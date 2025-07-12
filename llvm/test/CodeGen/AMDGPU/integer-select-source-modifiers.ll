@@ -340,15 +340,16 @@ define i64 @fneg_select_i64_1(i64 %cond, i64 %a, i64 %b) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v5, v3, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v5, -v3, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_select_i64_1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v5, v3 :: v_dual_cndmask_b32 v1, v4, v2
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v5, -v3, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = xor i64 %a, u0x8000000000000000
   %cmp = icmp eq i64 %cond, zeroinitializer
@@ -361,15 +362,16 @@ define i64 @fneg_select_i64_2(i64 %cond, i64 %a, i64 %b) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, -v3, v5, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_select_i64_2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v3, v5 :: v_dual_cndmask_b32 v1, v2, v4
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, -v3, v5, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = xor i64 %a, u0x8000000000000000
   %cmp = icmp eq i64 %cond, zeroinitializer
@@ -382,16 +384,16 @@ define i64 @fneg_1_fabs_2_select_i64(i64 %cond, i64 %a, i64 %b) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, |v5|, v3, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, |v5|, -v3, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_1_fabs_2_select_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, |v5|, v3, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, |v5|, -v3, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = xor i64 %a, u0x8000000000000000
   %abs.b = and i64 %b, u0x7fffffffffffffff
@@ -405,16 +407,16 @@ define i64 @fabs_select_i64_1(i64 %cond, i64 %a, i64 %b) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v5, |v3|, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v5, |v3|, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fabs_select_i64_1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v5, |v3|, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v5, |v3|, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = and i64 %a, u0x7fffffffffffffff
   %cmp = icmp eq i64 %cond, zeroinitializer
@@ -427,16 +429,16 @@ define i64 @fabs_select_i64_2(i64 %cond, i64 %a, i64 %b) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, |v3|, v5, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, |v3|, v5, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fabs_select_i64_2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, |v3|, v5, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, |v3|, v5, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = and i64 %a, u0x7fffffffffffffff
   %cmp = icmp eq i64 %cond, zeroinitializer
@@ -449,16 +451,16 @@ define i64 @fneg_fabs_select_i64_1(i64 %cond, i64 %a, i64 %b) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v5, -|v3|, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v5, -|v3|, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_fabs_select_i64_1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v5, -|v3|, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v5, -|v3|, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = or i64 %a, u0x8000000000000000
   %cmp = icmp eq i64 %cond, zeroinitializer
@@ -471,16 +473,16 @@ define i64 @fneg_fabs_select_i64_2(i64 %cond, i64 %a, i64 %b) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, -|v3|, v5, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, -|v3|, v5, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_fabs_select_i64_2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, -|v3|, v5, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, -|v3|, v5, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = or i64 %a, u0x8000000000000000
   %cmp = icmp eq i64 %cond, zeroinitializer

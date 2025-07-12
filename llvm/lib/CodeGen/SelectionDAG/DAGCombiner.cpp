@@ -684,7 +684,7 @@ namespace {
                                   SDValue VecIn2, unsigned LeftIdx,
                                   bool DidSplitVec);
     SDValue matchVSelectOpSizesWithSetCC(SDNode *Cast);
-
+    SDValue getBitwiseToSrcModifierOp(SDValue N);
     /// Walk up chain skipping non-aliasing memory nodes,
     /// looking for aliasing nodes and adding them to the Aliases vector.
     void GatherAllAliases(SDNode *N, SDValue OriginalChain,
@@ -12175,6 +12175,56 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   return SDValue();
 }
 
+static EVT getFloatVT(EVT VT) {
+  EVT FT = MVT::getFloatingPointVT(VT.getScalarSizeInBits());
+  return VT.isVector() ? VT.changeVectorElementType(FT) : FT;
+}
+
+SDValue DAGCombiner::getBitwiseToSrcModifierOp(SDValue N) {
+
+  unsigned Opc = N.getNode()->getOpcode();
+  if (Opc != ISD::AND && Opc != ISD::XOR && Opc != ISD::OR)
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  if(!TLI.shouldFoldSelectWithIdentityConstant(N.getOpcode(), N->getValueType(0), ISD::SELECT, LHS, RHS))
+    return SDValue();
+
+  ConstantSDNode *CRHS = isConstOrConstSplat(RHS);
+
+  if (!CRHS)
+    return SDValue();
+
+  EVT VT = RHS.getValueType();
+  EVT FVT = getFloatVT(VT);
+  SDLoc SL = SDLoc(N);
+
+  switch (Opc) {
+  case ISD::XOR:
+    if (CRHS->getAPIntValue().isSignMask())
+      return DAG.getNode(ISD::FNEG, SL, FVT,
+                         DAG.getNode(ISD::BITCAST, SL, FVT, LHS));
+    break;
+  case ISD::OR:
+    if (CRHS->getAPIntValue().isSignMask()) {
+      SDValue Abs = DAG.getNode(ISD::FABS, SL, FVT,
+                                DAG.getNode(ISD::BITCAST, SL, FVT, LHS));
+      return DAG.getNode(ISD::FNEG, SL, FVT, Abs);
+    }
+    break;
+  case ISD::AND:
+    if (CRHS->getAPIntValue().isMaxSignedValue())
+      return DAG.getNode(ISD::FABS, SL, FVT,
+                         DAG.getNode(ISD::BITCAST, SL, FVT, LHS));
+    break;
+  default:
+    return SDValue();
+  }
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -12389,6 +12439,29 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 
   if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
     return R;
+
+  auto FoldSrcMods = [&](SDValue LHS, SDValue RHS, EVT VT) -> SDValue {
+    SDValue SrcModTrue = getBitwiseToSrcModifierOp(LHS);
+    SDValue SrcModFalse = getBitwiseToSrcModifierOp(RHS);
+    if (SrcModTrue || SrcModFalse) {
+      SDLoc SL(N);
+      EVT FVT =
+          SrcModTrue ? SrcModTrue.getValueType() : SrcModFalse.getValueType();
+      SDValue FLHS =
+          SrcModTrue ? SrcModTrue : DAG.getNode(ISD::BITCAST, SL, FVT, LHS);
+      SDValue FRHS =
+          SrcModFalse ? SrcModFalse : DAG.getNode(ISD::BITCAST, SL, FVT, RHS);
+      SDValue FSelect = DAG.getNode(ISD::SELECT, SL, FVT, N0, FLHS, FRHS);
+      return DAG.getNode(ISD::BITCAST, SL, VT, FSelect);
+    }
+    return SDValue();
+  };
+
+  // Identify bitmask operations that are source mods and create
+  // the relevant fneg, fabs or fneg+fabs.
+  if (VT == MVT::i32 || VT == MVT::v2i32)
+    if (SDValue F = FoldSrcMods(N1, N2, VT))
+      return F;
 
   return SDValue();
 }

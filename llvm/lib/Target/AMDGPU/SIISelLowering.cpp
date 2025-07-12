@@ -15493,6 +15493,14 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
   return SDValue();
 }
 
+bool SITargetLowering::shouldFoldSelectWithIdentityConstant(
+    unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
+    SDValue Y) const {
+  return (BinOpcode == ISD::AND || BinOpcode == ISD::OR ||
+          BinOpcode == ISD::XOR) &&
+         (VT.getScalarType() == MVT::i32);
+}
+
 SDValue SITargetLowering::performSetCCCombine(SDNode *N,
                                               DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;

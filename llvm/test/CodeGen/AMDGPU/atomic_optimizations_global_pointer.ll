@@ -7145,12 +7145,13 @@ define amdgpu_kernel void @uniform_or_i8(ptr addrspace(1) %result, ptr addrspace
 ; GFX7LESS-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7LESS-NEXT:    s_mov_b32 s2, -1
 ; GFX7LESS-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; GFX7LESS-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX7LESS-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX7LESS-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
-; GFX7LESS-NEXT:    v_or_b32_e32 v0, s4, v0
+; GFX7LESS-NEXT:    s_or_b32 s5, s4, s6
+; GFX7LESS-NEXT:    s_mov_b32 s2, -1
+; GFX7LESS-NEXT:    v_mov_b32_e32 v0, s4
+; GFX7LESS-NEXT:    v_mov_b32_e32 v1, s5
+; GFX7LESS-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX7LESS-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; GFX7LESS-NEXT:    s_endpgm
 ;
@@ -8838,12 +8839,13 @@ define amdgpu_kernel void @uniform_or_i16(ptr addrspace(1) %result, ptr addrspac
 ; GFX7LESS-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7LESS-NEXT:    s_mov_b32 s2, -1
 ; GFX7LESS-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7LESS-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX7LESS-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX7LESS-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
-; GFX7LESS-NEXT:    v_or_b32_e32 v0, s4, v0
+; GFX7LESS-NEXT:    s_or_b32 s5, s4, s6
+; GFX7LESS-NEXT:    s_mov_b32 s2, -1
+; GFX7LESS-NEXT:    v_mov_b32_e32 v0, s4
+; GFX7LESS-NEXT:    v_mov_b32_e32 v1, s5
+; GFX7LESS-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX7LESS-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX7LESS-NEXT:    s_endpgm
 ;
