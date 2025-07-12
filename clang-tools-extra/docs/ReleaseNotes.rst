@@ -130,6 +130,12 @@ New checks
   Finds setter-like member functions that take a pointer parameter and set a
   reference member of the same class with the pointed value.
 
+- New :doc:`bugprone-move-shared-pointer-contents
+  <clang-tidy/checks/bugprone/move-shared-pointer-contents>` check.
+
+  Detects calls to move the contents out of a ``std::shared_ptr`` rather than
+  moving the pointer itself.
+
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
