@@ -16,14 +16,14 @@ define i32 @a(i32 %x, ptr nocapture readonly %y, ptr nocapture readonly %z) {
 ; CHECK-IMPLICIT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_8: // %for.body
 ; CHECK-OBJ;Disassembly of section .text:
-; CHECK-OBJ:               88: 8b0a002a      add
+; CHECK-OBJ:               88: 8b0b002b      add
 ; CHECK-OBJ-IMPLICIT-NEXT: 8c: d503201f      nop
 ; CHECK-OBJ-IMPLICIT-NEXT: 90: d503201f      nop
 ; CHECK-OBJ-IMPLICIT-NEXT: 94: d503201f      nop
 ; CHECK-OBJ-IMPLICIT-NEXT: 98: d503201f      nop
 ; CHECK-OBJ-IMPLICIT-NEXT: 9c: d503201f      nop
-; CHECK-OBJ-IMPLICIT-NEXT: a0: b840454b      ldr
-; CHECK-OBJ-EXPLICIT-NEXT: 8c: b840454b      ldr
+; CHECK-OBJ-IMPLICIT-NEXT: a0: b8404569      ldr
+; CHECK-OBJ-EXPLICIT-NEXT: 8c: b8404569      ldr
 entry:
   %cmp10 = icmp sgt i32 %x, 0
   br i1 %cmp10, label %for.body.preheader, label %for.cond.cleanup
