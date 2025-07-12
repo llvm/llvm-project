@@ -34,6 +34,12 @@ struct AMDGPUImageDMaskIntrinsic {
   unsigned Intr;
 };
 
+struct D16Candidate {
+  SmallVector<Instruction *, 4> InstsToErase;
+  Instruction *Replacee = nullptr;
+  Value *Index = nullptr;
+};
+
 #define GET_AMDGPUImageDMaskIntrinsicTable_IMPL
 #include "InstCombineTables.inc"
 
@@ -150,6 +156,67 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   return RetValue;
 }
 
+/// Attempts to fold an image sample whose users are ExtractElement + FPTrunc
+/// chains into a D16-returning version.
+static std::optional<Instruction *>
+modifyImageIntrinsicForD16(IntrinsicInst &II,
+                           const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr,
+                           InstCombiner &IC) {
+  SmallVector<D16Candidate, 4> Candidates;
+
+  // Collect all (ExtractElement, FPTrunc) pairs; abort on the first mismatch
+  for (User *U : II.users()) {
+    auto *Ext = dyn_cast<ExtractElementInst>(U);
+    if (!Ext || !Ext->hasOneUse())
+      return std::nullopt;
+
+    auto *Tr = dyn_cast<FPTruncInst>(*Ext->user_begin());
+    if (!Tr || !Tr->getType()->getScalarType()->isHalfTy())
+      return std::nullopt;
+
+    auto &Cand = Candidates.emplace_back();
+    Cand.InstsToErase = {Tr, Ext};
+    Cand.Replacee = Tr;
+    Cand.Index = Ext->getIndexOperand();
+  }
+
+  if (Candidates.empty())
+    return std::nullopt;
+
+  // Build the new half-vector return type
+  auto *VecTy = cast<VectorType>(II.getType());
+  Type *HalfVecTy = VecTy->getWithNewType(Type::getHalfTy(II.getContext()));
+
+  // Obtain the original image sample intrinsic's signature
+  // and replace its return type with the half-vector for D16 folding
+  SmallVector<Type *, 8> SigTys;
+  Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys);
+  SigTys[0] = HalfVecTy;
+
+  Function *HalfDecl = Intrinsic::getOrInsertDeclaration(
+      II.getModule(), ImageDimIntr->Intr, SigTys);
+
+  II.mutateType(HalfVecTy);
+  II.setCalledFunction(HalfDecl);
+
+  // Replace each chain with a single ExtractElement from the new D16 image
+  IRBuilder<> B(II.getContext());
+  for (auto &[Insts, Replacee, Idx] : Candidates) {
+    B.SetInsertPoint(Replacee);
+    auto *HalfExtract = B.CreateExtractElement(&II, Idx);
+    HalfExtract->takeName(Replacee);
+    Replacee->replaceAllUsesWith(HalfExtract);
+  }
+
+  // Erase the old instructions
+  for (auto &[Insts, Replacee, Idx] : Candidates) {
+    for (auto *I : Insts)
+      IC.eraseInstFromFunction(*I);
+  }
+
+  return &II;
+}
+
 static std::optional<Instruction *>
 simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                              const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr,
@@ -249,65 +316,8 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
         }
       }
 
-      // Only perform D16 folding if every user of the image sample is
-      // an ExtractElementInst immediately followed by an FPTrunc to half.
-      SmallVector<std::pair<ExtractElementInst *, FPTruncInst *>, 4>
-          ExtractTruncPairs;
-      bool AllHalfExtracts = true;
-
-      for (User *U : II.users()) {
-        auto *Ext = dyn_cast<ExtractElementInst>(U);
-        if (!Ext || !Ext->hasOneUse()) {
-          AllHalfExtracts = false;
-          break;
-        }
-
-        auto *Tr = dyn_cast<FPTruncInst>(*Ext->user_begin());
-        if (!Tr || !Tr->getType()->isHalfTy()) {
-          AllHalfExtracts = false;
-          break;
-        }
-
-        ExtractTruncPairs.emplace_back(Ext, Tr);
-      }
-
-      if (!ExtractTruncPairs.empty() && AllHalfExtracts) {
-        auto *VecTy = cast<VectorType>(II.getType());
-        Type *HalfVecTy =
-            VecTy->getWithNewType(Type::getHalfTy(II.getContext()));
-
-        // Obtain the original image sample intrinsic's signature
-        // and replace its return type with the half-vector for D16 folding
-        SmallVector<Type *, 8> SigTys;
-        Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys);
-        SigTys[0] = HalfVecTy;
-
-        Module *M = II.getModule();
-        Function *HalfDecl =
-            Intrinsic::getOrInsertDeclaration(M, ImageDimIntr->Intr, SigTys);
-
-        II.mutateType(HalfVecTy);
-        II.setCalledFunction(HalfDecl);
-
-        IRBuilder<> Builder(II.getContext());
-        for (auto &[Ext, Tr] : ExtractTruncPairs) {
-          Value *Idx = Ext->getIndexOperand();
-
-          Builder.SetInsertPoint(Tr);
-
-          Value *HalfExtract = Builder.CreateExtractElement(&II, Idx);
-          HalfExtract->takeName(Tr);
-
-          Tr->replaceAllUsesWith(HalfExtract);
-        }
-
-        for (auto &[Ext, Tr] : ExtractTruncPairs) {
-          IC.eraseInstFromFunction(*Tr);
-          IC.eraseInstFromFunction(*Ext);
-        }
-
-        return &II;
-      }
+      if (auto FoldedII = modifyImageIntrinsicForD16(II, ImageDimIntr, IC))
+        return *FoldedII;
     }
   }
 
