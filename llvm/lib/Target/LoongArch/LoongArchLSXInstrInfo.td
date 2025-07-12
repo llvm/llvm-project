@@ -1482,6 +1482,28 @@ multiclass VstelmPat<PatFrag StoreOp, ValueType vt, LAInst Inst,
             (Inst vt:$vd, BaseAddr:$rj, ImmOpnd:$imm, IdxOpnd:$idx)>;
 }
 
+multiclass InsertExtractPatV4<ValueType vecty, ValueType elemty> {
+  foreach imm1 = 0...3 in {
+    foreach imm2 = 0...3 in {
+      defvar Imm = !or(!shl(imm2, 4), imm1);
+      def : Pat<(vector_insert vecty:$vd,
+                    (elemty (vector_extract vecty:$vj, imm1)), imm2),
+                (VEXTRINS_W $vd, $vj, Imm)>;
+    }
+  }
+}
+
+multiclass InsertExtractPatV2<ValueType vecty, ValueType elemty> {
+  foreach imm1 = 0...1 in {
+    foreach imm2 = 0...1 in {
+      defvar Imm = !or(!shl(imm2, 4), imm1);
+      def : Pat<(vector_insert vecty:$vd,
+                    (elemty (vector_extract vecty:$vj, imm1)), imm2),
+                (VEXTRINS_D $vd, $vj, Imm)>;
+    }
+  }
+}
+
 let Predicates = [HasExtLSX] in {
 
 // VADD_{B/H/W/D}
@@ -1782,6 +1804,31 @@ defm : PatCCVrVrF<SETUNE, "VFCMP_CUNE">;
 defm : PatCCVrVrF<SETO, "VFCMP_COR">;
 defm : PatCCVrVrF<SETUO, "VFCMP_CUN">;
 
+// Insert element extracted from vector into vector.
+// VPICKVE2GR_{B/H/W/D} + VINSGR2VR_{B/H/W/D} -> VEXTRINS_{B/H/W/D}
+foreach imm1 = 0...15 in {
+  foreach imm2 = 0...15 in {
+    defvar Imm = !or(!shl(imm2, 4), imm1);
+    def : Pat<(vector_insert v16i8:$vd,
+                  (GRLenVT (vector_extract v16i8:$vj, imm1)), imm2),
+              (VEXTRINS_B $vd, $vj, Imm)>;
+  }
+}
+
+foreach imm1 = 0...7 in {
+  foreach imm2 = 0...7 in {
+    defvar Imm = !or(!shl(imm2, 4), imm1);
+    def : Pat<(vector_insert v8i16:$vd,
+                  (GRLenVT (vector_extract v8i16:$vj, imm1)), imm2),
+              (VEXTRINS_H $vd, $vj, Imm)>;
+  }
+}
+
+defm : InsertExtractPatV4<v4i32, GRLenVT>;
+defm : InsertExtractPatV4<v4f32, f32>;
+defm : InsertExtractPatV2<v2i64, GRLenVT>;
+defm : InsertExtractPatV2<v2f64, f64>;
+
 // VINSGR2VR_{B/H/W/D}
 def : Pat<(vector_insert v16i8:$vd, GRLenVT:$rj, uimm4:$imm),
           (VINSGR2VR_B v16i8:$vd, GRLenVT:$rj, uimm4:$imm)>;
@@ -1791,7 +1838,6 @@ def : Pat<(vector_insert v4i32:$vd, GRLenVT:$rj, uimm2:$imm),
           (VINSGR2VR_W v4i32:$vd, GRLenVT:$rj, uimm2:$imm)>;
 def : Pat<(vector_insert v2i64:$vd, GRLenVT:$rj, uimm1:$imm),
           (VINSGR2VR_D v2i64:$vd, GRLenVT:$rj, uimm1:$imm)>;
-
 def : Pat<(vector_insert v4f32:$vd, FPR32:$fj, uimm2:$imm),
           (VINSGR2VR_W $vd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm2:$imm)>;
 def : Pat<(vector_insert v2f64:$vd, FPR64:$fj, uimm1:$imm),
