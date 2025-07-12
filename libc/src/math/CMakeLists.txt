@@ -189,6 +189,7 @@ add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
 add_math_entrypoint_object(fabsf16)
 add_math_entrypoint_object(fabsf128)
+add_math_entrypoint_object(fabsbf16)
 
 add_math_entrypoint_object(fadd)
 add_math_entrypoint_object(faddl)
@@ -556,7 +557,3 @@ add_math_entrypoint_object(ufromfpxl)
 add_math_entrypoint_object(ufromfpxf16)
 add_math_entrypoint_object(ufromfpxf128)
 
-# BFloat16 functions
-add_math_entrypoint_object(fbfloat16)
-
-add_math_entrypoint_object(fabsbf16)
