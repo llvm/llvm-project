@@ -99,6 +99,11 @@ def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops"> {
   let dependentDialects = ["linalg::LinalgDialect"];
 }
 
+def LinalgNamedToElementwisePass : Pass<"linalg-named-to-elementwise"> {
+  let summary = "Convert linalg named ops to elementwise where possible";
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
 def LinalgFoldIntoElementwisePass : Pass<"linalg-fold-into-elementwise"> {
   let summary = "Fold transform, broadcast and other ops into elementwise";
   let dependentDialects = ["linalg::LinalgDialect"];
