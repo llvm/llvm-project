@@ -121,11 +121,11 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     for (size_t i = 0; i < rank; ++i) {
       size_t dimIdx = originalOffsets.size() - rank + i;
       Value constOffset =
-          rewriter.create<arith::ConstantIndexOp>(loc, distUnitBaseAddr[i]);
+          arith::ConstantIndexOp::create(rewriter, loc, distUnitBaseAddr[i]);
       Value offset =
           rewriter.createOrFold<index::AddOp>(loc, localOffset[i], constOffset);
       Value modValue =
-          rewriter.create<arith::ConstantIndexOp>(loc, distUnitShape[i]);
+          arith::ConstantIndexOp::create(rewriter, loc, distUnitShape[i]);
       Value offsetMod =
           rewriter.createOrFold<index::RemUOp>(loc, offset, modValue);
       Value origOffset = getValueOrCreateConstantIndexOp(
@@ -162,7 +162,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     // TODO : Handle order attribute
     // Get the subgroup ID
     auto linearSgId =
-        rewriter.create<gpu::SubgroupIdOp>(loc, /*upper_bound=*/nullptr);
+        gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
 
     // Create constants for layout dimensions
     SmallVector<Value> sgLayoutDim(sgLayout.size());
@@ -170,8 +170,8 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
 
     for (size_t i = 0; i < sgLayout.size(); i++) {
       sgLayoutDim[i] =
-          rewriter.create<arith::ConstantIndexOp>(loc, sgLayout[i]);
-      sgDataDim[i] = rewriter.create<arith::ConstantIndexOp>(loc, sgShape[i]);
+          arith::ConstantIndexOp::create(rewriter, loc, sgLayout[i]);
+      sgDataDim[i] = arith::ConstantIndexOp::create(rewriter, loc, sgShape[i]);
     }
 
     auto deLinearizeSgId =
@@ -201,9 +201,9 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
           calculateGlobalOffsets(rewriter, loc, originalOffsets, localOffset,
                                  distUnitBaseAddr, distUnitShape);
 
-      auto newCreateNdOp = rewriter.create<xegpu::CreateNdDescOp>(
-          loc, newTdescTy, op.getSource(), globalOffsets, op.getMixedSizes(),
-          op.getMixedStrides());
+      auto newCreateNdOp = xegpu::CreateNdDescOp::create(
+          rewriter, loc, newTdescTy, op.getSource(), globalOffsets,
+          op.getMixedSizes(), op.getMixedStrides());
       newCreateNdOps.push_back(newCreateNdOp);
     }
 
@@ -224,8 +224,8 @@ struct WgToSgLoadNdOp : public OpConversionPattern<xegpu::LoadNdOp> {
           dyn_cast<xegpu::TensorDescType>(src.getType());
       ArrayRef<int64_t> srcShape = tdescTy.getShape();
       VectorType newResTy = VectorType::get(srcShape, tdescTy.getElementType());
-      auto newLoadOp = rewriter.create<xegpu::LoadNdOp>(op.getLoc(), newResTy,
-                                                        src, op->getAttrs());
+      auto newLoadOp = xegpu::LoadNdOp::create(rewriter, op.getLoc(), newResTy,
+                                               src, op->getAttrs());
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -242,8 +242,8 @@ struct WgToSgStoreNdOp : public OpConversionPattern<xegpu::StoreNdOp> {
   matchAndRewrite(xegpu::StoreNdOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     for (auto [v, t] : llvm::zip(adaptor.getValue(), adaptor.getTensorDesc()))
-      rewriter.create<xegpu::StoreNdOp>(op.getLoc(), v, t, op.getL1HintAttr(),
-                                        op.getL2HintAttr(), op.getL3HintAttr());
+      xegpu::StoreNdOp::create(rewriter, op.getLoc(), v, t, op.getL1HintAttr(),
+                               op.getL2HintAttr(), op.getL3HintAttr());
 
     rewriter.eraseOp(op);
     return success();
@@ -261,8 +261,8 @@ struct WgToSgUpdateNdOffsetOp
                   ConversionPatternRewriter &rewriter) const override {
     llvm::SmallVector<Value> newUpdateTileOffsetOps;
     for (auto tDesc : adaptor.getTensorDesc()) {
-      auto newUpdateTileOffsetOp = rewriter.create<xegpu::UpdateNdOffsetOp>(
-          op.getLoc(), tDesc.getType(), tDesc, op.getOffsets(),
+      auto newUpdateTileOffsetOp = xegpu::UpdateNdOffsetOp::create(
+          rewriter, op.getLoc(), tDesc.getType(), tDesc, op.getOffsets(),
           op.getConstOffsets());
       newUpdateTileOffsetOps.push_back(newUpdateTileOffsetOp);
     }
@@ -305,7 +305,7 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
             llvm::cast<VectorType>(bVec.getType()).getShape();
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
-        tmpC = rewriter.create<xegpu::DpasOp>(loc, resTy, operands);
+        tmpC = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
         xegpu::setLayoutAttr(cast<OpResult>(tmpC),
                              originalLayout.dropSgLayoutAndData());
 
@@ -324,8 +324,8 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   matchAndRewrite(xegpu::PrefetchNdOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     for (auto src : adaptor.getTensorDesc())
-      rewriter.create<xegpu::PrefetchNdOp>(op.getLoc(), TypeRange(), src,
-                                           op->getAttrs());
+      xegpu::PrefetchNdOp::create(rewriter, op.getLoc(), TypeRange(), src,
+                                  op->getAttrs());
     rewriter.eraseOp(op);
     return success();
   }

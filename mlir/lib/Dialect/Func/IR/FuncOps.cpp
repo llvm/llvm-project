@@ -14,6 +14,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -54,8 +55,8 @@ void FuncDialect::initialize() {
 Operation *FuncDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
   if (ConstantOp::isBuildableWith(value, type))
-    return builder.create<ConstantOp>(loc, type,
-                                      llvm::cast<FlatSymbolRefAttr>(value));
+    return ConstantOp::create(builder, loc, type,
+                              llvm::cast<FlatSymbolRefAttr>(value));
   return nullptr;
 }
 
@@ -143,9 +144,7 @@ LogicalResult ConstantOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return success();
 }
 
-OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) {
-  return getValueAttr();
-}
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
 
 void ConstantOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {

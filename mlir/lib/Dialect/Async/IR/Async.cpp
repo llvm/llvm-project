@@ -10,6 +10,7 @@
 
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -99,7 +100,7 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
   // expected result is empty. Otherwise, leave this to the caller
   // because we don't know which values to return from the execute op.
   if (resultTypes.empty() && !bodyBuilder) {
-    builder.create<async::YieldOp>(result.location, ValueRange());
+    async::YieldOp::create(builder, result.location, ValueRange());
   } else if (bodyBuilder) {
     bodyBuilder(builder, result.location, bodyBlock->getArguments());
   }

@@ -13,6 +13,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "llvm/ADT/STLExtras.h"
@@ -50,13 +51,13 @@ void EmitCDialect::initialize() {
 Operation *EmitCDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
-  return builder.create<emitc::ConstantOp>(loc, type, value);
+  return emitc::ConstantOp::create(builder, loc, type, value);
 }
 
 /// Default callback for builders of ops carrying a region. Inserts a yield
 /// without arguments.
 void mlir::emitc::buildTerminatedBody(OpBuilder &builder, Location loc) {
-  builder.create<emitc::YieldOp>(loc);
+  emitc::YieldOp::create(builder, loc);
 }
 
 bool mlir::emitc::isSupportedEmitCType(Type type) {

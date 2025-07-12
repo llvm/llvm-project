@@ -12,6 +12,7 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "mlir/Dialect/UB/IR/UBOpsDialect.cpp.inc"
@@ -52,7 +53,7 @@ void UBDialect::initialize() {
 Operation *UBDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                           Type type, Location loc) {
   if (auto attr = dyn_cast<PoisonAttr>(value))
-    return builder.create<PoisonOp>(loc, type, attr);
+    return PoisonOp::create(builder, loc, type, attr);
 
   return nullptr;
 }
