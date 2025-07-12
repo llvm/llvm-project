@@ -163,6 +163,49 @@ static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
   }
 }
 
+/// Return the intrinsic ID associated with stmatrix for the given paramters.
+static llvm::Intrinsic::ID getStMatrixIntrinsicId(NVVM::MMALayout layout,
+                                                  int32_t num,
+                                                  NVVM::LdStMatrixShape shape) {
+  if (shape == NVVM::LdStMatrixShape::M8N8) {
+    if (layout == NVVM::MMALayout::row) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_b16;
+      case 2:
+        return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_b16;
+      case 4:
+        return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_b16;
+      default:
+        llvm_unreachable("unsupported number of matrix");
+      }
+    } else {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_trans_b16;
+      case 2:
+        return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_trans_b16;
+      case 4:
+        return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_trans_b16;
+      default:
+        llvm_unreachable("unsupported number of matrix");
+      }
+    }
+  } else {
+    // for 16x8 matrices, .trans is mandatory
+    switch (num) {
+    case 1:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x1_trans_b8;
+    case 2:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x2_trans_b8;
+    case 4:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x4_trans_b8;
+    default:
+      llvm_unreachable("unsupported number of matrix");
+    }
+  }
+}
+
 /// Return the intrinsic ID associated with st.bulk for the given address type.
 static llvm::Intrinsic::ID
 getStBulkIntrinsicId(LLVM::LLVMPointerType addrType) {

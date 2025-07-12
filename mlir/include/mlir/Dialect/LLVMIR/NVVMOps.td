@@ -1990,10 +1990,22 @@ def NVVM_WMMAMmaOp : NVVM_Op<"wmma.mma">,
   let hasVerifier = 1;
 }
 
-def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">, 
-  Arguments<(ins LLVM_PointerShared:$ptr, 
-                 Variadic<I32>:$sources, 
-                 MMALayoutAttr:$layout)> {
+def LdStMatrixShapeM8N8 : I32EnumAttrCase<"M8N8", 0, "m8n8">;
+def LdStMatrixShapeM8N16 : I32EnumAttrCase<"M8N16", 1, "m8n16">;
+def LdStMatrixShapeM16N8 : I32EnumAttrCase<"M16N8", 2, "m16n8">;
+def LdStMatrixShapeM16N16 : I32EnumAttrCase<"M16N16", 3, "m16n16">;
+
+def LdStMatrixShape : I32EnumAttr<"LdStMatrixShape", "Matrix shape for ldmatrix and stmatrix",
+  [LdStMatrixShapeM8N8, LdStMatrixShapeM16N8, LdStMatrixShapeM16N16]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def LdStMatrixShapeAttr : EnumAttr<NVVM_Dialect, LdStMatrixShape, "ld_st_matrix_shape"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_StMatrixOp: NVVM_Op<"stmatrix">,
+  Arguments<(ins LLVM_AnyPointer: $ptr, Variadic<I32>:$sources, MMALayoutAttr:$layout, LdStMatrixShapeAttr:$shape)> {
   let summary = "cooperative matrix store";
   let description = [{
     Collectively store one or more matrices across all threads in a warp to the
@@ -2001,21 +2013,12 @@ def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">,
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-store-instruction-stmatrix)
   }];
-  
-  let assemblyFormat = "$ptr `,` $sources attr-dict `:` type(operands)";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() {
-      int d = getSources().size();
-      std::string ptx = "stmatrix.sync.aligned";
-      ptx += ".x" + std::to_string(d);
-      if (getLayout() == NVVM::MMALayout::col)
-        ptx += ".trans";
-      if(d == 1) ptx += ".m8n8.shared.b16 [%0], {%1};";
-      if(d == 2) ptx += ".m8n8.shared.b16 [%0], {%1, %2};";
-      if(d == 4) ptx += ".m8n8.shared.b16 [%0], {%1, %2, %3, %4};";
-      return ptx;
-    }
+  string llvmBuilder = [{
+      auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+      auto intId = getStMatrixIntrinsicId($layout, $sources.size(), $shape);
+      createIntrinsicCall(builder, intId, operands, operands[0]->getType());
   }];
+  let assemblyFormat = "$ptr `,` $sources attr-dict `:` type(operands)";
   let hasVerifier = 1;
 }
 
