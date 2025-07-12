@@ -200,6 +200,9 @@ def err_drv_opt_unsupported_input_type : Error<
   "'%0' invalid for input of type %1">;
 def err_drv_amdgpu_ieee_without_no_honor_nans : Error<
   "invalid argument '-mno-amdgpu-ieee' only allowed with relaxed NaN handling">;
+def warn_drv_unsupported_wave64 : Warning<
+  "wavefront size 64 is not supported by HIP runtime on AMD GPU architecture "
+  "gfx10 and above">, InGroup<UnsupportedWave64>;
 def err_drv_argument_not_allowed_with : Error<
   "invalid argument '%0' not allowed with '%1'">;
 def err_drv_cannot_open_randomize_layout_seed_file : Error<
