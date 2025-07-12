@@ -1309,6 +1309,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::FCANONICALIZE: {
+    SDLoc dl(Node);
+    SDValue Result = TLI.expandFCanonicalizeWithStrictFmul(Node, dl, DAG);
+    Results.push_back(Result);
+    return;
+  }
   }
 
   SDValue Unrolled = DAG.UnrollVectorOp(Node);

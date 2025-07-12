@@ -1088,27 +1088,34 @@ define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %s
 ; SDAG-VI:       ; %bb.0:
 ; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-VI-NEXT:    v_cvt_f32_f16_sdwa v6, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SDAG-VI-NEXT:    v_cvt_f32_f16_sdwa v7, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SDAG-VI-NEXT:    v_cvt_f32_f16_sdwa v8, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v5, v5
 ; SDAG-VI-NEXT:    v_mac_f32_e32 v8, v6, v7
 ; SDAG-VI-NEXT:    v_mac_f32_e32 v4, v0, v2
-; SDAG-VI-NEXT:    v_mac_f32_e32 v5, v1, v3
 ; SDAG-VI-NEXT:    v_cvt_f16_f32_e32 v0, v8
-; SDAG-VI-NEXT:    v_cvt_f16_f32_e32 v1, v4
-; SDAG-VI-NEXT:    v_cvt_f16_f32_e32 v2, v5
-; SDAG-VI-NEXT:    v_max_f16_e32 v0, 0, v0
-; SDAG-VI-NEXT:    v_max_f16_e32 v3, 0, v1
-; SDAG-VI-NEXT:    v_max_f16_e32 v1, 0, v2
-; SDAG-VI-NEXT:    v_mov_b32_e32 v2, 0x3c00
-; SDAG-VI-NEXT:    v_min_f16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; SDAG-VI-NEXT:    v_min_f16_e32 v2, 1.0, v3
-; SDAG-VI-NEXT:    v_min_f16_e32 v1, 1.0, v1
+; SDAG-VI-NEXT:    v_mac_f32_e32 v5, v1, v3
+; SDAG-VI-NEXT:    v_cvt_f16_f32_e32 v2, v4
+; SDAG-VI-NEXT:    v_cvt_f16_f32_e32 v1, v5
+; SDAG-VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; SDAG-VI-NEXT:    v_mul_f16_e64 v3, 0, 1.0
+; SDAG-VI-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; SDAG-VI-NEXT:    v_max_f16_e32 v0, v0, v3
+; SDAG-VI-NEXT:    v_max_f16_e32 v2, v2, v3
+; SDAG-VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
+; SDAG-VI-NEXT:    v_max_f16_e32 v1, v1, v3
+; SDAG-VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; SDAG-VI-NEXT:    v_mul_f16_e64 v3, 1.0, 1.0
+; SDAG-VI-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; SDAG-VI-NEXT:    v_min_f16_sdwa v0, v0, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; SDAG-VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
+; SDAG-VI-NEXT:    v_min_f16_e32 v2, v2, v3
+; SDAG-VI-NEXT:    v_min_f16_e32 v1, v1, v3
 ; SDAG-VI-NEXT:    v_or_b32_e32 v0, v2, v0
 ; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1308,7 +1315,11 @@ define <4 x half> @v_mad_mix_v4f32_clamp_postcvt(<4 x half> %src0, <4 x half> %s
 ; SDAG-VI-NEXT:    v_max_f16_e32 v1, 0, v1
 ; SDAG-VI-NEXT:    v_max_f16_e32 v2, 0, v2
 ; SDAG-VI-NEXT:    v_max_f16_e32 v3, 0, v3
+; SDAG-VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v4, 0x3c00
+; SDAG-VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; SDAG-VI-NEXT:    v_mul_f16_e32 v3, 1.0, v3
+; SDAG-VI-NEXT:    v_mul_f16_e32 v2, 1.0, v2
 ; SDAG-VI-NEXT:    v_min_f16_sdwa v1, v1, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; SDAG-VI-NEXT:    v_min_f16_sdwa v0, v0, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; SDAG-VI-NEXT:    v_min_f16_e32 v3, 1.0, v3
