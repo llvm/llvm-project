@@ -418,6 +418,22 @@ public:
     return true;
   }
 
+  /// Returns true if CopyMI should be considered for register
+  /// definition rematerialization. Otherwise, returns false.
+  ///
+  /// Rematerialization can replace a source register with its value
+  /// from its definition. Its applied in the register coalescer,
+  /// after instruction selection and before register allocation.
+  ///
+  /// Subtargets can override this method to classify rematerialization
+  /// candidates. Note that this cannot be defined in tablegen because it
+  /// operates at a higher level.
+  virtual bool shouldReMaterializeTrivialRegDef(const MachineInstr *CopyMI,
+                                                const Register &DestReg,
+                                                const Register &SrcReg) const {
+    return true;
+  }
+
   /// Re-issue the specified 'original' instruction at the
   /// specific location targeting a new destination register.
   /// The register in Orig->getOperand(0).getReg() will be substituted by

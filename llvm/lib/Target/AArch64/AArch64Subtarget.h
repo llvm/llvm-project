@@ -120,6 +120,12 @@ private:
   /// Initialize properties based on the selected processor family.
   void initializeProperties(bool HasMinSize);
 
+  /// Returns true if Reg is virtual and is assigned to,
+  /// or is physcial and is a member of, the TRC register class.
+  /// Otherwise, returns false.
+  bool isRegInClass(const MachineInstr *MI, const Register &Reg,
+                    const TargetRegisterClass *TRC) const;
+
 public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
@@ -162,6 +168,13 @@ public:
 
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
+
+  bool canLowerToZeroCycleRegMove(const MachineInstr *CopyMI,
+                                  const Register &DestReg,
+                                  const Register &SrcReg) const override;
+  bool canLowerToZeroCycleRegZeroing(const MachineInstr *CopyMI,
+                                     const Register &DestReg,
+                                     const Register &SrcReg) const override;
 
   /// Returns ARM processor family.
   /// Avoid this function! CPU specifics should be kept local to this class
