@@ -254,41 +254,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     setLibcallImpl(RTLIB::MULO_I128, RTLIB::Unsupported);
   }
 
-  if (TT.getArch() == Triple::ArchType::hexagon) {
-    setLibcallImpl(RTLIB::SDIV_I32, RTLIB::__hexagon_divsi3);
-    setLibcallImpl(RTLIB::SDIV_I64, RTLIB::__hexagon_divdi3);
-    setLibcallImpl(RTLIB::UDIV_I32, RTLIB::__hexagon_udivsi3);
-    setLibcallImpl(RTLIB::UDIV_I64, RTLIB::__hexagon_udivdi3);
-    setLibcallImpl(RTLIB::SREM_I32, RTLIB::__hexagon_modsi3);
-    setLibcallImpl(RTLIB::SREM_I64, RTLIB::__hexagon_moddi3);
-    setLibcallImpl(RTLIB::UREM_I32, RTLIB::__hexagon_umodsi3);
-    setLibcallImpl(RTLIB::UREM_I64, RTLIB::__hexagon_umoddi3);
-
-    // Prefix is: nothing  for "slow-math",
-    //            "fast2_" for V5+ fast-math double-precision
-    // (actually, keep fast-math and fast-math2 separate for now)
-
-    setLibcallImpl(RTLIB::FAST_ADD_F64, RTLIB::__hexagon_fast_adddf3);
-    setLibcallImpl(RTLIB::FAST_SUB_F64, RTLIB::__hexagon_fast_subdf3);
-    setLibcallImpl(RTLIB::FAST_MUL_F64, RTLIB::__hexagon_fast_muldf3);
-    setLibcallImpl(RTLIB::FAST_DIV_F64, RTLIB::__hexagon_fast_divdf3);
-    setLibcallImpl(RTLIB::FAST_DIV_F32, RTLIB::__hexagon_fast_divsf3);
-    setLibcallImpl(RTLIB::FAST_SQRT_F32, RTLIB::__hexagon_fast2_sqrtf);
-    // This is the only fast library function for sqrtd.
-    setLibcallImpl(RTLIB::FAST_SQRT_F64, RTLIB::__hexagon_fast2_sqrtdf2);
-
-    setLibcallImpl(RTLIB::ADD_F64, RTLIB::__hexagon_adddf3);
-    setLibcallImpl(RTLIB::SUB_F64, RTLIB::__hexagon_subdf3);
-    setLibcallImpl(RTLIB::MUL_F64, RTLIB::__hexagon_muldf3);
-    setLibcallImpl(RTLIB::DIV_F64, RTLIB::__hexagon_divdf3);
-    setLibcallImpl(RTLIB::DIV_F32, RTLIB::__hexagon_divsf3);
-    setLibcallImpl(RTLIB::SQRT_F32, RTLIB::__hexagon_sqrtf);
-
-    setLibcallImpl(
-        RTLIB::HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES,
-        RTLIB::__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes);
-  }
-
   if (TT.getArch() == Triple::ArchType::msp430) {
     setLibcallImplCallingConv(RTLIB::__mspabi_mpyll,
                               CallingConv::MSP430_BUILTIN);
