@@ -31,12 +31,13 @@ DynamicLoader::DynamicLoader(const DynamicLoader::Setup &setup)
       m_PathResolver(setup.resolver ? setup.resolver
                                     : std::make_shared<PathResolver>(m_cache)),
       // m_DylibPathResolver(setup.dylibResolver),
-      ScanH(setup.basePaths, m_cache, m_PathResolver), FB(setup.filterBuilder),
-      LibMgr(), m_shouldScan(setup.shouldScan ? setup.shouldScan
-                                              : [](StringRef) { return true; }),
+      m_scanH(setup.basePaths, m_cache, m_PathResolver),
+      FB(setup.filterBuilder), m_libMgr(),
+      m_shouldScan(setup.shouldScan ? setup.shouldScan
+                                    : [](StringRef) { return true; }),
       includeSys(setup.includeSys) {
 
-  if (ScanH.getAllUnits().empty()) {
+  if (m_scanH.getAllUnits().empty()) {
     errs() << "Warning: No base paths provided for scanning.\n";
   }
 }
@@ -206,7 +207,7 @@ void DynamicLoader::searchSymbolsInLibraries(
     dbgs() << "Trying resolve from state=" << static_cast<int>(S)
            << " type=" << static_cast<int>(K) << "\n"; //);
     scanLibrariesIfNeeded(K);
-    for (auto &lib : LibMgr.getView(S, K)) {
+    for (auto &lib : m_libMgr.getView(S, K)) {
       // can use Async here?
       resolveSymbolsInLibrary(*lib, query);
       if (query.allResolved())
@@ -245,7 +246,7 @@ void DynamicLoader::scanLibrariesIfNeeded(LibraryManager::Kind PK) {
   dbgs() << "DynamicLoader::scanLibrariesIfNeeded: Scanning for "
          << (PK == LibraryManager::Kind::User ? "User" : "System")
          << " libraries\n"; //);
-  LibraryScanner Scanner(ScanH, LibMgr, m_shouldScan);
+  LibraryScanner Scanner(m_scanH, m_libMgr, m_shouldScan);
   Scanner.scanNext(PK == LibraryManager::Kind::User ? PathKind::User
                                                     : PathKind::System);
 }
