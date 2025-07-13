@@ -39,7 +39,6 @@ body: |
     ; NOSPH:       OUTARr 63, killed $r0
     ; NOSPH:       OUTARr 61, $r14
 
-
     ; XMEGA-LABEL: test
     ; XMEGA-LABEL: OUTARr 61, $r14
     ; XMEGA-LABEL: OUTARr 62, $r15
