@@ -699,6 +699,9 @@ Improvements to Clang's diagnostics
 - Clang now tries to avoid printing file paths that contain ``..``, instead preferring
   the canonical file path if it ends up being shorter.
 
+- Improve the diagnostics for placement new expression when const-qualified
+  object was passed as the storage argument. (#GH143708)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -952,6 +955,7 @@ Bug Fixes to C++ Support
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
 - Fix a crash in the presence of invalid base classes. (#GH147186)
+- Fix a crash with NTTP when instantiating local class.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
