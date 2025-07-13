@@ -74,9 +74,6 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           MI.getOpcode() != RISCV::PseudoVSETVLI &&
           MI.getOpcode() != RISCV::PseudoVSETIVLI)
         continue;
-      // For PseudoVSETVLIX0, Rd = X0 has special meaning.
-      if (MI.getOpcode() == RISCV::PseudoVSETVLIX0)
-        continue;
       for (int I = 0, E = Desc.getNumDefs(); I != E; ++I) {
         MachineOperand &MO = MI.getOperand(I);
         if (!MO.isReg() || !MO.isDef() || MO.isEarlyClobber())

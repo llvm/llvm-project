@@ -311,9 +311,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::XORI:
 
       case RISCV::ANDN:
-      case RISCV::BREV8:
       case RISCV::CLMUL:
-      case RISCV::ORC_B:
       case RISCV::ORN:
       case RISCV::SH1ADD:
       case RISCV::SH2ADD:
@@ -323,6 +321,12 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::BCLRI:
       case RISCV::BINVI:
         Worklist.push_back(std::make_pair(UserMI, Bits));
+        break;
+
+      case RISCV::BREV8:
+      case RISCV::ORC_B:
+        // BREV8 and ORC_B work on bytes. Round Bits down to the nearest byte.
+        Worklist.push_back(std::make_pair(UserMI, alignDown(Bits, 8)));
         break;
 
       case RISCV::PseudoCCMOVGPR:
@@ -591,6 +595,27 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         return false;
       break;
 
+    case RISCV::ADDI: {
+      if (MI->getOperand(1).isReg() && MI->getOperand(1).getReg().isVirtual()) {
+        if (MachineInstr *SrcMI = MRI.getVRegDef(MI->getOperand(1).getReg())) {
+          if (SrcMI->getOpcode() == RISCV::LUI &&
+              SrcMI->getOperand(1).isImm()) {
+            uint64_t Imm = SrcMI->getOperand(1).getImm();
+            Imm = SignExtend64<32>(Imm << 12);
+            Imm += (uint64_t)MI->getOperand(2).getImm();
+            if (isInt<32>(Imm))
+              continue;
+          }
+        }
+      }
+
+      if (hasAllWUsers(*MI, ST, MRI)) {
+        FixableDef.insert(MI);
+        break;
+      }
+      return false;
+    }
+
     // With these opcode, we can "fix" them with the W-version
     // if we know all users of the result only rely on bits 31:0
     case RISCV::SLLI:
@@ -598,7 +623,6 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       if (MI->getOperand(2).getImm() >= 32)
         return false;
       [[fallthrough]];
-    case RISCV::ADDI:
     case RISCV::ADD:
     case RISCV::LD:
     case RISCV::LWU:

@@ -78,25 +78,24 @@ define void @test() #0 {
 
 attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 
-; CHECK: %TypedBuffer = type { <4 x half> }
-; CHECK: %TypedBuffer.0 = type { <2 x float> }
-; CHECK: %TypedBuffer.1 = type { double }
-; CHECK: %TypedBuffer.2 = type { <4 x i32> }
+; CHECK: %"Buffer<half4>" = type { <4 x half> }
+; CHECK: %"Buffer<float2>" = type { <2 x float> }
+; CHECK: %"Buffer<double>" = type { double }
+; CHECK: %"Buffer<int32_t4>" = type { <4 x i32> }
 ; CHECK: %ByteAddressBuffer = type { i32 }
-; CHECK: %StructuredBuffer = type { i16 }
-; CHECK: %TypedBuffer.3 = type { i64 }
-; CHECK: %TypedBuffer.4 = type { <4 x float> }
-; CHECK: %TypedBuffer.5 = type { i64 }
+; CHECK: %"StructuredBuffer<int16_t>" = type { i16 }
+; CHECK: %"Buffer<uint32_t>" = type { i64 }
+; CHECK: %"Buffer<float4>" = type { <4 x float> }
 
-; CHECK: @Zero = external constant %TypedBuffer
-; CHECK: @One = external constant %TypedBuffer.0
-; CHECK: @Two = external constant %TypedBuffer.1
-; CHECK: @Three = external constant %TypedBuffer.2
+; CHECK: @Zero = external constant %"Buffer<half4>"
+; CHECK: @One = external constant %"Buffer<float2>"
+; CHECK: @Two = external constant %"Buffer<double>"
+; CHECK: @Three = external constant %"Buffer<int32_t4>"
 ; CHECK: @Four = external constant %ByteAddressBuffer
-; CHECK: @Five = external constant %StructuredBuffer
-; CHECK: @Six = external constant %TypedBuffer.3
-; CHECK: @Array = external constant %TypedBuffer.4
-; CHECK: @Seven = external constant %TypedBuffer.5
+; CHECK: @Five = external constant %"StructuredBuffer<int16_t>"
+; CHECK: @Six = external constant %"Buffer<uint32_t>"
+; CHECK: @Array = external constant %"Buffer<float4>"
+; CHECK: @Seven = external constant %"Buffer<uint32_t>"
 
 ; CHECK: !dx.resources = !{[[ResList:[!][0-9]+]]}
 

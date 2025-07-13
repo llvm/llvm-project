@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------===//
 
 #include "llvm/Object/OffloadBundle.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -20,7 +18,6 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"
@@ -342,8 +339,7 @@ CompressedOffloadBundle::decompress(llvm::MemoryBufferRef &Input,
     HashRecalcTimer.startTimer();
     llvm::MD5 Hash;
     llvm::MD5::MD5Result Result;
-    Hash.update(llvm::ArrayRef<uint8_t>(DecompressedData.data(),
-                                        DecompressedData.size()));
+    Hash.update(llvm::ArrayRef<uint8_t>(DecompressedData));
     Hash.final(Result);
     uint64_t RecalculatedHash = Result.low();
     HashRecalcTimer.stopTimer();

@@ -18,7 +18,6 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 ///
 /// Implements Analysis functions specific to slicing in Function.
@@ -111,8 +110,10 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
           return getBackwardSliceImpl(parentOp, backwardSlice, options);
         }
       }
+    } else {
+      return failure();
     }
-    return failure();
+    return success();
   };
 
   bool succeeded = true;

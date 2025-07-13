@@ -278,7 +278,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
                                             StringRef TheFeatures) {
   std::string TargetLookupError;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(std::string(TheTriple), TargetLookupError);
+      TargetRegistry::lookupTarget(TheTriple, TargetLookupError);
   if (!TheTarget)
     return createStringError(errc::invalid_argument, TargetLookupError.c_str());
 
@@ -365,30 +365,6 @@ LVBinaryReader::getSection(LVScope *Scope, LVAddress Address,
   if (Iter != SectionAddresses.begin())
     --Iter;
   return std::make_pair(Iter->first, Iter->second);
-}
-
-void LVBinaryReader::addSectionRange(LVSectionIndex SectionIndex,
-                                     LVScope *Scope) {
-  LVRange *ScopesWithRanges = getSectionRanges(SectionIndex);
-  ScopesWithRanges->addEntry(Scope);
-}
-
-void LVBinaryReader::addSectionRange(LVSectionIndex SectionIndex,
-                                     LVScope *Scope, LVAddress LowerAddress,
-                                     LVAddress UpperAddress) {
-  LVRange *ScopesWithRanges = getSectionRanges(SectionIndex);
-  ScopesWithRanges->addEntry(Scope, LowerAddress, UpperAddress);
-}
-
-LVRange *LVBinaryReader::getSectionRanges(LVSectionIndex SectionIndex) {
-  // Check if we already have a mapping for this section index.
-  LVSectionRanges::iterator IterSection = SectionRanges.find(SectionIndex);
-  if (IterSection == SectionRanges.end())
-    IterSection =
-        SectionRanges.emplace(SectionIndex, std::make_unique<LVRange>()).first;
-  LVRange *Range = IterSection->second.get();
-  assert(Range && "Range is null.");
-  return Range;
 }
 
 Error LVBinaryReader::createInstructions(LVScope *Scope,

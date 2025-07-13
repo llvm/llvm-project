@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fcntl_macros.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/sys/stat/mkdirat.h"
 #include "src/sys/statvfs/fstatvfs.h"
@@ -41,7 +41,7 @@ TEST_F(LlvmLibcSysFStatvfsTest, FStatvfsInvalidPath) {
 
   // Always delete the folder so that we start in a consistent state.
   LIBC_NAMESPACE::rmdir(TEST_DIR);
-  LIBC_NAMESPACE::libc_errno = 0; // Reset errno
+  libc_errno = 0; // Reset errno
 
   ASSERT_THAT(LIBC_NAMESPACE::mkdirat(AT_FDCWD, TEST_DIR, S_IRWXU),
               Succeeds(0));

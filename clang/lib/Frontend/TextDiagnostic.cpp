@@ -13,12 +13,10 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <optional>
@@ -1014,7 +1012,7 @@ static std::string buildFixItInsertionLine(FileID FID, unsigned LineNo,
 
     // We have an insertion hint. Determine whether the inserted
     // code contains no newlines and is on the same line as the caret.
-    std::pair<FileID, unsigned> HintLocInfo =
+    FileIDAndOffset HintLocInfo =
         SM.getDecomposedExpansionLoc(H.RemoveRange.getBegin());
     if (FID == HintLocInfo.first &&
         LineNo == SM.getLineNumber(HintLocInfo.first, HintLocInfo.second) &&
@@ -1520,8 +1518,8 @@ void TextDiagnostic::emitParseableFixits(ArrayRef<FixItHint> Hints,
     SourceLocation BLoc = H.RemoveRange.getBegin();
     SourceLocation ELoc = H.RemoveRange.getEnd();
 
-    std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(BLoc);
-    std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(ELoc);
+    FileIDAndOffset BInfo = SM.getDecomposedLoc(BLoc);
+    FileIDAndOffset EInfo = SM.getDecomposedLoc(ELoc);
 
     // Adjust for token ranges.
     if (H.RemoveRange.isTokenRange())

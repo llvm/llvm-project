@@ -741,7 +741,6 @@ ExprResult Sema::CheckPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
   if (!Pattern->containsUnexpandedParameterPack()) {
     Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
     << Pattern->getSourceRange();
-    CorrectDelayedTyposInExpr(Pattern);
     return ExprError();
   }
 
@@ -1201,11 +1200,9 @@ ExprResult Sema::ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
                                        SourceLocation RSquareLoc) {
   bool isParameterPack = ::isParameterPack(PackExpression);
   if (!isParameterPack) {
-    if (!PackExpression->containsErrors()) {
-      CorrectDelayedTyposInExpr(IndexExpr);
+    if (!PackExpression->containsErrors())
       Diag(PackExpression->getBeginLoc(), diag::err_expected_name_of_pack)
           << PackExpression;
-    }
     return ExprError();
   }
   ExprResult Res =
@@ -1403,11 +1400,6 @@ ExprResult Sema::ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,
   CheckFoldOperand(*this, LHS);
   CheckFoldOperand(*this, RHS);
 
-  auto DiscardOperands = [&] {
-    CorrectDelayedTyposInExpr(LHS);
-    CorrectDelayedTyposInExpr(RHS);
-  };
-
   // [expr.prim.fold]p3:
   //   In a binary fold, op1 and op2 shall be the same fold-operator, and
   //   either e1 shall contain an unexpanded parameter pack or e2 shall contain
@@ -1415,7 +1407,6 @@ ExprResult Sema::ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,
   if (LHS && RHS &&
       LHS->containsUnexpandedParameterPack() ==
           RHS->containsUnexpandedParameterPack()) {
-    DiscardOperands();
     return Diag(EllipsisLoc,
                 LHS->containsUnexpandedParameterPack()
                     ? diag::err_fold_expression_packs_both_sides
@@ -1430,7 +1421,6 @@ ExprResult Sema::ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,
     Expr *Pack = LHS ? LHS : RHS;
     assert(Pack && "fold expression with neither LHS nor RHS");
     if (!Pack->containsUnexpandedParameterPack()) {
-      DiscardOperands();
       return Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
              << Pack->getSourceRange();
     }

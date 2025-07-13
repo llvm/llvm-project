@@ -92,6 +92,37 @@ int o2 = 0xG; /* expected-error {{invalid suffix 'xG' on integer constant}}
                  c2y-warning {{octal literals without a '0o' prefix are deprecated}}
                */
 
+// Show that floating-point suffixes on octal literals are rejected.
+auto f1 = 0o0.;  /* expected-error {{invalid suffix '.' on integer constant}}
+                    compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                    ext-warning {{octal integer literals are a C2y extension}}
+                    cpp-warning {{octal integer literals are a Clang extension}}
+                */
+auto f2 = 0o0.1; /* expected-error {{invalid suffix '.1' on integer constant}}
+                    compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                    ext-warning {{octal integer literals are a C2y extension}}
+                    cpp-warning {{octal integer literals are a Clang extension}}
+                */
+auto f3 = 0o0e1; /* expected-error {{invalid suffix 'e1' on integer constant}}
+                    compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                    ext-warning {{octal integer literals are a C2y extension}}
+                    cpp-warning {{octal integer literals are a Clang extension}}
+                 */
+auto f4 = 0o0E1; /* expected-error {{invalid suffix 'E1' on integer constant}}
+                    compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                    ext-warning {{octal integer literals are a C2y extension}}
+                    cpp-warning {{octal integer literals are a Clang extension}}
+                 */
+
+// Show that valid floating-point literals with a leading 0 do not produce octal-related warnings.
+auto f5 = 0.;
+auto f7 = 00.;
+auto f8 = 01.;
+auto f9 = 0e1;
+auto f10 = 0E1;
+auto f11 = 00e1;
+auto f12 = 00E1;
+
 // Ensure digit separators work as expected.
 constexpr int p = 0o0'1'2'3'4'5'6'7; /* compat-warning {{octal integer literals are incompatible with standards before C2y}}
                                         ext-warning {{octal integer literals are a C2y extension}}

@@ -724,6 +724,19 @@ public:
     }
   }
 
+  /// Test if this node is an assert operation.
+  bool isAssert() const {
+    switch (NodeType) {
+    default:
+      return false;
+    case ISD::AssertAlign:
+    case ISD::AssertNoFPClass:
+    case ISD::AssertSext:
+    case ISD::AssertZext:
+      return true;
+    }
+  }
+
   /// Test if this node is a vector predication operation.
   bool isVPOpcode() const { return ISD::isVPOpcode(getOpcode()); }
 
@@ -1484,6 +1497,14 @@ public:
     MMO->refineAlignment(NewMMO);
   }
 
+  void refineRanges(const MachineMemOperand *NewMMO) {
+    // If this node has range metadata that is different than NewMMO, clear the
+    // range metadata.
+    // FIXME: Union the ranges instead?
+    if (getRanges() && getRanges() != NewMMO->getRanges())
+      MMO->clearRanges();
+  }
+
   const SDValue &getChain() const { return getOperand(0); }
 
   const SDValue &getBasePtr() const {
@@ -1687,9 +1708,9 @@ public:
 
   static int getSplatMaskIndex(ArrayRef<int> Mask) {
     assert(isSplatMask(Mask) && "Cannot get splat index for non-splat!");
-    for (unsigned i = 0, e = Mask.size(); i != e; ++i)
-      if (Mask[i] >= 0)
-        return Mask[i];
+    for (int Elem : Mask)
+      if (Elem >= 0)
+        return Elem;
 
     // We can choose any index value here and be correct because all elements
     // are undefined. Return 0 for better potential for callers to simplify.
@@ -1915,6 +1936,16 @@ LLVM_ABI bool isOneOrOneSplat(SDValue V, bool AllowUndefs = false);
 /// constant -1 integer (with no undefs).
 /// Does not permit build vector implicit truncation.
 LLVM_ABI bool isAllOnesOrAllOnesSplat(SDValue V, bool AllowUndefs = false);
+
+/// Return true if the value is a constant 1 integer or a splatted vector of a
+/// constant 1 integer (with no undefs).
+/// Does not permit build vector implicit truncation.
+LLVM_ABI bool isOnesOrOnesSplat(SDValue N, bool AllowUndefs = false);
+
+/// Return true if the value is a constant 0 integer or a splatted vector of a
+/// constant 0 integer (with no undefs).
+/// Does not permit build vector implicit truncation.
+LLVM_ABI bool isZeroOrZeroSplat(SDValue N, bool AllowUndefs = false);
 
 /// Return true if \p V is either a integer or FP constant.
 inline bool isIntOrFPConstant(SDValue V) {

@@ -554,6 +554,12 @@ flang:fir-hlfir:
 flang:codegen:
   - flang/**/CodeGen/**
 
+llvm:codegen:
+  - llvm/lib/CodeGen/*
+  - llvm/lib/CodeGen/MIRParser/*
+  - llvm/lib/CodeGen/LiveDebugValues/*
+  - llvm/lib/CodeGen/AsmPrinter/*
+
 llvm:globalisel:
   - llvm/**/GlobalISel/**
   - llvm/utils/TableGen/GlobalISel*
@@ -625,6 +631,10 @@ llvm:instcombine:
   - llvm/include/llvm/Analysis/InstructionSimplify.h
   - llvm/test/Transforms/InstCombine/**
   - llvm/test/Transforms/InstSimplify/**
+
+llvm:vectorcombine:
+  - llvm/lib/Transforms/Vectorize/VectorCombine.cpp
+  - llvm/test/Transforms/VectorCombine/**
 
 clangd:
   - clang-tools-extra/clangd/**
@@ -771,17 +781,23 @@ backend:NVPTX:
   - 'llvm/**/*nvptx*/**'
   - 'llvm/**/*NVPTX*/**'
 
+backend:MIPS:
+  - '**/*mips*'
+  - '**/*Mips*'
+  - '**/*mips*/**'
+  - '**/*Mips*/**'
+
 backend:RISC-V:
-  - clang/**/*riscv*
-  - clang/**/*RISCV*
-  - llvm/**/*riscv*
-  - llvm/**/*RISCV*
+  - '**/*riscv*'
+  - '**/*RISCV*'
+  - '**/*riscv*/**'
+  - '**/*RISCV*/**'
 
 backend:Xtensa:
-  - clang/**/*xtensa*
-  - clang/**/*Xtensa*
-  - llvm/**/*xtensa*
-  - llvm/**/*Xtensa*
+  - '**/*xtensa*'
+  - '**/*Xtensa*'
+  - '**/*xtensa*/**'
+  - '**/*Xtensa*/**'
 
 lld:coff:
   - lld/**/COFF/**

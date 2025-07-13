@@ -65,3 +65,8 @@ MakeParamComment(const llvm::offload::tblgen::ParamRec &Param) {
                        (Param.isOut() ? "[out]" : ""),
                        (Param.isOpt() ? "[optional]" : ""), Param.getDesc());
 }
+
+inline std::string
+getHandleImplName(const llvm::offload::tblgen::HandleRec &H) {
+  return (H.getName().substr(0, H.getName().size() - 9) + "_impl_t").str();
+}
