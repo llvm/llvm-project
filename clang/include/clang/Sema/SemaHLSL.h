@@ -32,6 +32,25 @@ class ParsedAttr;
 class Scope;
 class VarDecl;
 
+namespace hlsl {
+
+// Introduce a wrapper struct around the underlying RootElement. This structure
+// will retain extra clang diagnostic information that is not available in llvm.
+struct RootSignatureElement {
+  RootSignatureElement(SourceLocation Loc,
+                       llvm::hlsl::rootsig::RootElement Element)
+      : Loc(Loc), Element(Element) {}
+
+  const llvm::hlsl::rootsig::RootElement &getElement() const { return Element; }
+  const SourceLocation &getLocation() const { return Loc; }
+
+private:
+  SourceLocation Loc;
+  llvm::hlsl::rootsig::RootElement Element;
+};
+
+} // namespace hlsl
+
 using llvm::dxil::ResourceClass;
 
 // FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
@@ -130,12 +149,14 @@ public:
 
   /// Creates the Root Signature decl of the parsed Root Signature elements
   /// onto the AST and push it onto current Scope
-  void ActOnFinishRootSignatureDecl(
-      SourceLocation Loc, IdentifierInfo *DeclIdent,
-      SmallVector<llvm::hlsl::rootsig::RootElement> &Elements);
+  void
+  ActOnFinishRootSignatureDecl(SourceLocation Loc, IdentifierInfo *DeclIdent,
+                               ArrayRef<hlsl::RootSignatureElement> Elements);
 
-  // Returns true when D is invalid and a diagnostic was produced
-  bool handleRootSignatureDecl(HLSLRootSignatureDecl *D, SourceLocation Loc);
+  // Returns true if any RootSignatureElement is invalid and a diagnostic was
+  // produced
+  bool
+  handleRootSignatureElements(ArrayRef<hlsl::RootSignatureElement> Elements);
   void handleRootSignatureAttr(Decl *D, const ParsedAttr &AL);
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);

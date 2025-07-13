@@ -17,6 +17,7 @@
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Lex/LexHLSLRootSignature.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/SemaHLSL.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,7 +30,7 @@ namespace hlsl {
 class RootSignatureParser {
 public:
   RootSignatureParser(llvm::dxbc::RootSignatureVersion Version,
-                      SmallVector<llvm::hlsl::rootsig::RootElement> &Elements,
+                      SmallVector<RootSignatureElement> &Elements,
                       StringLiteral *Signature, Preprocessor &PP);
 
   /// Consumes tokens from the Lexer and constructs the in-memory
@@ -99,7 +100,8 @@ private:
     std::optional<llvm::dxbc::RootDescriptorFlags> Flags;
   };
   std::optional<ParsedRootDescriptorParams>
-  parseRootDescriptorParams(RootSignatureToken::Kind RegType);
+  parseRootDescriptorParams(RootSignatureToken::Kind DescKind,
+                            RootSignatureToken::Kind RegType);
 
   struct ParsedClauseParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
@@ -109,7 +111,8 @@ private:
     std::optional<llvm::dxbc::DescriptorRangeFlags> Flags;
   };
   std::optional<ParsedClauseParams>
-  parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
+  parseDescriptorTableClauseParams(RootSignatureToken::Kind ClauseKind,
+                                   RootSignatureToken::Kind RegType);
 
   struct ParsedStaticSamplerParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
@@ -134,13 +137,20 @@ private:
   std::optional<float> parseFloatParam();
 
   /// Parsing methods of various enums
-  std::optional<llvm::dxbc::ShaderVisibility> parseShaderVisibility();
-  std::optional<llvm::dxbc::SamplerFilter> parseSamplerFilter();
-  std::optional<llvm::dxbc::TextureAddressMode> parseTextureAddressMode();
-  std::optional<llvm::dxbc::ComparisonFunc> parseComparisonFunc();
-  std::optional<llvm::dxbc::StaticBorderColor> parseStaticBorderColor();
-  std::optional<llvm::dxbc::RootDescriptorFlags> parseRootDescriptorFlags();
-  std::optional<llvm::dxbc::DescriptorRangeFlags> parseDescriptorRangeFlags();
+  std::optional<llvm::dxbc::ShaderVisibility>
+  parseShaderVisibility(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::SamplerFilter>
+  parseSamplerFilter(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::TextureAddressMode>
+  parseTextureAddressMode(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::ComparisonFunc>
+  parseComparisonFunc(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::StaticBorderColor>
+  parseStaticBorderColor(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::RootDescriptorFlags>
+  parseRootDescriptorFlags(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::DescriptorRangeFlags>
+  parseDescriptorRangeFlags(RootSignatureToken::Kind Context);
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
@@ -201,7 +211,7 @@ private:
 
 private:
   llvm::dxbc::RootSignatureVersion Version;
-  SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
+  SmallVector<RootSignatureElement> &Elements;
   StringLiteral *Signature;
   RootSignatureLexer Lexer;
   Preprocessor &PP;

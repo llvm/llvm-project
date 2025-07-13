@@ -12,9 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "TypeDetail.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -26,17 +24,10 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
 
-#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/SourceMgr.h"
 
 #include <numeric>
 #include <optional>
