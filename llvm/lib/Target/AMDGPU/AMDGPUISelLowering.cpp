@@ -4877,7 +4877,7 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
 
     if (VT == MVT::f32 && Subtarget->hasFminFmaxLegacy()) {
       SDValue MinMax
-      = combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
+        = combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
       // Revisit this node so we can catch min3/max3/med3 patterns.
       //DCI.AddToWorklist(MinMax.getNode());
       return MinMax;
