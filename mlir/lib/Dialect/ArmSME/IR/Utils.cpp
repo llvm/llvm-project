@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
-#include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 
 namespace mlir::arm_sme {
 
