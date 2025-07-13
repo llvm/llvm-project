@@ -47,8 +47,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   auto MVTPtr = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
 
   // Set the load count for memcmp expand optimization
-  MaxLoadsPerMemcmp = 3;
-  MaxLoadsPerMemcmpOptSize = 2;
+  MaxLoadsPerMemcmp = 8;
+  MaxLoadsPerMemcmpOptSize = 4;
 
   // Booleans always contain 0 or 1.
   setBooleanContents(ZeroOrOneBooleanContent);

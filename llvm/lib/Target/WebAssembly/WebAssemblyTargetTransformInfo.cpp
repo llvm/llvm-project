@@ -145,9 +145,15 @@ WebAssemblyTTIImpl::TTI::MemCmpExpansionOptions
 WebAssemblyTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
   // INFO: I'm not sure what determines this, setting 2 conservatively
-  Options.NumLoadsPerBlock = 2;
+  Options.AllowOverlappingLoads = true;
+
+  if (ST->hasSIMD128())
+    Options.LoadSizes.push_back(16);
   Options.LoadSizes.append({8, 4, 2, 1});
+
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+
   return Options;
 }
 
