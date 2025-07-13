@@ -548,3 +548,43 @@ func.func @test_atomic_yield(%I: memref<10xf32>, %idx : index) {
   func.return
 }
 
+// CHECK-LABEL: module @return_void_with_unused_argument {
+// CHECK-LABEL:  func.func private @noop() {
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+// CHECK-LABEL:  func.func private @fn_return_void_with_unused_argument(%arg0: memref<1x1xsi8, 1>, %arg1: memref<1x1xsi16, 1>) {
+// CHECK-NEXT:    %alloc = memref.alloc() {alignment = 8 : i64} : memref<1x73xsi8, 3>
+// CHECK-NEXT:    %alloc_0 = memref.alloc() {alignment = 8 : i64} : memref<1x1xsi16, 3>
+// CHECK-NEXT:    %alloc_1 = memref.alloc() {alignment = 8 : i64} : memref<1x1xsi8, 3>
+// CHECK-NEXT:    memref.copy %arg0, %alloc_1 : memref<1x1xsi8, 1> to memref<1x1xsi8, 3>
+// CHECK-NEXT:    memref.copy %arg1, %alloc_0 : memref<1x1xsi16, 1> to memref<1x1xsi16, 3>
+// CHECK-NEXT:    call @noop() : () -> ()
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+// CHECK-LABEL:  func.func @main(%arg0: memref<1x73xsi8, 1>, %arg1: memref<1x1xsi8, 1>, %arg2: memref<1x1xsi16, 1>) -> memref<1x73xsi8, 1> {
+// CHECK-NEXT:    %alloc = memref.alloc() : memref<1x73xsi8, 1>
+// CHECK-NEXT:    call @fn_return_void_with_unused_argument(%arg1, %arg2) : (memref<1x1xsi8, 1>, memref<1x1xsi16, 1>) -> ()
+// CHECK-NEXT:    return %alloc : memref<1x73xsi8, 1>
+// CHECK-NEXT:  }
+// CHECK-NEXT:}
+module @return_void_with_unused_argument {
+  func.func private @noop(%arg0: memref<1x1xsi8, 3>, %arg1: memref<1x1xsi16, 3>, %arg2: memref<1x73xsi8, 1>) {
+    return
+  }
+  func.func private @fn_return_void_with_unused_argument(%arg0: memref<1x73xsi8, 1> , %arg1: memref<1x1xsi8, 1> , %arg2: memref<1x1xsi16, 1> , %arg3: memref<1x73xsi8, 1>) {
+    %alloc = memref.alloc() {alignment = 8 : i64} : memref<1x73xsi8, 3>
+    %alloc_0 = memref.alloc() {alignment = 8 : i64} : memref<1x1xsi16, 3>
+    %alloc_1 = memref.alloc() {alignment = 8 : i64} : memref<1x1xsi8, 3>
+    memref.copy %arg1, %alloc_1 : memref<1x1xsi8, 1> to memref<1x1xsi8, 3>
+    memref.copy %arg2, %alloc_0 : memref<1x1xsi16, 1> to memref<1x1xsi16, 3>
+    call @noop(%alloc_1, %alloc_0, %arg0) : 
+        (memref<1x1xsi8, 3>, memref<1x1xsi16, 3>, memref<1x73xsi8, 1>) -> ()
+    return
+  }
+  func.func @main(%arg0: memref<1x73xsi8, 1> , %arg1: memref<1x1xsi8, 1> , %arg2: memref<1x1xsi16, 1>) -> (memref<1x73xsi8, 1> ) {
+    %alloc = memref.alloc() : memref<1x73xsi8, 1>
+    call @fn_return_void_with_unused_argument(%arg0, %arg1, %arg2, %alloc) : (memref<1x73xsi8, 1>, memref<1x1xsi8, 1>, memref<1x1xsi16, 1>, memref<1x73xsi8, 1>) -> ()
+    return %alloc : memref<1x73xsi8, 1>
+  }
+}
+
