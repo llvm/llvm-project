@@ -41,7 +41,7 @@ void test_SFIANE() {
   static_assert(HasIndices<std::size_t>);
   types::for_each(types::integer_types(), IntegerTypesTest{});
 
-  // Not integer-like types should not satisfy HasIndices
+  // Non-integer-like types should not satisfy HasIndices
   static_assert(!HasIndices<bool>);
   static_assert(!HasIndices<float>);
   static_assert(!HasIndices<void>);
@@ -52,10 +52,9 @@ void test_SFIANE() {
 constexpr bool test() {
   {
     auto indices_view = std::ranges::views::indices(5);
-    assert(indices_view.size() == 5);
-
-    // Check that the view is a range
     static_assert(std::ranges::range<decltype(indices_view)>);
+
+    assert(indices_view.size() == 5);
 
     assert(indices_view[0] == 0);
     assert(indices_view[1] == 1);
@@ -68,10 +67,9 @@ constexpr bool test() {
     std::vector v(5, 0);
 
     auto indices_view = std::ranges::views::indices(std::ranges::size(v));
-    assert(indices_view.size() == 5);
-
-    // Check that the view is a range
     static_assert(std::ranges::range<decltype(indices_view)>);
+
+    assert(indices_view.size() == 5);
 
     assert(indices_view[0] == 0);
     assert(indices_view[1] == 1);
@@ -83,12 +81,10 @@ constexpr bool test() {
   {
     std::vector v(5, SomeInt{});
 
-    // Check that the indices view works as expected
     auto indices_view = std::ranges::views::indices(std::ranges::size(v));
-    assert(indices_view.size() == 5);
-
-    // Check that the view is a range
     static_assert(std::ranges::range<decltype(indices_view)>);
+
+    assert(indices_view.size() == 5);
 
     assert(indices_view[0] == 0);
     assert(indices_view[1] == 1);
