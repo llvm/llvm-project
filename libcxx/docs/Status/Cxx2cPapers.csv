@@ -122,7 +122,7 @@
 "`P3293R3 <https://wg21.link/P3293R3>`__","Splicing a base class subobject","2025-06 (Sofia)","","",""
 "`P3491R3 <https://wg21.link/P3491R3>`__","``define_static_{string,object,array}``","2025-06 (Sofia)","","",""
 "`P3096R12 <https://wg21.link/P3096R12>`__","Function Parameter Reflection in Reflection for C++26","2025-06 (Sofia)","","",""
-"`P2988R12 <https://wg21.link/P2988R12>`__","``std::optional<‍T&‍>``","2025-06 (Sofia)","","",""
+"`P2988R12 <https://wg21.link/P2988R12>`__","``std::optional<T&>``","2025-06 (Sofia)","","",""
 "`P3348R4 <https://wg21.link/P3348R4>`__","C++26 should refer to C23 not C17","2025-06 (Sofia)","","",""
 "`P3037R6 <https://wg21.link/P3037R6>`__","``constexpr`` ``std::shared_ptr`` and friends","2025-06 (Sofia)","","",""
 "`P3284R4 <https://wg21.link/P3284R4>`__","``write_env`` and ``unstoppable`` Sender Adaptors","2025-06 (Sofia)","","",""
