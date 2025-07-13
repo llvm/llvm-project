@@ -14,7 +14,7 @@
 #include <ranges>
 #include <cassert>
 
-#include "../types.h"
+#include "../../types.h"
 
 constexpr bool test() {
   int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};

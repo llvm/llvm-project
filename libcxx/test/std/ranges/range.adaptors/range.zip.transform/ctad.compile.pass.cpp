@@ -21,6 +21,10 @@ struct Container {
   int* end() const;
 };
 
+struct Fn {
+  int operator()(auto&&...) const { return 5; }
+};
+
 void testCTAD() {
   static_assert(std::is_same_v<decltype(std::ranges::zip_transform_view(Fn{}, Container{})),
                                std::ranges::zip_transform_view<Fn, std::ranges::owning_view<Container>>>);

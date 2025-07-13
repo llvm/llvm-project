@@ -17,7 +17,7 @@
 #include <ranges>
 #include <tuple>
 
-#include "../types.h"
+#include "../../types.h"
 
 struct InputRange : IntBufferView {
   using IntBufferView::IntBufferView;

@@ -21,6 +21,10 @@ struct PODSentinel {
   friend constexpr bool operator==(int*, const PODSentinel& s) { return s.b; }
 };
 
+struct Fn {
+  int operator()(auto&&...) const { return 5; }
+};
+
 struct Range : std::ranges::view_base {
   int* begin() const;
   PODSentinel end();

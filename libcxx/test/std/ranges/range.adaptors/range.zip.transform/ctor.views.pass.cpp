@@ -14,6 +14,10 @@
 
 #include "types.h"
 
+struct Fn {
+  int operator()(auto&&...) const { return 5; }
+};
+
 template <class T, class... Args>
 concept IsImplicitlyConstructible = requires(T val, Args... args) { val = {std::forward<Args>(args)...}; };
 
