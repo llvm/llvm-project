@@ -4336,6 +4336,25 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.OnlyTopDown = false;
   }
 
+  LLVM_DEBUG({
+    const char *DirStr = "default";
+    switch (PostRADirection) {
+    case MISched::TopDown:
+      DirStr = "topdown";
+      break;
+    case MISched::BottomUp:
+      DirStr = "bottomup";
+      break;
+    case MISched::Bidirectional:
+      DirStr = "bidirectional";
+      break;
+    default:;
+    }
+
+    dbgs() << "Post-MI-sched direction (" << MF.getName() << "): " << DirStr
+           << '\n';
+  });
+
   BotIdx = NumRegionInstrs - 1;
   this->NumRegionInstrs = NumRegionInstrs;
 }

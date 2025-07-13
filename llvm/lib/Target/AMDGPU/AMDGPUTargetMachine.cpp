@@ -460,6 +460,11 @@ static cl::opt<std::string>
                         cl::desc("Select custom AMDGPU scheduling strategy."),
                         cl::Hidden, cl::init(""));
 
+static cl::opt<std::string>
+    AMDGPUPostRADirection("amdgpu-post-ra-direction",
+                          cl::desc("Select custom AMDGPU postRA direction."),
+                          cl::Hidden, cl::init(""));
+
 static cl::opt<bool> EnableRewritePartialRegUses(
     "amdgpu-enable-rewrite-partial-reg-uses",
     cl::desc("Enable rewrite partial reg uses pass"), cl::init(true),
@@ -1154,7 +1159,7 @@ GCNTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 ScheduleDAGInstrs *
 GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
   Attribute PostRADirectionAttr =
-      C->MF->getFunction().getFnAttribute("misched-postra-direction");
+      C->MF->getFunction().getFnAttribute("amdgpu-post-ra-direction");
 
   if (PostRADirectionAttr.isValid()) {
     StringRef PostRADirectionStr = PostRADirectionAttr.getValueAsString();
@@ -1164,10 +1169,14 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
       PostRADirection = MISched::BottomUp;
     else if (PostRADirectionStr == "bidirectional")
       PostRADirection = MISched::Bidirectional;
-    else
-      report_fatal_error(
-          Twine("invalid value for 'misched-postra-direction' attribute: ") +
-          PostRADirectionStr);
+    else {
+      PostRADirection = MISched::Unspecified;
+      DiagnosticInfoOptimizationFailure Diag(
+          C->MF->getFunction(), C->MF->getFunction().getSubprogram(),
+          Twine("invalid value for postRa direction attribute: '") +
+              PostRADirectionStr);
+      C->MF->getFunction().getContext().diagnose(Diag);
+    }
   }
 
   ScheduleDAGMI *DAG =
