@@ -956,6 +956,8 @@ Bug Fixes to C++ Support
   (#GH135281)
 - Fix a crash in the presence of invalid base classes. (#GH147186)
 - Fix a crash with NTTP when instantiating local class.
+- Fixed a crash involving list-initialization of an empty class with a
+  non-empty initializer list. (#GH147949)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
