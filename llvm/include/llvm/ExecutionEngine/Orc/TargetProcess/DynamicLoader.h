@@ -20,82 +20,12 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryScanner.h"
 #include "llvm/Support/Path.h"
 
+#include <atomic>
 #include <shared_mutex>
 #include <unordered_map>
 
 namespace llvm {
 namespace orc {
-
-// template <typename Iterator, typename Predicate, typename Projection>
-// class FilterIterator {
-// public:
-//   FilterIterator(Iterator current, Iterator end, Predicate pred,
-//                  Projection proj)
-//       : current_(current), end_(end), pred_(pred), proj_(proj) {
-//     advance_to_valid();
-//   }
-
-//   decltype(auto) operator*() { return proj_(*current_); }
-
-//   FilterIterator &operator++() {
-//     ++current_;
-//     advance_to_valid();
-//     return *this;
-//   }
-
-//   bool operator!=(const FilterIterator &other) const {
-//     return current_ != other.current_;
-//   }
-
-// private:
-//   void advance_to_valid() {
-//     while (current_ != end_ && !pred_(*current_)) {
-//       ++current_;
-//     }
-//   }
-
-//   Iterator current_, end_;
-//   Predicate pred_;
-//   Projection proj_;
-// };
-
-// template <typename Iterator, typename Predicate, typename Projection>
-// class FilterView {
-// public:
-//   FilterView(Iterator begin, Iterator end, Predicate pred, Projection proj)
-//       : begin_(begin), end_(end), pred_(pred), proj_(proj) {}
-
-//   auto begin() {
-//     return FilterIterator<Iterator, Predicate, Projection>(begin_, end_,
-//     pred_,
-//                                                            proj_);
-//   }
-
-//   auto end() {
-//     return FilterIterator<Iterator, Predicate, Projection>(end_, end_, pred_,
-//                                                            proj_);
-//   }
-
-//   template <typename Iterator, typename Predicate, typename Projection>
-//   static auto make_filter_view(Iterator begin, Iterator end, Predicate pred,
-//                                Projection proj) {
-//     return FilterView<Iterator, Predicate, Projection>(begin, end, pred,
-//     proj);
-//   }
-
-//   template <typename Iterator, typename Predicate>
-//   static auto make_filter_view(Iterator begin, Iterator end, Predicate pred)
-//   {
-//     return FilterView<Iterator, Predicate,
-//                       decltype([](auto &x) -> decltype(auto) { return x; })>(
-//         begin, end, pred, [](auto &x) -> decltype(auto) { return x; });
-//   }
-
-// private:
-//   Iterator begin_, end_;
-//   Predicate pred_;
-//   Projection proj_;
-// };
 
 /// Manages library metadata and state for symbol resolution.
 ///
@@ -123,7 +53,7 @@ public:
     std::string getFullPath() const { return filePath; }
 
     bool setFilter(BloomFilter F) {
-      std::lock_guard lock(mutex);
+      std::lock_guard<std::shared_mutex> lock(mutex);
       if (filter)
         return false;
       filter.emplace(std::move(F));
@@ -132,7 +62,7 @@ public:
 
     bool ensureFilterBuilt(const BloomFilterBuilder &FB,
                            const std::vector<std::string> &symbols) {
-      std::lock_guard lock(mutex);
+      std::lock_guard<std::shared_mutex> lock(mutex);
       if (filter)
         return false;
       filter.emplace(FB.build(symbols));
@@ -141,12 +71,12 @@ public:
 
     bool mayContain(StringRef symbol) const {
       assert(hasFilter());
-      std::shared_lock lock(mutex);
+      std::shared_lock<std::shared_mutex> lock(mutex);
       return filter->mayContain(symbol);
     }
 
     bool hasFilter() const {
-      std::shared_lock lock(mutex);
+      std::shared_lock<std::shared_mutex> lock(mutex);
       return filter.has_value();
     }
 
@@ -286,12 +216,12 @@ public:
   }
 
   FilteredView getView(State s, Kind k) const {
-    std::shared_lock lock(mutex);
+    std::shared_lock<std::shared_mutex> lock(mutex);
     return FilteredView(libraries.begin(), libraries.end(), s, k);
   }
 
   void forEachLibrary(const LibraryVisitor &visitor) const {
-    std::unique_lock lock(mutex);
+    std::unique_lock<std::shared_mutex> lock(mutex);
     for (const auto &[_, entry] : libraries) {
       if (!visitor(*entry))
         break;
@@ -299,21 +229,21 @@ public:
   }
 
   bool isLoaded(StringRef path) const {
-    std::unique_lock lock(mutex);
+    std::unique_lock<std::shared_mutex> lock(mutex);
     if (auto it = libraries.find(path.str()); it != libraries.end())
       return it->second->getState() == State::Loaded;
     return false;
   }
 
   bool isQueried(StringRef path) const {
-    std::unique_lock lock(mutex);
+    std::unique_lock<std::shared_mutex> lock(mutex);
     if (auto it = libraries.find(path.str()); it != libraries.end())
       return it->second->getState() == State::Queried;
     return false;
   }
 
   void clear() {
-    std::unique_lock lock(mutex);
+    std::unique_lock<std::shared_mutex> lock(mutex);
     libraries.clear();
   }
 };
@@ -326,6 +256,8 @@ using LibraryInfo = LibraryManager::LibraryInfo;
 /// symbol resolution results through SymbolQuery. Thread-safe and uses
 /// LibraryScanHelper for efficient path resolution and caching.
 class DynamicLoader {
+  friend class LoaderControllerImpl;
+
 public:
   class SymbolEnumerator {
   public:
@@ -371,7 +303,7 @@ public:
 
     std::vector<StringRef> getUnresolvedSymbols() const {
       std::vector<StringRef> unresolved;
-      std::shared_lock lock(mtx);
+      std::shared_lock<std::shared_mutex> lock(mtx);
       for (const auto &[name, res] : results) {
         if (res.ResolvedLibPath.empty())
           unresolved.push_back(name);
@@ -380,7 +312,7 @@ public:
     }
 
     void resolve(StringRef symbol, const std::string &libPath) {
-      std::unique_lock lock(mtx);
+      std::unique_lock<std::shared_mutex> lock(mtx);
       auto it = results.find(symbol);
       if (it != results.end() && it->second.ResolvedLibPath.empty()) {
         it->second.ResolvedLibPath = libPath;
@@ -397,7 +329,7 @@ public:
     }
 
     std::optional<StringRef> getResolvedLib(StringRef symbol) const {
-      std::shared_lock lock(mtx);
+      std::shared_lock<std::shared_mutex> lock(mtx);
       auto it = results.find(symbol);
       if (it != results.end() && !it->second.ResolvedLibPath.empty())
         return StringRef(it->second.ResolvedLibPath);
@@ -405,13 +337,13 @@ public:
     }
 
     bool isResolved(StringRef symbol) const {
-      std::shared_lock lock(mtx);
+      std::shared_lock<std::shared_mutex> lock(mtx);
       auto it = results.find(symbol.str());
       return it != results.end() && !it->second.ResolvedLibPath.empty();
     }
 
     std::vector<const Result *> getAllResults() const {
-      std::shared_lock lock(mtx);
+      std::shared_lock<std::shared_mutex> lock(mtx);
       std::vector<const Result *> out;
       out.reserve(results.size());
       for (const auto &[_, res] : results)
@@ -480,15 +412,16 @@ private:
 
   std::shared_ptr<LibraryPathCache> m_cache;
   std::shared_ptr<PathResolver> m_PathResolver;
-  LibraryScanHelper ScanH;
+  LibraryScanHelper m_scanH;
   BloomFilterBuilder FB;
-  LibraryManager LibMgr;
+  LibraryManager m_libMgr;
   LibraryScanner::shouldScanFn m_shouldScan;
   // std::shared_ptr<DylibPathResolver> m_DylibPathResolver;
   bool includeSys;
 };
 
 using SymbolEnumerator = DynamicLoader::SymbolEnumerator;
+using SymbolQuery = DynamicLoader::SymbolQuery;
 using EnumerateResult = SymbolEnumerator::Result;
 
 } // end namespace orc

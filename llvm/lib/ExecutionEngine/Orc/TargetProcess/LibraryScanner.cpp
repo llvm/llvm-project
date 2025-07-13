@@ -298,7 +298,7 @@ std::optional<std::string> readlinkCached(const std::string &path) {
 
 mode_t PathResolver::lstatCached(const std::string &path) {
   // If already cached - retun cached result
-  std::unique_lock lock(m_mutex);
+  std::unique_lock<std::shared_mutex> lock(m_mutex);
 
   auto &cache = m_cache->m_lstatCache;
 
@@ -317,7 +317,7 @@ mode_t PathResolver::lstatCached(const std::string &path) {
 
 std::optional<std::string>
 PathResolver::readlinkCached(const std::string &path) {
-  std::unique_lock lock(m_mutex);
+  std::unique_lock<std::shared_mutex> lock(m_mutex);
   auto &cache = m_cache->m_readlinkCache;
   // If already cached - retun cached result
   auto it = cache.find(path);
@@ -408,7 +408,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
   // If already cached - retun cached result
   bool isRelative = sys::path::is_relative(path);
   {
-    std::shared_lock lock(m_mutex);
+    std::shared_lock<std::shared_mutex> lock(m_mutex);
     auto it = m_cache->m_realpathCache.find(path.str());
     if (it != m_cache->m_realpathCache.end()) {
       ec = it->second.errnoCode;
@@ -470,7 +470,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
       auto symlinkOpt = readlinkCached(resolvedPath);
       if (!symlinkOpt) {
         ec = std::make_error_code(std::errc::no_such_file_or_directory);
-        std::unique_lock lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
         m_cache->m_realpathCache.emplace(path,
                                          LibraryPathCache::PathInfo{"", ec});
         // LLVM_DEBUG(
@@ -489,7 +489,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
           realpathCached(symlink.str(), ec, resolved,
                          /*baseIsResolved=*/true, symloopLevel - 1);
       if (!realSymlink) {
-        std::unique_lock lock(m_mutex);
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
         m_cache->m_realpathCache.emplace(path,
                                          LibraryPathCache::PathInfo{"", ec});
         // LLVM_DEBUG(
@@ -505,7 +505,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
 
     } else if (st_mode == 0) {
       ec = std::make_error_code(std::errc::no_such_file_or_directory);
-      std::unique_lock lock(m_mutex);
+      std::unique_lock<std::shared_mutex> lock(m_mutex);
       m_cache->m_realpathCache.emplace(path,
                                        LibraryPathCache::PathInfo{"", ec});
       // LLVM_DEBUG(
@@ -520,7 +520,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
 
   std::string canonical = resolved.str().str();
   {
-    std::unique_lock lock(m_mutex);
+    std::unique_lock<std::shared_mutex> lock(m_mutex);
     m_cache->m_realpathCache.emplace(path, LibraryPathCache::PathInfo{
                                                canonical,
                                                std::error_code() // success
@@ -532,7 +532,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
   return canonical;
 }
 
-void LibraryScanHelper::addBasePath(const std::string &path) {
+void LibraryScanHelper::addBasePath(const std::string &path, PathKind kind) {
   std::error_code ec;
   std::string canon = resolveCanonical(path, ec);
   if (ec) {
@@ -541,14 +541,14 @@ void LibraryScanHelper::addBasePath(const std::string &path) {
            << path << "\n"; //);
     return;
   }
-  std::unique_lock lock(m_mutex);
+  std::unique_lock<std::shared_mutex> lock(m_mutex);
   if (m_units.count(canon)) {
     // LLVM_DEBUG(
     dbgs() << "LibraryScanHelper::addBasePath: Already added: " << canon
            << "\n"; //);
     return;
   }
-  PathKind kind = classifyKind(canon);
+  kind = kind == PathKind::Unknown ? classifyKind(canon) : kind;
   auto unit = std::make_shared<LibraryUnit>(canon, kind);
   m_units[canon] = unit;
 
@@ -570,7 +570,7 @@ LibraryScanHelper::getNextBatch(PathKind kind, size_t batchSize) {
   std::vector<std::shared_ptr<LibraryUnit>> result;
   auto &queue = (kind == PathKind::User) ? m_unscannedUsr : m_unscannedSys;
 
-  std::unique_lock lock(m_mutex);
+  std::unique_lock<std::shared_mutex> lock(m_mutex);
 
   while (!queue.empty() && result.size() < batchSize) {
     const std::string &base = queue.front(); // no copy
@@ -594,13 +594,13 @@ bool LibraryScanHelper::isTrackedBasePath(const std::string &path) const {
   if (ec) {
     return false;
   }
-  std::shared_lock lock(m_mutex);
+  std::shared_lock<std::shared_mutex> lock(m_mutex);
   return m_units.count(canon) > 0;
 }
 
 std::vector<std::shared_ptr<LibraryUnit>>
 LibraryScanHelper::getAllUnits() const {
-  std::shared_lock lock(m_mutex);
+  std::shared_lock<std::shared_mutex> lock(m_mutex);
   std::vector<std::shared_ptr<LibraryUnit>> result;
   result.reserve(m_units.size());
   for (const auto &[_, unit] : m_units) {
