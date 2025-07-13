@@ -308,6 +308,12 @@ LogicalResult ReturnOp::verify() {
   return success();
 }
 
+void ReturnOp::getSuccessorRegions(ArrayRef<Attribute> operands,
+                                   SmallVectorImpl<RegionSuccessor> &regions) {
+  // Return control back to func::FuncOp.
+  regions.push_back(RegionSuccessor());
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
