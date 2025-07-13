@@ -3376,6 +3376,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
         auto &mutableRef{const_cast<parser::FunctionReference &>(funcRef)};
         *structureConstructor =
             mutableRef.ConvertToStructureConstructor(type.derivedTypeSpec());
+        // Don't use saved typed expressions left over from argument
+        // analysis; they might not be valid structure components
+        // (e.g., a TYPE(*) argument)
+        auto restorer{DoNotUseSavedTypedExprs()};
         return Analyze(structureConstructor->value());
       }
     }
@@ -4058,7 +4062,7 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
       // first to be sure.
       std::optional<parser::StructureConstructor> ctor;
       result = Analyze(funcRef->value(), &ctor);
-      if (result && ctor) {
+      if (ctor) {
         // A misparsed function reference is really a structure
         // constructor.  Repair the parse tree in situ.
         const_cast<PARSED &>(x).u = std::move(*ctor);

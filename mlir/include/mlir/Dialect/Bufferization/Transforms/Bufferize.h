@@ -26,6 +26,7 @@ namespace bufferization {
 
 class AnalysisState;
 struct BufferizationOptions;
+class BufferizationState;
 class OpFilter;
 
 /// Bufferization statistics for debugging. These can be printed after running
@@ -62,7 +63,8 @@ LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options,
 /// `BufferizableOpInterface`. The buffer types of tensor block arguments are
 /// computed with `BufferizableOpIntercace::getBufferType`.
 LogicalResult bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
-                                      const BufferizationOptions &options);
+                                      const BufferizationOptions &options,
+                                      BufferizationState &state);
 
 } // namespace bufferization
 } // namespace mlir

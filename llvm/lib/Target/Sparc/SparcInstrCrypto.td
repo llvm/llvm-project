@@ -13,9 +13,9 @@
 
 // Convenience template for 4-operand instructions
 class FourOpImm<string OpcStr, bits<6> op3val, bits<4> op5val,
-        RegisterClass RC>
-      : F3_4<op3val, op5val, (outs RC:$rd), (ins RC:$rs1, RC:$rs2, simm5Op:$rs3),
-        !strconcat(OpcStr, " $rs1, $rs2, $rs3, $rd")>;
+                RegisterClass RC>
+    : F3_4<op3val, op5val, (outs RC:$rd), (ins RC:$rs1, RC:$rs2, simm5Op:$rs3),
+      !strconcat(OpcStr, " $rs1, $rs2, $rs3, $rd")>;
 
 let Predicates = [HasCrypto] in {
 def AES_EROUND01 : FourOp<"aes_eround01", 0b011001, 0b0000, DFPRegs>;
@@ -27,37 +27,37 @@ def AES_EROUND23_LAST : FourOp<"aes_eround23_l", 0b011001, 0b0101, DFPRegs>;
 def AES_DROUND01_LAST : FourOp<"aes_dround01_l", 0b011001, 0b0110, DFPRegs>;
 def AES_DROUND23_LAST : FourOp<"aes_dround23_l", 0b011001, 0b0111, DFPRegs>;
 def AES_KEXPAND0  : F3_3<2, 0b110110, 0b100110000,
-                    (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
-                    "aes_kexpand0 $rs1, $rs2, $rd", []>;
+                         (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
+                         "aes_kexpand0 $rs1, $rs2, $rd", []>;
 def AES_KEXPAND1 : FourOpImm<"aes_kexpand1", 0b011001, 0b1000, DFPRegs>;
 def AES_KEXPAND2  : F3_3<2, 0b110110, 0b100110001,
-                    (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
-                    "aes_kexpand2 $rs1, $rs2, $rd", []>;
+                         (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
+                         "aes_kexpand2 $rs1, $rs2, $rd", []>;
 
 def CAMELLIA_F : FourOp<"camellia_f", 0b011001, 0b1100, DFPRegs>;
 def CAMELLIA_FL  : F3_3<2, 0b110110, 0b100111100,
-                    (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
-                    "camellia_fl $rs1, $rs2, $rd", []>;
+                        (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
+                        "camellia_fl $rs1, $rs2, $rd", []>;
 def CAMELLIA_FLI : F3_3<2, 0b110110, 0b100111101,
-                    (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
-                    "camellia_fli $rs1, $rs2, $rd", []>;
+                        (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
+                        "camellia_fli $rs1, $rs2, $rd", []>;
 
 def CRC32C : F3_3<2, 0b110110, 0b101000111,
-                    (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
-                    "crc32c $rs1, $rs2, $rd", []>;
+                  (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
+                  "crc32c $rs1, $rs2, $rd", []>;
 
 def DES_ROUND : FourOp<"des_round", 0b011001, 0b1001, DFPRegs>;
 let rs2 = 0 in {
 def DES_IP  : F3_3<2, 0b110110, 0b100110100,
-                    (outs DFPRegs:$rd), (ins DFPRegs:$rs1),
-                    "des_ip $rs1, $rd", []>;
+                   (outs DFPRegs:$rd), (ins DFPRegs:$rs1),
+                   "des_ip $rs1, $rd", []>;
 def DES_IIP  : F3_3<2, 0b110110, 0b100110101,
                     (outs DFPRegs:$rd), (ins DFPRegs:$rs1),
                     "des_iip $rs1, $rd", []>;
 }
 def DES_KEXPAND : F3_3<2, 0b110110, 0b100110110,
-                    (outs DFPRegs:$rd), (ins DFPRegs:$rs1, simm5Op:$rs2),
-                    "des_kexpand $rs1, $rs2, $rd", []>;
+                       (outs DFPRegs:$rd), (ins DFPRegs:$rs1, simm5Op:$rs2),
+                       "des_kexpand $rs1, $rs2, $rd", []>;
 
 let rs1 = 0, rs2 = 0, rd = 0 in {
 let Uses = [D0, D1, D2, D5, D6, D7, D8, D9, D10, D11],

@@ -51,6 +51,9 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   }
 
   case ELF::R_SPARC_WDISP10: {
+    // FIXME this really should be an error reporting check.
+    assert((Value & 0x3) == 0);
+
     // 7.17 Compare and Branch
     // Inst{20-19} = d10hi;
     // Inst{12-5}  = d10lo;
@@ -69,6 +72,9 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
 
   case Sparc::fixup_sparc_13:
     return Value & 0x1fff;
+
+  case ELF::R_SPARC_5:
+    return Value & 0x1f;
 
   case ELF::R_SPARC_LOX10:
     return (Value & 0x3ff) | 0x1c00;
@@ -240,10 +246,9 @@ namespace {
     ELFSparcAsmBackend(const MCSubtargetInfo &STI, Triple::OSType OSType)
         : SparcAsmBackend(STI), OSType(OSType) {}
 
-    void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+    void applyFixup(const MCFragment &, const MCFixup &Fixup,
                     const MCValue &Target, MutableArrayRef<char> Data,
-                    uint64_t Value, bool IsResolved,
-                    const MCSubtargetInfo *STI) const override {
+                    uint64_t Value, bool IsResolved) override {
       if (!IsResolved)
         return;
       Value = adjustFixupValue(Fixup.getKind(), Value);

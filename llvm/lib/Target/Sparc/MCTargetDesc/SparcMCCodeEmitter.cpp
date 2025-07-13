@@ -164,7 +164,12 @@ unsigned SparcMCCodeEmitter::getSImm5OpValue(const MCInst &MI, unsigned OpNo,
   if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr))
     return CE->getValue();
 
-  llvm_unreachable("simm5 operands can only be used with constants!");
+  if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Expr)) {
+    Fixups.push_back(MCFixup::create(0, Expr, SExpr->getFixupKind()));
+    return 0;
+  }
+  Fixups.push_back(MCFixup::create(0, Expr, ELF::R_SPARC_5));
+  return 0;
 }
 
 unsigned
@@ -247,7 +252,7 @@ unsigned SparcMCCodeEmitter::getCompareAndBranchTargetOpValue(
     const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
     const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  if (MO.isReg() || MO.isImm())
+  if (MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);
 
   Fixups.push_back(MCFixup::create(0, MO.getExpr(), ELF::R_SPARC_WDISP10));
