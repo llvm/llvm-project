@@ -3272,8 +3272,8 @@ specifications are given in this list:
 -  ``i8:8:8`` - i8 is 8-bit (byte) aligned as mandated
 -  ``i16:16:16`` - i16 is 16-bit aligned
 -  ``i32:32:32`` - i32 is 32-bit aligned
--  ``i64:32:64`` - i64 is aligned at 32-bits but should be aligned to
-   64-bits if possible.
+-  ``i64:32:64`` - i64 has ABI alignment of 32-bits but preferred
+   alignment of 64-bits
 -  ``f16:16:16`` - half is 16-bit aligned
 -  ``f32:32:32`` - float is 32-bit aligned
 -  ``f64:64:64`` - double is 64-bit aligned
