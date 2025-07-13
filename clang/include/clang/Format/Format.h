@@ -2786,11 +2786,6 @@ struct FormatStyle {
   /// \version 3.7
   std::vector<std::string> ForEachMacros;
 
-  /// A vector of function-like macros whose invocations should be skipped by
-  /// ``RemoveParentheses``.
-  /// \version 21
-  std::vector<std::string> FunctionLikeMacros;
-
   tooling::IncludeStyle IncludeStyle;
 
   /// A vector of macros that should be interpreted as conditionals
@@ -3492,6 +3487,11 @@ struct FormatStyle {
   ///
   /// \version 17
   std::vector<std::string> Macros;
+
+  /// A vector of function-like macros whose invocations should be skipped by
+  /// ``RemoveParentheses``.
+  /// \version 21
+  std::vector<std::string> MacrosSkippedByRemoveParentheses;
 
   /// The maximum number of consecutive empty lines to keep.
   /// \code
@@ -5387,7 +5387,6 @@ struct FormatStyle {
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
-           FunctionLikeMacros == R.FunctionLikeMacros &&
            IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&
            IncludeStyle.IncludeCategories == R.IncludeStyle.IncludeCategories &&
            IncludeStyle.IncludeIsMainRegex ==
@@ -5416,6 +5415,8 @@ struct FormatStyle {
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
+           MacrosSkippedByRemoveParentheses ==
+               R.MacrosSkippedByRemoveParentheses &&
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
            NamespaceMacros == R.NamespaceMacros &&

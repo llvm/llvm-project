@@ -4073,12 +4073,6 @@ the configuration (without a prefix: ``Auto``).
 
   For example: BOOST_FOREACH.
 
-.. _FunctionLikeMacros:
-
-**FunctionLikeMacros** (``List of Strings``) :versionbadge:`clang-format 21` :ref:`¶ <FunctionLikeMacros>`
-  A vector of function-like macros whose invocations should be skipped by
-  ``RemoveParentheses``.
-
 .. _IfMacros:
 
 **IfMacros** (``List of Strings``) :versionbadge:`clang-format 13` :ref:`¶ <IfMacros>`
@@ -4980,6 +4974,12 @@ the configuration (without a prefix: ``Auto``).
      A(); -> y;
      A(z); -> z;
      A(a, b); // will not be expanded.
+
+.. _MacrosSkippedByRemoveParentheses:
+
+**MacrosSkippedByRemoveParentheses** (``List of Strings``) :versionbadge:`clang-format 21` :ref:`¶ <MacrosSkippedByRemoveParentheses>`
+  A vector of function-like macros whose invocations should be skipped by
+  ``RemoveParentheses``.
 
 .. _MainIncludeChar:
 

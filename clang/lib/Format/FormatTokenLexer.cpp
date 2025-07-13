@@ -43,10 +43,6 @@ FormatTokenLexer::FormatTokenLexer(
     auto Identifier = &IdentTable.get(ForEachMacro);
     Macros.insert({Identifier, TT_ForEachMacro});
   }
-  for (const std::string &FunctionLikeMacro : Style.FunctionLikeMacros) {
-    auto Identifier = &IdentTable.get(FunctionLikeMacro);
-    Macros.insert({Identifier, TT_FunctionLikeMacro});
-  }
   for (const std::string &IfMacro : Style.IfMacros) {
     auto Identifier = &IdentTable.get(IfMacro);
     Macros.insert({Identifier, TT_IfMacro});
@@ -78,6 +74,8 @@ FormatTokenLexer::FormatTokenLexer(
     Macros.insert({Identifier, TT_StatementAttributeLikeMacro});
   }
 
+  for (const auto &Macro : Style.MacrosSkippedByRemoveParentheses)
+    MacrosSkippedByRemoveParentheses.insert(&IdentTable.get(Macro));
   for (const auto &TemplateName : Style.TemplateNames)
     TemplateNames.insert(&IdentTable.get(TemplateName));
   for (const auto &TypeName : Style.TypeNames)
@@ -1477,6 +1475,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->setType(TT_MacroBlockBegin);
       else if (MacroBlockEndRegex.match(Text))
         FormatTok->setType(TT_MacroBlockEnd);
+      else if (MacrosSkippedByRemoveParentheses.contains(Identifier))
+        FormatTok->setFinalizedType(TT_FunctionLikeMacro);
       else if (TemplateNames.contains(Identifier))
         FormatTok->setFinalizedType(TT_TemplateName);
       else if (TypeNames.contains(Identifier))
