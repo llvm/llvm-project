@@ -67,7 +67,7 @@ void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
                            hasParent(fieldDecl(
                                hasParent(recordDecl(isExternCContext())))),
                            hasAncestor(functionDecl(isExternC())))),
-              std::move(IgnoreStringArrayIfNeededMatcher))
+              IgnoreStringArrayIfNeededMatcher)
           .bind("typeloc"),
       this);
 }
