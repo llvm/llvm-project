@@ -29,7 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T frexp(T x, int &exp) {
+LIBC_INLINE constexpr T frexp(T x, int &exp) {
   FPBits<T> bits(x);
   if (bits.is_inf_or_nan()) {
 #ifdef LIBC_FREXP_INF_NAN_EXPONENT

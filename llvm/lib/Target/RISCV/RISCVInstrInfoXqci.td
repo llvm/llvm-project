@@ -1417,7 +1417,7 @@ def : PatGprNoX0GprNoX0<sshlsat, QC_SHLSAT>;
 
 /// Branches
 
-let Predicates = [HasVendorXqcibi, IsRV32], AddedComplexity = 2 in {
+let Predicates = [HasVendorXqcibi, IsRV32] in {
 def : BcciPat<SETEQ, QC_BEQI, simm5nonzero>;
 def : BcciPat<SETNE, QC_BNEI, simm5nonzero>;
 def : BcciPat<SETLT, QC_BLTI, simm5nonzero>;
@@ -1445,7 +1445,7 @@ def : SelectQCbi<SETLT, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>
 def : SelectQCbi<SETGE, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
 def : SelectQCbi<SETULT, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
 def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
-} // let Predicates = [HasVendorXqcibi, IsRV32], AddedComplexity = 2
+} // let Predicates = [HasVendorXqcibi, IsRV32]
 
 let Predicates = [HasVendorXqcibm, IsRV32] in {
 def : Pat<(sext_inreg (i32 GPR:$rs1), i1), (QC_EXT GPR:$rs1, 1, 0)>;
@@ -1484,10 +1484,14 @@ def : QCIMVCCPat <SETNE,  QC_MVNE>;
 def : QCIMVCCPat <SETLT,  QC_MVLT>;
 def : QCIMVCCPat <SETULT, QC_MVLTU>;
 
-def : QCIMVCCIPat <SETEQ,  QC_MVEQI, simm5>;
-def : QCIMVCCIPat <SETNE,  QC_MVNEI, simm5>;
 def : QCIMVCCIPat <SETLT,  QC_MVLTI, simm5>;
 def : QCIMVCCIPat <SETULT, QC_MVLTUI, uimm5>;
+}
+
+// Prioritize Xqcics over these patterns.
+let Predicates = [HasVendorXqcicm, NoVendorXqcics, IsRV32] in {
+def : QCIMVCCIPat <SETEQ,  QC_MVEQI, simm5>;
+def : QCIMVCCIPat <SETNE,  QC_MVNEI, simm5>;
 }
 
 let Predicates = [HasVendorXqcics, IsRV32] in {
@@ -1498,12 +1502,8 @@ def : Pat<(select (i32 GPRNoX0:$rd), (i32 GPRNoX0:$rs2), simm5:$simm2),
 def : Pat<(select (i32 GPRNoX0:$rd), simm5:$simm2,(i32 GPRNoX0:$rs2)),
           (QC_SELECTIEQI GPRNoX0:$rd, (i32 0), GPRNoX0:$rs2, simm5:$simm2)>;
 
-// Below AddedComplexity is added to prefer these conditional select instructions over
-// conditional move instructions
-let AddedComplexity = 1 in {
 def : QCISELECTCCIPat <SETEQ,  QC_SELECTEQI>;
 def : QCISELECTCCIPat <SETNE,  QC_SELECTNEI>;
-}
 
 def : QCISELECTICCIPat <SETEQ,  QC_SELECTIEQI>;
 def : QCISELECTICCIPat <SETNE,  QC_SELECTINEI>;

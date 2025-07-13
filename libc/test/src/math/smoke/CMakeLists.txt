@@ -135,6 +135,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tanpif_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tanpif_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.tanpif
+)
+
+add_fp_unittest(
   tanpif16_test
   SUITE
     libc-math-smoke-tests

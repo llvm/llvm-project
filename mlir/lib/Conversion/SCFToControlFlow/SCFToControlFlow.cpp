@@ -630,14 +630,16 @@ DoWhileLowering::matchAndRewrite(WhileOp whileOp,
   // Loop around the "before" region based on condition.
   rewriter.setInsertionPointToEnd(before);
   auto condOp = cast<ConditionOp>(before->getTerminator());
-  rewriter.replaceOpWithNewOp<cf::CondBranchOp>(condOp, condOp.getCondition(),
-                                                before, condOp.getArgs(),
-                                                continuation, ValueRange());
+  rewriter.create<cf::CondBranchOp>(condOp.getLoc(), condOp.getCondition(),
+                                    before, condOp.getArgs(), continuation,
+                                    ValueRange());
 
   // Replace the op with values "yielded" from the "before" region, which are
   // visible by dominance.
   rewriter.replaceOp(whileOp, condOp.getArgs());
 
+  // Erase the condition op.
+  rewriter.eraseOp(condOp);
   return success();
 }
 

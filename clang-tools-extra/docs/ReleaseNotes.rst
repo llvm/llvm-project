@@ -142,6 +142,12 @@ New checks
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
 
+- New :doc:`llvm-prefer-static-over-anonymous-namespace
+  <clang-tidy/checks/llvm/prefer-static-over-anonymous-namespace>` check.
+
+  Finds function and variable declarations inside anonymous namespace and
+  suggests replacing them with ``static`` declarations.
+
 - New :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check.
 
@@ -179,8 +185,8 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
 
-- Improved :doc: `bugprone-sizeof-expression
-  <clang-tidy/checks/bugprone/bugprone-sizeof-expression>` check by adding
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by adding
   `WarnOnSizeOfInLoopTermination` option to detect misuses of ``sizeof``
   expression in loop conditions.
 

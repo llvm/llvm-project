@@ -754,9 +754,11 @@ public:
 
     LLVM::Linkage linkage =
         global.isPublic() ? LLVM::Linkage::External : LLVM::Linkage::Private;
+    bool isExternal = global.isExternal();
+    bool isUninitialized = global.isUninitialized();
 
     Attribute initialValue = nullptr;
-    if (!global.isExternal() && !global.isUninitialized()) {
+    if (!isExternal && !isUninitialized) {
       auto elementsAttr = llvm::cast<ElementsAttr>(*global.getInitialValue());
       initialValue = elementsAttr;
 
@@ -773,35 +775,29 @@ public:
       return global.emitOpError(
           "memory space cannot be converted to an integer address space");
 
+    // Remove old operation from symbol table.
+    SymbolTable *symbolTable = nullptr;
     if (symbolTables) {
       Operation *symbolTableOp =
           global->getParentWithTrait<OpTrait::SymbolTable>();
-
-      if (symbolTableOp) {
-        SymbolTable &symbolTable = symbolTables->getSymbolTable(symbolTableOp);
-        symbolTable.remove(global);
-      }
+      symbolTable = &symbolTables->getSymbolTable(symbolTableOp);
+      symbolTable->remove(global);
     }
 
+    // Create new operation.
     auto newGlobal = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         global, arrayTy, global.getConstant(), linkage, global.getSymName(),
         initialValue, alignment, *addressSpace);
 
-    if (symbolTables) {
-      Operation *symbolTableOp =
-          global->getParentWithTrait<OpTrait::SymbolTable>();
+    // Insert new operation into symbol table.
+    if (symbolTable)
+      symbolTable->insert(newGlobal, rewriter.getInsertionPoint());
 
-      if (symbolTableOp) {
-        SymbolTable &symbolTable = symbolTables->getSymbolTable(symbolTableOp);
-        symbolTable.insert(newGlobal, rewriter.getInsertionPoint());
-      }
-    }
-
-    if (!global.isExternal() && global.isUninitialized()) {
+    if (!isExternal && isUninitialized) {
       rewriter.createBlock(&newGlobal.getInitializerRegion());
       Value undef[] = {
-          rewriter.create<LLVM::UndefOp>(global.getLoc(), arrayTy)};
-      rewriter.create<LLVM::ReturnOp>(global.getLoc(), undef);
+          rewriter.create<LLVM::UndefOp>(newGlobal.getLoc(), arrayTy)};
+      rewriter.create<LLVM::ReturnOp>(newGlobal.getLoc(), undef);
     }
     return success();
   }

@@ -8308,6 +8308,9 @@ def err_need_header_before_typeid : Error<
 def err_need_header_before_placement_new : Error<
   "no matching %0 function for non-allocating placement new expression; "
   "include <new>">;
+def err_placement_new_into_const_qualified_storage : Error<
+  "placement new expression with a const-qualified argument of type %0 "
+  "is not allowed">;
 def err_ms___leave_not_in___try : Error<
   "'__leave' statement not in __try block">;
 def err_uuidof_without_guid : Error<
@@ -13098,6 +13101,7 @@ def err_hlsl_resource_range_overlap: Error<
   "resource ranges %sub{subst_hlsl_format_ranges}0,1,2,3 and %sub{subst_hlsl_format_ranges}4,5,6,7 "
   "overlap within space = %8 and visibility = "
   "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
+def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

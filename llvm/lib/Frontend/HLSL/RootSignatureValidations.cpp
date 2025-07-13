@@ -244,17 +244,15 @@ std::optional<const RangeInfo *> ResourceRange::insert(const RangeInfo &Info) {
 }
 
 llvm::SmallVector<OverlappingRanges>
-findOverlappingRanges(llvm::SmallVector<RangeInfo> &Infos) {
-  // 1. The user has provided the corresponding range information
+findOverlappingRanges(ArrayRef<RangeInfo> Infos) {
+  // It is expected that Infos is filled with valid RangeInfos and that
+  // they are sorted with respect to the RangeInfo <operator
+  assert(llvm::is_sorted(Infos) && "Ranges must be sorted");
+
   llvm::SmallVector<OverlappingRanges> Overlaps;
   using GroupT = std::pair<dxil::ResourceClass, /*Space*/ uint32_t>;
 
-  // 2. Sort the RangeInfo's by their GroupT to form groupings
-  std::sort(Infos.begin(), Infos.end(), [](RangeInfo A, RangeInfo B) {
-    return std::tie(A.Class, A.Space) < std::tie(B.Class, B.Space);
-  });
-
-  // 3. First we will init our state to track:
+  // First we will init our state to track:
   if (Infos.size() == 0)
     return Overlaps; // No ranges to overlap
   GroupT CurGroup = {Infos[0].Class, Infos[0].Space};
@@ -278,7 +276,7 @@ findOverlappingRanges(llvm::SmallVector<RangeInfo> &Infos) {
       Range.clear();
   };
 
-  // 3: Iterate through collected RangeInfos
+  // Iterate through collected RangeInfos
   for (const RangeInfo &Info : Infos) {
     GroupT InfoGroup = {Info.Class, Info.Space};
     // Reset our ResourceRanges when we enter a new group
@@ -287,12 +285,12 @@ findOverlappingRanges(llvm::SmallVector<RangeInfo> &Infos) {
       CurGroup = InfoGroup;
     }
 
-    // 3A: Insert range info into corresponding Visibility ResourceRange
+    // Insert range info into corresponding Visibility ResourceRange
     ResourceRange &VisRange = Ranges[llvm::to_underlying(Info.Visibility)];
     if (std::optional<const RangeInfo *> Overlapping = VisRange.insert(Info))
       Overlaps.push_back(OverlappingRanges(&Info, Overlapping.value()));
 
-    // 3B: Check for overlap in all overlapping Visibility ResourceRanges
+    // Check for overlap in all overlapping Visibility ResourceRanges
     //
     // If the range that we are inserting has ShaderVisiblity::All it needs to
     // check for an overlap in all other visibility types as well.
