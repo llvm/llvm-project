@@ -2723,6 +2723,16 @@ static std::optional<Instruction *> instCombineSVEUxt(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *>
+instCombineInStreamingMode(InstCombiner &IC, IntrinsicInst &II) {
+  SMEAttrs FnSMEAttrs(*II.getFunction());
+  bool IsStreaming = FnSMEAttrs.hasStreamingInterfaceOrBody();
+  if (IsStreaming || !FnSMEAttrs.hasStreamingCompatibleInterface())
+    return IC.replaceInstUsesWith(
+        II, ConstantInt::getBool(II.getType(), IsStreaming));
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -2828,6 +2838,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEUxt(IC, II, 16);
   case Intrinsic::aarch64_sve_uxtw:
     return instCombineSVEUxt(IC, II, 32);
+  case Intrinsic::aarch64_sme_in_streaming_mode:
+    return instCombineInStreamingMode(IC, II);
   }
 
   return std::nullopt;
