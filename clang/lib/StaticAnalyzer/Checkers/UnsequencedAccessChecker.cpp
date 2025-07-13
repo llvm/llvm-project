@@ -38,6 +38,7 @@ public:
 
     bool isStore() const { return StmtAndIsStore.getInt(); }
     const Stmt* getStmt() const { return StmtAndIsStore.getPointer(); }
+    const Expr* getExpr() const { return dyn_cast<Expr>(getStmt()); }
     const StackFrameContext* getFrame() const { return StackFrame; }
 
     void Profile(llvm::FoldingSetNodeID &ID) const {
@@ -79,6 +80,8 @@ class UnsequencedAccessChecker
             const StackFrameContext* HighestFrame,
             bool* DidHitHighest = nullptr);
     static int findCommonAncestorIdx(const StmtVec& A, const StmtVec& B);
+
+    static bool hasClosePreUnaryOperatorAncestor(const StmtVec& S);
 
     void checkAgainstSet(const AccessStmtSet* Set, AccessStmt CurrentAccess,
                          const StmtVec& Ancestors, const Stmt* HighestStmt,
@@ -370,16 +373,15 @@ void UnsequencedAccessChecker::checkAgainstSet(
             continue;
         }
 
-        StmtVec CurrentAncestors =
+        StmtVec OtherAncestors =
             getAllASTAncestors(OtherAccess.getStmt(), OtherAccess.getFrame(),
                                ParentMap, HighestStmt, HighestFrame);
 
-        int CommonIdx = findCommonAncestorIdx(Ancestors, CurrentAncestors);
-        if (CommonIdx == -1)
-            continue;
+        int CommonIdx = findCommonAncestorIdx(Ancestors, OtherAncestors);
+        assert(CommonIdx != -1);
 
-        if(checkAncestors(CommonIdx, OtherAccess, Ancestors, CurrentAccess,
-                          CurrentAncestors, C.getLangOpts())) {
+        if(checkAncestors(CommonIdx, OtherAccess, OtherAncestors, CurrentAccess,
+                          Ancestors, C.getLangOpts())) {
 
             const Stmt* CommonS = Ancestors[Ancestors.size() - CommonIdx];
 
@@ -425,12 +427,35 @@ bool UnsequencedAccessChecker::checkAncestors(
         }
 
         if (BO->isAssignmentOp()) {
-            const Stmt* Accessed = BO->getLHS()->IgnoreParens();
-            if (Accessed == A.getStmt() && !B.isStore())
+            if (Opts.CPlusPlus17)
                 return false;
 
-            if (Accessed == B.getStmt() && !A.isStore())
-                return false;
+            const Stmt* Accessed = BO->getLHS()->IgnoreParenCasts();
+            if (PrintDebugLog) {
+                std::cout << "Accessed is: " << Accessed << " "
+                          << Accessed->getStmtClassName() << std::endl;
+                const Stmt* ASide = A.getExpr()->IgnoreParenCasts();
+                const Stmt* BSide = B.getExpr()->IgnoreParenCasts();
+                std::cout << "ASide is: " << ASide << " "
+                          << ASide->getStmtClassName() << std::endl;
+                std::cout << "BSide is: " << BSide << " "
+                          << BSide->getStmtClassName() << std::endl;
+            }
+            if (Accessed == A.getExpr()->IgnoreParenCasts()) {
+                if (!B.isStore())
+                    return false;
+
+                if (Opts.CPlusPlus11 && hasClosePreUnaryOperatorAncestor(BVec))
+                    return false;
+            }
+
+            if (Accessed == B.getExpr()->IgnoreParenCasts()) {
+                if (!A.isStore())
+                    return false;
+
+                if (Opts.CPlusPlus11 && hasClosePreUnaryOperatorAncestor(AVec))
+                    return false;
+            }
         }
 
         return true;
@@ -480,6 +505,24 @@ bool UnsequencedAccessChecker::checkAncestors(
 
         return false;
     }
+
+    return false;
+}
+
+bool UnsequencedAccessChecker::hasClosePreUnaryOperatorAncestor(
+        const StmtVec& Vec) {
+
+    int VecSize = Vec.size();
+    for (int I = 1; I < VecSize; I++) {
+        if (isa<ParenExpr>(Vec[I]) || isa<CastExpr>(Vec[I]))
+            continue;
+
+        if (const auto* Op = dyn_cast<UnaryOperator>(Vec[I]))
+            return Op->isPrefix();
+
+        break;
+    }
+    std::cout << std::endl;
 
     return false;
 }
