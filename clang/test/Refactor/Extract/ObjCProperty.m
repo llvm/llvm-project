@@ -36,6 +36,6 @@
   /*range prohibit_setter=->+0:55*/self.implicitSetter = 0;
 }
 // CHECK: 2 'prohibit_setter' results:
-// CHECK: the selected expression can't be extracted
+// CHECK: the selected expression cannot be extracted
 
 @end

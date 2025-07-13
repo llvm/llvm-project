@@ -16,20 +16,20 @@ define void @basic(ptr %p, i32 %k) #0 {
 ; CHECK-NEXT:    [[CMP_PEEL_NOT:%.*]] = icmp eq i32 [[K]], 1
 ; CHECK-NEXT:    br i1 [[CMP_PEEL_NOT]], label [[FOR_END]], label [[FOR_BODY_PEEL2:%.*]]
 ; CHECK:       for.body.peel2:
-; CHECK-NEXT:    [[INCDEC_PTR_PEEL:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR_PEEL:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    store i32 1, ptr [[INCDEC_PTR_PEEL]], align 4
 ; CHECK-NEXT:    [[CMP_PEEL5:%.*]] = icmp sgt i32 [[K]], 2
 ; CHECK-NEXT:    br i1 [[CMP_PEEL5]], label [[FOR_BODY_PEEL7:%.*]], label [[FOR_END]]
 ; CHECK:       for.body.peel7:
-; CHECK-NEXT:    [[INCDEC_PTR_PEEL3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[INCDEC_PTR_PEEL8:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
+; CHECK-NEXT:    [[INCDEC_PTR_PEEL3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[INCDEC_PTR_PEEL8:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
 ; CHECK-NEXT:    store i32 2, ptr [[INCDEC_PTR_PEEL3]], align 4
 ; CHECK-NEXT:    [[CMP_PEEL10_NOT:%.*]] = icmp eq i32 [[K]], 3
 ; CHECK-NEXT:    br i1 [[CMP_PEEL10_NOT]], label [[FOR_END]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 3, [[FOR_BODY_PEEL7]] ]
 ; CHECK-NEXT:    [[P_ADDR_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[INCDEC_PTR_PEEL8]], [[FOR_BODY_PEEL7]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i32, ptr [[P_ADDR_04]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[P_ADDR_04]], i64 4
 ; CHECK-NEXT:    store i32 [[I_05]], ptr [[P_ADDR_04]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
@@ -76,20 +76,20 @@ define i32 @output(ptr %p, i32 %k) #0 {
 ; CHECK-NEXT:    [[CMP_PEEL_NOT:%.*]] = icmp eq i32 [[K]], 1
 ; CHECK-NEXT:    br i1 [[CMP_PEEL_NOT]], label [[FOR_END]], label [[FOR_BODY_PEEL2:%.*]]
 ; CHECK:       for.body.peel2:
-; CHECK-NEXT:    [[INCDEC_PTR_PEEL:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR_PEEL:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    store i32 1, ptr [[INCDEC_PTR_PEEL]], align 4
 ; CHECK-NEXT:    [[CMP_PEEL5:%.*]] = icmp sgt i32 [[K]], 2
 ; CHECK-NEXT:    br i1 [[CMP_PEEL5]], label [[FOR_BODY_PEEL7:%.*]], label [[FOR_END]]
 ; CHECK:       for.body.peel7:
-; CHECK-NEXT:    [[INCDEC_PTR_PEEL3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[INCDEC_PTR_PEEL8:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
+; CHECK-NEXT:    [[INCDEC_PTR_PEEL3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[INCDEC_PTR_PEEL8:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
 ; CHECK-NEXT:    store i32 2, ptr [[INCDEC_PTR_PEEL3]], align 4
 ; CHECK-NEXT:    [[CMP_PEEL10_NOT:%.*]] = icmp eq i32 [[K]], 3
 ; CHECK-NEXT:    br i1 [[CMP_PEEL10_NOT]], label [[FOR_END]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 3, [[FOR_BODY_PEEL7]] ]
 ; CHECK-NEXT:    [[P_ADDR_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[INCDEC_PTR_PEEL8]], [[FOR_BODY_PEEL7]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i32, ptr [[P_ADDR_04]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[P_ADDR_04]], i64 4
 ; CHECK-NEXT:    store i32 [[I_05]], ptr [[P_ADDR_04]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]

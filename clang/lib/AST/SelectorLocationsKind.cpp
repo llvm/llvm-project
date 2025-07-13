@@ -26,7 +26,7 @@ static SourceLocation getStandardSelLoc(unsigned Index,
     assert(Index == 0);
     if (EndLoc.isInvalid())
       return SourceLocation();
-    IdentifierInfo *II = Sel.getIdentifierInfoForSlot(0);
+    const IdentifierInfo *II = Sel.getIdentifierInfoForSlot(0);
     unsigned Len = II ? II->getLength() : 0;
     return EndLoc.getLocWithOffset(-Len);
   }
@@ -34,7 +34,7 @@ static SourceLocation getStandardSelLoc(unsigned Index,
   assert(Index < NumSelArgs);
   if (ArgLoc.isInvalid())
     return SourceLocation();
-  IdentifierInfo *II = Sel.getIdentifierInfoForSlot(Index);
+  const IdentifierInfo *II = Sel.getIdentifierInfoForSlot(Index);
   unsigned Len = /* selector id */ (II ? II->getLength() : 0) + /* ':' */ 1;
   if (WithArgSpace)
     ++Len;

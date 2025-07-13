@@ -12,7 +12,7 @@
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo &> %t/maindwodwo.txt
 ; RUN: cat %t/maindwodwo.txt | FileCheck -check-prefix=BOLT-DWO-MAIN %s
 
-; Tests that DW_AT_low_pc changes in DW_TAG_call_site.
+;; Tests that DW_AT_low_pc changes in DW_TAG_call_site.
 
 ; PRE-BOLT-DWO-MAIN: version = 0x0005
 ; PRE-BOLT-DWO-MAIN: DW_TAG_call_site

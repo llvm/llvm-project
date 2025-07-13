@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/stdlib/getenv.h"
 #include "src/unistd/getcwd.h"
 
@@ -30,7 +30,7 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   // Bad size
   cwd = LIBC_NAMESPACE::getcwd(buffer, 0);
   ASSERT_TRUE(cwd == nullptr);
-  ASSERT_EQ(libc_errno, EINVAL);
+  ASSERT_ERRNO_EQ(EINVAL);
   libc_errno = 0;
 
   // Insufficient size

@@ -28,7 +28,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -309,9 +309,11 @@ bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (!Store.isSimple())
     return false;
   LLT ValTy = MRI.getType(Store.getValueReg());
+  if (ValTy.isScalableVector())
+    return false;
   if (!ValTy.isVector() || ValTy.getSizeInBits() != 128)
     return false;
-  if (ValTy.getSizeInBits() != Store.getMemSizeInBits())
+  if (Store.getMemSizeInBits() != ValTy.getSizeInBits())
     return false; // Don't split truncating stores.
   if (!MRI.hasOneNonDBGUse(Store.getValueReg()))
     return false;
@@ -381,17 +383,187 @@ void applyOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+// Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
+bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         Register &SrcReg) {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  if (DstTy != LLT::fixed_vector(2, 64) && DstTy != LLT::fixed_vector(2, 32) &&
+      DstTy != LLT::fixed_vector(4, 32) && DstTy != LLT::fixed_vector(4, 16) &&
+      DstTy != LLT::fixed_vector(8, 16))
+    return false;
+
+  auto AndMI = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  if (AndMI->getOpcode() != TargetOpcode::G_AND)
+    return false;
+  auto LShrMI = getDefIgnoringCopies(AndMI->getOperand(1).getReg(), MRI);
+  if (LShrMI->getOpcode() != TargetOpcode::G_LSHR)
+    return false;
+
+  // Check the constant splat values
+  auto V1 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(MI.getOperand(2).getReg()), MRI);
+  auto V2 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(AndMI->getOperand(2).getReg()), MRI);
+  auto V3 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(LShrMI->getOperand(2).getReg()), MRI);
+  if (!V1.has_value() || !V2.has_value() || !V3.has_value())
+    return false;
+  unsigned HalfSize = DstTy.getScalarSizeInBits() / 2;
+  if (!V1.value().isMask(HalfSize) || V2.value() != (1ULL | 1ULL << HalfSize) ||
+      V3 != (HalfSize - 1))
+    return false;
+
+  SrcReg = LShrMI->getOperand(1).getReg();
+
+  return true;
+}
+
+void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B, Register &SrcReg) {
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT HalfTy =
+      DstTy.changeElementCount(DstTy.getElementCount().multiplyCoefficientBy(2))
+          .changeElementSize(DstTy.getScalarSizeInBits() / 2);
+
+  Register ZeroVec = B.buildConstant(HalfTy, 0).getReg(0);
+  Register CastReg =
+      B.buildInstr(TargetOpcode::G_BITCAST, {HalfTy}, {SrcReg}).getReg(0);
+  Register CMLTReg =
+      B.buildICmp(CmpInst::Predicate::ICMP_SLT, HalfTy, CastReg, ZeroVec)
+          .getReg(0);
+
+  B.buildInstr(TargetOpcode::G_BITCAST, {DstReg}, {CMLTReg}).getReg(0);
+  MI.eraseFromParent();
+}
+
+// Match mul({z/s}ext , {z/s}ext) => {u/s}mull
+bool matchExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       GISelValueTracking *KB,
+                       std::tuple<bool, Register, Register> &MatchInfo) {
+  // Get the instructions that defined the source operand
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+  unsigned I1Opc = I1->getOpcode();
+  unsigned I2Opc = I2->getOpcode();
+  unsigned EltSize = DstTy.getScalarSizeInBits();
+
+  if (!DstTy.isVector() || I1->getNumOperands() < 2 || I2->getNumOperands() < 2)
+    return false;
+
+  auto IsAtLeastDoubleExtend = [&](Register R) {
+    LLT Ty = MRI.getType(R);
+    return EltSize >= Ty.getScalarSizeInBits() * 2;
+  };
+
+  // If the source operands were EXTENDED before, then {U/S}MULL can be used
+  bool IsZExt1 =
+      I1Opc == TargetOpcode::G_ZEXT || I1Opc == TargetOpcode::G_ANYEXT;
+  bool IsZExt2 =
+      I2Opc == TargetOpcode::G_ZEXT || I2Opc == TargetOpcode::G_ANYEXT;
+  if (IsZExt1 && IsZExt2 && IsAtLeastDoubleExtend(I1->getOperand(1).getReg()) &&
+      IsAtLeastDoubleExtend(I2->getOperand(1).getReg())) {
+    get<0>(MatchInfo) = true;
+    get<1>(MatchInfo) = I1->getOperand(1).getReg();
+    get<2>(MatchInfo) = I2->getOperand(1).getReg();
+    return true;
+  }
+
+  bool IsSExt1 =
+      I1Opc == TargetOpcode::G_SEXT || I1Opc == TargetOpcode::G_ANYEXT;
+  bool IsSExt2 =
+      I2Opc == TargetOpcode::G_SEXT || I2Opc == TargetOpcode::G_ANYEXT;
+  if (IsSExt1 && IsSExt2 && IsAtLeastDoubleExtend(I1->getOperand(1).getReg()) &&
+      IsAtLeastDoubleExtend(I2->getOperand(1).getReg())) {
+    get<0>(MatchInfo) = false;
+    get<1>(MatchInfo) = I1->getOperand(1).getReg();
+    get<2>(MatchInfo) = I2->getOperand(1).getReg();
+    return true;
+  }
+
+  // Select UMULL if we can replace the other operand with an extend.
+  APInt Mask = APInt::getHighBitsSet(EltSize, EltSize / 2);
+  if (KB && (IsZExt1 || IsZExt2) &&
+      IsAtLeastDoubleExtend(IsZExt1 ? I1->getOperand(1).getReg()
+                                    : I2->getOperand(1).getReg())) {
+    Register ZExtOp =
+        IsZExt1 ? MI.getOperand(2).getReg() : MI.getOperand(1).getReg();
+    if (KB->maskedValueIsZero(ZExtOp, Mask)) {
+      get<0>(MatchInfo) = true;
+      get<1>(MatchInfo) = IsZExt1 ? I1->getOperand(1).getReg() : ZExtOp;
+      get<2>(MatchInfo) = IsZExt1 ? ZExtOp : I2->getOperand(1).getReg();
+      return true;
+    }
+  } else if (KB && DstTy == LLT::fixed_vector(2, 64) &&
+             KB->maskedValueIsZero(MI.getOperand(1).getReg(), Mask) &&
+             KB->maskedValueIsZero(MI.getOperand(2).getReg(), Mask)) {
+    get<0>(MatchInfo) = true;
+    get<1>(MatchInfo) = MI.getOperand(1).getReg();
+    get<2>(MatchInfo) = MI.getOperand(2).getReg();
+    return true;
+  }
+
+  if (KB && (IsSExt1 || IsSExt2) &&
+      IsAtLeastDoubleExtend(IsSExt1 ? I1->getOperand(1).getReg()
+                                    : I2->getOperand(1).getReg())) {
+    Register SExtOp =
+        IsSExt1 ? MI.getOperand(2).getReg() : MI.getOperand(1).getReg();
+    if (KB->computeNumSignBits(SExtOp) > EltSize / 2) {
+      get<0>(MatchInfo) = false;
+      get<1>(MatchInfo) = IsSExt1 ? I1->getOperand(1).getReg() : SExtOp;
+      get<2>(MatchInfo) = IsSExt1 ? SExtOp : I2->getOperand(1).getReg();
+      return true;
+    }
+  } else if (KB && DstTy == LLT::fixed_vector(2, 64) &&
+             KB->computeNumSignBits(MI.getOperand(1).getReg()) > EltSize / 2 &&
+             KB->computeNumSignBits(MI.getOperand(2).getReg()) > EltSize / 2) {
+    get<0>(MatchInfo) = false;
+    get<1>(MatchInfo) = MI.getOperand(1).getReg();
+    get<2>(MatchInfo) = MI.getOperand(2).getReg();
+    return true;
+  }
+
+  return false;
+}
+
+void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       MachineIRBuilder &B, GISelChangeObserver &Observer,
+                       std::tuple<bool, Register, Register> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_MUL &&
+         "Expected a G_MUL instruction");
+
+  // Get the instructions that defined the source operand
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  bool IsZExt = get<0>(MatchInfo);
+  Register Src1Reg = get<1>(MatchInfo);
+  Register Src2Reg = get<2>(MatchInfo);
+  LLT Src1Ty = MRI.getType(Src1Reg);
+  LLT Src2Ty = MRI.getType(Src2Reg);
+  LLT HalfDstTy = DstTy.changeElementSize(DstTy.getScalarSizeInBits() / 2);
+  unsigned ExtOpc = IsZExt ? TargetOpcode::G_ZEXT : TargetOpcode::G_SEXT;
+
+  if (Src1Ty.getScalarSizeInBits() * 2 != DstTy.getScalarSizeInBits())
+    Src1Reg = B.buildExtOrTrunc(ExtOpc, {HalfDstTy}, {Src1Reg}).getReg(0);
+  if (Src2Ty.getScalarSizeInBits() * 2 != DstTy.getScalarSizeInBits())
+    Src2Reg = B.buildExtOrTrunc(ExtOpc, {HalfDstTy}, {Src2Reg}).getReg(0);
+
+  B.buildInstr(IsZExt ? AArch64::G_UMULL : AArch64::G_SMULL,
+               {MI.getOperand(0).getReg()}, {Src1Reg, Src2Reg});
+  MI.eraseFromParent();
+}
+
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
-  // TODO: Make CombinerHelper methods const.
-  mutable CombinerHelper Helper;
+  const CombinerHelper Helper;
   const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig;
   const AArch64Subtarget &STI;
 
 public:
   AArch64PostLegalizerCombinerImpl(
       MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
       const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
       const AArch64Subtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
@@ -412,12 +584,12 @@ private:
 
 AArch64PostLegalizerCombinerImpl::AArch64PostLegalizerCombinerImpl(
     MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
     const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI, MachineDominatorTree *MDT,
     const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &KB, CSEInfo),
-      Helper(Observer, B, /*IsPreLegalize*/ false, &KB, MDT, LI),
+    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+      Helper(Observer, B, /*IsPreLegalize*/ false, &VT, MDT, LI),
       RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AArch64GenPostLegalizeGICombiner.inc"
@@ -464,11 +636,11 @@ void AArch64PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelKnownBitsAnalysis>();
-  AU.addPreserved<GISelKnownBitsAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<GISelCSEAnalysisWrapperPass>();
     AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   }
@@ -477,19 +649,14 @@ void AArch64PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 AArch64PostLegalizerCombiner::AArch64PostLegalizerCombiner(bool IsOptNone)
     : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  initializeAArch64PostLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
 
 bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
-  assert(MF.getProperties().hasProperty(
-             MachineFunctionProperties::Property::Legalized) &&
-         "Expected a legalized function?");
+  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
@@ -498,9 +665,11 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   const auto *LI = ST.getLegalizerInfo();
 
-  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
-      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
+      IsOptNone ? nullptr
+                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
@@ -508,7 +677,12 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());
-  AArch64PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *KB, CSEInfo,
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // Legalizer performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
+  AArch64PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo,
                                         RuleConfig, ST, MDT, LI);
   bool Changed = Impl.combineMachineInstrs();
 
@@ -653,12 +827,17 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
     // should only be in a single block.
     resetState();
     for (auto &MI : MBB) {
+      // Skip for scalable vectors
+      if (auto *LdSt = dyn_cast<GLoadStore>(&MI);
+          LdSt && MRI.getType(LdSt->getOperand(0).getReg()).isScalableVector())
+        continue;
+
       if (auto *St = dyn_cast<GStore>(&MI)) {
         Register PtrBaseReg;
         APInt Offset;
         LLT StoredValTy = MRI.getType(St->getValueReg());
         unsigned ValSize = StoredValTy.getSizeInBits();
-        if (ValSize < 32 || ValSize != St->getMMO().getSizeInBits())
+        if (ValSize < 32 || St->getMMO().getSizeInBits() != ValSize)
           continue;
 
         Register PtrReg = St->getPointerReg();
@@ -702,7 +881,7 @@ INITIALIZE_PASS_BEGIN(AArch64PostLegalizerCombiner, DEBUG_TYPE,
                       "Combine AArch64 MachineInstrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AArch64PostLegalizerCombiner, DEBUG_TYPE,
                     "Combine AArch64 MachineInstrs after legalization", false,
                     false)

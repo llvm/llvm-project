@@ -16,6 +16,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "gtest/gtest.h"
@@ -37,7 +38,7 @@ static void run(Module &M, StringRef FuncName,
   auto *F = M.getFunction(FuncName);
   DominatorTree DT(*F);
   PostDominatorTree PDT(*F);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   AssumptionCache AC(*F);
   AliasAnalysis AA(TLI);
@@ -226,7 +227,7 @@ TEST(CodeMoverUtils, IsControlFlowEquivalentCondNestTest) {
   //       i = 2;
   // }
   std::unique_ptr<Module> M =
-      parseIR(C, R"(define void @foo(i32* %i, i1 %cond1, i1 %cond2) { 
+      parseIR(C, R"(define void @foo(i32* %i, i1 %cond1, i1 %cond2) {
          entry:
            br i1 %cond1, label %if.outer.first, label %if.first.end
          if.outer.first:
@@ -281,8 +282,8 @@ TEST(CodeMoverUtils, IsControlFlowEquivalentImbalanceTest) {
   //   if (cond1)
   //     i = 4;
   // }
-  std::unique_ptr<Module> M = parseIR(
-      C, R"(define void @foo(i32* %i, i1 %cond1, i1 %cond2, i1 %cond3) { 
+  std::unique_ptr<Module> M =
+      parseIR(C, R"(define void @foo(i32* %i, i1 %cond1, i1 %cond2, i1 %cond3) {
          entry:
            br i1 %cond1, label %if.outer.first, label %if.first.end
          if.outer.first:
@@ -673,6 +674,11 @@ TEST(CodeMoverUtils, IsSafeToMoveTest4) {
         // Can move as %add2 and %sub2 are control flow equivalent,
         // although %add2 does not strictly dominate %sub2.
         EXPECT_TRUE(isSafeToMoveBefore(*SubInst2, *AddInst2, DT, &PDT, &DI));
+
+        BasicBlock *BB0 = getBasicBlockByName(F, "if.then.first");
+        BasicBlock *BB1 = getBasicBlockByName(F, "if.then.second");
+        EXPECT_TRUE(
+            isSafeToMoveBefore(*BB0, *BB1->getTerminator(), DT, &PDT, &DI));
       });
 }
 

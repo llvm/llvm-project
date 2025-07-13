@@ -73,6 +73,42 @@ MLIR_CAPI_EXPORTED MlirType mlirIndexTypeGet(MlirContext ctx);
 // Floating-point types.
 //===----------------------------------------------------------------------===//
 
+/// Checks whether the given type is a floating-point type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat(MlirType type);
+
+/// Returns the bitwidth of a floating-point type.
+MLIR_CAPI_EXPORTED unsigned mlirFloatTypeGetWidth(MlirType type);
+
+/// Returns the typeID of an Float4E2M1FN type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat4E2M1FNTypeGetTypeID(void);
+
+/// Checks whether the given type is an f4E2M1FN type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat4E2M1FN(MlirType type);
+
+/// Creates an f4E2M1FN type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat4E2M1FNTypeGet(MlirContext ctx);
+
+/// Returns the typeID of an Float6E2M3FN type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat6E2M3FNTypeGetTypeID(void);
+
+/// Checks whether the given type is an f6E2M3FN type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat6E2M3FN(MlirType type);
+
+/// Creates an f6E2M3FN type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat6E2M3FNTypeGet(MlirContext ctx);
+
+/// Returns the typeID of an Float6E3M2FN type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat6E3M2FNTypeGetTypeID(void);
+
+/// Checks whether the given type is an f6E3M2FN type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat6E3M2FN(MlirType type);
+
+/// Creates an f6E3M2FN type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat6E3M2FNTypeGet(MlirContext ctx);
+
 /// Returns the typeID of an Float8E5M2 type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E5M2TypeGetTypeID(void);
 
@@ -82,6 +118,16 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E5M2(MlirType type);
 /// Creates an f8E5M2 type in the given context. The type is owned by the
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirFloat8E5M2TypeGet(MlirContext ctx);
+
+/// Returns the typeID of an Float8E4M3 type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E4M3TypeGetTypeID(void);
+
+/// Checks whether the given type is an f8E4M3 type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E4M3(MlirType type);
+
+/// Creates an f8E4M3 type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat8E4M3TypeGet(MlirContext ctx);
 
 /// Returns the typeID of an Float8E4M3FN type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E4M3FNTypeGetTypeID(void);
@@ -122,6 +168,26 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E4M3B11FNUZ(MlirType type);
 /// Creates an f8E4M3B11FNUZ type in the given context. The type is owned by the
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirFloat8E4M3B11FNUZTypeGet(MlirContext ctx);
+
+/// Returns the typeID of an Float8E3M4 type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E3M4TypeGetTypeID(void);
+
+/// Checks whether the given type is an f8E3M4 type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E3M4(MlirType type);
+
+/// Creates an f8E3M4 type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat8E3M4TypeGet(MlirContext ctx);
+
+/// Returns the typeID of an Float8E8M0FNU type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E8M0FNUTypeGetTypeID(void);
+
+/// Checks whether the given type is an f8E8M0FNU type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E8M0FNU(MlirType type);
+
+/// Creates an f8E8M0FNU type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat8E8M0FNUTypeGet(MlirContext ctx);
 
 /// Returns the typeID of an BFloat16 type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirBFloat16TypeGetTypeID(void);
@@ -223,8 +289,11 @@ MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetRank(MlirType type);
 /// Checks whether the given shaped type has a static shape.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeHasStaticShape(MlirType type);
 
-/// Checks wither the dim-th dimension of the given shaped type is dynamic.
+/// Checks whether the dim-th dimension of the given shaped type is dynamic.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicDim(MlirType type, intptr_t dim);
+
+/// Checks whether the dim-th dimension of the given shaped type is static.
+MLIR_CAPI_EXPORTED bool mlirShapedTypeIsStaticDim(MlirType type, intptr_t dim);
 
 /// Returns the dim-th dimension of the given ranked shaped type.
 MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDimSize(MlirType type,
@@ -234,17 +303,25 @@ MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDimSize(MlirType type,
 /// in shaped types.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicSize(int64_t size);
 
+/// Checks whether the given shaped type dimension value is statically-sized.
+MLIR_CAPI_EXPORTED bool mlirShapedTypeIsStaticSize(int64_t size);
+
 /// Returns the value indicating a dynamic size in a shaped type. Prefer
-/// mlirShapedTypeIsDynamicSize to direct comparisons with this value.
+/// mlirShapedTypeIsDynamicSize and mlirShapedTypeIsStaticSize to direct
+/// comparisons with this value.
 MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicSize(void);
 
 /// Checks whether the given value is used as a placeholder for dynamic strides
 /// and offsets in shaped types.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicStrideOrOffset(int64_t val);
 
+/// Checks whether the given dimension value of a stride or an offset is
+/// statically-sized.
+MLIR_CAPI_EXPORTED bool mlirShapedTypeIsStaticStrideOrOffset(int64_t val);
+
 /// Returns the value indicating a dynamic stride or offset in a shaped type.
-/// Prefer mlirShapedTypeGetDynamicStrideOrOffset to direct comparisons with
-/// this value.
+/// Prefer mlirShapedTypeIsDynamicStrideOrOffset and
+/// mlirShapedTypeIsStaticStrideOrOffset to direct comparisons with this value.
 MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicStrideOrOffset(void);
 
 //===----------------------------------------------------------------------===//
@@ -407,6 +484,12 @@ MLIR_CAPI_EXPORTED MlirAffineMap mlirMemRefTypeGetAffineMap(MlirType type);
 
 /// Returns the memory space of the given MemRef type.
 MLIR_CAPI_EXPORTED MlirAttribute mlirMemRefTypeGetMemorySpace(MlirType type);
+
+/// Returns the strides of the MemRef if the layout map is in strided form.
+/// Both strides and offset are out params. strides must point to pre-allocated
+/// memory of length equal to the rank of the memref.
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirMemRefTypeGetStridesAndOffset(
+    MlirType type, int64_t *strides, int64_t *offset);
 
 /// Returns the memory spcae of the given Unranked MemRef type.
 MLIR_CAPI_EXPORTED MlirAttribute

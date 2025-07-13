@@ -6,7 +6,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
+from lldbsuite.test import lldbplatformutil
 
 class TypeAndTypeListTestCase(TestBase):
     def setUp(self):
@@ -18,6 +18,61 @@ class TypeAndTypeListTestCase(TestBase):
         self.source = "main.cpp"
         self.line = line_number(self.source, "// Break at this line")
 
+    def _find_nested_type_in_Pointer_template_arg(self, pointer_type):
+        self.assertTrue(pointer_type)
+        self.DebugSBType(pointer_type)
+        pointer_info_type = pointer_type.template_args[1]
+        self.assertTrue(pointer_info_type)
+        self.DebugSBType(pointer_info_type)
+
+        pointer_masks1_type = pointer_info_type.FindDirectNestedType("Masks1")
+        self.assertTrue(pointer_masks1_type)
+        self.DebugSBType(pointer_masks1_type)
+
+        pointer_masks2_type = pointer_info_type.FindDirectNestedType("Masks2")
+        self.assertTrue(pointer_masks2_type)
+        self.DebugSBType(pointer_masks2_type)
+
+    def _find_static_field_in_Task_pointer(self, task_pointer):
+        self.assertTrue(task_pointer)
+        self.DebugSBType(task_pointer)
+
+        task_type = task_pointer.GetPointeeType()
+        self.assertTrue(task_type)
+        self.DebugSBType(task_type)
+
+        static_constexpr_field = task_type.GetStaticFieldWithName(
+            "static_constexpr_field"
+        )
+        self.assertTrue(static_constexpr_field)
+        self.assertEqual(static_constexpr_field.GetName(), "static_constexpr_field")
+        self.assertEqual(static_constexpr_field.GetType().GetName(), "const long")
+
+        value = static_constexpr_field.GetConstantValue(self.target())
+        self.DebugSBValue(value)
+        self.assertEqual(value.GetValueAsSigned(), 47)
+
+        static_constexpr_bool_field = task_type.GetStaticFieldWithName(
+            "static_constexpr_bool_field"
+        )
+        self.assertTrue(static_constexpr_bool_field)
+        self.assertEqual(
+            static_constexpr_bool_field.GetName(), "static_constexpr_bool_field"
+        )
+        self.assertEqual(static_constexpr_bool_field.GetType().GetName(), "const bool")
+
+        value = static_constexpr_bool_field.GetConstantValue(self.target())
+        self.DebugSBValue(value)
+        self.assertEqual(value.GetValueAsUnsigned(), 1)
+
+        static_mutable_field = task_type.GetStaticFieldWithName("static_mutable_field")
+        self.assertTrue(static_mutable_field)
+        self.assertEqual(static_mutable_field.GetName(), "static_mutable_field")
+        self.assertEqual(static_mutable_field.GetType().GetName(), "int")
+
+        self.assertFalse(static_mutable_field.GetConstantValue(self.target()))
+
+    @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def test(self):
         """Exercise SBType and SBTypeList API."""
         d = {"EXE": self.exe_name}
@@ -54,7 +109,7 @@ class TypeAndTypeListTestCase(TestBase):
                 % type_list.GetSize()
             )
         # a second Task make be scared up by the Objective-C runtime
-        self.assertTrue(len(type_list) >= 1)
+        self.assertGreaterEqual(len(type_list), 1)
         for type in type_list:
             self.assertTrue(type)
             self.DebugSBType(type)
@@ -77,7 +132,7 @@ class TypeAndTypeListTestCase(TestBase):
                         "my_type_is_named has a named type",
                     )
                     self.assertTrue(field.type.IsAggregateType())
-                elif field.name == None:
+                elif field.name is None:
                     self.assertTrue(
                         field.type.IsAnonymousType(), "Nameless type is not anonymous"
                     )
@@ -133,7 +188,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.DebugSBType(union_type)
 
         # Check that we don't find indirectly nested types
-        self.assertTrue(enum_type.size == 1)
+        self.assertEqual(enum_type.size, 1)
 
         invalid_type = task_type.FindDirectNestedType("E2")
         self.assertFalse(invalid_type)
@@ -149,6 +204,22 @@ class TypeAndTypeListTestCase(TestBase):
 
         invalid_type = task_type.FindDirectNestedType(None)
         self.assertFalse(invalid_type)
+
+        # Check that FindDirectNestedType works with types from module and
+        # expression ASTs.
+        self._find_nested_type_in_Pointer_template_arg(
+            frame0.FindVariable("pointer").GetType()
+        )
+        self._find_nested_type_in_Pointer_template_arg(
+            frame0.EvaluateExpression("pointer").GetType()
+        )
+
+        self._find_static_field_in_Task_pointer(
+            frame0.FindVariable("task_head").GetType()
+        )
+        self._find_static_field_in_Task_pointer(
+            frame0.EvaluateExpression("task_head").GetType()
+        )
 
         # We'll now get the child member 'id' from 'task_head'.
         id = task_head.GetChildMemberWithName("id")
@@ -177,7 +248,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertEqual(myint_arr_element_type, myint_type)
 
         # Test enum methods. Requires DW_AT_enum_class which was added in Dwarf 4.
-        if configuration.dwarf_version >= 4:
+        if int(lldbplatformutil.getDwarfVersion()) >= 4:
             enum_type = target.FindFirstType("EnumType")
             self.assertTrue(enum_type)
             self.DebugSBType(enum_type)
@@ -192,7 +263,7 @@ class TypeAndTypeListTestCase(TestBase):
             int_scoped_enum_type = scoped_enum_type.GetEnumerationIntegerType()
             self.assertTrue(int_scoped_enum_type)
             self.DebugSBType(int_scoped_enum_type)
-            self.assertEquals(int_scoped_enum_type.GetName(), "int")
+            self.assertEqual(int_scoped_enum_type.GetName(), "int")
 
             enum_uchar = target.FindFirstType("EnumUChar")
             self.assertTrue(enum_uchar)
@@ -200,4 +271,41 @@ class TypeAndTypeListTestCase(TestBase):
             int_enum_uchar = enum_uchar.GetEnumerationIntegerType()
             self.assertTrue(int_enum_uchar)
             self.DebugSBType(int_enum_uchar)
-            self.assertEquals(int_enum_uchar.GetName(), "unsigned char")
+            self.assertEqual(int_enum_uchar.GetName(), "unsigned char")
+
+    def test_nested_typedef(self):
+        """Exercise FindDirectNestedType for typedefs."""
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
+        self.assertTrue(target)
+
+        with_nested_typedef = target.FindFirstType("WithNestedTypedef")
+        self.assertTrue(with_nested_typedef)
+
+        # This is necessary to work around #91186
+        self.assertTrue(target.FindFirstGlobalVariable("typedefed_value").GetType())
+
+        the_typedef = with_nested_typedef.FindDirectNestedType("TheTypedef")
+        self.assertTrue(the_typedef)
+        self.assertEqual(the_typedef.GetTypedefedType().GetName(), "int")
+
+    def test_GetByteAlign(self):
+        """Exercise SBType::GetByteAlign"""
+        self.build()
+        spec = lldb.SBModuleSpec()
+        spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact()))
+        module = lldb.SBModule(spec)
+        self.assertTrue(module)
+
+        # Invalid types should not crash.
+        self.assertEqual(lldb.SBType().GetByteAlign(), 0)
+
+        # Try a type with natural alignment.
+        void_ptr = module.GetBasicType(lldb.eBasicTypeVoid).GetPointerType()
+        self.assertTrue(void_ptr)
+        # Not exactly guaranteed by the spec, but should be true everywhere we
+        # care about.
+        self.assertEqual(void_ptr.GetByteSize(), void_ptr.GetByteAlign())
+
+        # And an over-aligned type.
+        self.assertEqual(module.FindFirstType("OverAlignedStruct").GetByteAlign(), 128)

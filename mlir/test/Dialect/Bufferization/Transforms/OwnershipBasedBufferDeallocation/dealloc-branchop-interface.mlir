@@ -178,7 +178,7 @@ func.func @condBranchDynamicTypeNested(
 //  CHECK-NEXT: ^bb1
 //   CHECK-NOT: bufferization.dealloc
 //   CHECK-NOT: bufferization.clone
-//       CHECK: cf.br ^bb5([[ARG1]], %false{{[0-9_]*}} :
+//       CHECK: cf.br ^bb6([[ARG1]], %false{{[0-9_]*}} :
 //       CHECK: ^bb2([[IDX:%.*]]:{{.*}})
 //       CHECK: [[ALLOC1:%.*]] = memref.alloc([[IDX]])
 //  CHECK-NEXT: test.buffer_based
@@ -186,20 +186,24 @@ func.func @condBranchDynamicTypeNested(
 //  CHECK-NEXT: [[OWN:%.+]] = arith.select [[ARG0]], [[ARG0]], [[NOT_ARG0]]
 //   CHECK-NOT: bufferization.dealloc
 //   CHECK-NOT: bufferization.clone
-//       CHECK: cf.cond_br{{.*}}, ^bb3, ^bb3
+//       CHECK: cf.cond_br{{.*}}, ^bb3, ^bb4
 //  CHECK-NEXT: ^bb3:
 //   CHECK-NOT: bufferization.dealloc
 //   CHECK-NOT: bufferization.clone
-//       CHECK: cf.br ^bb4([[ALLOC1]], [[OWN]]
-//  CHECK-NEXT: ^bb4([[ALLOC2:%.*]]:{{.*}}, [[COND1:%.+]]:{{.*}})
+//       CHECK: cf.br ^bb5([[ALLOC1]], [[OWN]]
+//  CHECK-NEXT: ^bb4:
 //   CHECK-NOT: bufferization.dealloc
 //   CHECK-NOT: bufferization.clone
-//       CHECK: cf.br ^bb5([[ALLOC2]], [[COND1]]
-//  CHECK-NEXT: ^bb5([[ALLOC4:%.*]]:{{.*}}, [[COND2:%.+]]:{{.*}})
+//       CHECK: cf.br ^bb5([[ALLOC1]], [[OWN]]
+//  CHECK-NEXT: ^bb5([[ALLOC2:%.*]]:{{.*}}, [[COND1:%.+]]:{{.*}})
+//   CHECK-NOT: bufferization.dealloc
+//   CHECK-NOT: bufferization.clone
+//       CHECK: cf.br ^bb6([[ALLOC2]], [[COND1]]
+//  CHECK-NEXT: ^bb6([[ALLOC4:%.*]]:{{.*}}, [[COND2:%.+]]:{{.*}})
 //  CHECK-NEXT: [[BASE:%[a-zA-Z0-9_]+]]{{.*}} = memref.extract_strided_metadata [[ALLOC4]]
 //  CHECK-NEXT: [[OWN:%.+]]:2 = bufferization.dealloc ([[BASE]] :{{.*}}) if ([[COND2]]) retain ([[ALLOC4]], [[ARG2]] :
-//       CHECK: cf.br ^bb6([[ALLOC4]], [[OWN]]#0
-//  CHECK-NEXT: ^bb6([[ALLOC5:%.*]]:{{.*}}, [[COND3:%.+]]:{{.*}})
+//       CHECK: cf.br ^bb7([[ALLOC4]], [[OWN]]#0
+//  CHECK-NEXT: ^bb7([[ALLOC5:%.*]]:{{.*}}, [[COND3:%.+]]:{{.*}})
 //       CHECK: test.copy
 //       CHECK: [[BASE:%[a-zA-Z0-9_]+]]{{.*}} = memref.extract_strided_metadata [[ALLOC5]]
 //  CHECK-NEXT: bufferization.dealloc ([[BASE]] : {{.*}}) if ([[COND3]])
@@ -570,7 +574,7 @@ func.func @select_captured_in_next_block(%arg0: index, %arg1: memref<?xi8>, %arg
 func.func @blocks_not_preordered_by_dominance() {
   cf.br ^bb1
 ^bb2:
-  "test.memref_user"(%alloc) : (memref<2xi32>) -> ()
+  "test.read_buffer"(%alloc) : (memref<2xi32>) -> ()
   return
 ^bb1:
   %alloc = memref.alloc() : memref<2xi32>
@@ -581,7 +585,7 @@ func.func @blocks_not_preordered_by_dominance() {
 //  CHECK-NEXT:   [[TRUE:%.+]] = arith.constant true
 //  CHECK-NEXT:   cf.br [[BB1:\^.+]]
 //  CHECK-NEXT: [[BB2:\^[a-zA-Z0-9_]+]]:
-//  CHECK-NEXT:   "test.memref_user"([[ALLOC:%[a-zA-Z0-9_]+]])
+//  CHECK-NEXT:   "test.read_buffer"([[ALLOC:%[a-zA-Z0-9_]+]])
 //  CHECK-NEXT:   bufferization.dealloc ([[ALLOC]] : {{.*}}) if ([[TRUE]])
 //   CHECK-NOT: retain
 //  CHECK-NEXT:   return

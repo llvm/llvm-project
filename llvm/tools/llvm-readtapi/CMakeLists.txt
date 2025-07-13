@@ -1,8 +1,10 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   Object
   Support
   Option
   TextAPI
+  TextAPIBinaryReader
   )
 
 set(LLVM_TARGET_DEFINITIONS TapiOpts.td)

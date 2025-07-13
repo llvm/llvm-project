@@ -49,15 +49,14 @@ void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
 bool IsSystemHeapAddress (uptr addr) { return false; }
 
-// No-op. Mac does not support static linkage anyway.
-void *AsanDoesNotSupportStaticLinkage() {
-  return 0;
-}
-
 uptr FindDynamicShadowStart() {
   return MapDynamicShadow(MemToShadowSize(kHighMemEnd), ASAN_SHADOW_SCALE,
-                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd,
+                          GetMmapGranularity());
 }
+
+// Not used.
+void TryReExecWithoutASLR() {}
 
 // No-op. Mac does not support static linkage anyway.
 void AsanCheckDynamicRTPrereqs() {}

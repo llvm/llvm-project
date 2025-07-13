@@ -94,7 +94,7 @@ define <3 x float> @twoShufUses(<3 x float> %x) {
 
 define <5 x i8> @longerMask(<3 x i8> %x) {
 ; CHECK-LABEL: @longerMask(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> <i8 poison, i8 1, i8 poison>, <5 x i32> <i32 2, i32 1, i32 4, i32 poison, i32 poison>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> <i8 undef, i8 1, i8 poison>, <5 x i32> <i32 2, i32 1, i32 4, i32 3, i32 poison>
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <5 x i8> [[SHUF]], i8 42, i64 4
 ; CHECK-NEXT:    ret <5 x i8> [[INS]]
 ;

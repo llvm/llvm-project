@@ -11,7 +11,6 @@
 
 #include "bolt/Rewrite/MetadataRewriter.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace bolt {
@@ -29,12 +28,18 @@ public:
   /// Register a new \p Rewriter.
   void registerRewriter(std::unique_ptr<MetadataRewriter> Rewriter);
 
+  /// Run initializers after sections are discovered.
+  void runSectionInitializers();
+
   /// Execute initialization of rewriters while functions are disassembled, but
   /// CFG is not yet built.
   void runInitializersPreCFG();
 
   /// Execute metadata initializers after CFG was constructed for functions.
   void runInitializersPostCFG();
+
+  /// Run finalization step of rewriters before the binary is emitted.
+  void runFinalizersPreEmit();
 
   /// Run finalization step of rewriters after code has been emitted.
   void runFinalizersAfterEmit();

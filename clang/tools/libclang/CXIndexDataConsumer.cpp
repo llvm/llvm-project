@@ -15,6 +15,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace clang::index;
@@ -409,7 +410,7 @@ const char *ScratchAlloc::toCStr(StringRef Str) {
 
 const char *ScratchAlloc::copyCStr(StringRef Str) {
   char *buf = IdxCtx.StrScratch.Allocate<char>(Str.size() + 1);
-  std::uninitialized_copy(Str.begin(), Str.end(), buf);
+  llvm::uninitialized_copy(Str, buf);
   buf[Str.size()] = '\0';
   return buf;
 }
@@ -861,7 +862,7 @@ bool CXIndexDataConsumer::handleObjCProperty(const ObjCPropertyDecl *D) {
 }
 
 bool CXIndexDataConsumer::handleNamespace(const NamespaceDecl *D) {
-  DeclInfo DInfo(/*isRedeclaration=*/!D->isOriginalNamespace(),
+  DeclInfo DInfo(/*isRedeclaration=*/!D->isFirstDecl(),
                  /*isDefinition=*/true,
                  /*isContainer=*/true);
   return handleDecl(D, D->getLocation(), getCursor(D), DInfo);
@@ -952,18 +953,12 @@ void CXIndexDataConsumer::addContainerInMap(const DeclContext *DC,
   if (!DC)
     return;
 
-  ContainerMapTy::iterator I = ContainerMap.find(DC);
-  if (I == ContainerMap.end()) {
-    if (container)
-      ContainerMap[DC] = container;
-    return;
-  }
   // Allow changing the container of a previously seen DeclContext so we
   // can handle invalid user code, like a function re-definition.
   if (container)
-    I->second = container;
+    ContainerMap[DC] = container;
   else
-    ContainerMap.erase(I);
+    ContainerMap.erase(DC);
 }
 
 CXIdxClientEntity CXIndexDataConsumer::getClientEntity(const Decl *D) const {
@@ -1016,8 +1011,8 @@ bool CXIndexDataConsumer::markEntityOccurrenceInFile(const NamedDecl *D,
 
   SourceManager &SM = Ctx->getSourceManager();
   D = getEntityDecl(D);
-  
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(SM.getFileLoc(Loc));
+
+  FileIDAndOffset LocInfo = SM.getDecomposedLoc(SM.getFileLoc(Loc));
   FileID FID = LocInfo.first;
   if (FID.isInvalid())
     return true;
@@ -1098,7 +1093,7 @@ void CXIndexDataConsumer::translateLoc(SourceLocation Loc,
   SourceManager &SM = Ctx->getSourceManager();
   Loc = SM.getFileLoc(Loc);
 
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+  FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
   FileID FID = LocInfo.first;
   unsigned FileOffset = LocInfo.second;
 

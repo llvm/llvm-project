@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify=expected,expected-cxx11 -std=c++11 -Wsign-conversion %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify=expected,expected-cxx11 -std=c++11 -Wsign-conversion %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify=expected,expected-cxx17 -std=c++17 -Wsign-conversion %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify=expected,expected-cxx17 -std=c++17 -Wsign-conversion %s -fexperimental-new-constant-interpreter
 
 // C++ rules for ?: are a lot stricter than C rules, and have to take into
 // account more conversion options.
@@ -427,3 +429,10 @@ void g() {
   long e = a = b ? throw 0 : throw 1;
 }
 } // namespace PR46484
+
+namespace GH111854 {
+void f() {
+  (true ? throw 0 : 0) <= 0;  // expected-warning {{relational comparison result unused}}
+  (false ? 0 : throw 0) <= 0; // expected-warning {{relational comparison result unused}}
+}
+}

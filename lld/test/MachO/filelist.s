@@ -3,7 +3,7 @@
 ## This test verifies that the paths in -filelist get processed in command-line
 ## order.
 
-# RUN: rm -rf %t; split-file %s %t
+# RUN: rm -rf %t; split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/first.s -o %t/first.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/second.s -o %t/second.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o

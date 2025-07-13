@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify %s
 
 namespace PR47043 {
   template<typename T> concept True = true;
@@ -814,11 +814,7 @@ static_assert(invalid<int> also here ; // expected-error{{use of undeclared iden
 
 int foo() {
     bool b;
-    b = invalid<int> not just in declarations; // expected-error{{expected ';' after expression}}
-                                               // expected-error@-1{{use of undeclared identifier 'invalid'}}
-                                               // expected-error@-2{{expected ';' after expression}}
-                                               // expected-error@-3{{use of undeclared identifier 'just'}}
-                                               // expected-error@-4{{unknown type name 'in'}}
+    b = invalid<int> not just in declarations; // expected-error{{use of undeclared identifier 'invalid'}}
     return b;
 }
 } // namespace GH48182
@@ -1006,7 +1002,14 @@ template<class>
 concept Irrelevant = false;
 
 template <typename T>
-concept ErrorRequires = requires(ErrorRequires auto x) { x; }; // expected-error {{unknown type name 'ErrorRequires'}}
+concept ErrorRequires = requires(ErrorRequires auto x) { x; };
+// expected-error@-1 {{a concept definition cannot refer to itself}} \
+// expected-error@-1 {{'auto' not allowed in requires expression parameter}} \
+// expected-note@-1 {{declared here}}
+
+template<typename T> concept C1 = C1<T> && []<C1>(C1 auto) -> C1 auto {};
+//expected-error@-1 4{{a concept definition cannot refer to itself}} \
+//expected-note@-1 4{{declared here}}
 
 template<class T> void aaa(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
 requires (False<T> || False<T>) || False<T> {} // expected-note 3 {{'int' does not satisfy 'False'}}
@@ -1063,4 +1066,187 @@ void cand(T t)
 {}
 
 void test() { cand(42); }
+}
+
+namespace GH63837 {
+
+template<class> concept IsFoo = true;
+
+template<class> struct Struct {
+  template<IsFoo auto... xs>
+  void foo() {}
+
+  template<auto... xs> requires (... && IsFoo<decltype(xs)>)
+  void bar() {}
+
+  template<IsFoo auto... xs>
+  static inline int field = 0;
+};
+
+template void Struct<void>::foo<>();
+template void Struct<void>::bar<>();
+template int Struct<void>::field<1, 2>;
+
+}
+
+namespace GH64808 {
+
+template <class T> struct basic_sender {
+  T func;
+  basic_sender(T) : func(T()) {}
+};
+
+auto a = basic_sender{[](auto... __captures) {
+  return []() // #note-a-1
+    requires((__captures, ...), false) // #note-a-2
+  {};
+}()};
+
+auto b = basic_sender{[](auto... __captures) {
+  return []()
+    requires([](int, double) { return true; }(decltype(__captures)()...))
+  {};
+}(1, 2.33)};
+
+void foo() {
+  a.func();
+  // expected-error@-1{{no matching function for call}}
+  // expected-note@#note-a-1{{constraints not satisfied}}
+  // expected-note@#note-a-2{{evaluated to false}}
+  b.func();
+}
+
+} // namespace GH64808
+
+namespace GH86757_1 {
+template <typename...> concept b = false;
+template <typename> concept c = b<>;
+template <typename d> concept f = c< d >;
+template <f> struct e; // expected-note {{}}
+template <f d> struct e<d>; // expected-error {{class template partial specialization is not more specialized than the primary template}}
+}
+
+
+namespace constrained_variadic {
+template <typename T = int>
+struct S {
+    void f(); // expected-note {{candidate}}
+    void f(...) requires true;   // expected-note {{candidate}}
+
+    void g(...);  // expected-note {{candidate}}
+    void g() requires true;  // expected-note {{candidate}}
+
+    consteval void h(...);
+    consteval void h(...) requires true {};
+};
+
+int test() {
+    S{}.f(); // expected-error{{call to member function 'f' is ambiguous}}
+    S{}.g(); // expected-error{{call to member function 'g' is ambiguous}}
+    S{}.h();
+}
+
+}
+
+namespace GH109780 {
+
+template <typename T>
+concept Concept; // expected-error {{expected '='}}
+
+bool val = Concept<int>;
+
+template <typename T>
+concept C = invalid; // expected-error {{use of undeclared identifier 'invalid'}}
+
+bool val2 = C<int>;
+
+} // namespace GH109780
+
+namespace GH121980 {
+
+template <class>
+concept has_member_difference_type; // expected-error {{expected '='}}
+
+template <has_member_difference_type> struct incrementable_traits; // expected-note {{declared here}}
+
+template <has_member_difference_type Tp>
+struct incrementable_traits<Tp>; // expected-error {{not more specialized than the primary}}
+
+}
+
+namespace InjectedClassNameType {
+
+template <class, class _Err> class expected {
+public:
+  template <class...>
+  expected(...);
+
+  template <class _T2, class _E2>
+  friend bool operator==(expected x, expected<_T2, _E2>)
+    requires requires {
+      { x };
+    }
+  {
+    return true;
+  }
+};
+
+bool test_val_types() {
+  return expected<void, int>() == 1;
+}
+
+}
+
+namespace CWG2369_Regression {
+
+enum class KindEnum {
+  Unknown = 0,
+  Foo = 1,
+};
+
+template <typename T>
+concept KnownKind = T::kind() != KindEnum::Unknown;
+
+template <KnownKind T> struct KnownType;
+
+struct Type {
+  KindEnum kind() const;
+
+  static Type f(Type t);
+
+  template <KnownKind T> static KnownType<T> f(T t);
+
+  static void g() {
+    Type t;
+    f(t);
+  }
+};
+
+template <KnownKind T> struct KnownType {
+  static constexpr KindEnum kind() { return KindEnum::Foo; }
+};
+
+}
+
+namespace GH115838 {
+
+template<typename T> concept has_x = requires(T t) {{ t.x };};
+
+class Publ { public:    int x = 0; };
+class Priv { private:   int x = 0; };
+class Prot { protected: int x = 0; };
+class Same { protected: int x = 0; };
+
+template<typename T> class D;
+template<typename T> requires ( has_x<T>) class D<T>: public T { public: static constexpr bool has = 1; };
+template<typename T> requires (!has_x<T>) class D<T>: public T { public: static constexpr bool has = 0; };
+
+// "Same" is identical to "Prot" but queried before used.
+static_assert(!has_x<Same>,  "Protected should be invisible.");
+static_assert(!D<Same>::has, "Protected should be invisible.");
+
+static_assert( D<Publ>::has, "Public should be visible.");
+static_assert(!D<Priv>::has, "Private should be invisible.");
+static_assert(!D<Prot>::has, "Protected should be invisible.");
+
 }

@@ -23,23 +23,25 @@
 #include "make_string.h"
 #include "test_allocator.h"
 #include "test_macros.h"
+#include "operator_hijacker.h"
 
 #define STR(S) MAKE_STRING(CharT, S)
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
 
-template <class CharT>
-static void test() {
+template <class CharT, class Allocator>
+static void test(const Allocator& a) {
   const std::basic_string<CharT> s(STR("testing"));
-  const test_allocator<CharT> a(2);
-  const std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(s, a);
+  const std::basic_istringstream<CharT, std::char_traits<CharT>, Allocator> ss(s, a);
   assert(ss.rdbuf()->get_allocator() == a);
   assert(ss.view() == SV("testing"));
 }
 
 int main(int, char**) {
-  test<char>();
+  test<char>(test_allocator<char>(2));
+  test<char>(operator_hijacker_allocator<char>());
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t>();
+  test<wchar_t>(test_allocator<wchar_t>(2));
+  test<wchar_t>(operator_hijacker_allocator<wchar_t>());
 #endif
   return 0;
 }

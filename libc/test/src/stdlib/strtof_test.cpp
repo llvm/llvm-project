@@ -7,20 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
 #include "src/stdlib/strtof.h"
 
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <stddef.h>
 
 using LIBC_NAMESPACE::fputil::testing::ForceRoundingModeTest;
 using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
-class LlvmLibcStrToFTest : public LIBC_NAMESPACE::testing::Test,
+class LlvmLibcStrToFTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest,
                            ForceRoundingModeTest<RoundingMode::Nearest> {
 public:
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
@@ -44,12 +43,11 @@ public:
     LIBC_NAMESPACE::fputil::FPBits<float> expected_fp =
         LIBC_NAMESPACE::fputil::FPBits<float>(expectedRawData);
 
-    libc_errno = 0;
     float result = LIBC_NAMESPACE::strtof(inputString, &str_end);
 
     EXPECT_EQ(str_end - inputString, expectedStrLen);
-    EXPECT_FP_EQ(result, static_cast<float>(expected_fp));
-    EXPECT_EQ(libc_errno, expectedErrno);
+    EXPECT_FP_EQ(result, expected_fp.get_val());
+    ASSERT_ERRNO_EQ(expectedErrno);
   }
 };
 
@@ -201,7 +199,7 @@ TEST_F(LlvmLibcStrToFTest, NaNWithParenthesesValidSequenceInvalidNumberTests) {
   run_test("NaN(1a)", 7, 0x7fc00000);
   run_test("NaN(asdf)", 9, 0x7fc00000);
   run_test("NaN(1A1)", 8, 0x7fc00000);
-  run_test("NaN(why_does_this_work)", 23, 0x7fc00000);
+  run_test("NaN(underscores_are_ok)", 23, 0x7fc00000);
   run_test(
       "NaN(1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM_)",
       68, 0x7fc00000);

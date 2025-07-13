@@ -1,6 +1,6 @@
 ; Test to make sure that the 'private' is used correctly.
 ;
-; RUN: llc < %s  -march=sparc | FileCheck %s
+; RUN: llc < %s -mtriple=sparc | FileCheck %s
 
 define private void @foo() {
         ret void
@@ -11,7 +11,7 @@ define private void @foo() {
 
 define i32 @bar() {
         call void @foo()
-	%1 = load i32, i32* @baz, align 4
+	%1 = load i32, ptr @baz, align 4
         ret i32 %1
 }
 

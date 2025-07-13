@@ -115,7 +115,7 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
         out, err = p.communicate(input=input)
         exitCode = p.wait()
     finally:
-        if timerObject != None:
+        if timerObject is not None:
             timerObject.cancel()
 
     # Ensure the resulting output is always of string type.
@@ -162,15 +162,14 @@ class TestLuaAPI(TestBase):
             self.skipTest("Lua API tests could not find Lua executable.")
             return
         lua_executable = os.environ["LUA_EXECUTABLE"]
+        lldb_lua_cpath = os.environ["LLDB_LUA_CPATH"]
 
         self.build()
         test_exe = self.getBuildArtifact("a.out")
         test_output = self.getBuildArtifact("output")
         test_input = self.getBuildArtifact("input")
 
-        lua_lldb_cpath = "%s/lua/5.3/?.so" % configuration.lldb_libs_dir
-
-        lua_prelude = "package.cpath = '%s;' .. package.cpath" % lua_lldb_cpath
+        lua_prelude = "package.cpath = '%s/?.so;' .. package.cpath" % lldb_lua_cpath
 
         lua_env = {
             "TEST_EXE": os.path.join(self.getBuildDir(), test_exe),
@@ -186,4 +185,4 @@ class TestLuaAPI(TestBase):
             print(out)
             print(err, file=sys.stderr)
 
-            self.assertTrue(exitCode == 0, "Lua test '%s' failure." % lua_test)
+            self.assertEqual(exitCode, 0, "Lua test '%s' failure." % lua_test)

@@ -84,7 +84,6 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_array_incomplete_or_sizeless_type:
   case diag::err_array_size_incomplete_type:
   case diag::err_asm_incomplete_type:
-  case diag::err_assoc_type_incomplete:
   case diag::err_bad_cast_incomplete:
   case diag::err_call_function_incomplete_return:
   case diag::err_call_incomplete_argument:
@@ -416,7 +415,7 @@ std::optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
         //     namespace clang { clangd::X; }
         // In this case, we use the "typo" specifier as extra scope instead
         // of using the scope assumed by sema.
-        if (!Spelling || llvm::StringRef(SpecifiedNS).endswith(*Spelling)) {
+        if (!Spelling || llvm::StringRef(SpecifiedNS).ends_with(*Spelling)) {
           Result.ResolvedScope = std::move(SpecifiedNS);
         } else {
           Result.UnresolvedScope = std::move(*Spelling);
@@ -485,7 +484,7 @@ collectAccessibleScopes(Sema &Sem, const DeclarationNameInfo &Typo, Scope *S,
                          /*IncludeGlobalScope=*/false,
                          /*LoadExternal=*/false);
   llvm::sort(Scopes);
-  Scopes.erase(std::unique(Scopes.begin(), Scopes.end()), Scopes.end());
+  Scopes.erase(llvm::unique(Scopes), Scopes.end());
   return Scopes;
 }
 

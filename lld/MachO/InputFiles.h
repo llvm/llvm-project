@@ -140,7 +140,7 @@ protected:
 
   InputFile(Kind, const llvm::MachO::InterfaceFile &);
 
-  // If true, this input's arch is compatiable with target.
+  // If true, this input's arch is compatible with target.
   bool compatArch = true;
 
 private:
@@ -241,6 +241,7 @@ public:
   DylibFile *exportingFile = nullptr;
   DylibFile *umbrella;
   SmallVector<StringRef, 2> rpaths;
+  SmallVector<StringRef> allowableClients;
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
@@ -296,10 +297,13 @@ public:
   static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
 
 private:
+  Expected<InputFile *> childToObjectFile(const llvm::object::Archive::Child &c,
+                                          bool lazy);
   std::unique_ptr<llvm::object::Archive> file;
   // Keep track of children fetched from the archive by tracking
   // which address offsets have been fetched already.
   llvm::DenseSet<uint64_t> seen;
+  llvm::DenseSet<uint64_t> seenLazy;
   // Load all symbols with hidden visibility (-load_hidden).
   bool forceHidden;
 };

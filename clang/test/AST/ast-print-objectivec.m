@@ -21,6 +21,10 @@
 - (void)methodWithArg:(int)x andAnotherOne:(int)y { }
 @end
 
+__attribute__((availability(macosx,introduced=10.1.0,deprecated=10.2)))
+@interface InterfaceWithAttribute
+@end
+
 // CHECK: @protocol P
 // CHECK: - (void)MethP __attribute__((availability(macos, introduced=10.1.0, deprecated=10.2)));
 // CHECK: @end
@@ -43,6 +47,10 @@
 // CHECK: - (void)methodWithArg:(int)x andAnotherOne:(int)y {
 // CHECK: }
 
+// CHECK: @end
+
+// CHECK: __attribute__((availability(macos, introduced=10.1.0, deprecated=10.2)))
+// CHECK: @interface InterfaceWithAttribute
 // CHECK: @end
 
 @class C1;

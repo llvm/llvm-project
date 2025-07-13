@@ -21,6 +21,11 @@
 
 using namespace __lsan;
 
+namespace __sanitizer {
+// LSan doesn't need to do anything else special in the startup hook.
+void EarlySanitizerInit() {}
+}  // namespace __sanitizer
+
 namespace __lsan {
 
 void LsanOnDeadlySignal(int signo, void *siginfo, void *context) {}
@@ -80,6 +85,7 @@ void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {
 // On Fuchsia, leak detection is done by a special hook after atexit hooks.
 // So this doesn't install any atexit hook like on other platforms.
 void InstallAtExitCheckLeaks() {}
+void InstallAtForkHandler() {}
 
 // ASan defines this to check its `halt_on_error` flag.
 bool UseExitcodeOnLeak() { return true; }

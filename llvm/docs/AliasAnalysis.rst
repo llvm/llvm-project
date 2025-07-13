@@ -207,7 +207,7 @@ Writing a new ``AliasAnalysis`` Implementation
 
 Writing a new alias analysis implementation for LLVM is quite straight-forward.
 There are already several implementations that you can use for examples, and the
-following information should help fill in any details.  For a examples, take a
+following information should help fill in any details.  For examples, take a
 look at the `various alias analysis implementations`_ included with LLVM.
 
 Different Pass styles
@@ -254,20 +254,6 @@ analysis run method (``run`` for a ``Pass``, ``runOnFunction`` for a
     InitializeAliasAnalysis(this);
     // Perform analysis here...
     return false;
-  }
-
-Required methods to override
-----------------------------
-
-You must override the ``getAdjustedAnalysisPointer`` method on all subclasses
-of ``AliasAnalysis``. An example implementation of this method would look like:
-
-.. code-block:: c++
-
-  void *getAdjustedAnalysisPointer(const void* ID) override {
-    if (ID == &AliasAnalysis::ID)
-      return (AliasAnalysis*)this;
-    return this;
   }
 
 Interfaces which may be specified

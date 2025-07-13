@@ -1,4 +1,6 @@
 // REQUIRES: arm
+// This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+// XFAIL: main-run-twice
 // RUN: rm -rf %t && split-file %s %t
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv6m-none-eabi %t/a.s -o %t/a.o
 // RUN: ld.lld --no-rosegment --script %t/a.t %t/a.o -o %t/a
@@ -54,4 +56,4 @@ far:
 // CHECK-NEXT: <far>:
 // CHECK-NEXT: 12345678:        bx      lr
 
-// CHECK-PI:  error: relocation R_ARM_THM_CALL to far not supported for Armv6-M targets for position independant and execute only code
+// CHECK-PI:  error: relocation R_ARM_THM_CALL to far not supported for Armv6-M targets for position independent and execute only code

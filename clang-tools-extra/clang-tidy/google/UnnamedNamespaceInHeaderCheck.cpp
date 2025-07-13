@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnnamedNamespaceInHeaderCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
@@ -17,31 +16,13 @@ namespace clang::tidy::google::build {
 
 UnnamedNamespaceInHeaderCheck::UnnamedNamespaceInHeaderCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {
-  std::optional<StringRef> HeaderFileExtensionsOption =
-      Options.get("HeaderFileExtensions");
-  RawStringHeaderFileExtensions =
-      HeaderFileExtensionsOption.value_or(utils::defaultHeaderFileExtensions());
-  if (HeaderFileExtensionsOption) {
-    if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                                    HeaderFileExtensions,
-                                    utils::defaultFileExtensionDelimiters())) {
-      this->configurationDiag("Invalid header file extension: '%0'")
-          << RawStringHeaderFileExtensions;
-    }
-  } else
-    HeaderFileExtensions = Context->getHeaderFileExtensions();
-}
-
-void UnnamedNamespaceInHeaderCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
-}
+    : ClangTidyCheck(Name, Context),
+      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
 
 void UnnamedNamespaceInHeaderCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-    Finder->addMatcher(namespaceDecl(isAnonymous()).bind("anonymousNamespace"),
-                       this);
+  Finder->addMatcher(namespaceDecl(isAnonymous()).bind("anonymousNamespace"),
+                     this);
 }
 
 void UnnamedNamespaceInHeaderCheck::check(

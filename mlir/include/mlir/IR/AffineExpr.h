@@ -14,12 +14,12 @@
 #ifndef MLIR_IR_AFFINEEXPR_H
 #define MLIR_IR_AFFINEEXPR_H
 
+#include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
-#include <functional>
 #include <type_traits>
 
 namespace mlir {
@@ -81,19 +81,6 @@ public:
 
   bool operator!() const { return expr == nullptr; }
 
-  template <typename U>
-  [[deprecated("Use llvm::isa<U>() instead")]] constexpr bool isa() const;
-
-  template <typename U>
-  [[deprecated("Use llvm::dyn_cast<U>() instead")]] U dyn_cast() const;
-
-  template <typename U>
-  [[deprecated("Use llvm::dyn_cast_or_null<U>() instead")]] U
-  dyn_cast_or_null() const;
-
-  template <typename U>
-  [[deprecated("Use llvm::cast<U>() instead")]] U cast() const;
-
   MLIRContext *getContext() const;
 
   /// Return the classification for this type.
@@ -123,8 +110,13 @@ public:
   /// Return true if the affine expression involves AffineSymbolExpr `position`.
   bool isFunctionOfSymbol(unsigned position) const;
 
-  /// Walk all of the AffineExpr's in this expression in postorder.
-  void walk(std::function<void(AffineExpr)> callback) const;
+  /// Walk all of the AffineExpr's in this expression in postorder. This allows
+  /// a lambda walk function that can either return `void` or a WalkResult. With
+  /// a WalkResult, interrupting is supported.
+  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  RetT walk(FnT &&callback) const {
+    return walk<RetT>(*this, callback);
+  }
 
   /// This method substitutes any uses of dimensions and symbols (e.g.
   /// dim#0 with dimReplacements[0]) and returns the modified expression tree.
@@ -202,6 +194,15 @@ public:
 
 protected:
   ImplType *expr{nullptr};
+
+private:
+  /// A trampoline for the templated non-static AffineExpr::walk method to
+  /// dispatch lambda `callback`'s of either a void result type or a
+  /// WalkResult type. Walk all of the AffineExprs in `e` in postorder. Users
+  /// should use the regular (non-static) `walk` method.
+  template <typename WalkRetTy>
+  static WalkRetTy walk(AffineExpr e,
+                        function_ref<WalkRetTy(AffineExpr)> callback);
 };
 
 /// Affine binary operation expression. An affine binary operation could be an
@@ -273,30 +274,6 @@ AffineExpr getAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
                                      MLIRContext *context);
 
 raw_ostream &operator<<(raw_ostream &os, AffineExpr expr);
-
-template <typename U>
-constexpr bool AffineExpr::isa() const {
-  if constexpr (std::is_same_v<U, AffineBinaryOpExpr>)
-    return getKind() <= AffineExprKind::LAST_AFFINE_BINARY_OP;
-  if constexpr (std::is_same_v<U, AffineDimExpr>)
-    return getKind() == AffineExprKind::DimId;
-  if constexpr (std::is_same_v<U, AffineSymbolExpr>)
-    return getKind() == AffineExprKind::SymbolId;
-  if constexpr (std::is_same_v<U, AffineConstantExpr>)
-    return getKind() == AffineExprKind::Constant;
-}
-template <typename U>
-U AffineExpr::dyn_cast() const {
-  return llvm::dyn_cast<U>(*this);
-}
-template <typename U>
-U AffineExpr::dyn_cast_or_null() const {
-  return llvm::dyn_cast_or_null<U>(*this);
-}
-template <typename U>
-U AffineExpr::cast() const {
-  return llvm::cast<U>(*this);
-}
 
 /// Simplify an affine expression by flattening and some amount of simple
 /// analysis. This has complexity linear in the number of nodes in 'expr'.

@@ -26,11 +26,13 @@ Constraint::Constraint(const llvm::Record *record)
     kind = CK_Type;
   } else if (def->isSubClassOf("AttrConstraint")) {
     kind = CK_Attr;
+  } else if (def->isSubClassOf("PropConstraint")) {
+    kind = CK_Prop;
   } else if (def->isSubClassOf("RegionConstraint")) {
     kind = CK_Region;
   } else if (def->isSubClassOf("SuccessorConstraint")) {
     kind = CK_Successor;
-  } else if(!def->isSubClassOf("Constraint")) {
+  } else if (!def->isSubClassOf("Constraint")) {
     llvm::errs() << "Expected a constraint but got: \n" << *def << "\n";
     llvm::report_fatal_error("Abort");
   }
@@ -107,6 +109,14 @@ std::optional<StringRef> Constraint::getBaseDefName() const {
   default:
     return std::nullopt;
   }
+}
+
+std::optional<StringRef> Constraint::getCppFunctionName() const {
+  std::optional<StringRef> name =
+      def->getValueAsOptionalString("cppFunctionName");
+  if (!name || *name == "")
+    return std::nullopt;
+  return name;
 }
 
 AppliedConstraint::AppliedConstraint(Constraint &&constraint,

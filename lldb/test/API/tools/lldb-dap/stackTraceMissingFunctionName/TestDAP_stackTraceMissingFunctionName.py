@@ -2,18 +2,12 @@
 Test lldb-dap stack trace response
 """
 
-
-import dap_server
 from lldbsuite.test.decorators import *
-import os
-
 import lldbdap_testcase
-from lldbsuite.test import lldbtest, lldbutil
 
 
 class TestDAP_stackTraceMissingFunctionName(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_missingFunctionName(self):
         """
         Test that the stack frame without a function name is given its pc in the response.
@@ -23,4 +17,4 @@ class TestDAP_stackTraceMissingFunctionName(lldbdap_testcase.DAPTestCaseBase):
 
         self.continue_to_next_stop()
         frame_without_function_name = self.get_stackFrames()[0]
-        self.assertEquals(frame_without_function_name["name"], "0x0000000000000000")
+        self.assertEqual(frame_without_function_name["name"], "0x0000000000000000")

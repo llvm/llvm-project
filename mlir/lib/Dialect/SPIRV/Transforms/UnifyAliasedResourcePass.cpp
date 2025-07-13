@@ -24,8 +24,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
-#include <algorithm>
 #include <iterator>
 
 namespace mlir {
@@ -34,8 +32,6 @@ namespace spirv {
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
 } // namespace spirv
 } // namespace mlir
-
-#define DEBUG_TYPE "spirv-unify-aliased-resource"
 
 using namespace mlir;
 
@@ -119,7 +115,7 @@ deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
     // Choose the *vector* with the smallest bitwidth as the canonical resource,
     // so that we can still keep vectorized load/store and avoid partial updates
     // to large vectors.
-    auto *minVal = std::min_element(vectorNumBits.begin(), vectorNumBits.end());
+    auto *minVal = llvm::min_element(vectorNumBits);
     // Make sure that the canonical resource's bitwidth is divisible by others.
     // With out this, we cannot properly adjust the index later.
     if (llvm::any_of(vectorNumBits,
@@ -139,7 +135,7 @@ deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
 
   // All element types are scalars. Then choose the smallest bitwidth as the
   // cannonical resource to avoid subcomponent load/store.
-  auto *minVal = std::min_element(scalarNumBits.begin(), scalarNumBits.end());
+  auto *minVal = llvm::min_element(scalarNumBits);
   if (llvm::any_of(scalarNumBits,
                    [minVal](int64_t bit) { return bit % *minVal != 0; }))
     return std::nullopt;

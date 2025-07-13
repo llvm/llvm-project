@@ -1,8 +1,7 @@
-// REQUIRES: x86-registered-target
 // UNSUPPORTED: system-windows
 
 // RUN: %clang -### -x hip -target x86_64-linux-gnu --offload=spirv64 \
-// RUN:   -fgpu-rdc --hip-path=%S/Inputs/hipspv -nohipwrapperinc \
+// RUN:   --no-offload-new-driver -fgpu-rdc --hip-path=%S/Inputs/hipspv -nohipwrapperinc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s
@@ -54,8 +53,7 @@
 // CHECK-SAME: "-targets={{.*}},hip-spirv64----generic"
 // CHECK-SAME: "-input=/dev/null" "-input=[[AB_SPIRV]]"
 // CHECK-SAME: "-output=[[AB_FATBIN:.*hipfb]]"
-// CHECK: {{".*llvm-mc.*"}} "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"
-// CHECK-SAME: "--filetype=obj"
+// CHECK: {{".*clang.*"}} "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"
 
 // Output the executable
 // CHECK: {{".*ld.*"}} {{.*}}"-o" "a.out" {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]]

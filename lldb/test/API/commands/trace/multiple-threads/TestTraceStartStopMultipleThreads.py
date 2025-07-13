@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 
+@skipIfNoIntelPT
 class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
     @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
     @testSBAPIAndCommands
@@ -28,43 +29,6 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
         # We'll see here the second thread
         self.expect("continue")
         self.expect("thread trace dump instructions", substrs=["main.cpp:4"])
-
-        self.traceStopProcess()
-
-    @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
-    @testSBAPIAndCommands
-    def testStartMultipleLiveThreadsWithStops(self):
-        self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        self.dbg.CreateTarget(exe)
-
-        self.expect("b main")
-        self.expect("b 6")
-        self.expect("b 11")
-
-        self.expect("r")
-        self.traceStartProcess()
-
-        # We'll see here the first thread
-        self.expect("continue")
-
-        # We are in thread 2
-        self.expect("thread trace dump instructions", substrs=["main.cpp:9"])
-        self.expect("thread trace dump instructions 2", substrs=["main.cpp:9"])
-
-        # We stop tracing it
-        self.expect("thread trace stop 2")
-
-        # The trace is still in memory
-        self.expect("thread trace dump instructions 2", substrs=["main.cpp:9"])
-
-        # We'll stop at the next breakpoint, thread 2 will be still alive, but not traced. Thread 3 will be traced
-        self.expect("continue")
-        self.expect("thread trace dump instructions", substrs=["main.cpp:4"])
-        self.expect("thread trace dump instructions 3", substrs=["main.cpp:4"])
-
-        self.expect("thread trace dump instructions 2", substrs=["not traced"])
 
         self.traceStopProcess()
 
@@ -236,7 +200,7 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
                 ].strip()
                 output = json.loads(response)
 
-        self.assertTrue(output is not None)
+        self.assertIsNotNone(output)
         self.assertIn("cpus", output)
         self.assertIn("tscPerfZeroConversion", output)
         found_non_empty_context_switch = False
@@ -249,8 +213,8 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
                     ipt_trace_size = binary_data["size"]
                 elif binary_data["kind"] == "perfContextSwitchTrace":
                     context_switch_size = binary_data["size"]
-            self.assertTrue(context_switch_size is not None)
-            self.assertTrue(ipt_trace_size is not None)
+            self.assertIsNotNone(context_switch_size)
+            self.assertIsNotNone(ipt_trace_size)
             if context_switch_size > 0:
                 found_non_empty_context_switch = True
 

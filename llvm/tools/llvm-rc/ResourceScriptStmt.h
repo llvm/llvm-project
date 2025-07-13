@@ -49,6 +49,16 @@ public:
     return *this;
   }
 
+  RCInt &operator*=(const RCInt &Rhs) {
+    std::tie(Val, Long) = std::make_pair(Val * Rhs.Val, Long | Rhs.Long);
+    return *this;
+  }
+
+  RCInt &operator/=(const RCInt &Rhs) {
+    std::tie(Val, Long) = std::make_pair(Val / Rhs.Val, Long | Rhs.Long);
+    return *this;
+  }
+
   RCInt &operator|=(const RCInt &Rhs) {
     std::tie(Val, Long) = std::make_pair(Val | Rhs.Val, Long | Rhs.Long);
     return *this;
@@ -94,6 +104,20 @@ public:
   IntWithNotMask &operator-=(const IntWithNotMask &Rhs) {
     Value &= ~Rhs.NotMask;
     Value -= Rhs.Value;
+    NotMask |= Rhs.NotMask;
+    return *this;
+  }
+
+  IntWithNotMask &operator*=(const IntWithNotMask &Rhs) {
+    Value &= ~Rhs.NotMask;
+    Value *= Rhs.Value;
+    NotMask |= Rhs.NotMask;
+    return *this;
+  }
+
+  IntWithNotMask &operator/=(const IntWithNotMask &Rhs) {
+    Value &= ~Rhs.NotMask;
+    Value /= Rhs.Value;
     NotMask |= Rhs.NotMask;
     return *this;
   }
@@ -145,7 +169,7 @@ public:
   IntOrString(const RCToken &Token)
       : Data(Token), IsInt(Token.kind() == RCToken::Kind::Int) {}
 
-  bool equalsLower(const char *Str) {
+  bool equalsLower(const char *Str) const {
     return !IsInt && Data.String.equals_insensitive(Str);
   }
 
@@ -875,7 +899,7 @@ public:
     VersionInfoFixed() : IsTypePresent(FtNumTypes, false) {}
 
     void setValue(VersionInfoFixedType Type, ArrayRef<uint32_t> Value) {
-      FixedInfo[Type] = SmallVector<uint32_t, 4>(Value.begin(), Value.end());
+      FixedInfo[Type] = SmallVector<uint32_t, 4>(Value);
       IsTypePresent[Type] = true;
     }
 
@@ -991,6 +1015,19 @@ public:
   raw_ostream &log(raw_ostream &) const override;
   Twine getResourceTypeName() const override { return "EXSTYLE"; }
   Error visit(Visitor *V) const override { return V->visitExStyleStmt(this); }
+};
+
+// MENU optional statement.
+//
+// Ref: https://learn.microsoft.com/en-us/windows/win32/menurc/menu-statement
+class MenuStmt : public OptionalStmt {
+public:
+  IntOrString Value;
+
+  MenuStmt(IntOrString NameOrId) : Value(NameOrId) {}
+  raw_ostream &log(raw_ostream &) const override;
+  Twine getResourceTypeName() const override { return "MENU"; }
+  Error visit(Visitor *V) const override { return V->visitMenuStmt(this); }
 };
 
 // CLASS optional statement.

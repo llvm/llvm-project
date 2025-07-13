@@ -73,6 +73,8 @@ SECTIONS {
   log2ceil100000000 = LOG2CEIL(0x100000000);
   log2ceil100000001 = LOG2CEIL(0x100000001);
   log2ceilmax = LOG2CEIL(0xffffffffffffffff);
+  unaryadd = +3 + ++5;
+  unaryadd_and_unaryminus = 15 + +-5 + -+7;
 }
 
 # CHECK:      0000000000000002 A unary
@@ -126,6 +128,8 @@ SECTIONS {
 # CHECK-NEXT: 0000000000000020 A log2ceil100000000
 # CHECK-NEXT: 0000000000000021 A log2ceil100000001
 # CHECK-NEXT: 0000000000000040 A log2ceilmax
+# CHECK-NEXT: 0000000000000008 A unaryadd
+# CHECK-NEXT: 0000000000000003 A unaryadd_and_unaryminus
 
 ## Mailformed number error.
 # RUN: echo "SECTIONS { . = 0x12Q41; }" > %t.script

@@ -17,7 +17,20 @@ subroutine default_none()
   !$omp end parallel
 end subroutine default_none
 
+! Test that indices of sequential loops are privatised and hence do not error
+! for DEFAULT(NONE)
+subroutine default_none_seq_loop
+  integer :: i
+
+  !$omp parallel do default(none)
+  do i = 1, 10
+     do j = 1, 20
+    enddo
+  enddo
+end subroutine
+
 program mm
   call default_none()
+  call default_none_seq_loop()
   !TODO: private, firstprivate, shared
 end

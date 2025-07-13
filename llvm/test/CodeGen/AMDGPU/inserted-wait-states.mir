@@ -1,7 +1,7 @@
-# RUN: llc -march=amdgcn -mcpu=tahiti -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,SICI
-# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,SICI
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,VI
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,VI,GFX9
+# RUN: llc -mtriple=amdgcn -mcpu=tahiti -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,SICI
+# RUN: llc -mtriple=amdgcn -mcpu=hawaii -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,SICI
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,VI
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,VI,GFX9
 
 --- |
   define amdgpu_kernel void @div_fmas() { ret void }

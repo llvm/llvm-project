@@ -1,5 +1,5 @@
 RUN: llvm-mc %p/../../Inputs/empty-CU.s -filetype obj -triple x86_64-apple-darwin -o %t.o
-RUN: dsymutil --linker llvm --update -f %t.o -o - | llvm-dwarfdump -v - -debug-info | FileCheck %s
+RUN: dsymutil --linker parallel --update -f %t.o -o - | llvm-dwarfdump -v - -debug-info | FileCheck %s
 
 CHECK: .debug_info contents:
 CHECK-NOT: DW_TAG_compile_unit

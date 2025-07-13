@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-tfr-cleanup=0 < %s | FileCheck %s
 
 target triple = "hexagon"
 
@@ -647,7 +647,7 @@ entry:
   ret i32 %1
 }
 
-attributes #0 = { noinline nounwind optnone "target-cpu"="hexagonv62" }
+attributes #0 = { noinline nounwind optnone "target-cpu"="hexagonv73" }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }
 

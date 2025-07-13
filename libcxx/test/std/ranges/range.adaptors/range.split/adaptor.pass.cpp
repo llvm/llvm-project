@@ -19,11 +19,7 @@
 #include <utility>
 
 #include "test_iterators.h"
-
-template <class View, class T>
-concept CanBePiped = requires (View&& view, T&& t) {
-  { std::forward<View>(view) | std::forward<T>(t) };
-};
+#include "test_range.h"
 
 struct SomeView : std::ranges::view_base {
   const std::string_view* v_;

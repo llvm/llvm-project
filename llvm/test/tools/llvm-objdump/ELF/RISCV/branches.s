@@ -56,12 +56,12 @@ c.jal bar
 # CHECK: c.j 0x60 <bar>
 c.j bar
 
-# CHECK: auipc ra, 0
-# CHECK: jalr	ra, 16(ra) <foo+0x58>
+# CHECK: auipc ra, 0x0
+# CHECK: jalr	ra, 0x10(ra) <foo+0x58>
 call .Llocal
 
-# CHECK: auipc ra, 0
-# CHECK: jalr	ra, 16(ra) <bar>
+# CHECK: auipc ra, 0x0
+# CHECK: jalr	ra, 0x10(ra) <bar>
 call bar
 
 .Llocal:
@@ -78,3 +78,9 @@ nop
 bar:
 # CHECK: 60: c.nop
 nop
+
+# CHECK-LABEL: 00011000 <far>:
+.org 0x11000
+far:
+# CHECK: jalr ra, 0x0(ra) <foo>
+call foo

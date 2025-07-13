@@ -172,7 +172,8 @@ TEST(EHFrameCFIBlockInspector, BasicSuccessCase) {
   // (3) Each FDE has an edge pointing to the CIE at the correct offset.
   // (4) Each function has exactly one FDE pointing at it.
 
-  auto G = cantFail(createLinkGraphFromMachOObject_arm64(TestObject));
+  auto G = cantFail(createLinkGraphFromMachOObject_arm64(
+      TestObject, std::make_shared<orc::SymbolStringPool>()));
   cantFail(createEHFrameSplitterPass_MachO_arm64()(*G));
   cantFail(createEHFrameEdgeFixerPass_MachO_arm64()(*G));
 
@@ -185,8 +186,9 @@ TEST(EHFrameCFIBlockInspector, BasicSuccessCase) {
     if (CFIBI.isCIE()) {
       CIEs.push_back(B);
       // If this CIE has an edge, check that getPersonalityEdge returns it.
-      if (B->edges_size() != 0)
+      if (B->edges_size() != 0) {
         EXPECT_TRUE(!!CFIBI.getPersonalityEdge());
+      }
     }
   }
   ASSERT_EQ(CIEs.size(), 2U);
@@ -210,7 +212,7 @@ TEST(EHFrameCFIBlockInspector, BasicSuccessCase) {
       ASSERT_TRUE(!!CFIBI.getPCBeginEdge());
       auto &PCBeginTarget = CFIBI.getPCBeginEdge()->getTarget();
       ASSERT_TRUE(PCBeginTarget.hasName());
-      Targets.insert(PCBeginTarget.getName());
+      Targets.insert(*PCBeginTarget.getName());
 
       // If the FDE points at CIEs[0] (the CIE without a personality) then it
       // should not have an LSDA. If it points to CIEs[1] then it should have
@@ -231,11 +233,12 @@ TEST(EHFrameCFIBlockInspector, BasicSuccessCase) {
 TEST(EHFrameCFIBlockInspector, ExternalPCBegin) {
   // Check that we don't crash if we transform the target of an FDE into an
   // external symbol before running edge-fixing.
-  auto G = cantFail(createLinkGraphFromMachOObject_arm64(TestObject));
+  auto G = cantFail(createLinkGraphFromMachOObject_arm64(
+      TestObject, std::make_shared<orc::SymbolStringPool>()));
 
   // Make '_a' external.
   for (auto *Sym : G->defined_symbols())
-    if (Sym->hasName() && Sym->getName() == "_a") {
+    if (Sym->hasName() && *Sym->getName() == "_a") {
       G->makeExternal(*Sym);
       break;
     }

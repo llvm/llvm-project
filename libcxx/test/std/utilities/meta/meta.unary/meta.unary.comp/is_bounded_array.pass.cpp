@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// The Clang version that Android currently uses in the CI is too old.
+// XFAIL: LIBCXX-ANDROID-FIXME
+
 // type_traits
 
 // is_bounded_array<T>
 // T is an array type of known bound ([dcl.array])
 
 #include <type_traits>
+#include <cstddef>
 
 #include "test_macros.h"
 

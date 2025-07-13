@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Error.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 
 #ifdef LLVM_ON_UNIX
 #include "llvm/Support/SystemZ/zOSSupport.h"
@@ -43,7 +44,19 @@ void SnippetSignal::log(raw_ostream &OS) const {
   OS << "snippet crashed while running";
 #ifdef LLVM_ON_UNIX
   OS << ": " << strsignal(SignalNumber);
+#else
+  (void)SignalNumber;
 #endif // LLVM_ON_UNIX
+}
+
+char PerfCounterNotFullyEnabled::ID;
+
+std::error_code PerfCounterNotFullyEnabled::convertToErrorCode() const {
+  return inconvertibleErrorCode();
+}
+
+void PerfCounterNotFullyEnabled::log(raw_ostream &OS) const {
+  OS << "The perf counter was not scheduled on the CPU the entire time.";
 }
 
 } // namespace exegesis

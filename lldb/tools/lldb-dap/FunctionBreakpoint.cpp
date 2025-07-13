@@ -8,25 +8,24 @@
 
 #include "FunctionBreakpoint.h"
 #include "DAP.h"
+#include "lldb/API/SBMutex.h"
+#include <mutex>
 
 namespace lldb_dap {
 
-FunctionBreakpoint::FunctionBreakpoint(const llvm::json::Object &obj)
-    : BreakpointBase(obj), functionName(std::string(GetString(obj, "name"))) {}
+FunctionBreakpoint::FunctionBreakpoint(
+    DAP &d, const protocol::FunctionBreakpoint &breakpoint)
+    : Breakpoint(d, breakpoint.condition, breakpoint.hitCondition),
+      m_function_name(breakpoint.name) {}
 
 void FunctionBreakpoint::SetBreakpoint() {
-  if (functionName.empty())
+  lldb::SBMutex lock = m_dap.GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
+  if (m_function_name.empty())
     return;
-  bp = g_dap.target.BreakpointCreateByName(functionName.c_str());
-  // See comments in BreakpointBase::GetBreakpointLabel() for details of why
-  // we add a label to our breakpoints.
-  bp.AddName(GetBreakpointLabel());
-  if (!condition.empty())
-    SetCondition();
-  if (!hitCondition.empty())
-    SetHitCondition();
-  if (!logMessage.empty())
-    SetLogMessage();
+  m_bp = m_dap.target.BreakpointCreateByName(m_function_name.c_str());
+  Breakpoint::SetBreakpoint();
 }
 
 } // namespace lldb_dap

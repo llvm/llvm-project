@@ -128,7 +128,7 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
                                        const SymbolBox &symBox);
 
   /// Dump the map. For debugging.
-  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   VT box;
@@ -293,7 +293,7 @@ public:
                                        const SymMap &symMap);
 
   /// Dump the map. For debugging.
-  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
+  LLVM_DUMP_METHOD void dump() const;
 
   void addVariableDefinition(semantics::SymbolRef symRef,
                              fir::FortranVariableOpInterface definingOp,
@@ -332,6 +332,16 @@ private:
   // Implied DO induction variables are not represented as Se::Symbol in
   // Ev::Expr. Keep the variable markers in their own stack.
   llvm::SmallVector<std::pair<AcDoVar, mlir::Value>> impliedDoStack;
+};
+
+/// RAII wrapper for SymMap.
+class SymMapScope {
+public:
+  explicit SymMapScope(SymMap &map) : map(map) { map.pushScope(); }
+  ~SymMapScope() { map.popScope(); }
+
+private:
+  SymMap &map;
 };
 
 } // namespace Fortran::lower

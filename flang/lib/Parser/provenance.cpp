@@ -167,6 +167,16 @@ void AllSources::AppendSearchPathDirectory(std::string directory) {
   searchPath_.push_back(directory);
 }
 
+const SourceFile *AllSources::OpenPath(
+    std::string path, llvm::raw_ostream &error) {
+  std::unique_ptr<SourceFile> source{std::make_unique<SourceFile>(encoding_)};
+  if (source->Open(path, error)) {
+    return ownedSourceFiles_.emplace_back(std::move(source)).get();
+  } else {
+    return nullptr;
+  }
+}
+
 const SourceFile *AllSources::Open(std::string path, llvm::raw_ostream &error,
     std::optional<std::string> &&prependPath) {
   std::unique_ptr<SourceFile> source{std::make_unique<SourceFile>(encoding_)};
@@ -180,12 +190,10 @@ const SourceFile *AllSources::Open(std::string path, llvm::raw_ostream &error,
   if (prependPath) {
     searchPath_.pop_front();
   }
-  if (!found) {
-    error << "Source file '" << path << "' was not found";
-    return nullptr;
-  } else if (source->Open(*found, error)) {
-    return ownedSourceFiles_.emplace_back(std::move(source)).get();
+  if (found) {
+    return OpenPath(*found, error);
   } else {
+    error << "Source file '" << path << "' was not found";
     return nullptr;
   }
 }
@@ -236,6 +244,27 @@ static void EmitPrefix(llvm::raw_ostream &o, llvm::raw_ostream::Colors color,
   if (showColors) {
     o.resetColor();
   }
+}
+
+std::optional<ProvenanceRange> AllSources::GetInclusionInfo(
+    const std::optional<ProvenanceRange> &range) const {
+  if (!range || !IsValid(range->start()))
+    return std::nullopt;
+  const Origin &origin{MapToOrigin(range->start())};
+
+  return common::visit(
+      common::visitors{
+          [&](const Inclusion &inc) -> std::optional<ProvenanceRange> {
+            if (IsValid(origin.replaces) &&
+                range_.Contains(origin.replaces.start()))
+              return origin.replaces;
+            return std::nullopt;
+          },
+          [&](const auto &) -> std::optional<ProvenanceRange> {
+            return std::nullopt;
+          },
+      },
+      origin.u);
 }
 
 void AllSources::EmitMessage(llvm::raw_ostream &o,
@@ -313,14 +342,19 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
 }
 
 const SourceFile *AllSources::GetSourceFile(
-    Provenance at, std::size_t *offset) const {
+    Provenance at, std::size_t *offset, bool topLevel) const {
   const Origin &origin{MapToOrigin(at)};
   return common::visit(common::visitors{
                            [&](const Inclusion &inc) {
-                             if (offset) {
-                               *offset = origin.covers.MemberOffset(at);
+                             if (topLevel && !origin.replaces.empty()) {
+                               return GetSourceFile(
+                                   origin.replaces.start(), offset, topLevel);
+                             } else {
+                               if (offset) {
+                                 *offset = origin.covers.MemberOffset(at);
+                               }
+                               return &inc.source;
                              }
-                             return &inc.source;
                            },
                            [&](const Macro &) {
                              return GetSourceFile(
@@ -372,9 +406,9 @@ std::optional<ProvenanceRange> AllSources::GetFirstFileProvenance() const {
   return std::nullopt;
 }
 
-std::string AllSources::GetPath(Provenance at) const {
+std::string AllSources::GetPath(Provenance at, bool topLevel) const {
   std::size_t offset{0};
-  const SourceFile *source{GetSourceFile(at, &offset)};
+  const SourceFile *source{GetSourceFile(at, &offset, topLevel)};
   return source ? *source->GetSourcePosition(offset).path : ""s;
 }
 
@@ -452,6 +486,14 @@ const AllSources::Origin &AllSources::MapToOrigin(Provenance at) const {
   return origin_[low];
 }
 
+Provenance AllSources::GetReplacedProvenance(Provenance provenance) const {
+  const Origin &origin{MapToOrigin(provenance)};
+  if (std::holds_alternative<Macro>(origin.u)) {
+    return origin.replaces.start();
+  }
+  return provenance;
+}
+
 std::optional<ProvenanceRange> CookedSource::GetProvenanceRange(
     CharBlock cookedRange) const {
   if (!AsCharBlock().Contains(cookedRange)) {
@@ -465,7 +507,16 @@ std::optional<ProvenanceRange> CookedSource::GetProvenanceRange(
   if (first.start() <= last.start()) {
     return {ProvenanceRange{first.start(), last.start() - first.start() + 1}};
   } else {
-    return std::nullopt;
+    // cookedRange may start (resp. end) in a macro expansion while it does not
+    // end (resp. start) in this macro expansion. Attempt to build a range
+    // over the replaced source.
+    Provenance firstStart{allSources_.GetReplacedProvenance(first.start())};
+    Provenance lastStart{allSources_.GetReplacedProvenance(last.start())};
+    if (firstStart <= lastStart) {
+      return {ProvenanceRange{firstStart, lastStart - firstStart + 1}};
+    } else {
+      return std::nullopt;
+    }
   }
 }
 
@@ -488,6 +539,16 @@ void CookedSource::Marshal(AllCookedSources &allCookedSources) {
       "(after end of source)"));
   data_ = buffer_.Marshal();
   buffer_.clear();
+  for (std::size_t ffStart : possibleFixedFormContinuations_) {
+    if (ffStart > 0 && ffStart + 1 < data_.size() &&
+        data_[ffStart - 1] == '\n' && data_[ffStart] == ' ') {
+      // This fixed form include line is the first source line in an
+      // #include file (or after an empty one).  Connect it with the previous
+      // source line by deleting its terminal newline.
+      data_[ffStart - 1] = ' ';
+    }
+  }
+  possibleFixedFormContinuations_.clear();
   allCookedSources.Register(*this);
 }
 
@@ -578,7 +639,7 @@ AllCookedSources::AllCookedSources(AllSources &s) : allSources_{s} {}
 AllCookedSources::~AllCookedSources() {}
 
 CookedSource &AllCookedSources::NewCookedSource() {
-  return cooked_.emplace_back();
+  return cooked_.emplace_back(allSources_);
 }
 
 const CookedSource *AllCookedSources::Find(CharBlock x) const {

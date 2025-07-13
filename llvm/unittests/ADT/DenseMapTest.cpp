@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "CountCopyAndMove.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
+#include <optional>
 #include <set>
 #include <utility>
 #include <variant>
@@ -20,7 +23,6 @@
 using namespace llvm;
 
 namespace {
-
 uint32_t getTestKey(int i, uint32_t *) { return i; }
 uint32_t getTestValue(int i, uint32_t *) { return 42 + i; }
 
@@ -33,6 +35,14 @@ uint32_t *getTestValue(int i, uint32_t **) {
   static uint32_t dummy_arr1[8192];
   assert(i < 8192 && "Only support 8192 dummy keys.");
   return &dummy_arr1[i];
+}
+
+enum class EnumClass { Val };
+
+EnumClass getTestKey(int i, EnumClass *) {
+  // We can't possibly support 100 values for the swap test, so just return an
+  // invalid EnumClass for testing.
+  return static_cast<EnumClass>(i);
 }
 
 /// A test class that tries to check that construction and destruction
@@ -77,6 +87,10 @@ struct CtorTesterMapInfo {
 CtorTester getTestKey(int i, CtorTester *) { return CtorTester(i); }
 CtorTester getTestValue(int i, CtorTester *) { return CtorTester(42 + i); }
 
+std::optional<uint32_t> getTestKey(int i, std::optional<uint32_t> *) {
+  return i;
+}
+
 // Test fixture, with helper functions implemented by forwarding to global
 // function overloads selected by component types of the type parameter. This
 // allows all of the map implementations to be tested with shared
@@ -103,14 +117,21 @@ template <typename T>
 typename T::mapped_type *const DenseMapTest<T>::dummy_value_ptr = nullptr;
 
 // Register these types for testing.
+// clang-format off
 typedef ::testing::Types<DenseMap<uint32_t, uint32_t>,
                          DenseMap<uint32_t *, uint32_t *>,
                          DenseMap<CtorTester, CtorTester, CtorTesterMapInfo>,
+                         DenseMap<EnumClass, uint32_t>,
+                         DenseMap<std::optional<uint32_t>, uint32_t>,
                          SmallDenseMap<uint32_t, uint32_t>,
                          SmallDenseMap<uint32_t *, uint32_t *>,
                          SmallDenseMap<CtorTester, CtorTester, 4,
-                                       CtorTesterMapInfo>
+                                       CtorTesterMapInfo>,
+                         SmallDenseMap<EnumClass, uint32_t>,
+                         SmallDenseMap<std::optional<uint32_t>, uint32_t>
                          > DenseMapTestTypes;
+// clang-format on
+
 TYPED_TEST_SUITE(DenseMapTest, DenseMapTestTypes, );
 
 // Empty map tests
@@ -346,28 +367,50 @@ TYPED_TEST(DenseMapTest, ConstIteratorTest) {
   EXPECT_TRUE(cit == cit2);
 }
 
-namespace {
-// Simple class that counts how many moves and copy happens when growing a map
-struct CountCopyAndMove {
-  static int Move;
-  static int Copy;
-  CountCopyAndMove() {}
-
-  CountCopyAndMove(const CountCopyAndMove &) { Copy++; }
-  CountCopyAndMove &operator=(const CountCopyAndMove &) {
-    Copy++;
-    return *this;
+TYPED_TEST(DenseMapTest, KeysValuesIterator) {
+  SmallSet<typename TypeParam::key_type, 10> Keys;
+  SmallSet<typename TypeParam::mapped_type, 10> Values;
+  for (int I = 0; I < 10; ++I) {
+    auto K = this->getKey(I);
+    auto V = this->getValue(I);
+    Keys.insert(K);
+    Values.insert(V);
+    this->Map[K] = V;
   }
-  CountCopyAndMove(CountCopyAndMove &&) { Move++; }
-  CountCopyAndMove &operator=(const CountCopyAndMove &&) {
-    Move++;
-    return *this;
-  }
-};
-int CountCopyAndMove::Copy = 0;
-int CountCopyAndMove::Move = 0;
 
-} // anonymous namespace
+  SmallSet<typename TypeParam::key_type, 10> ActualKeys;
+  SmallSet<typename TypeParam::mapped_type, 10> ActualValues;
+  for (auto K : this->Map.keys())
+    ActualKeys.insert(K);
+  for (auto V : this->Map.values())
+    ActualValues.insert(V);
+
+  EXPECT_EQ(Keys, ActualKeys);
+  EXPECT_EQ(Values, ActualValues);
+}
+
+TYPED_TEST(DenseMapTest, ConstKeysValuesIterator) {
+  SmallSet<typename TypeParam::key_type, 10> Keys;
+  SmallSet<typename TypeParam::mapped_type, 10> Values;
+  for (int I = 0; I < 10; ++I) {
+    auto K = this->getKey(I);
+    auto V = this->getValue(I);
+    Keys.insert(K);
+    Values.insert(V);
+    this->Map[K] = V;
+  }
+
+  const TypeParam &ConstMap = this->Map;
+  SmallSet<typename TypeParam::key_type, 10> ActualKeys;
+  SmallSet<typename TypeParam::mapped_type, 10> ActualValues;
+  for (auto K : ConstMap.keys())
+    ActualKeys.insert(K);
+  for (auto V : ConstMap.values())
+    ActualValues.insert(V);
+
+  EXPECT_EQ(Keys, ActualKeys);
+  EXPECT_EQ(Values, ActualValues);
+}
 
 // Test initializer list construction.
 TEST(DenseMapCustomTest, InitializerList) {
@@ -389,6 +432,28 @@ TEST(DenseMapCustomTest, EqualityComparison) {
   EXPECT_NE(M1, M3);
 }
 
+TEST(DenseMapCustomTest, InsertRange) {
+  DenseMap<int, int> M;
+
+  std::pair<int, int> InputVals[3] = {{0, 0}, {0, 1}, {1, 2}};
+  M.insert_range(InputVals);
+
+  EXPECT_EQ(M.size(), 2u);
+  EXPECT_THAT(M, testing::UnorderedElementsAre(testing::Pair(0, 0),
+                                               testing::Pair(1, 2)));
+}
+
+TEST(SmallDenseMapCustomTest, InsertRange) {
+  SmallDenseMap<int, int> M;
+
+  std::pair<int, int> InputVals[3] = {{0, 0}, {0, 1}, {1, 2}};
+  M.insert_range(InputVals);
+
+  EXPECT_EQ(M.size(), 2u);
+  EXPECT_THAT(M, testing::UnorderedElementsAre(testing::Pair(0, 0),
+                                               testing::Pair(1, 2)));
+}
+
 // Test for the default minimum size of a DenseMap
 TEST(DenseMapCustomTest, DefaultMinReservedSizeTest) {
   // IF THIS VALUE CHANGE, please update InitialSizeTest, InitFromIterator, and
@@ -401,8 +466,8 @@ TEST(DenseMapCustomTest, DefaultMinReservedSizeTest) {
   // Will allocate 64 buckets
   Map.reserve(1);
   unsigned MemorySize = Map.getMemorySize();
-  CountCopyAndMove::Copy = 0;
-  CountCopyAndMove::Move = 0;
+  CountCopyAndMove::ResetCounts();
+
   for (int i = 0; i < ExpectedMaxInitialEntries; ++i)
     Map.insert(std::pair<int, CountCopyAndMove>(std::piecewise_construct,
                                                 std::forward_as_tuple(i),
@@ -410,9 +475,9 @@ TEST(DenseMapCustomTest, DefaultMinReservedSizeTest) {
   // Check that we didn't grow
   EXPECT_EQ(MemorySize, Map.getMemorySize());
   // Check that move was called the expected number of times
-  EXPECT_EQ(ExpectedMaxInitialEntries, CountCopyAndMove::Move);
+  EXPECT_EQ(ExpectedMaxInitialEntries, CountCopyAndMove::TotalMoves());
   // Check that no copy occurred
-  EXPECT_EQ(0, CountCopyAndMove::Copy);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
 
   // Adding one extra element should grow the map
   Map.insert(std::pair<int, CountCopyAndMove>(
@@ -425,7 +490,7 @@ TEST(DenseMapCustomTest, DefaultMinReservedSizeTest) {
   //  This relies on move-construction elision, and cannot be reliably tested.
   //   EXPECT_EQ(ExpectedMaxInitialEntries + 2, CountCopyAndMove::Move);
   // Check that no copy occurred
-  EXPECT_EQ(0, CountCopyAndMove::Copy);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
 }
 
 // Make sure creating the map with an initial size of N actually gives us enough
@@ -439,8 +504,8 @@ TEST(DenseMapCustomTest, InitialSizeTest) {
   for (auto Size : {1, 2, 48, 66}) {
     DenseMap<int, CountCopyAndMove> Map(Size);
     unsigned MemorySize = Map.getMemorySize();
-    CountCopyAndMove::Copy = 0;
-    CountCopyAndMove::Move = 0;
+    CountCopyAndMove::ResetCounts();
+
     for (int i = 0; i < Size; ++i)
       Map.insert(std::pair<int, CountCopyAndMove>(std::piecewise_construct,
                                                   std::forward_as_tuple(i),
@@ -448,9 +513,9 @@ TEST(DenseMapCustomTest, InitialSizeTest) {
     // Check that we didn't grow
     EXPECT_EQ(MemorySize, Map.getMemorySize());
     // Check that move was called the expected number of times
-    EXPECT_EQ(Size, CountCopyAndMove::Move);
+    EXPECT_EQ(Size, CountCopyAndMove::TotalMoves());
     // Check that no copy occurred
-    EXPECT_EQ(0, CountCopyAndMove::Copy);
+    EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
   }
 }
 
@@ -461,15 +526,14 @@ TEST(DenseMapCustomTest, InitFromIterator) {
   const int Count = 65;
   Values.reserve(Count);
   for (int i = 0; i < Count; i++)
-    Values.emplace_back(i, CountCopyAndMove());
+    Values.emplace_back(i, CountCopyAndMove(i));
 
-  CountCopyAndMove::Move = 0;
-  CountCopyAndMove::Copy = 0;
+  CountCopyAndMove::ResetCounts();
   DenseMap<int, CountCopyAndMove> Map(Values.begin(), Values.end());
   // Check that no move occurred
-  EXPECT_EQ(0, CountCopyAndMove::Move);
+  EXPECT_EQ(0, CountCopyAndMove::TotalMoves());
   // Check that copy was called the expected number of times
-  EXPECT_EQ(Count, CountCopyAndMove::Copy);
+  EXPECT_EQ(Count, CountCopyAndMove::TotalCopies());
 }
 
 // Make sure reserve actually gives us enough buckets to insert N items
@@ -484,8 +548,7 @@ TEST(DenseMapCustomTest, ReserveTest) {
     DenseMap<int, CountCopyAndMove> Map;
     Map.reserve(Size);
     unsigned MemorySize = Map.getMemorySize();
-    CountCopyAndMove::Copy = 0;
-    CountCopyAndMove::Move = 0;
+    CountCopyAndMove::ResetCounts();
     for (int i = 0; i < Size; ++i)
       Map.insert(std::pair<int, CountCopyAndMove>(std::piecewise_construct,
                                                   std::forward_as_tuple(i),
@@ -493,10 +556,81 @@ TEST(DenseMapCustomTest, ReserveTest) {
     // Check that we didn't grow
     EXPECT_EQ(MemorySize, Map.getMemorySize());
     // Check that move was called the expected number of times
-    EXPECT_EQ(Size, CountCopyAndMove::Move);
+    EXPECT_EQ(Size, CountCopyAndMove::TotalMoves());
     // Check that no copy occurred
-    EXPECT_EQ(0, CountCopyAndMove::Copy);
+    EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
   }
+}
+
+TEST(DenseMapCustomTest, InsertOrAssignTest) {
+  DenseMap<int, CountCopyAndMove> Map;
+
+  CountCopyAndMove val1(1);
+  CountCopyAndMove::ResetCounts();
+  auto try0 = Map.insert_or_assign(0, val1);
+  EXPECT_TRUE(try0.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalMoves());
+  EXPECT_EQ(1, CountCopyAndMove::CopyConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::CopyAssignments);
+
+  CountCopyAndMove::ResetCounts();
+  auto try1 = Map.insert_or_assign(0, val1);
+  EXPECT_FALSE(try1.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalMoves());
+  EXPECT_EQ(0, CountCopyAndMove::CopyConstructions);
+  EXPECT_EQ(1, CountCopyAndMove::CopyAssignments);
+
+  int key2 = 2;
+  CountCopyAndMove val2(2);
+  CountCopyAndMove::ResetCounts();
+  auto try2 = Map.insert_or_assign(key2, std::move(val2));
+  EXPECT_TRUE(try2.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(1, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::MoveAssignments);
+
+  CountCopyAndMove val3(3);
+  CountCopyAndMove::ResetCounts();
+  auto try3 = Map.insert_or_assign(key2, std::move(val3));
+  EXPECT_FALSE(try3.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(1, CountCopyAndMove::MoveAssignments);
+}
+
+TEST(DenseMapCustomTest, EmplaceOrAssign) {
+  DenseMap<int, CountCopyAndMove> Map;
+
+  CountCopyAndMove::ResetCounts();
+  auto Try0 = Map.emplace_or_assign(3, 3);
+  EXPECT_TRUE(Try0.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(0, CountCopyAndMove::TotalMoves());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+
+  CountCopyAndMove::ResetCounts();
+  auto Try1 = Map.emplace_or_assign(3, 4);
+  EXPECT_FALSE(Try1.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(1, CountCopyAndMove::MoveAssignments);
+
+  int Key = 5;
+  CountCopyAndMove::ResetCounts();
+  auto Try2 = Map.emplace_or_assign(Key, 3);
+  EXPECT_TRUE(Try2.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(0, CountCopyAndMove::TotalMoves());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+
+  CountCopyAndMove::ResetCounts();
+  auto Try3 = Map.emplace_or_assign(Key, 4);
+  EXPECT_FALSE(Try3.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(1, CountCopyAndMove::MoveAssignments);
 }
 
 // Make sure DenseMap works with StringRef keys.
@@ -522,6 +656,33 @@ TEST(DenseMapCustomTest, StringRefTest) {
   EXPECT_EQ(42, M.lookup(""));
   EXPECT_EQ(42, M.lookup(StringRef()));
   EXPECT_EQ(42, M.lookup(StringRef("a", 0)));
+}
+
+struct NonDefaultConstructible {
+  unsigned V;
+  NonDefaultConstructible(unsigned V) : V(V) {};
+  bool operator==(const NonDefaultConstructible &Other) const {
+    return V == Other.V;
+  }
+};
+
+TEST(DenseMapCustomTest, LookupOr) {
+  DenseMap<int, NonDefaultConstructible> M;
+
+  M.insert_or_assign(0, 3u);
+  M.insert_or_assign(1, 2u);
+  M.insert_or_assign(1, 0u);
+
+  EXPECT_EQ(M.lookup_or(0, 4u), 3u);
+  EXPECT_EQ(M.lookup_or(1, 4u), 0u);
+  EXPECT_EQ(M.lookup_or(2, 4u), 4u);
+}
+
+TEST(DenseMapCustomTest, LookupOrConstness) {
+  DenseMap<int, unsigned *> M;
+  unsigned Default = 3u;
+  unsigned *Ret = M.lookup_or(0, &Default);
+  EXPECT_EQ(Ret, &Default);
 }
 
 // Key traits that allows lookup with either an unsigned or char* key;

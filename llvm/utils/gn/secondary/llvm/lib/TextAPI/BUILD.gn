@@ -11,6 +11,7 @@ static_library("TextAPI") {
     "InterfaceFile.cpp",
     "PackedVersion.cpp",
     "Platform.cpp",
+    "RecordVisitor.cpp",
     "RecordsSlice.cpp",
     "Symbol.cpp",
     "SymbolSet.cpp",
@@ -19,5 +20,6 @@ static_library("TextAPI") {
     "TextStub.cpp",
     "TextStubCommon.cpp",
     "TextStubV5.cpp",
+    "Utils.cpp",
   ]
 }

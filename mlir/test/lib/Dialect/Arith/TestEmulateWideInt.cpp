@@ -48,7 +48,7 @@ struct TestEmulateWideIntPass
     }
 
     func::FuncOp op = getOperation();
-    if (!op.getSymName().startswith(testFunctionPrefix))
+    if (!op.getSymName().starts_with(testFunctionPrefix))
       return;
 
     MLIRContext *ctx = op.getContext();
@@ -59,7 +59,7 @@ struct TestEmulateWideIntPass
     // TODO: Consider extending `arith.bitcast` to support scalar-to-1D-vector
     // casts (and vice versa) and using it insted of `llvm.bitcast`.
     auto addBitcast = [](OpBuilder &builder, Type type, ValueRange inputs,
-                         Location loc) -> std::optional<Value> {
+                         Location loc) -> Value {
       auto cast = builder.create<LLVM::BitcastOp>(loc, type, inputs);
       return cast->getResult(0);
     };

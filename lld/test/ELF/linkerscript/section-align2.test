@@ -1,7 +1,7 @@
 # REQUIRES: aarch64
 ## Test ALIGN and its interaction with explicit output section addresses.
 
-# RUN: echo '.globl _start; _start: ret; .data.rel.ro; .balign 8; .byte 0; .data; .byte 0; \
+# RUN: echo '.globl _start; _start: ret; .section .data.rel.ro,"aw"; .balign 8; .byte 0; .data; .byte 0; \
 # RUN:   .section .data2,"aw"; .balign 8; .byte 0; \
 # RUN:   .section .data3,"aw"; .balign 32; .byte 0; \
 # RUN:   .bss; .balign 32; .byte 0' | \
@@ -10,7 +10,7 @@
 # RUN: llvm-readelf -S %t | FileCheck %s
 
 ## Check we don't warn in the absence of SECTIONS.
-# RUN: ld.lld --fatal-warnings -Ttext=0x10000 %t.o -o /dev/null
+# RUN: ld.lld --fatal-warnings -Ttext=0x10000 --image-base=0x10000 %t.o -o /dev/null
 
 # WARN: warning: address (0x10004) of section .data.rel.ro is not a multiple of alignment (16)
 # WARN: warning: address (0x20001) of section .data2 is not a multiple of alignment (8)

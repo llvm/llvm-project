@@ -8,10 +8,8 @@
 
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
@@ -21,14 +19,13 @@ using namespace mlir::memref;
 static FailureOr<OpFoldResult> makeIndependent(OpBuilder &b, Location loc,
                                                OpFoldResult ofr,
                                                ValueRange independencies) {
-  if (ofr.is<Attribute>())
+  if (isa<Attribute>(ofr))
     return ofr;
-  Value value = ofr.get<Value>();
   AffineMap boundMap;
   ValueDimList mapOperands;
   if (failed(ValueBoundsConstraintSet::computeIndependentBound(
-          boundMap, mapOperands, presburger::BoundType::UB, value,
-          /*dim=*/std::nullopt, independencies, /*closedUB=*/true)))
+          boundMap, mapOperands, presburger::BoundType::UB, ofr, independencies,
+          /*closedUB=*/true)))
     return failure();
   return affine::materializeComputedBound(b, loc, boundMap, mapOperands);
 }
@@ -71,9 +68,9 @@ propagateSubViewOp(RewriterBase &rewriter,
                    UnrealizedConversionCastOp conversionOp, SubViewOp op) {
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);
-  auto newResultType = cast<MemRefType>(SubViewOp::inferRankReducedResultType(
+  MemRefType newResultType = SubViewOp::inferRankReducedResultType(
       op.getType().getShape(), op.getSourceType(), op.getMixedOffsets(),
-      op.getMixedSizes(), op.getMixedStrides()));
+      op.getMixedSizes(), op.getMixedStrides());
   Value newSubview = rewriter.create<SubViewOp>(
       op.getLoc(), newResultType, conversionOp.getOperand(0),
       op.getMixedOffsets(), op.getMixedSizes(), op.getMixedStrides());
@@ -154,7 +151,7 @@ static void replaceAndPropagateMemRefType(RewriterBase &rewriter,
       for (OpOperand &operand : user->getOpOperands()) {
         if ([[maybe_unused]] auto castOp =
                 operand.get().getDefiningOp<UnrealizedConversionCastOp>()) {
-          rewriter.updateRootInPlace(
+          rewriter.modifyOpInPlace(
               user, [&]() { operand.set(conversion->getOperand(0)); });
         }
       }

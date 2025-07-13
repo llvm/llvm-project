@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: opt -passes=amdgpu-attributor < %s | llc | FileCheck %s
 
 target triple = "amdgcn-amd-amdhsa"
 

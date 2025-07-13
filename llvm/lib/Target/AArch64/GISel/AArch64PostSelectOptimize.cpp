@@ -33,7 +33,7 @@ class AArch64PostSelectOptimize : public MachineFunctionPass {
 public:
   static char ID;
 
-  AArch64PostSelectOptimize();
+  AArch64PostSelectOptimize() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "AArch64 Post Select Optimizer";
@@ -48,6 +48,7 @@ private:
   bool doPeepholeOpts(MachineBasicBlock &MBB);
   /// Look for cross regclass copies that can be trivially eliminated.
   bool foldSimpleCrossClassCopies(MachineInstr &MI);
+  bool foldCopyDup(MachineInstr &MI);
 };
 } // end anonymous namespace
 
@@ -56,11 +57,6 @@ void AArch64PostSelectOptimize::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
-}
-
-AArch64PostSelectOptimize::AArch64PostSelectOptimize()
-    : MachineFunctionPass(ID) {
-  initializeAArch64PostSelectOptimizePass(*PassRegistry::getPassRegistry());
 }
 
 unsigned getNonFlagSettingVariant(unsigned Opc) {
@@ -104,8 +100,11 @@ unsigned getNonFlagSettingVariant(unsigned Opc) {
 
 bool AArch64PostSelectOptimize::doPeepholeOpts(MachineBasicBlock &MBB) {
   bool Changed = false;
-  for (auto &MI : make_early_inc_range(make_range(MBB.begin(), MBB.end()))) {
-    Changed |= foldSimpleCrossClassCopies(MI);
+  for (auto &MI : make_early_inc_range(MBB)) {
+    bool CurrentIterChanged = foldSimpleCrossClassCopies(MI);
+    if (!CurrentIterChanged)
+      CurrentIterChanged |= foldCopyDup(MI);
+    Changed |= CurrentIterChanged;
   }
   return Changed;
 }
@@ -158,6 +157,68 @@ bool AArch64PostSelectOptimize::foldSimpleCrossClassCopies(MachineInstr &MI) {
   return true;
 }
 
+bool AArch64PostSelectOptimize::foldCopyDup(MachineInstr &MI) {
+  if (!MI.isCopy())
+    return false;
+
+  auto *MF = MI.getMF();
+  auto &MRI = MF->getRegInfo();
+  auto *TII = MF->getSubtarget().getInstrInfo();
+
+  // Optimize COPY(y:GPR, DUP(x:FPR, i)) -> UMOV(y:GPR, x:FPR, i).
+  // Here Dst is y and Src is the result of DUP.
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  if (!Dst.isVirtual() || !Src.isVirtual())
+    return false;
+
+  auto TryMatchDUP = [&](const TargetRegisterClass *GPRRegClass,
+                         const TargetRegisterClass *FPRRegClass, unsigned DUP,
+                         unsigned UMOV) {
+    if (MRI.getRegClassOrNull(Dst) != GPRRegClass ||
+        MRI.getRegClassOrNull(Src) != FPRRegClass)
+      return false;
+
+    // There is a special case when one of the uses is COPY(z:FPR, y:GPR).
+    // In this case, we get COPY(z:FPR, COPY(y:GPR, DUP(x:FPR, i))), which can
+    // be folded by peephole-opt into just DUP(z:FPR, i), so this transform is
+    // not worthwhile in that case.
+    for (auto &Use : MRI.use_nodbg_instructions(Dst)) {
+      if (!Use.isCopy())
+        continue;
+
+      Register UseOp0 = Use.getOperand(0).getReg();
+      Register UseOp1 = Use.getOperand(1).getReg();
+      if (UseOp0.isPhysical() || UseOp1.isPhysical())
+        return false;
+
+      if (MRI.getRegClassOrNull(UseOp0) == FPRRegClass &&
+          MRI.getRegClassOrNull(UseOp1) == GPRRegClass)
+        return false;
+    }
+
+    MachineInstr *SrcMI = MRI.getUniqueVRegDef(Src);
+    if (!SrcMI || SrcMI->getOpcode() != DUP || !MRI.hasOneNonDBGUse(Src))
+      return false;
+
+    Register DupSrc = SrcMI->getOperand(1).getReg();
+    int64_t DupImm = SrcMI->getOperand(2).getImm();
+
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(UMOV), Dst)
+        .addReg(DupSrc)
+        .addImm(DupImm);
+    SrcMI->eraseFromParent();
+    MI.eraseFromParent();
+    return true;
+  };
+
+  return TryMatchDUP(&AArch64::GPR32RegClass, &AArch64::FPR32RegClass,
+                     AArch64::DUPi32, AArch64::UMOVvi32) ||
+         TryMatchDUP(&AArch64::GPR64RegClass, &AArch64::FPR64RegClass,
+                     AArch64::DUPi64, AArch64::UMOVvi64);
+}
+
 bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
   // If we find a dead NZCV implicit-def, we
   // - try to convert the operation to a non-flag-setting equivalent
@@ -199,10 +260,11 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
 
   for (auto &II : instructionsWithoutDebug(MBB.rbegin(), MBB.rend())) {
     bool NZCVDead = LRU.available(AArch64::NZCV);
-    if (NZCVDead && II.definesRegister(AArch64::NZCV)) {
+    if (NZCVDead && II.definesRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
       // The instruction defines NZCV, but NZCV is dead.
       unsigned NewOpc = getNonFlagSettingVariant(II.getOpcode());
-      int DeadNZCVIdx = II.findRegisterDefOperandIdx(AArch64::NZCV);
+      int DeadNZCVIdx =
+          II.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr);
       if (DeadNZCVIdx != -1) {
         if (NewOpc) {
           // If there is an equivalent non-flag-setting op, we convert.
@@ -230,12 +292,9 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
 }
 
 bool AArch64PostSelectOptimize::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
-  assert(MF.getProperties().hasProperty(
-             MachineFunctionProperties::Property::Selected) &&
-         "Expected a selected MF");
+  assert(MF.getProperties().hasSelected() && "Expected a selected MF");
 
   bool Changed = false;
   for (auto &BB : MF) {

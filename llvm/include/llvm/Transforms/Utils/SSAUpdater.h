@@ -23,7 +23,7 @@ class BasicBlock;
 class Instruction;
 class LoadInst;
 class PHINode;
-class DPValue;
+class DbgVariableRecord;
 template <typename T> class SmallVectorImpl;
 template <typename T> class SSAUpdaterTraits;
 class Type;
@@ -118,13 +118,14 @@ public:
 
   /// Rewrite debug value intrinsics to conform to a new SSA form.
   ///
-  /// This will scout out all the debug value instrinsics associated with
+  /// This will scout out all the debug value intrinsics associated with
   /// the instruction. Anything outside of its block will have its
   /// value set to the new SSA value if available, and undef if not.
   void UpdateDebugValues(Instruction *I);
   void UpdateDebugValues(Instruction *I,
                          SmallVectorImpl<DbgValueInst *> &DbgValues);
-  void UpdateDebugValues(Instruction *I, SmallVectorImpl<DPValue *> &DbgValues);
+  void UpdateDebugValues(Instruction *I,
+                         SmallVectorImpl<DbgVariableRecord *> &DbgValues);
 
   /// Rewrite a use like \c RewriteUse but handling in-block definitions.
   ///
@@ -136,7 +137,7 @@ public:
 private:
   Value *GetValueAtEndOfBlockInternal(BasicBlock *BB);
   void UpdateDebugValue(Instruction *I, DbgValueInst *DbgValue);
-  void UpdateDebugValue(Instruction *I, DPValue *DbgValue);
+  void UpdateDebugValue(Instruction *I, DbgVariableRecord *DbgValue);
 };
 
 /// Helper class for promoting a collection of loads and stores into SSA
@@ -163,13 +164,6 @@ public:
   /// removed from the code.
   void run(const SmallVectorImpl<Instruction *> &Insts);
 
-  /// Return true if the specified instruction is in the Inst list.
-  ///
-  /// The Insts list is the one passed into the constructor. Clients should
-  /// implement this with a more efficient version if possible.
-  virtual bool isInstInList(Instruction *I,
-                            const SmallVectorImpl<Instruction *> &Insts) const;
-
   /// This hook is invoked after all the stores are found and inserted as
   /// available values.
   virtual void doExtraRewritesBeforeFinalDeletion() {}
@@ -187,6 +181,13 @@ public:
   /// Return false if a sub-class wants to keep one of the loads/stores
   /// after the SSA construction.
   virtual bool shouldDelete(Instruction *I) const { return true; }
+
+  /// Return the value to use for the point in the code that the alloca is
+  /// positioned. This will only be used if an Alloca is included in Insts,
+  /// otherwise the value of a uninitialized load will be assumed to be poison.
+  virtual Value *getValueToUseForAlloca(Instruction *AI) const {
+    return nullptr;
+  }
 };
 
 } // end namespace llvm

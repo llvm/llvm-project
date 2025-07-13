@@ -20,7 +20,7 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <array>
 #include <span>
@@ -28,21 +28,31 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    {
-        std::array<int, 3> array{0, 1, 2};
+  {
+    std::array<int, 3> array{0, 1, 2};
 
-        auto invalid_range = [&] { std::span<int> const s(array.end(), array.begin()); (void)s; };
-        TEST_LIBCPP_ASSERT_FAILURE(invalid_range(), "invalid range in span's constructor (iterator, sentinel)");
-    }
-    {
-        std::array<int, 3> array{0, 1, 2};
+    auto invalid_range = [&] {
+      std::span<int> const s(array.end(), array.begin());
+      (void)s;
+    };
+    TEST_LIBCPP_ASSERT_FAILURE(invalid_range(), "invalid range in span's constructor (iterator, sentinel)");
+  }
+  {
+    std::array<int, 3> array{0, 1, 2};
 
-        auto invalid_range = [&] { std::span<int, 3> const s(array.end(), array.begin()); (void)s; };
-        TEST_LIBCPP_ASSERT_FAILURE(invalid_range(), "invalid range in span's constructor (iterator, sentinel)");
+    auto invalid_range = [&] {
+      std::span<int, 3> const s(array.end(), array.begin());
+      (void)s;
+    };
+    TEST_LIBCPP_ASSERT_FAILURE(invalid_range(), "invalid range in span's constructor (iterator, sentinel)");
 
-        auto invalid_size = [&] { std::span<int, 3> const s(array.begin(), array.begin() + 2); (void)s; };
-        TEST_LIBCPP_ASSERT_FAILURE(invalid_size(), "invalid range in span's constructor (iterator, sentinel): last - first != extent");
-    }
+    auto invalid_size = [&] {
+      std::span<int, 3> const s(array.begin(), array.begin() + 2);
+      (void)s;
+    };
+    TEST_LIBCPP_ASSERT_FAILURE(
+        invalid_size(), "invalid range in span's constructor (iterator, sentinel): last - first != extent");
+  }
 
-    return 0;
+  return 0;
 }

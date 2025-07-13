@@ -19,7 +19,8 @@ target triple = "x86_64-pc-windows-msvc"
 
 define dso_local i32 @main() {
 entry:
-  br i1 icmp ne (ptr @optionalFunc, ptr null), label %if.then, label %if.end
+  %cmp = icmp ne ptr @optionalFunc, null
+  br i1 %cmp, label %if.then, label %if.end
 
 if.then:
   tail call void @optionalFunc()

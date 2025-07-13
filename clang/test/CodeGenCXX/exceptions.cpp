@@ -61,7 +61,7 @@ namespace test1 {
     // CHECK-NEXT: [[NEW:%.*]] = call noalias nonnull ptr @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, ptr [[ACTIVE]]
     // CHECK-NEXT: invoke void @_ZN5test11BC1Ev(ptr {{[^,]*}} [[T0:%.*]])
-    // CHECK:      [[T1:%.*]] = getelementptr inbounds [[B:%.*]], ptr [[T0]], i32 0, i32 0
+    // CHECK:      [[T1:%.*]] = getelementptr inbounds nuw [[B:%.*]], ptr [[T0]], i32 0, i32 0
     // CHECK-NEXT: [[T2:%.*]] = load i32, ptr [[T1]], align 4
     // CHECK-NEXT: invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[NEW]], i32 [[T2]])
     // CHECK:      store i1 false, ptr [[ACTIVE]]
@@ -142,12 +142,12 @@ namespace test1 {
     // CHECK:      [[ACTIVE:%.*]] = alloca i1
     // CHECK:      [[NEW:%.*]] = call noalias nonnull ptr @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, ptr [[ACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN5test15makeBEv(ptr sret([[B:%.*]]) align 4 [[T0:%.*]])
+    // CHECK-NEXT: invoke void @_ZN5test15makeBEv(ptr dead_on_unwind writable sret([[B:%.*]]) align 4 [[T0:%.*]])
     // CHECK:      [[T1:%.*]] = invoke i32 @_ZN5test11BcviEv(ptr {{[^,]*}} [[T0]])
     // CHECK:      invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[NEW]], i32 [[T1]])
     // CHECK:      store i1 false, ptr [[ACTIVE]]
     // CHECK-NEXT: store ptr [[NEW]], ptr [[X]], align 8
-    // CHECK:      invoke void @_ZN5test15makeBEv(ptr sret([[B:%.*]]) align 4 [[T2:%.*]])
+    // CHECK:      invoke void @_ZN5test15makeBEv(ptr dead_on_unwind writable sret([[B:%.*]]) align 4 [[T2:%.*]])
     // CHECK:      [[RET:%.*]] = load ptr, ptr [[X]], align 8
 
     // CHECK98:      invoke void @_ZN5test11BD1Ev(ptr {{[^,]*}} [[T2]])
@@ -231,7 +231,7 @@ namespace test3 {
     // CHECK-NEXT: store ptr [[NEW]], ptr [[SAVED0]]
     // CHECK-NEXT: store ptr [[FOO]], ptr [[SAVED1]]
     // CHECK-NEXT: store i1 true, ptr [[CLEANUPACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN5test35makeAEv(ptr sret([[A:%.*]]) align 8 [[NEW]])
+    // CHECK-NEXT: invoke void @_ZN5test35makeAEv(ptr dead_on_unwind writable sret([[A:%.*]]) align 8 [[NEW]])
     // CHECK: br label
     //   -> cond.end
             new(foo(),10.0) A(makeA()) :
@@ -513,10 +513,9 @@ namespace test11 {
   // CHECK-LABEL:    define{{.*}} void @_ZN6test111CC2Ev(
   // CHECK:      [[THIS:%.*]] = load ptr, ptr {{%.*}}
   //   Construct single.
-  // CHECK-NEXT: [[SINGLE:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[THIS]], i32 0, i32 0
-  // CHECK-NEXT: call void @_ZN6test111AC1Ev(ptr {{[^,]*}} [[SINGLE]])
+  // CHECK-NEXT: call void @_ZN6test111AC1Ev(ptr {{[^,]*}} [[THIS]])
   //   Construct array.
-  // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[THIS]], i32 0, i32 1
+  // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds nuw [[C:%.*]], ptr [[THIS]], i32 0, i32 1
   // CHECK-NEXT: [[ARRAYBEGIN:%.*]] = getelementptr inbounds [2 x [3 x [[A:%.*]]]], ptr [[ARRAY]], i32 0, i32 0, i32 0
   // CHECK-NEXT: [[ARRAYEND:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[ARRAYBEGIN]], i64 6
   // CHECK-NEXT: br label
@@ -560,8 +559,8 @@ namespace test11 {
   // CHECK:      br label
   //   Finally, the cleanup for single.
 
-  // CHECK98:      invoke void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[SINGLE]])
-  // CHECK11:      call void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[SINGLE]])
+  // CHECK98:      invoke void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[THIS]])
+  // CHECK11:      call void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[THIS]])
 
   // CHECK:      br label
   // CHECK:      resume

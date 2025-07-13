@@ -15,13 +15,13 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; After that we have:
 ;   updated: 416B   %vreg18<def> = ISEL8 %vreg5, %vreg5, %vreg15<undef>;
 
-; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -ppc-gen-isel=true < %s | FileCheck %s --check-prefix=CHECK-GEN-ISEL-TRUE
-; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -ppc-gen-isel=false < %s | FileCheck %s --implicit-check-not isel
-%"struct.pov::ot_block_struct" = type { %"struct.pov::ot_block_struct"*, [3 x double], [3 x double], float, float, float, float, float, float, float, float, float, [3 x float], float, float, [3 x double], i16 }
-%"struct.pov::ot_node_struct" = type { %"struct.pov::ot_id_struct", %"struct.pov::ot_block_struct"*, [8 x %"struct.pov::ot_node_struct"*] }
+; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -mattr=+isel < %s | FileCheck %s --check-prefix=CHECK-GEN-ISEL-TRUE
+; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -mattr=-isel < %s | FileCheck %s --implicit-check-not isel
+%"struct.pov::ot_block_struct" = type { ptr, [3 x double], [3 x double], float, float, float, float, float, float, float, float, float, [3 x float], float, float, [3 x double], i16 }
+%"struct.pov::ot_node_struct" = type { %"struct.pov::ot_id_struct", ptr, [8 x ptr] }
 %"struct.pov::ot_id_struct" = type { i32, i32, i32, i32 }
 
-define void @_ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot_id_structE(%"struct.pov::ot_block_struct"* %new_block) {
+define void @_ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot_id_structE(ptr %new_block) {
 ; CHECK-GEN-ISEL-TRUE-LABEL: _ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot_id_structE:
 ; CHECK-GEN-ISEL-TRUE:       # %bb.0: # %entry
 ; CHECK-GEN-ISEL-TRUE-NEXT:    mflr r0
@@ -115,21 +115,21 @@ entry:
   br label %while.cond11
 
 while.cond11:
-  %this_node.0250 = phi %"struct.pov::ot_node_struct"* [ undef, %entry ], [ %1, %cond.false21.i156 ], [ %1, %cond.true18.i153 ]
+  %this_node.0250 = phi ptr [ undef, %entry ], [ %1, %cond.false21.i156 ], [ %1, %cond.true18.i153 ]
   %temp_id.sroa.21.1 = phi i32 [ undef, %entry ], [ %shr2039.i152, %cond.true18.i153 ], [ %div24.i155, %cond.false21.i156 ]
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   %cmp17 = icmp eq i32 0, %0
   br i1 %cmp17, label %lor.rhs, label %while.body21
 
 lor.rhs:
-  %Values = getelementptr inbounds %"struct.pov::ot_node_struct", %"struct.pov::ot_node_struct"* %this_node.0250, i64 0, i32 1
-  store %"struct.pov::ot_block_struct"* %new_block, %"struct.pov::ot_block_struct"** %Values, align 8
+  %Values = getelementptr inbounds %"struct.pov::ot_node_struct", ptr %this_node.0250, i64 0, i32 1
+  store ptr %new_block, ptr %Values, align 8
   ret void
 
 while.body21:
-  %call.i84 = tail call i8* @ZN3pov10pov_callocEmmPKciS1_pov()
-  store i8* %call.i84, i8** undef, align 8
-  %1 = bitcast i8* %call.i84 to %"struct.pov::ot_node_struct"*
+  %call.i84 = tail call ptr @ZN3pov10pov_callocEmmPKciS1_pov()
+  store ptr %call.i84, ptr undef, align 8
+  %1 = bitcast ptr %call.i84 to ptr
   br i1 undef, label %cond.true18.i153, label %cond.false21.i156
 
 cond.true18.i153:
@@ -142,4 +142,4 @@ cond.false21.i156:
   br label %while.cond11
 }
 
-declare i8* @ZN3pov10pov_callocEmmPKciS1_pov()
+declare ptr @ZN3pov10pov_callocEmmPKciS1_pov()

@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSection.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -20,11 +19,14 @@
 
 using namespace llvm;
 
-MCSection::MCSection(SectionVariant V, StringRef Name, SectionKind K,
-                     MCSymbol *Begin)
+MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
+                     bool IsVirtual, MCSymbol *Begin)
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      IsRegistered(false), DummyFragment(this), Name(Name), Variant(V),
-      Kind(K) {}
+      IsRegistered(false), IsText(IsText), IsVirtual(IsVirtual),
+      LinkerRelaxable(false), Name(Name), Variant(V) {
+  // The initial subsection number is 0. Create a fragment list.
+  CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
+}
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   if (!End)
@@ -33,8 +35,6 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 }
 
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
-
-MCSection::~MCSection() = default;
 
 void MCSection::setBundleLockState(BundleLockStateType NewState) {
   if (NewState == NotBundleLocked) {
@@ -55,86 +55,64 @@ void MCSection::setBundleLockState(BundleLockStateType NewState) {
   ++BundleLockNestingDepth;
 }
 
-MCSection::iterator
-MCSection::getSubsectionInsertionPoint(unsigned Subsection) {
-  if (Subsection == 0 && SubsectionFragmentMap.empty())
-    return end();
-
-  SmallVectorImpl<std::pair<unsigned, MCFragment *>>::iterator MI = lower_bound(
-      SubsectionFragmentMap, std::make_pair(Subsection, (MCFragment *)nullptr));
-  bool ExactMatch = false;
-  if (MI != SubsectionFragmentMap.end()) {
-    ExactMatch = MI->first == Subsection;
-    if (ExactMatch)
-      ++MI;
-  }
-  iterator IP;
-  if (MI == SubsectionFragmentMap.end())
-    IP = end();
-  else
-    IP = MI->second->getIterator();
-  if (!ExactMatch && Subsection != 0) {
-    // The GNU as documentation claims that subsections have an alignment of 4,
-    // although this appears not to be the case.
-    MCFragment *F = new MCDataFragment();
-    SubsectionFragmentMap.insert(MI, std::make_pair(Subsection, F));
-    getFragmentList().insert(IP, F);
-    F->setParent(this);
-    F->setSubsectionNumber(Subsection);
-  }
-
-  return IP;
-}
-
 StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
 
-void MCSection::addPendingLabel(MCSymbol *label, unsigned Subsection) {
-  PendingLabels.push_back(PendingLabel(label, Subsection));
-}
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void MCSection::dump(
+    DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> *FragToSyms)
+    const {
+  raw_ostream &OS = errs();
 
-void MCSection::flushPendingLabels(MCFragment *F, uint64_t FOffset,
-				   unsigned Subsection) {
-  // Set the fragment and fragment offset for all pending symbols in the
-  // specified Subsection, and remove those symbols from the pending list.
-  for (auto It = PendingLabels.begin(); It != PendingLabels.end(); ++It) {
-    PendingLabel& Label = *It;
-    if (Label.Subsection == Subsection) {
-      Label.Sym->setFragment(F);
-      Label.Sym->setOffset(FOffset);
-      PendingLabels.erase(It--);
+  OS << "MCSection Name:" << getName();
+  for (auto &F : *this) {
+    OS << '\n';
+    F.dump();
+    if (!FragToSyms)
+      continue;
+    auto It = FragToSyms->find(&F);
+    if (It == FragToSyms->end())
+      continue;
+    for (auto *Sym : It->second) {
+      OS << "\n  Symbol @" << Sym->getOffset() << ' ' << Sym->getName();
+      if (Sym->isTemporary())
+        OS << " Temporary";
     }
   }
 }
-
-void MCSection::flushPendingLabels() {
-  // Make sure all remaining pending labels point to data fragments, by
-  // creating new empty data fragments for each Subsection with labels pending.
-  while (!PendingLabels.empty()) {
-    PendingLabel& Label = PendingLabels[0];
-    iterator CurInsertionPoint =
-      this->getSubsectionInsertionPoint(Label.Subsection);
-    const MCSymbol *Atom = nullptr;
-    if (CurInsertionPoint != begin())
-      Atom = std::prev(CurInsertionPoint)->getAtom();
-    MCFragment *F = new MCDataFragment();
-    getFragmentList().insert(CurInsertionPoint, F);
-    F->setParent(this);
-    F->setAtom(Atom);
-    flushPendingLabels(F, 0, Label.Subsection);
-  }
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCSection::dump() const {
-  raw_ostream &OS = errs();
-
-  OS << "<MCSection";
-  OS << " Fragments:[\n      ";
-  for (auto it = begin(), ie = end(); it != ie; ++it) {
-    if (it != begin())
-      OS << ",\n      ";
-    it->dump();
-  }
-  OS << "]>";
-}
 #endif
+
+void MCEncodedFragment::setContents(ArrayRef<char> Contents) {
+  auto &S = getParent()->ContentStorage;
+  if (ContentStart + Contents.size() > ContentEnd) {
+    ContentStart = S.size();
+    S.resize_for_overwrite(S.size() + Contents.size());
+  }
+  ContentEnd = ContentStart + Contents.size();
+  llvm::copy(Contents, S.begin() + ContentStart);
+}
+
+void MCEncodedFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
+
+void MCEncodedFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
+  auto &S = getParent()->FixupStorage;
+  if (LLVM_UNLIKELY(FixupEnd != S.size())) {
+    // Move the elements to the end. Reserve space to avoid invalidating
+    // S.begin()+I for `append`.
+    auto Size = FixupEnd - FixupStart;
+    auto I = std::exchange(FixupStart, S.size());
+    S.reserve(S.size() + Size);
+    S.append(S.begin() + I, S.begin() + I + Size);
+  }
+  S.append(Fixups.begin(), Fixups.end());
+  FixupEnd = S.size();
+}
+
+void MCEncodedFragment::setFixups(ArrayRef<MCFixup> Fixups) {
+  auto &S = getParent()->FixupStorage;
+  if (FixupStart + Fixups.size() > FixupEnd) {
+    FixupStart = S.size();
+    S.resize_for_overwrite(S.size() + Fixups.size());
+  }
+  FixupEnd = FixupStart + Fixups.size();
+  llvm::copy(Fixups, S.begin() + FixupStart);
+}

@@ -61,6 +61,10 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
   for (SDep &SI : SecondSU.Preds)
     if (SI.isCluster())
       return false;
+
+  assert(FirstSU.ParentClusterIdx == InvalidClusterId &&
+         SecondSU.ParentClusterIdx == InvalidClusterId);
+
   // Though the reachability checks above could be made more generic,
   // perhaps as part of ScheduleDAGInstrs::addEdge(), since such edges are valid,
   // the extra computation cost makes it less interesting in general cases.
@@ -69,6 +73,14 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
   // to cause bottom-up scheduling to heavily prioritize the clustered instrs.
   if (!DAG.addEdge(&SecondSU, SDep(&FirstSU, SDep::Cluster)))
     return false;
+
+  auto &Clusters = DAG.getClusters();
+
+  FirstSU.ParentClusterIdx = Clusters.size();
+  SecondSU.ParentClusterIdx = Clusters.size();
+
+  SmallSet<SUnit *, 8> Cluster{{&FirstSU, &SecondSU}};
+  Clusters.push_back(Cluster);
 
   // TODO - If we want to chain more than two instructions, we need to create
   // artifical edges to make dependencies from the FirstSU also dependent
@@ -212,15 +224,9 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
 }
 
 std::unique_ptr<ScheduleDAGMutation>
-llvm::createMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates) {
+llvm::createMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates,
+                                   bool BranchOnly) {
   if (EnableMacroFusion)
-    return std::make_unique<MacroFusion>(Predicates, true);
-  return nullptr;
-}
-
-std::unique_ptr<ScheduleDAGMutation> llvm::createBranchMacroFusionDAGMutation(
-    ArrayRef<MacroFusionPredTy> Predicates) {
-  if (EnableMacroFusion)
-    return std::make_unique<MacroFusion>(Predicates, false);
+    return std::make_unique<MacroFusion>(Predicates, !BranchOnly);
   return nullptr;
 }

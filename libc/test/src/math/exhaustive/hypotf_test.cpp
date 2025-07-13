@@ -18,10 +18,10 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = float;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   uint64_t check(uint32_t start, uint32_t stop, mpfr::RoundingMode rounding) {
-    // Range of the second input: [2^37, 2^48).
+    // Range of the second input: [2^37, 2^48].
     constexpr uint32_t Y_START = (37U + 127U) << 23;
     constexpr uint32_t Y_STOP = (48U + 127U) << 23;
 
@@ -31,10 +31,10 @@ struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
     uint32_t xbits = start;
     uint64_t failed = 0;
     do {
-      float x = float(FPBits(xbits));
+      float x = FPBits(xbits).get_val();
       uint32_t ybits = Y_START;
       do {
-        float y = float(FPBits(ybits));
+        float y = FPBits(ybits).get_val();
         bool correct = TEST_FP_EQ(LIBC_NAMESPACE::fputil::hypot(x, y),
                                   LIBC_NAMESPACE::hypotf(x, y));
         // Using MPFR will be much slower.
@@ -49,11 +49,15 @@ struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
   }
 };
 
-using LlvmLibcHypotfExhaustiveTest = LlvmLibcExhaustiveMathTest<HypotfChecker>;
+using LlvmLibcHypotfExhaustiveTest =
+    LlvmLibcExhaustiveMathTest<HypotfChecker, /*Increment=*/1>;
 
-// Range of the first input: [2^23, 2^24);
+// Range of the first input: [2^23, 2^24];
 static constexpr uint32_t START = (23U + 127U) << 23;
-static constexpr uint32_t STOP = ((23U + 127U) << 23) + 1;
+// static constexpr uint32_t STOP = (24U + 127U) << 23;
+// Use a smaller range for automated tests, since the full range takes too long
+// and should only be run manually.
+static constexpr uint32_t STOP = ((23U + 127U) << 23) + 1024U;
 
 TEST_F(LlvmLibcHypotfExhaustiveTest, PositiveRange) {
   test_full_range_all_roundings(START, STOP);

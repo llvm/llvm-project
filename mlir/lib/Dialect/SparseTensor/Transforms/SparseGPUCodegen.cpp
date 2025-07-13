@@ -58,7 +58,7 @@ static gpu::GPUModuleOp genGPUModule(OpBuilder &builder, ModuleOp topModule) {
   for (auto op : topModule.getBodyRegion().getOps<gpu::GPUModuleOp>())
     return op; // existing
   markAsGPUContainer(topModule);
-  builder.setInsertionPointToStart(&topModule.getBodyRegion().front());
+  builder.setInsertionPointToStart(topModule.getBody());
   return builder.create<gpu::GPUModuleOp>(topModule->getLoc(),
                                           "sparse_kernels");
 }
@@ -75,10 +75,10 @@ static gpu::GPUFuncOp genGPUFunc(OpBuilder &builder, gpu::GPUModuleOp gpuModule,
     ("kernel" + Twine(kernelNumber++)).toStringRef(kernelName);
   } while (gpuModule.lookupSymbol(kernelName));
   // Then we insert a new kernel with given arguments into the module.
-  builder.setInsertionPointToStart(&gpuModule.getBodyRegion().front());
+  builder.setInsertionPointToStart(gpuModule.getBody());
   SmallVector<Type> argsTp;
-  for (unsigned i = 0, e = args.size(); i < e; i++)
-    argsTp.push_back(args[i].getType());
+  for (auto arg : args)
+    argsTp.push_back(arg.getType());
   FunctionType type = FunctionType::get(gpuModule->getContext(), argsTp, {});
   auto gpuFunc =
       builder.create<gpu::GPUFuncOp>(gpuModule->getLoc(), kernelName, type);
@@ -212,7 +212,7 @@ static Value genTensorToMemref(PatternRewriter &rewriter, Location loc,
   auto tensorType = llvm::cast<ShapedType>(tensor.getType());
   auto memrefType =
       MemRefType::get(tensorType.getShape(), tensorType.getElementType());
-  return rewriter.create<bufferization::ToMemrefOp>(loc, memrefType, tensor);
+  return rewriter.create<bufferization::ToBufferOp>(loc, memrefType, tensor);
 }
 
 /// Prepares the outlined arguments, passing scalars and buffers in. Here we
@@ -315,6 +315,9 @@ static void genGPUCode(PatternRewriter &rewriter, gpu::GPUFuncOp gpuFunc,
   rewriter.eraseBlock(forOp.getBody());
   rewriter.cloneRegionBefore(forallOp.getRegion(), forOp.getRegion(),
                              forOp.getRegion().begin(), irMap);
+  // Replace the scf.reduce terminator.
+  rewriter.setInsertionPoint(forOp.getBody()->getTerminator());
+  rewriter.replaceOpWithNewOp<scf::YieldOp>(forOp.getBody()->getTerminator());
 
   // Done.
   rewriter.setInsertionPointAfter(forOp);
@@ -445,6 +448,23 @@ static bool isAdmissibleBSR(SparseTensorType &aTp) {
   return false;
 }
 
+/// Test for 2:4 matrix with suitable metadata.
+static bool isAdmissible24(SparseTensorType &aTp) {
+  return aTp.getDimRank() == 2 && aTp.getLvlRank() == 3 && aTp.isDenseLvl(0) &&
+         aTp.isDenseLvl(1) && aTp.isNOutOfMLvl(2) && isAdmissibleMetaData(aTp);
+}
+
+/// Test for conversion into 2:4 matrix.
+static bool isConversionInto24(Value v) {
+  if (auto cnv = v.getDefiningOp<ConvertOp>()) {
+    Value a = cnv.getResult();
+    Value d = cnv.getSource();
+    SparseTensorType aTp = getSparseTensorType(a);
+    return isDenseTensor(d) && isAdmissible24(aTp);
+  }
+  return false;
+}
+
 /// Returns a suitable sparse format for the operation and given operand
 /// types with cuSparse, or kNone if none is available.
 static CuSparseFormat getCuSparseFormat(SparseTensorType aTp,
@@ -476,11 +496,11 @@ static Value genFirstPosOrCrds(OpBuilder &builder, Location loc, Value a,
   if (format == CuSparseFormat::kCOO) {
     // Library uses SoA COO, direct IR uses AoS COO.
     if (enableRT)
-      return genToCoordinates(builder, loc, a, 0, /*cooStart=*/0);
-    return genToCoordinatesBuffer(builder, loc, a);
+      return builder.create<ToCoordinatesOp>(loc, a, 0);
+    return builder.create<ToCoordinatesBufferOp>(loc, a);
   }
   // Formats CSR/CSC and BSR use positions at 1.
-  return genToPositions(builder, loc, a, 1);
+  return builder.create<ToPositionsOp>(loc, a, 1);
 }
 
 /// Generates the second coordinates of a sparse matrix.
@@ -490,7 +510,7 @@ static Value genSecondCrds(OpBuilder &builder, Location loc, Value a,
   if (isCOO && !enableRT)
     return Value(); // nothing needed
   // Formats CSR/CSC and BSR use coordinates at 1.
-  return genToCoordinates(builder, loc, a, 1, /*cooStart=*/isCOO ? 0 : 2);
+  return builder.create<ToCoordinatesOp>(loc, a, 1);
 }
 
 /// Generates the sparse matrix handle.
@@ -564,7 +584,7 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   Value szX = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
   Value memR = genFirstPosOrCrds(rewriter, loc, a, format, enableRT);
   Value memC = genSecondCrds(rewriter, loc, a, format, enableRT); // or empty
-  Value memV = genToValues(rewriter, loc, a);
+  Value memV = rewriter.create<ToValuesOp>(loc, a);
   Value rowA = genAllocCopy(rewriter, loc, memR, tokens);
   Value colA = memC ? genAllocCopy(rewriter, loc, memC, tokens) : Value();
   Value valA = genAllocCopy(rewriter, loc, memV, tokens);
@@ -631,7 +651,7 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   tokens.clear();
 
   // Done.
-  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, memY);
+  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, y.getType(), memY);
   return success();
 }
 
@@ -662,7 +682,7 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   Value szn = linalg::createOrFoldDimOp(rewriter, loc, b, 1);
   Value memR = genFirstPosOrCrds(rewriter, loc, a, format, enableRT);
   Value memC = genSecondCrds(rewriter, loc, a, format, enableRT); // or empty
-  Value memV = genToValues(rewriter, loc, a);
+  Value memV = rewriter.create<ToValuesOp>(loc, a);
   Value rowA = genAllocCopy(rewriter, loc, memR, tokens);
   Value colA = memC ? genAllocCopy(rewriter, loc, memC, tokens) : Value();
   Value valA = genAllocCopy(rewriter, loc, memV, tokens);
@@ -732,7 +752,7 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   tokens.clear();
 
   // Done.
-  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, bufC);
+  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, c.getType(), bufC);
   return success();
 }
 
@@ -765,10 +785,10 @@ static LogicalResult rewriteSpGEMM(PatternRewriter &rewriter,
   Value szn = linalg::createOrFoldDimOp(rewriter, loc, b, 1);
   Value amemR = genFirstPosOrCrds(rewriter, loc, a, format, enableRT);
   Value amemC = genSecondCrds(rewriter, loc, a, format, enableRT); // not empty
-  Value amemV = genToValues(rewriter, loc, a);
+  Value amemV = rewriter.create<ToValuesOp>(loc, a);
   Value bmemR = genFirstPosOrCrds(rewriter, loc, b, format, enableRT);
   Value bmemC = genSecondCrds(rewriter, loc, b, format, enableRT); // not empty
-  Value bmemV = genToValues(rewriter, loc, b);
+  Value bmemV = rewriter.create<ToValuesOp>(loc, b);
   Value rowA = genAllocCopy(rewriter, loc, amemR, tokens);
   Value colA = genAllocCopy(rewriter, loc, amemC, tokens);
   Value valA = genAllocCopy(rewriter, loc, amemV, tokens);
@@ -905,11 +925,14 @@ static LogicalResult rewriteSpGEMM(PatternRewriter &rewriter,
   tokens.clear();
 
   // Done.
-  Value vt = rewriter.create<bufferization::ToTensorOp>(loc, valH);
-  Value rt = rewriter.create<bufferization::ToTensorOp>(loc, rowH);
-  Value ct = rewriter.create<bufferization::ToTensorOp>(loc, colH);
-  rewriter.replaceOpWithNewOp<AssembleOp>(op, c.getType(), vt,
-                                          ValueRange{rt, ct});
+  Value vt = rewriter.create<bufferization::ToTensorOp>(
+      loc, memref::getTensorTypeFromMemRefType(valH.getType()), valH);
+  Value rt = rewriter.create<bufferization::ToTensorOp>(
+      loc, memref::getTensorTypeFromMemRefType(rowH.getType()), rowH);
+  Value ct = rewriter.create<bufferization::ToTensorOp>(
+      loc, memref::getTensorTypeFromMemRefType(colH.getType()), colH);
+  rewriter.replaceOpWithNewOp<AssembleOp>(op, c.getType(), ValueRange{rt, ct},
+                                          vt);
   return success();
 }
 
@@ -921,6 +944,15 @@ static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
   Value B = op.getOperand(1);
   Value C = op.getOperand(2); // we have C = AB
   SmallVector<Value> tokens;
+
+  // The cuSparselt API currently only allows pruning and compression
+  // to occur on the device. So we recognize the pattern
+  //    A' = convert A  ; dense to 2:4
+  //    C  = A'B        ; 2:4 matrix mult
+  // and then perform compression and matrix multiplication on device.
+  auto cnv = A.getDefiningOp<ConvertOp>();
+  assert(cnv);
+  A = cnv.getSource();
 
   // All input should be dense tensors.
   if (!isDenseTensor(A) || !isDenseTensor(B) || !isDenseTensor(C))
@@ -1002,7 +1034,6 @@ static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
               .getAsyncToken();
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnC)
               .getAsyncToken();
-  SmallVector<Value> newDynamicSizes;
   token = genDeallocMemRef(rewriter, loc, buffer1, token);
   token = genDeallocMemRef(rewriter, loc, buffer2, token);
   token = genDeallocMemRef(rewriter, loc, buffer3, token);
@@ -1015,7 +1046,7 @@ static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
   tokens.clear();
 
   // Done.
-  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, bufC);
+  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, C.getType(), bufC);
   return success();
 }
 
@@ -1052,7 +1083,7 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
   Value matB = genAllocCopy(rewriter, loc, bufB, tokens);
   Value memR = genFirstPosOrCrds(rewriter, loc, c, format, enableRT);
   Value memC = genSecondCrds(rewriter, loc, c, format, enableRT); // or empty
-  Value memV = genToValues(rewriter, loc, c);
+  Value memV = rewriter.create<ToValuesOp>(loc, c);
   Value rowC = genAllocCopy(rewriter, loc, memR, tokens);
   Value colC = memC ? genAllocCopy(rewriter, loc, memC, tokens) : Value();
   Value valC = genAllocCopy(rewriter, loc, memV, tokens);
@@ -1155,7 +1186,7 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
           block = arg.getOwner();
         else
           block = val.getDefiningOp()->getBlock();
-        if (!isNestedIn(block, forallOp))
+        if (!forallOp.getRegion().findAncestorBlockInRegion(*block))
           invariants.insert(val);
       }
     });
@@ -1208,15 +1239,6 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
   }
 
 private:
-  // Helper method to see if block appears in given loop.
-  static bool isNestedIn(Block *block, scf::ParallelOp forallOp) {
-    for (Operation *o = block->getParentOp(); o; o = o->getParentOp()) {
-      if (o == forallOp)
-        return true;
-    }
-    return false;
-  }
-
   unsigned numThreads;
 };
 
@@ -1243,11 +1265,13 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
     SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
 
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    auto infer = [&](MapList m) {
+      return AffineMap::inferFromExprList(m, op.getContext());
+    };
     AffineExpr i, j, k;
     bindDims(getContext(), i, j, k);
 
-    // TODO: more robust patterns, tranposed versions, more kernels,
+    // TODO: more robust patterns, transposed versions, more kernels,
     //       identify alpha and beta and pass them to the CUDA calls.
 
     // Recognize a SpMV kernel.
@@ -1266,7 +1290,7 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
         maps == infer({{i, k}, {k, j}, {i, j}}) && matchSumOfMultOfArgs(op)) {
       if (!isDenseTensor(op.getOperand(0)) && !isDenseTensor(op.getOperand(1)))
         return rewriteSpGEMM(rewriter, op, enableRT);
-      if (op->getAttr("DENSE24"))
+      if (isConversionInto24(op.getOperand(0)))
         return rewrite2To4SpMM(rewriter, op);
       return rewriteSpMM(rewriter, op, enableRT);
     }

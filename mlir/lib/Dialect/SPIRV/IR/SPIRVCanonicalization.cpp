@@ -16,7 +16,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 
 #include "mlir/Dialect/CommonFolders.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Matchers.h"
@@ -250,14 +249,11 @@ struct MulExtendedFold final : OpRewritePattern<MulOp> {
 
     auto highBits = constFoldBinaryOp<IntegerAttr>(
         {lhsAttr, rhsAttr}, [](const APInt &a, const APInt &b) {
-          unsigned bitWidth = a.getBitWidth();
-          APInt c;
           if (IsSigned) {
-            c = a.sext(bitWidth * 2) * b.sext(bitWidth * 2);
+            return llvm::APIntOps::mulhs(a, b);
           } else {
-            c = a.zext(bitWidth * 2) * b.zext(bitWidth * 2);
+            return llvm::APIntOps::mulhu(a, b);
           }
-          return c.extractBits(bitWidth, bitWidth); // Extract high result
         });
 
     if (!highBits)
@@ -329,7 +325,6 @@ void spirv::UMulExtendedOp::getCanonicalizationPatterns(
 
 // The transformation is only applied if one divisor is a multiple of the other.
 
-// TODO(https://github.com/llvm/llvm-project/issues/63174): Add support for vector constants
 struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -339,19 +334,29 @@ struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
     if (!prevUMod)
       return failure();
 
-    IntegerAttr prevValue;
-    IntegerAttr currValue;
+    TypedAttr prevValue;
+    TypedAttr currValue;
     if (!matchPattern(prevUMod.getOperand(1), m_Constant(&prevValue)) ||
         !matchPattern(umodOp.getOperand(1), m_Constant(&currValue)))
       return failure();
 
-    APInt prevConstValue = prevValue.getValue();
-    APInt currConstValue = currValue.getValue();
+    // Ensure that previous divisor is a multiple of the current divisor. If
+    // not, fail the transformation.
+    bool isApplicable = false;
+    if (auto prevInt = dyn_cast<IntegerAttr>(prevValue)) {
+      auto currInt = cast<IntegerAttr>(currValue);
+      isApplicable = prevInt.getValue().urem(currInt.getValue()) == 0;
+    } else if (auto prevVec = dyn_cast<DenseElementsAttr>(prevValue)) {
+      auto currVec = cast<DenseElementsAttr>(currValue);
+      isApplicable = llvm::all_of(llvm::zip_equal(prevVec.getValues<APInt>(),
+                                                  currVec.getValues<APInt>()),
+                                  [](const auto &pair) {
+                                    auto &[prev, curr] = pair;
+                                    return prev.urem(curr) == 0;
+                                  });
+    }
 
-    // Ensure that one divisor is a multiple of the other. If not, fail the
-    // transformation.
-    if (prevConstValue.urem(currConstValue) != 0 &&
-        currConstValue.urem(prevConstValue) != 0)
+    if (!isApplicable)
       return failure();
 
     // The transformation is safe. Replace the existing UMod operation with a
@@ -479,7 +484,7 @@ OpFoldResult spirv::IMulOp::fold(FoldAdaptor adaptor) {
 OpFoldResult spirv::ISubOp::fold(FoldAdaptor adaptor) {
   // x - x = 0
   if (getOperand1() == getOperand2())
-    return Builder(getContext()).getIntegerAttr(getType(), 0);
+    return Builder(getContext()).getZeroAttr(getType());
 
   // According to the SPIR-V spec:
   //
@@ -644,6 +649,45 @@ OpFoldResult spirv::UModOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.SNegate
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::SNegateOp::fold(FoldAdaptor adaptor) {
+  // -(-x) = 0 - (0 - x) = x
+  auto op = getOperand();
+  if (auto negateOp = op.getDefiningOp<spirv::SNegateOp>())
+    return negateOp->getOperand(0);
+
+  // According to the SPIR-V spec:
+  //
+  // Signed-integer subtract of Operand from zero.
+  return constFoldUnaryOp<IntegerAttr>(
+      adaptor.getOperands(), [](const APInt &a) {
+        APInt zero = APInt::getZero(a.getBitWidth());
+        return zero - a;
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.NotOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::NotOp::fold(spirv::NotOp::FoldAdaptor adaptor) {
+  // !(!x) = x
+  auto op = getOperand();
+  if (auto notOp = op.getDefiningOp<spirv::NotOp>())
+    return notOp->getOperand(0);
+
+  // According to the SPIR-V spec:
+  //
+  // Complement the bits of Operand.
+  return constFoldUnaryOp<IntegerAttr>(adaptor.getOperands(), [&](APInt a) {
+    a.flipAllBits();
+    return a;
+  });
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.LogicalAnd
 //===----------------------------------------------------------------------===//
 
@@ -663,23 +707,72 @@ OpFoldResult spirv::LogicalAndOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.LogicalEqualOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::LogicalEqualOp::fold(spirv::LogicalEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.LogicalNotEqualOp
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::LogicalNotEqualOp::fold(FoldAdaptor adaptor) {
   if (std::optional<bool> rhs =
           getScalarOrSplatBoolAttr(adaptor.getOperand2())) {
-    // x && false = x
+    // x != false -> x
     if (!rhs.value())
       return getOperand1();
   }
 
-  return Attribute();
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getZero(1) : APInt::getAllOnes(1);
+      });
 }
 
 //===----------------------------------------------------------------------===//
 // spirv.LogicalNot
 //===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::LogicalNotOp::fold(FoldAdaptor adaptor) {
+  // !(!x) = x
+  auto op = getOperand();
+  if (auto notOp = op.getDefiningOp<spirv::LogicalNotOp>())
+    return notOp->getOperand(0);
+
+  // According to the SPIR-V spec:
+  //
+  // Complement the bits of Operand.
+  return constFoldUnaryOp<IntegerAttr>(adaptor.getOperands(),
+                                       [](const APInt &a) {
+                                         APInt zero = APInt::getZero(1);
+                                         return a == 1 ? zero : (zero + 1);
+                                       });
+}
 
 void spirv::LogicalNotOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
@@ -707,6 +800,255 @@ OpFoldResult spirv::LogicalOrOp::fold(FoldAdaptor adaptor) {
   }
 
   return Attribute();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.SelectOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::SelectOp::fold(FoldAdaptor adaptor) {
+  // spirv.Select _ x x -> x
+  Value trueVals = getTrueValue();
+  Value falseVals = getFalseValue();
+  if (trueVals == falseVals)
+    return trueVals;
+
+  ArrayRef<Attribute> operands = adaptor.getOperands();
+
+  // spirv.Select true  x y -> x
+  // spirv.Select false x y -> y
+  if (auto boolAttr = getScalarOrSplatBoolAttr(operands[0]))
+    return *boolAttr ? trueVals : falseVals;
+
+  // Check that all the operands are constant
+  if (!operands[0] || !operands[1] || !operands[2])
+    return Attribute();
+
+  // Note: getScalarOrSplatBoolAttr will always return a boolAttr if we are in
+  // the scalar case. Hence, we are only required to consider the case of
+  // DenseElementsAttr in foldSelectOp.
+  auto condAttrs = dyn_cast<DenseElementsAttr>(operands[0]);
+  auto trueAttrs = dyn_cast<DenseElementsAttr>(operands[1]);
+  auto falseAttrs = dyn_cast<DenseElementsAttr>(operands[2]);
+  if (!condAttrs || !trueAttrs || !falseAttrs)
+    return Attribute();
+
+  auto elementResults = llvm::to_vector<4>(trueAttrs.getValues<Attribute>());
+  auto iters = llvm::zip_equal(elementResults, condAttrs.getValues<BoolAttr>(),
+                               falseAttrs.getValues<Attribute>());
+  for (auto [result, cond, falseRes] : iters) {
+    if (!cond.getValue())
+      result = falseRes;
+  }
+
+  auto resultType = trueAttrs.getType();
+  return DenseElementsAttr::get(cast<ShapedType>(resultType), elementResults);
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.IEqualOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::IEqualOp::fold(spirv::IEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.INotEqualOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::INotEqualOp::fold(spirv::INotEqualOp::FoldAdaptor adaptor) {
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getZero(1) : APInt::getAllOnes(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.SGreaterThan
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::SGreaterThanOp::fold(spirv::SGreaterThanOp::FoldAdaptor adaptor) {
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.sgt(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.SGreaterThanEqual
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::SGreaterThanEqualOp::fold(
+    spirv::SGreaterThanEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.sge(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.UGreaterThan
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::UGreaterThanOp::fold(spirv::UGreaterThanOp::FoldAdaptor adaptor) {
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.ugt(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.UGreaterThanEqual
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::UGreaterThanEqualOp::fold(
+    spirv::UGreaterThanEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.uge(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.SLessThan
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::SLessThanOp::fold(spirv::SLessThanOp::FoldAdaptor adaptor) {
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.slt(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.SLessThanEqual
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::SLessThanEqualOp::fold(spirv::SLessThanEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.sle(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.ULessThan
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::ULessThanOp::fold(spirv::ULessThanOp::FoldAdaptor adaptor) {
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.ult(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.ULessThanEqual
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::ULessThanEqualOp::fold(spirv::ULessThanEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.ule(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
 }
 
 //===----------------------------------------------------------------------===//

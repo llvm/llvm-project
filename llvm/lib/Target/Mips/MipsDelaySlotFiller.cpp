@@ -13,7 +13,6 @@
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "Mips.h"
 #include "MipsInstrInfo.h"
-#include "MipsRegisterInfo.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -42,7 +41,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
 #include <iterator>
 #include <memory>
@@ -209,9 +207,7 @@ namespace {
 
   class MipsDelaySlotFiller : public MachineFunctionPass {
   public:
-    MipsDelaySlotFiller() : MachineFunctionPass(ID) {
-      initializeMipsDelaySlotFillerPass(*PassRegistry::getPassRegistry());
-    }
+    MipsDelaySlotFiller() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override { return "Mips Delay Slot Filler"; }
 
@@ -231,12 +227,11 @@ namespace {
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBranchProbabilityInfo>();
+      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -365,7 +360,8 @@ void RegDefsUses::setCallerSaved(const MachineInstr &MI) {
   // Add RA/RA_64 to Defs to prevent users of RA/RA_64 from going into
   // the delay slot. The reason is that RA/RA_64 must not be changed
   // in the delay slot so that the callee can return to the caller.
-  if (MI.definesRegister(Mips::RA) || MI.definesRegister(Mips::RA_64)) {
+  if (MI.definesRegister(Mips::RA, /*TRI=*/nullptr) ||
+      MI.definesRegister(Mips::RA_64, /*TRI=*/nullptr)) {
     Defs.set(Mips::RA);
     Defs.set(Mips::RA_64);
   }
@@ -402,7 +398,7 @@ void RegDefsUses::addLiveOut(const MachineBasicBlock &MBB,
   for (const MachineBasicBlock *S : MBB.successors())
     if (S != &SuccBB)
       for (const auto &LI : S->liveins())
-        Uses.set(LI.PhysReg);
+        Uses.set(LI.PhysReg.id());
 }
 
 bool RegDefsUses::update(const MachineInstr &MI, unsigned Begin, unsigned End) {
@@ -563,9 +559,10 @@ Iter MipsDelaySlotFiller::replaceWithCompactBranch(MachineBasicBlock &MBB,
   Branch = TII->genInstrWithNewOpc(NewOpcode, Branch);
 
   auto *ToErase = cast<MachineInstr>(&*std::next(Branch));
-  // Update call site info for the Branch.
-  if (ToErase->shouldUpdateCallSiteInfo())
-    ToErase->getMF()->moveCallSiteInfo(ToErase, cast<MachineInstr>(&*Branch));
+  // Update call info for the Branch.
+  if (ToErase->shouldUpdateAdditionalCallInfo())
+    ToErase->getMF()->moveAdditionalCallInfo(ToErase,
+                                             cast<MachineInstr>(&*Branch));
   ToErase->eraseFromParent();
   return Branch;
 }
@@ -695,8 +692,10 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
     IterTy CurrI = I;
     ++I;
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": checking instruction: "; CurrI->dump());
-    // skip debug value
-    if (CurrI->isDebugInstr()) {
+    // Skip debug value.
+    // Instruction TargetOpcode::JUMP_TABLE_DEBUG_INFO is only used to note
+    // jump table debug info.
+    if (CurrI->isDebugInstr() || CurrI->isJumpTableDebugInfo()) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE ": ignoring debug instruction: ";
                  CurrI->dump());
       continue;
@@ -743,6 +742,12 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
     bool InMicroMipsMode = STI.inMicroMipsMode();
     const MipsInstrInfo *TII = STI.getInstrInfo();
     unsigned Opcode = (*Slot).getOpcode();
+
+    // In mips1-4, should not put mflo into the delay slot for the return.
+    if ((IsMFLOMFHI(CurrI->getOpcode())) &&
+        (!STI.hasMips32() && !STI.hasMips5()))
+      continue;
+
     // This is complicated by the tail call optimization. For non-PIC code
     // there is only a 32bit sized unconditional branch which can be assumed
     // to be able to reach the target. b16 only has a range of +/- 1 KB.
@@ -871,10 +876,10 @@ MipsDelaySlotFiller::selectSuccBB(MachineBasicBlock &B) const {
     return nullptr;
 
   // Select the successor with the larget edge weight.
-  auto &Prob = getAnalysis<MachineBranchProbabilityInfo>();
-  MachineBasicBlock *S = *std::max_element(
-      B.succ_begin(), B.succ_end(),
-      [&](const MachineBasicBlock *Dst0, const MachineBasicBlock *Dst1) {
+  auto &Prob = getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  MachineBasicBlock *S =
+      *llvm::max_element(B.successors(), [&](const MachineBasicBlock *Dst0,
+                                             const MachineBasicBlock *Dst1) {
         return Prob.getEdgeProbability(&B, Dst0) <
                Prob.getEdgeProbability(&B, Dst1);
       });

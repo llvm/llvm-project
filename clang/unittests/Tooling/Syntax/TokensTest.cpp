@@ -132,8 +132,7 @@ public:
     CI->getFrontendOpts().DisableFree = false;
     CI->getPreprocessorOpts().addRemappedFile(
         FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
-    CompilerInstance Compiler;
-    Compiler.setInvocation(std::move(CI));
+    CompilerInstance Compiler(std::move(CI));
     Compiler.setDiagnostics(Diags.get());
     Compiler.setFileManager(FileMgr.get());
     Compiler.setSourceManager(SourceMgr.get());
@@ -249,8 +248,9 @@ public:
   }
 
   // Data fields.
+  DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      new DiagnosticsEngine(new DiagnosticIDs, new DiagnosticOptions);
+      new DiagnosticsEngine(new DiagnosticIDs, DiagOpts);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
       new llvm::vfs::InMemoryFileSystem;
   llvm::IntrusiveRefCntPtr<FileManager> FileMgr =
@@ -374,9 +374,22 @@ TEST_F(TokenCollectorTest, Locations) {
 
   auto StartLoc = SourceMgr->getLocForStartOfFile(SourceMgr->getMainFileID());
   for (auto &R : Code.ranges()) {
-    EXPECT_THAT(Buffer.spelledTokenAt(StartLoc.getLocWithOffset(R.Begin)),
-                Pointee(RangeIs(R)));
+    EXPECT_THAT(
+        Buffer.spelledTokenContaining(StartLoc.getLocWithOffset(R.Begin)),
+        Pointee(RangeIs(R)));
   }
+}
+
+TEST_F(TokenCollectorTest, LocationInMiddleOfSpelledToken) {
+  llvm::Annotations Code(R"cpp(
+    int foo = [[baa^aar]];
+  )cpp");
+  recordTokens(Code.code());
+  // Check spelled tokens.
+  auto StartLoc = SourceMgr->getLocForStartOfFile(SourceMgr->getMainFileID());
+  EXPECT_THAT(
+      Buffer.spelledTokenContaining(StartLoc.getLocWithOffset(Code.point())),
+      Pointee(RangeIs(Code.range())));
 }
 
 TEST_F(TokenCollectorTest, MacroDirectives) {
@@ -814,6 +827,18 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
               ValueIs(SameRange(findSpelled("good"))));
   EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("prev good")), std::nullopt);
+}
+
+TEST_F(TokenBufferTest, NoCrashForEofToken) {
+  recordTokens(R"cpp(
+    int main() {
+  )cpp");
+  ASSERT_TRUE(!Buffer.expandedTokens().empty());
+  ASSERT_EQ(Buffer.expandedTokens().back().kind(), tok::eof);
+  // Expanded range including `eof` is handled gracefully (`eof` is ignored).
+  EXPECT_THAT(
+      Buffer.spelledForExpanded(Buffer.expandedTokens()),
+      ValueIs(SameRange(Buffer.spelledTokens(SourceMgr->getMainFileID()))));
 }
 
 TEST_F(TokenBufferTest, ExpandedTokensForRange) {

@@ -20,11 +20,13 @@ namespace clang::tidy::modernize {
 class UseUsingCheck : public ClangTidyCheck {
 
   const bool IgnoreMacros;
+  const bool IgnoreExternC;
   SourceLocation LastReplacementEnd;
   llvm::DenseMap<const Decl *, SourceRange> LastTagDeclRanges;
 
   std::string FirstTypedefType;
   std::string FirstTypedefName;
+  SourceLocation MainTypeEndLoc;
 
 public:
   UseUsingCheck(StringRef Name, ClangTidyContext *Context);

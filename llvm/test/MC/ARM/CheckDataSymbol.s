@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -assemble \
 # RUN: -triple=arm-arm-none-eabi -mcpu=cortex-a9 %s -o - \
 # RUN: | llvm-readobj -S --symbols - | FileCheck %s
-# CHECK:     Name: $d.1 ({{[1-9][0-9]+}})
+# CHECK:     Name: $d
 # CHECK-NEXT:     Value: 0x4
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Local (0x0)

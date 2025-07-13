@@ -36,7 +36,7 @@ cl::opt<bool>
                          cl::ReallyHidden,
                          cl::desc("disable outlining indirect calls."));
 
-cl::opt<bool>
+static cl::opt<bool>
     MatchCallsByName("ir-sim-calls-by-name", cl::init(false), cl::ReallyHidden,
                      cl::desc("only allow matching call instructions if the "
                               "name and type signature match."));
@@ -78,8 +78,7 @@ void IRInstructionData::initializeInstruction() {
   // We capture the incoming BasicBlocks as values as well as the incoming
   // Values in order to check for structural similarity.
   if (PHINode *PN = dyn_cast<PHINode>(Inst))
-    for (BasicBlock *BB : PN->blocks())
-      OperVals.push_back(BB);
+    llvm::append_range(OperVals, PN->blocks());
 }
 
 IRInstructionData::IRInstructionData(IRInstructionDataList &IDList)
@@ -274,7 +273,7 @@ bool IRSimilarity::isClose(const IRInstructionData &A,
   // name is the same.  We already know that the types are since is
   // isSameOperationAs is true.
   if (isa<CallInst>(A.Inst) && isa<CallInst>(B.Inst)) {
-    if (A.getCalleeName().str() != B.getCalleeName().str())
+    if (A.getCalleeName() != B.getCalleeName())
       return false;
   }
 
@@ -459,16 +458,14 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
     // Map the operand values to an unsigned integer if it does not already
     // have an unsigned integer assigned to it.
     for (Value *Arg : ID->OperVals)
-      if (!ValueToNumber.contains(Arg)) {
-        ValueToNumber.try_emplace(Arg, LocalValNumber);
+      if (ValueToNumber.try_emplace(Arg, LocalValNumber).second) {
         NumberToValue.try_emplace(LocalValNumber, Arg);
         LocalValNumber++;
       }
 
     // Mapping the instructions to an unsigned integer if it is not already
     // exist in the mapping.
-    if (!ValueToNumber.contains(ID->Inst)) {
-      ValueToNumber.try_emplace(ID->Inst, LocalValNumber);
+    if (ValueToNumber.try_emplace(ID->Inst, LocalValNumber).second) {
       NumberToValue.try_emplace(LocalValNumber, ID->Inst);
       LocalValNumber++;
     }
@@ -484,12 +481,10 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
   DenseSet<BasicBlock *> BBSet;
   getBasicBlocks(BBSet);
   for (BasicBlock *BB : BBSet) {
-    if (ValueToNumber.contains(BB))
-      continue;
-    
-    ValueToNumber.try_emplace(BB, LocalValNumber);
-    NumberToValue.try_emplace(LocalValNumber, BB);
-    LocalValNumber++;
+    if (ValueToNumber.try_emplace(BB, LocalValNumber).second) {
+      NumberToValue.try_emplace(LocalValNumber, BB);
+      LocalValNumber++;
+    }
   }
 }
 
@@ -732,11 +727,10 @@ bool IRSimilarityCandidate::compareAssignmentMapping(
     for (unsigned OtherVal : ValueMappingIt->second) {
       if (OtherVal == InstValB)
         continue;
-      if (!ValueNumberMappingA.contains(OtherVal))
+      auto OtherValIt = ValueNumberMappingA.find(OtherVal);
+      if (OtherValIt == ValueNumberMappingA.end())
         continue;
-      if (!ValueNumberMappingA[OtherVal].contains(InstValA))
-        continue;
-      ValueNumberMappingA[OtherVal].erase(InstValA);
+      OtherValIt->second.erase(InstValA);
     }
     ValueNumberMappingA.erase(ValueMappingIt);
     std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
@@ -1312,12 +1306,11 @@ static void findCandidateStructures(
        CandIt != CandEndIt; CandIt++) {
 
     // Determine if it has an assigned structural group already.
-    CandToGroupIt = CandToGroup.find(&*CandIt);
-    if (CandToGroupIt == CandToGroup.end()) {
-      // If not, we assign it one, and add it to our mapping.
-      std::tie(CandToGroupIt, Inserted) =
-          CandToGroup.insert(std::make_pair(&*CandIt, CurrentGroupNum++));
-    }
+    // If not, we assign it one, and add it to our mapping.
+    std::tie(CandToGroupIt, Inserted) =
+        CandToGroup.try_emplace(&*CandIt, CurrentGroupNum);
+    if (Inserted)
+      ++CurrentGroupNum;
 
     // Get the structural group number from the iterator.
     OuterGroupNum = CandToGroupIt->second;
@@ -1424,16 +1417,8 @@ void IRSimilarityIdentifier::findCandidates(
         // IRSimilarityCandidates that include that instruction.
         for (IRSimilarityCandidate &IRCand : SimilarityCandidates->back()) {
           for (unsigned Idx = IRCand.getStartIdx(), Edx = IRCand.getEndIdx();
-               Idx <= Edx; ++Idx) {
-            DenseMap<unsigned, DenseSet<IRSimilarityCandidate *>>::iterator
-                IdIt;
-            IdIt = IndexToIncludedCand.find(Idx);
-            bool Inserted = false;
-            if (IdIt == IndexToIncludedCand.end())
-              std::tie(IdIt, Inserted) = IndexToIncludedCand.insert(
-                  std::make_pair(Idx, DenseSet<IRSimilarityCandidate *>()));
-            IdIt->second.insert(&IRCand);
-          }
+               Idx <= Edx; ++Idx)
+            IndexToIncludedCand[Idx].insert(&IRCand);
           // Add mapping of candidate to the overall similarity group number.
           CandToGroup.insert(
               std::make_pair(&IRCand, SimilarityCandidates->size() - 1));
@@ -1486,10 +1471,7 @@ INITIALIZE_PASS(IRSimilarityIdentifierWrapperPass, "ir-similarity-identifier",
                 "ir-similarity-identifier", false, true)
 
 IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
-    : ModulePass(ID) {
-  initializeIRSimilarityIdentifierWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
   IRSI.reset(new IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,

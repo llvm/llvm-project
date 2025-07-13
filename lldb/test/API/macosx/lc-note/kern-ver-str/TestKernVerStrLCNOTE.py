@@ -32,7 +32,7 @@ class TestKernVerStrLCNOTE(TestBase):
             lambda: os.environ.pop("LLDB_APPLE_DSYMFORUUID_EXECUTABLE", None)
         )
 
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
+        dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
         dwarfdump_cmd_output = subprocess.check_output(
             ('/usr/bin/dwarfdump --uuid "%s"' % self.test_exe), shell=True
         ).decode("utf-8")
@@ -94,7 +94,7 @@ class TestKernVerStrLCNOTE(TestBase):
         self.target = self.dbg.CreateTarget("")
         err = lldb.SBError()
         self.process = self.target.LoadCore(self.corefile)
-        self.assertEqual(self.process.IsValid(), True)
+        self.assertTrue(self.process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
         self.assertEqual(self.target.GetNumModules(), 1)

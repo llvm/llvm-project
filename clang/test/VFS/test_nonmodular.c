@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/vdir %t/cache %t/outdir
-// We can't have module.map inside Inputs/Nonmodular.
+// We can't have module.modulemap inside Inputs/Nonmodular.
 // RUN: cp %S/Inputs/Nonmodular/Nonmodular.modulemap %t/outdir/module.modulemap
 //
 // RUN: sed -e "s@VDIR@%{/t:regex_replacement}/vdir@g" -e "s@IN_DIR@%{/S:regex_replacement}@g" -e "s@OUT_DIR@%{/t:regex_replacement}/outdir@g" %S/Inputs/Nonmodular/nonmodular-headers.yaml > %t/vdir/nonmodular-headers.yaml

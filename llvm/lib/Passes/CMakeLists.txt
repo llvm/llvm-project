@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMPasses
+  CodeGenPassBuilder.cpp
   OptimizationLevel.cpp
   PassBuilder.cpp
   PassBuilderBindings.cpp
@@ -18,6 +19,7 @@ add_llvm_component_library(LLVMPasses
   Analysis
   CFGuard
   CodeGen
+  GlobalISel
   Core
   Coroutines
   HipStdPar

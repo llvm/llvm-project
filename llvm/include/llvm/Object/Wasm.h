@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstddef>
@@ -39,9 +40,13 @@ public:
              const wasm::WasmTableType *TableType,
              const wasm::WasmSignature *Signature)
       : Info(Info), GlobalType(GlobalType), TableType(TableType),
-        Signature(Signature) {}
+        Signature(Signature) {
+    assert(!Signature || Signature->Kind != wasm::WasmSignature::Placeholder);
+  }
 
-  const wasm::WasmSymbolInfo &Info;
+  // Symbol info as represented in the symbol's 'syminfo' entry of an object
+  // file's symbol table.
+  wasm::WasmSymbolInfo Info;
   const wasm::WasmGlobalType *GlobalType;
   const wasm::WasmTableType *TableType;
   const wasm::WasmSignature *Signature;
@@ -94,7 +99,7 @@ public:
     return Info.Flags & wasm::WASM_SYMBOL_VISIBILITY_MASK;
   }
 
-  void print(raw_ostream &Out) const;
+  LLVM_ABI void print(raw_ostream &Out) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -119,7 +124,7 @@ struct WasmSegment {
   wasm::WasmDataSegment Data;
 };
 
-class WasmObjectFile : public ObjectFile {
+class LLVM_ABI WasmObjectFile : public ObjectFile {
 
 public:
   WasmObjectFile(MemoryBufferRef Object, Error &Err);
@@ -144,7 +149,6 @@ public:
   ArrayRef<wasm::WasmGlobal> globals() const { return Globals; }
   ArrayRef<wasm::WasmTag> tags() const { return Tags; }
   ArrayRef<wasm::WasmExport> exports() const { return Exports; }
-  ArrayRef<WasmSymbol> syms() const { return Symbols; }
   const wasm::WasmLinkingData &linkingData() const { return LinkingData; }
   uint32_t getNumberOfSymbols() const { return Symbols.size(); }
   ArrayRef<wasm::WasmElemSegment> elements() const { return ElemSegments; }
@@ -176,6 +180,7 @@ public:
   Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
   Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
   uint32_t getSymbolSectionId(SymbolRef Sym) const;
+  uint32_t getSymbolSize(SymbolRef Sym) const;
 
   // Overrides from SectionRef.
   void moveSectionNext(DataRefImpl &Sec) const override;
@@ -210,6 +215,7 @@ public:
   Expected<SubtargetFeatures> getFeatures() const override;
   bool isRelocatableObject() const override;
   bool isSharedObject() const;
+  bool hasUnmodeledTypes() const { return HasUnmodeledTypes; }
 
   struct ReadContext {
     const uint8_t *Start;
@@ -234,7 +240,7 @@ private:
   bool isValidSectionSymbol(uint32_t Index) const;
   wasm::WasmFunction &getDefinedFunction(uint32_t Index);
   const wasm::WasmFunction &getDefinedFunction(uint32_t Index) const;
-  wasm::WasmGlobal &getDefinedGlobal(uint32_t Index);
+  const wasm::WasmGlobal &getDefinedGlobal(uint32_t Index) const;
   wasm::WasmTag &getDefinedTag(uint32_t Index);
 
   const WasmSection &getWasmSection(DataRefImpl Ref) const;
@@ -292,6 +298,7 @@ private:
   bool HasLinkingSection = false;
   bool HasDylinkSection = false;
   bool HasMemory64 = false;
+  bool HasUnmodeledTypes = false;
   wasm::WasmLinkingData LinkingData;
   uint32_t NumImportedGlobals = 0;
   uint32_t NumImportedTables = 0;
@@ -347,9 +354,11 @@ public:
   };
 
   // Sections that may or may not be present, but cannot be predecessors
-  static int DisallowedPredecessors[WASM_NUM_SEC_ORDERS][WASM_NUM_SEC_ORDERS];
+  LLVM_ABI static int DisallowedPredecessors[WASM_NUM_SEC_ORDERS]
+                                            [WASM_NUM_SEC_ORDERS];
 
-  bool isValidSectionOrder(unsigned ID, StringRef CustomSectionName = "");
+  LLVM_ABI bool isValidSectionOrder(unsigned ID,
+                                    StringRef CustomSectionName = "");
 
 private:
   bool Seen[WASM_NUM_SEC_ORDERS] = {}; // Sections that have been seen already

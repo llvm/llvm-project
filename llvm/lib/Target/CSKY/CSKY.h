@@ -27,7 +27,7 @@ FunctionPass *createCSKYISelDag(CSKYTargetMachine &TM,
 FunctionPass *createCSKYConstantIslandPass();
 
 void initializeCSKYConstantIslandsPass(PassRegistry &);
-void initializeCSKYDAGToDAGISelPass(PassRegistry &);
+void initializeCSKYDAGToDAGISelLegacyPass(PassRegistry &);
 
 } // namespace llvm
 

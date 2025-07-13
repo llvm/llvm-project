@@ -8,33 +8,35 @@
 
 #include "src/time/nanosleep.h"
 
-#include "time_utils.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/time/gpu/time_utils.h"
 
-namespace LIBC_NAMESPACE {
-
-constexpr uint64_t TICKS_PER_NS = 1000000000UL;
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, nanosleep,
                    (const struct timespec *req, struct timespec *rem)) {
   if (!GPU_CLOCKS_PER_SEC || !req)
     return -1;
 
-  uint64_t nsecs = req->tv_nsec + req->tv_sec * TICKS_PER_NS;
+  uint64_t nsecs = req->tv_nsec + req->tv_sec * TICKS_PER_SEC;
+  uint64_t tick_rate = TICKS_PER_SEC / GPU_CLOCKS_PER_SEC;
 
   uint64_t start = gpu::fixed_frequency_clock();
-#if defined(LIBC_TARGET_ARCH_IS_NVPTX) && __CUDA_ARCH__ >= 700
-  uint64_t end = start + nsecs / (TICKS_PER_NS / GPU_CLOCKS_PER_SEC);
+#if defined(LIBC_TARGET_ARCH_IS_NVPTX)
+  uint64_t end = start + (nsecs + tick_rate - 1) / tick_rate;
   uint64_t cur = gpu::fixed_frequency_clock();
   // The NVPTX architecture supports sleeping and guaruntees the actual time
   // slept will be somewhere between zero and twice the requested amount. Here
   // we will sleep again if we undershot the time.
   while (cur < end) {
-    LIBC_INLINE_ASM("nanosleep.u32 %0;" ::"r"(nsecs));
+    if (__nvvm_reflect("__CUDA_ARCH") >= 700)
+      LIBC_INLINE_ASM("nanosleep.u32 %0;" ::"r"(nsecs));
     cur = gpu::fixed_frequency_clock();
     nsecs -= nsecs > cur - start ? cur - start : 0;
   }
 #elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
-  uint64_t end = start + nsecs / (TICKS_PER_NS / GPU_CLOCKS_PER_SEC);
+  uint64_t end = start + (nsecs + tick_rate - 1) / tick_rate;
   uint64_t cur = gpu::fixed_frequency_clock();
   // The AMDGPU architecture does not provide a sleep implementation with a
   // known delay so we simply repeatedly sleep with a large value of ~960 clock
@@ -56,11 +58,11 @@ LLVM_LIBC_FUNCTION(int, nanosleep,
 
   // Check to make sure we slept for at least the desired duration and set the
   // remaining time if not.
-  uint64_t elapsed = (stop - start) * (TICKS_PER_NS / GPU_CLOCKS_PER_SEC);
+  uint64_t elapsed = (stop - start) * tick_rate;
   if (elapsed < nsecs) {
     if (rem) {
-      rem->tv_sec = (nsecs - elapsed) / TICKS_PER_NS;
-      rem->tv_nsec = (nsecs - elapsed) % TICKS_PER_NS;
+      rem->tv_sec = (nsecs - elapsed) / TICKS_PER_SEC;
+      rem->tv_nsec = (nsecs - elapsed) % TICKS_PER_SEC;
     }
     return -1;
   }
@@ -68,4 +70,4 @@ LLVM_LIBC_FUNCTION(int, nanosleep,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

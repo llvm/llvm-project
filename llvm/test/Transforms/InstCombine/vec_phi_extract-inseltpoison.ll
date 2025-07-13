@@ -84,7 +84,7 @@ define void @nocopy(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-LABEL: @nocopy(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> undef, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP1]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <16 x i32> [[TMP2]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -97,7 +97,7 @@ define void @nocopy(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[ELT]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[INC]] = add <16 x i32> [[TMP4]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[INC]] = add <16 x i32> [[TMP4]], splat (i32 16)
 ; CHECK-NEXT:    br i1 [[END]], label [[LOOP]], label [[RET:%.*]]
 ; CHECK:       ret:
 ; CHECK-NEXT:    ret void

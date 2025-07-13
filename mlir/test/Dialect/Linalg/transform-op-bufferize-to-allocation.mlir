@@ -9,7 +9,7 @@
 //   CHECK-DAG:   %[[c0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[c50:.*]] = arith.constant 50 : index
 //   CHECK-DAG:   %[[dim0:.*]] = tensor.dim %[[t]], %[[c0]]
-//   CHECK-DAG:   %[[size0:.*]] = affine.apply #[[$map]]()[%[[h1]], %[[dim0]]]
+//   CHECK-DAG:   %[[size0:.*]] = affine.apply #[[$map]]()[%[[dim0]], %[[h1]]]
 //   CHECK-DAG:   %[[size1:.*]] = affine.apply #[[$map1]]()[%[[l2]], %[[h2]]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%[[size0]], %[[size1]]) : memref<?x?xindex>
 //       CHECK:   linalg.fill ins(%[[c50]] : index) outs(%[[alloc]] : memref<?x?xindex>)
@@ -36,13 +36,15 @@ module attributes {transform.with_named_sequence} {
 
     // Ensure that one linalg.fill was generated.
     %fill_op = transform.select "linalg.fill" in %new : (!transform.any_op) -> !transform.any_op
+    %p = transform.num_associations %fill_op : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %fill_op : !transform.any_op
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
 
     // Ensure that one linalg.copy was generated.
     %mat = transform.select "bufferization.materialize_in_destination" in %new : (!transform.any_op) -> !transform.any_op
+    %p2 = transform.num_associations %mat : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %mat : !transform.any_op
+    transform.debug.emit_param_as_remark %p2 : !transform.param<i64>
     transform.yield
   }
 }
@@ -73,18 +75,21 @@ module attributes {transform.with_named_sequence} {
 
     // Ensure that one linalg.fill was generated.
     %fill_op = transform.select "linalg.fill" in %new : (!transform.any_op) -> !transform.any_op
+    %p = transform.num_associations %fill_op : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %fill_op : !transform.any_op
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
 
     // Ensure that one linalg.copy was generated.
     %linalg_copy = transform.select "linalg.copy" in %new : (!transform.any_op) -> !transform.any_op
+    %p2 = transform.num_associations %linalg_copy : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %linalg_copy : !transform.any_op
+    transform.debug.emit_param_as_remark %p2 : !transform.param<i64>
 
     // Ensure that one memref.alloca was generated.
     %alloca = transform.select "memref.alloca" in %new : (!transform.any_op) -> !transform.any_op
+    %p3 = transform.num_associations %alloca : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %alloca : !transform.any_op
+    transform.debug.emit_param_as_remark %p3 : !transform.param<i64>
 
     // Make sure that One-Shot Bufferize can bufferize the rest.
     %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
@@ -96,7 +101,7 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @tensor_pad_constant(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
-//       CHECK:   %[[src:.*]] = bufferization.to_memref %[[t]]
+//       CHECK:   %[[src:.*]] = bufferization.to_buffer %[[t]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc
 //       CHECK:   %[[subview:.*]] = memref.subview %[[alloc]]
 //       CHECK:   memref.copy %[[src]], %[[subview]]
@@ -125,7 +130,7 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @tensor_insert(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
-//       CHECK:   %[[m:.*]] = bufferization.to_memref %[[t]]
+//       CHECK:   %[[m:.*]] = bufferization.to_buffer %[[t]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?x10xindex, 4>
 //       CHECK:   memref.copy %[[m]], %[[alloc]]
 //       CHECK:   memref.store %{{.*}}, %[[alloc]]

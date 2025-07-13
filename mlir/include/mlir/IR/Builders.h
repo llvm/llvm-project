@@ -19,8 +19,8 @@ class AffineExpr;
 class IRMapping;
 class UnknownLoc;
 class FileLineColLoc;
+class FileLineColRange;
 class Type;
-class PrimitiveType;
 class IntegerType;
 class FloatType;
 class FunctionType;
@@ -60,11 +60,7 @@ public:
                        Attribute metadata = Attribute());
 
   // Types.
-  FloatType getFloat8E5M2Type();
-  FloatType getFloat8E4M3FNType();
-  FloatType getFloat8E5M2FNUZType();
-  FloatType getFloat8E4M3FNUZType();
-  FloatType getFloat8E4M3B11FNUZType();
+  FloatType getF8E8M0Type();
   FloatType getBF16Type();
   FloatType getF16Type();
   FloatType getTF32Type();
@@ -118,6 +114,9 @@ public:
   // supports boolean, integer, and 16-/32-/64-bit float types, and vector or
   // ranked tensor of them. Returns null attribute otherwise.
   TypedAttr getZeroAttr(Type type);
+  // Returns a 1-valued attribute of the given `type`.
+  // Type constraints are the same as `getZeroAttr`.
+  TypedAttr getOneAttr(Type type);
 
   // Convenience methods for fixed types.
   FloatAttr getF16FloatAttr(float value);
@@ -205,6 +204,7 @@ protected:
 /// automatically inserted at an insertion point. The builder is copyable.
 class OpBuilder : public Builder {
 public:
+  class InsertPoint;
   struct Listener;
 
   /// Create a builder with the given context.
@@ -215,7 +215,7 @@ public:
   explicit OpBuilder(Region *region, Listener *listener = nullptr)
       : OpBuilder(region->getContext(), listener) {
     if (!region->empty())
-      setInsertionPoint(&region->front(), region->front().begin());
+      setInsertionPointToStart(&region->front());
   }
   explicit OpBuilder(Region &region, Listener *listener = nullptr)
       : OpBuilder(&region, listener) {}
@@ -285,13 +285,26 @@ public:
 
     virtual ~Listener() = default;
 
-    /// Notification handler for when an operation is inserted into the builder.
-    /// `op` is the operation that was inserted.
-    virtual void notifyOperationInserted(Operation *op) {}
+    /// Notify the listener that the specified operation was inserted.
+    ///
+    /// * If the operation was moved, then `previous` is the previous location
+    ///   of the op.
+    /// * If the operation was unlinked before it was inserted, then `previous`
+    ///   is empty.
+    ///
+    /// Note: Creating an (unlinked) op does not trigger this notification.
+    virtual void notifyOperationInserted(Operation *op, InsertPoint previous) {}
 
-    /// Notification handler for when a block is created using the builder.
-    /// `block` is the block that was created.
-    virtual void notifyBlockCreated(Block *block) {}
+    /// Notify the listener that the specified block was inserted.
+    ///
+    /// * If the block was moved, then `previous` and `previousIt` are the
+    ///   previous location of the block.
+    /// * If the block was unlinked before it was inserted, then `previous`
+    ///   is "nullptr".
+    ///
+    /// Note: Creating an (unlinked) block does not trigger this notification.
+    virtual void notifyBlockInserted(Block *block, Region *previous,
+                                     Region::iterator previousIt) {}
 
   protected:
     Listener(Kind kind) : ListenerBase(kind) {}
@@ -441,15 +454,14 @@ public:
   /// 'parent'. `locs` contains the locations of the inserted arguments, and
   /// should match the size of `argTypes`.
   Block *createBlock(Region *parent, Region::iterator insertPt = {},
-                     TypeRange argTypes = std::nullopt,
-                     ArrayRef<Location> locs = std::nullopt);
+                     TypeRange argTypes = {}, ArrayRef<Location> locs = {});
 
   /// Add new block with 'argTypes' arguments and set the insertion point to the
   /// end of it. The block is placed before 'insertBefore'. `locs` contains the
   /// locations of the inserted arguments, and should match the size of
   /// `argTypes`.
-  Block *createBlock(Block *insertBefore, TypeRange argTypes = std::nullopt,
-                     ArrayRef<Location> locs = std::nullopt);
+  Block *createBlock(Block *insertBefore, TypeRange argTypes = {},
+                     ArrayRef<Location> locs = {});
 
   //===--------------------------------------------------------------------===//
   // Operation Creation
@@ -473,7 +485,7 @@ private:
   template <typename OpT>
   RegisteredOperationName getCheckRegisteredInfo(MLIRContext *ctx) {
     std::optional<RegisteredOperationName> opName =
-        RegisteredOperationName::lookup(OpT::getOperationName(), ctx);
+        RegisteredOperationName::lookup(TypeID::get<OpT>(), ctx);
     if (LLVM_UNLIKELY(!opName)) {
       llvm::report_fatal_error(
           "Building op `" + OpT::getOperationName() +
@@ -500,7 +512,7 @@ public:
 
   /// Create an operation of specific op type at the current insertion point,
   /// and immediately try to fold it. This functions populates 'results' with
-  /// the results after folding the operation.
+  /// the results of the operation.
   template <typename OpTy, typename... Args>
   void createOrFold(SmallVectorImpl<Value> &results, Location location,
                     Args &&...args) {
@@ -513,11 +525,18 @@ public:
     if (block)
       block->getOperations().insert(insertPoint, op);
 
-    // Fold the operation. If successful erase it, otherwise notify.
-    if (succeeded(tryFold(op, results)))
+    // Attempt to fold the operation.
+    if (succeeded(tryFold(op, results)) && !results.empty()) {
+      // Erase the operation, if the fold removed the need for this operation.
+      // Note: The fold already populated the results in this case.
       op->erase();
-    else if (listener)
-      listener->notifyOperationInserted(op);
+      return;
+    }
+
+    ResultRange opResults = op->getResults();
+    results.assign(opResults.begin(), opResults.end());
+    if (block && listener)
+      listener->notifyOperationInserted(op, /*previous=*/{});
   }
 
   /// Overload to create or fold a single result operation.
@@ -543,9 +562,14 @@ public:
   }
 
   /// Attempts to fold the given operation and places new results within
-  /// 'results'. Returns success if the operation was folded, failure otherwise.
+  /// `results`. Returns success if the operation was folded, failure otherwise.
+  /// If the fold was in-place, `results` will not be filled. Optionally, newly
+  /// materialized constant operations can be returned to the caller.
+  ///
   /// Note: This function does not erase the operation on a successful fold.
-  LogicalResult tryFold(Operation *op, SmallVectorImpl<Value> &results);
+  LogicalResult
+  tryFold(Operation *op, SmallVectorImpl<Value> &results,
+          SmallVectorImpl<Operation *> *materializedConstants = nullptr);
 
   /// Creates a deep copy of the specified operation, remapping any operands
   /// that use values outside of the operation using the map that is provided
@@ -568,6 +592,16 @@ public:
   OpT cloneWithoutRegions(OpT op) {
     return cast<OpT>(cloneWithoutRegions(*op.getOperation()));
   }
+
+  /// Clone the blocks that belong to "region" before the given position in
+  /// another region "parent". The two regions must be different. The caller is
+  /// responsible for creating or updating the operation transferring flow of
+  /// control to the region and passing it the correct block arguments.
+  void cloneRegionBefore(Region &region, Region &parent,
+                         Region::iterator before, IRMapping &mapping);
+  void cloneRegionBefore(Region &region, Region &parent,
+                         Region::iterator before);
+  void cloneRegionBefore(Region &region, Block *before);
 
 protected:
   /// The optional listener for events of this builder.

@@ -76,13 +76,13 @@ void bar_float(void) {
 
 // CHECK: define{{.*}} void @bar_float() [[NUW]] {
 // CHECK: %[[VAR1:[A-Za-z0-9.]+]] = alloca { float, float }, align 4
-// CHECK: %[[VAR2:[A-Za-z0-9.]+]] = getelementptr inbounds { float, float }, ptr %[[VAR1]], i32 0, i32 0
-// CHECK: %[[VAR3:[A-Za-z0-9.]+]] = getelementptr inbounds { float, float }, ptr %[[VAR1]], i32 0, i32 1
+// CHECK: %[[VAR2:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { float, float }, ptr %[[VAR1]], i32 0, i32 0
+// CHECK: %[[VAR3:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { float, float }, ptr %[[VAR1]], i32 0, i32 1
 // CHECK: store float 2.000000e+00, ptr %[[VAR2]]
 // CHECK: store float -2.500000e+00, ptr %[[VAR3]]
-// CHECK: %[[VAR4:[A-Za-z0-9.]+]] = getelementptr inbounds { float, float }, ptr %[[VAR1]], i32 0, i32 0
+// CHECK: %[[VAR4:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { float, float }, ptr %[[VAR1]], i32 0, i32 0
 // CHECK: %[[VAR5:[A-Za-z0-9.]+]] = load float, ptr %[[VAR4]], align 4
-// CHECK: %[[VAR6:[A-Za-z0-9.]+]] = getelementptr inbounds { float, float }, ptr %[[VAR1]], i32 0, i32 1
+// CHECK: %[[VAR6:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { float, float }, ptr %[[VAR1]], i32 0, i32 1
 // CHECK: %[[VAR7:[A-Za-z0-9.]+]] = load float, ptr %[[VAR6]], align 4
 // CHECK: %{{[A-Za-z0-9.]+}} = call float @foo_float(float noundef %[[VAR5]], float noundef %[[VAR7]])
 
@@ -92,13 +92,13 @@ void bar_double(void) {
 
 // CHECK: define{{.*}} void @bar_double() [[NUW]] {
 // CHECK: %[[VAR11:[A-Za-z0-9.]+]] = alloca { double, double }, align 8
-// CHECK: %[[VAR12:[A-Za-z0-9.]+]] = getelementptr inbounds { double, double }, ptr %[[VAR11]], i32 0, i32 0
-// CHECK: %[[VAR13:[A-Za-z0-9.]+]] = getelementptr inbounds { double, double }, ptr %[[VAR11]], i32 0, i32 1
+// CHECK: %[[VAR12:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { double, double }, ptr %[[VAR11]], i32 0, i32 0
+// CHECK: %[[VAR13:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { double, double }, ptr %[[VAR11]], i32 0, i32 1
 // CHECK: store double 2.000000e+00, ptr %[[VAR12]]
 // CHECK: store double -2.500000e+00, ptr %[[VAR13]]
-// CHECK: %[[VAR14:[A-Za-z0-9.]+]] = getelementptr inbounds { double, double }, ptr %[[VAR11]], i32 0, i32 0
+// CHECK: %[[VAR14:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { double, double }, ptr %[[VAR11]], i32 0, i32 0
 // CHECK: %[[VAR15:[A-Za-z0-9.]+]] = load double, ptr %[[VAR14]], align 8
-// CHECK: %[[VAR16:[A-Za-z0-9.]+]] = getelementptr inbounds { double, double }, ptr %[[VAR11]], i32 0, i32 1
+// CHECK: %[[VAR16:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { double, double }, ptr %[[VAR11]], i32 0, i32 1
 // CHECK: %[[VAR17:[A-Za-z0-9.]+]] = load double, ptr %[[VAR16]], align 8
 // CHECK: %{{[A-Za-z0-9.]+}} = call double @foo_double(double noundef %[[VAR15]], double noundef %[[VAR17]])
 
@@ -108,13 +108,13 @@ void bar_long_double(void) {
 
 // CHECK: define{{.*}} void @bar_long_double() [[NUW]] {
 // CHECK: %[[VAR21:[A-Za-z0-9.]+]] = alloca { ppc_fp128, ppc_fp128 }, align 16
-// CHECK: %[[VAR22:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
-// CHECK: %[[VAR23:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1
+// CHECK: %[[VAR22:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
+// CHECK: %[[VAR23:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1
 // CHECK: store ppc_fp128 0xM40000000000000000000000000000000, ptr %[[VAR22]]
 // CHECK: store ppc_fp128 0xMC0040000000000008000000000000000, ptr %[[VAR23]]
-// CHECK: %[[VAR24:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
+// CHECK: %[[VAR24:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
 // CHECK: %[[VAR25:[A-Za-z0-9.]+]] = load ppc_fp128, ptr %[[VAR24]], align 16
-// CHECK: %[[VAR26:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1
+// CHECK: %[[VAR26:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1
 // CHECK: %[[VAR27:[A-Za-z0-9.]+]] = load ppc_fp128, ptr %[[VAR26]], align 16
 // CHECK: %{{[A-Za-z0-9.]+}} = call ppc_fp128 @foo_long_double(ppc_fp128 noundef %[[VAR25]], ppc_fp128 noundef %[[VAR27]])
 
@@ -124,13 +124,13 @@ void bar_ibm128(void) {
 
 // CHECK: define{{.*}} void @bar_ibm128() [[NUW]] {
 // CHECK: %[[VAR21:[A-Za-z0-9.]+]] = alloca { ppc_fp128, ppc_fp128 }, align 16
-// CHECK: %[[VAR22:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
-// CHECK: %[[VAR23:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1
+// CHECK: %[[VAR22:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
+// CHECK: %[[VAR23:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1
 // CHECK: store ppc_fp128 0xM40000000000000000000000000000000, ptr %[[VAR22]]
 // CHECK: store ppc_fp128 0xMC0040000000000008000000000000000, ptr %[[VAR23]]
-// CHECK: %[[VAR24:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
+// CHECK: %[[VAR24:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
 // CHECK: %[[VAR25:[A-Za-z0-9.]+]] = load ppc_fp128, ptr %[[VAR24]], align 16
-// CHECK: %[[VAR26:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1
+// CHECK: %[[VAR26:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1
 // CHECK: %[[VAR27:[A-Za-z0-9.]+]] = load ppc_fp128, ptr %[[VAR26]], align 16
 // CHECK: %{{[A-Za-z0-9.]+}} = call ppc_fp128 @foo_ibm128(ppc_fp128 noundef %[[VAR25]], ppc_fp128 noundef %[[VAR27]])
 
@@ -140,13 +140,13 @@ void bar_int(void) {
 
 // CHECK: define{{.*}} void @bar_int() [[NUW]] {
 // CHECK: %[[VAR31:[A-Za-z0-9.]+]] = alloca { i32, i32 }, align 4
-// CHECK: %[[VAR32:[A-Za-z0-9.]+]] = getelementptr inbounds { i32, i32 }, ptr %[[VAR31]], i32 0, i32 0
-// CHECK: %[[VAR33:[A-Za-z0-9.]+]] = getelementptr inbounds { i32, i32 }, ptr %[[VAR31]], i32 0, i32 1
+// CHECK: %[[VAR32:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[VAR31]], i32 0, i32 0
+// CHECK: %[[VAR33:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[VAR31]], i32 0, i32 1
 // CHECK: store i32 2, ptr %[[VAR32]]
 // CHECK: store i32 -3, ptr %[[VAR33]]
-// CHECK: %[[VAR34:[A-Za-z0-9.]+]] = getelementptr inbounds { i32, i32 }, ptr %[[VAR31]], i32 0, i32 0
+// CHECK: %[[VAR34:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[VAR31]], i32 0, i32 0
 // CHECK: %[[VAR35:[A-Za-z0-9.]+]] = load i32, ptr %[[VAR34]], align 4
-// CHECK: %[[VAR36:[A-Za-z0-9.]+]] = getelementptr inbounds { i32, i32 }, ptr %[[VAR31]], i32 0, i32 1
+// CHECK: %[[VAR36:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[VAR31]], i32 0, i32 1
 // CHECK: %[[VAR37:[A-Za-z0-9.]+]] = load i32, ptr %[[VAR36]], align 4
 // CHECK: %{{[A-Za-z0-9.]+}} = call signext i32 @foo_int(i32 noundef %[[VAR35]], i32 noundef %[[VAR37]])
 
@@ -156,13 +156,13 @@ void bar_short(void) {
 
 // CHECK: define{{.*}} void @bar_short() [[NUW]] {
 // CHECK: %[[VAR41:[A-Za-z0-9.]+]] = alloca { i16, i16 }, align 2
-// CHECK: %[[VAR42:[A-Za-z0-9.]+]] = getelementptr inbounds { i16, i16 }, ptr %[[VAR41]], i32 0, i32 0
-// CHECK: %[[VAR43:[A-Za-z0-9.]+]] = getelementptr inbounds { i16, i16 }, ptr %[[VAR41]], i32 0, i32 1
+// CHECK: %[[VAR42:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i16, i16 }, ptr %[[VAR41]], i32 0, i32 0
+// CHECK: %[[VAR43:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i16, i16 }, ptr %[[VAR41]], i32 0, i32 1
 // CHECK: store i16 2, ptr %[[VAR42]]
 // CHECK: store i16 -3, ptr %[[VAR43]]
-// CHECK: %[[VAR44:[A-Za-z0-9.]+]] = getelementptr inbounds { i16, i16 }, ptr %[[VAR41]], i32 0, i32 0
+// CHECK: %[[VAR44:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i16, i16 }, ptr %[[VAR41]], i32 0, i32 0
 // CHECK: %[[VAR45:[A-Za-z0-9.]+]] = load i16, ptr %[[VAR44]], align 2
-// CHECK: %[[VAR46:[A-Za-z0-9.]+]] = getelementptr inbounds { i16, i16 }, ptr %[[VAR41]], i32 0, i32 1
+// CHECK: %[[VAR46:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i16, i16 }, ptr %[[VAR41]], i32 0, i32 1
 // CHECK: %[[VAR47:[A-Za-z0-9.]+]] = load i16, ptr %[[VAR46]], align 2
 // CHECK: %{{[A-Za-z0-9.]+}} = call signext i16 @foo_short(i16 noundef %[[VAR45]], i16 noundef %[[VAR47]])
 
@@ -172,13 +172,13 @@ void bar_char(void) {
 
 // CHECK: define{{.*}} void @bar_char() [[NUW]] {
 // CHECK: %[[VAR51:[A-Za-z0-9.]+]] = alloca { i8, i8 }, align 1
-// CHECK: %[[VAR52:[A-Za-z0-9.]+]] = getelementptr inbounds { i8, i8 }, ptr %[[VAR51]], i32 0, i32 0
-// CHECK: %[[VAR53:[A-Za-z0-9.]+]] = getelementptr inbounds { i8, i8 }, ptr %[[VAR51]], i32 0, i32 1
+// CHECK: %[[VAR52:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i8, i8 }, ptr %[[VAR51]], i32 0, i32 0
+// CHECK: %[[VAR53:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i8, i8 }, ptr %[[VAR51]], i32 0, i32 1
 // CHECK: store i8 2, ptr %[[VAR52]]
 // CHECK: store i8 -3, ptr %[[VAR53]]
-// CHECK: %[[VAR54:[A-Za-z0-9.]+]] = getelementptr inbounds { i8, i8 }, ptr %[[VAR51]], i32 0, i32 0
+// CHECK: %[[VAR54:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i8, i8 }, ptr %[[VAR51]], i32 0, i32 0
 // CHECK: %[[VAR55:[A-Za-z0-9.]+]] = load i8, ptr %[[VAR54]], align 1
-// CHECK: %[[VAR56:[A-Za-z0-9.]+]] = getelementptr inbounds { i8, i8 }, ptr %[[VAR51]], i32 0, i32 1
+// CHECK: %[[VAR56:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i8, i8 }, ptr %[[VAR51]], i32 0, i32 1
 // CHECK: %[[VAR57:[A-Za-z0-9.]+]] = load i8, ptr %[[VAR56]], align 1
 // CHECK: %{{[A-Za-z0-9.]+}} = call signext i8 @foo_char(i8 noundef %[[VAR55]], i8 noundef %[[VAR57]])
 
@@ -188,13 +188,13 @@ void bar_long(void) {
 
 // CHECK: define{{.*}} void @bar_long() [[NUW]] {
 // CHECK: %[[VAR61:[A-Za-z0-9.]+]] = alloca { i64, i64 }, align 8
-// CHECK: %[[VAR62:[A-Za-z0-9.]+]] = getelementptr inbounds { i64, i64 }, ptr %[[VAR61]], i32 0, i32 0
-// CHECK: %[[VAR63:[A-Za-z0-9.]+]] = getelementptr inbounds { i64, i64 }, ptr %[[VAR61]], i32 0, i32 1
+// CHECK: %[[VAR62:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[VAR61]], i32 0, i32 0
+// CHECK: %[[VAR63:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[VAR61]], i32 0, i32 1
 // CHECK: store i64 2, ptr %[[VAR62]]
 // CHECK: store i64 -3, ptr %[[VAR63]]
-// CHECK: %[[VAR64:[A-Za-z0-9.]+]] = getelementptr inbounds { i64, i64 }, ptr %[[VAR61]], i32 0, i32 0
+// CHECK: %[[VAR64:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[VAR61]], i32 0, i32 0
 // CHECK: %[[VAR65:[A-Za-z0-9.]+]] = load i64, ptr %[[VAR64]], align 8
-// CHECK: %[[VAR66:[A-Za-z0-9.]+]] = getelementptr inbounds { i64, i64 }, ptr %[[VAR61]], i32 0, i32 1
+// CHECK: %[[VAR66:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[VAR61]], i32 0, i32 1
 // CHECK: %[[VAR67:[A-Za-z0-9.]+]] = load i64, ptr %[[VAR66]], align 8
 // CHECK: %{{[A-Za-z0-9.]+}} = call i64 @foo_long(i64 noundef %[[VAR65]], i64 noundef %[[VAR67]])
 
@@ -204,13 +204,13 @@ void bar_long_long(void) {
 
 // CHECK: define{{.*}} void @bar_long_long() [[NUW]] {
 // CHECK: %[[VAR71:[A-Za-z0-9.]+]] = alloca { i64, i64 }, align 8
-// CHECK: %[[VAR72:[A-Za-z0-9.]+]] = getelementptr inbounds { i64, i64 }, ptr %[[VAR71]], i32 0, i32 0
-// CHECK: %[[VAR73:[A-Za-z0-9.]+]] = getelementptr inbounds { i64, i64 }, ptr %[[VAR71]], i32 0, i32 1
+// CHECK: %[[VAR72:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[VAR71]], i32 0, i32 0
+// CHECK: %[[VAR73:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[VAR71]], i32 0, i32 1
 // CHECK: store i64 2, ptr %[[VAR72]]
 // CHECK: store i64 -3, ptr %[[VAR73]]
-// CHECK: %[[VAR74:[A-Za-z0-9.]+]] = getelementptr inbounds { i64, i64 }, ptr %[[VAR71]], i32 0, i32 0
+// CHECK: %[[VAR74:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[VAR71]], i32 0, i32 0
 // CHECK: %[[VAR75:[A-Za-z0-9.]+]] = load i64, ptr %[[VAR74]], align 8
-// CHECK: %[[VAR76:[A-Za-z0-9.]+]] = getelementptr inbounds { i64, i64 }, ptr %[[VAR71]], i32 0, i32 1
+// CHECK: %[[VAR76:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[VAR71]], i32 0, i32 1
 // CHECK: %[[VAR77:[A-Za-z0-9.]+]] = load i64, ptr %[[VAR76]], align 8
 // CHECK: %{{[A-Za-z0-9.]+}} = call i64 @foo_long_long(i64 noundef %[[VAR75]], i64 noundef %[[VAR77]])
 

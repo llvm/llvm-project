@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -33,6 +34,15 @@ static const char *BTFKindStr[] = {
 #define HANDLE_BTF_KIND(ID, NAME) "BTF_KIND_" #NAME,
 #include "llvm/DebugInfo/BTF/BTF.def"
 };
+
+static const DIType *tryRemoveAtomicType(const DIType *Ty) {
+  if (!Ty)
+    return Ty;
+  auto DerivedTy = dyn_cast<DIDerivedType>(Ty);
+  if (DerivedTy && DerivedTy->getTag() == dwarf::DW_TAG_atomic_type)
+    return DerivedTy->getBaseType();
+  return Ty;
+}
 
 /// Emit a BTF common type.
 void BTFTypeBase::emitType(MCStreamer &OS) {
@@ -89,7 +99,7 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
     return;
 
   // The base type for PTR/CONST/VOLATILE could be void.
-  const DIType *ResolvedType = DTy->getBaseType();
+  const DIType *ResolvedType = tryRemoveAtomicType(DTy->getBaseType());
   if (!ResolvedType) {
     assert((Kind == BTF::BTF_KIND_PTR || Kind == BTF::BTF_KIND_CONST ||
             Kind == BTF::BTF_KIND_VOLATILE) &&
@@ -304,7 +314,7 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
     } else {
       BTFMember.Offset = DDTy->getOffsetInBits();
     }
-    const auto *BaseTy = DDTy->getBaseType();
+    const auto *BaseTy = tryRemoveAtomicType(DDTy->getBaseType());
     BTFMember.Type = BDebug.getTypeId(BaseTy);
     Members.push_back(BTFMember);
   }
@@ -341,7 +351,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
 
   DITypeRefArray Elements = STy->getTypeArray();
-  auto RetType = Elements[0];
+  auto RetType = tryRemoveAtomicType(Elements[0]);
   BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
   BTFType.NameOff = 0;
 
@@ -349,7 +359,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   // to represent the vararg, encode the NameOff/Type to be 0.
   for (unsigned I = 1, N = Elements.size(); I < N; ++I) {
     struct BTF::BTFParam Param;
-    auto Element = Elements[I];
+    auto Element = tryRemoveAtomicType(Elements[I]);
     if (Element) {
       Param.NameOff = BDebug.addString(FuncArgNames[I]);
       Param.Type = BDebug.getTypeId(Element);
@@ -482,7 +492,7 @@ void BTFTypeTypeTag::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
   BTFType.NameOff = BDebug.addString(Tag);
   if (DTy) {
-    const DIType *ResolvedType = DTy->getBaseType();
+    const DIType *ResolvedType = tryRemoveAtomicType(DTy->getBaseType());
     if (!ResolvedType)
       BTFType.Type = 0;
     else
@@ -588,7 +598,7 @@ void BTFDebug::processDeclAnnotations(DINodeArray Annotations,
   for (const Metadata *Annotation : Annotations->operands()) {
     const MDNode *MD = cast<MDNode>(Annotation);
     const MDString *Name = cast<MDString>(MD->getOperand(0));
-    if (!Name->getString().equals("btf_decl_tag"))
+    if (Name->getString() != "btf_decl_tag")
       continue;
 
     const MDString *Value = cast<MDString>(MD->getOperand(1));
@@ -627,7 +637,7 @@ int BTFDebug::genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId) {
     for (const Metadata *Annotations : Annots->operands()) {
       const MDNode *MD = cast<MDNode>(Annotations);
       const MDString *Name = cast<MDString>(MD->getOperand(0));
-      if (!Name->getString().equals("btf_type_tag"))
+      if (Name->getString() != "btf_type_tag")
         continue;
       MDStrs.push_back(cast<MDString>(MD->getOperand(1)));
     }
@@ -705,7 +715,7 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
     if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
       if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
         const DISubrange *SR = cast<DISubrange>(Element);
-        auto *CI = SR->getCount().dyn_cast<ConstantInt *>();
+        auto *CI = dyn_cast<ConstantInt *>(SR->getCount());
         int64_t Count = CI->getSExtValue();
 
         // For struct s { int b; char c[]; }, the c[] will be represented
@@ -799,10 +809,14 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
                                 bool CheckPointer, bool SeenPointer) {
   unsigned Tag = DTy->getTag();
 
+  if (Tag == dwarf::DW_TAG_atomic_type)
+    return visitTypeEntry(DTy->getBaseType(), TypeId, CheckPointer,
+                          SeenPointer);
+
   /// Try to avoid chasing pointees, esp. structure pointees which may
   /// unnecessary bring in a lot of types.
   if (CheckPointer && !SeenPointer) {
-    SeenPointer = Tag == dwarf::DW_TAG_pointer_type;
+    SeenPointer = Tag == dwarf::DW_TAG_pointer_type && !DTy->getAnnotations();
   }
 
   if (CheckPointer && SeenPointer) {
@@ -902,7 +916,8 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
           if (DIToIdMap.find(BaseTy) != DIToIdMap.end()) {
             DTy = dyn_cast<DIDerivedType>(BaseTy);
           } else {
-            if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type) {
+            if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type &&
+                !DTy->getAnnotations()) {
               SeenPointer = true;
               if (IsForwardDeclCandidate(BaseTy))
                 break;
@@ -961,11 +976,24 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
   if (Tag != dwarf::DW_TAG_structure_type || CTy->isForwardDecl())
     return;
 
-  // Visit all struct members to ensure pointee type is visited
+  // Visit all struct members to ensure their types are visited.
   const DINodeArray Elements = CTy->getElements();
   for (const auto *Element : Elements) {
     const auto *MemberType = cast<DIDerivedType>(Element);
-    visitTypeEntry(MemberType->getBaseType());
+    const DIType *MemberBaseType = MemberType->getBaseType();
+
+    // If the member is a composite type, that may indicate the currently
+    // visited composite type is a wrapper, and the member represents the
+    // actual map definition.
+    // In that case, visit the member with `visitMapDefType` instead of
+    // `visitTypeEntry`, treating it specifically as a map definition rather
+    // than as a regular composite type.
+    const auto *MemberCTy = dyn_cast<DICompositeType>(MemberBaseType);
+    if (MemberCTy) {
+      visitMapDefType(MemberBaseType, TypeId);
+    } else {
+      visitTypeEntry(MemberBaseType);
+    }
   }
 
   // Visit this type, struct or a const/typedef/volatile/restrict type
@@ -973,8 +1001,7 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
 }
 
 /// Read file contents from the actual file or from the source
-std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
-  auto File = SP->getFile();
+std::string BTFDebug::populateFileContent(const DIFile *File) {
   std::string FileName;
 
   if (!File->getFilename().starts_with("/") && File->getDirectory().size())
@@ -1005,16 +1032,17 @@ std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
   return FileName;
 }
 
-void BTFDebug::constructLineInfo(const DISubprogram *SP, MCSymbol *Label,
+void BTFDebug::constructLineInfo(MCSymbol *Label, const DIFile *File,
                                  uint32_t Line, uint32_t Column) {
-  std::string FileName = populateFileContent(SP);
+  std::string FileName = populateFileContent(File);
   BTFLineInfo LineInfo;
 
   LineInfo.Label = Label;
   LineInfo.FileNameOff = addString(FileName);
   // If file content is not available, let LineOff = 0.
-  if (Line < FileContent[FileName].size())
-    LineInfo.LineOff = addString(FileContent[FileName][Line]);
+  const auto &Content = FileContent[FileName];
+  if (Line < Content.size())
+    LineInfo.LineOff = addString(Content[Line]);
   else
     LineInfo.LineOff = 0;
   LineInfo.LineNum = Line;
@@ -1366,10 +1394,10 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   if (!CurMI) // no debug info
     return;
 
-  // Skip this instruction if no DebugLoc or the DebugLoc
-  // is the same as the previous instruction.
+  // Skip this instruction if no DebugLoc, the DebugLoc
+  // is the same as the previous instruction or Line is 0.
   const DebugLoc &DL = MI->getDebugLoc();
-  if (!DL || PrevInstLoc == DL) {
+  if (!DL || PrevInstLoc == DL || DL.getLine() == 0) {
     // This instruction will be skipped, no LineInfo has
     // been generated, construct one based on function signature.
     if (LineInfoGenerated == false) {
@@ -1377,7 +1405,7 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
       if (!S)
         return;
       MCSymbol *FuncLabel = Asm->getFunctionBegin();
-      constructLineInfo(S, FuncLabel, S->getLine(), 0);
+      constructLineInfo(FuncLabel, S->getFile(), S->getLine(), 0);
       LineInfoGenerated = true;
     }
 
@@ -1389,8 +1417,7 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   OS.emitLabel(LineSym);
 
   // Construct the lineinfo.
-  auto SP = DL->getScope()->getSubprogram();
-  constructLineInfo(SP, LineSym, DL.getLine(), DL.getCol());
+  constructLineInfo(LineSym, DL->getFile(), DL.getLine(), DL.getCol());
 
   LineInfoGenerated = true;
   PrevInstLoc = DL;
@@ -1424,7 +1451,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     // constant with private linkage and if it won't be in .rodata.str<#>
     // and .rodata.cst<#> sections.
     if (SecName == ".rodata" && Global.hasPrivateLinkage() &&
-        DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
+        DataSecEntries.find(SecName) == DataSecEntries.end()) {
       // skip .rodata.str<#> and .rodata.cst<#> sections
       if (!GVKind->isMergeableCString() && !GVKind->isMergeableConst()) {
         DataSecEntries[std::string(SecName)] =
@@ -1445,8 +1472,10 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
       DIGlobal = GVE->getVariable();
       if (SecName.starts_with(".maps"))
         visitMapDefType(DIGlobal->getType(), GVTypeId);
-      else
-        visitTypeEntry(DIGlobal->getType(), GVTypeId, false, false);
+      else {
+        const DIType *Ty = tryRemoveAtomicType(DIGlobal->getType());
+        visitTypeEntry(Ty, GVTypeId, false, false);
+      }
       break;
     }
 
@@ -1485,17 +1514,38 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
       continue;
 
     // Find or create a DataSec
-    if (DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
-      DataSecEntries[std::string(SecName)] =
-          std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
-    }
+    auto [It, Inserted] = DataSecEntries.try_emplace(std::string(SecName));
+    if (Inserted)
+      It->second = std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
 
     // Calculate symbol size
-    const DataLayout &DL = Global.getParent()->getDataLayout();
+    const DataLayout &DL = Global.getDataLayout();
     uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
 
-    DataSecEntries[std::string(SecName)]->addDataSecEntry(VarId,
-        Asm->getSymbol(&Global), Size);
+    It->second->addDataSecEntry(VarId, Asm->getSymbol(&Global), Size);
+
+    if (Global.hasInitializer())
+      processGlobalInitializer(Global.getInitializer());
+  }
+}
+
+/// Process global variable initializer in pursuit for function
+/// pointers. Add discovered (extern) functions to BTF. Some (extern)
+/// functions might have been missed otherwise. Every symbol needs BTF
+/// info when linking with bpftool. Primary use case: "static"
+/// initialization of BPF maps.
+///
+/// struct {
+///   __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+///   ...
+/// } prog_map SEC(".maps") = { .values = { extern_func } };
+///
+void BTFDebug::processGlobalInitializer(const Constant *C) {
+  if (auto *Fn = dyn_cast<Function>(C))
+    processFuncPrototypes(Fn);
+  if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
+    for (unsigned I = 0, N = CA->getNumOperands(); I < N; ++I)
+      processGlobalInitializer(CA->getOperand(I));
   }
 }
 
@@ -1507,17 +1557,12 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
       const GlobalValue *GVal = MO.getGlobal();
       auto *GVar = dyn_cast<GlobalVariable>(GVal);
       if (GVar) {
-        // Emit "mov ri, <imm>"
-        int64_t Imm;
-        uint32_t Reloc;
-        if (GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr) ||
-            GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr)) {
-          Imm = PatchImms[GVar].first;
-          Reloc = PatchImms[GVar].second;
-        } else {
+        if (!GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr) &&
+            !GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr))
           return false;
-        }
 
+        // Emit "mov ri, <imm>"
+        auto [Imm, Reloc] = PatchImms[GVar];
         if (Reloc == BTF::ENUM_VALUE_EXISTENCE || Reloc == BTF::ENUM_VALUE ||
             Reloc == BTF::BTF_TYPE_ID_LOCAL || Reloc == BTF::BTF_TYPE_ID_REMOTE)
           OutMI.setOpcode(BPF::LD_imm64);
@@ -1572,14 +1617,12 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
   if (F->hasSection()) {
     StringRef SecName = F->getSection();
 
-    if (DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
-      DataSecEntries[std::string(SecName)] =
-          std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
-    }
+    auto [It, Inserted] = DataSecEntries.try_emplace(std::string(SecName));
+    if (Inserted)
+      It->second = std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
 
     // We really don't know func size, set it to 0.
-    DataSecEntries[std::string(SecName)]->addDataSecEntry(FuncId,
-        Asm->getSymbol(F), 0);
+    It->second->addDataSecEntry(FuncId, Asm->getSymbol(F), 0);
   }
 }
 
@@ -1592,6 +1635,13 @@ void BTFDebug::endModule() {
 
   // Collect global types/variables except MapDef globals.
   processGlobals(false);
+
+  // In case that BPF_TRAP usage is removed during machine-level optimization,
+  // generate btf for BPF_TRAP function here.
+  for (const Function &F : *MMI->getModule()) {
+    if (F.getName() == BPF_TRAP)
+      processFuncPrototypes(&F);
+  }
 
   for (auto &DataSec : DataSecEntries)
     addType(std::move(DataSec.second));

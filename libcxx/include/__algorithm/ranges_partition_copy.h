@@ -26,6 +26,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -35,9 +38,7 @@ namespace ranges {
 template <class _InIter, class _OutIter1, class _OutIter2>
 using partition_copy_result = in_out_out_result<_InIter, _OutIter1, _OutIter2>;
 
-namespace __partition_copy {
-
-struct __fn {
+struct __partition_copy {
   // TODO(ranges): delegate to the classic algorithm.
   template <class _InIter, class _Sent, class _OutIter1, class _OutIter2, class _Proj, class _Pred>
   _LIBCPP_HIDE_FROM_ABI constexpr static partition_copy_result<__remove_cvref_t<_InIter>,
@@ -91,15 +92,15 @@ struct __fn {
   }
 };
 
-} // namespace __partition_copy
-
 inline namespace __cpo {
-inline constexpr auto partition_copy = __partition_copy::__fn{};
+inline constexpr auto partition_copy = __partition_copy{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_PARTITION_COPY_H

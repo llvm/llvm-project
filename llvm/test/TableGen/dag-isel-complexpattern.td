@@ -22,7 +22,7 @@ def CP32 : ComplexPattern<i32, 0, "SelectCP32">;
 def INSTR : Instruction {
 // CHECK-LABEL: OPC_CheckOpcode, TARGET_VAL(ISD::STORE)
 // CHECK: OPC_CheckTypeI32
-// CHECK: OPC_CheckComplexPat, /*CP*/0, /*#*/1, // SelectCP32:$
+// CHECK: OPC_CheckComplexPat0, /*#*/1, // SelectCP32:$
 // CHECK: Src: (st (add:{ *:[i32] } (CP32:{ *:[i32] }), (CP32:{ *:[i32] })), i64:{ *:[i64] }:$addr)
   let OutOperandList = (outs);
   let InOperandList = (ins GPR64:$addr);

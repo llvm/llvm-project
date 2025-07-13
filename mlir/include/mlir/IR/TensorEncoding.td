@@ -31,11 +31,11 @@ def VerifiableTensorEncoding : AttrInterface<"VerifiableTensorEncoding"> {
         given shape and element type. Generates a diagnostic using
         the supplied callback on failure.
       }],
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"verifyEncoding",
       /*args=*/(ins
-        "ArrayRef<int64_t>":$shape,
-        "Type":$elementType,
+        "::mlir::ArrayRef<int64_t>":$shape,
+        "::mlir::Type":$elementType,
         "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
   ];

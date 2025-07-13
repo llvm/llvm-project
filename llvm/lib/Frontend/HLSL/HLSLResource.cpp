@@ -11,53 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/HLSLResource.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
 
 using namespace llvm;
 using namespace llvm::hlsl;
 
-GlobalVariable *FrontendResource::getGlobalVariable() {
-  return cast<GlobalVariable>(
-      cast<ConstantAsMetadata>(Entry->getOperand(0))->getValue());
-}
-
-StringRef FrontendResource::getSourceType() {
-  return cast<MDString>(Entry->getOperand(1))->getString();
-}
-
-ResourceKind FrontendResource::getResourceKind() {
-  return static_cast<ResourceKind>(
-      cast<ConstantInt>(
-          cast<ConstantAsMetadata>(Entry->getOperand(2))->getValue())
-          ->getLimitedValue());
-}
-bool FrontendResource::getIsROV() {
-  return cast<ConstantInt>(
-             cast<ConstantAsMetadata>(Entry->getOperand(3))->getValue())
-      ->getLimitedValue();
-}
-uint32_t FrontendResource::getResourceIndex() {
-  return cast<ConstantInt>(
-             cast<ConstantAsMetadata>(Entry->getOperand(4))->getValue())
-      ->getLimitedValue();
-}
-uint32_t FrontendResource::getSpace() {
-  return cast<ConstantInt>(
-             cast<ConstantAsMetadata>(Entry->getOperand(5))->getValue())
-      ->getLimitedValue();
-}
-
-FrontendResource::FrontendResource(GlobalVariable *GV, StringRef TypeStr,
-                                   ResourceKind RK, bool IsROV,
-                                   uint32_t ResIndex, uint32_t Space) {
-  auto &Ctx = GV->getContext();
-  IRBuilder<> B(Ctx);
-  Entry = MDNode::get(
-      Ctx, {ValueAsMetadata::get(GV), MDString::get(Ctx, TypeStr),
-            ConstantAsMetadata::get(B.getInt32(static_cast<int>(RK))),
-            ConstantAsMetadata::get(B.getInt1(IsROV)),
-            ConstantAsMetadata::get(B.getInt32(ResIndex)),
-            ConstantAsMetadata::get(B.getInt32(Space))});
-}
+// Intentionally empty; this file can be removed when more cpp files are added
+// to the HLSLFrontend lib.

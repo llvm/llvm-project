@@ -89,10 +89,10 @@ public:
 
   /// Do coverage checks.
   /// For each loaded module map, do header coverage check.
-  /// Starting from the directory of the module.map file,
+  /// Starting from the directory of the module.modulemap file,
   /// Find all header files, optionally looking only at files
   /// covered by the include path options, and compare against
-  /// the headers referenced by the module.map file.
+  /// the headers referenced by the module.modulemap file.
   /// Display warnings for unaccounted-for header files.
   /// \param IncludePaths The include paths to check for files.
   ///   (Note that other directories above these paths are ignored.
@@ -198,7 +198,7 @@ public:
   /// Diagnostic IDs.
   const llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagIDs;
   /// Options controlling the diagnostic engine.
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagnosticOpts;
+  clang::DiagnosticOptions DiagnosticOpts;
   /// Diagnostic consumer.
   clang::TextDiagnosticPrinter DC;
   /// Diagnostic engine.
@@ -213,6 +213,8 @@ public:
   llvm::IntrusiveRefCntPtr<clang::FileManager> FileMgr;
   /// Source manager.
   llvm::IntrusiveRefCntPtr<clang::SourceManager> SourceMgr;
+  /// Header search options.
+  clang::HeaderSearchOptions HSOpts;
   /// Header search manager.
   std::unique_ptr<clang::HeaderSearch> HeaderInfo;
   // The loaded module map objects.

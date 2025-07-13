@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
 namespace [[deprecated]] {}  // expected-warning {{'deprecated' attribute on anonymous namespace ignored}}
 
@@ -27,3 +27,22 @@ namespace M = N; // expected-warning {{'N' is deprecated}}
 
 // Shouldn't diag:
 [[nodiscard, deprecated("")]] int PR37935();
+
+namespace cxx20_concept {
+template <typename>
+concept C __attribute__((deprecated)) = true; // #C
+
+template <C T>
+// expected-warning@-1 {{'C' is deprecated}}
+//   expected-note@#C {{'C' has been explicitly marked deprecated here}}
+void f();
+
+namespace GH98164 {
+template <int>
+auto b() = delete; // #b
+
+decltype(b<0>()) x;
+// expected-error@-1 {{call to deleted function 'b'}}
+//   expected-note@#b {{candidate function [with $0 = 0] has been explicitly deleted}}
+} // namespace GH98164
+} // namespace cxx20_concept

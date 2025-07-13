@@ -41,13 +41,6 @@ class DirectoryEntry {
   DirectoryEntry &operator=(const DirectoryEntry &) = delete;
   friend class FileManager;
   friend class FileEntryTestHelper;
-
-  // FIXME: We should not be storing a directory entry name here.
-  StringRef Name; // Name of the directory.
-
-public:
-  LLVM_DEPRECATED("Use DirectoryEntryRef::getName() instead.", "")
-  StringRef getName() const { return Name; }
 };
 
 /// A reference to a \c DirectoryEntry  that includes the name of the directory

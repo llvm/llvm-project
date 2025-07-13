@@ -17,8 +17,11 @@ class RewritePatternSet;
 
 /// Collect a set of patterns to lower ArmSVE ops to ops that map to LLVM
 /// intrinsics.
-void populateArmSVELegalizeForLLVMExportPatterns(LLVMTypeConverter &converter,
-                                                 RewritePatternSet &patterns);
+void populateArmSVELegalizeForLLVMExportPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns);
+
+void populateLowerContractionToSVEI8MMPatternPatterns(
+    RewritePatternSet &patterns);
 
 /// Configure the target to support lowering ArmSVE ops to ops that map to LLVM
 /// intrinsics.

@@ -82,7 +82,8 @@ define <8 x half> @f32to4f16_mask(<4 x float> %a, <8 x half> %b, i8 %mask) {
 ;
 ; X86-LABEL: f32to4f16_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vcvtps2phx %xmm0, %xmm1 {%k1}
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:    retl
@@ -101,7 +102,8 @@ define <8 x half> @f32to8f16_mask(<8 x float> %a, <8 x half> %b, i8 %mask) {
 ;
 ; X86-LABEL: f32to8f16_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vcvtps2phx %ymm0, %xmm1 {%k1}
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:    vzeroupper
@@ -144,7 +146,7 @@ define float @f16tof32(half %b) nounwind {
 ; X86-LABEL: f16tof32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
@@ -166,7 +168,7 @@ define double @f16tof64(half %b) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmovsh 8(%ebp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvtsh2sd %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
@@ -356,7 +358,7 @@ define <8 x half> @f64to8f16(<8 x double> %b) {
 define float @extload_f16_f32(ptr %x) {
 ; X64-LABEL: extload_f16_f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovsh (%rdi), %xmm0
+; X64-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;
@@ -365,7 +367,7 @@ define float @extload_f16_f32(ptr %x) {
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovsh (%eax), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
@@ -380,7 +382,7 @@ define float @extload_f16_f32(ptr %x) {
 define double @extload_f16_f64(ptr %x) {
 ; X64-LABEL: extload_f16_f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovsh (%rdi), %xmm0
+; X64-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    vcvtsh2sd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;
@@ -394,7 +396,7 @@ define double @extload_f16_f64(ptr %x) {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    vmovsh (%eax), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvtsh2sd %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
@@ -410,7 +412,7 @@ define double @extload_f16_f64(ptr %x) {
 define float @extload_f16_f32_optsize(ptr %x) optsize {
 ; X64-LABEL: extload_f16_f32_optsize:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtsh2ss (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vcvtsh2ss (%rdi), %xmm15, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: extload_f16_f32_optsize:
@@ -418,7 +420,7 @@ define float @extload_f16_f32_optsize(ptr %x) optsize {
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtsh2ss (%eax), %xmm0, %xmm0
+; X86-NEXT:    vcvtsh2ss (%eax), %xmm7, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -432,7 +434,7 @@ define float @extload_f16_f32_optsize(ptr %x) optsize {
 define double @extload_f16_f64_optsize(ptr %x) optsize {
 ; X64-LABEL: extload_f16_f64_optsize:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtsh2sd (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vcvtsh2sd (%rdi), %xmm15, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: extload_f16_f64_optsize:
@@ -445,7 +447,7 @@ define double @extload_f16_f64_optsize(ptr %x) optsize {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    vcvtsh2sd (%eax), %xmm0, %xmm0
+; X86-NEXT:    vcvtsh2sd (%eax), %xmm7, %xmm0
 ; X86-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -557,13 +559,13 @@ define half @s8_to_half(i8 %x) {
 ; X64-LABEL: s8_to_half:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: s8_to_half:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2sh %eax, %xmm7, %xmm0
 ; X86-NEXT:    retl
   %a = sitofp i8 %x to half
   ret half %a
@@ -573,13 +575,13 @@ define half @s16_to_half(i16 %x) {
 ; X64-LABEL: s16_to_half:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: s16_to_half:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2sh %eax, %xmm7, %xmm0
 ; X86-NEXT:    retl
   %a = sitofp i16 %x to half
   ret half %a
@@ -588,12 +590,12 @@ define half @s16_to_half(i16 %x) {
 define half @s32_to_half(i32 %x) {
 ; X64-LABEL: s32_to_half:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtsi2sh %edi, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %edi, %xmm31, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: s32_to_half:
 ; X86:       # %bb.0:
-; X86-NEXT:    vcvtsi2shl {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2shl {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; X86-NEXT:    retl
   %a = sitofp i32 %x to half
   ret half %a
@@ -602,7 +604,7 @@ define half @s32_to_half(i32 %x) {
 define half @s64_to_half(i64 %x) {
 ; X64-LABEL: s64_to_half:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtsi2sh %rdi, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %rdi, %xmm31, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: s64_to_half:
@@ -642,13 +644,13 @@ define half @u8_to_half(i8 %x) {
 ; X64-LABEL: u8_to_half:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: u8_to_half:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2sh %eax, %xmm7, %xmm0
 ; X86-NEXT:    retl
   %a = uitofp i8 %x to half
   ret half %a
@@ -658,13 +660,13 @@ define half @u16_to_half(i16 %x) {
 ; X64-LABEL: u16_to_half:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: u16_to_half:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2sh %eax, %xmm7, %xmm0
 ; X86-NEXT:    retl
   %a = uitofp i16 %x to half
   ret half %a
@@ -673,12 +675,12 @@ define half @u16_to_half(i16 %x) {
 define half @u32_to_half(i32 %x) {
 ; X64-LABEL: u32_to_half:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtusi2sh %edi, %xmm0, %xmm0
+; X64-NEXT:    vcvtusi2sh %edi, %xmm31, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: u32_to_half:
 ; X86:       # %bb.0:
-; X86-NEXT:    vcvtusi2shl {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vcvtusi2shl {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; X86-NEXT:    retl
   %a = uitofp i32 %x to half
   ret half %a
@@ -687,7 +689,7 @@ define half @u32_to_half(i32 %x) {
 define half @u64_to_half(i64 %x) {
 ; X64-LABEL: u64_to_half:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtusi2sh %rdi, %xmm0, %xmm0
+; X64-NEXT:    vcvtusi2sh %rdi, %xmm31, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: u64_to_half:
@@ -777,7 +779,7 @@ define i64 @half_to_s64(half %x) {
 ;
 ; X86-LABEL: half_to_s64:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvttph2qq %xmm0, %xmm0
 ; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    vpextrd $1, %xmm0, %edx
@@ -808,7 +810,7 @@ define i128 @half_to_s128(half %x) {
 ; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    .cfi_offset %esi, -12
 ; X86-NEXT:    movl 8(%ebp), %esi
-; X86-NEXT:    vmovsh 12(%ebp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vmovsh %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
@@ -880,7 +882,7 @@ define i64 @half_to_u64(half %x) {
 ;
 ; X86-LABEL: half_to_u64:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvttph2uqq %xmm0, %xmm0
 ; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    vpextrd $1, %xmm0, %edx
@@ -911,7 +913,7 @@ define i128 @half_to_u128(half %x) {
 ; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    .cfi_offset %esi, -12
 ; X86-NEXT:    movl 8(%ebp), %esi
-; X86-NEXT:    vmovsh 12(%ebp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vmovsh %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
@@ -940,7 +942,7 @@ define x86_fp80 @half_to_f80(half %x) nounwind {
 ; X86-LABEL: half_to_f80:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vmovsh %xmm0, (%esp)
 ; X86-NEXT:    calll __extendhfxf2
 ; X86-NEXT:    popl %eax
@@ -990,7 +992,7 @@ define fp128 @half_to_f128(half %x) nounwind {
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    movl 8(%ebp), %esi
-; X86-NEXT:    vmovsh 12(%ebp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -1050,6 +1052,24 @@ define <8 x half> @u64tof16(<8 x i64> %a) #0 {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = uitofp <8 x i64> %a to <8 x half>
   ret <8 x half> %1
+}
+
+define void @f16tou32(ptr %ptr) {
+; X64-LABEL: f16tou32:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvttph2udq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0
+; X64-NEXT:    vmovlps %xmm0, (%rdi)
+; X64-NEXT:    retq
+;
+; X86-LABEL: f16tou32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vcvttph2udq {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0
+; X86-NEXT:    vmovlps %xmm0, (%eax)
+; X86-NEXT:    retl
+  %1 = fptoui <2 x half> splat (half 0xH7E00) to <2 x i32>
+  store <2 x i32> %1, ptr %ptr, align 8
+  ret void
 }
 
 attributes #0 = { "min-legal-vector-width"="256" "prefer-vector-width"="256" }

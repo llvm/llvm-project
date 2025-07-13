@@ -36,17 +36,14 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -198,7 +195,7 @@ getSyntaxOnlyToolArgs(const Twine &ToolName,
   std::vector<std::string> Args;
   Args.push_back(ToolName.str());
   Args.push_back("-fsyntax-only");
-  Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
+  llvm::append_range(Args, ExtraArgs);
   Args.push_back(FileName.str());
   return Args;
 }
@@ -255,15 +252,13 @@ llvm::Expected<std::string> getAbsolutePath(llvm::vfs::FileSystem &FS,
                                             StringRef File) {
   StringRef RelativePath(File);
   // FIXME: Should '.\\' be accepted on Win32?
-  if (RelativePath.starts_with("./")) {
-    RelativePath = RelativePath.substr(strlen("./"));
-  }
+  RelativePath.consume_front("./");
 
   SmallString<1024> AbsolutePath = RelativePath;
   if (auto EC = FS.makeAbsolute(AbsolutePath))
     return llvm::errorCodeToError(EC);
   llvm::sys::path::native(AbsolutePath);
-  return std::string(AbsolutePath.str());
+  return std::string(AbsolutePath);
 }
 
 std::string getAbsolutePath(StringRef File) {
@@ -295,7 +290,7 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
        ++Token) {
     StringRef TokenRef(*Token);
     ShouldAddTarget = ShouldAddTarget && !TokenRef.starts_with(TargetOPT) &&
-                      !TokenRef.equals(TargetOPTLegacy);
+                      TokenRef != TargetOPTLegacy;
     ShouldAddMode = ShouldAddMode && !TokenRef.starts_with(DriverModeOPT);
   }
   if (ShouldAddMode) {
@@ -379,17 +374,18 @@ bool ToolInvocation::run() {
 
   // Parse diagnostic options from the driver command-line only if none were
   // explicitly set.
-  IntrusiveRefCntPtr<DiagnosticOptions> ParsedDiagOpts;
+  std::unique_ptr<DiagnosticOptions> ParsedDiagOpts;
   DiagnosticOptions *DiagOpts = this->DiagOpts;
   if (!DiagOpts) {
     ParsedDiagOpts = CreateAndPopulateDiagOpts(Argv);
     DiagOpts = &*ParsedDiagOpts;
   }
 
-  TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), DiagOpts);
+  TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), *DiagOpts);
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics =
       CompilerInstance::createDiagnostics(
-          &*DiagOpts, DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
+          Files->getVirtualFileSystem(), *DiagOpts,
+          DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
   // Although `Diagnostics` are used only for command-line parsing, the custom
   // `DiagConsumer` might expect a `SourceManager` to be present.
   SourceManager SrcMgr(*Diagnostics, *Files);
@@ -448,8 +444,7 @@ bool FrontendActionFactory::runInvocation(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *DiagConsumer) {
   // Create a compiler instance to handle the actual work.
-  CompilerInstance Compiler(std::move(PCHContainerOps));
-  Compiler.setInvocation(std::move(Invocation));
+  CompilerInstance Compiler(std::move(Invocation), std::move(PCHContainerOps));
   Compiler.setFileManager(Files);
 
   // The FrontendAction can have lifetime requirements for Compiler or its
@@ -458,7 +453,8 @@ bool FrontendActionFactory::runInvocation(
   std::unique_ptr<FrontendAction> ScopedToolAction(create());
 
   // Create the compiler's actual diagnostics engine.
-  Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+  Compiler.createDiagnostics(Files->getVirtualFileSystem(), DiagConsumer,
+                             /*ShouldOwnClient=*/false);
   if (!Compiler.hasDiagnostics())
     return false;
 
@@ -556,6 +552,8 @@ int ClangTool::run(ToolAction *Action) {
                  << CWD.getError().message() << "\n";
   }
 
+  size_t NumOfTotalFiles = AbsolutePaths.size();
+  unsigned ProcessedFileCounter = 0;
   for (llvm::StringRef File : AbsolutePaths) {
     // Currently implementations of CompilationDatabase::getCompileCommands can
     // change the state of the file system (e.g.  prepare generated headers), so
@@ -611,7 +609,11 @@ int ClangTool::run(ToolAction *Action) {
 
       // FIXME: We need a callback mechanism for the tool writer to output a
       // customized message for each file.
-      LLVM_DEBUG({ llvm::dbgs() << "Processing: " << File << ".\n"; });
+      if (NumOfTotalFiles > 1)
+        llvm::errs() << "[" + std::to_string(++ProcessedFileCounter) + "/" +
+                            std::to_string(NumOfTotalFiles) +
+                            "] Processing file " + File
+                     << ".\n";
       ToolInvocation Invocation(std::move(CommandLine), Action, Files.get(),
                                 PCHContainerOps);
       Invocation.setDiagnosticConsumer(DiagConsumer);
@@ -647,8 +649,9 @@ public:
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(
-        Invocation, std::move(PCHContainerOps),
-        CompilerInstance::createDiagnostics(&Invocation->getDiagnosticOpts(),
+        Invocation, std::move(PCHContainerOps), nullptr,
+        CompilerInstance::createDiagnostics(Files->getVirtualFileSystem(),
+                                            Invocation->getDiagnosticOpts(),
                                             DiagConsumer,
                                             /*ShouldOwnClient=*/false),
         Files);
@@ -685,11 +688,12 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     StringRef Code, const std::vector<std::string> &Args, StringRef FileName,
     StringRef ToolName, std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ArgumentsAdjuster Adjuster, const FileContentMappings &VirtualMappedFiles,
-    DiagnosticConsumer *DiagConsumer) {
+    DiagnosticConsumer *DiagConsumer,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
   ASTBuilderAction Action(ASTs);
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+      new llvm::vfs::OverlayFileSystem(std::move(BaseFS)));
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);

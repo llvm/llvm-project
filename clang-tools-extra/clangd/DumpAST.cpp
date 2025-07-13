@@ -118,13 +118,12 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   std::string getKind(const Decl *D) { return D->getDeclKindName(); }
   std::string getKind(const Stmt *S) {
     std::string Result = S->getStmtClassName();
-    if (llvm::StringRef(Result).endswith("Stmt") ||
-        llvm::StringRef(Result).endswith("Expr"))
+    if (llvm::StringRef(Result).ends_with("Stmt") ||
+        llvm::StringRef(Result).ends_with("Expr"))
       Result.resize(Result.size() - 4);
     return Result;
   }
   std::string getKind(const TypeLoc &TL) {
-    std::string Result;
     if (TL.getTypeLocClass() == TypeLoc::Qualified)
       return "Qualified";
     return TL.getType()->getTypeClassName();
@@ -143,6 +142,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       TEMPLATE_ARGUMENT_KIND(Declaration);
       TEMPLATE_ARGUMENT_KIND(Template);
       TEMPLATE_ARGUMENT_KIND(TemplateExpansion);
+      TEMPLATE_ARGUMENT_KIND(StructuralValue);
 #undef TEMPLATE_ARGUMENT_KIND
     }
     llvm_unreachable("Unhandled ArgKind enum");
@@ -156,7 +156,6 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       NNS_KIND(Identifier);
       NNS_KIND(Namespace);
       NNS_KIND(TypeSpec);
-      NNS_KIND(TypeSpecWithTemplate);
       NNS_KIND(Global);
       NNS_KIND(Super);
       NNS_KIND(NamespaceAlias);
@@ -186,6 +185,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       TEMPLATE_KIND(SubstTemplateTemplateParm);
       TEMPLATE_KIND(SubstTemplateTemplateParmPack);
       TEMPLATE_KIND(UsingTemplate);
+      TEMPLATE_KIND(DeducedTemplate);
 #undef TEMPLATE_KIND
     }
     llvm_unreachable("Unhandled NameKind enum");

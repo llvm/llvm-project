@@ -24,8 +24,9 @@
 ## without making more layout changes. Address/offset assignments are different
 ## with a main linker script.
 
-# RUN: ld.lld --script %s %t1.o -o %t2
-# RUN: llvm-readelf -S -l %t2 | FileCheck --check-prefix=CHECK2 %s
+## Test non-contiguous OutputDescs in script->sectionCommands.
+# RUN: ld.lld --defsym y0=1 %s --defsym y1=1 %t1.o -o %t2
+# RUN: llvm-readelf -S -l -sX %t2 | FileCheck --check-prefix=CHECK2 %s
 # CHECK2:      Name      Type     Address            Off      Size   ES Flg
 # CHECK2-NEXT:           NULL
 # CHECK2-NEXT: .foo.text PROGBITS 000000000020{{.*}} [[#%x,]] 000008 00  AX
@@ -40,9 +41,13 @@
 # CHECK2-NEXT: LOAD      {{.*}} RW  0x1000
 # CHECK2-NEXT: GNU_STACK {{.*}} RW  0
 
+# CHECK2:      NOTYPE  GLOBAL DEFAULT  ABS               y0
+# CHECK2:      NOTYPE  GLOBAL DEFAULT  [[#]] (.foo.text) x0
+# CHECK2:      NOTYPE  GLOBAL DEFAULT  ABS               y1
+
 SECTIONS { .byte : { BYTE(0) } } INSERT BEFORE .data;
 
 SECTIONS { .foo.data : { *(.foo.data) } } INSERT BEFORE .data;
 
 ## The input section .foo.text is an orphan. It will be placed in .foo.text
-SECTIONS { .foo.text : {} } INSERT BEFORE .text;
+SECTIONS { .foo.text : { x0 = .; } } INSERT BEFORE ".text";

@@ -203,7 +203,8 @@ FmtStrVecObject::FmtStrVecObject(StringRef fmt, const FmtContext *ctx,
     : FmtObjectBase(fmt, ctx, params.size()) {
   parameters.reserve(params.size());
   for (std::string p : params)
-    parameters.push_back(llvm::detail::build_format_adapter(std::move(p)));
+    parameters.push_back(
+        llvm::support::detail::build_format_adapter(std::move(p)));
 
   adapters.reserve(parameters.size());
   for (auto &p : parameters)

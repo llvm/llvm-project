@@ -15,6 +15,7 @@
 #define BOLT_PROFILE_DATA_AGGREGATOR_H
 
 #include "bolt/Profile/DataReader.h"
+#include "bolt/Profile/YAMLProfileWriter.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Program.h"
@@ -77,9 +78,17 @@ public:
   static bool checkPerfDataMagic(StringRef FileName);
 
 private:
+  struct LBREntry {
+    uint64_t From;
+    uint64_t To;
+    bool Mispred;
+  };
+  friend raw_ostream &operator<<(raw_ostream &OS, const LBREntry &);
+
+  friend struct PerfSpeEventsTestHelper;
+
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;
-    uint64_t PC;
   };
 
   struct PerfBasicSample {
@@ -92,46 +101,43 @@ private:
     uint64_t Addr;
   };
 
-  /// Used for parsing specific pre-aggregated input files.
-  struct AggregatedLBREntry {
-    enum Type : char { BRANCH = 0, FT, FT_EXTERNAL_ORIGIN };
-    Location From;
-    Location To;
-    uint64_t Count;
-    uint64_t Mispreds;
-    Type EntryType;
-  };
-
+  /// Container for the unit of branch data, matching pre-aggregated trace type.
+  /// Backwards compatible with branch and fall-through types:
+  /// - if \p To is < 0, the trace only contains branch data (BR_ONLY),
+  /// - if \p Branch is < 0, the trace only contains fall-through data
+  ///   (FT_ONLY, FT_EXTERNAL_ORIGIN, or FT_EXTERNAL_RETURN).
   struct Trace {
+    static constexpr const uint64_t EXTERNAL = 0ULL;
+    static constexpr const uint64_t BR_ONLY = -1ULL;
+    static constexpr const uint64_t FT_ONLY = -1ULL;
+    static constexpr const uint64_t FT_EXTERNAL_ORIGIN = -2ULL;
+    static constexpr const uint64_t FT_EXTERNAL_RETURN = -3ULL;
+
+    uint64_t Branch;
     uint64_t From;
     uint64_t To;
-    Trace(uint64_t From, uint64_t To) : From(From), To(To) {}
-    bool operator==(const Trace &Other) const {
-      return From == Other.From && To == Other.To;
-    }
+    auto tie() const { return std::tie(Branch, From, To); }
+    bool operator==(const Trace &Other) const { return tie() == Other.tie(); }
+    bool operator<(const Trace &Other) const { return tie() < Other.tie(); }
   };
+  friend raw_ostream &operator<<(raw_ostream &OS, const Trace &);
 
   struct TraceHash {
-    size_t operator()(const Trace &L) const {
-      return std::hash<uint64_t>()(L.From << 32 | L.To);
-    }
+    size_t operator()(const Trace &L) const { return hash_combine(L.tie()); }
   };
 
-  struct FTInfo {
-    uint64_t InternCount{0};
-    uint64_t ExternCount{0};
-  };
-
-  struct BranchInfo {
+  struct TakenBranchInfo {
     uint64_t TakenCount{0};
     uint64_t MispredCount{0};
   };
 
   /// Intermediate storage for profile data. We save the results of parsing
   /// and use them later for processing and assigning profile.
-  std::unordered_map<Trace, BranchInfo, TraceHash> BranchLBRs;
-  std::unordered_map<Trace, FTInfo, TraceHash> FallthroughLBRs;
-  std::vector<AggregatedLBREntry> AggregatedLBRs;
+  std::unordered_map<Trace, TakenBranchInfo, TraceHash> TraceMap;
+  std::vector<std::pair<Trace, TakenBranchInfo>> Traces;
+  /// Pre-populated addresses of returns, coming from pre-aggregated data or
+  /// disassembly. Used to disambiguate call-continuation fall-throughs.
+  std::unordered_map<uint64_t, bool> Returns;
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
   std::vector<PerfMemSample> MemSamples;
 
@@ -169,6 +175,9 @@ private:
   std::string BuildIDBinaryName;
 
   /// Memory map info for a single file as recorded in perf.data
+  /// When a binary has multiple text segments, the Size is computed as the
+  /// difference of the last address of these segments from the BaseAddress.
+  /// The base addresses of all text segments must be the same.
   struct MMapInfo {
     uint64_t BaseAddress{0}; /// Base address of the mapped binary.
     uint64_t MMapAddress{0}; /// Address of the executable segment.
@@ -198,17 +207,11 @@ private:
   /// A trace is region of code executed between two LBR entries supplied in
   /// execution order.
   ///
-  /// Return true if the trace is valid, false otherwise.
-  bool
-  recordTrace(BinaryFunction &BF, const LBREntry &First, const LBREntry &Second,
-              uint64_t Count,
-              SmallVector<std::pair<uint64_t, uint64_t>, 16> &Branches) const;
-
   /// Return a vector of offsets corresponding to a trace in a function
-  /// (see recordTrace() above).
+  /// if the trace is valid, std::nullopt otherwise.
   std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
-  getFallthroughsInTrace(BinaryFunction &BF, const LBREntry &First,
-                         const LBREntry &Second, uint64_t Count = 1) const;
+  getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace, uint64_t Count,
+                         bool IsReturn) const;
 
   /// Record external entry into the function \p BF.
   ///
@@ -222,18 +225,18 @@ private:
   bool recordExit(BinaryFunction &BF, uint64_t From, bool Mispred,
                   uint64_t Count = 1) const;
 
-  /// Aggregation statistics
+  /// Branch stacks aggregation statistics
+  uint64_t NumTraces{0};
   uint64_t NumInvalidTraces{0};
   uint64_t NumLongRangeTraces{0};
-  uint64_t NumColdSamples{0};
+  uint64_t NumTotalSamples{0};
 
   /// Looks into system PATH for Linux Perf and set up the aggregator to use it
   void findPerfExecutable();
 
   /// Launch a perf subprocess with given args and save output for later
   /// parsing.
-  void launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
-                         const char *ArgsString, bool Wait);
+  void launchPerfProcess(StringRef Name, PerfProcessInfo &PPI, StringRef Args);
 
   /// Delete all temporary files created to hold the output generated by spawned
   /// subprocesses during the aggregation job
@@ -245,18 +248,17 @@ private:
   /// disassembled BinaryFunctions
   BinaryFunction *getBinaryFunctionContainingAddress(uint64_t Address) const;
 
+  /// Perform BAT translation for a given \p Func and return the parent
+  /// BinaryFunction or nullptr.
+  BinaryFunction *getBATParentFunction(const BinaryFunction &Func) const;
+
   /// Retrieve the location name to be used for samples recorded in \p Func.
-  /// If doing BAT translation, link cold parts to the hot part  names (used by
-  /// the original binary).  \p Count specifies how many samples were recorded
-  /// at that location, so we can tally total activity in cold areas if we are
-  /// dealing with profiling data collected in a bolted binary. For LBRs,
-  /// \p Count should only be used for the source of the branch to avoid
-  /// counting cold activity twice (one for source and another for destination).
-  StringRef getLocationName(BinaryFunction &Func, uint64_t Count);
+  static StringRef getLocationName(const BinaryFunction &Func, bool BAT);
 
   /// Semantic actions - parser hooks to interpret parsed perf samples
   /// Register a sample (non-LBR mode), i.e. a new hit at \p Address
-  bool doSample(BinaryFunction &Func, const uint64_t Address, uint64_t Count);
+  bool doBasicSample(BinaryFunction &Func, const uint64_t Address,
+                     uint64_t Count);
 
   /// Register an intraprocedural branch \p Branch.
   bool doIntraBranch(BinaryFunction &Func, uint64_t From, uint64_t To,
@@ -268,12 +270,14 @@ private:
                      uint64_t From, uint64_t To, uint64_t Count,
                      uint64_t Mispreds);
 
+  /// Checks if \p Addr corresponds to a return instruction.
+  bool checkReturn(uint64_t Addr);
+
   /// Register a \p Branch.
   bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds);
 
   /// Register a trace between two LBR entries supplied in execution order.
-  bool doTrace(const LBREntry &First, const LBREntry &Second,
-               uint64_t Count = 1);
+  bool doTrace(const Trace &Trace, uint64_t Count, bool IsReturn);
 
   /// Parser helpers
   /// Return false if we exhausted our parser buffer and finished parsing
@@ -298,7 +302,7 @@ private:
   ErrorOr<PerfMemSample> parseMemSample();
 
   /// Parse pre-aggregated LBR samples created by an external tool
-  ErrorOr<AggregatedLBREntry> parseAggregatedLBREntry();
+  std::error_code parseAggregatedLBREntry();
 
   /// Parse either buildid:offset or just offset, representing a location in the
   /// binary. Used exclusively for pre-aggregated LBR samples.
@@ -324,17 +328,14 @@ private:
   /// Parse a single LBR entry as output by perf script -Fbrstack
   ErrorOr<LBREntry> parseLBREntry();
 
-  /// Parse LBR sample, returns the number of traces.
-  uint64_t parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
+  /// Parse LBR sample.
+  void parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
 
   /// Parse and pre-aggregate branch events.
   std::error_code parseBranchEvents();
 
   /// Process all branch events.
   void processBranchEvents();
-
-  /// This member function supports generating data for AutoFDO LLVM tools.
-  std::error_code writeAutoFDOData(StringRef OutputFilename);
 
   /// Parse the full output generated by perf script to report non-LBR samples.
   std::error_code parseBasicEvents();
@@ -372,6 +373,9 @@ private:
   /// Parse a single pair of binary full path and associated build-id
   std::optional<std::pair<StringRef, StringRef>> parseNameBuildIDPair();
 
+  /// Coordinate reading and parsing of perf.data file
+  void parsePerfData(BinaryContext &BC);
+
   /// Coordinate reading and parsing of pre-aggregated file
   ///
   /// The regular perf2bolt aggregation job is to read perf output directly.
@@ -387,30 +391,49 @@ private:
   /// memory.
   ///
   /// File format syntax:
-  /// {B|F|f} [<start_id>:]<start_offset> [<end_id>:]<end_offset> <count>
-  ///       [<mispred_count>]
+  /// E <event>
+  /// S <start> <count>
+  /// [TR] <start> <end> <ft_end> <count>
+  /// B <start> <end> <count> <mispred_count>
+  /// [Ffr] <start> <end> <count>
   ///
-  /// B - indicates an aggregated branch
-  /// F - an aggregated fall-through
+  /// where <start>, <end>, <ft_end> have the format [<id>:]<offset>
+  ///
+  /// E - name of the sampling event used for subsequent entries
+  /// S - indicates an aggregated basic sample at <start>
+  /// B - indicates an aggregated branch from <start> to <end>
+  /// F - an aggregated fall-through from <start> to <end>
   /// f - an aggregated fall-through with external origin - used to disambiguate
   ///       between a return hitting a basic block head and a regular internal
   ///       jump to the block
+  /// r - an aggregated fall-through originating at an external return, no
+  ///       checks are performed for a fallthrough start
+  /// T - an aggregated trace: branch from <start> to <end> with a fall-through
+  ///       to <ft_end>
+  /// R - an aggregated trace originating at a return
   ///
-  /// <start_id> - build id of the object containing the start address. We can
-  /// skip it for the main binary and use "X" for an unknown object. This will
-  /// save some space and facilitate human parsing.
+  /// <id> - build id of the object containing the address. We can skip it for
+  /// the main binary and use "X" for an unknown object. This will save some
+  /// space and facilitate human parsing.
   ///
-  /// <start_offset> - hex offset from the object base load address (0 for the
-  /// main executable unless it's PIE) to the start address.
+  /// <offset> - hex offset from the object base load address (0 for the
+  /// main executable unless it's PIE) to the address.
   ///
-  /// <end_id>, <end_offset> - same for the end address.
-  ///
-  /// <count> - total aggregated count of the branch or a fall-through.
+  /// <count> - total aggregated count.
   ///
   /// <mispred_count> - the number of times the branch was mispredicted.
-  /// Omitted for fall-throughs.
   ///
   /// Example:
+  /// Basic samples profile:
+  /// E cycles
+  /// S 41be50 3
+  /// E br_inst_retired.near_taken
+  /// S 41be60 6
+  ///
+  /// Trace profile combining branches and fall-throughs:
+  /// T 4b196f 4b19e0 4b19ef 2
+  ///
+  /// Legacy branch profile with separate branches and fall-throughs:
   /// F 41be50 41be50 3
   /// F 41be90 41be90 4
   /// B 4b1942 39b57f0 3 0
@@ -420,9 +443,6 @@ private:
   /// Parse the full output of pre-aggregated LBR samples generated by
   /// an external tool.
   std::error_code parsePreAggregatedLBRSamples();
-
-  /// Process parsed pre-aggregated data.
-  void processPreAggregated();
 
   /// If \p Address falls into the binary address space based on memory
   /// mapping info \p MMI, then adjust it for further processing by subtracting
@@ -463,6 +483,10 @@ private:
   /// Dump data structures into a file readable by llvm-bolt
   std::error_code writeAggregatedFile(StringRef OutputFilename) const;
 
+  /// Dump translated data structures into YAML
+  std::error_code writeBATYAML(BinaryContext &BC,
+                               StringRef OutputFilename) const;
+
   /// Filter out binaries based on PID
   void filterBinaryMMapInfo();
 
@@ -474,11 +498,57 @@ private:
   /// If \p FileBuildID has no match, then issue an error and exit.
   void processFileBuildID(StringRef FileBuildID);
 
+  /// Infer missing fall-throughs for branch-only traces (LBR top-of-stack
+  /// entries).
+  void imputeFallThroughs();
+
   /// Debugging dump methods
   void dump() const;
-  void dump(const LBREntry &LBR) const;
   void dump(const PerfBranchSample &Sample) const;
   void dump(const PerfMemSample &Sample) const;
+
+  /// Profile diagnostics print methods
+  void printLongRangeTracesDiagnostic() const;
+  void printBranchSamplesDiagnostics() const;
+  void printBasicSamplesDiagnostics(uint64_t OutOfRangeSamples) const;
+  void printBranchStacksDiagnostics(uint64_t IgnoredSamples) const;
+
+  /// Get instruction at \p Addr either from containing binary function or
+  /// disassemble in-place, and invoke \p Callback on resulting MCInst.
+  /// Returns the result of the callback or nullopt.
+  template <typename T>
+  std::optional<T>
+  testInstructionAt(const uint64_t Addr,
+                    std::function<T(const MCInst &)> Callback) const {
+    BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
+    if (!Func)
+      return std::nullopt;
+    const uint64_t Offset = Addr - Func->getAddress();
+    if (Func->hasInstructions()) {
+      if (auto *MI = Func->getInstructionAtOffset(Offset))
+        return Callback(*MI);
+    } else {
+      if (auto MI = Func->disassembleInstructionAtOffset(Offset))
+        return Callback(*MI);
+    }
+    return std::nullopt;
+  }
+
+  /// Apply \p Callback to the instruction at \p Addr, and memoize the result
+  /// in a \p Map.
+  template <typename T>
+  std::optional<T> testAndSet(const uint64_t Addr,
+                              std::function<T(const MCInst &)> Callback,
+                              std::unordered_map<uint64_t, T> &Map) {
+    auto It = Map.find(Addr);
+    if (It != Map.end())
+      return It->second;
+    if (std::optional<T> Res = testInstructionAt<T>(Addr, Callback)) {
+      Map.emplace(Addr, *Res);
+      return *Res;
+    }
+    return std::nullopt;
+  }
 
 public:
   /// If perf.data was collected without build ids, the buildid-list may contain
@@ -490,7 +560,40 @@ public:
   /// Parse the output generated by "perf buildid-list" to extract build-ids
   /// and return a file name matching a given \p FileBuildID.
   std::optional<StringRef> getFileNameForBuildID(StringRef FileBuildID);
+
+  /// Get a constant reference to the parsed binary mmap entries.
+  const std::unordered_map<uint64_t, MMapInfo> &getBinaryMMapInfo() {
+    return BinaryMMapInfo;
+  }
+
+  friend class YAMLProfileWriter;
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const DataAggregator::LBREntry &L) {
+  OS << formatv("{0:x} -> {1:x}/{2}", L.From, L.To, L.Mispred ? 'M' : 'P');
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const DataAggregator::Trace &T) {
+  switch (T.Branch) {
+  case DataAggregator::Trace::FT_ONLY:
+    break;
+  case DataAggregator::Trace::FT_EXTERNAL_ORIGIN:
+    OS << "X:0 -> ";
+    break;
+  case DataAggregator::Trace::FT_EXTERNAL_RETURN:
+    OS << "X:R -> ";
+    break;
+  default:
+    OS << Twine::utohexstr(T.Branch) << " -> ";
+  }
+  OS << Twine::utohexstr(T.From);
+  if (T.To != DataAggregator::Trace::BR_ONLY)
+    OS << " ... " << Twine::utohexstr(T.To);
+  return OS;
+}
 } // namespace bolt
 } // namespace llvm
 

@@ -65,7 +65,7 @@ static bool isStore(int Opcode) {
 /// the destination along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
-unsigned ARCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register ARCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   int Opcode = MI.getOpcode();
   if (isLoad(Opcode)) {
@@ -84,7 +84,7 @@ unsigned ARCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// the source reg along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
-unsigned ARCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register ARCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   int Opcode = MI.getOpcode();
   if (isStore(Opcode)) {
@@ -280,8 +280,9 @@ unsigned ARCInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
 void ARCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc) const {
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   assert(ARC::GPR32RegClass.contains(SrcReg) &&
          "Only GPR32 src copy supported.");
   assert(ARC::GPR32RegClass.contains(DestReg) &&
@@ -293,7 +294,8 @@ void ARCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void ARCInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
     bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -322,7 +324,8 @@ void ARCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+                                        Register VReg,
+                                        MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();

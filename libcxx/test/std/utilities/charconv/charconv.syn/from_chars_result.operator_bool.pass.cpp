@@ -16,6 +16,7 @@
 #include <charconv>
 
 #include <cassert>
+#include <system_error>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -28,13 +29,13 @@ constexpr bool test() {
   {
     std::from_chars_result value{nullptr, std::errc{}};
     assert(bool(value) == true);
-    static_assert(noexcept(bool(true)) == true);
+    static_assert(noexcept(bool(value)) == true);
   }
   // False
   {
     std::from_chars_result value{nullptr, std::errc::value_too_large};
     assert(bool(value) == false);
-    static_assert(noexcept(bool(true)) == true);
+    static_assert(noexcept(bool(value)) == true);
   }
 
   return true;

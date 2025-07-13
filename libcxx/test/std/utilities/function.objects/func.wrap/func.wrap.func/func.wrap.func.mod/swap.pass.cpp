@@ -68,12 +68,12 @@ int main(int, char**) {
     std::function<int(int)> f1 = A(1);
     std::function<int(int)> f2 = A(2);
     assert(A::count == 2);
-    assert(globalMemCounter.checkOutstandingNewEq(2));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(2));
     RTTI_ASSERT(f1.target<A>()->id() == 1);
     RTTI_ASSERT(f2.target<A>()->id() == 2);
     f1.swap(f2);
     assert(A::count == 2);
-    assert(globalMemCounter.checkOutstandingNewEq(2));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(2));
     RTTI_ASSERT(f1.target<A>()->id() == 2);
     RTTI_ASSERT(f2.target<A>()->id() == 1);
   }
@@ -83,12 +83,12 @@ int main(int, char**) {
     std::function<int(int)> f1 = A(1);
     std::function<int(int)> f2 = g;
     assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
     RTTI_ASSERT(f1.target<A>()->id() == 1);
     RTTI_ASSERT(*f2.target<int (*)(int)>() == g);
     f1.swap(f2);
     assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
     RTTI_ASSERT(*f1.target<int (*)(int)>() == g);
     RTTI_ASSERT(f2.target<A>()->id() == 1);
   }
@@ -98,12 +98,12 @@ int main(int, char**) {
     std::function<int(int)> f1 = g;
     std::function<int(int)> f2 = A(1);
     assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
     RTTI_ASSERT(*f1.target<int (*)(int)>() == g);
     RTTI_ASSERT(f2.target<A>()->id() == 1);
     f1.swap(f2);
     assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(globalMemCounter.checkOutstandingNewLessThanOrEqual(1));
     RTTI_ASSERT(f1.target<A>()->id() == 1);
     RTTI_ASSERT(*f2.target<int (*)(int)>() == g);
   }

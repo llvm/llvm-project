@@ -386,7 +386,7 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   Status error;
 
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
@@ -394,9 +394,10 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
-    error.SetErrorStringWithFormat("register \"%s\" is an internal-only lldb "
-                                   "register, cannot read directly",
-                                   reg_info->name);
+    error = Status::FromErrorStringWithFormat(
+        "register \"%s\" is an internal-only lldb "
+        "register, cannot read directly",
+        reg_info->name);
     return error;
   }
 
@@ -404,8 +405,8 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   if (!opt_set) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
-    error.SetErrorStringWithFormat("register \"%s\" is in unrecognized set",
-                                   reg_info->name);
+    error = Status::FromErrorStringWithFormat(
+        "register \"%s\" is in unrecognized set", reg_info->name);
     return error;
   }
 
@@ -431,7 +432,7 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   case YMMRegSet: {
     std::optional<YMMSplitPtr> ymm_reg = GetYMMSplitReg(reg);
     if (!ymm_reg) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "register \"%s\" not supported by CPU/kernel", reg_info->name);
     } else {
       YMMReg ymm = XStateToYMM(ymm_reg->xmm, ymm_reg->ymm_hi);
@@ -453,7 +454,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
   Status error;
 
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
@@ -461,9 +462,10 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
-    error.SetErrorStringWithFormat("register \"%s\" is an internal-only lldb "
-                                   "register, cannot read directly",
-                                   reg_info->name);
+    error = Status::FromErrorStringWithFormat(
+        "register \"%s\" is an internal-only lldb "
+        "register, cannot read directly",
+        reg_info->name);
     return error;
   }
 
@@ -471,8 +473,8 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
   if (!opt_set) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
-    error.SetErrorStringWithFormat("register \"%s\" is in unrecognized set",
-                                   reg_info->name);
+    error = Status::FromErrorStringWithFormat(
+        "register \"%s\" is in unrecognized set", reg_info->name);
     return error;
   }
 
@@ -508,7 +510,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
   case YMMRegSet: {
     std::optional<YMMSplitPtr> ymm_reg = GetYMMSplitReg(reg);
     if (!ymm_reg) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "register \"%s\" not supported by CPU/kernel", reg_info->name);
     } else {
       YMMReg ymm;
@@ -548,14 +550,14 @@ Status NativeRegisterContextNetBSD_x86_64::WriteAllRegisterValues(
   Status error;
 
   if (!data_sp) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextNetBSD_x86_64::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextNetBSD_x86_64::%s data_sp contained mismatched "
         "data size, expected %zu, actual %" PRIu64,
         __FUNCTION__, REG_CONTEXT_SIZE, data_sp->GetByteSize());
@@ -564,10 +566,11 @@ Status NativeRegisterContextNetBSD_x86_64::WriteAllRegisterValues(
 
   const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
-    error.SetErrorStringWithFormat("NativeRegisterContextNetBSD_x86_64::%s "
-                                   "DataBuffer::GetBytes() returned a null "
-                                   "pointer",
-                                   __FUNCTION__);
+    error = Status::FromErrorStringWithFormat(
+        "NativeRegisterContextNetBSD_x86_64::%s "
+        "DataBuffer::GetBytes() returned a null "
+        "pointer",
+        __FUNCTION__);
     return error;
   }
   ::memcpy(m_gpr.data(), src, GetRegisterInfoInterface().GetGPRSize());

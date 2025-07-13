@@ -74,7 +74,7 @@ public:
   }
   // Map any symlink to "/symlink".
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override {
+                              SmallVectorImpl<char> &Output) override {
     auto I = FilesAndDirs.find(Path.str());
     if (I == FilesAndDirs.end())
       return make_error_code(llvm::errc::no_such_file_or_directory);
@@ -93,7 +93,7 @@ public:
     std::map<std::string, vfs::Status>::iterator I;
     std::string Path;
     bool isInPath(StringRef S) {
-      if (Path.size() < S.size() && S.find(Path) == 0) {
+      if (Path.size() < S.size() && S.starts_with(Path)) {
         auto LastSep = S.find_last_of('/');
         if (LastSep == Path.size() || LastSep == Path.size() - 1)
           return true;

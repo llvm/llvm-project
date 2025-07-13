@@ -131,7 +131,7 @@ void ExecutionEngine::registerSymbols(
 void ExecutionEngine::setupTargetTripleAndDataLayout(Module *llvmModule,
                                                      llvm::TargetMachine *tm) {
   llvmModule->setDataLayout(tm->createDataLayout());
-  llvmModule->setTargetTriple(tm->getTargetTriple().getTriple());
+  llvmModule->setTargetTriple(tm->getTargetTriple());
 }
 
 static std::string makePackedFunctionName(StringRef name) {
@@ -219,6 +219,11 @@ ExecutionEngine::ExecutionEngine(bool enableObjectDump,
 }
 
 ExecutionEngine::~ExecutionEngine() {
+  // Execute the global destructors from the module being processed.
+  // TODO: Allow JIT deinitialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  if (jit && !jit->getTargetTriple().isAArch64())
+    llvm::consumeError(jit->deinitialize(jit->getMainJITDylib()));
   // Run all dynamic library destroy callbacks to prepare for the shutdown.
   for (LibraryDestroyFn destroy : destroyFns)
     destroy();
@@ -308,10 +313,10 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
 
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
-  auto objectLinkingLayerCreator = [&](ExecutionSession &session,
-                                       const Triple &tt) {
+  auto objectLinkingLayerCreator = [&](ExecutionSession &session) {
     auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
-        session, [sectionMemoryMapper = options.sectionMemoryMapper]() {
+        session, [sectionMemoryMapper =
+                      options.sectionMemoryMapper](const MemoryBuffer &) {
           return std::make_unique<SectionMemoryManager>(sectionMemoryMapper);
         });
 
@@ -324,7 +329,7 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     // COFF format binaries (Windows) need special handling to deal with
     // exported symbol visibility.
     // cf llvm/lib/ExecutionEngine/Orc/LLJIT.cpp LLJIT::createObjectLinkingLayer
-    llvm::Triple targetTriple(llvm::Twine(llvmModule->getTargetTriple()));
+    const llvm::Triple &targetTriple = llvmModule->getTargetTriple();
     if (targetTriple.isOSBinFormatCOFF()) {
       objectLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
       objectLayer->setAutoClaimResponsibilityForObjectSymbols(true);
@@ -396,6 +401,12 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   };
   engine->registerSymbols(runtimeSymbolMap);
 
+  // Execute the global constructors from the module being processed.
+  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  if (!engine->jit->getTargetTriple().isAArch64())
+    cantFail(engine->jit->initialize(engine->jit->getMainJITDylib()));
+
   return std::move(engine);
 }
 
@@ -421,7 +432,7 @@ Expected<void *> ExecutionEngine::lookup(StringRef name) const {
     llvm::raw_string_ostream os(errorMessage);
     llvm::handleAllErrors(expectedSymbol.takeError(),
                           [&os](llvm::ErrorInfoBase &ei) { ei.log(os); });
-    return makeStringError(os.str());
+    return makeStringError(errorMessage);
   }
 
   if (void *fptr = expectedSymbol->toPtr<void *>())

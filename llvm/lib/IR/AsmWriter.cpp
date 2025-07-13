@@ -74,7 +74,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -88,6 +87,18 @@
 #include <vector>
 
 using namespace llvm;
+
+static cl::opt<bool>
+    PrintInstAddrs("print-inst-addrs", cl::Hidden,
+                   cl::desc("Print addresses of instructions when dumping"));
+
+static cl::opt<bool> PrintInstDebugLocs(
+    "print-inst-debug-locs", cl::Hidden,
+    cl::desc("Pretty print debug locations of instructions when dumping"));
+
+static cl::opt<bool> PrintProfData(
+    "print-prof-data", cl::Hidden,
+    cl::desc("Pretty print perf data (branch weights, etc) when dumping"));
 
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
@@ -114,11 +125,15 @@ static void orderValue(const Value *V, OrderMap &OM) {
   if (OM.lookup(V))
     return;
 
-  if (const Constant *C = dyn_cast<Constant>(V))
+  if (const Constant *C = dyn_cast<Constant>(V)) {
+    if (isa<ConstantData>(C))
+      return;
+
     if (C->getNumOperands() && !isa<GlobalValue>(C))
       for (const Value *Op : C->operands())
         if (!isa<BasicBlock>(Op) && !isa<GlobalValue>(Op))
           orderValue(Op, OM);
+  }
 
   // Note: we cannot cache this lookup above, since inserting into the map
   // changes the map's size, and thus affects the other IDs.
@@ -128,6 +143,20 @@ static void orderValue(const Value *V, OrderMap &OM) {
 
 static OrderMap orderModule(const Module *M) {
   OrderMap OM;
+
+  auto orderConstantValue = [&OM](const Value *V) {
+    if (isa<Constant>(V) || isa<InlineAsm>(V))
+      orderValue(V, OM);
+  };
+
+  auto OrderConstantFromMetadata = [&](Metadata *MD) {
+    if (const auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
+      orderConstantValue(VAM->getValue());
+    } else if (const auto *AL = dyn_cast<DIArgList>(MD)) {
+      for (const auto *VAM : AL->getArgs())
+        orderConstantValue(VAM->getValue());
+    }
+  };
 
   for (const GlobalVariable &G : M->globals()) {
     if (G.hasInitializer())
@@ -160,6 +189,16 @@ static OrderMap orderModule(const Module *M) {
     for (const BasicBlock &BB : F) {
       orderValue(&BB, OM);
       for (const Instruction &I : BB) {
+        // Debug records can contain Value references, that can then contain
+        // Values disconnected from the rest of the Value hierachy, if wrapped
+        // in some kind of constant-expression. Find and order any Values that
+        // are wrapped in debug-info.
+        for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+          OrderConstantFromMetadata(DVR.getRawLocation());
+          if (DVR.isDbgAssign())
+            OrderConstantFromMetadata(DVR.getRawAddress());
+        }
+
         for (const Value *Op : I.operands()) {
           Op = skipMetadataWrapper(Op);
           if ((isa<Constant>(*Op) && !isa<GlobalValue>(*Op)) ||
@@ -286,14 +325,14 @@ static const Module *getModuleFromVal(const Value *V) {
   return nullptr;
 }
 
-static const Module *getModuleFromDPI(const DPMarker *Marker) {
+static const Module *getModuleFromDPI(const DbgMarker *Marker) {
   const Function *M =
       Marker->getParent() ? Marker->getParent()->getParent() : nullptr;
   return M ? M->getParent() : nullptr;
 }
 
-static const Module *getModuleFromDPI(const DPValue *DPV) {
-  return getModuleFromDPI(DPV->getMarker());
+static const Module *getModuleFromDPI(const DbgRecord *DR) {
+  return DR->getMarker() ? getModuleFromDPI(DR->getMarker()) : nullptr;
 }
 
 static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
@@ -304,6 +343,7 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::AnyReg:        Out << "anyregcc"; break;
   case CallingConv::PreserveMost:  Out << "preserve_mostcc"; break;
   case CallingConv::PreserveAll:   Out << "preserve_allcc"; break;
+  case CallingConv::PreserveNone:  Out << "preserve_nonecc"; break;
   case CallingConv::CXX_FAST_TLS:  Out << "cxx_fast_tlscc"; break;
   case CallingConv::GHC:           Out << "ghccc"; break;
   case CallingConv::Tail:          Out << "tailcc"; break;
@@ -324,6 +364,9 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
     break;
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
     Out << "aarch64_sme_preservemost_from_x0";
+    break;
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
+    Out << "aarch64_sme_preservemost_from_x1";
     break;
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
     Out << "aarch64_sme_preservemost_from_x2";
@@ -362,6 +405,26 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::AMDGPU_KERNEL: Out << "amdgpu_kernel"; break;
   case CallingConv::AMDGPU_Gfx:    Out << "amdgpu_gfx"; break;
   case CallingConv::M68k_RTD:      Out << "m68k_rtdcc"; break;
+  case CallingConv::RISCV_VectorCall:
+    Out << "riscv_vector_cc";
+    break;
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CallingConv::RISCV_VLSCall_##ABI_VLEN:                                  \
+    Out << "riscv_vls_cc(" #ABI_VLEN ")";                                      \
+    break;
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
   }
 }
 
@@ -384,8 +447,7 @@ void llvm::printLLVMNameWithoutPrefix(raw_ostream &OS, StringRef Name) {
       // in the range 0-255.  This is important when building with MSVC because
       // its implementation will assert.  This situation can arise when dealing
       // with UTF-8 multibyte characters.
-      if (!isalnum(static_cast<unsigned char>(C)) && C != '-' && C != '.' &&
-          C != '_') {
+      if (!isalnum(C) && C != '-' && C != '.' && C != '_') {
         NeedsQuotes = true;
         break;
       }
@@ -566,8 +628,9 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   case Type::FP128TyID:     OS << "fp128"; return;
   case Type::PPC_FP128TyID: OS << "ppc_fp128"; return;
   case Type::LabelTyID:     OS << "label"; return;
-  case Type::MetadataTyID:  OS << "metadata"; return;
-  case Type::X86_MMXTyID:   OS << "x86_mmx"; return;
+  case Type::MetadataTyID:
+    OS << "metadata";
+    return;
   case Type::X86_AMXTyID:   OS << "x86_amx"; return;
   case Type::TokenTyID:     OS << "token"; return;
   case Type::IntegerTyID:
@@ -642,8 +705,10 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     OS << "target(\"";
     printEscapedString(Ty->getTargetExtName(), OS);
     OS << "\"";
-    for (Type *Inner : TETy->type_params())
-      OS << ", " << *Inner;
+    for (Type *Inner : TETy->type_params()) {
+      OS << ", ";
+      Inner->print(OS, /*IsForDebug=*/false, /*NoDetails=*/true);
+    }
     for (unsigned IntParam : TETy->int_params())
       OS << ", " << IntParam;
     OS << ")";
@@ -859,6 +924,9 @@ private:
 
   /// Add all of the metadata from an instruction.
   void processInstructionMetadata(const Instruction &I);
+
+  /// Add all of the metadata from a DbgRecord.
+  void processDbgRecordMetadata(const DbgRecord &DVR);
 };
 
 } // end namespace llvm
@@ -1011,8 +1079,8 @@ void SlotTracker::processModule() {
 
   // Add metadata used by named metadata.
   for (const NamedMDNode &NMD : TheModule->named_metadata()) {
-    for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-      CreateMetadataSlot(NMD.getOperand(i));
+    for (const MDNode *N : NMD.operands())
+      CreateMetadataSlot(N);
   }
 
   for (const Function &F : *TheModule) {
@@ -1126,9 +1194,41 @@ void SlotTracker::processGlobalObjectMetadata(const GlobalObject &GO) {
 void SlotTracker::processFunctionMetadata(const Function &F) {
   processGlobalObjectMetadata(F);
   for (auto &BB : F) {
-    for (auto &I : BB)
+    for (auto &I : BB) {
+      for (const DbgRecord &DR : I.getDbgRecordRange())
+        processDbgRecordMetadata(DR);
       processInstructionMetadata(I);
+    }
   }
+}
+
+void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
+  // Tolerate null metadata pointers: it's a completely illegal debug record,
+  // but we can have faulty metadata from debug-intrinsic days being
+  // autoupgraded into debug records. This gets caught by the verifier, which
+  // then will print the faulty IR, hitting this code path.
+  if (const DbgVariableRecord *DVR = dyn_cast<const DbgVariableRecord>(&DR)) {
+    // Process metadata used by DbgRecords; we only specifically care about the
+    // DILocalVariable, DILocation, and DIAssignID fields, as the Value and
+    // Expression fields should only be printed inline and so do not use a slot.
+    // Note: The above doesn't apply for empty-metadata operands.
+    if (auto *Empty = dyn_cast_if_present<MDNode>(DVR->getRawLocation()))
+      CreateMetadataSlot(Empty);
+    if (DVR->getRawVariable())
+      CreateMetadataSlot(DVR->getRawVariable());
+    if (DVR->isDbgAssign()) {
+      if (auto *AssignID = DVR->getRawAssignID())
+        CreateMetadataSlot(cast<MDNode>(AssignID));
+      if (auto *Empty = dyn_cast_if_present<MDNode>(DVR->getRawAddress()))
+        CreateMetadataSlot(Empty);
+    }
+  } else if (const DbgLabelRecord *DLR = dyn_cast<const DbgLabelRecord>(&DR)) {
+    CreateMetadataSlot(DLR->getRawLabel());
+  } else {
+    llvm_unreachable("unsupported DbgRecord kind");
+  }
+  if (DR.getDebugLoc())
+    CreateMetadataSlot(DR.getDebugLoc().getAsMDNode());
 }
 
 void SlotTracker::processInstructionMetadata(const Instruction &I) {
@@ -1302,12 +1402,8 @@ void SlotTracker::CreateMetadataSlot(const MDNode *N) {
 void SlotTracker::CreateAttributeSetSlot(AttributeSet AS) {
   assert(AS.hasAttributes() && "Doesn't need a slot!");
 
-  as_iterator I = asMap.find(AS);
-  if (I != asMap.end())
-    return;
-
-  unsigned DestSlot = asNext++;
-  asMap[AS] = DestSlot;
+  if (asMap.try_emplace(AS, asNext).second)
+    ++asNext;
 }
 
 /// Create a new slot for the specified Module
@@ -1385,112 +1481,157 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
   } else if (const GEPOperator *GEP = dyn_cast<GEPOperator>(U)) {
     if (GEP->isInBounds())
       Out << " inbounds";
+    else if (GEP->hasNoUnsignedSignedWrap())
+      Out << " nusw";
+    if (GEP->hasNoUnsignedWrap())
+      Out << " nuw";
+    if (auto InRange = GEP->getInRange()) {
+      Out << " inrange(" << InRange->getLower() << ", " << InRange->getUpper()
+          << ")";
+    }
   } else if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(U)) {
     if (NNI->hasNonNeg())
       Out << " nneg";
+  } else if (const auto *TI = dyn_cast<TruncInst>(U)) {
+    if (TI->hasNoUnsignedWrap())
+      Out << " nuw";
+    if (TI->hasNoSignedWrap())
+      Out << " nsw";
+  } else if (const auto *ICmp = dyn_cast<ICmpInst>(U)) {
+    if (ICmp->hasSameSign())
+      Out << " samesign";
   }
+}
+
+static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
+  if (&APF.getSemantics() == &APFloat::IEEEsingle() ||
+      &APF.getSemantics() == &APFloat::IEEEdouble()) {
+    // We would like to output the FP constant value in exponential notation,
+    // but we cannot do this if doing so will lose precision.  Check here to
+    // make sure that we only output it in exponential format if we can parse
+    // the value back and get the same value.
+    //
+    bool ignored;
+    bool isDouble = &APF.getSemantics() == &APFloat::IEEEdouble();
+    bool isInf = APF.isInfinity();
+    bool isNaN = APF.isNaN();
+
+    if (!isInf && !isNaN) {
+      double Val = APF.convertToDouble();
+      SmallString<128> StrVal;
+      APF.toString(StrVal, 6, 0, false);
+      // Check to make sure that the stringized number is not some string like
+      // "Inf" or NaN, that atof will accept, but the lexer will not.  Check
+      // that the string matches the "[-+]?[0-9]" regex.
+      //
+      assert((isDigit(StrVal[0]) ||
+              ((StrVal[0] == '-' || StrVal[0] == '+') && isDigit(StrVal[1]))) &&
+             "[-+]?[0-9] regex does not match!");
+      // Reparse stringized version!
+      if (APFloat(APFloat::IEEEdouble(), StrVal).convertToDouble() == Val) {
+        Out << StrVal;
+        return;
+      }
+    }
+
+    // Otherwise we could not reparse it to exactly the same value, so we must
+    // output the string in hexadecimal format!  Note that loading and storing
+    // floating point types changes the bits of NaNs on some hosts, notably
+    // x86, so we must not use these types.
+    static_assert(sizeof(double) == sizeof(uint64_t),
+                  "assuming that double is 64 bits!");
+    APFloat apf = APF;
+
+    // Floats are represented in ASCII IR as double, convert.
+    // FIXME: We should allow 32-bit hex float and remove this.
+    if (!isDouble) {
+      // A signaling NaN is quieted on conversion, so we need to recreate the
+      // expected value after convert (quiet bit of the payload is clear).
+      bool IsSNAN = apf.isSignaling();
+      apf.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                  &ignored);
+      if (IsSNAN) {
+        APInt Payload = apf.bitcastToAPInt();
+        apf =
+            APFloat::getSNaN(APFloat::IEEEdouble(), apf.isNegative(), &Payload);
+      }
+    }
+
+    Out << format_hex(apf.bitcastToAPInt().getZExtValue(), 0, /*Upper=*/true);
+    return;
+  }
+
+  // Either half, bfloat or some form of long double.
+  // These appear as a magic letter identifying the type, then a
+  // fixed number of hex digits.
+  Out << "0x";
+  APInt API = APF.bitcastToAPInt();
+  if (&APF.getSemantics() == &APFloat::x87DoubleExtended()) {
+    Out << 'K';
+    Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
+                                /*Upper=*/true);
+    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::IEEEquad()) {
+    Out << 'L';
+    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+    Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::PPCDoubleDouble()) {
+    Out << 'M';
+    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+    Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::IEEEhalf()) {
+    Out << 'H';
+    Out << format_hex_no_prefix(API.getZExtValue(), 4,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::BFloat()) {
+    Out << 'R';
+    Out << format_hex_no_prefix(API.getZExtValue(), 4,
+                                /*Upper=*/true);
+  } else
+    llvm_unreachable("Unsupported floating point type");
 }
 
 static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
                                   AsmWriterContext &WriterCtx) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
-    if (CI->getType()->isIntegerTy(1)) {
-      Out << (CI->getZExtValue() ? "true" : "false");
-      return;
+    Type *Ty = CI->getType();
+
+    if (Ty->isVectorTy()) {
+      Out << "splat (";
+      WriterCtx.TypePrinter->print(Ty->getScalarType(), Out);
+      Out << " ";
     }
-    Out << CI->getValue();
+
+    if (Ty->getScalarType()->isIntegerTy(1))
+      Out << (CI->getZExtValue() ? "true" : "false");
+    else
+      Out << CI->getValue();
+
+    if (Ty->isVectorTy())
+      Out << ")";
+
     return;
   }
 
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV)) {
-    const APFloat &APF = CFP->getValueAPF();
-    if (&APF.getSemantics() == &APFloat::IEEEsingle() ||
-        &APF.getSemantics() == &APFloat::IEEEdouble()) {
-      // We would like to output the FP constant value in exponential notation,
-      // but we cannot do this if doing so will lose precision.  Check here to
-      // make sure that we only output it in exponential format if we can parse
-      // the value back and get the same value.
-      //
-      bool ignored;
-      bool isDouble = &APF.getSemantics() == &APFloat::IEEEdouble();
-      bool isInf = APF.isInfinity();
-      bool isNaN = APF.isNaN();
-      if (!isInf && !isNaN) {
-        double Val = APF.convertToDouble();
-        SmallString<128> StrVal;
-        APF.toString(StrVal, 6, 0, false);
-        // Check to make sure that the stringized number is not some string like
-        // "Inf" or NaN, that atof will accept, but the lexer will not.  Check
-        // that the string matches the "[-+]?[0-9]" regex.
-        //
-        assert((isDigit(StrVal[0]) || ((StrVal[0] == '-' || StrVal[0] == '+') &&
-                                       isDigit(StrVal[1]))) &&
-               "[-+]?[0-9] regex does not match!");
-        // Reparse stringized version!
-        if (APFloat(APFloat::IEEEdouble(), StrVal).convertToDouble() == Val) {
-          Out << StrVal;
-          return;
-        }
-      }
-      // Otherwise we could not reparse it to exactly the same value, so we must
-      // output the string in hexadecimal format!  Note that loading and storing
-      // floating point types changes the bits of NaNs on some hosts, notably
-      // x86, so we must not use these types.
-      static_assert(sizeof(double) == sizeof(uint64_t),
-                    "assuming that double is 64 bits!");
-      APFloat apf = APF;
-      // Floats are represented in ASCII IR as double, convert.
-      // FIXME: We should allow 32-bit hex float and remove this.
-      if (!isDouble) {
-        // A signaling NaN is quieted on conversion, so we need to recreate the
-        // expected value after convert (quiet bit of the payload is clear).
-        bool IsSNAN = apf.isSignaling();
-        apf.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                    &ignored);
-        if (IsSNAN) {
-          APInt Payload = apf.bitcastToAPInt();
-          apf = APFloat::getSNaN(APFloat::IEEEdouble(), apf.isNegative(),
-                                 &Payload);
-        }
-      }
-      Out << format_hex(apf.bitcastToAPInt().getZExtValue(), 0, /*Upper=*/true);
-      return;
+    Type *Ty = CFP->getType();
+
+    if (Ty->isVectorTy()) {
+      Out << "splat (";
+      WriterCtx.TypePrinter->print(Ty->getScalarType(), Out);
+      Out << " ";
     }
 
-    // Either half, bfloat or some form of long double.
-    // These appear as a magic letter identifying the type, then a
-    // fixed number of hex digits.
-    Out << "0x";
-    APInt API = APF.bitcastToAPInt();
-    if (&APF.getSemantics() == &APFloat::x87DoubleExtended()) {
-      Out << 'K';
-      Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-      return;
-    } else if (&APF.getSemantics() == &APFloat::IEEEquad()) {
-      Out << 'L';
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-    } else if (&APF.getSemantics() == &APFloat::PPCDoubleDouble()) {
-      Out << 'M';
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-    } else if (&APF.getSemantics() == &APFloat::IEEEhalf()) {
-      Out << 'H';
-      Out << format_hex_no_prefix(API.getZExtValue(), 4,
-                                  /*Upper=*/true);
-    } else if (&APF.getSemantics() == &APFloat::BFloat()) {
-      Out << 'R';
-      Out << format_hex_no_prefix(API.getZExtValue(), 4,
-                                  /*Upper=*/true);
-    } else
-      llvm_unreachable("Unsupported floating point type");
+    WriteAPFloatInternal(Out, CFP->getValueAPF());
+
+    if (Ty->isVectorTy())
+      Out << ")";
+
     return;
   }
 
@@ -1517,6 +1658,27 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   if (const auto *NC = dyn_cast<NoCFIValue>(CV)) {
     Out << "no_cfi ";
     WriteAsOperandInternal(Out, NC->getGlobalValue(), WriterCtx);
+    return;
+  }
+
+  if (const ConstantPtrAuth *CPA = dyn_cast<ConstantPtrAuth>(CV)) {
+    Out << "ptrauth (";
+
+    // ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC]?]?)
+    unsigned NumOpsToWrite = 2;
+    if (!CPA->getOperand(2)->isNullValue())
+      NumOpsToWrite = 3;
+    if (!CPA->getOperand(3)->isNullValue())
+      NumOpsToWrite = 4;
+
+    ListSeparator LS;
+    for (unsigned i = 0, e = NumOpsToWrite; i != e; ++i) {
+      Out << LS;
+      WriterCtx.TypePrinter->print(CPA->getOperand(i)->getType(), Out);
+      Out << ' ';
+      WriteAsOperandInternal(Out, CPA->getOperand(i), WriterCtx);
+    }
+    Out << ')';
     return;
   }
 
@@ -1551,7 +1713,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     WriterCtx.TypePrinter->print(ETy, Out);
     Out << ' ';
     WriteAsOperandInternal(Out, CA->getElementAsConstant(0), WriterCtx);
-    for (unsigned i = 1, e = CA->getNumElements(); i != e; ++i) {
+    for (uint64_t i = 1, e = CA->getNumElements(); i != e; ++i) {
       Out << ", ";
       WriterCtx.TypePrinter->print(ETy, Out);
       Out << ' ';
@@ -1592,6 +1754,23 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   if (isa<ConstantVector>(CV) || isa<ConstantDataVector>(CV)) {
     auto *CVVTy = cast<FixedVectorType>(CV->getType());
     Type *ETy = CVVTy->getElementType();
+
+    // Use the same shorthand for splat vector (i.e. "splat(Ty val)") as is
+    // permitted on IR input to reduce the output changes when enabling
+    // UseConstant{Int,FP}ForFixedLengthSplat.
+    // TODO: Remove this block when the UseConstant{Int,FP}ForFixedLengthSplat
+    // options are removed.
+    if (auto *SplatVal = CV->getSplatValue()) {
+      if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
+        Out << "splat (";
+        WriterCtx.TypePrinter->print(ETy, Out);
+        Out << ' ';
+        WriteAsOperandInternal(Out, SplatVal, WriterCtx);
+        Out << ')';
+        return;
+      }
+    }
+
     Out << '<';
     WriterCtx.TypePrinter->print(ETy, Out);
     Out << ' ';
@@ -1627,24 +1806,35 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   }
 
   if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV)) {
+    // Use the same shorthand for splat vector (i.e. "splat(Ty val)") as is
+    // permitted on IR input to reduce the output changes when enabling
+    // UseConstant{Int,FP}ForScalableSplat.
+    // TODO: Remove this block when the UseConstant{Int,FP}ForScalableSplat
+    // options are removed.
+    if (CE->getOpcode() == Instruction::ShuffleVector) {
+      if (auto *SplatVal = CE->getSplatValue()) {
+        if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
+          Out << "splat (";
+          WriterCtx.TypePrinter->print(SplatVal->getType(), Out);
+          Out << ' ';
+          WriteAsOperandInternal(Out, SplatVal, WriterCtx);
+          Out << ')';
+          return;
+        }
+      }
+    }
+
     Out << CE->getOpcodeName();
     WriteOptimizationInfo(Out, CE);
-    if (CE->isCompare())
-      Out << ' ' << static_cast<CmpInst::Predicate>(CE->getPredicate());
     Out << " (";
 
-    std::optional<unsigned> InRangeOp;
     if (const GEPOperator *GEP = dyn_cast<GEPOperator>(CE)) {
       WriterCtx.TypePrinter->print(GEP->getSourceElementType(), Out);
       Out << ", ";
-      InRangeOp = GEP->getInRangeIndex();
-      if (InRangeOp)
-        ++*InRangeOp;
     }
 
-    for (User::const_op_iterator OI=CE->op_begin(); OI != CE->op_end(); ++OI) {
-      if (InRangeOp && unsigned(OI - CE->op_begin()) == *InRangeOp)
-        Out << "inrange ";
+    for (User::const_op_iterator OI = CE->op_begin(); OI != CE->op_end();
+         ++OI) {
       WriterCtx.TypePrinter->print((*OI)->getType(), Out);
       Out << ' ';
       WriteAsOperandInternal(Out, *OI, WriterCtx);
@@ -1724,6 +1914,8 @@ struct MDFieldPrinter {
                    bool ShouldSkipEmpty = true);
   void printMetadata(StringRef Name, const Metadata *MD,
                      bool ShouldSkipNull = true);
+  void printMetadataOrInt(StringRef Name, const Metadata *MD, bool IsUnsigned,
+                          bool ShouldSkipZero = true);
   template <class IntTy>
   void printInt(StringRef Name, IntTy Int, bool ShouldSkipZero = true);
   void printAPInt(StringRef Name, const APInt &Int, bool IsUnsigned,
@@ -1738,6 +1930,7 @@ struct MDFieldPrinter {
   void printEmissionKind(StringRef Name, DICompileUnit::DebugEmissionKind EK);
   void printNameTableKind(StringRef Name,
                           DICompileUnit::DebugNameTableKind NTK);
+  void printFixedPointKind(StringRef Name, DIFixedPointType::FixedPointKind V);
 };
 
 } // end anonymous namespace
@@ -1793,6 +1986,21 @@ void MDFieldPrinter::printMetadata(StringRef Name, const Metadata *MD,
 
   Out << FS << Name << ": ";
   writeMetadataAsOperand(Out, MD, WriterCtx);
+}
+
+void MDFieldPrinter::printMetadataOrInt(StringRef Name, const Metadata *MD,
+                                        bool IsUnsigned, bool ShouldSkipZero) {
+  if (!MD)
+    return;
+
+  if (auto *CI = dyn_cast<ConstantAsMetadata>(MD)) {
+    auto *CV = cast<ConstantInt>(CI->getValue());
+    if (IsUnsigned)
+      printInt(Name, CV->getZExtValue(), ShouldSkipZero);
+    else
+      printInt(Name, CV->getSExtValue(), ShouldSkipZero);
+  } else
+    printMetadata(Name, MD);
 }
 
 template <class IntTy>
@@ -1874,10 +2082,15 @@ void MDFieldPrinter::printNameTableKind(StringRef Name,
   Out << FS << Name << ": " << DICompileUnit::nameTableKindString(NTK);
 }
 
+void MDFieldPrinter::printFixedPointKind(StringRef Name,
+                                         DIFixedPointType::FixedPointKind V) {
+  Out << FS << Name << ": " << DIFixedPointType::fixedPointKindString(V);
+}
+
 template <class IntTy, class Stringifier>
 void MDFieldPrinter::printDwarfEnum(StringRef Name, IntTy Value,
                                     Stringifier toString, bool ShouldSkipZero) {
-  if (!Value)
+  if (ShouldSkipZero && !Value)
     return;
 
   Out << FS << Name << ": ";
@@ -1917,6 +2130,8 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
   Printer.printMetadata("inlinedAt", DL->getRawInlinedAt());
   Printer.printBool("isImplicitCode", DL->isImplicitCode(),
                     /* Default */ false);
+  Printer.printInt("atomGroup", DL->getAtomGroup());
+  Printer.printInt<unsigned>("atomRank", DL->getAtomRank());
   Out << ")";
 }
 
@@ -1931,38 +2146,21 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
   Out << "!DISubrange(";
   MDFieldPrinter Printer(Out, WriterCtx);
 
-  auto *Count = N->getRawCountNode();
-  if (auto *CE = dyn_cast_or_null<ConstantAsMetadata>(Count)) {
-    auto *CV = cast<ConstantInt>(CE->getValue());
-    Printer.printInt("count", CV->getSExtValue(),
-                     /* ShouldSkipZero */ false);
-  } else
-    Printer.printMetadata("count", Count, /*ShouldSkipNull */ true);
+  Printer.printMetadataOrInt("count", N->getRawCountNode(),
+                             /* IsUnsigned */ false,
+                             /* ShouldSkipZero */ false);
 
   // A lowerBound of constant 0 should not be skipped, since it is different
   // from an unspecified lower bound (= nullptr).
-  auto *LBound = N->getRawLowerBound();
-  if (auto *LE = dyn_cast_or_null<ConstantAsMetadata>(LBound)) {
-    auto *LV = cast<ConstantInt>(LE->getValue());
-    Printer.printInt("lowerBound", LV->getSExtValue(),
-                     /* ShouldSkipZero */ false);
-  } else
-    Printer.printMetadata("lowerBound", LBound, /*ShouldSkipNull */ true);
-
-  auto *UBound = N->getRawUpperBound();
-  if (auto *UE = dyn_cast_or_null<ConstantAsMetadata>(UBound)) {
-    auto *UV = cast<ConstantInt>(UE->getValue());
-    Printer.printInt("upperBound", UV->getSExtValue(),
-                     /* ShouldSkipZero */ false);
-  } else
-    Printer.printMetadata("upperBound", UBound, /*ShouldSkipNull */ true);
-
-  auto *Stride = N->getRawStride();
-  if (auto *SE = dyn_cast_or_null<ConstantAsMetadata>(Stride)) {
-    auto *SV = cast<ConstantInt>(SE->getValue());
-    Printer.printInt("stride", SV->getSExtValue(), /* ShouldSkipZero */ false);
-  } else
-    Printer.printMetadata("stride", Stride, /*ShouldSkipNull */ true);
+  Printer.printMetadataOrInt("lowerBound", N->getRawLowerBound(),
+                             /* IsUnsigned */ false,
+                             /* ShouldSkipZero */ false);
+  Printer.printMetadataOrInt("upperBound", N->getRawUpperBound(),
+                             /* IsUnsigned */ false,
+                             /* ShouldSkipZero */ false);
+  Printer.printMetadataOrInt("stride", N->getRawStride(),
+                             /* IsUnsigned */ false,
+                             /* ShouldSkipZero */ false);
 
   Out << ")";
 }
@@ -1972,45 +2170,42 @@ static void writeDIGenericSubrange(raw_ostream &Out, const DIGenericSubrange *N,
   Out << "!DIGenericSubrange(";
   MDFieldPrinter Printer(Out, WriterCtx);
 
-  auto IsConstant = [&](Metadata *Bound) -> bool {
-    if (auto *BE = dyn_cast_or_null<DIExpression>(Bound)) {
-      return BE->isConstant() &&
-             DIExpression::SignedOrUnsignedConstant::SignedConstant ==
-                 *BE->isConstant();
-    }
-    return false;
-  };
-
-  auto GetConstant = [&](Metadata *Bound) -> int64_t {
-    assert(IsConstant(Bound) && "Expected constant");
+  auto GetConstant = [&](Metadata *Bound) -> std::optional<int64_t> {
     auto *BE = dyn_cast_or_null<DIExpression>(Bound);
-    return static_cast<int64_t>(BE->getElement(1));
+    if (!BE)
+      return std::nullopt;
+    if (BE->isConstant() &&
+        DIExpression::SignedOrUnsignedConstant::SignedConstant ==
+            *BE->isConstant()) {
+      return static_cast<int64_t>(BE->getElement(1));
+    }
+    return std::nullopt;
   };
 
   auto *Count = N->getRawCountNode();
-  if (IsConstant(Count))
-    Printer.printInt("count", GetConstant(Count),
+  if (auto ConstantCount = GetConstant(Count))
+    Printer.printInt("count", *ConstantCount,
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("count", Count, /*ShouldSkipNull */ true);
 
   auto *LBound = N->getRawLowerBound();
-  if (IsConstant(LBound))
-    Printer.printInt("lowerBound", GetConstant(LBound),
+  if (auto ConstantLBound = GetConstant(LBound))
+    Printer.printInt("lowerBound", *ConstantLBound,
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("lowerBound", LBound, /*ShouldSkipNull */ true);
 
   auto *UBound = N->getRawUpperBound();
-  if (IsConstant(UBound))
-    Printer.printInt("upperBound", GetConstant(UBound),
+  if (auto ConstantUBound = GetConstant(UBound))
+    Printer.printInt("upperBound", *ConstantUBound,
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("upperBound", UBound, /*ShouldSkipNull */ true);
 
   auto *Stride = N->getRawStride();
-  if (IsConstant(Stride))
-    Printer.printInt("stride", GetConstant(Stride),
+  if (auto ConstantStride = GetConstant(Stride))
+    Printer.printInt("stride", *ConstantStride,
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("stride", Stride, /*ShouldSkipNull */ true);
@@ -2031,17 +2226,41 @@ static void writeDIEnumerator(raw_ostream &Out, const DIEnumerator *N,
 }
 
 static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
-                             AsmWriterContext &) {
+                             AsmWriterContext &WriterCtx) {
   Out << "!DIBasicType(";
-  MDFieldPrinter Printer(Out);
+  MDFieldPrinter Printer(Out, WriterCtx);
   if (N->getTag() != dwarf::DW_TAG_base_type)
     Printer.printTag(N);
   Printer.printString("name", N->getName());
-  Printer.printInt("size", N->getSizeInBits());
+  Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
+  Printer.printInt("align", N->getAlignInBits());
+  Printer.printDwarfEnum("encoding", N->getEncoding(),
+                         dwarf::AttributeEncodingString);
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
+  Printer.printDIFlags("flags", N->getFlags());
+  Out << ")";
+}
+
+static void writeDIFixedPointType(raw_ostream &Out, const DIFixedPointType *N,
+                                  AsmWriterContext &WriterCtx) {
+  Out << "!DIFixedPointType(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  if (N->getTag() != dwarf::DW_TAG_base_type)
+    Printer.printTag(N);
+  Printer.printString("name", N->getName());
+  Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
   Printer.printDIFlags("flags", N->getFlags());
+  Printer.printFixedPointKind("kind", N->getKind());
+  if (N->isRational()) {
+    bool IsUnsigned = !N->isSigned();
+    Printer.printAPInt("numerator", N->getNumerator(), IsUnsigned, false);
+    Printer.printAPInt("denominator", N->getDenominator(), IsUnsigned, false);
+  } else {
+    Printer.printInt("factor", N->getFactor());
+  }
   Out << ")";
 }
 
@@ -2056,7 +2275,7 @@ static void writeDIStringType(raw_ostream &Out, const DIStringType *N,
   Printer.printMetadata("stringLengthExpression", N->getRawStringLengthExp());
   Printer.printMetadata("stringLocationExpression",
                         N->getRawStringLocationExp());
-  Printer.printInt("size", N->getSizeInBits());
+  Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
@@ -2074,15 +2293,45 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
   Printer.printInt("line", N->getLine());
   Printer.printMetadata("baseType", N->getRawBaseType(),
                         /* ShouldSkipNull */ false);
-  Printer.printInt("size", N->getSizeInBits());
+  Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
-  Printer.printInt("offset", N->getOffsetInBits());
+  Printer.printMetadataOrInt("offset", N->getRawOffsetInBits(), true);
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printMetadata("extraData", N->getRawExtraData());
   if (const auto &DWARFAddressSpace = N->getDWARFAddressSpace())
     Printer.printInt("dwarfAddressSpace", *DWARFAddressSpace,
                      /* ShouldSkipZero */ false);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto PtrAuthData = N->getPtrAuthData()) {
+    Printer.printInt("ptrAuthKey", PtrAuthData->key());
+    Printer.printBool("ptrAuthIsAddressDiscriminated",
+                      PtrAuthData->isAddressDiscriminated());
+    Printer.printInt("ptrAuthExtraDiscriminator",
+                     PtrAuthData->extraDiscriminator());
+    Printer.printBool("ptrAuthIsaPointer", PtrAuthData->isaPointer());
+    Printer.printBool("ptrAuthAuthenticatesNullValues",
+                      PtrAuthData->authenticatesNullValues());
+  }
+  Out << ")";
+}
+
+static void writeDISubrangeType(raw_ostream &Out, const DISubrangeType *N,
+                                AsmWriterContext &WriterCtx) {
+  Out << "!DISubrangeType(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printString("name", N->getName());
+  Printer.printMetadata("scope", N->getRawScope());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
+  Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
+  Printer.printInt("align", N->getAlignInBits());
+  Printer.printDIFlags("flags", N->getFlags());
+  Printer.printMetadata("baseType", N->getRawBaseType(),
+                        /* ShouldSkipNull */ false);
+  Printer.printMetadata("lowerBound", N->getRawLowerBound());
+  Printer.printMetadata("upperBound", N->getRawUpperBound());
+  Printer.printMetadata("stride", N->getRawStride());
+  Printer.printMetadata("bias", N->getRawBias());
   Out << ")";
 }
 
@@ -2096,9 +2345,10 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printMetadata("file", N->getRawFile());
   Printer.printInt("line", N->getLine());
   Printer.printMetadata("baseType", N->getRawBaseType());
-  Printer.printInt("size", N->getSizeInBits());
+  Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
-  Printer.printInt("offset", N->getOffsetInBits());
+  Printer.printMetadataOrInt("offset", N->getRawOffsetInBits(), true);
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printMetadata("elements", N->getRawElements());
   Printer.printDwarfEnum("runtimeLang", N->getRuntimeLang(),
@@ -2116,6 +2366,14 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   else
     Printer.printMetadata("rank", N->getRawRank(), /*ShouldSkipNull */ true);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto *Specification = N->getRawSpecification())
+    Printer.printMetadata("specification", Specification);
+
+  if (auto EnumKind = N->getEnumKind())
+    Printer.printDwarfEnum("enumKind", *EnumKind, dwarf::EnumKindString,
+                           /*ShouldSkipZero=*/false);
+
+  Printer.printMetadata("bitStride", N->getRawBitStride());
   Out << ")";
 }
 
@@ -2200,6 +2458,7 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   Printer.printMetadata("thrownTypes", N->getRawThrownTypes());
   Printer.printMetadata("annotations", N->getRawAnnotations());
   Printer.printString("targetFuncName", N->getTargetFuncName());
+  Printer.printBool("keyInstructions", N->getKeyInstructionsEnabled(), false);
   Out << ")";
 }
 
@@ -2352,6 +2611,11 @@ static void writeDILabel(raw_ostream &Out, const DILabel *N,
   Printer.printString("name", N->getName());
   Printer.printMetadata("file", N->getRawFile());
   Printer.printInt("line", N->getLine());
+  Printer.printInt("column", N->getColumn());
+  Printer.printBool("isArtificial", N->isArtificial(), false);
+  if (N->getCoroSuspendIdx())
+    Printer.printInt("coroSuspendIdx", *N->getCoroSuspendIdx(),
+                     /* ShouldSkipZero */ false);
   Out << ")";
 }
 
@@ -2650,8 +2914,11 @@ public:
   void printBasicBlock(const BasicBlock *BB);
   void printInstructionLine(const Instruction &I);
   void printInstruction(const Instruction &I);
-  void printDPMarker(const DPMarker &DPI);
-  void printDPValue(const DPValue &DPI);
+  void printDbgMarker(const DbgMarker &DPI);
+  void printDbgVariableRecord(const DbgVariableRecord &DVR);
+  void printDbgLabelRecord(const DbgLabelRecord &DLR);
+  void printDbgRecord(const DbgRecord &DR);
+  void printDbgRecordLine(const DbgRecord &DR);
 
   void printUseListOrder(const Value *V, const std::vector<unsigned> &Shuffle);
   void printUseLists(const Function *F);
@@ -2848,7 +3115,7 @@ void AssemblyWriter::printModule(const Module *M) {
   if (!DL.empty())
     Out << "target datalayout = \"" << DL << "\"\n";
   if (!M->getTargetTriple().empty())
-    Out << "target triple = \"" << M->getTargetTriple() << "\"\n";
+    Out << "target triple = \"" << M->getTargetTriple().str() << "\"\n";
 
   if (!M->getModuleInlineAsm().empty()) {
     Out << '\n';
@@ -2977,7 +3244,7 @@ void AssemblyWriter::printModuleSummaryIndex() {
 
   // Print the TypeIdCompatibleVtableMap entries.
   for (auto &TId : TheIndex->typeIdCompatibleVtableMap()) {
-    auto GUID = GlobalValue::getGUID(TId.first);
+    auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(TId.first);
     Out << "^" << Machine.getTypeIdCompatibleVtableSlot(TId.first)
         << " = typeidCompatibleVTable: (name: \"" << TId.first << "\"";
     printTypeIdCompatibleVtableSummary(TId.second);
@@ -3228,6 +3495,16 @@ static const char *getVisibilityName(GlobalValue::VisibilityTypes Vis) {
   llvm_unreachable("invalid visibility");
 }
 
+static const char *getImportTypeName(GlobalValueSummary::ImportKind IK) {
+  switch (IK) {
+  case GlobalValueSummary::Definition:
+    return "definition";
+  case GlobalValueSummary::Declaration:
+    return "declaration";
+  }
+  llvm_unreachable("invalid import kind");
+}
+
 void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
   Out << ", insts: " << FS->instCount();
   if (FS->fflags().anyFlagSet())
@@ -3373,9 +3650,9 @@ void AssemblyWriter::printTypeIdInfo(
         continue;
       }
       // Print all type id that correspond to this GUID.
-      for (auto It = TidIter.first; It != TidIter.second; ++It) {
+      for (const auto &[GUID, TypeIdPair] : make_range(TidIter)) {
         Out << FS;
-        auto Slot = Machine.getTypeIdSlot(It->second.first);
+        auto Slot = Machine.getTypeIdSlot(TypeIdPair.first);
         assert(Slot != -1);
         Out << "^" << Slot;
       }
@@ -3414,10 +3691,10 @@ void AssemblyWriter::printVFuncId(const FunctionSummary::VFuncId VFId) {
   }
   // Print all type id that correspond to this GUID.
   FieldSeparator FS;
-  for (auto It = TidIter.first; It != TidIter.second; ++It) {
+  for (const auto &[GUID, TypeIdPair] : make_range(TidIter)) {
     Out << FS;
     Out << "vFuncId: (";
-    auto Slot = Machine.getTypeIdSlot(It->second.first);
+    auto Slot = Machine.getTypeIdSlot(TypeIdPair.first);
     assert(Slot != -1);
     Out << "^" << Slot;
     Out << ", offset: " << VFId.Offset;
@@ -3467,6 +3744,8 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
   Out << ", live: " << GVFlags.Live;
   Out << ", dsoLocal: " << GVFlags.DSOLocal;
   Out << ", canAutoHide: " << GVFlags.CanAutoHide;
+  Out << ", importType: "
+      << getImportTypeName(GlobalValueSummary::ImportKind(GVFlags.ImportType));
   Out << ")";
 
   if (Summary.getSummaryKind() == GlobalValueSummary::AliasKind)
@@ -3496,7 +3775,7 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
 
 void AssemblyWriter::printSummaryInfo(unsigned Slot, const ValueInfo &VI) {
   Out << "^" << Slot << " = gv: (";
-  if (!VI.name().empty())
+  if (VI.hasName() && !VI.name().empty())
     Out << "name: \"" << VI.name() << "\"";
   else
     Out << "guid: " << VI.getGUID();
@@ -3510,7 +3789,7 @@ void AssemblyWriter::printSummaryInfo(unsigned Slot, const ValueInfo &VI) {
     Out << ")";
   }
   Out << ")";
-  if (!VI.name().empty())
+  if (VI.hasName() && !VI.name().empty())
     Out << " ; guid = " << VI.getGUID();
   Out << "\n";
 }
@@ -3834,9 +4113,6 @@ void AssemblyWriter::printTypeIdentities() {
 
 /// printFunction - Print all aspects of a function.
 void AssemblyWriter::printFunction(const Function *F) {
-  bool ConvertBack = F->IsNewDbgInfoFormat;
-  if (ConvertBack)
-    const_cast<Function *>(F)->convertFromNewDbgValues();
   if (AnnotationWriter) AnnotationWriter->emitFunctionAnnot(F, Out);
 
   if (F->isMaterializable())
@@ -3857,6 +4133,9 @@ void AssemblyWriter::printFunction(const Function *F) {
     if (!AttrStr.empty())
       Out << "; Function Attrs: " << AttrStr << '\n';
   }
+
+  if (F->isIntrinsic() && F->getIntrinsicID() == Intrinsic::not_intrinsic)
+    Out << "; Unknown intrinsic\n";
 
   Machine.incorporateFunction(F);
 
@@ -3961,6 +4240,13 @@ void AssemblyWriter::printFunction(const Function *F) {
     writeOperand(F->getPersonalityFn(), /*PrintType=*/true);
   }
 
+  if (PrintProfData) {
+    if (auto *MDProf = F->getMetadata(LLVMContext::MD_prof)) {
+      Out << " ";
+      MDProf->print(Out, TheModule, /*IsForDebug=*/true);
+    }
+  }
+
   if (F->isDeclaration()) {
     Out << '\n';
   } else {
@@ -3979,8 +4265,6 @@ void AssemblyWriter::printFunction(const Function *F) {
     Out << "}\n";
   }
 
-  if (ConvertBack)
-    const_cast<Function *>(F)->convertToNewDbgValues();
   Machine.purgeFunction();
 }
 
@@ -4047,6 +4331,8 @@ void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
 
   // Output all of the instructions in the basic block...
   for (const Instruction &I : *BB) {
+    for (const DbgRecord &DR : I.getDbgRecordRange())
+      printDbgRecordLine(DR);
     printInstructionLine(I);
   }
 
@@ -4077,13 +4363,27 @@ void AssemblyWriter::printInfoComment(const Value &V) {
 
   if (AnnotationWriter) {
     AnnotationWriter->printInfoComment(V, Out);
-  } else if (const Instruction *I = dyn_cast<Instruction>(&V)) {
-    if (I->DbgMarker) {
-      // In the new, experimental DPValue representation of debug-info, print
-      // out which instructions have DPMarkers and where they are.
-      Out << "; dbgmarker @ " << I->DbgMarker;
+  }
+
+  if (PrintInstDebugLocs) {
+    if (auto *I = dyn_cast<Instruction>(&V)) {
+      if (I->getDebugLoc()) {
+        Out << " ; ";
+        I->getDebugLoc().print(Out);
+      }
     }
   }
+  if (PrintProfData) {
+    if (auto *I = dyn_cast<Instruction>(&V)) {
+      if (auto *MD = I->getMetadata(LLVMContext::MD_prof)) {
+        Out << " ; ";
+        MD->print(Out, TheModule, /*IsForDebug=*/true);
+      }
+    }
+  }
+
+  if (PrintInstAddrs)
+    Out << " ; " << &V;
 }
 
 static void maybePrintCallAddrSpace(const Value *Operand, const Instruction *I,
@@ -4543,34 +4843,88 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   printInfoComment(I);
 }
 
-void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
-  // There's no formal representation of a DPMarker -- print purely as a
+void AssemblyWriter::printDbgMarker(const DbgMarker &Marker) {
+  // There's no formal representation of a DbgMarker -- print purely as a
   // debugging aid.
-  for (const DPValue &DPI2 : Marker.StoredDPValues) {
-    printDPValue(DPI2);
+  for (const DbgRecord &DPR : Marker.StoredDbgRecords) {
+    printDbgRecord(DPR);
     Out << "\n";
   }
 
-  Out << "  DPMarker -> { ";
+  Out << "  DbgMarker -> { ";
   printInstruction(*Marker.MarkedInstr);
   Out << " }";
-  return;
 }
 
-void AssemblyWriter::printDPValue(const DPValue &Value) {
-  // There's no formal representation of a DPValue -- print purely as a
-  // debugging aid.
-  Out << "  DPValue { ";
+void AssemblyWriter::printDbgRecord(const DbgRecord &DR) {
+  if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR))
+    printDbgVariableRecord(*DVR);
+  else if (auto *DLR = dyn_cast<DbgLabelRecord>(&DR))
+    printDbgLabelRecord(*DLR);
+  else
+    llvm_unreachable("Unexpected DbgRecord kind");
+}
+
+void AssemblyWriter::printDbgVariableRecord(const DbgVariableRecord &DVR) {
   auto WriterCtx = getContext();
-  WriteAsOperandInternal(Out, Value.getRawLocation(), WriterCtx, true);
+  Out << "#dbg_";
+  switch (DVR.getType()) {
+  case DbgVariableRecord::LocationType::Value:
+    Out << "value";
+    break;
+  case DbgVariableRecord::LocationType::Declare:
+    Out << "declare";
+    break;
+  case DbgVariableRecord::LocationType::Assign:
+    Out << "assign";
+    break;
+  default:
+    llvm_unreachable(
+        "Tried to print a DbgVariableRecord with an invalid LocationType!");
+  }
+
+  auto PrintOrNull = [&](Metadata *M) {
+    if (!M)
+      Out << "(null)";
+    else
+      WriteAsOperandInternal(Out, M, WriterCtx, true);
+  };
+
+  Out << "(";
+  PrintOrNull(DVR.getRawLocation());
   Out << ", ";
-  WriteAsOperandInternal(Out, Value.getVariable(), WriterCtx, true);
+  PrintOrNull(DVR.getRawVariable());
   Out << ", ";
-  WriteAsOperandInternal(Out, Value.getExpression(), WriterCtx, true);
+  PrintOrNull(DVR.getRawExpression());
   Out << ", ";
-  WriteAsOperandInternal(Out, Value.getDebugLoc().get(), WriterCtx, true);
-  Out << " marker @" << Value.getMarker();
-  Out << " }";
+  if (DVR.isDbgAssign()) {
+    PrintOrNull(DVR.getRawAssignID());
+    Out << ", ";
+    PrintOrNull(DVR.getRawAddress());
+    Out << ", ";
+    PrintOrNull(DVR.getRawAddressExpression());
+    Out << ", ";
+  }
+  PrintOrNull(DVR.getDebugLoc().getAsMDNode());
+  Out << ")";
+}
+
+/// printDbgRecordLine - Print a DbgRecord with indentation and a newline
+/// character.
+void AssemblyWriter::printDbgRecordLine(const DbgRecord &DR) {
+  // Print lengthier indentation to bring out-of-line with instructions.
+  Out << "    ";
+  printDbgRecord(DR);
+  Out << '\n';
+}
+
+void AssemblyWriter::printDbgLabelRecord(const DbgLabelRecord &Label) {
+  auto WriterCtx = getContext();
+  Out << "#dbg_label(";
+  WriteAsOperandInternal(Out, Label.getRawLabel(), WriterCtx, true);
+  Out << ", ";
+  WriteAsOperandInternal(Out, Label.getDebugLoc(), WriterCtx, true);
+  Out << ")";
 }
 
 void AssemblyWriter::printMetadataAttachments(
@@ -4671,13 +5025,9 @@ void AssemblyWriter::printUseListOrder(const Value *V,
     Out << " ";
     writeOperand(V, true);
   }
-  Out << ", { ";
 
   assert(Shuffle.size() >= 2 && "Shuffle too small");
-  Out << Shuffle[0];
-  for (unsigned I = 1, E = Shuffle.size(); I != E; ++I)
-    Out << ", " << Shuffle[I];
-  Out << " }\n";
+  Out << ", { " << llvm::interleaved(Shuffle) << " }\n";
 }
 
 void AssemblyWriter::printUseLists(const Function *F) {
@@ -4718,19 +5068,11 @@ void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
 
 void Module::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                    bool ShouldPreserveUseListOrder, bool IsForDebug) const {
-  // RemoveDIs: always print with debug-info in intrinsic format.
-  bool ConvertAfter = IsNewDbgInfoFormat;
-  if (IsNewDbgInfoFormat)
-    const_cast<Module *>(this)->convertFromNewDbgValues();
-
   SlotTracker SlotTable(this);
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, this, AAW, IsForDebug,
                    ShouldPreserveUseListOrder);
   W.printModule(this);
-
-  if (ConvertAfter)
-    const_cast<Module *>(this)->convertToNewDbgValues();
 }
 
 void NamedMDNode::print(raw_ostream &ROS, bool IsForDebug) const {
@@ -4807,22 +5149,20 @@ static bool isReferencingMDNode(const Instruction &I) {
   return false;
 }
 
-void DPMarker::print(raw_ostream &ROS, bool IsForDebug) const {
+void DbgMarker::print(raw_ostream &ROS, bool IsForDebug) const {
 
   ModuleSlotTracker MST(getModuleFromDPI(this), true);
   print(ROS, MST, IsForDebug);
 }
 
-void DPValue::print(raw_ostream &ROS, bool IsForDebug) const {
+void DbgVariableRecord::print(raw_ostream &ROS, bool IsForDebug) const {
 
   ModuleSlotTracker MST(getModuleFromDPI(this), true);
   print(ROS, MST, IsForDebug);
 }
 
-void DPMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
-                     bool IsForDebug) const {
-  // There's no formal representation of a DPMarker -- print purely as a
-  // debugging aid.
+void DbgMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                      bool IsForDebug) const {
   formatted_raw_ostream OS(ROS);
   SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
   SlotTracker &SlotTable =
@@ -4833,13 +5173,34 @@ void DPMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   };
   incorporateFunction(getParent() ? getParent()->getParent() : nullptr);
   AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
-  W.printDPMarker(*this);
+  W.printDbgMarker(*this);
 }
 
-void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
-                    bool IsForDebug) const {
-  // There's no formal representation of a DPValue -- print purely as a
-  // debugging aid.
+void DbgLabelRecord::print(raw_ostream &ROS, bool IsForDebug) const {
+
+  ModuleSlotTracker MST(getModuleFromDPI(this), true);
+  print(ROS, MST, IsForDebug);
+}
+
+void DbgVariableRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                              bool IsForDebug) const {
+  formatted_raw_ostream OS(ROS);
+  SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
+  SlotTracker &SlotTable =
+      MST.getMachine() ? *MST.getMachine() : EmptySlotTable;
+  auto incorporateFunction = [&](const Function *F) {
+    if (F)
+      MST.incorporateFunction(*F);
+  };
+  incorporateFunction(Marker && Marker->getParent()
+                          ? Marker->getParent()->getParent()
+                          : nullptr);
+  AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
+  W.printDbgVariableRecord(*this);
+}
+
+void DbgLabelRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                           bool IsForDebug) const {
   formatted_raw_ostream OS(ROS);
   SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
   SlotTracker &SlotTable =
@@ -4851,7 +5212,7 @@ void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   incorporateFunction(Marker->getParent() ? Marker->getParent()->getParent()
                                           : nullptr);
   AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
-  W.printDPValue(*this);
+  W.printDbgLabelRecord(*this);
 }
 
 void Value::print(raw_ostream &ROS, bool IsForDebug) const {
@@ -5101,11 +5462,14 @@ void Value::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
 
 // Value::dump - allow easy printing of Values from the debugger.
 LLVM_DUMP_METHOD
-void DPMarker::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
+void DbgMarker::dump() const {
+  print(dbgs(), /*IsForDebug=*/true);
+  dbgs() << '\n';
+}
 
 // Value::dump - allow easy printing of Values from the debugger.
 LLVM_DUMP_METHOD
-void DPValue::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
+void DbgRecord::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
 
 // Type::dump - allow easy printing of Types from the debugger.
 LLVM_DUMP_METHOD

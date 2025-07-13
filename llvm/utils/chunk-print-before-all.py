@@ -10,10 +10,20 @@ import sys
 import re
 
 chunk_id = 0
+pass_regex = re.compile(r"\(([\w-]+)\)")
 
 # This function gets the pass name from the following line:
 # *** IR Dump Before/After PASS_NAME... ***
 def get_pass_name(line, prefix):
+    # avoid accidentally parsing function name in e.g.
+    # "*** IR Dump Before InlinerPass on (foo) ***"
+    line = line.split(" on ")[0]
+    non_pretty_pass_name = pass_regex.search(line)
+    # machine function pass names can contain spaces,
+    # but have a CLI friendly name also, e.g.:
+    # "*** IR Dump Before Stack Frame Layout Analysis (stack-frame-layout) ***"
+    if non_pretty_pass_name:
+        return non_pretty_pass_name.group(1)
     short_line = line[line.find(prefix) + len(prefix) + 1 :]
     return re.split(" |<", short_line)[0]
 
@@ -30,13 +40,13 @@ def print_chunk(lines, prefix, pass_name):
 is_dump = False
 cur = []
 for line in sys.stdin:
-    if line.startswith("*** IR Dump Before "):
+    if "*** IR Dump Before " in line:
         if len(cur) != 0:
             print_chunk(cur, "before", pass_name)
             cur = []
         cur.append("; " + line)
         pass_name = get_pass_name(line, "Before")
-    elif line.startswith("*** IR Dump After "):
+    elif "*** IR Dump After " in line:
         if len(cur) != 0:
             print_chunk(cur, "after", pass_name)
             cur = []

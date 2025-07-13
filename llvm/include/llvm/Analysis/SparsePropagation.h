@@ -87,10 +87,9 @@ public:
   /// ComputeInstructionState - Compute the LatticeKeys that change as a result
   /// of executing instruction \p I. Their associated LatticeVals are store in
   /// \p ChangedValues.
-  virtual void
-  ComputeInstructionState(Instruction &I,
-                          DenseMap<LatticeKey, LatticeVal> &ChangedValues,
-                          SparseSolver<LatticeKey, LatticeVal> &SS) = 0;
+  virtual void ComputeInstructionState(
+      Instruction &I, SmallDenseMap<LatticeKey, LatticeVal, 16> &ChangedValues,
+      SparseSolver<LatticeKey, LatticeVal> &SS) = 0;
 
   /// PrintLatticeVal - Render the given LatticeVal to the specified stream.
   virtual void PrintLatticeVal(LatticeVal LV, raw_ostream &OS);
@@ -245,13 +244,13 @@ SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getValueState(LatticeKey Key) {
 template <class LatticeKey, class LatticeVal, class KeyInfo>
 void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::UpdateState(LatticeKey Key,
                                                                 LatticeVal LV) {
-  auto I = ValueState.find(Key);
-  if (I != ValueState.end() && I->second == LV)
+  auto [I, Inserted] = ValueState.try_emplace(Key);
+  if (!Inserted && I->second == LV)
     return; // No change.
 
   // Update the state of the given LatticeKey and add its corresponding LLVM
   // value to the work list.
-  ValueState[Key] = std::move(LV);
+  I->second = std::move(LV);
   if (Value *V = KeyInfo::getValueFromLatticeKey(Key))
     ValueWorkList.push_back(V);
 }
@@ -401,7 +400,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::visitPHINode(PHINode &PN) {
   // computed from its incoming values.  For example, SSI form stores its sigma
   // functions as PHINodes with a single incoming value.
   if (LatticeFunc->IsSpecialCasedPHI(&PN)) {
-    DenseMap<LatticeKey, LatticeVal> ChangedValues;
+    SmallDenseMap<LatticeKey, LatticeVal, 16> ChangedValues;
     LatticeFunc->ComputeInstructionState(PN, ChangedValues, *this);
     for (auto &ChangedValue : ChangedValues)
       if (ChangedValue.second != LatticeFunc->getUntrackedVal())
@@ -456,7 +455,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::visitInst(Instruction &I) {
 
   // Otherwise, ask the transfer function what the result is.  If this is
   // something that we care about, remember it.
-  DenseMap<LatticeKey, LatticeVal> ChangedValues;
+  SmallDenseMap<LatticeKey, LatticeVal, 16> ChangedValues;
   LatticeFunc->ComputeInstructionState(I, ChangedValues, *this);
   for (auto &ChangedValue : ChangedValues)
     if (ChangedValue.second != LatticeFunc->getUntrackedVal())

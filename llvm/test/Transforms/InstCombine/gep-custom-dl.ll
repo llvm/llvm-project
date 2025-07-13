@@ -13,7 +13,7 @@ target datalayout = "e-m:m-p:40:64:64:32-i32:32-i16:16-i8:8-n32"
 ; Test that two array indexing geps fold
 define ptr @test1(ptr %I) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[I:%.*]], i32 21
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[I:%.*]], i32 84
 ; CHECK-NEXT:    ret ptr [[B]]
 ;
   %A = getelementptr i32, ptr %I, i8 17
@@ -24,7 +24,7 @@ define ptr @test1(ptr %I) {
 ; Test that two getelementptr insts fold
 define ptr @test2(ptr %I) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr { i32 }, ptr [[I:%.*]], i32 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr [[I:%.*]], i32 4
 ; CHECK-NEXT:    ret ptr [[A]]
 ;
   %A = getelementptr { i32 }, ptr %I, i32 1
@@ -34,7 +34,7 @@ define ptr @test2(ptr %I) {
 define void @test3(i8 %B) {
 ; This should be turned into a constexpr instead of being an instruction
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    store i8 [[B:%.*]], ptr getelementptr inbounds ([10 x i8], ptr @Global, i32 0, i32 4), align 1
+; CHECK-NEXT:    store i8 [[B:%.*]], ptr getelementptr inbounds nuw (i8, ptr @Global, i32 4), align 1
 ; CHECK-NEXT:    ret void
 ;
   %A = getelementptr [10 x i8], ptr @Global, i32 0, i32 4
@@ -62,7 +62,7 @@ define void @test_evaluate_gep_nested_as_ptrs(ptr addrspace(2) %B) {
 
 define void @test_evaluate_gep_as_ptrs_array(ptr addrspace(2) %B) {
 ; CHECK-LABEL: @test_evaluate_gep_as_ptrs_array(
-; CHECK-NEXT:    store ptr addrspace(2) [[B:%.*]], ptr addrspace(1) getelementptr inbounds ([4 x ptr addrspace(2)], ptr addrspace(1) @arst, i32 0, i32 2), align 8
+; CHECK-NEXT:    store ptr addrspace(2) [[B:%.*]], ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @arst, i32 16), align 8
 ; CHECK-NEXT:    ret void
 ;
 
@@ -99,7 +99,7 @@ define i1 @test5(ptr %x, ptr %y) {
 
 define <2 x i1> @test6(<2 x i32> %X, <2 x ptr> %P) nounwind {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x ptr> %P, <2 x i32> zeroinitializer, <2 x i32> <i32 1, i32 1>, <2 x i32> %X
@@ -111,7 +111,7 @@ define <2 x i1> @test6(<2 x i32> %X, <2 x ptr> %P) nounwind {
 ; Same as above, but indices scalarized.
 define <2 x i1> @test6b(<2 x i32> %X, <2 x ptr> %P) nounwind {
 ; CHECK-LABEL: @test6b(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x ptr> %P, i32 0, i32 1, <2 x i32> %X
@@ -168,7 +168,7 @@ define i32 @test10() {
 define i16 @constant_fold_custom_dl() {
 ; CHECK-LABEL: @constant_fold_custom_dl(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i16 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds ([1000 x i8], ptr addrspace(1) @X_as1, i32 1, i32 0), i16 sub (i16 0, i16 ptrtoint (ptr addrspace(1) @X_as1 to i16))) to i16)
+; CHECK-NEXT:    ret i16 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @X_as1, i32 1000), i16 sub (i16 0, i16 ptrtoint (ptr addrspace(1) @X_as1 to i16))) to i16)
 ;
 
 entry:
@@ -182,3 +182,11 @@ entry:
   ret i16 %E
 }
 
+define ptr @gep_too_large_type(ptr %p) {
+; CHECK-LABEL: @gep_too_large_type(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i32 -4
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr inbounds [4294967295 x i32], ptr %p, i32 1
+  ret ptr %gep
+}

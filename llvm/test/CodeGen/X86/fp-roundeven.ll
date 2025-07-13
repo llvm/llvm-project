@@ -50,14 +50,9 @@ define half @roundeven_f16(half %h) {
 ;
 ; AVX512F-LABEL: roundeven_f16:
 ; AVX512F:       ## %bb.0: ## %entry
-; AVX512F-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512F-NEXT:    movzwl %ax, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512FP16-LABEL: roundeven_f16:

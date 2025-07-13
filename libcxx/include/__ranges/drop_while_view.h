@@ -37,6 +37,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -45,7 +48,7 @@ namespace ranges {
 
 template <view _View, class _Pred>
   requires input_range<_View> && is_object_v<_Pred> && indirect_unary_predicate<const _Pred, iterator_t<_View>>
-class drop_while_view : public view_interface<drop_while_view<_View, _Pred>> {
+class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS drop_while_view : public view_interface<drop_while_view<_View, _Pred>> {
 public:
   _LIBCPP_HIDE_FROM_ABI drop_while_view()
     requires default_initializable<_View> && default_initializable<_Pred>
@@ -65,7 +68,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr const _Pred& pred() const { return *__pred_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    // Note: this duplicates a check in `optional` but provides a better error message.
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(),
         "drop_while_view needs to have a non-empty predicate before calling begin() -- did a previous "
         "assignment to this drop_while_view fail?");
@@ -86,7 +90,7 @@ private:
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
   static constexpr bool _UseCache = forward_range<_View>;
-  using _Cache                    = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
+  using _Cache _LIBCPP_NODEBUG    = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
   _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cached_begin_ = _Cache();
 };
 
@@ -111,7 +115,7 @@ struct __fn {
     requires constructible_from<decay_t<_Pred>, _Pred>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pred&& __pred) const
       noexcept(is_nothrow_constructible_v<decay_t<_Pred>, _Pred>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Pred>(__pred)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Pred>(__pred)));
   }
 };
 
@@ -126,5 +130,7 @@ inline constexpr auto drop_while = __drop_while::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_DROP_WHILE_VIEW_H

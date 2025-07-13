@@ -1,10 +1,17 @@
-//===- LoopScheduler.h -----------------------------------------*- C++ -*-===//
+//===- IterationGraphSorter.h -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This header file defines the iteration graph sorter (top-sort scheduling).
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_ITERATIONGRAPHSORTER_H_
+#define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_ITERATIONGRAPHSORTER_H_
 
 #include "mlir/IR/AffineMap.h"
 
@@ -21,7 +28,7 @@ class GenericOp;
 
 namespace sparse_tensor {
 
-/// Iteration graph sorting.
+/// Iteration graph sorting mask,
 enum class SortMask : unsigned {
   // The individual mask bits.
   kIncludeDenseOutput = 0x1, // b001
@@ -34,40 +41,52 @@ enum class SortMask : unsigned {
 
 class IterationGraphSorter {
 public:
-  // Constructs a scheduler from linalg.generic
-  // Maybe reuses the class to schedule foreach as well (to address
-  // non-permutation, e.g, traverse CSR in BSR order).
+  /// Factory method that construct an iteration graph sorter
+  /// for the given linalg.generic operation.
   static IterationGraphSorter fromGenericOp(linalg::GenericOp genericOp);
 
-  // Returns a permutation that represents the scheduled loop order.
-  // Note that the returned AffineMap could be null if the kernel can not be
-  // schedule due to cycles in the iteration graph.
+  /// Returns a permutation that represents the scheduled loop order.
+  /// Note that the returned AffineMap could be null if the kernel
+  /// cannot be scheduled due to cyclic iteration graph.
   [[nodiscard]] AffineMap sort(SortMask mask, Value ignored = nullptr);
+
+  /// Returns the number of loops in the iteration graph.
   unsigned getNumLoops() const { return loop2OutLvl.getNumDims(); }
 
 private:
+  // Private constructor.
   IterationGraphSorter(SmallVector<Value> &&ins,
                        SmallVector<AffineMap> &&loop2InsLvl, Value out,
                        AffineMap loop2OutLvl,
                        SmallVector<utils::IteratorType> &&iterTypes);
 
+  // Adds all the constraints in the given loop to level map.
   void addConstraints(Value t, AffineMap loop2LvlMap);
+
+  /// A helper to compute a topological sort. The method has an
+  /// O(n^2) time complexity since we use an adjacency matrix
+  /// representation for the iteration graph.
   AffineMap topoSort();
 
   // Input tensors and associated loop to level maps.
   SmallVector<Value> ins;
   SmallVector<AffineMap> loop2InsLvl;
+
   // Output tensor and associated loop to level map.
   Value out;
   AffineMap loop2OutLvl;
-  // Loop type;
+
+  // Loop itation types;
   SmallVector<utils::IteratorType> iterTypes;
 
-  // Adjacent matrix that represents the iteration graph.
+  // Adjacency matrix that represents the iteration graph.
   std::vector<std::vector<bool>> itGraph;
+
   // InDegree used for topo sort.
   std::vector<unsigned> inDegree;
 };
 
 } // namespace sparse_tensor
 } // namespace mlir
+
+#endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_ITERATIONGRAPHSORTER_H_

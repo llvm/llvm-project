@@ -13,11 +13,11 @@ define dso_local float @_Z3fn2v() {
 ; CHECK-NEXT:    callq _Z1av@PLT
 ; CHECK-NEXT:    # kill: def $al killed $al def $eax
 ; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vmovss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z}
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 {%k1} {z} = [7.5E-1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    cmpl $0, c(%rip)
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    vcvtsi2ssl b(%rip), %xmm1, %xmm1
+; CHECK-NEXT:    vcvtsi2ssl b(%rip), %xmm15, %xmm1
 ; CHECK-NEXT:    kmovd %eax, %k1
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}

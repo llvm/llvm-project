@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Target/SPIRV/Deserialization.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -121,7 +122,8 @@ class Deserializer {
 public:
   /// Creates a deserializer for the given SPIR-V `binary` module.
   /// The SPIR-V ModuleOp will be created into `context.
-  explicit Deserializer(ArrayRef<uint32_t> binary, MLIRContext *context);
+  explicit Deserializer(ArrayRef<uint32_t> binary, MLIRContext *context,
+                        const DeserializationOptions &options);
 
   /// Deserializes the remembered SPIR-V binary module.
   LogicalResult deserialize();
@@ -233,6 +235,25 @@ private:
     return globalVariableMap.lookup(id);
   }
 
+  /// Sets the function argument's attributes. |argID| is the function
+  /// argument's result <id>, and |argIndex| is its index in the function's
+  /// argument list.
+  LogicalResult setFunctionArgAttrs(uint32_t argID,
+                                    SmallVectorImpl<Attribute> &argAttrs,
+                                    size_t argIndex);
+
+  /// Gets the symbol name from the name of decoration.
+  StringAttr getSymbolDecoration(StringRef decorationName) {
+    auto attrName = llvm::convertToSnakeFromCamelCase(decorationName);
+    return opBuilder.getStringAttr(attrName);
+  }
+
+  /// Move a conditional branch into a separate basic block to avoid unnecessary
+  /// sinking of defs that may be required outside a selection region. This
+  /// function also ensures that a single block cannot be a header block of one
+  /// selection construct and the merge block of another.
+  LogicalResult splitConditionalBlocks();
+
   //===--------------------------------------------------------------------===//
   // Type
   //===--------------------------------------------------------------------===//
@@ -260,8 +281,6 @@ private:
 
   LogicalResult processFunctionType(ArrayRef<uint32_t> operands);
 
-  LogicalResult processJointMatrixType(ArrayRef<uint32_t> operands);
-
   LogicalResult processImageType(ArrayRef<uint32_t> operands);
 
   LogicalResult processSampledImageType(ArrayRef<uint32_t> operands);
@@ -271,6 +290,8 @@ private:
   LogicalResult processStructType(ArrayRef<uint32_t> operands);
 
   LogicalResult processMatrixType(ArrayRef<uint32_t> operands);
+
+  LogicalResult processTensorARMType(ArrayRef<uint32_t> operands);
 
   LogicalResult processTypeForwardPointer(ArrayRef<uint32_t> operands);
 
@@ -604,6 +625,9 @@ private:
 
   /// A list of all structs which have unresolved member types.
   SmallVector<DeferredStructTypeInfo, 0> deferredStructTypesInfos;
+
+  /// Deserialization options.
+  DeserializationOptions options;
 
 #ifndef NDEBUG
   /// A logger used to emit information during the deserialzation process.

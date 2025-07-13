@@ -18,17 +18,16 @@
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
 // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <unordered_set>
 
 #include "check_assertion.h"
 
 int main(int, char**) {
-    typedef std::unordered_set<int> C;
-    C c;
-    TEST_LIBCPP_ASSERT_FAILURE(c.max_load_factor(-0.5f),
-                               "unordered container::max_load_factor(lf) called with lf <= 0");
+  typedef std::unordered_set<int> C;
+  C c;
+  TEST_LIBCPP_ASSERT_FAILURE(c.max_load_factor(-0.5f), "unordered container::max_load_factor(lf) called with lf <= 0");
 
-    return 0;
+  return 0;
 }

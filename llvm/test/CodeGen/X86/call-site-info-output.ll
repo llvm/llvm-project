@@ -11,6 +11,7 @@
 ; CHECK-NEXT:   arg: 1, reg: '$esi'
 ; CHECK-NEXT:   arg: 2, reg: '$edx'
 ; RUN: llc -emit-call-site-info %t.mir -run-pass=finalize-isel -o -| FileCheck %s --check-prefix=PARSER
+; RUN: llc -emit-call-site-info %t.mir -passes=finalize-isel -o -| FileCheck %s --check-prefix=PARSER
 ; Verify that we are able to parse output mir and that we are getting the same result.
 ; PARSER: name: fn2
 ; PARSER: callSites:

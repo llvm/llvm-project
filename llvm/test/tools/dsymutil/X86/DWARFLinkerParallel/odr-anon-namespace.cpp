@@ -4,7 +4,7 @@
    done
  */
 
-// RUN: dsymutil --linker llvm -f \
+// RUN: dsymutil --linker parallel -f \
 // RUN:   -oso-prepend-path=%p/../../Inputs/odr-anon-namespace \
 // RUN:   -y %p/../dummy-debug-map.map -o - | \
 // RUN:   llvm-dwarfdump -debug-info - | FileCheck %s

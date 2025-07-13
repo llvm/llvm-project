@@ -48,12 +48,32 @@ AST_MATCHER(ImplicitCastExpr, isMultiLevelPointerConversion) {
   return SourcePtrLevel != TargetPtrLevel;
 }
 
+AST_MATCHER(QualType, isPointerType) {
+  const QualType Type =
+      Node.getCanonicalType().getNonReferenceType().getUnqualifiedType();
+
+  return !Type.isNull() && Type->isPointerType();
+}
+
 } // namespace
+
+MultiLevelImplicitPointerConversionCheck::
+    MultiLevelImplicitPointerConversionCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context), EnableInC(Options.get("EnableInC", true)) {
+}
+
+void MultiLevelImplicitPointerConversionCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "EnableInC", EnableInC);
+}
 
 void MultiLevelImplicitPointerConversionCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(
-      implicitCastExpr(hasCastKind(CK_BitCast), isMultiLevelPointerConversion())
+      implicitCastExpr(hasCastKind(CK_BitCast), isMultiLevelPointerConversion(),
+                       unless(hasParent(explicitCastExpr(
+                           hasDestinationType(isPointerType())))))
           .bind("expr"),
       this);
 }

@@ -1,0 +1,47 @@
+; REQUIRES: x86_64-linux
+
+; Make sure that we can ingest the MemProf profile in YAML and
+; annotate a call to new as cold.
+
+; RUN: split-file %s %t
+; RUN: llvm-profdata merge %t/memprof_annotate_yaml.yaml -o %t/memprof_annotate_yaml.memprofdata
+; RUN: opt < %t/memprof_annotate_yaml.ll -passes='memprof-use<profile-filename=%t/memprof_annotate_yaml.memprofdata>' -S 2>&1 | FileCheck %s
+
+;--- memprof_annotate_yaml.yaml
+---
+HeapProfileRecords:
+  - GUID:            _Z3foov
+    AllocSites:
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 0, Column: 22, IsInlineFrame: false }
+          - { Function: main, LineOffset: 2, Column: 5, IsInlineFrame: false }
+        MemInfoBlock:
+          # With these numbers, llvm::memprof::getAllocType will determine that
+          # the call to new is cold.  See MemoryProfileInfo.cpp for details.
+          TotalSize:                  400
+          AllocCount:                 1
+          TotalLifetimeAccessDensity: 1
+          TotalLifetime:              1000000
+    CallSites:       []
+...
+;--- memprof_annotate_yaml.ll
+define dso_local ptr @_Z3foov() !dbg !4 {
+entry:
+  %call = call ptr @_Znam(i64 4) #0, !dbg !5
+; CHECK: call ptr @_Znam(i64 4) #[[ATTR:[0-9]+]],
+  ret ptr %call
+}
+
+declare ptr @_Znam(i64)
+
+attributes #0 = { builtin allocsize(0) }
+; CHECK: attributes #[[ATTR]] = {{.*}} "memprof"="cold"
+
+!llvm.module.flags = !{!2, !3}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1)
+!1 = !DIFile(filename: "t", directory: "/")
+!2 = !{i32 7, !"Dwarf Version", i32 5}
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !1, file: !1, line: 1, unit: !0)
+!5 = !DILocation(line: 1, column: 22, scope: !4)

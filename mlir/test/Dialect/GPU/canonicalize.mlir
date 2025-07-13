@@ -11,6 +11,8 @@ func.func @fold_wait_op_test1() {
 }
 // CHECK-NOT: gpu.wait
 
+// -----
+
 // Erase duplicate barriers.
 // CHECK-LABEL: func @erase_barriers
 //       CHECK-NEXT: gpu.barrier
@@ -20,6 +22,8 @@ func.func @erase_barriers() {
   gpu.barrier
   return
 }
+
+// -----
 
 // Replace uses of gpu.wait op with its async dependency.
 // CHECK-LABEL: func @fold_wait_op_test2
@@ -37,6 +41,8 @@ func.func @fold_wait_op_test2(%arg0: i1) -> (memref<5xf16>, memref<5xf16>) {
 // CHECK-NEXT: %[[TOKEN1:.*]] = gpu.wait async
 // CHECK-NEXT: gpu.alloc async [%[[TOKEN1]]] ()
 // CHECK-NEXT: return
+
+// -----
 
 // CHECK-LABEL: func @fold_memcpy_op
 func.func @fold_memcpy_op(%arg0: i1) {
@@ -60,6 +66,8 @@ func.func @fold_memcpy_op(%arg0: i1) {
 }
 // CHECK-NOT: gpu.memcpy
 
+// -----
+
 // We cannot fold memcpy here as dest is a block argument.
 // CHECK-LABEL: func @do_not_fold_memcpy_op1
 func.func @do_not_fold_memcpy_op1(%arg0: i1, %arg1: memref<2xf16>) {
@@ -74,6 +82,8 @@ func.func @do_not_fold_memcpy_op1(%arg0: i1, %arg1: memref<2xf16>) {
     return
 }
 // CHECK: gpu.memcpy
+
+// -----
 
 // We cannot fold gpu.memcpy as it is used by an op having read effect on dest.
 // CHECK-LABEL: func @do_not_fold_memcpy_op2
@@ -92,6 +102,8 @@ func.func @do_not_fold_memcpy_op2(%arg0: i1, %arg1: index) -> f16 {
 }
 // CHECK: gpu.memcpy
 
+// -----
+
 // We cannot fold gpu.memcpy, as the defining op if dest is not a alloc like op.
 // CHECK-LABEL: func @do_not_fold_memcpy_op3
 func.func @do_not_fold_memcpy_op3(%arg0: memref<1xi8>, %arg1: memref<i1>) {
@@ -102,6 +114,8 @@ func.func @do_not_fold_memcpy_op3(%arg0: memref<1xi8>, %arg1: memref<i1>) {
 }
 // CHECK: gpu.memcpy
 
+// -----
+
 // CHECK-LABEL: @memcpy_after_cast
 func.func @memcpy_after_cast(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
   // CHECK-NOT: memref.cast
@@ -111,6 +125,8 @@ func.func @memcpy_after_cast(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
   gpu.memcpy %0, %1 : memref<?xf32>, memref<?xf32>
   return
 }
+
+// -----
 
 // CHECK-LABEL: @memset_after_cast
 func.func @memset_after_cast(%arg0: memref<10xf32>, %arg1: f32) {
@@ -131,6 +147,17 @@ func.func @gpu_dim_of_alloc(%size: index) -> index {
   %0 = gpu.alloc(%size) : memref<?xindex>
   %c0 = arith.constant 0 : index
   %1 = memref.dim %0, %c0 : memref<?xindex>
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @out_of_bound_memref.dim
+//  CHECK:   %[[MEMREF:.[a-z0-9A-Z_]+]] = memref.dim
+//  CHECK:   return %[[MEMREF]] : index
+func.func @out_of_bound_memref.dim(%arg : memref<?xi8>, %size: index) -> index {
+  %c2 = arith.constant 2 : index
+  %1 = memref.dim %arg, %c2 : memref<?xi8>
   return %1 : index
 }
 
@@ -223,6 +250,41 @@ func.func @make_subgroup_reduce_uniform() {
     %1 = "test.test2"() : () -> i32
     %2 = gpu.subgroup_reduce add %1 : (i32) -> (i32)
     "test.test3"(%2) : (i32) -> ()
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @subgroup_reduce_cluster_size_1
+//       CHECK: gpu.launch blocks
+//       CHECK: %[[V1:.*]] = "test.test2"() : () -> i32
+//       CHECK: "test.test3"(%[[V1]]) : (i32) -> ()
+func.func @subgroup_reduce_cluster_size_1() {
+  %0:6 = "test.test1"() : () -> (index, index, index, index, index, index)
+  gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %0#0, %arg7 = %0#1, %arg8 = %0#2)
+    threads(%arg3, %arg4, %arg5) in (%arg9 = %0#3, %arg10 = %0#4, %arg11 = %0#5) {
+    %1 = "test.test2"() : () -> i32
+    %2 = gpu.subgroup_reduce add %1 cluster(size=1) : (i32) -> (i32)
+    "test.test3"(%2) : (i32) -> ()
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+// The GPU kernel does not have any side effecting ops, so the entire
+// gpu.launch op can fold away.
+
+// CHECK-LABEL: func @gpu_launch_without_side_effects
+//   CHECK-NOT:   gpu.launch
+func.func @gpu_launch_without_side_effects() {
+  %0:6 = "test.test1"() : () -> (index, index, index, index, index, index)
+  gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %0#0, %arg7 = %0#1, %arg8 = %0#2)
+    threads(%arg3, %arg4, %arg5) in (%arg9 = %0#3, %arg10 = %0#4, %arg11 = %0#5) {
+    %1 = arith.addi %arg0, %arg1 : index
     gpu.terminator
   }
   return

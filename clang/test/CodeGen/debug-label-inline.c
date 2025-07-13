@@ -16,13 +16,13 @@ int f2(void) {
   int result;
 
   result = f1(ga, gb);
-  // CHECK: call void @llvm.dbg.label(metadata [[LABEL_METADATA:!.*]]), !dbg [[LABEL_LOCATION:!.*]]
+  // CHECK: #dbg_label([[LABEL_METADATA:!.*]],  [[LABEL_LOCATION:![0-9]+]]
 
   return result;
 }
 
 // CHECK: distinct !DISubprogram(name: "f1", {{.*}}, retainedNodes: [[ELEMENTS:!.*]])
 // CHECK: [[ELEMENTS]] = !{{{.*}}, [[LABEL_METADATA]]}
-// CHECK: [[LABEL_METADATA]] = !DILabel({{.*}}, name: "top", {{.*}}, line: 8)
+// CHECK: [[LABEL_METADATA]] = !DILabel({{.*}}, name: "top", {{.*}}, line: 8, column: 1)
 // CHECK: [[INLINEDAT:!.*]] = distinct !DILocation(line: 18,
 // CHECK: [[LABEL_LOCATION]] = !DILocation(line: 8, {{.*}}, inlinedAt: [[INLINEDAT]])

@@ -1,12 +1,12 @@
-# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 # This test ensures that the MIR parser reports an error when an instruction
 # is missing one of its implicit register operands.
 
 --- |
 
-  define i32 @foo(i32* %p) {
+  define i32 @foo(ptr %p) {
   entry:
-    %a = load i32, i32* %p
+    %a = load i32, ptr %p
     %0 = icmp sle i32 %a, 10
     br i1 %0, label %less, label %exit
 

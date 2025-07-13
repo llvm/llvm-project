@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_ADDRESS_H
 #define LLDB_CORE_ADDRESS_H
 
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -252,10 +253,11 @@ public:
   ///     in such cases.
   ///
   /// \see Address::DumpStyle
-  bool Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
-            DumpStyle fallback_style = DumpStyleInvalid,
-            uint32_t addr_byte_size = UINT32_MAX, bool all_ranges = false,
-            llvm::StringRef pattern = "") const;
+  bool
+  Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
+       DumpStyle fallback_style = DumpStyleInvalid,
+       uint32_t addr_byte_size = UINT32_MAX, bool all_ranges = false,
+       std::optional<Stream::HighlightSettings> settings = std::nullopt) const;
 
   AddressClass GetAddressClass() const;
 
@@ -369,22 +371,15 @@ public:
   bool ResolveAddressUsingFileSections(lldb::addr_t addr,
                                        const SectionList *sections);
 
-  /// Resolve this address to its containing function and optionally get
-  /// that function's address range.
+  /// Resolve this address to its containing function.
   ///
   /// \param[out] sym_ctx
   ///     The symbol context describing the function in which this address lies
   ///
-  /// \parm[out] addr_range_ptr
-  ///     Pointer to the AddressRange to fill in with the function's address
-  ///     range.  Caller may pass null if they don't need the address range.
-  ///
   /// \return
-  ///     Returns \b false if the function/symbol could not be resolved
-  ///     or if the address range was requested and could not be resolved;
+  ///     Returns \b false if the function/symbol could not be resolved;
   ///     returns \b true otherwise.
-  bool ResolveFunctionScope(lldb_private::SymbolContext &sym_ctx,
-                            lldb_private::AddressRange *addr_range_ptr = nullptr);
+  bool ResolveFunctionScope(lldb_private::SymbolContext &sym_ctx);
 
   /// Set the address to represent \a load_addr.
   ///

@@ -18,7 +18,7 @@ T* test1(V* x) { return &dynamic_cast<T&>(*x); }
 T* test2(A* x) { return &dynamic_cast<T&>(*x); }
 // CHECK-LABEL: define dso_local noundef ptr @"?test2@@YAPAUT@@PAUA@@@Z"(ptr noundef %x)
 // CHECK:        [[VBTBL:%.*]] = load ptr, ptr %x, align 4
-// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds i32, ptr [[VBTBL]], i32 1
+// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds nuw i8, ptr [[VBTBL]], i32 4
 // CHECK-NEXT:   [[VBOFFS:%.*]] = load i32, ptr [[VBOFFP]], align 4
 // CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, ptr %x, i32 [[VBOFFS]]
 // CHECK-NEXT:   [[CALL:%.*]] = tail call ptr @__RTDynamicCast(ptr nonnull [[ADJ]], i32 [[VBOFFS]], ptr nonnull @"??_R0?AUA@@@8", ptr nonnull @"??_R0?AUT@@@8", i32 1)
@@ -26,9 +26,9 @@ T* test2(A* x) { return &dynamic_cast<T&>(*x); }
 
 T* test3(B* x) { return &dynamic_cast<T&>(*x); }
 // CHECK-LABEL: define dso_local noundef ptr @"?test3@@YAPAUT@@PAUB@@@Z"(ptr noundef %x)
-// CHECK:        [[VBPTR:%.*]] = getelementptr inbounds i8, ptr %x, i32 4
+// CHECK:        [[VBPTR:%.*]] = getelementptr inbounds nuw i8, ptr %x, i32 4
 // CHECK-NEXT:   [[VBTBL:%.*]] = load ptr, ptr [[VBPTR:%.*]], align 4
-// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds i32, ptr [[VBTBL]], i32 1
+// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds nuw i8, ptr [[VBTBL]], i32 4
 // CHECK-NEXT:   [[VBOFFS:%.*]] = load i32, ptr [[VBOFFP]], align 4
 // CHECK-NEXT:   [[DELTA:%.*]] = add nsw i32 [[VBOFFS]], 4
 // CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, ptr %x, i32 [[DELTA]]
@@ -45,7 +45,7 @@ T* test5(A* x) { return dynamic_cast<T*>(x); }
 // CHECK:        [[CHECK:%.*]] = icmp eq ptr %x, null
 // CHECK-NEXT:   br i1 [[CHECK]]
 // CHECK:        [[VBTBL:%.*]] = load ptr, ptr %x, align 4
-// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds i32, ptr [[VBTBL]], i32 1
+// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds nuw i8, ptr [[VBTBL]], i32 4
 // CHECK-NEXT:   [[VBOFFS:%.*]] = load i32, ptr [[VBOFFP]], align 4
 // CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, ptr %x, i32 [[VBOFFS]]
 // CHECK-NEXT:   [[CALL:%.*]] = tail call ptr @__RTDynamicCast(ptr nonnull [[ADJ]], i32 [[VBOFFS]], ptr {{.*}}@"??_R0?AUA@@@8", ptr {{.*}}@"??_R0?AUT@@@8", i32 0)
@@ -57,9 +57,9 @@ T* test6(B* x) { return dynamic_cast<T*>(x); }
 // CHECK-LABEL: define dso_local noundef ptr @"?test6@@YAPAUT@@PAUB@@@Z"(ptr noundef %x)
 // CHECK:        [[CHECK:%.*]] = icmp eq ptr %x, null
 // CHECK-NEXT:   br i1 [[CHECK]]
-// CHECK:        [[VBPTR:%.*]] = getelementptr inbounds i8, ptr %x, i32 4
+// CHECK:        [[VBPTR:%.*]] = getelementptr inbounds nuw i8, ptr %x, i32 4
 // CHECK-NEXT:   [[VBTBL:%.*]] = load ptr, ptr [[VBPTR]], align 4
-// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds i32, ptr [[VBTBL]], i32 1
+// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds nuw i8, ptr [[VBTBL]], i32 4
 // CHECK-NEXT:   [[VBOFFS:%.*]] = load i32, ptr [[VBOFFP]], align 4
 // CHECK-NEXT:   [[DELTA:%.*]] = add nsw i32 [[VBOFFS]], 4
 // CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, ptr %x, i32 [[DELTA]]
@@ -78,7 +78,7 @@ void* test8(A* x) { return dynamic_cast<void*>(x); }
 // CHECK:        [[CHECK:%.*]] = icmp eq ptr %x, null
 // CHECK-NEXT:   br i1 [[CHECK]]
 // CHECK:        [[VBTBL:%.*]] = load ptr, ptr %x, align 4
-// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds i32, ptr [[VBTBL]], i32 1
+// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds nuw i8, ptr [[VBTBL]], i32 4
 // CHECK-NEXT:   [[VBOFFS:%.*]] = load i32, ptr [[VBOFFP]], align 4
 // CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, ptr %x, i32 [[VBOFFS]]
 // CHECK-NEXT:   [[RES:%.*]] = tail call ptr @__RTCastToVoid(ptr nonnull [[ADJ]])
@@ -90,9 +90,9 @@ void* test9(B* x) { return dynamic_cast<void*>(x); }
 // CHECK-LABEL: define dso_local noundef ptr @"?test9@@YAPAXPAUB@@@Z"(ptr noundef %x)
 // CHECK:        [[CHECK:%.*]] = icmp eq ptr %x, null
 // CHECK-NEXT:   br i1 [[CHECK]]
-// CHECK:        [[VBPTR:%.*]] = getelementptr inbounds i8, ptr %x, i32 4
+// CHECK:        [[VBPTR:%.*]] = getelementptr inbounds nuw i8, ptr %x, i32 4
 // CHECK-NEXT:   [[VBTBL:%.*]] = load ptr, ptr [[VBPTR]], align 4
-// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds i32, ptr [[VBTBL]], i32 1
+// CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds nuw i8, ptr [[VBTBL]], i32 4
 // CHECK-NEXT:   [[VBOFFS:%.*]] = load i32, ptr [[VBOFFP]], align 4
 // CHECK-NEXT:   [[BASE:%.*]] = getelementptr i8, ptr %x, i32 [[VBOFFS]]
 // CHECK-NEXT:   [[ADJ:%.*]] = getelementptr i8, ptr [[BASE]], i32 4

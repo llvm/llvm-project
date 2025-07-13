@@ -11,8 +11,10 @@
 #include "src/__support/CPP/type_traits/is_void.h"
 #include "src/__support/CPP/utility/declval.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // is_convertible
 namespace detail {
@@ -40,6 +42,7 @@ template <class From, class To>
 LIBC_INLINE_VAR constexpr bool is_convertible_v =
     is_convertible<From, To>::value;
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONVERTIBLE_H

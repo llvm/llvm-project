@@ -199,8 +199,10 @@ Operation *mlir::clone(OpBuilder &b, Operation *op, TypeRange newResultTypes,
   IRMapping bvm;
   OperationState state(op->getLoc(), op->getName(), newOperands, newResultTypes,
                        op->getAttrs());
-  for (Region &r : op->getRegions())
-    r.cloneInto(state.addRegion(), bvm);
+  for (Region &r : op->getRegions()) {
+    Region *newRegion = state.addRegion();
+    b.cloneRegionBefore(r, *newRegion, newRegion->begin(), bvm);
+  }
   return b.create(state);
 }
 
@@ -217,7 +219,7 @@ Operation *mlir::cloneWithoutRegions(OpBuilder &b, Operation *op,
 SmallVector<NamedAttribute>
 mlir::getPrunedAttributeList(Operation *op, ArrayRef<StringRef> elidedAttrs) {
   llvm::StringSet<> elidedAttrsSet;
-  elidedAttrsSet.insert(elidedAttrs.begin(), elidedAttrs.end());
+  elidedAttrsSet.insert_range(elidedAttrs);
   SmallVector<NamedAttribute> attrs;
   for (auto attr : op->getAttrs()) {
     if (elidedAttrsSet.count(attr.getName()))

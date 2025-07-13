@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReplaceRandomShuffleCheck.h"
-#include "../utils/FixItHintUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -83,7 +81,7 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
   StringRef ContainerText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(MatchedDecl->getSourceRange()),
       *Result.SourceManager, getLangOpts());
-  if (ContainerText.startswith("std::"))
+  if (ContainerText.starts_with("std::"))
     NewName = "std::" + NewName;
 
   Diag << FixItHint::CreateRemoval(MatchedDecl->getSourceRange());

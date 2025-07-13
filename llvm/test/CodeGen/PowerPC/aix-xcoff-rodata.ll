@@ -1,16 +1,16 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff -data-sections=false -ppc-merge-string-pool=false < %s | \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff -data-sections=false < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK32 %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false -ppc-merge-string-pool=false < %s | \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff -data-sections=false -ppc-merge-string-pool=false \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff -data-sections=false \
 ; RUN:   -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers --file-header %t.o | \
 ; RUN:   FileCheck --check-prefixes=OBJ,OBJ32 %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefixes=SYMS,SYMS32 %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=DIS %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false -ppc-merge-string-pool=false \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false \
 ; RUN:   -filetype=obj -o %t64.o < %s
 ; RUN: llvm-readobj --section-headers --file-header %t64.o | \
 ; RUN:   FileCheck --check-prefixes=OBJ,OBJ64 %s
@@ -82,7 +82,7 @@
 ; OBJ-NEXT:   TimeStamp: None (0x0)
 ; OBJ32-NEXT: SymbolTableOffset: 0x8C
 ; OBJ64-NEXT: SymbolTableOffset: 0xB0
-; OBJ-NEXT:   SymbolTableEntries: 21
+; OBJ-NEXT:   SymbolTableEntries: 23
 ; OBJ-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ-NEXT:   Flags: 0x0
 ; OBJ-NEXT: }

@@ -80,7 +80,7 @@ protected:
   std::shared_ptr<TargetOptions> TargetOpts;
 
   /// Options controlling the diagnostic engine.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagnosticOpts;
+  std::shared_ptr<DiagnosticOptions> DiagnosticOpts;
 
   /// Options controlling the \#include directive.
   std::shared_ptr<HeaderSearchOptions> HSOpts;
@@ -89,7 +89,7 @@ protected:
   std::shared_ptr<PreprocessorOptions> PPOpts;
 
   /// Options controlling the static analyzer.
-  AnalyzerOptionsRef AnalyzerOpts;
+  std::shared_ptr<AnalyzerOptions> AnalyzerOpts;
 
   std::shared_ptr<MigratorOptions> MigratorOpts;
 
@@ -201,6 +201,8 @@ private:
   /// @}
 };
 
+class CowCompilerInvocation;
+
 /// Helper class for holding the data necessary to invoke the compiler.
 ///
 /// This class is designed to represent an abstract "invocation" of the
@@ -219,6 +221,9 @@ public:
     return *this;
   }
   ~CompilerInvocation() = default;
+
+  explicit CompilerInvocation(const CowCompilerInvocation &X);
+  CompilerInvocation &operator=(const CowCompilerInvocation &X);
 
   /// Const getters.
   /// @{
@@ -260,19 +265,6 @@ public:
   }
   /// @}
 
-  /// Base class internals.
-  /// @{
-  using CompilerInvocationBase::LangOpts;
-  using CompilerInvocationBase::TargetOpts;
-  using CompilerInvocationBase::DiagnosticOpts;
-  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() {
-    return HSOpts;
-  }
-  std::shared_ptr<PreprocessorOptions> getPreprocessorOptsPtr() {
-    return PPOpts;
-  }
-  /// @}
-
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
   ///
@@ -298,6 +290,15 @@ public:
   /// \param MainAddr - The address of main (or some other function in the main
   /// executable), for finding the builtin compiler path.
   static std::string GetResourcesPath(const char *Argv0, void *MainAddr);
+
+  /// Populate \p Opts with the default set of pointer authentication-related
+  /// options given \p LangOpts and \p Triple.
+  ///
+  /// Note: This is intended to be used by tools which must be aware of
+  /// pointer authentication-related code generation, e.g. lldb.
+  static void setDefaultPointerAuthOptions(PointerAuthOptions &Opts,
+                                           const LangOptions &LangOpts,
+                                           const llvm::Triple &Triple);
 
   /// Retrieve a module hash string that is suitable for uniquely
   /// identifying the conditions under which the module was built.

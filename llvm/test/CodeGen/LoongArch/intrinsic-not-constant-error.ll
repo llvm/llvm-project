@@ -1,5 +1,5 @@
-; RUN: not llc --mtriple=loongarch32 < %s 2>&1 | FileCheck %s
-; RUN: not llc --mtriple=loongarch64 < %s 2>&1 | FileCheck %s
+; RUN: not llc --mtriple=loongarch32 -mattr=+d < %s 2>&1 | FileCheck %s
+; RUN: not llc --mtriple=loongarch64 -mattr=+d < %s 2>&1 | FileCheck %s
 
 declare void @llvm.loongarch.dbar(i32)
 declare void @llvm.loongarch.ibar(i32)

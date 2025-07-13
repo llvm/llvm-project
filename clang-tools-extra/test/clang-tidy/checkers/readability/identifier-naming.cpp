@@ -101,6 +101,10 @@ inline namespace InlineNamespace {
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: invalid case style for inline namespace 'InlineNamespace'
 // CHECK-FIXES: {{^}}inline namespace inline_namespace {{{$}}
 
+namespace FOO_ALIAS = FOO_NS;
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for namespace 'FOO_ALIAS' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}namespace foo_alias = FOO_NS;{{$}}
+
 SYSTEM_NS::structure g_s1;
 // NO warnings or fixes expected as SYSTEM_NS and structure are declared in a header file
 
@@ -108,10 +112,12 @@ USER_NS::object g_s2;
 // NO warnings or fixes expected as USER_NS and object are declared in a header file
 
 SYSTEM_MACRO(var1);
-// NO warnings or fixes expected as var1 is from macro expansion
+// CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global variable 'var1' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}SYSTEM_MACRO(g_var1);
 
 USER_MACRO(var2);
-// NO warnings or fixes expected as var2 is declared in a macro expansion
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: invalid case style for global variable 'var2' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}USER_MACRO(g_var2);
 
 #define BLA int FOO_bar
 BLA;
@@ -541,6 +547,7 @@ struct_type GlobalTypedefTestFunction(struct_type a_argument1) {
 // CHECK-FIXES: {{^}}struct_type_t GlobalTypedefTestFunction(struct_type_t a_argument1) {
     struct_type typedef_test_1;
 // CHECK-FIXES: {{^}}    struct_type_t typedef_test_1;
+  return {};
 }
 
 using my_struct_type = THIS___Structure;
@@ -602,9 +609,20 @@ static void static_Function() {
 // CHECK-FIXES: {{^}}#define MY_TEST_MACRO(X) X()
 
 void MY_TEST_Macro(function) {}
-// CHECK-FIXES: {{^}}void MY_TEST_MACRO(function) {}
-}
-}
+// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: invalid case style for global function 'function' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}void MY_TEST_MACRO(Function) {}
+
+#define MY_CAT_IMPL(l, r) l ## r
+#define MY_CAT(l, r) MY_CAT_IMPL(l, r)
+#define MY_MACRO2(foo) int MY_CAT(awesome_, MY_CAT(foo, __COUNTER__)) = 0
+#define MY_MACRO3(foo) int MY_CAT(awesome_, foo) = 0
+MY_MACRO2(myglob);
+MY_MACRO3(myglob);
+// No suggestions should occur even though the resulting decl of awesome_myglob#
+// or awesome_myglob are not entirely within a macro argument.
+
+} // namespace InlineNamespace
+} // namespace FOO_NS
 
 template <typename t_t> struct a {
 // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: invalid case style for struct 'a'
@@ -760,9 +778,19 @@ STATIC_MACRO void someFunc(ValueType a_v1, const ValueType& a_v2) {}
 // CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(value_type_t a_v1, const value_type_t& a_v2) {}
 STATIC_MACRO void someFunc(const ValueType** p_a_v1, ValueType (*p_a_v2)()) {}
 // CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(const value_type_t** p_a_v1, value_type_t (*p_a_v2)()) {}
-STATIC_MACRO ValueType someFunc() {}
-// CHECK-FIXES: {{^}}STATIC_MACRO value_type_t someFunc() {}
+STATIC_MACRO ValueType someFunc() { return {}; }
+// CHECK-FIXES: {{^}}STATIC_MACRO value_type_t someFunc() { return {}; }
 STATIC_MACRO void someFunc(MyFunPtr, const MyFunPtr****) {}
 // CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(my_fun_ptr_t, const my_fun_ptr_t****) {}
 #undef STATIC_MACRO
 }
+
+struct Some_struct {
+  int SomeMember;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for public member 'SomeMember' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}  int some_member;
+};
+Some_struct g_s1{ .SomeMember = 1 };
+// CHECK-FIXES: {{^}}Some_struct g_s1{ .some_member = 1 };
+Some_struct g_s2{.SomeMember=1};
+// CHECK-FIXES: {{^}}Some_struct g_s2{.some_member=1};

@@ -42,3 +42,23 @@ r2 s%= r4
 // CHECK: 9c 42 01 00 00 00 00 00     w2 s%= w4
 w1 s/= w3
 w2 s%= w4
+
+// CHECK: d3 10 00 00 00 01 00 00	w0 = load_acquire((u8 *)(r1 + 0x0))
+// CHECK: cb 10 00 00 00 01 00 00	w0 = load_acquire((u16 *)(r1 + 0x0))
+// CHECK: c3 10 00 00 00 01 00 00	w0 = load_acquire((u32 *)(r1 + 0x0))
+w0 = load_acquire((u8 *)(r1 + 0))
+w0 = load_acquire((u16 *)(r1 + 0))
+w0 = load_acquire((u32 *)(r1 + 0))
+
+// CHECK: db 10 00 00 00 01 00 00	r0 = load_acquire((u64 *)(r1 + 0x0))
+r0 = load_acquire((u64 *)(r1 + 0))
+
+// CHECK: d3 21 00 00 10 01 00 00	store_release((u8 *)(r1 + 0x0), w2)
+// CHECK: cb 21 00 00 10 01 00 00	store_release((u16 *)(r1 + 0x0), w2)
+// CHECK: c3 21 00 00 10 01 00 00	store_release((u32 *)(r1 + 0x0), w2)
+store_release((u8 *)(r1 + 0), w2)
+store_release((u16 *)(r1 + 0), w2)
+store_release((u32 *)(r1 + 0), w2)
+
+// CHECK: db 21 00 00 10 01 00 00	store_release((u64 *)(r1 + 0x0), r2)
+store_release((u64 *)(r1 + 0), r2)

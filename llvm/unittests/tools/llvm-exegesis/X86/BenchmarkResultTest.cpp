@@ -46,6 +46,15 @@ MATCHER(EqMCInst, "") {
   return true;
 }
 
+MATCHER(EqRegValue, "") {
+  const RegisterValue Lhs = get<0>(arg);
+  const RegisterValue Rhs = get<1>(arg);
+  if (Lhs.Register != Rhs.Register || Lhs.Value != Rhs.Value)
+    return false;
+
+  return true;
+}
+
 namespace {
 
 TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
@@ -74,9 +83,9 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   ToDisk.Mode = Benchmark::Latency;
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";
-  ToDisk.NumRepetitions = 1;
-  ToDisk.Measurements.push_back(BenchmarkMeasure{"a", 1, 1});
-  ToDisk.Measurements.push_back(BenchmarkMeasure{"b", 2, 2});
+  ToDisk.MinInstructions = 1;
+  ToDisk.Measurements.push_back(BenchmarkMeasure::Create("a", 1, {}));
+  ToDisk.Measurements.push_back(BenchmarkMeasure::Create("b", 2, {}));
   ToDisk.Error = "error";
   ToDisk.Info = "info";
 
@@ -120,10 +129,12 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
     EXPECT_EQ(FromDisk.Key.Config, ToDisk.Key.Config);
+    EXPECT_THAT(FromDisk.Key.RegisterInitialValues,
+                Pointwise(EqRegValue(), ToDisk.Key.RegisterInitialValues));
     EXPECT_EQ(FromDisk.Mode, ToDisk.Mode);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
     EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
-    EXPECT_EQ(FromDisk.NumRepetitions, ToDisk.NumRepetitions);
+    EXPECT_EQ(FromDisk.MinInstructions, ToDisk.MinInstructions);
     EXPECT_THAT(FromDisk.Measurements, ToDisk.Measurements);
     EXPECT_THAT(FromDisk.Error, ToDisk.Error);
     EXPECT_EQ(FromDisk.Info, ToDisk.Info);
@@ -137,10 +148,12 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
     EXPECT_EQ(FromDisk.Key.Config, ToDisk.Key.Config);
+    EXPECT_THAT(FromDisk.Key.RegisterInitialValues,
+                Pointwise(EqRegValue(), ToDisk.Key.RegisterInitialValues));
     EXPECT_EQ(FromDisk.Mode, ToDisk.Mode);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
     EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
-    EXPECT_EQ(FromDisk.NumRepetitions, ToDisk.NumRepetitions);
+    EXPECT_EQ(FromDisk.MinInstructions, ToDisk.MinInstructions);
     EXPECT_THAT(FromDisk.Measurements, ToDisk.Measurements);
     EXPECT_THAT(FromDisk.Error, ToDisk.Error);
     EXPECT_EQ(FromDisk.Info, ToDisk.Info);
@@ -149,10 +162,10 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
 
 TEST(BenchmarkResultTest, PerInstructionStats) {
   PerInstructionStats Stats;
-  Stats.push(BenchmarkMeasure{"a", 0.5, 0.0});
-  Stats.push(BenchmarkMeasure{"a", 1.5, 0.0});
-  Stats.push(BenchmarkMeasure{"a", -1.0, 0.0});
-  Stats.push(BenchmarkMeasure{"a", 0.0, 0.0});
+  Stats.push(BenchmarkMeasure::Create("a", 0.5, {}));
+  Stats.push(BenchmarkMeasure::Create("a", 1.5, {}));
+  Stats.push(BenchmarkMeasure::Create("a", -1.0, {}));
+  Stats.push(BenchmarkMeasure::Create("a", 0.0, {}));
   EXPECT_EQ(Stats.min(), -1.0);
   EXPECT_EQ(Stats.max(), 1.5);
   EXPECT_EQ(Stats.avg(), 0.25); // (0.5+1.5-1.0+0.0) / 4

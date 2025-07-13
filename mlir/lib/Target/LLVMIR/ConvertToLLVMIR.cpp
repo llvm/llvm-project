@@ -16,6 +16,7 @@
 #include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 
@@ -31,6 +32,7 @@ void registerToLLVMIRTranslation() {
         if (!llvmModule)
           return failure();
 
+        llvmModule->removeDebugIntrinsicDeclarations();
         llvmModule->print(output, nullptr);
         return success();
       },

@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -26,11 +27,11 @@
 
 /// Unwrap all the ref and box types and return the inner element type.
 static mlir::Type unwrapBoxAndRef(mlir::Type type) {
-  if (auto boxType = type.dyn_cast<fir::BoxCharType>())
+  if (auto boxType = mlir::dyn_cast<fir::BoxCharType>(type))
     return boxType.getEleTy();
   while (true) {
     type = fir::unwrapRefType(type);
-    if (auto boxTy = type.dyn_cast<fir::BoxType>())
+    if (auto boxTy = mlir::dyn_cast<fir::BoxType>(type))
       type = boxTy.getEleTy();
     else
       break;
@@ -41,19 +42,19 @@ static mlir::Type unwrapBoxAndRef(mlir::Type type) {
 /// Unwrap base fir.char<kind,len> type.
 static fir::CharacterType recoverCharacterType(mlir::Type type) {
   type = fir::unwrapSequenceType(unwrapBoxAndRef(type));
-  if (auto charTy = type.dyn_cast<fir::CharacterType>())
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(type))
     return charTy;
   llvm::report_fatal_error("expected a character type");
 }
 
 bool fir::factory::CharacterExprHelper::isCharacterScalar(mlir::Type type) {
   type = unwrapBoxAndRef(type);
-  return !type.isa<fir::SequenceType>() && fir::isa_char(type);
+  return !mlir::isa<fir::SequenceType>(type) && fir::isa_char(type);
 }
 
 bool fir::factory::CharacterExprHelper::isArray(mlir::Type type) {
   type = unwrapBoxAndRef(type);
-  if (auto seqTy = type.dyn_cast<fir::SequenceType>())
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type))
     return fir::isa_char(seqTy.getEleTy());
   return false;
 }
@@ -92,7 +93,8 @@ getCompileTimeLength(const fir::CharBoxValue &box) {
 /// Detect the precondition that the value `str` does not reside in memory. Such
 /// values will have a type `!fir.array<...x!fir.char<N>>` or `!fir.char<N>`.
 LLVM_ATTRIBUTE_UNUSED static bool needToMaterialize(mlir::Value str) {
-  return str.getType().isa<fir::SequenceType>() || fir::isa_char(str.getType());
+  return mlir::isa<fir::SequenceType>(str.getType()) ||
+         fir::isa_char(str.getType());
 }
 
 /// This is called only if `str` does not reside in memory. Such a bare string
@@ -103,7 +105,7 @@ fir::factory::CharacterExprHelper::materializeValue(mlir::Value str) {
   assert(needToMaterialize(str));
   auto ty = str.getType();
   assert(isCharacterScalar(ty) && "expected scalar character");
-  auto charTy = ty.dyn_cast<fir::CharacterType>();
+  auto charTy = mlir::dyn_cast<fir::CharacterType>(ty);
   if (!charTy || charTy.getLen() == fir::CharacterType::unknownLen()) {
     LLVM_DEBUG(llvm::dbgs() << "cannot materialize: " << str << '\n');
     llvm_unreachable("must be a !fir.char<N> type");
@@ -129,7 +131,7 @@ fir::factory::CharacterExprHelper::toExtendedValue(mlir::Value character,
   if (auto eleType = fir::dyn_cast_ptrEleTy(type))
     type = eleType;
 
-  if (auto arrayType = type.dyn_cast<fir::SequenceType>()) {
+  if (auto arrayType = mlir::dyn_cast<fir::SequenceType>(type)) {
     type = arrayType.getEleTy();
     auto indexType = builder.getIndexType();
     for (auto extent : arrayType.getShape()) {
@@ -145,10 +147,10 @@ fir::factory::CharacterExprHelper::toExtendedValue(mlir::Value character,
       mlir::emitError(loc, "cannot retrieve array extents from type");
   }
 
-  if (auto charTy = type.dyn_cast<fir::CharacterType>()) {
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(type)) {
     if (!resultLen && charTy.getLen() != fir::CharacterType::unknownLen())
       resultLen = builder.createIntegerConstant(loc, lenType, charTy.getLen());
-  } else if (auto boxCharType = type.dyn_cast<fir::BoxCharType>()) {
+  } else if (auto boxCharType = mlir::dyn_cast<fir::BoxCharType>(type)) {
     auto refType = builder.getRefType(boxCharType.getEleTy());
     // If the embox is accessible, use its operand to avoid filling
     // the generated fir with embox/unbox.
@@ -168,7 +170,7 @@ fir::factory::CharacterExprHelper::toExtendedValue(mlir::Value character,
     if (!resultLen) {
       resultLen = boxCharLen;
     }
-  } else if (type.isa<fir::BoxType>()) {
+  } else if (mlir::isa<fir::BoxType>(type)) {
     mlir::emitError(loc, "descriptor or derived type not yet handled");
   } else {
     llvm_unreachable("Cannot translate mlir::Value to character ExtendedValue");
@@ -221,7 +223,7 @@ fir::factory::CharacterExprHelper::createEmbox(const fir::CharBoxValue &box) {
 
 fir::CharBoxValue fir::factory::CharacterExprHelper::toScalarCharacter(
     const fir::CharArrayBoxValue &box) {
-  if (box.getBuffer().getType().isa<fir::PointerType>())
+  if (mlir::isa<fir::PointerType>(box.getBuffer().getType()))
     TODO(loc, "concatenating non contiguous character array into a scalar");
 
   // TODO: add a fast path multiplying new length at compile time if the info is
@@ -269,7 +271,9 @@ fir::factory::CharacterExprHelper::createElementAddr(mlir::Value buffer,
   auto extent = fir::SequenceType::getUnknownExtent();
   if (charTy.getLen() != fir::CharacterType::unknownLen())
     extent = charTy.getLen();
-  auto coorTy = builder.getRefType(fir::SequenceType::get({extent}, singleTy));
+  const bool isVolatile = fir::isa_volatile_type(buffer.getType());
+  auto sequenceType = fir::SequenceType::get({extent}, singleTy);
+  auto coorTy = builder.getRefType(sequenceType, isVolatile);
 
   auto coor = builder.createConvert(loc, coorTy, buffer);
   auto i = builder.createConvert(loc, builder.getIndexType(), index);
@@ -328,19 +332,20 @@ void fir::factory::CharacterExprHelper::createCopy(
   // If the src and dest are the same KIND, then use memmove to move the bits.
   // We don't have to worry about overlapping ranges with memmove.
   if (getCharacterKind(dest.getBuffer().getType()) == kind) {
+    const bool isVolatile = fir::isa_volatile_type(fromBuff.getType()) ||
+                            fir::isa_volatile_type(toBuff.getType());
     auto bytes = builder.getKindMap().getCharacterBitsize(kind) / 8;
     auto i64Ty = builder.getI64Type();
     auto kindBytes = builder.createIntegerConstant(loc, i64Ty, bytes);
     auto castCount = builder.createConvert(loc, i64Ty, count);
     auto totalBytes =
         builder.create<mlir::arith::MulIOp>(loc, kindBytes, castCount);
-    auto notVolatile = builder.createBool(loc, false);
-    auto memmv = getLlvmMemmove(builder);
-    auto argTys = memmv.getFunctionType().getInputs();
-    auto toPtr = builder.createConvert(loc, argTys[0], toBuff);
-    auto fromPtr = builder.createConvert(loc, argTys[1], fromBuff);
-    builder.create<fir::CallOp>(
-        loc, memmv, mlir::ValueRange{toPtr, fromPtr, totalBytes, notVolatile});
+    auto llvmPointerType =
+        mlir::LLVM::LLVMPointerType::get(builder.getContext());
+    auto toPtr = builder.createConvert(loc, llvmPointerType, toBuff);
+    auto fromPtr = builder.createConvert(loc, llvmPointerType, fromBuff);
+    builder.create<mlir::LLVM::MemmoveOp>(loc, toPtr, fromPtr, totalBytes,
+                                          isVolatile);
     return;
   }
 
@@ -375,7 +380,7 @@ fir::factory::CharacterExprHelper::createCharacterTemp(mlir::Type type,
   if (typeLen == fir::CharacterType::unknownLen())
     lenParams.push_back(len);
   auto ref = builder.allocateLocal(loc, charTy, "", ".chrtmp",
-                                   /*shape=*/std::nullopt, lenParams);
+                                   /*shape=*/{}, lenParams);
   return {ref, len};
 }
 
@@ -655,7 +660,7 @@ fir::factory::CharacterExprHelper::createUnboxChar(mlir::Value boxChar) {
 }
 
 bool fir::factory::CharacterExprHelper::isCharacterLiteral(mlir::Type type) {
-  if (auto seqType = type.dyn_cast<fir::SequenceType>())
+  if (auto seqType = mlir::dyn_cast<fir::SequenceType>(type))
     return (seqType.getShape().size() == 1) &&
            fir::isa_char(seqType.getEleTy());
   return false;
@@ -728,9 +733,9 @@ mlir::Value fir::factory::CharacterExprHelper::getLength(mlir::Value memref) {
   if (charType.hasConstantLen())
     return builder.createIntegerConstant(loc, builder.getCharacterLengthType(),
                                          charType.getLen());
-  if (memrefType.isa<fir::BoxType>())
+  if (mlir::isa<fir::BoxType>(memrefType))
     return readLengthFromBox(memref);
-  if (memrefType.isa<fir::BoxCharType>())
+  if (mlir::isa<fir::BoxCharType>(memrefType))
     return createUnboxChar(memref).second;
 
   // Length cannot be deduced from memref.
@@ -742,14 +747,14 @@ fir::factory::extractCharacterProcedureTuple(fir::FirOpBuilder &builder,
                                              mlir::Location loc,
                                              mlir::Value tuple,
                                              bool openBoxProc) {
-  mlir::TupleType tupleType = tuple.getType().cast<mlir::TupleType>();
+  mlir::TupleType tupleType = mlir::cast<mlir::TupleType>(tuple.getType());
   mlir::Value addr = builder.create<fir::ExtractValueOp>(
       loc, tupleType.getType(0), tuple,
       builder.getArrayAttr(
           {builder.getIntegerAttr(builder.getIndexType(), 0)}));
   mlir::Value proc = [&]() -> mlir::Value {
     if (openBoxProc)
-      if (auto addrTy = addr.getType().dyn_cast<fir::BoxProcType>())
+      if (auto addrTy = mlir::dyn_cast<fir::BoxProcType>(addr.getType()))
         return builder.create<fir::BoxAddrOp>(loc, addrTy.getEleTy(), addr);
     return addr;
   }();
@@ -763,7 +768,7 @@ fir::factory::extractCharacterProcedureTuple(fir::FirOpBuilder &builder,
 mlir::Value fir::factory::createCharacterProcedureTuple(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argTy,
     mlir::Value addr, mlir::Value len) {
-  mlir::TupleType tupleType = argTy.cast<mlir::TupleType>();
+  mlir::TupleType tupleType = mlir::cast<mlir::TupleType>(argTy);
   addr = builder.createConvert(loc, tupleType.getType(0), addr);
   if (len)
     len = builder.createConvert(loc, tupleType.getType(1), len);
@@ -866,7 +871,7 @@ fir::factory::convertCharacterKind(fir::FirOpBuilder &builder,
   auto kindMap = builder.getKindMap();
   mlir::Value boxCharAddr = srcBoxChar.getAddr();
   auto fromTy = boxCharAddr.getType();
-  if (auto charTy = fromTy.dyn_cast<fir::CharacterType>()) {
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(fromTy)) {
     // boxchar is a value, not a variable. Turn it into a temporary.
     // As a value, it ought to have a constant LEN value.
     assert(charTy.hasConstantLen() && "must have constant length");
@@ -875,7 +880,7 @@ fir::factory::convertCharacterKind(fir::FirOpBuilder &builder,
     boxCharAddr = tmp;
   }
   auto fromBits = kindMap.getCharacterBitsize(
-      fir::unwrapRefType(fromTy).cast<fir::CharacterType>().getFKind());
+      mlir::cast<fir::CharacterType>(fir::unwrapRefType(fromTy)).getFKind());
   auto toBits = kindMap.getCharacterBitsize(toKind);
   if (toBits < fromBits) {
     // Scale by relative ratio to give a buffer of the same length.

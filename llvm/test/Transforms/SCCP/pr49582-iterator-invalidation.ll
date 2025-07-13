@@ -5,7 +5,7 @@
 @c = external dso_local global ptr, align 8
 @d = external dso_local global i32, align 4
 
-define void @f(i32 %i) {
+define void @f(i32 %i, i1 %arg) {
 entry:
   br label %for.cond
 
@@ -474,7 +474,7 @@ if.then312:                                       ; preds = %if.then309
   br label %if.end628
 
 if.else316:                                       ; preds = %if.then309
-  br i1 undef, label %if.then318, label %if.end628
+  br i1 %arg, label %if.then318, label %if.end628
 
 if.then318:                                       ; preds = %if.else316
   %idxprom320 = sext i32 %add310 to i64
@@ -726,7 +726,7 @@ if.then499:                                       ; preds = %if.else496
   br label %if.end628
 
 if.else501:                                       ; preds = %if.else496
-  br i1 undef, label %if.then503, label %if.end628
+  br i1 %arg, label %if.then503, label %if.end628
 
 if.then503:                                       ; preds = %if.else501
   br label %if.end628
@@ -834,7 +834,7 @@ if.then596:                                       ; preds = %if.then593
   br label %if.end628
 
 if.else600:                                       ; preds = %if.then593
-  br i1 undef, label %if.then602, label %if.end628
+  br i1 %arg, label %if.then602, label %if.end628
 
 if.then602:                                       ; preds = %if.else600
   %idxprom604 = sext i32 %add594 to i64

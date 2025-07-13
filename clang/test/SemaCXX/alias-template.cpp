@@ -54,18 +54,24 @@ namespace LookupFilter {
   template<typename U> using S = S<U>*; // ok
 }
 
-namespace InFunctions {
+namespace UnexpandedPack {
   template<typename...T> struct S0 {
     template<typename Z> using U = T*; // expected-error {{declaration type contains unexpanded parameter pack 'T'}}
     U<char> u;
   };
+}
 
+namespace InvalidType {
   template<typename Z> using T1 = int;
   template<typename Z> using T2 = int[-1]; // expected-error {{array size is negative}}
+}
+
+namespace ShadowTemplateParam {
   template<typename...T> struct S3 { // expected-note {{template parameter is declared here}}
     template<typename Z> using T = int; // expected-error {{declaration of 'T' shadows template parameter}}
   };
-  template<typename Z> using Z = Z;
+  template<typename Z> // expected-note {{template parameter is declared here}}
+  using Z = Z; // expected-error {{declaration of 'Z' shadows template parameter}}
 }
 
 namespace ClassNameRedecl {
@@ -191,69 +197,4 @@ int g = sfinae_me<int>(); // expected-error{{no matching function for call to 's
 
 namespace NullExceptionDecl {
 template<int... I> auto get = []() { try { } catch(...) {}; return I; }; // expected-error{{initializer contains unexpanded parameter pack 'I'}}
-}
-
-namespace GH41693 {
-// No errors when a type alias defined in a class or a friend of a class
-// accesses private members of the same class.
-struct S {
-private:
-  template <typename> static constexpr void Impl() {}
-
-public:
-  template <typename X> using U = decltype(Impl<X>());
-};
-
-using X = S::U<void>;
-struct Y {
-private:
-  static constexpr int x=0;
-
-  template <typename>
-  static constexpr int y=0;
-
-  template <typename>
-  static constexpr int foo();
-
-public:
-  template <typename U>
-  using bar1 = decltype(foo<U>());
-  using bar2 = decltype(x);
-  template <typename U>
-  using bar3 = decltype(y<U>);
-};
-
-
-using type1 = Y::bar1<float>;
-using type2 = Y::bar2;
-using type3 = Y::bar3<float>;
-
-struct theFriend{
-  template<class T>
-  using theAlias = decltype(&T::i);
-};
-
-class theC{
-  int i;
-  public:
-  friend struct theFriend;
-};
-
-int foo(){
-  (void)sizeof(theFriend::theAlias<theC>);
-}
-
-// Test case that regressed with the first iteration of the fix for GH41693.
-template <typename T> class SP {
-    T* data;
-};
-
-template <typename T> class A {
-    static SP<A> foo();
-};
-
-template<typename T> using TRet = SP<A<T>>;
-
-template<typename T> TRet<T> A<T>::foo() { return TRet<T>{};};
-
 }

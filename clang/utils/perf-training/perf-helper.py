@@ -16,6 +16,8 @@ import time
 import bisect
 import shlex
 import tempfile
+import re
+import shutil
 
 test_env = {"PATH": os.environ["PATH"]}
 
@@ -30,26 +32,28 @@ def findFilesWithExtension(path, extension):
 
 
 def clean(args):
-    if len(args) != 2:
+    if len(args) < 2:
         print(
-            "Usage: %s clean <path> <extension>\n" % __file__
+            "Usage: %s clean <paths> <extension>\n" % __file__
             + "\tRemoves all files with extension from <path>."
         )
         return 1
-    for filename in findFilesWithExtension(args[0], args[1]):
-        os.remove(filename)
+    for path in args[0:-1]:
+        for filename in findFilesWithExtension(path, args[-1]):
+            os.remove(filename)
     return 0
 
 
 def merge(args):
-    if len(args) != 3:
+    if len(args) < 3:
         print(
-            "Usage: %s merge <llvm-profdata> <output> <path>\n" % __file__
+            "Usage: %s merge <llvm-profdata> <output> <paths>\n" % __file__
             + "\tMerges all profraw files from path into output."
         )
         return 1
     cmd = [args[0], "merge", "-o", args[1]]
-    cmd.extend(findFilesWithExtension(args[2], "profraw"))
+    for path in args[2:]:
+        cmd.extend(findFilesWithExtension(path, "profraw"))
     subprocess.check_call(cmd)
     return 0
 
@@ -64,6 +68,62 @@ def merge_fdata(args):
     cmd = [args[0], "-o", args[1]]
     cmd.extend(findFilesWithExtension(args[2], "fdata"))
     subprocess.check_call(cmd)
+    return 0
+
+
+def perf(args):
+    parser = argparse.ArgumentParser(
+        prog="perf-helper perf", description="perf wrapper for BOLT profile collection"
+    )
+    parser.add_argument(
+        "--lbr", action="store_true", help="Use perf with branch stacks"
+    )
+    parser.add_argument("cmd", nargs=argparse.REMAINDER, help="")
+
+    opts = parser.parse_args(args)
+    cmd = opts.cmd[1:]
+
+    perf_args = [
+        "perf",
+        "record",
+        "--event=cycles:u",
+        "--freq=max",
+        "--output=%d.perf.data" % os.getpid(),
+    ]
+    if opts.lbr:
+        perf_args += ["--branch-filter=any,u"]
+    perf_args.extend(cmd)
+
+    start_time = time.time()
+    subprocess.check_call(perf_args)
+
+    elapsed = time.time() - start_time
+    print("... data collection took %.4fs" % elapsed)
+    return 0
+
+
+def perf2bolt(args):
+    parser = argparse.ArgumentParser(
+        prog="perf-helper perf2bolt",
+        description="perf2bolt conversion wrapper for perf.data files",
+    )
+    parser.add_argument("bolt", help="Path to llvm-bolt")
+    parser.add_argument("path", help="Path containing perf.data files")
+    parser.add_argument("binary", help="Input binary")
+    parser.add_argument("--lbr", action="store_true", help="Use LBR perf2bolt mode")
+    opts = parser.parse_args(args)
+
+    p2b_args = [
+        opts.bolt,
+        opts.binary,
+        "--aggregate-only",
+        "--profile-format=yaml",
+    ]
+    if not opts.lbr:
+        p2b_args += ["-nl"]
+    p2b_args += ["-p"]
+    for filename in findFilesWithExtension(opts.path, "perf.data"):
+        subprocess.check_call(p2b_args + [filename, "-o", filename + ".fdata"])
     return 0
 
 
@@ -177,6 +237,7 @@ def get_cc1_command_for_args(cmd, env):
             or ln.startswith("InstalledDir:")
             or ln.startswith("LLVM Profile Note")
             or ln.startswith(" (in-process)")
+            or ln.startswith("Configuration file:")
             or " version " in ln
         ):
             continue
@@ -500,13 +561,151 @@ def genOrderFile(args):
     return 0
 
 
+def filter_bolt_optimized(inputs, instrumented_outputs, readelf):
+    new_inputs = []
+    new_instrumented_ouputs = []
+    for input, instrumented_output in zip(inputs, instrumented_outputs):
+        output = subprocess.check_output(
+            [readelf, "-WS", input], universal_newlines=True
+        )
+
+        # This binary has already been bolt-optimized, so skip further processing.
+        if re.search("\\.bolt\\.org\\.text", output, re.MULTILINE):
+            print(f"Skipping {input}, it's already instrumented")
+        else:
+            new_inputs.append(input)
+            new_instrumented_ouputs.append(instrumented_output)
+    return new_inputs, new_instrumented_ouputs
+
+
+def bolt_optimize(args):
+    parser = argparse.ArgumentParser("%prog  [options] ")
+    parser.add_argument("--method", choices=["INSTRUMENT", "PERF", "LBR"])
+    parser.add_argument("--input")
+    parser.add_argument("--instrumented-output")
+    parser.add_argument("--fdata")
+    parser.add_argument("--perf-training-binary-dir")
+    parser.add_argument("--readelf")
+    parser.add_argument("--bolt")
+    parser.add_argument("--lit")
+    parser.add_argument("--merge-fdata")
+
+    opts = parser.parse_args(args)
+
+    inputs = opts.input.split(";")
+    instrumented_outputs = opts.instrumented_output.split(";")
+    assert len(inputs) == len(
+        instrumented_outputs
+    ), "inconsistent --input / --instrumented-output arguments"
+
+    inputs, instrumented_outputs = filter_bolt_optimized(inputs,
+                                                         instrumented_outputs,
+                                                         opts.readelf)
+    if not inputs:
+        return 0
+
+    environ = os.environ.copy()
+    if opts.method == "INSTRUMENT":
+        preloads = []
+        for input, instrumented_output in zip(inputs, instrumented_outputs):
+            args = [
+                opts.bolt,
+                input,
+                "-o",
+                instrumented_output,
+                "-instrument",
+                "--instrumentation-file-append-pid",
+                f"--instrumentation-file={opts.fdata}",
+            ]
+            print("Running: " + " ".join(args))
+            process = subprocess.run(
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+
+            for line in process.stdout:
+                sys.stdout.write(line)
+            process.check_returncode()
+
+            # Shared library must be preloaded to be covered.
+            if ".so" in input:
+                preloads.append(instrumented_output)
+
+        if preloads:
+            print(
+                f"Patching execution environment for dynamic libraries: {' '.join(preloads)}"
+            )
+            environ["LD_PRELOAD"] = os.pathsep.join(preloads)
+
+    args = [
+        sys.executable,
+        opts.lit,
+        "-v",
+        os.path.join(opts.perf_training_binary_dir, f"bolt-fdata"),
+    ]
+    print("Running: " + " ".join(args))
+    process = subprocess.run(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        env=environ,
+    )
+
+    for line in process.stdout:
+        sys.stdout.write(line)
+    process.check_returncode()
+
+    if opts.method in ["PERF", "LBR"]:
+        perf2bolt([opts.bolt, opts.perf_training_binary_dir, opts.input])
+
+    merge_fdata([opts.merge_fdata, opts.fdata, opts.perf_training_binary_dir])
+
+    for input in inputs:
+        shutil.copy(input, f"{input}-prebolt")
+
+        args = [
+            opts.bolt,
+            f"{input}-prebolt",
+            "-o",
+            input,
+            "-data",
+            opts.fdata,
+            "-reorder-blocks=ext-tsp",
+            "-reorder-functions=cdsort",
+            "-split-functions",
+            "-split-all-cold",
+            "-split-eh",
+            "-dyno-stats",
+            "-use-gnu-stack",
+            "-update-debug-sections",
+            "-nl" if opts.method == "PERF" else "",
+        ]
+        print("Running: " + " ".join(args))
+        process = subprocess.run(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+
+        for line in process.stdout:
+            sys.stdout.write(line)
+        process.check_returncode()
+
+
 commands = {
+    "bolt-optimize": bolt_optimize,
     "clean": clean,
     "merge": merge,
     "dtrace": dtrace,
     "cc1": cc1,
     "gen-order-file": genOrderFile,
     "merge-fdata": merge_fdata,
+    "perf": perf,
+    "perf2bolt": perf2bolt,
 }
 
 

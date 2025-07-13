@@ -9,6 +9,8 @@
 #ifndef LLVM_MC_MCCODEEMITTER_H
 #define LLVM_MC_MCCODEEMITTER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class MCFixup;
@@ -18,7 +20,7 @@ class raw_ostream;
 template<typename T> class SmallVectorImpl;
 
 /// MCCodeEmitter - Generic instruction encoding interface.
-class MCCodeEmitter {
+class LLVM_ABI MCCodeEmitter {
 protected: // Can only create subclasses.
   MCCodeEmitter();
 
@@ -30,12 +32,6 @@ public:
   /// Lifetime management
   virtual void reset() {}
 
-  /// Append the prefixes of given instruction to the code buffer.
-  ///
-  /// \param Inst a single low-level machine instruction.
-  /// \param CB code buffer
-  virtual void emitPrefix(const MCInst &Inst, SmallVectorImpl<char> &CB,
-                          const MCSubtargetInfo &STI) const {}
   /// Encode the given \p Inst to bytes and append to \p CB.
   virtual void encodeInstruction(const MCInst &Inst, SmallVectorImpl<char> &CB,
                                  SmallVectorImpl<MCFixup> &Fixups,

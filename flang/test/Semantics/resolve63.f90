@@ -340,7 +340,7 @@ module m8
     call generic(null(), ip) ! ok
     call generic(null(mold=ip), null()) ! ok
     call generic(null(), null(mold=ip)) ! ok
-    !ERROR: One or more actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    !ERROR: The actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
     call generic(null(), null())
   end subroutine
 end
@@ -358,7 +358,7 @@ module m9
   end subroutine
   subroutine test
     external underspecified
-    !ERROR: One or more actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    !ERROR: The actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
     call generic(underspecified)
   end subroutine
 end module

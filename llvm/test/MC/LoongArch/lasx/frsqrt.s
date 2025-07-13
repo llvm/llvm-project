@@ -10,3 +10,11 @@ xvfrsqrt.s $xr31, $xr25
 xvfrsqrt.d $xr14, $xr22
 # CHECK-INST: xvfrsqrt.d $xr14, $xr22
 # CHECK-ENCODING: encoding: [0xce,0x0a,0x9d,0x76]
+
+xvfrsqrte.s $xr31, $xr25
+# CHECK-INST: xvfrsqrte.s $xr31, $xr25
+# CHECK-ENCODING: encoding: [0x3f,0x27,0x9d,0x76]
+
+xvfrsqrte.d $xr14, $xr22
+# CHECK-INST: xvfrsqrte.d $xr14, $xr22
+# CHECK-ENCODING: encoding: [0xce,0x2a,0x9d,0x76]

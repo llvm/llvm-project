@@ -24,7 +24,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
                 ),
                 {
                     "direction": "send",
-                    "regex": re.compile("^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
+                    "regex": re.compile(r"^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
                     "capture": {1: "target_xml"},
                 },
             ],
@@ -46,7 +46,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(feature)
 
         target_xml_registers = feature.findall("reg")
-        self.assertTrue(len(target_xml_registers) > 0)
+        self.assertGreater(len(target_xml_registers), 0)
 
         # registers info collected by qRegisterInfo
         self.add_register_info_collection_packets()
@@ -63,7 +63,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
             self.assertEqual(q_info_reg["format"], xml_info_reg.get("format"))
             self.assertEqual(q_info_reg["bitsize"], xml_info_reg.get("bitsize"))
 
-            if not self.isAArch64():
+            if not (self.isAArch64() or self.isRISCV()):
                 self.assertEqual(q_info_reg["offset"], xml_info_reg.get("offset"))
 
             self.assertEqual(q_info_reg["encoding"], xml_info_reg.get("encoding"))

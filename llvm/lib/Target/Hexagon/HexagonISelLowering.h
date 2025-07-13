@@ -18,10 +18,10 @@
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InlineAsm.h"
 #include <cstdint>
@@ -77,6 +77,7 @@ enum NodeType : unsigned {
   EH_RETURN,
   DCFETCH,
   READCYCLE,
+  READTIMER,
   PTRUE,
   PFALSE,
   D2P,         // Convert 8-byte value to 8-bit predicate register. [*]
@@ -182,6 +183,9 @@ public:
                           SelectionDAG &DAG) const override;
 
   const char *getTargetNodeName(unsigned Opcode) const override;
+  std::pair<MVT, unsigned>
+  handleMaskRegisterForCallingConv(const HexagonSubtarget &Subtarget,
+                                   EVT VT) const;
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
@@ -204,8 +208,10 @@ public:
 
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerREADSTEADYCOUNTER(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_LABEL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
   SDValue
@@ -246,7 +252,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv,
                       MachineFunction &MF, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -260,6 +266,14 @@ public:
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
+  unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
+                                                CallingConv::ID CC, EVT VT,
+                                                EVT &IntermediateVT,
+                                                unsigned &NumIntermediates,
+                                                MVT &RegisterVT) const override;
+
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
@@ -322,7 +336,7 @@ public:
   /// the immediate into a register.
   bool isLegalICmpImmediate(int64_t Imm) const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
@@ -339,8 +353,13 @@ public:
   SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
                                    const override;
 
-  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                             EVT NewVT) const override;
+  /// Returns true if it is beneficial to convert a load of a constant
+  /// to just the constant itself.
+  bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
+                                         Type *Ty) const override;
+
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                             std::optional<unsigned> ByteOffset) const override;
 
   void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                      SDNode *Node) const override;
@@ -359,6 +378,7 @@ public:
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override {
     return AtomicExpansionKind::LLSC;
   }
+  bool softPromoteHalfType() const override { return true; }
 
 private:
   void initializeHVXLowering();

@@ -36,12 +36,7 @@ void reportBug(const CheckerBase *Checker, const CallEvent &Call,
 }
 
 class CXXDeallocatorChecker : public Checker<check::PreCall> {
-  std::unique_ptr<BugType> BT_uninitField;
-
 public:
-  CXXDeallocatorChecker()
-      : BT_uninitField(new BugType(this, "CXXDeallocator")) {}
-
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const {
     const auto *DC = dyn_cast<CXXDeallocatorCall>(&Call);
     if (!DC) {
@@ -66,7 +61,7 @@ void addCXXDeallocatorChecker(AnalysisASTConsumer &AnalysisConsumer,
 }
 
 // TODO: What we should really be testing here is all the different varieties
-// of delete operators, and wether the retrieval of their arguments works as
+// of delete operators, and whether the retrieval of their arguments works as
 // intended. At the time of writing this file, CXXDeallocatorCall doesn't pick
 // up on much of those due to the AST not containing CXXDeleteExpr for most of
 // the standard/custom deletes.
@@ -81,7 +76,12 @@ TEST(CXXDeallocatorCall, SimpleDestructor) {
     }
   )",
                                                          Diags));
+#if defined(_AIX) || defined(__MVS__) || defined(__MINGW32__)
+  // AIX, ZOS and MinGW default to -fno-sized-deallocation.
   EXPECT_EQ(Diags, "test.CXXDeallocator: NumArgs: 1\n");
+#else
+  EXPECT_EQ(Diags, "test.CXXDeallocator: NumArgs: 2\n");
+#endif
 }
 
 } // namespace

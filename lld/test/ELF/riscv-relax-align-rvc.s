@@ -22,67 +22,67 @@
 # CHECK-DAG: 00010000 g       .text  {{0*}}36 _start
 
 # CHECK:      <_start>:
-# CHECK-NEXT:           c.addi    a0, 1
+# CHECK-NEXT:           c.addi    a0, 0x1
 # CHECK-EMPTY:
 # CHECK-NEXT: <a>:
 # CHECK-NEXT:           c.nop
-# CHECK-NEXT:           addi    zero, zero, 0
-# CHECK-NEXT:           addi    zero, zero, 0
-# CHECK-NEXT:           addi    zero, zero, 0
+# CHECK-NEXT:           addi    zero, zero, 0x0
+# CHECK-NEXT:           addi    zero, zero, 0x0
+# CHECK-NEXT:           addi    zero, zero, 0x0
 # CHECK-EMPTY:
 # CHECK-NEXT: <b>:
-# CHECK-NEXT:   10010:  c.addi  a0, 2
+# CHECK-NEXT:   10010:  c.addi  a0, 0x2
 # CHECK-EMPTY:
 # CHECK-NEXT: <c>:
-# CHECK-NEXT:           c.addi  a0, 3
-# CHECK-NEXT:           addi    zero, zero, 0
-# CHECK-NEXT:           addi    zero, zero, 0
-# CHECK-NEXT:           addi    zero, zero, 0
+# CHECK-NEXT:           c.addi  a0, 0x3
+# CHECK-NEXT:           addi    zero, zero, 0x0
+# CHECK-NEXT:           addi    zero, zero, 0x0
+# CHECK-NEXT:           addi    zero, zero, 0x0
 # CHECK-EMPTY:
 # CHECK-NEXT: <d>:
-# CHECK-NEXT:   10020:  c.addi  a0, 4
-# CHECK-NEXT:           c.addi  a0, 5
-# CHECK-NEXT:           addi    zero, zero, 0
-# CHECK-NEXT:           addi    zero, zero, 0
-# CHECK-NEXT:           addi    zero, zero, 0
-# CHECK-NEXT:   10030:  c.addi  a0, 6
-# CHECK-NEXT:           c.addi  a0, 7
-# CHECK-NEXT:           c.addi  a0, 8
+# CHECK-NEXT:   10020:  c.addi  a0, 0x4
+# CHECK-NEXT:           c.addi  a0, 0x5
+# CHECK-NEXT:           addi    zero, zero, 0x0
+# CHECK-NEXT:           addi    zero, zero, 0x0
+# CHECK-NEXT:           addi    zero, zero, 0x0
+# CHECK-NEXT:   10030:  c.addi  a0, 0x6
+# CHECK-NEXT:           c.addi  a0, 0x7
+# CHECK-NEXT:           c.addi  a0, 0x8
 # CHECK-EMPTY:
 
 # CHECK:      <.text2>:
-# CHECK-NEXT:           addi    a0, a1, 1
-# CHECK-NEXT:           c.addi  a0, 1
+# CHECK-NEXT:           addi    a0, a1, 0x1
+# CHECK-NEXT:           c.addi  a0, 0x1
 # CHECK-NEXT:           c.nop
-# CHECK-NEXT:           c.addi  a0, 2
+# CHECK-NEXT:           c.addi  a0, 0x2
 
 .global _start
 _start:
-  c.addi a0, 1
+  c.addi a0, 0x1
 a:
 .balign 16
 b:
-  c.addi a0, 2
+  c.addi a0, 0x2
 c:
-  c.addi a0, 3
+  c.addi a0, 0x3
 .balign 32
 .size a, . - a
 d:
-  c.addi a0, 4
-  c.addi a0, 5
+  c.addi a0, 0x4
+  c.addi a0, 0x5
 .balign 16
 .size c, . - c
-  c.addi a0, 6
+  c.addi a0, 0x6
 .size b, . - b
-  c.addi a0, 7
+  c.addi a0, 0x7
 .balign 4
-  c.addi a0, 8
+  c.addi a0, 0x8
 .size d, . - d
 .size _start, . - _start
 
 .section .text2,"ax"
 .balign 16
-  addi a0, a1, 1
-  c.addi a0, 1
+  addi a0, a1, 0x1
+  c.addi a0, 0x1
 .balign 8
-  c.addi a0, 2
+  c.addi a0, 0x2

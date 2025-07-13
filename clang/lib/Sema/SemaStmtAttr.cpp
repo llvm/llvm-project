@@ -12,13 +12,10 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DelayedDiagnostic.h"
-#include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
-#include "llvm/ADT/StringExtras.h"
 #include <optional>
 
 using namespace clang;
@@ -53,6 +50,13 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 
 static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
+  if (A.getAttributeSpellingListIndex() == SuppressAttr::CXX11_gsl_suppress &&
+      A.getNumArgs() < 1) {
+    // Suppression attribute with GSL spelling requires at least 1 argument.
+    S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments) << A << 1;
+    return nullptr;
+  }
+
   std::vector<StringRef> DiagnosticIdentifiers;
   for (unsigned I = 0, E = A.getNumArgs(); I != E; ++I) {
     StringRef RuleName;
@@ -60,8 +64,6 @@ static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     if (!S.checkStringLiteralArgumentAttr(A, I, RuleName, nullptr))
       return nullptr;
 
-    // FIXME: Warn if the rule name is unknown. This is tricky because only
-    // clang-tidy knows about available rules.
     DiagnosticIdentifiers.push_back(RuleName);
   }
 
@@ -77,9 +79,10 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   Expr *ValueExpr = A.getArgAsExpr(3);
 
   StringRef PragmaName =
-      llvm::StringSwitch<StringRef>(PragmaNameLoc->Ident->getName())
+      llvm::StringSwitch<StringRef>(
+          PragmaNameLoc->getIdentifierInfo()->getName())
           .Cases("unroll", "nounroll", "unroll_and_jam", "nounroll_and_jam",
-                 PragmaNameLoc->Ident->getName())
+                 PragmaNameLoc->getIdentifierInfo()->getName())
           .Default("clang loop");
 
   // This could be handled automatically by adding a Subjects definition in
@@ -104,9 +107,16 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
   } else if (PragmaName == "unroll") {
     // #pragma unroll N
-    if (ValueExpr)
-      SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
-    else
+    if (ValueExpr) {
+      if (!ValueExpr->isValueDependent()) {
+        auto Value = ValueExpr->EvaluateKnownConstInt(S.getASTContext());
+        if (Value.isZero() || Value.isOne())
+          SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
+        else
+          SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
+      } else
+        SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
+    } else
       SetHints(LoopHintAttr::Unroll, LoopHintAttr::Enable);
   } else if (PragmaName == "nounroll_and_jam") {
     SetHints(LoopHintAttr::UnrollAndJam, LoopHintAttr::Disable);
@@ -118,10 +128,10 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
       SetHints(LoopHintAttr::UnrollAndJam, LoopHintAttr::Enable);
   } else {
     // #pragma clang loop ...
-    assert(OptionLoc && OptionLoc->Ident &&
+    assert(OptionLoc && OptionLoc->getIdentifierInfo() &&
            "Attribute must have valid option info.");
     Option = llvm::StringSwitch<LoopHintAttr::OptionType>(
-                 OptionLoc->Ident->getName())
+                 OptionLoc->getIdentifierInfo()->getName())
                  .Case("vectorize", LoopHintAttr::Vectorize)
                  .Case("vectorize_width", LoopHintAttr::VectorizeWidth)
                  .Case("interleave", LoopHintAttr::Interleave)
@@ -135,11 +145,13 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  .Case("distribute", LoopHintAttr::Distribute)
                  .Default(LoopHintAttr::Vectorize);
     if (Option == LoopHintAttr::VectorizeWidth) {
-      assert((ValueExpr || (StateLoc && StateLoc->Ident)) &&
+      assert((ValueExpr || (StateLoc && StateLoc->getIdentifierInfo())) &&
              "Attribute must have a valid value expression or argument.");
-      if (ValueExpr && S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc()))
+      if (ValueExpr && S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc(),
+                                           /*AllowZero=*/false))
         return nullptr;
-      if (StateLoc && StateLoc->Ident && StateLoc->Ident->isStr("scalable"))
+      if (StateLoc && StateLoc->getIdentifierInfo() &&
+          StateLoc->getIdentifierInfo()->isStr("scalable"))
         State = LoopHintAttr::ScalableWidth;
       else
         State = LoopHintAttr::FixedWidth;
@@ -147,7 +159,8 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::UnrollCount ||
                Option == LoopHintAttr::PipelineInitiationInterval) {
       assert(ValueExpr && "Attribute must have a valid value expression.");
-      if (S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc()))
+      if (S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc(),
+                              /*AllowZero=*/false))
         return nullptr;
       State = LoopHintAttr::Numeric;
     } else if (Option == LoopHintAttr::Vectorize ||
@@ -156,14 +169,15 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::Unroll ||
                Option == LoopHintAttr::Distribute ||
                Option == LoopHintAttr::PipelineDisabled) {
-      assert(StateLoc && StateLoc->Ident && "Loop hint must have an argument");
-      if (StateLoc->Ident->isStr("disable"))
+      assert(StateLoc && StateLoc->getIdentifierInfo() &&
+             "Loop hint must have an argument");
+      if (StateLoc->getIdentifierInfo()->isStr("disable"))
         State = LoopHintAttr::Disable;
-      else if (StateLoc->Ident->isStr("assume_safety"))
+      else if (StateLoc->getIdentifierInfo()->isStr("assume_safety"))
         State = LoopHintAttr::AssumeSafety;
-      else if (StateLoc->Ident->isStr("full"))
+      else if (StateLoc->getIdentifierInfo()->isStr("full"))
         State = LoopHintAttr::Full;
-      else if (StateLoc->Ident->isStr("enable"))
+      else if (StateLoc->getIdentifierInfo()->isStr("enable"))
         State = LoopHintAttr::Enable;
       else
         llvm_unreachable("bad loop hint argument");
@@ -203,7 +217,6 @@ public:
 
 static Attr *handleNoMergeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                SourceRange Range) {
-  NoMergeAttr NMA(S.Context, A);
   CallExprFinder CEF(S, St);
 
   if (!CEF.foundCallExpr() && !CEF.foundAsmStmt()) {
@@ -213,6 +226,19 @@ static Attr *handleNoMergeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   }
 
   return ::new (S.Context) NoMergeAttr(S.Context, A);
+}
+
+static Attr *handleNoConvergentAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                    SourceRange Range) {
+  CallExprFinder CEF(S, St);
+
+  if (!CEF.foundCallExpr() && !CEF.foundAsmStmt()) {
+    S.Diag(St->getBeginLoc(), diag::warn_attribute_ignored_no_calls_in_stmt)
+        << A;
+    return nullptr;
+  }
+
+  return ::new (S.Context) NoConvergentAttr(S.Context, A);
 }
 
 template <typename OtherAttr, int DiagIdx>
@@ -271,7 +297,7 @@ bool Sema::CheckAlwaysInlineAttr(const Stmt *OrigSt, const Stmt *CurSt,
 static Attr *handleNoInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
   NoInlineAttr NIA(S.Context, A);
-  if (!NIA.isClangNoInline()) {
+  if (!NIA.isStmtNoInline()) {
     S.Diag(St->getBeginLoc(), diag::warn_function_attribute_ignored_in_stmt)
         << "[[clang::noinline]]";
     return nullptr;
@@ -296,6 +322,15 @@ static Attr *handleAlwaysInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     return nullptr;
 
   return ::new (S.Context) AlwaysInlineAttr(S.Context, A);
+}
+
+static Attr *handleCXXAssumeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                 SourceRange Range) {
+  ExprResult Res = S.ActOnCXXAssumeAttr(St, A, Range);
+  if (!Res.isUsable())
+    return nullptr;
+
+  return ::new (S.Context) CXXAssumeAttr(S.Context, A, Res.get());
 }
 
 static Attr *handleMustTailAttr(Sema &S, Stmt *St, const ParsedAttr &A,
@@ -356,12 +391,11 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 }
 
 // Diagnose non-identical duplicates as a 'conflicting' loop attributes
-// and suppress duplicate errors in cases where the two match for
-// [[clang::code_align()]] attribute.
-static void CheckForDuplicateCodeAlignAttrs(Sema &S,
-                                            ArrayRef<const Attr *> Attrs) {
-  auto FindFunc = [](const Attr *A) { return isa<const CodeAlignAttr>(A); };
-  const auto *FirstItr = std::find_if(Attrs.begin(), Attrs.end(), FindFunc);
+// and suppress duplicate errors in cases where the two match.
+template <typename LoopAttrT>
+static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
+  auto FindFunc = [](const Attr *A) { return isa<const LoopAttrT>(A); };
+  const auto *FirstItr = llvm::find_if(Attrs, FindFunc);
 
   if (FirstItr == Attrs.end()) // no attributes found
     return;
@@ -370,7 +404,7 @@ static void CheckForDuplicateCodeAlignAttrs(Sema &S,
   std::optional<llvm::APSInt> FirstValue;
 
   const auto *CAFA =
-      dyn_cast<ConstantExpr>(cast<CodeAlignAttr>(*FirstItr)->getAlignment());
+      dyn_cast<ConstantExpr>(cast<LoopAttrT>(*FirstItr)->getAlignment());
   // Return early if first alignment expression is dependent (since we don't
   // know what the effective size will be), and skip the loop entirely.
   if (!CAFA)
@@ -378,8 +412,8 @@ static void CheckForDuplicateCodeAlignAttrs(Sema &S,
 
   while (Attrs.end() != (LastFoundItr = std::find_if(LastFoundItr + 1,
                                                      Attrs.end(), FindFunc))) {
-    const auto *CASA = dyn_cast<ConstantExpr>(
-        cast<CodeAlignAttr>(*LastFoundItr)->getAlignment());
+    const auto *CASA =
+        dyn_cast<ConstantExpr>(cast<LoopAttrT>(*LastFoundItr)->getAlignment());
     // If the value is dependent, we can not test anything.
     if (!CASA)
       return;
@@ -393,7 +427,6 @@ static void CheckForDuplicateCodeAlignAttrs(Sema &S,
           << *FirstItr;
       S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
     }
-    return;
   }
 }
 
@@ -562,6 +595,70 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) OpenCLUnrollHintAttr(S.Context, A, UnrollFactor);
 }
 
+static Attr *handleHLSLLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                    SourceRange Range) {
+
+  if (A.getSemanticSpelling() == HLSLLoopHintAttr::Spelling::Microsoft_loop &&
+      !A.checkAtMostNumArgs(S, 0))
+    return nullptr;
+
+  unsigned UnrollFactor = 0;
+  if (A.getNumArgs() == 1) {
+    Expr *E = A.getArgAsExpr(0);
+
+    if (S.CheckLoopHintExpr(E, St->getBeginLoc(),
+                            /*AllowZero=*/false))
+      return nullptr;
+
+    std::optional<llvm::APSInt> ArgVal = E->getIntegerConstantExpr(S.Context);
+    // CheckLoopHintExpr handles non int const cases
+    assert(ArgVal != std::nullopt && "ArgVal should be an integer constant.");
+    int Val = ArgVal->getSExtValue();
+    // CheckLoopHintExpr handles negative and zero cases
+    assert(Val > 0 && "Val should be a positive integer greater than zero.");
+    UnrollFactor = static_cast<unsigned>(Val);
+  }
+  return ::new (S.Context) HLSLLoopHintAttr(S.Context, A, UnrollFactor);
+}
+
+static Attr *handleHLSLControlFlowHint(Sema &S, Stmt *St, const ParsedAttr &A,
+                                       SourceRange Range) {
+
+  return ::new (S.Context) HLSLControlFlowHintAttr(S.Context, A);
+}
+
+static Attr *handleAtomicAttr(Sema &S, Stmt *St, const ParsedAttr &AL,
+                              SourceRange Range) {
+  if (!AL.checkAtLeastNumArgs(S, 1))
+    return nullptr;
+
+  SmallVector<AtomicAttr::ConsumedOption, 6> Options;
+  for (unsigned ArgIndex = 0; ArgIndex < AL.getNumArgs(); ++ArgIndex) {
+    AtomicAttr::ConsumedOption Option;
+    StringRef OptionString;
+    SourceLocation Loc;
+
+    if (!AL.isArgIdent(ArgIndex)) {
+      S.Diag(AL.getArgAsExpr(ArgIndex)->getBeginLoc(),
+             diag::err_attribute_argument_type)
+          << AL << AANT_ArgumentIdentifier;
+      return nullptr;
+    }
+
+    IdentifierLoc *Ident = AL.getArgAsIdent(ArgIndex);
+    OptionString = Ident->getIdentifierInfo()->getName();
+    Loc = Ident->getLoc();
+    if (!AtomicAttr::ConvertStrToConsumedOption(OptionString, Option)) {
+      S.Diag(Loc, diag::err_attribute_invalid_atomic_argument) << OptionString;
+      return nullptr;
+    }
+    Options.push_back(Option);
+  }
+
+  return ::new (S.Context)
+      AtomicAttr(S.Context, AL, Options.data(), Options.size());
+}
+
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
   if (A.isInvalid() || A.getKind() == ParsedAttr::IgnoredAttribute)
@@ -575,12 +672,14 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
       !(A.existsInTarget(S.Context.getTargetInfo()) ||
         (S.Context.getLangOpts().SYCLIsDevice && Aux &&
          A.existsInTarget(*Aux)))) {
-    S.Diag(A.getLoc(), A.isRegularKeywordAttribute()
-                           ? (unsigned)diag::err_keyword_not_supported_on_target
-                       : A.isDeclspecAttribute()
-                           ? (unsigned)diag::warn_unhandled_ms_attribute_ignored
-                           : (unsigned)diag::warn_unknown_attribute_ignored)
-        << A << A.getRange();
+    if (A.isRegularKeywordAttribute() || A.isDeclspecAttribute()) {
+      S.Diag(A.getLoc(), A.isRegularKeywordAttribute()
+                             ? diag::err_keyword_not_supported_on_target
+                             : diag::warn_unhandled_ms_attribute_ignored)
+          << A << A.getRange();
+    } else {
+      S.DiagnoseUnknownAttribute(A);
+    }
     return nullptr;
   }
 
@@ -590,10 +689,16 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
   switch (A.getKind()) {
   case ParsedAttr::AT_AlwaysInline:
     return handleAlwaysInlineAttr(S, St, A, Range);
+  case ParsedAttr::AT_CXXAssume:
+    return handleCXXAssumeAttr(S, St, A, Range);
   case ParsedAttr::AT_FallThrough:
     return handleFallThroughAttr(S, St, A, Range);
   case ParsedAttr::AT_LoopHint:
     return handleLoopHintAttr(S, St, A, Range);
+  case ParsedAttr::AT_HLSLLoopHint:
+    return handleHLSLLoopHintAttr(S, St, A, Range);
+  case ParsedAttr::AT_HLSLControlFlowHint:
+    return handleHLSLControlFlowHint(S, St, A, Range);
   case ParsedAttr::AT_OpenCLUnrollHint:
     return handleOpenCLUnrollHint(S, St, A, Range);
   case ParsedAttr::AT_Suppress:
@@ -612,7 +717,17 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleCodeAlignAttr(S, St, A);
   case ParsedAttr::AT_MSConstexpr:
     return handleMSConstexprAttr(S, St, A, Range);
+  case ParsedAttr::AT_NoConvergent:
+    return handleNoConvergentAttr(S, St, A, Range);
+  case ParsedAttr::AT_Annotate:
+    return S.CreateAnnotationAttr(A);
+  case ParsedAttr::AT_Atomic:
+    return handleAtomicAttr(S, St, A, Range);
   default:
+    if (Attr *AT = nullptr; A.getInfo().handleStmtAttribute(S, St, A, AT) !=
+                            ParsedAttrInfo::NotHandled) {
+      return AT;
+    }
     // N.B., ClangAttrEmitter.cpp emits a diagnostic helper that ensures a
     // declaration attribute is not written on a statement, but this code is
     // needed for attributes in Attr.td that do not list any subjects.
@@ -630,10 +745,60 @@ void Sema::ProcessStmtAttributes(Stmt *S, const ParsedAttributes &InAttrs,
   }
 
   CheckForIncompatibleAttributes(*this, OutAttrs);
-  CheckForDuplicateCodeAlignAttrs(*this, OutAttrs);
+  CheckForDuplicateLoopAttrs<CodeAlignAttr>(*this, OutAttrs);
 }
 
-bool Sema::CheckRebuiltCodeAlignStmtAttributes(ArrayRef<const Attr *> Attrs) {
-  CheckForDuplicateCodeAlignAttrs(*this, Attrs);
+bool Sema::CheckRebuiltStmtAttributes(ArrayRef<const Attr *> Attrs) {
+  CheckForDuplicateLoopAttrs<CodeAlignAttr>(*this, Attrs);
   return false;
+}
+
+ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
+                                    SourceRange Range) {
+  if (A.getNumArgs() != 1 || !A.getArgAsExpr(0)) {
+    Diag(A.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << A.getAttrName() << 1 << Range;
+    return ExprError();
+  }
+
+  auto *Assumption = A.getArgAsExpr(0);
+
+  if (DiagnoseUnexpandedParameterPack(Assumption)) {
+    return ExprError();
+  }
+
+  if (Assumption->getDependence() == ExprDependence::None) {
+    ExprResult Res = BuildCXXAssumeExpr(Assumption, A.getAttrName(), Range);
+    if (Res.isInvalid())
+      return ExprError();
+    Assumption = Res.get();
+  }
+
+  if (!getLangOpts().CPlusPlus23 &&
+      A.getSyntax() == AttributeCommonInfo::AS_CXX11)
+    Diag(A.getLoc(), diag::ext_cxx23_attr) << A << Range;
+
+  return Assumption;
+}
+
+ExprResult Sema::BuildCXXAssumeExpr(Expr *Assumption,
+                                    const IdentifierInfo *AttrName,
+                                    SourceRange Range) {
+  if (!Assumption)
+    return ExprError();
+
+  ExprResult Res = CheckPlaceholderExpr(Assumption);
+  if (Res.isInvalid())
+    return ExprError();
+
+  Res = PerformContextuallyConvertToBool(Res.get());
+  if (Res.isInvalid())
+    return ExprError();
+
+  Assumption = Res.get();
+  if (Assumption->HasSideEffects(Context))
+    Diag(Assumption->getBeginLoc(), diag::warn_assume_side_effects)
+        << AttrName << Range;
+
+  return Assumption;
 }

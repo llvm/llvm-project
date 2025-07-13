@@ -122,25 +122,12 @@ define i32 @f10(i32 %a, i32 %sh) {
 define i128 @f11(i128 %a, i32 %sh) {
 ; CHECK-LABEL: f11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
-; CHECK-NEXT:    .cfi_offset %r14, -48
-; CHECK-NEXT:    .cfi_offset %r15, -40
-; CHECK-NEXT:    lg %r0, 8(%r3)
-; CHECK-NEXT:    lg %r1, 0(%r3)
-; CHECK-NEXT:    risblg %r3, %r4, 25, 159, 0
-; CHECK-NEXT:    lcr %r14, %r3
-; CHECK-NEXT:    sllg %r5, %r1, 0(%r4)
-; CHECK-NEXT:    srlg %r14, %r0, 0(%r14)
-; CHECK-NEXT:    ogr %r5, %r14
-; CHECK-NEXT:    sllg %r3, %r0, -64(%r3)
-; CHECK-NEXT:    tmll %r4, 127
-; CHECK-NEXT:    locgrle %r3, %r5
-; CHECK-NEXT:    sllg %r0, %r0, 0(%r4)
-; CHECK-NEXT:    locgre %r3, %r1
-; CHECK-NEXT:    locghinle %r0, 0
-; CHECK-NEXT:    stg %r0, 8(%r2)
-; CHECK-NEXT:    stg %r3, 0(%r2)
-; CHECK-NEXT:    lmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    vlvgp %v1, %r4, %r4
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vrepb %v1, %v1, 15
+; CHECK-NEXT:    vslb %v0, %v0, %v1
+; CHECK-NEXT:    vsl %v0, %v0, %v1
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
   %and = and i32 %sh, 127
   %ext = zext i32 %and to i128
@@ -151,25 +138,12 @@ define i128 @f11(i128 %a, i32 %sh) {
 define i128 @f12(i128 %a, i32 %sh) {
 ; CHECK-LABEL: f12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
-; CHECK-NEXT:    .cfi_offset %r14, -48
-; CHECK-NEXT:    .cfi_offset %r15, -40
-; CHECK-NEXT:    lg %r0, 0(%r3)
-; CHECK-NEXT:    lg %r1, 8(%r3)
-; CHECK-NEXT:    risblg %r3, %r4, 25, 159, 0
-; CHECK-NEXT:    lcr %r14, %r3
-; CHECK-NEXT:    srlg %r5, %r1, 0(%r4)
-; CHECK-NEXT:    sllg %r14, %r0, 0(%r14)
-; CHECK-NEXT:    ogr %r5, %r14
-; CHECK-NEXT:    srlg %r3, %r0, -64(%r3)
-; CHECK-NEXT:    tmll %r4, 127
-; CHECK-NEXT:    locgrle %r3, %r5
-; CHECK-NEXT:    srlg %r0, %r0, 0(%r4)
-; CHECK-NEXT:    locgre %r3, %r1
-; CHECK-NEXT:    locghinle %r0, 0
-; CHECK-NEXT:    stg %r0, 0(%r2)
-; CHECK-NEXT:    stg %r3, 8(%r2)
-; CHECK-NEXT:    lmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    vlvgp %v1, %r4, %r4
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vrepb %v1, %v1, 15
+; CHECK-NEXT:    vsrlb %v0, %v0, %v1
+; CHECK-NEXT:    vsrl %v0, %v0, %v1
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
   %and = and i32 %sh, 127
   %ext = zext i32 %and to i128
@@ -180,26 +154,12 @@ define i128 @f12(i128 %a, i32 %sh) {
 define i128 @f13(i128 %a, i32 %sh) {
 ; CHECK-LABEL: f13:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
-; CHECK-NEXT:    .cfi_offset %r14, -48
-; CHECK-NEXT:    .cfi_offset %r15, -40
-; CHECK-NEXT:    lg %r0, 0(%r3)
-; CHECK-NEXT:    lg %r1, 8(%r3)
-; CHECK-NEXT:    risblg %r3, %r4, 25, 159, 0
-; CHECK-NEXT:    lcr %r14, %r3
-; CHECK-NEXT:    srlg %r5, %r1, 0(%r4)
-; CHECK-NEXT:    sllg %r14, %r0, 0(%r14)
-; CHECK-NEXT:    ogr %r5, %r14
-; CHECK-NEXT:    srag %r14, %r0, 0(%r4)
-; CHECK-NEXT:    srag %r3, %r0, -64(%r3)
-; CHECK-NEXT:    srag %r0, %r0, 63
-; CHECK-NEXT:    tmll %r4, 127
-; CHECK-NEXT:    locgrle %r3, %r5
-; CHECK-NEXT:    locgre %r3, %r1
-; CHECK-NEXT:    locgrle %r0, %r14
-; CHECK-NEXT:    stg %r0, 0(%r2)
-; CHECK-NEXT:    stg %r3, 8(%r2)
-; CHECK-NEXT:    lmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    vlvgp %v1, %r4, %r4
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vrepb %v1, %v1, 15
+; CHECK-NEXT:    vsrab %v0, %v0, %v1
+; CHECK-NEXT:    vsra %v0, %v0, %v1
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
   %and = and i32 %sh, 127
   %ext = zext i32 %and to i128

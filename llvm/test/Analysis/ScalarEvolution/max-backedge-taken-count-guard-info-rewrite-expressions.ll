@@ -17,10 +17,8 @@ define void @rewrite_zext(i32 %n) {
 ; CHECK-NEXT:    --> {8,+,8}<nuw><nsw><%loop> U: [8,25) S: [8,25) Exits: (8 + (8 * ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 2
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -61,10 +59,8 @@ define i32 @rewrite_zext_min_max(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_min_max
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -109,10 +105,8 @@ define i32 @rewrite_min_max_zext(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_min_max_zext
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -157,10 +151,8 @@ define i32 @rewrite_sext_min_max(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_sext_min_max
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -205,10 +197,8 @@ define i32 @rewrite_min_max_sext(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_min_max_sext
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -254,11 +244,9 @@ define i32 @rewrite_zext_with_info_from_icmp_ne(i32 %N) {
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 4
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,5) S: [4,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_with_info_from_icmp_ne
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 0
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 0
-; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i64 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -305,10 +293,8 @@ define i32 @rewrite_zext_no_icmp_ne(i32 %N) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,4294967297) S: [4,4294967297) Exits: (4 + (4 * ((-4 + (4 * ((4 + (zext i32 (-1 + (zext i2 (trunc i32 %N to i2) to i32))<nsw> to i64))<nuw><nsw> /u 4))<nuw><nsw>)<nsw> /u 4))<nuw><nsw>)<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_no_icmp_ne
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * ((4 + (zext i32 (-1 + (zext i2 (trunc i32 %N to i2) to i32))<nsw> to i64))<nuw><nsw> /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1073741823
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 1073741823
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * ((4 + (zext i32 (-1 + (zext i2 (trunc i32 %N to i2) to i32))<nsw> to i64))<nuw><nsw> /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * ((4 + (zext i32 (-1 + (zext i2 (trunc i32 %N to i2) to i32))<nsw> to i64))<nuw><nsw> /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -347,10 +333,8 @@ define void @rewrite_zext_and_base_1(i32 %n) {
 ; CHECK-NEXT:    --> {8,+,8}<nuw><nsw><%loop> U: [8,33) S: [8,33) Exits: (8 + (8 * ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_and_base_1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -392,10 +376,8 @@ define void @rewrite_zext_and_base_2(i32 %n) {
 ; CHECK-NEXT:    --> {8,+,8}<nuw><nsw><%loop> U: [8,33) S: [8,33) Exits: (8 + (8 * ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_and_base_2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -435,10 +417,8 @@ define void @guard_pessimizes_analysis_step2(i1 %c, i32 %N) {
 ; CHECK-NEXT:    --> {(2 + %init)<nuw><nsw>,+,2}<nuw><nsw><%loop> U: [4,19) S: [4,19) Exits: (2 + (2 * ((14 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @guard_pessimizes_analysis_step2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((14 + (-1 * %init)<nsw>)<nsw> /u 2)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 6
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 6
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((14 + (-1 * %init)<nsw>)<nsw> /u 2)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((14 + (-1 * %init)<nsw>)<nsw> /u 2)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -483,10 +463,8 @@ define i32 @rewrite_sext_slt_narrow_check(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((zext i32 (4 smax %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_sext_slt_narrow_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((zext i32 (4 smax %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((zext i32 (4 smax %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((zext i32 (4 smax %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -529,10 +507,8 @@ define i32 @rewrite_zext_ult_narrow_check(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((4 umax (zext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_ult_narrow_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((4 umax (zext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((4 umax (zext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((4 umax (zext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -575,10 +551,8 @@ define i32 @rewrite_zext_ule_narrow_check(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((4 umax (zext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_ule_narrow_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((4 umax (zext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((4 umax (zext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((4 umax (zext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -621,10 +595,8 @@ define i32 @rewrite_zext_sle_narrow_check(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((zext i32 (4 smax %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_sle_narrow_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((zext i32 (4 smax %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((zext i32 (4 smax %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((zext i32 (4 smax %N) to i64) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -667,10 +639,8 @@ define i32 @rewrite_zext_uge_narrow_check(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_uge_narrow_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -713,10 +683,8 @@ define i32 @rewrite_sext_sge_narrow_check(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_sext_sge_narrow_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -759,10 +727,8 @@ define i32 @rewrite_zext_ugt_narrow_check(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_zext_ugt_narrow_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * ((16 umin (zext i32 %N to i64)) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -805,10 +771,8 @@ define i32 @rewrite_sext_sgt_narrow_check(i32 %N, ptr %arr) {
 ; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_sext_sgt_narrow_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * (zext i3 (trunc i64 ((16 smin (sext i32 %N to i64)) /u 4) to i3) to i64))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -832,6 +796,60 @@ loop:
 
 exit:
   ret i32 0
+}
+
+define void @rewrite_add_rec() {
+; CHECK-LABEL: 'rewrite_add_rec'
+; CHECK-NEXT:  Classifying expressions for: @rewrite_add_rec
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %outer.latch ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%outer.header> U: [0,10) S: [0,10) Exits: 9 LoopDispositions: { %outer.header: Computable, %inner: Invariant }
+; CHECK-NEXT:    %sub = sub i64 9, %iv
+; CHECK-NEXT:    --> {9,+,-1}<nsw><%outer.header> U: [0,10) S: [0,10) Exits: 0 LoopDispositions: { %outer.header: Computable, %inner: Invariant }
+; CHECK-NEXT:    %n.vec = and i64 %sub, -2
+; CHECK-NEXT:    --> (2 * ({9,+,-1}<nsw><%outer.header> /u 2))<nuw><nsw> U: [0,9) S: [0,9) Exits: 0 LoopDispositions: { %outer.header: Computable, %inner: Invariant }
+; CHECK-NEXT:    %inner.iv = phi i64 [ 0, %inner.ph ], [ %inner.iv.next, %inner ]
+; CHECK-NEXT:    --> {0,+,2}<%inner> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: (2 * ((-2 + (2 * ({9,+,-1}<nsw><%outer.header> /u 2))<nuw><nsw>)<nsw> /u 2))<nuw> LoopDispositions: { %inner: Computable, %outer.header: Variant }
+; CHECK-NEXT:    %inner.iv.next = add i64 %inner.iv, 2
+; CHECK-NEXT:    --> {2,+,2}<%inner> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: (2 + (2 * ((-2 + (2 * ({9,+,-1}<nsw><%outer.header> /u 2))<nuw><nsw>)<nsw> /u 2))<nuw>) LoopDispositions: { %inner: Computable, %outer.header: Variant }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%outer.header> U: [1,11) S: [1,11) Exits: 10 LoopDispositions: { %outer.header: Computable, %inner: Invariant }
+; CHECK-NEXT:  Determining loop execution counts for: @rewrite_add_rec
+; CHECK-NEXT:  Loop %inner: backedge-taken count is ((-2 + (2 * ({9,+,-1}<nsw><%outer.header> /u 2))<nuw><nsw>)<nsw> /u 2)
+; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ((-2 + (2 * ({9,+,-1}<nsw><%outer.header> /u 2))<nuw><nsw>)<nsw> /u 2)
+; CHECK-NEXT:  Loop %inner: Trip multiple is 1
+; CHECK-NEXT:  Loop %outer.header: backedge-taken count is i64 9
+; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is i64 9
+; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is i64 9
+; CHECK-NEXT:  Loop %outer.header: Trip multiple is 10
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %outer.latch ]
+  %sub = sub i64 9, %iv
+  %min.iters.check = icmp ult i64 %sub, 2
+  br i1 %min.iters.check, label %outer.latch, label %inner.ph
+
+inner.ph:
+  %n.vec = and i64 %sub, -2
+  br label %inner
+
+inner:
+  %inner.iv = phi i64 [ 0, %inner.ph ], [ %inner.iv.next, %inner ]
+  %inner.iv.next = add i64 %inner.iv, 2
+  call void @use(i64 %inner.iv)
+  %ec.inner = icmp eq i64 %inner.iv.next, %n.vec
+  br i1 %ec.inner, label %outer.latch, label %inner
+
+outer.latch:
+  %iv.next = add i64 %iv, 1
+  %ec.outer = icmp eq i64 %iv.next, 10
+  br i1 %ec.outer, label %exit, label %outer.header
+
+exit:
+  ret void
 }
 
 declare void @use(i64)

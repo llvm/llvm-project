@@ -43,10 +43,34 @@ func.func @llvm_nvvm_barrier0() {
   llvm.return
 }
 
+// CHECK-LABEL: @llvm_nvvm_barrier
+// CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
+llvm.func @llvm_nvvm_barrier(%barId : i32, %numberOfThreads : i32) {
+  // CHECK: nvvm.barrier 
+  nvvm.barrier 
+  // CHECK: nvvm.barrier id = %[[barId]]
+  nvvm.barrier id = %barId
+  // CHECK: nvvm.barrier id = %[[barId]] number_of_threads = %[[numberOfThreads]]
+  nvvm.barrier id = %barId number_of_threads = %numberOfThreads
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_barrier_arrive
+// CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
+llvm.func @llvm_nvvm_barrier_arrive(%barId : i32, %numberOfThreads : i32) {
+  // CHECK: nvvm.barrier.arrive number_of_threads = %[[numberOfThreads]]
+  nvvm.barrier.arrive number_of_threads = %numberOfThreads
+  // CHECK: nvvm.barrier.arrive id = %[[barId]] number_of_threads = %[[numberOfThreads]]
+  nvvm.barrier.arrive id = %barId number_of_threads = %numberOfThreads
+  llvm.return
+}
+
 // CHECK-LABEL: @llvm_nvvm_cluster_arrive
 func.func @llvm_nvvm_cluster_arrive() {
   // CHECK: nvvm.cluster.arrive
   nvvm.cluster.arrive
+  // CHECK: nvvm.cluster.arrive {aligned}
+  nvvm.cluster.arrive {aligned}
   llvm.return
 }
 
@@ -54,6 +78,8 @@ func.func @llvm_nvvm_cluster_arrive() {
 func.func @llvm_nvvm_cluster_arrive_relaxed() {
   // CHECK: nvvm.cluster.arrive.relaxed
   nvvm.cluster.arrive.relaxed
+  // CHECK: nvvm.cluster.arrive.relaxed {aligned}
+  nvvm.cluster.arrive.relaxed {aligned}
   llvm.return
 }
 
@@ -61,6 +87,8 @@ func.func @llvm_nvvm_cluster_arrive_relaxed() {
 func.func @llvm_nvvm_cluster_wait() {
   // CHECK: nvvm.cluster.wait
   nvvm.cluster.wait
+  // CHECK: nvvm.cluster.wait {aligned}
+  nvvm.cluster.wait {aligned}
   llvm.return
 }
 
@@ -101,8 +129,14 @@ func.func @nvvm_shfl_pred(
 
 // CHECK-LABEL: @nvvm_vote(
 func.func @nvvm_vote(%arg0 : i32, %arg1 : i1) -> i32 {
-  // CHECK: nvvm.vote.ballot.sync %{{.*}}, %{{.*}} : i32
-  %0 = nvvm.vote.ballot.sync %arg0, %arg1 : i32
+  // CHECK: nvvm.vote.sync ballot %{{.*}}, %{{.*}} -> i32
+  %0 = nvvm.vote.sync ballot %arg0, %arg1 -> i32
+  // CHECK: nvvm.vote.sync all %{{.*}}, %{{.*}} -> i1
+  %1 = nvvm.vote.sync all %arg0, %arg1 -> i1
+  // CHECK: nvvm.vote.sync any %{{.*}}, %{{.*}} -> i1
+  %2 = nvvm.vote.sync any %arg0, %arg1 -> i1
+  // CHECK: nvvm.vote.sync uni %{{.*}}, %{{.*}} -> i1
+  %3 = nvvm.vote.sync uni %arg0, %arg1 -> i1
   llvm.return %0 : i32
 }
 
@@ -133,6 +167,29 @@ func.func @nvvm_mma_m8n8k4_f16_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
      shape = #nvvm.shape<m = 8, n = 8, k = 4>} : (vector<2xf16>,vector<2xf16>,vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
   llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+}
+
+// CHECK-LABEL: @nvvm_mma_m16n8k8_bf16_bf16
+func.func @nvvm_mma_m16n8k8_bf16_bf16(%a0 : i32, %a1 : i32, %b0 : i32,
+                              %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) {
+  // CHECK: nvvm.mma.sync A[{{.*}}] B[{{.*}}] C[{{.*}}] {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<bf16>, multiplicandBPtxType = #nvvm.mma_type<bf16>, shape = #nvvm.shape<m = 16, n = 8, k = 8>} : (i32, i32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+  %0 = nvvm.mma.sync A[%a0, %a1] B[%b0] C[%c0, %c1, %c2, %c3]
+    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
+     multiplicandAPtxType = #nvvm.mma_type<bf16>, multiplicandBPtxType = #nvvm.mma_type<bf16>,
+     shape = #nvvm.shape<m = 16, n = 8, k = 8>} : (i32, i32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
+}
+
+// CHECK-LABEL: @nvvm_mma_m16n8k16_bf16_bf16
+func.func @nvvm_mma_m16n8k16_bf16_bf16(%a0 : i32, %a1 : i32, %a2 : i32, %a3 : i32,
+                              %b0 : i32, %b1 : i32,
+                              %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) {
+  // CHECK: nvvm.mma.sync A[{{.*}}] B[{{.*}}] C[{{.*}}] {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, multiplicandAPtxType = #nvvm.mma_type<bf16>, multiplicandBPtxType = #nvvm.mma_type<bf16>, shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (i32, i32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
+    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
+     multiplicandAPtxType = #nvvm.mma_type<bf16>, multiplicandBPtxType = #nvvm.mma_type<bf16>,
+     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (i32, i32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
 }
 
 // CHECK-LABEL: @nvvm_mma_m8n8k16_s8_s8
@@ -360,6 +417,25 @@ llvm.func @redux_sync(%value : i32, %offset : i32) -> i32 {
   llvm.return %r1 : i32
 }
 
+llvm.func @redux_sync_f32(%value: f32, %offset: i32) -> f32 {
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r1 = nvvm.redux.sync fmin %value, %offset: f32 -> f32
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r2 = nvvm.redux.sync fmin %value, %offset {abs = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r3 = nvvm.redux.sync fmin %value, %offset {NaN = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r4 = nvvm.redux.sync fmin %value, %offset {abs = true, NaN = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r5 = nvvm.redux.sync fmax %value, %offset: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r6 = nvvm.redux.sync fmax %value, %offset {abs = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r7 = nvvm.redux.sync fmax %value, %offset {NaN = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r8 = nvvm.redux.sync fmax %value, %offset {abs = true, NaN = true}: f32 -> f32
+  llvm.return %r1 : f32
+}
 
 // -----
 
@@ -436,25 +512,110 @@ llvm.func private @mbarrier_test_wait_shared(%barrier: !llvm.ptr<3>, %token : i6
   llvm.return
 }
 
-// CHECK-LABEL : @wgmma_fence_aligned
+// CHECK-LABEL: @wgmma_fence_aligned
 func.func @wgmma_fence_aligned() {
-  // CHECK : nvvm.wgmma.fence.aligned
+  // CHECK: nvvm.wgmma.fence.aligned
   nvvm.wgmma.fence.aligned
   return
 }
 
-// CHECK-LABEL : @wgmma_commit_group_sync_aligned
+// CHECK-LABEL: @wgmma_commit_group_sync_aligned
 func.func @wgmma_commit_group_sync_aligned() {
-  // CHECK : nvvm.wgmma.commit.group.sync.aligned
+  // CHECK: nvvm.wgmma.commit.group.sync.aligned
   nvvm.wgmma.commit.group.sync.aligned
   return
 }
 
 
-// CHECK-LABEL : @wgmma_commit_group_sync_aligned
+// CHECK-LABEL: @wgmma_wait_group_sync_aligned
 func.func @wgmma_wait_group_sync_aligned() {
-  // CHECK : nvvm.wgmma.wait.group.sync.aligned
+  // CHECK: nvvm.wgmma.wait.group.sync.aligned
   nvvm.wgmma.wait.group.sync.aligned 0
+  return
+}
+
+func.func @griddepcontrol_wait() {
+  // CHECK: nvvm.griddepcontrol.wait
+  nvvm.griddepcontrol.wait
+  return
+}
+
+func.func @griddepcontrol_launch_dependents()
+{
+  // CHECK: nvvm.griddepcontrol.launch.dependents
+  nvvm.griddepcontrol.launch.dependents
+  return
+}
+
+// CHECK-LABEL: @mapa
+func.func @mapa(%a: !llvm.ptr, %a_shared: !llvm.ptr<3>, %b : i32) {
+  // CHECK:   nvvm.mapa %{{.*}}
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr
+  // CHECK:   nvvm.mapa %{{.*}}
+  %1 = nvvm.mapa %a_shared, %b: !llvm.ptr<3> -> !llvm.ptr<3>
+  return
+}
+
+// CHECK-LABEL: @match_sync
+func.func @match_sync(%val32: i32, %val64: i64, %thread_mask: i32) {
+  // CHECK: nvvm.match.sync any %{{.*}}, %{{.*}} : i32 -> i32
+  %0 = nvvm.match.sync any %thread_mask, %val32 : i32 -> i32
+  // CHECK: nvvm.match.sync all %{{.*}}, %{{.*}} : i32 -> !llvm.struct<(i32, i1)>
+  %1 = nvvm.match.sync all %thread_mask, %val32 : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: nvvm.match.sync any %{{.*}}, %{{.*}} : i64 -> i32
+  %2 = nvvm.match.sync any %thread_mask, %val64 : i64 -> i32
+  // CHECK: nvvm.match.sync all %{{.*}}, %{{.*}} : i64 -> !llvm.struct<(i32, i1)>
+  %3 = nvvm.match.sync all %thread_mask, %val64 : i64 -> !llvm.struct<(i32, i1)>
+  return 
+}
+
+// CHECK-LABEL: @st_bulk
+func.func @st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64) {
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr
+  nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr<3>
+  nvvm.st.bulk %addr_shared, size = %size, init = 0 : !llvm.ptr<3>
+  return
+}
+
+// CHECK-LABEL: @dot_accumulate_4way
+func.func @dot_accumulate_4way(%a_vec: vector<4xi8>, %b_vec: vector<4xi8>, %c: i32) {
+  // CHECK:   nvvm.dot.accumulate.4way %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi8>, vector<4xi8>
+  %1 = nvvm.dot.accumulate.4way %a_vec <unsigned>, %b_vec <unsigned>, %c: vector<4xi8>, vector<4xi8>
+  // CHECK:   nvvm.dot.accumulate.4way %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi8>, vector<4xi8>
+  %3 = nvvm.dot.accumulate.4way %a_vec <signed>, %b_vec <signed>, %c: vector<4xi8>, vector<4xi8>
+  return
+}
+
+// CHECK-LABEL: @dot_accumulate_2way
+func.func @dot_accumulate_2way(%a_vec: vector<2xi16>, %b_vec: vector<4xi8>, %c: i32) {
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = false} : vector<2xi16>, vector<4xi8>
+  %1 = nvvm.dot.accumulate.2way %a_vec <unsigned>, %b_vec <unsigned>, %c {b_hi = false}: vector<2xi16>, vector<4xi8>
+  // CHECK:   nvvm.dot.accumulate.2way %{{.*}}, %{{.*}}, %{{.*}} {b_hi = true} : vector<2xi16>, vector<4xi8>
+  %3 = nvvm.dot.accumulate.2way %a_vec <signed>, %b_vec <signed>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
+  return
+}
+
+// CHECK-LABEL: @prefetch
+func.func @prefetch(%gen_ptr: !llvm.ptr, %local_ptr: !llvm.ptr<5>, %global_ptr: !llvm.ptr<1>) {
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_last : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_normal : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L1 uniform, %{{.*}}
+  nvvm.prefetch level = L1 uniform, %gen_ptr : !llvm.ptr
   return
 }
 
@@ -465,4 +626,30 @@ gpu.module @module_1 [#nvvm.target<chip = "sm_90", features = "+ptx70", link = [
 }
 
 gpu.module @module_2 [#nvvm.target<chip = "sm_90">, #nvvm.target<chip = "sm_80">, #nvvm.target<chip = "sm_70">] {
+}
+
+// CHECK-LABEL: nvvm.grid_constant
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
+  llvm.return
+}
+
+// -----
+
+// expected-error @below {{'"nvvm.grid_constant"' attribute must be present only on kernel arguments}}
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) {
+  llvm.return
+}
+
+// -----
+
+// expected-error @below {{'"nvvm.grid_constant"' attribute requires the argument to also have attribute 'llvm.byval'}}
+llvm.func @kernel_func(%arg0: !llvm.ptr {nvvm.grid_constant}) attributes {nvvm.kernel} {
+  llvm.return
+}
+
+// -----
+
+// expected-error @below {{'"nvvm.grid_constant"' must be a unit attribute}}
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant = true}) attributes {nvvm.kernel} {
+  llvm.return
 }

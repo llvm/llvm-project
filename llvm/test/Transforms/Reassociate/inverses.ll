@@ -12,12 +12,12 @@ define i32 @test1(i32 %a, i32 %b) {
   ret i32 %t5
 }
 
-define <2 x i32> @not_op_vec_undef(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: @not_op_vec_undef(
+define <2 x i32> @not_op_vec_poison(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @not_op_vec_poison(
 ; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %t2 = and <2 x i32> %b, %a
-  %t4 = xor <2 x i32> %a, <i32 -1, i32 undef>
+  %t4 = xor <2 x i32> %a, <i32 -1, i32 poison>
   %t5 = and <2 x i32> %t2, %t4
   ret <2 x i32> %t5
 }

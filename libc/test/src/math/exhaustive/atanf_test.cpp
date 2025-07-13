@@ -25,7 +25,7 @@ TEST_F(LlvmLibcAtanfExhaustiveTest, PostiveRange) {
 }
 
 // Range: [-Inf, 0];
-static constexpr uint32_t NEG_START = 0xb000'0000U;
+static constexpr uint32_t NEG_START = 0x8000'0000U;
 static constexpr uint32_t NEG_STOP = 0xff80'0000U;
 
 TEST_F(LlvmLibcAtanfExhaustiveTest, NegativeRange) {

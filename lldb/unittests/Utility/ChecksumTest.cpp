@@ -12,14 +12,14 @@
 
 using namespace lldb_private;
 
-static llvm::MD5::MD5Result hash1 = {0, 1, 2,  3,  4,  5,  6,  7,
-                                     8, 9, 10, 11, 12, 13, 14, 15};
+static llvm::MD5::MD5Result hash1 = {
+    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}};
 
-static llvm::MD5::MD5Result hash2 = {0, 1, 2,  3,  4,  5,  6,  7,
-                                     8, 9, 10, 11, 12, 13, 14, 15};
+static llvm::MD5::MD5Result hash2 = {
+    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}};
 
-static llvm::MD5::MD5Result hash3 = {8, 9, 10, 11, 12, 13, 14, 15,
-                                     0, 1, 2,  3,  4,  5,  6,  7};
+static llvm::MD5::MD5Result hash3 = {
+    {8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7}};
 
 TEST(ChecksumTest, TestConstructor) {
   Checksum checksum1;

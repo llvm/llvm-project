@@ -2,6 +2,11 @@
 // RUN: %clang_cc1 %s -std=c2x -verify=expected,access -fsyntax-only
 // RUN: %clang_cc1 %s -std=c2x -pedantic -verify=expected,access -fsyntax-only
 // RUN: %clang_cc1 %s -verify -fsyntax-only -Wno-atomic-access
+// RUN: %clang_cc1 %s -verify=expected,access -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -std=c2x -verify=expected,access -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -std=c2x -pedantic -verify=expected,access -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -verify -fsyntax-only -Wno-atomic-access -fexperimental-new-constant-interpreter
+
 
 _Atomic(unsigned int) data1;
 int _Atomic data2;
@@ -109,6 +114,23 @@ void func_16(void) {
   (void)sizeof(xp->val);
   (void)sizeof(y.ival);
   (void)sizeof(yp->ival);
+
+  // Also, do not diagnose in unreachable code paths.
+  {
+    if (0) {
+      x.val = 12;
+      xp->val = 12;
+      (void)y.ival;
+      (void)yp->ival;
+    }
+
+    return;
+
+    x.val = 12;
+    xp->val = 12;
+    (void)y.ival;
+    (void)yp->ival;
+  }
 }
 
 // Ensure that we correctly implement assignment constraints from C2x 6.5.16.1.

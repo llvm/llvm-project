@@ -226,3 +226,4 @@ define void @func_call_no_other_sgprs() {
   call void @extern() "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z"
   ret void
 }
+

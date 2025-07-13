@@ -10,128 +10,132 @@
 export namespace std {
 
   // [atomics.order], order and consistency
-  using std::memory_order;
-  using std::memory_order_acq_rel;
-  using std::memory_order_acquire;
-  using std::memory_order_consume;
-  using std::memory_order_relaxed;
-  using std::memory_order_release;
-  using std::memory_order_seq_cst;
+  using std::memory_order _LIBCPP_USING_IF_EXISTS;
+  using std::memory_order_acq_rel _LIBCPP_USING_IF_EXISTS;
+  using std::memory_order_acquire _LIBCPP_USING_IF_EXISTS;
+  using std::memory_order_consume _LIBCPP_USING_IF_EXISTS;
+  using std::memory_order_relaxed _LIBCPP_USING_IF_EXISTS;
+  using std::memory_order_release _LIBCPP_USING_IF_EXISTS;
+  using std::memory_order_seq_cst _LIBCPP_USING_IF_EXISTS;
 
-  using std::kill_dependency;
+  using std::kill_dependency _LIBCPP_USING_IF_EXISTS;
 
   // [atomics.ref.generic], class template atomic_ref
   // [atomics.ref.pointer], partial specialization for pointers
-  // using std::atomic_ref;
+  using std::atomic_ref _LIBCPP_USING_IF_EXISTS;
 
   // [atomics.types.generic], class template atomic
-  using std::atomic;
+  using std::atomic _LIBCPP_USING_IF_EXISTS;
 
   // [atomics.nonmembers], non-member functions
-  using std::atomic_compare_exchange_strong;
-  using std::atomic_compare_exchange_strong_explicit;
-  using std::atomic_compare_exchange_weak;
-  using std::atomic_compare_exchange_weak_explicit;
-  using std::atomic_exchange;
-  using std::atomic_exchange_explicit;
-  using std::atomic_is_lock_free;
-  using std::atomic_load;
-  using std::atomic_load_explicit;
-  using std::atomic_store;
-  using std::atomic_store_explicit;
+  using std::atomic_compare_exchange_strong _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_compare_exchange_strong_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_compare_exchange_weak _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_compare_exchange_weak_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_exchange _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_exchange_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_is_lock_free _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_load _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_load_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_store _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_store_explicit _LIBCPP_USING_IF_EXISTS;
 
-  using std::atomic_fetch_add;
-  using std::atomic_fetch_add_explicit;
-  using std::atomic_fetch_and;
-  using std::atomic_fetch_and_explicit;
-  using std::atomic_fetch_or;
-  using std::atomic_fetch_or_explicit;
-  using std::atomic_fetch_sub;
-  using std::atomic_fetch_sub_explicit;
-  using std::atomic_fetch_xor;
-  using std::atomic_fetch_xor_explicit;
-  using std::atomic_notify_all;
-  using std::atomic_notify_one;
-  using std::atomic_wait;
-  using std::atomic_wait_explicit;
+  using std::atomic_fetch_add _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_add_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_and _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_and_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_or _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_or_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_sub _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_sub_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_xor _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_xor_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_notify_all _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_notify_one _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_wait _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_wait_explicit _LIBCPP_USING_IF_EXISTS;
 
   // [atomics.alias], type aliases
-  using std::atomic_bool;
-  using std::atomic_char;
-  using std::atomic_char16_t;
-  using std::atomic_char32_t;
-  using std::atomic_char8_t;
-  using std::atomic_int;
-  using std::atomic_llong;
-  using std::atomic_long;
-  using std::atomic_schar;
-  using std::atomic_short;
-  using std::atomic_uchar;
-  using std::atomic_uint;
-  using std::atomic_ullong;
-  using std::atomic_ulong;
-  using std::atomic_ushort;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-  using std::atomic_wchar_t;
+  using std::atomic_bool _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_char _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_char16_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_char32_t _LIBCPP_USING_IF_EXISTS;
+#if _LIBCPP_HAS_CHAR8_T
+  using std::atomic_char8_t _LIBCPP_USING_IF_EXISTS;
+#endif
+  using std::atomic_int _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_llong _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_long _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_schar _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_short _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uchar _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_ullong _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_ulong _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_ushort _LIBCPP_USING_IF_EXISTS;
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+  using std::atomic_wchar_t _LIBCPP_USING_IF_EXISTS;
 #endif
 
-  using std::atomic_int16_t;
-  using std::atomic_int32_t;
-  using std::atomic_int64_t;
-  using std::atomic_int8_t;
-  using std::atomic_uint16_t;
-  using std::atomic_uint32_t;
-  using std::atomic_uint64_t;
-  using std::atomic_uint8_t;
+  using std::atomic_int16_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_int32_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_int64_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_int8_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint16_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint32_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint64_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint8_t _LIBCPP_USING_IF_EXISTS;
 
-  using std::atomic_int_least16_t;
-  using std::atomic_int_least32_t;
-  using std::atomic_int_least64_t;
-  using std::atomic_int_least8_t;
-  using std::atomic_uint_least16_t;
-  using std::atomic_uint_least32_t;
-  using std::atomic_uint_least64_t;
-  using std::atomic_uint_least8_t;
+  using std::atomic_int_least16_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_int_least32_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_int_least64_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_int_least8_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint_least16_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint_least32_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint_least64_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint_least8_t _LIBCPP_USING_IF_EXISTS;
 
-  using std::atomic_int_fast16_t;
-  using std::atomic_int_fast32_t;
-  using std::atomic_int_fast64_t;
-  using std::atomic_int_fast8_t;
-  using std::atomic_uint_fast16_t;
-  using std::atomic_uint_fast32_t;
-  using std::atomic_uint_fast64_t;
-  using std::atomic_uint_fast8_t;
+  using std::atomic_int_fast16_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_int_fast32_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_int_fast64_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_int_fast8_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint_fast16_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint_fast32_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint_fast64_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uint_fast8_t _LIBCPP_USING_IF_EXISTS;
 
-  using std::atomic_intmax_t;
-  using std::atomic_intptr_t;
-  using std::atomic_ptrdiff_t;
-  using std::atomic_size_t;
-  using std::atomic_uintmax_t;
-  using std::atomic_uintptr_t;
+  using std::atomic_intmax_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_intptr_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_ptrdiff_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_size_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uintmax_t _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_uintptr_t _LIBCPP_USING_IF_EXISTS;
 
-  using std::atomic_signed_lock_free;
-  using std::atomic_unsigned_lock_free;
+#ifndef _LIBCPP_NO_LOCK_FREE_TYPES
+  using std::atomic_signed_lock_free _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_unsigned_lock_free _LIBCPP_USING_IF_EXISTS;
+#endif
 
   // [atomics.flag], flag type and operations
-  using std::atomic_flag;
+  using std::atomic_flag _LIBCPP_USING_IF_EXISTS;
 
-  using std::atomic_flag_clear;
-  using std::atomic_flag_clear_explicit;
-  using std::atomic_flag_test;
-  using std::atomic_flag_test_and_set;
-  using std::atomic_flag_test_and_set_explicit;
-  using std::atomic_flag_test_explicit;
+  using std::atomic_flag_clear _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_flag_clear_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_flag_test _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_flag_test_and_set _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_flag_test_and_set_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_flag_test_explicit _LIBCPP_USING_IF_EXISTS;
 
-  using std::atomic_flag_notify_all;
-  using std::atomic_flag_notify_one;
-  using std::atomic_flag_wait;
-  using std::atomic_flag_wait_explicit;
+  using std::atomic_flag_notify_all _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_flag_notify_one _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_flag_wait _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_flag_wait_explicit _LIBCPP_USING_IF_EXISTS;
 
   // [atomics.fences], fences
-  using std::atomic_signal_fence;
-  using std::atomic_thread_fence;
+  using std::atomic_signal_fence _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_thread_fence _LIBCPP_USING_IF_EXISTS;
 
   // [depr.atomics.nonmembers]
-  using std::atomic_init;
+  using std::atomic_init _LIBCPP_USING_IF_EXISTS;
 
 } // namespace std

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s google-readability-casting %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s google-readability-casting %t -- -- -fexceptions
 
 bool g() { return false; }
 
@@ -16,16 +16,16 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   Typedef1 t1;
   (Typedef2)t1;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: C-style casts are discouraged; use static_cast (if needed, the cast may be redundant) [google-readability-casting]
-  // CHECK-FIXES: {{^}}  static_cast<Typedef2>(t1);
+  // CHECK-FIXES: static_cast<Typedef2>(t1);
   (const char*)t1;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: {{.*}}; use static_cast (if needed
-  // CHECK-FIXES: {{^}}  static_cast<const char*>(t1);
+  // CHECK-FIXES: static_cast<const char*>(t1);
   (Typedef1)cpc;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: {{.*}}; use static_cast (if needed
-  // CHECK-FIXES: {{^}}  static_cast<Typedef1>(cpc);
+  // CHECK-FIXES: static_cast<Typedef1>(cpc);
   (Typedef1)t1;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  t1;
+  // CHECK-FIXES: t1;
 
   char *pc = (char*)cpc;
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged; use const_cast [google-readability-casting]
@@ -33,15 +33,15 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   typedef char Char;
   Char *pChar = (Char*)pc;
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: {{.*}}; use static_cast (if needed
-  // CHECK-FIXES: {{^}}  Char *pChar = static_cast<Char*>(pc);
+  // CHECK-FIXES: Char *pChar = static_cast<Char*>(pc);
 
   (Char)*cpc;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: {{.*}}; use static_cast (if needed
-  // CHECK-FIXES: {{^}}  static_cast<Char>(*cpc);
+  // CHECK-FIXES: static_cast<Char>(*cpc);
 
   (char)*pChar;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: {{.*}}; use static_cast (if needed
-  // CHECK-FIXES: {{^}}  static_cast<char>(*pChar);
+  // CHECK-FIXES: static_cast<char>(*pChar);
 
   (const char*)cpv;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: {{.*}}; use static_cast [
@@ -124,24 +124,24 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
 
   e = (Enum)Enum1;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  e = Enum1;
+  // CHECK-FIXES: e = Enum1;
 
   e = (Enum)e;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  e = e;
+  // CHECK-FIXES: e = e;
 
   e = (Enum)           e;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  e = e;
+  // CHECK-FIXES: e = e;
 
   e = (Enum)           (e);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  e = (e);
+  // CHECK-FIXES: e = (e);
 
   static const int kZero = 0;
   (int)kZero;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  kZero;
+  // CHECK-FIXES: kZero;
 
   int b2 = static_cast<double>(b);
   int b3 = b;
@@ -322,15 +322,8 @@ void conversions() {
 }
 
 template <class T>
-T functional_cast_template_used_by_class(float i) {
+T functional_cast_template(float i) {
   return T(i);
-}
-
-template <class T>
-T functional_cast_template_used_by_int(float i) {
-  return T(i);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: C-style casts are discouraged; use static_cast
-  // CHECK-FIXES: return static_cast<T>(i);
 }
 
 struct S2 {
@@ -356,8 +349,8 @@ void functional_casts() {
   auto s = S(str);
 
   // Functional casts in template functions
-  functional_cast_template_used_by_class<S2>(x);
-  functional_cast_template_used_by_int<int>(x);
+  functional_cast_template<S2>(x);
+  functional_cast_template<int>(x);
 
   // New expressions are not functional casts
   auto w = new int(x);
@@ -366,4 +359,6 @@ void functional_casts() {
   S2 t = T(x); // OK, constructor call
   S2 u = U(x); // NOK, it's a reinterpret_cast in disguise
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: C-style casts are discouraged; use static_cast/const_cast/reinterpret_cast
+
+  throw S2(5.0f);
 }

@@ -10,7 +10,7 @@
 
 // We voluntarily use std::default_initializable on types that have redundant
 // or ignored cv-qualifiers -- don't warn about it.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-ignored-qualifiers
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-ignored-qualifiers
 
 // template<class T>
 //     concept default_initializable = constructible_from<T> &&
@@ -199,15 +199,12 @@ void test()
     test_not_const<void(Empty::*)(const int&) noexcept(false)>();
 
     // Sequence containers
-    test_not_const<std::array<               int, 0>>();
+    test_true     <std::array<               int, 0>>();
     test_not_const<std::array<               int, 1>>();
     test_false    <std::array<const          int, 1>>();
     test_not_const<std::array<      volatile int, 1>>();
     test_false    <std::array<const volatile int, 1>>();
     test_true     <std::deque<               int>>();
-#ifdef _LIBCPP_VERSION
-    test_true     <std::deque<const          int>>();
-#endif // _LIBCPP_VERSION
     test_true     <std::forward_list<int>>();
     test_true     <std::list<int>>();
     test_true     <std::vector<int>>();
@@ -226,9 +223,6 @@ void test()
 
     // Container adaptors
     test_true     <std::stack<               int>>();
-#ifdef _LIBCPP_VERSION
-    test_true     <std::stack<const          int>>();
-#endif // _LIBCPP_VERSION
     test_true     <std::queue<int>>();
     test_true     <std::priority_queue<int>>();
 

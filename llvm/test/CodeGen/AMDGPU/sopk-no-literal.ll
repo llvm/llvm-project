@@ -22,3 +22,4 @@ define amdgpu_kernel void @test_sopk_size(i32 %var.mode) {
 }
 
 declare void @llvm.amdgcn.s.setreg(i32 immarg, i32)
+

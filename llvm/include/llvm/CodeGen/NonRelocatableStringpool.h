@@ -11,6 +11,7 @@
 
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 
@@ -27,15 +28,12 @@ public:
   /// order.
   using MapTy = StringMap<DwarfStringPoolEntry, BumpPtrAllocator>;
 
-  NonRelocatableStringpool(
-      std::function<StringRef(StringRef Input)> Translator = nullptr,
-      bool PutEmptyString = false)
-      : Translator(Translator) {
+  NonRelocatableStringpool(bool PutEmptyString = false) {
     if (PutEmptyString)
-      EmptyString = getEntry("");
+      getEntry("");
   }
 
-  DwarfStringPoolEntryRef getEntry(StringRef S);
+  LLVM_ABI DwarfStringPoolEntryRef getEntry(StringRef S);
 
   /// Get the offset of string \p S in the string table. This can insert a new
   /// element or return the offset of a pre-existing one.
@@ -47,20 +45,18 @@ public:
   ///
   /// \returns The StringRef that points to permanent storage to use
   /// in place of \p S.
-  StringRef internString(StringRef S);
+  LLVM_ABI StringRef internString(StringRef S);
 
   uint64_t getSize() { return CurrentEndOffset; }
 
   /// Return the list of strings to be emitted. This does not contain the
   /// strings which were added via internString only.
-  std::vector<DwarfStringPoolEntryRef> getEntriesForEmission() const;
+  LLVM_ABI std::vector<DwarfStringPoolEntryRef> getEntriesForEmission() const;
 
 private:
   MapTy Strings;
   uint64_t CurrentEndOffset = 0;
   unsigned NumEntries = 0;
-  DwarfStringPoolEntryRef EmptyString;
-  std::function<StringRef(StringRef Input)> Translator;
 };
 
 /// Helper for making strong types.

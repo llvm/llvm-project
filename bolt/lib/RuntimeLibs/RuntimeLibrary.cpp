@@ -18,6 +18,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 
 #define DEBUG_TYPE "bolt-rtlib"
 
@@ -26,8 +27,8 @@ using namespace bolt;
 
 void RuntimeLibrary::anchor() {}
 
-std::string RuntimeLibrary::getLibPath(StringRef ToolPath,
-                                       StringRef LibFileName) {
+std::string RuntimeLibrary::getLibPathByToolPath(StringRef ToolPath,
+                                                 StringRef LibFileName) {
   StringRef Dir = llvm::sys::path::parent_path(ToolPath);
   SmallString<128> LibPath = llvm::sys::path::parent_path(Dir);
   llvm::sys::path::append(LibPath, "lib" LLVM_LIBDIR_SUFFIX);
@@ -39,10 +40,50 @@ std::string RuntimeLibrary::getLibPath(StringRef ToolPath,
   }
   llvm::sys::path::append(LibPath, LibFileName);
   if (!llvm::sys::fs::exists(LibPath)) {
+    // If it is a symlink, check the directory that the symlink points to.
+    if (llvm::sys::fs::is_symlink_file(ToolPath)) {
+      SmallString<256> RealPath;
+      llvm::sys::fs::real_path(ToolPath, RealPath);
+      if (llvm::ErrorOr<std::string> P =
+              llvm::sys::findProgramByName(RealPath)) {
+        outs() << "BOLT-INFO: library not found: " << LibPath << "\n"
+               << "BOLT-INFO: " << ToolPath << " is a symlink; will look up "
+               << LibFileName
+               << " at the target directory that the symlink points to\n";
+        return getLibPath(*P, LibFileName);
+      }
+    }
     errs() << "BOLT-ERROR: library not found: " << LibPath << "\n";
     exit(1);
   }
-  return std::string(LibPath.str());
+  return std::string(LibPath);
+}
+
+std::string RuntimeLibrary::getLibPathByInstalled(StringRef LibFileName) {
+  SmallString<128> LibPath(CMAKE_INSTALL_FULL_LIBDIR);
+  llvm::sys::path::append(LibPath, LibFileName);
+  return std::string(LibPath);
+}
+
+std::string RuntimeLibrary::getLibPath(StringRef ToolPath,
+                                       StringRef LibFileName) {
+  if (llvm::sys::fs::exists(LibFileName)) {
+    return std::string(LibFileName);
+  }
+
+  std::string ByTool = getLibPathByToolPath(ToolPath, LibFileName);
+  if (llvm::sys::fs::exists(ByTool)) {
+    return ByTool;
+  }
+
+  std::string ByInstalled = getLibPathByInstalled(LibFileName);
+  if (llvm::sys::fs::exists(ByInstalled)) {
+    return ByInstalled;
+  }
+
+  errs() << "BOLT-ERROR: library not found: " << ByTool << ", " << ByInstalled
+         << ", or " << LibFileName << "\n";
+  exit(1);
 }
 
 void RuntimeLibrary::loadLibrary(StringRef LibPath, BOLTLinker &Linker,
@@ -55,7 +96,7 @@ void RuntimeLibrary::loadLibrary(StringRef LibPath, BOLTLinker &Linker,
 
   if (Magic == file_magic::archive) {
     Error Err = Error::success();
-    object::Archive Archive(B.get()->getMemBufferRef(), Err);
+    object::Archive Archive(B->getMemBufferRef(), Err);
     for (const object::Archive::Child &C : Archive.children(Err)) {
       std::unique_ptr<object::Binary> Bin = cantFail(C.getAsBinary());
       if (object::ObjectFile *Obj = dyn_cast<object::ObjectFile>(&*Bin))
@@ -64,9 +105,9 @@ void RuntimeLibrary::loadLibrary(StringRef LibPath, BOLTLinker &Linker,
     check_error(std::move(Err), B->getBufferIdentifier());
   } else if (Magic == file_magic::elf_relocatable ||
              Magic == file_magic::elf_shared_object) {
-    std::unique_ptr<object::ObjectFile> Obj = cantFail(
-        object::ObjectFile::createObjectFile(B.get()->getMemBufferRef()),
-        "error creating in-memory object");
+    std::unique_ptr<object::ObjectFile> Obj =
+        cantFail(object::ObjectFile::createObjectFile(B->getMemBufferRef()),
+                 "error creating in-memory object");
     Linker.loadObject(Obj->getMemoryBufferRef(), MapSections);
   } else {
     errs() << "BOLT-ERROR: unrecognized library format: " << LibPath << "\n";

@@ -11,12 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
+#include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 ///
 /// Implements Analysis functions specific to slicing in Function.
@@ -78,26 +79,25 @@ void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
   forwardSlice->insert(v.rbegin(), v.rend());
 }
 
-static void getBackwardSliceImpl(Operation *op,
-                                 SetVector<Operation *> *backwardSlice,
-                                 const BackwardSliceOptions &options) {
+static LogicalResult getBackwardSliceImpl(Operation *op,
+                                          SetVector<Operation *> *backwardSlice,
+                                          const BackwardSliceOptions &options) {
   if (!op || op->hasTrait<OpTrait::IsIsolatedFromAbove>())
-    return;
+    return success();
 
   // Evaluate whether we should keep this def.
   // This is useful in particular to implement scoping; i.e. return the
   // transitive backwardSlice in the current scope.
   if (options.filter && !options.filter(op))
-    return;
+    return success();
 
-  for (const auto &en : llvm::enumerate(op->getOperands())) {
-    auto operand = en.value();
-    if (auto *definingOp = operand.getDefiningOp()) {
+  auto processValue = [&](Value value) {
+    if (auto *definingOp = value.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)
-        getBackwardSliceImpl(definingOp, backwardSlice, options);
-    } else if (auto blockArg = dyn_cast<BlockArgument>(operand)) {
+        return getBackwardSliceImpl(definingOp, backwardSlice, options);
+    } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
       if (options.omitBlockArguments)
-        continue;
+        return success();
 
       Block *block = blockArg.getOwner();
       Operation *parentOp = block->getParentOp();
@@ -105,38 +105,64 @@ static void getBackwardSliceImpl(Operation *op,
       // blocks of parentOp, which are not technically backward unless they flow
       // into us. For now, just bail.
       if (parentOp && backwardSlice->count(parentOp) == 0) {
-        assert(parentOp->getNumRegions() == 1 &&
-               parentOp->getRegion(0).getBlocks().size() == 1);
-        getBackwardSliceImpl(parentOp, backwardSlice, options);
+        if (parentOp->getNumRegions() == 1 &&
+            llvm::hasSingleElement(parentOp->getRegion(0).getBlocks())) {
+          return getBackwardSliceImpl(parentOp, backwardSlice, options);
+        }
       }
     } else {
-      llvm_unreachable("No definingOp and not a block argument.");
+      return failure();
     }
+    return success();
+  };
+
+  bool succeeded = true;
+
+  if (!options.omitUsesFromAbove) {
+    llvm::for_each(op->getRegions(), [&](Region &region) {
+      // Walk this region recursively to collect the regions that descend from
+      // this op's nested regions (inclusive).
+      SmallPtrSet<Region *, 4> descendents;
+      region.walk(
+          [&](Region *childRegion) { descendents.insert(childRegion); });
+      region.walk([&](Operation *op) {
+        for (OpOperand &operand : op->getOpOperands()) {
+          if (!descendents.contains(operand.get().getParentRegion()))
+            if (!processValue(operand.get()).succeeded()) {
+              return WalkResult::interrupt();
+            }
+        }
+        return WalkResult::advance();
+      });
+    });
   }
+  llvm::for_each(op->getOperands(), processValue);
 
   backwardSlice->insert(op);
+  return success(succeeded);
 }
 
-void mlir::getBackwardSlice(Operation *op,
-                            SetVector<Operation *> *backwardSlice,
-                            const BackwardSliceOptions &options) {
-  getBackwardSliceImpl(op, backwardSlice, options);
+LogicalResult mlir::getBackwardSlice(Operation *op,
+                                     SetVector<Operation *> *backwardSlice,
+                                     const BackwardSliceOptions &options) {
+  LogicalResult result = getBackwardSliceImpl(op, backwardSlice, options);
 
   if (!options.inclusive) {
     // Don't insert the top level operation, we just queried on it and don't
     // want it in the results.
     backwardSlice->remove(op);
   }
+  return result;
 }
 
-void mlir::getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
-                            const BackwardSliceOptions &options) {
+LogicalResult mlir::getBackwardSlice(Value root,
+                                     SetVector<Operation *> *backwardSlice,
+                                     const BackwardSliceOptions &options) {
   if (Operation *definingOp = root.getDefiningOp()) {
-    getBackwardSlice(definingOp, backwardSlice, options);
-    return;
+    return getBackwardSlice(definingOp, backwardSlice, options);
   }
   Operation *bbAargOwner = cast<BlockArgument>(root).getOwner()->getParentOp();
-  getBackwardSlice(bbAargOwner, backwardSlice, options);
+  return getBackwardSlice(bbAargOwner, backwardSlice, options);
 }
 
 SetVector<Operation *>
@@ -152,72 +178,19 @@ mlir::getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions,
     auto *currentOp = (slice)[currentIndex];
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
-    getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
-    slice.insert(backwardSlice.begin(), backwardSlice.end());
+    LogicalResult result =
+        getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
+    assert(result.succeeded());
+    (void)result;
+    slice.insert_range(backwardSlice);
 
     // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
     getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
-    slice.insert(forwardSlice.begin(), forwardSlice.end());
+    slice.insert_range(forwardSlice);
     ++currentIndex;
   }
   return topologicalSort(slice);
-}
-
-namespace {
-/// DFS post-order implementation that maintains a global count to work across
-/// multiple invocations, to help implement topological sort on multi-root DAGs.
-/// We traverse all operations but only record the ones that appear in
-/// `toSort` for the final result.
-struct DFSState {
-  DFSState(const SetVector<Operation *> &set) : toSort(set), seen() {}
-  const SetVector<Operation *> &toSort;
-  SmallVector<Operation *, 16> topologicalCounts;
-  DenseSet<Operation *> seen;
-};
-} // namespace
-
-static void dfsPostorder(Operation *root, DFSState *state) {
-  SmallVector<Operation *> queue(1, root);
-  std::vector<Operation *> ops;
-  while (!queue.empty()) {
-    Operation *current = queue.pop_back_val();
-    ops.push_back(current);
-    for (Operation *op : current->getUsers())
-      queue.push_back(op);
-    for (Region &region : current->getRegions()) {
-      for (Operation &op : region.getOps())
-        queue.push_back(&op);
-    }
-  }
-
-  for (Operation *op : llvm::reverse(ops)) {
-    if (state->seen.insert(op).second && state->toSort.count(op) > 0)
-      state->topologicalCounts.push_back(op);
-  }
-}
-
-SetVector<Operation *>
-mlir::topologicalSort(const SetVector<Operation *> &toSort) {
-  if (toSort.empty()) {
-    return toSort;
-  }
-
-  // Run from each root with global count and `seen` set.
-  DFSState state(toSort);
-  for (auto *s : toSort) {
-    assert(toSort.count(s) == 1 && "NYI: multi-sets not supported");
-    dfsPostorder(s, &state);
-  }
-
-  // Reorder and return.
-  SetVector<Operation *> res;
-  for (auto it = state.topologicalCounts.rbegin(),
-            eit = state.topologicalCounts.rend();
-       it != eit; ++it) {
-    res.insert(*it);
-  }
-  return res;
 }
 
 /// Returns true if `value` (transitively) depends on iteration-carried values
@@ -231,12 +204,13 @@ static bool dependsOnCarriedVals(Value value,
   sliceOptions.filter = [&](Operation *op) {
     return !ancestorOp->isAncestor(op);
   };
-  getBackwardSlice(value, &slice, sliceOptions);
+  LogicalResult result = getBackwardSlice(value, &slice, sliceOptions);
+  assert(result.succeeded());
+  (void)result;
 
   // Check that none of the operands of the operations in the backward slice are
   // loop iteration arguments, and neither is the value itself.
-  SmallPtrSet<Value, 8> iterCarriedValSet(iterCarriedArgs.begin(),
-                                          iterCarriedArgs.end());
+  SmallPtrSet<Value, 8> iterCarriedValSet(llvm::from_range, iterCarriedArgs);
   if (iterCarriedValSet.contains(value))
     return true;
 

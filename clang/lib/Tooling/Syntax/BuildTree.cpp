@@ -22,7 +22,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/LiteralSupport.h"
@@ -34,15 +33,10 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cstddef>
 #include <map>
 
 using namespace clang;
@@ -735,7 +729,8 @@ public:
     auto *Declaration =
         cast<syntax::SimpleDeclaration>(handleFreeStandingTagDecl(C));
     foldExplicitTemplateInstantiation(
-        Builder.getTemplateRange(C), Builder.findToken(C->getExternLoc()),
+        Builder.getTemplateRange(C),
+        Builder.findToken(C->getExternKeywordLoc()),
         Builder.findToken(C->getTemplateKeywordLoc()), Declaration, C);
     return true;
   }
@@ -958,8 +953,6 @@ public:
     case NestedNameSpecifier::NamespaceAlias:
     case NestedNameSpecifier::Identifier:
       return syntax::NodeKind::IdentifierNameSpecifier;
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      return syntax::NodeKind::SimpleTemplateNameSpecifier;
     case NestedNameSpecifier::TypeSpec: {
       const auto *NNSType = NNS.getAsType();
       assert(NNSType);

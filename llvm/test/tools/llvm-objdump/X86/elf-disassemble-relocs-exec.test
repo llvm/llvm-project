@@ -4,6 +4,7 @@
 # RUN: llvm-objdump --no-print-imm-hex -dr %t | FileCheck %s --match-full-lines --strict-whitespace
 # RUN: llvm-objdump --no-print-imm-hex -dr --no-leading-addr %t | FileCheck %s --check-prefix=NOADDR --match-full-lines --strict-whitespace
 # RUN: llvm-objdump --no-print-imm-hex -dr --no-addresses %t | FileCheck %s --check-prefix=NOADDR --match-full-lines --strict-whitespace
+# RUN: llvm-objdump --no-print-imm-hex -dr --disassemble-symbols=text1 %t | FileCheck %s --check-prefix=CHECK2 --match-full-lines --strict-whitespace
 
 # RUN: yaml2obj -DBITS=32 %s -o %t.32
 # RUN: llvm-objdump --no-print-imm-hex -dr --no-leading-addr %t.32 | FileCheck %s --check-prefix=NOADDR --match-full-lines --strict-whitespace
@@ -15,6 +16,16 @@
 # CHECK-NEXT:  400006: e8 fc fe ff ff               	callq	0x3fff07 <puts+0x3fff07>
 # CHECK-NEXT:		0000000000400007:  R_X86_64_PLT32	puts-0x4
 # CHECK-NEXT:  40000b: 90                           	nop
+# CHECK-EMPTY:
+# CHECK-NEXT:000000000040000c <text1>:
+# CHECK-NEXT:  40000c: bf 10 00 40 00               	movl	$4194320, %edi          # imm = 0x400010
+# CHECK-NEXT:		000000000040000d:  R_X86_64_32	.rodata
+# CHECK-NOT: {{.}}
+
+#     CHECK2:000000000040000c <text1>:
+#CHECK2-NEXT:  40000c: bf 10 00 40 00               	movl	$4194320, %edi          # imm = 0x400010
+#CHECK2-NEXT:		000000000040000d:  R_X86_64_32	.rodata
+#CHECK2-NOT: {{.}}
 
 #      NOADDR:<.text>:
 # NOADDR-NEXT: 90                                    	nop
@@ -42,7 +53,7 @@ Sections:
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     Address:         0x400000
     AddressAlign:    0x10
-    Content:         90BF10004000E8FCFEFFFF90
+    Content:         90BF10004000E8FCFEFFFF90BF10004000
   - Name:            .rodata
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC ]
@@ -62,6 +73,10 @@ Sections:
         Symbol:          puts
         Type:            R_X86_64_PLT32
         Addend:          -4
+      - Offset:          0x40000d
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          0
 Symbols:
   - Name:            .rodata
     Type:            STT_SECTION
@@ -70,4 +85,9 @@ Symbols:
   - Name:            puts
     Type:            STT_FUNC
     Binding:         STB_GLOBAL
+  - Name:            text1
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Section:         .text
+    Value:           0x40000c
 ...

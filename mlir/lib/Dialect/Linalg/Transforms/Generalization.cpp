@@ -13,20 +13,15 @@
 
 #include "mlir/Dialect/Linalg/Passes.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGGENERALIZATION
+#define GEN_PASS_DEF_LINALGGENERALIZENAMEDOPSPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -59,7 +54,7 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
   ValueRange outputs = linalgOp.getDpsInits();
   SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
   SmallVector<utils::IteratorType> iterators = linalgOp.getIteratorTypesArray();
-  SmallVector<Type> resultTypes = linalgOp.hasTensorSemantics()
+  SmallVector<Type> resultTypes = linalgOp.hasPureTensorSemantics()
                                       ? TypeRange(ValueRange(outputs))
                                       : TypeRange{};
 
@@ -76,24 +71,23 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
 
 namespace {
 
-struct LinalgGeneralizationPass
-    : public impl::LinalgGeneralizationBase<LinalgGeneralizationPass> {
+struct LinalgGeneralizeNamedOpsPass
+    : public impl::LinalgGeneralizeNamedOpsPassBase<
+          LinalgGeneralizeNamedOpsPass> {
+  using impl::LinalgGeneralizeNamedOpsPassBase<
+      LinalgGeneralizeNamedOpsPass>::LinalgGeneralizeNamedOpsPassBase;
   void runOnOperation() override;
 };
 
 } // namespace
 
-void LinalgGeneralizationPass::runOnOperation() {
+void LinalgGeneralizeNamedOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateLinalgNamedOpsGeneralizationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
 
 void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(
     RewritePatternSet &patterns) {
   patterns.add<LinalgGeneralizationPattern>(patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createLinalgGeneralizationPass() {
-  return std::make_unique<LinalgGeneralizationPass>();
 }

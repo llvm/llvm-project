@@ -27,14 +27,15 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __sample {
-
-struct __fn {
+struct __sample {
   template <input_iterator _Iter, sentinel_for<_Iter> _Sent, weakly_incrementable _OutIter, class _Gen>
     requires(forward_iterator<_Iter> || random_access_iterator<_OutIter>) && indirectly_copyable<_Iter, _OutIter> &&
             uniform_random_bit_generator<remove_reference_t<_Gen>>
@@ -55,15 +56,15 @@ struct __fn {
   }
 };
 
-} // namespace __sample
-
 inline namespace __cpo {
-inline constexpr auto sample = __sample::__fn{};
+inline constexpr auto sample = __sample{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_SAMPLE_H

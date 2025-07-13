@@ -1,8 +1,8 @@
 // RUN: mlir-opt %s -test-vector-warp-distribute="hoist-uniform distribute-transfer-write propagate-distribution" -canonicalize |\
 // RUN: mlir-opt -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if |\
 // RUN: mlir-opt -lower-affine -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm \
-// RUN:  -convert-arith-to-llvm -test-lower-to-nvvm | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN:  -convert-arith-to-llvm -gpu-lower-to-nvvm-pipeline | \
+// RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_cuda_runtime \
 // RUN:   -shared-libs=%mlir_c_runner_utils \
 // RUN:   -shared-libs=%mlir_runner_utils | \
@@ -20,7 +20,7 @@ func.func @gpu_func(%in: memref<1024xf32>, %out: memref<1xf32>) {
   gpu.launch blocks(%arg3, %arg4, %arg5)
   in (%arg9 = %c1, %arg10 = %c1, %arg11 = %c1)
   threads(%arg6, %arg7, %arg8) in (%arg12 = %c32, %arg13 = %c1, %arg14 = %c1) {
-    vector.warp_execute_on_lane_0(%arg6)[32] {
+    gpu.warp_execute_on_lane_0(%arg6)[32] {
       %init = vector.transfer_read %out[%c0], %cst_0 {in_bounds = [true]} : memref<1xf32>, vector<1xf32>
       %13 = scf.for %arg0 = %c0 to %c1024 step %c32 iter_args(%arg1 = %init) -> (vector<1xf32>) {
         %20 = vector.transfer_read %in[%arg0], %cst_0 {in_bounds = [true]} : memref<1024xf32>, vector<32xf32>

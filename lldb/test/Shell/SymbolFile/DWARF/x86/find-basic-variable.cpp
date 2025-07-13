@@ -33,6 +33,11 @@
 // RUN: lldb-test symbols --name=not_there --find=variable %t | \
 // RUN:   FileCheck --check-prefix=EMPTY %s
 
+/// Test a per-module index built by lld.
+// RUN: ld.lld --debug-names %t.o -o %t
+// RUN: lldb-test symbols --name=foo --find=variable --context=context %t | \
+// RUN:   FileCheck --check-prefix=CONTEXT %s
+
 // NAMES: Name: .debug_names
 
 // EMPTY: Found 0 variables:

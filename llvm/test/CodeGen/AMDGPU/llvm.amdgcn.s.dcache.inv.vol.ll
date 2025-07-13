@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 declare void @llvm.amdgcn.s.dcache.inv.vol() #0
 declare void @llvm.amdgcn.s.waitcnt(i32) #0
@@ -24,7 +24,7 @@ define amdgpu_kernel void @test_s_dcache_inv_vol_insert_wait() #0 {
   br label %end
 
 end:
-  store volatile i32 3, ptr addrspace(1) undef
+  store volatile i32 3, ptr addrspace(1) poison
   ret void
 }
 

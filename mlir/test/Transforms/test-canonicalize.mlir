@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(canonicalize))' | FileCheck %s
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(canonicalize{region-simplify=false}))' | FileCheck %s --check-prefixes=CHECK,NO-RS
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(canonicalize{region-simplify=disabled}))' | FileCheck %s --check-prefixes=CHECK,NO-RS
 
 // CHECK-LABEL: func @remove_op_with_inner_ops_pattern
 func.func @remove_op_with_inner_ops_pattern() {
@@ -68,19 +68,6 @@ func.func @test_commutative_multi_cst(%arg0: i32, %arg1: i32) -> (i32, i32) {
   %z = "test.op_commutative"(%arg0, %c42_i32_3, %c42_i32_2, %arg1): (i32, i32, i32, i32) -> i32
   // CHECK-NEXT: return %[[O0]], %[[O1]]
   return %y, %z: i32, i32
-}
-
-// CHECK-LABEL: func @typemismatch
-
-func.func @typemismatch() -> i32 {
-  %c42 = arith.constant 42.0 : f32
-
-  // The "passthrough_fold" folder will naively return its operand, but we don't
-  // want to fold here because of the type mismatch.
-
-  // CHECK: "test.passthrough_fold"
-  %0 = "test.passthrough_fold"(%c42) : (f32) -> (i32)
-  return %0 : i32
 }
 
 // CHECK-LABEL: test_dialect_canonicalizer

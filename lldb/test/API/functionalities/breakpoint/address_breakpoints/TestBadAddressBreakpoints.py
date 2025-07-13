@@ -32,7 +32,7 @@ class BadAddressBreakpointTestCase(TestBase):
         for region_idx in range(regions.GetSize()):
             region = lldb.SBMemoryRegionInfo()
             regions.GetMemoryRegionAtIndex(region_idx, region)
-            if illegal_address == None or region.GetRegionEnd() > illegal_address:
+            if illegal_address is None or region.GetRegionEnd() > illegal_address:
                 illegal_address = region.GetRegionEnd()
 
         if illegal_address is not None:
@@ -40,7 +40,7 @@ class BadAddressBreakpointTestCase(TestBase):
             bkpt = target.BreakpointCreateByAddress(illegal_address)
             # Verify that breakpoint is not resolved.
             for bp_loc in bkpt:
-                self.assertEquals(bp_loc.IsResolved(), False)
+                self.assertFalse(bp_loc.IsResolved())
         else:
             self.fail(
                 "Could not find an illegal address at which to set a bad breakpoint."

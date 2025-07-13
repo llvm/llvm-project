@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 @count = global i8 0
-@funcptr = global void () addrspace(1)* null
+@funcptr = global ptr addrspace(1) null
 
 define avr_intrcc void @interrupt_handler() {
 ; CHECK-LABEL: interrupt_handler:
@@ -101,9 +101,9 @@ define void @signal_handler_with_increment() #1 {
 ; CHECK-NEXT: out 63, r0
 ; CHECK-NEXT: pop r0
 ; CHECK-NEXT: reti
-  %old = load volatile i8, i8* @count
+  %old = load volatile i8, ptr @count
   %new = add i8 %old, 1
-  store volatile i8 %new, i8* @count
+  store volatile i8 %new, ptr @count
   ret void
 }
 
@@ -214,7 +214,7 @@ define void @signal_handler_with_icall() #1 {
 ; CHECK-NEXT: out     63, r0
 ; CHECK-NEXT: pop     r0
 ; CHECK-NEXT: reti
-  %ptr = load volatile void() addrspace(1)*, void() addrspace(1)** @funcptr
+  %ptr = load volatile ptr addrspace(1), ptr @funcptr
   call void %ptr()
   ret void
 }

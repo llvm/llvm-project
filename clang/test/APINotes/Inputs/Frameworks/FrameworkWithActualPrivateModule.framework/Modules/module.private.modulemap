@@ -1,0 +1,5 @@
+framework module FrameworkWithActualPrivateModule_Private {
+  umbrella header "FrameworkWithActualPrivateModule_Private.h"
+  export *
+  module * { export * }
+}

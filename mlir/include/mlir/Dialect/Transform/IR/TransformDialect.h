@@ -252,21 +252,21 @@ private:
 
 template <typename OpTy>
 void TransformDialect::addOperationIfNotRegistered() {
-  StringRef name = OpTy::getOperationName();
   std::optional<RegisteredOperationName> opName =
-      RegisteredOperationName::lookup(name, getContext());
+      RegisteredOperationName::lookup(TypeID::get<OpTy>(), getContext());
   if (!opName) {
     addOperations<OpTy>();
 #ifndef NDEBUG
+    StringRef name = OpTy::getOperationName();
     detail::checkImplementsTransformOpInterface(name, getContext());
 #endif // NDEBUG
     return;
   }
 
-  if (opName->getTypeID() == TypeID::get<OpTy>())
+  if (LLVM_LIKELY(opName->getTypeID() == TypeID::get<OpTy>()))
     return;
 
-  reportDuplicateOpRegistration(name);
+  reportDuplicateOpRegistration(OpTy::getOperationName());
 }
 
 template <typename Type>
@@ -298,13 +298,10 @@ void TransformDialect::addTypeIfNotRegistered() {
 template <typename DataTy>
 DataTy &TransformDialect::getOrCreateExtraData() {
   TypeID typeID = TypeID::get<DataTy>();
-  auto it = extraData.find(typeID);
-  if (it != extraData.end())
-    return static_cast<DataTy &>(*it->getSecond());
-
-  auto emplaced =
-      extraData.try_emplace(typeID, std::make_unique<DataTy>(getContext()));
-  return static_cast<DataTy &>(*emplaced.first->getSecond());
+  auto [it, inserted] = extraData.try_emplace(typeID);
+  if (inserted)
+    it->getSecond() = std::make_unique<DataTy>(getContext());
+  return static_cast<DataTy &>(*it->getSecond());
 }
 
 /// A wrapper for transform dialect extensions that forces them to be

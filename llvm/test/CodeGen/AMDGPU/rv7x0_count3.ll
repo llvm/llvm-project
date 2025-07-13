@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -show-mc-encoding  -mcpu=rv710 | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -show-mc-encoding  -mcpu=rv710 | FileCheck %s
 
 ; CHECK: TEX 9 @6 ;  encoding: [0x06,0x00,0x00,0x00,0x00,0x04,0x88,0x80]
 define amdgpu_vs void @test(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
@@ -7,7 +7,7 @@ bb:
   %tmp1 = extractelement <4 x float> %reg1, i32 1
   %tmp2 = extractelement <4 x float> %reg1, i32 2
   %tmp3 = extractelement <4 x float> %reg1, i32 3
-  %tmp4 = insertelement <4 x float> undef, float %tmp, i32 0
+  %tmp4 = insertelement <4 x float> poison, float %tmp, i32 0
   %tmp5 = insertelement <4 x float> %tmp4, float %tmp1, i32 1
   %tmp6 = insertelement <4 x float> %tmp5, float %tmp2, i32 2
   %tmp7 = insertelement <4 x float> %tmp6, float %tmp3, i32 3

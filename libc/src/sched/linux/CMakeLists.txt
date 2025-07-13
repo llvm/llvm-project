@@ -30,7 +30,7 @@ add_entrypoint_object(
     ../sched_getcpucount.h
   DEPENDS
     libc.include.sched
-  )
+)
 
 add_entrypoint_object(
   sched_yield
@@ -52,6 +52,8 @@ add_entrypoint_object(
     ../sched_setparam.h
   DEPENDS
     libc.include.sys_syscall
+    libc.include.time
+    libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -64,6 +66,8 @@ add_entrypoint_object(
     ../sched_getparam.h
   DEPENDS
     libc.include.sys_syscall
+    libc.include.time
+    libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -76,6 +80,8 @@ add_entrypoint_object(
     ../sched_setscheduler.h
   DEPENDS
     libc.include.sys_syscall
+    libc.include.time
+    libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
@@ -87,6 +93,7 @@ add_entrypoint_object(
   HDRS
     ../sched_getscheduler.h
   DEPENDS
+    libc.include.sched
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -124,6 +131,51 @@ add_entrypoint_object(
     ../sched_rr_get_interval.h
   DEPENDS
     libc.include.sys_syscall
+    libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  __sched_setcpuzero
+  SRCS
+    sched_setcpuzero.cpp
+  HDRS
+    ../sched_setcpuzero.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  __sched_setcpuset
+  SRCS
+    sched_setcpuset.cpp
+  HDRS
+    ../sched_setcpuset.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.hdr.sched_macros
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  __sched_getcpuisset
+  SRCS
+    sched_getcpuisset.cpp
+  HDRS
+    ../sched_getcpuisset.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.hdr.sched_macros
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
 )

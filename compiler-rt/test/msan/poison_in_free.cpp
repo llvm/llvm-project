@@ -1,6 +1,6 @@
 // RUN: %clangxx_msan -O0 %s -o %t && not %run %t >%t.out 2>&1
 // FileCheck %s <%t.out
-// RUN: %clangxx_msan -O0 %s -o %t && MSAN_OPTIONS=poison_in_free=0 %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -O0 %s -o %t && env MSAN_OPTIONS=poison_in_free=0 %run %t >%t.out 2>&1
 
 #include <stdio.h>
 #include <stdlib.h>

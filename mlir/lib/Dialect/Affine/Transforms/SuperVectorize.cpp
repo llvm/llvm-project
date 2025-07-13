@@ -609,9 +609,8 @@ makePattern(const DenseSet<Operation *> &parallelLoops, int vectorRank,
 }
 
 static NestedPattern &vectorTransferPattern() {
-  static auto pattern = affine::matcher::Op([](Operation &op) {
-    return isa<vector::TransferReadOp, vector::TransferWriteOp>(op);
-  });
+  static auto pattern = affine::matcher::Op(
+      llvm::IsaPred<vector::TransferReadOp, vector::TransferWriteOp>);
   return pattern;
 }
 
@@ -711,18 +710,16 @@ struct VectorizationState {
                                          BlockArgument replacement);
 
   /// Registers the scalar replacement of a scalar value. 'replacement' must be
-  /// scalar. Both values must be block arguments. Operation results should be
-  /// replaced using the 'registerOp*' utilitites.
+  /// scalar.
   ///
   /// This utility is used to register the replacement of block arguments
-  /// that are within the loop to be vectorized and will continue being scalar
-  /// within the vector loop.
+  /// or affine.apply results that are within the loop be vectorized and will
+  /// continue being scalar within the vector loop.
   ///
   /// Example:
   ///   * 'replaced': induction variable of a loop to be vectorized.
   ///   * 'replacement': new induction variable in the new vector loop.
-  void registerValueScalarReplacement(BlockArgument replaced,
-                                      BlockArgument replacement);
+  void registerValueScalarReplacement(Value replaced, Value replacement);
 
   /// Registers the scalar replacement of a scalar result returned from a
   /// reduction loop. 'replacement' must be scalar.
@@ -772,7 +769,6 @@ private:
   /// Internal implementation to map input scalar values to new vector or scalar
   /// values.
   void registerValueVectorReplacementImpl(Value replaced, Value replacement);
-  void registerValueScalarReplacementImpl(Value replaced, Value replacement);
 };
 
 } // namespace
@@ -844,19 +840,22 @@ void VectorizationState::registerValueVectorReplacementImpl(Value replaced,
 }
 
 /// Registers the scalar replacement of a scalar value. 'replacement' must be
-/// scalar. Both values must be block arguments. Operation results should be
-/// replaced using the 'registerOp*' utilitites.
+/// scalar.
 ///
 /// This utility is used to register the replacement of block arguments
-/// that are within the loop to be vectorized and will continue being scalar
-/// within the vector loop.
+/// or affine.apply results that are within the loop be vectorized and will
+/// continue being scalar within the vector loop.
 ///
 /// Example:
 ///   * 'replaced': induction variable of a loop to be vectorized.
 ///   * 'replacement': new induction variable in the new vector loop.
-void VectorizationState::registerValueScalarReplacement(
-    BlockArgument replaced, BlockArgument replacement) {
-  registerValueScalarReplacementImpl(replaced, replacement);
+void VectorizationState::registerValueScalarReplacement(Value replaced,
+                                                        Value replacement) {
+  assert(!valueScalarReplacement.contains(replaced) &&
+         "Scalar value replacement already registered");
+  assert(!isa<VectorType>(replacement.getType()) &&
+         "Expected scalar type in scalar replacement");
+  valueScalarReplacement.map(replaced, replacement);
 }
 
 /// Registers the scalar replacement of a scalar result returned from a
@@ -877,15 +876,6 @@ void VectorizationState::registerLoopResultScalarReplacement(
                        "with scalar: "
                     << replacement);
   loopResultScalarReplacement[replaced] = replacement;
-}
-
-void VectorizationState::registerValueScalarReplacementImpl(Value replaced,
-                                                            Value replacement) {
-  assert(!valueScalarReplacement.contains(replaced) &&
-         "Scalar value replacement already registered");
-  assert(!isa<VectorType>(replacement.getType()) &&
-         "Expected scalar type in scalar replacement");
-  valueScalarReplacement.map(replaced, replacement);
 }
 
 /// Returns in 'replacedVals' the scalar replacement for values in 'inputVals'.
@@ -976,6 +966,33 @@ static arith::ConstantOp vectorizeConstant(arith::ConstantOp constOp,
   // Register vector replacement for future uses in the scope.
   state.registerOpVectorReplacement(constOp, newConstOp);
   return newConstOp;
+}
+
+/// We have no need to vectorize affine.apply. However, we still need to
+/// generate it and replace the operands with values in valueScalarReplacement.
+static Operation *vectorizeAffineApplyOp(AffineApplyOp applyOp,
+                                         VectorizationState &state) {
+  SmallVector<Value, 8> updatedOperands;
+  for (Value operand : applyOp.getOperands()) {
+    if (state.valueVectorReplacement.contains(operand)) {
+      LLVM_DEBUG(
+          dbgs() << "\n[early-vect]+++++ affine.apply on vector operand\n");
+      return nullptr;
+    } else {
+      Value updatedOperand = state.valueScalarReplacement.lookupOrNull(operand);
+      if (!updatedOperand)
+        updatedOperand = operand;
+      updatedOperands.push_back(updatedOperand);
+    }
+  }
+
+  auto newApplyOp = state.builder.create<AffineApplyOp>(
+      applyOp.getLoc(), applyOp.getAffineMap(), updatedOperands);
+
+  // Register the new affine.apply result.
+  state.registerValueScalarReplacement(applyOp.getResult(),
+                                       newApplyOp.getResult());
+  return newApplyOp;
 }
 
 /// Creates a constant vector filled with the neutral elements of the given
@@ -1089,6 +1106,10 @@ static bool isUniformDefinition(Value value,
     if (!loop.isDefinedOutsideOfLoop(value))
       return false;
   }
+
+  if (!value.getType().isIntOrIndexOrFloat())
+    return false;
+
   return true;
 }
 
@@ -1164,6 +1185,32 @@ static Value vectorizeOperand(Value operand, VectorizationState &state) {
   return nullptr;
 }
 
+/// Returns true if any vectorized loop IV drives more than one index.
+static bool isIVMappedToMultipleIndices(
+    ArrayRef<Value> indices,
+    const DenseMap<Operation *, unsigned> &loopToVectorDim) {
+  for (auto &kvp : loopToVectorDim) {
+    AffineForOp forOp = cast<AffineForOp>(kvp.first);
+    // Find which indices are invariant w.r.t. this loop IV.
+    llvm::DenseSet<Value> invariants =
+        affine::getInvariantAccesses(forOp.getInductionVar(), indices);
+    // Count how many vary (i.e. are not invariant).
+    unsigned nonInvariant = 0;
+    for (Value idx : indices) {
+      if (invariants.count(idx))
+        continue;
+
+      if (++nonInvariant > 1) {
+        LLVM_DEBUG(dbgs() << "[early‑vect] Bail out: IV "
+                          << forOp.getInductionVar() << " drives "
+                          << nonInvariant << " indices\n");
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Vectorizes an affine load with the vectorization strategy in 'state' by
 /// generating a 'vector.transfer_read' op with the proper permutation map
 /// inferred from the indices of the load. The new 'vector.transfer_read' is
@@ -1184,11 +1231,20 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   SmallVector<Value, 8> indices;
   indices.reserve(memRefType.getRank());
   if (loadOp.getAffineMap() !=
-      state.builder.getMultiDimIdentityMap(memRefType.getRank()))
+      state.builder.getMultiDimIdentityMap(memRefType.getRank())) {
+    // Check the operand in loadOp affine map does not come from AffineApplyOp.
+    for (auto op : mapOperands) {
+      if (op.getDefiningOp<AffineApplyOp>())
+        return nullptr;
+    }
     computeMemoryOpIndices(loadOp, loadOp.getAffineMap(), mapOperands, state,
                            indices);
-  else
+  } else {
     indices.append(mapOperands.begin(), mapOperands.end());
+  }
+
+  if (isIVMappedToMultipleIndices(indices, state.vecLoopToVecDim))
+    return nullptr;
 
   // Compute permutation map using the information of new vector loops.
   auto permutationMap = makePermutationMap(state.builder.getInsertionBlock(),
@@ -1201,7 +1257,8 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
   auto transfer = state.builder.create<vector::TransferReadOp>(
-      loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices, permutationMap);
+      loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices,
+      /*padding=*/std::nullopt, permutationMap);
 
   // Register replacement for future uses in the scope.
   state.registerOpVectorReplacement(loadOp, transfer);
@@ -1234,6 +1291,9 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
                            indices);
   else
     indices.append(mapOperands.begin(), mapOperands.end());
+
+  if (isIVMappedToMultipleIndices(indices, state.vecLoopToVecDim))
+    return nullptr;
 
   // Compute permutation map using the information of new vector loops.
   auto permutationMap = makePermutationMap(state.builder.getInsertionBlock(),
@@ -1493,6 +1553,8 @@ static Operation *vectorizeOneOperation(Operation *op,
     return vectorizeAffineYieldOp(yieldOp, state);
   if (auto constant = dyn_cast<arith::ConstantOp>(op))
     return vectorizeConstant(constant, state);
+  if (auto applyOp = dyn_cast<AffineApplyOp>(op))
+    return vectorizeAffineApplyOp(applyOp, state);
 
   // Other ops with regions are not supported.
   if (op->getNumRegions() != 0)

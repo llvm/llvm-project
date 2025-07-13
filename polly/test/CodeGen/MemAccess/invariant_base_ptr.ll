@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-import-jscop \
-; RUN:   -polly-codegen -polly-invariant-load-hoisting -S \
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-codegen' \
+; RUN:   -polly-invariant-load-hoisting -S \
 ; RUN:   2>&1 < %s | FileCheck %s
 
 ; Setting new access functions where the base pointer of the array that is newly

@@ -20,6 +20,10 @@ class RewritePatternSet;
 template <typename OpT>
 class OperationPass;
 
+namespace amdgpu {
+struct Chipset;
+} // namespace amdgpu
+
 namespace gpu {
 class GPUModuleOp;
 } // namespace gpu
@@ -30,9 +34,10 @@ class GPUModuleOp;
 /// Collect a set of patterns to convert from the GPU dialect to ROCDL.
 /// If `runtime` is Unknown, gpu.printf will not be lowered
 /// The resulting pattern set should be run over a gpu.module op
-void populateGpuToROCDLConversionPatterns(LLVMTypeConverter &converter,
+void populateGpuToROCDLConversionPatterns(const LLVMTypeConverter &converter,
                                           RewritePatternSet &patterns,
-                                          gpu::amd::Runtime runtime);
+                                          gpu::amd::Runtime runtime,
+                                          amdgpu::Chipset chipset);
 
 /// Configure target to convert from the GPU dialect to ROCDL.
 void configureGpuToROCDLConversionLegality(ConversionTarget &target);

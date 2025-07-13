@@ -11,30 +11,21 @@
 
 #include <functional>
 
-class NotConstructible
-{
-    NotConstructible(const NotConstructible&);
-    NotConstructible& operator=(const NotConstructible&);
+class NotConstructible {
+  NotConstructible(const NotConstructible&);
+  NotConstructible& operator=(const NotConstructible&);
+
 public:
 };
 
-inline
-bool
-operator==(const NotConstructible&, const NotConstructible&)
-{return true;}
-
-namespace std
-{
+inline bool operator==(const NotConstructible&, const NotConstructible&) { return true; }
 
 template <>
-struct hash<NotConstructible>
-{
-    typedef NotConstructible argument_type;
-    typedef std::size_t result_type;
+struct std::hash<NotConstructible> {
+  typedef NotConstructible argument_type;
+  typedef std::size_t result_type;
 
-    std::size_t operator()(const NotConstructible&) const {return 0;}
+  std::size_t operator()(const NotConstructible&) const { return 0; }
 };
-
-}
 
 #endif // NOTCONSTRUCTIBLE_H

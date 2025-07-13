@@ -78,14 +78,13 @@ and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
 
 If you think you've found a bug in libunwind, please report it using
 the `LLVM bug tracker`_. If you're not sure, you
-can ask for support on the `Runtimes forum`_ or on IRC.
+can ask for support on the `Runtimes forum`_ or on Discord.
 Please use the tag "libunwind" for new threads.
 
 **Patches**
 
-If you want to contribute a patch to libunwind, the best place for that is
-`Phabricator <https://llvm.org/docs/Phabricator.html>`_. Please include [libunwind] in the subject and
-add `cfe-commits` as a subscriber. Also make sure you are subscribed to the `cfe-commits mailing list`_.
+If you want to contribute a patch to libunwind, please start by reading the LLVM
+`documentation about contributing <https://www.llvm.org/docs/Contributing.html>`__.
 
 **Discussion and Questions**
 

@@ -14,7 +14,6 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -71,10 +70,10 @@ void mlir::affine::reorderOperandsByHoistability(RewriterBase &rewriter,
                        op->getContext());
   canonicalizeMapAndOperands(&map, &operands);
 
-  rewriter.startRootUpdate(op);
+  rewriter.startOpModification(op);
   op.setMap(map);
   op->setOperands(operands);
-  rewriter.finalizeRootUpdate(op);
+  rewriter.finalizeOpModification(op);
 }
 
 /// Build an affine.apply that is a subexpression `expr` of `originalOp`s affine

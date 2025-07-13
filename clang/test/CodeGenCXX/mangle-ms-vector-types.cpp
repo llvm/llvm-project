@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fms-extensions -fcxx-exceptions -ffreestanding -target-feature +avx -emit-llvm %s -o - -triple=i686-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -fcxx-exceptions -ffreestanding -target-feature +avx -emit-llvm %s -o - -triple=i686-pc-win32 -fexperimental-new-constant-interpreter | FileCheck %s
 
 #include <xmmintrin.h>
 #include <emmintrin.h>

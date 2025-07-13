@@ -16,10 +16,10 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
@@ -81,11 +81,11 @@ struct GpuAllReduceRewriter {
 
     // Compute lane id (invocation id withing the subgroup).
     Value subgroupMask =
-        create<arith::ConstantIntOp>(kSubgroupSize - 1, int32Type);
+        create<arith::ConstantIntOp>(int32Type, kSubgroupSize - 1);
     Value laneId = create<arith::AndIOp>(invocationIdx, subgroupMask);
     Value isFirstLane =
         create<arith::CmpIOp>(arith::CmpIPredicate::eq, laneId,
-                              create<arith::ConstantIntOp>(0, int32Type));
+                              create<arith::ConstantIntOp>(int32Type, 0));
 
     Value numThreadsWithSmallerSubgroupId =
         create<arith::SubIOp>(invocationIdx, laneId);
@@ -181,7 +181,7 @@ private:
   /// block is expected to have 2 arguments. The gpu.yield return the
   /// accumulated value of the same type.
   AccumulatorFactory getFactory(Region &body) {
-    return AccumulatorFactory([&](Value lhs, Value rhs) {
+    return [&body, this](Value lhs, Value rhs) -> Value {
       Block *block = rewriter.getInsertionBlock();
       Block *split = rewriter.splitBlock(block, rewriter.getInsertionPoint());
 
@@ -209,51 +209,14 @@ private:
       // Return accumulator result.
       rewriter.setInsertionPointToStart(split);
       return split->addArgument(lhs.getType(), lhs.getLoc());
-    });
+    };
   }
 
   /// Returns an accumulator factory that creates an op specified by opName.
   AccumulatorFactory getFactory(gpu::AllReduceOperation opName) {
-    using Kind = gpu::AllReduceOperation;
-    bool isFloatingPoint = isa<FloatType>(valueType);
-    switch (opName) {
-    case Kind::ADD:
-      return isFloatingPoint ? getFactory<arith::AddFOp>()
-                             : getFactory<arith::AddIOp>();
-    case Kind::MUL:
-      return isFloatingPoint ? getFactory<arith::MulFOp>()
-                             : getFactory<arith::MulIOp>();
-    case Kind::MINSI:
-      return getFactory<arith::MinSIOp>();
-    case Kind::MINUI:
-      return getFactory<arith::MinUIOp>();
-    case Kind::MINF:
-      return getFactory<arith::MinNumFOp>();
-    case Kind::MAXSI:
-      return getFactory<arith::MaxSIOp>();
-    case Kind::MAXUI:
-      return getFactory<arith::MaxUIOp>();
-    case Kind::MAXF:
-      return getFactory<arith::MaxNumFOp>();
-    case Kind::AND:
-      return getFactory<arith::AndIOp>();
-    case Kind::OR:
-      return getFactory<arith::OrIOp>();
-    case Kind::XOR:
-      return getFactory<arith::XOrIOp>();
-    case Kind::MINIMUMF:
-      return getFactory<arith::MinimumFOp>();
-    case Kind::MAXIMUMF:
-      return getFactory<arith::MaximumFOp>();
-    }
-    llvm_unreachable("unknown GPU AllReduceOperation");
-  }
-
-  /// Returns an accumulator factory that creates an op of type T.
-  template <typename T>
-  AccumulatorFactory getFactory() {
-    return [this](Value lhs, Value rhs) {
-      return create<T>(lhs.getType(), lhs, rhs);
+    return [opName, this](Value lhs, Value rhs) {
+      return vector::makeArithReduction(rewriter, loc,
+                                        convertReductionKind(opName), lhs, rhs);
     };
   }
 
@@ -317,7 +280,7 @@ private:
   /// The first lane returns the result, all others return values are undefined.
   Value createSubgroupReduce(Value activeWidth, Value laneId, Value operand,
                              AccumulatorFactory &accumFactory) {
-    Value subgroupSize = create<arith::ConstantIntOp>(kSubgroupSize, int32Type);
+    Value subgroupSize = create<arith::ConstantIntOp>(int32Type, kSubgroupSize);
     Value isPartialSubgroup = create<arith::CmpIOp>(arith::CmpIPredicate::slt,
                                                     activeWidth, subgroupSize);
     std::array<Type, 2> shuffleType = {valueType, rewriter.getI1Type()};
@@ -331,7 +294,7 @@ private:
           // lane is within the active range. The accumulated value is available
           // in the first lane.
           for (int i = 1; i < kSubgroupSize; i <<= 1) {
-            Value offset = create<arith::ConstantIntOp>(i, int32Type);
+            Value offset = create<arith::ConstantIntOp>(int32Type, i);
             auto shuffleOp = create<gpu::ShuffleOp>(
                 shuffleType, value, offset, activeWidth, gpu::ShuffleMode::XOR);
             // Skip the accumulation if the shuffle op read from a lane outside
@@ -353,7 +316,7 @@ private:
         [&] {
           Value value = operand;
           for (int i = 1; i < kSubgroupSize; i <<= 1) {
-            Value offset = create<arith::ConstantIntOp>(i, int32Type);
+            Value offset = create<arith::ConstantIntOp>(int32Type, i);
             auto shuffleOp =
                 create<gpu::ShuffleOp>(shuffleType, value, offset, subgroupSize,
                                        gpu::ShuffleMode::XOR);
@@ -366,7 +329,7 @@ private:
 
   /// Returns value divided by the subgroup size (i.e. 32).
   Value getDivideBySubgroupSize(Value value) {
-    Value subgroupSize = create<arith::ConstantIntOp>(kSubgroupSize, int32Type);
+    Value subgroupSize = create<arith::ConstantIntOp>(int32Type, kSubgroupSize);
     return create<arith::DivSIOp>(int32Type, value, subgroupSize);
   }
 

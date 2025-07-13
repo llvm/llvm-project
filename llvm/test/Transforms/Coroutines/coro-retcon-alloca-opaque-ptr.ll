@@ -8,7 +8,7 @@ declare {ptr, ptr, i32} @prototype_f(ptr, i1)
 define {ptr, ptr, i32} @f(ptr %buffer, i32 %n, { i32 } %dummy) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  coro.return:
-; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[BUFFER:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[BUFFER:%.*]], i64 8
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[N_VAL_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 [[N]])
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER]], align 8

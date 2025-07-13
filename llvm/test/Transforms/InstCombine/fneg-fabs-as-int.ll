@@ -17,7 +17,7 @@ define <2 x i32> @fneg_fabs_as_int_v2f32_noimplicitfloat(<2 x float> %x) noimpli
 ; CHECK-LABEL: define <2 x i32> @fneg_fabs_as_int_v2f32_noimplicitfloat
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[BC]], <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[BC]], splat (i32 -2147483648)
 ; CHECK-NEXT:    ret <2 x i32> [[OR]]
 ;
   %bc = bitcast <2 x float> %x to <2 x i32>
@@ -158,8 +158,8 @@ define <2 x i32> @not_fneg_fabs_as_int_v2f32_nonsplat(<2 x float> %x) {
   ret <2 x i32> %or
 }
 
-define <3 x i32> @fneg_fabs_as_int_v3f32_undef(<3 x float> %x) {
-; CHECK-LABEL: define <3 x i32> @fneg_fabs_as_int_v3f32_undef
+define <3 x i32> @fneg_fabs_as_int_v3f32_poison(<3 x float> %x) {
+; CHECK-LABEL: define <3 x i32> @fneg_fabs_as_int_v3f32_poison
 ; CHECK-SAME: (<3 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x float> @llvm.fabs.v3f32(<3 x float> [[X]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = fneg <3 x float> [[TMP1]]
@@ -167,7 +167,7 @@ define <3 x i32> @fneg_fabs_as_int_v3f32_undef(<3 x float> %x) {
 ; CHECK-NEXT:    ret <3 x i32> [[OR]]
 ;
   %bc = bitcast <3 x float> %x to <3 x i32>
-  %or = or <3 x i32> %bc, <i32 -2147483648, i32 undef, i32 -2147483648>
+  %or = or <3 x i32> %bc, <i32 -2147483648, i32 poison, i32 -2147483648>
   ret <3 x i32> %or
 }
 
@@ -317,8 +317,9 @@ define i128 @fneg_fabs_as_int_ppc_fp128_f64_mask(ppc_fp128 %x) {
 define i128 @fneg_fabs_as_int_ppc_fp128_f128_mask(ppc_fp128 %x) {
 ; CHECK-LABEL: define i128 @fneg_fabs_as_int_ppc_fp128_f128_mask
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast ppc_fp128 [[X]] to i128
-; CHECK-NEXT:    [[OR:%.*]] = or i128 [[BC]], -170141183460469231731687303715884105728
+; CHECK-NEXT:    [[TMP1:%.*]] = call ppc_fp128 @llvm.fabs.ppcf128(ppc_fp128 [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg ppc_fp128 [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast ppc_fp128 [[TMP2]] to i128
 ; CHECK-NEXT:    ret i128 [[OR]]
 ;
   %bc = bitcast ppc_fp128 %x to i128

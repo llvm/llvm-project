@@ -28,18 +28,17 @@ class BackendConsumer : public ASTConsumer {
   using LinkModule = CodeGenAction::LinkModule;
 
   virtual void anchor();
+  CompilerInstance &CI;
   DiagnosticsEngine &Diags;
-  BackendAction Action;
-  const HeaderSearchOptions &HeaderSearchOpts;
   const CodeGenOptions &CodeGenOpts;
   const TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
   std::unique_ptr<raw_pwrite_stream> AsmOutStream;
-  ASTContext *Context;
+  ASTContext *Context = nullptr;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
 
   llvm::Timer LLVMIRGeneration;
-  unsigned LLVMIRGenerationRefCount;
+  unsigned LLVMIRGenerationRefCount = 0;
 
   /// True if we've finished generating IR. This prevents us from generating
   /// additional LLVM IR after emitting output in HandleTranslationUnit. This
@@ -47,6 +46,8 @@ class BackendConsumer : public ASTConsumer {
   bool IRGenFinished = false;
 
   bool TimerIsEnabled = false;
+
+  BackendAction Action;
 
   std::unique_ptr<CodeGenerator> Gen;
 
@@ -69,29 +70,12 @@ class BackendConsumer : public ASTConsumer {
   llvm::Module *CurLinkModule = nullptr;
 
 public:
-  BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
+  BackendConsumer(CompilerInstance &CI, BackendAction Action,
                   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                  const HeaderSearchOptions &HeaderSearchOpts,
-                  const PreprocessorOptions &PPOpts,
-                  const CodeGenOptions &CodeGenOpts,
-                  const TargetOptions &TargetOpts,
-                  const LangOptions &LangOpts, const std::string &InFile,
-                  SmallVector<LinkModule, 4> LinkModules,
-                  std::unique_ptr<raw_pwrite_stream> OS, llvm::LLVMContext &C,
-                  CoverageSourceInfo *CoverageInfo = nullptr);
-
-  // This constructor is used in installing an empty BackendConsumer
-  // to use the clang diagnostic handler for IR input files. It avoids
-  // initializing the OS field.
-  BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
-                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                  const HeaderSearchOptions &HeaderSearchOpts,
-                  const PreprocessorOptions &PPOpts,
-                  const CodeGenOptions &CodeGenOpts,
-                  const TargetOptions &TargetOpts,
-                  const LangOptions &LangOpts, llvm::Module *Module,
-                  SmallVector<LinkModule, 4> LinkModules, llvm::LLVMContext &C,
-                  CoverageSourceInfo *CoverageInfo = nullptr);
+                  llvm::LLVMContext &C, SmallVector<LinkModule, 4> LinkModules,
+                  StringRef InFile, std::unique_ptr<raw_pwrite_stream> OS,
+                  CoverageSourceInfo *CoverageInfo,
+                  llvm::Module *CurLinkModule = nullptr);
 
   llvm::Module *getModule() const;
   std::unique_ptr<llvm::Module> takeModule();
@@ -107,13 +91,12 @@ public:
   void HandleTagDeclDefinition(TagDecl *D) override;
   void HandleTagDeclRequiredDefinition(const TagDecl *D) override;
   void CompleteTentativeDefinition(VarDecl *D) override;
-  void CompleteExternalDeclaration(VarDecl *D) override;
+  void CompleteExternalDeclaration(DeclaratorDecl *D) override;
   void AssignInheritanceModel(CXXRecordDecl *RD) override;
   void HandleVTable(CXXRecordDecl *RD) override;
 
-
- // Links each entry in LinkModules into our module.  Returns true on error.
-  bool LinkInModules(llvm::Module *M, bool ShouldLinkFiles = true);
+  // Links each entry in LinkModules into our module.  Returns true on error.
+  bool LinkInModules(llvm::Module *M);
 
   /// Get the best possible source location to represent a diagnostic that
   /// may have associated debug info.

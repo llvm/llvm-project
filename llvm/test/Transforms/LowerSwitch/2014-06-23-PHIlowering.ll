@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=lowerswitch -S | FileCheck %s
+; RUN: opt < %s -passes=lower-switch -S | FileCheck %s
 
 define i32 @test(i32 %arg) #0 {
 ; CHECK-LABEL: @test

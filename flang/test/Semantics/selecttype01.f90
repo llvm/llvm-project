@@ -288,4 +288,11 @@ subroutine CheckNotProcedure
   function f() result(res)
     class(shape), allocatable :: res
   end
+
+subroutine CheckAssumedRankInSelectType(var)
+  class(*), intent(in) :: var(..)
+  !ERROR: Assumed-rank variable may only be used as actual argument
+  select type(var)
+  end select
+ end
 end

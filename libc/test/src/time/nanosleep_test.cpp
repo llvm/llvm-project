@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <time.h>
-
-#include "src/errno/libc_errno.h"
+#include "hdr/types/struct_timespec.h"
+#include "src/__support/libc_errno.h"
 #include "src/time/nanosleep.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -23,6 +22,6 @@ TEST(LlvmLibcNanosleep, SmokeTest) {
   struct timespec tim = {1, 500};
   struct timespec tim2 = {0, 0};
   int ret = LIBC_NAMESPACE::nanosleep(&tim, &tim2);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(ret, 0);
 }

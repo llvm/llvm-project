@@ -84,7 +84,8 @@ bool hlfir::isFortranVariableType(mlir::Type type) {
   return llvm::TypeSwitch<mlir::Type, bool>(type)
       .Case<fir::ReferenceType, fir::PointerType, fir::HeapType>([](auto p) {
         mlir::Type eleType = p.getEleTy();
-        return eleType.isa<fir::BaseBoxType>() || !fir::hasDynamicSize(eleType);
+        return mlir::isa<fir::BaseBoxType>(eleType) ||
+               !fir::hasDynamicSize(eleType);
       })
       .Case<fir::BaseBoxType, fir::BoxCharType>([](auto) { return true; })
       .Case<fir::VectorType>([](auto) { return true; })
@@ -93,15 +94,15 @@ bool hlfir::isFortranVariableType(mlir::Type type) {
 
 bool hlfir::isFortranScalarCharacterType(mlir::Type type) {
   return isFortranScalarCharacterExprType(type) ||
-         type.isa<fir::BoxCharType>() ||
-         fir::unwrapPassByRefType(fir::unwrapRefType(type))
-             .isa<fir::CharacterType>();
+         mlir::isa<fir::BoxCharType>(type) ||
+         mlir::isa<fir::CharacterType>(
+             fir::unwrapPassByRefType(fir::unwrapRefType(type)));
 }
 
 bool hlfir::isFortranScalarCharacterExprType(mlir::Type type) {
-  if (auto exprType = type.dyn_cast<hlfir::ExprType>())
+  if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type))
     return exprType.isScalar() &&
-           exprType.getElementType().isa<fir::CharacterType>();
+           mlir::isa<fir::CharacterType>(exprType.getElementType());
   return false;
 }
 
@@ -121,8 +122,8 @@ bool hlfir::isFortranScalarNumericalType(mlir::Type type) {
 bool hlfir::isFortranNumericalArrayObject(mlir::Type type) {
   if (isBoxAddressType(type))
     return false;
-  if (auto arrayTy =
-          getFortranElementOrSequenceType(type).dyn_cast<fir::SequenceType>())
+  if (auto arrayTy = mlir::dyn_cast<fir::SequenceType>(
+          getFortranElementOrSequenceType(type)))
     return isFortranScalarNumericalType(arrayTy.getEleTy());
   return false;
 }
@@ -130,8 +131,8 @@ bool hlfir::isFortranNumericalArrayObject(mlir::Type type) {
 bool hlfir::isFortranNumericalOrLogicalArrayObject(mlir::Type type) {
   if (isBoxAddressType(type))
     return false;
-  if (auto arrayTy =
-          getFortranElementOrSequenceType(type).dyn_cast<fir::SequenceType>()) {
+  if (auto arrayTy = mlir::dyn_cast<fir::SequenceType>(
+          getFortranElementOrSequenceType(type))) {
     mlir::Type eleTy = arrayTy.getEleTy();
     return isFortranScalarNumericalType(eleTy) ||
            mlir::isa<fir::LogicalType>(eleTy);
@@ -142,7 +143,8 @@ bool hlfir::isFortranNumericalOrLogicalArrayObject(mlir::Type type) {
 bool hlfir::isFortranArrayObject(mlir::Type type) {
   if (isBoxAddressType(type))
     return false;
-  return !!getFortranElementOrSequenceType(type).dyn_cast<fir::SequenceType>();
+  return !!mlir::dyn_cast<fir::SequenceType>(
+      getFortranElementOrSequenceType(type));
 }
 
 bool hlfir::isPassByRefOrIntegerType(mlir::Type type) {
@@ -151,7 +153,7 @@ bool hlfir::isPassByRefOrIntegerType(mlir::Type type) {
 }
 
 bool hlfir::isI1Type(mlir::Type type) {
-  if (mlir::IntegerType integer = type.dyn_cast<mlir::IntegerType>())
+  if (mlir::IntegerType integer = mlir::dyn_cast<mlir::IntegerType>(type))
     if (integer.getWidth() == 1)
       return true;
   return false;
@@ -160,8 +162,8 @@ bool hlfir::isI1Type(mlir::Type type) {
 bool hlfir::isFortranLogicalArrayObject(mlir::Type type) {
   if (isBoxAddressType(type))
     return false;
-  if (auto arrayTy =
-          getFortranElementOrSequenceType(type).dyn_cast<fir::SequenceType>()) {
+  if (auto arrayTy = mlir::dyn_cast<fir::SequenceType>(
+          getFortranElementOrSequenceType(type))) {
     mlir::Type eleTy = arrayTy.getEleTy();
     return mlir::isa<fir::LogicalType>(eleTy);
   }
@@ -212,4 +214,26 @@ mlir::Value hlfir::genExprShape(mlir::OpBuilder &builder,
 bool hlfir::mayHaveAllocatableComponent(mlir::Type ty) {
   return fir::isPolymorphicType(ty) || fir::isUnlimitedPolymorphicType(ty) ||
          fir::isRecordWithAllocatableMember(hlfir::getFortranElementType(ty));
+}
+
+mlir::Type hlfir::getExprType(mlir::Type variableType) {
+  hlfir::ExprType::Shape typeShape;
+  bool isPolymorphic = fir::isPolymorphicType(variableType);
+  mlir::Type type = getFortranElementOrSequenceType(variableType);
+  if (auto seqType = mlir::dyn_cast<fir::SequenceType>(type)) {
+    assert(!seqType.hasUnknownShape() && "assumed-rank cannot be expressions");
+    typeShape.append(seqType.getShape().begin(), seqType.getShape().end());
+    type = seqType.getEleTy();
+  }
+  return hlfir::ExprType::get(variableType.getContext(), typeShape, type,
+                              isPolymorphic);
+}
+
+bool hlfir::isFortranIntegerScalarOrArrayObject(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
+
+  mlir::Type unwrappedType = fir::unwrapPassByRefType(fir::unwrapRefType(type));
+  mlir::Type elementType = getFortranElementType(unwrappedType);
+  return mlir::isa<mlir::IntegerType>(elementType);
 }

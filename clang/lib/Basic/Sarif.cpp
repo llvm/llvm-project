@@ -17,7 +17,6 @@
 #include "clang/Basic/Sarif.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -57,8 +56,7 @@ static std::string percentEncodeURICharacter(char C) {
   // should be written out directly. Otherwise, percent
   // encode the character and write that out instead of the
   // reserved character.
-  if (llvm::isAlnum(C) ||
-      StringRef::npos != StringRef("-._~:@!$&'()*+,;=").find(C))
+  if (llvm::isAlnum(C) || StringRef("-._~:@!$&'()*+,;=").contains(C))
     return std::string(&C, 1);
   return "%" + llvm::toHex(StringRef(&C, 1));
 }
@@ -119,7 +117,7 @@ static unsigned int adjustColumnPos(FullSourceLoc Loc,
                                     unsigned int TokenLen = 0) {
   assert(!Loc.isInvalid() && "invalid Loc when adjusting column position");
 
-  std::pair<FileID, unsigned> LocInfo = Loc.getDecomposedExpansionLoc();
+  FileIDAndOffset LocInfo = Loc.getDecomposedExpansionLoc();
   std::optional<MemoryBufferRef> Buf =
       Loc.getManager().getBufferOrNone(LocInfo.first);
   assert(Buf && "got an invalid buffer for the location's file");
@@ -142,7 +140,7 @@ static unsigned int adjustColumnPos(FullSourceLoc Loc,
 /// @{
 
 /// \internal
-json::Object createMessage(StringRef Text) {
+static json::Object createMessage(StringRef Text) {
   return json::Object{{"text", Text.str()}};
 }
 

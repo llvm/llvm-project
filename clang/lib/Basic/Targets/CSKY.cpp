@@ -139,10 +139,6 @@ bool CSKYTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   return true;
 }
 
-ArrayRef<Builtin::Info> CSKYTargetInfo::getTargetBuiltins() const {
-  return ArrayRef<Builtin::Info>();
-}
-
 ArrayRef<const char *> CSKYTargetInfo::getGCCRegNames() const {
   static const char *const GCCRegNames[] = {
       // Integer registers
@@ -308,7 +304,8 @@ bool CSKYTargetInfo::validateAsmConstraint(
   }
 }
 
-unsigned CSKYTargetInfo::getMinGlobalAlign(uint64_t Size) const {
+unsigned CSKYTargetInfo::getMinGlobalAlign(uint64_t Size,
+                                           bool HasNonWeakDef) const {
   if (Size >= 32)
     return 32;
   return 0;

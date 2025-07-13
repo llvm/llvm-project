@@ -263,7 +263,6 @@ void AppleDWARFIndex::GetTypes(
     m_module.LogMessage(log, "FindByNameAndTag()");
   const dw_tag_t expected_tag = context[0].tag;
   SearchFor(*m_apple_types_up, expected_name, callback, expected_tag);
-  return;
 }
 
 void AppleDWARFIndex::GetNamespaces(
@@ -284,8 +283,12 @@ void AppleDWARFIndex::GetFunctions(
   for (const auto &entry : m_apple_names_up->equal_range(name)) {
     DIERef die_ref(std::nullopt, DIERef::Section::DebugInfo,
                    *entry.getDIESectionOffset());
-    if (!ProcessFunctionDIE(lookup_info, die_ref, dwarf, parent_decl_ctx,
-                            callback))
+    DWARFDIE die = dwarf.GetDIE(die_ref);
+    if (!die) {
+      ReportInvalidDIERef(die_ref, name);
+      continue;
+    }
+    if (!ProcessFunctionDIE(lookup_info, die, parent_decl_ctx, callback))
       return;
   }
 }

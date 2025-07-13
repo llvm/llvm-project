@@ -193,6 +193,26 @@ func.func @f3ext(%a: vector<5xi8>) -> vector<8xi17> {
   return %1 : vector<8xi17>
 }
 
+// CHECK-LABEL: func.func @i4_transpose(
+func.func @i4_transpose(%a: vector<8x16xi4>) -> vector<16x8xi4> {
+// CHECK-SAME:    %[[IN:.*]]: vector<8x16xi4>) -> vector<16x8xi4> {
+// CHECK:           %[[EXT:.*]] = vector.interleave
+// CHECK:           %[[TRANS:.*]] = vector.transpose %[[EXT]], [1, 0] : vector<8x16xi8> to vector<16x8xi8>
+// CHECK:           vector.deinterleave %[[TRANS]] : vector<16x8xi8> -> vector<16x4xi8>
+  %0 = vector.transpose %a, [1, 0] : vector<8x16xi4> to vector<16x8xi4>
+  return %0 : vector<16x8xi4>
+}
+
+// CHECK-LABEL: func.func @i7_transpose(
+func.func @i7_transpose(%a: vector<8x16xi7>) -> vector<16x8xi7> {
+// CHECK-SAME:    %[[IN:.*]]: vector<8x16xi7>) -> vector<16x8xi7> {
+// CHECK:           %[[EXT:.*]] = arith.extsi %[[IN]] : vector<8x16xi7> to vector<8x16xi8>
+// CHECK:           %[[TRANS:.*]] = vector.transpose %[[EXT]], [1, 0] : vector<8x16xi8> to vector<16x8xi8>
+// CHECK:           %[[TRUNC:.*]] = arith.trunci %[[TRANS]] : vector<16x8xi8> to vector<16x8xi7>
+  %0 = vector.transpose %a, [1, 0] : vector<8x16xi7> to vector<16x8xi7>
+  return %0 : vector<16x8xi7>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op

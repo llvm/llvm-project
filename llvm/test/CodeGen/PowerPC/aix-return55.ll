@@ -39,7 +39,7 @@ entry:
 ;CHECKOBJ-NEXT:      1c: 67 8a bc de                   oris 10, 28, 48350{{[[:space:]] *}}
 ;CHECKOBJ32-NEXT: 00000020 <d>:
 ;CHECKOBJ64-NEXT: 0000000000000020 <d>:
-;CHECKOBJ-NEXT:      20: 40 14 00 00                   bdnzf   20, 0x20
+;CHECKOBJ-NEXT:      20: 40 14 00 00                   bdnzf   20, 0x20 <d>
 ;CHECKOBJ-NEXT:      24: 00 00 00 00                   <unknown>{{[[:space:]] *}}
 ;CHECKOBJ32-NEXT: 00000028 <foo>:
 ;CHECKOBJ32-NEXT:    28: 00 00 00 00                   <unknown>

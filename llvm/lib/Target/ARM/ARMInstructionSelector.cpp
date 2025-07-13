@@ -14,10 +14,10 @@
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "arm-isel"
@@ -142,6 +142,8 @@ private:
                        int OpIdx = -1) const;
   void renderVFPF64Imm(MachineInstrBuilder &New, const MachineInstr &Old,
                        int OpIdx = -1) const;
+  void renderInvertedImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx = -1) const;
 
 #define GET_GLOBALISEL_PREDICATES_DECL
 #include "ARMGenGlobalISel.inc"
@@ -835,6 +837,15 @@ void ARMInstructionSelector::renderVFPF64Imm(
   NewInstBuilder.addImm(FPImmEncoding);
 }
 
+void ARMInstructionSelector::renderInvertedImm(MachineInstrBuilder &MIB,
+                                               const MachineInstr &MI,
+                                               int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  int64_t CVal = MI.getOperand(1).getCImm()->getSExtValue();
+  MIB.addImm(~CVal);
+}
+
 bool ARMInstructionSelector::select(MachineInstr &I) {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
@@ -1077,7 +1088,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     return selectGlobal(MIB, MRI);
   case G_STORE:
   case G_LOAD: {
-    const auto &MemOp = **I.memoperands_begin();
+    auto &MemOp = **I.memoperands_begin();
     if (MemOp.isAtomic()) {
       LLVM_DEBUG(dbgs() << "Atomic load/store not supported yet\n");
       return false;
@@ -1091,6 +1102,26 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
 
     assert((ValSize != 64 || STI.hasVFP2Base()) &&
            "Don't know how to load/store 64-bit value without VFP");
+
+    if (auto *LoadMI = dyn_cast<GLoad>(&I)) {
+      Register PtrReg = LoadMI->getPointerReg();
+      MachineInstr *Ptr = MRI.getVRegDef(PtrReg);
+      if (Ptr->getOpcode() == TargetOpcode::G_CONSTANT_POOL) {
+        const MachineOperand &Index = Ptr->getOperand(1);
+        unsigned Opcode = Subtarget->isThumb() ? ARM::tLDRpci : ARM::LDRcp;
+
+        auto Instr = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode))
+                         .addDef(Reg)
+                         .add(Index)
+                         .addImm(0)
+                         .add(predOps(ARMCC::AL))
+                         .addMemOperand(&MemOp);
+        if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+          return false;
+        I.eraseFromParent();
+        return true;
+      }
+    }
 
     const auto NewOpc = selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize);
     if (NewOpc == G_LOAD || NewOpc == G_STORE)

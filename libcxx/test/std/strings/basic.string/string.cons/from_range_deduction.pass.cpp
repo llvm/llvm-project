@@ -10,7 +10,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // To silence a GCC warning-turned-error re. `BadAlloc::value_type`.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-unused-local-typedefs
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-unused-local-typedefs
 
 // template<ranges::input_range R,
 //          class Allocator = allocator<ranges::range_value_t<R>>>

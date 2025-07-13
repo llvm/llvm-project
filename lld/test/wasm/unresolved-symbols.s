@@ -1,27 +1,36 @@
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %s -o %t1.o
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %t/main.s -o %t/main.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %t/secondary.s -o %t/secondary.o
 
-## Check that %t1.o contains undefined symbol undef_func.
-# RUN: not wasm-ld %t1.o -o /dev/null 2>&1 | \
+## Check that both main.o and secondary.o contain references to the same
+## undefined function and that both are correctly reported.
+# RUN: not wasm-ld --no-gc-sections %t/main.o %t/secondary.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERRUND %s
-# ERRUND: error: {{.*}}1.o: undefined symbol: undef_func
+# ERRUND: error: {{.*}}main.o: undefined symbol: undef_func
+# ERRUND: error: {{.*}}secondary.o: undefined symbol: undef_func
 
 ## report-all is the default one. Check that we get the same error
-# RUN: not wasm-ld %t1.o -o /dev/null --unresolved-symbols=report-all 2>&1 | \
+# RUN: not wasm-ld --no-gc-sections %t/main.o %t/secondary.o -o /dev/null --unresolved-symbols=report-all 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERRUND %s
 
 ## Error out if unknown option value was set.
-# RUN: not wasm-ld %t1.o -o /dev/null --unresolved-symbols=xxx 2>&1 | \
+# RUN: not wasm-ld %t/main.o -o /dev/null --unresolved-symbols=xxx 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERR1 %s
 # ERR1: unknown --unresolved-symbols value: xxx
 ## Check alias.
-# RUN: not wasm-ld %t1.o -o /dev/null --unresolved-symbols xxx 2>&1 | \
+# RUN: not wasm-ld %t/main.o -o /dev/null --unresolved-symbols xxx 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERR1 %s
 
 ## Ignore all should not produce error and should not produce
-# any imports.  It should create a stub function in the place of the missing
-# function symbol.
-# RUN: wasm-ld %t1.o -o %t2.wasm --unresolved-symbols=ignore-all
+## any imports.  It should create a stub function in the place of the missing
+## function symbol.
+# RUN: wasm-ld %t/main.o -o %t2.wasm --unresolved-symbols=ignore-all
 # RUN: obj2yaml %t2.wasm | FileCheck -check-prefix=IGNORE %s
+
+## --warn-unresolved-symbols should behave the same
+# RUN: wasm-ld %t/main.o -o %t2.wasm --warn-unresolved-symbols
+# RUN: obj2yaml %t2.wasm | FileCheck -check-prefix=IGNORE %s
+
 # IGNORE-NOT: - Type:            IMPORT
 # IGNORE-NOT: - Type:            ELEM
 #
@@ -52,11 +61,11 @@
 # IGNORE-NEXT:      - Index:           3
 # IGNORE-NEXT:        Name:            get_func_addr
 
-## --import-undefined should handle unresolved funtions symbols
-# by importing them but still report errors/warning for missing data symbols.
-# `--allow-undefined` should behave like `--import-undefined` +
-# `--unresolve-symbols=ignore`
-# RUN: wasm-ld %t1.o -o %t3.wasm --import-undefined --unresolved-symbols=ignore-all
+## --import-undefined should handle unresolved functions symbols
+## by importing them but still report errors/warning for missing data symbols.
+## `--allow-undefined` should behave like `--import-undefined` +
+## `--unresolve-symbols=ignore`
+# RUN: wasm-ld %t/main.o -o %t3.wasm --import-undefined --unresolved-symbols=ignore-all
 # RUN: obj2yaml %t3.wasm | FileCheck -check-prefix=IMPORT %s
 #      IMPORT:  - Type:            IMPORT
 # IMPORT-NEXT:    Imports:
@@ -67,22 +76,24 @@
 # IMPORT-NEXT:  - Type:            FUNCTION
 
 ## Check that --import-undefined reports unresolved data symbols.
-# RUN: not wasm-ld %t1.o -o %t3.wasm --import-undefined --unresolved-symbols=report-all 2>&1 | FileCheck -check-prefix=IMPORTUNDEFINED %s
-# IMPORTUNDEFINED-NOT: error: {{.*}}1.o: undefined symbol: undef_func
-# IMPORTUNDEFINED: error: {{.*}}1.o: undefined symbol: undef_data
+# RUN: not wasm-ld %t/main.o -o %t3.wasm --import-undefined --unresolved-symbols=report-all 2>&1 | FileCheck -check-prefix=IMPORTUNDEFINED %s
+# IMPORTUNDEFINED-NOT: error: {{.*}}main.o: undefined symbol: undef_func
+# IMPORTUNDEFINED: error: {{.*}}main.o: undefined symbol: undef_data
 
 ## Do not report undefines if linking relocatable.
-# RUN: wasm-ld -r %t1.o -o %t4.wasm --unresolved-symbols=report-all
+# RUN: wasm-ld -r %t/main.o -o %t4.wasm --unresolved-symbols=report-all
 # RUN: llvm-readobj %t4.wasm > /dev/null 2>&1
+
+## import-dynamic should fail due to incompatible relocations.
+# RUN: not wasm-ld %t/main.o -o %t5.wasm --experimental-pic --unresolved-symbols=import-dynamic 2>&1 | FileCheck -check-prefix=ERRNOPIC %s
+# ERRNOPIC: relocation R_WASM_MEMORY_ADDR_SLEB cannot be used against symbol `undef_data`; recompile with -fPIC
+# ERRNOPIC: relocation R_WASM_TABLE_INDEX_SLEB cannot be used against symbol `undef_func`; recompile with -fPIC
+
+#--- main.s
 
 .functype undef_func () -> ()
 .functype get_data_addr () -> (i32)
 .functype get_func_addr () -> (i32)
-
-## import-dynamic should fail due to incompatible relocations.
-# RUN: not wasm-ld %t1.o -o %t5.wasm --unresolved-symbols=import-dynamic 2>&1 | FileCheck -check-prefix=ERRNOPIC %s
-# ERRNOPIC: relocation R_WASM_MEMORY_ADDR_SLEB cannot be used against symbol `undef_data`; recompile with -fPIC
-# ERRNOPIC: relocation R_WASM_TABLE_INDEX_SLEB cannot be used against symbol `undef_func`; recompile with -fPIC
 
 .globl _start
 _start:
@@ -106,4 +117,13 @@ get_func_addr:
     .functype get_func_addr () -> (i32)
     i32.const undef_func
     return
+    end_function
+
+#--- secondary.s
+
+.functype undef_func () -> ()
+.globl foo
+foo:
+    .functype foo () -> ()
+    call undef_func
     end_function

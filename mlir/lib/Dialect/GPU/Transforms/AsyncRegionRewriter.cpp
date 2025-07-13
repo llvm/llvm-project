@@ -16,14 +16,11 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/GPU/Transforms/Utils.h"
+#include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
@@ -232,9 +229,8 @@ private:
   // control flow code.
   static bool areAllUsersExecuteOrAwait(Value token) {
     return !token.use_empty() &&
-           llvm::all_of(token.getUsers(), [](Operation *user) {
-             return isa<async::ExecuteOp, async::AwaitOp>(user);
-           });
+           llvm::all_of(token.getUsers(),
+                        llvm::IsaPred<async::ExecuteOp, async::AwaitOp>);
   }
 
   // Add the `asyncToken` as dependency as needed after `op`.
@@ -347,8 +343,4 @@ void GpuAsyncRegionPass::runOnOperation() {
   getOperation().getRegion().walk(DeferWaitCallback());
   // Makes each !gpu.async.token returned from async.execute op have single use.
   getOperation().getRegion().walk(SingleTokenUseCallback());
-}
-
-std::unique_ptr<OperationPass<func::FuncOp>> mlir::createGpuAsyncRegionPass() {
-  return std::make_unique<GpuAsyncRegionPass>();
 }

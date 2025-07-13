@@ -446,7 +446,7 @@ define <64 x i8> @fold_with_poison_elts_avx512(<64 x i8> %InVec) {
 
 define <16 x i8> @fold_with_allpoison_elts(<16 x i8> %InVec) {
 ; CHECK-LABEL: @fold_with_allpoison_elts(
-; CHECK-NEXT:    ret <16 x i8> undef
+; CHECK-NEXT:    ret <16 x i8> poison
 ;
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %InVec, <16 x i8> poison)
   ret <16 x i8> %1
@@ -454,7 +454,7 @@ define <16 x i8> @fold_with_allpoison_elts(<16 x i8> %InVec) {
 
 define <32 x i8> @fold_with_allpoison_elts_avx2(<32 x i8> %InVec) {
 ; CHECK-LABEL: @fold_with_allpoison_elts_avx2(
-; CHECK-NEXT:    ret <32 x i8> undef
+; CHECK-NEXT:    ret <32 x i8> poison
 ;
   %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %InVec, <32 x i8> poison)
   ret <32 x i8> %1
@@ -462,10 +462,42 @@ define <32 x i8> @fold_with_allpoison_elts_avx2(<32 x i8> %InVec) {
 
 define <64 x i8> @fold_with_allpoison_elts_avx512(<64 x i8> %InVec) {
 ; CHECK-LABEL: @fold_with_allpoison_elts_avx512(
-; CHECK-NEXT:    ret <64 x i8> undef
+; CHECK-NEXT:    ret <64 x i8> poison
 ;
   %1 = tail call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> %InVec, <64 x i8> poison)
   ret <64 x i8> %1
+}
+
+; Demanded bits tests (PR106256)
+
+define <16 x i8> @demanded_bits_mask(<16 x i8> %InVec, <16 x i8> %InMask) {
+; CHECK-LABEL: @demanded_bits_mask(
+; CHECK-NEXT:    [[S:%.*]] = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> [[INVEC:%.*]], <16 x i8> [[INMASK:%.*]])
+; CHECK-NEXT:    ret <16 x i8> [[S]]
+;
+  %m = or <16 x i8> %InMask, <i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112>
+  %s = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %InVec, <16 x i8> %m)
+  ret <16 x i8> %s
+}
+
+define <32 x i8> @demanded_bits_mask_avx2(<32 x i8> %InVec, <32 x i8> %InMask) {
+; CHECK-LABEL: @demanded_bits_mask_avx2(
+; CHECK-NEXT:    [[S:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> [[INVEC:%.*]], <32 x i8> [[INMASK:%.*]])
+; CHECK-NEXT:    ret <32 x i8> [[S]]
+;
+  %m = or <32 x i8> %InMask, <i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112>
+  %s = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %InVec, <32 x i8> %m)
+  ret <32 x i8> %s
+}
+
+define <64 x i8> @demanded_bits_mask_avx512(<64 x i8> %InVec, <64 x i8> %InMask) {
+; CHECK-LABEL: @demanded_bits_mask_avx512(
+; CHECK-NEXT:    [[S:%.*]] = tail call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> [[INVEC:%.*]], <64 x i8> [[INMASK:%.*]])
+; CHECK-NEXT:    ret <64 x i8> [[S]]
+;
+  %m = or <64 x i8> %InMask, <i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112, i8 16, i8 48, i8 112, i8 112>
+  %s = tail call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> %InVec, <64 x i8> %m)
+  ret <64 x i8> %s
 }
 
 ; Demanded elts tests.

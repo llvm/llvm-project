@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodules-cache-path=%t -fmodule-name=diag_pragma -x c++ %S/Inputs/module.map -std=c++20
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodules-cache-path=%t -fmodule-name=diag_pragma -x c++ %S/Inputs/module.modulemap -std=c++20
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -verify -fmodules-cache-path=%t -I %S/Inputs %s -std=c++20
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodule-name=diag_pragma -x c++ %S/Inputs/module.map -std=c++20 -o %t/explicit.pcm -Werror=string-plus-int
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodule-name=diag_pragma -x c++ %S/Inputs/module.modulemap -std=c++20 -o %t/explicit.pcm -Werror=string-plus-int
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -verify -fmodules-cache-path=%t -I %S/Inputs %s -std=c++20 -DEXPLICIT_FLAG -fmodule-file=%t/explicit.pcm
 
 #include "diag_pragma.h"

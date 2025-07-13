@@ -2,8 +2,8 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=powerpc64le -debug-only=isel -o /dev/null 2>&1                        | FileCheck %s --check-prefix=FMFDEBUG
 ; RUN: llc < %s -mtriple=powerpc64le                                                           | FileCheck %s --check-prefix=FMF
-; RUN: llc < %s -mtriple=powerpc64le -debug-only=isel -o /dev/null 2>&1 -enable-unsafe-fp-math -enable-no-nans-fp-math | FileCheck %s --check-prefix=GLOBALDEBUG
-; RUN: llc < %s -mtriple=powerpc64le -enable-unsafe-fp-math -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math | FileCheck %s --check-prefix=GLOBAL
+; RUN: llc < %s -mtriple=powerpc64le -debug-only=isel -o /dev/null 2>&1 -enable-unsafe-fp-math -fp-contract=fast -enable-no-nans-fp-math | FileCheck %s --check-prefix=GLOBALDEBUG
+; RUN: llc < %s -mtriple=powerpc64le -enable-unsafe-fp-math -fp-contract=fast -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math | FileCheck %s --check-prefix=GLOBAL
 
 ; Test FP transforms using instruction/node-level fast-math-flags.
 ; We're also checking debug output to verify that FMF is propagated to the newly created nodes.
@@ -577,15 +577,15 @@ define double @fcmp_nnan(double %a, double %y, double %z) {
 ; FP library calls can have fast-math-flags.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'log2_approx:'
-; FMFDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<ptr @log2>
-; FMFDEBUG:         ch,glue = callseq_end t15, TargetConstant:i64<32>, TargetConstant:i64<0>, t15:1
-; FMFDEBUG:         f64,ch,glue = CopyFromReg t16, Register:f64 $f1, t16:1
+; FMFDEBUG:         ch,glue = PPCISD::CALL_NOP {{t[0-9]+}}, TargetGlobalAddress:i64<ptr @log2>
+; FMFDEBUG:         ch,glue = callseq_end [[T15:t[0-9]+]], TargetConstant:i64<32>, TargetConstant:i64<0>, [[T15]]:1
+; FMFDEBUG:         f64,ch,glue = CopyFromReg [[T16:t[0-9]+]], Register:f64 $f1, [[T16]]:1
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'log2_approx:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'log2_approx:'
-; GLOBALDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<ptr @log2>
-; GLOBALDEBUG:         ch,glue = callseq_end t15, TargetConstant:i64<32>, TargetConstant:i64<0>, t15:1
-; GLOBALDEBUG:         f64,ch,glue = CopyFromReg t16, Register:f64 $f1, t16:1
+; GLOBALDEBUG:         ch,glue = PPCISD::CALL_NOP {{t[0-9]+}}, TargetGlobalAddress:i64<ptr @log2>
+; GLOBALDEBUG:         ch,glue = callseq_end [[T15:t[0-9]+]], TargetConstant:i64<32>, TargetConstant:i64<0>, [[T15]]:1
+; GLOBALDEBUG:         f64,ch,glue = CopyFromReg [[T16:t[0-9]+]], Register:f64 $f1, [[T16]]:1
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'log2_approx:'
 
 declare double @log2(double)

@@ -192,7 +192,7 @@ end:
   ret { i32, i32 } %r
 }
 
-; But the indicies must match
+; But the indices must match
 define { i32, i32 } @test6({ i32, i32 } %agg, i32 %val_left, i32 %val_right, i1 %c) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
@@ -223,7 +223,7 @@ end:
   ret { i32, i32 } %r
 }
 
-; More complex aggregates are fine, too, as long as indicies match.
+; More complex aggregates are fine, too, as long as indices match.
 define {{ i32, i32 }, { i32, i32 }} @test7({{ i32, i32 }, { i32, i32 }} %agg, i32 %val_left, i32 %val_right, i1 %c) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
@@ -253,7 +253,7 @@ end:
   ret {{ i32, i32 }, { i32, i32 }} %r
 }
 
-; The indicies must fully match, on all levels.
+; The indices must fully match, on all levels.
 define {{ i32, i32 }, { i32, i32 }} @test8({{ i32, i32 }, { i32, i32 }} %agg, i32 %val_left, i32 %val_right, i1 %c) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:

@@ -1,4 +1,4 @@
-# RUN: llc -march=mipsel -mattr=mips16 -relocation-model=pic -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=mipsel -mattr=mips16 -relocation-model=pic -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses the call entry pseudo source
 # values in memory operands correctly.
 
@@ -13,7 +13,7 @@
 
   define float @test2() #0 {
   entry:
-    %call = tail call float bitcast (float (...)* @g to float ()*)()
+    %call = tail call float @g()
     call void @__mips16_ret_sf(float %call)
     ret float %call
   }

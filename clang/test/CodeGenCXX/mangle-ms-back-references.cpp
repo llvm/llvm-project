@@ -1,5 +1,18 @@
 // RUN: %clang_cc1 -fms-extensions -fblocks -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
 
+namespace NS {
+// The name "RT1" for the name of the class below has been specifically
+// chosen to ensure that back reference lookup does not match against the
+// implicitly generated "$RT1" name of the reference temporary symbol.
+struct RT1 {
+  static const RT1& singleton;
+  int i;
+};
+const RT1& RT1::singleton = RT1{1};
+}
+// CHECK: "?$RT1@singleton@RT1@NS@@2ABU23@B"
+// CHECK: "?singleton@RT1@NS@@2ABU12@B"
+
 void f1(const char* a, const char* b) {}
 // CHECK: "?f1@@YAXPBD0@Z"
 
@@ -83,3 +96,20 @@ class H;
 
 void ManyParams(T01 &, T02 &, T03 &, T04 &, T05 &, T06 &, T07 &, T08 &, T09 &, T10 &, H<T11> &, H<T11> &) {}
 // CHECK: "?ManyParams@@YAXAAVT01@@AAVT02@@AAVT03@@AAVT04@@AAVT05@@AAVT06@@AAVT07@@AAVT08@@AAVT09@@AAVT10@@AAV?$H@VT11@@@@AAV?$H@VT11@@@@@Z"
+
+namespace NS {
+// The name "TSS0" for the name of the class below has been specifically
+// chosen to ensure that back reference lookup does not match against the
+// implicitly generated "$TSS0" name of the thread safe static initialization
+// variable.
+struct __declspec(dllexport) TSS0 {
+  static TSS0& get();
+  __forceinline static TSS0& singleton() {
+    static TSS0& lsv = get();
+    return lsv;
+  }
+};
+}
+// CHECK: "?singleton@TSS0@NS@@SAAAU12@XZ"
+// CHECK: "?lsv@?1??singleton@TSS0@NS@@SAAAU23@XZ@4AAU23@A"
+// CHECK: "?$TSS0@?1??singleton@TSS0@NS@@SAAAU23@XZ@4HA"

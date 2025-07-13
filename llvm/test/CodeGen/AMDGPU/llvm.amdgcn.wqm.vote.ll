@@ -1,9 +1,9 @@
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE64 %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE64 %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE64 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE64 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
 
 ;CHECK-LABEL: {{^}}ret:
 ;CHECK: v_cmp_eq_u32_e32 [[CMP:[^,]+]], v0, v1
@@ -43,12 +43,12 @@ main_body:
 ;CHECK: v_cmp_eq_u32_e32 [[CMP:[^,]+]], v0, v1
 
 ;WAVE64: s_wqm_b64 [[WQM:[^,]+]], [[CMP]]
-;WAVE64: s_xor_b64 [[KILL:[^,]+]], [[WQM]], exec
+;WAVE64: s_andn2_b64 [[KILL:[^,]+]], exec, [[WQM]]
 ;WAVE64: s_andn2_b64 [[MASK:[^,]+]], [[EXEC:[^,]+]], [[KILL]]
 ;WAVE64: s_and_b64 exec, exec, [[MASK]]
 
 ;WAVE32: s_wqm_b32 [[WQM:[^,]+]], [[CMP]]
-;WAVE32: s_xor_b32 [[KILL:[^,]+]], [[WQM]], exec
+;WAVE32: s_and{{n2|_not1}}_b32 [[KILL:[^,]+]], exec_lo, [[WQM]]
 ;WAVE32: s_and{{n2|_not1}}_b32 [[MASK:[^,]+]], [[EXEC:[^,]+]], [[KILL]]
 ;WAVE32: s_and_b32 exec_lo, exec_lo, [[MASK]]
 

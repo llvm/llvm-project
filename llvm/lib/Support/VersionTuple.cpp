@@ -85,9 +85,8 @@ bool VersionTuple::tryParse(StringRef input) {
   }
 
   // If we're not done, parse the micro version, \.[0-9]+
-  if (input[0] != '.')
+  if (!input.consume_front("."))
     return true;
-  input = input.substr(1);
   if (parseInt(input, micro))
     return true;
 
@@ -97,9 +96,8 @@ bool VersionTuple::tryParse(StringRef input) {
   }
 
   // If we're not done, parse the micro version, \.[0-9]+
-  if (input[0] != '.')
+  if (!input.consume_front("."))
     return true;
-  input = input.substr(1);
   if (parseInt(input, build))
     return true;
 
@@ -109,4 +107,14 @@ bool VersionTuple::tryParse(StringRef input) {
 
   *this = VersionTuple(major, minor, micro, build);
   return false;
+}
+
+VersionTuple VersionTuple::withMajorReplaced(unsigned NewMajor) const {
+  if (HasBuild)
+    return VersionTuple(NewMajor, Minor, Subminor, Build);
+  if (HasSubminor)
+    return VersionTuple(NewMajor, Minor, Subminor);
+  if (HasMinor)
+    return VersionTuple(NewMajor, Minor);
+  return VersionTuple(NewMajor);
 }

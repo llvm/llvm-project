@@ -14,6 +14,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/CastInterfaces.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -53,6 +54,7 @@ namespace arith {
 class ConstantIntOp : public arith::ConstantOp {
 public:
   using arith::ConstantOp::ConstantOp;
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
 
   /// Build a constant int op that produces an integer of the specified width.
   static void build(OpBuilder &builder, OperationState &result, int64_t value,
@@ -60,8 +62,12 @@ public:
 
   /// Build a constant int op that produces an integer of the specified type,
   /// which must be an integer type.
-  static void build(OpBuilder &builder, OperationState &result, int64_t value,
-                    Type type);
+  static void build(OpBuilder &builder, OperationState &result, Type type,
+                    int64_t value);
+
+  /// Build a constant int op that produces an integer from an APInt
+  static void build(OpBuilder &builder, OperationState &result, Type type,
+                    const APInt &value);
 
   inline int64_t value() {
     return cast<IntegerAttr>(arith::ConstantOp::getValue()).getInt();
@@ -74,10 +80,11 @@ public:
 class ConstantFloatOp : public arith::ConstantOp {
 public:
   using arith::ConstantOp::ConstantOp;
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
 
   /// Build a constant float op that produces a float of the specified type.
-  static void build(OpBuilder &builder, OperationState &result,
-                    const APFloat &value, FloatType type);
+  static void build(OpBuilder &builder, OperationState &result, FloatType type,
+                    const APFloat &value);
 
   inline APFloat value() {
     return cast<FloatAttr>(arith::ConstantOp::getValue()).getValue();
@@ -90,7 +97,7 @@ public:
 class ConstantIndexOp : public arith::ConstantOp {
 public:
   using arith::ConstantOp::ConstantOp;
-
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
   /// Build a constant int op that produces an index.
   static void build(OpBuilder &builder, OperationState &result, int64_t value);
 
@@ -151,6 +158,11 @@ Value getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
                      Value lhs, Value rhs);
 
 arith::CmpIPredicate invertPredicate(arith::CmpIPredicate pred);
+
+/// Creates an `arith.constant` operation with a zero value of type `type`. This
+/// method asserts if `type` is invalid for representing zero with
+/// `arith.constant`.
+Value getZeroConstant(OpBuilder &builder, Location loc, Type type);
 } // namespace arith
 } // namespace mlir
 

@@ -10,7 +10,7 @@
 #define _LIBCPP___UTILITY_PRIORITY_TAG_H
 
 #include <__config>
-#include <cstddef>
+#include <__cstddef/size_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -18,8 +18,10 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template<size_t _Ip> struct __priority_tag : __priority_tag<_Ip - 1> {};
-template<> struct __priority_tag<0> {};
+template <size_t _Ip>
+struct __priority_tag : __priority_tag<_Ip - 1> {};
+template <>
+struct __priority_tag<0> {};
 
 _LIBCPP_END_NAMESPACE_STD
 

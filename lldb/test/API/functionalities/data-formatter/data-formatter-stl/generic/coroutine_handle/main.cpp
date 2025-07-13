@@ -1,13 +1,27 @@
+#if defined(USE_LIBSTDCPP)
+#include <bits/c++config.h>
+// glibc++ >= 11 and c++20
+#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE >= 11
 #include <coroutine>
+#define HAS_CPP_COROUTINES 1
+#endif
+#endif
+
+// libc++ always has 'coroutine' feature.
+#if defined(USE_LIBCPP)
+#include <coroutine>
+#define HAS_CPP_COROUTINES 1
+#endif
 
 bool is_implementation_supported() {
-#ifdef _GLIBCXX_RELEASE
-  return _GLIBCXX_RELEASE >= 11;
-#else
+#ifdef HAS_CPP_COROUTINES
   return true;
+#else
+  return false;
 #endif
 }
 
+#ifdef HAS_CPP_COROUTINES
 // `int_generator` is a stripped down, minimal coroutine generator
 // type.
 struct int_generator {
@@ -39,8 +53,11 @@ int_generator my_generator_func() { co_yield 42; }
 // a place to reliably set a breakpoint on.
 void empty_function_so_we_can_set_a_breakpoint() {}
 
+#endif // HAS_CPP_COROUTINES
+
 int main() {
   bool is_supported = is_implementation_supported();
+#ifdef HAS_CPP_COROUTINES
   int_generator gen = my_generator_func();
   std::coroutine_handle<> type_erased_hdl = gen.hdl;
   std::coroutine_handle<int> incorrectly_typed_hdl =
@@ -48,4 +65,8 @@ int main() {
   gen.hdl.resume();                            // Break at initial_suspend
   gen.hdl.resume();                            // Break after co_yield
   empty_function_so_we_can_set_a_breakpoint(); // Break at final_suspend
+  return 0;
+#else
+  return 0; // Break at initial_suspend
+#endif // HAS_CPP_COROUTINES
 }

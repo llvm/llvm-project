@@ -13,17 +13,17 @@
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
 // UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <vector>
 
 #include "check_assertion.h"
 
 int main(int, char**) {
-    std::vector<int> v;
-    v.push_back(0);
-    v.pop_back();
-    TEST_LIBCPP_ASSERT_FAILURE(v.pop_back(), "vector::pop_back called on an empty vector");
+  std::vector<int> v;
+  v.push_back(0);
+  v.pop_back();
+  TEST_LIBCPP_ASSERT_FAILURE(v.pop_back(), "vector::pop_back called on an empty vector");
 
-    return 0;
+  return 0;
 }

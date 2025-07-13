@@ -14,6 +14,27 @@
 
 namespace mlir {
 
+//===----------------------------------------------------------------------===//
+// Helper Functions
+//===----------------------------------------------------------------------===//
+
+/// Find or create an external function declaration in the given module.
+LLVM::LLVMFuncOp getOrDefineFunction(gpu::GPUModuleOp moduleOp, Location loc,
+                                     OpBuilder &b, StringRef name,
+                                     LLVM::LLVMFunctionType type);
+
+/// Create a global that contains the given string. If a global with the same
+/// string already exists in the module, return that global.
+LLVM::GlobalOp getOrCreateStringConstant(OpBuilder &b, Location loc,
+                                         gpu::GPUModuleOp moduleOp, Type llvmI8,
+                                         StringRef namePrefix, StringRef str,
+                                         uint64_t alignment = 0,
+                                         unsigned addrSpace = 0);
+
+//===----------------------------------------------------------------------===//
+// Lowering Patterns
+//===----------------------------------------------------------------------===//
+
 /// Lowering for gpu.dynamic.shared.memory to LLVM dialect. The pattern first
 /// create a 0-sized global array symbol similar as LLVM expects. It constructs
 /// a memref descriptor with these values and return it.
@@ -22,8 +43,9 @@ struct GPUDynamicSharedMemoryOpLowering
   using ConvertOpToLLVMPattern<
       gpu::DynamicSharedMemoryOp>::ConvertOpToLLVMPattern;
   GPUDynamicSharedMemoryOpLowering(const LLVMTypeConverter &converter,
-                                   unsigned alignmentBit = 0)
-      : ConvertOpToLLVMPattern<gpu::DynamicSharedMemoryOp>(converter),
+                                   unsigned alignmentBit = 0,
+                                   PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<gpu::DynamicSharedMemoryOp>(converter, benefit),
         alignmentBit(alignmentBit) {}
 
   LogicalResult
@@ -35,14 +57,42 @@ private:
   unsigned alignmentBit;
 };
 
+struct GPUFuncOpLoweringOptions {
+  /// The address space to use for `alloca`s in private memory.
+  unsigned allocaAddrSpace;
+  /// The address space to use declaring workgroup memory.
+  unsigned workgroupAddrSpace;
+
+  /// The attribute name to use instead of `gpu.kernel`. Null if no attribute
+  /// should be used.
+  StringAttr kernelAttributeName;
+  /// The attribute name to to set block size. Null if no attribute should be
+  /// used.
+  StringAttr kernelBlockSizeAttributeName;
+
+  /// The calling convention to use for kernel functions.
+  LLVM::CConv kernelCallingConvention = LLVM::CConv::C;
+  /// The calling convention to use for non-kernel functions.
+  LLVM::CConv nonKernelCallingConvention = LLVM::CConv::C;
+
+  /// Whether to encode workgroup attributions as additional arguments instead
+  /// of a global variable.
+  bool encodeWorkgroupAttributionsAsArguments = false;
+};
+
 struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
   GPUFuncOpLowering(const LLVMTypeConverter &converter,
-                    unsigned allocaAddrSpace, unsigned workgroupAddrSpace,
-                    StringAttr kernelAttributeName)
-      : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter),
-        allocaAddrSpace(allocaAddrSpace),
-        workgroupAddrSpace(workgroupAddrSpace),
-        kernelAttributeName(kernelAttributeName) {}
+                    const GPUFuncOpLoweringOptions &options,
+                    PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter, benefit),
+        allocaAddrSpace(options.allocaAddrSpace),
+        workgroupAddrSpace(options.workgroupAddrSpace),
+        kernelAttributeName(options.kernelAttributeName),
+        kernelBlockSizeAttributeName(options.kernelBlockSizeAttributeName),
+        kernelCallingConvention(options.kernelCallingConvention),
+        nonKernelCallingConvention(options.nonKernelCallingConvention),
+        encodeWorkgroupAttributionsAsArguments(
+            options.encodeWorkgroupAttributionsAsArguments) {}
 
   LogicalResult
   matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
@@ -54,8 +104,21 @@ private:
   /// The address space to use declaring workgroup memory.
   unsigned workgroupAddrSpace;
 
-  /// The attribute name to use instead of `gpu.kernel`.
+  /// The attribute name to use instead of `gpu.kernel`. Null if no attribute
+  /// should be used.
   StringAttr kernelAttributeName;
+  /// The attribute name to to set block size. Null if no attribute should be
+  /// used.
+  StringAttr kernelBlockSizeAttributeName;
+
+  /// The calling convention to use for kernel functions
+  LLVM::CConv kernelCallingConvention;
+  /// The calling convention to use for non-kernel functions
+  LLVM::CConv nonKernelCallingConvention;
+
+  /// Whether to encode workgroup attributions as additional arguments instead
+  /// of a global variable.
+  bool encodeWorkgroupAttributionsAsArguments;
 };
 
 /// The lowering of gpu.printf to a call to HIP hostcalls
@@ -74,7 +137,7 @@ struct GPUPrintfOpToHIPLowering : public ConvertOpToLLVMPattern<gpu::PrintfOp> {
 /// The lowering of gpu.printf to a call to an external printf() function
 ///
 /// This pass will add a declaration of printf() to the GPUModule if needed
-/// and seperate out the format strings into global constants. For some
+/// and separate out the format strings into global constants. For some
 /// runtimes, such as OpenCL on AMD, this is sufficient setup, as the compiler
 /// will lower printf calls to appropriate device-side code
 struct GPUPrintfOpToLLVMCallLowering
@@ -107,20 +170,17 @@ struct GPUReturnOpLowering : public ConvertOpToLLVMPattern<gpu::ReturnOp> {
 
   LogicalResult
   matchAndRewrite(gpu::ReturnOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, adaptor.getOperands());
-    return success();
-  }
+                  ConversionPatternRewriter &rewriter) const override;
 };
 
 namespace impl {
-/// Unrolls op if it's operating on vectors.
+/// Unrolls op to array/vector elements.
 LogicalResult scalarizeVectorOp(Operation *op, ValueRange operands,
                                 ConversionPatternRewriter &rewriter,
                                 const LLVMTypeConverter &converter);
 } // namespace impl
 
-/// Rewriting that unrolls SourceOp to scalars if it's operating on vectors.
+/// Unrolls SourceOp to array/vector elements.
 template <typename SourceOp>
 struct ScalarizeVectorOpLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
@@ -133,6 +193,7 @@ public:
                                    *this->getTypeConverter());
   }
 };
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_GPUOPSLOWERING_H_

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=O1
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=O0
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=O1
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O0 -emit-llvm -o - %s | FileCheck %s --check-prefix=O0
 //
 // Ensure that we place appropriate lifetime markers around indirectly returned
 // temporaries, and that the lifetime.ends appear in a timely manner.
@@ -63,11 +63,11 @@ struct S baz(int i, volatile int *j) {
     //
     // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP1_ALLOCA]])
     //
-    // O1: call void @foo_int(ptr sret(%struct.S) align 4 %[[TMP1_ALLOCA]],
+    // O1: call void @foo_int(ptr dead_on_unwind writable sret(%struct.S) align 4 %[[TMP1_ALLOCA]],
     // O1: call void @llvm.memcpy
     // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP1_ALLOCA]])
     // O1: call void @llvm.lifetime.start.p0({{[^,]*}}, ptr %[[TMP2_ALLOCA]])
-    // O1: call void @foo_int(ptr sret(%struct.S) align 4 %[[TMP2_ALLOCA]],
+    // O1: call void @foo_int(ptr dead_on_unwind writable sret(%struct.S) align 4 %[[TMP2_ALLOCA]],
     // O1: call void @llvm.memcpy
     // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP2_ALLOCA]])
     r = foo_int(({

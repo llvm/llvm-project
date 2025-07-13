@@ -105,6 +105,7 @@ protected:
             mlir::Type stmtResultType) override;
 };
 using HlfirMinlocLowering = HlfirMinMaxLocIntrinsic<hlfir::MinlocOp>;
+using HlfirMaxlocLowering = HlfirMinMaxLocIntrinsic<hlfir::MaxlocOp>;
 
 template <typename OP>
 class HlfirProductIntrinsic : public HlfirTransformationalIntrinsic {
@@ -156,6 +157,28 @@ protected:
 
 protected:
   hlfir::CharExtremumPredicate pred;
+};
+
+class HlfirCShiftLowering : public HlfirTransformationalIntrinsic {
+public:
+  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
+
+protected:
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
+};
+
+class HlfirReshapeLowering : public HlfirTransformationalIntrinsic {
+public:
+  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
+
+protected:
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
 };
 
 } // namespace
@@ -264,16 +287,17 @@ HlfirTransformationalIntrinsic::computeResultType(mlir::Value argArray,
                                                   mlir::Type stmtResultType) {
   mlir::Type normalisedResult =
       hlfir::getFortranElementOrSequenceType(stmtResultType);
-  if (auto array = normalisedResult.dyn_cast<fir::SequenceType>()) {
+  if (auto array = mlir::dyn_cast<fir::SequenceType>(normalisedResult)) {
     hlfir::ExprType::Shape resultShape =
         hlfir::ExprType::Shape{array.getShape()};
     mlir::Type elementType = array.getEleTy();
     return hlfir::ExprType::get(builder.getContext(), resultShape, elementType,
-                                /*polymorphic=*/false);
+                                fir::isPolymorphicType(stmtResultType));
   } else if (auto resCharType =
                  mlir::dyn_cast<fir::CharacterType>(stmtResultType)) {
     normalisedResult = hlfir::ExprType::get(
-        builder.getContext(), hlfir::ExprType::Shape{}, resCharType, false);
+        builder.getContext(), hlfir::ExprType::Shape{}, resCharType,
+        /*polymorphic=*/false);
   }
   return normalisedResult;
 }
@@ -340,7 +364,7 @@ mlir::Value HlfirTransposeLowering::lowerImpl(
   hlfir::ExprType::Shape resultShape;
   mlir::Type normalisedResult =
       hlfir::getFortranElementOrSequenceType(stmtResultType);
-  auto array = normalisedResult.cast<fir::SequenceType>();
+  auto array = mlir::cast<fir::SequenceType>(normalisedResult);
   llvm::ArrayRef<int64_t> arrayShape = array.getShape();
   assert(arrayShape.size() == 2 && "arguments to transpose have a rank of 2");
   mlir::Type elementType = array.getEleTy();
@@ -373,9 +397,8 @@ mlir::Value HlfirCountLowering::lowerImpl(
   mlir::Value dim = operands[1];
   if (dim)
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
-  mlir::Value kind = operands[2];
   mlir::Type resultType = computeResultType(array, stmtResultType);
-  return createOp<hlfir::CountOp>(resultType, array, dim, kind);
+  return createOp<hlfir::CountOp>(resultType, array, dim);
 }
 
 mlir::Value HlfirCharExtremumLowering::lowerImpl(
@@ -385,6 +408,37 @@ mlir::Value HlfirCharExtremumLowering::lowerImpl(
   auto operands = getOperandVector(loweredActuals, argLowering);
   assert(operands.size() >= 2);
   return createOp<hlfir::CharExtremumOp>(pred, mlir::ValueRange{operands});
+}
+
+mlir::Value HlfirCShiftLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  auto operands = getOperandVector(loweredActuals, argLowering);
+  assert(operands.size() == 3);
+  mlir::Value dim = operands[2];
+  if (!dim) {
+    // If DIM is not present, drop the last element which is a null Value.
+    operands.truncate(2);
+  } else {
+    // If DIM is present, then dereference it if it is a ref.
+    dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
+    operands[2] = dim;
+  }
+
+  mlir::Type resultType = computeResultType(operands[0], stmtResultType);
+  return createOp<hlfir::CShiftOp>(resultType, operands);
+}
+
+mlir::Value HlfirReshapeLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  auto operands = getOperandVector(loweredActuals, argLowering);
+  assert(operands.size() == 4);
+  mlir::Type resultType = computeResultType(operands[0], stmtResultType);
+  return createOp<hlfir::ReshapeOp>(resultType, operands[0], operands[1],
+                                    operands[2], operands[3]);
 }
 
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
@@ -429,6 +483,15 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "minloc")
     return HlfirMinlocLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                    stmtResultType);
+  if (name == "maxloc")
+    return HlfirMaxlocLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                   stmtResultType);
+  if (name == "cshift")
+    return HlfirCShiftLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                   stmtResultType);
+  if (name == "reshape")
+    return HlfirReshapeLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                    stmtResultType);
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")
       return HlfirCharExtremumLowering{builder, loc,

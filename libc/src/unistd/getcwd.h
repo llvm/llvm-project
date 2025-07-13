@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_GETCWD_H
 #define LLVM_LIBC_SRC_UNISTD_GETCWD_H
 
-#include <unistd.h>
+#include "hdr/types/size_t.h"
+#include "hdr/unistd_macros.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 char *getcwd(char *buf, size_t size);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_GETCWD_H

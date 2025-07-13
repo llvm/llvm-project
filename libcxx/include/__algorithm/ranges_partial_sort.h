@@ -33,14 +33,15 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __partial_sort {
-
-struct __fn {
+struct __partial_sort {
   template <class _Iter, class _Sent, class _Comp, class _Proj>
   _LIBCPP_HIDE_FROM_ABI constexpr static _Iter
   __partial_sort_fn_impl(_Iter __first, _Iter __middle, _Sent __last, _Comp& __comp, _Proj& __proj) {
@@ -63,15 +64,15 @@ struct __fn {
   }
 };
 
-} // namespace __partial_sort
-
 inline namespace __cpo {
-inline constexpr auto partial_sort = __partial_sort::__fn{};
+inline constexpr auto partial_sort = __partial_sort{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_PARTIAL_SORT_H

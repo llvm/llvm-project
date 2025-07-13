@@ -236,12 +236,19 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     report_fatal_error("Code generator does not support intrinsic function '"+
                       Callee->getName()+"'!");
 
-  case Intrinsic::expect: {
-    // Just replace __builtin_expect(exp, c) with EXP.
+  case Intrinsic::expect:
+  case Intrinsic::expect_with_probability: {
+    // Just replace __builtin_expect(exp, c) and
+    // __builtin_expect_with_probability(exp, c, p) with EXP.
     Value *V = CI->getArgOperand(0);
     CI->replaceAllUsesWith(V);
     break;
   }
+
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check:
+    CI->replaceAllUsesWith(ConstantInt::getTrue(CI->getType()));
+    return;
 
   case Intrinsic::ctpop:
     CI->replaceAllUsesWith(LowerCTPOP(Context, CI->getArgOperand(0), CI));
@@ -309,6 +316,12 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
   case Intrinsic::readcyclecounter: {
     errs() << "WARNING: this target does not support the llvm.readcyclecoun"
            << "ter intrinsic.  It is being lowered to a constant 0\n";
+    CI->replaceAllUsesWith(ConstantInt::get(Type::getInt64Ty(Context), 0));
+    break;
+  }
+  case Intrinsic::readsteadycounter: {
+    errs() << "WARNING: this target does not support the llvm.readsteadycounter"
+           << " intrinsic.  It is being lowered to a constant 0\n";
     CI->replaceAllUsesWith(ConstantInt::get(Type::getInt64Ty(Context), 0));
     break;
   }
@@ -438,7 +451,7 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
   case Intrinsic::invariant_start:
   case Intrinsic::lifetime_start:
     // Discard region information.
-    CI->replaceAllUsesWith(UndefValue::get(CI->getType()));
+    CI->replaceAllUsesWith(PoisonValue::get(CI->getType()));
     break;
   case Intrinsic::invariant_end:
   case Intrinsic::lifetime_end:
@@ -463,10 +476,10 @@ bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
 
   // Okay, we can do this xform, do so now.
   Module *M = CI->getModule();
-  Function *Int = Intrinsic::getDeclaration(M, Intrinsic::bswap, Ty);
+  Function *Int = Intrinsic::getOrInsertDeclaration(M, Intrinsic::bswap, Ty);
 
   Value *Op = CI->getArgOperand(0);
-  Op = CallInst::Create(Int, Op, CI->getName(), CI);
+  Op = CallInst::Create(Int, Op, CI->getName(), CI->getIterator());
 
   CI->replaceAllUsesWith(Op);
   CI->eraseFromParent();

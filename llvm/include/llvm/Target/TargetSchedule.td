@@ -192,15 +192,10 @@ class ProcResourceUnits<ProcResourceKind kind, int num> {
   SchedMachineModel SchedModel = ?;
 }
 
-// EponymousProcResourceKind helps implement ProcResourceUnits by
-// allowing a ProcResourceUnits definition to reference itself. It
-// should not be referenced anywhere else.
-def EponymousProcResourceKind : ProcResourceKind;
-
 // Subtargets typically define processor resource kind and number of
 // units in one place.
 class ProcResource<int num> : ProcResourceKind,
-  ProcResourceUnits<EponymousProcResourceKind, num>;
+  ProcResourceUnits<!cast<ProcResourceKind>(NAME), num>;
 
 class ProcResGroup<list<ProcResource> resources> : ProcResourceKind {
   list<ProcResource> Resources = resources;
@@ -326,9 +321,13 @@ class SchedWriteRes<list<ProcResourceKind> resources> : SchedWrite,
 // Define values common to ReadAdvance and SchedReadAdvance.
 //
 // SchedModel ties these resources to a processor.
-class ProcReadAdvance<int cycles, list<SchedWrite> writes = []> {
+class ProcReadAdvance<int cycles, list<SchedWrite> writes = [],
+                      list<int> tunables = []> {
+  assert !le(!size(tunables), !size(writes)),
+         "cannot have more `tunables' than `writes'";
   int Cycles = cycles;
   list<SchedWrite> ValidWrites = writes;
+  list<int> CycleTunables = tunables;
   // Allow a processor to mark some scheduling classes as unsupported
   // for stronger verification.
   bit Unsupported = false;
@@ -345,15 +344,17 @@ class ProcReadAdvance<int cycles, list<SchedWrite> writes = []> {
 // indicate operands that are always read this number of Cycles later
 // than a normal register read, allowing the read's parent instruction
 // to issue earlier relative to the writer.
-class ReadAdvance<SchedRead read, int cycles, list<SchedWrite> writes = []>
-  : ProcReadAdvance<cycles, writes> {
+class ReadAdvance<SchedRead read, int cycles, list<SchedWrite> writes = [],
+                  list<int> tunables = []>
+  : ProcReadAdvance<cycles, writes, tunables> {
   SchedRead ReadType = read;
 }
 
 // Directly associate a new SchedRead type with a delay and optional
 // pipeline bypass. For use with InstRW or ItinRW.
-class SchedReadAdvance<int cycles, list<SchedWrite> writes = []> : SchedRead,
-  ProcReadAdvance<cycles, writes>;
+class SchedReadAdvance<int cycles, list<SchedWrite> writes = [],
+                       list<int> tunables = []>
+  : SchedRead, ProcReadAdvance<cycles, writes, tunables>;
 
 // Define SchedRead defaults. Reads seldom need special treatment.
 def ReadDefault : SchedRead;
@@ -404,6 +405,8 @@ def NoSchedPred : MCSchedPredicate<TruePred>;
 class SchedVar<SchedPredicateBase pred, list<SchedReadWrite> selected> {
   SchedPredicateBase Predicate = pred;
   list<SchedReadWrite> Selected = selected;
+  // SchedModel silences warnings but is ignored.
+  SchedMachineModel SchedModel = ?;
 }
 
 // SchedModel silences warnings but is ignored.

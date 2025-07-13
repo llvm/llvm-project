@@ -52,6 +52,12 @@ T *atest3() __attribute__((assume_aligned(31, o))); // expected-error {{requeste
 template <typename T, int o>
 T *atest4() __attribute__((assume_aligned(32, o)));
 
+template<typename T>
+T atest5(int) __attribute__((assume_aligned(2)));
+
+// expected-warning@+1 {{'assume_aligned' attribute only applies to return values that are pointers or references}}
+int atest6(int) __attribute__((assume_aligned(2)));
+
 void test22() {
   atest3<int, 5>();
   atest4<int, 5>();
@@ -85,3 +91,14 @@ void test24() {
   atest5<s3>(); // expected-note {{in instantiation of function template specialization 'atest5<s3>' requested here}}
 }
 
+namespace GH26612 {
+// This issue was about the align_value attribute, but assume_aligned has the
+// same problematic code pattern, so is being fixed at the same time despite
+// not having the same crashing behavior.
+template <class T>
+__attribute__((assume_aligned(4))) T f(T x); // expected-warning {{'assume_aligned' attribute only applies to return values that are pointers or references}}
+
+void foo() {
+  f<int>(0); // expected-note {{in instantiation of function template specialization 'GH26612::f<int>' requested here}}
+}
+} // namespace GH26612

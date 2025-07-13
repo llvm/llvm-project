@@ -21,4 +21,4 @@ declare void @func2(ptr)
 ; CHECK-OPT: sub [[REG3:x[0-9]+]], sp, x15, lsl #4
 ; CHECK-OPT: mov sp, [[REG3]]
 ; CHECK: bl func2
-; CHECK-ARM64EC: bl __chkstk_arm64ec
+; CHECK-ARM64EC: bl "#__chkstk_arm64ec"

@@ -11,7 +11,6 @@ define i64 @PR62286(i32 %a) {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,1,0]
 ; SSE-NEXT:    paddd %xmm1, %xmm1
 ; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSE-NEXT:    pxor %xmm3, %xmm3
 ; SSE-NEXT:    pcmpgtd %xmm1, %xmm3
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
@@ -19,38 +18,34 @@ define i64 @PR62286(i32 %a) {
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE-NEXT:    paddq %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE-NEXT:    paddq %xmm0, %xmm1
-; SSE-NEXT:    movq %xmm1, %rax
+; SSE-NEXT:    movq %xmm0, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR62286:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,1,0]
-; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm1
-; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3],ymm1[4],ymm0[5,6,7]
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vorps %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3]
+; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
-; AVX1-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; AVX1-NEXT:    vpmovsxdq %xmm1, %xmm1
+; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR62286:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
-; AVX2-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3]
-; AVX2-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpaddd %xmm0, %xmm0, %xmm1
+; AVX2-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3]
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0

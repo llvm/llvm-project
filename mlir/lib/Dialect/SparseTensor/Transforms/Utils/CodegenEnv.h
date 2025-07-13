@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_CODEGENENV_H_
-#define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_CODEGENENV_H_
+#ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_CODEGENENV_H_
+#define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_CODEGENENV_H_
 
 #include "CodegenUtils.h"
 #include "LoopEmitter.h"
@@ -49,10 +49,14 @@ public:
 
   linalg::GenericOp op() const { return linalgOp; }
   const SparsificationOptions &options() const { return sparseOptions; }
+  bool generatingSparseIterator() const {
+    return sparseOptions.sparseEmitStrategy ==
+           SparseEmitStrategy::kSparseIterator;
+  }
   Merger &merger() { return latticeMerger; }
   LoopEmitter &emitter() { return loopEmitter; }
 
-  void startEmit();
+  void startEmit(SparseEmitStrategy emitStrategy);
 
   /// Generates loop boundary statements (entering/exiting loops). The function
   /// passes and updates the passed-in parameters.
@@ -206,4 +210,4 @@ private:
 } // namespace sparse_tensor
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_CODEGENENV_H_
+#endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_CODEGENENV_H_

@@ -17,15 +17,15 @@
 // RUN:   FileCheck -check-prefix=CHECK-SYM %s
 
 // Invalid arch
-// RUN: not %clang -target powerpc64le-linux-gnu -mstack-protector-guard=tls %s 2>&1 | \
+// RUN: not %clang -target mipsel-linux-gnu -mstack-protector-guard=tls %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=INVALID-ARCH %s
 // INVALID-ARCH: unsupported option '-mstack-protector-guard=tls' for target
 
-// RUN: not %clang -target powerpc64le-linux-gnu -mstack-protector-guard-reg=fs %s 2>&1 | \
+// RUN: not %clang -target mipsel-linux-gnu -mstack-protector-guard-reg=fs %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=INVALID-ARCH2 %s
 // INVALID-ARCH2: unsupported option '-mstack-protector-guard-reg=fs' for target
 
-// RUN: not %clang -target powerpc64le-linux-gnu -mstack-protector-guard-offset=10 %s 2>&1 | \
+// RUN: not %clang -target mipsel-linux-gnu -mstack-protector-guard-offset=10 %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=INVALID-ARCH3 %s
 // INVALID-ARCH3: unsupported option '-mstack-protector-guard-offset=10' for target
 
@@ -85,3 +85,73 @@
 // CHECK-AARCH64: "-cc1" {{.*}}"-mstack-protector-guard=sysreg" "-mstack-protector-guard-offset=0" "-mstack-protector-guard-reg=sp_el0"
 // INVALID-VALUE-AARCH64: error: invalid value 'tls' in 'mstack-protector-guard=', expected one of: sysreg global
 // INVALID-REG-AARCH64: error: invalid value 'foo' in 'mstack-protector-guard-reg='
+
+// RUN: %clang -### -target riscv64-unknown-elf -mstack-protector-guard=tls -mstack-protector-guard-offset=24 -mstack-protector-guard-reg=tp %s 2>&1 | \
+// RUN:   FileCheck -v -check-prefix=CHECK-TLS-RISCV %s
+// RUN: %clang -### -target riscv64-unknown-elf -mstack-protector-guard=global %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=CHECK-GLOBAL %s
+
+// CHECK-TLS-RISCV: "-cc1" {{.*}}"-mstack-protector-guard=tls" "-mstack-protector-guard-offset=24" "-mstack-protector-guard-reg=tp"
+
+// RUN: not %clang -target riscv64-unknown-elf -mstack-protector-guard=tls %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=MISSING-OFFSET %s
+
+// RUN: not %clang -target riscv64-unknown-elf -mstack-protector-guard=sysreg %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVALID-VALUE2 %s
+
+// RUN: not %clang -target riscv64-unknown-elf -mstack-protector-guard=tls \
+// RUN: -mstack-protector-guard-offset=20 -mstack-protector-guard-reg=sp %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVALID-REG-RISCV %s
+
+// INVALID-REG-RISCV: error: invalid value 'sp' in 'mstack-protector-guard-reg=', expected one of: tp
+
+// RUN: %clang -### -target powerpc64-unknown-elf -mstack-protector-guard=tls -mstack-protector-guard-offset=24 -mstack-protector-guard-reg=r13 %s 2>&1 | \
+// RUN:   FileCheck -v -check-prefix=CHECK-TLS-POWERPC64 %s
+// RUN: %clang -### -target powerpc64-unknown-linux-gnu -mstack-protector-guard=global %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=CHECK-GLOBAL %s
+
+// RUN: not %clang -target powerpc64-unknown-linux-gnu -mstack-protector-guard=tls %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=MISSING-OFFSET %s
+
+// RUN: not %clang -target powerpc64-unknown-elf -mstack-protector-guard=sysreg %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVALID-VALUE2 %s
+
+// RUN: not %clang -target powerpc64-unknown-elf -mstack-protector-guard=tls \
+// RUN: -mstack-protector-guard-offset=20 -mstack-protector-guard-reg=r12 %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVALID-REG-POWERPC64 %s
+
+// CHECK-TLS-POWERPC64: "-cc1" {{.*}}"-mstack-protector-guard=tls" "-mstack-protector-guard-offset=24" "-mstack-protector-guard-reg=r13"
+// INVALID-REG-POWERPC64: error: invalid value 'r12' in 'mstack-protector-guard-reg=', expected one of: r13
+
+// RUN: %clang -### -target powerpc64le-unknown-elf -mstack-protector-guard=tls -mstack-protector-guard-offset=24 -mstack-protector-guard-reg=r13 %s 2>&1 | \
+// RUN:   FileCheck -v -check-prefix=CHECK-TLS-POWERPC64 %s
+// RUN: %clang -### -target powerpc64le-unknown-elf -mstack-protector-guard=global %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=CHECK-GLOBAL %s
+
+// RUN: not %clang -target powerpc64le-unknown-elf -mstack-protector-guard=tls %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=MISSING-OFFSET %s
+
+// RUN: not %clang -target powerpc64le-unknown-elf -mstack-protector-guard=sysreg %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVALID-VALUE2 %s
+
+// RUN: not %clang -target powerpc64le-unknown-elf -mstack-protector-guard=tls \
+// RUN: -mstack-protector-guard-offset=20 -mstack-protector-guard-reg=r12 %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVALID-REG-POWERPC64 %s
+
+// RUN: %clang -### -target ppc32-unknown-elf -mstack-protector-guard=tls -mstack-protector-guard-offset=24 -mstack-protector-guard-reg=r2 %s 2>&1 | \
+// RUN:   FileCheck -v -check-prefix=CHECK-TLS-POWERPC32 %s
+// RUN: %clang -### -target ppc32-unknown-elf -mstack-protector-guard=global %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=CHECK-GLOBAL %s
+
+// RUN: not %clang -target ppc32-unknown-elf -mstack-protector-guard=tls %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=MISSING-OFFSET %s
+
+// RUN: not %clang -target ppc32-unknown-elf -mstack-protector-guard=sysreg %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVALID-VALUE2 %s
+
+// RUN: not %clang -target ppc32-unknown-elf -mstack-protector-guard=tls \
+// RUN: -mstack-protector-guard-offset=20 -mstack-protector-guard-reg=r3 %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVALID-REG-POWERPC32 %s
+
+// CHECK-TLS-POWERPC32: "-cc1" {{.*}}"-mstack-protector-guard=tls" "-mstack-protector-guard-offset=24" "-mstack-protector-guard-reg=r2"
+// INVALID-REG-POWERPC32: error: invalid value 'r3' in 'mstack-protector-guard-reg=', expected one of: r2

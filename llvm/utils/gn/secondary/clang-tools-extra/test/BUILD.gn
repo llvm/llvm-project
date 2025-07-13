@@ -35,7 +35,6 @@ write_lit_config("lit_site_cfg") {
     "CURRENT_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "CLANG_PLUGIN_SUPPORT=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
-    "LLVM_INSTALL_TOOLCHAIN_ONLY=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "Python3_EXECUTABLE=$python_path",
@@ -84,7 +83,6 @@ group("test") {
     "//clang-tools-extra/unittests",
     "//clang/lib/Headers",
     "//clang/tools/c-index-test",
-    "//clang/tools/clang-rename",
     "//clang/tools/driver:symlinks",
     "//llvm/tools/llvm-bcanalyzer",
     "//llvm/utils/FileCheck",

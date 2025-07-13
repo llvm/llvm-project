@@ -12,8 +12,8 @@
 ; RUN: llvm-lto -thinlto-action=import %t3.bc -thinlto-index=%t3.index.bc -o /dev/null 2>&1 | FileCheck %s  --check-prefix=WARN
 
 
-; CHECK-NOT: {i64 6699318081062747564, i64 4294967295, !"foo"
-; CHECK: !{i64 -2624081020897602054, i64 281479271677951, !"main"
+; CHECK-NOT: {i64 6699318081062747564, i64 [[#]], !"foo"
+; CHECK: !{i64 -2624081020897602054, i64 [[#]], !"main"
 
 ; WARN: warning: Pseudo-probe ignored: source module '{{.*}}' is compiled with -fpseudo-probe-for-profiling while destination module '{{.*}}' is not
 

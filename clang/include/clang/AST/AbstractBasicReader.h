@@ -1,4 +1,4 @@
-//==--- AbstractBasiceReader.h - Abstract basic value deserialization -----===//
+//==--- AbstractBasicReader.h - Abstract basic value deserialization -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -143,8 +143,7 @@ public:
   // structure into a single data stream.
   Impl &readObject() { return asImpl(); }
 
-  template <class T>
-  llvm::ArrayRef<T> readArray(llvm::SmallVectorImpl<T> &buffer) {
+  template <class T> ArrayRef<T> readArray(llvm::SmallVectorImpl<T> &buffer) {
     assert(buffer.empty());
 
     uint32_t size = asImpl().readUInt32();
@@ -213,9 +212,9 @@ public:
   }
 
   Qualifiers readQualifiers() {
-    static_assert(sizeof(Qualifiers().getAsOpaqueValue()) <= sizeof(uint32_t),
+    static_assert(sizeof(Qualifiers().getAsOpaqueValue()) <= sizeof(uint64_t),
                   "update this if the value size changes");
-    uint32_t value = asImpl().readUInt32();
+    uint64_t value = asImpl().readUInt64();
     return Qualifiers::fromOpaqueValue(value);
   }
 
@@ -244,6 +243,15 @@ public:
     return FunctionProtoType::ExtParameterInfo::getFromOpaqueValue(value);
   }
 
+  FunctionEffect readFunctionEffect() {
+    uint32_t value = asImpl().readUInt32();
+    return FunctionEffect::fromOpaqueInt32(value);
+  }
+
+  EffectConditionExpr readEffectConditionExpr() {
+    return EffectConditionExpr{asImpl().readExprRef()};
+  }
+
   NestedNameSpecifier *readNestedNameSpecifier() {
     auto &ctx = getASTContext();
 
@@ -270,10 +278,8 @@ public:
         continue;
 
       case NestedNameSpecifier::TypeSpec:
-      case NestedNameSpecifier::TypeSpecWithTemplate:
         cur = NestedNameSpecifier::Create(ctx, cur,
-                          kind == NestedNameSpecifier::TypeSpecWithTemplate,
-                          asImpl().readQualType().getTypePtr());
+                                          asImpl().readQualType().getTypePtr());
         continue;
 
       case NestedNameSpecifier::Global:

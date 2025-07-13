@@ -15,10 +15,8 @@
 #include "SourcePrinter.h"
 #include "llvm-objdump.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
-#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "objdump"
@@ -40,7 +38,7 @@ void LiveVariable::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
   DWARFExpression Expression(Data, Unit->getAddressByteSize());
 
   auto GetRegName = [&MRI, &OS](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
-    if (std::optional<unsigned> LLVMRegNum =
+    if (std::optional<MCRegister> LLVMRegNum =
             MRI.getLLVMRegNum(DwarfRegNum, IsEH))
       if (const char *RegName = MRI.getName(*LLVMRegNum))
         return StringRef(RegName);
@@ -48,7 +46,7 @@ void LiveVariable::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
     return {};
   };
 
-  Expression.printCompact(OS, GetRegName);
+  printDwarfExpressionCompact(&Expression, OS, GetRegName);
 }
 
 void LiveVariablePrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
@@ -344,7 +342,8 @@ bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
   if (LineInfo.Source) {
     Buffer = MemoryBuffer::getMemBuffer(*LineInfo.Source);
   } else {
-    auto BufferOrError = MemoryBuffer::getFile(LineInfo.FileName);
+    auto BufferOrError =
+        MemoryBuffer::getFile(LineInfo.FileName, /*IsText=*/true);
     if (!BufferOrError) {
       if (MissingSources.insert(LineInfo.FileName).second)
         reportWarning("failed to find source " + LineInfo.FileName,
@@ -380,7 +379,6 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
   DILineInfo LineInfo = DILineInfo();
   Expected<DILineInfo> ExpectedLineInfo =
       Symbolizer->symbolizeCode(*Obj, Address);
-  std::string ErrorMessage;
   if (ExpectedLineInfo) {
     LineInfo = *ExpectedLineInfo;
   } else if (!WarnedInvalidDebugInfo) {

@@ -17,6 +17,7 @@
 #include <mutex>
 #include <set>
 #include <thread>
+#include <type_traits>
 
 // We mock out an allocator with a TSD registry, mostly using empty stubs. The
 // cache contains a single volatile uptr, to be able to test that several
@@ -25,7 +26,7 @@ template <class Config> class MockAllocator {
 public:
   using ThisT = MockAllocator<Config>;
   using TSDRegistryT = typename Config::template TSDRegistryT<ThisT>;
-  using CacheT = struct MockCache {
+  using SizeClassAllocatorT = struct MockSizeClassAllocator {
     volatile scudo::uptr Canary;
   };
   using QuarantineCacheT = struct MockQuarantine {};
@@ -37,7 +38,9 @@ public:
   }
 
   void unmapTestOnly() { TSDRegistry.unmapTestOnly(this); }
-  void initCache(CacheT *Cache) { *Cache = {}; }
+  void initAllocator(SizeClassAllocatorT *SizeClassAllocator) {
+    *SizeClassAllocator = {};
+  }
   void commitBack(UNUSED scudo::TSD<MockAllocator> *TSD) {}
   TSDRegistryT *getTSDRegistry() { return &TSDRegistry; }
   void callPostInitCallback() {}
@@ -86,7 +89,8 @@ TEST(ScudoTSDTest, TSDRegistryInit) {
   EXPECT_TRUE(Allocator->isInitialized());
 }
 
-template <class AllocatorT> static void testRegistry() {
+template <class AllocatorT>
+static void testRegistry() NO_THREAD_SAFETY_ANALYSIS {
   auto Deleter = [](AllocatorT *A) {
     A->unmapTestOnly();
     delete A;
@@ -99,22 +103,18 @@ template <class AllocatorT> static void testRegistry() {
   Registry->initThreadMaybe(Allocator.get(), /*MinimalInit=*/true);
   EXPECT_TRUE(Allocator->isInitialized());
 
-  bool UnlockRequired;
-  auto TSD = Registry->getTSDAndLock(&UnlockRequired);
-  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
-  EXPECT_NE(TSD, nullptr);
-  EXPECT_EQ(TSD->getCache().Canary, 0U);
-  if (UnlockRequired)
-    TSD->unlock();
+  {
+    typename AllocatorT::TSDRegistryT::ScopedTSD TSD(*Registry);
+    EXPECT_EQ(TSD->getSizeClassAllocator().Canary, 0U);
+  }
 
   Registry->initThreadMaybe(Allocator.get(), /*MinimalInit=*/false);
-  TSD = Registry->getTSDAndLock(&UnlockRequired);
-  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
-  EXPECT_NE(TSD, nullptr);
-  EXPECT_EQ(TSD->getCache().Canary, 0U);
-  memset(&TSD->getCache(), 0x42, sizeof(TSD->getCache()));
-  if (UnlockRequired)
-    TSD->unlock();
+  {
+    typename AllocatorT::TSDRegistryT::ScopedTSD TSD(*Registry);
+    EXPECT_EQ(TSD->getSizeClassAllocator().Canary, 0U);
+    memset(&TSD->getSizeClassAllocator(), 0x42,
+           sizeof(TSD->getSizeClassAllocator()));
+  }
 }
 
 TEST(ScudoTSDTest, TSDRegistryBasic) {
@@ -129,7 +129,12 @@ static std::mutex Mutex;
 static std::condition_variable Cv;
 static bool Ready;
 
-template <typename AllocatorT> static void stressCache(AllocatorT *Allocator) {
+// Accessing `TSD->getSizeClassAllocator()` requires `TSD::Mutex` which isn't
+// easy to test using thread-safety analysis. Alternatively, we verify the
+// thread safety through a runtime check in ScopedTSD and mark the test body
+// with NO_THREAD_SAFETY_ANALYSIS.
+template <typename AllocatorT>
+static void stressCache(AllocatorT *Allocator) NO_THREAD_SAFETY_ANALYSIS {
   auto Registry = Allocator->getTSDRegistry();
   {
     std::unique_lock<std::mutex> Lock(Mutex);
@@ -137,23 +142,20 @@ template <typename AllocatorT> static void stressCache(AllocatorT *Allocator) {
       Cv.wait(Lock);
   }
   Registry->initThreadMaybe(Allocator, /*MinimalInit=*/false);
-  bool UnlockRequired;
-  auto TSD = Registry->getTSDAndLock(&UnlockRequired);
-  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
-  EXPECT_NE(TSD, nullptr);
+  typename AllocatorT::TSDRegistryT::ScopedTSD TSD(*Registry);
   // For an exclusive TSD, the cache should be empty. We cannot guarantee the
   // same for a shared TSD.
-  if (!UnlockRequired)
-    EXPECT_EQ(TSD->getCache().Canary, 0U);
+  if (std::is_same<typename AllocatorT::TSDRegistryT,
+                   scudo::TSDRegistryExT<AllocatorT>>()) {
+    EXPECT_EQ(TSD->getSizeClassAllocator().Canary, 0U);
+  }
   // Transform the thread id to a uptr to use it as canary.
   const scudo::uptr Canary = static_cast<scudo::uptr>(
       std::hash<std::thread::id>{}(std::this_thread::get_id()));
-  TSD->getCache().Canary = Canary;
+  TSD->getSizeClassAllocator().Canary = Canary;
   // Loop a few times to make sure that a concurrent thread isn't modifying it.
   for (scudo::uptr I = 0; I < 4096U; I++)
-    EXPECT_EQ(TSD->getCache().Canary, Canary);
-  if (UnlockRequired)
-    TSD->unlock();
+    EXPECT_EQ(TSD->getSizeClassAllocator().Canary, Canary);
 }
 
 template <class AllocatorT> static void testRegistryThreaded() {
@@ -195,14 +197,10 @@ static void stressSharedRegistry(MockAllocator<SharedCaches> *Allocator) {
       Cv.wait(Lock);
   }
   Registry->initThreadMaybe(Allocator, /*MinimalInit=*/false);
-  bool UnlockRequired;
   for (scudo::uptr I = 0; I < 4096U; I++) {
-    auto TSD = Registry->getTSDAndLock(&UnlockRequired);
-    TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
-    EXPECT_NE(TSD, nullptr);
-    Set.insert(reinterpret_cast<void *>(TSD));
-    if (UnlockRequired)
-      TSD->unlock();
+    typename MockAllocator<SharedCaches>::TSDRegistryT::ScopedTSD TSD(
+        *Registry);
+    Set.insert(reinterpret_cast<void *>(&*TSD));
   }
   {
     std::unique_lock<std::mutex> Lock(Mutex);

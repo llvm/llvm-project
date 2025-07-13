@@ -3,10 +3,12 @@
 # Checking that the '%' was evaluated as a string first
 # In a fail scenario: The asmprint will print: addl $%(1+4), %eax
 
-# CHECK:  addl $5, %eax
+# CHECK:       addl $5, %eax
+# CHECK-NEXT:  addl $5, %eax
 .altmacro
 .macro percent_expr arg
     addl $\arg, %eax
+    addl $\arg&, %eax
 .endm
 
 percent_expr %(1+4)

@@ -1,22 +1,22 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+f -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+f -M no-aliases \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+f \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+f -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+f -M no-aliases \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+f \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d --mattr=+f -M no-aliases - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d --mattr=+f -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d --mattr=+f - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d --mattr=+f - \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d --mattr=+f -M no-aliases - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d --mattr=+f -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d --mattr=+f - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d --mattr=+f - \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 
 ##===----------------------------------------------------------------------===##
@@ -48,7 +48,8 @@ fgt.s x4, f5, f6
 fge.s x7, f8, f9
 
 # The following instructions actually alias instructions from the base ISA.
-# However, it only makes sense to support them when the F extension is enabled.
+# However, it only makes sense to support them when the F or Zfinx extension is
+# enabled.
 # CHECK-INST: csrrs t0, fcsr, zero
 # CHECK-ALIAS: frcsr t0
 frcsr x5

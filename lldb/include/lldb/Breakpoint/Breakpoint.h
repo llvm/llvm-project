@@ -397,16 +397,12 @@ public:
   /// Set the breakpoint's condition.
   ///
   /// \param[in] condition
-  ///    The condition expression to evaluate when the breakpoint is hit.
-  ///    Pass in nullptr to clear the condition.
-  void SetCondition(const char *condition);
+  ///    The condition to evaluate when the breakpoint is hit.
+  ///    Pass in an empty condition to clear the condition.
+  void SetCondition(StopCondition condition);
 
-  /// Return a pointer to the text of the condition expression.
-  ///
-  /// \return
-  ///    A pointer to the condition expression text, or nullptr if no
-  //     condition has been set.
-  const char *GetConditionText() const;
+  /// Return the breakpoint condition.
+  const StopCondition &GetCondition() const;
 
   // The next section are various utility functions.
 
@@ -519,6 +515,8 @@ public:
 
   bool IsHardware() const { return m_hardware; }
 
+  llvm::Error SetIsHardware(bool is_hardware);
+
   lldb::BreakpointResolverSP GetResolver() { return m_resolver_sp; }
 
   lldb::SearchFilterSP GetSearchFilter() { return m_filter_sp; }
@@ -588,6 +586,8 @@ public:
   /// Get statistics associated with this breakpoint in JSON format.
   llvm::json::Value GetStatistics();
 
+  void ResetStatistics();
+
   /// Get the time it took to resolve all locations in this breakpoint.
   StatsDuration::Duration GetResolveTime() const { return m_resolve_time; }
 
@@ -637,7 +637,6 @@ private:
   Breakpoint(Target &new_target, const Breakpoint &bp_to_copy_from);
 
   // For Breakpoint only
-  bool m_being_created;
   bool
       m_hardware; // If this breakpoint is required to use a hardware breakpoint
   Target &m_target; // The target that holds this breakpoint.
@@ -672,7 +671,7 @@ private:
 
   void SendBreakpointChangedEvent(lldb::BreakpointEventType eventKind);
 
-  void SendBreakpointChangedEvent(BreakpointEventData *data);
+  void SendBreakpointChangedEvent(const lldb::EventDataSP &breakpoint_data_sp);
 
   Breakpoint(const Breakpoint &) = delete;
   const Breakpoint &operator=(const Breakpoint &) = delete;

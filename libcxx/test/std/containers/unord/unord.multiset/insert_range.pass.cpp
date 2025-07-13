@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // Some fields in the test case variables are deliberately not explicitly initialized, this silences a warning on GCC.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-missing-field-initializers
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-missing-field-initializers
 
 // <set>
 
@@ -22,7 +22,8 @@
 
 int main(int, char**) {
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_map_set_insert_range<std::unordered_multiset<int, test_hash<int>, test_equal_to<int>, Alloc>, int, Iter, Sent>(/*allow_duplicates=*/true);
+    test_map_set_insert_range<std::unordered_multiset<int, test_hash<int>, test_equal_to<int>, Alloc>, int, Iter, Sent>(
+        /*allow_duplicates=*/true);
   });
 
   static_assert(test_set_constraints_insert_range<std::unordered_multiset, int, double>());
@@ -34,4 +35,3 @@ int main(int, char**) {
 
   return 0;
 }
-

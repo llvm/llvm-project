@@ -16,8 +16,11 @@
 #include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/Visitors.h"
 
+#include "llvm/ADT/SmallPtrSet.h"
+
 namespace llvm {
 class BitVector;
+class raw_ostream;
 } // namespace llvm
 
 namespace mlir {
@@ -26,8 +29,8 @@ template <typename ValueRangeT>
 class ValueTypeRange;
 
 /// `Block` represents an ordered list of `Operation`s.
-class Block : public IRObjectWithUseList<BlockOperand>,
-              public llvm::ilist_node_with_parent<Block, Region> {
+class alignas(8) Block : public IRObjectWithUseList<BlockOperand>,
+                         public llvm::ilist_node_with_parent<Block, Region> {
 public:
   explicit Block() = default;
   ~Block();
@@ -66,6 +69,10 @@ public:
   /// Unlink this block from its current region and insert it right before the
   /// specific block.
   void moveBefore(Block *block);
+
+  /// Unlink this block from its current region and insert it right before the
+  /// block that the given iterator points to in the region region.
+  void moveBefore(Region *region, llvm::iplist<Block>::iterator iterator);
 
   /// Unlink this Block from its parent region and delete it.
   void erase();
@@ -259,69 +266,105 @@ public:
   succ_iterator succ_end() { return getSuccessors().end(); }
   SuccessorRange getSuccessors() { return SuccessorRange(this); }
 
+  /// Return "true" if there is a path from this block to the given block
+  /// (according to the successors relationship). Both blocks must be in the
+  /// same region. Paths that contain a block from `except` do not count.
+  /// This function returns "false" if `other` is in `except`.
+  ///
+  /// Note: This function performs a block graph traversal and its complexity
+  /// linear in the number of blocks in the parent region.
+  ///
+  /// Note: Reachability is a necessary but insufficient condition for
+  /// dominance. Do not use this function in places where you need to check for
+  /// dominance.
+  bool isReachable(Block *other, SmallPtrSet<Block *, 16> &&except = {});
+
   //===--------------------------------------------------------------------===//
-  // Operation Walkers
+  // Walkers
   //===--------------------------------------------------------------------===//
 
-  /// Walk the operations in this block. The callback method is called for each
-  /// nested region, block or operation, depending on the callback provided.
-  /// The order in which regions, blocks and operations at the same nesting
+  /// Walk all nested operations, blocks (including this block) or regions,
+  /// depending on the type of callback.
+  ///
+  /// The order in which operations, blocks or regions at the same nesting
   /// level are visited (e.g., lexicographical or reverse lexicographical order)
-  /// is determined by 'Iterator'. The walk order for enclosing regions, blocks
-  /// and operations with respect to their nested ones is specified by 'Order'
-  /// (post-order by default). A callback on a block or operation is allowed to
-  /// erase that block or operation if either:
+  /// is determined by `Iterator`. The walk order for enclosing operations,
+  /// blocks or regions with respect to their nested ones is specified by
+  /// `Order` (post-order by default).
+  ///
+  /// A callback on a operation or block is allowed to erase that operation or
+  /// block if either:
   ///   * the walk is in post-order, or
   ///   * the walk is in pre-order and the walk is skipped after the erasure.
+  ///
   /// See Operation::walk for more details.
   template <WalkOrder Order = WalkOrder::PostOrder,
             typename Iterator = ForwardIterator, typename FnT,
+            typename ArgT = detail::first_argument<FnT>,
             typename RetT = detail::walkResultType<FnT>>
   RetT walk(FnT &&callback) {
-    return walk<Order, Iterator>(begin(), end(), std::forward<FnT>(callback));
+    if constexpr (std::is_same<ArgT, Block *>::value &&
+                  Order == WalkOrder::PreOrder) {
+      // Pre-order walk on blocks: invoke the callback on this block.
+      if constexpr (std::is_same<RetT, void>::value) {
+        callback(this);
+      } else {
+        RetT result = callback(this);
+        if (result.wasSkipped())
+          return WalkResult::advance();
+        if (result.wasInterrupted())
+          return WalkResult::interrupt();
+      }
+    }
+
+    // Walk nested operations, blocks or regions.
+    if constexpr (std::is_same<RetT, void>::value) {
+      walk<Order, Iterator>(begin(), end(), std::forward<FnT>(callback));
+    } else {
+      if (walk<Order, Iterator>(begin(), end(), std::forward<FnT>(callback))
+              .wasInterrupted())
+        return WalkResult::interrupt();
+    }
+
+    if constexpr (std::is_same<ArgT, Block *>::value &&
+                  Order == WalkOrder::PostOrder) {
+      // Post-order walk on blocks: invoke the callback on this block.
+      return callback(this);
+    }
+    if constexpr (!std::is_same<RetT, void>::value)
+      return WalkResult::advance();
   }
 
-  /// Walk the operations in the specified [begin, end) range of this block. The
-  /// callback method is called for each nested region, block or operation,
-  /// depending on the callback provided. The order in which regions, blocks and
-  /// operations at the same nesting level are visited (e.g., lexicographical or
-  /// reverse lexicographical order) is determined by 'Iterator'. The walk order
-  /// for enclosing regions, blocks and operations with respect to their nested
-  /// ones is specified by 'Order' (post-order by default). This method is
-  /// invoked for void-returning callbacks. A callback on a block or operation
-  /// is allowed to erase that block or operation only if the walk is in
-  /// post-order. See non-void method for pre-order erasure.
-  /// See Operation::walk for more details.
-  template <WalkOrder Order = WalkOrder::PostOrder,
-            typename Iterator = ForwardIterator, typename FnT,
-            typename RetT = detail::walkResultType<FnT>>
-  std::enable_if_t<std::is_same<RetT, void>::value, RetT>
-  walk(Block::iterator begin, Block::iterator end, FnT &&callback) {
-    for (auto &op : llvm::make_early_inc_range(llvm::make_range(begin, end)))
-      detail::walk<Order, Iterator>(&op, callback);
-  }
-
-  /// Walk the operations in the specified [begin, end) range of this block. The
-  /// callback method is called for each nested region, block or operation,
-  /// depending on the callback provided. The order in which regions, blocks and
-  /// operations at the same nesting level are visited (e.g., lexicographical or
-  /// reverse lexicographical order) is determined by 'Iterator'. The walk order
-  /// for enclosing regions, blocks and operations with respect to their nested
-  /// ones is specified by 'Order' (post-order by default). This method is
-  /// invoked for skippable or interruptible callbacks. A callback on a block or
-  /// operation is allowed to erase that block or operation if either:
+  /// Walk all nested operations, blocks (excluding this block) or regions,
+  /// depending on the type of callback, in the specified [begin, end) range of
+  /// this block.
+  ///
+  /// The order in which operations, blocks or regions at the same nesting
+  /// level are visited (e.g., lexicographical or reverse lexicographical order)
+  /// is determined by `Iterator`. The walk order for enclosing operations,
+  /// blocks or regions with respect to their nested ones is specified by
+  /// `Order` (post-order by default).
+  ///
+  /// A callback on a operation or block is allowed to erase that operation or
+  /// block if either:
   ///   * the walk is in post-order, or
   ///   * the walk is in pre-order and the walk is skipped after the erasure.
+  ///
   /// See Operation::walk for more details.
   template <WalkOrder Order = WalkOrder::PostOrder,
             typename Iterator = ForwardIterator, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
-  std::enable_if_t<std::is_same<RetT, WalkResult>::value, RetT>
-  walk(Block::iterator begin, Block::iterator end, FnT &&callback) {
-    for (auto &op : llvm::make_early_inc_range(llvm::make_range(begin, end)))
-      if (detail::walk<Order, Iterator>(&op, callback).wasInterrupted())
-        return WalkResult::interrupt();
-    return WalkResult::advance();
+  RetT walk(Block::iterator begin, Block::iterator end, FnT &&callback) {
+    for (auto &op : llvm::make_early_inc_range(llvm::make_range(begin, end))) {
+      if constexpr (std::is_same<RetT, WalkResult>::value) {
+        if (detail::walk<Order, Iterator>(&op, callback).wasInterrupted())
+          return WalkResult::interrupt();
+      } else {
+        detail::walk<Order, Iterator>(&op, callback);
+      }
+    }
+    if constexpr (std::is_same<RetT, WalkResult>::value)
+      return WalkResult::advance();
   }
 
   //===--------------------------------------------------------------------===//
@@ -374,6 +417,29 @@ private:
 
   friend struct llvm::ilist_traits<Block>;
 };
+
+raw_ostream &operator<<(raw_ostream &, Block &);
 } // namespace mlir
+
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::Block::iterator> {
+  static mlir::Block::iterator getEmptyKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return mlir::Block::iterator((mlir::Operation *)pointer);
+  }
+  static mlir::Block::iterator getTombstoneKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return mlir::Block::iterator((mlir::Operation *)pointer);
+  }
+  static unsigned getHashValue(mlir::Block::iterator iter) {
+    return hash_value(iter.getNodePtr());
+  }
+  static bool isEqual(mlir::Block::iterator lhs, mlir::Block::iterator rhs) {
+    return lhs == rhs;
+  }
+};
+
+} // end namespace llvm
 
 #endif // MLIR_IR_BLOCK_H

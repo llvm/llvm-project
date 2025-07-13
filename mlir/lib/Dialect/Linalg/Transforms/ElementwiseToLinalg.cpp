@@ -8,14 +8,13 @@
 
 #include "mlir/Dialect/Linalg/Passes.h"
 
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTELEMENTWISETOLINALG
+#define GEN_PASS_DEF_CONVERTELEMENTWISETOLINALGPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -27,8 +26,7 @@ static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
 
   // TODO: The conversion pattern can be made to work for `any_of` here, but
   // it's more complex as it requires tracking which operands are scalars.
-  return llvm::all_of(op->getOperandTypes(),
-                      [](Type type) { return isa<RankedTensorType>(type); });
+  return llvm::all_of(op->getOperandTypes(), llvm::IsaPred<RankedTensorType>);
 }
 
 /// Given `op` assumed `isElementwiseMappableOpOnRankedTensors`, iterate over
@@ -121,8 +119,10 @@ void mlir::linalg::populateElementwiseToLinalgConversionPatterns(
 
 namespace {
 class ConvertElementwiseToLinalgPass
-    : public impl::ConvertElementwiseToLinalgBase<
+    : public impl::ConvertElementwiseToLinalgPassBase<
           ConvertElementwiseToLinalgPass> {
+  using impl::ConvertElementwiseToLinalgPassBase<
+      ConvertElementwiseToLinalgPass>::ConvertElementwiseToLinalgPassBase;
 
   void runOnOperation() final {
     auto *func = getOperation();
@@ -140,7 +140,3 @@ class ConvertElementwiseToLinalgPass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertElementwiseToLinalgPass() {
-  return std::make_unique<ConvertElementwiseToLinalgPass>();
-}

@@ -34,12 +34,39 @@ public:
   }
 };
 
+void getAppleMachODefines(MacroBuilder &Builder, const LangOptions &Opts,
+                          const llvm::Triple &Triple);
+
 void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
                       const llvm::Triple &Triple, StringRef &PlatformName,
                       VersionTuple &PlatformMinVersion);
 
 template <typename Target>
-class LLVM_LIBRARY_VISIBILITY DarwinTargetInfo : public OSTargetInfo<Target> {
+class LLVM_LIBRARY_VISIBILITY AppleMachOTargetInfo
+    : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    getAppleMachODefines(Builder, Opts, Triple);
+  }
+
+public:
+  AppleMachOTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {}
+
+  const char *getStaticInitSectionSpecifier() const override {
+    return "__TEXT,__StaticInit,regular,pure_instructions";
+  }
+
+  /// Apple Mach-O does not support protected visibility.  Its "default" is very
+  /// similar to ELF's "protected";  Apple Mach-O requires a "weak" attribute on
+  /// declarations that can be dynamically replaced.
+  bool hasProtectedVisibility() const override { return false; }
+};
+
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY DarwinTargetInfo
+    : public AppleMachOTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
@@ -49,7 +76,7 @@ protected:
 
 public:
   DarwinTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {
+      : AppleMachOTargetInfo<Target>(Triple, Opts) {
     // By default, no TLS, and we list permitted architecture/OS
     // combinations.
     this->TLSSupported = false;
@@ -74,20 +101,16 @@ public:
         this->TLSSupported = !Triple.isOSVersionLT(3);
     } else if (Triple.isDriverKit()) {
       // No TLS on DriverKit.
-    }
+    } else if (Triple.isXROS())
+      this->TLSSupported = true;
 
     this->MCountName = "\01mcount";
   }
 
   const char *getStaticInitSectionSpecifier() const override {
     // FIXME: We should return 0 when building kexts.
-    return "__TEXT,__StaticInit,regular,pure_instructions";
+    return AppleMachOTargetInfo<Target>::getStaticInitSectionSpecifier();
   }
-
-  /// Darwin does not support protected visibility.  Darwin's "default"
-  /// is very similar to ELF's "protected";  Darwin requires a "weak"
-  /// attribute on declarations that can be dynamically replaced.
-  bool hasProtectedVisibility() const override { return false; }
 
   unsigned getExnObjectAlignment() const override {
     // Older versions of libc++abi guarantee an alignment of only 8-bytes for
@@ -108,6 +131,9 @@ public:
       break;
     case llvm::Triple::WatchOS: // Earliest supporting version is 5.0.0.
       MinVersion = llvm::VersionTuple(5U);
+      break;
+    case llvm::Triple::XROS:
+      MinVersion = llvm::VersionTuple(0);
       break;
     default:
       // Conservatively return 8 bytes if OS is unknown.
@@ -224,7 +250,7 @@ public:
     case llvm::Triple::arm:
       this->MCountName = "__mcount";
       break;
-    case llvm::Triple::riscv32:
+    case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
       break;
     }
@@ -333,6 +359,10 @@ protected:
       Builder.defineMacro("_GNU_SOURCE");
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
+    if (Triple.isTime64ABI()) {
+      Builder.defineMacro("_FILE_OFFSET_BITS", "64");
+      Builder.defineMacro("_TIME_BITS", "64");
+    }
   }
 
 public:
@@ -362,6 +392,36 @@ public:
 
   const char *getStaticInitSectionSpecifier() const override {
     return ".text.startup";
+  }
+};
+
+// Managarm Target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY ManagarmTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__managarm__");
+    if (Opts.POSIXThreads)
+      Builder.defineMacro("_REENTRANT");
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
+  }
+
+public:
+  ManagarmTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      break;
+    }
   }
 };
 
@@ -436,7 +496,6 @@ public:
     case llvm::Triple::sparcv9:
       this->MCountName = "_mcount";
       break;
-    case llvm::Triple::riscv32:
     case llvm::Triple::riscv64:
       break;
     }
@@ -465,7 +524,7 @@ public:
     this->IntMaxType = TargetInfo::SignedLongLong;
     this->Int64Type = TargetInfo::SignedLongLong;
     this->SizeType = TargetInfo::UnsignedInt;
-    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-n32:64");
+    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-i128:128-n32:64");
   }
 };
 
@@ -589,14 +648,7 @@ protected:
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__svr4__");
     Builder.defineMacro("__SVR4");
-    // Solaris headers require _XOPEN_SOURCE to be set to 600 for C99 and
-    // newer, but to 500 for everything else.  feature_test.h has a check to
-    // ensure that you are not using C99 with an old version of X/Open or C89
-    // with a new version.
-    if (Opts.C99)
-      Builder.defineMacro("_XOPEN_SOURCE", "600");
-    else
-      Builder.defineMacro("_XOPEN_SOURCE", "500");
+    Builder.defineMacro("_XOPEN_SOURCE", "600");
     if (Opts.CPlusPlus) {
       Builder.defineMacro("__C99FEATURES__");
       Builder.defineMacro("_FILE_OFFSET_BITS", "64");
@@ -774,6 +826,24 @@ public:
   }
 };
 
+// UEFI target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY UEFITargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__UEFI__");
+  }
+
+public:
+  UEFITargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->WCharType = TargetInfo::UnsignedShort;
+    this->WIntType = TargetInfo::UnsignedShort;
+    this->UseMicrosoftManglingForC = true;
+  }
+};
+
 void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
                        MacroBuilder &Builder);
 
@@ -791,6 +861,7 @@ public:
       : OSTargetInfo<Target>(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedShort;
+    this->UseMicrosoftManglingForC = true;
   }
 };
 
@@ -837,9 +908,6 @@ public:
                             "i64:64-i128:128-n8:16:32:64-S128");
     } else if (Triple.getArch() == llvm::Triple::mipsel) {
       // Handled on mips' setDataLayout.
-    } else {
-      assert(Triple.getArch() == llvm::Triple::le32);
-      this->resetDataLayout("e-p:32:32-i64:64");
     }
   }
 };
@@ -864,6 +932,7 @@ protected:
 public:
   FuchsiaTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
+    this->WIntType = TargetInfo::UnsignedInt;
     this->MCountName = "__mcount";
     this->TheCXXABI.set(TargetCXXABI::Fuchsia);
   }
@@ -933,6 +1002,7 @@ public:
     // Emscripten's ABI is unstable and we may change this back to 128 to match
     // the WebAssembly default in the future.
     this->LongDoubleAlign = 64;
+    this->Float128Align = 64;
   }
 };
 

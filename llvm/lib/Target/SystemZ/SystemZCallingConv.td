@@ -12,8 +12,8 @@ class CCIfExtend<CCAction A>
   : CCIf<"ArgFlags.isSExt() || ArgFlags.isZExt()", A>;
 
 class CCIfSubtarget<string F, CCAction A>
-  : CCIf<!strconcat("static_cast<const SystemZSubtarget&>"
-                    "(State.getMachineFunction().getSubtarget()).", F),
+  : CCIf<!strconcat("State.getMachineFunction()."
+                    "getSubtarget<SystemZSubtarget>().", F),
          A>;
 
 // Match if this specific argument is a fixed (i.e. named) argument.
@@ -50,6 +50,7 @@ def RetCC_SystemZ_ELF : CallingConv<[
   // other floating-point argument registers available for code that
   // doesn't care about the ABI.  All floating-point argument registers
   // are call-clobbered, so we can use all of them here.
+  CCIfType<[f16], CCAssignToReg<[F0H, F2H, F4H, F6H]>>,
   CCIfType<[f32], CCAssignToReg<[F0S, F2S, F4S, F6S]>>,
   CCIfType<[f64], CCAssignToReg<[F0D, F2D, F4D, F6D]>>,
 
@@ -102,9 +103,10 @@ def CC_SystemZ_ELF : CallingConv<[
   // A SwiftError is passed in callee-saved R9.
   CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R9D]>>>,
 
-  // Force long double values to the stack and pass i64 pointers to them.
-  CCIfType<[f128], CCPassIndirect<i64>>,
-  // Same for i128 values.  These are already split into two i64 here,
+  // Force i128 (if the type is legal) and long double values to the stack
+  // and pass i64 pointers to them.
+  CCIfType<[i128, f128], CCPassIndirect<i64>>,
+  // If i128 is not legal, such values are already split into two i64 here,
   // so we have to use a custom handler.
   CCIfType<[i64], CCCustom<"CC_SystemZ_I128Indirect">>,
 
@@ -114,6 +116,7 @@ def CC_SystemZ_ELF : CallingConv<[
   CCIfType<[i64], CCAssignToReg<[R2D, R3D, R4D, R5D, R6D]>>,
 
   // The first 4 float and double arguments are passed in even registers F0-F6.
+  CCIfType<[f16], CCAssignToReg<[F0H, F2H, F4H, F6H]>>,
   CCIfType<[f32], CCAssignToReg<[F0S, F2S, F4S, F6S]>>,
   CCIfType<[f64], CCAssignToReg<[F0D, F2D, F4D, F6D]>>,
 
@@ -137,7 +140,7 @@ def CC_SystemZ_ELF : CallingConv<[
              CCAssignToStack<16, 8>>>,
 
   // Other arguments are passed in 8-byte-aligned 8-byte stack slots.
-  CCIfType<[i32, i64, f32, f64], CCAssignToStack<8, 8>>
+  CCIfType<[i32, i64, f16, f32, f64], CCAssignToStack<8, 8>>
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -225,6 +228,8 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // Although we assign the f32 vararg to be bitcast, it will first be promoted
   // to an f64 within convertValVTToLocVT().
   CCIfType<[f32, f64], CCIfNotFixed<CCBitConvertToType<i64>>>,
+  // Pointers are always passed in full 64-bit registers.
+  CCIfPtr<CCCustom<"CC_XPLINK64_Pointer">>,
   // long double, can only be passed in GPR2 and GPR3, if available,
   // hence R2Q
   CCIfType<[f128], CCIfNotFixed<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>,
@@ -240,9 +245,10 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // A SwiftError is passed in R0.
   CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R0D]>>>,
 
-  // First i128 values. These are already split into two i64 here,
-  // so we have to use a custom handler and assign into registers, if possible
-  // We need to deal with this first
+  // Force i128 values to the stack and pass i64 pointers to them.
+  CCIfType<[i128], CCPassIndirect<i64>>,
+  // If i128 is not legal, such values are already split into two i64 here,
+  // so we have to use a custom handler.
   CCIfType<[i64], CCCustom<"CC_SystemZ_I128Indirect">>,
   // The first 3 integer arguments are passed in registers R1D-R3D.
   // The rest will be passed in the user area. The address offset of the user

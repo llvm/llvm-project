@@ -24,6 +24,12 @@ Several introductory papers and presentations.
    FAQ
    Lexicon
 
+:doc:`FAQ`
+  Frequently asked questions.
+
+:doc:`Lexicon`
+  Glossary.
+
 `Introduction to the LLVM Compiler`__
   Presentation providing a users introduction to LLVM.
 
@@ -80,6 +86,7 @@ LLVM welcomes contributions of all kinds. To learn more, see the following artic
    :hidden:
 
    GettingInvolved
+   QualGroup
 
 * :doc:`GettingInvolved`
 * :ref:`development-process`
@@ -90,6 +97,8 @@ LLVM welcomes contributions of all kinds. To learn more, see the following artic
   Reporting a security issue
 
 * :ref:`report-security-issue`
+
+* :doc:`QualGroup`
 
 Indices and tables
 ==================

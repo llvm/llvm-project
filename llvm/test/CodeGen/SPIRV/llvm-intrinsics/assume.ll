@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV-NOT: OpCapability ExpectAssumeKHR
 ; CHECK-SPIRV-NOT: OpExtension "SPV_KHR_expect_assume"

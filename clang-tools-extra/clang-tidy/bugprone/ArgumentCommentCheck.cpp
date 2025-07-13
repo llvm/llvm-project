@@ -145,7 +145,7 @@ static bool isLikelyTypo(llvm::ArrayRef<ParmVarDecl *> Params,
   std::string ArgNameLowerStr = ArgName.lower();
   StringRef ArgNameLower = ArgNameLowerStr;
   // The threshold is arbitrary.
-  unsigned UpperBound = (ArgName.size() + 2) / 3 + 1;
+  unsigned UpperBound = ((ArgName.size() + 2) / 3) + 1;
   unsigned ThisED = ArgNameLower.edit_distance(
       Params[ArgIndex]->getIdentifier()->getName().lower(),
       /*AllowReplacements=*/true, UpperBound);
@@ -185,7 +185,7 @@ static bool sameName(StringRef InComment, StringRef InDecl, bool StrictMode) {
 static bool looksLikeExpectMethod(const CXXMethodDecl *Expect) {
   return Expect != nullptr && Expect->getLocation().isMacroID() &&
          Expect->getNameInfo().getName().isIdentifier() &&
-         Expect->getName().startswith("gmock_");
+         Expect->getName().starts_with("gmock_");
 }
 static bool areMockAndExpectMethods(const CXXMethodDecl *Mock,
                                     const CXXMethodDecl *Expect) {

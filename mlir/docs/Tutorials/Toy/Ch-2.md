@@ -243,9 +243,9 @@ operation. This operation will represent a constant value in the Toy language.
 This operation takes zero operands, a
 [dense elements](../../Dialects/Builtin.md/#denseintorfpelementsattr) attribute named
 `value` to represent the constant value, and returns a single result of
-[RankedTensorType](../../Dialects/Builtin.md/#rankedtensortype). An operation class 
+[RankedTensorType](../../Dialects/Builtin.md/#rankedtensortype). An operation class
 inherits from the [CRTP](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern)
-`mlir::Op` class which also takes some optional [*traits*](../../Traits.md) to
+`mlir::Op` class which also takes some optional [*traits*](../../Traits) to
 customize its behavior. `Traits` are a mechanism with which we can inject
 additional behavior into an Operation, such as additional accessors,
 verification, and more. Let's look below at a possible definition for the
@@ -262,7 +262,7 @@ class ConstantOp : public mlir::Op<
                      mlir::OpTrait::OneResult,
                      /// We also provide a utility `getType` accessor that
                      /// returns the TensorType of the single result.
-                     mlir::OpTraits::OneTypedResult<TensorType>::Impl> {
+                     mlir::OpTrait::OneTypedResult<TensorType>::Impl> {
 
  public:
   /// Inherit the constructors from the base Op class.
@@ -497,10 +497,10 @@ def ConstantOp : Toy_Op<"constant"> {
   let results = (outs F64Tensor);
 
   // Add additional verification logic to the constant operation. Setting this bit
-  // to `1` will generate a `::mlir::LogicalResult verify()` declaration on the
+  // to `1` will generate a `::llvm::LogicalResult verify()` declaration on the
   // operation class that is called after ODS constructs have been verified, for
   // example the types of arguments and results. We implement additional verification
-  // in the definition of this `verify` method in the C++ source file. 
+  // in the definition of this `verify` method in the C++ source file.
   let hasVerifier = 1;
 }
 ```

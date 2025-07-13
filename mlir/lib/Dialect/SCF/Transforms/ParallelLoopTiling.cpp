@@ -141,7 +141,7 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
     b.setInsertionPointToStart(innerLoop.getBody());
     // Insert in-bound check
     Value inbound =
-        b.create<arith::ConstantIntOp>(op.getLoc(), 1, b.getIntegerType(1));
+        b.create<arith::ConstantIntOp>(op.getLoc(), b.getIntegerType(1), 1);
     for (auto [outerUpperBound, outerIV, innerIV, innerStep] :
          llvm::zip(outerLoop.getUpperBound(), outerLoop.getInductionVars(),
                    innerLoop.getInductionVars(), innerLoop.getStep())) {
@@ -159,6 +159,11 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
                                     /*hasElseRegion*/ false);
     ifInbound.getThenRegion().takeBody(op.getRegion());
     Block &thenBlock = ifInbound.getThenRegion().front();
+    // Replace the scf.reduce terminator with an scf.yield terminator.
+    Operation *reduceOp = thenBlock.getTerminator();
+    b.setInsertionPointToEnd(&thenBlock);
+    b.create<scf::YieldOp>(reduceOp->getLoc());
+    reduceOp->erase();
     b.setInsertionPointToStart(innerLoop.getBody());
     for (const auto &ivs : llvm::enumerate(llvm::zip(
              innerLoop.getInductionVars(), outerLoop.getInductionVars()))) {

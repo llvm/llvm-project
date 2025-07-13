@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fno-elide-constructors -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
-// RUN: %clang_cc1 -fno-elide-constructors -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | opt -passes=verify
+// RUN: %clang_cc1 -fno-elide-constructors -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -fno-elide-constructors -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | opt -passes=verify
 // FIXME: remove the call to "opt" once the tests are running the Clang verifier automatically again.
 
 int Bar(int);
@@ -162,7 +162,7 @@ HasNonTrivialCopyConstructor TestNonElidableCopyConstructor() {
   [[clang::musttail]] return (((ReturnsClassByValue())));
 }
 
-// CHECK: musttail call void @_Z19ReturnsClassByValuev(ptr sret(%struct.HasNonTrivialCopyConstructor) align 1 %agg.result)
+// CHECK: musttail call void @_Z19ReturnsClassByValuev(ptr dead_on_unwind writable sret(%struct.HasNonTrivialCopyConstructor) align 1 %agg.result)
 
 struct HasNonTrivialCopyConstructor2 {
   // Copy constructor works even if it has extra default params.
@@ -191,8 +191,8 @@ LargeWithCopyConstructor TestLargeWithCopyConstructor() {
   [[clang::musttail]] return ReturnsLarge();
 }
 
-// CHECK: define dso_local void @_Z28TestLargeWithCopyConstructorv(ptr noalias sret(%struct.LargeWithCopyConstructor) align 1 %agg.result)
-// CHECK: musttail call void @_Z12ReturnsLargev(ptr sret(%struct.LargeWithCopyConstructor) align 1 %agg.result)
+// CHECK: define dso_local void @_Z28TestLargeWithCopyConstructorv(ptr dead_on_unwind noalias writable sret(%struct.LargeWithCopyConstructor) align 1 %agg.result)
+// CHECK: musttail call void @_Z12ReturnsLargev(ptr dead_on_unwind writable sret(%struct.LargeWithCopyConstructor) align 1 %agg.result)
 
 using IntFunctionType = int();
 IntFunctionType *ReturnsIntFunction();

@@ -31,11 +31,10 @@ static bool isMaterializing(Value val) {
 /// Sorts the dependent loops such that it is ordered in the same sequence in
 /// which loops will be generated.
 static void sortDependentLoops(std::vector<LoopCoeffPair> &target) {
-  std::sort(target.begin(), target.end(),
-            [](const LoopCoeffPair &l, const LoopCoeffPair &r) {
-              assert(std::addressof(l) == std::addressof(r) || l != r);
-              return l.first < r.first;
-            });
+  llvm::sort(target, [](const LoopCoeffPair &l, const LoopCoeffPair &r) {
+    assert(std::addressof(l) == std::addressof(r) || l != r);
+    return l.first < r.first;
+  });
 }
 //===----------------------------------------------------------------------===//
 // Code generation environment constructor and general methods
@@ -59,7 +58,7 @@ LogicalResult CodegenEnv::initTensorExp() {
   return success();
 }
 
-void CodegenEnv::startEmit() {
+void CodegenEnv::startEmit(SparseEmitStrategy emitStrategy) {
   assert(insChain == nullptr && "must only start emitting once");
   if (sparseOut) {
     insChain = sparseOut->get();
@@ -85,7 +84,6 @@ void CodegenEnv::startEmit() {
     for (Level lvl = 0; lvl < lvlRank; lvl++)
       sortDependentLoops(latticeMerger.getDependentLoops(tid, lvl));
   }
-
   loopEmitter.initialize(
       tensors,
       StringAttr::get(linalgOp.getContext(),
@@ -95,18 +93,10 @@ void CodegenEnv::startEmit() {
       // TODO: compute the map and pass it to loop emitter directly instead of
       // passing in a callback.
       /*dependentLvlGetter=*/
-      [this](TensorId t,
-             Level lvl) -> std::vector<std::pair<TensorLevel, unsigned>> {
-        // Translates from a list of loop indices to a list of [tid, lvl] pair.
-        std::vector<LoopCoeffPair> &rLoops = merger().getDependentLoops(t, lvl);
-        std::vector<std::pair<TensorLevel, unsigned>> ret;
-        ret.reserve(rLoops.size());
-        for (auto [loop, coeff] : rLoops) {
-          TensorLevel tl = makeTensorLevel(merger().getLoopDefiningLvl(loop));
-          ret.emplace_back(tl, coeff);
-        };
-        return ret;
-      });
+      [this](TensorId t, Level lvl) -> std::vector<LoopCoeffPair> {
+        return merger().getDependentLoops(t, lvl);
+      },
+      emitStrategy);
 }
 
 std::optional<Operation *> CodegenEnv::genLoopBoundary(

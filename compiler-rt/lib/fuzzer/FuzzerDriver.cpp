@@ -24,10 +24,11 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
+#include <functional>
 #include <mutex>
 #include <string>
 #include <thread>
-#include <fstream>
 
 // This function should be present in the libFuzzer so that the client
 // binary can test for its existence.
@@ -229,6 +230,7 @@ static void PulseThread() {
 
 static void WorkerThread(const Command &BaseCmd, std::atomic<unsigned> *Counter,
                          unsigned NumJobs, std::atomic<bool> *HasErrors) {
+  ScopedDisableMsanInterceptorChecks S;
   while (true) {
     unsigned C = (*Counter)++;
     if (C >= NumJobs) break;

@@ -113,7 +113,7 @@ static SourceLocation getStartOfNextLine(SourceLocation Loc,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts) {
   std::unique_ptr<Lexer> Lex = getLexerStartingFromLoc(Loc, SM, LangOpts);
-  if (!Lex.get())
+  if (!Lex)
     return SourceLocation();
   llvm::SmallVector<char, 16> Line;
   // FIXME: this is a bit hacky to get ReadToEndOfLine work.
@@ -606,9 +606,8 @@ void ChangeNamespaceTool::run(
                  Result.Nodes.getNodeAs<DeclRefExpr>("func_ref")) {
     // If this reference has been processed as a function call, we do not
     // process it again.
-    if (ProcessedFuncRefs.count(FuncRef))
+    if (!ProcessedFuncRefs.insert(FuncRef).second)
       return;
-    ProcessedFuncRefs.insert(FuncRef);
     const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func_decl");
     assert(Func);
     const auto *Context = Result.Nodes.getNodeAs<Decl>("dc");
@@ -648,9 +647,8 @@ static SourceLocation getLocAfterNamespaceLBrace(const NamespaceDecl *NsDecl,
                                                  const LangOptions &LangOpts) {
   std::unique_ptr<Lexer> Lex =
       getLexerStartingFromLoc(NsDecl->getBeginLoc(), SM, LangOpts);
-  assert(Lex.get() &&
-         "Failed to create lexer from the beginning of namespace.");
-  if (!Lex.get())
+  assert(Lex && "Failed to create lexer from the beginning of namespace.");
+  if (!Lex)
     return SourceLocation();
   Token Tok;
   while (!Lex->LexFromRawLexer(Tok) && Tok.isNot(tok::TokenKind::l_brace)) {
@@ -827,10 +825,10 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
       // "IsVisibleInNewNs" matcher.
       if (AliasQualifiedName != AliasName) {
         // The alias is defined in some namespace.
-        assert(StringRef(AliasQualifiedName).endswith("::" + AliasName));
+        assert(StringRef(AliasQualifiedName).ends_with("::" + AliasName));
         llvm::StringRef AliasNs =
             StringRef(AliasQualifiedName).drop_back(AliasName.size() + 2);
-        if (!llvm::StringRef(OldNs).startswith(AliasNs))
+        if (!llvm::StringRef(OldNs).starts_with(AliasNs))
           continue;
       }
       std::string NameWithAliasNamespace =
@@ -862,7 +860,7 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
   // If the new nested name in the new namespace is the same as it was in the
   // old namespace, we don't create replacement unless there can be ambiguity.
   if ((NestedName == ReplaceName && !Conflict) ||
-      (NestedName.startswith("::") && NestedName.drop_front(2) == ReplaceName))
+      (NestedName.starts_with("::") && NestedName.drop_front(2) == ReplaceName))
     return;
   // If the reference need to be fully-qualified, add a leading "::" unless
   // NewNamespace is the global namespace.
@@ -891,7 +889,7 @@ void ChangeNamespaceTool::fixTypeLoc(
   // a typedef type, we need to use the typedef type instead.
   auto IsInMovedNs = [&](const NamedDecl *D) {
     if (!llvm::StringRef(D->getQualifiedNameAsString())
-             .startswith(OldNamespace + "::"))
+             .starts_with(OldNamespace + "::"))
       return false;
     auto ExpansionLoc = Result.SourceManager->getExpansionLoc(D->getBeginLoc());
     if (ExpansionLoc.isInvalid())

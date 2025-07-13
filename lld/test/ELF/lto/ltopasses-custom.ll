@@ -2,7 +2,7 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: ld.lld %t.o -o %t.so -save-temps --lto-aa-pipeline=basic-aa \
 ; RUN: --lto-newpm-passes=ipsccp -shared
-; RUN: ld.lld %t.o -o %t2.so -save-temps --lto-newpm-passes=loweratomic -shared
+; RUN: ld.lld %t.o -o %t2.so -save-temps --lto-newpm-passes=lower-atomic -shared
 ; RUN: llvm-dis %t.so.0.4.opt.bc -o - | FileCheck %s
 ; RUN: llvm-dis %t2.so.0.4.opt.bc -o - | FileCheck %s --check-prefix=ATOMIC
 
@@ -24,13 +24,13 @@ define void @barrier() {
 ; ATOMIC-NEXT: ret void
 
 ; Check that invalid passes are rejected gracefully.
-; RUN: not --crash ld.lld -m elf_x86_64 %t.o -o /dev/null \
+; RUN: env LLD_IN_TEST=1 not --crash ld.lld -m elf_x86_64 %t.o -o /dev/null \
 ; RUN:   --lto-newpm-passes=iamnotapass -shared 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=INVALID
 ; INVALID: unable to parse pass pipeline description 'iamnotapass': unknown pass name 'iamnotapass'
 
 ; Check that invalid AA pipelines are rejected gracefully.
-; RUN: not --crash ld.lld -m elf_x86_64 %t.o -o /dev/null \
+; RUN: env LLD_IN_TEST=1 not --crash ld.lld -m elf_x86_64 %t.o -o /dev/null \
 ; RUN:   --lto-newpm-passes=globaldce --lto-aa-pipeline=patatino \
 ; RUN:   -shared 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=INVALIDAA

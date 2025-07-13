@@ -14,24 +14,28 @@
 #define LLVM_CLANG_SEMA_SEMACONCEPT_H
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
-#include <string>
 #include <utility>
 
 namespace clang {
 class Sema;
 
-struct AtomicConstraint {
+enum { ConstraintAlignment = 8 };
+
+struct alignas(ConstraintAlignment) AtomicConstraint {
   const Expr *ConstraintExpr;
+  const NamedDecl *ConstraintDecl;
   std::optional<ArrayRef<TemplateArgumentLoc>> ParameterMapping;
 
-  AtomicConstraint(Sema &S, const Expr *ConstraintExpr) :
-      ConstraintExpr(ConstraintExpr) { };
+  AtomicConstraint(const Expr *ConstraintExpr, const NamedDecl *ConstraintDecl)
+      : ConstraintExpr(ConstraintExpr), ConstraintDecl(ConstraintDecl) {};
 
   bool hasMatchingParameterMapping(ASTContext &C,
                                    const AtomicConstraint &Other) const {
@@ -53,27 +57,10 @@ struct AtomicConstraint {
     }
     return true;
   }
-
-  bool subsumes(ASTContext &C, const AtomicConstraint &Other) const {
-    // C++ [temp.constr.order] p2
-    //   - an atomic constraint A subsumes another atomic constraint B
-    //     if and only if the A and B are identical [...]
-    //
-    // C++ [temp.constr.atomic] p2
-    //   Two atomic constraints are identical if they are formed from the
-    //   same expression and the targets of the parameter mappings are
-    //   equivalent according to the rules for expressions [...]
-
-    // We do not actually substitute the parameter mappings into the
-    // constraint expressions, therefore the constraint expressions are
-    // the originals, and comparing them will suffice.
-    if (ConstraintExpr != Other.ConstraintExpr)
-      return false;
-
-    // Check that the parameter lists are identical
-    return hasMatchingParameterMapping(C, Other);
-  }
 };
+
+struct alignas(ConstraintAlignment) NormalizedConstraintPair;
+struct alignas(ConstraintAlignment) FoldExpandedConstraint;
 
 /// \brief A normalized constraint, as defined in C++ [temp.constr.normal], is
 /// either an atomic constraint, a conjunction of normalized constraints or a
@@ -83,30 +70,20 @@ struct NormalizedConstraint {
 
   enum CompoundConstraintKind { CCK_Conjunction, CCK_Disjunction };
 
-  using CompoundConstraint = llvm::PointerIntPair<
-      std::pair<NormalizedConstraint, NormalizedConstraint> *, 1,
-      CompoundConstraintKind>;
+  using CompoundConstraint = llvm::PointerIntPair<NormalizedConstraintPair *, 1,
+                                                  CompoundConstraintKind>;
 
-  llvm::PointerUnion<AtomicConstraint *, CompoundConstraint> Constraint;
+  llvm::PointerUnion<AtomicConstraint *, FoldExpandedConstraint *,
+                     CompoundConstraint>
+      Constraint;
 
   NormalizedConstraint(AtomicConstraint *C): Constraint{C} { };
-  NormalizedConstraint(ASTContext &C, NormalizedConstraint LHS,
-                       NormalizedConstraint RHS, CompoundConstraintKind Kind)
-      : Constraint{CompoundConstraint{
-            new (C) std::pair<NormalizedConstraint, NormalizedConstraint>{
-                std::move(LHS), std::move(RHS)}, Kind}} { };
+  NormalizedConstraint(FoldExpandedConstraint *C) : Constraint{C} {};
 
-  NormalizedConstraint(ASTContext &C, const NormalizedConstraint &Other) {
-    if (Other.isAtomic()) {
-      Constraint = new (C) AtomicConstraint(*Other.getAtomicConstraint());
-    } else {
-      Constraint = CompoundConstraint(
-          new (C) std::pair<NormalizedConstraint, NormalizedConstraint>{
-              NormalizedConstraint(C, Other.getLHS()),
-              NormalizedConstraint(C, Other.getRHS())},
-              Other.getCompoundKind());
-    }
-  }
+  NormalizedConstraint(ASTContext &C, NormalizedConstraint LHS,
+                       NormalizedConstraint RHS, CompoundConstraintKind Kind);
+
+  NormalizedConstraint(ASTContext &C, const NormalizedConstraint &Other);
   NormalizedConstraint(NormalizedConstraint &&Other):
       Constraint(Other.Constraint) {
     Other.Constraint = nullptr;
@@ -120,34 +97,147 @@ struct NormalizedConstraint {
     return *this;
   }
 
-  CompoundConstraintKind getCompoundKind() const {
-    assert(!isAtomic() && "getCompoundKind called on atomic constraint.");
-    return Constraint.get<CompoundConstraint>().getInt();
+  bool isAtomic() const { return llvm::isa<AtomicConstraint *>(Constraint); }
+  bool isFoldExpanded() const {
+    return llvm::isa<FoldExpandedConstraint *>(Constraint);
   }
+  bool isCompound() const { return llvm::isa<CompoundConstraint>(Constraint); }
 
-  bool isAtomic() const { return Constraint.is<AtomicConstraint *>(); }
+  CompoundConstraintKind getCompoundKind() const;
 
-  NormalizedConstraint &getLHS() const {
-    assert(!isAtomic() && "getLHS called on atomic constraint.");
-    return Constraint.get<CompoundConstraint>().getPointer()->first;
-  }
+  NormalizedConstraint &getLHS() const;
+  NormalizedConstraint &getRHS() const;
 
-  NormalizedConstraint &getRHS() const {
-    assert(!isAtomic() && "getRHS called on atomic constraint.");
-    return Constraint.get<CompoundConstraint>().getPointer()->second;
-  }
+  AtomicConstraint *getAtomicConstraint() const;
 
-  AtomicConstraint *getAtomicConstraint() const {
-    assert(isAtomic() &&
-           "getAtomicConstraint called on non-atomic constraint.");
-    return Constraint.get<AtomicConstraint *>();
-  }
+  FoldExpandedConstraint *getFoldExpandedConstraint() const;
 
 private:
   static std::optional<NormalizedConstraint>
-  fromConstraintExprs(Sema &S, NamedDecl *D, ArrayRef<const Expr *> E);
+  fromAssociatedConstraints(Sema &S, const NamedDecl *D,
+                            ArrayRef<AssociatedConstraint> ACs);
   static std::optional<NormalizedConstraint>
-  fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E);
+  fromConstraintExpr(Sema &S, const NamedDecl *D, const Expr *E);
+};
+
+struct alignas(ConstraintAlignment) NormalizedConstraintPair {
+  NormalizedConstraint LHS, RHS;
+};
+
+struct alignas(ConstraintAlignment) FoldExpandedConstraint {
+  enum class FoldOperatorKind { And, Or } Kind;
+  NormalizedConstraint Constraint;
+  const Expr *Pattern;
+
+  FoldExpandedConstraint(FoldOperatorKind K, NormalizedConstraint C,
+                         const Expr *Pattern)
+      : Kind(K), Constraint(std::move(C)), Pattern(Pattern) {};
+
+  static bool AreCompatibleForSubsumption(const FoldExpandedConstraint &A,
+                                          const FoldExpandedConstraint &B);
+};
+
+const NormalizedConstraint *getNormalizedAssociatedConstraints(
+    Sema &S, const NamedDecl *ConstrainedDecl,
+    ArrayRef<AssociatedConstraint> AssociatedConstraints);
+
+/// \brief SubsumptionChecker establishes subsumption
+/// between two set of constraints.
+class SubsumptionChecker {
+public:
+  using SubsumptionCallable = llvm::function_ref<bool(
+      const AtomicConstraint &, const AtomicConstraint &)>;
+
+  SubsumptionChecker(Sema &SemaRef, SubsumptionCallable Callable = {});
+
+  std::optional<bool> Subsumes(const NamedDecl *DP,
+                               ArrayRef<AssociatedConstraint> P,
+                               const NamedDecl *DQ,
+                               ArrayRef<AssociatedConstraint> Q);
+
+  bool Subsumes(const NormalizedConstraint *P, const NormalizedConstraint *Q);
+
+private:
+  Sema &SemaRef;
+  SubsumptionCallable Callable;
+
+  // Each Literal has a unique value that is enough to establish
+  // its identity.
+  // Some constraints (fold expended) require special subsumption
+  // handling logic beyond comparing values, so we store a flag
+  // to let us quickly dispatch to each kind of variable.
+  struct Literal {
+    enum Kind { Atomic, FoldExpanded };
+
+    unsigned Value : 16;
+    LLVM_PREFERRED_TYPE(Kind)
+    unsigned Kind : 1;
+
+    bool operator==(const Literal &Other) const { return Value == Other.Value; }
+    bool operator<(const Literal &Other) const { return Value < Other.Value; }
+  };
+  using Clause = llvm::SmallVector<Literal>;
+  using Formula = llvm::SmallVector<Clause, 5>;
+
+  struct CNFFormula : Formula {
+    static constexpr auto Kind = NormalizedConstraint::CCK_Conjunction;
+    using Formula::Formula;
+  };
+  struct DNFFormula : Formula {
+    static constexpr auto Kind = NormalizedConstraint::CCK_Disjunction;
+    using Formula::Formula;
+  };
+
+  struct MappedAtomicConstraint {
+    AtomicConstraint *Constraint;
+    Literal ID;
+  };
+
+  struct FoldExpendedConstraintKey {
+    FoldExpandedConstraint::FoldOperatorKind Kind;
+    AtomicConstraint *Constraint;
+    Literal ID;
+  };
+
+  llvm::DenseMap<const Expr *, llvm::SmallDenseMap<llvm::FoldingSetNodeID,
+                                                   MappedAtomicConstraint>>
+      AtomicMap;
+
+  llvm::DenseMap<const Expr *, std::vector<FoldExpendedConstraintKey>> FoldMap;
+
+  // A map from a literal to a corresponding associated constraint.
+  // We do not have enough bits left for a pointer union here :(
+  llvm::DenseMap<uint16_t, void *> ReverseMap;
+
+  // Fold expanded constraints ask us to recursively establish subsumption.
+  // This caches the result.
+  llvm::SmallDenseMap<
+      std::pair<const FoldExpandedConstraint *, const FoldExpandedConstraint *>,
+      bool>
+      FoldSubsumptionCache;
+
+  // Each <atomic, fold expanded constraint> is represented as a single ID.
+  // This is intentionally kept small we can't handle a large number of
+  // constraints anyway.
+  uint16_t NextID;
+
+  bool Subsumes(const DNFFormula &P, const CNFFormula &Q);
+  bool Subsumes(Literal A, Literal B);
+  bool Subsumes(const FoldExpandedConstraint *A,
+                const FoldExpandedConstraint *B);
+  bool DNFSubsumes(const Clause &P, const Clause &Q);
+
+  CNFFormula CNF(const NormalizedConstraint &C);
+  DNFFormula DNF(const NormalizedConstraint &C);
+
+  template <typename FormulaType>
+  FormulaType Normalize(const NormalizedConstraint &C);
+  void AddUniqueClauseToFormula(Formula &F, Clause C);
+
+  Literal find(AtomicConstraint *);
+  Literal find(FoldExpandedConstraint *);
+
+  uint16_t getNewLiteralId();
 };
 
 } // clang

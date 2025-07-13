@@ -1,13 +1,13 @@
 ; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 ; CHECK: Access type node must be a valid scalar type
 
-define void @test6(ptr %gi) #0 {
+define void @test6(ptr %gi, i1 %arg) #0 {
 entry:
   store i32 42, ptr %gi, align 4, !tbaa !0
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
-  br i1 undef, label %for.body, label %for.end
+  br i1 %arg, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
   store i32 undef, ptr %gi, align 4, !tbaa !2

@@ -19,14 +19,13 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <utility>
 
 namespace mlir {
 namespace linalg {
 static bool hasAllOneValues(DenseIntElementsAttr attr) {
   return llvm::all_of(
-      attr, [](APInt element) { return element.getSExtValue() == 1; });
+      attr, [](const APInt &element) { return element.getSExtValue() == 1; });
 }
 
 static Value createAdd(Location loc, Value x, Value y, OpBuilder &builder) {
@@ -349,7 +348,7 @@ rewriteInIm2Col(RewriterBase &rewriter,
   SmallVector<ReassociationIndices> batchMatVecReassociationIndice = {{0, 1},
                                                                       {2, 3}};
 
-  Value batchMatVecResultReshaped = rewriter.create<tensor::ExpandShapeOp>(
+  auto batchMatVecResultReshaped = rewriter.create<tensor::ExpandShapeOp>(
       loc, transposedOutputTensor.getType(), batchMatVecResult.getResult(0),
       batchMatVecReassociationIndice);
 

@@ -17,23 +17,17 @@
 // 64-bit only instructions
 let SchedRW = [WriteSystem], Predicates = [In64BitMode] in {
 // SEAMCALL - Call to SEAM VMX-root Operation Module
-def SEAMCALL : I<0x01, MRM_CF, (outs), (ins),
-             "seamcall", []>, PD;
+def SEAMCALL : I<0x01, MRM_CF, (outs), (ins), "seamcall", []>, TB, PD;
 
 // SEAMRET - Return to Legacy VMX-root Operation
-def SEAMRET : I<0x01, MRM_CD, (outs), (ins),
-             "seamret", []>, PD;
+def SEAMRET : I<0x01, MRM_CD, (outs), (ins), "seamret", []>, TB, PD;
 
 // SEAMOPS - SEAM Operations
-def SEAMOPS : I<0x01, MRM_CE, (outs), (ins),
-             "seamops", []>, PD;
-
+def SEAMOPS : I<0x01, MRM_CE, (outs), (ins), "seamops", []>, TB, PD;
 } // SchedRW
 
 // common instructions
 let SchedRW = [WriteSystem] in {
 // TDCALL - Call SEAM Module Functions
-def TDCALL : I<0x01, MRM_CC, (outs), (ins),
-             "tdcall", []>, PD;
-
+def TDCALL : I<0x01, MRM_CC, (outs), (ins), "tdcall", []>, TB, PD;
 } // SchedRW

@@ -28,10 +28,23 @@ class NameResolver {
   static constexpr char Sep = '/';
 
 public:
-  /// Return unique version of the \p Name in the form "Name<Sep><Number>".
+  /// Return the number of uniquified versions of a given \p Name.
+  uint64_t getUniquifiedNameCount(StringRef Name) const {
+    if (Counters.contains(Name))
+      return Counters.at(Name);
+    return 0;
+  }
+
+  /// Return unique version of the \p Name in the form "Name<Sep><ID>".
+  std::string getUniqueName(StringRef Name, const uint64_t ID) const {
+    return (Name + Twine(Sep) + Twine(ID)).str();
+  }
+
+  /// Register new version of \p Name and return unique version in the form
+  /// "Name<Sep><Number>".
   std::string uniquify(StringRef Name) {
     const uint64_t ID = ++Counters[Name];
-    return (Name + Twine(Sep) + Twine(ID)).str();
+    return getUniqueName(Name, ID);
   }
 
   /// For uniquified \p Name, return the original form (that may no longer be
@@ -47,6 +60,12 @@ public:
     StringRef LHS, RHS;
     std::tie(LHS, RHS) = UniqueName.split(Sep);
     return (LHS + Suffix + Twine(Sep) + RHS).str();
+  }
+
+  // Drops the suffix that describes the function's number of names.
+  static StringRef dropNumNames(StringRef Name) {
+    const size_t Pos = Name.find("(*");
+    return Pos != StringRef::npos ? Name.substr(0, Pos) : Name;
   }
 };
 

@@ -1,5 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,alpha.core.PointerSub,debug.ExprInspection -Wno-pointer-to-int-cast -verify -triple x86_64-apple-darwin9 -Wno-tautological-pointer-compare -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,alpha.core.PointerSub,debug.ExprInspection -Wno-pointer-to-int-cast -verify -triple i686-apple-darwin9 -Wno-tautological-pointer-compare -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,debug.ExprInspection -Wno-pointer-to-int-cast -verify -triple x86_64-apple-darwin9 -Wno-tautological-pointer-compare -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,debug.ExprInspection -Wno-pointer-to-int-cast -verify -triple i686-apple-darwin9 -Wno-tautological-pointer-compare -analyzer-config eagerly-assume=false %s
+
+#include "Inputs/system-header-simulator.h"
 
 void clang_analyzer_eval(int);
 void clang_analyzer_dump(int);
@@ -35,19 +37,24 @@ domain_port (const char *domain_b, const char *domain_e,
   return port;
 }
 
-void f3(void) {
-  int x, y;
-  int d = &y - &x; // expected-warning{{Subtraction of two pointers that do not point to the same memory chunk may cause incorrect result}}
-
-  int a[10];
-  int *p = &a[2];
-  int *q = &a[8];
-  d = q-p; // no-warning
-}
+#define FIXED_VALUE (int*) 0x1111
 
 void f4(void) {
   int *p;
   p = (int*) 0x10000; // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
+
+  int *p1;
+  p1 = p; // no warning
+
+  long x = 0x10100;
+  x += 10;
+  p = (int*) x; // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
+
+  struct sigaction sa;
+  sa.sa_handler = SIG_IGN; // no warning (exclude macros defined in system header)
+  sigaction(SIGINT, &sa, NULL);
+
+  p = FIXED_VALUE; // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
 }
 
 void f5(void) {
@@ -214,12 +221,7 @@ void comparisons_imply_size(int *lhs, int *rhs) {
   }
 
   clang_analyzer_eval(lhs <= rhs); // expected-warning{{TRUE}}
-// FIXME: In Z3ConstraintManager, ptrdiff_t is mapped to signed bitvector. However, this does not directly imply the unsigned comparison.
-#ifdef ANALYZER_CM_Z3
-  clang_analyzer_eval((rhs - lhs) >= 0); // expected-warning{{UNKNOWN}}
-#else
   clang_analyzer_eval((rhs - lhs) >= 0); // expected-warning{{TRUE}}
-#endif
   clang_analyzer_eval((rhs - lhs) > 0); // expected-warning{{UNKNOWN}}
 
   if (lhs >= rhs) {
@@ -229,11 +231,7 @@ void comparisons_imply_size(int *lhs, int *rhs) {
 
   clang_analyzer_eval(lhs == rhs); // expected-warning{{FALSE}}
   clang_analyzer_eval(lhs < rhs); // expected-warning{{TRUE}}
-#ifdef ANALYZER_CM_Z3
-  clang_analyzer_eval((rhs - lhs) > 0); // expected-warning{{UNKNOWN}}
-#else
   clang_analyzer_eval((rhs - lhs) > 0); // expected-warning{{TRUE}}
-#endif
 }
 
 void size_implies_comparison(int *lhs, int *rhs) {
@@ -244,11 +242,7 @@ void size_implies_comparison(int *lhs, int *rhs) {
     return;
   }
 
-#ifdef ANALYZER_CM_Z3
-  clang_analyzer_eval(lhs <= rhs); // expected-warning{{UNKNOWN}}
-#else
   clang_analyzer_eval(lhs <= rhs); // expected-warning{{TRUE}}
-#endif
   clang_analyzer_eval((rhs - lhs) >= 0); // expected-warning{{TRUE}}
   clang_analyzer_eval((rhs - lhs) > 0); // expected-warning{{UNKNOWN}}
 
@@ -258,11 +252,7 @@ void size_implies_comparison(int *lhs, int *rhs) {
   }
 
   clang_analyzer_eval(lhs == rhs); // expected-warning{{FALSE}}
-#ifdef ANALYZER_CM_Z3
-  clang_analyzer_eval(lhs < rhs); // expected-warning{{UNKNOWN}}
-#else
   clang_analyzer_eval(lhs < rhs); // expected-warning{{TRUE}}
-#endif
   clang_analyzer_eval((rhs - lhs) > 0); // expected-warning{{TRUE}}
 }
 

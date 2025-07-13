@@ -13,7 +13,7 @@ declare void @use(i1)
 ; result = (((ptr) p + a) + b) + 1
 define ptr @basic(ptr %p, i64 %a, i64 %b) {
 ; CHECK-LABEL: @basic(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[A:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 [[B:%.*]]
 ; CHECK-NEXT:    ret ptr [[TMP3]]
@@ -50,9 +50,9 @@ define ptr @partialConstant2(ptr %p, i64 %a, i64 %b) {
 ; result = ((ptr) p + a) + 3
 define ptr @merge(ptr %p, i64 %a) {
 ; CHECK-LABEL: @merge(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[A:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
   %1 = getelementptr inbounds i32, ptr %p, i64 1
@@ -67,12 +67,12 @@ define ptr @merge(ptr %p, i64 %a) {
 ; result = (ptr) ((ptr) ((ptr) ptr + a) + (a * b)) + 9
 define ptr @nested(ptr %p, i64 %a, i64 %b) {
 ; CHECK-LABEL: @nested(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <3 x i32>, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[A:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <5 x i32>, ptr [[TMP2]], i64 4
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 128
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[TMP4]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP5]], i64 16
 ; CHECK-NEXT:    ret ptr [[TMP6]]
 ;
   %1 = getelementptr inbounds <3 x i32>, ptr %p, i64 1
@@ -87,7 +87,7 @@ define ptr @nested(ptr %p, i64 %a, i64 %b) {
 ; It is valid to swap if the source operand of the first GEP has multiple uses.
 define ptr @multipleUses1(ptr %p) {
 ; CHECK-LABEL: @multipleUses1(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[TMP3]]
@@ -101,7 +101,7 @@ define ptr @multipleUses1(ptr %p) {
 ; It is valid to swap if the second GEP has multiple uses.
 define ptr @multipleUses2(ptr %p, i64 %a) {
 ; CHECK-LABEL: @multipleUses2(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[A:%.*]]
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    ret ptr [[TMP2]]
@@ -115,7 +115,7 @@ define ptr @multipleUses2(ptr %p, i64 %a) {
 ; Negative test. It is not valid to swap if the first GEP has multiple uses.
 define ptr @multipleUses3(ptr %p) {
 ; CHECK-LABEL: @multipleUses3(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[TMP3]]

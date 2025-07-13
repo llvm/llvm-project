@@ -385,7 +385,7 @@ static bool isDestExprFix(const MatchFinder::MatchResult &Result,
 
   std::string TempTyStr = Dest->getType().getAsString();
   StringRef TyStr = TempTyStr;
-  if (TyStr.startswith("char") || TyStr.startswith("wchar_t"))
+  if (TyStr.starts_with("char") || TyStr.starts_with("wchar_t"))
     return false;
 
   Diag << FixItHint::CreateInsertion(Dest->getBeginLoc(), "(char *)");
@@ -677,7 +677,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
                 std::optional<unsigned> SourcePos, unsigned LengthPos,
                 bool WithIncrease)
         : Name(Name), DestinationPos(DestinationPos), SourcePos(SourcePos),
-          LengthPos(LengthPos), WithIncrease(WithIncrease){};
+          LengthPos(LengthPos), WithIncrease(WithIncrease) {};
 
     StringRef Name;
     std::optional<unsigned> DestinationPos;
@@ -702,17 +702,16 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
     return hasArgument(
         CC.LengthPos,
         allOf(
-            anyOf(
-                ignoringImpCasts(integerLiteral().bind(WrongLengthExprName)),
-                allOf(unless(hasDefinition(SizeOfCharExpr)),
-                      allOf(CC.WithIncrease
-                                ? ignoringImpCasts(hasDefinition(HasIncOp))
-                                : ignoringImpCasts(allOf(
-                                      unless(hasDefinition(HasIncOp)),
-                                      anyOf(hasDefinition(binaryOperator().bind(
-                                                UnknownLengthName)),
-                                            hasDefinition(anything())))),
-                            AnyOfWrongLengthInit))),
+            anyOf(ignoringImpCasts(integerLiteral().bind(WrongLengthExprName)),
+                  allOf(unless(hasDefinition(SizeOfCharExpr)),
+                        allOf(CC.WithIncrease
+                                  ? ignoringImpCasts(hasDefinition(HasIncOp))
+                                  : ignoringImpCasts(
+                                        allOf(unless(hasDefinition(HasIncOp)),
+                                              hasDefinition(optionally(
+                                                  binaryOperator().bind(
+                                                      UnknownLengthName))))),
+                              AnyOfWrongLengthInit))),
             expr().bind(LengthExprName)));
   };
 
@@ -721,8 +720,8 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
 
     // Try to match with 'wchar_t' based function calls.
     std::string WcharHandlerFuncName =
-        "::" + (CC.Name.startswith("mem") ? "w" + CC.Name.str()
-                                          : "wcs" + CC.Name.substr(3).str());
+        "::" + (CC.Name.starts_with("mem") ? "w" + CC.Name.str()
+                                           : "wcs" + CC.Name.substr(3).str());
 
     return allOf(callee(functionDecl(
                      hasAnyName(CharHandlerFuncName, WcharHandlerFuncName))),
@@ -820,13 +819,13 @@ void NotNullTerminatedResultCheck::check(
   }
 
   StringRef Name = FunctionExpr->getDirectCallee()->getName();
-  if (Name.startswith("mem") || Name.startswith("wmem"))
+  if (Name.starts_with("mem") || Name.starts_with("wmem"))
     memoryHandlerFunctionFix(Name, Result);
   else if (Name == "strerror_s")
     strerror_sFix(Result);
-  else if (Name.endswith("ncmp"))
+  else if (Name.ends_with("ncmp"))
     ncmpFix(Name, Result);
-  else if (Name.endswith("xfrm"))
+  else if (Name.ends_with("xfrm"))
     xfrmFix(Name, Result);
 }
 
@@ -835,7 +834,7 @@ void NotNullTerminatedResultCheck::memoryHandlerFunctionFix(
   if (isCorrectGivenLength(Result))
     return;
 
-  if (Name.endswith("chr")) {
+  if (Name.ends_with("chr")) {
     memchrFix(Name, Result);
     return;
   }
@@ -849,13 +848,13 @@ void NotNullTerminatedResultCheck::memoryHandlerFunctionFix(
            "the result from calling '%0' is not null-terminated")
       << Name;
 
-  if (Name.endswith("cpy")) {
+  if (Name.ends_with("cpy")) {
     memcpyFix(Name, Result, Diag);
-  } else if (Name.endswith("cpy_s")) {
+  } else if (Name.ends_with("cpy_s")) {
     memcpy_sFix(Name, Result, Diag);
-  } else if (Name.endswith("move")) {
+  } else if (Name.ends_with("move")) {
     memmoveFix(Name, Result, Diag);
-  } else if (Name.endswith("move_s")) {
+  } else if (Name.ends_with("move_s")) {
     isDestCapacityFix(Result, Diag);
     lengthArgHandle(LengthHandleKind::Increase, Result, Diag);
   }

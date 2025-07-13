@@ -34,7 +34,7 @@ define <2 x i64> @max_gt_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE41-LABEL: max_gt_v2i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm3
@@ -119,7 +119,7 @@ define <4 x i64> @max_gt_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE41-LABEL: max_gt_v4i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
-; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm5 = [2147483648,2147483648]
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    pxor %xmm5, %xmm0
 ; SSE41-NEXT:    movdqa %xmm4, %xmm6
@@ -415,7 +415,7 @@ define <2 x i64> @max_ge_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE41-LABEL: max_ge_v2i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm3
@@ -500,7 +500,7 @@ define <4 x i64> @max_ge_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE41-LABEL: max_ge_v4i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
-; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm5 = [2147483648,2147483648]
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    pxor %xmm5, %xmm0
 ; SSE41-NEXT:    movdqa %xmm4, %xmm6
@@ -796,7 +796,7 @@ define <2 x i64> @min_lt_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE41-LABEL: min_lt_v2i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
 ; SSE41-NEXT:    pxor %xmm1, %xmm3
 ; SSE41-NEXT:    movdqa %xmm3, %xmm4
@@ -881,7 +881,7 @@ define <4 x i64> @min_lt_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE41-LABEL: min_lt_v4i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
-; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm5 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm5, %xmm0
 ; SSE41-NEXT:    movdqa %xmm2, %xmm6
 ; SSE41-NEXT:    pxor %xmm5, %xmm6
@@ -1177,7 +1177,7 @@ define <2 x i64> @min_le_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE41-LABEL: min_le_v2i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
 ; SSE41-NEXT:    pxor %xmm1, %xmm3
 ; SSE41-NEXT:    movdqa %xmm3, %xmm4
@@ -1262,7 +1262,7 @@ define <4 x i64> @min_le_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE41-LABEL: min_le_v4i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
-; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm5 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm5, %xmm0
 ; SSE41-NEXT:    movdqa %xmm2, %xmm6
 ; SSE41-NEXT:    pxor %xmm5, %xmm6
@@ -1541,10 +1541,20 @@ define <2 x i64> @max_gt_v2i64c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [18446744073709551615,7]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: max_gt_v2i64c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551615,7]
-; AVX-NEXT:    retq
+; AVX1-LABEL: max_gt_v2i64c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551615,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: max_gt_v2i64c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551615,7]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: max_gt_v2i64c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551615,7]
+; AVX512-NEXT:    retq
   %1 = insertelement <2 x i64> <i64 -7, i64 7>, i64 -7, i32 0
   %2 = insertelement <2 x i64> <i64 -1, i64 1>, i64 -1, i32 0
   %3 = icmp sgt <2 x i64> %1, %2
@@ -1559,10 +1569,20 @@ define <4 x i64> @max_gt_v4i64c() {
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: max_gt_v4i64c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551615,18446744073709551615,7,7]
-; AVX-NEXT:    retq
+; AVX1-LABEL: max_gt_v4i64c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551615,18446744073709551615,7,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: max_gt_v4i64c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551615,18446744073709551615,7,7]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: max_gt_v4i64c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [18446744073709551615,18446744073709551615,7,7]
+; AVX512-NEXT:    retq
   %1 = insertelement <4 x i64> <i64 -7, i64 -1, i64 1, i64 7>, i64 -7, i32 0
   %2 = insertelement <4 x i64> <i64 -1, i64 -7, i64 7, i64 1>, i64 -1, i32 0
   %3 = icmp sgt <4 x i64> %1, %2
@@ -1576,10 +1596,20 @@ define <4 x i32> @max_gt_v4i32c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967295,4294967295,7,7]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: max_gt_v4i32c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,4294967295,7,7]
-; AVX-NEXT:    retq
+; AVX1-LABEL: max_gt_v4i32c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,4294967295,7,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: max_gt_v4i32c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,4294967295,7,7]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: max_gt_v4i32c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967295,4294967295,7,7]
+; AVX512-NEXT:    retq
   %1 = insertelement <4 x i32> <i32 -7, i32 -1, i32 1, i32 7>, i32 -7, i32 0
   %2 = insertelement <4 x i32> <i32 -1, i32 -7, i32 7, i32 1>, i32 -1, i32 0
   %3 = icmp sgt <4 x i32> %1, %2
@@ -1594,10 +1624,20 @@ define <8 x i32> @max_gt_v8i32c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [7,5,5,7]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: max_gt_v8i32c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967295,4294967293,4294967293,4294967295,7,5,5,7]
-; AVX-NEXT:    retq
+; AVX1-LABEL: max_gt_v8i32c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967295,4294967293,4294967293,4294967295,7,5,5,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: max_gt_v8i32c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967295,4294967293,4294967293,4294967295,7,5,5,7]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: max_gt_v8i32c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [4294967295,4294967293,4294967293,4294967295,7,5,5,7]
+; AVX512-NEXT:    retq
   %1 = insertelement <8 x i32> <i32 -7, i32 -5, i32 -3, i32 -1, i32 1, i32 3, i32 5, i32 7>, i32 -7, i32 0
   %2 = insertelement <8 x i32> <i32 -1, i32 -3, i32 -5, i32 -7, i32 7, i32 5, i32 3, i32 1>, i32 -1, i32 0
   %3 = icmp sgt <8 x i32> %1, %2
@@ -1663,10 +1703,20 @@ define <2 x i64> @max_ge_v2i64c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [18446744073709551615,7]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: max_ge_v2i64c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551615,7]
-; AVX-NEXT:    retq
+; AVX1-LABEL: max_ge_v2i64c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551615,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: max_ge_v2i64c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551615,7]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: max_ge_v2i64c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551615,7]
+; AVX512-NEXT:    retq
   %1 = insertelement <2 x i64> <i64 -7, i64 7>, i64 -7, i32 0
   %2 = insertelement <2 x i64> <i64 -1, i64 1>, i64 -1, i32 0
   %3 = icmp sge <2 x i64> %1, %2
@@ -1681,10 +1731,20 @@ define <4 x i64> @max_ge_v4i64c() {
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: max_ge_v4i64c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551615,18446744073709551615,7,7]
-; AVX-NEXT:    retq
+; AVX1-LABEL: max_ge_v4i64c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551615,18446744073709551615,7,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: max_ge_v4i64c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551615,18446744073709551615,7,7]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: max_ge_v4i64c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [18446744073709551615,18446744073709551615,7,7]
+; AVX512-NEXT:    retq
   %1 = insertelement <4 x i64> <i64 -7, i64 -1, i64 1, i64 7>, i64 -7, i32 0
   %2 = insertelement <4 x i64> <i64 -1, i64 -7, i64 7, i64 1>, i64 -1, i32 0
   %3 = icmp sge <4 x i64> %1, %2
@@ -1698,10 +1758,20 @@ define <4 x i32> @max_ge_v4i32c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967295,4294967295,7,7]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: max_ge_v4i32c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,4294967295,7,7]
-; AVX-NEXT:    retq
+; AVX1-LABEL: max_ge_v4i32c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,4294967295,7,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: max_ge_v4i32c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,4294967295,7,7]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: max_ge_v4i32c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967295,4294967295,7,7]
+; AVX512-NEXT:    retq
   %1 = insertelement <4 x i32> <i32 -7, i32 -1, i32 1, i32 7>, i32 -7, i32 0
   %2 = insertelement <4 x i32> <i32 -1, i32 -7, i32 7, i32 1>, i32 -1, i32 0
   %3 = icmp sge <4 x i32> %1, %2
@@ -1716,10 +1786,20 @@ define <8 x i32> @max_ge_v8i32c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [7,5,5,7]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: max_ge_v8i32c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967295,4294967293,4294967293,4294967295,7,5,5,7]
-; AVX-NEXT:    retq
+; AVX1-LABEL: max_ge_v8i32c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967295,4294967293,4294967293,4294967295,7,5,5,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: max_ge_v8i32c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967295,4294967293,4294967293,4294967295,7,5,5,7]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: max_ge_v8i32c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [4294967295,4294967293,4294967293,4294967295,7,5,5,7]
+; AVX512-NEXT:    retq
   %1 = insertelement <8 x i32> <i32 -7, i32 -5, i32 -3, i32 -1, i32 1, i32 3, i32 5, i32 7>, i32 -7, i32 0
   %2 = insertelement <8 x i32> <i32 -1, i32 -3, i32 -5, i32 -7, i32 7, i32 5, i32 3, i32 1>, i32 -1, i32 0
   %3 = icmp sge <8 x i32> %1, %2
@@ -1785,10 +1865,20 @@ define <2 x i64> @min_lt_v2i64c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [18446744073709551609,1]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: min_lt_v2i64c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551609,1]
-; AVX-NEXT:    retq
+; AVX1-LABEL: min_lt_v2i64c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551609,1]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: min_lt_v2i64c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551609,1]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: min_lt_v2i64c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551609,1]
+; AVX512-NEXT:    retq
   %1 = insertelement <2 x i64> <i64 -7, i64 7>, i64 -7, i32 0
   %2 = insertelement <2 x i64> <i64 -1, i64 1>, i64 -1, i32 0
   %3 = icmp slt <2 x i64> %1, %2
@@ -1803,10 +1893,20 @@ define <4 x i64> @min_lt_v4i64c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: min_lt_v4i64c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551609,18446744073709551609,1,1]
-; AVX-NEXT:    retq
+; AVX1-LABEL: min_lt_v4i64c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551609,18446744073709551609,1,1]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: min_lt_v4i64c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551609,18446744073709551609,1,1]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: min_lt_v4i64c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [18446744073709551609,18446744073709551609,1,1]
+; AVX512-NEXT:    retq
   %1 = insertelement <4 x i64> <i64 -7, i64 -1, i64 1, i64 7>, i64 -7, i32 0
   %2 = insertelement <4 x i64> <i64 -1, i64 -7, i64 7, i64 1>, i64 -1, i32 0
   %3 = icmp slt <4 x i64> %1, %2
@@ -1820,10 +1920,20 @@ define <4 x i32> @min_lt_v4i32c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967289,4294967289,1,1]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: min_lt_v4i32c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967289,4294967289,1,1]
-; AVX-NEXT:    retq
+; AVX1-LABEL: min_lt_v4i32c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967289,4294967289,1,1]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: min_lt_v4i32c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967289,4294967289,1,1]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: min_lt_v4i32c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967289,4294967289,1,1]
+; AVX512-NEXT:    retq
   %1 = insertelement <4 x i32> <i32 -7, i32 -1, i32 1, i32 7>, i32 -7, i32 0
   %2 = insertelement <4 x i32> <i32 -1, i32 -7, i32 7, i32 1>, i32 -1, i32 0
   %3 = icmp slt <4 x i32> %1, %2
@@ -1838,10 +1948,20 @@ define <8 x i32> @min_lt_v8i32c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,3,3,1]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: min_lt_v8i32c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967289,4294967291,4294967291,4294967289,1,3,3,1]
-; AVX-NEXT:    retq
+; AVX1-LABEL: min_lt_v8i32c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967289,4294967291,4294967291,4294967289,1,3,3,1]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: min_lt_v8i32c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967289,4294967291,4294967291,4294967289,1,3,3,1]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: min_lt_v8i32c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [4294967289,4294967291,4294967291,4294967289,1,3,3,1]
+; AVX512-NEXT:    retq
   %1 = insertelement <8 x i32> <i32 -7, i32 -5, i32 -3, i32 -1, i32 1, i32 3, i32 5, i32 7>, i32 -7, i32 0
   %2 = insertelement <8 x i32> <i32 -1, i32 -3, i32 -5, i32 -7, i32 7, i32 5, i32 3, i32 1>, i32 -1, i32 0
   %3 = icmp slt <8 x i32> %1, %2
@@ -1907,10 +2027,20 @@ define <2 x i64> @min_le_v2i64c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [18446744073709551609,1]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: min_le_v2i64c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551609,1]
-; AVX-NEXT:    retq
+; AVX1-LABEL: min_le_v2i64c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551609,1]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: min_le_v2i64c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551609,1]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: min_le_v2i64c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551609,1]
+; AVX512-NEXT:    retq
   %1 = insertelement <2 x i64> <i64 -7, i64 7>, i64 -7, i32 0
   %2 = insertelement <2 x i64> <i64 -1, i64 1>, i64 -1, i32 0
   %3 = icmp sle <2 x i64> %1, %2
@@ -1925,10 +2055,20 @@ define <4 x i64> @min_le_v4i64c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: min_le_v4i64c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551609,18446744073709551609,1,1]
-; AVX-NEXT:    retq
+; AVX1-LABEL: min_le_v4i64c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551609,18446744073709551609,1,1]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: min_le_v4i64c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551609,18446744073709551609,1,1]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: min_le_v4i64c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [18446744073709551609,18446744073709551609,1,1]
+; AVX512-NEXT:    retq
   %1 = insertelement <4 x i64> <i64 -7, i64 -1, i64 1, i64 7>, i64 -7, i32 0
   %2 = insertelement <4 x i64> <i64 -1, i64 -7, i64 7, i64 1>, i64 -1, i32 0
   %3 = icmp sle <4 x i64> %1, %2
@@ -1942,10 +2082,20 @@ define <4 x i32> @min_le_v4i32c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967289,4294967289,1,1]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: min_le_v4i32c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967289,4294967289,1,1]
-; AVX-NEXT:    retq
+; AVX1-LABEL: min_le_v4i32c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967289,4294967289,1,1]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: min_le_v4i32c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967289,4294967289,1,1]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: min_le_v4i32c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967289,4294967289,1,1]
+; AVX512-NEXT:    retq
   %1 = insertelement <4 x i32> <i32 -7, i32 -1, i32 1, i32 7>, i32 -7, i32 0
   %2 = insertelement <4 x i32> <i32 -1, i32 -7, i32 7, i32 1>, i32 -1, i32 0
   %3 = icmp sle <4 x i32> %1, %2
@@ -1960,10 +2110,20 @@ define <8 x i32> @min_le_v8i32c() {
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,3,3,1]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: min_le_v8i32c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967289,4294967291,4294967291,4294967289,1,3,3,1]
-; AVX-NEXT:    retq
+; AVX1-LABEL: min_le_v8i32c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967289,4294967291,4294967291,4294967289,1,3,3,1]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: min_le_v8i32c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967289,4294967291,4294967291,4294967289,1,3,3,1]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: min_le_v8i32c:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [4294967289,4294967291,4294967291,4294967289,1,3,3,1]
+; AVX512-NEXT:    retq
   %1 = insertelement <8 x i32> <i32 -7, i32 -5, i32 -3, i32 -1, i32 1, i32 3, i32 5, i32 7>, i32 -7, i32 0
   %2 = insertelement <8 x i32> <i32 -1, i32 -3, i32 -5, i32 -7, i32 7, i32 5, i32 3, i32 1>, i32 -1, i32 0
   %3 = icmp sle <8 x i32> %1, %2

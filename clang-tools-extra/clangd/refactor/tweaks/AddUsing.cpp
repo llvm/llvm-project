@@ -352,7 +352,7 @@ bool AddUsing::prepare(const Selection &Inputs) {
       splitQualifiedName(SpelledRange.text(SM));
   QualifierToSpell = getNNSLAsString(
       QualifierToRemove, Inputs.AST->getASTContext().getPrintingPolicy());
-  if (!llvm::StringRef(QualifierToSpell).endswith(SpelledQualifier) ||
+  if (!llvm::StringRef(QualifierToSpell).ends_with(SpelledQualifier) ||
       SpelledName.empty())
     return false; // What's spelled doesn't match the qualifier.
   return true;

@@ -16,7 +16,6 @@ add_flang_library(FortranLower
   ConvertType.cpp
   ConvertVariable.cpp
   CustomIntrinsicCall.cpp
-  DumpEvaluateExpr.cpp
   HlfirIntrinsics.cpp
   HostAssociations.cpp
   IO.cpp
@@ -24,37 +23,65 @@ add_flang_library(FortranLower
   LoweringOptions.cpp
   Mangler.cpp
   OpenACC.cpp
-  OpenMP.cpp
+  OpenMP/Atomic.cpp
+  OpenMP/ClauseProcessor.cpp
+  OpenMP/Clauses.cpp
+  OpenMP/DataSharingProcessor.cpp
+  OpenMP/Decomposer.cpp
+  OpenMP/OpenMP.cpp
+  OpenMP/Utils.cpp
   PFTBuilder.cpp
   Runtime.cpp
+  Support/PrivateReductionUtils.cpp
+  Support/ReductionProcessor.cpp
+  Support/Utils.cpp
   SymbolMap.cpp
   VectorSubscripts.cpp
   
   DEPENDS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   FIRTransforms
   HLFIRDialect
-  ${dialect_libs}
-  ${extension_libs}
 
   LINK_LIBS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   FIRDialectSupport
   FIRBuilder
   FIRSupport
   FIRTransforms
   HLFIRDialect
-  ${dialect_libs}
-  ${extension_libs}
-  FortranCommon
+  FortranSupport
   FortranParser
   FortranEvaluate
   FortranSemantics
+
+  LINK_COMPONENTS
+  Support
+
+  MLIR_DEPS
+  ${dialect_libs}
+  ${extension_libs}
+
+  MLIR_LIBS
+  ${dialect_libs}
+  ${extension_libs}
   MLIRAffineToStandard
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRSCFToControlFlow
+)
 
-  LINK_COMPONENTS
-  Support
+target_precompile_headers(FortranLower PRIVATE
+  [["flang/Lower/ConvertExpr.h"]]
+  [["flang/Lower/SymbolMap.h"]]
+  [["flang/Lower/AbstractConverter.h"]]
+  [["flang/Lower/IterationSpace.h"]]
+  [["flang/Lower/CallInterface.h"]]
+  [["flang/Lower/BoxAnalyzer.h"]]
+  [["flang/Lower/PFTBuilder.h"]]
+  [["flang/Lower/DirectivesCommon.h"]]
 )

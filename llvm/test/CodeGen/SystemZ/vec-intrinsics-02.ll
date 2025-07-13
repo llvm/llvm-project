@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 
 declare <2 x i64> @llvm.s390.vbperm(<16 x i8>, <16 x i8>)
-declare <16 x i8> @llvm.s390.vmslg(<2 x i64>, <2 x i64>, <16 x i8>, i32)
+declare i128 @llvm.s390.vmslg(<2 x i64>, <2 x i64>, i128, i32)
 declare <16 x i8> @llvm.s390.vlrl(i32, ptr)
 declare void @llvm.s390.vstrl(<16 x i8>, i32, ptr)
 
@@ -30,23 +30,27 @@ define <2 x i64> @test_vbperm(<16 x i8> %a, <16 x i8> %b) {
 }
 
 ; VMSLG with no shifts.
-define <16 x i8> @test_vmslg1(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c) {
+define i128 @test_vmslg1(<2 x i64> %a, <2 x i64> %b, i128 %c) {
 ; CHECK-LABEL: test_vmslg1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmslg %v24, %v24, %v26, %v28, 0
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vmslg %v0, %v24, %v26, %v0, 0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vmslg(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c, i32 0)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vmslg(<2 x i64> %a, <2 x i64> %b, i128 %c, i32 0)
+  ret i128 %res
 }
 
 ; VMSLG with both shifts.
-define <16 x i8> @test_vmslg2(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c) {
+define i128 @test_vmslg2(<2 x i64> %a, <2 x i64> %b, i128 %c) {
 ; CHECK-LABEL: test_vmslg2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmslg %v24, %v24, %v26, %v28, 12
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vmslg %v0, %v24, %v26, %v0, 12
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vmslg(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c, i32 12)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vmslg(<2 x i64> %a, <2 x i64> %b, i128 %c, i32 12)
+  ret i128 %res
 }
 
 ; VLRLR with the lowest in-range displacement.

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLForwardCompat.h"
-#include "MoveOnly.h"
+#include "CountCopyAndMove.h"
 #include "gtest/gtest.h"
 
 namespace {
@@ -45,6 +45,25 @@ TYPED_TEST(STLForwardCompatRemoveCVRefTest, RemoveCVRefT) {
                             llvm::remove_cvref_t<From>>::value));
 }
 
+template <typename T> class TypeIdentityTest : public ::testing::Test {
+public:
+  using TypeIdentity = llvm::type_identity<T>;
+};
+
+struct A {
+  struct B {};
+};
+using TypeIdentityTestTypes =
+    ::testing::Types<int, volatile int, A, const A::B>;
+
+TYPED_TEST_SUITE(TypeIdentityTest, TypeIdentityTestTypes, /*NameGenerator*/);
+
+TYPED_TEST(TypeIdentityTest, Identity) {
+  // TestFixture is the instantiated TypeIdentityTest.
+  EXPECT_TRUE(
+      (std::is_same_v<TypeParam, typename TestFixture::TypeIdentity::type>));
+}
+
 TEST(TransformTest, TransformStd) {
   std::optional<int> A;
 
@@ -58,27 +77,29 @@ TEST(TransformTest, TransformStd) {
 }
 
 TEST(TransformTest, MoveTransformStd) {
-  using llvm::MoveOnly;
+  using llvm::CountCopyAndMove;
 
-  std::optional<MoveOnly> A;
+  std::optional<CountCopyAndMove> A;
 
-  MoveOnly::ResetCounts();
+  CountCopyAndMove::ResetCounts();
   std::optional<int> B = llvm::transformOptional(
-      std::move(A), [&](const MoveOnly &M) { return M.val + 2; });
+      std::move(A), [&](const CountCopyAndMove &M) { return M.val + 2; });
   EXPECT_FALSE(B.has_value());
-  EXPECT_EQ(0u, MoveOnly::MoveConstructions);
-  EXPECT_EQ(0u, MoveOnly::MoveAssignments);
-  EXPECT_EQ(0u, MoveOnly::Destructions);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::MoveAssignments);
+  EXPECT_EQ(0, CountCopyAndMove::Destructions);
 
-  A = MoveOnly(5);
-  MoveOnly::ResetCounts();
+  A = CountCopyAndMove(5);
+  CountCopyAndMove::ResetCounts();
   std::optional<int> C = llvm::transformOptional(
-      std::move(A), [&](const MoveOnly &M) { return M.val + 2; });
+      std::move(A), [&](const CountCopyAndMove &M) { return M.val + 2; });
   EXPECT_TRUE(C.has_value());
   EXPECT_EQ(7, *C);
-  EXPECT_EQ(0u, MoveOnly::MoveConstructions);
-  EXPECT_EQ(0u, MoveOnly::MoveAssignments);
-  EXPECT_EQ(0u, MoveOnly::Destructions);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::MoveAssignments);
+  EXPECT_EQ(0, CountCopyAndMove::Destructions);
 }
 
 TEST(TransformTest, TransformLlvm) {
@@ -96,27 +117,29 @@ TEST(TransformTest, TransformLlvm) {
 }
 
 TEST(TransformTest, MoveTransformLlvm) {
-  using llvm::MoveOnly;
+  using llvm::CountCopyAndMove;
 
-  std::optional<MoveOnly> A;
+  std::optional<CountCopyAndMove> A;
 
-  MoveOnly::ResetCounts();
+  CountCopyAndMove::ResetCounts();
   std::optional<int> B = llvm::transformOptional(
-      std::move(A), [&](const MoveOnly &M) { return M.val + 2; });
+      std::move(A), [&](const CountCopyAndMove &M) { return M.val + 2; });
   EXPECT_FALSE(B.has_value());
-  EXPECT_EQ(0u, MoveOnly::MoveConstructions);
-  EXPECT_EQ(0u, MoveOnly::MoveAssignments);
-  EXPECT_EQ(0u, MoveOnly::Destructions);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::MoveAssignments);
+  EXPECT_EQ(0, CountCopyAndMove::Destructions);
 
-  A = MoveOnly(5);
-  MoveOnly::ResetCounts();
+  A = CountCopyAndMove(5);
+  CountCopyAndMove::ResetCounts();
   std::optional<int> C = llvm::transformOptional(
-      std::move(A), [&](const MoveOnly &M) { return M.val + 2; });
+      std::move(A), [&](const CountCopyAndMove &M) { return M.val + 2; });
   EXPECT_TRUE(C.has_value());
   EXPECT_EQ(7, *C);
-  EXPECT_EQ(0u, MoveOnly::MoveConstructions);
-  EXPECT_EQ(0u, MoveOnly::MoveAssignments);
-  EXPECT_EQ(0u, MoveOnly::Destructions);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::MoveAssignments);
+  EXPECT_EQ(0, CountCopyAndMove::Destructions);
 }
 
 TEST(TransformTest, ToUnderlying) {

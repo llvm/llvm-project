@@ -11,7 +11,7 @@ end module
 module m2
   use m1
   implicit none
-  !WARNING: 'foo' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic
+  !WARNING: 'foo' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic [-Whomonymous-specific]
   interface foo
     module procedure s
   end interface
@@ -22,13 +22,17 @@ contains
 end module
 
 subroutine foo
-  !ERROR: Cannot use-associate 'foo'; it is already declared in this scope
+  !PORTABILITY: 'foo' is use-associated into a subprogram of the same name [-Wuse-association-into-same-name-subprogram]
   use m1
+  !ERROR: Reference to 'foo' is ambiguous
+  call foo
 end
 
 subroutine bar
-  !ERROR: Cannot use-associate 'bar'; it is already declared in this scope
+  !PORTABILITY: 'foo' is use-associated into a subprogram of the same name [-Wuse-association-into-same-name-subprogram]
   use m1, bar => foo
+  !ERROR: Reference to 'bar' is ambiguous
+  call bar
 end
 
 !OK to use-associate a type with the same name as a generic
@@ -229,9 +233,9 @@ end
 
 subroutine test15
   use m15a
-  !ERROR: Cannot use-associate generic interface 'foo' with specific procedure of the same name when another such interface and procedure are in scope
-  use m15b
+  use m15b ! ok
 end
+
 
 module m16a
   type foo
@@ -259,18 +263,111 @@ end
 
 subroutine test16
   use m16a
-  !ERROR: Generic interface 'foo' has ambiguous derived types from modules 'm16a' and 'm16b'
-  use m16b
+  use m16b ! ok
 end
 
 subroutine test17
   use m15a
-  !ERROR: Cannot use-associate generic interface 'foo' with derived type of the same name when another such interface and procedure are in scope
-  use m16a
+  use m16a ! ok
 end
 
 subroutine test18
   use m16a
-  !ERROR: Cannot use-associate generic interface 'foo' with specific procedure of the same name when another such interface and derived type are in scope
-  use m15a
+  use m15a ! ok
+end
+
+module m21
+  type foo
+    integer a
+  end type
+  interface foo
+    module procedure f1
+  end interface
+ contains
+  function f1(a)
+    f1 = a
+  end
+end
+
+module m22
+  type foo
+    real b
+  end type
+  interface foo
+    module procedure f2
+  end interface
+ contains
+  function f2(a,b)
+    f2 = a + b
+  end
+end
+
+module m23
+  interface foo
+    module procedure foo
+    module procedure f3
+  end interface
+ contains
+  function foo()
+    foo = 0.
+  end
+  function f3(a,b,c)
+    f3 = a + b + c
+  end
+end
+
+module m24
+  interface foo
+    module procedure foo
+    module procedure f4
+  end interface
+ contains
+  function foo(a)
+    foo = a
+  end
+  function f4(a,b,c,d)
+    f4 = a + b + c +d
+  end
+end
+
+subroutine s_21_22_a
+  use m21
+  use m22
+  print *, foo(1.) ! Intel error
+  print *, foo(1.,2.) ! Intel error
+end
+
+subroutine s_21_22_b
+  use m21
+  use m22
+  !ERROR: 'foo' is not a derived type
+  type(foo) x ! definite error: GNU and Intel catch
+end
+
+subroutine s_21_23
+  use m21
+  use m23
+  type(foo) x ! Intel and NAG error
+  !PORTABILITY: Reference to generic function 'foo' (resolving to specific 'f1') is ambiguous with a structure constructor of the same name [-Wambiguous-structure-constructor]
+  print *, foo(1.) ! Intel error
+  print *, foo(1.,2.,3.) ! Intel error
+  call ext(foo) ! GNU and Intel error
+end
+
+subroutine s_22_23
+  use m22
+  use m23
+  type(foo) x ! Intel and NAG error
+  print *, foo(1.,2.) ! Intel error
+  print *, foo(1.,2.,3.) ! Intel error
+  call ext(foo) ! Intel error
+end
+
+subroutine s_23_24
+  use m23
+  use m24
+  print *, foo(1.,2.,3.) ! NAG error
+  print *, foo(1.,2.,3.,4.) ! XLF error
+  !ERROR: 'foo' is not a specific procedure
+  call ext(foo) ! definite error
 end

@@ -1,10 +1,8 @@
 // RUN: mlir-opt %s \
-// RUN:   --pass-pipeline="builtin.module(test-transform-dialect-interpreter{ \
-// RUN:        bind-first-extra-to-ops=linalg.matmul \
-// RUN:        bind-second-extra-to-ops=linalg.elemwise_binary \
-// RUN:        enable-expensive-checks},canonicalize,cse,symbol-dce)" \
+// RUN:   --pass-pipeline="builtin.module(transform-interpreter{ \
+// RUN:        debug-bind-trailing-args=linalg.matmul,linalg.elementwise},\
+// RUN:        canonicalize,cse,symbol-dce)" \
 // RUN:   --split-input-file --verify-diagnostics
-
 // ****************************** IMPORTANT NOTE ******************************
 //
 // If you are changing this file, you may also need to change
@@ -25,14 +23,14 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
   // Elementwise addition.
 
   // expected-note @below {{ancestor payload op}}
-  %biased = linalg.elemwise_binary { fun = #linalg.binary_fn<add> }
+  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
     ins(%matmul, %bias : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise max with 0 (ReLU).
-  %c0f = arith.constant 0.0 : f32
-  %relued = linalg.elemwise_binary { fun = #linalg.binary_fn<max_signed> }
-    ins(%biased, %c0f : tensor<512x512xf32>, f32)
+  %c0f = arith.constant dense<0.0> : tensor<512x512xf32>
+  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+    ins(%biased, %c0f : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
 }
@@ -45,14 +43,15 @@ func.func private @microkernel(
     %init: tensor<4x4xf32>,
     %output: tensor<4x4xf32>) -> tensor<4x4xf32>
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op,
-     %arg1: !transform.op<"linalg.matmul">,
-     %arg2: !transform.op<"linalg.elemwise_binary">):
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %arg0: !transform.any_op,
+      %arg1: !transform.op<"linalg.matmul">,
+      %arg2: !transform.op<"linalg.elementwise">) {
   // Since the %arg2 handle is associated with both elementwise operations,
   // we need to split it into two handles so we can target only the second
   // elementwise operation.
-  %add, %max = transform.split_handle %arg2 : (!transform.op<"linalg.elemwise_binary">)
+  %add, %max = transform.split_handle %arg2 : (!transform.op<"linalg.elementwise">)
       -> (!transform.any_op, !transform.any_op)
 
   // The actual tiling transformation takes tile sizes as attributes. It produces a
@@ -96,7 +95,8 @@ transform.sequence failures(propagate) {
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"func.call">)
 
   // expected-error @below {{uses a handle invalidated by a previously executed transform op}}
-  transform.test_print_remark_at_operand %f, "fused" : !transform.any_op
+  transform.debug.emit_remark_at %f, "fused" : !transform.any_op
 
   transform.yield
+  }
 }

@@ -13,6 +13,17 @@ struct X0<int, A> {
   static const unsigned value = 1;
 };
 
+template<class T>
+struct type_identity {
+    using type = T;
+};
+
+template<class T>
+using type_identity_t = typename type_identity<T>::type;
+
+template <typename... T>
+struct args_tag {};
+
 template<int> struct X0i;
 template<long> struct X0l;
 int array_x0a[X0<long, X0l>::value == 0? 1 : -1];
@@ -401,6 +412,34 @@ namespace deduction_substitution_failure {
   template<typename T, typename U> int B; // expected-warning 0-1 {{extension}}
   template<typename T> int B<T, typename Fail<T>::error> {}; // expected-note {{instantiation of}}
   int bi = B<char, char>; // expected-note {{during template argument deduction for variable template partial specialization 'B<T, typename Fail<T>::error>' [with T = char]}}
+}
+
+namespace deduce_pack_from_argument {
+  template <typename... T>
+  void separator(args_tag<T...>, T..., int, T...) {}
+  template <typename... T>
+  void separator_dependent(args_tag<T...>, type_identity_t<T>..., int, type_identity_t<T>...) {}
+  template <typename... Y, typename... T>
+  void separator_multiple_parameters(args_tag<Y...>, args_tag<T...>, type_identity_t<T>..., int mid, type_identity_t<T>...) {}
+
+  void test_separator() {
+    separator(args_tag<int, int>{}, 4, 8, 42, 16, 25);
+    separator(args_tag<>{}, 42);
+    separator_dependent(args_tag<int, int>{}, 4, 8, 42, 16, 25);
+    separator_dependent(args_tag<>{}, 42);
+    separator_multiple_parameters(args_tag<const int, const int>{}, args_tag<int, int>{}, 8, 9, 15, 16, 23);
+  }
+
+  template <typename... Y, typename... T> void no_separator(args_tag<T...>, T..., T...) {}
+  template <typename... Y, typename... T>
+  void no_separator_dependent(args_tag<Y...>, args_tag<T...>, type_identity_t<T>..., type_identity_t<T>...) {}
+
+  void test_no_separator() {
+    no_separator(args_tag<int, int>{}, 1, 2, 3, 4);
+    no_separator(args_tag<>{});
+    no_separator_dependent(args_tag<const int, const int>{}, args_tag<int, int>{}, 8, 9, 15, 16);
+    no_separator_dependent(args_tag<>{}, args_tag<>{});
+  }
 }
 
 namespace deduction_after_explicit_pack {

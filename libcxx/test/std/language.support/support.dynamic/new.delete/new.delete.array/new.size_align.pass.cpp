@@ -13,9 +13,12 @@
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete
 
+// GCC warns about allocating numeric_limits<size_t>::max() being too large (which we test here)
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-alloc-size-larger-than
+
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
-// UNSUPPORTED: target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 #include <new>
 #include <cstddef>
@@ -34,13 +37,12 @@ void my_new_handler() {
 }
 
 int main(int, char**) {
-    // Test that we can call the function directly
-    {
-        void* x = operator new[](10, static_cast<std::align_val_t>(64));
+    test_with_interesting_alignments([](std::size_t size, std::size_t alignment) {
+        void* x = operator new[](size, static_cast<std::align_val_t>(alignment));
         assert(x != nullptr);
-        assert(reinterpret_cast<std::uintptr_t>(x) % 64 == 0);
-        operator delete[](x, static_cast<std::align_val_t>(64));
-    }
+        assert(reinterpret_cast<std::uintptr_t>(x) % alignment == 0);
+        operator delete[](x, static_cast<std::align_val_t>(alignment));
+    });
 
     // Test that the new handler is called if allocation fails
     {

@@ -39,12 +39,14 @@ define i32 @dom_arg(i32 %a) {
 
 define ptr @dom_thread_local_global() {
 ; CHECK-LABEL: @dom_thread_local_global(
-; CHECK-NEXT:    store ptr @tl, ptr @g3, align 8
+; CHECK-NEXT:    [[P:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tl)
+; CHECK-NEXT:    store ptr [[P]], ptr @g3, align 8
 ; CHECK-NEXT:    call void @b()
 ; CHECK-NEXT:    [[R:%.*]] = load ptr, ptr @g3, align 8
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
-  store ptr @tl, ptr @g3
+  %p = call ptr @llvm.threadlocal.address(ptr @tl)
+  store ptr %p, ptr @g3
   call void @b()
   %r = load ptr, ptr @g3
   ret ptr %r

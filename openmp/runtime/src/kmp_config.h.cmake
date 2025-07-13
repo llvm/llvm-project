@@ -100,7 +100,7 @@
 #define ENABLE_LIBOMPTARGET OPENMP_ENABLE_LIBOMPTARGET
 
 // Configured cache line based on architecture
-#if KMP_ARCH_PPC64
+#if KMP_ARCH_PPC64 || KMP_ARCH_PPC
 # define CACHE_LINE 128
 #elif KMP_ARCH_AARCH64_A64FX
 # define CACHE_LINE 256
@@ -120,7 +120,7 @@
 #define KMP_ASM_INTRINS 1
 #define USE_ITT_BUILD LIBOMP_USE_ITT_NOTIFY
 #define INTEL_ITTNOTIFY_PREFIX __kmp_itt_
-#if ! KMP_MIC
+#if ! (KMP_MIC || KMP_OS_HAIKU)
 # define USE_LOAD_BALANCE 1
 #endif
 #if ! (KMP_OS_WINDOWS || KMP_OS_DARWIN)

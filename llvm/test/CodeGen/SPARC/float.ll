@@ -1,7 +1,7 @@
-; RUN: llc -march=sparc < %s | FileCheck %s -check-prefix=V8 -check-prefix=V8-BE
-; RUN: llc -march=sparcel < %s | FileCheck %s -check-prefix=V8 -check-prefix=V8-EL
-; RUN: llc -march=sparc -O0 < %s | FileCheck %s -check-prefix=V8-UNOPT
-; RUN: llc -march=sparc -mattr=v9 < %s | FileCheck %s -check-prefix=V9
+; RUN: llc -mtriple=sparc < %s | FileCheck %s -check-prefix=V8 -check-prefix=V8-BE
+; RUN: llc -mtriple=sparcel < %s | FileCheck %s -check-prefix=V8 -check-prefix=V8-EL
+; RUN: llc -mtriple=sparc -O0 < %s | FileCheck %s -check-prefix=V8-UNOPT
+; RUN: llc -mtriple=sparc -mattr=v9 < %s | FileCheck %s -check-prefix=V9
 ; RUN: llc -mtriple=sparc64-unknown-linux < %s | FileCheck %s -check-prefix=SPARC64
 
 ; V8-LABEL:     test_neg:
@@ -91,12 +91,12 @@ entry:
 ; SPARC64:          fxtos
 ; SPARC64:          fstox
 
-define void @test_xtos_stox(i64 %a, i64* %ptr0, float* %ptr1) {
+define void @test_xtos_stox(i64 %a, ptr %ptr0, ptr %ptr1) {
 entry:
   %0 = sitofp i64 %a to float
-  store float %0, float* %ptr1, align 8
+  store float %0, ptr %ptr1, align 8
   %1 = fptosi float %0 to i64
-  store i64 %1, i64* %ptr0, align 8
+  store i64 %1, ptr %ptr0, align 8
   ret void
 }
 
@@ -112,12 +112,12 @@ entry:
 ; SPARC64:          fitos
 ; SPARC64:          fstoi
 
-define void @test_itos_stoi(i32 %a, i32* %ptr0, float* %ptr1) {
+define void @test_itos_stoi(i32 %a, ptr %ptr0, ptr %ptr1) {
 entry:
   %0 = sitofp i32 %a to float
-  store float %0, float* %ptr1, align 8
+  store float %0, ptr %ptr1, align 8
   %1 = fptosi float %0 to i32
-  store i32 %1, i32* %ptr0, align 8
+  store i32 %1, ptr %ptr0, align 8
   ret void
 }
 
@@ -134,12 +134,12 @@ entry:
 ; SPARC64:          fxtod
 ; SPARC64:          fdtox
 
-define void @test_xtod_dtox(i64 %a, i64* %ptr0, double* %ptr1) {
+define void @test_xtod_dtox(i64 %a, ptr %ptr0, ptr %ptr1) {
 entry:
   %0 = sitofp i64 %a to double
-  store double %0, double* %ptr1, align 8
+  store double %0, ptr %ptr1, align 8
   %1 = fptosi double %0 to i64
-  store i64 %1, i64* %ptr0, align 8
+  store i64 %1, ptr %ptr0, align 8
   ret void
 }
 
@@ -155,12 +155,12 @@ entry:
 ; SPARC64:          fitod
 ; SPARC64:          fdtoi
 
-define void @test_itod_dtoi(i32 %a, double %b, i32* %ptr0, double* %ptr1) {
+define void @test_itod_dtoi(i32 %a, double %b, ptr %ptr0, ptr %ptr1) {
 entry:
   %0 = sitofp i32 %a to double
-  store double %0, double* %ptr1, align 8
+  store double %0, ptr %ptr1, align 8
   %1 = fptosi double %b to i32
-  store i32 %1, i32* %ptr0, align 8
+  store i32 %1, ptr %ptr0, align 8
   ret void
 }
 
@@ -176,12 +176,12 @@ entry:
 ; SPARC64-NOT:     call __floatundisf
 ; SPARC64-NOT:     call __fixunssfdi
 
-define void @test_uxtos_stoux(i64 %a, i64* %ptr0, float* %ptr1) {
+define void @test_uxtos_stoux(i64 %a, ptr %ptr0, ptr %ptr1) {
 entry:
   %0 = uitofp i64 %a to float
-  store float %0, float* %ptr1, align 8
+  store float %0, ptr %ptr1, align 8
   %1 = fptoui float %0 to i64
-  store i64 %1, i64* %ptr0, align 8
+  store i64 %1, ptr %ptr0, align 8
   ret void
 }
 
@@ -197,12 +197,12 @@ entry:
 ; SPARC64:     fdtos
 ; SPARC64:     fstoi
 
-define void @test_utos_stou(i32 %a, i32* %ptr0, float* %ptr1) {
+define void @test_utos_stou(i32 %a, ptr %ptr0, ptr %ptr1) {
 entry:
   %0 = uitofp i32 %a to float
-  store float %0, float* %ptr1, align 8
+  store float %0, ptr %ptr1, align 8
   %1 = fptoui float %0 to i32
-  store i32 %1, i32* %ptr0, align 8
+  store i32 %1, ptr %ptr0, align 8
   ret void
 }
 
@@ -219,12 +219,12 @@ entry:
 ; SPARC64-NOT:          call __floatundidf
 ; SPARC64-NOT:          call __floatunsdfdi
 
-define void @test_uxtod_dtoux(i64 %a, i64* %ptr0, double* %ptr1) {
+define void @test_uxtod_dtoux(i64 %a, ptr %ptr0, ptr %ptr1) {
 entry:
   %0 = uitofp i64 %a to double
-  store double %0, double* %ptr1, align 8
+  store double %0, ptr %ptr1, align 8
   %1 = fptoui double %0 to i64
-  store i64 %1, i64* %ptr0, align 8
+  store i64 %1, ptr %ptr0, align 8
   ret void
 }
 
@@ -240,11 +240,11 @@ entry:
 ; SPARC64-NOT:      fitod
 ; SPARC64:          fdtoi
 
-define void @test_utod_dtou(i32 %a, double %b, i32* %ptr0, double* %ptr1) {
+define void @test_utod_dtou(i32 %a, double %b, ptr %ptr0, ptr %ptr1) {
 entry:
   %0 = uitofp i32 %a to double
-  store double %0, double* %ptr1, align 8
+  store double %0, ptr %ptr1, align 8
   %1 = fptoui double %b to i32
-  store i32 %1, i32* %ptr0, align 8
+  store i32 %1, ptr %ptr0, align 8
   ret void
 }

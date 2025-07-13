@@ -24,13 +24,15 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __replace {
-struct __fn {
+struct __replace {
   template <input_iterator _Iter, sentinel_for<_Iter> _Sent, class _Type1, class _Type2, class _Proj = identity>
     requires indirectly_writable<_Iter, const _Type2&> &&
              indirect_binary_predicate<ranges::equal_to, projected<_Iter, _Proj>, const _Type1*>
@@ -49,15 +51,16 @@ struct __fn {
     return ranges::__replace_if_impl(ranges::begin(__range), ranges::end(__range), __pred, __new_value, __proj);
   }
 };
-} // namespace __replace
 
 inline namespace __cpo {
-inline constexpr auto replace = __replace::__fn{};
+inline constexpr auto replace = __replace{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_REPLACE_H

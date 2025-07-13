@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-small-data-threshold=8 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=8 < %s | FileCheck %s
 ; CHECK: = memd(gp+#g0)
 ; If an object will be placed in .sdata, do not shrink any references to it.
 ; In this case, g0 must be loaded via memd.

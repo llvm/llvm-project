@@ -13,9 +13,7 @@
 #include "mlir/Dialect/SparseTensor/Transforms/BufferizableOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 
@@ -30,7 +28,8 @@ template <typename ConcreteModel, typename ConcreteOp>
 struct SparseBufferizableOpInterfaceExternalModel
     : public BufferizableOpInterface::ExternalModel<ConcreteModel, ConcreteOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     return op->emitError(
         "sparse_tensor ops must be bufferized with the sparsifier");
   }
@@ -187,8 +186,8 @@ struct DisassembleOpInterface
   }
 };
 
-struct InsertOpInterface : public SparseBufferizableOpInterfaceExternalModel<
-                               InsertOpInterface, sparse_tensor::InsertOp> {
+struct ForeachOpInterface : public SparseBufferizableOpInterfaceExternalModel<
+                                ForeachOpInterface, sparse_tensor::ForeachOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
     return true;
@@ -196,15 +195,23 @@ struct InsertOpInterface : public SparseBufferizableOpInterfaceExternalModel<
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    // InsertOp writes to memory.
-    return true;
+    return false;
   }
 
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
-    // InsertOp returns an alias of its operand.
-    assert(op->getNumResults() == 1);
-    return {{op->getOpResult(0), BufferRelation::Equivalent}};
+    return {};
+  }
+
+  LogicalResult verifyAnalysis(Operation *op,
+                               const AnalysisState &state) const {
+    // A more complex analysis (similar to scf.for) is needed if the op returns
+    // a tensor. That tensor would have to be bufferized (not implemented yet).
+    for (OpResult result : op->getResults()) {
+      if (isa<TensorType>(result.getType()))
+        return op->emitOpError("tensor results are not supported yet");
+    }
+    return success();
   }
 };
 
@@ -324,11 +331,11 @@ void mlir::sparse_tensor::registerBufferizableOpInterfaceExternalModels(
     sparse_tensor::ConvertOp::attachInterface<ConvertOpInterface>(*ctx);
     sparse_tensor::LoadOp::attachInterface<LoadOpInterface>(*ctx);
     sparse_tensor::NewOp::attachInterface<NewOpInterface>(*ctx);
-    sparse_tensor::InsertOp::attachInterface<InsertOpInterface>(*ctx);
     sparse_tensor::NumberOfEntriesOp::attachInterface<
         NumberOfEntriesOpInterface>(*ctx);
     sparse_tensor::AssembleOp::attachInterface<AssembleOpInterface>(*ctx);
     sparse_tensor::DisassembleOp::attachInterface<DisassembleOpInterface>(*ctx);
+    sparse_tensor::ForeachOp::attachInterface<ForeachOpInterface>(*ctx);
     sparse_tensor::ToCoordinatesBufferOp::attachInterface<
         ToCoordinatesBufferOpInterface>(*ctx);
     sparse_tensor::ToCoordinatesOp::attachInterface<ToCoordinatesOpInterface>(

@@ -9,6 +9,7 @@
 #include "DiagnosticNames.h"
 #include "clang/Basic/AllDiagnostics.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringTable.h"
 
 using namespace clang;
 using namespace diagtool;
@@ -23,25 +24,13 @@ llvm::ArrayRef<DiagnosticRecord> diagtool::getBuiltinDiagnosticsByName() {
   return llvm::ArrayRef(BuiltinDiagnosticsByName);
 }
 
-
 // FIXME: Is it worth having two tables, especially when this one can get
 // out of sync easily?
 static const DiagnosticRecord BuiltinDiagnosticsByID[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, NOWERROR,      \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFER, CATEGORY)                 \
   {#ENUM, diag::ENUM, STR_SIZE(#ENUM, uint8_t)},
-#include "clang/Basic/DiagnosticCommonKinds.inc"
-#include "clang/Basic/DiagnosticCrossTUKinds.inc"
-#include "clang/Basic/DiagnosticDriverKinds.inc"
-#include "clang/Basic/DiagnosticFrontendKinds.inc"
-#include "clang/Basic/DiagnosticSerializationKinds.inc"
-#include "clang/Basic/DiagnosticLexKinds.inc"
-#include "clang/Basic/DiagnosticParseKinds.inc"
-#include "clang/Basic/DiagnosticASTKinds.inc"
-#include "clang/Basic/DiagnosticCommentKinds.inc"
-#include "clang/Basic/DiagnosticSemaKinds.inc"
-#include "clang/Basic/DiagnosticAnalysisKinds.inc"
-#include "clang/Basic/DiagnosticRefactoringKinds.inc"
+#include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
 };
 
@@ -53,6 +42,13 @@ static bool orderByID(const DiagnosticRecord &Left,
 const DiagnosticRecord &diagtool::getDiagnosticForID(short DiagID) {
   DiagnosticRecord Key = {nullptr, DiagID, 0};
 
+  // The requirement for lower_bound to produce a valid result it is
+  // enough if the BuiltinDiagnosticsByID is partitioned (by DiagID),
+  // but as we want this function to work for all possible values of
+  // DiagID sent in as argument it is better to right away check if
+  // BuiltinDiagnosticsByID is sorted.
+  assert(llvm::is_sorted(BuiltinDiagnosticsByID, orderByID) &&
+         "IDs in BuiltinDiagnosticsByID must be sorted.");
   const DiagnosticRecord *Result =
       llvm::lower_bound(BuiltinDiagnosticsByID, Key, orderByID);
   assert(Result && "diagnostic not found; table may be out of date");
@@ -73,7 +69,7 @@ static const GroupRecord OptionTable[] = {
 };
 
 llvm::StringRef GroupRecord::getName() const {
-  return StringRef(DiagGroupNames + NameOffset + 1, DiagGroupNames[NameOffset]);
+  return DiagGroupNames[NameOffset];
 }
 
 GroupRecord::subgroup_iterator GroupRecord::subgroup_begin() const {

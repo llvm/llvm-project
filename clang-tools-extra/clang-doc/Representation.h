@@ -35,6 +35,8 @@ struct EnumInfo;
 struct FunctionInfo;
 struct Info;
 struct TypedefInfo;
+struct ConceptInfo;
+struct VarInfo;
 
 enum class InfoType {
   IT_default,
@@ -42,8 +44,30 @@ enum class InfoType {
   IT_record,
   IT_function,
   IT_enum,
-  IT_typedef
+  IT_typedef,
+  IT_concept,
+  IT_variable,
+  IT_friend
 };
+
+enum class CommentKind {
+  CK_FullComment,
+  CK_ParagraphComment,
+  CK_TextComment,
+  CK_InlineCommandComment,
+  CK_HTMLStartTagComment,
+  CK_HTMLEndTagComment,
+  CK_BlockCommandComment,
+  CK_ParamCommandComment,
+  CK_TParamCommandComment,
+  CK_VerbatimBlockComment,
+  CK_VerbatimBlockLineComment,
+  CK_VerbatimLineComment,
+  CK_Unknown
+};
+
+CommentKind stringToCommentKind(llvm::StringRef KindStr);
+llvm::StringRef commentKindToString(CommentKind Kind);
 
 // A representation of a parsed comment.
 struct CommentInfo {
@@ -60,12 +84,13 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  SmallString<16>
-      Kind; // Kind of comment (FullComment, ParagraphComment, TextComment,
-            // InlineCommandComment, HTMLStartTagComment, HTMLEndTagComment,
-            // BlockCommandComment, ParamCommandComment,
-            // TParamCommandComment, VerbatimBlockComment,
-            // VerbatimBlockLineComment, VerbatimLineComment).
+  CommentKind Kind = CommentKind::
+      CK_Unknown; // Kind of comment (FullComment, ParagraphComment,
+                  // TextComment, InlineCommandComment, HTMLStartTagComment,
+                  // HTMLEndTagComment, BlockCommandComment,
+                  // ParamCommandComment, TParamCommandComment,
+                  // VerbatimBlockComment, VerbatimBlockLineComment,
+                  // VerbatimLineComment).
   SmallString<64> Text;      // Text of the comment.
   SmallString<16> Name;      // Name of the comment (for Verbatim and HTML).
   SmallString<8> Direction;  // Parameter direction (for (T)ParamCommand).
@@ -104,6 +129,7 @@ struct Reference {
 
   bool mergeable(const Reference &Other);
   void merge(Reference &&I);
+  bool operator<(const Reference &Other) const { return Name < Other.Name; }
 
   /// Returns the path for this Reference relative to CurrentPath.
   llvm::SmallString<64> getRelativeFilePath(const StringRef &CurrentPath) const;
@@ -145,6 +171,10 @@ struct ScopeChildren {
   std::vector<FunctionInfo> Functions;
   std::vector<EnumInfo> Enums;
   std::vector<TypedefInfo> Typedefs;
+  std::vector<ConceptInfo> Concepts;
+  std::vector<VarInfo> Variables;
+
+  void sort();
 };
 
 // A base struct for TypeInfos
@@ -160,6 +190,9 @@ struct TypeInfo {
   bool operator==(const TypeInfo &Other) const { return Type == Other.Type; }
 
   Reference Type; // Referenced type in this info.
+
+  bool IsTemplate = false;
+  bool IsBuiltIn = false;
 };
 
 // Represents one template parameter.
@@ -185,6 +218,15 @@ struct TemplateSpecializationInfo {
   std::vector<TemplateParamInfo> Params;
 };
 
+struct ConstraintInfo {
+  ConstraintInfo() = default;
+  ConstraintInfo(SymbolID USR, StringRef Name)
+      : ConceptRef(USR, Name, InfoType::IT_concept) {}
+  Reference ConceptRef;
+
+  SmallString<16> ConstraintExpr;
+};
+
 // Records the template information for a struct or function that is a template
 // or an explicit template specialization.
 struct TemplateInfo {
@@ -193,6 +235,7 @@ struct TemplateInfo {
 
   // Set when this is a specialization of another record/function.
   std::optional<TemplateSpecializationInfo> Specialization;
+  std::vector<ConstraintInfo> Constraints;
 };
 
 // Info for field types.
@@ -217,12 +260,14 @@ struct FieldTypeInfo : public TypeInfo {
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
-  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access)
-      : FieldTypeInfo(TI, Name), Access(Access) {}
+  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access,
+                 bool IsStatic = false)
+      : FieldTypeInfo(TI, Name), Access(Access), IsStatic(IsStatic) {}
 
   bool operator==(const MemberTypeInfo &Other) const {
-    return std::tie(Type, Name, Access, Description) ==
-           std::tie(Other.Type, Other.Name, Other.Access, Other.Description);
+    return std::tie(Type, Name, Access, IsStatic, Description) ==
+           std::tie(Other.Type, Other.Name, Other.Access, Other.IsStatic,
+                    Other.Description);
   }
 
   // Access level associated with this info (public, protected, private, none).
@@ -232,29 +277,33 @@ struct MemberTypeInfo : public FieldTypeInfo {
   AccessSpecifier Access = AccessSpecifier::AS_public;
 
   std::vector<CommentInfo> Description; // Comment description of this field.
+  bool IsStatic = false;
 };
 
 struct Location {
-  Location(int LineNumber = 0, StringRef Filename = StringRef(),
-           bool IsFileInRootDir = false)
-      : LineNumber(LineNumber), Filename(Filename),
-        IsFileInRootDir(IsFileInRootDir) {}
+  Location(int StartLineNumber = 0, int EndLineNumber = 0,
+           StringRef Filename = StringRef(), bool IsFileInRootDir = false)
+      : StartLineNumber(StartLineNumber), EndLineNumber(EndLineNumber),
+        Filename(Filename), IsFileInRootDir(IsFileInRootDir) {}
 
   bool operator==(const Location &Other) const {
-    return std::tie(LineNumber, Filename) ==
-           std::tie(Other.LineNumber, Other.Filename);
+    return std::tie(StartLineNumber, EndLineNumber, Filename) ==
+           std::tie(Other.StartLineNumber, Other.EndLineNumber, Other.Filename);
   }
+
+  bool operator!=(const Location &Other) const { return !(*this == Other); }
 
   // This operator is used to sort a vector of Locations.
   // No specific order (attributes more important than others) is required. Any
   // sort is enough, the order is only needed to call std::unique after sorting
   // the vector.
   bool operator<(const Location &Other) const {
-    return std::tie(LineNumber, Filename) <
-           std::tie(Other.LineNumber, Other.Filename);
+    return std::tie(StartLineNumber, EndLineNumber, Filename) <
+           std::tie(Other.StartLineNumber, Other.EndLineNumber, Other.Filename);
   }
 
-  int LineNumber = 0;           // Line number of this Location.
+  int StartLineNumber = 0; // Line number of this Location.
+  int EndLineNumber = 0;
   SmallString<32> Filename;     // File for this Location.
   bool IsFileInRootDir = false; // Indicates if file is inside root directory
 };
@@ -270,10 +319,12 @@ struct Info {
 
   virtual ~Info() = default;
 
+  Info &operator=(Info &&Other) = default;
+
   SymbolID USR =
       SymbolID(); // Unique identifier for the decl described by this Info.
-  const InfoType IT = InfoType::IT_default; // InfoType of this particular Info.
-  SmallString<16> Name;                     // Unqualified name of the decl.
+  InfoType IT = InfoType::IT_default; // InfoType of this particular Info.
+  SmallString<16> Name;               // Unqualified name of the decl.
   llvm::SmallVector<Reference, 4>
       Namespace; // List of parent namespaces for this decl.
   std::vector<CommentInfo> Description; // Comment description of this decl.
@@ -310,8 +361,49 @@ struct SymbolInfo : public Info {
 
   void merge(SymbolInfo &&I);
 
+  bool operator<(const SymbolInfo &Other) const {
+    // Sort by declaration location since we want the doc to be
+    // generated in the order of the source code.
+    // If the declaration location is the same, or not present
+    // we sort by defined location otherwise fallback to the extracted name
+    if (Loc.size() > 0 && Other.Loc.size() > 0 && Loc[0] != Other.Loc[0])
+      return Loc[0] < Other.Loc[0];
+
+    if (DefLoc && Other.DefLoc && *DefLoc != *Other.DefLoc)
+      return *DefLoc < *Other.DefLoc;
+
+    return extractName() < Other.extractName();
+  }
+
   std::optional<Location> DefLoc;     // Location where this decl is defined.
   llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
+  SmallString<16> MangledName;
+  bool IsStatic = false;
+};
+
+struct FriendInfo : SymbolInfo {
+  FriendInfo() : SymbolInfo(InfoType::IT_friend) {}
+  FriendInfo(SymbolID USR) : SymbolInfo(InfoType::IT_friend, USR) {}
+  FriendInfo(const InfoType IT, const SymbolID &USR,
+             const StringRef Name = StringRef())
+      : SymbolInfo(IT, USR, Name) {}
+  bool mergeable(const FriendInfo &Other);
+  void merge(FriendInfo &&Other);
+
+  Reference Ref;
+  std::optional<TemplateInfo> Template;
+  std::optional<TypeInfo> ReturnType;
+  std::optional<SmallVector<FieldTypeInfo, 4>> Params;
+  bool IsClass = false;
+};
+
+struct VarInfo : SymbolInfo {
+  VarInfo() : SymbolInfo(InfoType::IT_variable) {}
+  explicit VarInfo(SymbolID USR) : SymbolInfo(InfoType::IT_variable, USR) {}
+
+  void merge(VarInfo &&I);
+
+  TypeInfo Type;
 };
 
 // TODO: Expand to allow for documenting templating and default args.
@@ -335,6 +427,9 @@ struct FunctionInfo : public SymbolInfo {
   // Full qualified name of this function, including namespaces and template
   // specializations.
   SmallString<16> FullName;
+
+  // Function Prototype
+  SmallString<256> Prototype;
 
   // When present, this function is a template or specialization.
   std::optional<TemplateInfo> Template;
@@ -377,6 +472,8 @@ struct RecordInfo : public SymbolInfo {
       Bases; // List of base/parent records; this includes inherited methods and
              // attributes
 
+  std::vector<FriendInfo> Friends;
+
   ScopeChildren Children;
 };
 
@@ -389,7 +486,13 @@ struct TypedefInfo : public SymbolInfo {
 
   TypeInfo Underlying;
 
-  // Inidicates if this is a new C++ "using"-style typedef:
+  // Underlying type declaration
+  SmallString<16> TypeDeclaration;
+
+  /// Comment description for the typedef.
+  std::vector<CommentInfo> Description;
+
+  // Indicates if this is a new C++ "using"-style typedef:
   //   using MyVector = std::vector<int>
   // False means it's a C-style typedef:
   //   typedef std::vector<int> MyVector;
@@ -431,6 +534,9 @@ struct EnumValueInfo {
   // Stores the user-supplied initialization expression for this enumeration
   // constant. This will be empty for implicit enumeration values.
   SmallString<16> ValueExpr;
+
+  /// Comment description of this field.
+  std::vector<CommentInfo> Description;
 };
 
 // TODO: Expand to allow for documenting templating.
@@ -450,6 +556,17 @@ struct EnumInfo : public SymbolInfo {
   std::optional<TypeInfo> BaseType;
 
   llvm::SmallVector<EnumValueInfo, 4> Members; // List of enum members.
+};
+
+struct ConceptInfo : public SymbolInfo {
+  ConceptInfo() : SymbolInfo(InfoType::IT_concept) {}
+  ConceptInfo(SymbolID USR) : SymbolInfo(InfoType::IT_concept, USR) {}
+
+  void merge(ConceptInfo &&I);
+
+  bool IsType;
+  TemplateInfo Template;
+  SmallString<16> ConstraintExpression;
 };
 
 struct Index : public Reference {
@@ -481,25 +598,32 @@ struct ClangDocContext {
   ClangDocContext() = default;
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
-                  StringRef RepositoryUrl,
-                  std::vector<std::string> UserStylesheets,
-                  std::vector<std::string> JsScripts);
+                  StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
+                  StringRef Base, std::vector<std::string> UserStylesheets,
+                  bool FTimeTrace = false);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName; // Name of project clang-doc is documenting.
   bool PublicOnly; // Indicates if only public declarations are documented.
+  bool FTimeTrace; // Indicates if ftime trace is turned on
+  int Granularity; // Granularity of ftime trace
   std::string OutDirectory; // Directory for outputting generated files.
   std::string SourceRoot;   // Directory where processed files are stored. Links
                             // to definition locations will only be generated if
                             // the file is in this dir.
   // URL of repository that hosts code used for links to definition locations.
   std::optional<std::string> RepositoryUrl;
+  // Prefix of line code for repository.
+  std::optional<std::string> RepositoryLinePrefix;
   // Path of CSS stylesheets that will be copied to OutDirectory and used to
   // style all HTML files.
   std::vector<std::string> UserStylesheets;
-  // JavaScript files that will be imported in allHTML file.
+  // JavaScript files that will be imported in all HTML files.
   std::vector<std::string> JsScripts;
-  // Other files that should be copied to OutDirectory, besides UserStylesheets.
-  std::vector<std::string> FilesToCopy;
+  // Base directory for remote repositories.
+  StringRef Base;
+  // Maps mustache template types to specific mustache template files.
+  // Ex.    comment-template -> /path/to/comment-template.mustache
+  llvm::StringMap<std::string> MustacheTemplates;
   Index Idx;
 };
 

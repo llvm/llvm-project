@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes='function(callsite-splitting)' -S | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-linaro-linux-gnueabi"
+target triple = "aarch64"
 
 ;CHECK-LABEL: @test_eq_eq
 
@@ -401,13 +401,13 @@ End:
 ;CHECK-LABEL: Tail
 ;CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL2]], %TBB1.split ], [ %[[CALL1]], %TBB0.split ]
 ;CHECK: ret i32 %[[MERGED]]
-define i32 @test_cfg_no_or_phi(ptr %a,  i32 %v) {
+define i32 @test_cfg_no_or_phi(ptr %a,  i32 %v, i1 %arg) {
 entry:
-  br i1 undef, label %TBB0, label %TBB1
+  br i1 %arg, label %TBB0, label %TBB1
 TBB0:
-  br i1 undef, label %Tail, label %End
+  br i1 %arg, label %Tail, label %End
 TBB1:
-  br i1 undef, label %Tail, label %End
+  br i1 %arg, label %Tail, label %End
 Tail:
   %p = phi i32[1,%TBB0], [2, %TBB1]
   %r = call i32 @callee(ptr %a, i32 %v, i32 %p)
@@ -495,16 +495,16 @@ End:
 ;CHECK-LABEL: Tail:
 ;CHECK: %r = call i32 @callee(ptr %a, i32 %v, i32 0)
 ;CHECK: ret i32 %r
-define i32 @test_cond_no_effect(ptr %a, i32 %v) {
+define i32 @test_cond_no_effect(ptr %a, i32 %v, i1 %arg) {
 Entry:
   %tobool1 = icmp eq ptr %a, null
   br i1 %tobool1, label %Header, label %End
 
 Header:
-  br i1 undef, label %Tail, label %TBB
+  br i1 %arg, label %Tail, label %TBB
 
 TBB:
-  br i1 undef, label %Tail, label %End
+  br i1 %arg, label %Tail, label %End
 
 Tail:
   %r = call i32 @callee(ptr %a, i32 %v, i32 0)

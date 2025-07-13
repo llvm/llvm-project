@@ -10,9 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AVR.h"
-#include "AVRRegisterInfo.h"
-#include "AVRSubtarget.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
@@ -25,6 +22,8 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
+
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -53,7 +52,8 @@ static MCDisassembler *createAVRDisassembler(const Target &T,
   return new AVRDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAVRDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheAVRTarget(),
                                          createAVRDisassembler);

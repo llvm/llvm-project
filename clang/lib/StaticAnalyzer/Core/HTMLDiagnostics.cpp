@@ -16,7 +16,6 @@
 #include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Analysis/PathDiagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -26,25 +25,21 @@
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <map>
 #include <memory>
 #include <set>
-#include <sstream>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -52,6 +47,7 @@
 
 using namespace clang;
 using namespace ento;
+using llvm::RewriteBuffer;
 
 //===----------------------------------------------------------------------===//
 // Boilerplate.
@@ -68,6 +64,9 @@ class HTMLDiagnostics : public PathDiagnosticConsumer {
   bool noDir = false;
   const Preprocessor &PP;
   const bool SupportsCrossFileDiagnostics;
+  llvm::StringSet<> EmittedHashes;
+  html::RelexRewriteCacheRef RewriterCache =
+      html::instantiateRelexRewriteCache();
 
 public:
   HTMLDiagnostics(PathDiagnosticConsumerOptions DiagOpts,
@@ -188,7 +187,8 @@ void ento::createHTMLDiagnosticConsumer(
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, true));
+  C.emplace_back(std::make_unique<HTMLDiagnostics>(std::move(DiagOpts),
+                                                   OutputDir, PP, true));
 }
 
 void ento::createHTMLSingleFileDiagnosticConsumer(
@@ -203,7 +203,8 @@ void ento::createHTMLSingleFileDiagnosticConsumer(
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, false));
+  C.emplace_back(std::make_unique<HTMLDiagnostics>(std::move(DiagOpts),
+                                                   OutputDir, PP, false));
 }
 
 void ento::createPlistHTMLDiagnosticConsumer(
@@ -301,6 +302,13 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
       }
   }
 
+  SmallString<32> IssueHash = getIssueHash(D, PP);
+  auto [It, IsNew] = EmittedHashes.insert(IssueHash);
+  if (!IsNew) {
+    // We've already emitted a duplicate issue. It'll get overwritten anyway.
+    return;
+  }
+
   std::string report = GenerateHTML(D, R, SMgr, path, declName.c_str());
   if (report.empty()) {
     llvm::errs() << "warning: no diagnostics generated for main file.\n";
@@ -332,7 +340,7 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
              << declName.c_str() << "-" << offsetDecl << "-";
   }
 
-  FileName << StringRef(getIssueHash(D, PP)).substr(0, 6).str() << ".html";
+  FileName << StringRef(IssueHash).substr(0, 6).str() << ".html";
 
   SmallString<128> ResultPath;
   llvm::sys::path::append(ResultPath, Directory, FileName.str());
@@ -870,8 +878,8 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
   // If we have a preprocessor, relex the file and syntax highlight.
   // We might not have a preprocessor if we come from a deserialized AST file,
   // for example.
-  html::SyntaxHighlight(R, FID, PP);
-  html::HighlightMacros(R, FID, PP);
+  html::SyntaxHighlight(R, FID, PP, RewriterCache);
+  html::HighlightMacros(R, FID, PP, RewriterCache);
 }
 
 void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
@@ -887,7 +895,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
 
   SourceManager &SM = R.getSourceMgr();
   assert(&Pos.getManager() == &SM && "SourceManagers are different!");
-  std::pair<FileID, unsigned> LPosInfo = SM.getDecomposedExpansionLoc(Pos);
+  FileIDAndOffset LPosInfo = SM.getDecomposedExpansionLoc(Pos);
 
   if (LPosInfo.first != BugFileID)
     return;
@@ -1026,7 +1034,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
       FullSourceLoc L = MP->getLocation().asLocation().getExpansionLoc();
       assert(L.isFileID());
       StringRef BufferInfo = L.getBufferData();
-      std::pair<FileID, unsigned> LocInfo = L.getDecomposedLoc();
+      FileIDAndOffset LocInfo = L.getDecomposedLoc();
       const char* MacroName = LocInfo.second + BufferInfo.data();
       Lexer rawLexer(SM.getLocForStartOfFile(LocInfo.first), PP.getLangOpts(),
                      BufferInfo.begin(), MacroName, BufferInfo.end());
@@ -1199,18 +1207,19 @@ const arrowIndices = )<<<";
                      OS.str());
 }
 
-std::string getSpanBeginForControl(const char *ClassName, unsigned Index) {
+static std::string getSpanBeginForControl(const char *ClassName,
+                                          unsigned Index) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << "<span id=\"" << ClassName << Index << "\">";
   return Result;
 }
 
-std::string getSpanBeginForControlStart(unsigned Index) {
+static std::string getSpanBeginForControlStart(unsigned Index) {
   return getSpanBeginForControl("start", Index);
 }
 
-std::string getSpanBeginForControlEnd(unsigned Index) {
+static std::string getSpanBeginForControlEnd(unsigned Index) {
   return getSpanBeginForControl("end", Index);
 }
 

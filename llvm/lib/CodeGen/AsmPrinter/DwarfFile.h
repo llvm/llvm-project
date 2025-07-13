@@ -28,7 +28,6 @@ class DbgLabel;
 class DINode;
 class DILocalScope;
 class DwarfCompileUnit;
-class DwarfTypeUnit;
 class DwarfUnit;
 class LexicalScope;
 class MCSection;
@@ -38,6 +37,10 @@ class MDNode;
 struct RangeSpan {
   const MCSymbol *Begin;
   const MCSymbol *End;
+
+  bool operator==(const RangeSpan &Other) const {
+    return Begin == Other.Begin && End == Other.End;
+  }
 };
 
 struct RangeSpanList {

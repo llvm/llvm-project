@@ -28,7 +28,7 @@
 #include <utility>
 
 namespace mlir {
-#define GEN_PASS_DEF_ASYNCPARALLELFOR
+#define GEN_PASS_DEF_ASYNCPARALLELFORPASS
 #include "mlir/Dialect/Async/Passes.h.inc"
 } // namespace mlir
 
@@ -99,15 +99,8 @@ namespace {
 //   }
 //
 struct AsyncParallelForPass
-    : public impl::AsyncParallelForBase<AsyncParallelForPass> {
-  AsyncParallelForPass() = default;
-
-  AsyncParallelForPass(bool asyncDispatch, int32_t numWorkerThreads,
-                       int32_t minTaskSize) {
-    this->asyncDispatch = asyncDispatch;
-    this->numWorkerThreads = numWorkerThreads;
-    this->minTaskSize = minTaskSize;
-  }
+    : public impl::AsyncParallelForPassBase<AsyncParallelForPass> {
+  using Base::Base;
 
   void runOnOperation() override;
 };
@@ -141,7 +134,6 @@ struct ParallelComputeFunctionArgs {
   BlockArgument blockSize();
   ArrayRef<BlockArgument> tripCounts();
   ArrayRef<BlockArgument> lowerBounds();
-  ArrayRef<BlockArgument> upperBounds();
   ArrayRef<BlockArgument> steps();
   ArrayRef<BlockArgument> captures();
 
@@ -173,10 +165,6 @@ ArrayRef<BlockArgument> ParallelComputeFunctionArgs::tripCounts() {
 
 ArrayRef<BlockArgument> ParallelComputeFunctionArgs::lowerBounds() {
   return args.drop_front(2 + 1 * numLoops).take_front(numLoops);
-}
-
-ArrayRef<BlockArgument> ParallelComputeFunctionArgs::upperBounds() {
-  return args.drop_front(2 + 2 * numLoops).take_front(numLoops);
 }
 
 ArrayRef<BlockArgument> ParallelComputeFunctionArgs::steps() {
@@ -273,7 +261,7 @@ static ParallelComputeFunction createParallelComputeFunction(
   // Insert function into the module symbol table and assign it unique name.
   SymbolTable symbolTable(module);
   symbolTable.insert(func);
-  rewriter.getListener()->notifyOperationInserted(func);
+  rewriter.getListener()->notifyOperationInserted(func, /*previous=*/{});
 
   // Create function entry block.
   Block *block =
@@ -429,8 +417,9 @@ static ParallelComputeFunction createParallelComputeFunction(
       mapping.map(op.getInductionVars(), computeBlockInductionVars);
       mapping.map(computeFuncType.captures, captures);
 
-      for (auto &bodyOp : op.getRegion().getOps())
+      for (auto &bodyOp : op.getRegion().front().without_terminator())
         b.clone(bodyOp, mapping);
+      b.create<scf::YieldOp>(loc);
     };
   };
 
@@ -488,7 +477,7 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
   // Insert function into the module symbol table and assign it unique name.
   SymbolTable symbolTable(module);
   symbolTable.insert(func);
-  rewriter.getListener()->notifyOperationInserted(func);
+  rewriter.getListener()->notifyOperationInserted(func, /*previous=*/{});
 
   // Create function entry block.
   Block *block = b.createBlock(&func.getBody(), func.begin(), type.getInputs(),
@@ -831,13 +820,13 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
     const float initialOvershardingFactor = 8.0f;
 
     Value scalingFactor = b.create<arith::ConstantFloatOp>(
-        llvm::APFloat(initialOvershardingFactor), b.getF32Type());
+        b.getF32Type(), llvm::APFloat(initialOvershardingFactor));
     for (const std::pair<int, float> &p : overshardingBrackets) {
       Value bracketBegin = b.create<arith::ConstantIndexOp>(p.first);
       Value inBracket = b.create<arith::CmpIOp>(
           arith::CmpIPredicate::sgt, numWorkerThreadsVal, bracketBegin);
       Value bracketScalingFactor = b.create<arith::ConstantFloatOp>(
-          llvm::APFloat(p.second), b.getF32Type());
+          b.getF32Type(), llvm::APFloat(p.second));
       scalingFactor = b.create<arith::SelectOp>(inBracket, bracketScalingFactor,
                                                 scalingFactor);
     }
@@ -935,19 +924,8 @@ void AsyncParallelForPass::runOnOperation() {
       [&](ImplicitLocOpBuilder builder, scf::ParallelOp op) {
         return builder.create<arith::ConstantIndexOp>(minTaskSize);
       });
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<Pass> mlir::createAsyncParallelForPass() {
-  return std::make_unique<AsyncParallelForPass>();
-}
-
-std::unique_ptr<Pass> mlir::createAsyncParallelForPass(bool asyncDispatch,
-                                                       int32_t numWorkerThreads,
-                                                       int32_t minTaskSize) {
-  return std::make_unique<AsyncParallelForPass>(asyncDispatch, numWorkerThreads,
-                                                minTaskSize);
 }
 
 void mlir::async::populateAsyncParallelForPatterns(

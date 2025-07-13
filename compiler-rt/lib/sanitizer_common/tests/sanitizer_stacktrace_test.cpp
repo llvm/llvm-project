@@ -259,7 +259,7 @@ TEST_F(StackPrintDeathTest, SKIP_ON_SPARC(RequiresNonNullBuffer)) {
 #endif // SANITIZER_CAN_FAST_UNWIND
 
 TEST(SlowUnwindTest, ShortStackTrace) {
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   uptr pc = StackTrace::GetCurrentPc();
   uptr bp = GET_CURRENT_FRAME();
   stack.Unwind(pc, bp, nullptr, false, /*max_depth=*/0);
@@ -284,7 +284,7 @@ TEST(GetCurrentPc, Basic) {
           StackTrace::GetCurrentPc(),
       };
       for (uptr i = 0; i < ARRAY_SIZE(pcs); i++)
-        Printf("pc%zu: 0x%zx\n", i, pcs[i]);
+        Printf("pc%zu: %p\n", i, (void *)(pcs[i]));
       for (uptr i = 1; i < ARRAY_SIZE(pcs); i++) {
         EXPECT_GT(pcs[i], pcs[0]);
         EXPECT_LT(pcs[i], pcs[0] + 1000);

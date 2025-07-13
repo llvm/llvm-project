@@ -1,10 +1,10 @@
-; RUN: opt -S -passes=lowerswitch %s | FileCheck %s
+; RUN: opt -S -passes=lower-switch %s | FileCheck %s
 
 ; CHECK-LABEL: @phi_in_dead_block(
 ; CHECK-NOT: switch
-define void @phi_in_dead_block() {
+define void @phi_in_dead_block(i1 %arg) {
 bb:
-  br i1 undef, label %bb2, label %bb3
+  br i1 %arg, label %bb2, label %bb3
 
 bb1:                                              ; No predecessors!
   switch i32 undef, label %bb2 [
@@ -21,9 +21,9 @@ bb3:                                              ; preds = %bb1, %bb
 
 ; CHECK-LABEL: @phi_in_dead_block_br_to_self(
 ; CHECK-NOT: switch
-define void @phi_in_dead_block_br_to_self() {
+define void @phi_in_dead_block_br_to_self(i1 %arg) {
 bb:
-  br i1 undef, label %bb2, label %bb3
+  br i1 %arg, label %bb2, label %bb3
 
 bb1:                                              ; No predecessors!
   switch i32 undef, label %bb2 [

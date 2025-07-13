@@ -54,11 +54,46 @@ TEST(TimeProfiler, Begin_End_Smoke) {
   ASSERT_TRUE(json.find(R"("detail":"detail")") != std::string::npos);
 }
 
+TEST(TimeProfiler, Async_Begin_End_Smoke) {
+  setupProfiler();
+
+  auto *Profiler = timeTraceAsyncProfilerBegin("event", "detail");
+  timeTraceProfilerEnd(Profiler);
+
+  std::string json = teardownProfiler();
+  ASSERT_TRUE(json.find(R"("name":"event")") != std::string::npos);
+  ASSERT_TRUE(json.find(R"("detail":"detail")") != std::string::npos);
+}
+
 TEST(TimeProfiler, Begin_End_Disabled) {
   // Nothing should be observable here. The test is really just making sure
   // we've not got a stray nullptr deref.
   timeTraceProfilerBegin("event", "detail");
   timeTraceProfilerEnd();
+}
+
+TEST(TimeProfiler, Instant_Add_Smoke) {
+  setupProfiler();
+
+  timeTraceProfilerBegin("sync event", "sync detail");
+  timeTraceAddInstantEvent("instant event", [&] { return "instant detail"; });
+  timeTraceProfilerEnd();
+
+  std::string json = teardownProfiler();
+  ASSERT_TRUE(json.find(R"("name":"sync event")") != std::string::npos);
+  ASSERT_TRUE(json.find(R"("detail":"sync detail")") != std::string::npos);
+  ASSERT_TRUE(json.find(R"("name":"instant event")") != std::string::npos);
+  ASSERT_TRUE(json.find(R"("detail":"instant detail")") != std::string::npos);
+}
+
+TEST(TimeProfiler, Instant_Not_Added_Smoke) {
+  setupProfiler();
+
+  timeTraceAddInstantEvent("instant event", [&] { return "instant detail"; });
+
+  std::string json = teardownProfiler();
+  ASSERT_TRUE(json.find(R"("name":"instant event")") == std::string::npos);
+  ASSERT_TRUE(json.find(R"("detail":"instant detail")") == std::string::npos);
 }
 
 } // namespace

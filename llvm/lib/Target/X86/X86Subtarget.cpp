@@ -26,6 +26,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -69,11 +70,11 @@ X86Subtarget::classifyGlobalReference(const GlobalValue *GV) const {
 
 unsigned char
 X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
+  CodeModel::Model CM = TM.getCodeModel();
   // Tagged globals have non-zero upper bits, which makes direct references
-  // require a 64-bit immediate.  On the small code model this causes relocation
-  // errors, so we go through the GOT instead.
-  if (AllowTaggedGlobals && TM.getCodeModel() == CodeModel::Small && GV &&
-      !isa<Function>(GV))
+  // require a 64-bit immediate. With the small/medium code models this causes
+  // relocation errors, so we go through the GOT instead.
+  if (AllowTaggedGlobals && CM != CodeModel::Large && GV && !isa<Function>(GV))
     return X86II::MO_GOTPCREL_NORELAX;
 
   // If we're not PIC, it's not very interesting.
@@ -83,19 +84,18 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
   if (is64Bit()) {
     // 64-bit ELF PIC local references may use GOTOFF relocations.
     if (isTargetELF()) {
-      CodeModel::Model CM = TM.getCodeModel();
       assert(CM != CodeModel::Tiny &&
              "Tiny codesize model not supported on X86");
-      // In the large code model, even referencing a global under the large data
-      // threshold which is considered "small", we need to use GOTOFF.
+      // In the large code model, all text is far from any global data, so we
+      // use GOTOFF.
       if (CM == CodeModel::Large)
         return X86II::MO_GOTOFF;
-      // Large objects use GOTOFF, otherwise use RIP-rel access.
-      if (auto *GO = dyn_cast_or_null<GlobalObject>(GV))
-        return TM.isLargeGlobalObject(GO) ? X86II::MO_GOTOFF
-                                          : X86II::MO_NO_FLAG;
-      // For non-GlobalObjects, the small and medium code models treat them as
-      // accessible with a RIP-rel access.
+      // Large GlobalValues use GOTOFF, otherwise use RIP-rel access.
+      if (GV)
+        return TM.isLargeGlobalValue(GV) ? X86II::MO_GOTOFF : X86II::MO_NO_FLAG;
+      // GV == nullptr is for all other non-GlobalValue global data like the
+      // constant pool, jump tables, labels, etc. The small and medium code
+      // models treat these as accessible with a RIP-rel access.
       return X86II::MO_NO_FLAG;
     }
 
@@ -141,7 +141,7 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
     }
   }
 
-  if (TM.shouldAssumeDSOLocal(M, GV))
+  if (TM.shouldAssumeDSOLocal(GV))
     return classifyLocalReference(GV);
 
   if (isTargetCOFF()) {
@@ -191,7 +191,7 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV) const {
 unsigned char
 X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
                                               const Module &M) const {
-  if (TM.shouldAssumeDSOLocal(M, GV))
+  if (TM.shouldAssumeDSOLocal(GV))
     return X86II::MO_NO_FLAG;
 
   // Functions on COFF can be non-DSO local for three reasons:
@@ -279,6 +279,13 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
         FullFS += ",+evex512";
   }
 
+  // Disable 64-bit only features in non-64-bit mode.
+  SmallVector<StringRef, 9> FeaturesIn64BitOnly = {
+      "egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "cf", "zu", "uintr"};
+  if (FullFS.find("-64bit-mode") != std::string::npos)
+    for (StringRef F : FeaturesIn64BitOnly)
+      FullFS += ",-" + F.str();
+
   // Parse features string and set the CPU.
   ParseSubtargetFeatures(CPU, TuneCPU, FullFS);
 
@@ -290,11 +297,10 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     IsUnalignedMem16Slow = false;
 
   LLVM_DEBUG(dbgs() << "Subtarget features: SSELevel " << X86SSELevel
-                    << ", 3DNowLevel " << X863DNowLevel << ", 64bit "
-                    << HasX86_64 << "\n");
+                    << ", MMX " << HasMMX << ", 64bit " << HasX86_64 << "\n");
   if (Is64Bit && !HasX86_64)
-    report_fatal_error("64-bit code requested on a subtarget that doesn't "
-                       "support it!");
+    reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
+                          "support it!");
 
   // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, NaCl, and for all
   // 64-bit targets.  On Solaris (32-bit), stack alignment is 4 bytes
@@ -354,6 +360,9 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
   RegBankInfo.reset(RBI);
   InstSelector.reset(createX86InstructionSelector(TM, *this, *RBI));
 }
+
+// Define the virtual destructor out-of-line for build efficiency.
+X86Subtarget::~X86Subtarget() = default;
 
 const CallLowering *X86Subtarget::getCallLowering() const {
   return CallLoweringInfo.get();

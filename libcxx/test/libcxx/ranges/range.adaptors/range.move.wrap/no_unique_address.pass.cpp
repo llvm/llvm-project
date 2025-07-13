@@ -8,49 +8,71 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// This test ensures that <copyable-box> behaves correctly when it holds an empty type.
+// clang-cl and cl currently don't support [[no_unique_address]]
+// XFAIL: msvc
 
 #include <ranges>
 
 #include <cassert>
 #include <utility>
 
-bool copied = false;
-bool moved  = false;
+#include "test_macros.h"
 
-struct Empty {
-  Empty() noexcept {}
-  Empty(Empty const&) noexcept { copied = true; }
-  Empty(Empty&&) noexcept { moved = true; }
-  Empty& operator=(Empty const&) = delete;
-  Empty& operator=(Empty&&)      = delete;
+template <class T, bool ExpectNoUniqueAddress>
+void test_no_unique_address() {
+  struct Test {
+    [[no_unique_address]] std::ranges::__movable_box<T> box_;
+    bool b2;
+  };
+
+  if constexpr (ExpectNoUniqueAddress) {
+    static_assert(sizeof(Test) == sizeof(bool));
+  } else {
+    static_assert(sizeof(Test) > sizeof(bool));
+  }
+}
+
+struct Copyable {};
+
+struct NotCopyAssignable {
+  constexpr NotCopyAssignable()                          = default;
+  constexpr NotCopyAssignable(const NotCopyAssignable&)  = default;
+  NotCopyAssignable& operator=(const NotCopyAssignable&) = delete;
 };
 
-using Box = std::ranges::__movable_box<Empty>;
+struct NotMoveAssignable {
+  constexpr NotMoveAssignable()                          = default;
+  constexpr NotMoveAssignable(const NotMoveAssignable&)  = default;
+  NotMoveAssignable& operator=(const NotMoveAssignable&) = default;
+  constexpr NotMoveAssignable(NotMoveAssignable&&)       = default;
+  NotMoveAssignable& operator=(NotMoveAssignable&&)      = delete;
+};
 
-struct Inherit : Box {};
+struct MoveOnly {
+  constexpr MoveOnly()                 = default;
+  constexpr MoveOnly(const MoveOnly&)  = delete;
+  MoveOnly& operator=(const MoveOnly&) = delete;
+  constexpr MoveOnly(MoveOnly&&)       = default;
+  MoveOnly& operator=(MoveOnly&&)      = default;
+};
 
-struct Hold : Box {
-  [[no_unique_address]] Inherit member;
+struct MoveOnlyNotAssignable {
+  constexpr MoveOnlyNotAssignable()                              = default;
+  constexpr MoveOnlyNotAssignable(const MoveOnlyNotAssignable&)  = delete;
+  MoveOnlyNotAssignable& operator=(const MoveOnlyNotAssignable&) = delete;
+  constexpr MoveOnlyNotAssignable(MoveOnlyNotAssignable&&)       = default;
+  MoveOnlyNotAssignable& operator=(MoveOnlyNotAssignable&&)      = delete;
 };
 
 int main(int, char**) {
-  Hold box;
+  test_no_unique_address<Copyable, true>();
+  test_no_unique_address<NotCopyAssignable, false>();
+  test_no_unique_address<NotMoveAssignable, false>();
 
-  Box& base   = static_cast<Box&>(box);
-  Box& member = static_cast<Box&>(box.member);
-
-  // Despite [[no_unique_address]], the two objects have the same type so they
-  // can't share the same address.
-  assert(&base != &member);
-
-  // Make sure that we do perform the copy-construction, which wouldn't be the
-  // case if the two <copyable-box>s had the same address.
-  base = member;
-  assert(copied);
-
-  base = std::move(member);
-  assert(moved);
+#if TEST_STD_VER >= 23
+  test_no_unique_address<MoveOnly, true>();
+  test_no_unique_address<MoveOnlyNotAssignable, false>();
+#endif
 
   return 0;
 }

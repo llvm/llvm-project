@@ -6,17 +6,17 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 @a = common global ptr null, align 8
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @fn1() {
+define void @fn1() {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @a, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, <2 x ptr> [[SHUFFLE]], <2 x i64> <i64 11, i64 56>
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint <2 x ptr> [[TMP2]] to <2 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 0
-; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[TMP4]], align 8
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 11, i64 56>
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 11
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[ADD_PTR]], align 8
+; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = load ptr, ptr @a, align 8
@@ -27,20 +27,46 @@ entry:
   %2 = ptrtoint ptr %add.ptr1 to i64
   %arrayidx2 = getelementptr inbounds i64, ptr %0, i64 12
   store i64 %2, ptr %arrayidx2, align 8
-  ret i32 undef
+  ret void
 }
 
 declare float @llvm.powi.f32.i32(float, i32)
 define void @fn2(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @fn2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <4 x i32> [[TMP4]] to <4 x float>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP5]], i32 [[TMP6]])
-; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[C:%.*]], align 4
+; CHECK-NEXT:    [[I0:%.*]] = load i32, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[I0]], [[I1]]
+; CHECK-NEXT:    [[FP1:%.*]] = sitofp i32 [[ADD1]] to float
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call float @llvm.powi.f32.i32(float [[FP1]], i32 [[ADD1]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 1
+; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 1
+; CHECK-NEXT:    [[I3:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[I2]], [[I3]]
+; CHECK-NEXT:    [[FP2:%.*]] = sitofp i32 [[ADD2]] to float
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call float @llvm.powi.f32.i32(float [[FP2]], i32 [[ADD1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 2
+; CHECK-NEXT:    [[I4:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 2
+; CHECK-NEXT:    [[I5:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[I4]], [[I5]]
+; CHECK-NEXT:    [[FP3:%.*]] = sitofp i32 [[ADD3]] to float
+; CHECK-NEXT:    [[CALL3:%.*]] = tail call float @llvm.powi.f32.i32(float [[FP3]], i32 [[ADD1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 3
+; CHECK-NEXT:    [[I6:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 3
+; CHECK-NEXT:    [[I7:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[I6]], [[I7]]
+; CHECK-NEXT:    [[FP4:%.*]] = sitofp i32 [[ADD4]] to float
+; CHECK-NEXT:    [[CALL4:%.*]] = tail call float @llvm.powi.f32.i32(float [[FP4]], i32 [[ADD1]]) #[[ATTR2]]
+; CHECK-NEXT:    store float [[CALL1]], ptr [[C:%.*]], align 4
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[C]], i32 1
+; CHECK-NEXT:    store float [[CALL2]], ptr [[ARRAYIDX8]], align 4
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[C]], i32 2
+; CHECK-NEXT:    store float [[CALL3]], ptr [[ARRAYIDX9]], align 4
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, ptr [[C]], i32 3
+; CHECK-NEXT:    store float [[CALL4]], ptr [[ARRAYIDX10]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -89,14 +115,14 @@ define void @externally_used_ptrs() {
 ; CHECK-LABEL: @externally_used_ptrs(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @a, align 8
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 11
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, <2 x ptr> [[SHUFFLE]], <2 x i64> <i64 56, i64 11>
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint <2 x ptr> [[TMP2]] to <2 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i64>, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 56, i64 11>
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[ADD_PTR]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[ADD_PTR]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

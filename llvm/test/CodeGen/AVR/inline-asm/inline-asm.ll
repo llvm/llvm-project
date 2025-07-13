@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr -mattr=movw -no-integrated-as | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mattr=movw -no-integrated-as | FileCheck %s
 ; XFAIL: *
 
 ; CHECK-LABEL: no_operands:
@@ -164,14 +164,14 @@ define void @float_0_0() {
 ; CHECK-LABEL: mem_global:
 define void @mem_global() {
   ; CHECK: some_instr {{X|Y|Z}}, {{X|Y|Z}}
-  call void asm "some_instr $0, $1", "=*Q,=*Q"(i16* @a, i16* @b)
+  call void asm "some_instr $0, $1", "=*Q,=*Q"(ptr @a, ptr @b)
   ret void
 }
 
 ; CHECK-LABEL: mem_params:
-define void @mem_params(i16* %a, i16* %b) {
+define void @mem_params(ptr %a, ptr %b) {
   ; CHECK: some_instr {{X|Y|Z}}, {{X|Y|Z}}
-  call void asm "some_instr $0, $1", "=*Q,=*Q"(i16* %a, i16* %b)
+  call void asm "some_instr $0, $1", "=*Q,=*Q"(ptr %a, ptr %b)
   ret void
 }
 
@@ -180,7 +180,7 @@ define void @mem_local() {
   %a = alloca i16
   %b = alloca i16
   ; CHECK: some_instr {{X|Y|Z}}+3, {{X|Y|Z}}+1
-  call void asm "some_instr $0, $1", "=*Q,=*Q"(i16* %a, i16* %b)
+  call void asm "some_instr $0, $1", "=*Q,=*Q"(ptr %a, ptr %b)
   ret void
 }
 
@@ -189,16 +189,16 @@ define void @mem_mixed() {
   %a = alloca i16
   %b = alloca i16
   ; CHECK: some_instr {{X|Y|Z}}, {{X|Y|Z}}+3, {{X|Y|Z}}+1
-  call void asm "some_instr $0, $1, $2", "=*Q,=*Q,=*Q"(i16* @a, i16* %a, i16* %b)
+  call void asm "some_instr $0, $1, $2", "=*Q,=*Q,=*Q"(ptr @a, ptr %a, ptr %b)
   ret void
 }
 
 ; CHECK-LABEL: mem_gep:
-define i8 @mem_gep(i8* %p) {
+define i8 @mem_gep(ptr %p) {
 entry:
 ; CHECK: movw {{r[0-9]+}}, [[REG:r[0-9]+]]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i16 1
+  %arrayidx = getelementptr inbounds i8, ptr %p, i16 1
 ; CHECK: ld [[REG]], {{X|Y|Z}}+1
-  %0 = tail call i8 asm sideeffect "ld $0, $1\0A\09", "=r,*Q"(i8* %arrayidx)
+  %0 = tail call i8 asm sideeffect "ld $0, $1\0A\09", "=r,*Q"(ptr %arrayidx)
   ret i8 %0
 }

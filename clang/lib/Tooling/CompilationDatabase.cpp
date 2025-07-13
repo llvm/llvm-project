@@ -22,19 +22,13 @@
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Job.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Tooling/CompilationDatabasePluginRegistry.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/LineIterator.h"
@@ -156,6 +150,7 @@ private:
     bool CollectChildren = Collect;
     switch (A->getKind()) {
     case driver::Action::CompileJobClass:
+    case driver::Action::PrecompileJobClass:
       CollectChildren = true;
       break;
 
@@ -215,7 +210,7 @@ std::string GetClangToolCommand() {
   SmallString<128> ClangToolPath;
   ClangToolPath = llvm::sys::path::parent_path(ClangExecutable);
   llvm::sys::path::append(ClangToolPath, "clang-tool");
-  return std::string(ClangToolPath.str());
+  return std::string(ClangToolPath);
 }
 
 } // namespace
@@ -242,13 +237,13 @@ std::string GetClangToolCommand() {
 static bool stripPositionalArgs(std::vector<const char *> Args,
                                 std::vector<std::string> &Result,
                                 std::string &ErrorMsg) {
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   llvm::raw_string_ostream Output(ErrorMsg);
-  TextDiagnosticPrinter DiagnosticPrinter(Output, &*DiagOpts);
+  TextDiagnosticPrinter DiagnosticPrinter(Output, DiagOpts);
   UnusedInputDiagConsumer DiagClient(DiagnosticPrinter);
   DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()),
-      &*DiagOpts, &DiagClient, false);
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
+      &DiagClient, false);
 
   // The clang executable path isn't required since the jobs the driver builds
   // will not be executed.
@@ -293,7 +288,8 @@ static bool stripPositionalArgs(std::vector<const char *> Args,
     // -flto* flags make the BackendJobClass, which still needs analyzer.
     if (Cmd.getSource().getKind() == driver::Action::AssembleJobClass ||
         Cmd.getSource().getKind() == driver::Action::BackendJobClass ||
-        Cmd.getSource().getKind() == driver::Action::CompileJobClass) {
+        Cmd.getSource().getKind() == driver::Action::CompileJobClass ||
+        Cmd.getSource().getKind() == driver::Action::PrecompileJobClass) {
       CompileAnalyzer.run(&Cmd.getSource());
     }
   }

@@ -15,7 +15,7 @@ define  void @test(ptr %a, ptr readnone %a_end, i64 %b, ptr %bf) unnamed_addr  {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[B_PHI:%.*]] = phi ptr [ [[TMP0]], [[BB1]] ], [ [[BF:%.*]], [[BB2]] ]
 ; CHECK-NEXT:    switch i64 [[B]], label [[FOR_BODY:%.*]] [
-; CHECK-NEXT:    i64 1, label [[FOR_BODY]]
+; CHECK-NEXT:      i64 1, label [[FOR_BODY]]
 ; CHECK-NEXT:    ]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_03:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ]
@@ -24,8 +24,8 @@ define  void @test(ptr %a, ptr readnone %a_end, i64 %b, ptr %bf) unnamed_addr  {
 ; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[B_ADDR_FLOAT]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[L]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], ptr [[A_ADDR_03]], align 4
-; CHECK-NEXT:    [[B_ADDR_FLOAT_INC]] = getelementptr inbounds float, ptr [[B_ADDR_I64_PTR]], i64 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[A_ADDR_03]], i64 1
+; CHECK-NEXT:    [[B_ADDR_FLOAT_INC]] = getelementptr inbounds nuw i8, ptr [[B_ADDR_I64_PTR]], i64 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[A_ADDR_03]], i64 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[INCDEC_PTR]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:

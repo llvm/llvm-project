@@ -16,7 +16,7 @@
   @x = common local_unnamed_addr global i32 0, align 4, !dbg !0
 
   ; Function Attrs: noreturn nounwind uwtable
-  define void @Process(i32* nocapture readonly %p) local_unnamed_addr !dbg !9 {
+  define void @Process(ptr nocapture readonly %p) local_unnamed_addr !dbg !9 {
   ; Stripped
   entry:
     br label %nou
@@ -26,7 +26,7 @@
     ret void
   }
 
-  define void @test2(i32* nocapture readonly %p) local_unnamed_addr !dbg !101 {
+  define void @test2(ptr nocapture readonly %p) local_unnamed_addr !dbg !101 {
   ; Stripped
   entry:
     br label %block1
@@ -36,7 +36,7 @@
     ret void
   }
 
-  define void @test3(i32* nocapture readonly %p) local_unnamed_addr !dbg !201 {
+  define void @test3(ptr nocapture readonly %p) local_unnamed_addr !dbg !201 {
   ; Stripped
   entry:
     br label %block1

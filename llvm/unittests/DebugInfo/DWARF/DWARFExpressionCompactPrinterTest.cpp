@@ -10,7 +10,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -62,7 +63,7 @@ void DWARFExpressionCompactPrinterTest::TestExprPrinter(
   DWARFExpression Expr(DE, 8);
 
   auto GetRegName = [&](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
-    if (std::optional<unsigned> LLVMRegNum =
+    if (std::optional<MCRegister> LLVMRegNum =
             this->MRI->getLLVMRegNum(DwarfRegNum, IsEH))
       if (const char *RegName = this->MRI->getName(*LLVMRegNum))
         return llvm::StringRef(RegName);
@@ -70,7 +71,7 @@ void DWARFExpressionCompactPrinterTest::TestExprPrinter(
     return {};
   };
 
-  Expr.printCompact(OS, GetRegName);
+  printDwarfExpressionCompact(&Expr, OS, GetRegName);
   EXPECT_EQ(OS.str(), Expected);
 }
 

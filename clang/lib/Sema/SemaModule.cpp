@@ -12,11 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTMutationListener.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/StringExtras.h"
-#include <optional>
 
 using namespace clang;
 using namespace sema;
@@ -68,9 +69,99 @@ static std::string stringFromPath(ModuleIdPath Path) {
   for (auto &Piece : Path) {
     if (!Name.empty())
       Name += ".";
-    Name += Piece.first->getName();
+    Name += Piece.getIdentifierInfo()->getName();
   }
   return Name;
+}
+
+/// Helper function for makeTransitiveImportsVisible to decide whether
+/// the \param Imported module unit is in the same module with the \param
+/// CurrentModule.
+/// \param FoundPrimaryModuleInterface is a helper parameter to record the
+/// primary module interface unit corresponding to the module \param
+/// CurrentModule. Since currently it is expensive to decide whether two module
+/// units come from the same module by comparing the module name.
+static bool
+isImportingModuleUnitFromSameModule(ASTContext &Ctx, Module *Imported,
+                                    Module *CurrentModule,
+                                    Module *&FoundPrimaryModuleInterface) {
+  if (!Imported->isNamedModule())
+    return false;
+
+  // The a partition unit we're importing must be in the same module of the
+  // current module.
+  if (Imported->isModulePartition())
+    return true;
+
+  // If we found the primary module interface during the search process, we can
+  // return quickly to avoid expensive string comparison.
+  if (FoundPrimaryModuleInterface)
+    return Imported == FoundPrimaryModuleInterface;
+
+  if (!CurrentModule)
+    return false;
+
+  // Then the imported module must be a primary module interface unit.  It
+  // is only allowed to import the primary module interface unit from the same
+  // module in the implementation unit and the implementation partition unit.
+
+  // Since we'll handle implementation unit above. We can only care
+  // about the implementation partition unit here.
+  if (!CurrentModule->isModulePartitionImplementation())
+    return false;
+
+  if (Ctx.isInSameModule(Imported, CurrentModule)) {
+    assert(!FoundPrimaryModuleInterface ||
+           FoundPrimaryModuleInterface == Imported);
+    FoundPrimaryModuleInterface = Imported;
+    return true;
+  }
+
+  return false;
+}
+
+/// [module.import]p7:
+///   Additionally, when a module-import-declaration in a module unit of some
+///   module M imports another module unit U of M, it also imports all
+///   translation units imported by non-exported module-import-declarations in
+///   the module unit purview of U. These rules can in turn lead to the
+///   importation of yet more translation units.
+static void
+makeTransitiveImportsVisible(ASTContext &Ctx, VisibleModuleSet &VisibleModules,
+                             Module *Imported, Module *CurrentModule,
+                             SourceLocation ImportLoc,
+                             bool IsImportingPrimaryModuleInterface = false) {
+  assert(Imported->isNamedModule() &&
+         "'makeTransitiveImportsVisible()' is intended for standard C++ named "
+         "modules only.");
+
+  llvm::SmallVector<Module *, 4> Worklist;
+  llvm::SmallSet<Module *, 16> Visited;
+  Worklist.push_back(Imported);
+
+  Module *FoundPrimaryModuleInterface =
+      IsImportingPrimaryModuleInterface ? Imported : nullptr;
+
+  while (!Worklist.empty()) {
+    Module *Importing = Worklist.pop_back_val();
+
+    if (Visited.count(Importing))
+      continue;
+    Visited.insert(Importing);
+
+    // FIXME: The ImportLoc here is not meaningful. It may be problematic if we
+    // use the sourcelocation loaded from the visible modules.
+    VisibleModules.setVisible(Importing, ImportLoc);
+
+    if (isImportingModuleUnitFromSameModule(Ctx, Importing, CurrentModule,
+                                            FoundPrimaryModuleInterface)) {
+      for (Module *TransImported : Importing->Imports)
+        Worklist.push_back(TransImported);
+
+      for (auto [Exports, _] : Importing->Exports)
+        Worklist.push_back(Exports);
+    }
+  }
 }
 
 Sema::DeclGroupPtrTy
@@ -172,11 +263,11 @@ static bool DiagReservedModuleName(Sema &S, const IdentifierInfo *II,
 Sema::DeclGroupPtrTy
 Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                       ModuleDeclKind MDK, ModuleIdPath Path,
-                      ModuleIdPath Partition, ModuleImportState &ImportState) {
+                      ModuleIdPath Partition, ModuleImportState &ImportState,
+                      bool IntroducerIsFirstPPToken) {
   assert(getLangOpts().CPlusPlusModules &&
          "should only have module decl in standard C++ modules");
 
-  bool IsFirstDecl = ImportState == ModuleImportState::FirstDecl;
   bool SeenGMF = ImportState == ModuleImportState::GlobalFragment;
   // If any of the steps here fail, we count that as invalidating C++20
   // module state;
@@ -242,18 +333,13 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
           SeenGMF == (bool)this->TheGlobalModuleFragment) &&
          "mismatched global module state");
 
-  // In C++20, the module-declaration must be the first declaration if there
-  // is no global module fragment.
-  if (getLangOpts().CPlusPlusModules && !IsFirstDecl && !SeenGMF) {
+  // In C++20, A module directive may only appear as the first preprocessing
+  // tokens in a file (excluding the global module fragment.).
+  if (getLangOpts().CPlusPlusModules && !IntroducerIsFirstPPToken && !SeenGMF) {
     Diag(ModuleLoc, diag::err_module_decl_not_at_start);
-    SourceLocation BeginLoc =
-        ModuleScopes.empty()
-            ? SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
-            : ModuleScopes.back().BeginLoc;
-    if (BeginLoc.isValid()) {
-      Diag(BeginLoc, diag::note_global_module_introducer_missing)
-          << FixItHint::CreateInsertion(BeginLoc, "module;\n");
-    }
+    SourceLocation BeginLoc = PP.getMainFileFirstPPTokenLoc();
+    Diag(BeginLoc, diag::note_global_module_introducer_missing)
+        << FixItHint::CreateInsertion(BeginLoc, "module;\n");
   }
 
   // C++23 [module.unit]p1: ... The identifiers module and import shall not
@@ -265,17 +351,18 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
 
   // Test the first part of the path to see if it's std[0-9]+ but allow the
   // name in a system header.
-  StringRef FirstComponentName = Path[0].first->getName();
-  if (!getSourceManager().isInSystemHeader(Path[0].second) &&
+  StringRef FirstComponentName = Path[0].getIdentifierInfo()->getName();
+  if (!getSourceManager().isInSystemHeader(Path[0].getLoc()) &&
       (FirstComponentName == "std" ||
        (FirstComponentName.starts_with("std") &&
         llvm::all_of(FirstComponentName.drop_front(3), &llvm::isDigit))))
-    Diag(Path[0].second, diag::warn_reserved_module_name) << Path[0].first;
+    Diag(Path[0].getLoc(), diag::warn_reserved_module_name)
+        << Path[0].getIdentifierInfo();
 
   // Then test all of the components in the path to see if any of them are
   // using another kind of reserved or invalid identifier.
   for (auto Part : Path) {
-    if (DiagReservedModuleName(*this, Part.first, Part.second))
+    if (DiagReservedModuleName(*this, Part.getIdentifierInfo(), Part.getLoc()))
       return nullptr;
   }
 
@@ -291,10 +378,10 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // correct.
   if (!getLangOpts().CurrentModule.empty() &&
       getLangOpts().CurrentModule != ModuleName) {
-    Diag(Path.front().second, diag::err_current_module_name_mismatch)
-        << SourceRange(Path.front().second, IsPartition
-                                                ? Partition.back().second
-                                                : Path.back().second)
+    Diag(Path.front().getLoc(), diag::err_current_module_name_mismatch)
+        << SourceRange(Path.front().getLoc(), IsPartition
+                                                  ? Partition.back().getLoc()
+                                                  : Path.back().getLoc())
         << getLangOpts().CurrentModule;
     return nullptr;
   }
@@ -308,8 +395,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   case ModuleDeclKind::PartitionInterface: {
     // We can't have parsed or imported a definition of this module or parsed a
     // module map defining it already.
-    if (auto *M = Map.findModule(ModuleName)) {
-      Diag(Path[0].second, diag::err_module_redefinition) << ModuleName;
+    if (auto *M = Map.findOrLoadModule(ModuleName)) {
+      Diag(Path[0].getLoc(), diag::err_module_redefinition) << ModuleName;
       if (M->DefinitionLoc.isValid())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition);
       else if (OptionalFileEntryRef FE = M->getASTFile())
@@ -332,8 +419,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     // keyword nor a module-partition implicitly imports the primary
     // module interface unit of the module as if by a module-import-
     // declaration.
-    std::pair<IdentifierInfo *, SourceLocation> ModuleNameLoc(
-        PP.getIdentifierInfo(ModuleName), Path[0].second);
+    IdentifierLoc ModuleNameLoc(Path[0].getLoc(),
+                                PP.getIdentifierInfo(ModuleName));
 
     // The module loader will assume we're trying to import the module that
     // we're building if `LangOpts.CurrentModule` equals to 'ModuleName'.
@@ -391,17 +478,21 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
 
   getASTContext().setCurrentNamedModule(Mod);
 
+  if (auto *Listener = getASTMutationListener())
+    Listener->EnteringModulePurview();
+
   // We already potentially made an implicit import (in the case of a module
   // implementation unit importing its interface).  Make this module visible
   // and return the import decl to be added to the current TU.
   if (Interface) {
 
-    VisibleModules.setVisible(Interface, ModuleLoc);
-    VisibleModules.makeTransitiveImportsVisible(Interface, ModuleLoc);
+    makeTransitiveImportsVisible(getASTContext(), VisibleModules, Interface,
+                                 Mod, ModuleLoc,
+                                 /*IsImportingPrimaryModuleInterface=*/true);
 
     // Make the import decl for the interface in the impl module.
     ImportDecl *Import = ImportDecl::Create(Context, CurContext, ModuleLoc,
-                                            Interface, Path[0].second);
+                                            Interface, Path[0].getLoc());
     CurContext->addDecl(Import);
 
     // Sequence initialization of the imported module before that of the current
@@ -490,7 +581,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
 
   // For a C++20 module name, flatten into a single identifier with the source
   // location of the first component.
-  std::pair<IdentifierInfo *, SourceLocation> ModuleNameLoc;
+  IdentifierLoc ModuleNameLoc;
 
   std::string ModuleName;
   if (IsPartition) {
@@ -502,11 +593,13 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     ModuleName = NamedMod->getPrimaryModuleInterfaceName().str();
     ModuleName += ":";
     ModuleName += stringFromPath(Path);
-    ModuleNameLoc = {PP.getIdentifierInfo(ModuleName), Path[0].second};
+    ModuleNameLoc =
+        IdentifierLoc(Path[0].getLoc(), PP.getIdentifierInfo(ModuleName));
     Path = ModuleIdPath(ModuleNameLoc);
   } else if (getLangOpts().CPlusPlusModules) {
     ModuleName = stringFromPath(Path);
-    ModuleNameLoc = {PP.getIdentifierInfo(ModuleName), Path[0].second};
+    ModuleNameLoc =
+        IdentifierLoc(Path[0].getLoc(), PP.getIdentifierInfo(ModuleName));
     Path = ModuleIdPath(ModuleNameLoc);
   }
 
@@ -529,7 +622,8 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   if (!Mod)
     return true;
 
-  if (!Mod->isInterfaceOrPartition() && !ModuleName.empty()) {
+  if (!Mod->isInterfaceOrPartition() && !ModuleName.empty() &&
+      !getLangOpts().ObjC) {
     Diag(ImportLoc, diag::err_module_import_non_interface_nor_parition)
         << ModuleName;
     return true;
@@ -553,7 +647,19 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   if (Mod->isHeaderUnit())
     Diag(ImportLoc, diag::warn_experimental_header_unit);
 
-  VisibleModules.setVisible(Mod, ImportLoc);
+  if (Mod->isNamedModule())
+    makeTransitiveImportsVisible(getASTContext(), VisibleModules, Mod,
+                                 getCurrentModule(), ImportLoc);
+  else
+    VisibleModules.setVisible(Mod, ImportLoc);
+
+  assert((!Mod->isModulePartitionImplementation() || getCurrentModule()) &&
+         "We can only import a partition unit in a named module.");
+  if (Mod->isModulePartitionImplementation() &&
+      getCurrentModule()->isModuleInterfaceUnit())
+    Diag(ImportLoc,
+         diag::warn_import_implementation_partition_unit_in_interface_unit)
+        << Mod->Name;
 
   checkModuleImportContext(*this, Mod, ImportLoc, CurContext);
 
@@ -578,7 +684,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
       IdentifierLocs.push_back(SourceLocation());
   } else if (getLangOpts().CPlusPlusModules && !Mod->Parent) {
     // A single identifier for the whole name.
-    IdentifierLocs.push_back(Path[0].second);
+    IdentifierLocs.push_back(Path[0].getLoc());
   } else {
     Module *ModCheck = Mod;
     for (unsigned I = 0, N = Path.size(); I != N; ++I) {
@@ -588,7 +694,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
         break;
       ModCheck = ModCheck->Parent;
 
-      IdentifierLocs.push_back(Path[I].second);
+      IdentifierLocs.push_back(Path[I].getLoc());
     }
   }
 
@@ -605,8 +711,14 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   if (getLangOpts().CPlusPlusModules && ExportLoc.isValid() &&
       Mod->Kind == Module::ModuleKind::ModulePartitionImplementation) {
     Diag(ExportLoc, diag::err_export_partition_impl)
-        << SourceRange(ExportLoc, Path.back().second);
-  } else if (!ModuleScopes.empty() && !currentModuleIsImplementation()) {
+        << SourceRange(ExportLoc, Path.back().getLoc());
+  } else if (ExportLoc.isValid() &&
+             (ModuleScopes.empty() || currentModuleIsImplementation())) {
+    // [module.interface]p1:
+    // An export-declaration shall inhabit a namespace scope and appear in the
+    // purview of a module interface unit.
+    Diag(ExportLoc, diag::err_export_not_in_module_interface);
+  } else if (!ModuleScopes.empty()) {
     // Re-export the module if the imported module is exported.
     // Note that we don't need to add re-exported module to Imports field
     // since `Exports` implies the module is imported already.
@@ -614,17 +726,12 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
       getCurrentModule()->Exports.emplace_back(Mod, false);
     else
       getCurrentModule()->Imports.insert(Mod);
-  } else if (ExportLoc.isValid()) {
-    // [module.interface]p1:
-    // An export-declaration shall inhabit a namespace scope and appear in the
-    // purview of a module interface unit.
-    Diag(ExportLoc, diag::err_export_not_in_module_interface);
   }
 
   return Import;
 }
 
-void Sema::ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
+void Sema::ActOnAnnotModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
   checkModuleImportContext(*this, Mod, DirectiveLoc, CurContext, true);
   BuildModuleInclude(DirectiveLoc, Mod);
 }
@@ -634,9 +741,9 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
   // in that buffer do not qualify as module imports; they're just an
   // implementation detail of us building the module.
   //
-  // FIXME: Should we even get ActOnModuleInclude calls for those?
+  // FIXME: Should we even get ActOnAnnotModuleInclude calls for those?
   bool IsInModuleIncludes =
-      TUKind == TU_Module &&
+      TUKind == TU_ClangModule &&
       getSourceManager().isWrittenInMainFile(DirectiveLoc);
 
   // If we are really importing a module (not just checking layering) due to an
@@ -663,7 +770,7 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
   }
 }
 
-void Sema::ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
+void Sema::ActOnAnnotModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
   checkModuleImportContext(*this, Mod, DirectiveLoc, CurContext, true);
 
   ModuleScopes.push_back({});
@@ -687,7 +794,7 @@ void Sema::ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
   }
 }
 
-void Sema::ActOnModuleEnd(SourceLocation EomLoc, Module *Mod) {
+void Sema::ActOnAnnotModuleEnd(SourceLocation EomLoc, Module *Mod) {
   if (getLangOpts().ModulesLocalVisibility) {
     VisibleModules = std::move(ModuleScopes.back().OuterVisibleModules);
     // Leaving a module hides namespace names, so our visible namespace cache
@@ -746,8 +853,6 @@ void Sema::createImplicitModuleImportForErrorRecovery(SourceLocation Loc,
   VisibleModules.setVisible(Mod, Loc);
 }
 
-/// We have parsed the start of an export declaration, including the '{'
-/// (if present).
 Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
                                  SourceLocation LBraceLoc) {
   ExportDecl *D = ExportDecl::Create(Context, CurContext, ExportLoc);
@@ -762,23 +867,25 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
   //   An export-declaration shall appear only [...] in the purview of a module
   //   interface unit. An export-declaration shall not appear directly or
   //   indirectly within [...] a private-module-fragment.
-  if (!isCurrentModulePurview()) {
-    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
-    D->setInvalidDecl();
-    return D;
-  } else if (currentModuleIsImplementation()) {
-    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 1;
-    Diag(ModuleScopes.back().BeginLoc,
-         diag::note_not_module_interface_add_export)
-        << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
-    D->setInvalidDecl();
-    return D;
-  } else if (ModuleScopes.back().Module->Kind ==
-             Module::PrivateModuleFragment) {
-    Diag(ExportLoc, diag::err_export_in_private_module_fragment);
-    Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
-    D->setInvalidDecl();
-    return D;
+  if (!getLangOpts().HLSL) {
+    if (!isCurrentModulePurview()) {
+      Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
+      D->setInvalidDecl();
+      return D;
+    } else if (currentModuleIsImplementation()) {
+      Diag(ExportLoc, diag::err_export_not_in_module_interface) << 1;
+      Diag(ModuleScopes.back().BeginLoc,
+          diag::note_not_module_interface_add_export)
+          << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
+      D->setInvalidDecl();
+      return D;
+    } else if (ModuleScopes.back().Module->Kind ==
+              Module::PrivateModuleFragment) {
+      Diag(ExportLoc, diag::err_export_in_private_module_fragment);
+      Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
+      D->setInvalidDecl();
+      return D;
+    }
   }
 
   for (const DeclContext *DC = CurContext; DC; DC = DC->getLexicalParent()) {
@@ -798,7 +905,7 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
       //
       // Defer exporting the namespace until after we leave it, in order to
       // avoid marking all subsequent declarations in the namespace as exported.
-      if (!DeferredExportedNamespaces.insert(ND).second)
+      if (!getLangOpts().HLSL && !DeferredExportedNamespaces.insert(ND).second)
         break;
     }
   }
@@ -813,7 +920,9 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
     return D;
   }
 
-  D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
+  if (!getLangOpts().HLSL)
+    D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
+
   return D;
 }
 
@@ -830,6 +939,16 @@ static bool checkExportedDeclContext(Sema &S, DeclContext *DC,
 
 /// Check that it's valid to export \p D.
 static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
+
+  // HLSL: export declaration is valid only on functions
+  if (S.getLangOpts().HLSL) {
+    // Export-within-export was already diagnosed in ActOnStartExportDecl
+    if (!isa<FunctionDecl, ExportDecl>(D)) {
+      S.Diag(D->getBeginLoc(), diag::err_hlsl_export_not_on_function);
+      D->setInvalidDecl();
+      return false;
+    }
+  }
 
   //  C++20 [module.interface]p3:
   //   [...] it shall not declare a name with internal linkage.
@@ -883,7 +1002,6 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
   return true;
 }
 
-/// Complete the definition of an export declaration.
 Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
   auto *ED = cast<ExportDecl>(D);
   if (RBraceLoc.isValid())
@@ -909,6 +1027,10 @@ Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
       }
     }
   }
+
+  // Anything exported from a module should never be considered unused.
+  for (auto *Exported : ED->decls())
+    Exported->markUsed(getASTContext());
 
   return D;
 }

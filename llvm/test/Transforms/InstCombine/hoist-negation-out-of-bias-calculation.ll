@@ -15,7 +15,7 @@
 define i8 @t0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 0, [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[NEGBIAS]]
 ;
@@ -44,8 +44,8 @@ define i8 @t1_commutative(i8 %y) {
 
 define <2 x i8> @t2_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t2_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], splat (i8 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEGBIAS]]
 ;
@@ -55,14 +55,14 @@ define <2 x i8> @t2_vec(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %negbias
 }
 
-define <2 x i8> @t3_vec_undef(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: @t3_vec_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
+define <2 x i8> @t3_vec_poison(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @t3_vec_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], splat (i8 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEGBIAS]]
 ;
-  %negy = sub <2 x i8> <i8 0, i8 undef>, %y
+  %negy = sub <2 x i8> <i8 0, i8 poison>, %y
   %unbiasedx = and <2 x i8> %negy, %x
   %negbias = sub <2 x i8> %unbiasedx, %x
   ret <2 x i8> %negbias
@@ -76,7 +76,7 @@ define i8 @n4_extrause0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @n4_extrause0(
 ; CHECK-NEXT:    [[NEGY:%.*]] = sub i8 0, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[NEGY]])
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and i8 [[NEGY]], [[X:%.*]]
+; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and i8 [[X:%.*]], [[NEGY]]
 ; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 [[UNBIASEDX]], [[X]]
 ; CHECK-NEXT:    ret i8 [[NEGBIAS]]
 ;
@@ -89,7 +89,7 @@ define i8 @n4_extrause0(i8 %x, i8 %y) {
 define i8 @n5_extrause1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @n5_extrause1(
 ; CHECK-NEXT:    [[NEGY:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and i8 [[NEGY]], [[X:%.*]]
+; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and i8 [[X:%.*]], [[NEGY]]
 ; CHECK-NEXT:    call void @use8(i8 [[UNBIASEDX]])
 ; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 [[UNBIASEDX]], [[X]]
 ; CHECK-NEXT:    ret i8 [[NEGBIAS]]
@@ -104,7 +104,7 @@ define i8 @n6_extrause2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @n6_extrause2(
 ; CHECK-NEXT:    [[NEGY:%.*]] = sub i8 0, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[NEGY]])
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and i8 [[NEGY]], [[X:%.*]]
+; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and i8 [[X:%.*]], [[NEGY]]
 ; CHECK-NEXT:    call void @use8(i8 [[UNBIASEDX]])
 ; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 [[UNBIASEDX]], [[X]]
 ; CHECK-NEXT:    ret i8 [[NEGBIAS]]
@@ -122,7 +122,7 @@ define i8 @n6_extrause2(i8 %x, i8 %y) {
 define i8 @n7(i8 %x, i8 %y) {
 ; CHECK-LABEL: @n7(
 ; CHECK-NEXT:    [[NEGY_NOT:%.*]] = add i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[NEGBIAS:%.*]] = and i8 [[NEGY_NOT]], [[X:%.*]]
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = and i8 [[X:%.*]], [[NEGY_NOT]]
 ; CHECK-NEXT:    ret i8 [[NEGBIAS]]
 ;
   %negy = sub i8 0, %y
@@ -147,7 +147,7 @@ define i8 @n8(i8 %x, i8 %y) {
 define i8 @n9(i8 %x0, i8 %x1, i8 %y) {
 ; CHECK-LABEL: @n9(
 ; CHECK-NEXT:    [[NEGY:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and i8 [[NEGY]], [[X1:%.*]]
+; CHECK-NEXT:    [[UNBIASEDX:%.*]] = and i8 [[X1:%.*]], [[NEGY]]
 ; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 [[UNBIASEDX]], [[X0:%.*]]
 ; CHECK-NEXT:    ret i8 [[NEGBIAS]]
 ;

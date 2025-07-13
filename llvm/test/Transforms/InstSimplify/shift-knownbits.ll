@@ -14,6 +14,145 @@ define i32 @shl_amount_is_known_bogus(i32 %a, i32 %b) {
   ret i32 %shl
 }
 
+define i32 @shl_amount_is_known_bogus_range_attr(i32 %a, i32 range(i32 32, 64) %b) {
+; CHECK-LABEL: @shl_amount_is_known_bogus_range_attr(
+; CHECK-NEXT:    ret i32 poison
+;
+  %shl = shl i32 %a, %b
+  ret i32 %shl
+}
+
+define i32 @neg_shl_amount_is_known_bogus_range_attr(i32 %a, i32 range(i32 0, 32) %b) {
+; CHECK-LABEL: @neg_shl_amount_is_known_bogus_range_attr(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %shl = shl i32 %a, %b
+  ret i32 %shl
+}
+
+declare range(i32 32, 64) i32 @returns_out_of_range_helper()
+declare range(i32 0, 32) i32 @returns_in_range_helper()
+
+define i32 @shl_amount_is_known_bogus_range_return(i32 %a) {
+; CHECK-LABEL: @shl_amount_is_known_bogus_range_return(
+; CHECK-NEXT:    [[B:%.*]] = call i32 @returns_out_of_range_helper()
+; CHECK-NEXT:    ret i32 poison
+;
+  %b = call i32 @returns_out_of_range_helper()
+  %shl = shl i32 %a, %b
+  ret i32 %shl
+}
+
+define i32 @neg_shl_amount_is_known_bogus_range_return(i32 %a) {
+; CHECK-LABEL: @neg_shl_amount_is_known_bogus_range_return(
+; CHECK-NEXT:    [[B:%.*]] = call i32 @returns_in_range_helper()
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[B]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %b = call i32 @returns_in_range_helper()
+  %shl = shl i32 %a, %b
+  ret i32 %shl
+}
+
+declare i32 @returns_i32_helper()
+
+define i32 @shl_amount_is_known_bogus_range_call(i32 %a) {
+; CHECK-LABEL: @shl_amount_is_known_bogus_range_call(
+; CHECK-NEXT:    [[B:%.*]] = call range(i32 32, 64) i32 @returns_i32_helper()
+; CHECK-NEXT:    ret i32 poison
+;
+  %b = call range(i32 32, 64) i32 @returns_i32_helper()
+  %shl = shl i32 %a, %b
+  ret i32 %shl
+}
+
+define i32 @neg_shl_amount_is_known_bogus_range_call(i32 %a) {
+; CHECK-LABEL: @neg_shl_amount_is_known_bogus_range_call(
+; CHECK-NEXT:    [[B:%.*]] = call range(i32 0, 32) i32 @returns_i32_helper()
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[B]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %b = call range(i32 0, 32) i32 @returns_i32_helper()
+  %shl = shl i32 %a, %b
+  ret i32 %shl
+}
+
+define <2 x i32> @shl_amount_is_known_bogus_range_attr_vec(<2 x i32> %a, <2 x i32> range(i32 32, 64) %b) {
+; CHECK-LABEL: @shl_amount_is_known_bogus_range_attr_vec(
+; CHECK-NEXT:    ret <2 x i32> poison
+;
+  %shl = shl <2 x i32> %a, %b
+  ret <2 x i32> %shl
+}
+
+define <2 x i32> @neg_shl_amount_is_known_bogus_range_attr_vec(<2 x i32> %a, <2 x i32> range(i32 0, 32) %b) {
+; CHECK-LABEL: @neg_shl_amount_is_known_bogus_range_attr_vec(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[SHL]]
+;
+  %shl = shl <2 x i32> %a, %b
+  ret <2 x i32> %shl
+}
+
+declare range(i32 32, 64) <2 x i32> @returns_out_of_range_helper_vec()
+declare range(i32 0, 32) <2 x i32> @returns_in_range_helper_vec()
+
+define <2 x i32> @shl_amount_is_known_bogus_range_return_vec(<2 x i32> %a) {
+; CHECK-LABEL: @shl_amount_is_known_bogus_range_return_vec(
+; CHECK-NEXT:    [[B:%.*]] = call <2 x i32> @returns_out_of_range_helper_vec()
+; CHECK-NEXT:    ret <2 x i32> poison
+;
+  %b = call <2 x i32> @returns_out_of_range_helper_vec()
+  %shl = shl <2 x i32> %a, %b
+  ret <2 x i32> %shl
+}
+
+define <2 x i32> @neg_shl_amount_is_known_bogus_range_return_vec(<2 x i32> %a) {
+; CHECK-LABEL: @neg_shl_amount_is_known_bogus_range_return_vec(
+; CHECK-NEXT:    [[B:%.*]] = call <2 x i32> @returns_in_range_helper_vec()
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[B]]
+; CHECK-NEXT:    ret <2 x i32> [[SHL]]
+;
+  %b = call <2 x i32> @returns_in_range_helper_vec()
+  %shl = shl <2 x i32> %a, %b
+  ret <2 x i32> %shl
+}
+
+declare <2 x i32> @returns_i32_helper_vec()
+
+define <2 x i32> @shl_amount_is_known_bogus_range_call_vec(<2 x i32> %a) {
+; CHECK-LABEL: @shl_amount_is_known_bogus_range_call_vec(
+; CHECK-NEXT:    [[B:%.*]] = call range(i32 32, 64) <2 x i32> @returns_i32_helper_vec()
+; CHECK-NEXT:    ret <2 x i32> poison
+;
+  %b = call range(i32 32, 64) <2 x i32> @returns_i32_helper_vec()
+  %shl = shl <2 x i32> %a, %b
+  ret <2 x i32> %shl
+}
+
+define <2 x i32> @neg_shl_amount_is_known_bogus_range_call_vec(<2 x i32> %a) {
+; CHECK-LABEL: @neg_shl_amount_is_known_bogus_range_call_vec(
+; CHECK-NEXT:    [[B:%.*]] = call range(i32 0, 32) <2 x i32> @returns_i32_helper_vec()
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[B]]
+; CHECK-NEXT:    ret <2 x i32> [[SHL]]
+;
+  %b = call range(i32 0, 32) <2 x i32> @returns_i32_helper_vec()
+  %shl = shl <2 x i32> %a, %b
+  ret <2 x i32> %shl
+}
+
+define i32 @shl_amount_is_not_known_bogus_range_call_and_range_metadata(i32 %a) {
+; CHECK-LABEL: @shl_amount_is_not_known_bogus_range_call_and_range_metadata(
+; CHECK-NEXT:    [[B:%.*]] = call range(i32 0, 32) i32 @returns_i32_helper(), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[B]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %b = call range(i32 0, 32) i32 @returns_i32_helper(), !range !{ i32 32, i32 64 }
+  %shl = shl i32 %a, %b
+  ret i32 %shl
+}
+
 ; Check some weird types and the other shift ops.
 
 define i31 @lshr_amount_is_known_bogus(i31 %a, i31 %b) {
@@ -125,7 +264,7 @@ define <2 x i15> @shl_vector_zero(<2 x i15> %a, <2 x i15> %b) {
 
 define <2 x i32> @shl_vector_for_real(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @shl_vector_for_real(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[B:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[B:%.*]], splat (i32 3)
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[AND]]
 ; CHECK-NEXT:    ret <2 x i32> [[SHL]]
 ;
@@ -179,7 +318,7 @@ define i32 @lshr_cttz_zero_is_undef(i32 %x) {
 define <2 x i8> @lshr_ctlz_zero_is_undef_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_ctlz_zero_is_undef_splat_vec(
 ; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 3>
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
   %ct = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %x, i1 true)
@@ -203,7 +342,7 @@ define i8 @lshr_ctlz_zero_is_undef_vec(<2 x i8> %x) {
 define <2 x i8> @lshr_cttz_zero_is_undef_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_cttz_zero_is_undef_splat_vec(
 ; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 3>
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
   %ct = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %x, i1 true)

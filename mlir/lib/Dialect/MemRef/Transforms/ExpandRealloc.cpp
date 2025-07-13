@@ -16,7 +16,7 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_EXPANDREALLOC
+#define GEN_PASS_DEF_EXPANDREALLOCPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -68,7 +68,7 @@ struct ExpandReallocOpPattern : public OpRewritePattern<memref::ReallocOp> {
 
     // Get the size of the original buffer.
     int64_t inputSize =
-        op.getSource().getType().cast<BaseMemRefType>().getDimSize(0);
+        cast<BaseMemRefType>(op.getSource().getType()).getDimSize(0);
     OpFoldResult currSize = rewriter.getIndexAttr(inputSize);
     if (ShapedType::isDynamic(inputSize)) {
       Value dimZero = getValueOrCreateConstantIndexOp(rewriter, loc,
@@ -79,7 +79,7 @@ struct ExpandReallocOpPattern : public OpRewritePattern<memref::ReallocOp> {
 
     // Get the requested size that the new buffer should have.
     int64_t outputSize =
-        op.getResult().getType().cast<BaseMemRefType>().getDimSize(0);
+        cast<BaseMemRefType>(op.getResult().getType()).getDimSize(0);
     OpFoldResult targetSize = ShapedType::isDynamic(outputSize)
                                   ? OpFoldResult{op.getDynamicResultSize()}
                                   : rewriter.getIndexAttr(outputSize);
@@ -127,7 +127,7 @@ struct ExpandReallocOpPattern : public OpRewritePattern<memref::ReallocOp> {
           // is already bigger than the requested size, the cast represents a
           // subview operation.
           Value casted = builder.create<memref::ReinterpretCastOp>(
-              loc, op.getResult().getType().cast<MemRefType>(), op.getSource(),
+              loc, cast<MemRefType>(op.getResult().getType()), op.getSource(),
               rewriter.getIndexAttr(0), ArrayRef<OpFoldResult>{targetSize},
               ArrayRef<OpFoldResult>{rewriter.getIndexAttr(1)});
           builder.create<scf::YieldOp>(loc, casted);
@@ -142,11 +142,9 @@ private:
 };
 
 struct ExpandReallocPass
-    : public memref::impl::ExpandReallocBase<ExpandReallocPass> {
-  ExpandReallocPass(bool emitDeallocs)
-      : memref::impl::ExpandReallocBase<ExpandReallocPass>() {
-    this->emitDeallocs.setValue(emitDeallocs);
-  }
+    : public memref::impl::ExpandReallocPassBase<ExpandReallocPass> {
+  using Base::Base;
+
   void runOnOperation() override {
     MLIRContext &ctx = getContext();
 
@@ -168,8 +166,4 @@ struct ExpandReallocPass
 void mlir::memref::populateExpandReallocPatterns(RewritePatternSet &patterns,
                                                  bool emitDeallocs) {
   patterns.add<ExpandReallocOpPattern>(patterns.getContext(), emitDeallocs);
-}
-
-std::unique_ptr<Pass> mlir::memref::createExpandReallocPass(bool emitDeallocs) {
-  return std::make_unique<ExpandReallocPass>(emitDeallocs);
 }

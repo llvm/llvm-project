@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output          < %s | FileCheck %s --check-prefix=NOAA
-; RUN: opt %loadPolly -polly-print-scops -disable-output -tbaa    < %s | FileCheck %s --check-prefix=TBAA
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output -aa-pipeline=         < %s 2>&1 | FileCheck %s --check-prefix=NOAA
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output -aa-pipeline=tbaa    < %s 2>&1 | FileCheck %s --check-prefix=TBAA
 ;
 ;    void jd(int *Int0, int *Int1, float *Float0, float *Float1) {
 ;      for (int i = 0; i < 1024; i++) {

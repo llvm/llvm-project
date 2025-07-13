@@ -16,7 +16,7 @@
 
 namespace llvm {
 struct ExportedSymbol {
-  MachO::SymbolKind Kind = MachO::SymbolKind::GlobalSymbol;
+  MachO::EncodeKind Kind = MachO::EncodeKind::GlobalSymbol;
   std::string Name = {};
   bool Weak = false;
   bool ThreadLocalValue = false;
@@ -39,7 +39,7 @@ inline bool operator==(const ExportedSymbol &LHS, const ExportedSymbol &RHS) {
 }
 
 inline std::string stripWhitespace(std::string S) {
-  S.erase(std::remove_if(S.begin(), S.end(), ::isspace), S.end());
+  llvm::erase_if(S, ::isspace);
   return S;
 }
 

@@ -12,13 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Analysis/RetainSummaryManager.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/ParentMap.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include <optional>
 
 using namespace clang;
@@ -1098,7 +1097,7 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
   if (S.isKeywordSelector()) {
     for (unsigned i = 0, e = S.getNumArgs(); i != e; ++i) {
       StringRef Slot = S.getNameForSlot(i);
-      if (Slot.substr(Slot.size() - 8).equals_insensitive("delegate")) {
+      if (Slot.ends_with_insensitive("delegate")) {
         if (ResultEff == ObjCInitRetE)
           ResultEff = RetEffect::MakeNoRetHard();
         else

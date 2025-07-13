@@ -17,9 +17,9 @@ define i32 @lex(i1 %c0, i1 %c1, i32 %r0, i32 %r1, i32 %v) {
 ; CHECK:       do.body:
 ; CHECK-NEXT:    call void @zzz()
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[COMMON_RET]] [
-; CHECK-NEXT:    i32 10, label [[DO_BODY]]
-; CHECK-NEXT:    i32 32, label [[DO_BODY]]
-; CHECK-NEXT:    i32 9, label [[DO_BODY]]
+; CHECK-NEXT:      i32 10, label [[DO_BODY]]
+; CHECK-NEXT:      i32 32, label [[DO_BODY]]
+; CHECK-NEXT:      i32 9, label [[DO_BODY]]
 ; CHECK-NEXT:    ]
 ;
 entry:
