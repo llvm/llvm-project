@@ -718,15 +718,7 @@ define void @short_vector_to_i64(ptr %in, ptr %out, ptr %p) {
 define void @scalable_vector_to_i32(ptr %in, ptr %out, ptr %p) #0 {
 ; CHECK-LABEL: scalable_vector_to_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    mov w9, v0.s[2]
-; CHECK-NEXT:    mov w11, v0.s[3]
-; CHECK-NEXT:    orr w8, w10, w8, lsl #8
-; CHECK-NEXT:    orr w8, w8, w9, lsl #16
-; CHECK-NEXT:    orr w8, w8, w11, lsl #24
+; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <vscale x 4 x i8>, ptr %in, align 4
@@ -791,12 +783,10 @@ define void @scalable_vector_to_i32_unused_high_i8(ptr %in, ptr %out, ptr %p) #0
 ; CHECK-LABEL: scalable_vector_to_i32_unused_high_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ldrh w9, [x0]
 ; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    mov w9, v0.s[2]
-; CHECK-NEXT:    orr w8, w10, w8, lsl #8
-; CHECK-NEXT:    orr w8, w8, w9, lsl #16
+; CHECK-NEXT:    mov w8, v0.s[2]
+; CHECK-NEXT:    orr w8, w9, w8, lsl #16
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <vscale x 4 x i8>, ptr %in, align 4
@@ -851,11 +841,7 @@ define void @scalable_vector_to_i32_unused_low_i16(ptr %in, ptr %out, ptr %p) #0
 define void @scalable_vector_to_i32_unused_high_i16(ptr %in, ptr %out, ptr %p) #0 {
 ; CHECK-LABEL: scalable_vector_to_i32_unused_high_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    orr w8, w9, w8, lsl #8
+; CHECK-NEXT:    ldrh w8, [x0]
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <vscale x 4 x i8>, ptr %in, align 4
@@ -878,17 +864,7 @@ define void @scalable_vector_to_i32_unused_high_i16(ptr %in, ptr %out, ptr %p) #
 define void @scalable_vector_to_i64(ptr %in, ptr %out, ptr %p) #0 {
 ; CHECK-LABEL: scalable_vector_to_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w11, s0
-; CHECK-NEXT:    mov w9, v0.s[2]
-; CHECK-NEXT:    mov w10, v0.s[3]
-; CHECK-NEXT:    and x11, x11, #0xff
-; CHECK-NEXT:    bfi x11, x8, #8, #8
-; CHECK-NEXT:    lsl w8, w10, #24
-; CHECK-NEXT:    bfi x11, x9, #16, #8
-; CHECK-NEXT:    orr x8, x11, x8
+; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <vscale x 4 x i8>, ptr %in, align 4
