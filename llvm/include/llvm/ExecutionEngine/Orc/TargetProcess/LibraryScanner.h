@@ -66,10 +66,12 @@ private:
     std::error_code errnoCode;
   };
 
-  std::unordered_map<std::string, std::string> m_readlinkCache;
-  std::unordered_map<std::string, PathInfo> m_realpathCache;
-  std::unordered_map<std::string, mode_t> m_lstatCache;
   std::unordered_set<std::string> m_seen;
+  std::unordered_map<std::string, PathInfo> m_realpathCache;
+#ifndef _WIN32
+  std::unordered_map<std::string, std::string> m_readlinkCache;
+  std::unordered_map<std::string, mode_t> m_lstatCache;
+#endif
 };
 
 /// Resolves file system paths with optional caching of results.
