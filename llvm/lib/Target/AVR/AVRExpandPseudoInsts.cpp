@@ -2556,7 +2556,8 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
 
     buildMI(MBB, MBBI, AVR::BCLRs).addImm(0x07).setMIFlags(Flags);
 
-    buildMI(MBB, MBBI, AVR::OUTARr)
+    if (STI.getIORegSPH() != -1)
+      buildMI(MBB, MBBI, AVR::OUTARr)
         .addImm(STI.getIORegSPH())
         .addReg(SrcHiReg, getKillRegState(SrcIsKill))
         .setMIFlags(Flags);
