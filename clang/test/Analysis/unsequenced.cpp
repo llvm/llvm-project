@@ -28,6 +28,15 @@ void shift_tests() {
     // expected-note@-4{{variable is written to here}}
     // expected-warning@-5{{unsequenced modification and access}}
 #endif
+
+    int i = 0;
+    if(a << (i || (i = a++)) == 0) {}
+#ifndef CPP17
+    // expected-warning@-2{{unsequenced write to and read from variable}}
+    // expected-note@-3{{variable is read from here}}
+    // expected-note@-4{{variable is written to here}}
+    // expected-warning@-5{{unsequenced modification and access}}
+#endif
 }
 
 void std_tests() {
@@ -64,6 +73,14 @@ void std_tests() {
     // expected-warning@-5{{unsequenced modification and access}}
 #endif
 
+    i = 0;
+    r[i] = ++i;
+#ifndef CPP17
+    // expected-warning@-2{{unsequenced write to and read from variable}}
+    // expected-note@-3{{variable is read from here}}
+    // expected-note@-4{{variable is written to here}}
+    // expected-warning@-5{{unsequenced modification and access}}
+#endif
 }
 
 #ifdef CPP17
