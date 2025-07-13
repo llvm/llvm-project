@@ -12189,7 +12189,8 @@ SDValue DAGCombiner::getBitwiseToSrcModifierOp(SDValue N) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  if(!TLI.shouldFoldSelectWithIdentityConstant(N.getOpcode(), N->getValueType(0), ISD::SELECT, LHS, RHS))
+  if (!TLI.shouldFoldSelectWithIdentityConstant(
+          N.getOpcode(), N->getValueType(0), ISD::SELECT, LHS, RHS))
     return SDValue();
 
   ConstantSDNode *CRHS = isConstOrConstSplat(RHS);
