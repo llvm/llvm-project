@@ -18,8 +18,14 @@ static void binary_op_checks_inline(void) {
     // expected-warning@-2{{unsequenced writes to variable}}
     // expected-note@-3{{variable is written to here}}
     // expected-note@-4{{variable is written to here}}
+    
+    a1 = ++a1;
+    // expected-warning@-1{{multiple unsequenced modifications}}
+    // expected-warning@-2{{unsequenced writes to variable}}
+    // expected-note@-3{{variable is written to here}}
+    // expected-note@-4{{variable is written to here}}
 
-    b = a1 + b + (a1++);
+    b = a1 + b + (++a1);
     // expected-warning@-1{{unsequenced modification and access}}
     // expected-warning@-2{{unsequenced write to and read from variable}}
     // expected-note@-3{{variable is read from here}}
@@ -31,7 +37,7 @@ static void binary_op_checks_inline(void) {
     // expected-note@-3{{variable is written to here}}
     // expected-note@-4{{variable is read from here}}
     
-    if (a1 + (a1++) == b) {}
+    if (a1 + (a1 = 0) == b) {}
     // expected-warning@-1{{unsequenced modification and access}}
     // expected-warning@-2{{unsequenced write to and read from variable}}
     // expected-note@-3{{variable is read from here}}
@@ -53,7 +59,7 @@ static void binary_op_checks_inline(void) {
     // expected-note@-2{{variable is read from here}}
     // expected-note@-3{{variable is written to here}}
 
-    *(ip + a1) = a1++;
+    *(ip + a1) = a1 -= 1;
     // expected-warning@-1{{unsequenced modification and access}}
     // expected-warning@-2{{unsequenced write to and read from variable}}
     // expected-note@-3{{variable is written to here}}
@@ -81,6 +87,24 @@ static void binary_op_checks_inline(void) {
     (arr + sizeof(a1))[1] = a1++;
 
     b = a1 + (long)&a1;
+
+    b = a1 << (++a1);
+    // expected-warning@-1{{unsequenced modification and access}}
+    // expected-warning@-2{{unsequenced write to and read from variable}}
+    // expected-note@-3{{variable is written to here}}
+    // expected-note@-4{{variable is read from here}}
+
+    *ip = a1 = a1 + 1;
+    // expected-warning@-1{{unsequenced writes to variable}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
+
+    a1 = 2 + (a1 = 0);
+    // expected-warning@-1{{unsequenced writes to variable}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
+    // expected-warning@-4{{multiple unsequenced modifications}}
+
     
     (void)a1; (void)b;
 }
@@ -120,6 +144,12 @@ static void function_checks_inline(void) {
     // expected-note@-5{{variable is read from here}}
     // expected-note@-6{{variable is written to here}}
     // expected-note@-7{{variable is written to here}}
+
+    does_nothing2(a = 0, a = 1);
+    // expected-warning@-1{{unsequenced writes to variable}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
+    // expected-warning@-4{{multiple unsequenced modifications}}
 }
 
 static int* inc_and_return(int* a) {
@@ -202,6 +232,38 @@ static int branch2(void) {
 
 static int branching_function_check(void) {
     return branch1() + branch2();
+    // expected-warning@-1{{unsequenced write to and read from variable}}
+    // expected-warning@-2{{unsequenced writes to variable}}
+}
+
+static int function_with_auto_lifetimes(void) {
+    int a = 0;
+    int b[2] = {0};
+    float c = 2;
+
+    a++;
+    b[1]--;
+    c = c + a;
+    b[--a] = c;
+
+    return b[0];
+}
+
+static int unsequenced_but_no_ub(void) {
+    return function_with_auto_lifetimes() + function_with_auto_lifetimes();
+}
+
+static unsigned function_with_static_lifetimes(void) {
+    static unsigned a = 0;
+    return a++;
+    // expected-note@-1{{variable is read from here}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
+    // expected-note@-4{{variable is written to here}}
+}
+
+static unsigned unsequenced_with_ub(void) {
+    return function_with_static_lifetimes() - function_with_static_lifetimes();
     // expected-warning@-1{{unsequenced write to and read from variable}}
     // expected-warning@-2{{unsequenced writes to variable}}
 }
