@@ -13,14 +13,7 @@
 
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -68,9 +61,11 @@ void GpuModuleToBinaryPass::runOnOperation() {
     }
     return &parentTable.value();
   };
-
-  TargetOptions targetOptions(toolkitPath, linkFiles, cmdOptions, *targetFormat,
-                              lazyTableBuilder);
+  SmallVector<Attribute> librariesToLink;
+  for (const std::string &path : linkFiles)
+    librariesToLink.push_back(StringAttr::get(&getContext(), path));
+  TargetOptions targetOptions(toolkitPath, librariesToLink, cmdOptions,
+                              elfSection, *targetFormat, lazyTableBuilder);
   if (failed(transformGpuModulesToBinaries(
           getOperation(), OffloadingLLVMTranslationAttrInterface(nullptr),
           targetOptions)))

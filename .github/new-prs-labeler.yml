@@ -7,6 +7,12 @@ ClangIR:
   - clang/tools/cir-*/**/*
   - clang/test/CIR/**/*
 
+clang:bytecode:
+  - clang/docs/ConstantInterpreter.rst
+  - clang/lib/AST/ByteCode/**/*
+  - clang/test/AST/ByteCode/**/*
+  - clang/unittests/AST/ByteCode/**/*
+
 clang:dataflow:
   - clang/include/clang/Analysis/FlowSensitive/**/*
   - clang/lib/Analysis/FlowSensitive/**/*
@@ -499,6 +505,7 @@ clang:static analyzer:
   - clang/tools/scan-build/**
   - clang/utils/analyzer/**
   - clang/docs/analyzer/**
+  - clang/test/Analysis/**
 
 pgo:
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
@@ -546,6 +553,12 @@ flang:fir-hlfir:
 
 flang:codegen:
   - flang/**/CodeGen/**
+
+llvm:codegen:
+  - llvm/lib/CodeGen/*
+  - llvm/lib/CodeGen/MIRParser/*
+  - llvm/lib/CodeGen/LiveDebugValues/*
+  - llvm/lib/CodeGen/AsmPrinter/*
 
 llvm:globalisel:
   - llvm/**/GlobalISel/**
@@ -619,6 +632,10 @@ llvm:instcombine:
   - llvm/test/Transforms/InstCombine/**
   - llvm/test/Transforms/InstSimplify/**
 
+llvm:vectorcombine:
+  - llvm/lib/Transforms/Vectorize/VectorCombine.cpp
+  - llvm/test/Transforms/VectorCombine/**
+
 clangd:
   - clang-tools-extra/clangd/**
 
@@ -636,6 +653,7 @@ hlsl:
   - clang/lib/Sema/HLSLExternalSemaSource.cpp
   - clang/lib/Sema/SemaHLSL.cpp
   - clang/lib/CodeGen/CGHLSLRuntime.*
+  - clang/lib/CodeGen/CGHLSLBuiltins.cpp
   - llvm/include/llvm/Frontend/HLSL/**
   - llvm/lib/Frontend/HLSL/**
 
@@ -658,9 +676,20 @@ backend:DirectX:
   - '**/*dxil*/**'
   - '**/*DXContainer*'
   - '**/*DXContainer*/**'
+  - clang/lib/Sema/SemaDirectX.cpp
+  - clang/include/clang/Sema/SemaDirectX.h
+  - clang/include/clang/Basic/BuiltinsDirectX.td
+  - clang/lib/CodeGen/TargetBuiltins/DirectX.cpp
+  - clang/test/CodeGenDirectX/**
+  - clang/test/SemaDirectX/**
 
 backend:SPIR-V:
   - clang/lib/Driver/ToolChains/SPIRV.*
+  - clang/lib/Sema/SemaSPIRV.cpp
+  - clang/include/clang/Sema/SemaSPIRV.h
+  - clang/include/clang/Basic/BuiltinsSPIRV.td
+  - clang/test/CodeGenSPIRV/**
+  - clang/test/SemaSPIRV/**
   - llvm/lib/Target/SPIRV/**
   - llvm/test/CodeGen/SPIRV/**
   - llvm/test/Frontend/HLSL/**
@@ -683,11 +712,19 @@ mlgo:
   - llvm/unittests/CodeGen/ML*
   - llvm/test/CodeGen/MLRegAlloc/**
   - llvm/utils/mlgo-utils/**
+  - llvm/docs/MLGO.rst
+  - llvm/include/llvm/Analysis/IR2Vec.h
+  - llvm/lib/Analysis/IR2Vec.cpp
+  - llvm/lib/Analysis/models/**
+  - llvm/test/Analysis/IR2Vec/**
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
   - llvm/test/tools/llvm-exegesis/**
   - llvm/unittests/tools/llvm-exegesis/**
+
+tools:llvm-reduce:
+  - llvm/tools/llvm-reduce/**
 
 platform:windows:
   - lld/COFF/**
@@ -725,6 +762,9 @@ llvm:regalloc:
 lldb:
   - lldb/**
 
+lldb-dap:
+  - lldb/tools/lldb-dap/**
+
 backend:AMDGPU:
   - '**/*amdgpu*'
   - '**/*AMDGPU*'
@@ -741,11 +781,23 @@ backend:NVPTX:
   - 'llvm/**/*nvptx*/**'
   - 'llvm/**/*NVPTX*/**'
 
+backend:MIPS:
+  - '**/*mips*'
+  - '**/*Mips*'
+  - '**/*mips*/**'
+  - '**/*Mips*/**'
+
 backend:RISC-V:
-  - clang/**/*riscv*
-  - clang/**/*RISCV*
-  - llvm/**/*riscv*
-  - llvm/**/*RISCV*
+  - '**/*riscv*'
+  - '**/*RISCV*'
+  - '**/*riscv*/**'
+  - '**/*RISCV*/**'
+
+backend:Xtensa:
+  - '**/*xtensa*'
+  - '**/*Xtensa*'
+  - '**/*xtensa*/**'
+  - '**/*Xtensa*/**'
 
 lld:coff:
   - lld/**/COFF/**
@@ -762,6 +814,12 @@ lld:macho:
 lld:wasm:
   - lld/**/wasm/**
   - lld/Common/**
+
+backend:ARC:
+  - llvm/lib/Target/ARC/**
+  - clang/lib/Basic/Targets/ARC.h
+  - clang/lib/Basic/Targets/ARC.cpp
+  - clang/lib/CodeGen/Targets/ARC.cpp
 
 backend:ARM:
   - llvm/include/llvm/IR/IntrinsicsARM.td
@@ -789,6 +847,19 @@ backend:AArch64:
   - clang/include/clang/Sema/SemaARM.h
   - clang/lib/Sema/SemaARM.cpp
 
+backend:CSKY:
+  - llvm/lib/Target/CSKY/**
+  - llvm/include/llvm/TargetParser/CSKYTargetParser.def
+  - llvm/include/llvm/TargetParser/CSKYTargetParser.h
+  - llvm/include/llvm/BinaryFormat/ELFRelocs/CSKY.def
+  - llvm/lib/TargetParser/CSKYTargetParser.cpp
+  - llvm/lib/Support/CSKYAttributes.cpp
+  - llvm/lib/Support/CSKYAttributeParser.cpp
+  - clang/lib/Basic/Targets/CSKY.h
+  - clang/lib/Basic/Targets/CSKY.cpp
+  - clang/lib/CodeGen/Targets/CSKY.cpp
+  - clang/lib/Driver/ToolChains/CSKY*
+
 backend:Hexagon:
   - clang/include/clang/Basic/BuiltinsHexagon*.def
   - clang/include/clang/Sema/SemaHexagon.h
@@ -811,6 +882,13 @@ backend:Hexagon:
   - llvm/test/MC/Disassembler/Hexagon/**
   - llvm/test/MC/Hexagon/**
   - llvm/test/tools/llvm-objdump/ELF/Hexagon/**
+
+backend:Lanai:
+  - llvm/lib/Target/Lanai/**
+  - clang/lib/Basic/Targets/Lanai.h
+  - clang/lib/Basic/Targets/Lanai.cpp
+  - clang/lib/CodeGen/Targets/Lanai.cpp
+  - clang/lib/Driver/ToolChains/Lanai*
 
 backend:loongarch:
   - llvm/include/llvm/IR/IntrinsicsLoongArch.td

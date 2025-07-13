@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnnecessaryValueParamCheck.h"
-
 #include "../utils/DeclRefExprUtils.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/Matchers.h"
@@ -28,14 +27,6 @@ std::string paramNameOrIndex(StringRef Name, size_t Index) {
   return (Name.empty() ? llvm::Twine('#') + llvm::Twine(Index + 1)
                        : llvm::Twine('\'') + Name + llvm::Twine('\''))
       .str();
-}
-
-bool isReferencedOutsideOfCallExpr(const FunctionDecl &Function,
-                                   ASTContext &Context) {
-  auto Matches = match(declRefExpr(to(functionDecl(equalsNode(&Function))),
-                                   unless(hasAncestor(callExpr()))),
-                       Context);
-  return !Matches.empty();
 }
 
 bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
@@ -59,7 +50,8 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()),
       AllowedTypes(
-          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))),
+      IgnoreCoroutines(Options.get("IgnoreCoroutines", true)) {}
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl = parmVarDecl(
@@ -70,12 +62,14 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
                            matchers::matchesAnyListedName(AllowedTypes))))))),
       decl().bind("param"));
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
-                       unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
-                       has(typeLoc(forEach(ExpensiveValueParamDecl))),
-                       decl().bind("functionDecl"))),
+      traverse(TK_AsIs,
+               functionDecl(
+                   hasBody(IgnoreCoroutines ? stmt(unless(coroutineBodyStmt()))
+                                            : stmt()),
+                   isDefinition(), unless(isImplicit()),
+                   unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
+                   has(typeLoc(forEach(ExpensiveValueParamDecl))),
+                   decl().bind("functionDecl"))),
       this);
 }
 
@@ -132,6 +126,7 @@ void UnnecessaryValueParamCheck::storeOptions(
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
+  Options.store(Opts, "IgnoreCoroutines", IgnoreCoroutines);
 }
 
 void UnnecessaryValueParamCheck::onEndOfTranslationUnit() {
@@ -155,12 +150,9 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
   // Do not propose fixes when:
   // 1. the ParmVarDecl is in a macro, since we cannot place them correctly
   // 2. the function is virtual as it might break overrides
-  // 3. the function is referenced outside of a call expression within the
-  //    compilation unit as the signature change could introduce build errors.
-  // 4. the function is an explicit template/ specialization.
+  // 3. the function is an explicit template/ specialization.
   const auto *Method = llvm::dyn_cast<CXXMethodDecl>(&Function);
   if (Param.getBeginLoc().isMacroID() || (Method && Method->isVirtual()) ||
-      isReferencedOutsideOfCallExpr(Function, Context) ||
       Function.getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
     return;
   for (const auto *FunctionDecl = &Function; FunctionDecl != nullptr;

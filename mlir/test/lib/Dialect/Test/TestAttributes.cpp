@@ -67,7 +67,7 @@ void CompoundAAttr::print(AsmPrinter &printer) const {
 //===----------------------------------------------------------------------===//
 
 Attribute TestDecimalShapeAttr::parse(AsmParser &parser, Type type) {
-  if (parser.parseLess()){
+  if (parser.parseLess()) {
     return Attribute();
   }
   SmallVector<int64_t> shape;
@@ -194,7 +194,7 @@ void TestSubElementsAccessAttr::print(::mlir::AsmPrinter &printer) const {
 ArrayRef<uint64_t> TestExtern1DI64ElementsAttr::getElements() const {
   if (auto *blob = getHandle().getBlob())
     return blob->getDataAs<uint64_t>();
-  return std::nullopt;
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -317,6 +317,110 @@ static ParseResult parseCustomFloatAttr(AsmParser &p, StringAttr &typeStrAttr,
 }
 
 //===----------------------------------------------------------------------===//
+// TestCustomStructAttr
+//===----------------------------------------------------------------------===//
+
+static void printCustomStructAttr(AsmPrinter &p, int64_t value) {
+  if (ShapedType::isDynamic(value)) {
+    p << "?";
+  } else {
+    p.printStrippedAttrOrType(value);
+  }
+}
+
+static ParseResult parseCustomStructAttr(AsmParser &p, int64_t &value) {
+  if (succeeded(p.parseOptionalQuestion())) {
+    value = ShapedType::kDynamic;
+    return success();
+  }
+  return p.parseInteger(value);
+}
+
+static void printCustomOptStructFieldAttr(AsmPrinter &p, ArrayAttr attr) {
+  if (attr && attr.size() == 1 && isa<IntegerAttr>(attr[0])) {
+    p << cast<IntegerAttr>(attr[0]).getInt();
+  } else {
+    p.printStrippedAttrOrType(attr);
+  }
+}
+
+static ParseResult parseCustomOptStructFieldAttr(AsmParser &p,
+                                                 ArrayAttr &attr) {
+  int64_t value;
+  OptionalParseResult result = p.parseOptionalInteger(value);
+  if (result.has_value()) {
+    if (failed(result.value()))
+      return failure();
+    attr = ArrayAttr::get(
+        p.getContext(),
+        {IntegerAttr::get(IntegerType::get(p.getContext(), 64), value)});
+    return success();
+  }
+  return p.parseAttribute(attr);
+}
+
+//===----------------------------------------------------------------------===//
+// TestOpAsmAttrInterfaceAttr
+//===----------------------------------------------------------------------===//
+
+::mlir::OpAsmDialectInterface::AliasResult
+TestOpAsmAttrInterfaceAttr::getAlias(::llvm::raw_ostream &os) const {
+  os << "op_asm_attr_interface_";
+  os << getValue().getValue();
+  return ::mlir::OpAsmDialectInterface::AliasResult::FinalAlias;
+}
+
+//===----------------------------------------------------------------------===//
+// TestConstMemorySpaceAttr
+//===----------------------------------------------------------------------===//
+
+bool TestConstMemorySpaceAttr::isValidLoad(
+    Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return true;
+}
+
+bool TestConstMemorySpaceAttr::isValidStore(
+    Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
+}
+
+bool TestConstMemorySpaceAttr::isValidAtomicOp(
+    mlir::ptr::AtomicBinOp binOp, Type type, mlir::ptr::AtomicOrdering ordering,
+    IntegerAttr alignment, function_ref<InFlightDiagnostic()> emitError) const {
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
+}
+
+bool TestConstMemorySpaceAttr::isValidAtomicXchg(
+    Type type, mlir::ptr::AtomicOrdering successOrdering,
+    mlir::ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
+}
+
+bool TestConstMemorySpaceAttr::isValidAddrSpaceCast(
+    Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
+  if (emitError)
+    emitError() << "memory space doesn't allow addrspace casts";
+  return false;
+}
+
+bool TestConstMemorySpaceAttr::isValidPtrIntCast(
+    Type intLikeTy, Type ptrLikeTy,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  if (emitError)
+    emitError() << "memory space doesn't allow int-ptr casts";
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 
@@ -391,6 +495,36 @@ getDynamicCustomAssemblyFormatAttr(TestDialect *testDialect) {
   return DynamicAttrDefinition::get("dynamic_custom_assembly_format",
                                     testDialect, std::move(verifier),
                                     std::move(parser), std::move(printer));
+}
+
+//===----------------------------------------------------------------------===//
+// SlashAttr
+//===----------------------------------------------------------------------===//
+
+Attribute SlashAttr::parse(AsmParser &parser, Type type) {
+  int lhs, rhs;
+
+  if (parser.parseLess() || parser.parseInteger(lhs) || parser.parseSlash() ||
+      parser.parseInteger(rhs) || parser.parseGreater())
+    return Attribute();
+
+  return SlashAttr::get(parser.getContext(), lhs, rhs);
+}
+
+void SlashAttr::print(AsmPrinter &printer) const {
+  printer << "<" << getLhs() << " / " << getRhs() << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// TestCustomStorageCtorAttr
+//===----------------------------------------------------------------------===//
+
+test::detail::TestCustomStorageCtorAttrAttrStorage *
+test::detail::TestCustomStorageCtorAttrAttrStorage::construct(
+    mlir::StorageUniquer::StorageAllocator &, std::tuple<int> &&) {
+  // Note: this tests linker error ("undefined symbol"), the actual
+  // implementation is not important.
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

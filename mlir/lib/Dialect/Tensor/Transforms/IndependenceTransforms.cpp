@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
@@ -21,9 +20,9 @@ using namespace mlir::tensor;
 static FailureOr<OpFoldResult> makeIndependent(OpBuilder &b, Location loc,
                                                OpFoldResult ofr,
                                                ValueRange independencies) {
-  if (ofr.is<Attribute>())
+  if (isa<Attribute>(ofr))
     return ofr;
-  Value value = ofr.get<Value>();
+  Value value = cast<Value>(ofr);
   AffineMap boundMap;
   ValueDimList mapOperands;
   if (failed(ValueBoundsConstraintSet::computeIndependentBound(
@@ -80,14 +79,14 @@ FailureOr<Value> tensor::buildIndependentOp(OpBuilder &b, tensor::PadOp padOp,
   for (int64_t i = 0, e = padOp.getResultType().getRank(); i < e; ++i) {
     // offset = ub(low_padding) - low_padding
     OpFoldResult prevLow = padOp.getMixedLowPad()[i];
-    if (prevLow.is<Attribute>()) {
+    if (isa<Attribute>(prevLow)) {
       offsets.push_back(b.getIndexAttr(0));
     } else {
       offsets.push_back(
           b.create<affine::AffineApplyOp>(
                loc, b.getAffineDimExpr(0) - b.getAffineDimExpr(1),
-               std::initializer_list<Value>{newMixedLow[i].get<Value>(),
-                                            prevLow.get<Value>()})
+               std::initializer_list<Value>{cast<Value>(newMixedLow[i]),
+                                            cast<Value>(prevLow)})
               .getResult());
     }
     // size = reified result size

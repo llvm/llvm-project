@@ -109,12 +109,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "NVLinkOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "NVLinkOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -124,7 +125,8 @@ static constexpr OptTable::Info InfoTable[] = {
 
 class WrapperOptTable : public opt::GenericOptTable {
 public:
-  WrapperOptTable() : opt::GenericOptTable(InfoTable) {}
+  WrapperOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 
 const OptTable &getOptTable() {
@@ -339,11 +341,16 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.CPU = Args.getLastArgValue(OPT_arch);
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
 
-  Conf.RemarksFilename = RemarksFilename;
-  Conf.RemarksPasses = RemarksPasses;
-  Conf.RemarksWithHotness = RemarksWithHotness;
+  Conf.RemarksFilename =
+      Args.getLastArgValue(OPT_opt_remarks_filename, RemarksFilename);
+  Conf.RemarksPasses =
+      Args.getLastArgValue(OPT_opt_remarks_filter, RemarksPasses);
+  Conf.RemarksFormat =
+      Args.getLastArgValue(OPT_opt_remarks_format, RemarksFormat);
+
+  Conf.RemarksWithHotness =
+      Args.hasArg(OPT_opt_remarks_with_hotness) || RemarksWithHotness;
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
-  Conf.RemarksFormat = RemarksFormat;
 
   Conf.MAttrs = llvm::codegen::getMAttrs();
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =

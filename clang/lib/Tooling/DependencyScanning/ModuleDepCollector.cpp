@@ -14,7 +14,6 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/BLAKE3.h"
-#include "llvm/Support/StringSaver.h"
 #include <optional>
 
 using namespace clang;
@@ -31,7 +30,9 @@ void ModuleDeps::forEachFileDep(llvm::function_ref<void(StringRef)> Cb) const {
   }
 }
 
-const std::vector<std::string> &ModuleDeps::getBuildArguments() {
+const std::vector<std::string> &ModuleDeps::getBuildArguments() const {
+  // FIXME: this operation is not thread safe and is expected to be called
+  // on a single thread. Otherwise it should be protected with a lock.
   assert(!std::holds_alternative<std::monostate>(BuildInfo) &&
          "Using uninitialized ModuleDeps");
   if (const auto *CI = std::get_if<CowCompilerInvocation>(&BuildInfo))
@@ -39,10 +40,20 @@ const std::vector<std::string> &ModuleDeps::getBuildArguments() {
   return std::get<std::vector<std::string>>(BuildInfo);
 }
 
+void PrebuiltModuleASTAttrs::updateDependentsNotInStableDirs(
+    PrebuiltModulesAttrsMap &PrebuiltModulesMap) {
+  setInStableDir();
+  for (const auto Dep : ModuleFileDependents) {
+    if (!PrebuiltModulesMap[Dep].isInStableDir())
+      return;
+    PrebuiltModulesMap[Dep].updateDependentsNotInStableDirs(PrebuiltModulesMap);
+  }
+}
+
 static void
 optimizeHeaderSearchOpts(HeaderSearchOptions &Opts, ASTReader &Reader,
                          const serialization::ModuleFile &MF,
-                         const PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap,
+                         const PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
                          ScanningOptimizations OptimizeArgs) {
   if (any(OptimizeArgs & ScanningOptimizations::HeaderSearch)) {
     // Only preserve search paths that were used during the dependency scan.
@@ -87,11 +98,13 @@ optimizeHeaderSearchOpts(HeaderSearchOptions &Opts, ASTReader &Reader,
           } else {
             // This is not an implicitly built module, so it may have different
             // VFS options. Fall back to a string comparison instead.
-            auto VFSMap = PrebuiltModuleVFSMap.find(MF->FileName);
-            if (VFSMap == PrebuiltModuleVFSMap.end())
+            auto PrebuiltModulePropIt =
+                PrebuiltModulesASTMap.find(MF->FileName);
+            if (PrebuiltModulePropIt == PrebuiltModulesASTMap.end())
               return;
             for (std::size_t I = 0, E = VFSOverlayFiles.size(); I != E; ++I) {
-              if (VFSMap->second.contains(VFSOverlayFiles[I]))
+              if (PrebuiltModulePropIt->second.getVFS().contains(
+                      VFSOverlayFiles[I]))
                 VFSUsage[I] = true;
             }
           }
@@ -129,6 +142,34 @@ static void optimizeDiagnosticOpts(DiagnosticOptions &Opts,
   Opts.Remarks.clear();
 }
 
+static void optimizeCWD(CowCompilerInvocation &BuildInvocation, StringRef CWD) {
+  BuildInvocation.getMutFileSystemOpts().WorkingDir.clear();
+  if (BuildInvocation.getCodeGenOpts().DwarfVersion) {
+    // It is necessary to explicitly set the DebugCompilationDir
+    // to a common directory (e.g. root) if IgnoreCWD is true.
+    // When IgnoreCWD is true, the module's content should not
+    // depend on the current working directory. However, if dwarf
+    // information is needed (when CGOpts.DwarfVersion is
+    // non-zero), then CGOpts.DebugCompilationDir must be
+    // populated, because otherwise the current working directory
+    // will be automatically embedded in the dwarf information in
+    // the pcm, contradicting the assumption that it is safe to
+    // ignore the CWD. Thus in such cases,
+    // CGOpts.DebugCompilationDir is explicitly set to a common
+    // directory.
+    // FIXME: It is still excessive to create a copy of
+    // CodeGenOpts for each module. Since we do not modify the
+    // CodeGenOpts otherwise per module, the following code
+    // ends up generating identical CodeGenOpts for each module
+    // with DebugCompilationDir pointing to the root directory.
+    // We can optimize this away by creating a _single_ copy of
+    // CodeGenOpts whose DebugCompilationDir points to the root
+    // directory and reuse it across modules.
+    BuildInvocation.getMutCodeGenOpts().DebugCompilationDir =
+        llvm::sys::path::root_path(CWD);
+  }
+}
+
 static std::vector<std::string> splitString(std::string S, char Separator) {
   SmallVector<StringRef> Segments;
   StringRef(S).split(Segments, Separator, /*MaxSplit=*/-1, /*KeepEmpty=*/false);
@@ -142,17 +183,17 @@ static std::vector<std::string> splitString(std::string S, char Separator) {
 void ModuleDepCollector::addOutputPaths(CowCompilerInvocation &CI,
                                         ModuleDeps &Deps) {
   CI.getMutFrontendOpts().OutputFile =
-      Controller.lookupModuleOutput(Deps.ID, ModuleOutputKind::ModuleFile);
+      Controller.lookupModuleOutput(Deps, ModuleOutputKind::ModuleFile);
   if (!CI.getDiagnosticOpts().DiagnosticSerializationFile.empty())
     CI.getMutDiagnosticOpts().DiagnosticSerializationFile =
         Controller.lookupModuleOutput(
-            Deps.ID, ModuleOutputKind::DiagnosticSerializationFile);
+            Deps, ModuleOutputKind::DiagnosticSerializationFile);
   if (!CI.getDependencyOutputOpts().OutputFile.empty()) {
-    CI.getMutDependencyOutputOpts().OutputFile = Controller.lookupModuleOutput(
-        Deps.ID, ModuleOutputKind::DependencyFile);
+    CI.getMutDependencyOutputOpts().OutputFile =
+        Controller.lookupModuleOutput(Deps, ModuleOutputKind::DependencyFile);
     CI.getMutDependencyOutputOpts().Targets =
         splitString(Controller.lookupModuleOutput(
-                        Deps.ID, ModuleOutputKind::DependencyTargets),
+                        Deps, ModuleOutputKind::DependencyTargets),
                     '\0');
     if (!CI.getDependencyOutputOpts().OutputFile.empty() &&
         CI.getDependencyOutputOpts().Targets.empty()) {
@@ -182,6 +223,51 @@ void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
     CGOpts.SampleProfileFile.clear();
     CGOpts.ProfileRemappingFile.clear();
   }
+}
+
+bool dependencies::isPathInStableDir(const ArrayRef<StringRef> Directories,
+                                     const StringRef Input) {
+  using namespace llvm::sys;
+
+  if (!path::is_absolute(Input))
+    return false;
+
+  auto PathStartsWith = [](StringRef Prefix, StringRef Path) {
+    auto PrefixIt = path::begin(Prefix), PrefixEnd = path::end(Prefix);
+    for (auto PathIt = path::begin(Path), PathEnd = path::end(Path);
+         PrefixIt != PrefixEnd && PathIt != PathEnd; ++PrefixIt, ++PathIt) {
+      if (*PrefixIt != *PathIt)
+        return false;
+    }
+    return PrefixIt == PrefixEnd;
+  };
+
+  return any_of(Directories, [&](StringRef Dir) {
+    return !Dir.empty() && PathStartsWith(Dir, Input);
+  });
+}
+
+bool dependencies::areOptionsInStableDir(const ArrayRef<StringRef> Directories,
+                                         const HeaderSearchOptions &HSOpts) {
+  assert(isPathInStableDir(Directories, HSOpts.Sysroot) &&
+         "Sysroots differ between module dependencies and current TU");
+
+  assert(isPathInStableDir(Directories, HSOpts.ResourceDir) &&
+         "ResourceDirs differ between module dependencies and current TU");
+
+  for (const auto &Entry : HSOpts.UserEntries) {
+    if (!Entry.IgnoreSysRoot)
+      continue;
+    if (!isPathInStableDir(Directories, Entry.Path))
+      return false;
+  }
+
+  for (const auto &SysPrefix : HSOpts.SystemHeaderPrefixes) {
+    if (!isPathInStableDir(Directories, SysPrefix.Prefix))
+      return false;
+  }
+
+  return true;
 }
 
 static CowCompilerInvocation
@@ -214,9 +300,6 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   CI.getDependencyOutputOpts().Targets.clear();
 
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
-  CI.getFrontendOpts().ARCMTAction = FrontendOptions::ARCMT_None;
-  CI.getFrontendOpts().ObjCMTAction = FrontendOptions::ObjCMT_None;
-  CI.getFrontendOpts().MTMigrateDir.clear();
   CI.getLangOpts().ModuleName.clear();
 
   // Remove any macro definitions that are explicitly ignored.
@@ -270,7 +353,8 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
     // TODO: Verify this works fine when modulemap for module A is eagerly
     // loaded from A.pcm, and module map passed on the command line contains
     // definition of a submodule: "explicit module A.Private { ... }".
-    if (EagerLoadModules && DepModuleMapFiles.contains(*ModuleMapEntry))
+    if (Service.shouldEagerLoadModules() &&
+        DepModuleMapFiles.contains(*ModuleMapEntry))
       continue;
 
     // Don't report module map file of the current module unless it also
@@ -320,7 +404,7 @@ llvm::DenseSet<const FileEntry *> ModuleDepCollector::collectModuleMapFiles(
 
 void ModuleDepCollector::addModuleMapFiles(
     CompilerInvocation &CI, ArrayRef<ModuleID> ClangModuleDeps) const {
-  if (EagerLoadModules)
+  if (Service.shouldEagerLoadModules())
     return; // Only pcm is needed for eager load.
 
   for (const ModuleID &MID : ClangModuleDeps) {
@@ -333,9 +417,11 @@ void ModuleDepCollector::addModuleMapFiles(
 void ModuleDepCollector::addModuleFiles(
     CompilerInvocation &CI, ArrayRef<ModuleID> ClangModuleDeps) const {
   for (const ModuleID &MID : ClangModuleDeps) {
+    ModuleDeps *MD = ModuleDepsByID.lookup(MID);
     std::string PCMPath =
-        Controller.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
-    if (EagerLoadModules)
+        Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
+
+    if (Service.shouldEagerLoadModules())
       CI.getFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
       CI.getHeaderSearchOpts().PrebuiltModuleFiles.insert(
@@ -346,9 +432,11 @@ void ModuleDepCollector::addModuleFiles(
 void ModuleDepCollector::addModuleFiles(
     CowCompilerInvocation &CI, ArrayRef<ModuleID> ClangModuleDeps) const {
   for (const ModuleID &MID : ClangModuleDeps) {
+    ModuleDeps *MD = ModuleDepsByID.lookup(MID);
     std::string PCMPath =
-        Controller.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
-    if (EagerLoadModules)
+        Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
+
+    if (Service.shouldEagerLoadModules())
       CI.getMutFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
       CI.getMutHeaderSearchOpts().PrebuiltModuleFiles.insert(
@@ -397,20 +485,101 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   }
 }
 
+static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
+  // Check if the command line input uses relative paths.
+  // It is not safe to ignore the current working directory if any of the
+  // command line inputs use relative paths.
+#define IF_RELATIVE_RETURN_FALSE(PATH)                                         \
+  do {                                                                         \
+    if (!PATH.empty() && !llvm::sys::path::is_absolute(PATH))                  \
+      return false;                                                            \
+  } while (0)
+
+#define IF_ANY_RELATIVE_RETURN_FALSE(PATHS)                                    \
+  do {                                                                         \
+    if (llvm::any_of(PATHS, [](const auto &P) {                                \
+          return !P.empty() && !llvm::sys::path::is_absolute(P);               \
+        }))                                                                    \
+      return false;                                                            \
+  } while (0)
+
+  // Header search paths.
+  const auto &HeaderSearchOpts = CI.getHeaderSearchOpts();
+  IF_RELATIVE_RETURN_FALSE(HeaderSearchOpts.Sysroot);
+  for (auto &Entry : HeaderSearchOpts.UserEntries)
+    if (Entry.IgnoreSysRoot)
+      IF_RELATIVE_RETURN_FALSE(Entry.Path);
+  IF_RELATIVE_RETURN_FALSE(HeaderSearchOpts.ResourceDir);
+  IF_RELATIVE_RETURN_FALSE(HeaderSearchOpts.ModuleCachePath);
+  IF_RELATIVE_RETURN_FALSE(HeaderSearchOpts.ModuleUserBuildPath);
+  for (auto I = HeaderSearchOpts.PrebuiltModuleFiles.begin(),
+            E = HeaderSearchOpts.PrebuiltModuleFiles.end();
+       I != E;) {
+    auto Current = I++;
+    IF_RELATIVE_RETURN_FALSE(Current->second);
+  }
+  IF_ANY_RELATIVE_RETURN_FALSE(HeaderSearchOpts.PrebuiltModulePaths);
+  IF_ANY_RELATIVE_RETURN_FALSE(HeaderSearchOpts.VFSOverlayFiles);
+
+  // Preprocessor options.
+  const auto &PPOpts = CI.getPreprocessorOpts();
+  IF_ANY_RELATIVE_RETURN_FALSE(PPOpts.MacroIncludes);
+  IF_ANY_RELATIVE_RETURN_FALSE(PPOpts.Includes);
+  IF_RELATIVE_RETURN_FALSE(PPOpts.ImplicitPCHInclude);
+
+  // Frontend options.
+  const auto &FrontendOpts = CI.getFrontendOpts();
+  for (const FrontendInputFile &Input : FrontendOpts.Inputs) {
+    if (Input.isBuffer())
+      continue; // FIXME: Can this happen when parsing command-line?
+
+    IF_RELATIVE_RETURN_FALSE(Input.getFile());
+  }
+  IF_RELATIVE_RETURN_FALSE(FrontendOpts.CodeCompletionAt.FileName);
+  IF_ANY_RELATIVE_RETURN_FALSE(FrontendOpts.ModuleMapFiles);
+  IF_ANY_RELATIVE_RETURN_FALSE(FrontendOpts.ModuleFiles);
+  IF_ANY_RELATIVE_RETURN_FALSE(FrontendOpts.ModulesEmbedFiles);
+  IF_ANY_RELATIVE_RETURN_FALSE(FrontendOpts.ASTMergeFiles);
+  IF_RELATIVE_RETURN_FALSE(FrontendOpts.OverrideRecordLayoutsFile);
+  IF_RELATIVE_RETURN_FALSE(FrontendOpts.StatsFile);
+
+  // Filesystem options.
+  const auto &FileSystemOpts = CI.getFileSystemOpts();
+  IF_RELATIVE_RETURN_FALSE(FileSystemOpts.WorkingDir);
+
+  // Codegen options.
+  const auto &CodeGenOpts = CI.getCodeGenOpts();
+  IF_RELATIVE_RETURN_FALSE(CodeGenOpts.DebugCompilationDir);
+  IF_RELATIVE_RETURN_FALSE(CodeGenOpts.CoverageCompilationDir);
+
+  // Sanitizer options.
+  IF_ANY_RELATIVE_RETURN_FALSE(CI.getLangOpts().NoSanitizeFiles);
+
+  // Coverage mappings.
+  IF_RELATIVE_RETURN_FALSE(CodeGenOpts.ProfileInstrumentUsePath);
+  IF_RELATIVE_RETURN_FALSE(CodeGenOpts.SampleProfileFile);
+  IF_RELATIVE_RETURN_FALSE(CodeGenOpts.ProfileRemappingFile);
+
+  // Dependency output options.
+  for (auto &ExtraDep : CI.getDependencyOutputOpts().ExtraDeps)
+    IF_RELATIVE_RETURN_FALSE(ExtraDep.first);
+
+  return true;
+}
+
 static std::string getModuleContextHash(const ModuleDeps &MD,
                                         const CowCompilerInvocation &CI,
-                                        bool EagerLoadModules,
+                                        bool EagerLoadModules, bool IgnoreCWD,
                                         llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
-  SmallString<32> Scratch;
 
   // Hash the compiler version and serialization version to ensure the module
   // will be readable.
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
   llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
-  if (CWD)
+  if (CWD && !IgnoreCWD)
     HashBuilder.add(*CWD);
 
   // Hash the BuildInvocation without any input files.
@@ -442,9 +611,10 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
 }
 
 void ModuleDepCollector::associateWithContextHash(
-    const CowCompilerInvocation &CI, ModuleDeps &Deps) {
-  Deps.ID.ContextHash = getModuleContextHash(
-      Deps, CI, EagerLoadModules, ScanInstance.getVirtualFileSystem());
+    const CowCompilerInvocation &CI, bool IgnoreCWD, ModuleDeps &Deps) {
+  Deps.ID.ContextHash =
+      getModuleContextHash(Deps, CI, Service.shouldEagerLoadModules(),
+                           IgnoreCWD, ScanInstance.getVirtualFileSystem());
   bool Inserted = ModuleDepsByID.insert({Deps.ID, &Deps}).second;
   (void)Inserted;
   assert(Inserted && "duplicate module mapping");
@@ -457,13 +627,6 @@ void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
                                             SourceLocation Loc) {
   if (Reason != LexedFileChangeReason::EnterFile)
     return;
-
-  // This has to be delayed as the context hash can change at the start of
-  // `CompilerInstance::ExecuteAction`.
-  if (MDC.ContextHash.empty()) {
-    MDC.ContextHash = MDC.ScanInstance.getInvocation().getModuleHash();
-    MDC.Consumer.handleContextHash(MDC.ContextHash);
-  }
 
   SourceManager &SM = MDC.ScanInstance.getSourceManager();
 
@@ -492,9 +655,9 @@ void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
                                         const Module *Imported) {
   if (MDC.ScanInstance.getPreprocessor().isInImportingCXXNamedModules()) {
     P1689ModuleInfo RequiredModule;
-    RequiredModule.ModuleName = Path[0].first->getName().str();
+    RequiredModule.ModuleName = Path[0].getIdentifierInfo()->getName().str();
     RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
-    MDC.RequiredStdCXXModules.push_back(RequiredModule);
+    MDC.RequiredStdCXXModules.push_back(std::move(RequiredModule));
     return;
   }
 
@@ -510,8 +673,10 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
   if (MDC.isPrebuiltModule(TopLevelModule))
     MDC.DirectPrebuiltModularDeps.insert(
         {TopLevelModule, PrebuiltModuleDep{TopLevelModule}});
-  else
+  else {
     MDC.DirectModularDeps.insert(TopLevelModule);
+    MDC.DirectImports.insert(Imported);
+  }
 }
 
 void ModuleDepCollectorPP::EndOfMainFile() {
@@ -543,14 +708,18 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     if (!MDC.isPrebuiltModule(M))
       MDC.DirectModularDeps.insert(M);
 
+  MDC.addVisibleModules();
+
   for (const Module *M : MDC.DirectModularDeps)
     handleTopLevelModule(M);
 
+  MDC.Consumer.handleContextHash(
+      MDC.ScanInstance.getInvocation().getModuleHash());
+
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
-  if (MDC.IsStdModuleP1689Format)
-    MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
-        MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
+  MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
+      MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
 
   for (auto &&I : MDC.ModularDeps)
     MDC.Consumer.handleModuleDependency(*I.second);
@@ -561,6 +730,9 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     if (It != MDC.ModularDeps.end())
       MDC.Consumer.handleDirectModuleDependency(It->second->ID);
   }
+
+  for (auto &&I : MDC.VisibleModules)
+    MDC.Consumer.handleVisibleModule(std::string(I.getKey()));
 
   for (auto &&I : MDC.FileDeps)
     MDC.Consumer.handleFileDependency(I);
@@ -589,6 +761,12 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   MD.ID.ModuleName = M->getFullModuleName();
   MD.IsSystem = M->IsSystem;
+
+  // Start off with the assumption that this module is shareable when there
+  // are stable directories. As more dependencies are discovered, check if those
+  // come from the provided directories.
+  MD.IsInStableDirectories = !MDC.StableDirs.empty();
+
   // For modules which use export_as link name, the linked product that of the
   // corresponding export_as-named module.
   if (!M->UseExportAsModuleLinkName)
@@ -630,6 +808,12 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
+        if (MD.IsInStableDirectories) {
+          auto FullFilePath = ASTReader::ResolveImportedPath(
+              PathBuf, IFI.UnresolvedImportedFilename, MF->BaseDirectory);
+          MD.IsInStableDirectories =
+              isPathInStableDir(MDC.StableDirs, *FullFilePath);
+        }
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
         if (IFI.UnresolvedImportedFilenameAsRequested.ends_with(
@@ -641,22 +825,43 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         MD.ModuleMapFileDeps.emplace_back(*ResolvedFilenameAsRequested);
       });
 
+  bool IgnoreCWD = false;
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(
           MD, [&](CowCompilerInvocation &BuildInvocation) {
-            if (any(MDC.OptimizeArgs & (ScanningOptimizations::HeaderSearch |
-                                        ScanningOptimizations::VFS)))
+            if (any(MDC.Service.getOptimizeArgs() &
+                    (ScanningOptimizations::HeaderSearch |
+                     ScanningOptimizations::VFS)))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
                                        *MDC.ScanInstance.getASTReader(), *MF,
-                                       MDC.PrebuiltModuleVFSMap,
-                                       MDC.OptimizeArgs);
-            if (any(MDC.OptimizeArgs & ScanningOptimizations::SystemWarnings))
+                                       MDC.PrebuiltModulesASTMap,
+                                       MDC.Service.getOptimizeArgs());
+
+            if (any(MDC.Service.getOptimizeArgs() &
+                    ScanningOptimizations::SystemWarnings))
               optimizeDiagnosticOpts(
                   BuildInvocation.getMutDiagnosticOpts(),
                   BuildInvocation.getFrontendOpts().IsSystemModule);
+
+            IgnoreCWD = any(MDC.Service.getOptimizeArgs() &
+                            ScanningOptimizations::IgnoreCWD) &&
+                        isSafeToIgnoreCWD(BuildInvocation);
+            if (IgnoreCWD) {
+              llvm::ErrorOr<std::string> CWD =
+                  MDC.ScanInstance.getVirtualFileSystem()
+                      .getCurrentWorkingDirectory();
+              if (CWD)
+                optimizeCWD(BuildInvocation, *CWD);
+            }
           });
 
-  MDC.associateWithContextHash(CI, MD);
+  // Check provided input paths from the invocation for determining
+  // IsInStableDirectories.
+  if (MD.IsInStableDirectories)
+    MD.IsInStableDirectories =
+        areOptionsInStableDir(MDC.StableDirs, CI.getHeaderSearchOpts());
+
+  MDC.associateWithContextHash(CI, IgnoreCWD, MD);
 
   // Finish the compiler invocation. Requires dependencies and the context hash.
   MDC.addOutputPaths(CI, MD);
@@ -697,8 +902,16 @@ void ModuleDepCollectorPP::addModulePrebuiltDeps(
   for (const Module *Import : M->Imports)
     if (Import->getTopLevelModule() != M->getTopLevelModule())
       if (MDC.isPrebuiltModule(Import->getTopLevelModule()))
-        if (SeenSubmodules.insert(Import->getTopLevelModule()).second)
+        if (SeenSubmodules.insert(Import->getTopLevelModule()).second) {
           MD.PrebuiltModuleDeps.emplace_back(Import->getTopLevelModule());
+          if (MD.IsInStableDirectories) {
+            auto PrebuiltModulePropIt = MDC.PrebuiltModulesASTMap.find(
+                MD.PrebuiltModuleDeps.back().PCMFile);
+            MD.IsInStableDirectories =
+                (PrebuiltModulePropIt != MDC.PrebuiltModulesASTMap.end()) &&
+                PrebuiltModulePropIt->second.isInStableDir();
+          }
+        }
 }
 
 void ModuleDepCollectorPP::addAllSubmoduleDeps(
@@ -711,6 +924,13 @@ void ModuleDepCollectorPP::addAllSubmoduleDeps(
   });
 }
 
+void ModuleDepCollectorPP::addOneModuleDep(const Module *M, const ModuleID ID,
+                                           ModuleDeps &MD) {
+  MD.ClangModuleDeps.push_back(std::move(ID));
+  if (MD.IsInStableDirectories)
+    MD.IsInStableDirectories = MDC.ModularDeps[M]->IsInStableDirectories;
+}
+
 void ModuleDepCollectorPP::addModuleDep(
     const Module *M, ModuleDeps &MD,
     llvm::DenseSet<const Module *> &AddedModules) {
@@ -719,7 +939,7 @@ void ModuleDepCollectorPP::addModuleDep(
         !MDC.isPrebuiltModule(Import)) {
       if (auto ImportID = handleTopLevelModule(Import->getTopLevelModule()))
         if (AddedModules.insert(Import->getTopLevelModule()).second)
-          MD.ClangModuleDeps.push_back(*ImportID);
+          addOneModuleDep(Import->getTopLevelModule(), *ImportID, MD);
     }
   }
 }
@@ -743,25 +963,24 @@ void ModuleDepCollectorPP::addAffectingClangModule(
         !MDC.isPrebuiltModule(Affecting)) {
       if (auto ImportID = handleTopLevelModule(Affecting))
         if (AddedModules.insert(Affecting).second)
-          MD.ClangModuleDeps.push_back(*ImportID);
+          addOneModuleDep(Affecting, *ImportID, MD);
     }
   }
 }
 
 ModuleDepCollector::ModuleDepCollector(
+    DependencyScanningService &Service,
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     DependencyActionController &Controller, CompilerInvocation OriginalCI,
-    PrebuiltModuleVFSMapT PrebuiltModuleVFSMap,
-    ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
-    bool IsStdModuleP1689Format)
-    : ScanInstance(ScanInstance), Consumer(C), Controller(Controller),
-      PrebuiltModuleVFSMap(std::move(PrebuiltModuleVFSMap)),
-      Opts(std::move(Opts)),
+    const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+    const ArrayRef<StringRef> StableDirs)
+    : Service(Service), ScanInstance(ScanInstance), Consumer(C),
+      Controller(Controller),
+      PrebuiltModulesASTMap(std::move(PrebuiltModulesASTMap)),
+      StableDirs(StableDirs), Opts(std::move(Opts)),
       CommonInvocation(
-          makeCommonInvocationForModuleBuild(std::move(OriginalCI))),
-      OptimizeArgs(OptimizeArgs), EagerLoadModules(EagerLoadModules),
-      IsStdModuleP1689Format(IsStdModuleP1689Format) {}
+          makeCommonInvocationForModuleBuild(std::move(OriginalCI))) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));
@@ -781,6 +1000,29 @@ bool ModuleDepCollector::isPrebuiltModule(const Module *M) {
   return true;
 }
 
+void ModuleDepCollector::addVisibleModules() {
+  llvm::DenseSet<const Module *> ImportedModules;
+  auto InsertVisibleModules = [&](const Module *M) {
+    if (ImportedModules.contains(M))
+      return;
+
+    VisibleModules.insert(M->getTopLevelModuleName());
+    SmallVector<Module *> Stack;
+    M->getExportedModules(Stack);
+    while (!Stack.empty()) {
+      const Module *CurrModule = Stack.pop_back_val();
+      if (ImportedModules.contains(CurrModule))
+        continue;
+      ImportedModules.insert(CurrModule);
+      VisibleModules.insert(CurrModule->getTopLevelModuleName());
+      CurrModule->getExportedModules(Stack);
+    }
+  };
+
+  for (const Module *Import : DirectImports)
+    InsertVisibleModules(Import);
+}
+
 static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
                                           SmallVectorImpl<char> &Storage) {
   if (llvm::sys::path::is_absolute(Path) &&
@@ -793,7 +1035,7 @@ static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
 }
 
 void ModuleDepCollector::addFileDep(StringRef Path) {
-  if (IsStdModuleP1689Format) {
+  if (Service.getFormat() == ScanningOutputFormat::P1689) {
     // Within P1689 format, we don't want all the paths to be absolute path
     // since it may violate the traditional make style dependencies info.
     FileDeps.emplace_back(Path);

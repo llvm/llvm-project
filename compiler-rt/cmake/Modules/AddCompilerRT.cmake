@@ -123,7 +123,7 @@ macro(set_output_name output name arch)
   else()
     if(ANDROID AND ${arch} STREQUAL "i386")
       set(${output} "${name}-i686${COMPILER_RT_OS_SUFFIX}")
-    elseif("${arch}" MATCHES "^arm")
+    elseif(NOT "${arch}" MATCHES "^arm64" AND "${arch}" MATCHES "^arm")
       if(COMPILER_RT_DEFAULT_TARGET_ONLY)
         set(triple "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
       else()
@@ -389,7 +389,8 @@ function(add_compiler_rt_runtime name type)
         set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
         set_target_properties(${libname} PROPERTIES IMPORT_SUFFIX ".lib")
       endif()
-      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+      find_program(CODESIGN codesign)
+      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*" AND CODESIGN)
         # Apple's linker signs the resulting dylib with an ad-hoc code signature in
         # most situations, except:
         # 1. Versions of ld64 prior to ld64-609 in Xcode 12 predate this behavior.
@@ -404,7 +405,7 @@ function(add_compiler_rt_runtime name type)
         # argument and looking for `invalid argument "linker-signed"` in its output.
         # FIXME: Remove this once all supported toolchains support `-o linker-signed`.
         execute_process(
-          COMMAND sh -c "codesign -f -s - -o linker-signed this-does-not-exist 2>&1 | grep -q linker-signed"
+          COMMAND sh -c "${CODESIGN} -f -s - -o linker-signed this-does-not-exist 2>&1 | grep -q linker-signed"
           RESULT_VARIABLE CODESIGN_SUPPORTS_LINKER_SIGNED
         )
 
@@ -415,7 +416,7 @@ function(add_compiler_rt_runtime name type)
 
         add_custom_command(TARGET ${libname}
           POST_BUILD
-          COMMAND codesign --sign - ${EXTRA_CODESIGN_ARGUMENTS} $<TARGET_FILE:${libname}>
+          COMMAND ${CODESIGN} --sign - ${EXTRA_CODESIGN_ARGUMENTS} $<TARGET_FILE:${libname}>
           WORKING_DIRECTORY ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
           COMMAND_EXPAND_LISTS
         )
@@ -524,7 +525,7 @@ function(add_compiler_rt_test test_suite test_name arch)
   # when linking, not the compiler. Here, we hack it to use the compiler
   # because we want to use -fsanitize flags.
 
-  # Only add CMAKE_EXE_LINKER_FLAGS when in a standalone bulid.
+  # Only add CMAKE_EXE_LINKER_FLAGS when in a standalone build.
   # Or else CMAKE_EXE_LINKER_FLAGS contains flags for build compiler of Clang/llvm.
   # This might not be the same as what the COMPILER_RT_TEST_COMPILER supports.
   # eg: the build compiler use lld linker and we build clang with default ld linker
@@ -580,6 +581,24 @@ macro(add_compiler_rt_script name)
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
     DESTINATION ${COMPILER_RT_INSTALL_BINARY_DIR})
 endmacro(add_compiler_rt_script src name)
+
+
+macro(add_compiler_rt_cfg target_name file_name component arch)
+  set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/AIX/${file_name}")
+  get_compiler_rt_output_dir(${arch} output_dir)
+  set(dst_file "${output_dir}/${file_name}")
+  add_custom_command(OUTPUT ${dst_file}
+    DEPENDS ${src_file}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_file} ${dst_file}
+    COMMENT "Copying ${file_name}...")
+  add_custom_target(${target_name} DEPENDS ${dst_file})
+  install(FILES ${file_name}
+    DESTINATION ${COMPILER_RT_INSTALL_LIBRARY_DIR}
+    COMPONENT ${component})
+  add_dependencies(${component} ${target_name})
+
+  set_target_properties(${target_name} PROPERTIES FOLDER "Compiler-RT Misc")
+endmacro()
 
 # Builds custom version of libc++ and installs it in <prefix>.
 # Can be used to build sanitized versions of libc++ for running unit tests.
@@ -790,6 +809,7 @@ function(configure_compiler_rt_lit_site_cfg input output)
 
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_OUTPUT_DIR ${COMPILER_RT_OUTPUT_DIR})
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_EXEC_OUTPUT_DIR ${COMPILER_RT_EXEC_OUTPUT_DIR})
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR ${output_dir})
 
   configure_lit_site_cfg(${input} ${output})

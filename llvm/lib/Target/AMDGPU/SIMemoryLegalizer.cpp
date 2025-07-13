@@ -21,8 +21,10 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -359,11 +361,6 @@ public:
 
   /// Virtual destructor to allow derivations to be deleted.
   virtual ~SICacheControl() = default;
-
-  virtual bool tryForceStoreSC0SC1(const SIMemOpInfo &MOI,
-                                   MachineBasicBlock::iterator &MI) const {
-    return false;
-  }
 };
 
 class SIGfx6CacheControl : public SICacheControl {
@@ -492,7 +489,6 @@ protected:
   }
 
 public:
-
   SIGfx940CacheControl(const GCNSubtarget &ST) : SIGfx90ACacheControl(ST) {};
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
@@ -518,20 +514,6 @@ public:
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
                      Position Pos) const override;
-
-  bool tryForceStoreSC0SC1(const SIMemOpInfo &MOI,
-                           MachineBasicBlock::iterator &MI) const override {
-    bool Changed = false;
-    if (ST.hasForceStoreSC0SC1() &&
-        (MOI.getInstrAddrSpace() & (SIAtomicAddrSpace::SCRATCH |
-                                    SIAtomicAddrSpace::GLOBAL |
-                                    SIAtomicAddrSpace::OTHER)) !=
-         SIAtomicAddrSpace::NONE) {
-      Changed |= enableSC0Bit(MI);
-      Changed |= enableSC1Bit(MI);
-    }
-    return Changed;
-  }
 };
 
 class SIGfx10CacheControl : public SIGfx7CacheControl {
@@ -645,9 +627,9 @@ public:
   }
 };
 
-class SIMemoryLegalizer final : public MachineFunctionPass {
+class SIMemoryLegalizer final {
 private:
-
+  const MachineModuleInfo &MMI;
   /// Cache Control.
   std::unique_ptr<SICacheControl> CC = nullptr;
 
@@ -682,9 +664,15 @@ private:
                                 MachineBasicBlock::iterator &MI);
 
 public:
+  SIMemoryLegalizer(const MachineModuleInfo &MMI) : MMI(MMI) {};
+  bool run(MachineFunction &MF);
+};
+
+class SIMemoryLegalizerLegacy final : public MachineFunctionPass {
+public:
   static char ID;
 
-  SIMemoryLegalizer() : MachineFunctionPass(ID) {}
+  SIMemoryLegalizerLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -712,8 +700,8 @@ void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
   ListSeparator LS;
   for (const auto &[Name, Val] : ASNames)
     OS << LS << '\'' << Name << '\'';
-  DiagnosticInfoUnsupported BadTag(Fn, Str.str(), MI.getDebugLoc(), DS_Warning);
-  Fn.getContext().diagnose(BadTag);
+  Fn.getContext().diagnose(
+      DiagnosticInfoUnsupported(Fn, Str.str(), MI.getDebugLoc(), DS_Warning));
 }
 
 /// Reads \p MI's MMRAs to parse the "amdgpu-as" MMRA.
@@ -746,8 +734,8 @@ static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
 void SIMemOpAccess::reportUnsupported(const MachineBasicBlock::iterator &MI,
                                       const char *Msg) const {
   const Function &Func = MI->getParent()->getParent()->getFunction();
-  DiagnosticInfoUnsupported Diag(Func, Msg, MI->getDebugLoc());
-  Func.getContext().diagnose(Diag);
+  Func.getContext().diagnose(
+      DiagnosticInfoUnsupported(Func, Msg, MI->getDebugLoc()));
 }
 
 std::optional<std::tuple<SIAtomicScope, SIAtomicAddrSpace, bool>>
@@ -2284,8 +2272,10 @@ bool SIGfx12CacheControl::insertWaitsBeforeSystemScopeStore(
   const DebugLoc &DL = MI->getDebugLoc();
 
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_LOADCNT_soft)).addImm(0);
-  BuildMI(MBB, MI, DL, TII->get(S_WAIT_SAMPLECNT_soft)).addImm(0);
-  BuildMI(MBB, MI, DL, TII->get(S_WAIT_BVHCNT_soft)).addImm(0);
+  if (ST.hasImageInsts()) {
+    BuildMI(MBB, MI, DL, TII->get(S_WAIT_SAMPLECNT_soft)).addImm(0);
+    BuildMI(MBB, MI, DL, TII->get(S_WAIT_BVHCNT_soft)).addImm(0);
+  }
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_KMCNT_soft)).addImm(0);
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_STORECNT_soft)).addImm(0);
 
@@ -2787,11 +2777,26 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
   return Changed;
 }
 
-bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
-  bool Changed = false;
-
+bool SIMemoryLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
   const MachineModuleInfo &MMI =
       getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+  return SIMemoryLegalizer(MMI).run(MF);
+}
+
+PreservedAnalyses
+SIMemoryLegalizerPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  auto *MMI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                  .getCachedResult<MachineModuleAnalysis>(
+                      *MF.getFunction().getParent());
+  assert(MMI && "MachineModuleAnalysis must be available");
+  if (!SIMemoryLegalizer(MMI->getMMI()).run(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
+}
+
+bool SIMemoryLegalizer::run(MachineFunction &MF) {
+  bool Changed = false;
 
   SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>());
   CC = SICacheControl::create(MF.getSubtarget<GCNSubtarget>());
@@ -2821,7 +2826,6 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
         Changed |= expandLoad(*MOI, MI);
       else if (const auto &MOI = MOA.getStoreInfo(MI)) {
         Changed |= expandStore(*MOI, MI);
-        Changed |= CC->tryForceStoreSC0SC1(*MOI, MI);
       } else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
         Changed |= expandAtomicFence(*MOI, MI);
       else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI))
@@ -2833,11 +2837,11 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-INITIALIZE_PASS(SIMemoryLegalizer, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(SIMemoryLegalizerLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
-char SIMemoryLegalizer::ID = 0;
-char &llvm::SIMemoryLegalizerID = SIMemoryLegalizer::ID;
+char SIMemoryLegalizerLegacy::ID = 0;
+char &llvm::SIMemoryLegalizerID = SIMemoryLegalizerLegacy::ID;
 
 FunctionPass *llvm::createSIMemoryLegalizerPass() {
-  return new SIMemoryLegalizer();
+  return new SIMemoryLegalizerLegacy();
 }

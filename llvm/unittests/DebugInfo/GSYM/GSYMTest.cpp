@@ -214,10 +214,10 @@ TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
   FW.writeU32(1); // InfoType::LineTableInfo.
   TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
       "0x0000000c: missing FunctionInfo InfoType length");
-  FW.fixup32(4, FixupOffset); // Write an invalid InfoType enumeration value
+  FW.fixup32(7, FixupOffset); // Write an invalid InfoType enumeration value
   FW.writeU32(0); // LineTableInfo InfoType data length.
   TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x00000008: unsupported InfoType 4");
+                              "0x00000008: unsupported InfoType 7");
 }
 
 static void TestFunctionInfoEncodeError(llvm::endianness ByteOrder,

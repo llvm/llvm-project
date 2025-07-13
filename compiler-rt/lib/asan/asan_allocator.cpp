@@ -21,6 +21,7 @@
 #include "asan_poisoning.h"
 #include "asan_report.h"
 #include "asan_stack.h"
+#include "asan_suppressions.h"
 #include "asan_thread.h"
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
@@ -423,10 +424,15 @@ struct Allocator {
     PoisonShadow(chunk, allocated_size, kAsanHeapLeftRedzoneMagic);
   }
 
-  void ReInitialize(const AllocatorOptions &options) {
+  // Apply provided AllocatorOptions to an Allocator
+  void ApplyOptions(const AllocatorOptions &options) {
     SetAllocatorMayReturnNull(options.may_return_null);
     allocator.SetReleaseToOSIntervalMs(options.release_to_os_interval_ms);
     SharedInitCode(options);
+  }
+
+  void ReInitialize(const AllocatorOptions &options) {
+    ApplyOptions(options);
 
     // Poison all existing allocation's redzones.
     if (CanPoisonMemory()) {
@@ -732,7 +738,8 @@ struct Allocator {
     if (!AtomicallySetQuarantineFlagIfAllocated(m, ptr, stack)) return;
 
     if (m->alloc_type != alloc_type) {
-      if (atomic_load(&alloc_dealloc_mismatch, memory_order_acquire)) {
+      if (atomic_load(&alloc_dealloc_mismatch, memory_order_acquire) &&
+          !IsAllocDeallocMismatchSuppressed(stack)) {
         ReportAllocTypeMismatch((uptr)ptr, stack, (AllocType)m->alloc_type,
                                 (AllocType)alloc_type);
       }
@@ -973,6 +980,11 @@ void InitializeAllocator(const AllocatorOptions &options) {
 
 void ReInitializeAllocator(const AllocatorOptions &options) {
   instance.ReInitialize(options);
+}
+
+// Apply provided AllocatorOptions to an Allocator
+void ApplyAllocatorOptions(const AllocatorOptions &options) {
+  instance.ApplyOptions(options);
 }
 
 void GetAllocatorOptions(AllocatorOptions *options) {

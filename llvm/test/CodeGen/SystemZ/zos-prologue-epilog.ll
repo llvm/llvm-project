@@ -87,39 +87,39 @@ define void @func1(ptr %ptr) {
 ; CHECK-LABEL: func2
 ; CHECK64: stmg	6,7,1744(4)
 ; CHECK64: aghi  4,-320
-; CHECK64: std	15,{{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	14,{{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	13,{{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	12,{{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	11,{{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	10,{{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	9,{{[0-9]+}}(4)                       * 8-byte Folded Spill
-; CHECK64: std	8,{{[0-9]+}}(4)                       * 8-byte Folded Spill
-; CHECK64: vst	23,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
-; CHECK64: vst	22,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
-; CHECK64: vst	21,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
-; CHECK64: vst	20,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
-; CHECK64: vst	19,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
-; CHECK64: vst	18,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
-; CHECK64: vst	17,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
-; CHECK64: vst	16,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
+; CHECK64: std	15,{{[0-9]+}}(4)                      * 8-byte Spill
+; CHECK64: std	14,{{[0-9]+}}(4)                      * 8-byte Spill
+; CHECK64: std	13,{{[0-9]+}}(4)                      * 8-byte Spill
+; CHECK64: std	12,{{[0-9]+}}(4)                      * 8-byte Spill
+; CHECK64: std	11,{{[0-9]+}}(4)                      * 8-byte Spill
+; CHECK64: std	10,{{[0-9]+}}(4)                      * 8-byte Spill
+; CHECK64: std	9,{{[0-9]+}}(4)                       * 8-byte Spill
+; CHECK64: std	8,{{[0-9]+}}(4)                       * 8-byte Spill
+; CHECK64: vst	23,{{[0-9]+}}(4),4                   * 16-byte Spill
+; CHECK64: vst	22,{{[0-9]+}}(4),4                   * 16-byte Spill
+; CHECK64: vst	21,{{[0-9]+}}(4),4                   * 16-byte Spill
+; CHECK64: vst	20,{{[0-9]+}}(4),4                   * 16-byte Spill
+; CHECK64: vst	19,{{[0-9]+}}(4),4                   * 16-byte Spill
+; CHECK64: vst	18,{{[0-9]+}}(4),4                   * 16-byte Spill
+; CHECK64: vst	17,{{[0-9]+}}(4),4                   * 16-byte Spill
+; CHECK64: vst	16,{{[0-9]+}}(4),4                   * 16-byte Spill
 
-; CHECK64: ld	15,{{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	14,{{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	13,{{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	12,{{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	11,{{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	10,{{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	9,{{[0-9]+}}(4)                       * 8-byte Folded Reload
-; CHECK64: ld	8,{{[0-9]+}}(4)                       * 8-byte Folded Reload
-; CHECK64: vl	23,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
-; CHECK64: vl	22,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
-; CHECK64: vl	21,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
-; CHECK64: vl	20,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
-; CHECK64: vl	19,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
-; CHECK64: vl	18,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
-; CHECK64: vl	17,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
-; CHECK64: vl	16,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
+; CHECK64: ld	15,{{[0-9]+}}(4)                      * 8-byte Reload
+; CHECK64: ld	14,{{[0-9]+}}(4)                      * 8-byte Reload
+; CHECK64: ld	13,{{[0-9]+}}(4)                      * 8-byte Reload
+; CHECK64: ld	12,{{[0-9]+}}(4)                      * 8-byte Reload
+; CHECK64: ld	11,{{[0-9]+}}(4)                      * 8-byte Reload
+; CHECK64: ld	10,{{[0-9]+}}(4)                      * 8-byte Reload
+; CHECK64: ld	9,{{[0-9]+}}(4)                       * 8-byte Reload
+; CHECK64: ld	8,{{[0-9]+}}(4)                       * 8-byte Reload
+; CHECK64: vl	23,{{[0-9]+}}(4),4                   * 16-byte Reload
+; CHECK64: vl	22,{{[0-9]+}}(4),4                   * 16-byte Reload
+; CHECK64: vl	21,{{[0-9]+}}(4),4                   * 16-byte Reload
+; CHECK64: vl	20,{{[0-9]+}}(4),4                   * 16-byte Reload
+; CHECK64: vl	19,{{[0-9]+}}(4),4                   * 16-byte Reload
+; CHECK64: vl	18,{{[0-9]+}}(4),4                   * 16-byte Reload
+; CHECK64: vl	17,{{[0-9]+}}(4),4                   * 16-byte Reload
+; CHECK64: vl	16,{{[0-9]+}}(4),4                   * 16-byte Reload
 ; CHECK64: lg  7,2072(4)
 ; CHECK64: aghi  4,320
 ; CHECK64: b 2(7)

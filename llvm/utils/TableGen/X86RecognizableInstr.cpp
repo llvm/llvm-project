@@ -17,6 +17,7 @@
 #include "X86DisassemblerShared.h"
 #include "X86DisassemblerTables.h"
 #include "X86ModRMFilters.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Record.h"
 #include <string>
@@ -437,11 +438,11 @@ void RecognizableInstr::adjustOperandEncoding(OperandEncoding &encoding) {
          "Invalid CDisp scaling");
 }
 
-void RecognizableInstr::handleOperand(
-    bool optional, unsigned &operandIndex, unsigned &physicalOperandIndex,
-    unsigned numPhysicalOperands, const unsigned *operandMapping,
-    OperandEncoding (*encodingFromString)(const std::string &,
-                                          uint8_t OpSize)) {
+void RecognizableInstr::handleOperand(bool optional, unsigned &operandIndex,
+                                      unsigned &physicalOperandIndex,
+                                      unsigned numPhysicalOperands,
+                                      const unsigned *operandMapping,
+                                      EncodingFn encodingFromString) {
   if (optional) {
     if (physicalOperandIndex >= numPhysicalOperands)
       return;
@@ -458,12 +459,12 @@ void RecognizableInstr::handleOperand(
 
   StringRef typeName = (*Operands)[operandIndex].Rec->getName();
 
-  OperandEncoding encoding = encodingFromString(std::string(typeName), OpSize);
+  OperandEncoding encoding = encodingFromString(typeName, OpSize);
   // Adjust the encoding type for an operand based on the instruction.
   adjustOperandEncoding(encoding);
   Spec->operands[operandIndex].encoding = encoding;
   Spec->operands[operandIndex].type =
-      typeFromString(std::string(typeName), HasREX_W, OpSize);
+      typeFromString(typeName, HasREX_W, OpSize);
 
   ++operandIndex;
   ++physicalOperandIndex;
@@ -1020,433 +1021,498 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
 #undef MAP
 }
 
-#define TYPE(str, type)                                                        \
-  if (s == str)                                                                \
-    return type;
-OperandType RecognizableInstr::typeFromString(const std::string &s,
-                                              bool hasREX_W, uint8_t OpSize) {
+OperandType RecognizableInstr::typeFromString(StringRef Str, bool hasREX_W,
+                                              uint8_t OpSize) {
+  StringSwitch<OperandType> Switch(Str);
   if (hasREX_W) {
     // For instructions with a REX_W prefix, a declared 32-bit register encoding
     // is special.
-    TYPE("GR32", TYPE_R32)
+    Switch.Case("GR32", TYPE_R32);
   }
   if (OpSize == X86Local::OpSize16) {
     // For OpSize16 instructions, a declared 16-bit register or
     // immediate encoding is special.
-    TYPE("GR16", TYPE_Rv)
+    Switch.Case("GR16", TYPE_Rv);
   } else if (OpSize == X86Local::OpSize32) {
     // For OpSize32 instructions, a declared 32-bit register or
     // immediate encoding is special.
-    TYPE("GR32", TYPE_Rv)
+    Switch.Case("GR32", TYPE_Rv);
   }
-  TYPE("i16mem", TYPE_M)
-  TYPE("i16imm", TYPE_IMM)
-  TYPE("i16i8imm", TYPE_IMM)
-  TYPE("GR16", TYPE_R16)
-  TYPE("GR16orGR32orGR64", TYPE_R16)
-  TYPE("i32mem", TYPE_M)
-  TYPE("i32imm", TYPE_IMM)
-  TYPE("i32i8imm", TYPE_IMM)
-  TYPE("GR32", TYPE_R32)
-  TYPE("GR32orGR64", TYPE_R32)
-  TYPE("i64mem", TYPE_M)
-  TYPE("i64i32imm", TYPE_IMM)
-  TYPE("i64i8imm", TYPE_IMM)
-  TYPE("GR64", TYPE_R64)
-  TYPE("i8mem", TYPE_M)
-  TYPE("i8imm", TYPE_IMM)
-  TYPE("u4imm", TYPE_UIMM8)
-  TYPE("u8imm", TYPE_UIMM8)
-  TYPE("i16u8imm", TYPE_UIMM8)
-  TYPE("i32u8imm", TYPE_UIMM8)
-  TYPE("i64u8imm", TYPE_UIMM8)
-  TYPE("GR8", TYPE_R8)
-  TYPE("VR128", TYPE_XMM)
-  TYPE("VR128X", TYPE_XMM)
-  TYPE("f128mem", TYPE_M)
-  TYPE("f256mem", TYPE_M)
-  TYPE("f512mem", TYPE_M)
-  TYPE("FR128", TYPE_XMM)
-  TYPE("FR64", TYPE_XMM)
-  TYPE("FR64X", TYPE_XMM)
-  TYPE("f64mem", TYPE_M)
-  TYPE("sdmem", TYPE_M)
-  TYPE("FR16X", TYPE_XMM)
-  TYPE("FR32", TYPE_XMM)
-  TYPE("FR32X", TYPE_XMM)
-  TYPE("f32mem", TYPE_M)
-  TYPE("f16mem", TYPE_M)
-  TYPE("ssmem", TYPE_M)
-  TYPE("shmem", TYPE_M)
-  TYPE("RST", TYPE_ST)
-  TYPE("RSTi", TYPE_ST)
-  TYPE("i128mem", TYPE_M)
-  TYPE("i256mem", TYPE_M)
-  TYPE("i512mem", TYPE_M)
-  TYPE("i512mem_GR16", TYPE_M)
-  TYPE("i512mem_GR32", TYPE_M)
-  TYPE("i512mem_GR64", TYPE_M)
-  TYPE("i64i32imm_brtarget", TYPE_REL)
-  TYPE("i16imm_brtarget", TYPE_REL)
-  TYPE("i32imm_brtarget", TYPE_REL)
-  TYPE("ccode", TYPE_IMM)
-  TYPE("cflags", TYPE_IMM)
-  TYPE("AVX512RC", TYPE_IMM)
-  TYPE("brtarget32", TYPE_REL)
-  TYPE("brtarget16", TYPE_REL)
-  TYPE("brtarget8", TYPE_REL)
-  TYPE("f80mem", TYPE_M)
-  TYPE("lea64_32mem", TYPE_M)
-  TYPE("lea64mem", TYPE_M)
-  TYPE("VR64", TYPE_MM64)
-  TYPE("i64imm", TYPE_IMM)
-  TYPE("anymem", TYPE_M)
-  TYPE("opaquemem", TYPE_M)
-  TYPE("sibmem", TYPE_MSIB)
-  TYPE("SEGMENT_REG", TYPE_SEGMENTREG)
-  TYPE("DEBUG_REG", TYPE_DEBUGREG)
-  TYPE("CONTROL_REG", TYPE_CONTROLREG)
-  TYPE("srcidx8", TYPE_SRCIDX)
-  TYPE("srcidx16", TYPE_SRCIDX)
-  TYPE("srcidx32", TYPE_SRCIDX)
-  TYPE("srcidx64", TYPE_SRCIDX)
-  TYPE("dstidx8", TYPE_DSTIDX)
-  TYPE("dstidx16", TYPE_DSTIDX)
-  TYPE("dstidx32", TYPE_DSTIDX)
-  TYPE("dstidx64", TYPE_DSTIDX)
-  TYPE("offset16_8", TYPE_MOFFS)
-  TYPE("offset16_16", TYPE_MOFFS)
-  TYPE("offset16_32", TYPE_MOFFS)
-  TYPE("offset32_8", TYPE_MOFFS)
-  TYPE("offset32_16", TYPE_MOFFS)
-  TYPE("offset32_32", TYPE_MOFFS)
-  TYPE("offset32_64", TYPE_MOFFS)
-  TYPE("offset64_8", TYPE_MOFFS)
-  TYPE("offset64_16", TYPE_MOFFS)
-  TYPE("offset64_32", TYPE_MOFFS)
-  TYPE("offset64_64", TYPE_MOFFS)
-  TYPE("VR256", TYPE_YMM)
-  TYPE("VR256X", TYPE_YMM)
-  TYPE("VR512", TYPE_ZMM)
-  TYPE("VK1", TYPE_VK)
-  TYPE("VK1WM", TYPE_VK)
-  TYPE("VK2", TYPE_VK)
-  TYPE("VK2WM", TYPE_VK)
-  TYPE("VK4", TYPE_VK)
-  TYPE("VK4WM", TYPE_VK)
-  TYPE("VK8", TYPE_VK)
-  TYPE("VK8WM", TYPE_VK)
-  TYPE("VK16", TYPE_VK)
-  TYPE("VK16WM", TYPE_VK)
-  TYPE("VK32", TYPE_VK)
-  TYPE("VK32WM", TYPE_VK)
-  TYPE("VK64", TYPE_VK)
-  TYPE("VK64WM", TYPE_VK)
-  TYPE("VK1Pair", TYPE_VK_PAIR)
-  TYPE("VK2Pair", TYPE_VK_PAIR)
-  TYPE("VK4Pair", TYPE_VK_PAIR)
-  TYPE("VK8Pair", TYPE_VK_PAIR)
-  TYPE("VK16Pair", TYPE_VK_PAIR)
-  TYPE("vx64mem", TYPE_MVSIBX)
-  TYPE("vx128mem", TYPE_MVSIBX)
-  TYPE("vx256mem", TYPE_MVSIBX)
-  TYPE("vy128mem", TYPE_MVSIBY)
-  TYPE("vy256mem", TYPE_MVSIBY)
-  TYPE("vx64xmem", TYPE_MVSIBX)
-  TYPE("vx128xmem", TYPE_MVSIBX)
-  TYPE("vx256xmem", TYPE_MVSIBX)
-  TYPE("vy128xmem", TYPE_MVSIBY)
-  TYPE("vy256xmem", TYPE_MVSIBY)
-  TYPE("vy512xmem", TYPE_MVSIBY)
-  TYPE("vz256mem", TYPE_MVSIBZ)
-  TYPE("vz512mem", TYPE_MVSIBZ)
-  TYPE("BNDR", TYPE_BNDR)
-  TYPE("TILE", TYPE_TMM)
-  TYPE("TILEPair", TYPE_TMM_PAIR)
-  errs() << "Unhandled type string " << s << "\n";
+  // clang-format off
+  OperandType Type =
+      Switch.Case("i16mem", TYPE_M)
+          .Case("i16imm", TYPE_IMM)
+          .Case("i16i8imm", TYPE_IMM)
+          .Case("GR16", TYPE_R16)
+          .Case("GR16orGR32orGR64", TYPE_R16)
+          .Case("i32mem", TYPE_M)
+          .Case("i32imm", TYPE_IMM)
+          .Case("i32i8imm", TYPE_IMM)
+          .Case("GR32", TYPE_R32)
+          .Case("GR32orGR64", TYPE_R32)
+          .Case("i64mem", TYPE_M)
+          .Case("i64i32imm", TYPE_IMM)
+          .Case("i64i8imm", TYPE_IMM)
+          .Case("GR64", TYPE_R64)
+          .Case("i8mem", TYPE_M)
+          .Case("i8imm", TYPE_IMM)
+          .Case("u4imm", TYPE_UIMM8)
+          .Case("u8imm", TYPE_UIMM8)
+          .Case("i16u8imm", TYPE_UIMM8)
+          .Case("i32u8imm", TYPE_UIMM8)
+          .Case("i64u8imm", TYPE_UIMM8)
+          .Case("GR8", TYPE_R8)
+          .Case("VR128", TYPE_XMM)
+          .Case("VR128X", TYPE_XMM)
+          .Case("f128mem", TYPE_M)
+          .Case("f256mem", TYPE_M)
+          .Case("f512mem", TYPE_M)
+          .Case("FR128", TYPE_XMM)
+          .Case("FR64", TYPE_XMM)
+          .Case("FR64X", TYPE_XMM)
+          .Case("f64mem", TYPE_M)
+          .Case("sdmem", TYPE_M)
+          .Case("FR16X", TYPE_XMM)
+          .Case("FR32", TYPE_XMM)
+          .Case("FR32X", TYPE_XMM)
+          .Case("f32mem", TYPE_M)
+          .Case("f16mem", TYPE_M)
+          .Case("ssmem", TYPE_M)
+          .Case("shmem", TYPE_M)
+          .Case("RST", TYPE_ST)
+          .Case("RSTi", TYPE_ST)
+          .Case("i128mem", TYPE_M)
+          .Case("i256mem", TYPE_M)
+          .Case("i512mem", TYPE_M)
+          .Case("i512mem_GR16", TYPE_M)
+          .Case("i512mem_GR32", TYPE_M)
+          .Case("i512mem_GR64", TYPE_M)
+          .Case("i64i32imm_brtarget", TYPE_REL)
+          .Case("i8imm_brtarget", TYPE_REL)
+          .Case("i16imm_brtarget", TYPE_REL)
+          .Case("i32imm_brtarget", TYPE_REL)
+          .Case("ccode", TYPE_IMM)
+          .Case("cflags", TYPE_IMM)
+          .Case("AVX512RC", TYPE_IMM)
+          .Case("brtarget32", TYPE_REL)
+          .Case("brtarget16", TYPE_REL)
+          .Case("brtarget8", TYPE_REL)
+          .Case("f80mem", TYPE_M)
+          .Case("lea64_8mem", TYPE_M)
+          .Case("lea64_16mem", TYPE_M)
+          .Case("lea64_32mem", TYPE_M)
+          .Case("lea64mem", TYPE_M)
+          .Case("VR64", TYPE_MM64)
+          .Case("i64imm", TYPE_IMM)
+          .Case("anymem", TYPE_M)
+          .Case("opaquemem", TYPE_M)
+          .Case("sibmem", TYPE_MSIB)
+          .Case("SEGMENT_REG", TYPE_SEGMENTREG)
+          .Case("DEBUG_REG", TYPE_DEBUGREG)
+          .Case("CONTROL_REG", TYPE_CONTROLREG)
+          .Case("srcidx8", TYPE_SRCIDX)
+          .Case("srcidx16", TYPE_SRCIDX)
+          .Case("srcidx32", TYPE_SRCIDX)
+          .Case("srcidx64", TYPE_SRCIDX)
+          .Case("dstidx8", TYPE_DSTIDX)
+          .Case("dstidx16", TYPE_DSTIDX)
+          .Case("dstidx32", TYPE_DSTIDX)
+          .Case("dstidx64", TYPE_DSTIDX)
+          .Case("offset16_8", TYPE_MOFFS)
+          .Case("offset16_16", TYPE_MOFFS)
+          .Case("offset16_32", TYPE_MOFFS)
+          .Case("offset32_8", TYPE_MOFFS)
+          .Case("offset32_16", TYPE_MOFFS)
+          .Case("offset32_32", TYPE_MOFFS)
+          .Case("offset32_64", TYPE_MOFFS)
+          .Case("offset64_8", TYPE_MOFFS)
+          .Case("offset64_16", TYPE_MOFFS)
+          .Case("offset64_32", TYPE_MOFFS)
+          .Case("offset64_64", TYPE_MOFFS)
+          .Case("VR256", TYPE_YMM)
+          .Case("VR256X", TYPE_YMM)
+          .Case("VR512", TYPE_ZMM)
+          .Case("VK1", TYPE_VK)
+          .Case("VK1WM", TYPE_VK)
+          .Case("VK2", TYPE_VK)
+          .Case("VK2WM", TYPE_VK)
+          .Case("VK4", TYPE_VK)
+          .Case("VK4WM", TYPE_VK)
+          .Case("VK8", TYPE_VK)
+          .Case("VK8WM", TYPE_VK)
+          .Case("VK16", TYPE_VK)
+          .Case("VK16WM", TYPE_VK)
+          .Case("VK32", TYPE_VK)
+          .Case("VK32WM", TYPE_VK)
+          .Case("VK64", TYPE_VK)
+          .Case("VK64WM", TYPE_VK)
+          .Case("VK1Pair", TYPE_VK_PAIR)
+          .Case("VK2Pair", TYPE_VK_PAIR)
+          .Case("VK4Pair", TYPE_VK_PAIR)
+          .Case("VK8Pair", TYPE_VK_PAIR)
+          .Case("VK16Pair", TYPE_VK_PAIR)
+          .Case("vx32mem", TYPE_MVSIBX)
+          .Case("vx64mem", TYPE_MVSIBX)
+          .Case("vy32mem", TYPE_MVSIBY)
+          .Case("vy64mem", TYPE_MVSIBY)
+          .Case("vx32xmem", TYPE_MVSIBX)
+          .Case("vx64xmem", TYPE_MVSIBX)
+          .Case("vy32xmem", TYPE_MVSIBY)
+          .Case("vy64xmem", TYPE_MVSIBY)
+          .Case("vz32mem", TYPE_MVSIBZ)
+          .Case("vz64mem", TYPE_MVSIBZ)
+          .Case("BNDR", TYPE_BNDR)
+          .Case("TILE", TYPE_TMM)
+          .Case("TILEPair", TYPE_TMM_PAIR)
+          .Default(TYPE_NONE);
+  // clang-format on
+
+  if (Type != TYPE_NONE)
+    return Type;
+  errs() << "Unhandled type string " << Str << "\n";
   llvm_unreachable("Unhandled type string");
 }
-#undef TYPE
 
-#define ENCODING(str, encoding)                                                \
-  if (s == str)                                                                \
-    return encoding;
-OperandEncoding
-RecognizableInstr::immediateEncodingFromString(const std::string &s,
-                                               uint8_t OpSize) {
+OperandEncoding RecognizableInstr::immediateEncodingFromString(StringRef Str,
+                                                               uint8_t OpSize) {
+  StringSwitch<OperandEncoding> Switch(Str);
   if (OpSize != X86Local::OpSize16) {
     // For instructions without an OpSize prefix, a declared 16-bit register or
     // immediate encoding is special.
-    ENCODING("i16imm", ENCODING_IW)
+    Switch.Case("i16imm", ENCODING_IW);
   }
-  ENCODING("i32i8imm", ENCODING_IB)
-  ENCODING("AVX512RC", ENCODING_IRC)
-  ENCODING("i16imm", ENCODING_Iv)
-  ENCODING("i16i8imm", ENCODING_IB)
-  ENCODING("i32imm", ENCODING_Iv)
-  ENCODING("i64i32imm", ENCODING_ID)
-  ENCODING("i64i8imm", ENCODING_IB)
-  ENCODING("i8imm", ENCODING_IB)
-  ENCODING("ccode", ENCODING_CC)
-  ENCODING("cflags", ENCODING_CF)
-  ENCODING("u4imm", ENCODING_IB)
-  ENCODING("u8imm", ENCODING_IB)
-  ENCODING("i16u8imm", ENCODING_IB)
-  ENCODING("i32u8imm", ENCODING_IB)
-  ENCODING("i64u8imm", ENCODING_IB)
-  // This is not a typo.  Instructions like BLENDVPD put
-  // register IDs in 8-bit immediates nowadays.
-  ENCODING("FR32", ENCODING_IB)
-  ENCODING("FR64", ENCODING_IB)
-  ENCODING("FR128", ENCODING_IB)
-  ENCODING("VR128", ENCODING_IB)
-  ENCODING("VR256", ENCODING_IB)
-  ENCODING("FR16X", ENCODING_IB)
-  ENCODING("FR32X", ENCODING_IB)
-  ENCODING("FR64X", ENCODING_IB)
-  ENCODING("VR128X", ENCODING_IB)
-  ENCODING("VR256X", ENCODING_IB)
-  ENCODING("VR512", ENCODING_IB)
-  ENCODING("TILE", ENCODING_IB)
-  errs() << "Unhandled immediate encoding " << s << "\n";
+
+  // clang-format off
+  OperandEncoding Encoding =
+      Switch.Case("i32i8imm", ENCODING_IB)
+          .Case("AVX512RC", ENCODING_IRC)
+          .Case("i16imm", ENCODING_Iv)
+          .Case("i16i8imm", ENCODING_IB)
+          .Case("i32imm", ENCODING_Iv)
+          .Case("i64i32imm", ENCODING_ID)
+          .Case("i64i8imm", ENCODING_IB)
+          .Case("i8imm", ENCODING_IB)
+          .Case("ccode", ENCODING_CC)
+          .Case("cflags", ENCODING_CF)
+          .Case("u4imm", ENCODING_IB)
+          .Case("u8imm", ENCODING_IB)
+          .Case("i16u8imm", ENCODING_IB)
+          .Case("i32u8imm", ENCODING_IB)
+          .Case("i64u8imm", ENCODING_IB)
+          // This is not a typo.  Instructions like BLENDVPD put
+          // register IDs in 8-bit immediates nowadays.
+          .Case("FR32", ENCODING_IB)
+          .Case("FR64", ENCODING_IB)
+          .Case("FR128", ENCODING_IB)
+          .Case("VR128", ENCODING_IB)
+          .Case("VR256", ENCODING_IB)
+          .Case("FR16X", ENCODING_IB)
+          .Case("FR32X", ENCODING_IB)
+          .Case("FR64X", ENCODING_IB)
+          .Case("VR128X", ENCODING_IB)
+          .Case("VR256X", ENCODING_IB)
+          .Case("VR512", ENCODING_IB)
+          .Case("TILE", ENCODING_IB)
+          .Default(ENCODING_NONE);
+  // clang-format on
+
+  if (Encoding != ENCODING_NONE)
+    return Encoding;
+  errs() << "Unhandled immediate encoding " << Str << "\n";
   llvm_unreachable("Unhandled immediate encoding");
 }
 
 OperandEncoding
-RecognizableInstr::rmRegisterEncodingFromString(const std::string &s,
-                                                uint8_t OpSize) {
-  ENCODING("RST", ENCODING_FP)
-  ENCODING("RSTi", ENCODING_FP)
-  ENCODING("GR16", ENCODING_RM)
-  ENCODING("GR16orGR32orGR64", ENCODING_RM)
-  ENCODING("GR32", ENCODING_RM)
-  ENCODING("GR32orGR64", ENCODING_RM)
-  ENCODING("GR64", ENCODING_RM)
-  ENCODING("GR8", ENCODING_RM)
-  ENCODING("VR128", ENCODING_RM)
-  ENCODING("VR128X", ENCODING_RM)
-  ENCODING("FR128", ENCODING_RM)
-  ENCODING("FR64", ENCODING_RM)
-  ENCODING("FR32", ENCODING_RM)
-  ENCODING("FR64X", ENCODING_RM)
-  ENCODING("FR32X", ENCODING_RM)
-  ENCODING("FR16X", ENCODING_RM)
-  ENCODING("VR64", ENCODING_RM)
-  ENCODING("VR256", ENCODING_RM)
-  ENCODING("VR256X", ENCODING_RM)
-  ENCODING("VR512", ENCODING_RM)
-  ENCODING("VK1", ENCODING_RM)
-  ENCODING("VK2", ENCODING_RM)
-  ENCODING("VK4", ENCODING_RM)
-  ENCODING("VK8", ENCODING_RM)
-  ENCODING("VK16", ENCODING_RM)
-  ENCODING("VK32", ENCODING_RM)
-  ENCODING("VK64", ENCODING_RM)
-  ENCODING("BNDR", ENCODING_RM)
-  ENCODING("TILE", ENCODING_RM)
-  ENCODING("TILEPair", ENCODING_RM)
-  errs() << "Unhandled R/M register encoding " << s << "\n";
+RecognizableInstr::rmRegisterEncodingFromString(StringRef Str, uint8_t OpSize) {
+  // clang-format off
+  auto Encoding =
+      StringSwitch<OperandEncoding>(Str)
+          .Case("RST", ENCODING_FP)
+          .Case("RSTi", ENCODING_FP)
+          .Case("GR16", ENCODING_RM)
+          .Case("GR16orGR32orGR64", ENCODING_RM)
+          .Case("GR32", ENCODING_RM)
+          .Case("GR32orGR64", ENCODING_RM)
+          .Case("GR64", ENCODING_RM)
+          .Case("GR8", ENCODING_RM)
+          .Case("VR128", ENCODING_RM)
+          .Case("VR128X", ENCODING_RM)
+          .Case("FR128", ENCODING_RM)
+          .Case("FR64", ENCODING_RM)
+          .Case("FR32", ENCODING_RM)
+          .Case("FR64X", ENCODING_RM)
+          .Case("FR32X", ENCODING_RM)
+          .Case("FR16X", ENCODING_RM)
+          .Case("VR64", ENCODING_RM)
+          .Case("VR256", ENCODING_RM)
+          .Case("VR256X", ENCODING_RM)
+          .Case("VR512", ENCODING_RM)
+          .Case("VK1", ENCODING_RM)
+          .Case("VK2", ENCODING_RM)
+          .Case("VK4", ENCODING_RM)
+          .Case("VK8", ENCODING_RM)
+          .Case("VK16", ENCODING_RM)
+          .Case("VK32", ENCODING_RM)
+          .Case("VK64", ENCODING_RM)
+          .Case("BNDR", ENCODING_RM)
+          .Case("TILE", ENCODING_RM)
+          .Case("TILEPair", ENCODING_RM)
+          .Default(ENCODING_NONE);
+  // clang-format on
+  if (Encoding != ENCODING_NONE)
+    return Encoding;
+  errs() << "Unhandled R/M register encoding " << Str << "\n";
   llvm_unreachable("Unhandled R/M register encoding");
 }
 
 OperandEncoding
-RecognizableInstr::roRegisterEncodingFromString(const std::string &s,
-                                                uint8_t OpSize) {
-  ENCODING("GR16", ENCODING_REG)
-  ENCODING("GR16orGR32orGR64", ENCODING_REG)
-  ENCODING("GR32", ENCODING_REG)
-  ENCODING("GR32orGR64", ENCODING_REG)
-  ENCODING("GR64", ENCODING_REG)
-  ENCODING("GR8", ENCODING_REG)
-  ENCODING("VR128", ENCODING_REG)
-  ENCODING("FR128", ENCODING_REG)
-  ENCODING("FR64", ENCODING_REG)
-  ENCODING("FR32", ENCODING_REG)
-  ENCODING("VR64", ENCODING_REG)
-  ENCODING("SEGMENT_REG", ENCODING_REG)
-  ENCODING("DEBUG_REG", ENCODING_REG)
-  ENCODING("CONTROL_REG", ENCODING_REG)
-  ENCODING("VR256", ENCODING_REG)
-  ENCODING("VR256X", ENCODING_REG)
-  ENCODING("VR128X", ENCODING_REG)
-  ENCODING("FR64X", ENCODING_REG)
-  ENCODING("FR32X", ENCODING_REG)
-  ENCODING("FR16X", ENCODING_REG)
-  ENCODING("VR512", ENCODING_REG)
-  ENCODING("VK1", ENCODING_REG)
-  ENCODING("VK2", ENCODING_REG)
-  ENCODING("VK4", ENCODING_REG)
-  ENCODING("VK8", ENCODING_REG)
-  ENCODING("VK16", ENCODING_REG)
-  ENCODING("VK32", ENCODING_REG)
-  ENCODING("VK64", ENCODING_REG)
-  ENCODING("VK1Pair", ENCODING_REG)
-  ENCODING("VK2Pair", ENCODING_REG)
-  ENCODING("VK4Pair", ENCODING_REG)
-  ENCODING("VK8Pair", ENCODING_REG)
-  ENCODING("VK16Pair", ENCODING_REG)
-  ENCODING("VK1WM", ENCODING_REG)
-  ENCODING("VK2WM", ENCODING_REG)
-  ENCODING("VK4WM", ENCODING_REG)
-  ENCODING("VK8WM", ENCODING_REG)
-  ENCODING("VK16WM", ENCODING_REG)
-  ENCODING("VK32WM", ENCODING_REG)
-  ENCODING("VK64WM", ENCODING_REG)
-  ENCODING("BNDR", ENCODING_REG)
-  ENCODING("TILE", ENCODING_REG)
-  ENCODING("TILEPair", ENCODING_REG)
-  errs() << "Unhandled reg/opcode register encoding " << s << "\n";
+RecognizableInstr::roRegisterEncodingFromString(StringRef Str, uint8_t OpSize) {
+  // clang-format off
+  auto Encoding =
+      StringSwitch<OperandEncoding>(Str)
+          .Case("GR16", ENCODING_REG)
+          .Case("GR16orGR32orGR64", ENCODING_REG)
+          .Case("GR32", ENCODING_REG)
+          .Case("GR32orGR64", ENCODING_REG)
+          .Case("GR64", ENCODING_REG)
+          .Case("GR8", ENCODING_REG)
+          .Case("VR128", ENCODING_REG)
+          .Case("FR128", ENCODING_REG)
+          .Case("FR64", ENCODING_REG)
+          .Case("FR32", ENCODING_REG)
+          .Case("VR64", ENCODING_REG)
+          .Case("SEGMENT_REG", ENCODING_REG)
+          .Case("DEBUG_REG", ENCODING_REG)
+          .Case("CONTROL_REG", ENCODING_REG)
+          .Case("VR256", ENCODING_REG)
+          .Case("VR256X", ENCODING_REG)
+          .Case("VR128X", ENCODING_REG)
+          .Case("FR64X", ENCODING_REG)
+          .Case("FR32X", ENCODING_REG)
+          .Case("FR16X", ENCODING_REG)
+          .Case("VR512", ENCODING_REG)
+          .Case("VK1", ENCODING_REG)
+          .Case("VK2", ENCODING_REG)
+          .Case("VK4", ENCODING_REG)
+          .Case("VK8", ENCODING_REG)
+          .Case("VK16", ENCODING_REG)
+          .Case("VK32", ENCODING_REG)
+          .Case("VK64", ENCODING_REG)
+          .Case("VK1Pair", ENCODING_REG)
+          .Case("VK2Pair", ENCODING_REG)
+          .Case("VK4Pair", ENCODING_REG)
+          .Case("VK8Pair", ENCODING_REG)
+          .Case("VK16Pair", ENCODING_REG)
+          .Case("VK1WM", ENCODING_REG)
+          .Case("VK2WM", ENCODING_REG)
+          .Case("VK4WM", ENCODING_REG)
+          .Case("VK8WM", ENCODING_REG)
+          .Case("VK16WM", ENCODING_REG)
+          .Case("VK32WM", ENCODING_REG)
+          .Case("VK64WM", ENCODING_REG)
+          .Case("BNDR", ENCODING_REG)
+          .Case("TILE", ENCODING_REG)
+          .Case("TILEPair", ENCODING_REG)
+          .Default(ENCODING_NONE);
+  // clang-format on
+
+  if (Encoding != ENCODING_NONE)
+    return Encoding;
+
+  errs() << "Unhandled reg/opcode register encoding " << Str << "\n";
   llvm_unreachable("Unhandled reg/opcode register encoding");
 }
 
 OperandEncoding
-RecognizableInstr::vvvvRegisterEncodingFromString(const std::string &s,
+RecognizableInstr::vvvvRegisterEncodingFromString(StringRef Str,
                                                   uint8_t OpSize) {
-  ENCODING("GR8", ENCODING_VVVV)
-  ENCODING("GR16", ENCODING_VVVV)
-  ENCODING("GR32", ENCODING_VVVV)
-  ENCODING("GR64", ENCODING_VVVV)
-  ENCODING("FR32", ENCODING_VVVV)
-  ENCODING("FR128", ENCODING_VVVV)
-  ENCODING("FR64", ENCODING_VVVV)
-  ENCODING("VR128", ENCODING_VVVV)
-  ENCODING("VR256", ENCODING_VVVV)
-  ENCODING("FR16X", ENCODING_VVVV)
-  ENCODING("FR32X", ENCODING_VVVV)
-  ENCODING("FR64X", ENCODING_VVVV)
-  ENCODING("VR128X", ENCODING_VVVV)
-  ENCODING("VR256X", ENCODING_VVVV)
-  ENCODING("VR512", ENCODING_VVVV)
-  ENCODING("VK1", ENCODING_VVVV)
-  ENCODING("VK2", ENCODING_VVVV)
-  ENCODING("VK4", ENCODING_VVVV)
-  ENCODING("VK8", ENCODING_VVVV)
-  ENCODING("VK16", ENCODING_VVVV)
-  ENCODING("VK32", ENCODING_VVVV)
-  ENCODING("VK64", ENCODING_VVVV)
-  ENCODING("TILE", ENCODING_VVVV)
-  ENCODING("TILEPair", ENCODING_VVVV)
-  errs() << "Unhandled VEX.vvvv register encoding " << s << "\n";
+  // clang-format off
+  auto Encoding =
+      StringSwitch<OperandEncoding>(Str)
+          .Case("GR8", ENCODING_VVVV)
+          .Case("GR16", ENCODING_VVVV)
+          .Case("GR32", ENCODING_VVVV)
+          .Case("GR64", ENCODING_VVVV)
+          .Case("FR32", ENCODING_VVVV)
+          .Case("FR128", ENCODING_VVVV)
+          .Case("FR64", ENCODING_VVVV)
+          .Case("VR128", ENCODING_VVVV)
+          .Case("VR256", ENCODING_VVVV)
+          .Case("FR16X", ENCODING_VVVV)
+          .Case("FR32X", ENCODING_VVVV)
+          .Case("FR64X", ENCODING_VVVV)
+          .Case("VR128X", ENCODING_VVVV)
+          .Case("VR256X", ENCODING_VVVV)
+          .Case("VR512", ENCODING_VVVV)
+          .Case("VK1", ENCODING_VVVV)
+          .Case("VK2", ENCODING_VVVV)
+          .Case("VK4", ENCODING_VVVV)
+          .Case("VK8", ENCODING_VVVV)
+          .Case("VK16", ENCODING_VVVV)
+          .Case("VK32", ENCODING_VVVV)
+          .Case("VK64", ENCODING_VVVV)
+          .Case("TILE", ENCODING_VVVV)
+          .Case("TILEPair", ENCODING_VVVV)
+          .Default(ENCODING_NONE);
+  // clang-format on
+  if (Encoding != ENCODING_NONE)
+    return Encoding;
+
+  errs() << "Unhandled VEX.vvvv register encoding " << Str << "\n";
   llvm_unreachable("Unhandled VEX.vvvv register encoding");
 }
 
 OperandEncoding
-RecognizableInstr::writemaskRegisterEncodingFromString(const std::string &s,
+RecognizableInstr::writemaskRegisterEncodingFromString(StringRef Str,
                                                        uint8_t OpSize) {
-  ENCODING("VK1WM", ENCODING_WRITEMASK)
-  ENCODING("VK2WM", ENCODING_WRITEMASK)
-  ENCODING("VK4WM", ENCODING_WRITEMASK)
-  ENCODING("VK8WM", ENCODING_WRITEMASK)
-  ENCODING("VK16WM", ENCODING_WRITEMASK)
-  ENCODING("VK32WM", ENCODING_WRITEMASK)
-  ENCODING("VK64WM", ENCODING_WRITEMASK)
-  errs() << "Unhandled mask register encoding " << s << "\n";
+  // clang-format off
+  auto Encoding =
+      StringSwitch<OperandEncoding>(Str)
+          .Case("VK1WM", ENCODING_WRITEMASK)
+          .Case("VK2WM", ENCODING_WRITEMASK)
+          .Case("VK4WM", ENCODING_WRITEMASK)
+          .Case("VK8WM", ENCODING_WRITEMASK)
+          .Case("VK16WM", ENCODING_WRITEMASK)
+          .Case("VK32WM", ENCODING_WRITEMASK)
+          .Case("VK64WM", ENCODING_WRITEMASK)
+          .Default(ENCODING_NONE);
+  // clang-format on
+
+  if (Encoding != ENCODING_NONE)
+    return Encoding;
+
+  errs() << "Unhandled mask register encoding " << Str << "\n";
   llvm_unreachable("Unhandled mask register encoding");
 }
 
-OperandEncoding
-RecognizableInstr::memoryEncodingFromString(const std::string &s,
-                                            uint8_t OpSize) {
-  ENCODING("i16mem", ENCODING_RM)
-  ENCODING("i32mem", ENCODING_RM)
-  ENCODING("i64mem", ENCODING_RM)
-  ENCODING("i8mem", ENCODING_RM)
-  ENCODING("shmem", ENCODING_RM)
-  ENCODING("ssmem", ENCODING_RM)
-  ENCODING("sdmem", ENCODING_RM)
-  ENCODING("f128mem", ENCODING_RM)
-  ENCODING("f256mem", ENCODING_RM)
-  ENCODING("f512mem", ENCODING_RM)
-  ENCODING("f64mem", ENCODING_RM)
-  ENCODING("f32mem", ENCODING_RM)
-  ENCODING("f16mem", ENCODING_RM)
-  ENCODING("i128mem", ENCODING_RM)
-  ENCODING("i256mem", ENCODING_RM)
-  ENCODING("i512mem", ENCODING_RM)
-  ENCODING("i512mem_GR16", ENCODING_RM)
-  ENCODING("i512mem_GR32", ENCODING_RM)
-  ENCODING("i512mem_GR64", ENCODING_RM)
-  ENCODING("f80mem", ENCODING_RM)
-  ENCODING("lea64_32mem", ENCODING_RM)
-  ENCODING("lea64mem", ENCODING_RM)
-  ENCODING("anymem", ENCODING_RM)
-  ENCODING("opaquemem", ENCODING_RM)
-  ENCODING("sibmem", ENCODING_SIB)
-  ENCODING("vx64mem", ENCODING_VSIB)
-  ENCODING("vx128mem", ENCODING_VSIB)
-  ENCODING("vx256mem", ENCODING_VSIB)
-  ENCODING("vy128mem", ENCODING_VSIB)
-  ENCODING("vy256mem", ENCODING_VSIB)
-  ENCODING("vx64xmem", ENCODING_VSIB)
-  ENCODING("vx128xmem", ENCODING_VSIB)
-  ENCODING("vx256xmem", ENCODING_VSIB)
-  ENCODING("vy128xmem", ENCODING_VSIB)
-  ENCODING("vy256xmem", ENCODING_VSIB)
-  ENCODING("vy512xmem", ENCODING_VSIB)
-  ENCODING("vz256mem", ENCODING_VSIB)
-  ENCODING("vz512mem", ENCODING_VSIB)
-  errs() << "Unhandled memory encoding " << s << "\n";
+OperandEncoding RecognizableInstr::memoryEncodingFromString(StringRef Str,
+                                                            uint8_t OpSize) {
+  // clang-format off
+  auto Encoding =
+      StringSwitch<OperandEncoding>(Str)
+          .Case("i16mem", ENCODING_RM)
+          .Case("i32mem", ENCODING_RM)
+          .Case("i64mem", ENCODING_RM)
+          .Case("i8mem", ENCODING_RM)
+          .Case("shmem", ENCODING_RM)
+          .Case("ssmem", ENCODING_RM)
+          .Case("sdmem", ENCODING_RM)
+          .Case("f128mem", ENCODING_RM)
+          .Case("f256mem", ENCODING_RM)
+          .Case("f512mem", ENCODING_RM)
+          .Case("f64mem", ENCODING_RM)
+          .Case("f32mem", ENCODING_RM)
+          .Case("f16mem", ENCODING_RM)
+          .Case("i128mem", ENCODING_RM)
+          .Case("i256mem", ENCODING_RM)
+          .Case("i512mem", ENCODING_RM)
+          .Case("i512mem_GR16", ENCODING_RM)
+          .Case("i512mem_GR32", ENCODING_RM)
+          .Case("i512mem_GR64", ENCODING_RM)
+          .Case("f80mem", ENCODING_RM)
+          .Case("lea64_8mem", ENCODING_RM)
+          .Case("lea64_16mem", ENCODING_RM)
+          .Case("lea64_32mem", ENCODING_RM)
+          .Case("lea64mem", ENCODING_RM)
+          .Case("anymem", ENCODING_RM)
+          .Case("opaquemem", ENCODING_RM)
+          .Case("sibmem", ENCODING_SIB)
+          .Case("vx32mem", ENCODING_VSIB)
+          .Case("vx64mem", ENCODING_VSIB)
+          .Case("vy32mem", ENCODING_VSIB)
+          .Case("vy64mem", ENCODING_VSIB)
+          .Case("vx32xmem", ENCODING_VSIB)
+          .Case("vx64xmem", ENCODING_VSIB)
+          .Case("vy32xmem", ENCODING_VSIB)
+          .Case("vy64xmem", ENCODING_VSIB)
+          .Case("vz32mem", ENCODING_VSIB)
+          .Case("vz64mem", ENCODING_VSIB)
+          .Default(ENCODING_NONE);
+  // clang-format on
+
+  if (Encoding != ENCODING_NONE)
+    return Encoding;
+
+  errs() << "Unhandled memory encoding " << Str << "\n";
   llvm_unreachable("Unhandled memory encoding");
 }
 
 OperandEncoding
-RecognizableInstr::relocationEncodingFromString(const std::string &s,
-                                                uint8_t OpSize) {
+RecognizableInstr::relocationEncodingFromString(StringRef Str, uint8_t OpSize) {
+  StringSwitch<OperandEncoding> Switch(Str);
+
   if (OpSize != X86Local::OpSize16) {
     // For instructions without an OpSize prefix, a declared 16-bit register or
     // immediate encoding is special.
-    ENCODING("i16imm", ENCODING_IW)
+    Switch.Case("i16imm", ENCODING_IW);
   }
-  ENCODING("i16imm", ENCODING_Iv)
-  ENCODING("i16i8imm", ENCODING_IB)
-  ENCODING("i32imm", ENCODING_Iv)
-  ENCODING("i32i8imm", ENCODING_IB)
-  ENCODING("i64i32imm", ENCODING_ID)
-  ENCODING("i64i8imm", ENCODING_IB)
-  ENCODING("i8imm", ENCODING_IB)
-  ENCODING("u8imm", ENCODING_IB)
-  ENCODING("i16u8imm", ENCODING_IB)
-  ENCODING("i32u8imm", ENCODING_IB)
-  ENCODING("i64u8imm", ENCODING_IB)
-  ENCODING("i64i32imm_brtarget", ENCODING_ID)
-  ENCODING("i16imm_brtarget", ENCODING_IW)
-  ENCODING("i32imm_brtarget", ENCODING_ID)
-  ENCODING("brtarget32", ENCODING_ID)
-  ENCODING("brtarget16", ENCODING_IW)
-  ENCODING("brtarget8", ENCODING_IB)
-  ENCODING("i64imm", ENCODING_IO)
-  ENCODING("offset16_8", ENCODING_Ia)
-  ENCODING("offset16_16", ENCODING_Ia)
-  ENCODING("offset16_32", ENCODING_Ia)
-  ENCODING("offset32_8", ENCODING_Ia)
-  ENCODING("offset32_16", ENCODING_Ia)
-  ENCODING("offset32_32", ENCODING_Ia)
-  ENCODING("offset32_64", ENCODING_Ia)
-  ENCODING("offset64_8", ENCODING_Ia)
-  ENCODING("offset64_16", ENCODING_Ia)
-  ENCODING("offset64_32", ENCODING_Ia)
-  ENCODING("offset64_64", ENCODING_Ia)
-  ENCODING("srcidx8", ENCODING_SI)
-  ENCODING("srcidx16", ENCODING_SI)
-  ENCODING("srcidx32", ENCODING_SI)
-  ENCODING("srcidx64", ENCODING_SI)
-  ENCODING("dstidx8", ENCODING_DI)
-  ENCODING("dstidx16", ENCODING_DI)
-  ENCODING("dstidx32", ENCODING_DI)
-  ENCODING("dstidx64", ENCODING_DI)
-  errs() << "Unhandled relocation encoding " << s << "\n";
+
+  // clang-format off
+  OperandEncoding Encoding =
+      Switch.Case("i16imm", ENCODING_Iv)
+          .Case("i16i8imm", ENCODING_IB)
+          .Case("i32imm", ENCODING_Iv)
+          .Case("i32i8imm", ENCODING_IB)
+          .Case("i64i32imm", ENCODING_ID)
+          .Case("i64i8imm", ENCODING_IB)
+          .Case("i8imm", ENCODING_IB)
+          .Case("u8imm", ENCODING_IB)
+          .Case("i16u8imm", ENCODING_IB)
+          .Case("i32u8imm", ENCODING_IB)
+          .Case("i64u8imm", ENCODING_IB)
+          .Case("i64i32imm_brtarget", ENCODING_ID)
+          .Case("i16imm_brtarget", ENCODING_IW)
+          .Case("i32imm_brtarget", ENCODING_ID)
+          .Case("i8imm_brtarget", ENCODING_IB)
+          .Case("brtarget32", ENCODING_ID)
+          .Case("brtarget16", ENCODING_IW)
+          .Case("brtarget8", ENCODING_IB)
+          .Case("i64imm", ENCODING_IO)
+          .Case("offset16_8", ENCODING_Ia)
+          .Case("offset16_16", ENCODING_Ia)
+          .Case("offset16_32", ENCODING_Ia)
+          .Case("offset32_8", ENCODING_Ia)
+          .Case("offset32_16", ENCODING_Ia)
+          .Case("offset32_32", ENCODING_Ia)
+          .Case("offset32_64", ENCODING_Ia)
+          .Case("offset64_8", ENCODING_Ia)
+          .Case("offset64_16", ENCODING_Ia)
+          .Case("offset64_32", ENCODING_Ia)
+          .Case("offset64_64", ENCODING_Ia)
+          .Case("srcidx8", ENCODING_SI)
+          .Case("srcidx16", ENCODING_SI)
+          .Case("srcidx32", ENCODING_SI)
+          .Case("srcidx64", ENCODING_SI)
+          .Case("dstidx8", ENCODING_DI)
+          .Case("dstidx16", ENCODING_DI)
+          .Case("dstidx32", ENCODING_DI)
+          .Case("dstidx64", ENCODING_DI)
+          .Default(ENCODING_NONE);
+  // clang-format on
+
+  if (Encoding != ENCODING_NONE)
+    return Encoding;
+
+  errs() << "Unhandled relocation encoding " << Str << "\n";
   llvm_unreachable("Unhandled relocation encoding");
 }
 
 OperandEncoding
-RecognizableInstr::opcodeModifierEncodingFromString(const std::string &s,
+RecognizableInstr::opcodeModifierEncodingFromString(StringRef Str,
                                                     uint8_t OpSize) {
-  ENCODING("GR32", ENCODING_Rv)
-  ENCODING("GR64", ENCODING_RO)
-  ENCODING("GR16", ENCODING_Rv)
-  ENCODING("GR8", ENCODING_RB)
-  ENCODING("ccode", ENCODING_CC)
-  errs() << "Unhandled opcode modifier encoding " << s << "\n";
+  // clang-format off
+  auto Encoding =
+      StringSwitch<OperandEncoding>(Str)
+          .Case("GR32", ENCODING_Rv)
+          .Case("GR64", ENCODING_RO)
+          .Case("GR16", ENCODING_Rv)
+          .Case("GR8", ENCODING_RB)
+          .Case("ccode", ENCODING_CC)
+          .Default(ENCODING_NONE);
+  // clang-format on
+  if (Encoding != ENCODING_NONE)
+    return Encoding;
+
+  errs() << "Unhandled opcode modifier encoding " << Str << "\n";
   llvm_unreachable("Unhandled opcode modifier encoding");
 }
-#undef ENCODING

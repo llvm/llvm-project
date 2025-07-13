@@ -30,8 +30,6 @@ def VCIX_XVW : VCIXType<0b1111>;
 // The payload and tsimm5 operands are all marked as ImmArg in the IR
 // intrinsic and will be target constant, so use TImmLeaf rather than ImmLeaf.
 class PayloadOp<int bitsNum> : RISCVOp, TImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);"> {
-  let ParserMatchClass = UImmAsmOperand<bitsNum>;
-  let DecoderMethod = "decodeUImmOperand<"# bitsNum # ">";
   let OperandType = "OPERAND_UIMM" # bitsNum;
 }
 
@@ -73,7 +71,7 @@ class RVInstVCCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Inst{11-7} = rd;
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let ElementsDependOn = EltDepsVLMask;
 }
@@ -97,7 +95,7 @@ class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Inst{11-7} = rd;
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let ElementsDependOn = EltDepsVLMask;
 }
@@ -162,29 +160,45 @@ multiclass CustomSiFiveVCIX<string suffix, VCIXType type,
                             DAGOperand InTyRd, DAGOperand InTyRs2,
                             DAGOperand InTyRs1> {
   let vm = 1 in
-  defm VC_ # NAME   : CustomSiFiveVCIXorVCIF<suffix, type, InTyRd, InTyRs2,
+  defm SF_VC_ # NAME   : CustomSiFiveVCIXorVCIF<suffix, type, InTyRd, InTyRs2,
                                              InTyRs1, 0>;
   let vm = 0 in
-  defm VC_V_ # NAME : CustomSiFiveVCIXorVCIF<suffix, type, VR, InTyRs2,
+  defm SF_VC_V_ # NAME : CustomSiFiveVCIXorVCIF<suffix, type, VR, InTyRs2,
                                              InTyRs1, 1>;
+}
+
+// For XSfvqmaccdod/qoq and XSfvfwmaccqqq
+class SiFiveVMACCScheds<string name> {
+  defvar n = !tolower(name);
+  defvar prefix = !if(!ne(!find(n, "fw"), -1), "FW", "Q");
+  defvar suffix = !if(!ne(!find(n, "2x8x2"), -1), "DOD",
+                      !if(!eq(prefix, "Q"), "QOQ", "QQQ"));
+
+  string read = "ReadSF_V" # prefix # "MACC_" # suffix;
+  string write = "WriteSF_V" # prefix # "MACC_" # suffix;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class CustomSiFiveVMACC<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : RVInstVCCustom2<funct6{5-2}, opv.Value, (outs VR:$rd), (ins VR:$rs1, VR:$rs2),
-                      opcodestr, "$rd, $rs1, $rs2"> {
+                      opcodestr, "$rd, $rs1, $rs2">,
+      SchedTernaryMC<SiFiveVMACCScheds<NAME>.write,
+                     SiFiveVMACCScheds<NAME>.read,
+                     SiFiveVMACCScheds<NAME>.read,
+                     SiFiveVMACCScheds<NAME>.read> {
   let vm = 1;
   let funct6_lo2 = funct6{1-0};
 }
 }
 
 class CustomSiFiveVFNRCLIP<bits<6> funct6, RISCVVFormat opv, string opcodestr>
-    : VALUVF<funct6, opv, opcodestr> {
+    : VALUVF<funct6, opv, opcodestr>,
+      SchedBinaryMC<"WriteSF_VFNRClipV", "ReadSF_VFNRClipV", "ReadSF_VFNRClipF"> {
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 }
 
 let Predicates = [HasVendorXSfvcp], mayLoad = 0, mayStore = 0,
-    hasSideEffects = 1, hasNoSchedulingInfo = 1, DecoderNamespace = "XSfvcp" in {
+    hasSideEffects = 1, hasNoSchedulingInfo = 1, DecoderNamespace = "XSfvector" in {
   defm X   : CustomSiFiveVCIX<"x",   VCIX_X,   uimm5, uimm5, GPR>,   Sched<[]>;
   defm I   : CustomSiFiveVCIX<"i",   VCIX_X,   uimm5, uimm5, simm5>, Sched<[]>;
   defm XV  : CustomSiFiveVCIX<"xv",  VCIX_XV,  uimm5, VR,    GPR>,   Sched<[]>;
@@ -201,31 +215,31 @@ let Predicates = [HasVendorXSfvcp], mayLoad = 0, mayStore = 0,
   defm FVW : CustomSiFiveVCIX<"fvw", VCIX_XVW, VR,    VR,    FPR32>, Sched<[]>;
 }
 
-let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvqmaccdod",
-    DestEEW = EEWSEWx4 in {
-  def VQMACCU_2x8x2  : CustomSiFiveVMACC<0b101100, OPMVV, "sf.vqmaccu.2x8x2">;
-  def VQMACC_2x8x2   : CustomSiFiveVMACC<0b101101, OPMVV, "sf.vqmacc.2x8x2">;
-  def VQMACCUS_2x8x2 : CustomSiFiveVMACC<0b101110, OPMVV, "sf.vqmaccus.2x8x2">;
-  def VQMACCSU_2x8x2 : CustomSiFiveVMACC<0b101111, OPMVV, "sf.vqmaccsu.2x8x2">;
+let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvector",
+    DestEEW = EEWSEWx4, RVVConstraint=VS2Constraint in {
+  def SF_VQMACCU_2x8x2  : CustomSiFiveVMACC<0b101100, OPMVV, "sf.vqmaccu.2x8x2">;
+  def SF_VQMACC_2x8x2   : CustomSiFiveVMACC<0b101101, OPMVV, "sf.vqmacc.2x8x2">;
+  def SF_VQMACCUS_2x8x2 : CustomSiFiveVMACC<0b101110, OPMVV, "sf.vqmaccus.2x8x2">;
+  def SF_VQMACCSU_2x8x2 : CustomSiFiveVMACC<0b101111, OPMVV, "sf.vqmaccsu.2x8x2">;
 }
 
-let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvqmaccqoq",
-    DestEEW = EEWSEWx4 in {
-  def VQMACCU_4x8x4  : CustomSiFiveVMACC<0b111100, OPMVV, "sf.vqmaccu.4x8x4">;
-  def VQMACC_4x8x4   : CustomSiFiveVMACC<0b111101, OPMVV, "sf.vqmacc.4x8x4">;
-  def VQMACCUS_4x8x4 : CustomSiFiveVMACC<0b111110, OPMVV, "sf.vqmaccus.4x8x4">;
-  def VQMACCSU_4x8x4 : CustomSiFiveVMACC<0b111111, OPMVV, "sf.vqmaccsu.4x8x4">;
+let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvector",
+    DestEEW = EEWSEWx4, RVVConstraint=WidenVNoMask in {
+  def SF_VQMACCU_4x8x4  : CustomSiFiveVMACC<0b111100, OPMVV, "sf.vqmaccu.4x8x4">;
+  def SF_VQMACC_4x8x4   : CustomSiFiveVMACC<0b111101, OPMVV, "sf.vqmacc.4x8x4">;
+  def SF_VQMACCUS_4x8x4 : CustomSiFiveVMACC<0b111110, OPMVV, "sf.vqmaccus.4x8x4">;
+  def SF_VQMACCSU_4x8x4 : CustomSiFiveVMACC<0b111111, OPMVV, "sf.vqmaccsu.4x8x4">;
 }
 
-let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvfwmaccqqq",
-    DestEEW = EEWSEWx2 in {
-  def VFWMACC_4x4x4 : CustomSiFiveVMACC<0b111100, OPFVV, "sf.vfwmacc.4x4x4">;
+let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvector",
+    DestEEW = EEWSEWx2, RVVConstraint=WidenVNoMask in {
+  def SF_VFWMACC_4x4x4 : CustomSiFiveVMACC<0b111100, OPFVV, "sf.vfwmacc.4x4x4">;
 }
 
-let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvfnrclipxfqf",
-    Uses = [FRM] in {
-  def VFNRCLIP_XU_F_QF : CustomSiFiveVFNRCLIP<0b100010, OPFVF, "sf.vfnrclip.xu.f.qf">;
-  def VFNRCLIP_X_F_QF : CustomSiFiveVFNRCLIP<0b100011, OPFVF, "sf.vfnrclip.x.f.qf">;
+let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvector",
+    Uses = [FRM, VL, VTYPE] in {
+  def SF_VFNRCLIP_XU_F_QF : CustomSiFiveVFNRCLIP<0b100010, OPFVF, "sf.vfnrclip.xu.f.qf">;
+  def SF_VFNRCLIP_X_F_QF : CustomSiFiveVFNRCLIP<0b100011, OPFVF, "sf.vfnrclip.x.f.qf">;
 }
 
 class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class> :
@@ -238,7 +252,6 @@ class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
@@ -251,7 +264,6 @@ class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -265,7 +277,6 @@ class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
@@ -278,7 +289,6 @@ class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -292,7 +302,6 @@ class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -307,21 +316,20 @@ class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasSEWOp = 1;
   let hasSideEffects = 0;
   let Constraints = "$rd = $rs3";
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 multiclass VPseudoVC_X<LMULInfo m, DAGOperand RS1Class,
                        Operand OpClass = payload2> {
   let VLMul = m.value in {
     let Defs = [SF_VCIX_STATE], Uses = [SF_VCIX_STATE] in {
-      def "PseudoVC_" # NAME # "_SE_" # m.MX
+      def "PseudoSF_VC_" # NAME # "_SE_" # m.MX
         : VPseudoVC_X<OpClass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
-      def "PseudoVC_V_" # NAME # "_SE_" # m.MX
+      def "PseudoSF_VC_V_" # NAME # "_SE_" # m.MX
         : VPseudoVC_V_X<OpClass, m.vrclass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
     }
-    def "PseudoVC_V_" # NAME # "_" # m.MX
+    def "PseudoSF_VC_V_" # NAME # "_" # m.MX
       : VPseudoVC_V_X<OpClass, m.vrclass, RS1Class>,
         Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
   }
@@ -331,14 +339,14 @@ multiclass VPseudoVC_XV<LMULInfo m, DAGOperand RS1Class,
                         Operand OpClass = payload2> {
   let VLMul = m.value in {
     let Defs = [SF_VCIX_STATE], Uses = [SF_VCIX_STATE] in {
-      def "PseudoVC_" # NAME # "_SE_" # m.MX
+      def "PseudoSF_VC_" # NAME # "_SE_" # m.MX
         : VPseudoVC_XV<OpClass, m.vrclass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
-      def "PseudoVC_V_" # NAME # "_SE_" # m.MX
+      def "PseudoSF_VC_V_" # NAME # "_SE_" # m.MX
         : VPseudoVC_V_XV<OpClass, m.vrclass, m.vrclass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
     }
-    def "PseudoVC_V_" # NAME # "_" # m.MX
+    def "PseudoSF_VC_V_" # NAME # "_" # m.MX
       : VPseudoVC_V_XV<OpClass, m.vrclass, m.vrclass, RS1Class>,
         Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
   }
@@ -348,14 +356,14 @@ multiclass VPseudoVC_XVV<LMULInfo m, DAGOperand RS1Class,
                          Operand OpClass = payload2> {
   let VLMul = m.value in {
     let Defs = [SF_VCIX_STATE], Uses = [SF_VCIX_STATE] in {
-      def "PseudoVC_" # NAME # "_SE_" # m.MX
+      def "PseudoSF_VC_" # NAME # "_SE_" # m.MX
         : VPseudoVC_XVV<OpClass, m.vrclass, m.vrclass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
-      def "PseudoVC_V_" # NAME # "_SE_" # m.MX
+      def "PseudoSF_VC_V_" # NAME # "_SE_" # m.MX
         : VPseudoVC_V_XVV<OpClass, m.vrclass, m.vrclass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
     }
-    def "PseudoVC_V_" # NAME # "_" # m.MX
+    def "PseudoSF_VC_V_" # NAME # "_" # m.MX
       : VPseudoVC_V_XVV<OpClass, m.vrclass, m.vrclass, RS1Class>,
         Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
   }
@@ -365,43 +373,47 @@ multiclass VPseudoVC_XVW<LMULInfo m, DAGOperand RS1Class,
                          Operand OpClass = payload2> {
   let VLMul = m.value in {
     let Defs = [SF_VCIX_STATE], Uses = [SF_VCIX_STATE] in
-    def "PseudoVC_" # NAME # "_SE_" # m.MX
+    def "PseudoSF_VC_" # NAME # "_SE_" # m.MX
       : VPseudoVC_XVV<OpClass, m.wvrclass, m.vrclass, RS1Class>,
         Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
     let Constraints = "@earlyclobber $rd, $rd = $rs3" in {
       let Defs = [SF_VCIX_STATE], Uses = [SF_VCIX_STATE] in
-      def "PseudoVC_V_" # NAME # "_SE_" # m.MX
+      def "PseudoSF_VC_V_" # NAME # "_SE_" # m.MX
         : VPseudoVC_V_XVV<OpClass, m.wvrclass, m.vrclass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
-      def "PseudoVC_V_" # NAME # "_" # m.MX
+      def "PseudoSF_VC_V_" # NAME # "_" # m.MX
         : VPseudoVC_V_XVV<OpClass, m.wvrclass, m.vrclass, RS1Class>,
           Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
     }
   }
 }
 
-multiclass VPseudoSiFiveVMACC<string mx, VReg vd_type, VReg vs2_type,
-                              string Constraint = ""> {
+multiclass VPseudoSiFiveVMACC<string mx, VReg vd_type, VReg vs2_type> {
+  defvar SchedWriteName = SiFiveVMACCScheds<NAME>.write;
+  defvar SchedReadName = SiFiveVMACCScheds<NAME>.read;
   def "Pseudo" # NAME # "_" # mx
-      : VPseudoTernaryNoMaskWithPolicy<vd_type, V_M1.vrclass, vs2_type, Constraint>;
+      : VPseudoTernaryNoMaskWithPolicy<vd_type, V_M1.vrclass, vs2_type,
+                                       "@earlyclobber $rd">,
+        SchedTernary<SchedWriteName, SchedReadName, SchedReadName,
+                     SchedReadName, mx>;
 }
 
-multiclass VPseudoSiFiveVQMACCDOD<string Constraint = ""> {
+multiclass VPseudoSiFiveVQMACCDOD {
   foreach m = MxListVF8 in
     let VLMul = m.value in
-    defm NAME : VPseudoSiFiveVMACC<m.MX, m.vrclass, m.vrclass, Constraint>;
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.vrclass, m.vrclass>;
 }
 
-multiclass VPseudoSiFiveVQMACCQOQ<string Constraint = ""> {
+multiclass VPseudoSiFiveVQMACCQOQ {
   foreach m = [V_MF2, V_M1, V_M2, V_M4] in
     let VLMul = m.value in
-    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass>;
 }
 
-multiclass VPseudoSiFiveVFWMACC<string Constraint = ""> {
-  foreach m = MxListVF2 in
+multiclass VPseudoSiFiveVFWMACC {
+  foreach m = MxListFW in
     let VLMul = m.value in
-    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass>;
 }
 
 multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {
@@ -411,7 +423,10 @@ multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {
                                                        MxListVF4[i].vrclass,
                                                        FPR32, MxListW[i],
                                                        Constraint, /*sew*/0,
-                                                       UsesVXRM=0>;
+                                                       UsesVXRM=0>,
+                             SchedBinary<"WriteSF_VFNRClipV", "ReadSF_VFNRClipV",
+                                         "ReadSF_VFNRClipF",
+                                         MxListW[i].MX>;
 }
 
 let Predicates = [HasVendorXSfvcp] in {
@@ -443,26 +458,26 @@ let Predicates = [HasVendorXSfvcp] in {
 }
 
 let Predicates = [HasVendorXSfvqmaccdod] in {
-  defm VQMACCU_2x8x2  : VPseudoSiFiveVQMACCDOD;
-  defm VQMACC_2x8x2   : VPseudoSiFiveVQMACCDOD;
-  defm VQMACCUS_2x8x2 : VPseudoSiFiveVQMACCDOD;
-  defm VQMACCSU_2x8x2 : VPseudoSiFiveVQMACCDOD;
+  defm SF_VQMACCU_2x8x2  : VPseudoSiFiveVQMACCDOD;
+  defm SF_VQMACC_2x8x2   : VPseudoSiFiveVQMACCDOD;
+  defm SF_VQMACCUS_2x8x2 : VPseudoSiFiveVQMACCDOD;
+  defm SF_VQMACCSU_2x8x2 : VPseudoSiFiveVQMACCDOD;
 }
 
 let Predicates = [HasVendorXSfvqmaccqoq] in {
-  defm VQMACCU_4x8x4  : VPseudoSiFiveVQMACCQOQ;
-  defm VQMACC_4x8x4   : VPseudoSiFiveVQMACCQOQ;
-  defm VQMACCUS_4x8x4 : VPseudoSiFiveVQMACCQOQ;
-  defm VQMACCSU_4x8x4 : VPseudoSiFiveVQMACCQOQ;
+  defm SF_VQMACCU_4x8x4  : VPseudoSiFiveVQMACCQOQ;
+  defm SF_VQMACC_4x8x4   : VPseudoSiFiveVQMACCQOQ;
+  defm SF_VQMACCUS_4x8x4 : VPseudoSiFiveVQMACCQOQ;
+  defm SF_VQMACCSU_4x8x4 : VPseudoSiFiveVQMACCQOQ;
 }
 
 let Predicates = [HasVendorXSfvfwmaccqqq] in {
-  defm VFWMACC_4x4x4 : VPseudoSiFiveVFWMACC;
+  defm SF_VFWMACC_4x4x4 : VPseudoSiFiveVFWMACC;
 }
 
 let Predicates = [HasVendorXSfvfnrclipxfqf] in {
-  defm VFNRCLIP_XU_F_QF : VPseudoSiFiveVFNRCLIP;
-  defm VFNRCLIP_X_F_QF : VPseudoSiFiveVFNRCLIP;
+  defm SF_VFNRCLIP_XU_F_QF : VPseudoSiFiveVFNRCLIP;
+  defm SF_VFNRCLIP_X_F_QF : VPseudoSiFiveVFNRCLIP;
 }
 
 // SDNode
@@ -503,32 +518,32 @@ def SDT_SF_VC_V_XVW : SDTypeProfile<1, 5, [SDTCisVec<0>,
                                            SDTCisVec<3>,
                                            SDTCisSameAs<1, 5>]>;
 
-def sf_vc_v_x_se : SDNode<"RISCVISD::SF_VC_V_X_SE", SDT_SF_VC_V_X, [SDNPHasChain]>;
-def sf_vc_v_i_se : SDNode<"RISCVISD::SF_VC_V_I_SE", SDT_SF_VC_V_X, [SDNPHasChain]>;
-def sf_vc_vv_se : SDNode<"RISCVISD::SF_VC_VV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
-def sf_vc_xv_se : SDNode<"RISCVISD::SF_VC_XV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
-def sf_vc_iv_se : SDNode<"RISCVISD::SF_VC_IV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
-def sf_vc_fv_se : SDNode<"RISCVISD::SF_VC_FV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
-def sf_vc_v_vv_se : SDNode<"RISCVISD::SF_VC_V_VV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
-def sf_vc_v_xv_se : SDNode<"RISCVISD::SF_VC_V_XV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
-def sf_vc_v_iv_se : SDNode<"RISCVISD::SF_VC_V_IV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
-def sf_vc_v_fv_se : SDNode<"RISCVISD::SF_VC_V_FV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
-def sf_vc_vvv_se : SDNode<"RISCVISD::SF_VC_VVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
-def sf_vc_xvv_se : SDNode<"RISCVISD::SF_VC_XVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
-def sf_vc_ivv_se : SDNode<"RISCVISD::SF_VC_IVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
-def sf_vc_fvv_se : SDNode<"RISCVISD::SF_VC_FVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
-def sf_vc_v_vvv_se : SDNode<"RISCVISD::SF_VC_V_VVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
-def sf_vc_v_xvv_se : SDNode<"RISCVISD::SF_VC_V_XVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
-def sf_vc_v_ivv_se : SDNode<"RISCVISD::SF_VC_V_IVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
-def sf_vc_v_fvv_se : SDNode<"RISCVISD::SF_VC_V_FVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
-def sf_vc_vvw_se : SDNode<"RISCVISD::SF_VC_VVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
-def sf_vc_xvw_se : SDNode<"RISCVISD::SF_VC_XVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
-def sf_vc_ivw_se : SDNode<"RISCVISD::SF_VC_IVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
-def sf_vc_fvw_se : SDNode<"RISCVISD::SF_VC_FVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
-def sf_vc_v_vvw_se : SDNode<"RISCVISD::SF_VC_V_VVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
-def sf_vc_v_xvw_se : SDNode<"RISCVISD::SF_VC_V_XVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
-def sf_vc_v_ivw_se : SDNode<"RISCVISD::SF_VC_V_IVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
-def sf_vc_v_fvw_se : SDNode<"RISCVISD::SF_VC_V_FVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
+def sf_vc_v_x_se : RVSDNode<"SF_VC_V_X_SE", SDT_SF_VC_V_X, [SDNPHasChain]>;
+def sf_vc_v_i_se : RVSDNode<"SF_VC_V_I_SE", SDT_SF_VC_V_X, [SDNPHasChain]>;
+def sf_vc_vv_se : RVSDNode<"SF_VC_VV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
+def sf_vc_xv_se : RVSDNode<"SF_VC_XV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
+def sf_vc_iv_se : RVSDNode<"SF_VC_IV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
+def sf_vc_fv_se : RVSDNode<"SF_VC_FV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
+def sf_vc_v_vv_se : RVSDNode<"SF_VC_V_VV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
+def sf_vc_v_xv_se : RVSDNode<"SF_VC_V_XV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
+def sf_vc_v_iv_se : RVSDNode<"SF_VC_V_IV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
+def sf_vc_v_fv_se : RVSDNode<"SF_VC_V_FV_SE", SDT_SF_VC_V_XV, [SDNPHasChain]>;
+def sf_vc_vvv_se : RVSDNode<"SF_VC_VVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
+def sf_vc_xvv_se : RVSDNode<"SF_VC_XVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
+def sf_vc_ivv_se : RVSDNode<"SF_VC_IVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
+def sf_vc_fvv_se : RVSDNode<"SF_VC_FVV_SE", SDT_SF_VC_XVV, [SDNPHasChain]>;
+def sf_vc_v_vvv_se : RVSDNode<"SF_VC_V_VVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
+def sf_vc_v_xvv_se : RVSDNode<"SF_VC_V_XVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
+def sf_vc_v_ivv_se : RVSDNode<"SF_VC_V_IVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
+def sf_vc_v_fvv_se : RVSDNode<"SF_VC_V_FVV_SE", SDT_SF_VC_V_XVV, [SDNPHasChain]>;
+def sf_vc_vvw_se : RVSDNode<"SF_VC_VVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
+def sf_vc_xvw_se : RVSDNode<"SF_VC_XVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
+def sf_vc_ivw_se : RVSDNode<"SF_VC_IVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
+def sf_vc_fvw_se : RVSDNode<"SF_VC_FVW_SE", SDT_SF_VC_XVW, [SDNPHasChain]>;
+def sf_vc_v_vvw_se : RVSDNode<"SF_VC_V_VVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
+def sf_vc_v_xvw_se : RVSDNode<"SF_VC_V_XVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
+def sf_vc_v_ivw_se : RVSDNode<"SF_VC_V_IVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
+def sf_vc_v_fvw_se : RVSDNode<"SF_VC_V_FVW_SE", SDT_SF_VC_V_XVW, [SDNPHasChain]>;
 
 class VPatVC_OP4_ISD<SDPatternOperator op,
                      string inst,
@@ -668,11 +683,11 @@ class VPatVC_V_OP3<string intrinsic_name,
 multiclass VPatVC_X<string intrinsic_suffix, string instruction_suffix,
                     VTypeInfo vti, ValueType type, DAGOperand kind> {
   def : VPatVC_V_OP3_ISD<!cast<SDPatternOperator>("sf_vc_v_" # intrinsic_suffix # "_se"),
-                         "PseudoVC_V_" # instruction_suffix # "_SE_" # vti.LMul.MX,
+                         "PseudoSF_VC_V_" # instruction_suffix # "_SE_" # vti.LMul.MX,
                          vti.Vector, XLenVT, type, vti.Log2SEW,
                          payload5, kind>;
   def : VPatVC_V_OP3<"int_riscv_sf_vc_v_" # intrinsic_suffix,
-                     "PseudoVC_V_" # instruction_suffix # "_" # vti.LMul.MX,
+                     "PseudoSF_VC_V_" # instruction_suffix # "_" # vti.LMul.MX,
                      vti.Vector, XLenVT, type, vti.Log2SEW,
                      payload5, kind>;
 }
@@ -681,15 +696,15 @@ multiclass VPatVC_XV<string intrinsic_suffix, string instruction_suffix,
                      VTypeInfo vti, ValueType type, DAGOperand kind,
                      Operand op1_kind = payload2> {
   def : VPatVC_OP4_ISD<!cast<SDPatternOperator>("sf_vc_" # intrinsic_suffix # "_se"),
-                   "PseudoVC_" # instruction_suffix # "_SE_" # vti.LMul.MX,
+                   "PseudoSF_VC_" # instruction_suffix # "_SE_" # vti.LMul.MX,
                    XLenVT, vti.Vector, type, vti.Log2SEW,
                    payload5, vti.RegClass, kind, op1_kind>;
   def : VPatVC_V_OP3_ISD<!cast<SDPatternOperator>("sf_vc_v_" # intrinsic_suffix # "_se"),
-                         "PseudoVC_V_" # instruction_suffix # "_SE_" # vti.LMul.MX,
+                         "PseudoSF_VC_V_" # instruction_suffix # "_SE_" # vti.LMul.MX,
                          vti.Vector, vti.Vector, type, vti.Log2SEW,
                          vti.RegClass, kind, op1_kind>;
   def : VPatVC_V_OP3<"int_riscv_sf_vc_v_" # intrinsic_suffix,
-                     "PseudoVC_V_" # instruction_suffix # "_" # vti.LMul.MX,
+                     "PseudoSF_VC_V_" # instruction_suffix # "_" # vti.LMul.MX,
                      vti.Vector, vti.Vector, type, vti.Log2SEW,
                      vti.RegClass, kind, op1_kind>;
 }
@@ -698,15 +713,15 @@ multiclass VPatVC_XVV<string intrinsic_suffix, string instruction_suffix,
                       VTypeInfo wti, VTypeInfo vti, ValueType type, DAGOperand kind,
                       Operand op1_kind = payload2> {
   def : VPatVC_OP4_ISD<!cast<SDPatternOperator>("sf_vc_" # intrinsic_suffix # "_se"),
-                   "PseudoVC_" # instruction_suffix # "_SE_" # vti.LMul.MX,
+                   "PseudoSF_VC_" # instruction_suffix # "_SE_" # vti.LMul.MX,
                    wti.Vector, vti.Vector, type, vti.Log2SEW,
                    wti.RegClass, vti.RegClass, kind, op1_kind>;
   def : VPatVC_V_OP4_ISD<!cast<SDPatternOperator>("sf_vc_v_" # intrinsic_suffix # "_se"),
-                     "PseudoVC_V_" # instruction_suffix # "_SE_" # vti.LMul.MX,
+                     "PseudoSF_VC_V_" # instruction_suffix # "_SE_" # vti.LMul.MX,
                      wti.Vector, wti.Vector, vti.Vector, type, vti.Log2SEW,
                      wti.RegClass, vti.RegClass, kind, op1_kind>;
   def : VPatVC_V_OP4<"int_riscv_sf_vc_v_" # intrinsic_suffix,
-                     "PseudoVC_V_" # instruction_suffix # "_" # vti.LMul.MX,
+                     "PseudoSF_VC_V_" # instruction_suffix # "_" # vti.LMul.MX,
                      wti.Vector, wti.Vector, vti.Vector, type, vti.Log2SEW,
                      wti.RegClass, vti.RegClass, kind, op1_kind>;
 }
@@ -818,31 +833,31 @@ let Predicates = [HasVendorXSfvcp] in {
 }
 
 let Predicates = [HasVendorXSfvqmaccdod] in {
-  defm : VPatVQMACCDOD<"vqmaccu_2x8x2", "VQMACCU", "2x8x2">;
-  defm : VPatVQMACCDOD<"vqmacc_2x8x2", "VQMACC", "2x8x2">;
-  defm : VPatVQMACCDOD<"vqmaccus_2x8x2", "VQMACCUS", "2x8x2">;
-  defm : VPatVQMACCDOD<"vqmaccsu_2x8x2", "VQMACCSU", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmaccu_2x8x2", "SF_VQMACCU", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmacc_2x8x2", "SF_VQMACC", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmaccus_2x8x2", "SF_VQMACCUS", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmaccsu_2x8x2", "SF_VQMACCSU", "2x8x2">;
 }
 
 let Predicates = [HasVendorXSfvqmaccqoq] in {
-  defm : VPatVQMACCQOQ<"vqmaccu_4x8x4", "VQMACCU", "4x8x4">;
-  defm : VPatVQMACCQOQ<"vqmacc_4x8x4", "VQMACC", "4x8x4">;
-  defm : VPatVQMACCQOQ<"vqmaccus_4x8x4", "VQMACCUS", "4x8x4">;
-  defm : VPatVQMACCQOQ<"vqmaccsu_4x8x4", "VQMACCSU", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmaccu_4x8x4", "SF_VQMACCU", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmacc_4x8x4", "SF_VQMACC", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmaccus_4x8x4", "SF_VQMACCUS", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmaccsu_4x8x4", "SF_VQMACCSU", "4x8x4">;
 }
 
 let Predicates = [HasVendorXSfvfwmaccqqq] in {
-  defm : VPatVFWMACC<"vfwmacc_4x4x4", "VFWMACC", "4x4x4">;
+  defm : VPatVFWMACC<"vfwmacc_4x4x4", "SF_VFWMACC", "4x4x4">;
 }
 
 let Predicates = [HasVendorXSfvfnrclipxfqf] in {
-  defm : VPatVFNRCLIP<"vfnrclip_xu_f_qf", "VFNRCLIP_XU_F_QF">;
-  defm : VPatVFNRCLIP<"vfnrclip_x_f_qf", "VFNRCLIP_X_F_QF">;
+  defm : VPatVFNRCLIP<"vfnrclip_xu_f_qf", "SF_VFNRCLIP_XU_F_QF">;
+  defm : VPatVFNRCLIP<"vfnrclip_x_f_qf", "SF_VFNRCLIP_X_F_QF">;
 }
 
 let Predicates = [HasVendorXSiFivecdiscarddlone] in {
   let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
-      DecoderNamespace = "XSiFivecdiscarddlone" in
+      DecoderNamespace = "XSfsystem" in
   def SF_CDISCARD_D_L1
       : RVInstIUnary<0b111111000010, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
                      "sf.cdiscard.d.l1", "$rs1">, Sched<[]> {
@@ -853,7 +868,7 @@ let Predicates = [HasVendorXSiFivecdiscarddlone] in {
 
 let Predicates = [HasVendorXSiFivecflushdlone] in {
   let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
-      DecoderNamespace = "XSiFivecflushdlone" in
+      DecoderNamespace = "XSfsystem" in
   def SF_CFLUSH_D_L1
       : RVInstIUnary<0b111111000000, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
                      "sf.cflush.d.l1", "$rs1">, Sched<[]> {
@@ -865,9 +880,9 @@ let Predicates = [HasVendorXSiFivecflushdlone] in {
 let Predicates = [HasVendorXSfcease] in {
   let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
       DecoderNamespace = "XSfcease" in
-  def SF_CEASE : RVInstIUnary<0b001100000101, 0b000, OPC_SYSTEM, (outs), (ins),
-                              "sf.cease", "">, Sched<[]> {
-    let rs1 = 0b00000;
+  def SF_CEASE : Priv<"sf.cease", 0b0011000>, Sched<[]> {
     let rd = 0b00000;
+    let rs1 = 0b00000;
+    let rs2 = 0b00101;
 }
 }

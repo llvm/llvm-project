@@ -72,6 +72,15 @@ static bool isValidSwiftErrorResultType(QualType Ty) {
   return isValidSwiftContextType(Ty);
 }
 
+static bool isValidSwiftContextName(StringRef ContextName) {
+  // ContextName might be qualified, e.g. 'MyNamespace.MyStruct'.
+  SmallVector<StringRef, 1> ContextNameComponents;
+  ContextName.split(ContextNameComponents, '.');
+  return all_of(ContextNameComponents, [&](StringRef Component) {
+    return isValidAsciiIdentifier(Component);
+  });
+}
+
 void SemaSwift::handleAttrAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.isInvalid() || AL.isUsedAsTypeAttr())
     return;
@@ -148,8 +157,8 @@ void SemaSwift::handleError(Decl *D, const ParsedAttr &AL) {
       return true;
 
     S.Diag(AL.getLoc(), diag::err_attr_swift_error_return_type)
-        << AL << AL.getArgAsIdent(0)->Ident->getName() << isa<ObjCMethodDecl>(D)
-        << /*pointer*/ 1;
+        << AL << AL.getArgAsIdent(0)->getIdentifierInfo()->getName()
+        << isa<ObjCMethodDecl>(D) << /*pointer*/ 1;
     return false;
   };
 
@@ -159,8 +168,8 @@ void SemaSwift::handleError(Decl *D, const ParsedAttr &AL) {
       return true;
 
     S.Diag(AL.getLoc(), diag::err_attr_swift_error_return_type)
-        << AL << AL.getArgAsIdent(0)->Ident->getName() << isa<ObjCMethodDecl>(D)
-        << /*integral*/ 0;
+        << AL << AL.getArgAsIdent(0)->getIdentifierInfo()->getName()
+        << isa<ObjCMethodDecl>(D) << /*integral*/ 0;
     return false;
   };
 
@@ -169,10 +178,10 @@ void SemaSwift::handleError(Decl *D, const ParsedAttr &AL) {
 
   IdentifierLoc *Loc = AL.getArgAsIdent(0);
   SwiftErrorAttr::ConventionKind Convention;
-  if (!SwiftErrorAttr::ConvertStrToConventionKind(Loc->Ident->getName(),
-                                                  Convention)) {
+  if (!SwiftErrorAttr::ConvertStrToConventionKind(
+          Loc->getIdentifierInfo()->getName(), Convention)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
-        << AL << Loc->Ident;
+        << AL << Loc->getIdentifierInfo();
     return;
   }
 
@@ -287,10 +296,10 @@ static void checkSwiftAsyncErrorBlock(Sema &S, Decl *D,
 void SemaSwift::handleAsyncError(Decl *D, const ParsedAttr &AL) {
   IdentifierLoc *IDLoc = AL.getArgAsIdent(0);
   SwiftAsyncErrorAttr::ConventionKind ConvKind;
-  if (!SwiftAsyncErrorAttr::ConvertStrToConventionKind(IDLoc->Ident->getName(),
-                                                       ConvKind)) {
+  if (!SwiftAsyncErrorAttr::ConvertStrToConventionKind(
+          IDLoc->getIdentifierInfo()->getName(), ConvKind)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
-        << AL << IDLoc->Ident;
+        << AL << IDLoc->getIdentifierInfo();
     return;
   }
 
@@ -356,11 +365,11 @@ static bool validateSwiftFunctionName(Sema &S, const ParsedAttr &AL,
 
   // Split at the first '.', if it exists, which separates the context name
   // from the base name.
-  std::tie(ContextName, BaseName) = BaseName.split('.');
+  std::tie(ContextName, BaseName) = BaseName.rsplit('.');
   if (BaseName.empty()) {
     BaseName = ContextName;
     ContextName = StringRef();
-  } else if (ContextName.empty() || !isValidAsciiIdentifier(ContextName)) {
+  } else if (ContextName.empty() || !isValidSwiftContextName(ContextName)) {
     S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
         << AL << /*context*/ 1;
     return false;
@@ -584,11 +593,11 @@ bool SemaSwift::DiagnoseName(Decl *D, StringRef Name, SourceLocation Loc,
              !IsAsync) {
     StringRef ContextName, BaseName;
 
-    std::tie(ContextName, BaseName) = Name.split('.');
+    std::tie(ContextName, BaseName) = Name.rsplit('.');
     if (BaseName.empty()) {
       BaseName = ContextName;
       ContextName = StringRef();
-    } else if (!isValidAsciiIdentifier(ContextName)) {
+    } else if (!isValidSwiftContextName(ContextName)) {
       Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
           << AL << /*context*/ 1;
       return false;
@@ -643,15 +652,15 @@ void SemaSwift::handleNewType(Decl *D, const ParsedAttr &AL) {
   }
 
   SwiftNewTypeAttr::NewtypeKind Kind;
-  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
+  IdentifierInfo *II = AL.getArgAsIdent(0)->getIdentifierInfo();
   if (!SwiftNewTypeAttr::ConvertStrToNewtypeKind(II->getName(), Kind)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << II;
     return;
   }
 
   if (!isa<TypedefNameDecl>(D)) {
-    Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
-        << AL << AL.isRegularKeywordAttribute() << "typedefs";
+    Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedTypedef;
     return;
   }
 
@@ -667,7 +676,7 @@ void SemaSwift::handleAsyncAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   SwiftAsyncAttr::Kind Kind;
-  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
+  IdentifierInfo *II = AL.getArgAsIdent(0)->getIdentifierInfo();
   if (!SwiftAsyncAttr::ConvertStrToKind(II->getName(), Kind)) {
     Diag(AL.getLoc(), diag::err_swift_async_no_access) << AL << II;
     return;

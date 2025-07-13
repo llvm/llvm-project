@@ -59,6 +59,10 @@ def build_id: J<"build-id=">, HelpText<"Generate build ID note">,
   MetaVarName<"[fast,md5,sha1,uuid,0x<hexstring>]">;
 def : F<"build-id">, Alias<build_id>, AliasArgs<["sha1"]>, HelpText<"Alias for --build-id=sha1">;
 
+defm branch_to_branch: BB<"branch-to-branch",
+    "Enable branch-to-branch optimization (default at -O2)",
+    "Disable branch-to-branch optimization (default at -O0 and -O1)">;
+
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
     "Do not check section addresses for overlaps">;
@@ -140,6 +144,19 @@ def call_graph_profile_sort: JJ<"call-graph-profile-sort=">,
   Values<"none,hfsort,cdsort">;
 def : FF<"no-call-graph-profile-sort">, Alias<call_graph_profile_sort>, AliasArgs<["none"]>,
   Flags<[HelpHidden]>;
+
+defm irpgo_profile: EEq<"irpgo-profile",
+  "Read a temporary profile file for use with --bp-startup-sort=">;
+def bp_compression_sort: JJ<"bp-compression-sort=">, MetaVarName<"[none,function,data,both]">,
+  HelpText<"Improve Lempel-Ziv compression by grouping similar sections together, resulting in a smaller compressed app size">;
+def bp_startup_sort: JJ<"bp-startup-sort=">, MetaVarName<"[none,function]">,
+  HelpText<"Utilize a temporal profile file to reduce page faults during program startup">;
+
+// Auxiliary options related to balanced partition
+defm bp_compression_sort_startup_functions: BB<"bp-compression-sort-startup-functions",
+  "When --irpgo-profile is pecified, prioritize function similarity for compression in addition to startup time", "">;
+def verbose_bp_section_orderer: FF<"verbose-bp-section-orderer">,
+  HelpText<"Print information on balanced partitioning">;
 
 // --chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--"], "chroot">;
@@ -327,7 +344,7 @@ def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
 
 def no_warn_mismatch: F<"no-warn-mismatch">,
-  HelpText<"Suppress errors for certain unknown seciton types">;
+  HelpText<"Suppress errors for certain unknown section types">;
 
 def no_nmagic: F<"no-nmagic">, MetaVarName<"<magic>">,
   HelpText<"Page align sections (default)">;
@@ -419,6 +436,10 @@ defm rosegment: BB<"rosegment",
   "Put read-only non-executable sections in their own segment (default)",
   "Do not put read-only non-executable sections in their own segment">;
 
+defm xosegment: BB<"xosegment",
+  "Put execute-only sections in their own segment",
+  "Do not put execute-only sections in their own segment (default)">;
+
 defm rpath: Eq<"rpath", "Add a DT_RUNPATH to the output">;
 
 def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
@@ -433,6 +454,9 @@ defm section_start: Eq<"section-start", "Set address of section">,
   MetaVarName<"<address>">;
 
 def shared: F<"shared">, HelpText<"Build a shared object">;
+
+def randomize_section_padding: JJ<"randomize-section-padding=">,
+  HelpText<"Randomly insert padding between input sections and at the start of each segment using given seed">;
 
 defm soname: Eq<"soname", "Set DT_SONAME">;
 
@@ -552,6 +576,12 @@ defm whole_archive: B<"whole-archive",
 
 def why_extract: JJ<"why-extract=">, HelpText<"Print to a file about why archive members are extracted">;
 
+defm why_live
+    : EEq<"why-live",
+          "Report a chain of references preventing garbage collection for "
+          "each symbol matching <glob>">,
+      MetaVarName<"<glob>">;
+
 defm wrap : Eq<"wrap", "Redirect symbol references to __wrap_symbol and "
                        "__real_symbol references to symbol">,
             MetaVarName<"<symbol>">;
@@ -562,7 +592,7 @@ def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
 def visual_studio_diagnostics_format : FF<"vs-diagnostics">,
 HelpText<"Format diagnostics for Visual Studio compatibility">;
 
-def package_metadata: JJ<"package-metadata=">, HelpText<"Emit package metadata note">;
+def package_metadata: JJ<"package-metadata=">, HelpText<"Emit a percent-encoded string to the .note.package section">;
 
 // Aliases
 def: Separate<["-"], "dT">, Alias<default_script>, HelpText<"Alias for --default-script">;
@@ -684,7 +714,17 @@ def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
 def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def thinlto_single_module_eq: JJ<"thinlto-single-module=">,
   HelpText<"Specify a single module to compile in ThinLTO mode, for debugging only">;
-
+def thinlto_distributor_eq: JJ<"thinlto-distributor=">,
+  HelpText<"Distributor to use for ThinLTO backend compilations. If specified, "
+  "ThinLTO backend compilations will be distributed">;
+defm thinlto_distributor_arg: EEq<"thinlto-distributor-arg", "Arguments to "
+  "pass to the ThinLTO distributor">;
+def thinlto_compiler_eq: JJ<"thinlto-remote-compiler=">,
+  HelpText<"Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
+  "compilations">;
+defm thinlto_compiler_arg: EEq<"thinlto-remote-compiler-arg", "Compiler "
+  "arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
 defm fat_lto_objects: BB<"fat-lto-objects",
     "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
     "Ignore the .llvm.lto section in relocatable object files (default).">;

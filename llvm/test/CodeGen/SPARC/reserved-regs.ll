@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=sparc -verify-machineinstrs < %s | FileCheck %s
 
 ;; Test reserve-* options.
 ; RUN: llc -mtriple=sparc64-linux-gnu -mattr=+reserve-g1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-G1

@@ -15,10 +15,10 @@
 #include "char-block.h"
 #include "char-set.h"
 #include "provenance.h"
-#include "flang/Common/Fortran-features.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/reference-counted.h"
 #include "flang/Common/restorer.h"
+#include "flang/Support/Fortran-features.h"
 #include <cstddef>
 #include <cstring>
 #include <forward_list>
@@ -292,7 +292,8 @@ public:
   std::optional<ProvenanceRange> GetProvenanceRange(
       const AllCookedSources &) const;
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
-      bool echoSourceLine = true) const;
+      bool echoSourceLine = true,
+      const common::LanguageFeatureControl *hintFlags = nullptr) const;
 
   // If this Message or any of its attachments locates itself via a CharBlock,
   // replace its location with the corresponding ProvenanceRange.
@@ -352,7 +353,9 @@ public:
   void Copy(const Messages &);
   void ResolveProvenances(const AllCookedSources &);
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
-      bool echoSourceLines = true) const;
+      bool echoSourceLines = true,
+      const common::LanguageFeatureControl *hintFlags = nullptr,
+      std::size_t maxErrorsToEmit = 0) const;
   void AttachTo(Message &, std::optional<Severity> = std::nullopt);
   bool AnyFatalError() const;
 

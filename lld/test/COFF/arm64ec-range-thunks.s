@@ -5,6 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-windows native-funcs.s -o funcs-aarch64.obj
 # RUN: llvm-mc -filetype=obj -triple=x86_64-windows space.s -o space-x86_64.obj
 # RUN: llvm-mc -filetype=obj -triple=aarch64-windows space.s -o space-aarch64.obj
+# RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
 # RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
 
 
@@ -59,8 +60,8 @@
 
 # A similar test using a hybrid binary and native placeholder chunks.
 
-# RUN: lld-link -machine:arm64x -noentry -dll funcs-arm64ec.obj space-aarch64.obj loadconfig-arm64ec.obj -out:testx.dll \
-# RUN:          -verbose 2>&1 | FileCheck -check-prefix=VERBOSE %s
+# RUN: lld-link -machine:arm64x -noentry -dll funcs-arm64ec.obj space-aarch64.obj loadconfig-arm64.obj loadconfig-arm64ec.obj \
+# RUN:          -out:testx.dll -verbose 2>&1 | FileCheck -check-prefix=VERBOSE %s
 # RUN: llvm-objdump -d testx.dll | FileCheck --check-prefix=DISASM %s
 
 # RUN: llvm-readobj --coff-load-config testx.dll | FileCheck --check-prefix=LOADCFGX %s
@@ -74,11 +75,15 @@
 
 # Test a hybrid ARM64X binary which requires range extension thunks for both native and EC relocations.
 
-# RUN: lld-link -machine:arm64x -noentry -dll funcs-arm64ec.obj funcs-aarch64.obj loadconfig-arm64ec.obj -out:testx2.dll \
-# RUN:          -verbose 2>&1 | FileCheck -check-prefix=VERBOSEX %s
+# RUN: lld-link -machine:arm64x -noentry -dll funcs-arm64ec.obj funcs-aarch64.obj loadconfig-arm64.obj loadconfig-arm64ec.obj \
+# RUN:           -out:testx2.dll -verbose 2>&1 | FileCheck -check-prefix=VERBOSEX %s
 # VERBOSEX: Added 5 thunks with margin {{.*}} in 1 passes
 
+# RUN: lld-link -machine:arm64ec -noentry -dll funcs-arm64ec.obj funcs-aarch64.obj loadconfig-arm64.obj loadconfig-arm64ec.obj \
+# RUN:           -out:testx2ec.dll -verbose 2>&1 | FileCheck -check-prefix=VERBOSEX %s
+
 # RUN: llvm-objdump -d testx2.dll | FileCheck --check-prefix=DISASMX %s
+# RUN: llvm-objdump -d testx2ec.dll | FileCheck --check-prefix=DISASMX %s
 
 # DISASMX:      Disassembly of section .code1:
 # DISASMX-EMPTY:
@@ -125,6 +130,7 @@
 # DISASMX-NEXT: 180016010: d61f0200     br      x16
 
 # RUN: llvm-readobj --coff-load-config testx2.dll | FileCheck --check-prefix=LOADCFGX2 %s
+# RUN: llvm-readobj --coff-load-config testx2ec.dll | FileCheck --check-prefix=LOADCFGX2 %s
 
 # LOADCFGX2:       CodeMap [
 # LOADCFGX2-NEXT:    0x4000 - 0x4014  ARM64EC

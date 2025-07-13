@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "hexagon-abs"
 
@@ -32,11 +31,6 @@ STATISTIC(HexagonNumLoadAbsConversions,
 STATISTIC(HexagonNumStoreAbsConversions,
           "Number of Store instructions converted to absolute-set form");
 
-namespace llvm {
-FunctionPass *createHexagonGenMemAbsolute();
-void initializeHexagonGenMemAbsolutePass(PassRegistry &Registry);
-} // namespace llvm
-
 namespace {
 
 class HexagonGenMemAbsolute : public MachineFunctionPass {
@@ -46,9 +40,7 @@ class HexagonGenMemAbsolute : public MachineFunctionPass {
 
 public:
   static char ID;
-  HexagonGenMemAbsolute() : MachineFunctionPass(ID), TII(0), MRI(0), TRI(0) {
-    initializeHexagonGenMemAbsolutePass(*PassRegistry::getPassRegistry());
-  }
+  HexagonGenMemAbsolute() : MachineFunctionPass(ID), TII(0), MRI(0), TRI(0) {}
 
   StringRef getPassName() const override {
     return "Hexagon Generate Load/Store Set Absolute Address Instruction";

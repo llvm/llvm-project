@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_GENERATE_H
-#define _LIBCPP___ALGORITHM_GENERATE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_GENERATE_H
+#define _LIBCPP___CXX03___ALGORITHM_GENERATE_H
 
 #include <__cxx03/__config>
 
@@ -18,12 +18,11 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _ForwardIterator, class _Generator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-generate(_ForwardIterator __first, _ForwardIterator __last, _Generator __gen) {
+inline _LIBCPP_HIDE_FROM_ABI void generate(_ForwardIterator __first, _ForwardIterator __last, _Generator __gen) {
   for (; __first != __last; ++__first)
     *__first = __gen();
 }
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_GENERATE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_GENERATE_H

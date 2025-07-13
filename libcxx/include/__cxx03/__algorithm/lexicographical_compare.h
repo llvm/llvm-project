@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
-#define _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
+#define _LIBCPP___CXX03___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -21,7 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Compare, class _InputIterator1, class _InputIterator2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __lexicographical_compare(
+_LIBCPP_HIDE_FROM_ABI bool __lexicographical_compare(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
@@ -37,7 +37,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __lexicographical_compa
 }
 
 template <class _InputIterator1, class _InputIterator2, class _Compare>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool lexicographical_compare(
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI bool lexicographical_compare(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
@@ -47,11 +47,11 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 boo
 }
 
 template <class _InputIterator1, class _InputIterator2>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool lexicographical_compare(
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI bool lexicographical_compare(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2) {
   return std::lexicographical_compare(__first1, __last1, __first2, __last2, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H

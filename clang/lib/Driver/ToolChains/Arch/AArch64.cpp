@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "../CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
@@ -157,46 +156,25 @@ static bool
 getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
                                      const ArgList &Args,
                                      std::vector<StringRef> &Features) {
-  std::string MtuneLowerCase = Mtune.lower();
   // Check CPU name is valid, but ignore any extensions on it.
+  std::string MtuneLowerCase = Mtune.lower();
   llvm::AArch64::ExtensionSet Extensions;
   StringRef Tune;
-  if (!DecodeAArch64Mcpu(D, MtuneLowerCase, Tune, Extensions))
-    return false;
-
-  // Handle CPU name is 'native'.
-  if (MtuneLowerCase == "native")
-    MtuneLowerCase = std::string(llvm::sys::getHostCPUName());
-
-  // 'cyclone' and later have zero-cycle register moves and zeroing.
-  if (MtuneLowerCase == "cyclone" ||
-      StringRef(MtuneLowerCase).starts_with("apple")) {
-    Features.push_back("+zcm");
-    Features.push_back("+zcz");
-  }
-
-  return true;
+  return DecodeAArch64Mcpu(D, MtuneLowerCase, Tune, Extensions);
 }
 
 static bool
 getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
                                     const ArgList &Args,
                                     std::vector<StringRef> &Features) {
-  StringRef CPU;
-  // Check CPU name is valid, but ignore any extensions on it.
-  llvm::AArch64::ExtensionSet DecodedFeature;
-  std::string McpuLowerCase = Mcpu.lower();
-  if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, DecodedFeature))
-    return false;
-
-  return getAArch64MicroArchFeaturesFromMtune(D, CPU, Args, Features);
+  return getAArch64MicroArchFeaturesFromMtune(D, Mcpu, Args, Features);
 }
 
 void aarch64::getAArch64TargetFeatures(const Driver &D,
                                        const llvm::Triple &Triple,
                                        const ArgList &Args,
                                        std::vector<StringRef> &Features,
-                                       bool ForAS) {
+                                       bool ForAS, bool ForMultilib) {
   Arg *A;
   bool success = true;
   llvm::StringRef WaMArch;
@@ -331,6 +309,19 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
       Features.push_back("+strict-align");
   } else if (Triple.isOSOpenBSD())
     Features.push_back("+strict-align");
+
+  // Generate execute-only output (no data access to code sections).
+  // This only makes sense for the compiler, not for the assembler.
+  // It's not needed for multilib selection and may hide an unused
+  // argument diagnostic if the code is always run.
+  if (!ForAS && !ForMultilib) {
+    if (Arg *A = Args.getLastArg(options::OPT_mexecute_only,
+                                 options::OPT_mno_execute_only)) {
+      if (A->getOption().matches(options::OPT_mexecute_only)) {
+        Features.push_back("+execute-only");
+      }
+    }
+  }
 
   if (Args.hasArg(options::OPT_ffixed_x1))
     Features.push_back("+reserve-x1");

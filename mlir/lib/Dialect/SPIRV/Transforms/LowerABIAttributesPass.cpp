@@ -22,7 +22,6 @@
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/SetVector.h"
 
 namespace mlir {
 namespace spirv {
@@ -85,6 +84,9 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   if (!module) {
     return failure();
   }
+  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(funcOp);
+  spirv::TargetEnv targetEnv(targetEnvAttr);
+
   SetVector<Operation *> interfaceVarSet;
 
   // TODO: This should in reality traverse the entry function
@@ -93,18 +95,18 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   funcOp.walk([&](spirv::AddressOfOp addressOfOp) {
     auto var =
         module.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.getVariable());
-    // TODO: Per SPIR-V spec: "Before version 1.4, the interface’s
+    // Per SPIR-V spec: "Before version 1.4, the interface's
     // storage classes are limited to the Input and Output storage classes.
-    // Starting with version 1.4, the interface’s storage classes are all
+    // Starting with version 1.4, the interface's storage classes are all
     // storage classes used in declaring all global variables referenced by the
-    // entry point’s call tree." We should consider the target environment here.
-    switch (cast<spirv::PointerType>(var.getType()).getStorageClass()) {
-    case spirv::StorageClass::Input:
-    case spirv::StorageClass::Output:
+    // entry point’s call tree."
+    const spirv::StorageClass storageClass =
+        cast<spirv::PointerType>(var.getType()).getStorageClass();
+    if ((targetEnvAttr && targetEnv.getVersion() >= spirv::Version::V_1_4) ||
+        (llvm::is_contained(
+            {spirv::StorageClass::Input, spirv::StorageClass::Output},
+            storageClass))) {
       interfaceVarSet.insert(var.getOperation());
-      break;
-    default:
-      break;
     }
   });
   for (auto &var : interfaceVarSet) {
@@ -124,6 +126,9 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     return failure();
   }
 
+  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(funcOp);
+  spirv::TargetEnv targetEnv(targetEnvAttr);
+
   OpBuilder::InsertionGuard moduleInsertionGuard(builder);
   auto spirvModule = funcOp->getParentOfType<spirv::ModuleOp>();
   builder.setInsertionPointToEnd(spirvModule.getBody());
@@ -135,8 +140,6 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     return failure();
   }
 
-  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(funcOp);
-  spirv::TargetEnv targetEnv(targetEnvAttr);
   FailureOr<spirv::ExecutionModel> executionModel =
       spirv::getExecutionModel(targetEnvAttr);
   if (failed(executionModel))
@@ -234,6 +237,10 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
   auto indexType = typeConverter.getIndexType();
 
   auto attrName = spirv::getInterfaceVarABIAttrName();
+
+  OpBuilder::InsertionGuard funcInsertionGuard(rewriter);
+  rewriter.setInsertionPointToStart(&funcOp.front());
+
   for (const auto &argType :
        llvm::enumerate(funcOp.getFunctionType().getInputs())) {
     auto abiInfo = funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
@@ -250,8 +257,6 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     if (!var)
       return failure();
 
-    OpBuilder::InsertionGuard funcInsertionGuard(rewriter);
-    rewriter.setInsertionPointToStart(&funcOp.front());
     // Insert spirv::AddressOf and spirv::AccessChain operations.
     Value replacement =
         rewriter.create<spirv::AddressOfOp>(funcOp.getLoc(), var);
@@ -276,8 +281,8 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
 
   // Creates a new function with the update signature.
   rewriter.modifyOpInPlace(funcOp, [&] {
-    funcOp.setType(rewriter.getFunctionType(
-        signatureConverter.getConvertedTypes(), std::nullopt));
+    funcOp.setType(
+        rewriter.getFunctionType(signatureConverter.getConvertedTypes(), {}));
   });
   return success();
 }

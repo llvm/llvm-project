@@ -54,13 +54,15 @@
 
 namespace __tsan {
 
+extern bool ready_to_symbolize;
+
 #if !SANITIZER_GO
 struct MapUnmapCallback;
 #  if defined(__mips64) || defined(__aarch64__) || defined(__loongarch__) || \
       defined(__powerpc__) || SANITIZER_RISCV64
 
 struct AP32 {
-  static const uptr kSpaceBeg = 0;
+  static const uptr kSpaceBeg = SANITIZER_MMAP_BEGIN;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = 0;
   typedef __sanitizer::CompactSizeClassMap SizeClassMap;
@@ -98,6 +100,7 @@ struct JmpBuf {
   uptr sp;
   int int_signal_send;
   bool in_blocking_func;
+  uptr oldset_stack_size;
   uptr in_signal_handler;
   uptr *shadow_stack_pos;
 };
@@ -514,7 +517,7 @@ bool IsExpectedReport(uptr addr, uptr size);
 StackID CurrentStackId(ThreadState *thr, uptr pc);
 ReportStack *SymbolizeStackId(StackID stack_id);
 void PrintCurrentStack(ThreadState *thr, uptr pc);
-void PrintCurrentStackSlow(uptr pc);  // uses libunwind
+void PrintCurrentStack(uptr pc, bool fast);  // may uses libunwind
 MBlock *JavaHeapBlock(uptr addr, uptr *start);
 
 void Initialize(ThreadState *thr);

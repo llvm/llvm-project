@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: dfcmp
 
 @g0 = internal constant [12 x i8] c"a < b = %d\0A\00"

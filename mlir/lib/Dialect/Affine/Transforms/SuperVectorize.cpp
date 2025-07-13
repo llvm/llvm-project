@@ -1106,6 +1106,10 @@ static bool isUniformDefinition(Value value,
     if (!loop.isDefinedOutsideOfLoop(value))
       return false;
   }
+
+  if (!value.getType().isIntOrIndexOrFloat())
+    return false;
+
   return true;
 }
 
@@ -1181,6 +1185,32 @@ static Value vectorizeOperand(Value operand, VectorizationState &state) {
   return nullptr;
 }
 
+/// Returns true if any vectorized loop IV drives more than one index.
+static bool isIVMappedToMultipleIndices(
+    ArrayRef<Value> indices,
+    const DenseMap<Operation *, unsigned> &loopToVectorDim) {
+  for (auto &kvp : loopToVectorDim) {
+    AffineForOp forOp = cast<AffineForOp>(kvp.first);
+    // Find which indices are invariant w.r.t. this loop IV.
+    llvm::DenseSet<Value> invariants =
+        affine::getInvariantAccesses(forOp.getInductionVar(), indices);
+    // Count how many vary (i.e. are not invariant).
+    unsigned nonInvariant = 0;
+    for (Value idx : indices) {
+      if (invariants.count(idx))
+        continue;
+
+      if (++nonInvariant > 1) {
+        LLVM_DEBUG(dbgs() << "[early‑vect] Bail out: IV "
+                          << forOp.getInductionVar() << " drives "
+                          << nonInvariant << " indices\n");
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Vectorizes an affine load with the vectorization strategy in 'state' by
 /// generating a 'vector.transfer_read' op with the proper permutation map
 /// inferred from the indices of the load. The new 'vector.transfer_read' is
@@ -1213,6 +1243,9 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
     indices.append(mapOperands.begin(), mapOperands.end());
   }
 
+  if (isIVMappedToMultipleIndices(indices, state.vecLoopToVecDim))
+    return nullptr;
+
   // Compute permutation map using the information of new vector loops.
   auto permutationMap = makePermutationMap(state.builder.getInsertionBlock(),
                                            indices, state.vecLoopToVecDim);
@@ -1224,7 +1257,8 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
   auto transfer = state.builder.create<vector::TransferReadOp>(
-      loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices, permutationMap);
+      loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices,
+      /*padding=*/std::nullopt, permutationMap);
 
   // Register replacement for future uses in the scope.
   state.registerOpVectorReplacement(loadOp, transfer);
@@ -1257,6 +1291,9 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
                            indices);
   else
     indices.append(mapOperands.begin(), mapOperands.end());
+
+  if (isIVMappedToMultipleIndices(indices, state.vecLoopToVecDim))
+    return nullptr;
 
   // Compute permutation map using the information of new vector loops.
   auto permutationMap = makePermutationMap(state.builder.getInsertionBlock(),

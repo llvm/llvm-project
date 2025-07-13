@@ -29,7 +29,6 @@
 #include "Symbols.h"
 #include "Target.h"
 #include "Thunks.h"
-#include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
@@ -93,7 +92,7 @@ RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
   case R_AVR_13_PCREL:
     return R_PC;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
   }

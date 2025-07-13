@@ -118,11 +118,10 @@ ieee_arithmetic module rounding procedures.
 #define _FORTRAN_RUNTIME_IEEE_OTHER 5
 
 #if 0
-The size of derived types ieee_modes_type and ieee_status_type from intrinsic
-module ieee_exceptions must be large enough to hold an fenv.h object of type
-femode_t and fenv_t, respectively. These types have members that are declared
-as int arrays with the following extents to allow build time validation of
-these sizes in cross compilation environments.
+INTEGER(kind=4) extents for ieee_exceptions module types ieee_modes_type and
+ieee_status_type. These extent values are large enough to hold femode_t and
+fenv_t data in many environments. An environment that does not meet these
+size constraints may allocate memory with runtime size values.
 #endif
 #define _FORTRAN_RUNTIME_IEEE_FEMODE_T_EXTENT 2
 #define _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT 8

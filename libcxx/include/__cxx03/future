@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FUTURE
-#define _LIBCPP_FUTURE
+#ifndef _LIBCPP___CXX03_FUTURE
+#define _LIBCPP___CXX03_FUTURE
 
 /*
     future synopsis
@@ -411,51 +411,12 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(future_errc)
 template <>
 struct _LIBCPP_TEMPLATE_VIS is_error_code_enum<future_errc> : public true_type {};
 
-#  ifdef _LIBCPP_CXX03_LANG
 template <>
 struct _LIBCPP_TEMPLATE_VIS is_error_code_enum<future_errc::__lx> : public true_type {};
-#  endif
 
 // enum class launch
 _LIBCPP_DECLARE_STRONG_ENUM(launch){async = 1, deferred = 2, any = async | deferred};
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(launch)
-
-#  ifndef _LIBCPP_CXX03_LANG
-
-typedef underlying_type<launch>::type __launch_underlying_type;
-
-inline _LIBCPP_HIDE_FROM_ABI constexpr launch operator&(launch __x, launch __y) {
-  return static_cast<launch>(static_cast<__launch_underlying_type>(__x) & static_cast<__launch_underlying_type>(__y));
-}
-
-inline _LIBCPP_HIDE_FROM_ABI constexpr launch operator|(launch __x, launch __y) {
-  return static_cast<launch>(static_cast<__launch_underlying_type>(__x) | static_cast<__launch_underlying_type>(__y));
-}
-
-inline _LIBCPP_HIDE_FROM_ABI constexpr launch operator^(launch __x, launch __y) {
-  return static_cast<launch>(static_cast<__launch_underlying_type>(__x) ^ static_cast<__launch_underlying_type>(__y));
-}
-
-inline _LIBCPP_HIDE_FROM_ABI constexpr launch operator~(launch __x) {
-  return static_cast<launch>(~static_cast<__launch_underlying_type>(__x) & 3);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI launch& operator&=(launch& __x, launch __y) {
-  __x = __x & __y;
-  return __x;
-}
-
-inline _LIBCPP_HIDE_FROM_ABI launch& operator|=(launch& __x, launch __y) {
-  __x = __x | __y;
-  return __x;
-}
-
-inline _LIBCPP_HIDE_FROM_ABI launch& operator^=(launch& __x, launch __y) {
-  __x = __x ^ __y;
-  return __x;
-}
-
-#  endif // !_LIBCPP_CXX03_LANG
 
 // enum class future_status
 _LIBCPP_DECLARE_STRONG_ENUM(future_status){ready, timeout, deferred};
@@ -482,10 +443,6 @@ class _LIBCPP_EXPORTED_FROM_ABI future_error : public logic_error {
   friend class promise;
 
 public:
-#  if _LIBCPP_STD_VER >= 17
-  _LIBCPP_HIDE_FROM_ABI explicit future_error(future_errc __ec) : future_error(std::make_error_code(__ec)) {}
-#  endif
-
   _LIBCPP_HIDE_FROM_ABI const error_code& code() const _NOEXCEPT { return __ec_; }
 
   _LIBCPP_HIDE_FROM_ABI future_error(const future_error&) _NOEXCEPT = default;
@@ -1472,7 +1429,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void swap(__packaged_task_function&) _NOEXCEPT;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes...) const;
+  _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes...) const;
 };
 
 template <class _Rp, class... _ArgTypes>
@@ -1730,16 +1687,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI void reset();
 };
 
-#  if _LIBCPP_STD_VER >= 17
-
-template <class _Rp, class... _Args>
-packaged_task(_Rp (*)(_Args...)) -> packaged_task<_Rp(_Args...)>;
-
-template <class _Fp, class _Stripped = typename __strip_signature<decltype(&_Fp::operator())>::type>
-packaged_task(_Fp) -> packaged_task<_Stripped>;
-
-#  endif
-
 template <class... _ArgTypes>
 void packaged_task<void(_ArgTypes...)>::operator()(_ArgTypes... __args) {
   if (__p_.__state_ == nullptr)
@@ -1806,69 +1753,6 @@ _LIBCPP_HIDE_FROM_ABI future<_Rp> __make_async_assoc_state(_Fp&& __f) {
   std::thread(&__async_assoc_state<_Rp, _Fp>::__execute, __h.get()).detach();
   return future<_Rp>(__h.get());
 }
-
-#  ifndef _LIBCPP_CXX03_LANG
-
-template <class _Fp, class... _Args>
-class _LIBCPP_HIDDEN __async_func {
-  tuple<_Fp, _Args...> __f_;
-
-public:
-  typedef typename __invoke_of<_Fp, _Args...>::type _Rp;
-
-  _LIBCPP_HIDE_FROM_ABI explicit __async_func(_Fp&& __f, _Args&&... __args)
-      : __f_(std::move(__f), std::move(__args)...) {}
-
-  _LIBCPP_HIDE_FROM_ABI __async_func(__async_func&& __f) : __f_(std::move(__f.__f_)) {}
-
-  _LIBCPP_HIDE_FROM_ABI _Rp operator()() {
-    typedef typename __make_tuple_indices<1 + sizeof...(_Args), 1>::type _Index;
-    return __execute(_Index());
-  }
-
-private:
-  template <size_t... _Indices>
-  _LIBCPP_HIDE_FROM_ABI _Rp __execute(__tuple_indices<_Indices...>) {
-    return std::__invoke(std::move(std::get<0>(__f_)), std::move(std::get<_Indices>(__f_))...);
-  }
-};
-
-inline _LIBCPP_HIDE_FROM_ABI bool __does_policy_contain(launch __policy, launch __value) {
-  return (int(__policy) & int(__value)) != 0;
-}
-
-template <class _Fp, class... _Args>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI future<typename __invoke_of<__decay_t<_Fp>, __decay_t<_Args>...>::type>
-async(launch __policy, _Fp&& __f, _Args&&... __args) {
-  typedef __async_func<__decay_t<_Fp>, __decay_t<_Args>...> _BF;
-  typedef typename _BF::_Rp _Rp;
-
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-  try {
-#    endif
-    if (__does_policy_contain(__policy, launch::async))
-      return std::__make_async_assoc_state<_Rp>(
-          _BF(_LIBCPP_AUTO_CAST(std::forward<_Fp>(__f)), _LIBCPP_AUTO_CAST(std::forward<_Args>(__args))...));
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-  } catch (...) {
-    if (__policy == launch::async)
-      throw;
-  }
-#    endif
-
-  if (__does_policy_contain(__policy, launch::deferred))
-    return std::__make_deferred_assoc_state<_Rp>(
-        _BF(_LIBCPP_AUTO_CAST(std::forward<_Fp>(__f)), _LIBCPP_AUTO_CAST(std::forward<_Args>(__args))...));
-  return future<_Rp>{};
-}
-
-template <class _Fp, class... _Args>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI future<typename __invoke_of<__decay_t<_Fp>, __decay_t<_Args>...>::type>
-async(_Fp&& __f, _Args&&... __args) {
-  return std::async(launch::any, std::forward<_Fp>(__f), std::forward<_Args>(__args)...);
-}
-
-#  endif // C++03
 
 // shared_future
 
@@ -2047,11 +1931,11 @@ _LIBCPP_POP_MACROS
 
 #endif // !defined(_LIBCPP_HAS_NO_THREADS)
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/chrono>
 #endif
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/atomic>
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/exception>
@@ -2059,4 +1943,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/system_error>
 #endif
 
-#endif // _LIBCPP_FUTURE
+#endif // _LIBCPP___CXX03_FUTURE

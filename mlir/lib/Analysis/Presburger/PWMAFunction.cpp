@@ -65,6 +65,8 @@ void MultiAffineFunction::print(raw_ostream &os) const {
   output.print(os);
 }
 
+void MultiAffineFunction::dump() const { print(llvm::errs()); }
+
 SmallVector<DynamicAPInt, 8>
 MultiAffineFunction::valueAt(ArrayRef<DynamicAPInt> point) const {
   assert(point.size() == getNumDomainVars() + getNumSymbolVars() &&
@@ -141,7 +143,7 @@ void MultiAffineFunction::mergeDivs(MultiAffineFunction &other) {
   SmallVector<DynamicAPInt, 8> div(other.divs.getNumVars() + 1);
   for (unsigned i = 0; i < nDivs; ++i) {
     // Zero fill.
-    std::fill(div.begin(), div.end(), 0);
+    llvm::fill(div, 0);
     // Fill div with dividend from `divs`. Do not fill the constant.
     std::copy(divs.getDividend(i).begin(), divs.getDividend(i).end() - 1,
               div.begin());

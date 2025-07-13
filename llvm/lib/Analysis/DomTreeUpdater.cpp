@@ -16,17 +16,25 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTree.h"
 #include <functional>
 
 namespace llvm {
 
-template class GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
-                                     PostDominatorTree>;
+template class LLVM_EXPORT_TEMPLATE
+    GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>;
 
-template void
+template LLVM_EXPORT_TEMPLATE void
 GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
                       PostDominatorTree>::recalculate(Function &F);
+
+template LLVM_EXPORT_TEMPLATE void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/true>();
+template LLVM_EXPORT_TEMPLATE void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/false>();
 
 bool DomTreeUpdater::forceFlushDeletedBB() {
   if (DeletedBBs.empty())

@@ -16,10 +16,8 @@
 #include "APINotesFormat.h"
 #include "clang/APINotes/Types.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/DJB.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 
 namespace clang {
@@ -373,6 +371,13 @@ void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
       endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.ResultType = std::string(Data, Data + ResultTypeLen);
   Data += ResultTypeLen;
+
+  unsigned SwiftReturnOwnershipLength =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  Info.SwiftReturnOwnership = std::string(reinterpret_cast<const char *>(Data),
+                                          reinterpret_cast<const char *>(Data) +
+                                              SwiftReturnOwnershipLength);
+  Data += SwiftReturnOwnershipLength;
 }
 
 /// Used to deserialize the on-disk Objective-C method table.
@@ -616,6 +621,13 @@ public:
       Info.SwiftReleaseOp = std::string(reinterpret_cast<const char *>(Data),
                                         ReleaseOpLength - 1);
       Data += ReleaseOpLength - 1;
+    }
+    unsigned DefaultOwnershipLength =
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
+    if (DefaultOwnershipLength > 0) {
+      Info.SwiftDefaultOwnership = std::string(
+          reinterpret_cast<const char *>(Data), DefaultOwnershipLength - 1);
+      Data += DefaultOwnershipLength - 1;
     }
     if (unsigned ConformanceLength =
             endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
@@ -2034,11 +2046,16 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
     : Results(std::move(R)) {
 
   assert(!Results.empty());
-  assert(std::is_sorted(
-      Results.begin(), Results.end(),
+  assert(llvm::is_sorted(
+      Results,
       [](const std::pair<llvm::VersionTuple, T> &left,
          const std::pair<llvm::VersionTuple, T> &right) -> bool {
-        assert(left.first != right.first && "two entries for the same version");
+        // The comparison function should be reflective, and with expensive
+        // checks we can get callbacks basically checking that lambda(a,a) is
+        // false. We could still check that we do not find equal elements when
+        // left!=right.
+        assert((&left == &right || left.first != right.first) &&
+               "two entries for the same version");
         return left.first < right.first;
       }));
 

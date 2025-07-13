@@ -50,6 +50,8 @@ static cl::opt<bool>
                             cl::desc("Disable two address hints for register "
                                      "allocation"));
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     : X86GenRegisterInfo((TT.isArch64Bit() ? X86::RIP : X86::EIP),
                          X86_MC::getDwarfRegFlavour(TT, false),
@@ -60,6 +62,7 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
   // Cache some information.
   Is64Bit = TT.isArch64Bit();
   IsWin64 = Is64Bit && TT.isOSWindows();
+  IsUEFI64 = Is64Bit && TT.isUEFI();
 
   // Use a callee-saved register as the base pointer.  These registers must
   // not conflict with any ABI requirements.  For example, in 32-bit mode PIC
@@ -120,10 +123,16 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   if (RC == &X86::GR8_NOREXRegClass)
     return RC;
 
+  // Keep using non-rex2 register class when APX feature (EGPR/NDD/NF) is not
+  // enabled for relocation.
+  if (!X86EnableAPXForRelocation && isNonRex2RegClass(RC))
+    return RC;
+
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
 
   const TargetRegisterClass *Super = RC;
-  TargetRegisterClass::sc_iterator I = RC->getSuperClasses();
+  auto I = RC->superclasses().begin();
+  auto E = RC->superclasses().end();
   do {
     switch (Super->getID()) {
     case X86::FR32RegClassID:
@@ -172,7 +181,12 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
       if (getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
     }
-    Super = *I++;
+    if (I != E) {
+      Super = getRegClass(*I);
+      ++I;
+    } else {
+      Super = nullptr;
+    }
   } while (Super);
   return RC;
 }
@@ -218,25 +232,10 @@ X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
   }
 }
 
-bool X86RegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                                           unsigned DefSubReg,
-                                           const TargetRegisterClass *SrcRC,
-                                           unsigned SrcSubReg) const {
-  // Prevent rewriting a copy where the destination size is larger than the
-  // input size. See PR41619.
-  // FIXME: Should this be factored into the base implementation somehow.
-  if (DefRC->hasSuperClassEq(&X86::GR64RegClass) && DefSubReg == 0 &&
-      SrcRC->hasSuperClassEq(&X86::GR64RegClass) && SrcSubReg == X86::sub_32bit)
-    return false;
-
-  return TargetRegisterInfo::shouldRewriteCopySrc(DefRC, DefSubReg,
-                                                  SrcRC, SrcSubReg);
-}
-
 const TargetRegisterClass *
 X86RegisterInfo::getGPRsForTailCall(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
-  if (IsWin64 || (F.getCallingConv() == CallingConv::Win64))
+  if (IsWin64 || IsUEFI64 || (F.getCallingConv() == CallingConv::Win64))
     return &X86::GR64_TCW64RegClass;
   else if (Is64Bit)
     return &X86::GR64_TCRegClass;
@@ -398,7 +397,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return IsWin64 ? CSR_Win64_SwiftError_SaveList
                      : CSR_64_SwiftError_SaveList;
 
-    if (IsWin64)
+    if (IsWin64 || IsUEFI64)
       return HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList;
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
@@ -523,7 +522,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     if (IsSwiftCC)
       return IsWin64 ? CSR_Win64_SwiftError_RegMask : CSR_64_SwiftError_RegMask;
 
-    return IsWin64 ? CSR_Win64_RegMask : CSR_64_RegMask;
+    return (IsWin64 || IsUEFI64) ? CSR_Win64_RegMask : CSR_64_RegMask;
   }
 
   return CSR_32_RegMask;
@@ -563,7 +562,7 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(SubReg);
 
   // Set the frame-pointer register and its aliases as reserved if needed.
-  if (TFI->hasFP(MF)) {
+  if (TFI->hasFP(MF) || MF.getTarget().Options.FramePointerIsReserved(MF)) {
     if (MF.getInfo<X86MachineFunctionInfo>()->getFPClobberedByInvoke())
       MF.getContext().reportError(
           SMLoc(),
@@ -1000,6 +999,7 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNri64:
+  case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64:
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
@@ -1028,7 +1028,7 @@ Register X86RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? FramePtr : StackPtr;
 }
 
-unsigned
+Register
 X86RegisterInfo::getPtrSizedFrameRegister(const MachineFunction &MF) const {
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
   Register FrameReg = getFrameRegister(MF);
@@ -1037,7 +1037,7 @@ X86RegisterInfo::getPtrSizedFrameRegister(const MachineFunction &MF) const {
   return FrameReg;
 }
 
-unsigned
+Register
 X86RegisterInfo::getPtrSizedStackRegister(const MachineFunction &MF) const {
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
   Register StackReg = getStackRegister();
@@ -1177,8 +1177,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 
     auto TryAddNDDHint = [&](const MachineOperand &MO) {
       Register Reg = MO.getReg();
-      Register PhysReg =
-          Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
+      Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
       if (PhysReg && !MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
         TwoAddrHints.insert(PhysReg);
     };
@@ -1223,8 +1222,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
       Hints.push_back(PhysReg);
   };
 
-  SmallSet<MCPhysReg, 4> CopyHints;
-  CopyHints.insert(Hints.begin(), Hints.end());
+  SmallSet<MCPhysReg, 4> CopyHints(llvm::from_range, Hints);
   Hints.clear();
   for (auto Hint : CopyHints) {
     if (RC.contains(Hint) && !MRI->isReserved(Hint))
@@ -1247,4 +1245,39 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 #undef DEBUG_TYPE
 
   return true;
+}
+
+const TargetRegisterClass *X86RegisterInfo::constrainRegClassToNonRex2(
+    const TargetRegisterClass *RC) const {
+  switch (RC->getID()) {
+  default:
+    return RC;
+  case X86::GR8RegClassID:
+    return &X86::GR8_NOREX2RegClass;
+  case X86::GR16RegClassID:
+    return &X86::GR16_NOREX2RegClass;
+  case X86::GR32RegClassID:
+    return &X86::GR32_NOREX2RegClass;
+  case X86::GR64RegClassID:
+    return &X86::GR64_NOREX2RegClass;
+  case X86::GR32_NOSPRegClassID:
+    return &X86::GR32_NOREX2_NOSPRegClass;
+  case X86::GR64_NOSPRegClassID:
+    return &X86::GR64_NOREX2_NOSPRegClass;
+  }
+}
+
+bool X86RegisterInfo::isNonRex2RegClass(const TargetRegisterClass *RC) const {
+  switch (RC->getID()) {
+  default:
+    return false;
+  case X86::GR8_NOREX2RegClassID:
+  case X86::GR16_NOREX2RegClassID:
+  case X86::GR32_NOREX2RegClassID:
+  case X86::GR64_NOREX2RegClassID:
+  case X86::GR32_NOREX2_NOSPRegClassID:
+  case X86::GR64_NOREX2_NOSPRegClassID:
+  case X86::GR64_with_sub_16bit_in_GR16_NOREX2RegClassID:
+    return true;
+  }
 }

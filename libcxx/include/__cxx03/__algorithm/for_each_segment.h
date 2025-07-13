@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FOR_EACH_SEGMENT_H
-#define _LIBCPP___ALGORITHM_FOR_EACH_SEGMENT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_FOR_EACH_SEGMENT_H
+#define _LIBCPP___CXX03___ALGORITHM_FOR_EACH_SEGMENT_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/segmented_iterator.h>
@@ -23,8 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // Anything that is returned from __func is ignored.
 
 template <class _SegmentedIterator, class _Functor>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-__for_each_segment(_SegmentedIterator __first, _SegmentedIterator __last, _Functor __func) {
+_LIBCPP_HIDE_FROM_ABI void __for_each_segment(_SegmentedIterator __first, _SegmentedIterator __last, _Functor __func) {
   using _Traits = __segmented_iterator_traits<_SegmentedIterator>;
 
   auto __sfirst = _Traits::__segment(__first);
@@ -50,4 +49,4 @@ __for_each_segment(_SegmentedIterator __first, _SegmentedIterator __last, _Funct
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_FOR_EACH_SEGMENT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_FOR_EACH_SEGMENT_H

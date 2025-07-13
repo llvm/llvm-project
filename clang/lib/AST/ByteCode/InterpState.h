@@ -15,6 +15,7 @@
 
 #include "Context.h"
 #include "DynamicAllocator.h"
+#include "Floating.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
@@ -32,11 +33,19 @@ class InterpStack;
 class InterpFrame;
 class SourceMapper;
 
+struct StdAllocatorCaller {
+  const Expr *Call = nullptr;
+  QualType AllocType;
+  explicit operator bool() { return Call; }
+};
+
 /// Interpreter context.
 class InterpState final : public State, public SourceMapper {
 public:
   InterpState(State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               SourceMapper *M = nullptr);
+  InterpState(State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
+              const Function *Func);
 
   ~InterpState();
 
@@ -44,6 +53,8 @@ public:
 
   InterpState(const InterpState &) = delete;
   InterpState &operator=(const InterpState &) = delete;
+
+  bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
 
   // Stack frame accessors.
   Frame *getSplitFrame() { return Parent.getCurrentFrame(); }
@@ -114,6 +125,35 @@ public:
   /// \c true otherwise.
   bool maybeDiagnoseDanglingAllocations();
 
+  StdAllocatorCaller getStdAllocatorCaller(StringRef Name) const;
+
+  void *allocate(size_t Size, unsigned Align = 8) const {
+    return Allocator.Allocate(Size, Align);
+  }
+  template <typename T> T *allocate(size_t Num = 1) const {
+    return static_cast<T *>(allocate(Num * sizeof(T), alignof(T)));
+  }
+
+  template <typename T> T allocAP(unsigned BitWidth) {
+    unsigned NumWords = APInt::getNumWords(BitWidth);
+    if (NumWords == 1)
+      return T(BitWidth);
+    uint64_t *Mem = (uint64_t *)this->allocate(NumWords * sizeof(uint64_t));
+    // std::memset(Mem, 0, NumWords * sizeof(uint64_t)); // Debug
+    return T(Mem, BitWidth);
+  }
+
+  Floating allocFloat(const llvm::fltSemantics &Sem) {
+    if (Floating::singleWord(Sem))
+      return Floating(llvm::APFloatBase::SemanticsToEnum(Sem));
+
+    unsigned NumWords =
+        APInt::getNumWords(llvm::APFloatBase::getSizeInBits(Sem));
+    uint64_t *Mem = (uint64_t *)this->allocate(NumWords * sizeof(uint64_t));
+    // std::memset(Mem, 0, NumWords * sizeof(uint64_t)); // Debug
+    return Floating(Mem, llvm::APFloatBase::SemanticsToEnum(Sem));
+  }
+
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
@@ -125,7 +165,6 @@ private:
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
   DynamicAllocator Alloc;
-  std::optional<bool> ConstantContextOverride;
 
 public:
   /// Reference to the module containing all bytecode.
@@ -134,16 +173,28 @@ public:
   InterpStack &Stk;
   /// Interpreter Context.
   Context &Ctx;
+  /// Bottom function frame.
+  InterpFrame BottomFrame;
   /// The current frame.
   InterpFrame *Current = nullptr;
   /// Source location of the evaluating expression
   SourceLocation EvalLocation;
   /// Declaration we're initializing/evaluting, if any.
   const VarDecl *EvaluatingDecl = nullptr;
+  /// Things needed to do speculative execution.
+  SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
+  unsigned SpeculationDepth = 0;
+  std::optional<bool> ConstantContextOverride;
 
   llvm::SmallVector<
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>
       SeenGlobalTemporaries;
+
+  /// List of blocks we're currently running either constructors or destructors
+  /// for.
+  llvm::SmallVector<const Block *> InitializingBlocks;
+
+  mutable llvm::BumpPtrAllocator Allocator;
 };
 
 class InterpStateCCOverride final {

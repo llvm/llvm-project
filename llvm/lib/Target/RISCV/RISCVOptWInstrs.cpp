@@ -311,9 +311,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::XORI:
 
       case RISCV::ANDN:
-      case RISCV::BREV8:
       case RISCV::CLMUL:
-      case RISCV::ORC_B:
       case RISCV::ORN:
       case RISCV::SH1ADD:
       case RISCV::SH2ADD:
@@ -325,7 +323,14 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
         Worklist.push_back(std::make_pair(UserMI, Bits));
         break;
 
+      case RISCV::BREV8:
+      case RISCV::ORC_B:
+        // BREV8 and ORC_B work on bytes. Round Bits down to the nearest byte.
+        Worklist.push_back(std::make_pair(UserMI, alignDown(Bits, 8)));
+        break;
+
       case RISCV::PseudoCCMOVGPR:
+      case RISCV::PseudoCCMOVGPRNoX0:
         // Either operand 4 or operand 5 is returned by this instruction. If
         // only the lower word of the result is used, then only the lower word
         // of operand 4 and 5 is used.
@@ -538,6 +543,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::MIN:
     case RISCV::MINU:
     case RISCV::PseudoCCMOVGPR:
+    case RISCV::PseudoCCMOVGPRNoX0:
     case RISCV::PseudoCCAND:
     case RISCV::PseudoCCOR:
     case RISCV::PseudoCCXOR:
@@ -546,7 +552,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       // MIN, MAX, or PHI is also sign-extended.
 
       // The input registers for PHI are operand 1, 3, ...
-      // The input registers for PseudoCCMOVGPR are 4 and 5.
+      // The input registers for PseudoCCMOVGPR(NoX0) are 4 and 5.
       // The input registers for PseudoCCAND/OR/XOR are 4, 5, and 6.
       // The input registers for others are operand 1 and 2.
       unsigned B = 1, E = 3, D = 1;
@@ -556,6 +562,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         D = 2;
         break;
       case RISCV::PseudoCCMOVGPR:
+      case RISCV::PseudoCCMOVGPRNoX0:
         B = 4;
         E = 6;
         break;
@@ -588,6 +595,27 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         return false;
       break;
 
+    case RISCV::ADDI: {
+      if (MI->getOperand(1).isReg() && MI->getOperand(1).getReg().isVirtual()) {
+        if (MachineInstr *SrcMI = MRI.getVRegDef(MI->getOperand(1).getReg())) {
+          if (SrcMI->getOpcode() == RISCV::LUI &&
+              SrcMI->getOperand(1).isImm()) {
+            uint64_t Imm = SrcMI->getOperand(1).getImm();
+            Imm = SignExtend64<32>(Imm << 12);
+            Imm += (uint64_t)MI->getOperand(2).getImm();
+            if (isInt<32>(Imm))
+              continue;
+          }
+        }
+      }
+
+      if (hasAllWUsers(*MI, ST, MRI)) {
+        FixableDef.insert(MI);
+        break;
+      }
+      return false;
+    }
+
     // With these opcode, we can "fix" them with the W-version
     // if we know all users of the result only rely on bits 31:0
     case RISCV::SLLI:
@@ -595,7 +623,6 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       if (MI->getOperand(2).getImm() >= 32)
         return false;
       [[fallthrough]];
-    case RISCV::ADDI:
     case RISCV::ADD:
     case RISCV::LD:
     case RISCV::LWU:
@@ -645,7 +672,7 @@ bool RISCVOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
       // We're looking for the sext.w pattern ADDIW rd, rs1, 0.
-      if (!RISCV::isSEXT_W(MI))
+      if (!RISCVInstrInfo::isSEXT_W(MI))
         continue;
 
       Register SrcReg = MI.getOperand(1).getReg();

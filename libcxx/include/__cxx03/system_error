@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SYSTEM_ERROR
-#define _LIBCPP_SYSTEM_ERROR
+#ifndef _LIBCPP___CXX03_SYSTEM_ERROR
+#define _LIBCPP___CXX03_SYSTEM_ERROR
 
 /*
     system_error synopsis
@@ -152,20 +152,15 @@ template <> struct hash<std::error_condition>;
 #include <__cxx03/__system_error/system_error.h>
 #include <__cxx03/version>
 
-// standard-mandated includes
-
-// [system.error.syn]
-#include <__cxx03/compare>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/cstdint>
 #  include <__cxx03/cstring>
 #  include <__cxx03/limits>
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_SYSTEM_ERROR
+#endif // _LIBCPP___CXX03_SYSTEM_ERROR

@@ -21,7 +21,6 @@
 #include "MipsTargetObjectFile.h"
 #include "MipsTargetTransformInfo.h"
 #include "TargetInfo/MipsTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -38,6 +37,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
@@ -52,7 +52,7 @@ static cl::opt<bool>
     EnableMulMulFix("mfix4300", cl::init(false),
                     cl::desc("Enable the VR4300 mulmul bug fix."), cl::Hidden);
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   // Register the target.
   RegisterTargetMachine<MipsebTargetMachine> X(getTheMipsTarget());
   RegisterTargetMachine<MipselTargetMachine> Y(getTheMipselTarget());
@@ -61,6 +61,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
 
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
+  initializeMipsAsmPrinterPass(*PR);
   initializeMipsDelaySlotFillerPass(*PR);
   initializeMipsBranchExpansionPass(*PR);
   initializeMicroMipsSizeReducePass(*PR);
@@ -71,6 +72,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+  if (TT.isOSBinFormatCOFF())
+    return std::make_unique<TargetLoweringObjectFileCOFF>();
   return std::make_unique<MipsTargetObjectFile>();
 }
 
@@ -129,9 +132,10 @@ MipsTargetMachine::MipsTargetMachine(const Target &T, const Triple &TT,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT,
                                      bool isLittle)
-    : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
-                        CPU, FS, Options, getEffectiveRelocModel(JIT, RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, isLittle),
+                               TT, CPU, FS, Options,
+                               getEffectiveRelocModel(JIT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       isLittle(isLittle), TLOF(createTLOF(getTargetTriple())),
       ABI(MipsABIInfo::computeTargetABI(TT, CPU, Options.MCOptions)),
       Subtarget(nullptr),
@@ -231,6 +235,7 @@ public:
     // can break this requirement, so disable it when long branch pass is
     // enabled.
     EnableTailMerge = !getMipsSubtarget().enableLongBranchPass();
+    EnableLoopTermFold = true;
   }
 
   MipsTargetMachine &getMipsTargetMachine() const {
@@ -295,7 +300,7 @@ MipsTargetMachine::getTargetTransformInfo(const Function &F) const {
   }
 
   LLVM_DEBUG(errs() << "Target Transform Info Pass Added\n");
-  return TargetTransformInfo(MipsTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<MipsTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *MipsTargetMachine::createMachineFunctionInfo(

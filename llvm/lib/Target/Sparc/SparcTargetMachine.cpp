@@ -18,16 +18,18 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 using namespace llvm;
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   // Register the target.
   RegisterTargetMachine<SparcV8TargetMachine> X(getTheSparcTarget());
   RegisterTargetMachine<SparcV9TargetMachine> Y(getTheSparcV9Target());
   RegisterTargetMachine<SparcelTargetMachine> Z(getTheSparcelTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeSparcAsmPrinterPass(PR);
   initializeSparcDAGToDAGISelLegacyPass(PR);
   initializeErrataWorkaroundPass(PR);
 }
@@ -107,11 +109,12 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT,
                                        bool is64bit)
-    : LLVMTargetMachine(T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveSparcCodeModel(
-                            CM, getEffectiveRelocModel(RM), is64bit, JIT),
-                        OL),
+    : CodeGenTargetMachineImpl(
+          T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
+          getEffectiveRelocModel(RM),
+          getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM), is64bit,
+                                     JIT),
+          OL),
       TLOF(std::make_unique<SparcELFTargetObjectFile>()), is64Bit(is64bit) {
   initAsmInfo();
 }

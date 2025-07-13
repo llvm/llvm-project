@@ -104,6 +104,20 @@ define i1 @logical_or_implies(i32 %x) {
   ret i1 %res
 }
 
+; Safe to convert to or due to poison implication.
+define <vscale x 2 x i1> @logical_or_implies_scalablevec(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @logical_or_implies_scalablevec(
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq <vscale x 2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq <vscale x 2 x i32> [[X]], splat (i32 42)
+; CHECK-NEXT:    [[RES:%.*]] = or <vscale x 2 x i1> [[C1]], [[C2]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[RES]]
+;
+  %c1 = icmp eq <vscale x 2 x i32> %x, zeroinitializer
+  %c2 = icmp eq <vscale x 2 x i32> %x, splat (i32 42)
+  %res = select <vscale x 2 x i1> %c1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> %c2
+  ret <vscale x 2 x i1> %res
+}
+
 ; Will fold after conversion to or.
 define i1 @logical_or_implies_folds(i32 %x) {
 ; CHECK-LABEL: @logical_or_implies_folds(
@@ -127,6 +141,20 @@ define i1 @logical_and_implies(i32 %x) {
   %c2 = icmp ne i32 %x, 42
   %res = select i1 %c1, i1 %c2, i1 false
   ret i1 %res
+}
+
+; Safe to convert to and due to poison implication.
+define <vscale x 2 x i1> @logical_and_implies_scalablevec(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @logical_and_implies_scalablevec(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne <vscale x 2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne <vscale x 2 x i32> [[X]], splat (i32 42)
+; CHECK-NEXT:    [[RES:%.*]] = and <vscale x 2 x i1> [[C1]], [[C2]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[RES]]
+;
+  %c1 = icmp ne <vscale x 2 x i32> %x, zeroinitializer
+  %c2 = icmp ne <vscale x 2 x i32> %x, splat (i32 42)
+  %res = select <vscale x 2 x i1> %c1, <vscale x 2 x i1> %c2, <vscale x 2 x i1> zeroinitializer
+  ret <vscale x 2 x i1> %res
 }
 
 ; Will fold after conversion to and.
@@ -445,7 +473,7 @@ define i1 @demorgan_select_infloop1(i1 %L) {
 define i1 @demorgan_select_infloop2(i1 %L) {
 ; CHECK-LABEL: @demorgan_select_infloop2(
 ; CHECK-NEXT:    [[NOT_L:%.*]] = xor i1 [[L:%.*]], true
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne ptr getelementptr inbounds (i8, ptr @g2, i64 2), @g1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne ptr getelementptr inbounds nuw (i8, ptr @g2, i64 2), @g1
 ; CHECK-NEXT:    [[C15:%.*]] = select i1 [[NOT_L]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[C15]]
 ;

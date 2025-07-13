@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -23,6 +24,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <limits>
@@ -60,20 +62,100 @@ LogicalResult PackedStochRoundFp8Op::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// mxfp float ops
+//===----------------------------------------------------------------------===//
+LogicalResult PackedScaledTruncOp::verify() {
+  if (getExisting() && getExisting().getType() != getResult().getType())
+    return emitOpError("existing values must have same type as result");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FatRawBufferCastOp
+//===----------------------------------------------------------------------===//
+
+/// Convert the type `source` to one with the same sizes and strides - and
+/// offset, unless `stripOffset` is true, in which case the offset is reset to
+/// 0, if the offset should be reset but the layout of `source` isn't either the
+/// identity layout or a strided layout, this function fails.
+static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
+                                                     bool resetOffset) {
+  MLIRContext *ctx = source.getContext();
+  MemRefType::Builder mb(source);
+  mb.setMemorySpace(
+      amdgpu::AddressSpaceAttr::get(ctx, amdgpu::AddressSpace::FatRawBuffer));
+  MemRefLayoutAttrInterface layout = source.getLayout();
+  if (resetOffset && !layout.isIdentity()) {
+    auto stridedLayout = dyn_cast<StridedLayoutAttr>(layout);
+    if (!stridedLayout)
+      return failure();
+    mb.setLayout(StridedLayoutAttr::get(ctx, 0, stridedLayout.getStrides()));
+  }
+  return (MemRefType)(mb);
+}
+
+LogicalResult FatRawBufferCastOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  Adaptor adaptor(operands, attributes, properties, regions);
+  auto sourceType =
+      dyn_cast_if_present<MemRefType>(adaptor.getSource().getType());
+  if (!sourceType)
+    return failure();
+  FailureOr<MemRefType> resultType =
+      getFatRawBufferTypeLike(sourceType, adaptor.getResetOffset());
+  if (failed(resultType))
+    return failure();
+  inferredReturnTypes = SmallVector<Type>{*resultType};
+  return success();
+}
+
+LogicalResult FatRawBufferCastOp::verify() {
+  FailureOr<MemRefType> expectedResultType =
+      getFatRawBufferTypeLike(getSource().getType(), getResetOffset());
+  if (failed(expectedResultType))
+    return emitOpError("source type ")
+           << getSource().getType() << " can't have its offset reset";
+  if (getResult().getType() != *expectedResultType)
+    return emitOpError("expected result type to be ")
+           << *expectedResultType << " but got " << getResult().getType();
+  return success();
+}
+
+static bool hasGlobalMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return true;
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
+  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
+  return false;
+}
+
+static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 3;
+  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == gpu::AddressSpace::Workgroup;
+  return false;
+}
+
+static bool hasFatRawBufferMemorySpace(Attribute memorySpace) {
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 7;
+  if (auto gpuMemorySpace = dyn_cast<amdgpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == amdgpu::AddressSpace::FatRawBuffer;
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
 // RawBuffer*Op
 //===----------------------------------------------------------------------===//
 template <typename T>
 static LogicalResult verifyRawBufferOp(T &op) {
   MemRefType bufferType = llvm::cast<MemRefType>(op.getMemref().getType());
-  Attribute memorySpace = bufferType.getMemorySpace();
-  bool isGlobal = false;
-  if (!memorySpace)
-    isGlobal = true;
-  else if (auto intMemorySpace = llvm::dyn_cast<IntegerAttr>(memorySpace))
-    isGlobal = intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
-  else if (auto gpuMemorySpace =
-               llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
-    isGlobal = gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
+  bool isGlobal = hasGlobalMemorySpace(bufferType.getMemorySpace());
 
   if (!isGlobal)
     return op.emitOpError(
@@ -129,7 +211,7 @@ static bool staticallyOutOfBounds(OpType op) {
     return false;
   int64_t offset;
   SmallVector<int64_t> strides;
-  if (failed(getStridesAndOffset(bufferType, strides, offset)))
+  if (failed(bufferType.getStridesAndOffset(strides, offset)))
     return false;
   int64_t result = offset + op.getIndexOffset().value_or(0);
   if (op.getSgprOffset()) {
@@ -226,13 +308,22 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 LogicalResult WMMAOp::verify() {
   Type sourceAType = getSourceA().getType();
+  Type sourceBType = getSourceB().getType();
   Type destType = getDestC().getType();
 
   VectorType sourceVectorAType = dyn_cast<VectorType>(sourceAType);
+  VectorType sourceVectorBType = dyn_cast<VectorType>(sourceBType);
   VectorType destVectorType = dyn_cast<VectorType>(destType);
 
   Type sourceAElemType = sourceVectorAType.getElementType();
+  Type sourceBElemType = sourceVectorBType.getElementType();
   Type destElemType = destVectorType.getElementType();
+
+  if (sourceVectorAType.getNumElements() !=
+      sourceVectorBType.getNumElements()) {
+    return emitOpError("source vectors have different lengths: ")
+           << sourceVectorAType << " vs. " << sourceVectorBType;
+  }
 
   bool isDestFloat = isa<Float32Type, Float16Type, BFloat16Type>(destElemType);
   bool isSrcFloat =
@@ -247,6 +338,13 @@ LogicalResult WMMAOp::verify() {
     return emitOpError("Expected int sources with int destination");
   }
 
+  if (sourceAElemType != sourceBElemType &&
+      !(isa<Float8E5M2Type, Float8E4M3FNType>(sourceAElemType) &&
+        isa<Float8E5M2Type, Float8E4M3FNType>(sourceBElemType))) {
+    return emitOpError(
+               "source element types much match (except for fp8) but have ")
+           << sourceAType << " and " << sourceBType;
+  }
   return success();
 }
 
@@ -272,22 +370,24 @@ LogicalResult MFMAOp::verify() {
   }
 
   Type sourceBType = getSourceB().getType();
-  if (sourceElem.isFloat8E5M2FNUZ() || sourceElem.isFloat8E4M3FNUZ()) {
+  if (sourceElem.isFloat(8) || sourceElem.isFloat(6) || sourceElem.isFloat(4)) {
     int64_t sourceBLen = 1;
     Type sourceBElem = sourceBType;
     if (auto sourceBVector = llvm::dyn_cast<VectorType>(sourceBType)) {
       sourceBLen = sourceBVector.getNumElements();
       sourceBElem = sourceBVector.getElementType();
     }
-    if (!sourceBElem.isFloat8E5M2FNUZ() && !sourceBElem.isFloat8E4M3FNUZ())
-      return emitOpError("expected both source operands to have f8 elements");
+    if (!sourceBElem.isFloat(8) && !sourceBElem.isFloat(6) &&
+        !sourceBElem.isFloat(4))
+      return emitOpError("expected both source operands to have small-float "
+                         "elements if one does");
     if (sourceLen != sourceBLen)
       return emitOpError(
-          "expected both f8 source vectors to have the same length");
+          "expected both small-float source vectors to have the same length");
   } else {
     if (sourceType != sourceBType)
-      return emitOpError(
-          "expected both non-f8 source operand types to match exactly");
+      return emitOpError("expected both non-small-float source operand types "
+                         "to match exactly");
   }
   // Normalize the wider integer types the compiler expects to i8
   if (sourceElem.isInteger(32)) {
@@ -387,6 +487,75 @@ LogicalResult DPPOp::verify() {
     break;
   }
   }
+  return success();
+}
+
+LogicalResult GatherToLDSOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+  MemRefType dstType = cast<MemRefType>(getDst().getType());
+
+  if (!dstType.areTrailingDimsContiguous(dstType.getRank()))
+    return emitOpError("destination types must be contiguous");
+
+  auto elemType = srcType.getElementType();
+  // Check $src and $dst element types are the same.
+  if (elemType != dstType.getElementType())
+    return emitOpError("source and destination element types must match");
+
+  // copy type sizes should be 1, 2, 4, 12 or 16 bytes.
+  auto transferType = getTransferType();
+  int transferSize;
+  if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
+    transferSize = vectorTransfer.getNumElements() *
+                   vectorTransfer.getElementTypeBitWidth();
+  } else {
+    transferSize = transferType.getIntOrFloatBitWidth();
+  }
+  if (!llvm::is_contained({8, 16, 32, 96, 128}, transferSize))
+    return emitOpError(
+        "Transfering type size must be 8, 16, 32, 96 or 128 bits");
+
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()) &&
+      !hasFatRawBufferMemorySpace(srcType.getMemorySpace()))
+    return emitOpError(
+        "source memory address space must be global or fat raw buffer");
+
+  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
+    return emitOpError("destination memory address space must be Workgroup");
+
+  return success();
+}
+
+LogicalResult TransposeLoadOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+
+  if (!hasWorkgroupMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be Workgroup");
+
+  auto transferType = cast<VectorType>(getType());
+  size_t numElements = transferType.getNumElements();
+  size_t elementTypeSize =
+      transferType.getElementType().getIntOrFloatBitWidth();
+
+  // ElementSize -> NumElements
+  const llvm::SmallDenseMap<size_t, size_t> KValidLoadSizeMap = {
+      {4, 16},
+      {6, 16},
+      {8, 8},
+      {16, 4},
+  };
+
+  auto validNumElems = KValidLoadSizeMap.find(elementTypeSize);
+  if (validNumElems == KValidLoadSizeMap.end()) {
+    return emitOpError("Unsupported element type size for transpose load: ")
+           << elementTypeSize << " bits";
+  }
+  if (numElements != validNumElems->second) {
+    return emitOpError(
+               "Transferring type size mismatch: expected num of elements: ")
+           << validNumElems->second;
+  }
+
   return success();
 }
 

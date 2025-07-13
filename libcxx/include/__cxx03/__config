@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONFIG
-#define _LIBCPP___CONFIG
+#ifndef _LIBCPP___CXX03___CONFIG
+#define _LIBCPP___CXX03___CONFIG
 
-#include <__config_site>
 #include <__cxx03/__configuration/abi.h>
 #include <__cxx03/__configuration/availability.h>
 #include <__cxx03/__configuration/compiler.h>
+#include <__cxx03/__configuration/config_site_shim.h>
 #include <__cxx03/__configuration/platform.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
@@ -157,11 +157,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #  define _LIBCPP_TOSTRING2(x) #x
 #  define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
 
-// NOLINTNEXTLINE(libcpp-cpp-version-check)
-#  if __cplusplus < 201103L
-#    define _LIBCPP_CXX03_LANG
-#  endif
-
 #  ifndef __has_constexpr_builtin
 #    define __has_constexpr_builtin(x) 0
 #  endif
@@ -220,17 +215,8 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    endif
 #  endif
 
-// Incomplete features get their own specific disabling flags. This makes it
-// easier to grep for target specific flags once the feature is complete.
-#  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
-#    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
-#    define _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
-#    define _LIBCPP_HAS_NO_EXPERIMENTAL_TZDB
-#    define _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
-#  endif
-
 #  if defined(__MVS__)
-#    include <__cxx03/features.h> // for __NATIVE_ASCII_F
+#    include <features.h> // for __NATIVE_ASCII_F
 #  endif
 
 #  if defined(_WIN32)
@@ -307,34 +293,17 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_USING_DEV_RANDOM
 #  endif
 
-#  ifndef _LIBCPP_CXX03_LANG
-
-#    define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
-#    define _ALIGNAS_TYPE(x) alignas(x)
-#    define _ALIGNAS(x) alignas(x)
-#    define _LIBCPP_NORETURN [[noreturn]]
-#    define _NOEXCEPT noexcept
-#    define _NOEXCEPT_(...) noexcept(__VA_ARGS__)
-#    define _LIBCPP_CONSTEXPR constexpr
-
-#  else
-
-#    define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
-#    define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
-#    define _ALIGNAS(x) __attribute__((__aligned__(x)))
-#    define _LIBCPP_NORETURN __attribute__((__noreturn__))
-#    define _LIBCPP_HAS_NO_NOEXCEPT
-#    define nullptr __nullptr
-#    define _NOEXCEPT throw()
-#    define _NOEXCEPT_(...)
-#    define static_assert(...) _Static_assert(__VA_ARGS__)
-#    define decltype(...) __decltype(__VA_ARGS__)
-#    define _LIBCPP_CONSTEXPR
+#  define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
+#  define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
+#  define _ALIGNAS(x) __attribute__((__aligned__(x)))
+#  define _LIBCPP_NORETURN __attribute__((__noreturn__))
+#  define nullptr __nullptr
+#  define _NOEXCEPT throw()
+#  define static_assert(...) _Static_assert(__VA_ARGS__)
+#  define decltype(...) __decltype(__VA_ARGS__)
 
 typedef __char16_t char16_t;
 typedef __char32_t char32_t;
-
-#  endif
 
 #  define _LIBCPP_PREFERRED_ALIGNOF(_Tp) __alignof(_Tp)
 
@@ -613,7 +582,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_NO_INT128
 #  endif
 
-#  ifdef _LIBCPP_CXX03_LANG
 #    define _LIBCPP_DECLARE_STRONG_ENUM(x)                                                                             \
       struct _LIBCPP_EXPORTED_FROM_ABI x {                                                                             \
         enum __lx
@@ -625,11 +593,6 @@ typedef __char32_t char32_t;
       _LIBCPP_HIDE_FROM_ABI operator int() const { return __v_; }                                                      \
       };
 // clang-format on
-
-#  else // _LIBCPP_CXX03_LANG
-#    define _LIBCPP_DECLARE_STRONG_ENUM(x) enum class x
-#    define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)
-#  endif // _LIBCPP_CXX03_LANG
 
 #  if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT_LIKE) || defined(__NetBSD__)
 #    define _LIBCPP_LOCALE__L_EXTENSIONS 1
@@ -675,73 +638,21 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_WCTYPE_IS_MASK
 #  endif
 
-#  if _LIBCPP_STD_VER <= 17 || !defined(__cpp_char8_t)
-#    define _LIBCPP_HAS_NO_CHAR8_T
-#  endif
+#  define _LIBCPP_HAS_NO_CHAR8_T
 
 // Deprecation macros.
 //
 // Deprecations warnings are always enabled, except when users explicitly opt-out
 // by defining _LIBCPP_DISABLE_DEPRECATION_WARNINGS.
 #  if !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
-#    if __has_attribute(__deprecated__)
-#      define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
-#      define _LIBCPP_DEPRECATED_(m) __attribute__((__deprecated__(m)))
-#    elif _LIBCPP_STD_VER >= 14
-#      define _LIBCPP_DEPRECATED [[deprecated]]
-#      define _LIBCPP_DEPRECATED_(m) [[deprecated(m)]]
-#    else
-#      define _LIBCPP_DEPRECATED
-#      define _LIBCPP_DEPRECATED_(m)
-#    endif
+#    define _LIBCPP_DEPRECATED __attribute__((__deprecated__))
+#    define _LIBCPP_DEPRECATED_(m) __attribute__((__deprecated__(m)))
 #  else
 #    define _LIBCPP_DEPRECATED
 #    define _LIBCPP_DEPRECATED_(m)
 #  endif
 
-#  if _LIBCPP_STD_VER < 20
-#    define _LIBCPP_DEPRECATED_ATOMIC_SYNC                                                                             \
-      _LIBCPP_DEPRECATED_("The C++20 synchronization library has been deprecated prior to C++20. Please update to "    \
-                          "using -std=c++20 if you need to use these facilities.")
-#  else
-#    define _LIBCPP_DEPRECATED_ATOMIC_SYNC /* nothing */
-#  endif
-
-#  if !defined(_LIBCPP_CXX03_LANG)
-#    define _LIBCPP_DEPRECATED_IN_CXX11 _LIBCPP_DEPRECATED
-#  else
-#    define _LIBCPP_DEPRECATED_IN_CXX11
-#  endif
-
-#  if _LIBCPP_STD_VER >= 14
-#    define _LIBCPP_DEPRECATED_IN_CXX14 _LIBCPP_DEPRECATED
-#  else
-#    define _LIBCPP_DEPRECATED_IN_CXX14
-#  endif
-
-#  if _LIBCPP_STD_VER >= 17
-#    define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
-#  else
-#    define _LIBCPP_DEPRECATED_IN_CXX17
-#  endif
-
-#  if _LIBCPP_STD_VER >= 20
-#    define _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_DEPRECATED
-#  else
-#    define _LIBCPP_DEPRECATED_IN_CXX20
-#  endif
-
-#  if _LIBCPP_STD_VER >= 23
-#    define _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_DEPRECATED
-#  else
-#    define _LIBCPP_DEPRECATED_IN_CXX23
-#  endif
-
-#  if _LIBCPP_STD_VER >= 26
-#    define _LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_DEPRECATED
-#  else
-#    define _LIBCPP_DEPRECATED_IN_CXX26
-#  endif
+#  define _LIBCPP_DEPRECATED_ATOMIC_SYNC /* nothing */
 
 #  if !defined(_LIBCPP_HAS_NO_CHAR8_T)
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
@@ -758,42 +669,6 @@ typedef __char32_t char32_t;
 #  else
 #    define _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 #    define _LIBCPP_SUPPRESS_DEPRECATED_POP
-#  endif
-
-#  if _LIBCPP_STD_VER <= 11
-#    define _LIBCPP_EXPLICIT_SINCE_CXX14
-#  else
-#    define _LIBCPP_EXPLICIT_SINCE_CXX14 explicit
-#  endif
-
-#  if _LIBCPP_STD_VER >= 23
-#    define _LIBCPP_EXPLICIT_SINCE_CXX23 explicit
-#  else
-#    define _LIBCPP_EXPLICIT_SINCE_CXX23
-#  endif
-
-#  if _LIBCPP_STD_VER >= 14
-#    define _LIBCPP_CONSTEXPR_SINCE_CXX14 constexpr
-#  else
-#    define _LIBCPP_CONSTEXPR_SINCE_CXX14
-#  endif
-
-#  if _LIBCPP_STD_VER >= 17
-#    define _LIBCPP_CONSTEXPR_SINCE_CXX17 constexpr
-#  else
-#    define _LIBCPP_CONSTEXPR_SINCE_CXX17
-#  endif
-
-#  if _LIBCPP_STD_VER >= 20
-#    define _LIBCPP_CONSTEXPR_SINCE_CXX20 constexpr
-#  else
-#    define _LIBCPP_CONSTEXPR_SINCE_CXX20
-#  endif
-
-#  if _LIBCPP_STD_VER >= 23
-#    define _LIBCPP_CONSTEXPR_SINCE_CXX23 constexpr
-#  else
-#    define _LIBCPP_CONSTEXPR_SINCE_CXX23
 #  endif
 
 #  ifndef _LIBCPP_WEAK
@@ -933,9 +808,7 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
 #  endif
 
-#  if _LIBCPP_STD_VER >= 20
-#    define _LIBCPP_CONSTINIT constinit
-#  elif __has_attribute(__require_constant_initialization__)
+#  if __has_attribute(__require_constant_initialization__)
 #    define _LIBCPP_CONSTINIT __attribute__((__require_constant_initialization__))
 #  else
 #    define _LIBCPP_CONSTINIT
@@ -1037,19 +910,7 @@ typedef __char32_t char32_t;
 // macro is used to mark them as such, which suppresses the
 // '-Wctad-maybe-unsupported' compiler warning when CTAD is used in user code
 // with these classes.
-#  if _LIBCPP_STD_VER >= 17
-#    ifdef _LIBCPP_COMPILER_CLANG_BASED
-#      define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName)                                                              \
-        template <class... _Tag>                                                                                       \
-        [[maybe_unused]] _ClassName(typename _Tag::__allow_ctad...)->_ClassName<_Tag...>
-#    else
-#      define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(ClassName)                                                               \
-        template <class... _Tag>                                                                                       \
-        ClassName(typename _Tag::__allow_ctad...)->ClassName<_Tag...>
-#    endif
-#  else
-#    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
-#  endif
+#  define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
 
 // TODO(varconst): currently, there are bugs in Clang's intrinsics when handling Objective-C++ `id`, so don't use
 // compiler intrinsics in the Objective-C++ mode.
@@ -1225,4 +1086,4 @@ typedef __char32_t char32_t;
 
 #endif // __cplusplus
 
-#endif // _LIBCPP___CONFIG
+#endif // _LIBCPP___CXX03___CONFIG

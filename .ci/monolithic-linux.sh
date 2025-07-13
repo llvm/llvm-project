@@ -28,29 +28,49 @@ if [[ -n "${CLEAR_CACHE:-}" ]]; then
   ccache --clear
 fi
 
+mkdir -p artifacts/reproducers
+
+# Make sure any clang reproducers will end up as artifacts.
+export CLANG_CRASH_DIAGNOSTICS_DIR=`realpath artifacts/reproducers`
+
 function at-exit {
-  mkdir -p artifacts
+  retcode=$?
+
   ccache --print-stats > artifacts/ccache_stats.txt
+  cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
+  cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
 
   # If building fails there will be no results files.
   shopt -s nullglob
-  python3 "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":linux: Linux x64 Test Results" \
-    "linux-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
+  
+  python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py ":penguin: Linux x64 Test Results" \
+    $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
 }
 trap at-exit EXIT
 
 projects="${1}"
 targets="${2}"
+runtimes="${3}"
+runtime_targets="${4}"
+runtime_targets_needs_reconfig="${5}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
 
-echo "--- cmake"
-pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
-pip install -q -r "${MONOREPO_ROOT}"/lldb/test/requirements.txt
-pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
+echo "::group::cmake"
+export PIP_BREAK_SYSTEM_PACKAGES=1
+pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
+
+# Set the system llvm-symbolizer as preferred.
+export LLVM_SYMBOLIZER_PATH=`which llvm-symbolizer`
+[[ ! -f "${LLVM_SYMBOLIZER_PATH}" ]] && echo "llvm-symbolizer not found!"
+
+# Set up all runtimes either way. libcxx is a dependency of LLDB.
+# It will not be built unless it is used.
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -G Ninja \
+      -D CMAKE_PREFIX_PATH="${HOME}/.local" \
       -D CMAKE_BUILD_TYPE=Release \
       -D LLVM_ENABLE_ASSERTIONS=ON \
       -D LLVM_BUILD_EXAMPLES=ON \
@@ -59,82 +79,55 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_LLD=ON \
       -D CMAKE_CXX_FLAGS=-gmlt \
       -D LLVM_CCACHE_BUILD=ON \
+      -D LIBCXX_CXX_ABI=libcxxabi \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+      -D LLDB_ENABLE_PYTHON=ON \
+      -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
-echo "--- ninja"
+echo "::endgroup::"
+echo "::group::ninja"
+
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets}
 
-runtimes="${3}"
-runtime_targets="${4}"
+echo "::endgroup::"
+
+if [[ "${runtime_targets}" != "" ]]; then
+  echo "::group::ninja runtimes"
+
+  ninja -C "${BUILD_DIR}" ${runtime_targets}
+
+  echo "::endgroup::"
+fi
 
 # Compiling runtimes with just-built Clang and running their tests
 # as an additional testing for Clang.
-if [[ "${runtimes}" != "" ]]; then
-  if [[ "${runtime_targets}" == "" ]]; then
-    echo "Runtimes to build are specified, but targets are not."
-    exit 1
-  fi
+if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
+  echo "::group::cmake runtimes C++26"
 
-  echo "--- ninja install-clang"
+  cmake \
+    -D LIBCXX_TEST_PARAMS="std=c++26" \
+    -D LIBCXXABI_TEST_PARAMS="std=c++26" \
+    "${BUILD_DIR}"
 
-  ninja -C ${BUILD_DIR} install-clang install-clang-resource-headers
+  echo "::endgroup::"
+  echo "::group::ninja runtimes C++26"
 
-  RUNTIMES_BUILD_DIR="${MONOREPO_ROOT}/build-runtimes"
-  INSTALL_DIR="${BUILD_DIR}/install"
-  mkdir -p ${RUNTIMES_BUILD_DIR}
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
 
-  echo "--- cmake runtimes C++03"
+  echo "::endgroup::"
+  echo "::group::cmake runtimes clang modules"
 
-  cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -D LIBCXX_CXX_ABI=libcxxabi \
-      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -D LIBCXX_TEST_PARAMS="std=c++03" \
-      -D LIBCXXABI_TEST_PARAMS="std=c++03" \
-      -D LLVM_LIT_ARGS="${lit_args}"
+  cmake \
+    -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
+    -D LIBCXXABI_TEST_PARAMS="enable_modules=clang" \
+    "${BUILD_DIR}"
 
-  echo "--- ninja runtimes C++03"
+  echo "::endgroup::"
+  echo "::group::ninja runtimes clang modules"
 
-  ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
 
-  echo "--- cmake runtimes C++26"
-
-  rm -rf "${RUNTIMES_BUILD_DIR}"
-  cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -D LIBCXX_CXX_ABI=libcxxabi \
-      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -D LIBCXX_TEST_PARAMS="std=c++26" \
-      -D LIBCXXABI_TEST_PARAMS="std=c++26" \
-      -D LLVM_LIT_ARGS="${lit_args}"
-
-  echo "--- ninja runtimes C++26"
-
-  ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
-
-  echo "--- cmake runtimes clang modules"
-
-  rm -rf "${RUNTIMES_BUILD_DIR}"
-  cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -D LIBCXX_CXX_ABI=libcxxabi \
-      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
-      -D LIBCXXABI_TEST_PARAMS="enable_modules=clang" \
-      -D LLVM_LIT_ARGS="${lit_args}"
-
-  echo "--- ninja runtimes clang modules"
-  
-  ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
+  echo "::endgroup::"
 fi

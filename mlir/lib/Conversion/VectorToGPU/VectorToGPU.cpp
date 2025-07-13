@@ -12,8 +12,6 @@
 
 #include "mlir/Conversion/VectorToGPU/VectorToGPU.h"
 
-#include <type_traits>
-
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -28,11 +26,9 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Region.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -132,7 +128,7 @@ static std::optional<int64_t> getStaticallyKnownRowStride(ShapedType type) {
     return 0;
   int64_t offset = 0;
   SmallVector<int64_t, 2> strides;
-  if (failed(getStridesAndOffset(memrefType, strides, offset)) ||
+  if (failed(memrefType.getStridesAndOffset(strides, offset)) ||
       strides.back() != 1)
     return std::nullopt;
   int64_t stride = strides[strides.size() - 2];
@@ -317,8 +313,11 @@ getSliceContract(Operation *op,
     auto *currentOp = (slice)[currentIndex];
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
-    getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
-    slice.insert(backwardSlice.begin(), backwardSlice.end());
+    LogicalResult result =
+        getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
+    assert(result.succeeded() && "expected a backward slice");
+    (void)result;
+    slice.insert_range(backwardSlice);
 
     // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
@@ -334,7 +333,7 @@ getSliceContract(Operation *op,
     } else {
       getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
     }
-    slice.insert(forwardSlice.begin(), forwardSlice.end());
+    slice.insert_range(forwardSlice);
     ++currentIndex;
   }
   return slice;
@@ -374,7 +373,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
         }))
       return;
 
-    opToConvert.insert(dependentOps.begin(), dependentOps.end());
+    opToConvert.insert_range(dependentOps);
   });
   // Sort the operations so that we can convert them in topological order.
   return topologicalSort(opToConvert);
@@ -486,7 +485,7 @@ struct CombineTransferReadOpTranspose final
     Value result =
         rewriter
             .create<vector::TransferReadOp>(
-                loc, resultType, transferReadOp.getSource(),
+                loc, resultType, transferReadOp.getBase(),
                 transferReadOp.getIndices(), AffineMapAttr::get(newMap),
                 transferReadOp.getPadding(), transferReadOp.getMask(),
                 transferReadOp.getInBoundsAttr())
@@ -581,7 +580,7 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   gpu::MMAMatrixType type =
       gpu::MMAMatrixType::get(op.getVectorType().getShape(), elType, fragType);
   Value load = rewriter.create<gpu::SubgroupMmaLoadMatrixOp>(
-      op.getLoc(), type, op.getSource(), op.getIndices(),
+      op.getLoc(), type, op.getBase(), op.getIndices(),
       rewriter.getIndexAttr(*stride),
       isTranspose ? rewriter.getUnitAttr() : UnitAttr());
   valueMapping[mappingResult] = load;
@@ -612,7 +611,7 @@ convertTransferWriteOp(RewriterBase &rewriter, vector::TransferWriteOp op,
 
   Value matrix = it->second;
   auto store = rewriter.create<gpu::SubgroupMmaStoreMatrixOp>(
-      op.getLoc(), matrix, op.getSource(), op.getIndices(),
+      op.getLoc(), matrix, op.getBase(), op.getIndices(),
       rewriter.getIndexAttr(*stride), /*transpose=*/UnitAttr());
   (void)store;
 
@@ -759,7 +758,7 @@ creatLdMatrixCompatibleLoads(RewriterBase &rewriter, vector::TransferReadOp op,
                                          indices);
 
   nvgpu::LdMatrixOp newOp = rewriter.create<nvgpu::LdMatrixOp>(
-      loc, vectorType, op.getSource(), indices, *transpose, params->numTiles);
+      loc, vectorType, op.getBase(), indices, *transpose, params->numTiles);
   valueMapping[op] = newOp->getResult(0);
   return success();
 }
@@ -784,7 +783,6 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   }
 
   Value laneId = rewriter.create<gpu::LaneIdOp>(loc, /*upperBound=*/nullptr);
-  SmallVector<Value, 4> elements;
 
   // This is the individual element type.
   Type loadedElType = regInfo->registerLLVMType;
@@ -819,7 +817,7 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
           rewriter, op, *coords, {laneId, logicalValueId}, newIndices);
 
       Value el = rewriter.create<vector::LoadOp>(loc, loadedElType,
-                                                 op.getSource(), newIndices);
+                                                 op.getBase(), newIndices);
       result = rewriter.create<vector::InsertOp>(loc, el, result, i);
     }
   } else {
@@ -842,7 +840,7 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
         getXferIndices<vector::TransferReadOp>(
             rewriter, op, *coords, {laneId, logicalValueId}, newIndices);
         Value el = rewriter.create<memref::LoadOp>(op.getLoc(), loadedElType,
-                                                   op.getSource(), newIndices);
+                                                   op.getBase(), newIndices);
         result = rewriter.create<vector::InsertOp>(
             op.getLoc(), el, result, ArrayRef<int64_t>{i, innerIdx});
       }
@@ -876,7 +874,7 @@ convertTransferReadToLoads(RewriterBase &rewriter, vector::TransferReadOp op,
     return rewriter.notifyMatchFailure(op, "no warpMatrixInfo");
 
   bool isLdMatrixCompatible =
-      isSharedMemory(cast<MemRefType>(op.getSource().getType())) &&
+      isSharedMemory(cast<MemRefType>(op.getBase().getType())) &&
       nvgpu::inferTileWidthInBits(*warpMatrixInfo) == 128;
 
   VectorType vecTy = op.getVectorType();
@@ -934,7 +932,7 @@ convertTransferWriteToStores(RewriterBase &rewriter, vector::TransferWriteOp op,
     SmallVector<Value, 4> newIndices;
     getXferIndices<vector::TransferWriteOp>(
         rewriter, op, *coords, {laneId, logicalValueId}, newIndices);
-    rewriter.create<vector::StoreOp>(loc, el, op.getSource(), newIndices);
+    rewriter.create<vector::StoreOp>(loc, el, op.getBase(), newIndices);
   }
 
   LLVM_DEBUG(DBGS() << "erase: " << op << "\n");
@@ -1326,8 +1324,7 @@ struct ConvertVectorToGPUPass
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populatePrepareVectorToMMAPatterns(patterns, useNvGpu.getValue());
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
 
     IRRewriter rewriter(&getContext());

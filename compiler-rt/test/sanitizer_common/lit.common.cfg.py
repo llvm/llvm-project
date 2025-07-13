@@ -87,7 +87,7 @@ config.substitutions.append(("%collect_stack_traces", collect_stack_traces))
 config.substitutions.append(("%tool_name", config.tool_name))
 config.substitutions.append(("%tool_options", tool_options))
 config.substitutions.append(
-    ("%env_tool_opts=", "env " + tool_options + "=" + default_tool_options_str)
+    ("%env_tool_opts=", "%env " + tool_options + "=" + default_tool_options_str)
 )
 
 config.suffixes = [".c", ".cpp"]
@@ -100,3 +100,6 @@ if not config.parallelism_group:
 
 if config.host_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
+
+if os.path.exists("/etc/services"):
+    config.available_features.add("netbase")

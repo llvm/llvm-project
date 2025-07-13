@@ -83,10 +83,10 @@ static void PrintOps(Instruction *I, const SmallVectorImpl<ValueEntry> &Ops) {
   Module *M = I->getModule();
   dbgs() << Instruction::getOpcodeName(I->getOpcode()) << " "
        << *Ops[0].Op->getType() << '\t';
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
+  for (const ValueEntry &Op : Ops) {
     dbgs() << "[ ";
-    Ops[i].Op->printAsOperand(dbgs(), false, M);
-    dbgs() << ", #" << Ops[i].Rank << "] ";
+    Op.Op->printAsOperand(dbgs(), false, M);
+    dbgs() << ", #" << Op.Rank << "] ";
   }
 }
 #endif
@@ -241,8 +241,10 @@ void ReassociatePass::canonicalizeOperands(Instruction *I) {
   Value *RHS = I->getOperand(1);
   if (LHS == RHS || isa<Constant>(RHS))
     return;
-  if (isa<Constant>(LHS) || getRank(RHS) < getRank(LHS))
+  if (isa<Constant>(LHS) || getRank(RHS) < getRank(LHS)) {
     cast<BinaryOperator>(I)->swapOperands();
+    MadeChange = true;
+  }
 }
 
 static BinaryOperator *CreateAdd(Value *S1, Value *S2, const Twine &Name,
@@ -380,7 +382,7 @@ using RepeatedValue = std::pair<Value *, uint64_t>;
 static bool LinearizeExprTree(Instruction *I,
                               SmallVectorImpl<RepeatedValue> &Ops,
                               ReassociatePass::OrderedSet &ToRedo,
-                              reassociate::OverflowTracking &Flags) {
+                              OverflowTracking &Flags) {
   assert((isa<UnaryOperator>(I) || isa<BinaryOperator>(I)) &&
          "Expected a UnaryOperator or BinaryOperator!");
   LLVM_DEBUG(dbgs() << "LINEARIZE: " << *I << '\n');
@@ -420,7 +422,7 @@ static bool LinearizeExprTree(Instruction *I,
   using LeafMap = DenseMap<Value *, uint64_t>;
   LeafMap Leaves; // Leaf -> Total weight so far.
   SmallVector<Value *, 8> LeafOrder; // Ensure deterministic leaf output order.
-  const DataLayout DL = I->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
 
 #ifndef NDEBUG
   SmallPtrSet<Value *, 8> Visited; // For checking the iteration scheme.
@@ -429,15 +431,13 @@ static bool LinearizeExprTree(Instruction *I,
     // We examine the operands of this binary operator.
     auto [I, Weight] = Worklist.pop_back_val();
 
-    if (isa<OverflowingBinaryOperator>(I)) {
-      Flags.HasNUW &= I->hasNoUnsignedWrap();
-      Flags.HasNSW &= I->hasNoSignedWrap();
-    }
+    Flags.mergeFlags(*I);
 
     for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) { // Visit operands.
       Value *Op = I->getOperand(OpIdx);
       LLVM_DEBUG(dbgs() << "OPERAND: " << *Op << " (" << Weight << ")\n");
-      assert(!Op->use_empty() && "No uses, so how did we get to it?!");
+      assert((!Op->hasUseList() || !Op->use_empty()) &&
+             "No uses, so how did we get to it?!");
 
       // If this is a binary operation of the right kind with only one use then
       // add its operands to the expression.
@@ -731,15 +731,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
           ExpressionChangedStart->clearSubclassOptionalData();
           ExpressionChangedStart->setFastMathFlags(Flags);
         } else {
-          ExpressionChangedStart->clearSubclassOptionalData();
-          if (ExpressionChangedStart->getOpcode() == Instruction::Add ||
-              (ExpressionChangedStart->getOpcode() == Instruction::Mul &&
-               Flags.AllKnownNonZero)) {
-            if (Flags.HasNUW)
-              ExpressionChangedStart->setHasNoUnsignedWrap();
-            if (Flags.HasNSW && (Flags.AllKnownNonNegative || Flags.HasNUW))
-              ExpressionChangedStart->setHasNoSignedWrap();
-          }
+          Flags.applyFlags(*ExpressionChangedStart);
         }
       }
 
@@ -755,15 +747,14 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       if (ClearFlags)
         replaceDbgUsesWithUndef(ExpressionChangedStart);
 
-      ExpressionChangedStart->moveBefore(I);
+      ExpressionChangedStart->moveBefore(I->getIterator());
       ExpressionChangedStart =
           cast<BinaryOperator>(*ExpressionChangedStart->user_begin());
     } while (true);
   }
 
   // Throw away any left over nodes from the original expression.
-  for (BinaryOperator *BO : NodesToRewrite)
-    RedoInsts.insert(BO);
+  RedoInsts.insert_range(NodesToRewrite);
 }
 
 /// Insert instructions before the instruction pointed to by BI,
@@ -808,7 +799,7 @@ static Value *NegateValue(Value *V, Instruction *BI,
     // assured that the neg instructions we just inserted dominate the
     // instruction we are about to insert after them.
     //
-    I->moveBefore(BI);
+    I->moveBefore(BI->getIterator());
     I->setName(I->getName()+".neg");
 
     // Add the intermediate negates to the redo list as processing them later
@@ -1051,7 +1042,7 @@ static BinaryOperator *ConvertShiftToMul(Instruction *Shl) {
   // bitwidth - 1.
   bool NSW = cast<BinaryOperator>(Shl)->hasNoSignedWrap();
   bool NUW = cast<BinaryOperator>(Shl)->hasNoUnsignedWrap();
-  unsigned BitWidth = Shl->getType()->getIntegerBitWidth();
+  unsigned BitWidth = Shl->getType()->getScalarSizeInBits();
   if (NSW && (NUW || SA->getValue().ult(BitWidth - 1)))
     Mul->setHasNoSignedWrap(true);
   Mul->setHasNoUnsignedWrap(NUW);
@@ -1087,19 +1078,24 @@ static unsigned FindInOperandList(const SmallVectorImpl<ValueEntry> &Ops,
 
 /// Emit a tree of add instructions, summing Ops together
 /// and returning the result.  Insert the tree before I.
-static Value *EmitAddTreeOfValues(BasicBlock::iterator It,
+static Value *EmitAddTreeOfValues(Instruction *I,
                                   SmallVectorImpl<WeakTrackingVH> &Ops) {
   if (Ops.size() == 1) return Ops.back();
 
   Value *V1 = Ops.pop_back_val();
-  Value *V2 = EmitAddTreeOfValues(It, Ops);
-  return CreateAdd(V2, V1, "reass.add", It, &*It);
+  Value *V2 = EmitAddTreeOfValues(I, Ops);
+  auto *NewAdd = CreateAdd(V2, V1, "reass.add", I->getIterator(), I);
+  NewAdd->setDebugLoc(I->getDebugLoc());
+  return NewAdd;
 }
 
 /// If V is an expression tree that is a multiplication sequence,
 /// and if this sequence contains a multiply by Factor,
 /// remove Factor from the tree and return the new tree.
-Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
+/// If new instructions are inserted to generate this tree, DL should be used
+/// as the DebugLoc for these instructions.
+Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor,
+                                                   DebugLoc DL) {
   BinaryOperator *BO = isReassociableOp(V, Instruction::Mul, Instruction::FMul);
   if (!BO)
     return nullptr;
@@ -1109,10 +1105,8 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
   MadeChange |= LinearizeExprTree(BO, Tree, RedoInsts, Flags);
   SmallVector<ValueEntry, 8> Factors;
   Factors.reserve(Tree.size());
-  for (unsigned i = 0, e = Tree.size(); i != e; ++i) {
-    RepeatedValue E = Tree[i];
+  for (const RepeatedValue &E : Tree)
     Factors.append(E.second, ValueEntry(getRank(E.first), E.first));
-  }
 
   bool FoundFactor = false;
   bool NeedsNegate = false;
@@ -1163,8 +1157,10 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
     V = BO;
   }
 
-  if (NeedsNegate)
+  if (NeedsNegate) {
     V = CreateNeg(V, "neg", InsertPt, BO);
+    cast<Instruction>(V)->setDebugLoc(DL);
+  }
 
   return V;
 }
@@ -1383,8 +1379,8 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
   APInt ConstOpnd(Ty->getScalarSizeInBits(), 0);
 
   // Step 1: Convert ValueEntry to XorOpnd
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
-    Value *V = Ops[i].Op;
+  for (const ValueEntry &Op : Ops) {
+    Value *V = Op.Op;
     const APInt *C;
     // TODO: Support non-splat vectors.
     if (match(V, m_APInt(C))) {
@@ -1520,6 +1516,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       Constant *C = Ty->isIntOrIntVectorTy() ?
         ConstantInt::get(Ty, NumFound) : ConstantFP::get(Ty, NumFound);
       Instruction *Mul = CreateMul(TheOp, C, "factor", I->getIterator(), I);
+      Mul->setDebugLoc(I->getDebugLoc());
 
       // Now that we have inserted a multiply, optimize it. This allows us to
       // handle cases that require multiple factoring steps, such as this:
@@ -1588,9 +1585,9 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
   // where they are actually the same multiply.
   unsigned MaxOcc = 0;
   Value *MaxOccVal = nullptr;
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
+  for (const ValueEntry &Op : Ops) {
     BinaryOperator *BOp =
-        isReassociableOp(Ops[i].Op, Instruction::Mul, Instruction::FMul);
+        isReassociableOp(Op.Op, Instruction::Mul, Instruction::FMul);
     if (!BOp)
       continue;
 
@@ -1665,7 +1662,8 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       if (!BOp)
         continue;
 
-      if (Value *V = RemoveFactorFromExpression(Ops[i].Op, MaxOccVal)) {
+      if (Value *V = RemoveFactorFromExpression(Ops[i].Op, MaxOccVal,
+                                                I->getDebugLoc())) {
         // The factorized operand may occur several times.  Convert them all in
         // one fell swoop.
         for (unsigned j = Ops.size(); j != i;) {
@@ -1683,7 +1681,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
     DummyInst->deleteValue();
 
     unsigned NumAddedValues = NewMulOps.size();
-    Value *V = EmitAddTreeOfValues(I->getIterator(), NewMulOps);
+    Value *V = EmitAddTreeOfValues(I, NewMulOps);
 
     // Now that we have inserted the add tree, optimize it. This allows us to
     // handle cases that require multiple factoring steps, such as this:
@@ -1695,6 +1693,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
     // Create the multiply.
     Instruction *V2 = CreateMul(V, MaxOccVal, "reass.mul", I->getIterator(), I);
+    V2->setDebugLoc(I->getDebugLoc());
 
     // Rerun associate on the multiply in case the inner expression turned into
     // a multiply.  We want to make sure that we keep things in canonical form.
@@ -2174,13 +2173,14 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   if (isa<FPMathOperator>(I) && !hasFPAssociativeFlags(I))
     return;
 
-  // Do not reassociate boolean (i1) expressions.  We want to preserve the
+  // Do not reassociate boolean (i1/vXi1) expressions.  We want to preserve the
   // original order of evaluation for short-circuited comparisons that
   // SimplifyCFG has folded to AND/OR expressions.  If the expression
   // is not further optimized, it is likely to be transformed back to a
   // short-circuited form for code gen, and the source order may have been
-  // optimized for the most likely conditions.
-  if (I->getType()->isIntegerTy(1))
+  // optimized for the most likely conditions. For vector boolean expressions,
+  // we should be optimizing for ILP and not serializing the logical operations.
+  if (I->getType()->isIntOrIntVectorTy(1))
     return;
 
   // If this is a bitwise or instruction of operands

@@ -14,7 +14,7 @@ func.func @store_1D_vector(%vec: vector<8xf32>,
 // CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc
 // CHECK-SAME:    %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]]
 // CHECK-SAME:    memref<8x16x32xf32> -> !xegpu.tensor_desc<8xf32,
-// CHECK-SAME:    boundary_check = true
+// CHECK-SAME:    boundary_check = false
 // CHECK:       xegpu.store_nd %[[VEC]], %[[DESC]] : vector<8xf32>
 
 // -----
@@ -33,7 +33,6 @@ func.func @store_2D_vector(%vec: vector<8x16xf32>,
 // CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc
 // CHECK-SAME:    %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]]
 // CHECK-SAME:    memref<8x16x32xf32> -> !xegpu.tensor_desc<8x16xf32,
-// CHECK-SAME:    boundary_check = true
 // CHECK:       xegpu.store_nd %[[VEC]], %[[DESC]] : vector<8x16xf32>
 
 // -----
@@ -59,7 +58,6 @@ func.func @store_dynamic_source(%vec: vector<8x16xf32>,
 // CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]]
 // CHECK-SAME:    [%[[DIM_0]], %[[DIM_1]], %[[DIM_2]]], [%[[DIM_0_STRIDE]], %[[DIM_2]], 1]
 // CHECK-SAME:    memref<?x?x?xf32> -> !xegpu.tensor_desc<8x16xf32,
-// CHECK-SAME:    boundary_check = true
 // CHECK:       xegpu.store_nd %[[VEC]], %[[DESC]] : vector<8x16xf32>
 
 // -----
@@ -78,7 +76,6 @@ func.func @store_out_of_bounds(%vec: vector<8x16xf32>,
 // CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc
 // CHECK-SAME:    %[[SRC]][%[[OFFSET]], %[[OFFSET]]]
 // CHECK-SAME:    memref<7x64xf32> -> !xegpu.tensor_desc<8x16xf32,
-// CHECK-SAME:    boundary_check = true
 // CHECK:       xegpu.store_nd %[[VEC]], %[[DESC]] : vector<8x16xf32>
 
 // -----

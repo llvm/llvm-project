@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
@@ -507,6 +508,38 @@ void CustomResultsNameOp::getAsmResultNames(
 }
 
 //===----------------------------------------------------------------------===//
+// ResultNameFromTypeOp
+//===----------------------------------------------------------------------===//
+
+void ResultNameFromTypeOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  auto result = getResult();
+  auto setResultNameFn = [&](::llvm::StringRef name) {
+    setNameFn(result, name);
+  };
+  auto opAsmTypeInterface =
+      ::mlir::cast<::mlir::OpAsmTypeInterface>(result.getType());
+  opAsmTypeInterface.getAsmName(setResultNameFn);
+}
+
+//===----------------------------------------------------------------------===//
+// BlockArgumentNameFromTypeOp
+//===----------------------------------------------------------------------===//
+
+void BlockArgumentNameFromTypeOp::getAsmBlockArgumentNames(
+    ::mlir::Region &region, ::mlir::OpAsmSetValueNameFn setNameFn) {
+  for (auto &block : region) {
+    for (auto arg : block.getArguments()) {
+      if (auto opAsmTypeInterface =
+              ::mlir::dyn_cast<::mlir::OpAsmTypeInterface>(arg.getType())) {
+        auto setArgNameFn = [&](StringRef name) { setNameFn(arg, name); };
+        opAsmTypeInterface.getAsmName(setArgNameFn);
+      }
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // ResultTypeWithTraitOp
 //===----------------------------------------------------------------------===//
 
@@ -698,6 +731,7 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 
 //===----------------------------------------------------------------------===//
 // TestWithBoundsOp
+//===----------------------------------------------------------------------===//
 
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
@@ -706,6 +740,7 @@ void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 //===----------------------------------------------------------------------===//
 // TestWithBoundsRegionOp
+//===----------------------------------------------------------------------===//
 
 ParseResult TestWithBoundsRegionOp::parse(OpAsmParser &parser,
                                           OperationState &result) {
@@ -739,6 +774,7 @@ void TestWithBoundsRegionOp::inferResultRanges(
 
 //===----------------------------------------------------------------------===//
 // TestIncrementOp
+//===----------------------------------------------------------------------===//
 
 void TestIncrementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                         SetIntRangeFn setResultRanges) {
@@ -751,6 +787,7 @@ void TestIncrementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 //===----------------------------------------------------------------------===//
 // TestReflectBoundsOp
+//===----------------------------------------------------------------------===//
 
 void TestReflectBoundsOp::inferResultRanges(
     ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
@@ -765,8 +802,9 @@ void TestReflectBoundsOp::inferResultRanges(
     unsigned bitwidth = intTy.getWidth();
     sIntTy = b.getIntegerType(bitwidth, /*isSigned=*/true);
     uIntTy = b.getIntegerType(bitwidth, /*isSigned=*/false);
-  } else
+  } else {
     sIntTy = uIntTy = type;
+  }
 
   setUminAttr(b.getIntegerAttr(uIntTy, range.umin()));
   setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax()));
@@ -796,6 +834,16 @@ void ConversionFuncOp::print(OpAsmPrinter &p) {
   function_interface_impl::printFunctionOp(
       p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
       getArgAttrsAttrName(), getResAttrsAttrName());
+}
+
+//===----------------------------------------------------------------------===//
+// TestValueWithBoundsOp
+//===----------------------------------------------------------------------===//
+
+void TestValueWithBoundsOp::populateBoundsForIndexValue(
+    Value v, ValueBoundsConstraintSet &cstr) {
+  cstr.bound(v) >= getMin().getSExtValue();
+  cstr.bound(v) <= getMax().getSExtValue();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1092,13 +1140,14 @@ void ReadBufferOp::getEffects(
 
 //===----------------------------------------------------------------------===//
 // TestCallAndStoreOp
+//===----------------------------------------------------------------------===//
 
 CallInterfaceCallable TestCallAndStoreOp::getCallableForCallee() {
   return getCallee();
 }
 
 void TestCallAndStoreOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  setCalleeAttr(callee.get<SymbolRefAttr>());
+  setCalleeAttr(cast<SymbolRefAttr>(callee));
 }
 
 Operation::operand_range TestCallAndStoreOp::getArgOperands() {
@@ -1111,13 +1160,14 @@ MutableOperandRange TestCallAndStoreOp::getArgOperandsMutable() {
 
 //===----------------------------------------------------------------------===//
 // TestCallOnDeviceOp
+//===----------------------------------------------------------------------===//
 
 CallInterfaceCallable TestCallOnDeviceOp::getCallableForCallee() {
   return getCallee();
 }
 
 void TestCallOnDeviceOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  setCalleeAttr(callee.get<SymbolRefAttr>());
+  setCalleeAttr(cast<SymbolRefAttr>(callee));
 }
 
 Operation::operand_range TestCallOnDeviceOp::getArgOperands() {
@@ -1130,6 +1180,7 @@ MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
 
 //===----------------------------------------------------------------------===//
 // TestStoreWithARegion
+//===----------------------------------------------------------------------===//
 
 void TestStoreWithARegion::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
@@ -1141,6 +1192,7 @@ void TestStoreWithARegion::getSuccessorRegions(
 
 //===----------------------------------------------------------------------===//
 // TestStoreWithALoopRegion
+//===----------------------------------------------------------------------===//
 
 void TestStoreWithALoopRegion::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
@@ -1345,4 +1397,60 @@ std::optional<DestructurableAllocationOpInterface>
 TestMultiSlotAlloca::handleDestructuringComplete(
     const DestructurableMemorySlot &slot, OpBuilder &builder) {
   return createNewMultiAllocaWithoutSlot(slot, builder, *this);
+}
+
+::mlir::LogicalResult test::TestDummyTensorOp::bufferize(
+    ::mlir::RewriterBase &rewriter,
+    const ::mlir::bufferization::BufferizationOptions &options,
+    ::mlir::bufferization::BufferizationState &state) {
+  auto buffer =
+      mlir::bufferization::getBuffer(rewriter, getInput(), options, state);
+  if (mlir::failed(buffer))
+    return failure();
+
+  const auto outType = getOutput().getType();
+  const auto bufferizedOutType = test::TestMemrefType::get(
+      getContext(), outType.getShape(), outType.getElementType(), nullptr);
+  // replace op with memref analogy
+  auto dummyMemrefOp = rewriter.create<test::TestDummyMemrefOp>(
+      getLoc(), bufferizedOutType, *buffer);
+
+  mlir::bufferization::replaceOpWithBufferizedValues(rewriter, getOperation(),
+                                                     dummyMemrefOp.getResult());
+
+  return mlir::success();
+}
+
+::mlir::LogicalResult test::TestCreateTensorOp::bufferize(
+    ::mlir::RewriterBase &rewriter,
+    const ::mlir::bufferization::BufferizationOptions &options,
+    ::mlir::bufferization::BufferizationState &state) {
+  // Note: mlir::bufferization::getBufferType() would internally call
+  // TestCreateTensorOp::getBufferType()
+  const auto bufferizedOutType =
+      mlir::bufferization::getBufferType(getOutput(), options, state);
+  if (mlir::failed(bufferizedOutType))
+    return failure();
+
+  // replace op with memref analogy
+  auto createMemrefOp =
+      rewriter.create<test::TestCreateMemrefOp>(getLoc(), *bufferizedOutType);
+
+  mlir::bufferization::replaceOpWithBufferizedValues(
+      rewriter, getOperation(), createMemrefOp.getResult());
+
+  return mlir::success();
+}
+
+mlir::FailureOr<mlir::bufferization::BufferLikeType>
+test::TestCreateTensorOp::getBufferType(
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+    const mlir::bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  const auto type = dyn_cast<test::TestTensorType>(value.getType());
+  if (type == nullptr)
+    return failure();
+
+  return cast<mlir::bufferization::BufferLikeType>(test::TestMemrefType::get(
+      getContext(), type.getShape(), type.getElementType(), nullptr));
 }

@@ -17,7 +17,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "arm-selectiondag-info"
 
-cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
+static cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
     "arm-memtransfer-tploop", cl::Hidden,
     cl::desc("Control conversion of memcpy to "
              "Tail predicated loops (WLSTP)"),
@@ -29,6 +29,11 @@ cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
                clEnumValN(TPLoop::Allow, "allow",
                           "Allow (may be subject to certain conditions) "
                           "conversion of memcpy to TP loop.")));
+
+bool ARMSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= ARMISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= ARMISD::LAST_MEMORY_OPCODE;
+}
 
 // Emit, if possible, a specialized version of the given Libcall. Typically this
 // means selecting the appropriately aligned version, but we also convert memset
@@ -116,18 +121,20 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
     Args.push_back(Entry);
   }
 
-  char const *FunctionNames[4][3] = {
-    { "__aeabi_memcpy",  "__aeabi_memcpy4",  "__aeabi_memcpy8"  },
-    { "__aeabi_memmove", "__aeabi_memmove4", "__aeabi_memmove8" },
-    { "__aeabi_memset",  "__aeabi_memset4",  "__aeabi_memset8"  },
-    { "__aeabi_memclr",  "__aeabi_memclr4",  "__aeabi_memclr8"  }
-  };
+  static const RTLIB::Libcall FunctionImpls[4][3] = {
+      {RTLIB::MEMCPY, RTLIB::AEABI_MEMCPY4, RTLIB::AEABI_MEMCPY8},
+      {RTLIB::MEMMOVE, RTLIB::AEABI_MEMMOVE4, RTLIB::AEABI_MEMMOVE8},
+      {RTLIB::MEMSET, RTLIB::AEABI_MEMSET4, RTLIB::AEABI_MEMSET8},
+      {RTLIB::AEABI_MEMCLR, RTLIB::AEABI_MEMCLR4, RTLIB::AEABI_MEMCLR8}};
+
+  RTLIB::Libcall NewLC = FunctionImpls[AEABILibcall][AlignVariant];
+
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()),
-          DAG.getExternalSymbol(FunctionNames[AEABILibcall][AlignVariant],
+          TLI->getLibcallCallingConv(NewLC), Type::getVoidTy(*DAG.getContext()),
+          DAG.getExternalSymbol(TLI->getLibcallName(NewLC),
                                 TLI->getPointerTy(DAG.getDataLayout())),
           std::move(Args))
       .setDiscardResult();

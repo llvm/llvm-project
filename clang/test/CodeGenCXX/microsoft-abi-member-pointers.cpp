@@ -647,7 +647,7 @@ void (Multiple::*convertB2FuncToMultiple(void (B2::*mp)()))() {
 // CHECK:   br i1 %{{.*}} label %{{.*}}, label %{{.*}}
 //
 //        memptr.convert:                                   ; preds = %entry
-// CHECK:   insertvalue { ptr, i32 } undef, ptr %[[mp]], 0
+// CHECK:   insertvalue { ptr, i32 } poison, ptr %[[mp]], 0
 // CHECK:   insertvalue { ptr, i32 } %{{.*}}, i32 4, 1
 // CHECK:   br label
 //
@@ -705,7 +705,7 @@ void (D::*convertCToD(void (C::*mp)()))() {
 // CHECK:   %[[nv_adj:.*]] = select i1 %[[is_nvbase]], i32 %[[nv_disp]], i32 0
 // CHECK:   %[[dst_adj:.*]] = select i1 %[[is_nvbase]], i32 4, i32 0
 // CHECK:   %[[adj:.*]] = sub nsw i32 %[[nv_adj]], %[[dst_adj]]
-// CHECK:   insertvalue { ptr, i32, i32 } undef, ptr {{.*}}, 0
+// CHECK:   insertvalue { ptr, i32, i32 } poison, ptr {{.*}}, 0
 // CHECK:   insertvalue { ptr, i32, i32 } {{.*}}, i32 %[[adj]], 1
 // CHECK:   insertvalue { ptr, i32, i32 } {{.*}}, i32 {{.*}}, 2
 // CHECK:   br label
@@ -964,3 +964,31 @@ static_assert(sizeof(b::d) == 16, "");
 static_assert(sizeof(void (a<int>::*)()) == 16, "");
 #endif
 }
+
+namespace ContainerOf {
+  using size_t = unsigned long long;
+
+  struct List {
+    int data;
+  };
+
+  struct Node {
+    int data;
+    struct List list1;
+    struct List list2;
+  };
+
+  // CHECK-LABEL: define{{.*}} ptr @"?getOwner@ContainerOf@@
+  // CHECK: %memptr.offset = getelementptr i8, ptr null, {{.*}}
+  Node* getOwner(List *list, List Node::*member) {
+    size_t offset = reinterpret_cast<size_t>(&((Node*)nullptr->*member));
+    return reinterpret_cast<Node*>(reinterpret_cast<char*>(list) - offset);
+  }
+}
+
+namespace GH144081 {
+  struct A;
+  template<int A::*> void f() {}
+  template void f<nullptr>();
+  // CHECK-LABEL: define{{.*}} void @"??$f@$0A@@GH144081@@YAXXZ"
+} // namespace GH144081

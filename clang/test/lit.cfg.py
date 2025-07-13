@@ -29,10 +29,12 @@ config.suffixes = [
     ".c",
     ".cpp",
     ".i",
+    ".cir",
     ".cppm",
     ".m",
     ".mm",
     ".cu",
+    ".cuh",
     ".hip",
     ".hlsl",
     ".ll",
@@ -68,6 +70,8 @@ llvm_config.use_default_substitutions()
 
 llvm_config.use_clang()
 
+config.substitutions.append(("%src_dir", config.clang_src_dir))
+
 config.substitutions.append(("%src_include_dir", config.clang_src_dir + "/include"))
 
 config.substitutions.append(("%target_triple", config.target_triple))
@@ -84,6 +88,7 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
+    "cir-opt",
     "clang-diff",
     "clang-format",
     "clang-repl",
@@ -111,6 +116,29 @@ tools = [
 if config.clang_examples:
     config.available_features.add("examples")
 
+
+def have_host_out_of_process_jit_feature_support():
+    clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
+
+    if not clang_repl_exe:
+        return False
+
+    testcode = b"\n".join([b"int i = 0;", b"%quit"])
+
+    try:
+        clang_repl_cmd = subprocess.run(
+            [clang_repl_exe, "-orc-runtime", "-oop-executor"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            input=testcode,
+        )
+    except OSError:
+        return False
+
+    if clang_repl_cmd.returncode == 0:
+        return True
+
+    return False
 
 def have_host_jit_feature_support(feature_name):
     clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
@@ -164,12 +192,17 @@ if have_host_jit_feature_support('jit'):
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
 
+    if have_host_out_of_process_jit_feature_support():
+        config.available_features.add("host-supports-out-of-process-jit")
+
 if config.clang_staticanalyzer:
     config.available_features.add("staticanalyzer")
     tools.append("clang-check")
 
     if config.clang_staticanalyzer_z3:
         config.available_features.add("z3")
+        if config.clang_staticanalyzer_z3_mock:
+            config.available_features.add("z3-mock")
     else:
         config.available_features.add("no-z3")
 
@@ -180,6 +213,14 @@ if config.clang_staticanalyzer:
         (
             "%check_analyzer_fixit",
             '"%s" %s' % (config.python_executable, check_analyzer_fixit_path),
+        )
+    )
+
+    csv2json_path = os.path.join(config.test_source_root, "Analysis", "csv2json.py")
+    config.substitutions.append(
+        (
+            "%csv2json",
+            '"%s" %s' % (config.python_executable, csv2json_path),
         )
     )
 
@@ -207,12 +248,14 @@ config.substitutions.append(
     )
 )
 
-config.substitutions.append(("%host_cc", config.host_cc))
-config.substitutions.append(("%host_cxx", config.host_cxx))
-
 # Determine whether the test target is compatible with execution on the host.
 if "aarch64" in config.host_arch:
     config.available_features.add("aarch64-host")
+
+# Some tests are sensitive to whether clang is statically or dynamically linked
+# to other libraries.
+if not (config.build_shared_libs or config.link_llvm_dylib or config.link_clang_dylib):
+    config.available_features.add("static-libs")
 
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
@@ -250,6 +293,7 @@ if platform.system() not in ["Darwin", "Fuchsia"]:
 
 
 def is_filesystem_case_insensitive():
+    os.makedirs(config.test_exec_root, exist_ok=True)
     handle, path = tempfile.mkstemp(prefix="case-test", dir=config.test_exec_root)
     isInsensitive = os.path.exists(
         os.path.join(os.path.dirname(path), os.path.basename(path).upper())

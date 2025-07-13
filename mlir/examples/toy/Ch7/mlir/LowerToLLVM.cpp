@@ -92,7 +92,7 @@ public:
       auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
       auto loop =
           rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
-      for (Operation &nested : *loop.getBody())
+      for (Operation &nested : make_early_inc_range(*loop.getBody()))
         rewriter.eraseOp(&nested);
       loopIvs.push_back(loop.getInductionVar());
 
@@ -184,6 +184,7 @@ namespace {
 struct ToyToLLVMLoweringPass
     : public PassWrapper<ToyToLLVMLoweringPass, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ToyToLLVMLoweringPass)
+  StringRef getArgument() const override { return "toy-to-llvm"; }
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect>();
@@ -220,6 +221,7 @@ void ToyToLLVMLoweringPass::runOnOperation() {
   mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
   populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
   cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
+  cf::populateAssertToLLVMConversionPattern(typeConverter, patterns);
   populateFuncToLLVMConversionPatterns(typeConverter, patterns);
 
   // The only remaining operation to lower from the `toy` dialect, is the

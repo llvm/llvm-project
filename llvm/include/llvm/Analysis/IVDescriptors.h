@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -31,6 +32,7 @@ class StoreInst;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
+  // clang-format off
   None,     ///< Not a recurrence.
   Add,      ///< Sum of integers.
   Mul,      ///< Product of integers.
@@ -47,12 +49,26 @@ enum class RecurKind {
   FMax,     ///< FP max implemented in terms of select(cmp()).
   FMinimum, ///< FP min with llvm.minimum semantics
   FMaximum, ///< FP max with llvm.maximum semantics
+  FMinimumNum, ///< FP min with llvm.minimumnum semantics
+  FMaximumNum, ///< FP max with llvm.maximumnum semantics
   FMulAdd,  ///< Sum of float products with llvm.fmuladd(a * b + sum).
-  IAnyOf,   ///< Any_of reduction with select(icmp(),x,y) where one of (x,y) is
+  AnyOf,    ///< AnyOf reduction with select(cmp(),x,y) where one of (x,y) is
             ///< loop invariant, and both x and y are integer type.
-  FAnyOf    ///< Any_of reduction with select(fcmp(),x,y) where one of (x,y) is
-            ///< loop invariant, and both x and y are integer type.
-  // TODO: Any_of reduction need not be restricted to integer type only.
+  FindFirstIVSMin, /// FindFirst reduction with select(icmp(),x,y) where one of
+                   ///< (x,y) is a decreasing loop induction, and both x and y
+                   ///< are integer type, producing a SMin reduction.
+  FindFirstIVUMin, /// FindFirst reduction with select(icmp(),x,y) where one of
+                   ///< (x,y) is a decreasing loop induction, and both x and y
+                   ///< are integer type, producing a UMin reduction.
+  FindLastIVSMax, ///< FindLast reduction with select(cmp(),x,y) where one of
+                  ///< (x,y) is increasing loop induction, and both x and y
+                  ///< are integer type, producing a SMax reduction.
+  FindLastIVUMax, ///< FindLast reduction with select(cmp(),x,y) where one of
+                  ///< (x,y) is increasing loop induction, and both x and y
+                  ///< are integer type, producing a UMax reduction.
+  // clang-format on
+  // TODO: Any_of and FindLast reduction need not be restricted to integer type
+  // only.
 };
 
 /// The RecurrenceDescriptor is used to identify recurrences variables in a
@@ -80,7 +96,7 @@ public:
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
         IsSigned(Signed), IsOrdered(Ordered),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
-    CastInsts.insert(CI.begin(), CI.end());
+    CastInsts.insert_range(CI);
   }
 
   /// This POD struct holds information about a potential recurrence operation.
@@ -122,25 +138,26 @@ public:
   /// advances the instruction pointer 'I' from the compare instruction to the
   /// select instruction and stores this pointer in 'PatternLastInst' member of
   /// the returned struct.
-  static InstDesc isRecurrenceInstr(Loop *L, PHINode *Phi, Instruction *I,
-                                    RecurKind Kind, InstDesc &Prev,
-                                    FastMathFlags FuncFMF);
+  LLVM_ABI static InstDesc
+  isRecurrenceInstr(Loop *L, PHINode *Phi, Instruction *I, RecurKind Kind,
+                    InstDesc &Prev, FastMathFlags FuncFMF, ScalarEvolution *SE);
 
   /// Returns true if instruction I has multiple uses in Insts
-  static bool hasMultipleUsesOf(Instruction *I,
-                                SmallPtrSetImpl<Instruction *> &Insts,
-                                unsigned MaxNumUses);
+  LLVM_ABI static bool hasMultipleUsesOf(Instruction *I,
+                                         SmallPtrSetImpl<Instruction *> &Insts,
+                                         unsigned MaxNumUses);
 
   /// Returns true if all uses of the instruction I is within the Set.
-  static bool areAllUsesIn(Instruction *I, SmallPtrSetImpl<Instruction *> &Set);
+  LLVM_ABI static bool areAllUsesIn(Instruction *I,
+                                    SmallPtrSetImpl<Instruction *> &Set);
 
   /// Returns a struct describing if the instruction is a llvm.(s/u)(min/max),
   /// llvm.minnum/maxnum or a Select(ICmp(X, Y), X, Y) pair of instructions
   /// corresponding to a min(X, Y) or max(X, Y), matching the recurrence kind \p
   /// Kind. \p Prev specifies the description of an already processed select
   /// instruction, so its corresponding cmp can be matched to it.
-  static InstDesc isMinMaxPattern(Instruction *I, RecurKind Kind,
-                                  const InstDesc &Prev);
+  LLVM_ABI static InstDesc isMinMaxPattern(Instruction *I, RecurKind Kind,
+                                           const InstDesc &Prev);
 
   /// Returns a struct describing whether the instruction is either a
   ///   Select(ICmp(A, B), X, Y), or
@@ -148,21 +165,32 @@ public:
   /// where one of (X, Y) is a loop invariant integer and the other is a PHI
   /// value. \p Prev specifies the description of an already processed select
   /// instruction, so its corresponding cmp can be matched to it.
-  static InstDesc isAnyOfPattern(Loop *Loop, PHINode *OrigPhi, Instruction *I,
-                                 InstDesc &Prev);
+  LLVM_ABI static InstDesc isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
+                                          Instruction *I, InstDesc &Prev);
+
+  /// Returns a struct describing whether the instruction is either a
+  ///   Select(ICmp(A, B), X, Y), or
+  ///   Select(FCmp(A, B), X, Y)
+  /// where one of (X, Y) is an increasing (FindLast) or decreasing (FindFirst)
+  /// loop induction variable, and the other is a PHI value.
+  // TODO: Support non-monotonic variable. FindLast does not need be restricted
+  // to increasing loop induction variables.
+  LLVM_ABI static InstDesc isFindIVPattern(RecurKind Kind, Loop *TheLoop,
+                                           PHINode *OrigPhi, Instruction *I,
+                                           ScalarEvolution &SE);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
-  static InstDesc isConditionalRdxPattern(RecurKind Kind, Instruction *I);
+  LLVM_ABI static InstDesc isConditionalRdxPattern(Instruction *I);
 
   /// Returns the opcode corresponding to the RecurrenceKind.
-  static unsigned getOpcode(RecurKind Kind);
+  LLVM_ABI static unsigned getOpcode(RecurKind Kind);
 
   /// Returns true if Phi is a reduction of type Kind and adds it to the
   /// RecurrenceDescriptor. If either \p DB is non-null or \p AC and \p DT are
   /// non-null, the minimal bit width needed to compute the reduction will be
   /// computed.
-  static bool
+  LLVM_ABI static bool
   AddReductionVar(PHINode *Phi, RecurKind Kind, Loop *TheLoop,
                   FastMathFlags FuncFMF, RecurrenceDescriptor &RedDes,
                   DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
@@ -173,7 +201,7 @@ public:
   /// non-null, the minimal bit width needed to compute the reduction will be
   /// computed. If \p SE is non-null, store instructions to loop invariant
   /// addresses are processed.
-  static bool
+  LLVM_ABI static bool
   isReductionPHI(PHINode *Phi, Loop *TheLoop, RecurrenceDescriptor &RedDes,
                  DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
                  DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr);
@@ -187,8 +215,8 @@ public:
   /// recurrence and so on). Note that this function optimistically assumes that
   /// uses of the recurrence can be re-ordered if necessary and users need to
   /// check and perform the re-ordering.
-  static bool isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
-                                     DominatorTree *DT);
+  LLVM_ABI static bool isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
+                                              DominatorTree *DT);
 
   RecurKind getRecurrenceKind() const { return Kind; }
 
@@ -208,10 +236,10 @@ public:
   Instruction *getExactFPMathInst() const { return ExactFPMathInst; }
 
   /// Returns true if the recurrence kind is an integer kind.
-  static bool isIntegerRecurrenceKind(RecurKind Kind);
+  LLVM_ABI static bool isIntegerRecurrenceKind(RecurKind Kind);
 
   /// Returns true if the recurrence kind is a floating point kind.
-  static bool isFloatingPointRecurrenceKind(RecurKind Kind);
+  LLVM_ABI static bool isFloatingPointRecurrenceKind(RecurKind Kind);
 
   /// Returns true if the recurrence kind is an integer min/max kind.
   static bool isIntMinMaxRecurrenceKind(RecurKind Kind) {
@@ -222,7 +250,8 @@ public:
   /// Returns true if the recurrence kind is a floating-point min/max kind.
   static bool isFPMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::FMin || Kind == RecurKind::FMax ||
-           Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum;
+           Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum ||
+           Kind == RecurKind::FMinimumNum || Kind == RecurKind::FMaximumNum;
   }
 
   /// Returns true if the recurrence kind is any min/max kind.
@@ -233,12 +262,56 @@ public:
   /// Returns true if the recurrence kind is of the form
   ///   select(cmp(),x,y) where one of (x,y) is loop invariant.
   static bool isAnyOfRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::IAnyOf || Kind == RecurKind::FAnyOf;
+    return Kind == RecurKind::AnyOf;
+  }
+
+  /// Returns true if the recurrence kind is of the form
+  ///   select(cmp(),x,y) where one of (x,y) is decreasing loop induction.
+  static bool isFindFirstIVRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::FindFirstIVSMin ||
+           Kind == RecurKind::FindFirstIVUMin;
+  }
+
+  /// Returns true if the recurrence kind is of the form
+  ///   select(cmp(),x,y) where one of (x,y) is increasing loop induction.
+  static bool isFindLastIVRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::FindLastIVSMax ||
+           Kind == RecurKind::FindLastIVUMax;
+  }
+
+  /// Returns true if recurrece kind is a signed redux kind.
+  static bool isSignedRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::SMax || Kind == RecurKind::SMin ||
+           Kind == RecurKind::FindFirstIVSMin ||
+           Kind == RecurKind::FindLastIVSMax;
+  }
+
+  /// Returns true if the recurrence kind is of the form
+  ///   select(cmp(),x,y) where one of (x,y) is an increasing or decreasing loop
+  ///   induction.
+  static bool isFindIVRecurrenceKind(RecurKind Kind) {
+    return isFindFirstIVRecurrenceKind(Kind) ||
+           isFindLastIVRecurrenceKind(Kind);
   }
 
   /// Returns the type of the recurrence. This type can be narrower than the
   /// actual type of the Phi if the recurrence has been type-promoted.
   Type *getRecurrenceType() const { return RecurrenceType; }
+
+  /// Returns the sentinel value for FindFirstIV & FindLastIV recurrences to
+  /// replace the start value.
+  Value *getSentinelValue() const {
+    Type *Ty = StartValue->getType();
+    unsigned BW = Ty->getIntegerBitWidth();
+    if (isFindLastIVRecurrenceKind(Kind)) {
+      return ConstantInt::get(Ty, isSignedRecurrenceKind(Kind)
+                                      ? APInt::getSignedMinValue(BW)
+                                      : APInt::getMinValue(BW));
+    }
+    return ConstantInt::get(Ty, isSignedRecurrenceKind(Kind)
+                                    ? APInt::getSignedMaxValue(BW)
+                                    : APInt::getMaxValue(BW));
+  }
 
   /// Returns a reference to the instructions used for type-promoting the
   /// recurrence.
@@ -257,8 +330,8 @@ public:
 
   /// Attempts to find a chain of operations from Phi to LoopExitInst that can
   /// be treated as a set of reductions instructions for in-loop reductions.
-  SmallVector<Instruction *, 4> getReductionOpChain(PHINode *Phi,
-                                                    Loop *L) const;
+  LLVM_ABI SmallVector<Instruction *, 4> getReductionOpChain(PHINode *Phi,
+                                                             Loop *L) const;
 
   /// Returns true if the instruction is a call to the llvm.fmuladd intrinsic.
   static bool isFMulAddIntrinsic(Instruction *I) {
@@ -317,7 +390,7 @@ public:
   InductionKind getKind() const { return IK; }
   const SCEV *getStep() const { return Step; }
   BinaryOperator *getInductionBinOp() const { return InductionBinOp; }
-  ConstantInt *getConstIntStepValue() const;
+  LLVM_ABI ConstantInt *getConstIntStepValue() const;
 
   /// Returns true if \p Phi is an induction in the loop \p L. If \p Phi is an
   /// induction, the induction descriptor \p D will contain the data describing
@@ -328,7 +401,7 @@ public:
   /// analysis, it can be passed through \p Expr. If the def-use chain
   /// associated with the phi includes casts (that we know we can ignore
   /// under proper runtime checks), they are passed through \p CastsToIgnore.
-  static bool
+  LLVM_ABI static bool
   isInductionPHI(PHINode *Phi, const Loop *L, ScalarEvolution *SE,
                  InductionDescriptor &D, const SCEV *Expr = nullptr,
                  SmallVectorImpl<Instruction *> *CastsToIgnore = nullptr);
@@ -336,8 +409,9 @@ public:
   /// Returns true if \p Phi is a floating point induction in the loop \p L.
   /// If \p Phi is an induction, the induction descriptor \p D will contain
   /// the data describing this induction.
-  static bool isFPInductionPHI(PHINode *Phi, const Loop *L, ScalarEvolution *SE,
-                               InductionDescriptor &D);
+  LLVM_ABI static bool isFPInductionPHI(PHINode *Phi, const Loop *L,
+                                        ScalarEvolution *SE,
+                                        InductionDescriptor &D);
 
   /// Returns true if \p Phi is a loop \p L induction, in the context associated
   /// with the run-time predicate of PSE. If \p Assume is true, this can add
@@ -345,9 +419,10 @@ public:
   /// induction.
   /// If \p Phi is an induction, \p D will contain the data describing this
   /// induction.
-  static bool isInductionPHI(PHINode *Phi, const Loop *L,
-                             PredicatedScalarEvolution &PSE,
-                             InductionDescriptor &D, bool Assume = false);
+  LLVM_ABI static bool isInductionPHI(PHINode *Phi, const Loop *L,
+                                      PredicatedScalarEvolution &PSE,
+                                      InductionDescriptor &D,
+                                      bool Assume = false);
 
   /// Returns floating-point induction operator that does not allow
   /// reassociation (transforming the induction requires an override of normal

@@ -208,12 +208,13 @@ TEST_F(LSPTest, ClangTidyRename) {
   Annotations Source(R"cpp(
     void [[foo]]() {}
   )cpp");
-  Opts.ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
-                              llvm::StringRef) {
+  constexpr auto ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
+                                        llvm::StringRef) {
     ClangTidyOpts.Checks = {"-*,readability-identifier-naming"};
     ClangTidyOpts.CheckOptions["readability-identifier-naming.FunctionCase"] =
         "CamelCase";
   };
+  Opts.ClangTidyProvider = ClangTidyProvider;
   auto &Client = start();
   Client.didOpen("foo.hpp", Header.code());
   Client.didOpen("foo.cpp", Source.code());
@@ -266,10 +267,11 @@ TEST_F(LSPTest, ClangTidyCrash_Issue109367) {
   // This test requires clang-tidy checks to be linked in.
   if (!CLANGD_TIDY_CHECKS)
     return;
-  Opts.ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
-                              llvm::StringRef) {
+  constexpr auto ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
+                                        llvm::StringRef) {
     ClangTidyOpts.Checks = {"-*,boost-use-ranges"};
   };
+  Opts.ClangTidyProvider = ClangTidyProvider;
   // Check that registering the boost-use-ranges checker's matchers
   // on two different threads does not cause a crash.
   auto &Client = start();

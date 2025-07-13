@@ -321,12 +321,21 @@ define void @masked_store_v256i8(<256 x i8> %val, ptr %a, <256 x i1> %mask) {
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v24, (a1)
+; CHECK-NEXT:    addi a1, a0, 128
 ; CHECK-NEXT:    vse8.v v8, (a0), v0.t
-; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vse8.v v16, (a0), v0.t
+; CHECK-NEXT:    vse8.v v16, (a1), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v256i8.p0(<256 x i8> %val, ptr %a, i32 8, <256 x i1> %mask)
   ret void
 }
 
+define void @masked_store_v7i8(<7 x i8> %val, ptr %a, <7 x i1> %mask) {
+; CHECK-LABEL: masked_store_v7i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 7, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  call void @llvm.masked.store.v7i8.p0(<7 x i8> %val, ptr %a, i32 8, <7 x i1> %mask)
+  ret void
+}

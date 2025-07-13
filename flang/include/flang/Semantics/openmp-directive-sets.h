@@ -21,6 +21,8 @@ namespace llvm::omp {
 //===----------------------------------------------------------------------===//
 // - top<Directive>Set: The directive appears alone or as the first in a
 //   compound construct.
+// - bottom<Directive>Set: The directive appears alone or as the last in a
+//   compound construct.
 // - all<Directive>Set: All standalone or compound uses of the directive.
 
 static const OmpDirectiveSet topDistributeSet{
@@ -172,6 +174,11 @@ static const OmpDirectiveSet topTeamsSet{
     Directive::OMPD_teams_loop,
 };
 
+static const OmpDirectiveSet bottomTeamsSet{
+    Directive::OMPD_target_teams,
+    Directive::OMPD_teams,
+};
+
 static const OmpDirectiveSet allTeamsSet{
     OmpDirectiveSet{
         Directive::OMPD_target_teams,
@@ -289,6 +296,12 @@ static const OmpDirectiveSet workShareSet{
         Directive::OMPD_single,
     } | allDoSet,
 };
+
+//===----------------------------------------------------------------------===//
+// Directive sets for parent directives that do allow/not allow a construct
+//===----------------------------------------------------------------------===//
+
+static const OmpDirectiveSet scanParentAllowedSet{allDoSet | allSimdSet};
 
 //===----------------------------------------------------------------------===//
 // Directive sets for allowed/not allowed nested directives

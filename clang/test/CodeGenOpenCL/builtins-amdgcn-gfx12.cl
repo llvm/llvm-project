@@ -139,65 +139,6 @@ void test_s_barrier_signal_isfirst(int* a, int* b, int *c)
   __builtin_amdgcn_s_barrier_wait(1);
 }
 
-// CHECK-LABEL: @test_s_barrier_init(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[BAR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[BAR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BAR_ADDR]] to ptr
-// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// CHECK-NEXT:    store ptr [[BAR:%.*]], ptr [[BAR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BAR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(3)
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) [[TMP1]], i32 [[TMP2]])
-// CHECK-NEXT:    ret void
-//
-void test_s_barrier_init(void *bar, int a)
-{
-  __builtin_amdgcn_s_barrier_init(bar, a);
-}
-
-// CHECK-LABEL: @test_s_barrier_join(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[BAR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[BAR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BAR_ADDR]] to ptr
-// CHECK-NEXT:    store ptr [[BAR:%.*]], ptr [[BAR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BAR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(3)
-// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) [[TMP1]])
-// CHECK-NEXT:    ret void
-//
-void test_s_barrier_join(void *bar)
-{
-  __builtin_amdgcn_s_barrier_join(bar);
-}
-
-// CHECK-LABEL: @test_s_wakeup_barrier(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[BAR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[BAR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BAR_ADDR]] to ptr
-// CHECK-NEXT:    store ptr [[BAR:%.*]], ptr [[BAR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BAR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(3)
-// CHECK-NEXT:    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) [[TMP1]])
-// CHECK-NEXT:    ret void
-//
-void test_s_wakeup_barrier(void *bar)
-{
-  __builtin_amdgcn_s_wakeup_barrier(bar);
-}
-
-// CHECK-LABEL: @test_s_barrier_leave(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.leave(i16 1)
-// CHECK-NEXT:    ret void
-//
-void test_s_barrier_leave()
-{
-  __builtin_amdgcn_s_barrier_leave(1);
-}
-
 // CHECK-LABEL: @test_s_get_barrier_state(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
@@ -205,12 +146,11 @@ void test_s_barrier_leave()
 // CHECK-NEXT:    [[STATE:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// CHECK-NEXT:    [[STATE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[STATE]] to ptr
 // CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.s.get.barrier.state(i32 [[TMP0]])
-// CHECK-NEXT:    store i32 [[TMP1]], ptr [[STATE_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[STATE_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(5) [[STATE]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[STATE]], align 4
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 unsigned test_s_get_barrier_state(int a)
@@ -226,13 +166,12 @@ unsigned test_s_get_barrier_state(int a)
 // CHECK-NEXT:    [[STATE:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[BAR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BAR_ADDR]] to ptr
-// CHECK-NEXT:    [[STATE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[STATE]] to ptr
 // CHECK-NEXT:    store ptr [[BAR:%.*]], ptr [[BAR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BAR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(3)
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) [[TMP1]])
-// CHECK-NEXT:    store i32 [[TMP2]], ptr [[STATE_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[STATE_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[STATE]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[STATE]], align 4
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
 unsigned test_s_get_named_barrier_state(void *bar)
@@ -310,4 +249,27 @@ void test_s_buffer_prefetch_data(__amdgpu_buffer_rsrc_t rsrc, unsigned int len)
 {
   __builtin_amdgcn_s_buffer_prefetch_data(rsrc, 128, len);
   __builtin_amdgcn_s_buffer_prefetch_data(rsrc, 0, 31);
+}
+
+// CHECK-LABEL: @test_ds_bpermute_fi_b32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.ds.bpermute.fi.b32(i32 [[TMP0]], i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_ds_bpermute_fi_b32(global int* out, int a, int b)
+{
+  *out = __builtin_amdgcn_ds_bpermute_fi_b32(a, b);
 }

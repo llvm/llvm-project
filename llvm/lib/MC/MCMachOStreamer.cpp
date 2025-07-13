@@ -18,7 +18,6 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -59,8 +58,6 @@ private:
   /// labels in the middle of the section.
   DenseMap<const MCSection*, bool> HasSectionLabel;
 
-  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
-
   void emitDataRegion(MachO::DataRegionType Kind);
   void emitDataRegionEnd();
 
@@ -89,7 +86,7 @@ public:
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
-  void emitAssemblerFlag(MCAssemblerFlag Flag) override;
+  void emitSubsectionsViaSymbols() override;
   void emitLinkerOptions(ArrayRef<std::string> Options) override;
   void emitDataRegion(MCDataRegionType Kind) override;
   void emitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
@@ -99,7 +96,6 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
-  void emitThumbFunc(MCSymbol *Func) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -182,10 +178,10 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 void MCMachOStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   MCValue Res;
 
-  if (Value->evaluateAsRelocatable(Res, nullptr, nullptr)) {
-    if (const MCSymbolRefExpr *SymAExpr = Res.getSymA()) {
-      const MCSymbol &SymA = SymAExpr->getSymbol();
-      if (!Res.getSymB() && (SymA.getName() == "" || Res.getConstant() != 0))
+  if (Value->evaluateAsRelocatable(Res, nullptr)) {
+    if (const auto *SymA = Res.getAddSym()) {
+      if (!Res.getSubSym() &&
+          (SymA->getName().empty() || Res.getConstant() != 0))
         cast<MCSymbolMachO>(Symbol)->setAltEntry();
     }
   }
@@ -210,19 +206,8 @@ void MCMachOStreamer::emitDataRegionEnd() {
   emitLabel(Data.End);
 }
 
-void MCMachOStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
-  // Let the target do whatever target specific stuff it needs to do.
-  getAssembler().getBackend().handleAssemblerFlag(Flag);
-  // Do any generic stuff we need to do.
-  switch (Flag) {
-  case MCAF_SyntaxUnified: return; // no-op here.
-  case MCAF_Code16: return; // Change parsing mode; no-op here.
-  case MCAF_Code32: return; // Change parsing mode; no-op here.
-  case MCAF_Code64: return; // Change parsing mode; no-op here.
-  case MCAF_SubsectionsViaSymbols:
-    getWriter().setSubsectionsViaSymbols(true);
-    return;
-  }
+void MCMachOStreamer::emitSubsectionsViaSymbols() {
+  getWriter().setSubsectionsViaSymbols(true);
 }
 
 void MCMachOStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
@@ -267,13 +252,6 @@ void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
     VersionTuple SDKVersion) {
   getWriter().setTargetVariantBuildVersion((MachO::PlatformType)Platform, Major,
                                            Minor, Update, SDKVersion);
-}
-
-void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
-  // Remember that the function is a thumb function. Fixup and relocation
-  // values will need adjusted.
-  getAssembler().setIsThumbFunc(Symbol);
-  cast<MCSymbolMachO>(Symbol)->setThumbFunc();
 }
 
 bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
@@ -442,23 +420,6 @@ void MCMachOStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
   emitZerofill(Section, Symbol, Size, ByteAlignment);
 }
 
-void MCMachOStreamer::emitInstToData(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI) {
-  MCDataFragment *DF = getOrCreateDataFragment();
-
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // Add the fixups and data.
-  for (MCFixup &Fixup : Fixups) {
-    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixup);
-  }
-  DF->setHasInstructions(STI);
-  DF->getContents().append(Code.begin(), Code.end());
-}
-
 void MCMachOStreamer::finishImpl() {
   emitFrames(&getAssembler().getBackend());
 
@@ -523,8 +484,7 @@ void MCMachOStreamer::finalizeCGProfile() {
   size_t SectionBytes =
       W.getCGProfile().size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
   cast<MCDataFragment>(*CGProfileSection->begin())
-      .getContents()
-      .resize(SectionBytes);
+      .appendContents(SectionBytes, 0);
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -559,5 +519,5 @@ void MCMachOStreamer::createAddrSigSection() {
   // (instead of emitting a zero-sized section) so these relocations are
   // technically valid, even though we don't expect these relocations to
   // actually be applied by the linker.
-  Frag->getContents().resize(8);
+  Frag->appendContents(8, 0);
 }

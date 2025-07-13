@@ -18,6 +18,7 @@
 
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/StorageUniquer.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Compiler.h"
@@ -146,7 +147,7 @@ private:
   Operation *op = nullptr;
 };
 
-inline raw_ostream &operator<<(raw_ostream &os, ProgramPoint point) {
+inline raw_ostream &operator<<(raw_ostream &os, const ProgramPoint &point) {
   point.print(os);
   return os;
 }
@@ -265,6 +266,14 @@ struct LatticeAnchor
 /// Forward declaration of the data-flow analysis class.
 class DataFlowAnalysis;
 
+} // namespace mlir
+
+template <>
+struct llvm::DenseMapInfo<mlir::LatticeAnchor>
+    : public llvm::DenseMapInfo<mlir::LatticeAnchor::ParentTy> {};
+
+namespace mlir {
+
 //===----------------------------------------------------------------------===//
 // DataFlowConfig
 //===----------------------------------------------------------------------===//
@@ -308,6 +317,10 @@ private:
 ///    according to their dependency relations until a fixed point is reached.
 /// 3. Query analysis state results from the solver.
 ///
+/// Steps to re-run a data-flow analysis when IR changes:
+/// 1. Erase all analysis states as they are no longer valid.
+/// 2. Re-run the analysis using `initializeAndRun`.
+///
 /// TODO: Optimize the internal implementation of the solver.
 class DataFlowSolver {
 public:
@@ -328,9 +341,13 @@ public:
   /// does not exist.
   template <typename StateT, typename AnchorT>
   const StateT *lookupState(AnchorT anchor) const {
-    auto it =
-        analysisStates.find({LatticeAnchor(anchor), TypeID::get<StateT>()});
-    if (it == analysisStates.end())
+    LatticeAnchor latticeAnchor =
+        getLeaderAnchorOrSelf<StateT>(LatticeAnchor(anchor));
+    const auto &mapIt = analysisStates.find(latticeAnchor);
+    if (mapIt == analysisStates.end())
+      return nullptr;
+    auto it = mapIt->second.find(TypeID::get<StateT>());
+    if (it == mapIt->second.end())
       return nullptr;
     return static_cast<const StateT *>(it->second.get());
   }
@@ -338,12 +355,33 @@ public:
   /// Erase any analysis state associated with the given lattice anchor.
   template <typename AnchorT>
   void eraseState(AnchorT anchor) {
-    LatticeAnchor la(anchor);
+    LatticeAnchor latticeAnchor(anchor);
 
-    for (auto it = analysisStates.begin(); it != analysisStates.end(); ++it) {
-      if (it->first.first == la)
-        analysisStates.erase(it);
+    // Update equivalentAnchorMap.
+    for (auto &&[TypeId, eqClass] : equivalentAnchorMap) {
+      if (!eqClass.contains(latticeAnchor)) {
+        continue;
+      }
+      llvm::EquivalenceClasses<LatticeAnchor>::member_iterator leaderIt =
+          eqClass.findLeader(latticeAnchor);
+
+      // Update analysis states with new leader if needed.
+      if (*leaderIt == latticeAnchor && ++leaderIt != eqClass.member_end()) {
+        analysisStates[*leaderIt][TypeId] =
+            std::move(analysisStates[latticeAnchor][TypeId]);
+      }
+
+      eqClass.erase(latticeAnchor);
     }
+
+    // Update analysis states.
+    analysisStates.erase(latticeAnchor);
+  }
+
+  /// Erase all analysis states.
+  void eraseAllStates() {
+    analysisStates.clear();
+    equivalentAnchorMap.clear();
   }
 
   /// Get a uniqued lattice anchor instance. If one is not present, it is
@@ -394,8 +432,24 @@ public:
   template <typename StateT, typename AnchorT>
   StateT *getOrCreateState(AnchorT anchor);
 
+  /// Get leader lattice anchor in equivalence lattice anchor group, return
+  /// input lattice anchor if input not found in equivalece lattice anchor
+  /// group.
+  template <typename StateT>
+  LatticeAnchor getLeaderAnchorOrSelf(LatticeAnchor latticeAnchor) const;
+
+  /// Union input anchors under the given state.
+  template <typename StateT, typename AnchorT>
+  void unionLatticeAnchors(AnchorT anchor, AnchorT other);
+
+  /// Return given lattice is equivalent on given state.
+  template <typename StateT>
+  bool isEquivalent(LatticeAnchor lhs, LatticeAnchor rhs) const;
+
   /// Propagate an update to an analysis state if it changed by pushing
   /// dependent work items to the back of the queue.
+  /// This should only be used when DataFlowSolver is running.
+  /// Otherwise, the solver won't process the work items.
   void propagateIfChanged(AnalysisState *state, ChangeResult changed);
 
   /// Get the configuration of the solver.
@@ -404,6 +458,9 @@ public:
 private:
   /// Configuration of the dataflow solver.
   DataFlowConfig config;
+
+  /// The solver is working on the worklist.
+  bool isRunning = false;
 
   /// The solver's work queue. Work items can be inserted to the front of the
   /// queue to be processed greedily, speeding up computations that otherwise
@@ -419,8 +476,14 @@ private:
 
   /// A type-erased map of lattice anchors to associated analysis states for
   /// first-class lattice anchors.
-  DenseMap<std::pair<LatticeAnchor, TypeID>, std::unique_ptr<AnalysisState>>
+  DenseMap<LatticeAnchor, DenseMap<TypeID, std::unique_ptr<AnalysisState>>>
       analysisStates;
+
+  /// A map of Ananlysis state type to the equivalent lattice anchors.
+  /// Lattice anchors are considered equivalent under a certain analysis state
+  /// type if and only if, the analysis states pointed to by these lattice
+  /// anchors necessarily contain identical value.
+  DenseMap<TypeID, llvm::EquivalenceClasses<LatticeAnchor>> equivalentAnchorMap;
 
   /// Allow the base child analysis class to access the internals of the solver.
   friend class DataFlowAnalysis;
@@ -553,6 +616,14 @@ public:
   /// will provide a value for then.
   virtual LogicalResult visit(ProgramPoint *point) = 0;
 
+  /// Initialize lattice anchor equivalence class from the provided top-level
+  /// operation.
+  ///
+  /// This function will union lattice anchor to same equivalent class if the
+  /// analysis can determine the lattice content of lattice anchor is
+  /// necessarily identical under the corrensponding lattice type.
+  virtual void initializeEquivalentLatticeAnchor(Operation *top) {}
+
 protected:
   /// Create a dependency between the given analysis state and lattice anchor
   /// on this analysis.
@@ -573,6 +644,12 @@ protected:
     return solver.getLatticeAnchor<AnchorT>(std::forward<Args>(args)...);
   }
 
+  /// Union input anchors under the given state.
+  template <typename StateT, typename AnchorT>
+  void unionLatticeAnchors(AnchorT anchor, AnchorT other) {
+    return solver.unionLatticeAnchors<StateT>(anchor, other);
+  }
+
   /// Get the analysis state associated with the lattice anchor. The returned
   /// state is expected to be "write-only", and any updates need to be
   /// propagated by `propagateIfChanged`.
@@ -587,7 +664,9 @@ protected:
   template <typename StateT, typename AnchorT>
   const StateT *getOrCreateFor(ProgramPoint *dependent, AnchorT anchor) {
     StateT *state = getOrCreate<StateT>(anchor);
-    addDependency(state, dependent);
+    if (!solver.isEquivalent<StateT>(LatticeAnchor(anchor),
+                                     LatticeAnchor(dependent)))
+      addDependency(state, dependent);
     return state;
   }
 
@@ -628,15 +707,34 @@ template <typename AnalysisT, typename... Args>
 AnalysisT *DataFlowSolver::load(Args &&...args) {
   childAnalyses.emplace_back(new AnalysisT(*this, std::forward<Args>(args)...));
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  childAnalyses.back().get()->debugName = llvm::getTypeName<AnalysisT>();
+  childAnalyses.back()->debugName = llvm::getTypeName<AnalysisT>();
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
   return static_cast<AnalysisT *>(childAnalyses.back().get());
 }
 
+template <typename StateT>
+LatticeAnchor
+DataFlowSolver::getLeaderAnchorOrSelf(LatticeAnchor latticeAnchor) const {
+  if (!equivalentAnchorMap.contains(TypeID::get<StateT>())) {
+    return latticeAnchor;
+  }
+  const llvm::EquivalenceClasses<LatticeAnchor> &eqClass =
+      equivalentAnchorMap.at(TypeID::get<StateT>());
+  llvm::EquivalenceClasses<LatticeAnchor>::member_iterator leaderIt =
+      eqClass.findLeader(latticeAnchor);
+  if (leaderIt != eqClass.member_end()) {
+    return *leaderIt;
+  }
+  return latticeAnchor;
+}
+
 template <typename StateT, typename AnchorT>
 StateT *DataFlowSolver::getOrCreateState(AnchorT anchor) {
+  // Replace to leader anchor if found.
+  LatticeAnchor latticeAnchor(anchor);
+  latticeAnchor = getLeaderAnchorOrSelf<StateT>(latticeAnchor);
   std::unique_ptr<AnalysisState> &state =
-      analysisStates[{LatticeAnchor(anchor), TypeID::get<StateT>()}];
+      analysisStates[latticeAnchor][TypeID::get<StateT>()];
   if (!state) {
     state = std::unique_ptr<StateT>(new StateT(anchor));
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -646,12 +744,31 @@ StateT *DataFlowSolver::getOrCreateState(AnchorT anchor) {
   return static_cast<StateT *>(state.get());
 }
 
+template <typename StateT>
+bool DataFlowSolver::isEquivalent(LatticeAnchor lhs, LatticeAnchor rhs) const {
+  if (!equivalentAnchorMap.contains(TypeID::get<StateT>())) {
+    return false;
+  }
+  const llvm::EquivalenceClasses<LatticeAnchor> &eqClass =
+      equivalentAnchorMap.at(TypeID::get<StateT>());
+  if (!eqClass.contains(lhs) || !eqClass.contains(rhs))
+    return false;
+  return eqClass.isEquivalent(lhs, rhs);
+}
+
+template <typename StateT, typename AnchorT>
+void DataFlowSolver::unionLatticeAnchors(AnchorT anchor, AnchorT other) {
+  llvm::EquivalenceClasses<LatticeAnchor> &eqClass =
+      equivalentAnchorMap[TypeID::get<StateT>()];
+  eqClass.unionSets(LatticeAnchor(anchor), LatticeAnchor(other));
+}
+
 inline raw_ostream &operator<<(raw_ostream &os, const AnalysisState &state) {
   state.print(os);
   return os;
 }
 
-inline raw_ostream &operator<<(raw_ostream &os, LatticeAnchor anchor) {
+inline raw_ostream &operator<<(raw_ostream &os, const LatticeAnchor &anchor) {
   anchor.print(os);
   return os;
 }
@@ -681,10 +798,6 @@ struct DenseMapInfo<mlir::ProgramPoint> {
     return lhs == rhs;
   }
 };
-
-template <>
-struct DenseMapInfo<mlir::LatticeAnchor>
-    : public DenseMapInfo<mlir::LatticeAnchor::ParentTy> {};
 
 // Allow llvm::cast style functions.
 template <typename To>

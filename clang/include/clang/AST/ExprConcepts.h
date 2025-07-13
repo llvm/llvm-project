@@ -261,13 +261,13 @@ public:
     assert(Status == SS_SubstitutionFailure &&
            "Attempted to get substitution diagnostic when there has been no "
            "substitution failure.");
-    return Value.get<SubstitutionDiagnostic *>();
+    return cast<SubstitutionDiagnostic *>(Value);
   }
 
   TypeSourceInfo *getType() const {
     assert(!isSubstitutionFailure() &&
            "Attempted to get type when there has been a substitution failure.");
-    return Value.get<TypeSourceInfo *>();
+    return cast<TypeSourceInfo *>(Value);
   }
 
   static bool classof(const Requirement *R) {
@@ -310,6 +310,7 @@ public:
       // TODO: Can we maybe not save the whole template parameter list and just
       //  the type constraint? Saving the whole TPL makes it easier to handle in
       //  serialization but is less elegant.
+      ReturnTypeRequirement(TemplateParameterList *TPL, bool IsDependent);
       ReturnTypeRequirement(TemplateParameterList *TPL);
 
       bool isDependent() const {
@@ -329,24 +330,24 @@ public:
 
       bool isSubstitutionFailure() const {
         return !isEmpty() &&
-            TypeConstraintInfo.getPointer().is<SubstitutionDiagnostic *>();
+               isa<SubstitutionDiagnostic *>(TypeConstraintInfo.getPointer());
       }
 
       bool isTypeConstraint() const {
         return !isEmpty() &&
-            TypeConstraintInfo.getPointer().is<TemplateParameterList *>();
+               isa<TemplateParameterList *>(TypeConstraintInfo.getPointer());
       }
 
       SubstitutionDiagnostic *getSubstitutionDiagnostic() const {
         assert(isSubstitutionFailure());
-        return TypeConstraintInfo.getPointer().get<SubstitutionDiagnostic *>();
+        return cast<SubstitutionDiagnostic *>(TypeConstraintInfo.getPointer());
       }
 
       const TypeConstraint *getTypeConstraint() const;
 
       TemplateParameterList *getTypeConstraintTemplateParameterList() const {
         assert(isTypeConstraint());
-        return TypeConstraintInfo.getPointer().get<TemplateParameterList *>();
+        return cast<TemplateParameterList *>(TypeConstraintInfo.getPointer());
       }
   };
 private:
@@ -409,14 +410,14 @@ public:
     assert(isExprSubstitutionFailure() &&
            "Attempted to get expression substitution diagnostic when there has "
            "been no expression substitution failure");
-    return Value.get<SubstitutionDiagnostic *>();
+    return cast<SubstitutionDiagnostic *>(Value);
   }
 
   Expr *getExpr() const {
     assert(!isExprSubstitutionFailure() &&
            "ExprRequirement has no expression because there has been a "
            "substitution failure.");
-    return Value.get<Expr *>();
+    return cast<Expr *>(Value);
   }
 
   static bool classof(const Requirement *R) {
@@ -514,10 +515,6 @@ class RequiresExpr final : public Expr,
     return NumLocalParameters;
   }
 
-  unsigned numTrailingObjects(OverloadToken<concepts::Requirement *>) const {
-    return NumRequirements;
-  }
-
   RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
                RequiresExprBodyDecl *Body, SourceLocation LParenLoc,
                ArrayRef<ParmVarDecl *> LocalParameters,
@@ -540,13 +537,13 @@ public:
          unsigned NumRequirements);
 
   ArrayRef<ParmVarDecl *> getLocalParameters() const {
-    return {getTrailingObjects<ParmVarDecl *>(), NumLocalParameters};
+    return getTrailingObjects<ParmVarDecl *>(NumLocalParameters);
   }
 
   RequiresExprBodyDecl *getBody() const { return Body; }
 
   ArrayRef<concepts::Requirement *> getRequirements() const {
-    return {getTrailingObjects<concepts::Requirement *>(), NumRequirements};
+    return getTrailingObjects<concepts::Requirement *>(NumRequirements);
   }
 
   /// \brief Whether or not the requires clause is satisfied.

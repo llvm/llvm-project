@@ -16,19 +16,16 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include <type_traits>
 
 namespace mlir {
 namespace tensor {
-#define GEN_PASS_DEF_FOLDTENSORSUBSETOPS
+#define GEN_PASS_DEF_FOLDTENSORSUBSETOPSPASS
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 } // namespace tensor
 } // namespace mlir
@@ -36,7 +33,7 @@ namespace tensor {
 using namespace mlir;
 
 static Value getTensorOperand(vector::TransferReadOp op) {
-  return op.getSource();
+  return op.getBase();
 }
 
 static Value getTensorOperand(tensor::InsertSliceOp op) {
@@ -268,7 +265,8 @@ void tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(
 namespace {
 
 struct FoldTensorSubsetOpsPass final
-    : public tensor::impl::FoldTensorSubsetOpsBase<FoldTensorSubsetOpsPass> {
+    : public tensor::impl::FoldTensorSubsetOpsPassBase<
+          FoldTensorSubsetOpsPass> {
   void runOnOperation() override;
 };
 
@@ -277,9 +275,5 @@ struct FoldTensorSubsetOpsPass final
 void FoldTensorSubsetOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<Pass> tensor::createFoldTensorSubsetOpsPass() {
-  return std::make_unique<FoldTensorSubsetOpsPass>();
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }

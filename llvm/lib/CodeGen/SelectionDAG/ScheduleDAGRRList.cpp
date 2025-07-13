@@ -125,9 +125,9 @@ static cl::opt<int> MaxReorderWindow(
   cl::desc("Number of instructions to allow ahead of the critical path "
            "in sched=list-ilp"));
 
-static cl::opt<unsigned> AvgIPC(
-  "sched-avg-ipc", cl::Hidden, cl::init(1),
-  cl::desc("Average inst/cycle whan no target itinerary exists."));
+static cl::opt<unsigned>
+    AvgIPC("sched-avg-ipc", cl::Hidden, cl::init(1),
+           cl::desc("Average inst/cycle when no target itinerary exists."));
 
 namespace {
 
@@ -370,7 +370,7 @@ void ScheduleDAGRRList::Schedule() {
   assert(Interferences.empty() && LRegsMap.empty() && "stale Interferences");
 
   // Build the scheduling graph.
-  BuildSchedGraph(nullptr);
+  BuildSchedGraph();
 
   LLVM_DEBUG(dump());
   Topo.MarkDirty();
@@ -1292,7 +1292,7 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
 
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
-static void CheckForLiveRegDef(SUnit *SU, unsigned Reg, SUnit **LiveRegDefs,
+static void CheckForLiveRegDef(SUnit *SU, MCRegister Reg, SUnit **LiveRegDefs,
                                SmallSet<unsigned, 4> &RegAdded,
                                SmallVectorImpl<unsigned> &LRegs,
                                const TargetRegisterInfo *TRI,
@@ -1769,8 +1769,8 @@ public:
       unsigned NumRC = TRI->getNumRegClasses();
       RegLimit.resize(NumRC);
       RegPressure.resize(NumRC);
-      std::fill(RegLimit.begin(), RegLimit.end(), 0);
-      std::fill(RegPressure.begin(), RegPressure.end(), 0);
+      llvm::fill(RegLimit, 0);
+      llvm::fill(RegPressure, 0);
       for (const TargetRegisterClass *RC : TRI->regclasses())
         RegLimit[RC->getID()] = tri->getRegPressureLimit(RC, MF);
     }
@@ -1793,7 +1793,7 @@ public:
   void releaseState() override {
     SUnits = nullptr;
     SethiUllmanNumbers.clear();
-    std::fill(RegPressure.begin(), RegPressure.end(), 0);
+    llvm::fill(RegPressure, 0);
   }
 
   unsigned getNodePriority(const SUnit *SU) const;

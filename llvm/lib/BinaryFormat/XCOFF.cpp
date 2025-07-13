@@ -9,8 +9,10 @@
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 
 using namespace llvm;
 
@@ -106,6 +108,63 @@ StringRef XCOFF::getNameForTracebackTableLanguageId(
   return "Unknown";
 }
 #undef LANG_CASE
+
+XCOFF::CFileCpuId XCOFF::getCpuID(StringRef CPUName) {
+  StringRef CPU = PPC::normalizeCPUName(CPUName);
+  return StringSwitch<XCOFF::CFileCpuId>(CPU)
+      .Cases("generic", "COM", XCOFF::TCPU_COM)
+      .Case("601", XCOFF::TCPU_601)
+      .Cases("602", "603", "603e", "603ev", XCOFF::TCPU_603)
+      .Cases("604", "604e", XCOFF::TCPU_604)
+      .Case("620", XCOFF::TCPU_620)
+      .Case("970", XCOFF::TCPU_970)
+      .Cases("a2", "g3", "g4", "g5", "e500", XCOFF::TCPU_COM)
+      .Cases("pwr3", "pwr4", XCOFF::TCPU_COM)
+      .Cases("pwr5", "PWR5", XCOFF::TCPU_PWR5)
+      .Cases("pwr5x", "PWR5X", XCOFF::TCPU_PWR5X)
+      .Cases("pwr6", "PWR6", XCOFF::TCPU_PWR6)
+      .Cases("pwr6x", "PWR6E", XCOFF::TCPU_PWR6E)
+      .Cases("pwr7", "PWR7", XCOFF::TCPU_PWR7)
+      .Cases("pwr8", "PWR8", XCOFF::TCPU_PWR8)
+      .Cases("pwr9", "PWR9", XCOFF::TCPU_PWR9)
+      .Cases("pwr10", "PWR10", XCOFF::TCPU_PWR10)
+      .Cases("ppc", "PPC", "ppc32", "ppc64", XCOFF::TCPU_COM)
+      .Case("ppc64le", XCOFF::TCPU_PWR8)
+      .Case("future", XCOFF::TCPU_PWR10)
+      .Cases("any", "ANY", XCOFF::TCPU_ANY)
+      .Default(XCOFF::TCPU_INVALID);
+}
+
+#define TCPU_CASE(A)                                                           \
+  case XCOFF::TCPU_##A:                                                        \
+    return #A;
+StringRef XCOFF::getTCPUString(XCOFF::CFileCpuId TCPU) {
+  switch (TCPU) {
+    TCPU_CASE(INVALID)
+    TCPU_CASE(PPC)
+    TCPU_CASE(PPC64)
+    TCPU_CASE(COM)
+    TCPU_CASE(PWR)
+    TCPU_CASE(ANY)
+    TCPU_CASE(601)
+    TCPU_CASE(603)
+    TCPU_CASE(604)
+    TCPU_CASE(620)
+    TCPU_CASE(A35)
+    TCPU_CASE(PWR5)
+    TCPU_CASE(970)
+    TCPU_CASE(PWR6)
+    TCPU_CASE(PWR5X)
+    TCPU_CASE(PWR6E)
+    TCPU_CASE(PWR7)
+    TCPU_CASE(PWR8)
+    TCPU_CASE(PWR9)
+    TCPU_CASE(PWR10)
+    TCPU_CASE(PWRX)
+  }
+  return "INVALID";
+}
+#undef TCPU_CASE
 
 Expected<SmallString<32>> XCOFF::parseParmsType(uint32_t Value,
                                                 unsigned FixedParmsNum,

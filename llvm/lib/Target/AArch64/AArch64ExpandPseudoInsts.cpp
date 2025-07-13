@@ -50,9 +50,7 @@ public:
 
   static char ID;
 
-  AArch64ExpandPseudo() : MachineFunctionPass(ID) {
-    initializeAArch64ExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64ExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
@@ -67,6 +65,10 @@ private:
                             TargetRegisterClass ContiguousClass,
                             TargetRegisterClass StridedClass,
                             unsigned ContiguousOpc, unsigned StridedOpc);
+  bool expandFormTuplePseudo(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator MBBI,
+                             MachineBasicBlock::iterator &NextMBBI,
+                             unsigned Size);
   bool expandMOVImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                     unsigned BitSize);
 
@@ -834,21 +836,22 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   // Expand CALL_RVMARKER pseudo to:
   // - a branch to the call target, followed by
-  // - the special `mov x29, x29` marker, and
+  // - the special `mov x29, x29` marker, if necessary, and
   // - another branch, to the runtime function
   // Mark the sequence as bundle, to avoid passes moving other code in between.
   MachineInstr &MI = *MBBI;
   MachineOperand &RVTarget = MI.getOperand(0);
+  bool DoEmitMarker = MI.getOperand(1).getImm();
   assert(RVTarget.isGlobal() && "invalid operand for attached call");
 
   MachineInstr *OriginalCall = nullptr;
 
   if (MI.getOpcode() == AArch64::BLRA_RVMARKER) {
     // ptrauth call.
-    const MachineOperand &CallTarget = MI.getOperand(1);
-    const MachineOperand &Key = MI.getOperand(2);
-    const MachineOperand &IntDisc = MI.getOperand(3);
-    const MachineOperand &AddrDisc = MI.getOperand(4);
+    const MachineOperand &CallTarget = MI.getOperand(2);
+    const MachineOperand &Key = MI.getOperand(3);
+    const MachineOperand &IntDisc = MI.getOperand(4);
+    const MachineOperand &AddrDisc = MI.getOperand(5);
 
     assert((Key.getImm() == AArch64PACKey::IA ||
             Key.getImm() == AArch64PACKey::IB) &&
@@ -857,26 +860,27 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     MachineOperand Ops[] = {CallTarget, Key, IntDisc, AddrDisc};
 
     OriginalCall = createCallWithOps(MBB, MBBI, TII, AArch64::BLRA, Ops,
-                                     /*RegMaskStartIdx=*/5);
+                                     /*RegMaskStartIdx=*/6);
   } else {
     assert(MI.getOpcode() == AArch64::BLR_RVMARKER && "unknown rvmarker MI");
-    OriginalCall = createCall(MBB, MBBI, TII, MI.getOperand(1),
+    OriginalCall = createCall(MBB, MBBI, TII, MI.getOperand(2),
                               // Regmask starts after the RV and call targets.
-                              /*RegMaskStartIdx=*/2);
+                              /*RegMaskStartIdx=*/3);
   }
 
-  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
-                     .addReg(AArch64::FP, RegState::Define)
-                     .addReg(AArch64::XZR)
-                     .addReg(AArch64::FP)
-                     .addImm(0);
+  if (DoEmitMarker)
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
+        .addReg(AArch64::FP, RegState::Define)
+        .addReg(AArch64::XZR)
+        .addReg(AArch64::FP)
+        .addImm(0);
 
   auto *RVCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::BL))
                      .add(RVTarget)
                      .getInstr();
 
-  if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, OriginalCall);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MBB.getParent()->moveAdditionalCallInfo(&MI, OriginalCall);
 
   MI.eraseFromParent();
   finalizeBundle(MBB, OriginalCall->getIterator(),
@@ -904,8 +908,8 @@ bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
           .addImm(36)
           .getInstr();
 
-  if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, Call);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MBB.getParent()->moveAdditionalCallInfo(&MI, Call);
 
   MI.eraseFromParent();
   finalizeBundle(MBB, Call->getIterator(), std::next(BTI->getIterator()));
@@ -1142,6 +1146,32 @@ bool AArch64ExpandPseudo::expandMultiVecPseudo(
   return true;
 }
 
+bool AArch64ExpandPseudo::expandFormTuplePseudo(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI, unsigned Size) {
+  assert((Size == 2 || Size == 4) && "Invalid Tuple Size");
+  MachineInstr &MI = *MBBI;
+  Register ReturnTuple = MI.getOperand(0).getReg();
+
+  const TargetRegisterInfo *TRI =
+      MBB.getParent()->getSubtarget().getRegisterInfo();
+  for (unsigned I = 0; I < Size; ++I) {
+    Register FormTupleOpReg = MI.getOperand(I + 1).getReg();
+    Register ReturnTupleSubReg =
+        TRI->getSubReg(ReturnTuple, AArch64::zsub0 + I);
+    // Add copies to ensure the subregisters remain in the correct order
+    // for any contigious operation they are used by.
+    if (FormTupleOpReg != ReturnTupleSubReg)
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORR_ZZZ))
+          .addReg(ReturnTupleSubReg, RegState::Define)
+          .addReg(FormTupleOpReg)
+          .addReg(FormTupleOpReg);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 /// If MBBI references a pseudo instruction that should be expanded here,
 /// do the expansion and return true.  Otherwise return false.
 bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
@@ -1352,6 +1382,11 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                       AArch64II::MO_NC);
       }
 
+      // If the LOADgot instruction has a debug-instr-number, annotate the
+      // LDRWui instruction that it is expanded to with the same
+      // debug-instr-number to preserve debug information.
+      if (MI.peekDebugInstrNum() != 0)
+        MIB2->setDebugInstrNum(MI.peekDebugInstrNum());
       transferImpOps(MI, MIB1, MIB2);
     }
     MI.eraseFromParent();
@@ -1724,6 +1759,10 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandMultiVecPseudo(
          MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
          AArch64::LDNT1D_4Z, AArch64::LDNT1D_4Z_STRIDED);
+   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
+     return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 2);
+   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
+     return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 4);
   }
   return false;
 }

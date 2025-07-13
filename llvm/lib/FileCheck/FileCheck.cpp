@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <list>
@@ -265,7 +264,7 @@ BinaryOperation::getImplicitFormat(const SourceMgr &SM) const {
                                                          : *RightFormat;
 }
 
-Expected<std::string> NumericSubstitution::getResult() const {
+Expected<std::string> NumericSubstitution::getResultRegex() const {
   assert(ExpressionPointer->getAST() != nullptr &&
          "Substituting empty expression");
   Expected<APInt> EvaluatedValue = ExpressionPointer->getAST()->eval();
@@ -275,12 +274,53 @@ Expected<std::string> NumericSubstitution::getResult() const {
   return Format.getMatchingString(*EvaluatedValue);
 }
 
-Expected<std::string> StringSubstitution::getResult() const {
+Expected<std::string> NumericSubstitution::getResultForDiagnostics() const {
+  // The "regex" returned by getResultRegex() is just a numeric value
+  // like '42', '0x2A', '-17', 'DEADBEEF' etc. This is already suitable for use
+  // in diagnostics.
+  Expected<std::string> Literal = getResultRegex();
+  if (!Literal)
+    return Literal;
+
+  return "\"" + std::move(*Literal) + "\"";
+}
+
+Expected<std::string> StringSubstitution::getResultRegex() const {
   // Look up the value and escape it so that we can put it into the regex.
   Expected<StringRef> VarVal = Context->getPatternVarValue(FromStr);
   if (!VarVal)
     return VarVal.takeError();
   return Regex::escape(*VarVal);
+}
+
+Expected<std::string> StringSubstitution::getResultForDiagnostics() const {
+  Expected<StringRef> VarVal = Context->getPatternVarValue(FromStr);
+  if (!VarVal)
+    return VarVal.takeError();
+
+  std::string Result;
+  Result.reserve(VarVal->size() + 2);
+  raw_string_ostream OS(Result);
+
+  OS << '"';
+  // Escape the string if it contains any characters that
+  // make it hard to read, such as non-printable characters (including all
+  // whitespace except space) and double quotes. These are the characters that
+  // are escaped by write_escaped(), except we do not include backslashes,
+  // because they are common in Windows paths and escaping them would make the
+  // output harder to read. However, when we do escape, backslashes are escaped
+  // as well, otherwise the output would be ambiguous.
+  const bool NeedsEscaping =
+      llvm::any_of(*VarVal, [](char C) { return !isPrint(C) || C == '"'; });
+  if (NeedsEscaping)
+    OS.write_escaped(*VarVal);
+  else
+    OS << *VarVal;
+  OS << '"';
+  if (NeedsEscaping)
+    OS << " (escaped value)";
+
+  return Result;
 }
 
 bool Pattern::isValidVarNameStart(char C) { return C == '_' || isAlpha(C); }
@@ -386,15 +426,12 @@ Expected<std::unique_ptr<NumericVariableUse>> Pattern::parseNumericVariableUse(
   // that happens, we create a dummy variable so that parsing can continue. All
   // uses of undefined variables, whether string or numeric, are then diagnosed
   // in printNoMatch() after failing to match.
-  auto VarTableIter = Context->GlobalNumericVariableTable.find(Name);
-  NumericVariable *NumericVariable;
-  if (VarTableIter != Context->GlobalNumericVariableTable.end())
-    NumericVariable = VarTableIter->second;
-  else {
-    NumericVariable = Context->makeNumericVariable(
+  auto [VarTableIter, Inserted] =
+      Context->GlobalNumericVariableTable.try_emplace(Name);
+  if (Inserted)
+    VarTableIter->second = Context->makeNumericVariable(
         Name, ExpressionFormat(ExpressionFormat::Kind::Unsigned));
-    Context->GlobalNumericVariableTable[Name] = NumericVariable;
-  }
+  NumericVariable *NumericVariable = VarTableIter->second;
 
   std::optional<size_t> DefLineNumber = NumericVariable->getDefLineNumber();
   if (DefLineNumber && LineNumber && *DefLineNumber == *LineNumber)
@@ -1013,8 +1050,10 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
         // Handle substitution of string variables that were defined earlier on
         // the same line by emitting a backreference. Expressions do not
         // support substituting a numeric variable defined on the same line.
-        if (!IsNumBlock && VariableDefs.find(SubstStr) != VariableDefs.end()) {
-          unsigned CaptureParenGroup = VariableDefs[SubstStr];
+        decltype(VariableDefs)::iterator It;
+        if (!IsNumBlock &&
+            (It = VariableDefs.find(SubstStr)) != VariableDefs.end()) {
+          unsigned CaptureParenGroup = It->second;
           if (CaptureParenGroup < 1 || CaptureParenGroup > 9) {
             SM.PrintMessage(SMLoc::getFromPointer(SubstStr.data()),
                             SourceMgr::DK_Error,
@@ -1108,7 +1147,7 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
     Error Errs = Error::success();
     for (const auto &Substitution : Substitutions) {
       // Substitute and check for failure (e.g. use of undefined variable).
-      Expected<std::string> Value = Substitution->getResult();
+      Expected<std::string> Value = Substitution->getResultRegex();
       if (!Value) {
         // Convert to an ErrorDiagnostic to get location information. This is
         // done here rather than printMatch/printNoMatch since now we know which
@@ -1212,7 +1251,8 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       SmallString<256> Msg;
       raw_svector_ostream OS(Msg);
 
-      Expected<std::string> MatchedValue = Substitution->getResult();
+      Expected<std::string> MatchedValue =
+          Substitution->getResultForDiagnostics();
       // Substitution failures are handled in printNoMatch().
       if (!MatchedValue) {
         consumeError(MatchedValue.takeError());
@@ -1220,8 +1260,8 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       }
 
       OS << "with \"";
-      OS.write_escaped(Substitution->getFromString()) << "\" equal to \"";
-      OS.write_escaped(*MatchedValue) << "\"";
+      OS.write_escaped(Substitution->getFromString()) << "\" equal to ";
+      OS << *MatchedValue;
 
       // We report only the start of the match/search range to suggest we are
       // reporting the substitutions as set at the start of the match/search.
@@ -1641,13 +1681,11 @@ static const char *DefaultCommentPrefixes[] = {"COM", "RUN"};
 
 static void addDefaultPrefixes(FileCheckRequest &Req) {
   if (Req.CheckPrefixes.empty()) {
-    for (const char *Prefix : DefaultCheckPrefixes)
-      Req.CheckPrefixes.push_back(Prefix);
+    llvm::append_range(Req.CheckPrefixes, DefaultCheckPrefixes);
     Req.IsDefaultCheckPrefix = true;
   }
   if (Req.CommentPrefixes.empty())
-    for (const char *Prefix : DefaultCommentPrefixes)
-      Req.CommentPrefixes.push_back(Prefix);
+    llvm::append_range(Req.CommentPrefixes, DefaultCommentPrefixes);
 }
 
 struct PrefixMatcher {
@@ -1766,8 +1804,7 @@ void FileCheckPatternContext::createLineVariable() {
 }
 
 FileCheck::FileCheck(FileCheckRequest Req)
-    : Req(Req), PatternContext(std::make_unique<FileCheckPatternContext>()),
-      CheckStrings(std::make_unique<std::vector<FileCheckString>>()) {}
+    : Req(Req), PatternContext(std::make_unique<FileCheckPatternContext>()) {}
 
 FileCheck::~FileCheck() = default;
 
@@ -1916,7 +1953,7 @@ bool FileCheck::readCheckFile(
     // Verify that CHECK-NEXT/SAME/EMPTY lines have at least one CHECK line before them.
     if ((CheckTy == Check::CheckNext || CheckTy == Check::CheckSame ||
          CheckTy == Check::CheckEmpty) &&
-        CheckStrings->empty()) {
+        CheckStrings.empty()) {
       StringRef Type = CheckTy == Check::CheckNext
                            ? "NEXT"
                            : CheckTy == Check::CheckEmpty ? "EMPTY" : "SAME";
@@ -1934,8 +1971,8 @@ bool FileCheck::readCheckFile(
     }
 
     // Okay, add the string we captured to the output vector and move on.
-    CheckStrings->emplace_back(P, UsedPrefix, PatternLoc);
-    std::swap(DagNotMatches, CheckStrings->back().DagNotStrings);
+    CheckStrings.emplace_back(std::move(P), UsedPrefix, PatternLoc,
+                              std::move(DagNotMatches));
     DagNotMatches = ImplicitNegativeChecks;
   }
 
@@ -1962,10 +1999,10 @@ bool FileCheck::readCheckFile(
   // Add an EOF pattern for any trailing --implicit-check-not/CHECK-DAG/-NOTs,
   // and use the first prefix as a filler for the error message.
   if (!DagNotMatches.empty()) {
-    CheckStrings->emplace_back(
+    CheckStrings.emplace_back(
         Pattern(Check::CheckEOF, PatternContext.get(), LineNumber + 1),
-        *Req.CheckPrefixes.begin(), SMLoc::getFromPointer(Buffer.data()));
-    std::swap(DagNotMatches, CheckStrings->back().DagNotStrings);
+        *Req.CheckPrefixes.begin(), SMLoc::getFromPointer(Buffer.data()),
+        std::move(DagNotMatches));
   }
 
   return false;
@@ -2493,14 +2530,10 @@ static bool ValidatePrefixes(StringRef Kind, StringSet<> &UniquePrefixes,
 bool FileCheck::ValidateCheckPrefixes() {
   StringSet<> UniquePrefixes;
   // Add default prefixes to catch user-supplied duplicates of them below.
-  if (Req.CheckPrefixes.empty()) {
-    for (const char *Prefix : DefaultCheckPrefixes)
-      UniquePrefixes.insert(Prefix);
-  }
-  if (Req.CommentPrefixes.empty()) {
-    for (const char *Prefix : DefaultCommentPrefixes)
-      UniquePrefixes.insert(Prefix);
-  }
+  if (Req.CheckPrefixes.empty())
+    UniquePrefixes.insert_range(DefaultCheckPrefixes);
+  if (Req.CommentPrefixes.empty())
+    UniquePrefixes.insert_range(DefaultCommentPrefixes);
   // Do not validate the default prefixes, or diagnostics about duplicates might
   // incorrectly indicate that they were supplied by the user.
   if (!ValidatePrefixes("check", UniquePrefixes, Req.CheckPrefixes))
@@ -2676,13 +2709,13 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
                            std::vector<FileCheckDiag> *Diags) {
   bool ChecksFailed = false;
 
-  unsigned i = 0, j = 0, e = CheckStrings->size();
+  unsigned i = 0, j = 0, e = CheckStrings.size();
   while (true) {
     StringRef CheckRegion;
     if (j == e) {
       CheckRegion = Buffer;
     } else {
-      const FileCheckString &CheckLabelStr = (*CheckStrings)[j];
+      const FileCheckString &CheckLabelStr = CheckStrings[j];
       if (CheckLabelStr.Pat.getCheckTy() != Check::CheckLabel) {
         ++j;
         continue;
@@ -2708,7 +2741,7 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
       PatternContext->clearLocalVars();
 
     for (; i != j; ++i) {
-      const FileCheckString &CheckStr = (*CheckStrings)[i];
+      const FileCheckString &CheckStr = CheckStrings[i];
 
       // Check each string within the scanned region, including a second check
       // of any final CHECK-LABEL (to verify CHECK-NOT and CHECK-DAG)

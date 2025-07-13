@@ -14,12 +14,10 @@
 #include "Utils/CodegenUtils.h"
 #include "Utils/LoopEmitter.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -30,10 +28,6 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/AffineExprVisitor.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/TensorEncoding.h"
-#include "llvm/ADT/SmallBitVector.h"
 
 #include <optional>
 
@@ -521,9 +515,8 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
   Value ptr = genSubscript(env, builder, t, args);
   if (llvm::isa<TensorType>(ptr.getType())) {
     assert(env.options().sparseEmitStrategy ==
-               SparseEmitStrategy::kSparseIterator &&
-           args.size() == 1);
-    return builder.create<ExtractValOp>(loc, ptr, args.front());
+           SparseEmitStrategy::kSparseIterator);
+    return builder.create<ExtractValOp>(loc, ptr, llvm::getSingleElement(args));
   }
   return builder.create<memref::LoadOp>(loc, ptr, args);
 }
@@ -1129,7 +1122,7 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
     // TODO: remove this! The same tensor level might be added for multiple
     // times due to the special handling for all-dense "sparse" output tensor
     // (see L1038).
-    if (llvm::find(tidLvls, tl) != tidLvls.end())
+    if (llvm::is_contained(tidLvls, tl))
       return;
     tidLvls.emplace_back(tl);
   });

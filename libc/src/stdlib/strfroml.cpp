@@ -24,8 +24,10 @@ LLVM_LIBC_FUNCTION(int, strfroml,
   // the length modifier has to be set to LenghtModifier::L
   section.length_modifier = printf_core::LengthModifier::L;
 
-  printf_core::WriteBuffer wb(s, (n > 0 ? n - 1 : 0));
-  printf_core::Writer writer(&wb);
+  printf_core::WriteBuffer<printf_core::Mode<
+      printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
+      wb(s, (n > 0 ? n - 1 : 0));
+  printf_core::Writer writer(wb);
 
   int result = 0;
   if (section.has_conv)

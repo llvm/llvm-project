@@ -52,7 +52,6 @@ func.func @load_zero_pad_out_of_bounds(%source: memref<32x64xf32>,
 // CHECK-SAME:  %[[OFFSET:.+]]: index
 // CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]][%[[OFFSET]], %[[OFFSET]]]
 // CHECK-SAME:    memref<32x64xf32> -> !xegpu.tensor_desc<8x16xf32,
-// CHECK-SAME:    boundary_check = true
 // CHECK:       %[[VEC:.+]] = xegpu.load_nd %[[DESC]]{{.*}}-> vector<8x16xf32>
 // CHECK:       return %[[VEC]]
 
@@ -116,6 +115,19 @@ func.func @no_load_out_of_bounds_non_zero_pad(%source: memref<32x64xf32>,
 
 // CHECK-LABEL:   @no_load_out_of_bounds_non_zero_pad(
 // CHECK-COUNT-2: vector.transfer_read
+
+// -----
+
+func.func @no_load_out_of_bounds_1D_vector(%source: memref<8x16x32xf32>,
+    %offset: index) -> vector<8xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
+    {in_bounds = [false]} : memref<8x16x32xf32>, vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: @no_load_out_of_bounds_1D_vector(
+// CHECK:       vector.transfer_read
 
 // -----
 

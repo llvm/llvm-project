@@ -336,6 +336,33 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
     U.pVal[word] = WORDTYPE_MAX;
 }
 
+void APInt::clearBitsSlowCase(unsigned LoBit, unsigned HiBit) {
+  unsigned LoWord = whichWord(LoBit);
+  unsigned HiWord = whichWord(HiBit);
+
+  // Create an initial mask for the low word with ones below loBit.
+  uint64_t LoMask = ~(WORDTYPE_MAX << whichBit(LoBit));
+
+  // If HiBit is not aligned, we need a high mask.
+  unsigned HiShiftAmt = whichBit(HiBit);
+  if (HiShiftAmt != 0) {
+    // Create a high mask with ones above HiBit.
+    uint64_t HiMask = ~(WORDTYPE_MAX >> (APINT_BITS_PER_WORD - HiShiftAmt));
+    // If LoWord and HiWord are equal, then we combine the masks. Otherwise,
+    // clear the bits in HiWord.
+    if (HiWord == LoWord)
+      LoMask |= HiMask;
+    else
+      U.pVal[HiWord] &= HiMask;
+  }
+  // Apply the mask to the low word.
+  U.pVal[LoWord] &= LoMask;
+
+  // Fill any words between LoWord and HiWord with all zeros.
+  for (unsigned Word = LoWord + 1; Word < HiWord; ++Word)
+    U.pVal[Word] = 0;
+}
+
 // Complement a bignum in-place.
 static void tcComplement(APInt::WordType *dst, unsigned parts) {
   for (unsigned i = 0; i < parts; i++)
@@ -851,15 +878,14 @@ APInt llvm::APIntOps::RoundDoubleToAPInt(double Double, unsigned width) {
 /// |  1[63]   11[62-52]   52[51-00]   1023 |
 ///  --------------------------------------
 double APInt::roundToDouble(bool isSigned) const {
-
   // Handle the simple case where the value is contained in one uint64_t.
   // It is wrong to optimize getWord(0) to VAL; there might be more than one word.
   if (isSingleWord() || getActiveBits() <= APINT_BITS_PER_WORD) {
     if (isSigned) {
       int64_t sext = SignExtend64(getWord(0), BitWidth);
       return double(sext);
-    } else
-      return double(getWord(0));
+    }
+    return double(getWord(0));
   }
 
   // Determine if the value is negative.
@@ -2551,8 +2577,9 @@ int APInt::tcMultiplyPart(WordType *dst, const WordType *src,
       if (low + dst[i] < low)
         high++;
       dst[i] += low;
-    } else
+    } else {
       dst[i] = low;
+    }
 
     carry = high;
   }
@@ -3107,4 +3134,22 @@ APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
   APInt C1Ext = C1.zext(FullWidth);
   APInt C2Ext = C2.zext(FullWidth);
   return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
+}
+
+APInt APIntOps::pow(const APInt &X, int64_t N) {
+  assert(N >= 0 && "negative exponents not supported.");
+  APInt Acc = APInt(X.getBitWidth(), 1);
+  if (N == 0)
+    return Acc;
+  APInt Base = X;
+  int64_t RemainingExponent = N;
+  while (RemainingExponent > 0) {
+    while (RemainingExponent % 2 == 0) {
+      Base *= Base;
+      RemainingExponent /= 2;
+    }
+    --RemainingExponent;
+    Acc *= Base;
+  }
+  return Acc;
 }

@@ -1,4 +1,4 @@
-//===- FuncTransformOps.cpp - Implementation of CF transform ops ---===//
+//===- FuncTransformOps.cpp - Implementation of CF transform ops ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,10 +11,11 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/Utils/Utils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -51,8 +52,7 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
 
   SetVector<Value> outputs;
   if (getOutputs()) {
-    for (auto output : state.getPayloadValues(getOutputs()))
-      outputs.insert(output);
+    outputs.insert_range(state.getPayloadValues(getOutputs()));
 
     // Verify that the set of output values to be replaced is unique.
     if (outputs.size() !=
@@ -223,6 +223,109 @@ void transform::CastAndCallOp::getEffects(
     transform::onlyReadsHandle(getOutputsMutable(), effects);
   if (getFunction())
     transform::onlyReadsHandle(getFunctionMutable(), effects);
+  transform::producesHandle(getOperation()->getOpResults(), effects);
+  transform::modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// ReplaceFuncSignatureOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ReplaceFuncSignatureOp::apply(transform::TransformRewriter &rewriter,
+                                         transform::TransformResults &results,
+                                         transform::TransformState &state) {
+  auto payloadOps = state.getPayloadOps(getModule());
+  if (!llvm::hasSingleElement(payloadOps))
+    return emitDefiniteFailure() << "requires a single module to operate on";
+
+  auto targetModuleOp = dyn_cast<ModuleOp>(*payloadOps.begin());
+  if (!targetModuleOp)
+    return emitSilenceableFailure(getLoc())
+           << "target is expected to be module operation";
+
+  func::FuncOp funcOp =
+      targetModuleOp.lookupSymbol<func::FuncOp>(getFunctionName());
+  if (!funcOp)
+    return emitSilenceableFailure(getLoc())
+           << "function with name '" << getFunctionName() << "' not found";
+
+  unsigned numArgs = funcOp.getNumArguments();
+  unsigned numResults = funcOp.getNumResults();
+  // Check that the number of arguments and results matches the
+  // interchange sizes.
+  if (numArgs != getArgsInterchange().size())
+    return emitSilenceableFailure(getLoc())
+           << "function with name '" << getFunctionName() << "' has " << numArgs
+           << " arguments, but " << getArgsInterchange().size()
+           << " args interchange were given";
+
+  if (numResults != getResultsInterchange().size())
+    return emitSilenceableFailure(getLoc())
+           << "function with name '" << getFunctionName() << "' has "
+           << numResults << " results, but " << getResultsInterchange().size()
+           << " results interchange were given";
+
+  // Check that the args and results interchanges are unique.
+  SetVector<unsigned> argsInterchange, resultsInterchange;
+  argsInterchange.insert_range(getArgsInterchange());
+  resultsInterchange.insert_range(getResultsInterchange());
+  if (argsInterchange.size() != getArgsInterchange().size())
+    return emitSilenceableFailure(getLoc())
+           << "args interchange must be unique";
+
+  if (resultsInterchange.size() != getResultsInterchange().size())
+    return emitSilenceableFailure(getLoc())
+           << "results interchange must be unique";
+
+  // Check that the args and results interchange indices are in bounds.
+  for (unsigned index : argsInterchange) {
+    if (index >= numArgs) {
+      return emitSilenceableFailure(getLoc())
+             << "args interchange index " << index
+             << " is out of bounds for function with name '"
+             << getFunctionName() << "' with " << numArgs << " arguments";
+    }
+  }
+  for (unsigned index : resultsInterchange) {
+    if (index >= numResults) {
+      return emitSilenceableFailure(getLoc())
+             << "results interchange index " << index
+             << " is out of bounds for function with name '"
+             << getFunctionName() << "' with " << numResults << " results";
+    }
+  }
+
+  FailureOr<func::FuncOp> newFuncOpOrFailure = func::replaceFuncWithNewOrder(
+      rewriter, funcOp, argsInterchange.getArrayRef(),
+      resultsInterchange.getArrayRef());
+  if (failed(newFuncOpOrFailure))
+    return emitSilenceableFailure(getLoc())
+           << "failed to replace function signature '" << getFunctionName()
+           << "' with new order";
+
+  if (getAdjustFuncCalls()) {
+    SmallVector<func::CallOp> callOps;
+    targetModuleOp.walk([&](func::CallOp callOp) {
+      if (callOp.getCallee() == getFunctionName().getRootReference().getValue())
+        callOps.push_back(callOp);
+    });
+
+    for (func::CallOp callOp : callOps)
+      func::replaceCallOpWithNewOrder(rewriter, callOp,
+                                      argsInterchange.getArrayRef(),
+                                      resultsInterchange.getArrayRef());
+  }
+
+  results.set(cast<OpResult>(getTransformedModule()), {targetModuleOp});
+  results.set(cast<OpResult>(getTransformedFunction()), {*newFuncOpOrFailure});
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::ReplaceFuncSignatureOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::consumesHandle(getModuleMutable(), effects);
   transform::producesHandle(getOperation()->getOpResults(), effects);
   transform::modifiesPayload(effects);
 }

@@ -30,16 +30,10 @@ private:
 public:
   /// Zero-initializes a boolean.
   Boolean() : V(false) {}
-  Boolean(const llvm::APSInt &I) : V(!I.isZero()) {}
   explicit Boolean(bool V) : V(V) {}
 
   bool operator<(Boolean RHS) const { return V < RHS.V; }
   bool operator>(Boolean RHS) const { return V > RHS.V; }
-  bool operator<=(Boolean RHS) const { return V <= RHS.V; }
-  bool operator>=(Boolean RHS) const { return V >= RHS.V; }
-  bool operator==(Boolean RHS) const { return V == RHS.V; }
-  bool operator!=(Boolean RHS) const { return V != RHS.V; }
-
   bool operator>(unsigned RHS) const { return static_cast<unsigned>(V) > RHS; }
 
   Boolean operator-() const { return Boolean(V); }
@@ -82,9 +76,7 @@ public:
   Boolean truncate(unsigned TruncBits) const { return *this; }
 
   static Boolean bitcastFromMemory(const std::byte *Buff, unsigned BitWidth) {
-    // Boolean width is currently always 8 for all supported targets. If this
-    // changes we need to get the bool width from the target info.
-    assert(BitWidth == 8);
+    // Just load the first byte.
     bool Val = static_cast<bool>(*Buff);
     return Boolean(Val);
   }

@@ -2,7 +2,7 @@
   "errno": {
     "LIBC_CONF_ERRNO_MODE": {
       "value": "LIBC_ERRNO_MODE_DEFAULT",
-      "doc": "The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM."
+      "doc": "The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, LIBC_ERRNO_MODE_SYSTEM, and LIBC_ERRNO_MODE_SYSTEM_INLINE."
     }
   },
   "printf": {
@@ -30,6 +30,10 @@
       "value": false,
       "doc": "Use the same mode for double and long double in printf."
     },
+    "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320": {
+      "value": false,
+      "doc": "Use an alternative printf float implementation based on 320-bit floats"
+    },
     "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
       "value": false,
       "doc": "Disable printing fixed point values in printf and friends."
@@ -37,6 +41,10 @@
     "LIBC_CONF_PRINTF_DISABLE_STRERROR": {
       "value": false,
       "doc": "Disable handling of %m to print strerror in printf and friends."
+    },
+    "LIBC_CONF_PRINTF_RUNTIME_DISPATCH": {
+      "value": true,
+      "doc": "Use dynamic dispatch for the output mechanism to reduce code size."
     }
   },
   "scanf": {
@@ -90,7 +98,7 @@
     },
     "LIBC_CONF_FREXP_INF_NAN_EXPONENT": {
       "value": "",
-      "doc": "The value written back to the second parameter when calling frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified.  Configue an explicit exp value for Inf/NaN inputs."
+      "doc": "The value written back to the second parameter when calling frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified.  Configure an explicit exp value for Inf/NaN inputs."
     }
   },
   "qsort": {

@@ -68,7 +68,7 @@ define void @test_dead_readwrite() {
 define i32 @test_neg_read_after() {
 ; CHECK-LABEL: @test_neg_read_after(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @f(ptr nocapture writeonly [[A]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @f(ptr writeonly captures(none) [[A]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -82,7 +82,7 @@ define i32 @test_neg_read_after() {
 define void @test_neg_infinite_loop() {
 ; CHECK-LABEL: @test_neg_infinite_loop(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @f(ptr nocapture writeonly [[A]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @f(ptr writeonly captures(none) [[A]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -93,7 +93,7 @@ define void @test_neg_infinite_loop() {
 define void @test_neg_throw() {
 ; CHECK-LABEL: @test_neg_throw(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @f(ptr nocapture writeonly [[A]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @f(ptr writeonly captures(none) [[A]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -104,7 +104,7 @@ define void @test_neg_throw() {
 define void @test_neg_extra_write() {
 ; CHECK-LABEL: @test_neg_extra_write(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @f(ptr nocapture writeonly [[A]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @f(ptr writeonly captures(none) [[A]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -118,7 +118,7 @@ define void @test_neg_unmodeled_write() {
 ; CHECK-LABEL: @test_neg_unmodeled_write(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A2:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @f2(ptr nocapture writeonly [[A]], ptr [[A2]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @f2(ptr writeonly captures(none) [[A]], ptr [[A2]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -149,7 +149,7 @@ define i32 @test_neg_captured_before() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A2:%.*]] = alloca ptr, align 4
 ; CHECK-NEXT:    store ptr [[A]], ptr [[A2]], align 8
-; CHECK-NEXT:    call void @f(ptr nocapture writeonly [[A]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @f(ptr writeonly captures(none) [[A]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[A_COPY_CAST:%.*]] = load ptr, ptr [[A2]], align 8
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[A_COPY_CAST]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -167,7 +167,7 @@ define i32 @test_neg_captured_before() {
 define void @test_new_op_bundle() {
 ; CHECK-LABEL: @test_new_op_bundle(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @f(ptr nocapture writeonly [[A]]) #[[ATTR1]] [ "unknown"(ptr [[A]]) ]
+; CHECK-NEXT:    call void @f(ptr writeonly captures(none) [[A]]) #[[ATTR1]] [ "unknown"(ptr [[A]]) ]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -203,7 +203,7 @@ define i8 @test_neg_unrelated_capture_used_via_return() {
 ; CHECK-LABEL: @test_neg_unrelated_capture_used_via_return(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A2:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[CAPTURE:%.*]] = call ptr @f3(ptr nocapture writeonly [[A]], ptr readonly [[A2]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CAPTURE:%.*]] = call ptr @f3(ptr writeonly captures(none) [[A]], ptr readonly [[A2]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[CAPTURE]], align 1
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
@@ -246,7 +246,7 @@ define i32 @test_dse_overwrite() {
 define i32 @test_neg_dse_partial_overwrite() {
 ; CHECK-LABEL: @test_neg_dse_partial_overwrite(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @f(ptr nocapture writeonly [[A]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @f(ptr writeonly captures(none) [[A]]) #[[ATTR1]]
 ; CHECK-NEXT:    store i8 0, ptr [[A]], align 1
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
@@ -262,7 +262,7 @@ define i32 @test_neg_dse_partial_overwrite() {
 ; full overwrite reasoning
 define i32 @test_neg_dse_unsized(ptr %a) {
 ; CHECK-LABEL: @test_neg_dse_unsized(
-; CHECK-NEXT:    call void @f(ptr nocapture writeonly [[A:%.*]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @f(ptr writeonly captures(none) [[A:%.*]]) #[[ATTR1]]
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
@@ -286,3 +286,35 @@ define void @test_dse_non_alloca() {
   ret void
 }
 
+define void @test_other_read_effects() {
+; CHECK-LABEL: @test_other_read_effects(
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i32, align 4
+  call void @f(ptr %a) memory(read, argmem: readwrite) nounwind willreturn
+  ret void
+}
+
+define i32 @test_other_read_effects_read_after() {
+; CHECK-LABEL: @test_other_read_effects_read_after(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @f(ptr [[A]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %a = alloca i32, align 4
+  call void @f(ptr %a) memory(read, argmem: readwrite) nounwind willreturn
+  %v = load i32, ptr %a
+  ret i32 %v
+}
+
+define void @test_other_write_effects() {
+; CHECK-LABEL: @test_other_write_effects(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @f(ptr [[A]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i32, align 4
+  call void @f(ptr %a) memory(write, argmem: readwrite) nounwind willreturn
+  ret void
+}

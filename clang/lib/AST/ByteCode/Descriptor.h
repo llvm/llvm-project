@@ -33,8 +33,8 @@ using InitMapPtr = std::optional<std::pair<bool, std::shared_ptr<InitMap>>>;
 /// inline descriptors of all fields and array elements. It also initializes
 /// all the fields which contain non-trivial types.
 using BlockCtorFn = void (*)(Block *Storage, std::byte *FieldPtr, bool IsConst,
-                             bool IsMutable, bool IsActive, bool InUnion,
-                             const Descriptor *FieldDesc);
+                             bool IsMutable, bool IsVolatile, bool IsActive,
+                             bool InUnion, const Descriptor *FieldDesc);
 
 /// Invoked when a block is destroyed. Invokes the destructors of all
 /// non-trivial nested fields of arrays and records.
@@ -60,6 +60,11 @@ struct alignas(void *) GlobalInlineDescriptor {
   GlobalInitState InitState = GlobalInitState::InitializerFailed;
 };
 static_assert(sizeof(GlobalInlineDescriptor) == sizeof(void *), "");
+
+enum class Lifetime : uint8_t {
+  Started,
+  Ended,
+};
 
 /// Inline descriptor embedded in structures and arrays.
 ///
@@ -90,22 +95,27 @@ struct InlineDescriptor {
   /// Flag indicating if the field is the active member of a union.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsActive : 1;
-  /// Flat indicating if this field is in a union (even if nested).
-  unsigned InUnion : 1;
+  /// Flag indicating if this field is in a union (even if nested).
   LLVM_PREFERRED_TYPE(bool)
+  unsigned InUnion : 1;
   /// Flag indicating if the field is mutable (if in a record).
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
   /// Flag indicating if the field is an element of a composite array.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsArrayElement : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsVolatile : 1;
+
+  Lifetime LifeState;
 
   const Descriptor *Desc;
 
   InlineDescriptor(const Descriptor *D)
       : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
         IsBase(false), IsActive(false), IsFieldMutable(false),
-        IsArrayElement(false), Desc(D) {}
+        IsArrayElement(false), IsVolatile(false), LifeState(Lifetime::Started),
+        Desc(D) {}
 
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
@@ -117,6 +127,7 @@ struct Descriptor final {
 private:
   /// Original declaration, used to emit the error message.
   const DeclTy Source;
+  const Type *SourceType = nullptr;
   /// Size of an element, in host bytes.
   const unsigned ElemSize;
   /// Size of the storage, in host bytes.
@@ -156,10 +167,12 @@ public:
   const bool IsMutable = false;
   /// Flag indicating if the block is a temporary.
   const bool IsTemporary = false;
+  const bool IsVolatile = false;
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
   /// Flag indicating if this is a dummy descriptor.
   bool IsDummy = false;
+  bool IsConstexprUnknown = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;
@@ -167,20 +180,22 @@ public:
   const BlockMoveFn MoveFn = nullptr;
 
   /// Allocates a descriptor for a primitive.
-  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, bool IsConst,
-             bool IsTemporary, bool IsMutable);
+  Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+             MetadataSize MD, bool IsConst, bool IsTemporary, bool IsMutable,
+             bool IsVolatile);
 
   /// Allocates a descriptor for an array of primitives.
   Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, size_t NumElems,
              bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of primitives of unknown size.
-  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MDSize,
+  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MDSize, bool IsConst,
              bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for an array of composites.
-  Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
-             unsigned NumElems, bool IsConst, bool IsTemporary, bool IsMutable);
+  Descriptor(const DeclTy &D, const Type *SourceTy, const Descriptor *Elem,
+             MetadataSize MD, unsigned NumElems, bool IsConst, bool IsTemporary,
+             bool IsMutable);
 
   /// Allocates a descriptor for an array of composites of unknown size.
   Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
@@ -188,16 +203,17 @@ public:
 
   /// Allocates a descriptor for a record.
   Descriptor(const DeclTy &D, const Record *R, MetadataSize MD, bool IsConst,
-             bool IsTemporary, bool IsMutable);
+             bool IsTemporary, bool IsMutable, bool IsVolatile);
 
   /// Allocates a dummy descriptor.
-  Descriptor(const DeclTy &D);
+  Descriptor(const DeclTy &D, MetadataSize MD = std::nullopt);
 
   /// Make this descriptor a dummy descriptor.
   void makeDummy() { IsDummy = true; }
 
   QualType getType() const;
   QualType getElemQualType() const;
+  QualType getDataType(const ASTContext &Ctx) const;
   SourceLocation getLocation() const;
   SourceInfo getLoc() const;
 
@@ -254,7 +270,7 @@ public:
   bool isUnknownSizeArray() const { return Size == UnknownSizeMark; }
 
   /// Checks if the descriptor is of a primitive.
-  bool isPrimitive() const { return !IsArray && !ElemRecord; }
+  bool isPrimitive() const { return !IsArray && !ElemRecord && PrimT; }
 
   /// Checks if the descriptor is of an array.
   bool isArray() const { return IsArray; }
@@ -265,8 +281,12 @@ public:
   /// Checks if this is a dummy descriptor.
   bool isDummy() const { return IsDummy; }
 
+  /// Whether variables of this descriptor need their destructor called or not.
+  bool hasTrivialDtor() const;
+
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;
+  void dumpFull(unsigned Offset = 0, unsigned Indent = 0) const;
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.

@@ -170,6 +170,47 @@ void no_matching_placement_new() {
   (void)new(&buffer) X; // expected-error {{no matching 'operator new' function for non-allocating placement new expression; include <new>}}
 }
 
+void const_placement_new() {
+  const int value = 42;
+  (void)new(&value) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+  struct X { int n; };
+  const X cx = {5};
+  (void)new(&cx) X{10}; // expected-error {{placement new expression with a const-qualified argument of type 'const X *' is not allowed}}
+  const X* const cx2 = 0;
+  (void)new(cx2) X{10}; // expected-error {{placement new expression with a const-qualified argument of type 'const X *const' is not allowed}}
+  const int arr[1] = {1};
+  (void)new(&arr[0]) int(10); // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+  const void* ptr = 0;
+  (void)new(ptr) int; // expected-error {{placement new expression with a const-qualified argument of type 'const void *' is not allowed}}
+  const int complex_arr[5][3] = {};
+  (void)new(&complex_arr[0][0]) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+  (void)new(complex_arr[0]) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int[3]' is not allowed}}
+  const char str[] = "test";
+  (void)new(str) int; // expected-error {{placement new expression with a const-qualified argument of type 'const char[5]' is not allowed}}
+  const int* const* ptr_to_const_ptr_to_const = 0;
+  (void)new(ptr_to_const_ptr_to_const) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *const *' is not allowed}}
+  int* const* ptr_to_const_ptr = 0;
+  (void)new(ptr_to_const_ptr) int; // expected-error {{placement new expression with a const-qualified argument of type 'int *const *' is not allowed}}
+  typedef const int* ConstIntPtr;
+  ConstIntPtr cip = 0;
+  (void)new(cip) int; // expected-error {{placement new expression with a const-qualified argument of type 'ConstIntPtr' (aka 'const int *') is not allowed}}
+  typedef const void* ConstVoidPtr;
+}
+
+void const_placement_new_param(const void* ptr) {
+  new (ptr) int; // expected-error {{placement new expression with a const-qualified argument of type 'const void *' is not allowed}}
+}
+
+template<typename T>
+void const_template_placement_new(const T* storage) {
+  (void)new(storage) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+}
+
+void const_template_placement_new_instantiation() {
+  int x = 5;
+  const_template_placement_new(&x); // expected-note {{in instantiation of function template specialization 'const_template_placement_new<int>' requested here}}
+}
+
 void good_deletes()
 {
   delete (int*)0;
@@ -251,7 +292,7 @@ void loadEngineFor() {
 }
 
 template <class T> struct TBase {
-  void* operator new(T size, int); // expected-error {{'operator new' cannot take a dependent type as first parameter; use size_t}}
+  void* operator new(T size, int); // expected-error {{'operator new' cannot take a dependent type as its 1st parameter; use size_t}}
 };
 
 TBase<int> t1;
@@ -466,7 +507,7 @@ namespace TemplateDestructors {
 
 namespace DeleteParam {
   struct X {
-    void operator delete(X*); // expected-error{{first parameter of 'operator delete' must have type 'void *'}}
+    void operator delete(X*); // expected-error{{1st parameter of 'operator delete' must have type 'void *'}}
   };
 
   struct Y {
@@ -539,6 +580,22 @@ namespace PR10504 {
   };
   void f(A *x) { delete x; } // expected-warning {{delete called on 'PR10504::A' that is abstract but has non-virtual destructor}}
 }
+
+#if __cplusplus >= 201103L
+enum GH99278_1 {
+    zero = decltype(delete static_cast<GH99278_1*>(nullptr), 0){}
+    // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
+};
+template <typename = void>
+struct GH99278_2 {
+  union b {};
+  struct c {
+    c() { delete d; }
+    b *d;
+  } f;
+};
+GH99278_2<void> e;
+#endif
 
 struct PlacementArg {};
 inline void *operator new[](size_t, const PlacementArg &) throw () {

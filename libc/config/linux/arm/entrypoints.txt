@@ -20,11 +20,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
+    # poll.h entrypoints
+    libc.src.poll.poll
+
     # string.h entrypoints
-    libc.src.string.bcmp
-    libc.src.string.bcopy
-    libc.src.string.bzero
-    libc.src.string.index
     libc.src.string.memccpy
     libc.src.string.memchr
     libc.src.string.memcmp
@@ -34,10 +33,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.mempcpy
     libc.src.string.memrchr
     libc.src.string.memset
-    libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
-    libc.src.string.strcasecmp
     libc.src.string.strcasestr
     libc.src.string.strcat
     libc.src.string.strchr
@@ -48,7 +45,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
-    libc.src.string.strncasecmp
     libc.src.string.strncat
     libc.src.string.strncmp
     libc.src.string.strncpy
@@ -60,6 +56,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strstr
     libc.src.string.strtok
     libc.src.string.strtok_r
+
+    # strings.h entrypoints
+    libc.src.strings.bcmp
+    libc.src.strings.bcopy
+    libc.src.strings.bzero
+    libc.src.strings.index
+    libc.src.strings.rindex
+    libc.src.strings.strcasecmp
+    libc.src.strings.strncasecmp
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -151,6 +156,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.strtod
@@ -166,6 +172,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.free
     libc.src.stdlib.malloc
 
+    # sys/ioctl.h entrypoints
+    libc.src.sys.ioctl.ioctl
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
@@ -179,6 +188,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # libc.src.sys.epoll.epoll_pwait
     # libc.src.sys.epoll.epoll_pwait2
 
+    # sys/time.h entrypoints
+    libc.src.sys.time.setitimer
+    libc.src.sys.time.getitimer
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -189,6 +201,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
+    libc.src.setjmp.siglongjmp
+    libc.src.setjmp.sigsetjmp
   )
 endif()
 
@@ -207,7 +221,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.complex.cimag
     libc.src.complex.cimagf
     libc.src.complex.cimagl
-    
+    libc.src.complex.conj
+    libc.src.complex.conjf
+    libc.src.complex.conjl
+    libc.src.complex.cproj
+    libc.src.complex.cprojf
+    libc.src.complex.cprojl
+
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
     libc.src.fenv.fedisableexcept
@@ -227,12 +247,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.cbrt
@@ -260,7 +283,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
-    libc.src.math.fadd 
+    libc.src.math.fadd
     libc.src.math.faddl
     libc.src.math.fadd
     libc.src.math.fdim
@@ -414,6 +437,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.tanpif
     libc.src.math.totalorder
     libc.src.math.totalorderf
     libc.src.math.totalorderl

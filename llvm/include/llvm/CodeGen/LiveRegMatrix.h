@@ -48,7 +48,7 @@ class LiveRegMatrix {
   unsigned UserTag = 0;
 
   // The matrix is represented as a LiveIntervalUnion per register unit.
-  LiveIntervalUnion::Allocator LIUAlloc;
+  std::unique_ptr<LiveIntervalUnion::Allocator> LIUAlloc;
   LiveIntervalUnion::Array Matrix;
 
   // Cached queries per register unit.
@@ -56,18 +56,15 @@ class LiveRegMatrix {
 
   // Cached register mask interference info.
   unsigned RegMaskTag = 0;
-  unsigned RegMaskVirtReg = 0;
+  Register RegMaskVirtReg;
   BitVector RegMaskUsable;
 
-  LiveRegMatrix() = default;
+  LiveRegMatrix()
+      : LIUAlloc(std::make_unique<LiveIntervalUnion::Allocator>()) {};
   void releaseMemory();
 
 public:
-  LiveRegMatrix(LiveRegMatrix &&Other)
-      : TRI(Other.TRI), LIS(Other.LIS), VRM(Other.VRM), UserTag(Other.UserTag),
-        Matrix(std::move(Other.Matrix)), Queries(std::move(Other.Queries)),
-        RegMaskTag(Other.RegMaskTag), RegMaskVirtReg(Other.RegMaskVirtReg),
-        RegMaskUsable(std::move(Other.RegMaskUsable)) {}
+  LiveRegMatrix(LiveRegMatrix &&Other) = default;
 
   void init(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM);
 
@@ -164,7 +161,7 @@ public:
   /// Use MCRegUnitIterator to enumerate all regunits in the desired PhysReg.
   /// This returns a reference to an internal Query data structure that is only
   /// valid until the next query() call.
-  LiveIntervalUnion::Query &query(const LiveRange &LR, MCRegister RegUnit);
+  LiveIntervalUnion::Query &query(const LiveRange &LR, MCRegUnit RegUnit);
 
   /// Directly access the live interval unions per regunit.
   /// This returns an array indexed by the regunit number.

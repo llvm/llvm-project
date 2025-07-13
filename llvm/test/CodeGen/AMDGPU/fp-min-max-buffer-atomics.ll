@@ -223,7 +223,7 @@ define amdgpu_ps void @raw_buffer_atomic_min_rtn_f32(<4 x i32> inreg %rsrc, floa
 ; G_GFX1100-NEXT:    s_endpgm
 main_body:
   %ret = call float @llvm.amdgcn.raw.buffer.atomic.fmin.f32(float %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
-  store float %ret, ptr addrspace(1) undef
+  store float %ret, ptr addrspace(1) poison
   ret void
 }
 
@@ -597,7 +597,7 @@ define amdgpu_ps void @raw_buffer_atomic_max_rtn_f32(<4 x i32> inreg %rsrc, floa
 ; G_GFX1100-NEXT:    s_endpgm
 main_body:
   %ret = call float @llvm.amdgcn.raw.buffer.atomic.fmax.f32(float %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
-  store float %ret, ptr addrspace(1) undef
+  store float %ret, ptr addrspace(1) poison
   ret void
 }
 

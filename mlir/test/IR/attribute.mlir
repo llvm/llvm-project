@@ -416,10 +416,29 @@ func.func @non_type_in_type_array_attr_fail() {
 // Test StringAttr with custom type
 //===----------------------------------------------------------------------===//
 
-// CHECK-LABEL: func @string_attr_custom_type
-func.func @string_attr_custom_type() {
-  // CHECK: "string_data" : !foo.string
-  test.string_attr_with_type "string_data" : !foo.string
+// CHECK-LABEL: func @string_attr_custom_type_valid
+func.func @string_attr_custom_type_valid() {
+  // CHECK: "string_data" : i64
+  test.string_attr_with_type "string_data" : i64
+  return
+}
+
+// -----
+
+func.func @string_attr_custom_type_invalid() {
+  // expected-error @+1 {{'attr' failed to satisfy constraint: string attribute of integer}}
+  test.string_attr_with_type "string_data" : f32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @string_attr_custom_mixed_type
+func.func @string_attr_custom_mixed_type() {
+  // CHECK: "string_data" : i64
+  test.string_attr_with_mixed_type "string_data" : i64
+  // CHECK: 42 : i64
+  test.string_attr_with_mixed_type 42 : i64
   return
 }
 
@@ -435,6 +454,10 @@ func.func @allowed_cases_pass() {
   %0 = "test.i32_enum_attr"() {attr = 5: i32} : () -> i32
   // CHECK: test.i32_enum_attr
   %1 = "test.i32_enum_attr"() {attr = 10: i32} : () -> i32
+  // CHECK: test.i32_enum_attr
+  %2 = "test.i32_enum_attr"() {attr = 2147483648: i32} : () -> i32
+  // CHECK: test.i32_enum_attr
+  %3 = "test.i32_enum_attr"() {attr = 4294967295: i32} : () -> i32
   return
 }
 
@@ -516,7 +539,7 @@ func.func @allowed_cases_pass() {
 // -----
 
 func.func @disallowed_case_sticky_fail() {
-  // expected-error@+2 {{expected test::TestBitEnum to be one of: read, write, execute}}
+  // expected-error@+2 {{expected one of [read, write, execute] for a test bit enum, got: sticky}}
   // expected-error@+1 {{failed to parse TestBitEnumAttr}}
   "test.op_with_bit_enum"() {value = #test.bit_enum<sticky>} : () -> ()
 }
@@ -556,6 +579,14 @@ func.func @correct_type_pass() {
     scalar_f32_attr = dense<5.0> : tensor<2xf32>,
     tensor_f64_attr = dense<6.0> : tensor<4xf64>
   } : () -> ()
+  return
+}
+
+// -----
+
+func.func @tf32_elements_attr() {
+  // CHECK: "foo"() {attr = dense<4.000000e+00> : tensor<tf32>} : () -> ()
+  "foo"() {attr = dense<4.0> : tensor<tf32>} : () -> ()
   return
 }
 
@@ -670,6 +701,14 @@ func.func @dense_array_attr() attributes {
     x7_f16 = array<f16: 1., 3.>
   }: () -> ()
 
+  return
+}
+
+// -----
+
+func.func @test_invalid_bitwidth_type() {
+  // expected-error @below{{element type bitwidth must be a multiple of 8}}
+  "foo"() {tf32attr = array<tf32: 1024.0>} : () -> ()
   return
 }
 

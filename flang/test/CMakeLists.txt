@@ -59,22 +59,27 @@ set(FLANG_TEST_PARAMS
 
 set(FLANG_TEST_DEPENDS
   flang
-  llvm-config
-  FileCheck
-  count
-  not
   module_files
   fir-opt
   tco
   bbc
-  llvm-dis
-  llvm-objdump
-  llvm-readobj
-  split-file
-  FortranRuntime
   FortranDecimal
 )
-if (LLVM_ENABLE_PLUGINS AND NOT WIN32)
+if (NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS
+    llvm-config
+    FileCheck
+    count
+    not
+    llvm-dis
+    llvm-objdump
+    llvm-profdata
+    llvm-readobj
+    split-file
+  )
+endif ()
+
+if (LLVM_BUILD_EXAMPLES AND LLVM_ENABLE_PLUGINS AND NOT WIN32 AND NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS Bye)
 endif()
 
@@ -90,6 +95,10 @@ if (LLVM_BUILD_EXAMPLES)
     flangOmpReport
     flangFeatureList
     )
+endif ()
+
+if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS "libomp-mod")
 endif ()
 
 add_custom_target(flang-test-depends DEPENDS ${FLANG_TEST_DEPENDS})

@@ -15,14 +15,9 @@
 
 namespace mlir {
 
-bool isZeroIndex(OpFoldResult v) {
-  if (!v)
-    return false;
-  std::optional<int64_t> constint = getConstantIntValue(v);
-  if (!constint)
-    return false;
-  return *constint == 0;
-}
+bool isZeroInteger(OpFoldResult v) { return isConstantIntValue(v, 0); }
+
+bool isOneInteger(OpFoldResult v) { return isConstantIntValue(v, 1); }
 
 std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
            SmallVector<OpFoldResult>>
@@ -50,7 +45,7 @@ void dispatchIndexOpFoldResult(OpFoldResult ofr,
                                SmallVectorImpl<int64_t> &staticVec) {
   auto v = llvm::dyn_cast_if_present<Value>(ofr);
   if (!v) {
-    APInt apInt = cast<IntegerAttr>(ofr.get<Attribute>()).getValue();
+    APInt apInt = cast<IntegerAttr>(cast<Attribute>(ofr)).getValue();
     staticVec.push_back(apInt.getSExtValue());
     return;
   }
@@ -147,8 +142,7 @@ getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
 }
 
 bool isConstantIntValue(OpFoldResult ofr, int64_t value) {
-  auto val = getConstantIntValue(ofr);
-  return val && *val == value;
+  return getConstantIntValue(ofr) == value;
 }
 
 bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
@@ -191,7 +185,8 @@ bool isEqualConstantIntOrValueArray(ArrayRef<OpFoldResult> ofrs1,
 /// elements for which ShapedType::isDynamic is true, will be replaced by
 /// dynamicValues.
 SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
-                                         ValueRange dynamicValues, Builder &b) {
+                                         ValueRange dynamicValues,
+                                         MLIRContext *context) {
   SmallVector<OpFoldResult> res;
   res.reserve(staticValues.size());
   unsigned numDynamic = 0;
@@ -200,23 +195,28 @@ SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
     int64_t value = staticValues[idx];
     res.push_back(ShapedType::isDynamic(value)
                       ? OpFoldResult{dynamicValues[numDynamic++]}
-                      : OpFoldResult{b.getI64IntegerAttr(staticValues[idx])});
+                      : OpFoldResult{IntegerAttr::get(
+                            IntegerType::get(context, 64), staticValues[idx])});
   }
   return res;
+}
+SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
+                                         ValueRange dynamicValues, Builder &b) {
+  return getMixedValues(staticValues, dynamicValues, b.getContext());
 }
 
 /// Decompose a vector of mixed static or dynamic values into the corresponding
 /// pair of arrays. This is the inverse function of `getMixedValues`.
 std::pair<SmallVector<int64_t>, SmallVector<Value>>
-decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues) {
+decomposeMixedValues(ArrayRef<OpFoldResult> mixedValues) {
   SmallVector<int64_t> staticValues;
   SmallVector<Value> dynamicValues;
   for (const auto &it : mixedValues) {
-    if (it.is<Attribute>()) {
-      staticValues.push_back(cast<IntegerAttr>(it.get<Attribute>()).getInt());
+    if (auto attr = dyn_cast<Attribute>(it)) {
+      staticValues.push_back(cast<IntegerAttr>(attr).getInt());
     } else {
       staticValues.push_back(ShapedType::kDynamic);
-      dynamicValues.push_back(it.get<Value>());
+      dynamicValues.push_back(cast<Value>(it));
     }
   }
   return {staticValues, dynamicValues};
@@ -231,8 +231,8 @@ getValuesSortedByKeyImpl(ArrayRef<K> keys, ArrayRef<V> values,
     return SmallVector<V>{values};
   assert(keys.size() == values.size() && "unexpected mismatching sizes");
   auto indices = llvm::to_vector(llvm::seq<int64_t>(0, values.size()));
-  std::sort(indices.begin(), indices.end(),
-            [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
+  llvm::sort(indices,
+             [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
   SmallVector<V> res;
   res.reserve(values.size());
   for (int64_t i = 0, e = indices.size(); i < e; ++i)
@@ -280,13 +280,13 @@ std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
 
 bool hasValidSizesOffsets(SmallVector<int64_t> sizesOrOffsets) {
   return llvm::none_of(sizesOrOffsets, [](int64_t value) {
-    return !ShapedType::isDynamic(value) && value < 0;
+    return ShapedType::isStatic(value) && value < 0;
   });
 }
 
 bool hasValidStrides(SmallVector<int64_t> strides) {
   return llvm::none_of(strides, [](int64_t value) {
-    return !ShapedType::isDynamic(value) && value == 0;
+    return ShapedType::isStatic(value) && value == 0;
   });
 }
 
@@ -294,10 +294,10 @@ LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
                                    bool onlyNonNegative, bool onlyNonZero) {
   bool valuesChanged = false;
   for (OpFoldResult &ofr : ofrs) {
-    if (ofr.is<Attribute>())
+    if (isa<Attribute>(ofr))
       continue;
     Attribute attr;
-    if (matchPattern(ofr.get<Value>(), m_Constant(&attr))) {
+    if (matchPattern(cast<Value>(ofr), m_Constant(&attr))) {
       // Note: All ofrs have index type.
       if (onlyNonNegative && *getConstantIntValue(attr) < 0)
         continue;

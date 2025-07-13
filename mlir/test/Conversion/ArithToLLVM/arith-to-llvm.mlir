@@ -37,6 +37,8 @@ func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4
   return %1 : vector<4xf32>
 }
 
+// -----
+
 // CHECK-LABEL: @ops
 func.func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 ^bb0(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32, %arg4: f64):
@@ -84,8 +86,13 @@ func.func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
   %20 = arith.shrsi %arg2, %arg3 : i32
 // CHECK: = llvm.lshr %arg2, %arg3 : i32
   %21 = arith.shrui %arg2, %arg3 : i32
+// CHECK: arith.constant 2.000000e+00 : tf32
+  // There is no type conversion rule for tf32.
+  %22 = arith.constant 2.0 : tf32
   return %0, %10 : f32, i32
 }
+
+// -----
 
 // Checking conversion of index types to integers using i1, assuming no target
 // system would have a 1-bit address space.  Otherwise, we would have had to
@@ -99,6 +106,8 @@ func.func @index_cast(%arg0: index, %arg1: i1) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: @vector_index_cast
 func.func @vector_index_cast(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
 // CHECK: = llvm.trunc %{{.*}} : vector<2xi{{.*}}> to vector<2xi1>
@@ -108,6 +117,8 @@ func.func @vector_index_cast(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
   return
 }
 
+// -----
+
 func.func @index_castui(%arg0: index, %arg1: i1) {
 // CHECK: = llvm.trunc %0 : i{{.*}} to i1
   %0 = arith.index_castui %arg0: index to i1
@@ -115,6 +126,8 @@ func.func @index_castui(%arg0: index, %arg1: i1) {
   %1 = arith.index_castui %arg1: i1 to index
   return
 }
+
+// -----
 
 // CHECK-LABEL: @vector_index_castui
 func.func @vector_index_castui(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
@@ -124,6 +137,8 @@ func.func @vector_index_castui(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
   %1 = arith.index_castui %arg1: vector<2xi1> to vector<2xindex>
   return
 }
+
+// -----
 
 // Checking conversion of signed integer types to floating point.
 // CHECK-LABEL: @sitofp
@@ -138,6 +153,8 @@ func.func @sitofp(%arg0 : i32, %arg1 : i64) {
   %3 = arith.sitofp %arg1: i64 to f64
   return
 }
+
+// -----
 
 // Checking conversion of integer vectors to floating point vector types.
 // CHECK-LABEL: @sitofp_vector
@@ -157,6 +174,8 @@ func.func @sitofp_vector(%arg0 : vector<2xi16>, %arg1 : vector<2xi32>, %arg2 : v
   return
 }
 
+// -----
+
 // Checking conversion of unsigned integer types to floating point.
 // CHECK-LABEL: @uitofp
 func.func @uitofp(%arg0 : i32, %arg1 : i64) {
@@ -171,6 +190,8 @@ func.func @uitofp(%arg0 : i32, %arg1 : i64) {
   return
 }
 
+// -----
+
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fpext
 func.func @fpext(%arg0 : f16, %arg1 : f32) {
@@ -183,6 +204,8 @@ func.func @fpext(%arg0 : f16, %arg1 : f32) {
   return
 }
 
+// -----
+
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fpext
 func.func @fpext_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>) {
@@ -194,6 +217,8 @@ func.func @fpext_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>) {
   %2 = arith.extf %arg1: vector<2xf32> to vector<2xf64>
   return
 }
+
+// -----
 
 // Checking conversion of floating point to integer types.
 // CHECK-LABEL: @fptosi
@@ -208,6 +233,8 @@ func.func @fptosi(%arg0 : f32, %arg1 : f64) {
   %3 = arith.fptosi %arg1: f64 to i64
   return
 }
+
+// -----
 
 // Checking conversion of floating point vectors to integer vector types.
 // CHECK-LABEL: @fptosi_vector
@@ -227,6 +254,8 @@ func.func @fptosi_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : v
   return
 }
 
+// -----
+
 // Checking conversion of floating point to integer types.
 // CHECK-LABEL: @fptoui
 func.func @fptoui(%arg0 : f32, %arg1 : f64) {
@@ -240,6 +269,8 @@ func.func @fptoui(%arg0 : f32, %arg1 : f64) {
   %3 = arith.fptoui %arg1: f64 to i64
   return
 }
+
+// -----
 
 // Checking conversion of floating point vectors to integer vector types.
 // CHECK-LABEL: @fptoui_vector
@@ -259,6 +290,8 @@ func.func @fptoui_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : v
   return
 }
 
+// -----
+
 // Checking conversion of integer vectors to floating point vector types.
 // CHECK-LABEL: @uitofp_vector
 func.func @uitofp_vector(%arg0 : vector<2xi16>, %arg1 : vector<2xi32>, %arg2 : vector<2xi64>) {
@@ -277,6 +310,8 @@ func.func @uitofp_vector(%arg0 : vector<2xi16>, %arg1 : vector<2xi32>, %arg2 : v
   return
 }
 
+// -----
+
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fptrunc
 func.func @fptrunc(%arg0 : f32, %arg1 : f64) {
@@ -289,6 +324,8 @@ func.func @fptrunc(%arg0 : f32, %arg1 : f64) {
   return
 }
 
+// -----
+
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fptrunc
 func.func @fptrunc_vector(%arg0 : vector<2xf32>, %arg1 : vector<2xf64>) {
@@ -300,6 +337,8 @@ func.func @fptrunc_vector(%arg0 : vector<2xf32>, %arg1 : vector<2xf64>) {
   %2 = arith.truncf %arg1: vector<2xf64> to vector<2xf32>
   return
 }
+
+// -----
 
 // CHECK-LABEL: experimental_constrained_fptrunc
 func.func @experimental_constrained_fptrunc(%arg0 : f64) {
@@ -316,6 +355,8 @@ func.func @experimental_constrained_fptrunc(%arg0 : f64) {
   return
 }
 
+// -----
+
 // Check sign and zero extension and truncation of integers.
 // CHECK-LABEL: @integer_extension_and_truncation
 func.func @integer_extension_and_truncation(%arg0 : i3) {
@@ -328,6 +369,8 @@ func.func @integer_extension_and_truncation(%arg0 : i3) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: @integer_cast_0d_vector
 func.func @integer_cast_0d_vector(%arg0 : vector<i3>) {
 // CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
@@ -339,6 +382,8 @@ func.func @integer_cast_0d_vector(%arg0 : vector<i3>) {
   %2 = arith.trunci %arg0 : vector<i3> to vector<i2>
   return
 }
+
+// -----
 
 // CHECK-LABEL: func @fcmp(%arg0: f32, %arg1: f32) {
 func.func @fcmp(f32, f32) -> () {
@@ -532,9 +577,77 @@ func.func @cmpi_2dvector(%arg0 : vector<4x3xi32>, %arg1 : vector<4x3xi32>) {
 // -----
 
 // CHECK-LABEL: @select
+//  CHECK-SAME:  (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
 func.func @select(%arg0 : i1, %arg1 : i32, %arg2 : i32) -> i32 {
-  // CHECK: = llvm.select %arg0, %arg1, %arg2 : i1, i32
+  // CHECK: %[[RES:.*]] = llvm.select %[[ARG0]], %[[ARG1]], %[[ARG2]] : i1, i32
+  // CHECK: return %[[RES]]
   %0 = arith.select %arg0, %arg1, %arg2 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @select_complex
+//  CHECK-SAME:  (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: complex<f32>, %[[ARG2:.*]]: complex<f32>)
+func.func @select_complex(%arg0 : i1, %arg1 : complex<f32>, %arg2 : complex<f32>) -> complex<f32> {
+  // CHECK-DAG: %[[ARGC1:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : complex<f32> to !llvm.struct<(f32, f32)>
+  // CHECK-DAG: %[[ARGC2:.*]] = builtin.unrealized_conversion_cast %[[ARG2]] : complex<f32> to !llvm.struct<(f32, f32)>
+  //     CHECK: %[[RES:.*]] = llvm.select %[[ARG0]], %[[ARGC1]], %[[ARGC2]] : i1, !llvm.struct<(f32, f32)>
+  //     CHECK: %[[RESC:.*]] = builtin.unrealized_conversion_cast %[[RES]] : !llvm.struct<(f32, f32)> to complex<f32>
+  //     CHECK: return %[[RESC]]
+  %0 = arith.select %arg0, %arg1, %arg2 : complex<f32>
+  return %0 : complex<f32>
+}
+
+// -----
+
+// CHECK-LABEL: @ceildivsi
+// CHECK-SAME: %[[ARG0:.*]]: i64, %[[ARG1:.*]]: i64) -> i64
+func.func @ceildivsi(%arg0 : i64, %arg1 : i64) -> i64 {
+  // CHECK: %[[ZERO:.+]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[ONE:.+]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[DIV:.+]] = llvm.sdiv %[[ARG0]], %[[ARG1]] : i64
+  // CHECK: %[[MUL:.+]] = llvm.mul %[[DIV]], %[[ARG1]] : i64
+  // CHECK: %[[NEXACT:.+]] = llvm.icmp "ne" %[[ARG0]], %[[MUL]] : i64
+  // CHECK: %[[NNEG:.+]] = llvm.icmp "slt" %[[ARG0]], %[[ZERO]] : i64
+  // CHECK: %[[MNEG:.+]] = llvm.icmp "slt" %[[ARG1]], %[[ZERO]] : i64
+  // CHECK: %[[SAMESIGN:.+]] = llvm.icmp "eq" %[[NNEG]], %[[MNEG]] : i1
+  // CHECK: %[[SHOULDROUND:.+]] = llvm.and %[[NEXACT]], %[[SAMESIGN]] : i1
+  // CHECK: %[[CEIL:.+]] = llvm.add %[[DIV]], %[[ONE]] : i64
+  // CHECK: %[[RES:.+]] = llvm.select %[[SHOULDROUND]], %[[CEIL]], %[[DIV]] : i1, i64
+  %0 = arith.ceildivsi %arg0, %arg1 : i64
+  return %0: i64
+}
+
+// CHECK-LABEL: @ceildivui
+// CHECK-SAME: %[[ARG0:.*]]: i32) -> i32
+func.func @ceildivui(%arg0 : i32) -> i32 {
+// CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK: %[[CMP0:.*]] = llvm.icmp "eq" %[[ARG0]], %[[CST0]] : i32
+// CHECK: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK: %[[SUB0:.*]] = llvm.sub %[[ARG0]], %[[CST1]] : i32
+// CHECK: %[[DIV0:.*]] = llvm.udiv %[[SUB0]], %[[ARG0]] : i32
+// CHECK: %[[ADD0:.*]] = llvm.add %[[DIV0]], %[[CST1]] : i32
+// CHECK: %[[SEL0:.*]] = llvm.select %[[CMP0]], %[[CST0]], %[[ADD0]] : i1, i32
+  %0 = arith.ceildivui %arg0, %arg0 : i32
+  return %0: i32
+}
+
+// -----
+
+// CHECK-LABEL: @floordivsi
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32) -> i32
+func.func @floordivsi(%arg0 : i32, %arg1 : i32) -> i32 {
+  // CHECK: %[[SDIV:.*]] = llvm.sdiv %[[ARG0]], %[[ARG1]] : i32
+  // CHECK: %[[MUL0:.*]] = llvm.mul %[[SDIV]], %[[ARG1]] : i32
+  // CHECK: %[[CMP0:.*]] = llvm.icmp "ne" %[[ARG0]], %[[MUL0]] : i32
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[CMP1:.*]] = llvm.icmp "slt" %[[ARG0]], %[[CST0]] : i32
+  // CHECK: %[[CMP2:.*]] = llvm.icmp "slt" %[[ARG1]], %[[CST0]] : i32
+  // CHECK: %[[CMP3:.*]] = llvm.icmp "ne" %[[CMP1]], %[[CMP2]] : i1
+  // CHECK: %[[AND:.*]] = llvm.and %[[CMP0]], %[[CMP3]] : i1
+  // CHECK: %[[CST1:.*]] = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK: %[[ADD:.*]] = llvm.add %[[SDIV]], %[[CST1]] : i32
+  // CHECK: %[[SEL:.*]] = llvm.select %[[AND]], %[[ADD]], %[[SDIV]] : i1, i32
+  %0 = arith.floordivsi %arg0, %arg1 : i32
   return %0 : i32
 }
 
@@ -618,5 +731,19 @@ func.func @ops_supporting_overflow(%arg0: i64, %arg1: i64) {
   %2 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
   // CHECK: %{{.*}} = llvm.shl %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
   %3 = arith.shli %arg0, %arg1 overflow<nsw, nuw> : i64
+  // CHECK: %{{.*}} = llvm.trunc %{{.*}} overflow<nsw, nuw> : i64 to i32
+  %4 = arith.trunci %arg0 overflow<nsw, nuw> : i64 to i32
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_bitcast
+//  CHECK-SAME:   (%[[ARG:.*]]: memref<?xi16>)
+//       CHECK:   %[[V1:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : memref<?xi16> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//       CHECK:   %[[V2:.*]] = builtin.unrealized_conversion_cast %[[V1]] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> to memref<?xbf16>
+//       CHECK:   return %[[V2]]
+func.func @memref_bitcast(%1: memref<?xi16>) -> memref<?xbf16> {
+  %2 = arith.bitcast %1 : memref<?xi16> to memref<?xbf16>
+  func.return %2 : memref<?xbf16>
 }

@@ -14,16 +14,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmParser/WebAssemblyAsmTypeCheck.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
-#include "WebAssembly.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSectionWasm.h"
@@ -32,6 +32,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
@@ -179,7 +180,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
     }
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Token:
       OS << "Tok:" << Tok.Tok;
@@ -205,7 +206,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
 
 // Perhaps this should go somewhere common.
 static wasm::WasmLimits defaultLimits() {
-  return {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+  return {wasm::WASM_LIMITS_FLAG_NONE, 0, 0, 0};
 }
 
 static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
@@ -226,7 +227,7 @@ static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
 
 class WebAssemblyAsmParser final : public MCTargetAsmParser {
   MCAsmParser &Parser;
-  MCAsmLexer &Lexer;
+  AsmLexer &Lexer;
 
   // Order of labels, directives and instructions in a .s file have no
   // syntactical enforcement. This class is a callback from the actual parser,
@@ -277,7 +278,18 @@ public:
       : MCTargetAsmParser(Options, STI, MII), Parser(Parser),
         Lexer(Parser.getLexer()), Is64(STI.getTargetTriple().isArch64Bit()),
         TC(Parser, MII, Is64), SkipTypeCheck(Options.MCNoTypeCheck) {
-    setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+    FeatureBitset FBS = ComputeAvailableFeatures(STI.getFeatureBits());
+
+    // bulk-memory implies bulk-memory-opt
+    if (FBS.test(WebAssembly::FeatureBulkMemory)) {
+      FBS.set(WebAssembly::FeatureBulkMemoryOpt);
+    }
+    // reference-types implies call-indirect-overlong
+    if (FBS.test(WebAssembly::FeatureReferenceTypes)) {
+      FBS.set(WebAssembly::FeatureCallIndirectOverlong);
+    }
+
+    setAvailableFeatures(FBS);
     // Don't type check if this is inline asm, since that is a naked sequence of
     // instructions without a function/locals decl.
     auto &SM = Parser.getSourceManager();
@@ -292,7 +304,8 @@ public:
 
     DefaultFunctionTable = getOrCreateFunctionTableSymbol(
         getContext(), "__indirect_function_table", Is64);
-    if (!STI->checkFeatures("+reference-types"))
+    if (!STI->checkFeatures("+call-indirect-overlong") &&
+        !STI->checkFeatures("+reference-types"))
       DefaultFunctionTable->setOmitFromLinkingSection();
   }
 
@@ -532,11 +545,13 @@ public:
   }
 
   bool parseFunctionTableOperand(std::unique_ptr<WebAssemblyOperand> *Op) {
-    if (STI->checkFeatures("+reference-types")) {
-      // If the reference-types feature is enabled, there is an explicit table
-      // operand.  To allow the same assembly to be compiled with or without
-      // reference types, we allow the operand to be omitted, in which case we
-      // default to __indirect_function_table.
+    if (STI->checkFeatures("+call-indirect-overlong") ||
+        STI->checkFeatures("+reference-types")) {
+      // If the call-indirect-overlong feature is enabled, or implied by the
+      // reference-types feature, there is an explicit table operand.  To allow
+      // the same assembly to be compiled with or without
+      // call-indirect-overlong, we allow the operand to be omitted, in which
+      // case we default to __indirect_function_table.
       auto &Tok = Lexer.getTok();
       if (Tok.is(AsmToken::Identifier)) {
         auto *Sym =
@@ -654,6 +669,10 @@ public:
       if (parseFunctionTableOperand(&FunctionTable))
         return true;
       ExpectFuncType = true;
+    } else if (Name == "ref.test") {
+      // When we get support for wasm-gc types, this should become
+      // ExpectRefType.
+      ExpectFuncType = true;
     }
 
     // Returns true if the next tokens are a catch clause
@@ -687,8 +706,8 @@ public:
       auto *WasmSym = cast<MCSymbolWasm>(Sym);
       WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-      const MCExpr *Expr = MCSymbolRefExpr::create(
-          WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
+      const MCExpr *Expr =
+          MCSymbolRefExpr::create(WasmSym, WebAssembly::S_TYPEINDEX, Ctx);
       Operands.push_back(std::make_unique<WebAssemblyOperand>(
           Loc.getLoc(), Loc.getEndLoc(), WebAssemblyOperand::SymOp{Expr}));
     }
@@ -1233,7 +1252,7 @@ public:
     if (Group)
       WasmSym->setComdat(true);
     auto *WS = getContext().getWasmSection(SecName, SectionKind::getText(), 0,
-                                           Group, MCContext::GenericSectionID);
+                                           Group, MCSection::NonUniqueID);
     getStreamer().switchSection(WS);
     // Also generate DWARF for this section if requested.
     if (getContext().getGenDwarfForAssembly())
@@ -1268,7 +1287,8 @@ public:
 } // end anonymous namespace
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeWebAssemblyAsmParser() {
   RegisterMCAsmParser<WebAssemblyAsmParser> X(getTheWebAssemblyTarget32());
   RegisterMCAsmParser<WebAssemblyAsmParser> Y(getTheWebAssemblyTarget64());
 }

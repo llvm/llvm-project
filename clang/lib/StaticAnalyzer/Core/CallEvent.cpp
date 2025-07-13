@@ -33,7 +33,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
@@ -55,7 +54,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -280,7 +278,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   // Invalidate designated regions using the batch invalidation API.
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
   //  global variables.
-  return Result->invalidateRegions(ValuesToInvalidate, getOriginExpr(),
+  return Result->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
                                    BlockCount, getLocationContext(),
                                    /*CausedByPointerEscape*/ true,
                                    /*Symbols=*/nullptr, this, &ETraits);
@@ -435,27 +433,27 @@ static SVal processArgument(SVal Value, const Expr *ArgumentExpr,
 /// runtime definition don't match in terms of argument and parameter count.
 static SVal castArgToParamTypeIfNeeded(const CallEvent &Call, unsigned ArgIdx,
                                        SVal ArgVal, SValBuilder &SVB) {
-  const FunctionDecl *RTDecl =
-      Call.getRuntimeDefinition().getDecl()->getAsFunction();
   const auto *CallExprDecl = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
-
-  if (!RTDecl || !CallExprDecl)
+  if (!CallExprDecl)
     return ArgVal;
+
+  const FunctionDecl *Definition = CallExprDecl;
+  Definition->hasBody(Definition);
 
   // The function decl of the Call (in the AST) will not have any parameter
   // declarations, if it was 'only' declared without a prototype. However, the
   // engine will find the appropriate runtime definition - basically a
   // redeclaration, which has a function body (and a function prototype).
-  if (CallExprDecl->hasPrototype() || !RTDecl->hasPrototype())
+  if (CallExprDecl->hasPrototype() || !Definition->hasPrototype())
     return ArgVal;
 
   // Only do this cast if the number arguments at the callsite matches with
   // the parameters at the runtime definition.
-  if (Call.getNumArgs() != RTDecl->getNumParams())
+  if (Call.getNumArgs() != Definition->getNumParams())
     return UnknownVal();
 
   const Expr *ArgExpr = Call.getArgExpr(ArgIdx);
-  const ParmVarDecl *Param = RTDecl->getParamDecl(ArgIdx);
+  const ParmVarDecl *Param = Definition->getParamDecl(ArgIdx);
   return SVB.evalCast(ArgVal, Param->getType(), ArgExpr->getType());
 }
 
@@ -688,6 +686,18 @@ const FunctionDecl *SimpleFunctionCall::getDecl() const {
     return D;
 
   return getSVal(getOriginExpr()->getCallee()).getAsFunctionDecl();
+}
+
+RuntimeDefinition SimpleFunctionCall::getRuntimeDefinition() const {
+  // Clang converts lambdas to function pointers using an implicit conversion
+  // operator, which returns the lambda's '__invoke' method. However, Sema
+  // leaves the body of '__invoke' empty (it is generated later in CodeGen), so
+  // we need to skip '__invoke' and access the lambda's operator() directly.
+  if (const auto *CMD = dyn_cast_if_present<CXXMethodDecl>(getDecl());
+      CMD && CMD->isLambdaStaticInvoker())
+    return RuntimeDefinition{CMD->getParent()->getLambdaCallOperator()};
+
+  return AnyFunctionCall::getRuntimeDefinition();
 }
 
 const FunctionDecl *CXXInstanceCall::getDecl() const {

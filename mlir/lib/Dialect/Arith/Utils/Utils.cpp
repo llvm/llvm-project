@@ -66,10 +66,10 @@ mlir::inferExpandShapeOutputShape(OpBuilder &b, Location loc,
     int64_t inputIndex = it.index();
     // Call get<Value>() under the assumption that we're not casting
     // dynamism.
-    Value indexGroupSize = inputShape[inputIndex].get<Value>();
+    Value indexGroupSize = cast<Value>(inputShape[inputIndex]);
     Value indexGroupStaticSizesProduct =
         b.create<arith::ConstantIndexOp>(loc, indexGroupStaticSizesProductInt);
-    Value dynamicDimSize = b.createOrFold<arith::DivUIOp>(
+    Value dynamicDimSize = b.createOrFold<arith::DivSIOp>(
         loc, indexGroupSize, indexGroupStaticSizesProduct);
     outputShapeValues.push_back(dynamicDimSize);
   }
@@ -205,7 +205,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
     }
   }
 
-  if (dyn_cast<FloatType>(operand.getType())) {
+  if (isa<FloatType>(operand.getType())) {
     FloatType toFpTy = cast<FloatType>(targetType.getElementType());
     auto toBitwidth = toFpTy.getIntOrFloatBitWidth();
     Value from = operand;
@@ -216,11 +216,11 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
       from = b.create<arith::TruncFOp>(toFpTy, from);
     }
     Value zero = b.create<mlir::arith::ConstantFloatOp>(
-        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
+        toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
     return b.create<complex::CreateOp>(targetType, from, zero);
   }
 
-  if (dyn_cast<IntegerType>(operand.getType())) {
+  if (isa<IntegerType>(operand.getType())) {
     FloatType toFpTy = cast<FloatType>(targetType.getElementType());
     Value from = operand;
     if (isUnsigned) {
@@ -229,7 +229,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
       from = b.create<arith::SIToFPOp>(toFpTy, from);
     }
     Value zero = b.create<mlir::arith::ConstantFloatOp>(
-        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
+        toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
     return b.create<complex::CreateOp>(targetType, from, zero);
   }
 
@@ -315,17 +315,17 @@ Value ArithBuilder::_and(Value lhs, Value rhs) {
 Value ArithBuilder::add(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
     return b.create<arith::AddFOp>(loc, lhs, rhs);
-  return b.create<arith::AddIOp>(loc, lhs, rhs);
+  return b.create<arith::AddIOp>(loc, lhs, rhs, ovf);
 }
 Value ArithBuilder::sub(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
     return b.create<arith::SubFOp>(loc, lhs, rhs);
-  return b.create<arith::SubIOp>(loc, lhs, rhs);
+  return b.create<arith::SubIOp>(loc, lhs, rhs, ovf);
 }
 Value ArithBuilder::mul(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
     return b.create<arith::MulFOp>(loc, lhs, rhs);
-  return b.create<arith::MulIOp>(loc, lhs, rhs);
+  return b.create<arith::MulIOp>(loc, lhs, rhs, ovf);
 }
 Value ArithBuilder::sgt(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
@@ -361,22 +361,22 @@ Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
 std::optional<FloatType> parseFloatType(MLIRContext *ctx, StringRef name) {
   Builder b(ctx);
   return llvm::StringSwitch<std::optional<FloatType>>(name)
-      .Case("f4E2M1FN", b.getFloat4E2M1FNType())
-      .Case("f6E2M3FN", b.getFloat6E2M3FNType())
-      .Case("f6E3M2FN", b.getFloat6E3M2FNType())
-      .Case("f8E5M2", b.getFloat8E5M2Type())
-      .Case("f8E4M3", b.getFloat8E4M3Type())
-      .Case("f8E4M3FN", b.getFloat8E4M3FNType())
-      .Case("f8E5M2FNUZ", b.getFloat8E5M2FNUZType())
-      .Case("f8E4M3FNUZ", b.getFloat8E4M3FNUZType())
-      .Case("f8E3M4", b.getFloat8E3M4Type())
-      .Case("f8E8M0FNU", b.getFloat8E8M0FNUType())
-      .Case("bf16", b.getBF16Type())
-      .Case("f16", b.getF16Type())
-      .Case("f32", b.getF32Type())
-      .Case("f64", b.getF64Type())
-      .Case("f80", b.getF80Type())
-      .Case("f128", b.getF128Type())
+      .Case("f4E2M1FN", b.getType<Float4E2M1FNType>())
+      .Case("f6E2M3FN", b.getType<Float6E2M3FNType>())
+      .Case("f6E3M2FN", b.getType<Float6E3M2FNType>())
+      .Case("f8E5M2", b.getType<Float8E5M2Type>())
+      .Case("f8E4M3", b.getType<Float8E4M3Type>())
+      .Case("f8E4M3FN", b.getType<Float8E4M3FNType>())
+      .Case("f8E5M2FNUZ", b.getType<Float8E5M2FNUZType>())
+      .Case("f8E4M3FNUZ", b.getType<Float8E4M3FNUZType>())
+      .Case("f8E3M4", b.getType<Float8E3M4Type>())
+      .Case("f8E8M0FNU", b.getType<Float8E8M0FNUType>())
+      .Case("bf16", b.getType<BFloat16Type>())
+      .Case("f16", b.getType<Float16Type>())
+      .Case("f32", b.getType<Float32Type>())
+      .Case("f64", b.getType<Float64Type>())
+      .Case("f80", b.getType<Float80Type>())
+      .Case("f128", b.getType<Float128Type>())
       .Default(std::nullopt);
 }
 

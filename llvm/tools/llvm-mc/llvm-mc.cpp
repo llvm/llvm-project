@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -38,6 +40,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
+#include <memory>
 
 using namespace llvm;
 
@@ -49,9 +52,9 @@ static cl::opt<std::string> InputFilename(cl::Positional,
                                           cl::desc("<input file>"),
                                           cl::init("-"), cl::cat(MCCategory));
 
-static cl::list<std::string>
-    DisassemblerOptions("M", cl::desc("Disassembler options"),
-                        cl::cat(MCCategory));
+static cl::list<std::string> InstPrinterOptions("M",
+                                                cl::desc("InstPrinter options"),
+                                                cl::cat(MCCategory));
 
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
@@ -93,6 +96,12 @@ static cl::opt<bool>
     PrintImmHex("print-imm-hex", cl::init(false),
                 cl::desc("Prefer hex format for immediate values"),
                 cl::cat(MCCategory));
+
+static cl::opt<bool>
+    HexBytes("hex",
+             cl::desc("Take raw hexadecimal bytes as input for disassembly. "
+                      "Whitespace is ignored"),
+             cl::cat(MCCategory));
 
 static cl::list<std::string>
     DefineSymbol("defsym",
@@ -204,6 +213,10 @@ static cl::opt<bool> LexMotorolaIntegers(
 
 static cl::opt<bool> NoExecStack("no-exec-stack",
                                  cl::desc("File doesn't need an exec stack"),
+                                 cl::cat(MCCategory));
+
+static cl::opt<bool> ValidateCFI("validate-cfi",
+                                 cl::desc("Validate the CFI directives"),
                                  cl::cat(MCCategory));
 
 enum ActionType {
@@ -363,6 +376,7 @@ int main(int argc, char **argv) {
   MCOptions.ShowMCInst = ShowInst;
   MCOptions.AsmVerbose = true;
   MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
+  MCOptions.InstPrinterOptions = InstPrinterOptions;
 
   setDwarfDebugFlags(argc, argv);
   setDwarfDebugProducer();
@@ -512,10 +526,19 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
 
-  MCInstPrinter *IP = nullptr;
-  if (FileType == OFT_AssemblyFile) {
-    IP = TheTarget->createMCInstPrinter(Triple(TripleName), OutputAsmVariant,
-                                        *MAI, *MCII, *MRI);
+  std::unique_ptr<MCInstPrinter> IP;
+  if (ValidateCFI) {
+    // TODO: The DWARF CFI checker support for emitting anything other than
+    // errors and warnings has not been implemented yet. Because of this, it is
+    // assert-checked that the filetype output is null.
+    assert(FileType == OFT_Null);
+    auto FFA = std::make_unique<CFIFunctionFrameAnalyzer>(Ctx, *MCII);
+    auto FFS = std::make_unique<CFIFunctionFrameStreamer>(Ctx, std::move(FFA));
+    TheTarget->createNullTargetStreamer(*FFS);
+    Str = std::move(FFS);
+  } else if (FileType == OFT_AssemblyFile) {
+    IP.reset(TheTarget->createMCInstPrinter(
+        Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
 
     if (!IP) {
       WithColor::error()
@@ -525,14 +548,25 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    for (StringRef Opt : DisassemblerOptions)
+    for (StringRef Opt : InstPrinterOptions)
       if (!IP->applyTargetSpecificCLOption(Opt)) {
-        WithColor::error() << "invalid disassembler option '" << Opt << "'\n";
+        WithColor::error() << "invalid InstPrinter option '" << Opt << "'\n";
         return 1;
       }
 
     // Set the display preference for hex vs. decimal immediates.
     IP->setPrintImmHex(PrintImmHex);
+
+    switch (Action) {
+    case AC_MDisassemble:
+      IP->setUseMarkup(true);
+      break;
+    case AC_CDisassemble:
+      IP->setUseColor(true);
+      break;
+    default:
+      break;
+    }
 
     // Set up the AsmStreamer.
     std::unique_ptr<MCCodeEmitter> CE;
@@ -542,7 +576,7 @@ int main(int argc, char **argv) {
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(*OS);
-    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
                                            std::move(CE), std::move(MAB)));
 
   } else if (FileType == OFT_Null) {
@@ -563,7 +597,7 @@ int main(int argc, char **argv) {
                : MAB->createObjectWriter(*OS),
         std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
-      Str->initSections(true, *STI);
+      Str->switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
     Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
                               VersionTuple());
   }
@@ -579,20 +613,14 @@ int main(int argc, char **argv) {
                         *MCII, MCOptions);
     break;
   case AC_MDisassemble:
-    IP->setUseMarkup(true);
-    disassemble = true;
-    break;
   case AC_CDisassemble:
-    IP->setUseColor(true);
-    disassemble = true;
-    break;
   case AC_Disassemble:
     disassemble = true;
     break;
   }
   if (disassemble)
     Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
-                                    SrcMgr, Ctx, MCOptions);
+                                    SrcMgr, Ctx, MCOptions, HexBytes);
 
   // Keep output if no errors.
   if (Res == 0) {

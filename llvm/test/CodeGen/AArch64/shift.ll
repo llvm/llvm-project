@@ -21,7 +21,6 @@ define i1 @shl_i1(i1 %0, i1 %1){
 define i8 @shl_i8(i8 %0, i8 %1){
 ; CHECK-SD-LABEL: shl_i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsl w0, w0, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -37,7 +36,6 @@ define i8 @shl_i8(i8 %0, i8 %1){
 define i16 @shl_i16(i16 %0, i16 %1){
 ; CHECK-SD-LABEL: shl_i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsl w0, w0, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -123,7 +121,6 @@ define i8 @ashr_i8(i8 %0, i8 %1){
 ; CHECK-SD-LABEL: ashr_i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sxtb w8, w0
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    asr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -141,7 +138,6 @@ define i16 @ashr_i16(i16 %0, i16 %1){
 ; CHECK-SD-LABEL: ashr_i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sxth w8, w0
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    asr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -230,7 +226,6 @@ define i8 @lshr_i8(i8 %0, i8 %1){
 ; CHECK-SD-LABEL: lshr_i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xff
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -248,7 +243,6 @@ define i16 @lshr_i16(i16 %0, i16 %1){
 ; CHECK-SD-LABEL: lshr_i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xffff
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -604,8 +598,7 @@ define <1 x i32> @shl_v1i32(<1 x i32> %0, <1 x i32> %1){
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    fmov w9, s1
 ; CHECK-GI-NEXT:    lsl w8, w8, w9
-; CHECK-GI-NEXT:    mov v0.s[0], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    ret
     %3 = shl <1 x i32> %0, %1
     ret <1 x i32> %3
@@ -781,8 +774,7 @@ define <1 x i32> @ashr_v1i32(<1 x i32> %0, <1 x i32> %1){
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    fmov w9, s1
 ; CHECK-GI-NEXT:    asr w8, w8, w9
-; CHECK-GI-NEXT:    mov v0.s[0], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    ret
     %3 = ashr <1 x i32> %0, %1
     ret <1 x i32> %3
@@ -954,8 +946,7 @@ define <1 x i32> @lshr_v1i32(<1 x i32> %0, <1 x i32> %1){
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    fmov w9, s1
 ; CHECK-GI-NEXT:    lsr w8, w8, w9
-; CHECK-GI-NEXT:    mov v0.s[0], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    ret
     %3 = lshr <1 x i32> %0, %1
     ret <1 x i32> %3

@@ -10,36 +10,21 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/ArmSVE/Transforms/Transforms.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
 using namespace mlir::arm_sve;
 
-template <typename OpTy>
-class ForwardOperands : public OpConversionPattern<OpTy> {
-  using OpConversionPattern<OpTy>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(OpTy op, typename OpTy::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    if (adaptor.getOperands().getTypes() == op->getOperands().getTypes())
-      return rewriter.notifyMatchFailure(op, "operand types already match");
-
-    rewriter.modifyOpInPlace(op,
-                             [&]() { op->setOperands(adaptor.getOperands()); });
-    return success();
-  }
-};
-
 using SdotOpLowering = OneToOneConvertToLLVMPattern<SdotOp, SdotIntrOp>;
 using SmmlaOpLowering = OneToOneConvertToLLVMPattern<SmmlaOp, SmmlaIntrOp>;
 using UdotOpLowering = OneToOneConvertToLLVMPattern<UdotOp, UdotIntrOp>;
 using UmmlaOpLowering = OneToOneConvertToLLVMPattern<UmmlaOp, UmmlaIntrOp>;
+using UsmmlaOpLowering = OneToOneConvertToLLVMPattern<UsmmlaOp, UsmmlaIntrOp>;
+using DupQLaneLowering =
+    OneToOneConvertToLLVMPattern<DupQLaneOp, DupQLaneIntrOp>;
 using ScalableMaskedAddIOpLowering =
     OneToOneConvertToLLVMPattern<ScalableMaskedAddIOp,
                                  ScalableMaskedAddIIntrOp>;
@@ -204,28 +189,26 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
   // Populate conversion patterns
 
   // clang-format off
-  patterns.add<ForwardOperands<func::CallOp>,
-               ForwardOperands<func::CallIndirectOp>,
-               ForwardOperands<func::ReturnOp>>(converter,
-                                          &converter.getContext());
-  patterns.add<SdotOpLowering,
+  patterns.add<ConvertFromSvboolOpLowering,
+               ConvertToSvboolOpLowering,
+               DupQLaneLowering,
+               PselOpLowering,
+               ScalableMaskedAddFOpLowering,
+               ScalableMaskedAddIOpLowering,
+               ScalableMaskedDivFOpLowering,
+               ScalableMaskedMulFOpLowering,
+               ScalableMaskedMulIOpLowering,
+               ScalableMaskedSDivIOpLowering,
+               ScalableMaskedSubFOpLowering,
+               ScalableMaskedSubIOpLowering,
+               ScalableMaskedUDivIOpLowering,
                SmmlaOpLowering,
                UdotOpLowering,
                UmmlaOpLowering,
-               ScalableMaskedAddIOpLowering,
-               ScalableMaskedAddFOpLowering,
-               ScalableMaskedSubIOpLowering,
-               ScalableMaskedSubFOpLowering,
-               ScalableMaskedMulIOpLowering,
-               ScalableMaskedMulFOpLowering,
-               ScalableMaskedSDivIOpLowering,
-               ScalableMaskedUDivIOpLowering,
-               ScalableMaskedDivFOpLowering,
-               ConvertToSvboolOpLowering,
-               ConvertFromSvboolOpLowering,
+               UsmmlaOpLowering,
                ZipX2OpLowering,
                ZipX4OpLowering,
-               PselOpLowering>(converter);
+               SdotOpLowering>(converter);
   // Add vector.create_mask conversion with a high benefit as it produces much
   // nicer code than the generic lowering.
   patterns.add<CreateMaskOpLowering>(converter, /*benefit=*/4096);
@@ -235,41 +218,47 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
 void mlir::configureArmSVELegalizeForExportTarget(
     LLVMConversionTarget &target) {
   // clang-format off
-  target.addLegalOp<SdotIntrOp,
+  target.addLegalOp<BfmmlaOp,
+                    ConvertFromSvboolIntrOp,
+                    ConvertToSvboolIntrOp,
+                    DupQLaneIntrOp,
+                    PselIntrOp,
+                    ScalableMaskedAddFIntrOp,
+                    ScalableMaskedAddIIntrOp,
+                    ScalableMaskedDivFIntrOp,
+                    ScalableMaskedMulFIntrOp,
+                    ScalableMaskedMulIIntrOp,
+                    ScalableMaskedSDivIIntrOp,
+                    ScalableMaskedSubFIntrOp,
+                    ScalableMaskedSubIIntrOp,
+                    ScalableMaskedUDivIIntrOp,
                     SmmlaIntrOp,
                     UdotIntrOp,
                     UmmlaIntrOp,
-                    ScalableMaskedAddIIntrOp,
-                    ScalableMaskedAddFIntrOp,
-                    ScalableMaskedSubIIntrOp,
-                    ScalableMaskedSubFIntrOp,
-                    ScalableMaskedMulIIntrOp,
-                    ScalableMaskedMulFIntrOp,
-                    ScalableMaskedSDivIIntrOp,
-                    ScalableMaskedUDivIIntrOp,
-                    ScalableMaskedDivFIntrOp,
-                    ConvertToSvboolIntrOp,
-                    ConvertFromSvboolIntrOp,
+                    UsmmlaIntrOp,
+                    WhileLTIntrOp,
                     ZipX2IntrOp,
                     ZipX4IntrOp,
-                    PselIntrOp,
-                    WhileLTIntrOp>();
-  target.addIllegalOp<SdotOp,
+                    SdotIntrOp>();
+  target.addIllegalOp<ConvertFromSvboolOp,
+                      ConvertToSvboolOp,
+                      DupQLaneOp,
+                      PselOp,
+                      ScalableMaskedAddFOp,
+                      ScalableMaskedAddIOp,
+                      ScalableMaskedDivFOp,
+                      ScalableMaskedMulFOp,
+                      ScalableMaskedMulIOp,
+                      ScalableMaskedSDivIOp,
+                      ScalableMaskedSubFOp,
+                      ScalableMaskedSubIOp,
+                      ScalableMaskedUDivIOp,
                       SmmlaOp,
                       UdotOp,
                       UmmlaOp,
-                      ScalableMaskedAddIOp,
-                      ScalableMaskedAddFOp,
-                      ScalableMaskedSubIOp,
-                      ScalableMaskedSubFOp,
-                      ScalableMaskedMulIOp,
-                      ScalableMaskedMulFOp,
-                      ScalableMaskedSDivIOp,
-                      ScalableMaskedUDivIOp,
-                      ScalableMaskedDivFOp,
-                      ConvertToSvboolOp,
-                      ConvertFromSvboolOp,
+                      UsmmlaOp,
                       ZipX2Op,
-                      ZipX4Op>();
+                      ZipX4Op,
+                      SdotOp>();
   // clang-format on
 }

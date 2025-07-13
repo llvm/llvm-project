@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALIGNED_ALLOC_H
-#define _LIBCPP___MEMORY_ALIGNED_ALLOC_H
+#ifndef _LIBCPP___CXX03___MEMORY_ALIGNED_ALLOC_H
+#define _LIBCPP___CXX03___MEMORY_ALIGNED_ALLOC_H
 
 #include <__cxx03/__config>
 #include <__cxx03/cstddef>
@@ -30,17 +30,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_aligned_alloc(std::size_t __alignment, std::size_t __size) {
 #  if defined(_LIBCPP_MSVCRT_LIKE)
   return ::_aligned_malloc(__size, __alignment);
-#  elif _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_C11_ALIGNED_ALLOC)
-  // aligned_alloc() requires that __size is a multiple of __alignment,
-  // but for C++ [new.delete.general], only states "if the value of an
-  // alignment argument passed to any of these functions is not a valid
-  // alignment value, the behavior is undefined".
-  // To handle calls such as ::operator new(1, std::align_val_t(128)), we
-  // round __size up to the next multiple of __alignment.
-  size_t __rounded_size = (__size + __alignment - 1) & ~(__alignment - 1);
-  // Rounding up could have wrapped around to zero, so we have to add another
-  // max() ternary to the actual call site to avoid succeeded in that case.
-  return ::aligned_alloc(__alignment, __size > __rounded_size ? __size : __rounded_size);
 #  else
   void* __result = nullptr;
   (void)::posix_memalign(&__result, __alignment, __size);
@@ -61,4 +50,4 @@ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_aligned_free(void* __ptr) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ALIGNED_ALLOC_H
+#endif // _LIBCPP___CXX03___MEMORY_ALIGNED_ALLOC_H

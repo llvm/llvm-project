@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ExternalASTSource.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -43,31 +44,33 @@ private:
   IntrusiveRefCntPtr<ExternalASTSource> Source;
 };
 
-bool testExternalASTSource(ExternalASTSource *Source,
-                           StringRef FileContents) {
-  CompilerInstance Compiler;
-  Compiler.createDiagnostics();
+bool testExternalASTSource(ExternalASTSource *Source, StringRef FileContents) {
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc", MemoryBuffer::getMemBuffer(FileContents).release());
   const char *Args[] = { "test.cc" };
-  CompilerInvocation::CreateFromArgs(*Invocation, Args,
-                                     Compiler.getDiagnostics());
-  Compiler.setInvocation(std::move(Invocation));
+
+  DiagnosticOptions InvocationDiagOpts;
+  auto InvocationDiags = CompilerInstance::createDiagnostics(
+      *llvm::vfs::getRealFileSystem(), InvocationDiagOpts);
+  CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
+
+  CompilerInstance Compiler(std::move(Invocation));
+  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestFrontendAction Action(Source);
   return Compiler.ExecuteAction(Action);
 }
-
 
 // Ensure that a failed name lookup into an external source only occurs once.
 TEST(ExternalASTSourceTest, FailedLookupOccursOnce) {
   struct TestSource : ExternalASTSource {
     TestSource(unsigned &Calls) : Calls(Calls) {}
 
-    bool FindExternalVisibleDeclsByName(const DeclContext *,
-                                        DeclarationName Name) override {
+    bool
+    FindExternalVisibleDeclsByName(const DeclContext *, DeclarationName Name,
+                                   const DeclContext *OriginalDC) override {
       if (Name.getAsString() == "j")
         ++Calls;
       return false;

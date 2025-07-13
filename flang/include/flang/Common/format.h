@@ -9,8 +9,8 @@
 #ifndef FORTRAN_COMMON_FORMAT_H_
 #define FORTRAN_COMMON_FORMAT_H_
 
+#include "Fortran-consts.h"
 #include "enum-set.h"
-#include "flang/Common/Fortran.h"
 #include <cstring>
 
 // Define a FormatValidator class template to validate a format expression
@@ -430,11 +430,11 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
       }
     }
     SetLength();
-    if (stmt_ == IoStmtKind::Read &&
-        previousToken_.kind() != TokenKind::DT) { // 13.3.2p6
-      ReportError("String edit descriptor in READ format expression");
-    } else if (token_.kind() != TokenKind::String) {
+    if (token_.kind() != TokenKind::String) {
       ReportError("Unterminated string");
+    } else if (stmt_ == IoStmtKind::Read &&
+        previousToken_.kind() != TokenKind::DT) { // 13.3.2p6
+      ReportWarning("String edit descriptor in READ format expression");
     }
     break;
   default:
@@ -463,10 +463,13 @@ template <typename CHAR> void FormatValidator<CHAR>::check_r(bool allowed) {
 template <typename CHAR> bool FormatValidator<CHAR>::check_w() {
   if (token_.kind() == TokenKind::UnsignedInteger) {
     wValue_ = integerValue_;
-    if (wValue_ == 0 &&
-        (*argString_ == 'A' || *argString_ == 'L' ||
-            stmt_ == IoStmtKind::Read)) { // C1306, 13.7.2.1p6
-      ReportError("'%s' edit descriptor 'w' value must be positive");
+    if (wValue_ == 0) {
+      if (*argString_ == 'A' || stmt_ == IoStmtKind::Read) {
+        // C1306, 13.7.2.1p6
+        ReportError("'%s' edit descriptor 'w' value must be positive");
+      } else if (*argString_ == 'L') {
+        ReportWarning("'%s' edit descriptor 'w' value should be positive");
+      }
     }
     NextToken();
     return true;

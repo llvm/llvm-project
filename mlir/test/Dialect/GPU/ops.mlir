@@ -140,6 +140,10 @@ module attributes {gpu.container_module} {
       // CHECK: gpu.shuffle idx %{{.*}}, %{{.*}}, %{{.*}} : f32
       %shfl3, %pred3 = gpu.shuffle idx %arg0, %offset, %width : f32
 
+      // CHECK: gpu.rotate %{{.*}}, %{{.*}}, %{{.*}} : f32
+      %rotate_width = arith.constant 16 : i32
+      %rotate, %pred4 = gpu.rotate %arg0, %offset, %rotate_width : f32
+
       "gpu.barrier"() : () -> ()
 
       "some_op"(%bIdX, %tIdX) : (index, index) -> ()
@@ -229,9 +233,22 @@ module attributes {gpu.container_module} {
 
     // CHECK-LABEL: gpu.func @printf_test
     // CHECK: (%[[ARG0:.*]]: i32)
-    // CHECK: gpu.printf "Value: %d" %[[ARG0]] : i32
+    // CHECK: gpu.printf "Value: %d", %[[ARG0]] : i32
     gpu.func @printf_test(%arg0 : i32) {
-      gpu.printf "Value: %d" %arg0 : i32
+      gpu.printf "Value: %d", %arg0 : i32
+      gpu.return
+    }
+
+    // CHECK-LABEL: gpu.func @printf_empty
+    // CHECK: gpu.printf  "]"
+    // CHECK: scf.if
+    // CHECK: gpu.printf ", "
+    gpu.func @printf_empty(%arg0 : i32) {
+      gpu.printf "]"
+      %1 = arith.cmpi slt, %arg0, %arg0 : i32
+      scf.if %1 {
+        gpu.printf ", "
+      } 
       gpu.return
     }
 
@@ -417,6 +434,20 @@ module attributes {gpu.container_module} {
     gpu.wait [%token16]
     return
   }
+
+  // CHECK-LABEL: func @extract_insert_mma
+  func.func @extract_insert_mma(%src : !gpu.mma_matrix<16x16xf32, "COp">,
+                                %ptr: memref<16x16xf32>) {
+    %zero = arith.constant 0.0 : f32
+    %c0 = arith.constant 0 : index
+    // CHECK: gpu.subgroup_mma_extract_thread_local
+    %val = gpu.subgroup_mma_extract_thread_local %src[%c0] : !gpu.mma_matrix<16x16xf32, "COp"> -> f32
+    %m = gpu.subgroup_mma_constant_matrix %zero : !gpu.mma_matrix<16x16xf32, "COp">
+    // CHECK: gpu.subgroup_mma_insert_thread_local
+    %s0 = gpu.subgroup_mma_insert_thread_local %val, %m[%c0] : f32, !gpu.mma_matrix<16x16xf32, "COp"> -> !gpu.mma_matrix<16x16xf32, "COp">
+    gpu.subgroup_mma_store_matrix %s0, %ptr[%c0, %c0] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf32, "COp">, memref<16x16xf32>
+    return
+  }
 }
 
 // Just check that this doesn't crash.
@@ -464,3 +495,39 @@ gpu.binary @kernel_attrs_2 [
       ]>,
       bin = "BLOB">
   ]
+
+// CHECK-LABEL:   func @warp_execute_on_lane_0(
+func.func @warp_execute_on_lane_0(%laneid: index) {
+//  CHECK-NEXT:     gpu.warp_execute_on_lane_0(%{{.*}})[32] {
+  gpu.warp_execute_on_lane_0(%laneid)[32] {
+//  CHECK-NEXT:     }
+  }
+//  CHECK-NEXT:     return
+  return
+}
+
+// CHECK-LABEL: func.func @warp_execute_on_lane_0_2d
+func.func @warp_execute_on_lane_0_2d(%laneid: index) {
+  //  CHECK: gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1x4xi32>)
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x4xi32>) {
+    %0 = arith.constant dense<2>: vector<4x32xi32>
+    // CHECK: gpu.yield %{{.+}} : vector<4x32xi32>
+    gpu.yield %0 : vector<4x32xi32>
+  }
+  return
+}
+
+// CHECK-LABEL:   func @warp_operand_result(
+func.func @warp_operand_result(%laneid: index, %v0 : vector<4xi32>) -> (vector<4xi32>) {
+//  CHECK-NEXT:     %{{.*}} = gpu.warp_execute_on_lane_0(%{{.*}})[32] args(%{{.*}} : vector<4xi32>) -> (vector<4xi32>) {
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32]
+  args(%v0 : vector<4xi32>) -> (vector<4xi32>) {
+   ^bb0(%arg0 : vector<128xi32>) :
+    %0 = arith.constant dense<2>: vector<128xi32>
+    %1 = arith.addi %arg0, %0 : vector<128xi32>
+//       CHECK:       gpu.yield %{{.*}} : vector<128xi32>
+    gpu.yield %1 : vector<128xi32>
+//  CHECK-NEXT:     }
+  }
+  return %2 : vector<4xi32>
+}

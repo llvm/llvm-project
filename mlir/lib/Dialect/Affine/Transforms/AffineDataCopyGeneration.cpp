@@ -28,9 +28,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include <algorithm>
 #include <optional>
 
@@ -86,7 +84,7 @@ struct AffineDataCopyGeneration
 
 /// Generates copies for memref's living in 'slowMemorySpace' into newly created
 /// buffers in 'fastMemorySpace', and replaces memory operations to the former
-/// by the latter. Only load op's handled for now.
+/// by the latter.
 std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::affine::createAffineDataCopyGenerationPass(
     unsigned slowMemorySpace, unsigned fastMemorySpace, unsigned tagMemorySpace,
@@ -126,11 +124,10 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
   // moment; we do a check later and report an error with location info.
 
   // Get to the first load, store, or for op (that is not a copy nest itself).
-  auto curBegin =
-      std::find_if(block->begin(), block->end(), [&](Operation &op) {
-        return isa<AffineLoadOp, AffineStoreOp, AffineForOp>(op) &&
-               copyNests.count(&op) == 0;
-      });
+  auto curBegin = llvm::find_if(*block, [&](Operation &op) {
+    return isa<AffineLoadOp, AffineStoreOp, AffineForOp>(op) &&
+           copyNests.count(&op) == 0;
+  });
 
   // Create [begin, end) ranges.
   auto it = curBegin;
@@ -237,7 +234,8 @@ void AffineDataCopyGeneration::runOnOperation() {
   AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
   AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-  GreedyRewriteConfig config;
-  config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
-  (void)applyOpPatternsAndFold(copyOps, frozenPatterns, config);
+  (void)applyOpPatternsGreedily(
+      copyOps, frozenPatterns,
+      GreedyRewriteConfig().setStrictness(
+          GreedyRewriteStrictness::ExistingAndNewOps));
 }

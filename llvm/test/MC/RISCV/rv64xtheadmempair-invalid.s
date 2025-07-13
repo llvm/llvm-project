@@ -15,4 +15,5 @@ th.lwd a3, a4, (a5), 3, 5   # CHECK: [[@LINE]]:25: error: operand must be consta
 th.swd t3, t4, (t5), 5, 4   # CHECK: [[@LINE]]:22: error: immediate must be an integer in the range [0, 3]
 th.swd t3, t4, (t5)         # CHECK: [[@LINE]]:1: error: too few operands for instruction
 th.swd t3, t4, (t5), 3, 5   # CHECK: [[@LINE]]:25: error: operand must be constant 3
-th.lwud x6, x6, (x6), 2, 3  # CHECK: [[@LINE]]:9: error: rs1, rd1, and rd2 cannot all be the same
+th.ldd x6, x6, (x7), 2, 4   # CHECK: [[@LINE]]:8: error: rs1, rd1, and rd2 cannot overlap
+th.lwud x6, x6, (x6), 2, 3  # CHECK: [[@LINE]]:9: error: rs1, rd1, and rd2 cannot overlap

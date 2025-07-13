@@ -175,8 +175,7 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
   lldb::addr_t addr = *maybe_addr;
 
   if (Process *process = exe_ctx->GetProcessPtr())
-    if (ABISP abi_sp = process->GetABI())
-      addr = abi_sp->FixCodeAddress(addr);
+    addr = process->FixAnyAddress(addr);
 
   return addr;
 }
@@ -262,8 +261,10 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
   // 3: The symbol/reg name if there is an offset
   // 4: +/-
   // 5: The offset value.
+  // clang-format off
   static RegularExpression g_symbol_plus_offset_regex(
-      "^(\\$[^ +-]+)|(([^ +-]+)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*)$");
+      "^(\\$[^ +-]+)|(([^ +-]+)[[:space:]]*([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*)$");
+  // clang-format on
 
   llvm::SmallVector<llvm::StringRef, 4> matches;
   if (g_symbol_plus_offset_regex.Execute(sref, &matches)) {

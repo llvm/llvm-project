@@ -160,10 +160,9 @@ void WinException::endFunction(const MachineFunction *MF) {
     Asm->OutStreamer->popSection();
   }
 
-  if (!MF->getCatchretTargets().empty()) {
-    // Copy the function's catchret targets to a module-level list.
-    EHContTargets.insert(EHContTargets.end(), MF->getCatchretTargets().begin(),
-                         MF->getCatchretTargets().end());
+  if (!MF->getEHContTargets().empty()) {
+    // Copy the function's EH Continuation targets to a module-level list.
+    llvm::append_range(EHContTargets, MF->getEHContTargets());
   }
 }
 
@@ -290,6 +289,11 @@ void WinException::endFuncletImpl() {
       // functions that need it in the end anyway.
     }
 
+    if (!MF->getEHContTargets().empty()) {
+      // Copy the function's EH Continuation targets to a module-level list.
+      llvm::append_range(EHContTargets, MF->getEHContTargets());
+    }
+
     // Switch back to the funclet start .text section now that we are done
     // writing to .xdata, and emit an .seh_endproc directive to mark the end of
     // the function.
@@ -304,10 +308,8 @@ void WinException::endFuncletImpl() {
 const MCExpr *WinException::create32bitRef(const MCSymbol *Value) {
   if (!Value)
     return MCConstantExpr::create(0, Asm->OutContext);
-  return MCSymbolRefExpr::create(Value, useImageRel32
-                                            ? MCSymbolRefExpr::VK_COFF_IMGREL32
-                                            : MCSymbolRefExpr::VK_None,
-                                 Asm->OutContext);
+  auto Spec = useImageRel32 ? uint16_t(MCSymbolRefExpr::VK_COFF_IMGREL32) : 0;
+  return MCSymbolRefExpr::create(Value, Spec, Asm->OutContext);
 }
 
 const MCExpr *WinException::create32bitRef(const GlobalValue *GV) {
@@ -928,8 +930,8 @@ void WinException::computeIP2StateTable(
       BaseState = NullState;
       StartLabel = Asm->getFunctionBegin();
     } else {
-      auto *FuncletPad =
-          cast<FuncletPadInst>(FuncletStart->getBasicBlock()->getFirstNonPHI());
+      auto *FuncletPad = cast<FuncletPadInst>(
+          FuncletStart->getBasicBlock()->getFirstNonPHIIt());
       assert(FuncInfo.FuncletBaseStateMap.count(FuncletPad) != 0);
       BaseState = FuncInfo.FuncletBaseStateMap.find(FuncletPad)->second;
       StartLabel = getMCSymbolForMBB(Asm, &*FuncletStart);

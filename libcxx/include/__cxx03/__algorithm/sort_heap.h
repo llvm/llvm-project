@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SORT_HEAP_H
-#define _LIBCPP___ALGORITHM_SORT_HEAP_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SORT_HEAP_H
+#define _LIBCPP___CXX03___ALGORITHM_SORT_HEAP_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -30,7 +30,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+inline _LIBCPP_HIDE_FROM_ABI void
 __sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare&& __comp) {
   _RandomAccessIterator __saved_last   = __last;
   __comp_ref_type<_Compare> __comp_ref = __comp;
@@ -42,7 +42,7 @@ __sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+inline _LIBCPP_HIDE_FROM_ABI void
 sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
   static_assert(std::is_copy_constructible<_RandomAccessIterator>::value, "Iterators must be copy constructible.");
   static_assert(std::is_copy_assignable<_RandomAccessIterator>::value, "Iterators must be copy assignable.");
@@ -51,8 +51,7 @@ sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare 
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last) {
+inline _LIBCPP_HIDE_FROM_ABI void sort_heap(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   std::sort_heap(std::move(__first), std::move(__last), __less<>());
 }
 
@@ -60,4 +59,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SORT_HEAP_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SORT_HEAP_H

@@ -169,7 +169,7 @@ define i64 @test_trunc_with_constexpr() {
 
 define align 4 ptr @maybe_not_aligned(ptr noundef %p) {
 ; CHECK-LABEL: define align 4 ptr @maybe_not_aligned(
-; CHECK-SAME: ptr noundef readnone returned [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   ret ptr %p
@@ -177,7 +177,7 @@ define align 4 ptr @maybe_not_aligned(ptr noundef %p) {
 
 define align 4 ptr @definitely_aligned(ptr noundef align 4 %p) {
 ; CHECK-LABEL: define noundef align 4 ptr @definitely_aligned(
-; CHECK-SAME: ptr noundef readnone returned align 4 [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readnone returned align 4 captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   ret ptr %p
@@ -185,7 +185,7 @@ define align 4 ptr @definitely_aligned(ptr noundef align 4 %p) {
 
 define nonnull ptr @maybe_not_nonnull(ptr noundef %p) {
 ; CHECK-LABEL: define nonnull ptr @maybe_not_nonnull(
-; CHECK-SAME: ptr noundef readnone returned [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   ret ptr %p
@@ -193,7 +193,7 @@ define nonnull ptr @maybe_not_nonnull(ptr noundef %p) {
 
 define nonnull ptr @definitely_nonnull(ptr noundef nonnull %p) {
 ; CHECK-LABEL: define noundef nonnull ptr @definitely_nonnull(
-; CHECK-SAME: ptr noundef nonnull readnone returned [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef nonnull readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   ret ptr %p

@@ -442,6 +442,28 @@ in certain circumstances (such as calling the ``Pass::dump()`` from a
 debugger), so it should only be used to enhance debug output, it should not be
 depended on.
 
+Scheduling a MachineFunctionPass
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Backends create a ``TargetPassConfig`` and use ``addPass`` to schedule
+``MachineFunctionPass``\ es. External plugins can register a callback to modify
+and insert additional passes:
+
+.. code-block:: c++
+
+  RegisterTargetPassConfigCallback X{[](auto &TM, auto &PM, auto *TPC) {
+    TPC->insertPass(/* ... */);
+    TPC->substitutePass(/* ... */);
+  }};
+
+Note that passes still have to be registered:
+
+.. code-block:: c++
+
+  __attribute__((constructor)) static void initCodeGenPlugin() {
+    initializeExamplePass(*PassRegistry::getPassRegistry());
+  }
+
 .. _writing-an-llvm-pass-interaction:
 
 Specifying interactions between passes
@@ -652,7 +674,7 @@ default optimization pipelines, e.g. (the output has been trimmed):
   Pre-ISel Intrinsic Lowering
   FunctionPass Manager
     Expand large div/rem
-    Expand large fp convert
+    Expand fp
     Expand Atomic instructions
   SVE intrinsics optimizations
     FunctionPass Manager

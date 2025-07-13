@@ -3,10 +3,10 @@
 void clang_analyzer_eval(bool);
 
 struct s { int a; };
-int foo() {
+void foo() {
   auto [a] = s{1};
   clang_analyzer_eval(a == 1); // expected-warning{{TRUE}}
-} // expected-warning{{non-void function does not return a value}}
+}
 
 struct s2 {
   int &x;

@@ -27,7 +27,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "vector-utils"
 
@@ -258,29 +258,20 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   if (vectorType.isScalable())
     return false;
 
-  ArrayRef<int64_t> vectorShape = vectorType.getShape();
-  auto vecRank = vectorType.getRank();
+  // Ignore a leading sequence of adjacent unit dimensions in the vector.
+  ArrayRef<int64_t> vectorShape =
+      vectorType.getShape().drop_while([](auto v) { return v == 1; });
+  auto vecRank = vectorShape.size();
 
-  if (!trailingNDimsContiguous(memrefType, vecRank))
+  if (!memrefType.areTrailingDimsContiguous(vecRank))
     return false;
 
-  // Extract the trailing dims and strides of the input memref
+  // Extract the trailing dims of the input memref
   auto memrefShape = memrefType.getShape().take_back(vecRank);
 
-  // Compare the dims of `vectorType` against `memrefType` (in reverse).
-  // In the most basic case, all dims will match.
-  auto firstNonMatchingDim =
-      std::mismatch(vectorShape.rbegin(), vectorShape.rend(),
-                    memrefShape.rbegin(), memrefShape.rend());
-  if (firstNonMatchingDim.first == vectorShape.rend())
-    return true;
-
-  // One non-matching dim is still fine, however the remaining leading dims of
-  // `vectorType` need to be 1.
-  SmallVector<int64_t> leadingDims(++firstNonMatchingDim.first,
-                                   vectorShape.rend());
-
-  return llvm::all_of(leadingDims, [](auto x) { return x == 1; });
+  // Compare the dims of `vectorType` against `memrefType`.
+  // All of the dimensions, except the first must match.
+  return llvm::equal(vectorShape.drop_front(), memrefShape.drop_front());
 }
 
 std::optional<StaticTileOffsetRange>
@@ -291,8 +282,7 @@ vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
   // cannot be unrolled).
   auto shapeToUnroll = vType.getShape().drop_back(targetRank);
   auto scalableDimsToUnroll = vType.getScalableDims().drop_back(targetRank);
-  auto it =
-      std::find(scalableDimsToUnroll.begin(), scalableDimsToUnroll.end(), true);
+  auto it = llvm::find(scalableDimsToUnroll, true);
   auto firstScalableDim = it - scalableDimsToUnroll.begin();
   if (firstScalableDim == 0)
     return {};
@@ -312,7 +302,7 @@ SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
 
   Value base = TypeSwitch<Operation *, Value>(xfer)
                    .Case<vector::TransferReadOp>(
-                       [&](auto readOp) { return readOp.getSource(); })
+                       [&](auto readOp) { return readOp.getBase(); })
                    .Case<vector::TransferWriteOp>(
                        [&](auto writeOp) { return writeOp.getOperand(1); });
 
@@ -327,27 +317,29 @@ bool vector::isLinearizableVector(VectorType type) {
 }
 
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
-                                     Value source, ArrayRef<int64_t> readShape,
+                                     Value source,
+                                     ArrayRef<int64_t> inputVectorSizes,
                                      Value padValue,
                                      bool useInBoundsInsteadOfMasking) {
-  assert(llvm::none_of(readShape,
-                       [](int64_t s) { return s == ShapedType::kDynamic; }) &&
-         "expected static shape");
+  assert(!llvm::is_contained(inputVectorSizes, ShapedType::kDynamic) &&
+         "invalid input vector sizes");
   auto sourceShapedType = cast<ShapedType>(source.getType());
   auto sourceShape = sourceShapedType.getShape();
-  assert(sourceShape.size() == readShape.size() && "expected same ranks.");
-  auto maskType = VectorType::get(readShape, builder.getI1Type());
-  auto vectorType = VectorType::get(readShape, padValue.getType());
+  assert(sourceShape.size() == inputVectorSizes.size() &&
+         "expected same ranks.");
+  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
   assert(padValue.getType() == sourceShapedType.getElementType() &&
          "expected same pad element type to match source element type");
-  int64_t readRank = readShape.size();
+  int64_t readRank = inputVectorSizes.size();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
   SmallVector<bool> inBoundsVal(readRank, true);
+
   if (useInBoundsInsteadOfMasking) {
     // Update the inBounds attribute.
+    // FIXME: This computation is too weak - it ignores the read indices.
     for (unsigned i = 0; i < readRank; i++)
-      inBoundsVal[i] = (sourceShape[i] == readShape[i]) &&
-                       !ShapedType::isDynamic(sourceShape[i]);
+      inBoundsVal[i] = (sourceShape[i] == inputVectorSizes[i]) &&
+                       ShapedType::isStatic(sourceShape[i]);
   }
   auto transferReadOp = builder.create<vector::TransferReadOp>(
       loc,
@@ -357,10 +349,12 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       /*padding=*/padValue,
       /*inBounds=*/inBoundsVal);
 
-  if (llvm::equal(readShape, sourceShape) || useInBoundsInsteadOfMasking)
+  if (llvm::equal(inputVectorSizes, sourceShape) || useInBoundsInsteadOfMasking)
     return transferReadOp;
   SmallVector<OpFoldResult> mixedSourceDims =
       tensor::getMixedSizes(builder, loc, source);
+
+  auto maskType = VectorType::get(inputVectorSizes, builder.getI1Type());
   Value mask =
       builder.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
   return mlir::vector::maskOperation(builder, transferReadOp, mask)
@@ -370,9 +364,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
 LogicalResult
 vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
                                  ArrayRef<int64_t> inputVectorSizes) {
-  LDBG("Iteration space static sizes:");
-  LLVM_DEBUG(llvm::interleaveComma(shape, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
+  LDBG("Iteration space static sizes:" << llvm::interleaved(shape));
 
   if (inputVectorSizes.size() != shape.size()) {
     LDBG("Input vector sizes don't match the number of loops");

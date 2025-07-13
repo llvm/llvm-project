@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 
 #include <cstddef>
@@ -213,6 +214,16 @@ public:
   /// \param[in] s
   ///     The stream to which to dump the object description.
   void Dump(llvm::raw_ostream &s) const;
+
+  /// Convert the filespec object to a json value.
+  ///
+  /// Convert the filespec object to a json value. If the object contains a
+  /// valid directory name, it will be displayed followed by a directory
+  /// delimiter, and the filename.
+  ///
+  /// \return
+  ///     A json value representation of a filespec.
+  llvm::json::Value ToJSON() const;
 
   Style GetPathStyle() const;
 

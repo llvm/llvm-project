@@ -22,21 +22,6 @@ def copy(
 
 
 @linalg_structured_op
-def elemwise_unary(
-    I=TensorDef(T1),
-    O=TensorDef(U, output=True),
-    fun=UnaryFnAttrDef(default=UnaryFn.exp),
-    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
-):
-    """Applies the unary function fun elementwise.
-
-    Numeric casting is performed on the input operand, promoting it to the same
-    data type as the accumulator/output.
-    """
-    O[None] = fun(cast(U, I[None]))
-
-
-@linalg_structured_op
 def exp(
     I=TensorDef(T1),
     O=TensorDef(T1, output=True),
@@ -190,22 +175,6 @@ def erf(
     No numeric casting is performed on the input operand.
     """
     O[None] = UnaryFn.erf(I[None])
-
-
-@linalg_structured_op
-def elemwise_binary(
-    lhs=TensorDef(T1),
-    rhs=TensorDef(T2),
-    O=TensorDef(U, output=True),
-    fun=BinaryFnAttrDef(default=BinaryFn.add),
-    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
-):
-    """Applies the binary function fun elementwise.
-
-    Numeric casting is performed on the input operand, promoting it to the same
-    data type as the accumulator/output.
-    """
-    O[None] = fun(cast(U, lhs[None]), cast(U, rhs[None]))
 
 
 @linalg_structured_op
@@ -482,24 +451,6 @@ def batch_mmt4d(
     accum[D.b, D.m, D.n, D.m0, D.n0] += TypeFn.cast_signed(
         TV.AccumType, lhs[D.b, D.m, D.k, D.m0, D.k0]
     ) * TypeFn.cast_signed(TV.AccumType, rhs[D.b, D.n, D.k, D.n0, D.k0])
-
-
-@linalg_structured_op
-def batch_matmul(
-    A=TensorDef(T1, Batch, S.M, S.K),
-    B=TensorDef(T2, Batch, S.K, S.N),
-    C=TensorDef(U, Batch, S.M, S.N, output=True),
-):
-    """Performs a batched matrix multiplication of two 3D inputs.
-
-    Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output.
-    """
-    domain(D.b, D.m, D.n, D.k)
-    implements(ContractionOpInterface)
-    C[D.b, D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
-        U, B[D.b, D.k, D.n]
-    )
 
 
 @linalg_structured_op
@@ -1158,7 +1109,7 @@ def conv_3d_ncdhw_fcdhw(
     them to the same data type as the accumulator/output.
     """
     implements(ConvolutionOpInterface)
-    domain(D.n, D.od, D.oh, D.ow, D.f, D.kd, D.kh, D.kw, D.c)
+    domain(D.n, D.f, D.od, D.oh, D.ow, D.c, D.kd, D.kh, D.kw)
     O[D.n, D.f, D.od, D.oh, D.ow] += TypeFn.cast_signed(
         U,
         I[

@@ -81,7 +81,7 @@ AST_MATCHER_P(LambdaExpr, hasCaptureDefaultKind, LambdaCaptureDefault, Kind) {
 
 AST_MATCHER(VarDecl, hasIdentifier) {
   const IdentifierInfo *ID = Node.getIdentifier();
-  return ID != NULL && !ID->isPlaceholder();
+  return ID != nullptr && !ID->isPlaceholder();
 }
 
 } // namespace
@@ -92,19 +92,15 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
                                   declRefExpr(to(equalsBoundNode("param"))))));
   auto RefToParm = capturesVar(
       varDecl(anyOf(hasSameNameAsBoundNode("param"), RefToParmImplicit)));
-  auto HasRefToParm = hasAnyCapture(RefToParm);
 
   auto CaptureInRef =
       allOf(hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByRef),
             unless(hasAnyCapture(
                 capturesVar(varDecl(hasSameNameAsBoundNode("param"))))));
-  auto CaptureInCopy = allOf(
-      hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByCopy), HasRefToParm);
   auto CaptureByRefExplicit = hasAnyCapture(
       allOf(hasCaptureKind(LambdaCaptureKind::LCK_ByRef), RefToParm));
 
-  auto CapturedInBody =
-      lambdaExpr(anyOf(CaptureInRef, CaptureInCopy, CaptureByRefExplicit));
+  auto CapturedInBody = lambdaExpr(anyOf(CaptureInRef, CaptureByRefExplicit));
   auto CapturedInCaptureList = hasAnyCapture(capturesVar(
       varDecl(hasInitializer(ignoringParenImpCasts(equalsBoundNode("call"))))));
 
@@ -124,7 +120,7 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
                           equalsBoundNode("param"), equalsBoundNode("var")))))),
                 CapturedInLambda)),
       callee(unresolvedLookupExpr(hasAnyDeclaration(
-          namedDecl(hasUnderlyingDecl(hasName("::std::forward")))))),
+          namedDecl(hasUnderlyingDecl(hasName(ForwardFunction)))))),
 
       unless(anyOf(hasAncestor(typeLoc()),
                    hasAncestor(expr(hasUnevaluatedContext())))));
@@ -151,6 +147,15 @@ void MissingStdForwardCheck::check(const MatchFinder::MatchResult &Result) {
        "forwarding reference parameter %0 is never forwarded "
        "inside the function body")
       << Param;
+}
+
+MissingStdForwardCheck::MissingStdForwardCheck(StringRef Name,
+                                               ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      ForwardFunction(Options.get("ForwardFunction", "::std::forward")) {}
+
+void MissingStdForwardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "ForwardFunction", ForwardFunction);
 }
 
 } // namespace clang::tidy::cppcoreguidelines

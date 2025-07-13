@@ -43,7 +43,7 @@ arguments automatically.
   $> cd build
   $> cmake ../llvm -G Ninja                                                 \
      -DLLVM_ENABLE_PROJECTS="clang;lld"                                     \
-     -DLLVM_ENABLE_RUNTIMES="openmp"                                        \
+     -DLLVM_ENABLE_RUNTIMES="openmp;offload"                                \
      -DCMAKE_BUILD_TYPE=<Debug|Release>   \ # Select build type
      -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where the libraries will live
      -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc               \
@@ -58,14 +58,11 @@ OpenMP support. We then set ``RUNTIMES_<triple>_LLVM_ENABLE_RUNTIMES`` to enable
 ``libc`` for the GPU targets. The ``LLVM_RUNTIME_TARGETS`` sets the enabled
 targets to build, in this case we want the default target and the GPU targets.
 Note that if ``libc`` were included in ``LLVM_ENABLE_RUNTIMES`` it would build
-targeting the default host environment as well.
+targeting the default host environment as well. Alternatively, you can point
+your build towards the ``libc/cmake/caches/gpu.cmake`` cache file with ``-C``.
 
 Runtimes cross build
 --------------------
-
-.. note::
-  These instructions need to be updated for new headergen. They may be
-  inaccurate.
 
 For users wanting more direct control over the build process, the build steps
 can be done manually instead. This build closely follows the instructions in the
@@ -82,20 +79,17 @@ compiler. These tools must all be up-to-date with the libc source.
   $> HOST_CXX_COMPILER=<C++ compiler for the host> # For example "clang++"
   $> cmake ../llvm                            \
      -G Ninja                                 \
-     -DLLVM_ENABLE_PROJECTS="clang;libc"      \
+     -DLLVM_ENABLE_PROJECTS="clang"           \
      -DCMAKE_C_COMPILER=$HOST_C_COMPILER      \
      -DCMAKE_CXX_COMPILER=$HOST_CXX_COMPILER  \
      -DLLVM_LIBC_FULL_BUILD=ON                \
-     -DLIBC_HDRGEN_ONLY=ON    \ # Only build the 'libc-hdrgen' tool
      -DCMAKE_BUILD_TYPE=Release # Release suggested to make "clang" fast
   $> ninja # Build the 'clang' compiler
-  $> ninja libc-hdrgen # Build the 'libc-hdrgen' tool
 
-Once this has finished the build directory should contain the ``clang`` compiler
-and the ``libc-hdrgen`` executable. We will use the ``clang`` compiler to build
-the GPU code and the ``libc-hdrgen`` tool to create the necessary headers. We
-use these tools to bootstrap the build out of the runtimes directory targeting a
-GPU architecture.
+Once this has finished the build directory should contain the ``clang``
+compiler executable. We will use the ``clang`` compiler to build the GPU code.
+We use these tools to bootstrap the build out of the runtimes directory
+targeting a GPU architecture.
 
 .. code-block:: sh
 
@@ -105,7 +99,6 @@ GPU architecture.
   $> TARGET_TRIPLE=<amdgcn-amd-amdhsa or nvptx64-nvidia-cuda>
   $> TARGET_C_COMPILER=</path/to/clang>
   $> TARGET_CXX_COMPILER=</path/to/clang++>
-  $> HDRGEN=</path/to/libc-hdrgen>
   $> cmake ../runtimes \ # Point to the runtimes build
      -G Ninja                                  \
      -DLLVM_ENABLE_RUNTIMES=libc               \
@@ -113,7 +106,6 @@ GPU architecture.
      -DCMAKE_CXX_COMPILER=$TARGET_CXX_COMPILER \
      -DLLVM_LIBC_FULL_BUILD=ON                 \
      -DLLVM_RUNTIMES_TARGET=$TARGET_TRIPLE     \
-     -DLIBC_HDRGEN_EXE=$HDRGEN                 \
      -DCMAKE_BUILD_TYPE=Release
   $> ninja install
 

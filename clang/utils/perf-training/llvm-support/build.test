@@ -1,2 +1,2 @@
-RUN: %cmake -G %cmake_generator -B %t -S %llvm_src_dir -DCMAKE_C_COMPILER=%clang -DCMAKE_CXX_COMPILER=%clang -DCMAKE_CXX_FLAGS="--driver-mode=g++" -DCMAKE_BUILD_TYPE=Release
-RUN: %cmake --build %t -v --target LLVMSupport
+RUN: %cmake -G %cmake_generator -B %t -S %llvm_src_dir %cmake_compiler_args -DCMAKE_BUILD_TYPE=Release
+RUN: %perf_wrapper %cmake --build %t -v --target LLVMSupport

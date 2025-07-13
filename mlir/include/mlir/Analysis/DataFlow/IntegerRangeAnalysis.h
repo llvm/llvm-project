@@ -22,6 +22,7 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 
 namespace mlir {
+class RewriterBase;
 namespace dataflow {
 
 /// This lattice element represents the integer value range of an SSA value.
@@ -70,6 +71,21 @@ public:
                                ArrayRef<IntegerValueRangeLattice *> argLattices,
                                unsigned firstIndex) override;
 };
+
+/// Succeeds if an op can be converted to its unsigned equivalent without
+/// changing its semantics. This is the case when none of its openands or
+/// results can be below 0 when analyzed from a signed perspective.
+LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op);
+
+/// Succeeds when a value is statically non-negative in that it has a lower
+/// bound on its value (if it is treated as signed) and that bound is
+/// non-negative.
+/// Note, the results of this query may not be accurate for `index` if you plan
+/// to use a non-64-bit index.
+LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v);
+
+LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
+                                       RewriterBase &rewriter, Value value);
 
 } // end namespace dataflow
 } // end namespace mlir

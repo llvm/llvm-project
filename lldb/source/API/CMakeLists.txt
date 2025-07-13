@@ -56,7 +56,6 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBCommandReturnObject.cpp
   SBCommunication.cpp
   SBCompileUnit.cpp
-  SBSaveCoreOptions.cpp
   SBData.cpp
   SBDebugger.cpp
   SBDeclaration.cpp
@@ -65,8 +64,8 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBEvent.cpp
   SBExecutionContext.cpp
   SBExpressionOptions.cpp
-  SBFileSpec.cpp
   SBFile.cpp
+  SBFileSpec.cpp
   SBFileSpecList.cpp
   SBFormat.cpp
   SBFrame.cpp
@@ -82,13 +81,16 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBMemoryRegionInfoList.cpp
   SBModule.cpp
   SBModuleSpec.cpp
+  SBMutex.cpp
   SBPlatform.cpp
   SBProcess.cpp
   SBProcessInfo.cpp
   SBProcessInfoList.cpp
+  SBProgress.cpp
   SBQueue.cpp
   SBQueueItem.cpp
   SBReproducer.cpp
+  SBSaveCoreOptions.cpp
   SBScriptObject.cpp
   SBSection.cpp
   SBSourceManager.cpp
@@ -113,19 +115,23 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBTypeNameSpecifier.cpp
   SBTypeSummary.cpp
   SBTypeSynthetic.cpp
+  SBUnixSignals.cpp
   SBValue.cpp
   SBValueList.cpp
   SBVariablesOptions.cpp
   SBWatchpoint.cpp
   SBWatchpointOptions.cpp
-  SBUnixSignals.cpp
   SystemInitializerFull.cpp
   ${lldb_python_wrapper}
   ${lldb_lua_wrapper}
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/API
   DEPENDS
     lldb-sbapi-dwarf-enums
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -140,8 +146,6 @@ add_lldb_library(liblldb SHARED ${option_framework}
     lldbValueObject
     lldbVersion
     ${LLDB_ALL_PLUGINS}
-  LINK_COMPONENTS
-    Support
 
   ${option_install_prefix}
 )
@@ -205,23 +209,23 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
     # If we're not exporting all symbols, we'll want to explicitly set
     # the exported symbols here.  This prevents 'log enable --stack ...'
     # from working on some systems but limits the liblldb size.
-    MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb namespace")
+    message(STATUS "Symbols (liblldb): exporting all symbols from the lldb namespace")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports)
   elseif (NOT LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
     # Don't use an explicit export. Instead, tell the linker to export all symbols.
-    MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
-    MESSAGE(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+    message(STATUS "Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+    message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
                     "Only the SB API is guaranteed to be stable.")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb-private.exports)
   else ()
-    MESSAGE("-- Symbols (liblldb): exporting all symbols specified in the exports "
+    message(STATUS "Symbols (liblldb): exporting all symbols specified in the exports "
             " file '${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}'")
-    MESSAGE(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+    message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
                     "Only the SB API is guaranteed to be stable.")
     add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
   endif()
 elseif (LLDB_EXPORT_ALL_SYMBOLS)
-  MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+  message(STATUS "Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
 
   # Pull out the various lldb libraries linked into liblldb, these will be used
   # when looking for symbols to extract. We ignore most plugin libraries here,
@@ -287,6 +291,45 @@ else()
     )
   endif()
 endif()
+
+# Stage all headers in the include directory in the build dir.
+file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h)
+set(lldb_header_staging_dir ${CMAKE_BINARY_DIR}/include/lldb)
+file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
+file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
+list(REMOVE_ITEM root_public_headers ${root_private_headers})
+
+find_program(unifdef_EXECUTABLE unifdef)
+
+foreach(header
+    ${public_headers}
+    ${generated_public_headers}
+    ${root_public_headers})
+  get_filename_component(basename ${header} NAME)
+  set(staged_header ${lldb_header_staging_dir}/${basename})
+
+  if(unifdef_EXECUTABLE)
+    # unifdef returns 0 when the file is unchanged and 1 if something was changed.
+    # That means if we successfully remove SWIG code, the build system believes
+    # that the command has failed and stops. This is undesirable.
+    set(copy_command ${unifdef_EXECUTABLE} -USWIG ${header} > ${staged_header} || (exit 0))
+  else()
+    set(copy_command ${CMAKE_COMMAND} -E copy ${header} ${staged_header})
+  endif()
+
+  add_custom_command(
+    DEPENDS ${header} OUTPUT ${staged_header}
+    COMMAND ${copy_command}
+    COMMENT "LLDB headers: stage LLDB headers in include directory")
+
+  list(APPEND lldb_staged_headers ${staged_header})
+endforeach()
+
+add_custom_command(TARGET liblldb POST_BUILD
+  COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py -i ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h -o ${lldb_header_staging_dir}/lldb-defines.h -m ${LLDB_VERSION_MAJOR} -n ${LLDB_VERSION_MINOR} -p ${LLDB_VERSION_PATCH}
+)
+add_custom_target(liblldb-header-staging DEPENDS ${lldb_staged_headers})
+add_dependencies(liblldb liblldb-header-staging)
 
 if(LLDB_BUILD_FRAMEWORK)
   include(LLDBFramework)

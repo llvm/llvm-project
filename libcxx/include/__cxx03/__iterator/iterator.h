@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ITERATOR_H
-#define _LIBCPP___ITERATOR_ITERATOR_H
+#ifndef _LIBCPP___CXX03___ITERATOR_ITERATOR_H
+#define _LIBCPP___CXX03___ITERATOR_ITERATOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/cstddef>
@@ -20,7 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Category, class _Tp, class _Distance = ptrdiff_t, class _Pointer = _Tp*, class _Reference = _Tp&>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 iterator {
+struct _LIBCPP_TEMPLATE_VIS iterator {
   typedef _Tp value_type;
   typedef _Distance difference_type;
   typedef _Pointer pointer;
@@ -30,4 +30,4 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 iterator {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_ITERATOR_H
+#endif // _LIBCPP___CXX03___ITERATOR_ITERATOR_H

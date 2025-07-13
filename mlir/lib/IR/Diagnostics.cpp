@@ -392,11 +392,11 @@ struct SourceMgrDiagnosticHandlerImpl {
 
 /// Return a processable CallSiteLoc from the given location.
 static std::optional<CallSiteLoc> getCallSiteLoc(Location loc) {
-  if (dyn_cast<NameLoc>(loc))
+  if (isa<NameLoc>(loc))
     return getCallSiteLoc(cast<NameLoc>(loc).getChildLoc());
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc))
     return callLoc;
-  if (dyn_cast<FusedLoc>(loc)) {
+  if (isa<FusedLoc>(loc)) {
     for (auto subLoc : cast<FusedLoc>(loc).getLocations()) {
       if (auto callLoc = getCallSiteLoc(subLoc)) {
         return callLoc;
@@ -517,6 +517,10 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Diagnostic &diag) {
                    /*displaySourceLine=*/loc != note.getLocation());
     loc = note.getLocation();
   }
+}
+
+void SourceMgrDiagnosticHandler::setCallStackLimit(unsigned limit) {
+  callStackLimit = limit;
 }
 
 /// Get a memory buffer for the given file, or nullptr if one is not found.
@@ -657,7 +661,9 @@ struct ExpectedDiag {
 };
 
 struct SourceMgrDiagnosticVerifierHandlerImpl {
-  SourceMgrDiagnosticVerifierHandlerImpl() : status(success()) {}
+  SourceMgrDiagnosticVerifierHandlerImpl(
+      SourceMgrDiagnosticVerifierHandler::Level level)
+      : status(success()), level(level) {}
 
   /// Returns the expected diagnostics for the given source file.
   std::optional<MutableArrayRef<ExpectedDiag>>
@@ -668,16 +674,27 @@ struct SourceMgrDiagnosticVerifierHandlerImpl {
   computeExpectedDiags(raw_ostream &os, llvm::SourceMgr &mgr,
                        const llvm::MemoryBuffer *buf);
 
+  SourceMgrDiagnosticVerifierHandler::Level getVerifyLevel() const {
+    return level;
+  }
+
   /// The current status of the verifier.
   LogicalResult status;
 
   /// A list of expected diagnostics for each buffer of the source manager.
   llvm::StringMap<SmallVector<ExpectedDiag, 2>> expectedDiagsPerFile;
 
+  /// A list of expected diagnostics with unknown locations.
+  SmallVector<ExpectedDiag, 2> expectedUnknownLocDiags;
+
   /// Regex to match the expected diagnostics format.
   llvm::Regex expected =
       llvm::Regex("expected-(error|note|remark|warning)(-re)? "
-                  "*(@([+-][0-9]+|above|below))? *{{(.*)}}$");
+                  "*(@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$");
+
+  /// Verification level.
+  SourceMgrDiagnosticVerifierHandler::Level level =
+      SourceMgrDiagnosticVerifierHandler::Level::All;
 };
 } // namespace detail
 } // namespace mlir
@@ -710,7 +727,7 @@ SourceMgrDiagnosticVerifierHandlerImpl::computeExpectedDiags(
     raw_ostream &os, llvm::SourceMgr &mgr, const llvm::MemoryBuffer *buf) {
   // If the buffer is invalid, return an empty list.
   if (!buf)
-    return std::nullopt;
+    return {};
   auto &expectedDiags = expectedDiagsPerFile[buf->getBufferIdentifier()];
 
   // The number of the last line that did not correlate to a designator.
@@ -770,6 +787,11 @@ SourceMgrDiagnosticVerifierHandlerImpl::computeExpectedDiags(
           record.lineNo += offset;
         else
           record.lineNo -= offset;
+      } else if (offsetMatch.consume_front("unknown")) {
+        // This is matching unknown locations.
+        record.fileLoc = SMLoc();
+        expectedUnknownLocDiags.emplace_back(std::move(record));
+        continue;
       } else if (offsetMatch.consume_front("above")) {
         // If the designator applies 'above' we add it to the last non
         // designator line.
@@ -791,9 +813,9 @@ SourceMgrDiagnosticVerifierHandlerImpl::computeExpectedDiags(
 }
 
 SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
-    llvm::SourceMgr &srcMgr, MLIRContext *ctx, raw_ostream &out)
+    llvm::SourceMgr &srcMgr, MLIRContext *ctx, raw_ostream &out, Level level)
     : SourceMgrDiagnosticHandler(srcMgr, ctx, out),
-      impl(new SourceMgrDiagnosticVerifierHandlerImpl()) {
+      impl(new SourceMgrDiagnosticVerifierHandlerImpl(level)) {
   // Compute the expected diagnostics for each of the current files in the
   // source manager.
   for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i)
@@ -811,8 +833,8 @@ SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
 }
 
 SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
-    llvm::SourceMgr &srcMgr, MLIRContext *ctx)
-    : SourceMgrDiagnosticVerifierHandler(srcMgr, ctx, llvm::errs()) {}
+    llvm::SourceMgr &srcMgr, MLIRContext *ctx, Level level)
+    : SourceMgrDiagnosticVerifierHandler(srcMgr, ctx, llvm::errs(), level) {}
 
 SourceMgrDiagnosticVerifierHandler::~SourceMgrDiagnosticVerifierHandler() {
   // Ensure that all expected diagnostics were handled.
@@ -824,43 +846,45 @@ SourceMgrDiagnosticVerifierHandler::~SourceMgrDiagnosticVerifierHandler() {
 /// verified correctly, failure otherwise.
 LogicalResult SourceMgrDiagnosticVerifierHandler::verify() {
   // Verify that all expected errors were seen.
-  for (auto &expectedDiagsPair : impl->expectedDiagsPerFile) {
-    for (auto &err : expectedDiagsPair.second) {
-      if (err.matched)
-        continue;
+  auto checkExpectedDiags = [&](ExpectedDiag &err) {
+    if (!err.matched)
       impl->status =
           err.emitError(os, mgr,
                         "expected " + getDiagKindStr(err.kind) + " \"" +
                             err.substring + "\" was not produced");
-    }
-  }
+  };
+  for (auto &expectedDiagsPair : impl->expectedDiagsPerFile)
+    for (auto &err : expectedDiagsPair.second)
+      checkExpectedDiags(err);
+  for (auto &err : impl->expectedUnknownLocDiags)
+    checkExpectedDiags(err);
   impl->expectedDiagsPerFile.clear();
   return impl->status;
 }
 
 /// Process a single diagnostic.
 void SourceMgrDiagnosticVerifierHandler::process(Diagnostic &diag) {
-  auto kind = diag.getSeverity();
-
-  // Process a FileLineColLoc.
-  if (auto fileLoc = diag.getLocation()->findInstanceOf<FileLineColLoc>())
-    return process(fileLoc, diag.str(), kind);
-
-  emitDiagnostic(diag.getLocation(),
-                 "unexpected " + getDiagKindStr(kind) + ": " + diag.str(),
-                 DiagnosticSeverity::Error);
-  impl->status = failure();
+  return process(diag.getLocation(), diag.str(), diag.getSeverity());
 }
 
-/// Process a FileLineColLoc diagnostic.
-void SourceMgrDiagnosticVerifierHandler::process(FileLineColLoc loc,
+/// Process a diagnostic at a certain location.
+void SourceMgrDiagnosticVerifierHandler::process(LocationAttr loc,
                                                  StringRef msg,
                                                  DiagnosticSeverity kind) {
-  // Get the expected diagnostics for this file.
-  auto diags = impl->getExpectedDiags(loc.getFilename());
-  if (!diags) {
-    diags = impl->computeExpectedDiags(os, mgr,
-                                       getBufferForFile(loc.getFilename()));
+  FileLineColLoc fileLoc = loc.findInstanceOf<FileLineColLoc>();
+  MutableArrayRef<ExpectedDiag> diags;
+
+  if (fileLoc) {
+    // Get the expected diagnostics for this file.
+    if (auto maybeDiags = impl->getExpectedDiags(fileLoc.getFilename())) {
+      diags = *maybeDiags;
+    } else {
+      diags = impl->computeExpectedDiags(
+          os, mgr, getBufferForFile(fileLoc.getFilename()));
+    }
+  } else {
+    // Get all expected diagnostics at unknown locations.
+    diags = impl->expectedUnknownLocDiags;
   }
 
   // Search for a matching expected diagnostic.
@@ -868,9 +892,11 @@ void SourceMgrDiagnosticVerifierHandler::process(FileLineColLoc loc,
   ExpectedDiag *nearMiss = nullptr;
 
   // If this was an expected error, remember that we saw it and return.
-  unsigned line = loc.getLine();
-  for (auto &e : *diags) {
-    if (line == e.lineNo && e.match(msg)) {
+  for (auto &e : diags) {
+    // File line must match (unless it's an unknown location).
+    if (fileLoc && fileLoc.getLine() != e.lineNo)
+      continue;
+    if (e.match(msg)) {
       if (e.kind == kind) {
         e.matched = true;
         return;
@@ -881,6 +907,9 @@ void SourceMgrDiagnosticVerifierHandler::process(FileLineColLoc loc,
       nearMiss = &e;
     }
   }
+
+  if (impl->getVerifyLevel() == Level::OnlyExpected)
+    return;
 
   // Otherwise, emit an error for the near miss.
   if (nearMiss)
@@ -950,7 +979,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
     // Stable sort all of the diagnostics that were emitted. This creates a
     // deterministic ordering for the diagnostics based upon which order id they
     // were emitted for.
-    std::stable_sort(diagnostics.begin(), diagnostics.end());
+    llvm::stable_sort(diagnostics);
 
     // Emit each diagnostic to the context again.
     for (ThreadDiagnostic &diag : diagnostics)

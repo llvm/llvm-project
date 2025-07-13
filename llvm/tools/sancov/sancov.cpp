@@ -67,12 +67,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -82,7 +83,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class SancovOptTable : public opt::GenericOptTable {
 public:
-  SancovOptTable() : GenericOptTable(InfoTable) {}
+  SancovOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // namespace
 
@@ -887,8 +889,7 @@ symbolize(const RawCoverage &Data, const std::string ObjectFile) {
   }
 
   std::set<uint64_t> AllAddrs = findCoveragePointAddrs(ObjectFile);
-  if (!std::includes(AllAddrs.begin(), AllAddrs.end(), Data.Addrs->begin(),
-                     Data.Addrs->end())) {
+  if (!llvm::includes(AllAddrs, *Data.Addrs)) {
     fail("Coverage points in binary and .sancov file do not match.");
   }
   Coverage->Points = getCoveragePoints(ObjectFile, AllAddrs, *Data.Addrs);
@@ -1001,7 +1002,6 @@ static void printNotCoveredFunctions(const SymbolizedCoverage &CovData,
 // Read list of files and merges their coverage info.
 static void readAndPrintRawCoverage(const std::vector<std::string> &FileNames,
                                     raw_ostream &OS) {
-  std::vector<std::unique_ptr<RawCoverage>> Covs;
   for (const auto &FileName : FileNames) {
     auto Cov = RawCoverage::read(FileName);
     if (!Cov)

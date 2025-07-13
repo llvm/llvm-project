@@ -17,6 +17,7 @@
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "X86TargetStreamer.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCDwarf.h"
@@ -444,15 +445,13 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
     // Force the use of an ELF container.
     MAI = new X86ELFMCAsmInfo(TheTriple);
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
-             TheTriple.isWindowsCoreCLREnvironment()) {
+             TheTriple.isWindowsCoreCLREnvironment() || TheTriple.isUEFI()) {
     if (Options.getAssemblyLanguage().equals_insensitive("masm"))
       MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple);
     else
       MAI = new X86MCAsmInfoMicrosoft(TheTriple);
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
-    MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
-  } else if (TheTriple.isUEFI()) {
     MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
   } else {
     // The default is ELF.
@@ -514,7 +513,7 @@ public:
                             APInt &Mask) const override;
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 const Triple &TargetTriple) const override;
+                 const MCSubtargetInfo &STI) const override;
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override;
@@ -630,7 +629,8 @@ findX86_64PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
 std::vector<std::pair<uint64_t, uint64_t>>
 X86MCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
                                    ArrayRef<uint8_t> PltContents,
-                                   const Triple &TargetTriple) const {
+                                   const MCSubtargetInfo &STI) const {
+  const Triple &TargetTriple = STI.getTargetTriple();
   switch (TargetTriple.getArch()) {
   case Triple::x86:
     return findX86PltEntries(PltSectionVA, PltContents);

@@ -15,10 +15,13 @@
 #define LLVM_CLANG_BASIC_OPENACCKINDS_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
 // Represents the Construct/Directive kind of a pragma directive. Note the
 // OpenACC standard is inconsistent between calling these Construct vs
 // Directive, but we're calling it a Directive to be consistent with OpenMP.
@@ -158,40 +161,62 @@ inline bool isOpenACCCombinedDirectiveKind(OpenACCDirectiveKind K) {
          K == OpenACCDirectiveKind::KernelsLoop;
 }
 
+// Tests 'K' to see if it is 'data', 'host_data', 'enter data', or 'exit data'.
+inline bool isOpenACCDataDirectiveKind(OpenACCDirectiveKind K) {
+  return K == OpenACCDirectiveKind::Data ||
+         K == OpenACCDirectiveKind::EnterData ||
+         K == OpenACCDirectiveKind::ExitData ||
+         K == OpenACCDirectiveKind::HostData;
+}
+
 enum class OpenACCAtomicKind : uint8_t {
   Read,
   Write,
   Update,
   Capture,
-  Invalid,
+  None,
 };
 
-/// Represents the kind of an OpenACC clause.
+template <typename StreamTy>
+inline StreamTy &printOpenACCAtomicKind(StreamTy &Out, OpenACCAtomicKind AK) {
+  switch (AK) {
+  case OpenACCAtomicKind::Read:
+    return Out << "read";
+  case OpenACCAtomicKind::Write:
+    return Out << "write";
+  case OpenACCAtomicKind::Update:
+    return Out << "update";
+  case OpenACCAtomicKind::Capture:
+    return Out << "capture";
+  case OpenACCAtomicKind::None:
+    return Out << "<none>";
+  }
+  llvm_unreachable("unknown atomic kind");
+}
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCAtomicKind AK) {
+  return printOpenACCAtomicKind(Out, AK);
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCAtomicKind AK) {
+  return printOpenACCAtomicKind(Out, AK);
+}
+
+/// Represents the kind of an OpenACC clause. Sorted alphabetically, since this
+/// order ends up influencing the sorting of the list diagnostic.
 enum class OpenACCClauseKind : uint8_t {
-  /// 'finalize' clause, allowed on 'exit data' directive.
-  Finalize,
-  /// 'if_present' clause, allowed on 'host_data' and 'update' directives.
-  IfPresent,
-  /// 'seq' clause, allowed on 'loop' and 'routine' directives.
-  Seq,
-  /// 'independent' clause, allowed on 'loop' directives.
-  Independent,
+  /// 'async' clause, allowed on Compute, Data, 'update', 'wait', and Combined
+  /// constructs.
+  Async,
+  /// 'attach' clause, allowed on Compute and Combined constructs, plus 'data'
+  /// and 'enter data'.
+  Attach,
   /// 'auto' clause, allowed on 'loop' directives.
   Auto,
-  /// 'worker' clause, allowed on 'loop', Combined, and 'routine' directives.
-  Worker,
-  /// 'vector' clause, allowed on 'loop', Combined, and 'routine' directives.
-  Vector,
-  /// 'nohost' clause, allowed on 'routine' directives.
-  NoHost,
-  /// 'default' clause, allowed on parallel, serial, kernel (and compound)
-  /// constructs.
-  Default,
-  /// 'if' clause, allowed on all the Compute Constructs, Data Constructs,
-  /// Executable Constructs, and Combined Constructs.
-  If,
-  /// 'self' clause, allowed on Compute and Combined Constructs, plus 'update'.
-  Self,
+  /// 'bind' clause, allowed on routine constructs.
+  Bind,
+  /// 'collapse' clause, allowed on 'loop' and Combined constructs.
+  Collapse,
   /// 'copy' clause, allowed on Compute and Combined Constructs, plus 'data' and
   /// 'declare'.
   Copy,
@@ -199,46 +224,6 @@ enum class OpenACCClauseKind : uint8_t {
   PCopy,
   /// 'copy' clause alias 'present_or_copy'.  Preserved for diagnostic purposes.
   PresentOrCopy,
-  /// 'use_device' clause, allowed on 'host_data' construct.
-  UseDevice,
-  /// 'attach' clause, allowed on Compute and Combined constructs, plus 'data'
-  /// and 'enter data'.
-  Attach,
-  /// 'delete' clause, allowed on the 'exit data' construct.
-  Delete,
-  /// 'detach' clause, allowed on the 'exit data' construct.
-  Detach,
-  /// 'device' clause, allowed on the 'update' construct.
-  Device,
-  /// 'deviceptr' clause, allowed on Compute and Combined Constructs, plus
-  /// 'data' and 'declare'.
-  DevicePtr,
-  /// 'device_resident' clause, allowed on the 'declare' construct.
-  DeviceResident,
-  /// 'firstprivate' clause, allowed on 'parallel', 'serial', 'parallel loop',
-  /// and 'serial loop' constructs.
-  FirstPrivate,
-  /// 'host' clause, allowed on 'update' construct.
-  Host,
-  /// 'link' clause, allowed on 'declare' construct.
-  Link,
-  /// 'no_create' clause, allowed on allowed on Compute and Combined constructs,
-  /// plus 'data'.
-  NoCreate,
-  /// 'present' clause, allowed on Compute and Combined constructs, plus 'data'
-  /// and 'declare'.
-  Present,
-  /// 'private' clause, allowed on 'parallel', 'serial', 'loop', 'parallel
-  /// loop', and 'serial loop' constructs.
-  Private,
-  /// 'copyout' clause, allowed on Compute and Combined constructs, plus 'data',
-  /// 'exit data', and 'declare'.
-  CopyOut,
-  /// 'copyout' clause alias 'pcopyout'.  Preserved for diagnostic purposes.
-  PCopyOut,
-  /// 'copyout' clause alias 'present_or_copyout'.  Preserved for diagnostic
-  /// purposes.
-  PresentOrCopyOut,
   /// 'copyin' clause, allowed on Compute and Combined constructs, plus 'data',
   /// 'enter data', and 'declare'.
   CopyIn,
@@ -247,6 +232,14 @@ enum class OpenACCClauseKind : uint8_t {
   /// 'copyin' clause alias 'present_or_copyin'.  Preserved for diagnostic
   /// purposes.
   PresentOrCopyIn,
+  /// 'copyout' clause, allowed on Compute and Combined constructs, plus 'data',
+  /// 'exit data', and 'declare'.
+  CopyOut,
+  /// 'copyout' clause alias 'pcopyout'.  Preserved for diagnostic purposes.
+  PCopyOut,
+  /// 'copyout' clause alias 'present_or_copyout'.  Preserved for diagnostic
+  /// purposes.
+  PresentOrCopyOut,
   /// 'create' clause, allowed on Compute and Combined constructs, plus 'data',
   /// 'enter data', and 'declare'.
   Create,
@@ -255,44 +248,94 @@ enum class OpenACCClauseKind : uint8_t {
   /// 'create' clause alias 'present_or_create'.  Preserved for diagnostic
   /// purposes.
   PresentOrCreate,
-  /// 'reduction' clause, allowed on Parallel, Serial, Loop, and the combined
+  /// 'default' clause, allowed on parallel, serial, kernel (and compound)
   /// constructs.
-  Reduction,
-  /// 'collapse' clause, allowed on 'loop' and Combined constructs.
-  Collapse,
-  /// 'bind' clause, allowed on routine constructs.
-  Bind,
-  /// 'vector_length' clause, allowed on 'parallel', 'kernels', 'parallel loop',
-  /// and 'kernels loop' constructs.
-  VectorLength,
-  /// 'num_gangs' clause, allowed on 'parallel', 'kernels', parallel loop', and
-  /// 'kernels loop' constructs.
-  NumGangs,
-  /// 'num_workers' clause, allowed on 'parallel', 'kernels', parallel loop',
-  /// and 'kernels loop' constructs.
-  NumWorkers,
-  /// 'device_num' clause, allowed on 'init', 'shutdown', and 'set' constructs.
-  DeviceNum,
+  Default,
   /// 'default_async' clause, allowed on 'set' construct.
   DefaultAsync,
+  /// 'delete' clause, allowed on the 'exit data' construct.
+  Delete,
+  /// 'detach' clause, allowed on the 'exit data' construct.
+  Detach,
+  /// 'device' clause, allowed on the 'update' construct.
+  Device,
+  /// 'device_num' clause, allowed on 'init', 'shutdown', and 'set' constructs.
+  DeviceNum,
+  /// 'deviceptr' clause, allowed on Compute and Combined Constructs, plus
+  /// 'data' and 'declare'.
+  DevicePtr,
+  /// 'device_resident' clause, allowed on the 'declare' construct.
+  DeviceResident,
   /// 'device_type' clause, allowed on Compute, 'data', 'init', 'shutdown',
   /// 'set', update', 'loop', 'routine', and Combined constructs.
   DeviceType,
   /// 'dtype' clause, an alias for 'device_type', stored separately for
   /// diagnostic purposes.
   DType,
-  /// 'async' clause, allowed on Compute, Data, 'update', 'wait', and Combined
-  /// constructs.
-  Async,
-  /// 'tile' clause, allowed on 'loop' and Combined constructs.
-  Tile,
+  /// 'finalize' clause, allowed on 'exit data' directive.
+  Finalize,
+  /// 'firstprivate' clause, allowed on 'parallel', 'serial', 'parallel loop',
+  /// and 'serial loop' constructs.
+  FirstPrivate,
   /// 'gang' clause, allowed on 'loop' and Combined constructs.
   Gang,
+  /// 'host' clause, allowed on 'update' construct.
+  Host,
+  /// 'if' clause, allowed on all the Compute Constructs, Data Constructs,
+  /// Executable Constructs, and Combined Constructs.
+  If,
+  /// 'if_present' clause, allowed on 'host_data' and 'update' directives.
+  IfPresent,
+  /// 'independent' clause, allowed on 'loop' directives.
+  Independent,
+  /// 'link' clause, allowed on 'declare' construct.
+  Link,
+  /// 'no_create' clause, allowed on allowed on Compute and Combined constructs,
+  /// plus 'data'.
+  NoCreate,
+  /// 'nohost' clause, allowed on 'routine' directives.
+  NoHost,
+  /// 'num_gangs' clause, allowed on 'parallel', 'kernels', parallel loop', and
+  /// 'kernels loop' constructs.
+  NumGangs,
+  /// 'num_workers' clause, allowed on 'parallel', 'kernels', parallel loop',
+  /// and 'kernels loop' constructs.
+  NumWorkers,
+  /// 'present' clause, allowed on Compute and Combined constructs, plus 'data'
+  /// and 'declare'.
+  Present,
+  /// 'private' clause, allowed on 'parallel', 'serial', 'loop', 'parallel
+  /// loop', and 'serial loop' constructs.
+  Private,
+  /// 'reduction' clause, allowed on Parallel, Serial, Loop, and the combined
+  /// constructs.
+  Reduction,
+  /// 'self' clause, allowed on Compute and Combined Constructs, plus 'update'.
+  Self,
+  /// 'seq' clause, allowed on 'loop' and 'routine' directives.
+  Seq,
+  /// 'tile' clause, allowed on 'loop' and Combined constructs.
+  Tile,
+  /// 'use_device' clause, allowed on 'host_data' construct.
+  UseDevice,
+  /// 'vector' clause, allowed on 'loop', Combined, and 'routine' directives.
+  Vector,
+  /// 'vector_length' clause, allowed on 'parallel', 'kernels', 'parallel loop',
+  /// and 'kernels loop' constructs.
+  VectorLength,
   /// 'wait' clause, allowed on Compute, Data, 'update', and Combined
   /// constructs.
   Wait,
+  /// 'worker' clause, allowed on 'loop', Combined, and 'routine' directives.
+  Worker,
 
-  /// Represents an invalid clause, for the purposes of parsing.
+  /// 'shortloop' is represented in the ACC.td file, but isn't present in the
+  /// standard. This appears to be an old extension for the nvidia fortran
+  // compiler, but seemingly not elsewhere. Put it here as a placeholder, but it
+  // is never expected to be generated.
+  Shortloop,
+  /// Represents an invalid clause, for the purposes of parsing. Should be
+  /// 'last'.
   Invalid,
 };
 
@@ -449,6 +492,9 @@ inline StreamTy &printOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
   case OpenACCClauseKind::Wait:
     return Out << "wait";
 
+  case OpenACCClauseKind::Shortloop:
+    llvm_unreachable("Shortloop shouldn't be generated in clang");
+    LLVM_FALLTHROUGH;
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";
   }
@@ -585,6 +631,85 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
                                      OpenACCGangKind Op) {
   return printOpenACCGangKind(Out, Op);
+}
+
+// Represents the 'modifier' of a 'modifier-list', as applied to copy, copyin,
+// copyout, and create. Implemented as a 'bitmask'.
+// Note: This attempts to synchronize with mlir::acc::DataClauseModifier,
+// however has to store `Always` separately(whereas MLIR has it as AlwaysIn &
+// AlwaysOut). However, we keep them in sync so that we can cast between them.
+enum class OpenACCModifierKind : uint8_t {
+  Invalid = 0,
+  Zero = 1 << 0,
+  Readonly = 1 << 1,
+  AlwaysIn = 1 << 2,
+  AlwaysOut = 1 << 3,
+  Capture = 1 << 4,
+  Always = 1 << 5,
+  LLVM_MARK_AS_BITMASK_ENUM(Always)
+};
+
+inline bool isOpenACCModifierBitSet(OpenACCModifierKind List,
+                                    OpenACCModifierKind Bit) {
+  return (List & Bit) != OpenACCModifierKind::Invalid;
+}
+
+template <typename StreamTy>
+inline StreamTy &printOpenACCModifierKind(StreamTy &Out,
+                                          OpenACCModifierKind Mods) {
+  if (Mods == OpenACCModifierKind::Invalid)
+    return Out << "<invalid>";
+
+  bool First = true;
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::Always)) {
+    Out << "always";
+    First = false;
+  }
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::AlwaysIn)) {
+    if (!First)
+      Out << ", ";
+    Out << "alwaysin";
+    First = false;
+  }
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::AlwaysOut)) {
+    if (!First)
+      Out << ", ";
+    Out << "alwaysout";
+    First = false;
+  }
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::Readonly)) {
+    if (!First)
+      Out << ", ";
+    Out << "readonly";
+    First = false;
+  }
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::Zero)) {
+    if (!First)
+      Out << ", ";
+    Out << "zero";
+    First = false;
+  }
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::Capture)) {
+    if (!First)
+      Out << ", ";
+    Out << "capture";
+    First = false;
+  }
+  return Out;
+}
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCModifierKind Op) {
+  return printOpenACCModifierKind(Out, Op);
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCModifierKind Op) {
+  return printOpenACCModifierKind(Out, Op);
 }
 } // namespace clang
 

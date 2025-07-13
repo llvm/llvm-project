@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: cmp.eq(r{{[0-9]+}},#0)
 ; Check that the result of the builtin is not stored directly, i.e. that
 ; there is an instruction that converts it to {0,1} from {0,-1}. Right now

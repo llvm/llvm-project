@@ -119,8 +119,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
       }
 
       IndirectBrs.push_back(IBr);
-      for (BasicBlock *SuccBB : IBr->successors())
-        IndirectBrSuccs.insert(SuccBB);
+      IndirectBrSuccs.insert_range(IBr->successors());
     }
 
   if (IndirectBrs.empty())
@@ -145,8 +144,8 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
     if (BlockAddressUseIt == BB.use_end())
       continue;
 
-    assert(std::find_if(std::next(BlockAddressUseIt), BB.use_end(),
-                        IsBlockAddressUse) == BB.use_end() &&
+    assert(std::none_of(std::next(BlockAddressUseIt), BB.use_end(),
+                        IsBlockAddressUse) &&
            "There should only ever be a single blockaddress use because it is "
            "a constant and should be uniqued.");
 

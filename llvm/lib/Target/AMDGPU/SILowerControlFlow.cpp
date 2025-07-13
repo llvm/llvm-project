@@ -48,6 +48,7 @@
 /// %exec = S_OR_B64 %exec, %sgpr0     // Re-enable saved exec mask bits
 //===----------------------------------------------------------------------===//
 
+#include "SILowerControlFlow.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -68,7 +69,7 @@ RemoveRedundantEndcf("amdgpu-remove-redundant-endcf",
 
 namespace {
 
-class SILowerControlFlow : public MachineFunctionPass {
+class SILowerControlFlow {
 private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
@@ -136,9 +137,17 @@ private:
   void optimizeEndCf();
 
 public:
+  SILowerControlFlow(LiveIntervals *LIS, LiveVariables *LV,
+                     MachineDominatorTree *MDT)
+      : LIS(LIS), LV(LV), MDT(MDT) {}
+  bool run(MachineFunction &MF);
+};
+
+class SILowerControlFlowLegacy : public MachineFunctionPass {
+public:
   static char ID;
 
-  SILowerControlFlow() : MachineFunctionPass(ID) {}
+  SILowerControlFlowLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -152,17 +161,17 @@ public:
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreservedID(LiveVariablesID);
+    AU.addPreserved<LiveVariablesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 
 } // end anonymous namespace
 
-char SILowerControlFlow::ID = 0;
+char SILowerControlFlowLegacy::ID = 0;
 
-INITIALIZE_PASS(SILowerControlFlow, DEBUG_TYPE,
-               "SI lower control flow", false, false)
+INITIALIZE_PASS(SILowerControlFlowLegacy, DEBUG_TYPE, "SI lower control flow",
+                false, false)
 
 static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
   MachineOperand &ImpDefSCC = MI.getOperand(3);
@@ -171,7 +180,7 @@ static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
   ImpDefSCC.setIsDead(IsDead);
 }
 
-char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
+char &llvm::SILowerControlFlowLegacyID = SILowerControlFlowLegacy::ID;
 
 bool SILowerControlFlow::hasKill(const MachineBasicBlock *Begin,
                                  const MachineBasicBlock *End) {
@@ -753,21 +762,13 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
   return true;
 }
 
-bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
+bool SILowerControlFlow::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
   EnableOptimizeEndCf = RemoveRedundantEndcf &&
                         MF.getTarget().getOptLevel() > CodeGenOptLevel::None;
 
-  // This doesn't actually need LiveIntervals, but we can preserve them.
-  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
-  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  // This doesn't actually need LiveVariables, but we can preserve them.
-  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
-  LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
-  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-  MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
   MRI = &MF.getRegInfo();
   BoolRC = TRI->getBoolRC();
 
@@ -863,4 +864,36 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   KillBlocks.clear();
 
   return Changed;
+}
+
+bool SILowerControlFlowLegacy::runOnMachineFunction(MachineFunction &MF) {
+  // This doesn't actually need LiveIntervals, but we can preserve them.
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+  // This doesn't actually need LiveVariables, but we can preserve them.
+  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  LiveVariables *LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
+  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MachineDominatorTree *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  return SILowerControlFlow(LIS, LV, MDT).run(MF);
+}
+
+PreservedAnalyses
+SILowerControlFlowPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
+  LiveVariables *LV = MFAM.getCachedResult<LiveVariablesAnalysis>(MF);
+  MachineDominatorTree *MDT =
+      MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+
+  bool Changed = SILowerControlFlow(LIS, LV, MDT).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<SlotIndexesAnalysis>();
+  PA.preserve<LiveIntervalsAnalysis>();
+  PA.preserve<LiveVariablesAnalysis>();
+  return PA;
 }

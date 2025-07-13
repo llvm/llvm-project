@@ -32,8 +32,7 @@ define float @fcmp_0_fadd_select1(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast ogt <4 x float> [[WIDE_LOAD]], zeroinitializer
@@ -122,8 +121,7 @@ define double @fcmp_0_fadd_select2(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast ogt <4 x double> [[WIDE_LOAD]], zeroinitializer
@@ -215,8 +213,7 @@ define float @fcmp_val_fadd_select1(ptr noalias %x, float %y, i32 %N) nounwind r
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast ogt <4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
@@ -308,8 +305,7 @@ define double @fcmp_val_fadd_select2(ptr noalias %x, double %y, i32 %N) nounwind
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast ogt <4 x double> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
@@ -400,11 +396,10 @@ define float @fcmp_array_elm_fadd_select1(ptr noalias %x, ptr noalias %y, i32 %N
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[Y]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[Y]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp fast ogt <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
@@ -499,11 +494,10 @@ define double @fcmp_array_elm_fadd_select2(ptr noalias %x, ptr noalias %y, i32 %
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x double>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp fast ogt <4 x double> [[WIDE_LOAD]], [[WIDE_LOAD1]]
@@ -596,8 +590,7 @@ define float @fcmp_0_fsub_select1(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast ogt <4 x float> [[WIDE_LOAD]], zeroinitializer
@@ -748,8 +741,7 @@ define double @fcmp_0_fsub_select2(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast ogt <4 x double> [[WIDE_LOAD]], zeroinitializer
@@ -901,8 +893,7 @@ define float @fcmp_0_fmult_select1(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ <float 0.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast ogt <4 x float> [[WIDE_LOAD]], zeroinitializer
@@ -1054,8 +1045,7 @@ define double @fcmp_0_fmult_select2(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ <double 0.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast ogt <4 x double> [[WIDE_LOAD]], zeroinitializer
@@ -1197,7 +1187,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 define float @fcmp_multi(ptr nocapture readonly %a, i32 %n) nounwind readonly {
 ; CHECK-LABEL: define float @fcmp_multi(
-; CHECK-SAME: ptr nocapture readonly [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP10:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP10]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -1212,18 +1202,16 @@ define float @fcmp_multi(ptr nocapture readonly %a, i32 %n) nounwind readonly {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
-; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i1> [[TMP5]], splat (i1 true)
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP6]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP7]], <4 x float> [[TMP8]], <4 x float> [[TMP9]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x float> [[TMP9]], <4 x float> [[TMP8]]
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP3]], <4 x float> [[WIDE_LOAD]], <4 x float> [[PREDPHI]]
 ; CHECK-NEXT:    [[TMP10]] = fadd fast <4 x float> [[PREDPHI1]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -1323,7 +1311,7 @@ for.end:                                          ; preds = %for.inc, %entry
 
 define float @fcmp_fadd_fsub(ptr nocapture readonly %a, i32 %n) nounwind readonly {
 ; CHECK-LABEL: define float @fcmp_fadd_fsub(
-; CHECK-SAME: ptr nocapture readonly [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -1338,19 +1326,17 @@ define float @fcmp_fadd_fsub(ptr nocapture readonly %a, i32 %n) nounwind readonl
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI1:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP3]], splat (i1 true)
-; CHECK-NEXT:    [[TMP5:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp uge <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fsub fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <4 x i1> [[TMP5]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP3]], <4 x float> [[TMP7]], <4 x float> [[TMP6]]
-; CHECK-NEXT:    [[PREDPHI1]] = select <4 x i1> [[TMP9]], <4 x float> [[VEC_PHI]], <4 x float> [[PREDPHI]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP9]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP6]]
+; CHECK-NEXT:    [[PREDPHI1]] = select <4 x i1> [[TMP3]], <4 x float> [[TMP7]], <4 x float> [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
@@ -1446,7 +1432,7 @@ for.end:                                          ; preds = %for.inc, %entry
 
 define float @fcmp_fadd_fmul(ptr nocapture readonly %a, i32 %n) nounwind readonly {
 ; CHECK-LABEL: define float @fcmp_fadd_fmul(
-; CHECK-SAME: ptr nocapture readonly [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -1535,7 +1521,7 @@ for.end:                                          ; preds = %for.inc, %entry
 
 define float @fcmp_store_back(ptr nocapture %a, i32 %LEN) nounwind readonly {
 ; CHECK-LABEL: define float @fcmp_store_back(
-; CHECK-SAME: ptr nocapture [[A:%.*]], i32 [[LEN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[LEN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -1599,8 +1585,7 @@ define i64 @fcmp_0_add_select2(ptr noalias %x, i64 %N) nounwind readonly {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], zeroinitializer
@@ -1679,8 +1664,7 @@ define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 0, [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
@@ -1759,8 +1743,7 @@ define i32 @fcmp_0_mult_select1(ptr noalias %x, i32 %N) nounwind readonly {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 1, i32 1>, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], zeroinitializer
@@ -1818,86 +1801,6 @@ for.body:                                         ; preds = %for.body, %for.head
 for.end:                                          ; preds = %for.body, %entry
   %1 = phi i32 [ 0, %entry ], [ %sum.2, %for.body ]
   ret i32 %1
-}
-
-@table = constant [13 x i16] [i16 10, i16 35, i16 69, i16 147, i16 280, i16 472, i16 682, i16 1013, i16 1559, i16 2544, i16 4553, i16 6494, i16 10000], align 1
-
-define i16 @non_reduction_index(i16 noundef %val) {
-; CHECK-LABEL: define i16 @non_reduction_index(
-; CHECK-SAME: i16 noundef [[VAL:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i16 [ [[SPEC_SELECT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    ret i16 [[SPEC_SELECT_LCSSA]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_05:%.*]] = phi i16 [ 12, %[[ENTRY]] ], [ [[SUB:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[K_04:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[SPEC_SELECT]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[I_05]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i16 [[TMP0]], [[VAL]]
-; CHECK-NEXT:    [[SUB]] = add nsw i16 [[I_05]], -1
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP1]], i16 [[SUB]], i16 [[K_04]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[SUB]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
-;
-entry:
-  br label %for.body
-
-for.cond.cleanup:                                 ; preds = %for.body
-  %spec.select.lcssa = phi i16 [ %spec.select, %for.body ]
-  ret i16 %spec.select.lcssa
-
-for.body:                                         ; preds = %entry, %for.body
-  %i.05 = phi i16 [ 12, %entry ], [ %sub, %for.body ]
-  %k.04 = phi i16 [ 0, %entry ], [ %spec.select, %for.body ]
-  %arrayidx = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %i.05
-  %0 = load i16, ptr %arrayidx, align 1
-  %cmp1 = icmp ugt i16 %0, %val
-  %sub = add nsw i16 %i.05, -1
-  %spec.select = select i1 %cmp1, i16 %sub, i16 %k.04
-  %cmp.not = icmp eq i16 %sub, 0
-  br i1 %cmp.not, label %for.cond.cleanup, label %for.body
-}
-
-@tablef = constant [13 x half] [half 10.0, half 35.0, half 69.0, half 147.0, half 280.0, half 472.0, half 682.0, half 1013.0, half 1559.0, half 2544.0, half 4556.0, half 6496.0, half 10000.0], align 1
-
-define i16 @non_reduction_index_half(half noundef %val) {
-; CHECK-LABEL: define i16 @non_reduction_index_half(
-; CHECK-SAME: half noundef [[VAL:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i16 [ [[SPEC_SELECT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    ret i16 [[SPEC_SELECT_LCSSA]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_05:%.*]] = phi i16 [ 12, %[[ENTRY]] ], [ [[SUB:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[K_04:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[SPEC_SELECT]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[I_05]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[FCMP1:%.*]] = fcmp ugt half [[TMP0]], [[VAL]]
-; CHECK-NEXT:    [[SUB]] = add nsw i16 [[I_05]], -1
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[FCMP1]], i16 [[SUB]], i16 [[K_04]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[SUB]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
-;
-entry:
-  br label %for.body
-
-for.cond.cleanup:                                 ; preds = %for.body
-  %spec.select.lcssa = phi i16 [ %spec.select, %for.body ]
-  ret i16 %spec.select.lcssa
-
-for.body:                                         ; preds = %entry, %for.body
-  %i.05 = phi i16 [ 12, %entry ], [ %sub, %for.body ]
-  %k.04 = phi i16 [ 0, %entry ], [ %spec.select, %for.body ]
-  %arrayidx = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %i.05
-  %0 = load half, ptr %arrayidx, align 1
-  %fcmp1 = fcmp ugt half %0, %val
-  %sub = add nsw i16 %i.05, -1
-  %spec.select = select i1 %fcmp1, i16 %sub, i16 %k.04
-  %cmp.not = icmp eq i16 %sub, 0
-  br i1 %cmp.not, label %for.cond.cleanup, label %for.body
 }
 
 ;.

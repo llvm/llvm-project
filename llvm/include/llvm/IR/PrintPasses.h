@@ -51,6 +51,9 @@ std::vector<std::string> printAfterPasses();
 // Returns true if we should always print the entire module.
 bool forcePrintModuleIR();
 
+// Returns true if we should print the entire function for loop passes.
+bool forcePrintFuncIR();
+
 // Return true if -filter-passes is empty or contains the pass name.
 bool isPassInPrintList(StringRef PassName);
 bool isFilterPassesEmpty();

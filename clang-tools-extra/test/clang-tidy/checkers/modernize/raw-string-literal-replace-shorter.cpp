@@ -6,8 +6,8 @@ char const *const NeedDelimiter("\":)\"");
 
 char const *const ManyQuotes("quotes:\'\'\'\'");
 // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: {{.*}} can be written as a raw string literal
-// CHECK-FIXES: {{^}}char const *const ManyQuotes(R"(quotes:'''')");{{$}}
+// CHECK-FIXES: char const *const ManyQuotes(R"(quotes:'''')");
 
 char const *const LongOctal("\042\072\051\042");
 // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: {{.*}} can be written as a raw string literal
-// CHECK-FIXES: {{^}}char const *const LongOctal(R"lit(":)")lit");{{$}}
+// CHECK-FIXES: char const *const LongOctal(R"lit(":)")lit");

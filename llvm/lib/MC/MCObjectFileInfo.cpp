@@ -13,6 +13,7 @@
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionDXContainer.h"
@@ -546,18 +547,51 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 }
 
 void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
-  TextSection = Ctx->getGOFFSection(".text", SectionKind::getText(), nullptr);
-  BSSSection = Ctx->getGOFFSection(".bss", SectionKind::getBSS(), nullptr);
-  PPA1Section = Ctx->getGOFFSection(".ppa1", SectionKind::getMetadata(),
-                                    TextSection, GOFF::SK_PPA1);
-  PPA2Section = Ctx->getGOFFSection(".ppa2", SectionKind::getMetadata(),
-                                    TextSection, GOFF::SK_PPA2);
+  MCSectionGOFF *RootSDSection = Ctx->getGOFFSection(
+      SectionKind::getMetadata(), "#C",
+      GOFF::SDAttr{GOFF::ESD_TA_Rent, GOFF::ESD_BSC_Section});
 
-  PPA2ListSection =
-      Ctx->getGOFFSection(".ppa2list", SectionKind::getData(), nullptr);
+  MCSectionGOFF *ADAEDSection = Ctx->getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_WSA,
+      GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1,
+                   GOFF::ESD_ALIGN_Quadword, 0},
+      RootSDSection);
+  ADASection = Ctx->getGOFFSection(SectionKind::getData(), "#S",
+                                   GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
+                                                GOFF::ESD_LT_XPLink,
+                                                GOFF::ESD_BSC_Section, 0},
+                                   ADAEDSection);
 
-  ADASection = Ctx->getGOFFSection(".ada", SectionKind::getData(), nullptr);
-  IDRLSection = Ctx->getGOFFSection("B_IDRL", SectionKind::getData(), nullptr);
+  TextSection = Ctx->getGOFFSection(
+      SectionKind::getText(), GOFF::CLASS_CODE,
+      GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_NormalName,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Concatenate,
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Doubleword, 0},
+      RootSDSection);
+
+  MCSectionGOFF *PPA2ListEDSection = Ctx->getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_PPA2,
+      GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Doubleword, 0},
+      RootSDSection);
+  PPA2ListSection = Ctx->getGOFFSection(SectionKind::getData(), ".&ppa2",
+                                        GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
+                                                     GOFF::ESD_LT_OS,
+                                                     GOFF::ESD_BSC_Section, 0},
+                                        PPA2ListEDSection);
+
+  IDRLSection = Ctx->getGOFFSection(
+      SectionKind::getData(), "B_IDRL",
+      GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_NormalName,
+                   GOFF::ESD_TS_Structured, GOFF::ESD_BA_Concatenate,
+                   GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Doubleword, 0},
+      RootSDSection);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
@@ -594,6 +628,16 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
     LSDASection = Ctx->getCOFFSection(".gcc_except_table",
                                       COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                           COFF::IMAGE_SCN_MEM_READ);
+  }
+
+  if (T.getArch() == Triple::aarch64) {
+    ImportCallSection =
+        Ctx->getCOFFSection(".impcall", COFF::IMAGE_SCN_LNK_INFO);
+  } else if (T.getArch() == Triple::x86_64) {
+    // Import Call Optimization on x64 leverages the same metadata as the
+    // retpoline mitigation, hence the unusual section name.
+    ImportCallSection =
+        Ctx->getCOFFSection(".retplne", COFF::IMAGE_SCN_LNK_INFO);
   }
 
   // Debug info.
@@ -1061,7 +1105,7 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
                               utostr(Hash), /*IsComdat=*/true);
   case Triple::Wasm:
     return Ctx->getWasmSection(Name, SectionKind::getMetadata(), 0,
-                               utostr(Hash), MCContext::GenericSectionID);
+                               utostr(Hash), MCSection::NonUniqueID);
   case Triple::MachO:
   case Triple::COFF:
   case Triple::GOFF:

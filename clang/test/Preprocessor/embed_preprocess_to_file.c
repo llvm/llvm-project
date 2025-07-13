@@ -37,3 +37,11 @@ const char even_more[] = {
 // DIRECTIVE-NEXT: #embed <jk.txt> prefix(4, 5,) suffix(, 6, 7) /* clang -E -dE */
 // DIRECTIVE-NEXT:  , 8, 9, 10
 // DIRECTIVE-NEXT: };
+
+constexpr char big_one[] = {
+#embed <big_char.txt>
+};
+
+// EXPANDED: constexpr char big_one[] = {255
+// DIRECTIVE: constexpr char big_one[] = {
+// DIRECTIVE-NEXT: #embed <big_char.txt>

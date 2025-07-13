@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_IS_POINTER_IN_RANGE_H
-#define _LIBCPP___UTILITY_IS_POINTER_IN_RANGE_H
+#ifndef _LIBCPP___CXX03___UTILITY_IS_POINTER_IN_RANGE_H
+#define _LIBCPP___CXX03___UTILITY_IS_POINTER_IN_RANGE_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__assert>
@@ -33,7 +33,7 @@ struct __is_less_than_comparable<_Tp, _Up, __void_t<decltype(std::declval<_Tp>()
 };
 
 template <class _Tp, class _Up, __enable_if_t<__is_less_than_comparable<const _Tp*, const _Up*>::value, int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
 __is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__is_valid_range(__begin, __end), "[__begin, __end) is not a valid range");
 
@@ -48,7 +48,7 @@ __is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
 }
 
 template <class _Tp, class _Up, __enable_if_t<!__is_less_than_comparable<const _Tp*, const _Up*>::value, int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
 __is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
   if (__libcpp_is_constant_evaluated())
     return false;
@@ -59,4 +59,4 @@ __is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_IS_POINTER_IN_RANGE_H
+#endif // _LIBCPP___CXX03___UTILITY_IS_POINTER_IN_RANGE_H

@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii < %s | FileCheck -check-prefix=GFX7 %s
 ; Not supported in gfx8 or gfx9, except  90a/940
 ; xUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX9,GFX90A %s
-; xUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx940 < %s | FileCheck -check-prefixes=GFX9,GFX940 %s
+; xUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx942 < %s | FileCheck -check-prefixes=GFX9,GFX942 %s
 
 define double @struct_ptr_buffer_atomic_fmin_f64_ret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset(double %val, ptr addrspace(8) inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
 ; GFX6-LABEL: struct_ptr_buffer_atomic_fmin_f64_ret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:

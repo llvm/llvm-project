@@ -11,7 +11,7 @@
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
 
-#include "DXILResourceAnalysis.h"
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
@@ -24,6 +24,7 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -53,7 +54,6 @@ constexpr bool isValidForDXIL(Attribute::AttrKind Attr) {
                        Attribute::Nest,
                        Attribute::NoAlias,
                        Attribute::NoBuiltin,
-                       Attribute::NoCapture,
                        Attribute::NoDuplicate,
                        Attribute::NoImplicitFloat,
                        Attribute::NoInline,
@@ -150,9 +150,49 @@ class DXILPrepareModule : public ModulePass {
                                      Type *Ty) {
     // Omit bitcasts if the incoming value matches the instruction type.
     auto It = PointerTypes.find(Operand);
-    if (It != PointerTypes.end())
-      if (cast<TypedPointerType>(It->second)->getElementType() == Ty)
+    if (It != PointerTypes.end()) {
+      auto *OpTy = cast<TypedPointerType>(It->second)->getElementType();
+      if (OpTy == Ty)
         return nullptr;
+    }
+
+    Type *ValTy = Operand->getType();
+    // Also omit the bitcast for matching global array types
+    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Operand))
+      ValTy = GlobalVar->getValueType();
+
+    if (auto *AI = dyn_cast<AllocaInst>(Operand))
+      ValTy = AI->getAllocatedType();
+
+    if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+      Type *ElTy = ArrTy->getElementType();
+      if (ElTy == Ty)
+        return nullptr;
+    }
+
+    // finally, drill down GEP instructions until we get the array
+    // that is being accessed, and compare element types
+    if (ConstantExpr *GEPInstr = dyn_cast<ConstantExpr>(Operand)) {
+      while (GEPInstr->getOpcode() == Instruction::GetElementPtr) {
+        Value *OpArg = GEPInstr->getOperand(0);
+        if (ConstantExpr *NewGEPInstr = dyn_cast<ConstantExpr>(OpArg)) {
+          GEPInstr = NewGEPInstr;
+          continue;
+        }
+
+        if (auto *GlobalVar = dyn_cast<GlobalVariable>(OpArg))
+          ValTy = GlobalVar->getValueType();
+        if (auto *AI = dyn_cast<AllocaInst>(Operand))
+          ValTy = AI->getAllocatedType();
+        if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+          Type *ElTy = ArrTy->getElementType();
+          if (ElTy == Ty)
+            return nullptr;
+        }
+        break;
+      }
+    }
+
     // Insert bitcasts where we are removing the instruction.
     Builder.SetInsertPoint(&Inst);
     // This code only gets hit in opaque-pointer mode, so the type of the
@@ -161,6 +201,15 @@ class DXILPrepareModule : public ModulePass {
     return Builder.Insert(
         CastInst::Create(Instruction::BitCast, Operand,
                          Builder.getPtrTy(PtrTy->getAddressSpace())));
+  }
+
+  static std::array<unsigned, 6> getCompatibleInstructionMDs(llvm::Module &M) {
+    return {M.getMDKindID("dx.nonuniform"),
+            M.getMDKindID("dx.controlflow.hints"),
+            M.getMDKindID("dx.precise"),
+            llvm::LLVMContext::MD_range,
+            llvm::LLVMContext::MD_alias_scope,
+            llvm::LLVMContext::MD_noalias};
   }
 
 public:
@@ -178,6 +227,9 @@ public:
     VersionTuple ValVer = MetadataInfo.ValidatorVersion;
     bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
 
+    // construct allowlist of valid metadata node kinds
+    std::array<unsigned, 6> DXILCompatibleMDs = getCompatibleInstructionMDs(M);
+
     for (auto &F : M.functions()) {
       F.removeFnAttrs(AttrMask);
       F.removeRetAttrs(AttrMask);
@@ -188,21 +240,20 @@ public:
       for (size_t Idx = 0, End = F.arg_size(); Idx < End; ++Idx)
         F.removeParamAttrs(Idx, AttrMask);
 
+      // Lifetime intrinsics in LLVM 3.7 do not have the memory FnAttr
+      if (Intrinsic::ID IID = F.getIntrinsicID();
+          IID == Intrinsic::lifetime_start || IID == Intrinsic::lifetime_end)
+        F.removeFnAttr(Attribute::Memory);
+
       for (auto &BB : F) {
         IRBuilder<> Builder(&BB);
         for (auto &I : make_early_inc_range(BB)) {
-          if (I.getOpcode() == Instruction::FNeg) {
-            Builder.SetInsertPoint(&I);
-            Value *In = I.getOperand(0);
-            Value *Zero = ConstantFP::get(In->getType(), -0.0);
-            I.replaceAllUsesWith(Builder.CreateFSub(Zero, In));
-            I.eraseFromParent();
-            continue;
-          }
+
+          I.dropUnknownNonDebugMetadata(DXILCompatibleMDs);
 
           // Emtting NoOp bitcast instructions allows the ValueEnumerator to be
           // unmodified as it reserves instruction IDs during contruction.
-          if (auto LI = dyn_cast<LoadInst>(&I)) {
+          if (auto *LI = dyn_cast<LoadInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, LI->getPointerOperand(),
                     LI->getType())) {
@@ -212,7 +263,7 @@ public:
             }
             continue;
           }
-          if (auto SI = dyn_cast<StoreInst>(&I)) {
+          if (auto *SI = dyn_cast<StoreInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, SI->getPointerOperand(),
                     SI->getValueOperand()->getType())) {
@@ -223,7 +274,7 @@ public:
             }
             continue;
           }
-          if (auto GEP = dyn_cast<GetElementPtrInst>(&I)) {
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, GEP->getPointerOperand(),
                     GEP->getSourceElementType()))
@@ -235,6 +286,17 @@ public:
             CB->removeRetAttrs(AttrMask);
             for (size_t Idx = 0, End = CB->arg_size(); Idx < End; ++Idx)
               CB->removeParamAttrs(Idx, AttrMask);
+            // LLVM 3.7 Lifetime intrinics require an i8* pointer operand, so we
+            // insert a bitcast here to ensure that is the case
+            if (isa<LifetimeIntrinsic>(CB)) {
+              Value *PtrOperand = CB->getArgOperand(1);
+              Builder.SetInsertPoint(CB);
+              PointerType *PtrTy = cast<PointerType>(PtrOperand->getType());
+              Value *NoOpBitcast = Builder.Insert(
+                  CastInst::Create(Instruction::BitCast, PtrOperand,
+                                   Builder.getPtrTy(PtrTy->getAddressSpace())));
+              CB->setArgOperand(1, NoOpBitcast);
+            }
             continue;
           }
         }
@@ -242,14 +304,22 @@ public:
     }
     // Remove flags not for DXIL.
     cleanModuleFlags(M);
+
+    // dx.rootsignatures will have been parsed from its metadata form as its
+    // binary form as part of the RootSignatureAnalysisWrapper, so safely
+    // remove it as it is not recognized in DXIL
+    if (NamedMDNode *RootSignature = M.getNamedMetadata("dx.rootsignatures"))
+      RootSignature->eraseFromParent();
+
     return true;
   }
 
   DXILPrepareModule() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+    AU.addRequired<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<RootSignatureAnalysisWrapper>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
-    AU.addPreserved<DXILResourceMDWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
   }
@@ -262,6 +332,7 @@ char DXILPrepareModule::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILPrepareModule, DEBUG_TYPE, "DXIL Prepare Module",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(RootSignatureAnalysisWrapper)
 INITIALIZE_PASS_END(DXILPrepareModule, DEBUG_TYPE, "DXIL Prepare Module", false,
                     false)
 

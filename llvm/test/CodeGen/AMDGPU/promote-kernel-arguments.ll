@@ -72,7 +72,7 @@ entry:
   ret void
 }
 
-@LDS = internal unnamed_addr addrspace(3) global [4 x float] undef, align 16
+@LDS = internal unnamed_addr addrspace(3) global [4 x float] poison, align 16
 
 ; GCN-LABEL: flat_ptr_arg:
 ; GCN-COUNT-2: global_load_dwordx2

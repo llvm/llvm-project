@@ -29,10 +29,10 @@ MemRefDescriptor::MemRefDescriptor(Value descriptor)
 }
 
 /// Builds IR creating an `undef` value of the descriptor type.
-MemRefDescriptor MemRefDescriptor::undef(OpBuilder &builder, Location loc,
-                                         Type descriptorType) {
+MemRefDescriptor MemRefDescriptor::poison(OpBuilder &builder, Location loc,
+                                          Type descriptorType) {
 
-  Value descriptor = builder.create<LLVM::UndefOp>(loc, descriptorType);
+  Value descriptor = builder.create<LLVM::PoisonOp>(loc, descriptorType);
   return MemRefDescriptor(descriptor);
 }
 
@@ -52,15 +52,15 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
   assert(type.hasStaticShape() && "unexpected dynamic shape");
 
   // Extract all strides and offsets and verify they are static.
-  auto [strides, offset] = getStridesAndOffset(type);
-  assert(!ShapedType::isDynamic(offset) && "expected static offset");
+  auto [strides, offset] = type.getStridesAndOffset();
+  assert(ShapedType::isStatic(offset) && "expected static offset");
   assert(!llvm::any_of(strides, ShapedType::isDynamic) &&
          "expected static strides");
 
   auto convertedType = typeConverter.convertType(type);
   assert(convertedType && "unexpected failure in memref type conversion");
 
-  auto descr = MemRefDescriptor::undef(builder, loc, convertedType);
+  auto descr = MemRefDescriptor::poison(builder, loc, convertedType);
   descr.setAllocatedPtr(builder, loc, memory);
   descr.setAlignedPtr(builder, loc, alignedMemory);
   descr.setConstantOffset(builder, loc, offset);
@@ -193,7 +193,7 @@ Value MemRefDescriptor::bufferPtr(OpBuilder &builder, Location loc,
                                   MemRefType type) {
   // When we convert to LLVM, the input memref must have been normalized
   // beforehand. Hence, this call is guaranteed to work.
-  auto [strides, offsetCst] = getStridesAndOffset(type);
+  auto [strides, offsetCst] = type.getStridesAndOffset();
 
   Value ptr = alignedPtr(builder, loc);
   // For zero offsets, we already have the base pointer.
@@ -218,13 +218,13 @@ Value MemRefDescriptor::bufferPtr(OpBuilder &builder, Location loc,
 /// - aligned pointer;
 /// - offset;
 /// - <rank> sizes;
-/// - <rank> shapes;
+/// - <rank> strides;
 /// where <rank> is the MemRef rank as provided in `type`.
 Value MemRefDescriptor::pack(OpBuilder &builder, Location loc,
                              const LLVMTypeConverter &converter,
                              MemRefType type, ValueRange values) {
   Type llvmType = converter.convertType(type);
-  auto d = MemRefDescriptor::undef(builder, loc, llvmType);
+  auto d = MemRefDescriptor::poison(builder, loc, llvmType);
 
   d.setAllocatedPtr(builder, loc, values[kAllocatedPtrPosInMemRefDescriptor]);
   d.setAlignedPtr(builder, loc, values[kAlignedPtrPosInMemRefDescriptor]);
@@ -260,7 +260,7 @@ void MemRefDescriptor::unpack(OpBuilder &builder, Location loc, Value packed,
 /// Returns the number of non-aggregate values that would be produced by
 /// `unpack`.
 unsigned MemRefDescriptor::getNumUnpackedValues(MemRefType type) {
-  // Two pointers, offset, <rank> sizes, <rank> shapes.
+  // Two pointers, offset, <rank> sizes, <rank> strides.
   return 3 + 2 * type.getRank();
 }
 
@@ -300,10 +300,10 @@ UnrankedMemRefDescriptor::UnrankedMemRefDescriptor(Value descriptor)
     : StructBuilder(descriptor) {}
 
 /// Builds IR creating an `undef` value of the descriptor type.
-UnrankedMemRefDescriptor UnrankedMemRefDescriptor::undef(OpBuilder &builder,
-                                                         Location loc,
-                                                         Type descriptorType) {
-  Value descriptor = builder.create<LLVM::UndefOp>(loc, descriptorType);
+UnrankedMemRefDescriptor UnrankedMemRefDescriptor::poison(OpBuilder &builder,
+                                                          Location loc,
+                                                          Type descriptorType) {
+  Value descriptor = builder.create<LLVM::PoisonOp>(loc, descriptorType);
   return UnrankedMemRefDescriptor(descriptor);
 }
 Value UnrankedMemRefDescriptor::rank(OpBuilder &builder, Location loc) const {
@@ -331,7 +331,7 @@ Value UnrankedMemRefDescriptor::pack(OpBuilder &builder, Location loc,
                                      UnrankedMemRefType type,
                                      ValueRange values) {
   Type llvmType = converter.convertType(type);
-  auto d = UnrankedMemRefDescriptor::undef(builder, loc, llvmType);
+  auto d = UnrankedMemRefDescriptor::poison(builder, loc, llvmType);
 
   d.setRank(builder, loc, values[kRankInUnrankedMemRefDescriptor]);
   d.setMemRefDescPtr(builder, loc, values[kPtrInUnrankedMemRefDescriptor]);

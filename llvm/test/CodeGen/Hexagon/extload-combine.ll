@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-small-data-threshold=0 -disable-hsdr  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=0 -disable-hsdr < %s | FileCheck %s
 ; Check that the combine/stxw instructions are being generated.
 ; In case of combine one of the operand should be 0 and another should be
 ; the output of absolute addressing load instruction.

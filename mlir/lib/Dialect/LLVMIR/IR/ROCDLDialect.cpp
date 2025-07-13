@@ -24,11 +24,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
 using namespace ROCDL;
@@ -234,8 +230,8 @@ ROCDLTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     emitError() << "The target chip cannot be empty.";
     return failure();
   }
-  if (abiVersion != "400" && abiVersion != "500") {
-    emitError() << "Invalid ABI version, it must be either `400` or `500`.";
+  if (abiVersion != "400" && abiVersion != "500" && abiVersion != "600") {
+    emitError() << "Invalid ABI version, it must be `400`, `500` or '600'.";
     return failure();
   }
   if (files && !llvm::all_of(files, [](::mlir::Attribute attr) {

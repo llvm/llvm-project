@@ -11,13 +11,11 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -87,7 +85,7 @@ static Value unFoldOpIntResult(OpBuilder &builder, Location loc,
                                OpFoldResult ofr) {
   if (std::optional<int64_t> i = getConstantIntValue(ofr); i.has_value())
     return constantIndex(builder, loc, *i);
-  return ofr.get<Value>();
+  return cast<Value>(ofr);
 }
 
 static Value tryFoldTensors(Value t) {
@@ -263,7 +261,7 @@ void LoopEmitter::initializeLoopEmit(
         denseTp = bufferization::getMemRefTypeWithFullyDynamicLayout(rtp);
 
       Value denseVal =
-          builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
+          builder.create<bufferization::ToBufferOp>(loc, denseTp, tensor);
       // Dense outputs need special handling.
       if (isOutput && updater)
         denseVal = updater(builder, loc, denseVal, tensor);
@@ -352,8 +350,7 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
     if (depRedOrder.empty())
       continue;
 
-    std::sort(depRedOrder.begin(), depRedOrder.end(),
-              [](auto &l, auto &r) { return std::get<0>(l) < std::get<0>(r); });
+    llvm::sort(depRedOrder, llvm::less_first());
 
     SmallVector<SparseIterator *> lastIter(tensors.size(), nullptr);
     for (auto [loop, t, lvl] : depRedOrder) {
@@ -405,7 +402,7 @@ void LoopEmitter::categorizeIterators(
       spIters.push_back(it);
   }
 
-  std::stable_sort(spIters.begin(), spIters.end(), [](auto lhs, auto rhs) {
+  llvm::stable_sort(spIters, [](auto lhs, auto rhs) {
     // AffineUnRed > Affine > Slice > Trivial
     return static_cast<uint8_t>(lhs->kind) > static_cast<uint8_t>(rhs->kind);
   });
@@ -930,7 +927,7 @@ std::pair<Operation *, Value> sparse_tensor::genCoIteration(
     ivs.push_back(uniIdx);
 
   // Ensures all operands are valid.
-  assert(llvm::all_of(ivs, [](Value v) { return v != nullptr; }));
+  assert(!llvm::is_contained(ivs, nullptr));
   TypeRange types = ValueRange(ivs).getTypes();
   auto whileOp = builder.create<scf::WhileOp>(loc, types, ivs);
 
@@ -956,10 +953,6 @@ std::pair<Operation *, Value> sparse_tensor::genCoIteration(
   // Generates loop body.
   builder.setInsertionPointToStart(after);
   ValueRange aArgs = after->getArguments();
-  // Since some LoopCondKind might need extra checks to filter out invalid
-  // iterations, we maintains another array to hold the iteration arguments to
-  // yield if the checks fails.
-  SmallVector<Value> nextArgs(aArgs.begin(), aArgs.end());
 
   for (SparseIterator *it : spIters) {
     aArgs = it->linkNewScope(aArgs);

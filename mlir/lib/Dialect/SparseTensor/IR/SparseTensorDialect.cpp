@@ -21,10 +21,8 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -518,7 +516,7 @@ SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
   SmallVector<AffineExpr> dimRep;
   dimRep.reserve(srcShape.size());
   for (int64_t sz : srcShape) {
-    if (!ShapedType::isDynamic(sz)) {
+    if (ShapedType::isStatic(sz)) {
       // Push back the max coordinate for the given dimension/level size.
       dimRep.push_back(getAffineConstantExpr(sz - 1, getContext()));
     } else {
@@ -791,7 +789,7 @@ LogicalResult SparseTensorEncodingAttr::verify(
     return emitError() << "unexpected coordinate bitwidth: " << crdWidth;
 
   // Verify every COO segment.
-  auto *it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isSingletonLT);
+  auto *it = llvm::find_if(lvlTypes, isSingletonLT);
   while (it != lvlTypes.end()) {
     if (it == lvlTypes.begin() ||
         !(it - 1)->isa<LevelFormat::Compressed, LevelFormat::LooseCompressed>())
@@ -799,8 +797,7 @@ LogicalResult SparseTensorEncodingAttr::verify(
                             "before singleton level";
 
     auto *curCOOEnd = std::find_if_not(it, lvlTypes.end(), isSingletonLT);
-    if (!std::all_of(it, curCOOEnd,
-                     [](LevelType i) { return isSingletonLT(i); }))
+    if (!std::all_of(it, curCOOEnd, isSingletonLT))
       return emitError() << "expected all singleton lvlTypes "
                             "following a singleton level";
     // We can potentially support mixed SoA/AoS singleton levels.
@@ -829,12 +826,11 @@ LogicalResult SparseTensorEncodingAttr::verify(
   }
 
   // TODO: audit formats that actually are supported by backend.
-  if (auto it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isNOutOfMLT);
+  if (auto it = llvm::find_if(lvlTypes, isNOutOfMLT);
       it != std::end(lvlTypes)) {
     if (it != lvlTypes.end() - 1)
       return emitError() << "expected n_out_of_m to be the last level type";
-    if (!std::all_of(lvlTypes.begin(), it,
-                     [](LevelType i) { return isDenseLT(i); }))
+    if (!std::all_of(lvlTypes.begin(), it, isDenseLT))
       return emitError() << "expected all dense lvlTypes "
                             "before a n_out_of_m level";
     if (dimToLvl && (dimToLvl.getNumDims() != dimToLvl.getNumResults())) {
@@ -1533,7 +1529,7 @@ OpFoldResult LvlOp::fold(FoldAdaptor adaptor) {
   };
 
   SmallVector<Size> lvlShape = stt.getLvlShape();
-  if (!ShapedType::isDynamic(lvlShape[lvl]))
+  if (ShapedType::isStatic(lvlShape[lvl]))
     return getIndexAttr(lvlShape[lvl]);
 
   return {};
@@ -1878,7 +1874,7 @@ LogicalResult ConcatenateOp::verify() {
   for (Dimension d = 0; d < dimRank; d++) {
     const Size dstSh = dstTp.getDimShape()[d];
     if (d == concatDim) {
-      if (!ShapedType::isDynamic(dstSh)) {
+      if (ShapedType::isStatic(dstSh)) {
         // If we reach here, then all inputs have static shapes.  So we
         // can use `getDimShape()[d]` instead of `*getDynamicDimSize(d)`
         // to avoid redundant assertions in the loop.
@@ -1896,7 +1892,7 @@ LogicalResult ConcatenateOp::verify() {
       Size prev = dstSh;
       for (const auto src : getInputs()) {
         const auto sh = getSparseTensorType(src).getDimShape()[d];
-        if (!ShapedType::isDynamic(prev) && sh != prev)
+        if (ShapedType::isStatic(prev) && sh != prev)
           return emitError("All dimensions (expect for the concatenating one) "
                            "should be equal.");
         prev = sh;
@@ -2060,7 +2056,7 @@ LogicalResult SortOp::verify() {
   const auto checkDim = [&](Value v, Size minSize,
                             const char *message) -> LogicalResult {
     const Size sh = getMemRefType(v).getShape()[0];
-    if (!ShapedType::isDynamic(sh) && sh < minSize)
+    if (ShapedType::isStatic(sh) && sh < minSize)
       return emitError(
           llvm::formatv("{0} got {1} < {2}", message, sh, minSize));
     return success();
@@ -2778,22 +2774,7 @@ Operation *SparseTensorDialect::materializeConstant(OpBuilder &builder,
   return nullptr;
 }
 
-namespace {
-struct SparseTensorAsmDialectInterface : public OpAsmDialectInterface {
-  using OpAsmDialectInterface::OpAsmDialectInterface;
-
-  AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
-    if (isa<SparseTensorEncodingAttr>(attr)) {
-      os << "sparse";
-      return AliasResult::OverridableAlias;
-    }
-    return AliasResult::NoAlias;
-  }
-};
-} // namespace
-
 void SparseTensorDialect::initialize() {
-  addInterface<SparseTensorAsmDialectInterface>();
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.cpp.inc"

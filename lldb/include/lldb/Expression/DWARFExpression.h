@@ -11,20 +11,16 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/dwarf.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
+#include "llvm/Support/Error.h"
 #include <functional>
 
 namespace lldb_private {
-
-namespace plugin {
-namespace dwarf {
-class DWARFUnit;
-} // namespace dwarf
-} // namespace plugin
 
 /// \class DWARFExpression DWARFExpression.h
 /// "lldb/Expression/DWARFExpression.h" Encapsulates a DWARF location
@@ -39,6 +35,32 @@ class DWARFUnit;
 /// location expression or a location list and interprets it.
 class DWARFExpression {
 public:
+  using Stack = std::vector<Value>;
+
+  class Delegate {
+  public:
+    Delegate() = default;
+    virtual ~Delegate() = default;
+
+    virtual uint16_t GetVersion() const = 0;
+    virtual dw_addr_t GetBaseAddress() const = 0;
+    virtual uint8_t GetAddressByteSize() const = 0;
+    virtual llvm::Expected<std::pair<uint64_t, bool>>
+    GetDIEBitSizeAndSign(uint64_t relative_die_offset) const = 0;
+    virtual dw_addr_t ReadAddressFromDebugAddrSection(uint32_t index) const = 0;
+    virtual lldb::offset_t
+    GetVendorDWARFOpcodeSize(const DataExtractor &data,
+                             const lldb::offset_t data_offset,
+                             const uint8_t op) const = 0;
+    virtual bool ParseVendorDWARFOpcode(uint8_t op,
+                                        const DataExtractor &opcodes,
+                                        lldb::offset_t &offset,
+                                        Stack &stack) const = 0;
+
+    Delegate(const Delegate &) = delete;
+    Delegate &operator=(const Delegate &) = delete;
+  };
+
   DWARFExpression();
 
   /// Constructor
@@ -61,27 +83,21 @@ public:
   ///     The dwarf unit this expression belongs to. Only required to resolve
   ///     DW_OP{addrx, GNU_addr_index}.
   ///
-  /// \param[out] error
-  ///     If the location stream contains unknown DW_OP opcodes or the
-  ///     data is missing, \a error will be set to \b true.
-  ///
   /// \return
   ///     The address specified by the operation, if the operation exists, or
-  ///     LLDB_INVALID_ADDRESS otherwise.
-  lldb::addr_t GetLocation_DW_OP_addr(const plugin::dwarf::DWARFUnit *dwarf_cu,
-                                      bool &error) const;
+  ///     an llvm::Error otherwise.
+  llvm::Expected<lldb::addr_t>
+  GetLocation_DW_OP_addr(const Delegate *dwarf_cu) const;
 
-  bool Update_DW_OP_addr(const plugin::dwarf::DWARFUnit *dwarf_cu,
-                         lldb::addr_t file_addr);
+  bool Update_DW_OP_addr(const Delegate *dwarf_cu, lldb::addr_t file_addr);
 
   void UpdateValue(uint64_t const_value, lldb::offset_t const_value_byte_size,
                    uint8_t addr_byte_size);
 
-  bool
-  ContainsThreadLocalStorage(const plugin::dwarf::DWARFUnit *dwarf_cu) const;
+  bool ContainsThreadLocalStorage(const Delegate *dwarf_cu) const;
 
   bool LinkThreadLocalStorage(
-      const plugin::dwarf::DWARFUnit *dwarf_cu,
+      const Delegate *dwarf_cu,
       std::function<lldb::addr_t(lldb::addr_t file_addr)> const
           &link_address_callback);
 
@@ -135,13 +151,8 @@ public:
   static llvm::Expected<Value>
   Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
            lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-           const plugin::dwarf::DWARFUnit *dwarf_cu,
-           const lldb::RegisterKind reg_set, const Value *initial_value_ptr,
-           const Value *object_address_ptr);
-
-  static bool ParseDWARFLocationList(const plugin::dwarf::DWARFUnit *dwarf_cu,
-                                     const DataExtractor &data,
-                                     DWARFExpressionList *loc_list);
+           const Delegate *dwarf_cu, const lldb::RegisterKind reg_set,
+           const Value *initial_value_ptr, const Value *object_address_ptr);
 
   bool GetExpressionData(DataExtractor &data) const {
     data = m_data;

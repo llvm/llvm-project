@@ -91,8 +91,13 @@ Bind default visibility defined function symbols locally for
 .It Fl Bsymbolic-non-weak-functions
 Bind default visibility defined STB_GLOBAL function symbols locally for
 .Fl shared.
-.It Fl --be8
+.It Fl -be8
 Write a Big Endian ELF File using BE8 format(AArch32 only)
+.It Fl -branch-to-branch
+Enable the branch-to-branch optimizations: a branch whose target is
+another branch instruction is rewritten to point to the latter branch
+target (AArch64 and X86_64 only). Enabled by default at
+.Fl O2 Ns .
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value
@@ -414,7 +419,7 @@ If not specified,
 .Dv a.out
 is used as a default.
 .It Fl O Ns Ar value
-Optimize output file size.
+Optimize output file.
 .Ar value
 may be:
 .Pp
@@ -424,7 +429,7 @@ Disable string merging.
 .It Cm 1
 Enable string merging.
 .It Cm 2
-Enable string tail merging.
+Enable string tail merging and branch-to-branch optimization.
 .El
 .Pp
 .Fl O Ns Cm 1
@@ -493,6 +498,10 @@ If
 .Fl -use-android-relr-tags
 is specified, use SHT_ANDROID_RELR instead of SHT_RELR.
 .Pp
+.It Fl -package-metadata
+Emit a percent-encoded string to the
+.Cm .note.package
+section. For example, %25 decodes to a single %.
 .It Fl -pic-veneer
 Always generate position independent thunks.
 .It Fl -pie , Fl -pic-executable
@@ -529,6 +538,19 @@ and
 .It Fl -pop-state
 Restore the states saved by
 .Fl -push-state.
+.It Fl -randomize-section-padding Ns = Ns Ar seed
+Randomly insert padding between input sections and at the start of each segment using the given seed.
+Padding is inserted into output sections with names matching the following patterns:
+.Cm .bss ,
+.Cm .data ,
+.Cm .data.rel.ro ,
+.Cm .lbss ,
+.Cm .ldata ,
+.Cm .lrodata ,
+.Cm .ltext ,
+.Cm .rodata
+and
+.Cm .text* .
 .It Fl --relax-gp
 Enable global pointer relaxation for RISC-V.
 .It Fl -relocatable , Fl r
@@ -738,6 +760,8 @@ Report unresolved symbols as warnings.
 Force load of all members in a static library.
 .It Fl -why-extract Ns = Ns Ar file
 Print to a file about why archive members are extracted.
+.It Fl -why-live Ns = Ns Ar glob
+Report a chain of references preventing garbage collection for each symbol matching the glob.
 .It Fl -wrap Ns = Ns Ar symbol
 Redirect
 .Ar symbol
@@ -773,6 +797,14 @@ is the default, linker will not report the missing property otherwise will be re
 Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT or GNU_PROPERTY_X86_FEATURE_1_SHSTK properties.
 .Cm none
 is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
+.It Cm dynamic-undefined-weak
+Make undefined weak symbols dynamic when the dynamic symbol table is present, if they are referenced from
+relocatable object files and not forced local by symbol visibility or versioning. Do not make them dynamic when
+.Cm nodynamic-undefined-weak
+is specified.
+.Cm dynamic-undefined-weak
+is the default when building a shared object, or when an input shared object is present.
 .Pp
 .It Cm pauth-report Ns = Ns Ar [none|warning|error]
 Specify how to report the missing GNU_PROPERTY_AARCH64_FEATURE_PAUTH property.
@@ -938,6 +970,11 @@ Let __start_/__stop_ references retain the associated C identifier name sections
 .It Cm text
 Do not allow relocations against read-only segments.
 This is the default.
+.Pp
+.It Cm nobtcfi
+Create a
+.Dv PT_OPENBSD_NOBTCFI
+segment.
 .Pp
 .It Cm wxneeded
 Create a

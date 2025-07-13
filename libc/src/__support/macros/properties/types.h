@@ -10,9 +10,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 
-#include "hdr/float_macros.h"                      // LDBL_MANT_DIG
+#include "hdr/float_macros.h"                        // LDBL_MANT_DIG
 #include "include/llvm-libc-macros/float16-macros.h" // LIBC_TYPES_HAS_FLOAT16
 #include "include/llvm-libc-types/float128.h"        // float128
+#include "src/__support/macros/config.h"             // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/cpu_features.h"
@@ -29,6 +30,11 @@
 #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
 #elif (LDBL_MANT_DIG == 106)
 #define LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+#endif
+
+#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+    !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
+#define LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 #endif
 
 // int64 / uint64 support
@@ -52,5 +58,15 @@ using float16 = _Float16;
 // -- float128 support --------------------------------------------------------
 // LIBC_TYPES_HAS_FLOAT128 and 'float128' type are provided by
 // "include/llvm-libc-types/float128.h"
+
+// -- bfloat16 support ---------------------------------------------------------
+
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
+struct BFloat16;
+}
+} // namespace LIBC_NAMESPACE_DECL
+
+using bfloat16 = LIBC_NAMESPACE::fputil::BFloat16;
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H

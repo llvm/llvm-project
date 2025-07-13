@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -81,6 +82,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   unsigned CalleeSavedStackSize = 0;
   unsigned SVECalleeSavedStackSize = 0;
   bool HasCalleeSavedStackSize = false;
+  bool HasSVECalleeSavedStackSize = false;
 
   /// Number of TLS accesses using the special (combinable)
   /// _TLS_MODULE_BASE_ symbol.
@@ -229,6 +231,14 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // on function entry to record the initial pstate of a function.
   Register PStateSMReg = MCRegister::NoRegister;
 
+  // Holds a pointer to a buffer that is large enough to represent
+  // all SME ZA state and any additional state required by the
+  // __arm_sme_save/restore support routines.
+  Register SMESaveBufferAddr = MCRegister::NoRegister;
+
+  // true if SMESaveBufferAddr is used.
+  bool SMESaveBufferUsed = false;
+
   // Has the PNReg used to build PTRUE instruction.
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
   unsigned PredicateRegForFillSpill = 0;
@@ -236,6 +246,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // The stack slots where VG values are stored to.
   int64_t VGIdx = std::numeric_limits<int>::max();
   int64_t StreamingVGIdx = std::numeric_limits<int>::max();
+
+  // Holds the SME function attributes (streaming mode, ZA/ZT0 state).
+  SMEAttrs SMEFnAttrs;
 
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
@@ -251,6 +264,12 @@ public:
   unsigned getPredicateRegForFillSpill() const {
     return PredicateRegForFillSpill;
   }
+
+  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
+  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
+
+  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
+  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
 
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
@@ -288,7 +307,10 @@ public:
     StackSizeSVE = S;
   }
 
-  uint64_t getStackSizeSVE() const { return StackSizeSVE; }
+  uint64_t getStackSizeSVE() const {
+    assert(hasCalculatedStackSizeSVE());
+    return StackSizeSVE;
+  }
 
   bool hasStackFrame() const { return HasStackFrame; }
   void setHasStackFrame(bool s) { HasStackFrame = s; }
@@ -382,8 +404,11 @@ public:
   // Saves the CalleeSavedStackSize for SVE vectors in 'scalable bytes'
   void setSVECalleeSavedStackSize(unsigned Size) {
     SVECalleeSavedStackSize = Size;
+    HasSVECalleeSavedStackSize = true;
   }
   unsigned getSVECalleeSavedStackSize() const {
+    assert(HasSVECalleeSavedStackSize &&
+           "SVECalleeSavedStackSize has not been calculated");
     return SVECalleeSavedStackSize;
   }
 
@@ -435,6 +460,8 @@ public:
     StackHazardCSRSlotIndex = Index;
   }
 
+  SMEAttrs getSMEFnAttrs() const { return SMEFnAttrs; }
+
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
 
@@ -481,8 +508,22 @@ public:
   /// Add a LOH directive of this @p Kind and this @p Args.
   void addLOHDirective(MCLOHType Kind, MILOHArgs Args) {
     LOHContainerSet.push_back(MILOHDirective(Kind, Args));
-    LOHRelated.insert(Args.begin(), Args.end());
+    LOHRelated.insert_range(Args);
   }
+
+  size_t
+  clearLinkerOptimizationHints(const SmallPtrSetImpl<MachineInstr *> &MIs) {
+    size_t InitialSize = LOHContainerSet.size();
+    erase_if(LOHContainerSet, [&](const auto &D) {
+      return any_of(D.getArgs(), [&](auto *Arg) { return MIs.contains(Arg); });
+    });
+    // In theory there could be an LOH with one label in MIs and another label
+    // outside MIs, however we don't know if the label outside MIs is used in
+    // any other LOHs, so we can't remove them from LOHRelated. In that case, we
+    // might produce a few extra labels, but it won't break anything.
+    LOHRelated.remove_if([&](auto *MI) { return MIs.contains(MI); });
+    return InitialSize - LOHContainerSet.size();
+  };
 
   SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
     return ForwardedMustTailRegParms;
@@ -558,6 +599,7 @@ private:
 namespace yaml {
 struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<bool> HasRedZone;
+  std::optional<uint64_t> StackSizeSVE;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
@@ -569,6 +611,7 @@ struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
 template <> struct MappingTraits<AArch64FunctionInfo> {
   static void mapping(IO &YamlIO, AArch64FunctionInfo &MFI) {
     YamlIO.mapOptional("hasRedZone", MFI.HasRedZone);
+    YamlIO.mapOptional("stackSizeSVE", MFI.StackSizeSVE);
   }
 };
 

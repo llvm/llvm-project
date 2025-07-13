@@ -42,7 +42,7 @@
 // RUN:     -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
 // RUN:  | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-index-to-llvm{index-bitwidth=32},canonicalize,cse))' \
 // RUN:  | mlir-opt --gpu-to-llvm --gpu-module-to-binary=format=%gpu_compilation_format -canonicalize -cse -reconcile-unrealized-casts \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
@@ -96,8 +96,8 @@ func.func @main() {
     scf.if %10 {
       %11 = memref.load %out[%c45, %c7] : memref<64x8xf32, 3>
       %12 = memref.load %out_1[%c7, %c0] : memref<8x128xf32, 3>
-      gpu.printf "[GPU] TMA LOADED lhs[45][7] %f\0A" %11 : f32
-      gpu.printf "[GPU] TMA LOADED rhs[7][0] %f\0A" %12 : f32
+      gpu.printf "[GPU] TMA LOADED lhs[45][7] %f\0A", %11 : f32
+      gpu.printf "[GPU] TMA LOADED rhs[7][0] %f\0A", %12 : f32
     }
     gpu.terminator
   }

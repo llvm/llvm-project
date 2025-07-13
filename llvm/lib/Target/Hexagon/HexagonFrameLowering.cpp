@@ -196,29 +196,18 @@ static cl::opt<unsigned> SpillOptMax("spill-opt-max", cl::Hidden,
 static unsigned SpillOptCount = 0;
 #endif
 
-namespace llvm {
-
-  void initializeHexagonCallFrameInformationPass(PassRegistry&);
-  FunctionPass *createHexagonCallFrameInformation();
-
-} // end namespace llvm
-
 namespace {
 
   class HexagonCallFrameInformation : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonCallFrameInformation() : MachineFunctionPass(ID) {
-      PassRegistry &PR = *PassRegistry::getPassRegistry();
-      initializeHexagonCallFrameInformationPass(PR);
-    }
+    HexagonCallFrameInformation() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
   };
 
@@ -413,7 +402,7 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
   MachineDominatorTree MDT;
-  MDT.calculate(MF);
+  MDT.recalculate(MF);
   MachinePostDominatorTree MPT;
   MPT.recalculate(MF);
 
@@ -1076,20 +1065,18 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
         .addCFIIndex(MF.addFrameInst(OffR30));
   }
 
-  static Register RegsToMove[] = {
+  static const MCPhysReg RegsToMove[] = {
     Hexagon::R1,  Hexagon::R0,  Hexagon::R3,  Hexagon::R2,
     Hexagon::R17, Hexagon::R16, Hexagon::R19, Hexagon::R18,
     Hexagon::R21, Hexagon::R20, Hexagon::R23, Hexagon::R22,
     Hexagon::R25, Hexagon::R24, Hexagon::R27, Hexagon::R26,
     Hexagon::D0,  Hexagon::D1,  Hexagon::D8,  Hexagon::D9,
-    Hexagon::D10, Hexagon::D11, Hexagon::D12, Hexagon::D13,
-    Hexagon::NoRegister
+    Hexagon::D10, Hexagon::D11, Hexagon::D12, Hexagon::D13
   };
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
-  for (unsigned i = 0; RegsToMove[i] != Hexagon::NoRegister; ++i) {
-    Register Reg = RegsToMove[i];
+  for (MCPhysReg Reg : RegsToMove) {
     auto IfR = [Reg] (const CalleeSavedInfo &C) -> bool {
       return C.getReg() == Reg;
     };
@@ -1411,7 +1398,7 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
   }
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     // Add live in registers. We treat eh_return callee saved register r0 - r3
     // specially. They are not really callee saved registers as they are not
     // supposed to be killed.
@@ -1480,7 +1467,7 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
   }
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
     int FI = I.getFrameIdx();
     HII.loadRegFromStackSlot(MBB, MI, Reg, FI, RC, &HRI, Register());
@@ -1514,7 +1501,7 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
     return;
 
   // Set the physical aligned-stack base address register.
-  Register AP = 0;
+  MCRegister AP;
   if (const MachineInstr *AI = getAlignaInstr(MF))
     AP = AI->getOperand(0).getReg();
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
@@ -2209,10 +2196,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
   // and collect relevant information.
   for (auto &B : MF) {
     std::map<int,IndexType> LastStore, LastLoad;
-    // Emplace appears not to be supported in gcc 4.7.2-4.
-    //auto P = BlockIndexes.emplace(&B, HexagonBlockRanges::InstrIndexMap(B));
-    auto P = BlockIndexes.insert(
-                std::make_pair(&B, HexagonBlockRanges::InstrIndexMap(B)));
+    auto P = BlockIndexes.emplace(&B, HexagonBlockRanges::InstrIndexMap(B));
     auto &IndexMap = P.first->second;
     LLVM_DEBUG(dbgs() << "Index map for " << printMBBReference(B) << "\n"
                       << IndexMap << '\n');
@@ -2283,18 +2267,20 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
           continue;
 
         IndexType Index = IndexMap.getIndex(&In);
+        auto &LS = LastStore[FI];
+        auto &LL = LastLoad[FI];
         if (Load) {
-          if (LastStore[FI] == IndexType::None)
-            LastStore[FI] = IndexType::Entry;
-          LastLoad[FI] = Index;
+          if (LS == IndexType::None)
+            LS = IndexType::Entry;
+          LL = Index;
         } else if (Store) {
           HexagonBlockRanges::RangeList &RL = FIRangeMap[FI].Map[&B];
-          if (LastStore[FI] != IndexType::None)
-            RL.add(LastStore[FI], LastLoad[FI], false, false);
-          else if (LastLoad[FI] != IndexType::None)
-            RL.add(IndexType::Entry, LastLoad[FI], false, false);
-          LastLoad[FI] = IndexType::None;
-          LastStore[FI] = Index;
+          if (LS != IndexType::None)
+            RL.add(LS, LL, false, false);
+          else if (LL != IndexType::None)
+            RL.add(IndexType::Entry, LL, false, false);
+          LL = IndexType::None;
+          LS = Index;
         } else {
           BadFIs.insert(FI);
         }
@@ -2590,7 +2576,7 @@ bool HexagonFrameLowering::shouldInlineCSR(const MachineFunction &MF,
   // a contiguous block starting from D8.
   BitVector Regs(Hexagon::NUM_TARGET_REGS);
   for (const CalleeSavedInfo &I : CSI) {
-    Register R = I.getReg();
+    MCRegister R = I.getReg();
     if (!Hexagon::DoubleRegsRegClass.contains(R))
       return true;
     Regs[R] = true;
