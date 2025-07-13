@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
+#include <atomic>
 #include <mutex>
 #include <queue>
 #include <shared_mutex>
@@ -37,12 +38,18 @@ class LibraryPathCache {
 public:
   LibraryPathCache() = default;
 
-  void clear();
+  void clear() {
+    std::unique_lock<std::shared_mutex> lock(m_mutex);
+    m_seen.clear();
+    m_readlinkCache.clear();
+    m_realpathCache.clear();
+    m_lstatCache.clear();
+  }
 
   void markSeen(const std::string &canon_path) { m_seen.insert(canon_path); }
 
   bool hasSeen(StringRef canon_path, bool cache = true) {
-    std::shared_lock lock(m_mutex);
+    std::shared_lock<std::shared_mutex> lock(m_mutex);
     std::string s = canon_path.str();
     if (m_seen.count(s) > 0)
       return true;
@@ -133,9 +140,9 @@ private:
   std::optional<std::string> normalizeIfShared(StringRef path);
 };
 
-enum class PathKind { User, System };
+enum class PathKind : uint8_t { User, System, Unknown };
 
-enum class ScanState { NotScanned, Scanning, Scanned };
+enum class ScanState : uint8_t { NotScanned, Scanning, Scanned };
 
 struct LibraryUnit {
   std::string basePath; // Canonical base directory path
@@ -163,8 +170,10 @@ public:
       addBasePath(p);
   }
 
-  void addBasePath(
-      const std::string &path); // Add a canonical directory for scanning
+  void
+  addBasePath(const std::string &path,
+              PathKind Kind =
+                  PathKind::Unknown); // Add a canonical directory for scanning
   std::vector<std::shared_ptr<LibraryUnit>> getNextBatch(PathKind kind,
                                                          size_t batchSize);
 
