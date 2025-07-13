@@ -82,6 +82,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -4076,7 +4077,15 @@ bool NewGVN::eliminateInstructions(Function &F) {
                 if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
                   patchReplacementInstruction(DefI, DominatingLeader);
 
-                salvageDebugInfo(*DefI);
+                SmallVector<DbgVariableIntrinsic *> DbgUsers;
+                SmallVector<DbgVariableRecord *> DVRUsers;
+                findDbgUsers(DbgUsers, DefI, &DVRUsers);
+
+                for (auto *DVI: DbgUsers)
+                  DVI->replaceVariableLocationOp(DefI, DominatingLeader);
+                for (auto *DVR: DVRUsers)
+                  DVR->replaceVariableLocationOp(DefI, DominatingLeader);
+
                 markInstructionForDeletion(DefI);
               }
             }

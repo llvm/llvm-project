@@ -5,7 +5,8 @@
 
 
 define void @binop(i32 %x, i32 %y) !dbg !5 {
-; CHECK: #dbg_value(!DIArgList(i32 %y, i32 %x), [[META11:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[META13:![0-9]+]])
+; CHECK:      #dbg_value(i32 %add1, [[META9:![0-9]+]], !DIExpression(), [[META12:![0-9]+]])
+; CHECK-NEXT: #dbg_value(i32 %add1, [[META11:![0-9]+]], !DIExpression(), [[META13:![0-9]+]])
 ;
   %add1 = add i32 %x, %y, !dbg !12
     #dbg_value(i32 %add1, !9, !DIExpression(), !12)
@@ -38,6 +39,8 @@ declare void @use(i32, i32)
 !14 = !DILocation(line: 3, column: 1, scope: !5)
 !15 = !DILocation(line: 4, column: 1, scope: !5)
 ;.
+; CHECK: [[META9]] = !DILocalVariable(name: "1",
 ; CHECK: [[META11]] = !DILocalVariable(name: "2",
+; CHECK: [[META12]] = !DILocation(line: 1,
 ; CHECK: [[META13]] = !DILocation(line: 2,
 ;.
