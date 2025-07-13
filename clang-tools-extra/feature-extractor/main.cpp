@@ -7,6 +7,10 @@
 // Declares llvm::cl::extrahelp.
 #include "llvm/Support/CommandLine.h"
 
+#include "FeatureManager.h"
+
+#include "features/NumLoops.h"
+
 using namespace clang::tooling;
 using namespace clang::ast_matchers;
 using namespace llvm;
@@ -23,33 +27,19 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 // A help message for this specific tool can be added afterwards.
 static cl::extrahelp MoreHelp("\nMore help text...\n");
 
-StatementMatcher LoopMatcher =
-    forStmt(hasLoopInit(declStmt(hasSingleDecl(
-                varDecl(hasInitializer(integerLiteral(equals(0))))))))
-        .bind("forLoop");
-
-class LoopPrinter : public MatchFinder::MatchCallback {
-public:
-  virtual void run(const MatchFinder::MatchResult &Result) override {
-    if (const auto *FS = Result.Nodes.getNodeAs<clang::ForStmt>("forLoop"))
-      FS->dump();
-  }
-};
-
 int main(int argc, const char **argv) {
   auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
+
   if (!ExpectedParser) {
     // Fail gracefully for unsupported options.
     llvm::errs() << ExpectedParser.takeError();
     return 1;
   }
+
   CommonOptionsParser &OptionsParser = ExpectedParser.get();
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
+  FeatureManager<NumLoops> manager;
 
-  LoopPrinter Printer;
-  MatchFinder Finder;
-  Finder.addMatcher(LoopMatcher, &Printer);
-
-  return Tool.run(newFrontendActionFactory(&Finder).get());
+  return Tool.run(newFrontendActionFactory(manager.get_match_finder()).get());
 }
