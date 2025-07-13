@@ -4842,54 +4842,6 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
-static EVT getFloatVT(EVT VT) {
-  EVT FT = MVT::getFloatingPointVT(VT.getScalarSizeInBits());
-  return VT.isVector() ? VT.changeVectorElementType(FT) : FT;
-}
-
-static SDValue getBitwiseToSrcModifierOp(SDValue N,
-                                         TargetLowering::DAGCombinerInfo &DCI) {
-
-  unsigned Opc = N.getNode()->getOpcode();
-  if (Opc != ISD::AND && Opc != ISD::XOR && Opc != ISD::OR)
-    return SDValue();
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-  ConstantSDNode *CRHS = isConstOrConstSplat(RHS);
-
-  if (!CRHS)
-    return SDValue();
-
-  EVT VT = RHS.getValueType();
-  EVT FVT = getFloatVT(VT);
-  SDLoc SL = SDLoc(N);
-
-  switch (Opc) {
-  case ISD::XOR:
-    if (CRHS->getAPIntValue().isSignMask())
-      return DAG.getNode(ISD::FNEG, SL, FVT,
-                         DAG.getNode(ISD::BITCAST, SL, FVT, LHS));
-    break;
-  case ISD::OR:
-    if (CRHS->getAPIntValue().isSignMask()) {
-      SDValue Abs = DAG.getNode(ISD::FABS, SL, FVT,
-                                DAG.getNode(ISD::BITCAST, SL, FVT, LHS));
-      return DAG.getNode(ISD::FNEG, SL, FVT, Abs);
-    }
-    break;
-  case ISD::AND:
-    if (CRHS->getAPIntValue().isMaxSignedValue())
-      return DAG.getNode(ISD::FABS, SL, FVT,
-                         DAG.getNode(ISD::BITCAST, SL, FVT, LHS));
-    break;
-  default:
-    return SDValue();
-  }
-  return SDValue();
-}
-
 SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   if (SDValue Folded = foldFreeOpFromSelect(DCI, SDValue(N, 0)))
@@ -4930,24 +4882,6 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
       // DCI.AddToWorklist(MinMax.getNode());
       return MinMax;
     }
-
-    auto FoldSrcMods = [&](SDValue LHS, SDValue RHS, EVT VT) -> SDValue {
-      SDValue SrcModTrue = getBitwiseToSrcModifierOp(LHS, DCI);
-      SDValue SrcModFalse = getBitwiseToSrcModifierOp(RHS, DCI);
-      if (SrcModTrue || SrcModFalse) {
-        SDLoc SL(N);
-        EVT FVT =
-            SrcModTrue ? SrcModTrue.getValueType() : SrcModFalse.getValueType();
-        SDValue FLHS =
-            SrcModTrue ? SrcModTrue : DAG.getNode(ISD::BITCAST, SL, FVT, LHS);
-        SDValue FRHS =
-            SrcModFalse ? SrcModFalse : DAG.getNode(ISD::BITCAST, SL, FVT, RHS);
-        SDValue FSelect = DAG.getNode(ISD::SELECT, SL, FVT, Cond, FLHS, FRHS);
-        return DAG.getNode(ISD::BITCAST, SL, VT, FSelect);
-      }
-      return SDValue();
-    };
-
   }
 
   // There's no reason to not do this if the condition has other uses.
