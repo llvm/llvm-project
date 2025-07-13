@@ -1472,6 +1472,7 @@ def AVRSystemLibrary
 // Hexagon Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
+defset list<RuntimeLibcallImpl> HexagonLibcalls = {
 def __hexagon_divsi3 : RuntimeLibcallImpl<SDIV_I32>;
 def __hexagon_divdi3 : RuntimeLibcallImpl<SDIV_I64>;
 def __hexagon_udivsi3 : RuntimeLibcallImpl<UDIV_I32>;
@@ -1504,6 +1505,16 @@ def __hexagon_fast2_sqrtdf2 : RuntimeLibcallImpl<FAST_SQRT_F64>;
 
 def __hexagon_memcpy_likely_aligned_min32bytes_mult8bytes
     : RuntimeLibcallImpl<HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES>;
+}
+
+def isHexagon : RuntimeLibcallPredicate<"TT.getArch() == Triple::hexagon">;
+
+def HexagonSystemLibrary
+    : SystemRuntimeLibrary<isHexagon,
+    (add (sub DefaultLibcallImpls32,
+    __adddf3, __divsf3, __udivsi3, __udivdi3,
+    __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
+    __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls)>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
