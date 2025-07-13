@@ -25,7 +25,8 @@ using namespace ento;
 
 namespace {
 
-using StmtVec = llvm::SmallVector<const Stmt*>;
+using AncestorStmt = llvm::PointerIntPair<const Stmt*, 1, bool>;
+using StmtVec = llvm::SmallVector<AncestorStmt>;
 
 class AccessStmt {
     llvm::PointerIntPair<const Stmt*, 1, bool> StmtAndIsStore;
@@ -125,6 +126,7 @@ StmtVec UnsequencedAccessChecker::getAllASTAncestors(
     assert(CurrentFrame != nullptr);
 
     StmtVec Ancestors;
+    bool HasChangedStackFrame = false;
 
     while (true) {
 
@@ -157,15 +159,16 @@ StmtVec UnsequencedAccessChecker::getAllASTAncestors(
 
             ParentS = CurrentFrame->getCallSite();
             CurrentFrame = CurrentFrame->getParent()->getStackFrame();
+            HasChangedStackFrame = true;
         }
         assert(ParentS != nullptr);
 
-        Ancestors.push_back(CurrentS);
+        Ancestors.emplace_back(CurrentS, HasChangedStackFrame);
 
         CurrentS = ParentS;
     }
 
-    Ancestors.push_back(CurrentS);
+    Ancestors.emplace_back(CurrentS, HasChangedStackFrame);
 
     return Ancestors;
 }
@@ -236,8 +239,9 @@ bool UnsequencedAccessChecker::isUnsequencedStmt(
 }
 
 static void print_ancestors(const StmtVec& ancestors) {
-    for (const Stmt* S : ancestors) {
-        std::cout << S->getStmtClassName() << " " << S << std::endl;
+    for (AncestorStmt S : ancestors) {
+        std::cout << S.getPointer()->getStmtClassName() << " " << S.getPointer() 
+                  << std::endl;
     }
 }
 
@@ -383,7 +387,8 @@ void UnsequencedAccessChecker::checkAgainstSet(
         if(checkAncestors(CommonIdx, OtherAccess, OtherAncestors, CurrentAccess,
                           Ancestors, C.getLangOpts())) {
 
-            const Stmt* CommonS = Ancestors[Ancestors.size() - CommonIdx];
+            const Stmt* CommonS =
+                Ancestors[Ancestors.size() - CommonIdx].getPointer();
 
             if (PrintDebugLog) {
                 std::cout << "Common found: " << CommonS << " "
@@ -401,7 +406,7 @@ int UnsequencedAccessChecker::findCommonAncestorIdx(const StmtVec& A,
                                                     const StmtVec& B) {
     unsigned I = 1;
     while (I <= std::min(A.size(), B.size())) {
-        if (A[A.size() - I] != B[B.size() - I])
+        if (A[A.size() - I].getPointer() != B[B.size() - I].getPointer())
             break;
         I++;
     }
@@ -416,15 +421,17 @@ bool UnsequencedAccessChecker::checkAncestors(
         int CommonIdx, AccessStmt A, const StmtVec& AVec, AccessStmt B,
         const StmtVec& BVec, const LangOptions& Opts) const {
 
-    const Stmt* CommonS = AVec[AVec.size() - CommonIdx];
+    const Stmt* CommonS = AVec[AVec.size() - CommonIdx].getPointer();
+
+    bool IsAInDifferentFrame = AVec[AVec.size() - CommonIdx].getInt();
+    bool IsBInDifferentFrame = BVec[BVec.size() - CommonIdx].getInt();
 
     if (const auto* BO = dyn_cast<BinaryOperator>(CommonS)) {
         if (BO->isLogicalOp() || BO->isCommaOp() || BO->isPtrMemOp())
             return false;
 
-        if (Opts.CPlusPlus17 && BO->isShiftOp()) {
+        if (Opts.CPlusPlus17 && BO->isShiftOp())
             return false;
-        }
 
         if (BO->isAssignmentOp()) {
             if (Opts.CPlusPlus17)
@@ -441,7 +448,12 @@ bool UnsequencedAccessChecker::checkAncestors(
                 std::cout << "BSide is: " << BSide << " "
                           << BSide->getStmtClassName() << std::endl;
             }
+
             if (Accessed == A.getExpr()->IgnoreParenCasts()) {
+
+                if (IsBInDifferentFrame)
+                    return false;
+
                 if (!B.isStore())
                     return false;
 
@@ -450,6 +462,10 @@ bool UnsequencedAccessChecker::checkAncestors(
             }
 
             if (Accessed == B.getExpr()->IgnoreParenCasts()) {
+
+                if (IsAInDifferentFrame)
+                    return false;
+
                 if (!A.isStore())
                     return false;
 
@@ -483,8 +499,11 @@ bool UnsequencedAccessChecker::checkAncestors(
         bool AFound = false;
         bool BFound = false;
 
-        const Stmt* AFirstChild = AVec[AVec.size() - CommonIdx - 1];
-        const Stmt* BFirstChild = BVec[BVec.size() - CommonIdx - 1];
+        const Stmt* AFirstChild = 
+            AVec[AVec.size() - CommonIdx - 1].getPointer();
+
+        const Stmt* BFirstChild = 
+            BVec[BVec.size() - CommonIdx - 1].getPointer();
 
         if (!Opts.CPlusPlus17 && AFirstChild == CE->getCallee())
             AFound = true;
@@ -514,10 +533,11 @@ bool UnsequencedAccessChecker::hasClosePreUnaryOperatorAncestor(
 
     int VecSize = Vec.size();
     for (int I = 1; I < VecSize; I++) {
-        if (isa<ParenExpr>(Vec[I]) || isa<CastExpr>(Vec[I]))
+        if (isa<ParenExpr>(Vec[I].getPointer()) ||
+                isa<CastExpr>(Vec[I].getPointer()))
             continue;
 
-        if (const auto* Op = dyn_cast<UnaryOperator>(Vec[I]))
+        if (const auto* Op = dyn_cast<UnaryOperator>(Vec[I].getPointer()))
             return Op->isPrefix();
 
         break;

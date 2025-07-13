@@ -164,6 +164,7 @@ static void function_checks(void) {
 
     float a2 = 0.1f;
     float* fp = &a2;
+    int a3 = 22;
 
     if (inc_and_return(&globalInt) + globalInt) {}
     // expected-warning@-1{{unsequenced write to and read from variable}}
@@ -186,6 +187,8 @@ static void function_checks(void) {
     // expected-warning@-1{{unsequenced writes to variable}}
     // expected-note@-2{{variable is written to here}}
     // expected-note@-3{{variable is written to here}}
+
+    a3 = *inc_and_return(&a3);
 }
 
 static void loop_checks(void) {
