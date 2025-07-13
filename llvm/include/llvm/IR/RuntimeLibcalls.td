@@ -696,7 +696,6 @@ def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
 
 // Clear cache
 def __clear_cache : RuntimeLibcallImpl<CLEAR_CACHE>;
-def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 
 //--------------------------------------------------------------------
 // libm
@@ -955,6 +954,8 @@ defm sincos : LibmLongDoubleLibCall;
 def bzero : RuntimeLibcallImpl<BZERO>;
 def __bzero : RuntimeLibcallImpl<BZERO>;
 def _Unwind_SjLj_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+
+def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 
 //===----------------------------------------------------------------------===//
 // F128 libm Runtime Libcalls
@@ -1902,6 +1903,18 @@ def PPCSystemLibrary
            LibmF128Libcalls, AIX32Calls, AIX64Calls,
            AvailableIf<memcpy, isNotAIX>,
            LibcallImpls<(add Int128RTLibcalls), isPPC64>)>;
+
+//===----------------------------------------------------------------------===//
+// RISCV Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isRISCV : RuntimeLibcallPredicate<"TT.isRISCV()">;
+def isRISCV64 : RuntimeLibcallPredicate<"TT.isRISCV64()">;
+
+def RISCVSystemLibrary
+    : SystemRuntimeLibrary<isRISCV,
+      (add DefaultRuntimeLibcallImpls, __riscv_flush_icache,
+           LibcallImpls<(add Int128RTLibcalls), isRISCV64>)>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
