@@ -8569,122 +8569,6 @@ static SDValue getHopForBuildVector(const BuildVectorSDNode *BV,
   return DAG.getNode(HOpcode, DL, VT, V0, V1);
 }
 
-/// Lower BUILD_VECTOR to a horizontal add/sub operation if possible.
-static SDValue LowerToHorizontalOp(const BuildVectorSDNode *BV, const SDLoc &DL,
-                                   const X86Subtarget &Subtarget,
-                                   SelectionDAG &DAG) {
-  // We need at least 2 non-undef elements to make this worthwhile by default.
-  unsigned NumNonUndefs =
-      count_if(BV->op_values(), [](SDValue V) { return !V.isUndef(); });
-  if (NumNonUndefs < 2)
-    return SDValue();
-
-  // There are 4 sets of horizontal math operations distinguished by type:
-  // int/FP at 128-bit/256-bit. Each type was introduced with a different
-  // subtarget feature. Try to match those "native" patterns first.
-  MVT VT = BV->getSimpleValueType(0);
-  if (((VT == MVT::v4f32 || VT == MVT::v2f64) && Subtarget.hasSSE3()) ||
-      ((VT == MVT::v8i16 || VT == MVT::v4i32) && Subtarget.hasSSSE3()) ||
-      ((VT == MVT::v8f32 || VT == MVT::v4f64) && Subtarget.hasAVX()) ||
-      ((VT == MVT::v16i16 || VT == MVT::v8i32) && Subtarget.hasAVX2())) {
-    unsigned HOpcode;
-    SDValue V0, V1;
-    if (isHopBuildVector(BV, DAG, HOpcode, V0, V1))
-      return getHopForBuildVector(BV, DL, DAG, HOpcode, V0, V1);
-  }
-
-  // Try harder to match 256-bit ops by using extract/concat.
-  if (!Subtarget.hasAVX() || !VT.is256BitVector())
-    return SDValue();
-
-  // Count the number of UNDEF operands in the build_vector in input.
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned Half = NumElts / 2;
-  unsigned NumUndefsLO = 0;
-  unsigned NumUndefsHI = 0;
-  for (unsigned i = 0, e = Half; i != e; ++i)
-    if (BV->getOperand(i)->isUndef())
-      NumUndefsLO++;
-
-  for (unsigned i = Half, e = NumElts; i != e; ++i)
-    if (BV->getOperand(i)->isUndef())
-      NumUndefsHI++;
-
-  SDValue InVec0, InVec1;
-  if (VT == MVT::v8i32 || VT == MVT::v16i16) {
-    SDValue InVec2, InVec3;
-    unsigned X86Opcode;
-    bool CanFold = true;
-
-    if (isHorizontalBinOpPart(BV, ISD::ADD, DL, DAG, 0, Half, InVec0, InVec1) &&
-        isHorizontalBinOpPart(BV, ISD::ADD, DL, DAG, Half, NumElts, InVec2,
-                              InVec3) &&
-        ((InVec0.isUndef() || InVec2.isUndef()) || InVec0 == InVec2) &&
-        ((InVec1.isUndef() || InVec3.isUndef()) || InVec1 == InVec3))
-      X86Opcode = X86ISD::HADD;
-    else if (isHorizontalBinOpPart(BV, ISD::SUB, DL, DAG, 0, Half, InVec0,
-                                   InVec1) &&
-             isHorizontalBinOpPart(BV, ISD::SUB, DL, DAG, Half, NumElts, InVec2,
-                                   InVec3) &&
-             ((InVec0.isUndef() || InVec2.isUndef()) || InVec0 == InVec2) &&
-             ((InVec1.isUndef() || InVec3.isUndef()) || InVec1 == InVec3))
-      X86Opcode = X86ISD::HSUB;
-    else
-      CanFold = false;
-
-    if (CanFold) {
-      // Do not try to expand this build_vector into a pair of horizontal
-      // add/sub if we can emit a pair of scalar add/sub.
-      if (NumUndefsLO + 1 == Half || NumUndefsHI + 1 == Half)
-        return SDValue();
-
-      // Convert this build_vector into a pair of horizontal binops followed by
-      // a concat vector. We must adjust the outputs from the partial horizontal
-      // matching calls above to account for undefined vector halves.
-      SDValue V0 = InVec0.isUndef() ? InVec2 : InVec0;
-      SDValue V1 = InVec1.isUndef() ? InVec3 : InVec1;
-      assert((!V0.isUndef() || !V1.isUndef()) && "Horizontal-op of undefs?");
-      bool isUndefLO = NumUndefsLO == Half;
-      bool isUndefHI = NumUndefsHI == Half;
-      return ExpandHorizontalBinOp(V0, V1, DL, DAG, X86Opcode, false, isUndefLO,
-                                   isUndefHI);
-    }
-  }
-
-  if (VT == MVT::v8f32 || VT == MVT::v4f64 || VT == MVT::v8i32 ||
-      VT == MVT::v16i16) {
-    unsigned X86Opcode;
-    if (isHorizontalBinOpPart(BV, ISD::ADD, DL, DAG, 0, NumElts, InVec0,
-                              InVec1))
-      X86Opcode = X86ISD::HADD;
-    else if (isHorizontalBinOpPart(BV, ISD::SUB, DL, DAG, 0, NumElts, InVec0,
-                                   InVec1))
-      X86Opcode = X86ISD::HSUB;
-    else if (isHorizontalBinOpPart(BV, ISD::FADD, DL, DAG, 0, NumElts, InVec0,
-                                   InVec1))
-      X86Opcode = X86ISD::FHADD;
-    else if (isHorizontalBinOpPart(BV, ISD::FSUB, DL, DAG, 0, NumElts, InVec0,
-                                   InVec1))
-      X86Opcode = X86ISD::FHSUB;
-    else
-      return SDValue();
-
-    // Don't try to expand this build_vector into a pair of horizontal add/sub
-    // if we can simply emit a pair of scalar add/sub.
-    if (NumUndefsLO + 1 == Half || NumUndefsHI + 1 == Half)
-      return SDValue();
-
-    // Convert this build_vector into two horizontal add/sub followed by
-    // a concat vector.
-    bool isUndefLO = NumUndefsLO == Half;
-    bool isUndefHI = NumUndefsHI == Half;
-    return ExpandHorizontalBinOp(InVec0, InVec1, DL, DAG, X86Opcode, true,
-                                 isUndefLO, isUndefHI);
-  }
-
-  return SDValue();
-}
-
 static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
                           SelectionDAG &DAG);
 
@@ -9270,8 +9154,6 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
   if (SDValue AddSub = lowerToAddSubOrFMAddSub(BV, dl, Subtarget, DAG))
     return AddSub;
-  if (SDValue HorizontalOp = LowerToHorizontalOp(BV, dl, Subtarget, DAG))
-    return HorizontalOp;
   if (SDValue Broadcast = lowerBuildVectorAsBroadcast(BV, dl, Subtarget, DAG))
     return Broadcast;
   if (SDValue BitOp = lowerBuildVectorToBitOp(BV, dl, Subtarget, DAG))
