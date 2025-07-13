@@ -18,15 +18,15 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-enum class _LogErrorReason {
+enum class __log_error_reason : int {
   // Where possible, it logs in a way that indicates a fatal error (which might include capturing the stack trace).
-  _HardeningFailure
+  __hardening_failure
 };
 
 // This function should never be called directly from the code -- it should only be called through the
 // `_LIBCPP_LOG_ERROR` macro.
 _LIBCPP_AVAILABILITY_LOG_ERROR _LIBCPP_EXPORTED_FROM_ABI void
-__log_error(_LogErrorReason __reason, const char* __message) _NOEXCEPT;
+__log_error(__log_error_reason __reason, const char* __message) _NOEXCEPT;
 
 // _LIBCPP_LOG_ERROR(message)
 //

@@ -312,7 +312,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__110to_wstringEx', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__110to_wstringEy', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__111__call_onceERVmPvPFvS2_E', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__111__log_errorENS_15_LogErrorReasonEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__111__log_errorENS_18__log_error_reasonEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__111regex_errorC1ENS_15regex_constants10error_typeE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__111regex_errorC2ENS_15regex_constants10error_typeE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__111regex_errorD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}

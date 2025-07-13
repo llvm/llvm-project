@@ -945,7 +945,7 @@
 {'is_defined': True, 'name': '__ZNSt3__110to_wstringEx', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__110to_wstringEy', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__111__call_onceERVmPvPFvS2_E', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__111__log_errorENS_15_LogErrorReasonEPKc', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__111__log_errorENS_18__log_error_reasonEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__111__money_getIcE13__gather_infoEbRKNS_6localeERNS_10money_base7patternERcS8_RNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEESF_SF_SF_Ri', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__111__money_getIwE13__gather_infoEbRKNS_6localeERNS_10money_base7patternERwS8_RNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEERNS9_IwNSA_IwEENSC_IwEEEESJ_SJ_Ri', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__111__money_putIcE13__gather_infoEbbRKNS_6localeERNS_10money_base7patternERcS8_RNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEESF_SF_Ri', 'type': 'FUNC'}

@@ -25,7 +25,7 @@ namespace {
 
 void log_security_failure(const char* message) noexcept {
   // Always log the message to `stderr` in case the platform-specific system calls fail.
-  fprintf(stderr, "%s", message);
+  fputs(message, stderr);
 
   // On Apple platforms, use the `os_fault_with_payload` OS function that simulates a crash.
 #if defined(__APPLE__) && __has_include(<os/reason_private.h>)
@@ -50,9 +50,9 @@ void log_security_failure(const char* message) noexcept {
 
 } // namespace
 
-void __log_error(_LogErrorReason reason, const char* message) noexcept {
+void __log_error(__log_error_reason reason, const char* message) noexcept {
   switch (reason) {
-  case _LogErrorReason::_HardeningFailure:
+  case __log_error_reason::__hardening_failure:
   default:
     log_security_failure(message);
   }
