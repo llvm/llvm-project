@@ -169,10 +169,8 @@ class zip_transform_view<_Fn, _Views...>::__iterator
       : __parent_(std::addressof(__parent)), __inner_(std::move(__inner)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto __get_deref_and_invoke() const noexcept {
-    return [this](const auto&... __iters) noexcept(
-               noexcept(std::invoke(*__parent_->__fun_, *__iters...))) -> decltype(auto) {
-      return std::invoke(*__parent_->__fun_, *__iters...);
-    };
+    return [&__fun = *__parent_->__fun_](const auto&... __iters) noexcept(noexcept(std::invoke(
+               *__parent_->__fun_, *__iters...))) -> decltype(auto) { return std::invoke(__fun, *__iters...); };
   }
 
 public:
