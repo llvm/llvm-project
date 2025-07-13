@@ -60,7 +60,8 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &, uint64_t,
+  bool fixupNeedsRelaxationAdvanced(const MCFragment &, const MCFixup &,
+                                    const MCValue &, uint64_t,
                                     bool) const override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
@@ -72,11 +73,9 @@ public:
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
 
-  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
-                          bool &WasRelaxed) const override;
-  bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
-                     bool &WasRelaxed) const override;
-  std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF,
+  bool relaxDwarfLineAddr(MCFragment &F, bool &WasRelaxed) const override;
+  bool relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const override;
+  std::pair<bool, bool> relaxLEB128(MCFragment &LF,
                                     int64_t &Value) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,

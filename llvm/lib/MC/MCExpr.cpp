@@ -352,7 +352,7 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
     // the linker.
     bool BBeforeRelax = false, AAfterRelax = false;
     for (auto F = FB; F; F = F->getNext()) {
-      auto DF = dyn_cast<MCDataFragment>(F);
+      auto DF = F->getKind() == MCFragment::FT_Data ? F : nullptr;
       if (DF && DF->isLinkerRelaxable()) {
         if (&*F != FB || SBOffset != DF->getContents().size())
           BBeforeRelax = true;
@@ -373,12 +373,12 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       unsigned Count;
       if (DF) {
         Displacement += DF->getContents().size();
-      } else if (auto *RF = dyn_cast<MCRelaxableFragment>(F);
-                 RF && Asm->hasFinalLayout()) {
+      } else if (F->getKind() == MCFragment::FT_Relaxable &&
+                 Asm->hasFinalLayout()) {
         // Before finishLayout, a relaxable fragment's size is indeterminate.
         // After layout, during relocation generation, it can be treated as a
         // data fragment.
-        Displacement += RF->getContents().size();
+        Displacement += F->getSize();
       } else if (auto *AF = dyn_cast<MCAlignFragment>(F);
                  AF && Layout && AF->hasEmitNops() &&
                  !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(

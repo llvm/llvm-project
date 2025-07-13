@@ -17,7 +17,6 @@ namespace llvm {
 
 class ELFObjectWriter;
 class MCContext;
-class MCDataFragment;
 class MCFragment;
 class MCObjectWriter;
 class MCSection;
@@ -51,7 +50,7 @@ public:
   void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
+  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
                       uint64_t Offset) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;

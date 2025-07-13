@@ -43,8 +43,8 @@ class MCObjectStreamer : public MCStreamer {
   struct PendingMCFixup {
     const MCSymbol *Sym;
     MCFixup Fixup;
-    MCDataFragment *DF;
-    PendingMCFixup(const MCSymbol *McSym, MCDataFragment *F, MCFixup McFixup)
+    MCFragment *DF;
+    PendingMCFixup(const MCSymbol *McSym, MCFragment *F, MCFixup McFixup)
         : Sym(McSym), Fixup(McFixup), DF(F) {}
   };
   SmallVector<PendingMCFixup, 2> PendingFixups;
@@ -95,7 +95,7 @@ public:
   /// fragment is not a data fragment.
   /// Optionally a \p STI can be passed in so that a new fragment is created
   /// if the Subtarget differs from the current fragment.
-  MCDataFragment *getOrCreateDataFragment(const MCSubtargetInfo* STI = nullptr);
+  MCFragment *getOrCreateDataFragment(const MCSubtargetInfo *STI = nullptr);
 
 protected:
   bool changeSectionImpl(MCSection *Section, uint32_t Subsection);

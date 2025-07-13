@@ -66,8 +66,8 @@ void MCObjectStreamer::resolvePendingFixups() {
     // If the location symbol to relocate is in MCEncodedFragment,
     // put the Fixup into location symbol's fragment. Otherwise
     // put into PendingFixup.DF
-    MCFragment *SymFragment = PendingFixup.Sym->getFragment();
-    if (auto *F = dyn_cast<MCEncodedFragment>(SymFragment))
+    MCFragment *F = PendingFixup.Sym->getFragment();
+    if (F->isEncoded())
       F->addFixup(PendingFixup.Fixup);
     else
       PendingFixup.DF->addFixup(PendingFixup.Fixup);
@@ -76,7 +76,8 @@ void MCObjectStreamer::resolvePendingFixups() {
 }
 
 // As a compile-time optimization, avoid allocating and evaluating an MCExpr
-// tree for (Hi - Lo) when Hi and Lo are offsets into the same fragment.
+// tree for (Hi - Lo) when Hi and Lo are offsets into the same fragment's fixed
+// part.
 static std::optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
                                                   const MCSymbol *Lo) {
   assert(Hi && Lo);
@@ -85,8 +86,11 @@ static std::optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
   if (Hi->isVariable() || Lo->isVariable())
     return std::nullopt;
   auto *LoF = Lo->getFragment();
-  if (!LoF || LoF->getKind() != MCFragment::FT_Data ||
-      Hi->getFragment() != LoF || LoF->isLinkerRelaxable())
+  if (!LoF || Hi->getFragment() != LoF || LoF->isLinkerRelaxable())
+    return std::nullopt;
+  // If either symbol resides in the variable part, bail out.
+  auto Fixed = LoF->getFixedSize();
+  if (Lo->getOffset() > Fixed || Hi->getOffset() > Fixed)
     return std::nullopt;
 
   return Hi->getOffset() - Lo->getOffset();
@@ -131,7 +135,7 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
 }
 
-static bool canReuseDataFragment(const MCDataFragment &F,
+static bool canReuseDataFragment(const MCFragment &F,
                                  const MCAssembler &Assembler,
                                  const MCSubtargetInfo *STI) {
   if (!F.hasInstructions())
@@ -150,11 +154,12 @@ static bool canReuseDataFragment(const MCDataFragment &F,
   return !STI || F.getSubtargetInfo() == STI;
 }
 
-MCDataFragment *
+MCFragment *
 MCObjectStreamer::getOrCreateDataFragment(const MCSubtargetInfo *STI) {
-  auto *F = dyn_cast<MCDataFragment>(getCurrentFragment());
-  if (!F || !canReuseDataFragment(*F, *Assembler, STI)) {
-    F = getContext().allocFragment<MCDataFragment>();
+  auto *F = getCurrentFragment();
+  if (F->getKind() != MCFragment::FT_Data ||
+      !canReuseDataFragment(*F, *Assembler, STI)) {
+    F = getContext().allocFragment<MCFragment>();
     insert(F);
   }
   return F;
@@ -256,7 +261,10 @@ void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
     emitULEB128IntValue(IntValue);
     return;
   }
-  insert(getContext().allocFragment<MCLEBFragment>(*Value, false));
+  auto *F = getOrCreateDataFragment();
+  F->Kind = MCFragment::FT_LEB;
+  F->setLEBSigned(false);
+  F->setLEBValue(Value);
 }
 
 void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
@@ -265,7 +273,10 @@ void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
     emitSLEB128IntValue(IntValue);
     return;
   }
-  insert(getContext().allocFragment<MCLEBFragment>(*Value, true));
+  auto *F = getOrCreateDataFragment();
+  F->Kind = MCFragment::FT_LEB;
+  F->setLEBSigned(true);
+  F->setLEBValue(Value);
 }
 
 void MCObjectStreamer::emitWeakReference(MCSymbol *Alias,
@@ -374,7 +385,6 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
     return;
   }
 
-  // Otherwise emit to a separate fragment.
   emitInstToFragment(Inst, STI);
 }
 
@@ -396,18 +406,17 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
 
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
                                           const MCSubtargetInfo &STI) {
-  // Always create a new, separate fragment here, because its size can change
-  // during relaxation.
-  MCRelaxableFragment *IF =
-      getContext().allocFragment<MCRelaxableFragment>(STI);
-  insert(IF);
-  IF->setInst(Inst);
-
+  auto *F = getOrCreateDataFragment();
+  SmallVector<char, 16> Data;
   SmallVector<MCFixup, 1> Fixups;
-  getAssembler().getEmitter().encodeInstruction(
-      Inst, IF->getContentsForAppending(), Fixups, STI);
-  IF->doneAppending();
-  IF->appendFixups(Fixups);
+  getAssembler().getEmitter().encodeInstruction(Inst, Data, Fixups, STI);
+
+  F->Kind = MCFragment::FT_Relaxable;
+  F->STI = &STI;
+  F->HasInstructions = true;
+  F->setVarContents(Data);
+  F->setVarFixups(Fixups);
+  F->setInst(Inst);
 }
 
 #ifndef NDEBUG
@@ -486,9 +495,10 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
     return;
   }
 
-  const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, SMLoc());
-  insert(getContext().allocFragment<MCDwarfLineAddrFragment>(LineDelta,
-                                                             *AddrDelta));
+  auto *F = getOrCreateDataFragment();
+  F->Kind = MCFragment::FT_Dwarf;
+  F->setAddrDelta(buildSymbolDiff(*this, Label, LastLabel, SMLoc()));
+  F->setLineDelta(LineDelta);
 }
 
 void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
@@ -516,8 +526,9 @@ void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
 void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                                  const MCSymbol *Label,
                                                  SMLoc Loc) {
-  const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, Loc);
-  insert(getContext().allocFragment<MCDwarfCallFrameFragment>(*AddrDelta));
+  auto *F = getOrCreateDataFragment();
+  F->Kind = MCFragment::FT_DwarfFrame;
+  F->setAddrDelta(buildSymbolDiff(*this, Label, LastLabel, Loc));
 }
 
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,

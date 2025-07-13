@@ -417,14 +417,14 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   //   data fragment because we want all the instructions in a group to get into
   //   the same fragment. Be careful not to do that for the first instruction in
   //   the group, though.
-  MCDataFragment *DF;
+  MCFragment *DF;
 
   if (Assembler.isBundlingEnabled()) {
     MCSection &Sec = *getCurrentSectionOnly();
     if (isBundleLocked() && !Sec.isBundleGroupBeforeFirstInst()) {
       // If we are bundle-locked, we re-use the current fragment.
       // The bundle-locking directive ensures this is a new data fragment.
-      DF = cast<MCDataFragment>(getCurrentFragment());
+      DF = getCurrentFragment();
       CheckBundleSubtargets(DF->getSubtargetInfo(), &STI);
     } else {
       DF = getContext().allocFragment<MCDataFragment>();
