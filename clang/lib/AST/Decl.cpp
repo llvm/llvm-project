@@ -3587,7 +3587,7 @@ bool FunctionDecl::isGlobal() const {
 
 bool FunctionDecl::isNoReturn() const {
   if (hasAttr<NoReturnAttr>() || hasAttr<CXX11NoReturnAttr>() ||
-      hasAttr<C11NoReturnAttr>())
+      hasAttr<C11NoReturnAttr>() || hasAttr<InferredNoReturnAttr>())
     return true;
 
   if (auto *FnTy = getType()->getAs<FunctionType>())
