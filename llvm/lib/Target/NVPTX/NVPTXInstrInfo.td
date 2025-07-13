@@ -1689,8 +1689,8 @@ def cond_not_signed : PatLeaf<(cond), [{
   return !isSignedIntSetCC(N->get());
 }]>;
 
-// comparisons of i8 extracted with BFE as i32
-// It's faster to do comparison directly on i32 extracted by BFE,
+// comparisons of i8 extracted with PRMT as i32
+// It's faster to do comparison directly on i32 extracted by PRMT,
 // instead of the long conversion and sign extending.
 def: Pat<(setcc (i16 (sext_inreg (i16 (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE))), i8)),
                 (i16 (sext_inreg (i16 (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE))), i8)),
