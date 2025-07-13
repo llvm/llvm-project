@@ -12440,18 +12440,17 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
     return R;
 
-  auto FoldSrcMods = [&](SDValue LHS, SDValue RHS, EVT VT) -> SDValue {
-    SDValue SrcModTrue = getBitwiseToSrcModifierOp(LHS);
-    SDValue SrcModFalse = getBitwiseToSrcModifierOp(RHS);
-    if (SrcModTrue || SrcModFalse) {
+  auto FoldSrcMods = [&](SDValue N1, SDValue N2, EVT VT) -> SDValue {
+    SDValue SrcModN1 = getBitwiseToSrcModifierOp(N1);
+    SDValue SrcModN2 = getBitwiseToSrcModifierOp(N2);
+    if (SrcModN1 || SrcModN2) {
       SDLoc SL(N);
-      EVT FVT =
-          SrcModTrue ? SrcModTrue.getValueType() : SrcModFalse.getValueType();
-      SDValue FLHS =
-          SrcModTrue ? SrcModTrue : DAG.getNode(ISD::BITCAST, SL, FVT, LHS);
-      SDValue FRHS =
-          SrcModFalse ? SrcModFalse : DAG.getNode(ISD::BITCAST, SL, FVT, RHS);
-      SDValue FSelect = DAG.getNode(ISD::SELECT, SL, FVT, N0, FLHS, FRHS);
+      EVT FVT = SrcModN1 ? SrcModN1.getValueType() : SrcModN2.getValueType();
+      SDValue FN1 =
+          SrcModN1 ? SrcModN1 : DAG.getNode(ISD::BITCAST, SL, FVT, N1);
+      SDValue FN2 =
+          SrcModN2 ? SrcModN2 : DAG.getNode(ISD::BITCAST, SL, FVT, N2);
+      SDValue FSelect = DAG.getNode(ISD::SELECT, SL, FVT, N0, FN1, FN2);
       return DAG.getNode(ISD::BITCAST, SL, VT, FSelect);
     }
     return SDValue();
