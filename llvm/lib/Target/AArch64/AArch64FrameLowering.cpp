@@ -3043,9 +3043,11 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
                          ObjectOffset);
     if (FPAfterSVECalleeSaves) {
-      assert(-ObjectOffset > (int64_t)AFI->getSVECalleeSavedStackSize() &&
-             "Math isn't correct for CSRs with FPAfterSVECalleeSaves");
       FPOffset += StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
+      if (-ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize()) {
+        FPOffset += StackOffset::getFixed(AFI->getCalleeSavedStackSize());
+        SPOffset += StackOffset::getFixed(AFI->getCalleeSavedStackSize());
+      }
     }
     // Always use the FP for SVE spills if available and beneficial.
     if (hasFP(MF) && (SPOffset.getFixed() ||
