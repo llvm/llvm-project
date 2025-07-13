@@ -955,6 +955,7 @@ Bug Fixes to C++ Support
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
 - Fix a crash in the presence of invalid base classes. (#GH147186)
+- Fix a crash with NTTP when instantiating local class.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
