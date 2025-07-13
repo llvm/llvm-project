@@ -24,6 +24,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace {
 
 void log_security_failure(const char* message) noexcept {
+  // Always log the message to `stderr` in case the platform-specific system calls fail.
+  fprintf(stderr, "%s", message);
+
   // On Apple platforms, use the `os_fault_with_payload` OS function that simulates a crash.
 #if defined(__APPLE__) && __has_include(<os/reason_private.h>)
   os_fault_with_payload(
@@ -42,9 +45,6 @@ void log_security_failure(const char* message) noexcept {
   openlog("libc++", 0, 0);
   syslog(LOG_CRIT, "%s", message);
   closelog();
-
-#else
-  fprintf(stderr, "%s", message);
 #endif
 }
 
