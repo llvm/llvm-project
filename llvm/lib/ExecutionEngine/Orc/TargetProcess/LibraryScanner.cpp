@@ -105,20 +105,19 @@ bool isSharedLibrary(StringRef Path) {
   return false;
 }
 
-std::optional<std::string> DylibPathResolver::substOne(StringRef path,
-                                                       StringRef pattern,
-                                                       StringRef replacement) {
+std::string DylibPathResolver::substOne(StringRef path, StringRef pattern,
+                                        StringRef replacement) {
   if (path.size() < pattern.size() || !path.starts_with_insensitive(pattern))
-    return std::nullopt;
+    return path.str();
 
   SmallString<256> result(replacement);
   result.append(path.drop_front(pattern.size()));
 
-  return normalizeIfShared(result);
+  return result.str().str();
 }
 
-std::optional<std::string> DylibPathResolver::substAll(StringRef original,
-                                                       StringRef loaderPath) {
+std::string DylibPathResolver::substAll(StringRef original,
+                                        StringRef loaderPath) {
 
 #ifdef __APPLE__
   SmallString<256> mainExecutablePath(
@@ -134,12 +133,9 @@ std::optional<std::string> DylibPathResolver::substAll(StringRef original,
   }
 
   // Try @loader_path
-  if (auto path = substOne(original, "@loader_path", loaderDir))
-    return path;
-
+  std::string result_path = substOne(original, "@loader_path", loaderDir);
   // Try @executable_path
-  if (auto path = substOne(original, "@executable_path", mainExecutablePath))
-    return path;
+  return substOne(result_path, "@executable_path", mainExecutablePath);
 
 #else
   SmallString<256> loaderDir;
@@ -151,31 +147,21 @@ std::optional<std::string> DylibPathResolver::substAll(StringRef original,
   sys::path::remove_filename(loaderDir);
 
   // Try $origin
-  if (auto path = substOne(original, "$origin", loaderDir))
-    return path;
+  return substOne(original, "$origin", loaderDir);
 
-    // Optional: handle $lib or $platform later if needed
+  // Optional: handle $lib or $platform later if needed
 #endif
-
-  return std::nullopt;
 }
 
 std::optional<std::string>
-DylibPathResolver::tryWithBasePaths(ArrayRef<StringRef> basePaths,
-                                    StringRef stem, StringRef loaderPath) {
-  for (const auto &base : basePaths) {
-    auto resolvedBaseOpt = substAll(base, loaderPath);
-    if (!resolvedBaseOpt)
-      continue;
+DylibPathResolver::tryWithBasePath(StringRef basePath, StringRef stem,
+                                   StringRef loaderPath) {
+  std::string resolvedBase = substAll(basePath, loaderPath);
 
-    SmallString<256> fullPath(*resolvedBaseOpt);
-    sys::path::append(fullPath, stem);
+  SmallString<256> fullPath(resolvedBase);
+  sys::path::append(fullPath, stem);
 
-    if (auto norm = normalizeIfShared(fullPath)) {
-      return norm;
-    }
-  }
-  return std::nullopt;
+  return normalizeIfShared(fullPath);
 }
 
 std::optional<std::string>
@@ -183,18 +169,22 @@ DylibPathResolver::tryAllPaths(StringRef stem, ArrayRef<StringRef> RPath,
                                ArrayRef<StringRef> RunPath,
                                StringRef loaderPath) {
   // Try RPATH
-  if (auto found = tryWithBasePaths(RPath, stem, loaderPath))
-    return found;
+  for (const auto &rpath : RPath) {
+    if (auto found = tryWithBasePath(rpath, stem, loaderPath))
+      return found;
+  }
 
   // Try search paths (like LD_LIBRARY_PATH or configured)
-  // for (const auto &entry : m_searchPaths) {
-  // TODO.
-  // }
+  for (const auto &entry : m_helper.getAllUnits()) {
+    if (auto found = tryWithBasePath(entry->basePath, stem, loaderPath))
+      return found;
+  }
 
   // Try RUNPATH
-  if (auto found = tryWithBasePaths(RunPath, stem, loaderPath))
-    return found;
-
+  for (const auto &runpath : RunPath) {
+    if (auto found = tryWithBasePath(runpath, stem, loaderPath))
+      return found;
+  }
   return std::nullopt;
 }
 
@@ -215,8 +205,10 @@ std::optional<std::string> DylibPathResolver::tryWithExtensions(
 
   // Optionally try "lib" prefix if not already there
   StringRef filename = sys::path::filename(baseName);
+  StringRef base = sys::path::parent_path(baseName);
+  SmallString<256> withPrefix(base);
   if (!filename.starts_with("lib")) {
-    SmallString<256> withPrefix("lib");
+    withPrefix += "lib";
     withPrefix += filename;
     // Apply extension too
 #if defined(__APPLE__)
@@ -226,7 +218,7 @@ std::optional<std::string> DylibPathResolver::tryWithExtensions(
 #else
     withPrefix += ".so";
 #endif
-    candidates.push_back(withPrefix);
+    candidates.push_back(withPrefix.str());
   }
 
   // Try all variants using tryAllPaths
@@ -238,17 +230,25 @@ std::optional<std::string> DylibPathResolver::tryWithExtensions(
   return std::nullopt;
 }
 
-std::optional<std::string>
-DylibPathResolver::normalizeIfShared(StringRef path) {
+std::optional<std::string> DylibPathResolver::normalize(StringRef path) {
   std::error_code ec;
   auto real = m_helper.getPathResolver().realpathCached(path, ec);
   if (!real || ec)
     return std::nullopt;
 
-  if (!isSharedLibrary(*real))
+  return real;
+}
+
+std::optional<std::string>
+DylibPathResolver::normalizeIfShared(StringRef path) {
+  auto realOpt = normalize(path);
+  if (!realOpt)
     return std::nullopt;
 
-  return real;
+  if (!isSharedLibrary(*realOpt))
+    return std::nullopt;
+
+  return realOpt;
 }
 
 std::optional<std::string>
@@ -265,12 +265,12 @@ DylibPathResolver::resolve(StringRef libStem, SmallVector<StringRef, 2> RPath,
   // On MacOS @rpath is preplaced by all paths in RPATH one by one.
   if (libStem.starts_with_insensitive("@rpath")) {
     for (auto &P : RPath) {
-      if (auto norm = substOne(libStem, "@rpath", P))
+      if (auto norm = normalizeIfShared(substOne(libStem, "@rpath", P)))
         return norm;
     }
   } else {
 #endif
-    if (auto norm = substAll(libStem, libLoader))
+    if (auto norm = normalizeIfShared(substAll(libStem, libLoader)))
       return norm;
 #ifdef __APPLE__
   }
@@ -289,13 +289,7 @@ DylibPathResolver::resolve(StringRef libStem, SmallVector<StringRef, 2> RPath,
   return std::nullopt;
 }
 
-#ifdef _WIN32
-mode_t lstatCached(const std::string &path) { return 0; }
-std::optional<std::string> readlinkCached(const std::string &path) {
-  return std::nullopt;
-}
-#else
-
+#ifndef _WIN32
 mode_t PathResolver::lstatCached(const std::string &path) {
   // If already cached - retun cached result
   std::unique_lock<std::shared_mutex> lock(m_mutex);
@@ -335,7 +329,6 @@ PathResolver::readlinkCached(const std::string &path) {
   }
   return std::nullopt;
 }
-#endif
 
 void createComponent(StringRef Path, StringRef base_path, bool baseIsResolved,
                      SmallVector<StringRef, 16> &component) {
@@ -380,6 +373,7 @@ void normalizePathSegments(SmallVector<StringRef, 16> &pathParts) {
   }
   pathParts.swap(normalizedPath);
 }
+#endif
 
 std::optional<std::string> PathResolver::realpathCached(StringRef path,
                                                         std::error_code &ec,
@@ -430,9 +424,9 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
 
   // If result not in cache - call system function and cache result
 
+#ifndef _WIN32
   StringRef Separator(sys::path::get_separator());
   SmallString<256> resolved(Separator);
-#ifndef _WIN32
   SmallVector<StringRef, 16> Components;
 
   if (isRelative) {
