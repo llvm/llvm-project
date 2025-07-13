@@ -2569,7 +2569,6 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
     // such that BaseReg is alive along it but not at its exits
     MachineBasicBlock *SuccToVisit = nullptr;
     unsigned LiveSuccCount = 0;
-    MCRegister RegNoBAse = BaseReg;
     for (MachineBasicBlock *Succ : CurMBB->successors()) {
       for (MCRegAliasIterator AI(BaseReg, TRI, true); AI.isValid(); ++AI) {
         if (Succ->isLiveIn(*AI)) {
@@ -3079,7 +3078,7 @@ bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   Subtarget = &Fn.getSubtarget<AArch64Subtarget>();
-  TII = static_cast<const AArch64InstrInfo *>(Subtarget->getInstrInfo());
+  TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
