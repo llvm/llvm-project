@@ -25,7 +25,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using M = std::flat_multimap<int, char, std::less<int>, KeyContainer, ValueContainer>;
   {
     const M m = {{1, 'a'}, {1, 'b'}, {4, 'd'}, {5, 'e'}, {5, 'h'}};
@@ -47,7 +47,7 @@ void test() {
   }
   {
     M m;
-    std::size_t s = 1000;
+    std::size_t s = TEST_IS_CONSTANT_EVALUATED ? 100 : 1000;
     for (auto i = 0u; i < s; ++i) {
       m.emplace(i, 'a');
     }
@@ -60,11 +60,22 @@ void test() {
   }
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<char>>();
-  test<std::deque<int>, std::vector<char>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque<int>, std::vector<char>>();
   test<MinSequenceContainer<int>, MinSequenceContainer<char>>();
   test<std::vector<int, min_allocator<int>>, std::vector<char, min_allocator<char>>>();
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
