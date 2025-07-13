@@ -1328,9 +1328,7 @@ void MCStreamer::emitSLEB128Value(const MCExpr *Value) {}
 void MCStreamer::emitFill(const MCExpr &NumBytes, uint64_t Value, SMLoc Loc) {}
 void MCStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                           SMLoc Loc) {}
-void MCStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                      unsigned ValueSize,
-                                      unsigned MaxBytesToEmit) {}
+void MCStreamer::emitValueToAlignment(Align, int64_t, uint8_t, unsigned) {}
 void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
