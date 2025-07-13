@@ -11,9 +11,6 @@ The application of transform IR always starts from one top-level operation. In t
 Let us illustrate this with a simple sequence of transformations on the common “fully connected + bias + ReLU” ML layer, which boils down to performing a matrix multiplication, followed by an (elementwise) matrix addition and taking an elementwise maximum with 0. This can be expressed using the following IR:
 
 ```mlir
-#map0 = affine_map<(d0, d1) -> (d0, d1)>
-#map1 = affine_map<(d0, d1) -> ()>
-
 func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
                    %bias: tensor<512x512xf32>, %output: tensor<512x512xf32>)
                    -> tensor<512x512xf32> {
@@ -29,7 +26,7 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
   // Elementwise max with 0 (ReLU).
   %c0f = arith.constant 0.0 : f32
   %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
-    indexing_maps = [#map0, #map1, #map0]
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> ()>, affine_map<(d0, d1) -> (d0, d1)>]
     ins(%biased, %c0f : tensor<512x512xf32>, f32)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
@@ -150,7 +147,7 @@ Running this transformation with the same command as above expectedly produces t
 #map3 = affine_map<(d0, d1) -> ()>
 
 func.func @fc_relu(%arg0: tensor<512x512xf32>,
-                   %arg1: tensor<512x512xf32>, 
+                   %arg1: tensor<512x512xf32>,
                    %arg2: tensor<512x512xf32>,
                    %arg3: tensor<512x512xf32>) -> tensor<512x512xf32> {
   %0 = scf.forall (%arg4, %arg5) in (128, 16) shared_outs(%arg6 = %arg3) -> (tensor<512x512xf32>) {
