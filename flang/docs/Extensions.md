@@ -291,7 +291,10 @@ end
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
 * Nonstandard intrinsic functions: ISNAN, SIZEOF
-* A forward reference to a default INTEGER scalar dummy argument or
+* A forward reference to an INTEGER dummy argument is permitted to appear
+  in a specification expression, such as an array bound, in a scope with
+  IMPLICIT NONE(TYPE).
+* A forward reference to a default INTEGER scalar
   `COMMON` block variable is permitted to appear in a specification
   expression, such as an array bound, in a scope with IMPLICIT NONE(TYPE)
   if the name of the variable would have caused it to be implicitly typed
@@ -424,6 +427,10 @@ end
 * A zero field width is allowed for logical formatted output (`L0`).
 * `OPEN(..., FORM='BINARY')` is accepted as a legacy synonym for
   the standard `OPEN(..., FORM='UNFORMATTED', ACCESS='STREAM')`.
+* A character string edit descriptor is allowed in an input format
+  with an optional compilation-time warning.  When executed, it
+  is treated as an 'nX' positioning control descriptor that skips
+  over the same number of characters, without comparison.
 
 ### Extensions supported when enabled by options
 

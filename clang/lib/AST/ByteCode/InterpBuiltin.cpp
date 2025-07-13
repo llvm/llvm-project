@@ -152,6 +152,9 @@ static QualType getElemType(const Pointer &P) {
 
 static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
                                         unsigned ID) {
+  if (!S.diagnosing())
+    return;
+
   auto Loc = S.Current->getSource(OpPC);
   if (S.getLangOpts().CPlusPlus11)
     S.CCEDiag(Loc, diag::note_constexpr_invalid_function)

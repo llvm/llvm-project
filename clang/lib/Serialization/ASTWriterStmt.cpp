@@ -959,6 +959,8 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   CurrentPackingBits.updateBits();
   CurrentPackingBits.addBit(static_cast<bool>(E->getADLCallKind()));
   CurrentPackingBits.addBit(E->hasStoredFPFeatures());
+  CurrentPackingBits.addBit(E->isCoroElideSafe());
+  CurrentPackingBits.addBit(E->usesMemberSyntax());
 
   Record.AddSourceLocation(E->getRParenLoc());
   Record.AddStmt(E->getCallee());

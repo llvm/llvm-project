@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constant.h"
@@ -35,6 +36,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/ProfileData/MemProfSummary.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -740,19 +742,6 @@ static uint64_t computeStackId(const memprof::Frame &Frame) {
   return computeStackId(Frame.Function, Frame.LineOffset, Frame.Column);
 }
 
-// Helper to generate a single hash id for a given callstack, used for emitting
-// matching statistics and useful for uniquing such statistics across modules.
-static uint64_t computeFullStackId(ArrayRef<Frame> CallStack) {
-  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
-      HashBuilder;
-  for (auto &F : CallStack)
-    HashBuilder.add(F.Function, F.LineOffset, F.Column);
-  llvm::BLAKE3Result<8> Hash = HashBuilder.final();
-  uint64_t Id;
-  std::memcpy(&Id, Hash.data(), sizeof(Hash));
-  return Id;
-}
-
 static AllocationType addCallStack(CallStackTrie &AllocTrie,
                                    const AllocationInfo *AllocInfo,
                                    uint64_t FullStackId) {
@@ -968,7 +957,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             const TargetLibraryInfo &TLI,
             std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo,
             std::set<std::vector<uint64_t>> &MatchedCallSites,
-            DenseMap<uint64_t, LocToLocMap> &UndriftMaps) {
+            DenseMap<uint64_t, LocToLocMap> &UndriftMaps,
+            OptimizationRemarkEmitter &ORE) {
   auto &Ctx = M.getContext();
   // Previously we used getIRPGOFuncName() here. If F is local linkage,
   // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
@@ -1135,7 +1125,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
         // We may match this instruction's location list to multiple MIB
         // contexts. Add them to a Trie specialized for trimming the contexts to
         // the minimal needed to disambiguate contexts with unique behavior.
-        CallStackTrie AllocTrie;
+        CallStackTrie AllocTrie(&ORE);
         uint64_t TotalSize = 0;
         uint64_t TotalColdSize = 0;
         for (auto *AllocInfo : AllocInfoIter->second) {
@@ -1282,8 +1272,9 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
       continue;
 
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+    auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
     readMemprof(M, F, MemProfReader.get(), TLI, FullStackIdToAllocMatchInfo,
-                MatchedCallSites, UndriftMaps);
+                MatchedCallSites, UndriftMaps, ORE);
   }
 
   if (ClPrintMemProfMatchInfo) {

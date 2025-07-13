@@ -1389,9 +1389,8 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
   else if (const GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
     FuncName = G->getGlobal()->getName();
 
-  DiagnosticInfoUnsupported NoCalls(
-    Fn, Reason + FuncName, CLI.DL.getDebugLoc());
-  DAG.getContext()->diagnose(NoCalls);
+  DAG.getContext()->diagnose(
+      DiagnosticInfoUnsupported(Fn, Reason + FuncName, CLI.DL.getDebugLoc()));
 
   if (!CLI.IsTailCall) {
     for (ISD::InputArg &Arg : CLI.Ins)
@@ -1410,9 +1409,8 @@ SDValue AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                                       SelectionDAG &DAG) const {
   const Function &Fn = DAG.getMachineFunction().getFunction();
 
-  DiagnosticInfoUnsupported NoDynamicAlloca(Fn, "unsupported dynamic alloca",
-                                            SDLoc(Op).getDebugLoc());
-  DAG.getContext()->diagnose(NoDynamicAlloca);
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn, "unsupported dynamic alloca", SDLoc(Op).getDebugLoc()));
   auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()), Op.getOperand(0)};
   return DAG.getMergeValues(Ops, SDLoc());
 }
@@ -1527,10 +1525,9 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
         !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV))) {
       SDLoc DL(Op);
       const Function &Fn = DAG.getMachineFunction().getFunction();
-      DiagnosticInfoUnsupported BadLDSDecl(
-        Fn, "local memory global used by non-kernel function",
-        DL.getDebugLoc(), DS_Warning);
-      DAG.getContext()->diagnose(BadLDSDecl);
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          Fn, "local memory global used by non-kernel function",
+          DL.getDebugLoc(), DS_Warning));
 
       // We currently don't have a way to correctly allocate LDS objects that
       // aren't directly associated with a kernel. We do force inlining of

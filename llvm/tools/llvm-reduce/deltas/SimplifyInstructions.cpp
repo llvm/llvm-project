@@ -13,7 +13,6 @@
 
 #include "SimplifyInstructions.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/IR/Constants.h"
 
 using namespace llvm;
 
