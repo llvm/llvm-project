@@ -57,6 +57,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -1087,7 +1088,6 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::StoreV8)
     MAKE_CASE(NVPTXISD::FSHL_CLAMP)
     MAKE_CASE(NVPTXISD::FSHR_CLAMP)
-    MAKE_CASE(NVPTXISD::BFE)
     MAKE_CASE(NVPTXISD::BFI)
     MAKE_CASE(NVPTXISD::PRMT)
     MAKE_CASE(NVPTXISD::FCOPYSIGN)
@@ -2173,14 +2173,14 @@ SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   EVT VectorVT = Vector.getValueType();
 
   if (VectorVT == MVT::v4i8) {
-    SDValue BFE =
-        DAG.getNode(NVPTXISD::BFE, DL, MVT::i32,
-                    {Vector,
-                     DAG.getNode(ISD::MUL, DL, MVT::i32,
-                                 DAG.getZExtOrTrunc(Index, DL, MVT::i32),
-                                 DAG.getConstant(8, DL, MVT::i32)),
-                     DAG.getConstant(8, DL, MVT::i32)});
-    return DAG.getAnyExtOrTrunc(BFE, DL, Op->getValueType(0));
+    SDValue Selector = DAG.getNode(ISD::OR, DL, MVT::i32,
+                                   DAG.getZExtOrTrunc(Index, DL, MVT::i32),
+                                   DAG.getConstant(0x7770, DL, MVT::i32));
+    SDValue PRMT = DAG.getNode(
+        NVPTXISD::PRMT, DL, MVT::i32,
+        {DAG.getBitcast(MVT::i32, Vector), DAG.getConstant(0, DL, MVT::i32),
+         Selector, DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
+    return DAG.getAnyExtOrTrunc(PRMT, DL, Op->getValueType(0));
   }
 
   // Constant index will be matched by tablegen.
@@ -5271,31 +5271,6 @@ static SDValue PerformANDCombine(SDNode *N,
 
   SDValue AExt;
 
-  // Convert BFE-> truncate i16 -> and 255
-  // To just BFE-> truncate i16, as the value already has all the bits in the
-  // right places.
-  if (Val.getOpcode() == ISD::TRUNCATE) {
-    SDValue BFE = Val.getOperand(0);
-    if (BFE.getOpcode() != NVPTXISD::BFE)
-      return SDValue();
-
-    ConstantSDNode *BFEBits = dyn_cast<ConstantSDNode>(BFE.getOperand(0));
-    if (!BFEBits)
-      return SDValue();
-    uint64_t BFEBitsVal = BFEBits->getZExtValue();
-
-    ConstantSDNode *MaskCnst = dyn_cast<ConstantSDNode>(Mask);
-    if (!MaskCnst) {
-      // Not an AND with a constant
-      return SDValue();
-    }
-    uint64_t MaskVal = MaskCnst->getZExtValue();
-
-    if (MaskVal != (uint64_t(1) << BFEBitsVal) - 1)
-      return SDValue();
-    // If we get here, the AND is unnecessary.  Just replace it with the trunc
-    DCI.CombineTo(N, Val, false);
-  }
   // Generally, we will see zextload -> IMOV16rr -> ANY_EXTEND -> and
   if (Val.getOpcode() == ISD::ANY_EXTEND) {
     AExt = Val;
@@ -6401,4 +6376,46 @@ NVPTXTargetObjectFile::~NVPTXTargetObjectFile() = default;
 MCSection *NVPTXTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   return getDataSection();
+}
+
+static void computeKnownBitsForPRMT(const SDValue Op, KnownBits &Known,
+                                    const SelectionDAG &DAG, unsigned Depth) {
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
+  ConstantSDNode *Selector = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+  unsigned Mode = Op.getConstantOperandVal(3);
+
+  if (Mode != NVPTX::PTXPrmtMode::NONE || !Selector)
+    return;
+
+  KnownBits AKnown = DAG.computeKnownBits(A, Depth);
+  KnownBits BKnown = DAG.computeKnownBits(B, Depth);
+
+  // {b, a} = {{b7, b6, b5, b4}, {b3, b2, b1, b0}}
+  KnownBits BitField = BKnown.concat(AKnown);
+
+  APInt SelectorVal = Selector->getAPIntValue();
+  for (unsigned I : llvm::seq(std::min(4U, Known.getBitWidth() / 8))) {
+    APInt Sel = SelectorVal.extractBits(4, I * 4);
+    unsigned Idx = Sel.getLoBits(3).getZExtValue();
+    unsigned Sign = Sel.getHiBits(1).getZExtValue();
+    KnownBits Byte = BitField.extractBits(8, Idx * 8);
+    if (Sign)
+      Byte = KnownBits::ashr(Byte, 8);
+    Known.insertBits(Byte, I * 8);
+  }
+}
+
+void NVPTXTargetLowering::computeKnownBitsForTargetNode(
+    const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+    const SelectionDAG &DAG, unsigned Depth) const {
+  Known.resetAll();
+
+  switch (Op.getOpcode()) {
+  case NVPTXISD::PRMT:
+    computeKnownBitsForPRMT(Op, Known, DAG, Depth);
+    break;
+  default:
+    break;
+  }
 }

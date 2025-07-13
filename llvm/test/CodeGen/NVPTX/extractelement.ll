@@ -60,14 +60,14 @@ define i16  @test_v4i8(i32 %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_v4i8_param_0];
-; CHECK-NEXT:    bfe.s32 %r2, %r1, 0, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs1, %r2;
-; CHECK-NEXT:    bfe.s32 %r3, %r1, 8, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs2, %r3;
-; CHECK-NEXT:    bfe.s32 %r4, %r1, 16, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs3, %r4;
-; CHECK-NEXT:    bfe.s32 %r5, %r1, 24, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs4, %r5;
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x8880U;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-NEXT:    prmt.b32 %r3, %r1, 0, 0x9991U;
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r3;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0xaaa2U;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
+; CHECK-NEXT:    prmt.b32 %r5, %r1, 0, 0xbbb3U;
+; CHECK-NEXT:    cvt.u16.u32 %rs4, %r5;
 ; CHECK-NEXT:    add.s16 %rs5, %rs1, %rs2;
 ; CHECK-NEXT:    add.s16 %rs6, %rs3, %rs4;
 ; CHECK-NEXT:    add.s16 %rs7, %rs5, %rs6;
@@ -96,10 +96,10 @@ define i32  @test_v4i8_s32(i32 %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_v4i8_s32_param_0];
-; CHECK-NEXT:    bfe.s32 %r2, %r1, 0, 8;
-; CHECK-NEXT:    bfe.s32 %r3, %r1, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r4, %r1, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r5, %r1, 24, 8;
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x8880U;
+; CHECK-NEXT:    prmt.b32 %r3, %r1, 0, 0x9991U;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0xaaa2U;
+; CHECK-NEXT:    prmt.b32 %r5, %r1, 0, 0xbbb3U;
 ; CHECK-NEXT:    add.s32 %r6, %r2, %r3;
 ; CHECK-NEXT:    add.s32 %r7, %r4, %r5;
 ; CHECK-NEXT:    add.s32 %r8, %r6, %r7;
@@ -127,10 +127,10 @@ define i32  @test_v4i8_u32(i32 %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_v4i8_u32_param_0];
-; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
-; CHECK-NEXT:    bfe.u32 %r3, %r1, 8, 8;
-; CHECK-NEXT:    bfe.u32 %r4, %r1, 16, 8;
-; CHECK-NEXT:    bfe.u32 %r5, %r1, 24, 8;
+; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x7770U;
+; CHECK-NEXT:    prmt.b32 %r3, %r1, 0, 0x7771U;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x7772U;
+; CHECK-NEXT:    prmt.b32 %r5, %r1, 0, 0x7773U;
 ; CHECK-NEXT:    add.s32 %r6, %r2, %r3;
 ; CHECK-NEXT:    add.s32 %r7, %r4, %r5;
 ; CHECK-NEXT:    add.s32 %r8, %r6, %r7;
@@ -161,22 +161,22 @@ define i16  @test_v8i8(i64 %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_v8i8_param_0];
-; CHECK-NEXT:    bfe.s32 %r3, %r1, 0, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs1, %r3;
-; CHECK-NEXT:    bfe.s32 %r4, %r1, 8, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs2, %r4;
-; CHECK-NEXT:    bfe.s32 %r5, %r1, 16, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs3, %r5;
-; CHECK-NEXT:    bfe.s32 %r6, %r1, 24, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs4, %r6;
-; CHECK-NEXT:    bfe.s32 %r7, %r2, 0, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs5, %r7;
-; CHECK-NEXT:    bfe.s32 %r8, %r2, 8, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs6, %r8;
-; CHECK-NEXT:    bfe.s32 %r9, %r2, 16, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs7, %r9;
-; CHECK-NEXT:    bfe.s32 %r10, %r2, 24, 8;
-; CHECK-NEXT:    cvt.s8.s32 %rs8, %r10;
+; CHECK-NEXT:    prmt.b32 %r3, %r1, 0, 0x8880U;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0x9991U;
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r4;
+; CHECK-NEXT:    prmt.b32 %r5, %r1, 0, 0xaaa2U;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r5;
+; CHECK-NEXT:    prmt.b32 %r6, %r1, 0, 0xbbb3U;
+; CHECK-NEXT:    cvt.u16.u32 %rs4, %r6;
+; CHECK-NEXT:    prmt.b32 %r7, %r2, 0, 0x8880U;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    prmt.b32 %r8, %r2, 0, 0x9991U;
+; CHECK-NEXT:    cvt.u16.u32 %rs6, %r8;
+; CHECK-NEXT:    prmt.b32 %r9, %r2, 0, 0xaaa2U;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r9;
+; CHECK-NEXT:    prmt.b32 %r10, %r2, 0, 0xbbb3U;
+; CHECK-NEXT:    cvt.u16.u32 %rs8, %r10;
 ; CHECK-NEXT:    add.s16 %rs9, %rs1, %rs2;
 ; CHECK-NEXT:    add.s16 %rs10, %rs3, %rs4;
 ; CHECK-NEXT:    add.s16 %rs11, %rs5, %rs6;
