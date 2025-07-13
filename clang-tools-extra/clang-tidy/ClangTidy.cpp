@@ -505,14 +505,13 @@ getCheckNames(const ClangTidyOptions &Options,
 
 void filterCheckOptions(ClangTidyOptions &Options,
                         const std::vector<std::string> &EnabledChecks) {
-  StringSet<> EnabledChecksSet(llvm::from_range, EnabledChecks);
   ClangTidyOptions::OptionMap FilteredOptions;
   for (const auto &[OptionName, Value] : Options.CheckOptions) {
     const size_t CheckNameEndPos = OptionName.find('.');
     if (CheckNameEndPos == StringRef::npos)
       continue;
     const StringRef CheckName = OptionName.substr(0, CheckNameEndPos);
-    if (EnabledChecksSet.contains(CheckName))
+    if (llvm::binary_search(EnabledChecks, CheckName))
       FilteredOptions[OptionName] = Value;
   }
   Options.CheckOptions = std::move(FilteredOptions);
