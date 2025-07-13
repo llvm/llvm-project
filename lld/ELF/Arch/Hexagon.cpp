@@ -457,10 +457,9 @@ mergeAttributesSection(Ctx &ctx,
       case HexagonAttrs::HVXARCH:
         if (auto i = parser.getAttributeValue(tag.attr)) {
           auto r = merged.intAttr.try_emplace(tag.attr, *i);
-          if (!r.second && r.first->second != *i) {
+          if (!r.second)
             if (r.first->second < *i)
               r.first->second = *i;
-          }
         }
         continue;
 
