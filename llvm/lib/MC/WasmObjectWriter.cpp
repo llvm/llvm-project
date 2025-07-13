@@ -697,10 +697,10 @@ static void addData(SmallVectorImpl<char> &DataBytes,
       report_fatal_error("only data supported in data sections");
 
     if (auto *Align = dyn_cast<MCAlignFragment>(&Frag)) {
-      if (Align->getValueSize() != 1)
+      if (Align->getFillLen() != 1)
         report_fatal_error("only byte values supported for alignment");
       // If nops are requested, use zeros, as this is the data section.
-      uint8_t Value = Align->hasEmitNops() ? 0 : Align->getValue();
+      uint8_t Value = Align->hasEmitNops() ? 0 : Align->getFill();
       uint64_t Size =
           std::min<uint64_t>(alignTo(DataBytes.size(), Align->getAlignment()),
                              DataBytes.size() + Align->getMaxBytesToEmit());

@@ -469,39 +469,36 @@ public:
 };
 
 class MCAlignFragment : public MCFragment {
-  /// The alignment to ensure, in bytes.
-  Align Alignment;
-
   /// Flag to indicate that (optimal) NOPs should be emitted instead
   /// of using the provided value. The exact interpretation of this flag is
   /// target dependent.
   bool EmitNops : 1;
 
-  /// Value to use for filling padding bytes.
-  int64_t Value;
+  /// The alignment to ensure, in bytes.
+  Align Alignment;
 
   /// The size of the integer (in bytes) of \p Value.
-  unsigned ValueSize;
+  uint8_t FillLen;
 
   /// The maximum number of bytes to emit; if the alignment
   /// cannot be satisfied in this width then this fragment is ignored.
   unsigned MaxBytesToEmit;
 
+  /// Value to use for filling padding bytes.
+  int64_t Fill;
+
   /// When emitting Nops some subtargets have specific nop encodings.
   const MCSubtargetInfo *STI = nullptr;
 
 public:
-  MCAlignFragment(Align Alignment, int64_t Value, unsigned ValueSize,
+  MCAlignFragment(Align Alignment, int64_t Fill, uint8_t FillLen,
                   unsigned MaxBytesToEmit)
-      : MCFragment(FT_Align, false), Alignment(Alignment), EmitNops(false),
-        Value(Value), ValueSize(ValueSize), MaxBytesToEmit(MaxBytesToEmit) {}
+      : MCFragment(FT_Align, false), EmitNops(false), Alignment(Alignment),
+        FillLen(FillLen), MaxBytesToEmit(MaxBytesToEmit), Fill(Fill) {}
 
   Align getAlignment() const { return Alignment; }
-
-  int64_t getValue() const { return Value; }
-
-  unsigned getValueSize() const { return ValueSize; }
-
+  int64_t getFill() const { return Fill; }
+  uint8_t getFillLen() const { return FillLen; }
   unsigned getMaxBytesToEmit() const { return MaxBytesToEmit; }
 
   bool hasEmitNops() const { return EmitNops; }
