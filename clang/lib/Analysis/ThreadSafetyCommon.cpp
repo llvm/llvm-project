@@ -300,16 +300,37 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
     return translate(cast<MaterializeTemporaryExpr>(S)->getSubExpr(), Ctx);
 
   // Collect all literals
-  case Stmt::CharacterLiteralClass:
+  case Stmt::CharacterLiteralClass: {
+    const auto *CL = cast<CharacterLiteral>(S);
+    unsigned Value = CL->getValue();
+    switch (CL->getKind()) {
+    case CharacterLiteralKind::Ascii:
+    case CharacterLiteralKind::UTF8:
+      return new (Arena) til::LiteralT<char>(Value);
+    case CharacterLiteralKind::Wide:
+      return new (Arena) til::LiteralT<wchar_t>(Value);
+    case CharacterLiteralKind::UTF16:
+      return new (Arena) til::LiteralT<char16_t>(Value);
+    case CharacterLiteralKind::UTF32:
+      return new (Arena) til::LiteralT<char32_t>(Value);
+    }
+    llvm_unreachable("Invalid CharacterLiteralKind");
+  }
   case Stmt::CXXNullPtrLiteralExprClass:
   case Stmt::GNUNullExprClass:
+    return new (Arena) til::LiteralT<void *>(nullptr);
   case Stmt::CXXBoolLiteralExprClass:
-  case Stmt::FloatingLiteralClass:
-  case Stmt::ImaginaryLiteralClass:
+    return new (Arena)
+        til::LiteralT<bool>(cast<CXXBoolLiteralExpr>(S)->getValue());
   case Stmt::IntegerLiteralClass:
+    return new (Arena)
+        til::LiteralT<llvm::APInt>(cast<IntegerLiteral>(S)->getValue());
   case Stmt::StringLiteralClass:
+    return new (Arena)
+        til::LiteralT<StringRef>(cast<StringLiteral>(S)->getString());
   case Stmt::ObjCStringLiteralClass:
-    return new (Arena) til::Literal(cast<Expr>(S));
+    return new (Arena) til::LiteralT<StringRef>(
+        cast<ObjCStringLiteral>(S)->getString()->getString());
 
   case Stmt::DeclStmtClass:
     return translateDeclStmt(cast<DeclStmt>(S), Ctx);
