@@ -2538,12 +2538,12 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
   if (STI.getELFArch() >= 102) { // An XMEGA device
 
     buildMI(MBB, MBBI, AVR::OUTARr)
-        .addImm(0x3d)
+        .addImm(STI.getIORegSPL())
         .addReg(SrcLoReg, getKillRegState(SrcIsKill))
         .setMIFlags(Flags);
 
     buildMI(MBB, MBBI, AVR::OUTARr)
-        .addImm(0x3e)
+        .addImm(STI.getIORegSPH())
         .addReg(SrcHiReg, getKillRegState(SrcIsKill))
         .setMIFlags(Flags);
 
@@ -2557,7 +2557,7 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
     buildMI(MBB, MBBI, AVR::BCLRs).addImm(0x07).setMIFlags(Flags);
 
     buildMI(MBB, MBBI, AVR::OUTARr)
-        .addImm(0x3e)
+        .addImm(STI.getIORegSPH())
         .addReg(SrcHiReg, getKillRegState(SrcIsKill))
         .setMIFlags(Flags);
 
@@ -2567,7 +2567,7 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
         .setMIFlags(Flags);
 
     buildMI(MBB, MBBI, AVR::OUTARr)
-        .addImm(0x3d)
+        .addImm(STI.getIORegSPL())
         .addReg(SrcLoReg, getKillRegState(SrcIsKill))
         .setMIFlags(Flags);
   }
