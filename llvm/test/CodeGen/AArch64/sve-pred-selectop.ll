@@ -322,11 +322,9 @@ entry:
 define <vscale x 4 x i32> @ornot_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
 ; CHECK-LABEL: ornot_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z3.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    bsl2n z1.d, z1.d, z2.d, z1.d
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-NEXT:    orr z1.d, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -340,11 +338,9 @@ entry:
 define <vscale x 8 x i16> @ornot_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16> %x, <vscale x 8 x i16> %y) {
 ; CHECK-LABEL: ornot_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z3.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    bsl2n z1.d, z1.d, z2.d, z1.d
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
-; CHECK-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-NEXT:    orr z1.d, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -358,11 +354,9 @@ entry:
 define <vscale x 16 x i8> @ornot_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8> %x, <vscale x 16 x i8> %y) {
 ; CHECK-LABEL: ornot_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z3.b, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    bsl2n z1.d, z1.d, z2.d, z1.d
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    eor z2.d, z2.d, z3.d
-; CHECK-NEXT:    orr z1.d, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
 entry:

@@ -254,20 +254,20 @@ public:
   /// support for these atomic instructions, and also have different options
   /// w.r.t. what they should expand to.
   enum class AtomicExpansionKind {
-    None,    // Don't expand the instruction.
-    CastToInteger,    // Cast the atomic instruction to another type, e.g. from
-                      // floating-point to integer type.
+    None,          // Don't expand the instruction.
+    CastToInteger, // Cast the atomic instruction to another type, e.g. from
+                   // floating-point to integer type.
     LLSC,    // Expand the instruction into loadlinked/storeconditional; used
-             // by ARM/AArch64.
+             // by ARM/AArch64/PowerPC.
     LLOnly,  // Expand the (load) instruction into just a load-linked, which has
              // greater atomic guarantees than a normal load.
     CmpXChg, // Expand the instruction into cmpxchg; used by at least X86.
-    MaskedIntrinsic,  // Use a target-specific intrinsic for the LL/SC loop.
-    BitTestIntrinsic, // Use a target-specific intrinsic for special bit
-                      // operations; used by X86.
-    CmpArithIntrinsic,// Use a target-specific intrinsic for special compare
-                      // operations; used by X86.
-    Expand,           // Generic expansion in terms of other atomic operations.
+    MaskedIntrinsic,   // Use a target-specific intrinsic for the LL/SC loop.
+    BitTestIntrinsic,  // Use a target-specific intrinsic for special bit
+                       // operations; used by X86.
+    CmpArithIntrinsic, // Use a target-specific intrinsic for special compare
+                       // operations; used by X86.
+    Expand,            // Generic expansion in terms of other atomic operations.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
@@ -1116,10 +1116,7 @@ public:
     LegalizeTypeAction ValueTypeActions[MVT::VALUETYPE_SIZE];
 
   public:
-    ValueTypeActionImpl() {
-      std::fill(std::begin(ValueTypeActions), std::end(ValueTypeActions),
-                TypeLegal);
-    }
+    ValueTypeActionImpl() { llvm::fill(ValueTypeActions, TypeLegal); }
 
     LegalizeTypeAction getTypeAction(MVT VT) const {
       return ValueTypeActions[VT.SimpleTy];
@@ -1659,17 +1656,21 @@ public:
   /// InputVT should be treated. Either it's legal, needs to be promoted to a
   /// larger size, needs to be expanded to some other code sequence, or the
   /// target has a custom expander for it.
-  LegalizeAction getPartialReduceMLAAction(EVT AccVT, EVT InputVT) const {
-    PartialReduceActionTypes TypePair = {AccVT.getSimpleVT().SimpleTy,
-                                         InputVT.getSimpleVT().SimpleTy};
-    auto It = PartialReduceMLAActions.find(TypePair);
+  LegalizeAction getPartialReduceMLAAction(unsigned Opc, EVT AccVT,
+                                           EVT InputVT) const {
+    assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
+           Opc == ISD::PARTIAL_REDUCE_SUMLA);
+    PartialReduceActionTypes Key = {Opc, AccVT.getSimpleVT().SimpleTy,
+                                    InputVT.getSimpleVT().SimpleTy};
+    auto It = PartialReduceMLAActions.find(Key);
     return It != PartialReduceMLAActions.end() ? It->second : Expand;
   }
 
   /// Return true if a PARTIAL_REDUCE_U/SMLA node with the specified types is
   /// legal or custom for this target.
-  bool isPartialReduceMLALegalOrCustom(EVT AccVT, EVT InputVT) const {
-    LegalizeAction Action = getPartialReduceMLAAction(AccVT, InputVT);
+  bool isPartialReduceMLALegalOrCustom(unsigned Opc, EVT AccVT,
+                                       EVT InputVT) const {
+    LegalizeAction Action = getPartialReduceMLAAction(Opc, AccVT, InputVT);
     return Action == Legal || Action == Custom;
   }
 
@@ -2016,7 +2017,7 @@ public:
   /// It returns EVT::Other if the type should be determined using generic
   /// target-independent logic.
   virtual EVT
-  getOptimalMemOpType(const MemOp &Op,
+  getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                       const AttributeList & /*FuncAttributes*/) const {
     return MVT::Other;
   }
@@ -2754,12 +2755,19 @@ protected:
   /// type InputVT should be treated by the target. Either it's legal, needs to
   /// be promoted to a larger size, needs to be expanded to some other code
   /// sequence, or the target has a custom expander for it.
-  void setPartialReduceMLAAction(MVT AccVT, MVT InputVT,
+  void setPartialReduceMLAAction(unsigned Opc, MVT AccVT, MVT InputVT,
                                  LegalizeAction Action) {
+    assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
+           Opc == ISD::PARTIAL_REDUCE_SUMLA);
     assert(AccVT.isValid() && InputVT.isValid() &&
            "setPartialReduceMLAAction types aren't valid");
-    PartialReduceActionTypes TypePair = {AccVT.SimpleTy, InputVT.SimpleTy};
-    PartialReduceMLAActions[TypePair] = Action;
+    PartialReduceActionTypes Key = {Opc, AccVT.SimpleTy, InputVT.SimpleTy};
+    PartialReduceMLAActions[Key] = Action;
+  }
+  void setPartialReduceMLAAction(ArrayRef<unsigned> Opcodes, MVT AccVT,
+                                 MVT InputVT, LegalizeAction Action) {
+    for (unsigned Opc : Opcodes)
+      setPartialReduceMLAAction(Opc, AccVT, InputVT, Action);
   }
 
   /// If Opc/OrigVT is specified as being promoted, the promotion code defaults
@@ -3547,13 +3555,13 @@ public:
     return nullptr;
   }
 
-  /// Rename the default libcall routine name for the specified libcall.
-  void setLibcallName(RTLIB::Libcall Call, const char *Name) {
-    Libcalls.setLibcallName(Call, Name);
+  void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
+    Libcalls.setLibcallImpl(Call, Impl);
   }
 
-  void setLibcallName(ArrayRef<RTLIB::Libcall> Calls, const char *Name) {
-    Libcalls.setLibcallName(Calls, Name);
+  /// Get the libcall impl routine name for the specified libcall.
+  RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall Call) const {
+    return Libcalls.getLibcallImpl(Call);
   }
 
   /// Get the libcall routine name for the specified libcall.
@@ -3561,28 +3569,26 @@ public:
     return Libcalls.getLibcallName(Call);
   }
 
-  /// Override the default CondCode to be used to test the result of the
-  /// comparison libcall against zero.
-  /// FIXME: This can't be merged with 'RuntimeLibcallsInfo' because of the ISD.
-  void setCmpLibcallCC(RTLIB::Libcall Call, ISD::CondCode CC) {
-    CmpLibcallCCs[Call] = CC;
-  }
+  const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
 
-
-  /// Get the CondCode that's to be used to test the result of the comparison
-  /// libcall against zero.
-  /// FIXME: This can't be merged with 'RuntimeLibcallsInfo' because of the ISD.
-  ISD::CondCode getCmpLibcallCC(RTLIB::Libcall Call) const {
-    return CmpLibcallCCs[Call];
-  }
-
+  /// Get the comparison predicate that's to be used to test the result of the
+  /// comparison libcall against zero. This should only be used with
+  /// floating-point compare libcalls.
+  ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
 
   /// Set the CallingConv that should be used for the specified libcall.
-  void setLibcallCallingConv(RTLIB::Libcall Call, CallingConv::ID CC) {
-    Libcalls.setLibcallCallingConv(Call, CC);
+  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
+    Libcalls.setLibcallImplCallingConv(Call, CC);
+  }
+
+  /// Get the CallingConv that should be used for the specified libcall
+  /// implementation.
+  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
+    return Libcalls.getLibcallImplCallingConv(Call);
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
+  // FIXME: Remove this wrapper and directly use the used LibcallImpl
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
     return Libcalls.getLibcallCallingConv(Call);
   }
@@ -3751,10 +3757,10 @@ private:
   uint32_t CondCodeActions[ISD::SETCC_INVALID][(MVT::VALUETYPE_SIZE + 7) / 8];
 
   using PartialReduceActionTypes =
-      std::pair<MVT::SimpleValueType, MVT::SimpleValueType>;
-  /// For each result type and input type for the ISD::PARTIAL_REDUCE_U/SMLA
-  /// nodes, keep a LegalizeAction which indicates how instruction selection
-  /// should deal with this operation.
+      std::tuple<unsigned, MVT::SimpleValueType, MVT::SimpleValueType>;
+  /// For each partial reduce opcode, result type and input type combination,
+  /// keep a LegalizeAction which indicates how instruction selection should
+  /// deal with this operation.
   DenseMap<PartialReduceActionTypes, LegalizeAction> PartialReduceMLAActions;
 
   ValueTypeActionImpl ValueTypeActions;
@@ -4103,8 +4109,9 @@ public:
   /// It returns the types of the sequence of memory ops to perform
   /// memset / memcpy by reference.
   virtual bool
-  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
-                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
+                           unsigned Limit, const MemOp &Op, unsigned DstAS,
+                           unsigned SrcAS,
                            const AttributeList &FuncAttributes) const;
 
   /// Check to see if the specified operand of the specified instruction is a
@@ -4363,6 +4370,11 @@ public:
     return Op.getOpcode() == ISD::SPLAT_VECTOR ||
            Op.getOpcode() == ISD::SPLAT_VECTOR_PARTS;
   }
+
+  /// Return true if the given select/vselect should be considered canonical and
+  /// not be transformed. Currently only used for "vselect (not Cond), N1, N2 ->
+  /// vselect Cond, N2, N1".
+  virtual bool isTargetCanonicalSelect(SDNode *N) const { return false; }
 
   struct DAGCombinerInfo {
     void *DC;  // The DAG Combiner object.
@@ -5080,9 +5092,6 @@ public:
     return nullptr;
   }
 
-  bool verifyReturnAddressArgumentIsConstant(SDValue Op,
-                                             SelectionDAG &DAG) const;
-
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks
   //
@@ -5789,6 +5798,8 @@ public:
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                            const SDLoc &DL, DAGCombinerInfo &DCI) const;
+  SDValue foldSetCCWithOr(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
+                          const SDLoc &DL, DAGCombinerInfo &DCI) const;
   SDValue foldSetCCWithBinOp(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                              const SDLoc &DL, DAGCombinerInfo &DCI) const;
 

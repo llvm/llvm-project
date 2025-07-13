@@ -505,13 +505,14 @@ class NewGVN {
   MemorySSAWalker *MSSAWalker = nullptr;
   AssumptionCache *AC = nullptr;
   const DataLayout &DL;
-  std::unique_ptr<PredicateInfo> PredInfo;
 
   // These are the only two things the create* functions should have
   // side-effects on due to allocating memory.
   mutable BumpPtrAllocator ExpressionAllocator;
   mutable ArrayRecycler<Value *> ArgRecycler;
   mutable TarjanSCC SCCFinder;
+
+  std::unique_ptr<PredicateInfo> PredInfo;
   const SimplifyQuery SQ;
 
   // Number of function arguments, used by ranking
@@ -673,7 +674,9 @@ public:
          TargetLibraryInfo *TLI, AliasAnalysis *AA, MemorySSA *MSSA,
          const DataLayout &DL)
       : F(F), DT(DT), TLI(TLI), AA(AA), MSSA(MSSA), AC(AC), DL(DL),
-        PredInfo(std::make_unique<PredicateInfo>(F, *DT, *AC)),
+        // Reuse ExpressionAllocator for PredicateInfo as well.
+        PredInfo(
+            std::make_unique<PredicateInfo>(F, *DT, *AC, ExpressionAllocator)),
         SQ(DL, TLI, DT, AC, /*CtxI=*/nullptr, /*UseInstrInfo=*/false,
            /*CanUseUndef=*/false) {}
 
@@ -1530,11 +1533,12 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   }
 
   if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
-    auto *LifetimePtr = II->getOperand(1);
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start &&
-        (LoadPtr == lookupOperandLeader(LifetimePtr) ||
-         AA->isMustAlias(LoadPtr, LifetimePtr)))
-      return createConstantExpression(UndefValue::get(LoadType));
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+      auto *LifetimePtr = II->getOperand(1);
+      if (LoadPtr == lookupOperandLeader(LifetimePtr) ||
+          AA->isMustAlias(LoadPtr, LifetimePtr))
+        return createConstantExpression(UndefValue::get(LoadType));
+    }
   }
 
   // All of the below are only true if the loaded pointer is produced

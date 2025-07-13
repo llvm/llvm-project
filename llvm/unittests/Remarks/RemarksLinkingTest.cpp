@@ -207,22 +207,22 @@ TEST(Remarks, LinkingGoodStrTab) {
         "DebugLoc:        { File: file.c, Line: 3, Column: 12 }\n"
         "Function:        foo\n"
         "...\n",
-        remarks::Format::YAMLStrTab,
-        StringRef("REMARKS\0\0\0\0\0\0\0\0\0\x22\0\0\0\0\0\0\0"
-                  "inline\0NoDefinition\0foo\0file.c\0Ok\0"
-                  "--- !Passed\n"
-                  "Pass:            0\n"
-                  "Name:            4\n"
-                  "DebugLoc:        { File: 3, Line: 3, Column: 12 }\n"
-                  "Function:        2\n"
-                  "...\n"
-                  "--- !Missed\n"
-                  "Pass:            0\n"
-                  "Name:            1\n"
-                  "DebugLoc:        { File: 3, Line: 3, Column: 12 }\n"
-                  "Function:        2\n"
-                  "...\n",
-                  304));
+        remarks::Format::Bitstream,
+        "<BLOCKINFO_BLOCK/>\n"
+        "<Meta BlockID=8 NumWords=13 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=0 op1=2/>\n"
+        "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
+        "'inline\\x00NoDefinition\\x00foo\\x00file.c\\x00Ok\\x00'\n"
+        "</Meta>\n"
+        "<Remark BlockID=9 NumWords=4 BlockCodeSize=4>\n"
+        "  <Remark header codeid=5 abbrevid=4 op0=1 op1=4 op2=0 op3=2/>\n"
+        "  <Remark debug location codeid=6 abbrevid=5 op0=3 op1=3 op2=12/>\n"
+        "</Remark>\n"
+        "<Remark BlockID=9 NumWords=4 BlockCodeSize=4>\n"
+        "  <Remark header codeid=5 abbrevid=4 op0=2 op1=1 op2=0 op3=2/>\n"
+        "  <Remark debug location codeid=6 abbrevid=5 op0=3 op1=3 op2=12/>\n"
+        "</Remark>\n");
 }
 
 // Check that we propagate parsing errors.
@@ -241,11 +241,10 @@ TEST(Remarks, LinkingError) {
 
   {
     // Check that the prepend path is propagated and fails with the full path.
+    // Also ensures that the remark format is correctly auto-detected.
     RL.setExternalFilePrependPath("/baddir/");
-    Error E = RL.link(
-        StringRef("REMARKS\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0badfile.opt.yaml",
-                  40),
-        remarks::Format::YAMLStrTab);
+    Error E = RL.link(StringRef(
+        "REMARKS\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0badfile.opt.yaml", 40));
     EXPECT_TRUE(static_cast<bool>(E));
     std::string ErrorMessage = toString(std::move(E));
     EXPECT_EQ(StringRef(ErrorMessage).lower(),

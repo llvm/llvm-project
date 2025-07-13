@@ -73,7 +73,7 @@ static cl::opt<AArch64PAuth::AuthCheckMethod>
                                cl::values(AUTH_CHECK_METHOD_CL_VALUES_LR));
 
 static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
-    "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
+    "aarch64-min-jump-table-entries", cl::init(10), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on AArch64"));
 
 static cl::opt<unsigned> AArch64StreamingHazardSize(
@@ -662,6 +662,12 @@ AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
   // This isn't ABI, so we can always do better in the future.
   return getPointerAuthStableSipHash(
       (Twine(ParentFn.getName()) + " blockaddress").str());
+}
+
+bool AArch64Subtarget::isX16X17Safer() const {
+  // The Darwin kernel implements special protections for x16 and x17 so we
+  // should prefer to use those registers on that platform.
+  return isTargetDarwin();
 }
 
 bool AArch64Subtarget::enableMachinePipeliner() const {

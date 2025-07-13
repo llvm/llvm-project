@@ -19,6 +19,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetObjectFile.h"
 #include "X86TargetTransformInfo.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -219,7 +220,7 @@ getEffectiveX86CodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
   bool Is64Bit = TT.getArch() == Triple::x86_64;
   if (CM) {
     if (*CM == CodeModel::Tiny)
-      report_fatal_error("Target does not support the tiny CodeModel", false);
+      reportFatalUsageError("target does not support the tiny CodeModel");
     return *CM;
   }
   if (JIT)
@@ -378,14 +379,14 @@ void X86TargetMachine::reset() { SubtargetMap.clear(); }
 
 ScheduleDAGInstrs *
 X86TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  ScheduleDAGMILive *DAG = createSchedLive(C);
   DAG->addMutation(createX86MacroFusionDAGMutation());
   return DAG;
 }
 
 ScheduleDAGInstrs *
 X86TargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
   DAG->addMutation(createX86MacroFusionDAGMutation());
   return DAG;
 }
@@ -554,7 +555,6 @@ bool X86PassConfig::addPreISel() {
 void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
-    addPass(createX86WinFixupBufferSecurityCheckPass());
     addPass(createX86FixupSetCC());
     addPass(createX86OptimizeLEAs());
     addPass(createX86CallFrameOptimization());

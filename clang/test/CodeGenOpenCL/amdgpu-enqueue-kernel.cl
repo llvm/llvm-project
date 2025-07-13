@@ -209,9 +209,9 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    [[BLOCK_CAPTURED19:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr [[BLOCK12_ASCAST]], i32 0, i32 5
 // NOCPU-NEXT:    [[TMP17:%.*]] = load i64, ptr [[D_ADDR_ASCAST]], align 8
 // NOCPU-NEXT:    store i64 [[TMP17]], ptr [[BLOCK_CAPTURED19]], align 8
-// NOCPU-NEXT:    [[TMP18:%.*]] = getelementptr [1 x i64], ptr [[BLOCK_SIZES_ASCAST]], i32 0, i32 0
-// NOCPU-NEXT:    store i64 100, ptr [[TMP18]], align 8
-// NOCPU-NEXT:    [[TMP19:%.*]] = call i32 @__enqueue_kernel_varargs(ptr addrspace(1) [[TMP12]], i32 [[TMP13]], ptr addrspace(5) [[VARTMP11]], ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_3_kernel.runtime.handle to ptr), ptr [[BLOCK12_ASCAST]], i32 1, ptr [[TMP18]])
+// NOCPU-NEXT:    [[TMP18:%.*]] = getelementptr [1 x i64], ptr addrspace(5) [[BLOCK_SIZES]], i32 0, i32 0
+// NOCPU-NEXT:    store i64 100, ptr addrspace(5) [[TMP18]], align 8
+// NOCPU-NEXT:    [[TMP19:%.*]] = call i32 @__enqueue_kernel_varargs(ptr addrspace(1) [[TMP12]], i32 [[TMP13]], ptr addrspace(5) [[VARTMP11]], ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_3_kernel.runtime.handle to ptr), ptr [[BLOCK12_ASCAST]], i32 1, ptr addrspace(5) [[TMP18]])
 // NOCPU-NEXT:    [[BLOCK_SIZE22:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i64, ptr addrspace(1) }>, ptr [[BLOCK21_ASCAST]], i32 0, i32 0
 // NOCPU-NEXT:    store i32 32, ptr [[BLOCK_SIZE22]], align 8
 // NOCPU-NEXT:    [[BLOCK_ALIGN23:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i64, ptr addrspace(1) }>, ptr [[BLOCK21_ASCAST]], i32 0, i32 1
@@ -587,9 +587,9 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:    [[TMP17:%.*]] = load i64, ptr [[D_ADDR_ASCAST]], align 8, !tbaa [[TBAA3]]
 // GFX900-NEXT:    store i64 [[TMP17]], ptr [[BLOCK_CAPTURED19]], align 8, !tbaa [[TBAA3]]
 // GFX900-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[BLOCK_SIZES]]) #[[ATTR9]]
-// GFX900-NEXT:    [[TMP18:%.*]] = getelementptr [1 x i64], ptr [[BLOCK_SIZES_ASCAST]], i32 0, i32 0
-// GFX900-NEXT:    store i64 100, ptr [[TMP18]], align 8
-// GFX900-NEXT:    [[TMP19:%.*]] = call i32 @__enqueue_kernel_varargs(ptr addrspace(1) [[TMP12]], i32 [[TMP13]], ptr addrspace(5) [[VARTMP11]], ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_3_kernel.runtime.handle to ptr), ptr [[BLOCK12_ASCAST]], i32 1, ptr [[TMP18]])
+// GFX900-NEXT:    [[TMP18:%.*]] = getelementptr [1 x i64], ptr addrspace(5) [[BLOCK_SIZES]], i32 0, i32 0
+// GFX900-NEXT:    store i64 100, ptr addrspace(5) [[TMP18]], align 8
+// GFX900-NEXT:    [[TMP19:%.*]] = call i32 @__enqueue_kernel_varargs(ptr addrspace(1) [[TMP12]], i32 [[TMP13]], ptr addrspace(5) [[VARTMP11]], ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_3_kernel.runtime.handle to ptr), ptr [[BLOCK12_ASCAST]], i32 1, ptr addrspace(5) [[TMP18]])
 // GFX900-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[BLOCK_SIZES]]) #[[ATTR9]]
 // GFX900-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[BLOCK20]]) #[[ATTR9]]
 // GFX900-NEXT:    [[BLOCK_SIZE22:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i64, ptr addrspace(1) }>, ptr [[BLOCK21_ASCAST]], i32 0, i32 0

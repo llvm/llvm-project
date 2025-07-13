@@ -24,27 +24,18 @@ namespace {
 /// Generic one-to-one conversion of simply mappable operations into calls
 /// to their respective LLVM intrinsics.
 struct AMXIntrinsicOpConversion
-    : public OpInterfaceConversionPattern<amx::AMXIntrinsicOp> {
-  using OpInterfaceConversionPattern<
-      amx::AMXIntrinsicOp>::OpInterfaceConversionPattern;
-
-  AMXIntrinsicOpConversion(const LLVMTypeConverter &typeConverter,
-                           PatternBenefit benefit = 1)
-      : OpInterfaceConversionPattern(typeConverter, &typeConverter.getContext(),
-                                     benefit),
-        typeConverter(typeConverter) {}
+    : public ConvertOpInterfaceToLLVMPattern<amx::AMXIntrinsicOp> {
+  using ConvertOpInterfaceToLLVMPattern::ConvertOpInterfaceToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(amx::AMXIntrinsicOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
+    const LLVMTypeConverter &typeConverter = *getTypeConverter();
     return LLVM::detail::intrinsicRewrite(
         op, rewriter.getStringAttr(op.getIntrinsicName()),
         op.getIntrinsicOperands(operands, typeConverter, rewriter),
         typeConverter, rewriter);
   }
-
-private:
-  const LLVMTypeConverter &typeConverter;
 };
 
 } // namespace
@@ -59,4 +50,23 @@ void mlir::populateAMXLegalizeForLLVMExportPatterns(
 
 void mlir::configureAMXLegalizeForExportTarget(LLVMConversionTarget &target) {
   target.addIllegalDialect<AMXDialect>();
+}
+
+namespace {
+/// Implement the interface to convert AMX to LLVM.
+struct AMXToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateAMXLegalizeForLLVMExportPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertAMXToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, amx::AMXDialect *dialect) {
+    dialect->addInterfaces<AMXToLLVMDialectInterface>();
+  });
 }

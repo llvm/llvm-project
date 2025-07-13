@@ -731,7 +731,7 @@ public:
   /// introduce or modify an identifier. If they called get(), they would
   /// likely end up in a recursion.
   IdentifierInfo &getOwn(StringRef Name) {
-    auto &Entry = *HashTable.insert(std::make_pair(Name, nullptr)).first;
+    auto &Entry = *HashTable.try_emplace(Name).first;
 
     IdentifierInfo *&II = Entry.second;
     if (II)

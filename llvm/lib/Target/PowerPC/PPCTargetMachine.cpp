@@ -38,6 +38,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -113,7 +114,8 @@ static cl::opt<unsigned>
                          cl::init(0x7fff),
                          cl::desc("Maximum global merge offset"));
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializePowerPCTarget() {
   // Register the targets
   RegisterTargetMachine<PPCTargetMachine> A(getThePPC32Target());
   RegisterTargetMachine<PPCTargetMachine> B(getThePPC32LETarget());
@@ -310,12 +312,10 @@ getEffectivePPCCodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
 
 static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
   const PPCSubtarget &ST = C->MF->getSubtarget<PPCSubtarget>();
-  ScheduleDAGMILive *DAG =
-    new ScheduleDAGMILive(C, ST.usePPCPreRASchedStrategy() ?
-                          std::make_unique<PPCPreRASchedStrategy>(C) :
-                          std::make_unique<GenericScheduler>(C));
+  ScheduleDAGMILive *DAG = ST.usePPCPreRASchedStrategy()
+                               ? createSchedLive<PPCPreRASchedStrategy>(C)
+                               : createSchedLive<GenericScheduler>(C);
   // add DAG Mutations here.
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
   if (ST.hasStoreFusion())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.hasFusion())
@@ -324,13 +324,12 @@ static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
   return DAG;
 }
 
-static ScheduleDAGInstrs *createPPCPostMachineScheduler(
-  MachineSchedContext *C) {
+static ScheduleDAGInstrs *
+createPPCPostMachineScheduler(MachineSchedContext *C) {
   const PPCSubtarget &ST = C->MF->getSubtarget<PPCSubtarget>();
-  ScheduleDAGMI *DAG =
-    new ScheduleDAGMI(C, ST.usePPCPostRASchedStrategy() ?
-                      std::make_unique<PPCPostRASchedStrategy>(C) :
-                      std::make_unique<PostGenericScheduler>(C), true);
+  ScheduleDAGMI *DAG = ST.usePPCPostRASchedStrategy()
+                           ? createSchedPostRA<PPCPostRASchedStrategy>(C)
+                           : createSchedPostRA<PostGenericScheduler>(C);
   // add DAG Mutations here.
   if (ST.hasStoreFusion())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
@@ -562,7 +561,8 @@ void PPCPassConfig::addMachineSSAOptimization() {
 
 void PPCPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    insertPass(VSXFMAMutateEarly ? &RegisterCoalescerID : &MachineSchedulerID,
+    insertPass(VSXFMAMutateEarly ? &TwoAddressInstructionPassID
+                                 : &MachineSchedulerID,
                &PPCVSXFMAMutateID);
   }
 

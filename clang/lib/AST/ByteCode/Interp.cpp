@@ -445,13 +445,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   assert(Desc);
 
   const auto *D = Desc->asVarDecl();
-  if (!D || !D->hasGlobalStorage())
-    return true;
-
-  if (D == S.EvaluatingDecl)
-    return true;
-
-  if (D->isConstexpr())
+  if (!D || D == S.EvaluatingDecl || D->isConstexpr())
     return true;
 
   // If we're evaluating the initializer for a constexpr variable in C23, we may
@@ -576,22 +570,13 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isConst() || Ptr.isMutable())
     return true;
 
-  // The This pointer is writable in constructors and destructors,
-  // even if isConst() returns true.
-  // TODO(perf): We could be hitting this code path quite a lot in complex
-  // constructors. Is there a better way to do this?
-  if (S.Current->getFunction()) {
-    for (const InterpFrame *Frame = S.Current; Frame; Frame = Frame->Caller) {
-      if (const Function *Func = Frame->getFunction();
-          Func && (Func->isConstructor() || Func->isDestructor()) &&
-          Ptr.block() == Frame->getThis().block()) {
-        return true;
-      }
-    }
-  }
-
   if (!Ptr.isBlockPointer())
     return false;
+
+  // The This pointer is writable in constructors and destructors,
+  // even if isConst() returns true.
+  if (llvm::find(S.InitializingBlocks, Ptr.block()))
+    return true;
 
   const QualType Ty = Ptr.getType();
   const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -857,22 +842,21 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
-  // Bail out if the function declaration itself is invalid.  We will
-  // have produced a relevant diagnostic while parsing it, so just
-  // note the problematic sub-expression.
-  if (F->getDecl()->isInvalidDecl())
-    return Invalid(S, OpPC);
-
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
     return false;
 
-  if (F->isConstexpr() && F->hasBody() &&
-      (F->getDecl()->isConstexpr() || F->getDecl()->hasAttr<MSConstexprAttr>()))
+  if (F->isValid() && F->hasBody() && F->isConstexpr())
     return true;
 
   // Implicitly constexpr.
   if (F->isLambdaStaticInvoker())
     return true;
+
+  // Bail out if the function declaration itself is invalid.  We will
+  // have produced a relevant diagnostic while parsing it, so just
+  // note the problematic sub-expression.
+  if (F->getDecl()->isInvalidDecl())
+    return Invalid(S, OpPC);
 
   // Diagnose failed assertions specially.
   if (S.Current->getLocation(OpPC).isMacroID() &&
@@ -923,7 +907,8 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
       // for a constant expression. It might be defined at the point we're
       // actually calling it.
       bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
-      if (!DiagDecl->isDefined() && !IsExtern && DiagDecl->isConstexpr() &&
+      bool IsDefined = F->isDefined();
+      if (!IsDefined && !IsExtern && DiagDecl->isConstexpr() &&
           S.checkingPotentialConstantExpression())
         return false;
 
@@ -966,16 +951,15 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
   if (!This.isZero())
     return true;
 
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-
-  bool IsImplicit = false;
-  if (const auto *E = dyn_cast_if_present<CXXThisExpr>(Loc.asExpr()))
-    IsImplicit = E->isImplicit();
-
-  if (S.getLangOpts().CPlusPlus11)
-    S.FFDiag(Loc, diag::note_constexpr_this) << IsImplicit;
-  else
-    S.FFDiag(Loc);
+  const Expr *E = S.Current->getExpr(OpPC);
+  if (S.getLangOpts().CPlusPlus11) {
+    bool IsImplicit = false;
+    if (const auto *TE = dyn_cast<CXXThisExpr>(E))
+      IsImplicit = TE->isImplicit();
+    S.FFDiag(E, diag::note_constexpr_this) << IsImplicit;
+  } else {
+    S.FFDiag(E);
+  }
 
   return false;
 }
@@ -1109,7 +1093,7 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *CE, unsigned ArgSize) {
-  auto Args = llvm::ArrayRef(CE->getArgs(), CE->getNumArgs());
+  auto Args = ArrayRef(CE->getArgs(), CE->getNumArgs());
   auto NonNullArgs = collectNonNullArgs(F->getDecl(), Args);
   unsigned Offset = 0;
   unsigned Index = 0;
@@ -1197,6 +1181,8 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
   if (!CheckDynamicMemoryAllocation(S, OpPC))
     return false;
 
+  DynamicAllocator &Allocator = S.getAllocator();
+
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
   {
@@ -1212,6 +1198,21 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     QualType InitialType = Ptr.getType();
     while (Ptr.isBaseClass())
       Ptr = Ptr.getBase();
+
+    Source = Ptr.getDeclDesc()->asExpr();
+    BlockToDelete = Ptr.block();
+
+    // Check that new[]/delete[] or new/delete were used, not a mixture.
+    const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
+    if (std::optional<DynamicAllocator::Form> AllocForm =
+            Allocator.getAllocationForm(Source)) {
+      DynamicAllocator::Form DeleteForm =
+          DeleteIsArrayForm ? DynamicAllocator::Form::Array
+                            : DynamicAllocator::Form::NonArray;
+      if (!CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
+                               Source))
+        return false;
+    }
 
     // For the non-array case, the types must match if the static type
     // does not have a virtual destructor.
@@ -1230,9 +1231,6 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
           << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
       return false;
     }
-
-    Source = Ptr.getDeclDesc()->asExpr();
-    BlockToDelete = Ptr.block();
 
     if (!CheckDeleteSource(S, OpPC, Source, Ptr))
       return false;
@@ -1267,11 +1265,6 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
   if (!RunDestructors(S, OpPC, BlockToDelete))
     return false;
 
-  DynamicAllocator &Allocator = S.getAllocator();
-  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
-  std::optional<DynamicAllocator::Form> AllocForm =
-      Allocator.getAllocationForm(Source);
-
   if (!Allocator.deallocate(Source, BlockToDelete, S)) {
     // Nothing has been deallocated, this must be a double-delete.
     const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -1279,12 +1272,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     return false;
   }
 
-  assert(AllocForm);
-  DynamicAllocator::Form DeleteForm = DeleteIsArrayForm
-                                          ? DynamicAllocator::Form::Array
-                                          : DynamicAllocator::Form::NonArray;
-  return CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
-                             Source);
+  return true;
 }
 
 void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
@@ -1521,6 +1509,9 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       return false;
     if (Func->isDestructor() && !CheckDestructor(S, OpPC, ThisPtr))
       return false;
+
+    if (Func->isConstructor() || Func->isDestructor())
+      S.InitializingBlocks.push_back(ThisPtr.block());
   }
 
   if (!Func->isFullyCompiled())
@@ -1547,16 +1538,21 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
-  if (Interpret(S)) {
-    NewFrame.release(); // Frame was delete'd already.
-    assert(S.Current == FrameBefore);
-    return true;
+  bool Success = Interpret(S);
+  // Remove initializing  block again.
+  if (Func->isConstructor() || Func->isDestructor())
+    S.InitializingBlocks.pop_back();
+
+  if (!Success) {
+    // Interpreting the function failed somehow. Reset to
+    // previous state.
+    S.Current = FrameBefore;
+    return false;
   }
 
-  // Interpreting the function failed somehow. Reset to
-  // previous state.
-  S.Current = FrameBefore;
-  return false;
+  NewFrame.release(); // Frame was delete'd already.
+  assert(S.Current == FrameBefore);
+  return true;
 }
 
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1936,8 +1932,10 @@ bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
   if (!CheckPointerToIntegralCast(S, OpPC, Ptr, BitWidth))
     return false;
 
-  S.Stk.push<IntegralAP<false>>(
-      IntegralAP<false>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  auto Result = S.allocAP<IntegralAP<false>>(BitWidth);
+  Result.copy(APInt(BitWidth, Ptr.getIntegerRepresentation()));
+
+  S.Stk.push<IntegralAP<false>>(Result);
   return true;
 }
 
@@ -1947,8 +1945,10 @@ bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
   if (!CheckPointerToIntegralCast(S, OpPC, Ptr, BitWidth))
     return false;
 
-  S.Stk.push<IntegralAP<true>>(
-      IntegralAP<true>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  auto Result = S.allocAP<IntegralAP<true>>(BitWidth);
+  Result.copy(APInt(BitWidth, Ptr.getIntegerRepresentation()));
+
+  S.Stk.push<IntegralAP<true>>(Result);
   return true;
 }
 
@@ -2007,6 +2007,145 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC) {
       << E->getExprOperand()->getType()
       << E->getExprOperand()->getSourceRange();
   return false;
+}
+
+bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
+                                             const Pointer &RHS) {
+  unsigned LHSOffset = LHS.getIndex();
+  unsigned RHSOffset = RHS.getIndex();
+  unsigned LHSLength = (LHS.getNumElems() - 1) * LHS.elemSize();
+  unsigned RHSLength = (RHS.getNumElems() - 1) * RHS.elemSize();
+
+  StringRef LHSStr((const char *)LHS.atIndex(0).getRawAddress(), LHSLength);
+  StringRef RHSStr((const char *)RHS.atIndex(0).getRawAddress(), RHSLength);
+  int32_t IndexDiff = RHSOffset - LHSOffset;
+  if (IndexDiff < 0) {
+    if (static_cast<int32_t>(LHSLength) < -IndexDiff)
+      return false;
+    LHSStr = LHSStr.drop_front(-IndexDiff);
+  } else {
+    if (static_cast<int32_t>(RHSLength) < IndexDiff)
+      return false;
+    RHSStr = RHSStr.drop_front(IndexDiff);
+  }
+
+  unsigned ShorterCharWidth;
+  StringRef Shorter;
+  StringRef Longer;
+  if (LHSLength < RHSLength) {
+    ShorterCharWidth = LHS.elemSize();
+    Shorter = LHSStr;
+    Longer = RHSStr;
+  } else {
+    ShorterCharWidth = RHS.elemSize();
+    Shorter = RHSStr;
+    Longer = LHSStr;
+  }
+
+  // The null terminator isn't included in the string data, so check for it
+  // manually. If the longer string doesn't have a null terminator where the
+  // shorter string ends, they aren't potentially overlapping.
+  for (unsigned NullByte : llvm::seq(ShorterCharWidth)) {
+    if (Shorter.size() + NullByte >= Longer.size())
+      break;
+    if (Longer[Shorter.size() + NullByte])
+      return false;
+  }
+  return Shorter == Longer.take_front(Shorter.size());
+}
+
+static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
+                                PrimType T) {
+
+  if (T == PT_IntAPS) {
+    auto &Val = Ptr.deref<IntegralAP<true>>();
+    if (!Val.singleWord()) {
+      uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
+      Val.take(NewMemory);
+    }
+  } else if (T == PT_IntAP) {
+    auto &Val = Ptr.deref<IntegralAP<false>>();
+    if (!Val.singleWord()) {
+      uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
+      Val.take(NewMemory);
+    }
+  } else if (T == PT_Float) {
+    auto &Val = Ptr.deref<Floating>();
+    if (!Val.singleWord()) {
+      uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
+      Val.take(NewMemory);
+    }
+  }
+}
+
+template <typename T>
+static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
+  assert(needsAlloc<T>());
+  auto &Val = Ptr.deref<T>();
+  if (!Val.singleWord()) {
+    uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
+    Val.take(NewMemory);
+  }
+}
+
+static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
+  if (const Record *R = Ptr.getRecord()) {
+    for (const Record::Field &Fi : R->fields()) {
+      if (Fi.Desc->isPrimitive()) {
+        TYPE_SWITCH_ALLOC(Fi.Desc->getPrimType(), {
+          copyPrimitiveMemory<T>(S, Ptr.atField(Fi.Offset));
+        });
+        copyPrimitiveMemory(S, Ptr.atField(Fi.Offset), Fi.Desc->getPrimType());
+      } else
+        finishGlobalRecurse(S, Ptr.atField(Fi.Offset));
+    }
+    return;
+  }
+
+  if (const Descriptor *D = Ptr.getFieldDesc(); D && D->isArray()) {
+    unsigned NumElems = D->getNumElems();
+    if (NumElems == 0)
+      return;
+
+    if (D->isPrimitiveArray()) {
+      PrimType PT = D->getPrimType();
+      if (!needsAlloc(PT))
+        return;
+      assert(NumElems >= 1);
+      const Pointer EP = Ptr.atIndex(0);
+      bool AllSingleWord = true;
+      TYPE_SWITCH_ALLOC(PT, {
+        if (!EP.deref<T>().singleWord()) {
+          copyPrimitiveMemory<T>(S, EP);
+          AllSingleWord = false;
+        }
+      });
+      if (AllSingleWord)
+        return;
+      for (unsigned I = 1; I != D->getNumElems(); ++I) {
+        const Pointer EP = Ptr.atIndex(I);
+        copyPrimitiveMemory(S, EP, PT);
+      }
+    } else {
+      assert(D->isCompositeArray());
+      for (unsigned I = 0; I != D->getNumElems(); ++I) {
+        const Pointer EP = Ptr.atIndex(I).narrow();
+        finishGlobalRecurse(S, EP);
+      }
+    }
+  }
+}
+
+bool FinishInitGlobal(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  finishGlobalRecurse(S, Ptr);
+  if (Ptr.canBeInitialized()) {
+    Ptr.initialize();
+    Ptr.activate();
+  }
+
+  return true;
 }
 
 // https://github.com/llvm/llvm-project/issues/102513

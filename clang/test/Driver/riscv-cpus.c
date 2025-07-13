@@ -186,6 +186,9 @@
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zalrsc"
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zba"
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zbb"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+xmipscbop"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+xmipscmov"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+xmipslsp"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr1-base | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR1-BASE %s
 // MTUNE-SYNTACORE-SCR1-BASE: "-tune-cpu" "syntacore-scr1-base"
@@ -428,6 +431,11 @@
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+zvl256b" "-target-feature" "+zvl32b"
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+zvl512b" "-target-feature" "+zvl64b"
 // MCPU-SIFIVE-X280-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -menable-experimental-extensions -mcpu=sifive-x390 | FileCheck -check-prefix=MCPU-SIFIVE-X390 %s
+// MCPU-SIFIVE-X390: "-target-cpu" "sifive-x390"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-sifive-x390.c`
+// MCPU-SIFIVE-X390-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p450 | FileCheck -check-prefix=MCPU-SIFIVE-P450 %s
 // MCPU-SIFIVE-P450: "-nostdsysteminc" "-target-cpu" "sifive-p450"
@@ -746,3 +754,11 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-ax45 | FileCheck -check-prefix=MTUNE-ANDES-AX45 %s
 // MTUNE-ANDES-AX45: "-tune-cpu" "andes-ax45"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=andes-ax45mpv | FileCheck -check-prefix=MCPU-ANDES-AX45MPV %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-andes-ax45mpv.c`
+// MCPU-ANDES-AX45MPV: "-target-cpu" "andes-ax45mpv"
+// MCPU-ANDES-AX45MPV-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-ax45mpv | FileCheck -check-prefix=MTUNE-ANDES-AX45MPV %s
+// MTUNE-ANDES-AX45MPV: "-tune-cpu" "andes-ax45mpv"

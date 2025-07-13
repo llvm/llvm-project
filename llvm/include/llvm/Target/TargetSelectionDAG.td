@@ -521,6 +521,8 @@ def partial_reduce_umla : SDNode<"ISD::PARTIAL_REDUCE_UMLA",
                                  SDTPartialReduceMLA>;
 def partial_reduce_smla : SDNode<"ISD::PARTIAL_REDUCE_SMLA",
                                  SDTPartialReduceMLA>;
+def partial_reduce_sumla : SDNode<"ISD::PARTIAL_REDUCE_SUMLA",
+                                 SDTPartialReduceMLA>;
 
 def fadd       : SDNode<"ISD::FADD"       , SDTFPBinOp, [SDNPCommutative]>;
 def fsub       : SDNode<"ISD::FSUB"       , SDTFPBinOp>;
@@ -1061,7 +1063,9 @@ class OutPatFrag<dag ops, dag frag>
 // PatLeaf's are pattern fragments that have no operands.  This is just a helper
 // to define immediates and other common things concisely.
 class PatLeaf<dag frag, code pred = [{}], SDNodeXForm xform = NOOP_SDNodeXForm>
- : PatFrag<(ops), frag, pred, xform>;
+ : PatFrag<(ops), frag, pred, xform> {
+  code GISelLeafPredicateCode = ?;
+}
 
 
 // ImmLeaf is a pattern fragment with a constraint on the immediate.  The
@@ -1135,6 +1139,19 @@ def immAllZerosV : SDPatternOperator; // ISD::isConstantSplatVectorAllZeros
 def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
 def vnot : PatFrag<(ops node:$in), (xor node:$in, immAllOnesV)>;
 def ineg : PatFrag<(ops node:$in), (sub 0, node:$in)>;
+
+def or_disjoint : PatFrag<(ops node:$lhs, node:$rhs),
+                          (or node:$lhs, node:$rhs), [{
+  return N->getFlags().hasDisjoint();
+}]> {
+  let GISelPredicateCode = [{
+    return MI.getFlag(MachineInstr::Disjoint);
+  }];
+}
+
+def xor_like : PatFrags<(ops node:$lhs, node:$rhs),
+                        [(xor node:$lhs, node:$rhs),
+                         (or_disjoint node:$lhs, node:$rhs)]>;
 
 def zanyext : PatFrags<(ops node:$op),
                        [(zext node:$op),
