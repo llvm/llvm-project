@@ -568,8 +568,8 @@ struct UndefinedDiag {
 // a partition.
 struct InStruct {
   std::unique_ptr<InputSection> attributes;
-  std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<SyntheticSection> hexagonAttributes;
+  std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<BssSection> bss;
   std::unique_ptr<BssSection> bssRelRo;
   std::unique_ptr<SyntheticSection> gnuProperty;
