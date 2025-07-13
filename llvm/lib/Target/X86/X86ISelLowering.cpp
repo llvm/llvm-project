@@ -54095,7 +54095,7 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
                               DAG.getBitcast(BCVT, RHS));
     Res = DAG.getNode(ISD::TRUNCATE, DL, VT, DAG.getBitcast(InVT, Res));
     return DAG.getNode(ISD::SRL, DL, VT, Res,
-                       DAG.getConstant(AdditionalShift, DL, VT));
+                       DAG.getShiftAmountConstant(AdditionalShift, VT, DL));
   }
 
   // Truncate back to source type.
@@ -54105,7 +54105,7 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
   unsigned Opc = IsSigned ? ISD::MULHS : ISD::MULHU;
   SDValue Res = DAG.getNode(Opc, DL, VT, LHS, RHS);
   return DAG.getNode(ISD::SRL, DL, VT, Res,
-                     DAG.getConstant(AdditionalShift, DL, VT));
+                     DAG.getShiftAmountConstant(AdditionalShift, VT, DL));
 }
 
 // Attempt to match PMADDUBSW, which multiplies corresponding unsigned bytes
