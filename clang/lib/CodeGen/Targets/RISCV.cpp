@@ -609,6 +609,10 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   if (isEmptyRecord(getContext(), Ty, true) && Size == 0)
     return ABIArgInfo::getIgnore();
 
+  // Structures with flexible arrays are always indirect.
+  if (Ty->isStructureTypeWithFlexibleArrayMember())
+    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+
   // Pass floating point values via FPRs if possible.
   if (IsFixed && Ty->isFloatingType() && !Ty->isComplexType() &&
       FLen >= Size && ArgFPRsLeft) {
