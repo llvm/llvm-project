@@ -1,8 +1,7 @@
 ; RUN: opt -S -passes=newgvn %s | FileCheck %s
 
-; Check that eliminateInstruction() salvages the debug value of `Def` (`DefI`)
-; which is marked for deletion.
-
+; Check that eliminateInstruction() replaces the debug uses of the instructions
+; marked for deletion with the dominating leader.
 
 define void @binop(i32 %x, i32 %y) !dbg !5 {
 ; CHECK:      #dbg_value(i32 %add1, [[META9:![0-9]+]], !DIExpression(), [[META12:![0-9]+]])
