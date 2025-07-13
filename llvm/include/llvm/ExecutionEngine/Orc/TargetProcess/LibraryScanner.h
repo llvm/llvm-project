@@ -86,8 +86,10 @@ public:
                                      std::error_code &ec) {
     return realpathCached(path, ec);
   }
+#ifndef _WIN32
   mode_t lstatCached(const std::string &path);
   std::optional<std::string> readlinkCached(const std::string &path);
+#endif
   std::optional<std::string> realpathCached(StringRef path, std::error_code &ec,
                                             StringRef base = "",
                                             bool baseIsResolved = false,
@@ -115,15 +117,14 @@ public:
 private:
   LibraryScanHelper &m_helper;
 
-  std::optional<std::string> substOne(StringRef path, StringRef pattern,
+  std::string substOne(StringRef path, StringRef pattern,
                                       StringRef replacement);
 
   /// Apply all known loader substitutions to the path
-  std::optional<std::string> substAll(StringRef path, StringRef loaderPath);
+  std::string substAll(StringRef path, StringRef loaderPath);
 
-  std::optional<std::string> tryWithBasePaths(ArrayRef<StringRef> basePaths,
-                                              StringRef stem,
-                                              StringRef loaderPath);
+  std::optional<std::string> tryWithBasePath(StringRef basePath, StringRef stem,
+                                             StringRef loaderPath);
 
   /// Try resolving the path using RPATH, searchPaths, and RUNPATH (in that
   /// order)
@@ -138,6 +139,7 @@ private:
                                                StringRef loaderPath);
 
   std::optional<std::string> normalizeIfShared(StringRef path);
+  std::optional<std::string> normalize(StringRef path);
 };
 
 enum class PathKind : uint8_t { User, System, Unknown };
