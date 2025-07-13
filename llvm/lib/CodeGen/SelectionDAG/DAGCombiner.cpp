@@ -685,6 +685,7 @@ namespace {
                                   SDValue VecIn2, unsigned LeftIdx,
                                   bool DidSplitVec);
     SDValue matchVSelectOpSizesWithSetCC(SDNode *Cast);
+
     /// Walk up chain skipping non-aliasing memory nodes,
     /// looking for aliasing nodes and adding them to the Aliases vector.
     void GatherAllAliases(SDNode *N, SDValue OriginalChain,

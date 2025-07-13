@@ -222,8 +222,8 @@ define <2 x i32> @fabs_select_v2i32_2(<2 x i32> %cond, <2 x i32> %a, <2 x i32> %
   ret <2 x i32> %select
 }
 
-define <2 x i32> @fneg_select_v2i32(<2 x i32> %cond, <2 x i32> %a, <2 x i32> %b) {
-; GCN-LABEL: fneg_select_v2i32:
+define <2 x i32> @fneg_1_fabs_2_select_v2i32(<2 x i32> %cond, <2 x i32> %a, <2 x i32> %b) {
+; GCN-LABEL: fneg_1_fabs_2_select_v2i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -232,7 +232,7 @@ define <2 x i32> @fneg_select_v2i32(<2 x i32> %cond, <2 x i32> %a, <2 x i32> %b)
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, -v3, |v3|, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: fneg_select_v2i32:
+; GFX11-LABEL: fneg_1_fabs_2_select_v2i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
