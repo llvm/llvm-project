@@ -149,7 +149,7 @@
 "`P3503R3 <https://wg21.link/P3503R3>`__","Make type-erased allocator use in ``promise`` and ``packaged_task`` consistent","2025-06 (Sofia)","","",""
 "`P3008R6 <https://wg21.link/P3008R6>`__","Atomic floating-point min/max","2025-06 (Sofia)","","",""
 "`P3111R8 <https://wg21.link/P3111R8>`__","Atomic Reduction Operations","2025-06 (Sofia)","","",""
-"`P3060R3 <https://wg21.link/P3060R3>`__","Add ``std::views::indices(n)``","2025-06 (Sofia)","","",""
+"`P3060R3 <https://wg21.link/P3060R3>`__","Add ``std::views::indices(n)``","2025-06 (Sofia)","|Complete|","21",""
 "`P2319R5 <https://wg21.link/P2319R5>`__","Prevent ``path`` presentation problems","2025-06 (Sofia)","","",""
 "`P3223R2 <https://wg21.link/P3223R2>`__","Making ``std::istream::ignore`` less surprising","2025-06 (Sofia)","","",""
 "`P2781R9 <https://wg21.link/P2781R9>`__","``std::constant_wrapper``","2025-06 (Sofia)","","",""
