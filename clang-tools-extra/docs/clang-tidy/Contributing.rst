@@ -679,6 +679,7 @@ Note that some warnings may be false positives or require careful consideration
 before fixing. Use your judgment and feel free to discuss in the pull request
 if you're unsure about a particular warning.
 
+
 Out-of-tree check plugins
 -------------------------
 
