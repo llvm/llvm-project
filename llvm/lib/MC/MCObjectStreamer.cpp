@@ -84,8 +84,9 @@ static std::optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
     return 0;
   if (Hi->isVariable() || Lo->isVariable())
     return std::nullopt;
-  auto *LoF = dyn_cast_or_null<MCDataFragment>(Lo->getFragment());
-  if (!LoF || Hi->getFragment() != LoF || LoF->isLinkerRelaxable())
+  auto *LoF = Lo->getFragment();
+  if (!LoF || LoF->getKind() != MCFragment::FT_Data ||
+      Hi->getFragment() != LoF || LoF->isLinkerRelaxable())
     return std::nullopt;
 
   return Hi->getOffset() - Lo->getOffset();
