@@ -1,0 +1,90 @@
+# RUN: llc -o - -mtriple=arm64-linux-gnu -run-pass=register-coalescer -verify-coalescing %s | FileCheck %s -check-prefixes=NOTCPU-LINUX
+# RUN: llc -o - -mtriple=arm64-apple-macosx -mcpu=generic -run-pass=register-coalescer -verify-coalescing %s | FileCheck %s -check-prefixes=NOTCPU-APPLE
+# RUN: llc -o - -mtriple=arm64-apple-macosx -mcpu=apple-m1 -run-pass=register-coalescer -verify-coalescing %s | FileCheck %s -check-prefixes=CPU
+# RUN: llc -o - -mtriple=arm64-apple-macosx -mcpu=apple-m1 -mattr=-zcm-gpr64 -run-pass=register-coalescer -verify-coalescing %s | FileCheck %s -check-prefixes=NOTATTR
+# RUN: llc -o - -mtriple=arm64-apple-macosx -mattr=+zcm-gpr64 -run-pass=register-coalescer -verify-coalescing %s | FileCheck %s -check-prefixes=ATTR
+
+--- |
+  define void @remat_GPR32() {
+    ret void
+  }
+  declare void @foo_i32(i32, i32)
+
+  define void @remat_GPR64() {
+    ret void
+  }
+  declare void @foo_i64(i64, i64)
+...
+---
+name:            remat_GPR32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: remat_GPR32
+
+    ; NOTCPU-LINUX: %0:gpr32 = MOVi32imm 32
+    ; NOTCPU-LINUX-NEXT: %1:gpr32common = MOVi32imm 32
+    ; NOTCPU-LINUX: BL @foo_i32
+
+    ; NOTCPU-APPLE: %0:gpr32 = MOVi32imm 32
+    ; NOTCPU-APPLE-NEXT: %1:gpr32common = MOVi32imm 32
+    ; NOTCPU-APPLE: BL @foo_i32
+
+    ; CPU: %0:gpr32 = MOVi32imm 32
+    ; CPU-NEXT: %1:gpr32sp = COPY %0
+    ; CPU: BL @foo_i32
+
+    ; NOTATTR: %0:gpr32 = MOVi32imm 32
+    ; NOTATTR-NEXT: %1:gpr32common = MOVi32imm 32
+    ; NOTATTR: BL @foo_i32
+
+    ; ATTR: %0:gpr32 = MOVi32imm 32
+    ; ATTR-NEXT: %1:gpr32sp = COPY %0
+    ; ATTR: BL @foo_i32
+
+    %0:gpr32 = MOVi32imm 32
+    %1:gpr32sp = COPY %0
+
+    ; Creates a live range interference to prevent coalescing and force
+    ; trying to rematerialize the previous COPY.
+    %1 = ADDWri %1, 1, 0
+    
+    BL @foo_i32, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit %0, implicit %1
+    RET_ReallyLR
+
+---
+name:            remat_GPR64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: remat_GPR64
+
+    ; NOTCPU-LINUX: %0:gpr64 = MOVi64imm 64
+    ; NOTCPU-LINUX-NEXT: %1:gpr64common = MOVi64imm 64
+    ; NOTCPU-LINUX: BL @foo_i64
+
+    ; NOTCPU-APPLE: %0:gpr64 = MOVi64imm 64
+    ; NOTCPU-APPLE-NEXT: %1:gpr64common = MOVi64imm 64
+    ; NOTCPU-APPLE: BL @foo_i64
+
+    ; CPU: %0:gpr64 = MOVi64imm 64
+    ; CPU-NEXT: %1:gpr64sp = COPY %0
+    ; CPU: BL @foo_i64
+
+    ; NOTATTR: %0:gpr64 = MOVi64imm 64
+    ; NOTATTR-NEXT: %1:gpr64common = MOVi64imm 64
+    ; NOTATTR: BL @foo_i64
+
+    ; ATTR: %0:gpr64 = MOVi64imm 64
+    ; ATTR-NEXT: %1:gpr64sp = COPY %0
+    ; ATTR: BL @foo_i64
+
+    %0:gpr64 = MOVi64imm 64
+    %1:gpr64sp = COPY %0
+
+    ; Creates a live range interference to prevent coalescing and force
+    ; trying to rematerialize the previous COPY.
+    %1 = ADDXri %1, 1, 0
+    
+    BL @foo_i64, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit %0, implicit %1
+    RET_ReallyLR
