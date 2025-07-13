@@ -43,7 +43,9 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cmath>
 #include <cstddef>
 #include <iterator>
 #include <utility>
@@ -1083,6 +1085,92 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
 
 bool SemaHLSL::handleRootSignatureElements(
     ArrayRef<hlsl::RootSignatureElement> Elements) {
+  // Define some common error handling functions
+  bool HadError = false;
+  auto ReportError = [this, &HadError](SourceLocation Loc, uint32_t LowerBound,
+                                       uint32_t UpperBound) {
+    HadError = true;
+    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_value)
+        << LowerBound << UpperBound;
+  };
+
+  auto ReportFloatError = [this, &HadError](SourceLocation Loc,
+                                            float LowerBound,
+                                            float UpperBound) {
+    HadError = true;
+    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_value)
+        << llvm::formatv("{0:f}", LowerBound).sstr<6>()
+        << llvm::formatv("{0:f}", UpperBound).sstr<6>();
+  };
+
+  auto VerifyRegister = [ReportError](SourceLocation Loc, uint32_t Register) {
+    if (!llvm::hlsl::rootsig::verifyRegisterValue(Register))
+      ReportError(Loc, 0, 0xfffffffe);
+  };
+
+  auto VerifySpace = [ReportError](SourceLocation Loc, uint32_t Space) {
+    if (!llvm::hlsl::rootsig::verifyRegisterSpace(Space))
+      ReportError(Loc, 0, 0xffffffef);
+  };
+
+  const uint32_t Version =
+      llvm::to_underlying(SemaRef.getLangOpts().HLSLRootSigVer);
+  const uint32_t VersionEnum = Version - 1;
+  auto ReportFlagError = [this, &HadError, VersionEnum](SourceLocation Loc) {
+    HadError = true;
+    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_flag)
+        << /*version minor*/ VersionEnum;
+  };
+
+  // Iterate through the elements and do basic validations
+  for (const hlsl::RootSignatureElement &RootSigElem : Elements) {
+    SourceLocation Loc = RootSigElem.getLocation();
+    const llvm::hlsl::rootsig::RootElement &Elem = RootSigElem.getElement();
+    if (const auto *Descriptor =
+            std::get_if<llvm::hlsl::rootsig::RootDescriptor>(&Elem)) {
+      VerifyRegister(Loc, Descriptor->Reg.Number);
+      VerifySpace(Loc, Descriptor->Space);
+
+      if (!llvm::hlsl::rootsig::verifyRootDescriptorFlag(
+              Version, llvm::to_underlying(Descriptor->Flags)))
+        ReportFlagError(Loc);
+    } else if (const auto *Constants =
+                   std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
+      VerifyRegister(Loc, Constants->Reg.Number);
+      VerifySpace(Loc, Constants->Space);
+    } else if (const auto *Sampler =
+                   std::get_if<llvm::hlsl::rootsig::StaticSampler>(&Elem)) {
+      VerifyRegister(Loc, Sampler->Reg.Number);
+      VerifySpace(Loc, Sampler->Space);
+
+      assert(!std::isnan(Sampler->MaxLOD) && !std::isnan(Sampler->MinLOD) &&
+             "By construction, parseFloatParam can't produce a NaN from a "
+             "float_literal token");
+
+      if (!llvm::hlsl::rootsig::verifyMaxAnisotropy(Sampler->MaxAnisotropy))
+        ReportError(Loc, 0, 16);
+      if (!llvm::hlsl::rootsig::verifyMipLODBias(Sampler->MipLODBias))
+        ReportFloatError(Loc, -16.f, 15.99);
+    } else if (const auto *Clause =
+                   std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
+                       &Elem)) {
+      VerifyRegister(Loc, Clause->Reg.Number);
+      VerifySpace(Loc, Clause->Space);
+
+      if (!llvm::hlsl::rootsig::verifyNumDescriptors(Clause->NumDescriptors)) {
+        // NumDescriptor could techincally be ~0u but that is reserved for
+        // unbounded, so the diagnostic will not report that as a valid int
+        // value
+        ReportError(Loc, 1, 0xfffffffe);
+      }
+
+      if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
+              Version, llvm::to_underlying(Clause->Type),
+              llvm::to_underlying(Clause->Flags)))
+        ReportFlagError(Loc);
+    }
+  }
+
   using RangeInfo = llvm::hlsl::rootsig::RangeInfo;
   using OverlappingRanges = llvm::hlsl::rootsig::OverlappingRanges;
   using InfoPairT = std::pair<RangeInfo, const hlsl::RootSignatureElement *>;
@@ -1130,7 +1218,10 @@ bool SemaHLSL::handleRootSignatureElements(
                        &Elem)) {
       RangeInfo Info;
       Info.LowerBound = Clause->Reg.Number;
-      assert(0 < Clause->NumDescriptors && "Verified as part of TODO(#129940)");
+      // Relevant error will have already been reported above and needs to be
+      // fixed before we can conduct range analysis, so shortcut error return
+      if (Clause->NumDescriptors == 0)
+        return true;
       Info.UpperBound = Clause->NumDescriptors == RangeInfo::Unbounded
                             ? RangeInfo::Unbounded
                             : Info.LowerBound + Clause->NumDescriptors -
