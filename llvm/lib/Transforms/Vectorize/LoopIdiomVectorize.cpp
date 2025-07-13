@@ -253,7 +253,7 @@ bool LoopIdiomVectorize::run(Loop *L) {
 
   if (recognizeMinIdxPattern())
     return true;
-
+  
   return false;
 }
 
@@ -359,6 +359,14 @@ bool LoopIdiomVectorize::recognizeMinIdxPattern() {
   if (!SelectToInspect || !BasePtr) {
     LLVM_DEBUG(dbgs() << "Select or BasePtr not found\n");
     return false;
+  }
+
+  // In some cases, the pointer used to load comes from a GEP instruction.
+  // In particular, Flang uses offsetted pointer but for vectorized
+  // version, we need the base of the GEP.
+  if (isa<GetElementPtrInst>(BasePtr)) {
+    LLVM_DEBUG(dbgs() << "Extracting BasePtr from GEP\n");
+    BasePtr = cast<GetElementPtrInst>(BasePtr)->getPointerOperand();
   }
 
   // Extract FCmp and validate load types
@@ -820,17 +828,13 @@ bool LoopIdiomVectorize::transformMinIdxPattern(
   // %minidx.partial.2.if.add) %minidx.partial.2.if.gep = getelementptr inbounds
   // nuw float, ptr %p, i64 %FirstIndex
   Value *MinIdxPartial2IfAdd =
-      Builder.CreateAdd(MinIdxVectEndLCSSA, ConstantInt::get(I64Ty, 0),
+      Builder.CreateAdd(MinIdxVectEndLCSSA, ConstantInt::get(I64Ty, 1),
                         "minidx.partial.2.if.add.zero");
   Value *MinIdxPartial2IfMask = Builder.CreateCall(
       Intrinsic::getOrInsertDeclaration(M, Intrinsic::get_active_lane_mask,
                                         {MaskTy, I64Ty}),
       {FirstIndex, MinIdxPartial2IfAdd}, "minidx.partial.2.if.mask");
 
-  // Reverse the mask.
-  MinIdxPartial2IfMask = Builder.CreateCall(
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_reverse, {MaskTy}),
-      {MinIdxPartial2IfMask}, "minidx.partial.2.if.mask.reverse");
 
   Value *FirstIndexMinus1 =
       Builder.CreateSub(FirstIndex, ConstantInt::get(I64Ty, 1),
@@ -852,9 +856,16 @@ bool LoopIdiomVectorize::transformMinIdxPattern(
                          {MinIdxPartial2IfGEP, ConstantInt::get(I32Ty, 1),
                           MinIdxPartial2IfMask, Constant::getNullValue(VecTy)},
                          "minidx.partial.2.if.load");
+  Value *MinIdxPartial2IfSelectVals = 
+      Builder.CreateSelect(MinIdxPartial2IfMask, MinIdxPartial2IfLoad, GMax, "minidx.partial2.if.finalVals");
+
+  // Reverse the mask.
+  MinIdxPartial2IfMask = Builder.CreateCall(
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_reverse, {MaskTy}),
+      {MinIdxPartial2IfMask}, "minidx.partial.2.if.mask.reverse");
   Value *MinIdxPartial2IfReverse = Builder.CreateCall(
       Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_reverse, {VecTy}),
-      {MinIdxPartial2IfLoad}, "minidx.partial.2.if.reverse");
+      {MinIdxPartial2IfSelectVals}, "minidx.partial.2.if.reverse");
   Value *MinIdxPartial2IfReduce = Builder.CreateCall(
       Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_reduce_fminimum,
                                         {VecTy}),
