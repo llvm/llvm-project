@@ -1,5 +1,5 @@
 ; Verify that fp128 intrinsics only lower to `long double` calls (e.g. sinl) on
-; platforms where 128 and `long double` have the same layout.Otherwise, lower
+; platforms where 128 and `long double` have the same layout. Otherwise, lower
 ; to f128 versions (e.g. sinf128).
 ;
 ; Targets include:
@@ -15,21 +15,21 @@
 ; f128 long double. They should be passing with CHECK-F128 rather than
 ; CHECK-USELD.
 
-; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-linux-gnu    -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-linux-musl   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-none         -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=arm64-apple-macosx           -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if arm-registered-target     %{ llc < %s -mtriple=arm-none-eabi                -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if arm-registered-target     %{ llc < %s -mtriple=arm-unknown-linux-gnueabi    -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc-unknown-linux-gnu    -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
-; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc64-unknown-linux-gnu  -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
-; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc64-unknown-linux-musl -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
-; RUN: %if riscv-registered-target   %{ llc < %s -mtriple=riscv32-unknown-linux-gnu    -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if systemz-registered-target %{ llc < %s -mtriple=s390x-unknown-linux-gnu      -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-S390X %}
-; RUN: %if x86-registered-target     %{ llc < %s -mtriple=i686-unknown-linux-gnu       -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
-; RUN: %if x86-registered-target     %{ llc < %s -mtriple=i686-unknown-linux-musl      -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-gnu     -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
-; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-musl    -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-linux-gnu    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-linux-musl   | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-none         | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=arm64-apple-macosx           | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if arm-registered-target     %{ llc < %s -mtriple=arm-none-eabi                | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if arm-registered-target     %{ llc < %s -mtriple=arm-unknown-linux-gnueabi    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc-unknown-linux-gnu    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc64-unknown-linux-gnu  | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc64-unknown-linux-musl | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+; RUN: %if riscv-registered-target   %{ llc < %s -mtriple=riscv32-unknown-linux-gnu    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if systemz-registered-target %{ llc < %s -mtriple=s390x-unknown-linux-gnu      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-S390X %}
+; RUN: %if x86-registered-target     %{ llc < %s -mtriple=i686-unknown-linux-gnu       | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+; RUN: %if x86-registered-target     %{ llc < %s -mtriple=i686-unknown-linux-musl      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-gnu     | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-musl    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
 ;
 ; FIXME(#144006): Windows-MSVC should also be run but has a ldexp selection
 ; failure.
