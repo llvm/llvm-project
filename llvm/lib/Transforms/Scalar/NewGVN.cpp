@@ -4081,9 +4081,9 @@ bool NewGVN::eliminateInstructions(Function &F) {
                 SmallVector<DbgVariableRecord *> DVRUsers;
                 findDbgUsers(DbgUsers, DefI, &DVRUsers);
 
-                for (auto *DVI: DbgUsers)
+                for (auto *DVI : DbgUsers)
                   DVI->replaceVariableLocationOp(DefI, DominatingLeader);
-                for (auto *DVR: DVRUsers)
+                for (auto *DVR : DVRUsers)
                   DVR->replaceVariableLocationOp(DefI, DominatingLeader);
 
                 markInstructionForDeletion(DefI);
