@@ -37,7 +37,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __text_encoding_rep;
-struct text_encoding;
 
 struct __text_encoding_rep {
   static constexpr size_t __max_name_length_ = 63;
