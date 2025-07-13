@@ -140,12 +140,19 @@ private:
                        RTLIB::Libcall Call_F128,
                        RTLIB::Libcall Call_PPCF128,
                        SmallVectorImpl<SDValue> &Results);
-  SDValue ExpandIntLibCall(SDNode *Node, bool isSigned,
-                           RTLIB::Libcall Call_I8,
-                           RTLIB::Libcall Call_I16,
-                           RTLIB::Libcall Call_I32,
-                           RTLIB::Libcall Call_I64,
-                           RTLIB::Libcall Call_I128);
+
+  void
+  ExpandFastFPLibCall(SDNode *Node, bool IsFast,
+                      std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F32,
+                      std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F64,
+                      std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F80,
+                      std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F128,
+                      std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_PPCF128,
+                      SmallVectorImpl<SDValue> &Results);
+
+  SDValue ExpandIntLibCall(SDNode *Node, bool isSigned, RTLIB::Libcall Call_I8,
+                           RTLIB::Libcall Call_I16, RTLIB::Libcall Call_I32,
+                           RTLIB::Libcall Call_I64, RTLIB::Libcall Call_I128);
   void ExpandArgFPLibCall(SDNode *Node,
                           RTLIB::Libcall Call_F32, RTLIB::Libcall Call_F64,
                           RTLIB::Libcall Call_F80, RTLIB::Libcall Call_F128,
@@ -2225,6 +2232,37 @@ void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
   RTLIB::Libcall LC = RTLIB::getFPLibCall(Node->getSimpleValueType(0),
                                           Call_F32, Call_F64, Call_F80,
                                           Call_F128, Call_PPCF128);
+  ExpandFPLibCall(Node, LC, Results);
+}
+
+void SelectionDAGLegalize::ExpandFastFPLibCall(
+    SDNode *Node, bool IsFast,
+    std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F32,
+    std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F64,
+    std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F80,
+    std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F128,
+    std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_PPCF128,
+    SmallVectorImpl<SDValue> &Results) {
+
+  EVT VT = Node->getSimpleValueType(0);
+
+  RTLIB::Libcall LC;
+
+  // FIXME: Probably should define fast to respect nan/inf and only be
+  // approximate functions.
+
+  if (IsFast) {
+    LC = RTLIB::getFPLibCall(VT, Call_F32.first, Call_F64.first, Call_F80.first,
+                             Call_F128.first, Call_PPCF128.first);
+  }
+
+  if (!IsFast || TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
+    // Fall back if we don't have a fast implementation.
+    LC = RTLIB::getFPLibCall(VT, Call_F32.second, Call_F64.second,
+                             Call_F80.second, Call_F128.second,
+                             Call_PPCF128.second);
+  }
+
   ExpandFPLibCall(Node, LC, Results);
 }
 
@@ -4514,6 +4552,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   return true;
 }
 
+/// Return if we can use the FAST_* variant of a math libcall for the node.
+/// FIXME: This is just guessing, we probably should have unique specific sets
+/// flags required per libcall.
+static bool canUseFastMathLibcall(const SDNode *Node) {
+  // FIXME: Probably should define fast to respect nan/inf and only be
+  // approximate functions.
+
+  SDNodeFlags Flags = Node->getFlags();
+  return Flags.hasApproximateFuncs() && Flags.hasNoNaNs() &&
+         Flags.hasNoInfs() && Flags.hasNoSignedZeros();
+}
+
 void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   LLVM_DEBUG(dbgs() << "Trying to convert node to libcall\n");
   SmallVector<SDValue, 8> Results;
@@ -4634,11 +4684,18 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::FMAXIMUM_NUM_PPCF128, Results);
     break;
   case ISD::FSQRT:
-  case ISD::STRICT_FSQRT:
-    ExpandFPLibCall(Node, RTLIB::SQRT_F32, RTLIB::SQRT_F64,
-                    RTLIB::SQRT_F80, RTLIB::SQRT_F128,
-                    RTLIB::SQRT_PPCF128, Results);
+  case ISD::STRICT_FSQRT: {
+    // FIXME: Probably should define fast to respect nan/inf and only be
+    // approximate functions.
+    ExpandFastFPLibCall(Node, canUseFastMathLibcall(Node),
+                        {RTLIB::FAST_SQRT_F32, RTLIB::SQRT_F32},
+                        {RTLIB::FAST_SQRT_F64, RTLIB::SQRT_F64},
+                        {RTLIB::FAST_SQRT_F80, RTLIB::SQRT_F80},
+                        {RTLIB::FAST_SQRT_F128, RTLIB::SQRT_F128},
+                        {RTLIB::FAST_SQRT_PPCF128, RTLIB::SQRT_PPCF128},
+                        Results);
     break;
+  }
   case ISD::FCBRT:
     ExpandFPLibCall(Node, RTLIB::CBRT_F32, RTLIB::CBRT_F64,
                     RTLIB::CBRT_F80, RTLIB::CBRT_F128,
@@ -4875,11 +4932,15 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                        RTLIB::LLRINT_PPCF128, Results);
     break;
   case ISD::FDIV:
-  case ISD::STRICT_FDIV:
-    ExpandFPLibCall(Node, RTLIB::DIV_F32, RTLIB::DIV_F64,
-                    RTLIB::DIV_F80, RTLIB::DIV_F128,
-                    RTLIB::DIV_PPCF128, Results);
+  case ISD::STRICT_FDIV: {
+    ExpandFastFPLibCall(Node, canUseFastMathLibcall(Node),
+                        {RTLIB::FAST_DIV_F32, RTLIB::DIV_F32},
+                        {RTLIB::FAST_DIV_F64, RTLIB::DIV_F64},
+                        {RTLIB::FAST_DIV_F80, RTLIB::DIV_F80},
+                        {RTLIB::FAST_DIV_F128, RTLIB::DIV_F128},
+                        {RTLIB::FAST_DIV_PPCF128, RTLIB::DIV_PPCF128}, Results);
     break;
+  }
   case ISD::FREM:
   case ISD::STRICT_FREM:
     ExpandFPLibCall(Node, RTLIB::REM_F32, RTLIB::REM_F64,
@@ -4893,17 +4954,25 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::FMA_PPCF128, Results);
     break;
   case ISD::FADD:
-  case ISD::STRICT_FADD:
-    ExpandFPLibCall(Node, RTLIB::ADD_F32, RTLIB::ADD_F64,
-                    RTLIB::ADD_F80, RTLIB::ADD_F128,
-                    RTLIB::ADD_PPCF128, Results);
+  case ISD::STRICT_FADD: {
+    ExpandFastFPLibCall(Node, canUseFastMathLibcall(Node),
+                        {RTLIB::FAST_ADD_F32, RTLIB::ADD_F32},
+                        {RTLIB::FAST_ADD_F64, RTLIB::ADD_F64},
+                        {RTLIB::FAST_ADD_F80, RTLIB::ADD_F80},
+                        {RTLIB::FAST_ADD_F128, RTLIB::ADD_F128},
+                        {RTLIB::FAST_ADD_PPCF128, RTLIB::ADD_PPCF128}, Results);
     break;
+  }
   case ISD::FMUL:
-  case ISD::STRICT_FMUL:
-    ExpandFPLibCall(Node, RTLIB::MUL_F32, RTLIB::MUL_F64,
-                    RTLIB::MUL_F80, RTLIB::MUL_F128,
-                    RTLIB::MUL_PPCF128, Results);
+  case ISD::STRICT_FMUL: {
+    ExpandFastFPLibCall(Node, canUseFastMathLibcall(Node),
+                        {RTLIB::FAST_MUL_F32, RTLIB::MUL_F32},
+                        {RTLIB::FAST_MUL_F64, RTLIB::MUL_F64},
+                        {RTLIB::FAST_MUL_F80, RTLIB::MUL_F80},
+                        {RTLIB::FAST_MUL_F128, RTLIB::MUL_F128},
+                        {RTLIB::FAST_MUL_PPCF128, RTLIB::MUL_PPCF128}, Results);
     break;
+  }
   case ISD::FP16_TO_FP:
     if (Node->getValueType(0) == MVT::f32) {
       Results.push_back(ExpandLibCall(RTLIB::FPEXT_F16_F32, Node, false).first);
@@ -5076,11 +5145,15 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   }
   case ISD::FSUB:
-  case ISD::STRICT_FSUB:
-    ExpandFPLibCall(Node, RTLIB::SUB_F32, RTLIB::SUB_F64,
-                    RTLIB::SUB_F80, RTLIB::SUB_F128,
-                    RTLIB::SUB_PPCF128, Results);
+  case ISD::STRICT_FSUB: {
+    ExpandFastFPLibCall(Node, canUseFastMathLibcall(Node),
+                        {RTLIB::FAST_SUB_F32, RTLIB::SUB_F32},
+                        {RTLIB::FAST_SUB_F64, RTLIB::SUB_F64},
+                        {RTLIB::FAST_SUB_F80, RTLIB::SUB_F80},
+                        {RTLIB::FAST_SUB_F128, RTLIB::SUB_F128},
+                        {RTLIB::FAST_SUB_PPCF128, RTLIB::SUB_PPCF128}, Results);
     break;
+  }
   case ISD::SREM:
     Results.push_back(ExpandIntLibCall(Node, true,
                                        RTLIB::SREM_I8,

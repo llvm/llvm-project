@@ -18,10 +18,6 @@ using namespace RTLIB;
 #undef GET_INIT_RUNTIME_LIBCALL_NAMES
 #undef GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 
-static cl::opt<bool>
-    HexagonEnableFastMathRuntimeCalls("hexagon-fast-math", cl::Hidden,
-                                      cl::desc("Enable Fast Math processing"));
-
 static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
                                FloatABI::ABIType FloatABIType,
                                EABI EABIVersion) {
@@ -268,32 +264,25 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     setLibcallImpl(RTLIB::UREM_I32, RTLIB::__hexagon_umodsi3);
     setLibcallImpl(RTLIB::UREM_I64, RTLIB::__hexagon_umoddi3);
 
-    const bool FastMath = HexagonEnableFastMathRuntimeCalls;
-    // This is the only fast library function for sqrtd.
-    if (FastMath)
-      setLibcallImpl(RTLIB::SQRT_F64, RTLIB::__hexagon_fast2_sqrtdf2);
-
     // Prefix is: nothing  for "slow-math",
     //            "fast2_" for V5+ fast-math double-precision
     // (actually, keep fast-math and fast-math2 separate for now)
-    if (FastMath) {
-      setLibcallImpl(RTLIB::ADD_F64, RTLIB::__hexagon_fast_adddf3);
-      setLibcallImpl(RTLIB::SUB_F64, RTLIB::__hexagon_fast_subdf3);
-      setLibcallImpl(RTLIB::MUL_F64, RTLIB::__hexagon_fast_muldf3);
-      setLibcallImpl(RTLIB::DIV_F64, RTLIB::__hexagon_fast_divdf3);
-      setLibcallImpl(RTLIB::DIV_F32, RTLIB::__hexagon_fast_divsf3);
-    } else {
-      setLibcallImpl(RTLIB::ADD_F64, RTLIB::__hexagon_adddf3);
-      setLibcallImpl(RTLIB::SUB_F64, RTLIB::__hexagon_subdf3);
-      setLibcallImpl(RTLIB::MUL_F64, RTLIB::__hexagon_muldf3);
-      setLibcallImpl(RTLIB::DIV_F64, RTLIB::__hexagon_divdf3);
-      setLibcallImpl(RTLIB::DIV_F32, RTLIB::__hexagon_divsf3);
-    }
 
-    if (FastMath)
-      setLibcallImpl(RTLIB::SQRT_F32, RTLIB::__hexagon_fast2_sqrtf);
-    else
-      setLibcallImpl(RTLIB::SQRT_F32, RTLIB::__hexagon_sqrtf);
+    setLibcallImpl(RTLIB::FAST_ADD_F64, RTLIB::__hexagon_fast_adddf3);
+    setLibcallImpl(RTLIB::FAST_SUB_F64, RTLIB::__hexagon_fast_subdf3);
+    setLibcallImpl(RTLIB::FAST_MUL_F64, RTLIB::__hexagon_fast_muldf3);
+    setLibcallImpl(RTLIB::FAST_DIV_F64, RTLIB::__hexagon_fast_divdf3);
+    setLibcallImpl(RTLIB::FAST_DIV_F32, RTLIB::__hexagon_fast_divsf3);
+    setLibcallImpl(RTLIB::FAST_SQRT_F32, RTLIB::__hexagon_fast2_sqrtf);
+    // This is the only fast library function for sqrtd.
+    setLibcallImpl(RTLIB::FAST_SQRT_F64, RTLIB::__hexagon_fast2_sqrtdf2);
+
+    setLibcallImpl(RTLIB::ADD_F64, RTLIB::__hexagon_adddf3);
+    setLibcallImpl(RTLIB::SUB_F64, RTLIB::__hexagon_subdf3);
+    setLibcallImpl(RTLIB::MUL_F64, RTLIB::__hexagon_muldf3);
+    setLibcallImpl(RTLIB::DIV_F64, RTLIB::__hexagon_divdf3);
+    setLibcallImpl(RTLIB::DIV_F32, RTLIB::__hexagon_divsf3);
+    setLibcallImpl(RTLIB::SQRT_F32, RTLIB::__hexagon_sqrtf);
 
     setLibcallImpl(
         RTLIB::HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES,
