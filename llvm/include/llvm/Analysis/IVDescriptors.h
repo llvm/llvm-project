@@ -47,9 +47,9 @@ enum class RecurKind {
   FMul,     ///< Product of floats.
   FMin,     ///< FP min implemented in terms of select(cmp()).
   FMax,     ///< FP max implemented in terms of select(cmp()).
-  FCmpOGTSelect, ///< FP max implemented in terms of select(cmp()), but without
-                 /// any fast-math flags. Users need to handle NaNs and signed
-                 /// zeros when generating code.
+  OrderedFCmpSelect, ///< FP max implemented in terms of select(cmp()), but
+                     /// without any fast-math flags. Users need to handle NaNs
+                     /// and signed zeros when generating code.
   FMinimum, ///< FP min with llvm.minimum semantics
   FMaximum, ///< FP max with llvm.maximum semantics
   FMinimumNum, ///< FP min with llvm.minimumnum semantics
@@ -253,9 +253,9 @@ public:
   /// Returns true if the recurrence kind is a floating-point min/max kind.
   static bool isFPMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::FMin || Kind == RecurKind::FMax ||
-           Kind == RecurKind::FCmpOGTSelect || Kind == RecurKind::FMinimum ||
-           Kind == RecurKind::FMaximum || Kind == RecurKind::FMinimumNum ||
-           Kind == RecurKind::FMaximumNum;
+           Kind == RecurKind::OrderedFCmpSelect ||
+           Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum ||
+           Kind == RecurKind::FMinimumNum || Kind == RecurKind::FMaximumNum;
   }
 
   /// Returns true if the recurrence kind is any min/max kind.

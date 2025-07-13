@@ -635,8 +635,8 @@ bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
   VPRecipeWithIRFlags *MaxOp = nullptr;
   VPWidenIntOrFpInductionRecipe *WideIV = nullptr;
 
-  // Check if there are any FCmpOGTSelect reductions using wide selects that we
-  // can fix up. To do so, we also need a  wide canonical IV to keep track of
+  // Check if there are any OrderedFCmpSelect reductions using wide selects that
+  // we can fix up. To do so, we also need a wide canonical IV to keep track of
   // the indices of the max values.
   for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
     // We need a wide canonical IV
@@ -647,14 +647,14 @@ bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
       continue;
     }
 
-    // And a single FCmpOGTSelect reduction phi.
+    // And a single OrderedFCmpSelect reduction phi.
     // TODO: Support FMin reductions as well.
     auto *CurRedPhiR = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!CurRedPhiR)
       continue;
     if (RedPhiR)
       return false;
-    if (CurRedPhiR->getRecurrenceKind() != RecurKind::FCmpOGTSelect ||
+    if (CurRedPhiR->getRecurrenceKind() != RecurKind::OrderedFCmpSelect ||
         CurRedPhiR->isInLoop() || CurRedPhiR->isOrdered())
       continue;
     RedPhiR = CurRedPhiR;
@@ -706,9 +706,9 @@ bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
   MinIdxSel->insertAfter(MaxOp);
   IdxPhi->addOperand(MinIdxSel);
 
-  // Find the first index of with the maximum value. This is used to extract the
-  // lane with the final max value and is needed to handle signed zeros and NaNs
-  // in the input.
+  // Find the first index holding with the maximum value. This is used to
+  // extract the lane with the final max value and is needed to handle signed
+  // zeros and NaNs in the input.
   auto *MaxResult = find_singleton<VPSingleDefRecipe>(
       RedPhiR->users(), [](VPUser *U, bool) -> VPSingleDefRecipe * {
         auto *VPI = dyn_cast<VPInstruction>(U);

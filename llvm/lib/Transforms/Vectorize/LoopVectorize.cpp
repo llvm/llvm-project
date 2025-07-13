@@ -4350,7 +4350,7 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
         return Legal->isFixedOrderRecurrence(&Phi) ||
                Legal->getReductionVars().lookup(&Phi).getRecurrenceKind() ==
-                   RecurKind::FCmpOGTSelect;
+                   RecurKind::OrderedFCmpSelect;
       }))
     return false;
 
