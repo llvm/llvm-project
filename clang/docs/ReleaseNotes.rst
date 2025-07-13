@@ -1136,6 +1136,8 @@ clang-format
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
+- Add ``MacrosSkippedByRemoveParentheses`` option so that their invocations are
+  skipped by ``RemoveParentheses``.
 
 clang-refactor
 --------------
