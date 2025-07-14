@@ -16,6 +16,7 @@ extern "C" void android_set_abort_message(const char* msg);
 #endif // __BIONIC__
 
 #if defined(__APPLE__) && __has_include(<os/reason_private.h>)
+#  include <TargetConditionals.h>
 #  include <os/reason_private.h>
 #endif
 
@@ -28,7 +29,7 @@ void log_security_failure(const char* message) noexcept {
   fputs(message, stderr);
 
   // On Apple platforms, use the `os_fault_with_payload` OS function that simulates a crash.
-#if defined(__APPLE__) && __has_include(<os/reason_private.h>)
+#if defined(__APPLE__) && __has_include(<os/reason_private.h>) && !TARGET_OS_SIMULATOR
   os_fault_with_payload(
       /*reason_namespace=*/OS_REASON_SECURITY,
       /*reason_code=*/0,
