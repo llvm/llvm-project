@@ -1072,7 +1072,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       // for such literal to be able to fold.
       if (ST->hasVOP3Literal() &&
           (!ST->has64BitLiterals() || AMDGPU::isTrue16Inst(MI.getOpcode())) &&
-	  !IsPostRA)
+          !IsPostRA)
         continue;
 
       if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&
