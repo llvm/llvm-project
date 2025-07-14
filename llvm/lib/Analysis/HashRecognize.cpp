@@ -197,8 +197,6 @@ KnownBits ValueEvolution::computeInstr(const Instruction *I) {
   if (match(I, m_Select(m_ICmp(Pred, m_Value(L), m_Value(R)), m_Instruction(TV),
                         m_Instruction(FV)))) {
     Visited.insert(cast<Instruction>(I->getOperand(0)));
-    Visited.insert(TV);
-    Visited.insert(FV);
 
     // We need to check LCR against [0, 2) in the little-endian case, because
     // the RCR check is insufficient: it is simply [0, 1).
@@ -224,10 +222,14 @@ KnownBits ValueEvolution::computeInstr(const Instruction *I) {
 
     // We only compute KnownBits of either TV or FV, as the other value would
     // just be a bit-shift as checked by isBigEndianBitShift.
-    if (AllowedR == CheckRCR)
+    if (AllowedR == CheckRCR) {
+      Visited.insert(FV);
       return compute(TV);
-    if (AllowedR.inverse() == CheckRCR)
+    }
+    if (AllowedR.inverse() == CheckRCR) {
+      Visited.insert(TV);
       return compute(FV);
+    }
 
     ErrStr = "Bad RHS of significant-bit-check";
     return {BitWidth};
@@ -650,16 +652,14 @@ HashRecognize::recognizeCRC() const {
   KnownBits ResultBits = VE.KnownPhis.at(ConditionalRecurrence.Phi);
 
   // There must be exactly four unvisited instructions, corresponding to the
-  // IndVar PHI:
-  //   IndVar
-  //   Latch->getTerminator()
-  //   L.getLatchCmpInst(),
-  //   IndVar->getIncomingValueForBlock(Latch))
-  //
-  // Any other unvisited instructions from the KnownBits propagation can
-  // complicate the optimization, which would just replace the entire loop with
-  // the table-lookup version of the hash algorithm.
-  if (std::distance(Latch->begin(), Latch->end()) != VE.Visited.size() + 4)
+  // IndVar PHI. Any other unvisited instructions from the KnownBits propagation
+  // can complicate the optimization, which replaces the entire loop with the
+  // table-lookup version of the hash algorithm.
+  std::initializer_list<const Instruction *> AugmentVisited = {
+      IndVar, Latch->getTerminator(), L.getLatchCmpInst(),
+      cast<Instruction>(IndVar->getIncomingValueForBlock(Latch))};
+  VE.Visited.insert_range(AugmentVisited);
+  if (std::distance(Latch->begin(), Latch->end()) != VE.Visited.size())
     return "Found stray unvisited instructions";
 
   unsigned N = std::min(TC, ResultBits.getBitWidth());
