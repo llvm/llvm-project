@@ -2450,7 +2450,8 @@ bool VarDecl::hasInitWithSideEffects() const {
     ES->HasSideEffects =
         E->HasSideEffects(getASTContext()) &&
         // We can get a value-dependent initializer during error recovery.
-        (E->isValueDependent() || !evaluateValue());
+        (E->isValueDependent() || getType()->isDependentType() ||
+         !evaluateValue());
     ES->CheckedForSideEffects = true;
   }
   return ES->HasSideEffects;
@@ -5137,11 +5138,6 @@ RecordDecl *RecordDecl::CreateDeserialized(const ASTContext &C,
                  SourceLocation(), nullptr, nullptr);
   R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
   return R;
-}
-
-bool RecordDecl::isInjectedClassName() const {
-  return isImplicit() && getDeclName() && getDeclContext()->isRecord() &&
-    cast<RecordDecl>(getDeclContext())->getDeclName() == getDeclName();
 }
 
 bool RecordDecl::isLambda() const {

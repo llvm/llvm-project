@@ -460,6 +460,18 @@ entry:
   ret <vscale x 16 x i1> %active.lane.mask
 }
 
+define <8 x i1> @lane_mask_v8i1_imm3() {
+; CHECK-LABEL: lane_mask_v8i1_imm3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.b, vl3
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+entry:
+  %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 0, i64 3)
+  ret <8 x i1> %active.lane.mask
+}
+
 declare <vscale x 32 x i1> @llvm.get.active.lane.mask.nxv32i1.i32(i32, i32)
 declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32, i32)
 declare <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32, i32)

@@ -145,6 +145,8 @@ C++20 Feature Support
 - Fixed a crash with a defaulted spaceship (``<=>``) operator when the class
   contains a member declaration of vector type. Vector types cannot yet be
   compared directly, so this causes the operator to be deleted. (#GH137452)
+- Implement constant evaluation of lambdas that capture structured bindings.
+  (#GH145956)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -249,6 +251,8 @@ C Language Changes
 - The ``[[clang::assume()]]`` attribute is now correctly recognized in C. The
   ``__attribute__((assume()))`` form has always been supported, so the fix is
   specific to the attribute syntax used.
+- The ``clang-cl`` driver now recognizes ``/std:clatest`` and sets the language
+  mode to C23. (#GH147233)
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -306,6 +310,17 @@ C23 Feature Support
   which clarified how Clang is handling underspecified object declarations.
 - Clang now accepts single variadic parameter in type-name. It's a part of
   `WG14 N2975 <https://open-std.org/JTC1/SC22/WG14/www/docs/n2975.pdf>`_
+- Fixed a bug with handling the type operand form of ``typeof`` when it is used
+  to specify a fixed underlying type for an enumeration. #GH146351
+- Fixed a rejects-valid bug where Clang would reject an enumeration with an
+  ``_Atomic`` underlying type. The underlying type is the non-atomic,
+  unqualified version of the specified type. Due to the perhaps surprising lack
+  of atomic behavior, this is diagnosed under
+  ``-Wunderlying-atomic-qualifier-ignored``, which defaults to an error. This
+  can be downgraded with ``-Wno-underlying-atomic-qualifier-ignored`` or
+  ``-Wno-error=underlying-atomic-qualifier-ignored``. Clang now also diagnoses
+  cv-qualifiers as being ignored, but that warning does not default to an error.
+  It can be controlled by ``-Wunderlying-cv-qualifier-ignore``. (#GH147736)
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -360,6 +375,8 @@ New Compiler Flags
 - New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunities.
 
 - New option ``-ignore-pch`` added to disable precompiled headers. It overrides ``-emit-pch`` and ``-include-pch``. (#GH142409, `PCHDocs <https://clang.llvm.org/docs/UsersManual.html#ignoring-a-pch-file>`_).
+
+- New options ``-g[no-]key-instructions`` added, disabled by default. Reduces jumpiness of debug stepping for optimized code in some debuggers (not LLDB at this time). Not recommended for use without optimizations. DWARF only. Note both the positive and negative flags imply ``-g``.
 
 Deprecated Compiler Flags
 -------------------------
@@ -656,6 +673,10 @@ Improvements to Clang's diagnostics
   #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
+  
+- Clang no longer emits a spurious -Wdangling-gsl warning in C++23 when
+  iterating over an element of a temporary container in a range-based
+  for loop.(#GH109793, #GH145164)
 
 - Fixed false positives in ``-Wformat-truncation`` and ``-Wformat-overflow``
   diagnostics when floating-point numbers had both width field and plus or space
@@ -671,6 +692,17 @@ Improvements to Clang's diagnostics
   false positives in exception-heavy code, though only simple patterns
   are currently recognized.
 
+- Clang now accepts ``@tparam`` comments on variable template partial
+  specializations. (#GH144775)
+
+- Fixed a bug that caused diagnostic line wrapping to not function correctly on
+  some systems. (#GH139499)
+
+- Clang now tries to avoid printing file paths that contain ``..``, instead preferring
+  the canonical file path if it ends up being shorter.
+
+- Improve the diagnostics for placement new expression when const-qualified
+  object was passed as the storage argument. (#GH143708)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -750,6 +782,18 @@ Bug Fixes in This Version
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
 - Fixed a bug when use unicode character name in macro concatenation. (#GH145240)
+- Clang doesn't erroneously inject a ``static_assert`` macro in ms-compatibility and
+  -std=c99 mode. This resulted in deletion of ``-W/Wno-microsoft-static-assert``
+  flag and diagnostic because the macro injection was used to emit this warning.
+  Unfortunately there is no other good way to diagnose usage of ``static_assert``
+  macro without inclusion of ``<assert.h>``.
+- In C23, something like ``[[/*possible attributes*/]];`` is an attribute
+  declaration, not a statement. So it is not allowed by the syntax in places
+  where a statement is required, specifically as the secondary block of a
+  selection or iteration statement. This differs from C++, since C++ allows
+  declaration statements. Clang now emits a warning for these patterns. (#GH141659)
+- Fixed false positives for redeclaration errors of using enum in
+  nested scopes. (#GH147495)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -833,7 +877,7 @@ Bug Fixes to C++ Support
 - Clang no longer crashes when trying to unify the types of arrays with
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
-- Fixed type alias CTAD issues involving default template arguments. (#GH134471)
+- Fixed type alias CTAD issues involving default template arguments. (#GH133132), (#GH134471)
 - Fixed CTAD issues when initializing anonymous fields with designated initializers. (#GH67173)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
@@ -865,6 +909,7 @@ Bug Fixes to C++ Support
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Fixed ``static_cast`` not performing access or ambiguity checks when converting to an rvalue reference to a base class. (#GH121429)
 - Declarations using class template argument deduction with redundant
   parentheses around the declarator are no longer rejected. (#GH39811)
 - Fixed a crash caused by invalid declarations of ``std::initializer_list``. (#GH132256)
@@ -887,6 +932,7 @@ Bug Fixes to C++ Support
 - Clang now correctly parses arbitrary order of ``[[]]``, ``__attribute__`` and ``alignas`` attributes for declarations (#GH133107)
 - Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
 - Fixed a function declaration mismatch that caused inconsistencies between concepts and variable template declarations. (#GH139476)
+- Fixed an out-of-line declaration mismatch involving nested template parameters. (#GH145521)
 - Clang no longer segfaults when there is a configuration mismatch between modules and their users (http://crbug.com/400353616).
 - Fix an incorrect deduction when calling an explicit object member function template through an overload set address.
 - Fixed bug in constant evaluation that would allow using the value of a
@@ -899,8 +945,21 @@ Bug Fixes to C++ Support
 - Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
 - Fixed an access checking bug when substituting into concepts (#GH115838)
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
+- Correctly handles calling an explicit object member function template overload set
+  through its address (``(&Foo::bar<baz>)()``).
+- Fix a crash when forming an invalid call to an operator with an explicit object member. (#GH147121)
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
+- Fixed parsing of lambda expressions that appear after ``*`` or ``&`` in contexts where a declaration can appear. (#GH63880)
+- Fix name lookup in lambda appearing in the body of a requires expression. (#GH147650)
+- Fix a crash when trying to instantiate an ambiguous specialization. (#GH51866)
+- Improved handling of variables with ``consteval`` constructors, to
+  consistently treat the initializer as manifestly constant-evaluated.
+  (#GH135281)
+- Fix a crash in the presence of invalid base classes. (#GH147186)
+- Fix a crash with NTTP when instantiating local class.
+- Fixed a crash involving list-initialization of an empty class with a
+  non-empty initializer list. (#GH147949)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1034,6 +1093,8 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Provide a __device__ version of std::__glibcxx_assert_fail() in a header wrapper.
+
 CUDA Support
 ^^^^^^^^^^^^
 
@@ -1079,6 +1140,8 @@ clang-format
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
+- Add ``MacrosSkippedByRemoveParentheses`` option so that their invocations are
+  skipped by ``RemoveParentheses``.
 
 clang-refactor
 --------------
@@ -1201,6 +1264,7 @@ OpenMP Support
 - Fixed mapping of arrays of structs containing nested structs with user defined
   mappers, by using compiler-generated default mappers for the outer structs for
   such maps.
+- Deprecation warning has been emitted for deprecated delimited form of ``declare target``.
 
 Improvements
 ^^^^^^^^^^^^

@@ -84,8 +84,9 @@ static std::optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
     return 0;
   if (Hi->isVariable() || Lo->isVariable())
     return std::nullopt;
-  auto *LoF = dyn_cast_or_null<MCDataFragment>(Lo->getFragment());
-  if (!LoF || Hi->getFragment() != LoF || LoF->isLinkerRelaxable())
+  auto *LoF = Lo->getFragment();
+  if (!LoF || LoF->getKind() != MCFragment::FT_Data ||
+      Hi->getFragment() != LoF || LoF->isLinkerRelaxable())
     return std::nullopt;
 
   return Hi->getOffset() - Lo->getOffset();
@@ -352,7 +353,7 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
   // If this instruction doesn't need relaxation, just emit it as data.
   MCAssembler &Assembler = getAssembler();
   MCAsmBackend &Backend = Assembler.getBackend();
-  if (!(Backend.mayNeedRelaxation(Inst, STI) ||
+  if (!(Backend.mayNeedRelaxation(Inst.getOpcode(), Inst.getOperands(), STI) ||
         Backend.allowEnhancedRelaxation())) {
     emitInstToData(Inst, STI);
     return;
@@ -366,7 +367,8 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
   if (Assembler.getRelaxAll() ||
       (Assembler.isBundlingEnabled() && Sec->isBundleLocked())) {
     MCInst Relaxed = Inst;
-    while (Backend.mayNeedRelaxation(Relaxed, STI))
+    while (Backend.mayNeedRelaxation(Relaxed.getOpcode(), Relaxed.getOperands(),
+                                     STI))
       Backend.relaxInstruction(Relaxed, STI);
     emitInstToData(Relaxed, STI);
     return;
@@ -397,8 +399,9 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
   // Always create a new, separate fragment here, because its size can change
   // during relaxation.
   MCRelaxableFragment *IF =
-      getContext().allocFragment<MCRelaxableFragment>(Inst, STI);
+      getContext().allocFragment<MCRelaxableFragment>(STI);
   insert(IF);
+  IF->setInst(Inst);
 
   SmallVector<MCFixup, 1> Fixups;
   getAssembler().getEmitter().encodeInstruction(
@@ -577,13 +580,13 @@ void MCObjectStreamer::emitBytes(StringRef Data) {
   DF->appendContents(ArrayRef(Data.data(), Data.size()));
 }
 
-void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                            unsigned ValueSize,
+void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
+                                            uint8_t FillLen,
                                             unsigned MaxBytesToEmit) {
   if (MaxBytesToEmit == 0)
     MaxBytesToEmit = Alignment.value();
-  insert(getContext().allocFragment<MCAlignFragment>(
-      Alignment, Value, ValueSize, MaxBytesToEmit));
+  insert(getContext().allocFragment<MCAlignFragment>(Alignment, Fill, FillLen,
+                                                     MaxBytesToEmit));
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *CurSec = getCurrentSectionOnly();

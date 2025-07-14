@@ -86,7 +86,7 @@ static Value createOrFoldLvlCall(OpBuilder &builder, Location loc,
   const Dimension dim =
       stt.isIdentity() ? lvl : stt.getDimToLvl().getDimPosition(lvl);
   const Size sz = stt.getDynamicDimSize(dim);
-  if (!ShapedType::isDynamic(sz))
+  if (ShapedType::isStatic(sz))
     return constantIndex(builder, loc, sz);
   // If we cannot statically compute the size from the shape, then we
   // must dynamically query it.  (In principle we could also dynamically
@@ -103,7 +103,7 @@ static Value createOrFoldDimCall(OpBuilder &builder, Location loc,
                                  SparseTensorType stt, Value tensor,
                                  Dimension dim) {
   const Size sz = stt.getDynamicDimSize(dim);
-  if (!ShapedType::isDynamic(sz))
+  if (ShapedType::isStatic(sz))
     return constantIndex(builder, loc, sz);
   if (stt.hasEncoding())
     return genDimSizeCall(builder, loc, tensor, dim);

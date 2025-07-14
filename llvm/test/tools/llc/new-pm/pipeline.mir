@@ -1,5 +1,6 @@
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -x mir -passes=no-op-machine-function --print-pipeline-passes -filetype=null < %s | FileCheck %s --match-full-lines
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -x mir -passes='require<machine-dom-tree>,print<machine-dom-tree>' -print-pipeline-passes < %s | FileCheck --check-prefix=ANALYSIS %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -x mir -enable-new-pm -stop-before=greedy -O3 -filetype=null --print-pipeline-passes < %s | FileCheck %s --check-prefix=CHECK-REQ
 
 # Check same nested pass managers
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -x mir \
@@ -10,6 +11,7 @@
 
 # CHECK: function(machine-function(no-op-machine-function)),PrintMIRPreparePass,function(machine-function(verify,print))
 
+# CHECK-REQ-NOT: greedy
 # ANALYSIS: require<machine-dom-tree>,print<machine-dom-tree>
 
 # NESTED: function(machine-function(machine-cp))
