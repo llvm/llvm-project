@@ -2140,8 +2140,8 @@ def TargetAllocMemOp : OpenMP_Op<"target_allocmem",
     TypeAttr:$in_type,
     OptionalAttr<StrAttr>:$uniq_name,
     OptionalAttr<StrAttr>:$bindc_name,
-    Variadic<AnyInteger>:$typeparams,
-    Variadic<AnyInteger>:$shape
+    Variadic<IntLikeType>:$typeparams,
+    Variadic<IntLikeType>:$shape
   );
   let results = (outs I64);
 

@@ -3932,7 +3932,6 @@ static mlir::ParseResult parseTargetAllocMemOp(mlir::OpAsmParser &parser,
     return mlir::failure();
 
   mlir::Type restype = builder.getIntegerType(64);
-  ;
   if (!restype) {
     parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
     return mlir::failure();
