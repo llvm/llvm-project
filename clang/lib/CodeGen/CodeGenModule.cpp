@@ -394,6 +394,16 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
     Check("__ibm128", llvm::Type::getPPC_FP128Ty(Context), Target.Ibm128Align);
 
   Check("void*", llvm::PointerType::getUnqual(Context), Target.PointerAlign);
+
+  if (Triple.f128LibmShouldUseLongDouble() &&
+      &Target.getLongDoubleFormat() != &llvm::APFloat::IEEEquad()) {
+    llvm::errs()
+        << "For target " << Triple.str()
+        << " LLVM wants to use `long double` symbols for `_Float128` libm call "
+           "lowering, but clang specifies `long double` as "
+        << Target.getLongDoubleFormat() << "\n";
+    abort();
+  }
 #endif
 }
 
