@@ -1122,7 +1122,7 @@ ort \
     )";
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
-  EXPECT_STREQ("module;#include \"textual-header.h\"\nexport module m;"
+  EXPECT_STREQ("module\n;#include \"textual-header.h\"\nexport module m;"
                "exp\\\nort import:l[[rename]];"
                "import<<=3;import a b d e d e f e;"
                "import foo[[no_unique_address]];import foo();"
