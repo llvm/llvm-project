@@ -1824,20 +1824,18 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MULHS,     MVT::i32, Expand);
   setOperationAction(ISD::MUL,       MVT::i32, Expand);
 
+  setLibcallImpl(RTLIB::MUL_I32, RTLIB::sparc_umul);
+  setLibcallImpl(RTLIB::SDIV_I32, RTLIB::sparc_div);
+  setLibcallImpl(RTLIB::UDIV_I32, RTLIB::sparc_udiv);
+  setLibcallImpl(RTLIB::SREM_I32, RTLIB::sparc_rem);
+  setLibcallImpl(RTLIB::UREM_I32, RTLIB::sparc_urem);
+
   if (Subtarget->useSoftMulDiv()) {
     // .umul works for both signed and unsigned
     setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
     setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::MUL_I32, RTLIB::sparc_umul);
-
     setOperationAction(ISD::SDIV, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::SDIV_I32, RTLIB::sparc_div);
-
     setOperationAction(ISD::UDIV, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::UDIV_I32, RTLIB::sparc_udiv);
-
-    setLibcallImpl(RTLIB::SREM_I32, RTLIB::sparc_rem);
-    setLibcallImpl(RTLIB::UREM_I32, RTLIB::sparc_urem);
   }
 
   if (Subtarget->is64Bit()) {
@@ -1881,6 +1879,13 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::f128, Custom);
   }
 
+  if (!Subtarget->is64Bit()) {
+    setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Q_qtoll);
+    setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Q_qtoull);
+    setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Q_lltoq);
+    setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Q_ulltoq);
+  }
+
   if (Subtarget->hasHardQuad()) {
     setOperationAction(ISD::FADD,  MVT::f128, Legal);
     setOperationAction(ISD::FSUB,  MVT::f128, Legal);
@@ -1896,14 +1901,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FNEG, MVT::f128, Custom);
       setOperationAction(ISD::FABS, MVT::f128, Custom);
     }
-
-    if (!Subtarget->is64Bit()) {
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Q_qtoll);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Q_qtoull);
-      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Q_lltoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Q_ulltoq);
-    }
-
   } else {
     // Custom legalize f128 operations.
 
@@ -1948,10 +1945,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
       setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::_Q_qtou);
       setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::_Q_itoq);
       setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::_Q_utoq);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Q_qtoll);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Q_qtoull);
-      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Q_lltoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Q_ulltoq);
       setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::_Q_stoq);
       setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::_Q_dtoq);
       setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::_Q_qtos);
