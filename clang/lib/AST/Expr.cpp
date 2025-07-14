@@ -1619,19 +1619,19 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
 }
 
 std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
-CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
+Expr::getUnusedResultAttrImpl(const Decl *Callee, QualType ReturnType) {
   // If the callee is marked nodiscard, return that attribute
-  if (const Decl *D = getCalleeDecl())
-    if (const auto *A = D->getAttr<WarnUnusedResultAttr>())
+  if (Callee != nullptr)
+    if (const auto *A = Callee->getAttr<WarnUnusedResultAttr>())
       return {nullptr, A};
 
   // If the return type is a struct, union, or enum that is marked nodiscard,
   // then return the return type attribute.
-  if (const TagDecl *TD = getCallReturnType(Ctx)->getAsTagDecl())
+  if (const TagDecl *TD = ReturnType->getAsTagDecl())
     if (const auto *A = TD->getAttr<WarnUnusedResultAttr>())
       return {TD, A};
 
-  for (const auto *TD = getCallReturnType(Ctx)->getAs<TypedefType>(); TD;
+  for (const auto *TD = ReturnType->getAs<TypedefType>(); TD;
        TD = TD->desugar()->getAs<TypedefType>())
     if (const auto *A = TD->getDecl()->getAttr<WarnUnusedResultAttr>())
       return {TD->getDecl(), A};

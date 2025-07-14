@@ -1237,11 +1237,13 @@ public:
   /// of `instancetype` (in that case it's an expression type).
   QualType getCallReturnType(ASTContext &Ctx) const;
 
-  /// Returns the WarnUnusedResultAttr that is either declared on the called
-  /// method, or its return type declaration, together with a NamedDecl that
-  /// refers to the declaration the attribute is attached onto.
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
   std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
-  getUnusedResultAttr(ASTContext &Ctx) const;
+  getUnusedResultAttr(ASTContext &Ctx) const {
+    return getUnusedResultAttrImpl(getMethodDecl(), getCallReturnType(Ctx));
+  }
 
   /// Returns true if this message send should warn on unused results.
   bool hasUnusedResultAttr(ASTContext &Ctx) const {

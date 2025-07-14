@@ -264,6 +264,12 @@ public:
                               SourceRange &R1, SourceRange &R2,
                               ASTContext &Ctx) const;
 
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  static std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttrImpl(const Decl *Callee, QualType ReturnType);
+
   /// isLValue - True if this expression is an "l-value" according to
   /// the rules of the current language.  C and C++ give somewhat
   /// different rules for this concept, but in general, the result of
@@ -3174,11 +3180,13 @@ public:
   /// type.
   QualType getCallReturnType(const ASTContext &Ctx) const;
 
-  /// Returns the WarnUnusedResultAttr that is either declared on the called
-  /// function, or its return type declaration, together with a NamedDecl that
-  /// refers to the declaration the attribute is attached onto.
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
   std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
-  getUnusedResultAttr(const ASTContext &Ctx) const;
+  getUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttrImpl(getCalleeDecl(), getCallReturnType(Ctx));
+  }
 
   /// Returns true if this call expression should warn on unused results.
   bool hasUnusedResultAttr(const ASTContext &Ctx) const {

@@ -273,26 +273,6 @@ QualType ObjCMessageExpr::getCallReturnType(ASTContext &Ctx) const {
   return Ctx.getReferenceQualifiedType(this);
 }
 
-std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
-ObjCMessageExpr::getUnusedResultAttr(ASTContext &Ctx) const {
-  // If the callee is marked nodiscard, return that attribute
-  if (const ObjCMethodDecl *MD = getMethodDecl())
-    if (const auto *A = MD->getAttr<WarnUnusedResultAttr>())
-      return {nullptr, A};
-
-  // If the return type is a struct, union, or enum that is marked nodiscard,
-  // then return the return type attribute.
-  if (const TagDecl *TD = getCallReturnType(Ctx)->getAsTagDecl())
-    if (const auto *A = TD->getAttr<WarnUnusedResultAttr>())
-      return {TD, A};
-
-  for (const auto *TD = getCallReturnType(Ctx)->getAs<TypedefType>(); TD;
-       TD = TD->desugar()->getAs<TypedefType>())
-    if (const auto *A = TD->getDecl()->getAttr<WarnUnusedResultAttr>())
-      return {TD->getDecl(), A};
-  return {nullptr, nullptr};
-}
-
 SourceRange ObjCMessageExpr::getReceiverRange() const {
   switch (getReceiverKind()) {
   case Instance:
