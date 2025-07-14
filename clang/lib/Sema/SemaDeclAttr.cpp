@@ -1976,7 +1976,7 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
       Diags.isIgnored(diag::warn_suggest_noreturn_function, FD->getLocation()))
     return;
 
-  if (!FD->hasAttr<NoReturnAttr>() && !FD->hasAttr<InferredNoReturnAttr>() &&
+  if (!FD->isNoReturn() && !FD->hasAttr<InferredNoReturnAttr>() &&
       isKnownToAlwaysThrow(FD)) {
     NonConstFD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
 
