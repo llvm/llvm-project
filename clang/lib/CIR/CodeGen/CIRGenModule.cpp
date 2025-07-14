@@ -104,6 +104,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+
+  if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
+    theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
+                       cir::OptInfoAttr::get(&mlirContext,
+                                             cgo.OptimizationLevel,
+                                             cgo.OptimizeSize));
 }
 
 CIRGenModule::~CIRGenModule() = default;
@@ -1252,6 +1258,8 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::Enum:
   case Decl::Using:          // using X; [C++]
   case Decl::UsingDirective: // using namespace X; [C++]
+  case Decl::UsingEnum:      // using enum X; [C++]
+  case Decl::NamespaceAlias:
   case Decl::Typedef:
   case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:

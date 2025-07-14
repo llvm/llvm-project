@@ -1,5 +1,10 @@
 // RUN: %clang_tsan %s -o %t && %run %t | FileCheck %s
 
+// In these systems, the behavior of ReleaseMemoryPagesToOS is madvise(beg, end, MADV_FREE),
+// which tags the relevant pages as 'FREE' and does not release them immediately.
+// Therefore, we cannot assume that __tsan_read1 will not race with the shadow cleared.
+// UNSUPPORTED: darwin,target={{.*(freebsd|netbsd|solaris|haiku).*}}
+
 #include "test.h"
 #include <assert.h>
 #include <pthread.h>

@@ -419,7 +419,6 @@ static bool isQuoteCppDigitSeparator(const char *const Start,
 }
 
 void Scanner::skipLine(const char *&First, const char *const End) {
-  char LastNonWhitespace = ' ';
   for (;;) {
     assert(First <= End);
     if (First == End)
@@ -430,6 +429,9 @@ void Scanner::skipLine(const char *&First, const char *const End) {
       return;
     }
     const char *Start = First;
+    // Use `LastNonWhitespace`to track if a line-continuation has ever been seen
+    // before a new-line character:
+    char LastNonWhitespace = ' ';
     while (First != End && !isVerticalWhitespace(*First)) {
       // Iterate over strings correctly to avoid comments and newlines.
       if (*First == '"' ||

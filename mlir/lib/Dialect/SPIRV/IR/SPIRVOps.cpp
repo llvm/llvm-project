@@ -23,7 +23,6 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
@@ -39,7 +38,6 @@
 #include <cassert>
 #include <numeric>
 #include <optional>
-#include <type_traits>
 
 using namespace mlir;
 using namespace mlir::spirv::AttrNames;
@@ -545,6 +543,12 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
   if (llvm::isa<NoneType, TensorType>(type)) {
     if (parser.parseColonType(type))
       return failure();
+  }
+
+  if (llvm::isa<TensorArmType>(type)) {
+    if (parser.parseOptionalColon().succeeded())
+      if (parser.parseType(type))
+        return failure();
   }
 
   return parser.addTypeToList(type, result.types);

@@ -8,6 +8,7 @@ from dap_server import Source
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
+import base64
 
 
 class DAPTestCaseBase(TestBase):
@@ -344,7 +345,12 @@ class DAPTestCaseBase(TestBase):
         granularity="statement",
         timeout=DEFAULT_TIMEOUT,
     ):
-        self.dap_server.request_next(threadId=threadId, granularity=granularity)
+        response = self.dap_server.request_next(
+            threadId=threadId, granularity=granularity
+        )
+        self.assertTrue(
+            response["success"], f"next request failed: response {response}"
+        )
         if waitForStop:
             return self.dap_server.wait_for_stopped(timeout)
         return None
@@ -501,3 +507,20 @@ class DAPTestCaseBase(TestBase):
                 self.dap_server.request_disconnect(terminateDebuggee=True)
                 self.assertIsNotNone(server_tool, "debugserver not found.")
         return server_tool
+
+    def writeMemory(self, memoryReference, data=None, offset=0, allowPartial=False):
+        # This function accepts data in decimal and hexadecimal format,
+        # converts it to a Base64 string, and send it to the DAP,
+        # which expects Base64 encoded data.
+        encodedData = (
+            ""
+            if data is None
+            else base64.b64encode(
+                # (bit_length + 7 (rounding up to nearest byte) ) //8 = converts to bytes.
+                data.to_bytes((data.bit_length() + 7) // 8, "little")
+            ).decode()
+        )
+        response = self.dap_server.request_writeMemory(
+            memoryReference, encodedData, offset=offset, allowPartial=allowPartial
+        )
+        return response

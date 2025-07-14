@@ -30,8 +30,8 @@ Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
 
 Pointer::Pointer(const Pointer &P)
-    : Offset(P.Offset), PointeeStorage(P.PointeeStorage),
-      StorageKind(P.StorageKind) {
+    : Offset(P.Offset), StorageKind(P.StorageKind),
+      PointeeStorage(P.PointeeStorage) {
 
   if (isBlockPointer() && PointeeStorage.BS.Pointee)
     PointeeStorage.BS.Pointee->addPointer(this);
@@ -48,8 +48,8 @@ Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
 }
 
 Pointer::Pointer(Pointer &&P)
-    : Offset(P.Offset), PointeeStorage(P.PointeeStorage),
-      StorageKind(P.StorageKind) {
+    : Offset(P.Offset), StorageKind(P.StorageKind),
+      PointeeStorage(P.PointeeStorage) {
 
   if (StorageKind == Storage::Block && PointeeStorage.BS.Pointee)
     PointeeStorage.BS.Pointee->replacePointer(&P, this);
@@ -207,7 +207,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
 
   bool UsePath = true;
   if (const ValueDecl *VD = getDeclDesc()->asValueDecl();
-      VD && VD->getType()->isLValueReferenceType())
+      VD && VD->getType()->isReferenceType())
     UsePath = false;
 
   // Build the path into the object.
@@ -338,16 +338,28 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   }
 }
 
-/// Compute an integer that can be used to compare this pointer to
-/// another one.
 size_t Pointer::computeOffsetForComparison() const {
+  if (isIntegralPointer())
+    return asIntPointer().Value + Offset;
+  if (isTypeidPointer())
+    return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
+
   if (!isBlockPointer())
     return Offset;
 
   size_t Result = 0;
   Pointer P = *this;
-  while (!P.isRoot()) {
-    if (P.isArrayRoot()) {
+  while (true) {
+
+    if (P.isVirtualBaseClass()) {
+      Result += getInlineDesc()->Offset;
+      P = P.getBase();
+      continue;
+    }
+
+    if (P.isBaseClass()) {
+      if (P.getRecord()->getNumVirtualBases() > 0)
+        Result += P.getInlineDesc()->Offset;
       P = P.getBase();
       continue;
     }
@@ -358,14 +370,26 @@ size_t Pointer::computeOffsetForComparison() const {
       continue;
     }
 
+    if (P.isRoot()) {
+      if (P.isOnePastEnd())
+        ++Result;
+      break;
+    }
+
     if (const Record *R = P.getBase().getRecord(); R && R->isUnion()) {
       // Direct child of a union - all have offset 0.
       P = P.getBase();
       continue;
     }
 
+    // Fields, etc.
     Result += P.getInlineDesc()->Offset;
+    if (P.isOnePastEnd())
+      ++Result;
+
     P = P.getBase();
+    if (P.isRoot())
+      break;
   }
 
   return Result;
@@ -481,33 +505,36 @@ void Pointer::activate() const {
   auto activate = [](Pointer &P) -> void {
     P.getInlineDesc()->IsActive = true;
   };
-  auto deactivate = [](Pointer &P) -> void {
+
+  std::function<void(Pointer &)> deactivate;
+  deactivate = [&deactivate](Pointer &P) -> void {
     P.getInlineDesc()->IsActive = false;
+
+    if (const Record *R = P.getRecord()) {
+      for (const Record::Field &F : R->fields()) {
+        Pointer FieldPtr = P.atField(F.Offset);
+        if (FieldPtr.getInlineDesc()->IsActive)
+          deactivate(FieldPtr);
+      }
+      // FIXME: Bases?
+    }
   };
 
-  // Unions might be nested etc., so find the topmost Pointer that's
-  // not in a union anymore.
-  Pointer UnionPtr = getBase();
-  while (!UnionPtr.isRoot() && UnionPtr.inUnion())
-    UnionPtr = UnionPtr.getBase();
-
-  assert(UnionPtr.getFieldDesc()->isUnion());
-
-  const Record *UnionRecord = UnionPtr.getRecord();
-  for (const Record::Field &F : UnionRecord->fields()) {
-    Pointer FieldPtr = UnionPtr.atField(F.Offset);
-    if (FieldPtr == *this) {
-    } else {
-      deactivate(FieldPtr);
-      // FIXME: Recurse.
-    }
-  }
-
   Pointer B = *this;
-  while (B != UnionPtr) {
+  while (!B.isRoot() && B.inUnion()) {
     activate(B);
-    // FIXME: Need to de-activate other fields of parent records.
+
+    // When walking up the pointer chain, deactivate
+    // all union child pointers that aren't on our path.
+    Pointer Cur = B;
     B = B.getBase();
+    if (const Record *BR = B.getRecord(); BR && BR->isUnion()) {
+      for (const Record::Field &F : BR->fields()) {
+        Pointer FieldPtr = B.atField(F.Offset);
+        if (FieldPtr != Cur)
+          deactivate(FieldPtr);
+      }
+    }
   }
 }
 

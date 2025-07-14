@@ -47,12 +47,14 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCAsmBackend &MAB) const {
   auto Spec = Target.getSpecifier();
   unsigned FixupKind = Fixup.getKind();
+  bool PCRel = false;
   if (IsCrossSection) {
-    if (FixupKind != FK_Data_4) {
+    if (PCRel || FixupKind != FK_Data_4) {
       Ctx.reportError(Fixup.getLoc(), "Cannot represent this expression");
       return COFF::IMAGE_REL_ARM_ADDR32;
     }
-    FixupKind = FK_PCRel_4;
+    FixupKind = FK_Data_4;
+    PCRel = true;
   }
 
 
@@ -62,6 +64,8 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     return COFF::IMAGE_REL_ARM_ABSOLUTE;
   }
   case FK_Data_4:
+    if (PCRel)
+      return COFF::IMAGE_REL_ARM_REL32;
     switch (Spec) {
     case MCSymbolRefExpr::VK_COFF_IMGREL32:
       return COFF::IMAGE_REL_ARM_ADDR32NB;
@@ -70,8 +74,6 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     default:
       return COFF::IMAGE_REL_ARM_ADDR32;
     }
-  case FK_PCRel_4:
-    return COFF::IMAGE_REL_ARM_REL32;
   case FK_SecRel_2:
     return COFF::IMAGE_REL_ARM_SECTION;
   case FK_SecRel_4:

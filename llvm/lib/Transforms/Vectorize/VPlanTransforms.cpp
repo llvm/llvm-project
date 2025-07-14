@@ -1082,6 +1082,15 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
 
+  // select !c, x, y -> select c, y, x
+  VPValue *C;
+  if (match(Def, m_Select(m_Not(m_VPValue(C)), m_VPValue(X), m_VPValue(Y)))) {
+    Def->setOperand(0, C);
+    Def->setOperand(1, Y);
+    Def->setOperand(2, X);
+    return;
+  }
+
   if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return Def->replaceAllUsesWith(A);
 
@@ -1735,8 +1744,7 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!PhiR)
       continue;
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     if (RK != RecurKind::Add && RK != RecurKind::Mul)
       continue;
 
@@ -2114,21 +2122,19 @@ void VPlanTransforms::addActiveLaneMask(
     HeaderMask->replaceAllUsesWith(LaneMask);
 }
 
-/// Try to convert \p CurRecipe to a corresponding EVL-based recipe. Returns
-/// nullptr if no EVL-based recipe could be created.
+/// Try to optimize a \p CurRecipe masked by \p HeaderMask to a corresponding
+/// EVL-based recipe without the header mask. Returns nullptr if no EVL-based
+/// recipe could be created.
 /// \p HeaderMask  Header Mask.
 /// \p CurRecipe   Recipe to be transform.
 /// \p TypeInfo    VPlan-based type analysis.
 /// \p AllOneMask  The vector mask parameter of vector-predication intrinsics.
 /// \p EVL         The explicit vector length parameter of vector-predication
 /// intrinsics.
-/// \p PrevEVL     The explicit vector length of the previous iteration. Only
-/// required if \p CurRecipe is a VPInstruction::FirstOrderRecurrenceSplice.
-static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
-                                     VPRecipeBase &CurRecipe,
-                                     VPTypeAnalysis &TypeInfo,
-                                     VPValue &AllOneMask, VPValue &EVL,
-                                     VPValue *PrevEVL) {
+static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
+                                       VPRecipeBase &CurRecipe,
+                                       VPTypeAnalysis &TypeInfo,
+                                       VPValue &AllOneMask, VPValue &EVL) {
   using namespace llvm::VPlanPatternMatch;
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
@@ -2152,26 +2158,7 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
         VPValue *NewMask = GetNewMask(Red->getCondOp());
         return new VPReductionEVLRecipe(*Red, EVL, NewMask);
       })
-      .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
-        SmallVector<VPValue *> Ops(Sel->operands());
-        Ops.push_back(&EVL);
-        return new VPWidenIntrinsicRecipe(Intrinsic::vp_select, Ops,
-                                          TypeInfo.inferScalarType(Sel),
-                                          Sel->getDebugLoc());
-      })
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
-        if (VPI->getOpcode() == VPInstruction::FirstOrderRecurrenceSplice) {
-          assert(PrevEVL && "Fixed-order recurrences require previous EVL");
-          VPValue *MinusOneVPV = VPI->getParent()->getPlan()->getOrAddLiveIn(
-              ConstantInt::getSigned(Type::getInt32Ty(TypeInfo.getContext()),
-                                     -1));
-          SmallVector<VPValue *> Ops(VPI->operands());
-          Ops.append({MinusOneVPV, &AllOneMask, PrevEVL, &EVL});
-          return new VPWidenIntrinsicRecipe(Intrinsic::experimental_vp_splice,
-                                            Ops, TypeInfo.inferScalarType(VPI),
-                                            VPI->getDebugLoc());
-        }
-
         VPValue *LHS, *RHS;
         // Transform select with a header mask condition
         //   select(header_mask, LHS, RHS)
@@ -2204,9 +2191,12 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
          "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceAllUsesWith(&EVL);
 
+  // Defer erasing recipes till the end so that we don't invalidate the
+  // VPTypeAnalysis cache.
+  SmallVector<VPRecipeBase *> ToErase;
+
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
-  VPInstruction *PrevEVL = nullptr;
   bool ContainsFORs =
       any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
   if (ContainsFORs) {
@@ -2219,16 +2209,37 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                                              DebugLoc());
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
-    PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
+    VPValue *PrevEVL =
+        Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
+
+    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+             vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
+      for (VPRecipeBase &R : *VPBB) {
+        using namespace VPlanPatternMatch;
+        VPValue *V1, *V2;
+        if (!match(&R,
+                   m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
+                       m_VPValue(V1), m_VPValue(V2))))
+          continue;
+        VPValue *Imm = Plan.getOrAddLiveIn(
+            ConstantInt::getSigned(Type::getInt32Ty(Ctx), -1));
+        VPWidenIntrinsicRecipe *VPSplice = new VPWidenIntrinsicRecipe(
+            Intrinsic::experimental_vp_splice,
+            {V1, V2, Imm, AllOneMask, PrevEVL, &EVL},
+            TypeInfo.inferScalarType(R.getVPSingleValue()), R.getDebugLoc());
+        VPSplice->insertBefore(&R);
+        R.getVPSingleValue()->replaceAllUsesWith(VPSplice);
+        ToErase.push_back(&R);
+      }
+    }
   }
 
-  SmallVector<VPRecipeBase *> ToErase;
-
+  // Try to optimize header mask recipes away to their EVL variants.
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
-      VPRecipeBase *EVLRecipe = createEVLRecipe(
-          HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL, PrevEVL);
+      VPRecipeBase *EVLRecipe =
+          optimizeMaskToEVL(HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL);
       if (!EVLRecipe)
         continue;
 
@@ -2244,8 +2255,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
         CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
       }
-      // Defer erasing recipes till the end so that we don't invalidate the
-      // VPTypeAnalysis cache.
       ToErase.push_back(CurRecipe);
     }
   }
@@ -2482,23 +2491,23 @@ void VPlanTransforms::createInterleaveGroups(
     auto *InsertPos =
         cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IRInsertPos));
 
+    bool InBounds = false;
+    if (auto *Gep = dyn_cast<GetElementPtrInst>(
+            getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
+      InBounds = Gep->isInBounds();
+
     // Get or create the start address for the interleave group.
     auto *Start =
         cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
     VPValue *Addr = Start->getAddr();
     VPRecipeBase *AddrDef = Addr->getDefiningRecipe();
     if (AddrDef && !VPDT.properlyDominates(AddrDef, InsertPos)) {
-      // TODO: Hoist Addr's defining recipe (and any operands as needed) to
-      // InsertPos or sink loads above zero members to join it.
-      bool InBounds = false;
-      if (auto *Gep = dyn_cast<GetElementPtrInst>(
-              getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
-        InBounds = Gep->isInBounds();
-
       // We cannot re-use the address of member zero because it does not
       // dominate the insert position. Instead, use the address of the insert
       // position and create a PtrAdd adjusting it to the address of member
       // zero.
+      // TODO: Hoist Addr's defining recipe (and any operands as needed) to
+      // InsertPos or sink loads above zero members to join it.
       assert(IG->getIndex(IRInsertPos) != 0 &&
              "index of insert position shouldn't be zero");
       auto &DL = IRInsertPos->getDataLayout();
@@ -2511,6 +2520,19 @@ void VPlanTransforms::createInterleaveGroups(
       VPBuilder B(InsertPos);
       Addr = InBounds ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
                       : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
+    }
+    // If the group is reverse, adjust the index to refer to the last vector
+    // lane instead of the first. We adjust the index from the first vector
+    // lane, rather than directly getting the pointer for lane VF - 1, because
+    // the pointer operand of the interleaved access is supposed to be uniform.
+    if (IG->isReverse()) {
+      auto *ReversePtr = new VPVectorEndPointerRecipe(
+          Addr, &Plan.getVF(), getLoadStoreType(IRInsertPos),
+          -(int64_t)IG->getFactor(),
+          InBounds ? GEPNoWrapFlags::inBounds() : GEPNoWrapFlags::none(),
+          InsertPos->getDebugLoc());
+      ReversePtr->insertBefore(InsertPos);
+      Addr = ReversePtr;
     }
     auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
                                         InsertPos->getMask(), NeedsMaskForGaps, InsertPos->getDebugLoc());
@@ -3061,16 +3083,15 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 }
 
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
-/// converted to a narrower recipe. \p V is used by a wide recipe \p WideMember
-/// that feeds a store interleave group at index \p Idx, \p WideMember0 is the
-/// recipe feeding the same interleave group at index 0. A VPWidenLoadRecipe can
-/// be narrowed to an index-independent load if it feeds all wide ops at all
-/// indices (\p OpV must be the operand at index \p OpIdx for both the recipe at
-/// lane 0, \p WideMember0, and \p WideMember). A VPInterleaveRecipe can be
-/// narrowed to a wide load, if \p V is defined at \p Idx of a load interleave
-/// group.
-static bool canNarrowLoad(VPWidenRecipe *WideMember0, VPWidenRecipe *WideMember,
-                          unsigned OpIdx, VPValue *OpV, unsigned Idx) {
+/// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
+/// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding
+/// the same interleave group at index 0. A VPWidenLoadRecipe can be narrowed to
+/// an index-independent load if it feeds all wide ops at all indices (\p OpV
+/// must be the operand at index \p OpIdx for both the recipe at lane 0, \p
+/// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
+/// is defined at \p Idx of a load interleave group.
+static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
+                          VPValue *OpV, unsigned Idx) {
   auto *DefR = OpV->getDefiningRecipe();
   if (!DefR)
     return WideMember0->getOperand(OpIdx) == OpV;
@@ -3117,6 +3138,14 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
          GroupSize == VectorRegWidth;
 }
 
+/// Returns true if \p VPValue is a narrow VPValue.
+static bool isAlreadyNarrow(VPValue *VPV) {
+  if (VPV->isLiveIn())
+    return true;
+  auto *RepR = dyn_cast<VPReplicateRecipe>(VPV);
+  return RepR && RepR->isSingleScalar();
+}
+
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                              unsigned VectorRegWidth) {
   using namespace llvm::VPlanPatternMatch;
@@ -3133,6 +3162,10 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R) ||
         match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
+      continue;
+
+    if (isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(&R) &&
+        vputils::onlyFirstLaneUsed(cast<VPSingleDefRecipe>(&R)))
       continue;
 
     // Bail out on recipes not supported at the moment:
@@ -3168,6 +3201,16 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (InterleaveR->getStoredValues().empty())
       continue;
 
+    // Narrow interleave groups, if all operands are already matching narrow
+    // ops.
+    auto *Member0 = InterleaveR->getStoredValues()[0];
+    if (isAlreadyNarrow(Member0) &&
+        all_of(InterleaveR->getStoredValues(),
+               [Member0](VPValue *VPV) { return Member0 == VPV; })) {
+      StoreGroups.push_back(InterleaveR);
+      continue;
+    }
+
     // For now, we only support full interleave groups storing load interleave
     // groups.
     if (all_of(enumerate(InterleaveR->getStoredValues()), [](auto Op) {
@@ -3196,9 +3239,9 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
           R->getNumOperands() > 2)
         return;
       if (any_of(enumerate(R->operands()),
-                 [WideMember0, Idx = I, R](const auto &P) {
+                 [WideMember0, Idx = I](const auto &P) {
                    const auto &[OpIdx, OpV] = P;
-                   return !canNarrowLoad(WideMember0, R, OpIdx, OpV, Idx);
+                   return !canNarrowLoad(WideMember0, OpIdx, OpV, Idx);
                  }))
         return;
     }
@@ -3224,6 +3267,12 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       return L;
     }
 
+    if (auto *RepR = dyn_cast<VPReplicateRecipe>(R)) {
+      assert(RepR->isSingleScalar() &&
+             isa<LoadInst>(RepR->getUnderlyingInstr()) &&
+             "must be a single scalar load");
+      return RepR;
+    }
     auto *WideLoad = cast<VPWidenLoadRecipe>(R);
 
     // Narrow wide load to uniform scalar load, as transformed VPlan will only
@@ -3238,13 +3287,16 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   // Narrow operation tree rooted at store groups.
   for (auto *StoreGroup : StoreGroups) {
     VPValue *Res = nullptr;
-    if (auto *WideMember0 = dyn_cast<VPWidenRecipe>(
-            StoreGroup->getStoredValues()[0]->getDefiningRecipe())) {
+    VPValue *Member0 = StoreGroup->getStoredValues()[0];
+    if (isAlreadyNarrow(Member0)) {
+      Res = Member0;
+    } else if (auto *WideMember0 =
+                   dyn_cast<VPWidenRecipe>(Member0->getDefiningRecipe())) {
       for (unsigned Idx = 0, E = WideMember0->getNumOperands(); Idx != E; ++Idx)
         WideMember0->setOperand(Idx, NarrowOp(WideMember0->getOperand(Idx)));
       Res = WideMember0;
     } else {
-      Res = NarrowOp(StoreGroup->getStoredValues()[0]);
+      Res = NarrowOp(Member0);
     }
 
     auto *S = new VPWidenStoreRecipe(

@@ -80,9 +80,10 @@ body:             |
 # CHECK-NEXT:    %15:g8rc = COPY killed %6
 # CHECK:       bb.3:
 # CHECK:         %10:g8rc = COPY killed %15
-# CHECK-NEXT:    %16:g8rc_and_g8rc_nox0 = COPY killed %14
+# CHECK-NEXT:    %9:g8rc = COPY killed %14
 # CHECK-NEXT:    %14:g8rc = COPY killed %10
 # CHECK-NEXT:    %15:g8rc = IMPLICIT_DEF
+# CHECK-NEXT:    %16:g8rc_and_g8rc_nox0 = COPY killed %9
 # CHECK-NEXT:    BCC 68, %7, %bb.3
 # CHECK-NEXT:    B %bb.4
 # CHECK:       bb.4:
