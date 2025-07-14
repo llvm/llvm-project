@@ -52,6 +52,13 @@ struct OpenACCMappableModel
 
   mlir::acc::VariableTypeCategory getTypeCategory(mlir::Type type,
                                                   mlir::Value var) const;
+
+  mlir::Value generatePrivateInit(mlir::Type type, mlir::OpBuilder &builder,
+                                  mlir::Location loc,
+                                  mlir::TypedValue<mlir::acc::MappableType> var,
+                                  llvm::StringRef varName,
+                                  mlir::ValueRange extents,
+                                  mlir::Value initVal) const;
 };
 
 } // namespace fir::acc
