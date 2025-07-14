@@ -90,6 +90,7 @@ class ValueEvolution {
   const bool ByteOrderSwapped;
   APInt GenPoly;
   StringRef ErrStr;
+  unsigned AtIter;
 
   // Compute the KnownBits of a BinaryOperator.
   KnownBits computeBinOp(const BinaryOperator *I);
@@ -190,7 +191,7 @@ KnownBits ValueEvolution::computeInstr(const Instruction *I) {
     return KnownPhis.lookup_or(P, BitWidth);
 
   // Compute the KnownBits for a Select(Cmp()), forcing it to take the branch
-  // that is predicated on the (least|most)-significant-bit check.
+  // that is (least|most)-significant-bit-clear.
   CmpPredicate Pred;
   Value *L, *R;
   Instruction *TV, *FV;
@@ -198,35 +199,46 @@ KnownBits ValueEvolution::computeInstr(const Instruction *I) {
                         m_Instruction(FV)))) {
     Visited.insert(cast<Instruction>(I->getOperand(0)));
 
-    // We need to check LCR against [0, 2) in the little-endian case, because
-    // the RCR check is insufficient: it is simply [0, 1).
-    if (!ByteOrderSwapped) {
-      KnownBits KnownL = compute(L);
-      unsigned ICmpBW = KnownL.getBitWidth();
-      auto LCR = ConstantRange::fromKnownBits(KnownL, false);
-      auto CheckLCR = ConstantRange(APInt::getZero(ICmpBW), APInt(ICmpBW, 2));
-      if (LCR != CheckLCR) {
-        ErrStr = "Bad LHS of significant-bit-check";
-        return {BitWidth};
-      }
+    // Check that the predication is on (most|least) significant bit. We check
+    // that the compare is `>= 0` in the big-endian case, and `== 0` in the
+    // little-endian case (or the inverse, in which case the branches of the
+    // compare are swapped). We check LCR against CheckLCR, which is full-set,
+    // [0, -1), [0, -3), [0, -7), etc. depending on AtIter in the big-endian
+    // case, and [0, 2) in the little-endian case: CheckLCR checks that we are
+    // shifting in zero bits in every loop iteration in the big-endian case, and
+    // the compare 0 or 1 in the little-endian case (as a value and'ed with 1 is
+    // passed as the operand). We then check AllowedByR against CheckAllowedByR,
+    // which is [0, smin) in the big-endian case, and [0, 1) in the
+    // little-endian case: CheckAllowedByR checks for significant-bit-clear,
+    // which means that we visit the bit-shift branch instead of the
+    // bit-shift-and-xor-poly branch.
+    KnownBits KnownL = compute(L);
+    unsigned ICmpBW = KnownL.getBitWidth();
+    auto LCR = ConstantRange::fromKnownBits(KnownL, false);
+    auto CheckLCR = ConstantRange::getNonEmpty(
+        APInt::getZero(ICmpBW), ByteOrderSwapped
+                                    ? -APInt::getLowBitsSet(ICmpBW, AtIter)
+                                    : APInt(ICmpBW, 2));
+    if (LCR != CheckLCR) {
+      ErrStr = "Bad LHS of significant-bit-check";
+      return {BitWidth};
     }
 
-    // Check that the predication is on (most|least) significant bit.
     KnownBits KnownR = compute(R);
-    unsigned ICmpBW = KnownR.getBitWidth();
     auto RCR = ConstantRange::fromKnownBits(KnownR, false);
-    auto AllowedR = ConstantRange::makeAllowedICmpRegion(Pred, RCR);
-    ConstantRange CheckRCR(APInt::getZero(ICmpBW),
-                           ByteOrderSwapped ? APInt::getSignedMinValue(ICmpBW)
-                                            : APInt(ICmpBW, 1));
+    auto AllowedByR = ConstantRange::makeAllowedICmpRegion(Pred, RCR);
+    ConstantRange CheckAllowedByR(
+        APInt::getZero(ICmpBW),
+        ByteOrderSwapped ? APInt::getSignedMinValue(ICmpBW) : APInt(ICmpBW, 1));
 
-    // We only compute KnownBits of either TV or FV, as the other value would
-    // just be a bit-shift as checked by isBigEndianBitShift.
-    if (AllowedR == CheckRCR) {
+    // We only compute KnownBits of either TV or FV, as the other branch would
+    // be the bit-shift-and-xor-poly branch, as determined by the conditional
+    // recurrence.
+    if (AllowedByR == CheckAllowedByR) {
       Visited.insert(FV);
       return compute(TV);
     }
-    if (AllowedR.inverse() == CheckRCR) {
+    if (AllowedByR.inverse() == CheckAllowedByR) {
       Visited.insert(TV);
       return compute(FV);
     }
@@ -264,9 +276,11 @@ KnownBits ValueEvolution::compute(const Value *V) {
 }
 
 bool ValueEvolution::computeEvolutions(ArrayRef<PhiStepPair> PhiEvolutions) {
-  for (unsigned I = 0; I < TripCount; ++I)
+  for (unsigned I = 0; I < TripCount; ++I) {
+    AtIter = I;
     for (auto [Phi, Step] : PhiEvolutions)
       KnownPhis.emplace_or_assign(Phi, computeInstr(Step));
+  }
 
   return ErrStr.empty();
 }
