@@ -22,7 +22,7 @@ add_libc_test(
 
 
 add_libc_test(
-  string_converter_test.cpp
+  string_converter_test
   SUITE
     libc-support-tests
   SRCS
