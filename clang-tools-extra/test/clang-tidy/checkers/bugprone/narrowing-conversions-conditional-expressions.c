@@ -19,4 +19,3 @@ void test(int cond, int i) {
   char x = cond > 0 ? ':' : i;
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: narrowing conversion from 'int' to signed type 'char' is implementation-defined [bugprone-narrowing-conversions]
 }
-
