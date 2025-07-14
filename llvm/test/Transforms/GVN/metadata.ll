@@ -409,8 +409,9 @@ join:
   ret void
 }
 
-define void @test_nosanitize(ptr %p) {
-; CHECK-LABEL: define void @test_nosanitize
+; We should preserve the !nosanitize if both insns have it.
+define void @test_nosanitize1(ptr %p) {
+; CHECK-LABEL: define void @test_nosanitize1
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !nosanitize [[META6]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V1]], 0
@@ -422,6 +423,56 @@ define void @test_nosanitize(ptr %p) {
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load i32, ptr %p, !nosanitize !11
+  %cond = icmp eq i32 %v1, 0
+  br i1 %cond, label %if, label %join
+
+if:
+  %v2 = load i32, ptr %p, !nosanitize !11
+  call void @use.i32(i32 %v2)
+  br label %join
+
+join:
+  ret void
+}
+
+define void @test_nosanitize2(ptr %p) {
+; CHECK-LABEL: define void @test_nosanitize2
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V1]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @use.i32(i32 0)
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret void
+;
+  %v1 = load i32, ptr %p, !nosanitize !11
+  %cond = icmp eq i32 %v1, 0
+  br i1 %cond, label %if, label %join
+
+if:
+  %v2 = load i32, ptr %p
+  call void @use.i32(i32 %v2)
+  br label %join
+
+join:
+  ret void
+}
+
+define void @test_nosanitize3(ptr %p) {
+; CHECK-LABEL: define void @test_nosanitize3
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V1]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @use.i32(i32 0)
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret void
+;
+  %v1 = load i32, ptr %p
   %cond = icmp eq i32 %v1, 0
   br i1 %cond, label %if, label %join
 
