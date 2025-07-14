@@ -46,6 +46,10 @@ Note that currently ELF Core files are not supported."
 ) lldb::SBSaveCoreOptions::SetProcess;
 
 %feature("docstring", "
+    Get the process to save. If undefined, an invalid SBProcess will be returned."
+) lldb::SBSaveCoreOptions::GetProcess;
+
+%feature("docstring", "
     Add an SBThread to be saved, an error will be returned if an SBThread from a different process is specified. 
     The process is set either by the first SBThread added to the options container, or explicitly by the SetProcess call."
 ) lldb::SBSaveCoreOptions::AddThread;
@@ -63,17 +67,11 @@ Note that currently ELF Core files are not supported."
     Get an SBThreadCollection of all threads marked to be saved. This collection is not sorted according to insertion order."
 ) lldb::SBSaveCoreOptions::GetThreadsToSave;
 
-
 %feature("docstring", "
     Get an SBMemoryRegionInfoList of all the Regions that LLDB will attempt to write into the Core. Note, reading from these
     regions can fail, and it's guaraunteed every region will be present. If called without a valid process or style set an empty
     collection will be returned."
 ) lldb::SBSaveCoreOptions::GetMemoryRegionsToSave;
-
-%feature("docstring", "
-    Add a plugin specific flag to the objects option."
-) lldb::SBSaveCoreOptions::AddFlag;
-
 
 %feature("docstring", "
     Get the current total number of bytes the core is expected to have, excluding the overhead of the core file format.
