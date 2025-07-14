@@ -140,3 +140,43 @@ define <4 x i16> @unsupported_shift_value_v4i16(<4 x i16> %a, <4 x i16> %b) {
   %t = trunc <4 x i32> %ma to <4 x i16>
   ret <4 x i16> %t
 }
+
+define <2 x i16> @extend_to_illegal_type(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: extend_to_illegal_type:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.2s, v0.2s, #16
+; CHECK-NEXT:    shl v1.2s, v1.2s, #16
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
+; CHECK-NEXT:    sshr v1.2s, v1.2s, #16
+; CHECK-NEXT:    sqdmulh v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    ret
+  %as = sext <2 x i16> %a to <2 x i48>
+  %bs = sext <2 x i16> %b to <2 x i48>
+  %m = mul <2 x i48> %bs, %as
+  %sh = ashr <2 x i48> %m, splat (i48 15)
+  %ma = tail call <2 x i48> @llvm.smin.v4i32(<2 x i48> %sh, <2 x i48> splat (i48 32767))
+  %t = trunc <2 x i48> %ma to <2 x i16>
+  ret <2 x i16> %t
+}
+
+define <2 x i11> @illegal_source(<2 x i11> %a, <2 x i11> %b) {
+; CHECK-LABEL: source_is_illegal:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.2s, v0.2s, #21
+; CHECK-NEXT:    shl v1.2s, v1.2s, #21
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #21
+; CHECK-NEXT:    sshr v1.2s, v1.2s, #21
+; CHECK-NEXT:    mul v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    movi v1.2s, #127, msl #8
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #15
+; CHECK-NEXT:    smin v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+  %as = sext <2 x i11> %a to <2 x i32>
+  %bs = sext <2 x i11> %b to <2 x i32>
+  %m = mul <2 x i32> %bs, %as
+  %sh = ashr <2 x i32> %m, splat (i32 15)
+  %ma = tail call <2 x i32> @llvm.smin.v4i32(<2 x i32> %sh, <2 x i32> splat (i32 32767))
+  %t = trunc <2 x i32> %ma to <2 x i11>
+  ret <2 x i11> %t
+}
+

@@ -21005,9 +21005,9 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   if (N->getOpcode() != ISD::SMIN)
     return SDValue();
 
-  EVT VT = N->getValueType(0);
+  EVT DestVT = N->getValueType(0);
 
-  if (!VT.isVector() || VT.getScalarSizeInBits() > 64)
+  if (!DestVT.isVector() || DestVT.getScalarSizeInBits() > 64 || DestVT.isScalableVector())
     return SDValue();
 
   ConstantSDNode *Clamp = isConstOrConstSplat(N->getOperand(1));
@@ -21049,28 +21049,36 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue SExt0 = Mul.getOperand(0);
   SDValue SExt1 = Mul.getOperand(1);
 
+  if (SExt0.getOpcode() != ISD::SIGN_EXTEND ||
+      SExt1.getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+
   EVT SExt0Type = SExt0.getOperand(0).getValueType();
   EVT SExt1Type = SExt1.getOperand(0).getValueType();
 
-  if (SExt0.getOpcode() != ISD::SIGN_EXTEND ||
-      SExt1.getOpcode() != ISD::SIGN_EXTEND || SExt0Type != SExt1Type ||
+  if (SExt0Type != SExt1Type ||
       SExt0Type.getScalarType() != ScalarType ||
       SExt0Type.getFixedSizeInBits() > 128)
     return SDValue();
 
-  // Source vectors with width < 64 are illegal and will need to be extended
-  unsigned SourceVectorWidth = SExt0Type.getFixedSizeInBits();
-  SDValue V0 = (SourceVectorWidth < 64) ? SExt0 : SExt0.getOperand(0);
-  SDValue V1 = (SourceVectorWidth < 64) ? SExt1 : SExt1.getOperand(0);
-
   SDLoc DL(N);
+  SDValue V0 = SExt0.getOperand(0);
+  SDValue V1 = SExt1.getOperand(0);
+
+  // Ensure input vectors are extended to legal types
+  if (SExt0Type.getFixedSizeInBits() < 64) {
+      unsigned VecNumElements = SExt0Type.getVectorNumElements();
+      EVT ExtVecVT =
+        MVT::getVectorVT(MVT::getIntegerVT(64 / VecNumElements),
+                         VecNumElements);
+    V0 = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVecVT, V0);
+    V1 = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVecVT, V1);
+  }
+
   SDValue SQDMULH =
       DAG.getNode(AArch64ISD::SQDMULH, DL, V0.getValueType(), V0, V1);
-  EVT DestVT = N->getValueType(0);
-  if (DestVT.getScalarSizeInBits() > SExt0Type.getScalarSizeInBits())
-    return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, SQDMULH);
 
-  return SQDMULH;
+  return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, SQDMULH);
 }
 
 static SDValue performSMINCombine(SDNode *N, SelectionDAG &DAG) {
