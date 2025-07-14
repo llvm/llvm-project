@@ -439,26 +439,21 @@ let IsDefault = true in {
 def __ashlhi3 : RuntimeLibcallImpl<SHL_I16>;
 def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
 def __ashldi3 : RuntimeLibcallImpl<SHL_I64>;
-def __ashlti3 : RuntimeLibcallImpl<SHL_I128>;
 
 def __lshrhi3 : RuntimeLibcallImpl<SRL_I16>;
 def __lshrsi3 : RuntimeLibcallImpl<SRL_I32>;
 def __lshrdi3 : RuntimeLibcallImpl<SRL_I64>;
-def __lshrti3 : RuntimeLibcallImpl<SRL_I128>;
 
 def __ashrhi3 : RuntimeLibcallImpl<SRA_I16>;
 def __ashrsi3 : RuntimeLibcallImpl<SRA_I32>;
 def __ashrdi3 : RuntimeLibcallImpl<SRA_I64>;
-def __ashrti3 : RuntimeLibcallImpl<SRA_I128>;
 
 def __mulqi3 : RuntimeLibcallImpl<MUL_I8>;
 def __mulhi3 : RuntimeLibcallImpl<MUL_I16>;
 def __mulsi3 : RuntimeLibcallImpl<MUL_I32>;
 def __muldi3 : RuntimeLibcallImpl<MUL_I64>;
-def __multi3 : RuntimeLibcallImpl<MUL_I128>;
 
 def __mulosi4 : RuntimeLibcallImpl<MULO_I32>;
-def __mulodi4 : RuntimeLibcallImpl<MULO_I64>;
 
 def __divqi3 : RuntimeLibcallImpl<SDIV_I8>;
 def __divhi3 : RuntimeLibcallImpl<SDIV_I16>;
@@ -938,6 +933,11 @@ def calloc : RuntimeLibcallImpl<CALLOC>;
 // compiler-rt, not available for most architectures
 //--------------------------------------------------------------------
 
+def __ashlti3 : RuntimeLibcallImpl<SHL_I128>;
+def __lshrti3 : RuntimeLibcallImpl<SRL_I128>;
+def __ashrti3 : RuntimeLibcallImpl<SRA_I128>;
+def __multi3 : RuntimeLibcallImpl<MUL_I128>;
+def __mulodi4 : RuntimeLibcallImpl<MULO_I64>;
 def __muloti4 : RuntimeLibcallImpl<MULO_I128>;
 
 //--------------------------------------------------------------------
