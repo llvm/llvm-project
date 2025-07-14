@@ -47,11 +47,13 @@ static inline bool AddOverflow(int64_t X, int64_t Y, int64_t &Result) {
   Result = static_cast<int64_t>(UResult);
 
   // Adding two positive numbers should result in a positive number.
-  if (X > 0 && Y > 0)
+  if (X > 0 && Y > 0) {
     return Result <= 0;
+  }
   // Adding two negatives should result in a negative number.
-  if (X < 0 && Y < 0)
+  if (X < 0 && Y < 0) {
     return Result >= 0;
+  }
   return false;
 #endif
 }
@@ -74,19 +76,21 @@ static inline bool MulOverflow(int64_t X, int64_t Y, int64_t &Result) {
   Result = IsNegative ? (0 - UResult) : UResult;
 
   // If any of the args was 0, result is 0 and no overflow occurs.
-  if (UX == 0 || UY == 0)
+  if (UX == 0 || UY == 0) {
     return false;
+  }
 
   // UX and UY are in [1, 2^n], where n is the number of digits.
   // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
   // positive) divided by an argument compares to the other.
-  if (IsNegative)
+  if (IsNegative) {
     return UX > (static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) +
                     uint64_t(1)) /
         UY;
-  else
+  } else {
     return UX >
         (static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) / UY;
+  }
 #endif
 }
 
