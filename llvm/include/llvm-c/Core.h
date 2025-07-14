@@ -2708,6 +2708,14 @@ LLVM_C_ABI void LLVMGlobalEraseMetadata(LLVMValueRef Global, unsigned Kind);
 LLVM_C_ABI void LLVMGlobalClearMetadata(LLVMValueRef Global);
 
 /**
+ * Add debuginfo metadata to this global.
+ *
+ * @see llvm::GlobalVariable::addDebugInfo()
+ */
+LLVM_C_ABI void LLVMGlobalAddDebugInfo(LLVMValueRef Global,
+                                       LLVMMetadataRef GVE);
+
+/**
  * Retrieves an array of metadata entries representing the metadata attached to
  * this value. The caller is responsible for freeing this array by calling
  * \c LLVMDisposeValueMetadataEntries.
