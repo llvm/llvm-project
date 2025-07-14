@@ -30,11 +30,12 @@ define bfloat @faddv_nxv4bf16(<vscale x 4 x bfloat> %a) {
   ret bfloat %res
 }
 
+; NOTE: f16(1.875) == bf16(1.0)
 define bfloat @faddv_nxv8bf16(<vscale x 8 x bfloat> %a) {
 ; SVE-LABEL: faddv_nxv8bf16:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    movi v1.2d, #0000000000000000
-; SVE-NEXT:    fmov z2.s, #1.00000000
+; SVE-NEXT:    fmov z2.h, #1.87500000
 ; SVE-NEXT:    ptrue p0.s
 ; SVE-NEXT:    bfdot z1.s, z0.h, z2.h
 ; SVE-NEXT:    faddv s0, p0, z1.s
@@ -43,7 +44,7 @@ define bfloat @faddv_nxv8bf16(<vscale x 8 x bfloat> %a) {
 ;
 ; SME-LABEL: faddv_nxv8bf16:
 ; SME:       // %bb.0:
-; SME-NEXT:    fmov z1.s, #1.00000000
+; SME-NEXT:    fmov z1.h, #1.87500000
 ; SME-NEXT:    mov z2.s, #0 // =0x0
 ; SME-NEXT:    ptrue p0.s
 ; SME-NEXT:    bfdot z2.s, z0.h, z1.h

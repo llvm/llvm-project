@@ -16073,7 +16073,7 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
       SDValue ID =
           DAG.getTargetConstant(Intrinsic::aarch64_sve_bfdot, DL, MVT::i64);
       SDValue Zero = DAG.getConstantFP(0.0, DL, MVT::nxv4f32);
-      SDValue One = DAG.getConstantFP(1.0, DL, MVT::nxv4f32);
+      SDValue One = DAG.getConstantFP(1.0, DL, MVT::nxv8bf16);
       // Use BFDOT's implicitly promotion to float with partial reduction.
       SDValue BFDOT = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv4f32, ID,
                                   Zero, Src, One);
