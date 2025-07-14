@@ -32,7 +32,7 @@ define float @postra-sched-warning(float %input) nounwind #3 {
   ret float %x
 }
 
-attributes #0 = { alwaysinline nounwind memory(readwrite) "amdgpu-post-ra-direction"="topdown"}
-attributes #1 = { alwaysinline nounwind memory(readwrite) "amdgpu-post-ra-direction"="bottomup"}
-attributes #2 = { alwaysinline nounwind memory(readwrite) "amdgpu-post-ra-direction"="bidirectional"}
-attributes #3 = { alwaysinline nounwind memory(readwrite) "amdgpu-post-ra-direction"="warning"}
+attributes #0 = {"amdgpu-post-ra-direction"="topdown"}
+attributes #1 = {"amdgpu-post-ra-direction"="bottomup"}
+attributes #2 = {"amdgpu-post-ra-direction"="bidirectional"}
+attributes #3 = {"amdgpu-post-ra-direction"="warning"}
