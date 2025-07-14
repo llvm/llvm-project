@@ -247,30 +247,30 @@ functions:
       - stdc
     return_type: long
     arguments:
-      - type: const wchar_t *__restrict str
-      - type: wchar_t **__restrict str_end,
-      - type: int base
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
   - name: wcstoll
     standards:
       - stdc
     return_type: long long
     arguments:
-      - type: const wchar_t *__restrict str
-      - type: wchar_t **__restrict str_end,
-      - type: int base
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
   - name: wcstoul
     standards:
       - stdc
     return_type: unsigned long
     arguments:
-      - type: const wchar_t *__restrict str
-      - type: wchar_t **__restrict str_end,
-      - type: int base
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
   - name: wcstoull
     standards:
       - stdc
     return_type: unsigned long long
     arguments:
-      - type: const wchar_t *__restrict str
-      - type: wchar_t **__restrict str_end,
-      - type: int base
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
