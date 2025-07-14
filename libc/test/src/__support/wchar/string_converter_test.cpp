@@ -6,19 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: add support for 16-bit widechars to StringConverter to remove this
-// macro
-#include "src/__support/macros/properties/os.h"
-#ifndef LIBC_TARGET_OS_IS_WINDOWS
-
 #include "hdr/errno_macros.h"
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/properties/os.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/string_converter.h"
 #include "test/UnitTest/Test.h"
 
+// TODO: add support for 16-bit widechars to StringConverter to remove this
+// macro
+#ifdef LIBC_TARGET_OS_IS_WINDOWS
+TEST(LlvmLibcStringConverterTest, Windows) {
+  // pass on windows for now
+}
+#endif
+
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
 TEST(LlvmLibcStringConverterTest, UTF8To32) {
   // first 4 bytes are clown emoji (🤡)
   // next 3 bytes are sigma symbol (∑)
