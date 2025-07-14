@@ -1532,10 +1532,9 @@ define signext i32 @test21(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; RV64I-NEXT:    andi a0, a0, 1104
 ; RV64I-NEXT:    or a0, a0, a6
 ; RV64I-NEXT:    addi a2, a2, 1
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    bltu a2, a5, .LBB25_1
 ; RV64I-NEXT:  # %bb.2: # %bb7
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test21:
