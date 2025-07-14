@@ -307,7 +307,7 @@ public:
 
 private:
   bool finalize_{false};
-  std::optional<SubscriptValue> fixedStride_;
+  common::optional<SubscriptValue> fixedStride_;
 };
 
 // Implements general intrinsic assignment
