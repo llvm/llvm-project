@@ -53,6 +53,14 @@ private:
 
 } // namespace
 
+namespace __locale {
+
+inline _LIBCPP_HIDE_FROM_ABI char* __nl_langinfo_l(int __category_mask, __locale_t __l) {
+  return ::nl_langinfo_l(__category_mask, __l);
+}
+
+} // namespace __locale
+
 // The following are not POSIX routines.  These are quick-and-dirty hacks
 // to make things pretend to work
 inline _LIBCPP_HIDE_FROM_ABI long long strtoll_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
