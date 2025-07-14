@@ -19,7 +19,8 @@
 /// that a warning is issued for unused -Xthinlto-distributor options.
 // RUN: %clang -flto=thin %s -### -fuse-ld=lld --target=x86_64-linux-gnu \
 // RUN:   -Xthinlto-distributor=a1 -Xthinlto-distributor=a2,a3 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=NODIST
+// RUN:   FileCheck %s --check-prefix=NODIST --implicit-check-not=distributor \
+// RUN:     --implicit-check-not=remote-compiler
 
 // NODIST: warning: argument unused during compilation: '-Xthinlto-distributor=a1'
 // NODIST: warning: argument unused during compilation: '-Xthinlto-distributor=a2,a3'
@@ -29,7 +30,8 @@
 /// --thinlto-distributor=.
 // RUN: %clang -flto=thin %s -### -fuse-ld=lld --target=x86_64-linux-gnu \
 // RUN:   -fthinlto-distributor=d.exe -Werror 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=DEFAULT
+// RUN:   FileCheck %s --check-prefix=DEFAULT --implicit-check-not=distributor \
+// RUN:     --implicit-check-not=remote-compiler
 
 // DEFAULT: ld.lld
 // DEFAULT-SAME: "--thinlto-distributor=d.exe"
@@ -39,7 +41,8 @@
 /// appropriate unused option warnings are issued.
 // RUN: %clang %s -### -fuse-ld=lld --target=x86_64-linux-gnu \
 // RUN:   -fthinlto-distributor=d.exe 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=NOFLTO
+// RUN:   FileCheck %s --check-prefix=NOFLTO --implicit-check-not=distributor \
+// RUN:     --implicit-check-not=remote-compiler
 
 // NOFLTO: warning: argument unused during compilation: '-fthinlto-distributor=d.exe'
 // NOFLTO: ld.lld
