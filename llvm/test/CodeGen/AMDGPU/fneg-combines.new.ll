@@ -4318,9 +4318,9 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_v2f16(<2 x half> %ar
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_and_b32 s1, 1, s1
+; SI-NEXT:    s_cselect_b32 s0, 0, s0
 ; SI-NEXT:    s_xor_b32 s0, s0, 0x80008000
 ; SI-NEXT:    s_cmp_eq_u32 s1, 1
-; SI-NEXT:    s_cselect_b32 s0, 0x80008000, s0
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
 ; SI-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
@@ -4358,10 +4358,9 @@ define <2 x half> @v_fneg_select_infloop_regression_v2f16(<2 x half> %arg, i1 %a
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    v_and_b32_e32 v1, 1, v2
-; SI-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; SI-NEXT:    v_mov_b32_e32 v2, 0x80008000
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; SI-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
 ; SI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, vcc
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v1
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1

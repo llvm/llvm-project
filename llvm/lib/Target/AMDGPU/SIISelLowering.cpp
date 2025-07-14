@@ -15496,6 +15496,14 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
 bool SITargetLowering::shouldFoldSelectWithIdentityConstant(
     unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
     SDValue Y) const {
+
+  if (BinOpcode != ISD::AND && BinOpcode != ISD::OR && BinOpcode != ISD::XOR)
+    return false;
+
+  ConstantSDNode *CY = isConstOrConstSplat(Y);
+  if (!CY)
+    return false;
+
   return (BinOpcode == ISD::AND || BinOpcode == ISD::OR ||
           BinOpcode == ISD::XOR) &&
          (VT.getScalarType() == MVT::i32);
