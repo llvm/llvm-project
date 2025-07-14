@@ -1484,12 +1484,9 @@ private:
     // If there is no DISubprogram for F, it implies the function is compiled
     // without debug info. So we also don't generate debug info for the
     // suspension points.
-    bool AddDebugLabels =
-        (DIS && DIS->getUnit() &&
-         (DIS->getUnit()->getEmissionKind() ==
-              DICompileUnit::DebugEmissionKind::FullDebug ||
-          DIS->getUnit()->getEmissionKind() ==
-              DICompileUnit::DebugEmissionKind::LineTablesOnly));
+    bool AddDebugLabels = DIS && DIS->getUnit() &&
+                          (DIS->getUnit()->getEmissionKind() ==
+                           DICompileUnit::DebugEmissionKind::FullDebug);
 
     // resume.entry:
     //  %index.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32

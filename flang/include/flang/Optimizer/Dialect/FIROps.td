@@ -834,15 +834,11 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
         - allocator_idx: specify special allocator to use.
   }];
 
-  let arguments = (ins
-    AnyReferenceLike:$memref,
-    Optional<AnyShapeType>:$shape,
-    Optional<fir_SliceType>:$slice,
-    Variadic<AnyIntegerType>:$typeparams,
-    Optional<fir_ClassType>:$sourceBox,
-    OptionalAttr<AffineMapAttr>:$accessMap,
-    OptionalAttr<I32Attr>:$allocator_idx
-  );
+  let arguments = (ins AnyReferenceLike:$memref, Optional<AnyShapeType>:$shape,
+      Optional<fir_SliceType>:$slice, Variadic<AnyIntegerType>:$typeparams,
+      Optional<BoxOrClassType>:$sourceBox,
+      OptionalAttr<AffineMapAttr>:$accessMap,
+      OptionalAttr<I32Attr>:$allocator_idx);
 
   let results = (outs BoxOrClassType);
 
@@ -3878,9 +3874,17 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    unsigned getNumInductionVars() { return getLowerBound().size(); }
+    unsigned getNumInductionVars() {
+      return getLowerBound().size();
+    }
 
-    unsigned getNumLocalOperands() { return getLocalVars().size(); }
+    unsigned getNumLocalOperands() {
+      return getLocalVars().size();
+    }
+
+    unsigned getNumReduceOperands() {
+      return getReduceVars().size();
+    }
 
     mlir::Block::BlockArgListType getInductionVars() {
       return getBody()->getArguments().slice(0, getNumInductionVars());
@@ -3900,16 +3904,6 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
     /// Number of operands controlling the loop
     unsigned getNumControlOperands() { return getLowerBound().size() * 3; }
 
-    // Get Number of reduction operands
-    unsigned getNumReduceOperands() {
-      return getReduceVars().size();
-    }
-
-    mlir::Operation::operand_range getLocalOperands() {
-      return getOperands()
-          .slice(getNumControlOperands() + getNumReduceOperands(),
-                 getNumLocalOperands());
-    }
   }];
 }
 

@@ -108,6 +108,9 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
 
+- Improved :program:`clang-tidy` to show `CheckOptions` only for checks enabled
+  in `Checks` when running ``--dump-config``.
+
 - Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
   effect when passed via the `.clang-tidy` file.
 
@@ -142,6 +145,12 @@ New checks
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
 
+- New :doc:`llvm-prefer-static-over-anonymous-namespace
+  <clang-tidy/checks/llvm/prefer-static-over-anonymous-namespace>` check.
+
+  Finds function and variable declarations inside anonymous namespace and
+  suggests replacing them with ``static`` declarations.
+
 - New :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check.
 
@@ -160,6 +169,13 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
+- New :doc:`readability-use-concise-preprocessor-directives
+  <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check.
+
+  Finds uses of ``#if`` that can be simplified to ``#ifdef`` or ``#ifndef`` and,
+  since C23 and C++23, uses of ``#elif`` that can be simplified to ``#elifdef``
+  or ``#elifndef``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -171,6 +187,10 @@ Changes in existing checks
   false positives on deleted constructors that cannot be used to construct
   objects, even if they have public or protected access.
 
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check to print stack trace
+  of a potentially escaped exception.
+
 - Added an option to :doc:`bugprone-multi-level-implicit-pointer-conversion
   <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` to
   choose whether to enable the check in C code or not.
@@ -179,8 +199,8 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
 
-- Improved :doc: `bugprone-sizeof-expression
-  <clang-tidy/checks/bugprone/bugprone-sizeof-expression>` check by adding
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by adding
   `WarnOnSizeOfInLoopTermination` option to detect misuses of ``sizeof``
   expression in loop conditions.
 
@@ -212,10 +232,14 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
   `IgnoreMacros` to ignore ``goto`` labels defined in macros.
 
+- Improved :doc:`cppcoreguidelines-interfaces-global-init
+  <clang-tidy/checks/cppcoreguidelines/interfaces-global-init>` check by
+  fixing false positives on uses of ``constinit`` variables.
+
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
   flag to specify the function used for forwarding instead of ``std::forward``.
-   
+
 - Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
   fixing false positives when calling indexing operators that do not perform
@@ -341,6 +365,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing
   false negatives where math expressions are the operand of assignment operators
   or comparison operators.
+
+- Improved :doc:`readability-named-parameter
+  <clang-tidy/checks/readability/named-parameter>` check by adding the option
+  `InsertPlainNamesInForwardDecls` to insert parameter names without comments
+  for forward declarations only.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option

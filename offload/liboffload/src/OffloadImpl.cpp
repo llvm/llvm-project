@@ -91,7 +91,9 @@ struct ol_program_impl_t {
 struct ol_symbol_impl_t {
   ol_symbol_impl_t(GenericKernelTy *Kernel)
       : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL) {}
-  std::variant<GenericKernelTy *> PluginImpl;
+  ol_symbol_impl_t(GlobalTy &&Global)
+      : PluginImpl(Global), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE) {}
+  std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
   ol_symbol_kind_t Kind;
 };
 
@@ -229,7 +231,7 @@ Error olShutDown_impl() {
 
   for (auto &P : OldContext->Platforms) {
     // Host plugin is nullptr and has no deinit
-    if (!P.Plugin)
+    if (!P.Plugin || !P.Plugin->is_initialized())
       continue;
 
     if (auto Res = P.Plugin->deinit())
@@ -660,24 +662,6 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
   return olDestroy(Program);
 }
 
-Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
-                       ol_symbol_handle_t *Kernel) {
-
-  auto &Device = Program->Image->getDevice();
-  auto KernelImpl = Device.constructKernel(KernelName);
-  if (!KernelImpl)
-    return KernelImpl.takeError();
-
-  if (auto Err = KernelImpl->init(Device, *Program->Image))
-    return Err;
-
-  *Kernel = Program->Symbols
-                .emplace_back(std::make_unique<ol_symbol_impl_t>(&*KernelImpl))
-                .get();
-
-  return Error::success();
-}
-
 Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
                           ol_symbol_handle_t Kernel, const void *ArgumentsData,
                           size_t ArgumentsSize,
@@ -724,6 +708,91 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
     *EventOut = makeEvent(Queue);
 
   return Error::success();
+}
+
+Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
+                       ol_symbol_kind_t Kind, ol_symbol_handle_t *Symbol) {
+  auto &Device = Program->Image->getDevice();
+
+  switch (Kind) {
+  case OL_SYMBOL_KIND_KERNEL: {
+    auto KernelImpl = Device.constructKernel(Name);
+    if (!KernelImpl)
+      return KernelImpl.takeError();
+
+    if (auto Err = KernelImpl->init(Device, *Program->Image))
+      return Err;
+
+    *Symbol =
+        Program->Symbols
+            .emplace_back(std::make_unique<ol_symbol_impl_t>(&*KernelImpl))
+            .get();
+    return Error::success();
+  }
+  case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
+    GlobalTy GlobalObj{Name};
+    if (auto Res = Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
+            Device, *Program->Image, GlobalObj))
+      return Res;
+
+    *Symbol = Program->Symbols
+                  .emplace_back(
+                      std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj)))
+                  .get();
+
+    return Error::success();
+  }
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "getSymbol kind enum '%i' is invalid", Kind);
+  }
+}
+
+Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
+                                ol_symbol_info_t PropName, size_t PropSize,
+                                void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  auto CheckKind = [&](ol_symbol_kind_t Required) {
+    if (Symbol->Kind != Required) {
+      std::string ErrBuffer;
+      llvm::raw_string_ostream(ErrBuffer)
+          << PropName << ": Expected a symbol of Kind " << Required
+          << " but given a symbol of Kind " << Symbol->Kind;
+      return Plugin::error(ErrorCode::SYMBOL_KIND, ErrBuffer.c_str());
+    }
+    return Plugin::success();
+  };
+
+  switch (PropName) {
+  case OL_SYMBOL_INFO_KIND:
+    return Info.write<ol_symbol_kind_t>(Symbol->Kind);
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+      return Err;
+    return Info.write<void *>(std::get<GlobalTy>(Symbol->PluginImpl).getPtr());
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+      return Err;
+    return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetSymbolInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetSymbolInfo_impl(ol_symbol_handle_t Symbol, ol_symbol_info_t PropName,
+                           size_t PropSize, void *PropValue) {
+
+  return olGetSymbolInfoImplDetail(Symbol, PropName, PropSize, PropValue,
+                                   nullptr);
+}
+
+Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
+                               ol_symbol_info_t PropName, size_t *PropSizeRet) {
+  return olGetSymbolInfoImplDetail(Symbol, PropName, 0, nullptr, PropSizeRet);
 }
 
 } // namespace offload

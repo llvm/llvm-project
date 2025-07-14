@@ -4394,6 +4394,7 @@ def SPIRV_OC_OpTranspose                      : I32EnumAttrCase<"OpTranspose", 8
 def SPIRV_OC_OpImageSampleImplicitLod         : I32EnumAttrCase<"OpImageSampleImplicitLod", 87>;
 def SPIRV_OC_OpImageSampleExplicitLod         : I32EnumAttrCase<"OpImageSampleExplicitLod", 88>;
 def SPIRV_OC_OpImageSampleProjDrefImplicitLod : I32EnumAttrCase<"OpImageSampleProjDrefImplicitLod", 93>;
+def SPIRV_OC_OpImageFetch                     : I32EnumAttrCase<"OpImageFetch", 95>;
 def SPIRV_OC_OpImageDrefGather                : I32EnumAttrCase<"OpImageDrefGather", 97>;
 def SPIRV_OC_OpImageRead                      : I32EnumAttrCase<"OpImageRead", 98>;
 def SPIRV_OC_OpImageWrite                     : I32EnumAttrCase<"OpImageWrite", 99>;
@@ -4603,7 +4604,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpCompositeConstruct, SPIRV_OC_OpCompositeExtract,
       SPIRV_OC_OpCompositeInsert, SPIRV_OC_OpTranspose,
       SPIRV_OC_OpImageSampleImplicitLod, SPIRV_OC_OpImageSampleExplicitLod,
-      SPIRV_OC_OpImageSampleProjDrefImplicitLod, SPIRV_OC_OpImageDrefGather,
+      SPIRV_OC_OpImageSampleProjDrefImplicitLod, SPIRV_OC_OpImageFetch,
+      SPIRV_OC_OpImageDrefGather,
       SPIRV_OC_OpImageRead, SPIRV_OC_OpImageWrite, SPIRV_OC_OpImage,
       SPIRV_OC_OpImageQuerySize,
       SPIRV_OC_OpConvertFToU, SPIRV_OC_OpConvertFToS, SPIRV_OC_OpConvertSToF,
