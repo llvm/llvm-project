@@ -12,7 +12,7 @@
 
 // class map
 
-// mapped_type& operator[](key_type&& k);
+// mapped_type& operator[](key_type&& k);// constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -23,7 +23,7 @@
 #include "min_allocator.h"
 #include "container_test_types.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::map<MoveOnly, double> m;
     assert(m.size() == 0);
@@ -53,7 +53,7 @@ int main(int, char**) {
     assert(m[6] == 6.5);
     assert(m.size() == 2);
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // Use "container_test_types.h" to check what arguments get passed
     // to the allocator for operator[]
     using Container         = TCT::map<>;
@@ -75,6 +75,13 @@ int main(int, char**) {
       }
     }
   }
+  return true;
+}
 
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
