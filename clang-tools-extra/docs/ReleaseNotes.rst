@@ -232,6 +232,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
   `IgnoreMacros` to ignore ``goto`` labels defined in macros.
 
+- Improved :doc:`cppcoreguidelines-interfaces-global-init
+  <clang-tidy/checks/cppcoreguidelines/interfaces-global-init>` check by
+  fixing false positives on uses of ``constinit`` variables.
+
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
   flag to specify the function used for forwarding instead of ``std::forward``.
