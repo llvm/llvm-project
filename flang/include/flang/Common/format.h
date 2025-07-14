@@ -72,14 +72,14 @@ static inline bool MulOverflow(
   return __builtin_mul_overflow(x, y, &result);
 #else
   // Perform the unsigned multiplication on absolute values.
-  const std::uint64_t ux{X < 0 ? (0 - static_cast<std::uint64_t>(x))
+  const std::uint64_t ux{x < 0 ? (0 - static_cast<std::uint64_t>(x))
                                : static_cast<std::uint64_t>(x)};
   const std::uint64_t uy{y < 0 ? (0 - static_cast<std::uint64_t>(y))
                                : static_cast<std::uint64_t>(y)};
   const std::uint64_t uresult{ux * uy};
 
   // Convert to signed.
-  const bool isNegative{(x < 0) ^ (y < 0)};
+  const bool isNegative = (x < 0) ^ (y < 0);
   result = isNegative ? (0 - uresult) : uresult;
 
   // If any of the args was 0, result is 0 and no overflow occurs.
