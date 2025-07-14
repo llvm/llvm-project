@@ -439,26 +439,21 @@ let IsDefault = true in {
 def __ashlhi3 : RuntimeLibcallImpl<SHL_I16>;
 def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
 def __ashldi3 : RuntimeLibcallImpl<SHL_I64>;
-def __ashlti3 : RuntimeLibcallImpl<SHL_I128>;
 
 def __lshrhi3 : RuntimeLibcallImpl<SRL_I16>;
 def __lshrsi3 : RuntimeLibcallImpl<SRL_I32>;
 def __lshrdi3 : RuntimeLibcallImpl<SRL_I64>;
-def __lshrti3 : RuntimeLibcallImpl<SRL_I128>;
 
 def __ashrhi3 : RuntimeLibcallImpl<SRA_I16>;
 def __ashrsi3 : RuntimeLibcallImpl<SRA_I32>;
 def __ashrdi3 : RuntimeLibcallImpl<SRA_I64>;
-def __ashrti3 : RuntimeLibcallImpl<SRA_I128>;
 
 def __mulqi3 : RuntimeLibcallImpl<MUL_I8>;
 def __mulhi3 : RuntimeLibcallImpl<MUL_I16>;
 def __mulsi3 : RuntimeLibcallImpl<MUL_I32>;
 def __muldi3 : RuntimeLibcallImpl<MUL_I64>;
-def __multi3 : RuntimeLibcallImpl<MUL_I128>;
 
 def __mulosi4 : RuntimeLibcallImpl<MULO_I32>;
-def __mulodi4 : RuntimeLibcallImpl<MULO_I64>;
 
 def __divqi3 : RuntimeLibcallImpl<SDIV_I8>;
 def __divhi3 : RuntimeLibcallImpl<SDIV_I16>;
@@ -935,10 +930,29 @@ def calloc : RuntimeLibcallImpl<CALLOC>;
 } // End let IsDefault = true
 
 //--------------------------------------------------------------------
-// compiler-rt, not available for most architectures
+// compiler-rt/libgcc but 64-bit only, not available by default
 //--------------------------------------------------------------------
 
-def __muloti4 : RuntimeLibcallImpl<MULO_I128>;
+// Exist in libgcc and compiler-rt for 64-bit targets, or if
+// COMPILER_RT_ENABLE_SOFTWARE_INT128.
+defset list<RuntimeLibcallImpl> Int128RTLibcalls = {
+  def __ashlti3 : RuntimeLibcallImpl<SHL_I128>;
+  def __lshrti3 : RuntimeLibcallImpl<SRL_I128>;
+  def __ashrti3 : RuntimeLibcallImpl<SRA_I128>;
+  def __multi3 : RuntimeLibcallImpl<MUL_I128>;
+}
+
+//--------------------------------------------------------------------
+// compiler-rt only, not available by default
+//--------------------------------------------------------------------
+
+defset list<RuntimeLibcallImpl> CompilerRTOnlyInt64Libcalls = {
+  def __mulodi4 : RuntimeLibcallImpl<MULO_I64>;
+}
+
+defset list<RuntimeLibcallImpl> CompilerRTOnlyInt128Libcalls = {
+  def __muloti4 : RuntimeLibcallImpl<MULO_I128>;
+}
 
 //--------------------------------------------------------------------
 // Define implementation other libcalls
@@ -1034,21 +1048,6 @@ defset list<RuntimeLibcallImpl> LibmF128FiniteLibcalls = {
 defvar AllDefaultRuntimeLibcallImpls
   = !filter(entry, !instances<RuntimeLibcallImpl>(), entry.IsDefault);
 
-// Exist in libgcc and compiler-rt for 64-bit targets, or if
-// COMPILER_RT_ENABLE_SOFTWARE_INT128.
-defvar Int128RTLibcalls = [
-   __ashlti3, __lshrti3, __ashrti3, __multi3
-];
-
-// Only available in compiler-rt
-defvar CompilerRTOnlyInt64Libcalls = [
-  __mulodi4
-];
-
-defvar CompilerRTOnlyInt128Libcalls = [
-  __muloti4
-];
-
 defvar DefaultRuntimeLibcallImpls_f80 =
     !filter(entry, AllDefaultRuntimeLibcallImpls,
             !match(!cast<string>(entry.Provides), "F80"));
@@ -1064,12 +1063,9 @@ defvar DefaultRuntimeLibcallImpls_f128 =
 defvar DefaultRuntimeLibcallImpls =
 !listremove(
   !listremove(
-    !listremove(
-        !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
-                    !listconcat(CompilerRTOnlyInt64Libcalls,
-                                CompilerRTOnlyInt128Libcalls)),
-                    DefaultRuntimeLibcallImpls_f80),
-                    DefaultRuntimeLibcallImpls_ppcf128);
+    !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
+                DefaultRuntimeLibcallImpls_f80),
+                DefaultRuntimeLibcallImpls_ppcf128);
 
 /// Default set of libcall impls for 32-bit architectures.
 defvar DefaultLibcallImpls32 = DefaultRuntimeLibcallImpls;
