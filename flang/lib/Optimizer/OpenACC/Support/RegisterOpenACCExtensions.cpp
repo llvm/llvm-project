@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/OpenACC/RegisterOpenACCExtensions.h"
+#include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/OpenACC/FIROpenACCTypeInterfaces.h"
+#include "flang/Optimizer/OpenACC/Support/FIROpenACCTypeInterfaces.h"
 
 namespace fir::acc {
 void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
