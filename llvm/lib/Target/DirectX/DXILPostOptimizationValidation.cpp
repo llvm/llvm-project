@@ -130,19 +130,21 @@ static uint32_t parameterToRangeType(uint32_t Type) {
   switch (Type) {
   case llvm::to_underlying(dxbc::RootParameterType::CBV):
     return llvm::to_underlying(dxbc::DescriptorRangeType::CBV);
-  break;
+    break;
   case llvm::to_underlying(dxbc::RootParameterType::SRV):
-      return llvm::to_underlying(dxbc::DescriptorRangeType::SRV);
-  break;
+    return llvm::to_underlying(dxbc::DescriptorRangeType::SRV);
+    break;
   case llvm::to_underlying(dxbc::RootParameterType::UAV):
-        return llvm::to_underlying(dxbc::DescriptorRangeType::UAV);
-  break;
+    return llvm::to_underlying(dxbc::DescriptorRangeType::UAV);
+    break;
   default:
     llvm_unreachable("Root Parameter Type has no Range Type equivalent");
   }
 }
 
-static RootSignatureBindingValidation initRsBindingValdation(const mcdxbc::RootSignatureDesc &RSD, dxbc::ShaderVisibility Visibility) {
+static RootSignatureBindingValidation
+initRsBindingValdation(const mcdxbc::RootSignatureDesc &RSD,
+                       dxbc::ShaderVisibility Visibility) {
 
   RootSignatureBindingValidation Validation;
 
@@ -152,10 +154,10 @@ static RootSignatureBindingValidation initRsBindingValdation(const mcdxbc::RootS
 
     const auto &Header = RSD.ParametersContainer.getHeader(I);
     if (Header.ShaderVisibility !=
-          llvm::to_underlying(dxbc::ShaderVisibility::All) &&
-          Header.ShaderVisibility != llvm::to_underlying(Visibility))
-          continue;
-          
+            llvm::to_underlying(dxbc::ShaderVisibility::All) &&
+        Header.ShaderVisibility != llvm::to_underlying(Visibility))
+      continue;
+
     switch (Type) {
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
@@ -167,7 +169,7 @@ static RootSignatureBindingValidation initRsBindingValdation(const mcdxbc::RootS
       Binding.LowerBound = Desc.ShaderRegister;
       Binding.Space = Desc.RegisterSpace;
       Binding.Size = 1;
-  
+
       Validation.addBinding(parameterToRangeType(Type), Binding);
       break;
     }
@@ -176,11 +178,11 @@ static RootSignatureBindingValidation initRsBindingValdation(const mcdxbc::RootS
           RSD.ParametersContainer.getDescriptorTable(Loc);
 
       for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
-          llvm::dxil::ResourceInfo::ResourceBinding Binding;
-          Binding.LowerBound = Range.BaseShaderRegister;
-          Binding.Space = Range.RegisterSpace;
-          Binding.Size = Range.NumDescriptors;
-          Validation.addBinding(Range.RangeType, Binding);
+        llvm::dxil::ResourceInfo::ResourceBinding Binding;
+        Binding.LowerBound = Range.BaseShaderRegister;
+        Binding.Space = Range.RegisterSpace;
+        Binding.Size = Range.NumDescriptors;
+        Validation.addBinding(Range.RangeType, Binding);
       }
       break;
     }
@@ -238,17 +240,23 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
   if (auto RSD = getRootSignature(RSBI, MMI)) {
 
-    RootSignatureBindingValidation Validation = initRsBindingValdation(*RSD, tripleToVisibility(MMI.ShaderProfile));
+    RootSignatureBindingValidation Validation =
+        initRsBindingValdation(*RSD, tripleToVisibility(MMI.ShaderProfile));
 
     auto Cbufs = DRM.cbuffers();
     auto SRVs = DRM.srvs();
     auto UAVs = DRM.uavs();
     auto Samplers = DRM.samplers();
 
-    reportUnboundRegisters(M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::CBV), Cbufs);
-    reportUnboundRegisters(M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::UAV), UAVs);
-    reportUnboundRegisters(M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::Sampler), Samplers);
-    reportUnboundRegisters(M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::SRV), SRVs);
+    reportUnboundRegisters(
+        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::CBV), Cbufs);
+    reportUnboundRegisters(
+        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::UAV), UAVs);
+    reportUnboundRegisters(
+        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::Sampler),
+        Samplers);
+    reportUnboundRegisters(
+        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::SRV), SRVs);
   }
 }
 } // namespace
