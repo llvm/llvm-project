@@ -325,16 +325,24 @@ protected:
                    Any) override;
 };
 
+template <typename T> static inline std::string getBlockName(const T &B) {
+  if (B.hasName())
+    return B.getName().str();
+  return std::to_string(B.getNumber());
+}
+
 // Information that needs to be saved for a basic block in order to compare
 // before and after the pass to determine if it was changed by a pass.
 template <typename T> class BlockDataT {
 public:
-  BlockDataT(const BasicBlock &B) : Label(B.getName().str()), Data(B) {
+  BlockDataT(const BasicBlock &B) : Label(getBlockName(B)), Data(B) {
+    assert(!Label.empty() && "Expected block to have name");
     raw_string_ostream SS(Body);
     B.print(SS, nullptr, true, true);
   }
 
-  BlockDataT(const MachineBasicBlock &B) : Label(B.getName().str()), Data(B) {
+  BlockDataT(const MachineBasicBlock &B) : Label(getBlockName(B)), Data(B) {
+    assert(!Label.empty() && "Expected block to have name");
     raw_string_ostream SS(Body);
     B.print(SS);
   }

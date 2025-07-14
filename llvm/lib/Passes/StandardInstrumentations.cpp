@@ -727,14 +727,10 @@ template <typename T>
 template <typename FunctionT>
 bool IRComparer<T>::generateFunctionData(IRDataT<T> &Data, const FunctionT &F) {
   if (shouldGenerateData(F)) {
-    FuncDataT<T> FD(F.front().getName().str());
-    int I = 0;
+    std::string EntryBlockName = getBlockName(F.front());
+    FuncDataT<T> FD(EntryBlockName);
     for (const auto &B : F) {
-      std::string BBName = B.getName().str();
-      if (BBName.empty()) {
-        BBName = formatv("{0}", I);
-        ++I;
-      }
+      std::string BBName = getBlockName(B);
       FD.getOrder().emplace_back(BBName);
       FD.getData().insert({BBName, B});
     }
@@ -2190,27 +2186,27 @@ DCData::DCData(const BasicBlock &B) {
   const Instruction *Term = B.getTerminator();
   if (const BranchInst *Br = dyn_cast<const BranchInst>(Term))
     if (Br->isUnconditional())
-      addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "");
+      addSuccessorLabel(getBlockName(*Br->getSuccessor(0)), "");
     else {
-      addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "true");
-      addSuccessorLabel(Br->getSuccessor(1)->getName().str(), "false");
+      addSuccessorLabel(getBlockName(*Br->getSuccessor(0)), "true");
+      addSuccessorLabel(getBlockName(*Br->getSuccessor(1)), "false");
     }
   else if (const SwitchInst *Sw = dyn_cast<const SwitchInst>(Term)) {
-    addSuccessorLabel(Sw->case_default()->getCaseSuccessor()->getName().str(),
+    addSuccessorLabel(getBlockName(*Sw->case_default()->getCaseSuccessor()),
                       "default");
     for (auto &C : Sw->cases()) {
       assert(C.getCaseValue() && "Expected to find case value.");
       SmallString<20> Value = formatv("{0}", C.getCaseValue()->getSExtValue());
-      addSuccessorLabel(C.getCaseSuccessor()->getName().str(), Value);
+      addSuccessorLabel(getBlockName(*C.getCaseSuccessor()), Value);
     }
   } else
     for (const BasicBlock *Succ : successors(&B))
-      addSuccessorLabel(Succ->getName().str(), "");
+      addSuccessorLabel(getBlockName(*Succ), "");
 }
 
 DCData::DCData(const MachineBasicBlock &B) {
   for (const MachineBasicBlock *Succ : successors(&B))
-    addSuccessorLabel(Succ->getName().str(), "");
+    addSuccessorLabel(getBlockName(*Succ), "");
 }
 
 DotCfgChangeReporter::DotCfgChangeReporter(bool Verbose)
