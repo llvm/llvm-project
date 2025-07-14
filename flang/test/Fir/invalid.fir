@@ -1426,12 +1426,3 @@ func.func @wrong_weights_number_in_if_then_else(%cond: i1) {
   }
   return
 }
-
-// -----
-
-func.func @negative_weight_in_if_then(%cond: i1) {
-// expected-error @below {{weight #0 must be non-negative}}
-  fir.if %cond weights([-1, 101]) {
-  }
-  return
-}

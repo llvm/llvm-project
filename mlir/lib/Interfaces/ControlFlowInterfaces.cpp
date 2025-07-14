@@ -99,10 +99,6 @@ static LogicalResult verifyWeights(Operation *op,
                            << ": " << weights.size() << " vs "
                            << expectedWeightsNum;
 
-  for (auto [index, weight] : llvm::enumerate(weights))
-    if (weight < 0)
-      return op->emitError() << "weight #" << index << " must be non-negative";
-
   if (llvm::all_of(weights, [](int32_t value) { return value == 0; }))
     return op->emitError() << "branch weights cannot all be zero";
 
