@@ -6361,7 +6361,7 @@ bool SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand(
   bool OpSel = Mods & SISrcMods::OP_SEL_0;
   bool OpSelHi = Mods & SISrcMods::OP_SEL_1;
 
-  return OpSel == OpSelHi;
+  return !OpSel && !OpSelHi;
 }
 
 bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,

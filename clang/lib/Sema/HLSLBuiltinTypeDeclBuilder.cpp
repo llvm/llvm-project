@@ -697,7 +697,9 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
-  addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+  if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
+    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+
   return *this;
 }
 
@@ -714,7 +716,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   return *this;
 }
 
-FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() {
+FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() const {
   auto I = Fields.find("__handle");
   assert(I != Fields.end() &&
          I->second->getType()->isHLSLAttributedResourceType() &&
@@ -736,6 +738,12 @@ QualType BuiltinTypeDeclBuilder::getHandleElementType() {
     return getFirstTemplateTypeParam();
   // TODO: Should we default to VoidTy? Using `i8` is arguably ambiguous.
   return SemaRef.getASTContext().Char8Ty;
+}
+
+HLSLAttributedResourceType::Attributes
+BuiltinTypeDeclBuilder::getResourceAttrs() const {
+  QualType HandleType = getResourceHandleField()->getType();
+  return cast<HLSLAttributedResourceType>(HandleType)->getAttrs();
 }
 
 // BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::startDefinition() {

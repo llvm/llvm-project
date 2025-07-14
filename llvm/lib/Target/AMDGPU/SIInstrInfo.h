@@ -1360,7 +1360,8 @@ public:
   /// Check if \p MO would be a legal operand for gfx12+ packed math FP32
   /// instructions. Packed math FP32 instructions typically accept SGPRs or
   /// VGPRs as source operands. On gfx12+, if a source operand uses SGPRs, the
-  /// HW can only read one SGPR and use it for both the low and high operations.
+  /// HW can only read the first SGPR and use it for both the low and high
+  /// operations.
   /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
   /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
   /// be used.

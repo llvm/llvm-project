@@ -1023,9 +1023,7 @@ public:
     return isLiteralImm(MVT::f16);
   }
 
-  bool isKImmFP64() const {
-    return isLiteralImm(MVT::f64);
-  }
+  bool isKImmFP64() const { return isLiteralImm(MVT::f64); }
 
   bool isMem() const override {
     return false;
@@ -5146,7 +5144,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
 
   // Packed math FP32 instructions typically accept SGPRs or VGPRs as source
   // operands. On gfx12+, if a source operand uses SGPRs, the HW can only read
-  // one SGPR and use it for both the low and high operations.
+  // the first SGPR and use it for both the low and high operations.
   if (isPackedFP32Inst(Opc) && isGFX12Plus()) {
     int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
     int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
@@ -5162,7 +5160,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
 
     auto VerifyOneSGPR = [OpSel, OpSelHi](unsigned Index) -> bool {
       unsigned Mask = 1U << Index;
-      return (OpSel & Mask) == (OpSelHi & Mask);
+      return ((OpSel & Mask) == 0) && ((OpSelHi & Mask) == 0);
     };
 
     if (Src0.isReg() && isSGPR(Src0.getReg(), TRI) &&
