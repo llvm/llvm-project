@@ -26,6 +26,8 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/LogicalResult.h"
 #include <optional>
 #include <utility>
 
@@ -1100,6 +1102,20 @@ private:
   ControlFusionFn controlFoldingReshapes;
 };
 
+bool isZero(OpFoldResult value) {
+  if (auto attr = dyn_cast<Attribute>(value)) {
+    if (auto intAttr = dyn_cast<IntegerAttr>(attr))
+      return intAttr.getInt() == 0;
+  }
+  if (auto val = dyn_cast<Value>(value)) {
+    if (auto constOp = val.getDefiningOp<arith::ConstantOp>()) {
+      if (auto attr = dyn_cast<IntegerAttr>(constOp.getValue()))
+        return attr.getInt() == 0;
+    }
+  }
+  return false;
+}
+
 /// Pattern to fold a tensor.expand_shape op with its producer tensor.pad op
 /// by bubbling the expand_shape before the pad.
 struct FoldReshapeWithProducerPadOpByExpansion
@@ -1125,41 +1141,29 @@ struct FoldReshapeWithProducerPadOpByExpansion
                                          "fusion blocked by control function");
     }
 
+    Value constantPaddingValue = padOp.getConstantPaddingValue();
+    if (!constantPaddingValue) {
+      return rewriter.notifyMatchFailure(
+          expandOp, "cannot fold with non-constant padding value");
+    }
+
     SmallVector<ReassociationIndices> reassociations =
         expandOp.getReassociationIndices();
     SmallVector<OpFoldResult> low = padOp.getMixedLowPad();
     SmallVector<OpFoldResult> high = padOp.getMixedHighPad();
 
-    auto isZeroPadding = [](OpFoldResult padValue) -> bool {
-      if (auto attr = dyn_cast<Attribute>(padValue)) {
-        if (auto intAttr = dyn_cast<IntegerAttr>(attr))
-          return intAttr.getInt() == 0;
-      }
-
-      if (auto val = dyn_cast<Value>(padValue)) {
-        if (auto constOp = val.getDefiningOp<arith::ConstantOp>()) {
-          if (auto attr = dyn_cast<IntegerAttr>(constOp.getValue()))
-            return attr.getInt() == 0;
-        }
-      }
-
-      // when padding is dynamic and not constant, we don't know if it's zero or
-      // not. so we return false here.
-      return false;
-    };
-
     for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
       OpFoldResult l = low[idx];
       OpFoldResult h = high[idx];
-      if (reInd.size() != 1 && (!isZeroPadding(l) || !isZeroPadding(h)))
+      if (reInd.size() > 1 && (!isZero(l) || !isZero(h)))
         return failure();
     }
 
     SmallVector<OpFoldResult> newLow, newHigh;
     for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
       for (size_t i = 0; i < reInd.size(); ++i) {
-        newLow.push_back(padOp.getMixedLowPad()[idx]);
-        newHigh.push_back(padOp.getMixedHighPad()[idx]);
+        newLow.push_back(low[idx]);
+        newHigh.push_back(high[idx]);
       }
     }
 
@@ -1176,11 +1180,11 @@ struct FoldReshapeWithProducerPadOpByExpansion
       }
     }
 
-    for (auto [inDimIdx, outGroup] : llvm::enumerate(reassociations)) {
+    for (auto [inDimIdx, reInd] : llvm::enumerate(reassociations)) {
       OpFoldResult l = low[inDimIdx];
       OpFoldResult h = high[inDimIdx];
 
-      if (!isZeroPadding(l) || !isZeroPadding(h)) {
+      if (!isZero(l) || !isZero(h)) {
         auto srcType = cast<RankedTensorType>(padOp.getSource().getType());
         int64_t originalSize = srcType.getDimSize(inDimIdx);
 
@@ -1193,7 +1197,7 @@ struct FoldReshapeWithProducerPadOpByExpansion
           originalSizeOFR = rewriter.getI64IntegerAttr(originalSize);
         }
 
-        for (auto outDimIdx : outGroup) {
+        for (auto outDimIdx : reInd) {
           expandedShape[outDimIdx] = originalSizeOFR;
         }
       }
@@ -1233,6 +1237,125 @@ struct FoldReshapeWithProducerPadOpByExpansion
         padOp.getConstantPaddingValue(), padOp.getNofold());
 
     rewriter.replaceOp(expandOp, newPadOp.getResult());
+    return success();
+  }
+
+private:
+  ControlFusionFn controlFoldingReshapes;
+};
+
+/// Pattern to fold a tensor.collapse_shape op with its producer tensor.pad op
+/// by bubbling the collapse_shape before the pad.
+struct FoldReshapeWithProducerPadOpByCollapsing
+    : public OpRewritePattern<tensor::CollapseShapeOp> {
+
+  FoldReshapeWithProducerPadOpByCollapsing(MLIRContext *context,
+                                           ControlFusionFn foldReshapes,
+                                           PatternBenefit benefit = 1)
+      : OpRewritePattern<tensor::CollapseShapeOp>(context, benefit),
+        controlFoldingReshapes(std::move(foldReshapes)) {}
+
+  LogicalResult matchAndRewrite(tensor::CollapseShapeOp collapseOp,
+                                PatternRewriter &rewriter) const override {
+    tensor::PadOp padOp = collapseOp.getSrc().getDefiningOp<tensor::PadOp>();
+
+    if (!padOp)
+      return failure();
+
+    if (!padOp->hasOneUse())
+      return failure();
+
+    if (!controlFoldingReshapes(&collapseOp.getSrcMutable())) {
+      return rewriter.notifyMatchFailure(collapseOp,
+                                         "fusion blocked by control function");
+    }
+
+    Value constantPaddingValue = padOp.getConstantPaddingValue();
+    if (!constantPaddingValue) {
+      return rewriter.notifyMatchFailure(
+          collapseOp, "cannot fold with non-constant padding value");
+    }
+
+    SmallVector<ReassociationIndices> reassociations =
+        collapseOp.getReassociationIndices();
+    SmallVector<OpFoldResult> low = padOp.getMixedLowPad();
+    SmallVector<OpFoldResult> high = padOp.getMixedHighPad();
+
+    for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
+      if (reInd.size() > 1) {
+        for (auto dimIdx : reInd) {
+          if (!isZero(low[dimIdx]) || !isZero(high[dimIdx])) {
+            return failure();
+          }
+        }
+      }
+    }
+
+    SmallVector<OpFoldResult> newLow, newHigh;
+    for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
+      newLow.push_back(low[reInd[0]]);
+      newHigh.push_back(high[reInd[0]]);
+    }
+
+    Location loc = collapseOp.getLoc();
+    auto resultType = collapseOp.getResultType();
+
+    auto finalType = cast<RankedTensorType>(collapseOp.getType());
+    ArrayRef<int64_t> finalShape = finalType.getShape();
+
+    SmallVector<OpFoldResult> collapsedShape;
+    for (int64_t dimSize : finalShape) {
+      if (dimSize == ShapedType::kDynamic) {
+        collapsedShape.push_back(OpFoldResult{});
+      } else {
+        collapsedShape.push_back(rewriter.getI64IntegerAttr(dimSize));
+      }
+    }
+
+    for (auto [inDimIdx, reInd] : llvm::enumerate(reassociations)) {
+      OpFoldResult l = low[reInd[0]];
+      OpFoldResult h = high[reInd[0]];
+
+      if (!isZero(l) || !isZero(h)) {
+        auto srcType = cast<RankedTensorType>(padOp.getSource().getType());
+        int64_t originalSize = srcType.getDimSize(reInd[0]);
+
+        OpFoldResult originalSizeOFR;
+        if (originalSize == ShapedType::kDynamic) {
+          Value orgSizeVal =
+              rewriter.create<tensor::DimOp>(loc, padOp.getSource(), reInd[0]);
+          originalSizeOFR = orgSizeVal;
+        } else {
+          originalSizeOFR = rewriter.getI64IntegerAttr(originalSize);
+        }
+        collapsedShape[inDimIdx] = originalSizeOFR;
+      }
+    }
+
+    SmallVector<int64_t> staticCollapsedShape;
+    for (OpFoldResult dim : collapsedShape) {
+      if (auto attr = dyn_cast<Attribute>(dim)) {
+        if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+          staticCollapsedShape.push_back(intAttr.getInt());
+        } else {
+          staticCollapsedShape.push_back(ShapedType::kDynamic);
+        }
+      } else {
+        staticCollapsedShape.push_back(ShapedType::kDynamic);
+      }
+    }
+
+    auto newCollapseType = RankedTensorType::get(
+        staticCollapsedShape, padOp.getSource().getType().getElementType());
+    auto newCollapseOp = rewriter.create<tensor::CollapseShapeOp>(
+        loc, newCollapseType, padOp.getSource(), reassociations);
+
+    auto newPadOp = rewriter.create<tensor::PadOp>(
+        loc, resultType, newCollapseOp.getResult(), newLow, newHigh,
+        padOp.getConstantPaddingValue(), padOp.getNofold());
+
+    rewriter.replaceOp(collapseOp, newPadOp.getResult());
+
     return success();
   }
 
@@ -2387,6 +2510,11 @@ void mlir::linalg::populateFoldReshapeOpsByCollapsingPatterns(
   patterns.add<FoldWithProducerReshapeOpByCollapsing>(patterns.getContext(),
                                                       controlFoldingReshapes);
   patterns.add<FoldPadWithProducerReshapeOpByCollapsing>(
+      patterns.getContext(), controlFoldingReshapes);
+  patterns.add<FoldReshapeWithProducerPadOpByCollapsing>(
+      patterns.getContext(), controlFoldingReshapes);
+
+  patterns.add<FoldReshapeWithProducerPadOpByCollapsing>(
       patterns.getContext(), controlFoldingReshapes);
   patterns.add<FoldReshapeWithGenericOpByCollapsing>(patterns.getContext(),
                                                      controlFoldingReshapes);
