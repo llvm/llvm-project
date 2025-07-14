@@ -454,10 +454,17 @@ template<typename...TS>
 using AA = A<int, TS...>;
 
 template<typename...US>
-using BB = AA<US...>;
+using BB = AA<US...>; // #test25_BB
 
 BB a{0};
 static_assert(__is_same(decltype(a), A<int>));
+// FIXME: The template parameter list of generated deduction guide is not strictly conforming,
+// as the pack occurs prior to the non-packs.
+BB b{0, 1};
+// expected-error@-1 {{no viable}}
+// expected-note@#test25_BB 2{{not viable}}
+// expected-note@#test25_BB {{template <typename ...US, typename V> requires __is_same(V, int) && __is_deducible(AA, A<int, US...>) && __is_deducible(test25::BB, A<int, US...>) BB(V) -> A<int, US...>}}
+// expected-note@#test25_BB {{implicit deduction guide}}
 
 }
 
