@@ -3140,10 +3140,10 @@ Record::getValueAsListOfStrings(StringRef FieldName) const {
     if (const auto *SI = dyn_cast<StringInit>(I))
       Strings.push_back(SI->getValue());
     else
-      PrintFatalError(
-          getLoc(), Twine("Record `") + getName() + "', field `" + FieldName +
-                        "' exists but does not have a list of strings value: " +
-                        I->getAsString());
+      PrintFatalError(getLoc(),
+                      Twine("Record `") + getName() + "', field `" + FieldName +
+                          "' exists but does not have a list of strings value: " +
+                          I->getAsString());
   }
   return Strings;
 }
