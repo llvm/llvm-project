@@ -521,6 +521,8 @@ struct Formula {
 
   bool hasZeroEnd() const;
 
+  bool countsDownToZero() const;
+
   size_t getNumRegs() const;
   Type *getType() const;
 
@@ -703,6 +705,16 @@ bool Formula::hasZeroEnd() const {
   if (BaseRegs.size() != 1 || ScaledReg)
     return false;
   return true;
+}
+
+bool Formula::countsDownToZero() const {
+  if (!hasZeroEnd())
+    return false;
+  assert(BaseRegs.size() == 1 && "hasZeroEnd should mean one BaseReg");
+  const APInt *StepInt;
+  if (!match(BaseRegs[0], m_scev_AffineAddRec(m_SCEV(), m_scev_APInt(StepInt))))
+    return false;
+  return StepInt->isNegative();
 }
 
 /// Return the total number of register operands used by this formula. This does
@@ -1227,10 +1239,9 @@ public:
     return C.NumRegs == ~0u;
   }
 
-  void RateFormula(const Formula &F,
-                   SmallPtrSetImpl<const SCEV *> &Regs,
-                   const DenseSet<const SCEV *> &VisitedRegs,
-                   const LSRUse &LU,
+  void RateFormula(const Formula &F, SmallPtrSetImpl<const SCEV *> &Regs,
+                   const DenseSet<const SCEV *> &VisitedRegs, const LSRUse &LU,
+                   bool HardwareLoopProfitable,
                    SmallPtrSetImpl<const SCEV *> *LoserRegs = nullptr);
 
   void print(raw_ostream &OS) const;
@@ -1238,9 +1249,11 @@ public:
 
 private:
   void RateRegister(const Formula &F, const SCEV *Reg,
-                    SmallPtrSetImpl<const SCEV *> &Regs);
+                    SmallPtrSetImpl<const SCEV *> &Regs, const LSRUse &LU,
+                    bool HardwareLoopProfitable);
   void RatePrimaryRegister(const Formula &F, const SCEV *Reg,
                            SmallPtrSetImpl<const SCEV *> &Regs,
+                           const LSRUse &LU, bool HardwareLoopProfitable,
                            SmallPtrSetImpl<const SCEV *> *LoserRegs);
 };
 
@@ -1383,7 +1396,8 @@ static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
 
 /// Tally up interesting quantities from the given register.
 void Cost::RateRegister(const Formula &F, const SCEV *Reg,
-                        SmallPtrSetImpl<const SCEV *> &Regs) {
+                        SmallPtrSetImpl<const SCEV *> &Regs, const LSRUse &LU,
+                        bool HardwareLoopProfitable) {
   if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Reg)) {
     // If this is an addrec for another loop, it should be an invariant
     // with respect to L since L is the innermost loop (at least
@@ -1419,13 +1433,18 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
              SE->isLoopInvariant(Start, L)))
           LoopCost = 0;
     }
+    // If the loop counts down to zero and we'll be using a hardware loop then
+    // the addrec will be combined into the hardware loop instruction.
+    if (LU.Kind == LSRUse::ICmpZero && F.countsDownToZero() &&
+        HardwareLoopProfitable)
+      LoopCost = 0;
     C.AddRecCost += LoopCost;
 
     // Add the step value register, if it needs one.
     // TODO: The non-affine case isn't precisely modeled here.
     if (!AR->isAffine() || !isa<SCEVConstant>(AR->getOperand(1))) {
       if (!Regs.count(AR->getOperand(1))) {
-        RateRegister(F, AR->getOperand(1), Regs);
+        RateRegister(F, AR->getOperand(1), Regs, LU, HardwareLoopProfitable);
         if (isLoser())
           return;
       }
@@ -1448,22 +1467,22 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 /// one of those regs an instant loser.
 void Cost::RatePrimaryRegister(const Formula &F, const SCEV *Reg,
                                SmallPtrSetImpl<const SCEV *> &Regs,
+                               const LSRUse &LU, bool HardwareLoopProfitable,
                                SmallPtrSetImpl<const SCEV *> *LoserRegs) {
   if (LoserRegs && LoserRegs->count(Reg)) {
     Lose();
     return;
   }
   if (Regs.insert(Reg).second) {
-    RateRegister(F, Reg, Regs);
+    RateRegister(F, Reg, Regs, LU, HardwareLoopProfitable);
     if (LoserRegs && isLoser())
       LoserRegs->insert(Reg);
   }
 }
 
-void Cost::RateFormula(const Formula &F,
-                       SmallPtrSetImpl<const SCEV *> &Regs,
+void Cost::RateFormula(const Formula &F, SmallPtrSetImpl<const SCEV *> &Regs,
                        const DenseSet<const SCEV *> &VisitedRegs,
-                       const LSRUse &LU,
+                       const LSRUse &LU, bool HardwareLoopProfitable,
                        SmallPtrSetImpl<const SCEV *> *LoserRegs) {
   if (isLoser())
     return;
@@ -1477,7 +1496,8 @@ void Cost::RateFormula(const Formula &F,
       Lose();
       return;
     }
-    RatePrimaryRegister(F, ScaledReg, Regs, LoserRegs);
+    RatePrimaryRegister(F, ScaledReg, Regs, LU, HardwareLoopProfitable,
+                        LoserRegs);
     if (isLoser())
       return;
   }
@@ -1486,7 +1506,8 @@ void Cost::RateFormula(const Formula &F,
       Lose();
       return;
     }
-    RatePrimaryRegister(F, BaseReg, Regs, LoserRegs);
+    RatePrimaryRegister(F, BaseReg, Regs, LU, HardwareLoopProfitable,
+                        LoserRegs);
     if (isLoser())
       return;
   }
@@ -2112,6 +2133,7 @@ class LSRInstance {
   TTI::AddressingModeKind AMK;
   mutable SCEVExpander Rewriter;
   bool Changed = false;
+  bool HardwareLoopProfitable = false;
 
   /// This is the insert position that the current loop's induction variable
   /// increment should be placed. In simple loops, this is the latch block's
@@ -3592,7 +3614,8 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     if (!VisitedLSRUse.count(LUIdx) && !LF.isUseFullyOutsideLoop(L)) {
       Formula F;
       F.initialMatch(S, L, SE);
-      BaselineCost.RateFormula(F, Regs, VisitedRegs, LU);
+      BaselineCost.RateFormula(F, Regs, VisitedRegs, LU,
+                               HardwareLoopProfitable);
       VisitedLSRUse.insert(LUIdx);
     }
 
@@ -4730,7 +4753,8 @@ void LSRInstance::FilterOutUndesirableDedicatedRegisters() {
       // the corresponding bad register from the Regs set.
       Cost CostF(L, SE, TTI, AMK);
       Regs.clear();
-      CostF.RateFormula(F, Regs, VisitedRegs, LU, &LoserRegs);
+      CostF.RateFormula(F, Regs, VisitedRegs, LU, HardwareLoopProfitable,
+                        &LoserRegs);
       if (CostF.isLoser()) {
         // During initial formula generation, undesirable formulae are generated
         // by uses within other loops that have some non-trivial address mode or
@@ -4763,7 +4787,8 @@ void LSRInstance::FilterOutUndesirableDedicatedRegisters() {
 
         Cost CostBest(L, SE, TTI, AMK);
         Regs.clear();
-        CostBest.RateFormula(Best, Regs, VisitedRegs, LU);
+        CostBest.RateFormula(Best, Regs, VisitedRegs, LU,
+                             HardwareLoopProfitable);
         if (CostF.isLess(CostBest))
           std::swap(F, Best);
         LLVM_DEBUG(dbgs() << "  Filtering out formula "; F.print(dbgs());
@@ -5021,9 +5046,9 @@ void LSRInstance::NarrowSearchSpaceByFilterFormulaWithSameScaledReg() {
       Cost CostFA(L, SE, TTI, AMK);
       Cost CostFB(L, SE, TTI, AMK);
       Regs.clear();
-      CostFA.RateFormula(FA, Regs, VisitedRegs, LU);
+      CostFA.RateFormula(FA, Regs, VisitedRegs, LU, HardwareLoopProfitable);
       Regs.clear();
-      CostFB.RateFormula(FB, Regs, VisitedRegs, LU);
+      CostFB.RateFormula(FB, Regs, VisitedRegs, LU, HardwareLoopProfitable);
       return CostFA.isLess(CostFB);
     };
 
@@ -5428,7 +5453,7 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
     // the current best, prune the search at that point.
     NewCost = CurCost;
     NewRegs = CurRegs;
-    NewCost.RateFormula(F, NewRegs, VisitedRegs, LU);
+    NewCost.RateFormula(F, NewRegs, VisitedRegs, LU, HardwareLoopProfitable);
     if (NewCost.isLess(SolutionCost)) {
       Workspace.push_back(&F);
       if (Workspace.size() != Uses.size()) {
@@ -6132,6 +6157,12 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   LLVM_DEBUG(dbgs() << "\nLSR on loop ";
              L->getHeader()->printAsOperand(dbgs(), /*PrintType=*/false);
              dbgs() << ":\n");
+
+  // Check if we expect this loop to use a hardware loop instruction, which will
+  // be used when calculating the costs of formulas.
+  HardwareLoopInfo HWLoopInfo(L);
+  HardwareLoopProfitable =
+      TTI.isHardwareLoopProfitable(L, SE, AC, &TLI, HWLoopInfo);
 
   // Configure SCEVExpander already now, so the correct mode is used for
   // isSafeToExpand() checks.
