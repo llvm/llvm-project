@@ -903,6 +903,13 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   return deinitImpl();
 }
+
+Expected<__tgt_device_image>
+GenericDeviceTy::jitLinkBinary(GenericPluginTy &Plugin,
+                               std::vector<__tgt_device_image> InputImages) {
+  return Plugin.getJIT().link(InputImages, *this);
+}
+
 Expected<DeviceImageTy *>
 GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                             const __tgt_device_image *InputTgtImage) {

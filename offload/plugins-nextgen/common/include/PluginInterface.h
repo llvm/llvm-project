@@ -749,6 +749,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Load the binary image into the device and return the target table.
   Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
                                        const __tgt_device_image *TgtImage);
+  /// Link and compile multiple bitcode images into a single image.
+  Expected<__tgt_device_image>
+  jitLinkBinary(GenericPluginTy &Plugin,
+                std::vector<__tgt_device_image> InputImages);
   virtual Expected<DeviceImageTy *>
   loadBinaryImpl(const __tgt_device_image *TgtImage, int32_t ImageId) = 0;
 

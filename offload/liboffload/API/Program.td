@@ -25,6 +25,34 @@ def : Function {
     let returns = [];
 }
 
+def : Struct {
+    let name = "ol_program_link_buffer_t";
+    let desc = "An image to link with `olLinkProgram`.";
+    let members = [
+        StructMember<"void *", "Address", "base address of memory image">,
+        StructMember<"size_t", "Size", "size in bytes of memory image">,
+    ];
+}
+
+def : Function {
+    let name = "olLinkProgram";
+    let desc = "Compile and link multiple bitcode images into a single binary.";
+    let details = [
+        "No caching is performed; multiple calls to `olLinkProgram` with the same images will result in multiple linking operations",
+    ];
+    let params = [
+        Param<"ol_device_handle_t", "Device", "handle of the device to link for", PARAM_IN>,
+        Param<"ol_program_link_buffer_t *", "Images", "a pointer to an array of `ImagesSize` entries, one for each image to link", PARAM_IN>,
+        Param<"size_t", "ImagesSize", "the number of elements in `Images`", PARAM_IN>,
+        Param<"ol_program_handle_t*", "Program", "output handle for the created program", PARAM_OUT>
+    ];
+    let returns = [
+        Return<"OL_ERRC_INVALID_SIZE", ["`ImagesSize == 0`"]>,
+        Return<"OL_ERRC_INVALID_BINARY", ["Any image is not in the bitcode format"]>,
+        Return<"OL_ERRC_UNSUPPORTED", ["Linking is not supported for this device and `ImagesSize` > 1"]>,
+    ];
+}
+
 def : Function {
     let name = "olDestroyProgram";
     let desc = "Destroy the program and free all underlying resources.";

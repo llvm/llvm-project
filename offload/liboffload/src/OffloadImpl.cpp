@@ -650,6 +650,39 @@ Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
   return Error::success();
 }
 
+Error olLinkProgram_impl(ol_device_impl_t *Device,
+                         ol_program_link_buffer_t *Images, size_t ImagesSize,
+                         ol_program_handle_t *Program) {
+  std::vector<__tgt_device_image> DevImages;
+  for (size_t I = 0; I < ImagesSize; I++) {
+    auto &ProgData = Images[I];
+    DevImages.push_back({ProgData.Address,
+                         utils::advancePtr(ProgData.Address, ProgData.Size),
+                         nullptr, nullptr});
+  }
+
+  auto LinkResult =
+      Device->Device->jitLinkBinary(Device->Device->Plugin, DevImages);
+  if (!LinkResult)
+    return LinkResult.takeError();
+
+  ol_program_handle_t Prog =
+      new ol_program_impl_t(nullptr, nullptr, *LinkResult);
+
+  auto Res =
+      Device->Device->loadBinary(Device->Device->Plugin, &Prog->DeviceImage);
+  if (!Res) {
+    delete Prog;
+    return Res.takeError();
+  }
+  assert(*Res != nullptr && "loadBinary returned nullptr");
+
+  Prog->Image = *Res;
+  *Program = Prog;
+
+  return Error::success();
+}
+
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
   auto &Device = Program->Image->getDevice();
   if (auto Err = Device.unloadBinary(Program->Image))

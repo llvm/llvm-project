@@ -32,7 +32,8 @@ add_offload_unittest("platform"
 
 add_offload_unittest("program"
     program/olCreateProgram.cpp
-    program/olDestroyProgram.cpp)
+    program/olDestroyProgram.cpp
+    program/olLinkProgram.cpp)
 
 add_offload_unittest("queue"
     queue/olCreateQueue.cpp

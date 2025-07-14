@@ -55,6 +55,10 @@ struct JITEngine {
   process(const __tgt_device_image &Image,
           target::plugin::GenericDeviceTy &Device);
 
+  /// Link and compile multiple bitcode images into a single binary
+  Expected<__tgt_device_image> link(std::vector<__tgt_device_image> &Images,
+                                    target::plugin::GenericDeviceTy &Device);
+
 private:
   /// Compile the bitcode image \p Image and generate the binary image that can
   /// be loaded to the target device of the triple \p Triple architecture \p

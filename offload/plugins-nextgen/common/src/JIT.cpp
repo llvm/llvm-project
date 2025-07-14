@@ -327,3 +327,44 @@ JITEngine::process(const __tgt_device_image &Image,
 
   return &Image;
 }
+
+Expected<__tgt_device_image>
+JITEngine::link(std::vector<__tgt_device_image> &Images,
+                target::plugin::GenericDeviceTy &Device) {
+  const std::string &ComputeUnitKind = Device.getComputeUnitKind();
+  ComputeUnitInfo &CUI = ComputeUnitMap[ComputeUnitKind];
+
+  PostProcessingFn PostProcessing =
+      [&Device](llvm::SmallVector<std::unique_ptr<MemoryBuffer>> &&MB)
+      -> Expected<std::unique_ptr<MemoryBuffer>> {
+    return Device.doJITPostProcessing(std::move(MB));
+  };
+
+  std::lock_guard<std::mutex> Lock(ComputeUnitMapMutex);
+
+  llvm::SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
+  size_t Index = 0;
+  for (auto &I : Images) {
+    if (!isImageBitcode(I))
+      return error::createOffloadError(
+          error::ErrorCode::INVALID_BINARY,
+          "binary %i provided to link operation is not bitcode", Index);
+    Index++;
+
+    auto ObjMBOrErr = getOrCreateObjFile(I, CUI.Context, ComputeUnitKind);
+    if (!ObjMBOrErr)
+      return ObjMBOrErr.takeError();
+    Buffers.push_back(std::move(*ObjMBOrErr));
+  }
+
+  auto ImageMBOrErr = PostProcessing(std::move(Buffers));
+  if (!ImageMBOrErr)
+    return ImageMBOrErr.takeError();
+
+  auto &ImageMB = CUI.JITImages.emplace_back(std::move(*ImageMBOrErr));
+  __tgt_device_image JITedImage{};
+  JITedImage.ImageStart = const_cast<char *>(ImageMB->getBufferStart());
+  JITedImage.ImageEnd = const_cast<char *>(ImageMB->getBufferEnd());
+
+  return JITedImage;
+}
