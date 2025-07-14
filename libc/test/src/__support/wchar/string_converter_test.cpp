@@ -8,6 +8,7 @@
 
 // TODO: add support for 16-bit widechars to StringConverter to remove this
 // macro
+#include "src/__support/macros/properties/os.h"
 #ifndef LIBC_TARGET_OS_IS_WINDOWS
 
 #include "hdr/errno_macros.h"
