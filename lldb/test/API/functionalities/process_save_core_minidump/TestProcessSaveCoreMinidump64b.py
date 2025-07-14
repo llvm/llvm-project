@@ -48,7 +48,6 @@ class ProcessSaveCoreMinidump64bTestCase(TestBase):
                     actual, expected, "Bytes differ between live process and core"
                 )
 
-
             # Now we check if the error is the same, error isn't abnormal but they should fail for the same reason
             self.assertTrue(
                 (

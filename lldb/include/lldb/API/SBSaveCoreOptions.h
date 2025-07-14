@@ -79,7 +79,8 @@ public:
   ///   api, or implicitly from any function that requires a process.
   SBError SetProcess(lldb::SBProcess process);
 
-  /// Get the process to save, if the process is not set an invalid SBProcess will be returned.
+  /// Get the process to save, if the process is not set an invalid SBProcess
+  /// will be returned.
   ///
   /// \return
   ///   The set process, or an invalid SBProcess if no process is set.

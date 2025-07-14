@@ -836,11 +836,13 @@ Status MinidumpFileBuilder::AddMemoryList() {
   // 32 bit memory descriptiors, so we emit them first to ensure the memory is
   // in accessible with a 32 bit offset.
   std::vector<CoreFileMemoryRange> ranges_32;
-  llvm::Expected<CoreFileMemoryRanges> all_core_memory_ranges_maybe = m_save_core_options.GetMemoryRegionsToSave();
+  llvm::Expected<CoreFileMemoryRanges> all_core_memory_ranges_maybe =
+      m_save_core_options.GetMemoryRegionsToSave();
   if (!all_core_memory_ranges_maybe)
     return Status::FromError(all_core_memory_ranges_maybe.takeError());
 
-  const CoreFileMemoryRanges &all_core_memory_ranges = *all_core_memory_ranges_maybe;
+  const CoreFileMemoryRanges &all_core_memory_ranges =
+      *all_core_memory_ranges_maybe;
 
   lldb_private::Progress progress("Saving Minidump File", "",
                                   all_core_memory_ranges.GetSize());
@@ -878,8 +880,8 @@ Status MinidumpFileBuilder::AddMemoryList() {
     return error;
   }
 
-  // Save only the thread stacks to the 32b memory list. Everything else will get put in 
-  // Memory64, this simplifies tracking 
+  // Save only the thread stacks to the 32b memory list. Everything else will
+  // get put in Memory64, this simplifies tracking
   error = AddMemoryList_32(ranges_32, progress);
   if (error.Fail())
     return error;
