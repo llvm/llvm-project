@@ -14,6 +14,7 @@
 #ifndef LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMESTREAMER_H
 #define LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMESTREAMER_H
 
+#include "llvm/Support/Compiler.h"
 #include "DWARFCFIFunctionFrameReceiver.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCContext.h"
@@ -30,7 +31,7 @@ namespace llvm {
 /// channels them to `CFIFunctionFrameReceiver`. A function frame is the machine
 /// instructions and CFI directives that are between `.cfi_startproc` and
 /// `.cfi_endproc` directives.
-class CFIFunctionFrameStreamer : public MCStreamer {
+class LLVM_ABI CFIFunctionFrameStreamer : public MCStreamer {
 public:
   CFIFunctionFrameStreamer(MCContext &Context,
                            std::unique_ptr<CFIFunctionFrameReceiver> Receiver)

@@ -14,6 +14,7 @@
 #ifndef LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMEANALYZER_H
 #define LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMEANALYZER_H
 
+#include "llvm/Support/Compiler.h"
 #include "DWARFCFIAnalysis.h"
 #include "DWARFCFIFunctionFrameReceiver.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -27,7 +28,7 @@ namespace llvm {
 /// emitted through the `MCContext` instance to the constructor. If a frame
 /// finishes without being started or if all the frames are not finished before
 /// this classes is destructed, the program fails through an assertion.
-class CFIFunctionFrameAnalyzer : public CFIFunctionFrameReceiver {
+class LLVM_ABI CFIFunctionFrameAnalyzer : public CFIFunctionFrameReceiver {
 public:
   CFIFunctionFrameAnalyzer(MCContext &Context, const MCInstrInfo &MCII)
       : CFIFunctionFrameReceiver(Context), MCII(MCII) {}
