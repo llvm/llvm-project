@@ -4,21 +4,10 @@
 define i32 @completely_before_or_after_true_dep_different_size(ptr %d) {
 ; CHECK-LABEL: 'completely_before_or_after_true_dep_different_size'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.128.iv = getelementptr i64, ptr %gep.128, i64 %iv
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.iv = getelementptr i32, ptr %d, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (128 + %d) High: (384 + %d))
-; CHECK-NEXT:            Member: {(128 + %d),+,8}<nw><%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %d High: (128 + %d))
-; CHECK-NEXT:            Member: {%d,+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -88,21 +77,10 @@ exit:
 define void @completely_after_stores_with_different_sizes(ptr %dst) {
 ; CHECK-LABEL: 'completely_after_stores_with_different_sizes'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.iv = getelementptr i16, ptr %dst, i64 %iv
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.dst.128.iv = getelementptr i8, ptr %gep.dst.128, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %dst High: (128 + %dst)<nuw>)
-; CHECK-NEXT:            Member: {%dst,+,2}<nw><%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (128 + %dst)<nuw> High: (192 + %dst))
-; CHECK-NEXT:            Member: {(128 + %dst)<nuw>,+,1}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -173,13 +151,8 @@ exit:                            ; preds = %loop
 define void @completely_before_or_after_non_const_distance(ptr %dst) {
 ; CHECK-LABEL: 'completely_before_or_after_non_const_distance'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            store i32 0, ptr %gep.iv.mul, align 4 ->
-; CHECK-NEXT:            store i32 0, ptr %gep.off.iv, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -249,12 +222,8 @@ exit:
 define void @accesses_completely_before_or_after_instead_backwards_vectorizable(ptr dereferenceable(800) %dst) {
 ; CHECK-LABEL: 'accesses_completely_before_or_after_instead_backwards_vectorizable'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 128 bits
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        BackwardVectorizable:
-; CHECK-NEXT:            store i16 0, ptr %gep.mul.2, align 2 ->
-; CHECK-NEXT:            store i16 0, ptr %gep.iv.32, align 2
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
