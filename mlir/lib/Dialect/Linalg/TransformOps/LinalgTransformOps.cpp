@@ -3783,8 +3783,15 @@ LogicalResult TileUsingForallOp::verify() {
 
 void transform::VectorizeChildrenAndApplyPatternsOp::build(
     OpBuilder &builder, OperationState &result, Value target,
-    bool vectorizePadding, bool vectorizeExtract, bool flatten1DDepthwiseConv) {
+    bool vectorizeMixedPrecision, bool vectorizePadding, bool vectorizeExtract,
+    bool flatten1DDepthwiseConv) {
   result.addOperands(target);
+  if (vectorizeMixedPrecision) {
+    result.addAttribute(
+        VectorizeChildrenAndApplyPatternsOp::getVectorizeMixedPrecisionAttrName(
+            result.name),
+        builder.getUnitAttr());
+  }
   if (vectorizePadding) {
     result.addAttribute(
         VectorizeChildrenAndApplyPatternsOp::getVectorizePaddingAttrName(
@@ -3874,6 +3881,10 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
   tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
 
   patterns.add<CopyVectorizationPattern>(ctx);
+
+  if (getVectorizeMixedPrecision()) {
+    vector::populateFoldArithExtensionPatterns(patterns);
+  }
 
   if (getVectorizePadding()) {
     linalg::populatePadOpVectorizationPatterns(patterns);
