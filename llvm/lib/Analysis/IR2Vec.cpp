@@ -501,7 +501,8 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   // Otherwise, try to read from the vocabulary file.
   if (VocabFile.empty()) {
     // FIXME: Use default vocabulary
-    Ctx->emitError("IR2Vec vocabulary file path not specified");
+    Ctx->emitError("IR2Vec vocabulary file path not specified; You may need to "
+                   "set it using --ir2vec-vocab-path");
     return Vocabulary(); // Return invalid result
   }
   if (auto Err = readVocabulary()) {
