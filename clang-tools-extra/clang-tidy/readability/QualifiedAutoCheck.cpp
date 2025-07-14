@@ -107,13 +107,13 @@ QualifiedAutoCheck::QualifiedAutoCheck(StringRef Name,
       AddConstToQualified(Options.get("AddConstToQualified", true)),
       AllowedTypes(
           utils::options::parseStringList(Options.get("AllowedTypes", ""))),
-      RespectOpaqueTypes(Options.get("RespectOpaqueTypes", false)) {}
+      IgnoreAliasing(Options.get("IgnoreAliasing", true)) {}
 
 void QualifiedAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AddConstToQualified", AddConstToQualified);
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
-  Options.store(Opts, "RespectOpaqueTypes", RespectOpaqueTypes);
+  Options.store(Opts, "IgnoreAliasing", IgnoreAliasing);
 }
 
 void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
@@ -136,11 +136,11 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
 
   auto IsBoundToType = refersToType(equalsBoundNode("type"));
   auto UnlessFunctionType = unless(hasUnqualifiedDesugaredType(functionType()));
-  auto RespectOpaqueTypes = this->RespectOpaqueTypes;
-  auto IsAutoDeducedToPointer = [&RespectOpaqueTypes](
+  auto IgnoreAliasing = this->IgnoreAliasing;
+  auto IsAutoDeducedToPointer = [&IgnoreAliasing](
                                     const std::vector<StringRef> &AllowedTypes,
                                     const auto &...InnerMatchers) {
-    if (!RespectOpaqueTypes) {
+    if (IgnoreAliasing) {
       return autoType(hasDeducedType(
           hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))),
           unless(hasUnqualifiedType(

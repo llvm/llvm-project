@@ -5,7 +5,7 @@
 // RUN: %check_clang_tidy %s readability-qualified-auto %t \
 // RUN: -config='{CheckOptions: { \
 // RUN:   readability-qualified-auto.AllowedTypes: "[iI]terator$;my::ns::Ignored1;std::array<.*>::Ignored2;MyIgnoredPtr", \
-// RUN:   readability-qualified-auto.RespectOpaqueTypes: true \
+// RUN:   readability-qualified-auto.IgnoreAliasing: false \
 // RUN: }}' -check-suffix=ALIAS -- 
 
 namespace typedefs {
