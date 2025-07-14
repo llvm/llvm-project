@@ -4892,8 +4892,9 @@ foldCmpSelectWithSharedConstant(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     const APFloat &Val = cast<ConstantFPSDNode>(ConstVal)->getValueAPF();
     const GCNSubtarget *GCNST = static_cast<const GCNSubtarget *>(ST);
 
-    // Only optimize normal floating-point values, skip optimization for
-    // inlinable floating-point constants.
+    // Only optimize normal floating-point values (finite, non-zero, and
+    // non-subnormal as per IEEE 754), skip optimization for inlinable
+    // floating-point constants.
     if (!Val.isNormal() || GCNST->getInstrInfo()->isInlineConstant(Val))
       return SDValue();
   } else {
