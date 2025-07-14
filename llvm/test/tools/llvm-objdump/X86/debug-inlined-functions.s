@@ -3,112 +3,80 @@
 
 # RUN: llvm-mc -triple=x86_64 %s -filetype=obj -o %t.o
 
-# RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs=limits-only | \
-# RUN:     FileCheck %s --check-prefix=LINE
+# RUN: llvm-objdump %t.o -d --debug-inlined-funcs=unicode | \
+# RUN:     FileCheck %s --check-prefixes=UNICODE,UNICODE-MANGLED --strict-whitespace
 
 # RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs | \
-# RUN:     FileCheck %s --check-prefix=UNICODE --strict-whitespace
+# RUN:     FileCheck %s --check-prefixes=UNICODE,UNICODE-DEMANGLED --strict-whitespace
 
 # RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs=unicode | \
-# RUN:     FileCheck %s --check-prefix=UNICODE --strict-whitespace
-
-# RUN: llvm-objdump %t.o -d --debug-inlined-funcs=unicode | \
-# RUN:     FileCheck %s --check-prefix=MANGLE --strict-whitespace
+# RUN:     FileCheck %s --check-prefixes=UNICODE,UNICODE-DEMANGLED --strict-whitespace
 
 # RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs=unicode --debug-indent=30 | \
-# RUN:     FileCheck %s --check-prefix=INDENT --strict-whitespace
+# RUN:     FileCheck %s --check-prefix=UNICODE-DEMANGLED-INDENT --strict-whitespace
 
 # RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs=ascii | \
-# RUN:     FileCheck %s --check-prefix=ASCII  --strict-whitespace
+# RUN:     FileCheck %s --check-prefix=ASCII-DEMANGLED --strict-whitespace
+
+# RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs=limits-only | \
+# RUN:     FileCheck %s --check-prefix=LIMITS-ONLY-DEMANGLED
 
 # RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs=unicode --debug-vars=unicode | \
-# RUN:     FileCheck %s --check-prefix=DEBUG-ALL --strict-whitespace
+# RUN:     FileCheck %s --check-prefix=DEBUG-DEMANGLED-ALL --strict-whitespace
 
-# LINE: 0000000000000000 <bar(int, int)>:
-# LINE-NEXT: 0: 8d 04 3e                      leal    (%rsi,%rdi), %eax
-# LINE-NEXT: 3: 0f af f7                      imull   %edi, %esi
-# LINE-NEXT: 6: 01 f0                         addl    %esi, %eax
-# LINE-NEXT: 8: c3                            retq
-# LINE-NEXT: 9: 0f 1f 80 00 00 00 00          nopl    (%rax)
-# LINE-EMPTY:
-# LINE-NEXT: 0000000000000010 <foo(int, int)>:
-# LINE-NEXT: debug-inlined-functions.cc:8:16: bar(int, int) inlined into foo(int, int)
-# LINE-NEXT: 10: 8d 04 3e                     leal    (%rsi,%rdi), %eax
-# LINE-NEXT: 13: 0f af f7                     imull   %edi, %esi
-# LINE-NEXT: 16: 01 f0                        addl    %esi, %eax
-# LINE-NEXT: debug-inlined-functions.cc:8:16: end of bar(int, int) inlined into foo(int, int)
-# LINE-NEXT: 18: c3                           retq
-
-# UNICODE: 0000000000000000 <bar(int, int)>:
+# UNICODE-MANGLED: 0000000000000000 <_Z3barii>:
+# UNICODE-DEMANGLED: 0000000000000000 <bar(int, int)>:
 # UNICODE-NEXT:        0: 8d 04 3e                     	leal	(%rsi,%rdi), %eax
 # UNICODE-NEXT:        3: 0f af f7                     	imull	%edi, %esi
 # UNICODE-NEXT:        6: 01 f0                        	addl	%esi, %eax
 # UNICODE-NEXT:        8: c3                           	retq
 # UNICODE-NEXT:        9: 0f 1f 80 00 00 00 00         	nopl	(%rax)
 # UNICODE-EMPTY:
-# UNICODE-NEXT: 0000000000000010 <foo(int, int)>:
-# UNICODE-NEXT:                                                                                             ┠─ bar(int, int) = inlined into foo(int, int)
+# UNICODE-MANGLED-NEXT: 0000000000000010 <_Z3fooii>:
+# UNICODE-DEMANGLED-NEXT: 0000000000000010 <foo(int, int)>:
+# UNICODE-MANGLED-NEXT:                                                                                     ┠─ _Z3barii = inlined into _Z3fooii
+# UNICODE-DEMANGLED-NEXT:                                                                                   ┠─ bar(int, int) = inlined into foo(int, int)
 # UNICODE-NEXT:      10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           ┃
 # UNICODE-NEXT:      13: 0f af f7                     	imull	%edi, %esi                                  ┃
 # UNICODE-NEXT:      16: 01 f0                        	addl	%esi, %eax                                  ┻
 # UNICODE-NEXT:      18: c3                           	retq
 
-# MANGLE: 0000000000000000 <_Z3barii>:
-# MANGLE-NEXT:        0: 8d 04 3e                     	leal	(%rsi,%rdi), %eax
-# MANGLE-NEXT:        3: 0f af f7                     	imull	%edi, %esi
-# MANGLE-NEXT:        6: 01 f0                        	addl	%esi, %eax
-# MANGLE-NEXT:        8: c3                           	retq
-# MANGLE-NEXT:        9: 0f 1f 80 00 00 00 00         	nopl	(%rax)
-# MANGLE-EMPTY:
-# MANGLE-NEXT: 0000000000000010 <_Z3fooii>:
-# MANGLE-NEXT:                                                                                             ┠─ _Z3barii = inlined into _Z3fooii
-# MANGLE-NEXT:      10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           ┃
-# MANGLE-NEXT:      13: 0f af f7                     	imull	%edi, %esi                                  ┃
-# MANGLE-NEXT:      16: 01 f0                        	addl	%esi, %eax                                  ┻
-# MANGLE-NEXT:      18: c3                           	retq
+# UNICODE-DEMANGLED-INDENT: 0000000000000010 <foo(int, int)>:
+# UNICODE-DEMANGLED-INDENT-NEXT:                                                                          ┠─ bar(int, int) = inlined into foo(int, int)
+# UNICODE-DEMANGLED-INDENT-NEXT:       10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax     ┃
+# UNICODE-DEMANGLED-INDENT-NEXT:       13: 0f af f7                     	imull	%edi, %esi            ┃
+# UNICODE-DEMANGLED-INDENT-NEXT:       16: 01 f0                        	addl	%esi, %eax            ┻
+# UNICODE-DEMANGLED-INDENT-NEXT:       18: c3                           	retq
 
-# INDENT: 0000000000000000 <bar(int, int)>:
-# INDENT-NEXT:        0: 8d 04 3e                     	leal	(%rsi,%rdi), %eax
-# INDENT-NEXT:        3: 0f af f7                     	imull	%edi, %esi
-# INDENT-NEXT:        6: 01 f0                        	addl	%esi, %eax
-# INDENT-NEXT:        8: c3                           	retq
-# INDENT-NEXT:        9: 0f 1f 80 00 00 00 00         	nopl	(%rax)
-# INDENT-EMPTY:
-# INDENT-NEXT: 0000000000000010 <foo(int, int)>:
-# INDENT-NEXT:                                                                        ┠─ bar(int, int) = inlined into foo(int, int)
-# INDENT-NEXT:       10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax     ┃
-# INDENT-NEXT:       13: 0f af f7                     	imull	%edi, %esi            ┃
-# INDENT-NEXT:       16: 01 f0                        	addl	%esi, %eax            ┻
-# INDENT-NEXT:       18: c3                           	retq
+# ASCII-DEMANGLED: 0000000000000010 <foo(int, int)>:
+# ASCII-DEMANGLED-NEXT:                                                                                                 |- bar(int, int) = inlined into foo(int, int)
+# ASCII-DEMANGLED-NEXT:        10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           |
+# ASCII-DEMANGLED-NEXT:        13: 0f af f7                     	imull	%edi, %esi                                  |
+# ASCII-DEMANGLED-NEXT:        16: 01 f0                        	addl	%esi, %eax                                  v
+# ASCII-DEMANGLED-NEXT:        18: c3                           	retq
 
-# ASCII: 0000000000000000 <bar(int, int)>:
-# ASCII-NEXT:        0: 8d 04 3e                     	leal	(%rsi,%rdi), %eax
-# ASCII-NEXT:        3: 0f af f7                     	imull	%edi, %esi
-# ASCII-NEXT:        6: 01 f0                        	addl	%esi, %eax
-# ASCII-NEXT:        8: c3                           	retq
-# ASCII-NEXT:        9: 0f 1f 80 00 00 00 00         	nopl	(%rax)
-# ASCII-EMPTY:
-# ASCII-NEXT: 0000000000000010 <foo(int, int)>:
-# ASCII-NEXT:                                                                                               |- bar(int, int) = inlined into foo(int, int)
-# ASCII-NEXT:        10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           |
-# ASCII-NEXT:        13: 0f af f7                     	imull	%edi, %esi                                  |
-# ASCII-NEXT:        16: 01 f0                        	addl	%esi, %eax                                  v
-# ASCII-NEXT:        18: c3                           	retq
+# LIMITS-ONLY-DEMANGLED: 0000000000000010 <foo(int, int)>:
+# LIMITS-ONLY-DEMANGLED-NEXT: debug-inlined-functions.cc:8:16: bar(int, int) inlined into foo(int, int)
+# LIMITS-ONLY-DEMANGLED-NEXT: 10: 8d 04 3e                     leal    (%rsi,%rdi), %eax
+# LIMITS-ONLY-DEMANGLED-NEXT: 13: 0f af f7                     imull   %edi, %esi
+# LIMITS-ONLY-DEMANGLED-NEXT: 16: 01 f0                        addl    %esi, %eax
+# LIMITS-ONLY-DEMANGLED-NEXT: debug-inlined-functions.cc:8:16: end of bar(int, int) inlined into foo(int, int)
+# LIMITS-ONLY-DEMANGLED-NEXT: 18: c3                           retq
 
-# DEBUG-ALL: 0000000000000010 <foo(int, int)>:
-# DEBUG-ALL-NEXT:                                                                                           ┠─ a = RDI
-# DEBUG-ALL-NEXT:                                                                                           ┃ ┠─ b = RSI
-# DEBUG-ALL-NEXT:                                                                                           ┃ ┃ ┠─ bar(int, int) = inlined into foo(int, int)
-# DEBUG-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┠─ x = RDI
-# DEBUG-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┃ ┠─ y = RSI
-# DEBUG-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┃ ┃ ┌─ sum = RAX
-# DEBUG-ALL-NEXT:  10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           ┃ ┃ ┃ ┃ ┃ ╈
-# DEBUG-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┃ ┃ ┃ ┌─ b = entry(RSI)
-# DEBUG-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┃ ┃ ┃ │ ┌─ mul = RSI
-# DEBUG-ALL-NEXT:  13: 0f af f7                     	imull	%edi, %esi                                  ┃ ┻ ┃ ┃ ┻ ┃ ╈ ╈
-# DEBUG-ALL-NEXT:  																							┃ ┌─ result = RAX
-# DEBUG-ALL-NEXT:  16: 01 f0                        	addl	%esi, %eax                                  ┃ ╈ ┻ ┻   ┻ ┃ ┃
-# DEBUG-ALL-NEXT:  18: c3                           	retq                                                ┻ ┻         ┻ ┻
+# DEBUG-DEMANGLED-ALL: 0000000000000010 <foo(int, int)>:
+# DEBUG-DEMANGLED-ALL-NEXT:                                                                                           ┠─ a = RDI
+# DEBUG-DEMANGLED-ALL-NEXT:                                                                                           ┃ ┠─ b = RSI
+# DEBUG-DEMANGLED-ALL-NEXT:                                                                                           ┃ ┃ ┠─ bar(int, int) = inlined into foo(int, int)
+# DEBUG-DEMANGLED-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┠─ x = RDI
+# DEBUG-DEMANGLED-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┃ ┠─ y = RSI
+# DEBUG-DEMANGLED-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┃ ┃ ┌─ sum = RAX
+# DEBUG-DEMANGLED-ALL-NEXT:  10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           ┃ ┃ ┃ ┃ ┃ ╈
+# DEBUG-DEMANGLED-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┃ ┃ ┃ ┌─ b = entry(RSI)
+# DEBUG-DEMANGLED-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┃ ┃ ┃ │ ┌─ mul = RSI
+# DEBUG-DEMANGLED-ALL-NEXT:  13: 0f af f7                     	imull	%edi, %esi                                  ┃ ┻ ┃ ┃ ┻ ┃ ╈ ╈
+# DEBUG-DEMANGLED-ALL-NEXT:  																							┃ ┌─ result = RAX
+# DEBUG-DEMANGLED-ALL-NEXT:  16: 01 f0                        	addl	%esi, %eax                                  ┃ ╈ ┻ ┻   ┻ ┃ ┃
+# DEBUG-DEMANGLED-ALL-NEXT:  18: c3                           	retq                                                ┻ ┻         ┻ ┻
 
 	.file	"debug-inlined-functions.cc"
 	.text
