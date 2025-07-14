@@ -33,6 +33,8 @@ enum class Version : uint8_t {
 enum class Flags : uint8_t {
   FDESorted = 0x01,
   FramePointer = 0x02,
+  FDEFuncStartPCRel = 0x04,
+  V2AllFlags = FDESorted | FramePointer | FDEFuncStartPCRel,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/0xff),
 };
 
