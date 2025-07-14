@@ -82,11 +82,11 @@ endif()
 #===============================================================================
 
 # Generate headers
-configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/version.hpp")
+configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/__version.hpp")
 
 # Install generated headers.
 install(FILES
-  "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/version.hpp"
+  "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/__version.hpp"
   DESTINATION "${LIBSYCL_INCLUDE_DIR}/sycl"
   COMPONENT sycl-headers)
 

@@ -12,10 +12,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_PLATFORM_HPP
-#define _LIBSYCL_PLATFORM_HPP
+#ifndef _LIBSYCL___PLATFORM_HPP
+#define _LIBSYCL___PLATFORM_HPP
 
-#include <sycl/__detail/config.hpp>
+#include <sycl/__detail/__config.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -28,4 +28,4 @@ public:
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_PLATFORM_HPP
+#endif // _LIBSYCL___PLATFORM_HPP
