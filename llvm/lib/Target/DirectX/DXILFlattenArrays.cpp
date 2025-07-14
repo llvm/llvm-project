@@ -421,9 +421,8 @@ static Constant *transformInitializer(Constant *Init, Type *OrigType,
   return ConstantArray::get(FlattenedType, FlattenedElements);
 }
 
-static void
-flattenGlobalArrays(Module &M,
-                    SmallDenseMap<GlobalVariable *, GlobalVariable *> &GlobalMap) {
+static void flattenGlobalArrays(
+    Module &M, SmallDenseMap<GlobalVariable *, GlobalVariable *> &GlobalMap) {
   LLVMContext &Ctx = M.getContext();
   for (GlobalVariable &G : M.globals()) {
     Type *OrigType = G.getValueType();
