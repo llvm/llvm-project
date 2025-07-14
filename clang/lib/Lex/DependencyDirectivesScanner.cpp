@@ -722,6 +722,13 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
       skipLine(First, End);
       return false;
     }
+    // A module partition starts with exactly one ':'. If we have '::', this is
+    // a scope resolution instead and shouldn't be recognized as a directive
+    // per P1857R3.
+    if (First + 1 != End && First[1] == ':') {
+      skipLine(First, End);
+      return false;
+    }
     // `import:(type)name` is a valid ObjC method decl, so check one more token.
     (void)lexToken(First, End);
     if (!tryLexIdentifierOrSkipLine(First, End))
