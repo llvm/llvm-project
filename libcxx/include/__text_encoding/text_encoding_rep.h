@@ -20,10 +20,6 @@
 #include <cstdint>
 #include <string_view>
 
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <__locale_dir/locale_base_api.h>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif

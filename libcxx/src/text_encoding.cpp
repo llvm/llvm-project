@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__locale_dir/locale_base_api.h>
 #include <text_encoding>
 #if defined(_LIBCPP_WIN32API)
 #  include <windows.h>
