@@ -84,6 +84,23 @@ private:
   ValueObject *m_ptr_obj = nullptr;
 };
 
+class MsvcStlUniquePtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
+public:
+  MsvcStlUniquePtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
+
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
+
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
+
+  lldb::ChildCacheState Update() override;
+
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+
+private:
+  lldb::ValueObjectSP m_value_ptr_sp;
+  lldb::ValueObjectSP m_deleter_sp;
+};
+
 } // namespace formatters
 } // namespace lldb_private
 
@@ -162,4 +179,102 @@ lldb_private::SyntheticChildrenFrontEnd *
 lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEndCreator(
     lldb::ValueObjectSP valobj_sp) {
   return new MsvcStlSmartPointerSyntheticFrontEnd(valobj_sp);
+}
+
+bool lldb_private::formatters::IsMsvcStlUniquePtr(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_Mypair") != nullptr;
+
+  return false;
+}
+
+bool lldb_private::formatters::MsvcStlUniquePtrSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
+  if (!valobj_sp)
+    return false;
+
+  ValueObjectSP ptr_sp(valobj_sp->GetChildAtNamePath({"_Mypair", "_Myval2"}));
+  if (!ptr_sp)
+    return false;
+
+  DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
+
+  return true;
+}
+
+lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::
+    MsvcStlUniquePtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
+    : SyntheticChildrenFrontEnd(*valobj_sp) {
+  if (valobj_sp)
+    Update();
+}
+
+llvm::Expected<uint32_t> lldb_private::formatters::
+    MsvcStlUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
+  if (m_value_ptr_sp)
+    return m_deleter_sp ? 2 : 1;
+  return 0;
+}
+
+lldb::ValueObjectSP
+lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::GetChildAtIndex(
+    uint32_t idx) {
+  if (!m_value_ptr_sp)
+    return lldb::ValueObjectSP();
+
+  if (idx == 0)
+    return m_value_ptr_sp;
+
+  if (idx == 1)
+    return m_deleter_sp;
+
+  if (idx == 2) {
+    Status status;
+    auto value_sp = m_value_ptr_sp->Dereference(status);
+    if (status.Success()) {
+      return value_sp;
+    }
+  }
+
+  return lldb::ValueObjectSP();
+}
+
+lldb::ChildCacheState
+lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::Update() {
+  ValueObjectSP valobj_sp = m_backend.GetSP();
+  if (!valobj_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  ValueObjectSP pair_sp = valobj_sp->GetChildMemberWithName("_Mypair");
+  if (!pair_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  if (auto value_ptr_sp = pair_sp->GetChildMemberWithName("_Myval2"))
+    m_value_ptr_sp = value_ptr_sp->Clone(ConstString("pointer"));
+
+  // Only present if the deleter is non-empty
+  if (auto deleter_sp = pair_sp->GetChildMemberWithName("_Myval1"))
+    m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
+
+  return lldb::ChildCacheState::eRefetch;
+}
+
+llvm::Expected<size_t>
+lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::
+    GetIndexOfChildWithName(ConstString name) {
+  if (name == "pointer")
+    return 0;
+  if (name == "deleter")
+    return 1;
+  if (name == "obj" || name == "object" || name == "$$dereference$$")
+    return 2;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
+}
+
+lldb_private::SyntheticChildrenFrontEnd *
+lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEndCreator(
+    lldb::ValueObjectSP valobj_sp) {
+  return new MsvcStlUniquePtrSyntheticFrontEnd(valobj_sp);
 }
