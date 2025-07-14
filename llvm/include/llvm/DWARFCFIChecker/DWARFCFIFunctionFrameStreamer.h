@@ -14,13 +14,13 @@
 #ifndef LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMESTREAMER_H
 #define LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMESTREAMER_H
 
-#include "llvm/Support/Compiler.h"
 #include "DWARFCFIFunctionFrameReceiver.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <optional>
 

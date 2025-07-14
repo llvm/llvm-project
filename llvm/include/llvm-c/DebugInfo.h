@@ -757,7 +757,8 @@ LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
  * @see DIBuilder::replaceArrays()
  */
 LLVM_C_ABI void LLVMReplaceArrays(LLVMDIBuilderRef Builder, LLVMMetadataRef *T,
-                       LLVMMetadataRef *Elements, unsigned NumElements);
+                                  LLVMMetadataRef *Elements,
+                                  unsigned NumElements);
 
 /**
  * Create debugging information entry for a vector type.

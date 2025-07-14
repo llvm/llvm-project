@@ -14,11 +14,11 @@
 #ifndef LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMEANALYZER_H
 #define LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMEANALYZER_H
 
-#include "llvm/Support/Compiler.h"
 #include "DWARFCFIAnalysis.h"
 #include "DWARFCFIFunctionFrameReceiver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
