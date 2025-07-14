@@ -116,8 +116,7 @@ public:
   }
   TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
-    return ST->hasVInstructions() ? TailFoldingStyle::Data
-                                  : TailFoldingStyle::DataWithoutLaneMask;
+    return TailFoldingStyle::DataWithEVL;
   }
   std::optional<unsigned> getMaxVScale() const override;
   std::optional<unsigned> getVScaleForTuning() const override;
