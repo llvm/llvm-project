@@ -4015,6 +4015,7 @@ cc_library(
         ":VectorToSCF",
         ":VectorToSPIRV",
         ":VectorToXeGPU",
+        ":XeVMToLLVM",
     ],
 )
 
@@ -4634,10 +4635,12 @@ cc_library(
         ":TransformIRDLExtension",
         ":TransformLoopExtension",
         ":TransformPDLExtension",
+        ":TransformTuneExtension",
         ":UBToLLVM",
         ":VCIXToLLVMIRTranslation",
         ":VectorToLLVM",
         ":VectorTransformOps",
+        ":XeVMToLLVM",
     ],
 )
 
@@ -4800,6 +4803,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefUtils",
         ":Pass",
+        ":Rewrite",
         ":SCFDialect",
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
@@ -5321,6 +5325,7 @@ cc_library(
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":MathDialect",
         ":MemRefDialect",
         ":SCFDialect",
         ":SideEffectInterfaces",
@@ -5432,6 +5437,7 @@ cc_library(
         ":Transforms",
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
+        ":XeVMDialect",
         ":config",
         "//llvm:Core",
         "//llvm:MC",
@@ -5505,6 +5511,7 @@ cc_library(
         ":GPUDialect",
         ":GPUToGPURuntimeTransforms",
         ":GPUToNVVMTransforms",
+        ":GPUToROCDLTransforms",
         ":GPUTransformOpsIncGen",
         ":GPUTransforms",
         ":IR",
@@ -5512,6 +5519,7 @@ cc_library(
         ":MemRefDialect",
         ":NVGPUDialect",
         ":NVVMDialect",
+        ":ROCDLDialect",
         ":SCFDialect",
         ":Support",
         ":TransformDialect",
@@ -8030,12 +8038,15 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":ConversionPassIncGen",
+        ":DialectUtils",
         ":IR",
         ":LLVMDialect",
         ":Pass",
         ":ROCDLDialect",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
+        ":VectorUtils",
     ],
 )
 
@@ -11547,6 +11558,44 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "TransformTuneExtensionTdFiles",
+    srcs = glob(["include/mlir/Dialect/Transform/TuneExtension/*.td"]),
+    deps = [
+        ":BuiltinDialectTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformTuneExtensionOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/Transform/TuneExtension/TuneExtensionOps.h.inc": [
+            "-gen-op-decls",
+        ],
+        "include/mlir/Dialect/Transform/TuneExtension/TuneExtensionOps.cpp.inc": [
+            "-gen-op-defs",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/TuneExtension/TuneExtensionOps.td",
+    deps = [":TransformTuneExtensionTdFiles"],
+)
+
+cc_library(
+    name = "TransformTuneExtension",
+    srcs = glob(["lib/Dialect/Transform/TuneExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/TuneExtension/*.h"]),
+    deps = [
+        ":IR",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":TransformOpsIncGen",
+        ":TransformTuneExtensionOpsIncGen",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "TransformIRDLExtensionOpsIncGen",
     tbl_outs = {
@@ -13596,4 +13645,29 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/XeVMOps.td",
     deps = [":XeVMTdFiles"],
+)
+
+cc_library(
+    name = "XeVMToLLVM",
+    srcs = glob([
+        "lib/Conversion/XeVMToLLVM/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/XeVMToLLVM/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":XeVMDialect",
+        ":ConversionPassIncGen",
+	":ConvertToLLVMInterface",
+	":GPUDialect",
+        ":IR",
+	":LLVMCommonConversion",
+	":LLVMDialect",
+        ":Pass",
+	":Support",
+        ":TransformUtils",
+        ":VectorDialect",
+	"//llvm:Support",
+    ],
 )
