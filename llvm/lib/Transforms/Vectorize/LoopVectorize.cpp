@@ -8121,7 +8121,7 @@ bool VPRecipeBuilder::getScaledReductions(
         return false;
       Exts[I] = cast<Instruction>(OpI);
 
-      // Other operand should live inside the loop
+      // TODO: We should be able to support live-ins.
       if (!CM.TheLoop->contains(Exts[I]))
         return false;
 
