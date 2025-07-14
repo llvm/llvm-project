@@ -278,9 +278,8 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         GlobalVar = GlobalMap[GlobalVar];
       Info.RootPointerOperand = GlobalVar;
       RootTy = GlobalVar->getValueType();
-    } else if (auto *Alloca = dyn_cast<AllocaInst>(PtrOperand)) {
+    } else if (auto *Alloca = dyn_cast<AllocaInst>(PtrOperand))
       RootTy = Alloca->getAllocatedType();
-    }
     assert(!isMultiDimensionalArray(RootTy) &&
            "Expected root array type to be flattened");
 
