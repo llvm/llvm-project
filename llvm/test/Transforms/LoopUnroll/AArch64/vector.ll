@@ -172,22 +172,6 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; CORTEXA55:       [[EXIT]]:
 ; CORTEXA55-NEXT:    ret void
 ;
-; GENERIC-LABEL: define void @reverse(
-; GENERIC-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]]) {
-; GENERIC-NEXT:  [[ENTRY:.*]]:
-; GENERIC-NEXT:    br label %[[FOR_BODY:.*]]
-; GENERIC:       [[FOR_BODY]]:
-; GENERIC-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; GENERIC-NEXT:    [[TMP0:%.*]] = sub nsw i64 [[LEN]], [[IV]]
-; GENERIC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds <4 x float>, ptr [[SRC]], i64 [[TMP0]]
-; GENERIC-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 16
-; GENERIC-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw <4 x float>, ptr [[DST]], i64 [[IV]]
-; GENERIC-NEXT:    store <4 x float> [[TMP1]], ptr [[ARRAYIDX2]], align 16
-; GENERIC-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; GENERIC-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[LEN]]
-; GENERIC-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
-; GENERIC:       [[EXIT]]:
-; GENERIC-NEXT:    ret void
 entry:                               ; preds = %entry
   br label %for.body
 
@@ -246,24 +230,6 @@ define void @saxpy_tripcount8_full_unroll(ptr %dst, ptr %src, float %a) {
 ; CORTEXA55-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP2]], align 4
 ; CORTEXA55-NEXT:    ret void
 ;
-; GENERIC-LABEL: define void @saxpy_tripcount8_full_unroll(
-; GENERIC-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], float [[A:%.*]]) {
-; GENERIC-NEXT:  [[ENTRY:.*:]]
-; GENERIC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
-; GENERIC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-; GENERIC-NEXT:    br label %[[VECTOR_BODY:.*]]
-; GENERIC:       [[VECTOR_BODY]]:
-; GENERIC-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[SRC]], align 4
-; GENERIC-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x float>, ptr [[DST]], align 4
-; GENERIC-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[WIDE_LOAD]], <4 x float> [[WIDE_LOAD12]])
-; GENERIC-NEXT:    store <4 x float> [[TMP0]], ptr [[DST]], align 4
-; GENERIC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 4
-; GENERIC-NEXT:    [[WIDE_LOAD_1:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
-; GENERIC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[DST]], i64 4
-; GENERIC-NEXT:    [[WIDE_LOAD12_1:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
-; GENERIC-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[WIDE_LOAD_1]], <4 x float> [[WIDE_LOAD12_1]])
-; GENERIC-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP2]], align 4
-; GENERIC-NEXT:    ret void
 entry:
   %broadcast.splatinsert = insertelement <4 x float> poison, float %a, i64 0
   %broadcast.splat = shufflevector <4 x float> %broadcast.splatinsert, <4 x float> poison, <4 x i32> zeroinitializer
@@ -495,25 +461,6 @@ define void @saxpy_tripcount1K_av1(ptr %dst, ptr %src, float %a) {
 ; CORTEXA55:       [[EXIT]]:
 ; CORTEXA55-NEXT:    ret void
 ;
-; GENERIC-LABEL: define void @saxpy_tripcount1K_av1(
-; GENERIC-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], float [[A:%.*]]) {
-; GENERIC-NEXT:  [[ENTRY:.*]]:
-; GENERIC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
-; GENERIC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-; GENERIC-NEXT:    br label %[[VECTOR_BODY:.*]]
-; GENERIC:       [[VECTOR_BODY]]:
-; GENERIC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; GENERIC-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[INDEX]]
-; GENERIC-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
-; GENERIC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[DST]], i64 [[INDEX]]
-; GENERIC-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
-; GENERIC-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[WIDE_LOAD]], <4 x float> [[WIDE_LOAD12]])
-; GENERIC-NEXT:    store <4 x float> [[TMP2]], ptr [[TMP1]], align 4
-; GENERIC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; GENERIC-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; GENERIC-NEXT:    br i1 [[TMP3]], label %[[EXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; GENERIC:       [[EXIT]]:
-; GENERIC-NEXT:    ret void
 entry:
   %broadcast.splatinsert = insertelement <4 x float> poison, float %a, i64 0
   %broadcast.splat = shufflevector <4 x float> %broadcast.splatinsert, <4 x float> poison, <4 x i32> zeroinitializer
@@ -537,8 +484,6 @@ exit:                                 ; preds = %vector.body
 !0 = !{!0, !1}
 !1 = !{!"llvm.loop.isvectorized", i32 1}
 
-; GENERIC: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
-; GENERIC: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ;.
 ; APPLE: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; APPLE: [[META1]] = !{!"llvm.loop.unroll.disable"}
