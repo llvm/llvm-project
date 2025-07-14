@@ -68,7 +68,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   //
   // it's very accurate in the range [0, 0.5] and has a maximum error of
   // 0.0000000000000001 in the range [0, 0.5].
-  constexpr double POLY_COEFFS[10] = {
+  constexpr double POLY_COEFFS[] = {
       0x1.45f306dc9c889p-2, // x^1
       0x1.b2995e7b7b5fdp-5, // x^3
       0x1.8723a1d588a36p-6, // x^5
