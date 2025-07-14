@@ -1002,11 +1002,12 @@ define float @cospiD_pattern0_half(i16 %arg, float %arg1, float %arg2) {
 ; GFX7-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GFX7-NEXT:    v_mov_b32_e32 v2, 0xffff8000
+; GFX7-NEXT:    v_cmp_lt_i32_e32 vcc, 1, v3
 ; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v0
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX7-NEXT:    v_xor_b32_e32 v2, 0x8000, v0
-; GFX7-NEXT:    v_cmp_lt_i32_e32 vcc, 1, v3
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GFX7-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX7-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]

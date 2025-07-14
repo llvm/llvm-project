@@ -15504,9 +15504,14 @@ bool SITargetLowering::shouldFoldSelectWithIdentityConstant(
   if (!CY)
     return false;
 
-  return (BinOpcode == ISD::AND || BinOpcode == ISD::OR ||
-          BinOpcode == ISD::XOR) &&
-         (VT.getScalarType() == MVT::i32);
+  if (!CY->getAPIntValue().isSignMask() &&
+      !CY->getAPIntValue().isMaxSignedValue())
+    return false;
+
+  if (VT.getScalarType() != MVT::i32)
+    return false;
+
+  return true;
 }
 
 SDValue SITargetLowering::performSetCCCombine(SDNode *N,
