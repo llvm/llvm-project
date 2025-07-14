@@ -97,10 +97,10 @@ Note in the LLVM alias, the default value is `false`.
   for ``std::array`` iterators use `std::array<.*>::(const_)?iterator` string.
   The default is an empty string.
 
-.. option:: RespectOpaqueTypes
+.. option:: IgnoreAliasing
 
-  If set to `false` the check will use the canonical type to determine the type that ``auto`` is deduced to.
-  If set to `true` the check will not look beyond the first type alias. Default value is `false`.
+  If set to `true` the check will use the canonical type to determine the type that ``auto`` is deduced to.
+  If set to `false` the check will not look beyond the first type alias. Default value is `true`.
 
 .. code-block:: c++
 
@@ -109,10 +109,32 @@ Note in the LLVM alias, the default value is `false`.
 
    auto bar = foo();
 
-If RespectOpaqueTypes is set to `false`, it will be transformed into:
+If IgnoreAliasing is set to `true`, it will be transformed into:
 
 .. code-block:: c++
 
    auto *bar = foo();
 
 Otherwise no changes will occur.
+
+Limitations
+-----------
+
+When IgnoreAliasing is set to `false`, there are cases where Clang has not preserved the sugar
+and the canonical type will be used so false positives may occur.
+For example:
+.. code-block:: c++
+
+  #include <vector>
+
+  void change(int&);
+
+  using IntPtr = int *; // Relevant typedef
+
+  void loopPtr(const std::vector<IntPtr> &VectorIntPtr) {
+
+    // Currently fails for IgnoreAliasing==false as AST does not have the IntPtr
+    for (auto Data : VectorIntPtr) {
+      change(*Data);
+    }
+  }
