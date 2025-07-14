@@ -96,18 +96,18 @@ $ mlir-opt sequence.mlir --pass-pipeline="
 The `sequence.mlir` file contains _both_ the payload IR function _and_ the transform IR sequence nested in the same module. The transform interpreter pass will apply the `@__transform_main` named sequence to the anchor operation of the pass. In our case, we also asked the interpreter pass to associate the two extra arguments of the top-level sequence with all `linalg.matmul` and `linalg.elementwise` payload operations through the respective pass options. Running this pass results in the expected remarks:
 
 ```sh
-test.mlir:8:13: remark: matmul
+sequence.mlir:5:13: remark: matmul
   %matmul = linalg.matmul ins(%lhs, %rhs: tensor<512x512xf32>, tensor<512x512xf32>)
             ^
-test.mlir:8:13: note: see current operation: %0 = linalg.matmul ins(%arg0, %arg1 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
-test.mlir:12:13: remark: elemwise_binaries
+sequence.mlir:5:13: note: see current operation: %0 = linalg.matmul ins(%arg0, %arg1 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
+sequence.mlir:9:13: remark: elemwise_binaries
   %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
             ^
-test.mlir:12:13: note: see current operation: %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg2 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
-test.mlir:19:13: remark: elemwise_binaries
+sequence.mlir:9:13: note: see current operation: %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg2 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
+sequence.mlir:15:13: remark: elemwise_binaries
   %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
             ^
-test.mlir:19:13: note: see current operation: %2 = linalg.elementwise kind=#linalg.elementwise_kind<max_signed> indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> ()>, affine_map<(d0, d1) -> (d0, d1)>] ins(%1, %cst : tensor<512x512xf32>, f32) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
+sequence.mlir:15:13: note: see current operation: %2 = linalg.elementwise kind=#linalg.elementwise_kind<max_signed> indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> ()>, affine_map<(d0, d1) -> (d0, d1)>] ins(%1, %cst : tensor<512x512xf32>, f32) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
 ```
 
 Note that `%arg2` is associated with both elementwise payload operations. Any handle is associated with a list of entities. Individual transformations may or may not care about the order of elements in that list.
