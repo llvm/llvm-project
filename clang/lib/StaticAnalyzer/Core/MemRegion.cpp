@@ -1023,13 +1023,12 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
 }
 
 static bool isStdStreamVar(const VarDecl *D) {
-  const auto *ND = dyn_cast<NamedDecl>(D);
-  if (!ND)
+  const IdentifierInfo *II = D->getIdentifier();
+  if (!II)
     return false;
-  DeclarationName DeclN = ND->getDeclName();
-  if (!DeclN.isIdentifier())
+  if (!D->getDeclContext()->isTranslationUnit())
     return false;
-  StringRef N = DeclN.getAsIdentifierInfo()->getName();
+  StringRef N = II->getName();
   QualType FILETy = D->getASTContext().getFILEType();
   if (FILETy.isNull())
     return false;
