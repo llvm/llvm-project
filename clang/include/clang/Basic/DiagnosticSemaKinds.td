@@ -2548,6 +2548,10 @@ def warn_uninit_const_reference : Warning<
   "variable %0 is uninitialized when passed as a const reference argument "
   "here">, InGroup<UninitializedConstReference>, DefaultIgnore;
 
+def warn_uninit_const_pointer : Warning<
+  "variable %0 is uninitialized when passed as a const pointer argument here">,
+  InGroup<UninitializedConstPointer>, DefaultIgnore;
+
 def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;
 def warn_unsequenced_mod_use : Warning<
@@ -8308,6 +8312,9 @@ def err_need_header_before_typeid : Error<
 def err_need_header_before_placement_new : Error<
   "no matching %0 function for non-allocating placement new expression; "
   "include <new>">;
+def err_placement_new_into_const_qualified_storage : Error<
+  "placement new expression with a const-qualified argument of type %0 "
+  "is not allowed">;
 def err_ms___leave_not_in___try : Error<
   "'__leave' statement not in __try block">;
 def err_uuidof_without_guid : Error<
@@ -9365,6 +9372,16 @@ def warn_atomic_implicit_seq_cst : Warning<
   InGroup<DiagGroup<"atomic-implicit-seq-cst">>, DefaultIgnore;
 def err_atomic_unsupported : Error<
   "atomic types are not supported in '%0'">;
+def warn_cv_stripped_in_enum : Warning<
+  "%enum_select<CVQualList>{"
+    "%Both{'const' and 'volatile' qualifiers}|"
+    "%Const{'const' qualifier}|"
+    "%Volatile{'volatile' qualifier}}0 in enumeration underlying type ignored">,
+  InGroup<DiagGroup<"underlying-cv-qualifier-ignored">>;
+def warn_atomic_stripped_in_enum : Warning<
+  "'_Atomic' qualifier ignored; operations involving the enumeration type will "
+  "be non-atomic">,
+  InGroup<DiagGroup<"underlying-atomic-qualifier-ignored">>, DefaultError;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to %select{overflow builtin|checked integer operation}0 "
@@ -10626,6 +10643,10 @@ def warn_dangling_reference_captured
 def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
    "the full-expression">, InGroup<DanglingCapture>;
+
+def warn_experimental_lifetime_safety_dummy_warning : Warning<
+   "todo: remove this warning after we have atleast one warning based on the lifetime analysis">, 
+   InGroup<LifetimeSafety>, DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -13077,6 +13098,9 @@ def err_invalid_hlsl_resource_type: Error<
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
+def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;
+def err_hlsl_invalid_rootsig_flag : Error< "invalid flags for version 1.%0">;
+
 def subst_hlsl_format_ranges: TextSubstitution<
   "%select{t|u|b|s}0[%1;%select{%3]|unbounded)}2">;
 
@@ -13084,6 +13108,7 @@ def err_hlsl_resource_range_overlap: Error<
   "resource ranges %sub{subst_hlsl_format_ranges}0,1,2,3 and %sub{subst_hlsl_format_ranges}4,5,6,7 "
   "overlap within space = %8 and visibility = "
   "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
+def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

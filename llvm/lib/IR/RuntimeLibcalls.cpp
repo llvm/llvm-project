@@ -18,84 +18,9 @@ using namespace RTLIB;
 #undef GET_INIT_RUNTIME_LIBCALL_NAMES
 #undef GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 
-static cl::opt<bool>
-    HexagonEnableFastMathRuntimeCalls("hexagon-fast-math", cl::Hidden,
-                                      cl::desc("Enable Fast Math processing"));
-
 static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
                                FloatABI::ABIType FloatABIType,
                                EABI EABIVersion) {
-  if (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) {
-    CallingConv::ID DefaultCC = FloatABIType == FloatABI::Hard
-                                    ? CallingConv::ARM_AAPCS_VFP
-                                    : CallingConv::ARM_AAPCS;
-    for (RTLIB::LibcallImpl LC : RTLIB::libcall_impls())
-      Info.setLibcallImplCallingConv(LC, DefaultCC);
-  }
-
-  // Register based DivRem for AEABI (RTABI 4.2)
-  if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
-      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
-    if (TT.isOSWindows()) {
-      const struct {
-        const RTLIB::Libcall Op;
-        const RTLIB::LibcallImpl Impl;
-        const CallingConv::ID CC;
-      } LibraryCalls[] = {
-          {RTLIB::SDIVREM_I32, RTLIB::__rt_sdiv, CallingConv::ARM_AAPCS},
-          {RTLIB::SDIVREM_I64, RTLIB::__rt_sdiv64, CallingConv::ARM_AAPCS},
-          {RTLIB::UDIVREM_I32, RTLIB::__rt_udiv, CallingConv::ARM_AAPCS},
-          {RTLIB::UDIVREM_I64, RTLIB::__rt_udiv64, CallingConv::ARM_AAPCS},
-      };
-
-      for (const auto &LC : LibraryCalls) {
-        Info.setLibcallImpl(LC.Op, LC.Impl);
-        Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
-      }
-    } else {
-      const struct {
-        const RTLIB::Libcall Op;
-        const RTLIB::LibcallImpl Impl;
-      } LibraryCalls[] = {
-          {RTLIB::SDIVREM_I32, RTLIB::__aeabi_idivmod},
-          {RTLIB::SDIVREM_I64, RTLIB::__aeabi_ldivmod},
-          {RTLIB::UDIVREM_I32, RTLIB::__aeabi_uidivmod},
-          {RTLIB::UDIVREM_I64, RTLIB::__aeabi_uldivmod},
-      };
-
-      for (const auto &LC : LibraryCalls)
-        Info.setLibcallImpl(LC.Op, LC.Impl);
-    }
-  }
-
-  if (TT.isOSWindows()) {
-    static const struct {
-      const RTLIB::Libcall Op;
-      const RTLIB::LibcallImpl Impl;
-      const CallingConv::ID CC;
-    } LibraryCalls[] = {
-        {RTLIB::FPTOSINT_F32_I64, RTLIB::__stoi64, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::FPTOSINT_F64_I64, RTLIB::__dtoi64, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::FPTOUINT_F32_I64, RTLIB::__stou64, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::FPTOUINT_F64_I64, RTLIB::__dtou64, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::SINTTOFP_I64_F32, RTLIB::__i64tos, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::SINTTOFP_I64_F64, RTLIB::__i64tod, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::UINTTOFP_I64_F32, RTLIB::__u64tos, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::UINTTOFP_I64_F64, RTLIB::__u64tod, CallingConv::ARM_AAPCS_VFP},
-    };
-
-    for (const auto &LC : LibraryCalls) {
-      Info.setLibcallImpl(LC.Op, LC.Impl);
-      Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
-    }
-  }
-
-  // Use divmod compiler-rt calls for iOS 5.0 and later.
-  if (TT.isOSBinFormatMachO() && (!TT.isiOS() || !TT.isOSVersionLT(5, 0))) {
-    Info.setLibcallImpl(RTLIB::SDIVREM_I32, RTLIB::__divmodsi4);
-    Info.setLibcallImpl(RTLIB::UDIVREM_I32, RTLIB::__udivmodsi4);
-  }
-
   static const RTLIB::LibcallImpl AAPCS_Libcalls[] = {
       RTLIB::__aeabi_dadd,        RTLIB::__aeabi_ddiv,
       RTLIB::__aeabi_dmul,        RTLIB::__aeabi_dsub,
@@ -212,7 +137,11 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
                                        EABI EABIVersion, StringRef ABIName) {
-  setTargetRuntimeLibcallSets(TT);
+  setTargetRuntimeLibcallSets(TT, FloatABI);
+
+  // Early exit for targets that have fully ported to tablegen.
+  if (TT.isAMDGPU() || TT.isNVPTX() || TT.isWasm())
+    return;
 
   // Use the f128 variants of math functions on x86
   if (TT.isX86() && TT.isGNUEnvironment())
@@ -316,59 +245,13 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
   if (TT.isARM() || TT.isThumb())
     setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
 
-  if (!TT.isWasm()) {
-    // These libcalls are only available in compiler-rt, not libgcc.
-    if (TT.isArch32Bit()) {
-      setLibcallImpl(RTLIB::SHL_I128, RTLIB::Unsupported);
-      setLibcallImpl(RTLIB::SRL_I128, RTLIB::Unsupported);
-      setLibcallImpl(RTLIB::SRA_I128, RTLIB::Unsupported);
-      setLibcallImpl(RTLIB::MUL_I128, RTLIB::Unsupported);
-      setLibcallImpl(RTLIB::MULO_I64, RTLIB::Unsupported);
-    }
-
-    setLibcallImpl(RTLIB::MULO_I128, RTLIB::Unsupported);
-  }
-
-  if (TT.getArch() == Triple::ArchType::hexagon) {
-    setLibcallImpl(RTLIB::SDIV_I32, RTLIB::__hexagon_divsi3);
-    setLibcallImpl(RTLIB::SDIV_I64, RTLIB::__hexagon_divdi3);
-    setLibcallImpl(RTLIB::UDIV_I32, RTLIB::__hexagon_udivsi3);
-    setLibcallImpl(RTLIB::UDIV_I64, RTLIB::__hexagon_udivdi3);
-    setLibcallImpl(RTLIB::SREM_I32, RTLIB::__hexagon_modsi3);
-    setLibcallImpl(RTLIB::SREM_I64, RTLIB::__hexagon_moddi3);
-    setLibcallImpl(RTLIB::UREM_I32, RTLIB::__hexagon_umodsi3);
-    setLibcallImpl(RTLIB::UREM_I64, RTLIB::__hexagon_umoddi3);
-
-    const bool FastMath = HexagonEnableFastMathRuntimeCalls;
-    // This is the only fast library function for sqrtd.
-    if (FastMath)
-      setLibcallImpl(RTLIB::SQRT_F64, RTLIB::__hexagon_fast2_sqrtdf2);
-
-    // Prefix is: nothing  for "slow-math",
-    //            "fast2_" for V5+ fast-math double-precision
-    // (actually, keep fast-math and fast-math2 separate for now)
-    if (FastMath) {
-      setLibcallImpl(RTLIB::ADD_F64, RTLIB::__hexagon_fast_adddf3);
-      setLibcallImpl(RTLIB::SUB_F64, RTLIB::__hexagon_fast_subdf3);
-      setLibcallImpl(RTLIB::MUL_F64, RTLIB::__hexagon_fast_muldf3);
-      setLibcallImpl(RTLIB::DIV_F64, RTLIB::__hexagon_fast_divdf3);
-      setLibcallImpl(RTLIB::DIV_F32, RTLIB::__hexagon_fast_divsf3);
-    } else {
-      setLibcallImpl(RTLIB::ADD_F64, RTLIB::__hexagon_adddf3);
-      setLibcallImpl(RTLIB::SUB_F64, RTLIB::__hexagon_subdf3);
-      setLibcallImpl(RTLIB::MUL_F64, RTLIB::__hexagon_muldf3);
-      setLibcallImpl(RTLIB::DIV_F64, RTLIB::__hexagon_divdf3);
-      setLibcallImpl(RTLIB::DIV_F32, RTLIB::__hexagon_divsf3);
-    }
-
-    if (FastMath)
-      setLibcallImpl(RTLIB::SQRT_F32, RTLIB::__hexagon_fast2_sqrtf);
-    else
-      setLibcallImpl(RTLIB::SQRT_F32, RTLIB::__hexagon_sqrtf);
-
-    setLibcallImpl(
-        RTLIB::HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES,
-        RTLIB::__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes);
+  // These libcalls are only available in compiler-rt, not libgcc.
+  if (TT.isArch64Bit()) {
+    setLibcallImpl(RTLIB::SHL_I128, RTLIB::__ashlti3);
+    setLibcallImpl(RTLIB::SRL_I128, RTLIB::__lshrti3);
+    setLibcallImpl(RTLIB::SRA_I128, RTLIB::__ashrti3);
+    setLibcallImpl(RTLIB::MUL_I128, RTLIB::__multi3);
+    setLibcallImpl(RTLIB::MULO_I64, RTLIB::__mulodi4);
   }
 
   if (TT.getArch() == Triple::ArchType::msp430) {
