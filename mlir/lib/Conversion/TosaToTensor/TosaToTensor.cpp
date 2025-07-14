@@ -320,8 +320,6 @@ public:
         rewriter.getDenseI64ArrayAttr(sizes),
         rewriter.getDenseI64ArrayAttr(strides));
 
-    rewriter.replaceOp(sliceOp, newSliceOp.getResult());
-
     // Remove const_shape ops when it no longer has use point.
     Operation *startConstShape = sliceOp.getStart().getDefiningOp();
     if (startConstShape->getResult(0).hasOneUse())
@@ -331,6 +329,7 @@ public:
     if (sizeConstShape->getResult(0).hasOneUse())
       rewriter.eraseOp(sizeConstShape);
 
+    rewriter.replaceOp(sliceOp, newSliceOp.getResult());
     return success();
   }
 };
