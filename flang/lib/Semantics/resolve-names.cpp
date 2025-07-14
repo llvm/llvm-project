@@ -7575,7 +7575,8 @@ bool DeclarationVisitor::OkToAddComponent(
       if (msg) {
         auto &said{Say2(name, std::move(*msg), *prev,
             "Previous declaration of '%s'"_en_US)};
-        if (msg->severity() == parser::Severity::Error) {
+        if (msg->severity(/*warningsAreErrors=*/false) ==
+            parser::Severity::Error) {
           Resolve(name, *prev);
           return false;
         }

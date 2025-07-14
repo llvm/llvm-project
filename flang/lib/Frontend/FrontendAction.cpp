@@ -238,7 +238,8 @@ bool FrontendAction::reportFatalErrors(const char (&message)[N]) {
     instance->getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();
     instance->getParsing().messages().Emit(
         llvm::errs(), instance->getAllCookedSources(),
-        /*echoSourceLines=*/true, &features, maxErrors);
+        /*echoSourceLines=*/true, &features, maxErrors,
+        instance->getInvocation().getWarnAsErr());
     return true;
   }
   if (instance->getParsing().parseTree().has_value() &&
@@ -249,7 +250,8 @@ bool FrontendAction::reportFatalErrors(const char (&message)[N]) {
     instance->getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();
     instance->getParsing().messages().Emit(
         llvm::errs(), instance->getAllCookedSources(),
-        /*echoSourceLine=*/true, &features, maxErrors);
+        /*echoSourceLine=*/true, &features, maxErrors,
+        instance->getInvocation().getWarnAsErr());
     instance->getParsing().EmitMessage(
         llvm::errs(), instance->getParsing().finalRestingPlace(),
         "parser FAIL (final position)", "error: ", llvm::raw_ostream::RED);
