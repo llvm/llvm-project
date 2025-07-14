@@ -46,6 +46,8 @@ public:
   constexpr const char &operator[](std::size_t j) const {
     return interval_.start()[j];
   }
+  constexpr const char &front() const { return (*this)[0]; }
+  constexpr const char &back() const { return (*this)[size() - 1]; }
 
   bool Contains(const CharBlock &that) const {
     return interval_.Contains(that.interval_);
