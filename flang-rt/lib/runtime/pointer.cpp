@@ -115,10 +115,12 @@ void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
       byteStride *= dim.Extent();
     }
   }
-  if (pointer.Elements() > target.Elements()) {
+  std::size_t pointerElements{pointer.Elements()};
+  std::size_t targetElements{target.Elements()};
+  if (pointerElements > targetElements) {
     terminator.Crash("PointerAssociateRemapping: too many elements in remapped "
                      "pointer (%zd > %zd)",
-        pointer.Elements(), target.Elements());
+        pointerElements, targetElements);
   }
 }
 
