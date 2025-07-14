@@ -448,6 +448,8 @@ protected:
   OptLabelTy ContinueLabel;
   /// Default case label.
   OptLabelTy DefaultLabel;
+
+  const FunctionDecl *CompilingFunction = nullptr;
 };
 
 extern template class Compiler<ByteCodeEmitter>;
@@ -574,17 +576,17 @@ public:
     // Emit destructor calls for local variables of record
     // type with a destructor.
     for (Scope::Local &Local : llvm::reverse(this->Ctx->Descriptors[*Idx])) {
-      if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
-        if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
-          return false;
+      if (Local.Desc->hasTrivialDtor())
+        continue;
+      if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
+        return false;
 
-        if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
-          return false;
+      if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
+        return false;
 
-        if (!this->Ctx->emitPopPtr(E))
-          return false;
-        removeIfStoredOpaqueValue(Local);
-      }
+      if (!this->Ctx->emitPopPtr(E))
+        return false;
+      removeIfStoredOpaqueValue(Local);
     }
     return true;
   }

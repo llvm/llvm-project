@@ -16,8 +16,6 @@
 #include "mlir/IR/Iterators.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -2077,19 +2075,36 @@ OperationLegalizer::legalize(Operation *op,
 
   auto &logger = rewriter.getImpl().logger;
 #endif
+
+  // Check to see if the operation is ignored and doesn't need to be converted.
+  bool isIgnored = rewriter.getImpl().isOpIgnored(op);
+
   LLVM_DEBUG({
     logger.getOStream() << "\n";
     logger.startLine() << logLineComment;
-    logger.startLine() << "Legalizing operation : '" << op->getName() << "'("
-                       << op << ") {\n";
+    logger.startLine() << "Legalizing operation : ";
+    // Do not print the operation name if the operation is ignored. Ignored ops
+    // may have been erased and should not be accessed. The pointer can be
+    // printed safely.
+    if (!isIgnored)
+      logger.getOStream() << "'" << op->getName() << "' ";
+    logger.getOStream() << "(" << op << ") {\n";
     logger.indent();
 
     // If the operation has no regions, just print it here.
-    if (op->getNumRegions() == 0) {
+    if (!isIgnored && op->getNumRegions() == 0) {
       op->print(logger.startLine(), OpPrintingFlags().printGenericOpForm());
       logger.getOStream() << "\n\n";
     }
   });
+
+  if (isIgnored) {
+    LLVM_DEBUG({
+      logSuccess(logger, "operation marked 'ignored' during conversion");
+      logger.startLine() << logLineComment;
+    });
+    return success();
+  }
 
   // Check if this operation is legal on the target.
   if (auto legalityInfo = target.isLegal(op)) {
@@ -2111,15 +2126,6 @@ OperationLegalizer::legalize(Operation *op,
       });
     }
 
-    return success();
-  }
-
-  // Check to see if the operation is ignored and doesn't need to be converted.
-  if (rewriter.getImpl().isOpIgnored(op)) {
-    LLVM_DEBUG({
-      logSuccess(logger, "operation marked 'ignored' during conversion");
-      logger.startLine() << logLineComment;
-    });
     return success();
   }
 
@@ -2170,6 +2176,7 @@ OperationLegalizer::legalizeWithFold(Operation *op,
   (void)rewriterImpl;
 
   // Try to fold the operation.
+  StringRef opName = op->getName().getStringRef();
   SmallVector<Value, 2> replacementValues;
   SmallVector<Operation *, 2> newOps;
   rewriter.setInsertionPoint(op);
@@ -2189,6 +2196,12 @@ OperationLegalizer::legalizeWithFold(Operation *op,
       LLVM_DEBUG(logFailure(rewriterImpl.logger,
                             "failed to legalize generated constant '{0}'",
                             newOp->getName()));
+      if (!config.allowPatternRollback) {
+        // Rolling back a folder is like rolling back a pattern.
+        llvm::report_fatal_error(
+            "op '" + opName +
+            "' folder rollback of IR modifications requested");
+      }
       // Legalization failed: erase all materialized constants.
       for (Operation *op : newOps)
         rewriter.eraseOp(op);
@@ -2253,9 +2266,8 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     appliedPatterns.erase(&pattern);
     if (failed(result)) {
       if (!rewriterImpl.config.allowPatternRollback)
-        op->emitError("pattern '")
-            << pattern.getDebugName()
-            << "' produced IR that could not be legalized";
+        llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
+                                 "' produced IR that could not be legalized");
       rewriterImpl.resetState(curState, pattern.getDebugName());
     }
     if (config.listener)
@@ -2713,8 +2725,7 @@ legalizeUnresolvedMaterialization(RewriterBase &rewriter,
 }
 
 LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
-  if (ops.empty())
-    return success();
+  assert(!ops.empty() && "expected at least one operation");
   const ConversionTarget &target = opLegalizer.getTarget();
 
   // Compute the set of operations and blocks to convert.
@@ -3417,6 +3428,38 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
 // Op Conversion Entry Points
 //===----------------------------------------------------------------------===//
 
+/// This is the type of Action that is dispatched when a conversion is applied.
+class ApplyConversionAction
+    : public tracing::ActionImpl<ApplyConversionAction> {
+public:
+  using Base = tracing::ActionImpl<ApplyConversionAction>;
+  ApplyConversionAction(ArrayRef<IRUnit> irUnits) : Base(irUnits) {}
+  static constexpr StringLiteral tag = "apply-conversion";
+  static constexpr StringLiteral desc =
+      "Encapsulate the application of a dialect conversion";
+
+  void print(raw_ostream &os) const override { os << tag; }
+};
+
+static LogicalResult applyConversion(ArrayRef<Operation *> ops,
+                                     const ConversionTarget &target,
+                                     const FrozenRewritePatternSet &patterns,
+                                     ConversionConfig config,
+                                     OpConversionMode mode) {
+  if (ops.empty())
+    return success();
+  MLIRContext *ctx = ops.front()->getContext();
+  LogicalResult status = success();
+  SmallVector<IRUnit> irUnits(ops.begin(), ops.end());
+  ctx->executeAction<ApplyConversionAction>(
+      [&] {
+        OperationConverter opConverter(target, patterns, config, mode);
+        status = opConverter.convertOperations(ops);
+      },
+      irUnits);
+  return status;
+}
+
 //===----------------------------------------------------------------------===//
 // Partial Conversion
 //===----------------------------------------------------------------------===//
@@ -3424,9 +3467,8 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
 LogicalResult mlir::applyPartialConversion(
     ArrayRef<Operation *> ops, const ConversionTarget &target,
     const FrozenRewritePatternSet &patterns, ConversionConfig config) {
-  OperationConverter opConverter(target, patterns, config,
-                                 OpConversionMode::Partial);
-  return opConverter.convertOperations(ops);
+  return applyConversion(ops, target, patterns, config,
+                         OpConversionMode::Partial);
 }
 LogicalResult
 mlir::applyPartialConversion(Operation *op, const ConversionTarget &target,
@@ -3443,9 +3485,7 @@ LogicalResult mlir::applyFullConversion(ArrayRef<Operation *> ops,
                                         const ConversionTarget &target,
                                         const FrozenRewritePatternSet &patterns,
                                         ConversionConfig config) {
-  OperationConverter opConverter(target, patterns, config,
-                                 OpConversionMode::Full);
-  return opConverter.convertOperations(ops);
+  return applyConversion(ops, target, patterns, config, OpConversionMode::Full);
 }
 LogicalResult mlir::applyFullConversion(Operation *op,
                                         const ConversionTarget &target,
@@ -3512,9 +3552,8 @@ LogicalResult mlir::applyAnalysisConversion(
   // Convert the cloned operations. The original IR will remain unchanged.
   SmallVector<Operation *> opsToConvert = llvm::map_to_vector(
       ops, [&](Operation *op) { return mapping.lookup(op); });
-  OperationConverter opConverter(target, patterns, config,
-                                 OpConversionMode::Analysis);
-  LogicalResult status = opConverter.convertOperations(opsToConvert);
+  LogicalResult status = applyConversion(opsToConvert, target, patterns, config,
+                                         OpConversionMode::Analysis);
 
   // Remap `legalizableOps`, so that they point to the original ops and not the
   // cloned ops.

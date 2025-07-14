@@ -20,10 +20,36 @@ type :: grid_group
   integer(4) :: rank
 end type grid_group
 
+type :: coalesced_group
+  type(c_devptr), private :: handle
+  integer(4) :: size
+  integer(4) :: rank
+end type coalesced_group
+
+type :: thread_group
+  type(c_devptr), private :: handle
+  integer(4) :: size
+  integer(4) :: rank
+end type thread_group
+
 interface
   attributes(device) function this_grid()
     import
     type(grid_group) :: this_grid
+  end function
+end interface
+
+interface
+  attributes(device) function this_thread_block()
+    import
+    type(thread_group) :: this_thread_block
+  end function
+end interface
+
+interface this_warp
+  attributes(device) function this_warp()
+    import
+    type(coalesced_group) :: this_warp
   end function
 end interface
 

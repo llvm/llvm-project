@@ -1618,10 +1618,20 @@ def EmitC_ClassOp
         return
       }
     }
+    // Class with a final speciferAdd commentMore actions
+    emitc.class final @modelClass {
+      emitc.field @fieldName0 : !emitc.array<1xf32> = {emitc.opaque = "input_tensor"}
+      emitc.func @execute() {
+        %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+        %1 = get_field @fieldName0 : !emitc.array<1xf32>
+        %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+        return
+      }
+    }
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name);
+  let arguments = (ins SymbolNameAttr:$sym_name, UnitAttr:$final_specifier);
 
   let regions = (region AnyRegion:$body);
 
@@ -1632,7 +1642,8 @@ def EmitC_ClassOp
 
   let hasCustomAssemblyFormat = 1;
 
-  let assemblyFormat = [{ $sym_name attr-dict-with-keyword $body }];
+  let assemblyFormat =
+      [{ (`final` $final_specifier^)? $sym_name attr-dict-with-keyword $body }];
 }
 
 def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {

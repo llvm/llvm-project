@@ -25,6 +25,7 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -805,17 +806,21 @@ static void addSanitizers(const Triple &TargetTriple,
   // SanitizeSkipHotCutoffs: doubles with range [0, 1]
   // Opts.cutoffs: unsigned ints with range [0, 1000000]
   auto ScaledCutoffs = CodeGenOpts.SanitizeSkipHotCutoffs.getAllScaled(1000000);
-
+  uint64_t AllowRuntimeCheckSkipHotCutoff =
+      CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.value_or(0.0) * 1000000;
   // TODO: remove IsRequested()
-  if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value()) {
+  if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value() ||
+      CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.has_value()) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
     PB.registerOptimizerEarlyEPCallback(
-        [ScaledCutoffs](ModulePassManager &MPM, OptimizationLevel Level,
-                        ThinOrFullLTOPhase Phase) {
+        [ScaledCutoffs, AllowRuntimeCheckSkipHotCutoff](
+            ModulePassManager &MPM, OptimizationLevel Level,
+            ThinOrFullLTOPhase Phase) {
           LowerAllowCheckPass::Options Opts;
           // TODO: after removing IsRequested(), make this unconditional
           if (ScaledCutoffs.has_value())
             Opts.cutoffs = ScaledCutoffs.value();
+          Opts.runtime_check = AllowRuntimeCheckSkipHotCutoff;
           MPM.addPass(
               createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
         });
@@ -957,7 +962,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
           CodeGenOpts.DIBugsReportFilePath);
     Debugify.registerCallbacks(PIC, MAM);
 
-#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
     // If we're using debug location coverage tracking, mark all the
     // instructions coming out of the frontend without a DebugLoc as being
     // compiler-generated, to prevent both those instructions and new

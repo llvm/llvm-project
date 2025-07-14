@@ -160,7 +160,7 @@ ConstantAggregateBuilderBase::getAddrOfPosition(llvm::Type *type,
                                         nullptr, "");
   Builder.SelfReferences.emplace_back(dummy);
   auto &entry = Builder.SelfReferences.back();
-  (void)getGEPIndicesTo(entry.Indices, position + Begin);
+  getGEPIndicesTo(entry.Indices, position + Begin);
   return dummy;
 }
 

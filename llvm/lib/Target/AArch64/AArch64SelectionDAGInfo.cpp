@@ -12,7 +12,6 @@
 
 #include "AArch64SelectionDAGInfo.h"
 #include "AArch64MachineFunctionInfo.h"
-#include "AArch64TargetMachine.h"
 
 #define GET_SDNODE_DESC
 #include "AArch64GenSDNodeInfo.inc"

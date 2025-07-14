@@ -21,7 +21,6 @@
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCLabel.h"
 #include "llvm/MC/MCSectionCOFF.h"
@@ -75,6 +74,8 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
   SaveTempLabels = TargetOptions && TargetOptions->MCSaveTempLabels;
+  if (SaveTempLabels)
+    setUseNamesOnTempLabels(true);
   SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
 
   if (SrcMgr && SrcMgr->getNumBuffers())

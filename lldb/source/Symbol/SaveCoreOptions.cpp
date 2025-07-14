@@ -23,7 +23,7 @@ Status SaveCoreOptions::SetPluginName(const char *name) {
 
   std::vector<llvm::StringRef> plugin_names =
       PluginManager::GetSaveCorePluginNames();
-  if (llvm::find(plugin_names, name) == plugin_names.end()) {
+  if (!llvm::is_contained(plugin_names, name)) {
     StreamString stream;
     stream.Printf("plugin name '%s' is not a valid ObjectFile plugin name.",
                   name);

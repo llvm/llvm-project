@@ -731,7 +731,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
 ; GFX9-NEXT:  .LBB3_3: ; %exit
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v5 op_sel_hi:[0,0]
 ; GFX9-NEXT:    s_movk_i32 s4, 0x8000
 ; GFX9-NEXT:    v_or_b32_e32 v1, 0xffff8000, v0
@@ -973,7 +972,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
 ; GFX9-NEXT:  .LBB4_3: ; %exit
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v7 op_sel_hi:[0,1]
 ; GFX9-NEXT:    s_movk_i32 s4, 0x8000
 ; GFX9-NEXT:    v_or_b32_e32 v1, 0xffff8000, v0
@@ -1217,7 +1215,6 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX9-NEXT:  .LBB5_3: ; %exit
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3900
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3d00
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cmp_ge_f16_e32 vcc, 0.5, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 0x3800
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
@@ -1595,7 +1592,6 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX9-NEXT:    s_movk_i32 s34, 0x3800
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3900
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3d00
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cmp_gt_u16_e32 vcc, s35, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, v0, v1, vcc
 ; GFX9-NEXT:    v_cmp_gt_u16_sdwa vcc, v7, s34 src0_sel:WORD_1 src1_sel:DWORD
@@ -1933,7 +1929,6 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3800
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3900
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0x3d00
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cmp_ge_f16_e32 vcc, 0.5, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, v1, v2, vcc
 ; GFX9-NEXT:    v_cmp_nle_f16_sdwa vcc, v7, v0 src0_sel:WORD_1 src1_sel:DWORD

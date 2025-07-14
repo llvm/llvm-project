@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_maxmag.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/maxmag.h>
 
 #define FUNCTION maxmag
 #define __CLC_BODY <clc/shared/binary_def.inc>

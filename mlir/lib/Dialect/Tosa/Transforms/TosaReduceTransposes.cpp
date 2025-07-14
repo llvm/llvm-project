@@ -72,9 +72,7 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/Iterators.h"
-#include "mlir/IR/Matchers.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include <memory>
 #include <set>
 #include <stack>
 
@@ -602,8 +600,7 @@ void TosaReduceTransposes::runOnOperation() {
         !llvm::isa<RankedTensorType>(output.getType()))
       return;
 
-    llvm::for_each(transposeOp.getPerms(),
-                   [&perms](const auto i) { perms.emplace_back(i); });
+    llvm::append_range(perms, transposeOp.getPerms());
 
     // We let --canonicalize deal with identity transpose.
     if (llvm::equal(llvm::seq<int32_t>(0, perms.size()), perms))
