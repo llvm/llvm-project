@@ -1245,10 +1245,8 @@ public:
     return getGeneration() >= GFX10 || hasGFX940Insts();
   }
 
-#if LLPC_BUILD_NPI
   bool hasFmaakFmamkF64Insts() const { return hasGFX1250Insts(); }
 
-#endif /* LLPC_BUILD_NPI */
   bool hasImageInsts() const {
     return HasImageInsts;
   }
@@ -1306,7 +1304,7 @@ public:
 #if LLPC_BUILD_NPI
   bool hasMovB64() const { return GFX940Insts || (GFX1250Insts && !GFX13Insts); }
 #else /* LLPC_BUILD_NPI */
-  bool hasMovB64() const { return GFX940Insts; }
+  bool hasMovB64() const { return GFX940Insts || GFX1250Insts; }
 #endif /* LLPC_BUILD_NPI */
 
   bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }

@@ -111,16 +111,10 @@ private:
                                const MCSubtargetInfo &STI) const;
 
   /// Encode an fp or int literal.
-#if LLPC_BUILD_NPI
   std::optional<uint64_t>
   getLitEncoding(const MCOperand &MO, const MCOperandInfo &OpInfo,
                  const MCSubtargetInfo &STI,
                  bool HasMandatoryLiteral = false) const;
-#else /* LLPC_BUILD_NPI */
-  std::optional<uint32_t> getLitEncoding(const MCOperand &MO,
-                                         const MCOperandInfo &OpInfo,
-                                         const MCSubtargetInfo &STI) const;
-#endif /* LLPC_BUILD_NPI */
 
   void getBinaryCodeForInstr(const MCInst &MI, SmallVectorImpl<MCFixup> &Fixups,
                              APInt &Inst, APInt &Scratch,
@@ -296,19 +290,9 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
              : 255;
 }
 
-#if LLPC_BUILD_NPI
-std::optional<uint64_t>
-#else /* LLPC_BUILD_NPI */
-std::optional<uint32_t>
-#endif /* LLPC_BUILD_NPI */
-AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
-                                    const MCOperandInfo &OpInfo,
-#if LLPC_BUILD_NPI
-                                    const MCSubtargetInfo &STI,
-                                    bool HasMandatoryLiteral) const {
-#else /* LLPC_BUILD_NPI */
-                                    const MCSubtargetInfo &STI) const {
-#endif /* LLPC_BUILD_NPI */
+std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
+    const MCOperand &MO, const MCOperandInfo &OpInfo,
+    const MCSubtargetInfo &STI, bool HasMandatoryLiteral) const {
   int64_t Imm;
   if (MO.isExpr()) {
     if (!MO.getExpr()->evaluateAsAbsolute(Imm))
@@ -343,19 +327,13 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  case AMDGPU::OPERAND_REG_IMM_FP64:
-#endif /* LLPC_BUILD_NPI */
     return getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
 
-#if LLPC_BUILD_NPI
   case AMDGPU::OPERAND_REG_IMM_FP64: {
     auto Enc = getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
     return (HasMandatoryLiteral && Enc == 255) ? 254 : Enc;
   }
 
-#endif /* LLPC_BUILD_NPI */
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     return getLit16IntEncoding(static_cast<uint32_t>(Imm), STI);
@@ -394,9 +372,7 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 #endif /* LLPC_BUILD_NPI */
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
-#if LLPC_BUILD_NPI
   case AMDGPU::OPERAND_KIMM64:
-#endif /* LLPC_BUILD_NPI */
     return MO.getImm();
 #if LLPC_BUILD_NPI
 
@@ -805,14 +781,10 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   if (AMDGPU::isSISrcOperand(Desc, OpNo)) {
-#if LLPC_BUILD_NPI
     bool HasMandatoryLiteral =
         AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::imm);
     if (auto Enc = getLitEncoding(MO, Desc.operands()[OpNo], STI,
                                   HasMandatoryLiteral)) {
-#else /* LLPC_BUILD_NPI */
-    if (auto Enc = getLitEncoding(MO, Desc.operands()[OpNo], STI)) {
-#endif /* LLPC_BUILD_NPI */
       Op = *Enc;
       return;
     }

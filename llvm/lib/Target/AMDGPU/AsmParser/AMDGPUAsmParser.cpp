@@ -1091,12 +1091,8 @@ public:
     return isLiteralImm(MVT::f16);
   }
 
-#if LLPC_BUILD_NPI
-  bool isKImmFP64() const {
-    return isLiteralImm(MVT::f64);
-  }
+  bool isKImmFP64() const { return isLiteralImm(MVT::f64); }
 
-#endif /* LLPC_BUILD_NPI */
   bool isMem() const override {
     return false;
   }
@@ -2263,9 +2259,7 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-#if LLPC_BUILD_NPI
   case AMDGPU::OPERAND_KIMM64:
-#endif /* LLPC_BUILD_NPI */
     return &APFloat::IEEEdouble();
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
@@ -2609,13 +2603,11 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       // in predicate methods (isLiteralImm())
       llvm_unreachable("fp literal in 64-bit integer instruction.");
 
-#if LLPC_BUILD_NPI
     case AMDGPU::OPERAND_KIMM64:
       Inst.addOperand(MCOperand::createImm(Val));
       setImmKindMandatoryLiteral();
       return;
 
-#endif /* LLPC_BUILD_NPI */
     case AMDGPU::OPERAND_REG_IMM_BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
@@ -2830,7 +2822,6 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     Inst.addOperand(MCOperand::createImm(Literal.getLoBits(16).getZExtValue()));
     setImmKindMandatoryLiteral();
     return;
-#if LLPC_BUILD_NPI
   case AMDGPU::OPERAND_KIMM64:
     if ((isInt<32>(Val) || isUInt<32>(Val)) && !getModifiers().Lit64)
       Val <<= 32;
@@ -2838,7 +2829,6 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     Inst.addOperand(MCOperand::createImm(Val));
     setImmKindMandatoryLiteral();
     return;
-#endif /* LLPC_BUILD_NPI */
   default:
     llvm_unreachable("invalid operand size");
   }
@@ -5339,7 +5329,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
 #if LLPC_BUILD_NPI
   // Packed math FP32 instructions typically accept SGPRs or VGPRs as source
   // operands. On gfx12+, if a source operand uses SGPRs, the HW can only read
-  // one SGPR and use it for both the low and high operations.
+  // the first SGPR and use it for both the low and high operations.
   if (isPackedFP32Inst(Opc) && isGFX12Plus()) {
     int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
     int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
@@ -5355,7 +5345,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
 
     auto VerifyOneSGPR = [OpSel, OpSelHi](unsigned Index) -> bool {
       unsigned Mask = 1U << Index;
-      return (OpSel & Mask) == (OpSelHi & Mask);
+      return ((OpSel & Mask) == 0) && ((OpSelHi & Mask) == 0);
     };
 
     if (Src0.isReg() && isSGPR(Src0.getReg(), TRI) &&
@@ -5527,11 +5517,7 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
 
   unsigned NumExprs = 0;
   unsigned NumLiterals = 0;
-#if LLPC_BUILD_NPI
   uint64_t LiteralValue;
-#else /* LLPC_BUILD_NPI */
-  uint32_t LiteralValue;
-#endif /* LLPC_BUILD_NPI */
 
   for (int OpIdx : OpIndices) {
     if (OpIdx == -1)
@@ -5545,33 +5531,21 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
 
     if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
       uint64_t Value = static_cast<uint64_t>(MO.getImm());
-#if LLPC_BUILD_NPI
       bool IsForcedFP64 =
           Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_KIMM64 ||
           (Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_REG_IMM_FP64 &&
            HasMandatoryLiteral);
       bool IsFP64 = (IsForcedFP64 || AMDGPU::isSISrcFPOperand(Desc, OpIdx)) &&
-#else /* LLPC_BUILD_NPI */
-      bool IsFP64 = AMDGPU::isSISrcFPOperand(Desc, OpIdx) &&
-#endif /* LLPC_BUILD_NPI */
                     AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
       bool IsValid32Op = AMDGPU::isValid32BitLiteral(Value, IsFP64);
 
-#if LLPC_BUILD_NPI
       if (!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value) &&
           !IsForcedFP64 && (!has64BitLiterals() || Desc.getSize() != 4)) {
-#else /* LLPC_BUILD_NPI */
-      if (!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value)) {
-#endif /* LLPC_BUILD_NPI */
         Error(getLitLoc(Operands), "invalid operand for instruction");
         return false;
       }
 
-#if LLPC_BUILD_NPI
       if (IsFP64 && IsValid32Op && !IsForcedFP64)
-#else /* LLPC_BUILD_NPI */
-      if (IsFP64 && IsValid32Op)
-#endif /* LLPC_BUILD_NPI */
         Value = Hi_32(Value);
 
       if (NumLiterals == 0 || LiteralValue != Value) {

@@ -36,7 +36,6 @@ class VOP2_MADKe <bits<6> op, VOPProfile P> : Enc64 {
   let Inst{63-32} = imm;
 }
 
-#ifdef LLPC_BUILD_NPI
 class VOP2_MADK64e <bits<6> op, VOPProfile P> : Enc96 {
   bits<8>  vdst;
   bits<9>  src0;
@@ -51,7 +50,6 @@ class VOP2_MADK64e <bits<6> op, VOPProfile P> : Enc96 {
   let Inst{95-32} = imm;
 }
 
-#endif /* LLPC_BUILD_NPI */
 class VOP2_SDWAe <bits<6> op, VOPProfile P> : VOP_SDWAe <P> {
   bits<8> vdst;
   bits<8> src1;
@@ -424,22 +422,14 @@ class VOP_MADK_Base<ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
 }
 
 class VOP_MADAK <ValueType vt> : VOP_MADK_Base<vt> {
-#ifdef LLPC_BUILD_NPI
   field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32,
                             !if(!eq(vt.Size, 64), KImmFP64,
                                                   KImmFP16));
-#else /* LLPC_BUILD_NPI */
-  field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32, KImmFP16);
-#endif /* LLPC_BUILD_NPI */
   field dag Ins32 = !if(!eq(vt.Size, 32),
                         (ins VSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm),
-#ifdef LLPC_BUILD_NPI
                         !if(!eq(vt.Size, 64),
                             (ins VSrc_f64:$src0, VReg_64:$src1, ImmOpType:$imm),
                             (ins VSrc_f16:$src0, VGPR_32:$src1, ImmOpType:$imm)));
-#else /* LLPC_BUILD_NPI */
-                        (ins VSrc_f16:$src0, VGPR_32:$src1, ImmOpType:$imm));
-#endif /* LLPC_BUILD_NPI */
   field dag InsVOPDX = (ins VSrc_f32:$src0X, VGPR_32:$vsrc1X, ImmOpType:$imm);
   let InsVOPDX_immX = (ins VSrc_f32:$src0X, VGPR_32:$vsrc1X, ImmOpType:$immX);
   field dag InsVOPDY = (ins VSrc_f32:$src0Y, VGPR_32:$vsrc1Y, ImmOpType:$imm);
@@ -465,27 +455,17 @@ def VOP_MADAK_F16_fake16 : VOP_MADAK <f16> {
   let Ins32 = (ins VSrcFake16_f16_Lo128:$src0, VGPRSrc_32_Lo128:$src1, ImmOpType:$imm);
 }
 def VOP_MADAK_F32 : VOP_MADAK <f32>;
-#ifdef LLPC_BUILD_NPI
 def VOP_MADAK_F64 : VOP_MADAK <f64>;
-#endif /* LLPC_BUILD_NPI */
 
 class VOP_MADMK <ValueType vt> : VOP_MADK_Base<vt> {
-#ifdef LLPC_BUILD_NPI
   field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32,
                             !if(!eq(vt.Size, 64), KImmFP64,
                                                   KImmFP16));
-#else /* LLPC_BUILD_NPI */
-  field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32, KImmFP16);
-#endif /* LLPC_BUILD_NPI */
   field dag Ins32 = !if(!eq(vt.Size, 32),
                         (ins VSrc_f32:$src0, ImmOpType:$imm, VGPR_32:$src1),
-#ifdef LLPC_BUILD_NPI
                         !if(!eq(vt.Size, 64),
                             (ins VSrc_f64:$src0, ImmOpType:$imm, VReg_64:$src1),
                             (ins VSrc_f16:$src0, ImmOpType:$imm, VGPR_32:$src1)));
-#else /* LLPC_BUILD_NPI */
-                        (ins VSrc_f16:$src0, ImmOpType:$imm, VGPR_32:$src1));
-#endif /* LLPC_BUILD_NPI */
   field dag InsVOPDX = (ins VSrc_f32:$src0X, ImmOpType:$imm, VGPR_32:$vsrc1X);
   let InsVOPDX_immX = (ins VSrc_f32:$src0X, ImmOpType:$immX, VGPR_32:$vsrc1X);
   field dag InsVOPDY = (ins VSrc_f32:$src0Y, ImmOpType:$imm, VGPR_32:$vsrc1Y);
@@ -511,9 +491,7 @@ def VOP_MADMK_F16_fake16 : VOP_MADMK <f16> {
   let Ins32 = (ins VSrcFake16_f16_Lo128:$src0, ImmOpType:$imm, VGPRSrc_32_Lo128:$src1);
 }
 def VOP_MADMK_F32 : VOP_MADMK <f32>;
-#ifdef LLPC_BUILD_NPI
 def VOP_MADMK_F64 : VOP_MADMK <f64>;
-#endif /* LLPC_BUILD_NPI */
 
 // Returns the vreg register class to use for sources of VOP3 instructions for the
 // given VT.
@@ -1412,7 +1390,6 @@ let isCommutable = 1 in
 def V_FMAAK_F32 : VOP2_Pseudo<"v_fmaak_f32", VOP_MADAK_F32, [], "">, VOPD_Component<0x1, "v_fmaak_f32">;
 } // End SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1, CanBeVOPD3X = 0, FixedSize = 1
 
-#ifdef LLPC_BUILD_NPI
 let SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1,
     FixedSize = 1, Size = 12, SchedRW = [Write64Bit] in {
 def V_FMAMK_F64 : VOP2_Pseudo<"v_fmamk_f64", VOP_MADMK_F64, [], "">;
@@ -1421,7 +1398,6 @@ let isCommutable = 1 in
 def V_FMAAK_F64 : VOP2_Pseudo<"v_fmaak_f64", VOP_MADAK_F64, [], "">;
 } // End SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1, FixedSize = 1, Size = 12, SchedRW = [Write64Bit]
 
-#endif /* LLPC_BUILD_NPI */
 let SubtargetPredicate = HasPkFmacF16Inst in {
 defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
 } // End SubtargetPredicate = HasPkFmacF16Inst
@@ -1654,7 +1630,6 @@ multiclass VOP2Only_Real_MADK<GFXGen Gen, bits<6> op> {
     VOP2_MADKe<op{5-0}, !cast<VOP2_Pseudo>(NAME).Pfl>;
 }
 
-#ifdef LLPC_BUILD_NPI
 multiclass VOP2Only_Real_MADK64<GFXGen Gen, bits<6> op> {
   def Gen.Suffix :
     VOP2_Real_Gen<!cast<VOP2_Pseudo>(NAME), Gen>,
@@ -1663,6 +1638,7 @@ multiclass VOP2Only_Real_MADK64<GFXGen Gen, bits<6> op> {
   }
 }
 
+#ifdef LLPC_BUILD_NPI
 multiclass VOP2Only_Real_MADK64_gfx1250_gfx13<bits<6> gfx1250Op, bits<6> op> :
   VOP2Only_Real_MADK64<GFX1250Gen, gfx1250Op>,
   VOP2Only_Real_MADK64<GFX13Gen, op>;
@@ -2105,15 +2081,20 @@ let SubtargetPredicate = Gen.AssemblerPredicate in {
 
 let SubtargetPredicate = HasFmacF64Inst in
 defm V_FMAC_F64 : VOP2_Real_FULL_gfx12_gfx13<0x17, 0x1f>;
+#else /* LLPC_BUILD_NPI */
+    V_SUBBREV_U32_e32, V_SUBREV_CO_CI_U32_e32_gfx12, "v_subrev_co_ci_u32">;
+} // End SubtargetPredicate = isGFX12Plus
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
 defm V_FMAMK_F64 : VOP2Only_Real_MADK64_gfx1250_gfx13<0x23, 0x20>;
 defm V_FMAAK_F64 : VOP2Only_Real_MADK64_gfx1250_gfx13<0x24, 0x21>;
 defm V_ADD_U64 : VOP2_Real_FULL_gfx1250_gfx13<0x28, 0x23>;
 defm V_SUB_U64 : VOP2_Real_FULL_gfx1250_gfx13<0x29, 0x24>;
 defm V_MUL_U64 : VOP2_Real_NO_DPP<GFX1250Gen, 0x2a>;
 #else /* LLPC_BUILD_NPI */
-    V_SUBBREV_U32_e32, V_SUBREV_CO_CI_U32_e32_gfx12, "v_subrev_co_ci_u32">;
-} // End SubtargetPredicate = isGFX12Plus
+defm V_FMAMK_F64 : VOP2Only_Real_MADK64<GFX1250Gen, 0x23>;
+defm V_FMAAK_F64 : VOP2Only_Real_MADK64<GFX1250Gen, 0x24>;
 #endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//

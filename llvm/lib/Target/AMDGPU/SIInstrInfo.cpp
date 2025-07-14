@@ -2400,11 +2400,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     if (ST.hasMovB64()) {
       MI.setDesc(get(AMDGPU::V_MOV_B64_e32));
       if (SrcOp.isReg() || isInlineConstant(MI, 1) ||
-#if LLPC_BUILD_NPI
           isUInt<32>(SrcOp.getImm()) || ST.has64BitLiterals())
-#else /* LLPC_BUILD_NPI */
-          isUInt<32>(SrcOp.getImm()))
-#endif /* LLPC_BUILD_NPI */
         break;
     }
     if (SrcOp.isImm()) {
@@ -4806,9 +4802,7 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   }
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
-#if LLPC_BUILD_NPI
   case AMDGPU::OPERAND_KIMM64:
-#endif /* LLPC_BUILD_NPI */
     return false;
   case AMDGPU::OPERAND_INPUT_MODS:
   case MCOI::OPERAND_IMMEDIATE:
@@ -5260,9 +5254,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       break;
     case MCOI::OPERAND_IMMEDIATE:
     case AMDGPU::OPERAND_KIMM32:
-#if LLPC_BUILD_NPI
     case AMDGPU::OPERAND_KIMM64:
-#endif /* LLPC_BUILD_NPI */
       // Check if this operand is an immediate.
       // FrameIndex operands will be replaced by immediates, so they are
       // allowed.
@@ -6518,7 +6510,7 @@ bool SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand(
   bool OpSel = Mods & SISrcMods::OP_SEL_0;
   bool OpSelHi = Mods & SISrcMods::OP_SEL_1;
 
-  return OpSel == OpSelHi;
+  return !OpSel && !OpSelHi;
 }
 
 #endif /* LLPC_BUILD_NPI */

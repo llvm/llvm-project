@@ -432,15 +432,13 @@ static DecodeStatus decodeOperand_KImmFP(MCInst &Inst, unsigned Imm,
   return addOperand(Inst, DAsm->decodeMandatoryLiteralConstant(Imm));
 }
 
-#if LLPC_BUILD_NPI
 static DecodeStatus decodeOperand_KImmFP64(MCInst &Inst, uint64_t Imm,
-                                         uint64_t Addr,
-                                         const MCDisassembler *Decoder) {
+                                           uint64_t Addr,
+                                           const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(Inst, DAsm->decodeMandatoryLiteral64Constant(Imm));
 }
 
-#endif /* LLPC_BUILD_NPI */
 static DecodeStatus decodeOperandVOPDDstY(MCInst &Inst, unsigned Val,
                                           uint64_t Addr, const void *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
@@ -748,20 +746,24 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX1396, MI, DecW, Address, CS))
         break;
 
+#endif /* LLPC_BUILD_NPI */
       if (STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
         // Return 8 bytes for a potential literal.
         Bytes = Bytes_.slice(4, MaxInstBytesNum - 4);
 
+#if LLPC_BUILD_NPI
         if (isGFX13() &&
             tryDecodeInst(DecoderTableGFX1396, MI, DecW, Address, CS))
           break;
 
         if (isGFX1250Only() &&
+#else /* LLPC_BUILD_NPI */
+        if (isGFX1250() &&
+#endif /* LLPC_BUILD_NPI */
             tryDecodeInst(DecoderTableGFX125096, MI, DecW, Address, CS))
           break;
       }
 
-#endif /* LLPC_BUILD_NPI */
       // Reinitialize Bytes
       Bytes = Bytes_.slice(0, MaxInstBytesNum);
 
@@ -1779,7 +1781,6 @@ AMDGPUDisassembler::decodeMandatoryLiteralConstant(unsigned Val) const {
   return MCOperand::createImm(Literal);
 }
 
-#if LLPC_BUILD_NPI
 MCOperand
 AMDGPUDisassembler::decodeMandatoryLiteral64Constant(uint64_t Val) const {
   if (HasLiteral) {
@@ -1791,7 +1792,6 @@ AMDGPUDisassembler::decodeMandatoryLiteral64Constant(uint64_t Val) const {
   return MCOperand::createImm(Literal64);
 }
 
-#endif /* LLPC_BUILD_NPI */
 MCOperand AMDGPUDisassembler::decodeLiteralConstant(bool ExtendFP64) const {
   // For now all literal constants are supposed to be unsigned integer
   // ToDo: deal with signed/unsigned 64-bit integer constants
