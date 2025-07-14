@@ -728,6 +728,13 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
       return false;
     break;
   }
+  case ';': {
+    // Handle the global module fragment `module;`.
+    if (Id == "module" && !Export)
+      break;
+    skipLine(First, End);
+    return false;
+  }
   case '<':
   case '"':
     break;

@@ -1122,16 +1122,17 @@ ort \
     )";
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
-  EXPECT_STREQ("#include \"textual-header.h\"\nexport module m;"
+  EXPECT_STREQ("module;#include \"textual-header.h\"\nexport module m;"
                "exp\\\nort import:l[[rename]];"
                "import<<=3;import a b d e d e f e;"
                "import foo[[no_unique_address]];import foo();"
                "import f(:sefse);import f(->a=3);"
                "<TokBeforeEOF>\n",
                Out.data());
-  ASSERT_EQ(Directives.size(), 11u);
-  EXPECT_EQ(Directives[0].Kind, pp_include);
-  EXPECT_EQ(Directives[1].Kind, cxx_export_module_decl);
+  ASSERT_EQ(Directives.size(), 12u);
+  EXPECT_EQ(Directives[0].Kind, cxx_module_decl);
+  EXPECT_EQ(Directives[1].Kind, pp_include);
+  EXPECT_EQ(Directives[2].Kind, cxx_export_module_decl);
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, ObjCMethodArgs) {
