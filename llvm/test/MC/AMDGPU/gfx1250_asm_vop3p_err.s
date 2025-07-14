@@ -13,6 +13,9 @@ v_pk_fma_f32 v[8:9], v[0:1], v[4:5], s[0:1]
 v_pk_fma_f32 v[8:9], s[0:1], v[0:1], v[4:5] op_sel:[1,0,0] op_sel_hi:[0,0,0]
 // GFX12-ERR: :[[@LINE-1]]:45: error: invalid op_sel operand
 
+v_pk_fma_f32 v[8:9], s[0:1], v[0:1], v[4:5] op_sel:[1,0,0] op_sel_hi:[1,0,0]
+// GFX12-ERR: :[[@LINE-1]]:45: error: invalid op_sel operand
+
 v_pk_fma_f32 v[8:9], v[0:1], s[0:1], v[4:5] op_sel:[0,1,0] op_sel_hi:[0,0,0]
 // GFX12-ERR: :[[@LINE-1]]:45: error: invalid op_sel operand
 
@@ -31,6 +34,9 @@ v_pk_mul_f32 v[8:9], s[0:1], v[0:1] op_sel:[1,0] op_sel_hi:[0,0]
 v_pk_mul_f32 v[8:9], v[0:1], s[0:1] op_sel:[0,1] op_sel_hi:[0,0]
 // GFX12-ERR: :[[@LINE-1]]:37: error: invalid op_sel operand
 
+v_pk_mul_f32 v[8:9], v[0:1], s[0:1] op_sel:[0,1] op_sel_hi:[0,1]
+// GFX12-ERR: :[[@LINE-1]]:37: error: invalid op_sel operand
+
 v_pk_add_f32 v[8:9], s[0:1], v[0:1]
 // GFX12-ERR: :[[@LINE-1]]:1: error: invalid op_sel operand
 
@@ -41,6 +47,9 @@ v_pk_add_f32 v[8:9], s[0:1], v[0:1] op_sel:[1,0] op_sel_hi:[0,0]
 // GFX12-ERR: :[[@LINE-1]]:37: error: invalid op_sel operand
 
 v_pk_add_f32 v[8:9], v[0:1], s[0:1] op_sel:[0,1] op_sel_hi:[0,0]
+// GFX12-ERR: :[[@LINE-1]]:37: error: invalid op_sel operand
+
+v_pk_add_f32 v[8:9], v[0:1], s[0:1] op_sel:[0,1] op_sel_hi:[0,1]
 // GFX12-ERR: :[[@LINE-1]]:37: error: invalid op_sel operand
 
 v_pk_fma_f32 v[8:9], exec, v[0:1], v[4:5]
