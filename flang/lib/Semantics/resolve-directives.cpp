@@ -1796,10 +1796,13 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
 
   if (beginDir.v == llvm::omp::Directive::OMPD_do) {
-    if (const auto &doConstruct{
-            std::get<std::optional<parser::DoConstruct>>(x.t)}) {
-      if (doConstruct.value().IsDoWhile()) {
-        return true;
+    auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
+    if (optLoopCons.has_value()) {
+      if (const auto &doConstruct{
+              std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+        if (doConstruct->IsDoWhile()) {
+          return true;
+        }
       }
     }
   }
@@ -1962,48 +1965,69 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
   bool hasCollapseClause{
       clause ? (clause->Id() == llvm::omp::OMPC_collapse) : false};
 
-  const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  if (outer.has_value()) {
-    for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
-      if (loop->IsDoConcurrent()) {
-        // DO CONCURRENT is explicitly allowed for the LOOP construct so long as
-        // there isn't a COLLAPSE clause
-        if (isLoopConstruct) {
-          if (hasCollapseClause) {
-            // hasCollapseClause implies clause != nullptr
-            context_.Say(clause->source,
-                "DO CONCURRENT loops cannot be used with the COLLAPSE clause."_err_en_US);
+  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
+  if (optLoopCons.has_value()) {
+    if (const auto &outer{std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+      for (const parser::DoConstruct *loop{&*outer}; loop && level > 0;
+          --level) {
+        if (loop->IsDoConcurrent()) {
+          // DO CONCURRENT is explicitly allowed for the LOOP construct so long
+          // as there isn't a COLLAPSE clause
+          if (isLoopConstruct) {
+            if (hasCollapseClause) {
+              // hasCollapseClause implies clause != nullptr
+              context_.Say(clause->source,
+                  "DO CONCURRENT loops cannot be used with the COLLAPSE clause."_err_en_US);
+            }
+          } else {
+            auto &stmt =
+                std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t);
+            context_.Say(stmt.source,
+                "DO CONCURRENT loops cannot form part of a loop nest."_err_en_US);
           }
-        } else {
-          auto &stmt =
-              std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t);
-          context_.Say(stmt.source,
-              "DO CONCURRENT loops cannot form part of a loop nest."_err_en_US);
         }
-      }
-      // go through all the nested do-loops and resolve index variables
-      const parser::Name *iv{GetLoopIndex(*loop)};
-      if (iv) {
-        if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
-          SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
-          iv->symbol = symbol; // adjust the symbol within region
-          AddToContextObjectWithDSA(*symbol, ivDSA);
-        }
+        // go through all the nested do-loops and resolve index variables
+        const parser::Name *iv{GetLoopIndex(*loop)};
+        if (iv) {
+          if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
+            SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
+            iv->symbol = symbol; // adjust the symbol within region
+            AddToContextObjectWithDSA(*symbol, ivDSA);
+          }
 
-        const auto &block{std::get<parser::Block>(loop->t)};
-        const auto it{block.begin()};
-        loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+          const auto &block{std::get<parser::Block>(loop->t)};
+          const auto it{block.begin()};
+          loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+        }
       }
+      CheckAssocLoopLevel(level, GetAssociatedClause());
+    } else if (const auto &loop{std::get_if<
+                   common::Indirection<parser::OpenMPLoopConstruct>>(
+                   &*optLoopCons)}) {
+      auto &beginDirective =
+          std::get<parser::OmpBeginLoopDirective>(loop->value().t);
+      auto &beginLoopDirective =
+          std::get<parser::OmpLoopDirective>(beginDirective.t);
+      if (beginLoopDirective.v != llvm::omp::Directive::OMPD_unroll &&
+          beginLoopDirective.v != llvm::omp::Directive::OMPD_tile) {
+        context_.Say(GetContext().directiveSource,
+            "Only UNROLL or TILE constructs are allowed between an OpenMP Loop Construct and a DO construct"_err_en_US,
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                GetContext().directive, version)
+                    .str()));
+      } else {
+        PrivatizeAssociatedLoopIndexAndCheckLoopLevel(loop->value());
+      }
+    } else {
+      context_.Say(GetContext().directiveSource,
+          "A DO loop must follow the %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(
+              llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
+                  .str()));
     }
-    CheckAssocLoopLevel(level, GetAssociatedClause());
-  } else {
-    context_.Say(GetContext().directiveSource,
-        "A DO loop must follow the %s directive"_err_en_US,
-        parser::ToUpperCaseLetters(
-            llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
-                .str()));
   }
 }
+
 void OmpAttributeVisitor::CheckAssocLoopLevel(
     std::int64_t level, const parser::OmpClause *clause) {
   if (clause && level != 0) {

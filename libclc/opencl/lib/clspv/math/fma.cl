@@ -6,8 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/internal/math/clc_sw_fma.h>
 #include <clc/opencl/clc.h>
 
-_CLC_DEFINE_TERNARY_BUILTIN(float, fma, __clc_sw_fma, float, float, float)
+#define __FLOAT_ONLY
+#define FUNCTION fma
+#define __CLC_FUNCTION(x) __clc_sw_fma
+#define __CLC_BODY <clc/shared/ternary_def.inc>
+
+#include <clc/math/gentype.inc>

@@ -183,9 +183,9 @@ static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
     AttributeCommonInfo::AttrArgsInfo AttrArgsInfo =
         AttributeCommonInfo::getCXX11AttrArgsInfo(II);
     if (AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Required)
-      return PP.isNextPPTokenLParen();
+      return PP.isNextPPTokenOneOf(tok::l_paren);
 
-    return !PP.isNextPPTokenLParen() ||
+    return !PP.isNextPPTokenOneOf(tok::l_paren) ||
            AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Optional;
   }
   return false;
@@ -1241,9 +1241,6 @@ void Preprocessor::HandleDirective(Token &Result) {
   // work, we have to remember if we had read any tokens *before* this
   // pp-directive.
   bool ReadAnyTokensBeforeDirective =CurPPLexer->MIOpt.getHasReadAnyTokensVal();
-
-  if (!hasSeenMainFileFirstPPToken())
-    HandleMainFileFirstPPToken(Result);
 
   // Save the '#' token in case we need to return it later.
   Token SavedHash = Result;

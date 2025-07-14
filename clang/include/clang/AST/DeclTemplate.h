@@ -139,10 +139,8 @@ public:
   unsigned size() const { return NumParams; }
   bool empty() const { return NumParams == 0; }
 
-  ArrayRef<NamedDecl *> asArray() { return llvm::ArrayRef(begin(), end()); }
-  ArrayRef<const NamedDecl*> asArray() const {
-    return llvm::ArrayRef(begin(), size());
-  }
+  ArrayRef<NamedDecl *> asArray() { return {begin(), end()}; }
+  ArrayRef<const NamedDecl *> asArray() const { return {begin(), size()}; }
 
   NamedDecl* getParam(unsigned Idx) {
     assert(Idx < size() && "Template parameter index out-of-range");
@@ -772,7 +770,7 @@ protected:
 
   void loadLazySpecializationsImpl(bool OnlyPartial = false) const;
 
-  bool loadLazySpecializationsImpl(llvm::ArrayRef<TemplateArgument> Args,
+  bool loadLazySpecializationsImpl(ArrayRef<TemplateArgument> Args,
                                    TemplateParameterList *TPL = nullptr) const;
 
   template <class EntryType, typename... ProfileArguments>

@@ -28,7 +28,7 @@ class Metadata;
 namespace hlsl {
 namespace rootsig {
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RootFlags &Flags);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const dxbc::RootFlags &Flags);
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
                                  const RootConstants &Constants);
@@ -43,6 +43,8 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
                                  const StaticSampler &StaticSampler);
+
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element);
 
 LLVM_ABI void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
 
@@ -59,7 +61,7 @@ public:
 
 private:
   /// Define the various builders for the different metadata types
-  MDNode *BuildRootFlags(const RootFlags &Flags);
+  MDNode *BuildRootFlags(const dxbc::RootFlags &Flags);
   MDNode *BuildRootConstants(const RootConstants &Constants);
   MDNode *BuildRootDescriptor(const RootDescriptor &Descriptor);
   MDNode *BuildDescriptorTable(const DescriptorTable &Table);
@@ -81,7 +83,7 @@ struct RangeInfo {
   // Information retained for diagnostics
   llvm::dxil::ResourceClass Class;
   uint32_t Space;
-  ShaderVisibility Visibility;
+  dxbc::ShaderVisibility Visibility;
 };
 
 class ResourceRange {
@@ -97,13 +99,14 @@ public:
 
   // Returns a reference to the first RangeInfo that overlaps with
   // [Info.LowerBound;Info.UpperBound], or, std::nullopt if there is no overlap
-  std::optional<const RangeInfo *> getOverlapping(const RangeInfo &Info) const;
+  LLVM_ABI std::optional<const RangeInfo *>
+  getOverlapping(const RangeInfo &Info) const;
 
   // Return the mapped RangeInfo at X or nullptr if no mapping exists
-  const RangeInfo *lookup(uint32_t X) const;
+  LLVM_ABI const RangeInfo *lookup(uint32_t X) const;
 
   // Removes all entries of the ResourceRange
-  void clear();
+  LLVM_ABI void clear();
 
   // Insert the required (sub-)intervals such that the interval of [a;b] =
   // [Info.LowerBound, Info.UpperBound] is covered and points to a valid
@@ -131,7 +134,7 @@ public:
   // Returns a reference to the first RangeInfo that overlaps with
   // [Info.LowerBound;Info.UpperBound], or, std::nullopt if there is no overlap
   // (equivalent to getOverlapping)
-  std::optional<const RangeInfo *> insert(const RangeInfo &Info);
+  LLVM_ABI std::optional<const RangeInfo *> insert(const RangeInfo &Info);
 };
 
 } // namespace rootsig

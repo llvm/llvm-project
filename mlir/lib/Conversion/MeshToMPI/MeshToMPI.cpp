@@ -541,7 +541,7 @@ static mpi::MPI_ReductionOpEnumAttr getMPIReductionOp(ReductionKindAttr kind) {
   case ReductionKind::BitwiseXor:
     return getReductionOp(mpi::MPI_ReductionOpEnum::MPI_BXOR);
   default:
-    assert(false && "Unknown/unsupported reduction kind");
+    llvm_unreachable("Unknown/unsupported reduction kind");
   }
 }
 

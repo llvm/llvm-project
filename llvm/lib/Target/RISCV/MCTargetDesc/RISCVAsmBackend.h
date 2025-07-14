@@ -51,7 +51,7 @@ public:
                            uint64_t &Value) override;
 
   bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
-                uint64_t &FixedValue, bool IsResolved) override;
+                uint64_t &FixedValue, bool IsResolved);
 
   void maybeAddVendorReloc(const MCFragment &, const MCFixup &);
 

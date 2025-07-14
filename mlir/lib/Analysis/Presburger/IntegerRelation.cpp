@@ -25,16 +25,12 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
 #include <memory>
-#include <numeric>
 #include <optional>
-#include <sstream>
-#include <string>
 #include <utility>
 #include <vector>
 

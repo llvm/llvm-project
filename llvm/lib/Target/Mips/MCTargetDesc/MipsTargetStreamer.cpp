@@ -1034,43 +1034,43 @@ MCELFStreamer &MipsTargetELFStreamer::getStreamer() {
 
 void MipsTargetELFStreamer::emitGPRel32Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_GPREL32)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               MCFixupKind(Mips::fixup_Mips_GPREL32)));
   DF->appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitGPRel64Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_GPREL32)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               MCFixupKind(Mips::fixup_Mips_GPREL32)));
   DF->appendContents(8, 0);
 }
 
 void MipsTargetELFStreamer::emitDTPRel32Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_DTPREL32)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               MCFixupKind(Mips::fixup_Mips_DTPREL32)));
   DF->appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitDTPRel64Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_DTPREL64)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               MCFixupKind(Mips::fixup_Mips_DTPREL64)));
   DF->appendContents(8, 0);
 }
 
 void MipsTargetELFStreamer::emitTPRel32Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_TPREL32)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               MCFixupKind(Mips::fixup_Mips_TPREL32)));
   DF->appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitTPRel64Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_TPREL64)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               MCFixupKind(Mips::fixup_Mips_TPREL64)));
   DF->appendContents(8, 0);
 }
 

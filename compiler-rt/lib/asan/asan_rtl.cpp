@@ -390,6 +390,39 @@ void PrintAddressSpaceLayout() {
           kHighShadowBeg > kMidMemEnd);
 }
 
+// Apply most options specified either through the ASAN_OPTIONS
+// environment variable, or through the `__asan_default_options` user function.
+//
+// This function may be called multiple times, once per weak reference callback
+// on Windows, so it needs to be idempotent.
+//
+// Context:
+// For maximum compatibility on Windows, it is necessary for ASan options to be
+// configured/registered/applied inside this method (instead of in
+// ASanInitInternal, for example). That's because, on Windows, the user-provided
+// definition for `__asan_default_opts` may not be bound when `ASanInitInternal`
+// is invoked (it is bound later).
+//
+// To work around the late binding on windows, `ApplyOptions` will be called,
+// again, after binding to the user-provided `__asan_default_opts` function.
+// Therefore, any flags not configured here are not guaranteed to be
+// configurable through `__asan_default_opts` on Windows.
+//
+//
+// For more details on this issue, see:
+// https://github.com/llvm/llvm-project/issues/117925
+void ApplyFlags() {
+  SetCanPoisonMemory(flags()->poison_heap);
+  SetMallocContextSize(common_flags()->malloc_context_size);
+
+  __asan_option_detect_stack_use_after_return =
+      flags()->detect_stack_use_after_return;
+
+  AllocatorOptions allocator_options;
+  allocator_options.SetFrom(flags(), common_flags());
+  ApplyAllocatorOptions(allocator_options);
+}
+
 static bool AsanInitInternal() {
   if (LIKELY(AsanInited()))
     return true;
@@ -397,8 +430,9 @@ static bool AsanInitInternal() {
 
   CacheBinaryName();
 
-  // Initialize flags. This must be done early, because most of the
-  // initialization steps look at flags().
+  // Initialize flags. On Windows it also also register weak function callbacks.
+  // This must be done early, because most of the initialization steps look at
+  // flags().
   InitializeFlags();
 
   WaitForDebugger(flags()->sleep_before_init, "before init");
@@ -416,9 +450,6 @@ static bool AsanInitInternal() {
   AsanCheckDynamicRTPrereqs();
   AvoidCVE_2016_2143();
 
-  SetCanPoisonMemory(flags()->poison_heap);
-  SetMallocContextSize(common_flags()->malloc_context_size);
-
   InitializePlatformExceptionHandlers();
 
   InitializeHighMemEnd();
@@ -429,10 +460,6 @@ static bool AsanInitInternal() {
   SetPrintfAndReportCallback(AppendToErrorMessageBuffer);
 
   __sanitizer_set_report_path(common_flags()->log_path);
-
-  __asan_option_detect_stack_use_after_return =
-      flags()->detect_stack_use_after_return;
-
   __sanitizer::InitializePlatformEarly();
 
   // Setup internal allocator callback.
@@ -471,6 +498,13 @@ static bool AsanInitInternal() {
   AllocatorOptions allocator_options;
   allocator_options.SetFrom(flags(), common_flags());
   InitializeAllocator(allocator_options);
+
+  // Apply ASan flags.
+  // NOTE: In order for options specified through `__asan_default_options` to be
+  // honored on Windows, it is necessary for those options to be configured
+  // inside the `ApplyOptions` method. See the function-level comment for
+  // `ApplyFlags` for more details.
+  ApplyFlags();
 
   if (SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL)
     MaybeStartBackgroudThread();

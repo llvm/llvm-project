@@ -72,6 +72,10 @@ std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const ConceptDecl *D, const FullComment *FC, const Location &Loc,
          bool PublicOnly);
 
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const VarDecl *D, const FullComment *FC, const Location &Loc,
+         bool PublicOnly);
+
 // Function to hash a given USR value for storage.
 // As USRs (Unified Symbol Resolution) could be large, especially for functions
 // with long type arguments, we use 160-bits SHA1(USR) values to

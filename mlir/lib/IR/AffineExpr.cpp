@@ -781,6 +781,15 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   if (isPositiveRhs && lhs == llrhs && rlrhs == -rrhs) {
     return lhs % rlrhs;
   }
+
+  // Try simplify lhs's last operand with rhs. e.g:
+  // (s0 * 64 + s1) + (s1 // c * -c) --->
+  // s0 * 64 + (s1 + s1 // c * -c) -->
+  // s0 * 64 + s1 % c
+  if (lBinOpExpr && lBinOpExpr.getKind() == AffineExprKind::Add) {
+    if (auto simplified = simplifyAdd(lBinOpExpr.getRHS(), rhs))
+      return lBinOpExpr.getLHS() + simplified;
+  }
   return nullptr;
 }
 

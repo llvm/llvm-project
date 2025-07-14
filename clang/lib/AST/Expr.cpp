@@ -1356,8 +1356,7 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
     SourceLocation StrTokSpellingLoc = SM.getSpellingLoc(StrTokLoc);
 
     // Re-lex the token to get its length and original spelling.
-    std::pair<FileID, unsigned> LocInfo =
-        SM.getDecomposedLoc(StrTokSpellingLoc);
+    FileIDAndOffset LocInfo = SM.getDecomposedLoc(StrTokSpellingLoc);
     bool Invalid = false;
     StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
     if (Invalid) {
@@ -2021,7 +2020,8 @@ CXXBaseSpecifier **CastExpr::path_buffer() {
 #define ABSTRACT_STMT(x)
 #define CASTEXPR(Type, Base)                                                   \
   case Stmt::Type##Class:                                                      \
-    return static_cast<Type *>(this)->getTrailingObjects<CXXBaseSpecifier *>();
+    return static_cast<Type *>(this)                                           \
+        ->getTrailingObjectsNonStrict<CXXBaseSpecifier *>();
 #define STMT(Type, Base)
 #include "clang/AST/StmtNodes.inc"
   default:
@@ -4588,7 +4588,7 @@ const IdentifierInfo *DesignatedInitExpr::Designator::getFieldName() const {
 }
 
 DesignatedInitExpr::DesignatedInitExpr(const ASTContext &C, QualType Ty,
-                                       llvm::ArrayRef<Designator> Designators,
+                                       ArrayRef<Designator> Designators,
                                        SourceLocation EqualOrColonLoc,
                                        bool GNUSyntax,
                                        ArrayRef<Expr *> IndexExprs, Expr *Init)
@@ -4621,12 +4621,12 @@ DesignatedInitExpr::DesignatedInitExpr(const ASTContext &C, QualType Ty,
   setDependence(computeDependence(this));
 }
 
-DesignatedInitExpr *
-DesignatedInitExpr::Create(const ASTContext &C,
-                           llvm::ArrayRef<Designator> Designators,
-                           ArrayRef<Expr*> IndexExprs,
-                           SourceLocation ColonOrEqualLoc,
-                           bool UsesColonSyntax, Expr *Init) {
+DesignatedInitExpr *DesignatedInitExpr::Create(const ASTContext &C,
+                                               ArrayRef<Designator> Designators,
+                                               ArrayRef<Expr *> IndexExprs,
+                                               SourceLocation ColonOrEqualLoc,
+                                               bool UsesColonSyntax,
+                                               Expr *Init) {
   void *Mem = C.Allocate(totalSizeToAlloc<Stmt *>(IndexExprs.size() + 1),
                          alignof(DesignatedInitExpr));
   return new (Mem) DesignatedInitExpr(C, C.VoidTy, Designators,

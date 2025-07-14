@@ -498,6 +498,7 @@ set(files
   __iterator/ostreambuf_iterator.h
   __iterator/permutable.h
   __iterator/prev.h
+  __iterator/product_iterator.h
   __iterator/projected.h
   __iterator/ranges_iterator_traits.h
   __iterator/readable_traits.h

@@ -543,7 +543,7 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
 //   },
 //   "required": [ "id", "name", "line", "column" ]
 // }
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
+llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
                                    lldb::SBFormat &format) {
   llvm::json::Object object;
   int64_t frame_id = MakeDAPFrameID(frame);
@@ -572,9 +572,9 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 
   EmplaceSafeString(object, "name", frame_name);
 
-  auto target = frame.GetThread().GetProcess().GetTarget();
-  auto source = CreateSource(frame.GetPCAddress(), target);
-  if (!IsAssemblySource(source)) {
+  std::optional<protocol::Source> source = dap.ResolveSource(frame);
+
+  if (source && !IsAssemblySource(*source)) {
     // This is a normal source with a valid line entry.
     auto line_entry = frame.GetLineEntry();
     object.try_emplace("line", line_entry.GetLine());
@@ -584,8 +584,7 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
     // This is a source where the disassembly is used, but there is a valid
     // symbol. Calculate the line of the current PC from the start of the
     // current symbol.
-    lldb::SBTarget target = frame.GetThread().GetProcess().GetTarget();
-    lldb::SBInstructionList inst_list = target.ReadInstructions(
+    lldb::SBInstructionList inst_list = dap.target.ReadInstructions(
         frame.GetSymbol().GetStartAddress(), frame.GetPCAddress(), nullptr);
     size_t inst_line = inst_list.GetSize();
 
@@ -598,7 +597,8 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
     object.try_emplace("column", 1);
   }
 
-  object.try_emplace("source", std::move(source));
+  if (source)
+    object.try_emplace("source", std::move(source).value());
 
   const auto pc = frame.GetPC();
   if (pc != LLDB_INVALID_ADDRESS) {

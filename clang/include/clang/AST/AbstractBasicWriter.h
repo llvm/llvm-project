@@ -138,8 +138,7 @@ public:
     asImpl().writeUInt32(uint32_t(value));
   }
 
-  template <class T>
-  void writeArray(llvm::ArrayRef<T> array) {
+  template <class T> void writeArray(ArrayRef<T> array) {
     asImpl().writeUInt32(array.size());
     for (const T &elt : array) {
       WriteDispatcher<T>::write(asImpl(), elt);

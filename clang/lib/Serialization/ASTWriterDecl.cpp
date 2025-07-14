@@ -23,7 +23,6 @@
 #include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <optional>
 using namespace clang;
 using namespace serialization;
 
@@ -302,7 +301,7 @@ namespace clang {
     }
     MutableArrayRef<FunctionTemplateSpecializationInfo>
     getPartialSpecializations(FunctionTemplateDecl::Common *) {
-      return std::nullopt;
+      return {};
     }
 
     template<typename DeclTy>
@@ -1355,10 +1354,11 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       !D->hasExtInfo() && D->getFirstDecl() == D->getMostRecentDecl() &&
       D->getKind() == Decl::Var && !D->isInline() && !D->isConstexpr() &&
       !D->isInitCapture() && !D->isPreviousDeclInSameBlockScope() &&
-      !D->isEscapingByref() && !HasDeducedType &&
-      D->getStorageDuration() != SD_Static && !D->getDescribedVarTemplate() &&
-      !D->getMemberSpecializationInfo() && !D->isObjCForDecl() &&
-      !isa<ImplicitParamDecl>(D) && !D->isEscapingByref())
+      !D->hasInitWithSideEffects() && !D->isEscapingByref() &&
+      !HasDeducedType && D->getStorageDuration() != SD_Static &&
+      !D->getDescribedVarTemplate() && !D->getMemberSpecializationInfo() &&
+      !D->isObjCForDecl() && !isa<ImplicitParamDecl>(D) &&
+      !D->isEscapingByref())
     AbbrevToUse = Writer.getDeclVarAbbrev();
 
   Code = serialization::DECL_VAR;
@@ -2731,12 +2731,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // VarDecl
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      21)); // Packed Var Decl bits:  Linkage, ModulesCodegen,
+      22)); // Packed Var Decl bits:  Linkage, ModulesCodegen,
             // SClass, TSCSpec, InitStyle,
             // isARCPseudoStrong, IsThisDeclarationADemotedDefinition,
             // isExceptionVariable, isNRVOVariable, isCXXForRangeDecl,
             // isInline, isInlineSpecified, isConstexpr,
-            // isInitCapture, isPrevDeclInSameScope,
+            // isInitCapture, isPrevDeclInSameScope, hasInitWithSideEffects,
             // EscapingByref, HasDeducedType, ImplicitParamKind, isObjCForDecl
   Abv->Add(BitCodeAbbrevOp(0));                         // VarKind (local enum)
   // Type Source Info

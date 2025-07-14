@@ -15,7 +15,6 @@
 
 #include <clc/math/gentype.inc>
 
-#undef __FLOAT_ONLY
 #undef __CLC_FUNCTION
 
 #endif // __CLC_GEOMETRIC_CLC_FAST_DISTANCE_H__

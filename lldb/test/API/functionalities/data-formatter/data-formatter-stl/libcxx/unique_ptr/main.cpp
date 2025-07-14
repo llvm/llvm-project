@@ -6,6 +6,11 @@ struct User {
   std::string name = "steph";
 };
 
+struct NodeU {
+  std::unique_ptr<NodeU> next;
+  int value;
+};
+
 // libc++ stores unique_ptr data in a compressed pair, which has a specialized
 // representation when the type of the second element is an empty class. So
 // we need a deleter class with a dummy data member to trigger the other path.
@@ -24,6 +29,9 @@ int main() {
   std::unique_ptr<User> up_user = std::make_unique<User>();
   auto up_non_empty_deleter =
       std::unique_ptr<int, NonEmptyIntDeleter>(new int(1234));
+  std::unique_ptr<NodeU> ptr_node =
+      std::unique_ptr<NodeU>(new NodeU{nullptr, 2});
+  ptr_node = std::unique_ptr<NodeU>(new NodeU{std::move(ptr_node), 1});
 
   return 0; // break here
 }

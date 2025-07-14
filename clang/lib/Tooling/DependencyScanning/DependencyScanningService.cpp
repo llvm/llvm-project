@@ -15,8 +15,7 @@ using namespace dependencies;
 DependencyScanningService::DependencyScanningService(
     ScanningMode Mode, ScanningOutputFormat Format,
     ScanningOptimizations OptimizeArgs, bool EagerLoadModules, bool TraceVFS,
-    std::time_t BuildSessionTimestamp, bool CacheNegativeStats)
+    std::time_t BuildSessionTimestamp)
     : Mode(Mode), Format(Format), OptimizeArgs(OptimizeArgs),
       EagerLoadModules(EagerLoadModules), TraceVFS(TraceVFS),
-      CacheNegativeStats(CacheNegativeStats),
       BuildSessionTimestamp(BuildSessionTimestamp) {}

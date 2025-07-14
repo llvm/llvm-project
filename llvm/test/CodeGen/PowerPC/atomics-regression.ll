@@ -406,7 +406,6 @@ define void @test40(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB40_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -428,7 +427,6 @@ define void @test41(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB41_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -451,7 +449,6 @@ define void @test42(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB42_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB42_3
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -470,7 +467,6 @@ define void @test43(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -484,7 +480,6 @@ define void @test43(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB43_2
 ; PPC64LE-NEXT:    blr
@@ -497,7 +492,6 @@ define void @test44(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB44_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -511,7 +505,6 @@ define void @test44(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB44_2
 ; PPC64LE-NEXT:  .LBB44_4: # %cmpxchg.nostore
@@ -526,7 +519,6 @@ define void @test45(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -540,7 +532,6 @@ define void @test45(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB45_2
 ; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
@@ -557,7 +548,6 @@ define void @test46(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB46_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -571,7 +561,6 @@ define void @test46(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB46_2
 ; PPC64LE-NEXT:  .LBB46_4: # %cmpxchg.nostore
@@ -586,7 +575,6 @@ define void @test47(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -600,7 +588,6 @@ define void @test47(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB47_2
 ; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
@@ -617,7 +604,6 @@ define void @test48(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB48_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -631,7 +617,6 @@ define void @test48(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB48_2
 ; PPC64LE-NEXT:  .LBB48_4: # %cmpxchg.nostore
@@ -646,7 +631,6 @@ define void @test49(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB49_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -660,7 +644,6 @@ define void @test49(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB49_2
 ; PPC64LE-NEXT:  .LBB49_4: # %cmpxchg.nostore
@@ -679,7 +662,6 @@ define void @test50(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB50_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -701,7 +683,6 @@ define void @test51(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB51_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -724,7 +705,6 @@ define void @test52(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB52_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB52_3
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -743,7 +723,6 @@ define void @test53(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -757,7 +736,6 @@ define void @test53(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB53_2
 ; PPC64LE-NEXT:    blr
@@ -770,7 +748,6 @@ define void @test54(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB54_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -784,7 +761,6 @@ define void @test54(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB54_2
 ; PPC64LE-NEXT:  .LBB54_4: # %cmpxchg.nostore
@@ -799,7 +775,6 @@ define void @test55(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -813,7 +788,6 @@ define void @test55(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB55_2
 ; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
@@ -830,7 +804,6 @@ define void @test56(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB56_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -844,7 +817,6 @@ define void @test56(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB56_2
 ; PPC64LE-NEXT:  .LBB56_4: # %cmpxchg.nostore
@@ -859,7 +831,6 @@ define void @test57(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -873,7 +844,6 @@ define void @test57(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB57_2
 ; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
@@ -890,7 +860,6 @@ define void @test58(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB58_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -904,7 +873,6 @@ define void @test58(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB58_2
 ; PPC64LE-NEXT:  .LBB58_4: # %cmpxchg.nostore
@@ -919,7 +887,6 @@ define void @test59(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB59_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -933,7 +900,6 @@ define void @test59(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB59_2
 ; PPC64LE-NEXT:  .LBB59_4: # %cmpxchg.nostore
@@ -1424,7 +1390,6 @@ define void @test80(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB80_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -1446,7 +1411,6 @@ define void @test81(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB81_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -1469,7 +1433,6 @@ define void @test82(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB82_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB82_3
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -1488,7 +1451,6 @@ define void @test83(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1502,7 +1464,6 @@ define void @test83(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB83_2
 ; PPC64LE-NEXT:    blr
@@ -1515,7 +1476,6 @@ define void @test84(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB84_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1529,7 +1489,6 @@ define void @test84(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB84_2
 ; PPC64LE-NEXT:  .LBB84_4: # %cmpxchg.nostore
@@ -1544,7 +1503,6 @@ define void @test85(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1558,7 +1516,6 @@ define void @test85(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB85_2
 ; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
@@ -1575,7 +1532,6 @@ define void @test86(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB86_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1589,7 +1545,6 @@ define void @test86(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB86_2
 ; PPC64LE-NEXT:  .LBB86_4: # %cmpxchg.nostore
@@ -1604,7 +1559,6 @@ define void @test87(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1618,7 +1572,6 @@ define void @test87(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB87_2
 ; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
@@ -1635,7 +1588,6 @@ define void @test88(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB88_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1649,7 +1601,6 @@ define void @test88(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB88_2
 ; PPC64LE-NEXT:  .LBB88_4: # %cmpxchg.nostore
@@ -1664,7 +1615,6 @@ define void @test89(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB89_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1678,7 +1628,6 @@ define void @test89(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB89_2
 ; PPC64LE-NEXT:  .LBB89_4: # %cmpxchg.nostore
@@ -1697,7 +1646,6 @@ define void @test90(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB90_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -1719,7 +1667,6 @@ define void @test91(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB91_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -1742,7 +1689,6 @@ define void @test92(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB92_1: # %cmpxchg.start
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB92_3
 ; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
@@ -1761,7 +1707,6 @@ define void @test93(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1775,7 +1720,6 @@ define void @test93(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB93_2
 ; PPC64LE-NEXT:    blr
@@ -1788,7 +1732,6 @@ define void @test94(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB94_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1802,7 +1745,6 @@ define void @test94(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB94_2
 ; PPC64LE-NEXT:  .LBB94_4: # %cmpxchg.nostore
@@ -1817,7 +1759,6 @@ define void @test95(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1831,7 +1772,6 @@ define void @test95(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB95_2
 ; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
@@ -1848,7 +1788,6 @@ define void @test96(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB96_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1862,7 +1801,6 @@ define void @test96(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB96_2
 ; PPC64LE-NEXT:  .LBB96_4: # %cmpxchg.nostore
@@ -1877,7 +1815,6 @@ define void @test97(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1891,7 +1828,6 @@ define void @test97(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB97_2
 ; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
@@ -1908,7 +1844,6 @@ define void @test98(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB98_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1922,7 +1857,6 @@ define void @test98(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB98_2
 ; PPC64LE-NEXT:  .LBB98_4: # %cmpxchg.nostore
@@ -1937,7 +1871,6 @@ define void @test99(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE:       # %bb.0: # %cmpxchg.start
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    clrlwi 4, 4, 16
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB99_4
 ; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -1951,7 +1884,6 @@ define void @test99(ptr %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lharx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi 6, 6, 16
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    beq 0, .LBB99_2
 ; PPC64LE-NEXT:  .LBB99_4: # %cmpxchg.nostore

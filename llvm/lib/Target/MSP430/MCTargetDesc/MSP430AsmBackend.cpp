@@ -103,10 +103,11 @@ uint64_t MSP430AsmBackend::adjustFixupValue(const MCFixup &Fixup,
   }
 }
 
-void MSP430AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void MSP430AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                   const MCValue &Target,
                                   MutableArrayRef<char> Data, uint64_t Value,
                                   bool IsResolved) {
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   Value = adjustFixupValue(Fixup, Value, getContext());
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   if (!Value)

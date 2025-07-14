@@ -32,7 +32,11 @@ _CLC_OVERLOAD _CLC_DEF float __clc_tgamma(float x) {
   return g;
 }
 
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_tgamma, float);
+#define __FLOAT_ONLY
+#define FUNCTION __clc_tgamma
+#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef FUNCTION
 
 #ifdef cl_khr_fp64
 
@@ -55,7 +59,11 @@ _CLC_OVERLOAD _CLC_DEF double __clc_tgamma(double x) {
   return g;
 }
 
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_tgamma, double);
+#define __DOUBLE_ONLY
+#define FUNCTION __clc_tgamma
+#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef FUNCTION
 
 #endif
 

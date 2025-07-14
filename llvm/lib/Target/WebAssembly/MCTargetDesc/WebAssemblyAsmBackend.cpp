@@ -20,6 +20,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -78,10 +79,14 @@ bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-void WebAssemblyAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void WebAssemblyAsmBackend::applyFixup(const MCFragment &F,
+                                       const MCFixup &Fixup,
                                        const MCValue &Target,
                                        MutableArrayRef<char> Data,
-                                       uint64_t Value, bool) {
+                                       uint64_t Value, bool IsResolved) {
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
+
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   assert(Info.Flags == 0 && "WebAssembly does not use MCFixupKindInfo flags");
 

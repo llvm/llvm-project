@@ -260,20 +260,6 @@ define void @vector_interleave_store_factor4(<vscale x 2 x i32> %a, <vscale x 2 
   ret void
 }
 
-; TODO: Remove once recursive interleaving support is removed
-define void @vector_interleave_store_factor4_recursive(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, ptr %p) {
-; CHECK-LABEL: vector_interleave_store_factor4_recursive:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vsseg4e32.v v8, (a0)
-; CHECK-NEXT:    ret
-  %v0 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %c)
-  %v1 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %b, <vscale x 4 x i32> %d)
-  %v2 = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %v0, <vscale x 8 x i32> %v1)
-  store <vscale x 16 x i32> %v2, ptr %p
-  ret void
-}
-
 define void @vector_interleave_store_factor5(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, ptr %p) {
 ; CHECK-LABEL: vector_interleave_store_factor5:
 ; CHECK:       # %bb.0:
@@ -315,25 +301,5 @@ define void @vector_interleave_store_factor8(<vscale x 2 x i32> %a, <vscale x 2 
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.interleave8(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, <vscale x 2 x i32> %f, <vscale x 2 x i32> %g, <vscale x 2 x i32> %h)
   store <vscale x 16 x i32> %v, ptr %p
-  ret void
-}
-
-; TODO: Remove once recursive interleaving support is removed
-define void @vector_interleave_store_factor8_recursive(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, <vscale x 2 x i32> %f, <vscale x 2 x i32> %g, <vscale x 2 x i32> %h, ptr %p) {
-; CHECK-LABEL: vector_interleave_store_factor8_recursive:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsseg8e32.v v8, (a0)
-; CHECK-NEXT:    ret
-  %v0 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %e)
-  %v1 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %c, <vscale x 2 x i32> %g)
-  %v2 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1)
-
-  %v3 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %b, <vscale x 2 x i32> %f)
-  %v4 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %d, <vscale x 2 x i32> %h)
-  %v5 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %v3, <vscale x 4 x i32> %v4)
-
-  %v6 = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %v2, <vscale x 8 x i32> %v5)
-  store <vscale x 16 x i32> %v6, ptr %p
   ret void
 }

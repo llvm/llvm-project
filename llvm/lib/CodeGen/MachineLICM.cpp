@@ -400,7 +400,7 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
     // Estimate register pressure during pre-regalloc pass.
     unsigned NumRPS = TRI->getNumRegPressureSets();
     RegPressure.resize(NumRPS);
-    std::fill(RegPressure.begin(), RegPressure.end(), 0);
+    llvm::fill(RegPressure, 0);
     RegLimit.resize(NumRPS);
     for (unsigned i = 0, e = NumRPS; i != e; ++i)
       RegLimit[i] = TRI->getRegPressureSetLimit(MF, i);
@@ -941,7 +941,7 @@ static bool isOperandKill(const MachineOperand &MO, MachineRegisterInfo *MRI) {
 /// initialize the starting "register pressure". Note this does not count live
 /// through (livein but not used) registers.
 void MachineLICMImpl::InitRegPressure(MachineBasicBlock *BB) {
-  std::fill(RegPressure.begin(), RegPressure.end(), 0);
+  llvm::fill(RegPressure, 0);
 
   // If the preheader has only a single predecessor and it ends with a
   // fallthrough or an unconditional branch, then scan its predecessor for live

@@ -11,6 +11,7 @@ add_llvm_component_library(LLVMFrontendHLSL
   intrinsics_gen
 
   LINK_COMPONENTS
+  BinaryFormat
   Core
   Support
   )

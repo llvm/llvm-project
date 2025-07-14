@@ -156,14 +156,8 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::GetSummary(
   if (!m_ptr_obj)
     return false;
 
-  bool success;
-  uint64_t ptr_value = m_ptr_obj->GetValueAsUnsigned(0, &success);
-  if (!success)
-    return false;
-  if (ptr_value == 0)
-    stream.Printf("nullptr");
-  else
-    stream.Printf("0x%" PRIx64, ptr_value);
+  DumpCxxSmartPtrPointerSummary(stream, *m_ptr_obj, options);
+
   return true;
 }
 

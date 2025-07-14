@@ -267,9 +267,10 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
   }
 
   // Fill
-  if (isaFillOpInterface(genericOp)) {
+  if (std::optional<Value> fillValue = isaFillOpInterface(genericOp)) {
+    // Always use the detected fill value, regardless of pattern
     LinalgOp namedOp = rewriter.replaceOpWithNewOp<FillOp>(
-        genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0]);
+        genericOp, *fillValue, genericOp.getDpsInits()[0]);
     return namedOp;
   }
 

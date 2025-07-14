@@ -8,7 +8,7 @@
 //
 // TableGen is a tool which can be used to build up a description of something,
 // then invoke one or more "tablegen backends" to emit information about the
-// description in some predefined format.  In practice, this is used by the LLVM
+// description in some predefined format. In practice, this is used by the LLVM
 // code generators to automate generation of a code generator through a
 // high-level description of the target.
 //

@@ -2737,12 +2737,14 @@ def TestLinalgConvOp :
     bool hasIndexSemantics() { return false; }
 
     static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
-                              mlir::ArrayRef<mlir::NamedAttribute> attrs) {
+                              mlir::ArrayRef<mlir::NamedAttribute> attrs,
+                              llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
       b.create<mlir::linalg::YieldOp>(block.getArguments().back());
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
-                              mlir::ArrayRef<mlir::NamedAttribute>)>
+                              mlir::ArrayRef<mlir::NamedAttribute>,
+                              llvm::function_ref<mlir::InFlightDiagnostic()>)>
     getRegionBuilder() {
       return &regionBuilder;
     }
@@ -2798,12 +2800,14 @@ def TestLinalgFillOp :
     bool hasIndexSemantics() { return false; }
 
     static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
-                              mlir::ArrayRef<mlir::NamedAttribute> attrs) {
+                              mlir::ArrayRef<mlir::NamedAttribute> attrs,
+                              llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
       b.create<mlir::linalg::YieldOp>(block.getArguments().back());
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
-                              mlir::ArrayRef<mlir::NamedAttribute>)>
+                              mlir::ArrayRef<mlir::NamedAttribute>,
+                              llvm::function_ref<mlir::InFlightDiagnostic()>)>
     getRegionBuilder() {
       return &regionBuilder;
     }
@@ -3478,6 +3482,38 @@ def OpWithPropertyPredicates : TEST_Op<"op_with_property_predicates"> {
   let assemblyFormat = "attr-dict prop-dict";
 }
 
+def TestPropPatternOp1 : TEST_Op<"prop_pattern_op_1"> {
+  let arguments = (ins
+    StringProp:$tag,
+    I64Prop:$val,
+    BoolProp:$cond
+  );
+  let results = (outs I32:$results);
+  let assemblyFormat = "$tag $val $cond attr-dict";
+}
+
+def TestPropPatternOp2 : TEST_Op<"prop_pattern_op_2"> {
+  let arguments = (ins
+    I32:$input,
+    StringProp:$tag
+  );
+  let assemblyFormat = "$input $tag attr-dict";
+}
+
+def : Pat<
+  (TestPropPatternOp1 $tag, NonNegativeI64Prop:$val, ConstantProp<BoolProp, "false">),
+  (TestPropPatternOp1 $tag, (NativeCodeCall<"$0 + 1"> $val), ConstantProp<BoolProp, "true">)>;
+
+def : Pat<
+  (TestPropPatternOp2 (TestPropPatternOp1 $tag1, $val, ConstantProp<BoolProp, "true">),
+    PropConstraint<CPred<"!$_self.empty()">, "non-empty string">:$tag2),
+  (TestPropPatternOp2
+    (TestPropPatternOp1 $tag1,
+      (NativeCodeCall<"-($0)"> $val),
+      ConstantProp<BoolProp, "false">),
+    (NativeCodeCall<"$0.str() + \".\" + $1.str()"> $tag1, $tag2))
+>;
+
 //===----------------------------------------------------------------------===//
 // Test Dataflow
 //===----------------------------------------------------------------------===//
@@ -3579,29 +3615,16 @@ def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
 // Test Ops bufferization
 //===----------------------------------------------------------------------===//
 
-def TestDummyTensorOp : TEST_Op<"dummy_tensor_op", [BufferizableOpInterface]> {
+def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
+    [DeclareOpInterfaceMethods<BufferizableOpInterface,
+        ["bufferize", "bufferizesToMemoryRead",
+         "bufferizesToMemoryWrite", "getAliasingValues"]>]> {
   let arguments = (ins
     Arg<TestTensorType>:$input
   );
   let results = (outs
     Arg<TestTensorType>:$output
   );
-  let extraClassDeclaration = [{
-    // BufferizableOpInterface
-    bool bufferizesToMemoryRead(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    bool bufferizesToMemoryWrite(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    mlir::bufferization::AliasingValueList getAliasingValues(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    mlir::LogicalResult bufferize(
-      mlir::RewriterBase& rewriter,
-      const mlir::bufferization::BufferizationOptions& options,
-      mlir::bufferization::BufferizationState &state);
-  }];
 
   let extraClassDefinition = [{
     bool test::TestDummyTensorOp::bufferizesToMemoryRead(::mlir::OpOperand&,
@@ -3627,6 +3650,57 @@ def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
   let results = (outs
     Arg<TestMemrefType>:$output
   );
+}
+
+def TestCreateTensorOp : TEST_Op<"create_tensor_op",
+    [DeclareOpInterfaceMethods<BufferizableOpInterface,
+        ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+         "bufferizesToMemoryWrite", "getAliasingValues",
+         "bufferizesToAllocation"]>]> {
+  let arguments = (ins);
+  let results = (outs Arg<TestTensorType>:$output);
+  let extraClassDefinition = [{
+    bool test::TestCreateTensorOp::bufferizesToMemoryRead(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestCreateTensorOp::bufferizesToMemoryWrite(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestCreateTensorOp::bufferizesToAllocation(mlir::Value value) {
+      return false;
+    }
+
+    ::mlir::bufferization::AliasingValueList
+    test::TestCreateTensorOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+  }];
+}
+
+def TestCreateMemrefOp : TEST_Op<"create_memref_op"> {
+  let arguments = (ins);
+  let results = (outs Arg<TestMemrefType>:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Test assembly format references
+//===----------------------------------------------------------------------===//
+
+def TestOpWithRegionRef : TEST_Op<"dummy_op_with_region_ref", [NoTerminator]> {
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = [{
+    $body attr-dict custom<DummyRegionRef>(ref($body))
+  }];
+}
+
+def TestOpWithSuccessorRef : TEST_Op<"dummy_op_with_successor_ref"> {
+  let successors = (successor AnySuccessor:$successor);
+  let assemblyFormat = [{
+    $successor attr-dict custom<DummySuccessorRef>(ref($successor))
+  }];
 }
 
 #endif // TEST_OPS

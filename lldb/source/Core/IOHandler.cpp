@@ -663,3 +663,10 @@ void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
 #endif
   }
 }
+
+void IOHandlerEditline::Refresh() {
+#if LLDB_ENABLE_LIBEDIT
+  if (m_editline_up)
+    m_editline_up->Refresh();
+#endif
+}

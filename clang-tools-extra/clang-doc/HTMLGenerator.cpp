@@ -986,6 +986,8 @@ llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
         genHTML(*static_cast<clang::doc::TypedefInfo *>(I), CDCtx, InfoTitle);
     break;
   case InfoType::IT_concept:
+  case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -1015,6 +1017,10 @@ static std::string getRefType(InfoType IT) {
     return "typedef";
   case InfoType::IT_concept:
     return "concept";
+  case InfoType::IT_variable:
+    return "variable";
+  case InfoType::IT_friend:
+    return "friend";
   }
   llvm_unreachable("Unknown InfoType");
 }

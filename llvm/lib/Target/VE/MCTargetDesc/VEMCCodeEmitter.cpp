@@ -12,7 +12,7 @@
 
 #include "MCTargetDesc/VEFixupKinds.h"
 #include "VE.h"
-#include "VEMCExpr.h"
+#include "VEMCAsmInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCCodeEmitter.h"

@@ -15,4 +15,3 @@
 
 #undef __CLC_FUNCTION
 #undef __CLC_GEOMETRIC_RET_GENTYPE
-#undef __FLOAT_ONLY

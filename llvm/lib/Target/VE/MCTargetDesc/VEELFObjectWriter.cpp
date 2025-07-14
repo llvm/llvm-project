@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/VEMCExpr.h"
+#include "MCTargetDesc/VEMCAsmInfo.h"
 #include "VEFixupKinds.h"
-#include "VEMCExpr.h"
+#include "VEMCAsmInfo.h"
 #include "VEMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"

@@ -198,8 +198,7 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool shouldForceRelocation(const MCFixup &Fixup,
-                             const MCValue &Target) override {
+  bool shouldForceRelocation(const MCFixup &Fixup) {
     switch(Fixup.getTargetKind()) {
       default:
         llvm_unreachable("Unknown Fixup Kind!");
@@ -404,131 +403,9 @@ public:
     llvm_unreachable(errStr.str().c_str());
   }
 
-  /// ApplyFixup - Apply the \arg Value for given \arg Fixup into the provided
-  /// data fragment, at the offset specified by the fixup and following the
-  /// fixup kind as appropriate.
-  void applyFixup(const MCFragment &, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t FixupValue, bool IsResolved) override {
-
-    // When FixupValue is 0 the relocation is external and there
-    // is nothing for us to do.
-    if (!FixupValue) return;
-
-    MCFixupKind Kind = Fixup.getKind();
-    uint64_t Value;
-    uint32_t InstMask;
-    uint32_t Reloc;
-
-    // LLVM gives us an encoded value, we have to convert it back
-    // to a real offset before we can use it.
-    uint32_t Offset = Fixup.getOffset();
-    unsigned NumBytes = getFixupKindNumBytes(Kind);
-    assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
-    char *InstAddr = Data.data() + Offset;
-
-    Value = adjustFixupValue(Kind, FixupValue);
-    if(!Value)
-      return;
-    int sValue = (int)Value;
-
-    switch((unsigned)Kind) {
-      default:
-        return;
-
-      case fixup_Hexagon_B7_PCREL:
-        if (!(isIntN(7, sValue)))
-          HandleFixupError(7, 2, (int64_t)FixupValue, "B7_PCREL");
-        [[fallthrough]];
-      case fixup_Hexagon_B7_PCREL_X:
-        InstMask = 0x00001f18;  // Word32_B7
-        Reloc = (((Value >> 2) & 0x1f) << 8) |    // Value 6-2 = Target 12-8
-                ((Value & 0x3) << 3);             // Value 1-0 = Target 4-3
-        break;
-
-      case fixup_Hexagon_B9_PCREL:
-        if (!(isIntN(9, sValue)))
-          HandleFixupError(9, 2, (int64_t)FixupValue, "B9_PCREL");
-        [[fallthrough]];
-      case fixup_Hexagon_B9_PCREL_X:
-        InstMask = 0x003000fe;  // Word32_B9
-        Reloc = (((Value >> 7) & 0x3) << 20) |    // Value 8-7 = Target 21-20
-                ((Value & 0x7f) << 1);            // Value 6-0 = Target 7-1
-        break;
-
-        // Since the existing branches that use this relocation cannot be
-        // extended, they should only be fixed up if the target is within range.
-      case fixup_Hexagon_B13_PCREL:
-        if (!(isIntN(13, sValue)))
-          HandleFixupError(13, 2, (int64_t)FixupValue, "B13_PCREL");
-        [[fallthrough]];
-      case fixup_Hexagon_B13_PCREL_X:
-        InstMask = 0x00202ffe;  // Word32_B13
-        Reloc = (((Value >> 12) & 0x1) << 21) |    // Value 12   = Target 21
-                (((Value >> 11) & 0x1) << 13) |    // Value 11   = Target 13
-                ((Value & 0x7ff) << 1);            // Value 10-0 = Target 11-1
-        break;
-
-      case fixup_Hexagon_B15_PCREL:
-        if (!(isIntN(15, sValue)))
-          HandleFixupError(15, 2, (int64_t)FixupValue, "B15_PCREL");
-        [[fallthrough]];
-      case fixup_Hexagon_B15_PCREL_X:
-        InstMask = 0x00df20fe;  // Word32_B15
-        Reloc = (((Value >> 13) & 0x3) << 22) |    // Value 14-13 = Target 23-22
-                (((Value >> 8) & 0x1f) << 16) |    // Value 12-8  = Target 20-16
-                (((Value >> 7) & 0x1)  << 13) |    // Value 7     = Target 13
-                ((Value & 0x7f) << 1);             // Value 6-0   = Target 7-1
-        break;
-
-      case fixup_Hexagon_B22_PCREL:
-        if (!(isIntN(22, sValue)))
-          HandleFixupError(22, 2, (int64_t)FixupValue, "B22_PCREL");
-        [[fallthrough]];
-      case fixup_Hexagon_B22_PCREL_X:
-        InstMask = 0x01ff3ffe;  // Word32_B22
-        Reloc = (((Value >> 13) & 0x1ff) << 16) |  // Value 21-13 = Target 24-16
-                ((Value & 0x1fff) << 1);           // Value 12-0  = Target 13-1
-        break;
-
-      case fixup_Hexagon_B32_PCREL_X:
-        InstMask = 0x0fff3fff;  // Word32_X26
-        Reloc = (((Value >> 14) & 0xfff) << 16) |  // Value 25-14 = Target 27-16
-                (Value & 0x3fff);                  // Value 13-0  = Target 13-0
-        break;
-
-      case FK_Data_1:
-      case FK_Data_2:
-      case FK_Data_4:
-      case fixup_Hexagon_32:
-        InstMask = 0xffffffff;  // Word32
-        Reloc = Value;
-        break;
-    }
-
-    LLVM_DEBUG(dbgs() << "Name=" << getFixupKindInfo(Kind).Name << "("
-                      << (unsigned)Kind << ")\n");
-    LLVM_DEBUG(
-        uint32_t OldData = 0; for (unsigned i = 0; i < NumBytes; i++) OldData |=
-                              (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
-        dbgs() << "\tBValue=0x"; dbgs().write_hex(Value) << ": AValue=0x";
-        dbgs().write_hex(FixupValue)
-        << ": Offset=" << Offset << ": Size=" << Data.size() << ": OInst=0x";
-        dbgs().write_hex(OldData) << ": Reloc=0x"; dbgs().write_hex(Reloc););
-
-    // For each byte of the fragment that the fixup touches, mask in the
-    // bits from the fixup value. The Value has been "split up" into the
-    // appropriate bitfields above.
-    for (unsigned i = 0; i < NumBytes; i++){
-      InstAddr[i] &= uint8_t(~InstMask >> (i * 8)) & 0xff; // Clear reloc bits
-      InstAddr[i] |= uint8_t(Reloc >> (i * 8)) & 0xff;     // Apply new reloc
-    }
-
-    LLVM_DEBUG(uint32_t NewData = 0;
-               for (unsigned i = 0; i < NumBytes; i++) NewData |=
-               (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
-               dbgs() << ": NInst=0x"; dbgs().write_hex(NewData) << "\n";);
-  }
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,
+                  MutableArrayRef<char> Data, uint64_t FixupValue,
+                  bool IsResolved) override;
 
   bool isInstRelaxable(MCInst const &HMI) const {
     const MCInstrDesc &MCID = HexagonMCInstrInfo::getDesc(*MCII, HMI);
@@ -774,6 +651,133 @@ public:
 }; // class HexagonAsmBackend
 
 } // namespace
+
+void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                                   const MCValue &Target,
+                                   MutableArrayRef<char> Data,
+                                   uint64_t FixupValue, bool IsResolved) {
+  if (IsResolved && shouldForceRelocation(Fixup))
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, FixupValue, IsResolved);
+  // When FixupValue is 0 the relocation is external and there
+  // is nothing for us to do.
+  if (!FixupValue)
+    return;
+
+  MCFixupKind Kind = Fixup.getKind();
+  uint64_t Value;
+  uint32_t InstMask;
+  uint32_t Reloc;
+
+  // LLVM gives us an encoded value, we have to convert it back
+  // to a real offset before we can use it.
+  uint32_t Offset = Fixup.getOffset();
+  unsigned NumBytes = getFixupKindNumBytes(Kind);
+  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  char *InstAddr = Data.data() + Offset;
+
+  Value = adjustFixupValue(Kind, FixupValue);
+  if (!Value)
+    return;
+  int sValue = (int)Value;
+
+  switch ((unsigned)Kind) {
+  default:
+    return;
+
+  case fixup_Hexagon_B7_PCREL:
+    if (!(isIntN(7, sValue)))
+      HandleFixupError(7, 2, (int64_t)FixupValue, "B7_PCREL");
+    [[fallthrough]];
+  case fixup_Hexagon_B7_PCREL_X:
+    InstMask = 0x00001f18;                 // Word32_B7
+    Reloc = (((Value >> 2) & 0x1f) << 8) | // Value 6-2 = Target 12-8
+            ((Value & 0x3) << 3);          // Value 1-0 = Target 4-3
+    break;
+
+  case fixup_Hexagon_B9_PCREL:
+    if (!(isIntN(9, sValue)))
+      HandleFixupError(9, 2, (int64_t)FixupValue, "B9_PCREL");
+    [[fallthrough]];
+  case fixup_Hexagon_B9_PCREL_X:
+    InstMask = 0x003000fe;                 // Word32_B9
+    Reloc = (((Value >> 7) & 0x3) << 20) | // Value 8-7 = Target 21-20
+            ((Value & 0x7f) << 1);         // Value 6-0 = Target 7-1
+    break;
+
+    // Since the existing branches that use this relocation cannot be
+    // extended, they should only be fixed up if the target is within range.
+  case fixup_Hexagon_B13_PCREL:
+    if (!(isIntN(13, sValue)))
+      HandleFixupError(13, 2, (int64_t)FixupValue, "B13_PCREL");
+    [[fallthrough]];
+  case fixup_Hexagon_B13_PCREL_X:
+    InstMask = 0x00202ffe;                  // Word32_B13
+    Reloc = (((Value >> 12) & 0x1) << 21) | // Value 12   = Target 21
+            (((Value >> 11) & 0x1) << 13) | // Value 11   = Target 13
+            ((Value & 0x7ff) << 1);         // Value 10-0 = Target 11-1
+    break;
+
+  case fixup_Hexagon_B15_PCREL:
+    if (!(isIntN(15, sValue)))
+      HandleFixupError(15, 2, (int64_t)FixupValue, "B15_PCREL");
+    [[fallthrough]];
+  case fixup_Hexagon_B15_PCREL_X:
+    InstMask = 0x00df20fe;                  // Word32_B15
+    Reloc = (((Value >> 13) & 0x3) << 22) | // Value 14-13 = Target 23-22
+            (((Value >> 8) & 0x1f) << 16) | // Value 12-8  = Target 20-16
+            (((Value >> 7) & 0x1) << 13) |  // Value 7     = Target 13
+            ((Value & 0x7f) << 1);          // Value 6-0   = Target 7-1
+    break;
+
+  case fixup_Hexagon_B22_PCREL:
+    if (!(isIntN(22, sValue)))
+      HandleFixupError(22, 2, (int64_t)FixupValue, "B22_PCREL");
+    [[fallthrough]];
+  case fixup_Hexagon_B22_PCREL_X:
+    InstMask = 0x01ff3ffe;                    // Word32_B22
+    Reloc = (((Value >> 13) & 0x1ff) << 16) | // Value 21-13 = Target 24-16
+            ((Value & 0x1fff) << 1);          // Value 12-0  = Target 13-1
+    break;
+
+  case fixup_Hexagon_B32_PCREL_X:
+    InstMask = 0x0fff3fff;                    // Word32_X26
+    Reloc = (((Value >> 14) & 0xfff) << 16) | // Value 25-14 = Target 27-16
+            (Value & 0x3fff);                 // Value 13-0  = Target 13-0
+    break;
+
+  case FK_Data_1:
+  case FK_Data_2:
+  case FK_Data_4:
+  case fixup_Hexagon_32:
+    InstMask = 0xffffffff; // Word32
+    Reloc = Value;
+    break;
+  }
+
+  LLVM_DEBUG(dbgs() << "Name=" << getFixupKindInfo(Kind).Name << "("
+                    << (unsigned)Kind << ")\n");
+  LLVM_DEBUG(
+      uint32_t OldData = 0; for (unsigned i = 0; i < NumBytes; i++) OldData |=
+                            (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
+      dbgs() << "\tBValue=0x"; dbgs().write_hex(Value) << ": AValue=0x";
+      dbgs().write_hex(FixupValue)
+      << ": Offset=" << Offset << ": Size=" << Data.size() << ": OInst=0x";
+      dbgs().write_hex(OldData) << ": Reloc=0x"; dbgs().write_hex(Reloc););
+
+  // For each byte of the fragment that the fixup touches, mask in the
+  // bits from the fixup value. The Value has been "split up" into the
+  // appropriate bitfields above.
+  for (unsigned i = 0; i < NumBytes; i++) {
+    InstAddr[i] &= uint8_t(~InstMask >> (i * 8)) & 0xff; // Clear reloc bits
+    InstAddr[i] |= uint8_t(Reloc >> (i * 8)) & 0xff;     // Apply new reloc
+  }
+
+  LLVM_DEBUG(uint32_t NewData = 0;
+             for (unsigned i = 0; i < NumBytes; i++) NewData |=
+             (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
+             dbgs() << ": NInst=0x"; dbgs().write_hex(NewData) << "\n";);
+}
 
 // MCAsmBackend
 MCAsmBackend *llvm::createHexagonAsmBackend(Target const &T,

@@ -1497,6 +1497,14 @@ public:
     MMO->refineAlignment(NewMMO);
   }
 
+  void refineRanges(const MachineMemOperand *NewMMO) {
+    // If this node has range metadata that is different than NewMMO, clear the
+    // range metadata.
+    // FIXME: Union the ranges instead?
+    if (getRanges() && getRanges() != NewMMO->getRanges())
+      MMO->clearRanges();
+  }
+
   const SDValue &getChain() const { return getOperand(0); }
 
   const SDValue &getBasePtr() const {

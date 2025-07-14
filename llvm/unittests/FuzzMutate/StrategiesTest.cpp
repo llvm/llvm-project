@@ -745,4 +745,22 @@ TEST(AllStrategies, SkipEHPad) {
   mutateAndVerifyModule<InjectorIRStrategy>(Source);
   mutateAndVerifyModule<InstModificationIRStrategy>(Source);
 }
+
+TEST(AllStrategies, SpecialTerminator) {
+  StringRef Source = "\n\
+    declare amdgpu_cs_chain void @callee(<3 x i32> inreg, { i32, ptr addrspace(5), i32, i32 })\n\
+    define amdgpu_cs_chain void @chain_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr) {\n\
+      call void(ptr, i64, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain(ptr @callee, i64 -1, <3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 0) \n\
+      unreachable\n\
+    }\n\
+  ";
+  mutateAndVerifyModule<InjectorIRStrategy>(Source);
+  mutateAndVerifyModule<InsertCFGStrategy>(Source);
+  mutateAndVerifyModule<InsertFunctionStrategy>(Source);
+  mutateAndVerifyModule<InsertPHIStrategy>(Source);
+  mutateAndVerifyModule<InstModificationIRStrategy>(Source);
+  mutateAndVerifyModule<ShuffleBlockStrategy>(Source);
+  mutateAndVerifyModule<SinkInstructionStrategy>(Source);
+}
+
 } // namespace

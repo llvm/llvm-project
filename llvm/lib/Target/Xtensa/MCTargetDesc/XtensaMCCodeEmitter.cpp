@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/XtensaFixupKinds.h"
-#include "MCTargetDesc/XtensaMCExpr.h"
+#include "MCTargetDesc/XtensaMCAsmInfo.h"
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"

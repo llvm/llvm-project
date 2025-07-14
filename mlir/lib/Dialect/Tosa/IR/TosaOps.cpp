@@ -3829,16 +3829,16 @@ LogicalResult ReverseOp::verify() {
 
 LogicalResult tosa::SelectOp::verify() {
   // verify input2 and input3 have same element type as output
-  if (verifySameElementTypes(*this, /* inType = */ getInput2().getType(),
+  if (verifySameElementTypes(*this, /* inType = */ getOnTrue().getType(),
                              /* outType = */ getOutput().getType())
           .failed() ||
-      verifySameElementTypes(*this, /* inType = */ getInput3().getType(),
+      verifySameElementTypes(*this, /* inType = */ getOnFalse().getType(),
                              /* outType = */ getOutput().getType())
           .failed()) {
     return failure();
   }
   // verify input1 has element type of bool
-  auto predicateType = llvm::dyn_cast<ShapedType>(getInput1().getType());
+  auto predicateType = llvm::dyn_cast<ShapedType>(getPred().getType());
   if (!predicateType) {
     return emitOpError("expect shaped tensor for input1, got ")
            << getInput1().getType();

@@ -126,3 +126,22 @@ lldb_private::formatters::GetArrayAddressOrPointerValue(ValueObject &valobj) {
 
   return data_addr.address;
 }
+
+void lldb_private::formatters::DumpCxxSmartPtrPointerSummary(
+    Stream &stream, ValueObject &ptr, const TypeSummaryOptions &options) {
+  if (ptr.GetValueAsUnsigned(0) == 0) {
+    stream.Printf("nullptr");
+    return;
+  }
+
+  Status error;
+  ValueObjectSP pointee_sp = ptr.Dereference(error);
+  if (!pointee_sp || !error.Success())
+    return;
+
+  if (!pointee_sp->DumpPrintableRepresentation(
+          stream, ValueObject::eValueObjectRepresentationStyleSummary,
+          lldb::eFormatInvalid,
+          ValueObject::PrintableRepresentationSpecialCases::eDisable, false))
+    stream.Printf("ptr = 0x%" PRIx64, ptr.GetValueAsUnsigned(0));
+}

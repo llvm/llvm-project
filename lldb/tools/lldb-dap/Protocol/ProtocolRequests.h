@@ -468,7 +468,7 @@ struct SourceArguments {
   /// The reference to the source. This is the same as `source.sourceReference`.
   /// This is provided for backward compatibility since old clients do not
   /// understand the `source` attribute.
-  int64_t sourceReference;
+  int64_t sourceReference = LLDB_DAP_INVALID_SRC_REF;
 };
 bool fromJSON(const llvm::json::Value &, SourceArguments &, llvm::json::Path);
 

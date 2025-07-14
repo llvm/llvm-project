@@ -403,6 +403,9 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
       const dw_offset_t attr_offset = offset;
       form_value.SetUnit(cu);
       form_value.SetForm(abbrevDecl->getFormByIndex(idx));
+      if (abbrevDecl->getAttrIsImplicitConstByIndex(idx))
+        form_value.SetValue(abbrevDecl->getAttrImplicitConstValueByIndex(idx));
+
       if (form_value.ExtractValue(data, &offset)) {
         if (end_attr_offset_ptr)
           *end_attr_offset_ptr = offset;

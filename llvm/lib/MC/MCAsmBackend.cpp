@@ -116,14 +116,11 @@ bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   return fixupNeedsRelaxation(Fixup, Value);
 }
 
-bool MCAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
-                            const MCValue &Target, uint64_t &FixedValue,
-                            bool IsResolved) {
-  if (IsResolved && shouldForceRelocation(Fixup, Target))
-    IsResolved = false;
+void MCAsmBackend::maybeAddReloc(const MCFragment &F, const MCFixup &Fixup,
+                                 const MCValue &Target, uint64_t &Value,
+                                 bool IsResolved) {
   if (!IsResolved)
-    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
-  return IsResolved;
+    Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
 }
 
 bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/ARMFixupKinds.h"
+#include "MCTargetDesc/ARMMCAsmInfo.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -64,7 +65,7 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     switch (Spec) {
     case MCSymbolRefExpr::VK_COFF_IMGREL32:
       return COFF::IMAGE_REL_ARM_ADDR32NB;
-    case MCSymbolRefExpr::VK_SECREL:
+    case ARM::S_COFF_SECREL:
       return COFF::IMAGE_REL_ARM_SECREL;
     default:
       return COFF::IMAGE_REL_ARM_ADDR32;

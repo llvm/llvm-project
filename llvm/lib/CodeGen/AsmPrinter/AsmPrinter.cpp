@@ -1081,13 +1081,6 @@ void AsmPrinter::emitFunctionHeader() {
 /// function.  This can be overridden by targets as required to do custom stuff.
 void AsmPrinter::emitFunctionEntryLabel() {
   CurrentFnSym->redefineIfPossible();
-
-  // The function label could have already been emitted if two symbols end up
-  // conflicting due to asm renaming.  Detect this and emit an error.
-  if (CurrentFnSym->isVariable())
-    report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
-                       "' is a protected alias");
-
   OutStreamer->emitLabel(CurrentFnSym);
 
   if (TM.getTargetTriple().isOSBinFormatELF()) {
@@ -1426,9 +1419,12 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
         "BB entries info is required for BBFreq and BrProb "
         "features");
   }
-  return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
+  return {FuncEntryCountEnabled,
+          BBFreqEnabled,
+          BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
-          static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries),
+          false};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1487,16 +1483,13 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     }
 
     if (!Features.OmitBBEntries) {
-      // TODO: Remove this check when version 1 is deprecated.
-      if (BBAddrMapVersion > 1) {
-        OutStreamer->AddComment("BB id");
-        // Emit the BB ID for this basic block.
-        // We only emit BaseID since CloneID is unset for
-        // -basic-block-adress-map.
-        // TODO: Emit the full BBID when labels and sections can be mixed
-        // together.
-        OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
-      }
+      OutStreamer->AddComment("BB id");
+      // Emit the BB ID for this basic block.
+      // We only emit BaseID since CloneID is unset for
+      // -basic-block-adress-map.
+      // TODO: Emit the full BBID when labels and sections can be mixed
+      // together.
+      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
       // Emit the basic block offset relative to the end of the previous block.
       // This is zero unless the block is padded due to alignment.
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
@@ -2146,16 +2139,20 @@ void AsmPrinter::emitFunctionBody() {
 }
 
 /// Compute the number of Global Variables that uses a Constant.
-static unsigned getNumGlobalVariableUses(const Constant *C) {
-  if (!C)
+static unsigned getNumGlobalVariableUses(const Constant *C,
+                                         bool &HasNonGlobalUsers) {
+  if (!C) {
+    HasNonGlobalUsers = true;
     return 0;
+  }
 
   if (isa<GlobalVariable>(C))
     return 1;
 
   unsigned NumUses = 0;
   for (const auto *CU : C->users())
-    NumUses += getNumGlobalVariableUses(dyn_cast<Constant>(CU));
+    NumUses +=
+        getNumGlobalVariableUses(dyn_cast<Constant>(CU), HasNonGlobalUsers);
 
   return NumUses;
 }
@@ -2166,7 +2163,8 @@ static unsigned getNumGlobalVariableUses(const Constant *C) {
 /// candidates are skipped and are emitted later in case at least one cstexpr
 /// isn't replaced by a PC relative GOT entry access.
 static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
-                                     unsigned &NumGOTEquivUsers) {
+                                     unsigned &NumGOTEquivUsers,
+                                     bool &HasNonGlobalUsers) {
   // Global GOT equivalents are unnamed private globals with a constant
   // pointer initializer to another global symbol. They must point to a
   // GlobalVariable or Function, i.e., as GlobalValue.
@@ -2178,7 +2176,8 @@ static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
   // To be a got equivalent, at least one of its users need to be a constant
   // expression used by another global variable.
   for (const auto *U : GV->users())
-    NumGOTEquivUsers += getNumGlobalVariableUses(dyn_cast<Constant>(U));
+    NumGOTEquivUsers +=
+        getNumGlobalVariableUses(dyn_cast<Constant>(U), HasNonGlobalUsers);
 
   return NumGOTEquivUsers > 0;
 }
@@ -2196,9 +2195,13 @@ void AsmPrinter::computeGlobalGOTEquivs(Module &M) {
 
   for (const auto &G : M.globals()) {
     unsigned NumGOTEquivUsers = 0;
-    if (!isGOTEquivalentCandidate(&G, NumGOTEquivUsers))
+    bool HasNonGlobalUsers = false;
+    if (!isGOTEquivalentCandidate(&G, NumGOTEquivUsers, HasNonGlobalUsers))
       continue;
-
+    // If non-global variables use it, we still need to emit it.
+    // Add 1 here, then emit it in `emitGlobalGOTEquivs`.
+    if (HasNonGlobalUsers)
+      NumGOTEquivUsers += 1;
     const MCSymbol *GOTEquivSym = getSymbol(&G);
     GlobalGOTEquivs[GOTEquivSym] = std::make_pair(&G, NumGOTEquivUsers);
   }

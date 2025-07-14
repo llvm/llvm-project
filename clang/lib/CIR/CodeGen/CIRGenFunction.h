@@ -68,6 +68,10 @@ public:
   mlir::Value cxxThisValue = nullptr;
   clang::CharUnits cxxThisAlignment;
 
+  /// The value of 'this' to sue when evaluating CXXDefaultInitExprs within this
+  /// expression.
+  Address cxxDefaultInitExprThis = Address::invalid();
+
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
 
@@ -490,7 +494,26 @@ public:
   static bool
   isConstructorDelegationValid(const clang::CXXConstructorDecl *ctor);
 
+  /// A scope within which we are constructing the fields of an object which
+  /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
+  /// we need to evaluate the CXXDefaultInitExpr within the evaluation.
+  class FieldConstructionScope {
+  public:
+    FieldConstructionScope(CIRGenFunction &cgf, Address thisAddr)
+        : cgf(cgf), oldCXXDefaultInitExprThis(cgf.cxxDefaultInitExprThis) {
+      cgf.cxxDefaultInitExprThis = thisAddr;
+    }
+    ~FieldConstructionScope() {
+      cgf.cxxDefaultInitExprThis = oldCXXDefaultInitExprThis;
+    }
+
+  private:
+    CIRGenFunction &cgf;
+    Address oldCXXDefaultInitExprThis;
+  };
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
+  LValue makeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
   /// is expected to be signed, the pointer passed to this function must have
@@ -526,6 +549,9 @@ public:
            "Invalid argument to getAddrOfLocalVar(), no decl!");
     return it->second;
   }
+
+  Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
+                                   mlir::Type fieldType, unsigned index);
 
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
@@ -747,6 +773,15 @@ public:
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
                   mlir::Location loc);
+  RValue emitCall(const CIRGenFunctionInfo &funcInfo,
+                  const CIRGenCallee &callee, ReturnValueSlot returnValue,
+                  const CallArgList &args,
+                  cir::CIRCallOpInterface *callOrTryCall = nullptr) {
+    assert(currSrcLoc && "source location must have been set");
+    return emitCall(funcInfo, callee, returnValue, args, callOrTryCall,
+                    *currSrcLoc);
+  }
+
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
                   const clang::CallExpr *e, ReturnValueSlot returnValue);
   void emitCallArg(CallArgList &args, const clang::Expr *e,
@@ -813,6 +848,8 @@ public:
       clang::NestedNameSpecifier *qualifier, bool isArrow,
       const clang::Expr *base);
 
+  mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
+
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
@@ -844,6 +881,11 @@ public:
 
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
+  void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
+
+  void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
+                               clang::Expr *init);
+
   mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
 
   /// Emit the computation of the specified expression of scalar type.
@@ -857,9 +899,8 @@ public:
 
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
-  mlir::LogicalResult
-  emitStmt(const clang::Stmt *s, bool useCurrentScope,
-           llvm::ArrayRef<const Attr *> attrs = std::nullopt);
+  mlir::LogicalResult emitStmt(const clang::Stmt *s, bool useCurrentScope,
+                               llvm::ArrayRef<const Attr *> attrs = {});
 
   mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
                                      bool useCurrentScope);
@@ -918,6 +959,8 @@ public:
   /// ignoring the result.
   void emitIgnoredExpr(const clang::Expr *e);
 
+  RValue emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc);
+
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
   /// returning the rvalue.
@@ -938,7 +981,15 @@ public:
   /// of the expression.
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
+  LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
+
+  /// Like emitLValueForField, excpet that if the Field is a reference, this
+  /// will return the address of the reference and not the address of the value
+  /// stored in the reference.
+  LValue emitLValueForFieldInitialization(LValue base,
+                                          const clang::FieldDecl *field,
+                                          llvm::StringRef fieldName);
 
   LValue emitMemberExpr(const MemberExpr *e);
 

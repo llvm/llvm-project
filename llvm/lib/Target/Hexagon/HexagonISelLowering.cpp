@@ -102,6 +102,10 @@ static cl::opt<int>
     MaxStoresPerMemsetOptSizeCL("max-store-memset-Os", cl::Hidden, cl::init(4),
                                 cl::desc("Max #stores to inline memset"));
 
+static cl::opt<bool>
+    ConstantLoadsToImm("constant-loads-to-imm", cl::Hidden, cl::init(true),
+                       cl::desc("Convert constant loads to immediate values."));
+
 static cl::opt<bool> AlignLoads("hexagon-align-loads",
   cl::Hidden, cl::init(false),
   cl::desc("Rewrite unaligned loads as a pair of aligned loads"));
@@ -3605,6 +3609,18 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
 bool HexagonTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                          bool ForCodeSize) const {
   return true;
+}
+
+/// Returns true if it is beneficial to convert a load of a constant
+/// to just the constant itself.
+bool HexagonTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
+                                                              Type *Ty) const {
+  if (!ConstantLoadsToImm)
+    return false;
+
+  assert(Ty->isIntegerTy());
+  unsigned BitSize = Ty->getPrimitiveSizeInBits();
+  return (BitSize > 0 && BitSize <= 64);
 }
 
 /// isLegalAddressingMode - Return true if the addressing mode represented by

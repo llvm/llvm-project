@@ -729,9 +729,9 @@ public:
     createFuncCall(rewriter, loc, name, {},
                    {tensor, lvlCoords, values, filled, added, count},
                    EmitCInterface::On);
+    Operation *parent = getTop(op);
     rewriter.replaceOp(op, adaptor.getTensor());
     // Deallocate the buffers on exit of the loop nest.
-    Operation *parent = getTop(op);
     rewriter.setInsertionPointAfter(parent);
     rewriter.create<memref::DeallocOp>(loc, values);
     rewriter.create<memref::DeallocOp>(loc, filled);

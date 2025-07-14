@@ -3041,6 +3041,16 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
 void TextNodeDumper::VisitHLSLRootSignatureDecl(
     const HLSLRootSignatureDecl *D) {
   dumpName(D);
+  OS << " version: ";
+  switch (D->getVersion()) {
+  case llvm::dxbc::RootSignatureVersion::V1_0:
+    OS << "1.0";
+    break;
+  case llvm::dxbc::RootSignatureVersion::V1_1:
+    OS << "1.1";
+    break;
+  }
+  OS << ", ";
   llvm::hlsl::rootsig::dumpRootElements(OS, D->getRootElements());
 }
 
