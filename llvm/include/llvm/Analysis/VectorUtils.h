@@ -182,6 +182,12 @@ LLVM_ABI Intrinsic::ID getInterleaveIntrinsicID(unsigned Factor);
 /// Returns the corresponding llvm.vector.deinterleaveN intrinsic for factor N.
 LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
 
+/// Returns the corresponding factor of llvm.vector.interleaveN intrinsics.
+LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);
+
+/// Returns the corresponding factor of llvm.vector.deinterleaveN intrinsics.
+LLVM_ABI unsigned getDeinterleaveIntrinsicFactor(Intrinsic::ID ID);
+
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
 /// from the vector.

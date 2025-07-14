@@ -48,6 +48,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -574,69 +575,11 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   return true;
 }
 
-static bool isInterleaveIntrinsic(Intrinsic::ID IID) {
-  switch (IID) {
-  case Intrinsic::vector_interleave2:
-  case Intrinsic::vector_interleave3:
-  case Intrinsic::vector_interleave4:
-  case Intrinsic::vector_interleave5:
-  case Intrinsic::vector_interleave6:
-  case Intrinsic::vector_interleave7:
-  case Intrinsic::vector_interleave8:
-    return true;
-  default:
-    return false;
-  }
-}
-
-static bool isDeinterleaveIntrinsic(Intrinsic::ID IID) {
-  switch (IID) {
-  case Intrinsic::vector_deinterleave2:
-  case Intrinsic::vector_deinterleave3:
-  case Intrinsic::vector_deinterleave4:
-  case Intrinsic::vector_deinterleave5:
-  case Intrinsic::vector_deinterleave6:
-  case Intrinsic::vector_deinterleave7:
-  case Intrinsic::vector_deinterleave8:
-    return true;
-  default:
-    return false;
-  }
-}
-
-static unsigned getIntrinsicFactor(const IntrinsicInst *II) {
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::vector_deinterleave2:
-  case Intrinsic::vector_interleave2:
-    return 2;
-  case Intrinsic::vector_deinterleave3:
-  case Intrinsic::vector_interleave3:
-    return 3;
-  case Intrinsic::vector_deinterleave4:
-  case Intrinsic::vector_interleave4:
-    return 4;
-  case Intrinsic::vector_deinterleave5:
-  case Intrinsic::vector_interleave5:
-    return 5;
-  case Intrinsic::vector_deinterleave6:
-  case Intrinsic::vector_interleave6:
-    return 6;
-  case Intrinsic::vector_deinterleave7:
-  case Intrinsic::vector_interleave7:
-    return 7;
-  case Intrinsic::vector_deinterleave8:
-  case Intrinsic::vector_interleave8:
-    return 8;
-  default:
-    llvm_unreachable("Unexpected intrinsic");
-  }
-}
-
 static Value *getMask(Value *WideMask, unsigned Factor,
                       ElementCount LeafValueEC) {
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
-    if (isInterleaveIntrinsic(IMI->getIntrinsicID()) &&
-        getIntrinsicFactor(IMI) == Factor && llvm::all_equal(IMI->args())) {
+    if (unsigned F = getInterleaveIntrinsicFactor(IMI->getIntrinsicID());
+        F && F == Factor && llvm::all_equal(IMI->args())) {
       return IMI->getArgOperand(0);
     }
   }
@@ -672,7 +615,9 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   if (!LoadedVal->hasOneUse() || !isa<LoadInst, VPIntrinsic>(LoadedVal))
     return false;
 
-  const unsigned Factor = getIntrinsicFactor(DI);
+  const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
+  assert(Factor && "unexpected deinterleave intrinsic");
+
   SmallVector<Value *, 8> DeinterleaveValues(Factor, nullptr);
   Value *LastFactor = nullptr;
   for (auto *User : DI->users()) {
@@ -738,7 +683,8 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
     return false;
 
   SmallVector<Value *, 8> InterleaveValues(II->args());
-  const unsigned Factor = getIntrinsicFactor(II);
+  const unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
+  assert(Factor && "unexpected interleave intrinsic");
 
   if (auto *VPStore = dyn_cast<VPIntrinsic>(StoredBy)) {
     if (VPStore->getIntrinsicID() != Intrinsic::vp_store)
@@ -792,9 +738,9 @@ bool InterleavedAccessImpl::runOnFunction(Function &F) {
       Changed |= lowerInterleavedStore(&I, DeadInsts);
 
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-      if (isDeinterleaveIntrinsic(II->getIntrinsicID()))
+      if (getDeinterleaveIntrinsicFactor(II->getIntrinsicID()))
         Changed |= lowerDeinterleaveIntrinsic(II, DeadInsts);
-      else if (isInterleaveIntrinsic(II->getIntrinsicID()))
+      else if (getInterleaveIntrinsicFactor(II->getIntrinsicID()))
         Changed |= lowerInterleaveIntrinsic(II, DeadInsts);
     }
   }
