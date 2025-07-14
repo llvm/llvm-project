@@ -109,9 +109,10 @@ class MainProgramDetails : public WithOmpDeclarative {
 public:
   MainProgramDetails() {}
   MainProgramDetails(const SourceName &name, const SourceName &scopeName)
-  : name_{name}, scopeName_{scopeName} {}
-  const SourceName& scopeName() const { return scopeName_; }
-  const SourceName& name() const { return name_; }
+      : name_{name}, scopeName_{scopeName} {}
+  const SourceName &scopeName() const { return scopeName_; }
+  const SourceName &name() const { return name_; }
+
 private:
   SourceName name_; // Original main program symbol name
   SourceName scopeName_; // Main program symbol name used in scope symbol table
@@ -837,7 +838,7 @@ public:
   const Scope &owner() const { return *owner_; }
 
   const SourceName &name() const {
-    if (const auto* details = detailsIf<MainProgramDetails>()) {
+    if (const auto *details = detailsIf<MainProgramDetails>()) {
       // For main program symbol always return the original name
       return details->name();
     }
