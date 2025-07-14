@@ -795,7 +795,7 @@ bool X86AsmBackend::padInstructionViaPrefix(MCFragment &RF,
                         *RF.getSubtargetInfo()))
     return false;
 
-  const unsigned OldSize = RF.getVarContents().size();
+  const unsigned OldSize = RF.getVarSize();
   if (OldSize == 15)
     return false;
 

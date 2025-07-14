@@ -272,8 +272,8 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCFragment &F,
                                          bool &WasRelaxed) const {
   MCContext &C = getContext();
 
-  int64_t LineDelta = F.getLineDelta();
-  const MCExpr &AddrDelta = F.getAddrDelta();
+  int64_t LineDelta = F.getDwarfLineDelta();
+  const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   SmallVector<MCFixup, 1> Fixups;
   size_t OldSize = F.getVarSize();
 
@@ -335,7 +335,7 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCFragment &F,
 }
 
 bool RISCVAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
-  const MCExpr &AddrDelta = F.getAddrDelta();
+  const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   SmallVector<MCFixup, 2> Fixups;
   size_t OldSize = F.getVarSize();
 

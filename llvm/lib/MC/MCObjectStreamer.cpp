@@ -497,8 +497,8 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
 
   auto *F = getOrCreateDataFragment();
   F->Kind = MCFragment::FT_Dwarf;
-  F->setAddrDelta(buildSymbolDiff(*this, Label, LastLabel, SMLoc()));
-  F->setLineDelta(LineDelta);
+  F->setDwarfAddrDelta(buildSymbolDiff(*this, Label, LastLabel, SMLoc()));
+  F->setDwarfLineDelta(LineDelta);
 }
 
 void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
@@ -528,7 +528,7 @@ void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                                  SMLoc Loc) {
   auto *F = getOrCreateDataFragment();
   F->Kind = MCFragment::FT_DwarfFrame;
-  F->setAddrDelta(buildSymbolDiff(*this, Label, LastLabel, Loc));
+  F->setDwarfAddrDelta(buildSymbolDiff(*this, Label, LastLabel, Loc));
 }
 
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
@@ -591,13 +591,13 @@ void MCObjectStreamer::emitBytes(StringRef Data) {
   DF->appendContents(ArrayRef(Data.data(), Data.size()));
 }
 
-void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                            unsigned ValueSize,
+void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
+                                            uint8_t FillLen,
                                             unsigned MaxBytesToEmit) {
   if (MaxBytesToEmit == 0)
     MaxBytesToEmit = Alignment.value();
-  insert(getContext().allocFragment<MCAlignFragment>(
-      Alignment, Value, ValueSize, MaxBytesToEmit));
+  insert(getContext().allocFragment<MCAlignFragment>(Alignment, Fill, FillLen,
+                                                     MaxBytesToEmit));
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *CurSec = getCurrentSectionOnly();

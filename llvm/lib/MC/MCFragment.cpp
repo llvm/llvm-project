@@ -78,8 +78,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   switch (getKind()) {
   case MCFragment::FT_Align: {
     const auto *AF = cast<MCAlignFragment>(this);
-    OS << " Align:" << AF->getAlignment().value() << " Value:" << AF->getValue()
-       << " ValueSize:" << AF->getValueSize()
+    OS << " Align:" << AF->getAlignment().value() << " Fill:" << AF->getFill()
+       << " FillLen:" << unsigned(AF->getFillLen())
        << " MaxBytesToEmit:" << AF->getMaxBytesToEmit();
     if (AF->hasEmitNops())
       OS << " Nops";
@@ -123,12 +123,12 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     }
     case MCFragment::FT_Dwarf:
       OS << " AddrDelta:";
-      getAddrDelta().print(OS, nullptr);
-      OS << " LineDelta:" << getLineDelta();
+      getDwarfAddrDelta().print(OS, nullptr);
+      OS << " LineDelta:" << getDwarfLineDelta();
       break;
     case MCFragment::FT_DwarfFrame:
       OS << " AddrDelta:";
-      getAddrDelta().print(OS, nullptr);
+      getDwarfAddrDelta().print(OS, nullptr);
       break;
     default:
       llvm_unreachable("");

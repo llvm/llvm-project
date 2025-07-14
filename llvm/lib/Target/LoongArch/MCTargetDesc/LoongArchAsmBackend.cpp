@@ -279,23 +279,23 @@ getRelocPairForSize(unsigned Size) {
   }
 }
 
-std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCFragment &LF,
+std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCFragment &F,
                                                        int64_t &Value) const {
-  const MCExpr &Expr = LF.getLEBValue();
-  if (LF.isLEBSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
+  const MCExpr &Expr = F.getLEBValue();
+  if (F.isLEBSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
     return std::make_pair(false, false);
-  LF.setVarFixups({MCFixup::create(0, &Expr, FK_Data_leb128)});
+  F.setVarFixups({MCFixup::create(0, &Expr, FK_Data_leb128)});
   return std::make_pair(true, true);
 }
 
-bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &DF,
+bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
                                              bool &WasRelaxed) const {
   MCContext &C = getContext();
 
-  int64_t LineDelta = DF.getLineDelta();
-  const MCExpr &AddrDelta = DF.getAddrDelta();
+  int64_t LineDelta = F.getDwarfLineDelta();
+  const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   SmallVector<MCFixup, 1> Fixups;
-  size_t OldSize = DF.getVarSize();
+  size_t OldSize = F.getVarSize();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
@@ -349,14 +349,14 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &DF,
     OS << uint8_t(dwarf::DW_LNS_copy);
   }
 
-  DF.setVarContents(Data);
-  DF.setVarFixups(Fixups);
+  F.setVarContents(Data);
+  F.setVarFixups(Fixups);
   WasRelaxed = OldSize != Data.size();
   return true;
 }
 
 bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
-  const MCExpr &AddrDelta = F.getAddrDelta();
+  const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   SmallVector<MCFixup, 2> Fixups;
   size_t OldSize = F.getVarContents().size();
 

@@ -548,18 +548,11 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   case MCFragment::FT_Align: {
     ++stats::EmittedAlignFragments;
     const MCAlignFragment &AF = cast<MCAlignFragment>(F);
-    assert(AF.getValueSize() && "Invalid virtual align in concrete fragment!");
+    assert(AF.getFillLen() && "Invalid virtual align in concrete fragment!");
 
-    uint64_t Count = FragmentSize / AF.getValueSize();
-
-    // FIXME: This error shouldn't actually occur (the front end should emit
-    // multiple .align directives to enforce the semantics it wants), but is
-    // severe enough that we want to report it. How to handle this?
-    if (Count * AF.getValueSize() != FragmentSize)
-      report_fatal_error("undefined .align directive, value size '" +
-                        Twine(AF.getValueSize()) +
-                        "' is not a divisor of padding size '" +
-                        Twine(FragmentSize) + "'");
+    uint64_t Count = FragmentSize / AF.getFillLen();
+    assert(FragmentSize % AF.getFillLen() == 0 &&
+           "computeFragmentSize computed size is incorrect");
 
     // See if we are aligning with nops, and if so do that first to try to fill
     // the Count bytes.  Then if that did not fill any bytes or there are any
@@ -574,17 +567,19 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
 
     // Otherwise, write out in multiples of the value size.
     for (uint64_t i = 0; i != Count; ++i) {
-      switch (AF.getValueSize()) {
+      switch (AF.getFillLen()) {
       default: llvm_unreachable("Invalid size!");
-      case 1: OS << char(AF.getValue()); break;
+      case 1:
+        OS << char(AF.getFill());
+        break;
       case 2:
-        support::endian::write<uint16_t>(OS, AF.getValue(), Endian);
+        support::endian::write<uint16_t>(OS, AF.getFill(), Endian);
         break;
       case 4:
-        support::endian::write<uint32_t>(OS, AF.getValue(), Endian);
+        support::endian::write<uint32_t>(OS, AF.getFill(), Endian);
         break;
       case 8:
-        support::endian::write<uint64_t>(OS, AF.getValue(), Endian);
+        support::endian::write<uint64_t>(OS, AF.getFill(), Endian);
         break;
       }
     }
@@ -727,8 +722,8 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
       case MCFragment::FT_Align:
         // Check that we aren't trying to write a non-zero value into a virtual
         // section.
-        assert((cast<MCAlignFragment>(F).getValueSize() == 0 ||
-                cast<MCAlignFragment>(F).getValue() == 0) &&
+        assert((cast<MCAlignFragment>(F).getFillLen() == 0 ||
+                cast<MCAlignFragment>(F).getFill() == 0) &&
                "Invalid align in virtual section!");
         break;
       case MCFragment::FT_Fill:
@@ -1010,15 +1005,12 @@ bool MCAssembler::relaxDwarfLineAddr(MCFragment &F) {
   MCContext &Context = getContext();
   auto OldSize = F.getVarSize();
   int64_t AddrDelta;
-  bool Abs = F.getAddrDelta().evaluateKnownAbsolute(AddrDelta, *this);
+  bool Abs = F.getDwarfAddrDelta().evaluateKnownAbsolute(AddrDelta, *this);
   assert(Abs && "We created a line delta with an invalid expression");
   (void)Abs;
-  int64_t LineDelta;
-  LineDelta = F.getLineDelta();
   SmallVector<char, 8> Data;
-
-  MCDwarfLineAddr::encode(Context, getDWARFLinetableParams(), LineDelta,
-                          AddrDelta, Data);
+  MCDwarfLineAddr::encode(Context, getDWARFLinetableParams(),
+                          F.getDwarfLineDelta(), AddrDelta, Data);
   F.setVarContents(Data);
   F.clearVarFixups();
   return OldSize != Data.size();
@@ -1031,11 +1023,11 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCFragment &F) {
 
   MCContext &Context = getContext();
   int64_t Value;
-  bool Abs = F.getAddrDelta().evaluateAsAbsolute(Value, *this);
+  bool Abs = F.getDwarfAddrDelta().evaluateAsAbsolute(Value, *this);
   if (!Abs) {
-    reportError(F.getAddrDelta().getLoc(),
+    reportError(F.getDwarfAddrDelta().getLoc(),
                 "invalid CFI advance_loc expression");
-    F.setAddrDelta(MCConstantExpr::create(0, Context));
+    F.setDwarfAddrDelta(MCConstantExpr::create(0, Context));
     return false;
   }
 

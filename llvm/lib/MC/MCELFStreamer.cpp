@@ -321,7 +321,7 @@ void MCELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
 }
 
 void MCELFStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                         unsigned ValueSize,
+                                         uint8_t ValueSize,
                                          unsigned MaxBytesToEmit) {
   if (isBundleLocked())
     report_fatal_error("Emitting values inside a locked bundle is forbidden");

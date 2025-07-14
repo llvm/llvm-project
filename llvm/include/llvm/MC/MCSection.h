@@ -291,12 +291,9 @@ protected:
       // The value this fragment should contain.
       const MCExpr *Value;
     } leb;
+    // Used by .debug_frame and .debug_line to encode an address difference.
     struct {
-      const MCExpr *AddrDelta;
-    } dwarf_frame;
-    struct {
-      // The expression for the difference of the two symbols that make up the
-      // address delta between two .loc dwarf directives.
+      // The address difference between two labels.
       const MCExpr *AddrDelta;
       // The value of the difference between the two line numbers between two
       // .loc dwarf directives.
@@ -495,24 +492,33 @@ public:
     assert(Kind == FT_LEB);
     return *u.leb.Value;
   }
-  void setLEBValue(const MCExpr *Expr) { u.leb.Value = Expr; }
-  bool isLEBSigned() const { return u.leb.IsSigned; }
-  void setLEBSigned(bool S) { u.leb.IsSigned = S; }
+  void setLEBValue(const MCExpr *Expr) {
+    assert(Kind == FT_LEB);
+    u.leb.Value = Expr;
+  }
+  bool isLEBSigned() const {
+    assert(Kind == FT_LEB);
+    return u.leb.IsSigned;
+  }
+  void setLEBSigned(bool S) {
+    assert(Kind == FT_LEB);
+    u.leb.IsSigned = S;
+  }
 
   //== FT_DwarfFrame functions
-  const MCExpr &getAddrDelta() const {
+  const MCExpr &getDwarfAddrDelta() const {
     assert(Kind == FT_Dwarf || Kind == FT_DwarfFrame);
     return *u.dwarf.AddrDelta;
   }
-  void setAddrDelta(const MCExpr *E) {
+  void setDwarfAddrDelta(const MCExpr *E) {
     assert(Kind == FT_Dwarf || Kind == FT_DwarfFrame);
     u.dwarf.AddrDelta = E;
   }
-  int64_t getLineDelta() const {
+  int64_t getDwarfLineDelta() const {
     assert(Kind == FT_Dwarf);
     return u.dwarf.LineDelta;
   }
-  void setLineDelta(int64_t LineDelta) {
+  void setDwarfLineDelta(int64_t LineDelta) {
     assert(Kind == FT_Dwarf);
     u.dwarf.LineDelta = LineDelta;
   }
@@ -531,39 +537,36 @@ using MCDataFragment = MCFragment;
 using MCRelaxableFragment = MCFragment;
 
 class MCAlignFragment : public MCFragment {
-  /// The alignment to ensure, in bytes.
-  Align Alignment;
-
   /// Flag to indicate that (optimal) NOPs should be emitted instead
   /// of using the provided value. The exact interpretation of this flag is
   /// target dependent.
   bool EmitNops : 1;
 
-  /// Value to use for filling padding bytes.
-  int64_t Value;
+  /// The alignment to ensure, in bytes.
+  Align Alignment;
 
   /// The size of the integer (in bytes) of \p Value.
-  unsigned ValueSize;
+  uint8_t FillLen;
 
   /// The maximum number of bytes to emit; if the alignment
   /// cannot be satisfied in this width then this fragment is ignored.
   unsigned MaxBytesToEmit;
 
+  /// Value to use for filling padding bytes.
+  int64_t Fill;
+
   /// When emitting Nops some subtargets have specific nop encodings.
   const MCSubtargetInfo *STI = nullptr;
 
 public:
-  MCAlignFragment(Align Alignment, int64_t Value, unsigned ValueSize,
+  MCAlignFragment(Align Alignment, int64_t Fill, uint8_t FillLen,
                   unsigned MaxBytesToEmit)
-      : MCFragment(FT_Align, false), Alignment(Alignment), EmitNops(false),
-        Value(Value), ValueSize(ValueSize), MaxBytesToEmit(MaxBytesToEmit) {}
+      : MCFragment(FT_Align, false), EmitNops(false), Alignment(Alignment),
+        FillLen(FillLen), MaxBytesToEmit(MaxBytesToEmit), Fill(Fill) {}
 
   Align getAlignment() const { return Alignment; }
-
-  int64_t getValue() const { return Value; }
-
-  unsigned getValueSize() const { return ValueSize; }
-
+  int64_t getFill() const { return Fill; }
+  uint8_t getFillLen() const { return FillLen; }
   unsigned getMaxBytesToEmit() const { return MaxBytesToEmit; }
 
   bool hasEmitNops() const { return EmitNops; }
