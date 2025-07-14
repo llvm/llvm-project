@@ -243,6 +243,17 @@ const ir2vec::Embedding &Vocabulary::operator[](const Value *Arg) const {
   return Vocab[MaxOpcodes + MaxTypeIDs + static_cast<unsigned>(ArgKind)];
 }
 
+StringRef Vocabulary::getVocabKeyForOpcode(unsigned Opcode) {
+  assert(Opcode >= 1 && Opcode <= MaxOpcodes && "Invalid opcode");
+#define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
+  if (Opcode == NUM) {                                                         \
+    return #OPCODE;                                                            \
+  }
+#include "llvm/IR/Instruction.def"
+#undef HANDLE_INST
+  return "UnknownOpcode";
+}
+
 StringRef Vocabulary::getVocabKeyForTypeID(Type::TypeID TypeID) {
   switch (TypeID) {
   case Type::VoidTyID:
@@ -279,6 +290,7 @@ StringRef Vocabulary::getVocabKeyForTypeID(Type::TypeID TypeID) {
   case Type::TargetExtTyID:
     return "UnknownTy";
   }
+  return "UnknownTy";
 }
 
 StringRef Vocabulary::getVocabKeyForOperandKind(Vocabulary::OperandKind Kind) {
@@ -315,14 +327,8 @@ StringRef Vocabulary::getStringKey(unsigned Pos) {
   assert(Pos < MaxOpcodes + MaxTypeIDs + MaxOperandKinds &&
          "Position out of bounds in vocabulary");
   // Opcode
-  if (Pos < MaxOpcodes) {
-#define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
-  if (Pos == NUM - 1) {                                                        \
-    return #OPCODE;                                                            \
-  }
-#include "llvm/IR/Instruction.def"
-#undef HANDLE_INST
-  }
+  if (Pos < MaxOpcodes)
+    return getVocabKeyForOpcode(Pos + 1);
   // Type
   if (Pos < MaxOpcodes + MaxTypeIDs)
     return getVocabKeyForTypeID(static_cast<Type::TypeID>(Pos - MaxOpcodes));
@@ -430,21 +436,18 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
   // Handle Opcodes
   std::vector<Embedding> NumericOpcodeEmbeddings(Vocabulary::MaxOpcodes,
                                                  Embedding(Dim, 0));
-#define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
-  {                                                                            \
-    auto It = OpcVocab.find(#OPCODE);                                          \
-    if (It != OpcVocab.end())                                                  \
-      NumericOpcodeEmbeddings[NUM - 1] = It->second;                           \
-    else                                                                       \
-      handleMissingEntity(#OPCODE);                                            \
+  for (unsigned Opcode : seq(0u, Vocabulary::MaxOpcodes)) {
+    StringRef VocabKey = Vocabulary::getVocabKeyForOpcode(Opcode + 1);
+    auto It = OpcVocab.find(VocabKey.str());
+    if (It != OpcVocab.end())
+      NumericOpcodeEmbeddings[Opcode] = It->second;
+    else
+      handleMissingEntity(VocabKey.str());
   }
-#include "llvm/IR/Instruction.def"
-#undef HANDLE_INST
   Vocab.insert(Vocab.end(), NumericOpcodeEmbeddings.begin(),
                NumericOpcodeEmbeddings.end());
 
-  // Handle Types using direct iteration through TypeID enum
-  // We iterate through all possible TypeID values and map them to embeddings
+  // Handle Types
   std::vector<Embedding> NumericTypeEmbeddings(Vocabulary::MaxTypeIDs,
                                                Embedding(Dim, 0));
   for (unsigned TypeID : seq(0u, Vocabulary::MaxTypeIDs)) {
