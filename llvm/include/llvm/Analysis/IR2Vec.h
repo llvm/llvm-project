@@ -162,6 +162,14 @@ class Vocabulary {
   static constexpr unsigned MaxOperandKinds =
       static_cast<unsigned>(OperandKind::MaxOperandKind);
 
+public:
+  Vocabulary() = default;
+  Vocabulary(VocabVector &&Vocab);
+
+  bool isValid() const;
+  unsigned getDimension() const;
+  size_t size() const;
+
   /// Helper function to get vocabulary key for a given Opcode
   static StringRef getVocabKeyForOpcode(unsigned Opcode);
 
@@ -173,14 +181,6 @@ class Vocabulary {
 
   /// Helper function to classify an operand into OperandKind
   static OperandKind getOperandKind(const Value *Op);
-
-public:
-  Vocabulary() = default;
-  Vocabulary(VocabVector &&Vocab);
-
-  bool isValid() const;
-  unsigned getDimension() const;
-  size_t size() const;
 
   /// Accessors to get the embedding for a given entity.
   const ir2vec::Embedding &operator[](unsigned Opcode) const;
