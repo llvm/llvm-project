@@ -7,15 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILPostOptimizationValidation.h"
-#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -130,13 +126,10 @@ static uint32_t parameterToRangeType(uint32_t Type) {
   switch (Type) {
   case llvm::to_underlying(dxbc::RootParameterType::CBV):
     return llvm::to_underlying(dxbc::DescriptorRangeType::CBV);
-    break;
   case llvm::to_underlying(dxbc::RootParameterType::SRV):
     return llvm::to_underlying(dxbc::DescriptorRangeType::SRV);
-    break;
   case llvm::to_underlying(dxbc::RootParameterType::UAV):
     return llvm::to_underlying(dxbc::DescriptorRangeType::UAV);
-    break;
   default:
     llvm_unreachable("Root Parameter Type has no Range Type equivalent");
   }
