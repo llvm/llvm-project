@@ -568,12 +568,15 @@ legalizeLoadStoreOnArrayAllocas(Instruction &I,
                                 DenseMap<Value *, Value *> &) {
 
   Value *PtrOp;
+  unsigned PtrOpIndex;
   [[maybe_unused]] Type *LoadStoreTy;
   if (auto *LI = dyn_cast<LoadInst>(&I)) {
     PtrOp = LI->getPointerOperand();
+    PtrOpIndex = LI->getPointerOperandIndex();
     LoadStoreTy = LI->getType();
   } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
     PtrOp = SI->getPointerOperand();
+    PtrOpIndex = SI->getPointerOperandIndex();
     LoadStoreTy = SI->getValueOperand()->getType();
   } else
     return;
@@ -595,16 +598,7 @@ legalizeLoadStoreOnArrayAllocas(Instruction &I,
   Value *Zero = Builder.getInt32(0);
   Value *GEP = Builder.CreateGEP(Ty, AllocaPtrOp, {Zero, Zero}, "",
                                  GEPNoWrapFlags::all());
-
-  Value *NewLoadStore = nullptr;
-  if (auto *LI = dyn_cast<LoadInst>(&I))
-    NewLoadStore = Builder.CreateLoad(LI->getType(), GEP, LI->getName());
-  else if (auto *SI = dyn_cast<StoreInst>(&I))
-    NewLoadStore =
-        Builder.CreateStore(SI->getValueOperand(), GEP, SI->isVolatile());
-
-  ToRemove.push_back(&I);
-  I.replaceAllUsesWith(NewLoadStore);
+  I.setOperand(PtrOpIndex, GEP);
 }
 
 namespace {
