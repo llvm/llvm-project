@@ -247,7 +247,7 @@ template <typename T> static T check(ErrorOr<T> E, std::string Msg) {
 }
 
 static int usage() {
-  errs() << "Available subcommands: dump-symtab run print-guid\n";
+  errs() << "Available subcommands: dump-symtab run print-guid version\n";
   return 1;
 }
 
@@ -614,6 +614,10 @@ int main(int argc, char **argv) {
     // Note the name of the function we're calling: this won't return the right
     // answer for internal linkage symbols.
     outs() << GlobalValue::getGUIDAssumingExternalLinkage(argv[2]) << '\n';
+    return 0;
+  }
+  if (Subcommand == "version") {
+    cl::PrintVersionMessage();
     return 0;
   }
   return usage();
