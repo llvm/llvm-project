@@ -2356,6 +2356,9 @@ module std [system] {
   module verbose_abort {
     header "__verbose_abort"
   }
+  module verbose_trap {
+    header "__verbose_trap"
+  }
   module internal_assert {
     header "__assert"
     export *
