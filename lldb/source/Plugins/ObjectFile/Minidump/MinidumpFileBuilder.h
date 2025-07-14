@@ -176,8 +176,6 @@ private:
   static constexpr size_t HEADER_SIZE = sizeof(llvm::minidump::Header);
   static constexpr size_t DIRECTORY_SIZE = sizeof(llvm::minidump::Directory);
 
-  static constexpr const char FORCE_64B_FLAG[] = "force_64b";
-
   // More that one place can mention the register thread context locations,
   // so when we emit the thread contents, remember where it is so we don't have
   // to duplicate it in the exception data.

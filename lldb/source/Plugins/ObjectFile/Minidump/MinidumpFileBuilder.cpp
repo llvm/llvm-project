@@ -831,19 +831,11 @@ Status MinidumpFileBuilder::AddLinuxFileStreams() {
 Status MinidumpFileBuilder::AddMemoryList() {
   Status error;
 
-  // Note this is here for testing. In the past there has been many occasions
-  // that the 64b code has regressed because it's wasteful and expensive to
-  // write a 4.2gb+ on every CI run to get around this and to exercise this
-  // codepath we define a flag in the options object.
-  bool force_64b_for_non_threads =
-      m_save_core_options.ContainsFlag(FORCE_64B_FLAG);
-
   // We first save the thread stacks to ensure they fit in the first UINT32_MAX
   // bytes of the core file. Thread structures in minidump files can only use
   // 32 bit memory descriptiors, so we emit them first to ensure the memory is
   // in accessible with a 32 bit offset.
   std::vector<CoreFileMemoryRange> ranges_32;
-  std::vector<CoreFileMemoryRange> ranges_64;
   CoreFileMemoryRanges all_core_memory_ranges;
   error = m_process_sp->CalculateCoreFileSaveRanges(m_save_core_options,
                                                     all_core_memory_ranges);
@@ -875,6 +867,10 @@ Status MinidumpFileBuilder::AddMemoryList() {
     }
   }
 
+  // The header has to be in 32b memory, as it needs to be addressable by a 32b
+  // RVA. Everything else can be 64b.
+  total_size += sizeof(llvm::minidump::MemoryListHeader);
+
   if (total_size >= UINT32_MAX) {
     error = Status::FromErrorStringWithFormat(
         "Unable to write minidump. Stack memory "
@@ -883,35 +879,15 @@ Status MinidumpFileBuilder::AddMemoryList() {
     return error;
   }
 
-  // After saving the stacks, we start packing as much as we can into 32b.
-  // We apply a generous padding here so that the Directory, MemoryList and
-  // Memory64List sections all begin in 32b addressable space.
-  // Then anything overflow extends into 64b addressable space.
-  // all_core_memory_vec will either contain all stack regions at this point,
-  // or be empty if it's a stack only minidump.
-  if (!all_core_memory_vec.empty())
-    total_size += 256 + (all_core_memory_vec.size() *
-                         sizeof(llvm::minidump::MemoryDescriptor_64));
-
-  for (const auto &core_range : all_core_memory_vec) {
-    const addr_t range_size = core_range.range.size();
-    // We don't need to check for stacks here because we already removed them
-    // from all_core_memory_ranges.
-    if (!force_64b_for_non_threads && total_size + range_size < UINT32_MAX) {
-      ranges_32.push_back(core_range);
-      total_size += range_size;
-    } else {
-      ranges_64.push_back(core_range);
-    }
-  }
-
+  // Save only the thread stacks to the 32b memory list. Everything else will get put in 
+  // Memory64, this simplifies tracking 
   error = AddMemoryList_32(ranges_32, progress);
   if (error.Fail())
     return error;
 
   // Add the remaining memory as a 64b range.
-  if (!ranges_64.empty()) {
-    error = AddMemoryList_64(ranges_64, progress);
+  if (!all_core_memory_ranges.IsEmpty()) {
+    error = AddMemoryList_64(all_core_memory_vec, progress);
     if (error.Fail())
       return error;
   }

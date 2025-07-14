@@ -214,17 +214,3 @@ void SaveCoreOptions::Clear() {
   m_process_sp.reset();
   m_regions_to_save.Clear();
 }
-
-void SaveCoreOptions::AddFlag(const char *flag) {
-  if (!flag || !flag[0])
-    return;
-
-  if (!m_flags)
-    m_flags = std::unordered_set<std::string>();
-
-  m_flags->emplace(std::string(flag));
-}
-
-bool SaveCoreOptions::ContainsFlag(const char *flag) const {
-  return m_flags && m_flags->find(flag) != m_flags->end();
-}

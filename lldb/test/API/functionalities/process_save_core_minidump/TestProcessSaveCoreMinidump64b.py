@@ -9,9 +9,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-# Constant from MinidumpFileBuilder.h, this forces 64b for non threads
-FORCE_64B = "force_64b"
-
 
 class ProcessSaveCoreMinidump64bTestCase(TestBase):
     def verify_minidump(
@@ -51,6 +48,7 @@ class ProcessSaveCoreMinidump64bTestCase(TestBase):
                     actual, expected, "Bytes differ between live process and core"
                 )
 
+
             # Now we check if the error is the same, error isn't abnormal but they should fail for the same reason
             self.assertTrue(
                 (
@@ -60,7 +58,8 @@ class ProcessSaveCoreMinidump64bTestCase(TestBase):
                 or (
                     actual_process_read_error.Fail()
                     and expected_process_read_error.Fail()
-                )
+                ),
+                f"Address range {hex(start_addr)} - {hex(end_addr)} failed to read from live process and core for different reasons",
             )
 
     @skipUnlessArch("x86_64")
@@ -84,7 +83,6 @@ class ProcessSaveCoreMinidump64bTestCase(TestBase):
             options.SetStyle(lldb.eSaveCoreFull)
             options.SetPluginName("minidump")
             options.SetProcess(live_process)
-            options.AddFlag(FORCE_64B)
 
             error = live_process.SaveCore(options)
             self.assertTrue(error.Success(), error.GetCString())
@@ -119,7 +117,6 @@ class ProcessSaveCoreMinidump64bTestCase(TestBase):
             options.SetStyle(lldb.eSaveCoreDirtyOnly)
             options.SetPluginName("minidump")
             options.SetProcess(live_process)
-            options.AddFlag(FORCE_64B)
 
             error = live_process.SaveCore(options)
             self.assertTrue(error.Success(), error.GetCString())
