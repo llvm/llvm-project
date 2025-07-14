@@ -106,15 +106,17 @@ static void generateEnumClass(ArrayRef<const Record *> Records, raw_ostream &OS,
                               bool ExportEnums) {
   OS << "\n";
   OS << "enum class " << Enum << " {\n";
-  std::string N;
-  for (auto [I, R] : llvm::enumerate(Records)) {
-    N = getIdentifierName(R, Prefix);
-    OS << "  " << N << ",\n";
-    // Make the sentinel names less likely to conflict with actual names...
-    if (I == 0)
-      OS << "  First_ = " << N << ",\n";
+  if (!Records.empty()) {
+    std::string N;
+    for (auto [I, R] : llvm::enumerate(Records)) {
+      N = getIdentifierName(R, Prefix);
+      OS << "  " << N << ",\n";
+      // Make the sentinel names less likely to conflict with actual names...
+      if (I == 0)
+        OS << "  First_ = " << N << ",\n";
+    }
+    OS << "  Last_ = " << N << ",\n";
   }
-  OS << "  Last_ = " << N << ",\n";
   OS << "};\n";
   OS << "\n";
   OS << "static constexpr std::size_t " << Enum
