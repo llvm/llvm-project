@@ -812,7 +812,62 @@ static PHINode *findInnerReductionPhi(Loop *L, Value *V) {
         // Detect floating point reduction only when it can be reordered.
         if (RD.getExactFPMathInst() != nullptr)
           return nullptr;
-        return PHI;
+
+        RecurKind RK = RD.getRecurrenceKind();
+        switch (RK) {
+        case RecurKind::Or:
+        case RecurKind::And:
+        case RecurKind::Xor:
+        case RecurKind::SMin:
+        case RecurKind::SMax:
+        case RecurKind::UMin:
+        case RecurKind::UMax:
+        case RecurKind::FAdd:
+        case RecurKind::FMul:
+        case RecurKind::FMin:
+        case RecurKind::FMax:
+        case RecurKind::FMinimum:
+        case RecurKind::FMaximum:
+        case RecurKind::FMinimumNum:
+        case RecurKind::FMaximumNum:
+        case RecurKind::FMulAdd:
+        case RecurKind::AnyOf:
+          return PHI;
+
+        // Change the order of integer addition/multiplication may change the
+        // semantics. Consider the following case:
+        //
+        //  int A[2][2] = {{ INT_MAX, INT_MAX }, { INT_MIN, INT_MIN }};
+        //  int sum = 0;
+        //  for (int i = 0; i < 2; i++)
+        //    for (int j = 0; j < 2; j++)
+        //      sum += A[j][i];
+        //
+        // If the above loops are exchanged, the addition will cause an
+        // overflow. To prove the legality, we must ensure that all reduction
+        // operations don't have nuw/nsw flags.
+        case RecurKind::Add:
+        case RecurKind::Mul: {
+          unsigned OpCode = RecurrenceDescriptor::getOpcode(RK);
+          SmallVector<Instruction *, 4> Ops = RD.getReductionOpChain(PHI, L);
+
+          // FIXME: Is this check necessary?
+          if (Ops.empty())
+            return nullptr;
+          for (Instruction *I : Ops) {
+            // FIXME: Is this check necessary?
+            if (I->getOpcode() != OpCode)
+              return nullptr;
+
+            // Reject if the reduction operation has nuw/nsw flags.
+            if (I->hasNoSignedWrap() || I->hasNoUnsignedWrap())
+              return nullptr;
+          }
+          return PHI;
+        }
+        default:
+          return nullptr;
+        }
       }
       return nullptr;
     }
