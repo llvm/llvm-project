@@ -720,6 +720,7 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
                              .StartsWith("vqsubs.", Intrinsic::ssub_sat)
                              .StartsWith("vqsubu.", Intrinsic::usub_sat)
                              .StartsWith("vrinta.", Intrinsic::round)
+                             .StartsWith("vrintn.", Intrinsic::roundeven)
                              .StartsWith("vrintm.", Intrinsic::floor)
                              .StartsWith("vrintp.", Intrinsic::ceil)
                              .StartsWith("vrintx.", Intrinsic::rint)

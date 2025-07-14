@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/raw_ostream.h"
 #include <limits>
 #include <variant>
 
@@ -50,7 +51,14 @@ struct RootDescriptor {
   dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
   dxbc::RootDescriptorFlags Flags;
 
-  void setDefaultFlags() {
+  void setDefaultFlags(dxbc::RootSignatureVersion Version) {
+    if (Version == dxbc::RootSignatureVersion::V1_0) {
+      Flags = dxbc::RootDescriptorFlags::DataVolatile;
+      return;
+    }
+
+    assert(Version == llvm::dxbc::RootSignatureVersion::V1_1 &&
+           "Specified an invalid root signature version");
     switch (Type) {
     case DescriptorType::CBuffer:
     case DescriptorType::SRV:
@@ -83,7 +91,16 @@ struct DescriptorTableClause {
   uint32_t Offset = DescriptorTableOffsetAppend;
   dxbc::DescriptorRangeFlags Flags;
 
-  void setDefaultFlags() {
+  void setDefaultFlags(dxbc::RootSignatureVersion Version) {
+    if (Version == dxbc::RootSignatureVersion::V1_0) {
+      Flags = dxbc::DescriptorRangeFlags::DescriptorsVolatile;
+      if (Type != ClauseType::Sampler)
+        Flags |= dxbc::DescriptorRangeFlags::DataVolatile;
+      return;
+    }
+
+    assert(Version == dxbc::RootSignatureVersion::V1_1 &&
+           "Specified an invalid root signature version");
     switch (Type) {
     case ClauseType::CBuffer:
     case ClauseType::SRV:
@@ -134,6 +151,21 @@ struct StaticSampler {
 using RootElement =
     std::variant<dxbc::RootFlags, RootConstants, RootDescriptor,
                  DescriptorTable, DescriptorTableClause, StaticSampler>;
+
+/// The following contains the serialization interface for root elements
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const dxbc::RootFlags &Flags);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const RootConstants &Constants);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const DescriptorTableClause &Clause);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const RootDescriptor &Descriptor);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const StaticSampler &StaticSampler);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element);
+
+LLVM_ABI void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
 
 } // namespace rootsig
 } // namespace hlsl

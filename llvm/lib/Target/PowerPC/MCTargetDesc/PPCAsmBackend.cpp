@@ -14,7 +14,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -129,12 +128,6 @@ public:
     }
   }
 
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override {
-    // FIXME.
-    llvm_unreachable("relaxInstruction() unimplemented");
-  }
-
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override {
     uint64_t NumNops = Count / 4;
@@ -149,35 +142,37 @@ public:
 } // end anonymous namespace
 
 MCFixupKindInfo PPCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  // clang-format off
   const static MCFixupKindInfo InfosBE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
-      {"fixup_ppc_br24", 6, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_ppc_br24_notoc", 6, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_ppc_brcond14", 16, 14, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_br24", 6, 24, 0},
+      {"fixup_ppc_br24_notoc", 6, 24, 0},
+      {"fixup_ppc_brcond14", 16, 14, 0},
       {"fixup_ppc_br24abs", 6, 24, 0},
       {"fixup_ppc_brcond14abs", 16, 14, 0},
       {"fixup_ppc_half16", 0, 16, 0},
       {"fixup_ppc_half16ds", 0, 14, 0},
-      {"fixup_ppc_pcrel34", 0, 34, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_pcrel34", 0, 34, 0},
       {"fixup_ppc_imm34", 0, 34, 0},
       {"fixup_ppc_nofixup", 0, 0, 0}};
   const static MCFixupKindInfo InfosLE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
-      {"fixup_ppc_br24", 2, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_ppc_br24_notoc", 2, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_ppc_brcond14", 2, 14, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_br24", 2, 24, 0},
+      {"fixup_ppc_br24_notoc", 2, 24, 0},
+      {"fixup_ppc_brcond14", 2, 14, 0},
       {"fixup_ppc_br24abs", 2, 24, 0},
       {"fixup_ppc_brcond14abs", 2, 14, 0},
       {"fixup_ppc_half16", 0, 16, 0},
       {"fixup_ppc_half16ds", 2, 14, 0},
-      {"fixup_ppc_pcrel34", 0, 34, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_pcrel34", 0, 34, 0},
       {"fixup_ppc_imm34", 0, 34, 0},
       {"fixup_ppc_nofixup", 0, 0, 0}};
+  // clang-format on
 
   // Fixup kinds from .reloc directive are like R_PPC_NONE/R_PPC64_NONE. They
   // do not require any extra processing.
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -287,7 +282,7 @@ ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
 std::optional<MCFixupKind>
 XCOFFPPCAsmBackend::getFixupKind(StringRef Name) const {
   return StringSwitch<std::optional<MCFixupKind>>(Name)
-      .Case("R_REF", (MCFixupKind)PPC::fixup_ppc_nofixup)
+      .Case("R_REF", PPC::fixup_ppc_nofixup)
       .Default(std::nullopt);
 }
 

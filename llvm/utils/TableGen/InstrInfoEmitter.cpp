@@ -201,7 +201,7 @@ InstrInfoEmitter::CollectOperandInfo(OperandInfoListTy &OperandInfoList,
                                      OperandInfoMapTy &OperandInfoMap) {
   const CodeGenTarget &Target = CDP.getTargetInfo();
   unsigned Offset = 0;
-  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+  for (const CodeGenInstruction *Inst : Target.getInstructions()) {
     OperandInfoTy OperandInfo = GetOperandInfo(*Inst);
     if (OperandInfoMap.try_emplace(OperandInfo, Offset).second) {
       OperandInfoList.push_back(OperandInfo);
@@ -645,7 +645,7 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
       Target.getName(), "", "computeAvailableFeatures", SubtargetFeatures, OS);
 
   std::vector<std::vector<const Record *>> FeatureBitsets;
-  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+  for (const CodeGenInstruction *Inst : Target.getInstructions()) {
     FeatureBitsets.emplace_back();
     for (const Record *Predicate :
          Inst->TheDef->getValueAsListOfDefs("Predicates")) {
@@ -696,7 +696,7 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
      << "  static constexpr " << getMinimalTypeForRange(FeatureBitsets.size())
      << " RequiredFeaturesRefs[] = {\n";
   unsigned InstIdx = 0;
-  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+  for (const CodeGenInstruction *Inst : Target.getInstructions()) {
     OS << "    CEFBS";
     unsigned NumPredicates = 0;
     for (const Record *Predicate :
@@ -818,7 +818,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   const CodeGenTarget &Target = CDP.getTargetInfo();
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
-      Target.getInstructionsByEnumValue();
+      Target.getInstructions();
 
   emitEnums(OS, NumberedInstructions);
 
@@ -1058,7 +1058,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "#endif // GET_INSTRINFO_CTOR_DTOR\n\n";
 
   ArrayRef<const CodeGenInstruction *> TargetInstructions =
-      Target.getTargetInstructionsByEnumValue();
+      Target.getTargetInstructions();
 
   if (HasUseNamedOperandTable) {
     Timer.startTimer("Emit operand name mappings");

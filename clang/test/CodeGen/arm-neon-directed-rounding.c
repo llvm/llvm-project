@@ -116,7 +116,7 @@ float32x4_t test_vrndmq_f32(float32x4_t a) {
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
 // CHECK-A32-NEXT:    [[VRNDN_V_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
-// CHECK-A32-NEXT:    [[VRNDN_V1_I:%.*]] = call <2 x float> @llvm.arm.neon.vrintn.v2f32(<2 x float> [[VRNDN_V_I]])
+// CHECK-A32-NEXT:    [[VRNDN_V1_I:%.*]] = call <2 x float> @llvm.roundeven.v2f32(<2 x float> [[VRNDN_V_I]])
 // CHECK-A32-NEXT:    [[VRNDN_V2_I:%.*]] = bitcast <2 x float> [[VRNDN_V1_I]] to <8 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[VRNDN_V2_I]] to <2 x i32>
 // CHECK-A32-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to <2 x float>
@@ -141,7 +141,7 @@ float32x2_t test_vrndn_f32(float32x2_t a) {
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
 // CHECK-A32-NEXT:    [[VRNDNQ_V_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
-// CHECK-A32-NEXT:    [[VRNDNQ_V1_I:%.*]] = call <4 x float> @llvm.arm.neon.vrintn.v4f32(<4 x float> [[VRNDNQ_V_I]])
+// CHECK-A32-NEXT:    [[VRNDNQ_V1_I:%.*]] = call <4 x float> @llvm.roundeven.v4f32(<4 x float> [[VRNDNQ_V_I]])
 // CHECK-A32-NEXT:    [[VRNDNQ_V2_I:%.*]] = bitcast <4 x float> [[VRNDNQ_V1_I]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[VRNDNQ_V2_I]] to <4 x i32>
 // CHECK-A32-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <4 x float>
@@ -310,24 +310,18 @@ float32x4_t test_vrndq_f32(float32x4_t a) {
   return vrndq_f32(a);
 }
 
-// CHECK-A32-LABEL: define dso_local float @test_vrndns_f32(
-// CHECK-A32-SAME: float noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-A32-NEXT:  [[ENTRY:.*:]]
-// CHECK-A32-NEXT:    [[VRNDN_I:%.*]] = call float @llvm.arm.neon.vrintn.f32(float [[A]])
-// CHECK-A32-NEXT:    ret float [[VRNDN_I]]
-//
-// CHECK-A64-LABEL: define dso_local float @test_vrndns_f32(
-// CHECK-A64-SAME: float noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-A64-NEXT:  [[ENTRY:.*:]]
-// CHECK-A64-NEXT:    [[VRNDN_I:%.*]] = call float @llvm.roundeven.f32(float [[A]])
-// CHECK-A64-NEXT:    ret float [[VRNDN_I]]
+// CHECK-LABEL: define dso_local float @test_vrndns_f32(
+// CHECK-SAME: float noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VRNDN_I:%.*]] = call float @llvm.roundeven.f32(float [[A]])
+// CHECK-NEXT:    ret float [[VRNDN_I]]
 //
 float32_t test_vrndns_f32(float32_t a) {
   return vrndns_f32(a);
 }
 
 // CHECK-LABEL: define dso_local <2 x float> @test_vrndi_f32(
-// CHECK-SAME: <2 x float> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: <2 x float> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>

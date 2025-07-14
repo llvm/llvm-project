@@ -303,9 +303,9 @@ void DerivedTypeCache::postComponentVisitUpdate(
     return;
   ActiveLevels oldLevels;
   oldLevels.swap(activeRecursionLevels);
-  std::merge(componentActiveRecursionLevels.begin(),
-             componentActiveRecursionLevels.end(), oldLevels.begin(),
-             oldLevels.end(), std::back_inserter(activeRecursionLevels));
+  std::set_union(componentActiveRecursionLevels.begin(),
+                 componentActiveRecursionLevels.end(), oldLevels.begin(),
+                 oldLevels.end(), std::back_inserter(activeRecursionLevels));
 }
 
 void DerivedTypeCache::finalize(mlir::Type ty, mlir::LLVM::DITypeAttr attr,

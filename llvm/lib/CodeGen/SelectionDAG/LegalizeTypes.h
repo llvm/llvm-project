@@ -564,7 +564,7 @@ private:
   // Convert Float Results to Integer.
   void SoftenFloatResult(SDNode *N, unsigned ResNo);
   SDValue SoftenFloatRes_Unary(SDNode *N, RTLIB::Libcall LC);
-  SDValue SoftenFloatRes_UnaryWithTwoFPResults(
+  bool SoftenFloatRes_UnaryWithTwoFPResults(
       SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo = {});
   SDValue SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC);
   SDValue SoftenFloatRes_MERGE_VALUES(SDNode *N, unsigned ResNo);
