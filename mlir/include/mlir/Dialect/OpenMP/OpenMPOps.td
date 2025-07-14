@@ -2110,10 +2110,6 @@ def AllocateDirOp : OpenMP_Op<"allocate_dir", clauses = [
                        clausesOptAssemblyFormat #
                        ") attr-dict ";
 
-  let builders = [
-    OpBuilder<(ins CArg<"const AllocateDirOperands &">:$clauses)>
-  ];
-
   let hasVerifier = 1;
 }
 
