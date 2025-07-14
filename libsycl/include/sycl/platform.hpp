@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the Platform class, which encapsulates
-/// a single SYCL platform on which kernel functions may be executed.
+/// This file contains the declaration of the SYCL platform class, which
+/// encapsulates a single platform on which kernel functions may be executed.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -21,7 +21,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 class _LIBSYCL_EXPORT platform {
 public:
-  /// Constructs a SYCL platform using the default device.
+  /// Constructs a SYCL platform which contains the default device.
   platform();
 
 }; // class platform
