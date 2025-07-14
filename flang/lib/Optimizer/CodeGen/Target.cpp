@@ -784,7 +784,7 @@ struct TargetX86_64Win : public GenericTarget<TargetX86_64Win> {
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// AArch64 linux target specifics.
+// AArch64 target specifics.
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -808,6 +808,34 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
       typeTodo(sem, loc, "argument");
     }
     return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  integerArgumentType(mlir::Location loc,
+                      mlir::IntegerType argTy) const override {
+    if (argTy.getWidth() < getCIntTypeWidth() && argTy.isSignless()) {
+      AT::IntegerExtension intExt;
+      if (argTy.getWidth() == 1) {
+        // Zero extend for 'i1'.
+        intExt = AT::IntegerExtension::Zero;
+      } else {
+        if (triple.isOSDarwin()) {
+          // On Darwin, sign extend. The apple developer guide specifies this as
+          // a divergence from the AArch64PCS:
+          // https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms#Pass-arguments-to-functions-correctly
+          intExt = AT::IntegerExtension::Sign;
+        } else {
+          // On linux, pass directly and do not extend.
+          intExt = AT::IntegerExtension::None;
+        }
+      }
+      CodeGenSpecifics::Marshalling marshal;
+      marshal.emplace_back(argTy, AT{/*alignment=*/0, /*byval=*/false,
+                                     /*sret=*/false, /*append=*/false,
+                                     /*intExt=*/intExt});
+      return marshal;
+    }
+    return GenericTarget::integerArgumentType(loc, argTy);
   }
 
   CodeGenSpecifics::Marshalling
@@ -1016,6 +1044,37 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
   CodeGenSpecifics::Marshalling
   structReturnType(mlir::Location loc, fir::RecordType ty) const override {
     return structType(loc, ty, /*isResult=*/true);
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// PPC (AIX 32 bit) target specifics.
+//===----------------------------------------------------------------------===//
+namespace {
+struct TargetPPC : public GenericTarget<TargetPPC> {
+  using GenericTarget::GenericTarget;
+
+  static constexpr int defaultWidth = 32;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    // two distinct element type arguments (re, im)
+    marshal.emplace_back(eleTy, AT{});
+    marshal.emplace_back(eleTy, AT{});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    // Use a type that will be translated into LLVM as:
+    // { t, t }   struct of 2 element type
+    marshal.emplace_back(
+        mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy}),
+        AT{});
+    return marshal;
   }
 };
 } // namespace
@@ -1847,6 +1906,9 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
   case llvm::Triple::ArchType::aarch64:
     return std::make_unique<TargetAArch64>(
         ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+  case llvm::Triple::ArchType::ppc:
+    return std::make_unique<TargetPPC>(ctx, std::move(trp), std::move(kindMap),
+                                       targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::ppc64:
     return std::make_unique<TargetPPC64>(
         ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);

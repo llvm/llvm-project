@@ -61,6 +61,7 @@ getIntrinsicEffects(mlir::Operation *self,
   // }
   for (mlir::OpOperand &operand : self->getOpOperands()) {
     mlir::Type opTy = operand.get().getType();
+    fir::addVolatileMemoryEffects({opTy}, effects);
     if (fir::isa_ref_type(opTy) || fir::isa_box_type(opTy))
       effects.emplace_back(mlir::MemoryEffects::Read::get(), &operand,
                            mlir::SideEffects::DefaultResource::get());
@@ -95,7 +96,7 @@ static llvm::LogicalResult areMatchingTypes(Op &op, mlir::Type type1,
 }
 
 //===----------------------------------------------------------------------===//
-// DeclareOp
+// AssignOp
 //===----------------------------------------------------------------------===//
 
 /// Is this a fir.[ref/ptr/heap]<fir.[box/class]<fir.heap<T>>> type?
@@ -164,6 +165,8 @@ void hlfir::AssignOp::getEffects(
     }
   }
 
+  fir::addVolatileMemoryEffects({lhsType, rhsType}, effects);
+
   if (getRealloc()) {
     // Reallocation of the data cannot be precisely described by this API.
     effects.emplace_back(mlir::MemoryEffects::Free::get(),
@@ -177,16 +180,26 @@ void hlfir::AssignOp::getEffects(
 // DeclareOp
 //===----------------------------------------------------------------------===//
 
-/// Given a FIR memory type, and information about non default lower bounds, get
-/// the related HLFIR variable type.
-mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
-                                                  bool hasExplicitLowerBounds) {
+static std::pair<mlir::Type, mlir::Type>
+getDeclareOutputTypes(mlir::Type inputType, bool hasExplicitLowerBounds) {
+  // Drop pointer/allocatable attribute of descriptor values. Only descriptor
+  // addresses are ALLOCATABLE/POINTER. The HLFIR box result of an hlfir.declare
+  // without those attributes should not have these attributes set.
+  if (auto baseBoxType = mlir::dyn_cast<fir::BaseBoxType>(inputType))
+    if (baseBoxType.isPointerOrAllocatable()) {
+      mlir::Type boxWithoutAttributes =
+          baseBoxType.getBoxTypeWithNewAttr(fir::BaseBoxType::Attribute::None);
+      return {boxWithoutAttributes, boxWithoutAttributes};
+    }
   mlir::Type type = fir::unwrapRefType(inputType);
   if (mlir::isa<fir::BaseBoxType>(type))
-    return inputType;
+    return {inputType, inputType};
   if (auto charType = mlir::dyn_cast<fir::CharacterType>(type))
-    if (charType.hasDynamicLen())
-      return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
+    if (charType.hasDynamicLen()) {
+      mlir::Type hlfirType =
+          fir::BoxCharType::get(charType.getContext(), charType.getFKind());
+      return {hlfirType, inputType};
+    }
 
   auto seqType = mlir::dyn_cast<fir::SequenceType>(type);
   bool hasDynamicExtents =
@@ -194,14 +207,58 @@ mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
   mlir::Type eleType = seqType ? seqType.getEleTy() : type;
   bool hasDynamicLengthParams = fir::characterWithDynamicLen(eleType) ||
                                 fir::isRecordWithTypeParameters(eleType);
-  if (hasExplicitLowerBounds || hasDynamicExtents || hasDynamicLengthParams)
-    return fir::BoxType::get(type);
-  return inputType;
+  if (hasExplicitLowerBounds || hasDynamicExtents || hasDynamicLengthParams) {
+    mlir::Type boxType =
+        fir::BoxType::get(type, fir::isa_volatile_type(inputType));
+    return {boxType, inputType};
+  }
+  return {inputType, inputType};
+}
+
+/// Given a FIR memory type, and information about non default lower bounds, get
+/// the related HLFIR variable type.
+mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
+                                                  bool hasExplicitLowerBounds) {
+  return getDeclareOutputTypes(inputType, hasExplicitLowerBounds).first;
 }
 
 static bool hasExplicitLowerBounds(mlir::Value shape) {
   return shape &&
          mlir::isa<fir::ShapeShiftType, fir::ShiftType>(shape.getType());
+}
+
+static std::pair<mlir::Type, mlir::Value>
+updateDeclaredInputTypeWithVolatility(mlir::Type inputType, mlir::Value memref,
+                                      mlir::OpBuilder &builder,
+                                      fir::FortranVariableFlagsEnum flags) {
+  if (!bitEnumContainsAny(flags,
+                          fir::FortranVariableFlagsEnum::fortran_volatile)) {
+    return std::make_pair(inputType, memref);
+  }
+
+  // A volatile pointer's pointee is volatile.
+  const bool isPointer =
+      bitEnumContainsAny(flags, fir::FortranVariableFlagsEnum::pointer);
+  // An allocatable's inner type's volatility matches that of the reference.
+  const bool isAllocatable =
+      bitEnumContainsAny(flags, fir::FortranVariableFlagsEnum::allocatable);
+
+  auto updateType = [&](auto t) {
+    using FIRT = decltype(t);
+    auto elementType = t.getEleTy();
+    const bool elementTypeIsBox = mlir::isa<fir::BaseBoxType>(elementType);
+    const bool elementTypeIsVolatile = isPointer || isAllocatable ||
+                                       elementTypeIsBox ||
+                                       fir::isa_volatile_type(elementType);
+    auto newEleTy =
+        fir::updateTypeWithVolatility(elementType, elementTypeIsVolatile);
+    inputType = FIRT::get(newEleTy, true);
+  };
+  llvm::TypeSwitch<mlir::Type>(inputType)
+      .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(updateType);
+  memref =
+      builder.create<fir::VolatileCastOp>(memref.getLoc(), inputType, memref);
+  return std::make_pair(inputType, memref);
 }
 
 void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
@@ -214,17 +271,23 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
-  mlir::Type hlfirVariableType =
-      getHLFIRVariableType(inputType, hasExplicitLbs);
-  build(builder, result, {hlfirVariableType, inputType}, memref, shape,
+  if (fortran_attrs) {
+    const auto flags = fortran_attrs.getFlags();
+    std::tie(inputType, memref) = updateDeclaredInputTypeWithVolatility(
+        inputType, memref, builder, flags);
+  }
+  auto [hlfirVariableType, firVarType] =
+      getDeclareOutputTypes(inputType, hasExplicitLbs);
+  build(builder, result, {hlfirVariableType, firVarType}, memref, shape,
         typeparams, dummy_scope, nameAttr, fortran_attrs, data_attr);
 }
 
 llvm::LogicalResult hlfir::DeclareOp::verify() {
-  if (getMemref().getType() != getResult(1).getType())
-    return emitOpError("second result type must match input memref type");
-  mlir::Type hlfirVariableType = getHLFIRVariableType(
+  auto [hlfirVariableType, firVarType] = getDeclareOutputTypes(
       getMemref().getType(), hasExplicitLowerBounds(getShape()));
+  if (firVarType != getResult(1).getType())
+    return emitOpError("second result type must match input memref type, "
+                       "unless it is a box with heap or pointer attribute");
   if (hlfirVariableType != getResult(0).getType())
     return emitOpError("first result type is inconsistent with variable "
                        "properties: expected ")
@@ -390,6 +453,13 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
   unsigned outputRank = 0;
   mlir::Type outputElementType;
   bool hasBoxComponent;
+  if (fir::useStrictVolatileVerification() &&
+      fir::isa_volatile_type(memrefType) !=
+          fir::isa_volatile_type(getResult().getType())) {
+    return emitOpError("volatility mismatch between memref and result type")
+           << " memref type: " << memrefType
+           << " result type: " << getResult().getType();
+  }
   if (getComponent()) {
     auto component = getComponent().value();
     auto recType = mlir::dyn_cast<fir::RecordType>(baseElementType);
@@ -1537,7 +1607,7 @@ void hlfir::AssociateOp::build(mlir::OpBuilder &builder,
   mlir::Type firVarType;
   auto sourceExprType = mlir::dyn_cast<hlfir::ExprType>(source.getType());
   if (sourceExprType && sourceExprType.isPolymorphic())
-    firVarType = fir::ClassType::get(fir::HeapType::get(dataType));
+    firVarType = fir::ClassType::get(dataType);
   else
     firVarType = fir::ReferenceType::get(dataType);
 
@@ -1559,7 +1629,7 @@ void hlfir::AssociateOp::build(
   mlir::Type firVarType;
   auto sourceExprType = mlir::dyn_cast<hlfir::ExprType>(source.getType());
   if (sourceExprType && sourceExprType.isPolymorphic())
-    firVarType = fir::ClassType::get(fir::HeapType::get(dataType));
+    firVarType = fir::ClassType::get(dataType);
   else
     firVarType = fir::ReferenceType::get(dataType);
 

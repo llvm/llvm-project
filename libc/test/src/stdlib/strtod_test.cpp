@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
 #include "src/stdlib/strtod.h"
 
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
@@ -22,7 +22,7 @@ using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-class LlvmLibcStrToDTest : public LIBC_NAMESPACE::testing::Test,
+class LlvmLibcStrToDTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest,
                            ForceRoundingModeTest<RoundingMode::Nearest> {
 public:
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
@@ -46,7 +46,6 @@ public:
     LIBC_NAMESPACE::fputil::FPBits<double> expected_fp =
         LIBC_NAMESPACE::fputil::FPBits<double>(expectedRawData);
 
-    LIBC_NAMESPACE::libc_errno = 0;
     double result = LIBC_NAMESPACE::strtod(inputString, &str_end);
     if (expectedErrno == 0)
       EXPECT_THAT(result, Succeeds<double>(expected_fp.get_val()));

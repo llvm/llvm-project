@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
@@ -73,6 +74,7 @@ void SCFDialect::initialize() {
 #include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"
       >();
   addInterfaces<SCFInlinerInterface>();
+  declarePromisedInterface<ConvertToEmitCPatternInterface, SCFDialect>();
   declarePromisedInterfaces<bufferization::BufferDeallocationOpInterface,
                             InParallelOp, ReduceReturnOp>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConditionOp,
@@ -758,7 +760,7 @@ LoopNest mlir::scf::buildLoopNest(
 
   // Return the loops.
   ValueVector nestResults;
-  llvm::copy(loops.front().getResults(), std::back_inserter(nestResults));
+  llvm::append_range(nestResults, loops.front().getResults());
   return LoopNest{std::move(loops), std::move(nestResults)};
 }
 
@@ -767,7 +769,7 @@ LoopNest mlir::scf::buildLoopNest(
     ValueRange steps,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
   // Delegate to the main function by wrapping the body builder.
-  return buildLoopNest(builder, loc, lbs, ubs, steps, std::nullopt,
+  return buildLoopNest(builder, loc, lbs, ubs, steps, {},
                        [&bodyBuilder](OpBuilder &nestedBuilder,
                                       Location nestedLoc, ValueRange ivs,
                                       ValueRange) -> ValueVector {
@@ -1173,13 +1175,11 @@ LogicalResult ForallOp::verify() {
       return emitOpError("type mismatch between ")
              << i << "-th output and corresponding block argument";
   if (getMapping().has_value() && !getMapping()->empty()) {
-    if (static_cast<int64_t>(getMapping()->size()) != numLoops)
+    if (getDeviceMappingAttrs().size() != numLoops)
       return emitOpError() << "mapping attribute size must match op rank";
-    for (auto map : getMapping()->getValue()) {
-      if (!isa<DeviceMappingAttrInterface>(map))
-        return emitOpError()
-               << getMappingAttrName() << " is not device mapping attribute";
-    }
+    if (failed(getDeviceMaskingAttr()))
+      return emitOpError() << getMappingAttrName()
+                           << " supports at most one device masking attribute";
   }
 
   // Verify mixed static/dynamic control variables.
@@ -1431,6 +1431,39 @@ SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
     }
   }
   return storeOps;
+}
+
+SmallVector<DeviceMappingAttrInterface> ForallOp::getDeviceMappingAttrs() {
+  SmallVector<DeviceMappingAttrInterface> res;
+  if (!getMapping())
+    return res;
+  for (auto attr : getMapping()->getValue()) {
+    auto m = dyn_cast<DeviceMappingAttrInterface>(attr);
+    if (m)
+      res.push_back(m);
+  }
+  return res;
+}
+
+FailureOr<DeviceMaskingAttrInterface> ForallOp::getDeviceMaskingAttr() {
+  DeviceMaskingAttrInterface res;
+  if (!getMapping())
+    return res;
+  for (auto attr : getMapping()->getValue()) {
+    auto m = dyn_cast<DeviceMaskingAttrInterface>(attr);
+    if (m && res)
+      return failure();
+    if (m)
+      res = m;
+  }
+  return res;
+}
+
+bool ForallOp::usesLinearMapping() {
+  SmallVector<DeviceMappingAttrInterface> ifaces = getDeviceMappingAttrs();
+  if (ifaces.empty())
+    return false;
+  return ifaces.front().isLinearMapping();
 }
 
 std::optional<SmallVector<Value>> ForallOp::getLoopInductionVars() {
@@ -1785,7 +1818,7 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
                    op.getMixedStep(), op.getInductionVars())) {
-      if (iv.getUses().begin() == iv.getUses().end())
+      if (iv.hasNUses(0))
         continue;
       auto numIterations = constantTripCount(lb, ub, step);
       if (!numIterations.has_value() || numIterations.value() != 1) {
@@ -2017,8 +2050,7 @@ IfOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
   if (!yieldOp)
     return failure();
   TypeRange types = yieldOp.getOperandTypes();
-  inferredReturnTypes.insert(inferredReturnTypes.end(), types.begin(),
-                             types.end());
+  llvm::append_range(inferredReturnTypes, types);
   return success();
 }
 
@@ -3193,7 +3225,7 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
     auto newSteps = concatValues(op.getStep(), innerOp.getStep());
 
     rewriter.replaceOpWithNewOp<ParallelOp>(op, newLowerBounds, newUpperBounds,
-                                            newSteps, std::nullopt,
+                                            newSteps, ValueRange(),
                                             bodyBuilder);
     return success();
   }
@@ -4282,7 +4314,7 @@ void IndexSwitchOp::getSuccessorRegions(
     return;
   }
 
-  llvm::copy(getRegions(), std::back_inserter(successors));
+  llvm::append_range(successors, getRegions());
 }
 
 void IndexSwitchOp::getEntrySuccessorRegions(
@@ -4293,7 +4325,7 @@ void IndexSwitchOp::getEntrySuccessorRegions(
   // If a constant was not provided, all regions are possible successors.
   auto arg = dyn_cast_or_null<IntegerAttr>(adaptor.getArg());
   if (!arg) {
-    llvm::copy(getRegions(), std::back_inserter(successors));
+    llvm::append_range(successors, getRegions());
     return;
   }
 

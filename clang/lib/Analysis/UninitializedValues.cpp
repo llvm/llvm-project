@@ -20,7 +20,6 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
-#include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/DomainSpecific/ObjCNoReturn.h"
@@ -31,7 +30,6 @@
 #include "llvm/ADT/PackedVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
 #include <optional>
@@ -163,8 +161,7 @@ public:
 
   ValueVector::reference operator[](const VarDecl *vd);
 
-  Value getValue(const CFGBlock *block, const CFGBlock *dstBlock,
-                 const VarDecl *vd) {
+  Value getValue(const CFGBlock *block, const VarDecl *vd) {
     std::optional<unsigned> idx = declToIndex.getValueIndex(vd);
     return getValueVector(block)[*idx];
   }
@@ -591,12 +588,12 @@ public:
         if (!Pred)
           continue;
 
-        Value AtPredExit = vals.getValue(Pred, B, vd);
+        Value AtPredExit = vals.getValue(Pred, vd);
         if (AtPredExit == Initialized)
           // This block initializes the variable.
           continue;
         if (AtPredExit == MayUninitialized &&
-            vals.getValue(B, nullptr, vd) == Uninitialized) {
+            vals.getValue(B, vd) == Uninitialized) {
           // This block declares the variable (uninitialized), and is reachable
           // from a block that initializes the variable. We can't guarantee to
           // give an earlier location for the diagnostic (and it appears that
@@ -627,6 +624,8 @@ public:
     // Scan the frontier, looking for blocks where the variable was
     // uninitialized.
     for (const auto *Block : cfg) {
+      if (vals.getValue(Block, vd) != Uninitialized)
+        continue;
       unsigned BlockID = Block->getBlockID();
       const Stmt *Term = Block->getTerminatorStmt();
       if (SuccsVisited[BlockID] && SuccsVisited[BlockID] < Block->succ_size() &&
@@ -637,8 +636,7 @@ public:
         for (CFGBlock::const_succ_iterator I = Block->succ_begin(),
              E = Block->succ_end(); I != E; ++I) {
           const CFGBlock *Succ = *I;
-          if (Succ && SuccsVisited[Succ->getBlockID()] >= Succ->succ_size() &&
-              vals.getValue(Block, Succ, vd) == Uninitialized) {
+          if (Succ && SuccsVisited[Succ->getBlockID()] >= Succ->succ_size()) {
             // Switch cases are a special case: report the label to the caller
             // as the 'terminator', not the switch statement itself. Suppress
             // situations where no label matched: we can't be sure that's
@@ -677,8 +675,11 @@ void TransferFunctions::reportUse(const Expr *ex, const VarDecl *vd) {
 
 void TransferFunctions::reportConstRefUse(const Expr *ex, const VarDecl *vd) {
   Value v = vals[vd];
-  if (isAlwaysUninit(v))
-    handler.handleConstRefUseOfUninitVariable(vd, getUninitUse(ex, vd, v));
+  if (isAlwaysUninit(v)) {
+    auto use = getUninitUse(ex, vd, v);
+    use.setConstRefUse();
+    handler.handleUseOfUninitVariable(vd, use);
+  }
 }
 
 void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS) {
@@ -889,12 +890,6 @@ struct PruneBlocksHandler : public UninitVariablesHandler {
 
   void handleUseOfUninitVariable(const VarDecl *vd,
                                  const UninitUse &use) override {
-    hadUse[currentBlock] = true;
-    hadAnyUse = true;
-  }
-
-  void handleConstRefUseOfUninitVariable(const VarDecl *vd,
-                                         const UninitUse &use) override {
     hadUse[currentBlock] = true;
     hadAnyUse = true;
   }

@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenUtils.h"
-#include "SparseTensorDescriptor.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include <optional>
@@ -211,7 +208,7 @@ Value mlir::sparse_tensor::genIsNonzero(OpBuilder &builder, mlir::Location loc,
   if (tp.isIntOrIndex())
     return builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, v,
                                          zero);
-  if (dyn_cast<ComplexType>(tp))
+  if (isa<ComplexType>(tp))
     return builder.create<complex::NotEqualOp>(loc, v, zero);
   llvm_unreachable("Non-numeric type");
 }
@@ -459,26 +456,25 @@ void sparse_tensor::foreachInSparseConstant(
   }
 
   // Sorts the sparse element attribute based on coordinates.
-  std::sort(elems.begin(), elems.end(),
-            [order](const ElementAttr &lhs, const ElementAttr &rhs) {
-              if (std::addressof(lhs) == std::addressof(rhs))
-                return false;
+  llvm::sort(elems, [order](const ElementAttr &lhs, const ElementAttr &rhs) {
+    if (std::addressof(lhs) == std::addressof(rhs))
+      return false;
 
-              auto lhsCoords = llvm::map_to_vector(
-                  lhs.first, [](IntegerAttr i) { return i.getInt(); });
-              auto rhsCoords = llvm::map_to_vector(
-                  rhs.first, [](IntegerAttr i) { return i.getInt(); });
+    auto lhsCoords = llvm::map_to_vector(
+        lhs.first, [](IntegerAttr i) { return i.getInt(); });
+    auto rhsCoords = llvm::map_to_vector(
+        rhs.first, [](IntegerAttr i) { return i.getInt(); });
 
-              SmallVector<int64_t, 4> lhsLvlCrds = order.compose(lhsCoords);
-              SmallVector<int64_t, 4> rhsLvlCrds = order.compose(rhsCoords);
-              // Sort the element based on the lvl coordinates.
-              for (Level l = 0; l < order.getNumResults(); l++) {
-                if (lhsLvlCrds[l] == rhsLvlCrds[l])
-                  continue;
-                return lhsLvlCrds[l] < rhsLvlCrds[l];
-              }
-              llvm_unreachable("no equal coordinate in sparse element attr");
-            });
+    SmallVector<int64_t, 4> lhsLvlCrds = order.compose(lhsCoords);
+    SmallVector<int64_t, 4> rhsLvlCrds = order.compose(rhsCoords);
+    // Sort the element based on the lvl coordinates.
+    for (Level l = 0; l < order.getNumResults(); l++) {
+      if (lhsLvlCrds[l] == rhsLvlCrds[l])
+        continue;
+      return lhsLvlCrds[l] < rhsLvlCrds[l];
+    }
+    llvm_unreachable("no equal coordinate in sparse element attr");
+  });
 
   SmallVector<Value> cvs;
   cvs.reserve(dimRank);
@@ -550,8 +546,8 @@ TypedValue<BaseMemRefType>
 sparse_tensor::genToMemref(OpBuilder &builder, Location loc, Value tensor) {
   auto tTp = llvm::cast<TensorType>(tensor.getType());
   auto mTp = MemRefType::get(tTp.getShape(), tTp.getElementType());
-  return builder.create<bufferization::ToMemrefOp>(loc, mTp, tensor)
-      .getResult();
+  return cast<TypedValue<BaseMemRefType>>(
+      builder.create<bufferization::ToBufferOp>(loc, mTp, tensor).getResult());
 }
 
 Value sparse_tensor::createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc,

@@ -769,7 +769,7 @@ declare <512 x i1> @llvm.ppc.mma.xxsetaccz()
 define void @int_xxsetaccz(ptr %ptr) {
 ; CHECK-LABEL: int_xxsetaccz:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxsetaccz wacc0
+; CHECK-NEXT:    dmxxsetaccz wacc0
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r3)
 ; CHECK-NEXT:    stxv v5, 32(r3)
@@ -779,7 +779,7 @@ define void @int_xxsetaccz(ptr %ptr) {
 ;
 ; CHECK-BE-LABEL: int_xxsetaccz:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsetaccz wacc0
+; CHECK-BE-NEXT:    dmxxsetaccz wacc0
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-NEXT:    stxv v4, 32(r3)
@@ -789,7 +789,7 @@ define void @int_xxsetaccz(ptr %ptr) {
 ;
 ; CHECK-O0-LABEL: int_xxsetaccz:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    xxsetaccz wacc0
+; CHECK-O0-NEXT:    dmxxsetaccz wacc0
 ; CHECK-O0-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-NEXT:    stxv vs0, 48(r3)
@@ -803,7 +803,7 @@ define void @int_xxsetaccz(ptr %ptr) {
 ;
 ; CHECK-O0-BE-LABEL: int_xxsetaccz:
 ; CHECK-O0-BE:       # %bb.0: # %entry
-; CHECK-O0-BE-NEXT:    xxsetaccz wacc0
+; CHECK-O0-BE-NEXT:    dmxxsetaccz wacc0
 ; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v5, v5
 ; CHECK-O0-BE-NEXT:    stxv vs0, 48(r3)
@@ -817,7 +817,7 @@ define void @int_xxsetaccz(ptr %ptr) {
 ;
 ; CHECK-AIX64-LABEL: int_xxsetaccz:
 ; CHECK-AIX64:       # %bb.0: # %entry
-; CHECK-AIX64-NEXT:    xxsetaccz 0
+; CHECK-AIX64-NEXT:    dmxxsetaccz 0
 ; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX64-NEXT:    stxv 4, 32(3)
@@ -827,7 +827,7 @@ define void @int_xxsetaccz(ptr %ptr) {
 ;
 ; CHECK-AIX32-LABEL: int_xxsetaccz:
 ; CHECK-AIX32:       # %bb.0: # %entry
-; CHECK-AIX32-NEXT:    xxsetaccz 0
+; CHECK-AIX32-NEXT:    dmxxsetaccz 0
 ; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX32-NEXT:    stxv 4, 32(3)
@@ -845,7 +845,7 @@ declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble
 define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ; CHECK-LABEL: disass_acc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxsetaccz wacc0
+; CHECK-NEXT:    dmxxsetaccz wacc0
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v5, 0(r3)
 ; CHECK-NEXT:    stxv v4, 0(r4)
@@ -855,7 +855,7 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ;
 ; CHECK-BE-LABEL: disass_acc:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsetaccz wacc0
+; CHECK-BE-NEXT:    dmxxsetaccz wacc0
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v2, 0(r3)
 ; CHECK-BE-NEXT:    stxv v3, 0(r4)
@@ -865,7 +865,7 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ;
 ; CHECK-O0-LABEL: disass_acc:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    xxsetaccz wacc0
+; CHECK-O0-NEXT:    dmxxsetaccz wacc0
 ; CHECK-O0-NEXT:    dmxxextfdmr512 vsp32, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    vmr v2, v0
 ; CHECK-O0-NEXT:    xxlor vs0, v1, v1
@@ -879,7 +879,7 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ;
 ; CHECK-O0-BE-LABEL: disass_acc:
 ; CHECK-O0-BE:       # %bb.0: # %entry
-; CHECK-O0-BE-NEXT:    xxsetaccz wacc0
+; CHECK-O0-BE-NEXT:    dmxxsetaccz wacc0
 ; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc0, 0
 ; CHECK-O0-BE-NEXT:    vmr v2, v1
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v0, v0
@@ -893,7 +893,7 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ;
 ; CHECK-AIX64-LABEL: disass_acc:
 ; CHECK-AIX64:       # %bb.0: # %entry
-; CHECK-AIX64-NEXT:    xxsetaccz 0
+; CHECK-AIX64-NEXT:    dmxxsetaccz 0
 ; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 2, 0(3)
 ; CHECK-AIX64-NEXT:    stxv 3, 0(4)
@@ -903,7 +903,7 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ;
 ; CHECK-AIX32-LABEL: disass_acc:
 ; CHECK-AIX32:       # %bb.0: # %entry
-; CHECK-AIX32-NEXT:    xxsetaccz 0
+; CHECK-AIX32-NEXT:    dmxxsetaccz 0
 ; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 2, 0(3)
 ; CHECK-AIX32-NEXT:    stxv 3, 0(4)
@@ -931,7 +931,7 @@ declare <512 x i1> @llvm.ppc.mma.xvf32gernp(<512 x i1>, <16 x i8>, <16 x i8>)
 define void @testcse(ptr %res, <16 x i8> %vc) {
 ; CHECK-LABEL: testcse:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxsetaccz wacc0
+; CHECK-NEXT:    dmxxsetaccz wacc0
 ; CHECK-NEXT:    xvf32gerpp wacc0, v2, v2
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r3)
@@ -946,7 +946,7 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ;
 ; CHECK-BE-LABEL: testcse:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsetaccz wacc0
+; CHECK-BE-NEXT:    dmxxsetaccz wacc0
 ; CHECK-BE-NEXT:    xvf32gerpp wacc0, v2, v2
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r3)
@@ -961,7 +961,7 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ;
 ; CHECK-O0-LABEL: testcse:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    xxsetaccz wacc0
+; CHECK-O0-NEXT:    dmxxsetaccz wacc0
 ; CHECK-O0-NEXT:    xvf32gerpp wacc0, v2, v2
 ; CHECK-O0-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    xxlor vs3, v4, v4
@@ -980,7 +980,7 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ;
 ; CHECK-O0-BE-LABEL: testcse:
 ; CHECK-O0-BE:       # %bb.0: # %entry
-; CHECK-O0-BE-NEXT:    xxsetaccz wacc0
+; CHECK-O0-BE-NEXT:    dmxxsetaccz wacc0
 ; CHECK-O0-BE-NEXT:    xvf32gerpp wacc0, v2, v2
 ; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-BE-NEXT:    xxlor vs3, v5, v5
@@ -999,7 +999,7 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ;
 ; CHECK-AIX64-LABEL: testcse:
 ; CHECK-AIX64:       # %bb.0: # %entry
-; CHECK-AIX64-NEXT:    xxsetaccz 0
+; CHECK-AIX64-NEXT:    dmxxsetaccz 0
 ; CHECK-AIX64-NEXT:    xvf32gerpp 0, 2, 2
 ; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(3)
@@ -1014,7 +1014,7 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ;
 ; CHECK-AIX32-LABEL: testcse:
 ; CHECK-AIX32:       # %bb.0: # %entry
-; CHECK-AIX32-NEXT:    xxsetaccz 0
+; CHECK-AIX32-NEXT:    dmxxsetaccz 0
 ; CHECK-AIX32-NEXT:    xvf32gerpp 0, 2, 2
 ; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(3)
