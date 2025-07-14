@@ -17,8 +17,8 @@
 # RUN: ld.lld a.o b.o c.o d.o -o out3
 # RUN: llvm-readobj --arch-specific out3 | FileCheck %s --check-prefix=CHECK3
 
-# HDR:      Name              Type             Address          Off    Size   ES Flg Lk Inf Al
-# HDR:      .hexagon.attributes HEXAGON_ATTRIBUTES 00000000 {{.*}} {{.*}} 00      0   0  1{{$}}
+# HDR:      Name                Type               Address  Off    Size   ES Flg Lk Inf Al
+# HDR:      .hexagon.attributes HEXAGON_ATTRIBUTES 00000000 {{.*}} {{.*}} 00     0   0  1{{$}}
 
 # HDR:      Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # HDR:      LOAD           {{.*}}
