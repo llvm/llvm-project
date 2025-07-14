@@ -97,13 +97,18 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     mlir::Location loc = allocOp.getLoc();
     auto memrefType = allocOp.getType();
     if (!memrefType.hasStaticShape())
+      // TODO: Handle Dynamic shapes in the future. If the size
+      // of the allocation is the result of some function, we could
+      // potentially evaluate the function and use the result in the call to
+      // allocate.
       return rewriter.notifyMatchFailure(
           allocOp.getLoc(), "cannot transform alloc op with dynamic shape");
 
-    int64_t totalSize =
-        memrefType.getNumElements() * memrefType.getElementTypeBitWidth() / 8;
-    auto alignment = allocOp.getAlignment();
-    if (alignment) {
+    // TODO: Is there a better API to determine the number of bits in a byte in
+    // MLIR?
+    int64_t totalSize = memrefType.getNumElements() *
+                        memrefType.getElementTypeBitWidth() / CHAR_BIT;
+    if (auto alignment = allocOp.getAlignment()) {
       int64_t alignVal = alignment.value();
       totalSize = (totalSize + alignVal - 1) / alignVal * alignVal;
     }
