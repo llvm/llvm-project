@@ -250,8 +250,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
       setLibcallImpl(RTLIB::MUL_I128, RTLIB::Unsupported);
       setLibcallImpl(RTLIB::MULO_I64, RTLIB::Unsupported);
     }
-
-    setLibcallImpl(RTLIB::MULO_I128, RTLIB::Unsupported);
   }
 
   if (TT.getArch() == Triple::ArchType::msp430) {
