@@ -1539,7 +1539,7 @@ MCAlignFragmentRef::create(MCCASBuilder &MB, const MCAlignFragment &F,
   if (!B)
     return B.takeError();
 
-  uint64_t Count = FragmentSize / F.getValueSize();
+  uint64_t Count = FragmentSize / F.getFillLen();
   if (F.hasEmitNops()) {
     // Write 0 as size and use backend to emit nop.
     writeVBR8(0, B->Data);
@@ -1551,8 +1551,8 @@ MCAlignFragmentRef::create(MCCASBuilder &MB, const MCAlignFragment &F,
     return get(B->build());
   }
   writeVBR8(Count, B->Data);
-  writeVBR8(F.getValue(), B->Data);
-  writeVBR8(F.getValueSize(), B->Data);
+  writeVBR8(F.getFill(), B->Data);
+  writeVBR8(F.getFillLen(), B->Data);
   return get(B->build());
 }
 
@@ -1923,7 +1923,7 @@ Error MCDataFragmentMerger::tryMerge(const MCFragment &F, unsigned Size,
 static Error writeAlignFragment(MCCASBuilder &Builder,
                                 const MCAlignFragment &AF, raw_ostream &OS,
                                 unsigned FragmentSize) {
-  uint64_t Count = FragmentSize / AF.getValueSize();
+  uint64_t Count = FragmentSize / AF.getFillLen();
   if (AF.hasEmitNops()) {
     if (!Builder.Asm.getBackend().writeNopData(OS, Count,
                                                AF.getSubtargetInfo()))
@@ -1935,20 +1935,20 @@ static Error writeAlignFragment(MCCASBuilder &Builder,
   auto Endian = Builder.ObjectWriter.Target.isLittleEndian() ? endianness::little
                                                              : endianness::big;
   for (uint64_t I = 0; I != Count; ++I) {
-    switch (AF.getValueSize()) {
+    switch (AF.getFillLen()) {
     default:
       llvm_unreachable("Invalid size!");
     case 1:
-      OS << char(AF.getValue());
+      OS << char(AF.getFill());
       break;
     case 2:
-      support::endian::write<uint16_t>(OS, AF.getValue(), Endian);
+      support::endian::write<uint16_t>(OS, AF.getFill(), Endian);
       break;
     case 4:
-      support::endian::write<uint32_t>(OS, AF.getValue(), Endian);
+      support::endian::write<uint32_t>(OS, AF.getFill(), Endian);
       break;
     case 8:
-      support::endian::write<uint64_t>(OS, AF.getValue(), Endian);
+      support::endian::write<uint64_t>(OS, AF.getFill(), Endian);
       break;
     }
   }
