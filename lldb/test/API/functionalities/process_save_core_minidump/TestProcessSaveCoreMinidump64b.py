@@ -1,6 +1,6 @@
 """
-Test saving a minidumps with the force 64b flag, and evaluate that every
-saved memory region is byte-wise 1:1 with the live process.
+Test that saved memory regions is byte-wise 1:1 with the live process. Specifically 
+that the memory regions that will be populated in the Memory64List are the same byte for byte.
 """
 
 import os
