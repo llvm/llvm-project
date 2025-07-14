@@ -143,6 +143,10 @@ public:
   /// Query is legal on the target.
   bool isLegalOrBeforeLegalizer(const LegalityQuery &Query) const;
 
+  /// \return true if \p Query is legal on the target, or if \p Query will
+  /// perform WidenScalar action on the target.
+  bool isLegalOrHasWidenScalar(const LegalityQuery &Query) const;
+
   /// \return true if the combine is running prior to legalization, or if \p Ty
   /// is a legal integer constant type on the target.
   bool isConstantLegalOrBeforeLegalizer(const LLT Ty) const;
@@ -693,18 +697,19 @@ public:
   /// feeding a G_AND instruction \p MI.
   bool matchNarrowBinopFeedingAnd(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
-  /// Given an G_UDIV \p MI expressing a divide by constant, return an
-  /// expression that implements it by multiplying by a magic number.
+  /// Given an G_UDIV \p MI or G_UREM \p MI expressing a divide by constant,
+  /// return an expression that implements it by multiplying by a magic number.
   /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
-  MachineInstr *buildUDivUsingMul(MachineInstr &MI) const;
-  /// Combine G_UDIV by constant into a multiply by magic constant.
-  bool matchUDivByConst(MachineInstr &MI) const;
-  void applyUDivByConst(MachineInstr &MI) const;
+  MachineInstr *buildUDivorURemUsingMul(MachineInstr &MI) const;
+  /// Combine G_UDIV or G_UREM by constant into a multiply by magic constant.
+  bool matchUDivorURemByConst(MachineInstr &MI) const;
+  void applyUDivorURemByConst(MachineInstr &MI) const;
 
   /// Given an G_SDIV \p MI expressing a signed divide by constant, return an
   /// expression that implements it by multiplying by a magic number.
   /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
   MachineInstr *buildSDivUsingMul(MachineInstr &MI) const;
+  /// Combine G_SDIV by constant into a multiply by magic constant.
   bool matchSDivByConst(MachineInstr &MI) const;
   void applySDivByConst(MachineInstr &MI) const;
 

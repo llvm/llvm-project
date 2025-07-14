@@ -298,8 +298,8 @@ public:
                                        llvm::StringRef Value,
                                        llvm::SmallString<32> &Opt) const {}
 
-  /// Get LLVM calling convention for OpenCL kernel.
-  virtual unsigned getOpenCLKernelCallingConv() const;
+  /// Get LLVM calling convention for device kernels.
+  virtual unsigned getDeviceKernelCallingConv() const;
 
   /// Get target specific null pointer.
   /// \param T is the LLVM type of the null pointer.

@@ -1860,12 +1860,6 @@ def : Pat<(v4i32(fp_to_uint v4f64:$vj)),
                (XVFTINTRZ_LU_D v4f64:$vj)),
               sub_128)>;
 
-// XVPERMI_Q
-foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
-def : Pat<(vt (concat_vectors LSX128:$vd, LSX128:$vj)),
-          (XVPERMI_Q (SUBREG_TO_REG (i64 0), LSX128:$vd, sub_128),
-                     (SUBREG_TO_REG (i64 0), LSX128:$vj, sub_128), 2)>;
-
 // XVABSD_{B/H/W/D}[U]
 defm : PatXrXr<abds, "XVABSD">;
 defm : PatXrXrU<abdu, "XVABSD">;
@@ -1878,6 +1872,35 @@ def : Pat<(loongarch_xvmskltz (v4i64 LASX256:$vj)), (PseudoXVMSKLTZ_D LASX256:$v
 def : Pat<(loongarch_xvmskgez (v32i8 LASX256:$vj)), (PseudoXVMSKGEZ_B LASX256:$vj)>;
 def : Pat<(loongarch_xvmskeqz (v32i8 LASX256:$vj)), (PseudoXVMSKEQZ_B LASX256:$vj)>;
 def : Pat<(loongarch_xvmsknez (v32i8 LASX256:$vj)), (PseudoXVMSKNEZ_B LASX256:$vj)>;
+
+// Subvector tricks
+// Patterns for insert_subvector/extract_subvector
+multiclass subvector_subreg_lowering<RegisterClass subRC, ValueType subVT,
+                                     RegisterClass RC, ValueType VT,
+                                     int hiIdx, SubRegIndex subIdx> {
+  // A 128-bit subvector extract from the first 256-bit vector position is a
+  // subregister copy that needs no instruction. Likewise, a 128-bit subvector
+  // insert to the first 256-bit vector position is a subregister copy that needs
+  // no instruction.
+  def : Pat<(subVT (extract_subvector (VT RC:$src), (iPTR 0))),
+            (subVT (EXTRACT_SUBREG RC:$src, subIdx))>;
+  def : Pat<(VT (insert_subvector undef_or_freeze_undef, subRC:$src, (iPTR 0))),
+            (VT (INSERT_SUBREG (IMPLICIT_DEF), subRC:$src, subIdx))>;
+
+  def : Pat<(subVT (extract_subvector (VT RC:$src), (iPTR hiIdx))),
+            (subVT (EXTRACT_SUBREG (XVPERMI_Q (IMPLICIT_DEF), RC:$src, 1), subIdx))>;
+  def : Pat<(VT (insert_subvector RC:$vd, subRC:$vj, (iPTR 0))),
+            (VT (XVPERMI_Q RC:$vd, (INSERT_SUBREG (IMPLICIT_DEF), subRC:$vj, subIdx), 48))>;
+  def : Pat<(VT (insert_subvector RC:$vd, subRC:$vj, (iPTR hiIdx))),
+            (VT (XVPERMI_Q RC:$vd, (INSERT_SUBREG (IMPLICIT_DEF), subRC:$vj, subIdx), 2))>;
+}
+
+defm : subvector_subreg_lowering<LSX128, v4i32, LASX256, v8i32,  4,  sub_128>;
+defm : subvector_subreg_lowering<LSX128, v4f32, LASX256, v8f32,  4,  sub_128>;
+defm : subvector_subreg_lowering<LSX128, v2i64, LASX256, v4i64,  2,  sub_128>;
+defm : subvector_subreg_lowering<LSX128, v2f64, LASX256, v4f64,  2,  sub_128>;
+defm : subvector_subreg_lowering<LSX128, v8i16, LASX256, v16i16, 8,  sub_128>;
+defm : subvector_subreg_lowering<LSX128, v16i8, LASX256, v32i8,  16, sub_128>;
 
 } // Predicates = [HasExtLASX]
 

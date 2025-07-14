@@ -310,7 +310,7 @@ static bool LocPropertyAttribute( ASTContext &Context, const char *attrName,
     return false;
 
   SourceManager &SM = Context.getSourceManager();
-  std::pair<FileID, unsigned> locInfo = SM.getDecomposedLoc(LParenLoc);
+  FileIDAndOffset locInfo = SM.getDecomposedLoc(LParenLoc);
   // Try to load the file buffer.
   bool invalidTemp = false;
   StringRef file = SM.getBufferData(locInfo.first, &invalidTemp);

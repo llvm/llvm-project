@@ -2097,7 +2097,7 @@ Error LVScopeRoot::doPrintMatches(bool Split, raw_ostream &OS,
     print(OS);
 
     for (LVScope *Scope : *Scopes) {
-      getReader().setCompileUnit(const_cast<LVScope *>(Scope));
+      getReader().setCompileUnit(Scope);
 
       // If 'Split', we use the scope name (CU name) as the ouput file; the
       // delimiters in the pathname, must be replaced by a normal character.

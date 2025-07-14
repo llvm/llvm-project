@@ -11,7 +11,6 @@
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -164,7 +163,8 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
 }
 
 void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
-    ConversionTarget &target, RewritePatternSet &patterns, Chipset chipset) {
+    ConversionTarget &target, RewritePatternSet &patterns, Chipset chipset,
+    PatternBenefit benefit) {
   // gfx10 has no atomic adds.
   if (chipset.majorVersion == 10 || chipset < Chipset(9, 0, 8)) {
     target.addIllegalOp<RawBufferAtomicFaddOp>();
@@ -204,7 +204,7 @@ void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
       RawBufferAtomicByCasPattern<RawBufferAtomicFmaxOp, arith::MaximumFOp>,
       RawBufferAtomicByCasPattern<RawBufferAtomicSmaxOp, arith::MaxSIOp>,
       RawBufferAtomicByCasPattern<RawBufferAtomicUminOp, arith::MinUIOp>>(
-      patterns.getContext());
+      patterns.getContext(), benefit);
 }
 
 void AmdgpuEmulateAtomicsPass::runOnOperation() {

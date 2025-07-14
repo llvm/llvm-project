@@ -25,19 +25,19 @@ program OmpAtomic
    y = MIN(y, 8)
 
 !$omp atomic
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level AND operator
+   !ERROR: The atomic variable z should appear as an argument of the top-level AND operator
    z = IAND(y, 4)
 !$omp atomic
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level OR operator
+   !ERROR: The atomic variable z should appear as an argument of the top-level OR operator
    z = IOR(y, 5)
 !$omp atomic
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level NEQV/EOR operator
+   !ERROR: The atomic variable z should appear as an argument of the top-level NEQV/EOR operator
    z = IEOR(y, 6)
 !$omp atomic
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level MAX operator
+   !ERROR: The atomic variable z should appear as an argument of the top-level MAX operator
    z = MAX(y, 7, b, c)
 !$omp atomic
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level MIN operator
+   !ERROR: The atomic variable z should appear as an argument of the top-level MIN operator
    z = MIN(y, 8, a, d)
 
 !$omp atomic
@@ -58,19 +58,19 @@ program OmpAtomic
    y = MIN(y, 8)
 
 !$omp atomic update
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level AND operator
+   !ERROR: The atomic variable z should appear as an argument of the top-level AND operator
    z = IAND(y, 4)
 !$omp atomic update 
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level OR operator
+   !ERROR: The atomic variable z should appear as an argument of the top-level OR operator
    z = IOR(y, 5)
 !$omp atomic update
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level NEQV/EOR operator
+   !ERROR: The atomic variable z should appear as an argument of the top-level NEQV/EOR operator
    z = IEOR(y, 6)
 !$omp atomic update
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level MAX operator
+   !ERROR: The atomic variable z should appear as an argument of the top-level MAX operator
    z = MAX(y, 7)
 !$omp atomic update
-   !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level MIN operator
+   !ERROR: The atomic variable z should appear as an argument of the top-level MIN operator
    z = MIN(y, 8)
 
 !$omp atomic update
@@ -90,7 +90,7 @@ subroutine conflicting_types()
     type(simple) ::s
     z = 1
     !$omp atomic
-    !ERROR: The atomic variable z should occur exactly once among the arguments of the top-level AND operator
+    !ERROR: The atomic variable z should appear as an argument of the top-level AND operator
     z = IAND(s%z, 4)
 end subroutine
 
@@ -103,22 +103,22 @@ subroutine more_invalid_atomic_update_stmts()
     type(some_type) :: s
  
     !$omp atomic update
-    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level MIN operator
+    !ERROR: The atomic variable a should be exactly one of the arguments of the top-level MIN operator
         a = min(a, a, b)
      
     !$omp atomic
-    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level MAX operator
+    !ERROR: The atomic variable a should be exactly one of the arguments of the top-level MAX operator
         a = max(b, a, b, a)
 
     !$omp atomic
         a = min(b, a, b)
 
     !$omp atomic
-    !ERROR: The atomic variable a should occur exactly once among the arguments of the top-level MAX operator
+    !ERROR: The atomic variable a should be exactly one of the arguments of the top-level MAX operator
         a = max(b, a, b, a, b)
     
     !$omp atomic update
-    !ERROR: The atomic variable y should occur exactly once among the arguments of the top-level MIN operator
+    !ERROR: The atomic variable y should appear as an argument of the top-level MIN operator
         y = min(z, x)
      
     !$omp atomic
@@ -126,7 +126,7 @@ subroutine more_invalid_atomic_update_stmts()
 
     !$omp atomic update
     !ERROR: Atomic variable k should be a scalar
-    !ERROR: The atomic variable k should occur exactly once among the arguments of the top-level MAX operator
+    !ERROR: The atomic variable k should appear as an argument of the top-level MAX operator
         k = max(x, y)
 
     !$omp atomic
