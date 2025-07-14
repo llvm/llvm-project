@@ -2854,7 +2854,7 @@ namespace {
       TableInfo.Table.push_back(MCD::OPC_Fail);
 
       // Print the table to the output stream.
-      OpcodeMask |= emitTable(OS, TableInfo.Table, indent(0), FC.getBitWidth(),
+      OpcodeMask |= emitTable(OS, TableInfo.Table, FC.getBitWidth(),
                               DecoderNamespace, EncodingIDs);
     }
 

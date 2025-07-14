@@ -95,9 +95,7 @@ include "GISel/M68kRegisterBanks.td"
 
 include "M68kInstrInfo.td"
 
-def M68kInstrInfo : InstrInfo {
-  let GenerateTemplatedDecoder = false;
-}
+def M68kInstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//
 // Calling Conventions

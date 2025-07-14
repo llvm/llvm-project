@@ -1162,7 +1162,7 @@ class InstrInfo {
   // emitter. This means that the generated `decodeInstruction` function will
   // use auto-inferred types for the instruction payload instead of generating
   // templated code using `InsnType` for the instruction payload.
-  bit GenerateTemplatedDecoder = true;
+  bit GenerateTemplatedDecoder = false;
 }
 
 // Standard Pseudo Instructions.

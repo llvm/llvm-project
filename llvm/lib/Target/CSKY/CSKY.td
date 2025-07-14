@@ -671,7 +671,10 @@ def : CK860V<"ck860fv", NoSchedModel,
 // Define the CSKY target.
 //===----------------------------------------------------------------------===//
 
-def CSKYInstrInfo : InstrInfo;
+def CSKYInstrInfo : InstrInfo {
+  // FIXME: Migrate CSKY disassembler to work with non-templated decoder.
+  let GenerateTemplatedDecoder = true;
+}
 
 
 def CSKYAsmParser : AsmParser {

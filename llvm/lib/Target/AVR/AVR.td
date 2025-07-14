@@ -32,7 +32,10 @@ include "AVRRegisterInfo.td"
 
 include "AVRInstrInfo.td"
 
-def AVRInstrInfo : InstrInfo;
+def AVRInstrInfo : InstrInfo {
+  // FIXME: Migrate AVR disassembler to work with non-templated decoder.
+  let GenerateTemplatedDecoder = true;
+}
 
 //===---------------------------------------------------------------------===//
 // Calling Conventions
