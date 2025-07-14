@@ -2169,6 +2169,14 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_frexpf",
+    hdrs = ["src/__support/math/frexpf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+    ],
+)
+
 ############################### complex targets ################################
 
 libc_function(
@@ -3216,7 +3224,12 @@ libc_math_function(name = "fmulf128")
 
 libc_math_function(name = "frexp")
 
-libc_math_function(name = "frexpf")
+libc_math_function(
+    name = "frexpf",
+    additional_deps = [
+        ":__support_math_frexpf",
+    ],
+)
 
 libc_math_function(name = "frexpl")
 
