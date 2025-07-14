@@ -7,9 +7,11 @@ on:
   push:
     paths:
      - '.ci/**'
+     - '.github/workflows/check-ci.yml'
   pull_request:
     paths:
      - '.ci/**'
+     - '.github/workflows/check-ci.yml'
 
 jobs:
   test-python:
@@ -29,5 +31,5 @@ jobs:
       - name: Install Python Dependencies
         run: pip3 install -r .ci/all_requirements.txt
       - name: Run Tests
-        working-direcotry: .ci
+        working-directory: .ci
         run: pytest
