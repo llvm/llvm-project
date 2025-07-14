@@ -2214,7 +2214,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     if (ST.hasMovB64()) {
       MI.setDesc(get(AMDGPU::V_MOV_B64_e32));
       if (SrcOp.isReg() || isInlineConstant(MI, 1) ||
-          isUInt<32>(SrcOp.getImm()))
+          isUInt<32>(SrcOp.getImm()) || ST.has64BitLiterals())
         break;
     }
     if (SrcOp.isImm()) {
@@ -4442,6 +4442,7 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   }
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
+  case AMDGPU::OPERAND_KIMM64:
     return false;
   case AMDGPU::OPERAND_INPUT_MODS:
   case MCOI::OPERAND_IMMEDIATE:
@@ -4867,6 +4868,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       break;
     case MCOI::OPERAND_IMMEDIATE:
     case AMDGPU::OPERAND_KIMM32:
+    case AMDGPU::OPERAND_KIMM64:
       // Check if this operand is an immediate.
       // FrameIndex operands will be replaced by immediates, so they are
       // allowed.

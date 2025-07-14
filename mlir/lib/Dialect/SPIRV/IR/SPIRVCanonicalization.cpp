@@ -16,7 +16,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 
 #include "mlir/Dialect/CommonFolders.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Matchers.h"

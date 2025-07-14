@@ -5136,11 +5136,6 @@ RecordDecl *RecordDecl::CreateDeserialized(const ASTContext &C,
   return R;
 }
 
-bool RecordDecl::isInjectedClassName() const {
-  return isImplicit() && getDeclName() && getDeclContext()->isRecord() &&
-    cast<RecordDecl>(getDeclContext())->getDeclName() == getDeclName();
-}
-
 bool RecordDecl::isLambda() const {
   if (auto RD = dyn_cast<CXXRecordDecl>(this))
     return RD->isLambda();

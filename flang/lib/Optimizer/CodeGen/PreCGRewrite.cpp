@@ -107,9 +107,8 @@ public:
       shapeOpers.push_back(extVal);
     }
     auto xbox = rewriter.create<fir::cg::XEmboxOp>(
-        loc, embox.getType(), embox.getMemref(), shapeOpers,
-        llvm::ArrayRef<mlir::Value>(), llvm::ArrayRef<mlir::Value>(),
-        llvm::ArrayRef<mlir::Value>(), llvm::ArrayRef<mlir::Value>(),
+        loc, embox.getType(), embox.getMemref(), shapeOpers, mlir::ValueRange{},
+        mlir::ValueRange{}, mlir::ValueRange{}, mlir::ValueRange{},
         embox.getTypeparams(), embox.getSourceBox(),
         embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');

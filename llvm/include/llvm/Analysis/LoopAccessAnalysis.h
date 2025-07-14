@@ -423,6 +423,11 @@ private:
   getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
                                      const MemAccessInfo &B,
                                      Instruction *BInst);
+
+  // Return true if we can prove that \p Sink only accesses memory after \p
+  // Src's end or vice versa.
+  bool areAccessesCompletelyBeforeOrAfter(const SCEV *Src, Type *SrcTy,
+                                          const SCEV *Sink, Type *SinkTy);
 };
 
 class RuntimePointerChecking;

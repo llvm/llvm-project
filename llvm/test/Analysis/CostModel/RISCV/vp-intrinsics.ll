@@ -978,6 +978,122 @@ define void @store() {
   ret void
 }
 
+define void @gather() {
+; ARGBASED-LABEL: 'gather'
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call <2 x i8> @llvm.vp.gather.v2i8.v2p0(<2 x ptr> poison, <2 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = call <4 x i8> @llvm.vp.gather.v4i8.v4p0(<4 x ptr> poison, <4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %3 = call <8 x i8> @llvm.vp.gather.v8i8.v8p0(<8 x ptr> poison, <8 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = call <16 x i8> @llvm.vp.gather.v16i8.v16p0(<16 x ptr> poison, <16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %5 = call <2 x i64> @llvm.vp.gather.v2i64.v2p0(<2 x ptr> poison, <2 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %6 = call <4 x i64> @llvm.vp.gather.v4i64.v4p0(<4 x ptr> poison, <4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: %7 = call <8 x i64> @llvm.vp.gather.v8i64.v8p0(<8 x ptr> poison, <8 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 141 for instruction: %8 = call <16 x i64> @llvm.vp.gather.v16i64.v16p0(<16 x ptr> poison, <16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = call <vscale x 2 x i8> @llvm.vp.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %10 = call <vscale x 4 x i8> @llvm.vp.gather.nxv4i8.nxv4p0(<vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %11 = call <vscale x 8 x i8> @llvm.vp.gather.nxv8i8.nxv8p0(<vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %12 = call <vscale x 16 x i8> @llvm.vp.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: %13 = call <vscale x 2 x i64> @llvm.vp.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: %14 = call <vscale x 4 x i64> @llvm.vp.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: %15 = call <vscale x 8 x i64> @llvm.vp.gather.nxv8i64.nxv8p0(<vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: %16 = call <vscale x 16 x i64> @llvm.vp.gather.nxv16i64.nxv16p0(<vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'gather'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %1 = call <2 x i8> @llvm.vp.gather.v2i8.v2p0(<2 x ptr> poison, <2 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %2 = call <4 x i8> @llvm.vp.gather.v4i8.v4p0(<4 x ptr> poison, <4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 62 for instruction: %3 = call <8 x i8> @llvm.vp.gather.v8i8.v8p0(<8 x ptr> poison, <8 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %4 = call <16 x i8> @llvm.vp.gather.v16i8.v16p0(<16 x ptr> poison, <16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %5 = call <2 x i64> @llvm.vp.gather.v2i64.v2p0(<2 x ptr> poison, <2 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %6 = call <4 x i64> @llvm.vp.gather.v4i64.v4p0(<4 x ptr> poison, <4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: %7 = call <8 x i64> @llvm.vp.gather.v8i64.v8p0(<8 x ptr> poison, <8 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 141 for instruction: %8 = call <16 x i64> @llvm.vp.gather.v16i64.v16p0(<16 x ptr> poison, <16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %9 = call <vscale x 2 x i8> @llvm.vp.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %10 = call <vscale x 4 x i8> @llvm.vp.gather.nxv4i8.nxv4p0(<vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %11 = call <vscale x 8 x i8> @llvm.vp.gather.nxv8i8.nxv8p0(<vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %12 = call <vscale x 16 x i8> @llvm.vp.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %13 = call <vscale x 2 x i64> @llvm.vp.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %14 = call <vscale x 4 x i64> @llvm.vp.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %15 = call <vscale x 8 x i64> @llvm.vp.gather.nxv8i64.nxv8p0(<vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %16 = call <vscale x 16 x i64> @llvm.vp.gather.nxv16i64.nxv16p0(<vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call <2 x i8> @llvm.vp.gather(<2 x ptr> poison, <2 x i1> poison, i32 poison)
+  call <4 x i8> @llvm.vp.gather(<4 x ptr> poison, <4 x i1> poison, i32 poison)
+  call <8 x i8> @llvm.vp.gather(<8 x ptr> poison, <8 x i1> poison, i32 poison)
+  call <16 x i8> @llvm.vp.gather(<16 x ptr> poison, <16 x i1> poison, i32 poison)
+  call <2 x i64> @llvm.vp.gather(<2 x ptr> poison, <2 x i1> poison, i32 poison)
+  call <4 x i64> @llvm.vp.gather(<4 x ptr> poison, <4 x i1> poison, i32 poison)
+  call <8 x i64> @llvm.vp.gather(<8 x ptr> poison, <8 x i1> poison, i32 poison)
+  call <16 x i64> @llvm.vp.gather(<16 x ptr> poison, <16 x i1> poison, i32 poison)
+  call <vscale x 2 x i8> @llvm.vp.gather(<vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+  call <vscale x 4 x i8> @llvm.vp.gather(<vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+  call <vscale x 8 x i8> @llvm.vp.gather(<vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+  call <vscale x 16 x i8> @llvm.vp.gather(<vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+  call <vscale x 2 x i64> @llvm.vp.gather(<vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+  call <vscale x 4 x i64> @llvm.vp.gather(<vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+  call <vscale x 8 x i64> @llvm.vp.gather(<vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+  call <vscale x 16 x i64> @llvm.vp.gather(<vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+  ret void
+}
+
+define void @scatter() {
+; ARGBASED-LABEL: 'scatter'
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.vp.scatter.v2i8.v2p0(<2 x i8> poison, <2 x ptr> poison, <2 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.vp.scatter.v4i8.v4p0(<4 x i8> poison, <4 x ptr> poison, <4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.vp.scatter.v8i8.v8p0(<8 x i8> poison, <8 x ptr> poison, <8 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.vp.scatter.v16i8.v16p0(<16 x i8> poison, <16 x ptr> poison, <16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: call void @llvm.vp.scatter.v2i64.v2p0(<2 x i64> poison, <2 x ptr> poison, <2 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: call void @llvm.vp.scatter.v4i64.v4p0(<4 x i64> poison, <4 x ptr> poison, <4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: call void @llvm.vp.scatter.v8i64.v8p0(<8 x i64> poison, <8 x ptr> poison, <8 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 141 for instruction: call void @llvm.vp.scatter.v16i64.v16p0(<16 x i64> poison, <16 x ptr> poison, <16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8> poison, <vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.vp.scatter.nxv4i8.nxv4p0(<vscale x 4 x i8> poison, <vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> poison, <vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> poison, <vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> poison, <vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv4i64.nxv4p0(<vscale x 4 x i64> poison, <vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv8i64.nxv8p0(<vscale x 8 x i64> poison, <vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv16i64.nxv16p0(<vscale x 16 x i64> poison, <vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'scatter'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: call void @llvm.vp.scatter.v2i8.v2p0(<2 x i8> poison, <2 x ptr> poison, <2 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: call void @llvm.vp.scatter.v4i8.v4p0(<4 x i8> poison, <4 x ptr> poison, <4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: call void @llvm.vp.scatter.v8i8.v8p0(<8 x i8> poison, <8 x ptr> poison, <8 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 141 for instruction: call void @llvm.vp.scatter.v16i8.v16p0(<16 x i8> poison, <16 x ptr> poison, <16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: call void @llvm.vp.scatter.v2i64.v2p0(<2 x i64> poison, <2 x ptr> poison, <2 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: call void @llvm.vp.scatter.v4i64.v4p0(<4 x i64> poison, <4 x ptr> poison, <4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: call void @llvm.vp.scatter.v8i64.v8p0(<8 x i64> poison, <8 x ptr> poison, <8 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 141 for instruction: call void @llvm.vp.scatter.v16i64.v16p0(<16 x i64> poison, <16 x ptr> poison, <16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8> poison, <vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv4i8.nxv4p0(<vscale x 4 x i8> poison, <vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> poison, <vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> poison, <vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> poison, <vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv4i64.nxv4p0(<vscale x 4 x i64> poison, <vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv8i64.nxv8p0(<vscale x 8 x i64> poison, <vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv16i64.nxv16p0(<vscale x 16 x i64> poison, <vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call void @llvm.vp.scatter(<2 x i8> poison, <2 x ptr> poison, <2 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<4 x i8> poison, <4 x ptr> poison, <4 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<8 x i8> poison, <8 x ptr> poison, <8 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<16 x i8> poison, <16 x ptr> poison, <16 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<2 x i64> poison, <2 x ptr> poison, <2 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<4 x i64> poison, <4 x ptr> poison, <4 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<8 x i64> poison, <8 x ptr> poison, <8 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<16 x i64> poison, <16 x ptr> poison, <16 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<vscale x 2 x i8> poison, <vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<vscale x 4 x i8> poison, <vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<vscale x 8 x i8> poison, <vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<vscale x 16 x i8> poison, <vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<vscale x 2 x i64> poison, <vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<vscale x 4 x i64> poison, <vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<vscale x 8 x i64> poison, <vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
+  call void @llvm.vp.scatter(<vscale x 16 x i64> poison, <vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+  ret void
+}
+
 define void @strided_load() {
 ; ARGBASED-LABEL: 'strided_load'
 ; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %ti1_2 = call <2 x i1> @llvm.experimental.vp.strided.load.v2i1.p0.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)

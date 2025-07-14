@@ -1762,6 +1762,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SRL, VT, Custom);
   }
 
+  setOperationAction(ISD::SADDSAT, MVT::i32, Legal);
+  setOperationAction(ISD::SADDSAT, MVT::i64, Legal);
+
   // Extending loads from (native) vectors of i8 into (native) vectors of i16
   // are legal.
   setLoadExtAction(ISD::EXTLOAD,  MVT::v2i16, MVT::v2i8, Legal);

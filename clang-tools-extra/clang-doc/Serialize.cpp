@@ -12,6 +12,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/Mangle.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringExtras.h"
@@ -767,6 +768,17 @@ static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
     I.DefLoc = Loc;
   else
     I.Loc.emplace_back(Loc);
+
+  auto *Mangler = ItaniumMangleContext::create(
+      D->getASTContext(), D->getASTContext().getDiagnostics());
+  std::string MangledName;
+  llvm::raw_string_ostream MangledStream(MangledName);
+  if (auto *CXXD = dyn_cast<CXXRecordDecl>(D))
+    Mangler->mangleCXXVTable(CXXD, MangledStream);
+  else
+    MangledStream << D->getNameAsString();
+  I.MangledName = MangledName;
+  delete Mangler;
 }
 
 static void

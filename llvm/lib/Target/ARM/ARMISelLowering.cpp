@@ -115,7 +115,6 @@
 #include <vector>
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "arm-isel"
 

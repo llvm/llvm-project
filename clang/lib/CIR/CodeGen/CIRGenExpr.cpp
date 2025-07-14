@@ -637,8 +637,30 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   }
   case UO_Real:
   case UO_Imag: {
-    cgm.errorNYI(e->getSourceRange(), "UnaryOp real/imag");
-    return LValue();
+    if (op == UO_Imag) {
+      cgm.errorNYI(e->getSourceRange(), "UnaryOp real/imag");
+      return LValue();
+    }
+
+    LValue lv = emitLValue(e->getSubExpr());
+    assert(lv.isSimple() && "real/imag on non-ordinary l-value");
+
+    // __real is valid on scalars. This is a faster way of testing that.
+    // __imag can only produce an rvalue on scalars.
+    if (e->getOpcode() == UO_Real &&
+        !mlir::isa<cir::ComplexType>(lv.getAddress().getElementType())) {
+      assert(e->getSubExpr()->getType()->isArithmeticType());
+      return lv;
+    }
+
+    QualType exprTy = getContext().getCanonicalType(e->getSubExpr()->getType());
+    QualType elemTy = exprTy->castAs<clang::ComplexType>()->getElementType();
+    mlir::Location loc = getLoc(e->getExprLoc());
+    Address component = builder.createComplexRealPtr(loc, lv.getAddress());
+    assert(!cir::MissingFeatures::opTBAA());
+    LValue elemLV = makeAddrLValue(component, elemTy);
+    elemLV.getQuals().addQualifiers(lv.getQuals());
+    return elemLV;
   }
   case UO_PreInc:
   case UO_PreDec: {
@@ -1593,10 +1615,15 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
     delegating = true;
     break;
   case CXXConstructionKind::VirtualBase:
-  case CXXConstructionKind::NonVirtualBase:
+    // This should just set 'forVirtualBase' to true and fall through, but
+    // virtual base class support is otherwise missing, so this needs to wait
+    // until it can be tested.
     cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXConstructExpr: other construction kind");
+                 "emitCXXConstructExpr: virtual base constructor");
     return;
+  case CXXConstructionKind::NonVirtualBase:
+    type = Ctor_Base;
+    break;
   }
 
   emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);

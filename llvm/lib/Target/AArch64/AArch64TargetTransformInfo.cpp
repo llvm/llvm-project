@@ -2723,6 +2723,16 @@ static std::optional<Instruction *> instCombineSVEUxt(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *>
+instCombineInStreamingMode(InstCombiner &IC, IntrinsicInst &II) {
+  SMEAttrs FnSMEAttrs(*II.getFunction());
+  bool IsStreaming = FnSMEAttrs.hasStreamingInterfaceOrBody();
+  if (IsStreaming || !FnSMEAttrs.hasStreamingCompatibleInterface())
+    return IC.replaceInstUsesWith(
+        II, ConstantInt::getBool(II.getType(), IsStreaming));
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -2828,6 +2838,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEUxt(IC, II, 16);
   case Intrinsic::aarch64_sve_uxtw:
     return instCombineSVEUxt(IC, II, 32);
+  case Intrinsic::aarch64_sme_in_streaming_mode:
+    return instCombineInStreamingMode(IC, II);
   }
 
   return std::nullopt;
@@ -5205,6 +5217,7 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       {ISD::ADD, MVT::v16i8,  2},
       {ISD::ADD, MVT::v4i16,  2},
       {ISD::ADD, MVT::v8i16,  2},
+      {ISD::ADD, MVT::v2i32,  2},
       {ISD::ADD, MVT::v4i32,  2},
       {ISD::ADD, MVT::v2i64,  2},
       {ISD::OR,  MVT::v8i8,  15},

@@ -18,8 +18,6 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
-#include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 using namespace mlir::tosa;

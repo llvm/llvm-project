@@ -3893,7 +3893,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // arguments to begin at SP+0. Completely unused for non-tail calls.
   int32_t FPDiff = 0;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  auto *TRI = static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
+  auto *TRI = Subtarget->getRegisterInfo();
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass

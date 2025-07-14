@@ -74,6 +74,7 @@ public:
   mlir::Value emitPromotedComplexOperand(const Expr *e, QualType promotionTy);
 
   mlir::Value emitBinAdd(const BinOpInfo &op);
+  mlir::Value emitBinSub(const BinOpInfo &op);
 
   QualType getPromotionType(QualType ty, bool isDivOpCode = false) {
     if (auto *complexTy = ty->getAs<ComplexType>()) {
@@ -105,6 +106,7 @@ public:
   }
 
   HANDLEBINOP(Add)
+  HANDLEBINOP(Sub)
 #undef HANDLEBINOP
 };
 } // namespace
@@ -291,12 +293,8 @@ mlir::Value ComplexExprEmitter::VisitInitListExpr(const InitListExpr *e) {
   }
 
   assert(e->getNumInits() == 0 && "Unexpected number of inits");
-  QualType complexElemTy =
-      e->getType()->castAs<clang::ComplexType>()->getElementType();
-  mlir::Type complexElemLLVMTy = cgf.convertType(complexElemTy);
-  mlir::TypedAttr defaultValue = builder.getZeroInitAttr(complexElemLLVMTy);
-  auto complexAttr = cir::ConstComplexAttr::get(defaultValue, defaultValue);
-  return builder.create<cir::ConstantOp>(loc, complexAttr);
+  mlir::Type complexTy = cgf.convertType(e->getType());
+  return builder.getNullValue(complexTy, loc);
 }
 
 mlir::Value
@@ -349,6 +347,7 @@ mlir::Value ComplexExprEmitter::emitPromoted(const Expr *e,
   case BO_##OP:                                                                \
     return emitBin##OP(emitBinOps(bo, promotionTy));
       HANDLE_BINOP(Add)
+      HANDLE_BINOP(Sub)
 #undef HANDLE_BINOP
     default:
       break;
@@ -392,6 +391,12 @@ mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
   assert(!cir::MissingFeatures::cgFPOptionsRAII());
   return builder.create<cir::ComplexAddOp>(op.loc, op.lhs, op.rhs);
+}
+
+mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
+  assert(!cir::MissingFeatures::fastMathFlags());
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  return builder.create<cir::ComplexSubOp>(op.loc, op.lhs, op.rhs);
 }
 
 LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {

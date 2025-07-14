@@ -508,7 +508,7 @@ class DAPTestCaseBase(TestBase):
                 self.assertIsNotNone(server_tool, "debugserver not found.")
         return server_tool
 
-    def writeMemory(self, memoryReference, data=None, offset=None, allowPartial=None):
+    def writeMemory(self, memoryReference, data=None, offset=0, allowPartial=False):
         # This function accepts data in decimal and hexadecimal format,
         # converts it to a Base64 string, and send it to the DAP,
         # which expects Base64 encoded data.

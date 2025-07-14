@@ -189,6 +189,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {RECORD_LOCATION, {"Location", &genLocationAbbrev}},
           {RECORD_TAG_TYPE, {"TagType", &genIntAbbrev}},
           {RECORD_IS_TYPE_DEF, {"IsTypeDef", &genBoolAbbrev}},
+          {RECORD_MANGLED_NAME, {"MangledName", &genStringAbbrev}},
           {BASE_RECORD_USR, {"USR", &genSymbolIdAbbrev}},
           {BASE_RECORD_NAME, {"Name", &genStringAbbrev}},
           {BASE_RECORD_PATH, {"Path", &genStringAbbrev}},
@@ -271,7 +272,8 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Record Block
         {BI_RECORD_BLOCK_ID,
          {RECORD_USR, RECORD_NAME, RECORD_PATH, RECORD_DEFLOCATION,
-          RECORD_LOCATION, RECORD_TAG_TYPE, RECORD_IS_TYPE_DEF}},
+          RECORD_LOCATION, RECORD_TAG_TYPE, RECORD_IS_TYPE_DEF,
+          RECORD_MANGLED_NAME}},
         // BaseRecord Block
         {BI_BASE_RECORD_BLOCK_ID,
          {BASE_RECORD_USR, BASE_RECORD_NAME, BASE_RECORD_PATH,
@@ -616,6 +618,7 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
   emitRecord(I.USR, RECORD_USR);
   emitRecord(I.Name, RECORD_NAME);
   emitRecord(I.Path, RECORD_PATH);
+  emitRecord(I.MangledName, RECORD_MANGLED_NAME);
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)

@@ -2268,8 +2268,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MachineSDNode *Load =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
 
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, Load);
       return;
@@ -2487,8 +2486,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           IsMasked, IsStrided, Log2SEW, static_cast<unsigned>(LMUL));
       MachineSDNode *Store =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(Store, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(Store, {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, Store);
       return;

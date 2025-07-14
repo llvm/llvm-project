@@ -2075,19 +2075,36 @@ OperationLegalizer::legalize(Operation *op,
 
   auto &logger = rewriter.getImpl().logger;
 #endif
+
+  // Check to see if the operation is ignored and doesn't need to be converted.
+  bool isIgnored = rewriter.getImpl().isOpIgnored(op);
+
   LLVM_DEBUG({
     logger.getOStream() << "\n";
     logger.startLine() << logLineComment;
-    logger.startLine() << "Legalizing operation : '" << op->getName() << "'("
-                       << op << ") {\n";
+    logger.startLine() << "Legalizing operation : ";
+    // Do not print the operation name if the operation is ignored. Ignored ops
+    // may have been erased and should not be accessed. The pointer can be
+    // printed safely.
+    if (!isIgnored)
+      logger.getOStream() << "'" << op->getName() << "' ";
+    logger.getOStream() << "(" << op << ") {\n";
     logger.indent();
 
     // If the operation has no regions, just print it here.
-    if (op->getNumRegions() == 0) {
+    if (!isIgnored && op->getNumRegions() == 0) {
       op->print(logger.startLine(), OpPrintingFlags().printGenericOpForm());
       logger.getOStream() << "\n\n";
     }
   });
+
+  if (isIgnored) {
+    LLVM_DEBUG({
+      logSuccess(logger, "operation marked 'ignored' during conversion");
+      logger.startLine() << logLineComment;
+    });
+    return success();
+  }
 
   // Check if this operation is legal on the target.
   if (auto legalityInfo = target.isLegal(op)) {
@@ -2109,15 +2126,6 @@ OperationLegalizer::legalize(Operation *op,
       });
     }
 
-    return success();
-  }
-
-  // Check to see if the operation is ignored and doesn't need to be converted.
-  if (rewriter.getImpl().isOpIgnored(op)) {
-    LLVM_DEBUG({
-      logSuccess(logger, "operation marked 'ignored' during conversion");
-      logger.startLine() << logLineComment;
-    });
     return success();
   }
 
@@ -2168,6 +2176,7 @@ OperationLegalizer::legalizeWithFold(Operation *op,
   (void)rewriterImpl;
 
   // Try to fold the operation.
+  StringRef opName = op->getName().getStringRef();
   SmallVector<Value, 2> replacementValues;
   SmallVector<Operation *, 2> newOps;
   rewriter.setInsertionPoint(op);
@@ -2187,6 +2196,12 @@ OperationLegalizer::legalizeWithFold(Operation *op,
       LLVM_DEBUG(logFailure(rewriterImpl.logger,
                             "failed to legalize generated constant '{0}'",
                             newOp->getName()));
+      if (!config.allowPatternRollback) {
+        // Rolling back a folder is like rolling back a pattern.
+        llvm::report_fatal_error(
+            "op '" + opName +
+            "' folder rollback of IR modifications requested");
+      }
       // Legalization failed: erase all materialized constants.
       for (Operation *op : newOps)
         rewriter.eraseOp(op);
@@ -2251,9 +2266,8 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     appliedPatterns.erase(&pattern);
     if (failed(result)) {
       if (!rewriterImpl.config.allowPatternRollback)
-        op->emitError("pattern '")
-            << pattern.getDebugName()
-            << "' produced IR that could not be legalized";
+        llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
+                                 "' produced IR that could not be legalized");
       rewriterImpl.resetState(curState, pattern.getDebugName());
     }
     if (config.listener)

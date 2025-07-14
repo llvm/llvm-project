@@ -131,6 +131,7 @@ def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 def hasTcgen05Instructions : Predicate<"Subtarget->hasTcgen05Instructions()">;
+def hasF32x2Instructions : Predicate<"Subtarget->hasF32x2Instructions()">;
 
 class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>;
 class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
@@ -199,6 +200,7 @@ def BF16RT   : RegTyInfo<bf16, B16, "bf16", bf16imm, fpimm, supports_imm = 0>;
 
 def F16X2RT  : RegTyInfo<v2f16, B32, "f16x2", ?, ?, supports_imm = 0>;
 def BF16X2RT : RegTyInfo<v2bf16, B32, "bf16x2", ?, ?, supports_imm = 0>;
+def F32X2RT  : RegTyInfo<v2f32, B64, "f32x2", ?, ?, supports_imm = 0>;
 
 
 // This class provides a basic wrapper around an NVPTXInst that abstracts the
@@ -395,6 +397,13 @@ multiclass F3<string op_str, SDPatternOperator op_pat> {
               op_str # "$ftz.f16",
               [(set f16:$dst, (op_pat f16:$a, f16:$b))]>,
               Requires<[useFP16Math]>;
+  def f32x2rr :
+    BasicFlagsNVPTXInst<(outs B64:$dst),
+              (ins B64:$a, B64:$b),
+              (ins FTZFlag:$ftz),
+              op_str # "$ftz.f32x2",
+              [(set v2f32:$dst, (op_pat v2f32:$a, v2f32:$b))]>,
+              Requires<[hasF32x2Instructions]>;
   def f16x2rr :
     BasicFlagsNVPTXInst<(outs B32:$dst),
               (ins B32:$a, B32:$b),
@@ -746,6 +755,9 @@ foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
 def : Pat<(vt (select i1:$p, vt:$a, vt:$b)),
           (SELP_b32rr $a, $b, $p)>;
 }
+
+def : Pat<(v2f32 (select i1:$p, v2f32:$a, v2f32:$b)),
+          (SELP_b64rr $a, $b, $p)>;
 
 //-----------------------------------
 // Test Instructions
@@ -1218,6 +1230,7 @@ defm FMA_F16x2  : FMA<F16X2RT,  allow_ftz = true, preds = [useFP16Math]>;
 defm FMA_BF16   : FMA<BF16RT,   allow_ftz = false, preds = [hasBF16Math]>;
 defm FMA_BF16x2 : FMA<BF16X2RT, allow_ftz = false, preds = [hasBF16Math]>;
 defm FMA_F32    : FMA<F32RT,    allow_ftz = true>;
+defm FMA_F32x2  : FMA<F32X2RT,  allow_ftz = true, preds = [hasF32x2Instructions]>;
 defm FMA_F64    : FMA<F64RT,    allow_ftz = false>;
 
 // sin/cos
@@ -1359,11 +1372,6 @@ def BREV64 :
 // restriction in PTX?
 //
 // dest and src may be int32 or int64, but start and end are always int32.
-def SDTBFE :
-  SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisInt<0>,
-                       SDTCisVT<2, i32>, SDTCisVT<3, i32>]>;
-def bfe : SDNode<"NVPTXISD::BFE", SDTBFE>;
-
 def SDTBFI :
   SDTypeProfile<1, 4, [SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, 
                        SDTCisVT<3, i32>, SDTCisVT<4, i32>]>;
@@ -1374,22 +1382,13 @@ def SDTPRMT :
                        SDTCisVT<2, i32>, SDTCisVT<3, i32>, SDTCisVT<4, i32>]>;
 def prmt : SDNode<"NVPTXISD::PRMT", SDTPRMT>;
 
-multiclass BFE<string Instr, ValueType T, RegisterClass RC> {
+multiclass BFE<string Instr, RegisterClass RC> {
   def rrr
-    : BasicNVPTXInst<(outs RC:$d),
-                (ins RC:$a, B32:$b, B32:$c),
-                Instr,
-                [(set T:$d, (bfe T:$a, i32:$b, i32:$c))]>;
+    : BasicNVPTXInst<(outs RC:$d), (ins RC:$a, B32:$b, B32:$c), Instr>;
   def rri
-    : BasicNVPTXInst<(outs RC:$d),
-                (ins RC:$a, B32:$b, i32imm:$c),
-                Instr,
-                [(set T:$d, (bfe T:$a, i32:$b, imm:$c))]>;
+    : BasicNVPTXInst<(outs RC:$d), (ins RC:$a, B32:$b, i32imm:$c), Instr>;
   def rii
-    : BasicNVPTXInst<(outs RC:$d),
-                (ins RC:$a, i32imm:$b, i32imm:$c),
-                Instr,
-                [(set T:$d, (bfe T:$a, imm:$b, imm:$c))]>;
+    : BasicNVPTXInst<(outs RC:$d), (ins RC:$a, i32imm:$b, i32imm:$c), Instr>;
 }
 
 multiclass BFI<string Instr, ValueType T, RegisterClass RC, Operand ImmCls> {
@@ -1434,10 +1433,10 @@ let hasSideEffects = false in {
   // the same patterns, so the first one wins. Having unsigned byte extraction
   // has the benefit of always having zero in unused bits, which makes some
   // optimizations easier (e.g. no need to mask them).
-  defm BFE_U32 : BFE<"bfe.u32", i32, B32>;
-  defm BFE_S32 : BFE<"bfe.s32", i32, B32>;
-  defm BFE_U64 : BFE<"bfe.u64", i64, B64>;
-  defm BFE_S64 : BFE<"bfe.s64", i64, B64>;
+  defm BFE_U32 : BFE<"bfe.u32", B32>;
+  defm BFE_S32 : BFE<"bfe.s32", B32>;
+  defm BFE_U64 : BFE<"bfe.u64", B64>;
+  defm BFE_S64 : BFE<"bfe.s64", B64>;
 
   defm BFI_B32 : BFI<"bfi.b32", i32, B32, i32imm>;
   defm BFI_B64 : BFI<"bfi.b64", i64, B64, i64imm>;
@@ -1474,19 +1473,26 @@ def : Pat<(fshr i32:$hi, i32:$lo, (shl i32:$amt, (i32 3))),
           (PRMT_B32rrr $lo, $hi, $amt, PrmtF4E)>;
 
 
+def byte_extract_prmt : ImmLeaf<i32, [{
+  return (Imm == 0x7770) || (Imm == 0x7771) || (Imm == 0x7772) || (Imm == 0x7773);
+}]>;
+
+def to_sign_extend_selector : SDNodeXForm<imm, [{
+  const APInt &V = N->getAPIntValue();
+  const APInt B = V.trunc(4);
+  const APInt BSext = B | 8;
+  const APInt R = BSext.concat(BSext).concat(BSext).concat(B).zext(32);
+  return CurDAG->getTargetConstant(R, SDLoc(N), MVT::i32);
+}]>;
+
+
 // byte extraction + signed/unsigned extension to i32.
-def : Pat<(i32 (sext_inreg (bfe i32:$s, i32:$o, 8), i8)),
-          (BFE_S32rri $s, $o, 8)>;
-def : Pat<(i32 (sext_inreg (bfe i32:$s, imm:$o, 8), i8)),
-          (BFE_S32rii $s, imm:$o, 8)>;
-def : Pat<(i32 (and (bfe i32:$s, i32:$o, 8), 255)),
-          (BFE_U32rri $s, $o, 8)>;
-def : Pat<(i32 (and (bfe i32:$s, imm:$o, 8), 255)),
-          (BFE_U32rii $s, imm:$o, 8)>;
+def : Pat<(i32 (sext_inreg (prmt i32:$s, 0, byte_extract_prmt:$sel, PrmtNONE), i8)),
+          (PRMT_B32rii $s, 0, (to_sign_extend_selector $sel), PrmtNONE)>;
 
 // byte extraction + signed extension to i16
-def : Pat<(i16 (sext_inreg (trunc (bfe i32:$s, imm:$o, 8)), i8)),
-          (CVT_s8_s32 (BFE_S32rii $s, imm:$o, 8), CvtNONE)>;
+def : Pat<(i16 (sext_inreg (trunc (prmt i32:$s, 0, byte_extract_prmt:$sel, PrmtNONE)), i8)),
+          (CVT_u16_u32 (PRMT_B32rii $s, 0, (to_sign_extend_selector $sel), PrmtNONE), CvtNONE)>;
 
 
 // Byte extraction via shift/trunc/sext
@@ -1696,28 +1702,36 @@ def cond_not_signed : PatLeaf<(cond), [{
   return !isSignedIntSetCC(N->get());
 }]>;
 
-// comparisons of i8 extracted with BFE as i32
-// It's faster to do comparison directly on i32 extracted by BFE,
+// comparisons of i8 extracted with PRMT as i32
+// It's faster to do comparison directly on i32 extracted by PRMT,
 // instead of the long conversion and sign extending.
-def: Pat<(setcc (i16 (sext_inreg (i16 (trunc (bfe B32:$a, B32:$oa, 8))), i8)),
-                (i16 (sext_inreg (i16 (trunc (bfe B32:$b, B32:$ob, 8))), i8)),
+def: Pat<(setcc (i16 (sext_inreg (i16 (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE))), i8)),
+                (i16 (sext_inreg (i16 (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE))), i8)),
                 cond_signed:$cc),
-         (SETP_i32rr (BFE_S32rri $a, $oa, 8), (BFE_S32rri $b, $ob, 8), (cond2cc $cc))>;
+         (SETP_i32rr (PRMT_B32rii i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE),
+                     (PRMT_B32rii i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE), 
+                     (cond2cc $cc))>;
 
-def: Pat<(setcc (i16 (sext_inreg (trunc (bfe B32:$a, imm:$oa, 8)), i8)),
-                (i16 (sext_inreg (trunc (bfe B32:$b, imm:$ob, 8)), i8)),
+def: Pat<(setcc (i16 (sext_inreg (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE)), i8)),
+                (i16 (sext_inreg (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE)), i8)),
                 cond_signed:$cc),
-         (SETP_i32rr (BFE_S32rii $a, imm:$oa, 8), (BFE_S32rii $b, imm:$ob, 8), (cond2cc $cc))>;
+         (SETP_i32rr (PRMT_B32rii i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE),
+                     (PRMT_B32rii i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE), 
+                     (cond2cc $cc))>;
 
-def: Pat<(setcc (i16 (and (trunc (bfe B32:$a, B32:$oa, 8)), 255)),
-                (i16 (and (trunc (bfe B32:$b, B32:$ob, 8)), 255)),
+def: Pat<(setcc (i16 (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE))),
+                (i16 (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE))),
                 cond_signed:$cc),
-         (SETP_i32rr (BFE_U32rri $a, $oa, 8), (BFE_U32rri $b, $ob, 8), (cond2cc $cc))>;
+         (SETP_i32rr (PRMT_B32rii i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE),
+                     (PRMT_B32rii i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE),
+                     (cond2cc $cc))>;
 
-def: Pat<(setcc (i16 (and (trunc (bfe B32:$a, imm:$oa, 8)), 255)),
-                (i16 (and (trunc (bfe B32:$b, imm:$ob, 8)), 255)),
+def: Pat<(setcc (i16 (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE))),
+                (i16 (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE))),
                 cond_not_signed:$cc),
-         (SETP_i32rr (BFE_U32rii $a, imm:$oa, 8), (BFE_U32rii $b, imm:$ob, 8), (cond2cc $cc))>;
+         (SETP_i32rr (PRMT_B32rii i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE),
+                     (PRMT_B32rii i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE), 
+                     (cond2cc $cc))>;
 
 def SDTDeclareArrayParam :
   SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
@@ -2302,6 +2316,7 @@ def : Pat<(i32 (trunc (sra i64:$s, (i32 32)))), (I64toI32H $s)>;
 def: Pat<(i32 (sext (extractelt v2i16:$src, 0))),
          (CVT_INREG_s32_s16 $src)>;
 
+// Handle extracting one element from the pair (32-bit types)
 foreach vt = [v2f16, v2bf16, v2i16] in {
   def : Pat<(extractelt vt:$src, 0), (I32toI16L_Sink $src)>, Requires<[hasPTX<71>]>;
   def : Pat<(extractelt vt:$src, 1), (I32toI16H_Sink $src)>, Requires<[hasPTX<71>]>;
@@ -2313,9 +2328,20 @@ foreach vt = [v2f16, v2bf16, v2i16] in {
             (V2I16toI32 $a, $b)>;
 }
 
+// Same thing for the 64-bit type v2f32.
+foreach vt = [v2f32] in {
+  def : Pat<(extractelt vt:$src, 0), (I64toI32L_Sink $src)>, Requires<[hasPTX<71>]>;
+  def : Pat<(extractelt vt:$src, 1), (I64toI32H_Sink $src)>, Requires<[hasPTX<71>]>;
+
+  def : Pat<(extractelt vt:$src, 0), (I64toI32L $src)>;
+  def : Pat<(extractelt vt:$src, 1), (I64toI32H $src)>;
+
+  def : Pat<(vt (build_vector vt.ElementType:$a, vt.ElementType:$b)), 
+            (V2I32toI64 $a, $b)>;
+}
+
 def: Pat<(v2i16 (scalar_to_vector i16:$a)),
          (CVT_u32_u16 $a, CvtNONE)>;
-
 
 def nvptx_build_vector : SDNode<"NVPTXISD::BUILD_VECTOR", SDTypeProfile<1, 2, []>, []>;
 
@@ -2467,7 +2493,7 @@ def : Pat<(brcond i32:$a, bb:$target),
 
 // SelectionDAGBuilder::visitSWitchCase() will invert the condition of a
 // conditional branch if the target block is the next block so that the code
-// can fall through to the target block.  The invertion is done by 'xor
+// can fall through to the target block.  The inversion is done by 'xor
 // condition, 1', which will be translated to (setne condition, -1).  Since ptx
 // supports '@!pred bra target', we should use it.
 def : Pat<(brcond (i1 (setne i1:$a, -1)), bb:$target),

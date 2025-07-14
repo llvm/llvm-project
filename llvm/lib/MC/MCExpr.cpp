@@ -351,17 +351,17 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
     // instruction, the difference cannot be resolved as it may be changed by
     // the linker.
     bool BBeforeRelax = false, AAfterRelax = false;
-    for (auto FI = FB; FI; FI = FI->getNext()) {
-      auto DF = dyn_cast<MCDataFragment>(FI);
+    for (auto F = FB; F; F = F->getNext()) {
+      auto DF = dyn_cast<MCDataFragment>(F);
       if (DF && DF->isLinkerRelaxable()) {
-        if (&*FI != FB || SBOffset != DF->getContents().size())
+        if (&*F != FB || SBOffset != DF->getContents().size())
           BBeforeRelax = true;
-        if (&*FI != FA || SAOffset == DF->getContents().size())
+        if (&*F != FA || SAOffset == DF->getContents().size())
           AAfterRelax = true;
         if (BBeforeRelax && AAfterRelax)
           return;
       }
-      if (&*FI == FA) {
+      if (&*F == FA) {
         // If FA and FB belong to the same subsection, the loop will find FA and
         // we can resolve the difference.
         Addend += Reverse ? -Displacement : Displacement;
@@ -373,18 +373,18 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       unsigned Count;
       if (DF) {
         Displacement += DF->getContents().size();
-      } else if (auto *RF = dyn_cast<MCRelaxableFragment>(FI);
+      } else if (auto *RF = dyn_cast<MCRelaxableFragment>(F);
                  RF && Asm->hasFinalLayout()) {
         // Before finishLayout, a relaxable fragment's size is indeterminate.
         // After layout, during relocation generation, it can be treated as a
         // data fragment.
         Displacement += RF->getContents().size();
-      } else if (auto *AF = dyn_cast<MCAlignFragment>(FI);
+      } else if (auto *AF = dyn_cast<MCAlignFragment>(F);
                  AF && Layout && AF->hasEmitNops() &&
                  !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
                      *AF, Count)) {
         Displacement += Asm->computeFragmentSize(*AF);
-      } else if (auto *FF = dyn_cast<MCFillFragment>(FI);
+      } else if (auto *FF = dyn_cast<MCFillFragment>(F);
                  FF && FF->getNumValues().evaluateAsAbsolute(Num)) {
         Displacement += Num * FF->getValueSize();
       } else {

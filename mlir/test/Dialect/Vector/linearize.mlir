@@ -264,6 +264,19 @@ func.func @test_vector_shuffle(%arg0: vector<4x2xf32>, %arg1: vector<4x2xf32>) -
 
 // -----
 
+// CHECK-LABEL: test_vector_extract_scalar
+// CHECK-SAME: (%[[ARG:.*]]: vector<2x4xi32>) -> i32 {
+func.func @test_vector_extract_scalar(%arg0 : vector<2x4xi32>) -> i32 {
+
+  // CHECK: %[[SRC_1D:.*]] = vector.shape_cast %[[ARG]] : vector<2x4xi32> to vector<8xi32>
+  // CHECK: %[[EXTRACT_1D:.*]] = vector.extract %[[SRC_1D]][6] : i32 from vector<8xi32>
+  // CHECK: return %[[EXTRACT_1D]] : i32
+  %0 = vector.extract %arg0[1, 2] : i32 from vector<2x4xi32>
+  return %0 : i32
+}
+
+// -----
+
 // CHECK-LABEL: test_vector_extract
 // CHECK-SAME: (%[[ORIG_ARG:.*]]: vector<2x8x2xf32>) -> vector<8x2xf32> {
 func.func @test_vector_extract(%arg0: vector<2x8x2xf32>) -> vector<8x2xf32> {
@@ -337,19 +350,6 @@ func.func @test_vector_insert_scalable(%arg0: vector<2x8x[4]xf32>, %arg1: vector
   %0 = vector.insert %arg1, %arg0[0]: vector<8x[4]xf32> into vector<2x8x[4]xf32>
   // CHECK: return %[[RES]] : vector<2x8x[4]xf32>
   return %0 : vector<2x8x[4]xf32>
-}
-
-// -----
-
-// CHECK-LABEL: test_vector_extract_scalar
-func.func @test_vector_extract_scalar(%idx : index) {
-  %cst = arith.constant dense<[1, 2, 3, 4]> : vector<4xi32>
-
-  // CHECK-NOT: vector.shuffle
-  // CHECK:     vector.extract
-  // CHECK-NOT: vector.shuffle
-  %0 = vector.extract %cst[%idx] : i32 from vector<4xi32>
-  return
 }
 
 // -----

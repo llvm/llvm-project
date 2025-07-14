@@ -605,15 +605,17 @@ TEST(ProtocolTypesTest, DisassembledInstruction) {
       parse<DisassembledInstruction>(R"({"address":1})",
                                      "disassemblyInstruction"),
       FailedWithMessage("expected string at disassemblyInstruction.address"));
-  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(R"({"address":"-1"})",
-                                                      "disassemblyInstruction"),
-                       FailedWithMessage("expected string encoded uint64_t at "
-                                         "disassemblyInstruction.address"));
-  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(
-                           R"({"address":"0xfffffffffffffffffffffffffff"})",
-                           "disassemblyInstruction"),
-                       FailedWithMessage("expected string encoded uint64_t at "
-                                         "disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(
+      parse<DisassembledInstruction>(R"({"address":"-1"})",
+                                     "disassemblyInstruction"),
+      FailedWithMessage(
+          "malformed memory reference at disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(
+      parse<DisassembledInstruction>(
+          R"({"address":"0xfffffffffffffffffffffffffff"})",
+          "disassemblyInstruction"),
+      FailedWithMessage(
+          "malformed memory reference at disassemblyInstruction.address"));
 }
 
 TEST(ProtocolTypesTest, Thread) {
@@ -780,7 +782,7 @@ TEST(ProtocolTypesTest, ReadMemoryArguments) {
 
 TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
   ReadMemoryResponseBody response;
-  response.address = "0xdeadbeef";
+  response.address = 0xdeadbeef;
   const std::string data_str = "hello world!";
   std::transform(data_str.begin(), data_str.end(),
                  std::back_inserter(response.data),
@@ -788,7 +790,7 @@ TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
   response.unreadableBytes = 1;
 
   Expected<Value> expected = json::parse(
-      R"({ "address": "0xdeadbeef", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
+      R"({ "address": "0xDEADBEEF", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
 }

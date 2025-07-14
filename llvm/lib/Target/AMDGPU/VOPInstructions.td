@@ -632,9 +632,9 @@ def SDWA {
 class VOP_SDWAe<VOPProfile P> : Enc64 {
   bits<8> src0;
   bits<3> src0_sel;
-  bits<2> src0_modifiers; // float: {abs,neg}, int {sext}
+  bits<5> src0_modifiers; // float: {abs,neg}, int {sext}
   bits<3> src1_sel;
-  bits<2> src1_modifiers;
+  bits<5> src1_modifiers;
   bits<3> dst_sel;
   bits<2> dst_unused;
   bits<1> clamp;
@@ -644,10 +644,10 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
   let Inst{44-43} = !if(P.EmitDstSel, dst_unused{1-0}, ?);
   let Inst{45}    = !if(P.HasSDWAClamp, clamp{0}, 0);
   let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, 0);
-  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{0}, 0);
+  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{4}, 0);
   let Inst{53-52} = !if(P.HasSrc0FloatMods, src0_modifiers{1-0}, 0);
   let Inst{58-56} = !if(P.HasSrc1, src1_sel{2-0}, 0);
-  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{0}, 0);
+  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{4}, 0);
   let Inst{61-60} = !if(P.HasSrc1FloatMods, src1_modifiers{1-0}, 0);
 }
 
@@ -668,18 +668,18 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
 class VOP_SDWA9e<VOPProfile P> : Enc64 {
   bits<9> src0; // {src0_sgpr{0}, src0{7-0}}
   bits<3> src0_sel;
-  bits<2> src0_modifiers; // float: {abs,neg}, int {sext}
+  bits<5> src0_modifiers; // float: {abs,neg}, int {sext}
   bits<3> src1_sel;
-  bits<2> src1_modifiers;
+  bits<5> src1_modifiers;
   bits<1> src1_sgpr;
 
   let Inst{39-32} = !if(P.HasSrc0, src0{7-0}, 0);
   let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, 0);
-  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{0}, 0);
+  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{4}, 0);
   let Inst{53-52} = !if(P.HasSrc0FloatMods, src0_modifiers{1-0}, 0);
   let Inst{55}    = !if(P.HasSrc0, src0{8}, 0);
   let Inst{58-56} = !if(P.HasSrc1, src1_sel{2-0}, 0);
-  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{0}, 0);
+  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{4}, 0);
   let Inst{61-60} = !if(P.HasSrc1FloatMods, src1_modifiers{1-0}, 0);
   let Inst{63}    = 0; // src1_sgpr - should be specified in subclass
 }

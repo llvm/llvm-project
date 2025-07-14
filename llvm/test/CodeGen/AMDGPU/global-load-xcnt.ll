@@ -65,15 +65,15 @@ define i16 @test_v7i16_load_store(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2
 ; GCN-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GCN-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off
 ; GCN-SDAG-NEXT:    global_load_b128 v[0:3], v[2:3], off
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[8:9], 0
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GCN-SDAG-NEXT:    v_pk_add_u16 v10, v6, v2
 ; GCN-SDAG-NEXT:    v_pk_add_u16 v11, v7, v3
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v2, 12 :: v_dual_mov_b32 v6, 8
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v7, 0
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v8, 0
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[2:3], 12
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[6:7], 8
 ; GCN-SDAG-NEXT:    v_pk_add_u16 v4, v4, v0
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_lshrrev_b32 v0, 16, v10
+; GCN-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v10
 ; GCN-SDAG-NEXT:    v_pk_add_u16 v5, v5, v1
 ; GCN-SDAG-NEXT:    s_clause 0x2
 ; GCN-SDAG-NEXT:    global_store_b16 v[2:3], v11, off
@@ -87,19 +87,17 @@ define i16 @test_v7i16_load_store(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2
 ; GCN-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GCN-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
 ; GCN-GISEL-NEXT:    global_load_b128 v[0:3], v[2:3], off
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v10, 2
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v11, 0
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v12, 4 :: v_dual_mov_b32 v14, 6
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v13, 0 :: v_dual_mov_b32 v15, 0
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v16, 8 :: v_dual_mov_b32 v18, 10
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v17, 0 :: v_dual_mov_b32 v19, 0
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[8:9], 0
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[10:11], 2
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[12:13], 4
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[14:15], 6
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[16:17], 8
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[18:19], 10
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[20:21], 12
 ; GCN-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GCN-GISEL-NEXT:    v_pk_add_u16 v2, v6, v2
 ; GCN-GISEL-NEXT:    v_pk_add_u16 v4, v4, v0
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v20, 12
 ; GCN-GISEL-NEXT:    v_pk_add_u16 v1, v5, v1
-; GCN-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v21, 0 :: v_dual_lshrrev_b32 v0, 16, v2
 ; GCN-GISEL-NEXT:    v_pk_add_u16 v3, v7, v3
 ; GCN-GISEL-NEXT:    s_clause 0x6
 ; GCN-GISEL-NEXT:    global_store_b16 v[8:9], v4, off
@@ -109,6 +107,7 @@ define i16 @test_v7i16_load_store(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2
 ; GCN-GISEL-NEXT:    global_store_b16 v[16:17], v2, off
 ; GCN-GISEL-NEXT:    global_store_d16_hi_b16 v[18:19], v2, off
 ; GCN-GISEL-NEXT:    global_store_b16 v[20:21], v3, off
+; GCN-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
 ; GCN-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <7 x i16>, ptr addrspace(1) %ptr1
   %insert = insertelement <7 x i16> %vec1, i16 20, i32 4
@@ -313,16 +312,15 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-SDAG-NEXT:    global_load_b128 v[22:25], v[0:1], off offset:16
 ; GCN-SDAG-NEXT:    global_load_b128 v[26:29], v[0:1], off
 ; GCN-SDAG-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:64
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v16, 0x70
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v17, 0 :: v_dual_mov_b32 v50, 0x60
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v51, 0 :: v_dual_mov_b32 v52, 48
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v54, 32
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v38, 0x50 :: v_dual_mov_b32 v53, 0
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v55, 0 :: v_dual_mov_b32 v14, 0xc8
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v15, 0 :: v_dual_mov_b32 v39, 0
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v48, 64 :: v_dual_mov_b32 v40, 16
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v42, 0 :: v_dual_mov_b32 v49, 0
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v41, 0 :: v_dual_mov_b32 v43, 0
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[16:17], 0x70
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[50:51], 0x60
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[52:53], 48
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[38:39], 0x50
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[54:55], 32
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[48:49], 64
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[40:41], 16
+; GCN-SDAG-NEXT:    v_dual_mov_b32 v14, 0xc8 :: v_dual_mov_b32 v15, 0
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[42:43], 0
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x7
 ; GCN-SDAG-NEXT:    global_store_b128 v[16:17], v[6:9], off
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x6
@@ -401,21 +399,15 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-GISEL-NEXT:    global_load_b128 v[26:29], v[0:1], off offset:96
 ; GCN-GISEL-NEXT:    global_load_b128 v[30:33], v[0:1], off offset:112
 ; GCN-GISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:64
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v34, 0xc8
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v35, 0 :: v_dual_mov_b32 v38, 0
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v39, 0 :: v_dual_mov_b32 v48, 16
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v50, 32 :: v_dual_mov_b32 v49, 0
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v51, 0 :: v_dual_mov_b32 v52, 48
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v54, 64
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v40, 0x50 :: v_dual_mov_b32 v53, 0
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v55, 0 :: v_dual_mov_b32 v41, 0
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v42, 0x60
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v44, 0x70 :: v_dual_mov_b32 v43, 0
-; GCN-GISEL-NEXT:    s_wait_loadcnt 0x7
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v45, 0 :: v_dual_mov_b32 v37, v9
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v36, v8
-; GCN-GISEL-NEXT:    v_lshl_add_u64 v[6:7], v[6:7], 0, 0xc8
-; GCN-GISEL-NEXT:    v_lshl_add_u64 v[8:9], v[8:9], 0, v[8:9]
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[38:39], 0
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[48:49], 16
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[50:51], 32
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[52:53], 48
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[54:55], 64
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[34:35], 0xc8
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[40:41], 0x50
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[42:43], 0x60
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[44:45], 0x70
 ; GCN-GISEL-NEXT:    s_wait_loadcnt 0x6
 ; GCN-GISEL-NEXT:    global_store_b128 v[38:39], v[10:13], off
 ; GCN-GISEL-NEXT:    s_wait_loadcnt 0x5
@@ -428,6 +420,7 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-GISEL-NEXT:    global_store_b128 v[42:43], v[26:29], off
 ; GCN-GISEL-NEXT:    s_wait_loadcnt 0x1
 ; GCN-GISEL-NEXT:    global_store_b128 v[44:45], v[30:33], off
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[36:37], v[8:9]
 ; GCN-GISEL-NEXT:    s_wait_xcnt 0x5
 ; GCN-GISEL-NEXT:    v_lshl_add_u64 v[10:11], v[10:11], 0, v[10:11]
 ; GCN-GISEL-NEXT:    v_lshl_add_u64 v[12:13], v[12:13], 0, v[12:13]
@@ -443,6 +436,8 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GCN-GISEL-NEXT:    v_lshl_add_u64 v[48:49], v[0:1], 0, v[0:1]
 ; GCN-GISEL-NEXT:    v_lshl_add_u64 v[50:51], v[2:3], 0, v[2:3]
+; GCN-GISEL-NEXT:    v_lshl_add_u64 v[6:7], v[6:7], 0, 0xc8
+; GCN-GISEL-NEXT:    v_lshl_add_u64 v[8:9], v[8:9], 0, v[8:9]
 ; GCN-GISEL-NEXT:    s_wait_xcnt 0x1
 ; GCN-GISEL-NEXT:    v_lshl_add_u64 v[26:27], v[26:27], 0, v[26:27]
 ; GCN-GISEL-NEXT:    v_lshl_add_u64 v[28:29], v[28:29], 0, v[28:29]
@@ -490,11 +485,10 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GCN-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v8, 12
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v10, 8
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v11, 0 :: v_dual_lshlrev_b32 v4, 4, v0
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v12, 0
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v13, 0
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[8:9], 12
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[10:11], 8
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[12:13], 0
+; GCN-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
 ; GCN-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GCN-SDAG-NEXT:    s_clause 0x1
 ; GCN-SDAG-NEXT:    global_load_b128 v[0:3], v4, s[0:1]
@@ -518,15 +512,14 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GCN-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v8, 0
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v10, 2
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v11, 0 :: v_dual_lshlrev_b32 v4, 4, v0
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v12, 4
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v13, 0 :: v_dual_mov_b32 v14, 6
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v15, 0 :: v_dual_mov_b32 v16, 8
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v17, 0 :: v_dual_mov_b32 v18, 10
-; GCN-GISEL-NEXT:    v_dual_mov_b32 v19, 0 :: v_dual_mov_b32 v20, 12
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v21, 0
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[8:9], 0
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[10:11], 2
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[12:13], 4
+; GCN-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[14:15], 6
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[16:17], 8
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[18:19], 10
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[20:21], 12
 ; GCN-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GCN-GISEL-NEXT:    s_clause 0x1
 ; GCN-GISEL-NEXT:    global_load_b128 v[0:3], v4, s[0:1]

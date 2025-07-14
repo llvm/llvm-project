@@ -875,19 +875,10 @@ llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &PH) {
 bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  std::string raw_address;
-  if (!O || !O.map("address", raw_address))
-    return false;
-
-  std::optional<lldb::addr_t> address = DecodeMemoryReference(raw_address);
-  if (!address) {
-    P.field("address").report("expected string encoded uint64_t");
-    return false;
-  }
-
-  DI.address = *address;
-
-  return O.map("instruction", DI.instruction) &&
+  return O &&
+         DecodeMemoryReference(Params, "address", DI.address, P,
+                               /*required=*/true) &&
+         O.map("instruction", DI.instruction) &&
          O.mapOptional("instructionBytes", DI.instructionBytes) &&
          O.mapOptional("symbol", DI.symbol) &&
          O.mapOptional("location", DI.location) &&

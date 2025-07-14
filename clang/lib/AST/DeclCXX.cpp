@@ -2149,6 +2149,16 @@ bool CXXRecordDecl::hasDeletedDestructor() const {
   return false;
 }
 
+bool CXXRecordDecl::isInjectedClassName() const {
+  if (!isImplicit() || !getDeclName())
+    return false;
+
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(getDeclContext()))
+    return RD->getDeclName() == getDeclName();
+
+  return false;
+}
+
 static bool isDeclContextInNamespace(const DeclContext *DC) {
   while (!DC->isTranslationUnit()) {
     if (DC->isNamespace())

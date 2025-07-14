@@ -13091,10 +13091,10 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
   EVT CondVT = Cond.getValueType();
   assert(CondVT.isVector() && "Vector select expects a vector selector!");
 
-  bool IsTAllZero = ISD::isBuildVectorAllZeros(TVal.getNode());
-  bool IsTAllOne = ISD::isBuildVectorAllOnes(TVal.getNode());
-  bool IsFAllZero = ISD::isBuildVectorAllZeros(FVal.getNode());
-  bool IsFAllOne = ISD::isBuildVectorAllOnes(FVal.getNode());
+  bool IsTAllZero = ISD::isConstantSplatVectorAllZeros(TVal.getNode());
+  bool IsTAllOne = ISD::isConstantSplatVectorAllOnes(TVal.getNode());
+  bool IsFAllZero = ISD::isConstantSplatVectorAllZeros(FVal.getNode());
+  bool IsFAllOne = ISD::isConstantSplatVectorAllOnes(FVal.getNode());
 
   // no vselect(cond, 0/-1, X) or vselect(cond, X, 0/-1), return
   if (!IsTAllZero && !IsTAllOne && !IsFAllZero && !IsFAllOne)

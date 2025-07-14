@@ -312,6 +312,15 @@ C23 Feature Support
   `WG14 N2975 <https://open-std.org/JTC1/SC22/WG14/www/docs/n2975.pdf>`_
 - Fixed a bug with handling the type operand form of ``typeof`` when it is used
   to specify a fixed underlying type for an enumeration. #GH146351
+- Fixed a rejects-valid bug where Clang would reject an enumeration with an
+  ``_Atomic`` underlying type. The underlying type is the non-atomic,
+  unqualified version of the specified type. Due to the perhaps surprising lack
+  of atomic behavior, this is diagnosed under
+  ``-Wunderlying-atomic-qualifier-ignored``, which defaults to an error. This
+  can be downgraded with ``-Wno-underlying-atomic-qualifier-ignored`` or
+  ``-Wno-error=underlying-atomic-qualifier-ignored``. Clang now also diagnoses
+  cv-qualifiers as being ignored, but that warning does not default to an error.
+  It can be controlled by ``-Wunderlying-cv-qualifier-ignore``. (#GH147736)
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -690,6 +699,9 @@ Improvements to Clang's diagnostics
 - Clang now tries to avoid printing file paths that contain ``..``, instead preferring
   the canonical file path if it ends up being shorter.
 
+- Improve the diagnostics for placement new expression when const-qualified
+  object was passed as the storage argument. (#GH143708)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -895,6 +907,7 @@ Bug Fixes to C++ Support
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Fixed ``static_cast`` not performing access or ambiguity checks when converting to an rvalue reference to a base class. (#GH121429)
 - Declarations using class template argument deduction with redundant
   parentheses around the declarator are no longer rejected. (#GH39811)
 - Fixed a crash caused by invalid declarations of ``std::initializer_list``. (#GH132256)
@@ -942,6 +955,9 @@ Bug Fixes to C++ Support
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
 - Fix a crash in the presence of invalid base classes. (#GH147186)
+- Fix a crash with NTTP when instantiating local class.
+- Fixed a crash involving list-initialization of an empty class with a
+  non-empty initializer list. (#GH147949)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1075,6 +1091,8 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Provide a __device__ version of std::__glibcxx_assert_fail() in a header wrapper.
+
 CUDA Support
 ^^^^^^^^^^^^
 
@@ -1120,6 +1138,8 @@ clang-format
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
+- Add ``MacrosSkippedByRemoveParentheses`` option so that their invocations are
+  skipped by ``RemoveParentheses``.
 
 clang-refactor
 --------------

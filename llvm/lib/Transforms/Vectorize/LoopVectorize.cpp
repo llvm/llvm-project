@@ -175,6 +175,7 @@ const char LLVMLoopVectorizeFollowupEpilogue[] =
 STATISTIC(LoopsVectorized, "Number of loops vectorized");
 STATISTIC(LoopsAnalyzed, "Number of loops analyzed for vectorization");
 STATISTIC(LoopsEpilogueVectorized, "Number of epilogues vectorized");
+STATISTIC(LoopsEarlyExitVectorized, "Number of early exit loops vectorized");
 
 static cl::opt<bool> EnableEpilogueVectorization(
     "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
@@ -6288,8 +6289,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Interleave;
       case LoopVectorizationCostModel::CM_Scalarize:
       case LoopVectorizationCostModel::CM_Widen:
-        return Legal->isMaskRequired(I) ? TTI::CastContextHint::Masked
-                                        : TTI::CastContextHint::Normal;
+        return isPredicatedInst(I) ? TTI::CastContextHint::Masked
+                                   : TTI::CastContextHint::Normal;
       case LoopVectorizationCostModel::CM_Widen_Reverse:
         return TTI::CastContextHint::Reversed;
       case LoopVectorizationCostModel::CM_Unknown:
@@ -7205,6 +7206,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
          "Trying to execute plan with unsupported VF");
   assert(BestVPlan.hasUF(BestUF) &&
          "Trying to execute plan with unsupported UF");
+  if (BestVPlan.hasEarlyExit())
+    ++LoopsEarlyExitVectorized;
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
@@ -10061,8 +10064,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
   unsigned UserIC = Hints.getInterleave();
-  if (LVL.hasUncountableEarlyExit() && UserIC != 1 &&
-      !VectorizerParams::isInterleaveForced()) {
+  if (LVL.hasUncountableEarlyExit() && UserIC != 1) {
     UserIC = 1;
     reportVectorizationInfo("Interleaving not supported for loops "
                             "with uncountable early exits",

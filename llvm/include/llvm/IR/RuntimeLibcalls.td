@@ -62,13 +62,24 @@ foreach IntTy = ["I32", "I64", "I128"] in {
 
 foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
   def ADD_#FPTy : RuntimeLibcall;
+  def FAST_ADD_#FPTy : RuntimeLibcall;
+
   def SUB_#FPTy : RuntimeLibcall;
+  def FAST_SUB_#FPTy : RuntimeLibcall;
+
   def MUL_#FPTy : RuntimeLibcall;
+  def FAST_MUL_#FPTy : RuntimeLibcall;
+
   def DIV_#FPTy : RuntimeLibcall;
+  def FAST_DIV_#FPTy : RuntimeLibcall;
+
   def REM_#FPTy : RuntimeLibcall;
   def FMA_#FPTy : RuntimeLibcall;
   def POWI_#FPTy : RuntimeLibcall;
+
   def SQRT_#FPTy : RuntimeLibcall;
+  def FAST_SQRT_#FPTy : RuntimeLibcall;
+
   def CBRT_#FPTy : RuntimeLibcall;
   def LOG_#FPTy : RuntimeLibcall;
   def LOG_FINITE_#FPTy : RuntimeLibcall;
@@ -419,7 +430,6 @@ def OBJC_SYNC_EXIT : RuntimeLibcall;
 // Define implementation default libcalls
 //--------------------------------------------------------------------
 
-defset list<RuntimeLibcallImpl> AllDefaultRuntimeLibcallImpls = {
 let IsDefault = true in {
 
 //--------------------------------------------------------------------
@@ -686,7 +696,6 @@ def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
 
 // Clear cache
 def __clear_cache : RuntimeLibcallImpl<CLEAR_CACHE>;
-def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 
 //--------------------------------------------------------------------
 // libm
@@ -925,7 +934,6 @@ def memset : RuntimeLibcallImpl<MEMSET>;
 def calloc : RuntimeLibcallImpl<CALLOC>;
 
 } // End let IsDefault = true
-} // End defset AllDefaultRuntimeLibcallImpls
 
 //--------------------------------------------------------------------
 // Define implementation other libcalls
@@ -946,6 +954,8 @@ defm sincos : LibmLongDoubleLibCall;
 def bzero : RuntimeLibcallImpl<BZERO>;
 def __bzero : RuntimeLibcallImpl<BZERO>;
 def _Unwind_SjLj_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+
+def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 
 //===----------------------------------------------------------------------===//
 // F128 libm Runtime Libcalls
@@ -1016,8 +1026,8 @@ defset list<RuntimeLibcallImpl> LibmF128FiniteLibcalls = {
 // unreasonable defaults like reporting f80 calls on most targets when
 // they are relevant to only one.
 
-defvar AllDefaultLibCalls =
-    !foreach(entry, AllDefaultRuntimeLibcallImpls, entry.Provides);
+defvar AllDefaultRuntimeLibcallImpls
+  = !filter(entry, !instances<RuntimeLibcallImpl>(), entry.IsDefault);
 
 // Exist in libgcc and compiler-rt for 64-bit targets, or if
 // COMPILER_RT_ENABLE_SOFTWARE_INT128.
@@ -1030,14 +1040,26 @@ defvar CompilerRTOnlyInt128Libcalls = [
   __mulodi4
 ];
 
-defvar DefaultRuntimeLibcallImpls =
-  !listremove(!listremove(AllDefaultRuntimeLibcallImpls,
-                          Int128RTLibcalls),
-                          CompilerRTOnlyInt128Libcalls);
+defvar DefaultRuntimeLibcallImpls_f80 =
+    !filter(entry, AllDefaultRuntimeLibcallImpls,
+            !match(!cast<string>(entry.Provides), "F80"));
+
+defvar DefaultRuntimeLibcallImpls_ppcf128 =
+    !filter(entry, AllDefaultRuntimeLibcallImpls,
+            !match(!cast<string>(entry.Provides), "PPCF128"));
 
 defvar DefaultRuntimeLibcallImpls_f128 =
-    !filter(entry, DefaultRuntimeLibcallImpls,
+    !filter(entry, AllDefaultRuntimeLibcallImpls,
             !match(!cast<string>(entry.Provides), "_F128"));
+
+defvar DefaultRuntimeLibcallImpls =
+!listremove(
+  !listremove(
+    !listremove(
+        !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
+                    CompilerRTOnlyInt128Libcalls),
+                    DefaultRuntimeLibcallImpls_f80),
+                    DefaultRuntimeLibcallImpls_ppcf128);
 
 defvar DefaultRuntimeLibcallImpls_atomic =
     !filter(entry, DefaultRuntimeLibcallImpls,
@@ -1461,6 +1483,7 @@ def AVRSystemLibrary
 // Hexagon Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
+defset list<RuntimeLibcallImpl> HexagonLibcalls = {
 def __hexagon_divsi3 : RuntimeLibcallImpl<SDIV_I32>;
 def __hexagon_divdi3 : RuntimeLibcallImpl<SDIV_I64>;
 def __hexagon_udivsi3 : RuntimeLibcallImpl<UDIV_I32>;
@@ -1470,30 +1493,39 @@ def __hexagon_moddi3 : RuntimeLibcallImpl<SREM_I64>;
 def __hexagon_umodsi3 : RuntimeLibcallImpl<UREM_I32>;
 def __hexagon_umoddi3 : RuntimeLibcallImpl<UREM_I64>;
 
-// FIXME: "Fast" versions should be treated as a separate RTLIB::FAST_* function
 def __hexagon_adddf3 : RuntimeLibcallImpl<ADD_F64>;
-def __hexagon_fast_adddf3 : RuntimeLibcallImpl<ADD_F64>;
+def __hexagon_fast_adddf3 : RuntimeLibcallImpl<FAST_ADD_F64>;
 
 def __hexagon_subdf3 : RuntimeLibcallImpl<SUB_F64>;
-def __hexagon_fast_subdf3 : RuntimeLibcallImpl<SUB_F64>;
+def __hexagon_fast_subdf3 : RuntimeLibcallImpl<FAST_SUB_F64>;
 
 def __hexagon_muldf3 : RuntimeLibcallImpl<MUL_F64>;
-def __hexagon_fast_muldf3 : RuntimeLibcallImpl<MUL_F64>;
+def __hexagon_fast_muldf3 : RuntimeLibcallImpl<FAST_MUL_F64>;
 
 def __hexagon_divdf3 : RuntimeLibcallImpl<DIV_F64>;
-def __hexagon_fast_divdf3 : RuntimeLibcallImpl<DIV_F64>;
+def __hexagon_fast_divdf3 : RuntimeLibcallImpl<FAST_DIV_F64>;
 
 def __hexagon_divsf3 : RuntimeLibcallImpl<DIV_F32>;
-def __hexagon_fast_divsf3 : RuntimeLibcallImpl<DIV_F32>;
+def __hexagon_fast_divsf3 : RuntimeLibcallImpl<FAST_DIV_F32>;
 
 def __hexagon_sqrtf : RuntimeLibcallImpl<SQRT_F32>;
-def __hexagon_fast2_sqrtf : RuntimeLibcallImpl<SQRT_F32>;
+def __hexagon_fast2_sqrtf : RuntimeLibcallImpl<FAST_SQRT_F32>;
 
 // This is the only fast library function for sqrtd.
-def __hexagon_fast2_sqrtdf2 : RuntimeLibcallImpl<SQRT_F64>;
+def __hexagon_fast2_sqrtdf2 : RuntimeLibcallImpl<FAST_SQRT_F64>;
 
 def __hexagon_memcpy_likely_aligned_min32bytes_mult8bytes
     : RuntimeLibcallImpl<HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES>;
+}
+
+def isHexagon : RuntimeLibcallPredicate<"TT.getArch() == Triple::hexagon">;
+
+def HexagonSystemLibrary
+    : SystemRuntimeLibrary<isHexagon,
+    (add (sub DefaultLibcallImpls32,
+    __adddf3, __divsf3, __udivsi3, __udivdi3,
+    __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
+    __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls)>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
@@ -1880,9 +1912,22 @@ def PPCSystemLibrary
            (sub DefaultRuntimeLibcallImpls, memcpy,
                 DefaultRuntimeLibcallImpls_f128),
            __extendkftf2, __trunctfkf2,
+           DefaultRuntimeLibcallImpls_ppcf128,
            LibmF128Libcalls, AIX32Calls, AIX64Calls,
            AvailableIf<memcpy, isNotAIX>,
            LibcallImpls<(add Int128RTLibcalls), isPPC64>)>;
+
+//===----------------------------------------------------------------------===//
+// RISCV Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isRISCV : RuntimeLibcallPredicate<"TT.isRISCV()">;
+def isRISCV64 : RuntimeLibcallPredicate<"TT.isRISCV64()">;
+
+def RISCVSystemLibrary
+    : SystemRuntimeLibrary<isRISCV,
+      (add DefaultRuntimeLibcallImpls, __riscv_flush_icache,
+           LibcallImpls<(add Int128RTLibcalls), isRISCV64>)>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
@@ -1946,6 +1991,21 @@ def _aulldiv : RuntimeLibcallImpl<UDIV_I64>;
 def _allrem : RuntimeLibcallImpl<SREM_I64>;
 def _aullrem : RuntimeLibcallImpl<UREM_I64>;
 def _allmul : RuntimeLibcallImpl<MUL_I64>;
+
+//===----------------------------------------------------------------------===//
+// X86 Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isX86_32 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86">;
+def isX86_64 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86_64">;
+
+def X86_32SystemLibrary
+    : SystemRuntimeLibrary<isX86_32,
+      (add DefaultLibcallImpls32, DefaultRuntimeLibcallImpls_f80)>;
+
+def X86_64SystemLibrary
+    : SystemRuntimeLibrary<isX86_64,
+      (add DefaultLibcallImpls64, DefaultRuntimeLibcallImpls_f80)>;
 
 //===----------------------------------------------------------------------===//
 // XCore Runtime Libcalls
