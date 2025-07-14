@@ -90,7 +90,7 @@ TEST(DWARF64UnitTest, DWARF5StrTable) {
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
+  Data:    ELFDATA2MSB
   Type:    ET_EXEC
   Machine: EM_PPC64
 DWARF:
