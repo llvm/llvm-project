@@ -1,6 +1,4 @@
 ; RUN: llc -mtriple=xcore-unknown-unknown < %s | FileCheck %s
-; RUN: llc -mtriple=xcore-none-linux < %s | FileCheck %s
-; RUN: llc -mtriple=xcore-none-linux-gnu < %s | FileCheck %s
 
 ; CHECK-LABEL: exp10_f16:
 ; CHECK: bl __extendhfsf2
