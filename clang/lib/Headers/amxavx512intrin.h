@@ -16,7 +16,15 @@
 
 #define __DEFAULT_FN_ATTRS_AVX512                                              \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("amx-avx512,avx10.2-512")))
+                 __target__("amx-avx512")))
+
+#define __DEFAULT_FN_ATTRS_AVX512BF16                                          \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("amx-avx512,avx512bf16")))
+
+#define __DEFAULT_FN_ATTRS_AVX512FP16                                          \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("amx-avx512,avx512fp16")))
 
 /// Moves a row from a tile register to a zmm destination register, converting
 ///    the int32 source elements to fp32. The row of the tile is selected by a
@@ -237,25 +245,27 @@ static __inline__ __m512 __DEFAULT_FN_ATTRS_AVX512 _tile_cvtrowd2ps_internal(
   return __builtin_ia32_tcvtrowd2ps_internal(m, n, src, u);
 }
 
-static __inline__ __m512bh __DEFAULT_FN_ATTRS_AVX512
+static __inline__ __m512bh __DEFAULT_FN_ATTRS_AVX512BF16
 _tile_cvtrowps2bf16h_internal(unsigned short m, unsigned short n,
                               _tile1024i src, unsigned u) {
   return __builtin_ia32_tcvtrowps2bf16h_internal(m, n, src, u);
 }
 
-static __inline__ __m512bh __DEFAULT_FN_ATTRS_AVX512
+static __inline__ __m512bh __DEFAULT_FN_ATTRS_AVX512BF16
 _tile_cvtrowps2bf16l_internal(unsigned short m, unsigned short n,
                               _tile1024i src, unsigned u) {
   return __builtin_ia32_tcvtrowps2bf16l_internal(m, n, src, u);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS_AVX512 _tile_cvtrowps2phh_internal(
-    unsigned short m, unsigned short n, _tile1024i src, unsigned u) {
+static __inline__ __m512h __DEFAULT_FN_ATTRS_AVX512FP16
+_tile_cvtrowps2phh_internal(unsigned short m, unsigned short n,
+                            _tile1024i src, unsigned u) {
   return __builtin_ia32_tcvtrowps2phh_internal(m, n, src, u);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS_AVX512 _tile_cvtrowps2phl_internal(
-    unsigned short m, unsigned short n, _tile1024i src, unsigned u) {
+static __inline__ __m512h __DEFAULT_FN_ATTRS_AVX512FP16
+_tile_cvtrowps2phl_internal(unsigned short m, unsigned short n,
+                            _tile1024i src, unsigned u) {
   return __builtin_ia32_tcvtrowps2phl_internal(m, n, src, u);
 }
 
@@ -298,7 +308,7 @@ static __m512 __tile_cvtrowd2ps(__tile1024i src0, unsigned src1) {
 ///    The 2nd source r32. Size is 4 Bytes.
 /// \returns
 ///    The destination v32bf16 data. Size is 64 Bytes.
-__DEFAULT_FN_ATTRS_AVX512
+__DEFAULT_FN_ATTRS_AVX512BF16
 static __m512bh __tile_cvtrowps2bf16h(__tile1024i src0, unsigned src1) {
   return _tile_cvtrowps2bf16h_internal(src0.row, src0.col, src0.tile, src1);
 }
@@ -317,7 +327,7 @@ static __m512bh __tile_cvtrowps2bf16h(__tile1024i src0, unsigned src1) {
 ///    The 2nd source r32. Size is 4 Bytes.
 /// \returns
 ///    The destination v32bf16 data. Size is 64 Bytes.
-__DEFAULT_FN_ATTRS_AVX512
+__DEFAULT_FN_ATTRS_AVX512BF16
 static __m512bh __tile_cvtrowps2bf16l(__tile1024i src0, unsigned src1) {
   return _tile_cvtrowps2bf16l_internal(src0.row, src0.col, src0.tile, src1);
 }
@@ -336,7 +346,7 @@ static __m512bh __tile_cvtrowps2bf16l(__tile1024i src0, unsigned src1) {
 ///    The 2nd source r32. Size is 4 Bytes.
 /// \returns
 ///    The destination v32fp16 data. Size is 64 Bytes.
-__DEFAULT_FN_ATTRS_AVX512
+__DEFAULT_FN_ATTRS_AVX512FP16
 static __m512h __tile_cvtrowps2phh(__tile1024i src0, unsigned src1) {
   return _tile_cvtrowps2phh_internal(src0.row, src0.col, src0.tile, src1);
 }
@@ -355,7 +365,7 @@ static __m512h __tile_cvtrowps2phh(__tile1024i src0, unsigned src1) {
 ///    The 2nd source r32. Size is 4 Bytes.
 /// \returns
 ///    The destination v32fp16 data. Size is 64 Bytes.
-__DEFAULT_FN_ATTRS_AVX512
+__DEFAULT_FN_ATTRS_AVX512FP16
 static __m512h __tile_cvtrowps2phl(__tile1024i src0, unsigned src1) {
   return _tile_cvtrowps2phl_internal(src0.row, src0.col, src0.tile, src1);
 }
