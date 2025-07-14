@@ -73,10 +73,11 @@ def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
 }
 
 def LoweringPrepare : Pass<"cir-lowering-prepare"> {
-  let summary = "Preparation work before lowering to LLVM dialect";
+  let summary = "Lower to more fine-grained CIR operations before lowering to
+    other dialects";
   let description = [{
-    This pass does preparation work for LLVM lowering. For example, it may
-    expand the global variable initialziation in a more ABI-friendly form.
+    This pass does preparation work for lowering to other dialects. For example,
+    it may expand the global variable initialziation in a more ABI-friendly form.
   }];
   let constructor = "mlir::createLoweringPreparePass()";
   let dependentDialects = ["cir::CIRDialect"];
