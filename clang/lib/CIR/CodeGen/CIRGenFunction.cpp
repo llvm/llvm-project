@@ -463,7 +463,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
     if (isa<CXXDestructorDecl>(funcDecl)) {
-      getCIRGenModule().errorNYI(bodyRange, "C++ destructor definition");
+      emitDestructorBody(args);
     } else if (isa<CXXConstructorDecl>(funcDecl)) {
       emitConstructorBody(args);
     } else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
@@ -538,6 +538,96 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
                  "emitConstructorBody: emit body statement failed.");
     return;
   }
+}
+
+/// Emits the body of the current destructor.
+void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
+  const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(curGD.getDecl());
+  CXXDtorType dtorType = curGD.getDtorType();
+
+  // For an abstract class, non-base destructors are never used (and can't
+  // be emitted in general, because vbase dtors may not have been validated
+  // by Sema), but the Itanium ABI doesn't make them optional and Clang may
+  // in fact emit references to them from other compilations, so emit them
+  // as functions containing a trap instruction.
+  if (dtorType != Dtor_Base && dtor->getParent()->isAbstract()) {
+    cgm.errorNYI(dtor->getSourceRange(), "abstract base class destructors");
+    return;
+  }
+
+  Stmt *body = dtor->getBody();
+  assert(body && !cir::MissingFeatures::incrementProfileCounter());
+
+  // The call to operator delete in a deleting destructor happens
+  // outside of the function-try-block, which means it's always
+  // possible to delegate the destructor body to the complete
+  // destructor.  Do so.
+  if (dtorType == Dtor_Deleting) {
+    cgm.errorNYI(dtor->getSourceRange(), "deleting destructor");
+    return;
+  }
+
+  // If the body is a function-try-block, enter the try before
+  // anything else.
+  const bool isTryBody = isa_and_nonnull<CXXTryStmt>(body);
+  if (isTryBody)
+    cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
+
+  assert(!cir::MissingFeatures::sanitizers());
+  assert(!cir::MissingFeatures::dtorCleanups());
+
+  // If this is the complete variant, just invoke the base variant;
+  // the epilogue will destruct the virtual bases.  But we can't do
+  // this optimization if the body is a function-try-block, because
+  // we'd introduce *two* handler blocks.  In the Microsoft ABI, we
+  // always delegate because we might not have a definition in this TU.
+  switch (dtorType) {
+  case Dtor_Comdat:
+    llvm_unreachable("not expecting a COMDAT");
+  case Dtor_Deleting:
+    llvm_unreachable("already handled deleting case");
+
+  case Dtor_Complete:
+    assert((body || getTarget().getCXXABI().isMicrosoft()) &&
+           "can't emit a dtor without a body for non-Microsoft ABIs");
+
+    assert(!cir::MissingFeatures::dtorCleanups());
+
+    // TODO(cir): A complete destructor is supposed to call the base destructor.
+    // Since we have to emit both dtor kinds we just fall through for now and.
+    // As long as we don't support virtual bases this should be functionally
+    // equivalent.
+    assert(!cir::MissingFeatures::completeDtors());
+
+    // Fallthrough: act like we're in the base variant.
+    [[fallthrough]];
+
+  case Dtor_Base:
+    assert(body);
+
+    assert(!cir::MissingFeatures::dtorCleanups());
+    assert(!cir::MissingFeatures::vtableInitialization());
+
+    if (isTryBody) {
+      cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
+    } else if (body) {
+      (void)emitStmt(body, /*useCurrentScope=*/true);
+    } else {
+      assert(dtor->isImplicit() && "bodyless dtor not implicit");
+      // nothing to do besides what's in the epilogue
+    }
+    // -fapple-kext must inline any call to this dtor into
+    // the caller's body.
+    assert(!cir::MissingFeatures::appleKext());
+
+    break;
+  }
+
+  assert(!cir::MissingFeatures::dtorCleanups());
+
+  // Exit the try if applicable.
+  if (isTryBody)
+    cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
 }
 
 /// Given a value of type T* that may not be to a complete object, construct
