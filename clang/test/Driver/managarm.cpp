@@ -1,6 +1,7 @@
 // UNSUPPORTED: system-windows
 
 // RUN: %clang -### %s --target=x86_64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK-X86-64 %s
 // CHECK-X86-64:      "-cc1"
 // CHECK-X86-64-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -26,6 +27,7 @@
 // CHECK-X86-64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
 // RUN: %clang -### %s --target=x86_64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt --unwindlib=libunwind 2>&1 | FileCheck --check-prefix=CHECK-X86-64-LIBS %s
 // CHECK-X86-64-LIBS:      "-cc1"
 // CHECK-X86-64-LIBS-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -49,6 +51,7 @@
 // CHECK-X86-64-LIBS-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
 // RUN: %clang -### %s --target=x86_64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-X86-64-STATIC %s
 // CHECK-X86-64-STATIC:      "-cc1"
 // CHECK-X86-64-STATIC-SAME: "-static-define"
@@ -89,6 +92,7 @@
 // CHECK-X86-64-SHARED-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
 // RUN: %clang -### %s --target=aarch64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK-AARCH64 %s
 // CHECK-AARCH64:      "-cc1"
 // CHECK-AARCH64-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -115,6 +119,7 @@
 // CHECK-AARCH64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
 // RUN: %clang -### %s --target=aarch64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt --unwindlib=libunwind 2>&1 | FileCheck --check-prefix=CHECK-AARCH64-LIBS %s
 // CHECK-AARCH64-LIBS:      "-cc1"
 // CHECK-AARCH64-LIBS-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -139,6 +144,7 @@
 // CHECK-AARCH64-LIBS-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
 // RUN: %clang -### %s --target=aarch64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-AARCH64-STATIC %s
 // CHECK-AARCH64-STATIC:      "-cc1"
 // CHECK-AARCH64-STATIC-SAME: "-static-define"
@@ -181,6 +187,7 @@
 // CHECK-AARCH64-SHARED-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
 // RUN: %clang -### %s --target=riscv64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK-RISCV64 %s
 // CHECK-RISCV64:      "-cc1"
 // CHECK-RISCV64-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -205,6 +212,7 @@
 // CHECK-RISCV64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
 // RUN: %clang -### %s --target=riscv64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt --unwindlib=libunwind 2>&1 | FileCheck --check-prefix=CHECK-RISCV64-LIBS %s
 // CHECK-RISCV64-LIBS:      "-cc1"
 // CHECK-RISCV64-LIBS-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -227,6 +235,7 @@
 // CHECK-RISCV64-LIBS-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
 // RUN: %clang -### %s --target=riscv64-unknown-managarm-mlibc --sysroot=%S/Inputs/basic_managarm_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-RISCV64-STATIC %s
 // CHECK-RISCV64-STATIC:      "-cc1"
 // CHECK-RISCV64-STATIC-SAME: "-static-define"

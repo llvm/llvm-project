@@ -450,6 +450,7 @@
 // Test a simulated installation of libc++ on Linux, both through sysroot and
 // the installation path of Clang.
 // RUN: %clangxx -x c++ -### %s -no-pie 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
@@ -462,6 +463,7 @@
 // CHECK-BASIC-LIBCXX-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-BASIC-LIBCXX-SYSROOT: "--sysroot=[[SYSROOT]]"
 // RUN: %clang -x c++ -### %s -no-pie 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxx_tree/usr/bin \
@@ -477,6 +479,7 @@
 // Test that we can use -stdlib=libc++ in a build system even when it
 // occasionally links C code instead of C++ code.
 // RUN: %clang -x c -### %s -Werror -no-pie 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxx_tree/usr/bin \

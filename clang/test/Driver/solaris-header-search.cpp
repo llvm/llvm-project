@@ -2,6 +2,7 @@
 //
 // Sparc, 32bit
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=sparc-sun-solaris2.11 --stdlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK_SOLARIS_SPARC %s
@@ -12,6 +13,7 @@
 
 // Sparc, 64bit
 // RUN: %clang -m64 -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=sparc-sun-solaris2.11 --stdlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK_SOLARIS_SPARC64 %s
@@ -22,6 +24,7 @@
 
 // Intel, 32bit
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=i386-pc-solaris2.11 --stdlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_x86_tree \
 // RUN:   | FileCheck --check-prefix=CHECK_SOLARIS_X86 %s
@@ -32,6 +35,7 @@
 
 // Intel, 64bit
 // RUN: %clang -m64 -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=i386-pc-solaris2.11 --stdlib=platform \
 // RUN:     --sysroot=%S/Inputs/solaris_x86_tree \
 // RUN:   | FileCheck --check-prefix=CHECK_SOLARIS_X64 %s

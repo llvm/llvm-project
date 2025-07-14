@@ -1,4 +1,5 @@
 // RUN: %clangxx -x c++ %s -### -o %t.o 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \

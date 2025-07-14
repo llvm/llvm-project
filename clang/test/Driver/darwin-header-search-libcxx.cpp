@@ -16,6 +16,7 @@
 // Check with only headers alongside the installation (those should be used).
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \
@@ -27,6 +28,7 @@
 // CHECK-LIBCXX-TOOLCHAIN-1-NOT: "-internal-isystem" "/usr/include/c++/v1"
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \
@@ -41,6 +43,7 @@
 // Check with only headers in the sysroot (those should be used).
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
@@ -58,6 +61,7 @@
 // over --sysroot.
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \
@@ -68,6 +72,7 @@
 // RUN:               --check-prefix=CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1 %s
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \
@@ -78,6 +83,7 @@
 // RUN:               --check-prefix=CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1 %s
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \

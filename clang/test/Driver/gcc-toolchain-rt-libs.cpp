@@ -1,5 +1,5 @@
-// RUN: %clangxx %s -### -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=STDCPLUS
-// RUN: %clangxx %s -### -stdlib=libc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=LIBCPLUS
+// RUN: %clangxx %s -### -no-canonical-prefixes -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=STDCPLUS
+// RUN: %clangxx %s -### -no-canonical-prefixes -stdlib=libc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=LIBCPLUS
 
 int main() {}
 

@@ -16,10 +16,12 @@
 // RUN: mkdir -p %t2/include/aarch64-none-linux-android23/c++/v1
 
 // RUN: %clang -target aarch64-none-linux-android -ccc-install-dir %/t2/bin \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --sysroot=%t2/sysroot -stdlib=libc++ -fsyntax-only \
 // RUN:   %s -### 2>&1 | FileCheck --check-prefix=ANDROID-DIR -DDIR=%/t2/bin %s
 
 // RUN: %clang -target aarch64-none-linux-android21 -ccc-install-dir %/t2/bin \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --sysroot=%t2/sysroot -stdlib=libc++ -fsyntax-only \
 // RUN:   %s -### 2>&1 | FileCheck --check-prefix=ANDROID-DIR -DDIR=%/t2/bin %s
 
@@ -27,10 +29,12 @@
 // ANDROID-DIR-SAME: "-internal-isystem" "[[DIR]][[SEP]]..[[SEP]]include[[SEP]]c++[[SEP]]v1"
 
 // RUN: %clang -target aarch64-none-linux-android23 -ccc-install-dir %/t2/bin \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --sysroot=%t2/sysroot -stdlib=libc++ -fsyntax-only \
 // RUN:   %s -### 2>&1 | FileCheck --check-prefix=ANDROID23-DIR -DDIR=%/t2/bin %s
 
 // RUN: %clang -target aarch64-none-linux-android28 -ccc-install-dir %/t2/bin \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --sysroot=%t2/sysroot -stdlib=libc++ -fsyntax-only \
 // RUN:   %s -### 2>&1 | FileCheck --check-prefix=ANDROID23-DIR -DDIR=%/t2/bin %s
 
