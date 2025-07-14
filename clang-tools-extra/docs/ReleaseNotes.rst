@@ -108,6 +108,9 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
 
+- Improved :program:`clang-tidy` to show `CheckOptions` only for checks enabled
+  in `Checks` when running ``--dump-config``.
+
 - Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
   effect when passed via the `.clang-tidy` file.
 
@@ -166,6 +169,13 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
+- New :doc:`readability-use-concise-preprocessor-directives
+  <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check.
+
+  Finds uses of ``#if`` that can be simplified to ``#ifdef`` or ``#ifndef`` and,
+  since C23 and C++23, uses of ``#elif`` that can be simplified to ``#elifdef``
+  or ``#elifndef``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -185,8 +195,8 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
 
-- Improved :doc: `bugprone-sizeof-expression
-  <clang-tidy/checks/bugprone/bugprone-sizeof-expression>` check by adding
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by adding
   `WarnOnSizeOfInLoopTermination` option to detect misuses of ``sizeof``
   expression in loop conditions.
 
