@@ -134,6 +134,7 @@ ReductionProcessor::getReductionType(const fir::ReduceOperationEnum &redOp) {
   case fir::ReduceOperationEnum::MIN:
     return ReductionIdentifier::MIN;
   }
+  llvm_unreachable("Unhandled ReductionIdentifier case");
 }
 
 bool ReductionProcessor::supportedIntrinsicProcReduction(

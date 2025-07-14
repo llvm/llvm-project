@@ -79,6 +79,10 @@ public:
   // For the given fir.declare returns the outermost fir.dummy_scope
   // in the current function.
   fir::DummyScopeOp getOutermostScope(fir::DeclareOp declareOp) const;
+  // Returns true, if the given type of a memref of a FirAliasTagOpInterface
+  // operation is a descriptor or contains a descriptor
+  // (e.g. !fir.ref<!fir.type<Derived{f:!fir.box<!fir.heap<f32>>}>>).
+  bool typeReferencesDescriptor(mlir::Type type);
 
 private:
   mlir::DominanceInfo &domInfo;
@@ -95,6 +99,10 @@ private:
   // to the dominance information.
   llvm::DenseMap<mlir::func::FuncOp, llvm::SmallVector<fir::DummyScopeOp, 16>>
       sortedScopeOperations;
+
+  // Local pass cache for derived types that contain descriptor
+  // member(s), to avoid the cost of isRecordWithDescriptorMember().
+  llvm::DenseSet<mlir::Type> typesContainingDescriptors;
 };
 
 // Process fir.dummy_scope operations in the given func:
@@ -143,6 +151,22 @@ fir::DummyScopeOp PassState::getOutermostScope(fir::DeclareOp declareOp) const {
   if (!scopeOps.empty())
     return scopeOps[0];
   return nullptr;
+}
+
+bool PassState::typeReferencesDescriptor(mlir::Type type) {
+  type = fir::unwrapAllRefAndSeqType(type);
+  if (mlir::isa<fir::BaseBoxType>(type))
+    return true;
+
+  if (mlir::isa<fir::RecordType>(type)) {
+    if (typesContainingDescriptors.contains(type))
+      return true;
+    if (fir::isRecordWithDescriptorMember(type)) {
+      typesContainingDescriptors.insert(type);
+      return true;
+    }
+  }
+  return false;
 }
 
 class AddAliasTagsPass : public fir::impl::AddAliasTagsBase<AddAliasTagsPass> {
@@ -200,11 +224,17 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
          "load and store only access one address");
   mlir::Value memref = accessedOperands.front();
 
-  // skip boxes. These get an "any descriptor access" tag in TBAABuilder
-  // (CodeGen). I didn't see any speedup from giving each box a separate TBAA
-  // type.
-  if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(memref.getType())))
+  // Skip boxes and derived types that contain descriptors.
+  // The box accesses get an "any descriptor access" tag in TBAABuilder
+  // (CodeGen). The derived types accesses get "any access" tag
+  // (because they access both the data and the descriptor(s)).
+  // Note that it would be incorrect to attach any "data" access
+  // tag to the derived type accesses here, because the tags
+  // attached to the descriptor accesses in CodeGen will make
+  // them non-conflicting with any descriptor accesses.
+  if (state.typeReferencesDescriptor(memref.getType()))
     return;
+
   LLVM_DEBUG(llvm::dbgs() << "Analysing " << op << "\n");
 
   const fir::AliasAnalysis::Source &source = state.getSource(memref);
