@@ -10,3 +10,7 @@
 void test_amdgcn_raw_ptr_buffer_load_lds(__amdgpu_buffer_rsrc_t rsrc, __local void * lds, int offset, int soffset) {
     __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, lds, 1, offset, soffset, 2, 3);
 }
+
+void test_amdgcn_struct_ptr_buffer_load_lds(__amdgpu_buffer_rsrc_t rsrc, __local void * lds, int size, int vindex, int voffset, int soffset) {
+    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, lds, 4, vindex, voffset, soffset, 2, 3);
+}
