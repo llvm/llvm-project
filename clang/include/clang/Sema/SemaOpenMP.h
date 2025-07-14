@@ -1494,7 +1494,7 @@ private:
       SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
       Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits);
 
-  /// @brief Categories of loops encountered during semantic OpenMP loop
+  /// Categories of loops encountered during semantic OpenMP loop
   /// analysis
   ///
   /// This enumeration identifies the structural category of a loop or sequence

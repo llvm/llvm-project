@@ -1160,11 +1160,8 @@ public:
 ///   for(int k = 127; k >= 0; --k)
 /// \endcode
 class OMPLoopRangeClause final
-    : public OMPClause,
-      private llvm::TrailingObjects<OMPLoopRangeClause, Expr *> {
+    : public OMPClause {
   friend class OMPClauseReader;
-  friend class llvm::TrailingObjects<OMPLoopRangeClause, Expr *>;
-
   /// Location of '('
   SourceLocation LParenLoc;
 
@@ -1172,24 +1169,25 @@ class OMPLoopRangeClause final
   SourceLocation FirstLoc, CountLoc;
 
   /// Number of looprange arguments (always 2: first, count)
-  unsigned NumArgs = 2;
+  static constexpr unsigned NumArgs = 2;
+  Stmt *Args[NumArgs] = {nullptr, nullptr};
 
-  /// Set the argument expressions.
-  void setArgs(ArrayRef<Expr *> Args) {
-    assert(Args.size() == NumArgs && "Expected exactly 2 looprange arguments");
-    std::copy(Args.begin(), Args.end(), getTrailingObjects<Expr *>());
-  }
+  /// Set looprange 'first' expression
+  void setFirst(Expr *E) { Args[0] = E; }
+
+  /// Set looprange 'count' expression
+  void setCount(Expr *E) { Args[1] = E; }
 
   /// Build an empty clause for deserialization.
   explicit OMPLoopRangeClause()
-      : OMPClause(llvm::omp::OMPC_looprange, {}, {}), NumArgs(2) {}
+      : OMPClause(llvm::omp::OMPC_looprange, {}, {}) {}
 
 public:
   /// Build a 'looprange' clause AST node.
   static OMPLoopRangeClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          SourceLocation FirstLoc, SourceLocation CountLoc,
-         SourceLocation EndLoc, ArrayRef<Expr *> Args);
+         SourceLocation EndLoc, Expr* First, Expr* Count);
 
   /// Build an empty 'looprange' clause node.
   static OMPLoopRangeClause *CreateEmpty(const ASTContext &C);
@@ -1204,32 +1202,16 @@ public:
   void setCountLoc(SourceLocation Loc) { CountLoc = Loc; }
 
   /// Get looprange 'first' expression
-  Expr *getFirst() const { return getArgs()[0]; }
+  Expr *getFirst() const { return cast_or_null<Expr>(Args[0]); }
 
   /// Get looprange 'count' expression
-  Expr *getCount() const { return getArgs()[1]; }
-
-  /// Set looprange 'first' expression
-  void setFirst(Expr *E) { getArgs()[0] = E; }
-
-  /// Set looprange 'count' expression
-  void setCount(Expr *E) { getArgs()[1] = E; }
-
-  MutableArrayRef<Expr *> getArgs() {
-    return MutableArrayRef<Expr *>(getTrailingObjects<Expr *>(), NumArgs);
-  }
-  ArrayRef<Expr *> getArgs() const {
-    return ArrayRef<Expr *>(getTrailingObjects<Expr *>(), NumArgs);
-  }
+  Expr *getCount() const { return cast_or_null<Expr>(Args[1]); }
 
   child_range children() {
-    return child_range(reinterpret_cast<Stmt **>(getArgs().begin()),
-                       reinterpret_cast<Stmt **>(getArgs().end()));
+    return child_range(Args, Args + NumArgs);
   }
   const_child_range children() const {
-    auto AR = getArgs();
-    return const_child_range(reinterpret_cast<Stmt *const *>(AR.begin()),
-                             reinterpret_cast<Stmt *const *>(AR.end()));
+    return const_child_range(Args, Args + NumArgs);
   }
 
   child_range used_children() {

@@ -1024,23 +1024,20 @@ OMPLoopRangeClause *
 OMPLoopRangeClause::Create(const ASTContext &C, SourceLocation StartLoc,
                            SourceLocation LParenLoc, SourceLocation FirstLoc,
                            SourceLocation CountLoc, SourceLocation EndLoc,
-                           ArrayRef<Expr *> Args) {
-
-  assert(Args.size() == 2 &&
-         "looprange clause must have exactly two arguments");
+                           Expr *First, Expr* Count) {
   OMPLoopRangeClause *Clause = CreateEmpty(C);
   Clause->setLocStart(StartLoc);
   Clause->setLParenLoc(LParenLoc);
   Clause->setFirstLoc(FirstLoc);
   Clause->setCountLoc(CountLoc);
   Clause->setLocEnd(EndLoc);
-  Clause->setArgs(Args);
+  Clause->setFirst(First);
+  Clause->setCount(Count);
   return Clause;
 }
 
 OMPLoopRangeClause *OMPLoopRangeClause::CreateEmpty(const ASTContext &C) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(2));
-  return new (Mem) OMPLoopRangeClause();
+  return new (C) OMPLoopRangeClause();
 }
 
 OMPAllocateClause *OMPAllocateClause::Create(
