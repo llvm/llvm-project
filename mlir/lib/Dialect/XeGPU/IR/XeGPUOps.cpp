@@ -399,7 +399,7 @@ void CreateNdDescOp::print(::mlir::OpAsmPrinter &_odsPrinter) {
   bool printOffsets = false;
   if (constOffsetsAttr && constOffsetsAttr.size() > 0) {
     auto firstVal = constOffsetsAttr.asArrayRef()[0];
-    if (firstVal != std::numeric_limits<int64_t>::max()>>16) {
+    if (firstVal != std::numeric_limits<int64_t>::max() ) {
       printOffsets = true;
     }
   }
