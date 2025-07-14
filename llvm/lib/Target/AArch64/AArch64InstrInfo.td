@@ -413,6 +413,8 @@ def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
 
 def AllowMisalignedMemAccesses : Predicate<"!Subtarget->requiresStrictAlign()">;
 
+def UseWzrToVecMove : Predicate<"Subtarget->useWzrToVecMove()">;
+
 
 //===----------------------------------------------------------------------===//
 // AArch64-specific DAG Nodes.
@@ -7356,10 +7358,18 @@ def : Pat<(v4f16 (vector_insert (v4f16 V64:$Rn),
               (i64 0)),
             dsub)>;
 
+let Predicates = [UseWzrToVecMove] in {
+def : Pat<(vector_insert (v8f16 V128:$Rn), (f16 fpimm0), (i64 VectorIndexH:$imm)),
+          (INSvi16gpr V128:$Rn, VectorIndexH:$imm, WZR)>;
 def : Pat<(vector_insert (v4f16 V64:$Rn), (f16 fpimm0), (i64 VectorIndexH:$imm)),
           (EXTRACT_SUBREG (INSvi16gpr (v8f16 (INSERT_SUBREG (v8f16 (IMPLICIT_DEF)), V64:$Rn, dsub)), VectorIndexH:$imm, WZR), dsub)>;
+def : Pat<(vector_insert (v4f32 V128:$Rn), (f32 fpimm0), (i64 VectorIndexS:$imm)),
+          (INSvi32gpr V128:$Rn, VectorIndexS:$imm, WZR)>;
 def : Pat<(vector_insert (v2f32 V64:$Rn), (f32 fpimm0), (i64 VectorIndexS:$imm)),
           (EXTRACT_SUBREG (INSvi32gpr (v4f32 (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), V64:$Rn, dsub)), VectorIndexS:$imm, WZR), dsub)>;
+def : Pat<(vector_insert v2f64:$Rn, (f64 fpimm0), (i64 VectorIndexD:$imm)),
+          (INSvi64gpr V128:$Rn, VectorIndexS:$imm, XZR)>;
+}
 
 def : Pat<(v8f16 (vector_insert (v8f16 V128:$Rn),
             (f16 FPR16:$Rm), (i64 VectorIndexH:$imm))),
@@ -8028,18 +8038,6 @@ def MOVIv2d_ns   : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1110, V128,
                                                 simdimmtype10,
                                                 "movi", ".2d",
                    [(set (v2i64 V128:$Rd), (AArch64movi_edit imm0_255:$imm8))]>;
-
-def : Pat<(vector_insert (v8f16 V128:$Rn), (f16 fpimm0), (i64 VectorIndexH:$imm)),
-          (INSvi16lane V128:$Rn, VectorIndexH:$imm,
-          (v8f16 (MOVIv2d_ns (i32 0))), (i64 0))>;
-
-def : Pat<(vector_insert (v4f32 V128:$Rn), (f32 fpimm0), (i64 VectorIndexS:$imm)),
-          (INSvi32lane V128:$Rn, VectorIndexS:$imm,
-          (v4f32 (MOVIv2d_ns (i32 0))), (i64 0))>;
-
-def : Pat<(vector_insert (v2f64 V128:$Rn), (f64 fpimm0), (i64 VectorIndexD:$imm)),
-          (INSvi64lane V128:$Rn, VectorIndexD:$imm,
-          (v2f64 (MOVIv2d_ns (i32 0))), (i64 0))>;
 
 let Predicates = [HasNEON] in {
 def : Pat<(v2i64 immAllZerosV), (MOVIv2d_ns (i32 0))>;
