@@ -207,9 +207,9 @@ define <1 x i32> @test_dot_product_with_transposed_shuffle_op(<4 x i32> %a, <2 x
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> zeroinitializer, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <2 x i32> [[SHUFFLE]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP9]])
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT5:%.*]] = insertelement <1 x i32> poison, i32 [[TMP15]], i64 0
-; CHECK-NEXT:    ret <1 x i32> [[SPLAT_SPLATINSERT5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP9]])
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <1 x i32> poison, i32 [[TMP10]], i64 0
+; CHECK-NEXT:    ret <1 x i32> [[TMP11]]
 ;
 entry:
   %t.a = tail call <4 x i32> @llvm.matrix.transpose.v4i32(<4 x i32> %a, i32 2, i32 2)

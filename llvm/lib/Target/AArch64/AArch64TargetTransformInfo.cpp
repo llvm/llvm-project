@@ -3897,7 +3897,11 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    unsigned Index,
                                                    const Value *Op0,
                                                    const Value *Op1) const {
-  if (Index == 0 && Op0 && isa<PoisonValue>(Op0))
+  // Treat insert at lane 0 into a poison vector as having zero cost. This
+  // ensures vector broadcasts via an insert + shuffle (and will be lowered to a
+  // single dup) are treated as cheap.
+  if (Opcode == Instruction::InsertElement && Index == 0 && Op0 &&
+      isa<PoisonValue>(Op0))
     return 0;
   return getVectorInstrCostHelper(Opcode, Val, CostKind, Index);
 }
