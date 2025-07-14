@@ -44,9 +44,10 @@
 // mandatory, permitted VA size up to 52 bits via ARMv8.2-LVA, but we are
 // unaware of an ARMv8.2 CPU that implemented ARMv8.2-LVA.
 
-const uint64_t max_va_size = 48;
-const uint64_t pac_mask = ((1ULL << 55) - 1) & ~((1ULL << max_va_size) - 1);
-const uint64_t ttbr1_mask = 1ULL << 55;
+static const uint64_t max_va_size = 48;
+static const uint64_t pac_mask =
+    ((1ULL << 55) - 1) & ~((1ULL << max_va_size) - 1);
+static const uint64_t ttbr1_mask = 1ULL << 55;
 
 // Determine whether PAC is supported without accessing memory. This utilizes
 // the XPACLRI instruction which will copy bit 55 of x30 into at least bit 54 if
@@ -57,10 +58,6 @@ static bool pac_supported() {
   return x30 & (1ULL << 54);
 }
 
-// This asm snippet is used to force the creation of a frame record when
-// calling the EmuPAC functions. This is important because the EmuPAC functions
-// may crash if an auth failure is detected and may be unwound past using a
-// frame pointer based unwinder.
 #ifdef __GCC_HAVE_DWARF2_CFI_ASM
 #define CFI_INST(inst) inst
 #else
@@ -73,6 +70,10 @@ static bool pac_supported() {
 #define ASM_SYMBOL(symbol) #symbol
 #endif
 
+// This asm snippet is used to force the creation of a frame record when
+// calling the EmuPAC functions. This is important because the EmuPAC functions
+// may crash if an auth failure is detected and may be unwound past using a
+// frame pointer based unwinder.
 // clang-format off
 #define FRAME_POINTER_WRAP(sym) \
   CFI_INST(".cfi_startproc\n") \
