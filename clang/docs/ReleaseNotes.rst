@@ -475,6 +475,9 @@ related warnings within the method body.
 - Clang now disallows the use of attributes applied before an
   ``extern template`` declaration (#GH79893).
 
+- Clang will print the "reason" string argument passed on to
+  ``[[clang::warn_unused_result("reason")]]`` as part of the warning diagnostic.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
