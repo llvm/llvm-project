@@ -408,6 +408,58 @@ TEST_F(DiscardExprStateTest, CallWithParenExprTreatedCorrectly) {
   EXPECT_NE(CallExpectState.Env.getValue(FnToPtrDecay), nullptr);
 }
 
+
+struct NonConvergingLattice {
+  int State;
+
+  bool operator==(const NonConvergingLattice &Other) const {
+    return State == Other.State;
+  }
+
+  LatticeJoinEffect join(const NonConvergingLattice &Other) {
+    if (Other.State == 0)
+      return LatticeJoinEffect::Unchanged;
+    State += Other.State;
+    return LatticeJoinEffect::Changed;
+  }
+};
+
+class NonConvergingAnalysis
+    : public DataflowAnalysis<NonConvergingAnalysis, NonConvergingLattice> {
+public:
+  explicit NonConvergingAnalysis(ASTContext &Context)
+      : DataflowAnalysis<NonConvergingAnalysis, NonConvergingLattice>(
+            Context,
+            // Don't apply builtin transfer function.
+            DataflowAnalysisOptions{std::nullopt}) {}
+
+  static NonConvergingLattice initialElement() { return {0}; }
+
+  void transfer(const CFGElement &, NonConvergingLattice &E, Environment &) {
+    ++E.State;
+  }
+};
+
+TEST_F(DataflowAnalysisTest, NonConvergingAnalysis) {
+  std::string Code = R"(
+    void target() {
+      unsigned i =0;
+      for(;;++i) {
+        // preventing CFG from considering this function
+        // as 'noreturn'
+        if (i == ~0)
+           break;
+        else
+           i = 0;
+      }
+    }
+  )";
+  auto Res = runAnalysis<NonConvergingAnalysis>(
+      Code, [](ASTContext &C) { return NonConvergingAnalysis(C); });
+  EXPECT_EQ(llvm::toString(Res.takeError()),
+            "maximum number of blocks processed");
+}
+
 // Regression test for joins of bool-typed lvalue expressions. The first loop
 // results in two passes through the code that follows. Each pass results in a
 // different `StorageLocation` for the pointee of `v`. Then, the second loop
