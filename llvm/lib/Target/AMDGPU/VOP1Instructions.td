@@ -526,6 +526,10 @@ defm V_LOG_F16 : VOP1Inst_t16 <"v_log_f16", VOP_F16_F16, AMDGPUlogf16>;
 defm V_EXP_F16 : VOP1Inst_t16 <"v_exp_f16", VOP_F16_F16, AMDGPUexpf16>;
 defm V_SIN_F16 : VOP1Inst_t16 <"v_sin_f16", VOP_F16_F16, AMDGPUsin>;
 defm V_COS_F16 : VOP1Inst_t16 <"v_cos_f16", VOP_F16_F16, AMDGPUcos>;
+
+let SubtargetPredicate = HasBF16TransInsts in {
+defm V_TANH_BF16 : VOP1Inst_t16 <"v_tanh_bf16", VOP_BF16_BF16, int_amdgcn_tanh>;
+}
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 defm V_FREXP_MANT_F16 : VOP1Inst_t16 <"v_frexp_mant_f16", VOP_F16_F16, int_amdgcn_frexp_mant>;
 defm V_FREXP_EXP_I16_F16 : VOP1Inst_t16_with_profiles <"v_frexp_exp_i16_f16",
@@ -1127,6 +1131,7 @@ defm V_CVT_F32_F16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x00b>;
 
 defm V_MOV_B64 : VOP1_Real_FULL <GFX1250Gen, 0x1d>;
 
+defm V_TANH_BF16             : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x04a>;
 defm V_CVT_F32_BF16          : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x072, "v_cvt_f32_bf16", "V_CVT_F32_BF16_gfx1250">;
 defm V_CVT_PK_F16_FP8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x075>;
 defm V_CVT_PK_F16_BF8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x076>;
