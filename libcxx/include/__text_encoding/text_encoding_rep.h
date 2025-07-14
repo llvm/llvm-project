@@ -335,7 +335,7 @@ public:
 private:
   _LIBCPP_HIDE_FROM_ABI constexpr __text_encoding_rep() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr text_encoding_rep(__id __i) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr __text_encoding_rep(__id __i) noexcept
       : __encoding_rep_(__find_encoding_data_by_id(__i)) {
     if (__encoding_rep_->__name_[0] != '\0')
       std::copy_n(__encoding_rep_->__name_, std::char_traits<char>::length(__encoding_rep_->__name_), __name_);
