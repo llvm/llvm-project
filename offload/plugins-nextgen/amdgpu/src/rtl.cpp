@@ -2066,31 +2066,35 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   uint64_t getStreamBusyWaitMicroseconds() const { return OMPX_StreamBusyWait; }
 
-  Expected<std::unique_ptr<MemoryBuffer>>
-  doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const override {
+  Expected<std::unique_ptr<MemoryBuffer>> doJITPostProcessing(
+      std::vector<std::unique_ptr<MemoryBuffer>> &&MB) const override {
 
     // TODO: We should try to avoid materialization but there seems to be no
     // good linker interface w/o file i/o.
-    SmallString<128> LinkerInputFilePath;
-    std::error_code EC = sys::fs::createTemporaryFile("amdgpu-pre-link-jit",
-                                                      "o", LinkerInputFilePath);
-    if (EC)
-      return Plugin::error(ErrorCode::HOST_IO,
-                           "failed to create temporary file for linker");
+    llvm::SmallVector<SmallString<128>> InputFilenames;
+    for (auto &B : MB) {
+      SmallString<128> LinkerInputFilePath;
+      auto &Dest = InputFilenames.emplace_back();
+      std::error_code EC =
+          sys::fs::createTemporaryFile("amdgpu-pre-link-jit", "o", Dest);
+      if (EC)
+        return Plugin::error(ErrorCode::HOST_IO,
+                             "failed to create temporary file for linker");
 
-    // Write the file's contents to the output file.
-    Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
-        FileOutputBuffer::create(LinkerInputFilePath, MB->getBuffer().size());
-    if (!OutputOrErr)
-      return OutputOrErr.takeError();
-    std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
-    llvm::copy(MB->getBuffer(), Output->getBufferStart());
-    if (Error E = Output->commit())
-      return std::move(E);
+      // Write the file's contents to the output file.
+      Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
+          FileOutputBuffer::create(Dest, B->getBuffer().size());
+      if (!OutputOrErr)
+        return OutputOrErr.takeError();
+      std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
+      llvm::copy(B->getBuffer(), Output->getBufferStart());
+      if (Error E = Output->commit())
+        return std::move(E);
+    }
 
     SmallString<128> LinkerOutputFilePath;
-    EC = sys::fs::createTemporaryFile("amdgpu-pre-link-jit", "so",
-                                      LinkerOutputFilePath);
+    std::error_code EC = sys::fs::createTemporaryFile(
+        "amdgpu-pre-link-jit", "so", LinkerOutputFilePath);
     if (EC)
       return Plugin::error(ErrorCode::HOST_IO,
                            "failed to create temporary file for linker");
@@ -2105,15 +2109,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
          "Using `%s` to link JITed amdgcn output.", LLDPath.c_str());
 
     std::string MCPU = "-plugin-opt=mcpu=" + getComputeUnitKind();
-    StringRef Args[] = {LLDPath,
-                        "-flavor",
-                        "gnu",
-                        "--no-undefined",
-                        "-shared",
-                        MCPU,
-                        "-o",
-                        LinkerOutputFilePath.data(),
-                        LinkerInputFilePath.data()};
+    std::vector<StringRef> Args = {
+        LLDPath,   "-flavor", "gnu", "--no-undefined",
+        "-shared", MCPU,      "-o",  LinkerOutputFilePath.data()};
+    for (auto &N : InputFilenames) {
+      Args.push_back(N);
+    }
 
     std::string Error;
     int RC = sys::ExecuteAndWait(LLDPath, Args, std::nullopt, {}, 0, 0, &Error);
@@ -2131,9 +2132,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (sys::fs::remove(LinkerOutputFilePath))
       return Plugin::error(ErrorCode::HOST_IO,
                            "failed to remove temporary output file for lld");
-    if (sys::fs::remove(LinkerInputFilePath))
-      return Plugin::error(ErrorCode::HOST_IO,
-                           "failed to remove temporary input file for lld");
+    for (auto &N : InputFilenames) {
+      if (sys::fs::remove(N))
+        return Plugin::error(ErrorCode::HOST_IO,
+                             "failed to remove temporary input file for lld");
+    }
 
     return std::move(*BufferOrErr);
   }

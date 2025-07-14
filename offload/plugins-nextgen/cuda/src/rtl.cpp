@@ -420,8 +420,14 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
-  Expected<std::unique_ptr<MemoryBuffer>>
-  doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const override {
+  Expected<std::unique_ptr<MemoryBuffer>> doJITPostProcessing(
+      std::vector<std::unique_ptr<MemoryBuffer>> &&MB) const override {
+    // TODO: This should be possible, just needs to be implemented
+    if (MB.size() > 1)
+      return make_error<error::OffloadError>(
+          error::ErrorCode::UNIMPLEMENTED,
+          "CUDA plugin does not support linking multiple binaries");
+
     // TODO: We should be able to use the 'nvidia-ptxjitcompiler' interface to
     //       avoid the call to 'ptxas'.
     SmallString<128> PTXInputFilePath;
@@ -433,11 +439,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     // Write the file's contents to the output file.
     Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
-        FileOutputBuffer::create(PTXInputFilePath, MB->getBuffer().size());
+        FileOutputBuffer::create(PTXInputFilePath, MB[0]->getBuffer().size());
     if (!OutputOrErr)
       return OutputOrErr.takeError();
     std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
-    llvm::copy(MB->getBuffer(), Output->getBufferStart());
+    llvm::copy(MB[0]->getBuffer(), Output->getBufferStart());
     if (Error E = Output->commit())
       return std::move(E);
 

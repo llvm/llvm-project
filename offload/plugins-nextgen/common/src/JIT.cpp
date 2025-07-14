@@ -292,7 +292,9 @@ JITEngine::compile(const __tgt_device_image &Image,
   if (!ObjMBOrErr)
     return ObjMBOrErr.takeError();
 
-  auto ImageMBOrErr = PostProcessing(std::move(*ObjMBOrErr));
+  std::vector<std::unique_ptr<MemoryBuffer>> Buffers;
+  Buffers.push_back(std::move(*ObjMBOrErr));
+  auto ImageMBOrErr = PostProcessing(std::move(Buffers));
   if (!ImageMBOrErr)
     return ImageMBOrErr.takeError();
 
@@ -314,7 +316,8 @@ JITEngine::process(const __tgt_device_image &Image,
                    target::plugin::GenericDeviceTy &Device) {
   const std::string &ComputeUnitKind = Device.getComputeUnitKind();
 
-  PostProcessingFn PostProcessing = [&Device](std::unique_ptr<MemoryBuffer> MB)
+  PostProcessingFn PostProcessing =
+      [&Device](std::vector<std::unique_ptr<MemoryBuffer>> &&MB)
       -> Expected<std::unique_ptr<MemoryBuffer>> {
     return Device.doJITPostProcessing(std::move(MB));
   };

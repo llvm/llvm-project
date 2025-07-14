@@ -44,7 +44,7 @@ struct JITEngine {
   /// called.
   using PostProcessingFn =
       std::function<Expected<std::unique_ptr<MemoryBuffer>>(
-          std::unique_ptr<MemoryBuffer>)>;
+          std::vector<std::unique_ptr<MemoryBuffer>> &&)>;
 
   JITEngine(Triple::ArchType TA);
 

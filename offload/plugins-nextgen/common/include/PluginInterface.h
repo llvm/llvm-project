@@ -935,8 +935,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Post processing after jit backend. The ownership of \p MB will be taken.
   virtual Expected<std::unique_ptr<MemoryBuffer>>
-  doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const {
-    return std::move(MB);
+  doJITPostProcessing(std::vector<std::unique_ptr<MemoryBuffer>> &&MB) const {
+    if (MB.size() > 1)
+      return make_error<error::OffloadError>(
+          error::ErrorCode::UNSUPPORTED,
+          "Plugin does not support linking multiple binaries");
+    return std::move(MB[0]);
   }
 
   /// The minimum number of threads we use for a low-trip count combined loop.
