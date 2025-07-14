@@ -969,10 +969,10 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMADC_VIM:
   case RISCV::VMADC_VVM:
   case RISCV::VMADC_VXM:
-  case RISCV::VMSBC_VVM:
-  case RISCV::VMSBC_VXM:
   case RISCV::VSBC_VVM:
   case RISCV::VSBC_VXM:
+  case RISCV::VMSBC_VVM:
+  case RISCV::VMSBC_VXM:
   // Vector Widening Integer Multiply-Add Instructions
   case RISCV::VWMACCU_VV:
   case RISCV::VWMACCU_VX:
