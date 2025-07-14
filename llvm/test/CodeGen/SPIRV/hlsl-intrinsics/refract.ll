@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
 ; Make sure SPIRV operation function calls for refract are lowered correctly.
 

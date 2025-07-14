@@ -66,9 +66,6 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
            E->getArg(1)->getType()->hasFloatingRepresentation() &&
            E->getArg(2)->getType()->isFloatingType() &&
            "refract operands must have a float representation");
-    assert(E->getArg(0)->getType()->isVectorType() &&
-           E->getArg(1)->getType()->isVectorType() &&
-           "refract I and N operands must be a vector");
     return Builder.CreateIntrinsic(
         /*ReturnType=*/I->getType(), Intrinsic::spv_refract,
         ArrayRef<Value *>{I, N, eta}, nullptr, "spv.refract");

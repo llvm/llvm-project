@@ -58,10 +58,6 @@ float3 test_mixed_datatype_inputs(float3 p0, float3 p1, half p2) {
   return refract(p0, p1, p2);
 }
 
-half3 test_mixed_datatype_inputs(half3 p0, half3 p1, float p2) {
-  return refract(p0, p1, p2);
-}
-
 typedef float float5 __attribute__((ext_vector_type(5)));
 
 float5 test_vec5_inputs(float5 p0, float5 p1,  float p2) {

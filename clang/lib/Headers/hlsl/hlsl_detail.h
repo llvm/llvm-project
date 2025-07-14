@@ -45,14 +45,6 @@ template <typename T> struct is_arithmetic {
   static const bool Value = __is_arithmetic(T);
 };
 
-template <typename T> struct is_vector {
-  static const bool value = false;
-};
-
-template <typename T, int N> struct is_vector<vector<T, N>> {
-  static const bool value = true;
-};
-
 template <typename T, int N>
 using HLSL_FIXED_VECTOR =
     vector<__detail::enable_if_t<(N > 1 && N <= 4), T>, N>;
