@@ -915,10 +915,8 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
       match(FalseVal,
             m_c_Intrinsic<Intrinsic::umin>(m_Specific(X), m_Value(Y)))) {
     FreezeY = true;
-  } else if (match(FalseVal, m_SDiv(m_Specific(X), m_Value(Y))) ||
-             match(FalseVal, m_UDiv(m_Specific(X), m_Value(Y))) ||
-             match(FalseVal, m_SRem(m_Specific(X), m_Value(Y))) ||
-             match(FalseVal, m_URem(m_Specific(X), m_Value(Y)))) {
+  } else if (match(FalseVal, m_IDiv(m_Specific(X), m_Value(Y))) ||
+             match(FalseVal, m_IRem(m_Specific(X), m_Value(Y)))) {
     FreezeY = false;
   } else {
     return nullptr;
