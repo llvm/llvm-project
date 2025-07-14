@@ -14,7 +14,6 @@
 
 #include "Atomic.h"
 #include "ClauseProcessor.h"
-#include "Clauses.h"
 #include "DataSharingProcessor.h"
 #include "Decomposer.h"
 #include "Utils.h"
@@ -23,6 +22,7 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
