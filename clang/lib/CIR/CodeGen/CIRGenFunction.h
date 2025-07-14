@@ -550,6 +550,9 @@ public:
     return it->second;
   }
 
+  Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
+                                   mlir::Type fieldType, unsigned index);
+
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
   /// FIXME(cir): this should return a mlir::Value!
@@ -558,6 +561,19 @@ public:
     return cxxThisValue;
   }
   Address loadCXXThisAddress();
+
+  /// Convert the given pointer to a complete class to the given direct base.
+  Address getAddressOfDirectBaseInCompleteClass(mlir::Location loc,
+                                                Address value,
+                                                const CXXRecordDecl *derived,
+                                                const CXXRecordDecl *base,
+                                                bool baseIsVirtual);
+
+  /// Determine whether a base class initialization may overlap some other
+  /// object.
+  AggValueSlot::Overlap_t getOverlapForBaseInit(const CXXRecordDecl *rd,
+                                                const CXXRecordDecl *baseRD,
+                                                bool isVirtual);
 
   /// Get an appropriate 'undef' rvalue for the given type.
   /// TODO: What's the equivalent for MLIR? Currently we're only using this for
@@ -759,6 +775,9 @@ public:
   void emitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarInit(const AutoVarEmission &emission);
 
+  void emitBaseInitializer(mlir::Location loc, const CXXRecordDecl *classDecl,
+                           CXXCtorInitializer *baseInit);
+
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
@@ -883,6 +902,8 @@ public:
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
                                clang::Expr *init);
 
+  mlir::Value emitPromotedComplexExpr(const Expr *e, QualType promotionType);
+
   mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
 
   /// Emit the computation of the specified expression of scalar type.
@@ -956,6 +977,8 @@ public:
   /// ignoring the result.
   void emitIgnoredExpr(const clang::Expr *e);
 
+  RValue emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc);
+
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
   /// returning the rvalue.
@@ -976,6 +999,7 @@ public:
   /// of the expression.
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
+  LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this
@@ -1198,7 +1222,41 @@ private:
   void updateLoopOpParallelism(mlir::acc::LoopOp &op, bool isOrphan,
                                OpenACCDirectiveKind dk);
 
+  // The OpenACC 'cache' construct actually applies to the 'loop' if present. So
+  // keep track of the 'loop' so that we can add the cache vars to it correctly.
+  mlir::acc::LoopOp *activeLoopOp = nullptr;
+
+  struct ActiveOpenACCLoopRAII {
+    CIRGenFunction &cgf;
+    mlir::acc::LoopOp *oldLoopOp;
+
+    ActiveOpenACCLoopRAII(CIRGenFunction &cgf, mlir::acc::LoopOp *newOp)
+        : cgf(cgf), oldLoopOp(cgf.activeLoopOp) {
+      cgf.activeLoopOp = newOp;
+    }
+    ~ActiveOpenACCLoopRAII() { cgf.activeLoopOp = oldLoopOp; }
+  };
+
 public:
+  // Helper type used to store the list of important information for a 'data'
+  // clause variable, or a 'cache' variable reference.
+  struct OpenACCDataOperandInfo {
+    mlir::Location beginLoc;
+    mlir::Value varValue;
+    std::string name;
+    llvm::SmallVector<mlir::Value> bounds;
+  };
+  // Gets the collection of info required to lower and OpenACC clause or cache
+  // construct variable reference.
+  OpenACCDataOperandInfo getOpenACCDataOperandInfo(const Expr *e);
+  // Helper function to emit the integer expressions as required by an OpenACC
+  // clause/construct.
+  mlir::Value emitOpenACCIntExpr(const Expr *intExpr);
+  // Helper function to emit an integer constant as an mlir int type, used for
+  // constants in OpenACC constructs/clauses.
+  mlir::Value createOpenACCConstantInt(mlir::Location loc, unsigned width,
+                                       int64_t value);
+
   mlir::LogicalResult
   emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
   mlir::LogicalResult emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s);

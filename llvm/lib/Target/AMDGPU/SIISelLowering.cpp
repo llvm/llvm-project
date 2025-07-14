@@ -877,7 +877,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasPrefetch() && Subtarget->hasSafeSmemPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
-  if (Subtarget->hasIEEEMinMax()) {
+  if (Subtarget->hasIEEEMinimumMaximumInsts()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
   } else {
@@ -1404,6 +1404,19 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
+  case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
+  case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64: {
+    Info.opc = (IntrID == Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64)
+                   ? ISD::INTRINSIC_W_CHAIN
+                   : ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::getVT(CI.getType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.memVT = MVT::i64;
+    Info.size = 8;
+    Info.align.reset();
+    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    return true;
+  }
   case Intrinsic::amdgcn_global_atomic_csub: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
@@ -1564,6 +1577,8 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_read_tr16_b64:
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
+  case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
+  case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_csub:
@@ -1968,7 +1983,8 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
 }
 
 EVT SITargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   // FIXME: Should account for address space here.
 
   // The default fallback uses the private pointer size as a guess for a type to
@@ -3877,7 +3893,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // arguments to begin at SP+0. Completely unused for non-tail calls.
   int32_t FPDiff = 0;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  auto *TRI = static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
+  auto *TRI = Subtarget->getRegisterInfo();
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
@@ -7114,7 +7130,8 @@ SDValue SITargetLowering::lowerFMINIMUM_FMAXIMUM(SDValue Op,
   if (VT.isVector())
     return splitBinaryVectorOp(Op, DAG);
 
-  assert(!Subtarget->hasIEEEMinMax() && !Subtarget->hasMinimum3Maximum3F16() &&
+  assert(!Subtarget->hasIEEEMinimumMaximumInsts() &&
+         !Subtarget->hasMinimum3Maximum3F16() &&
          Subtarget->hasMinimum3Maximum3PKF16() && VT == MVT::f16 &&
          "should not need to widen f16 minimum/maximum to v2f16");
 
@@ -14027,7 +14044,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   // operand form.
   const SDNodeFlags Flags = N->getFlags();
   if ((Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM) &&
-      !Subtarget->hasIEEEMinMax() && Flags.hasNoNaNs()) {
+      !Subtarget->hasIEEEMinimumMaximumInsts() && Flags.hasNoNaNs()) {
     unsigned NewOpc =
         Opc == ISD::FMINIMUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
     return DAG.getNode(NewOpc, SDLoc(N), VT, Op0, Op1, Flags);

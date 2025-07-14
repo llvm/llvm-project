@@ -293,22 +293,15 @@ static LogicalResult checkVarAndVarType(Op op) {
   if (!op.getVar())
     return op.emitError("must have var operand");
 
-  if (mlir::isa<mlir::acc::PointerLikeType>(op.getVar().getType()) &&
-      mlir::isa<mlir::acc::MappableType>(op.getVar().getType())) {
-    // TODO: If a type implements both interfaces (mappable and pointer-like),
-    // it is unclear which semantics to apply without additional info which
-    // would need captured in the data operation. For now restrict this case
-    // unless a compelling reason to support disambiguating between the two.
-    return op.emitError("var must be mappable or pointer-like (not both)");
-  }
-
+  // A variable must have a type that is either pointer-like or mappable.
   if (!mlir::isa<mlir::acc::PointerLikeType>(op.getVar().getType()) &&
       !mlir::isa<mlir::acc::MappableType>(op.getVar().getType()))
     return op.emitError("var must be mappable or pointer-like");
 
-  if (mlir::isa<mlir::acc::MappableType>(op.getVar().getType()) &&
-      op.getVarType() != op.getVar().getType())
-    return op.emitError("varType must match when var is mappable");
+  // When it is a pointer-like type, the varType must capture the target type.
+  if (mlir::isa<mlir::acc::PointerLikeType>(op.getVar().getType()) &&
+      op.getVarType() == op.getVar().getType())
+    return op.emitError("varType must capture the element type of var");
 
   return success();
 }
@@ -3852,6 +3845,49 @@ mlir::Value UpdateOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
   return getWaitDevnumValue(getWaitOperandsDeviceType(), getWaitOperands(),
                             getWaitOperandsSegments(), getHasWaitDevnum(),
                             deviceType);
+}
+
+void UpdateOp::addAsyncOnly(MLIRContext *context,
+                            llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOnlyAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOnlyAttr(), effectiveDeviceTypes));
+}
+
+void UpdateOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getAsyncOperandsMutable()));
+}
+
+void UpdateOp::addWaitOnly(MLIRContext *context,
+                           llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWaitOnlyAttr(addDeviceTypeAffectedOperandHelper(context, getWaitOnlyAttr(),
+                                                     effectiveDeviceTypes));
+}
+
+void UpdateOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+
+  llvm::SmallVector<int32_t> segments;
+  if (getWaitOperandsSegments())
+    llvm::copy(*getWaitOperandsSegments(), std::back_inserter(segments));
+
+  setWaitOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getWaitOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValues,
+      getWaitOperandsMutable(), segments));
+  setWaitOperandsSegments(segments);
+
+  llvm::SmallVector<mlir::Attribute> hasDevnums;
+  if (getHasWaitDevnumAttr())
+    llvm::copy(getHasWaitDevnumAttr(), std::back_inserter(hasDevnums));
+  hasDevnums.insert(
+      hasDevnums.end(),
+      std::max(effectiveDeviceTypes.size(), static_cast<size_t>(1)),
+      mlir::BoolAttr::get(context, hasDevnum));
+  setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
 }
 
 //===----------------------------------------------------------------------===//

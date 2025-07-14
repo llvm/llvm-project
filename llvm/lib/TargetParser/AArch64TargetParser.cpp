@@ -298,6 +298,13 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
   if (E == AEK_SVE2AES)
     disable(AEK_SVEAES);
 
+  // sve2-sm4 was historically associated with both FEAT_SVE2 and
+  // FEAT_SVE_SM4, the latter is now associated with sve-sm4 and sve2-sm4 has
+  // become shorthand for +sve2+sve-sm4. For backwards compatibility, when we
+  // disable sve2-sm4 we must also disable sve-sm4.
+  if (E == AEK_SVE2SM4)
+    disable(AEK_SVESM4);
+
   // sve2-sha3 was historically associated with both FEAT_SVE2 and
   // FEAT_SVE_SHA3, the latter is now associated with sve-sha3 and sve2-sha3 has
   // become shorthand for +sve2+sve-sha3. For backwards compatibility, when we

@@ -70,6 +70,25 @@ static cl::opt<bool> codeGenLLVM(
     cl::desc("Run only CodeGen passes and translate FIR to LLVM IR"),
     cl::init(false));
 
+static cl::opt<bool> emitFinalMLIR(
+    "emit-final-mlir",
+    cl::desc("Only translate FIR to MLIR, do not lower to LLVM IR"),
+    cl::init(false));
+
+static cl::opt<bool>
+    simplifyMLIR("simplify-mlir",
+                 cl::desc("Run CSE and canonicalization on MLIR output"),
+                 cl::init(false));
+
+// Enabled by default to accurately reflect -O2
+static cl::opt<bool> enableAliasAnalysis("enable-aa",
+                                         cl::desc("Enable FIR alias analysis"),
+                                         cl::init(true));
+
+static cl::opt<bool> testGeneratorMode(
+    "test-gen", cl::desc("-emit-final-mlir -simplify-mlir -enable-aa=false"),
+    cl::init(false));
+
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
 
@@ -140,7 +159,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   } else {
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
     config.EnableOpenMP = true;  // assume the input contains OpenMP
-    config.AliasAnalysis = true; // enabled when optimizing for speed
+    config.AliasAnalysis = enableAliasAnalysis && !testGeneratorMode;
     if (codeGenLLVM) {
       // Run only CodeGen passes.
       fir::createDefaultFIRCodeGenPassPipeline(pm, config);
@@ -149,13 +168,20 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
       fir::registerDefaultInlinerPass(config);
       fir::createMLIRToLLVMPassPipeline(pm, config);
     }
-    fir::addLLVMDialectToLLVMPass(pm, out.os());
+    if (simplifyMLIR || testGeneratorMode) {
+      pm.addPass(mlir::createCanonicalizerPass());
+      pm.addPass(mlir::createCSEPass());
+    }
+    if (!emitFinalMLIR && !testGeneratorMode)
+      fir::addLLVMDialectToLLVMPass(pm, out.os());
   }
 
   // run the pass manager
   if (mlir::succeeded(pm.run(*owningRef))) {
     // passes ran successfully, so keep the output
-    if ((emitFir || passPipeline.hasAnyOccurrences()) && !codeGenLLVM)
+    if ((emitFir || passPipeline.hasAnyOccurrences() || emitFinalMLIR ||
+         testGeneratorMode) &&
+        !codeGenLLVM)
       printModule(*owningRef, out.os());
     out.keep();
     return mlir::success();

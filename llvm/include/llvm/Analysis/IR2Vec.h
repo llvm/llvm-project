@@ -107,9 +107,12 @@ public:
   const std::vector<double> &getData() const { return Data; }
 
   /// Arithmetic operators
-  Embedding &operator+=(const Embedding &RHS);
-  Embedding &operator-=(const Embedding &RHS);
-  Embedding &operator*=(double Factor);
+  LLVM_ABI Embedding &operator+=(const Embedding &RHS);
+  LLVM_ABI Embedding operator+(const Embedding &RHS) const;
+  LLVM_ABI Embedding &operator-=(const Embedding &RHS);
+  LLVM_ABI Embedding operator-(const Embedding &RHS) const;
+  LLVM_ABI Embedding &operator*=(double Factor);
+  LLVM_ABI Embedding operator*(double Factor) const;
 
   /// Adds Src Embedding scaled by Factor with the called Embedding.
   /// Called_Embedding += Src * Factor
@@ -117,9 +120,10 @@ public:
 
   /// Returns true if the embedding is approximately equal to the RHS embedding
   /// within the specified tolerance.
-  bool approximatelyEquals(const Embedding &RHS, double Tolerance = 1e-6) const;
+  LLVM_ABI bool approximatelyEquals(const Embedding &RHS,
+                                    double Tolerance = 1e-4) const;
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 };
 
 using InstEmbeddingsMap = DenseMap<const Instruction *, Embedding>;
@@ -268,7 +272,7 @@ class IR2VecVocabPrinterPass : public PassInfoMixin<IR2VecVocabPrinterPass> {
 
 public:
   explicit IR2VecVocabPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
   static bool isRequired() { return true; }
 };
 

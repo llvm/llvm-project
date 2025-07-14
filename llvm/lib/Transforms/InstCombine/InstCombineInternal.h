@@ -148,6 +148,7 @@ public:
   Instruction *foldItoFPtoI(CastInst &FI);
   Instruction *visitSelectInst(SelectInst &SI);
   Instruction *foldShuffledIntrinsicOperands(IntrinsicInst *II);
+  Value *foldReversedIntrinsicOperands(IntrinsicInst *II);
   Instruction *visitCallInst(CallInst &CI);
   Instruction *visitInvokeInst(InvokeInst &II);
   Instruction *visitCallBrInst(CallBrInst &CBI);
@@ -437,6 +438,10 @@ private:
 
   Value *reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y, Instruction &I,
                                  bool IsAnd, bool RHSIsLogical);
+
+  Value *foldDisjointOr(Value *LHS, Value *RHS);
+
+  Value *reassociateDisjointOr(Value *LHS, Value *RHS);
 
   Instruction *
   canonicalizeConditionalNegationViaMathToSelect(BinaryOperator &i);

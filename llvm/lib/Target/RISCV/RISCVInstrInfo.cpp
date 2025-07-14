@@ -513,26 +513,24 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+  unsigned KillFlag = getKillRegState(KillSrc);
 
   if (RISCV::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
-        .addReg(SrcReg,
-                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc))
+        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
         .addImm(0);
     return;
   }
 
   if (RISCV::GPRF16RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::PseudoMV_FPR16INX), DstReg)
-        .addReg(SrcReg,
-                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc));
+        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
     return;
   }
 
   if (RISCV::GPRF32RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::PseudoMV_FPR32INX), DstReg)
-        .addReg(SrcReg,
-                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc));
+        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
     return;
   }
 
@@ -547,11 +545,11 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // Emit an ADDI for both parts of GPRPair.
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
             TRI->getSubReg(DstReg, RISCV::sub_gpr_even))
-        .addReg(EvenReg, getKillRegState(KillSrc))
+        .addReg(EvenReg, KillFlag)
         .addImm(0);
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
             TRI->getSubReg(DstReg, RISCV::sub_gpr_odd))
-        .addReg(OddReg, getKillRegState(KillSrc))
+        .addReg(OddReg, KillFlag)
         .addImm(0);
     return;
   }
@@ -581,36 +579,36 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = RISCV::FSGNJ_S;
     }
     BuildMI(MBB, MBBI, DL, get(Opc), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag)
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
   if (RISCV::FPR32RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_S), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag)
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
   if (RISCV::FPR64RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag)
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
   if (RISCV::FPR32RegClass.contains(DstReg) &&
       RISCV::GPRRegClass.contains(SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::FMV_W_X), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
   if (RISCV::GPRRegClass.contains(DstReg) &&
       RISCV::FPR32RegClass.contains(SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_W), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
@@ -618,7 +616,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       RISCV::GPRRegClass.contains(SrcReg)) {
     assert(STI.getXLen() == 64 && "Unexpected GPR size");
     BuildMI(MBB, MBBI, DL, get(RISCV::FMV_D_X), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
@@ -626,7 +624,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       RISCV::FPR64RegClass.contains(SrcReg)) {
     assert(STI.getXLen() == 64 && "Unexpected GPR size");
     BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_D), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
@@ -966,11 +964,15 @@ RISCVCC::CondCode RISCVInstrInfo::getCondFromBranchOpc(unsigned Opc) {
   case RISCV::CV_BEQIMM:
   case RISCV::QC_BEQI:
   case RISCV::QC_E_BEQI:
+  case RISCV::NDS_BBC:
+  case RISCV::NDS_BEQC:
     return RISCVCC::COND_EQ;
   case RISCV::BNE:
   case RISCV::QC_BNEI:
   case RISCV::QC_E_BNEI:
   case RISCV::CV_BNEIMM:
+  case RISCV::NDS_BBS:
+  case RISCV::NDS_BNEC:
     return RISCVCC::COND_NE;
   case RISCV::BLT:
   case RISCV::QC_BLTI:
@@ -1101,6 +1103,26 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
       return RISCV::QC_E_BLTUI;
     case RISCVCC::COND_GEU:
       return RISCV::QC_E_BGEUI;
+    }
+    break;
+  case RISCV::Select_GPR_Using_CC_UImmLog2XLen_NDS:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::NDS_BBC;
+    case RISCVCC::COND_NE:
+      return RISCV::NDS_BBS;
+    }
+    break;
+  case RISCV::Select_GPR_Using_CC_UImm7_NDS:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::NDS_BEQC;
+    case RISCVCC::COND_NE:
+      return RISCV::NDS_BNEC;
     }
     break;
   }
@@ -1400,6 +1422,18 @@ bool RISCVInstrInfo::reverseBranchCondition(
   case RISCV::QC_E_BLTUI:
     Cond[0].setImm(RISCV::QC_E_BGEUI);
     break;
+  case RISCV::NDS_BBC:
+    Cond[0].setImm(RISCV::NDS_BBS);
+    break;
+  case RISCV::NDS_BBS:
+    Cond[0].setImm(RISCV::NDS_BBC);
+    break;
+  case RISCV::NDS_BEQC:
+    Cond[0].setImm(RISCV::NDS_BNEC);
+    break;
+  case RISCV::NDS_BNEC:
+    Cond[0].setImm(RISCV::NDS_BEQC);
+    break;
   }
 
   return false;
@@ -1572,6 +1606,11 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   switch (BranchOp) {
   default:
     llvm_unreachable("Unexpected opcode!");
+  case RISCV::NDS_BBC:
+  case RISCV::NDS_BBS:
+  case RISCV::NDS_BEQC:
+  case RISCV::NDS_BNEC:
+    return isInt<11>(BrOffset);
   case RISCV::BEQ:
   case RISCV::BNE:
   case RISCV::BLT:
@@ -1592,12 +1631,12 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   case RISCV::QC_E_BLTI:
   case RISCV::QC_E_BLTUI:
   case RISCV::QC_E_BGEUI:
-    return isIntN(13, BrOffset);
+    return isInt<13>(BrOffset);
   case RISCV::JAL:
   case RISCV::PseudoBR:
-    return isIntN(21, BrOffset);
+    return isInt<21>(BrOffset);
   case RISCV::PseudoJump:
-    return isIntN(32, SignExtend64(BrOffset + 0x800, XLen));
+    return isInt<32>(SignExtend64(BrOffset + 0x800, XLen));
   }
 }
 
@@ -2766,7 +2805,8 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM(6)
         CASE_OPERAND_UIMM(7)
         CASE_OPERAND_UIMM(8)
-        CASE_OPERAND_UIMM(10)
+        CASE_OPERAND_UIMM(9)
+	CASE_OPERAND_UIMM(10)
         CASE_OPERAND_UIMM(12)
         CASE_OPERAND_UIMM(16)
         CASE_OPERAND_UIMM(20)

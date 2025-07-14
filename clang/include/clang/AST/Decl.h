@@ -888,13 +888,17 @@ struct EvaluatedStmt {
   bool HasICEInit : 1;
   bool CheckedForICEInit : 1;
 
+  bool HasSideEffects : 1;
+  bool CheckedForSideEffects : 1;
+
   LazyDeclStmtPtr Value;
   APValue Evaluated;
 
   EvaluatedStmt()
       : WasEvaluated(false), IsEvaluating(false),
         HasConstantInitialization(false), HasConstantDestruction(false),
-        HasICEInit(false), CheckedForICEInit(false) {}
+        HasICEInit(false), CheckedForICEInit(false), HasSideEffects(false),
+        CheckedForSideEffects(false) {}
 };
 
 /// Represents a variable declaration or definition.
@@ -1086,6 +1090,11 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsCXXCondDecl : 1;
+
+    /// Whether this variable is the implicit __range variable in a for-range
+    /// loop.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsCXXForRangeImplicitVar : 1;
   };
 
   union {
@@ -1353,9 +1362,11 @@ public:
     return const_cast<VarDecl *>(this)->getInitializingDeclaration();
   }
 
-  /// Checks whether this declaration has an initializer with side effects,
-  /// without triggering deserialization if the initializer is not yet
-  /// deserialized.
+  /// Checks whether this declaration has an initializer with side effects.
+  /// The result is cached. If the result hasn't been computed this can trigger
+  /// deserialization and constant evaluation. By running this during
+  /// serialization and serializing the result all clients can safely call this
+  /// without triggering further deserialization.
   bool hasInitWithSideEffects() const;
 
   /// Determine whether this variable's value might be usable in a
@@ -1583,6 +1594,19 @@ public:
   void setCXXCondDecl() {
     assert(!isa<ParmVarDecl>(this));
     NonParmVarDeclBits.IsCXXCondDecl = true;
+  }
+
+  /// Whether this variable is the implicit '__range' variable in C++
+  /// range-based for loops.
+  bool isCXXForRangeImplicitVar() const {
+    return isa<ParmVarDecl>(this) ? false
+                                  : NonParmVarDeclBits.IsCXXForRangeImplicitVar;
+  }
+
+  void setCXXForRangeImplicitVar(bool FRV) {
+    assert(!isa<ParmVarDecl>(this) &&
+           "Cannot set IsCXXForRangeImplicitVar on ParmVarDecl");
+    NonParmVarDeclBits.IsCXXForRangeImplicitVar = FRV;
   }
 
   /// Determines if this variable's alignment is dependent.
@@ -4395,21 +4419,6 @@ public:
   void setIsRandomized(bool V) { RecordDeclBits.IsRandomized = V; }
 
   void reorderDecls(const SmallVectorImpl<Decl *> &Decls);
-
-  /// Determines whether this declaration represents the
-  /// injected class name.
-  ///
-  /// The injected class name in C++ is the name of the class that
-  /// appears inside the class itself. For example:
-  ///
-  /// \code
-  /// struct C {
-  ///   // C is implicitly declared here as a synonym for the class name.
-  /// };
-  ///
-  /// C::C c; // same as "C c;"
-  /// \endcode
-  bool isInjectedClassName() const;
 
   /// Determine whether this record is a class describing a lambda
   /// function object.
