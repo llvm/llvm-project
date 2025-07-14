@@ -376,6 +376,8 @@ New Compiler Flags
 
 - New option ``-ignore-pch`` added to disable precompiled headers. It overrides ``-emit-pch`` and ``-include-pch``. (#GH142409, `PCHDocs <https://clang.llvm.org/docs/UsersManual.html#ignoring-a-pch-file>`_).
 
+- New options ``-g[no-]key-instructions`` added, disabled by default. Reduces jumpiness of debug stepping for optimized code in some debuggers (not LLDB at this time). Not recommended for use without optimizations. DWARF only. Note both the positive and negative flags imply ``-g``.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -472,6 +474,9 @@ related warnings within the method body.
 
 - Clang now disallows the use of attributes applied before an
   ``extern template`` declaration (#GH79893).
+
+- Clang will print the "reason" string argument passed on to
+  ``[[clang::warn_unused_result("reason")]]`` as part of the warning diagnostic.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -699,6 +704,9 @@ Improvements to Clang's diagnostics
 - Clang now tries to avoid printing file paths that contain ``..``, instead preferring
   the canonical file path if it ends up being shorter.
 
+- Improve the diagnostics for placement new expression when const-qualified
+  object was passed as the storage argument. (#GH143708)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -872,7 +880,7 @@ Bug Fixes to C++ Support
 - Clang no longer crashes when trying to unify the types of arrays with
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
-- Fixed type alias CTAD issues involving default template arguments. (#GH134471)
+- Fixed type alias CTAD issues involving default template arguments. (#GH133132), (#GH134471)
 - Fixed CTAD issues when initializing anonymous fields with designated initializers. (#GH67173)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
@@ -952,6 +960,9 @@ Bug Fixes to C++ Support
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
 - Fix a crash in the presence of invalid base classes. (#GH147186)
+- Fix a crash with NTTP when instantiating local class.
+- Fixed a crash involving list-initialization of an empty class with a
+  non-empty initializer list. (#GH147949)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1132,6 +1143,8 @@ clang-format
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
+- Add ``MacrosSkippedByRemoveParentheses`` option so that their invocations are
+  skipped by ``RemoveParentheses``.
 
 clang-refactor
 --------------

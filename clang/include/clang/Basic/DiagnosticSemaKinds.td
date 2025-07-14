@@ -8312,6 +8312,9 @@ def err_need_header_before_typeid : Error<
 def err_need_header_before_placement_new : Error<
   "no matching %0 function for non-allocating placement new expression; "
   "include <new>">;
+def err_placement_new_into_const_qualified_storage : Error<
+  "placement new expression with a const-qualified argument of type %0 "
+  "is not allowed">;
 def err_ms___leave_not_in___try : Error<
   "'__leave' statement not in __try block">;
 def err_uuidof_without_guid : Error<
@@ -13094,6 +13097,9 @@ def err_invalid_hlsl_resource_type: Error<
 
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
+
+def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;
+def err_hlsl_invalid_rootsig_flag : Error< "invalid flags for version 1.%0">;
 
 def subst_hlsl_format_ranges: TextSubstitution<
   "%select{t|u|b|s}0[%1;%select{%3]|unbounded)}2">;

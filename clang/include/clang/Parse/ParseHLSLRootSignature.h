@@ -100,7 +100,8 @@ private:
     std::optional<llvm::dxbc::RootDescriptorFlags> Flags;
   };
   std::optional<ParsedRootDescriptorParams>
-  parseRootDescriptorParams(RootSignatureToken::Kind RegType);
+  parseRootDescriptorParams(RootSignatureToken::Kind DescKind,
+                            RootSignatureToken::Kind RegType);
 
   struct ParsedClauseParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
@@ -110,7 +111,8 @@ private:
     std::optional<llvm::dxbc::DescriptorRangeFlags> Flags;
   };
   std::optional<ParsedClauseParams>
-  parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
+  parseDescriptorTableClauseParams(RootSignatureToken::Kind ClauseKind,
+                                   RootSignatureToken::Kind RegType);
 
   struct ParsedStaticSamplerParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
@@ -135,13 +137,20 @@ private:
   std::optional<float> parseFloatParam();
 
   /// Parsing methods of various enums
-  std::optional<llvm::dxbc::ShaderVisibility> parseShaderVisibility();
-  std::optional<llvm::dxbc::SamplerFilter> parseSamplerFilter();
-  std::optional<llvm::dxbc::TextureAddressMode> parseTextureAddressMode();
-  std::optional<llvm::dxbc::ComparisonFunc> parseComparisonFunc();
-  std::optional<llvm::dxbc::StaticBorderColor> parseStaticBorderColor();
-  std::optional<llvm::dxbc::RootDescriptorFlags> parseRootDescriptorFlags();
-  std::optional<llvm::dxbc::DescriptorRangeFlags> parseDescriptorRangeFlags();
+  std::optional<llvm::dxbc::ShaderVisibility>
+  parseShaderVisibility(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::SamplerFilter>
+  parseSamplerFilter(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::TextureAddressMode>
+  parseTextureAddressMode(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::ComparisonFunc>
+  parseComparisonFunc(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::StaticBorderColor>
+  parseStaticBorderColor(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::RootDescriptorFlags>
+  parseRootDescriptorFlags(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::DescriptorRangeFlags>
+  parseDescriptorRangeFlags(RootSignatureToken::Kind Context);
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
@@ -188,6 +197,21 @@ private:
   /// was consumed.
   bool tryConsumeExpectedToken(RootSignatureToken::Kind Expected);
   bool tryConsumeExpectedToken(ArrayRef<RootSignatureToken::Kind> Expected);
+
+  /// Consume tokens until the expected token has been peeked to be next
+  /// or we have reached the end of the stream. Note that this means the
+  /// expected token will be the next token not CurToken.
+  ///
+  /// Returns true if it found a token of the given type.
+  bool skipUntilExpectedToken(RootSignatureToken::Kind Expected);
+  bool skipUntilExpectedToken(ArrayRef<RootSignatureToken::Kind> Expected);
+
+  /// Consume tokens until we reach a closing right paren, ')', or, until we
+  /// have reached the end of the stream. This will place the current token
+  /// to be the end of stream or the right paren.
+  ///
+  /// Returns true if it is closed before the end of stream.
+  bool skipUntilClosedParens(uint32_t NumParens = 1);
 
   /// Convert the token's offset in the signature string to its SourceLocation
   ///
