@@ -75,10 +75,11 @@ public:
     SmallVector<SUnit *, 2> DefMask;
     for (SUnit &SU : DAG->SUnits) {
       const MachineInstr *MI = SU.getInstr();
-      if (isSoleUseCopyToV0(SU))
+      bool UseV0 = MI->findRegisterUseOperand(RISCV::V0, TRI);
+      if (isSoleUseCopyToV0(SU) && !UseV0)
         DefMask.push_back(&SU);
 
-      if (MI->findRegisterUseOperand(RISCV::V0, TRI)) {
+      if (UseV0) {
         NearestUseV0SU = &SU;
 
         // Copy may not be a real use, so skip it here.
