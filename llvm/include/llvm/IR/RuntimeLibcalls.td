@@ -1037,12 +1037,16 @@ defvar AllDefaultRuntimeLibcallImpls
 // Exist in libgcc and compiler-rt for 64-bit targets, or if
 // COMPILER_RT_ENABLE_SOFTWARE_INT128.
 defvar Int128RTLibcalls = [
-   __ashlti3, __lshrti3, __ashrti3, __multi3, __mulodi4
+   __ashlti3, __lshrti3, __ashrti3, __multi3
 ];
 
 // Only available in compiler-rt
 defvar CompilerRTOnlyInt64Libcalls = [
   __mulodi4
+];
+
+defvar CompilerRTOnlyInt128Libcalls = [
+  __muloti4
 ];
 
 defvar DefaultRuntimeLibcallImpls_f80 =
@@ -1062,7 +1066,8 @@ defvar DefaultRuntimeLibcallImpls =
   !listremove(
     !listremove(
         !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
-                    CompilerRTOnlyInt64Libcalls),
+                    !listconcat(CompilerRTOnlyInt64Libcalls,
+                                CompilerRTOnlyInt128Libcalls)),
                     DefaultRuntimeLibcallImpls_f80),
                     DefaultRuntimeLibcallImpls_ppcf128);
 
@@ -2148,5 +2153,5 @@ def isWasm : RuntimeLibcallPredicate<"TT.isWasm()">;
 def WasmSystemLibrary
     : SystemRuntimeLibrary<isWasm,
       (add DefaultRuntimeLibcallImpls, Int128RTLibcalls,
-           CompilerRTOnlyInt64Libcalls, __muloti4,
+           CompilerRTOnlyInt64Libcalls, CompilerRTOnlyInt128Libcalls,
            emscripten_return_address)>;
