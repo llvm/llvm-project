@@ -14,6 +14,9 @@ using olWaitEventTest = OffloadQueueTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olWaitEventTest);
 
 TEST_P(olWaitEventTest, Success) {
+  if (getPlatformBackend() == OL_PLATFORM_BACKEND_AMDGPU)
+    GTEST_SKIP() << "AMDGPU synchronize event not implemented";
+
   uint32_t Src = 42;
   void *DstPtr;
 
