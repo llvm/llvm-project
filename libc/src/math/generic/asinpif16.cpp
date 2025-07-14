@@ -41,7 +41,6 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
 
   FPBits xbits(x);
-  uint16_t x_uint = xbits.uintval();
   bool is_neg = xbits.is_neg();
   float16 x_abs = xbits.abs().get_val();
 
@@ -66,7 +65,8 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // exceptional values
-  if (auto r = ASINPIF16_EXCEPTS.lookup(x_uint); LIBC_UNLIKELY(r.has_value()))
+  if (auto r = ASINPIF16_EXCEPTS.lookup(xbits.uintval());
+      LIBC_UNLIKELY(r.has_value()))
     return r.value();
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
