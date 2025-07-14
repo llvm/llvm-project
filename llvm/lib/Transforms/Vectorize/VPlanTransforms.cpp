@@ -3085,7 +3085,9 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 static bool canNarrowLoad(VPWidenRecipe *WideMember0, VPWidenRecipe *WideMember,
                           unsigned OpIdx, VPValue *OpV, unsigned Idx) {
   auto *DefR = OpV->getDefiningRecipe();
-  if (!DefR)
+  auto *VPI = dyn_cast_if_present<VPInstruction>(DefR);
+  if (!DefR || (VPI && VPI->getOpcode() == VPInstruction::Broadcast &&
+                !VPI->getOperand(0)->getDefiningRecipe()))
     return WideMember0->getOperand(OpIdx) == OpV;
   if (auto *W = dyn_cast<VPWidenLoadRecipe>(DefR))
     return !W->getMask() && WideMember0->getOperand(OpIdx) == OpV;
@@ -3237,7 +3239,9 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.
   auto NarrowOp = [](VPValue *V) -> VPValue * {
     auto *R = V->getDefiningRecipe();
-    if (!R)
+    auto *VPI = dyn_cast_if_present<VPInstruction>(R);
+    if (!R || (VPI && VPI->getOpcode() == VPInstruction::Broadcast &&
+               !VPI->getOperand(0)->getDefiningRecipe()))
       return V;
     if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
       // Narrow interleave group to wide load, as transformed VPlan will only
