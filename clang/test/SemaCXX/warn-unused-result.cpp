@@ -354,3 +354,21 @@ void use2() {
   (void)G{"Hello"};
 }
 } // namespace nodiscard_specialization
+
+namespace BuildStringOnClangScope {
+
+[[clang::warn_unused_result("Discarded result")]]
+bool makeClangTrue() { return true; }
+
+[[gnu::warn_unused_result("Discarded result")]]
+bool makeGccTrue() { return true; }
+
+void doClangThings() {
+  makeClangTrue(); // expected-warning {{ignoring return value of function declared with 'clang::warn_unused_result' attribute: Discarded result}}
+}
+
+void doGccThings() {
+  makeGccTrue(); // expected-warning {{ignoring return value of function declared with 'gnu::warn_unused_result' attribute}}
+}
+
+}
