@@ -2197,6 +2197,14 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_ldexpf",
+    hdrs = ["src/__support/math/ldexpf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+    ],
+)
+
 ############################### complex targets ################################
 
 libc_function(
@@ -3346,7 +3354,12 @@ libc_math_function(name = "ilogbf16")
 
 libc_math_function(name = "ldexp")
 
-libc_math_function(name = "ldexpf")
+libc_math_function(
+    name = "ldexpf",
+    additional_deps = [
+        ":__support_math_ldexpf",
+    ]
+)
 
 libc_math_function(name = "ldexpl")
 
