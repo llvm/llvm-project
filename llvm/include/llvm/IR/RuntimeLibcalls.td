@@ -1998,6 +1998,17 @@ def SPARCSystemLibrary
 >;
 
 //===----------------------------------------------------------------------===//
+// SPIRV Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isSPIRV : RuntimeLibcallPredicate<"TT.isSPIRV()">;
+
+// No calls FIXME: Add memcpy/memset is a hack to skip
+// PreISelIntrinsicLowering in favor of SPIRVPrepareFunctions;
+// probably should remove that and just use the default one.
+def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add memset, memcpy)>;
+
+//===----------------------------------------------------------------------===//
 // Windows Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
