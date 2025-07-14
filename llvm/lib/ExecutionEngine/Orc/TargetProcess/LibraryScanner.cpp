@@ -290,7 +290,7 @@ DylibPathResolver::resolve(StringRef libStem, SmallVector<StringRef, 2> RPath,
 }
 
 #ifndef _WIN32
-mode_t PathResolver::lstatCached(const std::string &path) {
+mode_t PathResolver::lstatCached(StringRef path) {
   // If already cached - retun cached result
   std::unique_lock<std::shared_mutex> lock(m_mutex);
 
@@ -302,15 +302,14 @@ mode_t PathResolver::lstatCached(const std::string &path) {
 
   // Not cached: perform lstat and store
   struct stat buf {};
-  mode_t st_mode = (lstat(path.c_str(), &buf) == -1) ? 0 : buf.st_mode;
+  mode_t st_mode = (lstat(path.str().c_str(), &buf) == -1) ? 0 : buf.st_mode;
 
   cache.insert({path, st_mode});
 
   return st_mode;
 }
 
-std::optional<std::string>
-PathResolver::readlinkCached(const std::string &path) {
+std::optional<std::string> PathResolver::readlinkCached(StringRef path) {
   std::unique_lock<std::shared_mutex> lock(m_mutex);
   auto &cache = m_cache->m_readlinkCache;
   // If already cached - retun cached result
@@ -321,7 +320,7 @@ PathResolver::readlinkCached(const std::string &path) {
   // If result not in cache - call system function and cache result
   char buf[PATH_MAX];
   ssize_t len;
-  if ((len = readlink(path.c_str(), buf, sizeof(buf))) != -1) {
+  if ((len = readlink(path.str().c_str(), buf, sizeof(buf))) != -1) {
     buf[len] = '\0';
     std::string s(buf);
     cache.insert({path, s});
@@ -403,7 +402,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
   bool isRelative = sys::path::is_relative(path);
   {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
-    auto it = m_cache->m_realpathCache.find(path.str());
+    auto it = m_cache->m_realpathCache.find(path);
     if (it != m_cache->m_realpathCache.end()) {
       ec = it->second.errnoCode;
       if (ec) {
@@ -465,8 +464,8 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
       if (!symlinkOpt) {
         ec = std::make_error_code(std::errc::no_such_file_or_directory);
         std::unique_lock<std::shared_mutex> lock(m_mutex);
-        m_cache->m_realpathCache.emplace(path,
-                                         LibraryPathCache::PathInfo{"", ec});
+        m_cache->m_realpathCache.insert(
+            {path, LibraryPathCache::PathInfo{"", ec}});
         // LLVM_DEBUG(
         dbgs() << "    Failed to read symlink: " << resolvedPath << "\n"; //);
 
@@ -480,12 +479,12 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
       resolved.resize(oldSize);
 
       auto realSymlink =
-          realpathCached(symlink.str(), ec, resolved,
+          realpathCached(symlink, ec, resolved,
                          /*baseIsResolved=*/true, symloopLevel - 1);
       if (!realSymlink) {
         std::unique_lock<std::shared_mutex> lock(m_mutex);
-        m_cache->m_realpathCache.emplace(path,
-                                         LibraryPathCache::PathInfo{"", ec});
+        m_cache->m_realpathCache.insert(
+            {path, LibraryPathCache::PathInfo{"", ec}});
         // LLVM_DEBUG(
         dbgs() << "    Failed to resolve symlink target: " << symlink
                << "\n"; //);
@@ -500,8 +499,8 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
     } else if (st_mode == 0) {
       ec = std::make_error_code(std::errc::no_such_file_or_directory);
       std::unique_lock<std::shared_mutex> lock(m_mutex);
-      m_cache->m_realpathCache.emplace(path,
-                                       LibraryPathCache::PathInfo{"", ec});
+      m_cache->m_realpathCache.insert(
+          {path, LibraryPathCache::PathInfo{"", ec}});
       // LLVM_DEBUG(
       dbgs() << "    Component does not exist: " << resolvedPath << "\n"; //);
 
@@ -515,10 +514,10 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
   std::string canonical = resolved.str().str();
   {
     std::unique_lock<std::shared_mutex> lock(m_mutex);
-    m_cache->m_realpathCache.emplace(path, LibraryPathCache::PathInfo{
+    m_cache->m_realpathCache.insert({path, LibraryPathCache::PathInfo{
                                                canonical,
                                                std::error_code() // success
-                                           });
+                                           }});
   }
   // LLVM_DEBUG(
   dbgs() << "PathResolver::realpathCached: Final resolved: " << path << " => "
@@ -526,7 +525,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
   return canonical;
 }
 
-void LibraryScanHelper::addBasePath(const std::string &path, PathKind kind) {
+void LibraryScanHelper::addBasePath(const std::string &path, PathType kind) {
   std::error_code ec;
   std::string canon = resolveCanonical(path, ec);
   if (ec) {
@@ -542,11 +541,11 @@ void LibraryScanHelper::addBasePath(const std::string &path, PathKind kind) {
            << "\n"; //);
     return;
   }
-  kind = kind == PathKind::Unknown ? classifyKind(canon) : kind;
+  kind = kind == PathType::Unknown ? classifyKind(canon) : kind;
   auto unit = std::make_shared<LibraryUnit>(canon, kind);
   m_units[canon] = unit;
 
-  if (kind == PathKind::User) {
+  if (kind == PathType::User) {
     // LLVM_DEBUG(
     dbgs() << "LibraryScanHelper::addBasePath: Added User path: " << canon
            << "\n"; //);
@@ -560,9 +559,9 @@ void LibraryScanHelper::addBasePath(const std::string &path, PathKind kind) {
 }
 
 std::vector<std::shared_ptr<LibraryUnit>>
-LibraryScanHelper::getNextBatch(PathKind kind, size_t batchSize) {
+LibraryScanHelper::getNextBatch(PathType kind, size_t batchSize) {
   std::vector<std::shared_ptr<LibraryUnit>> result;
-  auto &queue = (kind == PathKind::User) ? m_unscannedUsr : m_unscannedSys;
+  auto &queue = (kind == PathType::User) ? m_unscannedUsr : m_unscannedSys;
 
   std::unique_lock<std::shared_mutex> lock(m_mutex);
 
@@ -582,7 +581,7 @@ LibraryScanHelper::getNextBatch(PathKind kind, size_t batchSize) {
   return result;
 }
 
-bool LibraryScanHelper::isTrackedBasePath(const std::string &path) const {
+bool LibraryScanHelper::isTrackedBasePath(StringRef path) const {
   std::error_code ec;
   std::string canon = resolveCanonical(path, ec);
   if (ec) {
@@ -590,6 +589,14 @@ bool LibraryScanHelper::isTrackedBasePath(const std::string &path) const {
   }
   std::shared_lock<std::shared_mutex> lock(m_mutex);
   return m_units.count(canon) > 0;
+}
+
+bool LibraryScanHelper::leftToScan(PathType K) const {
+  std::shared_lock<std::shared_mutex> lock(m_mutex);
+  for (const auto &unit : m_units)
+    if (unit.second->kind == K && unit.second->state == ScanState::NotScanned)
+      return true;
+  return false;
 }
 
 std::vector<std::shared_ptr<LibraryUnit>>
@@ -603,20 +610,20 @@ LibraryScanHelper::getAllUnits() const {
   return result;
 }
 
-std::string LibraryScanHelper::resolveCanonical(const std::string &path,
+std::string LibraryScanHelper::resolveCanonical(StringRef path,
                                                 std::error_code &ec) const {
   auto canon = m_resolver->resolve(path, ec);
-  return ec ? path : *canon;
+  return ec ? path.str() : *canon;
 }
 
-PathKind LibraryScanHelper::classifyKind(const std::string &path) const {
+PathType LibraryScanHelper::classifyKind(StringRef path) const {
   // Detect home directory
   const char *home = getenv("HOME");
   if (home && path.find(home) == 0)
-    return PathKind::User;
+    return PathType::User;
 
   // Standard user install locations
-  static const std::vector<std::string> userPrefixes = {
+  static const std::array<std::string, 5> userPrefixes = {
       "/usr/local",    // often used by users for manual installs
       "/opt/homebrew", // common on macOS M1/M2
       "/opt/local",    // MacPorts
@@ -626,10 +633,10 @@ PathKind LibraryScanHelper::classifyKind(const std::string &path) const {
 
   for (const auto &prefix : userPrefixes) {
     if (path.find(prefix) == 0)
-      return PathKind::User;
+      return PathType::User;
   }
 
-  return PathKind::System;
+  return PathType::System;
 }
 
 Expected<LibraryDepsInfo> parseMachODeps(const object::MachOObjectFile &Obj) {
@@ -831,7 +838,7 @@ std::optional<std::string> LibraryScanner::shouldScan(StringRef filePath) {
     return std::nullopt;
 
   // [5] Skip if we've already seen this path (via cache)
-  if (m_helper.hasSeen(CanonicalPath))
+  if (m_helper.hasSeenOrMark(CanonicalPath))
     return std::nullopt;
 
   // [6] Already tracked in LibraryManager?
@@ -845,7 +852,7 @@ std::optional<std::string> LibraryScanner::shouldScan(StringRef filePath) {
   return CanonicalPath;
 }
 
-void LibraryScanner::handleLibrary(StringRef filePath, PathKind K, int level) {
+void LibraryScanner::handleLibrary(StringRef filePath, PathType K, int level) {
   // LLVM_DEBUG(
   dbgs() << "LibraryScanner::handleLibrary: Scanning: " << filePath
          << ", level=" << level << "\n"; //);
@@ -877,9 +884,7 @@ void LibraryScanner::handleLibrary(StringRef filePath, PathKind K, int level) {
     return;
   }
 
-  bool added = m_libMgr.addLibrary(
-      CanonicalPath, K == PathKind::User ? LibraryManager::Kind::User
-                                         : LibraryManager::Kind::System);
+  bool added = m_libMgr.addLibrary(CanonicalPath, K);
   if (!added) {
     // LLVM_DEBUG(
     dbgs() << "  Already added: " << CanonicalPath << "\n"; //);
@@ -897,7 +902,7 @@ void LibraryScanner::handleLibrary(StringRef filePath, PathKind K, int level) {
   // Heuristic 2: All RPATH and RUNPATH already tracked
   auto allTracked = [&](const auto &Paths) {
     return std::all_of(Paths.begin(), Paths.end(), [&](StringRef P) {
-      return m_helper.isTrackedBasePath(P.str());
+      return m_helper.isTrackedBasePath(P);
     });
   };
 
@@ -963,11 +968,11 @@ void LibraryScanner::scanBaseDir(std::shared_ptr<LibraryUnit> unit) {
   unit->state.store(ScanState::Scanned);
 }
 
-void LibraryScanner::scanNext(PathKind K, size_t batchSize) {
+void LibraryScanner::scanNext(PathType K, size_t batchSize) {
   // LLVM_DEBUG(
   dbgs() << "LibraryScanner::scanNext: Scanning next batch of size "
          << batchSize << " for kind "
-         << (K == PathKind::User ? "User" : "System") << "\n"; //);
+         << (K == PathType::User ? "User" : "System") << "\n"; //);
 
   auto Units = m_helper.getNextBatch(K, batchSize);
   for (auto &unit : Units) {
