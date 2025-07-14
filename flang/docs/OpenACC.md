@@ -29,7 +29,7 @@ local:
   `deviceptr` and `present` clauses.
 * The OpenACC specification disallows a variable appearing multiple times in
   clauses of `!$acc declare` directives for a function, subroutine, program,
-  or module, but we allow it with a warning.
+  or module, but it is allowed with a warning when same clause is used.
 
 ## Remarks about incompatibilities with other implementations
 * Array element references in the data clauses are equivalent to array sections
