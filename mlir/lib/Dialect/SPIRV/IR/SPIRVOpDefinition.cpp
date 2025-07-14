@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 
 #include "SPIRVParsingUtils.h"
 

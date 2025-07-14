@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -165,7 +166,7 @@ void transform::TypeConversionCastShapeDynamicDimsOp::
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
       return Value();
     }
-    return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
+    return tensor::CastOp::create(builder, loc, resultType, input).getResult();
   });
   converter.addTargetMaterialization([](OpBuilder &builder, Type resultType,
                                         ValueRange inputs,
@@ -177,7 +178,7 @@ void transform::TypeConversionCastShapeDynamicDimsOp::
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
       return Value();
     }
-    return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
+    return tensor::CastOp::create(builder, loc, resultType, input).getResult();
   });
 }
 

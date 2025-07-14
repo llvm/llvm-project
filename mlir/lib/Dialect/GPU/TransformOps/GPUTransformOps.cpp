@@ -31,6 +31,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Visitors.h"
@@ -560,8 +561,8 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   Value predicate;
   if (originalBasisWasProvided) {
     for (Value tmpPredicate : builderResult.predicateOps) {
-      predicate = predicate ? rewriter.create<arith::AndIOp>(loc, predicate,
-                                                             tmpPredicate)
+      predicate = predicate ? arith::AndIOp::create(rewriter, loc, predicate,
+                                                    tmpPredicate)
                             : tmpPredicate;
     }
   }
@@ -573,8 +574,8 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   Block::iterator insertionPoint;
   if (predicate) {
     // Step 6.a. If predicated, move at the beginning.
-    auto ifOp = rewriter.create<scf::IfOp>(loc, predicate,
-                                           /*withElseRegion=*/false);
+    auto ifOp = scf::IfOp::create(rewriter, loc, predicate,
+                                  /*withElseRegion=*/false);
     targetBlock = ifOp.thenBlock();
     insertionPoint = ifOp.thenBlock()->begin();
   } else {
@@ -632,7 +633,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForallToBlocksImpl(
     // the insertion point.
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(parentBlock);
-    zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
   }
 
   ForallRewriteResult rewriteResult;
@@ -884,7 +885,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapOneForallToThreadsImpl(
     return diag;
   // Add a syncthreads if needed. TODO: warpsync
   if (syncAfterDistribute)
-    rewriter.create<BarrierOp>(loc);
+    BarrierOp::create(rewriter, loc);
 
   return DiagnosedSilenceableFailure::success();
 }
@@ -901,7 +902,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForallToThreadsImpl(
 
   // Create an early zero index value for replacements.
   Location loc = target->getLoc();
-  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
   DiagnosedSilenceableFailure diag = DiagnosedSilenceableFailure::success();
   WalkResult walkResult = target->walk([&](scf::ForallOp forallOp) {
     diag = mlir::transform::gpu::mapOneForallToThreadsImpl(

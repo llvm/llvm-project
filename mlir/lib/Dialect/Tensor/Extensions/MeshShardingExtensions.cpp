@@ -74,12 +74,12 @@ struct CreatorOpShardingInterface
         if (!oldType.isDynamicDim(i) && shardType.isDynamicDim(i)) {
           if (!newSharding) {
             newSharding =
-                builder.create<ShardingOp>(op->getLoc(), resultShardings[0]);
+                ShardingOp::create(builder, op->getLoc(), resultShardings[0]);
             device =
-                builder.create<mesh::ProcessMultiIndexOp>(op->getLoc(), mesh)
+                mesh::ProcessMultiIndexOp::create(builder, op->getLoc(), mesh)
                     .getResults();
-            shapeForDevice = builder.create<mesh::ShardShapeOp>(
-                op->getLoc(), oldType.getShape(), spmdizedOperands,
+            shapeForDevice = mesh::ShardShapeOp::create(
+                builder, op->getLoc(), oldType.getShape(), spmdizedOperands,
                 newSharding->getResult(0), device);
           }
           newOperands.emplace_back(shapeForDevice.getResult()[i]);
@@ -88,7 +88,7 @@ struct CreatorOpShardingInterface
           newOperands.emplace_back(spmdizedOperands[++currOldOprndNum]);
         }
       }
-      newOp = builder.create<OpTy>(op->getLoc(), shardType, newOperands);
+      newOp = OpTy::create(builder, op->getLoc(), shardType, newOperands);
       spmdizationMap.map(op->getResult(0), newOp->getResult(0));
     } else {
       // `clone` will populate the mapping of old to new results.
