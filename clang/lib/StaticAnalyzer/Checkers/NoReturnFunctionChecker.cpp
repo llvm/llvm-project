@@ -50,45 +50,37 @@ void NoReturnFunctionChecker::checkPostCall(const CallEvent &CE,
       BuildSinks = getFunctionExtInfo(C->getType()).getNoReturn();
   }
 
- if (!BuildSinks && CE.isGlobalCFunction()) {
-   if (const IdentifierInfo *II = CE.getCalleeIdentifier()) {
-     // HACK: Some functions are not marked noreturn, and don't return.
-     //  Here are a few hardwired ones.  If this takes too long, we can
-     //  potentially cache these results.
-     //
-     // (!) In case of function list update, please also update
-     // CFGBuilder::VisitCallExpr (CFG.cpp)
-     BuildSinks =
-         llvm::StringSwitch<bool>(StringRef(II->getName()))
-             .Case("exit", true)
-             .Case("abort", true)
-             .Case("panic", true)
-             .Case("error", true)
-             .Case("Assert", true)
-             // FIXME: This is just a wrapper around throwing an exception.
-             //  Eventually inter-procedural analysis should handle this
-             //  easily.
-             .Case("ziperr", true)
-             .Case("assfail", true)
-             .Case("db_error", true)
-             .Case("__assert", true)
-             .Case("__assert2", true)
-             // For the purpose of static analysis, we do not care that
-             //  this MSVC function will return if the user decides to
-             //  continue.
-             .Case("_wassert", true)
-             .Case("__assert_rtn", true)
-             .Case("__assert_fail", true)
-             .Case("dtrace_assfail", true)
-             .Case("yy_fatal_error", true)
-             .Case("_XCAssertionFailureHandler", true)
-             .Case("_DTAssertionFailureHandler", true)
-             .Case("_TSAssertionFailureHandler", true)
-             .Case("__builtin_trap", true)
-             .Case("__builtin_unreachable", true)
-             .Default(false);
-   }
- }
+  if (!BuildSinks && CE.isGlobalCFunction()) {
+    if (const IdentifierInfo *II = CE.getCalleeIdentifier()) {
+      // HACK: Some functions are not marked noreturn, and don't return.
+      //  Here are a few hardwired ones.  If this takes too long, we can
+      //  potentially cache these results.
+      BuildSinks
+        = llvm::StringSwitch<bool>(StringRef(II->getName()))
+            .Case("exit", true)
+            .Case("panic", true)
+            .Case("error", true)
+            .Case("Assert", true)
+            // FIXME: This is just a wrapper around throwing an exception.
+            //  Eventually inter-procedural analysis should handle this easily.
+            .Case("ziperr", true)
+            .Case("assfail", true)
+            .Case("db_error", true)
+            .Case("__assert", true)
+            .Case("__assert2", true)
+            // For the purpose of static analysis, we do not care that
+            //  this MSVC function will return if the user decides to continue.
+            .Case("_wassert", true)
+            .Case("__assert_rtn", true)
+            .Case("__assert_fail", true)
+            .Case("dtrace_assfail", true)
+            .Case("yy_fatal_error", true)
+            .Case("_XCAssertionFailureHandler", true)
+            .Case("_DTAssertionFailureHandler", true)
+            .Case("_TSAssertionFailureHandler", true)
+            .Default(false);
+    }
+  }
 
   if (BuildSinks)
     C.generateSink(C.getState(), C.getPredecessor());
