@@ -76,14 +76,20 @@ void UnhandledSelfAssignmentCheck::registerMatchers(MatchFinder *Finder) {
   //    return *this;
   // }
   const auto HasCopyAndSwap = cxxMethodDecl(
-      ofClass(cxxRecordDecl(unless(hasAncestor(classTemplateDecl())))),
-      hasDescendant(
-          stmt(hasDescendant(
-                   varDecl(hasType(cxxRecordDecl(equalsBoundNode("class"))))
-                       .bind("tmp_var")),
-               hasDescendant(callExpr(callee(functionDecl(hasName("swap"))),
-                                      hasAnyArgument(declRefExpr(to(varDecl(
-                                          equalsBoundNode("tmp_var"))))))))));
+      ofClass(cxxRecordDecl()),
+      hasBody(compoundStmt(
+          hasDescendant(
+              varDecl(hasType(cxxRecordDecl(equalsBoundNode("class"))))
+                  .bind("tmp_var")),
+          hasDescendant(stmt(anyOf(
+              cxxMemberCallExpr(hasArgument(
+                  0, declRefExpr(to(varDecl(equalsBoundNode("tmp_var")))))),
+              callExpr(
+                  callee(functionDecl(hasName("swap"))), argumentCountIs(2),
+                  hasAnyArgument(
+                      declRefExpr(to(varDecl(equalsBoundNode("tmp_var"))))),
+                  hasAnyArgument(unaryOperator(has(cxxThisExpr()),
+                                               hasOperatorName("*"))))))))));
 
   DeclarationMatcher AdditionalMatcher = cxxMethodDecl();
   if (WarnOnlyIfThisHasSuspiciousField) {
