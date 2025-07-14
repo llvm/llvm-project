@@ -29,6 +29,10 @@ enum { MAX_LANES = 64 };
 
 using namespace llvm;
 
+// TODO -- delete this flag once we have more robust mechanisms to allocate the
+// optimal RC for Opc and Dest of MFMA. In particular, there are high RP cases
+// where it is better to produce the VGPR form (e.g. if there are VGPR users
+// of the MFMA result).
 cl::opt<bool> MFMAVGPRForm(
     "amdgpu-mfma-vgpr-form", cl::Hidden,
     cl::desc("Whether to force use VGPR for Opc and Dest of MFMA. If "
