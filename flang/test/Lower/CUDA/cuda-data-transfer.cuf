@@ -436,3 +436,11 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub22()
 ! CHECK: cuf.data_transfer
+
+subroutine sub23(n)
+  integer :: n
+  real(8), device :: d(n,n), x(n)
+  x = sum(d,dim=2) ! Was triggering Unsupported CUDA data transfer
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub23
