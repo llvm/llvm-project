@@ -2651,7 +2651,10 @@ public:
   /// Determines whether this function is known to never return for CFG
   /// analysis. Checks for noreturn attributes on the function declaration
   /// or its type, including 'analyzer_noreturn' attribute.
-  bool isAnalyzerNoReturn() const;
+  ///
+  /// Returns 'std::nullopt' if function declaration has no '*noreturn'
+  /// attributes
+  std::optional<bool> getAnalyzerNoReturn() const;
 
   /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }

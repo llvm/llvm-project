@@ -3596,8 +3596,14 @@ bool FunctionDecl::isNoReturn() const {
   return false;
 }
 
-bool FunctionDecl::isAnalyzerNoReturn() const {
-  return isNoReturn() || hasAttr<AnalyzerNoReturnAttr>();
+std::optional<bool> FunctionDecl::getAnalyzerNoReturn() const {
+  if (isNoReturn())
+    return true;
+
+  if (auto *Attr = getAttr<AnalyzerNoReturnAttr>())
+    return Attr->getValue();
+
+  return std::nullopt;
 }
 
 bool FunctionDecl::isMemberLikeConstrainedFriend() const {

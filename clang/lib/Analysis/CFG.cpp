@@ -41,7 +41,6 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -2833,8 +2832,13 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     // (see [expr.call]).
     if (!FD->isVariadic())
       findConstructionContextsForArguments(C);
-    if (!NoReturn)
-      NoReturn = FD->isAnalyzerNoReturn() || C->isBuiltinAssumeFalse(*Context);
+
+    if (!NoReturn) {
+      auto NoRetAttrOpt = FD->getAnalyzerNoReturn();
+      NoReturn =
+          (NoRetAttrOpt && *NoRetAttrOpt) || C->isBuiltinAssumeFalse(*Context);
+    }
+
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
     if (isBuiltinAssumeWithSideEffects(FD->getASTContext(), C) ||
@@ -6311,31 +6315,45 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
       }))
     return true;
 
-  auto HasNoReturnCall = [](const CallExpr *CE) {
+  auto HasNoReturnCall = [&](const CallExpr *CE) {
     if (!CE)
       return false;
 
-    static thread_local llvm::SmallPtrSet<const FunctionDecl *, 32> InProgress;
-
     auto *FD = CE->getDirectCallee();
 
-    if (!FD || InProgress.count(FD))
+    if (!FD)
       return false;
 
-    InProgress.insert(FD);
-    auto DoCleanup = llvm::make_scope_exit([&]() { InProgress.erase(FD); });
+    // HACK: we are gonna cache analysis result as implicit `analyzer_noreturn`
+    // attribute
+    auto *MutFD = const_cast<FunctionDecl *>(FD);
+    auto NoRetAttrOpt = FD->getAnalyzerNoReturn();
+    auto NoReturn = false;
 
-    auto NoReturnFromCFG = [FD]() {
-      if (!FD->getBody())
-        return false;
+    if (!NoRetAttrOpt && FD->getBody()) {
+      // Mark function as `analyzer_noreturn(false)` to:
+      //  * prevent infinite recursion in noreturn analysis
+      //  * indicate that we've already analyzed(-ing) this function
+      //  * serve as a safe default assumption (function may return)
+      MutFD->addAttr(AnalyzerNoReturnAttr::CreateImplicit(
+          FD->getASTContext(), false, FD->getLocation()));
 
       auto CalleeCFG =
           CFG::buildCFG(FD, FD->getBody(), &FD->getASTContext(), {});
 
-      return CalleeCFG && CalleeCFG->getEntry().isInevitablySinking();
-    };
+      NoReturn = CalleeCFG && CalleeCFG->getEntry().isInevitablySinking();
 
-    return FD->isAnalyzerNoReturn() || NoReturnFromCFG();
+      // Override to `analyzer_noreturn(true)`
+      if (NoReturn) {
+        MutFD->dropAttr<AnalyzerNoReturnAttr>();
+        MutFD->addAttr(AnalyzerNoReturnAttr::CreateImplicit(
+            FD->getASTContext(), NoReturn, FD->getLocation()));
+      }
+
+    } else if (NoRetAttrOpt)
+      NoReturn = *NoRetAttrOpt;
+
+    return NoReturn;
   };
 
   if (llvm::any_of(*Blk, [&](const CFGElement &Elm) {
