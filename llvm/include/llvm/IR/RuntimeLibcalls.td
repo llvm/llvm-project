@@ -1980,6 +1980,23 @@ def _Q_qtoull : RuntimeLibcallImpl<FPTOUINT_F128_I64>;
 def _Q_lltoq : RuntimeLibcallImpl<SINTTOFP_I64_F128>;
 def _Q_ulltoq : RuntimeLibcallImpl<UINTTOFP_I64_F128>;
 
+def isSPARC : RuntimeLibcallPredicate<"TT.isSPARC()">;
+def isSPARC32 : RuntimeLibcallPredicate<"TT.isSPARC32()">;
+def isSPARC64 : RuntimeLibcallPredicate<"TT.isSPARC64()">;
+
+defvar SPARC64_MulDivCalls = [
+  __mulsi3, __divsi3, __modsi3, __udivsi3, __umodsi3
+];
+
+def SPARCSystemLibrary
+    : SystemRuntimeLibrary<isSPARC,
+      (add (sub DefaultLibcallImpls32, SPARC64_MulDivCalls),
+            sparc_umul, sparc_div, sparc_udiv, sparc_rem, sparc_urem,
+       LibcallImpls<(add _Q_qtoll, _Q_qtoull, _Q_lltoq, _Q_ulltoq), isSPARC32>,
+       LibcallImpls<(add SPARC64_MulDivCalls, Int128RTLibcalls), isSPARC64>,
+       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128)
+>;
+
 //===----------------------------------------------------------------------===//
 // Windows Runtime Libcalls
 //===----------------------------------------------------------------------===//

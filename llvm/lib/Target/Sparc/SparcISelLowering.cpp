@@ -1824,12 +1824,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MULHS,     MVT::i32, Expand);
   setOperationAction(ISD::MUL,       MVT::i32, Expand);
 
-  setLibcallImpl(RTLIB::MUL_I32, RTLIB::sparc_umul);
-  setLibcallImpl(RTLIB::SDIV_I32, RTLIB::sparc_div);
-  setLibcallImpl(RTLIB::UDIV_I32, RTLIB::sparc_udiv);
-  setLibcallImpl(RTLIB::SREM_I32, RTLIB::sparc_rem);
-  setLibcallImpl(RTLIB::UREM_I32, RTLIB::sparc_urem);
-
   if (Subtarget->useSoftMulDiv()) {
     // .umul works for both signed and unsigned
     setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
@@ -1877,13 +1871,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   } else {
     setOperationAction(ISD::LOAD, MVT::f128, Custom);
     setOperationAction(ISD::STORE, MVT::f128, Custom);
-  }
-
-  if (!Subtarget->is64Bit()) {
-    setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Q_qtoll);
-    setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Q_qtoull);
-    setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Q_lltoq);
-    setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Q_ulltoq);
   }
 
   if (Subtarget->hasHardQuad()) {
