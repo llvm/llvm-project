@@ -69,6 +69,6 @@ add_mlir_library(MLIRIR
   LINK_LIBS PUBLIC
   MLIRSupport
   PRIVATE
-  atomic
+  ${LLVM_ATOMIC_LIB}
   )
 
