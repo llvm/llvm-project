@@ -152,8 +152,7 @@ public:
   }
 
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -285,7 +284,7 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
   ImpDefs.clear();
   VRegPHIUseCount.clear();
 
-  MF.getProperties().set(MachineFunctionProperties::Property::NoPHIs);
+  MF.getProperties().setNoPHIs();
 
   return Changed;
 }

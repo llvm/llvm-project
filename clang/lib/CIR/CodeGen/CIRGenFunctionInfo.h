@@ -16,14 +16,11 @@
 #define LLVM_CLANG_CIR_CIRGENFUNCTIONINFO_H
 
 #include "clang/AST/CanonicalType.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/TrailingObjects.h"
 
 namespace clang::CIRGen {
-
-struct CIRGenFunctionInfoArgInfo {
-  CanQualType type;
-};
 
 /// A class for recording the number of arguments that a function signature
 /// requires.
@@ -47,19 +44,21 @@ public:
   ///
   /// If FD is not null, this will consider pass_object_size params in FD.
   static RequiredArgs
-  forPrototypePlus(const clang::FunctionProtoType *prototype) {
+  getFromProtoWithExtraSlots(const clang::FunctionProtoType *prototype,
+                             unsigned additional) {
     if (!prototype->isVariadic())
       return All;
 
     if (prototype->hasExtParameterInfos())
       llvm_unreachable("NYI");
 
-    return RequiredArgs(prototype->getNumParams());
+    return RequiredArgs(prototype->getNumParams() + additional);
   }
 
   static RequiredArgs
-  forPrototypePlus(clang::CanQual<clang::FunctionProtoType> prototype) {
-    return forPrototypePlus(prototype.getTypePtr());
+  getFromProtoWithExtraSlots(clang::CanQual<clang::FunctionProtoType> prototype,
+                             unsigned additional) {
+    return getFromProtoWithExtraSlots(prototype.getTypePtr(), additional);
   }
 
   unsigned getNumRequiredArgs() const {
@@ -68,18 +67,17 @@ public:
   }
 };
 
+// The TrailingObjects for this class contain the function return type in the
+// first CanQualType slot, followed by the argument types.
 class CIRGenFunctionInfo final
     : public llvm::FoldingSetNode,
-      private llvm::TrailingObjects<CIRGenFunctionInfo,
-                                    CIRGenFunctionInfoArgInfo> {
-  using ArgInfo = CIRGenFunctionInfoArgInfo;
-
+      private llvm::TrailingObjects<CIRGenFunctionInfo, CanQualType> {
   RequiredArgs required;
 
   unsigned numArgs;
 
-  ArgInfo *getArgsBuffer() { return getTrailingObjects<ArgInfo>(); }
-  const ArgInfo *getArgsBuffer() const { return getTrailingObjects<ArgInfo>(); }
+  CanQualType *getArgTypes() { return getTrailingObjects(); }
+  const CanQualType *getArgTypes() const { return getTrailingObjects(); }
 
   CIRGenFunctionInfo() : required(RequiredArgs::All) {}
 
@@ -94,8 +92,8 @@ public:
   // these have to be public.
   friend class TrailingObjects;
 
-  using const_arg_iterator = const ArgInfo *;
-  using arg_iterator = ArgInfo *;
+  using const_arg_iterator = const CanQualType *;
+  using arg_iterator = CanQualType *;
 
   // This function has to be CamelCase because llvm::FoldingSet requires so.
   // NOLINTNEXTLINE(readability-identifier-naming)
@@ -110,33 +108,41 @@ public:
 
   // NOLINTNEXTLINE(readability-identifier-naming)
   void Profile(llvm::FoldingSetNodeID &id) {
-    id.AddBoolean(required.getOpaqueData());
-    getReturnType().Profile(id);
+    // If the Profile functions get out of sync, we can end up with incorrect
+    // function signatures, so we call the static Profile function here rather
+    // than duplicating the logic.
+    Profile(id, required, getReturnType(), arguments());
   }
 
-  CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
-
-  const_arg_iterator argInfoBegin() const { return getArgsBuffer() + 1; }
-  const_arg_iterator argInfoEnd() const {
-    return getArgsBuffer() + 1 + numArgs;
+  llvm::ArrayRef<CanQualType> arguments() const {
+    return llvm::ArrayRef<CanQualType>(argTypesBegin(), numArgs);
   }
-  arg_iterator argInfoBegin() { return getArgsBuffer() + 1; }
-  arg_iterator argInfoEnd() { return getArgsBuffer() + 1 + numArgs; }
 
-  unsigned argInfoSize() const { return numArgs; }
-
-  llvm::MutableArrayRef<ArgInfo> argInfos() {
-    return llvm::MutableArrayRef<ArgInfo>(argInfoBegin(), numArgs);
+  llvm::ArrayRef<CanQualType> requiredArguments() const {
+    return llvm::ArrayRef<CanQualType>(argTypesBegin(), getNumRequiredArgs());
   }
-  llvm::ArrayRef<ArgInfo> argInfos() const {
-    return llvm::ArrayRef<ArgInfo>(argInfoBegin(), numArgs);
+
+  CanQualType getReturnType() const { return getArgTypes()[0]; }
+
+  const_arg_iterator argTypesBegin() const { return getArgTypes() + 1; }
+  const_arg_iterator argTypesEnd() const { return getArgTypes() + 1 + numArgs; }
+  arg_iterator argTypesBegin() { return getArgTypes() + 1; }
+  arg_iterator argTypesEnd() { return getArgTypes() + 1 + numArgs; }
+
+  unsigned argTypeSize() const { return numArgs; }
+
+  llvm::MutableArrayRef<CanQualType> argTypes() {
+    return llvm::MutableArrayRef<CanQualType>(argTypesBegin(), numArgs);
+  }
+  llvm::ArrayRef<CanQualType> argTypes() const {
+    return llvm::ArrayRef<CanQualType>(argTypesBegin(), numArgs);
   }
 
   bool isVariadic() const { return required.allowsOptionalArgs(); }
   RequiredArgs getRequiredArgs() const { return required; }
   unsigned getNumRequiredArgs() const {
     return isVariadic() ? getRequiredArgs().getNumRequiredArgs()
-                        : argInfoSize();
+                        : argTypeSize();
   }
 };
 

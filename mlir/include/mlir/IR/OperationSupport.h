@@ -985,9 +985,9 @@ public:
                  BlockRange successors = {},
                  MutableArrayRef<std::unique_ptr<Region>> regions = {});
   OperationState(OperationState &&other) = default;
-  OperationState(const OperationState &other) = default;
   OperationState &operator=(OperationState &&other) = default;
-  OperationState &operator=(const OperationState &other) = default;
+  OperationState(const OperationState &other) = delete;
+  OperationState &operator=(const OperationState &other) = delete;
   ~OperationState();
 
   /// Get (or create) a properties of the provided type to be set on the
@@ -1322,7 +1322,14 @@ struct OperationEquivalence {
     // When provided, the location attached to the operation are ignored.
     IgnoreLocations = 1,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreLocations)
+    // When provided, the discardable attributes attached to the operation are
+    // ignored.
+    IgnoreDiscardableAttrs = 2,
+
+    // When provided, the properties attached to the operation are ignored.
+    IgnoreProperties = 4,
+
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreProperties)
   };
 
   /// Compute a hash for the given operation.

@@ -317,6 +317,9 @@
 // RUN: not %clang --target=aarch64-linux -fsanitize=memtag -I +mte %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-NOMT-1
 // CHECK-SANMT-NOMT-1: '-fsanitize=memtag-stack' requires hardware support (+memtag)
 
+// RUN: not %clang --target=aarch64-linux-android31 -fsanitize-trap=memtag -march=armv8-a+memtag -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-TRAP
+// CHECK-SANMT-TRAP: error: unsupported argument 'memtag' to option '-fsanitize-trap='
+
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-address-use-after-scope %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-USE-AFTER-SCOPE
 // RUN: %clang_cl --target=x86_64-windows -fsanitize=address -fsanitize-address-use-after-scope -### -- %s 2>&1 | FileCheck %s --check-prefix=CHECK-USE-AFTER-SCOPE
 // CHECK-USE-AFTER-SCOPE: -cc1{{.*}}-fsanitize-address-use-after-scope
@@ -1281,18 +1284,26 @@
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined=xyzzy %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF8
 // CHECK-SKIP-HOT-CUTOFF8: unsupported argument 'undefined=xyzzy' to option '-fsanitize-skip-hot-cutoff='
 
-// Invalid: -fno-sanitize-top without parameters
+// Invalid: -fsanitize-skip-hot-cutoff without parameters
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF9
 // CHECK-SKIP-HOT-CUTOFF9: unknown argument: '-fsanitize-skip-hot-cutoff'
 
-// Invalid: -fno-sanitize-top=undefined without cutoff
+// Invalid: -fsanitize-skip-hot-cutoff=undefined without cutoff
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF10
 // CHECK-SKIP-HOT-CUTOFF10: unsupported argument 'undefined' to option '-fsanitize-skip-hot-cutoff='
 
-// Invalid: -fno-sanitize-top=undefined= without cutoff
+// Invalid: -fsanitize-skip-hot-cutoff=undefined= without cutoff
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined= %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF11
 // CHECK-SKIP-HOT-CUTOFF11: unsupported argument 'undefined=' to option '-fsanitize-skip-hot-cutoff='
 
-// No-op: -fno-sanitize-top= without parameters is unusual but valid
+// No-op: -fsanitize-skip-hot-cutoff= without parameters is unusual but valid
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff= %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF12
 // CHECK-SKIP-HOT-CUTOFF12-NOT: "-fsanitize-skip-hot-cutoff"
+
+// Invalid: out of range cutoff
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined=1.1 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF13
+// CHECK-SKIP-HOT-CUTOFF13: unsupported argument 'undefined=1.1' to option '-fsanitize-skip-hot-cutoff='
+
+// Invalid: out of range cutoff
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined=-0.1 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF14
+// CHECK-SKIP-HOT-CUTOFF14: unsupported argument 'undefined=-0.1' to option '-fsanitize-skip-hot-cutoff='

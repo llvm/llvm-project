@@ -35,48 +35,48 @@
 # NISE-NEXT:  Total uOps:        200
 
 # ISF:        Resources:
-# ISF-NEXT:   [0]   - SiFive7FDiv:1
-# ISF-NEXT:   [1]   - SiFive7IDiv:1
-# ISF-NEXT:   [2]   - SiFive7PipeA:1
-# ISF-NEXT:   [3]   - SiFive7PipeAB:2 SiFive7PipeA, SiFive7PipeB
-# ISF-NEXT:   [4]   - SiFive7PipeB:1
-# ISF-NEXT:   [5]   - SiFive7VA:1
-# ISF-NEXT:   [6]   - SiFive7VCQ:1
-# ISF-NEXT:   [7]   - SiFive7VL:1
-# ISF-NEXT:   [8]   - SiFive7VS:1
+# ISF-NEXT:   [0]   - VLEN512SiFive7FDiv:1
+# ISF-NEXT:   [1]   - VLEN512SiFive7IDiv:1
+# ISF-NEXT:   [2]   - VLEN512SiFive7PipeA:1
+# ISF-NEXT:   [3]   - VLEN512SiFive7PipeAB:2 VLEN512SiFive7PipeA, VLEN512SiFive7PipeB
+# ISF-NEXT:   [4]   - VLEN512SiFive7PipeB:1
+# ISF-NEXT:   [5]   - VLEN512SiFive7VA:1
+# ISF-NEXT:   [6]   - VLEN512SiFive7VCQ:1
+# ISF-NEXT:   [7]   - VLEN512SiFive7VL:1
+# ISF-NEXT:   [8]   - VLEN512SiFive7VS:1
 
 # ISFB:       Resources:
-# ISFB-NEXT:  [0]   - SiFive7FDiv:1
-# ISFB-NEXT:  [1]   - SiFive7IDiv:1
-# ISFB-NEXT:  [2]   - SiFive7PipeA:1
-# ISFB-NEXT:  [3]   - SiFive7PipeAB:2 SiFive7PipeA, SiFive7PipeB
-# ISFB-NEXT:  [4]   - SiFive7PipeB:1
-# ISFB-NEXT:  [5]   - SiFive7VA:1
-# ISFB-NEXT:  [6]   - SiFive7VCQ:1
-# ISFB-NEXT:  [7]   - SiFive7VL:1
-# ISFB-NEXT:  [8]   - SiFive7VS:1
+# ISFB-NEXT:  [0]   - VLEN512SiFive7FDiv:1
+# ISFB-NEXT:  [1]   - VLEN512SiFive7IDiv:1
+# ISFB-NEXT:  [2]   - VLEN512SiFive7PipeA:1
+# ISFB-NEXT:  [3]   - VLEN512SiFive7PipeAB:2 VLEN512SiFive7PipeA, VLEN512SiFive7PipeB
+# ISFB-NEXT:  [4]   - VLEN512SiFive7PipeB:1
+# ISFB-NEXT:  [5]   - VLEN512SiFive7VA:1
+# ISFB-NEXT:  [6]   - VLEN512SiFive7VCQ:1
+# ISFB-NEXT:  [7]   - VLEN512SiFive7VL:1
+# ISFB-NEXT:  [8]   - VLEN512SiFive7VS:1
 
 # ISFBE:      Resources:
-# ISFBE-NEXT: [0]   - SiFive7FDiv:1
-# ISFBE-NEXT: [1]   - SiFive7IDiv:1
-# ISFBE-NEXT: [2]   - SiFive7PipeA:1
-# ISFBE-NEXT: [3]   - SiFive7PipeAB:2 SiFive7PipeA, SiFive7PipeB
-# ISFBE-NEXT: [4]   - SiFive7PipeB:1
-# ISFBE-NEXT: [5]   - SiFive7VA:1
-# ISFBE-NEXT: [6]   - SiFive7VCQ:1
-# ISFBE-NEXT: [7]   - SiFive7VL:1
-# ISFBE-NEXT: [8]   - SiFive7VS:1
+# ISFBE-NEXT: [0]   - VLEN512SiFive7FDiv:1
+# ISFBE-NEXT: [1]   - VLEN512SiFive7IDiv:1
+# ISFBE-NEXT: [2]   - VLEN512SiFive7PipeA:1
+# ISFBE-NEXT: [3]   - VLEN512SiFive7PipeAB:2 VLEN512SiFive7PipeA, VLEN512SiFive7PipeB
+# ISFBE-NEXT: [4]   - VLEN512SiFive7PipeB:1
+# ISFBE-NEXT: [5]   - VLEN512SiFive7VA:1
+# ISFBE-NEXT: [6]   - VLEN512SiFive7VCQ:1
+# ISFBE-NEXT: [7]   - VLEN512SiFive7VL:1
+# ISFBE-NEXT: [8]   - VLEN512SiFive7VS:1
 
 # ISFE:       Resources:
-# ISFE-NEXT:  [0]   - SiFive7FDiv:1
-# ISFE-NEXT:  [1]   - SiFive7IDiv:1
-# ISFE-NEXT:  [2]   - SiFive7PipeA:1
-# ISFE-NEXT:  [3]   - SiFive7PipeAB:2 SiFive7PipeA, SiFive7PipeB
-# ISFE-NEXT:  [4]   - SiFive7PipeB:1
-# ISFE-NEXT:  [5]   - SiFive7VA:1
-# ISFE-NEXT:  [6]   - SiFive7VCQ:1
-# ISFE-NEXT:  [7]   - SiFive7VL:1
-# ISFE-NEXT:  [8]   - SiFive7VS:1
+# ISFE-NEXT:  [0]   - VLEN512SiFive7FDiv:1
+# ISFE-NEXT:  [1]   - VLEN512SiFive7IDiv:1
+# ISFE-NEXT:  [2]   - VLEN512SiFive7PipeA:1
+# ISFE-NEXT:  [3]   - VLEN512SiFive7PipeAB:2 VLEN512SiFive7PipeA, VLEN512SiFive7PipeB
+# ISFE-NEXT:  [4]   - VLEN512SiFive7PipeB:1
+# ISFE-NEXT:  [5]   - VLEN512SiFive7VA:1
+# ISFE-NEXT:  [6]   - VLEN512SiFive7VCQ:1
+# ISFE-NEXT:  [7]   - VLEN512SiFive7VL:1
+# ISFE-NEXT:  [8]   - VLEN512SiFive7VS:1
 
 # ISN:        Instruction Info:
 # ISN-NEXT:   [1]: #uOps
@@ -216,20 +216,20 @@
 # NISE-NEXT:  [7]: Encoding Size
 
 # ISF:        [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
-# ISF-NEXT:    1      3     1.00                  U      1     SiFive7PipeA,SiFive7PipeAB                 VSETVLI                    vsetvli	a3, a2, e16, m1, tu, mu	// Comment
-# ISF-NEXT:    1      4     2.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                      vlm.v	v4, (a1)
+# ISF-NEXT:    1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	a3, a2, e16, m1, tu, mu	// Comment
+# ISF-NEXT:    1      4     2.00    *                    4     VLEN512SiFive7VCQ,VLEN512SiFive7VL[1,3]    VLM_V                      vlm.v	v4, (a1)
 
 # ISFB:       [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        [10]   [11]   Instructions:
-# ISFB-NEXT:   1      3     1.00                  U      1     SiFive7PipeA,SiFive7PipeAB                 VSETVLI                                  vsetvli	a3, a2, e16, m1, tu, mu	// Comment
-# ISFB-NEXT:   1      4     2.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                                    vlm.v	v4, (a1)
+# ISFB-NEXT:   1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                                  vsetvli	a3, a2, e16, m1, tu, mu	// Comment
+# ISFB-NEXT:   1      4     2.00    *                    4     VLEN512SiFive7VCQ,VLEN512SiFive7VL[1,3]    VLM_V                                    vlm.v	v4, (a1)
 
 # ISFBE:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        [10]   [11]   [12]   Encodings:                    Instructions:
-# ISFBE-NEXT:  1      3     1.00                  U      1     SiFive7PipeA,SiFive7PipeAB                 VSETVLI                                   4     d7 76 86 00                   vsetvli	a3, a2, e16, m1, tu, mu	// Comment
-# ISFBE-NEXT:  1      4     2.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                                     4     07 82 b5 02                   vlm.v	v4, (a1)
+# ISFBE-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                                   4     d7 76 86 00                   vsetvli	a3, a2, e16, m1, tu, mu	// Comment
+# ISFBE-NEXT:  1      4     2.00    *                    4     VLEN512SiFive7VCQ,VLEN512SiFive7VL[1,3]    VLM_V                                     4     07 82 b5 02                   vlm.v	v4, (a1)
 
 # ISFE:       [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        [10]   Encodings:                    Instructions:
-# ISFE-NEXT:   1      3     1.00                  U      1     SiFive7PipeA,SiFive7PipeAB                 VSETVLI                     4     d7 76 86 00                   vsetvli	a3, a2, e16, m1, tu, mu	// Comment
-# ISFE-NEXT:   1      4     2.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                       4     07 82 b5 02                   vlm.v	v4, (a1)
+# ISFE-NEXT:   1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                     4     d7 76 86 00                   vsetvli	a3, a2, e16, m1, tu, mu	// Comment
+# ISFE-NEXT:   1      4     2.00    *                    4     VLEN512SiFive7VCQ,VLEN512SiFive7VL[1,3]    VLM_V                       4     07 82 b5 02                   vlm.v	v4, (a1)
 
 # ISNB:       [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    Instructions:
 # ISNB-NEXT:   1      3     1.00                  U                   vsetvli	a3, a2, e16, m1, tu, mu
@@ -256,114 +256,114 @@
 # NISE-NEXT:   1      4     2.00    *                    4     07 82 b5 02                   vlm.v	v4, (a1)
 
 # ISN:        Resources:
-# ISN-NEXT:   [0]   - SiFive7FDiv
-# ISN-NEXT:   [1]   - SiFive7IDiv
-# ISN-NEXT:   [2]   - SiFive7PipeA
-# ISN-NEXT:   [3]   - SiFive7PipeB
-# ISN-NEXT:   [4]   - SiFive7VA
-# ISN-NEXT:   [5]   - SiFive7VCQ
-# ISN-NEXT:   [6]   - SiFive7VL
-# ISN-NEXT:   [7]   - SiFive7VS
+# ISN-NEXT:   [0]   - VLEN512SiFive7FDiv
+# ISN-NEXT:   [1]   - VLEN512SiFive7IDiv
+# ISN-NEXT:   [2]   - VLEN512SiFive7PipeA
+# ISN-NEXT:   [3]   - VLEN512SiFive7PipeB
+# ISN-NEXT:   [4]   - VLEN512SiFive7VA
+# ISN-NEXT:   [5]   - VLEN512SiFive7VCQ
+# ISN-NEXT:   [6]   - VLEN512SiFive7VL
+# ISN-NEXT:   [7]   - VLEN512SiFive7VS
 
 # ISF:        Resources:
-# ISF-NEXT:   [0]   - SiFive7FDiv
-# ISF-NEXT:   [1]   - SiFive7IDiv
-# ISF-NEXT:   [2]   - SiFive7PipeA
-# ISF-NEXT:   [3]   - SiFive7PipeB
-# ISF-NEXT:   [4]   - SiFive7VA
-# ISF-NEXT:   [5]   - SiFive7VCQ
-# ISF-NEXT:   [6]   - SiFive7VL
-# ISF-NEXT:   [7]   - SiFive7VS
+# ISF-NEXT:   [0]   - VLEN512SiFive7FDiv
+# ISF-NEXT:   [1]   - VLEN512SiFive7IDiv
+# ISF-NEXT:   [2]   - VLEN512SiFive7PipeA
+# ISF-NEXT:   [3]   - VLEN512SiFive7PipeB
+# ISF-NEXT:   [4]   - VLEN512SiFive7VA
+# ISF-NEXT:   [5]   - VLEN512SiFive7VCQ
+# ISF-NEXT:   [6]   - VLEN512SiFive7VL
+# ISF-NEXT:   [7]   - VLEN512SiFive7VS
 
 # ISFB:       Resources:
-# ISFB-NEXT:  [0]   - SiFive7FDiv
-# ISFB-NEXT:  [1]   - SiFive7IDiv
-# ISFB-NEXT:  [2]   - SiFive7PipeA
-# ISFB-NEXT:  [3]   - SiFive7PipeB
-# ISFB-NEXT:  [4]   - SiFive7VA
-# ISFB-NEXT:  [5]   - SiFive7VCQ
-# ISFB-NEXT:  [6]   - SiFive7VL
-# ISFB-NEXT:  [7]   - SiFive7VS
+# ISFB-NEXT:  [0]   - VLEN512SiFive7FDiv
+# ISFB-NEXT:  [1]   - VLEN512SiFive7IDiv
+# ISFB-NEXT:  [2]   - VLEN512SiFive7PipeA
+# ISFB-NEXT:  [3]   - VLEN512SiFive7PipeB
+# ISFB-NEXT:  [4]   - VLEN512SiFive7VA
+# ISFB-NEXT:  [5]   - VLEN512SiFive7VCQ
+# ISFB-NEXT:  [6]   - VLEN512SiFive7VL
+# ISFB-NEXT:  [7]   - VLEN512SiFive7VS
 
 # ISFBE:      Resources:
-# ISFBE-NEXT: [0]   - SiFive7FDiv
-# ISFBE-NEXT: [1]   - SiFive7IDiv
-# ISFBE-NEXT: [2]   - SiFive7PipeA
-# ISFBE-NEXT: [3]   - SiFive7PipeB
-# ISFBE-NEXT: [4]   - SiFive7VA
-# ISFBE-NEXT: [5]   - SiFive7VCQ
-# ISFBE-NEXT: [6]   - SiFive7VL
-# ISFBE-NEXT: [7]   - SiFive7VS
+# ISFBE-NEXT: [0]   - VLEN512SiFive7FDiv
+# ISFBE-NEXT: [1]   - VLEN512SiFive7IDiv
+# ISFBE-NEXT: [2]   - VLEN512SiFive7PipeA
+# ISFBE-NEXT: [3]   - VLEN512SiFive7PipeB
+# ISFBE-NEXT: [4]   - VLEN512SiFive7VA
+# ISFBE-NEXT: [5]   - VLEN512SiFive7VCQ
+# ISFBE-NEXT: [6]   - VLEN512SiFive7VL
+# ISFBE-NEXT: [7]   - VLEN512SiFive7VS
 
 # ISFE:       Resources:
-# ISFE-NEXT:  [0]   - SiFive7FDiv
-# ISFE-NEXT:  [1]   - SiFive7IDiv
-# ISFE-NEXT:  [2]   - SiFive7PipeA
-# ISFE-NEXT:  [3]   - SiFive7PipeB
-# ISFE-NEXT:  [4]   - SiFive7VA
-# ISFE-NEXT:  [5]   - SiFive7VCQ
-# ISFE-NEXT:  [6]   - SiFive7VL
-# ISFE-NEXT:  [7]   - SiFive7VS
+# ISFE-NEXT:  [0]   - VLEN512SiFive7FDiv
+# ISFE-NEXT:  [1]   - VLEN512SiFive7IDiv
+# ISFE-NEXT:  [2]   - VLEN512SiFive7PipeA
+# ISFE-NEXT:  [3]   - VLEN512SiFive7PipeB
+# ISFE-NEXT:  [4]   - VLEN512SiFive7VA
+# ISFE-NEXT:  [5]   - VLEN512SiFive7VCQ
+# ISFE-NEXT:  [6]   - VLEN512SiFive7VL
+# ISFE-NEXT:  [7]   - VLEN512SiFive7VS
 
 # ISNB:       Resources:
-# ISNB-NEXT:  [0]   - SiFive7FDiv
-# ISNB-NEXT:  [1]   - SiFive7IDiv
-# ISNB-NEXT:  [2]   - SiFive7PipeA
-# ISNB-NEXT:  [3]   - SiFive7PipeB
-# ISNB-NEXT:  [4]   - SiFive7VA
-# ISNB-NEXT:  [5]   - SiFive7VCQ
-# ISNB-NEXT:  [6]   - SiFive7VL
-# ISNB-NEXT:  [7]   - SiFive7VS
+# ISNB-NEXT:  [0]   - VLEN512SiFive7FDiv
+# ISNB-NEXT:  [1]   - VLEN512SiFive7IDiv
+# ISNB-NEXT:  [2]   - VLEN512SiFive7PipeA
+# ISNB-NEXT:  [3]   - VLEN512SiFive7PipeB
+# ISNB-NEXT:  [4]   - VLEN512SiFive7VA
+# ISNB-NEXT:  [5]   - VLEN512SiFive7VCQ
+# ISNB-NEXT:  [6]   - VLEN512SiFive7VL
+# ISNB-NEXT:  [7]   - VLEN512SiFive7VS
 
 # ISNBE:      Resources:
-# ISNBE-NEXT: [0]   - SiFive7FDiv
-# ISNBE-NEXT: [1]   - SiFive7IDiv
-# ISNBE-NEXT: [2]   - SiFive7PipeA
-# ISNBE-NEXT: [3]   - SiFive7PipeB
-# ISNBE-NEXT: [4]   - SiFive7VA
-# ISNBE-NEXT: [5]   - SiFive7VCQ
-# ISNBE-NEXT: [6]   - SiFive7VL
-# ISNBE-NEXT: [7]   - SiFive7VS
+# ISNBE-NEXT: [0]   - VLEN512SiFive7FDiv
+# ISNBE-NEXT: [1]   - VLEN512SiFive7IDiv
+# ISNBE-NEXT: [2]   - VLEN512SiFive7PipeA
+# ISNBE-NEXT: [3]   - VLEN512SiFive7PipeB
+# ISNBE-NEXT: [4]   - VLEN512SiFive7VA
+# ISNBE-NEXT: [5]   - VLEN512SiFive7VCQ
+# ISNBE-NEXT: [6]   - VLEN512SiFive7VL
+# ISNBE-NEXT: [7]   - VLEN512SiFive7VS
 
 # ISNE:       Resources:
-# ISNE-NEXT:  [0]   - SiFive7FDiv
-# ISNE-NEXT:  [1]   - SiFive7IDiv
-# ISNE-NEXT:  [2]   - SiFive7PipeA
-# ISNE-NEXT:  [3]   - SiFive7PipeB
-# ISNE-NEXT:  [4]   - SiFive7VA
-# ISNE-NEXT:  [5]   - SiFive7VCQ
-# ISNE-NEXT:  [6]   - SiFive7VL
-# ISNE-NEXT:  [7]   - SiFive7VS
+# ISNE-NEXT:  [0]   - VLEN512SiFive7FDiv
+# ISNE-NEXT:  [1]   - VLEN512SiFive7IDiv
+# ISNE-NEXT:  [2]   - VLEN512SiFive7PipeA
+# ISNE-NEXT:  [3]   - VLEN512SiFive7PipeB
+# ISNE-NEXT:  [4]   - VLEN512SiFive7VA
+# ISNE-NEXT:  [5]   - VLEN512SiFive7VCQ
+# ISNE-NEXT:  [6]   - VLEN512SiFive7VL
+# ISNE-NEXT:  [7]   - VLEN512SiFive7VS
 
 # NISB:       Resources:
-# NISB-NEXT:  [0]   - SiFive7FDiv
-# NISB-NEXT:  [1]   - SiFive7IDiv
-# NISB-NEXT:  [2]   - SiFive7PipeA
-# NISB-NEXT:  [3]   - SiFive7PipeB
-# NISB-NEXT:  [4]   - SiFive7VA
-# NISB-NEXT:  [5]   - SiFive7VCQ
-# NISB-NEXT:  [6]   - SiFive7VL
-# NISB-NEXT:  [7]   - SiFive7VS
+# NISB-NEXT:  [0]   - VLEN512SiFive7FDiv
+# NISB-NEXT:  [1]   - VLEN512SiFive7IDiv
+# NISB-NEXT:  [2]   - VLEN512SiFive7PipeA
+# NISB-NEXT:  [3]   - VLEN512SiFive7PipeB
+# NISB-NEXT:  [4]   - VLEN512SiFive7VA
+# NISB-NEXT:  [5]   - VLEN512SiFive7VCQ
+# NISB-NEXT:  [6]   - VLEN512SiFive7VL
+# NISB-NEXT:  [7]   - VLEN512SiFive7VS
 
 # NISBE:      Resources:
-# NISBE-NEXT: [0]   - SiFive7FDiv
-# NISBE-NEXT: [1]   - SiFive7IDiv
-# NISBE-NEXT: [2]   - SiFive7PipeA
-# NISBE-NEXT: [3]   - SiFive7PipeB
-# NISBE-NEXT: [4]   - SiFive7VA
-# NISBE-NEXT: [5]   - SiFive7VCQ
-# NISBE-NEXT: [6]   - SiFive7VL
-# NISBE-NEXT: [7]   - SiFive7VS
+# NISBE-NEXT: [0]   - VLEN512SiFive7FDiv
+# NISBE-NEXT: [1]   - VLEN512SiFive7IDiv
+# NISBE-NEXT: [2]   - VLEN512SiFive7PipeA
+# NISBE-NEXT: [3]   - VLEN512SiFive7PipeB
+# NISBE-NEXT: [4]   - VLEN512SiFive7VA
+# NISBE-NEXT: [5]   - VLEN512SiFive7VCQ
+# NISBE-NEXT: [6]   - VLEN512SiFive7VL
+# NISBE-NEXT: [7]   - VLEN512SiFive7VS
 
 # NISE:       Resources:
-# NISE-NEXT:  [0]   - SiFive7FDiv
-# NISE-NEXT:  [1]   - SiFive7IDiv
-# NISE-NEXT:  [2]   - SiFive7PipeA
-# NISE-NEXT:  [3]   - SiFive7PipeB
-# NISE-NEXT:  [4]   - SiFive7VA
-# NISE-NEXT:  [5]   - SiFive7VCQ
-# NISE-NEXT:  [6]   - SiFive7VL
-# NISE-NEXT:  [7]   - SiFive7VS
+# NISE-NEXT:  [0]   - VLEN512SiFive7FDiv
+# NISE-NEXT:  [1]   - VLEN512SiFive7IDiv
+# NISE-NEXT:  [2]   - VLEN512SiFive7PipeA
+# NISE-NEXT:  [3]   - VLEN512SiFive7PipeB
+# NISE-NEXT:  [4]   - VLEN512SiFive7VA
+# NISE-NEXT:  [5]   - VLEN512SiFive7VCQ
+# NISE-NEXT:  [6]   - VLEN512SiFive7VL
+# NISE-NEXT:  [7]   - VLEN512SiFive7VS
 
 # ISN:        Resource pressure per iteration:
 # ISN-NEXT:   [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]

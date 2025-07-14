@@ -389,8 +389,9 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
       }
       // Otherwise there just wasn't enough space.
       result.resize_for_overwrite(result.capacity() * 2);
-    } else
+    } else {
       break;
+    }
   }
 
   result.truncate(strlen(result.data()));
@@ -938,8 +939,9 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
         (Name.size() == 2 && Name[0] == '.' && Name[1] == '.'))
       return directory_iterator_increment(It);
     It.CurrentEntry.replace_filename(Name, direntType(CurDir));
-  } else
+  } else {
     return directory_iterator_destruct(It);
+  }
 
   return std::error_code();
 }
@@ -1095,14 +1097,14 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     !Stat.st_tag.ft_txtflag && !Stat.st_tag.ft_ccsid &&
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
-      if (auto EC = llvm::enablezOSAutoConversion(ResultFD))
+      if (auto EC = llvm::enableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
         if (auto EC = llvm::setzOSFileTag(ResultFD, CCSID_IBM_1047, true))
           return EC;
       }
     } else {
-      if (auto EC = llvm::disablezOSAutoConversion(ResultFD))
+      if (auto EC = llvm::disableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
         if (auto EC = llvm::setzOSFileTag(ResultFD, FT_BINARY, false))

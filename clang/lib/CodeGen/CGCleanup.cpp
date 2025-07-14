@@ -962,8 +962,8 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
 
       // Append the prepared cleanup prologue from above.
       llvm::BasicBlock *NormalExit = Builder.GetInsertBlock();
-      for (unsigned I = 0, E = InstsToAppend.size(); I != E; ++I)
-        InstsToAppend[I]->insertInto(NormalExit, NormalExit->end());
+      for (llvm::Instruction *Inst : InstsToAppend)
+        Inst->insertInto(NormalExit, NormalExit->end());
 
       // Optimistically hope that any fixups will continue falling through.
       for (unsigned I = FixupDepth, E = EHStack.getNumBranchFixups();
@@ -1118,6 +1118,7 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
 
   // Create the branch.
   llvm::BranchInst *BI = Builder.CreateBr(Dest.getBlock());
+  addInstToCurrentSourceAtom(BI, nullptr);
 
   // Calculate the innermost active normal cleanup.
   EHScopeStack::stable_iterator

@@ -334,11 +334,10 @@ static const RecordRecTy *resolveRecordTypes(const RecordRecTy *T1,
   while (!Stack.empty()) {
     const Record *R = Stack.pop_back_val();
 
-    if (T2->isSubClassOf(R)) {
+    if (T2->isSubClassOf(R))
       CommonSuperClasses.push_back(R);
-    } else {
-      append_range(Stack, make_first_range(R->getDirectSuperClasses()));
-    }
+    else
+      llvm::append_range(Stack, make_first_range(R->getDirectSuperClasses()));
   }
 
   return RecordRecTy::get(T1->getRecordKeeper(), CommonSuperClasses);
@@ -501,7 +500,7 @@ const Init *BitsInit::convertInitializerTo(const RecTy *Ty) const {
   }
 
   if (auto *BRT = dyn_cast<BitsRecTy>(Ty)) {
-    // If the number of bits is right, return it.  Otherwise we need to expand
+    // If the number of bits is right, return it. Otherwise we need to expand
     // or truncate.
     if (getNumBits() != BRT->getNumBits()) return nullptr;
     return this;
@@ -692,18 +691,19 @@ const Init *StringInit::convertInitializerTo(const RecTy *Ty) const {
   return nullptr;
 }
 
-static void ProfileListInit(FoldingSetNodeID &ID, ArrayRef<const Init *> Range,
+static void ProfileListInit(FoldingSetNodeID &ID,
+                            ArrayRef<const Init *> Elements,
                             const RecTy *EltTy) {
-  ID.AddInteger(Range.size());
+  ID.AddInteger(Elements.size());
   ID.AddPointer(EltTy);
 
-  for (const Init *I : Range)
-    ID.AddPointer(I);
+  for (const Init *E : Elements)
+    ID.AddPointer(E);
 }
 
 ListInit::ListInit(ArrayRef<const Init *> Elements, const RecTy *EltTy)
     : TypedInit(IK_ListInit, ListRecTy::get(EltTy)),
-      NumValues(Elements.size()) {
+      NumElements(Elements.size()) {
   llvm::uninitialized_copy(Elements, getTrailingObjects());
 }
 
@@ -729,7 +729,7 @@ const ListInit *ListInit::get(ArrayRef<const Init *> Elements,
 
 void ListInit::Profile(FoldingSetNodeID &ID) const {
   const RecTy *EltTy = cast<ListRecTy>(getType())->getElementType();
-  ProfileListInit(ID, getValues(), EltTy);
+  ProfileListInit(ID, getElements(), EltTy);
 }
 
 const Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
@@ -738,13 +738,13 @@ const Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
 
   if (const auto *LRT = dyn_cast<ListRecTy>(Ty)) {
     SmallVector<const Init *, 8> Elements;
-    Elements.reserve(getValues().size());
+    Elements.reserve(size());
 
     // Verify that all of the elements of the list are subclasses of the
     // appropriate class!
     bool Changed = false;
     const RecTy *ElementType = LRT->getElementType();
-    for (const Init *I : getValues())
+    for (const Init *I : getElements())
       if (const Init *CI = I->convertInitializerTo(ElementType)) {
         Elements.push_back(CI);
         if (CI != I)
@@ -773,7 +773,7 @@ const Init *ListInit::resolveReferences(Resolver &R) const {
   Resolved.reserve(size());
   bool Changed = false;
 
-  for (const Init *CurElt : getValues()) {
+  for (const Init *CurElt : getElements()) {
     const Init *E = CurElt->resolveReferences(R);
     Changed |= E != CurElt;
     Resolved.push_back(E);
@@ -944,9 +944,10 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
   case TAIL:
     if (const auto *LHSl = dyn_cast<ListInit>(LHS)) {
       assert(!LHSl->empty() && "Empty list in tail");
-      // Note the +1.  We can't just pass the result of getValues()
+      // Note the slice(1). We can't just pass the result of getElements()
       // directly.
-      return ListInit::get(LHSl->getValues().slice(1), LHSl->getElementType());
+      return ListInit::get(LHSl->getElements().slice(1),
+                           LHSl->getElementType());
     }
     break;
 
@@ -1012,11 +1013,11 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
           [](const ListInit *List) -> std::optional<std::vector<const Init *>> {
         std::vector<const Init *> Flattened;
         // Concatenate elements of all the inner lists.
-        for (const Init *InnerInit : List->getValues()) {
+        for (const Init *InnerInit : List->getElements()) {
           const auto *InnerList = dyn_cast<ListInit>(InnerInit);
           if (!InnerList)
             return std::nullopt;
-          llvm::append_range(Flattened, InnerList->getValues());
+          llvm::append_range(Flattened, InnerList->getElements());
         };
         return Flattened;
       };
@@ -1116,7 +1117,7 @@ static const StringInit *interleaveStringList(const ListInit *List,
   SmallString<80> Result(Element->getValue());
   StringInit::StringFormat Fmt = StringInit::SF_String;
 
-  for (const Init *Elem : List->getValues().drop_front()) {
+  for (const Init *Elem : List->getElements().drop_front()) {
     Result.append(Delim->getValue());
     const auto *Element = dyn_cast<StringInit>(Elem);
     if (!Element)
@@ -1138,7 +1139,7 @@ static const StringInit *interleaveIntList(const ListInit *List,
     return nullptr;
   SmallString<80> Result(Element->getAsString());
 
-  for (const Init *Elem : List->getValues().drop_front()) {
+  for (const Init *Elem : List->getElements().drop_front()) {
     Result.append(Delim->getValue());
     const auto *Element = dyn_cast_or_null<IntInit>(
         Elem->convertInitializerTo(IntRecTy::get(RK)));
@@ -1309,7 +1310,7 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
       SmallVector<std::pair<const Init *, const StringInit *>, 8> Args;
       llvm::append_range(Args, LHSs->getArgAndNames());
       llvm::append_range(Args, RHSs->getArgAndNames());
-      return DagInit::get(Op, nullptr, Args);
+      return DagInit::get(Op, Args);
     }
     break;
   }
@@ -1504,7 +1505,7 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
     const auto *Dag = dyn_cast<DagInit>(LHS);
     const auto *Op = dyn_cast<DefInit>(RHS);
     if (Dag && Op)
-      return DagInit::get(Op, nullptr, Dag->getArgs(), Dag->getArgNames());
+      return DagInit::get(Op, Dag->getArgs(), Dag->getArgNames());
     break;
   }
   case ADD:
@@ -1556,8 +1557,7 @@ unresolved:
 }
 
 const Init *BinOpInit::resolveReferences(Resolver &R) const {
-  const Init *lhs = LHS->resolveReferences(R);
-  const Init *rhs = RHS->resolveReferences(R);
+  const Init *NewLHS = LHS->resolveReferences(R);
 
   unsigned Opc = getOpcode();
   if (Opc == AND || Opc == OR) {
@@ -1569,15 +1569,17 @@ const Init *BinOpInit::resolveReferences(Resolver &R) const {
     // limited version of short-circuit against all ones (`true` is casted
     // to 1 rather than all ones before we evaluate `!or`).
     if (const auto *LHSi = dyn_cast_or_null<IntInit>(
-            lhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+            NewLHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
       if ((Opc == AND && !LHSi->getValue()) ||
           (Opc == OR && LHSi->getValue() == -1))
         return LHSi;
     }
   }
 
-  if (LHS != lhs || RHS != rhs)
-    return (BinOpInit::get(getOpcode(), lhs, rhs, getType()))
+  const Init *NewRHS = RHS->resolveReferences(R);
+
+  if (LHS != NewLHS || RHS != NewRHS)
+    return (BinOpInit::get(getOpcode(), NewLHS, NewRHS, getType()))
         ->Fold(R.getCurrentRecord());
   return this;
 }
@@ -1687,7 +1689,7 @@ static const Init *ForeachDagApply(const Init *LHS, const DagInit *MHSd,
   }
 
   if (Change)
-    return DagInit::get(Val, nullptr, NewArgs);
+    return DagInit::get(Val, MHSd->getName(), NewArgs);
   return MHSd;
 }
 
@@ -1720,7 +1722,7 @@ static const Init *FilterHelper(const Init *LHS, const Init *MHS,
   if (const auto *MHSl = dyn_cast<ListInit>(MHS)) {
     SmallVector<const Init *, 8> NewList;
 
-    for (const Init *Item : MHSl->getValues()) {
+    for (const Init *Item : MHSl->getElements()) {
       const Init *Include = ItemApply(LHS, Item, RHS, CurRec);
       if (!Include)
         return nullptr;
@@ -1825,7 +1827,7 @@ const Init *TernOpInit::Fold(const Record *CurRec) const {
           return this;
         Children.emplace_back(Node, dyn_cast<StringInit>(Name));
       }
-      return DagInit::get(LHS, nullptr, Children);
+      return DagInit::get(LHS, Children);
     }
     break;
   }
@@ -2733,11 +2735,8 @@ const DagInit *DagInit::get(const Init *V, const StringInit *VN,
 const DagInit *DagInit::get(
     const Init *V, const StringInit *VN,
     ArrayRef<std::pair<const Init *, const StringInit *>> ArgAndNames) {
-  SmallVector<const Init *, 8> Args;
-  SmallVector<const StringInit *, 8> Names;
-
-  llvm::append_range(Args, make_first_range(ArgAndNames));
-  llvm::append_range(Names, make_second_range(ArgAndNames));
+  SmallVector<const Init *, 8> Args(make_first_range(ArgAndNames));
+  SmallVector<const StringInit *, 8> Names(make_second_range(ArgAndNames));
   return DagInit::get(V, VN, Args, Names);
 }
 
@@ -2788,7 +2787,7 @@ bool DagInit::isConcrete() const {
 std::string DagInit::getAsString() const {
   std::string Result = "(" + Val->getAsString();
   if (ValName)
-    Result += ":" + ValName->getAsUnquotedString();
+    Result += ":$" + ValName->getAsUnquotedString();
   if (!arg_empty()) {
     Result += " ";
     ListSeparator LS;
@@ -2901,8 +2900,8 @@ void Record::checkName() {
 }
 
 const RecordRecTy *Record::getType() const {
-  SmallVector<const Record *, 4> DirectSCs;
-  append_range(DirectSCs, make_first_range(getDirectSuperClasses()));
+  SmallVector<const Record *> DirectSCs(
+      make_first_range(getDirectSuperClasses()));
   return RecordRecTy::get(TrackedRecords, DirectSCs);
 }
 
@@ -2922,16 +2921,16 @@ void Record::setName(const Init *NewName) {
   Name = NewName;
   checkName();
   // DO NOT resolve record values to the name at this point because
-  // there might be default values for arguments of this def.  Those
+  // there might be default values for arguments of this def. Those
   // arguments might not have been resolved yet so we don't want to
   // prematurely assume values for those arguments were not passed to
   // this def.
   //
   // Nonetheless, it may be that some of this Record's values
-  // reference the record name.  Indeed, the reason for having the
-  // record name be an Init is to provide this flexibility.  The extra
+  // reference the record name. Indeed, the reason for having the
+  // record name be an Init is to provide this flexibility. The extra
   // resolve steps after completely instantiating defs takes care of
-  // this.  See TGParser::ParseDef and TGParser::ParseDefm.
+  // this. See TGParser::ParseDef and TGParser::ParseDefm.
 }
 
 void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
@@ -3092,7 +3091,7 @@ std::vector<const Record *>
 Record::getValueAsListOfDefs(StringRef FieldName) const {
   const ListInit *List = getValueAsListInit(FieldName);
   std::vector<const Record *> Defs;
-  for (const Init *I : List->getValues()) {
+  for (const Init *I : List->getElements()) {
     if (const auto *DI = dyn_cast<DefInit>(I))
       Defs.push_back(DI->getDef());
     else
@@ -3121,7 +3120,7 @@ std::vector<int64_t>
 Record::getValueAsListOfInts(StringRef FieldName) const {
   const ListInit *List = getValueAsListInit(FieldName);
   std::vector<int64_t> Ints;
-  for (const Init *I : List->getValues()) {
+  for (const Init *I : List->getElements()) {
     if (const auto *II = dyn_cast<IntInit>(I))
       Ints.push_back(II->getValue());
     else
@@ -3137,7 +3136,7 @@ std::vector<StringRef>
 Record::getValueAsListOfStrings(StringRef FieldName) const {
   const ListInit *List = getValueAsListInit(FieldName);
   std::vector<StringRef> Strings;
-  for (const Init *I : List->getValues()) {
+  for (const Init *I : List->getElements()) {
     if (const auto *SI = dyn_cast<StringInit>(I))
       Strings.push_back(SI->getValue());
     else

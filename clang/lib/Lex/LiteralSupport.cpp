@@ -1420,7 +1420,7 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
   }
 
   // Parse a potential octal literal prefix.
-  bool SawOctalPrefix = false, IsSingleZero = false;
+  bool IsSingleZero = false;
   if ((c1 == 'O' || c1 == 'o') && (s[1] >= '0' && s[1] <= '7')) {
     unsigned DiagId;
     if (LangOpts.C2y)
@@ -1432,14 +1432,26 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
     Diags.Report(TokLoc, DiagId);
     ++s;
     DigitsBegin = s;
-    SawOctalPrefix = true;
+    radix = 8;
+    s = SkipOctalDigits(s);
+    if (s == ThisTokEnd) {
+      // Done
+    } else if ((isHexDigit(*s) && *s != 'e' && *s != 'E' && *s != '.') &&
+               !isValidUDSuffix(LangOpts, StringRef(s, ThisTokEnd - s))) {
+      auto InvalidDigitLoc = Lexer::AdvanceToTokenCharacter(
+          TokLoc, s - ThisTokBegin, SM, LangOpts);
+      Diags.Report(InvalidDigitLoc, diag::err_invalid_digit)
+          << StringRef(s, 1) << 1;
+      hadError = true;
+    }
+    // Other suffixes will be diagnosed by the caller.
+    return;
   }
 
   auto _ = llvm::make_scope_exit([&] {
     // If we still have an octal value but we did not see an octal prefix,
     // diagnose as being an obsolescent feature starting in C2y.
-    if (radix == 8 && LangOpts.C2y && !SawOctalPrefix && !hadError &&
-        !IsSingleZero)
+    if (radix == 8 && LangOpts.C2y && !hadError && !IsSingleZero)
       Diags.Report(TokLoc, diag::warn_unprefixed_octal_deprecated);
   });
 

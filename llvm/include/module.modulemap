@@ -125,6 +125,13 @@ module LLVM_DebugInfo_DWARF {
   module * { export * }
 }
 
+module LLVM_DebugInfo_DWARF_LowLevel {
+  requires cplusplus
+
+  umbrella "llvm/DebugInfo/DWARF/LowLevel"
+  module * { export * }
+}
+
 module LLVM_DebugInfo_PDB {
   requires cplusplus
 
@@ -178,9 +185,10 @@ module LLVM_DebugInfo_CodeView {
   module * { export * }
 
   // These are intended for (repeated) textual inclusion.
+  textual header "llvm/DebugInfo/CodeView/CodeViewLanguages.def"
   textual header "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
-  textual header "llvm/DebugInfo/CodeView/CodeViewTypes.def"
   textual header "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
+  textual header "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 }
 
 module LLVM_DWARFLinker {
@@ -267,7 +275,6 @@ module LLVM_IR {
   textual header "llvm/IR/FixedMetadataKinds.def"
   textual header "llvm/IR/Value.def"
   textual header "llvm/IR/VPIntrinsics.def"
-  textual header "llvm/IR/RuntimeLibcalls.def"
 }
 
 module LLVM_IRReader {

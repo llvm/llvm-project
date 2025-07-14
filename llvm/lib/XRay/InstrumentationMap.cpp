@@ -24,7 +24,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <system_error>

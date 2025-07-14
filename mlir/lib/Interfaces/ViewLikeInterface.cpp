@@ -27,9 +27,7 @@ LogicalResult mlir::verifyListOfOperandsOrIntegers(Operation *op,
     return op->emitError("expected ") << numElements << " " << name
                                       << " values, got " << staticVals.size();
   unsigned expectedNumDynamicEntries =
-      llvm::count_if(staticVals, [](int64_t staticVal) {
-        return ShapedType::isDynamic(staticVal);
-      });
+      llvm::count_if(staticVals, ShapedType::isDynamic);
   if (values.size() != expectedNumDynamicEntries)
     return op->emitError("expected ")
            << expectedNumDynamicEntries << " dynamic " << name << " values";
@@ -126,12 +124,12 @@ mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
     return failure();
 
   for (int64_t offset : op.getStaticOffsets()) {
-    if (offset < 0 && !ShapedType::isDynamic(offset))
+    if (offset < 0 && ShapedType::isStatic(offset))
       return op->emitError("expected offsets to be non-negative, but got ")
              << offset;
   }
   for (int64_t size : op.getStaticSizes()) {
-    if (size < 0 && !ShapedType::isDynamic(size))
+    if (size < 0 && ShapedType::isStatic(size))
       return op->emitError("expected sizes to be non-negative, but got ")
              << size;
   }
@@ -270,5 +268,5 @@ bool mlir::detail::sameOffsetsSizesAndStrides(
 unsigned mlir::detail::getNumDynamicEntriesUpToIdx(ArrayRef<int64_t> staticVals,
                                                    unsigned idx) {
   return std::count_if(staticVals.begin(), staticVals.begin() + idx,
-                       [&](int64_t val) { return ShapedType::isDynamic(val); });
+                       ShapedType::isDynamic);
 }

@@ -17,6 +17,7 @@
 #include "CGOpenCLRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
@@ -126,7 +127,7 @@ static std::string getBlockDescriptorName(const CGBlockInfo &BlockInfo,
         CGM.getContext().getObjCEncodingForBlock(BlockInfo.getBlockExpr());
     /// Replace occurrences of '@' with '\1'. '@' is reserved on ELF platforms
     /// as a separator between symbol name and symbol version.
-    std::replace(TypeAtEncoding.begin(), TypeAtEncoding.end(), '@', '\1');
+    llvm::replace(TypeAtEncoding, '@', '\1');
   }
   Name += "e" + llvm::to_string(TypeAtEncoding.size()) + "_" + TypeAtEncoding;
   Name += "l" + CGM.getObjCRuntime().getRCBlockLayoutStr(CGM, BlockInfo);
@@ -1414,10 +1415,10 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   // Arrange for local static and local extern declarations to appear
   // to be local to this function as well, in case they're directly
   // referenced in a block.
-  for (DeclMapTy::const_iterator i = ldm.begin(), e = ldm.end(); i != e; ++i) {
-    const auto *var = dyn_cast<VarDecl>(i->first);
+  for (const auto &KV : ldm) {
+    const auto *var = dyn_cast<VarDecl>(KV.first);
     if (var && !var->hasLocalStorage())
-      setAddrOfLocalVar(var, i->second);
+      setAddrOfLocalVar(var, KV.second);
   }
 
   // Begin building the function declaration.
@@ -1522,7 +1523,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   if (IsLambdaConversionToBlock)
     EmitLambdaBlockInvokeBody();
   else {
-    PGO.assignRegionCounters(GlobalDecl(blockDecl), fn);
+    PGO->assignRegionCounters(GlobalDecl(blockDecl), fn);
     incrementProfileCounter(blockDecl->getBody());
     EmitStmt(blockDecl->getBody());
   }

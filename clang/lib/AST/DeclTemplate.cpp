@@ -33,7 +33,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <memory>
 #include <optional>
 #include <utility>
 
@@ -359,7 +358,6 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
 
   ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
                                               OnlyPartial);
-  return;
 }
 
 bool RedeclarableTemplateDecl::loadLazySpecializationsImpl(
@@ -671,7 +669,7 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   CommonPtr->InjectedClassNameType =
       Context.getTemplateSpecializationType(Name,
                                             /*SpecifiedArgs=*/TemplateArgs,
-                                            /*CanonicalArgs=*/std::nullopt);
+                                            /*CanonicalArgs=*/{});
   return CommonPtr->InjectedClassNameType;
 }
 
@@ -755,7 +753,7 @@ void TemplateTypeParmDecl::setTypeConstraint(
          "call setTypeConstraint");
   assert(!TypeConstraintInitialized &&
          "TypeConstraint was already initialized!");
-  new (getTrailingObjects<TypeConstraint>())
+  new (getTrailingObjects())
       TypeConstraint(Loc, ImmediatelyDeclaredConstraint, ArgPackSubstIndex);
   TypeConstraintInitialized = true;
 }
@@ -880,8 +878,7 @@ TemplateTemplateParmDecl::TemplateTemplateParmDecl(
     : TemplateDecl(TemplateTemplateParm, DC, L, Id, Params),
       TemplateParmPosition(D, P), Typename(Typename), ParameterPack(true),
       ExpandedParameterPack(true), NumExpandedParams(Expansions.size()) {
-  llvm::uninitialized_copy(Expansions,
-                           getTrailingObjects<TemplateParameterList *>());
+  llvm::uninitialized_copy(Expansions, getTrailingObjects());
 }
 
 TemplateTemplateParmDecl *
@@ -939,7 +936,7 @@ void TemplateTemplateParmDecl::setDefaultArgument(
 //===----------------------------------------------------------------------===//
 TemplateArgumentList::TemplateArgumentList(ArrayRef<TemplateArgument> Args)
     : NumArguments(Args.size()) {
-  llvm::uninitialized_copy(Args, getTrailingObjects<TemplateArgument>());
+  llvm::uninitialized_copy(Args, getTrailingObjects());
 }
 
 TemplateArgumentList *
@@ -1166,7 +1163,7 @@ ImplicitConceptSpecializationDecl::CreateDeserialized(
 void ImplicitConceptSpecializationDecl::setTemplateArguments(
     ArrayRef<TemplateArgument> Converted) {
   assert(Converted.size() == NumTemplateArgs);
-  llvm::uninitialized_copy(Converted, getTrailingObjects<TemplateArgument>());
+  llvm::uninitialized_copy(Converted, getTrailingObjects());
 }
 
 //===----------------------------------------------------------------------===//

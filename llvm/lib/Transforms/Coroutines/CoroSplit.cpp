@@ -42,6 +42,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -302,7 +303,7 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
 }
 
 // Mark a coroutine as done, which implies that the coroutine is finished and
-// never get resumed.
+// never gets resumed.
 //
 // In resume-switched ABI, the done state is represented by storing zero in
 // ResumeFnAddr.
@@ -703,6 +704,7 @@ void coro::BaseCloner::replaceEntryBlock() {
     auto *SwitchBB =
         cast<BasicBlock>(VMap[Shape.SwitchLowering.ResumeEntryBlock]);
     Builder.CreateBr(SwitchBB);
+    SwitchBB->moveAfter(Entry);
     break;
   }
   case coro::ABI::Async:
@@ -912,29 +914,14 @@ void coro::BaseCloner::create() {
     assert(SP != OrigF.getSubprogram() && SP->isDistinct());
     updateScopeLine(ActiveSuspend, *SP);
 
-    // Update the linkage name to reflect the modified symbol name. It
-    // is necessary to update the linkage name in Swift, since the
-    // mangling changes for resume functions. It might also be the
-    // right thing to do in C++, but due to a limitation in LLVM's
-    // AsmPrinter we can only do this if the function doesn't have an
-    // abstract specification, since the DWARF backend expects the
-    // abstract specification to contain the linkage name and asserts
-    // that they are identical.
-    if (SP->getUnit() &&
-        SP->getUnit()->getSourceLanguage() == dwarf::DW_LANG_Swift) {
-      SP->replaceLinkageName(MDString::get(Context, NewF->getName()));
-      if (auto *Decl = SP->getDeclaration()) {
-        auto *NewDecl = DISubprogram::get(
-            Decl->getContext(), Decl->getScope(), Decl->getName(),
-            NewF->getName(), Decl->getFile(), Decl->getLine(), Decl->getType(),
-            Decl->getScopeLine(), Decl->getContainingType(),
-            Decl->getVirtualIndex(), Decl->getThisAdjustment(),
-            Decl->getFlags(), Decl->getSPFlags(), Decl->getUnit(),
-            Decl->getTemplateParams(), nullptr, Decl->getRetainedNodes(),
-            Decl->getThrownTypes(), Decl->getAnnotations(),
-            Decl->getTargetFuncName());
-        SP->replaceDeclaration(NewDecl);
-      }
+    // Update the linkage name and the function name to reflect the modified
+    // name.
+    MDString *NewLinkageName = MDString::get(Context, NewF->getName());
+    SP->replaceLinkageName(NewLinkageName);
+    if (DISubprogram *Decl = SP->getDeclaration()) {
+      TempDISubprogram NewDecl = Decl->clone();
+      NewDecl->replaceLinkageName(NewLinkageName);
+      SP->replaceDeclaration(MDNode::replaceWithUniqued(std::move(NewDecl)));
     }
   }
 
@@ -1492,6 +1479,15 @@ private:
   static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
     LLVMContext &C = F.getContext();
 
+    DIBuilder DBuilder(*F.getParent(), /*AllowUnresolved*/ false);
+    DISubprogram *DIS = F.getSubprogram();
+    // If there is no DISubprogram for F, it implies the function is compiled
+    // without debug info. So we also don't generate debug info for the
+    // suspension points.
+    bool AddDebugLabels = DIS && DIS->getUnit() &&
+                          (DIS->getUnit()->getEmissionKind() ==
+                           DICompileUnit::DebugEmissionKind::FullDebug);
+
     // resume.entry:
     //  %index.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32
     //  0, i32 2 % index = load i32, i32* %index.addr switch i32 %index, label
@@ -1514,6 +1510,7 @@ private:
         Builder.CreateSwitch(Index, UnreachBB, Shape.CoroSuspends.size());
     Shape.SwitchLowering.ResumeSwitch = Switch;
 
+    // Split all coro.suspend calls
     size_t SuspendIndex = 0;
     for (auto *AnyS : Shape.CoroSuspends) {
       auto *S = cast<CoroSuspendInst>(AnyS);
@@ -1552,6 +1549,7 @@ private:
       //     br label %resume.0.landing
       //
       //  resume.0: ; <--- jump from the switch in the resume.entry
+      //        #dbg_label(...)  ; <--- artificial label for debuggers
       //     %0 = tail call i8 @llvm.coro.suspend(token none, i1 false)
       //     br label %resume.0.landing
       //
@@ -1574,11 +1572,27 @@ private:
       PN->addIncoming(Builder.getInt8(-1), SuspendBB);
       PN->addIncoming(S, ResumeBB);
 
+      if (AddDebugLabels) {
+        if (DebugLoc SuspendLoc = S->getDebugLoc()) {
+          std::string LabelName =
+              ("__coro_resume_" + Twine(SuspendIndex)).str();
+          DILocation &DILoc = *SuspendLoc.get();
+          DILabel *ResumeLabel =
+              DBuilder.createLabel(DIS, LabelName, DILoc.getFile(),
+                                   SuspendLoc.getLine(), SuspendLoc.getCol(),
+                                   /*IsArtificial=*/true,
+                                   /*CoroSuspendIdx=*/SuspendIndex,
+                                   /*AlwaysPreserve=*/false);
+          DBuilder.insertLabel(ResumeLabel, &DILoc, ResumeBB->begin());
+        }
+      }
+
       ++SuspendIndex;
     }
 
     Builder.SetInsertPoint(UnreachBB);
     Builder.CreateUnreachable();
+    DBuilder.finalize();
 
     Shape.SwitchLowering.ResumeEntryBlock = NewEntry;
   }
