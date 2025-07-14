@@ -520,12 +520,10 @@ public:
         cgf, cgf.getLoc(e->getSourceRange())};
 
     // Store the updated result through the lvalue
-    if (lv.isBitField()) {
-      cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec bitfield");
-      return {};
-    } else {
+    if (lv.isBitField())
+      return cgf.emitStoreThroughBitfieldLValue(RValue::get(value), lv);
+    else
       cgf.emitStoreThroughLValue(RValue::get(value), lv);
-    }
 
     // If this is a postinc, return the value read from memory, otherwise use
     // the updated value.
