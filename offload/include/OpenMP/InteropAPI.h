@@ -51,7 +51,7 @@ struct interop_flags_t {
 };
 
 struct interop_ctx_t {
-  uint16_t version; // version of the interface (current is 0)
+  uint32_t version; // version of the interface (current is 0)
   interop_flags_t flags;
   int gtid;
 };
