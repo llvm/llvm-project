@@ -308,7 +308,7 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
     return InstructionCost::getInvalid();
 
   // We support both the plain dot product idiom, and the use of dotproduct
-  // to compute a a reduction of an extended value.
+  // to compute a reduction of an extended value.
   if (BinOp && (*BinOp != Instruction::Mul || InputTypeA != InputTypeB))
     return InstructionCost::getInvalid();
 
