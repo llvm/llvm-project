@@ -202,12 +202,10 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
   if (TT.isOSWindows() && !TT.isOSCygMing()) {
     setLibcallImpl(RTLIB::LDEXP_F32, RTLIB::Unsupported);
     setLibcallImpl(RTLIB::LDEXP_F80, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::LDEXP_F128, RTLIB::Unsupported);
     setLibcallImpl(RTLIB::LDEXP_PPCF128, RTLIB::Unsupported);
 
     setLibcallImpl(RTLIB::FREXP_F32, RTLIB::Unsupported);
     setLibcallImpl(RTLIB::FREXP_F80, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::FREXP_F128, RTLIB::Unsupported);
     setLibcallImpl(RTLIB::FREXP_PPCF128, RTLIB::Unsupported);
   }
 

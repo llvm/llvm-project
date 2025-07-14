@@ -147,4 +147,17 @@ entry:
   ret half %0
 }
 
+define fp128 @testExpf128(fp128 %val, i32 %a) {
+; SVE-LABEL: testExpf128:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    b ldexpl
+;
+; WINDOWS-LABEL: testExpf128:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    b ldexpl
+entry:
+  %ldexp = call fp128 @llvm.ldexp.f128.i32(fp128 %val, i32 %a)
+  ret fp128 %ldexp
+}
+
 declare half @llvm.ldexp.f16.i32(half, i32) memory(none)
