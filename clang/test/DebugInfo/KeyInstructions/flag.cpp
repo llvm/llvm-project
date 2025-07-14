@@ -3,6 +3,10 @@
 //// Default: Off.
 // RUN: %clang -### -target x86_64 -c -gdwarf %s 2>&1 | FileCheck %s --check-prefixes=NO-KEY-INSTRUCTIONS
 
+//// Help.
+// RUN %clang --help | FileCheck %s --check-prefix=HELP
+// HELP: -gkey-instructions  Enable Key Instructions, which reduces the jumpiness of debug stepping in optimized C/C++ code in some debuggers. DWARF only. Implies -g.
+
 // KEY-INSTRUCTIONS: "-gkey-instructions"
 // NO-KEY-INSTRUCTIONS-NOT: key-instructions
 
