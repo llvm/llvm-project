@@ -62,6 +62,12 @@ public:
       return F((const LLVMContext *)nullptr);
   }
 
+  /// Get a raw pointer to the contained context without locking the context.
+  LLVMContext *getContextUnlocked() { return S->Ctx.get(); }
+
+  /// Get a raw pointer to the contained context without locking the context.
+  const LLVMContext *getContextUnlocked() const { return S->Ctx.get(); }
+
 private:
   std::shared_ptr<State> S;
 };
@@ -154,6 +160,10 @@ using GVPredicate = std::function<bool(const GlobalValue &)>;
 using GVModifier = std::function<void(GlobalValue &)>;
 
 /// Clones teh given module onto the given context.
+LLVM_ABI ThreadSafeModule
+cloneToContext(const Module &M, ThreadSafeContext TSCtx,
+               GVPredicate ShouldCloneDef = GVPredicate(),
+               GVModifier UpdateClonedDefSource = GVModifier());
 LLVM_ABI ThreadSafeModule
 cloneToContext(const ThreadSafeModule &TSMW, ThreadSafeContext TSCtx,
                GVPredicate ShouldCloneDef = GVPredicate(),
