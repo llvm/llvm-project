@@ -13,7 +13,9 @@
 
 #include <__log_hardening_failure>
 
-static_assert(noexcept(std::__log_hardening_failure("")));
+#include "test_macros.h"
+
+ASSERT_NOEXCEPT(std::__log_hardening_failure(""));
 
 int main(int, char**) {
   std::__log_hardening_failure("Some message");
