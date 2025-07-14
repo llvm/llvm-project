@@ -2252,7 +2252,7 @@ void Parser::ParseBaseClause(Decl *ClassDecl) {
   while (true) {
     // Parse a base-specifier.
     BaseResult Result = ParseBaseSpecifier(ClassDecl);
-    if (Result.isInvalid()) {
+    if (!Result.isUsable()) {
       // Skip the rest of this base specifier, up until the comma or
       // opening brace.
       SkipUntil(tok::comma, tok::l_brace, StopAtSemi | StopBeforeMatch);
@@ -4969,7 +4969,7 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   // signature string and construct the in-memory elements
   if (!Found) {
     // Invoke the root signature parser to construct the in-memory constructs
-    SmallVector<llvm::hlsl::rootsig::RootElement> RootElements;
+    SmallVector<hlsl::RootSignatureElement> RootElements;
     hlsl::RootSignatureParser Parser(getLangOpts().HLSLRootSigVer, RootElements,
                                      Signature, PP);
     if (Parser.parse()) {

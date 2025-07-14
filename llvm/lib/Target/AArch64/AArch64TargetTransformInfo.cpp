@@ -2723,6 +2723,16 @@ static std::optional<Instruction *> instCombineSVEUxt(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *>
+instCombineInStreamingMode(InstCombiner &IC, IntrinsicInst &II) {
+  SMEAttrs FnSMEAttrs(*II.getFunction());
+  bool IsStreaming = FnSMEAttrs.hasStreamingInterfaceOrBody();
+  if (IsStreaming || !FnSMEAttrs.hasStreamingCompatibleInterface())
+    return IC.replaceInstUsesWith(
+        II, ConstantInt::getBool(II.getType(), IsStreaming));
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -2828,6 +2838,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEUxt(IC, II, 16);
   case Intrinsic::aarch64_sve_uxtw:
     return instCombineSVEUxt(IC, II, 32);
+  case Intrinsic::aarch64_sme_in_streaming_mode:
+    return instCombineInStreamingMode(IC, II);
   }
 
   return std::nullopt;
@@ -4264,14 +4276,9 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
     TTI::OperandValueInfo Op2Info, const Instruction *I) const {
-  // TODO: Handle other cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     Op1Info, Op2Info, I);
-
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // We don't lower some vector selects well that are wider than the register
-  // width.
+  // width. TODO: Improve this with different cost kinds.
   if (isa<FixedVectorType>(ValTy) && ISD == ISD::SELECT) {
     // We would need this many instructions to hide the scalarization happening.
     const int AmortizationCost = 20;
@@ -4355,9 +4362,10 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
 
   // Treat the icmp in icmp(and, 0) or icmp(and, -1/1) when it can be folded to
   // icmp(and, 0) as free, as we can make use of ands, but only if the
-  // comparison is not unsigned.
-  if (ValTy->isIntegerTy() && ISD == ISD::SETCC && I &&
-      !CmpInst::isUnsigned(VecPred) &&
+  // comparison is not unsigned. FIXME: Enable for non-throughput cost kinds
+  // providing it will not cause performance regressions.
+  if (CostKind == TTI::TCK_RecipThroughput && ValTy->isIntegerTy() &&
+      ISD == ISD::SETCC && I && !CmpInst::isUnsigned(VecPred) &&
       TLI->isTypeLegal(TLI->getValueType(DL, ValTy)) &&
       match(I->getOperand(0), m_And(m_Value(), m_Value()))) {
     if (match(I->getOperand(1), m_Zero()))
@@ -4898,15 +4906,14 @@ void AArch64TTIImpl::getUnrollingPreferences(
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
+  // No need to unroll auto-vectorized loops
+  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+    return;
+
   // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining. Don't unroll vector loops either, as they don't benefit much from
-  // unrolling.
+  // inlining.
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
-      // Don't unroll vectorised loop.
-      if (I.getType()->isVectorTy())
-        return;
-
       if (isa<CallBase>(I)) {
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
           if (const Function *F = cast<CallBase>(I).getCalledFunction())
@@ -5209,6 +5216,7 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       {ISD::ADD, MVT::v16i8,  2},
       {ISD::ADD, MVT::v4i16,  2},
       {ISD::ADD, MVT::v8i16,  2},
+      {ISD::ADD, MVT::v2i32,  2},
       {ISD::ADD, MVT::v4i32,  2},
       {ISD::ADD, MVT::v2i64,  2},
       {ISD::OR,  MVT::v8i8,  15},

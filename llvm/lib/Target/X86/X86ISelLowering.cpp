@@ -4975,6 +4975,16 @@ X86TargetLowering::getTargetConstantFromLoad(LoadSDNode *LD) const {
   return getTargetConstantFromNode(LD);
 }
 
+bool X86TargetLowering::isTargetCanonicalSelect(SDNode *N) const {
+  // Do not fold (vselect not(C), X, 0s) to (vselect C, Os, X)
+  SDValue Cond = N->getOperand(0);
+  SDValue RHS = N->getOperand(2);
+  EVT CondVT = Cond.getValueType();
+  return N->getOpcode() == ISD::VSELECT && Subtarget.hasAVX512() &&
+         CondVT.getVectorElementType() == MVT::i1 &&
+         ISD::isBuildVectorAllZeros(RHS.getNode());
+}
+
 // Extract raw constant bits from constant pools.
 static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
                                           APInt &UndefElts,
@@ -53574,6 +53584,10 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
 
     SDLoc LdDL(Ld);
     SDLoc StDL(N);
+
+    // Remove any range metadata as we're converting to f64 load/store.
+    Ld->getMemOperand()->clearRanges();
+
     // Lower to a single movq load/store pair.
     SDValue NewLd = DAG.getLoad(MVT::f64, LdDL, Ld->getChain(),
                                 Ld->getBasePtr(), Ld->getMemOperand());
@@ -57872,22 +57886,20 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  SDValue X, Y;
+
   // add(psadbw(X,0),psadbw(Y,0)) -> psadbw(add(X,Y),0)
   // iff X and Y won't overflow.
-  if (Op0.getOpcode() == X86ISD::PSADBW && Op1.getOpcode() == X86ISD::PSADBW &&
-      ISD::isBuildVectorAllZeros(Op0.getOperand(1).getNode()) &&
-      ISD::isBuildVectorAllZeros(Op1.getOperand(1).getNode())) {
-    if (DAG.willNotOverflowAdd(false, Op0.getOperand(0), Op1.getOperand(0))) {
-      MVT OpVT = Op0.getOperand(1).getSimpleValueType();
-      SDValue Sum =
-          DAG.getNode(ISD::ADD, DL, OpVT, Op0.getOperand(0), Op1.getOperand(0));
-      return DAG.getNode(X86ISD::PSADBW, DL, VT, Sum,
-                         getZeroVector(OpVT, Subtarget, DAG, DL));
-    }
+  if (sd_match(Op0, m_c_BinOp(X86ISD::PSADBW, m_Value(X), m_Zero())) &&
+      sd_match(Op1, m_c_BinOp(X86ISD::PSADBW, m_Value(Y), m_Zero())) &&
+      DAG.willNotOverflowAdd(/*IsSigned=*/false, X, Y)) {
+    MVT OpVT = X.getSimpleValueType();
+    SDValue Sum = DAG.getNode(ISD::ADD, DL, OpVT, X, Y);
+    return DAG.getNode(X86ISD::PSADBW, DL, VT, Sum,
+                       getZeroVector(OpVT, Subtarget, DAG, DL));
   }
 
   if (VT.isVector()) {
-    SDValue X, Y;
     EVT BoolVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
                                   VT.getVectorElementCount());
 

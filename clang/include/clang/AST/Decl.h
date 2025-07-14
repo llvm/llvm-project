@@ -1090,6 +1090,11 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsCXXCondDecl : 1;
+
+    /// Whether this variable is the implicit __range variable in a for-range
+    /// loop.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsCXXForRangeImplicitVar : 1;
   };
 
   union {
@@ -1589,6 +1594,19 @@ public:
   void setCXXCondDecl() {
     assert(!isa<ParmVarDecl>(this));
     NonParmVarDeclBits.IsCXXCondDecl = true;
+  }
+
+  /// Whether this variable is the implicit '__range' variable in C++
+  /// range-based for loops.
+  bool isCXXForRangeImplicitVar() const {
+    return isa<ParmVarDecl>(this) ? false
+                                  : NonParmVarDeclBits.IsCXXForRangeImplicitVar;
+  }
+
+  void setCXXForRangeImplicitVar(bool FRV) {
+    assert(!isa<ParmVarDecl>(this) &&
+           "Cannot set IsCXXForRangeImplicitVar on ParmVarDecl");
+    NonParmVarDeclBits.IsCXXForRangeImplicitVar = FRV;
   }
 
   /// Determines if this variable's alignment is dependent.
@@ -4401,21 +4419,6 @@ public:
   void setIsRandomized(bool V) { RecordDeclBits.IsRandomized = V; }
 
   void reorderDecls(const SmallVectorImpl<Decl *> &Decls);
-
-  /// Determines whether this declaration represents the
-  /// injected class name.
-  ///
-  /// The injected class name in C++ is the name of the class that
-  /// appears inside the class itself. For example:
-  ///
-  /// \code
-  /// struct C {
-  ///   // C is implicitly declared here as a synonym for the class name.
-  /// };
-  ///
-  /// C::C c; // same as "C c;"
-  /// \endcode
-  bool isInjectedClassName() const;
 
   /// Determine whether this record is a class describing a lambda
   /// function object.

@@ -190,6 +190,10 @@ public:
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>
       SeenGlobalTemporaries;
 
+  /// List of blocks we're currently running either constructors or destructors
+  /// for.
+  llvm::SmallVector<const Block *> InitializingBlocks;
+
   mutable llvm::BumpPtrAllocator Allocator;
 };
 
