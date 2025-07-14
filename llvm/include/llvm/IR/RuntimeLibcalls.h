@@ -147,7 +147,7 @@ private:
   LLVM_ABI static const char *const LibCallImplNames[RTLIB::NumLibcallImpls];
 
   /// Map from a concrete LibcallImpl implementation to its RTLIB::Libcall kind.
-  static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
+  LLVM_ABI static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
 
   static bool darwinHasSinCosStret(const Triple &TT) {
     if (!TT.isOSDarwin())
