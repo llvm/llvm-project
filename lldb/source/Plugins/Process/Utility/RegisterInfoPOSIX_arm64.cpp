@@ -425,8 +425,7 @@ void RegisterInfoPOSIX_arm64::AddRegSetSME(bool has_zt) {
   //
   // This must be added now, rather than when vg is defined because SME is a
   // dynamic set that may or may not be present.
-  static uint32_t vg_invalidates[] = {sme_regnum + 1 /*svg*/,
-                                      LLDB_INVALID_REGNUM};
+  static uint32_t vg_invalidates[] = {GetRegNumSMESVG(), LLDB_INVALID_REGNUM};
   m_dynamic_reg_infos[GetRegNumSVEVG()].invalidate_regs = vg_invalidates;
 }
 

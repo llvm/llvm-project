@@ -127,4 +127,18 @@ def TosaReduceTransposes : Pass<"tosa-reduce-transposes", "func::FuncOp"> {
   }];
 }
 
+def TosaConvertIntegerTypeToSignless : Pass<"tosa-convert-integer-type-to-signless", "func::FuncOp"> {
+  let summary = "Convert integer types to signless";
+  let description = [{
+    This pass converts signed or unsigned integer types to signless. It
+    currently does this greedily for all operators and can also change the
+    signature of the function. Should the signature of the entrypoint
+    function change, it will be the responsibility of the user to carry
+    signedness information of the inputs and outputs independently.
+
+    This can be a useful transformation for conversion to other formats
+    that require strict adherence to the TOSA specification.
+  }];
+}
+
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSES

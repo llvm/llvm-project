@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_serial(int cond) {
-  // CHECK: cir.func @acc_serial(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_serial(%[[ARG:.*]]: !s32i{{.*}}) {
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 #pragma acc serial
@@ -268,7 +268,7 @@ void acc_serial(int cond) {
 }
 
 void acc_serial_data_clauses(int *arg1, int *arg2) {
-  // CHECK: cir.func @acc_serial_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_serial_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {
   // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg1", init]
   // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg2", init]
   // CHECK-NEXT: cir.store %[[ARG1_PARAM]], %[[ARG1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>

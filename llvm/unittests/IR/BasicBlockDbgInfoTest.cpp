@@ -164,7 +164,7 @@ TEST(BasicBlockDbgInfoTest, DropSourceAtomOnSplit) {
     !1 = !DIFile(filename: "dummy", directory: "dummy")
     !2 = !{i32 7, !"Dwarf Version", i32 5}
     !3 = !{i32 2, !"Debug Info Version", i32 3}
-    !10 = distinct !DISubprogram(name: "func", scope: !1, file: !1, line: 1, type: !11, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !13)
+    !10 = distinct !DISubprogram(name: "func", scope: !1, file: !1, line: 1, type: !11, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !13, keyInstructions: true)
     !11 = !DISubroutineType(types: !12)
     !12 = !{null}
     !13 = !{}

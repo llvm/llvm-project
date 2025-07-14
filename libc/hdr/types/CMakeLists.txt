@@ -21,6 +21,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  mbstate_t
+  HDRS
+    mbstate_t.h
+  DEPENDS
+    libc.include.llvm-libc-types.mbstate_t
+)
+
+add_proxy_header_library(
   div_t
   HDRS
     div_t.h

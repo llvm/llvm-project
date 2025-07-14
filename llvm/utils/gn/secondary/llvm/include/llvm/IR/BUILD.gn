@@ -6,6 +6,12 @@ tablegen("Attributes") {
   tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
+tablegen("RuntimeLibcalls") {
+  visibility = [ ":public_tablegen" ]
+  args = [ "-gen-runtime-libcalls" ]
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
+}
+
 tablegen("IntrinsicImpl") {
   visibility = [ "//llvm/lib/IR" ]
   args = [ "-gen-intrinsic-impl" ]
@@ -116,6 +122,9 @@ group("public_tablegen") {
 
     # IR's public headers include IntrinsicEnums.inc.
     ":IntrinsicEnums",
+
+    # IR's public headers include RuntimeLibcalls.inc.
+    ":RuntimeLibcalls",
 
     # FIXME: These are only included from .cpp files at first glance.
     # Try removing them from the public_tablegen target.

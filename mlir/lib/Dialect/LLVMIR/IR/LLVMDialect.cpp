@@ -12,9 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "TypeDetail.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -26,17 +24,10 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
 
-#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/SourceMgr.h"
 
 #include <numeric>
 #include <optional>
@@ -128,7 +119,6 @@ REGISTER_ENUM_TYPE(Visibility);
 /// second template argument.
 template <typename EnumTy, typename RetTy = EnumTy>
 static RetTy parseOptionalLLVMKeyword(OpAsmParser &parser,
-                                      OperationState &result,
                                       EnumTy defaultValue) {
   SmallVector<StringRef, 10> names;
   for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
@@ -1396,14 +1386,14 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
   // Default to C Calling Convention if no keyword is provided.
   result.addAttribute(
       getCConvAttrName(result.name),
-      CConvAttr::get(parser.getContext(), parseOptionalLLVMKeyword<CConv>(
-                                              parser, result, LLVM::CConv::C)));
+      CConvAttr::get(parser.getContext(),
+                     parseOptionalLLVMKeyword<CConv>(parser, LLVM::CConv::C)));
 
   result.addAttribute(
       getTailCallKindAttrName(result.name),
       TailCallKindAttr::get(parser.getContext(),
                             parseOptionalLLVMKeyword<TailCallKind>(
-                                parser, result, LLVM::TailCallKind::None)));
+                                parser, LLVM::TailCallKind::None)));
 
   // Parse a function pointer for indirect calls.
   if (parseOptionalCallFuncPtr(parser, operands))
@@ -1631,8 +1621,8 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
   // Default to C Calling Convention if no keyword is provided.
   result.addAttribute(
       getCConvAttrName(result.name),
-      CConvAttr::get(parser.getContext(), parseOptionalLLVMKeyword<CConv>(
-                                              parser, result, LLVM::CConv::C)));
+      CConvAttr::get(parser.getContext(),
+                     parseOptionalLLVMKeyword<CConv>(parser, LLVM::CConv::C)));
 
   // Parse a function pointer for indirect calls.
   if (parseOptionalCallFuncPtr(parser, operands))
@@ -2245,8 +2235,7 @@ void GlobalOp::print(OpAsmPrinter &p) {
                            getGlobalTypeAttrName(), getConstantAttrName(),
                            getValueAttrName(), getLinkageAttrName(),
                            getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
-                           getVisibility_AttrName(), getComdatAttrName(),
-                           getUnnamedAddrAttrName()});
+                           getVisibility_AttrName(), getComdatAttrName()});
 
   // Print the trailing type unless it's a string global.
   if (llvm::dyn_cast_or_null<StringAttr>(getValueOrNull()))
@@ -2298,16 +2287,16 @@ static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
                                              OperationState &result) {
   MLIRContext *ctx = parser.getContext();
   // Parse optional linkage, default to External.
-  result.addAttribute(OpType::getLinkageAttrName(result.name),
-                      LLVM::LinkageAttr::get(
-                          ctx, parseOptionalLLVMKeyword<Linkage>(
-                                   parser, result, LLVM::Linkage::External)));
+  result.addAttribute(
+      OpType::getLinkageAttrName(result.name),
+      LLVM::LinkageAttr::get(ctx, parseOptionalLLVMKeyword<Linkage>(
+                                      parser, LLVM::Linkage::External)));
 
   // Parse optional visibility, default to Default.
   result.addAttribute(OpType::getVisibility_AttrName(result.name),
                       parser.getBuilder().getI64IntegerAttr(
                           parseOptionalLLVMKeyword<LLVM::Visibility, int64_t>(
-                              parser, result, LLVM::Visibility::Default)));
+                              parser, LLVM::Visibility::Default)));
 
   if (succeeded(parser.parseOptionalKeyword("thread_local")))
     result.addAttribute(OpType::getThreadLocal_AttrName(result.name),
@@ -2317,7 +2306,7 @@ static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
   result.addAttribute(OpType::getUnnamedAddrAttrName(result.name),
                       parser.getBuilder().getI64IntegerAttr(
                           parseOptionalLLVMKeyword<UnnamedAddr, int64_t>(
-                              parser, result, LLVM::UnnamedAddr::None)));
+                              parser, LLVM::UnnamedAddr::None)));
 
   return success();
 }
@@ -2588,7 +2577,7 @@ void AliasOp::print(OpAsmPrinter &p) {
                           {SymbolTable::getSymbolAttrName(),
                            getAliasTypeAttrName(), getLinkageAttrName(),
                            getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
-                           getVisibility_AttrName(), getUnnamedAddrAttrName()});
+                           getVisibility_AttrName()});
 
   // Print the trailing type.
   p << " : " << getType() << ' ';
@@ -2774,7 +2763,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
   assert(llvm::cast<LLVMFunctionType>(type).getNumParams() == argAttrs.size() &&
          "expected as many argument attribute lists as arguments");
   call_interface_impl::addArgAndResultAttrs(
-      builder, result, argAttrs, /*resultAttrs=*/std::nullopt,
+      builder, result, argAttrs, /*resultAttrs=*/{},
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
 
@@ -2825,29 +2814,28 @@ buildLLVMFunctionType(OpAsmParser &parser, SMLoc loc, ArrayRef<Type> inputs,
 //
 ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   // Default to external linkage if no keyword is provided.
-  result.addAttribute(
-      getLinkageAttrName(result.name),
-      LinkageAttr::get(parser.getContext(),
-                       parseOptionalLLVMKeyword<Linkage>(
-                           parser, result, LLVM::Linkage::External)));
+  result.addAttribute(getLinkageAttrName(result.name),
+                      LinkageAttr::get(parser.getContext(),
+                                       parseOptionalLLVMKeyword<Linkage>(
+                                           parser, LLVM::Linkage::External)));
 
   // Parse optional visibility, default to Default.
   result.addAttribute(getVisibility_AttrName(result.name),
                       parser.getBuilder().getI64IntegerAttr(
                           parseOptionalLLVMKeyword<LLVM::Visibility, int64_t>(
-                              parser, result, LLVM::Visibility::Default)));
+                              parser, LLVM::Visibility::Default)));
 
   // Parse optional UnnamedAddr, default to None.
   result.addAttribute(getUnnamedAddrAttrName(result.name),
                       parser.getBuilder().getI64IntegerAttr(
                           parseOptionalLLVMKeyword<UnnamedAddr, int64_t>(
-                              parser, result, LLVM::UnnamedAddr::None)));
+                              parser, LLVM::UnnamedAddr::None)));
 
   // Default to C Calling Convention if no keyword is provided.
   result.addAttribute(
       getCConvAttrName(result.name),
-      CConvAttr::get(parser.getContext(), parseOptionalLLVMKeyword<CConv>(
-                                              parser, result, LLVM::CConv::C)));
+      CConvAttr::get(parser.getContext(),
+                     parseOptionalLLVMKeyword<CConv>(parser, LLVM::CConv::C)));
 
   StringAttr nameAttr;
   SmallVector<OpAsmParser::Argument> entryArgs;

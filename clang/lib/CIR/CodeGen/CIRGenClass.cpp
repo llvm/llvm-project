@@ -53,18 +53,218 @@ bool CIRGenFunction::isConstructorDelegationValid(
   return true;
 }
 
+static void emitLValueForAnyFieldInitialization(CIRGenFunction &cgf,
+                                                CXXCtorInitializer *memberInit,
+                                                LValue &lhs) {
+  FieldDecl *field = memberInit->getAnyMember();
+  if (memberInit->isIndirectMemberInitializer()) {
+    // If we are initializing an anonymous union field, drill down to the field.
+    IndirectFieldDecl *indirectField = memberInit->getIndirectMember();
+    for (const auto *nd : indirectField->chain()) {
+      auto *fd = cast<clang::FieldDecl>(nd);
+      lhs = cgf.emitLValueForFieldInitialization(lhs, fd, fd->getName());
+    }
+  } else {
+    lhs = cgf.emitLValueForFieldInitialization(lhs, field, field->getName());
+  }
+}
+
+static void emitMemberInitializer(CIRGenFunction &cgf,
+                                  const CXXRecordDecl *classDecl,
+                                  CXXCtorInitializer *memberInit,
+                                  const CXXConstructorDecl *constructor,
+                                  FunctionArgList &args) {
+  assert(memberInit->isAnyMemberInitializer() &&
+         "Mush have member initializer!");
+  assert(memberInit->getInit() && "Must have initializer!");
+
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  // non-static data member initializers
+  FieldDecl *field = memberInit->getAnyMember();
+  QualType fieldType = field->getType();
+
+  mlir::Value thisPtr = cgf.loadCXXThis();
+  QualType recordTy = cgf.getContext().getTypeDeclType(classDecl);
+
+  // If a base constructor is being emitted, create an LValue that has the
+  // non-virtual alignment.
+  LValue lhs = (cgf.curGD.getCtorType() == Ctor_Base)
+                   ? cgf.makeNaturalAlignPointeeAddrLValue(thisPtr, recordTy)
+                   : cgf.makeNaturalAlignAddrLValue(thisPtr, recordTy);
+
+  emitLValueForAnyFieldInitialization(cgf, memberInit, lhs);
+
+  // Special case: If we are in a copy or move constructor, and we are copying
+  // an array off PODs or classes with trivial copy constructors, ignore the AST
+  // and perform the copy we know is equivalent.
+  // FIXME: This is hacky at best... if we had a bit more explicit information
+  // in the AST, we could generalize it more easily.
+  const ConstantArrayType *array =
+      cgf.getContext().getAsConstantArrayType(fieldType);
+  if (array && constructor->isDefaulted() &&
+      constructor->isCopyOrMoveConstructor()) {
+    QualType baseElementTy = cgf.getContext().getBaseElementType(array);
+    // NOTE(cir): CodeGen allows record types to be memcpy'd if applicable,
+    // whereas ClangIR wants to represent all object construction explicitly.
+    if (!baseElementTy->isRecordType()) {
+      cgf.cgm.errorNYI(memberInit->getSourceRange(),
+                       "emitMemberInitializer: array of non-record type");
+      return;
+    }
+  }
+
+  cgf.emitInitializerForField(field, lhs, memberInit->getInit());
+}
+
+static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
+  const Type *baseType = baseInit->getBaseClass();
+  const auto *baseClassDecl =
+      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getDecl());
+  return baseClassDecl->isDynamicClass();
+}
+
+/// Gets the address of a direct base class within a complete object.
+/// This should only be used for (1) non-virtual bases or (2) virtual bases
+/// when the type is known to be complete (e.g. in complete destructors).
+///
+/// The object pointed to by 'thisAddr' is assumed to be non-null.
+Address CIRGenFunction::getAddressOfDirectBaseInCompleteClass(
+    mlir::Location loc, Address thisAddr, const CXXRecordDecl *derived,
+    const CXXRecordDecl *base, bool baseIsVirtual) {
+  // 'thisAddr' must be a pointer (in some address space) to Derived.
+  assert(thisAddr.getElementType() == convertType(derived));
+
+  // Compute the offset of the virtual base.
+  CharUnits offset;
+  const ASTRecordLayout &layout = getContext().getASTRecordLayout(derived);
+  if (baseIsVirtual)
+    offset = layout.getVBaseClassOffset(base);
+  else
+    offset = layout.getBaseClassOffset(base);
+
+  return builder.createBaseClassAddr(loc, thisAddr, convertType(base),
+                                     offset.getQuantity(),
+                                     /*assumeNotNull=*/true);
+}
+
+void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
+                                         const CXXRecordDecl *classDecl,
+                                         CXXCtorInitializer *baseInit) {
+  assert(curFuncDecl && "loading 'this' without a func declaration?");
+  assert(isa<CXXMethodDecl>(curFuncDecl));
+
+  assert(baseInit->isBaseInitializer() && "Must have base initializer!");
+
+  Address thisPtr = loadCXXThisAddress();
+
+  const Type *baseType = baseInit->getBaseClass();
+  const auto *baseClassDecl =
+      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getDecl());
+
+  bool isBaseVirtual = baseInit->isBaseVirtual();
+
+  // If the initializer for the base (other than the constructor
+  // itself) accesses 'this' in any way, we need to initialize the
+  // vtables.
+  if (classDecl->isDynamicClass()) {
+    cgm.errorNYI(loc, "emitBaseInitializer: dynamic class");
+    return;
+  }
+
+  // We can pretend to be a complete class because it only matters for
+  // virtual bases, and we only do virtual bases for complete ctors.
+  Address v = getAddressOfDirectBaseInCompleteClass(
+      loc, thisPtr, classDecl, baseClassDecl, isBaseVirtual);
+  assert(!cir::MissingFeatures::aggValueSlotGC());
+  AggValueSlot aggSlot = AggValueSlot::forAddr(
+      v, Qualifiers(), AggValueSlot::IsDestructed, AggValueSlot::IsNotAliased,
+      getOverlapForBaseInit(classDecl, baseClassDecl, isBaseVirtual));
+
+  emitAggExpr(baseInit->getInit(), aggSlot);
+
+  assert(!cir::MissingFeatures::requiresCleanups());
+}
+
 /// This routine generates necessary code to initialize base classes and
 /// non-static data members belonging to this constructor.
 void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
                                       CXXCtorType ctorType,
                                       FunctionArgList &args) {
-  if (cd->isDelegatingConstructor())
-    return emitDelegatingCXXConstructorCall(cd, args);
-
-  if (cd->getNumCtorInitializers() != 0) {
-    // There's much more to do here.
-    cgm.errorNYI(cd->getSourceRange(), "emitCtorPrologue: any initializer");
+  if (cd->isDelegatingConstructor()) {
+    emitDelegatingCXXConstructorCall(cd, args);
     return;
+  }
+
+  // If there are no member initializers, we can just return.
+  if (cd->getNumCtorInitializers() == 0)
+    return;
+
+  const CXXRecordDecl *classDecl = cd->getParent();
+
+  // This code doesn't use range-based iteration because we may need to emit
+  // code between the virtual base initializers and the non-virtual base or
+  // between the non-virtual base initializers and the member initializers.
+  CXXConstructorDecl::init_const_iterator b = cd->init_begin(),
+                                          e = cd->init_end();
+
+  // Virtual base initializers first, if any. They aren't needed if:
+  // - This is a base ctor variant
+  // - There are no vbases
+  // - The class is abstract, so a complete object of it cannot be constructed
+  //
+  // The check for an abstract class is necessary because sema may not have
+  // marked virtual base destructors referenced.
+  bool constructVBases = ctorType != Ctor_Base &&
+                         classDecl->getNumVBases() != 0 &&
+                         !classDecl->isAbstract();
+  if (constructVBases) {
+    cgm.errorNYI(cd->getSourceRange(), "emitCtorPrologue: virtual base");
+    return;
+  }
+
+  const mlir::Value oldThisValue = cxxThisValue;
+  if (!constructVBases && (*b)->isBaseInitializer() && (*b)->isBaseVirtual()) {
+    cgm.errorNYI(cd->getSourceRange(),
+                 "emitCtorPrologue: virtual base initializer");
+    return;
+  }
+
+  // Handle non-virtual base initializers.
+  for (; b != e && (*b)->isBaseInitializer(); b++) {
+    assert(!(*b)->isBaseVirtual());
+
+    if (cgm.getCodeGenOpts().StrictVTablePointers &&
+        cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+        isInitializerOfDynamicClass(*b)) {
+      cgm.errorNYI(cd->getSourceRange(),
+                   "emitCtorPrologue: strict vtable pointers");
+      return;
+    }
+    emitBaseInitializer(getLoc(cd->getBeginLoc()), classDecl, *b);
+  }
+
+  cxxThisValue = oldThisValue;
+
+  if (classDecl->isDynamicClass()) {
+    cgm.errorNYI(cd->getSourceRange(),
+                 "emitCtorPrologue: initialize vtable pointers");
+    return;
+  }
+
+  // Finally, initialize class members.
+  FieldConstructionScope fcs(*this, loadCXXThisAddress());
+  // Classic codegen uses a special class to attempt to replace member
+  // initializers with memcpy. We could possibly defer that to the
+  // lowering or optimization phases to keep the memory accesses more
+  // explicit. For now, we don't insert memcpy at all.
+  assert(!cir::MissingFeatures::ctorMemcpyizer());
+  for (; b != e; b++) {
+    CXXCtorInitializer *member = (*b);
+    assert(!member->isBaseInitializer());
+    assert(member->isAnyMemberInitializer() &&
+           "Delegating initializer on non-delegating constructor");
+    emitMemberInitializer(*this, cd->getParent(), member, cd, args);
   }
 }
 
@@ -82,6 +282,33 @@ Address CIRGenFunction::loadCXXThisAddress() {
   }
 
   return Address(loadCXXThis(), cxxThisAlignment);
+}
+
+void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
+                                             Expr *init) {
+  QualType fieldType = field->getType();
+  switch (getEvaluationKind(fieldType)) {
+  case cir::TEK_Scalar:
+    if (lhs.isSimple())
+      emitExprAsInit(init, field, lhs, false);
+    else
+      cgm.errorNYI(field->getSourceRange(),
+                   "emitInitializerForField: non-simple scalar");
+    break;
+  case cir::TEK_Complex:
+    cgm.errorNYI(field->getSourceRange(), "emitInitializerForField: complex");
+    break;
+  case cir::TEK_Aggregate: {
+    cgm.errorNYI(field->getSourceRange(), "emitInitializerForField: aggregate");
+    break;
+  }
+  }
+
+  // Ensure that we destroy this object if an exception is thrown later in the
+  // constructor.
+  QualType::DestructionKind dtorKind = fieldType.isDestructedType();
+  (void)dtorKind;
+  assert(!cir::MissingFeatures::requiresCleanups());
 }
 
 void CIRGenFunction::emitDelegateCXXConstructorCall(
@@ -115,6 +342,31 @@ void CIRGenFunction::emitDelegateCXXConstructorCall(
 
   emitCXXConstructorCall(ctor, ctorType, /*ForVirtualBase=*/false,
                          /*Delegating=*/true, thisAddr, delegateArgs, loc);
+}
+
+void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
+  const auto *assignOp = cast<CXXMethodDecl>(curGD.getDecl());
+  assert(assignOp->isCopyAssignmentOperator() ||
+         assignOp->isMoveAssignmentOperator());
+  const Stmt *rootS = assignOp->getBody();
+  assert(isa<CompoundStmt>(rootS) &&
+         "Body of an implicit assignment operator should be compound stmt.");
+  const auto *rootCS = cast<CompoundStmt>(rootS);
+
+  assert(!cir::MissingFeatures::incrementProfileCounter());
+  assert(!cir::MissingFeatures::runCleanupsScope());
+
+  // Classic codegen uses a special class to attempt to replace member
+  // initializers with memcpy. We could possibly defer that to the
+  // lowering or optimization phases to keep the memory accesses more
+  // explicit. For now, we don't insert memcpy at all, though in some
+  // cases the AST contains a call to memcpy.
+  assert(!cir::MissingFeatures::assignMemcpyizer());
+  for (Stmt *s : rootCS->body())
+    if (emitStmt(s, /*useCurrentScope=*/true).failed())
+      cgm.errorNYI(s->getSourceRange(),
+                   std::string("emitImplicitAssignmentOperatorBody: ") +
+                       s->getStmtClassName());
 }
 
 void CIRGenFunction::emitDelegatingCXXConstructorCall(

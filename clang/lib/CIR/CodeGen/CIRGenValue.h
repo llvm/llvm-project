@@ -19,6 +19,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
 
+#include "CIRGenRecordLayout.h"
 #include "mlir/IR/Value.h"
 
 #include "clang/CIR/MissingFeatures.h"
@@ -88,7 +89,6 @@ public:
     return er;
   }
 
-  // FIXME: Aggregate rvalues need to retain information about whether they are
   // volatile or not.  Remove default to find all places that probably get this
   // wrong.
 
@@ -163,6 +163,7 @@ class LValue {
   mlir::Value vectorIdx; // Index for vector subscript
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
+  const CIRGenBitFieldInfo *bitFieldInfo{nullptr};
 
   void initialize(clang::QualType type, clang::Qualifiers quals,
                   clang::CharUnits alignment, LValueBaseInfo baseInfo) {
@@ -183,9 +184,9 @@ public:
   bool isSimple() const { return lvType == Simple; }
   bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
+  bool isVolatile() const { return quals.hasVolatile(); }
 
-  // TODO: Add support for volatile
-  bool isVolatile() const { return false; }
+  bool isVolatileQualified() const { return quals.hasVolatile(); }
 
   unsigned getVRQualifiers() const {
     return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
@@ -246,6 +247,38 @@ public:
     r.elementType = vecAddress.getElementType();
     r.vectorIdx = index;
     r.initialize(t, t.getQualifiers(), vecAddress.getAlignment(), baseInfo);
+    return r;
+  }
+
+  // bitfield lvalue
+  Address getBitFieldAddress() const {
+    return Address(getBitFieldPointer(), elementType, getAlignment());
+  }
+
+  mlir::Value getBitFieldPointer() const {
+    assert(isBitField());
+    return v;
+  }
+
+  const CIRGenBitFieldInfo &getBitFieldInfo() const {
+    assert(isBitField());
+    return *bitFieldInfo;
+  }
+
+  /// Create a new object to represent a bit-field access.
+  ///
+  /// \param Addr - The base address of the bit-field sequence this
+  /// bit-field refers to.
+  /// \param Info - The information describing how to perform the bit-field
+  /// access.
+  static LValue makeBitfield(Address addr, const CIRGenBitFieldInfo &info,
+                             clang::QualType type, LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = BitField;
+    r.v = addr.getPointer();
+    r.elementType = addr.getElementType();
+    r.bitFieldInfo = &info;
+    r.initialize(type, type.getQualifiers(), addr.getAlignment(), baseInfo);
     return r;
   }
 };

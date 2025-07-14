@@ -484,7 +484,7 @@ public:
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
       : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(M.getTargetTriple()) {}
+        T(M.getTargetTriple()), IsFinalized(false) {}
   LLVM_ABI ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
@@ -520,6 +520,10 @@ public:
   /// \param Fn                    The function to be finalized. If not used,
   ///                              all functions are finalized.
   LLVM_ABI void finalize(Function *Fn = nullptr);
+
+  /// Check whether the finalize function has already run
+  /// \return true if the finalize function has already run
+  LLVM_ABI bool isFinalized();
 
   /// Add attributes known for \p FnID to \p Fn.
   LLVM_ABI void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
@@ -3285,6 +3289,8 @@ private:
   /// \Return The instruction
   Value *emitRMWOpAsInstruction(Value *Src1, Value *Src2,
                                 AtomicRMWInst::BinOp RMWOp);
+
+  bool IsFinalized;
 
 public:
   /// a struct to pack relevant information while generating atomic Ops

@@ -2605,9 +2605,22 @@ SDValue DAGTypeLegalizer::PromoteIntOp_STRICT_UINT_TO_FP(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ZERO_EXTEND(SDNode *N) {
   SDLoc dl(N);
-  SDValue Op = GetPromotedInteger(N->getOperand(0));
-  Op = DAG.getNode(ISD::ANY_EXTEND, dl, N->getValueType(0), Op);
-  return DAG.getZeroExtendInReg(Op, dl, N->getOperand(0).getValueType());
+  SDValue Src = N->getOperand(0);
+  SDValue Op = GetPromotedInteger(Src);
+  EVT VT = N->getValueType(0);
+
+  // If this zext has the nneg flag and the target prefers sext, see if the
+  // promoted input is already sign extended.
+  // TODO: Should we have some way to set nneg on ISD::AND instead?
+  if (N->getFlags().hasNonNeg() && Op.getValueType() == VT &&
+      TLI.isSExtCheaperThanZExt(Src.getValueType(), VT)) {
+    unsigned OpEffectiveBits = DAG.ComputeMaxSignificantBits(Op);
+    if (OpEffectiveBits <= Src.getScalarValueSizeInBits())
+      return Op;
+  }
+
+  Op = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Op);
+  return DAG.getZeroExtendInReg(Op, dl, Src.getValueType());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VP_ZERO_EXTEND(SDNode *N) {
@@ -4367,8 +4380,13 @@ void DAGTypeLegalizer::ExpandIntRes_Logical(SDNode *N,
   SDValue LL, LH, RL, RH;
   GetExpandedInteger(N->getOperand(0), LL, LH);
   GetExpandedInteger(N->getOperand(1), RL, RH);
-  Lo = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LL, RL);
-  Hi = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LH, RH);
+
+  SDNodeFlags Flags;
+  if (N->getOpcode() == ISD::OR)
+    Flags.setDisjoint(N->getFlags().hasDisjoint());
+
+  Lo = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LL, RL, Flags);
+  Hi = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LH, RH, Flags);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,

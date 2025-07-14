@@ -267,6 +267,7 @@ struct AccEndCombinedDirective;
 struct OpenACCDeclarativeConstruct;
 struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
+struct OpenMPLoopConstruct;
 struct OpenMPDeclarativeConstruct;
 struct OmpEndLoopDirective;
 struct OmpMemoryOrderClause;
@@ -4597,8 +4598,11 @@ struct OmpClauseList {
 struct OmpDirectiveSpecification {
   ENUM_CLASS(Flags, None, DeprecatedSyntax);
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
+  const OmpDirectiveName &DirName() const {
+    return std::get<OmpDirectiveName>(t);
+  }
   llvm::omp::Directive DirId() const { //
-    return std::get<OmpDirectiveName>(t).v;
+    return DirName().v;
   }
   const OmpArgumentList &Arguments() const;
   const OmpClauseList &Clauses() const;
@@ -4611,7 +4615,7 @@ struct OmpDirectiveSpecification {
 
 struct OmpMetadirectiveDirective {
   TUPLE_CLASS_BOILERPLATE(OmpMetadirectiveDirective);
-  std::tuple<OmpClauseList> t;
+  std::tuple<Verbatim, OmpClauseList> t;
   CharBlock source;
 };
 
@@ -4838,17 +4842,17 @@ struct OpenMPExecutableAllocate {
       t;
 };
 
-EMPTY_CLASS(OmpEndAllocators);
-
-// 6.7 Allocators construct [OpenMP 5.2]
-//     allocators-construct -> ALLOCATORS [allocate-clause [,]]
-//                                allocate-stmt
-//                             [omp-end-allocators-construct]
+// Ref: [5.2:180-181], [6.0:315]
+//
+// allocators-construct ->
+//    ALLOCATORS [allocate-clause...]
+//    block
+//    [END ALLOCATORS]
 struct OpenMPAllocatorsConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPAllocatorsConstruct);
   CharBlock source;
-  std::tuple<Verbatim, OmpClauseList, Statement<AllocateStmt>,
-      std::optional<OmpEndAllocators>>
+  std::tuple<OmpDirectiveSpecification, Block,
+      std::optional<OmpDirectiveSpecification>>
       t;
 };
 
@@ -4935,19 +4939,11 @@ struct OpenMPDepobjConstruct {
 //                    nocontext-clause |
 //                    novariants-clause |
 //                    nowait-clause
-struct OmpDispatchDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpDispatchDirective);
-  CharBlock source;
-  std::tuple<Verbatim, OmpClauseList> t;
-};
-
-EMPTY_CLASS(OmpEndDispatchDirective);
-
 struct OpenMPDispatchConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDispatchConstruct);
   CharBlock source;
-  std::tuple<OmpDispatchDirective, Block,
-      std::optional<OmpEndDispatchDirective>>
+  std::tuple<OmpDirectiveSpecification, Block,
+      std::optional<OmpDirectiveSpecification>>
       t;
 };
 
@@ -5021,11 +5017,13 @@ struct OpenMPBlockConstruct {
 };
 
 // OpenMP directives enclosing do loop
+using NestedConstruct =
+    std::variant<DoConstruct, common::Indirection<OpenMPLoopConstruct>>;
 struct OpenMPLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
   OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
       : t({std::move(a), std::nullopt, std::nullopt}) {}
-  std::tuple<OmpBeginLoopDirective, std::optional<DoConstruct>,
+  std::tuple<OmpBeginLoopDirective, std::optional<NestedConstruct>,
       std::optional<OmpEndLoopDirective>>
       t;
 };
