@@ -1267,7 +1267,8 @@ def EmitC_GetGlobalOp : EmitC_Op<"get_global",
   }];
 
   let arguments = (ins FlatSymbolRefAttr:$name);
-  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>:$result);
+  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType,
+                                 EmitC_PointerType]>:$result);
   let assemblyFormat = "$name `:` type($result) attr-dict";
 }
 
@@ -1686,7 +1687,8 @@ def EmitC_GetFieldOp
   }];
 
   let arguments = (ins FlatSymbolRefAttr:$field_name);
-  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>:$result);
+  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType,
+                                 EmitC_PointerType]>:$result);
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
 }
 

@@ -153,7 +153,7 @@ struct ConvertGetGlobal final
     MemRefType opTy = op.getType();
     Type resultTy = convertMemRefType(opTy, getTypeConverter());
     if (opTy.getRank() == 0)
-      resultTy = emitc::LValueType::get(resultTy);
+      resultTy = emitc::PointerType::get(resultTy);
 
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(),
