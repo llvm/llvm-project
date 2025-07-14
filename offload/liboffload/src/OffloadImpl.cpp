@@ -84,7 +84,7 @@ struct ol_program_impl_t {
         DeviceImage(DeviceImage) {}
   plugin::DeviceImageTy *Image;
   std::unique_ptr<llvm::MemoryBuffer> ImageData;
-  std::vector<std::unique_ptr<ol_symbol_impl_t>> Symbols;
+  llvm::SmallVector<std::unique_ptr<ol_symbol_impl_t>> Symbols;
   std::mutex SymbolListMutex;
   __tgt_device_image DeviceImage;
 };
@@ -96,7 +96,7 @@ struct ol_symbol_impl_t {
       : PluginImpl(Global), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE), Name(Name) {}
   std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
   ol_symbol_kind_t Kind;
-  const char *Name;
+  llvm::StringRef Name;
 };
 
 namespace llvm {
@@ -719,10 +719,9 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
   std::lock_guard<std::mutex> Lock{Program->SymbolListMutex};
 
   // If it already exists, return an existing handle
-  auto Check = std::find_if(
-      Program->Symbols.begin(), Program->Symbols.end(), [&](auto &Sym) {
-        return Sym->Kind == Kind && !std::strcmp(Sym->Name, Name);
-      });
+  auto Check = llvm::find_if(Program->Symbols, [&](auto &Sym) {
+    return Sym->Kind == Kind && Sym->Name == Name;
+  });
   if (Check != Program->Symbols.end()) {
     *Symbol = Check->get();
     return Error::success();
