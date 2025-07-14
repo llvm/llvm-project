@@ -17477,14 +17477,14 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     LoadInst *LI, IntrinsicInst *DI) const {
-  ArrayRef<Type *> DISubtypes = DI->getType()->subtypes();
-  const unsigned Factor = DISubtypes.size();
+  VectorDeinterleaving VD(DI);
+  const unsigned Factor = VD.getFactor();
   if (Factor != 2 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
     return false;
   }
 
-  VectorType *VTy = cast<VectorType>(DISubtypes[0]);
+  VectorType *VTy = cast<VectorType>(VD.getDeinterleavedType());
 
   const DataLayout &DL = LI->getModule()->getDataLayout();
   bool UseScalable;
@@ -17536,6 +17536,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
       LLVM_DEBUG(dbgs() << "LdN4 res: "; LdN->dump());
     }
 
+    // Merge the values from different factors.
     for (unsigned J = 0; J < Factor; ++J)
       Result = Builder.CreateInsertValue(Result, ExtractedLdValues[J], J);
   } else {
@@ -17545,6 +17546,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
       Result = Builder.CreateCall(LdNFunc, BaseAddr, "ldN");
   }
 
+  // Replace output of deinterleave2 intrinsic by output of ldN2/ldN4
   DI->replaceAllUsesWith(Result);
   return true;
 }

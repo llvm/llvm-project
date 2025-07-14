@@ -3229,7 +3229,8 @@ public:
   ///
   /// \p Load is a vp.load instruction.
   /// \p Mask is a mask value
-  /// \p DeinterleaveRes is a list of deinterleaved results.
+  /// \p VD represents either a deinterleave intrinsic or a list of
+  /// deinterleaved values.
   virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
                                       const VectorDeinterleaving &VD) const {
     return false;
@@ -3251,7 +3252,7 @@ public:
   /// llvm.vector.deinterleave{2,3,5,7}
   ///
   /// \p LI is the accompanying load instruction.
-  /// \p DeinterleaveValues contains the deinterleaved values.
+  /// \p DI represents the deinterleave intrinsic.
   virtual bool lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
                                                 IntrinsicInst *DI) const {
     return false;
