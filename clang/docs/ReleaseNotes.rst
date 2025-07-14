@@ -133,7 +133,8 @@ C++2c Feature Support
 
 - Implemented `P0963R3 Structured binding declaration as a condition <https://wg21.link/P0963R3>`_.
 
-- Implemented `P2719R4 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_.
+- Implemented `P2719R5 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_
+  as an extension in all C++ language modes.
 
 - Implemented `P3618R0 Allow attaching main to the global module <https://wg21.link/P3618>`_.
 

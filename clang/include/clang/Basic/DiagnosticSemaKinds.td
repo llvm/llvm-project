@@ -10082,7 +10082,7 @@ def err_type_aware_destroying_operator_delete : Error<
   "destroying delete is not permitted to be type aware">;
 
 def warn_ext_type_aware_allocators : ExtWarn<
-  "type aware allocators are a clang extension">, InGroup<DiagGroup<"cxx-type-aware-allocators">>;
+  "type aware allocators are a Clang extension">, InGroup<DiagGroup<"cxx-type-aware-allocators">>;
 def err_type_aware_allocator_missing_matching_operator : Error<
   "declaration of type aware %0 in %1 must have matching type aware %2"
 >;
