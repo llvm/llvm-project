@@ -14,4 +14,3 @@ add_llvm_unittest(SystemZMCTests
   SystemZAsmLexerTest.cpp
   SystemZMCDisassemblerTest.cpp
   )
-
