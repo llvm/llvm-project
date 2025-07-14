@@ -23469,16 +23469,6 @@ class HorizontalReduction {
     return I->isAssociative();
   }
 
-  static Value *getRdxOperand(Instruction *I, unsigned Index) {
-    // Poison-safe 'or' takes the form: select X, true, Y
-    // To make that work with the normal operand processing, we skip the
-    // true value operand.
-    // TODO: Change the code and data structures to handle this without a hack.
-    if (getRdxKind(I) == RecurKind::Or && isa<SelectInst>(I) && Index == 1)
-      return I->getOperand(2);
-    return I->getOperand(Index);
-  }
-
   /// Creates reduction operation with the current opcode.
   static Value *createOp(IRBuilderBase &Builder, RecurKind Kind, Value *LHS,
                          Value *RHS, const Twine &Name, bool UseSelect) {
@@ -23670,11 +23660,6 @@ public:
   }
 
 private:
-  /// Total number of operands in the reduction operation.
-  static unsigned getNumberOfOperands(Instruction *I) {
-    return isCmpSelMinMax(I) ? 3 : 2;
-  }
-
   /// Checks if the instruction is in basic block \p BB.
   /// For a cmp+sel min/max reduction check that both ops are in \p BB.
   static bool hasSameParent(Instruction *I, BasicBlock *BB) {
@@ -23780,31 +23765,27 @@ public:
     // Checks if the operands of the \p TreeN instruction are also reduction
     // operations or should be treated as reduced values or an extra argument,
     // which is not part of the reduction.
-    auto CheckOperands = [&](Instruction *TreeN,
-                             SmallVectorImpl<Value *> &PossibleReducedVals,
-                             SmallVectorImpl<Instruction *> &ReductionOps,
-                             unsigned Level) {
-      for (int I : reverse(seq<int>(getFirstOperandIndex(TreeN),
-                                    getNumberOfOperands(TreeN)))) {
-        Value *EdgeVal = getRdxOperand(TreeN, I);
-        ReducedValsToOps[EdgeVal].push_back(TreeN);
-        auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
-        // If the edge is not an instruction, or it is different from the main
-        // reduction opcode or has too many uses - possible reduced value.
-        // Also, do not try to reduce const values, if the operation is not
-        // foldable.
-        if (!EdgeInst || Level > RecursionMaxDepth ||
-            getRdxKind(EdgeInst) != RdxKind ||
-            IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
-            !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
-            !isVectorizable(RdxKind, EdgeInst) ||
-            (R.isAnalyzedReductionRoot(EdgeInst) &&
-             all_of(EdgeInst->operands(), IsaPred<Constant>))) {
-          PossibleReducedVals.push_back(EdgeVal);
-          continue;
-        }
+    auto CheckOperand = [&](Instruction *TreeN, int OperandIndex,
+                            SmallVectorImpl<Value *> &PossibleReducedVals,
+                            SmallVectorImpl<Instruction *> &ReductionOps,
+                            unsigned Level) {
+      Value *EdgeVal = TreeN->getOperand(OperandIndex);
+      ReducedValsToOps[EdgeVal].push_back(TreeN);
+      auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
+      // If the edge is not an instruction, or it is different from the main
+      // reduction opcode or has too many uses - possible reduced value.
+      // Also, do not try to reduce const values, if the operation is not
+      // foldable.
+      if (!EdgeInst || Level > RecursionMaxDepth ||
+          getRdxKind(EdgeInst) != RdxKind ||
+          IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
+          !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
+          !isVectorizable(RdxKind, EdgeInst) ||
+          (R.isAnalyzedReductionRoot(EdgeInst) &&
+           all_of(EdgeInst->operands(), IsaPred<Constant>)))
+        PossibleReducedVals.push_back(EdgeVal);
+      else
         ReductionOps.push_back(EdgeInst);
-      }
     };
     // Try to regroup reduced values so that it gets more profitable to try to
     // reduce them. Values are grouped by their value ids, instructions - by
@@ -23855,7 +23836,12 @@ public:
       auto [TreeN, Level] = Worklist.pop_back_val();
       SmallVector<Value *> PossibleRedVals;
       SmallVector<Instruction *> PossibleReductionOps;
-      CheckOperands(TreeN, PossibleRedVals, PossibleReductionOps, Level);
+      int I1 = getFirstOperandIndex(TreeN);
+      int I2 = isa<SelectInst>(TreeN) && match(TreeN, m_LogicalOr())
+                   ? 2 // Skip "true" in "select X, true, Y"
+                   : I1 + 1;
+      CheckOperand(TreeN, I2, PossibleRedVals, PossibleReductionOps, Level);
+      CheckOperand(TreeN, I1, PossibleRedVals, PossibleReductionOps, Level);
       addReductionOps(TreeN);
       // Add reduction values. The values are sorted for better vectorization
       // results.
