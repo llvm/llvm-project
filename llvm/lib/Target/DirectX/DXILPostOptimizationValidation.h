@@ -20,7 +20,6 @@
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/PassManager.h"
-#include <cstdint>
 
 namespace llvm {
 
