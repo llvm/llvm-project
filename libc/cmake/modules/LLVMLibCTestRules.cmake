@@ -233,7 +233,11 @@ function(create_libc_unittest fq_target_name)
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
                                    "${LIBC_UNITTEST_FLAGS}")
   # TODO: Ideally we would have a separate function for link options.
-  set(link_options ${compile_options})
+  set(link_options
+    ${compile_options}
+    ${LIBC_LINK_OPTIONS_DEFAULT}
+    ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+  )
   list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -288,9 +292,7 @@ function(create_libc_unittest fq_target_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
-  
-  string(REPLACE " " ";" EXTRA_LINK_OPTIONS "${LIBC_TEST_EXTRA_LINK_OPTIONS}")
-  target_link_options(${fq_build_target_name} PRIVATE ${link_options} ${EXTRA_LINK_OPTIONS})
+  target_link_options(${fq_build_target_name} PRIVATE ${link_options})
 
   if(NOT LIBC_UNITTEST_CXX_STANDARD)
     set(LIBC_UNITTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -582,14 +584,26 @@ function(add_integration_test test_name)
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
-    string(REPLACE " " ";" EXTRA_LINK_OPTIONS "${LIBC_TEST_EXTRA_LINK_OPTIONS}")
-    target_link_options(${fq_build_target_name} PRIVATE
-      -nolibc -nostartfiles -nostdlib++ -static ${EXTRA_LINK_OPTIONS})
+      set(link_options
+        -nolibc
+        -nostartfiles
+        -nostdlib++
+        -static
+        ${LIBC_LINK_OPTIONS_DEFAULT}
+        ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+      )
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
-    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
-    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -static
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
   endif()
   target_link_libraries(
     ${fq_build_target_name}
@@ -778,13 +792,26 @@ function(add_libc_hermetic test_name)
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
-    string(REPLACE " " ";" EXTRA_LINK_OPTIONS "${LIBC_TEST_EXTRA_LINK_OPTIONS}")
-    target_link_options(${fq_build_target_name} PRIVATE 
-      -nolibc -nostartfiles -nostdlib++ -static ${EXTRA_LINK_OPTIONS})
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -nostdlib++
+      -static
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
-    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -static
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
     list(APPEND link_libraries ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
