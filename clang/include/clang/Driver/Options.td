@@ -4690,8 +4690,8 @@ def gsimple_template_names_EQ
       Values<"simple,mangled">, Visibility<[CC1Option]>;
 def gsrc_hash_EQ : Joined<["-"], "gsrc-hash=">,
   Group<g_flags_Group>, Visibility<[CC1Option]>,
-  Values<"md5,sha1,sha256">,
-  NormalizedValues<["DSH_MD5", "DSH_SHA1", "DSH_SHA256"]>,
+  Values<"md5,sha1,sha256,none">,
+  NormalizedValues<["DSH_MD5", "DSH_SHA1", "DSH_SHA256", "DSH_NONE"]>,
   NormalizedValuesScope<"CodeGenOptions">,
   MarshallingInfoEnum<CodeGenOpts<"DebugSrcHash">, "DSH_MD5">;
 def gno_simple_template_names : Flag<["-"], "gno-simple-template-names">,
