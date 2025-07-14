@@ -359,6 +359,7 @@ void nested_scopes() {
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_INNER]]
 // CHECK-DAG: Origin [[O_ADDR_INNER]] contains Loan [[L_INNER]]
 // CHECK-DAG: Origin [[O_ADDR_OUTER]] contains Loan [[L_OUTER]]
+// CHECK-NOT: Origin [[O_P]] contains Loan [[L_OUTER]]
 
 
 // CHECK-LABEL: Function: pointer_indirection

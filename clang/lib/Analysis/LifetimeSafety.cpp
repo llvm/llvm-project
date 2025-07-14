@@ -508,9 +508,10 @@ using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
-  OriginLoanMap::Factory OriginMapFact;
+  OriginLoanMap::Factory OriginMapFactory;
   LoanSet::Factory LoanSetFact;
 
+  /// Creates a singleton set containing only the given loan ID.
   LoanSet createLoanSet(LoanID LID) {
     return LoanSetFact.add(LoanSetFact.getEmptySet(), LID);
   }
@@ -521,6 +522,8 @@ struct LifetimeFactory {
 /// instance rather than modifying the existing one.
 struct LifetimeLattice {
   /// The map from an origin to the set of loans it contains.
+  /// The lattice has a finite height: An origin's loan set is bounded by the
+  /// total number of loans in the function.
   /// TODO(opt): To reduce the lattice size, propagate origins of declarations,
   /// not expressions, because expressions are not visible across blocks.
   OriginLoanMap Origins = OriginLoanMap(nullptr);
@@ -535,10 +538,10 @@ struct LifetimeLattice {
     return !(*this == Other);
   }
 
-  LoanSet getLoans(OriginID OID, LifetimeFactory &Factory) const {
+  LoanSet getLoans(OriginID OID) const {
     if (auto *Loans = Origins.lookup(OID))
       return *Loans;
-    return Factory.LoanSetFact.getEmptySet();
+    return LoanSet(nullptr);
   }
 
   /// Computes the union of two lattices by performing a key-wise join of
@@ -559,9 +562,8 @@ struct LifetimeLattice {
     for (const auto &Entry : Other.Origins) {
       OriginID OID = Entry.first;
       LoanSet OtherLoanSet = Entry.second;
-      JoinedState = Factory.OriginMapFact.add(
-          JoinedState, OID,
-          join(getLoans(OID, Factory), OtherLoanSet, Factory));
+      JoinedState = Factory.OriginMapFactory.add(
+          JoinedState, OID, join(getLoans(OID), OtherLoanSet, Factory));
     }
     return LifetimeLattice(JoinedState);
   }
@@ -639,8 +641,8 @@ private:
   LifetimeLattice transfer(LifetimeLattice In, const IssueFact &F) {
     OriginID OID = F.getOriginID();
     LoanID LID = F.getLoanID();
-    return LifetimeLattice(
-        Factory.OriginMapFact.add(In.Origins, OID, Factory.createLoanSet(LID)));
+    return LifetimeLattice(Factory.OriginMapFactory.add(
+        In.Origins, OID, Factory.createLoanSet(LID)));
   }
 
   /// The destination origin's loan set is replaced by the source's.
@@ -648,9 +650,9 @@ private:
   LifetimeLattice transfer(LifetimeLattice InState, const AssignOriginFact &F) {
     OriginID DestOID = F.getDestOriginID();
     OriginID SrcOID = F.getSrcOriginID();
-    LoanSet SrcLoans = InState.getLoans(SrcOID, Factory);
+    LoanSet SrcLoans = InState.getLoans(SrcOID);
     return LifetimeLattice(
-        Factory.OriginMapFact.add(InState.Origins, DestOID, SrcLoans));
+        Factory.OriginMapFactory.add(InState.Origins, DestOID, SrcLoans));
   }
 };
 
