@@ -174,7 +174,8 @@ enum Scope : ScopeUnderlyingType {
   Cluster = 2,
   Device = 3,
   System = 4,
-  LASTSCOPE = System
+  DefaultDevice = 5,
+  LASTSCOPE = DefaultDevice
 };
 
 using AddressSpaceUnderlyingType = unsigned int;

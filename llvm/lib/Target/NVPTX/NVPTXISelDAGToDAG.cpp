@@ -520,8 +520,8 @@ NVPTX::Ordering NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
   auto Ordering = N->getMergedOrdering();
   switch (Ordering) {
   case AtomicOrdering::NotAtomic:
-  case AtomicOrdering::Unordered:
     return NVPTX::Ordering::NotAtomic;
+  case AtomicOrdering::Unordered:
   case AtomicOrdering::Monotonic:
     return NVPTX::Ordering::Relaxed;
   case AtomicOrdering::Acquire:
@@ -533,12 +533,14 @@ NVPTX::Ordering NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
   case AtomicOrdering::SequentiallyConsistent:
     return NVPTX::Ordering::SequentiallyConsistent;
   }
+  llvm_unreachable("Invalid atomic ordering");
 }
 
 NVPTX::Scope NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
   // No "scope" modifier for SM/PTX versions which do not support scoped atomics
+  // Functionally, these atomics are at device scope
   if (!Subtarget->hasAtomScope())
-    return NVPTX::Scope::Thread;
+    return NVPTX::Scope::DefaultDevice;
   return Scopes[N->getSyncScopeID()];
 }
 
@@ -778,7 +780,7 @@ NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
 }
 
 static bool canLowerToLDG(const MemSDNode &N, const NVPTXSubtarget &Subtarget,
-                          unsigned CodeAddrSpace) {
+                          NVPTX::AddressSpace CodeAddrSpace) {
   // We use ldg (i.e. ld.global.nc) for invariant loads from the global address
   // space.
   return Subtarget.hasLDG() && CodeAddrSpace == NVPTX::AddressSpace::Global &&
@@ -810,6 +812,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acquire_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(
           formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
                   ScopeToString(S)));
@@ -829,6 +832,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_release_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(
           formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
                   ScopeToString(S)));
@@ -848,6 +852,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acq_rel_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(
           formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
                   ScopeToString(S)));
@@ -868,6 +873,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_seq_cst_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(formatv("Unsupported scope \"{}\" for seq_cst fence.",
                                  ScopeToString(S)));
     }
@@ -1046,7 +1052,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   const MVT LoadedVT = LoadedEVT.getSimpleVT();
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getAddrSpace(LD);
+  const auto CodeAddrSpace = getAddrSpace(LD);
   if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
     return tryLDG(LD);
 
@@ -1118,7 +1124,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   const MVT MemVT = MemEVT.getSimpleVT();
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getAddrSpace(LD);
+  const auto CodeAddrSpace = getAddrSpace(LD);
   if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
     return tryLDG(LD);
 
@@ -1334,7 +1340,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     return false;
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getAddrSpace(ST);
+  const auto CodeAddrSpace = getAddrSpace(ST);
 
   SDLoc DL(ST);
   SDValue Chain = ST->getChain();
@@ -1384,7 +1390,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   assert(StoreVT.isSimple() && "Store value is not simple");
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getAddrSpace(ST);
+  const auto CodeAddrSpace = getAddrSpace(ST);
   if (CodeAddrSpace == NVPTX::AddressSpace::Const) {
     report_fatal_error("Cannot store to pointer that points to constant "
                        "memory space");

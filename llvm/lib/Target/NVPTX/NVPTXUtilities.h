@@ -149,6 +149,8 @@ inline std::string ScopeToString(Scope S) {
     return "Cluster";
   case Scope::Device:
     return "Device";
+  case Scope::DefaultDevice:
+    return "DefaultDevice";
   }
   report_fatal_error(formatv("Unknown NVPTX::Scope \"{}\".",
                              static_cast<ScopeUnderlyingType>(S)));

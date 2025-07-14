@@ -307,6 +307,7 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
     auto S = NVPTX::Scope(Imm);
     switch (S) {
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       return;
     case NVPTX::Scope::System:
       O << ".sys";
