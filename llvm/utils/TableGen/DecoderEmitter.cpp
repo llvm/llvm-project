@@ -15,7 +15,6 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenTarget.h"
 #include "Common/InfoByHwMode.h"
-#include "Common/Types.h"
 #include "Common/VarLenCodeEmitterGen.h"
 #include "TableGenBackends.h"
 #include "llvm/ADT/APInt.h"
