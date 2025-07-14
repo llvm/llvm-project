@@ -5,8 +5,8 @@ define <4 x i16> @ext_identity_mask_first_vector_first_half_4xi16(<8 x i8> %x) {
 ; CHECK-LABEL: define <4 x i16> @ext_identity_mask_first_vector_first_half_4xi16(
 ; CHECK-SAME: <8 x i8> [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[E_1:%.*]] = zext <8 x i8> [[X]] to <8 x i16>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i16> [[E_1]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[X]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i16>
 ; CHECK-NEXT:    ret <4 x i16> [[SHUFFLE]]
 ;
 entry:
@@ -19,8 +19,8 @@ define <3 x i32> @ext_identity_mask_first_vector_first_half_3xi32(<4 x i16> %x) 
 ; CHECK-LABEL: define <3 x i32> @ext_identity_mask_first_vector_first_half_3xi32(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[E_1:%.*]] = zext <4 x i16> [[X]] to <4 x i32>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[E_1]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i16> [[X]], <4 x i16> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = zext <3 x i16> [[TMP0]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[SHUFFLE]]
 ;
 entry:
@@ -102,12 +102,8 @@ define <4 x i32> @load_i32_zext_to_v4i32(ptr %di) {
 ; CHECK-LABEL: define <4 x i32> @load_i32_zext_to_v4i32(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
-; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
-; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
-; CHECK-NEXT:    [[E_1:%.*]] = zext <8 x i8> [[VEC_BC]] to <8 x i16>
-; CHECK-NEXT:    [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i16> [[E_1]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i16> [[VEC_SHUFFLE]] to <4 x i32>
+; CHECK-NEXT:    [[L1:%.*]] = load <4 x i8>, ptr [[DI]], align 4
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext <4 x i8> [[L1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
 entry:
