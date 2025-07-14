@@ -546,6 +546,7 @@ struct LifetimeLattice {
   // TODO(opt): This key-wise join is a performance bottleneck. A more
   // efficient merge could be implemented using a Patricia Trie or HAMT
   // instead of the current AVL-tree-based ImmutableMap.
+  // TODO(opt): Keep the state small by removing origins which become dead.
   LifetimeLattice join(const LifetimeLattice &Other,
                        LifetimeFactory &Factory) const {
     /// Merge the smaller map into the larger one ensuring we iterate over the
