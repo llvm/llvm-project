@@ -4906,15 +4906,14 @@ void AArch64TTIImpl::getUnrollingPreferences(
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
+  // No need to unroll auto-vectorized loops
+  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+    return;
+
   // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining. Don't unroll vector loops either, as they don't benefit much from
-  // unrolling.
+  // inlining.
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
-      // Don't unroll vectorised loop.
-      if (I.getType()->isVectorTy())
-        return;
-
       if (isa<CallBase>(I)) {
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
           if (const Function *F = cast<CallBase>(I).getCalledFunction())
