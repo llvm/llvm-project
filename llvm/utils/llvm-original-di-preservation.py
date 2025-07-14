@@ -667,11 +667,11 @@ def Main():
     else:
         # Pretty(ish) print the detected bugs, but check if any exist first so that we don't print an empty dict.
         if di_location_bugs:
-            print_bugs_yaml('DILocation Bugs', di_location_bugs)
+            print_bugs_yaml("DILocation Bugs", di_location_bugs)
         if di_subprogram_bugs:
-            print_bugs_yaml('DISubprogram Bugs', di_subprogram_bugs)
+            print_bugs_yaml("DISubprogram Bugs", di_subprogram_bugs)
         if di_variable_bugs:
-            print_bugs_yaml('DIVariable Bugs', di_variable_bugs)
+            print_bugs_yaml("DIVariable Bugs", di_variable_bugs)
 
     if opts.error_test:
         if any((di_location_bugs, di_subprogram_bugs, di_variable_bugs)):
