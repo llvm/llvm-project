@@ -27,7 +27,7 @@ struct AppProperties {
   EFI_HANDLE image_handle;
 };
 
-[[gnu::weak]] extern AppProperties app;
+extern AppProperties app;
 
 } // namespace LIBC_NAMESPACE_DECL
 
