@@ -1370,13 +1370,12 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   return *cxxStdlibType;
 }
 
-
 static void ResolveAndAddSystemIncludePath(const ArgList &DriverArgs,
-                                               ArgStringList &CC1Args,
-                                               const Twine &Path) {
+                                           ArgStringList &CC1Args,
+                                           const Twine &Path) {
   bool Canonicalize =
-        DriverArgs.hasFlag(options::OPT_canonical_prefixes,
-                           options::OPT_no_canonical_prefixes, true);
+      DriverArgs.hasFlag(options::OPT_canonical_prefixes,
+                         options::OPT_no_canonical_prefixes, true);
 
   if (!Canonicalize) {
     CC1Args.push_back(DriverArgs.MakeArgString(Path));
