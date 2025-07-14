@@ -32,22 +32,6 @@ public:
   void apply(ScheduleDAGInstrs *DAG) override;
 };
 
-static bool isMemLoad(const MachineInstr *MI) {
-  auto isLoad = [](const MachineInstr *MI) {
-    return (SIInstrInfo::isDS(*MI) || SIInstrInfo::isVMEM(*MI) ||
-            SIInstrInfo::isSMRD(*MI)) &&
-           MI->mayLoad();
-  };
-
-  if (MI->isBundle()) {
-    auto I = std::next(MI->getIterator());
-    return I != MI->getParent()->instr_end() && I->isInsideBundle() &&
-           isLoad(&*I);
-  }
-
-  return isLoad(MI);
-}
-
 void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
   const unsigned SyntheticLatency = 2000;
   for (SUnit &SU : DAG->SUnits) {
@@ -62,7 +46,9 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
       if (!PredDep.isBarrier())
         continue;
       SUnit *PredSU = PredDep.getSUnit();
-      if (!isMemLoad(PredSU->getInstr()))
+      MachineInstr *MI = PredSU->getInstr();
+      // Only consider memory loads
+      if (!MI->mayLoad() || MI->mayStore())
         continue;
       SDep ForwardD = PredDep;
       ForwardD.setSUnit(&SU);
