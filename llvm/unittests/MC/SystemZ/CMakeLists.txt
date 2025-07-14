@@ -10,6 +10,8 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
-add_llvm_unittest(SystemZAsmLexerTests
+add_llvm_unittest(SystemZMCTests
   SystemZAsmLexerTest.cpp
+  SystemZMCDisassemblerTest.cpp
   )
+
