@@ -13,7 +13,7 @@ define void @h() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
 ; CHECK-NEXT:    store <4 x i16> [[TMP3]], ptr [[ARRAYIDX2]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 poison, i32 poison>, i32 [[CONV9]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP4]], <2 x i32> zeroinitializer, i64 2)
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i32> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i32> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i16>

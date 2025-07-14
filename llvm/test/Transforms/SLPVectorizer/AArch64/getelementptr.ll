@@ -175,6 +175,10 @@ define i32 @getelementptr_2x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[G]], i32 [[TMP10]]
 ; CHECK-NEXT:    [[T12:%.*]] = load i32, ptr [[ARRAYIDX15]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[ADD11]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[T12]], i32 0
+; CHECK-NEXT:    [[TMP13]] = add nsw <2 x i32> [[TMP11]], [[TMP14]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = extractelement <2 x i32> [[TMP13]], i32 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]]
 ;
