@@ -110,3 +110,42 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
 )
+
+add_header_library(
+  exp_constants
+  HDRS
+    exp_constants.h
+  DEPENDS
+    libc.src.__support.FPUtil.triple_double
+)
+
+add_header_library(
+  exp_utils
+  HDRS
+    exp_utils.h
+  DEPENDS
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_header_library(
+  exp
+  HDRS
+    exp.h
+  DEPENDS
+    .exp_constants
+    .exp_utils
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.triple_double
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+)
