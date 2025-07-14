@@ -22281,15 +22281,14 @@ public:
               isGuaranteedNotToBePoison(VectorizedTree, AC) ||
               (It != ReducedValsToOps.end() &&
                any_of(It->getSecond(), [&](Instruction *I) {
-                 return isBoolLogicOp(I) &&
-                        I->getOperand(0) == VectorizedTree;
+                 return isBoolLogicOp(I) && I->getOperand(0) == VectorizedTree;
                }))) {
             ;
           } else if (isGuaranteedNotToBePoison(Res, AC) ||
                      (It1 != ReducedValsToOps.end() &&
-                     any_of(It1->getSecond(), [&](Instruction *I) {
-                       return isBoolLogicOp(I) && I->getOperand(0) == Res;
-                     }))) {
+                      any_of(It1->getSecond(), [&](Instruction *I) {
+                        return isBoolLogicOp(I) && I->getOperand(0) == Res;
+                      }))) {
             std::swap(VectorizedTree, Res);
           } else {
             VectorizedTree = Builder.CreateFreeze(VectorizedTree);
