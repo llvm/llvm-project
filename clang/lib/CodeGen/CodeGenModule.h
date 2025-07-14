@@ -464,16 +464,6 @@ private:
   std::vector<llvm::WeakTrackingVH> LLVMUsed;
   std::vector<llvm::WeakTrackingVH> LLVMCompilerUsed;
 
-  /// Set of function names that must be inlined -- inline assembly and
-  /// __attribute__((error)). e.g. __always_inline void foo() { asm (...); }
-  llvm::DenseSet<StringRef> MustInlinedFunctions;
-
-  /// Deferred always inline functions that has a generated GlobalAlias due to
-  /// -funique-internal-linkage-names
-  llvm::MapVector<GlobalDecl, llvm::DenseSet<llvm::Function *>>
-      DeferredMaybeInlineFunctions;
-  llvm::MapVector<llvm::Function *, StringRef> RenamedInlineFunctions;
-
   /// Store the list of global constructors and their respective priorities to
   /// be emitted when the translation unit is complete.
   CtorList GlobalCtors;
@@ -1266,10 +1256,6 @@ public:
 
   /// Emit an alias for "main" if it has no arguments (needed for wasm).
   void EmitMainVoidAlias();
-
-  /// Fixup attributes or remove GlobalAlias for always inline functions due to
-  /// -funique-internal-linkage-names
-  void FixupMaybeInlineFunctions();
 
   /// Tell the consumer that this variable has been instantiated.
   void HandleCXXStaticMemberVarInstantiation(VarDecl *VD);

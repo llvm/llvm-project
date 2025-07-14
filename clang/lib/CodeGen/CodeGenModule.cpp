@@ -775,7 +775,6 @@ void CodeGenModule::clear() {
   DeferredAnnotations.clear();
   if (OpenMPRuntime)
     OpenMPRuntime->clear();
-  DeferredMaybeInlineFunctions.clear();
 }
 
 void InstrProfStats::reportDiagnostics(DiagnosticsEngine &Diags,
@@ -941,7 +940,6 @@ void CodeGenModule::Release() {
   emitAtAvailableLinkGuard();
   if (Context.getTargetInfo().getTriple().isWasm())
     EmitMainVoidAlias();
-  FixupMaybeInlineFunctions();
 
   if (getTriple().isAMDGPU() ||
       (getTriple().isSPIRV() && getTriple().getVendor() == llvm::Triple::AMD)) {
@@ -6215,27 +6213,6 @@ void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
   EmitTopLevelDecl(VD);
 }
 
-static llvm::DenseSet<llvm::CallBase *> collectCallSites(llvm::Function *Fn) {
-  llvm::DenseSet<llvm::CallBase *> CIs;
-  for (auto &BB : *Fn) {
-    for (auto &I : BB) {
-      if (auto *CI = dyn_cast<llvm::CallBase>(&I))
-        CIs.insert(CI);
-    }
-  }
-  return CIs;
-}
-
-static bool hasInlineAttr(const FunctionDecl *Decl) {
-  return Decl->hasAttr<AlwaysInlineAttr>() || Decl->hasAttr<GNUInlineAttr>();
-}
-
-static bool isLinuxInitCall(const FunctionDecl *Decl) {
-  if (auto *Attr = Decl->getAttr<SectionAttr>())
-    return Attr->getName() == ".init.text";
-  return false;
-}
-
 void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                                                  llvm::GlobalValue *GV) {
   const auto *D = cast<FunctionDecl>(GD.getDecl());
@@ -6250,7 +6227,8 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                                                    /*DontDefer=*/true,
                                                    ForDefinition));
 
-  llvm::GlobalAlias *GA = nullptr;
+  auto *Fn = cast<llvm::Function>(GV);
+  llvm::Function *GA = nullptr;
   if (!getLangOpts().CPlusPlus &&
       getCXXABI().getMangleContext().shouldMangleDeclName(D)) {
     // -funique-internal-linkage-names may change the symbol name of C function.
@@ -6261,16 +6239,31 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
         if (llvm::GlobalValue *GVDef =
                 getModule().getNamedValue(II->getName())) {
           GVDef->replaceAllUsesWith(GV);
-          GVDef->eraseFromParent();
-        } else if (isLinuxInitCall(D)) {
-          RenamedInlineFunctions[cast<llvm::Function>(GV)] = D->getName();
+          GA = dyn_cast<llvm::Function>(GVDef);
         } else {
-          // Create a GlobalAlias to the original symbol in case it was
-          // referenced in the inline assembly
-          unsigned AS = GV->getType()->getPointerAddressSpace();
-          GA = llvm::GlobalAlias::create(GV->getValueType(), AS,
-                                         llvm::GlobalValue::InternalLinkage,
-                                         II->getName(), GV, &getModule());
+          GA = llvm::Function::Create(Fn->getFunctionType(), llvm::GlobalValue::InternalLinkage,
+                             II->getName(), &getModule());
+          GA->setAttributes(Fn->getAttributes());
+        }
+        if (D->hasAttr<GNUInlineAttr>() || D->hasAttr<AlwaysInlineAttr>()) {
+          GA->eraseFromParent();
+          GA = nullptr;
+        }
+        // Create a wrapper with the original symbol in case the mangled function is
+        // referenced in any hardcoded inline assembly
+        if (GA) {
+          if (!GA->isDeclaration())
+            GA->deleteBody();
+          GA->setLinkage(llvm::GlobalValue::InternalLinkage);
+          llvm::BasicBlock *BB = llvm::BasicBlock::Create(GA->getContext(), "", GA);
+          llvm::SmallVector<llvm::Value *> Args;
+          for (auto &arg : GA->args())
+            Args.push_back(&arg);
+          llvm::CallInst *CI = llvm::CallInst::Create(Fn->getFunctionType(), GV, Args, "", BB->end());
+          if (Fn->getReturnType()->isVoidTy())
+            llvm::ReturnInst::Create(GA->getContext(), BB);
+          else
+            llvm::ReturnInst::Create(GA->getContext(), CI, BB->end());
         }
       }
     }
@@ -6284,7 +6277,6 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   // generating code for it because various parts of IR generation
   // want to propagate this information down (e.g. to local static
   // declarations).
-  auto *Fn = cast<llvm::Function>(GV);
   setFunctionLinkage(GD, Fn);
 
   // FIXME: this is redundant with part of setFunctionDefinitionAttributes
@@ -6315,60 +6307,10 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   SetLLVMFunctionAttributesForDefinition(D, Fn);
 
-  // Avoid extra uses of the internal GlobalAlias if Callee has
-  // __attribute__((error)) or inline assembly.
-  if (GA) {
-    bool shouldEraseAlias = false;
-    auto CallSites = collectCallSites(Fn);
-    for (auto &CI : CallSites) {
-      if (auto *Callee = CI->getCalledFunction()) {
-        // Callee is a known always inline that contains either inline assembly
-        // or __attribute__((error))
-        if (MustInlinedFunctions.contains(Callee->getName()) ||
-            Callee->hasFnAttribute("dontcall-error"))
-          shouldEraseAlias = true;
-      } else if (CI->isInlineAsm() && hasInlineAttr(D)) {
-        // Avoid alias towards always inline assembly to allow inlining
-        shouldEraseAlias = true;
-        RenamedInlineFunctions[Fn] = D->getName();
-      }
-    }
-
-    if (shouldEraseAlias) {
-      if (hasInlineAttr(D))
-        MustInlinedFunctions.insert(Fn->getName());
-      else
-        RenamedInlineFunctions[Fn] = D->getName();
-      GA->eraseFromParent();
-      GA = nullptr;
-    } else {
-      // Collect callee info if it hasn't been seen yet, and deferred the
-      // process later
-      for (auto &CI : CallSites) {
-        if (auto *Callee = CI->getCalledFunction()) {
-          GlobalDecl CalleeDecl;
-          if (Callee->isDeclaration() && !Callee->isIntrinsic() &&
-              hasInlineAttr(D)) {
-            // Callee has not emitted. Defer this check to a later stage
-            DeferredMaybeInlineFunctions[GD].insert(Callee);
-            GA = nullptr;
-          } else if (lookupRepresentativeDecl(Callee->getName(), CalleeDecl)) {
-            // Defer if Callee is also deferred
-            if (DeferredMaybeInlineFunctions.contains(CalleeDecl)) {
-              DeferredMaybeInlineFunctions[GD].insert(Callee);
-              GA = nullptr;
-            }
-          }
-        }
-      }
-    }
-  }
-
   // Set Attributes to perserve the internal GlobalValues
   if (GA) {
-    SetCommonAttributes(GD, GA);
-    addUsedOrCompilerUsedGlobal(GA);
-    addUsedOrCompilerUsedGlobal(GV);
+    setNonAliasAttributes(GD, GA);
+    SetLLVMFunctionAttributesForDefinition(D, GA);
   }
 
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
@@ -7648,50 +7590,6 @@ void CodeGenModule::EmitMainVoidAlias() {
       auto *GA = llvm::GlobalAlias::create("__main_void", F);
       GA->setVisibility(llvm::GlobalValue::HiddenVisibility);
     }
-  }
-}
-
-void CodeGenModule::FixupMaybeInlineFunctions() {
-  // Check if GlobalAlias need to be removed
-  unsigned long sz = 0;
-  while (sz != DeferredMaybeInlineFunctions.size()) {
-    sz = DeferredMaybeInlineFunctions.size();
-    for (auto I = DeferredMaybeInlineFunctions.begin();
-         I != DeferredMaybeInlineFunctions.end();) {
-      const auto *D = cast<FunctionDecl>(I->first.getDecl());
-      auto *GA = GetGlobalValue(D->getName());
-      StringRef MangledName = getMangledName(I->first);
-      if (GA && llvm::any_of(I->second, [this](auto *C) {
-            return this->MustInlinedFunctions.contains(C->getName());
-          })) {
-        MustInlinedFunctions.insert(MangledName);
-        GA->eraseFromParent();
-        I = DeferredMaybeInlineFunctions.erase(I);
-      } else
-        I++;
-    }
-  }
-  // Fixup attributes
-  for (auto &[Decl, _] : DeferredMaybeInlineFunctions) {
-    const auto *D = cast<FunctionDecl>(Decl.getDecl());
-    auto *GA = GetGlobalValue(D->getName());
-    StringRef MangledName = getMangledName(Decl);
-    auto *GV = GetGlobalValue(MangledName);
-    if (!GA || !GV)
-      continue;
-    SetCommonAttributes(Decl, GA);
-    addUsedOrCompilerUsedGlobal(GA);
-    addUsedOrCompilerUsedGlobal(GV);
-  }
-
-  // Revert unique internal linkage name for all C inline functions that has
-  // inline assembly. This is a workaround to Linux static_call, because the
-  // original symbol name is used in an assembly trampoline. A more proper way
-  // here is to parse the inline assembly and figure out what kind of assembly
-  // constraints must inline (e.g. "i" through constant folding), but this might
-  // be difficult in the frontend..
-  for (auto &[Fn, Name] : RenamedInlineFunctions) {
-    Fn->setName(Name);
   }
 }
 
