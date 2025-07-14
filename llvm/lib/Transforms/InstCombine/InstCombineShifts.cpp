@@ -530,48 +530,140 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   return nullptr;
 }
 
-/// Return true if we can simplify two logical (either left or right) shifts
-/// that have constant shift amounts: OuterShift (InnerShift X, C1), C2.
-static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
-                                    Instruction *InnerShift,
-                                    InstCombinerImpl &IC, Instruction *CxtI) {
+/// Return a bitmask of all constant outer shift amounts that can be simplified
+/// by foldShiftedShift().
+static APInt getEvaluableShiftedShiftMask(bool IsOuterShl,
+                                          Instruction *InnerShift,
+                                          InstCombinerImpl &IC,
+                                          Instruction *CxtI) {
   assert(InnerShift->isLogicalShift() && "Unexpected instruction type");
+
+  const unsigned TypeWidth = InnerShift->getType()->getScalarSizeInBits();
 
   // We need constant scalar or constant splat shifts.
   const APInt *InnerShiftConst;
   if (!match(InnerShift->getOperand(1), m_APInt(InnerShiftConst)))
-    return false;
+    return APInt::getZero(TypeWidth);
 
-  // Two logical shifts in the same direction:
+  if (InnerShiftConst->uge(TypeWidth))
+    return APInt::getZero(TypeWidth);
+
+  const unsigned InnerShAmt = InnerShiftConst->getZExtValue();
+
+  // Two logical shifts in the same direction can always be simplified, so long
+  // as the total shift amount is legal.
   // shl (shl X, C1), C2 -->  shl X, C1 + C2
   // lshr (lshr X, C1), C2 --> lshr X, C1 + C2
   bool IsInnerShl = InnerShift->getOpcode() == Instruction::Shl;
   if (IsInnerShl == IsOuterShl)
-    return true;
+    return APInt::getLowBitsSet(TypeWidth, TypeWidth - InnerShAmt);
 
+  APInt ShMask = APInt::getZero(TypeWidth);
   // Equal shift amounts in opposite directions become bitwise 'and':
   // lshr (shl X, C), C --> and X, C'
   // shl (lshr X, C), C --> and X, C'
-  if (*InnerShiftConst == OuterShAmt)
-    return true;
+  ShMask.setBit(InnerShAmt);
 
-  // If the 2nd shift is bigger than the 1st, we can fold:
+  // If the inner shift is bigger than the outer, we can fold:
   // lshr (shl X, C1), C2 -->  and (shl X, C1 - C2), C3
   // shl (lshr X, C1), C2 --> and (lshr X, C1 - C2), C3
-  // but it isn't profitable unless we know the and'd out bits are already zero.
-  // Also, check that the inner shift is valid (less than the type width) or
-  // we'll crash trying to produce the bit mask for the 'and'.
-  unsigned TypeWidth = InnerShift->getType()->getScalarSizeInBits();
-  if (InnerShiftConst->ugt(OuterShAmt) && InnerShiftConst->ult(TypeWidth)) {
-    unsigned InnerShAmt = InnerShiftConst->getZExtValue();
-    unsigned MaskShift =
-        IsInnerShl ? TypeWidth - InnerShAmt : InnerShAmt - OuterShAmt;
-    APInt Mask = APInt::getLowBitsSet(TypeWidth, OuterShAmt) << MaskShift;
-    if (IC.MaskedValueIsZero(InnerShift->getOperand(0), Mask, CxtI))
-      return true;
+  // but it isn't profitable unless we know the masked out bits are already
+  // zero.
+  KnownBits Known = IC.computeKnownBits(InnerShift->getOperand(0), CxtI);
+  // Isolate the bits that are annihilated by the inner shift.
+  APInt InnerShMask = IsInnerShl ? Known.Zero.lshr(TypeWidth - InnerShAmt)
+                                 : Known.Zero.trunc(InnerShAmt);
+  // Isolate the upper (resp. lower) InnerShAmt bits of the base operand of the
+  // inner shl (resp. lshr).
+  // Then:
+  // - lshr (shl X, C1), C2 == (shl X, C1 - C2) if the bottom C2 of the isolated
+  //   bits are zero
+  // - shl (lshr X, C1), C2 == (lshr X, C1 - C2) if the top C2 of the isolated
+  //   bits are zero
+  const unsigned MaxOuterShAmt =
+      IsInnerShl ? Known.Zero.lshr(TypeWidth - InnerShAmt).countr_one()
+                 : Known.Zero.trunc(InnerShAmt).countl_one();
+  ShMask.setLowBits(MaxOuterShAmt);
+  return ShMask;
+}
+
+/// Given a bitmask \p ShiftMask of desired shift amounts, determine the submask
+/// of bits corresponding to shift amounts X for which the given expression \p V
+/// can be computed for at worst the same cost as the current expression tree
+/// when shifted by X. For each set bit in the \p ShiftMask afterward,
+/// getShiftedValue() can produce the corresponding value.
+///
+/// \returns true if and only if at least one bit of the \p ShiftMask is set
+/// after refinement.
+static bool refineEvaluableShiftMask(Value *V, APInt &ShiftMask,
+                                     bool IsLeftShift, InstCombinerImpl &IC,
+                                     Instruction *CxtI) {
+  // We can always evaluate immediate constants.
+  if (match(V, m_ImmConstant()))
+    return true;
+
+  Instruction *I = dyn_cast<Instruction>(V);
+  if (!I) {
+    ShiftMask.clearAllBits();
+    return false;
   }
 
-  return false;
+  // We can't mutate something that has multiple uses: doing so would
+  // require duplicating the instruction in general, which isn't profitable.
+  if (!I->hasOneUse()) {
+    ShiftMask.clearAllBits();
+    return false;
+  }
+
+  switch (I->getOpcode()) {
+  default: {
+    ShiftMask.clearAllBits();
+    return false;
+  }
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+    return refineEvaluableShiftMask(I->getOperand(0), ShiftMask, IsLeftShift,
+                                    IC, I) &&
+           refineEvaluableShiftMask(I->getOperand(1), ShiftMask, IsLeftShift,
+                                    IC, I);
+
+  case Instruction::Shl:
+  case Instruction::LShr: {
+    ShiftMask &= getEvaluableShiftedShiftMask(IsLeftShift, I, IC, CxtI);
+    return !ShiftMask.isZero();
+  }
+
+  case Instruction::Select: {
+    SelectInst *SI = cast<SelectInst>(I);
+    Value *TrueVal = SI->getTrueValue();
+    Value *FalseVal = SI->getFalseValue();
+    return refineEvaluableShiftMask(TrueVal, ShiftMask, IsLeftShift, IC, SI) &&
+           refineEvaluableShiftMask(FalseVal, ShiftMask, IsLeftShift, IC, SI);
+  }
+  case Instruction::PHI: {
+    // We can change a phi if we can change all operands.  Note that we never
+    // get into trouble with cyclic PHIs here because we only consider
+    // instructions with a single use.
+    PHINode *PN = cast<PHINode>(I);
+    for (Value *IncValue : PN->incoming_values())
+      if (!refineEvaluableShiftMask(IncValue, ShiftMask, IsLeftShift, IC, PN))
+        return false;
+    return true;
+  }
+  case Instruction::Mul: {
+    const APInt *MulConst;
+    // We can fold (shr (mul X, -(1 << C)), C) -> (and (neg X), C`)
+    if (IsLeftShift || !match(I->getOperand(1), m_APInt(MulConst)) ||
+        !MulConst->isNegatedPowerOf2()) {
+      ShiftMask.clearAllBits();
+      return false;
+    }
+    ShiftMask &=
+        APInt::getOneBitSet(ShiftMask.getBitWidth(), MulConst->countr_zero());
+    return !ShiftMask.isZero();
+  }
+  }
 }
 
 /// See if we can compute the specified value, but shifted logically to the left
@@ -584,56 +676,11 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
 ///      %F = lshr i128 %E, 64
 /// where the client will ask if E can be computed shifted right by 64-bits. If
 /// this succeeds, getShiftedValue() will be called to produce the value.
-static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
+static bool canEvaluateShifted(Value *V, unsigned ShAmt, bool IsLeftShift,
                                InstCombinerImpl &IC, Instruction *CxtI) {
-  // We can always evaluate immediate constants.
-  if (match(V, m_ImmConstant()))
-    return true;
-
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) return false;
-
-  // We can't mutate something that has multiple uses: doing so would
-  // require duplicating the instruction in general, which isn't profitable.
-  if (!I->hasOneUse()) return false;
-
-  switch (I->getOpcode()) {
-  default: return false;
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:
-    // Bitwise operators can all arbitrarily be arbitrarily evaluated shifted.
-    return canEvaluateShifted(I->getOperand(0), NumBits, IsLeftShift, IC, I) &&
-           canEvaluateShifted(I->getOperand(1), NumBits, IsLeftShift, IC, I);
-
-  case Instruction::Shl:
-  case Instruction::LShr:
-    return canEvaluateShiftedShift(NumBits, IsLeftShift, I, IC, CxtI);
-
-  case Instruction::Select: {
-    SelectInst *SI = cast<SelectInst>(I);
-    Value *TrueVal = SI->getTrueValue();
-    Value *FalseVal = SI->getFalseValue();
-    return canEvaluateShifted(TrueVal, NumBits, IsLeftShift, IC, SI) &&
-           canEvaluateShifted(FalseVal, NumBits, IsLeftShift, IC, SI);
-  }
-  case Instruction::PHI: {
-    // We can change a phi if we can change all operands.  Note that we never
-    // get into trouble with cyclic PHIs here because we only consider
-    // instructions with a single use.
-    PHINode *PN = cast<PHINode>(I);
-    for (Value *IncValue : PN->incoming_values())
-      if (!canEvaluateShifted(IncValue, NumBits, IsLeftShift, IC, PN))
-        return false;
-    return true;
-  }
-  case Instruction::Mul: {
-    const APInt *MulConst;
-    // We can fold (shr (mul X, -(1 << C)), C) -> (and (neg X), C`)
-    return !IsLeftShift && match(I->getOperand(1), m_APInt(MulConst)) &&
-           MulConst->isNegatedPowerOf2() && MulConst->countr_zero() == NumBits;
-  }
-  }
+  APInt ShiftMask =
+      APInt::getOneBitSet(V->getType()->getScalarSizeInBits(), ShAmt);
+  return refineEvaluableShiftMask(V, ShiftMask, IsLeftShift, IC, CxtI);
 }
 
 /// Fold OuterShift (InnerShift X, C1), C2.
@@ -985,37 +1032,32 @@ static Instruction *foldShrThroughZExtedShl(BinaryOperator &I, Value *Op,
                                             InstCombinerImpl &IC,
                                             const DataLayout &DL) {
   Type *DestTy = I.getType();
+  const unsigned InnerBitWidth = Op->getType()->getScalarSizeInBits();
 
-  auto *Inner = dyn_cast<Instruction>(Op);
-  if (!Inner)
+  // Determine if the operand is effectively right-shifted by counting the
+  // known leading zero bits.
+  KnownBits Known = IC.computeKnownBits(Op, nullptr);
+  const unsigned MaxInnerShrAmt = Known.countMinLeadingZeros();
+  if (MaxInnerShrAmt == 0)
+    return nullptr;
+  APInt ShrMask =
+      APInt::getLowBitsSet(InnerBitWidth, std::min(MaxInnerShrAmt, ShlAmt) + 1);
+
+  // Undo the maximal inner right shift amount that simplifies the overall
+  // computation.
+  if (!refineEvaluableShiftMask(Op, ShrMask, /*IsLeftShift=*/true, IC, nullptr))
     return nullptr;
 
-  // Dig through operations until the first shift.
-  while (!Inner->isShift())
-    if (!match(Inner, m_BinOp(m_OneUse(m_Instruction(Inner)), m_Constant())))
-      return nullptr;
-
-  // Fold only if the inner shift is a logical right-shift.
-  const APInt *InnerShrConst;
-  if (!match(Inner, m_LShr(m_Value(), m_APInt(InnerShrConst))))
+  const unsigned InnerShrAmt = ShrMask.getActiveBits() - 1;
+  if (InnerShrAmt == 0)
     return nullptr;
-
-  const uint64_t InnerShrAmt = InnerShrConst->getZExtValue();
-  if (InnerShrAmt >= ShlAmt) {
-    const uint64_t ReducedShrAmt = InnerShrAmt - ShlAmt;
-    if (!canEvaluateShifted(Op, ReducedShrAmt, /*IsLeftShift=*/false, IC,
-                            nullptr))
-      return nullptr;
-    Value *NewOp =
-        getShiftedValue(Op, ReducedShrAmt, /*isLeftShift=*/false, IC, DL);
-    return new ZExtInst(NewOp, DestTy);
-  }
-
-  if (!canEvaluateShifted(Op, InnerShrAmt, /*IsLeftShift=*/true, IC, nullptr))
-    return nullptr;
+  assert(InnerShrAmt <= ShlAmt);
 
   const uint64_t ReducedShlAmt = ShlAmt - InnerShrAmt;
   Value *NewOp = getShiftedValue(Op, InnerShrAmt, /*isLeftShift=*/true, IC, DL);
+  if (ReducedShlAmt == 0)
+    return new ZExtInst(NewOp, DestTy);
+
   Value *NewZExt = IC.Builder.CreateZExt(NewOp, DestTy);
   NewZExt->takeName(I.getOperand(0));
   auto *NewShl = BinaryOperator::CreateShl(
