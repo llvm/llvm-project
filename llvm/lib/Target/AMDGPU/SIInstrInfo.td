@@ -1303,15 +1303,6 @@ let PrintMethod = "printBitOp3" in
 def BitOp3 : NamedIntOperand<"bitop3">;
 def bitop3_0 : DefaultOperand<BitOp3, 0>;
 
-def MatrixAFMT : CustomOperand<i32, 1, "MatrixAFMT">;
-def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
-
-def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
-def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
-
-def MatrixAScaleFmt : CustomOperand<i32, 1, "MatrixAScaleFmt">;
-def MatrixBScaleFmt : CustomOperand<i32, 1, "MatrixBScaleFmt">;
-
 def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
 def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 

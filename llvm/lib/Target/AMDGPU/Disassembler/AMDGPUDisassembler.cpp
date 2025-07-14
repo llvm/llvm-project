@@ -589,15 +589,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // ToDo: better to switch encoding length using some bit predicate
     // but it is unknown yet, so try all we can
 
-    // Try to decode DPP and SDWA first to solve conflict with VOP1 and VOP2
-    // encodings
-    if (isGFX1250() && Bytes.size() >= 16) {
-      DecoderUInt128 DecW = eat16Bytes(Bytes);
-      if (tryDecodeInst(DecoderTableGFX1250128, MI, DecW, Address, CS))
-        break;
-      Bytes = Bytes_.slice(0, MaxInstBytesNum);
-    }
-
     if (isGFX11Plus() && Bytes.size() >= 12 ) {
       DecoderUInt128 DecW = eat12Bytes(Bytes);
 
@@ -868,9 +859,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::IsMAI)
     convertMAIInst(MI);
 
-  if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::IsWMMA)
-    convertWMMAInst(MI);
-
   int VDstIn_Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                               AMDGPU::OpName::vdst_in);
   if (VDstIn_Idx != -1) {
@@ -1007,35 +995,6 @@ void AMDGPUDisassembler::convertMAIInst(MCInst &MI) const {
 
   const AMDGPU::MFMA_F8F6F4_Info *AdjustedRegClassOpcode =
       AMDGPU::getMFMA_F8F6F4_WithFormatArgs(CBSZ, BLGP, MI.getOpcode());
-  if (!AdjustedRegClassOpcode ||
-      AdjustedRegClassOpcode->Opcode == MI.getOpcode())
-    return;
-
-  MI.setOpcode(AdjustedRegClassOpcode->Opcode);
-  int Src0Idx =
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
-  int Src1Idx =
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
-  adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src0Idx),
-                              AdjustedRegClassOpcode->NumRegsSrcA);
-  adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src1Idx),
-                              AdjustedRegClassOpcode->NumRegsSrcB);
-}
-
-void AMDGPUDisassembler::convertWMMAInst(MCInst &MI) const {
-  int FmtAIdx =
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::matrix_a_fmt);
-  if (FmtAIdx == -1)
-    return;
-
-  int FmtBIdx =
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::matrix_b_fmt);
-
-  unsigned FmtA = MI.getOperand(FmtAIdx).getImm();
-  unsigned FmtB = MI.getOperand(FmtBIdx).getImm();
-
-  const AMDGPU::MFMA_F8F6F4_Info *AdjustedRegClassOpcode =
-      AMDGPU::getWMMA_F8F6F4_WithFormatArgs(FmtA, FmtB, MI.getOpcode());
   if (!AdjustedRegClassOpcode ||
       AdjustedRegClassOpcode->Opcode == MI.getOpcode())
     return;
