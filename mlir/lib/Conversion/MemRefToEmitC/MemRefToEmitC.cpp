@@ -79,13 +79,23 @@ struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
   }
 };
 
+Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
+  Type resultTy;
+  if (opTy.getRank() == 0) {
+    resultTy = typeConverter->convertType(mlir::getElementTypeOrSelf(opTy));
+  } else {
+    resultTy = typeConverter->convertType(opTy);
+  }
+  return resultTy;
+}
+
 struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(memref::GlobalOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
-    MemRefType type = op.getType();
+    MemRefType opTy = op.getType();
     if (!op.getType().hasStaticShape()) {
       return rewriter.notifyMatchFailure(
           op.getLoc(), "cannot transform global with dynamic shape");
@@ -98,11 +108,7 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
                        "currently not supported");
     }
 
-    Type resultTy;
-    if (type.getRank() == 0)
-      resultTy = getTypeConverter()->convertType(type.getElementType());
-    else
-      resultTy = getTypeConverter()->convertType(type);
+    Type resultTy = convertMemRefType(opTy, getTypeConverter());
 
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(),
@@ -122,7 +128,7 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
     bool externSpecifier = !staticSpecifier;
 
     Attribute initialValue = operands.getInitialValueAttr();
-    if (type.getRank() == 0) {
+    if (opTy.getRank() == 0) {
       auto elementsAttr = llvm::cast<ElementsAttr>(*op.getInitialValue());
       initialValue = elementsAttr.getSplatValue<Attribute>();
     }
@@ -144,16 +150,10 @@ struct ConvertGetGlobal final
   matchAndRewrite(memref::GetGlobalOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
 
-    MemRefType type = op.getType();
-    Type resultTy;
-    if (type.getRank() == 0)
-      resultTy = emitc::LValueType::get(
-          getTypeConverter()->convertType(type.getElementType()));
-    else
-      resultTy = getTypeConverter()->convertType(type);
-
-    if (!resultTy)
-      return rewriter.notifyMatchFailure(op.getLoc(), "cannot convert type");
+    MemRefType opTy = op.getType();
+    Type resultTy = convertMemRefType(opTy, getTypeConverter());
+    if (opTy.getRank() == 0)
+      resultTy = emitc::LValueType::get(resultTy);
 
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(),
