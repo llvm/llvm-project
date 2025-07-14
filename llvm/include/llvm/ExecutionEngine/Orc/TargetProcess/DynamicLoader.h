@@ -35,14 +35,13 @@ namespace orc {
 class LibraryManager {
 public:
   enum class State : uint8_t { Unloaded = 0, Loaded = 1, Queried = 2 };
-  enum class Kind : uint8_t { User = 0, System = 1 };
 
   class LibraryInfo {
   public:
     LibraryInfo(const LibraryInfo &) = delete;
     LibraryInfo &operator=(const LibraryInfo &) = delete;
 
-    LibraryInfo(std::string filePath, State s, Kind k,
+    LibraryInfo(std::string filePath, State s, PathType k,
                 std::optional<BloomFilter> filter = std::nullopt)
         : filePath(std::move(filePath)), state(s), kind(k),
           filter(std::move(filter)) {}
@@ -81,7 +80,7 @@ public:
     }
 
     State getState() const { return state.load(); }
-    Kind getKind() const { return kind; }
+    PathType getKind() const { return kind; }
 
     void setState(State s) { state.store(s); }
 
@@ -92,7 +91,7 @@ public:
   private:
     std::string filePath;
     std::atomic<State> state;
-    Kind kind;
+    PathType kind;
     std::optional<BloomFilter> filter;
     mutable std::shared_mutex mutex;
   };
@@ -103,7 +102,7 @@ public:
     using Iterator = typename Map::const_iterator;
     class FilterIterator {
     public:
-      FilterIterator(Iterator _it, Iterator _end, State s, Kind k)
+      FilterIterator(Iterator _it, Iterator _end, State s, PathType k)
           : it(_it), end(_end), state(s), kind(k) {
         advance();
       }
@@ -132,9 +131,9 @@ public:
       }
       Iterator it, end;
       State state;
-      Kind kind;
+      PathType kind;
     };
-    FilteredView(Iterator begin, Iterator end, State s, Kind k)
+    FilteredView(Iterator begin, Iterator end, State s, PathType k)
         : begin_(begin), end_(end), state_(s), kind_(k) {}
 
     FilterIterator begin() const {
@@ -148,7 +147,7 @@ public:
   private:
     Iterator begin_, end_;
     State state_;
-    Kind kind_;
+    PathType kind_;
   };
 
 private:
@@ -161,7 +160,7 @@ public:
   LibraryManager() = default;
   ~LibraryManager() = default;
 
-  bool addLibrary(std::string path, Kind kind,
+  bool addLibrary(std::string path, PathType kind,
                   std::optional<BloomFilter> filter = std::nullopt) {
     std::unique_lock<std::shared_mutex> lock(mutex);
     // SmallString<256> nativePath(path);
@@ -215,7 +214,7 @@ public:
     return nullptr;
   }
 
-  FilteredView getView(State s, Kind k) const {
+  FilteredView getView(State s, PathType k) const {
     std::shared_lock<std::shared_mutex> lock(mutex);
     return FilteredView(libraries.begin(), libraries.end(), s, k);
   }
@@ -396,11 +395,24 @@ public:
 
   using OnSearchComplete = unique_function<void(SymbolQuery &)>;
 
+  void dump() {
+    m_libMgr.forEachLibrary([&](const LibraryInfo &lib) -> bool {
+      dbgs() << ". Library Path : " << lib.getFullPath() << " -> \n\t\t:"
+             << " ({Type : ("
+             << (lib.getKind() == PathType::User ? "User" : "System")
+             << ") }, { State : "
+             << (lib.getState() == LibraryManager::State::Loaded ? "Loaded"
+                                                                 : "Unloaded")
+             << "})\n";
+      return true;
+    });
+  }
+
   void searchSymbolsInLibraries(std::vector<std::string> &symbolNames,
                                 OnSearchComplete callback);
 
 private:
-  void scanLibrariesIfNeeded(LibraryManager::Kind K);
+  void scanLibrariesIfNeeded(PathType K);
   void resolveSymbolsInLibrary(LibraryInfo &library, SymbolQuery &query);
   bool
   symbolExistsInLibrary(const LibraryInfo &library, StringRef symbol,
@@ -416,7 +428,6 @@ private:
   BloomFilterBuilder FB;
   LibraryManager m_libMgr;
   LibraryScanner::shouldScanFn m_shouldScan;
-  // std::shared_ptr<DylibPathResolver> m_DylibPathResolver;
   bool includeSys;
 };
 

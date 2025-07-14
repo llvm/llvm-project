@@ -17,6 +17,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 
 #include <atomic>
@@ -41,20 +42,35 @@ public:
   void clear() {
     std::unique_lock<std::shared_mutex> lock(m_mutex);
     m_seen.clear();
-    m_readlinkCache.clear();
     m_realpathCache.clear();
+#ifndef _WIN32
+    m_readlinkCache.clear();
     m_lstatCache.clear();
+#endif
   }
 
-  void markSeen(const std::string &canon_path) { m_seen.insert(canon_path); }
+  void markSeen(const std::string &canon_path) {
+    std::unique_lock<std::shared_mutex> lock(m_mutex);
+    m_seen.insert(canon_path);
+  }
 
-  bool hasSeen(StringRef canon_path, bool cache = true) {
+  bool hasSeen(StringRef canon_path) {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
+    return m_seen.contains(canon_path);
+    // return m_seen.count(canon_path) > 0;
+  }
+
+  bool hasSeenOrMark(StringRef canon_path) {
     std::string s = canon_path.str();
-    if (m_seen.count(s) > 0)
-      return true;
-    if (cache)
-      markSeen(s);
+    {
+      std::shared_lock<std::shared_mutex> lock(m_mutex);
+      if (m_seen.contains(s))
+        return true;
+    }
+    {
+      std::unique_lock<std::shared_mutex> lock(m_mutex);
+      m_seen.insert(s);
+    }
     return false;
   }
 
@@ -66,11 +82,11 @@ private:
     std::error_code errnoCode;
   };
 
-  std::unordered_set<std::string> m_seen;
-  std::unordered_map<std::string, PathInfo> m_realpathCache;
+  StringSet<> m_seen;
+  StringMap<PathInfo> m_realpathCache;
 #ifndef _WIN32
-  std::unordered_map<std::string, std::string> m_readlinkCache;
-  std::unordered_map<std::string, mode_t> m_lstatCache;
+  StringMap<std::string> m_readlinkCache;
+  StringMap<mode_t> m_lstatCache;
 #endif
 };
 
@@ -84,13 +100,12 @@ public:
   PathResolver(std::shared_ptr<LibraryPathCache> cache)
       : m_cache(std::move(cache)) {}
 
-  std::optional<std::string> resolve(const std::string &path,
-                                     std::error_code &ec) {
+  std::optional<std::string> resolve(StringRef path, std::error_code &ec) {
     return realpathCached(path, ec);
   }
 #ifndef _WIN32
-  mode_t lstatCached(const std::string &path);
-  std::optional<std::string> readlinkCached(const std::string &path);
+  mode_t lstatCached(StringRef path);
+  std::optional<std::string> readlinkCached(StringRef path);
 #endif
   std::optional<std::string> realpathCached(StringRef path, std::error_code &ec,
                                             StringRef base = "",
@@ -120,7 +135,7 @@ private:
   LibraryScanHelper &m_helper;
 
   std::string substOne(StringRef path, StringRef pattern,
-                                      StringRef replacement);
+                       StringRef replacement);
 
   /// Apply all known loader substitutions to the path
   std::string substAll(StringRef path, StringRef loaderPath);
@@ -144,16 +159,16 @@ private:
   std::optional<std::string> normalize(StringRef path);
 };
 
-enum class PathKind : uint8_t { User, System, Unknown };
+enum class PathType : uint8_t { User, System, Unknown };
 
 enum class ScanState : uint8_t { NotScanned, Scanning, Scanned };
 
 struct LibraryUnit {
   std::string basePath; // Canonical base directory path
-  PathKind kind;        // User or System
+  PathType kind;        // User or System
   std::atomic<ScanState> state;
 
-  LibraryUnit(std::string base, PathKind k)
+  LibraryUnit(std::string base, PathType k)
       : basePath(std::move(base)), kind(k), state(ScanState::NotScanned) {}
 };
 
@@ -176,19 +191,23 @@ public:
 
   void
   addBasePath(const std::string &path,
-              PathKind Kind =
-                  PathKind::Unknown); // Add a canonical directory for scanning
-  std::vector<std::shared_ptr<LibraryUnit>> getNextBatch(PathKind kind,
+              PathType Kind =
+                  PathType::Unknown); // Add a canonical directory for scanning
+  std::vector<std::shared_ptr<LibraryUnit>> getNextBatch(PathType kind,
                                                          size_t batchSize);
 
-  bool isTrackedBasePath(const std::string &path) const;
+  bool leftToScan(PathType K) const;
+
+  bool isTrackedBasePath(StringRef path) const;
   std::vector<std::shared_ptr<LibraryUnit>> getAllUnits() const;
 
   PathResolver &getPathResolver() const { return *m_resolver; }
 
   LibraryPathCache &getCache() const { return *m_cache; }
 
-  bool hasSeen(StringRef path) const { return m_cache->hasSeen(path); }
+  bool hasSeenOrMark(StringRef path) const {
+    return m_cache->hasSeenOrMark(path);
+  }
 
   std::optional<std::string> resolve(StringRef path,
                                      std::error_code &ec) const {
@@ -196,17 +215,14 @@ public:
   }
 
 private:
-  std::string resolveCanonical(const std::string &path,
-                               std::error_code &ec) const;
-  PathKind classifyKind(const std::string &path) const;
+  std::string resolveCanonical(StringRef path, std::error_code &ec) const;
+  PathType classifyKind(StringRef path) const;
 
-  mutable std::shared_mutex m_fileMutex;
   mutable std::shared_mutex m_mutex;
   std::shared_ptr<LibraryPathCache> m_cache;
   std::shared_ptr<PathResolver> m_resolver;
 
-  std::unordered_map<std::string, std::shared_ptr<LibraryUnit>>
-      m_units; // key: canonical path
+  StringMap<std::shared_ptr<LibraryUnit>> m_units; // key: canonical path
   std::deque<std::string> m_unscannedUsr;
   std::deque<std::string> m_unscannedSys;
 };
@@ -221,7 +237,7 @@ public:
       : m_helper(H), m_libMgr(m_libMgr), m_libResolver(DylibPathResolver(H)),
         shouldScanCall(std::move(shouldScanCall)) {}
 
-  void scanNext(PathKind kind, size_t batchSize = 1);
+  void scanNext(PathType kind, size_t batchSize = 1);
 
   struct LibraryDepsInfo {
     std::vector<std::string> storage;
@@ -256,7 +272,7 @@ private:
   std::optional<std::string> shouldScan(StringRef filePath);
   Expected<LibraryDepsInfo> extractDeps(StringRef filePath);
 
-  void handleLibrary(StringRef path, PathKind K, int level = 1);
+  void handleLibrary(StringRef path, PathType K, int level = 1);
 
   void scanBaseDir(std::shared_ptr<LibraryUnit> unit);
 };

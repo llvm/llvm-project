@@ -179,6 +179,7 @@ void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
   }
 
   const auto &unresolved = unresolvedSymbols.getUnresolvedSymbols();
+  bool hadAnySym = false;
   for (const auto &symbol : unresolved) {
     if (lib.mayContain(symbol)) {
       // LLVM_DEBUG(
@@ -189,9 +190,14 @@ void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
         dbgs() << "  Resolved symbol: " << symbol
                << " in library: " << lib.getFullPath() << "\n"; //);
         unresolvedSymbols.resolve(symbol, lib.getFullPath());
+        hadAnySym = true;
       }
     }
   }
+
+  using LibraryState = LibraryManager::State;
+  if (hadAnySym && lib.getState() != LibraryState::Loaded)
+    lib.setState(LibraryState::Queried);
 }
 
 void DynamicLoader::searchSymbolsInLibraries(
@@ -199,7 +205,7 @@ void DynamicLoader::searchSymbolsInLibraries(
   SymbolQuery query(symbolList);
 
   using LibraryState = LibraryManager::State;
-  using LibraryType = LibraryManager::Kind;
+  using LibraryType = PathType;
   auto tryResolveFrom = [&](LibraryState S, LibraryType K) {
     if (query.allResolved())
       return;
@@ -237,18 +243,18 @@ done:
            << "\n";
   //});
 
-  // ProcessLib(query.getResolvedPath());
   onComplete(query);
 }
 
-void DynamicLoader::scanLibrariesIfNeeded(LibraryManager::Kind PK) {
+void DynamicLoader::scanLibrariesIfNeeded(PathType PK) {
   // LLVM_DEBUG(
   dbgs() << "DynamicLoader::scanLibrariesIfNeeded: Scanning for "
-         << (PK == LibraryManager::Kind::User ? "User" : "System")
+         << (PK == PathType::User ? "User" : "System")
          << " libraries\n"; //);
+  if (!m_scanH.leftToScan(PK))
+    return;
   LibraryScanner Scanner(m_scanH, m_libMgr, m_shouldScan);
-  Scanner.scanNext(PK == LibraryManager::Kind::User ? PathKind::User
-                                                    : PathKind::System);
+  Scanner.scanNext(PK);
 }
 
 bool DynamicLoader::symbolExistsInLibrary(
