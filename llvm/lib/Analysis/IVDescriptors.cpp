@@ -819,7 +819,7 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
   if (match(I, m_OrdOrUnordFMin(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
   if (match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMax || Kind == RecurKind::FCmpOGTSelect,
+    return InstDesc(Kind == RecurKind::FMax || Kind == RecurKind::OrderedFCmpSelect,
                     I);
   if (match(I, m_FMinNum(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
@@ -948,10 +948,10 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
       if (HasRequiredFMF())
         return isMinMaxPattern(I, Kind, Prev);
       auto *Cmp = dyn_cast<FCmpInst>(I);
-      if ((Kind == RecurKind::FMax || Kind == RecurKind::FCmpOGTSelect) &&
-          Cmp && FCmpInst::isOrdered(Cmp->getPredicate()) &&
+      if ((Kind == RecurKind::FMax || Kind == RecurKind::OrderedFCmpSelect) &&
+          (!Cmp || FCmpInst::isOrdered(Cmp->getPredicate())) &&
           isMinMaxPattern(I, Kind, Prev).isRecurrence())
-        return InstDesc(I, RecurKind::FCmpOGTSelect);
+        return InstDesc(I, RecurKind::OrderedFCmpSelect);
     } else if (isFMulAddIntrinsic(I))
       return InstDesc(Kind == RecurKind::FMulAdd, I,
                       I->hasAllowReassoc() ? nullptr : I);
@@ -1215,7 +1215,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::UMin:
     return Instruction::ICmp;
   case RecurKind::FMax:
-  case RecurKind::FCmpOGTSelect:
+  case RecurKind::OrderedFCmpSelect:
   case RecurKind::FMin:
   case RecurKind::FMaximum:
   case RecurKind::FMinimum:
