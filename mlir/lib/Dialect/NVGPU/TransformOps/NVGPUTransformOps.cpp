@@ -688,7 +688,7 @@ Value MmaSyncBuilder::buildMmaSyncMemRefLoadOperand(
 
   Type elementType = getElementTypeOrSelf(memref.getType());
   auto vt = VectorType::get(vectorShape, elementType);
-  Value res = b.create<vector::SplatOp>(loc, vt, loads[0]);
+  Value res = b.create<vector::BroadcastOp>(loc, vt, loads[0]);
   foreachIndividualVectorElement(
       res,
       /*applyFn=*/
