@@ -1740,7 +1740,7 @@ std::forward_list<std::string> GetOperatorNames(
 std::forward_list<std::string> GetAllNames(
     const SemanticsContext &context, const SourceName &name) {
   std::string str{name.ToString()};
-  if (!name.empty() && name.end()[-1] == ')' &&
+  if (!name.empty() && name.back() == ')' &&
       name.ToString().rfind("operator(", 0) == 0) {
     for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
       auto names{GetOperatorNames(context, common::LogicalOperator{i})};
