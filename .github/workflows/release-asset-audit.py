@@ -25,7 +25,7 @@ def main():
     uploaders = set(
         [
             "DimitryAndric",
-            "stefanp-ibm",
+            "stefanp-synopsys",
             "lei137",
             "omjavaid",
             "nicolerabjohn",
