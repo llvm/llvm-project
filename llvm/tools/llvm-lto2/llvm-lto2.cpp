@@ -247,7 +247,7 @@ template <typename T> static T check(ErrorOr<T> E, std::string Msg) {
 }
 
 static int usage() {
-  errs() << "Available subcommands: dump-symtab run print-guid version\n";
+  errs() << "Available subcommands: dump-symtab run print-guid\n";
   return 1;
 }
 
