@@ -36,6 +36,20 @@ class VOP2_MADKe <bits<6> op, VOPProfile P> : Enc64 {
   let Inst{63-32} = imm;
 }
 
+class VOP2_MADK64e <bits<6> op, VOPProfile P> : Enc96 {
+  bits<8>  vdst;
+  bits<9>  src0;
+  bits<8>  src1;
+  bits<64> imm;
+
+  let Inst{8-0}   = !if(P.HasSrc0, src0, 0);
+  let Inst{16-9}  = !if(P.HasSrc1, src1, 0);
+  let Inst{24-17} = !if(P.EmitDst, vdst, 0);
+  let Inst{30-25} = op;
+  let Inst{31}    = 0x0; // encoding
+  let Inst{95-32} = imm;
+}
+
 class VOP2_SDWAe <bits<6> op, VOPProfile P> : VOP_SDWAe <P> {
   bits<8> vdst;
   bits<8> src1;
@@ -375,10 +389,14 @@ class VOP_MADK_Base<ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
 }
 
 class VOP_MADAK <ValueType vt> : VOP_MADK_Base<vt> {
-  field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32, KImmFP16);
+  field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32,
+                            !if(!eq(vt.Size, 64), KImmFP64,
+                                                  KImmFP16));
   field dag Ins32 = !if(!eq(vt.Size, 32),
                         (ins VSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm),
-                        (ins VSrc_f16:$src0, VGPR_32:$src1, ImmOpType:$imm));
+                        !if(!eq(vt.Size, 64),
+                            (ins VSrc_f64:$src0, VReg_64:$src1, ImmOpType:$imm),
+                            (ins VSrc_f16:$src0, VGPR_32:$src1, ImmOpType:$imm)));
   field dag InsVOPDX = (ins VSrc_f32:$src0X, VGPR_32:$vsrc1X, ImmOpType:$imm);
   let InsVOPDX_immX = (ins VSrc_f32:$src0X, VGPR_32:$vsrc1X, ImmOpType:$immX);
   field dag InsVOPDY = (ins VSrc_f32:$src0Y, VGPR_32:$vsrc1Y, ImmOpType:$imm);
@@ -404,12 +422,17 @@ def VOP_MADAK_F16_fake16 : VOP_MADAK <f16> {
   let Ins32 = (ins VSrcFake16_f16_Lo128:$src0, VGPRSrc_32_Lo128:$src1, ImmOpType:$imm);
 }
 def VOP_MADAK_F32 : VOP_MADAK <f32>;
+def VOP_MADAK_F64 : VOP_MADAK <f64>;
 
 class VOP_MADMK <ValueType vt> : VOP_MADK_Base<vt> {
-  field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32, KImmFP16);
+  field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32,
+                            !if(!eq(vt.Size, 64), KImmFP64,
+                                                  KImmFP16));
   field dag Ins32 = !if(!eq(vt.Size, 32),
                         (ins VSrc_f32:$src0, ImmOpType:$imm, VGPR_32:$src1),
-                        (ins VSrc_f16:$src0, ImmOpType:$imm, VGPR_32:$src1));
+                        !if(!eq(vt.Size, 64),
+                            (ins VSrc_f64:$src0, ImmOpType:$imm, VReg_64:$src1),
+                            (ins VSrc_f16:$src0, ImmOpType:$imm, VGPR_32:$src1)));
   field dag InsVOPDX = (ins VSrc_f32:$src0X, ImmOpType:$imm, VGPR_32:$vsrc1X);
   let InsVOPDX_immX = (ins VSrc_f32:$src0X, ImmOpType:$immX, VGPR_32:$vsrc1X);
   field dag InsVOPDY = (ins VSrc_f32:$src0Y, ImmOpType:$imm, VGPR_32:$vsrc1Y);
@@ -435,6 +458,7 @@ def VOP_MADMK_F16_fake16 : VOP_MADMK <f16> {
   let Ins32 = (ins VSrcFake16_f16_Lo128:$src0, ImmOpType:$imm, VGPRSrc_32_Lo128:$src1);
 }
 def VOP_MADMK_F32 : VOP_MADMK <f32>;
+def VOP_MADMK_F64 : VOP_MADMK <f64>;
 
 // Returns the vreg register class to use for sources of VOP3 instructions for the
 // given VT.
@@ -1296,6 +1320,14 @@ let isCommutable = 1 in
 def V_FMAAK_F32 : VOP2_Pseudo<"v_fmaak_f32", VOP_MADAK_F32, [], "">, VOPD_Component<0x1, "v_fmaak_f32">;
 } // End SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1, CanBeVOPD3X = 0, FixedSize = 1
 
+let SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1,
+    FixedSize = 1, Size = 12, SchedRW = [Write64Bit] in {
+def V_FMAMK_F64 : VOP2_Pseudo<"v_fmamk_f64", VOP_MADMK_F64, [], "">;
+
+let isCommutable = 1 in
+def V_FMAAK_F64 : VOP2_Pseudo<"v_fmaak_f64", VOP_MADAK_F64, [], "">;
+} // End SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1, FixedSize = 1, Size = 12, SchedRW = [Write64Bit]
+
 let SubtargetPredicate = HasPkFmacF16Inst in {
 defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
 } // End SubtargetPredicate = HasPkFmacF16Inst
@@ -1516,6 +1548,14 @@ multiclass VOP2Only_Real_MADK<GFXGen Gen, bits<6> op> {
   def Gen.Suffix :
     VOP2_Real_Gen<!cast<VOP2_Pseudo>(NAME), Gen>,
     VOP2_MADKe<op{5-0}, !cast<VOP2_Pseudo>(NAME).Pfl>;
+}
+
+multiclass VOP2Only_Real_MADK64<GFXGen Gen, bits<6> op> {
+  def Gen.Suffix :
+    VOP2_Real_Gen<!cast<VOP2_Pseudo>(NAME), Gen>,
+    VOP2_MADK64e<op{5-0}, !cast<VOP2_Pseudo>(NAME).Pfl> {
+      let DecoderNamespace = Gen.DecoderNamespace;
+  }
 }
 
 multiclass VOP2Only_Real_MADK_with_name<GFXGen Gen, bits<6> op, string asmName,
@@ -1791,6 +1831,9 @@ let SubtargetPredicate = isGFX12Plus in {
   defm : VOP2bInstAliases<
     V_SUBBREV_U32_e32, V_SUBREV_CO_CI_U32_e32_gfx12, "v_subrev_co_ci_u32">;
 } // End SubtargetPredicate = isGFX12Plus
+
+defm V_FMAMK_F64 : VOP2Only_Real_MADK64<GFX1250Gen, 0x23>;
+defm V_FMAAK_F64 : VOP2Only_Real_MADK64<GFX1250Gen, 0x24>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.
