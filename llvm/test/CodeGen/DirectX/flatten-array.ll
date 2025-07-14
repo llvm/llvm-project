@@ -123,12 +123,21 @@ define void @gep_4d_test ()  {
 @b = internal global [2 x [3 x [4 x i32]]] zeroinitializer, align 16
 
 define void @global_gep_load() {
+  ; CHECK-LABEL: define void @global_gep_load(
   ; CHECK: {{.*}} = load i32, ptr getelementptr inbounds ([24 x i32], ptr @a.1dim, i32 0, i32 6), align 4
   ; CHECK-NEXT:    ret void
   %1 = getelementptr inbounds [2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* @a, i32 0, i32 0
   %2 = getelementptr inbounds [3 x [4 x i32]], [3 x [4 x i32]]* %1, i32 0, i32 1
   %3 = getelementptr inbounds [4 x i32], [4 x i32]* %2, i32 0, i32 2
   %4 = load i32, i32* %3, align 4
+  ret void
+}
+
+define void @global_nested_geps() {
+  ; CHECK-LABEL: define void @global_nested_geps(
+  ; CHECK: {{.*}} = load i32, ptr getelementptr inbounds ([24 x i32], ptr @a.1dim, i32 0, i32 6), align 4
+  ; CHECK-NEXT:    ret void
+  %1 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* getelementptr inbounds ([3 x [4 x i32]], [3 x [4 x i32]]* getelementptr inbounds ([2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* @a, i32 0, i32 0), i32 0, i32 1), i32 0, i32 2), align 4
   ret void
 }
 
