@@ -652,6 +652,7 @@ private:
         Factory.OriginMapFact.add(InState.Origins, DestOID, SrcLoans));
   }
 };
+
 // ========================================================================= //
 //                              Dataflow analysis
 // ========================================================================= //
@@ -719,19 +720,11 @@ public:
   }
 
   LifetimeLattice getEntryState(const CFGBlock *B) const {
-    auto It = BlockEntryStates.find(B);
-    if (It != BlockEntryStates.end()) {
-      return It->second;
-    }
-    return LifetimeLattice{};
+    return BlockEntryStates.lookup(B);
   }
 
   LifetimeLattice getExitState(const CFGBlock *B) const {
-    auto It = BlockExitStates.find(B);
-    if (It != BlockExitStates.end()) {
-      return It->second;
-    }
-    return LifetimeLattice{};
+    return BlockExitStates.lookup(B);
   }
 };
 
