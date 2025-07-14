@@ -1,0 +1,22 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s8i = !cir.int<s, 8>
+!u32i = !cir.int<u, 32>
+cir.func @reference_unknown_vtable() {
+  // expected-error @below {{'cir.vtable.address_point' op 'some_vtable' does not reference a valid cir.global}}
+  %0 = cir.vtable.address_point(@some_vtable, address_point = <index = 0, offset = 2>) : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>
+  cir.return
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+!rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>}>
+cir.global "private" external @_ZTV1S : !rec_anon_struct {alignment = 8 : i64}
+cir.func @incorrect_type() {
+  // expected-error @below {{'cir.vtable.address_point' op result type must be '!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>', but provided result type is '!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 64>>>>'}}
+  %0 = cir.vtable.address_point(@_ZTV1S, address_point = <index = 0, offset = 2>) : !cir.ptr<!cir.ptr<!cir.func<() -> !u64i>>>
+  cir.return
+}
