@@ -2902,28 +2902,37 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
 
   StringRef Str;
-  if (AL.isStandardAttributeSyntax() && !AL.getScopeName()) {
-    // The standard attribute cannot be applied to variable declarations such
-    // as a function pointer.
-    if (isa<VarDecl>(D))
-      S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
-          << AL << AL.isRegularKeywordAttribute()
-          << ExpectedFunctionOrClassOrEnum;
-
-    // If this is spelled as the standard C++17 attribute, but not in C++17,
-    // warn about using it as an extension. If there are attribute arguments,
-    // then claim it's a C++20 extension instead. C23 supports this attribute
-    // with the message; no extension warning is needed there beyond the one
-    // already issued for accepting attributes in older modes.
-    const LangOptions &LO = S.getLangOpts();
-    if (AL.getNumArgs() == 1) {
-      if (LO.CPlusPlus && !LO.CPlusPlus20)
-        S.Diag(AL.getLoc(), diag::ext_cxx20_attr) << AL;
-
-      if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, nullptr))
+  if (AL.isStandardAttributeSyntax()) {
+    // If this is spelled [[clang::warn_unused_result]] we look for an optional
+    // string literal. This is not gated behind any specific version of the
+    // standard.
+    if (AL.isClangScope()) {
+      if (AL.getNumArgs() == 1 &&
+          !S.checkStringLiteralArgumentAttr(AL, 0, Str, nullptr))
         return;
-    } else if (LO.CPlusPlus && !LO.CPlusPlus17)
-      S.Diag(AL.getLoc(), diag::ext_cxx17_attr) << AL;
+    } else if (!AL.getScopeName()) {
+      // The standard attribute cannot be applied to variable declarations such
+      // as a function pointer.
+      if (isa<VarDecl>(D))
+        S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
+            << AL << AL.isRegularKeywordAttribute()
+            << ExpectedFunctionOrClassOrEnum;
+
+      // If this is spelled as the standard C++17 attribute, but not in C++17,
+      // warn about using it as an extension. If there are attribute arguments,
+      // then claim it's a C++20 extension instead. C23 supports this attribute
+      // with the message; no extension warning is needed there beyond the one
+      // already issued for accepting attributes in older modes.
+      const LangOptions &LO = S.getLangOpts();
+      if (AL.getNumArgs() == 1) {
+        if (LO.CPlusPlus && !LO.CPlusPlus20)
+          S.Diag(AL.getLoc(), diag::ext_cxx20_attr) << AL;
+
+        if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, nullptr))
+          return;
+      } else if (LO.CPlusPlus && !LO.CPlusPlus17)
+        S.Diag(AL.getLoc(), diag::ext_cxx17_attr) << AL;
+    }
   }
 
   if ((!AL.isGNUAttribute() &&
