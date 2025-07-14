@@ -97,7 +97,7 @@ let Definition = "target" in {
     Desc<"The maximum number of zeroes to insert when displaying a very small float before falling back to scientific notation.">;
   def MaxChildrenCount: Property<"max-children-count", "UInt64">,
     DefaultUnsignedValue<24>,
-    Desc<"Maximum number of children to expand in any level of depth.">;
+    Desc<"Maximum number of children to show. Note: The default behavior will show 256 children for top-level values, and 24 children for any nested value. A custom count applies to all values, at any nesting.">;
   def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
     DefaultUnsignedValue<0xFFFFFFFF>,
     Desc<"Maximum depth to expand children.">;

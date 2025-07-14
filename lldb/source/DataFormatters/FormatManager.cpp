@@ -466,7 +466,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
   if (valobj.GetSummaryFormat().get() != nullptr)
     return valobj.GetSummaryFormat()->IsOneLiner();
 
-  const size_t max_num_children =
+  const auto [max_num_children, _] =
       (target_sp ? *target_sp : Target::GetGlobalProperties())
           .GetMaximumNumberOfChildrenToDisplay();
   auto num_children = valobj.GetNumChildren(max_num_children);
