@@ -290,7 +290,7 @@ define { <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor3_partial(ptr %p) 
   ret { <8 x i8>, <8 x i8> } %res1
 }
 
-; InterleavedAccess should kick in even if the users of deinterleave intrinsic is not extractvalue.
+; InterleavedAccess should kick in even if the users of deinterleave intrinsic are not extractvalue.
 define { <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor3_no_extract(ptr %p, ptr %p1, i1 %c) {
 ; CHECK-LABEL: vector_deinterleave_load_factor3_no_extract:
 ; CHECK:       # %bb.0:

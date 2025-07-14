@@ -17514,8 +17514,6 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
   Value *BaseAddr = LI->getPointerOperand();
   Value *Result = nullptr;
   if (NumLoads > 1) {
-    Result = PoisonValue::get(DI->getType());
-
     // Create multiple legal small ldN.
     SmallVector<Value *, 4> ExtractedLdValues(Factor, PoisonValue::get(VTy));
     for (unsigned I = 0; I < NumLoads; ++I) {
@@ -17537,6 +17535,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     }
 
     // Merge the values from different factors.
+    Result = PoisonValue::get(DI->getType());
     for (unsigned J = 0; J < Factor; ++J)
       Result = Builder.CreateInsertValue(Result, ExtractedLdValues[J], J);
   } else {

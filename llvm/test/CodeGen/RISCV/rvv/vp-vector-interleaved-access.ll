@@ -104,7 +104,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor3_partial(ptr %ptr, 
   ret { <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
 }
 
-; InterleavedAccess should kick in even if the users of deinterleave intrinsic is not extractvalue.
+; InterleavedAccess should kick in even if the users of deinterleave intrinsic are not extractvalue.
 define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor3_no_extract(ptr %ptr, i32 %evl) {
 ; RV32-LABEL: load_factor3_no_extract:
 ; RV32:       # %bb.0:
