@@ -1268,8 +1268,18 @@ struct ConvertVectorTransferRead final
     bool isDivisibleInSize =
         fitsInMultiByteContainerTy(op.getVectorType(), containerElemTy);
 
-    auto newPadding = rewriter.create<arith::ExtUIOp>(loc, containerElemTy,
-                                                      adaptor.getPadding());
+    // Pad the padding value with 0s on the left. These bits are discarded and
+    // thus their values don't matter.
+    Value padding = adaptor.getPadding();
+    if (!padding.getType().isInteger()) {
+      padding = rewriter.create<arith::BitcastOp>(
+          loc,
+          IntegerType::get(rewriter.getContext(),
+                           padding.getType().getIntOrFloatBitWidth()),
+          padding);
+    }
+    auto newPadding =
+        rewriter.create<arith::ExtUIOp>(loc, containerElemTy, padding);
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
