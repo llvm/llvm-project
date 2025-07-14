@@ -20,19 +20,16 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-static constexpr size_t N_ASINPIF16_EXCEPTS = 3;
-
 LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
 
   FPBits xbits(x);
   bool is_neg = xbits.is_neg();
-  float16 x_abs = xbits.abs().get_val();
+  double x_abs = fputil::cast<double>(xbits.abs().get_val());
 
   auto signed_result = [is_neg](auto r) -> auto { return is_neg ? -r : r; };
 
-  if (LIBC_UNLIKELY(x_abs > 1.0f16)) {
+  if (LIBC_UNLIKELY(x_abs > 1.0)) {
     // aspinf16(NaN) = NaN
     if (xbits.is_nan()) {
       if (xbits.is_signaling_nan()) {
@@ -87,7 +84,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   };
 
   // if |x| <= 0.5:
-  if (LIBC_UNLIKELY(x_abs <= 0.5f16)) {
+  if (LIBC_UNLIKELY(x_abs <= 0.5)) {
     // Use polynomial approximation of asin(x)/pi in the range [0, 0.5]
     double result = asinpi_polyeval(fputil::cast<double>(x));
     return fputil::cast<float16>(result);
@@ -120,7 +117,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   //             = 0.5 - 0.5 * x
   //             = multiply_add(-0.5, x, 0.5)
 
-  double u = fputil::multiply_add(-0.5, fputil::cast<double>(x_abs), 0.5);
+  double u = fputil::multiply_add(-0.5, x_abs, 0.5);
   double asinpi_sqrt_u = asinpi_polyeval(fputil::sqrt<double>(u));
   double result = fputil::multiply_add(-2.0, asinpi_sqrt_u, 0.5);
 
