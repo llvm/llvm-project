@@ -1247,6 +1247,7 @@ def op_sel_hi0 : ArrayOperand0<"op_sel_hi", "OpSelHi">;
 def neg_lo0 : ArrayOperand0<"neg_lo", "NegLo">;
 def neg_hi0 : ArrayOperand0<"neg_hi", "NegHi">;
 
+def IndexKey32bit : CustomOperand<i32, 1>;
 def IndexKey16bit : CustomOperand<i32, 1>;
 def IndexKey8bit : CustomOperand<i32, 1>;
 
@@ -1301,6 +1302,18 @@ def ByteSel0 : DefaultOperand<ByteSel, 0>;
 let PrintMethod = "printBitOp3" in
 def BitOp3 : NamedIntOperand<"bitop3">;
 def bitop3_0 : DefaultOperand<BitOp3, 0>;
+
+def MatrixAFMT : CustomOperand<i32, 1, "MatrixAFMT">;
+def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
+
+def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
+def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
+
+def MatrixAScaleFmt : CustomOperand<i32, 1, "MatrixAScaleFmt">;
+def MatrixBScaleFmt : CustomOperand<i32, 1, "MatrixBScaleFmt">;
+
+def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
+def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
@@ -1627,6 +1640,8 @@ def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
 def VOP3PModsNeg  : ComplexPattern<untyped, 1, "SelectVOP3PModsNeg">;
+def VOP3PModsNegs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegs">;
+def VOP3PModsNegAbs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegAbs">;
 def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
 
 def WMMAModsF32NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF32NegAbs">;
@@ -1635,6 +1650,7 @@ def WMMAModsF16NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF16NegAbs">;
 def WMMAVISrc  : ComplexPattern<untyped, 1, "SelectWMMAVISrc">;
 def SWMMACIndex8  : ComplexPattern<untyped, 2, "SelectSWMMACIndex8">;
 def SWMMACIndex16  : ComplexPattern<untyped, 2, "SelectSWMMACIndex16">;
+def SWMMACIndex32  : ComplexPattern<untyped, 2, "SelectSWMMACIndex32">;
 
 def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 
@@ -1865,6 +1881,7 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         !eq(VT, v4bf16)    : AVSrc_64,
         !eq(VT.Size, 1024) : VRegSrc_1024,
         !eq(VT.Size, 512)  : VRegSrc_512,
+        !eq(VT.Size, 384)  : VRegSrc_384,
         !eq(VT.Size, 256)  : VRegSrc_256,
         !eq(VT.Size, 192)  : VRegSrc_192,
         !eq(VT.Size, 128)  : VRegSrc_128,
@@ -1877,6 +1894,7 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
 class getVOP3VRegSrcForVT<ValueType VT> {
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VRegSrc_1024,
                               !eq(VT.Size, 512)  : VRegSrc_512,
+                              !eq(VT.Size, 384)  : VRegSrc_384,
                               !eq(VT.Size, 256)  : VRegSrc_256,
                               !eq(VT.Size, 192)  : VRegSrc_192,
                               !eq(VT.Size, 128)  : VRegSrc_128,
@@ -2648,6 +2666,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
+  field bit HasMatrixFMT = 0;
+  field bit HasMatrixScale = 0;
+  field bit HasMatrixReuse = 0;
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);

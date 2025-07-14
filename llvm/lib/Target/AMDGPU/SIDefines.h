@@ -1002,6 +1002,27 @@ enum Target : unsigned {
 
 } // namespace Exp
 
+namespace WMMA {
+enum MatrixFMT : unsigned {
+  MATRIX_FMT_FP8 = 0,
+  MATRIX_FMT_BF8 = 1,
+  MATRIX_FMT_FP6 = 2,
+  MATRIX_FMT_BF6 = 3,
+  MATRIX_FMT_FP4 = 4
+};
+
+enum MatrixScale : unsigned {
+  MATRIX_SCALE_ROW0 = 0,
+  MATRIX_SCALE_ROW1 = 1,
+};
+
+enum MatrixScaleFmt : unsigned {
+  MATRIX_SCALE_FMT_E8 = 0,
+  MATRIX_SCALE_FMT_E5M3 = 1,
+  MATRIX_SCALE_FMT_E4M3 = 2
+};
+} // namespace WMMA
+
 namespace VOP3PEncoding {
 
 enum OpSel : uint64_t {
