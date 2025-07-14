@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++26
-
 // Requires 396145d in the built library.
 // XFAIL: using-built-library-before-llvm-9
 
@@ -32,6 +30,11 @@ int main(int, char**) {
   std::string str; // read the next word
   in >> str;
   assert(str == "Clown");
+
+  // Parameter value "-1L" doesn't cause ambiguity with the char_type overload.
+  in.ignore(100, -1L); // ignore up to EOF, which is the default behavior
+  assert(in.eof()); // stream should be at EOF now
+  // assert(in.gcount() == 5);
 
   return 0;
 }

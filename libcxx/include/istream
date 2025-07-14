@@ -294,13 +294,11 @@ public:
   basic_istream& getline(char_type* __s, streamsize __n, char_type __dlm);
 
   basic_istream& ignore(streamsize __n = 1, int_type __dlm = traits_type::eof());
-#    if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI basic_istream& ignore(streamsize __n, char_type __delim)
-    requires is_same_v<char_type, char>
-  {
-    return this->ignore(__n, _Traits::to_int_type(__delim));
+  template <class _Tp = char_type>
+  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 typename std::enable_if<is_same<_Tp, char>::value, basic_istream&>::type
+  ignore(streamsize __n, char_type __delim) {
+    return ignore(__n, traits_type::to_int_type(__delim));
   }
-#    endif
   int_type peek();
   basic_istream& read(char_type* __s, streamsize __n);
   streamsize readsome(char_type* __s, streamsize __n);
