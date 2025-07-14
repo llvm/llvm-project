@@ -157,3 +157,105 @@ for.inc:                                          ; preds = %cond.end5
 for.end:                                          ; preds = %for.cond.cleanup
   ret void
 }
+
+; Pseudo-code for the following IR:
+;
+; void f(int A[][42]) {
+;   for (int i = 0; i < 100; i++)
+;     for (int j = 0; j < 41; j++)
+;       (j % 2 == 0 ? A[i][j] : A[i][j+1]) = 1;
+; }
+;
+; FIXME: There are loop-carried dependencies between the store instruction. For
+; example, the value of %ptr0 when (i, j) = (0, 1) is %A+8, which is the same
+; as when (i, j) = (0, 2).
+
+define void @non_invariant_baseptr_with_identical_obj(ptr %A) {
+; CHECK-LABEL: 'non_invariant_baseptr_with_identical_obj'
+; CHECK-NEXT:  Src: store i32 1, ptr %idx, align 4 --> Dst: store i32 1, ptr %idx, align 4
+; CHECK-NEXT:    da analyze - none!
+;
+entry:
+  br label %loop.i.header
+
+loop.i.header:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %loop.i.latch ]
+  %A1 = getelementptr i32, ptr %A, i32 1
+  br label %loop.j
+
+loop.j:
+  %j = phi i32 [ 0, %loop.i.header ], [ %j.inc, %loop.j ]
+  %ptr0 = phi ptr [ %A, %loop.i.header ], [ %ptr1, %loop.j ]
+  %ptr1 = phi ptr [ %A1, %loop.i.header ], [ %ptr0, %loop.j ]
+  %idx = getelementptr [42 x i32], ptr %ptr0, i32 %i, i32 %j
+  store i32 1, ptr %idx
+  %j.inc = add i32 %j, 1
+  %cmp.j = icmp slt i32 %j.inc, 41
+  br i1 %cmp.j, label %loop.j, label %loop.i.latch
+
+loop.i.latch:
+  %i.inc = add i32 %i, 1
+  %cmp.i = icmp slt i32 %i.inc, 100
+  br i1 %cmp.i, label %loop.i.header, label %exit
+
+exit:
+  ret void
+}
+
+; Pseudo-code for the following IR:
+;
+; void f(int A[][42][42]) {
+;   for (int i = 0; i < 100; i++)
+;     for (int j = 0; j < 41; j++) {
+;       int *ptr0 = (j % 2 == 0 ? A[i][j] : A[i][j+1]);
+;       for (int k = 0; k < 42; k++)
+;         ptr0[k] = 1;
+;     }
+; }
+;
+; Similar to the above case, but ptr0 is loop-invariant with respsect to the
+; k-loop.
+;
+; FIXME: Same as the above case, there are loop-carried dependencies between
+; the store.
+
+define void @non_invariant_baseptr_with_identical_obj2(ptr %A) {
+; CHECK-LABEL: 'non_invariant_baseptr_with_identical_obj2'
+; CHECK-NEXT:  Src: store i32 1, ptr %idx, align 4 --> Dst: store i32 1, ptr %idx, align 4
+; CHECK-NEXT:    da analyze - none!
+;
+entry:
+  br label %loop.i.header
+
+loop.i.header:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %loop.i.latch ]
+  %A1 = getelementptr i32, ptr %A, i32 1
+  br label %loop.j.header
+
+loop.j.header:
+  %j = phi i32 [ 0, %loop.i.header ], [ %j.inc, %loop.j.latch ]
+  %ptr0 = phi ptr [ %A, %loop.i.header ], [ %ptr1, %loop.j.latch ]
+  %ptr1 = phi ptr [ %A1, %loop.i.header ], [ %ptr0, %loop.j.latch ]
+  br label %loop.k
+
+loop.k:
+  %k = phi i32 [ 0, %loop.j.header ], [ %k.inc, %loop.k ]
+  %idx = getelementptr [42 x [42 x i32]], ptr %ptr0, i32 %i, i32 %k, i32 %j
+  store i32 1, ptr %idx
+  %k.inc = add i32 %k, 1
+  %cmp.k = icmp slt i32 %k.inc, 42
+  br i1 %cmp.k, label %loop.k, label %loop.j.latch
+
+loop.j.latch:
+  %j.inc = add i32 %j, 1
+  %cmp.j = icmp slt i32 %j.inc, 41
+  br i1 %cmp.j, label %loop.j.header, label %loop.i.latch
+
+loop.i.latch:
+  %i.inc = add i32 %i, 1
+  %cmp.i = icmp slt i32 %i.inc, 100
+  br i1 %cmp.i, label %loop.i.header, label %exit
+
+exit:
+  ret void
+}
