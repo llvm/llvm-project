@@ -306,6 +306,8 @@ Changes to LLDB
     stop reason = SIGSEGV: sent by tkill system call (sender pid=649752, uid=2667987)
   ```
 * ELF Cores can now have their siginfo structures inspected using `thread siginfo`.
+* LLDB now detects when the names of known DWARF sections in a PECOFF file have
+  been truncated by link.exe on Windows, and advises the user how to avoid this.
 
 ### Changes to lldb-dap
 

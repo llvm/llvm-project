@@ -173,6 +173,22 @@ parser.add_argument(
     help="Specify the C/C++ standard.",
 )
 
+parser.add_argument(
+    "--force-dwarf-symbols",
+    dest="force_dwarf_symbols",
+    action="store_true",
+    default=False,
+    help="When compiling with clang-cl on Windows, use DWARF instead of CodeView",
+)
+
+parser.add_argument(
+    "--force-ms-link",
+    dest="force_ms_link",
+    action="store_true",
+    default=False,
+    help="When compiling with clang-cl on Windows, always use link.exe",
+)
+
 
 args = parser.parse_args(args=sys.argv[1:])
 
@@ -379,15 +395,20 @@ class MsvcBuilder(Builder):
                     )
 
         if self.mode == "link" or self.mode == "compile-and-link":
-            self.linker = (
-                self._find_linker("link")
-                if toolchain_type == "msvc"
-                else self._find_linker("lld-link", args.tools_dir)
-            )
+            if toolchain_type == "msvc" or args.force_ms_link:
+                search_paths = []
+                if toolchain_type != "msvc":
+                    search_paths.append(
+                        os.path.dirname(find_executable("cl", args.tools_dir))
+                    )
+                self.linker = self._find_linker("link", search_paths)
+            else:
+                self.linker = self._find_linker("lld-link", args.tools_dir)
             if not self.linker:
                 raise ValueError("Unable to find an appropriate linker.")
 
         self.compile_env, self.link_env = self._get_visual_studio_environment()
+        self.force_dwarf_symbols = args.force_dwarf_symbols
 
     def _find_linker(self, name, search_paths=[]):
         compiler_dir = os.path.dirname(self.compiler)
@@ -678,6 +699,8 @@ class MsvcBuilder(Builder):
             args.append("/GR-")
         args.append("/Z7")
         if self.toolchain_type == "clang-cl":
+            if self.force_dwarf_symbols:
+                args.append("-gdwarf")
             args.append("-Xclang")
             args.append("-fkeep-static-consts")
             args.append("-fms-compatibility-version=19")
