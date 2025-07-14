@@ -81,6 +81,11 @@ SBError SBSaveCoreOptions::SetProcess(lldb::SBProcess process) {
   return m_opaque_up->SetProcess(process.GetSP());
 }
 
+SBProcess SBSaveCoreOptions::GetProcess() {
+  LLDB_INSTRUMENT_VA(this);
+  return SBProcess(m_opaque_up->GetProcess());
+}
+
 SBError SBSaveCoreOptions::AddThread(lldb::SBThread thread) {
   LLDB_INSTRUMENT_VA(this, thread);
   return m_opaque_up->AddThread(thread.GetSP());

@@ -836,12 +836,11 @@ Status MinidumpFileBuilder::AddMemoryList() {
   // 32 bit memory descriptiors, so we emit them first to ensure the memory is
   // in accessible with a 32 bit offset.
   std::vector<CoreFileMemoryRange> ranges_32;
-  CoreFileMemoryRanges all_core_memory_ranges;
-  error = m_process_sp->CalculateCoreFileSaveRanges(m_save_core_options,
-                                                    all_core_memory_ranges);
+  llvm::Expected<CoreFileMemoryRanges> all_core_memory_ranges_maybe = m_save_core_options.GetMemoryRegionsToSave();
+  if (!all_core_memory_ranges_maybe)
+    return Status::FromError(all_core_memory_ranges_maybe.takeError());
 
-  if (error.Fail())
-    return error;
+  const CoreFileMemoryRanges &all_core_memory_ranges = *all_core_memory_ranges_maybe;
 
   lldb_private::Progress progress("Saving Minidump File", "",
                                   all_core_memory_ranges.GetSize());
