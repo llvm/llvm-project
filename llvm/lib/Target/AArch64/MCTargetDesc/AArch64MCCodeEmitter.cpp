@@ -303,7 +303,7 @@ AArch64MCCodeEmitter::getAddSubImmOpValue(const MCInst &MI, unsigned OpIdx,
   const MCExpr *Expr = MO.getExpr();
 
   // Encode the 12 bits of the fixup.
-  MCFixupKind Kind = MCFixupKind(AArch64::fixup_aarch64_add_imm12);
+  MCFixupKind Kind = AArch64::fixup_aarch64_add_imm12;
   addFixup(Fixups, 0, Expr, Kind);
 
   ++MCNumFixups;
@@ -413,8 +413,8 @@ AArch64MCCodeEmitter::getMoveWideImmOpValue(const MCInst &MI, unsigned OpIdx,
     return MO.getImm();
   assert(MO.isExpr() && "Unexpected movz/movk immediate");
 
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   MCFixupKind(AArch64::fixup_aarch64_movw)));
+  Fixups.push_back(
+      MCFixup::create(0, MO.getExpr(), AArch64::fixup_aarch64_movw));
 
   ++MCNumFixups;
 

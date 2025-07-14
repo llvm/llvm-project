@@ -176,7 +176,7 @@ public:
     const MCOperand &MO = MI.getOperand(Idx);
     assert(MO.isExpr() && "Unexpected MO type.");
 
-    MCFixupKind Kind = MCFixupKind(CSKY::fixup_csky_pcrel_imm26_scale2);
+    MCFixupKind Kind = CSKY::fixup_csky_pcrel_imm26_scale2;
     if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
@@ -190,7 +190,7 @@ public:
     const MCOperand &MO = MI.getOperand(Idx);
     assert(MO.isExpr() && "Unexpected MO type.");
 
-    MCFixupKind Kind = MCFixupKind(CSKY::fixup_csky_pcrel_imm18_scale2);
+    MCFixupKind Kind = CSKY::fixup_csky_pcrel_imm18_scale2;
     if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
@@ -481,23 +481,23 @@ MCFixupKind CSKYMCCodeEmitter::getTargetFixup(const MCExpr *Expr) const {
   default:
     llvm_unreachable("Unhandled fixup kind!");
   case CSKY::S_ADDR:
-    return MCFixupKind(CSKY::fixup_csky_addr32);
+    return CSKY::fixup_csky_addr32;
   case CSKY::S_ADDR_HI16:
-    return MCFixupKind(CSKY::fixup_csky_addr_hi16);
+    return CSKY::fixup_csky_addr_hi16;
   case CSKY::S_ADDR_LO16:
-    return MCFixupKind(CSKY::fixup_csky_addr_lo16);
+    return CSKY::fixup_csky_addr_lo16;
   case CSKY::S_GOT:
-    return MCFixupKind(CSKY::fixup_csky_got32);
+    return CSKY::fixup_csky_got32;
   case CSKY::S_GOTPC:
-    return MCFixupKind(CSKY::fixup_csky_gotpc);
+    return CSKY::fixup_csky_gotpc;
   case CSKY::S_GOTOFF:
-    return MCFixupKind(CSKY::fixup_csky_gotoff);
+    return CSKY::fixup_csky_gotoff;
   case CSKY::S_PLT:
-    return MCFixupKind(CSKY::fixup_csky_plt32);
+    return CSKY::fixup_csky_plt32;
   case CSKY::S_PLT_IMM18_BY4:
-    return MCFixupKind(CSKY::fixup_csky_plt_imm18_scale4);
+    return CSKY::fixup_csky_plt_imm18_scale4;
   case CSKY::S_GOT_IMM18_BY4:
-    return MCFixupKind(CSKY::fixup_csky_got_imm18_scale4);
+    return CSKY::fixup_csky_got_imm18_scale4;
   }
 }
 

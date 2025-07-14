@@ -1082,6 +1082,15 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
 
+  // select !c, x, y -> select c, y, x
+  VPValue *C;
+  if (match(Def, m_Select(m_Not(m_VPValue(C)), m_VPValue(X), m_VPValue(Y)))) {
+    Def->setOperand(0, C);
+    Def->setOperand(1, Y);
+    Def->setOperand(2, X);
+    return;
+  }
+
   if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return Def->replaceAllUsesWith(A);
 
@@ -1735,8 +1744,7 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!PhiR)
       continue;
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     if (RK != RecurKind::Add && RK != RecurKind::Mul)
       continue;
 
@@ -3075,16 +3083,15 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 }
 
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
-/// converted to a narrower recipe. \p V is used by a wide recipe \p WideMember
-/// that feeds a store interleave group at index \p Idx, \p WideMember0 is the
-/// recipe feeding the same interleave group at index 0. A VPWidenLoadRecipe can
-/// be narrowed to an index-independent load if it feeds all wide ops at all
-/// indices (\p OpV must be the operand at index \p OpIdx for both the recipe at
-/// lane 0, \p WideMember0, and \p WideMember). A VPInterleaveRecipe can be
-/// narrowed to a wide load, if \p V is defined at \p Idx of a load interleave
-/// group.
-static bool canNarrowLoad(VPWidenRecipe *WideMember0, VPWidenRecipe *WideMember,
-                          unsigned OpIdx, VPValue *OpV, unsigned Idx) {
+/// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
+/// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding
+/// the same interleave group at index 0. A VPWidenLoadRecipe can be narrowed to
+/// an index-independent load if it feeds all wide ops at all indices (\p OpV
+/// must be the operand at index \p OpIdx for both the recipe at lane 0, \p
+/// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
+/// is defined at \p Idx of a load interleave group.
+static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
+                          VPValue *OpV, unsigned Idx) {
   auto *DefR = OpV->getDefiningRecipe();
   if (!DefR)
     return WideMember0->getOperand(OpIdx) == OpV;
@@ -3132,7 +3139,12 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
 }
 
 /// Returns true if \p VPValue is a narrow VPValue.
-static bool isAlreadyNarrow(VPValue *VPV) { return VPV->isLiveIn(); }
+static bool isAlreadyNarrow(VPValue *VPV) {
+  if (VPV->isLiveIn())
+    return true;
+  auto *RepR = dyn_cast<VPReplicateRecipe>(VPV);
+  return RepR && RepR->isSingleScalar();
+}
 
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                              unsigned VectorRegWidth) {
@@ -3150,6 +3162,10 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R) ||
         match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
+      continue;
+
+    if (isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(&R) &&
+        vputils::onlyFirstLaneUsed(cast<VPSingleDefRecipe>(&R)))
       continue;
 
     // Bail out on recipes not supported at the moment:
@@ -3223,9 +3239,9 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
           R->getNumOperands() > 2)
         return;
       if (any_of(enumerate(R->operands()),
-                 [WideMember0, Idx = I, R](const auto &P) {
+                 [WideMember0, Idx = I](const auto &P) {
                    const auto &[OpIdx, OpV] = P;
-                   return !canNarrowLoad(WideMember0, R, OpIdx, OpV, Idx);
+                   return !canNarrowLoad(WideMember0, OpIdx, OpV, Idx);
                  }))
         return;
     }

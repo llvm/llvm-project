@@ -17,7 +17,6 @@
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -270,8 +269,8 @@ public:
                               std::optional<int64_t> Value, unsigned ValueSize,
                               unsigned MaxBytesToEmit);
 
-  void emitValueToAlignment(Align Alignment, int64_t Value = 0,
-                            unsigned ValueSize = 1,
+  void emitValueToAlignment(Align Alignment, int64_t Fill = 0,
+                            uint8_t FillLen = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
@@ -1529,10 +1528,10 @@ void MCAsmStreamer::emitAlignmentDirective(uint64_t ByteAlignment,
   EmitEOL();
 }
 
-void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                         unsigned ValueSize,
+void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
+                                         uint8_t FillLen,
                                          unsigned MaxBytesToEmit) {
-  emitAlignmentDirective(Alignment.value(), Value, ValueSize, MaxBytesToEmit);
+  emitAlignmentDirective(Alignment.value(), Fill, FillLen, MaxBytesToEmit);
 }
 
 void MCAsmStreamer::emitCodeAlignment(Align Alignment,
