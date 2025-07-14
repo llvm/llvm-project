@@ -2187,6 +2187,24 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_ldexpf16",
+    hdrs = ["src/__support/math/ldexpf16.h"],
+    deps = [
+        ":__support_macros_properties_types",
+        ":__support_fputil_manipulation_functions",
+        ":llvm_libc_macros_float16_macros"
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ldexpf",
+    hdrs = ["src/__support/math/ldexpf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+    ],
+)
+
 ############################### complex targets ################################
 
 libc_function(
@@ -3336,7 +3354,12 @@ libc_math_function(name = "ilogbf16")
 
 libc_math_function(name = "ldexp")
 
-libc_math_function(name = "ldexpf")
+libc_math_function(
+    name = "ldexpf",
+    additional_deps = [
+        ":__support_math_ldexpf",
+    ]
+)
 
 libc_math_function(name = "ldexpl")
 
@@ -3347,7 +3370,12 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "ldexpf16")
+libc_math_function(
+    name = "ldexpf16",
+    additional_deps = [
+        ":__support_math_ldexpf16",
+    ],
+)
 
 libc_math_function(name = "llogb")
 

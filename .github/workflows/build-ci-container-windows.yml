@@ -20,7 +20,7 @@ on:
 jobs:
   build-ci-container-windows:
     if: github.repository_owner == 'llvm'
-    runs-on: windows-2019
+    runs-on: windows-2022
     outputs:
       container-name: ${{ steps.vars.outputs.container-name }}
       container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
@@ -34,7 +34,7 @@ jobs:
         id: vars
         run: |
           $tag = [int64](Get-Date -UFormat %s)
-          $container_name="ghcr.io/$env:GITHUB_REPOSITORY_OWNER/ci-windows-2019"
+          $container_name="ghcr.io/$env:GITHUB_REPOSITORY_OWNER/ci-windows-2022"
           echo "container-name=${container_name}" >> $env:GITHUB_OUTPUT
           echo "container-name-tag=${container_name}:${tag}" >> $env:GITHUB_OUTPUT
           echo "container-filename=ci-windows-${tag}.tar" >> $env:GITHUB_OUTPUT
@@ -58,7 +58,7 @@ jobs:
       - build-ci-container-windows
     permissions:
       packages: write
-    runs-on: windows-2019
+    runs-on: windows-2022
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
