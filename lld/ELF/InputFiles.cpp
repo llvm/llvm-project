@@ -592,9 +592,6 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   uint64_t size = objSections.size();
   sections.resize(size);
 
-  AArch64BuildAttrSubsections aarch64BAsubSections;
-  bool hasAArch64BuildAttributes = false;
-
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
     // Read GNU property section into a per-InputFile structure that will be
@@ -691,23 +688,6 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       }
       break;
     case EM_AARCH64:
-      // Extract Build Attributes section contents into aarch64BAsubSections.
-      // Input objects may contain both build Build Attributes and GNU
-      // properties. We delay processing Build Attributes until we have finished
-      // reading all sections so that we can check that these are consistent.
-      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES) {
-        ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
-        AArch64AttributeParser attributes;
-        if (Error e = attributes.parse(contents, ELFT::Endianness)) {
-          StringRef name = check(obj.getSectionName(sec, shstrtab));
-          InputSection isec(*this, sec, name);
-          Warn(ctx) << &isec << ": " << std::move(e);
-        } else {
-          aarch64BAsubSections = extractBuildAttributesSubsections(attributes);
-          hasAArch64BuildAttributes = true;
-        }
-        sections[i] = &InputSection::discarded;
-      }
       // Producing a static binary with MTE globals is not currently supported,
       // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
       // medatada, and we don't want them to end up in the output file for
@@ -718,12 +698,6 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       break;
     }
   }
-
-  // Handle AArch64 Build Attributes and GNU properties:
-  // - Err on mismatched values.
-  // - Store missing values as GNU properties.
-  if (hasAArch64BuildAttributes)
-    handleAArch64BAAndGnuProperties<ELFT>(this, ctx, aarch64BAsubSections);
 
   // Read a symbol table.
   initializeSymbols(obj);
@@ -814,6 +788,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   SmallVector<ArrayRef<Elf_Word>, 0> selectedGroups;
+  AArch64BuildAttrSubsections aarch64BAsubSections;
+  bool hasAArch64BuildAttributes = false;
   for (size_t i = 0; i != size; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
@@ -878,6 +854,26 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
       break;
+    case SHT_AARCH64_ATTRIBUTES: {
+      // Extract Build Attributes section contents into aarch64BAsubSections.
+      // Input objects may contain both build Build Attributes and GNU
+      // properties. We delay processing Build Attributes until we have finished
+      // reading all sections so that we can check that these are consistent.
+      if (ctx.arg.emachine == EM_AARCH64) {
+        ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
+        AArch64AttributeParser attributes;
+        if (Error e = attributes.parse(contents, ELFT::Endianness)) {
+          StringRef name = check(obj.getSectionName(sec, shstrtab));
+          InputSection isec(*this, sec, name);
+          Warn(ctx) << &isec << ": " << std::move(e);
+        } else {
+          aarch64BAsubSections = extractBuildAttributesSubsections(attributes);
+          hasAArch64BuildAttributes = true;
+        }
+        this->sections[i] = &InputSection::discarded;
+      }
+      break;
+    }
     case SHT_LLVM_LTO:
       // Discard .llvm.lto in a relocatable link that does not use the bitcode.
       // The concatenated output does not properly reflect the linking
@@ -981,6 +977,12 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
           << " with SHF_LINK_ORDER should not refer a non-regular section: "
           << linkSec;
   }
+
+  // Handle AArch64 Build Attributes and GNU properties:
+  // - Err on mismatched values.
+  // - Store missing values as GNU properties.
+  if (hasAArch64BuildAttributes)
+    handleAArch64BAAndGnuProperties<ELFT>(this, ctx, aarch64BAsubSections);
 
   for (ArrayRef<Elf_Word> entries : selectedGroups)
     handleSectionGroup<ELFT>(this->sections, entries);
