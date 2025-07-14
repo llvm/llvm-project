@@ -2082,9 +2082,8 @@ defvar X86CommonLibcalls =
        LibmHasFrexpF32, LibmHasLdexpF32,
        LibmHasFrexpF80, LibmHasLdexpF80,
        DefaultRuntimeLibcallImpls_f80,
-       // MSVCRT doesn't have powi
-       // FIXME: It's almost certainly correct that MSVCRT has
-       // __powitf2_f128, but at least one test is relying on it.
+       // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
+       // hack for one test relying on it.
        __powitf2_f128,
        LibcallImpls<(add MostPowI), isNotOSMSVCRT>
 );
