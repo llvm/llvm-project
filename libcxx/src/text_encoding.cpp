@@ -69,9 +69,6 @@ __text_encoding_rep __text_encoding_rep::__get_locale_encoding(const char* __nam
   case 865:
     __mib = __text_encoding_rep::__id::IBM865;
     break;
-  case 865:
-    __mib = __text_encoding_rep::__id::IBM865;
-    break;
   case 866:
     __mib = __text_encoding_rep::__id::IBM866;
     break;
@@ -119,9 +116,6 @@ __text_encoding_rep __text_encoding_rep::__get_locale_encoding(const char* __nam
     break;
   case 1145:
     __mib = __text_encoding_rep::__id::IBM01145;
-    break;
-  case 1146:
-    __mib = __text_encoding_rep::__id::IBM01146;
     break;
   case 1146:
     __mib = __text_encoding_rep::__id::IBM01146;
