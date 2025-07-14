@@ -551,19 +551,12 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // in fact emit references to them from other compilations, so emit them
   // as functions containing a trap instruction.
   if (dtorType != Dtor_Base && dtor->getParent()->isAbstract()) {
-    SourceLocation loc =
-        dtor->hasBody() ? dtor->getBody()->getBeginLoc() : dtor->getLocation();
-    builder.create<cir::TrapOp>(getLoc(loc));
-    // The corresponding clang/CodeGen logic clears the insertion point here,
-    // but MLIR's builder requires a valid insertion point, so we create a dummy
-    // block (since the trap is a block terminator).
-    builder.createBlock(builder.getBlock()->getParent());
+    cgm.errorNYI(dtor->getSourceRange(), "abstract base class destructors");
     return;
   }
 
   Stmt *body = dtor->getBody();
-  if (body)
-    assert(!cir::MissingFeatures::incrementProfileCounter());
+  assert(body && !cir::MissingFeatures::incrementProfileCounter());
 
   // The call to operator delete in a deleting destructor happens
   // outside of the function-try-block, which means it's always
@@ -577,9 +570,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // If the body is a function-try-block, enter the try before
   // anything else.
   const bool isTryBody = isa_and_nonnull<CXXTryStmt>(body);
-  if (isTryBody) {
+  if (isTryBody)
     cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
-  }
 
   assert(!cir::MissingFeatures::sanitizers());
   assert(!cir::MissingFeatures::dtorCleanups());

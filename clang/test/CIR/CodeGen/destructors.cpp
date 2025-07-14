@@ -48,3 +48,10 @@ struct inline_destructor {
         some_function();
     }
 };
+
+// This inline destructor is not odr-used in this TU.
+// Make sure we don't emit a definition
+
+// CIR-NOT: cir.func {{.*}}inline_destructor{{.*}}
+// LLVM-NOT: define {{.*}}inline_destructor{{.*}}
+// OGCG-NOT: define {{.*}}inline_destructor{{.*}}
