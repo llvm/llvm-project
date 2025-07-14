@@ -584,14 +584,14 @@ function(add_integration_test test_name)
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
-      set(link_options
-        -nolibc
-        -nostartfiles
-        -nostdlib++
-        -static
-        ${LIBC_LINK_OPTIONS_DEFAULT}
-        ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
-      )
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -nostdlib++
+      -static
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use
