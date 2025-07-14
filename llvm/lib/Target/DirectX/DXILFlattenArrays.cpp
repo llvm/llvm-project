@@ -218,6 +218,11 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return false;
 
   Value *PtrOperand = GEP.getPointerOperand();
+  // It shouldn't(?) be possible for the pointer operand of a GEP to be a PHI
+  // node unless HLSL has pointers. If this assumption is incorrect or HLSL gets
+  // pointer types, then the handling of this case can be implemented later.
+  assert(!isa<PHINode>(PtrOperand) &&
+         "Pointer operand of GEP should not be a PHI Node");
 
   // Replace a GEP ConstantExpr pointer operand with a GEP instruction so that
   // it can be visited
