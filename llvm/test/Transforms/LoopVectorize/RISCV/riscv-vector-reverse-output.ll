@@ -5,16 +5,13 @@
 ;;  for (int i = N-1; i >= 0; --i)
 ;;    a[i] = b[i] + 1.0;
 
-; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v \
-; RUN: -riscv-v-vector-bits-min=128 -S < %s \
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -S < %s \
 ; RUN: | FileCheck --check-prefix=RV64 %s
 
-; RUN: opt -passes=loop-vectorize -mtriple=riscv32 -mattr=+v \
-; RUN: -riscv-v-vector-bits-min=128 -S < %s \
+; RUN: opt -passes=loop-vectorize -mtriple=riscv32 -mattr=+v -S < %s \
 ; RUN: | FileCheck --check-prefix=RV32 %s
 
-; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v \
-; RUN: -riscv-v-vector-bits-min=128 -force-vector-interleave=2 -S < %s \
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -force-vector-interleave=2 -S < %s \
 ; RUN: | FileCheck --check-prefix=RV64-UF2 %s
 
 define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
