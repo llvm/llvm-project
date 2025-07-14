@@ -934,8 +934,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual std::string getComputeUnitKind() const { return "unknown"; }
 
   /// Post processing after jit backend. The ownership of \p MB will be taken.
-  virtual Expected<std::unique_ptr<MemoryBuffer>>
-  doJITPostProcessing(std::vector<std::unique_ptr<MemoryBuffer>> &&MB) const {
+  virtual Expected<std::unique_ptr<MemoryBuffer>> doJITPostProcessing(
+      llvm::SmallVector<std::unique_ptr<MemoryBuffer>> &&MB) const {
     if (MB.size() > 1)
       return make_error<error::OffloadError>(
           error::ErrorCode::UNSUPPORTED,

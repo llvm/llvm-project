@@ -2067,7 +2067,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   uint64_t getStreamBusyWaitMicroseconds() const { return OMPX_StreamBusyWait; }
 
   Expected<std::unique_ptr<MemoryBuffer>> doJITPostProcessing(
-      std::vector<std::unique_ptr<MemoryBuffer>> &&MB) const override {
+      llvm::SmallVector<std::unique_ptr<MemoryBuffer>> &&MB) const override {
 
     // TODO: We should try to avoid materialization but there seems to be no
     // good linker interface w/o file i/o.

@@ -421,7 +421,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   Expected<std::unique_ptr<MemoryBuffer>> doJITPostProcessing(
-      std::vector<std::unique_ptr<MemoryBuffer>> &&MB) const override {
+      llvm::SmallVector<std::unique_ptr<MemoryBuffer>> &&MB) const override {
     // TODO: This should be possible, just needs to be implemented
     if (MB.size() > 1)
       return make_error<error::OffloadError>(
