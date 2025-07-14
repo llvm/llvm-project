@@ -1065,10 +1065,10 @@ void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
   OS << "static bool checkDecoderPredicate(unsigned Idx, "
      << "const FeatureBitset &Bits) {\n";
   OS << "  switch (Idx) {\n";
-  OS << "    default: llvm_unreachable(\"Invalid index!\");\n";
+  OS << "  default: llvm_unreachable(\"Invalid index!\");\n";
   for (const auto &[Index, Predicate] : enumerate(Predicates)) {
-    OS << "    case " << Index << ":\n";
-    OS << "       return (" << Predicate << ");\n";
+    OS << "  case " << Index << ":\n";
+    OS << "    return (" << Predicate << ");\n";
   }
   OS << "  }\n";
   OS << "}\n\n";
@@ -1188,15 +1188,15 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
     OS << "  };\n";
     OS << "  if (Idx >= " << Decoders.size() << ")\n";
     OS << "    llvm_unreachable(\"Invalid index!\");\n";
-    OS << "return decodeFnTable[Idx](S, insn, MI, Address, Decoder, "
+    OS << "  return decodeFnTable[Idx](S, insn, MI, Address, Decoder, "
           "DecodeComplete);\n";
   } else {
     emitTmpTypeDec();
     OS << "  " << TmpType << " tmp;\n";
     OS << "  switch (Idx) {\n";
-    OS << "    default: llvm_unreachable(\"Invalid index!\");\n";
+    OS << "  default: llvm_unreachable(\"Invalid index!\");\n";
     for (const auto &[Index, Decoder] : enumerate(Decoders)) {
-      OS << "    case " << Index << ":\n";
+      OS << "  case " << Index << ":\n";
       OS << Decoder;
       OS << "    return S;\n";
     }
@@ -2302,16 +2302,13 @@ uint64_t fieldFromInstruction(const std::bitset<N>& Insn, unsigned StartBit,
                               unsigned Size) {
   assert(StartBit + Size <= N && "Instruction field out of bounds!");
   assert(Size <= 64 && "Cannot support >64-bit extractions!");
-  if (Size == N)
-    return Insn.to_ullong();
-  const std::bitset<N> Mask((1ULL << Size) - 1);
+  const std::bitset<N> Mask(maskTrailingOnes<uint64_t>(Size));
   return ((Insn >> StartBit) & Mask).to_ullong();
 }
 )";
   }
 
   if (GenerateAPIntType) {
-    // The templated version also works with APInt.
     OS << R"(
 static uint64_t fieldFromInstruction(const APInt &Insn, unsigned StartBit,
                      unsigned Size) {
@@ -2690,6 +2687,7 @@ void DecoderEmitter::run(raw_ostream &o) {
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -2750,7 +2748,7 @@ namespace {
       OpcMap;
   std::map<unsigned, std::vector<OperandInfo>> Operands;
   std::vector<unsigned> InstrLen;
-  const bool IsVarLenInst = Target.hasVariableLengthEncodings();
+  bool IsVarLenInst = Target.hasVariableLengthEncodings();
   unsigned MaxInstLen = 0;
 
   for (const auto &[NEI, NumberedEncoding] : enumerate(NumberedEncodings)) {
