@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify -Wfunction-effects %s
-// RUN: %clang_cc1 -fsyntax-only -fblocks -verify -x c -std=c23 -Wfunction-effects %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify -Wfunction-effects -Wfunction-effect-redeclarations %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -verify -x c -std=c23 -Wfunction-effects -Wfunction-effect-redeclarations %s
 
 #if !__has_attribute(nonblocking)
 #error "the 'nonblocking' attribute is not available"
@@ -132,15 +132,15 @@ void type_conversions_2()
 #ifdef __cplusplus
 struct Base {
   virtual void f1();
-  virtual void nonblocking() noexcept [[clang::nonblocking]];
-  virtual void nonallocating() noexcept [[clang::nonallocating]];
+  virtual void nonblocking() noexcept [[clang::nonblocking]]; // expected-note {{overridden virtual function is here}}
+  virtual void nonallocating() noexcept [[clang::nonallocating]]; // expected-note {{overridden virtual function is here}}
   virtual void f2() [[clang::nonallocating]]; // expected-note {{previous declaration is here}}
 };
 
 struct Derived : public Base {
   void f1() [[clang::nonblocking]] override;
-  void nonblocking() noexcept override;
-  void nonallocating() noexcept override;
+  void nonblocking() noexcept override; // expected-warning {{overriding function is missing 'nonblocking' attribute from base declaration}}
+  void nonallocating() noexcept override; // expected-warning {{overriding function is missing 'nonallocating' attribute from base declaration}}
   void f2() [[clang::allocating]] override; // expected-warning {{effects conflict when merging declarations; kept 'allocating', discarded 'nonallocating'}}
 };
 #endif // __cplusplus
@@ -149,7 +149,7 @@ struct Derived : public Base {
 
 void f2();
 void f2() [[clang::nonblocking]]; // expected-note {{previous declaration is here}}
-void f2(); // expected-warning {{attribute 'nonblocking' on function does not match previous declaration}}
+void f2(); // expected-warning {{redeclaration is missing 'nonblocking' attribute from previous declaration}}
 // Note: we verify that the attribute is actually seen during the constraints tests.
 
 void f3() [[clang::blocking]]; // expected-note {{previous declaration is here}}
