@@ -93,16 +93,8 @@ define i32 @test_udot_v4i8_nomla(ptr nocapture readonly %a1) {
 ;
 ; CHECK-GI-LABEL: test_udot_v4i8_nomla:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr w8, [x0]
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v2.8b, #0
+; CHECK-GI-NEXT:    ldr s0, [x0]
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    uaddlv s0, v0.4h
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    and w0, w8, #0xffff
