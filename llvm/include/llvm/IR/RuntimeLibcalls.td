@@ -459,7 +459,6 @@ def __multi3 : RuntimeLibcallImpl<MUL_I128>;
 
 def __mulosi4 : RuntimeLibcallImpl<MULO_I32>;
 def __mulodi4 : RuntimeLibcallImpl<MULO_I64>;
-def __muloti4 : RuntimeLibcallImpl<MULO_I128>;
 
 def __divqi3 : RuntimeLibcallImpl<SDIV_I8>;
 def __divhi3 : RuntimeLibcallImpl<SDIV_I16>;
@@ -936,6 +935,12 @@ def calloc : RuntimeLibcallImpl<CALLOC>;
 } // End let IsDefault = true
 
 //--------------------------------------------------------------------
+// compiler-rt, not available for most architectures
+//--------------------------------------------------------------------
+
+def __muloti4 : RuntimeLibcallImpl<MULO_I128>;
+
+//--------------------------------------------------------------------
 // Define implementation other libcalls
 //--------------------------------------------------------------------
 
@@ -1032,12 +1037,16 @@ defvar AllDefaultRuntimeLibcallImpls
 // Exist in libgcc and compiler-rt for 64-bit targets, or if
 // COMPILER_RT_ENABLE_SOFTWARE_INT128.
 defvar Int128RTLibcalls = [
-   __ashlti3, __lshrti3, __ashrti3, __multi3, __mulodi4
+   __ashlti3, __lshrti3, __ashrti3, __multi3
 ];
 
 // Only available in compiler-rt
-defvar CompilerRTOnlyInt128Libcalls = [
+defvar CompilerRTOnlyInt64Libcalls = [
   __mulodi4
+];
+
+defvar CompilerRTOnlyInt128Libcalls = [
+  __muloti4
 ];
 
 defvar DefaultRuntimeLibcallImpls_f80 =
@@ -1057,7 +1066,8 @@ defvar DefaultRuntimeLibcallImpls =
   !listremove(
     !listremove(
         !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
-                    CompilerRTOnlyInt128Libcalls),
+                    !listconcat(CompilerRTOnlyInt64Libcalls,
+                                CompilerRTOnlyInt128Libcalls)),
                     DefaultRuntimeLibcallImpls_f80),
                     DefaultRuntimeLibcallImpls_ppcf128);
 
@@ -2143,5 +2153,5 @@ def isWasm : RuntimeLibcallPredicate<"TT.isWasm()">;
 def WasmSystemLibrary
     : SystemRuntimeLibrary<isWasm,
       (add DefaultRuntimeLibcallImpls, Int128RTLibcalls,
-           CompilerRTOnlyInt128Libcalls,
+           CompilerRTOnlyInt64Libcalls, CompilerRTOnlyInt128Libcalls,
            emscripten_return_address)>;
