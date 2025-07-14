@@ -1738,14 +1738,17 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   if (SI->getType()->isIntOrIntVectorTy(1))
     return nullptr;
 
-  // Avoid breaking min/max reduction pattern,
+  // Avoid breaking reduction pattern,
   // which is necessary for vectorization later.
-  if (isa<MinMaxIntrinsic>(&Op))
-    for (Value *IntrinOp : Op.operands())
-      if (auto *PN = dyn_cast<PHINode>(IntrinOp))
-        for (Value *PhiOp : PN->operands())
-          if (PhiOp == &Op)
-            return nullptr;
+  PHINode *PhiNode;
+  Value *Start, *Step;
+  if (auto *BinOp = dyn_cast<BinaryOperator>(&Op)) {
+    if (matchSimpleRecurrence(BinOp, PhiNode, Start, Step))
+      return nullptr;
+  } else if (auto *II = dyn_cast<IntrinsicInst>(&Op)) {
+    if (matchSimpleBinaryIntrinsicRecurrence(II, PhiNode, Start, Step))
+      return nullptr;
+  }
 
   // Test if a FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
