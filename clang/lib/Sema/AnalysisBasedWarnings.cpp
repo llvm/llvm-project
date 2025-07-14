@@ -987,10 +987,11 @@ static void DiagUninitUse(Sema &S, const VarDecl *VD, const UninitUse &Use,
 }
 
 /// Diagnose uninitialized const reference usages.
-static void DiagnoseUninitializedConstRefUse(Sema &S, const VarDecl *VD,
+static bool DiagnoseUninitializedConstRefUse(Sema &S, const VarDecl *VD,
                                              const UninitUse &Use) {
   S.Diag(Use.getUser()->getBeginLoc(), diag::warn_uninit_const_reference)
       << VD->getDeclName() << Use.getUser()->getSourceRange();
+  return !S.getDiagnostics().isLastDiagnosticIgnored();
 }
 
 /// DiagnoseUninitializedUse -- Helper function for diagnosing uses of an
@@ -1022,7 +1023,7 @@ static bool DiagnoseUninitializedUse(Sema &S, const VarDecl *VD,
       if (CR.doesContainReference()) {
         S.Diag(DRE->getBeginLoc(), diag::warn_uninit_self_reference_in_init)
             << VD->getDeclName() << VD->getLocation() << DRE->getSourceRange();
-        return true;
+        return !S.getDiagnostics().isLastDiagnosticIgnored();
       }
     }
 
@@ -1045,7 +1046,7 @@ static bool DiagnoseUninitializedUse(Sema &S, const VarDecl *VD,
     S.Diag(VD->getBeginLoc(), diag::note_var_declared_here)
         << VD->getDeclName();
 
-  return true;
+  return !S.getDiagnostics().isLastDiagnosticIgnored();
 }
 
 namespace {
@@ -1559,43 +1560,7 @@ public:
       UsesVec *vec = V.getPointer();
       bool hasSelfInit = V.getInt();
 
-      // Specially handle the case where we have uses of an uninitialized
-      // variable, but the root cause is an idiomatic self-init.  We want
-      // to report the diagnostic at the self-init since that is the root cause.
-      if (!vec->empty() && hasSelfInit && hasAlwaysUninitializedUse(vec))
-        DiagnoseUninitializedUse(S, vd,
-                                 UninitUse(vd->getInit()->IgnoreParenCasts(),
-                                           /* isAlwaysUninit */ true),
-                                 /* alwaysReportSelfInit */ true);
-      else {
-        // Sort the uses by their SourceLocations.  While not strictly
-        // guaranteed to produce them in line/column order, this will provide
-        // a stable ordering.
-        llvm::sort(*vec, [](const UninitUse &a, const UninitUse &b) {
-          // Move ConstRef uses to the back.
-          if (a.isConstRefUse() != b.isConstRefUse())
-            return b.isConstRefUse();
-          // Prefer a more confident report over a less confident one.
-          if (a.getKind() != b.getKind())
-            return a.getKind() > b.getKind();
-          return a.getUser()->getBeginLoc() < b.getUser()->getBeginLoc();
-        });
-
-        for (const auto &U : *vec) {
-          if (U.isConstRefUse()) {
-            DiagnoseUninitializedConstRefUse(S, vd, U);
-            break;
-          }
-
-          // If we have self-init, downgrade all uses to 'may be uninitialized'.
-          UninitUse Use = hasSelfInit ? UninitUse(U.getUser(), false) : U;
-
-          if (DiagnoseUninitializedUse(S, vd, Use))
-            // Skip further diagnostics for this variable. We try to warn only
-            // on the first point at which a variable is used uninitialized.
-            break;
-        }
-      }
+      diagnoseUnitializedVar(vd, hasSelfInit, vec);
 
       // Release the uses vector.
       delete vec;
@@ -1611,6 +1576,49 @@ private:
              U.getKind() == UninitUse::AfterCall ||
              U.getKind() == UninitUse::AfterDecl;
     });
+  }
+
+  // Print the diagnostic for the variable.  We try to warn only on the first
+  // point at which a variable is used uninitialized.  After the first
+  // diagnostic is printed, further diagnostics for this variable are skipped.
+  void diagnoseUnitializedVar(const VarDecl *vd, bool hasSelfInit,
+                              UsesVec *vec) {
+    // Specially handle the case where we have uses of an uninitialized
+    // variable, but the root cause is an idiomatic self-init.  We want
+    // to report the diagnostic at the self-init since that is the root cause.
+    if (hasSelfInit && hasAlwaysUninitializedUse(vec)) {
+      if (DiagnoseUninitializedUse(S, vd,
+                                   UninitUse(vd->getInit()->IgnoreParenCasts(),
+                                             /*isAlwaysUninit=*/true),
+                                   /*alwaysReportSelfInit=*/true))
+        return;
+    }
+
+    // Sort the uses by their SourceLocations.  While not strictly
+    // guaranteed to produce them in line/column order, this will provide
+    // a stable ordering.
+    llvm::sort(*vec, [](const UninitUse &a, const UninitUse &b) {
+      // Prefer the direct use of an uninitialized variable over its use via
+      // constant reference.
+      if (a.isConstRefUse() != b.isConstRefUse())
+        return b.isConstRefUse();
+      // Prefer a more confident report over a less confident one.
+      if (a.getKind() != b.getKind())
+        return a.getKind() > b.getKind();
+      return a.getUser()->getBeginLoc() < b.getUser()->getBeginLoc();
+    });
+
+    for (const auto &U : *vec) {
+      if (U.isConstRefUse()) {
+        if (DiagnoseUninitializedConstRefUse(S, vd, U))
+          return;
+      } else {
+        // If we have self-init, downgrade all uses to 'may be uninitialized'.
+        UninitUse Use = hasSelfInit ? UninitUse(U.getUser(), false) : U;
+        if (DiagnoseUninitializedUse(S, vd, Use))
+          return;
+      }
+    }
   }
 };
 
