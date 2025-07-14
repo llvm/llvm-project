@@ -23970,15 +23970,14 @@ public:
               isGuaranteedNotToBePoison(VectorizedTree, AC) ||
               (It != ReducedValsToOps.end() &&
                any_of(It->getSecond(), [&](Instruction *I) {
-                 return isBoolLogicOp(I) &&
-                        getRdxOperand(I, 0) == VectorizedTree;
+                 return isBoolLogicOp(I) && I->getOperand(0) == VectorizedTree;
                }))) {
             ;
           } else if (isGuaranteedNotToBePoison(Res, AC) ||
                      (It1 != ReducedValsToOps.end() &&
-                     any_of(It1->getSecond(), [&](Instruction *I) {
-                       return isBoolLogicOp(I) && getRdxOperand(I, 0) == Res;
-                     }))) {
+                      any_of(It1->getSecond(), [&](Instruction *I) {
+                        return isBoolLogicOp(I) && I->getOperand(0) == Res;
+                      }))) {
             std::swap(VectorizedTree, Res);
           } else {
             VectorizedTree = Builder.CreateFreeze(VectorizedTree);
@@ -24467,11 +24466,11 @@ public:
           if (!AnyBoolLogicOp)
             return;
           if (isBoolLogicOp(RedOp1) && ((!InitStep && LHS == VectorizedTree) ||
-                                        getRdxOperand(RedOp1, 0) == LHS ||
+                                        RedOp1->getOperand(0) == LHS ||
                                         isGuaranteedNotToBePoison(LHS, AC)))
             return;
           if (isBoolLogicOp(RedOp2) && ((!InitStep && RHS == VectorizedTree) ||
-                                        getRdxOperand(RedOp2, 0) == RHS ||
+                                        RedOp2->getOperand(0) == RHS ||
                                         isGuaranteedNotToBePoison(RHS, AC))) {
             std::swap(LHS, RHS);
             return;
