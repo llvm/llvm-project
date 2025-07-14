@@ -808,7 +808,7 @@ public:
         dilationAttr);
 
     rewriter.setInsertionPointAfter(op);
-    auto nanMode = op.getNanMode();
+    StringRef nanMode = op.getNanMode();
     rewriter.replaceOp(op, resultOp);
 
     // NaN propagation has no meaning for non floating point types.
