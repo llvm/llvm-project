@@ -1131,13 +1131,13 @@ def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
 
 def udiv_by_const : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_UDIV):$root,
+  (match (G_UDIV $dst, $x, $y):$root,
    [{ return Helper.matchUDivorURemByConst(*${root}); }]),
   (apply [{ Helper.applyUDivorURemByConst(*${root}); }])>;
 
 def sdiv_by_const : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_SDIV):$root,
+  (match (G_SDIV $dst, $x, $y):$root,
    [{ return Helper.matchSDivByConst(*${root}); }]),
   (apply [{ Helper.applySDivByConst(*${root}); }])>;
 
@@ -1153,8 +1153,8 @@ def udiv_by_pow2 : GICombineRule<
    [{ return Helper.matchDivByPow2(*${root}, /*IsSigned=*/false); }]),
   (apply [{ Helper.applyUDivByPow2(*${root}); }])>;
 
-def intdiv_combines : GICombineGroup<[udiv_by_const, sdiv_by_const,
-                                      sdiv_by_pow2, udiv_by_pow2]>;
+def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2, 
+                                      udiv_by_const, sdiv_by_const,]>;
 
 def urem_by_const : GICombineRule<
   (defs root:$root),
@@ -2054,9 +2054,9 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     div_rem_to_divrem, funnel_shift_combines, bitreverse_shift, commute_shift,
     form_bitfield_extract, constant_fold_binops, constant_fold_fma,
     constant_fold_cast_op, fabs_fneg_fold,
-    intdiv_combines, mulh_combines, redundant_neg_operands,
+    mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
-    intrem_combines, sub_add_reg, select_to_minmax,
+    intrem_combines, intdiv_combines, sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
