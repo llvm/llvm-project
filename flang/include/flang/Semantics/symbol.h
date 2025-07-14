@@ -836,7 +836,6 @@ public:
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
-
   const SourceName &name() const {
     if (const auto *details = detailsIf<MainProgramDetails>()) {
       // For main program symbol always return the original name
@@ -844,7 +843,6 @@ public:
     }
     return name_;
   }
-
   Attrs &attrs() { return attrs_; }
   const Attrs &attrs() const { return attrs_; }
   Attrs &implicitAttrs() { return implicitAttrs_; }
