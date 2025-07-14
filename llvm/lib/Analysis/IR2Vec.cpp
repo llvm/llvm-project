@@ -277,7 +277,6 @@ StringRef Vocabulary::getVocabKeyForTypeID(Type::TypeID TypeID) {
     return "MetadataTy";
   case Type::X86_AMXTyID:
   case Type::TargetExtTyID:
-  default:
     return "UnknownTy";
   }
 }
