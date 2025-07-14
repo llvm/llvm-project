@@ -15930,8 +15930,8 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
 
     if (!ValidLoopRange(FirstVal, CountVal, LoopSeqSize)) {
       SemaRef.Diag(LRC->getFirstLoc(), diag::err_omp_invalid_looprange)
-          << getOpenMPDirectiveName(OMPD_fuse) << (FirstVal + CountVal - 1)
-          << LoopSeqSize;
+          << getOpenMPDirectiveName(OMPD_fuse) << FirstVal
+          << (FirstVal + CountVal - 1) << LoopSeqSize;
       return StmtError();
     }
 
@@ -16038,7 +16038,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
 
   // Firstly we need to update TransformIndex to match the begining of the
   // looprange section
-  for (unsigned int I = 0; I < FirstVal - 1; ++I) {
+  for (unsigned I : llvm::seq<unsigned>(FirstVal - 1)) {
     if (LoopCategories[I] == OMPLoopCategory::TransformSingleLoop)
       ++TransformIndex;
   }

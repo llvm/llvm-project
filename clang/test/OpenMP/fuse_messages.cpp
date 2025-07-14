@@ -3,23 +3,23 @@
 void func() {
 
     // expected-error@+2 {{statement after '#pragma omp fuse' must be a loop sequence containing canonical loops or loop-generating constructs}}
-    #pragma omp fuse 
+    #pragma omp fuse
     ;
 
     // expected-error@+2 {{statement after '#pragma omp fuse' must be a for loop}}
-    #pragma omp fuse 
+    #pragma omp fuse
     {int bar = 0;}
 
     // expected-error@+4 {{statement after '#pragma omp fuse' must be a for loop}}
-    #pragma omp fuse 
+    #pragma omp fuse
     {
         for(int i = 0; i < 10; ++i);
         int x = 2;
     }
 
     // expected-error@+2 {{statement after '#pragma omp fuse' must be a loop sequence containing canonical loops or loop-generating constructs}}
-    #pragma omp fuse 
-    #pragma omp for 
+    #pragma omp fuse
+    #pragma omp for
     for (int i = 0; i < 7; ++i)
         ;
 
@@ -39,7 +39,7 @@ void func() {
 
 
     // expected-error@+1 {{unexpected OpenMP clause 'final' in directive '#pragma omp fuse'}}
-    #pragma omp fuse final(0) 
+    #pragma omp fuse final(0)
     {
         for (int i = 0; i < 7; ++i)
             ;
@@ -49,7 +49,7 @@ void func() {
 
     //expected-error@+4 {{loop after '#pragma omp fuse' is not in canonical form}}
     //expected-error@+3 {{increment clause of OpenMP for loop must perform simple addition or subtraction on loop variable 'i'}}
-    #pragma omp fuse 
+    #pragma omp fuse
     {
         for(int i = 0; i < 10; i*=2) {
             ;
@@ -58,25 +58,25 @@ void func() {
     }
 
     //expected-error@+2 {{loop sequence after '#pragma omp fuse' must contain at least 1 canonical loop or loop-generating construct}}
-    #pragma omp fuse 
+    #pragma omp fuse
     {}
 
     //expected-error@+3 {{statement after '#pragma omp fuse' must be a for loop}}
-    #pragma omp fuse 
+    #pragma omp fuse
     {
-        #pragma omp unroll full 
+        #pragma omp unroll full
         for(int i = 0; i < 10; ++i);
-        
+
         for(int j = 0; j < 10; ++j);
     }
 
-    //expected-warning@+2 {{loop range in '#pragma omp fuse' contains only a single loop, resulting in redundant fusion}}
+    //expected-warning@+2 {{looprange clause selects a single loop, resulting in redundant fusion}}
     #pragma omp fuse
     {
         for(int i = 0; i < 10; ++i);
     }
 
-    //expected-warning@+1 {{loop range in '#pragma omp fuse' contains only a single loop, resulting in redundant fusion}}
+    //expected-warning@+1 {{looprange clause selects a single loop, resulting in redundant fusion}}
     #pragma omp fuse looprange(1, 1)
     {
         for(int i = 0; i < 10; ++i);
@@ -99,7 +99,7 @@ void func() {
 
     const int x = 1;
     constexpr int y = 4;
-    //expected-error@+1 {{loop range in '#pragma omp fuse' exceeds the number of available loops: range end '4' is greater than the total number of loops '3'}}
+    //expected-error@+1 {{looprange clause selects loops from 1 to 4 but this exceeds the number of loops (3) in the loop sequence}}
     #pragma omp fuse looprange(x,y)
     {
         for(int i = 0; i < 10; ++i);
@@ -107,7 +107,7 @@ void func() {
         for(int k = 0; k < 50; ++k);
     }
 
-    //expected-error@+1 {{loop range in '#pragma omp fuse' exceeds the number of available loops: range end '420' is greater than the total number of loops '3'}}
+    //expected-error@+1 {{looprange clause selects loops from 1 to 420 but this exceeds the number of loops (3) in the loop sequence}}
     #pragma omp fuse looprange(1,420)
     {
         for(int i = 0; i < 10; ++i);
@@ -115,7 +115,7 @@ void func() {
         for(int k = 0; k < 50; ++k);
     }
 
-    //expected-error@+1 {{loop range in '#pragma omp fuse' exceeds the number of available loops: range end '6' is greater than the total number of loops '5'}}
+    //expected-error@+1 {{looprange clause selects loops from 1 to 6 but this exceeds the number of loops (5) in the loop sequence}}
     #pragma omp fuse looprange(1,6)
     {
         for(int i = 0; i < 10; ++i);
@@ -130,21 +130,21 @@ void func() {
         }
     }
 
-    //expected-error@+1 {{loop range in '#pragma omp fuse' exceeds the number of available loops: range end '4' is greater than the total number of loops '3'}}
+    //expected-error@+1 {{looprange clause selects loops from 2 to 4 but this exceeds the number of loops (3) in the loop sequence}}
     #pragma omp fuse looprange(2,3)
     {
         #pragma omp unroll partial(2)
         for(int i = 0; i < 10; ++i);
-        
+
         #pragma omp reverse
         for(int j = 0; j < 10; ++j);
 
-        #pragma omp fuse 
+        #pragma omp fuse
         {
             {
                 #pragma omp reverse
                 for(int j = 0; j < 10; ++j);
-            }            
+            }
             for(int k = 0; k < 50; ++k);
         }
     }
@@ -154,7 +154,7 @@ void func() {
 template <typename T>
 static void templated_func() {
 
-    //expected-warning@+1 {{loop range in '#pragma omp fuse' contains only a single loop, resulting in redundant fusion}}
+    //expected-warning@+1 {{looprange clause selects a single loop, resulting in redundant fusion}}
     #pragma omp fuse looprange(2,1)
     {
         for(int i = 0; i < 10; ++i);
@@ -162,7 +162,7 @@ static void templated_func() {
         for(int k = 0; k < 50; ++k);
     }
 
-    //expected-error@+1 {{loop range in '#pragma omp fuse' exceeds the number of available loops: range end '5' is greater than the total number of loops '3'}}
+    //expected-error@+1 {{looprange clause selects loops from 3 to 5 but this exceeds the number of loops (3) in the loop sequence}}
     #pragma omp fuse looprange(3,3)
     {
         for(int i = 0; i < 10; ++i);
@@ -172,10 +172,10 @@ static void templated_func() {
 
 }
 
-template <int V> 
+template <int V>
 static void templated_func_value_dependent() {
 
-    //expected-warning@+1 {{loop range in '#pragma omp fuse' contains only a single loop, resulting in redundant fusion}}
+    //expected-warning@+1 {{looprange clause selects a single loop, resulting in redundant fusion}}
     #pragma omp fuse looprange(V,1)
     {
         for(int i = 0; i < 10; ++i);
@@ -184,7 +184,7 @@ static void templated_func_value_dependent() {
     }
 }
 
-template <typename T> 
+template <typename T>
 static void templated_func_type_dependent() {
     constexpr T s = 1;
 
@@ -205,7 +205,6 @@ void template_inst() {
     templated_func_value_dependent<1>();
     // expected-note@+1 {{in instantiation of function template specialization 'templated_func_type_dependent<int>' requested here}}
     templated_func_type_dependent<int>();
-
 }
 
 

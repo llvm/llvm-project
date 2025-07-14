@@ -24,7 +24,7 @@ int main() {
 #endif /* HEADER */
 
 // CHECK:      do
-// CHECK: i=0 j=0
+// CHECK-NEXT: i=0 j=0
 // CHECK-NEXT: i=0 k=0
 // CHECK-NEXT: i=0 j=1
 // CHECK-NEXT: i=0 k=1
