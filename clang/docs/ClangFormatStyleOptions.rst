@@ -4975,6 +4975,12 @@ the configuration (without a prefix: ``Auto``).
      A(z); -> z;
      A(a, b); // will not be expanded.
 
+.. _MacrosSkippedByRemoveParentheses:
+
+**MacrosSkippedByRemoveParentheses** (``List of Strings``) :versionbadge:`clang-format 21` :ref:`¶ <MacrosSkippedByRemoveParentheses>`
+  A vector of function-like macros whose invocations should be skipped by
+  ``RemoveParentheses``.
+
 .. _MainIncludeChar:
 
 **MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 19` :ref:`¶ <MainIncludeChar>`

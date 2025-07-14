@@ -2559,8 +2559,10 @@ ICmpInst *LSRInstance::OptimizeMax(ICmpInst *Cond, IVStrideUse* &CondUse) {
   Instruction *Cmp = cast<Instruction>(Sel->getOperand(0));
   Cond->eraseFromParent();
   Sel->eraseFromParent();
-  if (Cmp->use_empty())
+  if (Cmp->use_empty()) {
+    salvageDebugInfo(*Cmp);
     Cmp->eraseFromParent();
+  }
   return NewCond;
 }
 
