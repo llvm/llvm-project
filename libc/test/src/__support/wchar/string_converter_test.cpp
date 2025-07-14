@@ -57,7 +57,7 @@ TEST(LlvmLibcStringConverterTest, UTF8To32) {
 
 TEST(LlvmLibcStringConverterTest, UTF32To8) {
   // clown emoji, sigma symbol, y with diaeresis, letter A
-  const wchar_t *src = L"\x1f921\x2211\xff\x41";
+  const wchar_t src[] = {0x1f921, 0x2211, 0xff, 0x41, 0x0};
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
       reinterpret_cast<const char32_t *>(src), &state, SIZE_MAX);
@@ -128,7 +128,7 @@ TEST(LlvmLibcStringConverterTest, UTF32To8) {
 }
 
 TEST(LlvmLibcStringConverterTest, UTF32To8PartialRead) {
-  const wchar_t *src = L"\x1f921\x2211"; // clown emoji, sigma symbol
+  const wchar_t src[] = {0x1f921, 0x2211, 0x0}; // clown emoji, sigma symbol
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
       reinterpret_cast<const char32_t *>(src), &state, SIZE_MAX, 1);
@@ -178,7 +178,7 @@ TEST(LlvmLibcStringConverterTest, UTF8To32PartialRead) {
 }
 
 TEST(LlvmLibcStringConverterTest, UTF32To8ErrorHandling) {
-  const wchar_t *src = L"\x1f921\xffffff"; // clown emoji, invalid utf32
+  const wchar_t src[] = {0x1f921, 0xffffff, 0x0}; // clown emoji, invalid utf32
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
       reinterpret_cast<const char32_t *>(src), &state, SIZE_MAX);
@@ -234,7 +234,7 @@ TEST(LlvmLibcStringConverterTest, MultipleStringConverters32To8) {
   StringConverter to continue where we left off. This is not expected to work
   and considered invalid.
   */
-  const wchar_t *src = L"\x1f921\xff"; // clown emoji, y with diaeresis (ÿ)
+  const wchar_t src[] = {0x1f921, 0xff, 0x0}; // clown emoji, y with diaeresis (ÿ)
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc1(
       reinterpret_cast<const char32_t *>(src), &state, SIZE_MAX, 1);
@@ -317,7 +317,7 @@ TEST(LlvmLibcStringConverterTest, DestLimitUTF8To32) {
 }
 
 TEST(LlvmLibcStringConverterTest, DestLimitUTF32To8) {
-  const wchar_t *src = L"\x1f921\x1f921"; // 2 clown emojis
+  const wchar_t src[] = {0x1f921, 0x1f921}; // 2 clown emojis
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
       reinterpret_cast<const char32_t *>(src), &state, 5);
