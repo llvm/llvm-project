@@ -228,9 +228,13 @@ protected:
   static void addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
                                         llvm::opt::ArgStringList &CC1Args,
                                         const Twine &Path);
+
+public:
   static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
                                llvm::opt::ArgStringList &CC1Args,
                                const Twine &Path);
+
+protected:
   static void addExternCSystemInclude(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args,
                                       const Twine &Path);

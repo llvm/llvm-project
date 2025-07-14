@@ -946,8 +946,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       SmallString<128> P(D.ResourceDir);
       llvm::sys::path::append(P, "include");
       llvm::sys::path::append(P, "openmp_wrappers");
-      CmdArgs.push_back("-internal-isystem");
-      CmdArgs.push_back(Args.MakeArgString(P));
+      getToolChain().addSystemInclude(Args, CmdArgs, P);
     }
 
     CmdArgs.push_back("-include");
@@ -959,7 +958,8 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     // standard library headers and other headers.
     SmallString<128> P(D.ResourceDir);
     llvm::sys::path::append(P, "include", "llvm_offload_wrappers");
-    CmdArgs.append({"-internal-isystem", Args.MakeArgString(P), "-include"});
+    getToolChain().addSystemInclude(Args, CmdArgs, P);
+    CmdArgs.push_back("-include");
     if (JA.isDeviceOffloading(Action::OFK_OpenMP))
       CmdArgs.push_back("__llvm_offload_device.h");
     else
@@ -1132,16 +1132,14 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
       llvm::sys::path::append(P, "include");
       llvm::sys::path::append(P, getToolChain().getTripleString());
-      CmdArgs.push_back("-internal-isystem");
-      CmdArgs.push_back(Args.MakeArgString(P));
+      getToolChain().addSystemInclude(Args, CmdArgs, P);
     } else if (C.getActiveOffloadKinds() == Action::OFK_OpenMP) {
       // TODO: CUDA / HIP include their own headers for some common functions
       // implemented here. We'll need to clean those up so they do not conflict.
       SmallString<128> P(D.ResourceDir);
       llvm::sys::path::append(P, "include");
       llvm::sys::path::append(P, "llvm_libc_wrappers");
-      CmdArgs.push_back("-internal-isystem");
-      CmdArgs.push_back(Args.MakeArgString(P));
+      getToolChain().addSystemInclude(Args, CmdArgs, P);
     }
   }
 
