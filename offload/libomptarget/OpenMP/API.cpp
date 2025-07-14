@@ -689,9 +689,16 @@ void syncImplicitInterops(int gtid, void *event);
 // ...) so we can synchronize the necessary objects from the offload side.
 EXTERN void __tgt_target_sync(ident_t *loc_ref, int gtid, void *current_task,
                               void *event) {
-
   if (!RTLAlive)
     return;
 
+  RTLOngoingSyncs++;
+  if (!RTLAlive) {
+    RTLOngoingSyncs--;
+    return;
+  }
+
   syncImplicitInterops(gtid, event);
+
+  RTLOngoingSyncs--;
 }

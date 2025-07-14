@@ -191,4 +191,5 @@ void deinitRuntime();
 
 extern PluginManager *PM;
 extern std::atomic<bool> RTLAlive; // Indicates if the RTL has been initialized
+extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
 #endif // OMPTARGET_PLUGIN_MANAGER_H
