@@ -21007,7 +21007,8 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
 
   EVT DestVT = N->getValueType(0);
 
-  if (!DestVT.isVector() || DestVT.getScalarSizeInBits() > 64 || DestVT.isScalableVector())
+  if (!DestVT.isVector() || DestVT.getScalarSizeInBits() > 64 ||
+      DestVT.isScalableVector())
     return SDValue();
 
   ConstantSDNode *Clamp = isConstOrConstSplat(N->getOperand(1));
@@ -21056,8 +21057,7 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   EVT SExt0Type = SExt0.getOperand(0).getValueType();
   EVT SExt1Type = SExt1.getOperand(0).getValueType();
 
-  if (SExt0Type != SExt1Type ||
-      SExt0Type.getScalarType() != ScalarType ||
+  if (SExt0Type != SExt1Type || SExt0Type.getScalarType() != ScalarType ||
       SExt0Type.getFixedSizeInBits() > 128)
     return SDValue();
 
@@ -21067,10 +21067,9 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
 
   // Ensure input vectors are extended to legal types
   if (SExt0Type.getFixedSizeInBits() < 64) {
-      unsigned VecNumElements = SExt0Type.getVectorNumElements();
-      EVT ExtVecVT =
-        MVT::getVectorVT(MVT::getIntegerVT(64 / VecNumElements),
-                         VecNumElements);
+    unsigned VecNumElements = SExt0Type.getVectorNumElements();
+    EVT ExtVecVT = MVT::getVectorVT(MVT::getIntegerVT(64 / VecNumElements),
+                                    VecNumElements);
     V0 = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVecVT, V0);
     V1 = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVecVT, V1);
   }

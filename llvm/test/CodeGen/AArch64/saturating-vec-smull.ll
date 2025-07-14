@@ -160,7 +160,7 @@ define <2 x i16> @extend_to_illegal_type(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <2 x i11> @illegal_source(<2 x i11> %a, <2 x i11> %b) {
-; CHECK-LABEL: source_is_illegal:
+; CHECK-LABEL: illegal_source:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #21
 ; CHECK-NEXT:    shl v1.2s, v1.2s, #21
