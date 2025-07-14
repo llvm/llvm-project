@@ -12882,11 +12882,10 @@ def err_sycl_special_type_num_init_method : Error<
 // SYCL external attribute diagnostics
 def err_sycl_attribute_invalid_linkage : Error<
   "'sycl_external' can only be applied to functions with external linkage">;
-def err_sycl_attribute_avoid_main : Error<
+def err_sycl_attribute_invalid_main : Error<
   "'sycl_external' cannot be applied to the 'main' function">;
-def err_sycl_attribute_avoid_deleted_function
-    : Error<"'sycl_external' cannot be applied to an explicitly deleted "
-            "function">;
+def err_sycl_attribute_invalid_deleted_function : Error<
+  "'sycl_external' cannot be applied to an explicitly deleted function">;
 
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<

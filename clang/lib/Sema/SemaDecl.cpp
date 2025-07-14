@@ -4085,10 +4085,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     }
 
     // SYCL 2020 section 5.10.1, "SYCL functions and member functions linkage":
-    //   When a function is declared with sycl_external, that attribute must be
+    //   When a function is declared with SYCL_EXTERNAL, that macro must be
     //   used on the first declaration of that function in the translation unit.
     //   Redeclarations of the function in the same translation unit may
-    //   optionally use sycl_external, but this is not required.
+    //   optionally use SYCL_EXTERNAL, but this is not required.
     if (LangOpts.SYCLIsDevice) {
       const SYCLExternalAttr *SEA = New->getAttr<SYCLExternalAttr>();
       if (SEA && !Old->hasAttr<SYCLExternalAttr>()) {
@@ -12459,7 +12459,7 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
 
   if (getLangOpts().SYCLIsDevice) {
     if (FD->hasAttr<SYCLExternalAttr>()) {
-      Diag(FD->getLocation(), diag::err_sycl_attribute_avoid_main);
+      Diag(FD->getLocation(), diag::err_sycl_attribute_invalid_main);
       FD->setInvalidDecl();
       return;
     }

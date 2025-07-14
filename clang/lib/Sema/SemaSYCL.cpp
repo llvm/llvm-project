@@ -257,7 +257,7 @@ void SemaSYCL::CheckSYCLExternalFunctionDecl(FunctionDecl *FD) {
     }
     if (FD->isDeletedAsWritten()) {
       Diag(SEAttr->getLocation(),
-           diag::err_sycl_attribute_avoid_deleted_function);
+           diag::err_sycl_attribute_invalid_deleted_function);
       return;
     }
   }
