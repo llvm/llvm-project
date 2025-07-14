@@ -366,5 +366,8 @@ FEATURE(clang_atomic_attributes, true)
 FEATURE(cuda_noinline_keyword, LangOpts.CUDA)
 EXTENSION(cuda_implicit_host_device_templates, LangOpts.CUDA && LangOpts.OffloadImplicitHostDeviceTemplates)
 
+// C++2d type-aware allocators
+EXTENSION(cxx_type_aware_allocators, true)
+
 #undef EXTENSION
 #undef FEATURE

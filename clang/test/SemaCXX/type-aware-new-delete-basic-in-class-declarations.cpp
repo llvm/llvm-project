@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx -std=c++26 -fsyntax-only -verify=expected,clangext %s
-// RUN: %clang_cc1 -triple arm64-apple-macosx -std=c++26 -Wno-cxx-type-aware-allocators -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx -std=c++26 -Wno-ext-cxx-type-aware-allocators -fsyntax-only -verify %s
 
 namespace std {
   template <class T> struct type_identity {};
