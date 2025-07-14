@@ -580,13 +580,13 @@ void MCObjectStreamer::emitBytes(StringRef Data) {
   DF->appendContents(ArrayRef(Data.data(), Data.size()));
 }
 
-void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                            unsigned ValueSize,
+void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
+                                            uint8_t FillLen,
                                             unsigned MaxBytesToEmit) {
   if (MaxBytesToEmit == 0)
     MaxBytesToEmit = Alignment.value();
-  insert(getContext().allocFragment<MCAlignFragment>(
-      Alignment, Value, ValueSize, MaxBytesToEmit));
+  insert(getContext().allocFragment<MCAlignFragment>(Alignment, Fill, FillLen,
+                                                     MaxBytesToEmit));
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *CurSec = getCurrentSectionOnly();
