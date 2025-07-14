@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: add support for 16-bit widechars to StringConverter to remove this
+// macro
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
+
 #include "hdr/errno_macros.h"
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
@@ -352,3 +356,5 @@ TEST(LlvmLibcStringConverterTest, DestLimitUTF32To8) {
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 }
+
+#endif
