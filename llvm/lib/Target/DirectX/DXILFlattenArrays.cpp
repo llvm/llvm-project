@@ -52,7 +52,7 @@ class DXILFlattenArraysVisitor
     : public InstVisitor<DXILFlattenArraysVisitor, bool> {
 public:
   DXILFlattenArraysVisitor(
-      DenseMap<GlobalVariable *, GlobalVariable *> &GlobalMap)
+      SmallDenseMap<GlobalVariable *, GlobalVariable *> &GlobalMap)
       : GlobalMap(GlobalMap) {}
   bool visit(Function &F);
   // InstVisitor methods.  They return true if the instruction was scalarized,
@@ -80,8 +80,8 @@ public:
 
 private:
   SmallVector<WeakTrackingVH> PotentiallyDeadInstrs;
-  DenseMap<GEPOperator *, GEPInfo> GEPChainInfoMap;
-  DenseMap<GlobalVariable *, GlobalVariable *> &GlobalMap;
+  SmallDenseMap<GEPOperator *, GEPInfo> GEPChainInfoMap;
+  SmallDenseMap<GlobalVariable *, GlobalVariable *> &GlobalMap;
   bool finish();
   ConstantInt *genConstFlattenIndices(ArrayRef<Value *> Indices,
                                       ArrayRef<uint64_t> Dims,
@@ -419,7 +419,7 @@ static Constant *transformInitializer(Constant *Init, Type *OrigType,
 
 static void
 flattenGlobalArrays(Module &M,
-                    DenseMap<GlobalVariable *, GlobalVariable *> &GlobalMap) {
+                    SmallDenseMap<GlobalVariable *, GlobalVariable *> &GlobalMap) {
   LLVMContext &Ctx = M.getContext();
   for (GlobalVariable &G : M.globals()) {
     Type *OrigType = G.getValueType();
@@ -457,7 +457,7 @@ flattenGlobalArrays(Module &M,
 
 static bool flattenArrays(Module &M) {
   bool MadeChange = false;
-  DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
+  SmallDenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
   flattenGlobalArrays(M, GlobalMap);
   DXILFlattenArraysVisitor Impl(GlobalMap);
   for (auto &F : make_early_inc_range(M.functions())) {
