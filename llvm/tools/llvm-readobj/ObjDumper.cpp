@@ -203,7 +203,7 @@ void ObjDumper::printSectionsAsHex(const object::ObjectFile &Obj,
       W.getOStream() << ' ';
       for (i = 0; TmpSecPtr < SecEnd && i < 4; ++i) {
         for (k = 0; TmpSecPtr < SecEnd && k < 4; k++, TmpSecPtr++) {
-          uint8_t Val = *(reinterpret_cast<const uint8_t *>(TmpSecPtr));
+          uint8_t Val = *TmpSecPtr;
           W.getOStream() << format_hex_no_prefix(Val, 2);
         }
         W.getOStream() << ' ';
