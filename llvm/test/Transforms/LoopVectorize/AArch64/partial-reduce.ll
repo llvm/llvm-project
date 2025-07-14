@@ -911,36 +911,33 @@ for.exit:                        ; preds = %for.body
   ret i32 %add
 }
 
-define void @add_of_zext_outside_loop(ptr noalias %a, ptr noalias %b, i8 %c, i8 %d) #0 {
-; CHECK-INTERLEAVE1-LABEL: define void @add_of_zext_outside_loop(
-; CHECK-INTERLEAVE1-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
+define i32 @add_of_zext_outside_loop(i32 %a, ptr noalias %b, i8 %c, i8 %d) #0 {
+; CHECK-INTERLEAVE1-LABEL: define i32 @add_of_zext_outside_loop(
+; CHECK-INTERLEAVE1-SAME: i32 [[A:%.*]], ptr noalias [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVE1-NEXT:  entry:
 ; CHECK-INTERLEAVE1-NEXT:    [[CONV:%.*]] = zext i8 [[D]] to i32
-; CHECK-INTERLEAVE1-NEXT:    [[A_PROMOTED:%.*]] = load i32, ptr [[A]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    [[CONV1:%.*]] = zext i8 [[C]] to i32
 ; CHECK-INTERLEAVE1-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       for.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[IV:%.*]] = phi i32 [ [[CONV]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-INTERLEAVE1-NEXT:    [[RDX:%.*]] = phi i32 [ [[A_PROMOTED]], [[ENTRY]] ], [ [[RDX_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[RDX:%.*]] = phi i32 [ [[A]], [[ENTRY]] ], [ [[RDX_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IV]] to i64
-; CHECK-INTERLEAVE1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[B]], i64 0, i64 [[IDXPROM]]
+; CHECK-INTERLEAVE1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
 ; CHECK-INTERLEAVE1-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    [[RDX_NEXT]] = add nsw i32 [[RDX]], [[CONV1]]
 ; CHECK-INTERLEAVE1-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 4
-; CHECK-INTERLEAVE1-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV_NEXT]], 0
+; CHECK-INTERLEAVE1-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV_NEXT]], 1024
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[FOR_BODY]]
 ; CHECK-INTERLEAVE1:       exit:
 ; CHECK-INTERLEAVE1-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], [[FOR_BODY]] ]
-; CHECK-INTERLEAVE1-NEXT:    store i32 [[ADD_LCSSA]], ptr [[A]], align 4
-; CHECK-INTERLEAVE1-NEXT:    ret void
+; CHECK-INTERLEAVE1-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
-; CHECK-INTERLEAVED-LABEL: define void @add_of_zext_outside_loop(
-; CHECK-INTERLEAVED-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVED-LABEL: define i32 @add_of_zext_outside_loop(
+; CHECK-INTERLEAVED-SAME: i32 [[A:%.*]], ptr noalias [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVED-NEXT:  entry:
 ; CHECK-INTERLEAVED-NEXT:    [[CONV:%.*]] = zext i8 [[D]] to i32
-; CHECK-INTERLEAVED-NEXT:    [[A_PROMOTED:%.*]] = load i32, ptr [[A]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[CONV1:%.*]] = zext i8 [[C]] to i32
-; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = sub i32 -4, [[CONV]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = sub i32 1020, [[CONV]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 2
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
 ; CHECK-INTERLEAVED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
@@ -949,7 +946,7 @@ define void @add_of_zext_outside_loop(ptr noalias %a, ptr noalias %b, i8 %c, i8 
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = sub i2 0, [[TMP3]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = zext i2 [[TMP4]] to i32
 ; CHECK-INTERLEAVED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[TMP5]], 0
-; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = sub i32 -4, [[CONV]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = sub i32 1020, [[CONV]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP6]], 2
 ; CHECK-INTERLEAVED-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 4, i32 [[TMP7]])
 ; CHECK-INTERLEAVED-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
@@ -967,15 +964,15 @@ define void @add_of_zext_outside_loop(ptr noalias %a, ptr noalias %b, i8 %c, i8 
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ [[A_PROMOTED]], [[VECTOR_PH]] ], [ [[TMP20:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ [[A]], [[VECTOR_PH]] ], [ [[TMP20:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = mul i32 [[INDEX]], 4
 ; CHECK-INTERLEAVED-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[CONV]], [[TMP14]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = add i32 [[OFFSET_IDX]], 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = sext i32 [[OFFSET_IDX]] to i64
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = sext i32 [[TMP15]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [0 x i8], ptr [[B]], i64 0, i64 [[TMP16]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [0 x i8], ptr [[B]], i64 0, i64 [[TMP17]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP16]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP17]]
 ; CHECK-INTERLEAVED-NEXT:    store i8 0, ptr [[TMP18]], align 1
 ; CHECK-INTERLEAVED-NEXT:    store i8 0, ptr [[TMP19]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP20]] = add i32 [[VEC_PHI]], [[CONV1]]
@@ -989,80 +986,73 @@ define void @add_of_zext_outside_loop(ptr noalias %a, ptr noalias %b, i8 %c, i8 
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
-; CHECK-MAXBW-LABEL: define void @add_of_zext_outside_loop(
-; CHECK-MAXBW-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
+; CHECK-MAXBW-LABEL: define i32 @add_of_zext_outside_loop(
+; CHECK-MAXBW-SAME: i32 [[A:%.*]], ptr noalias [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    [[CONV:%.*]] = zext i8 [[D]] to i32
-; CHECK-MAXBW-NEXT:    [[A_PROMOTED:%.*]] = load i32, ptr [[A]], align 1
 ; CHECK-MAXBW-NEXT:    [[CONV1:%.*]] = zext i8 [[C]] to i32
 ; CHECK-MAXBW-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-MAXBW:       for.body:
 ; CHECK-MAXBW-NEXT:    [[IV:%.*]] = phi i32 [ [[CONV]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-MAXBW-NEXT:    [[RDX:%.*]] = phi i32 [ [[A_PROMOTED]], [[ENTRY]] ], [ [[RDX_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[RDX:%.*]] = phi i32 [ [[A]], [[ENTRY]] ], [ [[RDX_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IV]] to i64
-; CHECK-MAXBW-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[B]], i64 0, i64 [[IDXPROM]]
+; CHECK-MAXBW-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
 ; CHECK-MAXBW-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1
 ; CHECK-MAXBW-NEXT:    [[RDX_NEXT]] = add nsw i32 [[RDX]], [[CONV1]]
 ; CHECK-MAXBW-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 4
-; CHECK-MAXBW-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV_NEXT]], 0
+; CHECK-MAXBW-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV_NEXT]], 1024
 ; CHECK-MAXBW-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[FOR_BODY]]
 ; CHECK-MAXBW:       exit:
 ; CHECK-MAXBW-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], [[FOR_BODY]] ]
-; CHECK-MAXBW-NEXT:    store i32 [[ADD_LCSSA]], ptr [[A]], align 4
-; CHECK-MAXBW-NEXT:    ret void
+; CHECK-MAXBW-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
   %conv = zext i8 %d to i32
-  %a.promoted = load i32, ptr %a, align 1
   %conv1 = zext i8 %c to i32
   br label %for.body
 
 for.body:
   %iv = phi i32 [ %conv, %entry ], [ %iv.next, %for.body ]
-  %rdx = phi i32 [ %a.promoted, %entry ], [ %rdx.next, %for.body ]
+  %rdx = phi i32 [ %a, %entry ], [ %rdx.next, %for.body ]
   %idxprom = sext i32 %iv to i64
-  %arrayidx = getelementptr inbounds [0 x i8], ptr %b, i64 0, i64 %idxprom
+  %arrayidx = getelementptr inbounds i8, ptr %b, i64 %idxprom
   store i8 0, ptr %arrayidx, align 1
   %rdx.next = add nsw i32 %rdx, %conv1
   %iv.next = add i32 %iv, 4
-  %cmp = icmp eq i32 %iv.next, 0
+  %cmp = icmp eq i32 %iv.next, 1024
   br i1 %cmp, label %exit, label %for.body
 
 exit:
   %add.lcssa = phi i32 [ %rdx.next, %for.body ]
-  store i32 %add.lcssa, ptr %a, align 4
-  ret void
+  ret i32 %add.lcssa
 }
 
-define void @add_of_loop_invariant_zext(ptr noalias %a, ptr noalias %b, i8 %c, i8 %d) #0 {
-; CHECK-INTERLEAVE1-LABEL: define void @add_of_loop_invariant_zext(
-; CHECK-INTERLEAVE1-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
+define i32 @add_of_loop_invariant_zext(i32 %a, ptr %b, i8 %c, i8 %d) #0 {
+; CHECK-INTERLEAVE1-LABEL: define i32 @add_of_loop_invariant_zext(
+; CHECK-INTERLEAVE1-SAME: i32 [[A:%.*]], ptr [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVE1-NEXT:  entry:
 ; CHECK-INTERLEAVE1-NEXT:    [[CONV:%.*]] = zext i8 [[D]] to i32
-; CHECK-INTERLEAVE1-NEXT:    [[A_PROMOTED:%.*]] = load i32, ptr [[A]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       for.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[IV:%.*]] = phi i32 [ [[CONV]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-INTERLEAVE1-NEXT:    [[RDX:%.*]] = phi i32 [ [[A_PROMOTED]], [[ENTRY]] ], [ [[RDX_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[RDX:%.*]] = phi i32 [ [[A]], [[ENTRY]] ], [ [[RDX_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IV]] to i64
-; CHECK-INTERLEAVE1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[B]], i64 0, i64 [[IDXPROM]]
+; CHECK-INTERLEAVE1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
 ; CHECK-INTERLEAVE1-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    [[CONV1:%.*]] = zext i8 [[C]] to i32
 ; CHECK-INTERLEAVE1-NEXT:    [[RDX_NEXT]] = add nsw i32 [[RDX]], [[CONV1]]
 ; CHECK-INTERLEAVE1-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 4
-; CHECK-INTERLEAVE1-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV_NEXT]], 0
+; CHECK-INTERLEAVE1-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV_NEXT]], 1024
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[FOR_BODY]]
 ; CHECK-INTERLEAVE1:       exit:
 ; CHECK-INTERLEAVE1-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], [[FOR_BODY]] ]
-; CHECK-INTERLEAVE1-NEXT:    store i32 [[ADD_LCSSA]], ptr [[A]], align 4
-; CHECK-INTERLEAVE1-NEXT:    ret void
+; CHECK-INTERLEAVE1-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
-; CHECK-INTERLEAVED-LABEL: define void @add_of_loop_invariant_zext(
-; CHECK-INTERLEAVED-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVED-LABEL: define i32 @add_of_loop_invariant_zext(
+; CHECK-INTERLEAVED-SAME: i32 [[A:%.*]], ptr [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-INTERLEAVED-NEXT:  entry:
 ; CHECK-INTERLEAVED-NEXT:    [[CONV:%.*]] = zext i8 [[D]] to i32
-; CHECK-INTERLEAVED-NEXT:    [[A_PROMOTED:%.*]] = load i32, ptr [[A]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = sub i32 -4, [[CONV]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = sub i32 1020, [[CONV]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 2
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
 ; CHECK-INTERLEAVED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
@@ -1071,7 +1061,7 @@ define void @add_of_loop_invariant_zext(ptr noalias %a, ptr noalias %b, i8 %c, i
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = sub i2 0, [[TMP3]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = zext i2 [[TMP4]] to i32
 ; CHECK-INTERLEAVED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[TMP5]], 0
-; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = sub i32 -4, [[CONV]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = sub i32 1020, [[CONV]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP6]], 2
 ; CHECK-INTERLEAVED-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 4, i32 [[TMP7]])
 ; CHECK-INTERLEAVED-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
@@ -1090,15 +1080,15 @@ define void @add_of_loop_invariant_zext(ptr noalias %a, ptr noalias %b, i8 %c, i
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ [[A_PROMOTED]], [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ [[A]], [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP22:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = mul i32 [[INDEX]], 4
 ; CHECK-INTERLEAVED-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[CONV]], [[TMP15]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = add i32 [[OFFSET_IDX]], 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = sext i32 [[OFFSET_IDX]] to i64
 ; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = sext i32 [[TMP16]] to i64
-; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [0 x i8], ptr [[B]], i64 0, i64 [[TMP17]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [0 x i8], ptr [[B]], i64 0, i64 [[TMP18]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP17]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP18]]
 ; CHECK-INTERLEAVED-NEXT:    store i8 0, ptr [[TMP19]], align 1
 ; CHECK-INTERLEAVED-NEXT:    store i8 0, ptr [[TMP20]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP21]] = add i32 [[VEC_PHI]], [[TMP14]]
@@ -1112,49 +1102,45 @@ define void @add_of_loop_invariant_zext(ptr noalias %a, ptr noalias %b, i8 %c, i
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
-; CHECK-MAXBW-LABEL: define void @add_of_loop_invariant_zext(
-; CHECK-MAXBW-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
+; CHECK-MAXBW-LABEL: define i32 @add_of_loop_invariant_zext(
+; CHECK-MAXBW-SAME: i32 [[A:%.*]], ptr [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    [[CONV:%.*]] = zext i8 [[D]] to i32
-; CHECK-MAXBW-NEXT:    [[A_PROMOTED:%.*]] = load i32, ptr [[A]], align 1
 ; CHECK-MAXBW-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-MAXBW:       for.body:
 ; CHECK-MAXBW-NEXT:    [[IV:%.*]] = phi i32 [ [[CONV]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-MAXBW-NEXT:    [[RDX:%.*]] = phi i32 [ [[A_PROMOTED]], [[ENTRY]] ], [ [[RDX_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[RDX:%.*]] = phi i32 [ [[A]], [[ENTRY]] ], [ [[RDX_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IV]] to i64
-; CHECK-MAXBW-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[B]], i64 0, i64 [[IDXPROM]]
+; CHECK-MAXBW-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
 ; CHECK-MAXBW-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1
 ; CHECK-MAXBW-NEXT:    [[CONV1:%.*]] = zext i8 [[C]] to i32
 ; CHECK-MAXBW-NEXT:    [[RDX_NEXT]] = add nsw i32 [[RDX]], [[CONV1]]
 ; CHECK-MAXBW-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 4
-; CHECK-MAXBW-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV_NEXT]], 0
+; CHECK-MAXBW-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV_NEXT]], 1024
 ; CHECK-MAXBW-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[FOR_BODY]]
 ; CHECK-MAXBW:       exit:
 ; CHECK-MAXBW-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], [[FOR_BODY]] ]
-; CHECK-MAXBW-NEXT:    store i32 [[ADD_LCSSA]], ptr [[A]], align 4
-; CHECK-MAXBW-NEXT:    ret void
+; CHECK-MAXBW-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
   %conv = zext i8 %d to i32
-  %a.promoted = load i32, ptr %a, align 1
   br label %for.body
 
 for.body:
   %iv = phi i32 [ %conv, %entry ], [ %iv.next, %for.body ]
-  %rdx = phi i32 [ %a.promoted, %entry ], [ %rdx.next, %for.body ]
+  %rdx = phi i32 [ %a, %entry ], [ %rdx.next, %for.body ]
   %idxprom = sext i32 %iv to i64
-  %arrayidx = getelementptr inbounds [0 x i8], ptr %b, i64 0, i64 %idxprom
+  %arrayidx = getelementptr inbounds i8, ptr %b, i64 %idxprom
   store i8 0, ptr %arrayidx, align 1
   %conv1 = zext i8 %c to i32
   %rdx.next = add nsw i32 %rdx, %conv1
   %iv.next = add i32 %iv, 4
-  %cmp = icmp eq i32 %iv.next, 0
+  %cmp = icmp eq i32 %iv.next, 1024
   br i1 %cmp, label %exit, label %for.body
 
 exit:
   %add.lcssa = phi i32 [ %rdx.next, %for.body ]
-  store i32 %add.lcssa, ptr %a, align 4
-  ret void
+  ret i32 %add.lcssa
 }
 
 
