@@ -973,6 +973,7 @@ static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
                           RFlags.getGEPNoWrapFlags());
   }
   case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
     return Folder.FoldGEP(IntegerType::getInt8Ty(TypeInfo.getContext()), Ops[0],
                           Ops[1],
                           cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
@@ -2767,7 +2768,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
       {StartOffset,
        Builder.createNaryOp(VPInstruction::StepVector, {}, PhiType)});
 
-  VPValue *PtrAdd = Builder.createPtrAdd(
+  VPValue *PtrAdd = Builder.createWidePtrAdd(
       Phi,
       Builder.createNaryOp(Instruction::Mul, {StartOffset, R->getStepValue()}),
       DL, "vector.gep");

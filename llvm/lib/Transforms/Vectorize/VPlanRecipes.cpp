@@ -475,6 +475,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
     return 2;
   case Instruction::Select:
@@ -494,9 +495,8 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
 }
 #endif
 
-bool VPInstruction::doesGeneratePerAllLanes(VPTransformState &State) const {
-  return Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this) &&
-         !State.hasVectorValue(getOperand(1));
+bool VPInstruction::doesGeneratePerAllLanes() const {
+  return Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this);
 }
 
 bool VPInstruction::canGenerateScalarForFirstLane() const {
@@ -514,6 +514,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::AnyOf:
     return true;
@@ -849,7 +850,14 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateLogicalAnd(A, B, Name);
   }
   case VPInstruction::PtrAdd: {
+    assert(vputils::onlyFirstLaneUsed(this) &&
+           "can only generate first lane for PtrAdd");
     Value *Ptr = State.get(getOperand(0), VPLane(0));
+    Value *Addend = State.get(getOperand(1), VPLane(0));
+    return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
+  }
+  case VPInstruction::WidePtrAdd: {
+    Value *Ptr = State.get(getOperand(0), true);
     Value *Addend = State.get(getOperand(1), vputils::onlyFirstLaneUsed(this));
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
@@ -910,6 +918,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
       }
     }
 
+    assert(!doesGeneratePerAllLanes() &&
+           "Should only generate a vector value or single scalar, not scalars "
+           "for all lanes.");
     return Ctx.TTI.getArithmeticInstrCost(getOpcode(), ResTy, Ctx.CostKind);
   }
 
@@ -997,7 +1008,7 @@ void VPInstruction::execute(VPTransformState &State) {
   bool GeneratesPerFirstLaneOnly = canGenerateScalarForFirstLane() &&
                                    (vputils::onlyFirstLaneUsed(this) ||
                                     isVectorToScalar() || isSingleScalar());
-  bool GeneratesPerAllLanes = doesGeneratePerAllLanes(State);
+  bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
   if (GeneratesPerAllLanes) {
     for (unsigned Lane = 0, NumLanes = State.VF.getFixedValue();
          Lane != NumLanes; ++Lane) {
@@ -1041,6 +1052,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::LogicalAnd:
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
@@ -1078,6 +1090,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::ReductionStartVector:
     return true;
   case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindIVResult:
@@ -1180,6 +1193,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::PtrAdd:
     O << "ptradd";
+    break;
+  case VPInstruction::WidePtrAdd:
+    O << "wide-ptradd";
     break;
   case VPInstruction::AnyOf:
     O << "any-of";
@@ -1765,7 +1781,8 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
     return Opcode == Instruction::AShr;
   case OperationType::GEPOp:
     return Opcode == Instruction::GetElementPtr ||
-           Opcode == VPInstruction::PtrAdd;
+           Opcode == VPInstruction::PtrAdd ||
+           Opcode == VPInstruction::WidePtrAdd;
   case OperationType::FPMathOp:
     return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
            Opcode == Instruction::FSub || Opcode == Instruction::FNeg ||
