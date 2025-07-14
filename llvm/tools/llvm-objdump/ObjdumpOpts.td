@@ -247,7 +247,7 @@ def debug_indent_EQ : Joined<["--"], "debug-indent=">,
 
 def debug_inlined_funcs_EQ : Joined<["--"], "debug-inlined-funcs=">,
   HelpText<"Print the locations of inlined functions alongside disassembly. "
-           "Supported formats: ascii, limit-only, and unicode (default)">,
+           "Supported formats: ascii, limits-only, and unicode (default)">,
   Values<"ascii,limits-only,unicode">;
 def : Flag<["--"], "debug-inlined-funcs">, Alias<debug_inlined_funcs_EQ>, AliasArgs<["unicode"]>;
 
