@@ -1352,6 +1352,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECREDUCE_FADD, VT, Legal);
       }
     }
+    if (Subtarget->hasFullFP16())
+      setOperationAction(ISD::VECREDUCE_FADD, MVT::v2f16, Custom);
+
     for (MVT VT : { MVT::v8i8, MVT::v4i16, MVT::v2i32,
                     MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
@@ -16046,9 +16049,19 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
 SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  // Scalarize v2f16 to turn it into a faddp. This will be more efficient than
+  // widening by inserting zeroes.
+  if (Subtarget->hasFullFP16() && Op.getOpcode() == ISD::VECREDUCE_FADD &&
+      SrcVT == MVT::v2f16) {
+    SDLoc DL(Op);
+    return DAG.getNode(ISD::FADD, DL, MVT::f16,
+                       DAG.getExtractVectorElt(DL, MVT::f16, Src, 0),
+                       DAG.getExtractVectorElt(DL, MVT::f16, Src, 1));
+  }
 
   // Try to lower fixed length reductions to SVE.
-  EVT SrcVT = Src.getValueType();
   bool OverrideNEON = !Subtarget->isNeonAvailable() ||
                       Op.getOpcode() == ISD::VECREDUCE_AND ||
                       Op.getOpcode() == ISD::VECREDUCE_OR ||
