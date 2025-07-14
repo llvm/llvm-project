@@ -21,9 +21,9 @@
 TEST(LlvmLibcStringConverterTest, Windows) {
   // pass on windows for now
 }
-#endif
 
-#ifndef LIBC_TARGET_OS_IS_WINDOWS
+#else
+
 TEST(LlvmLibcStringConverterTest, UTF8To32) {
   // first 4 bytes are clown emoji (🤡)
   // next 3 bytes are sigma symbol (∑)
