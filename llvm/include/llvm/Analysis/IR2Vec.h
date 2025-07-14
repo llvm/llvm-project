@@ -162,14 +162,17 @@ class Vocabulary {
   static constexpr unsigned MaxOperandKinds =
       static_cast<unsigned>(OperandKind::MaxOperandKind);
 
+  /// Helper function to get vocabulary key for a given Opcode
+  static StringRef getVocabKeyForOpcode(unsigned Opcode);
+
+  /// Helper function to get vocabulary key for a given TypeID
+  static StringRef getVocabKeyForTypeID(Type::TypeID TypeID);
+
   /// Helper function to get vocabulary key for a given OperandKind
   static StringRef getVocabKeyForOperandKind(OperandKind Kind);
 
   /// Helper function to classify an operand into OperandKind
   static OperandKind getOperandKind(const Value *Op);
-
-  /// Helper function to get vocabulary key for a given TypeID
-  static StringRef getVocabKeyForTypeID(Type::TypeID TypeID);
 
 public:
   Vocabulary() = default;
