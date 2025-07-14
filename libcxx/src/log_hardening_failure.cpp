@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#include <__log_error>
+#include <__log_hardening_failure>
 #include <cstdio>
 
 #ifdef __BIONIC__
@@ -22,9 +22,7 @@ extern "C" void android_set_abort_message(const char* msg);
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-namespace {
-
-void log_security_failure(const char* message) noexcept {
+void __log_hardening_failure(const char* message) noexcept {
   // Always log the message to `stderr` in case the platform-specific system calls fail.
   fputs(message, stderr);
 
@@ -47,16 +45,6 @@ void log_security_failure(const char* message) noexcept {
   syslog(LOG_CRIT, "%s", message);
   closelog();
 #endif
-}
-
-} // namespace
-
-void __log_error(__log_error_reason reason, const char* message) noexcept {
-  switch (reason) {
-  case __log_error_reason::__hardening_failure:
-  default:
-    log_security_failure(message);
-  }
 }
 
 _LIBCPP_END_NAMESPACE_STD

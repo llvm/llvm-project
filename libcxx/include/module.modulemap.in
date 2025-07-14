@@ -2353,8 +2353,8 @@ module std [system] {
     header "__std_mbstate_t.h"
     export *
   }
-  module log_error {
-    header "__log_error"
+  module log_hardening_failure {
+    header "__log_hardening_failure"
   }
   module verbose_abort {
     header "__verbose_abort"
