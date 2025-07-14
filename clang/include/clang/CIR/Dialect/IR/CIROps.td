@@ -2669,6 +2669,33 @@ def ComplexAddOp : CIR_Op<"complex.add", [Pure, SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexSubOp
+//===----------------------------------------------------------------------===//
+
+def ComplexSubOp : CIR_Op<"complex.sub", [Pure, SameOperandsAndResultType]> {
+  let summary = "Complex subtraction";
+  let description = [{
+    The `cir.complex.sub` operation takes two complex numbers and returns
+    their difference.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.sub %0, %1 : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
 // Bit Manipulation Operations
 //===----------------------------------------------------------------------===//
 
@@ -2804,6 +2831,45 @@ def BitPopcountOp : CIR_BitOpBase<"bit.popcnt",
     %0 = cir.const #cir.int<104> : !u32i
     // %1 will be 3 since there are 3 1-bits in %0
     %1 = cir.bit.popcnt(%0 : !u32i) : !u32i
+    ```
+  }];
+}
+
+def BitReverseOp : CIR_BitOpBase<"bit.reverse",
+                                 CIR_UIntOfWidths<[8, 16, 32, 64]>> {
+  let summary = "Reverse the bit pattern of the operand integer";
+  let description = [{
+    The `cir.bit.reverse` operation reverses the bits of the operand integer.
+    Its only argument must be of unsigned integer types of width 8, 16, 32, or
+    64.
+
+    This operation covers the C/C++ builtin function `__builtin_bitreverse`.
+
+    Example:
+
+    ```mlir
+    %1 = cir.bit.reverse(%0 : !u32i): !u32i
+    ```
+  }];
+}
+
+def ByteSwapOp : CIR_BitOpBase<"byte_swap", CIR_UIntOfWidths<[16, 32, 64]>> {
+  let summary = "Reverse the bytes in the object representation of the operand";
+  let description = [{
+    The `cir.byte_swap` operation takes an integer as operand, reverse the bytes
+    in the object representation of the operand integer, and returns the result.
+
+    The operand integer must be an unsigned integer. Its widths must be either
+    16, 32, or 64.
+
+    Example:
+
+    ```mlir
+    // %0 = 0x12345678
+    %0 = cir.const #cir.int<305419896> : !u32i
+
+    // %1 should be 0x78563412
+    %1 = cir.byte_swap(%0 : !u32i) : !u32i
     ```
   }];
 }

@@ -597,7 +597,7 @@ private:
 std::optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   const DeclContext *DC = D->getDeclContext();
   // Injected "Foo" within the class "Foo" has file scope, not class scope.
-  if (auto *R = dyn_cast_or_null<RecordDecl>(D))
+  if (auto *R = dyn_cast_or_null<CXXRecordDecl>(D))
     if (R->isInjectedClassName())
       DC = DC->getParent();
   // Lambda captures are considered function scope, not class scope.

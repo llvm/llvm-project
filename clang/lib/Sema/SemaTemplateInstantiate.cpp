@@ -4412,8 +4412,12 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
       // No need to instantiate in-class initializers during explicit
       // instantiation.
       if (Field->hasInClassInitializer() && TSK == TSK_ImplicitInstantiation) {
+        // Handle local classes which could have substituted template params.
         CXXRecordDecl *ClassPattern =
-            Instantiation->getTemplateInstantiationPattern();
+            Instantiation->isLocalClass()
+                ? Instantiation->getInstantiatedFromMemberClass()
+                : Instantiation->getTemplateInstantiationPattern();
+
         DeclContext::lookup_result Lookup =
             ClassPattern->lookup(Field->getDeclName());
         FieldDecl *Pattern = Lookup.find_first<FieldDecl>();
