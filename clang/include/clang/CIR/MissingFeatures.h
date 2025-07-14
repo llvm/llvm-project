@@ -253,6 +253,7 @@ struct MissingFeatures {
   static bool thunks() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool typeChecks() { return false; }
+  static bool vtableInitializer() { return false; }
   static bool weakRefReference() { return false; }
   static bool writebacks() { return false; }
   static bool appleKext() { return false; }
