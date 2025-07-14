@@ -994,6 +994,14 @@ static bool DiagnoseUninitializedConstRefUse(Sema &S, const VarDecl *VD,
   return !S.getDiagnostics().isLastDiagnosticIgnored();
 }
 
+/// Diagnose uninitialized const pointer usages.
+static bool DiagnoseUninitializedConstPtrUse(Sema &S, const VarDecl *VD,
+                                             const UninitUse &Use) {
+  S.Diag(Use.getUser()->getBeginLoc(), diag::warn_uninit_const_pointer)
+      << VD->getDeclName() << Use.getUser()->getSourceRange();
+  return !S.getDiagnostics().isLastDiagnosticIgnored();
+}
+
 /// DiagnoseUninitializedUse -- Helper function for diagnosing uses of an
 /// uninitialized variable. This manages the different forms of diagnostic
 /// emitted for particular types of uses. Returns true if the use was diagnosed
@@ -1599,9 +1607,9 @@ private:
     // a stable ordering.
     llvm::sort(*vec, [](const UninitUse &a, const UninitUse &b) {
       // Prefer the direct use of an uninitialized variable over its use via
-      // constant reference.
-      if (a.isConstRefUse() != b.isConstRefUse())
-        return b.isConstRefUse();
+      // constant reference or pointer.
+      if (a.isConstRefOrPtrUse() != b.isConstRefOrPtrUse())
+        return b.isConstRefOrPtrUse();
       // Prefer a more confident report over a less confident one.
       if (a.getKind() != b.getKind())
         return a.getKind() > b.getKind();
@@ -1611,6 +1619,9 @@ private:
     for (const auto &U : *vec) {
       if (U.isConstRefUse()) {
         if (DiagnoseUninitializedConstRefUse(S, vd, U))
+          return;
+      } else if (U.isConstPtrUse()) {
+        if (DiagnoseUninitializedConstPtrUse(S, vd, U))
           return;
       } else {
         // If we have self-init, downgrade all uses to 'may be uninitialized'.
@@ -2828,7 +2839,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (!Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_sometimes_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_maybe_uninit_var, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_uninit_const_reference, D->getBeginLoc())) {
+      !Diags.isIgnored(diag::warn_uninit_const_reference, D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_uninit_const_pointer, D->getBeginLoc())) {
     if (CFG *cfg = AC.getCFG()) {
       UninitValsDiagReporter reporter(S);
       UninitVariablesAnalysisStats stats;
