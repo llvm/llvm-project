@@ -2661,8 +2661,8 @@ def ComplexImagPtrOp : CIR_Op<"complex.imag_ptr", [Pure]> {
     ```
   }];
 
-  let results = (outs CIR_PtrToIntOrFloatType:$result);
   let arguments = (ins CIR_PtrToComplexType:$operand);
+  let results = (outs CIR_PtrToIntOrFloatType:$result);
 
   let assemblyFormat = [{
     $operand `:`
