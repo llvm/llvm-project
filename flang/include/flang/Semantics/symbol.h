@@ -107,7 +107,14 @@ private:
 
 class MainProgramDetails : public WithOmpDeclarative {
 public:
+  MainProgramDetails() {}
+  MainProgramDetails(const SourceName &name, const SourceName &scopeName)
+  : name_{name}, scopeName_{scopeName} {}
+  const SourceName& scopeName() const { return scopeName_; }
+  const SourceName& name() const { return name_; }
 private:
+  SourceName name_; // Original main program symbol name
+  SourceName scopeName_; // Main program symbol name used in scope symbol table
 };
 
 class WithBindName {
@@ -828,7 +835,15 @@ public:
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
-  const SourceName &name() const { return name_; }
+
+  const SourceName &name() const {
+    if (const auto* details = detailsIf<MainProgramDetails>()) {
+      // For main program symbol always return the original name
+      return details->name();
+    }
+    return name_;
+  }
+
   Attrs &attrs() { return attrs_; }
   const Attrs &attrs() const { return attrs_; }
   Attrs &implicitAttrs() { return implicitAttrs_; }

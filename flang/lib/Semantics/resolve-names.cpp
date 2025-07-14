@@ -599,6 +599,18 @@ public:
     // Note: don't use FindSymbol here. If this is a derived type scope,
     // we want to detect whether the name is already declared as a component.
     auto *symbol{FindInScope(name)};
+    if constexpr (std::is_same_v<MainProgramDetails, D>) {
+      CHECK(!symbol || !symbol->has<MainProgramDetails>());
+      // Use mangled main program name from MainProgramDetails, in order
+      // to avoid conflicts with the other kinds of symbols having the same
+      // name.
+      symbol = FindInScope(details.scopeName());
+      if (!symbol) {
+        auto &result{MakeSymbol(details.scopeName(), attrs)};
+        result.set_details(std::move(details));
+        return result;
+      }
+    }
     if (!symbol) {
       symbol = &MakeSymbol(name, attrs);
       symbol->set_details(std::move(details));
@@ -10273,10 +10285,13 @@ void ResolveNamesVisitor::AddSubpNames(ProgramTree &node) {
 bool ResolveNamesVisitor::BeginScopeForNode(const ProgramTree &node) {
   switch (node.GetKind()) {
     SWITCH_COVERS_ALL_CASES
-  case ProgramTree::Kind::Program:
+  case ProgramTree::Kind::Program: {
+    SourceName name = node.name().source;
+    SourceName scopeName = context().SaveTempName(name.ToString() + "$main"s);
     PushScope(Scope::Kind::MainProgram,
-        &MakeSymbol(node.name(), MainProgramDetails{}));
+        &MakeSymbol(node.name(), MainProgramDetails{name, scopeName}));
     return true;
+  }
   case ProgramTree::Kind::Function:
   case ProgramTree::Kind::Subroutine:
     return BeginSubprogram(node.name(), node.GetSubpFlag(),
