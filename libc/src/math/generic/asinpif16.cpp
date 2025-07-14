@@ -23,20 +23,6 @@ namespace LIBC_NAMESPACE_DECL {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr size_t N_ASINPIF16_EXCEPTS = 3;
 
-static constexpr fputil::ExceptValues<float16, N_ASINPIF16_EXCEPTS>
-    ASINPIF16_EXCEPTS{{
-        // (input_hex, RZ_output_hex, RU_offset, RD_offset, RN_offset)
-        // x = 0.0, asinfpi(0.0) = 0.0
-        {0x0000, 0x0000, 0, 0, 0},
-
-        // x = 0x1.004p-3, asinpif16(x) = 0x1.47p-5 (RZ)
-        {0x3001U, 0x291cU, 1U, 0U, 1U},
-        // x = 0x1.0bp-1, asinpif16(x) = 0x1.658p-3 (RZ)
-        {0x382cU, 0x3196U, 1U, 0U, 0U},
-    }};
-
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-
 LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
 
@@ -62,13 +48,6 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
 
     return FPBits::quiet_nan().get_val();
   }
-
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  // exceptional values
-  if (auto r = ASINPIF16_EXCEPTS.lookup(xbits.uintval());
-      LIBC_UNLIKELY(r.has_value()))
-    return r.value();
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // the coefficients for the polynomial approximation of asin(x)/pi in the
   // range [0, 0.5] extracted using python-sympy
