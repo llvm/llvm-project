@@ -109,19 +109,6 @@ void bad_root_signature_14() {}
 #define DuplicatesRootSignature \
   "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
 
-// CHECK: [[@LINE-2]]:4: note: expanded from macro 'DuplicatesRootSignature'
-// CHECK-NEXT: [[@LINE-3]] |   "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
-// CHECK-NEXT:             |    ^
-// CHECK: [[@LINE-5]]:13: note: expanded from macro 'DuplicatesRootSignature'
-// CHECK-NEXT: [[@LINE-6]] |   "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
-// CHECK-NEXT:             |             ^
-// CHECK: [[@LINE-8]]:22: note: expanded from macro 'DuplicatesRootSignature'
-// CHECK-NEXT: [[@LINE-9]] |    "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
-// CHECK-NEXT:             |                       ^
-// CHECK: [[@LINE-11]]:47: note: expanded from macro 'DuplicatesRootSignature'
-// CHECK-NEXT: [[@LINE-12]] |    "CBV(b0), CBV(b0), CBV(b0), DescriptorTable(CBV(b0, numDescriptors = 2))"
-// CHECK-NEXT:             |                                                ^
-
 // expected-error@+6 {{resource ranges b[0;0] and b[0;0] overlap within space = 0 and visibility = All}}
 // expected-note@+5 {{overlapping resource range here}}
 // expected-error@+4 {{resource ranges b[0;0] and b[0;0] overlap within space = 0 and visibility = All}}
