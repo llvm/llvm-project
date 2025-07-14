@@ -3749,7 +3749,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (Opc == AMDGPU::V_MAC_F32_e64 || Opc == AMDGPU::V_MAC_F16_e64 ||
           Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_t16_e64 ||
           Opc == AMDGPU::V_FMAC_F16_fake16_e64 ||
-	  Opc == AMDGPU::V_FMAC_F16_e64 || Opc == AMDGPU::V_FMAC_F64_e64)
+          Opc == AMDGPU::V_FMAC_F16_e64 || Opc == AMDGPU::V_FMAC_F64_e64)
         UseMI.untieRegOperand(
             AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2));
 
@@ -9401,7 +9401,7 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       if (!Op.isReg() && !isInlineConstant(Op, OpInfo)) {
         HasLiteral = true;
         if (ST.has64BitLiterals()) {
-          switch(OpInfo.OperandType) {
+          switch (OpInfo.OperandType) {
           default:
             break;
           case AMDGPU::OPERAND_REG_IMM_FP64:
