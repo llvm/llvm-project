@@ -1061,10 +1061,6 @@ defvar DefaultRuntimeLibcallImpls =
                     DefaultRuntimeLibcallImpls_f80),
                     DefaultRuntimeLibcallImpls_ppcf128);
 
-defvar DefaultRuntimeLibcallImpls_atomic =
-    !filter(entry, DefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry.Provides), "ATOMIC"));
-
 /// Default set of libcall impls for 32-bit architectures.
 defvar DefaultLibcallImpls32 = DefaultRuntimeLibcallImpls;
 
