@@ -16,7 +16,7 @@
 
 extern "C" int LLVMFuzzerTestOneInput(double x) {
   // remove NaN and inf and values outside accepted range
-  if (isnan(x) || isinf(x) || x < 0)
+  if (isnan(x) || isinf(x) || x < -1)
     return 0;
   // signed zeros already tested in unit tests
   if (signbit(x) && x == 0.0)
