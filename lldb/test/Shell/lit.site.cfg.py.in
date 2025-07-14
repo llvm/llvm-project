@@ -21,6 +21,7 @@ config.enable_remote = not @LLDB_TEST_SHELL_DISABLE_REMOTE@
 config.libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
+config.python_root_dir = "@Python3_ROOT_DIR@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.objc_gnustep_dir = "@LLDB_TEST_OBJC_GNUSTEP_DIR@"
 config.lldb_enable_lzma = @LLDB_ENABLE_LZMA@
@@ -35,6 +36,7 @@ config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 # The shell tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-shell")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-shell")
+config.clang_resource_dir = os.path.join("@CLANG_RESOURCE_DIR@")
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

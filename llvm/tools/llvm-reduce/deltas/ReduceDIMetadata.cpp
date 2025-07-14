@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceDIMetadata.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -67,8 +66,8 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
           // Don't add uninteresting operands to the tuple.
           if (!O.shouldKeep())
             continue;
-        TN.push_back(Op);
       }
+      TN.push_back(Tup->getOperand(I));
     }
     if (TN.size() != Tup->getNumOperands())
       DbgNode->replaceOperandWith(OpIdx, DbgNode->get(DbgNode->getContext(), TN));

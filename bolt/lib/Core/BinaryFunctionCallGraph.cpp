@@ -252,10 +252,7 @@ buildCallGraph(BinaryContext &BC, CgFilterFunction Filter, bool CgFromPerfData,
 
         for (MCInst &Inst : *BB) {
           // Find call instructions and extract target symbols from each one.
-          // Check CallProfile annotation if the instruction is not recognized
-          // as a call, e.g. unknown control flow indirect jump.
-          if (BC.MIB->isCall(Inst) ||
-              BC.MIB->hasAnnotation(Inst, "CallProfile")) {
+          if (BC.MIB->isCall(Inst)) {
             const CallInfoTy CallInfo = getCallInfo(BB, Inst);
 
             if (!CallInfo.empty()) {

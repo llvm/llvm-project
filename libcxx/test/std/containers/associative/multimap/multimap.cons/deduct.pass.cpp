@@ -40,7 +40,10 @@
 #include <climits> // INT_MAX
 #include <functional>
 #include <map>
+#include <tuple>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
@@ -188,6 +191,24 @@ int main(int, char**) {
       std::multimap c(std::from_range, Range(), Alloc());
       static_assert(std::is_same_v<decltype(c), std::multimap<int, long, DefaultComp, Alloc>>);
     }
+  }
+  {
+    std::vector<std::pair<const int, float>> pair_vec = {{1, 1.1f}, {2, 2.2f}, {3, 3.3f}};
+    std::multimap mm1(pair_vec.begin(), pair_vec.end());
+    ASSERT_SAME_TYPE(decltype(mm1), std::multimap<int, float>);
+
+    std::vector<std::tuple<int, double>> tuple_vec = {{10, 1.1}, {20, 2.2}, {30, 3.3}};
+    std::multimap mm2(tuple_vec.begin(), tuple_vec.end());
+    ASSERT_SAME_TYPE(decltype(mm2), std::multimap<int, double>);
+
+    std::vector<std::array<long, 2>> array_vec = {{100L, 101L}, {200L, 201L}, {300L, 301L}};
+    std::multimap mm3(array_vec.begin(), array_vec.end());
+    ASSERT_SAME_TYPE(decltype(mm3), std::multimap<long, long>);
+
+    // Check deduction with non-const key in input pair
+    std::vector<std::pair<int, char>> non_const_key_pair_vec = {{5, 'a'}, {6, 'b'}};
+    std::multimap mm4(non_const_key_pair_vec.begin(), non_const_key_pair_vec.end());
+    ASSERT_SAME_TYPE(decltype(mm4), std::multimap<int, char>);
   }
 #endif
 

@@ -214,6 +214,24 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
       Reg1.isPhysical() ? MI.getOperand(Idx1).isRenamable() : false;
   bool Reg2IsRenamable =
       Reg2.isPhysical() ? MI.getOperand(Idx2).isRenamable() : false;
+
+  // For a case like this:
+  //   %0.sub = INST %0.sub(tied), %1.sub, implicit-def %0
+  // we need to update the implicit-def after commuting to result in:
+  //   %1.sub = INST %1.sub(tied), %0.sub, implicit-def %1
+  SmallVector<unsigned> UpdateImplicitDefIdx;
+  if (HasDef && MI.hasImplicitDef()) {
+    const TargetRegisterInfo *TRI =
+        MI.getMF()->getSubtarget().getRegisterInfo();
+    for (auto [OpNo, MO] : llvm::enumerate(MI.implicit_operands())) {
+      Register ImplReg = MO.getReg();
+      if ((ImplReg.isVirtual() && ImplReg == Reg0) ||
+          (ImplReg.isPhysical() && Reg0.isPhysical() &&
+           TRI->isSubRegisterEq(ImplReg, Reg0)))
+        UpdateImplicitDefIdx.push_back(OpNo + MI.getNumExplicitOperands());
+    }
+  }
+
   // If destination is tied to either of the commuted source register, then
   // it must be updated.
   if (HasDef && Reg0 == Reg1 &&
@@ -240,6 +258,8 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   if (HasDef) {
     CommutedMI->getOperand(0).setReg(Reg0);
     CommutedMI->getOperand(0).setSubReg(SubReg0);
+    for (unsigned Idx : UpdateImplicitDefIdx)
+      CommutedMI->getOperand(Idx).setReg(Reg0);
   }
   CommutedMI->getOperand(Idx2).setReg(Reg1);
   CommutedMI->getOperand(Idx1).setReg(Reg2);
@@ -1043,7 +1063,7 @@ bool TargetInstrInfo::getAccumulatorReassociationPatterns(
 
   // Check if the MBB this instruction is a part of contains any other chains.
   // If so, don't apply it.
-  SmallSet<Register, 32> ReductionChain(Chain.begin(), Chain.end());
+  SmallSet<Register, 32> ReductionChain(llvm::from_range, Chain);
   for (const auto &I : MBB) {
     if (I.getOpcode() == Opc &&
         !ReductionChain.contains(I.getOperand(0).getReg()))
@@ -1716,7 +1736,7 @@ bool TargetInstrInfo::getMemOperandWithOffset(
     const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
     bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
-  LocationSize Width = 0;
+  LocationSize Width = LocationSize::precise(0);
   if (!getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
                                      Width, TRI) ||
       BaseOps.size() != 1)
@@ -1846,8 +1866,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
 
   // To simplify the sub-register handling, verify that we only need to
   // consider physical registers.
-  assert(MF->getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoVRegs));
+  assert(MF->getProperties().hasNoVRegs());
 
   if (auto DestSrc = isCopyInstr(MI)) {
     Register DestReg = DestSrc->Destination->getReg();

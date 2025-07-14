@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "CommonArgs.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -59,8 +58,6 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       OCKL = FilePath;
     } else if (BaseName == "opencl") {
       OpenCL = FilePath;
-    } else if (BaseName == "hip") {
-      HIP = FilePath;
     } else if (BaseName == "asanrtl") {
       AsanRTL = FilePath;
     } else if (BaseName == "oclc_finite_only_off") {
@@ -223,7 +220,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     std::string VerStr = DirName.drop_front(strlen("rocm-")).str();
     // The ROCm directory name follows the format of
     // rocm-{major}.{minor}.{subMinor}[-{build}]
-    std::replace(VerStr.begin(), VerStr.end(), '-', '.');
+    llvm::replace(VerStr, '-', '.');
     V.tryParse(VerStr);
     return V;
   };
@@ -528,7 +525,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
                     "hipstdpar_lib.hpp"});
   };
 
-  if (DriverArgs.hasArg(options::OPT_nogpuinc)) {
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true)) {
     if (HasHipStdPar)
       HandleHipStdPar();
 
@@ -562,7 +560,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (C.getDriver().isUsingLTO()) {
     const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0], ThinLTO);
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs, ThinLTO);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +
@@ -838,7 +836,7 @@ Expected<SmallVector<std::string>>
 AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
   // Detect AMD GPUs availible on the system.
   std::string Program;
-  if (Arg *A = Args.getLastArg(options::OPT_amdgpu_arch_tool_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_offload_arch_tool_EQ))
     Program = A->getValue();
   else
     Program = GetProgramPath("amdgpu-arch");
@@ -935,7 +933,13 @@ bool RocmInstallationDetector::checkCommonBitcodeLibs(
     return false;
   }
   if (ABIVer.requiresLibrary() && getABIVersionPath(ABIVer).empty()) {
-    D.Diag(diag::err_drv_no_rocm_device_lib) << 2 << ABIVer.toString();
+    // Starting from COV6, we will report minimum ROCm version requirement in
+    // the error message.
+    if (ABIVer.getAsCodeObjectVersion() < 6)
+      D.Diag(diag::err_drv_no_rocm_device_lib) << 2 << ABIVer.toString() << 0;
+    else
+      D.Diag(diag::err_drv_no_rocm_device_lib)
+          << 2 << ABIVer.toString() << 1 << "6.3";
     return false;
   }
   return true;

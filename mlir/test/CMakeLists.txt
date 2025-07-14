@@ -105,6 +105,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-pass-test
   mlir-capi-quant-test
   mlir-capi-rewrite-test
+  mlir-capi-smt-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
   mlir-capi-transform-interpreter-test

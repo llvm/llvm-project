@@ -130,6 +130,14 @@ template <typename A> common::IfNoLvalue<Expr<ResultType<A>>, A> AsExpr(A &&x) {
   return Expr<ResultType<A>>{std::move(x)};
 }
 
+template <typename T, typename U = typename Relational<T>::Result>
+Expr<U> AsExpr(Relational<T> &&x) {
+  // The variant in Expr<Type<TypeCategory::Logical, KIND>> only contains
+  // Relational<SomeType>, not other Relational<T>s. Wrap the Relational<T>
+  // in Relational<SomeType> before creating Expr<>.
+  return Expr<U>(Relational<SomeType>{std::move(x)});
+}
+
 template <typename T> Expr<T> AsExpr(Expr<T> &&x) {
   static_assert(IsSpecificIntrinsicType<T>);
   return std::move(x);
@@ -388,23 +396,32 @@ std::optional<DataRef> ExtractDataRef(const ActualArgument &,
 
 // Predicate: is an expression is an array element reference?
 template <typename T>
-bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
+const Symbol *IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
     bool skipComponents = false) {
   if (auto dataRef{ExtractDataRef(expr, intoSubstring)}) {
-    const DataRef *ref{&*dataRef};
-    if (skipComponents) {
-      while (const Component * component{std::get_if<Component>(&ref->u)}) {
-        ref = &component->base();
+    for (const DataRef *ref{&*dataRef}; ref;) {
+      if (const Component * component{std::get_if<Component>(&ref->u)}) {
+        ref = skipComponents ? &component->base() : nullptr;
+      } else if (const auto *coarrayRef{std::get_if<CoarrayRef>(&ref->u)}) {
+        ref = &coarrayRef->base();
+      } else if (const auto *arrayRef{std::get_if<ArrayRef>(&ref->u)}) {
+        return &arrayRef->GetLastSymbol();
+      } else {
+        break;
       }
     }
-    if (const auto *coarrayRef{std::get_if<CoarrayRef>(&ref->u)}) {
-      return !coarrayRef->subscript().empty();
-    } else {
-      return std::holds_alternative<ArrayRef>(ref->u);
-    }
-  } else {
-    return false;
   }
+  return nullptr;
+}
+
+template <typename T>
+bool isStructureComponent(const Fortran::evaluate::Expr<T> &expr) {
+  if (auto dataRef{ExtractDataRef(expr, /*intoSubstring=*/false)}) {
+    const Fortran::evaluate::DataRef *ref{&*dataRef};
+    return std::holds_alternative<Fortran::evaluate::Component>(ref->u);
+  }
+
+  return false;
 }
 
 template <typename A>
@@ -417,9 +434,6 @@ std::optional<NamedEntity> ExtractNamedEntity(const A &x) {
             },
             [](Component &&component) -> std::optional<NamedEntity> {
               return NamedEntity{std::move(component)};
-            },
-            [](CoarrayRef &&co) -> std::optional<NamedEntity> {
-              return co.GetBase();
             },
             [](auto &&) { return std::optional<NamedEntity>{}; },
         },
@@ -476,74 +490,59 @@ template <typename A> std::optional<CoarrayRef> ExtractCoarrayRef(const A &x) {
   }
 }
 
-struct ExtractSubstringHelper {
-  template <typename T> static std::optional<Substring> visit(T &&) {
+template <typename TARGET> struct ExtractFromExprDesignatorHelper {
+  template <typename T> static std::optional<TARGET> visit(T &&) {
     return std::nullopt;
   }
 
-  static std::optional<Substring> visit(const Substring &e) { return e; }
+  static std::optional<TARGET> visit(const TARGET &t) { return t; }
 
   template <typename T>
-  static std::optional<Substring> visit(const Designator<T> &e) {
+  static std::optional<TARGET> visit(const Designator<T> &e) {
     return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 
-  template <typename T>
-  static std::optional<Substring> visit(const Expr<T> &e) {
+  template <typename T> static std::optional<TARGET> visit(const Expr<T> &e) {
     return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 };
 
 template <typename A> std::optional<Substring> ExtractSubstring(const A &x) {
-  return ExtractSubstringHelper::visit(x);
+  return ExtractFromExprDesignatorHelper<Substring>::visit(x);
+}
+
+template <typename A>
+std::optional<ComplexPart> ExtractComplexPart(const A &x) {
+  return ExtractFromExprDesignatorHelper<ComplexPart>::visit(x);
 }
 
 // If an expression is simply a whole symbol data designator,
 // extract and return that symbol, else null.
+const Symbol *UnwrapWholeSymbolDataRef(const DataRef &);
+const Symbol *UnwrapWholeSymbolDataRef(const std::optional<DataRef> &);
 template <typename A> const Symbol *UnwrapWholeSymbolDataRef(const A &x) {
-  if (auto dataRef{ExtractDataRef(x)}) {
-    if (const SymbolRef * p{std::get_if<SymbolRef>(&dataRef->u)}) {
-      return &p->get();
-    }
-  }
-  return nullptr;
+  return UnwrapWholeSymbolDataRef(ExtractDataRef(x));
 }
 
 // If an expression is a whole symbol or a whole component desginator,
 // extract and return that symbol, else null.
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(const DataRef &);
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(
+    const std::optional<DataRef> &);
 template <typename A>
 const Symbol *UnwrapWholeSymbolOrComponentDataRef(const A &x) {
-  if (auto dataRef{ExtractDataRef(x)}) {
-    if (const SymbolRef * p{std::get_if<SymbolRef>(&dataRef->u)}) {
-      return &p->get();
-    } else if (const Component * c{std::get_if<Component>(&dataRef->u)}) {
-      if (c->base().Rank() == 0) {
-        return &c->GetLastSymbol();
-      }
-    }
-  }
-  return nullptr;
+  return UnwrapWholeSymbolOrComponentDataRef(ExtractDataRef(x));
 }
 
 // If an expression is a whole symbol or a whole component designator,
 // potentially followed by an image selector, extract and return that symbol,
 // else null.
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const DataRef &);
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(
+    const std::optional<DataRef> &);
 template <typename A>
 const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const A &x) {
-  if (auto dataRef{ExtractDataRef(x)}) {
-    if (const SymbolRef * p{std::get_if<SymbolRef>(&dataRef->u)}) {
-      return &p->get();
-    } else if (const Component * c{std::get_if<Component>(&dataRef->u)}) {
-      if (c->base().Rank() == 0) {
-        return &c->GetLastSymbol();
-      }
-    } else if (const CoarrayRef * c{std::get_if<CoarrayRef>(&dataRef->u)}) {
-      if (c->subscript().empty()) {
-        return &c->GetLastSymbol();
-      }
-    }
-  }
-  return nullptr;
+  return UnwrapWholeSymbolOrComponentOrCoarrayRef(ExtractDataRef(x));
 }
 
 // GetFirstSymbol(A%B%C[I]%D) -> A
@@ -1287,17 +1286,6 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-inline bool CanCUDASymbolHaveSaveAttr(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() != common::CUDADataAttr::Unified) {
-      return false;
-    }
-  }
-  return true;
-}
-
 inline bool IsCUDADeviceSymbol(const Symbol &sym) {
   if (const auto *details =
           sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
@@ -1371,24 +1359,165 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 
 /// Check if the expression is a mix of host and device variables that require
 /// implicit data transfer.
-inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
-  unsigned hostSymbols{0};
-  unsigned deviceSymbols{0};
-  for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (IsCUDADeviceSymbol(sym)) {
-      ++deviceSymbols;
-    } else {
-      if (sym.owner().IsDerivedType()) {
-        if (IsCUDADeviceSymbol(sym.owner().GetSymbol()->GetUltimate())) {
-          ++deviceSymbols;
-        }
-      }
-      ++hostSymbols;
-    }
+bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
+
+// Checks whether the symbol on the LHS is present in the RHS expression.
+bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
+
+namespace operation {
+
+enum class Operator {
+  Unknown,
+  Add,
+  And,
+  Associated,
+  Call,
+  Constant,
+  Convert,
+  Div,
+  Eq,
+  Eqv,
+  False,
+  Ge,
+  Gt,
+  Identity,
+  Intrinsic,
+  Le,
+  Lt,
+  Max,
+  Min,
+  Mul,
+  Ne,
+  Neqv,
+  Not,
+  Or,
+  Pow,
+  Resize, // Convert within the same TypeCategory
+  Sub,
+  True,
+};
+
+std::string ToString(Operator op);
+
+template <typename... Ts, int Kind>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::LogicalOperation<Kind>, Ts...> &op) {
+  switch (op.derived().logicalOperator) {
+  case common::LogicalOperator::And:
+    return Operator::And;
+  case common::LogicalOperator::Or:
+    return Operator::Or;
+  case common::LogicalOperator::Eqv:
+    return Operator::Eqv;
+  case common::LogicalOperator::Neqv:
+    return Operator::Neqv;
+  case common::LogicalOperator::Not:
+    return Operator::Not;
   }
-  bool hasConstant{HasConstant(expr)};
-  return (hasConstant || (hostSymbols > 0)) && deviceSymbols > 0;
+  return Operator::Unknown;
 }
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Relational<T>, Ts...> &op) {
+  switch (op.derived().opr) {
+  case common::RelationalOperator::LT:
+    return Operator::Lt;
+  case common::RelationalOperator::LE:
+    return Operator::Le;
+  case common::RelationalOperator::EQ:
+    return Operator::Eq;
+  case common::RelationalOperator::NE:
+    return Operator::Ne;
+  case common::RelationalOperator::GE:
+    return Operator::Ge;
+  case common::RelationalOperator::GT:
+    return Operator::Gt;
+  }
+  return Operator::Unknown;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(const evaluate::Operation<evaluate::Add<T>, Ts...> &op) {
+  return Operator::Add;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Subtract<T>, Ts...> &op) {
+  return Operator::Sub;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Multiply<T>, Ts...> &op) {
+  return Operator::Mul;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Divide<T>, Ts...> &op) {
+  return Operator::Div;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Power<T>, Ts...> &op) {
+  return Operator::Pow;
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::RealToIntPower<T>, Ts...> &op) {
+  return Operator::Pow;
+}
+
+template <typename T, common::TypeCategory C, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Convert<T, C>, Ts...> &op) {
+  if constexpr (C == T::category) {
+    return Operator::Resize;
+  } else {
+    return Operator::Convert;
+  }
+}
+
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Extremum<T>, Ts...> &op) {
+  if (op.derived().ordering == evaluate::Ordering::Greater) {
+    return Operator::Max;
+  } else {
+    return Operator::Min;
+  }
+}
+
+template <typename T> Operator OperationCode(const evaluate::Constant<T> &x) {
+  return Operator::Constant;
+}
+
+template <typename T> Operator OperationCode(const T &) {
+  return Operator::Unknown;
+}
+
+Operator OperationCode(const evaluate::ProcedureDesignator &proc);
+
+} // namespace operation
+
+// Return information about the top-level operation (ignoring parentheses):
+// the operation code and the list of arguments.
+std::pair<operation::Operator, std::vector<Expr<SomeType>>>
+GetTopLevelOperation(const Expr<SomeType> &expr);
+
+// Check if expr is same as x, or a sequence of Convert operations on x.
+bool IsSameOrConvertOf(const Expr<SomeType> &expr, const Expr<SomeType> &x);
+
+// Strip away any top-level Convert operations (if any exist) and return
+// the input value. A ComplexConstructor(x, 0) is also considered as a
+// convert operation.
+// If the input is not Operation, Designator, FunctionRef or Constant,
+// it returns std::nullopt.
+std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 
 } // namespace Fortran::evaluate
 
@@ -1428,6 +1557,7 @@ bool IsExtensibleType(const DerivedTypeSpec *);
 bool IsSequenceOrBindCType(const DerivedTypeSpec *);
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name);
 bool IsBuiltinCPtr(const Symbol &);
+bool IsFromBuiltinModule(const Symbol &);
 bool IsEventType(const DerivedTypeSpec *);
 bool IsLockType(const DerivedTypeSpec *);
 bool IsNotifyType(const DerivedTypeSpec *);

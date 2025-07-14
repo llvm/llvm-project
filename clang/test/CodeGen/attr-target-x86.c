@@ -56,7 +56,7 @@ void f_default2(void) {
 __attribute__((target("avx,      sse4.2,      arch=   ivybridge")))
 void f_avx_sse4_2_ivybridge_2(void) {}
 
-// CHECK: [[f_no_aes_ivybridge]] = {{.*}}"target-cpu"="ivybridge" "target-features"="+avx,+cmov,+crc32,+cx16,+cx8,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt,-aes,-amx-avx512,-avx10.1-256,-avx10.1-512,-avx10.2-256,-avx10.2-512,-vaes"
+// CHECK: [[f_no_aes_ivybridge]] = {{.*}}"target-cpu"="ivybridge" "target-features"="+avx,+cmov,+crc32,+cx16,+cx8,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt,-aes,-vaes"
 __attribute__((target("no-aes, arch=ivybridge")))
 void f_no_aes_ivybridge(void) {}
 
@@ -98,11 +98,11 @@ void f_x86_64_v3(void) {}
 __attribute__((target("arch=x86-64-v4")))
 void f_x86_64_v4(void) {}
 
-// CHECK: [[f_avx10_1_256]] = {{.*}}"target-cpu"="i686" "target-features"="+aes,+avx,+avx10.1-256,+avx2,+avx512bf16,+avx512bitalg,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512fp16,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512vl,+avx512vnni,+avx512vpopcntdq,+cmov,+crc32,+cx8,+f16c,+fma,+mmx,+pclmul,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+vaes,+vpclmulqdq,+x87,+xsave,-amx-avx512,-avx10.1-512,-avx10.2-512,-evex512"
+// CHECK: [[f_avx10_1_256]] = {{.*}}"target-cpu"="i686" "target-features"="+avx,+avx10.1-256,+avx2,+avx512bf16,+avx512bitalg,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512fp16,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512vl,+avx512vnni,+avx512vpopcntdq,+cmov,+crc32,+cx8,+f16c,+fma,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,-amx-avx512,-avx10.1-512,-avx10.2-512,-evex512"
 __attribute__((target("avx10.1-256")))
 void f_avx10_1_256(void) {}
 
-// CHECK: [[f_avx10_1_512]] = {{.*}}"target-cpu"="i686" "target-features"="+aes,+avx,+avx10.1-256,+avx10.1-512,+avx2,+avx512bf16,+avx512bitalg,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512fp16,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512vl,+avx512vnni,+avx512vpopcntdq,+cmov,+crc32,+cx8,+evex512,+f16c,+fma,+mmx,+pclmul,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+vaes,+vpclmulqdq,+x87,+xsave"
+// CHECK: [[f_avx10_1_512]] = {{.*}}"target-cpu"="i686" "target-features"="+avx,+avx10.1-256,+avx10.1-512,+avx2,+avx512bf16,+avx512bitalg,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512fp16,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512vl,+avx512vnni,+avx512vpopcntdq,+cmov,+crc32,+cx8,+evex512,+f16c,+fma,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 __attribute__((target("avx10.1-512")))
 void f_avx10_1_512(void) {}
 

@@ -3,6 +3,8 @@
 # remove-loads-into-fake-uses pass, and that if the function does not use
 # instruction referencing then no changes are made.
 # RUN: llc %s -run-pass remove-loads-into-fake-uses -mtriple=x86_64-unknown-linux -debug-only=remove-loads-into-fake-uses 2>&1 -o - | FileCheck %s
+# RUN: llc %s -passes remove-loads-into-fake-uses -mtriple=x86_64-unknown-linux -debug-only=remove-loads-into-fake-uses 2>&1 -o - | FileCheck %s
+
 # REQUIRES: asserts
 #
 ## We verify that:

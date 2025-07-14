@@ -54,8 +54,10 @@ static std::optional<TemplateSpecializationTypeLoc>
 matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
   if (const auto Dep = TheType.getAs<DependentNameTypeLoc>()) {
     const IdentifierInfo *Identifier = Dep.getTypePtr()->getIdentifier();
+    ElaboratedTypeKeyword Keyword = Dep.getTypePtr()->getKeyword();
     if (!Identifier || Identifier->getName() != "type" ||
-        Dep.getTypePtr()->getKeyword() != ElaboratedTypeKeyword::Typename) {
+        (Keyword != ElaboratedTypeKeyword::Typename &&
+         Keyword != ElaboratedTypeKeyword::None)) {
       return std::nullopt;
     }
     TheType = Dep.getQualifierLoc().getTypeLoc();
@@ -108,8 +110,10 @@ matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
 
     if (const auto *AliasedType =
             dyn_cast<DependentNameType>(Specialization->getAliasedType())) {
+      ElaboratedTypeKeyword Keyword = AliasedType->getKeyword();
       if (AliasedType->getIdentifier()->getName() != "type" ||
-          AliasedType->getKeyword() != ElaboratedTypeKeyword::Typename) {
+          (Keyword != ElaboratedTypeKeyword::Typename &&
+           Keyword != ElaboratedTypeKeyword::None)) {
         return std::nullopt;
       }
     } else {
@@ -157,7 +161,7 @@ matchTrailingTemplateParam(const FunctionTemplateDecl *FunctionTemplate) {
 
   const TemplateParameterList *TemplateParams =
       FunctionTemplate->getTemplateParameters();
-  if (TemplateParams->size() == 0)
+  if (TemplateParams->empty())
     return {};
 
   const NamedDecl *LastParam =
@@ -275,7 +279,7 @@ findInsertionForConstraint(const FunctionDecl *Function, ASTContext &Context) {
   return Body->getBeginLoc();
 }
 
-bool isPrimaryExpression(const Expr *Expression) {
+static bool isPrimaryExpression(const Expr *Expression) {
   // This function is an incomplete approximation of checking whether
   // an Expr is a primary expression. In particular, if this function
   // returns true, the expression is a primary expression. The converse
@@ -415,7 +419,7 @@ handleTrailingTemplateType(const FunctionTemplateDecl *FunctionTemplate,
   SourceRange RemovalRange;
   const TemplateParameterList *TemplateParams =
       FunctionTemplate->getTemplateParameters();
-  if (!TemplateParams || TemplateParams->size() == 0)
+  if (!TemplateParams || TemplateParams->empty())
     return {};
 
   if (TemplateParams->size() == 1) {

@@ -22,6 +22,7 @@
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -420,7 +421,7 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::OCLReserveID:
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
@@ -546,37 +547,47 @@ void UnaryTransformTypeLoc::initializeLocal(ASTContext &Context,
         Context.getTrivialTypeSourceInfo(getTypePtr()->getBaseType(), Loc));
 }
 
+template <class TL>
+static void initializeElaboratedKeyword(TL T, SourceLocation Loc) {
+  T.setElaboratedKeywordLoc(T.getTypePtr()->getKeyword() !=
+                                    ElaboratedTypeKeyword::None
+                                ? Loc
+                                : SourceLocation());
+}
+
+static NestedNameSpecifierLoc
+initializeQualifier(ASTContext &Context, NestedNameSpecifier *Qualifier,
+                    SourceLocation Loc) {
+  if (!Qualifier)
+    return NestedNameSpecifierLoc();
+  NestedNameSpecifierLocBuilder Builder;
+  Builder.MakeTrivial(Context, Qualifier, Loc);
+  return Builder.getWithLocInContext(Context);
+}
+
 void ElaboratedTypeLoc::initializeLocal(ASTContext &Context,
                                         SourceLocation Loc) {
   if (isEmpty())
     return;
-  setElaboratedKeywordLoc(Loc);
-  NestedNameSpecifierLocBuilder Builder;
-  Builder.MakeTrivial(Context, getTypePtr()->getQualifier(), Loc);
-  setQualifierLoc(Builder.getWithLocInContext(Context));
+  initializeElaboratedKeyword(*this, Loc);
+  setQualifierLoc(
+      initializeQualifier(Context, getTypePtr()->getQualifier(), Loc));
 }
 
 void DependentNameTypeLoc::initializeLocal(ASTContext &Context,
                                            SourceLocation Loc) {
-  setElaboratedKeywordLoc(Loc);
-  NestedNameSpecifierLocBuilder Builder;
-  Builder.MakeTrivial(Context, getTypePtr()->getQualifier(), Loc);
-  setQualifierLoc(Builder.getWithLocInContext(Context));
+  initializeElaboratedKeyword(*this, Loc);
+  setQualifierLoc(
+      initializeQualifier(Context, getTypePtr()->getQualifier(), Loc));
   setNameLoc(Loc);
 }
 
 void
 DependentTemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
                                                         SourceLocation Loc) {
-  setElaboratedKeywordLoc(Loc);
-  if (NestedNameSpecifier *Qualifier =
-          getTypePtr()->getDependentTemplateName().getQualifier()) {
-    NestedNameSpecifierLocBuilder Builder;
-    Builder.MakeTrivial(Context, Qualifier, Loc);
-    setQualifierLoc(Builder.getWithLocInContext(Context));
-  } else {
-    setQualifierLoc(NestedNameSpecifierLoc());
-  }
+  initializeElaboratedKeyword(*this, Loc);
+  setQualifierLoc(initializeQualifier(
+      Context, getTypePtr()->getDependentTemplateName().getQualifier(), Loc));
   setTemplateKeywordLoc(Loc);
   setTemplateNameLoc(Loc);
   setLAngleLoc(Loc);
@@ -642,9 +653,9 @@ static ConceptReference *createTrivialConceptReference(ASTContext &Context,
       DeclarationNameInfo(AT->getTypeConstraintConcept()->getDeclName(), Loc,
                           AT->getTypeConstraintConcept()->getDeclName());
   unsigned size = AT->getTypeConstraintArguments().size();
-  TemplateArgumentLocInfo *TALI = new TemplateArgumentLocInfo[size];
+  llvm::SmallVector<TemplateArgumentLocInfo, 8> TALI(size);
   TemplateSpecializationTypeLoc::initializeArgLocs(
-      Context, AT->getTypeConstraintArguments(), TALI, Loc);
+      Context, AT->getTypeConstraintArguments(), TALI.data(), Loc);
   TemplateArgumentListInfo TAListI;
   for (unsigned i = 0; i < size; ++i) {
     TAListI.addArgument(
@@ -656,7 +667,6 @@ static ConceptReference *createTrivialConceptReference(ASTContext &Context,
       Context, NestedNameSpecifierLoc{}, Loc, DNI, nullptr,
       AT->getTypeConstraintConcept(),
       ASTTemplateArgumentListInfo::Create(Context, TAListI));
-  delete[] TALI;
   return ConceptRef;
 }
 

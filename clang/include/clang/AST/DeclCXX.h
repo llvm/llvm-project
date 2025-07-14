@@ -365,12 +365,10 @@ private:
       return getVBasesSlowCase();
     }
 
-    ArrayRef<CXXBaseSpecifier> bases() const {
-      return llvm::ArrayRef(getBases(), NumBases);
-    }
+    ArrayRef<CXXBaseSpecifier> bases() const { return {getBases(), NumBases}; }
 
     ArrayRef<CXXBaseSpecifier> vbases() const {
-      return llvm::ArrayRef(getVBases(), NumVBases);
+      return {getVBases(), NumVBases};
     }
 
   private:
@@ -548,8 +546,7 @@ public:
   }
 
   CXXRecordDecl *getMostRecentNonInjectedDecl() {
-    CXXRecordDecl *Recent =
-        static_cast<CXXRecordDecl *>(this)->getMostRecentDecl();
+    CXXRecordDecl *Recent = getMostRecentDecl();
     while (Recent->isInjectedClassName()) {
       // FIXME: Does injected class name need to be in the redeclarations chain?
       assert(Recent->getPreviousDecl());
@@ -1550,6 +1547,9 @@ public:
   /// Returns the destructor decl for this class.
   CXXDestructorDecl *getDestructor() const;
 
+  /// Returns the destructor decl for this class.
+  bool hasDeletedDestructor() const;
+
   /// Returns true if the class destructor, or any implicitly invoked
   /// destructors are marked noreturn.
   bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
@@ -1887,6 +1887,21 @@ public:
     auto &DL = static_cast<LambdaDefinitionData &>(*DefinitionData);
     DL.IsGenericLambda = IsGeneric;
   }
+
+  /// Determines whether this declaration represents the
+  /// injected class name.
+  ///
+  /// The injected class name in C++ is the name of the class that
+  /// appears inside the class itself. For example:
+  ///
+  /// \code
+  /// struct C {
+  ///   // C is implicitly declared here as a synonym for the class name.
+  /// };
+  ///
+  /// C::C c; // same as "C c;"
+  /// \endcode
+  bool isInjectedClassName() const;
 
   // Determine whether this type is an Interface Like type for
   // __interface inheritance purposes.
@@ -2603,9 +2618,6 @@ class CXXConstructorDecl final
   size_t numTrailingObjects(OverloadToken<InheritedConstructor>) const {
     return CXXConstructorDeclBits.IsInheritingConstructor;
   }
-  size_t numTrailingObjects(OverloadToken<ExplicitSpecifier>) const {
-    return CXXConstructorDeclBits.HasTrailingExplicitSpecifier;
-  }
 
   ExplicitSpecifier getExplicitSpecifierInternal() const {
     if (CXXConstructorDeclBits.HasTrailingExplicitSpecifier)
@@ -2622,8 +2634,12 @@ class CXXConstructorDecl final
   };
 
   uint64_t getTrailingAllocKind() const {
-    return numTrailingObjects(OverloadToken<InheritedConstructor>()) |
-           (numTrailingObjects(OverloadToken<ExplicitSpecifier>()) << 1);
+    uint64_t Kind = 0;
+    if (CXXConstructorDeclBits.IsInheritingConstructor)
+      Kind |= TAKInheritsConstructor;
+    if (CXXConstructorDeclBits.HasTrailingExplicitSpecifier)
+      Kind |= TAKHasTailExplicit;
+    return Kind;
   }
 
 public:
@@ -2852,7 +2868,6 @@ class CXXDestructorDecl : public CXXMethodDecl {
   // FIXME: Don't allocate storage for these except in the first declaration
   // of a virtual destructor.
   FunctionDecl *OperatorDelete = nullptr;
-  FunctionDecl *OperatorArrayDelete = nullptr;
   Expr *OperatorDeleteThisArg = nullptr;
 
   CXXDestructorDecl(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
@@ -2878,14 +2893,9 @@ public:
   static CXXDestructorDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   void setOperatorDelete(FunctionDecl *OD, Expr *ThisArg);
-  void setOperatorArrayDelete(FunctionDecl *OD);
 
   const FunctionDecl *getOperatorDelete() const {
     return getCanonicalDecl()->OperatorDelete;
-  }
-
-  const FunctionDecl *getArrayOperatorDelete() const {
-    return getCanonicalDecl()->OperatorArrayDelete;
   }
 
   Expr *getOperatorDeleteThisArg() const {
@@ -3299,7 +3309,7 @@ class LifetimeExtendedTemporaryDecl final
 
   mutable APValue *Value = nullptr;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   LifetimeExtendedTemporaryDecl(Expr *Temp, ValueDecl *EDecl, unsigned Mangling)
       : Decl(Decl::LifetimeExtendedTemporary, EDecl->getDeclContext(),
@@ -3867,8 +3877,7 @@ class UsingPackDecl final
                   InstantiatedFrom ? InstantiatedFrom->getDeclName()
                                    : DeclarationName()),
         InstantiatedFrom(InstantiatedFrom), NumExpansions(UsingDecls.size()) {
-    std::uninitialized_copy(UsingDecls.begin(), UsingDecls.end(),
-                            getTrailingObjects<NamedDecl *>());
+    llvm::uninitialized_copy(UsingDecls, getTrailingObjects());
   }
 
   void anchor() override;
@@ -3886,7 +3895,7 @@ public:
   /// Get the set of using declarations that this pack expanded into. Note that
   /// some of these may still be unresolved.
   ArrayRef<NamedDecl *> expansions() const {
-    return llvm::ArrayRef(getTrailingObjects<NamedDecl *>(), NumExpansions);
+    return getTrailingObjects(NumExpansions);
   }
 
   static UsingPackDecl *Create(ASTContext &C, DeclContext *DC,
@@ -4166,7 +4175,7 @@ public:
 /// DecompositionDecl of type 'int (&)[3]'.
 class BindingDecl : public ValueDecl {
   /// The declaration that this binding binds to part of.
-  ValueDecl *Decomp;
+  ValueDecl *Decomp = nullptr;
   /// The binding represented by this declaration. References to this
   /// declaration are effectively equivalent to this expression (except
   /// that it is only evaluated once at the point of declaration of the
@@ -4193,7 +4202,7 @@ public:
   Expr *getBinding() const { return Binding; }
 
   // Get the array of nested BindingDecls when the binding represents a pack.
-  llvm::ArrayRef<BindingDecl *> getBindingPackDecls() const;
+  ArrayRef<BindingDecl *> getBindingPackDecls() const;
 
   /// Get the decomposition declaration that this binding represents a
   /// decomposition of.
@@ -4239,8 +4248,7 @@ class DecompositionDecl final
       : VarDecl(Decomposition, C, DC, StartLoc, LSquareLoc, nullptr, T, TInfo,
                 SC),
         NumBindings(Bindings.size()) {
-    std::uninitialized_copy(Bindings.begin(), Bindings.end(),
-                            getTrailingObjects<BindingDecl *>());
+    llvm::uninitialized_copy(Bindings, getTrailingObjects());
     for (auto *B : Bindings) {
       B->setDecomposedDecl(this);
       if (B->isParameterPack() && B->getBinding()) {
@@ -4267,21 +4275,21 @@ public:
                                                unsigned NumBindings);
 
   // Provide the range of bindings which may have a nested pack.
-  llvm::ArrayRef<BindingDecl *> bindings() const {
-    return {getTrailingObjects<BindingDecl *>(), NumBindings};
+  ArrayRef<BindingDecl *> bindings() const {
+    return getTrailingObjects(NumBindings);
   }
 
   // Provide a flattened range to visit each binding.
   auto flat_bindings() const {
-    llvm::ArrayRef<BindingDecl *> Bindings = bindings();
-    llvm::ArrayRef<BindingDecl *> PackBindings;
+    ArrayRef<BindingDecl *> Bindings = bindings();
+    ArrayRef<BindingDecl *> PackBindings;
 
     // Split the bindings into subranges split by the pack.
-    llvm::ArrayRef<BindingDecl *> BeforePackBindings = Bindings.take_until(
+    ArrayRef<BindingDecl *> BeforePackBindings = Bindings.take_until(
         [](BindingDecl *BD) { return BD->isParameterPack(); });
 
     Bindings = Bindings.drop_front(BeforePackBindings.size());
-    if (!Bindings.empty()) {
+    if (!Bindings.empty() && Bindings.front()->getBinding()) {
       PackBindings = Bindings.front()->getBindingPackDecls();
       Bindings = Bindings.drop_front();
     }
