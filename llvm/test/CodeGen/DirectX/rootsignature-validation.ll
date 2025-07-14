@@ -43,30 +43,12 @@ declare target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) @llvm.dx
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 define void @CSMain() local_unnamed_addr #1 {
 entry:
-  %CB.cb_h.i.i = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBs_4_0tt(i32 1, i32 3, i32 1, i32 0, i1 false, ptr nonnull @CB.str)
-  store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) %CB.cb_h.i.i, ptr @CB.cb, align 4
-  %0 = tail call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
-  %1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str.2)
-  %2 = tail call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 0, i32 -2, i32 1, i32 0, i1 false, ptr nonnull @.str.4)
-  %3 = tail call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 0, i32 2, i32 1, i32 0, i1 false, ptr nonnull @.str.6)
-  %4 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 0, i32 1, i32 1, i32 0, i1 false, ptr @.str.10)
-  %5 = call { float, float, float, float } @llvm.dx.resource.load.cbufferrow.4.f32.f32.f32.f32.tdx.CBuffer_tdx.Layout_s___cblayout_CBs_4_0tt(target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) %CB.cb_h.i.i, i32 0)
-  %6 = extractvalue { float, float, float, float } %5, 0
-  %7 = call { i32, i1 } @llvm.dx.resource.load.rawbuffer.i32.tdx.RawBuffer_i32_0_0t(target("dx.RawBuffer", i32, 0, 0) %0, i32 0, i32 0)
-  %8 = extractvalue { i32, i1 } %7, 0
-  %conv.i = sitofp i32 %8 to float
-  %add.i = fadd reassoc nnan ninf nsz arcp afn float %6, %conv.i
-  %9 = call { float, i1 } @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %2, i32 0, i32 0)
-  %10 = extractvalue { float, i1 } %9, 0
-  %add2.i = fadd reassoc nnan ninf nsz arcp afn float %add.i, %10
-  %11 = call { float, i1 } @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %3, i32 0, i32 0)
-  %12 = extractvalue { float, i1 } %11, 0
-  %add4.i = fadd reassoc nnan ninf nsz arcp afn float %add2.i, %12
-  %13 = call { float, i1 } @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %4, i32 0, i32 0)
-  %14 = extractvalue { float, i1 } %13, 0
-  %add6.i = fadd reassoc nnan ninf nsz arcp afn float %add4.i, %14
-  %conv7.i = fptosi float %add6.i to i32
-  call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i32_1_0t.i32(target("dx.RawBuffer", i32, 1, 0) %1, i32 0, i32 0, i32 %conv7.i)
+
+  %CB = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) @llvm.dx.resource.handlefrombinding(i32 1, i32 3, i32 1, i32 0, i1 false, ptr nonnull @CB.str)
+  %Sampler = call target("dx.Sampler", 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 3, i32 1, i32 0, i1 false, ptr nonnull @Smp.str)
+  %SB = tail call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @SB.str)
+  %RWB =  tail call target("dx.RawBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @RWB.str)
+
   ret void
 }
 
