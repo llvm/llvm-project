@@ -1151,7 +1151,8 @@ TEST(MinimizeSourceToDependencyDirectivesTest, ObjCMethodArgs) {
   EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
 }
 
-TEST(MinimizeSourceToDependencyDirectivesTest, CxxModulesImportScopeResolution) {
+TEST(MinimizeSourceToDependencyDirectivesTest,
+     CxxModulesImportScopeResolution) {
   SmallString<16> Out;
   SmallVector<dependency_directives_scan::Token, 2> Tokens;
   SmallVector<Directive, 1> Directives;
