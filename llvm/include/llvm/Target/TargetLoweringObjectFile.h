@@ -93,6 +93,9 @@ public:
   /// Emit Call Graph Profile metadata.
   void emitCGProfileMetadata(MCStreamer &Streamer, Module &M) const;
 
+  /// Emit pseudo_probe_desc metadata.
+  void emitPseudoProbeDescMetadata(MCStreamer &Streamer, Module &M) const;
+
   /// Process linker options metadata and emit platform-specific bits.
   virtual void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const {}
 
