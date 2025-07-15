@@ -616,9 +616,10 @@ TEST(IntegerRelationTest, rangeProduct) {
       "(i, j, l) : (4*i + 6*j + 9*l == 0, i >= 0, j >= 0, l >= 0)", 2);
 
   IntegerRelation rangeProd = r1.rangeProduct(r2);
-  IntegerRelation expected = parseRelationFromSet(
-      "(i, j, k, l) : (2*i + 3*k == 0, 4*i + 6*j + 9*l == 0, i >= 0, j >= 0, k >= 0, l >= 0)", 2);
+  IntegerRelation expected =
+      parseRelationFromSet("(i, j, k, l) : (2*i + 3*k == 0, 4*i + 6*j + 9*l == "
+                           "0, i >= 0, j >= 0, k >= 0, l >= 0)",
+                           2);
 
   EXPECT_TRUE(expected.isEqual(rangeProd));
 }
-
