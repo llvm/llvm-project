@@ -36,7 +36,7 @@ Potentially Breaking Changes
 
 - The Objective-C ARC migrator (ARCMigrate) has been removed.
 - Fix missing diagnostics for uses of declarations when performing typename access,
-  such as when performing member access on a '[[deprecated]]' type alias.
+  such as when performing member access on a ``[[deprecated]]`` type alias.
   (#GH58547)
 - For ARM targets when compiling assembly files, the features included in the selected CPU
   or Architecture's FPU are included. If you wish not to use a specific feature,
@@ -132,8 +132,6 @@ C++2c Feature Support
 
 
 - Implemented `P0963R3 Structured binding declaration as a condition <https://wg21.link/P0963R3>`_.
-
-- Implemented `P2719R4 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_.
 
 - Implemented `P3618R0 Allow attaching main to the global module <https://wg21.link/P3618>`_.
 
@@ -475,6 +473,9 @@ related warnings within the method body.
 - Clang now disallows the use of attributes applied before an
   ``extern template`` declaration (#GH79893).
 
+- Clang will print the "reason" string argument passed on to
+  ``[[clang::warn_unused_result("reason")]]`` as part of the warning diagnostic.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -703,6 +704,11 @@ Improvements to Clang's diagnostics
 
 - Improve the diagnostics for placement new expression when const-qualified
   object was passed as the storage argument. (#GH143708)
+
+- Clang now does not issue a warning about returning from a function declared with
+  the ``[[noreturn]]`` attribute when the function body is ended with a call via
+  pointer, provided it can be proven that the pointer only points to
+  ``[[noreturn]]`` functions.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -947,6 +953,7 @@ Bug Fixes to C++ Support
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 - Correctly handles calling an explicit object member function template overload set
   through its address (``(&Foo::bar<baz>)()``).
+- Fix a crash when using an explicit object parameter in a non-member function. (#GH113185)
 - Fix a crash when forming an invalid call to an operator with an explicit object member. (#GH147121)
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
@@ -1021,7 +1028,9 @@ Arm and AArch64 Support
   `as specified here <https://github.com/ARM-software/acle/blob/main/main/acle.md#modal-8-bit-floating-point-extensions>`_
   is now available.
 - Support has been added for the following processors (command-line identifiers in parentheses):
+
   - Arm Cortex-A320 (``cortex-a320``)
+
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
 - The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
   ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is
@@ -1029,7 +1038,19 @@ Arm and AArch64 Support
 - When a feature that depends on NEON (``simd``) is used, NEON is now automatically enabled.
 - When NEON is disabled (``+nosimd``), all features that depend on NEON will now be disabled.
 
--  Support for __ptrauth type qualifier has been added.
+- Pointer authentication
+
+  - Support for __ptrauth type qualifier has been added.
+  - Objective-C adoption of pointer authentication
+
+    - ``isa`` and ``super`` pointers are protected with address diversity and separate
+      usage specific discriminators.
+    - methodlist pointers and content are protected with address diversity and methodlist
+      pointers have a usage specific discriminator.
+    - ``class_ro_t`` pointers are protected with address diversity and usage specific
+      discriminators.
+    - ``SEL`` typed ivars are protected with address diversity and usage specific
+      discriminators.
 
 - For AArch64, added support for generating executable-only code sections by using the
   ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
@@ -1193,6 +1214,9 @@ New features
   so frequent 'not yet implemented' diagnostics should be expected.  Also, the
   ACC MLIR dialect does not currently implement any lowering to LLVM-IR, so no
   code generation is possible for OpenACC.
+- Implemented `P2719R5 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_
+  as an extension in all C++ language modes.
+
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

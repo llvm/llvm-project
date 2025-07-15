@@ -12,16 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/XeGPU/Transforms/Passes.h"
-
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
-#include <numeric>
 
 namespace mlir {
 namespace xegpu {
@@ -438,7 +434,8 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
           // Compute the offset
           Value inc = rewriter.create<arith::ConstantIndexOp>(
               loc, i * blockedChunkSize);
-          Value incVec = rewriter.create<vector::SplatOp>(loc, indiceType, inc);
+          Value incVec =
+              rewriter.create<vector::BroadcastOp>(loc, indiceType, inc);
           Value offsetIndice =
               rewriter.create<arith::AddIOp>(loc, indice, incVec);
 
