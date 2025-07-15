@@ -243,19 +243,42 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   assert(LI->isSimple());
   IRBuilder<> Builder(LI);
 
-  Value *FirstActive =
-      *llvm::find_if(DeinterleaveValues, [](Value *V) { return V != nullptr; });
-  VectorType *ResVTy = cast<VectorType>(FirstActive->getType());
+  auto FirstActiveItr =
+      llvm::find_if(DeinterleaveValues, [](Value *V) { return V != nullptr; });
+  VectorType *ResVTy = cast<VectorType>((*FirstActiveItr)->getType());
 
   const DataLayout &DL = LI->getDataLayout();
-
   if (!isLegalInterleavedAccessType(ResVTy, Factor, LI->getAlign(),
                                     LI->getPointerAddressSpace(), DL))
     return false;
 
-  Value *Return;
   Type *PtrTy = LI->getPointerOperandType();
   Type *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
+
+  // If the segment load is going to be performed segment at a time anyways
+  // and there's only one element used, use a strided load instead.  This
+  // will be equally fast, and create less vector register pressure.
+  if (!Subtarget.hasOptimizedSegmentLoadStore(Factor) &&
+      1 == llvm::count_if(DeinterleaveValues,
+                          [](Value *V) { return V != nullptr; })) {
+    unsigned Idx = std::distance(DeinterleaveValues.begin(), FirstActiveItr);
+    unsigned ScalarSizeInBytes = DL.getTypeStoreSize(ResVTy->getElementType());
+    Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
+    Value *Offset = ConstantInt::get(XLenTy, Idx * ScalarSizeInBytes);
+    Value *BasePtr = Builder.CreatePtrAdd(LI->getPointerOperand(), Offset);
+    Value *Mask = Builder.getAllOnesMask(ResVTy->getElementCount());
+    Type *I32 = Type::getIntNTy(LI->getContext(), 32);
+    Value *VL = Builder.CreateElementCount(I32, ResVTy->getElementCount());
+
+    CallInst *CI =
+        Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
+                                {ResVTy, BasePtr->getType(), Stride->getType()},
+                                {BasePtr, Stride, Mask, VL});
+    Align A = commonAlignment(LI->getAlign(), Idx * ScalarSizeInBytes);
+    CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), A));
+    (*FirstActiveItr)->replaceAllUsesWith(CI);
+    return true;
+  }
 
   if (isa<FixedVectorType>(ResVTy)) {
     Value *VL = Builder.CreateElementCount(XLenTy, ResVTy->getElementCount());
