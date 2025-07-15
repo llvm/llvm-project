@@ -267,8 +267,7 @@ void OutlinableRegion::splitCandidate() {
   // region is the same as the recorded instruction following the last
   // instruction. If they do not match, there could be problems in rewriting
   // the program after outlining, so we ignore it.
-  if (!BackInst->isTerminator() &&
-      EndInst != BackInst->getNextNode())
+  if (!BackInst->isTerminator() && EndInst != BackInst->getNextNode())
     return;
 
   Instruction *StartInst = (*Candidate->begin()).Inst;

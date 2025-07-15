@@ -1804,8 +1804,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
               continue;
             return false;
           }
-          if (IsImpactedInRange(LoadI->getNextNode(),
-                                BB->getTerminator()))
+          if (IsImpactedInRange(LoadI->getNextNode(), BB->getTerminator()))
             return false;
           if (IsImpactedInRange(&IntrBB->front(), &IntrI))
             return false;
