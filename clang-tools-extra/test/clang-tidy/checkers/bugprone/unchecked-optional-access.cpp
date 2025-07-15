@@ -157,7 +157,7 @@ void function_calling_analyzer_noreturn(const bsl::optional<int>& opt)
       assertion_handler(); // This will be deduced to have an implicit `analyzer_noreturn` attribute.
   }
 
-  *opt; // no-warning
+  *opt; // no-warning: The previous condition guards this dereference.
 }
 
 // Should be considered as 'noreturn' by CFG
