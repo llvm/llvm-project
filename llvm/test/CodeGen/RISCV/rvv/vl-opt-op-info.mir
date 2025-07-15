@@ -1823,7 +1823,7 @@ body: |
     %y:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, %x, $noreg, 1, 5 /* e32 */, 0
 ...
 ---
-name: vrgatherei16_vv_compatible_index_eew
+name: vrgatherei16_vv_incompatible_index_eew
 body: |
   bb.0:
     ; CHECK-LABEL: name: vrgatherei16_vv_compatible_index_eew
