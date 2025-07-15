@@ -1382,18 +1382,11 @@ static void ResolveAndAddSystemIncludePath(const ArgList &DriverArgs,
     return;
   }
 
-  // We canonicalise system include paths that were added automatically if
-  // that yields a shorter path since those can end up quite long otherwise.
-  //
-  // While we would ideally prefer to use FileManager for this, there doesn't
-  // seem to be a way to obtain one in here, so we just resolve these via the
-  // real file system; most system libraries will hopefully correspond to
-  // actual files.
-  IntrusiveRefCntPtr<vfs::FileSystem> VFS = vfs::getRealFileSystem();
+  // We canonicalise system include paths that were added automatically
+  // since those can end up quite long otherwise.
   SmallString<256> Canonical, PathStorage;
   StringRef SimplifiedPath = Path.toStringRef(PathStorage);
-  if (!VFS->getRealPath(SimplifiedPath, Canonical) &&
-      Canonical.size() < SimplifiedPath.size())
+  if (!sys::fs::real_path(SimplifiedPath, Canonical))
     SimplifiedPath = Canonical;
   CC1Args.push_back(DriverArgs.MakeArgString(SimplifiedPath));
 }
