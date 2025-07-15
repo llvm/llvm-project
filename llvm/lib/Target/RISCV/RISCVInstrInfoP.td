@@ -25,7 +25,7 @@ def SImm10UnsignedAsmOperand : SImmAsmOperand<10, "Unsigned"> {
 }
 
 // A 10-bit signed immediate allowing range [-512, 1023]
-// but will decode to [-512, 511].
+// but represented as [-512, 511].
 def simm10_unsigned : RISCVOp {
   let ParserMatchClass = SImm10UnsignedAsmOperand;
   let EncoderMethod = "getImmOpValue";
