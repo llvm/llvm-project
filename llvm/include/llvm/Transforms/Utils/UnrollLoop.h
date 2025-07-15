@@ -111,7 +111,7 @@ LLVM_ABI LoopReminderUnrollResult UnrollRuntimeLoopRemainder(
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
     unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit,
-    Loop **ResultLoop = nullptr);
+    bool AllowLoopRotation, Loop **ResultLoop = nullptr);
 
 LLVM_ABI LoopUnrollResult UnrollAndJamLoop(
     Loop *L, unsigned Count, unsigned TripCount, unsigned TripMultiple,

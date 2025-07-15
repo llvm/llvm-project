@@ -73,6 +73,7 @@ while.end:                                        ; preds = %while.cond
 
   bool ret =
       UnrollRuntimeLoopRemainder(L, 4, true, false, false, false, &LI, &SE, &DT,
-                                 &AC, /*TTI=*/nullptr, PreserveLCSSA, 4, false);
+                                 &AC, /*TTI=*/nullptr, PreserveLCSSA, 4, false,
+                                 false);
   EXPECT_FALSE(ret);
 }

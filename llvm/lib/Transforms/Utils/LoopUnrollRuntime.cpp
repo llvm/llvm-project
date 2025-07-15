@@ -581,7 +581,7 @@ LoopReminderUnrollResult llvm::UnrollRuntimeLoopRemainder(
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
     unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit,
-    Loop **ResultLoop) {
+    bool AllowLoopRotation, Loop **ResultLoop) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -590,22 +590,25 @@ LoopReminderUnrollResult llvm::UnrollRuntimeLoopRemainder(
   LoopReminderUnrollResult Result = LoopReminderUnrollResult::Unmodified;
 
   // Rotate loop if it makes the exit count from the latch computable.
-  BasicBlock *OrigHeader = L->getHeader();
-  BranchInst *BI = dyn_cast<BranchInst>(OrigHeader->getTerminator());
-  if (BI && !BI->isUnconditional() &&
-      isa<SCEVCouldNotCompute>(SE->getExitCount(L, L->getLoopLatch())) &&
-      !isa<SCEVCouldNotCompute>(SE->getExitCount(L, OrigHeader))) {
-    LLVM_DEBUG(
-        dbgs() << "  Rotating loop to make the exit count computable.\n");
-    SimplifyQuery SQ{OrigHeader->getDataLayout()};
-    SQ.TLI = nullptr;
-    SQ.DT = DT;
-    SQ.AC = AC;
-    if (llvm::LoopRotation(L, LI, TTI, AC, DT, SE, nullptr /*MemorySSAUpdater*/,
-                           SQ, false /*RotationOnly*/, 16 /*Threshold*/,
-                           false /*IsUtilMode*/, false /*PrepareForLTO*/,
-                           [](Loop *, ScalarEvolution *) { return true; }))
-      Result = LoopReminderUnrollResult::Rotated;
+  if (AllowLoopRotation) {
+    BasicBlock *OrigHeader = L->getHeader();
+    BranchInst *BI = dyn_cast<BranchInst>(OrigHeader->getTerminator());
+    if (BI && !BI->isUnconditional() &&
+        isa<SCEVCouldNotCompute>(SE->getExitCount(L, L->getLoopLatch())) &&
+        !isa<SCEVCouldNotCompute>(SE->getExitCount(L, OrigHeader))) {
+      LLVM_DEBUG(
+          dbgs() << "  Rotating loop to make the exit count computable.\n");
+      SimplifyQuery SQ{OrigHeader->getDataLayout()};
+      SQ.TLI = nullptr;
+      SQ.DT = DT;
+      SQ.AC = AC;
+      if (llvm::LoopRotation(L, LI, TTI, AC, DT, SE,
+                             /*MemorySSAUpdater*/ nullptr, SQ,
+                             /*RotationOnly*/ false, /*Threshold*/ 16,
+                             /*IsUtilMode*/ false, /*PrepareForLTO*/ false,
+                             [](Loop *, ScalarEvolution *) { return true; }))
+        Result = LoopReminderUnrollResult::Rotated;
+    }
   }
 
   // Make sure the loop is in canonical form.

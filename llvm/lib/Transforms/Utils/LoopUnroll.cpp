@@ -542,7 +542,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
         ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
         PreserveLCSSA, ULO.SCEVExpansionBudget, ULO.RuntimeUnrollMultiExit,
-        RemainderLoop);
+        /*AllowLoopRotation*/ true, RemainderLoop);
     LatchBlock = L->getLoopLatch();
     LatchIsExiting = L->isLoopExiting(LatchBlock);
   }
