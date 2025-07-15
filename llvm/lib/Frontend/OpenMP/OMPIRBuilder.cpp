@@ -2155,9 +2155,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       OutlinedFn.getArg(1)->replaceUsesWithIf(
           Shareds, [Shareds](Use &U) { return U.getUser() != Shareds; });
     }
-
-    for (Instruction *I : llvm::reverse(ToBeDeleted))
+    for (Instruction *I : llvm::reverse(ToBeDeleted)) {
+      if (I->getIterator() == Builder.GetInsertPoint())
+        Builder.SetInsertPoint(I->getParent());
       I->eraseFromParent();
+    }
   };
 
   addOutlineInfo(std::move(OI));
@@ -7714,6 +7716,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
       Builder.CreateCall(TaskFn, {Ident, ThreadID, TaskData});
     }
 
+    Builder.SetInsertPoint(StaleCI->getParent());
     StaleCI->eraseFromParent();
     for (Instruction *I : llvm::reverse(ToBeDeleted))
       I->eraseFromParent();
@@ -9511,6 +9514,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
                            omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
                        Args);
 
+    Builder.SetInsertPoint(StaleCI->getParent());
     for (Instruction *I : llvm::reverse(ToBeDeleted))
       I->eraseFromParent();
   };
