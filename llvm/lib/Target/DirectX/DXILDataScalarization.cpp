@@ -202,7 +202,7 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
   // original vector's defining instruction if available, else immediately after
   // the alloca
   if (auto *Instr = dyn_cast<Instruction>(Vec))
-    Builder.SetInsertPoint(Instr->getNextNonDebugInstruction());
+    Builder.SetInsertPoint(Instr->getNextNode());
   SmallVector<Value *, 4> GEPs(ArrNumElems);
   for (unsigned I = 0; I < ArrNumElems; ++I) {
     Value *EE = Builder.CreateExtractElement(Vec, I, Name + ".extract");
