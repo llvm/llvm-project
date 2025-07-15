@@ -63,8 +63,10 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case renderscript64: return "renderscript64";
   case riscv32:        return "riscv32";
   case riscv64:        return "riscv64";
-  case riscv32be:      return "riscv32be";
-  case riscv64be:      return "riscv64be";
+  case riscv32be:
+    return "riscv32be";
+  case riscv64be:
+    return "riscv64be";
   case shave:          return "shave";
   case sparc:          return "sparc";
   case sparcel:        return "sparcel";
@@ -241,7 +243,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case riscv32:
   case riscv64:
   case riscv32be:
-  case riscv64be:   return "riscv";
+  case riscv64be:
+    return "riscv";
 
   case ve:          return "ve";
   case csky:        return "csky";
@@ -1841,7 +1844,9 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::ppc64le:        T.setArch(Triple::ppcle);   break;
   case Triple::renderscript64: T.setArch(Triple::renderscript32); break;
   case Triple::riscv64:        T.setArch(Triple::riscv32); break;
-  case Triple::riscv64be:      T.setArch(Triple::riscv32be); break;
+  case Triple::riscv64be:
+    T.setArch(Triple::riscv32be);
+    break;
   case Triple::sparcv9:        T.setArch(Triple::sparc);   break;
   case Triple::spir64:         T.setArch(Triple::spir);    break;
   case Triple::spirv:
@@ -1920,7 +1925,9 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::ppcle:           T.setArch(Triple::ppc64le);    break;
   case Triple::renderscript32:  T.setArch(Triple::renderscript64);     break;
   case Triple::riscv32:         T.setArch(Triple::riscv64);    break;
-  case Triple::riscv32be:       T.setArch(Triple::riscv64be);  break;
+  case Triple::riscv32be:
+    T.setArch(Triple::riscv64be);
+    break;
   case Triple::sparc:           T.setArch(Triple::sparcv9);    break;
   case Triple::spir:            T.setArch(Triple::spir64);     break;
   case Triple::spirv:
