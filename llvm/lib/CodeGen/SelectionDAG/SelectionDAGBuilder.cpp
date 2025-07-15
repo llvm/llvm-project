@@ -3351,13 +3351,30 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
 
   // Deopt and ptrauth bundles are lowered in helper functions, and we don't
   // have to do anything here to lower funclet bundles.
-  if (I.hasOperandBundlesOtherThan(
-          {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
-           LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
-           LLVMContext::OB_cfguardtarget, LLVMContext::OB_ptrauth,
-           LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi}))
+  constexpr uint32_t kAllowedBundles[] = {
+      LLVMContext::OB_deopt,
+      LLVMContext::OB_gc_transition,
+      LLVMContext::OB_gc_live,
+      LLVMContext::OB_funclet,
+      LLVMContext::OB_cfguardtarget,
+      LLVMContext::OB_ptrauth,
+      LLVMContext::OB_clang_arc_attachedcall,
+      LLVMContext::OB_kcfi};
+  if (I.hasOperandBundlesOtherThan(kAllowedBundles)) {
+    std::string Error;
+    for (unsigned i = 0, e = I.getNumOperandBundles(); i != e; ++i) {
+      OperandBundleUse U = I.getOperandBundleAt(i);
+      bool First = true;
+      if (is_contained(kAllowedBundles, U.getTagID()))
+        continue;
+      if (!First)
+        Error += ", ";
+      First = false;
+      Error += U.getTagName();
+    }
     reportFatalUsageError(
-        "cannot lower invokes with arbitrary operand bundles!");
+        Twine("cannot lower invokes with arbitrary operand bundles: ", Error));
+  }
 
   const Value *Callee(I.getCalledOperand());
   const Function *Fn = dyn_cast<Function>(Callee);
