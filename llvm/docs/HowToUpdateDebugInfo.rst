@@ -177,6 +177,8 @@ threading, `DILocation` attachments need to be remapped using `mapAtomInstance`
 and `RemapSourceAtom`. This is to support the Key Instructions debug info feature.
 See :doc:`KeyInstructionsDebugInfo` for information.
 
+.. _NewInstLocations:
+
 Setting locations for new instructions
 --------------------------------------
 
