@@ -1336,6 +1336,22 @@ class QCISELECTIICCPat<CondCode Cond, QCISELECTIICC Inst>
     : Pat<(select (i32 (setcc (i32 GPRNoX0:$rd), (i32 GPRNoX0:$rs1), Cond)), simm5:$simm1, simm5:$simm2),
           (Inst GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$simm1, simm5:$simm2)>;
 
+class QCILICCPat<CondCode Cond, QCILICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rs2), Cond)), simm5:$simm, (XLenVT GPRNoX0:$rd)),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm)>;
+
+class QCILICCPatInv<CondCode Cond, QCILICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rs2), Cond)), (XLenVT GPRNoX0:$rd), simm5:$simm),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm)>;
+
+class QCILICCIPat<CondCode Cond, QCILICC Inst, DAGOperand InTyImm>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), InTyImm:$imm, Cond)), simm5:$simm, (XLenVT GPRNoX0:$rd)),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, InTyImm:$imm, simm5:$simm)>;
+
+class QCILICCIPatInv<CondCode Cond, QCILICC Inst, DAGOperand InTyImm>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), InTyImm:$imm, Cond)), (XLenVT GPRNoX0:$rd), simm5:$simm),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, InTyImm:$imm, simm5:$simm)>;
+
 // Match `riscv_brcc` and lower to the appropriate XQCIBI branch instruction.
 class BcciPat<CondCode Cond, QCIBranchInst_rii Inst, DAGOperand InTyImm>
     : Pat<(riscv_brcc (i32 GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
@@ -1496,6 +1512,36 @@ def : QCIMVCCIPat <SETULT, QC_MVLTUI, uimm5>;
 let Predicates = [HasVendorXqcicm, NoVendorXqcics, IsRV32] in {
 def : QCIMVCCIPat <SETEQ,  QC_MVEQI, simm5>;
 def : QCIMVCCIPat <SETNE,  QC_MVNEI, simm5>;
+}
+
+let Predicates = [HasVendorXqcicli, HasVendorXqcicsOrXqcicm, IsRV32] in {
+def : QCILICCPat <SETEQ,  QC_LIEQ>;
+def : QCILICCPat <SETNE,  QC_LINE>;
+def : QCILICCPat <SETLT,  QC_LILT>;
+def : QCILICCPat <SETGE,  QC_LIGE>;
+def : QCILICCPat <SETULT, QC_LILTU>;
+def : QCILICCPat <SETUGE, QC_LIGEU>;
+
+def : QCILICCIPat <SETEQ,  QC_LIEQI, simm5>;
+def : QCILICCIPat <SETNE,  QC_LINEI, simm5>;
+def : QCILICCIPat <SETLT,  QC_LILTI, simm5>;
+def : QCILICCIPat <SETGE,  QC_LIGEI, simm5>;
+def : QCILICCIPat <SETULT, QC_LILTUI, uimm5>;
+def : QCILICCIPat <SETUGE, QC_LIGEUI, uimm5>;
+
+def : QCILICCPatInv <SETNE,  QC_LIEQ>;
+def : QCILICCPatInv <SETEQ,  QC_LINE>;
+def : QCILICCPatInv <SETGE,  QC_LILT>;
+def : QCILICCPatInv <SETLT,  QC_LIGE>;
+def : QCILICCPatInv <SETUGE, QC_LILTU>;
+def : QCILICCPatInv <SETULT, QC_LIGEU>;
+
+def : QCILICCIPatInv <SETNE,  QC_LIEQI, simm5>;
+def : QCILICCIPatInv <SETEQ,  QC_LINEI, simm5>;
+def : QCILICCIPatInv <SETGE,  QC_LILTI, simm5>;
+def : QCILICCIPatInv <SETLT,  QC_LIGEI, simm5>;
+def : QCILICCIPatInv <SETUGE, QC_LILTUI, uimm5>;
+def : QCILICCIPatInv <SETULT, QC_LIGEUI, uimm5>;
 }
 
 let Predicates = [HasVendorXqcics, IsRV32] in {
