@@ -61,18 +61,9 @@ public:
     severity_ = severity;
     return *this;
   }
-  // This is currently emulating how the frontend is currently handling other
-  // diagnostic messages. We may want to be more nuanced in the future.
-  Severity EffectiveSeverity(bool warningsAreErrors) const {
-    if (warningsAreErrors) {
-      return Severity::Error;
-    } else {
-      return severity_;
-    }
-  }
-  bool IsFatal(bool warningsAreErrors = false) const {
-    Severity sev{EffectiveSeverity(warningsAreErrors)};
-    return sev == Severity::Error || sev == Severity::Todo;
+
+  bool IsFatal() const {
+    return severity() == Severity::Error || severity() == Severity::Todo;
   }
 
 private:
@@ -128,16 +119,8 @@ public:
     severity_ = severity;
     return *this;
   }
-  Severity EffectiveSeverity(bool warningsAreErrors) const {
-    if (warningsAreErrors) {
-      return Severity::Error;
-    } else {
-      return severity_;
-    }
-  }
   bool IsFatal(bool warningsAreErrors = false) const {
-    Severity sev{EffectiveSeverity(warningsAreErrors)};
-    return sev == Severity::Error || sev == Severity::Todo;
+    return severity() == Severity::Error || severity() == Severity::Todo;
   }
   std::string MoveString() { return std::move(string_); }
   bool operator==(const MessageFormattedText &that) const {
@@ -299,8 +282,7 @@ public:
   }
 
   bool SortBefore(const Message &that) const;
-  bool IsFatal(bool warningsAreErrors = false) const;
-  Severity EffectiveSeverity(bool warningsAreErrors) const;
+  bool IsFatal() const;
   Severity severity() const;
   Message &set_severity(Severity);
   std::optional<common::LanguageFeature> languageFeature() const;

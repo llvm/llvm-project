@@ -161,23 +161,8 @@ bool Message::SortBefore(const Message &that) const {
       location_, that.location_);
 }
 
-Severity Message::EffectiveSeverity(bool warningsAreErrors) const {
-  return common::visit(
-      common::visitors{
-          [](const MessageExpectedText &) { return Severity::Error; },
-          [=](const MessageFixedText &x) {
-            return x.EffectiveSeverity(warningsAreErrors);
-          },
-          [=](const MessageFormattedText &x) {
-            return x.EffectiveSeverity(warningsAreErrors);
-          },
-      },
-      text_);
-}
-
-bool Message::IsFatal(bool warningsAreErrors) const {
-  Severity sev{EffectiveSeverity(warningsAreErrors)};
-  return sev == Severity::Error || sev == Severity::Todo;
+bool Message::IsFatal() const {
+  return severity() == Severity::Error || severity() == Severity::Todo;
 }
 
 Severity Message::severity() const {
@@ -486,7 +471,7 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     }
     msg->Emit(o, allCooked, echoSourceLines, hintFlagPtr);
     lastMsg = msg;
-    if (msg->IsFatal(warningsAreErrors)) {
+    if (warningsAreErrors || msg->IsFatal()) {
       ++errorsEmitted;
     }
     // If maxErrorsToEmit is 0, emit all errors, otherwise break after
@@ -512,8 +497,11 @@ bool Messages::AnyFatalError(bool warningsAreErrors) const {
   if (messages_.empty()) {
     return false;
   }
+  if (warningsAreErrors) {
+    return true;
+  }
   for (const auto &msg : messages_) {
-    if (msg.IsFatal(warningsAreErrors)) {
+    if (msg.IsFatal()) {
       return true;
     }
   }
