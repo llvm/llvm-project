@@ -40,12 +40,16 @@ enum Fixups {
   fixup_riscv_rvc_jump,
   // 8-bit fixup for symbol references in the compressed branch instruction
   fixup_riscv_rvc_branch,
+  // 6-bit fixup for symbol references in instructions like c.li
+  fixup_riscv_rvc_imm,
   // Fixup representing a legacy no-pic function call attached to the auipc
   // instruction in a pair composed of adjacent auipc+jalr instructions.
   fixup_riscv_call,
   // Fixup representing a function call attached to the auipc instruction in a
   // pair composed of adjacent auipc+jalr instructions.
   fixup_riscv_call_plt,
+
+  // Qualcomm specific fixups
   // 12-bit fixup for symbol references in the 48-bit Xqcibi branch immediate
   // instructions
   fixup_riscv_qc_e_branch,
