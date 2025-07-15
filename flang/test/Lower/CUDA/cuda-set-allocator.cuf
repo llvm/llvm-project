@@ -22,8 +22,3 @@ contains
 ! CHECK: cuf.set_allocator_idx %[[Z]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<device>}
 
 end module
-
-
-
-    
-  

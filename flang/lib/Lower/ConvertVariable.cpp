@@ -787,7 +787,7 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   return res;
 }
 
-/// Device allocatable component in a derived-type don't have the correct
+/// Device allocatable components in a derived-type don't have the correct
 /// allocator index in their descriptor when they are created. After
 /// initialization, cuf.set_allocator_idx operations are inserted to set the
 /// correct allocator index for each device component.
