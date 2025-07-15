@@ -1030,8 +1030,9 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
 }
 
 bool AArch64InstrInfo::shouldReMaterializeTrivialRegDef(
-    const MachineInstr *CopyMI, const Register &DestReg,
-    const Register &SrcReg) const {
+    const MachineFunction *MF, const MachineInstr &CopyMI,
+    const Register &DestReg, const Register &SrcReg,
+    const LiveIntervals *LIS) const {
   return !Subtarget.canLowerToZeroCycleRegMove(CopyMI, DestReg, SrcReg) &&
          !Subtarget.canLowerToZeroCycleRegZeroing(CopyMI, DestReg, SrcReg);
 }
