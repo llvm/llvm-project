@@ -926,4 +926,12 @@ DEFAULT_FEATURES += [
             cfg.available_features,
         ),
     ),
+    # Tests that require __log_hardening_failure support in the built library
+    Feature(
+        name="availability-log_hardening_failure-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-21)",
+            cfg.available_features,
+        ),
+    ),
 ]

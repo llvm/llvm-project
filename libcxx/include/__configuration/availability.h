@@ -304,6 +304,11 @@
 #define _LIBCPP_AVAILABILITY_HAS_VERBOSE_ABORT _LIBCPP_INTRODUCED_IN_LLVM_15
 #define _LIBCPP_AVAILABILITY_VERBOSE_ABORT _LIBCPP_INTRODUCED_IN_LLVM_15_ATTRIBUTE
 
+// This controls whether the library provides a function to log errors without terminating the program (used in
+// particular by the `observe` assertion semantic).
+#define _LIBCPP_AVAILABILITY_HAS_LOG_HARDENING_FAILURE _LIBCPP_INTRODUCED_IN_LLVM_21
+#define _LIBCPP_AVAILABILITY_LOG_HARDENING_FAILURE _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE
+
 // This controls the availability of the C++17 std::pmr library,
 // which is implemented in large part in the built library.
 //
