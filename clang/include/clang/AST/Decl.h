@@ -3252,6 +3252,11 @@ public:
     return hasInClassInitializer() ? InitAndBitWidth->BitWidth : BitWidth;
   }
 
+  /// Determines whether the bit width of this field is a constant integer.
+  /// This may not always be the case, such as inside template-dependent
+  /// expressions.
+  bool hasConstantIntegerBitWidth() const;
+
   /// Computes the bit width of this field, if this is a bit field.
   /// May not be called on non-bitfields.
   /// Note that in order to successfully use this function, the bitwidth
