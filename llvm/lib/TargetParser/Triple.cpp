@@ -2328,9 +2328,9 @@ bool Triple::f128LibmShouldUseLongDouble() const {
     return true;
 
   // MIPS64 is usually f128, except on FreeBSD-like operating systems. MIPS32
-  // is f128 with N32 but f64 with the O32 ABI. Triple doesn't know about ABI
-  // here, so allow MIPS32 to hit the safer `ld !== f128` default.
-  if (isMIPS64() && !(isOSFreeBSD() || isOSKFreeBSD() || isOSDragonFly()))
+  // is f128 only with the N32 ABI (O32 is `f64`).
+  if ((isMIPS64() || isABIN32()) &&
+      !(isOSFreeBSD() || isOSKFreeBSD() || isOSDragonFly()))
     return true;
 
   // Android and Ohos use binary128 on x86_64.

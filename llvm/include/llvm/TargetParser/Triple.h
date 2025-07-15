@@ -266,12 +266,12 @@ public:
     EABIHF,
     Android,
     Musl,
-    MuslABIN32, ///< MIPS N32 ABI
-    MuslABI64,  ///< MIPS N64 ABI
-    MuslEABI,   ///< Arm32 EABI
-    MuslEABIHF, ///< Arm32 EABI + HF
-    MuslF32,    ///< LoongArch ILP32F/LP64F
-    MuslSF,     ///< LoongArch ILP32S/LP64S
+    MuslABIN32, ///< Musl MIPS32 with the N32 ABI
+    MuslABI64,  ///< Musl MIPS32 with the N64 ABI
+    MuslEABI,   ///< Musl Arm32 EABI
+    MuslEABIHF, ///< Musl Arm32 EABI + HF
+    MuslF32,    ///< Musl LoongArch ILP32F/LP64F
+    MuslSF,     ///< Musl LoongArch ILP32S/LP64S
     MuslX32,    ///< Musl using 32-bit ABI on x86_64
     LLVM,
 
