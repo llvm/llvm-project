@@ -2075,7 +2075,6 @@ defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_
 defvar X86CommonLibcalls =
   (add DarwinSinCosStret, DarwinExp10,
        X86_F128_Libcalls,
-       sincos_f80,
        LibmHasSinCosF80, // FIXME: Depends on long double
        SinCosF32F64Libcalls,
        LibcallImpls<(add __bzero), darwinHas__bzero>,
