@@ -221,40 +221,45 @@ lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::GetChildAtIndex(
 
 lldb::ChildCacheState
 lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::Update() {
+  m_exe_ctx_ref.Clear();
+  m_count = 0;
+  m_element_bit_size = 0;
+  m_base_data_address = 0;
   m_children.clear();
+
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
     return lldb::ChildCacheState::eRefetch;
-  m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
+  auto exe_ctx_ref = valobj_sp->GetExecutionContextRef();
 
   ValueObjectSP size_sp = valobj_sp->GetChildMemberWithName("_Mysize");
   if (!size_sp)
     return lldb::ChildCacheState::eRefetch;
-  m_count = size_sp->GetValueAsUnsigned(0);
-  if (!m_count)
+  uint64_t count = size_sp->GetValueAsUnsigned(0);
+  if (count == 0)
     return lldb::ChildCacheState::eReuse;
 
   ValueObjectSP begin_sp(valobj_sp->GetChildAtNamePath(
       {"_Myvec", "_Mypair", "_Myval2", "_Myfirst"}));
-  if (!begin_sp) {
-    m_count = 0;
+  if (!begin_sp)
     return lldb::ChildCacheState::eRefetch;
-  }
 
   // FIXME: the STL exposes _EEN_VBITS as a constant - it should be used instead
   CompilerType begin_ty = begin_sp->GetCompilerType().GetPointeeType();
   if (!begin_ty.IsValid())
     return lldb::ChildCacheState::eRefetch;
-  llvm::Expected<uint64_t> bit_size = begin_ty.GetBitSize(nullptr);
-  if (!bit_size)
+  llvm::Expected<uint64_t> element_bit_size = begin_ty.GetBitSize(nullptr);
+  if (!element_bit_size)
     return lldb::ChildCacheState::eRefetch;
-  m_element_bit_size = *bit_size;
 
-  m_base_data_address = begin_sp->GetValueAsUnsigned(0);
-  if (!m_base_data_address) {
-    m_count = 0;
+  uint64_t base_data_address = begin_sp->GetValueAsUnsigned(0);
+  if (!base_data_address)
     return lldb::ChildCacheState::eRefetch;
-  }
+
+  m_exe_ctx_ref = exe_ctx_ref;
+  m_count = count;
+  m_element_bit_size = *element_bit_size;
+  m_base_data_address = base_data_address;
   return lldb::ChildCacheState::eRefetch;
 }
 
