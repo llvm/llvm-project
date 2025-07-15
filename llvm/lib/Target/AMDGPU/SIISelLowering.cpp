@@ -11071,11 +11071,17 @@ SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       VT.getSizeInBits() == 512)
     return splitTernaryVectorOp(Op, DAG);
 
-  assert(VT.getSizeInBits() == 64);
 
   SDLoc DL(Op);
   SDValue Cond = Op.getOperand(0);
-
+  if (Cond.getOpcode() == ISD::SETCC) {
+    SDValue Freeze = DAG.getFreeze(Cond.getOperand(0));
+    if (Freeze != Cond.getOperand(0)) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+      Cond =
+          DAG.getSetCC(DL, Cond.getValueType(), Freeze, Cond.getOperand(1), CC);
+    }
+  }
   SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
   SDValue One = DAG.getConstant(1, DL, MVT::i32);
 
