@@ -3564,7 +3564,8 @@ public:
     return Libcalls.getLibcallImpl(Call);
   }
 
-  /// Get the libcall routine name for the specified libcall.
+  /// Get the libcall routine name for the specified libcall if implemented,
+  /// otherwise NULL.
   const char *getLibcallName(RTLIB::Libcall Call) const {
     return Libcalls.getLibcallName(Call);
   }

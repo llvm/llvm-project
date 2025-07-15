@@ -47,6 +47,7 @@
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -394,6 +395,17 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
     Check("__ibm128", llvm::Type::getPPC_FP128Ty(Context), Target.Ibm128Align);
 
   Check("void*", llvm::PointerType::getUnqual(Context), Target.PointerAlign);
+
+  if (Triple.f128LibmShouldUseLongDouble() &&
+      &Target.getLongDoubleFormat() != &llvm::APFloat::IEEEquad()) {
+    const char *SemName =
+        llvm::APFloatBase::SemanticsName(Target.getLongDoubleFormat());
+    llvm::errs() << "For target `" << Triple.str()
+                 << "` LLVM wants to use `long double` symbols for `_Float128` "
+                    "libm call lowering, but clang specifies `long double` as `"
+                 << SemName << "`\n";
+    abort();
+  }
 #endif
 }
 

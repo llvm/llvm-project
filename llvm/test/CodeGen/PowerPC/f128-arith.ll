@@ -425,14 +425,19 @@ define fp128 @qp_sincos(ptr nocapture readonly %a) nounwind {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    std r0, 80(r1)
-; CHECK-NEXT:    addi r5, r1, 48
-; CHECK-NEXT:    addi r6, r1, 32
-; CHECK-NEXT:    lxv v2, 0(r3)
-; CHECK-NEXT:    bl sincosf128
+; CHECK-NEXT:    stxv v31, 48(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    stxv v30, 32(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    lxv v31, 0(r3)
+; CHECK-NEXT:    vmr v2, v31
+; CHECK-NEXT:    bl cosf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    lxv v2, 48(r1)
-; CHECK-NEXT:    lxv v3, 32(r1)
-; CHECK-NEXT:    xsmulqp v2, v3, v2
+; CHECK-NEXT:    vmr v30, v2
+; CHECK-NEXT:    vmr v2, v31
+; CHECK-NEXT:    bl sinf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    xsmulqp v2, v30, v2
+; CHECK-NEXT:    lxv v31, 48(r1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv v30, 32(r1) # 16-byte Folded Reload
 ; CHECK-NEXT:    addi r1, r1, 64
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
@@ -441,28 +446,31 @@ define fp128 @qp_sincos(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-LABEL: qp_sincos:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    stdu r1, -96(r1)
-; CHECK-P8-NEXT:    std r0, 112(r1)
-; CHECK-P8-NEXT:    addi r30, r1, 48
-; CHECK-P8-NEXT:    addi r29, r1, 32
+; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
+; CHECK-P8-NEXT:    li r4, 48
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    mr r5, r30
-; CHECK-P8-NEXT:    mr r6, r29
-; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    bl sincosf128
+; CHECK-P8-NEXT:    stxvd2x v30, r1, r4 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r4, 64
+; CHECK-P8-NEXT:    stxvd2x v31, r1, r4 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    xxswapd v31, vs0
+; CHECK-P8-NEXT:    vmr v2, v31
+; CHECK-P8-NEXT:    bl cosf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r29
-; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r30
-; CHECK-P8-NEXT:    xxswapd v3, vs0
+; CHECK-P8-NEXT:    vmr v30, v2
+; CHECK-P8-NEXT:    vmr v2, v31
+; CHECK-P8-NEXT:    bl sinf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    vmr v3, v2
+; CHECK-P8-NEXT:    vmr v2, v30
 ; CHECK-P8-NEXT:    bl __mulkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    addi r1, r1, 96
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    lxvd2x v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    lxvd2x v30, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:

@@ -256,6 +256,7 @@ struct APFloatBase {
 
   LLVM_ABI static const llvm::fltSemantics &EnumToSemantics(Semantics S);
   LLVM_ABI static Semantics SemanticsToEnum(const llvm::fltSemantics &Sem);
+  LLVM_ABI static const char *SemanticsName(const llvm::fltSemantics &Sem);
 
   LLVM_ABI static const fltSemantics &IEEEhalf() LLVM_READNONE;
   LLVM_ABI static const fltSemantics &BFloat() LLVM_READNONE;

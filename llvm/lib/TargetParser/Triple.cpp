@@ -2306,6 +2306,43 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   return ExceptionHandling::None;
 }
 
+bool Triple::f128LibmShouldUseLongDouble() const {
+  // Always prefer to lower to `*f128` symbols when they are likely to be
+  // available, to avoid any inaccuracies or problems from libc config.
+  //
+  // Note that the logic should be kept in sync with Clang's LongDoubleFormat.
+
+  // Windows and Apple always use f64 as `long double`.
+  if (isOSWindows() || isOSDarwin())
+    return false;
+
+  // PowerPC has a complicated `long double` situation so `*f128` is always
+  // used.
+  if (isPPC())
+    return false;
+
+  // Most 64-bit architectures use use binary128, a few are binary128 on both
+  // 64- and 32-bit.
+  if (isAArch64() || isLoongArch() || isRISCV() || isSPARC64() || isSystemZ() ||
+      isVE() || isWasm())
+    return true;
+
+  // MIPS64 is usually f128, except on FreeBSD-like operating systems. MIPS32
+  // is f128 only with the N32 ABI (O32 is `f64`).
+  if ((isMIPS64() || isABIN32()) &&
+      !(isOSFreeBSD() || isOSKFreeBSD() || isOSDragonFly()))
+    return true;
+
+  // Android and Ohos use binary128 on x86_64.
+  if (getArch() == Triple::x86_64 && (isAndroid() || isOHOSFamily()))
+    return true;
+
+  // By default, make the safe assumption that `long double !== f128`. This
+  // also catches x86 (`long double` is x87 `f80`) and PowerPC (`long double`
+  // is `f64` or PPC double-double).
+  return false;
+}
+
 // HLSL triple environment orders are relied on in the front end
 static_assert(Triple::Vertex - Triple::Pixel == 1,
               "incorrect HLSL stage order");
