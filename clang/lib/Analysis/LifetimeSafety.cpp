@@ -738,14 +738,6 @@ public:
     return Lattice(JoinedOrigins);
   }
 
-  LoanSet join(LoanSet A, LoanSet B) {
-    if (A.getHeight() < B.getHeight())
-      std::swap(A, B);
-    for (LoanID L : B)
-      A = Factory.LoanSetFactory.add(A, L);
-    return A;
-  }
-
   /// A new loan is issued to the origin. Old loans are erased.
   Lattice transfer(Lattice In, const IssueFact &F) {
     OriginID OID = F.getOriginID();
