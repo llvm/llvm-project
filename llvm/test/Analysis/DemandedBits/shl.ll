@@ -57,10 +57,56 @@ define i8 @test_shl(i32 %a, i32 %b) {
 ; CHECK-DAG:  DemandedBits: 0xff for %shl.t = trunc i32 %shl to i8
 ; CHECK-DAG:  DemandedBits: 0xff for %shl in %shl.t = trunc i32 %shl to i8
 ; CHECK-DAG:  DemandedBits: 0xff for %shl = shl i32 %a, %b
-; CHECK-DAG:  DemandedBits: 0xffffffff for %a in %shl = shl i32 %a, %b
+; CHECK-DAG:  DemandedBits: 0xff for %a in %shl = shl i32 %a, %b
 ; CHECK-DAG:  DemandedBits: 0xffffffff for %b in %shl = shl i32 %a, %b
 ;
   %shl = shl i32 %a, %b
   %shl.t = trunc i32 %shl to i8
   ret i8 %shl.t
+}
+
+define i8 @test_shl_var_amount(i32 %a, i32 %b){
+; CHECK-LABEL: 'test_shl_var_amount'
+; CHECK-DAG: DemandedBits: 0xff for   %5 = trunc i32 %4 to i8
+; CHECK-DAG: DemandedBits: 0xff for %4 in   %5 = trunc i32 %4 to i8
+; CHECK-DAG: DemandedBits: 0xff for   %4 = shl i32 %1, %3
+; CHECK-DAG: DemandedBits: 0xff for %1 in   %4 = shl i32 %1, %3
+; CHECK-DAG: DemandedBits: 0xffffffff for %3 in   %4 = shl i32 %1, %3
+; CHECK-DAG: DemandedBits: 0xff for   %2 = trunc i32 %1 to i8
+; CHECK-DAG: DemandedBits: 0xff for %1 in   %2 = trunc i32 %1 to i8
+; CHECK-DAG: DemandedBits: 0xffffffff for   %3 = zext i8 %2 to i32
+; CHECK-DAG: DemandedBits: 0xff for %2 in   %3 = zext i8 %2 to i32
+; CHECK-DAG: DemandedBits: 0xff for   %1 = add nsw i32 %a, %b
+; CHECK-DAG: DemandedBits: 0xff for %a in   %1 = add nsw i32 %a, %b
+; CHECK-DAG: DemandedBits: 0xff for %b in   %1 = add nsw i32 %a, %b
+;
+  %1 = add nsw i32 %a, %b
+  %2 = trunc i32 %1 to i8
+  %3 = zext i8 %2 to i32
+  %4 = shl i32 %1, %3
+  %5 = trunc i32 %4 to i8
+  ret i8 %5
+}
+
+define i8 @test_shl_var_amount_nsw(i32 %a, i32 %b){
+ ; CHECK-LABEL 'test_shl_var_amount_nsw'
+ ; CHECK-DAG: DemandedBits: 0xff for   %5 = trunc i32 %4 to i8
+ ; CHECK-DAG: DemandedBits: 0xff for %4 in   %5 = trunc i32 %4 to i8
+ ; CHECK-DAG: DemandedBits: 0xff for   %4 = shl nsw i32 %1, %3
+ ; CHECK-DAG: DemandedBits: 0xffffffff for %1 in   %4 = shl nsw i32 %1, %3
+ ; CHECK-DAG: DemandedBits: 0xffffffff for %3 in   %4 = shl nsw i32 %1, %3
+ ; CHECK-DAG: DemandedBits: 0xffffffff for   %3 = zext i8 %2 to i32
+ ; CHECK-DAG: DemandedBits: 0xff for %2 in   %3 = zext i8 %2 to i32
+ ; CHECK-DAG: DemandedBits: 0xff for   %2 = trunc i32 %1 to i8
+ ; CHECK-DAG: DemandedBits: 0xff for %1 in   %2 = trunc i32 %1 to i8
+ ; CHECK-DAG: DemandedBits: 0xffffffff for   %1 = add nsw i32 %a, %b
+ ; CHECK-DAG: DemandedBits: 0xffffffff for %a in   %1 = add nsw i32 %a, %b
+ ; CHECK-DAG: DemandedBits: 0xffffffff for %b in   %1 = add nsw i32 %a, %b
+ ;
+  %1 = add nsw i32 %a, %b
+  %2 = trunc i32 %1 to i8
+  %3 = zext i8 %2 to i32
+  %4 = shl nsw i32 %1, %3
+  %5 = trunc i32 %4 to i8
+  ret i8 %5
 }
