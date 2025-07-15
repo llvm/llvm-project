@@ -130,6 +130,16 @@ public:
     });
   }
 
+#ifndef NDEBUG
+  void EndOfMainFile() override {
+    if (!Files.empty() &&
+        Files.back().File == SM.getFileEntryForID(SM.getMainFileID()))
+      Files.pop_back();
+
+    assert(Files.empty());
+  }
+#endif
+
 private:
   std::vector<Include> Files;
   SourceLocation NextToEnter;

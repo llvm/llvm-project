@@ -257,6 +257,9 @@ Changes in existing checks
   `AnalyzePointers` option and fixing false positives when using const array
   type.
 
+- Improved :doc:`misc-header-include-cycle
+  <clang-tidy/checks/misc/header-include-cycle>` check performance.
+
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding the options
   `UnusedIncludes` and `MissingIncludes`, which specify whether the check should
