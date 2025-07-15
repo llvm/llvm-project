@@ -1631,8 +1631,6 @@ def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
 def VOP3PModsNeg  : ComplexPattern<untyped, 1, "SelectVOP3PModsNeg">;
-def VOP3PModsNegs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegs">;
-def VOP3PModsNegAbs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegAbs">;
 def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
 
 def WMMAModsF32NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF32NegAbs">;
@@ -1872,7 +1870,6 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         !eq(VT, v4bf16)    : AVSrc_64,
         !eq(VT.Size, 1024) : VRegSrc_1024,
         !eq(VT.Size, 512)  : VRegSrc_512,
-        !eq(VT.Size, 384)  : VRegSrc_384,
         !eq(VT.Size, 256)  : VRegSrc_256,
         !eq(VT.Size, 192)  : VRegSrc_192,
         !eq(VT.Size, 128)  : VRegSrc_128,
@@ -1885,7 +1882,6 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
 class getVOP3VRegSrcForVT<ValueType VT> {
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VRegSrc_1024,
                               !eq(VT.Size, 512)  : VRegSrc_512,
-                              !eq(VT.Size, 384)  : VRegSrc_384,
                               !eq(VT.Size, 256)  : VRegSrc_256,
                               !eq(VT.Size, 192)  : VRegSrc_192,
                               !eq(VT.Size, 128)  : VRegSrc_128,

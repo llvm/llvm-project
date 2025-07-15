@@ -589,6 +589,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // ToDo: better to switch encoding length using some bit predicate
     // but it is unknown yet, so try all we can
 
+    // Try to decode DPP and SDWA first to solve conflict with VOP1 and VOP2
+    // encodings
     if (isGFX11Plus() && Bytes.size() >= 12 ) {
       DecoderUInt128 DecW = eat12Bytes(Bytes);
 
@@ -956,23 +958,10 @@ static void adjustMFMA_F8F6F4OpRegClass(const MCRegisterInfo &MRI,
     return MO.setReg(
         MRI.getSubReg(MO.getReg(), AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5));
   case 8:
-    if (MCRegister NewReg = MRI.getSubReg(
-            MO.getReg(), AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7)) {
-      MO.setReg(NewReg);
-    }
-    return;
-  case 12: {
-    // There is no 384-bit subreg index defined.
-    MCRegister BaseReg = MRI.getSubReg(MO.getReg(), AMDGPU::sub0);
-    MCRegister NewReg = MRI.getMatchingSuperReg(
-        BaseReg, AMDGPU::sub0, &MRI.getRegClass(AMDGPU::VReg_384RegClassID));
-    return MO.setReg(NewReg);
-  }
-  case 16:
     // No-op in cases where one operand is still f8/bf8.
     return;
   default:
-    llvm_unreachable("Unexpected size for mfma/wmma f8f6f4 operand");
+    llvm_unreachable("Unexpected size for mfma f8f6f4 operand");
   }
 }
 

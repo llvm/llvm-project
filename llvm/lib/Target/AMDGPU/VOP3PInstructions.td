@@ -1316,8 +1316,9 @@ let WaveSizePredicate = isWave64 in {
 
 }
 
-class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType, bit _IsIU, bit _IsFP8BF8XF32,
-                             bit _Has_ImodOp = 0, bit _HasMatrixReuse = 0, bit _IsF4 = 0>
+class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
+                             bit _IsIU, bit _IsFP8BF8XF32, bit _Has_ImodOp = 0,
+                             bit _HasMatrixReuse = 0, bit _IsF4 = 0>
     : VOP3P_Profile<VOPProfile<ArgTy>> {
   bit IsIU = _IsIU;
   bit NoABMods = !or(_IsFP8BF8XF32, _IsF4); // No IMOD support for A and B
@@ -1507,21 +1508,20 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType, bi
                           !eq(IndexType, 8) : (ins i32:$src2, i32:$index_key_8bit),
                           !eq(IndexType, 16): (ins i32:$src2, i32:$index_key_16bit),
                           !eq(IndexType, 32): (ins i64:$src2, i32:$index_key_32bit));
-  dag Src2InlineInPat = !con(!if(IsC_IMod1, (ins (VOP3PModsNegAbs i32:$src2_modifiers)), (ins)), (ins (Src2VT (WMMAVISrc Src2VT:$src2))));
-  dag Src2InlineOutPat = !con(!if(IsIUXF32, (ins), !if(IsC_IMod1,  (ins i32:$src2_modifiers), (ins (i32 8)))), (ins Src2VT:$src2));
-  dag MatrixReuseInPat = !if(HasMatrixReuse, (ins timm:$matrix_a_reuse, timm:$matrix_b_reuse), (ins));
-  dag MatrixReuseOutModPat = !if(HasMatrixReuse, (ins i1:$matrix_a_reuse, i1:$matrix_b_reuse), (ins));
+  dag Src2InlineInPat = (ins (Src2VT (WMMAVISrc Src2VT:$src2)));
+  dag Src2InlineOutPat = !con(!if(IsIU, (ins), (ins (i32 8))), (ins Src2VT:$src2));
 
-  dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, MatrixReuseInPat, ClampPat);
-  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixReuseOutModPat, ClampPat);
 
-  dag SwmmacInPat  = !con(Src0InPat, Src1InPat, (ins Src2VT:$srcTiedDef), IndexInPat, MatrixReuseInPat, ClampPat);
-  dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, MatrixReuseOutModPat, ClampPat);
+  dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, ClampPat);
+  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, ClampPat);
+
+  dag SwmmacInPat  = !con(Src0InPat, Src1InPat, (ins Src2VT:$srcTiedDef), IndexInPat, ClampPat);
+  dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, ClampPat);
 
   // wmma pattern where src2 is inline imm uses _threeaddr pseudo,
   // can't use _twoaddr since it would violate src2 tied to vdst constraint.
-  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat, MatrixReuseInPat, ClampPat);
-  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixReuseOutModPat, ClampPat);
+  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat,  ClampPat);
+  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, ClampPat);
 }
 
 def WMMAInstInfoTable : GenericTable {
@@ -1543,19 +1543,15 @@ multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string Pse
   defvar WMMAConstraints2Addr = !if(DiffVdstSrc2, "@earlyclobber $vdst", "@earlyclobber $vdst,$vdst = $src2");
   defvar WMMAConstraints3Addr = "@earlyclobber $vdst";
 
-  let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0, SubtargetPredicate = HasWMMA128bInsts in {
+  let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
     let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in
       def _twoaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo {
         let PseudoInstr = Instr#PseudoInstrSuffix;
-        let FixedSize = 0;
-        let Size = 8;
       }
 
     let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in
       def _threeaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo {
         let PseudoInstr = Instr#PseudoInstrSuffix;
-        let FixedSize = 0;
-        let Size = 8;
       }
 
   }
@@ -1646,7 +1642,7 @@ def F32_FP8BF8X128_WMMA_w32      : VOP3PWMMA_Profile<[v8f32, v16i32, v16i32, v8f
 def F16_FP8BF8X64_WMMA_w32       : VOP3PWMMA_Profile<[v8f16, v8i32, v8i32, v8f16], 0, 0, 0, 1, 1, 1>;
 def F16_FP8BF8X128_WMMA_w32      : VOP3PWMMA_Profile<[v8f16, v16i32, v16i32, v8f16], 0, 0, 0, 1, 1, 1>;
 def F32_32X16X128_F4_WMMA_w32    : VOP3PWMMA_Profile<[v16f32, v16i32, v8i32, v16f32], 0, 0, 0, 0, 1, 0, 1>;
-def I32_IU8X64_WMMA_w32          : VOP3PWMMA_Profile<[v8i32, v8i32, v8i32, v8i32], 0, 0, 1, 0, 1, 0, 1>;
+def I32_IU8X64_WMMA_w32          : VOP3PWMMA_Profile<[v8i32, v8i32, v8i32, v8i32], 0, 0, 1, 0, 1, 1>;
 def F32_F16X64_SWMMAC_w32        : VOP3PWMMA_Profile<[v8f32, v16f16, v32f16, v8f32], 1, 16, 0, 0, 1, 1>;
 def F32_BF16X64_SWMMAC_w32       : VOP3PWMMA_Profile<[v8f32, v16bf16, v32bf16, v8f32], 1, 16, 0, 0, 1, 1>;
 def F16_F16X64_SWMMAC_w32        : VOP3PWMMA_Profile<[v8f16, v16f16, v32f16, v8f16], 1, 16, 0, 0, 1, 1>;
@@ -1829,6 +1825,7 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12Plus in {
   def : SWMMACPat<V_SWMMAC_F32_16X16X32_BF8_BF8_w64_twoaddr, int_amdgcn_swmmac_f32_16x16x32_bf8_bf8, F32_FP8BF8_SWMMAC_w64>;
 }
 
+
 //===----------------------------------------------------------------------===//
 // Begin Real Encodings
 //===----------------------------------------------------------------------===//
@@ -1870,7 +1867,6 @@ multiclass VOP3P_Real_Base<GFXGen Gen, bits<8> op, string backing_ps_name = NAME
 
 class VOP3PeWmma<bits<8> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
     : VOP3Pe_gfx11_gfx12<op, P>{
-
   // opsel
   let Inst{11} = !cond(!eq(WMMAP.IndexType, 0)  : 0,
                        !eq(WMMAP.IndexType, 8)  : index_key_8bit{0},
