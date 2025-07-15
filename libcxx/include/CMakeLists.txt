@@ -535,6 +535,7 @@ set(files
   __locale_dir/time.h
   __locale_dir/wbuffer_convert.h
   __locale_dir/wstring_convert.h
+  __log_hardening_failure
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h

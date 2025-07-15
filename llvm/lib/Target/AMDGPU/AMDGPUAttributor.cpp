@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
