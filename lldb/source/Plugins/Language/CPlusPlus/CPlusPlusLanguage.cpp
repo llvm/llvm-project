@@ -1499,10 +1499,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "^std::(__debug::)?unordered_(multi)?(map|set)<.+> >$",
                 stl_summary_flags, true);
 
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::list summary provider",
-      "^std::__(debug|cxx11)::list<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericCappedContainerSummaryProvider,
+                "libstdc++ debug std::list summary provider",
+                "^std::__(debug|cxx11)::list<.+>(( )?&)?$", stl_summary_flags,
+                true);
 
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "libstdc++ std::forward_list summary provider",
