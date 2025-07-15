@@ -99,8 +99,10 @@ Note in the LLVM alias, the default value is `false`.
 
 .. option:: IgnoreAliasing
 
-  If set to `true` the check will use the canonical type to determine the type that ``auto`` is deduced to.
-  If set to `false` the check will not look beyond the first type alias. Default value is `true`.
+  If set to `true` the check will use the underlying type to determine the type
+  that ``auto`` is deduced to.
+  If set to `false` the check will not look beyond the first type alias.
+  Default value is `true`.
 
 .. code-block:: c++
 
@@ -109,7 +111,7 @@ Note in the LLVM alias, the default value is `false`.
 
    auto bar = foo();
 
-If IgnoreAliasing is set to `true`, it will be transformed into:
+If :option:`IgnoreAliasing` is set to `true`, it will be transformed into:
 
 .. code-block:: c++
 
@@ -120,9 +122,11 @@ Otherwise no changes will occur.
 Limitations
 -----------
 
-When IgnoreAliasing is set to `false`, there are cases where Clang has not preserved the sugar
-and the canonical type will be used so false positives may occur.
+When :option:`IgnoreAliasing` is set to `false`, there are cases where
+Clang has not preserved the type alias and the underlying type will be used so
+false positives may occur.
 For example:
+
 .. code-block:: c++
 
   #include <vector>
@@ -133,7 +137,7 @@ For example:
 
   void loopPtr(const std::vector<IntPtr> &VectorIntPtr) {
 
-    // Currently fails for IgnoreAliasing==false as AST does not have the IntPtr
+    // May fail for IgnoreAliasing==false as AST does not have the IntPtr
     for (auto Data : VectorIntPtr) {
       change(*Data);
     }
