@@ -158,7 +158,7 @@ define fp128 @exp10_f128(fp128 %x) #0 {
 ; CHECK-NEXT:     allocframe(#24)
 ; CHECK-NEXT:    } // 8-byte Folded Spill
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call exp10l
+; CHECK-NEXT:     call exp10f128
 ; CHECK-NEXT:     r0 = add(r29,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -191,12 +191,12 @@ define <2 x fp128> @exp10_v2f128(<2 x fp128> %x) #0 {
 ; CHECK-NEXT:     memd(r29+#32) = r21:20
 ; CHECK-NEXT:    } // 8-byte Folded Spill
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call exp10l
+; CHECK-NEXT:     call exp10f128
 ; CHECK-NEXT:     r19:18 = memd(r29+#64)
 ; CHECK-NEXT:     r21:20 = memd(r29+#72)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call exp10l
+; CHECK-NEXT:     call exp10f128
 ; CHECK-NEXT:     r0 = add(r29,#0)
 ; CHECK-NEXT:     r3:2 = combine(r19,r18)
 ; CHECK-NEXT:     r5:4 = combine(r21,r20)

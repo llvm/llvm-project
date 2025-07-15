@@ -2323,7 +2323,7 @@ bool Triple::f128LibmShouldUseLongDouble() const {
 
   // Most 64-bit architectures use use binary128, a few are binary128 on both
   // 64- and 32-bit.
-  if (isAArch64() || isLoongArch() || isRISCV() || isSPARC() || isSystemZ() ||
+  if (isAArch64() || isLoongArch() || isRISCV() || isSPARC64() || isSystemZ() ||
       isVE() || isWasm())
     return true;
 
