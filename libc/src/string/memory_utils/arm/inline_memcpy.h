@@ -199,8 +199,10 @@ copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
   // The compiler performs alias analysis and is able to prove that `dst` and
   // `src` do not alias by propagating the `__restrict` keyword from the
   // `memcpy` prototype. This allows the compiler to merge consecutive
-  // load/store (LDR, STR) instructions into load/store double (LDRD, STRD)
-  // instructions.
+  // load/store (LDR, STR) instructions generated in
+  // `copy_block_and_bump_pointers` with `BlockOp::kByWord` into load/store
+  // double (LDRD, STRD) instructions, this is is undesirable so we prevent the
+  // compiler from inferring `__restrict` with the following line.
   asm volatile("" : "+r"(dst), "+r"(src));
 #ifdef __ARM_FEATURE_UNALIGNED
   return inline_memcpy_arm_mid_end(dst, src, size);
