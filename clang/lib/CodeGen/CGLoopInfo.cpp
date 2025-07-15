@@ -201,13 +201,7 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
 
   std::optional<bool> Enabled;
 
-  // Vectorization is disabled if:
-  // 1) it is disabled explicitly, or
-  // 2) it is implied when vectorize.width is set to 1 and scalable
-  // vectorization is not specified explicitly.
-  if (Attrs.VectorizeEnable == LoopAttributes::Disable ||
-      (Attrs.VectorizeWidth == 1 &&
-       Attrs.VectorizeScalable != LoopAttributes::Enable))
+  if (Attrs.VectorizeEnable == LoopAttributes::Disable)
     Enabled = false;
   else if (Attrs.VectorizeEnable != LoopAttributes::Unspecified ||
            Attrs.VectorizePredicateEnable != LoopAttributes::Unspecified ||
@@ -227,18 +221,6 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
     }
     return createUnrollAndJamMetadata(Attrs, LoopProperties, HasUserTransforms);
   }
-
-  // Apply all loop properties to the vectorized loop.
-  SmallVector<Metadata *, 4> FollowupLoopProperties;
-  FollowupLoopProperties.append(LoopProperties.begin(), LoopProperties.end());
-
-  // Don't vectorize an already vectorized loop.
-  FollowupLoopProperties.push_back(
-      MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.isvectorized")));
-
-  bool FollowupHasTransforms = false;
-  SmallVector<Metadata *, 4> Followup = createUnrollAndJamMetadata(
-      Attrs, FollowupLoopProperties, FollowupHasTransforms);
 
   SmallVector<Metadata *, 4> Args;
   Args.append(LoopProperties.begin(), LoopProperties.end());
@@ -293,22 +275,46 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
   // 5) it is implied when vectorize.width is unset (0) and the user
   //    explicitly requested fixed-width vectorization, i.e.
   //    vectorize.scalable.enable is false.
+  bool VectorizeEnabled = false;
   if (Attrs.VectorizeEnable != LoopAttributes::Unspecified ||
       (IsVectorPredicateEnabled && Attrs.VectorizeWidth != 1) ||
       Attrs.VectorizeWidth > 1 ||
       Attrs.VectorizeScalable == LoopAttributes::Enable ||
       (Attrs.VectorizeScalable == LoopAttributes::Disable &&
        Attrs.VectorizeWidth != 1)) {
-    bool AttrVal = Attrs.VectorizeEnable != LoopAttributes::Disable;
+    VectorizeEnabled = Attrs.VectorizeEnable != LoopAttributes::Disable;
     Args.push_back(
         MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
                           ConstantAsMetadata::get(ConstantInt::get(
-                              llvm::Type::getInt1Ty(Ctx), AttrVal))}));
+                              llvm::Type::getInt1Ty(Ctx), VectorizeEnabled))}));
   }
 
-  if (FollowupHasTransforms)
-    Args.push_back(
-        createFollowupMetadata("llvm.loop.vectorize.followup_all", Followup));
+  // Apply all loop properties to the vectorized loop.
+  SmallVector<Metadata *, 4> FollowupLoopProperties;
+
+  // If vectorization is not explicitly enabled, the follow-up metadata will be
+  // directly appended to the list currently being created. In that case, adding
+  // LoopProperties to FollowupLoopProperties would result in duplication.
+  if (VectorizeEnabled)
+    FollowupLoopProperties.append(LoopProperties.begin(), LoopProperties.end());
+
+  // Don't vectorize an already vectorized loop.
+  FollowupLoopProperties.push_back(
+      MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.isvectorized")));
+
+  bool FollowupHasTransforms = false;
+  SmallVector<Metadata *, 4> Followup = createUnrollAndJamMetadata(
+      Attrs, FollowupLoopProperties, FollowupHasTransforms);
+
+  if (FollowupHasTransforms) {
+    // If vectorization is explicitly enabled, we create a follow-up metadata,
+    // otherwise directly add the contents of it to Args.
+    if (VectorizeEnabled)
+      Args.push_back(
+          createFollowupMetadata("llvm.loop.vectorize.followup_all", Followup));
+    else
+      Args.append(Followup.begin(), Followup.end());
+  }
 
   HasUserTransforms = true;
   return Args;
@@ -649,7 +655,9 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
     case LoopHintAttr::Disable:
       switch (Option) {
       case LoopHintAttr::Vectorize:
-        setVectorizeEnable(false);
+        // Disable vectorization by specifying a width of 1.
+        setVectorizeWidth(1);
+        setVectorizeScalable(LoopAttributes::Unspecified);
         break;
       case LoopHintAttr::Interleave:
         // Disable interleaving by speciyfing a count of 1.

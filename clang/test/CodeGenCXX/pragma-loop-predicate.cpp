@@ -37,7 +37,8 @@ void test3(int *List, int Length) {
     List[i] = i * 2;
 }
 
-// Check that vectorization is disabled.
+// Check that disabling vectorization means a vectorization width of 1, and
+// also that vectorization_predicate isn't enabled.
 void test4(int *List, int Length) {
 // CHECK-LABEL: @{{.*}}test4{{.*}}(
 // CHECK: br label {{.*}}, !llvm.loop ![[LOOP4:.*]]
@@ -47,7 +48,7 @@ void test4(int *List, int Length) {
     List[i] = i * 2;
 }
 
-// Check that vectorize is disabled and vectorize_predicate is ignored.
+// Check that vectorize and vectorize_predicate are disabled.
 void test5(int *List, int Length) {
 // CHECK-LABEL: @{{.*}}test5{{.*}}(
 // CHECK: br label {{.*}}, !llvm.loop ![[LOOP5:.*]]
@@ -113,16 +114,16 @@ void test9(int *List, int Length) {
 // CHECK-NEXT: ![[LOOP3]] = distinct !{![[LOOP3]], [[MP]], [[GEN6]], [[GEN3]]}
 
 // CHECK-NEXT: ![[LOOP4]] = distinct !{![[LOOP4]], [[MP]], [[GEN10:![0-9]+]]}
-// CHECK-NEXT: [[GEN10]] = !{!"llvm.loop.vectorize.enable", i1 false}
+// CHECK-NEXT: [[GEN10]] = !{!"llvm.loop.vectorize.width", i32 1}
 
-// CHECK-NEXT: ![[LOOP5]] = distinct !{![[LOOP5]], [[MP]], [[GEN10]]}
+// CHECK-NEXT: ![[LOOP5]] = distinct !{![[LOOP5]], [[MP]], [[GEN6]], [[GEN10]]}
 
-// CHECK-NEXT: ![[LOOP6]] = distinct !{![[LOOP6]], [[MP]], [[GEN10]]}
+// CHECK-NEXT: ![[LOOP6]] = distinct !{![[LOOP6]], [[MP]], [[GEN8]], [[GEN10]], [[GEN11:![0-9]+]]}
+// CHECK-NEXT: [[GEN11]] = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
 
-// CHECK-NEXT: ![[LOOP7]] = distinct !{![[LOOP7]], [[MP]], [[GEN8]], [[GEN11:![0-9]+]], [[GEN12:![0-9]+]], [[GEN3]]}
-// CHECK-NEXT: [[GEN11]] = !{!"llvm.loop.vectorize.width", i32 4}
-// CHECK-NEXT: [[GEN12]] = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+// CHECK-NEXT: ![[LOOP7]] = distinct !{![[LOOP7]], [[MP]], [[GEN8]], [[GEN12:![0-9]+]], [[GEN11]], [[GEN3]]}
+// CHECK-NEXT: [[GEN12]] = !{!"llvm.loop.vectorize.width", i32 4}
 
-// CHECK-NEXT: ![[LOOP8]] = distinct !{![[LOOP8]], [[MP]], [[GEN10]]}
+// CHECK-NEXT: ![[LOOP8]] = distinct !{![[LOOP8]], [[MP]], [[GEN6]], [[GEN10]], [[GEN11]]}
 
-// CHECK-NEXT: ![[LOOP9]] = distinct !{![[LOOP9]], [[MP]], [[GEN6]], [[GEN11]], [[GEN12]], [[GEN3]]}
+// CHECK-NEXT: ![[LOOP9]] = distinct !{![[LOOP9]], [[MP]], [[GEN6]], [[GEN12]], [[GEN11]], [[GEN3]]}
