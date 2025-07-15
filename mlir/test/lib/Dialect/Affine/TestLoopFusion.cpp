@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass to test various loop fusion utility functions.
+// This file implements a pass to test various loop fusion utilities. It is not
+// meant to be a pass to perform valid fusion.
 //
 //===----------------------------------------------------------------------===//
 
@@ -47,9 +48,9 @@ struct TestLoopFusion
       llvm::cl::desc("Enable testing of loop fusion slice computation"),
       llvm::cl::init(false)};
 
-  Option<bool> clTestLoopFusionTransformation{
-      *this, "test-loop-fusion-transformation",
-      llvm::cl::desc("Enable testing of loop fusion transformation"),
+  Option<bool> clTestLoopFusionUtilities{
+      *this, "test-loop-fusion-utilities",
+      llvm::cl::desc("Enable testing of loop fusion transformation utilities"),
       llvm::cl::init(false)};
 };
 
@@ -62,10 +63,9 @@ struct TestLoopFusion
 static bool testDependenceCheck(AffineForOp srcForOp, AffineForOp dstForOp,
                                 unsigned i, unsigned j, unsigned loopDepth,
                                 unsigned maxLoopDepth) {
-  affine::ComputationSliceState sliceUnion;
+  ComputationSliceState sliceUnion;
   for (unsigned d = loopDepth + 1; d <= maxLoopDepth; ++d) {
-    FusionResult result =
-        affine::canFuseLoops(srcForOp, dstForOp, d, &sliceUnion);
+    FusionResult result = canFuseLoops(srcForOp, dstForOp, d, &sliceUnion);
     if (result.value == FusionResult::FailBlockDependence) {
       srcForOp->emitRemark("block-level dependence preventing"
                            " fusion of loop nest ")
@@ -87,8 +87,7 @@ static unsigned getBlockIndex(Operation &op) {
 }
 
 // Returns a string representation of 'sliceUnion'.
-static std::string
-getSliceStr(const affine::ComputationSliceState &sliceUnion) {
+static std::string getSliceStr(const ComputationSliceState &sliceUnion) {
   std::string result;
   llvm::raw_string_ostream os(result);
   // Slice insertion point format [loop-depth, operation-block-index]
@@ -117,8 +116,8 @@ static bool testSliceComputation(AffineForOp forOpA, AffineForOp forOpB,
                                  unsigned i, unsigned j, unsigned loopDepth,
                                  unsigned maxLoopDepth) {
   for (unsigned d = loopDepth + 1; d <= maxLoopDepth; ++d) {
-    affine::ComputationSliceState sliceUnion;
-    FusionResult result = affine::canFuseLoops(forOpA, forOpB, d, &sliceUnion);
+    ComputationSliceState sliceUnion;
+    FusionResult result = canFuseLoops(forOpA, forOpB, d, &sliceUnion);
     if (result.value == FusionResult::Success) {
       forOpB->emitRemark("slice (")
           << " src loop: " << i << ", dst loop: " << j << ", depth: " << d
@@ -134,22 +133,23 @@ static bool testSliceComputation(AffineForOp forOpA, AffineForOp forOpB,
 
 // Attempts to fuse 'forOpA' into 'forOpB' at loop depths in range
 // ['loopDepth' + 1, 'maxLoopDepth'].
-// Returns true if loops were successfully fused, false otherwise.
-static bool testLoopFusionTransformation(AffineForOp forOpA, AffineForOp forOpB,
-                                         unsigned i, unsigned j,
-                                         unsigned loopDepth,
-                                         unsigned maxLoopDepth) {
+// Returns true if loops were successfully fused, false otherwise. This tests
+// `fuseLoops` and `canFuseLoops` utilities.
+static bool testLoopFusionUtilities(AffineForOp forOpA, AffineForOp forOpB,
+                                    unsigned i, unsigned j, unsigned loopDepth,
+                                    unsigned maxLoopDepth) {
   for (unsigned d = loopDepth + 1; d <= maxLoopDepth; ++d) {
-    affine::ComputationSliceState sliceUnion;
-    FusionResult result = affine::canFuseLoops(forOpA, forOpB, d, &sliceUnion);
-    if (result.value == FusionResult::Success) {
-      affine::fuseLoops(forOpA, forOpB, sliceUnion);
-      // Note: 'forOpA' is removed to simplify test output. A proper loop
-      // fusion pass should check the data dependence graph and run memref
-      // region analysis to ensure removing 'forOpA' is safe.
+    ComputationSliceState sliceUnion;
+    // This check isn't a sufficient one, but necessary.
+    FusionResult result = canFuseLoops(forOpA, forOpB, d, &sliceUnion);
+    if (result.value != FusionResult::Success)
+      continue;
+    fuseLoops(forOpA, forOpB, sliceUnion);
+    // Note: 'forOpA' is removed to simplify test output. A proper loop
+    // fusion pass should perform additional checks to check safe removal.
+    if (forOpA.use_empty())
       forOpA.erase();
-      return true;
-    }
+    return true;
   }
   return false;
 }
@@ -182,7 +182,7 @@ static bool iterateLoops(ArrayRef<SmallVector<AffineForOp, 2>> depthToLoops,
 
 void TestLoopFusion::runOnOperation() {
   std::vector<SmallVector<AffineForOp, 2>> depthToLoops;
-  if (clTestLoopFusionTransformation) {
+  if (clTestLoopFusionUtilities) {
     // Run loop fusion until a fixed point is reached.
     do {
       depthToLoops.clear();
@@ -190,7 +190,7 @@ void TestLoopFusion::runOnOperation() {
       gatherLoops(getOperation(), depthToLoops);
 
       // Try to fuse all combinations of src/dst loop nests in 'depthToLoops'.
-    } while (iterateLoops(depthToLoops, testLoopFusionTransformation,
+    } while (iterateLoops(depthToLoops, testLoopFusionUtilities,
                           /*returnOnChange=*/true));
     return;
   }

@@ -104,6 +104,13 @@ functions:
     arguments:
       - type: const wchar_t *
       - type: const wchar_t *
+  - name: wcscspn
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
   - name: wmemcmp
     standards:
       - stdc
@@ -159,6 +166,14 @@ functions:
     arguments: 
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
+  - name: wcslcat
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
+      - type: size_t
   - name: wcsstr
     standards:
       - stdc
@@ -196,6 +211,22 @@ functions:
     arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
+  - name: wcslcpy
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
+      - type: size_t
+  - name: wcstok
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
+      - type: wchar_t** __restrict
   - name: wcpcpy
     standards:
       - stdc
@@ -211,3 +242,35 @@ functions:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
       - type: size_t
+  - name: wcstol
+    standards:
+      - stdc
+    return_type: long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
+  - name: wcstoll
+    standards:
+      - stdc
+    return_type: long long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
+  - name: wcstoul
+    standards:
+      - stdc
+    return_type: unsigned long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
+  - name: wcstoull
+    standards:
+      - stdc
+    return_type: unsigned long long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int

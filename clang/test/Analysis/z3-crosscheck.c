@@ -1,8 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -analyze -analyzer-checker=core,unix.Malloc,debug.ExprInspection -DNO_CROSSCHECK -verify %s
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -analyze -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-config crosscheck-with-z3=true -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,unix.Malloc,debug.ExprInspection -DNO_CROSSCHECK -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-config crosscheck-with-z3=true -verify %s
 // REQUIRES: z3
-
-// XFAIL: *
 
 void clang_analyzer_dump(float);
 

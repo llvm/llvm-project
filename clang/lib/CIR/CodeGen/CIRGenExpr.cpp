@@ -224,6 +224,10 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       return;
     }
 
+    assert(dst.isBitField() && "Unknown LValue type");
+    emitStoreThroughBitfieldLValue(src, dst);
+    return;
+
     cgm.errorNYI(dst.getPointer().getLoc(),
                  "emitStoreThroughLValue: non-simple lvalue");
     return;
@@ -321,18 +325,79 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
 
 mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
                                                            LValue dst) {
-  assert(!cir::MissingFeatures::bitfields());
-  cgm.errorNYI("bitfields");
-  return {};
+
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+
+  const CIRGenBitFieldInfo &info = dst.getBitFieldInfo();
+  mlir::Type resLTy = convertTypeForMem(dst.getType());
+  Address ptr = dst.getBitFieldAddress();
+
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+  const bool useVolatile = false;
+
+  mlir::Value dstAddr = dst.getAddress().getPointer();
+
+  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, dstAddr,
+                                   ptr.getElementType(), src.getValue(), info,
+                                   dst.isVolatileQualified(), useVolatile);
+}
+
+RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
+  const CIRGenBitFieldInfo &info = lv.getBitFieldInfo();
+
+  // Get the output type.
+  mlir::Type resLTy = convertType(lv.getType());
+  Address ptr = lv.getBitFieldAddress();
+
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+
+  mlir::Value field = builder.createGetBitfield(
+      getLoc(loc), resLTy, ptr.getPointer(), ptr.getElementType(), info,
+      lv.isVolatile(), false);
+  assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck() && "NYI");
+  return RValue::get(field);
+}
+
+Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
+                                                 const FieldDecl *field,
+                                                 mlir::Type fieldType,
+                                                 unsigned index) {
+  mlir::Location loc = getLoc(field->getLocation());
+  cir::PointerType fieldPtr = cir::PointerType::get(fieldType);
+  cir::GetMemberOp sea = getBuilder().createGetMember(
+      loc, fieldPtr, base.getPointer(), field->getName(), index);
+  return Address(sea, CharUnits::One());
+}
+
+LValue CIRGenFunction::emitLValueForBitField(LValue base,
+                                             const FieldDecl *field) {
+  LValueBaseInfo baseInfo = base.getBaseInfo();
+  const CIRGenRecordLayout &layout =
+      cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  const CIRGenBitFieldInfo &info = layout.getBitFieldInfo(field);
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+  assert(!cir::MissingFeatures::preservedAccessIndexRegion());
+  unsigned idx = layout.getCIRFieldNo(field);
+
+  Address addr = getAddrOfBitFieldStorage(base, field, info.storageType, idx);
+
+  mlir::Location loc = getLoc(field->getLocation());
+  if (addr.getElementType() != info.storageType)
+    addr = builder.createElementBitCast(loc, addr, info.storageType);
+
+  QualType fieldType =
+      field->getType().withCVRQualifiers(base.getVRQualifiers());
+  // TODO(cir): Support TBAA for bit fields.
+  assert(!cir::MissingFeatures::opTBAA());
+  LValueBaseInfo fieldBaseInfo(baseInfo.getAlignmentSource());
+  return LValue::makeBitfield(addr, info, fieldType, fieldBaseInfo);
 }
 
 LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   LValueBaseInfo baseInfo = base.getBaseInfo();
 
-  if (field->isBitField()) {
-    cgm.errorNYI(field->getSourceRange(), "emitLValueForField: bitfield");
-    return LValue();
-  }
+  if (field->isBitField())
+    return emitLValueForBitField(base, field);
 
   QualType fieldType = field->getType();
   const RecordDecl *rec = field->getParent();
@@ -460,6 +525,9 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   assert(!lv.getType()->isFunctionType());
   assert(!(lv.getType()->isConstantMatrixType()) && "not implemented");
 
+  if (lv.isBitField())
+    return emitLoadOfBitfieldLValue(lv, loc);
+
   if (lv.isSimple())
     return RValue::get(emitLoadOfScalar(lv, loc));
 
@@ -569,8 +637,28 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   }
   case UO_Real:
   case UO_Imag: {
-    cgm.errorNYI(e->getSourceRange(), "UnaryOp real/imag");
-    return LValue();
+    LValue lv = emitLValue(e->getSubExpr());
+    assert(lv.isSimple() && "real/imag on non-ordinary l-value");
+
+    // __real is valid on scalars. This is a faster way of testing that.
+    // __imag can only produce an rvalue on scalars.
+    if (e->getOpcode() == UO_Real &&
+        !mlir::isa<cir::ComplexType>(lv.getAddress().getElementType())) {
+      assert(e->getSubExpr()->getType()->isArithmeticType());
+      return lv;
+    }
+
+    QualType exprTy = getContext().getCanonicalType(e->getSubExpr()->getType());
+    QualType elemTy = exprTy->castAs<clang::ComplexType>()->getElementType();
+    mlir::Location loc = getLoc(e->getExprLoc());
+    Address component =
+        e->getOpcode() == UO_Real
+            ? builder.createComplexRealPtr(loc, lv.getAddress())
+            : builder.createComplexImagPtr(loc, lv.getAddress());
+    assert(!cir::MissingFeatures::opTBAA());
+    LValue elemLV = makeAddrLValue(component, elemTy);
+    elemLV.getQuals().addQualifiers(lv.getQuals());
+    return elemLV;
   }
   case UO_PreInc:
   case UO_PreDec: {
@@ -1010,11 +1098,10 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     LValue lv = emitLValue(e->getLHS());
 
     SourceLocRAIIObject loc{*this, getLoc(e->getSourceRange())};
-    if (lv.isBitField()) {
-      cgm.errorNYI(e->getSourceRange(), "bitfields");
-      return {};
-    }
-    emitStoreThroughLValue(rv, lv);
+    if (lv.isBitField())
+      emitStoreThroughBitfieldLValue(rv, lv);
+    else
+      emitStoreThroughLValue(rv, lv);
 
     if (getLangOpts().OpenMP) {
       cgm.errorNYI(e->getSourceRange(), "openmp");
@@ -1042,8 +1129,7 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot) {
   case cir::TEK_Scalar:
     return RValue::get(emitScalarExpr(e));
   case cir::TEK_Complex:
-    cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: complex type");
-    return RValue::get(nullptr);
+    return RValue::getComplex(emitComplexExpr(e));
   case cir::TEK_Aggregate: {
     if (aggSlot.isIgnored())
       aggSlot = createAggTemp(e->getType(), getLoc(e->getSourceRange()),
@@ -1527,10 +1613,15 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
     delegating = true;
     break;
   case CXXConstructionKind::VirtualBase:
-  case CXXConstructionKind::NonVirtualBase:
+    // This should just set 'forVirtualBase' to true and fall through, but
+    // virtual base class support is otherwise missing, so this needs to wait
+    // until it can be tested.
     cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXConstructExpr: other construction kind");
+                 "emitCXXConstructExpr: virtual base constructor");
     return;
+  case CXXConstructionKind::NonVirtualBase:
+    type = Ctor_Base;
+    break;
   }
 
   emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);

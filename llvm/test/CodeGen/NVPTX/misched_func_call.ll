@@ -8,7 +8,7 @@ define ptx_kernel void @wombat(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: wombat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<11>;
-; CHECK-NEXT:    .reg .b64 %rd<7>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %bb
 ; CHECK-NEXT:    ld.param.b32 %r4, [wombat_param_2];
@@ -27,11 +27,11 @@ define ptx_kernel void @wombat(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    mul.lo.s32 %r7, %r10, %r3;
 ; CHECK-NEXT:    or.b32 %r8, %r4, %r7;
 ; CHECK-NEXT:    mul.lo.s32 %r9, %r2, %r8;
-; CHECK-NEXT:    cvt.rn.f64.s32 %rd3, %r9;
-; CHECK-NEXT:    cvt.rn.f64.u32 %rd4, %r10;
-; CHECK-NEXT:    add.rn.f64 %rd5, %rd4, %rd3;
-; CHECK-NEXT:    mov.b64 %rd6, 0;
-; CHECK-NEXT:    st.global.b64 [%rd6], %rd5;
+; CHECK-NEXT:    cvt.rn.f64.s32 %rd2, %r9;
+; CHECK-NEXT:    cvt.rn.f64.u32 %rd3, %r10;
+; CHECK-NEXT:    add.rn.f64 %rd4, %rd3, %rd2;
+; CHECK-NEXT:    mov.b64 %rd5, 0;
+; CHECK-NEXT:    st.global.b64 [%rd5], %rd4;
 ; CHECK-NEXT:    mov.b32 %r10, 1;
 ; CHECK-NEXT:    bra.uni $L__BB0_1;
 bb:

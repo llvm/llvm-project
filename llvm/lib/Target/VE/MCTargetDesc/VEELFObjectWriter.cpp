@@ -61,7 +61,6 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
       reportError(Fixup.getLoc(), "Unsupported pc-relative fixup kind");
       return ELF::R_VE_NONE;
     case FK_Data_1:
-    case FK_PCRel_1:
       reportError(Fixup.getLoc(),
                   "1-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;
@@ -72,7 +71,6 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
     case FK_Data_4:
       return ELF::R_VE_SREL32;
     case FK_Data_8:
-    case FK_PCRel_8:
       reportError(Fixup.getLoc(),
                   "8-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;

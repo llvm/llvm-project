@@ -318,6 +318,9 @@
 #  endif
 #endif
 
+// The first address that can be returned by mmap.
+#define SANITIZER_MMAP_BEGIN 0
+
 // The range of addresses which can be returned my mmap.
 // FIXME: this value should be different on different platforms.  Larger values
 // will still work but will consume more memory for TwoLevelByteMap.

@@ -777,6 +777,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
   }
 
   if (Subtarget.hasAltivec()) {
@@ -9584,6 +9586,36 @@ static bool isValidSplatLoad(const PPCSubtarget &Subtarget, const SDValue &Op,
   return false;
 }
 
+bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN) {
+  assert(BVN.getNumOperands() > 0 && "Unexpected 0-size build vector");
+
+  BitMask.clearAllBits();
+  EVT VT = BVN.getValueType(0);
+  APInt ConstValue(VT.getSizeInBits(), 0);
+
+  unsigned EltWidth = VT.getScalarSizeInBits();
+
+  unsigned BitPos = 0;
+  for (auto OpVal : BVN.op_values()) {
+    auto *CN = dyn_cast<ConstantSDNode>(OpVal);
+
+    if (!CN)
+      return false;
+
+    ConstValue.insertBits(CN->getAPIntValue().zextOrTrunc(EltWidth), BitPos);
+    BitPos += EltWidth;
+  }
+
+  for (unsigned J = 0; J < 16; ++J) {
+    APInt ExtractValue = ConstValue.extractBits(8, J * 8);
+    if (ExtractValue != 0x00 && ExtractValue != 0xFF)
+      return false;
+    if (ExtractValue == 0xFF)
+      BitMask.setBit(J);
+  }
+  return true;
+}
+
 // If this is a case we can't handle, return null and let the default
 // expansion code take care of it.  If we CAN select this case, and if it
 // selects to a single instruction, return Op.  Otherwise, if we can codegen
@@ -9595,6 +9627,25 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(Op.getNode());
   assert(BVN && "Expected a BuildVectorSDNode in LowerBUILD_VECTOR");
 
+  if (Subtarget.hasP10Vector()) {
+    APInt BitMask(32, 0);
+    // If the value of the vector is all zeros or all ones,
+    // we do not convert it to MTVSRBMI.
+    // The xxleqv instruction sets a vector with all ones.
+    // The xxlxor instruction sets a vector with all zeros.
+    if (isValidMtVsrBmi(BitMask, *BVN) && BitMask != 0 && BitMask != 0xffff) {
+      SDValue SDConstant = DAG.getTargetConstant(BitMask, dl, MVT::i32);
+      MachineSDNode *MSDNode =
+          DAG.getMachineNode(PPC::MTVSRBMI, dl, MVT::v16i8, SDConstant);
+      SDValue SDV = SDValue(MSDNode, 0);
+      EVT DVT = BVN->getValueType(0);
+      EVT SVT = SDV.getValueType();
+      if (SVT != DVT) {
+        SDV = DAG.getNode(ISD::BITCAST, dl, DVT, SDV);
+      }
+      return SDV;
+    }
+  }
   // Check if this is a splat of a constant value.
   APInt APSplatBits, APSplatUndef;
   unsigned SplatBitSize;
@@ -17912,9 +17963,6 @@ SDValue PPCTargetLowering::LowerRETURNADDR(SDValue Op,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
 
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   SDLoc dl(Op);
   unsigned Depth = Op.getConstantOperandVal(0);
 
@@ -18191,7 +18239,8 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 /// It returns EVT::Other if the type should be determined using generic
 /// target-independent logic.
 EVT PPCTargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   if (getTargetMachine().getOptLevel() != CodeGenOptLevel::None) {
     // We should use Altivec/VSX loads and stores when available. For unaligned
     // addresses, unaligned VSX loads are only fast starting with the P8.

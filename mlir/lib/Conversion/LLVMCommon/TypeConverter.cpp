@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "MemRefDescriptor.h"
 #include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -610,7 +609,7 @@ bool LLVMTypeConverter::canConvertToBarePtr(BaseMemRefType type) {
     if (ShapedType::isDynamic(stride))
       return false;
 
-  return !ShapedType::isDynamic(offset);
+  return ShapedType::isStatic(offset);
 }
 
 /// Convert a memref type to a bare pointer to the memref element type.

@@ -131,7 +131,8 @@ static const llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor>
           {BI_TEMPLATE_PARAM_BLOCK_ID, "TemplateParamBlock"},
           {BI_CONSTRAINT_BLOCK_ID, "ConstraintBlock"},
           {BI_CONCEPT_BLOCK_ID, "ConceptBlock"},
-          {BI_VAR_BLOCK_ID, "VarBlock"}};
+          {BI_VAR_BLOCK_ID, "VarBlock"},
+          {BI_FRIEND_BLOCK_ID, "FriendBlock"}};
       assert(Inits.size() == BlockIdCount);
       for (const auto &Init : Inits)
         BlockIdNameMap[Init.first] = Init.second;
@@ -188,6 +189,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {RECORD_LOCATION, {"Location", &genLocationAbbrev}},
           {RECORD_TAG_TYPE, {"TagType", &genIntAbbrev}},
           {RECORD_IS_TYPE_DEF, {"IsTypeDef", &genBoolAbbrev}},
+          {RECORD_MANGLED_NAME, {"MangledName", &genStringAbbrev}},
           {BASE_RECORD_USR, {"USR", &genSymbolIdAbbrev}},
           {BASE_RECORD_NAME, {"Name", &genStringAbbrev}},
           {BASE_RECORD_PATH, {"Path", &genStringAbbrev}},
@@ -224,7 +226,8 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {VAR_USR, {"USR", &genSymbolIdAbbrev}},
           {VAR_NAME, {"Name", &genStringAbbrev}},
           {VAR_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
-          {VAR_IS_STATIC, {"IsStatic", &genBoolAbbrev}}};
+          {VAR_IS_STATIC, {"IsStatic", &genBoolAbbrev}},
+          {FRIEND_IS_CLASS, {"IsClass", &genBoolAbbrev}}};
 
       assert(Inits.size() == RecordIdCount);
       for (const auto &Init : Inits) {
@@ -269,7 +272,8 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Record Block
         {BI_RECORD_BLOCK_ID,
          {RECORD_USR, RECORD_NAME, RECORD_PATH, RECORD_DEFLOCATION,
-          RECORD_LOCATION, RECORD_TAG_TYPE, RECORD_IS_TYPE_DEF}},
+          RECORD_LOCATION, RECORD_TAG_TYPE, RECORD_IS_TYPE_DEF,
+          RECORD_MANGLED_NAME}},
         // BaseRecord Block
         {BI_BASE_RECORD_BLOCK_ID,
          {BASE_RECORD_USR, BASE_RECORD_NAME, BASE_RECORD_PATH,
@@ -293,7 +297,8 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
           CONCEPT_CONSTRAINT_EXPRESSION}},
         // Constraint Block
         {BI_CONSTRAINT_BLOCK_ID, {CONSTRAINT_EXPRESSION}},
-        {BI_VAR_BLOCK_ID, {VAR_NAME, VAR_USR, VAR_DEFLOCATION, VAR_IS_STATIC}}};
+        {BI_VAR_BLOCK_ID, {VAR_NAME, VAR_USR, VAR_DEFLOCATION, VAR_IS_STATIC}},
+        {BI_FRIEND_BLOCK_ID, {FRIEND_IS_CLASS}}};
 
 // AbbreviationMap
 
@@ -476,6 +481,19 @@ void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
   emitRecord((unsigned)Field, REFERENCE_FIELD);
 }
 
+void ClangDocBitcodeWriter::emitBlock(const FriendInfo &R) {
+  StreamSubBlockGuard Block(Stream, BI_FRIEND_BLOCK_ID);
+  emitBlock(R.Ref, FieldId::F_friend);
+  emitRecord(R.IsClass, FRIEND_IS_CLASS);
+  if (R.Template)
+    emitBlock(*R.Template);
+  if (R.Params)
+    for (const auto &P : *R.Params)
+      emitBlock(P);
+  if (R.ReturnType)
+    emitBlock(*R.ReturnType);
+}
+
 void ClangDocBitcodeWriter::emitBlock(const TypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_TYPE_BLOCK_ID);
   emitBlock(T.Type, FieldId::F_type);
@@ -600,6 +618,7 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
   emitRecord(I.USR, RECORD_USR);
   emitRecord(I.Name, RECORD_NAME);
   emitRecord(I.Path, RECORD_PATH);
+  emitRecord(I.MangledName, RECORD_MANGLED_NAME);
   for (const auto &N : I.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
@@ -628,6 +647,8 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
     emitBlock(C);
   if (I.Template)
     emitBlock(*I.Template);
+  for (const auto &C : I.Friends)
+    emitBlock(C);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const BaseRecordInfo &I) {
@@ -743,6 +764,9 @@ bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
     break;
   case InfoType::IT_variable:
     emitBlock(*static_cast<VarInfo *>(I));
+    break;
+  case InfoType::IT_friend:
+    emitBlock(*static_cast<FriendInfo *>(I));
     break;
   case InfoType::IT_default:
     llvm::errs() << "Unexpected info, unable to write.\n";

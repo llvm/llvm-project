@@ -31,5 +31,5 @@
 // C-AARCH64-BAREMETAL-NOGCC: "{{.*}}/aarch64-nogcc/bin/../aarch64-none-elf/lib/crt0.o"
 // C-AARCH64-BAREMETAL-NOGCC: "{{.*}}/aarch64-nogcc/{{.*}}/aarch64-none-elf/lib/crtbegin.o"
 // C-AARCH64-BAREMETAL-NOGCC: "{{.*}}/aarch64-nogcc/bin/../aarch64-none-elf/lib"
-// C-AARCH64-BAREMETAL-NOGCC: "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// C-AARCH64-BAREMETAL-NOGCC: "{{.*}}.o" "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
 // C-AARCH64-BAREMETAL-NOGCC: "{{.*}}/aarch64-nogcc/{{.*}}/aarch64-none-elf/lib/crtend.o"

@@ -206,6 +206,16 @@ std::string BareMetal::computeSysRoot() const {
   return computeClangRuntimesSysRoot(D, /*IncludeTriple*/ true);
 }
 
+std::string BareMetal::getCompilerRTPath() const {
+  const Driver &D = getDriver();
+  if (IsGCCInstallationValid || detectGCCToolchainAdjacent(getDriver())) {
+    SmallString<128> Path(D.ResourceDir);
+    llvm::sys::path::append(Path, "lib");
+    return std::string(Path.str());
+  }
+  return ToolChain::getCompilerRTPath();
+}
+
 static void addMultilibsFilePaths(const Driver &D, const MultilibSet &Multilibs,
                                   const Multilib &Multilib,
                                   StringRef InstallPath,
@@ -373,6 +383,28 @@ BareMetal::OrderedMultilibs BareMetal::getOrderedMultilibs() const {
   // No multilibs selected so return a single default multilib.
   static const llvm::SmallVector<Multilib> Default = {Multilib()};
   return llvm::reverse(Default);
+}
+
+ToolChain::CXXStdlibType BareMetal::GetDefaultCXXStdlibType() const {
+  if (getTriple().isRISCV() && IsGCCInstallationValid)
+    return ToolChain::CST_Libstdcxx;
+  return ToolChain::CST_Libcxx;
+}
+
+ToolChain::RuntimeLibType BareMetal::GetDefaultRuntimeLibType() const {
+  if (getTriple().isRISCV() && IsGCCInstallationValid)
+    return ToolChain::RLT_Libgcc;
+  return ToolChain::RLT_CompilerRT;
+}
+
+// TODO: Add a validity check for GCCInstallation.
+//       If valid, use `UNW_Libgcc`; otherwise, use `UNW_None`.
+ToolChain::UnwindLibType
+BareMetal::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
+  if (getTriple().isRISCV())
+    return ToolChain::UNW_None;
+
+  return ToolChain::GetUnwindLibType(Args);
 }
 
 void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
@@ -568,12 +600,24 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple::ArchType Arch = TC.getArch();
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
 
-  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+  if (!D.SysRoot.empty())
+    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
   CmdArgs.push_back("-Bstatic");
 
-  if (TC.getTriple().isRISCV() && Args.hasArg(options::OPT_mno_relax))
-    CmdArgs.push_back("--no-relax");
+  if (const char *LDMOption = getLDMOption(TC.getTriple(), Args)) {
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back(LDMOption);
+  } else {
+    D.Diag(diag::err_target_unknown_triple) << Triple.str();
+    return;
+  }
+
+  if (Triple.isRISCV()) {
+    CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
   if (Triple.isARM() || Triple.isThumb()) {
     bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
@@ -611,13 +655,20 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_s, options::OPT_t, options::OPT_r});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_L, options::OPT_u, options::OPT_T_Group,
+                   options::OPT_s, options::OPT_t, options::OPT_r});
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
+
+  if (D.isUsingLTO())
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
+                  D.getLTOMode() == LTOK_Thin);
+
+  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
   if (TC.ShouldLinkCXXStdlib(Args)) {
     bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
@@ -638,10 +689,6 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-lgloss");
     CmdArgs.push_back("--end-group");
   }
-
-  if (D.isUsingLTO())
-    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
 
   if ((TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D)) &&
       NeedCRTs)

@@ -413,7 +413,7 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
       return failure();
 
     SmallVector<int64_t> targetIndiceShape(*targetShape);
-    int64_t originalChunkSize = tdescTy.getChunkSize();
+    int64_t originalChunkSize = tdescTy.getChunkSizeAsInt();
     // IndiceVec is 1 dim lower than tdescTy when chunkSize is larger than 1.
     if (originalChunkSize > 1)
       targetIndiceShape.pop_back();
@@ -438,7 +438,8 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
           // Compute the offset
           Value inc = rewriter.create<arith::ConstantIndexOp>(
               loc, i * blockedChunkSize);
-          Value incVec = rewriter.create<vector::SplatOp>(loc, indiceType, inc);
+          Value incVec =
+              rewriter.create<vector::BroadcastOp>(loc, indiceType, inc);
           Value offsetIndice =
               rewriter.create<arith::AddIOp>(loc, indice, incVec);
 
@@ -480,7 +481,7 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
       return failure();
 
     SmallVector<int64_t> targetMaskShape(*targetShape);
-    int64_t originalChunkSize = tdescTy.getChunkSize();
+    int64_t originalChunkSize = tdescTy.getChunkSizeAsInt();
 
     VectorType maskTy = llvm::dyn_cast<VectorType>(op.getMask().getType());
 
@@ -571,7 +572,7 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
       return failure();
 
     SmallVector<int64_t> targetMaskShape(*targetShape);
-    int64_t originalChunkSize = tdescTy.getChunkSize();
+    int64_t originalChunkSize = tdescTy.getChunkSizeAsInt();
 
     VectorType maskTy = llvm::dyn_cast<VectorType>(op.getMask().getType());
 
@@ -625,9 +626,6 @@ struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    if (tdescTy.getRank() > 2)
-      return failure();
-
     if (!tdescTy.isScattered())
       return failure();
 
@@ -645,7 +643,7 @@ struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
     SmallVector<Type> convertedOffsetTypes;
     SmallVector<Value> convertedOffsetVec;
     SmallVector<Value> newOps;
-    int64_t originalChunkSize = tdescTy.getChunkSize();
+    int64_t originalChunkSize = tdescTy.getChunkSizeAsInt();
     if (originalChunkSize > 1) {
       auto targetOffsetShape = ArrayRef<int64_t>(*targetShape).drop_back();
       convertedOffsetTypes = getUnrolledTypes(offsetVecTy, targetOffsetShape);

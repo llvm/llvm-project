@@ -29,6 +29,7 @@ namespace spirv {
 namespace detail {
 struct ArrayTypeStorage;
 struct CooperativeMatrixTypeStorage;
+struct TensorArmTypeStorage;
 struct ImageTypeStorage;
 struct MatrixTypeStorage;
 struct PointerTypeStorage;
@@ -96,7 +97,8 @@ public:
   std::optional<int64_t> getSizeInBytes();
 };
 
-// SPIR-V composite type: VectorType, SPIR-V ArrayType, or SPIR-V StructType.
+// SPIR-V composite type: VectorType, SPIR-V ArrayType, SPIR-V
+// StructType, or SPIR-V TensorArmType.
 class CompositeType : public SPIRVType {
 public:
   using SPIRVType::SPIRVType;
@@ -470,6 +472,46 @@ public:
 
   /// Returns the elements' type (i.e, single element type).
   Type getElementType() const;
+
+  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                     std::optional<StorageClass> storage = std::nullopt);
+  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
+                       std::optional<StorageClass> storage = std::nullopt);
+};
+
+/// SPIR-V TensorARM Type
+class TensorArmType
+    : public Type::TypeBase<TensorArmType, CompositeType,
+                            detail::TensorArmTypeStorage, ShapedType::Trait> {
+public:
+  using Base::Base;
+
+  using ShapedTypeTraits = ShapedType::Trait<TensorArmType>;
+  using ShapedTypeTraits::getDimSize;
+  using ShapedTypeTraits::getDynamicDimIndex;
+  using ShapedTypeTraits::getElementTypeBitWidth;
+  using ShapedTypeTraits::getNumDynamicDims;
+  using ShapedTypeTraits::getNumElements;
+  using ShapedTypeTraits::getRank;
+  using ShapedTypeTraits::hasStaticShape;
+  using ShapedTypeTraits::isDynamicDim;
+
+  static constexpr StringLiteral name = "spirv.arm.tensor";
+
+  // TensorArm supports minimum rank of 1, hence an empty shape here means
+  // unranked.
+  static TensorArmType get(ArrayRef<int64_t> shape, Type elementType);
+  TensorArmType cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                          Type elementType) const;
+
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   ArrayRef<int64_t> shape, Type elementType);
+
+  Type getElementType() const;
+  ArrayRef<int64_t> getShape() const;
+  bool hasRank() const { return !getShape().empty(); }
+  operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      std::optional<StorageClass> storage = std::nullopt);

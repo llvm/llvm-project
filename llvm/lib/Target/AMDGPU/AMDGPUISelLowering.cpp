@@ -423,6 +423,11 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::FLOG10, ISD::FLOG, ISD::FEXP, ISD::FEXP10}, MVT::f16,
                      Custom);
 
+  setOperationAction(ISD::FCANONICALIZE, {MVT::f32, MVT::f64}, Legal);
+  if (Subtarget->has16BitInsts()) {
+    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Legal);
+  }
+
   // FIXME: These IS_FPCLASS vector fp types are marked custom so it reaches
   // scalarization code. Can be removed when IS_FPCLASS expand isn't called by
   // default unless marked custom/legal.
@@ -3853,7 +3858,7 @@ bool AMDGPUTargetLowering::shouldCombineMemoryType(EVT VT) const {
   return true;
 }
 
-// Replace load of an illegal type with a store of a bitcast to a friendlier
+// Replace load of an illegal type with a bitcast from a load of a friendlier
 // type.
 SDValue AMDGPUTargetLowering::performLoadCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
@@ -4001,7 +4006,8 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_rcp_legacy:
   case Intrinsic::amdgcn_rsq_legacy:
-  case Intrinsic::amdgcn_rsq_clamp: {
+  case Intrinsic::amdgcn_rsq_clamp:
+  case Intrinsic::amdgcn_tanh: {
     // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(1);
     return Src.isUndef() ? Src : SDValue();
@@ -4218,10 +4224,17 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
     SDValue SplitLHS = DAG.getNode(ISD::BITCAST, LHSSL, ConcatType, LHS);
     Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, LHSSL, TargetType, SplitLHS, One);
   }
-  Hi = DAG.getFreeze(Hi);
 
-  SDValue HiShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftFullAmt);
-  SDValue NewShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt);
+  KnownBits KnownLHS = DAG.computeKnownBits(LHS);
+  SDValue HiShift;
+  if (KnownLHS.isNegative()) {
+    HiShift = DAG.getAllOnesConstant(SL, TargetType);
+  } else {
+    Hi = DAG.getFreeze(Hi);
+    HiShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftFullAmt);
+  }
+  SDValue NewShift =
+      DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt, N->getFlags());
 
   SDValue Vec;
   if (VT.isVector()) {
@@ -4328,7 +4341,8 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
     Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, LHSSL, TargetType, SplitLHS, One);
   }
 
-  SDValue NewShift = DAG.getNode(ISD::SRL, SL, TargetType, Hi, ShiftAmt);
+  SDValue NewShift =
+      DAG.getNode(ISD::SRL, SL, TargetType, Hi, ShiftAmt, N->getFlags());
 
   SDValue Vec;
   if (VT.isVector()) {
@@ -6183,7 +6197,8 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
-    case Intrinsic::amdgcn_rsq_clamp: {
+    case Intrinsic::amdgcn_rsq_clamp:
+    case Intrinsic::amdgcn_tanh: {
       if (SNaN)
         return true;
 

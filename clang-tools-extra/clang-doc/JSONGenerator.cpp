@@ -39,8 +39,7 @@ static void serializeArray(const Container &Records, Object &Obj,
 static auto SerializeInfoLambda = [](const auto &Info, Object &Object) {
   serializeInfo(Info, Object);
 };
-static auto SerializeReferenceLambda = [](const Reference &Ref,
-                                          Object &Object) {
+static auto SerializeReferenceLambda = [](const auto &Ref, Object &Object) {
   serializeReference(Ref, Object);
 };
 
@@ -365,12 +364,29 @@ static void serializeInfo(const BaseRecordInfo &I, Object &Obj,
   Obj["IsParent"] = I.IsParent;
 }
 
+static void serializeInfo(const FriendInfo &I, Object &Obj) {
+  auto FriendRef = Object();
+  serializeReference(I.Ref, FriendRef);
+  Obj["Reference"] = std::move(FriendRef);
+  Obj["IsClass"] = I.IsClass;
+  if (I.Template)
+    serializeInfo(I.Template.value(), Obj);
+  if (I.Params)
+    serializeArray(I.Params.value(), Obj, "Params", SerializeInfoLambda);
+  if (I.ReturnType) {
+    auto ReturnTypeObj = Object();
+    serializeInfo(I.ReturnType.value(), ReturnTypeObj);
+    Obj["ReturnType"] = std::move(ReturnTypeObj);
+  }
+}
+
 static void serializeInfo(const RecordInfo &I, json::Object &Obj,
                           const std::optional<StringRef> &RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
   Obj["FullName"] = I.FullName;
   Obj["TagType"] = getTagType(I.TagType);
   Obj["IsTypedef"] = I.IsTypeDef;
+  Obj["MangledName"] = I.MangledName;
 
   if (!I.Children.Functions.empty()) {
     json::Value PubFunctionsArray = Array();
@@ -436,6 +452,9 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
   if (I.Template)
     serializeInfo(I.Template.value(), Obj);
 
+  if (!I.Friends.empty())
+    serializeArray(I.Friends, Obj, "Friends", SerializeInfoLambda);
+
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
 
@@ -473,6 +492,23 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
 
+static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
+  SmallString<16> FileName;
+  if (I->IT == InfoType::IT_record) {
+    auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
+    if (RecordSymbolInfo->MangledName.size() < 255)
+      FileName = RecordSymbolInfo->MangledName;
+    else
+      FileName = toStringRef(toHex(RecordSymbolInfo->USR));
+  } else if (I->IT == InfoType::IT_namespace && I->Name != "")
+    // Serialize the global namespace as index.json
+    FileName = I->Name;
+  else
+    FileName = I->getFileBaseName();
+  sys::path::append(Path, FileName + ".json");
+  return FileName;
+}
+
 Error JSONGenerator::generateDocs(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
     const ClangDocContext &CDCtx) {
@@ -483,7 +519,6 @@ Error JSONGenerator::generateDocs(
 
     SmallString<128> Path;
     sys::path::native(RootDir, Path);
-    sys::path::append(Path, Info->getRelativeFilePath(""));
     if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = sys::fs::create_directories(Path);
           Err != std::error_code())
@@ -491,7 +526,7 @@ Error JSONGenerator::generateDocs(
       CreatedDirs.insert(Path);
     }
 
-    sys::path::append(Path, Info->getFileBaseName() + ".json");
+    SmallString<16> FileName = determineFileName(Info, Path);
     FileToInfos[Path].push_back(Info);
   }
 
@@ -525,6 +560,7 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
   case InfoType::IT_function:
   case InfoType::IT_typedef:
   case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   case InfoType::IT_default:
     return createStringError(inconvertibleErrorCode(), "unexpected info type");

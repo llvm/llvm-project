@@ -13,6 +13,7 @@
 
 #include "OffloadImpl.hpp"
 #include "Helpers.hpp"
+#include "OffloadPrint.hpp"
 #include "PluginManager.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <OffloadAPI.h>
@@ -83,7 +84,17 @@ struct ol_program_impl_t {
         DeviceImage(DeviceImage) {}
   plugin::DeviceImageTy *Image;
   std::unique_ptr<llvm::MemoryBuffer> ImageData;
+  std::vector<std::unique_ptr<ol_symbol_impl_t>> Symbols;
   __tgt_device_image DeviceImage;
+};
+
+struct ol_symbol_impl_t {
+  ol_symbol_impl_t(GenericKernelTy *Kernel)
+      : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL) {}
+  ol_symbol_impl_t(GlobalTy &&Global)
+      : PluginImpl(Global), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE) {}
+  std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
+  ol_symbol_kind_t Kind;
 };
 
 namespace llvm {
@@ -96,7 +107,10 @@ struct AllocInfo {
 
 // Global shared state for liboffload
 struct OffloadContext;
-static OffloadContext *OffloadContextVal;
+// This pointer is non-null if and only if the context is valid and fully
+// initialized
+static std::atomic<OffloadContext *> OffloadContextVal;
+std::mutex OffloadContextValMutex;
 struct OffloadContext {
   OffloadContext(OffloadContext &) = delete;
   OffloadContext(OffloadContext &&) = delete;
@@ -107,6 +121,7 @@ struct OffloadContext {
   bool ValidationEnabled = true;
   DenseMap<void *, AllocInfo> AllocInfoMap{};
   SmallVector<ol_platform_impl_t, 4> Platforms{};
+  size_t RefCount;
 
   ol_device_handle_t HostDevice() {
     // The host platform is always inserted last
@@ -145,20 +160,18 @@ constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
 #include "Shared/Targets.def"
 
-Error initPlugins() {
-  auto *Context = new OffloadContext{};
-
+Error initPlugins(OffloadContext &Context) {
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    Context->Platforms.emplace_back(ol_platform_impl_t{                        \
+    Context.Platforms.emplace_back(ol_platform_impl_t{                         \
         std::unique_ptr<GenericPluginTy>(createPlugin_##Name()),               \
         pluginNameToBackend(#Name)});                                          \
   } while (false);
 #include "Shared/Targets.def"
 
   // Preemptively initialize all devices in the plugin
-  for (auto &Platform : Context->Platforms) {
+  for (auto &Platform : Context.Platforms) {
     // Do not use the host plugin - it isn't supported.
     if (Platform.BackendType == OL_PLATFORM_BACKEND_UNKNOWN)
       continue;
@@ -178,52 +191,76 @@ Error initPlugins() {
   }
 
   // Add the special host device
-  auto &HostPlatform = Context->Platforms.emplace_back(
+  auto &HostPlatform = Context.Platforms.emplace_back(
       ol_platform_impl_t{nullptr, OL_PLATFORM_BACKEND_HOST});
   HostPlatform.Devices.emplace_back(-1, nullptr, nullptr, InfoTreeNode{});
-  Context->HostDevice()->Platform = &HostPlatform;
+  Context.HostDevice()->Platform = &HostPlatform;
 
-  Context->TracingEnabled = std::getenv("OFFLOAD_TRACE");
-  Context->ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
-
-  OffloadContextVal = Context;
+  Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
+  Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
 
   return Plugin::success();
 }
 
-// TODO: We can properly reference count here and manage the resources in a more
-// clever way
 Error olInit_impl() {
-  static std::once_flag InitFlag;
-  std::optional<Error> InitResult{};
-  std::call_once(InitFlag, [&] { InitResult = initPlugins(); });
+  std::lock_guard<std::mutex> Lock{OffloadContextValMutex};
 
-  if (InitResult)
-    return std::move(*InitResult);
-  return Error::success();
+  if (isOffloadInitialized()) {
+    OffloadContext::get().RefCount++;
+    return Plugin::success();
+  }
+
+  // Use a temporary to ensure that entry points querying OffloadContextVal do
+  // not get a partially initialized context
+  auto *NewContext = new OffloadContext{};
+  Error InitResult = initPlugins(*NewContext);
+  OffloadContextVal.store(NewContext);
+  OffloadContext::get().RefCount++;
+
+  return InitResult;
 }
-Error olShutDown_impl() { return Error::success(); }
+
+Error olShutDown_impl() {
+  std::lock_guard<std::mutex> Lock{OffloadContextValMutex};
+
+  if (--OffloadContext::get().RefCount != 0)
+    return Error::success();
+
+  llvm::Error Result = Error::success();
+  auto *OldContext = OffloadContextVal.exchange(nullptr);
+
+  for (auto &P : OldContext->Platforms) {
+    // Host plugin is nullptr and has no deinit
+    if (!P.Plugin || !P.Plugin->is_initialized())
+      continue;
+
+    if (auto Res = P.Plugin->deinit())
+      Result = llvm::joinErrors(std::move(Result), std::move(Res));
+  }
+
+  delete OldContext;
+  return Result;
+}
 
 Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
                                   ol_platform_info_t PropName, size_t PropSize,
                                   void *PropValue, size_t *PropSizeRet) {
-  ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
   bool IsHost = Platform->BackendType == OL_PLATFORM_BACKEND_HOST;
 
   switch (PropName) {
   case OL_PLATFORM_INFO_NAME:
-    return ReturnValue(IsHost ? "Host" : Platform->Plugin->getName());
+    return Info.writeString(IsHost ? "Host" : Platform->Plugin->getName());
   case OL_PLATFORM_INFO_VENDOR_NAME:
     // TODO: Implement this
-    return ReturnValue("Unknown platform vendor");
+    return Info.writeString("Unknown platform vendor");
   case OL_PLATFORM_INFO_VERSION: {
-    return ReturnValue(formatv("v{0}.{1}.{2}", OL_VERSION_MAJOR,
-                               OL_VERSION_MINOR, OL_VERSION_PATCH)
-                           .str()
-                           .c_str());
+    return Info.writeString(formatv("v{0}.{1}.{2}", OL_VERSION_MAJOR,
+                                    OL_VERSION_MINOR, OL_VERSION_PATCH)
+                                .str());
   }
   case OL_PLATFORM_INFO_BACKEND: {
-    return ReturnValue(Platform->BackendType);
+    return Info.write<ol_platform_backend_t>(Platform->BackendType);
   }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
@@ -250,36 +287,108 @@ Error olGetPlatformInfoSize_impl(ol_platform_handle_t Platform,
 Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                                 ol_device_info_t PropName, size_t PropSize,
                                 void *PropValue, size_t *PropSizeRet) {
+  assert(Device != OffloadContext::get().HostDevice());
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
 
-  ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
+  auto makeError = [&](ErrorCode Code, StringRef Err) {
+    std::string ErrBuffer;
+    llvm::raw_string_ostream(ErrBuffer) << PropName << ": " << Err;
+    return Plugin::error(ErrorCode::UNIMPLEMENTED, ErrBuffer.c_str());
+  };
 
   // Find the info if it exists under any of the given names
-  auto GetInfoString = [&](std::vector<std::string> Names) {
-    if (Device == OffloadContext::get().HostDevice())
-      return "Host";
-
-    for (auto Name : Names) {
-      if (auto Entry = Device->Info.get(Name))
+  auto getInfoString =
+      [&](std::vector<std::string> Names) -> llvm::Expected<const char *> {
+    for (auto &Name : Names) {
+      if (auto Entry = Device->Info.get(Name)) {
+        if (!std::holds_alternative<std::string>((*Entry)->Value))
+          return makeError(ErrorCode::BACKEND_FAILURE,
+                           "plugin returned incorrect type");
         return std::get<std::string>((*Entry)->Value).c_str();
+      }
     }
 
-    return "";
+    return makeError(ErrorCode::UNIMPLEMENTED,
+                     "plugin did not provide a response for this information");
+  };
+
+  auto getInfoXyz =
+      [&](std::vector<std::string> Names) -> llvm::Expected<ol_dimensions_t> {
+    for (auto &Name : Names) {
+      if (auto Entry = Device->Info.get(Name)) {
+        auto Node = *Entry;
+        ol_dimensions_t Out{0, 0, 0};
+
+        auto getField = [&](StringRef Name, uint32_t &Dest) {
+          if (auto F = Node->get(Name)) {
+            if (!std::holds_alternative<size_t>((*F)->Value))
+              return makeError(
+                  ErrorCode::BACKEND_FAILURE,
+                  "plugin returned incorrect type for dimensions element");
+            Dest = std::get<size_t>((*F)->Value);
+          } else
+            return makeError(ErrorCode::BACKEND_FAILURE,
+                             "plugin didn't provide all values for dimensions");
+          return Plugin::success();
+        };
+
+        if (auto Res = getField("x", Out.x))
+          return Res;
+        if (auto Res = getField("y", Out.y))
+          return Res;
+        if (auto Res = getField("z", Out.z))
+          return Res;
+
+        return Out;
+      }
+    }
+
+    return makeError(ErrorCode::UNIMPLEMENTED,
+                     "plugin did not provide a response for this information");
   };
 
   switch (PropName) {
   case OL_DEVICE_INFO_PLATFORM:
-    return ReturnValue(Device->Platform);
+    return Info.write<void *>(Device->Platform);
   case OL_DEVICE_INFO_TYPE:
-    return Device == OffloadContext::get().HostDevice()
-               ? ReturnValue(OL_DEVICE_TYPE_HOST)
-               : ReturnValue(OL_DEVICE_TYPE_GPU);
+    return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_GPU);
   case OL_DEVICE_INFO_NAME:
-    return ReturnValue(GetInfoString({"Device Name"}));
+    return Info.writeString(getInfoString({"Device Name"}));
   case OL_DEVICE_INFO_VENDOR:
-    return ReturnValue(GetInfoString({"Vendor Name"}));
+    return Info.writeString(getInfoString({"Vendor Name"}));
   case OL_DEVICE_INFO_DRIVER_VERSION:
-    return ReturnValue(
-        GetInfoString({"CUDA Driver Version", "HSA Runtime Version"}));
+    return Info.writeString(
+        getInfoString({"CUDA Driver Version", "HSA Runtime Version"}));
+  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
+    return Info.write(getInfoXyz({"Workgroup Max Size per Dimension" /*AMD*/,
+                                  "Maximum Block Dimensions" /*CUDA*/}));
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "getDeviceInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
+                                    ol_device_info_t PropName, size_t PropSize,
+                                    void *PropValue, size_t *PropSizeRet) {
+  assert(Device == OffloadContext::get().HostDevice());
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_DEVICE_INFO_PLATFORM:
+    return Info.write<void *>(Device->Platform);
+  case OL_DEVICE_INFO_TYPE:
+    return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_HOST);
+  case OL_DEVICE_INFO_NAME:
+    return Info.writeString("Virtual Host Device");
+  case OL_DEVICE_INFO_VENDOR:
+    return Info.writeString("Liboffload");
+  case OL_DEVICE_INFO_DRIVER_VERSION:
+    return Info.writeString(LLVM_VERSION_STRING);
+  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
+    return Info.write<ol_dimensions_t>(ol_dimensions_t{1, 1, 1});
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
@@ -290,12 +399,18 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
 Error olGetDeviceInfo_impl(ol_device_handle_t Device, ol_device_info_t PropName,
                            size_t PropSize, void *PropValue) {
+  if (Device == OffloadContext::get().HostDevice())
+    return olGetDeviceInfoImplDetailHost(Device, PropName, PropSize, PropValue,
+                                         nullptr);
   return olGetDeviceInfoImplDetail(Device, PropName, PropSize, PropValue,
                                    nullptr);
 }
 
 Error olGetDeviceInfoSize_impl(ol_device_handle_t Device,
                                ol_device_info_t PropName, size_t *PropSizeRet) {
+  if (Device == OffloadContext::get().HostDevice())
+    return olGetDeviceInfoImplDetailHost(Device, PropName, 0, nullptr,
+                                         PropSizeRet);
   return olGetDeviceInfoImplDetail(Device, PropName, 0, nullptr, PropSizeRet);
 }
 
@@ -382,6 +497,33 @@ Error olWaitQueue_impl(ol_queue_handle_t Queue) {
   return Error::success();
 }
 
+Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
+                               ol_queue_info_t PropName, size_t PropSize,
+                               void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_QUEUE_INFO_DEVICE:
+    return Info.write<ol_device_handle_t>(Queue->Device);
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetQueueInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetQueueInfo_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
+                          size_t PropSize, void *PropValue) {
+  return olGetQueueInfoImplDetail(Queue, PropName, PropSize, PropValue,
+                                  nullptr);
+}
+
+Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
+                              size_t *PropSizeRet) {
+  return olGetQueueInfoImplDetail(Queue, PropName, 0, nullptr, PropSizeRet);
+}
+
 Error olWaitEvent_impl(ol_event_handle_t Event) {
   if (auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo))
     return Res;
@@ -394,6 +536,34 @@ Error olDestroyEvent_impl(ol_event_handle_t Event) {
     return Res;
 
   return olDestroy(Event);
+}
+
+Error olGetEventInfoImplDetail(ol_event_handle_t Event,
+                               ol_event_info_t PropName, size_t PropSize,
+                               void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_EVENT_INFO_QUEUE:
+    return Info.write<ol_queue_handle_t>(Event->Queue);
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetEventInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetEventInfo_impl(ol_event_handle_t Event, ol_event_info_t PropName,
+                          size_t PropSize, void *PropValue) {
+
+  return olGetEventInfoImplDetail(Event, PropName, PropSize, PropValue,
+                                  nullptr);
+}
+
+Error olGetEventInfoSize_impl(ol_event_handle_t Event, ol_event_info_t PropName,
+                              size_t *PropSizeRet) {
+  return olGetEventInfoImplDetail(Event, PropName, 0, nullptr, PropSizeRet);
 }
 
 ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
@@ -492,24 +662,8 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
   return olDestroy(Program);
 }
 
-Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
-                       ol_kernel_handle_t *Kernel) {
-
-  auto &Device = Program->Image->getDevice();
-  auto KernelImpl = Device.constructKernel(KernelName);
-  if (!KernelImpl)
-    return KernelImpl.takeError();
-
-  if (auto Err = KernelImpl->init(Device, *Program->Image))
-    return Err;
-
-  *Kernel = &*KernelImpl;
-
-  return Error::success();
-}
-
 Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
-                          ol_kernel_handle_t Kernel, const void *ArgumentsData,
+                          ol_symbol_handle_t Kernel, const void *ArgumentsData,
                           size_t ArgumentsSize,
                           const ol_kernel_launch_size_args_t *LaunchSizeArgs,
                           ol_event_handle_t *EventOut) {
@@ -519,6 +673,10 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
         ErrorCode::INVALID_DEVICE,
         "device specified does not match the device of the given queue");
   }
+
+  if (Kernel->Kind != OL_SYMBOL_KIND_KERNEL)
+    return createOffloadError(ErrorCode::SYMBOL_KIND,
+                              "provided symbol is not a kernel");
 
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
@@ -538,7 +696,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   // Don't do anything with pointer indirection; use arg data as-is
   LaunchArgs.Flags.IsCUDA = true;
 
-  auto *KernelImpl = reinterpret_cast<GenericKernelTy *>(Kernel);
+  auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
   auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
                                 LaunchArgs, AsyncInfoWrapper);
 
@@ -550,6 +708,91 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
     *EventOut = makeEvent(Queue);
 
   return Error::success();
+}
+
+Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
+                       ol_symbol_kind_t Kind, ol_symbol_handle_t *Symbol) {
+  auto &Device = Program->Image->getDevice();
+
+  switch (Kind) {
+  case OL_SYMBOL_KIND_KERNEL: {
+    auto KernelImpl = Device.constructKernel(Name);
+    if (!KernelImpl)
+      return KernelImpl.takeError();
+
+    if (auto Err = KernelImpl->init(Device, *Program->Image))
+      return Err;
+
+    *Symbol =
+        Program->Symbols
+            .emplace_back(std::make_unique<ol_symbol_impl_t>(&*KernelImpl))
+            .get();
+    return Error::success();
+  }
+  case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
+    GlobalTy GlobalObj{Name};
+    if (auto Res = Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
+            Device, *Program->Image, GlobalObj))
+      return Res;
+
+    *Symbol = Program->Symbols
+                  .emplace_back(
+                      std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj)))
+                  .get();
+
+    return Error::success();
+  }
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "getSymbol kind enum '%i' is invalid", Kind);
+  }
+}
+
+Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
+                                ol_symbol_info_t PropName, size_t PropSize,
+                                void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  auto CheckKind = [&](ol_symbol_kind_t Required) {
+    if (Symbol->Kind != Required) {
+      std::string ErrBuffer;
+      llvm::raw_string_ostream(ErrBuffer)
+          << PropName << ": Expected a symbol of Kind " << Required
+          << " but given a symbol of Kind " << Symbol->Kind;
+      return Plugin::error(ErrorCode::SYMBOL_KIND, ErrBuffer.c_str());
+    }
+    return Plugin::success();
+  };
+
+  switch (PropName) {
+  case OL_SYMBOL_INFO_KIND:
+    return Info.write<ol_symbol_kind_t>(Symbol->Kind);
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+      return Err;
+    return Info.write<void *>(std::get<GlobalTy>(Symbol->PluginImpl).getPtr());
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+      return Err;
+    return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetSymbolInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetSymbolInfo_impl(ol_symbol_handle_t Symbol, ol_symbol_info_t PropName,
+                           size_t PropSize, void *PropValue) {
+
+  return olGetSymbolInfoImplDetail(Symbol, PropName, PropSize, PropValue,
+                                   nullptr);
+}
+
+Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
+                               ol_symbol_info_t PropName, size_t *PropSizeRet) {
+  return olGetSymbolInfoImplDetail(Symbol, PropName, 0, nullptr, PropSizeRet);
 }
 
 } // namespace offload

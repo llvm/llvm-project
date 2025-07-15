@@ -42,15 +42,17 @@ Implemented Papers
 - P0767R1: Deprecate POD (`Github <https://github.com/llvm/llvm-project/issues/104013>`__)
 - P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
 - P2255R2: A type trait to detect reference binding to temporary (implemented the type traits only) (`Github <https://github.com/llvm/llvm-project/issues/105180>`__)
+- P2372R3: Fixing locale handling in chrono formatters (`Github <https://github.com/llvm/llvm-project/issues/100043>`__)
 - P2562R1: ``constexpr`` Stable Sorting (`Github <https://github.com/llvm/llvm-project/issues/105360>`__)
 - P0472R3: Put std::monostate in <utility> (`Github <https://github.com/llvm/llvm-project/issues/127874>`__)
 - P1222R4: A Standard ``flat_set`` (`Github <https://github.com/llvm/llvm-project/issues/105193>`__)
 - P2897R7: ``aligned_accessor``: An mdspan accessor expressing pointer over-alignment (`Github <https://github.com/llvm/llvm-project/issues/118372>`__)
 - P3247R2: Deprecate the notion of trivial types (`Github <https://github.com/llvm/llvm-project/issues/118387>`__)
-- P3372R3: ``constexpr`` containers and adaptors (`Github <https://github.com/llvm/llvm-project/issues/128673>`__) (Only ``constexpr flat_map`` is implemented)
+- P3372R3: ``constexpr`` containers and adaptors (`Github <https://github.com/llvm/llvm-project/issues/127876>`__) (``forward_list``, ``list``, ``priority_queue``, ``flat_map``, and ``flat_set`` are implemented)
 - P2441R2: ``views::join_with`` (`Github <https://github.com/llvm/llvm-project/issues/105185>`__)
 - P2711R1: Making multi-param constructors of ``views`` ``explicit`` (`Github <https://github.com/llvm/llvm-project/issues/105252>`__)
 - P2770R0: Stashing stashing ``iterators`` for proper flattening (`Github <https://github.com/llvm/llvm-project/issues/105250>`__)
+- P2655R3: ``common_reference_t`` of ``reference_wrapper`` Should Be a Reference Type (`Github <https://github.com/llvm/llvm-project/issues/105260>`__)
 
 Improvements and New Features
 -----------------------------
@@ -84,6 +86,8 @@ Improvements and New Features
 - The ``flat_map::insert`` and ``flat_set::insert_range`` have been optimized, resulting in a performance improvement of up
   to 10x for inserting elements into a ``flat_map`` when the input range is a ``flat_map`` or a ``zip_view``.
 
+- ``ctype::tolower`` and ``ctype::toupper`` have been optimized, resulting in a 2x performance improvement.
+
 Deprecations and Removals
 -------------------------
 
@@ -97,7 +101,7 @@ Deprecations and Removals
 - libc++ no longer adds ``constexpr`` to ``std::hash<std::vector<bool, A>>::operator()``, as the ``constexpr`` addition
   since C++20 was an unintended extension.
 
-- TODO: The non-conforming extension ``packaged_task::result_type`` has been removed in LLVM 21.
+- The non-conforming extension ``packaged_task::result_type`` has been removed in LLVM 21.
 
 Potentially breaking changes
 ----------------------------
