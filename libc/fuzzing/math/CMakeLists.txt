@@ -135,15 +135,6 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
-  atan_fuzz
-  NEED_MPFR
-  SRCS
-    atan_fuzz.cpp
-  DEPENDS
-    libc.src.math.atan
-)
-
-add_libc_fuzzer(
   tan_fuzz
   NEED_MPFR
   SRCS
@@ -159,4 +150,49 @@ add_libc_fuzzer(
     sincos_fuzz.cpp
   DEPENDS
     libc.src.math.sincos
+)
+
+add_libc_fuzzer(
+  log_fuzz
+  NEED_MPFR
+  SRCS
+    log_fuzz.cpp
+  DEPENDS
+    libc.src.math.log
+)
+
+add_libc_fuzzer(
+  log10_fuzz
+  NEED_MPFR
+  SRCS
+    log10_fuzz.cpp
+  DEPENDS
+    libc.src.math.log10
+)
+
+add_libc_fuzzer(
+  log1p_fuzz
+  NEED_MPFR
+  SRCS
+    log1p_fuzz.cpp
+  DEPENDS
+    libc.src.math.log1p
+)
+
+add_libc_fuzzer(
+  log2_fuzz
+  NEED_MPFR
+  SRCS
+    log2_fuzz.cpp
+  DEPENDS
+    libc.src.math.log2
+)
+
+add_libc_fuzzer(
+  sqrt_fuzz
+  NEED_MPFR
+  SRCS
+    sqrt_fuzz.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
 )

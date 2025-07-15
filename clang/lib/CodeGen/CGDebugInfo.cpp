@@ -799,7 +799,8 @@ void CGDebugInfo::CreateCompileUnit() {
   // Create new compile unit.
   TheCU = DBuilder.createCompileUnit(
       LangTag, CUFile, CGOpts.EmitVersionIdentMetadata ? Producer : "",
-      LO.Optimize || CGOpts.PrepareForLTO || CGOpts.PrepareForThinLTO,
+      CGOpts.OptimizationLevel != 0 || CGOpts.PrepareForLTO ||
+          CGOpts.PrepareForThinLTO,
       CGOpts.DwarfDebugFlags, RuntimeVers, CGOpts.SplitDwarfFile, EmissionKind,
       DwoId, CGOpts.SplitDwarfInlining, CGOpts.DebugInfoForProfiling,
       NameTableKind, CGOpts.DebugRangesBaseAddress, remapDIPath(Sysroot), SDK);
@@ -2284,7 +2285,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     Flags |= llvm::DINode::FlagRValueReference;
   if (!Method->isExternallyVisible())
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
-  if (CGM.getLangOpts().Optimize)
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   // In this debug mode, emit type info for a class when its constructor type
@@ -4355,7 +4356,7 @@ llvm::DISubprogram *CGDebugInfo::getFunctionFwdDeclOrStub(GlobalDecl GD,
       FD->getReturnType(), ArgTypes, FunctionProtoType::ExtProtoInfo(CC));
   if (!FD->isExternallyVisible())
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
-  if (CGM.getLangOpts().Optimize)
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   if (Stub) {
@@ -4685,7 +4686,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 
   if (Fn->hasLocalLinkage())
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
-  if (CGM.getLangOpts().Optimize)
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   llvm::DINode::DIFlags FlagsForDef = Flags | getCallSiteRelatedAttrs();
@@ -4768,7 +4769,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   unsigned LineNo = getLineNumber(Loc);
   unsigned ScopeLine = 0;
   llvm::DISubprogram::DISPFlags SPFlags = llvm::DISubprogram::SPFlagZero;
-  if (CGM.getLangOpts().Optimize)
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
@@ -5100,7 +5101,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
         // Use VarDecl's Tag, Scope and Line number.
         auto FieldAlign = getDeclAlignIfRequired(Field, CGM.getContext());
         auto *D = DBuilder.createAutoVariable(
-            Scope, FieldName, Unit, Line, FieldTy, CGM.getLangOpts().Optimize,
+            Scope, FieldName, Unit, Line, FieldTy,
+            CGM.getCodeGenOpts().OptimizationLevel != 0,
             Flags | llvm::DINode::FlagArtificial, FieldAlign);
 
         // Insert an llvm.dbg.declare into the current block.
@@ -5126,9 +5128,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   llvm::DILocalVariable *D = nullptr;
   if (ArgNo) {
     llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
-    D = DBuilder.createParameterVariable(Scope, Name, *ArgNo, Unit, Line, Ty,
-                                         CGM.getLangOpts().Optimize, Flags,
-                                         Annotations);
+    D = DBuilder.createParameterVariable(
+        Scope, Name, *ArgNo, Unit, Line, Ty,
+        CGM.getCodeGenOpts().OptimizationLevel != 0, Flags, Annotations);
   } else {
     // For normal local variable, we will try to find out whether 'VD' is the
     // copy parameter of coroutine.
@@ -5169,8 +5171,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
     D = RemapCoroArgToLocalVar();
     // Or we will create a new DIVariable for this Decl if D dose not exists.
     if (!D)
-      D = DBuilder.createAutoVariable(Scope, Name, Unit, Line, Ty,
-                                      CGM.getLangOpts().Optimize, Flags, Align);
+      D = DBuilder.createAutoVariable(
+          Scope, Name, Unit, Line, Ty,
+          CGM.getCodeGenOpts().OptimizationLevel != 0, Flags, Align);
   }
   // Insert an llvm.dbg.declare into the current block.
   DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(Expr),
@@ -5224,7 +5227,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
   // Create the descriptor for the variable.
   llvm::DILocalVariable *D = DBuilder.createAutoVariable(
-      Scope, Name, Unit, Line, Ty, CGM.getLangOpts().Optimize,
+      Scope, Name, Unit, Line, Ty, CGM.getCodeGenOpts().OptimizationLevel != 0,
       llvm::DINode::FlagZero, Align);
 
   if (const MemberExpr *ME = dyn_cast<MemberExpr>(BD->getBinding())) {
@@ -5322,9 +5325,10 @@ void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
   StringRef Name = D->getName();
 
   // Create the descriptor for the label.
-  auto *L = DBuilder.createLabel(
-      Scope, Name, Unit, Line, Column, /*IsArtificial=*/false,
-      /*CoroSuspendIdx=*/std::nullopt, CGM.getLangOpts().Optimize);
+  auto *L = DBuilder.createLabel(Scope, Name, Unit, Line, Column,
+                                 /*IsArtificial=*/false,
+                                 /*CoroSuspendIdx=*/std::nullopt,
+                                 CGM.getCodeGenOpts().OptimizationLevel != 0);
 
   // Insert an llvm.dbg.label into the current block.
   DBuilder.insertLabel(L,
@@ -5587,7 +5591,8 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
 
   // Create the descriptor for the parameter.
   auto *debugVar = DBuilder.createParameterVariable(
-      scope, Name, ArgNo, tunit, line, type, CGM.getLangOpts().Optimize, flags);
+      scope, Name, ArgNo, tunit, line, type,
+      CGM.getCodeGenOpts().OptimizationLevel != 0, flags);
 
   // Insert an llvm.dbg.declare into the current block.
   DBuilder.insertDeclare(Alloca, debugVar, DBuilder.createExpression(),
@@ -6362,7 +6367,7 @@ llvm::DebugLoc CGDebugInfo::SourceLocToDebugLoc(SourceLocation Loc) {
 llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {
   // Call site-related attributes are only useful in optimized programs, and
   // when there's a possibility of debugging backtraces.
-  if (!CGM.getLangOpts().Optimize ||
+  if (CGM.getCodeGenOpts().OptimizationLevel == 0 ||
       DebugKind == llvm::codegenoptions::NoDebugInfo ||
       DebugKind == llvm::codegenoptions::LocTrackingOnly)
     return llvm::DINode::FlagZero;

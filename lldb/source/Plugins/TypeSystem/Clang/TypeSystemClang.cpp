@@ -474,20 +474,6 @@ static void ParseLangArgs(LangOptions &Opts, ArchSpec arch) {
   // specified, or -std is set to a conforming mode.
   Opts.Trigraphs = !Opts.GNUMode;
   Opts.CharIsSigned = arch.CharIsSignedByDefault();
-  Opts.OptimizeSize = 0;
-
-  // FIXME: Eliminate this dependency.
-  //    unsigned Opt =
-  //    Args.hasArg(OPT_Os) ? 2 : getLastArgIntValue(Args, OPT_O, 0, Diags);
-  //    Opts.Optimize = Opt != 0;
-  unsigned Opt = 0;
-
-  // This is the __NO_INLINE__ define, which just depends on things like the
-  // optimization level and -fno-inline, not actually whether the backend has
-  // inlining enabled.
-  //
-  // FIXME: This is affected by other options (-fno-inline).
-  Opts.NoInlineDefine = !Opt;
 
   // This is needed to allocate the extra space for the owning module
   // on each decl.
