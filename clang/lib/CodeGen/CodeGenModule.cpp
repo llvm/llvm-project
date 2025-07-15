@@ -2989,7 +2989,7 @@ void CodeGenModule::SetInternalFunctionAttributes(GlobalDecl GD,
 }
 
 static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND,
-                            VersionTuple EnclosingVersion = VersionTuple()) {
+                            VersionTuple EnclosingVersion) {
   // Set linkage and visibility in case we never see a definition.
   LinkageInfo LV = ND->getLinkageAndVisibility();
   // Don't set internal linkage on declarations.
@@ -5284,7 +5284,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
 
     GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
 
-    setLinkageForGV(GV, D);
+    setLinkageForGV(GV, D, Target.getPlatformMinVersion());
 
     if (D->getTLSKind()) {
       if (D->getTLSKind() == VarDecl::TLS_Dynamic)
