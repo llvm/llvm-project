@@ -119,9 +119,9 @@ public:
   ~Value();
 
   void printType(llvm::raw_ostream &Out) const;
-  void printData(llvm::raw_ostream &Out);
-  void print(llvm::raw_ostream &Out);
-  void dump();
+  void printData(llvm::raw_ostream &Out) const;
+  void print(llvm::raw_ostream &Out) const;
+  void dump() const;
   void clear();
 
   ASTContext &getASTContext();

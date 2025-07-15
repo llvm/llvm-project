@@ -180,14 +180,15 @@ static std::string CharPtrToString(const char *Ptr) {
 namespace clang {
 
 struct ValueRef : public Value {
-  ValueRef(Interpreter *In, void *Ty) : Value(In, Ty) {
+  ValueRef(const Interpreter *In, void *Ty)
+      : Value(const_cast<Interpreter *>(In), Ty) {
     // Tell the base class to not try to deallocate if it manages the value.
     IsManuallyAlloc = false;
   }
   void setData(long double D) { Data.m_LongDouble = D; }
 };
 
-std::string Interpreter::ValueDataToString(const Value &V) {
+std::string Interpreter::ValueDataToString(const Value &V) const {
   Sema &S = getCompilerInstance()->getSema();
   ASTContext &Ctx = S.getASTContext();
 

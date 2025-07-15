@@ -197,7 +197,7 @@ private:
   /// @name Value and pretty printing support
   /// @{
 
-  std::string ValueDataToString(const Value &V);
+  std::string ValueDataToString(const Value &V) const;
   std::string ValueTypeToString(const Value &V) const;
 
   llvm::Expected<Expr *> convertExprToValue(Expr *E);
