@@ -23,6 +23,31 @@ include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
+// V5.2: [6.3] `align` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_AlignClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$align
+  );
+
+  let optAssemblyFormat = [{
+    `align` `(` $align `)`
+  }];
+
+  let description = [{
+    The `align` clause is used to specify the byte alignment to use for
+    allocations associated with the construct on which the clause appears.
+  }];
+}
+
+def OpenMP_AlignClause : OpenMP_AlignClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [5.11] `aligned` clause
 //===----------------------------------------------------------------------===//
 
@@ -83,6 +108,32 @@ class OpenMP_AllocateClauseSkip<
 }
 
 def OpenMP_AllocateClause : OpenMP_AllocateClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [6.4] `allocator` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_AllocatorClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+
+  let arguments = (ins
+    OptionalAttr<AllocatorHandleAttr>:$allocator
+  );
+
+  let optAssemblyFormat = [{
+    `allocator` `(` custom<ClauseAttr>($allocator) `)`
+  }];
+
+  let description = [{
+    `allocator` specifies the memory allocator to be used for allocations
+    associated with the construct on which the clause appears.
+  }];
+}
+
+def OpenMP_AllocatorClause : OpenMP_AllocatorClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // LLVM OpenMP extension `ompx_bare` clause

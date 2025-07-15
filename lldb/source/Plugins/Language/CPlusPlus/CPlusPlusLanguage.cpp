@@ -1507,10 +1507,6 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "^std::((__debug::)?|(__cxx11::)?)list<.+>(( )?&)?$",
                 stl_summary_flags, true);
 
-  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
-                "libstdc++ std::tuple summary provider",
-                "^std::tuple<.*>(( )?&)?$", stl_summary_flags, true);
-
   cpp_category_sp->AddTypeSummary(
       "^std::((__debug::)?|(__cxx11::)?)forward_list<.+>(( )?&)?$",
       eFormatterMatchRegex,
@@ -1539,11 +1535,6 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp,
       lldb_private::formatters::LibStdcppUniquePtrSyntheticFrontEndCreator,
       "std::unique_ptr synthetic children", "^std::unique_ptr<.+>(( )?&)?$",
-      stl_synth_flags, true);
-  AddCXXSynthetic(
-      cpp_category_sp,
-      lldb_private::formatters::LibStdcppTupleSyntheticFrontEndCreator,
-      "std::tuple synthetic children", "^std::tuple<.*>(( )?&)?$",
       stl_synth_flags, true);
 
   static constexpr const char *const libstdcpp_std_coroutine_handle_regex =
@@ -1613,6 +1604,17 @@ static bool GenericUniquePtrSummaryProvider(ValueObject &valobj, Stream &stream,
   return LibStdcppUniquePointerSummaryProvider(valobj, stream, options);
 }
 
+static SyntheticChildrenFrontEnd *
+GenericTupleSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                     lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlTuple(*valobj_sp))
+    return MsvcStlTupleSyntheticFrontEndCreator(children, valobj_sp);
+  return LibStdcppTupleSyntheticFrontEndCreator(children, valobj_sp);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -1668,6 +1670,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(cpp_category_sp, GenericUniquePtrSyntheticFrontEndCreator,
                   "std::unique_ptr synthetic children",
                   "^std::unique_ptr<.+>(( )?&)?$", stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericTupleSyntheticFrontEndCreator,
+                  "std::tuple synthetic children", "^std::tuple<.*>(( )?&)?$",
+                  stl_synth_flags, true);
 
   AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::shared_ptr summary provider",
@@ -1678,6 +1683,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, GenericUniquePtrSummaryProvider,
                 "MSVC STL/libstdc++ std::unique_ptr summary provider",
                 "^std::unique_ptr<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "MSVC STL/libstdc++ std::tuple summary provider",
+                "^std::tuple<.*>(( )?&)?$", stl_summary_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
