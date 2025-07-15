@@ -7,12 +7,12 @@ define void @fcmp_oeq(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp oeq float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp oeq <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp oeq <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp oeq <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp oeq <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp oeq double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp oeq <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp oeq <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp oeq <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp oeq fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp oeq <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp oeq <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp oeq float undef, undef
@@ -32,8 +32,8 @@ define void @fcmp_oeq_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp oeq half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp oeq <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp oeq <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp oeq <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp oeq <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp oeq <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp oeq <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_oeq_half'
@@ -41,7 +41,7 @@ define void @fcmp_oeq_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp oeq <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp oeq <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp oeq <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp oeq <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp oeq <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp oeq half undef, undef
@@ -57,8 +57,8 @@ define void @fcmp_oeq_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp oeq bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp oeq <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp oeq <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp oeq <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp oeq <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp oeq <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp oeq <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp oeq bfloat undef, undef
@@ -74,12 +74,12 @@ define void @fcmp_ogt(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp ogt float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp ogt <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp ogt <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp ogt <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp ogt <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp ogt double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp ogt <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp ogt <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp ogt <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp ogt fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp ogt <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp ogt <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp ogt float undef, undef
@@ -99,8 +99,8 @@ define void @fcmp_ogt_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp ogt half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp ogt <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp ogt <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp ogt <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp ogt <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp ogt <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp ogt <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_ogt_half'
@@ -108,7 +108,7 @@ define void @fcmp_ogt_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp ogt <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp ogt <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp ogt <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp ogt <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp ogt <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp ogt half undef, undef
@@ -124,8 +124,8 @@ define void @fcmp_ogt_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp ogt bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp ogt <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp ogt <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp ogt <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp ogt <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp ogt <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp ogt <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp ogt bfloat undef, undef
@@ -141,12 +141,12 @@ define void @fcmp_oge(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp oge float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp oge <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp oge <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp oge <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp oge <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp oge double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp oge <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp oge <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp oge <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp oge fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp oge <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp oge <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp oge float undef, undef
@@ -166,8 +166,8 @@ define void @fcmp_oge_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp oge half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp oge <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp oge <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp oge <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp oge <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp oge <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp oge <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_oge_half'
@@ -175,7 +175,7 @@ define void @fcmp_oge_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp oge <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp oge <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp oge <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp oge <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp oge <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp oge half undef, undef
@@ -191,8 +191,8 @@ define void @fcmp_oge_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp oge bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp oge <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp oge <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp oge <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp oge <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp oge <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp oge <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp oge bfloat undef, undef
@@ -208,12 +208,12 @@ define void @fcmp_olt(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp olt float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp olt <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp olt <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp olt <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp olt <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp olt double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp olt <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp olt <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp olt <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp olt fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp olt <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp olt <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp olt float undef, undef
@@ -233,8 +233,8 @@ define void @fcmp_olt_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp olt half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp olt <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp olt <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp olt <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp olt <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp olt <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp olt <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_olt_half'
@@ -242,7 +242,7 @@ define void @fcmp_olt_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp olt <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp olt <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp olt <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp olt <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp olt <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp olt half undef, undef
@@ -258,8 +258,8 @@ define void @fcmp_olt_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp olt bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp olt <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp olt <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp olt <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp olt <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp olt <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp olt <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp olt bfloat undef, undef
@@ -275,12 +275,12 @@ define void @fcmp_ole(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp ole float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp ole <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp ole <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp ole <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp ole <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp ole double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp ole <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp ole <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp ole <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp ole fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp ole <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp ole <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp ole float undef, undef
@@ -300,8 +300,8 @@ define void @fcmp_ole_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp ole half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp ole <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp ole <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp ole <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp ole <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp ole <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp ole <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_ole_half'
@@ -309,7 +309,7 @@ define void @fcmp_ole_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp ole <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp ole <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp ole <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp ole <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp ole <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp ole half undef, undef
@@ -325,8 +325,8 @@ define void @fcmp_ole_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp ole bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp ole <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp ole <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp ole <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp ole <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp ole <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp ole <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp ole bfloat undef, undef
@@ -342,12 +342,12 @@ define void @fcmp_one(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp one float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp one <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp one <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp one <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp one <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp one double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp one <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp one <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp one <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp one fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp one <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp one <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp one float undef, undef
@@ -367,8 +367,8 @@ define void @fcmp_one_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp one half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp one <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp one <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp one <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp one <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp one <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp one <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_one_half'
@@ -376,7 +376,7 @@ define void @fcmp_one_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp one <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp one <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp one <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp one <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp one <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp one half undef, undef
@@ -392,8 +392,8 @@ define void @fcmp_one_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp one bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp one <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp one <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp one <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp one <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp one <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp one <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp one bfloat undef, undef
@@ -409,12 +409,12 @@ define void @fcmp_ord(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp ord float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp ord <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp ord <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp ord <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp ord <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp ord double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp ord <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp ord <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp ord <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp ord fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp ord <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp ord <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp ord float undef, undef
@@ -434,8 +434,8 @@ define void @fcmp_ord_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp ord half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp ord <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp ord <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp ord <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp ord <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp ord <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp ord <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_ord_half'
@@ -443,7 +443,7 @@ define void @fcmp_ord_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp ord <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp ord <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp ord <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp ord <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp ord <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp ord half undef, undef
@@ -459,8 +459,8 @@ define void @fcmp_ord_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp ord bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp ord <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp ord <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp ord <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp ord <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp ord <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp ord <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp ord bfloat undef, undef
@@ -476,12 +476,12 @@ define void @fcmp_ueq(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp ueq float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp ueq <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp ueq <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp ueq <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp ueq <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp ueq double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp ueq <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp ueq <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp ueq <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp ueq fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp ueq <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp ueq <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp ueq float undef, undef
@@ -501,8 +501,8 @@ define void @fcmp_ueq_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp ueq half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp ueq <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp ueq <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp ueq <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp ueq <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp ueq <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp ueq <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_ueq_half'
@@ -510,7 +510,7 @@ define void @fcmp_ueq_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp ueq <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp ueq <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp ueq <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp ueq <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp ueq <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp ueq half undef, undef
@@ -526,8 +526,8 @@ define void @fcmp_ueq_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp ueq bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp ueq <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp ueq <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp ueq <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp ueq <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp ueq <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp ueq <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp ueq bfloat undef, undef
@@ -543,12 +543,12 @@ define void @fcmp_ugt(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp ugt float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp ugt <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp ugt <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp ugt <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp ugt <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp ugt double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp ugt <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp ugt <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp ugt <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp ugt fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp ugt <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp ugt <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp ugt float undef, undef
@@ -568,8 +568,8 @@ define void @fcmp_ugt_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp ugt half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp ugt <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp ugt <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp ugt <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp ugt <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp ugt <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp ugt <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_ugt_half'
@@ -577,7 +577,7 @@ define void @fcmp_ugt_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp ugt <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp ugt <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp ugt <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp ugt <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp ugt <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp ugt half undef, undef
@@ -593,8 +593,8 @@ define void @fcmp_ugt_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp ugt bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp ugt <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp ugt <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp ugt <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp ugt <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp ugt <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp ugt <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp ugt bfloat undef, undef
@@ -610,12 +610,12 @@ define void @fcmp_uge(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp uge float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp uge <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp uge <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp uge <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp uge <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp uge double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp uge <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp uge <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp uge <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp uge fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp uge <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp uge <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp uge float undef, undef
@@ -635,8 +635,8 @@ define void @fcmp_uge_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp uge half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp uge <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp uge <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp uge <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp uge <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp uge <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp uge <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_uge_half'
@@ -644,7 +644,7 @@ define void @fcmp_uge_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp uge <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp uge <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp uge <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp uge <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp uge <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp uge half undef, undef
@@ -660,8 +660,8 @@ define void @fcmp_uge_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp uge bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp uge <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp uge <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp uge <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp uge <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp uge <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp uge <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp uge bfloat undef, undef
@@ -677,12 +677,12 @@ define void @fcmp_ult(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp ult float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp ult <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp ult <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp ult <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp ult <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp ult double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp ult <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp ult <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp ult <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp ult fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp ult <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp ult <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp ult float undef, undef
@@ -702,8 +702,8 @@ define void @fcmp_ult_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp ult half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp ult <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp ult <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp ult <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp ult <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp ult <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp ult <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_ult_half'
@@ -711,7 +711,7 @@ define void @fcmp_ult_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp ult <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp ult <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp ult <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp ult <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp ult <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp ult half undef, undef
@@ -727,8 +727,8 @@ define void @fcmp_ult_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp ult bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp ult <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp ult <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp ult <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp ult <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp ult <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp ult <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp ult bfloat undef, undef
@@ -744,12 +744,12 @@ define void @fcmp_ule(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp ule float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp ule <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp ule <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp ule <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp ule <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp ule double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp ule <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp ule <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp ule <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp ule fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp ule <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp ule <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp ule float undef, undef
@@ -769,8 +769,8 @@ define void @fcmp_ule_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp ule half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp ule <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp ule <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp ule <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp ule <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp ule <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp ule <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_ule_half'
@@ -778,7 +778,7 @@ define void @fcmp_ule_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp ule <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp ule <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp ule <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp ule <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp ule <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp ule half undef, undef
@@ -794,8 +794,8 @@ define void @fcmp_ule_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp ule bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp ule <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp ule <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp ule <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp ule <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp ule <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp ule <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp ule bfloat undef, undef
@@ -811,12 +811,12 @@ define void @fcmp_une(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp une float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp une <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp une <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp une <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp une <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp une double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp une <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp une <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp une <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp une fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp une <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp une <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp une float undef, undef
@@ -836,8 +836,8 @@ define void @fcmp_une_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp une half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp une <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp une <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp une <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp une <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp une <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp une <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_une_half'
@@ -845,7 +845,7 @@ define void @fcmp_une_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp une <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp une <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp une <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp une <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp une <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp une half undef, undef
@@ -861,8 +861,8 @@ define void @fcmp_une_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp une bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp une <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp une <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp une <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp une <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp une <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp une <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp une bfloat undef, undef
@@ -878,12 +878,12 @@ define void @fcmp_uno(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp uno float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp uno <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp uno <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp uno <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp uno <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp uno double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp uno <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp uno <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp uno <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp uno fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp uno <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp uno <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp uno float undef, undef
@@ -903,8 +903,8 @@ define void @fcmp_uno_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp uno half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp uno <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp uno <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp uno <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp uno <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp uno <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp uno <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_uno_half'
@@ -912,7 +912,7 @@ define void @fcmp_uno_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp uno <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp uno <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp uno <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp uno <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp uno <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp uno half undef, undef
@@ -928,8 +928,8 @@ define void @fcmp_uno_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp uno bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp uno <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp uno <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp uno <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp uno <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp uno <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp uno <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp uno bfloat undef, undef
@@ -945,12 +945,12 @@ define void @fcmp_true(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp true float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp true <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp true <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp true <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp true <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp true double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp true <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp true <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp true <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp true fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp true <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp true <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp true float undef, undef
@@ -970,8 +970,8 @@ define void @fcmp_true_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp true half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp true <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp true <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp true <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp true <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp true <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp true <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_true_half'
@@ -979,7 +979,7 @@ define void @fcmp_true_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp true <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp true <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp true <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp true <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp true <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp true half undef, undef
@@ -995,8 +995,8 @@ define void @fcmp_true_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp true bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp true <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp true <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp true <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp true <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp true <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp true <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp true bfloat undef, undef
@@ -1012,12 +1012,12 @@ define void @fcmp_false(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f32 = fcmp false float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = fcmp false <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = fcmp false <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8f32 = fcmp false <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = fcmp false <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f64 = fcmp false double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = fcmp false <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4f64 = fcmp false <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = fcmp false <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f128 = fcmp false fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2f128 = fcmp false <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f128 = fcmp false <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f32 = fcmp false float undef, undef
@@ -1037,8 +1037,8 @@ define void @fcmp_false_half(i32 %arg) {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %f16 = fcmp false half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 3 for: %v2f16 = fcmp false <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %v4f16 = fcmp false <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8f16 = fcmp false <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16f16 = fcmp false <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8f16 = fcmp false <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16f16 = fcmp false <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fcmp_false_half'
@@ -1046,7 +1046,7 @@ define void @fcmp_false_half(i32 %arg) {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = fcmp false <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = fcmp false <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = fcmp false <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v16f16 = fcmp false <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = fcmp false <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %f16 = fcmp false half undef, undef
@@ -1062,8 +1062,8 @@ define void @fcmp_false_bfloat(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bf16 = fcmp false bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %v2bf16 = fcmp false <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4bf16 = fcmp false <4 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:4 SizeLat:4 for: %v8bf16 = fcmp false <8 x bfloat> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %v16bf16 = fcmp false <16 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %v8bf16 = fcmp false <8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:7 SizeLat:7 for: %v16bf16 = fcmp false <16 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %bf16 = fcmp false bfloat undef, undef

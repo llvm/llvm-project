@@ -337,10 +337,6 @@ public:
     /// http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055a/IHI0055A_aapcs64.pdf
     AArch64ABIBuiltinVaList,
 
-    /// __builtin_va_list as defined by the PNaCl ABI:
-    /// http://www.chromium.org/nativeclient/pnacl/bitcode-abi#TOC-Machine-Types
-    PNaClABIBuiltinVaList,
-
     /// __builtin_va_list as defined by the Power ABI:
     /// https://www.power.org
     ///        /resources/downloads/Power-Arch-32-bit-ABI-supp-1.0-Embedded.pdf
