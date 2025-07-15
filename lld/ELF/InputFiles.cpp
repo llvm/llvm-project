@@ -573,9 +573,6 @@ handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
   }
 }
 
-template <typename ELFT>
-static void readGnuProperty(Ctx &, const InputSection &, ObjFile<ELFT> &);
-
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   object::ELFFile<ELFT> obj = this->getObj();
   // Read a section table. justSymbols is usually false.
