@@ -593,11 +593,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   CodeGenOpts.CodeModel = TargetOpts.CodeModel;
   CodeGenOpts.LargeDataThreshold = TargetOpts.LargeDataThreshold;
 
-  if (LangOpts.getExceptionHandling() !=
-          LangOptions::ExceptionHandlingKind::None &&
+  if (CodeGenOpts.getExceptionHandling() !=
+          CodeGenOptions::ExceptionHandlingKind::None &&
       T.isWindowsMSVCEnvironment())
     Diags.Report(diag::err_fe_invalid_exception_model)
-        << static_cast<unsigned>(LangOpts.getExceptionHandling()) << T.str();
+        << static_cast<unsigned>(CodeGenOpts.getExceptionHandling()) << T.str();
 
   if (LangOpts.AppleKext && !LangOpts.CPlusPlus)
     Diags.Report(diag::warn_c_kext);
@@ -3713,23 +3713,6 @@ static StringRef GetInputKindName(InputKind IK) {
   llvm_unreachable("unknown input language");
 }
 
-static StringRef getExceptionHandlingName(unsigned EHK) {
-  switch (static_cast<LangOptions::ExceptionHandlingKind>(EHK)) {
-  case LangOptions::ExceptionHandlingKind::None:
-    return "none";
-  case LangOptions::ExceptionHandlingKind::DwarfCFI:
-    return "dwarf";
-  case LangOptions::ExceptionHandlingKind::SjLj:
-    return "sjlj";
-  case LangOptions::ExceptionHandlingKind::WinEH:
-    return "seh";
-  case LangOptions::ExceptionHandlingKind::Wasm:
-    return "wasm";
-  }
-
-  llvm_unreachable("covered switch");
-}
-
 void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                                               ArgumentConsumer Consumer,
                                               const llvm::Triple &T,
@@ -3745,10 +3728,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Consumer, OPT_pic_is_pie);
     for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
       GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
-    if (Opts.ExceptionHandling) {
-      GenerateArg(Consumer, OPT_exception_model,
-                  getExceptionHandlingName(Opts.ExceptionHandling));
-    }
 
     return;
   }
@@ -4056,24 +4035,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.PIE = Args.hasArg(OPT_pic_is_pie);
     parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                         Diags, Opts.Sanitize);
-
-    if (const Arg *A = Args.getLastArg(options::OPT_exception_model)) {
-      std::optional<LangOptions::ExceptionHandlingKind> EMValue =
-          llvm::StringSwitch<std::optional<LangOptions::ExceptionHandlingKind>>(
-              A->getValue())
-              .Case("dwarf", LangOptions::ExceptionHandlingKind::DwarfCFI)
-              .Case("sjlj", LangOptions::ExceptionHandlingKind::SjLj)
-              .Case("seh", LangOptions::ExceptionHandlingKind::WinEH)
-              .Case("wasm", LangOptions::ExceptionHandlingKind::Wasm)
-              .Case("none", LangOptions::ExceptionHandlingKind::None)
-              .Default(std::nullopt);
-      if (EMValue) {
-        Opts.ExceptionHandling = static_cast<unsigned>(*EMValue);
-      } else {
-        Diags.Report(diag::err_drv_invalid_value)
-            << A->getAsString(Args) << A->getValue();
-      }
-    }
 
     return Diags.getNumErrors() == NumErrorsBefore;
   }
