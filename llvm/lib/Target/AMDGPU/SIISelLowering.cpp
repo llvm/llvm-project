@@ -11071,6 +11071,8 @@ SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       VT.getSizeInBits() == 512)
     return splitTernaryVectorOp(Op, DAG);
 
+  assert(VT.getSizeInBits() == 64);
+
   SDLoc DL(Op);
   SDValue Cond = Op.getOperand(0);
   Cond = DAG.getFreeze(Cond);
