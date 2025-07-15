@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/RuntimeLibcalls.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 using namespace RTLIB;
