@@ -25,6 +25,7 @@ static inline bool is_in_main_file(ASTContext *context, const ForStmt *fs) {
 
 ///
 /// For a given for statement, tries to extract loop bound in the condition
+/// This function extracts literal conditions from for loop condition
 ///
 static inline std::optional<llvm::APInt>
 get_for_condition_range_value(const ForStmt *fs) {
@@ -36,6 +37,26 @@ get_for_condition_range_value(const ForStmt *fs) {
 
       if (const IntegerLiteral *IL = dyn_cast<IntegerLiteral>(RHS))
         return IL->getValue();
+    }
+  }
+
+  return std::nullopt;
+}
+
+///
+/// For a given for statement, tries to extract loop bound in the condition
+/// This function evaluates macro conditions from for loop condition
+///
+static inline std::optional<llvm::APSInt>
+get_for_condition_range_value(ASTContext *context, const ForStmt *fs) {
+
+  if (const Expr *cond = fs->getCond(); cond) {
+    if (const BinaryOperator *binOp = dyn_cast<BinaryOperator>(cond)) {
+      const Expr *rhs = binOp->getRHS();
+      clang::Expr::EvalResult eval;
+      if (rhs->EvaluateAsInt(eval, *context)) {
+        return eval.Val.getInt();
+      }
     }
   }
 
