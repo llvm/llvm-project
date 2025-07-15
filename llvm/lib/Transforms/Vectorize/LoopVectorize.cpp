@@ -8435,7 +8435,9 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
 /// exit block. The penultimate value of recurrences is fed to their LCSSA phi
 /// users in the original exit block using the VPIRInstruction wrapping to the
 /// LCSSA phi.
-static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
+static bool addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
+  using namespace llvm::VPlanPatternMatch;
+
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *ScalarPHVPBB = Plan.getScalarPreheader();
   auto *MiddleVPBB = Plan.getMiddleBlock();
@@ -8453,6 +8455,15 @@ static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
 
     assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
            "Cannot handle loops with uncountable early exits");
+
+    // TODO: Support ExtractLane of last-active-lane with first-order
+    // recurrences.
+
+    if (any_of(FOR->users(), [FOR](VPUser *U) {
+          return match(U, m_VPInstruction<VPInstruction::ExtractLane>(
+                              m_VPValue(), m_Specific(FOR)));
+        }))
+      return false;
 
     // This is the second phase of vectorizing first-order recurrences, creating
     // extract for users outside the loop. An overview of the transformation is
@@ -8528,6 +8539,7 @@ static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
       using namespace llvm::VPlanPatternMatch;
       if (!match(U, m_ExtractLastElement(m_Specific(FOR))))
         continue;
+
       // For VF vscale x 1, if vscale = 1, we are unable to extract the
       // penultimate value of the recurrence. Instead we rely on the existing
       // extract of the last element from the result of
@@ -8535,13 +8547,14 @@ static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
       // TODO: Consider vscale_range info and UF.
       if (LoopVectorizationPlanner::getDecisionAndClampRange(IsScalableOne,
                                                              Range))
-        return;
+        return true;
       VPValue *PenultimateElement = MiddleBuilder.createNaryOp(
           VPInstruction::ExtractPenultimateElement, {FOR->getBackedgeValue()},
           {}, "vector.recur.extract.for.phi");
       cast<VPInstruction>(U)->replaceAllUsesWith(PenultimateElement);
     }
   }
+  return true;
 }
 
 VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
@@ -8738,7 +8751,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     R->setOperand(1, WideIV->getStepValue());
   }
 
-  addExitUsersForFirstOrderRecurrences(*Plan, Range);
+  if (!addExitUsersForFirstOrderRecurrences(*Plan, Range))
+    return nullptr;
   DenseMap<VPValue *, VPValue *> IVEndValues;
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
 
@@ -9167,7 +9181,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_ExtractLastElement(m_VPValue())))
+      if (match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                       m_VPValue())) ||
+          match(U, m_VPInstruction<VPInstruction::ExtractLane>(m_VPValue(),
+                                                               m_VPValue())))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 
