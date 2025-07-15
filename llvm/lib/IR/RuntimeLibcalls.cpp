@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/RuntimeLibcalls.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 using namespace RTLIB;
@@ -169,12 +168,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     if (darwinHasSinCosStret(TT)) {
       setLibcallImpl(RTLIB::SINCOS_STRET_F32, RTLIB::__sincosf_stret);
       setLibcallImpl(RTLIB::SINCOS_STRET_F64, RTLIB::__sincos_stret);
-      if (TT.isWatchABI()) {
-        setLibcallImplCallingConv(RTLIB::__sincosf_stret,
-                                  CallingConv::ARM_AAPCS_VFP);
-        setLibcallImplCallingConv(RTLIB::__sincos_stret,
-                                  CallingConv::ARM_AAPCS_VFP);
-      }
     }
 
     if (darwinHasExp10(TT)) {

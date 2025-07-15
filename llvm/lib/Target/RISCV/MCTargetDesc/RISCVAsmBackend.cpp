@@ -76,12 +76,13 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_branch", 0, 32, 0},
       {"fixup_riscv_rvc_jump", 2, 11, 0},
       {"fixup_riscv_rvc_branch", 0, 16, 0},
+      {"fixup_riscv_rvc_imm", 0, 16, 0},
       {"fixup_riscv_call", 0, 64, 0},
       {"fixup_riscv_call_plt", 0, 64, 0},
 
       {"fixup_riscv_qc_e_branch", 0, 48, 0},
       {"fixup_riscv_qc_e_32", 16, 32, 0},
-      {"fixup_riscv_qc_abs20_u", 12, 20, 0},
+      {"fixup_riscv_qc_abs20_u", 0, 32, 0},
       {"fixup_riscv_qc_e_call_plt", 0, 48, 0},
 
       // Andes fixups
@@ -134,6 +135,10 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
     // For jump instructions the immediate must be in the range
     // [-1048576, 1048574]
     return Offset > 1048574 || Offset < -1048576;
+  case RISCV::fixup_riscv_rvc_imm:
+    // This fixup can never be emitted as a relocation, so always needs to be
+    // relaxed.
+    return true;
   }
 }
 
@@ -152,6 +157,18 @@ static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
     // This only relaxes one "step" - i.e. from C.J to JAL, not from C.J to
     // QC.E.J, because we can always relax again if needed.
     return RISCV::JAL;
+  case RISCV::C_LI:
+    if (!STI.hasFeature(RISCV::FeatureVendorXqcili))
+      break;
+    // We only need this because `QC.E.LI` can be compressed into a `C.LI`. This
+    // happens because the `simm6` MCOperandPredicate accepts bare symbols, and
+    // `QC.E.LI` is the only instruction that accepts bare symbols at parse-time
+    // and compresses to `C.LI`. `C.LI` does not itself accept bare symbols at
+    // parse time.
+    //
+    // If we have a bare symbol, we need to turn this back to a `QC.E.LI`, as we
+    // have no way to emit a relocation on a `C.LI` instruction.
+    return RISCV::QC_E_LI;
   case RISCV::JAL: {
     // We can only relax JAL if we have Xqcilb
     if (!STI.hasFeature(RISCV::FeatureVendorXqcilb))
@@ -237,6 +254,23 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
             Inst.getOperand(0).getReg() == RISCV::X1) &&
            "JAL only relaxable with rd=x0 or rd=x1");
     Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
+    Res.addOperand(Inst.getOperand(1));
+    break;
+  }
+  case RISCV::C_LI: {
+    // This should only be hit when trying to relax a `C.LI` into a `QC.E.LI`
+    // because the `C.LI` has a bare symbol. We cannot use
+    // `RISCVRVC::uncompress` because it will use decompression patterns. The
+    // `QC.E.LI` compression pattern to `C.LI` is compression-only (because we
+    // don't want `c.li` ever printed as `qc.e.li`, which might be done if the
+    // pattern applied to decompression), but that doesn't help much becuase
+    // `C.LI` with a bare symbol will decompress to an `ADDI` anyway (because
+    // `simm12`'s MCOperandPredicate accepts a bare symbol and that pattern
+    // comes first), and we still cannot emit an `ADDI` with a bare symbol.
+    assert(STI.hasFeature(RISCV::FeatureVendorXqcili) &&
+           "C.LI is only relaxable with Xqcili");
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
+    Res.addOperand(Inst.getOperand(0));
     Res.addOperand(Inst.getOperand(1));
     break;
   }
@@ -539,10 +573,18 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
             (Bit5 << 2);
     return Value;
   }
+  case RISCV::fixup_riscv_rvc_imm: {
+    if (!isInt<6>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    unsigned Bit5 = (Value >> 5) & 0x1;
+    unsigned Bit4_0 = Value & 0x1f;
+    Value = (Bit5 << 12) | (Bit4_0 << 2);
+    return Value;
+  }
   case RISCV::fixup_riscv_qc_e_32: {
     if (!isInt<32>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-    return ((Value & 0xffffffff) << 16);
+    return Value & 0xffffffffu;
   }
   case RISCV::fixup_riscv_qc_abs20_u: {
     if (!isInt<20>(Value))

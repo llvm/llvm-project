@@ -302,7 +302,7 @@ bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   Value *PtrOperand = GEPI.getPointerOperand();
-  Type *OrigGEPType = GEPI.getPointerOperandType();
+  Type *OrigGEPType = GEPI.getSourceElementType();
   Type *NewGEPType = OrigGEPType;
   bool NeedsTransform = false;
 
@@ -318,6 +318,11 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
       NeedsTransform = true;
     }
   }
+
+  // Scalar geps should remain scalars geps. The dxil-flatten-arrays pass will
+  // convert these scalar geps into flattened array geps
+  if (!isa<ArrayType>(OrigGEPType))
+    NewGEPType = OrigGEPType;
 
   // Note: We bail if this isn't a gep touched via alloca or global
   // transformations
