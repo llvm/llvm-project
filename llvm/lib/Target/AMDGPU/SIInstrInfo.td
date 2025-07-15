@@ -1247,6 +1247,7 @@ def op_sel_hi0 : ArrayOperand0<"op_sel_hi", "OpSelHi">;
 def neg_lo0 : ArrayOperand0<"neg_lo", "NegLo">;
 def neg_hi0 : ArrayOperand0<"neg_hi", "NegHi">;
 
+def IndexKey32bit : CustomOperand<i32, 1>;
 def IndexKey16bit : CustomOperand<i32, 1>;
 def IndexKey8bit : CustomOperand<i32, 1>;
 
@@ -1302,6 +1303,9 @@ let PrintMethod = "printBitOp3" in
 def BitOp3 : NamedIntOperand<"bitop3">;
 def bitop3_0 : DefaultOperand<BitOp3, 0>;
 
+def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
+def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
+
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_KIMM"#vt.Size;
@@ -1315,6 +1319,12 @@ def KImmFP32 : KImmFPOperand<i32>;
 // 32-bit VALU immediate operand with a 16-bit value that uses the
 // constant bus.
 def KImmFP16 : KImmFPOperand<i16>;
+
+// 64-bit VALU immediate operand that uses the constant bus.
+def KImmFP64 : KImmFPOperand<i64> {
+  let DecoderMethod = "decodeOperand_KImmFP64";
+  let PrintMethod = "printFP64ImmOperand";
+}
 
 class FPInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithFP"#opSize#"InputMods";
@@ -1635,6 +1645,7 @@ def WMMAModsF16NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF16NegAbs">;
 def WMMAVISrc  : ComplexPattern<untyped, 1, "SelectWMMAVISrc">;
 def SWMMACIndex8  : ComplexPattern<untyped, 2, "SelectSWMMACIndex8">;
 def SWMMACIndex16  : ComplexPattern<untyped, 2, "SelectSWMMACIndex16">;
+def SWMMACIndex32  : ComplexPattern<untyped, 2, "SelectSWMMACIndex32">;
 
 def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 
@@ -2648,6 +2659,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
+  field bit HasMatrixReuse = 0;
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);
@@ -2831,6 +2843,7 @@ def VOP_F16_F16 : VOPProfile<[f16, f16, untyped, untyped]>;
 def VOP_F16_I16 : VOPProfile <[f16, i16, untyped, untyped]>;
 def VOP_I16_F16 : VOPProfile <[i16, f16, untyped, untyped]>;
 def VOP_I16_I16 : VOPProfile <[i16, i16, untyped, untyped]>;
+def VOP_BF16_BF16 : VOPProfile<[bf16, bf16, untyped, untyped]>;
 
 def VOP_F16_F16_F16 : VOPProfile <[f16, f16, f16, untyped]>;
 def VOP_F16_F16_I16 : VOPProfile <[f16, f16, i16, untyped]>;

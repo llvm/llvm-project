@@ -4623,6 +4623,9 @@ defm ptrauth_init_fini_address_discrimination : OptInCC1FFlag<"ptrauth-init-fini
   "Enable address discrimination of function pointers in init/fini arrays">;
 defm ptrauth_elf_got : OptInCC1FFlag<"ptrauth-elf-got", "Enable authentication of pointers from GOT (ELF only)">;
 defm aarch64_jump_table_hardening: OptInCC1FFlag<"aarch64-jump-table-hardening", "Use hardened lowering for jump-table dispatch">;
+defm ptrauth_objc_isa : OptInCC1FFlag<"ptrauth-objc-isa", "Enable signing and authentication of Objective-C object's 'isa' field">;
+defm ptrauth_objc_interface_sel : OptInCC1FFlag<"ptrauth-objc-interface-sel", "Enable signing and authentication of Objective-C object's 'SEL' fields">;
+defm ptrauth_objc_class_ro : OptInCC1FFlag<"ptrauth-objc-class-ro", "Enable signing and authentication for ObjC class_ro pointers">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -4826,8 +4829,8 @@ def gsimple_template_names_EQ
       Values<"simple,mangled">, Visibility<[CC1Option]>;
 def gsrc_hash_EQ : Joined<["-"], "gsrc-hash=">,
   Group<g_flags_Group>, Visibility<[CC1Option]>,
-  Values<"md5,sha1,sha256">,
-  NormalizedValues<["DSH_MD5", "DSH_SHA1", "DSH_SHA256"]>,
+  Values<"md5,sha1,sha256,none">,
+  NormalizedValues<["DSH_MD5", "DSH_SHA1", "DSH_SHA256", "DSH_NONE"]>,
   NormalizedValuesScope<"CodeGenOptions">,
   MarshallingInfoEnum<CodeGenOpts<"DebugSrcHash">, "DSH_MD5">;
 def gno_simple_template_names : Flag<["-"], "gno-simple-template-names">,
@@ -4858,9 +4861,9 @@ def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
 defm key_instructions : BoolGOption<"key-instructions",
     CodeGenOpts<"DebugKeyInstructions">, DefaultFalse,
     NegFlag<SetFalse>, PosFlag<SetTrue, [], [],
-        "Enable Key Instructions, which reduces the jumpiness of optimized code stepping (DWARF only)."
-        " Requires LLVM built with LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS.">,
-    BothFlags<[HelpHidden], [ClangOption, CLOption, CC1Option]>>;
+        "Enable Key Instructions, which reduces the jumpiness of debug stepping in optimized C/C++ code"
+        " in some debuggers. DWARF only. Implies -g.">,
+    BothFlags<[], [ClangOption, CLOption, CC1Option]>>;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
 def help : Flag<["-", "--"], "help">,
     Visibility<[ClangOption, CC1Option, CC1AsOption,

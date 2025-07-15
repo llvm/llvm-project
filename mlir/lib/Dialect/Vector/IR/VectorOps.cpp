@@ -47,7 +47,6 @@
 
 #include <cassert>
 #include <cstdint>
-#include <numeric>
 
 #include "mlir/Dialect/Vector/IR/VectorDialect.cpp.inc"
 // Pull in all enum type and utility function definitions.

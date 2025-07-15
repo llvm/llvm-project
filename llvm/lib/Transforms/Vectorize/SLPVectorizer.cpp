@@ -3898,7 +3898,7 @@ private:
 
     /// When ReuseReorderShuffleIndices is empty it just returns position of \p
     /// V within vector of Scalars. Otherwise, try to remap on its reuse index.
-    int findLaneForValue(Value *V) const {
+    unsigned findLaneForValue(Value *V) const {
       unsigned FoundLane = getVectorFactor();
       for (auto *It = find(Scalars, V), *End = Scalars.end(); It != End;
            std::advance(It, 1)) {
@@ -4344,7 +4344,7 @@ private:
 
   /// This POD struct describes one external user in the vectorized tree.
   struct ExternalUser {
-    ExternalUser(Value *S, llvm::User *U, const TreeEntry &E, int L)
+    ExternalUser(Value *S, llvm::User *U, const TreeEntry &E, unsigned L)
         : Scalar(S), User(U), E(E), Lane(L) {}
 
     /// Which scalar in our function.
@@ -4357,7 +4357,7 @@ private:
     const TreeEntry &E;
 
     /// Which lane does the scalar belong to.
-    int Lane;
+    unsigned Lane;
   };
   using UserList = SmallVector<ExternalUser, 16>;
 
@@ -5809,48 +5809,40 @@ static InstructionCost getExtractWithExtendCost(
   return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
 }
 
-/// Correctly creates insert_subvector, checking that the index is multiple of
-/// the subvectors length. Otherwise, generates shuffle using \p Generator or
+/// Creates subvector insert. Generates shuffle using \p Generator or
 /// using default shuffle.
 static Value *createInsertVector(
     IRBuilderBase &Builder, Value *Vec, Value *V, unsigned Index,
     function_ref<Value *(Value *, Value *, ArrayRef<int>)> Generator = {}) {
+  if (isa<PoisonValue>(Vec) && isa<PoisonValue>(V))
+    return Vec;
   const unsigned SubVecVF = getNumElements(V->getType());
-  if (Index % SubVecVF == 0) {
-    Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V, Index);
-  } else {
-    // Create shuffle, insertvector requires that index is multiple of
-    // the subvector length.
-    const unsigned VecVF = getNumElements(Vec->getType());
-    SmallVector<int> Mask(VecVF, PoisonMaskElem);
-    std::iota(Mask.begin(), Mask.end(), 0);
-    for (unsigned I : seq<unsigned>(SubVecVF))
-      Mask[I + Index] = I + VecVF;
-    if (Generator) {
-      Vec = Generator(Vec, V, Mask);
-    } else {
-      // 1. Resize V to the size of Vec.
-      SmallVector<int> ResizeMask(VecVF, PoisonMaskElem);
-      std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), SubVecVF), 0);
-      V = Builder.CreateShuffleVector(V, ResizeMask);
-      Vec = Builder.CreateShuffleVector(Vec, V, Mask);
-    }
+  // Create shuffle, insertvector requires that index is multiple of
+  // the subvector length.
+  const unsigned VecVF = getNumElements(Vec->getType());
+  SmallVector<int> Mask(VecVF, PoisonMaskElem);
+  if (isa<PoisonValue>(Vec)) {
+    auto *Begin = std::next(Mask.begin(), Index);
+    std::iota(Begin, std::next(Begin, SubVecVF), 0);
+    Vec = Builder.CreateShuffleVector(V, Mask);
+    return Vec;
   }
-  return Vec;
+  std::iota(Mask.begin(), Mask.end(), 0);
+  std::iota(std::next(Mask.begin(), Index),
+            std::next(Mask.begin(), Index + SubVecVF), VecVF);
+  if (Generator)
+    return Generator(Vec, V, Mask);
+  // 1. Resize V to the size of Vec.
+  SmallVector<int> ResizeMask(VecVF, PoisonMaskElem);
+  std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), SubVecVF), 0);
+  V = Builder.CreateShuffleVector(V, ResizeMask);
+  // 2. Insert V into Vec.
+  return Builder.CreateShuffleVector(Vec, V, Mask);
 }
 
-/// Correctly creates extract_subvector, checking that the index is multiple of
-/// the subvectors length. Otherwise, generates shuffle using \p Generator or
-/// using default shuffle.
+/// Generates subvector extract using \p Generator or using default shuffle.
 static Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
                                   unsigned SubVecVF, unsigned Index) {
-  if (Index % SubVecVF == 0) {
-    VectorType *SubVecTy =
-        getWidenedType(Vec->getType()->getScalarType(), SubVecVF);
-    return Builder.CreateExtractVector(SubVecTy, Vec, Index);
-  }
-  // Create shuffle, extract_subvector requires that index is multiple of
-  // the subvector length.
   SmallVector<int> Mask(SubVecVF, PoisonMaskElem);
   std::iota(Mask.begin(), Mask.end(), Index);
   return Builder.CreateShuffleVector(Vec, Mask);
@@ -7901,7 +7893,7 @@ void BoUpSLP::buildExternalUses(
       // Check if the scalar is externally used as an extra arg.
       const auto ExtI = ExternallyUsedValues.find(Scalar);
       if (ExtI != ExternallyUsedValues.end()) {
-        int FoundLane = Entry->findLaneForValue(Scalar);
+        unsigned FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
                           << FoundLane << " from " << *Scalar << ".\n");
         ScalarToExtUses.try_emplace(Scalar, ExternalUses.size());
@@ -7949,7 +7941,7 @@ void BoUpSLP::buildExternalUses(
 
         if (U && Scalar->hasNUsesOrMore(UsesLimit))
           U = nullptr;
-        int FoundLane = Entry->findLaneForValue(Scalar);
+        unsigned FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract:" << *UserInst
                           << " from lane " << FoundLane << " from " << *Scalar
                           << ".\n");
@@ -14568,8 +14560,6 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
 
-  unsigned BundleWidth = VectorizableTree[0]->Scalars.size();
-
   SmallPtrSet<Value *, 4> CheckedExtracts;
   for (unsigned I = 0, E = VectorizableTree.size(); I < E; ++I) {
     TreeEntry &TE = *VectorizableTree[I];
@@ -14632,6 +14622,11 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   }
   SmallDenseSet<std::pair<Value *, Value *>, 8> CheckedScalarUser;
   for (ExternalUser &EU : ExternalUses) {
+    LLVM_DEBUG(dbgs() << "SLP: Computing cost for external use of TreeEntry "
+                      << EU.E.Idx << " in lane " << EU.Lane << "\n");
+    LLVM_DEBUG(dbgs() << "  User:" << *EU.User << "\n");
+    LLVM_DEBUG(dbgs() << "  Use: " << EU.Scalar->getNameOrAsOperand() << "\n");
+
     // Uses by ephemeral values are free (because the ephemeral value will be
     // removed prior to code generation, and so the extraction will be
     // removed as well).
@@ -14739,6 +14734,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
     // for the extract and the added cost of the sign extend if needed.
     InstructionCost ExtraCost = TTI::TCC_Free;
     auto *ScalarTy = EU.Scalar->getType();
+    const unsigned BundleWidth = EU.E.getVectorFactor();
+    assert(EU.Lane < BundleWidth && "Extracted lane out of bounds.");
     auto *VecTy = getWidenedType(ScalarTy, BundleWidth);
     const TreeEntry *Entry = &EU.E;
     auto It = MinBWs.find(Entry);
@@ -14752,10 +14749,14 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
       VecTy = getWidenedType(MinTy, BundleWidth);
       ExtraCost =
           getExtractWithExtendCost(*TTI, Extend, ScalarTy, VecTy, EU.Lane);
+      LLVM_DEBUG(dbgs() << "  ExtractExtend or ExtractSubvec cost: "
+                        << ExtraCost << "\n");
     } else {
       ExtraCost =
           getVectorInstrCost(*TTI, ScalarTy, Instruction::ExtractElement, VecTy,
                              CostKind, EU.Lane, EU.Scalar, ScalarUserAndIdx);
+      LLVM_DEBUG(dbgs() << "  ExtractElement cost for " << *ScalarTy << " from "
+                        << *VecTy << ": " << ExtraCost << "\n");
     }
     // Leave the scalar instructions as is if they are cheaper than extracts.
     if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||
@@ -16275,8 +16276,8 @@ Value *BoUpSLP::gather(
       assert(SLPReVec && "FixedVectorType is not expected.");
       Vec =
           createInsertVector(Builder, Vec, Scalar, Pos * getNumElements(VecTy));
-      auto *II = dyn_cast<IntrinsicInst>(Vec);
-      if (!II || II->getIntrinsicID() != Intrinsic::vector_insert)
+      auto *II = dyn_cast<Instruction>(Vec);
+      if (!II)
         return Vec;
       InsElt = II;
     } else {
@@ -16296,6 +16297,28 @@ Value *BoUpSLP::gather(
           if (auto *SI = dyn_cast<Instruction>(Scalar))
             UserOp = SI;
         } else {
+          if (V->getType()->isVectorTy()) {
+            if (auto *SV = dyn_cast<ShuffleVectorInst>(InsElt);
+                SV && SV->getOperand(0) != V && SV->getOperand(1) != V) {
+              // Find shufflevector, caused by resize.
+              auto FindOperand = [](Value *Vec, Value *V) -> Instruction * {
+                if (auto *SV = dyn_cast<ShuffleVectorInst>(Vec)) {
+                  if (SV->getOperand(0) == V)
+                    return SV;
+                  if (SV->getOperand(1) == V)
+                    return SV;
+                }
+                return nullptr;
+              };
+              InsElt = nullptr;
+              if (Instruction *User = FindOperand(SV->getOperand(0), V))
+                InsElt = User;
+              else if (Instruction *User = FindOperand(SV->getOperand(1), V))
+                InsElt = User;
+              assert(InsElt &&
+                     "Failed to find shufflevector, caused by resize.");
+            }
+          }
           UserOp = InsElt;
         }
         if (UserOp) {
@@ -16864,10 +16887,18 @@ public:
                                          V, SimplifyQuery(*R.DL));
                                    }));
           unsigned InsertionIndex = Idx * getNumElements(ScalarTy);
+          // Use scalar version of the SCalarType to correctly handle shuffles
+          // for revectorization. The revectorization mode operates by the
+          // vectors, but here we need to operate on the scalars, because the
+          // masks were already transformed for the vector elements and we don't
+          // need doing this transformation again.
+          Type *OrigScalarTy = ScalarTy;
+          ScalarTy = ScalarTy->getScalarType();
           Vec = createInsertVector(
               Builder, Vec, V, InsertionIndex,
               std::bind(&ShuffleInstructionBuilder::createShuffle, this, _1, _2,
                         _3));
+          ScalarTy = OrigScalarTy;
           if (!CommonMask.empty()) {
             std::iota(std::next(CommonMask.begin(), Idx),
                       std::next(CommonMask.begin(), Idx + E->getVectorFactor()),

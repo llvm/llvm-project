@@ -79,7 +79,7 @@ endif()
 
 add_dependencies(clang clang-resource-headers)
 
-option(CLANG_LINK_FLANG "Create flang install link to clang" OFF)
+option(CLANG_LINK_FLANG "Create flang install link to clang" ON)
 #Only create flang symlink if Flang is not being built
 list(FIND LLVM_ENABLE_PROJECTS flang FLANG_TARGET_INDEX)
 

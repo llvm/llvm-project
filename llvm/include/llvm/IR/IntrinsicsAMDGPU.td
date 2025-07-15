@@ -588,6 +588,10 @@ def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
 def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
 def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
 
+def int_amdgcn_tanh : DefaultAttrsIntrinsic<
+  [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
+>;
+
 def int_amdgcn_cvt_pk_f16_fp8 : DefaultAttrsIntrinsic<
   [llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_cvt_pk_f16_fp8">;
@@ -3509,6 +3513,18 @@ def int_amdgcn_ashr_pk_u8_i32 : ClangBuiltin<"__builtin_amdgcn_ashr_pk_u8_i32">,
 //===----------------------------------------------------------------------===//
 // gfx1250 intrinsics
 // ===----------------------------------------------------------------------===//
+
+// Async waits decrement ASYNCcnt and tensor waits decrement TENSORcnt which is
+// modeled as InaccessibleMem.
+class AMDGPUWaitAsyncIntrinsic :
+  Intrinsic<[], [llvm_i16_ty],
+  [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>, IntrWillReturn, IntrNoCallback,
+   IntrNoFree]>;
+
+def int_amdgcn_s_wait_asynccnt :
+    ClangBuiltin<"__builtin_amdgcn_s_wait_asynccnt">, AMDGPUWaitAsyncIntrinsic;
+def int_amdgcn_s_wait_tensorcnt :
+    ClangBuiltin<"__builtin_amdgcn_s_wait_tensorcnt">, AMDGPUWaitAsyncIntrinsic;
 
 def int_amdgcn_ds_atomic_async_barrier_arrive_b64 :
   ClangBuiltin<"__builtin_amdgcn_ds_atomic_async_barrier_arrive_b64">,

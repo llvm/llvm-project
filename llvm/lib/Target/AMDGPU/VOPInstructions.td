@@ -432,7 +432,7 @@ class VOP3be <VOPProfile P> : Enc64 {
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0);
 }
 
-class VOP3Pe <VOPProfile P> : Enc64 {
+class VOP3Pe_Base {
   bits<8> vdst;
   bits<4> src0_modifiers;
   bits<9> src0;
@@ -443,7 +443,12 @@ class VOP3Pe <VOPProfile P> : Enc64 {
   bits<1> clamp;
   bits<2> index_key_8bit;
   bits<1> index_key_16bit;
+  bits<1> index_key_32bit;
+  bits<1> matrix_a_reuse;
+  bits<1> matrix_b_reuse;
+}
 
+class VOP3Pe <VOPProfile P> : Enc64, VOP3Pe_Base {
   let Inst{7-0} = !if(P.HasDst, vdst, 0);
   let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1}, 0); // neg_hi src0
   let Inst{9} = !if(P.HasSrc1Mods, src1_modifiers{1}, 0); // neg_hi src1
@@ -451,9 +456,13 @@ class VOP3Pe <VOPProfile P> : Enc64 {
 
   let Inst{11} = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{2}, 0); // op_sel(0)
   let Inst{12} = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{2}, 0); // op_sel(1)
-  let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2}, 0); // op_sel(2)
+  let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2},
+                     !if(P.HasMatrixReuse, matrix_a_reuse, 0));    // op_sel(2)
 
-  let Inst{14} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{3}, !if(P.IsDOT, 1, ?)); // op_sel_hi(2)
+  let Inst{14} = !cond(!and(P.HasSrc2, P.HasOpSel) : src2_modifiers{3},
+                       P.IsDOT : 1,
+                       P.HasMatrixReuse : matrix_b_reuse,
+                       1: ?); // op_sel_hi(2)
 
   let Inst{15} = !if(P.HasClamp, clamp{0}, 0);
 
@@ -632,9 +641,9 @@ def SDWA {
 class VOP_SDWAe<VOPProfile P> : Enc64 {
   bits<8> src0;
   bits<3> src0_sel;
-  bits<2> src0_modifiers; // float: {abs,neg}, int {sext}
+  bits<5> src0_modifiers; // float: {abs,neg}, int {sext}
   bits<3> src1_sel;
-  bits<2> src1_modifiers;
+  bits<5> src1_modifiers;
   bits<3> dst_sel;
   bits<2> dst_unused;
   bits<1> clamp;
@@ -644,10 +653,10 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
   let Inst{44-43} = !if(P.EmitDstSel, dst_unused{1-0}, ?);
   let Inst{45}    = !if(P.HasSDWAClamp, clamp{0}, 0);
   let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, 0);
-  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{0}, 0);
+  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{4}, 0);
   let Inst{53-52} = !if(P.HasSrc0FloatMods, src0_modifiers{1-0}, 0);
   let Inst{58-56} = !if(P.HasSrc1, src1_sel{2-0}, 0);
-  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{0}, 0);
+  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{4}, 0);
   let Inst{61-60} = !if(P.HasSrc1FloatMods, src1_modifiers{1-0}, 0);
 }
 
@@ -668,18 +677,18 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
 class VOP_SDWA9e<VOPProfile P> : Enc64 {
   bits<9> src0; // {src0_sgpr{0}, src0{7-0}}
   bits<3> src0_sel;
-  bits<2> src0_modifiers; // float: {abs,neg}, int {sext}
+  bits<5> src0_modifiers; // float: {abs,neg}, int {sext}
   bits<3> src1_sel;
-  bits<2> src1_modifiers;
+  bits<5> src1_modifiers;
   bits<1> src1_sgpr;
 
   let Inst{39-32} = !if(P.HasSrc0, src0{7-0}, 0);
   let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, 0);
-  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{0}, 0);
+  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{4}, 0);
   let Inst{53-52} = !if(P.HasSrc0FloatMods, src0_modifiers{1-0}, 0);
   let Inst{55}    = !if(P.HasSrc0, src0{8}, 0);
   let Inst{58-56} = !if(P.HasSrc1, src1_sel{2-0}, 0);
-  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{0}, 0);
+  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{4}, 0);
   let Inst{61-60} = !if(P.HasSrc1FloatMods, src1_modifiers{1-0}, 0);
   let Inst{63}    = 0; // src1_sgpr - should be specified in subclass
 }

@@ -154,7 +154,7 @@ public:
 void VEAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                               const MCValue &Target, MutableArrayRef<char> Data,
                               uint64_t Value, bool IsResolved) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case VE::fixup_ve_tls_gd_hi32:
   case VE::fixup_ve_tls_gd_lo32:
   case VE::fixup_ve_tpoff_hi32:
