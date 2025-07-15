@@ -213,6 +213,34 @@ typedef struct {
   int c;
 } V;
 
+void get_volatile(V* v) {
+  v->b = 3;
+}
+
+// CIR: cir.func dso_local @get_volatile
+// CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_V>, !cir.ptr<!cir.ptr<!rec_V>>, ["v", init] {alignment = 8 : i64}
+// CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
+// CIR:   [[TMP2:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_V>>, !cir.ptr<!rec_V>
+// CIR:   [[TMP3:%.*]] = cir.get_member [[TMP2]][0] {name = "b"} : !cir.ptr<!rec_V> -> !cir.ptr<!u64i>
+// CIR:   [[TMP4:%.*]] = cir.set_bitfield(#bfi_b, [[TMP3]] : !cir.ptr<!u64i>, [[TMP1]] : !s32i) {is_volatile} -> !s32i
+
+// LLVM: define dso_local void @get_volatile
+// LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
+// LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
+// LLVM:   [[TMP2:%.*]] = getelementptr %struct.V, ptr [[TMP1]], i32 0, i32 0
+// LLVM:   [[TMP3:%.*]] = load volatile i64, ptr [[TMP2]], align 8
+// LLVM:   [[TMP4:%.*]] = and i64 [[TMP3]], -1095216660481
+// LLVM:   [[TMP5:%.*]] = or i64 [[TMP4]], 12884901888
+// LLVM:   store volatile i64 [[TMP5]], ptr [[TMP2]], align 8
+
+// OCGC: define dso_local void @get_volatile
+// OCGC:   [[TMP0:%.*]] = alloca ptr, align 8
+// OCGC:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
+// OCGC:   [[TMP2:%.*]] = load volatile i64, ptr [[TMP1]], align 4
+// OCGC:   [[TMP3:%.*]] = and i64 [[TMP2]], -1095216660481
+// OCGC:   [[TMP4:%.*]] = or i64 [[TMP3]], 12884901888
+// OCGC:   store volatile i64 [[TMP4]], ptr [[TMP1]], align 4
+
 void set_volatile(V* v) {
   v->b = 3;
 }
@@ -239,3 +267,51 @@ void set_volatile(V* v) {
 // OGCG:   [[TMP3:%.*]] = and i64 [[TMP2]], -1095216660481
 // OGCG:   [[TMP4:%.*]] = or i64 [[TMP3]], 12884901888
 // OGCG:   store volatile i64 [[TMP4]], ptr [[TMP1]], align 4
+
+void unOp(S* s) {
+  s->d++;
+}
+
+// CIR: cir.func {{.*@unOp}}
+// CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init] {alignment = 8 : i64}
+// CIR:   [[TMP1:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "d"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
+// CIR:   [[TMP3:%.*]] = cir.get_bitfield(#bfi_d, [[TMP2]] : !cir.ptr<!u64i>) -> !s32i
+// CIR:   [[TMP4:%.*]] = cir.unary(inc, [[TMP3]]) nsw : !s32i, !s32i
+// CIR:   cir.set_bitfield(#bfi_d, [[TMP2]] : !cir.ptr<!u64i>, [[TMP4]] : !s32i)
+
+// LLVM: define {{.*@unOp}}
+// LLVM:   [[TMP0:%.*]] = getelementptr %struct.S, ptr [[LOAD0:%.*]], i32 0, i32 0
+// LLVM:   [[TMP1:%.*]] = load i64, ptr [[TMP0]], align 8
+// LLVM:   [[TMP2:%.*]] = shl i64 [[TMP1]], 13
+// LLVM:   [[TMP3:%.*]] = ashr i64 [[TMP2]], 62
+// LLVM:   [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+// LLVM:   [[TMP5:%.*]] = add nsw i32 [[TMP4]], 1
+// LLVM:   [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
+// LLVM:   [[TMP7:%.*]] = load i64, ptr [[TMP0]], align 8
+// LLVM:   [[TMP8:%.*]] = and i64 [[TMP6]], 3
+// LLVM:   [[TMP9:%.*]] = shl i64 [[TMP8]], 49
+// LLVM:   [[TMP10:%.*]] = and i64 [[TMP7]], -1688849860263937
+// LLVM:   [[TMP11:%.*]] = or i64 [[TMP10]], [[TMP9]]
+// LLVM:   store i64 [[TMP11]], ptr [[TMP0]], align 8
+// LLVM:   [[TMP12:%.*]] = shl i64 [[TMP8]], 62
+// LLVM:   [[TMP13:%.*]] = ashr i64 [[TMP12]], 62
+// LLVM:   [[TMP14:%.*]] = trunc i64 [[TMP13]] to i32
+
+// OGCG: define {{.*@unOp}}
+// OGCG:   [[TMP0:%.*]] = load ptr, ptr %s.addr, align 8
+// OGCG:   [[TMP1:%.*]] = load i64, ptr [[TMP0]], align 4
+// OGCG:   [[TMP2:%.*]] = shl i64 [[TMP1]], 13
+// OGCG:   [[TMP3:%.*]] = ashr i64 [[TMP2]], 62
+// OGCG:   [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+// OGCG:   [[TMP5:%.*]] = add nsw i32 [[TMP4]], 1
+// OGCG:   [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
+// OGCG:   [[TMP7:%.*]] = load i64, ptr [[TMP0]], align 4
+// OGCG:   [[TMP8:%.*]] = and i64 [[TMP6]], 3
+// OGCG:   [[TMP9:%.*]] = shl i64 [[TMP8]], 49
+// OGCG:   [[TMP10:%.*]] = and i64 [[TMP7]], -1688849860263937
+// OGCG:   [[TMP11:%.*]] = or i64 [[TMP10]], [[TMP9]]
+// OGCG:   store i64 [[TMP11]], ptr [[TMP0]], align 4
+// OGCG:   [[TMP12:%.*]] = shl i64 [[TMP8]], 62
+// OGCG:   [[TMP13:%.*]] = ashr i64 [[TMP12]], 62
+// OGCG:   [[TMP14:%.*]] = trunc i64 [[TMP13]] to i32

@@ -29,6 +29,28 @@ bool MsvcStlWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // VC 2015+ std::wstring
 
+// MSVC STL std::shared_ptr<> and std::weak_ptr<>
+bool IsMsvcStlSmartPointer(ValueObject &valobj);
+bool MsvcStlSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
+                                        const TypeSummaryOptions &options);
+
+lldb_private::SyntheticChildrenFrontEnd *
+MsvcStlSmartPointerSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::unique_ptr<>
+bool IsMsvcStlUniquePtr(ValueObject &valobj);
+bool MsvcStlUniquePtrSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options);
+
+lldb_private::SyntheticChildrenFrontEnd *
+MsvcStlUniquePtrSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::tuple<>
+bool IsMsvcStlTuple(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlTupleSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                     lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 

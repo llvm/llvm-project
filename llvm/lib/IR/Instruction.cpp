@@ -1236,14 +1236,6 @@ bool Instruction::isDebugOrPseudoInst() const {
 }
 
 const Instruction *
-Instruction::getNextNonDebugInstruction(bool SkipPseudoOp) const {
-  for (const Instruction *I = getNextNode(); I; I = I->getNextNode())
-    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
-      return I;
-  return nullptr;
-}
-
-const Instruction *
 Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
   for (const Instruction *I = getPrevNode(); I; I = I->getPrevNode())
     if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
@@ -1252,9 +1244,6 @@ Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
 }
 
 const DebugLoc &Instruction::getStableDebugLoc() const {
-  if (isa<DbgInfoIntrinsic>(this))
-    if (const Instruction *Next = getNextNonDebugInstruction())
-      return Next->getDebugLoc();
   return getDebugLoc();
 }
 

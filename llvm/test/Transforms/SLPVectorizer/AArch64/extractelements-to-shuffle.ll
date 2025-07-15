@@ -645,20 +645,21 @@ define i1 @tryMapToRange(ptr %values, ptr %result, <2 x i64> %hi, <2 x i64> %lo)
 ; CHECK-NEXT:    [[S1:%.*]] = sext <2 x i1> [[C1]] to <2 x i64>
 ; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i64> [[S1]] to <16 x i8>
 ; CHECK-NEXT:    [[A1:%.*]] = and <16 x i8> [[BC1]], <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <16 x i8> [[A1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i8> [[A1]], i64 8
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt <2 x i64> [[L]], [[LO:%.*]]
 ; CHECK-NEXT:    [[S2:%.*]] = sext <2 x i1> [[C2]] to <2 x i64>
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> [[S2]] to <16 x i8>
 ; CHECK-NEXT:    [[A2:%.*]] = and <16 x i8> [[BC2]], <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+; CHECK-NEXT:    [[E3:%.*]] = extractelement <16 x i8> [[A2]], i64 0
+; CHECK-NEXT:    [[E4:%.*]] = extractelement <16 x i8> [[A2]], i64 8
 ; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub <2 x i64> [[L]], [[LO]]
 ; CHECK-NEXT:    [[ADD_I_I_I_I_I_I:%.*]] = add <2 x i64> [[REASS_SUB]], splat (i64 1)
 ; CHECK-NEXT:    store <2 x i64> [[ADD_I_I_I_I_I_I]], ptr [[RESULT:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A1]], <16 x i8> [[A2]], <2 x i32> <i32 8, i32 24>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[A1]], <16 x i8> [[A2]], <2 x i32> <i32 0, i32 16>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[O3:%.*]] = or i8 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[O3]], 0
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[E4]], [[E3]]
+; CHECK-NEXT:    [[O4:%.*]] = or i8 [[O3]], [[O2]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[O4]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %l = load <2 x i64>, ptr %values, align 8

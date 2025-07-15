@@ -81,7 +81,7 @@ end program
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = {{.*}}, uniq_name = "_QFFreduceEr"} : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> (!fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>)
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_4:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
-! CHECK:             fir.store %[[VAL_3]]#1 to %[[VAL_4]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
+! CHECK:             fir.store %[[VAL_3]]#0 to %[[VAL_4]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 0 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 10 : i32
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
