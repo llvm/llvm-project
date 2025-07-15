@@ -126,7 +126,6 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
         builder.getDenseI64ArrayAttr({}) /* empty const strides*/);
 }
 
-
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source,
                            llvm::ArrayRef<OpFoldResult> shape,
@@ -149,7 +148,6 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
         staticStridesAttr);
 }
 
-
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<IntegerType> source,
                            llvm::ArrayRef<OpFoldResult> shape,
@@ -171,7 +169,6 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
         dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
         staticStridesAttr);
 }
-
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source,
