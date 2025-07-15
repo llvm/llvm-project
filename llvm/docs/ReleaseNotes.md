@@ -145,6 +145,10 @@ Changes to the LoongArch Backend
 
 * Changing the default code model from `small` to `medium` for 64-bit.
 * Added inline asm support for the `q` constraint.
+* Added the `32s` target feature for LA32S ISA extensions.
+* Added codegen support for atomic-ops (`cmpxchg`, `max`, `min`, `umax`, `umin`) on LA32.
+* Added codegen support for the ILP32D calling convention.
+* Added several codegen and vectorization optimizations.
 
 Changes to the MIPS Backend
 ---------------------------
