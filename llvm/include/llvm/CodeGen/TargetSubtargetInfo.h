@@ -200,7 +200,7 @@ public:
   ///
   /// NOTE: Subtargets must maintain consistency between the logic here and
   /// on lowering.
-  virtual bool canLowerToZeroCycleRegMove(const MachineInstr *CopyMI,
+  virtual bool canLowerToZeroCycleRegMove(const MachineInstr &CopyMI,
                                           const Register &DestReg,
                                           const Register &SrcReg) const {
     return false;
@@ -221,7 +221,7 @@ public:
   ///
   /// NOTE: Subtargets must maintain consistency between the logic here and
   /// on lowering.
-  virtual bool canLowerToZeroCycleRegZeroing(const MachineInstr *CopyMI,
+  virtual bool canLowerToZeroCycleRegZeroing(const MachineInstr &CopyMI,
                                              const Register &DestReg,
                                              const Register &SrcReg) const {
     return false;

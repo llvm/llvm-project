@@ -1403,7 +1403,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx))
     return false;
 
-  if (!TII->shouldReMaterializeTrivialRegDef(CopyMI, DstReg, SrcReg)) {
+  if (!TII->shouldReMaterializeTrivialRegDef(MF, *CopyMI, DstReg, SrcReg, LIS)) {
     LLVM_DEBUG(dbgs() << "Remat prevented: " << CopyIdx << "\t" << *CopyMI);
     ++NumReMatsPrevented;
     return false;
