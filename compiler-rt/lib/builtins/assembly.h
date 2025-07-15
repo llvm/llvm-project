@@ -194,6 +194,23 @@
 #else
 #define WIDE(op) op
 #endif
+
+#if defined(__ARM_FEATURE_PAC_DEFAULT) && defined(__ARM_FEATURE_BTI_DEFAULT)
+#define PACBTI_LANDING pacbti r12, lr, sp
+#elif defined(__ARM_FEATURE_PAC_DEFAULT)
+#define PACBTI_LANDING pac r12, lr, sp
+#elif defined(__ARM_FEATURE_BTI_DEFAULT)
+#define PACBTI_LANDING bti
+#else
+#define PACBTI_LANDING
+#endif
+
+#if defined(__ARM_FEATURE_PAUTH)
+#define PAC_RETURN bxaut r12, lr, sp
+#else
+#define PAC_RETURN aut r12, lr, sp SEPARATOR bx lr
+#endif
+
 #else // !defined(__arm)
 #define DECLARE_FUNC_ENCODING
 #define DEFINE_CODE_STATE

@@ -7,16 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Fuchsia.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -93,7 +91,9 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--execute-only");
 
     std::string CPU = getCPUName(D, Args, Triple);
-    if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
+    if (Args.hasFlag(options::OPT_mfix_cortex_a53_843419,
+                     options::OPT_mno_fix_cortex_a53_843419, true) &&
+        (CPU.empty() || CPU == "generic" || CPU == "cortex-a53"))
       CmdArgs.push_back("--fix-cortex-a53-843419");
   }
 

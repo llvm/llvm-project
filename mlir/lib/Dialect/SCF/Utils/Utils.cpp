@@ -17,15 +17,12 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -301,19 +298,8 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
 /// constants, or optional otherwise. Trip count is computed as
 /// ceilDiv(highBound - lowBound, step).
 static std::optional<int64_t> getConstantTripCount(scf::ForOp forOp) {
-  std::optional<int64_t> lbCstOp = getConstantIntValue(forOp.getLowerBound());
-  std::optional<int64_t> ubCstOp = getConstantIntValue(forOp.getUpperBound());
-  std::optional<int64_t> stepCstOp = getConstantIntValue(forOp.getStep());
-  if (!lbCstOp.has_value() || !ubCstOp.has_value() || !stepCstOp.has_value())
-    return {};
-
-  // Constant loop bounds computation.
-  int64_t lbCst = lbCstOp.value();
-  int64_t ubCst = ubCstOp.value();
-  int64_t stepCst = stepCstOp.value();
-  assert(lbCst >= 0 && ubCst >= 0 && stepCst > 0 &&
-         "expected positive loop bounds and step");
-  return llvm::divideCeilSigned(ubCst - lbCst, stepCst);
+  return constantTripCount(forOp.getLowerBound(), forOp.getUpperBound(),
+                           forOp.getStep());
 }
 
 /// Generates unrolled copies of scf::ForOp 'loopBodyBlock', with

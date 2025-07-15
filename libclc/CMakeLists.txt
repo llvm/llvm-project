@@ -72,7 +72,7 @@ else()
   # Note that we check this later (for both build types) but we can provide a
   # more useful error message when built in-tree. We assume that LLVM tools are
   # always available so don't warn here.
-  if( NOT clang IN_LIST LLVM_ENABLE_PROJECTS )
+  if( NOT LLVM_RUNTIMES_BUILD AND NOT clang IN_LIST LLVM_ENABLE_PROJECTS )
     message(FATAL_ERROR "Clang is not enabled, but is required to build libclc in-tree")
   endif()
 
@@ -83,6 +83,9 @@ else()
     get_host_tool_path( opt OPT opt_exe opt_target )
   endif()
 endif()
+
+# Setup the paths where libclc runtimes should be stored.
+set( LIBCLC_OUTPUT_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 
 if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
   message( WARNING "Using custom LLVM tools to build libclc: "
@@ -161,34 +164,14 @@ endif()
 
 list( SORT LIBCLC_TARGETS_TO_BUILD )
 
-# Construct LLVM version define
-set( LLVM_VERSION_DEFINE "-DHAVE_LLVM=0x${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}" )
-
 # This needs to be set before any target that needs it
 # We need to use LLVM_INCLUDE_DIRS here, because if we are linking to an
 # llvm build directory, this includes $src/llvm/include which is where all the
 # headers are not $build/include/ which is what LLVM_INCLUDE_DIR is set to.
 include_directories( ${LLVM_INCLUDE_DIRS} )
 
-# Setup prepare_builtins tools
-set(LLVM_LINK_COMPONENTS
-  BitReader
-  BitWriter
-  Core
-  IRReader
-  Support
-)
-if( LIBCLC_STANDALONE_BUILD )
-  add_llvm_executable( prepare_builtins utils/prepare-builtins.cpp )
-  set( prepare_builtins_exe prepare_builtins )
-  set( prepare_builtins_target prepare_builtins )
-else()
-  add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
-  setup_host_tool( prepare_builtins PREPARE_BUILTINS prepare_builtins_exe prepare_builtins_target )
-endif()
-target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
-# These were not properly reported in early LLVM and we don't need them
-target_compile_options( prepare_builtins PRIVATE -fno-rtti -fno-exceptions )
+# Configure prepare_builtins
+add_subdirectory( utils )
 
 # Setup arch devices
 set( r600--_devices cedar cypress barts cayman )
@@ -445,8 +428,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     if( ARCH STREQUAL amdgcn OR ARCH STREQUAL r600 OR ARCH STREQUAL amdgcn-amdhsa )
       set ( private_addrspace_val 5 )
     endif()
-    if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64
-        OR ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
+    if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
       set ( generic_addrspace_val 4 )
     endif()
     list( APPEND build_flags

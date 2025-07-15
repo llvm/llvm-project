@@ -156,6 +156,10 @@ concepts::ExprRequirement::ReturnTypeRequirement::ReturnTypeRequirement(
   TypeConstraintInfo.setInt(Dependent ? true : false);
 }
 
+concepts::ExprRequirement::ReturnTypeRequirement::ReturnTypeRequirement(
+    TemplateParameterList *TPL, bool IsDependent)
+    : TypeConstraintInfo(TPL, IsDependent) {}
+
 concepts::TypeRequirement::TypeRequirement(TypeSourceInfo *T)
     : Requirement(RK_Type, T->getType()->isInstantiationDependentType(),
                   T->getType()->containsUnexpandedParameterPack(),

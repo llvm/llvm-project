@@ -8,6 +8,7 @@ from dap_server import Source
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
+import base64
 
 
 class DAPTestCaseBase(TestBase):
@@ -49,7 +50,9 @@ class DAPTestCaseBase(TestBase):
         self.build_and_create_debug_adapter(dictionary={"EXE": unique_name})
         return self.getBuildArtifact(unique_name)
 
-    def set_source_breakpoints(self, source_path, lines, data=None):
+    def set_source_breakpoints(
+        self, source_path, lines, data=None, wait_for_resolve=True
+    ):
         """Sets source breakpoints and returns an array of strings containing
         the breakpoint IDs ("1", "2") for each breakpoint that was set.
         Parameter data is array of data objects for breakpoints.
@@ -65,9 +68,13 @@ class DAPTestCaseBase(TestBase):
         breakpoint_ids = []
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
+        if wait_for_resolve:
+            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
-    def set_source_breakpoints_assembly(self, source_reference, lines, data=None):
+    def set_source_breakpoints_assembly(
+        self, source_reference, lines, data=None, wait_for_resolve=True
+    ):
         response = self.dap_server.request_setBreakpoints(
             Source(source_reference=source_reference),
             lines,
@@ -79,9 +86,13 @@ class DAPTestCaseBase(TestBase):
         breakpoint_ids = []
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
+        if wait_for_resolve:
+            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
-    def set_function_breakpoints(self, functions, condition=None, hitCondition=None):
+    def set_function_breakpoints(
+        self, functions, condition=None, hitCondition=None, wait_for_resolve=True
+    ):
         """Sets breakpoints by function name given an array of function names
         and returns an array of strings containing the breakpoint IDs
         ("1", "2") for each breakpoint that was set.
@@ -95,7 +106,21 @@ class DAPTestCaseBase(TestBase):
         breakpoint_ids = []
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
+        if wait_for_resolve:
+            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
+
+    def wait_for_breakpoints_to_resolve(
+        self, breakpoint_ids: list[str], timeout: Optional[float] = DEFAULT_TIMEOUT
+    ):
+        unresolved_breakpoints = self.dap_server.wait_for_breakpoints_to_be_verified(
+            breakpoint_ids, timeout
+        )
+        self.assertEqual(
+            len(unresolved_breakpoints),
+            0,
+            f"Expected to resolve all breakpoints. Unresolved breakpoint ids: {unresolved_breakpoints}",
+        )
 
     def waitUntil(self, condition_callback):
         for _ in range(20):
@@ -103,6 +128,16 @@ class DAPTestCaseBase(TestBase):
                 return True
             time.sleep(0.5)
         return False
+
+    def assertCapabilityIsSet(self, key: str, msg: Optional[str] = None) -> None:
+        """Assert that given capability is set in the client."""
+        self.assertIn(key, self.dap_server.capabilities, msg)
+        self.assertEqual(self.dap_server.capabilities[key], True, msg)
+
+    def assertCapabilityIsNotSet(self, key: str, msg: Optional[str] = None) -> None:
+        """Assert that given capability is not set in the client."""
+        if key in self.dap_server.capabilities:
+            self.assertEqual(self.dap_server.capabilities[key], False, msg)
 
     def verify_breakpoint_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify we hit
@@ -310,7 +345,12 @@ class DAPTestCaseBase(TestBase):
         granularity="statement",
         timeout=DEFAULT_TIMEOUT,
     ):
-        self.dap_server.request_next(threadId=threadId, granularity=granularity)
+        response = self.dap_server.request_next(
+            threadId=threadId, granularity=granularity
+        )
+        self.assertTrue(
+            response["success"], f"next request failed: response {response}"
+        )
         if waitForStop:
             return self.dap_server.wait_for_stopped(timeout)
         return None
@@ -467,3 +507,20 @@ class DAPTestCaseBase(TestBase):
                 self.dap_server.request_disconnect(terminateDebuggee=True)
                 self.assertIsNotNone(server_tool, "debugserver not found.")
         return server_tool
+
+    def writeMemory(self, memoryReference, data=None, offset=0, allowPartial=False):
+        # This function accepts data in decimal and hexadecimal format,
+        # converts it to a Base64 string, and send it to the DAP,
+        # which expects Base64 encoded data.
+        encodedData = (
+            ""
+            if data is None
+            else base64.b64encode(
+                # (bit_length + 7 (rounding up to nearest byte) ) //8 = converts to bytes.
+                data.to_bytes((data.bit_length() + 7) // 8, "little")
+            ).decode()
+        )
+        response = self.dap_server.request_writeMemory(
+            memoryReference, encodedData, offset=offset, allowPartial=allowPartial
+        )
+        return response

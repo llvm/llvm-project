@@ -942,6 +942,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 
   CHECK_PARSE_LIST(JavaImportGroups);
   CHECK_PARSE_LIST(Macros);
+  CHECK_PARSE_LIST(MacrosSkippedByRemoveParentheses);
   CHECK_PARSE_LIST(NamespaceMacros);
   CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);
   CHECK_PARSE_LIST(TableGenBreakingDAGArgOperators);
@@ -1265,6 +1266,24 @@ TEST(ConfigParseTest, AllowCppForC) {
                                "Language: Cpp\n",
                                &Style),
             ParseError::Success);
+}
+
+TEST(ConfigParseTest, HandleNonCppDotHFile) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_Cpp;
+  EXPECT_EQ(parseConfiguration("Language: C", &Style,
+                               /*AllowUnknownOptions=*/false,
+                               /*IsDotHFile=*/true),
+            ParseError::Success);
+  EXPECT_EQ(Style.Language, FormatStyle::LK_C);
+
+  Style = {};
+  Style.Language = FormatStyle::LK_Cpp;
+  EXPECT_EQ(parseConfiguration("Language: ObjC", &Style,
+                               /*AllowUnknownOptions=*/false,
+                               /*IsDotHFile=*/true),
+            ParseError::Success);
+  EXPECT_EQ(Style.Language, FormatStyle::LK_ObjC);
 }
 
 TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {

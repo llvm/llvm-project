@@ -14,7 +14,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -58,9 +57,6 @@ void ARMTargetInfo::setABIAAPCS() {
                     "-a:0:32"
                     "-n32"
                     "-S64");
-  } else if (T.isOSNaCl()) {
-    assert(!BigEndian && "NaCl on ARM does not support big endian");
-    resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S128");
   } else {
     resetDataLayout(BigEndian
                         ? "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -1405,7 +1401,7 @@ ARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_AAPCS_VFP:
   case CC_Swift:
   case CC_SwiftAsync:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
     return CCCR_OK;
   default:
     return CCCR_Warning;
@@ -1480,7 +1476,7 @@ WindowsARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86VectorCall:
     return CCCR_Ignore;
   case CC_C:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_Swift:

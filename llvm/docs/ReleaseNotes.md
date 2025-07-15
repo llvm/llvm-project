@@ -70,6 +70,12 @@ Changes to the LLVM IR
   `llvm.load.relative`.
 * Inline asm calls no longer accept ``label`` arguments. Use ``callbr`` instead.
 
+* Updated semantics of the `callbr` instruction to clarify that its
+  'indirect labels' are not expected to be reached by indirect (as in
+  register-controlled) branch instructions, and therefore are not
+  guaranteed to start with a `bti` or `endbr64` instruction, where
+  those exist.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -139,6 +145,10 @@ Changes to the LoongArch Backend
 
 * Changing the default code model from `small` to `medium` for 64-bit.
 * Added inline asm support for the `q` constraint.
+* Added the `32s` target feature for LA32S ISA extensions.
+* Added codegen support for atomic-ops (`cmpxchg`, `max`, `min`, `umax`, `umin`) on LA32.
+* Added codegen support for the ILP32D calling convention.
+* Added several codegen and vectorization optimizations.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -201,6 +211,14 @@ Changes to the RISC-V Backend
 * Adds experimental assembler support for the SiFive Xsfmm* Attached Matrix
   Extensions.
 * `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
+* The `Shlcofideleg` extension was added.
+* `-mcpu=sifive-x390` was added.
+* `-mtune=andes-45-series` was added.
+* Adds assembler support for the Andes `XAndesvbfhcvt` (Andes Vector BFLOAT16 Conversion extension).
+* `-mcpu=andes-ax45mpv` was added.
+* Removed -mattr=+no-rvc-hints that could be used to disable parsing and generation of RVC hints.
+* Adds assembler support for the Andes `XAndesvsintload` (Andes Vector INT4 Load extension).
+* Adds assembler support for the Andes `XAndesbfhcvt` (Andes Scalar BFLOAT16 Conversion extension).
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -213,6 +231,8 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
+
+* `fp128` will now use `*f128` libcalls on 32-bit GNU targets as well.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -239,6 +259,9 @@ Changes to the C API
 * Added ``LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision`` for creating
   debugging metadata of enumerators larger than 64 bits.
 
+* Added ``LLVMGetICmpSameSign`` and ``LLVMSetICmpSameSign`` for the `samesign`
+  flag on `icmp` instructions.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -255,6 +278,8 @@ Changes to the LLVM tools
 * llvm-strip now supports continuing to process files on encountering an error.
 * In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
   ([#47468](https://github.com/llvm/llvm-project/issues/47468))
+* llvm-addr2line now supports a `+` prefix when specifying an address.
+* Support for `SHT_LLVM_BB_ADDR_MAP` versions 0 and 1 has been dropped.
 
 Changes to LLDB
 ---------------------------------
@@ -279,6 +304,26 @@ Changes to LLDB
   supporting reverse execution, such as [rr](https://rr-project.org).
   When using reverse execution, `process continue --forward` returns to the
   forward execution.
+* LLDB now supports RISC-V 32-bit ELF core files.
+* LLDB now supports siginfo descriptions for Linux user-space signals. User space
+  signals will now have descriptions describing the method and sender.
+  ```
+    stop reason = SIGSEGV: sent by tkill system call (sender pid=649752, uid=2667987)
+  ```
+* ELF Cores can now have their siginfo structures inspected using `thread siginfo`.
+* LLDB now uses
+  [DIL](https://discourse.llvm.org/t/rfc-data-inspection-language/69893) as the
+  default implementation for 'frame variable'. This should not change the
+  behavior of 'frame variable' at all, at this time. To revert to using the
+  old implementation use
+  ```
+     settings set target.experimental.use-DIL false
+   ```
+* Disassembly of unknown instructions now produces `<unknown>` instead of
+  nothing at all
+* Changed the format of opcode bytes to match llvm-objdump when disassembling
+  RISC-V code with `disassemble`'s `--byte` option.
+
 
 ### Changes to lldb-dap
 

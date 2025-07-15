@@ -147,6 +147,17 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   /// Initialize the device, which is a no-op
   Error initImpl(GenericPluginTy &Plugin) override { return Plugin::success(); }
 
+  /// Unload the binary image
+  ///
+  /// TODO: This currently does nothing, and should be implemented as part of
+  /// broader memory handling logic for this plugin
+  Error unloadBinaryImpl(DeviceImageTy *Image) override {
+    auto Elf = reinterpret_cast<GenELF64DeviceImageTy *>(Image);
+    DynamicLibrary::closeLibrary(Elf->getDynamicLibrary());
+    Plugin.free(Elf);
+    return Plugin::success();
+  }
+
   /// Deinitialize the device, which is a no-op
   Error deinitImpl() override { return Plugin::success(); }
 
@@ -206,8 +217,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
     // Load the temporary file as a dynamic library.
     std::string ErrMsg;
-    DynamicLibrary DynLib =
-        DynamicLibrary::getPermanentLibrary(TmpFileName, &ErrMsg);
+    DynamicLibrary DynLib = DynamicLibrary::getLibrary(TmpFileName, &ErrMsg);
 
     // Check if the loaded library is valid.
     if (!DynLib.isValid())
@@ -326,9 +336,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
 
   /// Print information about the device.
-  Error obtainInfoImpl(InfoQueueTy &Info) override {
+  Expected<InfoTreeNode> obtainInfoImpl() override {
+    InfoTreeNode Info;
     Info.add("Device Type", "Generic-elf-64bit");
-    return Plugin::success();
+    return Info;
   }
 
   /// This plugin should not setup the device environment or memory pool.

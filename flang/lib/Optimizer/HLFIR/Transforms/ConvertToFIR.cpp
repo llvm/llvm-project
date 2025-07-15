@@ -326,11 +326,14 @@ public:
       auto genHlfirBox = [&]() -> mlir::Value {
         if (auto baseBoxType =
                 mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
-          // Rebox so that lower bounds are correct.
+          // Rebox so that lower bounds and attributes are correct.
           if (baseBoxType.isAssumedRank())
             return builder.create<fir::ReboxAssumedRankOp>(
                 loc, hlfirBaseType, firBase,
                 fir::LowerBoundModifierAttribute::SetToOnes);
+          if (!fir::extractSequenceType(baseBoxType.getEleTy()) &&
+              baseBoxType == hlfirBaseType)
+            return firBase;
           return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
                                               declareOp.getShape(),
                                               /*slice=*/mlir::Value{});
@@ -356,7 +359,7 @@ public:
         // is used for accessing the bounds etc. Using the HLFIR box,
         // that holds the same base_addr at this point, makes
         // the representation a little bit more clear.
-        if (hlfirBase.getType() == firBase.getType())
+        if (hlfirBase.getType() == declareOp.getOriginalBase().getType())
           firBase = hlfirBase;
       } else {
         // Need to conditionally rebox/embox the optional: the input fir.box

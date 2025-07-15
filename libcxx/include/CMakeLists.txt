@@ -498,6 +498,7 @@ set(files
   __iterator/ostreambuf_iterator.h
   __iterator/permutable.h
   __iterator/prev.h
+  __iterator/product_iterator.h
   __iterator/projected.h
   __iterator/ranges_iterator_traits.h
   __iterator/readable_traits.h
@@ -510,13 +511,19 @@ set(files
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
+  __locale_dir/check_grouping.h
+  __locale_dir/get_c_locale.h
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/android.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
+  __locale_dir/messages.h
+  __locale_dir/money.h
+  __locale_dir/num.h
   __locale_dir/pad_and_output.h
+  __locale_dir/scan_keyword.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
@@ -525,6 +532,9 @@ set(files
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
+  __locale_dir/time.h
+  __locale_dir/wbuffer_convert.h
+  __locale_dir/wstring_convert.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -706,6 +716,7 @@ set(files
   __ranges/iota_view.h
   __ranges/istream_view.h
   __ranges/join_view.h
+  __ranges/join_with_view.h
   __ranges/lazy_split_view.h
   __ranges/movable_box.h
   __ranges/non_propagating_cache.h
@@ -776,9 +787,8 @@ set(files
   __tuple/tuple_size.h
   __tuple/tuple_types.h
   __type_traits/add_cv_quals.h
-  __type_traits/add_lvalue_reference.h
   __type_traits/add_pointer.h
-  __type_traits/add_rvalue_reference.h
+  __type_traits/add_reference.h
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
@@ -800,6 +810,7 @@ set(files
   __type_traits/extent.h
   __type_traits/has_unique_object_representation.h
   __type_traits/has_virtual_destructor.h
+  __type_traits/integer_traits.h
   __type_traits/integral_constant.h
   __type_traits/invoke.h
   __type_traits/is_abstract.h
@@ -850,7 +861,6 @@ set(files
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
-  __type_traits/is_signed_integer.h
   __type_traits/is_specialization.h
   __type_traits/is_standard_layout.h
   __type_traits/is_swappable.h
@@ -864,7 +874,6 @@ set(files
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
   __type_traits/is_unsigned.h
-  __type_traits/is_unsigned_integer.h
   __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h
@@ -935,6 +944,7 @@ set(files
   __vector/vector_bool.h
   __vector/vector_bool_formatter.h
   __verbose_abort
+  __verbose_trap
   algorithm
   any
   array
@@ -1560,6 +1570,7 @@ set(files
   __cxx03/__utility/unreachable.h
   __cxx03/__variant/monostate.h
   __cxx03/__verbose_abort
+  __cxx03/__verbose_trap
   __cxx03/algorithm
   __cxx03/array
   __cxx03/atomic
@@ -1699,12 +1710,17 @@ list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
-target_link_libraries(cxx-headers INTERFACE libcxx-libc-headers libcxx-abi-headers)
+target_link_libraries(cxx-headers INTERFACE runtimes-libc-headers libcxx-abi-headers)
 add_dependencies(cxx-headers generate-cxx-headers)
 # It's important that the arch directory be included first so that its header files
 # which interpose on the default include dir be included instead of the default ones.
 target_include_directories(cxx-headers INTERFACE ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}
                                                  ${LIBCXX_GENERATED_INCLUDE_DIR})
+
+# Make sure to map the generated include directory back to libc++'s actual source directory when generating
+# debug information. Otherwise, the debug information will refer to generated headers which are created during
+# the build and generally not persistent.
+target_add_compile_flags_if_supported(cxx-headers INTERFACE "-fdebug-prefix-map=${LIBCXX_GENERATED_INCLUDE_DIR}=${LIBCXX_SOURCE_DIR}/include")
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})

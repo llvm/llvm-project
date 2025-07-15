@@ -1188,6 +1188,8 @@ bool SymbolFileDWARF::ParseImportedModules(
       SourceModule module;
       module.path.push_back(ConstString(name));
 
+      const char *include_path = module_die.GetAttributeValueAsString(
+          DW_AT_LLVM_include_path, nullptr);
       DWARFDIE parent_die = module_die;
       while ((parent_die = parent_die.GetParent())) {
         if (parent_die.Tag() != DW_TAG_module)
@@ -1195,10 +1197,16 @@ bool SymbolFileDWARF::ParseImportedModules(
         if (const char *name =
                 parent_die.GetAttributeValueAsString(DW_AT_name, nullptr))
           module.path.push_back(ConstString(name));
+
+        // Inferred submodule declarations may not have a
+        // DW_AT_LLVM_include_path. Pick the parent (aka umbrella) module's
+        // include path instead.
+        if (!include_path)
+          include_path = parent_die.GetAttributeValueAsString(
+              DW_AT_LLVM_include_path, nullptr);
       }
       std::reverse(module.path.begin(), module.path.end());
-      if (const char *include_path = module_die.GetAttributeValueAsString(
-              DW_AT_LLVM_include_path, nullptr)) {
+      if (include_path) {
         FileSpec include_spec(include_path, dwarf_cu->GetPathStyle());
         MakeAbsoluteAndRemap(include_spec, *dwarf_cu,
                              m_objfile_sp->GetModule());
@@ -4119,7 +4127,7 @@ void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
   m_index->Dump(s);
 }
 
-void SymbolFileDWARF::DumpClangAST(Stream &s) {
+void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
     return;
@@ -4127,11 +4135,12 @@ void SymbolFileDWARF::DumpClangAST(Stream &s) {
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
     return;
-  clang->Dump(s.AsRawOstream());
+  clang->Dump(s.AsRawOstream(), filter);
 }
 
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                                           bool errors_only) {
+                                           bool errors_only,
+                                           bool load_all_debug_info) {
   StructuredData::Array separate_debug_info_files;
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
@@ -4174,7 +4183,7 @@ bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
 
     // If we have a DWO symbol file, that means we were able to successfully
     // load it.
-    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile();
+    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile(load_all_debug_info);
     if (dwo_symfile) {
       dwo_data->AddStringItem(
           "resolved_dwo_path",
@@ -4209,6 +4218,9 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
 
 const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
   llvm::call_once(m_dwp_symfile_once_flag, [this]() {
+    if (m_objfile_sp->GetArchitecture().GetTriple().isAppleMachO())
+      return;
+
     // Create a list of files to try and append .dwp to.
     FileSpecList symfiles;
     // Append the module's object file path.
@@ -4408,4 +4420,33 @@ void SymbolFileDWARF::GetCompileOptions(
       continue;
     args.insert({comp_unit, Args(flags)});
   }
+}
+
+std::pair<uint32_t, uint32_t> SymbolFileDWARF::GetDwoFileCounts() {
+  uint32_t total_dwo_count = 0;
+  uint32_t loaded_dwo_count = 0;
+
+  DWARFDebugInfo &info = DebugInfo();
+  const size_t num_cus = info.GetNumUnits();
+  for (size_t cu_idx = 0; cu_idx < num_cus; cu_idx++) {
+    DWARFUnit *dwarf_cu = info.GetUnitAtIndex(cu_idx);
+    if (dwarf_cu == nullptr)
+      continue;
+
+    // Check if this is a DWO unit by checking if it has a DWO ID.
+    if (!dwarf_cu->GetDWOId().has_value())
+      continue;
+
+    total_dwo_count++;
+
+    // If we have a DWO symbol file, that means we were able to successfully
+    // load it.
+    SymbolFile *dwo_symfile =
+        dwarf_cu->GetDwoSymbolFile(/*load_all_debug_info=*/false);
+    if (dwo_symfile) {
+      loaded_dwo_count++;
+    }
+  }
+
+  return {loaded_dwo_count, total_dwo_count};
 }

@@ -50,10 +50,9 @@ std::optional<Token> findQualToken(const VarDecl *Decl, Qualifier Qual,
   if (FileRange.isInvalid())
     return std::nullopt;
 
-  tok::TokenKind Tok =
-      Qual == Qualifier::Const
-          ? tok::kw_const
-          : Qual == Qualifier::Volatile ? tok::kw_volatile : tok::kw_restrict;
+  tok::TokenKind Tok = Qual == Qualifier::Const      ? tok::kw_const
+                       : Qual == Qualifier::Volatile ? tok::kw_volatile
+                                                     : tok::kw_restrict;
 
   return utils::lexer::getQualifyingToken(Tok, FileRange, *Result.Context,
                                           *Result.SourceManager);

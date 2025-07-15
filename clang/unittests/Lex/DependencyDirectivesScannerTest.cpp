@@ -677,13 +677,28 @@ TEST(MinimizeSourceToDependencyDirectivesTest, EmptyIncludesAndImports) {
                Out.data());
 }
 
-TEST(MinimizeSourceToDependencyDirectivesTest, AtImportFailures) {
+TEST(MinimizeSourceToDependencyDirectivesTest, ImportFailures) {
   SmallVector<char, 128> Out;
 
   ASSERT_TRUE(minimizeSourceToDependencyDirectives("@import A\n", Out));
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives("@import MACRO(A);\n", Out));
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import \" \";\n", Out));
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("import <Foo.h>\n"
+                                                    "@import Foo;",
+                                                    Out));
+  EXPECT_STREQ("@import Foo;\n", Out.data());
+
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives("import <Foo.h>\n"
+                                           "#import <Foo.h>\n"
+                                           "@;\n"
+                                           "#pragma clang module import Foo",
+                                           Out));
+  EXPECT_STREQ("#import <Foo.h>\n"
+               "#pragma clang module import Foo\n",
+               Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, RawStringLiteral) {
@@ -772,6 +787,128 @@ TEST(MinimizeSourceToDependencyDirectivesTest,
                "2+\\\t\n"
                "3\n",
                Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest,
+     WhitespaceAfterLineContinuationSlashLineComment) {
+  SmallVector<char, 128> Out;
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("// some comment \\  \n"
+                                                    "module A;\n",
+                                                    Out));
+  EXPECT_STREQ("", Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest,
+     WhitespaceAfterLineContinuationSlashAllDirectives) {
+  SmallVector<char, 512> Out;
+  SmallVector<dependency_directives_scan::Token, 16> Tokens;
+  SmallVector<Directive, 16> Directives;
+
+  StringRef Input = "#define \\   \n"
+                    "A\n"
+                    "#undef\t\\   \n"
+                    "A\n"
+                    "#endif \\\t\t\n"
+                    "\n"
+                    "#if \\     \t\n"
+                    "A\n"
+                    "#ifdef\t\\   \n"
+                    "A\n"
+                    "#ifndef \\ \t\n"
+                    "A\n"
+                    "#elifdef \\  \n"
+                    "A\n"
+                    "#elifndef \\ \n"
+                    "A\n"
+                    "#elif \\\t\t \n"
+                    "A\n"
+                    "#else \\\t \t\n"
+                    "\n"
+                    "#include \\  \n"
+                    "<A>\n"
+                    "#include_next \\    \n"
+                    "<A>\n"
+                    "#__include_macros\\ \n"
+                    "<A>\n"
+                    "#import \\ \t\n"
+                    "<A>\n"
+                    "@import \\\t \n"
+                    "A;\n"
+                    "#pragma clang \\   \n"
+                    "module \\    \n"
+                    "import A\n"
+                    "#pragma \\   \n"
+                    "push_macro(A)\n"
+                    "#pragma \\\t \n"
+                    "pop_macro(A)\n"
+                    "#pragma \\   \n"
+                    "include_alias(<A>,\\ \n"
+                    "<B>)\n"
+                    "export \\    \n"
+                    "module m;\n"
+                    "import\t\\\t \n"
+                    "m;\n"
+                    "#pragma\t\\  \n"
+                    "clang\t\\  \t\n"
+                    "system_header\n";
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives(Input, Out, Tokens, Directives));
+
+  EXPECT_EQ(pp_define, Directives[0].Kind);
+  EXPECT_EQ(pp_undef, Directives[1].Kind);
+  EXPECT_EQ(pp_endif, Directives[2].Kind);
+  EXPECT_EQ(pp_if, Directives[3].Kind);
+  EXPECT_EQ(pp_ifdef, Directives[4].Kind);
+  EXPECT_EQ(pp_ifndef, Directives[5].Kind);
+  EXPECT_EQ(pp_elifdef, Directives[6].Kind);
+  EXPECT_EQ(pp_elifndef, Directives[7].Kind);
+  EXPECT_EQ(pp_elif, Directives[8].Kind);
+  EXPECT_EQ(pp_else, Directives[9].Kind);
+  EXPECT_EQ(pp_include, Directives[10].Kind);
+  EXPECT_EQ(pp_include_next, Directives[11].Kind);
+  EXPECT_EQ(pp___include_macros, Directives[12].Kind);
+  EXPECT_EQ(pp_import, Directives[13].Kind);
+  EXPECT_EQ(decl_at_import, Directives[14].Kind);
+  EXPECT_EQ(pp_pragma_import, Directives[15].Kind);
+  EXPECT_EQ(pp_pragma_push_macro, Directives[16].Kind);
+  EXPECT_EQ(pp_pragma_pop_macro, Directives[17].Kind);
+  EXPECT_EQ(pp_pragma_include_alias, Directives[18].Kind);
+  EXPECT_EQ(cxx_export_module_decl, Directives[19].Kind);
+  EXPECT_EQ(cxx_import_decl, Directives[20].Kind);
+  EXPECT_EQ(pp_pragma_system_header, Directives[21].Kind);
+  EXPECT_EQ(pp_eof, Directives[22].Kind);
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest,
+     TestFixedBugThatReportUnterminatedDirectiveFalsely) {
+  SmallVector<char, 512> Out;
+  SmallVector<dependency_directives_scan::Token, 16> Tokens;
+  SmallVector<Directive, 16> Directives;
+
+  StringRef Input = "#ifndef __TEST \n"
+                    "#define __TEST \n"
+                    "#if defined(__TEST_DUMMY) \n"
+                    "#if defined(__TEST_DUMMY2) \n"
+                    "#pragma GCC warning        \\  \n"
+                    "\"hello!\"\n"
+                    "#else\n"
+                    "#pragma GCC error          \\  \n"
+                    "\"world!\" \n"
+                    "#endif // defined(__TEST_DUMMY2) \n"
+                    "#endif  // defined(__TEST_DUMMY) \n"
+                    "#endif // #ifndef __TEST \n";
+  ASSERT_FALSE( // False on no error:
+      minimizeSourceToDependencyDirectives(Input, Out, Tokens, Directives));
+  ASSERT_TRUE(Directives.size() == 8);
+  EXPECT_EQ(pp_ifndef, Directives[0].Kind);
+  EXPECT_EQ(pp_define, Directives[1].Kind);
+  EXPECT_EQ(pp_if, Directives[2].Kind);
+  EXPECT_EQ(pp_if, Directives[3].Kind);
+  EXPECT_EQ(pp_endif, Directives[4].Kind);
+  EXPECT_EQ(pp_endif, Directives[5].Kind);
+  EXPECT_EQ(pp_endif, Directives[6].Kind);
+  EXPECT_EQ(pp_eof, Directives[7].Kind);
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, PoundWarningAndError) {
@@ -1011,6 +1148,19 @@ TEST(MinimizeSourceToDependencyDirectivesTest, ObjCMethodArgs) {
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
   // `module :` and `import :` not followed by an identifier are not treated as
   // directive lines because they can be method argument decls.
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest,
+     CxxModulesImportScopeResolution) {
+  SmallString<16> Out;
+  SmallVector<dependency_directives_scan::Token, 2> Tokens;
+  SmallVector<Directive, 1> Directives;
+
+  StringRef Source = "import::inner xi = {};'\n"
+                     "module::inner yi = {};";
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
   EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
 }
 
