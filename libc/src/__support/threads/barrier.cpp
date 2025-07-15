@@ -15,7 +15,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 const int BARRIER_FIRST_EXITED = -1;
 
-int Barrier::init(Barrier *b, const pthread_barrierattr_t *attr,
+int Barrier::init(Barrier *b,
+                  const pthread_barrierattr_t *attr __attribute__((unused)),
                   unsigned count) {
   LIBC_ASSERT(attr == nullptr); // TODO implement barrierattr
   if (count == 0)
