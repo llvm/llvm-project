@@ -373,8 +373,7 @@ void X86InstrMappingEmitter::emitSSE2AVXTable(
 void X86InstrMappingEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("X86 instruction mapping", OS);
 
-  ArrayRef<const CodeGenInstruction *> Insts =
-      Target.getInstructionsByEnumValue();
+  ArrayRef<const CodeGenInstruction *> Insts = Target.getInstructions();
   printClassDef(OS);
   emitCompressEVEXTable(Insts, OS);
   emitNFTransformTable(Insts, OS);

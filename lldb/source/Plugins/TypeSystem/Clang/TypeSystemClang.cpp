@@ -2420,9 +2420,12 @@ void TypeSystemClang::DumpDeclHiearchy(clang::Decl *decl) {
 
   clang::RecordDecl *record_decl = llvm::dyn_cast<clang::RecordDecl>(decl);
   if (record_decl) {
+    bool is_injected_class_name =
+        llvm::isa<clang::CXXRecordDecl>(record_decl) &&
+        llvm::cast<CXXRecordDecl>(record_decl)->isInjectedClassName();
     printf("%20s: %s%s\n", decl->getDeclKindName(),
            record_decl->getDeclName().getAsString().c_str(),
-           record_decl->isInjectedClassName() ? " (injected class name)" : "");
+           is_injected_class_name ? " (injected class name)" : "");
 
   } else {
     clang::NamedDecl *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl);
@@ -5024,6 +5027,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     // PowerPC -- Matrix Multiply Assist
     case clang::BuiltinType::VectorPair:
     case clang::BuiltinType::VectorQuad:
+    case clang::BuiltinType::DMR1024:
       break;
 
     // ARM -- Scalable Vector Extension

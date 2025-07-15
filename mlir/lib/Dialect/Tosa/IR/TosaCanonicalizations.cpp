@@ -15,20 +15,14 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
-#include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
-#include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #include <functional>
 
@@ -344,7 +338,7 @@ LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
     return failure();
   rewriter.modifyOpInPlace(op, [&]() {
     op.getOperation()->setOperands(
-        {notOp.getInput1(), op.getInput3(), op.getInput2()});
+        {notOp.getInput1(), op.getOnFalse(), op.getOnTrue()});
   });
   return success();
 }
@@ -1510,8 +1504,8 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
-  if (getInput2() == getInput3())
-    return getInput2();
+  if (getOnTrue() == getOnFalse())
+    return getOnTrue();
 
   auto predicate =
       llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getInput1());
@@ -1520,8 +1514,8 @@ OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
 
   if (!predicate.isSplat())
     return {};
-  return predicate.getSplatValue<APInt>().getBoolValue() ? getInput2()
-                                                         : getInput3();
+  return predicate.getSplatValue<APInt>().getBoolValue() ? getOnTrue()
+                                                         : getOnFalse();
 }
 
 OpFoldResult TileOp::fold(FoldAdaptor adaptor) {

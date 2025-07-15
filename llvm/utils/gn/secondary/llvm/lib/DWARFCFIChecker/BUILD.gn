@@ -1,0 +1,14 @@
+static_library("DWARFCFIChecker") {
+  output_name = "LLVMDWARFCFIChecker"
+  deps = [
+    "//llvm/lib/DebugInfo/DWARF/LowLevel",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "DWARFCFIAnalysis.cpp",
+    "DWARFCFIFunctionFrameAnalyzer.cpp",
+    "DWARFCFIFunctionFrameStreamer.cpp",
+    "DWARFCFIState.cpp",
+  ]
+}

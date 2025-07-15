@@ -19,6 +19,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetObjectFile.h"
 #include "X86TargetTransformInfo.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -219,7 +220,7 @@ getEffectiveX86CodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
   bool Is64Bit = TT.getArch() == Triple::x86_64;
   if (CM) {
     if (*CM == CodeModel::Tiny)
-      report_fatal_error("Target does not support the tiny CodeModel", false);
+      reportFatalUsageError("target does not support the tiny CodeModel");
     return *CM;
   }
   if (JIT)
@@ -554,7 +555,6 @@ bool X86PassConfig::addPreISel() {
 void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
-    addPass(createX86WinFixupBufferSecurityCheckPass());
     addPass(createX86FixupSetCC());
     addPass(createX86OptimizeLEAs());
     addPass(createX86CallFrameOptimization());

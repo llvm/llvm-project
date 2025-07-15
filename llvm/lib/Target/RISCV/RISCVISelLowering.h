@@ -331,7 +331,7 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *Fast = nullptr) const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   bool splitValueIntoRegisterParts(
@@ -362,6 +362,15 @@ public:
   // given scalable container type given known bounds on VLEN.
   static std::pair<unsigned, unsigned>
   computeVLMAXBounds(MVT ContainerVT, const RISCVSubtarget &Subtarget);
+
+  /// Given a vector (either fixed or scalable), return the scalable vector
+  /// corresponding to a vector register (i.e. an m1 register group).
+  static MVT getM1VT(MVT VT) {
+    unsigned EltSizeInBits = VT.getVectorElementType().getSizeInBits();
+    assert(EltSizeInBits <= RISCV::RVVBitsPerBlock && "Unexpected vector MVT");
+    return MVT::getScalableVectorVT(VT.getVectorElementType(),
+                                    RISCV::RVVBitsPerBlock / EltSizeInBits);
+  }
 
   static unsigned getRegClassIDForLMUL(RISCVVType::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
@@ -458,6 +467,12 @@ public:
                                             MachineBasicBlock *MBB) const;
 
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
+  /// Match a mask which "spreads" the leading elements of a vector evenly
+  /// across the result.  Factor is the spread amount, and Index is the
+  /// offset applied.
+  static bool isSpreadMask(ArrayRef<int> Mask, unsigned Factor,
+                           unsigned &Index);
 
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,

@@ -896,12 +896,7 @@ BasicBlock *CodeGenPrepare::findDestBlockOfMergeableEmptyBlock(BasicBlock *BB) {
   BasicBlock::iterator BBI = BI->getIterator();
   if (BBI != BB->begin()) {
     --BBI;
-    while (isa<DbgInfoIntrinsic>(BBI)) {
-      if (BBI == BB->begin())
-        break;
-      --BBI;
-    }
-    if (!isa<DbgInfoIntrinsic>(BBI) && !isa<PHINode>(BBI))
+    if (!isa<PHINode>(BBI))
       return nullptr;
   }
 
@@ -2981,10 +2976,9 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   // Make sure there are no instructions between the first instruction
   // and return.
   BasicBlock::const_iterator BI = BB->getFirstNonPHIIt();
-  // Skip over debug and the bitcast.
-  while (isa<DbgInfoIntrinsic>(BI) || &*BI == BCI || &*BI == EVI ||
-         isa<PseudoProbeInst>(BI) || isLifetimeEndOrBitCastFor(&*BI) ||
-         isFakeUse(&*BI))
+  // Skip over pseudo-probes and the bitcast.
+  while (&*BI == BCI || &*BI == EVI || isa<PseudoProbeInst>(BI) ||
+         isLifetimeEndOrBitCastFor(&*BI) || isFakeUse(&*BI))
     BI = std::next(BI);
   if (&*BI != RetI)
     return false;
@@ -3335,8 +3329,7 @@ class TypePromotionTransaction {
 
       // Record where we would have to re-insert the instruction in the sequence
       // of DbgRecords, if we ended up reinserting.
-      if (BB->IsNewDbgInfoFormat)
-        BeforeDbgRecord = Inst->getDbgReinsertionPosition();
+      BeforeDbgRecord = Inst->getDbgReinsertionPosition();
 
       if (HasPrevInstruction) {
         Point.PrevInst = std::prev(Inst->getIterator());
@@ -6099,6 +6092,13 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       }
 
       if (!ResultIndex) {
+        auto PtrInst = dyn_cast<Instruction>(ResultPtr);
+        // We know that we have a pointer without any offsets. If this pointer
+        // originates from a different basic block than the current one, we
+        // must be able to recreate it in the current basic block.
+        // We do not support the recreation of any instructions yet.
+        if (PtrInst && PtrInst->getParent() != MemoryInst->getParent())
+          return Modified;
         SunkAddr = ResultPtr;
       } else {
         if (ResultPtr->getType() != I8PtrTy)

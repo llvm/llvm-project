@@ -494,9 +494,9 @@ static std::vector<llvm::StringRef> semanticTokenModifiers() {
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                    Callback<llvm::json::Value> Reply) {
   // Determine character encoding first as it affects constructed ClangdServer.
-  if (Params.capabilities.offsetEncoding && !Opts.Encoding) {
+  if (Params.capabilities.PositionEncodings && !Opts.Encoding) {
     Opts.Encoding = OffsetEncoding::UTF16; // fallback
-    for (OffsetEncoding Supported : *Params.capabilities.offsetEncoding)
+    for (OffsetEncoding Supported : *Params.capabilities.PositionEncodings)
       if (Supported != OffsetEncoding::UnsupportedEncoding) {
         Opts.Encoding = Supported;
         break;
@@ -686,6 +686,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   ServerCaps["executeCommandProvider"] =
       llvm::json::Object{{"commands", Commands}};
 
+  if (Opts.Encoding)
+    ServerCaps["positionEncoding"] = *Opts.Encoding;
+
   llvm::json::Object Result{
       {{"serverInfo",
         llvm::json::Object{
@@ -693,6 +696,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"version", llvm::formatv("{0} {1} {2}", versionString(),
                                       featureString(), platformString())}}},
        {"capabilities", std::move(ServerCaps)}}};
+
+  // TODO: offsetEncoding capability is a deprecated clangd extension and should
+  // be deleted.
   if (Opts.Encoding)
     Result["offsetEncoding"] = *Opts.Encoding;
   Reply(std::move(Result));

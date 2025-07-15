@@ -130,7 +130,7 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
         if (DesugarArgument) {
           ShouldAKA = true;
           QT = Context.getTemplateSpecializationType(
-              TST->getTemplateName(), Args, /*CanonicalArgs=*/std::nullopt, QT);
+              TST->getTemplateName(), Args, /*CanonicalArgs=*/{}, QT);
         }
         break;
       }
@@ -228,7 +228,7 @@ break; \
           desugarForDiagnostic(Context, Ty->getBaseType(), ShouldAKA);
       QT = Context.getObjCObjectType(
           BaseType, Ty->getTypeArgsAsWritten(),
-          llvm::ArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
+          ArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
           Ty->isKindOfTypeAsWritten());
     }
   }
@@ -506,7 +506,15 @@ void clang::FormatASTNodeDiagnosticArgument(
     case DiagnosticsEngine::ak_attr: {
       const Attr *At = reinterpret_cast<Attr *>(Val);
       assert(At && "Received null Attr object!");
-      OS << '\'' << At->getSpelling() << '\'';
+
+      OS << '\'';
+      if (At->hasScope()) {
+        OS << At->getNormalizedFullName(At->getScopeName()->getName(),
+                                        At->getSpelling());
+      } else {
+        OS << At->getSpelling();
+      }
+      OS << '\'';
       NeedQuotes = false;
       break;
     }
@@ -514,6 +522,20 @@ void clang::FormatASTNodeDiagnosticArgument(
       const Expr *E = reinterpret_cast<Expr *>(Val);
       assert(E && "Received null Expr!");
       E->printPretty(OS, /*Helper=*/nullptr, Context.getPrintingPolicy());
+      break;
+    }
+    case DiagnosticsEngine::ak_attr_info: {
+      AttributeCommonInfo *AT = reinterpret_cast<AttributeCommonInfo *>(Val);
+      assert(AT && "Received null AttributeCommonInfo object!");
+
+      OS << '\'';
+      if (AT->isStandardAttributeSyntax()) {
+        OS << AT->getNormalizedFullName();
+      } else {
+        OS << AT->getAttrName()->getName();
+      }
+      OS << '\'';
+      NeedQuotes = false;
       break;
     }
   }
@@ -560,7 +582,7 @@ class TemplateDiff {
   /// IsBold - Keeps track of the bold formatting for the output string.
   bool IsBold;
 
-  /// DiffTree - A tree representation the differences between two types.
+  /// DiffTree - A tree representation of the differences between two types.
   class DiffTree {
   public:
     /// DiffKind - The difference in a DiffNode.  Fields of
@@ -780,7 +802,7 @@ class TemplateDiff {
       CurrentNode = FlatTree[CurrentNode].ParentNode;
     }
 
-    /// AddNode - Adds a child node to the current node, then sets that node
+    /// AddNode - Adds a child node to the current node, then sets that
     /// node as the current node.
     void AddNode() {
       assert(FlatTree[CurrentNode].Kind == Template &&
@@ -915,12 +937,12 @@ class TemplateDiff {
       return FlatTree[ReadNode].ToArgInfo.IsDefault;
     }
 
-    /// NodeIsSame - Returns true the arguments are the same.
+    /// NodeIsSame - Returns true if the arguments are the same.
     bool NodeIsSame() {
       return FlatTree[ReadNode].Same;
     }
 
-    /// HasChildrend - Returns true if the node has children.
+    /// HasChildren - Returns true if the node has children.
     bool HasChildren() {
       return FlatTree[ReadNode].ChildNode != 0;
     }
@@ -960,7 +982,7 @@ class TemplateDiff {
 
   /// TSTiterator - a pair of iterators that walks the
   /// TemplateSpecializationType and the desugared TemplateSpecializationType.
-  /// The deseguared TemplateArgument should provide the canonical argument
+  /// The desugared TemplateArgument should provide the canonical argument
   /// for comparisons.
   class TSTiterator {
     typedef const TemplateArgument& reference;
@@ -971,7 +993,7 @@ class TemplateDiff {
     /// parameter packs in order with the rest of the TemplateArguments.
     struct InternalIterator {
       /// TST - the template specialization whose arguments this iterator
-      /// traverse over.
+      /// traverses over.
       const TemplateSpecializationType *TST;
 
       /// Index - the index of the template argument in TST.
@@ -1143,7 +1165,7 @@ class TemplateDiff {
 
     Ty = Context.getTemplateSpecializationType(
         TemplateName(CTSD->getSpecializedTemplate()),
-        CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/std::nullopt,
+        CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/{},
         Ty.getLocalUnqualifiedType().getCanonicalType());
 
     return Ty->getAs<TemplateSpecializationType>();

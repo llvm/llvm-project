@@ -31,7 +31,7 @@ static Expected<std::string>
 ReadFull(IOObject &descriptor, size_t length,
          std::optional<std::chrono::microseconds> timeout = std::nullopt) {
   if (!descriptor.IsValid())
-    return llvm::make_error<TransportClosedError>();
+    return llvm::make_error<TransportInvalidError>();
 
   bool timeout_supported = true;
   // FIXME: SelectHelper does not work with NativeFile on Win32.
@@ -42,7 +42,8 @@ ReadFull(IOObject &descriptor, size_t length,
   if (timeout && timeout_supported) {
     SelectHelper sh;
     sh.SetTimeout(*timeout);
-    sh.FDSetRead(descriptor.GetWaitableHandle());
+    sh.FDSetRead(
+        reinterpret_cast<lldb::socket_t>(descriptor.GetWaitableHandle()));
     Status status = sh.Select();
     if (status.Fail()) {
       // Convert timeouts into a specific error.
@@ -92,7 +93,7 @@ void JSONTransport::Log(llvm::StringRef message) {
 Expected<std::string>
 HTTPDelimitedJSONTransport::ReadImpl(const std::chrono::microseconds &timeout) {
   if (!m_input || !m_input->IsValid())
-    return createStringError("transport output is closed");
+    return llvm::make_error<TransportInvalidError>();
 
   IOObject *input = m_input.get();
   Expected<std::string> message_header =
@@ -131,7 +132,7 @@ HTTPDelimitedJSONTransport::ReadImpl(const std::chrono::microseconds &timeout) {
 
 Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
   if (!m_output || !m_output->IsValid())
-    return llvm::make_error<TransportClosedError>();
+    return llvm::make_error<TransportInvalidError>();
 
   Log(llvm::formatv("<-- {0}", message).str());
 
@@ -142,6 +143,35 @@ Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
   return m_output->Write(Output.data(), num_bytes).takeError();
 }
 
+Expected<std::string>
+JSONRPCTransport::ReadImpl(const std::chrono::microseconds &timeout) {
+  if (!m_input || !m_input->IsValid())
+    return make_error<TransportInvalidError>();
+
+  IOObject *input = m_input.get();
+  Expected<std::string> raw_json =
+      ReadUntil(*input, kMessageSeparator, timeout);
+  if (!raw_json)
+    return raw_json.takeError();
+
+  Log(llvm::formatv("--> {0}", *raw_json).str());
+
+  return *raw_json;
+}
+
+Error JSONRPCTransport::WriteImpl(const std::string &message) {
+  if (!m_output || !m_output->IsValid())
+    return llvm::make_error<TransportInvalidError>();
+
+  Log(llvm::formatv("<-- {0}", message).str());
+
+  std::string Output;
+  llvm::raw_string_ostream OS(Output);
+  OS << message << kMessageSeparator;
+  size_t num_bytes = Output.size();
+  return m_output->Write(Output.data(), num_bytes).takeError();
+}
+
 char TransportEOFError::ID;
 char TransportTimeoutError::ID;
-char TransportClosedError::ID;
+char TransportInvalidError::ID;

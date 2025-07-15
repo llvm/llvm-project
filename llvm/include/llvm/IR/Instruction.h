@@ -507,7 +507,7 @@ public:
   LLVM_ABI bool extractProfTotalWeight(uint64_t &TotalVal) const;
 
   /// Set the debug location information for this instruction.
-  void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc); }
+  void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc).getCopied(); }
 
   /// Return the debug location for this node as a DebugLoc.
   const DebugLoc &getDebugLoc() const { return DbgLoc; }
@@ -698,7 +698,7 @@ public:
   ///     applications, thus the N-way merging should be in code path.
   /// The DebugLoc attached to this instruction will be overwritten by the
   /// merged DebugLoc.
-  LLVM_ABI void applyMergedLocation(DILocation *LocA, DILocation *LocB);
+  LLVM_ABI void applyMergedLocation(DebugLoc LocA, DebugLoc LocB);
 
   /// Updates the debug location given that the instruction has been hoisted
   /// from a block to a predecessor of that block.
