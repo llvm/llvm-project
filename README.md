@@ -1,43 +1,117 @@
-# The LLVM Compiler Infrastructure
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
-[![libc++](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule)](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule)
+# Clang Enhancement: `__fq_func__` and `__mangled_func__` Support
 
-Welcome to the LLVM project!
+## 1) `Expr.h` → `llvm-project/clang/include/clang/AST/Expr.h`
 
-This repository contains the source code for LLVM, a toolkit for the
-construction of highly optimized compilers, optimizers, and run-time
-environments.
+```cpp
+enum class PredefinedIdentKind {
+  Func,
+  Function,
+  LFunction, // Same as Function, but as wide string.
+  FuncDName,
+  FuncSig,
+  LFuncSig, // Same as FuncSig, but as wide string
+  PrettyFunction,
+  /// The same as PrettyFunction, except that the
+  /// 'virtual' keyword is omitted for virtual member functions.
+  PrettyFunctionNoVirtual,
+  FQFunction,
+  MangledFunction
+};
+```
 
-The LLVM project has multiple components. The core of the project is
-itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and convert them into
-object files. Tools include an assembler, disassembler, bitcode analyzer, and
-bitcode optimizer.
+## `2)Expr.cpp` -->`llvm-project/clang/lib/AST`
+```
+StringRef PredefinedExpr::getIdentKindName(PredefinedIdentKind IK) {
+  switch (IK) {
+  case PredefinedIdentKind::Func:
+    return "__func__";
+  case PredefinedIdentKind::Function:
+    return "__FUNCTION__";
+  case PredefinedIdentKind::FuncDName:
+    return "__FUNCDNAME__";
+  case PredefinedIdentKind::FQFunction:
+    return "__fq_func__";
+  case PredefinedIdentKind::MangledFunction:
+    return "__mangled_func__";
+  case PredefinedIdentKind::LFunction:
+    return "L__FUNCTION__";
+  case PredefinedIdentKind::PrettyFunction:
+    return "__PRETTY_FUNCTION__";
+  case PredefinedIdentKind::FuncSig:
+    return "__FUNCSIG__";
+  case PredefinedIdentKind::LFuncSig:
+    return "L__FUNCSIG__";
+  case PredefinedIdentKind::PrettyFunctionNoVirtual:
+    break;
+  }
+  llvm_unreachable("Unknown ident kind for PredefinedExpr");
+}
+```
+```
+std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
+                                        const Decl *CurrentDecl,
+                                        bool ForceElaboratedPrinting) {
+  ASTContext &Context = CurrentDecl->getASTContext();
 
-C-like languages use the [Clang](https://clang.llvm.org/) frontend. This
-component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
--- and from there into object files, using LLVM.
+  if (IK == PredefinedIdentKind::FQFunction) {
+  if (const auto *ND = dyn_cast<NamedDecl>(CurrentDecl))
+    return ND->getQualifiedNameAsString();
+  return "<unknown>";
+}
 
-Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
-the [LLD linker](https://lld.llvm.org), and more.
+if (IK == PredefinedIdentKind::MangledFunction) {
+  if (const auto *ND = dyn_cast<NamedDecl>(CurrentDecl)) {
+    std::unique_ptr<MangleContext> MC;
+    MC.reset(Context.createMangleContext());
+    SmallString<256> Buffer;
+    llvm::raw_svector_ostream Out(Buffer);
+    GlobalDecl GD;
+    if (const CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(ND))
+      GD = GlobalDecl(CD, Ctor_Base);
+    else if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(ND))
+      GD = GlobalDecl(DD, Dtor_Base);
+    else if (auto FD = dyn_cast<FunctionDecl>(ND)) {
+      GD = FD->isReferenceableKernel() ? GlobalDecl(FD) : GlobalDecl(ND);
+    } else
+      GD = GlobalDecl(ND);
+    MC->mangleName(GD, Out);
+    return std::string(Buffer);
+  }
+  return "<unknown>";
+}
+// Remaining Code continues
+```
 
-## Getting the Source Code and Building LLVM
+## `3)TokenKinds.def` -->`llvm-project/clang/include/clang/Basic/TokenKinds.def`
+```
+KEYWORD(__fq_func__, KEYALL)
+KEYWORD(__mangled_func__, KEYALL)
+```
 
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
-page for information on building and running LLVM.
+## `4)SemaExpr.cpp` -->`llvm-project/clang/lib/Sema/SemaExpr.cpp`
+```
+static PredefinedIdentKind getPredefinedExprKind(tok::TokenKind Kind) {
+  switch (Kind) {
+  default:
+    llvm_unreachable("unexpected TokenKind");
+  case tok::kw___func__:
+    return PredefinedIdentKind::Func;
+  case tok::kw___fq_func__:
+    return PredefinedIdentKind::FQFunction;
+  case tok::kw___mangled_func__:
+    return PredefinedIdentKind::MangledFunction;
+ // Code Continues
+```
 
-For information on how to contribute to the LLVM project, please take a look at
-the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
+## `5)ParseExpr.cpp` -->`llvm-project/clang/lib/Parse/ParseExpr.cpp`
+ ```
+ case tok::kw_L__FUNCTION__:   
+  case tok::kw_L__FUNCSIG__: 
+  case tok::kw___PRETTY_FUNCTION__:
+    //Add below lines
+  case tok::kw___fq_func__:           
+  case tok::kw___mangled_func__: 
+  //end here
+```
 
-## Getting in touch
-
-Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
-chat](https://discord.gg/xS7Z362),
-[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
-[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
-
-The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
-participants to all modes of communication within the project.
+  
