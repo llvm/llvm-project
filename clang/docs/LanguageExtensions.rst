@@ -5350,8 +5350,8 @@ width/count of the set of target architectures supported by your application.
     ...
   }
 
-Specifying a *non-scalable* width/count of 1 disables the optimization, and is
-equivalent to ``vectorize(disable)`` or ``interleave(disable)``.
+Specifying a width/count of 1 disables the optimization, and is equivalent to
+``vectorize(disable)`` or ``interleave(disable)``.
 
 Vector predication is enabled by ``vectorize_predicate(enable)``, for example:
 
