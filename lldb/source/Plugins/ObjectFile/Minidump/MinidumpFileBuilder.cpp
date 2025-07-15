@@ -1109,7 +1109,7 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
     return error;
 
   error = AddDirectory(StreamType::Memory64List,
-                       (sizeof(llvm::support::ulittle64_t) * 2) +
+                       (sizeof(llvm::minidump::Memory64ListHeader)) +
                            ranges.size() *
                                sizeof(llvm::minidump::MemoryDescriptor_64));
   if (error.Fail())
