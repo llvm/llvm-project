@@ -1747,8 +1747,7 @@ bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
 }
 
-bool CursorVisitor::VisitOverflowBehaviorTypeLoc(
-    OverflowBehaviorTypeLoc TL) {
+bool CursorVisitor::VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
 }
 

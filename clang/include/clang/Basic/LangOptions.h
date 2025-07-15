@@ -131,7 +131,6 @@ public:
     OB_FWrapv
   };
 
-
   // FIXME: Unify with TUKind.
   enum CompilingModuleKind {
     /// Not compiling a module interface at all.

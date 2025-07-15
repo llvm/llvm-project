@@ -1150,7 +1150,6 @@ public:
   /// Returns true if it is a WebAssembly Funcref Type.
   bool isWebAssemblyFuncrefType() const;
 
-
   /// Returns true if it is a OverflowBehaviorType of Wrap kind.
   bool isWrapType() const;
 
@@ -2665,7 +2664,7 @@ public:
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
-  bool isOverflowBehaviorType() const;      // __attribute__((no_sanitize))
+  bool isOverflowBehaviorType() const;          // __attribute__((no_sanitize))
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
   bool isObjCObjectPointerType() const;         // pointer to ObjC object
   bool isObjCRetainableType() const;            // ObjC object or block pointer
@@ -6675,10 +6674,7 @@ public:
 
 class OverflowBehaviorType : public Type, public llvm::FoldingSetNode {
 public:
-  enum OverflowBehaviorKind {
-    Wrap,
-    NoWrap
-  };
+  enum OverflowBehaviorKind { Wrap, NoWrap };
 
 private:
   friend class ASTContext; // ASTContext creates these
@@ -6686,9 +6682,10 @@ private:
   QualType UnderlyingType;
   OverflowBehaviorKind BehaviorKind;
 
-  OverflowBehaviorType(QualType Canon, QualType Underlying, OverflowBehaviorKind Kind);
-public:
+  OverflowBehaviorType(QualType Canon, QualType Underlying,
+                       OverflowBehaviorKind Kind);
 
+public:
   QualType getUnderlyingType() const { return UnderlyingType; }
   OverflowBehaviorKind getBehaviorKind() const { return BehaviorKind; }
 
@@ -9046,8 +9043,7 @@ inline bool Type::isScalarType() const {
          isa<MemberPointerType>(CanonicalType) ||
          isa<ComplexType>(CanonicalType) ||
          isa<ObjCObjectPointerType>(CanonicalType) ||
-         isa<OverflowBehaviorType>(CanonicalType) ||
-         isBitIntType();
+         isa<OverflowBehaviorType>(CanonicalType) || isBitIntType();
 }
 
 inline bool Type::isIntegralOrEnumerationType() const {

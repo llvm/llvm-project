@@ -1168,7 +1168,8 @@ public:
     if (UnderlyingType.isNull())
       return {};
 
-    if (UnderlyingType.getAsOpaquePtr() == T->getUnderlyingType().getAsOpaquePtr())
+    if (UnderlyingType.getAsOpaquePtr() ==
+        T->getUnderlyingType().getAsOpaquePtr())
       return QualType(T, 0);
 
     return Ctx.getOverflowBehaviorType(T->getBehaviorKind(), UnderlyingType);
@@ -2172,7 +2173,6 @@ bool Type::isIntegralType(const ASTContext &Ctx) const {
             dyn_cast<OverflowBehaviorType>(CanonicalType))
       return OBT->getUnderlyingType()->isIntegralOrEnumerationType();
   }
-
 
   return isBitIntType();
 }
