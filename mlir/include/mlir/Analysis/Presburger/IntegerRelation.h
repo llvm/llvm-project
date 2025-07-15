@@ -710,10 +710,8 @@ public:
   /// Let the relation `this` be R1, and the relation `rel` be R2. Requires
   /// R1 and R2 to have the same domain.
   ///
-  /// This operation computes the relation whose domain is the same as R1 and
-  /// whose range is the product of the ranges of R1 and R2, and whose
-  /// constraints are the conjunction of the constraints of R1 and R2 applied
-  /// to the relevant subspaces of the range.
+  /// Let R3 be the rangeProduct of R1 and R2. Then x R3 (y, z) iff
+  /// (x R1 y and x R2 z).
   ///
   /// Example:
   ///
