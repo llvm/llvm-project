@@ -6294,7 +6294,8 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
         FillRC = nullptr;
         break;
       case AArch64::sub_32:
-        FillRC = &AArch64::GPR32RegClass;
+        if (AArch64::GPR64RegClass.hasSubClassEq(getRegClass(DstReg)))
+          FillRC = &AArch64::GPR32RegClass;
         break;
       case AArch64::ssub:
         FillRC = &AArch64::FPR32RegClass;
