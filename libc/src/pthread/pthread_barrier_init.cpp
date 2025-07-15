@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "pthread_mutex_init.h"
-#include "pthread_mutexattr.h"
+#include "pthread_barrier_init.h"
 
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"

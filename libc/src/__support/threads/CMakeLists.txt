@@ -90,6 +90,17 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
   )
 endif()
 
+add_object_library(
+  barrier
+  HDRS
+    barrier.h
+  SRCS
+    barrier.cpp
+  DEPENDS
+    .CndVar
+    .mutex
+)
+
 if (LLVM_LIBC_FULL_BUILD)
   set(identifier_dependency_on_thread libc.src.__support.threads.thread)
 endif()

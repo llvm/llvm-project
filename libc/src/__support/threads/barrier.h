@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC___SUPPORT_SRC_THREADS_LINUX_BARRIER_H
 #define LLVM_LIBC___SUPPORT_SRC_THREADS_LINUX_BARRIER_H
 
+#include "include/llvm-libc-types/pthread_barrier_t.h"
+#include "include/llvm-libc-types/pthread_barrierattr_t.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/CndVar.h"
 #include "src/__support/threads/mutex.h"
@@ -29,7 +31,8 @@ private:
   Mutex m;
 
 public:
-  static int init(Barrier *b, const pthread_barrierattr_t* attr, unsigned count);
+  static int init(Barrier *b, const pthread_barrierattr_t *attr,
+                  unsigned count);
   static int destroy(Barrier *b);
   int wait();
 };

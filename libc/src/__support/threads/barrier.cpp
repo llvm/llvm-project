@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/barrier.h"
-#include "src/__support/threads/mutex.h"
+#include "barrier.h"
 #include "hdr/errno_macros.h"
+#include "src/__support/threads/mutex.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-int Barrier::init(Barrier *b, const pthread_barrierattr_t* attr, unsigned count) {
+int Barrier::init(Barrier *b, const pthread_barrierattr_t *attr,
+                  unsigned count) {
+  LIBC_ASSERT(attr == nullptr); // TODO implement barrierattr
   if (count == 0)
     return EINVAL;
 
@@ -45,7 +48,6 @@ int Barrier::wait() {
   if (waiting == expected) {
     // this is the last thread to call wait(), so lets wake everyone up
     blocking = false;
-    waiting--;
     exiting.broadcast();
   } else {
     // block threads until waiting = expected
@@ -53,6 +55,7 @@ int Barrier::wait() {
       exiting.wait(&m);
     }
   }
+  waiting--;
 
   // all threads have exited the barrier, lets let the ones waiting to enter
   // continue
@@ -61,10 +64,13 @@ int Barrier::wait() {
     entering.broadcast();
   }
   m.unlock();
+
+  return 0;
 }
 
 int Barrier::destroy(Barrier *b) {
-  
+  Mutex::destroy(&b->m);
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
