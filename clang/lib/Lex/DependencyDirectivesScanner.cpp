@@ -419,7 +419,6 @@ static bool isQuoteCppDigitSeparator(const char *const Start,
 }
 
 void Scanner::skipLine(const char *&First, const char *const End) {
-  char LastNonWhitespace = ' ';
   for (;;) {
     assert(First <= End);
     if (First == End)
@@ -430,6 +429,9 @@ void Scanner::skipLine(const char *&First, const char *const End) {
       return;
     }
     const char *Start = First;
+    // Use `LastNonWhitespace`to track if a line-continuation has ever been seen
+    // before a new-line character:
+    char LastNonWhitespace = ' ';
     while (First != End && !isVerticalWhitespace(*First)) {
       // Iterate over strings correctly to avoid comments and newlines.
       if (*First == '"' ||
@@ -717,6 +719,13 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
   case ':': {
     // `module :` is never the start of a valid module declaration.
     if (Id == "module") {
+      skipLine(First, End);
+      return false;
+    }
+    // A module partition starts with exactly one ':'. If we have '::', this is
+    // a scope resolution instead and shouldn't be recognized as a directive
+    // per P1857R3.
+    if (First + 1 != End && First[1] == ':') {
       skipLine(First, End);
       return false;
     }

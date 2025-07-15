@@ -2119,6 +2119,13 @@ m_IntToPtr(const OpTy &Op) {
   return CastOperator_match<OpTy, Instruction::IntToPtr>(Op);
 }
 
+/// Matches any cast or self. Used to ignore casts.
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, CastInst>, OpTy>
+m_CastOrSelf(const OpTy &Op) {
+  return m_CombineOr(CastInst_match<OpTy, CastInst>(Op), Op);
+}
+
 /// Matches Trunc.
 template <typename OpTy>
 inline CastInst_match<OpTy, TruncInst> m_Trunc(const OpTy &Op) {
@@ -2626,7 +2633,7 @@ struct IntrinsicID_match {
 
   template <typename OpTy> bool match(OpTy *V) const {
     if (const auto *CI = dyn_cast<CallInst>(V))
-      if (const auto *F = CI->getCalledFunction())
+      if (const auto *F = dyn_cast_or_null<Function>(CI->getCalledOperand()))
         return F->getIntrinsicID() == ID;
     return false;
   }

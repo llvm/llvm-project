@@ -32,7 +32,7 @@ class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):
 
         # Make sure we got a module event for libother.
         event = self.dap_server.wait_for_event("module", 5)
-        self.assertTrue(event, "didn't get a module event")
+        self.assertIsNotNone(event, "didn't get a module event")
         module_name = event["body"]["module"]["name"]
         module_id = event["body"]["module"]["id"]
         self.assertEqual(event["body"]["reason"], "new")
@@ -43,13 +43,20 @@ class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):
 
         # Make sure we got a module event for libother.
         event = self.dap_server.wait_for_event("module", 5)
-        self.assertTrue(event, "didn't get a module event")
+        self.assertIsNotNone(event, "didn't get a module event")
         reason = event["body"]["reason"]
-        self.assertEqual(event["body"]["reason"], "removed")
+        self.assertEqual(reason, "removed")
         self.assertEqual(event["body"]["module"]["id"], module_id)
 
-        # The removed module event should omit everything but the module id.
-        # Check that there's no module name in the event.
-        self.assertNotIn("name", event["body"]["module"])
+        # The removed module event should omit everything but the module id and name
+        # as they are required fields.
+        module_data = event["body"]["module"]
+        required_keys = ["id", "name"]
+        self.assertListEqual(list(module_data.keys()), required_keys)
+        self.assertEqual(module_data["name"], "", "expects empty name.")
+
+        # Make sure we do not send another event
+        event = self.dap_server.wait_for_event("module", 3)
+        self.assertIsNone(event, "expects no events.")
 
         self.continue_to_exit()

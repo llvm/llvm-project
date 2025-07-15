@@ -753,7 +753,7 @@ static inline mlir::FunctionType genFuncType(mlir::MLIRContext *context,
   }
 
   if (TyR::ty == ParamTypeId::Void)
-    return mlir::FunctionType::get(context, argTypes, std::nullopt);
+    return mlir::FunctionType::get(context, argTypes, {});
 
   auto resType = getTypeHelper(context, builder, TyR::ty, TyR::kind);
   return mlir::FunctionType::get(context, argTypes, {resType});

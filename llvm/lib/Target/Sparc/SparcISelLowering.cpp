@@ -1044,11 +1044,9 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   // The InGlue in necessary since all emitted instructions must be
   // stuck together.
   SDValue InGlue;
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Register Reg = RegsToPass[i].first;
-    if (!isTailCall)
-      Reg = toCallerWindow(Reg);
-    Chain = DAG.getCopyToReg(Chain, dl, Reg, RegsToPass[i].second, InGlue);
+  for (const auto &[OrigReg, N] : RegsToPass) {
+    Register Reg = isTailCall ? OrigReg : toCallerWindow(OrigReg);
+    Chain = DAG.getCopyToReg(Chain, dl, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
 
@@ -1069,11 +1067,9 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
   if (hasStructRetAttr)
     Ops.push_back(DAG.getTargetConstant(SRetArgSize, dl, MVT::i32));
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Register Reg = RegsToPass[i].first;
-    if (!isTailCall)
-      Reg = toCallerWindow(Reg);
-    Ops.push_back(DAG.getRegister(Reg, RegsToPass[i].second.getValueType()));
+  for (const auto &[OrigReg, N] : RegsToPass) {
+    Register Reg = isTailCall ? OrigReg : toCallerWindow(OrigReg);
+    Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
   }
 
   // Add a register mask operand representing the call-preserved registers.
@@ -1375,9 +1371,8 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   // necessary since all emitted instructions must be stuck together in order
   // to pass the live physical registers.
   SDValue InGlue;
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Chain = DAG.getCopyToReg(Chain, DL,
-                             RegsToPass[i].first, RegsToPass[i].second, InGlue);
+  for (const auto &[Reg, N] : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
 
@@ -1395,9 +1390,8 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
-    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
-                                  RegsToPass[i].second.getValueType()));
+  for (const auto &[Reg, N] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
   const SparcRegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -1834,16 +1828,8 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     // .umul works for both signed and unsigned
     setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
     setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::MUL_I32, RTLIB::sparc_umul);
-
     setOperationAction(ISD::SDIV, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::SDIV_I32, RTLIB::sparc_div);
-
     setOperationAction(ISD::UDIV, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::UDIV_I32, RTLIB::sparc_udiv);
-
-    setLibcallImpl(RTLIB::SREM_I32, RTLIB::sparc_rem);
-    setLibcallImpl(RTLIB::UREM_I32, RTLIB::sparc_urem);
   }
 
   if (Subtarget->is64Bit()) {
@@ -1902,14 +1888,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FNEG, MVT::f128, Custom);
       setOperationAction(ISD::FABS, MVT::f128, Custom);
     }
-
-    if (!Subtarget->is64Bit()) {
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Q_qtoll);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Q_qtoull);
-      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Q_lltoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Q_ulltoq);
-    }
-
   } else {
     // Custom legalize f128 operations.
 
@@ -1954,10 +1932,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
       setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::_Q_qtou);
       setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::_Q_itoq);
       setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::_Q_utoq);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Q_qtoll);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Q_qtoull);
-      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Q_lltoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Q_ulltoq);
       setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::_Q_stoq);
       setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::_Q_dtoq);
       setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::_Q_qtos);
@@ -2879,9 +2853,6 @@ static SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (TLI.verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);

@@ -145,6 +145,10 @@ Changes to the LoongArch Backend
 
 * Changing the default code model from `small` to `medium` for 64-bit.
 * Added inline asm support for the `q` constraint.
+* Added the `32s` target feature for LA32S ISA extensions.
+* Added codegen support for atomic-ops (`cmpxchg`, `max`, `min`, `umax`, `umin`) on LA32.
+* Added codegen support for the ILP32D calling convention.
+* Added several codegen and vectorization optimizations.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -213,6 +217,8 @@ Changes to the RISC-V Backend
 * Adds assembler support for the Andes `XAndesvbfhcvt` (Andes Vector BFLOAT16 Conversion extension).
 * `-mcpu=andes-ax45mpv` was added.
 * Removed -mattr=+no-rvc-hints that could be used to disable parsing and generation of RVC hints.
+* Adds assembler support for the Andes `XAndesvsintload` (Andes Vector INT4 Load extension).
+* Adds assembler support for the Andes `XAndesbfhcvt` (Andes Scalar BFLOAT16 Conversion extension).
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -273,6 +279,7 @@ Changes to the LLVM tools
 * In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
   ([#47468](https://github.com/llvm/llvm-project/issues/47468))
 * llvm-addr2line now supports a `+` prefix when specifying an address.
+* Support for `SHT_LLVM_BB_ADDR_MAP` versions 0 and 1 has been dropped.
 
 Changes to LLDB
 ---------------------------------
@@ -304,6 +311,10 @@ Changes to LLDB
     stop reason = SIGSEGV: sent by tkill system call (sender pid=649752, uid=2667987)
   ```
 * ELF Cores can now have their siginfo structures inspected using `thread siginfo`.
+* Disassembly of unknown instructions now produces `<unknown>` instead of
+  nothing at all
+* Changed the format of opcode bytes to match llvm-objdump when disassembling
+  RISC-V code with `disassemble`'s `--byte` option.
 
 ### Changes to lldb-dap
 

@@ -165,10 +165,10 @@ public:
     return Tok;
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Immediate:
-      MCAsmInfo().printExpr(OS, *getImm());
+      MAI.printExpr(OS, *getImm());
       break;
     case Register:
       OS << "<register x";
@@ -348,6 +348,9 @@ bool BPFAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm16:
     return Error(Operands[ErrorInfo]->getStartLoc(),
                  "operand is not a 16-bit signed integer");
+  case Match_InvalidTiedOperand:
+    return Error(Operands[ErrorInfo]->getStartLoc(),
+                 "operand is not the same as the dst register");
   }
 
   llvm_unreachable("Unknown match type detected!");

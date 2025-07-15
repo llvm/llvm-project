@@ -472,7 +472,7 @@ class VectorType;
                                         MachineMemOperand::Flags Flags,
                                         unsigned *Fast) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
@@ -608,6 +608,11 @@ class VectorType;
     bool preferZeroCompareBranch() const override { return true; }
 
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
+
+    bool hasAndNotCompare(SDValue V) const override {
+      // We can use bics for any scalar.
+      return V.getValueType().isScalarInteger();
+    }
 
     bool
     isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;

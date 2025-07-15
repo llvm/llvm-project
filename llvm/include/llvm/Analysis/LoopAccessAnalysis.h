@@ -396,8 +396,6 @@ private:
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
 
-    bool ShouldRetryWithRuntimeCheck;
-
     /// TypeByteSize is either the common store size of both accesses, or 0 when
     /// store sizes mismatch.
     uint64_t TypeByteSize;
@@ -407,11 +405,9 @@ private:
 
     DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
                                  std::optional<uint64_t> CommonStride,
-                                 bool ShouldRetryWithRuntimeCheck,
                                  uint64_t TypeByteSize, bool AIsWrite,
                                  bool BIsWrite)
         : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
-          ShouldRetryWithRuntimeCheck(ShouldRetryWithRuntimeCheck),
           TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 
@@ -427,6 +423,11 @@ private:
   getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
                                      const MemAccessInfo &B,
                                      Instruction *BInst);
+
+  // Return true if we can prove that \p Sink only accesses memory after \p
+  // Src's end or vice versa.
+  bool areAccessesCompletelyBeforeOrAfter(const SCEV *Src, Type *SrcTy,
+                                          const SCEV *Sink, Type *SinkTy);
 };
 
 class RuntimePointerChecking;
