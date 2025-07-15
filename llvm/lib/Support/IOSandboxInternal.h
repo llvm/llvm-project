@@ -48,6 +48,7 @@ static constexpr auto read = detail::interpose(::read);
 static constexpr auto pread = detail::interpose(::pread);
 static constexpr auto mmap = detail::interpose(::mmap);
 static constexpr auto readdir = detail::interpose(::readdir);
+static constexpr auto access = detail::interpose(::access);
 static constexpr auto stat = detail::interpose(::stat);
 static constexpr auto lstat = detail::interpose(::lstat);
 static constexpr auto fstat = detail::interpose(::fstat);
