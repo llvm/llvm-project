@@ -799,8 +799,16 @@ bool SafeStack::run() {
     IRB.SetCurrentDebugLocation(
         DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
   if (SafeStackUsePointerAddress) {
+    const char *SafestackPointerAddressName =
+        TL.getLibcallName(RTLIB::SAFESTACK_POINTER_ADDRESS);
+    if (!SafestackPointerAddressName) {
+      F.getContext().emitError(
+          "no libcall available for safestack pointer address");
+      return false;
+    }
+
     FunctionCallee Fn = F.getParent()->getOrInsertFunction(
-        "__safestack_pointer_address", IRB.getPtrTy(0));
+        SafestackPointerAddressName, IRB.getPtrTy(0));
     UnsafeStackPtr = IRB.CreateCall(Fn);
   } else {
     UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB);
