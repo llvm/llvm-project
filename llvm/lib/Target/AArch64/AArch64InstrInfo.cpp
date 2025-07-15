@@ -9591,7 +9591,7 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
       return;
     if (RangeBegin->isBundledWithPred())
       return;
-    Ranges.push_back(std::make_pair(RangeBegin, RangeEnd));
+    Ranges.emplace_back(RangeBegin, RangeEnd);
   };
   // Find the first point where all unsafe registers are dead.
   // FIND: <safe instr> <-- end of first potential range
