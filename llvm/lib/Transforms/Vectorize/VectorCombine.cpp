@@ -860,7 +860,7 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
   // Cost Check :
   // OldCost = bitlogic + 2*casts
   // NewCost = bitlogic + cast
-  
+
   // Calculate specific costs for each cast with instruction context
   InstructionCost LHSCastCost = TTI.getCastInstrCost(
       CastOpcode, DstVecTy, SrcVecTy,
@@ -877,7 +877,7 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
   InstructionCost GenericCastCost = TTI.getCastInstrCost(
       CastOpcode, DstVecTy, SrcVecTy,
       TTI::CastContextHint::None, CostKind);
-  
+
   InstructionCost NewCost =
       TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy, CostKind) +
       GenericCastCost;
@@ -888,7 +888,7 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
   if (!RHSCast->hasOneUse())
     NewCost += RHSCastCost;
 
-  LLVM_DEBUG(dbgs() << "foldBitOpOfCastops: OldCost=" << OldCost 
+  LLVM_DEBUG(dbgs() << "foldBitOpOfCastops: OldCost=" << OldCost
                     << " NewCost=" << NewCost << "\n");
 
   if (NewCost > OldCost)
@@ -2061,12 +2061,10 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   }
 
   unsigned NumOpElts = Op0Ty->getNumElements();
-  bool IsIdentity0 =
-      ShuffleDstTy == Op0Ty &&
+  bool IsIdentity0 = ShuffleDstTy == Op0Ty &&
       all_of(NewMask0, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
       ShuffleVectorInst::isIdentityMask(NewMask0, NumOpElts);
-  bool IsIdentity1 =
-      ShuffleDstTy == Op1Ty &&
+  bool IsIdentity1 =ShuffleDstTy == Op1Ty &&
       all_of(NewMask1, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
       ShuffleVectorInst::isIdentityMask(NewMask1, NumOpElts);
 
