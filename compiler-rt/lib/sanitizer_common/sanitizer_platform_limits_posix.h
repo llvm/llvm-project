@@ -487,11 +487,19 @@ struct __sanitizer_msghdr {
   struct __sanitizer_iovec *msg_iov;
   uptr msg_iovlen;
   void *msg_control;
+#    if !SANITIZER_AIX
   uptr msg_controllen;
+#    else
+  unsigned msg_controllen;
+#    endif
   int msg_flags;
 };
 struct __sanitizer_cmsghdr {
+#    if !SANITIZER_AIX
   uptr cmsg_len;
+#    else
+  unsigned cmsg_len;
+#    endif
   int cmsg_level;
   int cmsg_type;
 };
@@ -563,6 +571,8 @@ typedef long __sanitizer_clock_t;
 #  if SANITIZER_LINUX || SANITIZER_HAIKU
 typedef int __sanitizer_clockid_t;
 typedef unsigned long long __sanitizer_eventfd_t;
+#  elif SANITIZER_AIX
+typedef int __sanitizer_clockid_t;
 #  endif
 
 #  if SANITIZER_LINUX
@@ -1147,6 +1157,13 @@ extern unsigned fpos_t_sz;
 // A special value to mark ioctls that are not present on the target platform,
 // when it can not be determined without including any system headers.
 extern const unsigned IOCTL_NOT_PRESENT;
+
+ // On AIX, some variables are unsigned long types.
+#if SANITIZER_AIX
+using ioctl_alttype = uptr;
+#else
+using ioctl_alttype = unsigned;
+#endif
 
 extern ioctl_alttype IOCTL_FIOASYNC;
 extern unsigned IOCTL_FIOCLEX;

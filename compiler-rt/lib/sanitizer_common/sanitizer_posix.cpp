@@ -30,6 +30,7 @@
 #if SANITIZER_FREEBSD || SANITIZER_AIX
 // The MAP_NORESERVE define has been removed in FreeBSD 11.x, and even before
 // that, it was never implemented.  So just define it to zero.
+// Similarly, AIX does not define MAP_NORESERVE.
 #undef  MAP_NORESERVE
 #define MAP_NORESERVE 0
 #endif

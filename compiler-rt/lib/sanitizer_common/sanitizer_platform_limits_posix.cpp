@@ -1093,6 +1093,9 @@ CHECK_SIZE_AND_OFFSET(addrinfo, ai_protocol);
 CHECK_SIZE_AND_OFFSET(addrinfo, ai_addrlen);
 CHECK_SIZE_AND_OFFSET(addrinfo, ai_canonname);
 CHECK_SIZE_AND_OFFSET(addrinfo, ai_addr);
+#if SANITIZER_AIX
+CHECK_SIZE_AND_OFFSET(addrinfo, ai_eflags);
+#endif
 
 CHECK_TYPE_SIZE(hostent);
 CHECK_SIZE_AND_OFFSET(hostent, h_name);
