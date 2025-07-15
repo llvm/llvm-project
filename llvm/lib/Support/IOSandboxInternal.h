@@ -53,6 +53,7 @@ static constexpr auto lstat = detail::interpose(::lstat);
 static constexpr auto fstat = detail::interpose(::fstat);
 static constexpr auto getcwd = detail::interpose(::getcwd);
 static constexpr auto realpath = detail::interpose(::realpath);
+static constexpr auto readlink = detail::interpose(::readlink);
 } // namespace llvm
 
 #endif
