@@ -2490,26 +2490,29 @@ IntegerRelation IntegerRelation::rangeProduct(const IntegerRelation &rel) {
 
   // explicit copy of `this`
   IntegerRelation result = *this;
-  unsigned srcOffset = getVarKindOffset(VarKind::Range);
+  unsigned relRangeVarStart = rel.getVarKindOffset(VarKind::Range);
   unsigned numRelRangeVars = rel.getNumRangeVars();
+  unsigned numThisRangeVars = getNumRangeVars();
 
   result.appendVar(VarKind::Range, numRelRangeVars);
 
+  // Copy each equality from `rel` and update the copy to account for range
+  // variables from `this`. The `rel` equality is a list of coefficients of the
+  // variables from `rel`, and so the range variables need to be shifted right
+  // by the number of `this` range variables.
   for (unsigned i = 0; i < rel.getNumEqualities(); ++i) {
-    // Add a new equality that uses the new range variables.
-    // The old equality is a list of coefficients of the variables
-    // from `rel`, and so the range variables need to be shifted
-    // right by the number of range variables added to `result`.
     SmallVector<DynamicAPInt> copy =
         SmallVector<DynamicAPInt>(rel.getEquality(i));
-    copy.insert(copy.begin() + srcOffset, numRelRangeVars, DynamicAPInt(0));
+    copy.insert(copy.begin() + relRangeVarStart, numThisRangeVars,
+                DynamicAPInt(0));
     result.addEquality(copy);
   }
 
   for (unsigned i = 0; i < rel.getNumInequalities(); ++i) {
     SmallVector<DynamicAPInt> copy =
         SmallVector<DynamicAPInt>(rel.getInequality(i));
-    copy.insert(copy.begin() + srcOffset, numRelRangeVars, DynamicAPInt(0));
+    copy.insert(copy.begin() + relRangeVarStart, numThisRangeVars,
+                DynamicAPInt(0));
     result.addInequality(copy);
   }
 

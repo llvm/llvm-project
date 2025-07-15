@@ -623,3 +623,33 @@ TEST(IntegerRelationTest, rangeProduct) {
 
   EXPECT_TRUE(expected.isEqual(rangeProd));
 }
+
+TEST(IntegerRelationTest, rangeProductMultdimRange) {
+  IntegerRelation r1 = parseRelationFromSet(
+      "(i, k) : (2*i + 3*k == 0, i >= 0, k >= 0)", 1);
+  IntegerRelation r2 = parseRelationFromSet(
+      "(i, l, m) : (4*i + 6*m + 9*l == 0, i >= 0, l >= 0, m >= 0)", 1);
+
+  IntegerRelation rangeProd = r1.rangeProduct(r2);
+  IntegerRelation expected =
+      parseRelationFromSet("(i, k, l, m) : (2*i + 3*k == 0, 4*i + 6*m + 9*l == "
+                           "0, i >= 0, k >= 0, l >= 0, m >= 0)",
+                           1);
+
+  EXPECT_TRUE(expected.isEqual(rangeProd));
+}
+
+TEST(IntegerRelationTest, rangeProductMultdimRangeSwapped) {
+  IntegerRelation r1 = parseRelationFromSet(
+      "(i, l, m) : (4*i + 6*m + 9*l == 0, i >= 0, l >= 0, m >= 0)", 1);
+  IntegerRelation r2 = parseRelationFromSet(
+      "(i, k) : (2*i + 3*k == 0, i >= 0, k >= 0)", 1);
+
+  IntegerRelation rangeProd = r1.rangeProduct(r2);
+  IntegerRelation expected =
+      parseRelationFromSet("(i, l, m, k) : (2*i + 3*k == 0, 4*i + 6*m + 9*l == "
+                           "0, i >= 0, k >= 0, l >= 0, m >= 0)",
+                           1);
+
+  EXPECT_TRUE(expected.isEqual(rangeProd));
+}
