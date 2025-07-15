@@ -369,7 +369,26 @@ namespace NestedUnions {
     return true;
   }
   static_assert(test_nested());
-
-
 }
+
+namespace UnionMemberCallDiags {
+  struct A { int n; };
+  struct B { A a; };
+  constexpr A a = (A() = B().a);
+
+  union C {
+    int n;
+    A a;
+  };
+
+  constexpr bool g() {
+    C c = {.n = 1};
+    c.a.operator=(B{2}.a); // all-note {{member call on member 'a' of union with active member 'n' is not allowed in a constant expression}}
+    return c.a.n == 2;
+  }
+  static_assert(g()); // all-error {{not an integral constant expression}} \
+                      // all-note {{in call to}}
+}
+
+
 #endif
