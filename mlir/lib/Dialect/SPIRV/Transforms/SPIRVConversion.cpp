@@ -366,52 +366,6 @@ convertShaped8BitFloatType(ShapedType type,
   return type.clone(convertedElementType);
 }
 
-/// Converts a sub-byte float ``type` to i32 regardless of target environment.
-/// Returns a nullptr for unsupported float types, including non sub-byte
-/// types.
-///
-/// We are treating 8 bit floats as sub-byte types here due to it's similar
-/// nature of being used as a packed format.
-
-/// Note that we don't recognize
-/// sub-byte types in `spirv::ScalarType` and use the above given that these
-/// sub-byte types are not supported at all in SPIR-V; there are no
-/// compute/storage capability for them like other supported integer types.
-
-// static Type convertPackedFLoatType(const SPIRVConversionOptions &options,
-//                                    FloatType type) {
-
-//   // F4, F6, F8 types are converted to integer types with the same bit width.
-
-//   if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType,
-//   Float8E5M2FNUZType,
-//           Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
-//           Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType,
-//           Float8E8M0FNUType>(type))
-//     auto emulatedType = IntegerType::get(type.getContext(), type.getWidth());
-
-//   if (type.getWidth() > 8) {
-//     LLVM_DEBUG(llvm::dbgs() << "not a packed type\n");
-//     return nullptr;
-//   }
-//   if (options.subByteTypeStorage != SPIRVSubByteTypeStorage::Packed) {
-//     LLVM_DEBUG(llvm::dbgs() << "unsupported sub-byte storage kind\n");
-//     return nullptr;
-//   }
-
-//   // if (!llvm::isPowerOf2_32(type.getWidth())) {
-//   //   LLVM_DEBUG(llvm::dbgs()
-//   //              << "unsupported non-power-of-two bitwidth in sub-byte" <<
-//   type
-//   //              << "\n");
-//   //   return nullptr;
-//   // }
-
-//   LLVM_DEBUG(llvm::dbgs() << type << " converted to 32-bit for SPIR-V\n");
-//   return IntegerType::get(type.getContext(), /*width=*/32,
-//                           type.getSignedness());
-// }
-
 /// Returns a type with the same shape but with any index element type converted
 /// to the matching integer type. This is a noop when the element type is not
 /// the index type.
