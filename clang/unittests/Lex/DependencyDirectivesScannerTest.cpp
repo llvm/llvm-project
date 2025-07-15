@@ -1151,6 +1151,19 @@ TEST(MinimizeSourceToDependencyDirectivesTest, ObjCMethodArgs) {
   EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
 }
 
+TEST(MinimizeSourceToDependencyDirectivesTest,
+     CxxModulesImportScopeResolution) {
+  SmallString<16> Out;
+  SmallVector<dependency_directives_scan::Token, 2> Tokens;
+  SmallVector<Directive, 1> Directives;
+
+  StringRef Source = "import::inner xi = {};'\n"
+                     "module::inner yi = {};";
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+}
+
 TEST(MinimizeSourceToDependencyDirectivesTest, TokensBeforeEOF) {
   SmallString<128> Out;
 

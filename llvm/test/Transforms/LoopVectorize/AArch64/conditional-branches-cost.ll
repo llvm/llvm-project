@@ -1484,7 +1484,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 1)
-; DEFAULT-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[TMP0]] to <4 x i32>
+; DEFAULT-NEXT:    [[TMP1:%.*]] = trunc nuw nsw <4 x i64> [[TMP0]] to <4 x i32>
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
 ; DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[DST]], align 4
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
@@ -1521,7 +1521,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; PRED-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
 ; PRED-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i64> [[VEC_IND]], splat (i64 20)
 ; PRED-NEXT:    [[TMP1:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 1)
-; PRED-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i32>
+; PRED-NEXT:    [[TMP2:%.*]] = trunc nuw nsw <4 x i64> [[TMP1]] to <4 x i32>
 ; PRED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
 ; PRED-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; PRED:       [[PRED_STORE_IF]]:

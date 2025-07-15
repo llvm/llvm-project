@@ -33,7 +33,9 @@ define void @alloca_2d_gep_test() {
   ; FCHECK:  [[alloca_val:%.*]] = alloca [4 x i32], align 16
   ; CHECK: [[tid:%.*]] = tail call i32 @llvm.dx.thread.id(i32 0)
   ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw [2 x [2 x i32]], ptr [[alloca_val]], i32 0, i32 [[tid]]
-  ; FCHECK: [[gep:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[alloca_val]], i32 0, i32 [[tid]]
+  ; FCHECK: [[flatidx_mul:%.*]] = mul i32 [[tid]], 2
+  ; FCHECK: [[flatidx:%.*]] = add i32 0, [[flatidx_mul]]
+  ; FCHECK: [[gep:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[alloca_val]], i32 0, i32 [[flatidx]]
   ; CHECK: ret void
   %1 = alloca [2 x <2 x i32>], align 16
   %2 = tail call i32 @llvm.dx.thread.id(i32 0)
