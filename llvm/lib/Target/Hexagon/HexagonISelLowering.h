@@ -78,6 +78,7 @@ enum NodeType : unsigned {
   DCFETCH,
   READCYCLE,
   READTIMER,
+  THREAD_POINTER,
   PTRUE,
   PFALSE,
   D2P,         // Convert 8-byte value to 8-bit predicate register. [*]
