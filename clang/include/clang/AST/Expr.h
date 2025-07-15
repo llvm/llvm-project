@@ -1480,6 +1480,14 @@ public:
     return DeclRefExprBits.IsImmediateEscalating;
   }
 
+  bool isOverflowBehaviorDiscarded() const {
+    return DeclRefExprBits.IsOverflwBehaviorDiscarded;
+  }
+
+  void setOverflowBehaviorDiscarded(bool Set) {
+    DeclRefExprBits.IsOverflwBehaviorDiscarded = Set;
+  }
+
   void setIsImmediateEscalating(bool Set) {
     DeclRefExprBits.IsImmediateEscalating = Set;
   }

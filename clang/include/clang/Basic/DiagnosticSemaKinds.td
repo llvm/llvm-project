@@ -4030,6 +4030,27 @@ def note_cannot_use_trivial_abi_reason : Note<
   "it has a __weak field|it has a field of a non-trivial class type|"
   "it has an address-discriminated '__ptrauth' field}1">;
 
+// OverflowBehavior attribute
+def err_overflow_behavior_unknown_ident : Error<
+  "'%0' is not a valid argument to attribute %1, only 'wrap' and 'no_wrap' "
+  "are supported">;
+def warn_overflow_behavior_non_integer_type
+    : Warning<"%0 attribute cannot be applied to non-integer type '%1'; "
+              "attribute ignored">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_overflow_behavior_attribute_disabled
+    : Warning<"%0 attribute is ignored because it is not enabled; pass "
+              "-foverflow-behavior-types">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_implicitly_discarded_overflow_behavior : Warning<
+  "implicit conversion from %0 to %1 discards overflow behavior">,
+  InGroup<ImplicitlyDiscardedOverflowBehavior>;
+def warn_implicitly_discarded_overflow_behavior_pedantic : Warning<
+  "implicit conversion from %0 to %1 discards overflow behavior">,
+  InGroup<ImplicitlyDiscardedOverflowBehaviorPedantic>;
+def warn_implicitly_discarded_overflow_behavior_assignment : Warning<
+  "implicit conversion from %0 to %1 during assignment discards overflow behavior">,
+  InGroup<ImplicitlyDiscardedOverflowBehaviorAssignment>, DefaultIgnore;
 // Availability attribute
 def warn_availability_unknown_platform : Warning<
   "unknown platform %0 in availability macro">, InGroup<Availability>;

@@ -6331,6 +6331,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_ffixed_point,
                     options::OPT_fno_fixed_point);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_foverflow_behavior_types,
+                    options::OPT_fno_overflow_behavior_types);
+
   if (Arg *A = Args.getLastArg(options::OPT_fcxx_abi_EQ))
     A->render(Args, CmdArgs);
 

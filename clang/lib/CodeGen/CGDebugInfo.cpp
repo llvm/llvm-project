@@ -1115,6 +1115,10 @@ llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
                                   Encoding);
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const OverflowBehaviorType *Ty, llvm::DIFile *U) {
+  return getOrCreateType(Ty->getUnderlyingType(), U);
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const ComplexType *Ty) {
   // Bit size and offset of the type.
   llvm::dwarf::TypeKind Encoding = llvm::dwarf::DW_ATE_complex_float;
@@ -4037,6 +4041,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
 
   case Type::BitInt:
     return CreateType(cast<BitIntType>(Ty));
+  case Type::OverflowBehavior:
+    return CreateType(cast<OverflowBehaviorType>(Ty), Unit);
   case Type::Pipe:
     return CreateType(cast<PipeType>(Ty), Unit);
 

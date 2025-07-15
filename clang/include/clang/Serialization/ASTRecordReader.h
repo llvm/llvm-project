@@ -350,6 +350,10 @@ public:
     return cast<BTFTypeTagAttr>(readAttr());
   }
 
+  NoSanitizeAttr *readNoSanitizeAttr() {
+    return cast<NoSanitizeAttr>(readAttr());
+  }
+
   /// Reads a token out of a record, advancing Idx.
   Token readToken() {
     return Reader->ReadToken(*F, Record, Idx);

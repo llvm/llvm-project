@@ -121,6 +121,14 @@ def ImplicitIntConversion : DiagGroup<"implicit-int-conversion",
                                      [Shorten64To32,
                                       ObjCSignedCharBoolImplicitIntConversion,
                                       ImplicitIntConversionOnNegation]>;
+def ImplicitlyDiscardedOverflowBehaviorPedantic :
+  DiagGroup<"implicitly-discarded-overflow-behavior-pedantic">;
+def ImplicitlyDiscardedOverflowBehaviorAssignment :
+  DiagGroup<"implicitly-discarded-overflow-behavior-assignment">;
+def ImplicitlyDiscardedOverflowBehavior :
+  DiagGroup<"implicitly-discarded-overflow-behavior",
+   [ImplicitlyDiscardedOverflowBehaviorPedantic,
+   ImplicitlyDiscardedOverflowBehaviorAssignment]>;
 def ImplicitConstIntFloatConversion : DiagGroup<"implicit-const-int-float-conversion">;
 def ImplicitIntFloatConversion : DiagGroup<"implicit-int-float-conversion",
  [ImplicitConstIntFloatConversion]>;
@@ -1663,6 +1671,9 @@ def CrossTU : DiagGroup<"ctu">;
 def CTADMaybeUnsupported : DiagGroup<"ctad-maybe-unsupported">;
 
 def FortifySource : DiagGroup<"fortify-source", [FormatOverflow, FormatTruncation]>;
+
+def OverflowBehaviorAttributeIgnored
+    : DiagGroup<"overflow-behavior-attribute-ignored">;
 
 def MaxTokens : DiagGroup<"max-tokens"> {
   code Documentation = [{

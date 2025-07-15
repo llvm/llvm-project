@@ -6334,6 +6334,11 @@ bool UnnamedLocalNoLinkageFinder::VisitAtomicType(const AtomicType* T) {
   return Visit(T->getValueType());
 }
 
+bool UnnamedLocalNoLinkageFinder::VisitOverflowBehaviorType(
+    const OverflowBehaviorType *T) {
+  return Visit(T->getUnderlyingType());
+}
+
 bool UnnamedLocalNoLinkageFinder::VisitPipeType(const PipeType* T) {
   return false;
 }
