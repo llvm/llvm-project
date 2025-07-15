@@ -161,17 +161,17 @@ void function_calling_analyzer_noreturn(const bsl::optional<int>& opt)
 }
 
 // Should be considered as 'noreturn' by CFG
-void no_return_from_cfg() {
+void halt() {
     for(;;) {}
 }
 
 void function_calling_no_return_from_cfg(const bsl::optional<int>& opt)
 {
   if (!opt) {
-      no_return_from_cfg();
+      halt();
   }
 
-  *opt; // no-warning
+  *opt; // no-warning: The previous condition guards this dereference.
 }
 
 template <typename T>
