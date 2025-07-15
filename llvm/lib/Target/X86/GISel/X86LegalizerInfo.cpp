@@ -1086,6 +1086,7 @@ bool X86LegalizerInfo::legalizeIsFPClass(MachineInstr &MI,
 
   if (IsF80)
     return expandFPClassTestForF80(MI, MRI, Helper);
+  return  expandFPClassTestForF32OrF64(MI, MRI, Helper);
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
