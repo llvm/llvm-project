@@ -3351,14 +3351,15 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
 
   // Deopt and ptrauth bundles are lowered in helper functions, and we don't
   // have to do anything here to lower funclet bundles.
-  constexpr std::array<uint32_t, 7> kAllowedBundles = {
+  constexpr uint32_t kAllowedBundles[] = {
       LLVMContext::OB_deopt,
       LLVMContext::OB_gc_transition,
       LLVMContext::OB_gc_live,
       LLVMContext::OB_funclet,
       LLVMContext::OB_cfguardtarget,
       LLVMContext::OB_ptrauth,
-      LLVMContext::OB_clang_arc_attachedcall};
+      LLVMContext::OB_clang_arc_attachedcall,
+      LLVMContext::OB_kcfi};
   if (I.hasOperandBundlesOtherThan(kAllowedBundles)) {
     std::string Error;
     for (unsigned i = 0, e = I.getNumOperandBundles(); i != e; ++i) {

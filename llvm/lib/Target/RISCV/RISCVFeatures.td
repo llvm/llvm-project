@@ -179,7 +179,6 @@ def FeatureStdExtZicfiss
 def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfiss),
                                           "'Zicfiss' (Shadow stack)">;
-def NoHasStdExtZicfiss : Predicate<"!Subtarget->hasStdExtZicfiss()">;
 
 def FeatureStdExtZilsd
     : RISCVExtension<1, 0,
@@ -188,7 +187,6 @@ def FeatureStdExtZilsd
 def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
                        AssemblerPredicate<(all_of FeatureStdExtZilsd),
                                           "'Zilsd' (Load/Store pair instructions)">;
-def NoHasStdExtZilsd : Predicate<"!Subtarget->hasStdExtZilsd()">;
 
 // Multiply Extensions
 
@@ -1487,6 +1485,8 @@ def HasVendorXqcics
     : Predicate<"Subtarget->hasVendorXqcics()">,
       AssemblerPredicate<(all_of FeatureVendorXqcics),
                          "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
+def NoVendorXqcics
+    : Predicate<"!Subtarget->hasVendorXqcics()">;
 
 def FeatureVendorXqcicsr
     : RISCVExperimentalExtension<0, 4, "Qualcomm uC CSR Extension">;
@@ -1598,6 +1598,14 @@ def HasVendorXAndesPerf
     : Predicate<"Subtarget->hasVendorXAndesPerf()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesPerf),
                          "'XAndesPerf' (Andes Performance Extension)">;
+
+def FeatureVendorXAndesBFHCvt
+    : RISCVExtension<5, 0, "Andes Scalar BFLOAT16 Conversion Extension",
+                     [FeatureStdExtF]>;
+def HasVendorXAndesBFHCvt
+    : Predicate<"Subtarget->hasVendorXAndesBFHCvt()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesBFHCvt),
+                         "'XAndesBFHCvt' (Andes Scalar BFLOAT16 Conversion Extension)">;
 
 def FeatureVendorXAndesVBFHCvt
     : RISCVExtension<5, 0, "Andes Vector BFLOAT16 Conversion Extension",

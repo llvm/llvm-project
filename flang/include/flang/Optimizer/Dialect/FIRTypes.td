@@ -626,8 +626,10 @@ def AnyBoxLike : TypeConstraint<Or<[fir_BoxType.predicate,
     fir_BoxCharType.predicate, fir_BoxProcType.predicate,
     fir_ClassType.predicate]>, "any box">;
 
-def BoxOrClassType : TypeConstraint<Or<[fir_BoxType.predicate,
-    fir_ClassType.predicate]>, "box or class">;
+def BoxOrClassLike
+    : TypeConstraint<Or<[fir_BoxType.predicate, fir_ClassType.predicate]>,
+                     "box or class">;
+def BoxOrClassType : Type<BoxOrClassLike.predicate, "box or class">;
 
 def AnyRefOrBoxLike : TypeConstraint<Or<[AnyReferenceLike.predicate,
     AnyBoxLike.predicate, FunctionType.predicate]>,
