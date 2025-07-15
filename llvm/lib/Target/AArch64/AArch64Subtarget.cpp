@@ -674,18 +674,18 @@ bool AArch64Subtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
 }
 
-bool AArch64Subtarget::isRegInClass(const MachineInstr *MI, const Register &Reg,
+bool AArch64Subtarget::isRegInClass(const MachineInstr &MI, const Register &Reg,
                                     const TargetRegisterClass *TRC) const {
   if (Reg.isPhysical()) {
     return TRC->contains(Reg);
   }
-  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   return TRC->hasSubClassEq(MRI.getRegClass(Reg));
 }
 
 /// NOTE: must maintain consistency with `AArch64InstrInfo::copyPhysReg`.
 bool AArch64Subtarget::canLowerToZeroCycleRegMove(
-    const MachineInstr *CopyMI, const Register &DestReg,
+    const MachineInstr &CopyMI, const Register &DestReg,
     const Register &SrcReg) const {
   if (isRegInClass(CopyMI, DestReg, &AArch64::GPR32allRegClass) &&
       isRegInClass(CopyMI, SrcReg, &AArch64::GPR32allRegClass) &&
@@ -737,7 +737,7 @@ bool AArch64Subtarget::canLowerToZeroCycleRegMove(
 
 /// NOTE: must maintain consistency with `AArch64InstrInfo::copyPhysReg`.
 bool AArch64Subtarget::canLowerToZeroCycleRegZeroing(
-    const MachineInstr *CopyMI, const Register &DestReg,
+    const MachineInstr &CopyMI, const Register &DestReg,
     const Register &SrcReg) const {
   if (isRegInClass(CopyMI, DestReg, &AArch64::GPR32allRegClass) &&
       isRegInClass(CopyMI, SrcReg, &AArch64::GPR32allRegClass) &&
