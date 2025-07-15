@@ -2353,8 +2353,14 @@ module std [system] {
     header "__std_mbstate_t.h"
     export *
   }
+  module log_hardening_failure {
+    header "__log_hardening_failure"
+  }
   module verbose_abort {
     header "__verbose_abort"
+  }
+  module verbose_trap {
+    header "__verbose_trap"
   }
   module internal_assert {
     header "__assert"

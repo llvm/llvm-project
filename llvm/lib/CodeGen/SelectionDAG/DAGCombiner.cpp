@@ -2606,9 +2606,7 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
       return SDValue();
   }
 
-  SDValue SelectOp = DAG.getSelect(DL, VT, Sel.getOperand(0), NewCT, NewCF);
-  SelectOp->setFlags(BO->getFlags());
-  return SelectOp;
+  return DAG.getSelect(DL, VT, Sel.getOperand(0), NewCT, NewCF, BO->getFlags());
 }
 
 static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, const SDLoc &DL,
@@ -12191,11 +12189,8 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     return V;
 
   // select (not Cond), N1, N2 -> select Cond, N2, N1
-  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false)) {
-    SDValue SelectOp = DAG.getSelect(DL, VT, F, N2, N1);
-    SelectOp->setFlags(Flags);
-    return SelectOp;
-  }
+  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false))
+    return DAG.getSelect(DL, VT, F, N2, N1, Flags);
 
   if (SDValue V = foldSelectOfConstants(N))
     return V;
@@ -13091,10 +13086,10 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
   EVT CondVT = Cond.getValueType();
   assert(CondVT.isVector() && "Vector select expects a vector selector!");
 
-  bool IsTAllZero = ISD::isBuildVectorAllZeros(TVal.getNode());
-  bool IsTAllOne = ISD::isBuildVectorAllOnes(TVal.getNode());
-  bool IsFAllZero = ISD::isBuildVectorAllZeros(FVal.getNode());
-  bool IsFAllOne = ISD::isBuildVectorAllOnes(FVal.getNode());
+  bool IsTAllZero = ISD::isConstantSplatVectorAllZeros(TVal.getNode());
+  bool IsTAllOne = ISD::isConstantSplatVectorAllOnes(TVal.getNode());
+  bool IsFAllZero = ISD::isConstantSplatVectorAllZeros(FVal.getNode());
+  bool IsFAllOne = ISD::isConstantSplatVectorAllOnes(FVal.getNode());
 
   // no vselect(cond, 0/-1, X) or vselect(cond, X, 0/-1), return
   if (!IsTAllZero && !IsTAllOne && !IsFAllZero && !IsFAllOne)
@@ -13194,8 +13189,9 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     return V;
 
   // vselect (not Cond), N1, N2 -> vselect Cond, N2, N1
-  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false))
-    return DAG.getSelect(DL, VT, F, N2, N1);
+  if (!TLI.isTargetCanonicalSelect(N))
+    if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false))
+      return DAG.getSelect(DL, VT, F, N2, N1);
 
   // select (sext m), (add X, C), X --> (add X, (and C, (sext m))))
   if (N1.getOpcode() == ISD::ADD && N1.getOperand(0) == N2 && N1->hasOneUse() &&
@@ -13489,11 +13485,9 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
 
     // Fold to a simpler select_cc
     if (SCC.getOpcode() == ISD::SETCC) {
-      SDValue SelectOp =
-          DAG.getNode(ISD::SELECT_CC, DL, N2.getValueType(), SCC.getOperand(0),
-                      SCC.getOperand(1), N2, N3, SCC.getOperand(2));
-      SelectOp->setFlags(SCC->getFlags());
-      return SelectOp;
+      return DAG.getNode(ISD::SELECT_CC, DL, N2.getValueType(),
+                         SCC.getOperand(0), SCC.getOperand(1), N2, N3,
+                         SCC.getOperand(2), SCC->getFlags());
     }
   }
 
@@ -28342,10 +28336,8 @@ SDValue DAGCombiner::SimplifySelect(const SDLoc &DL, SDValue N0, SDValue N1,
                                   SCC.getOperand(0), SCC.getOperand(1),
                                   SCC.getOperand(4), Flags);
       AddToWorklist(SETCC.getNode());
-      SDValue SelectNode = DAG.getSelect(SDLoc(SCC), SCC.getValueType(), SETCC,
-                                         SCC.getOperand(2), SCC.getOperand(3));
-      SelectNode->setFlags(Flags);
-      return SelectNode;
+      return DAG.getSelect(SDLoc(SCC), SCC.getValueType(), SETCC,
+                           SCC.getOperand(2), SCC.getOperand(3), Flags);
     }
 
     return SCC;
@@ -28646,9 +28638,9 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
     SDValue N10 = N1.getOperand(0);
     SDValue N20 = N2.getOperand(0);
     SDValue NewSel = DAG.getSelect(DL, N10.getValueType(), N0, N10, N20);
-    SDValue NewBinOp = DAG.getNode(BinOpc, DL, OpVTs, NewSel, N1.getOperand(1));
-    NewBinOp->setFlags(N1->getFlags());
-    NewBinOp->intersectFlagsWith(N2->getFlags());
+    SDNodeFlags Flags = N1->getFlags() & N2->getFlags();
+    SDValue NewBinOp =
+        DAG.getNode(BinOpc, DL, OpVTs, {NewSel, N1.getOperand(1)}, Flags);
     return SDValue(NewBinOp.getNode(), N1.getResNo());
   }
 
@@ -28660,10 +28652,9 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
     // Second op VT might be different (e.g. shift amount type)
     if (N11.getValueType() == N21.getValueType()) {
       SDValue NewSel = DAG.getSelect(DL, N11.getValueType(), N0, N11, N21);
+      SDNodeFlags Flags = N1->getFlags() & N2->getFlags();
       SDValue NewBinOp =
-          DAG.getNode(BinOpc, DL, OpVTs, N1.getOperand(0), NewSel);
-      NewBinOp->setFlags(N1->getFlags());
-      NewBinOp->intersectFlagsWith(N2->getFlags());
+          DAG.getNode(BinOpc, DL, OpVTs, {N1.getOperand(0), NewSel}, Flags);
       return SDValue(NewBinOp.getNode(), N1.getResNo());
     }
   }

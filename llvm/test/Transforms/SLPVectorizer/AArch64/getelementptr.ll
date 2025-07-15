@@ -164,7 +164,8 @@ define i32 @getelementptr_2x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[T12:%.*]] = load i32, ptr [[ARRAYIDX15]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[T10]], i32 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[T12]], i32 3
-; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP8]], <2 x i32> [[TMP6]], i64 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> [[TMP10]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP13]])
 ; CHECK-NEXT:    [[OP_RDX]] = add i32 [[TMP14]], [[SUM_032]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
