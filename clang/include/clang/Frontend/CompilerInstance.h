@@ -720,6 +720,7 @@ public:
       DisableValidationForModuleKind DisableValidation,
       bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
       ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
+      const CodeGenOptions &CodeGenOpts,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,

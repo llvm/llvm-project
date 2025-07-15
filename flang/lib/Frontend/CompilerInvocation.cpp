@@ -1029,7 +1029,10 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     for (const auto &wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
-        // -W(no-)<feature>
+        // -Wfatal-errors
+      } else if (wArg == "fatal-errors") {
+        res.setMaxErrors(1);
+        // -W[no-]<feature>
       } else if (!features.EnableWarning(wArg)) {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
@@ -1790,6 +1793,7 @@ CompilerInvocation::getSemanticsCtx(
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
       .set_intrinsicModuleDirectories(fortranOptions.intrinsicModuleDirectories)
+      .set_maxErrors(getMaxErrors())
       .set_warningsAreErrors(getWarnAsErr())
       .set_moduleFileSuffix(getModuleFileSuffix())
       .set_underscoring(getCodeGenOpts().Underscoring);

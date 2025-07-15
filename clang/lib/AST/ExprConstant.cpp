@@ -66,6 +66,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <functional>
+#include <limits>
 #include <optional>
 
 #define DEBUG_TYPE "exprconstant"
@@ -1428,11 +1429,11 @@ namespace {
     }
     bool destroy(bool RunDestructors = true) {
       bool OK = cleanup(Info, RunDestructors, OldStackSize);
-      OldStackSize = -1U;
+      OldStackSize = std::numeric_limits<unsigned>::max();
       return OK;
     }
     ~ScopeRAII() {
-      if (OldStackSize != -1U)
+      if (OldStackSize != std::numeric_limits<unsigned>::max())
         destroy(false);
       // Body moved to a static method to encourage the compiler to inline away
       // instances of this class.
@@ -8951,7 +8952,28 @@ static bool EvaluateLValue(const Expr *E, LValue &Result, EvalInfo &Info,
 }
 
 bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
-  const NamedDecl *D = E->getDecl();
+  const ValueDecl *D = E->getDecl();
+
+  // If we are within a lambda's call operator, check whether the 'VD' referred
+  // to within 'E' actually represents a lambda-capture that maps to a
+  // data-member/field within the closure object, and if so, evaluate to the
+  // field or what the field refers to.
+  if (Info.CurrentCall && isLambdaCallOperator(Info.CurrentCall->Callee) &&
+      E->refersToEnclosingVariableOrCapture()) {
+    // We don't always have a complete capture-map when checking or inferring if
+    // the function call operator meets the requirements of a constexpr function
+    // - but we don't need to evaluate the captures to determine constexprness
+    // (dcl.constexpr C++17).
+    if (Info.checkingPotentialConstantExpression())
+      return false;
+
+    if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(D)) {
+      const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
+      return HandleLambdaCapture(Info, E, Result, MD, FD,
+                                 FD->getType()->isReferenceType());
+    }
+  }
+
   if (isa<FunctionDecl, MSGuidDecl, TemplateParamObjectDecl,
           UnnamedGlobalConstantDecl>(D))
     return Success(cast<ValueDecl>(D));
@@ -8963,27 +8985,6 @@ bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
 }
 
 bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
-  // If we are within a lambda's call operator, check whether the 'VD' referred
-  // to within 'E' actually represents a lambda-capture that maps to a
-  // data-member/field within the closure object, and if so, evaluate to the
-  // field or what the field refers to.
-  if (Info.CurrentCall && isLambdaCallOperator(Info.CurrentCall->Callee) &&
-      isa<DeclRefExpr>(E) &&
-      cast<DeclRefExpr>(E)->refersToEnclosingVariableOrCapture()) {
-    // We don't always have a complete capture-map when checking or inferring if
-    // the function call operator meets the requirements of a constexpr function
-    // - but we don't need to evaluate the captures to determine constexprness
-    // (dcl.constexpr C++17).
-    if (Info.checkingPotentialConstantExpression())
-      return false;
-
-    if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(VD)) {
-      const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
-      return HandleLambdaCapture(Info, E, Result, MD, FD,
-                                 FD->getType()->isReferenceType());
-    }
-  }
-
   CallStackFrame *Frame = nullptr;
   unsigned Version = 0;
   if (VD->hasLocalStorage()) {
@@ -11537,12 +11538,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       switch (E->getBuiltinCallee()) {
       case Builtin::BI__builtin_elementwise_add_sat:
         ResultElements.push_back(APValue(
-            APSInt(LHS.isSigned() ? LHS.sadd_sat(RHS) : RHS.uadd_sat(RHS),
+            APSInt(LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
       case Builtin::BI__builtin_elementwise_sub_sat:
         ResultElements.push_back(APValue(
-            APSInt(LHS.isSigned() ? LHS.ssub_sat(RHS) : RHS.usub_sat(RHS),
+            APSInt(LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
       }
@@ -14477,12 +14478,6 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     if (!EvaluatePointer(E->getRHS(), RHSValue, Info) || !LHSOK)
       return false;
 
-    // If we have Unknown pointers we should fail if they are not global values.
-    if (!(IsGlobalLValue(LHSValue.getLValueBase()) &&
-          IsGlobalLValue(RHSValue.getLValueBase())) &&
-        (LHSValue.AllowConstexprUnknown || RHSValue.AllowConstexprUnknown))
-      return false;
-
     // Reject differing bases from the normal codepath; we special-case
     // comparisons to null.
     if (!HasSameBase(LHSValue, RHSValue)) {
@@ -14544,6 +14539,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
           (LHSValue.Base && isZeroSized(RHSValue)))
         return DiagComparison(
             diag::note_constexpr_pointer_comparison_zero_sized);
+      if (LHSValue.AllowConstexprUnknown || RHSValue.AllowConstexprUnknown)
+        return DiagComparison(
+            diag::note_constexpr_pointer_comparison_unspecified);
+      // FIXME: Verify both variables are live.
       return Success(CmpResult::Unequal, E);
     }
 
