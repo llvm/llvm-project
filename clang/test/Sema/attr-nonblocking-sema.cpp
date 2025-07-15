@@ -127,7 +127,7 @@ void type_conversions_2()
 #endif
 
 // --- VIRTUAL METHODS ---
-// Attributes propagate to overridden methods, so no diagnostics except for conflicts.
+// Attributes propagate to overridden methods.
 // Check this in the syntax tests too.
 #ifdef __cplusplus
 struct Base {
@@ -135,6 +135,7 @@ struct Base {
   virtual void nonblocking() noexcept [[clang::nonblocking]]; // expected-note {{overridden virtual function is here}}
   virtual void nonallocating() noexcept [[clang::nonallocating]]; // expected-note {{overridden virtual function is here}}
   virtual void f2() [[clang::nonallocating]]; // expected-note {{previous declaration is here}}
+  virtual void f3() [[clang::nonblocking]]; // expected-note {{overridden virtual function is here}}
 };
 
 struct Derived : public Base {
@@ -142,6 +143,11 @@ struct Derived : public Base {
   void nonblocking() noexcept override; // expected-warning {{overriding function is missing 'nonblocking' attribute from base declaration}}
   void nonallocating() noexcept override; // expected-warning {{overriding function is missing 'nonallocating' attribute from base declaration}}
   void f2() [[clang::allocating]] override; // expected-warning {{effects conflict when merging declarations; kept 'allocating', discarded 'nonallocating'}}
+};
+
+template <bool B>
+struct TDerived : public Base {
+  void f3() [[clang::nonblocking(B)]] override; // expected-warning {{attribute 'nonblocking' on overriding function conflicts with base declaration}}
 };
 #endif // __cplusplus
 
