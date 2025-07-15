@@ -205,6 +205,7 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT) {
   setOperationAction(ISD::SELECT,            VT, Expand);
   setOperationAction(ISD::SELECT_CC,         VT, Expand);
   setOperationAction(ISD::VSELECT,           VT, Expand);
+  setOperationAction(ISD::CTSELECT,          VT, Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
   if (VT.isInteger()) {
     setOperationAction(ISD::SHL, VT, Custom);
@@ -306,6 +307,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::CTPOP, VT, Expand);
     setOperationAction(ISD::SELECT, VT, Expand);
     setOperationAction(ISD::SELECT_CC, VT, Expand);
+    setOperationAction(ISD::CTSELECT, VT, Expand);
 
     // Vector reductions
     setOperationAction(ISD::VECREDUCE_ADD, VT, Legal);
@@ -357,6 +359,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::MSTORE, VT, Legal);
     setOperationAction(ISD::SELECT, VT, Expand);
     setOperationAction(ISD::SELECT_CC, VT, Expand);
+    setOperationAction(ISD::CTSELECT, VT, Expand);
 
     // Pre and Post inc are supported on loads and stores
     for (unsigned im = (unsigned)ISD::PRE_INC;
@@ -471,6 +474,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::VSELECT, VT, Expand);
     setOperationAction(ISD::SELECT, VT, Expand);
     setOperationAction(ISD::SELECT_CC, VT, Expand);
+    setOperationAction(ISD::CTSELECT, VT, Expand);
 
     if (!HasMVEFP) {
       setOperationAction(ISD::SINT_TO_FP, VT, Expand);
@@ -1452,10 +1456,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
+  setOperationAction(ISD::CTSELECT,  MVT::i32, Custom);
+  setOperationAction(ISD::CTSELECT,  MVT::f32, Custom);
+  setOperationAction(ISD::CTSELECT,  MVT::i64, Custom);
+  setOperationAction(ISD::CTSELECT,  MVT::f64, Custom);
   if (Subtarget->hasFullFP16()) {
     setOperationAction(ISD::SETCC,     MVT::f16, Expand);
     setOperationAction(ISD::SELECT,    MVT::f16, Custom);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Custom);
+    setOperationAction(ISD::CTSELECT,  MVT::f16, Custom);
   }
 
   setOperationAction(ISD::SETCCCARRY, MVT::i32, Custom);
@@ -5262,6 +5271,23 @@ SDValue ARMTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getSelectCC(dl, Cond,
                          DAG.getConstant(0, dl, Cond.getValueType()),
                          SelectTrue, SelectFalse, ISD::SETNE);
+}
+
+SDValue ARMTargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Cond = Op.getOperand(0);
+  SDValue SelectTrue = Op.getOperand(1);
+  SDValue SelectFalse = Op.getOperand(2);
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+
+  SDValue Zero = DAG.getConstant(0, DL, Cond.getValueType());
+  SDValue Val = DAG.getSetCC(DL, VT, Cond, Zero, ISD::SETNE);
+  SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Val);
+  SDValue MaskNeg = DAG.getNOT(DL, Mask, VT);
+
+  SelectTrue = DAG.getNode(ISD::AND, DL, VT, SelectTrue, Mask);
+  SelectFalse = DAG.getNode(ISD::AND, DL, VT, SelectFalse, MaskNeg);
+  return DAG.getNode(ISD::OR, DL, VT, SelectTrue, SelectFalse);
 }
 
 static void checkVSELConstraints(ISD::CondCode CC, ARMCC::CondCodes &CondCode,
@@ -10626,6 +10652,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::GlobalTLSAddress: return LowerGlobalTLSAddress(Op, DAG);
   case ISD::SELECT:        return LowerSELECT(Op, DAG);
   case ISD::SELECT_CC:     return LowerSELECT_CC(Op, DAG);
+  case ISD::CTSELECT:      return LowerCTSELECT(Op, DAG);
   case ISD::BRCOND:        return LowerBRCOND(Op, DAG);
   case ISD::BR_CC:         return LowerBR_CC(Op, DAG);
   case ISD::BR_JT:         return LowerBR_JT(Op, DAG);
@@ -10773,6 +10800,24 @@ static void ReplaceLongIntrinsic(SDNode *N, SmallVectorImpl<SDValue> &Results,
                                 LongMul.getValue(0), LongMul.getValue(1)));
 }
 
+static SDValue ExpandCTSELECT(SDNode *N, SelectionDAG &DAG) {
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueValue = N->getOperand(1);
+  SDValue FalseValue = N->getOperand(2);
+  SDLoc DL(N);
+
+  SDValue TrueValueHi, TrueValueLo;
+  std::tie(TrueValueHi, TrueValueLo) = DAG.SplitScalar(TrueValue, DL, MVT::i32, MVT::i32);
+
+  SDValue FalseValueHi, FalseValueLo;
+  std::tie(FalseValueHi, FalseValueLo) = DAG.SplitScalar(FalseValue, DL, MVT::i32, MVT::i32);
+
+  SDValue ResHi = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, {Cond, TrueValueHi, FalseValueHi});
+  SDValue ResLo = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, {Cond, TrueValueLo, FalseValueLo});
+
+  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, ResLo, ResHi);
+}
+
 /// ReplaceNodeResults - Replace the results of node with an illegal result
 /// type with new values built out of custom code.
 void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
@@ -10836,6 +10881,9 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     Res = LowerFP_TO_INT_SAT(SDValue(N, 0), DAG, Subtarget);
+    break;
+  case ISD::CTSELECT:
+    Res = ExpandCTSELECT(N, DAG);
     break;
   }
   if (Res.getNode())
