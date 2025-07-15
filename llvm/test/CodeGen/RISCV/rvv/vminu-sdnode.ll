@@ -898,9 +898,8 @@ define <vscale x 2 x i8> @vsub_if_uge_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 
 ; CHECK-LABEL: vsub_if_uge_nxv2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmsltu.vv v0, v8, v9
 ; CHECK-NEXT:    vsub.vv v9, v8, v9
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp ult <vscale x 2 x i8> %va, %vb
   %select = select <vscale x 2 x i1> %cmp, <vscale x 2 x i8> zeroinitializer, <vscale x 2 x i8> %vb
@@ -911,9 +910,9 @@ define <vscale x 2 x i8> @vsub_if_uge_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 
 define <vscale x 2 x i8> @vsub_if_uge_swapped_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i8> %vb) {
 ; CHECK-LABEL: vsub_if_uge_swapped_nxv2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vmsleu.vv v0, v9, v8
-; CHECK-NEXT:    vsub.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp uge <vscale x 2 x i8> %va, %vb
   %select = select <vscale x 2 x i1> %cmp, <vscale x 2 x i8> %vb, <vscale x 2 x i8> zeroinitializer
@@ -925,9 +924,8 @@ define <vscale x 2 x i16> @vsub_if_uge_nxv2i16(<vscale x 2 x i16> %va, <vscale x
 ; CHECK-LABEL: vsub_if_uge_nxv2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vmsltu.vv v0, v8, v9
 ; CHECK-NEXT:    vsub.vv v9, v8, v9
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp ult <vscale x 2 x i16> %va, %vb
   %select = select <vscale x 2 x i1> %cmp, <vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> %vb
@@ -938,9 +936,9 @@ define <vscale x 2 x i16> @vsub_if_uge_nxv2i16(<vscale x 2 x i16> %va, <vscale x
 define <vscale x 2 x i16> @vsub_if_uge_swapped_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i16> %vb) {
 ; CHECK-LABEL: vsub_if_uge_swapped_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vmsleu.vv v0, v9, v8
-; CHECK-NEXT:    vsub.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp uge <vscale x 2 x i16> %va, %vb
   %select = select <vscale x 2 x i1> %cmp, <vscale x 2 x i16> %vb, <vscale x 2 x i16> zeroinitializer
@@ -952,9 +950,8 @@ define <vscale x 2 x i32> @vsub_if_uge_nxv2i32(<vscale x 2 x i32> %va, <vscale x
 ; CHECK-LABEL: vsub_if_uge_nxv2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmsltu.vv v0, v8, v9
 ; CHECK-NEXT:    vsub.vv v9, v8, v9
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp ult <vscale x 2 x i32> %va, %vb
   %select = select <vscale x 2 x i1> %cmp, <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> %vb
@@ -965,9 +962,9 @@ define <vscale x 2 x i32> @vsub_if_uge_nxv2i32(<vscale x 2 x i32> %va, <vscale x
 define <vscale x 2 x i32> @vsub_if_uge_swapped_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i32> %vb) {
 ; CHECK-LABEL: vsub_if_uge_swapped_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vmsleu.vv v0, v9, v8
-; CHECK-NEXT:    vsub.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp uge <vscale x 2 x i32> %va, %vb
   %select = select <vscale x 2 x i1> %cmp, <vscale x 2 x i32> %vb, <vscale x 2 x i32> zeroinitializer
@@ -979,9 +976,8 @@ define <vscale x 2 x i64> @vsub_if_uge_nxv2i64(<vscale x 2 x i64> %va, <vscale x
 ; CHECK-LABEL: vsub_if_uge_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vmsltu.vv v0, v8, v10
 ; CHECK-NEXT:    vsub.vv v10, v8, v10
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vminu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %cmp = icmp ult <vscale x 2 x i64> %va, %vb
   %select = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> %vb
@@ -992,9 +988,9 @@ define <vscale x 2 x i64> @vsub_if_uge_nxv2i64(<vscale x 2 x i64> %va, <vscale x
 define <vscale x 2 x i64> @vsub_if_uge_swapped_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i64> %vb) {
 ; CHECK-LABEL: vsub_if_uge_swapped_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vmsleu.vv v0, v10, v8
-; CHECK-NEXT:    vsub.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsub.vv v10, v8, v10
+; CHECK-NEXT:    vminu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %cmp = icmp uge <vscale x 2 x i64> %va, %vb
   %select = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %vb, <vscale x 2 x i64> zeroinitializer
