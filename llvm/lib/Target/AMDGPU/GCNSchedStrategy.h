@@ -28,11 +28,12 @@ class GCNSchedStage;
 
 enum class GCNSchedStageID : unsigned {
   OccInitialSchedule = 0,
-  UnclusteredHighRPReschedule = 1,
-  ClusteredLowOccupancyReschedule = 2,
-  PreRARematerialize = 3,
-  ILPInitialSchedule = 4,
-  MemoryClauseInitialSchedule = 5
+  RewriteSchedule = 1,
+  UnclusteredHighRPReschedule = 2,
+  ClusteredLowOccupancyReschedule = 3,
+  PreRARematerialize = 4,
+  ILPInitialSchedule = 5,
+  MemoryClauseInitialSchedule = 6
 };
 
 #ifndef NDEBUG
@@ -224,6 +225,7 @@ using RegionBoundaries =
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class GCNSchedStage;
   friend class OccInitialScheduleStage;
+  friend class RewriteScheduleStage;
   friend class UnclusteredHighRPStage;
   friend class ClusteredLowOccStage;
   friend class PreRARematStage;
@@ -398,6 +400,20 @@ public:
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
   OccInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+};
+
+class RewriteScheduleStage : public GCNSchedStage {
+private:
+  // Record regions with excess archvgpr register pressure over the physical
+  // register limit. Register pressure in these regions usually will result in
+  // spilling.
+  BitVector RegionsWithExcessArchVGPR;
+
+public:
+  bool initGCNSchedStage() override;
+
+  RewriteScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
 };
 

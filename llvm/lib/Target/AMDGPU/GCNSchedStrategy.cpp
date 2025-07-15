@@ -29,6 +29,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -528,6 +529,7 @@ GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
     const MachineSchedContext *C, bool IsLegacyScheduler)
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::OccInitialSchedule);
+  SchedStages.push_back(GCNSchedStageID::RewriteSchedule);
   SchedStages.push_back(GCNSchedStageID::UnclusteredHighRPReschedule);
   SchedStages.push_back(GCNSchedStageID::ClusteredLowOccupancyReschedule);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
@@ -778,6 +780,8 @@ GCNScheduleDAGMILive::createSchedStage(GCNSchedStageID SchedStageID) {
   switch (SchedStageID) {
   case GCNSchedStageID::OccInitialSchedule:
     return std::make_unique<OccInitialScheduleStage>(SchedStageID, *this);
+  case GCNSchedStageID::RewriteSchedule:
+    return std::make_unique<RewriteScheduleStage>(SchedStageID, *this);
   case GCNSchedStageID::UnclusteredHighRPReschedule:
     return std::make_unique<UnclusteredHighRPStage>(SchedStageID, *this);
   case GCNSchedStageID::ClusteredLowOccupancyReschedule:
@@ -898,13 +902,11 @@ GCNScheduleDAGMILive::getRegionLiveInMap() const {
   RegionFirstMIs.reserve(Regions.size());
   auto I = Regions.rbegin(), E = Regions.rend();
   do {
-    const MachineBasicBlock *MBB = I->first->getParent();
     auto *MI = &*skipDebugInstructionsForward(I->first, I->second);
     RegionFirstMIs.push_back(MI);
-    do {
-      ++I;
-    } while (I != E && I->first->getParent() == MBB);
+    ++I;
   } while (I != E);
+
   return getLiveRegMap(RegionFirstMIs, /*After=*/false, *LIS);
 }
 
@@ -1003,6 +1005,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const GCNSchedStageID &StageID) {
   case GCNSchedStageID::OccInitialSchedule:
     OS << "Max Occupancy Initial Schedule";
     break;
+  case GCNSchedStageID::RewriteSchedule:
+    OS << "Instruction Rewriting Reschedule";
+    break;
   case GCNSchedStageID::UnclusteredHighRPReschedule:
     OS << "Unclustered High Register Pressure Reschedule";
     break;
@@ -1034,6 +1039,42 @@ bool GCNSchedStage::initGCNSchedStage() {
 
   LLVM_DEBUG(dbgs() << "Starting scheduling stage: " << StageID << "\n");
   return true;
+}
+
+bool RewriteScheduleStage::initGCNSchedStage() {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
+  if (!ST.hasGFX90AInsts() || MFI.getMinWavesPerEU() > 1)
+    return false;
+
+  RegionsWithExcessArchVGPR.resize(DAG.Regions.size());
+  RegionsWithExcessArchVGPR.reset();
+  for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
+    auto PressureBefore = DAG.Pressure[Region];
+    if (PressureBefore.getPureArchVGPNum() > ST.getAddressableNumArchVGPRs())
+      RegionsWithExcessArchVGPR[Region] = true;
+  }
+
+  if (RegionsWithExcessArchVGPR.none())
+    return false;
+
+  // We have excess VGPR pressure, try to inflate to AV registers to reduce
+  // pressure.
+  bool MadeChange = false;
+  const SIRegisterInfo *TRI =
+      static_cast<const SIRegisterInfo *>(DAG.MRI.getTargetRegisterInfo());
+  for (unsigned I = 0, E = DAG.MRI.getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    if (!DAG.LIS->hasInterval(Reg))
+      continue;
+    const TargetRegisterClass *RC = DAG.MRI.getRegClass(Reg);
+
+    if (TRI->isAGPRClass(RC) || TRI->isVGPRClass(RC)) {
+      MadeChange |= DAG.MRI.recomputeRegClass(Reg);
+    }
+  }
+
+  return MadeChange;
 }
 
 bool UnclusteredHighRPStage::initGCNSchedStage() {

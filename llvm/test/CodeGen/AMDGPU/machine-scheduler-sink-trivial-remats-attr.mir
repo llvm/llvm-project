@@ -1650,7 +1650,7 @@ body:             |
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_253:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 253, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_254:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 254, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_255:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 256, implicit $exec, implicit $mode
-  ; GFX90A-NEXT:   [[DEF:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
+  ; GFX90A-NEXT:   [[DEF:%[0-9]+]]:av_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_256:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 255, implicit $exec, implicit $mode
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.1:

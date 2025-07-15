@@ -69,13 +69,15 @@ struct GCNRegPressure {
            NumAGPRs;
   }
 
-  /// \returns the ArchVGPR32 pressure, plus the AVGPRS which we assume will be
+  /// \returns the ArchVGPR32 pressure, plus the AVGPRs which we assume will be
   /// allocated as VGPR
   unsigned getArchVGPRNum() const { return Value[VGPR] + Value[AVGPR]; }
   /// \returns the AccVGPR32 pressure
   unsigned getAGPRNum() const { return Value[AGPR]; }
   /// \returns the AVGPR32 pressure
   unsigned getAVGPRNum() const { return Value[AVGPR]; }
+  /// \return the ArchVGPR32 pressure, without accounting for AVGPRs
+  unsigned getPureArchVGPNum() const { return Value[VGPR]; }
 
   unsigned getVGPRTuplesWeight() const {
     return std::max(Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR],
@@ -88,6 +90,36 @@ struct GCNRegPressure {
     return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
                     ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts()),
                                                 DynamicVGPRBlockSize));
+  }
+
+  unsigned getVGPRSpills(const GCNSubtarget &ST, MachineFunction &MF) {
+    if (!ST.hasGFX90AInsts())
+      return 0;
+
+    auto MaxVectorRegs = ST.getMaxNumVectorRegs(MF.getFunction());
+    unsigned ArchVGPRThreshold = MaxVectorRegs.first;
+    unsigned AGPRThreshold = MaxVectorRegs.second;
+
+    unsigned ArchPressure = getArchVGPRNum();
+    unsigned AGPRPressure = getAGPRNum();
+
+    unsigned ArchSpill = ArchPressure > ArchVGPRThreshold
+                             ? (ArchPressure - ArchVGPRThreshold)
+                             : 0;
+    unsigned AGPRSpill =
+        AGPRPressure > AGPRThreshold ? (AGPRPressure - AGPRThreshold) : 0;
+
+    unsigned UnifiedSpill = 0;
+
+    if (ST.hasGFX90AInsts()) {
+      unsigned CombinedThreshold = ST.getMaxNumVGPRs(MF);
+      unsigned UnifiedPressure = getVGPRNum(true);
+      UnifiedSpill = UnifiedPressure > CombinedThreshold
+                         ? (UnifiedPressure - CombinedThreshold)
+                         : 0;
+    }
+
+    return std::max(UnifiedSpill, (ArchSpill + AGPRSpill));
   }
 
   void inc(unsigned Reg,
