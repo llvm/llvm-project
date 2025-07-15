@@ -35,12 +35,15 @@
 
 #include "llvm/Config/llvm-config.h" // for LLVM_BUILD_LLVM_DYLIB, LLVM_BUILD_SHARED_LIBS
 #include "llvm/Support/Compiler.h"
+#include <cassert>
 #include <cstdint>
 
 // NOTE: Since the REPL itself could also include this runtime, extreme caution
 // should be taken when MAKING CHANGES to this file, especially when INCLUDE NEW
 // HEADERS, like <string>, <memory> and etc. (That pulls a large number of
 // tokens and will impact the runtime performance of the REPL)
+
+extern "C" void *memcpy(void *dest, const void *src, size_t n);
 
 namespace llvm {
 class raw_ostream;
@@ -97,6 +100,7 @@ class REPL_EXTERNAL_VISIBILITY Value {
     REPL_BUILTIN_TYPES
 #undef X
     void *m_Ptr;
+    unsigned char m_RawBits[sizeof(long double) * 8]; // widest type
   };
 
 public:
@@ -138,6 +142,10 @@ public:
 
   void *getPtr() const;
   void setPtr(void *Ptr) { Data.m_Ptr = Ptr; }
+  void setRawBits(void *Ptr, unsigned NBits = sizeof(Storage)) {
+    assert(NBits <= sizeof(Storage) && "Greater than the total size");
+    memcpy(/*dest=*/Data.m_RawBits, /*src=*/Ptr, /*nbytes=*/NBits / 8);
+  }
 
 #define X(type, name)                                                          \
   void set##name(type Val) { Data.m_##name = Val; }                            \

@@ -815,13 +815,13 @@ Interpreter::GenModule(IncrementalAction *Action) {
     // of the module which does not map well to CodeGen's design. To work this
     // around we created an empty module to make CodeGen happy. We should make
     // sure it always stays empty.
-    assert((!CachedInCodeGenModule ||
-            !getCompilerInstance()->getPreprocessorOpts().Includes.empty()) ||
-           ((CachedInCodeGenModule->empty() &&
-             CachedInCodeGenModule->global_empty() &&
-             CachedInCodeGenModule->alias_empty() &&
-             CachedInCodeGenModule->ifunc_empty())) &&
-               "CodeGen wrote to a readonly module");
+    assert(((!CachedInCodeGenModule ||
+             !getCompilerInstance()->getPreprocessorOpts().Includes.empty()) ||
+            ((CachedInCodeGenModule->empty() &&
+              CachedInCodeGenModule->global_empty() &&
+              CachedInCodeGenModule->alias_empty() &&
+              CachedInCodeGenModule->ifunc_empty()))) &&
+           "CodeGen wrote to a readonly module");
     std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
     CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
     return M;

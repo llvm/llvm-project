@@ -26,6 +26,7 @@ s3
 struct S4 { ~S4() { printf("~S4()\n"); }};
 S4{}
 // CHECK-NEXT: (S4) @0x{{[0-9a-f]+}}
+// TODO-CHECK-NEXT: ~S4()
 
 enum Enum{ e1 = -12, e2, e3=33, e4, e5 = 33};
 e2

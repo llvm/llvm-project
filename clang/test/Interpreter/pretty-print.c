@@ -70,7 +70,9 @@ float farr[2][1] = { {0}, {3.14}}; farr
 0.00001f
 // CHECK-NEXT: (float) 1.00000e-05f
 
-
+// TODO: _Bool, _Complex, _Atomic, and _BitInt
+// union U { int I; float F; } u; u.I = 12; u.I
+// TODO-CHECK-NEXT: (int) 12
 // struct S1{} s1; s1
 // TODO-CHECK-NEXT: (S1 &) @0x{{[0-9a-f]+}}
 

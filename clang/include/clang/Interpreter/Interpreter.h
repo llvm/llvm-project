@@ -189,7 +189,7 @@ private:
   // clang::Values.
   mutable llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
-  std::array<Expr *, 4> ValuePrintingInfo;
+  std::array<Expr *, 4> ValuePrintingInfo = {0};
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
 

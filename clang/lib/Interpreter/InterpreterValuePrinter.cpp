@@ -184,7 +184,6 @@ struct ValueRef : public Value {
     // Tell the base class to not try to deallocate if it manages the value.
     IsManuallyAlloc = false;
   }
-  void setData(long double D) { Data.m_LongDouble = D; }
 };
 
 std::string Interpreter::ValueDataToString(const Value &V) const {
@@ -212,7 +211,7 @@ std::string Interpreter::ValueDataToString(const Value &V) const {
       if (ElemTy->isBuiltinType()) {
         // Single dim arrays, advancing.
         uintptr_t Offset = (uintptr_t)V.getPtr() + Idx * ElemSize;
-        InnerV.setData(*(long double *)Offset);
+        InnerV.setRawBits((void *)Offset, ElemSize * 8);
       } else {
         // Multi dim arrays, position to the next dimension.
         size_t Stride = ElemCount / N;
