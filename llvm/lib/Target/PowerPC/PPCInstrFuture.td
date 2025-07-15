@@ -193,17 +193,22 @@ let Predicates = [HasVSX, IsISAFuture] in {
                       "vucmprlh $VRT, $VRA, $VRB", []>;
 }
 
-// Load VSX Vector with Right Length Left-justified.
-def : Pat<(v4i32 (int_ppc_vsx_lxvrl addr:$RA, i64:$RB)), (LXVRL $RA, $RB)>;
-def : Pat<(v4i32 (int_ppc_vsx_lxvrll addr:$RA, i64:$RB)), (LXVRLL $RA, $RB)>;
-def : Pat<(v256i1 (int_ppc_vsx_lxvprl addr:$RA, i64:$RB)), (LXVPRL $RA, $RB)>;
-def : Pat<(v256i1 (int_ppc_vsx_lxvprll addr:$RA, i64:$RB)), (LXVPRLL $RA, $RB)>;
+// Load/Store VSX Vector with Right Length Left-justified.
+// foreach Ty = [v4i32, v2i64, v128i1] in {
+foreach Ty = [v4i32, v2i64] in {
+  def : Pat<(Ty (int_ppc_vsx_lxvrl addr:$RA, i64:$RB)),
+            (LXVRL memr:$RA, g8rc:$RB)>;
+  def : Pat<(Ty (int_ppc_vsx_lxvrll addr:$RA, i64:$RB)),
+            (LXVRLL $RA, $RB)>;
+  def : Pat<(int_ppc_vsx_stxvrl Ty:$XT, addr:$RA, i64:$RB),
+            (STXVRL $XT, $RA, $RB)>;
+  def : Pat<(int_ppc_vsx_stxvrll Ty:$XT, addr:$RA, i64:$RB),
+            (STXVRLL $XT, $RA, $RB)>;
+}
 
-// Store VSX Vector with Right Length Left-justified.
-def : Pat<(int_ppc_vsx_stxvrl v4i32:$XT, addr:$RA, i64:$RB),
-          (STXVRL $XT, $RA, $RB)>;
-def : Pat<(int_ppc_vsx_stxvrll v4i32:$XT, addr:$RA, i64:$RB),
-          (STXVRLL $XT, $RA, $RB)>;
+// Load/Store VSX Vector pair with Right Length Left-justified.
+def : Pat<(v256i1(int_ppc_vsx_lxvprl addr:$RA, i64:$RB)), (LXVPRL $RA, $RB)>;
+def : Pat<(v256i1(int_ppc_vsx_lxvprll addr:$RA, i64:$RB)), (LXVPRLL $RA, $RB)>;
 def : Pat<(int_ppc_vsx_stxvprl v256i1:$XTp, addr:$RA, i64:$RB),
           (STXVPRL $XTp, $RA, $RB)>;
 def : Pat<(int_ppc_vsx_stxvprll v256i1:$XTp, addr:$RA, i64:$RB),
