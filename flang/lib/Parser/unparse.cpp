@@ -778,7 +778,7 @@ public:
   }
   void Unparse(const SubstringInquiry &x) {
     Walk(x.v);
-    Put(x.source.end()[-1] == 'n' ? "%LEN" : "%KIND");
+    Put(x.source.back() == 'n' ? "%LEN" : "%KIND");
   }
   void Unparse(const SubstringRange &x) { // R910
     Walk(x.t, ":");
@@ -2571,7 +2571,7 @@ public:
     Word(ToUpperCaseLetters(common::EnumToString(x)));
   }
 
-  void Unparse(const OpenMPAtomicConstruct &x) {
+  template <typename Construct> void UnparseBlockConstruct(const Construct &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(std::get<OmpDirectiveSpecification>(x.t));
@@ -2585,6 +2585,10 @@ public:
       Put("\n");
       EndOpenMP();
     }
+  }
+
+  void Unparse(const OpenMPAtomicConstruct &x) { //
+    UnparseBlockConstruct(x);
   }
 
   void Unparse(const OpenMPExecutableAllocate &x) {
@@ -2614,22 +2618,8 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpEndAllocators &x) {
-    BeginOpenMP();
-    Word("!$OMP END ALLOCATE");
-    Put("\n");
-    EndOpenMP();
-  }
-  void Unparse(const OpenMPAllocatorsConstruct &x) {
-    BeginOpenMP();
-    Word("!$OMP ALLOCATE");
-    Walk(std::get<OmpClauseList>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<Statement<AllocateStmt>>(x.t));
-    if (const auto &end = std::get<std::optional<OmpEndAllocators>>(x.t)) {
-      Walk(*end);
-    }
+  void Unparse(const OpenMPAllocatorsConstruct &x) { //
+    UnparseBlockConstruct(x);
   }
   void Unparse(const OmpAssumeDirective &x) {
     BeginOpenMP();
@@ -2768,6 +2758,9 @@ public:
     Put("\n");
     EndOpenMP();
   }
+  void Unparse(const OpenMPDispatchConstruct &x) { //
+    UnparseBlockConstruct(x);
+  }
   void Unparse(const OpenMPRequiresConstruct &y) {
     BeginOpenMP();
     Word("!$OMP REQUIRES ");
@@ -2786,15 +2779,6 @@ public:
   bool Pre(const OmpMessageClause &x) {
     Walk(x.v);
     return false;
-  }
-  void Unparse(const OmpDispatchDirective &x) {
-    Word("!$OMP DISPATCH");
-    Walk(x.t);
-    Put("\n");
-  }
-  void Unparse(const OmpEndDispatchDirective &) {
-    Word("!$OMP END DISPATCH");
-    Put("\n");
   }
   void Unparse(const OmpErrorDirective &x) {
     Word("!$OMP ERROR ");

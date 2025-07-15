@@ -200,7 +200,7 @@ public:
   }
 
   bool shouldForceRelocation(const MCFixup &Fixup) {
-    switch(Fixup.getTargetKind()) {
+    switch(Fixup.getKind()) {
       default:
         llvm_unreachable("Unknown Fixup Kind!");
 
@@ -452,7 +452,7 @@ public:
       return false;
     // If we cannot resolve the fixup value, it requires relaxation.
     if (!Resolved) {
-      switch (Fixup.getTargetKind()) {
+      switch (Fixup.getKind()) {
       case fixup_Hexagon_B22_PCREL:
         // GetFixupCount assumes B22 won't relax
         [[fallthrough]];
