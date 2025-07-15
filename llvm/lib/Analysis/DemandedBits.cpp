@@ -36,6 +36,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
@@ -246,6 +247,59 @@ void DemandedBits::determineLiveOperandBits(
     else
       AB &= ~(Known.One & ~Known2.One);
     break;
+  case Instruction::SRem:
+  case Instruction::URem:
+  case Instruction::UDiv:
+  case Instruction::SDiv: {
+    auto Opc = UserI->getOpcode();
+    auto IsDiv = Opc == Instruction::UDiv || Opc == Instruction::SDiv;
+    bool IsSigned = Opc == Instruction::SDiv || Opc == Instruction::SRem;
+    if (OperandNo == 0) {
+      const APInt *DivAmnt;
+      if (match(UserI->getOperand(1), m_APInt(DivAmnt))) {
+        uint64_t D = DivAmnt->getZExtValue();
+        if (isPowerOf2_64(D)) {
+          unsigned Sh = Log2_64(D);
+          if (IsDiv) {
+            AB = AOut.shl(Sh);
+          } else {
+            AB = AOut & APInt::getLowBitsSet(BitWidth, Sh);
+          }
+        } else if (IsDiv) { // Non power of 2 constant div
+          //   x =  q * C + r;
+          //   q = x / C;
+          //   We think of it like grade school division in base 2.
+          //
+          //    x = [   unused   |  window m-bits |  ...  | needed bits ]
+          //                         ^ each step emits 1 quotient bit
+          //                         |
+          //                         |
+          //   C fits in m = ⌈log₂ C⌉ bits
+          //   Each new quotient bit consumes the window of m low bits and
+          //   shifts one position left.
+
+          //   To produce the first LowQ quotient/rem bits we slide the window
+          //   LowQ times --> need at most LowQ + m low bits of the dividend.
+          //   Need = LowQ + Ceil(log2(C))             (+1 sign bit for
+          //   sdiv/srem). For example : Assume x = b7 b6 b5 b4 b3 b2 b1 b0.
+          //   LowQ = 4, C = 5 and ceil(log_2(C)) = 3.
+          //   step 0: b2 b1 b0, produces quotient q[0].
+          //   step 1: b3 b2 b1, produces quotient q[1].
+          //   step 2: b4 b3 b2, produces quotient q[2].
+          //   step 3: b5 b4 b3, produces quotient q[3].
+          //   k = LowQ - 1;
+          //   TopIndex = k + m-1 = 3 + 2 = 5;
+          //   The dividend bits b5...b0 are enough we don't care for b6 and b7.
+          unsigned LowQ = AOut.getActiveBits();
+          unsigned Need = LowQ + Log2_64_Ceil(D);
+          if (IsSigned)
+            Need++;
+          AB = APInt::getLowBitsSet(BitWidth, std::min(BitWidth, Need));
+        }
+      }
+    }
+    break;
+  }
   case Instruction::Xor:
   case Instruction::PHI:
     AB = AOut;
