@@ -673,8 +673,10 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
   if (MDC.isPrebuiltModule(TopLevelModule))
     MDC.DirectPrebuiltModularDeps.insert(
         {TopLevelModule, PrebuiltModuleDep{TopLevelModule}});
-  else
+  else {
     MDC.DirectModularDeps.insert(TopLevelModule);
+    MDC.DirectImports.insert(Imported);
+  }
 }
 
 void ModuleDepCollectorPP::EndOfMainFile() {
@@ -706,6 +708,8 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     if (!MDC.isPrebuiltModule(M))
       MDC.DirectModularDeps.insert(M);
 
+  MDC.addVisibleModules();
+
   for (const Module *M : MDC.DirectModularDeps)
     handleTopLevelModule(M);
 
@@ -726,6 +730,9 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     if (It != MDC.ModularDeps.end())
       MDC.Consumer.handleDirectModuleDependency(It->second->ID);
   }
+
+  for (auto &&I : MDC.VisibleModules)
+    MDC.Consumer.handleVisibleModule(std::string(I.getKey()));
 
   for (auto &&I : MDC.FileDeps)
     MDC.Consumer.handleFileDependency(I);
@@ -991,6 +998,29 @@ bool ModuleDepCollector::isPrebuiltModule(const Module *M) {
   assert("Prebuilt module came from the expected AST file" &&
          PrebuiltModuleFileIt->second == M->getASTFile()->getName());
   return true;
+}
+
+void ModuleDepCollector::addVisibleModules() {
+  llvm::DenseSet<const Module *> ImportedModules;
+  auto InsertVisibleModules = [&](const Module *M) {
+    if (ImportedModules.contains(M))
+      return;
+
+    VisibleModules.insert(M->getTopLevelModuleName());
+    SmallVector<Module *> Stack;
+    M->getExportedModules(Stack);
+    while (!Stack.empty()) {
+      const Module *CurrModule = Stack.pop_back_val();
+      if (ImportedModules.contains(CurrModule))
+        continue;
+      ImportedModules.insert(CurrModule);
+      VisibleModules.insert(CurrModule->getTopLevelModuleName());
+      CurrModule->getExportedModules(Stack);
+    }
+  };
+
+  for (const Module *Import : DirectImports)
+    InsertVisibleModules(Import);
 }
 
 static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
