@@ -269,9 +269,8 @@ bool ScriptedThread::CalculateStopInfo() {
   case lldb::eStopReasonSignal: {
     uint32_t signal;
     llvm::StringRef description;
-    if (!data_dict->GetValueForKeyAsInteger("signal", signal)) {
-        return false;
-    }
+    if (!data_dict->GetValueForKeyAsInteger("signal", signal))
+      return false;
     data_dict->GetValueForKeyAsString("desc", description);
     stop_info_sp =
         StopInfo::CreateStopReasonWithSignal(*this, signal, description.data());
