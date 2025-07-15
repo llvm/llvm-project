@@ -1,14 +1,14 @@
 # Key Instructions debug info in LLVM and Clang
 
-Key Instructions is an LLVM feature that reduces the jumpiness of optimized code debug stepping by discriminating the significance of instrucions that make up source language statements. This document explains the feature and how it is implemented in [LLVM](#llvm) and [Clang](#clang-and-other-front-ends).
+Key Instructions is an LLVM feature that reduces the jumpiness of optimized code debug stepping by distinguishing the significance of instructions that make up source language statements. This document explains the feature and how it is implemented in [LLVM](#llvm) and [Clang](#clang-and-other-front-ends).
 
 ## Status
 
-Feature complete except for coroutines, which fall back to not-key-instructions handling for now but will get support soon (there is no fundemental reason why they cannot be supported, we've just not got to it at time of writing).
+Feature complete except for coroutines, which fall back to not-key-instructions handling for now but will get support soon (there is no fundamental reason why they cannot be supported, we've just not got to it at time of writing).
 
 Tell Clang [not] to produce Key Instructions metadata with `-g[no-]key-instructions`.
 
-The feature improves optimized code stepping; it's intended for the feature to be used with optimisations enabled. Although the feature works at O0 it is not recommended because in some cases the effect of editing variables may not always be immediately realised. In some cases, debuggers may place a breakpoint after parts of an expression have been evaluated, which limits the ability to have variable edits affect expressions. (This is a quirk of the current implementation, rather than fundemental limitation, covered in more detail [later](#disabled-at-o0).)
+The feature improves optimized code stepping; it's intended for the feature to be used with optimisations enabled. Although the feature works at O0 it is not recommended because in some cases the effect of editing variables may not always be immediately realised. In some cases, debuggers may place a breakpoint after parts of an expression have been evaluated, which limits the ability to have variable edits affect expressions. (This is a quirk of the current implementation, rather than fundamental limitation, covered in more detail [later](#disabled-at-o0).)
 
 This is a DWARF-based feature. There is currently no plan to support CodeView.
 
