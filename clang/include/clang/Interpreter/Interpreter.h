@@ -187,7 +187,7 @@ private:
 
   // A cache for the compiled destructors used to for de-allocation of managed
   // clang::Values.
-  llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
+  mutable llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
   std::array<Expr *, 4> ValuePrintingInfo;
 
@@ -204,7 +204,8 @@ private:
 
   // When we deallocate clang::Value we need to run the destructor of the type.
   // This function forces emission of the needed dtor.
-  llvm::Expected<llvm::orc::ExecutorAddr> CompileDtorCall(CXXRecordDecl *CXXRD);
+  llvm::Expected<llvm::orc::ExecutorAddr>
+  CompileDtorCall(CXXRecordDecl *CXXRD) const;
 
   /// @}
   /// @name Code generation

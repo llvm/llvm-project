@@ -111,7 +111,7 @@ public:
   };
 
   Value() = default;
-  Value(Interpreter *In, void *Ty);
+  Value(const Interpreter *In, void *Ty);
   Value(const Value &RHS);
   Value(Value &&RHS) noexcept;
   Value &operator=(const Value &RHS);
@@ -124,9 +124,7 @@ public:
   void dump() const;
   void clear();
 
-  ASTContext &getASTContext();
   const ASTContext &getASTContext() const;
-  Interpreter &getInterpreter();
   const Interpreter &getInterpreter() const;
   QualType getType() const;
 
@@ -193,7 +191,7 @@ protected:
     }
   };
 
-  Interpreter *Interp = nullptr;
+  const Interpreter *Interp = nullptr;
   void *OpaqueType = nullptr;
   Storage Data;
   Kind ValueKind = K_Unspecified;

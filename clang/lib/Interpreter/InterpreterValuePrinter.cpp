@@ -180,8 +180,7 @@ static std::string CharPtrToString(const char *Ptr) {
 namespace clang {
 
 struct ValueRef : public Value {
-  ValueRef(const Interpreter *In, void *Ty)
-      : Value(const_cast<Interpreter *>(In), Ty) {
+  ValueRef(const Interpreter *In, void *Ty) : Value(In, Ty) {
     // Tell the base class to not try to deallocate if it manages the value.
     IsManuallyAlloc = false;
   }
@@ -356,7 +355,7 @@ std::string Interpreter::ValueTypeToString(const Value &V) const {
 }
 
 llvm::Expected<llvm::orc::ExecutorAddr>
-Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) {
+Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) const {
   assert(CXXRD && "Cannot compile a destructor for a nullptr");
   if (auto Dtor = Dtors.find(CXXRD); Dtor != Dtors.end())
     return Dtor->getSecond();

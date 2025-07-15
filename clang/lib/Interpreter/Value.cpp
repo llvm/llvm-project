@@ -120,8 +120,8 @@ static Value::Kind ConvertQualTypeToKind(const ASTContext &Ctx, QualType QT) {
   }
 }
 
-Value::Value(Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
-  ASTContext &C = getASTContext();
+Value::Value(const Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
+  const ASTContext &C = getASTContext();
   setKind(ConvertQualTypeToKind(C, getType()));
   if (ValueKind == K_PtrOrObj) {
     QualType Canon = getType().getCanonicalType();
@@ -131,7 +131,7 @@ Value::Value(Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
          Canon->isMemberPointerType())) {
       IsManuallyAlloc = true;
       // Compile dtor function.
-      Interpreter &Interp = getInterpreter();
+      const Interpreter &Interp = getInterpreter();
       void *DtorF = nullptr;
       size_t ElementsSize = 1;
       QualType DtorTy = getType();
@@ -236,19 +236,11 @@ QualType Value::getType() const {
   return QualType::getFromOpaquePtr(OpaqueType);
 }
 
-Interpreter &Value::getInterpreter() {
-  assert(Interp != nullptr &&
-         "Can't get interpreter from a default constructed value");
-  return *Interp;
-}
-
 const Interpreter &Value::getInterpreter() const {
   assert(Interp != nullptr &&
          "Can't get interpreter from a default constructed value");
   return *Interp;
 }
-
-ASTContext &Value::getASTContext() { return getInterpreter().getASTContext(); }
 
 const ASTContext &Value::getASTContext() const {
   return getInterpreter().getASTContext();
