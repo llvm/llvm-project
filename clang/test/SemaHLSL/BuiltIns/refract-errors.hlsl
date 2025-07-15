@@ -54,10 +54,6 @@ float1 test_vec1_inputs(float1 p0, float1 p1, float1 p2) {
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate template ignored: substitution failure [with L = 1]: no type named 'Type' in 'hlsl::__detail::enable_if<false, float>'}}
 }
 
-float3 test_mixed_datatype_inputs(float3 p0, float3 p1, half p2) {
-  return refract(p0, p1, p2);
-}
-
 typedef float float5 __attribute__((ext_vector_type(5)));
 
 float5 test_vec5_inputs(float5 p0, float5 p1,  float p2) {

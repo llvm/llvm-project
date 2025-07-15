@@ -70,7 +70,8 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
       PassedType->isVectorType()
           ? PassedType->castAs<clang::VectorType>()->getElementType()
           : PassedType;
-  if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
+  if (!BaseType->isHalfType() && !BaseType->isFloat16Type() &&
+      !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
            << /* half or float */ 2 << PassedType;
@@ -80,7 +81,8 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
 static bool CheckFloatOrHalfScalarRepresentation(Sema *S, SourceLocation Loc,
                                                  int ArgOrdinal,
                                                  clang::QualType PassedType) {
-  if (!PassedType->isHalfType() && !PassedType->isFloat32Type())
+  if (!PassedType->isHalfType() && !PassedType->isFloat16Type() &&
+      !PassedType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar */ 1 << /* no int */ 0
            << /* half or float */ 2 << PassedType;
@@ -287,7 +289,7 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
                                    llvm::ArrayRef(ChecksArr)))
       return true;
-    // Check that first two arguments are vectors of the same type
+    // Check that first two arguments are vectors/scalars of the same type
     QualType Arg0Type = TheCall->getArg(0)->getType();
     if (!SemaRef.getASTContext().hasSameUnqualifiedType(
             Arg0Type, TheCall->getArg(1)->getType()))

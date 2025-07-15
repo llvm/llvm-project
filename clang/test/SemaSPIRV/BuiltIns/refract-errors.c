@@ -27,12 +27,12 @@ float test_int_scalar_inputs(int p0, int p1, int p2) {
 
 float test_float_and_half_inputs(float2 p0, half2 p1, float p2) {
   return __builtin_spirv_refract(p0, p1, p2);
-  //  expected-error@-1 {{2nd argument must be a scalar or vector of 16 or 32 bit floating-point types (was 'half2' (vector of 2 'half' values))}}
+  //  expected-error@-1 {{first two arguments to '__builtin_spirv_refract' must have the same type}}
 }
 
 float test_float_and_half_2_inputs(float2 p0, float2 p1, half p2) {
   return __builtin_spirv_refract(p0, p1, p2);
-  //  expected-error@-1 {{3rd argument must be a scalar 16 or 32 bit floating-point type (was 'half' (aka '_Float16'))}}
+  //  expected-error@-1 {{all arguments to '__builtin_spirv_refract' must be of scalar or vector type with matching scalar element type: 'float2' (vector of 2 'float' values) vs 'half' (aka '_Float16')}}
 }
 
 float2 test_mismatch_vector_size_inputs(float2 p0, float3 p1, float p2) {
