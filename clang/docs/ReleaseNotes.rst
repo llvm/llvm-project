@@ -800,6 +800,8 @@ Bug Fixes in This Version
   declaration statements. Clang now emits a warning for these patterns. (#GH141659)
 - Fixed false positives for redeclaration errors of using enum in
   nested scopes. (#GH147495)
+- Fixed a failed assertion with an operator call expression which comes from a
+  macro expansion when performing analysis for nullability attributes. (#GH138371)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
