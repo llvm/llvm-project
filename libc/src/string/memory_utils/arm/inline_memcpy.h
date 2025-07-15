@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// The functions defined in this file give approximate code size. These sizes
+// assume the following configuration options:
+// - LIBC_CONF_KEEP_FRAME_POINTER = false
+// - LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR = false
+// - LIBC_ADD_NULL_CHECKS = false
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ARM_INLINE_MEMCPY_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ARM_INLINE_MEMCPY_H
 
@@ -19,26 +24,34 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
-template <size_t bytes>
-LIBC_INLINE void copy_assume_aligned(void *dst, const void *src) {
-  constexpr size_t alignment = bytes > kWordSize ? kWordSize : bytes;
-  memcpy_inline<bytes>(assume_aligned<alignment>(dst),
-                       assume_aligned<alignment>(src));
+// Performs a copy of `bytes` byte from `src` to `dst`. This function has the
+// semantics of `memcpy` where `src` and `dst` are `__restrict`. The compiler is
+// free to use whatever instruction is best for the size and assumed access.
+template <size_t bytes, AssumeAccess access>
+LIBC_INLINE void copy(void *dst, const void *src) {
+  if constexpr (access == AssumeAccess::kAligned) {
+    constexpr size_t alignment = bytes > kWordSize ? kWordSize : bytes;
+    memcpy_inline<bytes>(assume_aligned<alignment>(dst),
+                         assume_aligned<alignment>(src));
+  } else if constexpr (access == AssumeAccess::kUnknown) {
+    memcpy_inline<bytes>(dst, src);
+  } else {
+    static_assert(false);
+  }
 }
 
-template <size_t bytes, BlockOp block_op = BlockOp::kFull>
+template <size_t bytes, BlockOp block_op = BlockOp::kFull,
+          AssumeAccess access = AssumeAccess::kUnknown>
 LIBC_INLINE void copy_block_and_bump_pointers(Ptr &dst, CPtr &src) {
   if constexpr (block_op == BlockOp::kFull) {
-    copy_assume_aligned<bytes>(dst, src);
+    copy<bytes, access>(dst, src);
   } else if constexpr (block_op == BlockOp::kByWord) {
     // We restrict loads/stores to 4 byte to prevent the use of load/store
-    // multiple (LDM, STM) and load/store double (LDRD, STRD). First, they
-    // may fault (see notes below) and second, they use more registers which
-    // in turn adds push/pop instructions in the hot path.
-    static_assert(bytes >= kWordSize);
+    // multiple (LDM, STM) and load/store double (LDRD, STRD).
+    static_assert((bytes % kWordSize == 0) && (bytes >= kWordSize));
     LIBC_LOOP_UNROLL
     for (size_t offset = 0; offset < bytes; offset += kWordSize) {
-      copy_assume_aligned<kWordSize>(dst + offset, src + offset);
+      copy<kWordSize, access>(dst + offset, src + offset);
     }
   } else {
     static_assert(false, "Invalid BlockOp");
@@ -52,28 +65,27 @@ LIBC_INLINE void copy_block_and_bump_pointers(Ptr &dst, CPtr &src) {
   src += bytes;
 }
 
-template <size_t bytes, BlockOp block_op, BumpSize bump_size = BumpSize::kYes>
-LIBC_INLINE void consume_by_aligned_block(Ptr &dst, CPtr &src, size_t &size) {
+template <size_t bytes, BlockOp block_op, AssumeAccess access>
+LIBC_INLINE void consume_by_block(Ptr &dst, CPtr &src, size_t &size) {
   LIBC_LOOP_NOUNROLL
   for (size_t i = 0; i < size / bytes; ++i)
-    copy_block_and_bump_pointers<bytes, block_op>(dst, src);
-  if constexpr (bump_size == BumpSize::kYes) {
-    size %= bytes;
-  }
+    copy_block_and_bump_pointers<bytes, block_op, access>(dst, src);
+  size %= bytes;
 }
 
-LIBC_INLINE void copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src,
-                                              size_t size) {
-  consume_by_aligned_block<1, BlockOp::kFull, BumpSize::kNo>(dst, src, size);
+[[maybe_unused]] LIBC_INLINE void
+copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
+  LIBC_LOOP_NOUNROLL
+  for (size_t i = 0; i < size; ++i)
+    *dst++ = *src++;
 }
 
 } // namespace
 
-// Implementation for Cortex-M0, M0+, M1.
-// Notes:
-// - It compiles down to 196 bytes, but 220 bytes when used through `memcpy`
-//   that also needs to return the `dst` ptr.
-// - These cores do not allow for unaligned loads/stores.
+// Implementation for Cortex-M0, M0+, M1 cores that do not allow for unaligned
+// loads/stores. It compiles down to 208 bytes when used through `memcpy` that
+// also needs to return the `dst` ptr.
+// Note:
 // - When `src` and `dst` are coaligned, we start by aligning them and perform
 //   bulk copies. We let the compiler know the pointers are aligned so it can
 //   use load/store multiple (LDM, STM). This significantly increase throughput
@@ -94,21 +106,29 @@ LIBC_INLINE void copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src,
     if (src_alignment == 0)
       LIBC_ATTR_LIKELY {
         // Both `src` and `dst` are now word-aligned.
-        consume_by_aligned_block<64, BlockOp::kFull>(dst, src, size);
-        consume_by_aligned_block<16, BlockOp::kFull>(dst, src, size);
-        consume_by_aligned_block<4, BlockOp::kFull>(dst, src, size);
+        // We first copy by blocks of 64 bytes, the compiler will use 4
+        // load/store multiple (LDM, STM), each of 4 words. This requires more
+        // registers so additional push/pop are needed but the speedup is worth
+        // it.
+        consume_by_block<64, BlockOp::kFull, AssumeAccess::kAligned>(dst, src,
+                                                                     size);
+        // Then we use blocks of 4 word load/store.
+        consume_by_block<16, BlockOp::kByWord, AssumeAccess::kAligned>(dst, src,
+                                                                       size);
+        // Then we use word by word copy.
+        consume_by_block<4, BlockOp::kByWord, AssumeAccess::kAligned>(dst, src,
+                                                                      size);
       }
     else {
       // `dst` is aligned but `src` is not.
       LIBC_LOOP_NOUNROLL
       while (size >= kWordSize) {
-        // Recompose word from multiple loads depending on the
-        // alignment.
+        // Recompose word from multiple loads depending on the alignment.
         const uint32_t value =
             src_alignment == 2
                 ? load_aligned<uint32_t, uint16_t, uint16_t>(src)
                 : load_aligned<uint32_t, uint8_t, uint16_t, uint8_t>(src);
-        copy_assume_aligned<kWordSize>(dst, &value);
+        copy<kWordSize, AssumeAccess::kAligned>(dst, &value);
         dst += kWordSize;
         src += kWordSize;
         size -= kWordSize;
@@ -121,17 +141,8 @@ LIBC_INLINE void copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src,
 }
 
 // Implementation for Cortex-M3, M4, M7, M23, M33, M35P, M52 with hardware
-// support for unaligned loads and stores.
-// Notes:
-// - It compiles down to 266 bytes.
-// - `dst` and `src` are not `__restrict` to prevent the compiler from
-//   reordering loads/stores.
-// - We keep state variables to a strict minimum to keep everything in the free
-//   registers and prevent costly push / pop.
-// - If unaligned single loads/stores to normal memory are supported, unaligned
-//   accesses for load/store multiple (LDM, STM) and load/store double (LDRD,
-//   STRD) instructions are generally not supported and will still fault so we
-//   make sure to restrict unrolling to word loads/stores.
+// support for unaligned loads and stores. It compiles down to 272 bytes when
+// used through `memcpy` that also needs to return the `dst` ptr.
 [[maybe_unused]] LIBC_INLINE void inline_memcpy_arm_mid_end(Ptr dst, CPtr src,
                                                             size_t size) {
   if (misaligned(bitwise_or(src, dst)))
@@ -157,22 +168,40 @@ LIBC_INLINE void copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src,
         }
     }
   // `dst` and `src` are not necessarily both aligned at that point but this
-  // implementation assumes hardware support for unaligned loads and stores.
-  consume_by_aligned_block<64, BlockOp::kByWord>(dst, src, size);
-  consume_by_aligned_block<16, BlockOp::kByWord>(dst, src, size);
-  consume_by_aligned_block<4, BlockOp::kFull>(dst, src, size);
+  // implementation assumes hardware support for unaligned loads and stores so
+  // it is still fast to perform unrolled word by word copy. Note that wider
+  // accesses through the use of load/store multiple (LDM, STM) and load/store
+  // double (LDRD, STRD) instructions are generally not supported and can fault.
+  // By forcing decomposition of 64 bytes copy into word by word copy, the
+  // compiler can use the first load to prefetch memory:
+  //   ldr  r3, [r1, #64]!  <- prefetch next cache line
+  //   str  r3, [r0]
+  //   ldr  r3, [r1, #0x4]
+  //   str  r3, [r0, #0x4]
+  //   ...
+  //   ldr  r3, [r1, #0x3c]
+  //   str  r3, [r0, #0x3c]
+  // This is a bit detrimental for sizes between 64 and 256 (less than 10%
+  // penalty) but the prefetch yields better throughput for larger copies.
+  consume_by_block<64, BlockOp::kByWord, AssumeAccess::kUnknown>(dst, src,
+                                                                 size);
+  consume_by_block<16, BlockOp::kByWord, AssumeAccess::kUnknown>(dst, src,
+                                                                 size);
+  consume_by_block<4, BlockOp::kByWord, AssumeAccess::kUnknown>(dst, src, size);
   if (size & 1)
     copy_block_and_bump_pointers<1>(dst, src);
   if (size & 2)
-    LIBC_ATTR_UNLIKELY
-  copy_block_and_bump_pointers<2>(dst, src);
+    copy_block_and_bump_pointers<2>(dst, src);
 }
 
-[[maybe_unused]] LIBC_INLINE void inline_memcpy_arm(void *__restrict dst_,
-                                                    const void *__restrict src_,
+[[maybe_unused]] LIBC_INLINE void inline_memcpy_arm(Ptr dst, CPtr src,
                                                     size_t size) {
-  Ptr dst = cpp::bit_cast<Ptr>(dst_);
-  CPtr src = cpp::bit_cast<CPtr>(src_);
+  // The compiler performs alias analysis and is able to prove that `dst` and
+  // `src` do not alias by propagating the `__restrict` keyword from the
+  // `memcpy` prototype. This allows the compiler to merge consecutive
+  // load/store (LDR, STR) instructions into load/store double (LDRD, STRD)
+  // instructions.
+  asm volatile("" : "+r"(dst), "+r"(src));
 #ifdef __ARM_FEATURE_UNALIGNED
   return inline_memcpy_arm_mid_end(dst, src, size);
 #else

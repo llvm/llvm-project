@@ -35,7 +35,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE_VAR constexpr size_t kWordSize = sizeof(uint32_t);
 
-enum class BumpSize { kNo, kYes };
+enum class AssumeAccess { kUnknown, kAligned };
 enum class BlockOp { kFull, kByWord };
 
 LIBC_INLINE auto misaligned(CPtr ptr) {
