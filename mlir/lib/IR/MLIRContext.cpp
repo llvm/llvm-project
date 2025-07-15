@@ -31,6 +31,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/ThreadPool.h"
@@ -709,13 +710,6 @@ MLIRContext::getRegisteredOperationsByDialect(StringRef dialectName) {
 
 bool MLIRContext::isOperationRegistered(StringRef name) {
   return RegisteredOperationName::lookup(name, this).has_value();
-}
-
-void MLIRContext::disableThreadLocalStorage(bool disable) {
-  const auto mode =
-      disable ? DistinctAttributeAllocator::AllocationMode::SharedLocked
-              : DistinctAttributeAllocator::AllocationMode::ThreadLocal;
-  getImpl().distinctAttributeAllocator.setAllocationMode(mode);
 }
 
 void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {

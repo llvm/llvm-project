@@ -12,7 +12,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include <thread>
 
@@ -28,17 +27,11 @@ TEST(DistinctAttributeAllocatorTest, TestAttributeWellFormedAfterThreadJoin) {
   OpBuilder builder(&ctx);
   DistinctAttr attr;
 
-  {
-    ctx.disableThreadLocalStorage();
-    auto guard =
-        llvm::make_scope_exit([&ctx]() { ctx.enableThreadLocalStorage(); });
-
-    std::thread t([&ctx, &attr]() {
-      attr = DistinctAttr::create(UnitAttr::get(&ctx));
-      ASSERT_TRUE(attr);
-    });
-    t.join();
-  }
+  std::thread t([&ctx, &attr]() {
+    attr = DistinctAttr::create(UnitAttr::get(&ctx));
+    ASSERT_TRUE(attr);
+  });
+  t.join();
 
   // If the attribute storage got deleted after the thread joins (which we don't
   // want) then trying to access it triggers an assert in Debug mode, and a

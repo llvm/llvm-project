@@ -418,15 +418,6 @@ LogicalResult PassManager::runWithCrashRecovery(Operation *op,
   // thread-local storage during passes beyond the lifetime of the recovery
   // context thread.
   const bool threadingEnabled = getContext()->isMultithreadingEnabled();
-  if (threadingEnabled) {
-    crashRecoveryLock.lock();
-    getContext()->disableThreadLocalStorage();
-  }
-  auto guard = llvm::make_scope_exit([this]() {
-    getContext()->enableThreadLocalStorage();
-    crashRecoveryLock.unlock();
-  });
-
   crashReproGenerator->initialize(getPasses(), op, verifyPasses);
 
   // Safely invoke the passes within a recovery context.
@@ -439,8 +430,6 @@ LogicalResult PassManager::runWithCrashRecovery(Operation *op,
     recoveryContext.RunSafely(runPassesFn);
   crashReproGenerator->finalize(op, passManagerResult);
 
-  if (!threadingEnabled)
-    guard.release();
   return passManagerResult;
 }
 

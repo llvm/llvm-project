@@ -19,12 +19,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Support/StorageUniquer.h"
-#include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/Allocator.h"
-#include <atomic>
-#include <cstdint>
 #include <mutex>
 
 namespace mlir {
@@ -398,112 +394,30 @@ private:
                                               Attribute referencedAttr);
 };
 
-/// An allocator for distinct attribute storage instances. It uses thread-local
-/// bump pointer allocators stored in a thread-local cache to ensure the storage
-/// is freed after the destruction of the distinct attribute allocator. The way
-/// in which storage is allocated may be changed from a thread-local allocator
-/// to a shared, locked allocator. This can be used to prevent use-after-free
-/// errors if storage is allocated on a thread that has a lifetime less than the
-/// lifetime of the storage.
+/// An allocator for distinct attribute storage instances. Uses a synchronized
+/// BumpPtrAllocator to ensure allocated storage is deleted when the
+/// DistinctAttributeAllocator is destroyed
 class DistinctAttributeAllocator final {
 public:
-  /// The allocation strategy for DistinctAttribute storage.
-  enum class AllocationMode : uint8_t {
-    /// Use a thread-local allocator. Lock-free, but storage lifetime is tied to
-    /// a thread, which may have shorter lifetime than the storage allocated
-    /// here.
-    ThreadLocal,
-    /// Use a single, shared allocator protected by a mutex. Slower due to
-    /// locking, but storage persists for the lifetime of the MLIR context.
-    SharedLocked,
-  };
-
-  DistinctAttributeAllocator() {
-    setAllocationMode(AllocationMode::ThreadLocal);
-  };
-
+  DistinctAttributeAllocator() = default;
   DistinctAttributeAllocator(DistinctAttributeAllocator &&) = delete;
   DistinctAttributeAllocator(const DistinctAttributeAllocator &) = delete;
   DistinctAttributeAllocator &
   operator=(const DistinctAttributeAllocator &) = delete;
 
-  /// Allocates a distinct attribute storage. In most cases this will be
-  /// using a thread-local allocator for synchronization free parallel accesses,
-  /// however if the PassManager's crash recovery is enabled this will incur
-  /// synchronization cost in exchange for persisting the storage.
   DistinctAttrStorage *allocate(Attribute referencedAttr) {
-    return std::invoke(allocatorFn.load(), *this, referencedAttr);
-  }
-
-  /// Sets the allocation mode. This is used by the MLIRContext to switch
-  /// allocation strategies, for example, during crash recovery.
-  void setAllocationMode(AllocationMode mode) {
-    switch (mode) {
-    case AllocationMode::ThreadLocal:
-      allocatorFn.store(&DistinctAttributeAllocator::allocateThreadLocalWrapper,
-                        std::memory_order_release);
-      break;
-    case AllocationMode::SharedLocked:
-      allocatorFn.store(
-          &DistinctAttributeAllocator::allocateLockedSharedWrapper,
-          std::memory_order_release);
-      break;
-    }
-  }
-
-private:
-  // Define some static wrappers for allocating using either the thread-local
-  // allocator or the shared locked allocator. We use these static wrappers to
-  // ensure that the width of the function pointer to these functions is the
-  // size of regular pointer on the platform (which is not always the case for
-  // pointer-to-member-function), and so should be handled by atomic
-  // instructions.
-  static DistinctAttrStorage *
-  allocateThreadLocalWrapper(DistinctAttributeAllocator &self,
-                             Attribute referencedAttr) {
-    return self.allocateUsingThreadLocal(referencedAttr);
-  }
-
-  static DistinctAttrStorage *
-  allocateLockedSharedWrapper(DistinctAttributeAllocator &self,
-                              Attribute referencedAttr) {
-    return self.allocateUsingLockedShared(referencedAttr);
-  }
-
-  DistinctAttrStorage *allocateUsingLockedShared(Attribute referencedAttr) {
-    std::scoped_lock<std::mutex> guard(sharedAllocatorMutex);
-    return doAllocate(sharedAllocator, referencedAttr);
-  }
-
-  DistinctAttrStorage *allocateUsingThreadLocal(Attribute referencedAttr) {
-    return doAllocate(allocatorCache.get(), referencedAttr);
-  };
-
-  DistinctAttrStorage *doAllocate(llvm::BumpPtrAllocator &allocator,
-                                  Attribute referencedAttr) {
+    std::scoped_lock<std::mutex> guard(allocatorMutex);
     return new (allocator.Allocate<DistinctAttrStorage>())
         DistinctAttrStorage(referencedAttr);
   };
 
-  /// Used to allocate Distinct Attribute storage without synchronization
-  ThreadLocalCache<llvm::BumpPtrAllocator> allocatorCache;
+private:
+  /// Used to allocate Distict Attribute storage. When this allocator destroyed
+  /// in till also dealllocate any storage instances
+  llvm::BumpPtrAllocator allocator;
 
-  /// Used to allocate Distict Attribute storage with synchronization,
-  /// but without bounding the lifetime of the allocated memory to the
-  /// lifetime of a thread.
-  llvm::BumpPtrAllocator sharedAllocator;
-
-  /// Used to lock access to the shared allocator
-  std::mutex sharedAllocatorMutex;
-
-  using AllocatorFuncPtr =
-      DistinctAttrStorage *(*)(DistinctAttributeAllocator &, Attribute);
-
-  /// Atomic function pointer for the allocation strategy. Using a pointer to a
-  /// static member function as opposed to a non-static one should guarantee
-  /// that the function pointer fits into a standard pointer size, and so will
-  /// atomic instruction support for the corresponding width.
-  std::atomic<AllocatorFuncPtr> allocatorFn;
+  /// Used to lock access to the allocator
+  std::mutex allocatorMutex;
 };
 } // namespace detail
 } // namespace mlir
