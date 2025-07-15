@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-// XFAIL: *
+
 module attributes {omp.is_target_device = true} {
   omp.private {type = private} @simd_privatizer : !llvm.ptr alloc {
   ^bb0(%arg0: !llvm.ptr):
