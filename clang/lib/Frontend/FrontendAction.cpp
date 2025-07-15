@@ -947,8 +947,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         if (ASTReader::isAcceptableASTFile(
                 Dir->path(), FileMgr, CI.getModuleCache(),
                 CI.getPCHContainerReader(), CI.getLangOpts(),
-                CI.getTargetOpts(), CI.getPreprocessorOpts(),
-                SpecificModuleCachePath, /*RequireStrictOptionMatches=*/true)) {
+                CI.getCodeGenOpts(), CI.getTargetOpts(),
+                CI.getPreprocessorOpts(), SpecificModuleCachePath,
+                /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;
           break;
