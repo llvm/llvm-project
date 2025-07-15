@@ -5,6 +5,8 @@
 // || operators work on vector types.
 
 typedef long long v2i64 __attribute__((vector_size(16))); // expected-warning {{'long long' is incompatible with C++98}}
+// this type is specifically used as the result type of comparison of v2i64
+typedef long v2i_long __attribute__((vector_size(16)));
 typedef int v2i32 __attribute__((vector_size(8)));
 typedef short v2i16 __attribute__((vector_size(4)));
 typedef char v2i8 __attribute__((vector_size(2)));
@@ -60,7 +62,7 @@ void arithmeticTest(void) {
 
 void comparisonTest(void) {
   v2i64 v2i64_a = (v2i64){0, 1}; // expected-warning {{compound literals are a C99-specific feature}}
-  v2i64 v2i64_r;
+  v2i_long v2i64_r;
 
   v2i64_r = v2i64_a == 1;
   v2i64_r = v2i64_a != 1;
@@ -141,7 +143,7 @@ void floatTestConstantComparison(void) {
 
 void doubleTestConstantComparison(void) {
   v2f64 v2f64_a = {0.4, 0.4};
-  v2i64 v2i64_r;
+  v2i_long v2i64_r;
   v2i64_r = v2f64_a > 0.4;
   v2i64_r = v2f64_a >= 0.4;
   v2i64_r = v2f64_a < 0.4;
