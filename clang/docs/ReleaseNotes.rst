@@ -705,6 +705,11 @@ Improvements to Clang's diagnostics
 - Improve the diagnostics for placement new expression when const-qualified
   object was passed as the storage argument. (#GH143708)
 
+- Clang now does not issue a warning about returning from a function declared with
+  the ``[[noreturn]]`` attribute when the function body is ended with a call via
+  pointer, provided it can be proven that the pointer only points to
+  ``[[noreturn]]`` functions.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
