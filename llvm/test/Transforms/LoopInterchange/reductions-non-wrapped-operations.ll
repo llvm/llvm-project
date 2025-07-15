@@ -2,7 +2,7 @@
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa
 ; RUN: FileCheck -input-file=%t %s
 
-; Check that exchanging the loops is legal for the bitwise-or reduction.
+; Check that interchanging the loops is legal for the bitwise-or reduction.
 ;
 ; int b_or = 0;
 ; for (int i = 0; i < 2; i++)
@@ -43,7 +43,7 @@ exit:
 }
 
 
-; Check that exchanging the loops is legal for the bitwise-and reduction.
+; Check that interchanging the loops is legal for the bitwise-and reduction.
 ;
 ; int b_and = -1;
 ; for (int i = 0; i < 2; i++)
@@ -84,7 +84,7 @@ exit:
 }
 
 
-; Check that exchanging the loops is legal for the bitwise-xor reduction.
+; Check that interchanging the loops is legal for the bitwise-xor reduction.
 ;
 ; int b_xor = 0;
 ; for (int i = 0; i < 2; i++)
@@ -125,7 +125,7 @@ exit:
 }
 
 
-; Check that exchanging the loops is legal for the signed-minimum reduction.
+; Check that interchanging the loops is legal for the signed-minimum reduction.
 ;
 ; int smin = init;
 ; for (int i = 0; i < 2; i++)
@@ -167,7 +167,7 @@ exit:
 }
 
 
-; Check that exchanging the loops is legal for the signed-maximum reduction.
+; Check that interchanging the loops is legal for the signed-maximum reduction.
 ;
 ; int smax = init;
 ; for (int i = 0; i < 2; i++)
@@ -209,7 +209,7 @@ exit:
 }
 
 
-; Check that exchanging the loops is legal for the unsigned-minimum reduction.
+; Check that interchanging the loops is legal for the unsigned-minimum reduction.
 ;
 ; unsigned umin = init;
 ; for (int i = 0; i < 2; i++)
@@ -251,7 +251,7 @@ exit:
 }
 
 
-; Check that exchanging the loops is legal for the unsigned-maximum reduction.
+; Check that interchanging the loops is legal for the unsigned-maximum reduction.
 ;
 ; unsigned umax = 0;
 ; for (int i = 0; i < 2; i++)
@@ -293,7 +293,7 @@ exit:
 }
 
 
-; Check that exchanging the loops is legal for the any-of reduction.
+; Check that interchanging the loops is legal for the any-of reduction.
 ;
 ; int any_of = 0;
 ; for (int i = 0; i < 2; i++)
@@ -375,7 +375,7 @@ exit:
   ret void
 }
 
-; Check that the interchange is legal if the floation-point addition is marked
+; Check that the interchange is legal if the floating-point addition is marked
 ; as reassoc.
 ;
 ; CHECK:      --- !Pass
@@ -452,7 +452,7 @@ exit:
   ret void
 }
 
-; Check that the interchange is legal if the floation-point multiplication is
+; Check that the interchange is legal if the floating-point multiplication is
 ; marked as reassoc.
 ;
 ; CHECK:      --- !Pass
@@ -531,7 +531,7 @@ exit:
   ret void
 }
 
-; Check that the interchange is legal if the floation-point fmuladd is marked
+; Check that the interchange is legal if the floating-point fmuladd is marked
 ; as reassoc.
 ;
 ; CHECK:      --- !Pass
@@ -569,8 +569,8 @@ exit:
   ret void
 }
 
-; Check that exchanging the loops is legal for the reassociative floating-point
-; minimum.
+; Check that interchanging the loops is legal for the reassociative
+; floating-point minimum.
 ;
 ; float fmin = init;
 ; for (int i = 0; i < 2; i++)
@@ -612,7 +612,7 @@ exit:
 }
 
 
-; Check that exchanging the loops is legal for the floation-point
+; Check that interchanging the loops is legal for the floating-point
 ; llvm.minimumnum.
 ;
 ; CHECK:      --- !Pass
@@ -648,8 +648,8 @@ exit:
   ret void
 }
 
-; Check that exchanging the loops is legal for the reassociative floating-point
-; maximum.
+; Check that interchanging the loops is legal for the reassociative
+; floating-point maximum.
 ;
 ; float fmax = init;
 ; for (int i = 0; i < 2; i++)
@@ -690,7 +690,7 @@ exit:
   ret void
 }
 
-; Check that exchanging the loops is legal for the floation-point
+; Check that interchanging the loops is legal for the floating-point
 ; llvm.maximumnum.
 
 ; CHECK:      --- !Pass
