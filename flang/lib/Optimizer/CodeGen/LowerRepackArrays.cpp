@@ -63,13 +63,14 @@ private:
   static constexpr llvm::StringRef bufferName = ".repacked";
 
   // Return value of fir::BaseBoxType that represents a temporary
-  // array created for the original box with given extents and
-  // type parameters. The new box has the default lower bounds.
-  // If useStack is true, then the temporary will be allocated
+  // array created for the original box with given lbounds/extents and
+  // type parameters. The new box has the same shape as the original
+  // array. If useStack is true, then the temporary will be allocated
   // in stack memory (when possible).
   static mlir::Value allocateTempBuffer(fir::FirOpBuilder &builder,
                                         mlir::Location loc, bool useStack,
                                         mlir::Value origBox,
+                                        llvm::ArrayRef<mlir::Value> lbounds,
                                         llvm::ArrayRef<mlir::Value> extents,
                                         llvm::ArrayRef<mlir::Value> typeParams);
 
@@ -99,7 +100,9 @@ public:
 // the presence of the stack attribute does not automatically
 // mean that the allocation is actually done in stack memory.
 // For example, we always do the heap allocation for polymorphic
-// types using Fortran runtime.
+// types using Fortran runtime. Currently, we allocate all
+// repack temporaries of derived types as polymorphic,
+// so that we can preserve the dynamic type of the original.
 // Adding the polymorpic mold to fir.alloca and then using
 // Fortran runtime to compute the allocation size could probably
 // resolve this limitation.
@@ -170,7 +173,8 @@ PackArrayConversion::matchAndRewrite(fir::PackArrayOp op,
 
 mlir::Value PackArrayConversion::allocateTempBuffer(
     fir::FirOpBuilder &builder, mlir::Location loc, bool useStack,
-    mlir::Value origBox, llvm::ArrayRef<mlir::Value> extents,
+    mlir::Value origBox, llvm::ArrayRef<mlir::Value> lbounds,
+    llvm::ArrayRef<mlir::Value> extents,
     llvm::ArrayRef<mlir::Value> typeParams) {
   auto tempType = mlir::cast<fir::SequenceType>(
       fir::extractSequenceType(origBox.getType()));
@@ -191,16 +195,35 @@ mlir::Value PackArrayConversion::allocateTempBuffer(
     assert(!isHeapAllocation && "temp must have been allocated on the stack");
 
   mlir::Type ptrType = base.getType();
-  if (llvm::isa<fir::BaseBoxType>(ptrType))
-    return base;
+  if (auto tempBoxType = mlir::dyn_cast<fir::BaseBoxType>(ptrType)) {
+    // We need to reset the CFI_attribute_allocatable before
+    // returning the temporary box to avoid any mishandling
+    // of the temporary box in Fortran runtime.
+    base = builder.create<fir::BoxAddrOp>(loc, fir::boxMemRefType(tempBoxType),
+                                          base);
+    ptrType = base.getType();
+  }
 
-  mlir::Type tempBoxType = fir::BoxType::get(mlir::isa<fir::HeapType>(ptrType)
-                                                 ? ptrType
-                                                 : fir::unwrapRefType(ptrType));
+  // Create the temporary using dynamic type of the original,
+  // if it is polymorphic, or it has a derived type with SEQUENCE
+  // or BIND attribute (such dummy arguments may have their dynamic
+  // type not exactly matching their static type).
+  // Note that for the latter case, the allocation can still be done
+  // without the mold, because the dynamic and static types
+  // must be storage compatible.
+  bool useDynamicType = fir::isBoxedRecordType(origBox.getType()) ||
+                        fir::isPolymorphicType(origBox.getType());
+  mlir::Type tempBoxType =
+      fir::wrapInClassOrBoxType(fir::unwrapRefType(ptrType),
+                                /*isPolymorphic=*/useDynamicType);
+  // Use the shape with proper lower bounds for the final box.
+  shape = builder.genShape(loc, lbounds, extents);
   mlir::Value newBox =
       builder.createBox(loc, tempBoxType, base, shape, /*slice=*/nullptr,
-                        typeParams, /*tdesc=*/nullptr);
-  return newBox;
+                        typeParams, useDynamicType ? origBox : nullptr);
+  // The new box might be !fir.class, while the original might be
+  // !fir.box - we have to add a conversion.
+  return builder.createConvert(loc, origBox.getType(), newBox);
 }
 
 mlir::FailureOr<mlir::Value>
@@ -280,16 +303,11 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
                             << op.getOperation() << '\n';
   }
 
-  mlir::Value tempBox =
-      allocateTempBuffer(builder, loc, op.getStack(), box, extents, typeParams);
+  mlir::Value tempBox = allocateTempBuffer(builder, loc, op.getStack(), box,
+                                           lbounds, extents, typeParams);
   if (!op.getNoCopy())
     fir::runtime::genShallowCopy(builder, loc, tempBox, box,
                                  /*resultIsAllocated=*/true);
-
-  // Set lower bounds after the original box.
-  mlir::Value shift = builder.genShift(loc, lbounds);
-  tempBox = builder.create<fir::ReboxOp>(loc, boxType, tempBox, shift,
-                                         /*slice=*/nullptr);
   builder.create<fir::ResultOp>(loc, tempBox);
 
   return ifOp.getResult(0);
