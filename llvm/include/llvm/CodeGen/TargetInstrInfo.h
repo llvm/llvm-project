@@ -428,9 +428,10 @@ public:
   /// Subtargets can override this method to classify rematerialization
   /// candidates. Note that this cannot be defined in tablegen because it
   /// operates at a higher level.
-  virtual bool shouldReMaterializeTrivialRegDef(const MachineInstr *CopyMI,
-                                                const Register &DestReg,
-                                                const Register &SrcReg) const {
+  virtual bool shouldReMaterializeTrivialRegDef(
+      const MachineFunction *MF, const MachineInstr &CopyMI,
+      const Register &DestReg, const Register &SrcReg,
+      const LiveIntervals *LIS) const {
     return true;
   }
 

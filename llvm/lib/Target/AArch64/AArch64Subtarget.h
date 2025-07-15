@@ -123,7 +123,7 @@ private:
   /// Returns true if Reg is virtual and is assigned to,
   /// or is physcial and is a member of, the TRC register class.
   /// Otherwise, returns false.
-  bool isRegInClass(const MachineInstr *MI, const Register &Reg,
+  bool isRegInClass(const MachineInstr &MI, const Register &Reg,
                     const TargetRegisterClass *TRC) const;
 
 public:
@@ -169,10 +169,10 @@ public:
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
 
-  bool canLowerToZeroCycleRegMove(const MachineInstr *CopyMI,
+  bool canLowerToZeroCycleRegMove(const MachineInstr &CopyMI,
                                   const Register &DestReg,
                                   const Register &SrcReg) const override;
-  bool canLowerToZeroCycleRegZeroing(const MachineInstr *CopyMI,
+  bool canLowerToZeroCycleRegZeroing(const MachineInstr &CopyMI,
                                      const Register &DestReg,
                                      const Register &SrcReg) const override;
 
