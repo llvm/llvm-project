@@ -15,6 +15,10 @@
 #define LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
+#include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/IR/Function.h"
+#include "llvm/Support/Error.h"
+#include <unordered_map>
 
 namespace llvm {
 class LLVMContext;
@@ -47,6 +51,37 @@ private:
   llvm::LLVMContext &Ctx;
   ArrayRef<RootElement> Elements;
   SmallVector<Metadata *> GeneratedMetadata;
+};
+
+enum class RootSignatureElementKind {
+  Error = 0,
+  RootFlags = 1,
+  RootConstants = 2,
+  SRV = 3,
+  UAV = 4,
+  CBV = 5,
+  DescriptorTable = 6,
+  StaticSamplers = 7
+};
+
+class MetadataParser {
+public:
+  using MapT = SmallDenseMap<const Function *, llvm::mcdxbc::RootSignatureDesc>;
+  MetadataParser(llvm::LLVMContext &Ctx, MDNode* Root): Ctx(Ctx), Root(Root) {}
+
+  /// Iterates through root signature and converts them into MapT
+  LLVM_ABI llvm::Expected<MapT*> ParseRootSignature();
+
+private:
+  llvm::Error parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD, MDNode *RootFlagNode);
+  llvm::Error parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD, MDNode *RootConstantNode);
+  llvm::Error parseRootDescriptors(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD, MDNode *RootDescriptorNode, RootSignatureElementKind ElementKind);
+  llvm::Error parseDescriptorRange(LLVMContext *Ctx, mcdxbc::DescriptorTable &Table, MDNode *RangeDescriptorNode);
+  llvm::Error parseDescriptorTable(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD, MDNode *DescriptorTableNode);
+  llvm::Error parseRootSignatureElement(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD, MDNode *Element);
+  llvm::Error parseStaticSampler(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD, MDNode *StaticSamplerNode);
+  llvm::LLVMContext &Ctx;
+  MDNode* Root;
 };
 
 } // namespace rootsig
