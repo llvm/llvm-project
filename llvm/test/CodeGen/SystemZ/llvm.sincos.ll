@@ -1,30 +1,9 @@
 ; RUN: llc -mtriple=s390x-linux-gnu < %s | FileCheck -check-prefix=LINUX %s
 ; RUN: llc -mtriple=s390x-ibm-zos < %s | FileCheck -check-prefix=ZOS %s
 
+; FIXME: half cases split out since they are broken on zos
+
 ; FIXME: Check ZOS function content
-
-; FIXME: half broken
-; define { half, half } @test_sincos_f16(half %a) #0 {
-;   %result = call { half, half } @llvm.sincos.f16(half %a)
-;   ret { half, half } %result
-; }
-
-; define half @test_sincos_f16_only_use_sin(half %a) #0 {
-;   %result = call { half, half } @llvm.sincos.f16(half %a)
-;   %result.0 = extractvalue { half, half } %result, 0
-;   ret half %result.0
-; }
-
-; define half @test_sincos_f16_only_use_cos(half %a) #0 {
-;   %result = call { half, half } @llvm.sincos.f16(half %a)
-;   %result.1 = extractvalue { half, half } %result, 1
-;   ret half %result.1
-; }
-
-; define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) #0 {
-;   %result = call { <2 x half>, <2 x half> } @llvm.sincos.v2f16(<2 x half> %a)
-;   ret { <2 x half>, <2 x half> } %result
-; }
 
 define { float, float } @test_sincos_f32(float %a) #0 {
 ; LINUX-LABEL: test_sincos_f32:
