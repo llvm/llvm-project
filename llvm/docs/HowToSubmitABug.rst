@@ -124,8 +124,8 @@ which should produce reduced IR that reproduces the crash.
 
 .. TIP::
    ``llvm-reduce`` is still fairly immature and may crash. On the other hand,
-   unlike ``bugpoint``, ``llvm-reduce`` is multi-threaded and can therefore
-   potentially be much faster.
+   unlike ``bugpoint``, ``llvm-reduce -j $NUM_THREADS`` is multi-threaded and
+   can therefore potentially be much faster.
 
 If none of the above work, you can get the IR before a crash by running the
 ``opt`` command with the ``--print-before-all --print-module-scope`` flags to
