@@ -1682,7 +1682,7 @@ void SCEVExpander::replaceCongruentIVInc(
     if (PHINode *PN = dyn_cast<PHINode>(OrigInc))
       IP = PN->getParent()->getFirstInsertionPt();
     else
-      IP = OrigInc->getNextNonDebugInstruction()->getIterator();
+      IP = OrigInc->getNextNode()->getIterator();
 
     IRBuilder<> Builder(IP->getParent(), IP);
     Builder.SetCurrentDebugLocation(IsomorphicInc->getDebugLoc());
