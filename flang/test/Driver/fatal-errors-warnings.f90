@@ -1,4 +1,4 @@
-! RUN: not %flang_fc1 -Wfatal-errors -pedantic %s 2>&1 | FileCheck %s --check-prefix=CHECK1
+! RUN: %flang_fc1 -Wfatal-errors -pedantic %s 2>&1 | FileCheck %s --check-prefix=CHECK1
 ! RUN: not %flang_fc1 -pedantic -Werror %s 2>&1 | FileCheck %s --check-prefix=CHECK2
 ! RUN: not %flang_fc1 -Wfatal-errors -pedantic -Werror %s 2>&1 | FileCheck %s --check-prefix=CHECK3
 
@@ -15,18 +15,17 @@ program test
     real :: b(1)
     call foo(a) ! ok
     !CHECK1: fatal-errors-warnings.f90:{{.*}} warning:
-    !CHECK2: fatal-errors-warnings.f90:{{.*}} error:
-    !CHECK3: fatal-errors-warnings.f90:{{.*}} error:
+    !CHECK2: fatal-errors-warnings.f90:{{.*}} warning:
+    !CHECK3: fatal-errors-warnings.f90:{{.*}} warning:
     call foo(b)
     !CHECK1: fatal-errors-warnings.f90:{{.*}} warning:
-    !CHECK2: fatal-errors-warnings.f90:{{.*}} error:
+    !CHECK2: fatal-errors-warnings.f90:{{.*}} warning:
     !CHECK3-NOT: error:
     !CHECK3-NOT: warning:
     call foo((a))
     !CHECK1: fatal-errors-warnings.f90:{{.*}} warning:
-    !CHECK2: fatal-errors-warnings.f90:{{.*}} error:
+    !CHECK2: fatal-errors-warnings.f90:{{.*}} warning:
     call foo(a([1]))
-    !CHECK1: fatal-errors-warnings.f90:{{.*}} error:
-    !CHECK2: fatal-errors-warnings.f90:{{.*}} error:
-    call foo(a(1))
+    !! Hard error instead of warning if uncommented.
+    !call foo(a(1))
 end

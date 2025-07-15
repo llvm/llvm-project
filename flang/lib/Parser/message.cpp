@@ -473,7 +473,11 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
       // Don't emit two identical messages for the same location
       continue;
     }
-    msg->Emit(o, allCooked, echoSourceLines, hintFlagPtr, warningsAreErrors);
+    // We think it is confusing to users to display warnings and other
+    // diagnostics as errors, instead we just treat them as errors for the
+    // purpose of failing.
+    msg->Emit(o, allCooked, echoSourceLines, hintFlagPtr,
+        /*warningsAreErrors=*/false);
     lastMsg = msg;
     if (msg->IsFatal(warningsAreErrors)) {
       ++errorsEmitted;
