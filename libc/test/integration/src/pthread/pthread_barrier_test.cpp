@@ -27,7 +27,8 @@ pthread_barrier_t barrier;
 
 void smoke_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_barrier_init(&barrier, nullptr, 1), 0);
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_barrier_wait(&barrier), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_barrier_wait(&barrier),
+            PTHREAD_BARRIER_SERIAL_THREAD);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_barrier_destroy(&barrier), 0);
 }
 
@@ -55,6 +56,8 @@ void single_use_barrier() {
 
   for (int i = 0; i < NUM_THREADS; ++i)
     LIBC_NAMESPACE::pthread_join(threads[i], nullptr);
+
+  LIBC_NAMESPACE::pthread_barrier_destroy(&barrier);
 }
 
 void reusable_barrier() {
@@ -77,11 +80,38 @@ void reusable_barrier() {
 
   for (int i = 0; i < NUM_THREADS * REPEAT; ++i)
     LIBC_NAMESPACE::pthread_join(threads[i], nullptr);
+
+  LIBC_NAMESPACE::pthread_barrier_destroy(&barrier);
+}
+
+void *barrier_wait(void* in) {
+  return reinterpret_cast<void *>(
+      LIBC_NAMESPACE::pthread_barrier_wait(&barrier));
+}
+
+// verify that only one of the wait() calls return PTHREAD_BARRIER_SERIAL_THREAD
+// with the rest returning 0
+void one_nonzero_wait_returnval() {
+  const int NUM_THREADS = 30;
+  pthread_t threads[NUM_THREADS];
+  LIBC_NAMESPACE::pthread_barrier_init(&barrier, nullptr, NUM_THREADS + 1);
+  for (int i = 0; i < NUM_THREADS; ++i)
+    LIBC_NAMESPACE::pthread_create(&threads[i], nullptr, barrier_wait, nullptr);
+
+  uintptr_t retsum = LIBC_NAMESPACE::pthread_barrier_wait(&barrier);
+  for (int i = 0; i < NUM_THREADS; ++i) {
+    void* ret;
+    LIBC_NAMESPACE::pthread_join(threads[i], &ret);
+    retsum += reinterpret_cast<uintptr_t>(ret);
+  }
+
+  ASSERT_EQ(static_cast<int>(retsum), PTHREAD_BARRIER_SERIAL_THREAD);
 }
 
 TEST_MAIN() {
   smoke_test();
   single_use_barrier();
   reusable_barrier();
+  one_nonzero_wait_returnval();
   return 0;
 }

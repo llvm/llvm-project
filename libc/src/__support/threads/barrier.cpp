@@ -13,6 +13,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+const int BARRIER_FIRST_EXITED = -1;
+
 int Barrier::init(Barrier *b, const pthread_barrierattr_t *attr,
                   unsigned count) {
   LIBC_ASSERT(attr == nullptr); // TODO implement barrierattr
@@ -62,6 +64,8 @@ int Barrier::wait() {
   if (waiting == 0) {
     blocking = true;
     entering.broadcast();
+    m.unlock();
+    return BARRIER_FIRST_EXITED;
   }
   m.unlock();
 
@@ -69,6 +73,8 @@ int Barrier::wait() {
 }
 
 int Barrier::destroy(Barrier *b) {
+  CndVar::destroy(&b->entering);
+  CndVar::destroy(&b->exiting);
   Mutex::destroy(&b->m);
   return 0;
 }

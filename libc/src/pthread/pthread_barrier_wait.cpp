@@ -16,9 +16,12 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, pthread_barrier_wait,
-                   (pthread_barrier_t * b)) {
-  return reinterpret_cast<Barrier *>(b)->wait();
+LLVM_LIBC_FUNCTION(int, pthread_barrier_wait, (pthread_barrier_t * b)) {
+  int out = reinterpret_cast<Barrier *>(b)->wait();
+  if (out == BARRIER_FIRST_EXITED)
+    return PTHREAD_BARRIER_SERIAL_THREAD;
+  
+  return out;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

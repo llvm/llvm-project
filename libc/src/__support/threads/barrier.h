@@ -21,6 +21,8 @@ namespace LIBC_NAMESPACE_DECL {
 // pthread_barrier_t (found in include/llvm-libc/types/pthread_barrier_t.h) is
 // the same size
 
+extern const int BARRIER_FIRST_EXITED;
+
 class Barrier {
 private:
   unsigned expected;
