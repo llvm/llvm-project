@@ -82,10 +82,10 @@ class TestFrameVar(TestBase):
         )
 
         # A completion for a full namespace should contain the plugins in that namespace.
-        self.completions_contain("plugin list abi", ["abi.sysv-x86_64"])
-        self.completions_contain("plugin list abi.", ["abi.sysv-x86_64"])
-        self.completions_contain("plugin list abi.s", ["abi.sysv-x86_64"])
-        self.completions_contain("plugin list abi.sysv-x", ["abi.sysv-x86_64"])
+        self.completions_contain("plugin list object-file", ["object-file.JSON"])
+        self.completions_contain("plugin list object-file.", ["object-file.JSON"])
+        self.completions_contain("plugin list object-file.J", ["object-file.JSON"])
+        self.completions_contain("plugin list object-file.JS", ["object-file.JSON"])
 
         # Check for a completion that is a both a complete namespace and a prefix of
         # another namespace. It should return the completions for the plugins in the completed

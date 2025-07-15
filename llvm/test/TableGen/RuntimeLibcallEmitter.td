@@ -135,7 +135,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT: #pragma GCC diagnostic pop
 // CHECK-NEXT: #endif
 // CHECK-EMPTY:
-// CHECK-NEXT: constexpr llvm::StringTable
+// CHECK-NEXT: const llvm::StringTable
 // CHECK-NEXT: RTLIB::RuntimeLibcallsInfo::RuntimeLibcallImplNameTable = RuntimeLibcallImplNameTableStorage;
 // CHECK-EMPTY:
 // CHECK-NEXT: const uint16_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameOffsetTable[] = {
