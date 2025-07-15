@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+#ifndef CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+#define CLANG_CIR_DIALECT_IR_CIRATTRS_TD
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
@@ -516,4 +516,4 @@ def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
 }
 
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+#endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD
