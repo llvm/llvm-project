@@ -147,18 +147,6 @@ public:
     return MemoryEffectsBase(Location::InaccessibleMem, MR);
   }
 
-  /// Create MemoryEffectsBase that can only read inaccessible memory.
-  static MemoryEffectsBase
-  inaccessibleReadMemOnly(Location Loc = Location::InaccessibleMem) {
-    return MemoryEffectsBase(Loc, ModRefInfo::Ref);
-  }
-
-  /// Create MemoryEffectsBase that can only write inaccessible memory.
-  static MemoryEffectsBase
-  inaccessibleWriteMemOnly(Location Loc = Location::InaccessibleMem) {
-    return MemoryEffectsBase(Loc, ModRefInfo::Mod);
-  }
-
   /// Create MemoryEffectsBase that can only access errno memory.
   static MemoryEffectsBase errnoMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
     return MemoryEffectsBase(Location::ErrnoMem, MR);

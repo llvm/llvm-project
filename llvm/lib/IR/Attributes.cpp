@@ -664,9 +664,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         InaccessibleTargetMemLocation TargetLoc =
             static_cast<InaccessibleTargetMemLocation>(Loc);
         if (TargetLoc == InaccessibleTargetMemLocation::AARCH64_FPMR)
-          OS << "fpmr: ";
+          OS << "aarch64_fpmr: ";
         if (TargetLoc == InaccessibleTargetMemLocation::AARCH64_ZA)
-          OS << "za: ";
+          OS << "aarch64_za: ";
         break;
       }
       }
