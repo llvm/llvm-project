@@ -42,7 +42,7 @@ class IntEnumAttrCaseBase<I intType, string sym, string strVal, int intVal> :
   let predicate = CPred<[{
     ::llvm::cast<::mlir::IntegerAttr>($_self).getValue().eq(::llvm::APInt(}]
       # intType.bitwidth # ", "
-      # intVal # 
+      # intVal #
     "))">;
 }
 
@@ -493,6 +493,11 @@ class EnumParameter<EnumInfo enumInfo>
     !cast<EnumAttrInfo>(enumInfo).parameterParser, ?);
   let printer = !if(!isa<EnumAttrInfo>(enumInfo),
     !cast<EnumAttrInfo>(enumInfo).parameterPrinter, ?);
+}
+
+class DefaultValuedEnumParameter<EnumInfo enumInfo, EnumCase value>
+    : EnumParameter<enumInfo> {
+  let defaultValue = enumInfo.cppType # "::" # value.symbol;
 }
 
 // An attribute backed by a C++ enum. The attribute contains a single

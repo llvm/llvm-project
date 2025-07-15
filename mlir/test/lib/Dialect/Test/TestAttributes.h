@@ -16,6 +16,7 @@
 
 #include <tuple>
 
+#include "TestEnums.h"
 #include "TestTraits.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -27,7 +28,6 @@
 
 // generated files require above includes to come first
 #include "TestAttrInterfaces.h.inc"
-#include "TestOpEnums.h.inc"
 
 namespace test {
 class TestDialect;
