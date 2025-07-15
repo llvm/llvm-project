@@ -4899,15 +4899,15 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // If operand is guaranteed not to be poison, there is no need to add freeze
   // to the operand. So we first find the operand that is not guaranteed to be
   // poison.
-  Use *MaybePoisonOperand = nullptr;
+  Value *MaybePoisonOperand = nullptr;
   for (Use &U : OrigOpInst->operands()) {
     if (isa<MetadataAsValue>(U.get()) ||
         isGuaranteedNotToBeUndefOrPoison(U.get()) ||
         // Treat identical operands as a single operand.
-        (MaybePoisonOperand && MaybePoisonOperand->get() == U.get()))
+        (MaybePoisonOperand && MaybePoisonOperand == U.get()))
       continue;
     if (!MaybePoisonOperand)
-      MaybePoisonOperand = &U;
+      MaybePoisonOperand = U.get();
     else
       return nullptr;
   }
@@ -4919,10 +4919,10 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
     return OrigOp;
 
   Builder.SetInsertPoint(OrigOpInst);
-  auto *FrozenMaybePoisonOperand = Builder.CreateFreeze(
-      MaybePoisonOperand->get(), MaybePoisonOperand->get()->getName() + ".fr");
+  Value *FrozenMaybePoisonOperand = Builder.CreateFreeze(
+      MaybePoisonOperand, MaybePoisonOperand->getName() + ".fr");
 
-  replaceUse(*MaybePoisonOperand, FrozenMaybePoisonOperand);
+  OrigOpInst->replaceUsesOfWith(MaybePoisonOperand, FrozenMaybePoisonOperand);
   return OrigOp;
 }
 
