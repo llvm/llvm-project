@@ -2813,12 +2813,14 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI, unsigned OpIdx0,
   if ((int)OpIdx1 != Src0Idx && MO0->isReg()) {
     if (!DefinedRC1)
       return OpInfo1.OperandType == MCOI::OPERAND_UNKNOWN;
-    return isLegalRegOperand(MI, OpIdx1, *MO0);
+    return isLegalRegOperand(MI, OpIdx1, *MO0) &&
+           (!MO1->isReg() || isLegalRegOperand(MI, OpIdx0, *MO1));
   }
   if ((int)OpIdx0 != Src0Idx && MO1->isReg()) {
     if (!DefinedRC0)
       return OpInfo0.OperandType == MCOI::OPERAND_UNKNOWN;
-    return isLegalRegOperand(MI, OpIdx0, *MO1);
+    return (!MO0->isReg() || isLegalRegOperand(MI, OpIdx1, *MO0)) &&
+           isLegalRegOperand(MI, OpIdx0, *MO1);
   }
 
   // No need to check 64-bit literals since swapping does not bring new
