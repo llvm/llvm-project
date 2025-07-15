@@ -679,7 +679,6 @@ bool AArch64Subtarget::isRegInClass(const MachineInstr *MI, const Register &Reg,
   if (Reg.isPhysical()) {
     return TRC->contains(Reg);
   }
-  
   const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
   return TRC->hasSubClassEq(MRI.getRegClass(Reg));
 }
