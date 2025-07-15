@@ -7399,13 +7399,14 @@ static bool getMiscPatterns(MachineInstr &Root,
 static bool getGatherPattern(MachineInstr &Root,
                              SmallVectorImpl<unsigned> &Patterns,
                              unsigned LoadLaneOpCode, unsigned NumLanes) {
+  const MachineFunction *MF = Root.getMF();
+
   // Early exit if optimizing for size.
-  if (Root.getMF()->getFunction().hasMinSize())
+  if (MF->getFunction().hasMinSize())
     return false;
 
-  const MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();
-  const TargetRegisterInfo *TRI =
-      Root.getMF()->getSubtarget().getRegisterInfo();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
 
   // The root of the pattern must load into the last lane of the vector.
   if (Root.getOperand(2).getImm() != NumLanes - 1)
@@ -7413,7 +7414,7 @@ static bool getGatherPattern(MachineInstr &Root,
 
   // Check that we have load into all lanes except lane 0.
   // For each load we also want to check that:
-  // 1. It has a single debug use (since we will be replacing the virtual
+  // 1. It has a single non-debug use (since we will be replacing the virtual
   // register)
   // 2. That the addressing mode only uses a single offset register.
   auto *CurrInstr = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
@@ -7498,6 +7499,12 @@ generateGatherPattern(MachineInstr &Root,
     LoadToLaneInstrs.push_back(CurrInstr);
     CurrInstr = MRI.getUniqueVRegDef(CurrInstr->getOperand(1).getReg());
   }
+
+  // Sort the load instructions according to the lane.
+  llvm::sort(LoadToLaneInstrs,
+             [](const MachineInstr *A, const MachineInstr *B) {
+               return A->getOperand(2).getImm() > B->getOperand(2).getImm();
+             });
 
   MachineInstr *SubregToReg = CurrInstr;
   LoadToLaneInstrs.push_back(
