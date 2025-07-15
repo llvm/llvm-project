@@ -160,6 +160,12 @@ FEATURE(ptrauth_indirect_gotos, LangOpts.PointerAuthIndirectGotos)
 FEATURE(ptrauth_init_fini, LangOpts.PointerAuthInitFini)
 FEATURE(ptrauth_init_fini_address_discrimination, LangOpts.PointerAuthInitFiniAddressDiscrimination)
 FEATURE(ptrauth_elf_got, LangOpts.PointerAuthELFGOT)
+
+FEATURE(ptrauth_objc_isa, LangOpts.PointerAuthObjcIsa)
+FEATURE(ptrauth_objc_interface_sel, LangOpts.PointerAuthObjcInterfaceSel)
+FEATURE(ptrauth_objc_signable_class, true)
+FEATURE(ptrauth_objc_method_list_pointer, LangOpts.PointerAuthCalls)
+
 EXTENSION(swiftcc,
   PP.getTargetInfo().checkCallingConvention(CC_Swift) ==
   clang::TargetInfo::CCCR_OK)
