@@ -86,6 +86,19 @@ public:
     return find_node(root, data) != nullptr;
   }
 
+  std::optional<T> get_parent(const T &data) {
+    std::optional<T> result;
+
+    traverse_pre_order_impl(
+        nullptr, root, 0, !root->children.size(),
+        [&result, &data](Element *parent, Element &n, int depth, bool is_leaf) {
+          if (parent && n->value == data)
+            result = (*parent)->value;
+        });
+
+    return result;
+  }
+
   bool add_node(const T &parentData, const T &data) {
     if (!root) {
       root = std::make_unique<Node>(data);
