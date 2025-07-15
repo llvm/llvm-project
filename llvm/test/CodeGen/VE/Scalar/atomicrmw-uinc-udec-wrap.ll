@@ -8,6 +8,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s1, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s2, (56)0, %s0
 ; CHECK-NEXT:    ldl.sx %s4, (, %s1)
@@ -24,6 +25,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    cmpu.w %s6, %s6, %s3
 ; CHECK-NEXT:    cmov.w.ge %s4, (0)1, %s6
 ; CHECK-NEXT:    and %s4, %s4, (56)0
+; CHECK-NEXT:    and %s4, %s4, (32)0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    and %s6, %s5, %s2
 ; CHECK-NEXT:    or %s4, %s6, %s4
@@ -45,6 +47,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s1, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s2, (48)0, %s0
 ; CHECK-NEXT:    ldl.sx %s4, (, %s1)
@@ -61,6 +64,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    cmpu.w %s6, %s6, %s3
 ; CHECK-NEXT:    cmov.w.ge %s4, (0)1, %s6
 ; CHECK-NEXT:    and %s4, %s4, (48)0
+; CHECK-NEXT:    and %s4, %s4, (32)0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    and %s6, %s5, %s2
 ; CHECK-NEXT:    or %s4, %s6, %s4
@@ -125,6 +129,7 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s2, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s3, (56)0, %s0
 ; CHECK-NEXT:    ldl.sx %s5, (, %s2)
@@ -142,6 +147,7 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    cmov.w.gt %s5, %s1, %s34
 ; CHECK-NEXT:    cmov.w.eq %s5, %s1, %s7
 ; CHECK-NEXT:    and %s5, %s5, (56)0
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    sla.w.sx %s5, %s5, %s0
 ; CHECK-NEXT:    and %s7, %s6, %s3
 ; CHECK-NEXT:    or %s5, %s7, %s5
@@ -163,6 +169,7 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s2, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s3, (48)0, %s0
 ; CHECK-NEXT:    ldl.sx %s5, (, %s2)
@@ -180,6 +187,7 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    cmov.w.gt %s5, %s1, %s34
 ; CHECK-NEXT:    cmov.w.eq %s5, %s1, %s7
 ; CHECK-NEXT:    and %s5, %s5, (48)0
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    sla.w.sx %s5, %s5, %s0
 ; CHECK-NEXT:    and %s7, %s6, %s3
 ; CHECK-NEXT:    or %s5, %s7, %s5

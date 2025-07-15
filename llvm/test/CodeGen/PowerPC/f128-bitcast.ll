@@ -35,17 +35,22 @@ entry:
 define i64 @getPart2(fp128 %in) local_unnamed_addr {
 ; CHECK-LABEL: getPart2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mfvsrd r3, v2
+; CHECK-NEXT:    stxv v2, -16(r1)
+; CHECK-NEXT:    ld r3, -8(r1)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: getPart2:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mfvsrd r3, v2
+; CHECK-BE-NEXT:    stxv v2, -16(r1)
+; CHECK-BE-NEXT:    ld r3, -16(r1)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: getPart2:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    mfvsrd r3, v2
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    addi r3, r1, -16
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    ld r3, -8(r1)
 ; CHECK-P8-NEXT:    blr
 entry:
   %0 = bitcast fp128 %in to i128

@@ -479,6 +479,9 @@ public:
   bool operator==(const SDNodeFlags &Other) const {
     return Flags == Other.Flags;
   }
+  bool operator!=(const SDNodeFlags &Other) const {
+    return !operator==(Other);
+  }
   void operator&=(const SDNodeFlags &OtherFlags) { Flags &= OtherFlags.Flags; }
   void operator|=(const SDNodeFlags &OtherFlags) { Flags |= OtherFlags.Flags; }
 };

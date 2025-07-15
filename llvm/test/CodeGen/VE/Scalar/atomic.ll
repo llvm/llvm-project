@@ -83,6 +83,7 @@ define signext i32 @test_atomic_fetch_and_4() {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    or %s2, 0, %s1
 ; CHECK-NEXT:    and %s1, 1, %s2
+; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    cas.w %s1, (%s0), %s2
 ; CHECK-NEXT:    brne.w %s1, %s2, .LBB2_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end

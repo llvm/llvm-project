@@ -4,24 +4,32 @@
 define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(ptr addrspace(1) %ptr) #1 {
 ; GCN-LABEL: global_atomic_fadd_ret_f32_wrong_subtarget:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_mov_b64 s[0:1], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32 v0, s0, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32 v0, s1, v0
+; GCN-NEXT:    s_mov_b64 s[6:7], exec
+; GCN-NEXT:    v_mbcnt_lo_u32_b32 v0, s6, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32 v0, s7, v0
+; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB0_4
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GCN-NEXT:    s_bcnt1_i32_b64 s0, s[0:1]
-; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v1, s0
+; GCN-NEXT:    s_bcnt1_i32_b64 s0, s[6:7]
+; GCN-NEXT:    s_flbit_i32_b32 s6, 0
+; GCN-NEXT:    s_min_u32 s6, s6, 32
+; GCN-NEXT:    s_lshl_b64 s[0:1], s[0:1], s6
+; GCN-NEXT:    s_min_u32 s0, s0, 1
+; GCN-NEXT:    s_or_b32 s0, s1, s0
+; GCN-NEXT:    v_cvt_f32_u32_e32 v1, s0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GCN-NEXT:    s_sub_i32 s1, 32, s6
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
+; GCN-NEXT:    v_ldexp_f32 v1, v1, s1
 ; GCN-NEXT:    v_mul_f32_e32 v2, 4.0, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dword s8, s[4:5], 0x0
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s8
 ; GCN-NEXT:  .LBB0_2: ; %atomicrmw.start
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    v_mov_b32_e32 v5, v1
@@ -52,20 +60,28 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(ptr addrsp
 define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(ptr addrspace(1) %ptr) #1 {
 ; GCN-LABEL: global_atomic_fadd_noret_f32_wrong_subtarget:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_mov_b64 s[0:1], exec
-; GCN-NEXT:    v_mbcnt_lo_u32_b32 v0, s0, 0
-; GCN-NEXT:    v_mbcnt_hi_u32_b32 v0, s1, v0
+; GCN-NEXT:    s_mov_b64 s[2:3], exec
+; GCN-NEXT:    v_mbcnt_lo_u32_b32 v0, s2, 0
+; GCN-NEXT:    v_mbcnt_hi_u32_b32 v0, s3, v0
+; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GCN-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB1_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
-; GCN-NEXT:    s_bcnt1_i32_b64 s0, s[0:1]
-; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v1, s0
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    v_mul_f32_e32 v1, 4.0, v1
+; GCN-NEXT:    s_bcnt1_i32_b64 s0, s[2:3]
+; GCN-NEXT:    s_flbit_i32_b32 s2, 0
+; GCN-NEXT:    s_min_u32 s2, s2, 32
+; GCN-NEXT:    s_lshl_b64 s[0:1], s[0:1], s2
+; GCN-NEXT:    s_min_u32 s0, s0, 1
+; GCN-NEXT:    s_or_b32 s0, s1, s0
+; GCN-NEXT:    v_cvt_f32_u32_e32 v0, s0
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GCN-NEXT:    s_sub_i32 s2, 32, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    v_ldexp_f32 v0, v0, s2
+; GCN-NEXT:    v_mul_f32_e32 v0, 4.0, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_atomic_add_f32 v0, v1, s[2:3]
+; GCN-NEXT:    global_atomic_add_f32 v1, v0, s[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1
 ; GCN-NEXT:  .LBB1_2:

@@ -8,6 +8,7 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s2, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s3, (56)0, %s0
 ; CHECK-NEXT:    ldl.sx %s5, (, %s2)
@@ -24,6 +25,7 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    cmpu.w %s7, %s7, %s4
 ; CHECK-NEXT:    cmov.w.ge %s5, %s34, %s7
 ; CHECK-NEXT:    and %s5, %s5, (56)0
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    sla.w.sx %s5, %s5, %s0
 ; CHECK-NEXT:    and %s7, %s6, %s3
 ; CHECK-NEXT:    or %s5, %s7, %s5
@@ -45,6 +47,7 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s2, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s3, (48)0, %s0
 ; CHECK-NEXT:    ldl.sx %s5, (, %s2)
@@ -61,6 +64,7 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    cmpu.w %s7, %s7, %s4
 ; CHECK-NEXT:    cmov.w.ge %s5, %s34, %s7
 ; CHECK-NEXT:    and %s5, %s5, (48)0
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    sla.w.sx %s5, %s5, %s0
 ; CHECK-NEXT:    and %s7, %s6, %s3
 ; CHECK-NEXT:    or %s5, %s7, %s5
@@ -126,12 +130,14 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s1, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s2, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s4, (, %s1)
 ; CHECK-NEXT:    xor %s2, -1, %s2
+; CHECK-NEXT:    ldl.sx %s4, (, %s1)
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    and %s3, %s3, (56)0
+; CHECK-NEXT:    and %s3, %s3, (32)0
 ; CHECK-NEXT:  .LBB4_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    or %s5, 0, %s4
@@ -162,12 +168,14 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s1, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s2, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s4, (, %s1)
 ; CHECK-NEXT:    xor %s2, -1, %s2
+; CHECK-NEXT:    ldl.sx %s4, (, %s1)
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    and %s3, %s3, (48)0
+; CHECK-NEXT:    and %s3, %s3, (32)0
 ; CHECK-NEXT:  .LBB5_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    or %s5, 0, %s4

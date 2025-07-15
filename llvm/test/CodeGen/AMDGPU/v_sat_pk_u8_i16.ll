@@ -695,7 +695,7 @@ define amdgpu_kernel void @vec_smax_smin_sgpr(ptr addrspace(1) %out, <2 x i16> i
 ; SDAG-VI-NEXT:    v_med3_i32 v1, s2, 0, v0
 ; SDAG-VI-NEXT:    v_med3_i32 v0, s3, 0, v0
 ; SDAG-VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SDAG-VI-NEXT:    v_or_b32_sdwa v2, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; SDAG-VI-NEXT:    v_or_b32_e32 v2, v1, v0
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v0, s0
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v1, s1
 ; SDAG-VI-NEXT:    flat_store_dword v[0:1], v2

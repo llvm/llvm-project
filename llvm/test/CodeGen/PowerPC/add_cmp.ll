@@ -10,7 +10,7 @@ entry:
 
 ; CHECK: === addiCmpiUnsigned
 ; CHECK: Optimized lowered selection DAG: %bb.0 'addiCmpiUnsigned:entry'
-; CHECK:   [[REG1:t[0-9]+]]: i32 = truncate {{t[0-9]+}}
+; CHECK:   [[REG1:t[0-9]+]]: i32 = truncate nuw {{t[0-9]+}}
 ; CHECK:   [[REG2:t[0-9]+]]: i32 = add nuw [[REG1]], Constant:i32<10>
 ; CHECK:   {{t[0-9]+}}: i1 = setcc [[REG2]], Constant:i32<100>, setugt:ch
 }
@@ -23,7 +23,7 @@ entry:
 
 ; CHECK: === addiCmpiSigned
 ; CHECK: Optimized lowered selection DAG: %bb.0 'addiCmpiSigned:entry'
-; CHECK:   [[REG1:t[0-9]+]]: i32 = truncate {{t[0-9]+}}
+; CHECK:   [[REG1:t[0-9]+]]: i32 = truncate nsw {{t[0-9]+}}
 ; CHECK:   [[REG2:t[0-9]+]]: i32 = add nsw [[REG1]], Constant:i32<16>
 ; CHECK:   {{t[0-9]+}}: i1 = setcc [[REG2]], Constant:i32<30>, setgt:ch
 }
@@ -36,7 +36,7 @@ entry:
 
 ; CHECK: === addiCmpiUnsignedOverflow
 ; CHECK: Optimized lowered selection DAG: %bb.0 'addiCmpiUnsignedOverflow:entry'
-; CHECK:   [[REG1:t[0-9]+]]: i32 = truncate {{t[0-9]+}}
+; CHECK:   [[REG1:t[0-9]+]]: i32 = truncate nuw {{t[0-9]+}}
 ; CHECK:   [[REG2:t[0-9]+]]: i32 = add nuw [[REG1]], Constant:i32<110>
 ; CHECK:   {{t[0-9]+}}: i1 = setcc [[REG2]], Constant:i32<100>, setugt:ch
 }
@@ -49,7 +49,7 @@ entry:
 
 ; CHECK: === addiCmpiSignedOverflow
 ; CHECK: Optimized lowered selection DAG: %bb.0 'addiCmpiSignedOverflow:entry'
-; CHECK:   [[REG1:t[0-9]+]]: i16 = truncate {{t[0-9]+}}
+; CHECK:   [[REG1:t[0-9]+]]: i16 = truncate nsw {{t[0-9]+}}
 ; CHECK:   [[REG2:t[0-9]+]]: i16 = add nsw [[REG1]], Constant:i16<16>
 ; CHECK:   {{t[0-9]+}}: i1 = setcc [[REG2]], Constant:i16<-32767>, setgt:ch
 }

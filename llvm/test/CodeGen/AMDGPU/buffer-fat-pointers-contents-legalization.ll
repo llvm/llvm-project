@@ -2150,17 +2150,17 @@ define <6 x i8> @load_v6i8(ptr addrspace(8) inreg %buf) {
 ; SDAG-LABEL: load_v6i8:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    buffer_load_ushort v6, off, s[16:19], 0 offset:4
-; SDAG-NEXT:    buffer_load_dword v0, off, s[16:19], 0
+; SDAG-NEXT:    buffer_load_ushort v0, off, s[16:19], 0 offset:4
+; SDAG-NEXT:    buffer_load_dword v6, off, s[16:19], 0
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
-; SDAG-NEXT:    v_and_b32_e32 v1, 0xffff, v6
+; SDAG-NEXT:    v_and_b32_e32 v7, 0xffff, v0
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    v_lshrrev_b32_e32 v7, 8, v0
-; SDAG-NEXT:    v_lshrrev_b64 v[3:4], 24, v[0:1]
-; SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; SDAG-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
-; SDAG-NEXT:    v_mov_b32_e32 v4, v6
-; SDAG-NEXT:    v_mov_b32_e32 v1, v7
+; SDAG-NEXT:    v_lshrrev_b64 v[3:4], 24, v[6:7]
+; SDAG-NEXT:    v_lshrrev_b32_e32 v1, 8, v6
+; SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v6
+; SDAG-NEXT:    v_lshrrev_b32_e32 v5, 8, v7
+; SDAG-NEXT:    v_mov_b32_e32 v0, v6
+; SDAG-NEXT:    v_mov_b32_e32 v4, v7
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: load_v6i8:
@@ -3610,17 +3610,17 @@ define <6 x i8> @volatile_load_v6i8(ptr addrspace(8) inreg %buf) {
 ; SDAG-LABEL: volatile_load_v6i8:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    buffer_load_dword v0, off, s[16:19], 0 glc
-; SDAG-NEXT:    buffer_load_ushort v6, off, s[16:19], 0 offset:4 glc
+; SDAG-NEXT:    buffer_load_dword v6, off, s[16:19], 0 glc
+; SDAG-NEXT:    buffer_load_ushort v0, off, s[16:19], 0 offset:4 glc
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
-; SDAG-NEXT:    v_lshrrev_b32_e32 v7, 8, v0
+; SDAG-NEXT:    v_lshrrev_b32_e32 v1, 8, v6
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v1, 0xffff, v6
-; SDAG-NEXT:    v_lshrrev_b64 v[3:4], 24, v[0:1]
-; SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; SDAG-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
-; SDAG-NEXT:    v_mov_b32_e32 v4, v6
-; SDAG-NEXT:    v_mov_b32_e32 v1, v7
+; SDAG-NEXT:    v_and_b32_e32 v7, 0xffff, v0
+; SDAG-NEXT:    v_lshrrev_b64 v[3:4], 24, v[6:7]
+; SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v6
+; SDAG-NEXT:    v_lshrrev_b32_e32 v5, 8, v7
+; SDAG-NEXT:    v_mov_b32_e32 v0, v6
+; SDAG-NEXT:    v_mov_b32_e32 v4, v7
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: volatile_load_v6i8:

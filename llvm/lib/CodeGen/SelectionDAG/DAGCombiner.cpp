@@ -16310,6 +16310,23 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     break;
   }
 
+  // Use known bits to apply the nsw/nuw flags to the truncate.
+  const unsigned DestWidth = VT.getScalarSizeInBits();
+  const unsigned SrcWidth = N0.getScalarValueSizeInBits();
+  SDNodeFlags Flags = N->getFlags();
+  if (!N->getFlags().hasNoSignedWrap() &&
+      DAG.ComputeMaxSignificantBits(N0) <= DestWidth)
+    Flags.setNoSignedWrap(true);
+  if (!N->getFlags().hasNoUnsignedWrap() &&
+      DAG.MaskedValueIsZero(N0, APInt::getBitsSetFrom(SrcWidth, DestWidth)))
+    Flags.setNoUnsignedWrap(true);
+
+  if (Flags != N->getFlags()) {
+    N->setFlags(Flags);
+    AddUsersToWorklist(N);
+    return SDValue(N, 0);
+  }
+
   return SDValue();
 }
 

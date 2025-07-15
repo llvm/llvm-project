@@ -84,6 +84,7 @@ define zeroext i1 @_Z26atomic_cmp_swap_relaxed_i1RNSt3__16atomicIbEERbb(ptr noca
 ; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
@@ -128,10 +129,12 @@ define signext i8 @_Z26atomic_cmp_swap_relaxed_i8RNSt3__16atomicIcEERcc(ptr noca
 ; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (56)0
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
@@ -173,6 +176,7 @@ define zeroext i8 @_Z26atomic_cmp_swap_relaxed_u8RNSt3__16atomicIhEERhh(ptr noca
 ; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
@@ -217,10 +221,12 @@ define signext i16 @_Z27atomic_cmp_swap_relaxed_i16RNSt3__16atomicIsEERss(ptr no
 ; CHECK-NEXT:    ld2b.zx %s4, (, %s1)
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (48)0
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
@@ -262,6 +268,7 @@ define zeroext i16 @_Z27atomic_cmp_swap_relaxed_u16RNSt3__16atomicItEERtt(ptr no
 ; CHECK-NEXT:    ld2b.zx %s4, (, %s1)
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (48)0, %s0
@@ -524,6 +531,7 @@ define zeroext i1 @_Z26atomic_cmp_swap_acquire_i1RNSt3__16atomicIbEERbb(ptr noca
 ; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
@@ -569,10 +577,12 @@ define signext i8 @_Z26atomic_cmp_swap_acquire_i8RNSt3__16atomicIcEERcc(ptr noca
 ; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (56)0
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
@@ -615,6 +625,7 @@ define zeroext i8 @_Z26atomic_cmp_swap_acquire_u8RNSt3__16atomicIhEERhh(ptr noca
 ; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
@@ -660,10 +671,12 @@ define signext i16 @_Z27atomic_cmp_swap_acquire_i16RNSt3__16atomicIsEERss(ptr no
 ; CHECK-NEXT:    ld2b.zx %s4, (, %s1)
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (48)0
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
@@ -706,6 +719,7 @@ define zeroext i16 @_Z27atomic_cmp_swap_acquire_u16RNSt3__16atomicItEERtt(ptr no
 ; CHECK-NEXT:    ld2b.zx %s4, (, %s1)
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (48)0, %s0
@@ -974,6 +988,7 @@ define zeroext i1 @_Z26atomic_cmp_swap_seq_cst_i1RNSt3__16atomicIbEERbb(ptr noca
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
@@ -1020,10 +1035,12 @@ define signext i8 @_Z26atomic_cmp_swap_seq_cst_i8RNSt3__16atomicIcEERcc(ptr noca
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (56)0
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
@@ -1067,6 +1084,7 @@ define zeroext i8 @_Z26atomic_cmp_swap_seq_cst_u8RNSt3__16atomicIhEERhh(ptr noca
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
@@ -1113,10 +1131,12 @@ define signext i16 @_Z27atomic_cmp_swap_seq_cst_i16RNSt3__16atomicIsEERss(ptr no
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (48)0
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
+; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
 ; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
@@ -1160,6 +1180,7 @@ define zeroext i16 @_Z27atomic_cmp_swap_seq_cst_u16RNSt3__16atomicItEERtt(ptr no
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (48)0, %s0
