@@ -1,4 +1,4 @@
-//===-------------- PPCVSXCopy.cpp - VSX Copy Legalization ----------------===//
+//===-------------- PPCVSXWACCCopy.cpp - VSX and WACC Copy Legalization ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 //
 // A pass which deals with the complexity of generating legal VSX register
 // copies to/from register classes which partially overlap with the VSX
-// register file.
+// register file and combines the wacc/wacc_hi copies when needed.
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,12 +29,12 @@ using namespace llvm;
 #define DEBUG_TYPE "ppc-vsx-copy"
 
 namespace {
-  // PPCVSXCopy pass - For copies between VSX registers and non-VSX registers
+  // PPCVSXWACCCopy pass - For copies between VSX registers and non-VSX registers
   // (Altivec and scalar floating-point registers), we need to transform the
   // copies into subregister copies with other restrictions.
-  struct PPCVSXCopy : public MachineFunctionPass {
+  struct PPCVSXWACCCopy : public MachineFunctionPass {
     static char ID;
-    PPCVSXCopy() : MachineFunctionPass(ID) {}
+    PPCVSXWACCCopy() : MachineFunctionPass(ID) {}
 
     const TargetInstrInfo *TII;
 
@@ -122,6 +122,33 @@ protected:
           // Transform the original copy into a subregister extraction copy.
           SrcMO.setReg(NewVReg);
           SrcMO.setSubReg(PPC::sub_64);
+        } else if (IsRegInClass(DstMO.getReg(), &PPC::WACC_HIRCRegClass, MRI) &&
+                   IsRegInClass(SrcMO.getReg(), &PPC::WACCRCRegClass, MRI)) {
+	  // Matches the pattern:
+	  //   %a:waccrc = COPY %b.sub_wacc_hi:dmrrc
+	  //   %c:wacc_hirc = COPY %a:waccrc
+	  // And replaces it with:
+	  //   %c:wacc_hirc = COPY %b.sub_wacc_hi:dmrrc
+          MachineInstr *DefMI = MRI.getUniqueVRegDef(SrcMO.getReg());
+          if (!DefMI || !DefMI->isCopy())
+            continue;
+
+          MachineOperand &OrigSrc = DefMI->getOperand(1);
+
+          if (!IsRegInClass(OrigSrc.getReg(), &PPC::DMRRCRegClass, MRI))
+            continue;
+
+          if (OrigSrc.getSubReg() != PPC::sub_wacc_hi)
+            continue;
+
+          // Rewrite the second copy to use the original register's subreg
+          SrcMO.setReg(OrigSrc.getReg());
+          SrcMO.setSubReg(PPC::sub_wacc_hi);
+          Changed = true;
+
+          // Remove the intermediate copy if safe
+          if (MRI.use_nodbg_empty(DefMI->getOperand(0).getReg()))
+            DefMI->eraseFromParent();
         }
       }
 
@@ -151,9 +178,9 @@ public:
   };
   } // end anonymous namespace
 
-INITIALIZE_PASS(PPCVSXCopy, DEBUG_TYPE,
+INITIALIZE_PASS(PPCVSXWACCCopy, DEBUG_TYPE,
                 "PowerPC VSX Copy Legalization", false, false)
 
-char PPCVSXCopy::ID = 0;
+char PPCVSXWACCCopy::ID = 0;
 FunctionPass*
-llvm::createPPCVSXCopyPass() { return new PPCVSXCopy(); }
+llvm::createPPCVSXWACCCopyPass() { return new PPCVSXWACCCopy(); }
