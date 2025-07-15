@@ -161,21 +161,31 @@ bool Message::SortBefore(const Message &that) const {
       location_, that.location_);
 }
 
-bool Message::IsFatal(bool warningsAreErrors) const {
-  Severity sev{severity(warningsAreErrors)};
-  return sev == Severity::Error || sev == Severity::Todo;
-}
-
-Severity Message::severity(bool warningsAreErrors) const {
+Severity Message::EffectiveSeverity(bool warningsAreErrors) const {
   return common::visit(
       common::visitors{
           [](const MessageExpectedText &) { return Severity::Error; },
           [=](const MessageFixedText &x) {
-            return x.severity(warningsAreErrors);
+            return x.EffectiveSeverity(warningsAreErrors);
           },
           [=](const MessageFormattedText &x) {
-            return x.severity(warningsAreErrors);
+            return x.EffectiveSeverity(warningsAreErrors);
           },
+      },
+      text_);
+}
+
+bool Message::IsFatal(bool warningsAreErrors) const {
+  Severity sev{EffectiveSeverity(warningsAreErrors)};
+  return sev == Severity::Error || sev == Severity::Todo;
+}
+
+Severity Message::severity() const {
+  return common::visit(
+      common::visitors{
+          [](const MessageExpectedText &) { return Severity::Error; },
+          [](const MessageFixedText &x) { return x.severity(); },
+          [](const MessageFormattedText &x) { return x.severity(); },
       },
       text_);
 }
@@ -299,17 +309,18 @@ static std::string HintLanguageControlFlag(
 static constexpr int MAX_CONTEXTS_EMITTED{2};
 static constexpr bool OMIT_SHARED_CONTEXTS{true};
 
+// We think it is confusing to users to display warnings and other
+// diagnostics as errors. Don't use EffectiveSeverity() here.
 void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
-    bool echoSourceLine, const common::LanguageFeatureControl *hintFlagPtr,
-    bool warningsAreErrors) const {
+    bool echoSourceLine,
+    const common::LanguageFeatureControl *hintFlagPtr) const {
   std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
   const AllSources &sources{allCooked.allSources()};
   const std::string text{ToString()};
-  Severity sev{severity(warningsAreErrors)};
   const std::string hint{
       HintLanguageControlFlag(hintFlagPtr, languageFeature_, usageWarning_)};
-  sources.EmitMessage(o, provenanceRange, text + hint, Prefix(sev),
-      PrefixColor(sev), echoSourceLine);
+  sources.EmitMessage(o, provenanceRange, text + hint, Prefix(severity()),
+      PrefixColor(severity()), echoSourceLine);
   // Refers to whether the attachment in the loop below is a context, but can't
   // be declared inside the loop because the previous iteration's
   // attachment->attachmentIsContext_ indicates this.
@@ -473,11 +484,7 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
       // Don't emit two identical messages for the same location
       continue;
     }
-    // We think it is confusing to users to display warnings and other
-    // diagnostics as errors, instead we just treat them as errors for the
-    // purpose of failing.
-    msg->Emit(o, allCooked, echoSourceLines, hintFlagPtr,
-        /*warningsAreErrors=*/false);
+    msg->Emit(o, allCooked, echoSourceLines, hintFlagPtr);
     lastMsg = msg;
     if (msg->IsFatal(warningsAreErrors)) {
       ++errorsEmitted;

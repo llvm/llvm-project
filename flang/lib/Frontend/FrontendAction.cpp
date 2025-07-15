@@ -230,16 +230,14 @@ bool FrontendAction::reportFatalErrors(const char (&message)[N]) {
   const common::LanguageFeatureControl &features{
       instance->getInvocation().getFortranOpts().features};
   const size_t maxErrors{instance->getInvocation().getMaxErrors()};
-  if (!instance->getParsing().messages().empty() &&
-      (instance->getInvocation().getWarnAsErr() ||
-       instance->getParsing().messages().AnyFatalError())) {
+  const bool warningsAreErrors{instance->getInvocation().getWarnAsErr()};
+  if (instance->getParsing().messages().AnyFatalError(warningsAreErrors)) {
     const unsigned diagID = instance->getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, message);
     instance->getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();
     instance->getParsing().messages().Emit(
         llvm::errs(), instance->getAllCookedSources(),
-        /*echoSourceLines=*/true, &features, maxErrors,
-        instance->getInvocation().getWarnAsErr());
+        /*echoSourceLines=*/true, &features, maxErrors, warningsAreErrors);
     return true;
   }
   if (instance->getParsing().parseTree().has_value() &&
@@ -250,8 +248,7 @@ bool FrontendAction::reportFatalErrors(const char (&message)[N]) {
     instance->getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();
     instance->getParsing().messages().Emit(
         llvm::errs(), instance->getAllCookedSources(),
-        /*echoSourceLine=*/true, &features, maxErrors,
-        instance->getInvocation().getWarnAsErr());
+        /*echoSourceLine=*/true, &features, maxErrors, warningsAreErrors);
     instance->getParsing().EmitMessage(
         llvm::errs(), instance->getParsing().finalRestingPlace(),
         "parser FAIL (final position)", "error: ", llvm::raw_ostream::RED);

@@ -56,18 +56,22 @@ public:
 
   CharBlock text() const { return text_; }
   bool empty() const { return text_.empty(); }
-  Severity severity(bool warningsAreErrors = false) const {
-    if (warningsAreErrors) {
-      return Severity::Error;
-    }
-    return severity_;
-  }
+  Severity severity() const { return severity_; }
   MessageFixedText &set_severity(Severity severity) {
     severity_ = severity;
     return *this;
   }
+  // This is currently emulating how the frontend is currently handling other
+  // diagnostic messages. We may want to be more nuanced in the future.
+  Severity EffectiveSeverity(bool warningsAreErrors) const {
+    if (warningsAreErrors) {
+      return Severity::Error;
+    } else {
+      return severity_;
+    }
+  }
   bool IsFatal(bool warningsAreErrors = false) const {
-    Severity sev{severity(warningsAreErrors)};
+    Severity sev{EffectiveSeverity(warningsAreErrors)};
     return sev == Severity::Error || sev == Severity::Todo;
   }
 
@@ -111,7 +115,7 @@ class MessageFormattedText {
 public:
   template <typename... A>
   MessageFormattedText(const MessageFixedText &text, A &&...x)
-      : severity_{text.severity(false)} {
+      : severity_{text.severity()} {
     Format(&text, Convert(std::forward<A>(x))...);
   }
   MessageFormattedText(const MessageFormattedText &) = default;
@@ -119,18 +123,20 @@ public:
   MessageFormattedText &operator=(const MessageFormattedText &) = default;
   MessageFormattedText &operator=(MessageFormattedText &&) = default;
   const std::string &string() const { return string_; }
-  Severity severity(bool warningsAreErrors = false) const {
-    if (warningsAreErrors) {
-      return Severity::Error;
-    }
-    return severity_;
-  }
+  Severity severity() const { return severity_; }
   MessageFormattedText &set_severity(Severity severity) {
     severity_ = severity;
     return *this;
   }
+  Severity EffectiveSeverity(bool warningsAreErrors) const {
+    if (warningsAreErrors) {
+      return Severity::Error;
+    } else {
+      return severity_;
+    }
+  }
   bool IsFatal(bool warningsAreErrors = false) const {
-    Severity sev{severity(warningsAreErrors)};
+    Severity sev{EffectiveSeverity(warningsAreErrors)};
     return sev == Severity::Error || sev == Severity::Todo;
   }
   std::string MoveString() { return std::move(string_); }
@@ -294,7 +300,8 @@ public:
 
   bool SortBefore(const Message &that) const;
   bool IsFatal(bool warningsAreErrors = false) const;
-  Severity severity(bool warningsAreErrors = false) const;
+  Severity EffectiveSeverity(bool warningsAreErrors) const;
+  Severity severity() const;
   Message &set_severity(Severity);
   std::optional<common::LanguageFeature> languageFeature() const;
   Message &set_languageFeature(common::LanguageFeature);
@@ -305,8 +312,7 @@ public:
       const AllCookedSources &) const;
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
       bool echoSourceLine = true,
-      const common::LanguageFeatureControl *hintFlags = nullptr,
-      bool warningsAreErrors = false) const;
+      const common::LanguageFeatureControl *hintFlags = nullptr) const;
 
   // If this Message or any of its attachments locates itself via a CharBlock,
   // replace its location with the corresponding ProvenanceRange.
