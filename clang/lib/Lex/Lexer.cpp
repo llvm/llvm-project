@@ -4046,10 +4046,10 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
     bool returnedToken = LexIdentifierContinue(Result, CurPtr);
-    if (returnedToken && LangOpts.CPlusPlusModules &&
-        Result.isModuleContextualKeyword() &&
-        PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine) &&
-        !LexingRawMode && !Is_PragmaLexer)
+    if (returnedToken && Result.isModuleContextualKeyword() &&
+        LangOpts.CPlusPlusModules && !LexingRawMode && !Is_PragmaLexer &&
+        !ParsingPreprocessorDirective && PP &&
+        PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
       goto HandleDirective;
     return returnedToken;
   }
