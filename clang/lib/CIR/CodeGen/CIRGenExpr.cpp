@@ -637,11 +637,6 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   }
   case UO_Real:
   case UO_Imag: {
-    if (op == UO_Imag) {
-      cgm.errorNYI(e->getSourceRange(), "UnaryOp real/imag");
-      return LValue();
-    }
-
     LValue lv = emitLValue(e->getSubExpr());
     assert(lv.isSimple() && "real/imag on non-ordinary l-value");
 
@@ -656,7 +651,10 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     QualType exprTy = getContext().getCanonicalType(e->getSubExpr()->getType());
     QualType elemTy = exprTy->castAs<clang::ComplexType>()->getElementType();
     mlir::Location loc = getLoc(e->getExprLoc());
-    Address component = builder.createComplexRealPtr(loc, lv.getAddress());
+    Address component =
+        e->getOpcode() == UO_Real
+            ? builder.createComplexRealPtr(loc, lv.getAddress())
+            : builder.createComplexImagPtr(loc, lv.getAddress());
     assert(!cir::MissingFeatures::opTBAA());
     LValue elemLV = makeAddrLValue(component, elemTy);
     elemLV.getQuals().addQualifiers(lv.getQuals());

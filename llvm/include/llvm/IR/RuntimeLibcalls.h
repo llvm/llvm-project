@@ -147,7 +147,7 @@ private:
   LLVM_ABI static const char *const LibCallImplNames[RTLIB::NumLibcallImpls];
 
   /// Map from a concrete LibcallImpl implementation to its RTLIB::Libcall kind.
-  static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
+  LLVM_ABI static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
 
   static bool darwinHasSinCosStret(const Triple &TT) {
     if (!TT.isOSDarwin())
@@ -172,6 +172,10 @@ private:
   static bool hasSinCos(const Triple &TT) {
     return TT.isGNUEnvironment() || TT.isOSFuchsia() ||
            (TT.isAndroid() && !TT.isAndroidVersionLT(9));
+  }
+
+  static bool hasSinCos_f32_f64(const Triple &TT) {
+    return hasSinCos(TT) || TT.isPS();
   }
 
   LLVM_ABI void initDefaultLibCallImpls();
