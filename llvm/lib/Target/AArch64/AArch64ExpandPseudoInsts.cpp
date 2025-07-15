@@ -92,8 +92,8 @@ private:
   bool expandCALL_BTI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandStoreSwiftAsyncContext(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI);
-  MachineBasicBlock *expandRestoreZA(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator MBBI);
+  MachineBasicBlock *expandCommitOrRestoreZA(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MBBI);
   MachineBasicBlock *expandCondSMToggle(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI);
 };
@@ -991,9 +991,13 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
 }
 
 MachineBasicBlock *
-AArch64ExpandPseudo::expandRestoreZA(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator MBBI) {
+AArch64ExpandPseudo::expandCommitOrRestoreZA(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
+  bool IsRestoreZA = MI.getOpcode() == AArch64::RestoreZAPseudo;
+  assert((MI.getOpcode() == AArch64::RestoreZAPseudo ||
+          MI.getOpcode() == AArch64::CommitZAPseudo) &&
+         "Expected ZA commit or restore");
   assert((std::next(MBBI) != MBB.end() ||
           MI.getParent()->successors().begin() !=
               MI.getParent()->successors().end()) &&
@@ -1001,21 +1005,23 @@ AArch64ExpandPseudo::expandRestoreZA(MachineBasicBlock &MBB,
 
   // Compare TPIDR2_EL0 value against 0.
   DebugLoc DL = MI.getDebugLoc();
-  MachineInstrBuilder Cbz = BuildMI(MBB, MBBI, DL, TII->get(AArch64::CBZX))
-                                .add(MI.getOperand(0));
+  MachineInstrBuilder Branch =
+      BuildMI(MBB, MBBI, DL,
+              TII->get(IsRestoreZA ? AArch64::CBZX : AArch64::CBNZX))
+          .add(MI.getOperand(0));
 
   // Split MBB and create two new blocks:
   //  - MBB now contains all instructions before RestoreZAPseudo.
-  //  - SMBB contains the RestoreZAPseudo instruction only.
-  //  - EndBB contains all instructions after RestoreZAPseudo.
+  //  - SMBB contains the [Commit|RestoreZA]Pseudo instruction only.
+  //  - EndBB contains all instructions after [Commit|RestoreZA]Pseudo.
   MachineInstr &PrevMI = *std::prev(MBBI);
   MachineBasicBlock *SMBB = MBB.splitAt(PrevMI, /*UpdateLiveIns*/ true);
   MachineBasicBlock *EndBB = std::next(MI.getIterator()) == SMBB->end()
                                  ? *SMBB->successors().begin()
                                  : SMBB->splitAt(MI, /*UpdateLiveIns*/ true);
 
-  // Add the SMBB label to the TB[N]Z instruction & create a branch to EndBB.
-  Cbz.addMBB(SMBB);
+  // Add the SMBB label to the CB[N]Z instruction & create a branch to EndBB.
+  Branch.addMBB(SMBB);
   BuildMI(&MBB, DL, TII->get(AArch64::B))
       .addMBB(EndBB);
   MBB.addSuccessor(EndBB);
@@ -1023,8 +1029,12 @@ AArch64ExpandPseudo::expandRestoreZA(MachineBasicBlock &MBB,
   // Replace the pseudo with a call (BL).
   MachineInstrBuilder MIB =
       BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::BL));
-  MIB.addReg(MI.getOperand(1).getReg(), RegState::Implicit);
-  for (unsigned I = 2; I < MI.getNumOperands(); ++I)
+  unsigned FirstBLOperand = 1;
+  if (IsRestoreZA) {
+    MIB.addReg(MI.getOperand(1).getReg(), RegState::Implicit);
+    FirstBLOperand = 2;
+  }
+  for (unsigned I = FirstBLOperand; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));
   BuildMI(SMBB, DL, TII->get(AArch64::B)).addMBB(EndBB);
 
@@ -1646,8 +1656,9 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandCALL_BTI(MBB, MBBI);
    case AArch64::StoreSwiftAsyncContext:
      return expandStoreSwiftAsyncContext(MBB, MBBI);
+   case AArch64::CommitZAPseudo:
    case AArch64::RestoreZAPseudo: {
-     auto *NewMBB = expandRestoreZA(MBB, MBBI);
+     auto *NewMBB = expandCommitOrRestoreZA(MBB, MBBI);
      if (NewMBB != &MBB)
        NextMBBI = MBB.end(); // The NextMBBI iterator is invalidated.
      return true;
@@ -1658,6 +1669,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
        NextMBBI = MBB.end(); // The NextMBBI iterator is invalidated.
      return true;
    }
+   case AArch64::InOutZAUsePseudo:
+   case AArch64::RequiresZASavePseudo:
    case AArch64::COALESCER_BARRIER_FPR16:
    case AArch64::COALESCER_BARRIER_FPR32:
    case AArch64::COALESCER_BARRIER_FPR64:
