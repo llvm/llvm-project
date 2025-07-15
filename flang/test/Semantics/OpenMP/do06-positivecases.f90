@@ -6,7 +6,7 @@
 
 ! A positive case
 !DEF: /OMP_DO MainProgram
-program omp_do
+program OMP_DO
   !DEF: /OMP_DO/i ObjectEntity INTEGER(4)
   !DEF: /OMP_DO/j ObjectEntity INTEGER(4)
   !DEF: /OMP_DO/k ObjectEntity INTEGER(4)
@@ -20,4 +20,4 @@ program omp_do
       !$omp end ordered
     end do
   !$omp end do
-end program omp_do
+end program OMP_DO

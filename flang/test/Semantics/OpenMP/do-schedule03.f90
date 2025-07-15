@@ -3,7 +3,7 @@
 ! 2.7.1 Schedule Clause
 ! Test that does not catch non constant integer expressions like xx - xx.
   !DEF: /OMPDOSCHEDULE MainProgram
-program ompdoschedule
+program OMPDOSCHEDULE
   !DEF: /OMPDOSCHEDULE/a ObjectEntity REAL(4)
   !DEF: /OMPDOSCHEDULE/y ObjectEntity REAL(4)
   !DEF: /OMPDOSCHEDULE/z ObjectEntity REAL(4)
@@ -25,4 +25,4 @@ program ompdoschedule
     y(i) = z(i-1) + a(i)
   end do
   !$omp end do
-end program ompdoschedule
+end program OMPDOSCHEDULE

@@ -3,7 +3,7 @@
 ! 2.7.1 Do Loop Constructs
 
 !DEF: /OMP_DO1 MainProgram
-program omp_do1
+program OMP_DO1
   !DEF: /OMP_DO1/i ObjectEntity INTEGER(4)
   !DEF: /OMP_DO1/j ObjectEntity INTEGER(4)
   !DEF: /OMP_DO1/k (OmpThreadprivate) ObjectEntity INTEGER(4)
@@ -19,4 +19,4 @@ program omp_do1
     end do
   end do
   !$omp end do
-end program omp_do1
+end program OMP_DO1

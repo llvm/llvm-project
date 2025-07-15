@@ -4,7 +4,7 @@
 ! A positive case
 
 !DEF: /OMP_DO MainProgram
-program omp_do
+program OMP_DO
   !DEF: /OMP_DO/i ObjectEntity INTEGER(4)
   !DEF: /OMP_DO/n ObjectEntity INTEGER(4)
   integer i,n
@@ -71,4 +71,4 @@ program omp_do
     !REF: /OMP_DO/OtherConstruct7/i
     if(i < 5) cycle
   end do
-end program omp_do
+end program OMP_DO

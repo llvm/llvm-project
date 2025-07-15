@@ -5,7 +5,7 @@
 ! A positive case
 
 !DEF: /OMP_DO MainProgram
-program omp_do
+program OMP_DO
   !DEF: /OMP_DO/i ObjectEntity INTEGER(4)
   integer i
 
@@ -16,4 +16,4 @@ program omp_do
   end do
   !$omp end do
 
-end program omp_do
+end program OMP_DO
