@@ -863,13 +863,13 @@ findInnerReductionPhi(Loop *L, Value *V,
           unsigned OpCode = RecurrenceDescriptor::getOpcode(RK);
           SmallVector<Instruction *, 4> Ops = RD.getReductionOpChain(PHI, L);
 
-          // FIXME: Is this check necessary?
+          // Bail out when we fail to collect reduction instructions chain.
           if (Ops.empty())
             return nullptr;
+
           for (Instruction *I : Ops) {
-            // FIXME: Is this check necessary?
-            if (I->getOpcode() != OpCode)
-              return nullptr;
+            assert(I->getOpcode() == OpCode &&
+                   "Expected the instruction to be the reduction operation");
 
             // If the instruction has nuw/nsw flags, we must drop them when the
             // transformation is actually performed.
