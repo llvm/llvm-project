@@ -671,8 +671,8 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   }
 
   if (PRFX) {
-    finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
     transferImpOps(MI, PRFX, DOP);
+    finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
   } else
     transferImpOps(MI, DOP, DOP);
 
@@ -1591,18 +1591,22 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
          "Non-writeback variants of STGloop / STZGloop should not "
          "survive past PrologEpilogInserter.");
    case AArch64::STR_ZZZZXI:
+   case AArch64::STR_ZZZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 4);
    case AArch64::STR_ZZZXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 3);
    case AArch64::STR_ZZXI:
+   case AArch64::STR_ZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 2);
    case AArch64::STR_PPXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_PXI, 2);
    case AArch64::LDR_ZZZZXI:
+   case AArch64::LDR_ZZZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 4);
    case AArch64::LDR_ZZZXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 3);
    case AArch64::LDR_ZZXI:
+   case AArch64::LDR_ZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 2);
    case AArch64::LDR_PPXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_PXI, 2);

@@ -94,6 +94,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMBitReverseOpLowering
+    : public mlir::OpConversionPattern<cir::BitReverseOp> {
+public:
+  using mlir::OpConversionPattern<cir::BitReverseOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BitReverseOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMBrCondOpLowering
     : public mlir::OpConversionPattern<cir::BrCondOp> {
 public:
@@ -101,6 +111,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::BrCondOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMByteSwapOpLowering
+    : public mlir::OpConversionPattern<cir::ByteSwapOp> {
+public:
+  using mlir::OpConversionPattern<cir::ByteSwapOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ByteSwapOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
@@ -513,6 +533,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMComplexImagPtrOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexImagPtrOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexImagPtrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexImagPtrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMComplexRealPtrOpLowering
     : public mlir::OpConversionPattern<cir::ComplexRealPtrOp> {
 public:
@@ -530,6 +560,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::ComplexAddOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexSubOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexSubOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexSubOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexSubOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
