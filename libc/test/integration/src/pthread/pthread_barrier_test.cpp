@@ -84,7 +84,7 @@ void reusable_barrier() {
   LIBC_NAMESPACE::pthread_barrier_destroy(&barrier);
 }
 
-void *barrier_wait(void* in) {
+void *barrier_wait(void *in) {
   return reinterpret_cast<void *>(
       LIBC_NAMESPACE::pthread_barrier_wait(&barrier));
 }
@@ -100,7 +100,7 @@ void one_nonzero_wait_returnval() {
 
   uintptr_t retsum = LIBC_NAMESPACE::pthread_barrier_wait(&barrier);
   for (int i = 0; i < NUM_THREADS; ++i) {
-    void* ret;
+    void *ret;
     LIBC_NAMESPACE::pthread_join(threads[i], &ret);
     retsum += reinterpret_cast<uintptr_t>(ret);
   }
