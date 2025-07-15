@@ -43,17 +43,17 @@ int main(int, char**) {
   }
   // mismatch of static extent
   {
-    TEST_LIBCPP_ASSERT_FAILURE(([] { [[maybe_unused]] std::extents<int, D, 5> e1(std::array{1000, 3}); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([] { std::extents<int, D, 5> e1(std::array{1000, 3}); }()),
                                "extents construction: mismatch of provided arguments with static extents.");
   }
   // value out of range
   {
-    TEST_LIBCPP_ASSERT_FAILURE(([] { [[maybe_unused]] std::extents<signed char, D, 5> e1(std::array{1000, 5}); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([] { std::extents<signed char, D, 5> e1(std::array{1000, 5}); }()),
                                "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   // negative value
   {
-    TEST_LIBCPP_ASSERT_FAILURE(([] { [[maybe_unused]] std::extents<signed char, D, 5> e1(std::array{-1, 5}); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([] { std::extents<signed char, D, 5> e1(std::array{-1, 5}); }()),
                                "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   return 0;
