@@ -324,11 +324,10 @@ void multiThreadedPageInBackground(const DeferredFiles &deferred) {
                  << deferred.size() << "\n";
 }
 
-static void
-multiThreadedPageIn(const DeferredFiles &deferred = DeferredFiles()) {
+static void multiThreadedPageIn(const DeferredFiles &deferred) {
+  static std::deque<DeferredFiles *> queue;
   static std::thread *running;
   static std::mutex mutex;
-  static std::deque<DeferredFiles *> queue;
 
   mutex.lock();
   if (running && (queue.empty() || deferred.empty())) {
@@ -341,16 +340,18 @@ multiThreadedPageIn(const DeferredFiles &deferred = DeferredFiles()) {
     queue.emplace_back(new DeferredFiles(deferred));
     if (!running)
       running = new std::thread([&]() {
-        mutex.lock();
-        while (!queue.empty()) {
+        while (true) {
+          mutex.lock();
+          if (queue.empty()) {
+            mutex.unlock();
+            return;
+          }
           DeferredFiles *deferred = queue.front();
+          queue.pop_front();
           mutex.unlock();
           multiThreadedPageInBackground(*deferred);
           delete deferred;
-          mutex.lock();
-          queue.pop_front();
         }
-        mutex.unlock();
       });
   }
   mutex.unlock();
@@ -1413,8 +1414,8 @@ static void createFiles(const InputArgList &args) {
         archive->addLazySymbols();
     }
 
-    // reap threads
-    // multiThreadedPageIn();
+    DeferredFiles reapThreads;
+    multiThreadedPageIn(reapThreads);
   }
 }
 
