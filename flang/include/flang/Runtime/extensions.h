@@ -13,12 +13,10 @@
 #define FORTRAN_RUNTIME_EXTENSIONS_H_
 
 #include "flang/Runtime/entry-names.h"
-
-#define FORTRAN_PROCEDURE_NAME(name) name##_
-
-#include "flang/Runtime/entry-names.h"
 #include <cstddef>
 #include <cstdint>
+
+#define FORTRAN_PROCEDURE_NAME(name) name##_
 
 #ifdef _WIN32
 // UID and GID don't exist on Windows, these exist to avoid errors.
@@ -88,6 +86,9 @@ int FORTRAN_PROCEDURE_NAME(ierrno)();
 
 // GNU extension subroutine PERROR(STRING)
 void RTNAME(Perror)(const char *str);
+
+// MCLOCK -- returns accumulated time in ticks
+int FORTRAN_PROCEDURE_NAME(mclock)();
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_
