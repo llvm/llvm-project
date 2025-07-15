@@ -437,7 +437,7 @@ struct __sanitizer_tm {
   int tm_yday;
   int tm_isdst;
 #  if !SANITIZER_AIX
-#  if SANITIZER_HAIKU
+#    if SANITIZER_HAIKU
   int tm_gmtoff;
 #  else
   long int tm_gmtoff;
@@ -544,7 +544,7 @@ struct __sanitizer_dirent {
 #    else
   uptr d_ino;
   uptr d_off;
-#endif
+#    endif
   unsigned short d_reclen;
   // more fields that we don't care about
 };
@@ -1158,12 +1158,12 @@ extern unsigned fpos_t_sz;
 // when it can not be determined without including any system headers.
 extern const unsigned IOCTL_NOT_PRESENT;
 
- // On AIX, some variables are unsigned long types.
-#if SANITIZER_AIX
+// On AIX, some variables are unsigned long types.
+#  if SANITIZER_AIX
 using ioctl_alttype = uptr;
-#else
+#  else
 using ioctl_alttype = unsigned;
-#endif
+#  endif
 
 extern ioctl_alttype IOCTL_FIOASYNC;
 extern unsigned IOCTL_FIOCLEX;
@@ -1612,6 +1612,7 @@ extern const int si_SEGV_ACCERR;
 typedef void *__sanitizer_timer_t;
 #  endif
 
-#endif  // SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU || SANITIZER_AIX
+#endif  // SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU ||
+        // SANITIZER_AIX
 
 #endif

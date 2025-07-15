@@ -61,11 +61,11 @@
 #endif
 
 #if !SANITIZER_ANDROID
-#if !SANITIZER_HAIKU && !SANITIZER_AIX
-#include <sys/mount.h>
-#endif
-#include <sys/timeb.h>
-#include <utmpx.h>
+#    if !SANITIZER_HAIKU && !SANITIZER_AIX
+#      include <sys/mount.h>
+#    endif
+#    include <sys/timeb.h>
+#    include <utmpx.h>
 #endif
 
 #if SANITIZER_LINUX
@@ -573,20 +573,20 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   const unsigned IOCTL_NOT_PRESENT = 0;
 
   // On AIX, some variables are unsigned long types.
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
   using ioctl_alttype = uptr;
-#else
+#  else
   using ioctl_alttype = unsigned;
-#endif
+#  endif
 
   ioctl_alttype IOCTL_FIONBIO = FIONBIO;
-#if !SANITIZER_HAIKU
+#  if !SANITIZER_HAIKU
   ioctl_alttype IOCTL_FIOASYNC = FIOASYNC;
   unsigned IOCTL_FIOCLEX = FIOCLEX;
   unsigned IOCTL_FIOGETOWN = FIOGETOWN;
   unsigned IOCTL_FIONCLEX = FIONCLEX;
   ioctl_alttype IOCTL_FIOSETOWN = FIOSETOWN;
-#endif
+#  endif
   unsigned IOCTL_SIOCADDMULTI = SIOCADDMULTI;
   unsigned IOCTL_SIOCATMARK = SIOCATMARK;
   unsigned IOCTL_SIOCDELMULTI = SIOCDELMULTI;
@@ -608,14 +608,14 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_SIOCSIFNETMASK = SIOCSIFNETMASK;
   ioctl_alttype IOCTL_SIOCSPGRP = SIOCSPGRP;
 
-#if !SANITIZER_HAIKU
+#  if !SANITIZER_HAIKU
   ioctl_alttype IOCTL_TIOCCONS = TIOCCONS;
   unsigned IOCTL_TIOCGETD = TIOCGETD;
   unsigned IOCTL_TIOCNOTTY = TIOCNOTTY;
   ioctl_alttype IOCTL_TIOCPKT = TIOCPKT;
   ioctl_alttype IOCTL_TIOCSETD = TIOCSETD;
   ioctl_alttype IOCTL_TIOCSTI = TIOCSTI;
-#endif
+#  endif
 
   unsigned IOCTL_TIOCEXCL = TIOCEXCL;
   unsigned IOCTL_TIOCGPGRP = TIOCGPGRP;
@@ -631,7 +631,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 #  endif
   ioctl_alttype IOCTL_TIOCSPGRP = TIOCSPGRP;
   ioctl_alttype IOCTL_TIOCSWINSZ = TIOCSWINSZ;
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned IOCTL_SIOCGETSGCNT = SIOCGETSGCNT;
   unsigned IOCTL_SIOCGETVIFCNT = SIOCGETVIFCNT;
 #endif
@@ -1093,9 +1093,9 @@ CHECK_SIZE_AND_OFFSET(addrinfo, ai_protocol);
 CHECK_SIZE_AND_OFFSET(addrinfo, ai_addrlen);
 CHECK_SIZE_AND_OFFSET(addrinfo, ai_canonname);
 CHECK_SIZE_AND_OFFSET(addrinfo, ai_addr);
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
 CHECK_SIZE_AND_OFFSET(addrinfo, ai_eflags);
-#endif
+#  endif
 
 CHECK_TYPE_SIZE(hostent);
 CHECK_SIZE_AND_OFFSET(hostent, h_name);
@@ -1142,13 +1142,13 @@ COMPILER_CHECK(sizeof(__sanitizer_dirent) <= sizeof(dirent));
 CHECK_SIZE_AND_OFFSET(dirent, d_ino);
 #if SANITIZER_APPLE
 CHECK_SIZE_AND_OFFSET(dirent, d_seekoff);
-#elif SANITIZER_AIX
+#  elif SANITIZER_AIX
 CHECK_SIZE_AND_OFFSET(dirent, d_offset);
-#elif SANITIZER_FREEBSD || SANITIZER_HAIKU
+#  elif SANITIZER_FREEBSD || SANITIZER_HAIKU
 // There is no 'd_off' field on FreeBSD.
-#else
+#  else
 CHECK_SIZE_AND_OFFSET(dirent, d_off);
-#endif
+#  endif
 CHECK_SIZE_AND_OFFSET(dirent, d_reclen);
 
 #if SANITIZER_GLIBC
@@ -1223,10 +1223,10 @@ CHECK_SIZE_AND_OFFSET(wordexp_t, we_wordc);
 CHECK_SIZE_AND_OFFSET(wordexp_t, we_wordv);
 CHECK_SIZE_AND_OFFSET(wordexp_t, we_offs);
 #endif
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
 CHECK_SIZE_AND_OFFSET(wordexp_t, we_sflags);
 CHECK_SIZE_AND_OFFSET(wordexp_t, we_soffs);
-#endif
+#  endif
 
 CHECK_TYPE_SIZE(tm);
 CHECK_SIZE_AND_OFFSET(tm, tm_sec);
@@ -1243,7 +1243,7 @@ CHECK_SIZE_AND_OFFSET(tm, tm_gmtoff);
 CHECK_SIZE_AND_OFFSET(tm, tm_zone);
 #  endif
 
-#if SANITIZER_LINUX
+#  if SANITIZER_LINUX
 CHECK_TYPE_SIZE(mntent);
 CHECK_SIZE_AND_OFFSET(mntent, mnt_fsname);
 CHECK_SIZE_AND_OFFSET(mntent, mnt_dir);
@@ -1293,7 +1293,7 @@ CHECK_TYPE_SIZE(clock_t);
 CHECK_TYPE_SIZE(clockid_t);
 #endif
 
-#if !SANITIZER_ANDROID && !SANITIZER_HAIKU && !SANITIZER_AIX
+#  if !SANITIZER_ANDROID && !SANITIZER_HAIKU && !SANITIZER_AIX
 CHECK_TYPE_SIZE(ifaddrs);
 CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_next);
 CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_name);
