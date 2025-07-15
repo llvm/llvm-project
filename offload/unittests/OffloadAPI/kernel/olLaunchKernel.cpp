@@ -40,7 +40,8 @@ struct LaunchKernelTestBase : OffloadQueueTest {
 struct LaunchSingleKernelTestBase : LaunchKernelTestBase {
   void SetUpKernel(const char *kernel) {
     RETURN_ON_FATAL_FAILURE(SetUpProgram(kernel));
-    ASSERT_SUCCESS(olGetKernel(Program, kernel, &Kernel));
+    ASSERT_SUCCESS(
+        olGetSymbol(Program, kernel, OL_SYMBOL_KIND_KERNEL, &Kernel));
   }
 
   ol_symbol_handle_t Kernel = nullptr;
@@ -67,7 +68,8 @@ struct LaunchMultipleKernelTestBase : LaunchKernelTestBase {
     Kernels.resize(kernels.size());
     size_t I = 0;
     for (auto K : kernels)
-      ASSERT_SUCCESS(olGetKernel(Program, K, &Kernels[I++]));
+      ASSERT_SUCCESS(
+          olGetSymbol(Program, K, OL_SYMBOL_KIND_KERNEL, &Kernels[I++]));
   }
 
   std::vector<ol_symbol_handle_t> Kernels;
@@ -221,6 +223,15 @@ TEST_P(olLaunchKernelGlobalTest, Success) {
   }
 
   ASSERT_SUCCESS(olMemFree(Mem));
+}
+
+TEST_P(olLaunchKernelGlobalTest, InvalidNotAKernel) {
+  ol_symbol_handle_t Global = nullptr;
+  ASSERT_SUCCESS(
+      olGetSymbol(Program, "global", OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Global));
+  ASSERT_ERROR(
+      OL_ERRC_SYMBOL_KIND,
+      olLaunchKernel(Queue, Device, Global, nullptr, 0, &LaunchArgs, nullptr));
 }
 
 TEST_P(olLaunchKernelGlobalCtorTest, Success) {

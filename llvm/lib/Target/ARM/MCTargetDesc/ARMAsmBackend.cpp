@@ -215,7 +215,7 @@ static const char *checkPCRelOffset(uint64_t Value, int64_t Min, int64_t Max) {
 
 const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
                                                     uint64_t Value) const {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case ARM::fixup_arm_thumb_br: {
     // Relaxing tB to t2B. tB has a signed 12-bit displacement with the
     // low bit being an implied zero. There's an implied +4 offset for the
@@ -316,7 +316,7 @@ bool ARMAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                  uint64_t Value,
                                                  bool Resolved) const {
   const MCSymbol *Sym = Target.getAddSym();
-  if (needsInterworking(*Asm, Sym, Fixup.getTargetKind()))
+  if (needsInterworking(*Asm, Sym, Fixup.getKind()))
     return true;
 
   if (!Resolved)
@@ -947,7 +947,7 @@ bool ARMAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
   }
   // Create relocations for unconditional branches to function symbols with
   // different execution mode in ELF binaries.
-  if (needsInterworking(*Asm, Sym, Fixup.getTargetKind()))
+  if (needsInterworking(*Asm, Sym, Fixup.getKind()))
     return true;
   // We must always generate a relocation for BL/BLX instructions if we have
   // a symbol to reference, as the linker relies on knowing the destination
@@ -1093,7 +1093,7 @@ std::optional<bool> ARMAsmBackend::evaluateFixup(const MCFragment &F,
   // For a few PC-relative fixups in Thumb mode, offsets need to be aligned
   // down. We compensate here because the default handler's `Value` decrement
   // doesn't account for this alignment.
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case ARM::fixup_t2_ldst_pcrel_12:
   case ARM::fixup_t2_pcrel_10:
   case ARM::fixup_t2_pcrel_9:

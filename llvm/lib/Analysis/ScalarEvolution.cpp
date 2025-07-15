@@ -601,6 +601,9 @@ static int CompareValueComplexity(const LoopInfo *const LI, Value *LV,
   if (const auto *LGV = dyn_cast<GlobalValue>(LV)) {
     const auto *RGV = cast<GlobalValue>(RV);
 
+    if (auto L = LGV->getLinkage() - RGV->getLinkage())
+      return L;
+
     const auto IsGVNameSemantic = [&](const GlobalValue *GV) {
       auto LT = GV->getLinkage();
       return !(GlobalValue::isPrivateLinkage(LT) ||

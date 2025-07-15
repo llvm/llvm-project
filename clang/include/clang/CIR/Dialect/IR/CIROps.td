@@ -1670,6 +1670,94 @@ def GetGlobalOp : CIR_Op<"get_global",
 }
 
 //===----------------------------------------------------------------------===//
+// SetBitfieldOp
+//===----------------------------------------------------------------------===//
+
+def SetBitfieldOp : CIR_Op<"set_bitfield"> {
+  let summary = "Set the value of a bitfield member";
+  let description = [{
+    The `cir.set_bitfield` operation provides a store-like access to
+    a bit field of a record.
+
+    A bitfield info attribute must be provided to describe the location of
+    the bitfield within the memory referenced by the $addr argument.
+    The $src argument is inserted at the appropriate place in the memory and
+    the value that was stored. Returns the value being stored.
+
+    A unit attribute `volatile` can be used to indicate a volatile store of the
+    bitfield.
+      ```mlir
+        cir.set_bitfield(#bfi, %0 : !cir.ptr<!u32i>, %1 : !s32i) {is_volatile}
+                                                                       -> !s32i
+      ```
+
+    Example.
+    Suppose we have a struct with multiple bitfields stored in
+    different storages. The `cir.set_bitfield` operation sets the value
+    of the bitfield.
+    ```C++
+    typedef struct {
+      int a : 4;
+      int b : 27;
+      int c : 17;
+      int d : 2;
+      int e : 15;
+    } S;
+
+    void store_bitfield(S& s) {
+      s.e = 3;
+    }
+    ```
+
+    ```mlir
+    // 'e' is in the storage with the index 1
+    !record_type = !cir.record<struct "S" packed padded {!u64i, !u16i,
+                               !cir.array<!u8i x 2>} #cir.record.decl.ast>
+    #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
+                                offset = 0, is_signed = true>
+
+    %1 = cir.const #cir.int<3> : !s32i
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!record_type>>, !cir.ptr<!record_type>
+    %3 = cir.get_member %2[1] {name = "e"} : !cir.ptr<!record_type>
+                                                             -> !cir.ptr<!u16i>
+    %4 = cir.set_bitfield(#bfi_e, %3 : !cir.ptr<!u16i>, %1 : !s32i) -> !s32i
+    ```
+   }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$addr,
+    CIR_AnyType:$src,
+    BitfieldInfoAttr:$bitfield_info,
+    UnitAttr:$is_volatile
+  );
+
+  let results = (outs CIR_IntType:$result);
+
+  let assemblyFormat = [{ `(`$bitfield_info`,` $addr`:`qualified(type($addr))`,`
+    $src`:`type($src) `)`  attr-dict `->` type($result) }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$type,
+                   "mlir::Value":$addr,
+                   "mlir::Type":$storage_type,
+                   "mlir::Value":$src,
+                   "llvm::StringRef":$name,
+                   "unsigned":$size,
+                   "unsigned":$offset,
+                   "bool":$is_signed,
+                   "bool":$is_volatile
+                   ),
+   [{
+      BitfieldInfoAttr info =
+        BitfieldInfoAttr::get($_builder.getContext(),
+                              name, storage_type,
+                              size, offset, is_signed);
+      build($_builder, $_state, type, addr, src, info, is_volatile);
+    }]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // GetBitfieldOp
 //===----------------------------------------------------------------------===//
 
@@ -1685,6 +1773,9 @@ def GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
     A unit attribute `volatile` can be used to indicate a volatile load of the
     bitfield.
+    ```mlir
+      cir.get_bitfield(#bfi, %0 {is_volatile} : !cir.ptr<!u64i>) -> !s32i
+    ```
 
     Example:
     Suppose we have a struct with multiple bitfields stored in
@@ -2522,6 +2613,119 @@ def ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexRealPtrOp
+//===----------------------------------------------------------------------===//
+
+def ComplexRealPtrOp : CIR_Op<"complex.real_ptr", [Pure]> {
+  let summary = "Derive a pointer to the real part of a complex value";
+  let description = [{
+    `cir.complex.real_ptr` operation takes a pointer operand that points to a
+    complex value of type `!cir.complex` and yields a pointer to the real part
+    of the operand.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.real_ptr %0 : !cir.ptr<!cir.complex<!cir.double>>
+      -> !cir.ptr<!cir.double>
+    ```
+  }];
+
+  let results = (outs CIR_PtrToIntOrFloatType:$result);
+  let arguments = (ins CIR_PtrToComplexType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:`
+    qualified(type($operand)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexImagPtrOp
+//===----------------------------------------------------------------------===//
+
+def ComplexImagPtrOp : CIR_Op<"complex.imag_ptr", [Pure]> {
+  let summary = "Derive a pointer to the imaginary part of a complex value";
+  let description = [{
+    `cir.complex.imag_ptr` operation takes a pointer operand that points to a
+    complex value of type `!cir.complex` and yields a pointer to the imaginary
+    part of the operand.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.imag_ptr %0 : !cir.ptr<!cir.complex<!cir.double>>
+      -> !cir.ptr<!cir.double>
+    ```
+  }];
+
+  let arguments = (ins CIR_PtrToComplexType:$operand);
+  let results = (outs CIR_PtrToIntOrFloatType:$result);
+
+  let assemblyFormat = [{
+    $operand `:`
+    qualified(type($operand)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexAddOp
+//===----------------------------------------------------------------------===//
+
+def ComplexAddOp : CIR_Op<"complex.add", [Pure, SameOperandsAndResultType]> {
+  let summary = "Complex addition";
+  let description = [{
+    The `cir.complex.add` operation takes two complex numbers and returns
+    their sum.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.add %0, %1 : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexSubOp
+//===----------------------------------------------------------------------===//
+
+def ComplexSubOp : CIR_Op<"complex.sub", [Pure, SameOperandsAndResultType]> {
+  let summary = "Complex subtraction";
+  let description = [{
+    The `cir.complex.sub` operation takes two complex numbers and returns
+    their difference.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.sub %0, %1 : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
 // Bit Manipulation Operations
 //===----------------------------------------------------------------------===//
 
@@ -2531,7 +2735,7 @@ class CIR_BitOpBase<string mnemonic, TypeConstraint operandTy>
   let results = (outs operandTy:$result);
 
   let assemblyFormat = [{
-    `(` $input `:` type($input) `)` `:` type($result) attr-dict
+    $input `:` type($result) attr-dict
   }];
 }
 
@@ -2540,20 +2744,20 @@ class CIR_BitZeroCountOpBase<string mnemonic, TypeConstraint operandTy>
   let arguments = (ins operandTy:$input, UnitAttr:$poison_zero);
 
   let assemblyFormat = [{
-    `(` $input `:` type($input) `)` (`poison_zero` $poison_zero^)?
+    $input (`poison_zero` $poison_zero^)?
     `:` type($result) attr-dict
   }];
 }
 
-def BitClrsbOp : CIR_BitOpBase<"bit.clrsb", CIR_SIntOfWidths<[32, 64]>> {
+def BitClrsbOp : CIR_BitOpBase<"clrsb", CIR_SIntOfWidths<[32, 64]>> {
   let summary = "Get the number of leading redundant sign bits in the input";
   let description = [{
     Compute the number of leading redundant sign bits in the input integer.
 
     The input integer must be a signed integer. The most significant bit of the
-    input integer is the sign bit. The `cir.bit.clrsb` operation returns the
-    number of consecutive bits following the sign bit that are identical to the
-    sign bit.
+    input integer is the sign bit. The `cir.clrsb` operation returns the number
+    of consecutive bits following the sign bit that are identical to the sign
+    bit.
 
     The bit width of the input integer must be either 32 or 64.
 
@@ -2564,24 +2768,23 @@ def BitClrsbOp : CIR_BitOpBase<"bit.clrsb", CIR_SIntOfWidths<[32, 64]>> {
     %0 = cir.const #cir.int<3735928559> : !s32i
     // %1 will be 1 because there is 1 bit following the most significant bit
     // that is identical to it.
-    %1 = cir.bit.clrsb(%0 : !s32i) : !s32i
+    %1 = cir.clrsb %0 : !s32i
 
     // %2 = 1, 0b0000_0000_0000_0000_0000_0000_0000_0001
     %2 = cir.const #cir.int<1> : !s32i
     // %3 will be 30 because there are 30 consecutive bits following the sign
     // bit that are identical to the sign bit.
-    %3 = cir.bit.clrsb(%2 : !s32i) : !s32i
+    %3 = cir.clrsb %2 : !s32i
     ```
   }];
 }
 
-def BitClzOp : CIR_BitZeroCountOpBase<"bit.clz",
-                                      CIR_UIntOfWidths<[16, 32, 64]>> {
+def BitClzOp : CIR_BitZeroCountOpBase<"clz", CIR_UIntOfWidths<[16, 32, 64]>> {
   let summary = "Get the number of leading 0-bits in the input";
   let description = [{
     Compute the number of leading 0-bits in the input.
 
-    The input integer must be an unsigned integer. The `cir.bit.clz` operation
+    The input integer must be an unsigned integer. The `cir.clz` operation
     returns the number of consecutive 0-bits at the most significant bit
     position in the input.
 
@@ -2594,18 +2797,17 @@ def BitClzOp : CIR_BitZeroCountOpBase<"bit.clz",
     // %0 = 0b0000_0000_0000_0000_0000_0000_0000_1000
     %0 = cir.const #cir.int<8> : !u32i
     // %1 will be 28
-    %1 = cir.bit.clz(%0 : !u32i) poison_zero : !u32i
+    %1 = cir.clz %0 poison_zero : !u32i
     ```
   }];
 }
 
-def BitCtzOp : CIR_BitZeroCountOpBase<"bit.ctz",
-                                      CIR_UIntOfWidths<[16, 32, 64]>> {
+def BitCtzOp : CIR_BitZeroCountOpBase<"ctz", CIR_UIntOfWidths<[16, 32, 64]>> {
   let summary = "Get the number of trailing 0-bits in the input";
   let description = [{
     Compute the number of trailing 0-bits in the input.
 
-    The input integer must be an unsigned integer. The `cir.bit.ctz` operation
+    The input integer must be an unsigned integer. The `cir.ctz` operation
     counts the number of consecutive 0-bits starting from the least significant
     bit.
 
@@ -2618,12 +2820,12 @@ def BitCtzOp : CIR_BitZeroCountOpBase<"bit.ctz",
     // %0 = 0b1000
     %0 = cir.const #cir.int<8> : !u32i
     // %1 will be 3
-    %1 = cir.bit.ctz(%0 : !u32i) poison_zero : !u32i
+    %1 = cir.ctz %0 poison_zero : !u32i
     ```
   }];
 }
 
-def BitParityOp : CIR_BitOpBase<"bit.parity", CIR_UIntOfWidths<[32, 64]>> {
+def BitParityOp : CIR_BitOpBase<"parity", CIR_UIntOfWidths<[32, 64]>> {
   let summary = "Get the parity of input";
   let description = [{
     Compute the parity of the input. The parity of an integer is the number of
@@ -2637,13 +2839,12 @@ def BitParityOp : CIR_BitOpBase<"bit.parity", CIR_UIntOfWidths<[32, 64]>> {
     // %0 = 0x0110_1000
     %0 = cir.const #cir.int<104> : !u32i
     // %1 will be 1 since there are three 1-bits in %0
-    %1 = cir.bit.parity(%0 : !u32i) : !u32i
+    %1 = cir.parity %0 : !u32i
     ```
   }];
 }
 
-def BitPopcountOp : CIR_BitOpBase<"bit.popcnt",
-                                  CIR_UIntOfWidths<[16, 32, 64]>> {
+def BitPopcountOp : CIR_BitOpBase<"popcount", CIR_UIntOfWidths<[16, 32, 64]>> {
   let summary = "Get the number of 1-bits in input";
   let description = [{
     Compute the number of 1-bits in the input.
@@ -2656,7 +2857,43 @@ def BitPopcountOp : CIR_BitOpBase<"bit.popcnt",
     // %0 = 0x0110_1000
     %0 = cir.const #cir.int<104> : !u32i
     // %1 will be 3 since there are 3 1-bits in %0
-    %1 = cir.bit.popcnt(%0 : !u32i) : !u32i
+    %1 = cir.popcount %0 : !u32i
+    ```
+  }];
+}
+
+def BitReverseOp : CIR_BitOpBase<"bitreverse",
+                                 CIR_UIntOfWidths<[8, 16, 32, 64]>> {
+  let summary = "Reverse the bit pattern of the operand integer";
+  let description = [{
+    The `cir.bitreverse` operation reverses the bits of the operand integer. Its
+    only argument must be of unsigned integer types of width 8, 16, 32, or 64.
+
+    Example:
+
+    ```mlir
+    %1 = cir.bitreverse %0: !u32i
+    ```
+  }];
+}
+
+def ByteSwapOp : CIR_BitOpBase<"byte_swap", CIR_UIntOfWidths<[16, 32, 64]>> {
+  let summary = "Reverse the bytes in the object representation of the operand";
+  let description = [{
+    The `cir.byte_swap` operation takes an integer as operand, reverse the bytes
+    in the object representation of the operand integer, and returns the result.
+
+    The operand integer must be an unsigned integer. Its widths must be either
+    16, 32, or 64.
+
+    Example:
+
+    ```mlir
+    // %0 = 0x12345678
+    %0 = cir.const #cir.int<305419896> : !u32i
+
+    // %1 should be 0x78563412
+    %1 = cir.byte_swap %0 : !u32i
     ```
   }];
 }

@@ -245,6 +245,7 @@ void StandardConversionSequence::setAsIdentityConversion() {
   IsLvalueReference = true;
   BindsToFunctionLvalue = false;
   BindsToRvalue = false;
+  IsImplicitObjectArgumentQualificationConversion = false;
   BindsImplicitObjectArgumentWithoutRefQualifier = false;
   ObjCLifetimeConversionBinding = false;
   FromBracedInitList = false;
@@ -5317,6 +5318,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     ICS.Standard.DirectBinding = BindsDirectly;
     ICS.Standard.IsLvalueReference = !isRValRef;
     ICS.Standard.BindsToFunctionLvalue = T2->isFunctionType();
+    ICS.Standard.IsImplicitObjectArgumentQualificationConversion = false;
     ICS.Standard.BindsToRvalue = InitCategory.isRValue();
     ICS.Standard.BindsImplicitObjectArgumentWithoutRefQualifier = false;
     ICS.Standard.ObjCLifetimeConversionBinding =
@@ -5496,6 +5498,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     ICS.Standard.IsLvalueReference = !isRValRef;
     ICS.Standard.BindsToFunctionLvalue = false;
     ICS.Standard.BindsToRvalue = true;
+    ICS.Standard.IsImplicitObjectArgumentQualificationConversion = false;
     ICS.Standard.BindsImplicitObjectArgumentWithoutRefQualifier = false;
     ICS.Standard.ObjCLifetimeConversionBinding = false;
   } else if (ICS.isUserDefined()) {
@@ -5518,6 +5521,8 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     ICS.UserDefined.After.IsLvalueReference = !isRValRef;
     ICS.UserDefined.After.BindsToFunctionLvalue = false;
     ICS.UserDefined.After.BindsToRvalue = !LValRefType;
+    ICS.UserDefined.After.IsImplicitObjectArgumentQualificationConversion =
+        false;
     ICS.UserDefined.After.BindsImplicitObjectArgumentWithoutRefQualifier = false;
     ICS.UserDefined.After.ObjCLifetimeConversionBinding = false;
     ICS.UserDefined.After.FromBracedInitList = false;
@@ -5802,6 +5807,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
       StandardConversionSequence &SCS = Result.isStandard() ? Result.Standard :
                                             Result.UserDefined.After;
       SCS.ReferenceBinding = true;
+      SCS.IsImplicitObjectArgumentQualificationConversion = false;
       SCS.IsLvalueReference = ToType->isLValueReferenceType();
       SCS.BindsToRvalue = true;
       SCS.BindsToFunctionLvalue = false;
@@ -5999,8 +6005,12 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   // affects the conversion rank.
   QualType ClassTypeCanon = S.Context.getCanonicalType(ClassType);
   ImplicitConversionKind SecondKind;
-  if (ClassTypeCanon == FromTypeCanon.getLocalUnqualifiedType()) {
+  bool IsQualificationConversion = false;
+  if (ImplicitParamType.getCanonicalType() == FromTypeCanon) {
     SecondKind = ICK_Identity;
+  } else if (ClassTypeCanon == FromTypeCanon.getLocalUnqualifiedType()) {
+    SecondKind = ICK_Identity;
+    IsQualificationConversion = true;
   } else if (S.IsDerivedFrom(Loc, FromType, ClassType)) {
     SecondKind = ICK_Derived_To_Base;
   } else if (!Method->isExplicitObjectMemberFunction()) {
@@ -6041,6 +6051,8 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   ICS.Standard.setFromType(FromType);
   ICS.Standard.setAllToTypes(ImplicitParamType);
   ICS.Standard.ReferenceBinding = true;
+  ICS.Standard.IsImplicitObjectArgumentQualificationConversion =
+      IsQualificationConversion;
   ICS.Standard.DirectBinding = true;
   ICS.Standard.IsLvalueReference = Method->getRefQualifier() != RQ_RValue;
   ICS.Standard.BindsToFunctionLvalue = false;
@@ -13131,7 +13143,8 @@ CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
     ParamTypes =
         Cand->Function->getType()->castAs<FunctionProtoType>()->getParamTypes();
     if (isa<CXXMethodDecl>(Cand->Function) &&
-        !isa<CXXConstructorDecl>(Cand->Function) && !Reversed) {
+        !isa<CXXConstructorDecl>(Cand->Function) && !Reversed &&
+        !Cand->Function->hasCXXExplicitFunctionObjectParameter()) {
       // Conversion 0 is 'this', which doesn't have a corresponding parameter.
       ConvIdx = 1;
       if (CSK == OverloadCandidateSet::CSK_Operator &&
@@ -13149,9 +13162,8 @@ CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
 
   // Fill in the rest of the conversions.
   for (unsigned ParamIdx = Reversed ? ParamTypes.size() - 1 : 0;
-       ConvIdx != ConvCount;
+       ConvIdx != ConvCount && ArgIdx < Args.size();
        ++ConvIdx, ++ArgIdx, ParamIdx += (Reversed ? -1 : 1)) {
-    assert(ArgIdx < Args.size() && "no argument for this arg conversion");
     if (Cand->Conversions[ConvIdx].isInitialized()) {
       // We've already checked this conversion.
     } else if (ParamIdx < ParamTypes.size()) {

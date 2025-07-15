@@ -15,6 +15,7 @@ Clang Language Extensions
    AutomaticReferenceCounting
    PointerAuthentication
    MatrixTypes
+   CXXTypeAwareAllocators
 
 Introduction
 ============
@@ -1539,6 +1540,13 @@ C++14 variable templates
 Use ``__has_feature(cxx_variable_templates)`` or
 ``__has_extension(cxx_variable_templates)`` to determine if support for
 templated variable declarations is enabled.
+
+C++ type aware allocators
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use ``__has_extension(cxx_type_aware_allocators)`` to determine the existence of
+support for the future C++2d type aware allocator feature. For full details see
+:doc:`C++ Type Aware Allocators <CXXTypeAwareAllocators>` for additional details.
 
 C11
 ---
