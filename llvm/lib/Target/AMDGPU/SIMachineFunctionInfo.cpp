@@ -42,7 +42,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
       WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
       GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
-  const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
+  const GCNSubtarget &ST = *STI;
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
   MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
