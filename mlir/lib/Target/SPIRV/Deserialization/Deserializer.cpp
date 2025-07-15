@@ -678,6 +678,14 @@ spirv::Deserializer::getConstant(uint32_t id) {
   return constIt->getSecond();
 }
 
+std::optional<std::pair<Attribute, Type>>
+spirv::Deserializer::getConstantCompositeReplicate(uint32_t id) {
+  if (auto it = constantCompositeReplicateMap.find(id);
+      it != constantCompositeReplicateMap.end())
+    return it->second;
+  return std::nullopt;
+}
+
 std::optional<spirv::SpecConstOperationMaterializationInfo>
 spirv::Deserializer::getSpecConstantOperation(uint32_t id) {
   auto constIt = specConstOperationMap.find(id);
@@ -1554,15 +1562,63 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult spirv::Deserializer::processConstantCompositeReplicateEXT(
+    ArrayRef<uint32_t> operands) {
+  if (operands.size() != 3) {
+    return emitError(
+               unknownLoc,
+               "OpConstantCompositeReplicateEXT expects 3 operands but found ")
+           << operands.size();
+  }
+
+  Type resultType = getType(operands[0]);
+  if (!resultType) {
+    return emitError(unknownLoc, "undefined result type from <id> ")
+           << operands[0];
+  }
+
+  auto compositeType = dyn_cast<CompositeType>(resultType);
+  if (!compositeType) {
+    return emitError(unknownLoc,
+                     "result type from <id> is not a composite type")
+           << operands[0];
+  }
+
+  uint32_t resultID = operands[1];
+  uint32_t constantID = operands[2];
+
+  std::optional<std::pair<Attribute, Type>> constantInfo =
+      getConstant(constantID);
+  if (constantInfo.has_value()) {
+    constantCompositeReplicateMap.try_emplace(
+        resultID, constantInfo.value().first, resultType);
+    return success();
+  }
+
+  std::optional<std::pair<Attribute, Type>> replicatedConstantCompositeInfo =
+      getConstantCompositeReplicate(constantID);
+  if (replicatedConstantCompositeInfo.has_value()) {
+    constantCompositeReplicateMap.try_emplace(
+        resultID, replicatedConstantCompositeInfo.value().first, resultType);
+    return success();
+  }
+
+  return emitError(unknownLoc, "OpConstantCompositeReplicateEXT operand <id> ")
+         << constantID
+         << " must come from a normal constant or a "
+            "OpConstantCompositeReplicateEXT";
+}
+
 LogicalResult
 spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
   if (operands.size() < 2) {
-    return emitError(unknownLoc,
-                     "OpConstantComposite must have type <id> and result <id>");
+    return emitError(
+        unknownLoc,
+        "OpSpecConstantComposite must have type <id> and result <id>");
   }
   if (operands.size() < 3) {
     return emitError(unknownLoc,
-                     "OpConstantComposite must have at least 1 parameter");
+                     "OpSpecConstantComposite must have at least 1 parameter");
   }
 
   Type resultType = getType(operands[0]);
@@ -1585,6 +1641,41 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
       unknownLoc, TypeAttr::get(resultType), symName,
       opBuilder.getArrayAttr(elements));
   specConstCompositeMap[resultID] = op;
+
+  return success();
+}
+
+LogicalResult spirv::Deserializer::processSpecConstantCompositeReplicateEXT(
+    ArrayRef<uint32_t> operands) {
+  if (operands.size() != 3) {
+    return emitError(unknownLoc, "OpSpecConstantCompositeReplicateEXT expects "
+                                 "3 operands but found ")
+           << operands.size();
+  }
+
+  Type resultType = getType(operands[0]);
+  if (!resultType) {
+    return emitError(unknownLoc, "undefined result type from <id> ")
+           << operands[0];
+  }
+
+  auto compositeType = dyn_cast<CompositeType>(resultType);
+  if (!compositeType) {
+    return emitError(unknownLoc,
+                     "result type from <id> is not a composite type")
+           << operands[0];
+  }
+
+  uint32_t resultID = operands[1];
+
+  auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
+  spirv::SpecConstantOp constituentSpecConstantOp =
+      getSpecConstant(operands[2]);
+  auto op = opBuilder.create<spirv::EXTSpecConstantCompositeReplicateOp>(
+      unknownLoc, TypeAttr::get(resultType), symName,
+      SymbolRefAttr::get(constituentSpecConstantOp));
+
+  specConstCompositeReplicateMap[resultID] = op;
 
   return success();
 }
