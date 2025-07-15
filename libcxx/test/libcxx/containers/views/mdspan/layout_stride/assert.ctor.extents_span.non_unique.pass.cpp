@@ -43,7 +43,7 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(
         ([=] {
           std::array<unsigned, 3> strides{4, 1, 200};
-          [[maybe_unused]] std::layout_stride::mapping<std::extents<unsigned, D, 5, 7>> m(
+          std::layout_stride::mapping<std::extents<unsigned, D, 5, 7>> m(
               std::extents<unsigned, D, 5, 7>(20), std::span(strides));
         }()),
         "layout_stride::mapping ctor: the provided extents and strides lead to a non-unique mapping");
@@ -61,7 +61,7 @@ int main(int, char**) {
     // will fail because neither of the equal strides is associated with an extent of 1
     TEST_LIBCPP_ASSERT_FAILURE(
         ([=] {
-          [[maybe_unused]] std::layout_stride::mapping<std::extents<unsigned, D, 5, 2>> m3(
+          std::layout_stride::mapping<std::extents<unsigned, D, 5, 2>> m3(
               std::extents<unsigned, D, 5, 2>(2), std::span(strides));
         }()),
         "layout_stride::mapping ctor: the provided extents and strides lead to a non-unique mapping");
