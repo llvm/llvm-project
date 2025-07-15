@@ -109,7 +109,7 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                    uint64_t Value,
                                                    bool Resolved) const {
   int64_t Offset = int64_t(Value);
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
 
   // Return true if the symbol is unresolved.
   if (!Resolved)
@@ -474,7 +474,7 @@ bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext &Ctx) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     llvm_unreachable("Unknown fixup kind!");
   case FK_Data_1:
@@ -678,7 +678,7 @@ static const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
   for (const MCFixup &F : DF->getFixups()) {
     if (F.getOffset() != Offset)
       continue;
-    auto Kind = F.getTargetKind();
+    auto Kind = F.getKind();
     if (!mc::isRelocation(F.getKind())) {
       if (Kind == RISCV::fixup_riscv_pcrel_hi20) {
         *DFOut = DF;
@@ -706,7 +706,7 @@ std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
   const MCFixup *AUIPCFixup;
   const MCFragment *AUIPCDF;
   MCValue AUIPCTarget;
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     // Use default handling for `Value` and `IsResolved`.
     return {};
@@ -745,14 +745,14 @@ std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
   Value = Asm->getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Asm->getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
-  return AUIPCFixup->getTargetKind() == RISCV::fixup_riscv_pcrel_hi20 &&
+  return AUIPCFixup->getKind() == RISCV::fixup_riscv_pcrel_hi20 &&
          isPCRelFixupResolved(AUIPCTarget.getAddSym(), *AUIPCDF);
 }
 
 void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
                                           const MCFixup &Fixup) {
   StringRef VendorIdentifier;
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     // No Vendor Relocation Required.
     return;
