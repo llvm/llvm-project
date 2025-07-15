@@ -248,6 +248,25 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- Pointer authentication
+
+  - Support for __ptrauth type qualifier has been added.
+  - Objective-C adoption of pointer authentication
+
+    - ``isa`` and ``super`` pointers are protected with address diversity and separate
+      usage specific discriminators.
+    - methodlist pointers and content are protected with address diversity and methodlist
+      pointers have a usage specific discriminator.
+    - ``class_ro_t`` pointers are protected with address diversity and usage specific
+      discriminators.
+    - ``SEL`` typed ivars are protected with address diversity and usage specific
+      discriminators.
+
+- For AArch64, added support for generating executable-only code sections by using the
+  ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
+- Added ``-msve-streaming-vector-bits=`` flag, which allows specifying the
+  SVE vector width in streaming mode.
+
 Android Support
 ^^^^^^^^^^^^^^^
 

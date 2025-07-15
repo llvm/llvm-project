@@ -1542,16 +1542,6 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
           Discrimination::Constant, InitFiniPointerConstantDiscriminator);
     }
 
-    Opts.BlockInvocationFunctionPointers =
-        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
-    Opts.BlockHelperFunctionPointers =
-        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
-    Opts.BlockByrefHelperFunctionPointers =
-        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
-    Opts.BlockDescriptorPointers =
-        PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
-                          BlockDescriptorConstantDiscriminator);
-
     Opts.ObjCMethodListFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
     Opts.ObjCMethodListPointer =
@@ -3631,6 +3621,7 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthELFGOT = Args.hasArg(OPT_fptrauth_elf_got);
   Opts.AArch64JumpTableHardening =
       Args.hasArg(OPT_faarch64_jump_table_hardening);
+
   Opts.PointerAuthObjcIsa = Args.hasArg(OPT_fptrauth_objc_isa);
   Opts.PointerAuthObjcClassROPointers = Args.hasArg(OPT_fptrauth_objc_class_ro);
   Opts.PointerAuthObjcInterfaceSel =
