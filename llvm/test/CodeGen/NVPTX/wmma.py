@@ -764,6 +764,7 @@ define ${ret_ty} @test_${function}_o(i8 ${as}* %src) {
 
     return generated_items
 
+
 def gen_stmatrix_tests():
     stmatrix_template = """
 declare void @${intrinsic}(i8 ${as}* %dst, ${args});
@@ -788,11 +789,13 @@ define void @test_${function}_o(i8 ${as}* %dst, ${args}) {
     intrinsic_template = (
         "llvm.nvvm.stmatrix.sync.aligned.${geom}.${frag}${trans}.${itype}.${pspace}"
     )
-    instruction_template = ("stmatrix.sync.aligned.${geom}.${frag}${trans}${space}.${itype}"
+    instruction_template = (
+        "stmatrix.sync.aligned.${geom}.${frag}${trans}${space}.${itype}"
     )
     generated_items = []
 
-    for frag, space, trans in product(get_stmatrix_ops(),
+    for frag, space, trans in product(
+        get_stmatrix_ops(),
         ["", ".shared"],
         ["", ".trans"],
     ):
@@ -801,7 +804,8 @@ define void @test_${function}_o(i8 ${as}* %dst, ${args}) {
 
         params = {
             "frag": frag.frag,
-            "space": space,"trans": trans,
+            "space": space,
+            "trans": trans,
             "itype": frag.mma_type.ptx_type,
             "pspace": get_pspace(space),
             "as": "addrspace(%d)" % get_aspace(space),
