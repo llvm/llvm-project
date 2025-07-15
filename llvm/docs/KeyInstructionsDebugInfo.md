@@ -1,18 +1,20 @@
-# Key Instructions debug info in LLVM
+# Key Instructions debug info in LLVM and Clang
 
-Key Instructions is an LLVM feature that reduces the jumpiness of optimized code debug stepping by discriminating the significance of instrucions that make up source language statements. This document explains the feature and how it is implemented in LLVM. For Clang support please see the Clang docs.
+Key Instructions is an LLVM feature that reduces the jumpiness of optimized code debug stepping by discriminating the significance of instrucions that make up source language statements. This document explains the feature and how it is implemented in [LLVM](#llvm) and [Clang](#clang-and-other-front-ends).
 
 ## Status
 
 Feature complete except for coroutines, which fall back to not-key-instructions handling for now but will get support soon (there is no fundemental reason why they cannot be supported, we've just not got to it at time of writing).
 
-Tell Clang [not] to produce Key Instructions metadata with `-g[no-]key-instructions`. See the Clang docs for implementation info.
+Tell Clang [not] to produce Key Instructions metadata with `-g[no-]key-instructions`.
 
 The feature improves optimized code stepping; it's intended for the feature to be used with optimisations enabled. Although the feature works at O0 it is not recommended because in some cases the effect of editing variables may not always be immediately realised. In some cases, debuggers may place a breakpoint after parts of an expression have been evaluated, which limits the ability to have variable edits affect expressions. (This is a quirk of the current implementation, rather than fundemental limitation, covered in more detail [later](#disabled-at-o0).)
 
 This is a DWARF-based feature. There is currently no plan to support CodeView.
 
 Set LLVM flag `-dwarf-use-key-instructions` to `false` to ignore Key Instructions metadata when emitting DWARF.
+
+# LLVM
 
 ## Problem statement
 
@@ -53,12 +55,6 @@ The `DILocations` carry over from IR to MIR as normal, without any changes.
 4. *DWARF emission* - Iterate over all instructions in a function. For each `(atomGroup, inlinedAt)` pair we find the set of instructions sharing the lowest rank. Only the last of these instructions in each basic block is included in the set. The instructions in this set get `is_stmt` applied to their source locations. That `is_stmt` then "floats" to the top of contiguous sequence of instructions with the same line number in the same basic block. That has two benefits when optimisations are enabled. First, this floats `is_stmt` to the top of epilogue instructions (rather than applying it to the `ret` instruction itself) which is important to avoid losing variable location coverage at return statements. Second, it reduces the difference in optimized code stepping behaviour between when Key Instructions is enabled and disabled in “uninteresting” cases. I.e., it appears to generally reduce unnecessary changes in stepping.\
 We’ve used contiguous line numbers rather than atom membership as the test there because of our choice to represent source atoms with a single integer ID. We can’t have instructions belonging to multiple atom groups or represent any kind of grouping hierarchy. That means we can’t rely on all the call setup instructions being in the same group currently (e.g., if one of the argument expressions contains key functionality such as a store, it will be in its own group).
 
-## Adding the feature to a front end
-
-Front ends that want to use the feature need to group and rank instructions according to their source atoms and interingness by attaching `DILocations` with the necessary `atomGroup` and `atomRank` values. They also need to set the `keyInstructions` field to `true` in `DISubprogram`s to tell LLVM to interpret the new metadata in those functions.
-
-The prototype had LLVM annotate instructions (instead of Clang) using simple heuristics (just looking at kind of instructions, e.g., annotating all stores, conditional branches, etc). This doesn't exist anywhere upstream, but could be shared if there's interest (e.g., so another front end can try it out before committing to a full implementation), feel free to reach out on Discourse (@OCHyams, @jmorse).
-
 ## Limitations
 
 ### Lack of multiple atom membership
@@ -80,7 +76,7 @@ Certain optimisations merge source locations, which presents another case where 
 ### Disabled at O0
 
 Consider the following code without optimisations:
-```
+```c
 int c =
     a + b;
 ```
@@ -104,6 +100,58 @@ int e =        // atom 1
 Without multiple-atom-membership or some kind of atom hierarchy it's not apparent how to get the `is_stmt` to stick to `a + b`, given the other rules the `is_stmt` placement follows.
 
 O0 isn't a key use-case so solving this is not a priority for the initial implementation. The trade off, smoother stepping at the cost of not being able to edit variables to affect an expression in some cases (and at particular stop points), becomes more attractive when optimisations are enabled (we find that editing variables in the debugger in optimized code often produces unexpected effects, so it's not a big concern that Key Instructions makes it harder sometimes).
+
+# Clang and other front ends
+
+Tell Clang [not] to produce Key Instructions metadata with `-g[no-]key-instructions`.
+
+## Implementation
+
+Clang needs to annotate key instructions with the new metadata. Variable assignments (stores, memory intrinsics), control flow (branches and their conditions, some unconditional branches), and exception handling instructions are annotated. Calls are ignored as they're unconditionally marked `is_stmt`. This is achieved with a few simple constructs:
+
+Class `ApplyAtomGroup` - This is a scoped helper similar to `ApplyDebugLocation` that creates a new source atom group which instructions can be added to. It's used during CodeGen to declare that a new source atom has started, e.g. in `CodeGenFunction::EmitBinaryOperatorLValue`.
+
+`CodeGenFunction::addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction, llvm::Value *Backup)` adds an instruction (and a backup instruction if non-null) to the current "atom group" defined with `ApplyAtomGroup`. The Key Instruction gets rank 1, and backup instructions get higher ranks (the function looks through casts, applying increasing rank as it goes). There are a lot of sites in Clang that need to call this (mostly stores and store-like instructions). Most stores created through `CGBuilderTy` are annotated, but some that don't need to be key are not. It's important to remember that if there's no active atom group, i.e. no active `ApplyAtomGroup` instance, then `addInstToCurrentSourceAtom` does not annotate the instructions.
+
+`CodeGenFunction::addInstToNewSourceAtom(llvm::Instruction *KeyInstruction, llvm::Value *Backup)` adds an instruction (and a backup instruction if non-null) to a new "atom group". Currently mostly used in loop handling code.
+
+`CodeGenFunction::addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction, llvm::Value *Backup, uint64_t Atom)` adds the instruction (and backup instruction if non-null) to the specific group `Atom`. This is currently only used for `rets` which is explored in the examples below. Special handling is needed due to the fact that an existing atom group needs to be reused in some circumstances, so neither of the other helper functions are appropriate.
+
+## Examples
+
+A simple example walk through:
+```c
+void fun(int a) {
+  int b = a;
+}
+```
+
+There are two key instructions here, the assignment and the implicit return. We want to emit metadata that looks like this:
+
+```llvm
+define hidden void @_Z3funi(i32 noundef %a) #0 !dbg !11 {
+entry:
+  %a.addr = alloca i32, align 4
+  %b = alloca i32, align 4
+  store i32 %a, ptr %a.addr, align 4
+  %0 = load i32, ptr %a.addr, align 4, !dbg !DILocation(line: 2, scope: !11, atomGroup: 1, atomRank: 2)
+  store i32 %0, ptr %b, align 4,       !dbg !DILocation(line: 2, scope: !11, atomGroup: 1, atomRank: 1)
+  ret void,                            !dbg !DILocation(line: 3, scope: !11, atomGroup: 2, atomRank: 1)
+}
+```
+
+The store is the key instruction for the assignment (`atomGroup` 1). The instruction corresponding to the final (and in this case only) RHS value, the load from `%a.addr`, is a good backup location for `is_stmt` if the store gets optimized away. It's part of the same source atom, but has lower `is_stmt` precedence, so it gets a higher `atomRank`. This is achieved by starting an atom group with `ApplyAtomGroup` for the source atom (in this case a variable init) in `EmitAutoVarInit`. The instructions (both key and backup) are then annotated by call to `addInstToCurrentSourceAtom` called from `EmitStoreOfScalar`.
+
+The implicit return is also key (`atomGroup` 2) so that it's stepped on, to match existing non-key-instructions behaviour. This is achieved by calling  `addInstToNewSourceAtom` from within `EmitFunctionEpilog`.
+
+Explicit return statements are handled uniquely. Rather than emit a `ret` for each `return` Clang, in all but the simplest cases (as in the first example) emits a branch to a dedicated block with a single `ret`. That branch is the key instruction for the return statement. If there's only one branch to that block, because there's only one `return` (as in this example), Clang folds the block into its only predecessor. Handily `EmitReturnBlock` returns the `DebugLoc` associated with the single branch in that case, which is fed into `addInstToSpecificSourceAtom` to ensure the `ret` gets the right group.
+
+
+## Supporting Key Instructions from another front end
+
+Front ends that want to use the feature need to group and rank instructions according to their source atoms and interingness by attaching `DILocations` with the necessary `atomGroup` and `atomRank` values. They also need to set the `keyInstructions` field to `true` in `DISubprogram`s to tell LLVM to interpret the new metadata in those functions.
+
+The prototype had LLVM annotate instructions (instead of Clang) using simple heuristics (just looking at kind of instructions, e.g., annotating all stores, conditional branches, etc). This doesn't exist anywhere upstream, but could be shared if there's interest (e.g., so another front end can try it out before committing to a full implementation), feel free to reach out on Discourse (@OCHyams, @jmorse).
 
 ---
 
