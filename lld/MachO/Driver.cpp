@@ -312,10 +312,10 @@ void multiThreadedPageInBackground(const DeferredFiles &deferred) {
       index += 1;
       mutex.unlock();
 
-      volatile int t = 0; // Reference each page to load it into memory.
+      // Reference each page to load it into memory.
       for (const char *page = buff.data(), *end = page + buff.size();
            page < end; page += pageSize)
-        t += *page;
+        volatile char t = *page;
     }
   });
 
