@@ -591,19 +591,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   sections.resize(size);
-
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
-    // Read GNU property section into a per-InputFile structure that will be
-    // merged at a later stage. A synthetic section will be created for the
-    // merged contents.
-    if (check(obj.getSectionName(sec, shstrtab)) == ".note.gnu.property") {
-      readGnuProperty(
-          ctx,
-          InputSection(*this, sec, check(obj.getSectionName(sec, shstrtab))),
-          *this);
-      sections[i] = &InputSection::discarded;
-    }
 
     if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
       continue;
@@ -825,7 +814,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     // Input objects may contain both build Build Attributes and GNU
     // properties. We delay processing Build Attributes until we have finished
     // reading all sections so that we can check that these are consistent.
-    // FIXME: This really belongs in the following switch, but due to the
+    //
+    // Ideally this belongs in the following switch, but due to the
     // combination of enum constant reuse and fallthrough it has to be
     // here.
     if (ctx.arg.emachine == EM_AARCH64 && type == SHT_AARCH64_ATTRIBUTES) {
