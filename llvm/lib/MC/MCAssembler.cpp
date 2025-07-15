@@ -763,7 +763,7 @@ void MCAssembler::layout() {
 
     // Chain together fragments from all subsections.
     if (Sec.Subsections.size() > 1) {
-      MCDataFragment Dummy;
+      MCFragment Dummy;
       MCFragment *Tail = &Dummy;
       for (auto &[_, List] : Sec.Subsections) {
         assert(List.Head);

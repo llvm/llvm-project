@@ -178,7 +178,7 @@ void MCObjectStreamer::emitCFISections(bool EH, bool Debug) {
 void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
                                      SMLoc Loc) {
   MCStreamer::emitValueImpl(Value, Size, Loc);
-  MCDataFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getOrCreateDataFragment();
 
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
@@ -227,7 +227,7 @@ void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // If there is a current fragment, mark the symbol as pointing into it.
   // Otherwise queue the label and set its fragment pointer when we emit the
   // next fragment.
-  MCDataFragment *F = getOrCreateDataFragment();
+  MCFragment *F = getOrCreateDataFragment();
   Symbol->setFragment(F);
   Symbol->setOffset(F->getContents().size());
 
@@ -247,7 +247,7 @@ void MCObjectStreamer::emitPendingAssignments(MCSymbol *Symbol) {
 // Emit a label at a previously emitted fragment/offset position. This must be
 // within the currently-active section.
 void MCObjectStreamer::emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc,
-                                      MCDataFragment &F, uint64_t Offset) {
+                                      MCFragment &F, uint64_t Offset) {
   assert(F.getParent() == getCurrentSectionOnly());
   MCStreamer::emitLabel(Symbol, Loc);
   getAssembler().registerSymbol(*Symbol);
@@ -300,7 +300,7 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   // If the subsection number is not in the sorted Subsections list, create a
   // new fragment list.
   if (I == E || Subsections[I].first != Subsection) {
-    auto *F = getContext().allocFragment<MCDataFragment>();
+    auto *F = getContext().allocFragment<MCFragment>();
     F->setParent(Section);
     Subsections.insert(Subsections.begin() + I,
                        {Subsection, MCSection::FragList{F, F}});
@@ -390,7 +390,7 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
 
 void MCObjectStreamer::emitInstToData(const MCInst &Inst,
                                       const MCSubtargetInfo &STI) {
-  MCDataFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getOrCreateDataFragment();
   SmallVector<MCFixup, 1> Fixups;
   SmallString<256> Code;
   getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
@@ -587,7 +587,7 @@ void MCObjectStreamer::emitCVFileChecksumOffsetDirective(unsigned FileNo) {
 
 void MCObjectStreamer::emitBytes(StringRef Data) {
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
-  MCDataFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getOrCreateDataFragment();
   DF->appendContents(ArrayRef(Data.data(), Data.size()));
 }
 
@@ -626,7 +626,7 @@ void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
 
 static std::optional<std::pair<bool, std::string>>
 getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
-                         MCDataFragment *&DF) {
+                         MCFragment *&DF) {
   if (Symbol.isVariable()) {
     const MCExpr *SymbolExpr = Symbol.getVariableValue();
     MCValue OffsetVal;
@@ -643,7 +643,7 @@ getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
         return std::make_pair(false,
                               std::string("symbol in offset has no data "
                                           "fragment"));
-      DF = cast<MCDataFragment>(Fragment);
+      DF = cast<MCFragment>(Fragment);
       return std::nullopt;
     }
 
@@ -671,7 +671,7 @@ getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
                             std::string("symbol in offset has no data "
                                         "fragment"));
     RelocOffset = SA.getOffset() + OffsetVal.getConstant();
-    DF = cast<MCDataFragment>(Fragment);
+    DF = cast<MCFragment>(Fragment);
   } else {
     RelocOffset = Symbol.getOffset();
     MCFragment *Fragment = Symbol.getFragment();
@@ -681,7 +681,7 @@ getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
       return std::make_pair(false,
                             std::string("symbol in offset has no data "
                                         "fragment"));
-    DF = cast<MCDataFragment>(Fragment);
+    DF = cast<MCFragment>(Fragment);
   }
   return std::nullopt;
 }
@@ -702,7 +702,7 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
     Expr =
         MCSymbolRefExpr::create(getContext().createTempSymbol(), getContext());
 
-  MCDataFragment *DF = getOrCreateDataFragment(&STI);
+  MCFragment *DF = getOrCreateDataFragment(&STI);
   MCValue OffsetVal;
   if (!Offset.evaluateAsRelocatable(OffsetVal, nullptr))
     return std::make_pair(false,

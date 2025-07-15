@@ -92,7 +92,7 @@ public:
   }
 
   /// Get a data fragment to write into, creating a new one if the current
-  /// fragment is not a data fragment.
+  /// fragment is not FT_Data.
   /// Optionally a \p STI can be passed in so that a new fragment is created
   /// if the Subtarget differs from the current fragment.
   MCFragment *getOrCreateDataFragment(const MCSubtargetInfo *STI = nullptr);

@@ -72,7 +72,7 @@ void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
     Symbol->setType(ELF::STT_TLS);
 }
 
-void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
+void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
                                    uint64_t Offset) {
   auto *Symbol = cast<MCSymbolELF>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
@@ -427,7 +427,7 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
       DF = getCurrentFragment();
       CheckBundleSubtargets(DF->getSubtargetInfo(), &STI);
     } else {
-      DF = getContext().allocFragment<MCDataFragment>();
+      DF = getContext().allocFragment<MCFragment>();
       insert(DF);
     }
     if (Sec.getBundleLockState() == MCSection::BundleLockedAlignToEnd) {

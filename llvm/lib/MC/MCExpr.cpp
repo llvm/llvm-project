@@ -324,7 +324,7 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
     // symbols is limited to specific cases where the fragments between two
     // symbols (including the fragments the symbols are defined in) are
     // fixed-size fragments so the difference can be calculated. For example,
-    // this is important when the Subtarget is changed and a new MCDataFragment
+    // this is important when the Subtarget is changed and a new MCFragment
     // is created in the case of foo: instr; .arch_extension ext; instr .if . -
     // foo.
     if (SA.isVariable() || SB.isVariable())

@@ -205,6 +205,7 @@ namespace std {
 #  include <__type_traits/is_assignable.h>
 #  include <__type_traits/is_constructible.h>
 #  include <__type_traits/is_convertible.h>
+#  include <__type_traits/is_core_convertible.h>
 #  include <__type_traits/is_destructible.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
@@ -982,11 +983,13 @@ public:
 template <class _Tp>
 optional(_Tp) -> optional<_Tp>;
 
-// Comparisons between optionals
+// [optional.relops] Relational operators
+
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() == std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() == std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const optional<_Tp>& __x, const optional<_Up>& __y) {
   if (static_cast<bool>(__x) != static_cast<bool>(__y))
     return false;
@@ -998,7 +1001,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const optional<_Tp>& __x, const 
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() != std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() != std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(const optional<_Tp>& __x, const optional<_Up>& __y) {
   if (static_cast<bool>(__x) != static_cast<bool>(__y))
     return true;
@@ -1007,10 +1011,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(const optional<_Tp>& __x, const 
   return *__x != *__y;
 }
 
-template <
-    class _Tp,
-    class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() < std::declval<const _Up&>()), bool>, int> = 0>
+template < class _Tp,
+           class _Up,
+           enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() < std::declval<const _Up&>()), bool>,
+                       int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const optional<_Tp>& __x, const optional<_Up>& __y) {
   if (!static_cast<bool>(__y))
     return false;
@@ -1019,10 +1023,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const optional<_Tp>& __x, const o
   return *__x < *__y;
 }
 
-template <
-    class _Tp,
-    class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() > std::declval<const _Up&>()), bool>, int> = 0>
+template < class _Tp,
+           class _Up,
+           enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() > std::declval<const _Up&>()), bool>,
+                       int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const optional<_Tp>& __x, const optional<_Up>& __y) {
   if (!static_cast<bool>(__x))
     return false;
@@ -1034,7 +1038,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const optional<_Tp>& __x, const o
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() <= std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() <= std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const optional<_Tp>& __x, const optional<_Up>& __y) {
   if (!static_cast<bool>(__x))
     return true;
@@ -1046,7 +1051,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const optional<_Tp>& __x, const 
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() >= std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() >= std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const optional<_Tp>& __x, const optional<_Up>& __y) {
   if (!static_cast<bool>(__y))
     return true;
@@ -1067,7 +1073,8 @@ operator<=>(const optional<_Tp>& __x, const optional<_Up>& __y) {
 
 #    endif // _LIBCPP_STD_VER >= 20
 
-// Comparisons with nullopt
+// [optional.nullops] Comparison with nullopt
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const optional<_Tp>& __x, nullopt_t) noexcept {
   return !static_cast<bool>(__x);
@@ -1139,11 +1146,13 @@ _LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const optional<_Tp>&
 
 #    endif // _LIBCPP_STD_VER <= 17
 
-// Comparisons with T
+// [optional.comp.with.t] Comparison with T
+
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() == std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() == std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const optional<_Tp>& __x, const _Up& __v) {
   return static_cast<bool>(__x) ? *__x == __v : false;
 }
@@ -1151,7 +1160,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const optional<_Tp>& __x, const 
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() == std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() == std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const _Tp& __v, const optional<_Up>& __x) {
   return static_cast<bool>(__x) ? __v == *__x : false;
 }
@@ -1159,7 +1169,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const _Tp& __v, const optional<_
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() != std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() != std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(const optional<_Tp>& __x, const _Up& __v) {
   return static_cast<bool>(__x) ? *__x != __v : true;
 }
@@ -1167,23 +1178,24 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(const optional<_Tp>& __x, const 
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() != std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() != std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(const _Tp& __v, const optional<_Up>& __x) {
   return static_cast<bool>(__x) ? __v != *__x : true;
 }
 
-template <
-    class _Tp,
-    class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() < std::declval<const _Up&>()), bool>, int> = 0>
+template < class _Tp,
+           class _Up,
+           enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() < std::declval<const _Up&>()), bool>,
+                       int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const optional<_Tp>& __x, const _Up& __v) {
   return static_cast<bool>(__x) ? *__x < __v : true;
 }
 
-template <
-    class _Tp,
-    class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() < std::declval<const _Up&>()), bool>, int> = 0>
+template < class _Tp,
+           class _Up,
+           enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() < std::declval<const _Up&>()), bool>,
+                       int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const _Tp& __v, const optional<_Up>& __x) {
   return static_cast<bool>(__x) ? __v < *__x : false;
 }
@@ -1191,7 +1203,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const _Tp& __v, const optional<_U
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() <= std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() <= std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const optional<_Tp>& __x, const _Up& __v) {
   return static_cast<bool>(__x) ? *__x <= __v : true;
 }
@@ -1199,23 +1212,24 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const optional<_Tp>& __x, const 
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() <= std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() <= std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const _Tp& __v, const optional<_Up>& __x) {
   return static_cast<bool>(__x) ? __v <= *__x : false;
 }
 
-template <
-    class _Tp,
-    class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() > std::declval<const _Up&>()), bool>, int> = 0>
+template < class _Tp,
+           class _Up,
+           enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() > std::declval<const _Up&>()), bool>,
+                       int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const optional<_Tp>& __x, const _Up& __v) {
   return static_cast<bool>(__x) ? *__x > __v : false;
 }
 
-template <
-    class _Tp,
-    class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() > std::declval<const _Up&>()), bool>, int> = 0>
+template < class _Tp,
+           class _Up,
+           enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() > std::declval<const _Up&>()), bool>,
+                       int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const _Tp& __v, const optional<_Up>& __x) {
   return static_cast<bool>(__x) ? __v > *__x : true;
 }
@@ -1223,7 +1237,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const _Tp& __v, const optional<_U
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() >= std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() >= std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const optional<_Tp>& __x, const _Up& __v) {
   return static_cast<bool>(__x) ? *__x >= __v : false;
 }
@@ -1231,7 +1246,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const optional<_Tp>& __x, const 
 template <
     class _Tp,
     class _Up,
-    enable_if_t<is_convertible_v<decltype(std::declval<const _Tp&>() >= std::declval<const _Up&>()), bool>, int> = 0>
+    enable_if_t<__is_core_convertible_v<decltype(std::declval<const _Tp&>() >= std::declval<const _Up&>()), bool>,
+                int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const _Tp& __v, const optional<_Up>& __x) {
   return static_cast<bool>(__x) ? __v >= *__x : true;
 }
