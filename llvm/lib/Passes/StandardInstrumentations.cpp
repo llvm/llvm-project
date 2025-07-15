@@ -1991,6 +1991,11 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
       EdgesMap.insert({Key, BeforeColour});
     }
   }
+  if (Before == After) {
+    for (auto &I : Nodes)
+      I.finalize(*this);
+    return;
+  }
 
   // Handle each basic block in the after IR
   for (auto &A : After.getData()) {
