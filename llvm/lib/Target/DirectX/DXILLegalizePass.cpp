@@ -98,9 +98,9 @@ static void fixI8UseChain(Instruction &I,
       ElementType = AI->getAllocatedType();
     if (auto *GEP = dyn_cast<GetElementPtrInst>(NewOperands[0])) {
       ElementType = GEP->getSourceElementType();
-      if (ElementType->isArrayTy())
-        ElementType = ElementType->getArrayElementType();
     }
+    if (ElementType->isArrayTy())
+      ElementType = ElementType->getArrayElementType();
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewOperands[0]);
     ReplacedValues[Load] = NewLoad;
     ToRemove.push_back(Load);
@@ -562,6 +562,45 @@ legalizeGetHighLowi64Bytes(Instruction &I,
   }
 }
 
+static void
+legalizeLoadStoreOnArrayAllocas(Instruction &I,
+                                SmallVectorImpl<Instruction *> &ToRemove,
+                                DenseMap<Value *, Value *> &) {
+
+  Value *PtrOp;
+  unsigned PtrOpIndex;
+  [[maybe_unused]] Type *LoadStoreTy;
+  if (auto *LI = dyn_cast<LoadInst>(&I)) {
+    PtrOp = LI->getPointerOperand();
+    PtrOpIndex = LI->getPointerOperandIndex();
+    LoadStoreTy = LI->getType();
+  } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+    PtrOp = SI->getPointerOperand();
+    PtrOpIndex = SI->getPointerOperandIndex();
+    LoadStoreTy = SI->getValueOperand()->getType();
+  } else
+    return;
+
+  assert(LoadStoreTy->isSingleValueType() &&
+         "Expected load/store type to be a single-valued type");
+
+  auto *AllocaPtrOp = dyn_cast<AllocaInst>(PtrOp);
+  if (!AllocaPtrOp)
+    return;
+
+  Type *Ty = AllocaPtrOp->getAllocatedType();
+  if (!isa<ArrayType>(Ty))
+    return;
+  assert(!isa<ArrayType>(Ty->getArrayElementType()) &&
+         "Expected allocated type of AllocaInst to be a flat ArrayType");
+
+  IRBuilder<> Builder(&I);
+  Value *Zero = Builder.getInt32(0);
+  Value *GEP = Builder.CreateGEP(Ty, AllocaPtrOp, {Zero, Zero}, "",
+                                 GEPNoWrapFlags::all());
+  I.setOperand(PtrOpIndex, GEP);
+}
+
 namespace {
 class DXILLegalizationPipeline {
 
@@ -612,6 +651,7 @@ private:
     // downcastI64toI32InsertExtractElements needs to handle.
     LegalizationPipeline[Stage2].push_back(
         downcastI64toI32InsertExtractElements);
+    LegalizationPipeline[Stage2].push_back(legalizeLoadStoreOnArrayAllocas);
   }
 };
 
