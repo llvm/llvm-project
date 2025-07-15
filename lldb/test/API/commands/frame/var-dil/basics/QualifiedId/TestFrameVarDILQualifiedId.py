@@ -18,6 +18,7 @@ class TestFrameVarDILQualifiedId(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWindows
     def test_frame_var(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
