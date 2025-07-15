@@ -522,6 +522,9 @@ if(build_runtimes)
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
     # With ROCm 6.3 the ROCr runtime and the thunk layer share a single repository.
     # No need to provide a separate path for ROCt.
+    if (OFFLOAD_EXTERNAL_PROJECT_UNIFIED_ROCR OR DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH)
+      list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake;${CMAKE_PREFIX_PATH}")
+    endif()
     if (OFFLOAD_EXTERNAL_PROJECT_UNIFIED_ROCR)
       if(NOT DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH)
         message(SEND_ERROR "External ROCr requires setting LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH")
@@ -533,9 +536,9 @@ if(build_runtimes)
         DEPENDS clang llvm-link lld opt llvm-objcopy
         INSTALL_COMMAND ""
         CMAKE_ARGS -DBUILD_SHARED_LIBS=ON
-                   -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake
                    -DIMAGE_SUPPORT=OFF
-                   -DLLVM_RUNTIME_OPENMP=ON)
+                   -DLLVM_RUNTIME_OPENMP=ON
+                   ${extra_cmake_args})
       set(HSA_DEP rocr-runtime)
     endif()
 
@@ -549,9 +552,9 @@ if(build_runtimes)
           SOURCE_DIR ${LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH}
           DEPENDS clang llvm-link lld opt llvm-objcopy
           CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${ROCM_DEVICE_LIBS_INSTALL_PREFIX_PATH}
-                     -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake
                      -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW=${ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC}
-                     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD=amdgcn)
+                     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD=amdgcn
+                     ${extra_cmake_args})
       else()
         ExternalProject_Add(rocm-device-libs
           SOURCE_DIR ${LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH}
