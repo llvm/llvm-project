@@ -242,3 +242,35 @@ functions:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
       - type: size_t
+  - name: wcstol
+    standards:
+      - stdc
+    return_type: long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
+  - name: wcstoll
+    standards:
+      - stdc
+    return_type: long long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
+  - name: wcstoul
+    standards:
+      - stdc
+    return_type: unsigned long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
+  - name: wcstoull
+    standards:
+      - stdc
+    return_type: unsigned long long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int

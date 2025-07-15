@@ -139,6 +139,10 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        EABI EABIVersion, StringRef ABIName) {
   setTargetRuntimeLibcallSets(TT, FloatABI);
 
+  // Early exit for targets that have fully ported to tablegen.
+  if (TT.isAMDGPU() || TT.isNVPTX() || TT.isWasm())
+    return;
+
   // Use the f128 variants of math functions on x86
   if (TT.isX86() && TT.isGNUEnvironment())
     setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/true);
@@ -165,12 +169,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     if (darwinHasSinCosStret(TT)) {
       setLibcallImpl(RTLIB::SINCOS_STRET_F32, RTLIB::__sincosf_stret);
       setLibcallImpl(RTLIB::SINCOS_STRET_F64, RTLIB::__sincos_stret);
-      if (TT.isWatchABI()) {
-        setLibcallImplCallingConv(RTLIB::__sincosf_stret,
-                                  CallingConv::ARM_AAPCS_VFP);
-        setLibcallImplCallingConv(RTLIB::__sincos_stret,
-                                  CallingConv::ARM_AAPCS_VFP);
-      }
     }
 
     if (darwinHasExp10(TT)) {
@@ -241,17 +239,13 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
   if (TT.isARM() || TT.isThumb())
     setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
 
-  if (!TT.isWasm()) {
-    // These libcalls are only available in compiler-rt, not libgcc.
-    if (TT.isArch32Bit()) {
-      setLibcallImpl(RTLIB::SHL_I128, RTLIB::Unsupported);
-      setLibcallImpl(RTLIB::SRL_I128, RTLIB::Unsupported);
-      setLibcallImpl(RTLIB::SRA_I128, RTLIB::Unsupported);
-      setLibcallImpl(RTLIB::MUL_I128, RTLIB::Unsupported);
-      setLibcallImpl(RTLIB::MULO_I64, RTLIB::Unsupported);
-    }
-
-    setLibcallImpl(RTLIB::MULO_I128, RTLIB::Unsupported);
+  // These libcalls are only available in compiler-rt, not libgcc.
+  if (TT.isArch64Bit()) {
+    setLibcallImpl(RTLIB::SHL_I128, RTLIB::__ashlti3);
+    setLibcallImpl(RTLIB::SRL_I128, RTLIB::__lshrti3);
+    setLibcallImpl(RTLIB::SRA_I128, RTLIB::__ashrti3);
+    setLibcallImpl(RTLIB::MUL_I128, RTLIB::__multi3);
+    setLibcallImpl(RTLIB::MULO_I64, RTLIB::__mulodi4);
   }
 
   if (TT.getArch() == Triple::ArchType::msp430) {

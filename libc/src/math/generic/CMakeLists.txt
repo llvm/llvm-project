@@ -1913,7 +1913,7 @@ add_entrypoint_object(
   HDRS
     ../ldexpf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.ldexpf
 )
 
 add_entrypoint_object(
@@ -1933,8 +1933,7 @@ add_entrypoint_object(
   HDRS
     ../ldexpf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.ldexpf16
 )
 
 add_entrypoint_object(
@@ -1944,8 +1943,7 @@ add_entrypoint_object(
   HDRS
     ../ldexpf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.ldexpf128
 )
 
 add_object_library(

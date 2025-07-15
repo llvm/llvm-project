@@ -4015,7 +4015,7 @@ cc_library(
         ":VectorToSCF",
         ":VectorToSPIRV",
         ":VectorToXeGPU",
-	":XeVMToLLVM",
+        ":XeVMToLLVM",
     ],
 )
 
@@ -4640,6 +4640,7 @@ cc_library(
         ":VCIXToLLVMIRTranslation",
         ":VectorToLLVM",
         ":VectorTransformOps",
+        ":XeVMToLLVM",
     ],
 )
 

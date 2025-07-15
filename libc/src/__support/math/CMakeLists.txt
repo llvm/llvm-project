@@ -82,3 +82,31 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
 )
+
+add_header_library(
+  ldexpf128
+  HDRS
+    ldexpf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
+  ldexpf16
+  HDRS
+    ldexpf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  ldexpf
+  HDRS
+    ldexpf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)

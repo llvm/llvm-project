@@ -36,6 +36,14 @@ Version 21.0
   -------------
   Symbol added: _ZNSt3__113__hash_memoryEPKvm
 
+* [libc++][hardening] Introduce a dylib function to log hardening errors.
+
+  This patch added a function to log hardening failures to the dylib.
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__123__log_hardening_failureEPKc
+
 ------------
 Version 20.0
 ------------

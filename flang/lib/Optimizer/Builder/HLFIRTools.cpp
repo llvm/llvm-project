@@ -212,10 +212,17 @@ bool hlfir::Entity::mayHaveNonDefaultLowerBounds() const {
   if (auto varIface = getIfVariableInterface())
     return isShapeWithLowerBounds(varIface.getShape());
   // Go through chain of fir.box converts.
-  if (auto convert = getDefiningOp<fir::ConvertOp>())
+  if (auto convert = getDefiningOp<fir::ConvertOp>()) {
     return hlfir::Entity{convert.getValue()}.mayHaveNonDefaultLowerBounds();
-  // TODO: Embox and Rebox do not have hlfir variable interface, but are
-  // easy to reason about.
+  } else if (auto rebox = getDefiningOp<fir::ReboxOp>()) {
+    // If slicing is involved, then the resulting box has
+    // default lower bounds. If there is no slicing,
+    // then the result depends on the shape operand
+    // (whether it has non default lower bounds or not).
+    return !rebox.getSlice() && isShapeWithLowerBounds(rebox.getShape());
+  } else if (auto embox = getDefiningOp<fir::EmboxOp>()) {
+    return !embox.getSlice() && isShapeWithLowerBounds(embox.getShape());
+  }
   return true;
 }
 
@@ -1645,4 +1652,31 @@ bool hlfir::designatePreservesContinuity(hlfir::DesignateOp op) {
     }
   }
   return true;
+}
+
+bool hlfir::isSimplyContiguous(mlir::Value base, bool checkWhole) {
+  hlfir::Entity entity{base};
+  if (entity.isSimplyContiguous())
+    return true;
+
+  // Look at the definition.
+  mlir::Operation *def = base.getDefiningOp();
+  if (!def)
+    return false;
+
+  return mlir::TypeSwitch<mlir::Operation *, bool>(def)
+      .Case<fir::EmboxOp>(
+          [&](auto op) { return fir::isContiguousEmbox(op, checkWhole); })
+      .Case<fir::ReboxOp>([&](auto op) {
+        hlfir::Entity box{op.getBox()};
+        return fir::reboxPreservesContinuity(
+                   op, box.mayHaveNonDefaultLowerBounds(), checkWhole) &&
+               isSimplyContiguous(box, checkWhole);
+      })
+      .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
+        return isSimplyContiguous(op.getMemref(), checkWhole);
+      })
+      .Case<fir::ConvertOp>(
+          [&](auto op) { return isSimplyContiguous(op.getValue()); })
+      .Default([](auto &&) { return false; });
 }

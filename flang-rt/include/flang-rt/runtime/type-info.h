@@ -68,7 +68,9 @@ public:
   RT_API_ATTRS std::uint64_t offset() const { return offset_; }
   RT_API_ATTRS const Value &characterLen() const { return characterLen_; }
   RT_API_ATTRS const DerivedType *derivedType() const {
-    return derivedType_.descriptor().OffsetElement<const DerivedType>();
+    return category() == TypeCategory::Derived
+        ? derivedType_.descriptor().OffsetElement<const DerivedType>()
+        : nullptr;
   }
   RT_API_ATTRS const Value *lenValue() const {
     return lenValue_.descriptor().OffsetElement<const Value>();

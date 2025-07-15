@@ -5620,6 +5620,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FREM:
+  case ISD::FCOPYSIGN:
     // No poison except from flags (which is handled above)
     return false;
 

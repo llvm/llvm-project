@@ -214,7 +214,9 @@ static mlir::Value unwrapPassThroughOps(mlir::Value val) {
 /// of the value, otherwise return the value
 static mlir::Value unwrapReboxOp(mlir::Value val) {
   while (fir::ReboxOp rebox = val.getDefiningOp<fir::ReboxOp>()) {
-    if (!fir::reboxPreservesContinuity(rebox, /*checkWhole=*/false)) {
+    if (!fir::reboxPreservesContinuity(rebox,
+                                       /*mayHaveNonDefaultLowerBounds=*/true,
+                                       /*checkWhole=*/false)) {
       LLVM_DEBUG(llvm::dbgs() << "REBOX may produce non-contiguous array: "
                               << rebox << '\n');
       break;
