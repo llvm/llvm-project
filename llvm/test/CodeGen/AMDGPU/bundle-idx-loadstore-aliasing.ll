@@ -65,7 +65,7 @@ define dso_local amdgpu_kernel void @amdgcn_aa_multibb() "amdgpu-wavegroup-enabl
 ; MULTIBBDBG: ===== AMDGPUBundleIdxLdSt :: Sinking Phase =====
 ;     Skip first kernel.
 ; MULTIBBDBG: ===== AMDGPUBundleIdxLdSt :: Sinking Phase =====
-; MULTIBBDBG:  *** Conflict with V_STORE_IDX [[V_STORE_IDX_:%[0-9]+]]:vgpr_32, %61:sgpr_32, 50, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 200)`, align 8, addrspace 10)
+; MULTIBBDBG:  *** Conflict with V_STORE_IDX [[V_STORE_IDX_:%[0-9]+]]:vgpr_32, %43:sgpr_32, 50, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 200)`, align 8, addrspace 10)
 ; MULTIBBDBG: BB.2 :: [[V_STORE_IDX_]]:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
 ; MULTIBBDBG-NEXT:  *** Found 1 use(s)
 ; MULTIBBDBG-NEXT:  *** Use is in MI's current block. Leaving a copy in block 2

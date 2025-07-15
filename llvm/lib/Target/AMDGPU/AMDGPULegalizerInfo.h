@@ -23,6 +23,8 @@ namespace llvm {
 class GCNTargetMachine;
 class GCNSubtarget;
 class MachineIRBuilder;
+class SrcOp;
+class DstOp;
 
 namespace AMDGPU {
 struct ImageDimIntrinsicInfo;
@@ -106,6 +108,14 @@ public:
                      bool UsePartialMad64_32,
                      bool SeparateOddAlignedProducts) const;
   bool legalizeMul(LegalizerHelper &Helper, MachineInstr &MI) const;
+  MachineInstrBuilder buildUnsignedDivByConstant(MachineIRBuilder &B,
+                                                 const DstOp &Dst,
+                                                 const SrcOp &Dividend,
+                                                 unsigned Divisor) const;
+  MachineInstrBuilder buildUnsignedRemByConstant(MachineIRBuilder &B,
+                                                 const DstOp &Dst,
+                                                 const SrcOp &Dividend,
+                                                 unsigned Divisor) const;
   bool legalizeCTLZ_CTTZ(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
   bool legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -134,10 +144,8 @@ public:
   bool legalizeWorkitemIDIntrinsic(
       MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
       unsigned Dim, AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
-  void buildWorkitemIdWavegroupModeGISel(MachineInstr &MI,
-                                         MachineRegisterInfo &MRI,
-                                         MachineIRBuilder &B,
-                                         unsigned Dim) const;
+  void buildWorkitemIdWavegroupMode(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    MachineIRBuilder &B, unsigned Dim) const;
 
   Register getKernargParameterPtr(MachineIRBuilder &B, int64_t Offset) const;
   bool legalizeKernargMemParameter(MachineInstr &MI, MachineIRBuilder &B,

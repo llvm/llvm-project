@@ -98,8 +98,12 @@ private:
                               unsigned Width) const;
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
-  SDValue buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG, SDValue Op,
-                                           unsigned Dim) const;
+  SDValue buildWorkitemIdWavegroupMode(SelectionDAG &DAG, SDValue Op,
+                                       unsigned Dim) const;
+  SDValue buildUnsignedDivByConstant(SelectionDAG &DAG, SDValue Dividend,
+                                     unsigned Divisor) const;
+  SDValue buildUnsignedRemByConstant(SelectionDAG &DAG, SDValue Dividend,
+                                     unsigned Divisor) const;
 
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;

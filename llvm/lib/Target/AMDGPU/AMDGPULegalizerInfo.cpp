@@ -33,6 +33,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/Support/DivisionByConstantInfo.h"
 
 #define DEBUG_TYPE "amdgpu-legalinfo"
 
@@ -4739,67 +4740,125 @@ static bool replaceWithConstant(MachineIRBuilder &B, MachineInstr &MI,
   return true;
 }
 
-void AMDGPULegalizerInfo::buildWorkitemIdWavegroupModeGISel(
-    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
-    unsigned Dim) const {
-  /* v0 is not set up in Wavegroup launch mode, so workitem.id.x must be
-     calculated:
-     FlatWorkItemId = WaveIdInWorkgroup * 32 + LaneId // wave32 is forced
-     WorkitemIDX = FlatWorkitemId % DimX
-     WorkitemIDY = (FlatWorkitemId / DimX) % DimY
-     WorkitemIDZ = (FlatWorkitemId / DimX) / DimY */
-  assert(((Dim == 0) || (Dim == 1) || (Dim == 2)) &&
-         "Unknown value for Dim. Expected 0, 1, or 2");
-  unsigned MaxIDX = ST.getMaxWorkitemID(B.getMF().getFunction(), 0);
-  unsigned MaxIDY = ST.getMaxWorkitemID(B.getMF().getFunction(), 1);
-  unsigned MaxIDZ = ST.getMaxWorkitemID(B.getMF().getFunction(), 2);
-  assert((((MaxIDX + 1) * (MaxIDY + 1) * (MaxIDZ + 1)) % 128 == 0) &&
-         "Total threads per workgroup in wavegroup dispatch mode must be an "
-         "integer multiple of 128.");
+void AMDGPULegalizerInfo::buildWorkitemIdWavegroupMode(MachineInstr &MI,
+                                                       MachineRegisterInfo &MRI,
+                                                       MachineIRBuilder &B,
+                                                       unsigned Dim) const {
+  // v0 is not set up in Wavegroup launch mode, so workitem.id must be
+  // calculated. This assumes wave32 is forced in wavegroup dispatch mode.
+  //   FlatWorkItemId = WaveIdInWorkgroup * 32 + LaneId
+  //   WorkitemIDX = FlatWorkitemId % SizeX
+  //               = FlatWorkitemId - SizeX * floor(FlatWorkitemId / SizeX)
+  //               = FlatWorkitemId - SizeX * DivX
+  //   WorkitemIDY = floor(FlatWorkitemId / SizeX) % SizeY
+  //               = DivX - SizeY * floor(DivX / SizeY)
+  //               = DivX - SizeY * DivY
+  //   WorkitemIDZ = floor(FlatWorkitemId / (SizeX * SizeY))
 
-  auto DstReg = MI.getOperand(0).getReg();
+  assert(Dim <= 2 && "Unknown value for Dim. Expected 0, 1, or 2");
+  unsigned SizeX = ST.getMaxWorkitemID(B.getMF().getFunction(), 0) + 1;
+  unsigned SizeY = ST.getMaxWorkitemID(B.getMF().getFunction(), 1) + 1;
+  unsigned SizeZ = ST.getMaxWorkitemID(B.getMF().getFunction(), 2) + 1;
+
+  Register DstReg = MI.getOperand(0).getReg();
   LLT S32 = LLT::scalar(32);
 
-  // calculate FlatWorkitemID
-  auto WaveIdInWorkgroup = MRI.createGenericVirtualRegister(LLT::scalar(32));
-  auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
-  auto LSB = B.buildConstant(S32, 25);
-  auto Width = B.buildConstant(S32, 5);
-  B.buildUbfx(WaveIdInWorkgroup, TTMP8, LSB, Width);
-  auto ThreadOffset = MRI.createGenericVirtualRegister(LLT::scalar(32));
-  auto ShiftAmt = B.buildConstant(S32, 5);
-  B.buildShl(ThreadOffset, WaveIdInWorkgroup, ShiftAmt);
-  auto FlatWorkitemID = MRI.createGenericVirtualRegister(LLT::scalar(32));
-  auto AllOnes = B.buildConstant(S32, -1).getReg(0);
-  auto LaneID = B.buildConstant(S32, 0).getReg(0);
+  // If Size == 1 for the dimension we seek, WorkitemID will be 0.
+  unsigned DimSize = Dim == 0 ? SizeX : Dim == 1 ? SizeY : SizeZ;
+  if (DimSize == 1) {
+    B.buildConstant(DstReg, 0);
+    return;
+  }
+
+  // Calculate FlatWorkitemID.
+  Register TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8)).getReg(0);
+  Register LSB = B.buildConstant(S32, 25).getReg(0);
+  Register Width = B.buildConstant(S32, 5).getReg(0);
+  Register WaveIdInWorkgroup = B.buildUbfx(S32, TTMP8, LSB, Width).getReg(0);
+  Register ShiftAmt = B.buildConstant(S32, 5).getReg(0);
+  Register ThreadOffset =
+      B.buildShl(S32, WaveIdInWorkgroup, ShiftAmt).getReg(0);
+  Register AllOnes = B.buildConstant(S32, -1).getReg(0);
+  Register LaneID = B.buildConstant(S32, 0).getReg(0);
   LaneID = B.buildIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {S32})
                .addUse(AllOnes)
                .addUse(LaneID)
                .getReg(0);
-  B.buildAdd(FlatWorkitemID, ThreadOffset, LaneID);
+  Register FlatWorkitemID = B.buildAdd(S32, LaneID, ThreadOffset).getReg(0);
 
-  // compute WorkitemIDX = FlatWorkitemID % DimX
-  auto DimX = B.buildConstant(S32, MaxIDX);
-  auto DivX = MRI.createGenericVirtualRegister(S32);
-  auto RemX = MRI.createGenericVirtualRegister(S32);
-  B.buildInstr(AMDGPU::G_UDIVREM, {DivX, RemX}, {FlatWorkitemID, DimX});
   if (Dim == 0) {
-    B.buildCopy(DstReg, RemX);
+    if (SizeY == 1 && SizeZ == 1) {
+      B.buildCopy(DstReg, FlatWorkitemID);
+      return;
+    }
+    buildUnsignedRemByConstant(B, DstReg, FlatWorkitemID, SizeX);
     return;
   }
 
-  // compute WorkitemIDY or WorkitemIDZ
-  auto DimY = B.buildConstant(S32, MaxIDY);
-  auto DivY = MRI.createGenericVirtualRegister(LLT::scalar(32));
-  auto RemY = MRI.createGenericVirtualRegister(LLT::scalar(32));
-  B.buildInstr(AMDGPU::G_UDIVREM, {DivY, RemY}, {DivX, DimY});
   if (Dim == 1) {
-    B.buildCopy(DstReg, RemY); // WorkitemIDY = (FlatWorkitemID / DimX) % DimY
-  } else if (Dim == 2) {
-    B.buildCopy(DstReg, DivY); // WorkitemIDY = (FlatWorkitemID / DimX) / DimY
+    if (SizeZ == 1) {
+      buildUnsignedDivByConstant(B, DstReg, FlatWorkitemID, SizeX);
+      return;
+    }
+    Register DivX =
+        buildUnsignedDivByConstant(B, S32, FlatWorkitemID, SizeX).getReg(0);
+    buildUnsignedRemByConstant(B, DstReg, DivX, SizeY);
+    return;
   }
 
-  return;
+  buildUnsignedDivByConstant(B, DstReg, FlatWorkitemID, SizeX * SizeY);
+}
+
+// Given a known integer constant in Divisor, build an unsigned division by
+// calculating a magic number, then multiplying and possibly shifting. See
+// BuildUDIV in SelectionDAG for implementation in ISel path.
+// TODO Support vectors.
+MachineInstrBuilder AMDGPULegalizerInfo::buildUnsignedDivByConstant(
+    MachineIRBuilder &B, const DstOp &Dst, const SrcOp &Dividend,
+    unsigned Divisor) const {
+  LLT Ty = Dst.getLLTTy(*B.getMRI());
+  assert(!Ty.isVector() && "Function does not yet support vector dividends.");
+  assert(Divisor != 0 && "Division by 0.");
+
+  Register Result = Dividend.getReg();
+  if (Divisor == 1)
+    return B.buildCopy(Dst, Result);
+
+  APInt DivisorAPInt(Ty.getSizeInBits(), Divisor);
+  UnsignedDivisionByConstantInfo MagicU =
+      UnsignedDivisionByConstantInfo::get(DivisorAPInt);
+  bool UseNPQ = MagicU.IsAdd;
+  if (MagicU.PreShift != 0) {
+    Register PreShift = B.buildConstant(Ty, MagicU.PreShift).getReg(0);
+    Result = B.buildLShr(Ty, Result, PreShift).getReg(0);
+  }
+  APInt Magic = std::move(MagicU.Magic);
+  Register MagicFactor = B.buildConstant(Ty, Magic).getReg(0);
+  Result = B.buildUMulH(Ty, Result, MagicFactor).getReg(0);
+  if (UseNPQ) {
+    Register NPQ = B.buildSub(Ty, Dividend, Result).getReg(0);
+    NPQ = B.buildLShr(Ty, NPQ, B.buildConstant(Ty, 1)).getReg(0);
+    Result = B.buildAdd(Ty, Result, NPQ).getReg(0);
+  }
+  if (MagicU.PostShift != 0) {
+    Register PostShift = B.buildConstant(Ty, MagicU.PostShift).getReg(0);
+    Result = B.buildLShr(Ty, Result, PostShift).getReg(0);
+  }
+  return B.buildCopy(Dst, Result);
+}
+
+// Use the "magic number" method to calculate an unsigned division by constant,
+// then use that result to compute the remainder.
+// TODO Support vectors.
+MachineInstrBuilder AMDGPULegalizerInfo::buildUnsignedRemByConstant(
+    MachineIRBuilder &B, const DstOp &Dst, const SrcOp &Dividend,
+    unsigned Divisor) const {
+  LLT Ty = Dst.getLLTTy(*B.getMRI());
+  Register DivResult =
+      buildUnsignedDivByConstant(B, Ty, Dividend, Divisor).getReg(0);
+  Register DivisorReg = B.buildConstant(Ty, Divisor).getReg(0);
+  Register Product = B.buildMul(Ty, DivisorReg, DivResult).getReg(0);
+  return B.buildSub(Dst, Dividend, Product);
 }
 
 bool AMDGPULegalizerInfo::legalizeWorkitemIDIntrinsic(
@@ -4824,9 +4883,9 @@ bool AMDGPULegalizerInfo::legalizeWorkitemIDIntrinsic(
     return true;
   }
 
-  // Wavegroup launch mode needs to compute workitem id
+  // Wavegroup launch mode needs to compute workitem id.
   if (AMDGPU::getWavegroupEnable(B.getMF().getFunction())) {
-    buildWorkitemIdWavegroupModeGISel(MI, MRI, B, Dim);
+    buildWorkitemIdWavegroupMode(MI, MRI, B, Dim);
     MI.eraseFromParent();
     return true;
   }
