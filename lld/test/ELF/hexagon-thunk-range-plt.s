@@ -38,16 +38,16 @@ _start:
 .skip 0x200000
 
 # CHECK: Disassembly of section .text:
-# CHECK: 0002021c <_start>:
-# CHECK-NEXT:    { call 0x220250 }
+# CHECK:     <_start>:
+# CHECK-NEXT:  2021c:  { call 0x220250 }
 # CHECK-NEXT:    { call 0x220260 }
 # CHECK-NEXT:    { call 0x220270 }
 # CHECK-NEXT:    { jumpr r31 }
 
 ## Verify PLT header and entries are created with exact addresses
 # CHECK: Disassembly of section .plt:
-# CHECK: 00220230 <.plt>:
-# CHECK-NEXT:    { immext(#0x20080)
+# CHECK:      <.plt>:
+# CHECK-NEXT:   220230:  { immext(#0x20080)
 # CHECK-NEXT:      r28 = add(pc,##0x200b8) }
 # CHECK-NEXT:    { r14 -= add(r28,#0x10)
 # CHECK-NEXT:      r15 = memw(r28+#0x8)
@@ -56,20 +56,20 @@ _start:
 # CHECK-NEXT:      jumpr r28 }
 # CHECK-NEXT:    { trap0(#0xdb) }
 
-# CHECK: 00220250 <extern_within_range@plt>:
-# CHECK-NEXT:    { immext(#0x20080)
+# CHECK:      <extern_within_range@plt>:
+# CHECK-NEXT:   220250:  { immext(#0x20080)
 # CHECK-NEXT:      r14 = add(pc,##0x200a8) }
 # CHECK-NEXT:    { r28 = memw(r14+#0x0) }
 # CHECK-NEXT:    { jumpr r28 }
 
-# CHECK: 00220260 <extern_beyond_range@plt>:
-# CHECK-NEXT:    { immext(#0x20080)
+# CHECK:      <extern_beyond_range@plt>:
+# CHECK-NEXT:   220260: { immext(#0x20080)
 # CHECK-NEXT:      r14 = add(pc,##0x2009c) }
 # CHECK-NEXT:    { r28 = memw(r14+#0x0) }
 # CHECK-NEXT:    { jumpr r28 }
 
-# CHECK: 00220270 <extern_close@plt>:
-# CHECK-NEXT:    { immext(#0x20080)
+# CHECK:      <extern_close@plt>:
+# CHECK-NEXT:   220270:  { immext(#0x20080)
 # CHECK-NEXT:      r14 = add(pc,##0x20090) }
 # CHECK-NEXT:    { r28 = memw(r14+#0x0) }
 # CHECK-NEXT:    { jumpr r28 }
