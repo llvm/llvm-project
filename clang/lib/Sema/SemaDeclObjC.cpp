@@ -5585,6 +5585,14 @@ Decl *SemaObjC::ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
 
   TypeSourceInfo *TInfo = SemaRef.GetTypeForDeclarator(D);
   QualType T = TInfo->getType();
+  ASTContext &Context = getASTContext();
+  if (Context.getLangOpts().PointerAuthObjcInterfaceSel &&
+      !T.getPointerAuth()) {
+    if (Context.isObjCSelType(T.getUnqualifiedType())) {
+      if (auto PAQ = Context.getObjCMemberSelTypePtrAuth())
+        T = Context.getPointerAuthType(T, PAQ);
+    }
+  }
 
   if (BitWidth) {
     // 6.7.2.1p3, 6.7.2.1p4
