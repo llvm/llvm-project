@@ -66,6 +66,14 @@ String theUrl
 Boolean hasSourceChanges = true
 Integer successStat = 0
 
+String jobName = (
+    (isPrBranch ? 'presub' : 'update') + underScore +
+        env.CHANGE_TARGET ?: (env.BRANCH_NAME ?: 'NoSuchBranchName')
+)
+if (env.CHANGE_BRANCH) {
+    jobName += underScore + env.BRANCH_NAME // Sic, the PR-<n> string.
+}
+
 Integer fullTimeoutH = 15
 
 try {
@@ -94,8 +102,8 @@ try {
                             ],
                             userRemoteConfigs: [
                                 [
-                                    credentialsId: 'mat-amd-csg-demo',
-                                    url: 'https://github.com/AMD-CSG/aocc-devops.git'
+                                    credentialsId: gitHubAppCredsId,
+                                    url: 'https://github.amd.com/AOCC/aocc-devops.git'
                                 ]
                             ]
                         )
@@ -222,13 +230,6 @@ try {
                 return this
             }
             stage ('run') {
-                String jobName = (
-                    (isPrBranch ? 'presub' : 'update') + underScore +
-                        env.CHANGE_TARGET ?: (env.BRANCH_NAME ?: 'NoSuchBranchName')
-                )
-                if (env.CHANGE_BRANCH) {
-                    jobName += underScore + env.BRANCH_NAME // Sic, the PR-<n> string.
-                }
                 try {
                     withEnv([
                         'PATH=' + linuxBasePath,
@@ -253,25 +254,25 @@ try {
                         deleteDirs: true,
                         patterns: cleanExcludes
                     )
-                    build(
-                        propagate: true,
-                        wait: true,
-                        job: 'AOCC-Workloads/TestSuites/NAGLLVM',
-                        parameters: [
-                            // Use the name of build tar as defined in the run script:
-                            string(
-                                name: 'CUT',
-                                value: (
-                                    env.BUILD_URL + 'artifact/' +
-                                        jobName + '-' + env.BUILD_NUMBER + '.tar.xz'
-                                )
-                            ),
-                            string(name: 'CHANGE_ID', value: env.CHANGE_ID)
-                        ]
-                    )
                 }
             }
         }
+        build(
+            propagate: true,
+            wait: true,
+            job: 'AOCC-Workloads/TestSuites/NAGLLVM',
+            parameters: [
+                // Use the name of build tar as defined in the run script:
+                string(
+                    name: 'CUT',
+                    value: (
+                        env.BUILD_URL + 'artifact/' +
+                            jobName + '-' + env.BUILD_NUMBER + '.tar.xz'
+                    )
+                ),
+                string(name: 'CHANGE_ID', value: env.CHANGE_ID)
+            ]
+        )
     }
 } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
     /*
