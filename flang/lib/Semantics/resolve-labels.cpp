@@ -491,9 +491,9 @@ public:
   void Post(const parser::MainProgram &mainProgram) {
     // Uppercase the name of the main program, so that its symbol name
     // would be unique from similarly named non-main-program symbols.
-    auto upperCaseCharBlock = [](const parser::CharBlock& cb) {
-      char* ch = const_cast<char*>(cb.begin());
-      char* endCh = ch + cb.size();
+    auto upperCaseCharBlock = [](const parser::CharBlock &cb) {
+      char *ch = const_cast<char *>(cb.begin());
+      char *endCh = ch + cb.size();
       while (ch != endCh) {
         *ch++ = parser::ToUpperCaseLetter(*ch);
       }
@@ -507,9 +507,8 @@ public:
     if (progName) {
       upperCaseCharBlock(*progName);
     }
-    const parser::CharBlock *
-        endName{GetStmtName(std::get<parser::Statement<parser::EndProgramStmt>>(
-            mainProgram.t))};
+    const parser::CharBlock *endName{GetStmtName(
+        std::get<parser::Statement<parser::EndProgramStmt>>(mainProgram.t))};
     if (endName) {
       upperCaseCharBlock(*endName);
       if (progName) {
