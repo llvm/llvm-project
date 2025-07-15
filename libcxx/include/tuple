@@ -220,7 +220,9 @@ template <class... Types>
 #  include <__config>
 #  include <__cstddef/size_t.h>
 #  include <__fwd/array.h>
+#  include <__fwd/complex.h>
 #  include <__fwd/pair.h>
+#  include <__fwd/subrange.h>
 #  include <__fwd/tuple.h>
 #  include <__memory/allocator_arg_t.h>
 #  include <__memory/uses_allocator.h>
@@ -341,7 +343,7 @@ concept __tuple_like_no_tuple = __tuple_like<_Tp> && !__is_tuple_v<_Tp>;
 template <class _Tp, class _Up, class _IndexSeq>
 struct __tuple_common_comparison_category_impl {};
 template <class _Tp, class _Up, size_t... _Indices>
-  requires requires {
+  requires(tuple_size_v<_Tp> == tuple_size_v<_Up>) && requires {
     typename common_comparison_category_t<
         __synth_three_way_result<tuple_element_t<_Indices, _Tp>, tuple_element_t<_Indices, _Up>>...>;
   }
