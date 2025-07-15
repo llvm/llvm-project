@@ -66,6 +66,10 @@ static cl::opt<unsigned int> MaxMemInstrCount(
         "in the dependency matrix. Higher value may lead to more interchanges "
         "at the cost of compile-time"));
 
+static cl::opt<bool> ForceLoopInterchange(
+    "loop-interchange-force", cl::init(false), cl::Hidden,
+    cl::desc("Ignore the cost model, and force interchange if it is legal"));
+
 namespace {
 
 using LoopVector = SmallVector<Loop *, 8>;
@@ -599,7 +603,8 @@ struct LoopInterchange {
     }
     LLVM_DEBUG(dbgs() << "Loops are legal to interchange\n");
     LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
-    if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
+    if (!ForceLoopInterchange &&
+        !LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
                           DependencyMatrix, CCM)) {
       LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
       return false;
