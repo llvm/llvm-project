@@ -2653,7 +2653,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
-  field bit HasMatrixFMT = 0;
   field bit HasMatrixReuse = 0;
 
   field bit HasSrc0Mods = HasModifiers;

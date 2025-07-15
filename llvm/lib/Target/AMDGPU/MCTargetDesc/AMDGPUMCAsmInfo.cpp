@@ -74,7 +74,7 @@ unsigned AMDGPUMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
   if (STI->hasFeature(AMDGPU::FeatureNSAEncoding))
     return 20;
 
-  // VOP3PX/VOP3PX2 encoding.
+  // VOP3PX encoding.
   if (STI->hasFeature(AMDGPU::FeatureGFX950Insts))
     return 16;
 
