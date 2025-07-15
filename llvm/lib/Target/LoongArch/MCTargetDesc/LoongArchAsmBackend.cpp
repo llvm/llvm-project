@@ -157,7 +157,7 @@ void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   MCContext &Ctx = getContext();
 
   // Fixup leb128 separately.
-  if (Fixup.getTargetKind() == FK_Data_leb128)
+  if (Fixup.getKind() == FK_Data_leb128)
     return fixupLeb128(Ctx, Fixup, Data, Value);
 
   // Apply any target-specific value adjustments.
