@@ -3981,7 +3981,7 @@ bool AMDGPUAsmParser::validateVOPD(const MCInst &Inst,
   bool AsVOPD3 = MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3;
 
   if (AsVOPD3) {
-    for (const auto &Operand : Operands) {
+    for (const std::unique_ptr<MCParsedAsmOperand> &Operand : Operands) {
       AMDGPUOperand &Op = (AMDGPUOperand &)*Operand;
       if ((Op.isRegKind() || Op.isImmTy(AMDGPUOperand::ImmTyNone)) &&
           (Op.getModifiers().getFPModifiersOperand() & SISrcMods::ABS))
