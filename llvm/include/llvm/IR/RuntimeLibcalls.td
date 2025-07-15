@@ -2067,6 +2067,10 @@ def isX86 : RuntimeLibcallPredicate<"TT.isX86()">;
 // Some darwins have an optimized __bzero/bzero function.
 def darwinHas__bzero : RuntimeLibcallPredicate<"TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6)">;
 
+// FIXME: This is has ldexpl/frexpl plus use f128 for long double.
+def hasFrexplLdexplF128
+  : RuntimeLibcallPredicate<[{(!TT.isOSWindows() || TT.isOSCygMing()) && !TT.isGNUEnvironment()}]>;
+
 // Use the f128 variants of math functions on x86
 defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls), isGNUEnvironment>;
 
@@ -2080,6 +2084,7 @@ defvar X86CommonLibcalls =
        LibcallImpls<(add __bzero), darwinHas__bzero>,
        LibmHasFrexpF32, LibmHasLdexpF32,
        LibmHasFrexpF80, LibmHasLdexpF80,
+       LibcallImpls<(add frexp_f128, ldexp_f128), hasFrexplLdexplF128>,
        DefaultRuntimeLibcallImpls_f80,
        // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
        // hack for one test relying on it.
