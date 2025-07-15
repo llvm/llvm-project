@@ -1233,3 +1233,34 @@ void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
 }
+
+void ExprEngine::VisitCXXParenListInitExpr(const CXXParenListInitExpr *E,
+                                           ExplodedNode *Pred,
+                                           ExplodedNodeSet &Dst) {
+  StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+
+  ProgramStateRef S = Pred->getState();
+  QualType T = getContext().getCanonicalType(E->getType());
+
+  const LocationContext *LCtx = Pred->getLocationContext();
+
+  SmallVector<SVal, 4> ArgVals;
+  for (Expr *Arg : E->getInitExprs())
+    ArgVals.push_back(S->getSVal(Arg, LCtx));
+
+  if (!E->isGLValue() && (T->isRecordType() || T->isArrayType())) {
+    llvm::ImmutableList<SVal> ArgList = getBasicVals().getEmptySValList();
+
+    for (const SVal &V : llvm::reverse(ArgVals))
+      ArgList = getBasicVals().prependSVal(V, ArgList);
+
+    Bldr.generateNode(
+        E, Pred, S->BindExpr(E, LCtx, svalBuilder.makeCompoundVal(T, ArgList)));
+  } else {
+    Bldr.generateNode(E, Pred,
+                      S->BindExpr(E, LCtx,
+                                  ArgVals.empty()
+                                      ? getSValBuilder().makeZeroVal(T)
+                                      : ArgVals.front()));
+  }
+}

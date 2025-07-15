@@ -1941,7 +1941,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::ConceptSpecializationExprClass:
     case Stmt::CXXRewrittenBinaryOperatorClass:
     case Stmt::RequiresExprClass:
-    case Expr::CXXParenListInitExprClass:
     case Stmt::EmbedExprClass:
       // Fall through.
 
@@ -2318,6 +2317,12 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::InitListExprClass:
       Bldr.takeNodes(Pred);
       VisitInitListExpr(cast<InitListExpr>(S), Pred, Dst);
+      Bldr.addNodes(Dst);
+      break;
+
+    case Expr::CXXParenListInitExprClass:
+      Bldr.takeNodes(Pred);
+      VisitCXXParenListInitExpr(cast<CXXParenListInitExpr>(S), Pred, Dst);
       Bldr.addNodes(Dst);
       break;
 
