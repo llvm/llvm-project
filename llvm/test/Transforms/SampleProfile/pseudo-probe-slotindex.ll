@@ -1,4 +1,4 @@
-; REQUIRES: x86_64-linux
+; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
 ; RUN: llc -print-after=slotindexes -stop-after=slotindexes -mtriple=x86_64-- %s -filetype=asm -o %t 2>&1 | FileCheck %s
 
 define void @foo(ptr %p) {
