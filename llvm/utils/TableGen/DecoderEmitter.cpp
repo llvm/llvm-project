@@ -2244,8 +2244,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
   return Bits.getNumBits();
 }
 
-// emitFieldFromInstruction - Emit the templated helper function
-// fieldFromInstruction().
+// Emit the templated helper function fieldFromInstruction().
 //
 // On Windows we make sure that this function is not inlined when using the VS
 // compiler. It has a bug which causes the function to be optimized out in some
@@ -2298,10 +2297,10 @@ fieldFromInstruction(const IntType &Insn, unsigned StartBit, unsigned Size) {
     OS << R"(
 template <size_t N>
 uint64_t fieldFromInstruction(const std::bitset<N>& Insn, unsigned StartBit,
-                              unsigned Size) {
-  assert(StartBit + Size <= N && "Instruction field out of bounds!");
-  assert(Size <= 64 && "Cannot support >64-bit extractions!");
-  const std::bitset<N> Mask(maskTrailingOnes<uint64_t>(Size));
+                              unsigned NumBits) {
+  assert(StartBit + NumBits <= N && "Instruction field out of bounds!");
+  assert(NumBits <= 64 && "Cannot support >64-bit extractions!");
+  const std::bitset<N> Mask(maskTrailingOnes<uint64_t>(NumBits));
   return ((Insn >> StartBit) & Mask).to_ullong();
 }
 )";
@@ -2310,8 +2309,8 @@ uint64_t fieldFromInstruction(const std::bitset<N>& Insn, unsigned StartBit,
   if (GenerateAPIntType) {
     OS << R"(
 static uint64_t fieldFromInstruction(const APInt &Insn, unsigned StartBit,
-                     unsigned Size) {
-  return Insn.extractBitsAsZExtValue(Size, StartBit);
+                     unsigned NumBits) {
+  return Insn.extractBitsAsZExtValue(NumBits, StartBit);
 }
 )";
   }
@@ -2321,40 +2320,40 @@ static uint64_t fieldFromInstruction(const APInt &Insn, unsigned StartBit,
 // Helper functions for extracting fields from encoded instructions.
 // InsnType must either be integral or an APInt-like object that must:
 // * be default-constructible and copy-constructible
-// * Support extractBitsAsZExtValue(Size, StartBit)
+// * Support extractBitsAsZExtValue(NumBits, StartBit)
 // * Support the ~, &, ==, and != operators with other objects of the same type
 // * Support the != and bitwise & with uint64_t
 
 template <typename InsnType>
 static std::enable_if_t<!std::is_integral_v<InsnType>, uint64_t>
 fieldFromInstruction(const InsnType &Insn, unsigned StartBit,
-                     unsigned Size) {
-  return Insn.extractBitsAsZExtValue(Size, StartBit);
+                     unsigned NumBits) {
+  return Insn.extractBitsAsZExtValue(NumBits, StartBit);
 }
 )";
   }
 }
 
-// emitInsertBits - Emit the helper function insertBits().
+// Emit the helper function insertBits().
 static void emitInsertBits(formatted_raw_ostream &OS) {
   OS << R"(
 // Helper function for inserting bits extracted from an encoded instruction into
 // an integer-typed field.
 template <typename IntType>
 static std::enable_if_t<std::is_integral_v<IntType>, void>
-insertBits(IntType &field, IntType bits, unsigned startBit, unsigned numBits) {
+insertBits(IntType &Field, IntType Bits, unsigned StartBit, unsigned NumBits) {
   // Check that no bit beyond numBits is set, so that a simple bitwise |
   // is sufficient.
-  assert((~(((IntType)1 << numBits) - 1) & bits) == 0 &&
-           "bits has more than numBits bits set");
-  assert(startBit + numBits <= sizeof(IntType) * 8);
+  assert((~(((IntType)1 << NumBits) - 1) & Bits) == 0 &&
+           "Bits has more than NumBits bits set");
+  assert(StartBit + NumBits <= sizeof(IntType) * 8);
   (void)numBits;
-  field |= bits << startBit;
+  Field |= Bits << StartBit;
 }
 )";
 }
 
-// emitDecodeInstruction - Emit the entry function function decodeInstruction().
+// Emit the entry function function decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
                                   unsigned OpcodeMask, const CPPType &Type,
                                   StringRef Suffix) {
@@ -2790,7 +2789,7 @@ namespace {
     }
   }
 
-  const bool GenerateTemplated =
+  bool GenerateTemplated =
       Target.getInstructionSet()->getValueAsBit("GenerateTemplatedDecoder");
 
   // For variable instruction, we emit a instruction length table to let the
