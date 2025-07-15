@@ -17,6 +17,7 @@
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
+#include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -33,14 +34,6 @@
 
 using namespace llvm;
 using namespace llvm::dxil;
-
-static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
-                                                 unsigned int OpId) {
-  if (auto *CI =
-          mdconst::dyn_extract<ConstantInt>(Node->getOperand(OpId).get()))
-    return CI->getZExtValue();
-  return std::nullopt;
-}
 
 static bool reportError(LLVMContext *Ctx, Twine Message,
                         DiagnosticSeverity Severity = DS_Error) {
@@ -111,13 +104,25 @@ analyzeModule(Module &M) {
       reportError(Ctx, "Root Element is not a metadata node.");
       continue;
     }
-    mcdxbc::RootSignatureDesc RSD;
-    if (std::optional<uint32_t> Version = extractMdIntValue(RSDefNode, 2))
-      RSD.Version = *Version;
+    uint32_t Version = 1;
+    if (std::optional<uint32_t> V =
+            llvm::hlsl::rootsig::extractMdIntValue(RSDefNode, 2))
+      Version = *V;
     else {
       reportError(Ctx, "Invalid RSDefNode value, expected constant int");
       continue;
     }
+
+    llvm::hlsl::rootsig::MetadataParser MDParser(RootElementListNode);
+    llvm::Expected<mcdxbc::RootSignatureDesc> RSDOrErr =
+        MDParser.ParseRootSignature(Version);
+
+    if (auto Err = RSDOrErr.takeError()) {
+      reportError(Ctx, toString(std::move(Err)));
+      continue;
+    }
+
+    auto &RSD = *RSDOrErr;
 
     // Clang emits the root signature data in dxcontainer following a specific
     // sequence. First the header, then the root parameters. So the header
@@ -126,12 +131,6 @@ analyzeModule(Module &M) {
 
     // static sampler offset is calculated when writting dxcontainer.
     RSD.StaticSamplersOffset = 0u;
-
-    hlsl::rootsig::MetadataParser MDParser(RootElementListNode);
-
-    if (MDParser.ParseRootSignature(Ctx, RSD)) {
-      return RSDMap;
-    }
 
     RSDMap.insert(std::make_pair(F, RSD));
   }
