@@ -81,17 +81,28 @@ MetadataPredicate createIdentityMDPredicate(const Function &F,
     return [](const Metadata *MD) { return false; };
 
   DISubprogram *SPClonedWithinModule = F.getSubprogram();
+
+  // Don't clone inlined subprograms.
+  auto ShouldKeep = [SPClonedWithinModule](const DISubprogram *SP) -> bool {
+    return SP != SPClonedWithinModule;
+  };
+
   return [=](const Metadata *MD) {
     // Avoid cloning types, compile units, and (other) subprograms.
     if (isa<DICompileUnit>(MD) || isa<DIType>(MD))
       return true;
 
     if (auto *SP = dyn_cast<DISubprogram>(MD))
-      return SP != SPClonedWithinModule;
+      return ShouldKeep(SP);
 
     // If a subprogram isn't going to be cloned skip its lexical blocks as well.
     if (auto *LScope = dyn_cast<DILocalScope>(MD))
-      return LScope->getSubprogram() != SPClonedWithinModule;
+      return ShouldKeep(LScope->getSubprogram());
+
+    // Avoid cloning local variables of subprograms that won't be cloned.
+    if (auto *DV = dyn_cast<DILocalVariable>(MD))
+      if (auto *S = dyn_cast_or_null<DILocalScope>(DV->getScope()))
+        return ShouldKeep(S->getSubprogram());
 
     return false;
   };
@@ -103,7 +114,6 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   const Twine &NameSuffix, Function *F,
                                   ClonedCodeInfo *CodeInfo, bool MapAtoms) {
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
-  NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
 
@@ -275,7 +285,6 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                              const char *NameSuffix, ClonedCodeInfo *CodeInfo,
                              ValueMapTypeRemapper *TypeMapper,
                              ValueMaterializer *Materializer) {
-  NewFunc->setIsNewDbgInfoFormat(OldFunc->IsNewDbgInfoFormat);
   assert(NameSuffix && "NameSuffix cannot be null!");
 
 #ifndef NDEBUG
@@ -380,7 +389,6 @@ Function *llvm::CloneFunction(Function *F, ValueToValueMapTy &VMap,
   // Create the new function...
   Function *NewF = Function::Create(FTy, F->getLinkage(), F->getAddressSpace(),
                                     F->getName(), F->getParent());
-  NewF->setIsNewDbgInfoFormat(F->IsNewDbgInfoFormat);
 
   // Loop over the arguments, copying the names of the mapped arguments over...
   Function::arg_iterator DestI = NewF->arg_begin();
@@ -514,7 +522,6 @@ void PruningFunctionCloner::CloneBlock(
   BasicBlock *NewBB;
   Twine NewName(BB->hasName() ? Twine(BB->getName()) + NameSuffix : "");
   BBEntry = NewBB = BasicBlock::Create(BB->getContext(), NewName, NewFunc);
-  NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
 
   // It is only legal to clone a function if a block address within that
   // function is never referenced outside of the function.  Given that, we
@@ -537,10 +544,7 @@ void PruningFunctionCloner::CloneBlock(
   // Keep a cursor pointing at the last place we cloned debug-info records from.
   BasicBlock::const_iterator DbgCursor = StartingInst;
   auto CloneDbgRecordsToHere =
-      [NewBB, &DbgCursor](Instruction *NewInst, BasicBlock::const_iterator II) {
-        if (!NewBB->IsNewDbgInfoFormat)
-          return;
-
+      [&DbgCursor](Instruction *NewInst, BasicBlock::const_iterator II) {
         // Clone debug-info records onto this instruction. Iterate through any
         // source-instructions we've cloned and then subsequently optimised
         // away, so that their debug-info doesn't go missing.

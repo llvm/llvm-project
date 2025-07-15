@@ -290,8 +290,11 @@ static void getPipelineStages(
   });
   options.inclusive = true;
   for (Operation &op : forOp.getBody()->getOperations()) {
-    if (stage0Ops.contains(&op))
-      getBackwardSlice(&op, &dependencies, options);
+    if (stage0Ops.contains(&op)) {
+      LogicalResult result = getBackwardSlice(&op, &dependencies, options);
+      assert(result.succeeded() && "expected a backward slice");
+      (void)result;
+    }
   }
 
   for (Operation &op : forOp.getBody()->getOperations()) {
@@ -685,7 +688,7 @@ Value MmaSyncBuilder::buildMmaSyncMemRefLoadOperand(
 
   Type elementType = getElementTypeOrSelf(memref.getType());
   auto vt = VectorType::get(vectorShape, elementType);
-  Value res = b.create<vector::SplatOp>(loc, vt, loads[0]);
+  Value res = b.create<vector::BroadcastOp>(loc, vt, loads[0]);
   foreachIndividualVectorElement(
       res,
       /*applyFn=*/

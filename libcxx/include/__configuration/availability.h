@@ -116,9 +116,6 @@
 #  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_PUSH /* nothing */
 #  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_POP  /* nothing */
 
-#  define _LIBCPP_INTRODUCED_IN_LLVM_4 1
-#  define _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE /* nothing */
-
 #elif defined(__APPLE__)
 
 // clang-format off
@@ -258,14 +255,6 @@
     _Pragma("clang attribute pop") \
     _Pragma("clang attribute pop")
 
-// LLVM 4
-#  if defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 50000
-#    define _LIBCPP_INTRODUCED_IN_LLVM_4 0
-#  else
-#    define _LIBCPP_INTRODUCED_IN_LLVM_4 1
-#  endif
-#  define _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE __attribute__((availability(watchos, strict, introduced = 5.0)))
-
 // clang-format on
 
 #else
@@ -276,23 +265,6 @@
       "It looks like you're trying to enable vendor availability markup, but you haven't defined the corresponding macros yet!"
 
 #endif
-
-// These macros control the availability of std::bad_optional_access and
-// other exception types. These were put in the shared library to prevent
-// code bloat from every user program defining the vtable for these exception
-// types.
-//
-// Note that when exceptions are disabled, the methods that normally throw
-// these exceptions can be used even on older deployment targets, but those
-// methods will abort instead of throwing.
-#define _LIBCPP_AVAILABILITY_HAS_BAD_OPTIONAL_ACCESS _LIBCPP_INTRODUCED_IN_LLVM_4
-#define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE
-
-#define _LIBCPP_AVAILABILITY_HAS_BAD_VARIANT_ACCESS _LIBCPP_INTRODUCED_IN_LLVM_4
-#define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE
-
-#define _LIBCPP_AVAILABILITY_HAS_BAD_ANY_CAST _LIBCPP_INTRODUCED_IN_LLVM_4
-#define _LIBCPP_AVAILABILITY_BAD_ANY_CAST _LIBCPP_INTRODUCED_IN_LLVM_4_ATTRIBUTE
 
 // These macros control the availability of all parts of <filesystem> that
 // depend on something in the dylib.
@@ -331,6 +303,11 @@
 // to use it when the mechanism isn't overriden at compile-time.
 #define _LIBCPP_AVAILABILITY_HAS_VERBOSE_ABORT _LIBCPP_INTRODUCED_IN_LLVM_15
 #define _LIBCPP_AVAILABILITY_VERBOSE_ABORT _LIBCPP_INTRODUCED_IN_LLVM_15_ATTRIBUTE
+
+// This controls whether the library provides a function to log errors without terminating the program (used in
+// particular by the `observe` assertion semantic).
+#define _LIBCPP_AVAILABILITY_HAS_LOG_HARDENING_FAILURE _LIBCPP_INTRODUCED_IN_LLVM_21
+#define _LIBCPP_AVAILABILITY_LOG_HARDENING_FAILURE _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE
 
 // This controls the availability of the C++17 std::pmr library,
 // which is implemented in large part in the built library.
@@ -382,19 +359,6 @@
 // See https://wg21.link/LWG2233. This requires `std::bad_function_call::what()` to be available in the dylib.
 #define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had bad_function_call::what() in the headers before
-
-// Define availability attributes that depend on _LIBCPP_HAS_EXCEPTIONS.
-// Those are defined in terms of the availability attributes above, and
-// should not be vendor-specific.
-#if !_LIBCPP_HAS_EXCEPTIONS
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
-#else
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST _LIBCPP_AVAILABILITY_BAD_ANY_CAST
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
-#  define _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
-#endif
 
 // Define availability attributes that depend on both
 // _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.

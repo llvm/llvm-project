@@ -17,6 +17,7 @@
 #include "CGOpenCLRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
@@ -126,7 +127,7 @@ static std::string getBlockDescriptorName(const CGBlockInfo &BlockInfo,
         CGM.getContext().getObjCEncodingForBlock(BlockInfo.getBlockExpr());
     /// Replace occurrences of '@' with '\1'. '@' is reserved on ELF platforms
     /// as a separator between symbol name and symbol version.
-    std::replace(TypeAtEncoding.begin(), TypeAtEncoding.end(), '@', '\1');
+    llvm::replace(TypeAtEncoding, '@', '\1');
   }
   Name += "e" + llvm::to_string(TypeAtEncoding.size()) + "_" + TypeAtEncoding;
   Name += "l" + CGM.getObjCRuntime().getRCBlockLayoutStr(CGM, BlockInfo);
@@ -852,9 +853,24 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
       offset += size;
       index++;
     };
+    auto addSignedHeaderField =
+        [&](llvm::Value *Value, const PointerAuthSchema &Schema,
+            GlobalDecl Decl, QualType Type, CharUnits Size, const Twine &Name) {
+          auto StorageAddress = projectField(index, Name);
+          if (Schema) {
+            auto AuthInfo = EmitPointerAuthInfo(
+                Schema, StorageAddress.emitRawPointer(*this), Decl, Type);
+            Value = EmitPointerAuthSign(AuthInfo, Value);
+          }
+          Builder.CreateStore(Value, StorageAddress);
+          offset += Size;
+          index++;
+        };
 
     if (!IsOpenCL) {
-      addHeaderField(isa, getPointerSize(), "block.isa");
+      addSignedHeaderField(
+          isa, CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers, GlobalDecl(),
+          QualType(), getPointerSize(), "block.isa");
       addHeaderField(llvm::ConstantInt::get(IntTy, flags.getBitMask()),
                      getIntSize(), "block.flags");
       addHeaderField(llvm::ConstantInt::get(IntTy, 0), getIntSize(),
@@ -1284,7 +1300,9 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
     if (IsWindows)
       fields.addNullPointer(CGM.Int8PtrPtrTy);
     else
-      fields.add(CGM.getNSConcreteGlobalBlock());
+      fields.addSignedPointer(CGM.getNSConcreteGlobalBlock(),
+                              CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                              GlobalDecl(), QualType());
 
     // __flags
     BlockFlags flags = BLOCK_IS_GLOBAL;
@@ -1414,10 +1432,10 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   // Arrange for local static and local extern declarations to appear
   // to be local to this function as well, in case they're directly
   // referenced in a block.
-  for (DeclMapTy::const_iterator i = ldm.begin(), e = ldm.end(); i != e; ++i) {
-    const auto *var = dyn_cast<VarDecl>(i->first);
+  for (const auto &KV : ldm) {
+    const auto *var = dyn_cast<VarDecl>(KV.first);
     if (var && !var->hasLocalStorage())
-      setAddrOfLocalVar(var, i->second);
+      setAddrOfLocalVar(var, KV.second);
   }
 
   // Begin building the function declaration.
@@ -1522,7 +1540,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   if (IsLambdaConversionToBlock)
     EmitLambdaBlockInvokeBody();
   else {
-    PGO.assignRegionCounters(GlobalDecl(blockDecl), fn);
+    PGO->assignRegionCounters(GlobalDecl(blockDecl), fn);
     incrementProfileCounter(blockDecl->getBody());
     EmitStmt(blockDecl->getBody());
   }

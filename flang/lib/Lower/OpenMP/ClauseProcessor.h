@@ -13,12 +13,11 @@
 #define FORTRAN_LOWER_CLAUSEPROCESSOR_H
 
 #include "ClauseFinder.h"
-#include "Clauses.h"
-#include "ReductionProcessor.h"
 #include "Utils.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/DirectivesCommon.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree.h"
@@ -31,6 +30,10 @@ class FirOpBuilder;
 namespace Fortran {
 namespace lower {
 namespace omp {
+
+// Container type for tracking user specified Defaultmaps for a target region
+using DefaultMapsTy = std::map<clause::Defaultmap::VariableCategory,
+                               clause::Defaultmap::ImplicitBehavior>;
 
 /// Class that handles the processing of OpenMP clauses.
 ///
@@ -110,6 +113,8 @@ public:
   bool processCopyin() const;
   bool processCopyprivate(mlir::Location currentLocation,
                           mlir::omp::CopyprivateClauseOps &result) const;
+  bool processDefaultMap(lower::StatementContext &stmtCtx,
+                         DefaultMapsTy &result) const;
   bool processDepend(lower::SymMap &symMap, lower::StatementContext &stmtCtx,
                      mlir::omp::DependClauseOps &result) const;
   bool
@@ -122,6 +127,7 @@ public:
   bool processIsDevicePtr(
       mlir::omp::IsDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
+  bool processLinear(mlir::omp::LinearClauseOps &result) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
 
@@ -132,6 +138,7 @@ public:
   bool processMap(mlir::Location currentLocation,
                   lower::StatementContext &stmtCtx,
                   mlir::omp::MapClauseOps &result,
+                  llvm::omp::Directive directive = llvm::omp::OMPD_unknown,
                   llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms =
                       nullptr) const;
   bool processMotionClauses(lower::StatementContext &stmtCtx,

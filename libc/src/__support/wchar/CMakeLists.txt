@@ -1,0 +1,70 @@
+add_header_library(
+  mbstate
+  HDRS
+    mbstate.h
+  DEPENDS
+    libc.hdr.types.char32_t    
+)
+
+add_header_library(
+  string_converter
+  HDRS
+    string_converter.h
+  DEPENDS
+    libc.hdr.types.char8_t
+    libc.hdr.types.char32_t
+    libc.hdr.types.size_t
+    libc.src.__support.error_or
+    .mbstate
+    .character_converter 
+)
+
+add_object_library(
+  character_converter
+  HDRS
+    character_converter.h
+  SRCS 
+    character_converter.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.char8_t
+    libc.hdr.types.char32_t
+    libc.hdr.types.size_t
+    libc.src.__support.error_or
+    libc.src.__support.math_extras
+    .mbstate
+)
+
+add_object_library(
+  wcrtomb
+  HDRS
+    wcrtomb.h
+  SRCS 
+    wcrtomb.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.char32_t
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.error_or
+    libc.src.__support.common
+    .character_converter
+    .mbstate
+)
+
+add_object_library(
+  mbrtowc
+  HDRS
+    mbrtowc.h
+  SRCS
+    mbrtowc.cpp
+  DEPENDS
+  libc.hdr.errno_macros
+  libc.hdr.types.wchar_t
+  libc.hdr.types.size_t
+  libc.src.__support.common
+  libc.src.__support.error_or
+  libc.src.__support.macros.config
+  .character_converter
+  .mbstate
+)

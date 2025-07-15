@@ -601,6 +601,7 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   let constructor = "mlir::createLowerGpuOpsToROCDLOpsPass()";
   let dependentDialects = [
     "ROCDL::ROCDLDialect",
+    "amdgpu::AMDGPUDialect",
     "cf::ControlFlowDialect",
     "memref::MemRefDialect",
   ];
@@ -904,6 +905,8 @@ def ConvertMeshToMPIPass : Pass<"convert-mesh-to-mpi"> {
     shard/partition sizes depend on the rank.
   }];
   let dependentDialects = [
+    "affine::AffineDialect",
+    "arith::ArithDialect",
     "memref::MemRefDialect",
     "mpi::MPIDialect",
     "scf::SCFDialect",
@@ -1415,7 +1418,7 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "bool", /*default=*/"false",
            "Use the preferred alignment of a vector type in load/store "
            "operations instead of the alignment of the element type of the "
-           "memref. This flag is intended for use with hardware which requires" 
+           "memref. This flag is intended for use with hardware which requires"
            "vector alignment, or in application contexts where it is known all "
            "vector access are naturally aligned. ">,
     Option<"amx", "enable-amx",
@@ -1430,6 +1433,10 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "bool", /*default=*/"false",
            "Enables the use of ArmSVE dialect while lowering the vector "
        "dialect.">,
+    Option<"armI8MM", "enable-arm-i8mm",
+           "bool", /*default=*/"false",
+           "Enables the use of Arm FEAT_I8MM instructions while lowering "
+           "the vector dialect.">,
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
@@ -1486,6 +1493,15 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
     "memref::MemRefDialect", "arith::ArithDialect",
     "vector::VectorDialect", "xegpu::XeGPUDialect"
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// XeVMToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertXeVMToLLVMPass : Pass<"convert-xevm-to-llvm"> {
+  let summary = "Convert XeVM to LLVM dialect";
+  let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
 #endif // MLIR_CONVERSION_PASSES

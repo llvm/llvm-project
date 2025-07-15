@@ -25,4 +25,4 @@ end subroutine
 ! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.box<!fir.heap<f32>>) -> !fir.box<!fir.heap<!fir.array<*:f32>>>
 ! CHECK:           fir.store %[[VAL_3]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFtest_main_entryEx"} : (!fir.box<!fir.heap<!fir.array<*:f32>>>) -> (!fir.box<!fir.heap<!fir.array<*:f32>>>, !fir.box<!fir.heap<!fir.array<*:f32>>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFtest_main_entryEx"} : (!fir.box<!fir.heap<!fir.array<*:f32>>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)

@@ -12714,6 +12714,13 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyGoogleFormat("SomeType* absl_nullable s{InitValue};");
   verifyGoogleFormat("SomeType* absl_nullability_unknown s(InitValue);");
   verifyGoogleFormat("SomeType* absl_nullability_unknown s{InitValue};");
+
+  auto Style = getLLVMStyleWithColumns(60);
+  Style.AttributeMacros.push_back("my_fancy_attr");
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("void foo(const MyLongTypeNameeeeeeeeeeeee* my_fancy_attr\n"
+               "             testttttttttt);",
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
@@ -15084,6 +15091,13 @@ TEST_F(FormatTest, PullInlineFunctionDefinitionsIntoSingleLine) {
                "  int foo() { bar(); }\n"
                "#endif\n"
                "};",
+               MergeInlineOnly);
+
+  MergeInlineOnly.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  verifyFormat("#define Foo                \\\n"
+               "  struct S {               \\\n"
+               "    void foo() { return; } \\\n"
+               "  }",
                MergeInlineOnly);
 
   // Also verify behavior when BraceWrapping.AfterFunction = true
@@ -25754,6 +25768,21 @@ TEST_F(FormatTest, OperatorPassedAsAFunctionPtr) {
   verifyFormat("foo(operator, , -42);", Style);
 }
 
+TEST_F(FormatTest, LineSpliceWithTrailingWhitespace) {
+  auto Style = getLLVMStyle();
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  Style.UseTab = FormatStyle::UT_Never;
+
+  verifyFormat("int i;", "  \\  \n"
+                         "  int i;");
+  verifyFormat("#define FOO(args) \\\n"
+               "  struct a {};",
+               "#define FOO( args )   \\   \n"
+               "struct a{\\\t\t\t\n"
+               "  };",
+               Style);
+}
+
 TEST_F(FormatTest, WhitespaceSensitiveMacros) {
   FormatStyle Style = getLLVMStyle();
   Style.WhitespaceSensitiveMacros.push_back("FOO");
@@ -27926,13 +27955,6 @@ TEST_F(FormatTest, AlignArrayOfStructuresLeftAlignmentNonSquare) {
   verifyFormat("void foo() {\n"
                "  auto thing = test{\n"
                "      {\n"
-               "       {13}, {something}, // A\n"
-               "      }\n"
-               "  };\n"
-               "}",
-               "void foo() {\n"
-               "  auto thing = test{\n"
-               "      {\n"
                "       {13},\n"
                "       {something}, // A\n"
                "      }\n"
@@ -27988,13 +28010,6 @@ TEST_F(FormatTest, AlignArrayOfStructuresRightAlignmentNonSquare) {
                "};",
                Style);
   verifyFormat("void foo() {\n"
-               "  auto thing = test{\n"
-               "      {\n"
-               "       {13}, {something}, // A\n"
-               "      }\n"
-               "  };\n"
-               "}",
-               "void foo() {\n"
                "  auto thing = test{\n"
                "      {\n"
                "       {13},\n"
@@ -28463,6 +28478,10 @@ TEST_F(FormatTest, RemoveParentheses) {
                Style);
   verifyFormat("MOCK_METHOD(void, Function, (), override);",
                "MOCK_METHOD(void, Function, (), (override));", Style);
+
+  Style.MacrosSkippedByRemoveParentheses.push_back("FOO");
+  verifyFormat("FOO((a && b));", Style);
+  verifyFormat("FOO((int), func, ((std::map<int, int>)), (override));", Style);
 
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
   verifyFormat("#define Return0 return (0);", Style);

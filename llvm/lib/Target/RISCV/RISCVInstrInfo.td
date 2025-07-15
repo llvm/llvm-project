@@ -321,7 +321,7 @@ def uimm6 : RISCVUImmLeafOp<6>;
 def uimm7_opcode : RISCVUImmOp<7> {
   let ParserMatchClass = InsnDirectiveOpcode;
 }
-def uimm7 : RISCVUImmOp<7>;
+def uimm7 : RISCVUImmLeafOp<7>;
 def uimm8 : RISCVUImmOp<8>;
 def uimm16 : RISCVUImmOp<16>;
 def uimm32 : RISCVUImmOp<32>;
@@ -341,20 +341,32 @@ def simm12 : RISCVSImmLeafOp<12> {
 def simm12_no6 : ImmLeaf<XLenVT, [{
   return isInt<12>(Imm) && !isInt<6>(Imm) && isInt<12>(-Imm);}]>;
 
-// A 13-bit signed immediate where the least significant bit is zero.
-def bare_simm13_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
-  let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsrN<1>";
-  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
+class BareSImm13Lsb0MaybeSym : Operand<OtherVT> {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isShiftedInt<12, 1>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+}
+
+// A 13-bit signed immediate where the least significant bit is zero. The ImmLeaf
+// is needed so that the CompressInstEmitter can correctly add checks for the
+// compress patterns that involve instructions that use this operand. Similar to
+// bare_simm9_lsb0 in RISCVInstrInfoC.td.
+def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
+                       ImmLeaf<XLenVT, [{return isShiftedInt<12, 1>(Imm);}]> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
+  let PrintMethod = "printBranchOperand";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
   let OperandType = "OPERAND_PCREL";
 }
+
+// We need this (sort of) duplicate definition since adding ImmLeaf to
+// bare_simm13_lsb0 above makes it not sit well with codegen patterns where it
+// is used to match with a basic block (eg. BccPat<>).
+def bare_simm13_lsb0_bb : BareSImm13Lsb0MaybeSym;
 
 class UImm20OperandMaybeSym : RISCVUImmOp<20> {
   let MCOperandPredicate = [{
@@ -379,7 +391,8 @@ def Simm21Lsb0JALAsmOperand : BareSImmNLsb0AsmOperand<21> {
 }
 
 // A 21-bit signed immediate where the least significant bit is zero.
-def simm21_lsb0_jal : Operand<OtherVT> {
+def simm21_lsb0_jal : Operand<OtherVT>,
+                      ImmLeaf<XLenVT, [{return isShiftedInt<20, 1>(Imm);}]>  {
   let ParserMatchClass = Simm21Lsb0JALAsmOperand;
   let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsrN<1>";
@@ -488,6 +501,12 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 
 // Addressing modes.
 def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
+
+class AddrRegRegScale<int N>
+    : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<"#N#">">;
+class AddrRegZextRegScale<int N>
+    : ComplexPattern<i64, 3, "SelectAddrRegZextRegScale<"#N#", 32>",
+                     [], [], 10>;
 
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
@@ -1431,18 +1450,18 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.
-def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
-  if (N->getFlags().hasDisjoint())
-    return true;
-  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-  return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+def riscv_or_disjoint : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
+  return orDisjoint(N);
 }]>;
-def : PatGprSimm12<or_is_add, ADDI>;
+def : PatGprSimm12<riscv_or_disjoint, ADDI>;
 
 def add_like : PatFrags<(ops node:$lhs, node:$rhs),
-                        [(or_is_add node:$lhs, node:$rhs),
+                        [(riscv_or_disjoint node:$lhs, node:$rhs),
                          (add  node:$lhs, node:$rhs)]>;
+
+def riscv_xor_like : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(riscv_or_disjoint node:$lhs, node:$rhs),
+                               (xor  node:$lhs, node:$rhs)]>;
 
 // negate of low bit can be done via two (compressible) shifts.  The negate
 // is never compressible since rs1 and rd can't be the same register.
@@ -1518,17 +1537,18 @@ def GIAddrRegImm :
 
 /// Stack probing
 
-let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
+    Defs = [X2], Uses = [X2] in {
 // Probed stack allocation of a constant size, used in function prologues when
 // stack-clash protection is enabled.
-def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
+def PROBED_STACKALLOC : Pseudo<(outs),
                                (ins GPR:$target),
                                []>,
                                Sched<[]>;
-def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
-                               (ins GPR:$target),
-                               []>,
-                               Sched<[]>;
+def PROBED_STACKALLOC_RVV : Pseudo<(outs),
+                                   (ins GPR:$target),
+                                   []>,
+                                   Sched<[]>;
 let usesCustomInserter = 1 in
 def PROBED_STACKALLOC_DYN : Pseudo<(outs),
                                (ins GPR:$target),
@@ -1599,6 +1619,10 @@ def riscv_seteq : ComplexPattern<XLenVT, 1, "selectSETEQ", [setcc]>;
 def : Pat<(riscv_seteq (XLenVT GPR:$rs1)), (SLTIU GPR:$rs1, 1)>;
 def : Pat<(riscv_setne (XLenVT GPR:$rs1)), (SLTU (XLenVT X0), GPR:$rs1)>;
 def : Pat<(XLenVT (setne (XLenVT GPR:$rs1), -1)), (SLTIU GPR:$rs1, -1)>;
+def : Pat<(XLenVT (seteq (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)), 0)),
+          (SLTIU (XLenVT (SLLI GPR:$rs, (XLenSubTrailingOnes imm:$mask))), 1)>;
+def : Pat<(XLenVT (setne (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)), 0)),
+          (SLTU (XLenVT X0), (XLenVT (SLLI GPR:$rs, (XLenSubTrailingOnes imm:$mask))))>;
 
 def IntCCtoRISCVCC : SDNodeXForm<riscv_selectcc, [{
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -1645,15 +1669,23 @@ let Predicates = [HasStdExtC, OptForMinSize] in {
   def : SelectCompressOpt<SETNE>;
 }
 
+multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
+  let usesCustomInserter = 1 in
+  def Select_# valty #_Using_ # NAME
+      : Pseudo<(outs valty:$dst),
+               (ins valty:$lhs, imm:$imm, cond_code:$cc,
+                valty:$truev, valty:$falsev), []>;
+}
+
 /// Branches and jumps
 
 // Match `riscv_brcc` and lower to the appropriate RISC-V branch instruction.
 multiclass BccPat<CondCode Cond, RVInstB Inst> {
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), GPR:$rs2, Cond, bb:$imm12),
-            (Inst GPR:$rs1, GPR:$rs2, bare_simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, GPR:$rs2, bare_simm13_lsb0_bb:$imm12)>;
   // Explicitly select 0 to X0. The register coalescer doesn't always do it.
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), 0, Cond, bb:$imm12),
-            (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0_bb:$imm12)>;
 }
 
 class BrccCompressOpt<CondCode Cond, RVInstB Inst>
@@ -1668,7 +1700,7 @@ defm : BccPat<SETGE, BGE>;
 defm : BccPat<SETULT, BLTU>;
 defm : BccPat<SETUGE, BGEU>;
 
-let Predicates = [HasStdExtCOrZca, OptForMinSize] in {
+let Predicates = [HasStdExtZca, OptForMinSize] in {
   def : BrccCompressOpt<SETEQ, BEQ>;
   def : BrccCompressOpt<SETNE, BNE>;
 }
@@ -2019,6 +2051,13 @@ let hasSideEffects = true in {
 def ReadFFLAGS : ReadSysReg<SysRegFFLAGS, [FFLAGS]>;
 def WriteFFLAGS : WriteSysReg<SysRegFFLAGS, [FFLAGS]>;
 }
+
+let hasPostISelHook = 1 in {
+def ReadFCSR : ReadSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def WriteFCSR : WriteSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def WriteFCSRImm : WriteSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
+}
+
 /// Other pseudo-instructions
 
 // Pessimistically assume the stack pointer will be clobbered
@@ -2125,7 +2164,7 @@ def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
 // Select 'or' as ADDIW if the immediate bits are known to be 0 in $rs1 and
 // $rs1 is sign extended. This can improve compressibility. Using ADDIW gives
 // more power to RISCVOptWInstrs.
-def : Pat<(or_is_add 33signbits_node:$rs1, simm12:$imm),
+def : Pat<(riscv_or_disjoint 33signbits_node:$rs1, simm12:$imm),
           (ADDIW $rs1, simm12:$imm)>;
 
 /// Loads
@@ -2199,6 +2238,14 @@ def : Pat<(i64 (add GPR:$rs1, negImm:$rs2)), (SUB GPR:$rs1, negImm:$rs2)>;
 }
 
 //===----------------------------------------------------------------------===//
+// Zihintpause
+//===----------------------------------------------------------------------===//
+
+// Zihintpause
+let Predicates = [HasStdExtZihintpause] in
+def : Pat<(int_riscv_pause), (FENCE 0x1, 0x0)>;
+
+//===----------------------------------------------------------------------===//
 // Standard extensions
 //===----------------------------------------------------------------------===//
 
@@ -2210,9 +2257,17 @@ include "RISCVInstrInfoA.td"
 include "RISCVInstrInfoZa.td"
 include "RISCVInstrInfoZalasr.td"
 
+// Integer
+include "RISCVInstrInfoZimop.td"
+include "RISCVInstrInfoZicbo.td"
+include "RISCVInstrInfoZicond.td"
+include "RISCVInstrInfoZicfiss.td"
+include "RISCVInstrInfoZilsd.td"
+
 // Scalar FP
 include "RISCVInstrInfoF.td"
 include "RISCVInstrInfoD.td"
+include "RISCVInstrInfoQ.td"
 include "RISCVInstrInfoZfh.td"
 include "RISCVInstrInfoZfbfmin.td"
 include "RISCVInstrInfoZfa.td"
@@ -2226,12 +2281,8 @@ include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvqdotq.td"
 
-// Integer
-include "RISCVInstrInfoZimop.td"
-include "RISCVInstrInfoZicbo.td"
-include "RISCVInstrInfoZicond.td"
-include "RISCVInstrInfoZicfiss.td"
-include "RISCVInstrInfoZilsd.td"
+// Packed SIMD
+include "RISCVInstrInfoP.td"
 
 // Compressed
 include "RISCVInstrInfoC.td"
@@ -2249,6 +2300,7 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
+include "RISCVInstrInfoXSfmm.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"

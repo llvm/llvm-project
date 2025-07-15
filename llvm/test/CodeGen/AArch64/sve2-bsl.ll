@@ -299,3 +299,73 @@ define <vscale x 2 x i64> @codegen_bsl2n_i64(<vscale x 2 x i64> %0, <vscale x 2 
   %7 = or <vscale x 2 x i64> %4, %6
   ret <vscale x 2 x i64> %7
 }
+
+; (A ^ B) & C) ^ B -> (A & C) | (B & !C) when BIC instructions are available.
+define <vscale x 4 x i32> @bsl_combine_when_bic_available(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
+; CHECK-LABEL: bsl_combine_when_bic_available:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+entry:
+  %t1 = xor <vscale x 4 x i32> %a, %b
+  %t2 = and <vscale x 4 x i32> %t1, %c
+  %t3 = xor <vscale x 4 x i32> %t2, %b
+  ret <vscale x 4 x i32> %t3
+}
+
+; NOT (a) = NBSL (a, a, a).
+; We don't have a pattern for this right now because the tied register
+; constraint can lead to worse code gen.
+define <vscale x 2 x i64> @not(<vscale x 2 x i64> %0) #0 {
+; CHECK-LABEL: not:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %2 = xor <vscale x 2 x i64> %0, splat (i64 -1)
+  ret <vscale x 2 x i64> %2
+}
+
+; NAND (a, b) = NBSL (a, b, b) = NBSL (b, a, a).
+define <vscale x 2 x i64> @nand(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
+; CHECK-LABEL: nand:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z1.d
+; CHECK-NEXT:    ret
+  %3 = and <vscale x 2 x i64> %1, %0
+  %4 = xor <vscale x 2 x i64> %3, splat (i64 -1)
+  ret <vscale x 2 x i64> %4
+}
+
+; NOR (a, b) = NBSL (a, b, a) = NBSL (b, a, b).
+define <vscale x 2 x i64> @nor(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
+; CHECK-LABEL: nor:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %3 = or <vscale x 2 x i64> %1, %0
+  %4 = xor <vscale x 2 x i64> %3, splat (i64 -1)
+  ret <vscale x 2 x i64> %4
+}
+
+; EON (a, b) = BSL2N (a, a, b) = BSL2N (b, b, a).
+define <vscale x 2 x i64> @eon(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
+; CHECK-LABEL: eon:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %3 = xor <vscale x 2 x i64> %0, %1
+  %4 = xor <vscale x 2 x i64> %3, splat (i64 -1)
+  ret <vscale x 2 x i64> %4
+}
+
+; ORN (a, b) = BSL2N (a, b, a).
+define <vscale x 2 x i64> @orn(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
+; CHECK-LABEL: orn:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %3 = xor <vscale x 2 x i64> %1, splat (i64 -1)
+  %4 = or <vscale x 2 x i64> %0, %3
+  ret <vscale x 2 x i64> %4
+}

@@ -9,11 +9,13 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86IntelInstPrinter.h"
+#include "MCTargetDesc/X86MCAsmInfo.h"
 #include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86Operand.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,7 +25,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -122,6 +124,10 @@ private:
     SMLoc Result = Parser.getTok().getLoc();
     Parser.Lex();
     return Result;
+  }
+
+  bool tokenIsStartOfStatement(AsmToken::TokenKind Token) override {
+    return Token == AsmToken::LCurly;
   }
 
   X86TargetStreamer &getTargetStreamer() {
@@ -1493,7 +1499,7 @@ bool X86AsmParser::MatchRegisterByName(MCRegister &RegNo, StringRef RegName,
 bool X86AsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc, bool RestoreOnFailure) {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   RegNo = MCRegister();
 
   SmallVector<AsmToken, 5> Tokens;
@@ -2114,7 +2120,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (IDVal == "f" || IDVal == "b") {
           MCSymbol *Sym =
               getContext().getDirectionalLocalSymbol(IntVal, IDVal == "b");
-          auto Variant = X86MCExpr::VK_None;
+          auto Variant = X86::S_None;
           const MCExpr *Val =
               MCSymbolRefExpr::create(Sym, Variant, getContext());
           if (IDVal == "b" && Sym->isUndefined())
@@ -2261,7 +2267,7 @@ bool X86AsmParser::ParseIntelInlineAsmIdentifier(
     return false;
   // Create the symbol reference.
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-  auto Variant = X86MCExpr::VK_None;
+  auto Variant = X86::S_None;
   Val = MCSymbolRefExpr::create(Sym, Variant, getParser().getContext());
   return false;
 }
@@ -3001,7 +3007,7 @@ bool X86AsmParser::ParseMemOperand(MCRegister SegReg, const MCExpr *Disp,
     if (!Id.empty()) {
       MCSymbol *Sym = this->getContext().getOrCreateSymbol(Id);
       if (Sym->isVariable()) {
-        auto V = Sym->getVariableValue(/*SetUsed*/ false);
+        auto V = Sym->getVariableValue();
         return isa<X86MCExpr>(V);
       }
     }
@@ -4791,7 +4797,7 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
     Parser.Lex();
     if (!is16BitMode()) {
       SwitchMode(X86::Is16Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+      getTargetStreamer().emitCode16();
     }
   } else if (IDVal == ".code16gcc") {
     // .code16gcc parses as if in 32-bit mode, but emits code in 16-bit mode.
@@ -4799,19 +4805,19 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
     Code16GCC = true;
     if (!is16BitMode()) {
       SwitchMode(X86::Is16Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+      getTargetStreamer().emitCode16();
     }
   } else if (IDVal == ".code32") {
     Parser.Lex();
     if (!is32BitMode()) {
       SwitchMode(X86::Is32Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
+      getTargetStreamer().emitCode32();
     }
   } else if (IDVal == ".code64") {
     Parser.Lex();
     if (!is64BitMode()) {
       SwitchMode(X86::Is64Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code64);
+      getTargetStreamer().emitCode64();
     }
   } else {
     Error(L, "unknown directive " + IDVal);

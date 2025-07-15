@@ -272,7 +272,7 @@ def ANDN  : ALU_rr<0b0100000, 0b111, "andn">,
             Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def ORN   : ALU_rr<0b0100000, 0b110, "orn">,
             Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def XNOR  : ALU_rr<0b0100000, 0b100, "xnor">,
+def XNOR  : ALU_rr<0b0100000, 0b100, "xnor", Commutable=1>,
             Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 } // Predicates = [HasStdExtZbbOrZbkb]
 
@@ -497,7 +497,8 @@ def invLogicImm : ComplexPattern<XLenVT, 1, "selectInvLogicImm", [], [], 0>;
 let Predicates = [HasStdExtZbbOrZbkb] in {
 def : Pat<(XLenVT (and GPR:$rs1, (not GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
 def : Pat<(XLenVT (or  GPR:$rs1, (not GPR:$rs2))), (ORN  GPR:$rs1, GPR:$rs2)>;
-def : Pat<(XLenVT (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (not (riscv_xor_like GPR:$rs1, GPR:$rs2))),
+          (XNOR GPR:$rs1, GPR:$rs2)>;
 
 def : Pat<(XLenVT (and GPR:$rs1, invLogicImm:$rs2)), (ANDN GPR:$rs1, invLogicImm:$rs2)>;
 def : Pat<(XLenVT (or  GPR:$rs1, invLogicImm:$rs2)), (ORN  GPR:$rs1, invLogicImm:$rs2)>;
@@ -704,9 +705,13 @@ def : CSImm12MulBy4Pat<SH2ADD>;
 def : CSImm12MulBy8Pat<SH3ADD>;
 } // Predicates = [HasStdExtZba]
 
+def zExtImm32 : ComplexPattern<i64, 1, "selectZExtImm32", [], [], 0>;
+
 multiclass ADD_UWPat<Instruction add_uw> {
   def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFFF), GPR:$rs2)),
             (add_uw GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (add_like zExtImm32:$rs1, GPR:$rs2)),
+            (add_uw zExtImm32:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (and GPR:$rs, 0xFFFFFFFF)), (add_uw GPR:$rs, (XLenVT X0))>;
 }
 

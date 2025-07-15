@@ -27,7 +27,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -723,8 +722,8 @@ public:
       // Switch the coroutine completion token to available state.
       rewriter.create<RuntimeSetAvailableOp>(loc, *coro.asyncToken);
 
-    rewriter.eraseOp(op);
     rewriter.create<cf::BranchOp>(loc, coro.cleanup);
+    rewriter.eraseOp(op);
 
     return success();
   }
@@ -793,7 +792,7 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   // Returns true if operation is inside the coroutine.
   auto isInCoroutine = [&](Operation *op) -> bool {
     auto parentFunc = op->getParentOfType<func::FuncOp>();
-    return coros->find(parentFunc) != coros->end();
+    return coros->contains(parentFunc);
   };
 
   // Lower async operations to async.runtime operations.

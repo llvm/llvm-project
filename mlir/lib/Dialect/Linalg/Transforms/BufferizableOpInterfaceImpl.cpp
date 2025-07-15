@@ -8,11 +8,9 @@
 
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
@@ -24,10 +22,9 @@ using namespace mlir::bufferization;
 namespace {
 
 /// Generic conversion for any DestinationStyleOpInterface on tensors.
-static LogicalResult
-bufferizeDestinationStyleOpInterface(RewriterBase &rewriter,
-                                     DestinationStyleOpInterface op,
-                                     const BufferizationOptions &options) {
+static LogicalResult bufferizeDestinationStyleOpInterface(
+    RewriterBase &rewriter, DestinationStyleOpInterface op,
+    const BufferizationOptions &options, const BufferizationState &state) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);
@@ -49,7 +46,8 @@ bufferizeDestinationStyleOpInterface(RewriterBase &rewriter,
       newInputBuffers.push_back(opOperand->get());
       continue;
     }
-    FailureOr<Value> buffer = getBuffer(rewriter, opOperand->get(), options);
+    FailureOr<Value> buffer =
+        getBuffer(rewriter, opOperand->get(), options, state);
     if (failed(buffer))
       return failure();
     newInputBuffers.push_back(*buffer);
@@ -60,7 +58,7 @@ bufferizeDestinationStyleOpInterface(RewriterBase &rewriter,
   for (OpResult opResult : op->getOpResults()) {
     OpOperand *opOperand = op.getDpsInitOperand(opResult.getResultNumber());
     FailureOr<Value> resultBuffer =
-        getBuffer(rewriter, opOperand->get(), options);
+        getBuffer(rewriter, opOperand->get(), options, state);
     if (failed(resultBuffer))
       return failure();
     newOutputBuffers.push_back(*resultBuffer);
@@ -76,10 +74,10 @@ bufferizeDestinationStyleOpInterface(RewriterBase &rewriter,
   // new op. Since the new op does not have any tensor results, it does not
   // return anything.
   assert(op->getNumRegions() == 1 && "expected that op has 1 region");
-  OperationState state(op->getLoc(), op->getName(), newOperands, TypeRange{},
-                       op->getAttrs());
-  state.addRegion();
-  Operation *newOp = Operation::create(state);
+  OperationState opState(op->getLoc(), op->getName(), newOperands, TypeRange{},
+                         op->getAttrs());
+  opState.addRegion();
+  Operation *newOp = Operation::create(opState);
   newOp->getRegion(0).getBlocks().splice(newOp->getRegion(0).begin(),
                                          op->getRegion(0).getBlocks());
 
@@ -148,9 +146,10 @@ struct LinalgOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     return bufferizeDestinationStyleOpInterface(
-        rewriter, cast<DestinationStyleOpInterface>(op), options);
+        rewriter, cast<DestinationStyleOpInterface>(op), options, state);
   }
 };
 
@@ -174,14 +173,15 @@ struct SoftmaxOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto softmaxOp = cast<linalg::SoftmaxOp>(op);
     FailureOr<Value> inputBuffer =
-        getBuffer(rewriter, softmaxOp.getInput(), options);
+        getBuffer(rewriter, softmaxOp.getInput(), options, state);
     if (failed(inputBuffer))
       return failure();
     FailureOr<Value> outputBuffer =
-        getBuffer(rewriter, softmaxOp.getOutput(), options);
+        getBuffer(rewriter, softmaxOp.getOutput(), options, state);
     if (failed(outputBuffer))
       return failure();
     rewriter.create<linalg::SoftmaxOp>(softmaxOp.getLoc(),
@@ -202,6 +202,7 @@ void mlir::linalg::registerBufferizableOpInterfaceExternalModels(
     LinalgOpInterfaceHelper<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
+
         >::registerOpInterface(ctx);
 
     SoftmaxOp::attachInterface<SoftmaxOpInterface>(*ctx);

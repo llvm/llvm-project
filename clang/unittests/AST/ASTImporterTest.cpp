@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Testing/CommandLineArgs.h"
@@ -308,8 +309,10 @@ TEST_P(ImportExpr, ImportShuffleVectorExpr) {
   const auto Pattern = functionDecl(hasDescendant(shuffleVectorExpr(
       allOf(has(declRefExpr(to(parmVarDecl(hasName("a"))))),
             has(declRefExpr(to(parmVarDecl(hasName("b"))))),
-            has(integerLiteral(equals(0))), has(integerLiteral(equals(1))),
-            has(integerLiteral(equals(2))), has(integerLiteral(equals(3)))))));
+            has(constantExpr(has(integerLiteral(equals(0))))),
+            has(constantExpr(has(integerLiteral(equals(1))))),
+            has(constantExpr(has(integerLiteral(equals(2))))),
+            has(constantExpr(has(integerLiteral(equals(3)))))))));
   testImport(Code, Lang_C99, "", Lang_C99, Verifier, Pattern);
 }
 
@@ -3213,6 +3216,102 @@ TEST_P(ImportExpr, UnresolvedMemberExpr) {
              Lang_CXX11, "", Lang_CXX11, Verifier,
              functionTemplateDecl(has(functionDecl(has(
                  compoundStmt(has(callExpr(has(unresolvedMemberExpr())))))))));
+}
+
+TEST_P(ImportExpr, ConceptNoRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    template<typename T>
+    struct is_int { static const bool value = false; };
+    template<> struct is_int<int> { static const bool value = true; };
+    template<typename T>
+    concept declToImport = is_int<T>::value;
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(unless(has(requiresExpr()))));
+}
+
+TEST_P(ImportExpr, ConceptSimpleRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+  template <class T1, class T2>
+  concept declToImport = requires(T1 i, T2 j) {
+    i + j;
+  };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportExpr, ConceptCompoundNonTypeRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+  template <class T1, class T2>
+  concept declToImport = requires(T1 i, T2 j) {
+    {i + j};
+  };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportExpr, ConceptCompoundTypeRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    template<typename T>
+    struct is_int { static const bool value = false; };
+    template<> struct is_int<int> { static const bool value = true; };
+
+    template<typename T>
+    concept type_is_int = is_int<T>::value;
+
+    template<typename T>
+    concept declToImport = requires(T x) {
+      {x * 1} -> type_is_int;
+    };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportExpr, ConceptTypeRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+  template <class T>
+  concept declToImport = requires {
+    typename T::value;
+  };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportExpr, ConceptNestedRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    template<typename T>
+    struct is_int { static const bool value = false; };
+    template<> struct is_int<int> { static const bool value = true; };
+
+    template<typename T>
+    concept declToImport = requires(T x) {
+      requires is_int<T>::value;
+    };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportExpr, ConceptNestedNonInstantiationDependentRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    template<typename T>
+    concept declToImport = requires {
+      requires sizeof(long) == sizeof(int);
+    };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
 }
 
 class ImportImplicitMethods : public ASTImporterOptionSpecificTestBase {
@@ -7991,6 +8090,15 @@ TEST_P(ImportAttributes, ImportLocksExcluded) {
       "void test(int A1, int A2) __attribute__((locks_excluded(A1, A2)));",
       FromAttr, ToAttr);
   checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportReentrantCapability) {
+  ReentrantCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<CXXRecordDecl>(
+      R"(
+      struct __attribute__((capability("x"), reentrant_capability)) test {};
+      )",
+      FromAttr, ToAttr);
 }
 
 TEST_P(ImportAttributes, ImportC99NoThrowAttr) {

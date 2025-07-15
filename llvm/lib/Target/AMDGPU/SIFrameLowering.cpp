@@ -714,11 +714,12 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     assert(hasFP(MF));
     Register FPReg = MFI->getFrameOffsetReg();
     assert(FPReg != AMDGPU::FP_REG);
-    unsigned VGPRSize =
-        llvm::alignTo((ST.getAddressableNumVGPRs() -
-                       AMDGPU::IsaInfo::getVGPRAllocGranule(&ST)) *
-                          4,
-                      FrameInfo.getMaxAlign());
+    unsigned VGPRSize = llvm::alignTo(
+        (ST.getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) -
+         AMDGPU::IsaInfo::getVGPRAllocGranule(&ST,
+                                              MFI->getDynamicVGPRBlockSize())) *
+            4,
+        FrameInfo.getMaxAlign());
     MFI->setScratchReservedForDynamicVGPRs(VGPRSize);
 
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), FPReg)
@@ -1748,11 +1749,12 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  assert(std::is_sorted(CSI.begin(), CSI.end(),
-                        [](const CalleeSavedInfo &A, const CalleeSavedInfo &B) {
-                          return A.getReg() < B.getReg();
-                        }) &&
-         "Callee saved registers not sorted");
+  assert(
+      llvm::is_sorted(CSI,
+                      [](const CalleeSavedInfo &A, const CalleeSavedInfo &B) {
+                        return A.getReg() < B.getReg();
+                      }) &&
+      "Callee saved registers not sorted");
 
   auto CanUseBlockOps = [&](const CalleeSavedInfo &CSI) {
     return !CSI.isSpilledToReg() &&
@@ -2086,7 +2088,7 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
 
 bool SIFrameLowering::mayReserveScratchForCWSR(
     const MachineFunction &MF) const {
-  return MF.getSubtarget<GCNSubtarget>().isDynamicVGPREnabled() &&
+  return MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() &&
          AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv()) &&
          AMDGPU::isCompute(MF.getFunction().getCallingConv());
 }

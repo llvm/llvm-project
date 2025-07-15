@@ -605,7 +605,7 @@ public:
 
   /// The underlying plugin might store the low-level communication history for
   /// this session.  Dump it into the provided stream.
-  virtual void DumpPluginHistory(Stream &s) { return; }
+  virtual void DumpPluginHistory(Stream &s) {}
 
   /// Launch a new process.
   ///
@@ -2546,6 +2546,8 @@ void PruneThreadPlans();
   ProcessRunLock &GetRunLock();
 
   bool CurrentThreadIsPrivateStateThread();
+
+  bool CurrentThreadPosesAsPrivateStateThread();
 
   virtual Status SendEventData(const char *data) {
     return Status::FromErrorString(

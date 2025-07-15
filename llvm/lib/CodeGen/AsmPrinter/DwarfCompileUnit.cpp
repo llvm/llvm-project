@@ -429,7 +429,7 @@ DIE *DwarfCompileUnit::getOrCreateCommonBlock(
   addString(NDie, dwarf::DW_AT_name, Name);
   addGlobalName(Name, NDie, CB->getScope());
   if (CB->getFile())
-    addSourceLine(NDie, CB->getLineNo(), CB->getFile());
+    addSourceLine(NDie, CB->getLineNo(), /*Column*/ 0, CB->getFile());
   if (DIGlobalVariable *V = CB->getDecl())
     getCU().addLocationAttribute(&NDie, V, GlobalExprs);
   return &NDie;
@@ -1404,7 +1404,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
   else
     EntityDie = getDIE(Entity);
   assert(EntityDie);
-  addSourceLine(*IMDie, Module->getLine(), Module->getFile());
+  addSourceLine(*IMDie, Module->getLine(), /*Column*/ 0, Module->getFile());
   addDIEEntry(*IMDie, dwarf::DW_AT_import, *EntityDie);
   StringRef Name = Module->getName();
   if (!Name.empty()) {
@@ -1701,6 +1701,11 @@ void DwarfCompileUnit::applyLabelAttributes(const DbgLabel &Label,
     addString(LabelDie, dwarf::DW_AT_name, Name);
   const auto *DILabel = Label.getLabel();
   addSourceLine(LabelDie, DILabel);
+  if (DILabel->isArtificial())
+    addFlag(LabelDie, dwarf::DW_AT_artificial);
+  if (DILabel->getCoroSuspendIdx())
+    addUInt(LabelDie, dwarf::DW_AT_LLVM_coro_suspend_idx, std::nullopt,
+            *DILabel->getCoroSuspendIdx());
 }
 
 /// Add a Dwarf expression attribute data and value.

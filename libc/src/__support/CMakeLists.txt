@@ -2,6 +2,15 @@ add_subdirectory(CPP)
 add_subdirectory(macros)
 
 add_header_library(
+  libc_errno
+  HDRS
+    libc_errno.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   block
   HDRS
     block.h
@@ -164,6 +173,19 @@ add_header_library(
     str_to_integer.h
   DEPENDS
     .ctype_utils
+    .str_to_num_result
+    libc.hdr.errno_macros
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.common
+)
+
+add_header_library(
+  wcs_to_integer
+  HDRS
+    wcs_to_integer.h
+  DEPENDS
+    .wctype_utils
     .str_to_num_result
     libc.hdr.errno_macros
     libc.src.__support.CPP.limits
@@ -381,3 +403,11 @@ add_subdirectory(HashTable)
 add_subdirectory(fixed_point)
 
 add_subdirectory(time)
+
+# Requires access to uchar header which is not on macos
+# Therefore, cannot currently build this on macos in overlay mode
+if(NOT (LIBC_TARGET_OS_IS_DARWIN))
+  add_subdirectory(wchar)
+endif()
+
+add_subdirectory(math)

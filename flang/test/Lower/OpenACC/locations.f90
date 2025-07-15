@@ -171,6 +171,17 @@ module acc_locations
 ! CHECK: acc.loop
 ! CHECK: } attributes {collapse = [3]{{.*}}} loc(fused["{{.*}}locations.f90":160:11, "{{.*}}locations.f90":161:5, "{{.*}}locations.f90":162:7, "{{.*}}locations.f90":163:9])
 
+  subroutine data_end_locations(arr)
+    real, dimension(10) :: arr
+
+    !$acc data copy(arr)
+    !CHECK-LABEL: acc.copyin
+    !CHECK-SAME:  loc("{{.*}}locations.f90":177:21)
+
+    !$acc end data
+    !CHECK-LABEL: acc.copyout
+    !CHECK-SAME:  loc("{{.*}}locations.f90":181:11)
+  end subroutine
 end module
 
 

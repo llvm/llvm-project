@@ -646,6 +646,10 @@ public:
     return getModuleOwnershipKind() == ModuleOwnershipKind::ModulePrivate;
   }
 
+  /// Whether this declaration was a local declaration to a C++20
+  /// named module.
+  bool isModuleLocal() const;
+
   /// Whether this declaration was exported in a lexical context.
   /// e.g.:
   ///

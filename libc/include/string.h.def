@@ -11,8 +11,6 @@
 
 #include "__llvm-libc-common.h"
 
-#include "llvm-libc-macros/null-macro.h"
-
 %%public_api()
 
 #endif // LLVM_LIBC_STRING_H
