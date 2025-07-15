@@ -35,7 +35,7 @@
     END
   END
 
-! CHECK-LABEL:  func.func @_QQmain() attributes {fir.bindc_name = "main"} {
+! CHECK-LABEL:  func.func @_QQmain() attributes {fir.bindc_name = "MAIN"} {
 ! CHECK:    %[[VAL_0:.*]] = fir.alloca !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>
 ! CHECK:    %[[VAL_1:.*]] = fir.alloca !fir.type<_QMmTdt{pp1:!fir.boxproc<(!fir.ref<i32>) -> i32>}>
 ! CHECK:    %[[VAL_2:.*]] = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> i32> {bindc_name = "pp2", uniq_name = "_QFEpp2"}

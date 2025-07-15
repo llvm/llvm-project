@@ -1,6 +1,6 @@
 ! RUN: %python %S/../test_symbols.py %s %flang_fc1 -fopenacc
 
-!DEF: /mm MainProgram
+!DEF: /MM MainProgram
 program mm
   !DEF: /mm/x ObjectEntity REAL(4)
   !DEF: /mm/y ObjectEntity REAL(4)
