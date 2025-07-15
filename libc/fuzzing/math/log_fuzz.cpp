@@ -23,6 +23,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   for (size_t i = 0; i < size / sizeof(double); ++i) {
     double x;
     std::memcpy(&x, data, sizeof(double));
+    data += sizeof(double);
+
     // remove NaN and inf and values outside accepted range
     if (isnan(x) || isinf(x) || x < 0)
       return 0;
