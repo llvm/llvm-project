@@ -24,11 +24,11 @@ entry:
 define void @Main() {
 ; CHECK-LABEL: define void @Main() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:  [[BFRAGPACKED_I_SCALARIZE:%.*]] = alloca i32, align 16
+; CHECK-NEXT:  [[BFRAGPACKED_I:%.*]] = alloca i32, align 16
 ; SCHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [10 x i32], ptr addrspace(3) getelementptr inbounds ([10 x [10 x i32]], ptr addrspace(3) @bTile, i32 0, i32 1), i32 0, i32 2
 ; FCHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(3) getelementptr inbounds ([100 x i32], ptr addrspace(3) @bTile.1dim, i32 0, i32 12), align 16
 ; SCHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[TMP0]], align 16
-; SCHECK-NEXT:    store i32 [[TMP1]], ptr [[BFRAGPACKED_I_SCALARIZE]], align 16
+; SCHECK-NEXT:    store i32 [[TMP1]], ptr [[BFRAGPACKED_I]], align 16
 ; SCHECK-NEXT:    ret void
 ;
 entry:
