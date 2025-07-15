@@ -602,7 +602,7 @@ namespace {
     SDValue foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0, SDValue N1,
                                    SDValue N2, SDValue N3, ISD::CondCode CC);
     SDValue foldSelectOfBinops(SDNode *N);
-    SDValue foldSelectOfSourceMods(SDNode *N);
+    SDValue bitmaskOperandsToSignInstructions(SDNode *N);
     SDValue foldSextSetcc(SDNode *N);
     SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
                               const SDLoc &DL);
@@ -12176,7 +12176,9 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   return SDValue();
 }
 
-static SDValue getBitwiseToSrcModifierOp(SDValue N, SelectionDAG &DAG) {
+// Replace bitwise operations that modify the sign bit of integers
+// with FABS and FNEG.
+static SDValue getBitMaskToInstruction(SDValue N, SelectionDAG &DAG) {
 
   unsigned Opc = N.getNode()->getOpcode();
   if (Opc != ISD::AND && Opc != ISD::XOR && Opc != ISD::OR)
@@ -12223,13 +12225,13 @@ static SDValue getBitwiseToSrcModifierOp(SDValue N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-SDValue DAGCombiner::foldSelectOfSourceMods(SDNode *N) {
+SDValue DAGCombiner::bitmaskOperandsToSignInstructions(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
   EVT VT = N->getValueType(0);
-  SDValue SrcModN1 = getBitwiseToSrcModifierOp(N1, DAG);
-  SDValue SrcModN2 = getBitwiseToSrcModifierOp(N2, DAG);
+  SDValue SrcModN1 = getBitMaskToInstruction(N1, DAG);
+  SDValue SrcModN2 = getBitMaskToInstruction(N2, DAG);
   if (SrcModN1 || SrcModN2) {
     SDLoc SL(N);
     EVT FVT = SrcModN1 ? SrcModN1.getValueType() : SrcModN2.getValueType();
@@ -12456,9 +12458,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
     return R;
 
-  // Identify bitmask operations that are source mods and create
-  // the relevant fneg, fabs or fneg+fabs.
-  if (SDValue F = foldSelectOfSourceMods(N))
+  // Identify bitmask operations that modify only the sign bit
+  // and replace with FNEG or FABS as appropriate.
+  if (SDValue F = bitmaskOperandsToSignInstructions(N))
     return F;
 
   return SDValue();
