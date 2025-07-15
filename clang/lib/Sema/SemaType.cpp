@@ -6533,7 +6533,7 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       return;
     }
 
-    Expr *ASArgExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
+    Expr *ASArgExpr = Attr.getArgAsExpr(0);
     LangAS ASIdx;
     if (!BuildAddressSpaceIndex(S, ASIdx, ASArgExpr, Attr.getLoc())) {
       Attr.setInvalid();
