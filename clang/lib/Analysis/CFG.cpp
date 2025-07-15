@@ -6324,30 +6324,33 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
     if (!FD)
       return false;
 
-    // HACK: we are gonna cache analysis result as implicit `analyzer_noreturn`
-    // attribute
-    auto *MutFD = const_cast<FunctionDecl *>(FD);
-    auto NoRetAttrOpt = FD->getAnalyzerNoReturn();
+    auto *CanCD = FD->getCanonicalDecl();
+    auto *DefFD = CanCD->getDefinition();
+    auto NoRetAttrOpt = CanCD->getAnalyzerNoReturn();
     auto NoReturn = false;
 
-    if (!NoRetAttrOpt && FD->getBody()) {
+    if (!NoRetAttrOpt && DefFD && DefFD->getBody()) {
+      // HACK: we are gonna cache analysis result as implicit
+      // `analyzer_noreturn` attribute
+      auto *MutCD = const_cast<FunctionDecl *>(CanCD);
+
       // Mark function as `analyzer_noreturn(false)` to:
       //  * prevent infinite recursion in noreturn analysis
       //  * indicate that we've already analyzed(-ing) this function
       //  * serve as a safe default assumption (function may return)
-      MutFD->addAttr(AnalyzerNoReturnAttr::CreateImplicit(
-          FD->getASTContext(), false, FD->getLocation()));
+      MutCD->addAttr(AnalyzerNoReturnAttr::CreateImplicit(
+          CanCD->getASTContext(), false, CanCD->getLocation()));
 
       auto CalleeCFG =
-          CFG::buildCFG(FD, FD->getBody(), &FD->getASTContext(), {});
+          CFG::buildCFG(DefFD, DefFD->getBody(), &DefFD->getASTContext(), {});
 
       NoReturn = CalleeCFG && CalleeCFG->getEntry().isInevitablySinking();
 
       // Override to `analyzer_noreturn(true)`
       if (NoReturn) {
-        MutFD->dropAttr<AnalyzerNoReturnAttr>();
-        MutFD->addAttr(AnalyzerNoReturnAttr::CreateImplicit(
-            FD->getASTContext(), NoReturn, FD->getLocation()));
+        MutCD->dropAttr<AnalyzerNoReturnAttr>();
+        MutCD->addAttr(AnalyzerNoReturnAttr::CreateImplicit(
+            CanCD->getASTContext(), NoReturn, CanCD->getLocation()));
       }
 
     } else if (NoRetAttrOpt)

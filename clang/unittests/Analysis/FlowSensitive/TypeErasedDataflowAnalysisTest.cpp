@@ -718,6 +718,27 @@ protected:
 
       void trap() {}
     )"));
+    FilesContents.push_back(std::make_pair<std::string, std::string>(
+        "noreturn_test_defs_canonical.h", R"(
+      extern void assertionHandler();
+
+      void assertionSecondTrampoline() {
+        assertionHandler();
+      }
+    )"));
+    FilesContents.push_back(std::make_pair<std::string, std::string>(
+        "noreturn_test_defs_noretcfg.h", R"(
+      // will be marged as noreturn by CFG
+      void assertionHandler() {
+          for (;;) {}
+      }
+
+      void assertionTrampoline() {
+        assertionHandler();
+      }
+
+      void trap() {}
+    )"));
 
     ASSERT_THAT_ERROR(
         test::checkDataflow<FunctionCallAnalysis>(
@@ -771,6 +792,37 @@ TEST_F(AnalyzerNoreturnTest, DirectNoReturnCall) {
 TEST_F(AnalyzerNoreturnTest, IndirectNoReturnCall) {
   std::string Code = R"(
     #include "noreturn_test_defs.h"
+
+    void target() {
+      assertionTrampoline();
+      trap();
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, Not(UnorderedElementsAre(IsStringMapEntry(
+                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
+                                 UnorderedElementsAre("trap")))))));
+}
+
+TEST_F(AnalyzerNoreturnTest, CanonicalDeclCallCheck) {
+  std::string Code = R"(
+    #include "noreturn_test_defs.h"
+    #include "noreturn_test_defs_canonical.h"
+
+    void target() {
+      assertionSecondTrampoline();
+      trap();
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, Not(UnorderedElementsAre(IsStringMapEntry(
+                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
+                                 UnorderedElementsAre("trap")))))));
+}
+
+TEST_F(AnalyzerNoreturnTest, NoReturnFromCFGCheck) {
+  std::string Code = R"(
+    #include "noreturn_test_defs_noretcfg.h"
 
     void target() {
       assertionTrampoline();

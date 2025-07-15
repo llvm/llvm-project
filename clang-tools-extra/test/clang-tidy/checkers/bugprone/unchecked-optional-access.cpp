@@ -143,6 +143,8 @@ void nullable_value_after_swap(BloombergLP::bdlb::NullableValue<int> &opt1, Bloo
 
 void assertion_handler_imp() __attribute__((analyzer_noreturn));
 
+void assertion_handler();
+
 void assertion_handler() {
     do {
        assertion_handler_imp();
@@ -158,20 +160,15 @@ void function_calling_analyzer_noreturn(const bsl::optional<int>& opt)
   *opt; // no-warning
 }
 
-void abort();
-
-void do_fail() {
-    abort(); // acts like 'abort()' C-function
+// Should be considered as 'noreturn' by CFG
+void no_return_from_cfg() {
+    for(;;) {}
 }
 
-void invoke_assertion_handler() {
-    do_fail();
-}
-
-void function_calling_well_known_noreturn(const bsl::optional<int>& opt)
+void function_calling_no_return_from_cfg(const bsl::optional<int>& opt)
 {
   if (!opt) {
-      invoke_assertion_handler();
+      no_return_from_cfg();
   }
 
   *opt; // no-warning
