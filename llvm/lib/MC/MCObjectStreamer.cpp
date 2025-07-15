@@ -371,18 +371,27 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
 
 void MCObjectStreamer::emitInstToData(const MCInst &Inst,
                                       const MCSubtargetInfo &STI) {
-  MCDataFragment *DF = getOrCreateDataFragment();
-  SmallVector<MCFixup, 1> Fixups;
-  SmallString<256> Code;
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
+  MCDataFragment *F = getOrCreateDataFragment(&STI);
 
-  auto CodeOffset = DF->getContents().size();
-  for (MCFixup &Fixup : Fixups)
-    Fixup.setOffset(Fixup.getOffset() + CodeOffset);
+  // Append the instruction to the data fragment.
+  size_t FixupStartIndex = F->getFixups().size();
+  size_t CodeOffset = F->getContents().size();
+  SmallVector<MCFixup, 1> Fixups;
+  getAssembler().getEmitter().encodeInstruction(
+      Inst, F->getContentsForAppending(), Fixups, STI);
+  F->doneAppending();
   if (!Fixups.empty())
-    DF->appendFixups(Fixups);
-  DF->setHasInstructions(STI);
-  DF->appendContents(Code);
+    F->appendFixups(Fixups);
+
+  for (auto &Fixup : MutableArrayRef(F->getFixups()).slice(FixupStartIndex)) {
+    Fixup.setOffset(Fixup.getOffset() + CodeOffset);
+    if (Fixup.isLinkerRelaxable()) {
+      F->setLinkerRelaxable();
+      getCurrentSectionOnly()->setLinkerRelaxable();
+    }
+  }
+
+  F->setHasInstructions(STI);
 }
 
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,

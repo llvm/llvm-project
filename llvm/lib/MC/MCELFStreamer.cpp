@@ -294,18 +294,6 @@ void MCELFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
   emitCommonSymbol(Symbol, Size, ByteAlignment);
 }
 
-void MCELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
-                                  SMLoc Loc) {
-  MCObjectStreamer::emitValueImpl(Value, Size, Loc);
-}
-
-void MCELFStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                         uint8_t ValueSize,
-                                         unsigned MaxBytesToEmit) {
-  MCObjectStreamer::emitValueToAlignment(Alignment, Value, ValueSize,
-                                         MaxBytesToEmit);
-}
-
 void MCELFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
                                        const MCSymbolRefExpr *To,
                                        uint64_t Count) {
@@ -366,32 +354,6 @@ void MCELFStreamer::finalizeCGProfile() {
     Offset += sizeof(uint64_t);
   }
   popSection();
-}
-
-void MCELFStreamer::emitInstToData(const MCInst &Inst,
-                                   const MCSubtargetInfo &STI) {
-  MCAssembler &Assembler = getAssembler();
-  MCDataFragment *DF = getOrCreateDataFragment(&STI);
-
-  // Emit instruction directly into data fragment.
-  size_t FixupStartIndex = DF->getFixups().size();
-  size_t CodeOffset = DF->getContents().size();
-  SmallVector<MCFixup, 1> Fixups;
-  Assembler.getEmitter().encodeInstruction(Inst, DF->getContentsForAppending(),
-                                           Fixups, STI);
-  DF->doneAppending();
-  if (!Fixups.empty())
-    DF->appendFixups(Fixups);
-
-  for (auto &Fixup : MutableArrayRef(DF->getFixups()).slice(FixupStartIndex)) {
-    Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-    if (Fixup.isLinkerRelaxable()) {
-      DF->setLinkerRelaxable();
-      getCurrentSectionOnly()->setLinkerRelaxable();
-    }
-  }
-
-  DF->setHasInstructions(STI);
 }
 
 void MCELFStreamer::finishImpl() {

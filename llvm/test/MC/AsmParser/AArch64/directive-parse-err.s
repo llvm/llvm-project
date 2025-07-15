@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -triple aarch64 %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -triple aarch64 %s 2>&1 | grep "error:" | count 60
+// RUN: not llvm-mc -triple aarch64 %s 2>&1 | grep "error:" | count 59
 
 	// CHECK: [[#@LINE+1]]:19: error: expected newline
 	.equ   ident1, 0 $
@@ -174,11 +174,6 @@
 	.cv_loc 1 1 $
 	// CHECK-NOT: :[[#@LINE+1]]:{{[0-9]+}}: error:
 	.cv_loc 1 1 // EOL COMMENT
-	
-	// CHECK: [[#@LINE+1]]:28: error: expected newline
-	.bundle_lock align_to_end $
-	// CHECK-NOT: [[#@LINE+1]]:{{[0-9]+}}: error:
-	.bundle_lock align_to_end // EOL COMMENT	
 	
 	// CHECK: [[#@LINE+1]]:11: error: invalid token in expression
 	.sleb128 $
