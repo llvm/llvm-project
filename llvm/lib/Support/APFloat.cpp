@@ -261,6 +261,53 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     llvm_unreachable("Unknown floating semantics");
 }
 
+const char *APFloatBase::SemanticsName(const llvm::fltSemantics &Sem) {
+  switch (APFloatBase::SemanticsToEnum(Sem)) {
+  case S_IEEEhalf:
+    return "IEEEhalf";
+  case S_BFloat:
+    return "BFloat";
+  case S_IEEEsingle:
+    return "IEEEsingle";
+  case S_IEEEdouble:
+    return "IEEEdouble";
+  case S_IEEEquad:
+    return "IEEEquad";
+  case S_PPCDoubleDouble:
+    return "PPCDoubleDouble";
+  case S_PPCDoubleDoubleLegacy:
+    return "PPCDoubleDoubleLegacy";
+  case S_Float8E5M2:
+    return "Float8E5M2";
+  case S_Float8E5M2FNUZ:
+    return "Float8E5M2FNUZ";
+  case S_Float8E4M3:
+    return "Float8E4M3";
+  case S_Float8E4M3FN:
+    return "Float8E4M3FN";
+  case S_Float8E4M3FNUZ:
+    return "Float8E4M3FNUZ";
+  case S_Float8E4M3B11FNUZ:
+    return "Float8E4M3B11FNUZ";
+  case S_Float8E3M4:
+    return "Float8E3M4";
+  case S_FloatTF32:
+    return "FloatTF32";
+  case S_Float8E8M0FNU:
+    return "Float8E8M0FNU";
+  case S_Float6E3M2FN:
+    return "Float6E3M2FN";
+  case S_Float6E2M3FN:
+    return "Float6E2M3FN";
+  case S_Float4E2M1FN:
+    return "Float4E2M1FN";
+  case S_x87DoubleExtended:
+    return "x87DoubleExtended";
+  default:
+    llvm_unreachable("Unknown floating semantics");
+  }
+}
+
 const fltSemantics &APFloatBase::IEEEhalf() { return semIEEEhalf; }
 const fltSemantics &APFloatBase::BFloat() { return semBFloat; }
 const fltSemantics &APFloatBase::IEEEsingle() { return semIEEEsingle; }
