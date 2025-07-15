@@ -29,6 +29,12 @@ def uimm7_lsb000 : RISCVOp,
   }];
 }
 
+// A 9-bit unsigned offset
+def uimm9 : RISCVUImmOp<9>;
+
+// Custom prefetch ADDR selector
+def AddrRegImm9 : ComplexPattern<iPTR, 2, "SelectAddrRegImm9">;
+
 //===----------------------------------------------------------------------===//
 // MIPS custom instruction formats
 //===----------------------------------------------------------------------===//
@@ -103,9 +109,41 @@ class SWPFormat<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{6-0} = OPC_CUSTOM_0.Value;
 }
 
+// Prefetch format.
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
+class Mips_prefetch_ri<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<9> imm9;
+  bits<5> rs1;
+  bits<5> hint;
+
+  let Inst{31-29} = 0b000;
+  let Inst{28-20} = imm9;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b000;
+  let Inst{11-7} = hint;
+  let Inst{6-0} = OPC_CUSTOM_0.Value;
+}
+
 //===----------------------------------------------------------------------===//
 // MIPS extensions
 //===----------------------------------------------------------------------===//
+let Predicates = [HasVendorXMIPSCBOP] ,DecoderNamespace = "Xmipscbop" in {
+  def MIPS_PREFETCH : Mips_prefetch_ri<(outs), (ins GPR:$rs1, uimm9:$imm9, uimm5:$hint),
+                                        "mips.pref", "$hint, ${imm9}(${rs1})">,
+                       Sched<[]>;
+}
+
+let Predicates = [HasVendorXMIPSCBOP] in {
+  // Prefetch Data Write.
+  def : Pat<(prefetch (AddrRegImm9  (XLenVT GPR:$rs1), uimm9:$imm9),
+             (i32 1), timm, (i32 1)),
+            (MIPS_PREFETCH GPR:$rs1, uimm9:$imm9, 9)>;
+  // Prefetch Data Read.
+  def : Pat<(prefetch (AddrRegImm9 (XLenVT GPR:$rs1), uimm9:$imm9),
+             (i32 0), timm, (i32 1)),
+            (MIPS_PREFETCH GPR:$rs1, uimm9:$imm9, 8)>;
+}
 
 let Predicates = [HasVendorXMIPSCMov], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
                  DecoderNamespace = "Xmipscmov" in {

@@ -85,8 +85,8 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   LazyValueInfo *LVI = nullptr;
   AAResults *AA = nullptr;
   std::unique_ptr<DomTreeUpdater> DTU;
-  std::optional<BlockFrequencyInfo *> BFI;
-  std::optional<BranchProbabilityInfo *> BPI;
+  BlockFrequencyInfo *BFI = nullptr;
+  BranchProbabilityInfo *BPI = nullptr;
   bool ChangedSinceLastAnalysisUpdate = false;
   bool HasGuards = false;
 #ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -110,8 +110,7 @@ public:
                         TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
                         LazyValueInfo *LVI, AAResults *AA,
                         std::unique_ptr<DomTreeUpdater> DTU,
-                        std::optional<BlockFrequencyInfo *> BFI,
-                        std::optional<BranchProbabilityInfo *> BPI);
+                        BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI);
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 

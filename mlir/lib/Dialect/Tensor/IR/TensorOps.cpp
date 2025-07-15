@@ -35,11 +35,8 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
-#include <algorithm>
 #include <optional>
-#include <vector>
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -292,7 +289,7 @@ bool mlir::tensor::preservesStaticInformation(Type source, Type target) {
 
   // If cast is towards more static sizes along any dimension, don't fold.
   for (auto t : llvm::zip(sourceType.getShape(), targetType.getShape())) {
-    if (!ShapedType::isDynamic(std::get<0>(t)) &&
+    if (ShapedType::isStatic(std::get<0>(t)) &&
         ShapedType::isDynamic(std::get<1>(t)))
       return false;
   }
@@ -1235,7 +1232,7 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
 
       // Case 2 : The tensor cast shape is static, but empty tensor result
       // shape is dynamic.
-      if (!ShapedType::isDynamic(newDim)) {
+      if (ShapedType::isStatic(newDim)) {
         newMixedSizes.push_back(rewriter.getIndexAttr(newDim));
         continue;
       }
@@ -1872,9 +1869,9 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (!sourceTy || !resultTy || sourceTy != resultTy)
     return {};
 
-  // If the source and result are both 1D tensors and have the same type, the
-  // reshape has no effect, even if the tensor is dynamically shaped.
-  if (sourceTy.getRank() == 1)
+  // If the source and result are both 0D or 1D tensors and have the same type,
+  // the reshape has no effect, even if the tensor is dynamically shaped.
+  if (sourceTy.getRank() <= 1)
     return source;
 
   if (auto fromElements = getShape().getDefiningOp<tensor::FromElementsOp>()) {
@@ -2197,7 +2194,7 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
 
     for (const auto &[inputDim, innerReassoc] : llvm::enumerate(reassoc)) {
       for (uint64_t outDim : innerReassoc) {
-        if (!ShapedType::isDynamic(newOutputShape[outDim]))
+        if (ShapedType::isStatic(newOutputShape[outDim]))
           continue;
 
         // If the cast's src type is dynamic, don't infer any of the
@@ -2315,13 +2312,13 @@ RankedTensorType ExtractSliceOp::inferResultType(
 RankedTensorType ExtractSliceOp::inferResultType(
     RankedTensorType sourceTensorType, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides) {
-  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
-  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-  dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-  return ExtractSliceOp::inferResultType(sourceTensorType, staticOffsets,
-                                         staticSizes, staticStrides);
+  SmallVector<int64_t> staticSizes;
+  std::tie(staticSizes, std::ignore) = decomposeMixedValues(sizes);
+  assert(static_cast<int64_t>(staticSizes.size()) ==
+             sourceTensorType.getRank() &&
+         "unexpected staticSizes not equal to rank of source");
+  return RankedTensorType::get(staticSizes, sourceTensorType.getElementType(),
+                               sourceTensorType.getEncoding());
 }
 
 /// If the rank is reduced (i.e. the desiredResultRank is smaller than the
@@ -3579,7 +3576,7 @@ struct FoldOrthogonalPaddings : public OpRewritePattern<PadOp> {
         continue;
       OpFoldResult sliceSize = innerSliceOp.getMixedSizes()[en.index()];
       int64_t sourceSize = innerSliceOp.getSourceType().getShape()[en.index()];
-      assert(!ShapedType::isDynamic(sourceSize) &&
+      assert(ShapedType::isStatic(sourceSize) &&
              "expected padded dimension to have a static size");
       if (getConstantIntValue(sliceSize) != sourceSize) {
         return rewriter.notifyMatchFailure(
@@ -3792,6 +3789,29 @@ struct FoldConsecutiveConstantPadding : public OpRewritePattern<tensor::PadOp> {
 };
 
 } // namespace
+
+LogicalResult
+PadOp::reifyResultShapes(OpBuilder &b,
+                         ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
+  SmallVector<OpFoldResult> lp = getMixedLowPad();
+  SmallVector<OpFoldResult> hp = getMixedHighPad();
+  for (int64_t i = 0; i < getResultType().getRank(); ++i) {
+    if (!getType().isDynamicDim(i)) {
+      reifiedReturnShapes[0][i] = b.getIndexAttr(getType().getDimSize(i));
+      continue;
+    }
+    Location loc = getLoc();
+    Value dim = b.createOrFold<tensor::DimOp>(
+        loc, getSource(), b.create<arith::ConstantIndexOp>(loc, i));
+
+    AffineExpr d0, d1, d2;
+    bindDims(b.getContext(), d0, d1, d2);
+    reifiedReturnShapes[0][i] = affine::makeComposedFoldedAffineApply(
+        b, loc, {d0 + d1 + d2}, {dim, lp[i], hp[i]});
+  }
+  return success();
+}
 
 void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {

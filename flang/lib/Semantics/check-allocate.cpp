@@ -10,6 +10,7 @@
 #include "assignment.h"
 #include "definable.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -33,6 +34,7 @@ struct AllocateCheckerInfo {
   bool gotMold{false};
   bool gotStream{false};
   bool gotPinned{false};
+  std::optional<evaluate::ConstantSubscripts> sourceExprShape;
 };
 
 class AllocationCheckerHelper {
@@ -259,6 +261,9 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
           CheckCopyabilityInPureScope(messages, *expr, scope);
         }
       }
+      auto maybeShape{evaluate::GetShape(context.foldingContext(), *expr)};
+      info.sourceExprShape =
+          evaluate::AsConstantExtents(context.foldingContext(), maybeShape);
     } else {
       // Error already reported on source expression.
       // Do not continue allocate checks.
@@ -581,6 +586,52 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             .Attach(
                 ultimate_->name(), "Declared here with rank %d"_en_US, rank_);
         return false;
+      } else if (allocateInfo_.gotSource && allocateInfo_.sourceExprShape &&
+          allocateInfo_.sourceExprShape->size() ==
+              static_cast<std::size_t>(allocateShapeSpecRank_)) {
+        std::size_t j{0};
+        for (const auto &shapeSpec :
+            std::get<std::list<parser::AllocateShapeSpec>>(allocation_.t)) {
+          if (j >= allocateInfo_.sourceExprShape->size()) {
+            break;
+          }
+          std::optional<evaluate::ConstantSubscript> lbound;
+          if (const auto &lb{std::get<0>(shapeSpec.t)}) {
+            lbound.reset();
+            const auto &lbExpr{lb->thing.thing.value()};
+            if (const auto *expr{GetExpr(context, lbExpr)}) {
+              auto folded{
+                  evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};
+              lbound = evaluate::ToInt64(folded);
+              evaluate::SetExpr(lbExpr, std::move(folded));
+            }
+          } else {
+            lbound = 1;
+          }
+          if (lbound) {
+            const auto &ubExpr{std::get<1>(shapeSpec.t).thing.thing.value()};
+            if (const auto *expr{GetExpr(context, ubExpr)}) {
+              auto folded{
+                  evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};
+              auto ubound{evaluate::ToInt64(folded)};
+              evaluate::SetExpr(ubExpr, std::move(folded));
+              if (ubound) {
+                auto extent{*ubound - *lbound + 1};
+                if (extent < 0) {
+                  extent = 0;
+                }
+                if (extent != allocateInfo_.sourceExprShape->at(j)) {
+                  context.Say(name_.source,
+                      "Allocation has extent %jd on dimension %d, but SOURCE= has extent %jd"_err_en_US,
+                      static_cast<std::intmax_t>(extent), j + 1,
+                      static_cast<std::intmax_t>(
+                          allocateInfo_.sourceExprShape->at(j)));
+                }
+              }
+            }
+          }
+          ++j;
+        }
       }
     }
   } else { // allocating a scalar object

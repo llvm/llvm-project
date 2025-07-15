@@ -1901,6 +1901,9 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
     if (!Def->isFlagSet(VerifyRuntimeMode) && !Def->getSVEGuard().empty() &&
         !Def->getSMEGuard().empty())
       report_fatal_error("Missing VerifyRuntimeMode flag");
+    if (Def->isFlagSet(VerifyRuntimeMode) &&
+        (Def->getSVEGuard().empty() || Def->getSMEGuard().empty()))
+      report_fatal_error("VerifyRuntimeMode requires SVE and SME guards");
 
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());

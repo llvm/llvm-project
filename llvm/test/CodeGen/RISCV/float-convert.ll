@@ -643,12 +643,12 @@ define i64 @fcvt_l_s_sat(float %a) nounwind {
 ; RV32IF-NEXT:    addi a2, a3, -1
 ; RV32IF-NEXT:  .LBB12_4: # %start
 ; RV32IF-NEXT:    feq.s a3, fs0, fs0
-; RV32IF-NEXT:    neg a4, s0
-; RV32IF-NEXT:    neg a5, a1
+; RV32IF-NEXT:    neg a4, a1
+; RV32IF-NEXT:    neg a1, s0
 ; RV32IF-NEXT:    neg a3, a3
-; RV32IF-NEXT:    and a0, a4, a0
+; RV32IF-NEXT:    and a0, a1, a0
 ; RV32IF-NEXT:    and a1, a3, a2
-; RV32IF-NEXT:    or a0, a5, a0
+; RV32IF-NEXT:    or a0, a4, a0
 ; RV32IF-NEXT:    and a0, a3, a0
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload

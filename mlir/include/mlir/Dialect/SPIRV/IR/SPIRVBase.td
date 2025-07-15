@@ -344,6 +344,7 @@ def SPV_KHR_subgroup_rotate                  : I32EnumAttrCase<"SPV_KHR_subgroup
 def SPV_KHR_non_semantic_info                : I32EnumAttrCase<"SPV_KHR_non_semantic_info", 29>;
 def SPV_KHR_terminate_invocation             : I32EnumAttrCase<"SPV_KHR_terminate_invocation", 30>;
 def SPV_KHR_cooperative_matrix               : I32EnumAttrCase<"SPV_KHR_cooperative_matrix", 31>;
+def SPV_KHR_bfloat16                         : I32EnumAttrCase<"SPV_KHR_bfloat16", 32>;
 
 def SPV_EXT_demote_to_helper_invocation  : I32EnumAttrCase<"SPV_EXT_demote_to_helper_invocation", 1000>;
 def SPV_EXT_descriptor_indexing          : I32EnumAttrCase<"SPV_EXT_descriptor_indexing", 1001>;
@@ -358,6 +359,7 @@ def SPV_EXT_shader_atomic_float_min_max  : I32EnumAttrCase<"SPV_EXT_shader_atomi
 def SPV_EXT_shader_image_int64           : I32EnumAttrCase<"SPV_EXT_shader_image_int64", 1010>;
 def SPV_EXT_shader_atomic_float16_add    : I32EnumAttrCase<"SPV_EXT_shader_atomic_float16_add", 1011>;
 def SPV_EXT_mesh_shader                  : I32EnumAttrCase<"SPV_EXT_mesh_shader", 1012>;
+def SPV_EXT_replicated_composites        : I32EnumAttrCase<"SPV_EXT_replicated_composites", 1013>;
 
 def SPV_AMD_gpu_shader_half_float_fetch          : I32EnumAttrCase<"SPV_AMD_gpu_shader_half_float_fetch", 2000>;
 def SPV_AMD_shader_ballot                        : I32EnumAttrCase<"SPV_AMD_shader_ballot", 2001>;
@@ -421,6 +423,8 @@ def SPV_NV_ray_tracing_motion_blur       : I32EnumAttrCase<"SPV_NV_ray_tracing_m
 
 def SPV_NVX_multiview_per_view_attributes : I32EnumAttrCase<"SPV_NVX_multiview_per_view_attributes", 5015>;
 
+def SPV_ARM_tensors                      : I32EnumAttrCase<"SPV_ARM_tensors", 6000>;
+
 def SPIRV_ExtensionAttr :
     SPIRV_I32EnumAttr<"Extension", "supported SPIR-V extensions", "ext", [
       SPV_KHR_16bit_storage, SPV_KHR_8bit_storage, SPV_KHR_device_group,
@@ -436,14 +440,15 @@ def SPIRV_ExtensionAttr :
       SPV_KHR_fragment_shader_barycentric, SPV_KHR_ray_cull_mask,
       SPV_KHR_uniform_group_instructions, SPV_KHR_subgroup_rotate,
       SPV_KHR_non_semantic_info, SPV_KHR_terminate_invocation,
-      SPV_KHR_cooperative_matrix,
+      SPV_KHR_cooperative_matrix, SPV_KHR_bfloat16,
       SPV_EXT_demote_to_helper_invocation, SPV_EXT_descriptor_indexing,
       SPV_EXT_fragment_fully_covered, SPV_EXT_fragment_invocation_density,
       SPV_EXT_fragment_shader_interlock, SPV_EXT_physical_storage_buffer,
       SPV_EXT_shader_stencil_export, SPV_EXT_shader_viewport_index_layer,
       SPV_EXT_shader_atomic_float_add, SPV_EXT_shader_atomic_float_min_max,
       SPV_EXT_shader_image_int64, SPV_EXT_shader_atomic_float16_add,
-      SPV_EXT_mesh_shader,
+      SPV_EXT_mesh_shader, SPV_EXT_replicated_composites,
+      SPV_ARM_tensors,
       SPV_AMD_gpu_shader_half_float_fetch, SPV_AMD_shader_ballot,
       SPV_AMD_shader_explicit_vertex_parameter, SPV_AMD_shader_fragment_mask,
       SPV_AMD_shader_image_load_store_lod, SPV_AMD_texture_gather_bias_lod,
@@ -843,6 +848,12 @@ def SPIRV_C_CooperativeMatrixKHR                        : I32EnumAttrCase<"Coope
   list<Availability> availability = [
     Extension<[SPV_KHR_cooperative_matrix]>,
     MinVersion<SPIRV_V_1_6>
+  ];
+}
+def SPIRV_C_ReplicatedCompositesEXT                     : I32EnumAttrCase<"ReplicatedCompositesEXT", 6024> {
+  list<Availability> availability = [
+    Extension<[SPV_EXT_replicated_composites]>,
+    MinVersion<SPIRV_V_1_0>
   ];
 }
 def SPIRV_C_BitInstructions                             : I32EnumAttrCase<"BitInstructions", 6025> {
@@ -1310,6 +1321,24 @@ def SPIRV_C_GeometryStreams                             : I32EnumAttrCase<"Geome
 def SPIRV_C_MultiViewport                               : I32EnumAttrCase<"MultiViewport", 57> {
   list<I32EnumAttrCase> implies = [SPIRV_C_Geometry];
 }
+def SPIRV_C_TensorsARM                                  : I32EnumAttrCase<"TensorsARM", 4174> {
+  list<I32EnumAttrCase> implies = [SPIRV_C_Int8];
+  list<Availability> availability = [
+    Extension<[SPV_ARM_tensors]>
+  ];
+}
+def SPIRV_C_StorageTensorArrayDynamicIndexingEXT        : I32EnumAttrCase<"StorageTensorArrayDynamicIndexingEXT", 4175> {
+  list<I32EnumAttrCase> implies = [SPIRV_C_TensorsARM, SPIRV_C_Shader];
+  list<Availability> availability = [
+    Extension<[SPV_ARM_tensors]>
+  ];
+}
+def SPIRV_C_StorageTensorArrayNonUniformIndexingEXT     : I32EnumAttrCase<"StorageTensorArrayNonUniformIndexingEXT", 4176> {
+  list<I32EnumAttrCase> implies = [SPIRV_C_TensorsARM, SPIRV_C_ShaderNonUniform];
+  list<Availability> availability = [
+    Extension<[SPV_ARM_tensors]>
+  ];
+}
 def SPIRV_C_WorkgroupMemoryExplicitLayout8BitAccessKHR  : I32EnumAttrCase<"WorkgroupMemoryExplicitLayout8BitAccessKHR", 4429> {
   list<I32EnumAttrCase> implies = [SPIRV_C_WorkgroupMemoryExplicitLayoutKHR];
   list<Availability> availability = [
@@ -1412,6 +1441,23 @@ def SPIRV_C_ShaderStereoViewNV                          : I32EnumAttrCase<"Shade
     Extension<[SPV_NV_stereo_view_rendering]>
   ];
 }
+def SPIRV_C_BFloat16TypeKHR                             : I32EnumAttrCase<"BFloat16TypeKHR", 5116> {
+  list<Availability> availability = [
+    Extension<[SPV_KHR_bfloat16]>
+  ];
+}
+def SPIRV_C_BFloat16DotProductKHR                       : I32EnumAttrCase<"BFloat16DotProductKHR", 5117> {
+  list<I32EnumAttrCase> implies = [SPIRV_C_BFloat16TypeKHR];
+  list<Availability> availability = [
+    Extension<[SPV_KHR_bfloat16]>
+  ];
+}
+def SPIRV_C_BFloat16CooperativeMatrixKHR                : I32EnumAttrCase<"BFloat16CooperativeMatrixKHR", 5118> {
+  list<I32EnumAttrCase> implies = [SPIRV_C_BFloat16TypeKHR, SPIRV_C_CooperativeMatrixKHR];
+  list<Availability> availability = [
+    Extension<[SPV_KHR_bfloat16]>
+  ];
+}
 
 def SPIRV_C_Bfloat16ConversionINTEL                         : I32EnumAttrCase<"Bfloat16ConversionINTEL", 6115> {
   list<Availability> availability = [
@@ -1461,7 +1507,7 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_USMStorageClassesINTEL, SPIRV_C_IOPipesINTEL, SPIRV_C_BlockingPipesINTEL,
       SPIRV_C_FPGARegINTEL, SPIRV_C_DotProductInputAll,
       SPIRV_C_DotProductInput4x8BitPacked, SPIRV_C_DotProduct, SPIRV_C_RayCullMaskKHR,
-      SPIRV_C_CooperativeMatrixKHR,
+      SPIRV_C_CooperativeMatrixKHR, SPIRV_C_ReplicatedCompositesEXT,
       SPIRV_C_BitInstructions, SPIRV_C_AtomicFloat32AddEXT, SPIRV_C_AtomicFloat64AddEXT,
       SPIRV_C_LongConstantCompositeINTEL, SPIRV_C_OptNoneINTEL,
       SPIRV_C_AtomicFloat16AddEXT, SPIRV_C_DebugInfoModuleINTEL, SPIRV_C_SplitBarrierINTEL,
@@ -1505,6 +1551,8 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_IntegerFunctions2INTEL, SPIRV_C_TessellationPointSize,
       SPIRV_C_GeometryPointSize, SPIRV_C_ImageCubeArray, SPIRV_C_ImageRect,
       SPIRV_C_GeometryStreams, SPIRV_C_MultiViewport,
+      SPIRV_C_TensorsARM, SPIRV_C_StorageTensorArrayDynamicIndexingEXT,
+      SPIRV_C_StorageTensorArrayNonUniformIndexingEXT,
       SPIRV_C_WorkgroupMemoryExplicitLayout8BitAccessKHR, SPIRV_C_VariablePointers,
       SPIRV_C_RayTraversalPrimitiveCullingKHR, SPIRV_C_SampleMaskOverrideCoverageNV,
       SPIRV_C_GeometryShaderPassthroughNV, SPIRV_C_PerViewAttributesNV,
@@ -1518,7 +1566,8 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_StorageTexelBufferArrayNonUniformIndexing,
       SPIRV_C_ShaderViewportIndexLayerEXT, SPIRV_C_ShaderViewportMaskNV,
       SPIRV_C_ShaderStereoViewNV, SPIRV_C_Bfloat16ConversionINTEL,
-      SPIRV_C_CacheControlsINTEL
+      SPIRV_C_CacheControlsINTEL, SPIRV_C_BFloat16TypeKHR,
+      SPIRV_C_BFloat16DotProductKHR, SPIRV_C_BFloat16CooperativeMatrixKHR
     ]>;
 
 def SPIRV_AM_Logical                 : I32EnumAttrCase<"Logical", 0>;
@@ -3217,6 +3266,16 @@ def SPIRV_ExecutionModelAttr :
       SPIRV_EM_TaskEXT, SPIRV_EM_MeshEXT
     ]>;
 
+def SPIRV_FPE_BFloat16KHR : I32EnumAttrCase<"BFloat16KHR", 0> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_BFloat16TypeKHR]>
+  ];
+}
+def SPIRV_FPEncodingAttr :
+    SPIRV_I32EnumAttr<"FPEncoding", "valid SPIR-V FPEncoding", "f_p_encoding", [
+      SPIRV_FPE_BFloat16KHR
+    ]>;
+
 def SPIRV_FC_None         : I32BitEnumAttrCaseNone<"None">;
 def SPIRV_FC_Inline       : I32BitEnumAttrCaseBit<"Inline", 0>;
 def SPIRV_FC_DontInline   : I32BitEnumAttrCaseBit<"DontInline", 1>;
@@ -4150,7 +4209,7 @@ def SPIRV_IsPtrType : CPred<"::llvm::isa<::mlir::spirv::PointerType>($_self)">;
 def SPIRV_IsRTArrayType : CPred<"::llvm::isa<::mlir::spirv::RuntimeArrayType>($_self)">;
 def SPIRV_IsSampledImageType : CPred<"::llvm::isa<::mlir::spirv::SampledImageType>($_self)">;
 def SPIRV_IsStructType : CPred<"::llvm::isa<::mlir::spirv::StructType>($_self)">;
-
+def SPIRV_IsTensorArmType : CPred<"::llvm::isa<::mlir::spirv::TensorArmType>($_self)">;
 
 // See https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_types
 // for the definition of the following types and type categories.
@@ -4161,10 +4220,12 @@ def SPIRV_Integer : AnyIntOfWidths<[8, 16, 32, 64]>;
 def SPIRV_Int16 : TypeAlias<I16, "Int16">;
 def SPIRV_Int32 : TypeAlias<I32, "Int32">;
 def SPIRV_Float32 : TypeAlias<F32, "Float32">;
+def SPIRV_BFloat16KHR : TypeAlias<BF16, "BFloat16">;
 def SPIRV_Float : FloatOfWidths<[16, 32, 64]>;
 def SPIRV_Float16or32 : FloatOfWidths<[16, 32]>;
+def SPIRV_AnyFloat : AnyTypeOf<[SPIRV_Float, SPIRV_BFloat16KHR]>;
 def SPIRV_Vector : VectorOfLengthAndType<[2, 3, 4, 8, 16],
-                                       [SPIRV_Bool, SPIRV_Integer, SPIRV_Float]>;
+                                       [SPIRV_Bool, SPIRV_Integer, SPIRV_AnyFloat]>;
 // Component type check is done in the type parser for the following SPIR-V
 // dialect-specific types so we use "Any" here.
 def SPIRV_AnyPtr : DialectType<SPIRV_Dialect, SPIRV_IsPtrType,
@@ -4186,18 +4247,20 @@ def SPIRV_AnyStruct : DialectType<SPIRV_Dialect, SPIRV_IsStructType,
                                 "any SPIR-V struct type">;
 def SPIRV_AnySampledImage : DialectType<SPIRV_Dialect, SPIRV_IsSampledImageType,
                                 "any SPIR-V sampled image type">;
+def SPIRV_AnyTensorArm : DialectType<SPIRV_Dialect, SPIRV_IsTensorArmType,
+                                 "any SPIR-V tensorArm type">;
 
-def SPIRV_Numerical : AnyTypeOf<[SPIRV_Integer, SPIRV_Float]>;
+def SPIRV_Numerical : AnyTypeOf<[SPIRV_Integer, SPIRV_AnyFloat]>;
 def SPIRV_Scalar : AnyTypeOf<[SPIRV_Numerical, SPIRV_Bool]>;
 def SPIRV_Aggregate : AnyTypeOf<[SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct]>;
 def SPIRV_Composite :
     AnyTypeOf<[SPIRV_Vector, SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct,
-               SPIRV_AnyCooperativeMatrix, SPIRV_AnyMatrix]>;
+               SPIRV_AnyCooperativeMatrix, SPIRV_AnyMatrix, SPIRV_AnyTensorArm]>;
 def SPIRV_Type : AnyTypeOf<[
-    SPIRV_Void, SPIRV_Bool, SPIRV_Integer, SPIRV_Float, SPIRV_Vector,
+    SPIRV_Void, SPIRV_Bool, SPIRV_Integer, SPIRV_AnyFloat, SPIRV_Vector,
     SPIRV_AnyPtr, SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct,
     SPIRV_AnyCooperativeMatrix, SPIRV_AnyMatrix, SPIRV_AnySampledImage,
-    SPIRV_AnyImage
+    SPIRV_AnyImage, SPIRV_AnyTensorArm
   ]>;
 
 def SPIRV_SignedInt : SignedIntOfWidths<[8, 16, 32, 64]>;
@@ -4338,7 +4401,9 @@ def SPIRV_OC_OpTranspose                      : I32EnumAttrCase<"OpTranspose", 8
 def SPIRV_OC_OpImageSampleImplicitLod         : I32EnumAttrCase<"OpImageSampleImplicitLod", 87>;
 def SPIRV_OC_OpImageSampleExplicitLod         : I32EnumAttrCase<"OpImageSampleExplicitLod", 88>;
 def SPIRV_OC_OpImageSampleProjDrefImplicitLod : I32EnumAttrCase<"OpImageSampleProjDrefImplicitLod", 93>;
+def SPIRV_OC_OpImageFetch                     : I32EnumAttrCase<"OpImageFetch", 95>;
 def SPIRV_OC_OpImageDrefGather                : I32EnumAttrCase<"OpImageDrefGather", 97>;
+def SPIRV_OC_OpImageRead                      : I32EnumAttrCase<"OpImageRead", 98>;
 def SPIRV_OC_OpImageWrite                     : I32EnumAttrCase<"OpImageWrite", 99>;
 def SPIRV_OC_OpImage                          : I32EnumAttrCase<"OpImage", 100>;
 def SPIRV_OC_OpImageQuerySize                 : I32EnumAttrCase<"OpImageQuerySize", 104>;
@@ -4493,6 +4558,7 @@ def SPIRV_OC_OpGroupNonUniformBitwiseXor      : I32EnumAttrCase<"OpGroupNonUnifo
 def SPIRV_OC_OpGroupNonUniformLogicalAnd      : I32EnumAttrCase<"OpGroupNonUniformLogicalAnd", 362>;
 def SPIRV_OC_OpGroupNonUniformLogicalOr       : I32EnumAttrCase<"OpGroupNonUniformLogicalOr", 363>;
 def SPIRV_OC_OpGroupNonUniformLogicalXor      : I32EnumAttrCase<"OpGroupNonUniformLogicalXor", 364>;
+def SPIRV_OC_OpTypeTensorARM                  : I32EnumAttrCase<"OpTypeTensorARM", 4163>;
 def SPIRV_OC_OpSubgroupBallotKHR              : I32EnumAttrCase<"OpSubgroupBallotKHR", 4421>;
 def SPIRV_OC_OpGroupNonUniformRotateKHR       : I32EnumAttrCase<"OpGroupNonUniformRotateKHR", 4431>;
 def SPIRV_OC_OpSDot                           : I32EnumAttrCase<"OpSDot", 4450>;
@@ -4506,6 +4572,8 @@ def SPIRV_OC_OpCooperativeMatrixLoadKHR       : I32EnumAttrCase<"OpCooperativeMa
 def SPIRV_OC_OpCooperativeMatrixStoreKHR      : I32EnumAttrCase<"OpCooperativeMatrixStoreKHR", 4458>;
 def SPIRV_OC_OpCooperativeMatrixMulAddKHR     : I32EnumAttrCase<"OpCooperativeMatrixMulAddKHR", 4459>;
 def SPIRV_OC_OpCooperativeMatrixLengthKHR     : I32EnumAttrCase<"OpCooperativeMatrixLengthKHR", 4460>;
+def SPIRV_OC_OpConstantCompositeReplicateEXT : I32EnumAttrCase<"OpConstantCompositeReplicateEXT", 4461>;
+def SPIRV_OC_OpSpecConstantCompositeReplicateEXT : I32EnumAttrCase<"OpSpecConstantCompositeReplicateEXT", 4462>;
 def SPIRV_OC_OpEmitMeshTasksEXT               : I32EnumAttrCase<"OpEmitMeshTasksEXT", 5294>;
 def SPIRV_OC_OpSetMeshOutputsEXT              : I32EnumAttrCase<"OpSetMeshOutputsEXT", 5295>;
 def SPIRV_OC_OpSubgroupBlockReadINTEL         : I32EnumAttrCase<"OpSubgroupBlockReadINTEL", 5575>;
@@ -4545,8 +4613,10 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpCompositeConstruct, SPIRV_OC_OpCompositeExtract,
       SPIRV_OC_OpCompositeInsert, SPIRV_OC_OpTranspose,
       SPIRV_OC_OpImageSampleImplicitLod, SPIRV_OC_OpImageSampleExplicitLod,
-      SPIRV_OC_OpImageSampleProjDrefImplicitLod, SPIRV_OC_OpImageDrefGather,
-      SPIRV_OC_OpImageWrite, SPIRV_OC_OpImage, SPIRV_OC_OpImageQuerySize,
+      SPIRV_OC_OpImageSampleProjDrefImplicitLod, SPIRV_OC_OpImageFetch,
+      SPIRV_OC_OpImageDrefGather,
+      SPIRV_OC_OpImageRead, SPIRV_OC_OpImageWrite, SPIRV_OC_OpImage,
+      SPIRV_OC_OpImageQuerySize,
       SPIRV_OC_OpConvertFToU, SPIRV_OC_OpConvertFToS, SPIRV_OC_OpConvertSToF,
       SPIRV_OC_OpConvertUToF, SPIRV_OC_OpUConvert, SPIRV_OC_OpSConvert,
       SPIRV_OC_OpFConvert, SPIRV_OC_OpConvertPtrToU, SPIRV_OC_OpConvertUToPtr,
@@ -4605,12 +4675,16 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGroupNonUniformFMax, SPIRV_OC_OpGroupNonUniformBitwiseAnd,
       SPIRV_OC_OpGroupNonUniformBitwiseOr, SPIRV_OC_OpGroupNonUniformBitwiseXor,
       SPIRV_OC_OpGroupNonUniformLogicalAnd, SPIRV_OC_OpGroupNonUniformLogicalOr,
-      SPIRV_OC_OpGroupNonUniformLogicalXor, SPIRV_OC_OpSubgroupBallotKHR,
+      SPIRV_OC_OpGroupNonUniformLogicalXor,
+      SPIRV_OC_OpTypeTensorARM,
+      SPIRV_OC_OpSubgroupBallotKHR,
       SPIRV_OC_OpGroupNonUniformRotateKHR, SPIRV_OC_OpSDot, SPIRV_OC_OpUDot,
       SPIRV_OC_OpSUDot, SPIRV_OC_OpSDotAccSat, SPIRV_OC_OpUDotAccSat,
       SPIRV_OC_OpSUDotAccSat, SPIRV_OC_OpTypeCooperativeMatrixKHR,
       SPIRV_OC_OpCooperativeMatrixLoadKHR, SPIRV_OC_OpCooperativeMatrixStoreKHR,
       SPIRV_OC_OpCooperativeMatrixMulAddKHR, SPIRV_OC_OpCooperativeMatrixLengthKHR,
+      SPIRV_OC_OpConstantCompositeReplicateEXT,
+      SPIRV_OC_OpSpecConstantCompositeReplicateEXT,
       SPIRV_OC_OpEmitMeshTasksEXT, SPIRV_OC_OpSetMeshOutputsEXT,
       SPIRV_OC_OpSubgroupBlockReadINTEL, SPIRV_OC_OpSubgroupBlockWriteINTEL,
       SPIRV_OC_OpAssumeTrueKHR, SPIRV_OC_OpAtomicFAddEXT,

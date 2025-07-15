@@ -335,7 +335,7 @@ let Class = FunctionProtoType in {
   def : Property<"extParameterInfo", Array<ExtParameterInfo>> {
     let Read = [{ node->hasExtParameterInfos()
                     ? node->getExtParameterInfos()
-                    : llvm::ArrayRef<FunctionProtoType::ExtParameterInfo>() }];
+                    : ArrayRef<FunctionProtoType::ExtParameterInfo>() }];
   }
   def : Property<"AArch64SMEAttributes", UInt32> {
     let Read = [{ node->getAArch64SMEAttributes() }];
@@ -753,7 +753,7 @@ let Class = TemplateSpecializationType in {
   }
 
   def : Creator<[{
-    return ctx.getTemplateSpecializationType(templateName, args, std::nullopt, UnderlyingType);
+    return ctx.getTemplateSpecializationType(templateName, args, {}, UnderlyingType);
   }]>;
 }
 

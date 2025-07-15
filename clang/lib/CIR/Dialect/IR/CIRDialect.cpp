@@ -21,6 +21,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/LogicalResult.h"
 
 #include <numeric>
 
@@ -65,6 +66,10 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << (boolAttr.getValue() ? "true" : "false");
       return AliasResult::FinalAlias;
     }
+    if (auto bitfield = mlir::dyn_cast<cir::BitfieldInfoAttr>(attr)) {
+      os << "bfi_" << bitfield.getName().str();
+      return AliasResult::FinalAlias;
+    }
     return AliasResult::NoAlias;
   }
 };
@@ -91,6 +96,63 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
 //===----------------------------------------------------------------------===//
 // Helpers
 //===----------------------------------------------------------------------===//
+
+// Parses one of the keywords provided in the list `keywords` and returns the
+// position of the parsed keyword in the list. If none of the keywords from the
+// list is parsed, returns -1.
+static int parseOptionalKeywordAlternative(AsmParser &parser,
+                                           ArrayRef<llvm::StringRef> keywords) {
+  for (auto en : llvm::enumerate(keywords)) {
+    if (succeeded(parser.parseOptionalKeyword(en.value())))
+      return en.index();
+  }
+  return -1;
+}
+
+namespace {
+template <typename Ty> struct EnumTraits {};
+
+#define REGISTER_ENUM_TYPE(Ty)                                                 \
+  template <> struct EnumTraits<cir::Ty> {                                     \
+    static llvm::StringRef stringify(cir::Ty value) {                          \
+      return stringify##Ty(value);                                             \
+    }                                                                          \
+    static unsigned getMaxEnumVal() { return cir::getMaxEnumValFor##Ty(); }    \
+  }
+
+REGISTER_ENUM_TYPE(GlobalLinkageKind);
+REGISTER_ENUM_TYPE(VisibilityKind);
+REGISTER_ENUM_TYPE(SideEffect);
+} // namespace
+
+/// Parse an enum from the keyword, or default to the provided default value.
+/// The return type is the enum type by default, unless overriden with the
+/// second template argument.
+template <typename EnumTy, typename RetTy = EnumTy>
+static RetTy parseOptionalCIRKeyword(AsmParser &parser, EnumTy defaultValue) {
+  llvm::SmallVector<llvm::StringRef, 10> names;
+  for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
+    names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
+
+  int index = parseOptionalKeywordAlternative(parser, names);
+  if (index == -1)
+    return static_cast<RetTy>(defaultValue);
+  return static_cast<RetTy>(index);
+}
+
+/// Parse an enum from the keyword, return failure if the keyword is not found.
+template <typename EnumTy, typename RetTy = EnumTy>
+static ParseResult parseCIRKeyword(AsmParser &parser, RetTy &result) {
+  llvm::SmallVector<llvm::StringRef, 10> names;
+  for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
+    names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
+
+  int index = parseOptionalKeywordAlternative(parser, names);
+  if (index == -1)
+    return failure();
+  result = static_cast<RetTy>(index);
+  return success();
+}
 
 // Check if a region's termination omission is valid and, if so, creates and
 // inserts the omitted terminator into the region.
@@ -128,6 +190,26 @@ static bool omitRegionTerm(mlir::Region &r) {
     return y && y.getArgs().empty();
   };
   return singleNonEmptyBlock && yieldsNothing();
+}
+
+void printVisibilityAttr(OpAsmPrinter &printer,
+                         cir::VisibilityAttr &visibility) {
+  switch (visibility.getValue()) {
+  case cir::VisibilityKind::Hidden:
+    printer << "hidden";
+    break;
+  case cir::VisibilityKind::Protected:
+    printer << "protected";
+    break;
+  case cir::VisibilityKind::Default:
+    break;
+  }
+}
+
+void parseVisibilityAttr(OpAsmParser &parser, cir::VisibilityAttr &visibility) {
+  cir::VisibilityKind visibilityKind =
+      parseOptionalCIRKeyword(parser, cir::VisibilityKind::Default);
+  visibility = cir::VisibilityAttr::get(parser.getContext(), visibilityKind);
 }
 
 //===----------------------------------------------------------------------===//
@@ -344,13 +426,13 @@ LogicalResult cir::CastOp::verify() {
     return success();
   }
   case cir::CastKind::floating: {
-    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType) ||
-        !mlir::isa<cir::CIRFPTypeInterface>(resType))
+    if (!mlir::isa<cir::FPTypeInterface>(srcType) ||
+        !mlir::isa<cir::FPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for source and result";
     return success();
   }
   case cir::CastKind::float_to_int: {
-    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType))
+    if (!mlir::isa<cir::FPTypeInterface>(srcType))
       return emitOpError() << "requires !cir.float type for source";
     if (!mlir::dyn_cast<cir::IntType>(resType))
       return emitOpError() << "requires !cir.int type for result";
@@ -371,7 +453,7 @@ LogicalResult cir::CastOp::verify() {
     return success();
   }
   case cir::CastKind::float_to_bool: {
-    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType))
+    if (!mlir::isa<cir::FPTypeInterface>(srcType))
       return emitOpError() << "requires !cir.float type for source";
     if (!mlir::isa<cir::BoolType>(resType))
       return emitOpError() << "requires !cir.bool type for result";
@@ -387,14 +469,14 @@ LogicalResult cir::CastOp::verify() {
   case cir::CastKind::int_to_float: {
     if (!mlir::isa<cir::IntType>(srcType))
       return emitOpError() << "requires !cir.int type for source";
-    if (!mlir::isa<cir::CIRFPTypeInterface>(resType))
+    if (!mlir::isa<cir::FPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for result";
     return success();
   }
   case cir::CastKind::bool_to_float: {
     if (!mlir::isa<cir::BoolType>(srcType))
       return emitOpError() << "requires !cir.bool type for source";
-    if (!mlir::isa<cir::CIRFPTypeInterface>(resType))
+    if (!mlir::isa<cir::FPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for result";
     return success();
   }
@@ -516,7 +598,9 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   llvm::ArrayRef<mlir::Type> allResultTypes;
 
   // If we cannot parse a string callee, it means this is an indirect call.
-  if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
+  if (!parser
+           .parseOptionalAttribute(calleeAttr, CIRDialect::getCalleeAttrName(),
+                                   result.attributes)
            .has_value()) {
     OpAsmParser::UnresolvedOperand indirectVal;
     // Do not resolve right now, since we need to figure out the type
@@ -533,6 +617,22 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     return mlir::failure();
   if (parser.parseRParen())
     return mlir::failure();
+
+  if (parser.parseOptionalKeyword("nothrow").succeeded())
+    result.addAttribute(CIRDialect::getNoThrowAttrName(),
+                        mlir::UnitAttr::get(parser.getContext()));
+
+  if (parser.parseOptionalKeyword("side_effect").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    cir::SideEffect sideEffect;
+    if (parseCIRKeyword<cir::SideEffect>(parser, sideEffect).failed())
+      return failure();
+    if (parser.parseRParen().failed())
+      return failure();
+    auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
+    result.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
+  }
 
   if (parser.parseOptionalAttrDict(result.attributes))
     return ::mlir::failure();
@@ -556,7 +656,8 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
 static void printCallCommon(mlir::Operation *op,
                             mlir::FlatSymbolRefAttr calleeSym,
                             mlir::Value indirectCallee,
-                            mlir::OpAsmPrinter &printer) {
+                            mlir::OpAsmPrinter &printer, bool isNothrow,
+                            cir::SideEffect sideEffect) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
@@ -572,7 +673,19 @@ static void printCallCommon(mlir::Operation *op,
   }
   printer << "(" << ops << ")";
 
-  printer.printOptionalAttrDict(op->getAttrs(), {"callee"});
+  if (isNothrow)
+    printer << " nothrow";
+
+  if (sideEffect != cir::SideEffect::All) {
+    printer << " side_effect(";
+    printer << stringifySideEffect(sideEffect);
+    printer << ")";
+  }
+
+  printer.printOptionalAttrDict(op->getAttrs(),
+                                {CIRDialect::getCalleeAttrName(),
+                                 CIRDialect::getNoThrowAttrName(),
+                                 CIRDialect::getSideEffectAttrName()});
 
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
@@ -586,13 +699,16 @@ mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
 
 void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  printCallCommon(*this, getCalleeAttr(), indirectCallee, p);
+  cir::SideEffect sideEffect = getSideEffect();
+  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
+                  sideEffect);
 }
 
 static LogicalResult
 verifyCallCommInSymbolUses(mlir::Operation *op,
                            SymbolTableCollection &symbolTable) {
-  auto fnAttr = op->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr =
+      op->getAttrOfType<FlatSymbolRefAttr>(CIRDialect::getCalleeAttrName());
   if (!fnAttr) {
     // This is an indirect call, thus we don't have to check the symbol uses.
     return mlir::success();
@@ -1227,18 +1343,53 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // FuncOp
 //===----------------------------------------------------------------------===//
 
+/// Returns the name used for the linkage attribute. This *must* correspond to
+/// the name of the attribute in ODS.
+static llvm::StringRef getLinkageAttrNameString() { return "linkage"; }
+
 void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name, FuncType type) {
+                        StringRef name, FuncType type,
+                        GlobalLinkageKind linkage) {
   result.addRegion();
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
+  result.addAttribute(
+      getLinkageAttrNameString(),
+      GlobalLinkageKindAttr::get(builder.getContext(), linkage));
+  result.addAttribute(getGlobalVisibilityAttrName(result.name),
+                      cir::VisibilityAttr::get(builder.getContext()));
 }
 
 ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
+
+  mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
+  mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
+  mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
+
+  // Default to external linkage if no keyword is provided.
+  state.addAttribute(getLinkageAttrNameString(),
+                     GlobalLinkageKindAttr::get(
+                         parser.getContext(),
+                         parseOptionalCIRKeyword<GlobalLinkageKind>(
+                             parser, GlobalLinkageKind::ExternalLinkage)));
+
+  ::llvm::StringRef visAttrStr;
+  if (parser.parseOptionalKeyword(&visAttrStr, {"private", "public", "nested"})
+          .succeeded()) {
+    state.addAttribute(visNameAttr,
+                       parser.getBuilder().getStringAttr(visAttrStr));
+  }
+
+  cir::VisibilityAttr cirVisibilityAttr;
+  parseVisibilityAttr(parser, cirVisibilityAttr);
+  state.addAttribute(visibilityNameAttr, cirVisibilityAttr);
+
+  if (parser.parseOptionalKeyword(dsoLocalNameAttr).succeeded())
+    state.addAttribute(dsoLocalNameAttr, parser.getBuilder().getUnitAttr());
 
   StringAttr nameAttr;
   if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
@@ -1271,11 +1422,27 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   state.addAttribute(getFunctionTypeAttrName(state.name),
                      TypeAttr::get(fnType));
 
+  bool hasAlias = false;
+  mlir::StringAttr aliaseeNameAttr = getAliaseeAttrName(state.name);
+  if (parser.parseOptionalKeyword("alias").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    mlir::StringAttr aliaseeAttr;
+    if (parser.parseOptionalSymbolName(aliaseeAttr).failed())
+      return failure();
+    state.addAttribute(aliaseeNameAttr, FlatSymbolRefAttr::get(aliaseeAttr));
+    if (parser.parseRParen().failed())
+      return failure();
+    hasAlias = true;
+  }
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
       *body, arguments, /*enableNameShadowing=*/false);
   if (parseResult.has_value()) {
+    if (hasAlias)
+      return parser.emitError(loc, "function alias shall not have a body");
     if (failed(*parseResult))
       return failure();
     // Function body was parsed, make sure its not empty.
@@ -1286,9 +1453,17 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   return success();
 }
 
+// This function corresponds to `llvm::GlobalValue::isDeclaration` and should
+// have a similar implementation. We don't currently ifuncs or materializable
+// functions, but those should be handled here as they are implemented.
 bool cir::FuncOp::isDeclaration() {
-  // TODO(CIR): This function will actually do something once external
-  // function declarations and aliases are upstreamed.
+  assert(!cir::MissingFeatures::supportIFuncAttr());
+
+  std::optional<StringRef> aliasee = getAliasee();
+  if (!aliasee)
+    return getFunctionBody().empty();
+
+  // Aliases are always definitions.
   return false;
 }
 
@@ -1299,11 +1474,36 @@ mlir::Region *cir::FuncOp::getCallableRegion() {
 }
 
 void cir::FuncOp::print(OpAsmPrinter &p) {
+  if (getComdat())
+    p << " comdat";
+
+  if (getLinkage() != GlobalLinkageKind::ExternalLinkage)
+    p << ' ' << stringifyGlobalLinkageKind(getLinkage());
+
+  mlir::SymbolTable::Visibility vis = getVisibility();
+  if (vis != mlir::SymbolTable::Visibility::Public)
+    p << ' ' << vis;
+
+  cir::VisibilityAttr cirVisibilityAttr = getGlobalVisibilityAttr();
+  if (!cirVisibilityAttr.isDefault()) {
+    p << ' ';
+    printVisibilityAttr(p, cirVisibilityAttr);
+  }
+
+  if (getDsoLocal())
+    p << " dso_local";
+
   p << ' ';
   p.printSymbolName(getSymName());
   cir::FuncType fnType = getFunctionType();
   function_interface_impl::printFunctionSignature(
       p, *this, fnType.getInputs(), fnType.isVarArg(), fnType.getReturnTypes());
+
+  if (std::optional<StringRef> aliaseeName = getAliasee()) {
+    p << " alias(";
+    p.printSymbolName(*aliaseeName);
+    p << ")";
+  }
 
   // Print the body if this is not an external function.
   Region &body = getOperation()->getRegion(0);
@@ -1312,25 +1512,6 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p.printRegion(body, /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/true);
   }
-}
-
-//===----------------------------------------------------------------------===//
-// CIR defined traits
-//===----------------------------------------------------------------------===//
-
-LogicalResult
-mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
-  if (failed(verifyAtLeastNOperands(op, 1)) || failed(verifyOneResult(op)))
-    return failure();
-
-  const Type type = op->getResult(0).getType();
-  const Type opType = op->getOperand(0).getType();
-
-  if (type != opType)
-    return op->emitOpError()
-           << "requires the same type for first operand and result";
-
-  return success();
 }
 
 // TODO(CIR): The properties of functions that require verification haven't
@@ -1533,6 +1714,16 @@ LogicalResult cir::GetMemberOp::verify() {
 // VecCreateOp
 //===----------------------------------------------------------------------===//
 
+OpFoldResult cir::VecCreateOp::fold(FoldAdaptor adaptor) {
+  if (llvm::any_of(getElements(), [](mlir::Value value) {
+        return !mlir::isa<cir::ConstantOp>(value.getDefiningOp());
+      }))
+    return {};
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), adaptor.getElements()));
+}
+
 LogicalResult cir::VecCreateOp::verify() {
   // Verify that the number of arguments matches the number of elements in the
   // vector, and that the type of all the arguments matches the type of the
@@ -1577,6 +1768,104 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
     return {};
 
   return elements[index];
+}
+
+//===----------------------------------------------------------------------===//
+// VecCmpOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
+  auto lhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
+  auto rhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getRhs());
+  if (!lhsVecAttr || !rhsVecAttr)
+    return {};
+
+  mlir::Type inputElemTy =
+      mlir::cast<cir::VectorType>(lhsVecAttr.getType()).getElementType();
+  if (!isAnyIntegerOrFloatingPointType(inputElemTy))
+    return {};
+
+  cir::CmpOpKind opKind = adaptor.getKind();
+  mlir::ArrayAttr lhsVecElhs = lhsVecAttr.getElts();
+  mlir::ArrayAttr rhsVecElhs = rhsVecAttr.getElts();
+  uint64_t vecSize = lhsVecElhs.size();
+
+  SmallVector<mlir::Attribute, 16> elements(vecSize);
+  bool isIntAttr = vecSize && mlir::isa<cir::IntAttr>(lhsVecElhs[0]);
+  for (uint64_t i = 0; i < vecSize; i++) {
+    mlir::Attribute lhsAttr = lhsVecElhs[i];
+    mlir::Attribute rhsAttr = rhsVecElhs[i];
+    int cmpResult = 0;
+    switch (opKind) {
+    case cir::CmpOpKind::lt: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::le: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <=
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::gt: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::ge: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >=
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::eq: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() ==
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() ==
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    case cir::CmpOpKind::ne: {
+      if (isIntAttr) {
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() !=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+      } else {
+        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() !=
+                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
+      }
+      break;
+    }
+    }
+
+    elements[i] = cir::IntAttr::get(getType().getElementType(), cmpResult);
+  }
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), elements));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1633,6 +1922,15 @@ LogicalResult cir::VecShuffleOp::verify() {
                          << " and " << getResult().getType() << " don't match";
   }
 
+  const uint64_t maxValidIndex =
+      getVec1().getType().getSize() + getVec2().getType().getSize() - 1;
+  if (llvm::any_of(
+          getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
+            return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;
+          })) {
+    return emitOpError() << ": index for __builtin_shufflevector must be "
+                            "less than the total number of vector elements";
+  }
   return success();
 }
 
@@ -1727,6 +2025,111 @@ OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
   cir::VectorType vecTy = getLhs().getType();
   return cir::ConstVectorAttr::get(
       vecTy, mlir::ArrayAttr::get(getContext(), elements));
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexCreateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexCreateOp::verify() {
+  if (getType().getElementType() != getReal().getType()) {
+    emitOpError()
+        << "operand type of cir.complex.create does not match its result type";
+    return failure();
+  }
+
+  return success();
+}
+
+OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute real = adaptor.getReal();
+  mlir::Attribute imag = adaptor.getImag();
+  if (!real || !imag)
+    return {};
+
+  // When both of real and imag are constants, we can fold the operation into an
+  // `#cir.const_complex` operation.
+  auto realAttr = mlir::cast<mlir::TypedAttr>(real);
+  auto imagAttr = mlir::cast<mlir::TypedAttr>(imag);
+  return cir::ConstComplexAttr::get(realAttr, imagAttr);
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexRealOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexRealOp::verify() {
+  if (getType() != getOperand().getType().getElementType()) {
+    emitOpError() << ": result type does not match operand type";
+    return failure();
+  }
+  return success();
+}
+
+OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
+  if (auto complexCreateOp =
+          dyn_cast_or_null<cir::ComplexCreateOp>(getOperand().getDefiningOp()))
+    return complexCreateOp.getOperand(0);
+
+  auto complex =
+      mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
+  return complex ? complex.getReal() : nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexImagOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexImagOp::verify() {
+  if (getType() != getOperand().getType().getElementType()) {
+    emitOpError() << ": result type does not match operand type";
+    return failure();
+  }
+  return success();
+}
+
+OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
+  if (auto complexCreateOp =
+          dyn_cast_or_null<cir::ComplexCreateOp>(getOperand().getDefiningOp()))
+    return complexCreateOp.getOperand(1);
+
+  auto complex =
+      mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
+  return complex ? complex.getImag() : nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexRealPtrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexRealPtrOp::verify() {
+  mlir::Type resultPointeeTy = getType().getPointee();
+  cir::PointerType operandPtrTy = getOperand().getType();
+  auto operandPointeeTy =
+      mlir::cast<cir::ComplexType>(operandPtrTy.getPointee());
+
+  if (resultPointeeTy != operandPointeeTy.getElementType()) {
+    return emitOpError() << ": result type does not match operand type";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexImagPtrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexImagPtrOp::verify() {
+  mlir::Type resultPointeeTy = getType().getPointee();
+  cir::PointerType operandPtrTy = getOperand().getType();
+  auto operandPointeeTy =
+      mlir::cast<cir::ComplexType>(operandPtrTy.getPointee());
+
+  if (resultPointeeTy != operandPointeeTy.getElementType()) {
+    return emitOpError()
+           << "cir.complex.imag_ptr result type does not match operand type";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

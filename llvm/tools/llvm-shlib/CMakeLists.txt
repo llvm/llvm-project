@@ -41,6 +41,15 @@ if(LLVM_BUILD_LLVM_DYLIB)
     llvm_install_library_symlink(LLVM-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX} $<TARGET_FILE_NAME:LLVM> SHARED FULL_DEST COMPONENT LLVM)
   endif()
 
+  if (MINGW OR CYGWIN)
+    # The LLVM DLL is supposed to export all symbols (except for ones
+    # that are explicitly hidden). Normally, this is what happens anyway, but
+    # if there are symbols that are marked explicitly as dllexport, we'd only
+    # export them and nothing else. Therefore, add --export-all-symbols to
+    # make sure we export all symbols despite potential dllexports.
+    target_link_options(LLVM PRIVATE LINKER:--export-all-symbols)
+  endif()
+
   list(REMOVE_DUPLICATES LIB_NAMES)
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
     set(LIB_NAMES -Wl,-all_load ${LIB_NAMES})
@@ -66,7 +75,7 @@ if(LLVM_BUILD_LLVM_DYLIB)
     else()
       # GNU ld doesn't resolve symbols in the version script.
       set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
-      if (NOT LLVM_LINKER_IS_SOLARISLD AND NOT MINGW)
+      if (NOT LLVM_LINKER_IS_SOLARISLD AND NOT MINGW AND NOT CYGWIN)
         # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
         set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
       endif()

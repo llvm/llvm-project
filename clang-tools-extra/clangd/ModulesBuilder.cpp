@@ -160,6 +160,16 @@ public:
           RequiredModule->getModuleFilePath().str());
   }
 
+  std::string getAsString() const {
+    std::string Result;
+    llvm::raw_string_ostream OS(Result);
+    for (const auto &ModuleFile : RequiredModules) {
+      OS << "-fmodule-file=" << ModuleFile->getModuleName() << "="
+         << ModuleFile->getModuleFilePath() << " ";
+    }
+    return Result;
+  }
+
   bool canReuse(const CompilerInvocation &CI,
                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const override;
 
@@ -209,8 +219,9 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
 
   IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   PCHContainerOperations PCHOperations;
+  CodeGenOptions CodeGenOpts;
   ASTReader Reader(PP, *ModCache, /*ASTContext=*/nullptr,
-                   PCHOperations.getRawReader(), {});
+                   PCHOperations.getRawReader(), CodeGenOpts, {});
 
   // We don't need any listener here. By default it will use a validator
   // listener.
@@ -296,8 +307,27 @@ buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
   GenerateReducedModuleInterfaceAction Action;
   Clang->ExecuteAction(Action);
 
-  if (Clang->getDiagnostics().hasErrorOccurred())
-    return llvm::createStringError("Compilation failed");
+  if (Clang->getDiagnostics().hasErrorOccurred()) {
+    std::string Cmds;
+    for (const auto &Arg : Inputs.CompileCommand.CommandLine) {
+      if (!Cmds.empty())
+        Cmds += " ";
+      Cmds += Arg;
+    }
+
+    clangd::vlog("Failed to compile {0} with command: {1}.", ModuleUnitFileName,
+                 Cmds);
+
+    std::string BuiltModuleFilesStr = BuiltModuleFiles.getAsString();
+    if (!BuiltModuleFilesStr.empty())
+      clangd::vlog("The actual used module files built by clangd is {0}",
+                   BuiltModuleFilesStr);
+
+    return llvm::createStringError(
+        llvm::formatv("Failed to compile {0}. Use '--log=verbose' to view "
+                      "detailed failure reasons.",
+                      ModuleUnitFileName));
+  }
 
   return ModuleFile{ModuleName, Inputs.CompileCommand.Output};
 }

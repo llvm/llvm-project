@@ -13,10 +13,13 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// TODO: stop calling the public unlink function. It should be calling an
+// internal shared utility.
+
 LLVM_LIBC_FUNCTION(int, shm_unlink, (const char *name)) {
-  using namespace shm_common;
-  if (cpp::optional<SHMPath> buffer = translate_name(name))
-    return unlink(buffer->data());
+  if (cpp::optional<shm_common::SHMPath> buffer =
+          shm_common::translate_name(name))
+    return LIBC_NAMESPACE::unlink(buffer->data());
   return -1;
 }
 

@@ -6620,6 +6620,8 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_affinity:
       case OMPC_bind:
       case OMPC_filter:
+      case OMPC_severity:
+      case OMPC_message:
         continue;
       case OMPC_allocator:
       case OMPC_flush:
@@ -6637,8 +6639,6 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_match:
       case OMPC_when:
       case OMPC_at:
-      case OMPC_severity:
-      case OMPC_message:
       default:
         llvm_unreachable("Unexpected clause");
       }
@@ -7122,6 +7122,7 @@ void SemaOpenMP::ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(
       getASTContext(), VariantFuncRef, DVScope.TI,
       /*NothingArgs=*/nullptr, /*NothingArgsSize=*/0,
       /*NeedDevicePtrArgs=*/nullptr, /*NeedDevicePtrArgsSize=*/0,
+      /*NeedDeviceAddrArgs=*/nullptr, /*NeedDeviceAddrArgsSize=*/0,
       /*AppendArgs=*/nullptr, /*AppendArgsSize=*/0);
   for (FunctionDecl *BaseFD : Bases)
     BaseFD->addAttr(OMPDeclareVariantA);
@@ -7553,6 +7554,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
     ArrayRef<Expr *> AdjustArgsNothing,
     ArrayRef<Expr *> AdjustArgsNeedDevicePtr,
+    ArrayRef<Expr *> AdjustArgsNeedDeviceAddr,
     ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
     SourceLocation AppendArgsLoc, SourceRange SR) {
 
@@ -7564,6 +7566,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
   SmallVector<Expr *, 8> AllAdjustArgs;
   llvm::append_range(AllAdjustArgs, AdjustArgsNothing);
   llvm::append_range(AllAdjustArgs, AdjustArgsNeedDevicePtr);
+  llvm::append_range(AllAdjustArgs, AdjustArgsNeedDeviceAddr);
 
   if (!AllAdjustArgs.empty() || !AppendArgs.empty()) {
     VariantMatchInfo VMI;
@@ -7614,6 +7617,8 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
       const_cast<Expr **>(AdjustArgsNothing.data()), AdjustArgsNothing.size(),
       const_cast<Expr **>(AdjustArgsNeedDevicePtr.data()),
       AdjustArgsNeedDevicePtr.size(),
+      const_cast<Expr **>(AdjustArgsNeedDeviceAddr.data()),
+      AdjustArgsNeedDeviceAddr.size(),
       const_cast<OMPInteropInfo *>(AppendArgs.data()), AppendArgs.size(), SR);
   FD->addAttr(NewAttr);
 }
@@ -15135,7 +15140,7 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   // instantiated.
   if (SemaRef.CurContext->isDependentContext())
     return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
-                                       nullptr, nullptr);
+                                       NumLoops, nullptr, nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting a single-dimensional loop iteration space");
@@ -15294,7 +15299,7 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
       ForStmt(Context, Init.get(), Cond.get(), nullptr, Incr.get(),
               ReversedBody, LoopHelper.Init->getBeginLoc(),
               LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
-  return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
+  return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt, NumLoops,
                                      ReversedFor,
                                      buildPreInits(Context, PreInits));
 }
@@ -15504,9 +15509,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_final:
     Res = ActOnOpenMPFinalClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
-  case OMPC_num_threads:
-    Res = ActOnOpenMPNumThreadsClause(Expr, StartLoc, LParenLoc, EndLoc);
-    break;
   case OMPC_safelen:
     Res = ActOnOpenMPSafelenClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
@@ -15560,6 +15562,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
     break;
   case OMPC_grainsize:
   case OMPC_num_tasks:
+  case OMPC_num_threads:
   case OMPC_device:
   case OMPC_if:
   case OMPC_default:
@@ -15906,10 +15909,41 @@ isNonNegativeIntegerValue(Expr *&ValExpr, Sema &SemaRef, OpenMPClauseKind CKind,
   return true;
 }
 
-OMPClause *SemaOpenMP::ActOnOpenMPNumThreadsClause(Expr *NumThreads,
-                                                   SourceLocation StartLoc,
-                                                   SourceLocation LParenLoc,
-                                                   SourceLocation EndLoc) {
+static std::string getListOfPossibleValues(OpenMPClauseKind K, unsigned First,
+                                           unsigned Last,
+                                           ArrayRef<unsigned> Exclude = {}) {
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  unsigned Skipped = Exclude.size();
+  for (unsigned I = First; I < Last; ++I) {
+    if (llvm::is_contained(Exclude, I)) {
+      --Skipped;
+      continue;
+    }
+    Out << "'" << getOpenMPSimpleClauseTypeName(K, I) << "'";
+    if (I + Skipped + 2 == Last)
+      Out << " or ";
+    else if (I + Skipped + 1 != Last)
+      Out << ", ";
+  }
+  return std::string(Out.str());
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPNumThreadsClause(
+    OpenMPNumThreadsClauseModifier Modifier, Expr *NumThreads,
+    SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation ModifierLoc, SourceLocation EndLoc) {
+  assert((ModifierLoc.isInvalid() || getLangOpts().OpenMP >= 60) &&
+         "Unexpected num_threads modifier in OpenMP < 60.");
+
+  if (ModifierLoc.isValid() && Modifier == OMPC_NUMTHREADS_unknown) {
+    std::string Values = getListOfPossibleValues(OMPC_num_threads, /*First=*/0,
+                                                 OMPC_NUMTHREADS_unknown);
+    Diag(ModifierLoc, diag::err_omp_unexpected_clause_value)
+        << Values << getOpenMPClauseNameForDiag(OMPC_num_threads);
+    return nullptr;
+  }
+
   Expr *ValExpr = NumThreads;
   Stmt *HelperValStmt = nullptr;
 
@@ -15930,8 +15964,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPNumThreadsClause(Expr *NumThreads,
     HelperValStmt = buildPreInits(getASTContext(), Captures);
   }
 
-  return new (getASTContext()) OMPNumThreadsClause(
-      ValExpr, HelperValStmt, CaptureRegion, StartLoc, LParenLoc, EndLoc);
+  return new (getASTContext())
+      OMPNumThreadsClause(Modifier, ValExpr, HelperValStmt, CaptureRegion,
+                          StartLoc, LParenLoc, ModifierLoc, EndLoc);
 }
 
 ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
@@ -16294,26 +16329,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
-}
-
-static std::string getListOfPossibleValues(OpenMPClauseKind K, unsigned First,
-                                           unsigned Last,
-                                           ArrayRef<unsigned> Exclude = {}) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  unsigned Skipped = Exclude.size();
-  for (unsigned I = First; I < Last; ++I) {
-    if (llvm::is_contained(Exclude, I)) {
-      --Skipped;
-      continue;
-    }
-    Out << "'" << getOpenMPSimpleClauseTypeName(K, I) << "'";
-    if (I + Skipped + 2 == Last)
-      Out << " or ";
-    else if (I + Skipped + 1 != Last)
-      Out << ", ";
-  }
-  return std::string(Out.str());
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPDefaultClause(DefaultKind Kind,
@@ -16688,8 +16703,14 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
         static_cast<OpenMPNumTasksClauseModifier>(Argument.back()), Expr,
         StartLoc, LParenLoc, ArgumentLoc.back(), EndLoc);
     break;
-  case OMPC_final:
   case OMPC_num_threads:
+    assert(Argument.size() == 1 && ArgumentLoc.size() == 1 &&
+           "Modifier for num_threads clause and its location are expected.");
+    Res = ActOnOpenMPNumThreadsClause(
+        static_cast<OpenMPNumThreadsClauseModifier>(Argument.back()), Expr,
+        StartLoc, LParenLoc, ArgumentLoc.back(), EndLoc);
+    break;
+  case OMPC_final:
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:

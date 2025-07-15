@@ -23,7 +23,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
+#include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -35,7 +35,6 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <utility>
 
 using namespace clang;
 using namespace CodeGen;
@@ -67,18 +66,22 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   DXILValMD->addOperand(Val);
 }
 
-void addRootSignature(ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
+void addRootSignature(llvm::dxbc::RootSignatureVersion RootSigVer,
+                      ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
                       llvm::Function *Fn, llvm::Module &M) {
   auto &Ctx = M.getContext();
 
-  llvm::hlsl::rootsig::MetadataBuilder Builder(Ctx, Elements);
-  MDNode *RootSignature = Builder.BuildRootSignature();
-  MDNode *FnPairing =
-      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature});
+  llvm::hlsl::rootsig::MetadataBuilder RSBuilder(Ctx, Elements);
+  MDNode *RootSignature = RSBuilder.BuildRootSignature();
+
+  ConstantAsMetadata *Version = ConstantAsMetadata::get(ConstantInt::get(
+      llvm::Type::getInt32Ty(Ctx), llvm::to_underlying(RootSigVer)));
+  MDNode *MDVals =
+      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature, Version});
 
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
-  RootSignatureValMD->addOperand(FnPairing);
+  RootSignatureValMD->addOperand(MDVals);
 }
 
 } // namespace
@@ -237,35 +240,6 @@ static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
   }
 }
 
-std::pair<llvm::Intrinsic::ID, bool>
-CGHLSLRuntime::getCreateHandleFromBindingIntrinsic() {
-  switch (getArch()) {
-  case llvm::Triple::dxil:
-    return std::pair(llvm::Intrinsic::dx_resource_handlefrombinding, true);
-  case llvm::Triple::spirv:
-    return std::pair(llvm::Intrinsic::spv_resource_handlefrombinding, false);
-  default:
-    llvm_unreachable("Intrinsic resource_handlefrombinding not supported by "
-                     "target architecture");
-  }
-}
-
-std::pair<llvm::Intrinsic::ID, bool>
-CGHLSLRuntime::getCreateHandleFromImplicitBindingIntrinsic() {
-  switch (getArch()) {
-  case llvm::Triple::dxil:
-    return std::pair(llvm::Intrinsic::dx_resource_handlefromimplicitbinding,
-                     true);
-  case llvm::Triple::spirv:
-    return std::pair(llvm::Intrinsic::spv_resource_handlefromimplicitbinding,
-                     false);
-  default:
-    llvm_unreachable(
-        "Intrinsic resource_handlefromimplicitbinding not supported by "
-        "target architecture");
-  }
-}
-
 // Codegen for HLSLBufferDecl
 void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
 
@@ -405,6 +379,7 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
   addSPIRVBuiltinDecoration(GV, BuiltInID);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   return B.CreateLoad(Ty, GV);
 }
 
@@ -418,17 +393,27 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
+    llvm::Intrinsic::ID IntrinID = getThreadIdIntrinsic();
     llvm::Function *ThreadIDIntrinsic =
-        CGM.getIntrinsic(getThreadIdIntrinsic());
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_GroupThreadIDAttr>()) {
+    llvm::Intrinsic::ID IntrinID = getGroupThreadIdIntrinsic();
     llvm::Function *GroupThreadIDIntrinsic =
-        CGM.getIntrinsic(getGroupThreadIdIntrinsic());
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupThreadIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
-    llvm::Function *GroupIDIntrinsic = CGM.getIntrinsic(getGroupIdIntrinsic());
+    llvm::Intrinsic::ID IntrinID = getGroupIdIntrinsic();
+    llvm::Function *GroupIDIntrinsic =
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_PositionAttr>()) {
@@ -495,17 +480,11 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
   // Add and identify root signature to function, if applicable
   for (const Attr *Attr : FD->getAttrs()) {
-    if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr))
-      addRootSignature(RSAttr->getSignatureDecl()->getRootElements(), EntryFn,
+    if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr)) {
+      auto *RSDecl = RSAttr->getSignatureDecl();
+      addRootSignature(RSDecl->getVersion(), RSDecl->getRootElements(), EntryFn,
                        M);
-  }
-}
-
-void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
-                                              llvm::Function *Fn) {
-  if (FD->isInExportDeclContext()) {
-    const StringRef ExportAttrKindStr = "hlsl.export";
-    Fn->addFnAttr(ExportAttrKindStr);
+    }
   }
 }
 
@@ -617,39 +596,35 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
 void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                                 llvm::GlobalVariable *GV,
                                                 HLSLResourceBindingAttr *RBA) {
+  assert(RBA && "expect a nonnull binding attribute");
   llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
   auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
-  auto *Space =
-      llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
+  auto *Space = llvm::ConstantInt::get(CGM.IntTy, RBA->getSpaceNumber());
   Value *Name = nullptr;
 
-  auto [IntrinsicID, HasNameArg] =
+  llvm::Intrinsic::ID IntrinsicID =
       RBA->hasRegisterSlot()
           ? CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic()
           : CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
 
-  if (HasNameArg) {
-    std::string Str(BufDecl->getName());
-    std::string GlobalName(Str + ".str");
-    Name = CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
-  }
+  std::string Str(BufDecl->getName());
+  std::string GlobalName(Str + ".str");
+  Name = CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
 
   // buffer with explicit binding
   if (RBA->hasRegisterSlot()) {
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
-    SmallVector<Value *> Args{Space, RegSlot, RangeSize, Index, NonUniform};
-    if (Name)
-      Args.push_back(Name);
+    SmallVector<Value *> Args{Space, RegSlot,    RangeSize,
+                              Index, NonUniform, Name};
     initializeBuffer(CGM, GV, IntrinsicID, Args);
   } else {
     // buffer with implicit binding
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
-    SmallVector<Value *> Args{OrderID, Space, RangeSize, Index, NonUniform};
-    if (Name)
-      Args.push_back(Name);
+    SmallVector<Value *> Args{OrderID, Space,      RangeSize,
+                              Index,   NonUniform, Name};
     initializeBuffer(CGM, GV, IntrinsicID, Args);
   }
 }
