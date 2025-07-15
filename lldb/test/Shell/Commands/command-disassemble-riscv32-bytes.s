@@ -1,4 +1,6 @@
 # REQUIRES: riscv
+# Unsupported until we fix launching the filter program on Windows.
+# UNSUPPORTED: system-windows
 
 # This test verifies that disassemble -b prints out the correct bytes and
 # format for standard and unknown riscv instructions of various sizes,
