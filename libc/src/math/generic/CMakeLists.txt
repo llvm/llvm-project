@@ -607,6 +607,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tanpif
+  SRCS
+    tanpif.cpp
+  HDRS
+    ../tanpif.h
+  DEPENDS
+    .sincosf_utils
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+)
+
+add_entrypoint_object(
   tanpif16
   SRCS
     tanpif16.cpp
@@ -1744,7 +1759,7 @@ add_entrypoint_object(
   HDRS
     ../frexpf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.frexpf
 )
 
 add_entrypoint_object(
@@ -1764,8 +1779,7 @@ add_entrypoint_object(
   HDRS
     ../frexpf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.frexpf16
 )
 
 add_entrypoint_object(
@@ -1775,8 +1789,7 @@ add_entrypoint_object(
   HDRS
     ../frexpf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.frexpf128
 )
 
 add_entrypoint_object(
@@ -1900,7 +1913,7 @@ add_entrypoint_object(
   HDRS
     ../ldexpf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.ldexpf
 )
 
 add_entrypoint_object(
@@ -1920,8 +1933,7 @@ add_entrypoint_object(
   HDRS
     ../ldexpf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.ldexpf16
 )
 
 add_entrypoint_object(
@@ -1931,8 +1943,7 @@ add_entrypoint_object(
   HDRS
     ../ldexpf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.ldexpf128
 )
 
 add_object_library(
