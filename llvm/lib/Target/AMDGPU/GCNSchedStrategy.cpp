@@ -29,6 +29,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -535,6 +536,7 @@ GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
     const MachineSchedContext *C, bool IsLegacyScheduler)
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::OccInitialSchedule);
+  SchedStages.push_back(GCNSchedStageID::RewriteSchedule);
   SchedStages.push_back(GCNSchedStageID::UnclusteredHighRPReschedule);
   SchedStages.push_back(GCNSchedStageID::ClusteredLowOccupancyReschedule);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
@@ -785,6 +787,8 @@ GCNScheduleDAGMILive::createSchedStage(GCNSchedStageID SchedStageID) {
   switch (SchedStageID) {
   case GCNSchedStageID::OccInitialSchedule:
     return std::make_unique<OccInitialScheduleStage>(SchedStageID, *this);
+  case GCNSchedStageID::RewriteSchedule:
+    return std::make_unique<RewriteScheduleStage>(SchedStageID, *this);
   case GCNSchedStageID::UnclusteredHighRPReschedule:
     return std::make_unique<UnclusteredHighRPStage>(SchedStageID, *this);
   case GCNSchedStageID::ClusteredLowOccupancyReschedule:
@@ -948,10 +952,12 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   Pressure.resize(Regions.size());
   RegionsWithHighRP.resize(Regions.size());
   RegionsWithExcessRP.resize(Regions.size());
+  RegionsWithExcessArchVGPR.resize(Regions.size());
   RegionsWithMinOcc.resize(Regions.size());
   RegionsWithIGLPInstrs.resize(Regions.size());
   RegionsWithHighRP.reset();
   RegionsWithExcessRP.reset();
+  RegionsWithExcessArchVGPR.reset();
   RegionsWithMinOcc.reset();
   RegionsWithIGLPInstrs.reset();
 
@@ -1010,6 +1016,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const GCNSchedStageID &StageID) {
   case GCNSchedStageID::OccInitialSchedule:
     OS << "Max Occupancy Initial Schedule";
     break;
+  case GCNSchedStageID::RewriteSchedule:
+    OS << "Instruction Rewriting Reschedule";
+    break;
   case GCNSchedStageID::UnclusteredHighRPReschedule:
     OS << "Unclustered High Register Pressure Reschedule";
     break;
@@ -1040,6 +1049,245 @@ bool GCNSchedStage::initGCNSchedStage() {
     return false;
 
   LLVM_DEBUG(dbgs() << "Starting scheduling stage: " << StageID << "\n");
+  return true;
+}
+
+bool RewriteScheduleStage::initGCNSchedStage() {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!ST.hasGFX90AInsts() || DAG.RegionsWithExcessArchVGPR.none())
+    return false;
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *SRI = ST.getRegisterInfo();
+  SmallPtrSet<MachineInstr *, 16> CrossRCUseCopies;
+  SmallPtrSet<MachineInstr *, 16> CrossRCDefCopies;
+  std::vector<std::pair<MachineInstr *, unsigned>> RewriteInsts;
+
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (TII->isMAI(MI)) {
+        int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
+        if (ReplacementOp == -1)
+          continue;
+        const TargetRegisterClass *VGPRRC =
+            DAG.MRI.getRegClass(MI.getOperand(0).getReg());
+        const TargetRegisterClass *AGPRRC = SRI->getEquivalentAGPRClass(VGPRRC);
+        const TargetRegisterClass *DestConstrainExceptRC =
+            recomputeRegClassExceptRewritable(MI.getOperand(0).getReg(), VGPRRC,
+                                              AGPRRC);
+
+        if (!DestConstrainExceptRC)
+          CrossRCUseCopies.insert(&MI);
+
+        MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+        if (Src2 && Src2->isReg()) {
+          const TargetRegisterClass *Src2ConstrainExceptRC =
+              recomputeRegClassExceptRewritable(Src2->getReg(), VGPRRC, AGPRRC);
+          if ((!Src2ConstrainExceptRC || Src2ConstrainExceptRC != AGPRRC))
+            CrossRCDefCopies.insert(&MI);
+
+          DAG.MRI.setRegClass(Src2->getReg(), AGPRRC);
+        }
+
+        DAG.MRI.setRegClass(MI.getOperand(0).getReg(), AGPRRC);
+
+        auto OriginalOpc = MI.getOpcode();
+        MI.setDesc(TII->get(ReplacementOp));
+        RewriteInsts.push_back({&MI, OriginalOpc});
+      }
+    }
+  }
+
+  bool ShouldRewrite = false;
+  for (unsigned RegionIdx = 0; RegionIdx < DAG.Regions.size(); RegionIdx++) {
+    if (!DAG.RegionsWithExcessArchVGPR[RegionIdx])
+      continue;
+
+    // For the cases we care about (i.e. ArchVGPR usage is greater than the
+    // addressable limit), rewriting alone should bring pressure to manageable
+    // level. If we find any such region, then the rewrite is potentially
+    // beneficial.
+    auto PressureAfter = DAG.getRealRegPressure(RegionIdx);
+    unsigned MaxCombinedVGPRs = ST.getMaxNumVGPRs(MF);
+    if (PressureAfter.getArchVGPRNum() <= ST.getAddressableNumArchVGPRs() &&
+        PressureAfter.getVGPRNum(true) <= MaxCombinedVGPRs) {
+      ShouldRewrite = true;
+      break;
+    }
+  }
+
+  // If we find that we'll need to insert cross RC copies inside loop bodies,
+  // then bail
+  if (ShouldRewrite) {
+    CI.clear();
+    CI.compute(MF);
+
+    for (auto *DefMI : CrossRCUseCopies) {
+      auto DefReg = DefMI->getOperand(0).getReg();
+
+      for (auto &UseMI : DAG.MRI.use_nodbg_instructions(DefReg)) {
+        for (unsigned OpNo = 0; OpNo < UseMI.getNumOperands(); OpNo++) {
+          auto &TheOp = UseMI.getOperand(OpNo);
+          if (!TheOp.isReg() || !TheOp.isUse())
+            continue;
+          if (TheOp.getReg() != DefReg)
+            continue;
+
+          auto RequiredRC = UseMI.getRegClassConstraint(OpNo, DAG.TII, DAG.TRI);
+          if (!RequiredRC || SRI->hasAGPRs(RequiredRC))
+            continue;
+
+          unsigned DefDepth = CI.getCycleDepth(DefMI->getParent());
+          if (DefDepth && CI.getCycleDepth(UseMI.getParent()) >= DefDepth) {
+            ShouldRewrite = false;
+            break;
+          }
+        }
+        if (!ShouldRewrite)
+          break;
+      }
+      if (!ShouldRewrite)
+        break;
+    }
+  }
+
+  // If we haven't found the beneficial conditions, prefer the VGPR form which
+  // may result in less cross RC copies.
+  if (!ShouldRewrite) {
+    for (auto RI : RewriteInsts) {
+      MachineInstr *MI = RI.first;
+
+      assert(TII->isMAI(*MI));
+      const TargetRegisterClass *AGPRRC =
+          DAG.MRI.getRegClass(MI->getOperand(0).getReg());
+      const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(AGPRRC);
+
+      MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+      assert(Src2);
+
+      if (Src2->isReg()) {
+        DAG.MRI.setRegClass(Src2->getReg(), VGPRRC);
+      }
+      DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VGPRRC);
+      MI->setDesc(TII->get(RI.second));
+    }
+
+    return false;
+  }
+
+  DAG.RegionsWithExcessArchVGPR.reset();
+  DAG.RegionsWithExcessRP.reset();
+
+  // Insert cross RC copies for the users of the MFMA result
+  for (auto MI : CrossRCUseCopies) {
+    auto DefReg = MI->getOperand(0).getReg();
+    SmallVector<MachineInstr *, 4> UseInstrs;
+    for (auto &UseMI : DAG.MRI.use_nodbg_instructions(DefReg))
+      UseInstrs.push_back(&UseMI);
+
+    DenseMap<Register, MachineInstr *> NewCopies;
+    for (auto UseMI : UseInstrs) {
+      for (unsigned OpNo = 0; OpNo < UseMI->getNumOperands(); OpNo++) {
+        auto &TheOp = UseMI->getOperand(OpNo);
+        if (!TheOp.isReg() || !TheOp.isUse())
+          continue;
+        if (TheOp.getReg() != DefReg)
+          continue;
+
+        auto RequiredRC = UseMI->getRegClassConstraint(OpNo, DAG.TII, DAG.TRI);
+
+        if (!RequiredRC || SRI->hasAGPRs(RequiredRC))
+          continue;
+
+        Register DestVGPR;
+        if (!NewCopies.contains(DefReg)) {
+          Register DestVGPR = DAG.MRI.createVirtualRegister(
+              SRI->getEquivalentVGPRClass(DAG.MRI.getRegClass(DefReg)));
+
+          // Insert copy near the user to avoid inserting inside loops.
+          MachineInstrBuilder VGPRCopy =
+              BuildMI(*UseMI->getParent(), UseMI->getIterator(),
+                      UseMI->getDebugLoc(), TII->get(TargetOpcode::COPY))
+                  .addDef(DestVGPR, 0, 0)
+                  .addUse(DefReg, 0, 0);
+
+          NewCopies[DefReg] = VGPRCopy;
+        }
+        DestVGPR = NewCopies[DefReg]->getOperand(0).getReg();
+        TheOp.setReg(DestVGPR);
+      }
+    }
+    if (NewCopies.contains(DefReg)) {
+      DAG.LIS->InsertMachineInstrInMaps(*NewCopies[DefReg]);
+      DAG.LIS->removeInterval(DefReg);
+      DAG.LIS->createAndComputeVirtRegInterval(DefReg);
+      DAG.LIS->createAndComputeVirtRegInterval(
+          NewCopies[DefReg]->getOperand(0).getReg());
+    }
+  }
+
+  // Insert cross RC copies for the use operands of the MFMA
+  for (auto MI : CrossRCDefCopies) {
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    if (!Src2)
+      continue;
+    if (!Src2->isReg())
+      continue;
+    auto Src2Reg = Src2->getReg();
+    SmallVector<MachineInstr *, 4> DefInstrs;
+    for (auto &DefMI : DAG.MRI.def_instructions(Src2Reg))
+      DefInstrs.push_back(&DefMI);
+
+    DenseMap<Register, MachineInstr *> NewCopies;
+    for (auto DefMI : DefInstrs) {
+      for (unsigned OpNo = 0; OpNo < DefMI->getNumOperands(); OpNo++) {
+        auto &TheOp = DefMI->getOperand(OpNo);
+        if (!TheOp.isReg() || !TheOp.isDef())
+          continue;
+        if (TheOp.getReg() != Src2Reg)
+          continue;
+
+        auto RequiredRC = DefMI->getRegClassConstraint(OpNo, DAG.TII, DAG.TRI);
+
+        if (!RequiredRC || SRI->hasAGPRs(RequiredRC))
+          continue;
+
+        Register SrcVGPR;
+        if (!NewCopies.contains(Src2Reg)) {
+          Register SrcVGPR = DAG.MRI.createVirtualRegister(
+              SRI->getEquivalentVGPRClass(DAG.MRI.getRegClass(Src2Reg)));
+
+          // Insert copy near the def to avoid inserting inside loops.
+          MachineInstrBuilder VGPRCopy =
+              BuildMI(*DefMI->getParent(), ++DefMI->getIterator(),
+                      DefMI->getDebugLoc(), TII->get(TargetOpcode::COPY))
+                  .addDef(Src2Reg, 0, 0)
+                  .addUse(SrcVGPR, 0, 0);
+
+          NewCopies[Src2Reg] = VGPRCopy;
+        }
+
+        SrcVGPR = NewCopies[Src2Reg]->getOperand(1).getReg();
+        TheOp.setReg(SrcVGPR);
+      }
+    }
+
+    if (NewCopies.contains(Src2Reg)) {
+      DAG.LIS->InsertMachineInstrInMaps(*NewCopies[Src2Reg]);
+      DAG.LIS->removeInterval(Src2Reg);
+      DAG.LIS->createAndComputeVirtRegInterval(Src2Reg);
+      DAG.LIS->createAndComputeVirtRegInterval(
+          NewCopies[Src2Reg]->getOperand(1).getReg());
+    }
+  }
+
+  // Liveins may have been modified for cross RC copies
+  RegionPressureMap LiveInUpdater(&DAG, false);
+  LiveInUpdater.buildLiveRegMap();
+
+  for (unsigned RegionIdx = 0; RegionIdx < DAG.Regions.size(); RegionIdx++)
+    DAG.LiveIns[RegionIdx] = LiveInUpdater.getLiveRegsForRegionIdx(RegionIdx);
+
   return true;
 }
 
@@ -1348,6 +1596,9 @@ void GCNSchedStage::checkScheduling() {
     DAG.RegionsWithExcessRP[RegionIdx] = true;
   }
 
+  if (PressureAfter.getArchVGPRNum() > ST.getAddressableNumArchVGPRs())
+    DAG.RegionsWithExcessArchVGPR[RegionIdx] = true;
+
   // Revert if this region's schedule would cause a drop in occupancy or
   // spilling.
   if (shouldRevertScheduling(WavesAfter)) {
@@ -1646,6 +1897,38 @@ void GCNSchedStage::revertScheduling() {
   DAG.placeDebugValues();
 
   DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
+}
+
+bool RewriteScheduleStage::isRewriteCandidate(MachineInstr *MI) const {
+
+  if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
+    return false;
+  return AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode()) != -1;
+}
+
+const TargetRegisterClass *
+RewriteScheduleStage::recomputeRegClassExceptRewritable(
+    Register Reg, const TargetRegisterClass *OldRC,
+    const TargetRegisterClass *NewRC) const {
+
+  // Accumulate constraints from all uses.
+  for (MachineOperand &MO : DAG.MRI.reg_nodbg_operands(Reg)) {
+    // Apply the effect of the given operand to NewRC.
+    MachineInstr *MI = MO.getParent();
+    // We can swap the classes of dst + src2 as a pair to AGPR, so ignore the
+    // effects of rewrite candidates. It just so happens that we can use either
+    // AGPR or VGPR in src0/src1, so don't bother checking the constraint
+    // effects of the individual operands.
+    if (isRewriteCandidate(MI))
+      continue;
+
+    unsigned OpNo = &MO - &MI->getOperand(0);
+    NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, DAG.TII, DAG.TRI);
+    if (!NewRC || NewRC == OldRC)
+      return nullptr;
+  }
+
+  return NewRC;
 }
 
 bool PreRARematStage::allUsesAvailableAt(const MachineInstr *InstToRemat,
