@@ -5371,3 +5371,11 @@ def ModularFormat : InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let Documentation = [ModularFormatDocs];
 }
+
+def OverflowBehavior : TypeAttr {
+  let Spellings = [Clang<"overflow_behavior">];
+  let Args = [IdentifierArgument<"BehaviorKind">];
+  let Subjects = SubjectList<[Var, TypedefName, Field], WarnDiag,
+                             "variables, typedefs, and data members">;
+  let Documentation = [Undocumented];
+}
