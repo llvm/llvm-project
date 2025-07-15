@@ -14,7 +14,7 @@
 #ifndef SANITIZER_PLATFORM_LIMITS_POSIX_H
 #define SANITIZER_PLATFORM_LIMITS_POSIX_H
 
-#if SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU
+#if SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU || SANITIZER_AIX
 
 #  include "sanitizer_internal_defs.h"
 #  include "sanitizer_mallinfo.h"
@@ -29,7 +29,7 @@
 #      define SANITIZER_HAS_STAT64 0
 #      define SANITIZER_HAS_STATFS64 0
 #    endif
-#  elif SANITIZER_GLIBC || SANITIZER_ANDROID
+#  elif SANITIZER_GLIBC || SANITIZER_ANDROID || SANITIZER_AIX
 #    define SANITIZER_HAS_STAT64 1
 #    define SANITIZER_HAS_STATFS64 1
 #  endif
@@ -319,7 +319,7 @@ struct __sanitizer_iovec {
   usize iov_len;
 };
 
-#  if !SANITIZER_ANDROID
+#  if !SANITIZER_ANDROID && !SANITIZER_AIX
 struct __sanitizer_ifaddrs {
   struct __sanitizer_ifaddrs *ifa_next;
   char *ifa_name;
@@ -333,7 +333,7 @@ struct __sanitizer_ifaddrs {
   void *ifa_dstaddr;  // (struct sockaddr *)
   void *ifa_data;
 };
-#  endif  // !SANITIZER_ANDROID
+#  endif  // !SANITIZER_ANDROID && !SANITIZER_AIX
 
 #  if SANITIZER_APPLE
 typedef unsigned long __sanitizer_pthread_key_t;
@@ -341,7 +341,7 @@ typedef unsigned long __sanitizer_pthread_key_t;
 typedef unsigned __sanitizer_pthread_key_t;
 #  endif
 
-#  if SANITIZER_LINUX && !SANITIZER_ANDROID
+#  if (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_AIX
 
 struct __sanitizer_XDR {
   int x_op;
@@ -436,12 +436,14 @@ struct __sanitizer_tm {
   int tm_wday;
   int tm_yday;
   int tm_isdst;
+#  if !SANITIZER_AIX
 #  if SANITIZER_HAIKU
   int tm_gmtoff;
 #  else
   long int tm_gmtoff;
 #  endif
   const char *tm_zone;
+#  endif
 };
 
 #  if SANITIZER_LINUX
@@ -528,8 +530,13 @@ struct __sanitizer_dirent {
 };
 #  else
 struct __sanitizer_dirent {
+#    if SANITIZER_AIX
+  uptr d_offset;
+  uptr d_ino;
+#    else
   uptr d_ino;
   uptr d_off;
+#endif
   unsigned short d_reclen;
   // more fields that we don't care about
 };
@@ -545,7 +552,7 @@ struct __sanitizer_dirent64 {
 extern unsigned struct_sock_fprog_sz;
 #  endif
 
-#  if SANITIZER_HAIKU
+#  if SANITIZER_HAIKU || SANITIZER_AIX
 typedef int __sanitizer_clock_t;
 #  elif defined(__x86_64__) && !defined(_LP64)
 typedef long long __sanitizer_clock_t;
@@ -608,6 +615,14 @@ typedef unsigned long __sanitizer_sigset_t;
 struct __sanitizer_sigset_t {
   // The size is determined by looking at sizeof of real sigset_t on linux.
   uptr val[128 / sizeof(uptr)];
+};
+#  elif SANITIZER_AIX
+struct __sanitizer_sigset_t {
+#    if SANITIZER_WORDSIZE == 64
+  uptr val[4];
+#    else
+  uptr val[2];
+#    endif
 };
 #  endif
 
@@ -800,8 +815,12 @@ struct __sanitizer_addrinfo {
   int ai_family;
   int ai_socktype;
   int ai_protocol;
-#  if SANITIZER_ANDROID || SANITIZER_APPLE || SANITIZER_HAIKU
+#  if SANITIZER_ANDROID || SANITIZER_APPLE || SANITIZER_HAIKU || SANITIZER_AIX
+#    if SANITIZER_AIX  // AIX ai_addrlen type is size_t
+  uptr ai_addrlen;
+#    else
   unsigned ai_addrlen;
+#    endif
   char *ai_canonname;
   void *ai_addr;
 #  else  // LINUX
@@ -810,6 +829,9 @@ struct __sanitizer_addrinfo {
   char *ai_canonname;
 #  endif
   struct __sanitizer_addrinfo *ai_next;
+#  if SANITIZER_AIX
+  int ai_eflags;
+#  endif
 };
 
 struct __sanitizer_hostent {
@@ -826,7 +848,7 @@ struct __sanitizer_pollfd {
   short revents;
 };
 
-#  if SANITIZER_ANDROID || SANITIZER_APPLE
+#  if SANITIZER_ANDROID || SANITIZER_APPLE || SANITIZER_AIX
 typedef unsigned __sanitizer_nfds_t;
 #  else
 typedef unsigned long __sanitizer_nfds_t;
@@ -864,6 +886,10 @@ struct __sanitizer_wordexp_t {
   uptr we_wordc;
   char **we_wordv;
   uptr we_offs;
+#  if SANITIZER_AIX
+  int we_sflags;
+  uptr we_soffs;
+#  endif
 };
 
 #  if SANITIZER_LINUX && !SANITIZER_ANDROID
@@ -1122,12 +1148,12 @@ extern unsigned fpos_t_sz;
 // when it can not be determined without including any system headers.
 extern const unsigned IOCTL_NOT_PRESENT;
 
-extern unsigned IOCTL_FIOASYNC;
+extern ioctl_alttype IOCTL_FIOASYNC;
 extern unsigned IOCTL_FIOCLEX;
 extern unsigned IOCTL_FIOGETOWN;
-extern unsigned IOCTL_FIONBIO;
+extern ioctl_alttype IOCTL_FIONBIO;
 extern unsigned IOCTL_FIONCLEX;
-extern unsigned IOCTL_FIOSETOWN;
+extern ioctl_alttype IOCTL_FIOSETOWN;
 extern unsigned IOCTL_SIOCADDMULTI;
 extern unsigned IOCTL_SIOCATMARK;
 extern unsigned IOCTL_SIOCDELMULTI;
@@ -1147,27 +1173,29 @@ extern unsigned IOCTL_SIOCSIFFLAGS;
 extern unsigned IOCTL_SIOCSIFMETRIC;
 extern unsigned IOCTL_SIOCSIFMTU;
 extern unsigned IOCTL_SIOCSIFNETMASK;
-extern unsigned IOCTL_SIOCSPGRP;
+extern ioctl_alttype IOCTL_SIOCSPGRP;
 #  if !SANITIZER_HAIKU
-extern unsigned IOCTL_TIOCCONS;
+extern ioctl_alttype IOCTL_TIOCCONS;
 extern unsigned IOCTL_TIOCGETD;
 extern unsigned IOCTL_TIOCNOTTY;
-extern unsigned IOCTL_TIOCPKT;
-extern unsigned IOCTL_TIOCSETD;
-extern unsigned IOCTL_TIOCSTI;
+extern ioctl_alttype IOCTL_TIOCPKT;
+extern ioctl_alttype IOCTL_TIOCSETD;
+extern ioctl_alttype IOCTL_TIOCSTI;
 #  endif
 extern unsigned IOCTL_TIOCEXCL;
 extern unsigned IOCTL_TIOCGPGRP;
 extern unsigned IOCTL_TIOCGWINSZ;
-extern unsigned IOCTL_TIOCMBIC;
-extern unsigned IOCTL_TIOCMBIS;
+extern ioctl_alttype IOCTL_TIOCMBIC;
+extern ioctl_alttype IOCTL_TIOCMBIS;
 extern unsigned IOCTL_TIOCMGET;
-extern unsigned IOCTL_TIOCMSET;
+extern ioctl_alttype IOCTL_TIOCMSET;
 extern unsigned IOCTL_TIOCNXCL;
 extern unsigned IOCTL_TIOCOUTQ;
+#  if !SANITIZER_AIX
 extern unsigned IOCTL_TIOCSCTTY;
-extern unsigned IOCTL_TIOCSPGRP;
-extern unsigned IOCTL_TIOCSWINSZ;
+#  endif
+extern ioctl_alttype IOCTL_TIOCSPGRP;
+extern ioctl_alttype IOCTL_TIOCSWINSZ;
 #  if SANITIZER_LINUX && !SANITIZER_ANDROID
 extern unsigned IOCTL_SIOCGETSGCNT;
 extern unsigned IOCTL_SIOCGETVIFCNT;
@@ -1567,6 +1595,6 @@ extern const int si_SEGV_ACCERR;
 typedef void *__sanitizer_timer_t;
 #  endif
 
-#endif  // SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU
+#endif  // SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU || SANITIZER_AIX
 
 #endif
