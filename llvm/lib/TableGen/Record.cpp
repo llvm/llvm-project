@@ -3148,7 +3148,7 @@ llvm::IRMemLocation Record::getLocationTypeAsInt(StringRef FieldName) const {
   if (Name == "AArch64_FPMR")
     return static_cast<IRMemLocation>(
         llvm::InaccessibleTargetMemLocation::AARCH64_FPMR);
-  else if (Name == "ZA")
+  else if (Name == "AArch64_ZA")
     return static_cast<IRMemLocation>(
         llvm::InaccessibleTargetMemLocation::AARCH64_ZA);
   else if (Name == "InaccessibleMem")

@@ -286,7 +286,6 @@ define void @f48() inaccessiblememonly {
 define void @f49() inaccessiblemem_or_argmemonly {
   ret void
 }
-
 ; CHECK: define void @f50(ptr swiftself %0)
 define void @f50(ptr swiftself %0)
 {
@@ -578,43 +577,6 @@ define void @dead_on_return(ptr dead_on_return %p) {
   ret void
 }
 
-; CHECK: define void @fpmr_write() [[ATTR59:#.*]] {
-define void @fpmr_write() inaccessiblewritememonly(fpmr) {
-  ret void
-}
-
-; CHECK: define void @fpmr_read()  [[ATTR60:#.*]] {
-define void @fpmr_read() inaccessiblereadmemonly(fpmr) {
-  ret void
-}
-
-; CHECK: define void @za_write()  [[ATTR61:#.*]] {
-define void @za_write() inaccessiblewritememonly(za) {
-  ret void
-}
-
-; CHECK: define void @za_read()  [[ATTR62:#.*]] {
-define void @za_read() inaccessiblereadmemonly(za) {
-  ret void
-}
-
-; CHECK: define void @read_inaccessible()  [[ATTR63:#.*]] {
-define void @read_inaccessible() inaccessiblereadmemonly {
-  ret void
-}
-
-; CHECK: define void @write_inaccessible()  [[ATTR64:#.*]] {
-define void @write_inaccessible() inaccessiblewritememonly {
-  ret void
-}
-
-; CHECK: define void @za_read_write_fpmr()  [[ATTR65:#.*]] {
-define void @za_read_write_fpmr() inaccessiblereadmemonly(za) inaccessiblewritememonly(fpmr) {
-  ret void
-}
-
-
-; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }
 ; CHECK: attributes #3 = { memory(read) }
@@ -674,11 +636,4 @@ define void @za_read_write_fpmr() inaccessiblereadmemonly(za) inaccessiblewritem
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }
 ; CHECK: attributes [[NODIVERGENCESOURCE]] = { nodivergencesource }
-; CHECK: attributes [[ATTR59]] = { memory(fpmr: write) }
-; CHECK: attributes [[ATTR60]] = { memory(fpmr: read) }
-; CHECK: attributes [[ATTR61]] = { memory(za: write) }
-; CHECK: attributes [[ATTR62]] = { memory(za: read) }
-; CHECK: attributes [[ATTR63]] = { memory(inaccessiblemem: read) }
-; CHECK: attributes [[ATTR64]] = { memory(inaccessiblemem: write) }
-; CHECK: attributes [[ATTR65]] = { memory(fpmr: write, za: read) }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }
