@@ -5,12 +5,6 @@
 // RUN:   -ffreestanding \
 // RUN:   -emit-llvm -w -o - %s | FileCheck %s
 
-// RUN: %clang_cc1 -triple armv7-unknown-nacl-gnueabi \
-// RUN:  -target-cpu cortex-a8 \
-// RUN:  -mfloat-abi hard \
-// RUN:  -ffreestanding \
-// RUN:  -emit-llvm -w -o - %s | FileCheck %s
-
 // RUN: %clang_cc1 -triple arm64-apple-darwin9 -target-feature +neon \
 // RUN:   -ffreestanding \
 // RUN:   -emit-llvm -w -o - %s | FileCheck -check-prefix=CHECK64 %s
