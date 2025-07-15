@@ -1878,7 +1878,7 @@ static void RemovePreallocated(Function *F) {
 
     Builder.SetInsertPoint(PreallocatedSetup);
     auto *StackSave = Builder.CreateStackSave();
-    Builder.SetInsertPoint(NewCB->getNextNonDebugInstruction());
+    Builder.SetInsertPoint(NewCB->getNextNode());
     Builder.CreateStackRestore(StackSave);
 
     // Replace @llvm.call.preallocated.arg() with alloca.
@@ -1902,7 +1902,7 @@ static void RemovePreallocated(Function *F) {
         auto AddressSpace = UseCall->getType()->getPointerAddressSpace();
         auto *ArgType =
             UseCall->getFnAttr(Attribute::Preallocated).getValueAsType();
-        auto *InsertBefore = PreallocatedSetup->getNextNonDebugInstruction();
+        auto *InsertBefore = PreallocatedSetup->getNextNode();
         Builder.SetInsertPoint(InsertBefore);
         auto *Alloca =
             Builder.CreateAlloca(ArgType, AddressSpace, nullptr, "paarg");
