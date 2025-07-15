@@ -2092,15 +2092,30 @@ Sema::SemaDiagnosticBuilder::~SemaDiagnosticBuilder() {
 }
 
 Sema::SemaDiagnosticBuilder
-Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
+Sema::targetDiag(SourceLocation Loc, unsigned DiagID, FunctionDecl *FD) {
   FD = FD ? FD : getCurFunctionDecl();
-  if (LangOpts.OpenMP)
-    return LangOpts.OpenMPIsTargetDevice
-               ? OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD)
-               : OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);
-  if (getLangOpts().CUDA)
-    return getLangOpts().CUDAIsDevice ? CUDA().DiagIfDeviceCode(Loc, DiagID)
-                                      : CUDA().DiagIfHostCode(Loc, DiagID);
+
+  if (LangOpts.OpenMP) {
+    if (LangOpts.OpenMPIsTargetDevice)
+      return OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD);
+
+    SemaDiagnosticBuilder SDB = OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);
+    if (SDB.isDeferred())
+      FD->setInvalidDecl();
+
+    return SDB;
+  }
+
+  if (getLangOpts().CUDA) {
+    if (getLangOpts().CUDAIsDevice)
+      return CUDA().DiagIfDeviceCode(Loc, DiagID);
+
+    SemaDiagnosticBuilder SDB = CUDA().DiagIfHostCode(Loc, DiagID);
+    if (SDB.isDeferred())
+      FD->setInvalidDecl();
+
+    return SDB;
+  }
 
   if (getLangOpts().SYCLIsDevice)
     return SYCL().DiagIfDeviceCode(Loc, DiagID);
@@ -2138,9 +2153,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
 
   // Try to associate errors with the lexical context, if that is a function, or
   // the value declaration otherwise.
-  const FunctionDecl *FD = isa<FunctionDecl>(C)
-                               ? cast<FunctionDecl>(C)
-                               : dyn_cast_or_null<FunctionDecl>(D);
+  FunctionDecl *FD = isa<FunctionDecl>(C) ? cast<FunctionDecl>(C)
+                                          : dyn_cast_or_null<FunctionDecl>(D);
 
   auto CheckDeviceType = [&](QualType Ty) {
     if (Ty->isDependentType())
