@@ -18,7 +18,8 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* __launder(_Tp* __p) _NOEXCEPT {
-  // The compiler diagnoses misuses of __builtin_launder, so we don't need to add any static_asserts.
+  // The compiler diagnoses misuses of __builtin_launder, so we don't need to add any static_asserts
+  // to implement the Mandates.
   return __builtin_launder(__p);
 }
 
