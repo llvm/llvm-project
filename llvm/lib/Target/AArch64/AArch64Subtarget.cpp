@@ -270,6 +270,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     break;
   case NeoverseV2:
   case NeoverseV3:
+    CacheLineSize = 64;
     EpilogueVectorizationMinVF = 8;
     MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
