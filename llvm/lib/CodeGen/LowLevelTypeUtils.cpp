@@ -80,6 +80,8 @@ const llvm::fltSemantics &llvm::getFltSemanticForLLT(LLT Ty) {
     return APFloat::IEEEsingle();
   case 64:
     return APFloat::IEEEdouble();
+  case 80:
+    return APFloat::x87DoubleExtended();
   case 128:
     return APFloat::IEEEquad();
   }

@@ -13,6 +13,7 @@
 #include "X86LegalizerInfo.h"
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -579,6 +580,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
       .lower();
 
+  getActionDefinitionsBuilder(G_IS_FPCLASS).custom();
   // fp intrinsics
   getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
       .scalarize(0)
@@ -616,6 +618,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeFPTOSI(MI, MRI, Helper);
   case TargetOpcode::G_GET_ROUNDING:
     return legalizeGETROUNDING(MI, MRI, Helper);
+  case TargetOpcode::G_IS_FPCLASS:
+    return legalizeIsFPClass(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -853,9 +857,235 @@ bool X86LegalizerInfo::legalizeGETROUNDING(MachineInstr &MI,
   auto RetValTrunc = MIRBuilder.buildZExtOrTrunc(DstTy, RetVal);
 
   MIRBuilder.buildCopy(Dst, RetValTrunc);
-
   MI.eraseFromParent();
   return true;
+}
+
+bool X86LegalizerInfo::expandFPClassTestForF32OrF64(
+    MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  FPClassTest Test = static_cast<FPClassTest>(MI.getOperand(2).getImm());
+  assert(!SrcTy.isVector() && "G_IS_FPCLASS does not support vectors yet");
+  const fltSemantics &Semantics = getFltSemanticForLLT(SrcTy.getScalarType());
+
+  // Some checks may be represented as inversion of simpler check, for example
+  // "inf|normal|subnormal|zero" => !"nan".
+  bool IsInverted = false;
+
+  if (FPClassTest InvertedCheck = invertFPClassTestIfSimpler(Test, false)) {
+    Test = InvertedCheck;
+    IsInverted = true;
+  }
+
+  // In the general case use integer operations.
+  unsigned BitSize = SrcTy.getScalarSizeInBits();
+  LLT IntVT = LLT::scalar(BitSize);
+  // MachineInstrBuilder OpAsInt = MIRBuilder.buildBitcast(IntVT, SrcReg);
+  MachineInstrBuilder OpAsInt = MIRBuilder.buildCopy(IntVT, SrcReg);
+
+  // Various Mask
+  APInt SignMask = APInt::getSignMask(BitSize);
+  APInt ValueMask = APInt::getSignedMaxValue(BitSize);
+  APInt Inf = APFloat::getInf(Semantics).bitcastToAPInt();
+  APInt InfPlus1 = Inf + 1;
+  APInt ExpMask = Inf;
+  APInt AllOneMantissa = APFloat::getLargest(Semantics).bitcastToAPInt() & ~Inf;
+  APInt QNaNBitMask =
+      APInt::getOneBitSet(BitSize, AllOneMantissa.getActiveBits() - 1);
+  APInt InvertionMask = APInt::getAllOnes(DstTy.getScalarSizeInBits());
+
+  auto ValueMaskV = MIRBuilder.buildConstant(IntVT, ValueMask);
+  auto SignBitV = MIRBuilder.buildConstant(IntVT, SignMask);
+  auto ExpMaskV = MIRBuilder.buildConstant(IntVT, ExpMask);
+  auto ZeroV = MIRBuilder.buildConstant(IntVT, 0);
+  auto InfV = MIRBuilder.buildConstant(IntVT, Inf);
+  auto InfPlus1V = MIRBuilder.buildConstant(IntVT, InfPlus1);
+  auto ResultInvertedV = MIRBuilder.buildConstant(DstTy, InvertionMask);
+
+  MachineInstrBuilder Res;
+  const auto appendResult = [&](MachineInstrBuilder &PartialRes) {
+    if (PartialRes.getInstr()) {
+      if (Res.getInstr()) {
+        Res = MIRBuilder.buildOr(DstTy, Res, PartialRes);
+      } else {
+        Res = PartialRes;
+      }
+    }
+  };
+  // Split the value into sign bit and absolute value.
+  auto AbsV = MIRBuilder.buildAnd(IntVT, OpAsInt, ValueMaskV);
+  auto SignVDestReg = MRI.createGenericVirtualRegister(LLT::scalar(1));
+  auto SignV =
+      MIRBuilder.buildICmp(CmpInst::ICMP_SLT, SignVDestReg, OpAsInt, ZeroV);
+
+  // Tests that involve more than one class should be processed first.
+  MachineInstrBuilder PartialRes;
+
+  if ((Test & fcFinite) == fcFinite) {
+    // finite(V) ==> abs(V) < exp_mask
+    PartialRes = MIRBuilder.buildICmp(
+        IsInverted ? CmpInst::ICMP_SGE : CmpInst::ICMP_SLT,
+        MRI.createGenericVirtualRegister(LLT::scalar(1)), AbsV, ExpMaskV);
+    Test &= ~fcFinite;
+  } else if ((Test & fcFinite) == fcPosFinite) {
+    // finite(V) && V > 0 ==> V < exp_mask
+    PartialRes = MIRBuilder.buildICmp(
+        IsInverted ? CmpInst::ICMP_UGE : CmpInst::ICMP_ULT,
+        MRI.createGenericVirtualRegister(LLT::scalar(1)), OpAsInt, ExpMaskV);
+    Test &= ~fcPosFinite;
+  } else if ((Test & fcFinite) == fcNegFinite) {
+    // finite(V) && V < 0 ==> abs(V) < exp_mask && signbit == 1
+    auto PartialResPart = MIRBuilder.buildICmp(
+        CmpInst::ICMP_SLT, MRI.createGenericVirtualRegister(LLT::scalar(1)),
+        AbsV, ExpMaskV);
+    PartialRes = MIRBuilder.buildAnd(LLT::scalar(1), PartialResPart, SignV);
+    Test &= ~fcNegFinite;
+  }
+  appendResult(PartialRes);
+
+  if (FPClassTest PartialCheck = Test & (fcZero | fcSubnormal)) {
+    // fcZero | fcSubnormal => test all exponent bits are 0
+    // TODO: Handle sign bit specific cases
+    if (PartialCheck == (fcZero | fcSubnormal)) {
+      auto ExpBits = MIRBuilder.buildAnd(IntVT, OpAsInt, ExpMaskV);
+      auto ExpIsZero = MIRBuilder.buildICmp(
+          CmpInst::ICMP_EQ, MRI.createGenericVirtualRegister(LLT::scalar(1)),
+          ExpBits, ZeroV);
+      appendResult(ExpIsZero);
+      Test &= ~PartialCheck & fcAllFlags;
+    }
+  }
+
+  // Check for individual classes.
+  if (unsigned PartialCheck = Test & fcZero) {
+    if (PartialCheck == fcPosZero)
+      PartialRes = MIRBuilder.buildICmp(
+          CmpInst::ICMP_EQ, MRI.createGenericVirtualRegister(LLT::scalar(1)),
+          OpAsInt, ZeroV);
+    else if (PartialCheck == fcZero)
+      PartialRes = MIRBuilder.buildICmp(
+          CmpInst::ICMP_EQ, MRI.createGenericVirtualRegister(LLT::scalar(1)),
+          AbsV, ZeroV);
+    else // ISD::fcNegZero
+      PartialRes = MIRBuilder.buildICmp(
+          CmpInst::ICMP_EQ, MRI.createGenericVirtualRegister(LLT::scalar(1)),
+          OpAsInt, SignBitV);
+    appendResult(PartialRes);
+  }
+  if (unsigned PartialCheck = Test & fcSubnormal) {
+    assert("Not Supported yet!");
+  }
+  if (unsigned PartialCheck = Test & fcInf) {
+    if (PartialCheck == fcPosInf)
+      PartialRes = MIRBuilder.buildICmp(
+          IsInverted ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ,
+          MRI.createGenericVirtualRegister(LLT::scalar(1)), OpAsInt, InfV);
+    else if (PartialCheck == fcInf)
+      PartialRes = MIRBuilder.buildICmp(
+          IsInverted ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ,
+          MRI.createGenericVirtualRegister(LLT::scalar(1)), AbsV, InfV);
+    else { // ISD::fcNegInf
+      APInt NegInf = APFloat::getInf(Semantics, true).bitcastToAPInt();
+      auto NegInfV = MIRBuilder.buildConstant(IntVT, NegInf);
+      PartialRes = MIRBuilder.buildICmp(
+          IsInverted ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ,
+          MRI.createGenericVirtualRegister(LLT::scalar(1)), OpAsInt, NegInfV);
+    }
+    MIRBuilder.buildCopy(DstReg, PartialRes);
+    MI.eraseFromParent();
+    return true;
+  }
+  if (unsigned PartialCheck = Test & fcNan) {
+    APInt InfWithQnanBit = Inf | QNaNBitMask;
+    auto InfWithQnanBitV = MIRBuilder.buildConstant(IntVT, InfWithQnanBit);
+    if (PartialCheck == fcNan) {
+      // isnan(V) ==> abs(V) > int(inf)
+      auto AbsDstReg = MRI.createGenericVirtualRegister(LLT::scalar(BitSize));
+      auto FAbsV = MIRBuilder.buildCopy(AbsDstReg, SrcReg);
+      auto InfVDstReg = MRI.createGenericVirtualRegister(LLT::scalar(BitSize));
+      PartialRes = MIRBuilder.buildFCmp(
+          CmpInst::FCMP_UEQ, MRI.createGenericVirtualRegister(LLT::scalar(1)),
+          FAbsV, FAbsV);
+    } else if (PartialCheck == fcQNan) {
+      // isquiet(V) ==> abs(V) >= (unsigned(Inf) | quiet_bit)
+      PartialRes = MIRBuilder.buildICmp(
+          IsInverted ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE,
+          MRI.createGenericVirtualRegister(LLT::scalar(1)), AbsV,
+          InfWithQnanBitV);
+
+    } else { // ISD::fcSNan
+      // issignaling(V) ==> abs(V) > unsigned(Inf) &&
+      //                    abs(V) < (unsigned(Inf) | quiet_bit)
+      auto IsNotQnan = MIRBuilder.buildICmp(
+          CmpInst::ICMP_SLT, MRI.createGenericVirtualRegister(LLT::scalar(1)),
+          AbsV, InfWithQnanBitV);
+      auto IsNan = MIRBuilder.buildICmp(
+          CmpInst::ICMP_SGE, MRI.createGenericVirtualRegister(LLT::scalar(1)),
+          AbsV, InfPlus1V);
+      PartialRes = MIRBuilder.buildAnd(LLT::scalar(1), IsNan, IsNotQnan);
+    }
+    MIRBuilder.buildCopy(DstReg, PartialRes);
+    MI.eraseFromParent();
+    return true;
+  }
+  if (unsigned PartialCheck = Test & fcNormal) {
+    assert("Not Supported yet!");
+  }
+  if (unsigned PartialCheck = Test & fcSubnormal) {
+    // subnormal(V) ==> abs(V) < exp_mask && signbit == 0
+    auto ExpBits = MIRBuilder.buildAnd(IntVT, OpAsInt, ExpMaskV);
+    auto ExpIsZero = MIRBuilder.buildICmp(
+        CmpInst::ICMP_EQ, MRI.createGenericVirtualRegister(LLT::scalar(1)),
+        ExpBits, ZeroV);
+    auto SignBit = MIRBuilder.buildICmp(
+        CmpInst::ICMP_EQ, MRI.createGenericVirtualRegister(LLT::scalar(1)),
+        SignV, ZeroV);
+    PartialRes = MIRBuilder.buildAnd(LLT::scalar(1), ExpIsZero, SignBit);
+    appendResult(PartialRes);
+  }
+  if (!Res.getInstr()) {
+    Res = MIRBuilder.buildConstant(LLT::scalar(1), IsInverted);
+    MIRBuilder.buildCopy(DstReg, Res);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  MIRBuilder.buildCopy(DstReg, Res);
+  MI.eraseFromParent();
+  return true;
+}
+bool X86LegalizerInfo::expandFPClassTestForF80(MachineInstr &MI,
+                                               MachineRegisterInfo &MRI,
+                                               LegalizerHelper &Helper) const {
+  return false;
+}
+
+bool X86LegalizerInfo::legalizeIsFPClass(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(!SrcTy.isVector() && "G_IS_FPCLASS does not support vectors yet");
+
+  FPClassTest Mask = static_cast<FPClassTest>(MI.getOperand(2).getImm());
+  if (Mask == fcNone) {
+    MIRBuilder.buildConstant(DstReg, 0);
+    MI.eraseFromParent();
+    return true;
+  }
+  if (Mask == fcAllFlags) {
+    MIRBuilder.buildConstant(DstReg, 1);
+    MI.eraseFromParent();
+    return true;
+  }
+  bool IsF80 = (SrcTy == LLT::scalar(80));
+  // For f32/f64/f80 if NoFpException is set, we can use the FCMP
+  // Some checks can be implemented using float comparisons, if floating point
+  // exceptions are ignored.
+
+  if (IsF80)
+    return expandFPClassTestForF80(MI, MRI, Helper);
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
