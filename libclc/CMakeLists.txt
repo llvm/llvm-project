@@ -171,7 +171,7 @@ list( SORT LIBCLC_TARGETS_TO_BUILD )
 include_directories( ${LLVM_INCLUDE_DIRS} )
 
 # Configure prepare_builtins
-add_subdirectory(utils)
+add_subdirectory( utils )
 
 # Setup arch devices
 set( r600--_devices cedar cypress barts cayman )
