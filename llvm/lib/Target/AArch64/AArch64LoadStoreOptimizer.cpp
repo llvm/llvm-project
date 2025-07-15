@@ -1666,7 +1666,7 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
          "Given Opc should be a Load or Store with an immediate");
   // OpcA will be the first instruction in the pair.
   if (NonSExtOpc == getMatchingNonSExtOpcode(OpcB, &PairIsValidLdStrOpc)) {
-    Flags.setSExtIdx(NonSExtOpc == (unsigned)OpcA ? 1 : 0);
+    Flags.setSExtIdx(NonSExtOpc == OpcA ? 1 : 0);
     return true;
   }
 
@@ -2529,31 +2529,63 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
     return E;
   }
 
-  for (unsigned Count = 0; MBBI != E && Count < Limit;
-       MBBI = next_nodbg(MBBI, E)) {
-    MachineInstr &MI = *MBBI;
+  unsigned Count = 0;
+  MachineBasicBlock *CurMBB = I->getParent();
+  // choice of next block to visit is liveins-based
+  bool VisitSucc = CurMBB->getParent()->getRegInfo().tracksLiveness();
 
-    // Don't count transient instructions towards the search limit since there
-    // may be different numbers of them if e.g. debug information is present.
-    if (!MI.isTransient())
-      ++Count;
+  while (true) {
+    for (MachineBasicBlock::iterator CurEnd = CurMBB->end();
+         MBBI != CurEnd && Count < Limit; MBBI = next_nodbg(MBBI, CurEnd)) {
+      MachineInstr &MI = *MBBI;
 
-    // If we found a match, return it.
-    if (isMatchingUpdateInsn(*I, MI, BaseReg, UnscaledOffset))
-      return MBBI;
+      // Don't count transient instructions towards the search limit since there
+      // may be different numbers of them if e.g. debug information is present.
+      if (!MI.isTransient())
+        ++Count;
 
-    // Update the status of what the instruction clobbered and used.
-    LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits, TRI);
+      // If we found a match, return it.
+      if (isMatchingUpdateInsn(*I, MI, BaseReg, UnscaledOffset))
+        return MBBI;
 
-    // Otherwise, if the base register is used or modified, we have no match, so
-    // return early.
-    // If we are optimizing SP, do not allow instructions that may load or store
-    // in between the load and the optimized value update.
-    if (!ModifiedRegUnits.available(BaseReg) ||
-        !UsedRegUnits.available(BaseReg) ||
-        (BaseRegSP && MBBI->mayLoadOrStore()))
-      return E;
+      // Update the status of what the instruction clobbered and used.
+      LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
+                                        TRI);
+
+      // Otherwise, if the base register is used or modified, we have no match,
+      // so return early. If we are optimizing SP, do not allow instructions
+      // that may load or store in between the load and the optimized value
+      // update.
+      if (!ModifiedRegUnits.available(BaseReg) ||
+          !UsedRegUnits.available(BaseReg) ||
+          (BaseRegSP && MBBI->mayLoadOrStore()))
+        return E;
+    }
+
+    if (!VisitSucc || Limit <= Count)
+      break;
+
+    // Try to go downward to successors along a CF path w/o side enters
+    // such that BaseReg is alive along it but not at its exits
+    MachineBasicBlock *SuccToVisit = nullptr;
+    unsigned LiveSuccCount = 0;
+    for (MachineBasicBlock *Succ : CurMBB->successors()) {
+      for (MCRegAliasIterator AI(BaseReg, TRI, true); AI.isValid(); ++AI) {
+        if (Succ->isLiveIn(*AI)) {
+          if (LiveSuccCount++)
+            return E;
+          if (Succ->pred_size() == 1)
+            SuccToVisit = Succ;
+          break;
+        }
+      }
+    }
+    if (!SuccToVisit)
+      break;
+    CurMBB = SuccToVisit;
+    MBBI = CurMBB->begin();
   }
+
   return E;
 }
 
@@ -3046,7 +3078,7 @@ bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   Subtarget = &Fn.getSubtarget<AArch64Subtarget>();
-  TII = static_cast<const AArch64InstrInfo *>(Subtarget->getInstrInfo());
+  TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
