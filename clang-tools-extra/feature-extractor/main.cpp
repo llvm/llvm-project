@@ -10,6 +10,7 @@
 #include "FeatureManager.h"
 
 #include "features/NumLoops.h"
+#include "features/OmpRegions.h"
 
 using namespace clang::tooling;
 using namespace clang::ast_matchers;
@@ -39,7 +40,7 @@ int main(int argc, const char **argv) {
   CommonOptionsParser &OptionsParser = ExpectedParser.get();
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
-  FeatureManager<NumLoops> manager;
+  FeatureManager<NumLoops, OmpRegions> manager;
 
   return Tool.run(newFrontendActionFactory(manager.get_match_finder()).get());
 }
