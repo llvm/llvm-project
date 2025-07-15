@@ -5448,9 +5448,8 @@ define <vscale x 4 x i32> @vfclass_v(<vscale x 4 x float> %a, <vscale x 4 x i32>
 ;
 ; VLOPT-LABEL: vfclass_v:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vfclass.v v8, v8
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfclass.v v8, v8
 ; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vfclass.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x float> %a, iXLen -1)

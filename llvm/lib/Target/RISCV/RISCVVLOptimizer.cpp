@@ -1139,6 +1139,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMFLE_VV:
   case RISCV::VMFGT_VF:
   case RISCV::VMFGE_VF:
+  // Vector Floating-Point Classify Instruction
+  case RISCV::VFCLASS_V:
   // Vector Floating-Point Merge Instruction
   case RISCV::VFMERGE_VFM:
   // Vector Floating-Point Move Instruction
