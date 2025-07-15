@@ -125,6 +125,13 @@ public:
     return Analysis.getExpiredLoansAtPoint(PP);
   }
 
+  std::optional<OriginSet> getLiveOriginsAtPoint(llvm::StringRef Annotation) {
+    ProgramPoint PP = Runner.getProgramPoint(Annotation);
+    if (!PP)
+      return std::nullopt;
+    return Analysis.getLiveOriginsAtPoint(PP);
+  }
+
 private:
   template <typename DeclT> DeclT *findDecl(llvm::StringRef Name) {
     auto &Ctx = Runner.getASTContext();
@@ -159,6 +166,15 @@ public:
   OriginInfo(llvm::StringRef OriginVar, LifetimeTestHelper &Helper)
       : OriginVar(OriginVar), Helper(Helper) {}
   llvm::StringRef OriginVar;
+  LifetimeTestHelper &Helper;
+};
+
+// A helper class to represent a set of origins, identified by variable names.
+class OriginsInfo {
+public:
+  OriginsInfo(const std::vector<std::string> &Vars, LifetimeTestHelper &H)
+      : OriginVars(Vars), Helper(H) {}
+  std::vector<std::string> OriginVars;
   LifetimeTestHelper &Helper;
 };
 
@@ -232,6 +248,34 @@ MATCHER_P(AreExpiredAt, Annotation, "") {
                             ActualExpiredLoans, result_listener);
 }
 
+/// Matcher to verify the complete set of live origins at a program point.
+MATCHER_P(AreLiveAt, Annotation, "") {
+  const OriginsInfo &Info = arg;
+  auto &Helper = Info.Helper;
+
+  auto ActualLiveSetOpt = Helper.getLiveOriginsAtPoint(Annotation);
+  if (!ActualLiveSetOpt) {
+    *result_listener << "could not get a valid live origin set at point '"
+                     << Annotation << "'";
+    return false;
+  }
+  std::vector<OriginID> ActualLiveOrigins(ActualLiveSetOpt->begin(),
+                                          ActualLiveSetOpt->end());
+
+  std::vector<OriginID> ExpectedLiveOrigins;
+  for (const auto &VarName : Info.OriginVars) {
+    auto OriginIDOpt = Helper.getOriginForDecl(VarName);
+    if (!OriginIDOpt) {
+      *result_listener << "could not find an origin for variable '" << VarName
+                       << "'";
+      return false;
+    }
+    ExpectedLiveOrigins.push_back(*OriginIDOpt);
+  }
+  return ExplainMatchResult(UnorderedElementsAreArray(ExpectedLiveOrigins),
+                            ActualLiveOrigins, result_listener);
+}
+
 // Base test fixture to manage the runner and helper.
 class LifetimeAnalysisTest : public ::testing::Test {
 protected:
@@ -243,6 +287,13 @@ protected:
   OriginInfo Origin(llvm::StringRef OriginVar) {
     return OriginInfo(OriginVar, *Helper);
   }
+
+  /// Factory function that hides the std::vector creation.
+  OriginsInfo Origins(std::initializer_list<std::string> OriginVars) {
+    return OriginsInfo({OriginVars}, *Helper);
+  }
+
+  OriginsInfo NoOrigins() { return Origins({}); }
 
   /// Factory function that hides the std::vector creation.
   LoanSetInfo LoansTo(std::initializer_list<std::string> LoanVars) {
@@ -704,6 +755,91 @@ TEST_F(LifetimeAnalysisTest, ReassignedPointerThenOriginalExpires) {
   EXPECT_THAT(NoLoans(), AreExpiredAt("p_has_s2"));
   EXPECT_THAT(LoansTo({"s2"}), AreExpiredAt("p_after_s2_expires"));
   EXPECT_THAT(LoansTo({"s1", "s2"}), AreExpiredAt("p_after_s1_expires"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessDeadPointer) {
+  SetupTest(R"(
+    void target() {
+      POINT(p2);
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessSimpleReturn) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+      return p;
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessKilledByReassignment) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj s1, s2;
+      MyObj* p = &s1;
+      POINT(p1);
+      p = &s2;
+      POINT(p2);
+      return p;
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p2"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessAcrossBranches) {
+  SetupTest(R"(
+    MyObj* target(bool c) {
+      MyObj x, y;
+      MyObj* p = nullptr;
+      POINT(p1);
+      if (c) {
+        p = &x;
+        POINT(p2);
+      } else {
+        p = &y;
+        POINT(p3);
+      }
+      return p;
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p2"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p3"));
+  // Before the `if`, the value of `p` (`nullptr`) is always overwritten before
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessInLoop) {
+  SetupTest(R"(
+    MyObj* target(bool c) {
+      MyObj s1, s2;
+      MyObj* p = &s1;
+      MyObj* q = &s2;
+      POINT(p1);
+      while(c) {
+        POINT(p2);
+        p = q;
+        POINT(p3);
+      }
+      POINT(p4);
+      return p;
+    }
+  )");
+
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p4"));
+  EXPECT_THAT(Origins({"p", "q"}), AreLiveAt("p3"));
+  EXPECT_THAT(Origins({"q"}), AreLiveAt("p2"));
+  EXPECT_THAT(Origins({"p", "q"}), AreLiveAt("p1"));
 }
 
 } // anonymous namespace
