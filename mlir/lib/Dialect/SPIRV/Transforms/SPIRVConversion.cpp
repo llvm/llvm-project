@@ -343,6 +343,29 @@ static Type convert8BitFloatType(const SPIRVConversionOptions &options,
   return nullptr;
 }
 
+/// Returns a type with the same shape but with any 8-bit float element type
+/// converted to the same bit width integer type. This is a noop when the
+/// element type is not the 8-bit float type.
+static ShapedType
+convertShaped8BitFloatType(ShapedType type,
+                           const SPIRVConversionOptions &options) {
+  if (!options.emulateUnsupportedFloatTypes)
+    return nullptr;
+  auto srcElementType = type.getElementType();
+  Type convertedElementType = nullptr;
+  // F8 types are converted to integer types with the same bit width.
+  if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
+          Float8E8M0FNUType>(srcElementType))
+    convertedElementType = IntegerType::get(
+        type.getContext(), srcElementType.getIntOrFloatBitWidth());
+
+  if (!convertedElementType)
+    return type;
+
+  return type.clone(convertedElementType);
+}
+
 /// Converts a sub-byte float ``type` to i32 regardless of target environment.
 /// Returns a nullptr for unsupported float types, including non sub-byte
 /// types.
@@ -408,22 +431,11 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
                   const SPIRVConversionOptions &options, VectorType type,
                   std::optional<spirv::StorageClass> storageClass = {}) {
   type = cast<VectorType>(convertIndexElementType(type, options));
+  type = cast<VectorType>(convertShaped8BitFloatType(type, options));
   auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
   if (!scalarType) {
-    // If this is not a spec allowed scalar type, there are 2 scenarios,
-    // 8 bit floats or sub-byte integer types. try to handle them accrodingly.
-
-    // Hnadle 8 bit float types.
-    auto floatType = dyn_cast<FloatType>(type.getElementType());
-    if (floatType && floatType.getWidth() == 8) {
-      // If this is an 8 bit float type, try to convert it to a supported
-      // integer type.
-      if (auto convertedType = convert8BitFloatType(options, floatType)) {
-        return VectorType::get(type.getShape(), convertedType);
-      }
-    }
-
-    // Handle sub-byte integer types.
+    // If this is not a spec allowed scalar type, try to handle sub-byte integer
+    // types.
     auto intType = dyn_cast<IntegerType>(type.getElementType());
     if (!intType) {
       LLVM_DEBUG(llvm::dbgs()
@@ -516,6 +528,7 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
   }
 
   type = cast<TensorType>(convertIndexElementType(type, options));
+  type = cast<TensorType>(convertShaped8BitFloatType(type, options));
   auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
   if (!scalarType) {
     LLVM_DEBUG(llvm::dbgs()
@@ -681,12 +694,14 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     arrayElemType = type.getElementType();
   } else if (auto floatType = dyn_cast<FloatType>(elementType)) {
     // Hnadle 8 bit float types.
-    if (options.emulateUnsupportedFloatTypes && floatType &&
-        floatType.getWidth() == 8) {
-      // If this is an 8 bit float type, try to convert it to a supported
-      // integer type.
-      arrayElemType = convert8BitFloatType(options, floatType);
-    }
+    type = cast<MemRefType>(convertShaped8BitFloatType(type, options));
+    arrayElemType = type.getElementType();
+    // if (options.emulateUnsupportedFloatTypes && floatType &&
+    //     floatType.getWidth() == 8) {
+    //   // If this is an 8 bit float type, try to convert it to a supported
+    //   // integer type.
+    //   arrayElemType = convert8BitFloatType(options, floatType);
+    // }
   } else {
     LLVM_DEBUG(
         llvm::dbgs()
