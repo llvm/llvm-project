@@ -5260,6 +5260,8 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
   if (InitE->isValueDependent())
     return false;
 
+  // For references to objects, check they do not designate a one-past-the-end
+  // object.
   if (VD->getType()->isReferenceType() &&
       !VD->getType()->isFunctionReferenceType()) {
     return EvaluateInitForDeclOfReferenceType(Info, VD, InitE, Result, Val);
@@ -9339,6 +9341,9 @@ bool LValueExprEvaluator::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
 
 bool LValueExprEvaluator::VisitUnaryDeref(const UnaryOperator *E) {
   bool Success = evaluatePointer(E->getSubExpr(), Result);
+  // [C++26][expr.unary.op]
+  // If the operand points to an object or function, the result
+  // denotes that object or function; otherwise, the behavior is undefined.
   return Success &&
          (!E->getType().getNonReferenceType()->isObjectType() ||
           findCompleteObject(Info, E, AK_Dereference, Result, E->getType()));
