@@ -105,6 +105,25 @@ define <2 x i64> @saturating_2xi32_2xi64(<2 x i32> %a, <2 x i32> %b) {
   ret <2 x i64> %ma
 }
 
+define <6 x i16> @saturating_6xi16(<6 x i16> %a, <6 x i16> %b) {
+; CHECK-LABEL: saturating_6xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smull2 v3.4s, v1.8h, v0.8h
+; CHECK-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-NEXT:    sqdmulh v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    sshr v3.4s, v3.4s, #15
+; CHECK-NEXT:    smin v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    xtn2 v0.8h, v2.4s
+; CHECK-NEXT:    ret
+  %as = sext <6 x i16> %a to <6 x i32>
+  %bs = sext <6 x i16> %b to <6 x i32>
+  %m = mul <6 x i32> %bs, %as
+  %sh = ashr <6 x i32> %m, splat (i32 15)
+  %ma = tail call <6 x i32> @llvm.smin.v6i32(<6 x i32> %sh, <6 x i32> splat (i32 32767))
+  %t = trunc <6 x i32> %ma to <6 x i16>
+  ret <6 x i16> %t
+}
+
 define <4 x i16> @unsupported_saturation_value_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: unsupported_saturation_value_v4i16:
 ; CHECK:       // %bb.0:
@@ -175,8 +194,30 @@ define <2 x i11> @illegal_source(<2 x i11> %a, <2 x i11> %b) {
   %bs = sext <2 x i11> %b to <2 x i32>
   %m = mul <2 x i32> %bs, %as
   %sh = ashr <2 x i32> %m, splat (i32 15)
-  %ma = tail call <2 x i32> @llvm.smin.v4i32(<2 x i32> %sh, <2 x i32> splat (i32 32767))
+  %ma = tail call <2 x i32> @llvm.smin.v2i32(<2 x i32> %sh, <2 x i32> splat (i32 32767))
   %t = trunc <2 x i32> %ma to <2 x i11>
   ret <2 x i11> %t
 }
-
+define <1 x i16> @saturating_1xi16(<1 x i16> %a, <1 x i16> %b) {
+; CHECK-LABEL: saturating_1xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    zip1 v1.4h, v1.4h, v0.4h
+; CHECK-NEXT:    shl v0.2s, v0.2s, #16
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
+; CHECK-NEXT:    shl v1.2s, v1.2s, #16
+; CHECK-NEXT:    sshr v1.2s, v1.2s, #16
+; CHECK-NEXT:    mul v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    movi v1.2s, #127, msl #8
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #15
+; CHECK-NEXT:    smin v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    ret
+  %as = sext <1 x i16> %a to <1 x i32>
+  %bs = sext <1 x i16> %b to <1 x i32>
+  %m = mul <1 x i32> %bs, %as
+  %sh = ashr <1 x i32> %m, splat (i32 15)
+  %ma = tail call <1 x i32> @llvm.smin.v1i32(<1 x i32> %sh, <1 x i32> splat (i32 32767))
+  %t = trunc <1 x i32> %ma to <1 x i16>
+  ret <1 x i16> %t
+}

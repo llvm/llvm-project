@@ -21058,7 +21058,8 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   EVT SExt1Type = SExt1.getOperand(0).getValueType();
 
   if (SExt0Type != SExt1Type || SExt0Type.getScalarType() != ScalarType ||
-      SExt0Type.getFixedSizeInBits() > 128)
+      SExt0Type.getFixedSizeInBits() > 128 || !SExt0Type.isPow2VectorType() ||
+      SExt0Type.getVectorNumElements() == 1)
     return SDValue();
 
   SDLoc DL(N);
