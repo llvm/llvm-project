@@ -282,8 +282,7 @@ LogicalResult CreateNdDescOp::verify() {
 ParseResult parseOptionalDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers,
-    SmallVectorImpl<Type> *valueTypes = nullptr,
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
 
   SmallVector<int64_t, 4> integerVals;
@@ -316,11 +315,14 @@ ParseResult parseOptionalDynamicIndexList(
   return success();
 }
 
-void printOptionalDynamicIndexList(
-    OpAsmPrinter &printer, Operation *op, OperandRange values,
-    ArrayRef<int64_t> integers, TypeRange valueTypes = TypeRange()) {
+void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
+                                   OperandRange values,
+                                   ArrayRef<int64_t> integers,
+                                   TypeRange valueTypes = TypeRange()) {
 
-  if (values.empty() && llvm::all_of(integers, [](int64_t i) { return i == std::numeric_limits<int64_t>::max(); }))
+  if (values.empty() && llvm::all_of(integers, [](int64_t i) {
+        return i == std::numeric_limits<int64_t>::max();
+      }))
     return;
   printer << '[';
   unsigned dynamicValIdx = 0;
