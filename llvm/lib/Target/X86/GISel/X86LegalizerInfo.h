@@ -57,6 +57,12 @@ private:
 
   bool legalizeGETROUNDING(MachineInstr &MI, MachineRegisterInfo &MRI,
                            LegalizerHelper &Helper) const;
+  bool expandFPClassTestForF32OrF64(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    LegalizerHelper &Helper) const;
+  bool expandFPClassTestForF80(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               LegalizerHelper &Helper) const;
+  bool legalizeIsFPClass(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         LegalizerHelper &Helper) const;
 };
 } // namespace llvm
 #endif
