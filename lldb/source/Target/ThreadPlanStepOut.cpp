@@ -79,6 +79,35 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       ComputeTargetFrame(thread, frame_idx, m_stepped_past_frames);
   StackFrameSP immediate_return_from_sp(thread.GetStackFrameAtIndex(frame_idx));
 
+  SetupReturnAddress(return_frame_sp, immediate_return_from_sp, frame_idx,
+                     continue_to_next_branch);
+}
+
+ThreadPlanStepOut::ThreadPlanStepOut(Thread &thread, bool stop_others,
+                                     Vote report_stop_vote,
+                                     Vote report_run_vote, uint32_t frame_idx,
+                                     bool continue_to_next_branch,
+                                     bool gather_return_value)
+    : ThreadPlan(ThreadPlan::eKindStepOut, "Step out", thread, report_stop_vote,
+                 report_run_vote),
+      ThreadPlanShouldStopHere(this), m_return_bp_id(LLDB_INVALID_BREAK_ID),
+      m_return_addr(LLDB_INVALID_ADDRESS), m_stop_others(stop_others),
+      m_immediate_step_from_function(nullptr),
+      m_calculate_return_value(gather_return_value) {
+  SetFlagsToDefault();
+  m_step_from_insn = thread.GetRegisterContext()->GetPC(0);
+
+  StackFrameSP return_frame_sp = thread.GetStackFrameAtIndex(frame_idx + 1);
+  StackFrameSP immediate_return_from_sp =
+      thread.GetStackFrameAtIndex(frame_idx);
+
+  SetupReturnAddress(return_frame_sp, immediate_return_from_sp, frame_idx,
+                     continue_to_next_branch);
+}
+
+void ThreadPlanStepOut::SetupReturnAddress(
+    StackFrameSP return_frame_sp, StackFrameSP immediate_return_from_sp,
+    uint32_t frame_idx, bool continue_to_next_branch) {
   if (!return_frame_sp || !immediate_return_from_sp)
     return; // we can't do anything here.  ValidatePlan() will return false.
 
@@ -94,8 +123,8 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       // First queue a plan that gets us to this inlined frame, and when we get
       // there we'll queue a second plan that walks us out of this frame.
       m_step_out_to_inline_plan_sp = std::make_shared<ThreadPlanStepOut>(
-          thread, nullptr, false, stop_others, eVoteNoOpinion, eVoteNoOpinion,
-          frame_idx - 1, eLazyBoolNo, continue_to_next_branch);
+          GetThread(), nullptr, false, m_stop_others, eVoteNoOpinion,
+          eVoteNoOpinion, frame_idx - 1, eLazyBoolNo, continue_to_next_branch);
       static_cast<ThreadPlanStepOut *>(m_step_out_to_inline_plan_sp.get())
           ->SetShouldStopHereCallbacks(nullptr, nullptr);
       m_step_out_to_inline_plan_sp->SetPrivate(true);

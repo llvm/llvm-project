@@ -436,7 +436,7 @@ PreservedAnalyses AssignGUIDPass::run(Module &M, ModuleAnalysisManager &MAM) {
 GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
   if (F.isDeclaration()) {
     assert(GlobalValue::isExternalLinkage(F.getLinkage()));
-    return GlobalValue::getGUID(F.getGlobalIdentifier());
+    return F.getGUID();
   }
   auto *MD = F.getMetadata(GUIDMetadataName);
   assert(MD && "guid not found for defined function");
@@ -621,17 +621,23 @@ CtxProfAnalysis::getSelectInstrumentation(SelectInst &SI) {
   return nullptr;
 }
 
-template <class ProfilesTy, class ProfTy>
-static void preorderVisit(ProfilesTy &Profiles,
-                          function_ref<void(ProfTy &)> Visitor) {
+template <class ProfTy>
+static void preorderVisitOneRoot(ProfTy &Profile,
+                                 function_ref<void(ProfTy &)> Visitor) {
   std::function<void(ProfTy &)> Traverser = [&](auto &Ctx) {
     Visitor(Ctx);
     for (auto &[_, SubCtxSet] : Ctx.callsites())
       for (auto &[__, Subctx] : SubCtxSet)
         Traverser(Subctx);
   };
+  Traverser(Profile);
+}
+
+template <class ProfilesTy, class ProfTy>
+static void preorderVisit(ProfilesTy &Profiles,
+                          function_ref<void(ProfTy &)> Visitor) {
   for (auto &[_, P] : Profiles)
-    Traverser(P);
+    preorderVisitOneRoot<ProfTy>(P, Visitor);
 }
 
 void PGOContextualProfile::initIndex() {
@@ -683,40 +689,47 @@ void PGOContextualProfile::visit(ConstVisitor V, const Function *F) const {
 const CtxProfFlatProfile PGOContextualProfile::flatten() const {
   CtxProfFlatProfile Flat;
   auto Accummulate = [](SmallVectorImpl<uint64_t> &Into,
-                        const SmallVectorImpl<uint64_t> &From) {
+                        const SmallVectorImpl<uint64_t> &From,
+                        uint64_t SamplingRate) {
     if (Into.empty())
       Into.resize(From.size());
     assert(Into.size() == From.size() &&
            "All contexts corresponding to a function should have the exact "
            "same number of counters.");
     for (size_t I = 0, E = Into.size(); I < E; ++I)
-      Into[I] += From[I];
+      Into[I] += From[I] * SamplingRate;
   };
 
-  preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
-                const PGOCtxProfContext>(
-      Profiles.Contexts, [&](const PGOCtxProfContext &Ctx) {
-        Accummulate(Flat[Ctx.guid()], Ctx.counters());
-      });
-  for (const auto &[_, RC] : Profiles.Contexts)
-    for (const auto &[G, Unh] : RC.getUnhandled())
-      Accummulate(Flat[G], Unh);
+  for (const auto &[_, CtxRoot] : Profiles.Contexts) {
+    const uint64_t SamplingFactor = CtxRoot.getTotalRootEntryCount();
+    preorderVisitOneRoot<const PGOCtxProfContext>(
+        CtxRoot, [&](const PGOCtxProfContext &Ctx) {
+          Accummulate(Flat[Ctx.guid()], Ctx.counters(), SamplingFactor);
+        });
+
+    for (const auto &[G, Unh] : CtxRoot.getUnhandled())
+      Accummulate(Flat[G], Unh, SamplingFactor);
+  }
+  // We don't sample "Flat" currently, so sampling rate is 1.
   for (const auto &[G, FC] : Profiles.FlatProfiles)
-    Accummulate(Flat[G], FC);
+    Accummulate(Flat[G], FC, /*SamplingRate=*/1);
   return Flat;
 }
 
 const CtxProfFlatIndirectCallProfile
 PGOContextualProfile::flattenVirtCalls() const {
   CtxProfFlatIndirectCallProfile Ret;
-  preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
-                const PGOCtxProfContext>(
-      Profiles.Contexts, [&](const PGOCtxProfContext &Ctx) {
-        auto &Targets = Ret[Ctx.guid()];
-        for (const auto &[ID, SubctxSet] : Ctx.callsites())
-          for (const auto &Subctx : SubctxSet)
-            Targets[ID][Subctx.first] += Subctx.second.getEntrycount();
-      });
+  for (const auto &[_, CtxRoot] : Profiles.Contexts) {
+    const uint64_t TotalRootEntryCount = CtxRoot.getTotalRootEntryCount();
+    preorderVisitOneRoot<const PGOCtxProfContext>(
+        CtxRoot, [&](const PGOCtxProfContext &Ctx) {
+          auto &Targets = Ret[Ctx.guid()];
+          for (const auto &[ID, SubctxSet] : Ctx.callsites())
+            for (const auto &Subctx : SubctxSet)
+              Targets[ID][Subctx.first] +=
+                  Subctx.second.getEntrycount() * TotalRootEntryCount;
+        });
+  }
   return Ret;
 }
 

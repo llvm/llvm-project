@@ -17,6 +17,7 @@
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -28,6 +29,7 @@ class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class VPBuilder;
 class VPRecipeBuilder;
+struct VFRange;
 
 extern cl::opt<bool> VerifyEachVPlan;
 
@@ -52,24 +54,36 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
-  /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turing \p Plan's
-  /// flat CFG into a hierarchical CFG. It also creates a VPValue expression for
-  /// the original trip count. It will also introduce a dedicated VPBasicBlock
-  /// for the vector pre-header as well a VPBasicBlock as exit block of the
-  /// region (middle.block). If a check is needed to guard executing the scalar
-  /// epilogue loop, it will be added to the middle block, together with
-  /// VPBasicBlocks for the scalar preheader and exit blocks. \p InductionTy is
-  /// the type of the canonical induction and used for related values, like the
-  /// trip count expression.
-  static void createLoopRegions(VPlan &Plan, Type *InductionTy,
-                                PredicatedScalarEvolution &PSE,
-                                bool RequiresScalarEpilogueCheck,
-                                bool TailFolded, Loop *TheLoop);
+  LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop,
+                                                                LoopInfo &LI);
+
+  /// Prepare the plan for vectorization. It will introduce a dedicated
+  /// VPBasicBlock for the vector pre-header as well as a VPBasicBlock as exit
+  /// block of the main vector loop (middle.block). If a check is needed to
+  /// guard executing the scalar epilogue loop, it will be added to the middle
+  /// block, together with VPBasicBlocks for the scalar preheader and exit
+  /// blocks. \p InductionTy is the type of the canonical induction and used for
+  /// related values, like the trip count expression.  It also creates a VPValue
+  /// expression for the original trip count.
+  LLVM_ABI_FOR_TEST static void prepareForVectorization(
+      VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
+      bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop,
+      DebugLoc IVDL, bool HasUncountableExit, VFRange &Range);
+
+  /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
+  /// flat CFG into a hierarchical CFG.
+  LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
+
+  /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
+  /// VPValue and connect the block to \p Plan, using the VPValue as branch
+  /// condition.
+  static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
+                               bool AddBranchWeights);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed.
-  static bool tryToConvertVPInstructionsToVPRecipes(
+  LLVM_ABI_FOR_TEST static bool tryToConvertVPInstructionsToVPRecipes(
       VPlanPtr &Plan,
       function_ref<const InductionDescriptor *(PHINode *)>
           GetIntOrFpInductionDescriptor,
@@ -90,6 +104,12 @@ struct VPlanTransforms {
 
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx);
+
+  /// Replace each VPReplicateRecipe outside on any replicate region in \p Plan
+  /// with \p VF single-scalar recipes.
+  /// TODO: Also replicate VPReplicateRecipes inside replicate regions, thereby
+  /// dissolving the latter.
+  static void replicateByVF(VPlan &Plan, ElementCount VF);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
   /// resulting plan to \p BestVF and \p BestUF.
@@ -164,20 +184,31 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
-  /// Update \p Plan to account for the uncountable early exit block in \p
-  /// UncountableExitingBlock by
-  ///  * updating the condition exiting the vector loop to include the early
-  ///    exit conditions
+  /// Update \p Plan to account for the uncountable early exit from \p
+  /// EarlyExitingVPBB to \p EarlyExitVPBB by
+  ///  * updating the condition exiting the loop via the latch to include the
+  ///    early exit condition,
   ///  * splitting the original middle block to branch to the early exit block
-  ///    if taken.
-  static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
-                                         Loop *OrigLoop,
-                                         BasicBlock *UncountableExitingBlock,
-                                         VPRecipeBuilder &RecipeBuilder);
+  ///    conditionally - according to the early exit condition.
+  static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
+                                         VPBasicBlock *EarlyExitVPBB,
+                                         VPlan &Plan, VPBasicBlock *HeaderVPBB,
+                                         VPBasicBlock *LatchVPBB,
+                                         VFRange &Range);
+
+  /// Replace loop regions with explicit CFG.
+  static void dissolveLoopRegions(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
+
+  /// This function converts initial recipes to the abstract recipes and clamps
+  /// \p Range based on cost model for following optimizations and cost
+  /// estimations. The converted abstract recipes will lower to concrete
+  /// recipes before codegen.
+  static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
+                                       VFRange &Range);
 
   /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
@@ -201,6 +232,21 @@ struct VPlanTransforms {
   /// candidates.
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                      unsigned VectorRegWidth);
+
+  /// Predicate and linearize the control-flow in the only loop region of
+  /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
+  /// header, otherwise use all-true for the header mask. Masks for blocks are
+  /// added to a block-to-mask map which is returned in order to be used later
+  /// for wide recipe construction. This argument is temporary and will be
+  /// removed in the future.
+  static DenseMap<VPBasicBlock *, VPValue *>
+  introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
+
+  /// Add branch weight metadata, if the \p Plan's middle block is terminated by
+  /// a BranchOnCond recipe.
+  static void
+  addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
+                                    std::optional<unsigned> VScaleForTuning);
 };
 
 } // namespace llvm

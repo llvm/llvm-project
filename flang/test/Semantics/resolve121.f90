@@ -25,7 +25,7 @@ subroutine test3()
   ! CHECK-LABEL: Subprogram scope: test3
   ! CHECK: i1, SAVE size=4 offset=0: ObjectEntity type: INTEGER(4)
   ! CHECK: j1, SAVE size=4 offset=0: ObjectEntity type: INTEGER(4)
-  ! CHECK: k1, SAVE size=4 offset=0: ObjectEntity type: INTEGER(4)
+  ! CHECK: k1, SAVE (InCommonBlock) size=4 offset=0: ObjectEntity type: INTEGER(4)
   integer :: i1
   integer :: j1, k1
   common /blk/ k1
@@ -37,7 +37,7 @@ subroutine test4()
   ! CHECK-LABEL: Subprogram scope: test4
   ! CHECK: i1, SAVE size=4 offset=0: ObjectEntity type: INTEGER(4) init:1_4
   ! CHECK: j1, SAVE size=4 offset=0: ObjectEntity type: INTEGER(4)
-  ! CHECK: k1, SAVE size=4 offset=0: ObjectEntity type: INTEGER(4)
+  ! CHECK: k1, SAVE (InCommonBlock) size=4 offset=0: ObjectEntity type: INTEGER(4)
   integer :: i1 = 1
   integer :: j1, k1
   common /blk/ k1

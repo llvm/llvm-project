@@ -910,7 +910,8 @@ namespace CompoundLiterals {
   constexpr int f2(int *x =(int[]){1,2,3}) {
     return x[0];
   }
-  constexpr int g = f2(); // Should evaluate to 1?
+  // Should evaluate to 1?
+  constexpr int g = f2(); // #g_decl
   static_assert(g == 1, "");
 
   // This example should be rejected because the lifetime of the compound
@@ -1347,7 +1348,10 @@ namespace NTTP {
 namespace UnaryOpError {
   constexpr int foo() {
     int f = 0;
-    ++g; // both-error {{use of undeclared identifier 'g'}}
+    ++g; // both-error {{use of undeclared identifier 'g'}} \
+            both-error {{cannot assign to variable 'g' with const-qualified type 'const int'}} \
+            both-note@#g_decl {{'CompoundLiterals::g' declared here}} \
+            both-note@#g_decl {{variable 'g' declared const here}}
     return f;
   }
 }
@@ -1357,6 +1361,30 @@ namespace VolatileReads {
   const volatile int b = 1;
   static_assert(b, ""); // both-error {{not an integral constant expression}} \
                         // both-note {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
+
+
+  constexpr int a = 12;
+  constexpr volatile int c = (volatile int&)a; // both-error {{must be initialized by a constant expression}} \
+                                               // both-note {{read of volatile-qualified type 'volatile int'}}
+
+  volatile constexpr int n1 = 0; // both-note {{here}}
+  volatile const int n2 = 0; // both-note {{here}}
+  constexpr int m1 = n1; // both-error {{constant expression}} \
+                         // both-note {{read of volatile-qualified type 'const volatile int'}}
+  constexpr int m2 = n2; // both-error {{constant expression}} \
+                         // both-note {{read of volatile-qualified type 'const volatile int'}}
+  constexpr int m1b = const_cast<const int&>(n1); // both-error {{constant expression}} \
+                                                  // both-note {{read of volatile object 'n1'}}
+  constexpr int m2b = const_cast<const int&>(n2); // both-error {{constant expression}} \
+                                                  // both-note {{read of volatile object 'n2'}}
+
+  struct S {
+    constexpr S(int=0) : i(1) {}
+    int i;
+  };
+  constexpr volatile S vs; // both-note {{here}}
+  static_assert(const_cast<int&>(vs.i), ""); // both-error {{constant expression}} \
+                                             // both-note {{read of volatile object 'vs'}}
 }
 #if __cplusplus >= 201703L
 namespace {
@@ -1390,3 +1418,15 @@ constexpr int usingDirectiveDecl() {
   return FB;
 }
 static_assert(usingDirectiveDecl() == 10, "");
+
+namespace OnePastEndCmp {
+  struct S {
+   int a;
+   int b;
+  };
+
+  constexpr S s{12,13};
+  constexpr const int *p = &s.a;
+  constexpr const int *q = &s.a + 1;
+  static_assert(p != q, "");
+}

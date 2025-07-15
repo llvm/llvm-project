@@ -15,8 +15,10 @@
 #define LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Analysis/IR2Vec.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class BasicBlock;
@@ -31,23 +33,25 @@ class FunctionPropertiesInfo {
   void updateAggregateStats(const Function &F, const LoopInfo &LI);
   void reIncludeBB(const BasicBlock &BB);
 
-public:
-  static FunctionPropertiesInfo
-  getFunctionPropertiesInfo(const Function &F, const DominatorTree &DT,
-                            const LoopInfo &LI);
+  ir2vec::Embedding FunctionEmbedding = ir2vec::Embedding(0.0);
+  const ir2vec::Vocabulary *IR2VecVocab = nullptr;
 
-  static FunctionPropertiesInfo
+public:
+  LLVM_ABI static FunctionPropertiesInfo
+  getFunctionPropertiesInfo(const Function &F, const DominatorTree &DT,
+                            const LoopInfo &LI,
+                            const ir2vec::Vocabulary *Vocabulary);
+
+  LLVM_ABI static FunctionPropertiesInfo
   getFunctionPropertiesInfo(Function &F, FunctionAnalysisManager &FAM);
 
-  bool operator==(const FunctionPropertiesInfo &FPI) const {
-    return std::memcmp(this, &FPI, sizeof(FunctionPropertiesInfo)) == 0;
-  }
+  LLVM_ABI bool operator==(const FunctionPropertiesInfo &FPI) const;
 
   bool operator!=(const FunctionPropertiesInfo &FPI) const {
     return !(*this == FPI);
   }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   /// Number of basic blocks
   int64_t BasicBlockCount = 0;
@@ -136,6 +140,17 @@ public:
   int64_t CallReturnsVectorPointerCount = 0;
   int64_t CallWithManyArgumentsCount = 0;
   int64_t CallWithPointerArgumentCount = 0;
+
+  const ir2vec::Embedding &getFunctionEmbedding() const {
+    return FunctionEmbedding;
+  }
+
+  const ir2vec::Vocabulary *getIR2VecVocab() const { return IR2VecVocab; }
+
+  // Helper intended to be useful for unittests
+  void setFunctionEmbeddingForTest(const ir2vec::Embedding &Embedding) {
+    FunctionEmbedding = Embedding;
+  }
 };
 
 // Analysis pass
@@ -143,11 +158,12 @@ class FunctionPropertiesAnalysis
     : public AnalysisInfoMixin<FunctionPropertiesAnalysis> {
 
 public:
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   using Result = const FunctionPropertiesInfo;
 
-  FunctionPropertiesInfo run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI FunctionPropertiesInfo run(Function &F,
+                                      FunctionAnalysisManager &FAM);
 };
 
 /// Printer pass for the FunctionPropertiesAnalysis results.
@@ -158,7 +174,7 @@ class FunctionPropertiesPrinterPass
 public:
   explicit FunctionPropertiesPrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
@@ -171,9 +187,9 @@ public:
 /// inlining.
 class FunctionPropertiesUpdater {
 public:
-  FunctionPropertiesUpdater(FunctionPropertiesInfo &FPI, CallBase &CB);
+  LLVM_ABI FunctionPropertiesUpdater(FunctionPropertiesInfo &FPI, CallBase &CB);
 
-  void finish(FunctionAnalysisManager &FAM) const;
+  LLVM_ABI void finish(FunctionAnalysisManager &FAM) const;
   bool finishAndTest(FunctionAnalysisManager &FAM) const {
     finish(FAM);
     return isUpdateValid(Caller, FPI, FAM);
@@ -184,12 +200,14 @@ private:
   BasicBlock &CallSiteBB;
   Function &Caller;
 
-  static bool isUpdateValid(Function &F, const FunctionPropertiesInfo &FPI,
-                            FunctionAnalysisManager &FAM);
+  LLVM_ABI static bool isUpdateValid(Function &F,
+                                     const FunctionPropertiesInfo &FPI,
+                                     FunctionAnalysisManager &FAM);
 
   DominatorTree &getUpdatedDominatorTree(FunctionAnalysisManager &FAM) const;
 
   DenseSet<const BasicBlock *> Successors;
+  DenseSet<const BasicBlock *> CallUsers;
 
   // Edges we might potentially need to remove from the dominator tree.
   SmallVector<DominatorTree::UpdateType, 2> DomTreeUpdates;

@@ -109,10 +109,7 @@ DXILMetadataAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
 // DXILMetadataAnalysisWrapperPass
 
 DXILMetadataAnalysisWrapperPass::DXILMetadataAnalysisWrapperPass()
-    : ModulePass(ID) {
-  initializeDXILMetadataAnalysisWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 DXILMetadataAnalysisWrapperPass::~DXILMetadataAnalysisWrapperPass() = default;
 

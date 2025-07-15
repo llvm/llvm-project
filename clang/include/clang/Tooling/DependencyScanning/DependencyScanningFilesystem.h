@@ -18,6 +18,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
 #include <optional>
+#include <variant>
 
 namespace clang {
 namespace tooling {
@@ -220,6 +221,35 @@ public:
   CacheShard &getShardForFilename(StringRef Filename) const;
   CacheShard &getShardForUID(llvm::sys::fs::UniqueID UID) const;
 
+  struct OutOfDateEntry {
+    // A null terminated string that contains a path.
+    const char *Path = nullptr;
+
+    struct NegativelyCachedInfo {};
+    struct SizeChangedInfo {
+      uint64_t CachedSize = 0;
+      uint64_t ActualSize = 0;
+    };
+
+    std::variant<NegativelyCachedInfo, SizeChangedInfo> Info;
+
+    OutOfDateEntry(const char *Path)
+        : Path(Path), Info(NegativelyCachedInfo{}) {}
+
+    OutOfDateEntry(const char *Path, uint64_t CachedSize, uint64_t ActualSize)
+        : Path(Path), Info(SizeChangedInfo{CachedSize, ActualSize}) {}
+  };
+
+  /// Visits all cached entries and re-stat an entry using UnderlyingFS to check
+  /// if the cache contains out-of-date entries. An entry can be out-of-date for
+  /// two reasons:
+  ///  1. The entry contains a stat error, indicating the file did not exist
+  ///     in the cache, but the file exists on the UnderlyingFS.
+  ///  2. The entry is associated with a file whose size is different from the
+  ///     size of the file on the same path on the UnderlyingFS.
+  std::vector<OutOfDateEntry>
+  getOutOfDateEntries(llvm::vfs::FileSystem &UnderlyingFS) const;
+
 private:
   std::unique_ptr<CacheShard[]> CacheShards;
   unsigned NumShards;
@@ -370,6 +400,16 @@ public:
   /// Returns true if the directive tokens are populated for this file entry,
   /// false if not (i.e. this entry is not a file or its scan fails).
   bool ensureDirectiveTokensArePopulated(EntryRef Entry);
+
+  /// \returns The scanned preprocessor directive tokens of the file that are
+  /// used to speed up preprocessing, if available.
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  getDirectiveTokens(const Twine &Path) {
+    if (llvm::ErrorOr<EntryRef> Entry = getOrCreateFileSystemEntry(Path.str()))
+      if (ensureDirectiveTokensArePopulated(*Entry))
+        return Entry->getDirectiveTokens();
+    return std::nullopt;
+  }
 
   /// Check whether \p Path exists. By default checks cached result of \c
   /// status(), and falls back on FS if unable to do so.

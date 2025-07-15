@@ -145,8 +145,7 @@ public:
   bool runOnMachineFunction(MachineFunction &F) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -942,7 +941,7 @@ bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {
   IsPIC = TM.isPositionIndependent();
   ABI = static_cast<const MipsTargetMachine &>(TM).getABI();
   STI = &MF.getSubtarget<MipsSubtarget>();
-  TII = static_cast<const MipsInstrInfo *>(STI->getInstrInfo());
+  TII = STI->getInstrInfo();
 
   if (IsPIC && ABI.IsO32() &&
       MF.getInfo<MipsFunctionInfo>()->globalBaseRegSet())

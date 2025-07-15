@@ -19,10 +19,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCWinEH.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/SMLoc.h"
@@ -44,11 +45,9 @@ class MCAsmBackend;
 class MCAssembler;
 class MCContext;
 class MCExpr;
-class MCFragment;
 class MCInst;
 class MCInstPrinter;
 class MCRegister;
-class MCSection;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
@@ -91,7 +90,7 @@ using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
 /// The base classes FooTargetAsmStreamer and FooTargetELFStreamer should
 /// *never* be treated differently. Callers should always talk to a
 /// FooTargetStreamer.
-class MCTargetStreamer {
+class LLVM_ABI MCTargetStreamer {
 protected:
   MCStreamer &Streamer;
 
@@ -134,7 +133,7 @@ public:
 
 // FIXME: declared here because it is used from
 // lib/CodeGen/AsmPrinter/ARMException.cpp.
-class ARMTargetStreamer : public MCTargetStreamer {
+class LLVM_ABI ARMTargetStreamer : public MCTargetStreamer {
 public:
   ARMTargetStreamer(MCStreamer &S);
   ~ARMTargetStreamer() override;
@@ -168,6 +167,11 @@ public:
   virtual void emitInst(uint32_t Inst, char Suffix = '\0');
 
   virtual void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE);
+
+  virtual void emitSyntaxUnified();
+
+  virtual void emitCode16();
+  virtual void emitCode32();
 
   // Note in the output that the specified \p Symbol is a Thumb mode function.
   virtual void emitThumbFunc(MCSymbol *Symbol);
@@ -213,7 +217,7 @@ private:
 /// There are multiple implementations of this interface: one for writing out
 /// a .s file, and implementations that write out .o files of various formats.
 ///
-class MCStreamer {
+class LLVM_ABI MCStreamer {
   MCContext &Context;
   std::unique_ptr<MCTargetStreamer> TargetStreamer;
 
@@ -255,11 +259,8 @@ class MCStreamer {
   bool AllowAutoPadding = false;
 
 protected:
-  // True if we are processing SEH directives in an epilogue.
-  bool InEpilogCFI = false;
-
   // Symbol of the current epilog for which we are processing SEH directives.
-  MCSymbol *CurrentEpilog = nullptr;
+  WinEH::FrameInfo::Epilog *CurrentWinEpilog = nullptr;
 
   MCFragment *CurFrag = nullptr;
 
@@ -342,9 +343,11 @@ public:
     return WinFrameInfos;
   }
 
-  MCSymbol *getCurrentEpilog() const { return CurrentEpilog; }
+  WinEH::FrameInfo::Epilog *getCurrentWinEpilog() const {
+    return CurrentWinEpilog;
+  }
 
-  bool isInEpilogCFI() const { return InEpilogCFI; }
+  bool isInEpilogCFI() const { return CurrentWinEpilog; }
 
   void generateCompactUnwindEncodings(MCAsmBackend *MAB);
 
@@ -472,8 +475,8 @@ public:
 
   virtual void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol);
 
-  /// Note in the output the specified \p Flag.
-  virtual void emitAssemblerFlag(MCAssemblerFlag Flag);
+  /// Emit a .subsection_via_symbols directive.
+  virtual void emitSubsectionsViaSymbols();
 
   /// Emit the given list \p Options of strings as linker
   /// options into the output.
@@ -804,14 +807,14 @@ public:
   /// This used to implement the .align assembler directive.
   ///
   /// \param Alignment - The alignment to reach.
-  /// \param Value - The value to use when filling bytes.
-  /// \param ValueSize - The size of the integer (in bytes) to emit for
+  /// \param Fill - The value to use when filling bytes.
+  /// \param FillLen - The size of the integer (in bytes) to emit for
   /// \p Value. This must match a native machine width.
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void emitValueToAlignment(Align Alignment, int64_t Value = 0,
-                                    unsigned ValueSize = 1,
+  virtual void emitValueToAlignment(Align Alignment, int64_t Fill = 0,
+                                    uint8_t FillLen = 1,
                                     unsigned MaxBytesToEmit = 0);
 
   /// Emit nops until the byte alignment \p ByteAlignment is reached.
@@ -1026,6 +1029,8 @@ public:
   virtual void emitWinCFIEndProlog(SMLoc Loc = SMLoc());
   virtual void emitWinCFIBeginEpilogue(SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndEpilogue(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIUnwindV2Start(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc = SMLoc());
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
   virtual void emitWinEHHandlerData(SMLoc Loc = SMLoc());
@@ -1123,7 +1128,7 @@ inline MCContext &MCTargetStreamer::getContext() {
 
 /// Create a dummy machine code streamer, which does nothing. This is useful for
 /// timing the assembler front end.
-MCStreamer *createNullStreamer(MCContext &Ctx);
+LLVM_ABI MCStreamer *createNullStreamer(MCContext &Ctx);
 
 } // end namespace llvm
 

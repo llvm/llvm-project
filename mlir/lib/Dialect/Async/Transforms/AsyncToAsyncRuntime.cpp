@@ -27,13 +27,12 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
 namespace mlir {
-#define GEN_PASS_DEF_ASYNCTOASYNCRUNTIME
-#define GEN_PASS_DEF_ASYNCFUNCTOASYNCRUNTIME
+#define GEN_PASS_DEF_ASYNCTOASYNCRUNTIMEPASS
+#define GEN_PASS_DEF_ASYNCFUNCTOASYNCRUNTIMEPASS
 #include "mlir/Dialect/Async/Passes.h.inc"
 } // namespace mlir
 
@@ -47,7 +46,7 @@ static constexpr const char kAsyncFnPrefix[] = "async_execute_fn";
 namespace {
 
 class AsyncToAsyncRuntimePass
-    : public impl::AsyncToAsyncRuntimeBase<AsyncToAsyncRuntimePass> {
+    : public impl::AsyncToAsyncRuntimePassBase<AsyncToAsyncRuntimePass> {
 public:
   AsyncToAsyncRuntimePass() = default;
   void runOnOperation() override;
@@ -58,7 +57,8 @@ public:
 namespace {
 
 class AsyncFuncToAsyncRuntimePass
-    : public impl::AsyncFuncToAsyncRuntimeBase<AsyncFuncToAsyncRuntimePass> {
+    : public impl::AsyncFuncToAsyncRuntimePassBase<
+          AsyncFuncToAsyncRuntimePass> {
 public:
   AsyncFuncToAsyncRuntimePass() = default;
   void runOnOperation() override;
@@ -304,8 +304,8 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   cloneConstantsIntoTheRegion(execute.getBodyRegion());
 
   // Collect all outlined function inputs.
-  SetVector<mlir::Value> functionInputs(execute.getDependencies().begin(),
-                                        execute.getDependencies().end());
+  SetVector<mlir::Value> functionInputs(llvm::from_range,
+                                        execute.getDependencies());
   functionInputs.insert_range(execute.getBodyOperands());
   getUsedValuesDefinedAbove(execute.getBodyRegion(), functionInputs);
 
@@ -722,8 +722,8 @@ public:
       // Switch the coroutine completion token to available state.
       rewriter.create<RuntimeSetAvailableOp>(loc, *coro.asyncToken);
 
-    rewriter.eraseOp(op);
     rewriter.create<cf::BranchOp>(loc, coro.cleanup);
+    rewriter.eraseOp(op);
 
     return success();
   }
@@ -792,7 +792,7 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   // Returns true if operation is inside the coroutine.
   auto isInCoroutine = [&](Operation *op) -> bool {
     auto parentFunc = op->getParentOfType<func::FuncOp>();
-    return coros->find(parentFunc) != coros->end();
+    return coros->contains(parentFunc);
   };
 
   // Lower async operations to async.runtime operations.
@@ -895,13 +895,4 @@ void AsyncFuncToAsyncRuntimePass::runOnOperation() {
     signalPassFailure();
     return;
   }
-}
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createAsyncToAsyncRuntimePass() {
-  return std::make_unique<AsyncToAsyncRuntimePass>();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createAsyncFuncToAsyncRuntimePass() {
-  return std::make_unique<AsyncFuncToAsyncRuntimePass>();
 }
