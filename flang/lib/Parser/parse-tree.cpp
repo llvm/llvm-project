@@ -368,6 +368,53 @@ llvm::omp::Clause OmpClause::Id() const {
   return std::visit([](auto &&s) { return getClauseIdForClass(s); }, u);
 }
 
+bool OmpDirectiveName::IsExecutionPart() const {
+  // Can the directive appear in the execution part of the program.
+  llvm::omp::Directive id{v};
+  switch (llvm::omp::getDirectiveCategory(id)) {
+  case llvm::omp::Category::Executable:
+    return true;
+  case llvm::omp::Category::Declarative:
+    switch (id) {
+    case llvm::omp::Directive::OMPD_allocate:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  case llvm::omp::Category::Informational:
+    switch (id) {
+    case llvm::omp::Directive::OMPD_assume:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  case llvm::omp::Category::Meta:
+    return true;
+  case llvm::omp::Category::Subsidiary:
+    switch (id) {
+    // TODO: case llvm::omp::Directive::OMPD_task_iteration:
+    case llvm::omp::Directive::OMPD_section:
+    case llvm::omp::Directive::OMPD_scan:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  case llvm::omp::Category::Utility:
+    switch (id) {
+    case llvm::omp::Directive::OMPD_error:
+    case llvm::omp::Directive::OMPD_nothing:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  }
+  return false;
+}
+
 const OmpArgumentList &OmpDirectiveSpecification::Arguments() const {
   static OmpArgumentList empty{decltype(OmpArgumentList::v){}};
   if (auto &arguments = std::get<std::optional<OmpArgumentList>>(t)) {
