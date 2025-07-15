@@ -237,18 +237,16 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   // Are we eliminating the loop control altogether?
   bool CompletelyUnroll = (Count == TripCount);
 
+  // We use the runtime remainder in cases where we don't know trip multiple
   if (TripMultiple % Count != 0) {
-    auto UnrollReminderResult = UnrollRuntimeLoopRemainder(
-        L, Count, /*AllowExpensiveTripCount*/ false,
-        /*UseEpilogRemainder*/ true, UnrollRemainder, /*ForgetAllSCEV*/ false,
-        LI, SE, DT, AC, TTI, /*PreserveLCSSA*/ true, SCEVCheapExpansionBudget,
-        /*AllowLoopRotation*/ false, EpilogueLoop);
-    if (UnrollReminderResult != LoopReminderUnrollResult::Unrolled) {
+    if (!UnrollRuntimeLoopRemainder(L, Count, /*AllowExpensiveTripCount*/ false,
+                                    /*UseEpilogRemainder*/ true,
+                                    UnrollRemainder, /*ForgetAllSCEV*/ false,
+                                    LI, SE, DT, AC, TTI, true,
+                                    SCEVCheapExpansionBudget, EpilogueLoop)) {
       LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; remainder loop could not be "
                            "generated when assuming runtime trip count\n");
-      return UnrollReminderResult == LoopReminderUnrollResult::Rotated
-                 ? LoopUnrollResult::Modified
-                 : LoopUnrollResult::Unmodified;
+      return LoopUnrollResult::Unmodified;
     }
   }
 

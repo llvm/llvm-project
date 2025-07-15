@@ -58,6 +58,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopRotationUtils.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
@@ -535,20 +536,51 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       UnrollRuntimeEpilog.getNumOccurrences() ? UnrollRuntimeEpilog
                                               : isEpilogProfitable(L);
 
-  LoopReminderUnrollResult UnrollReminderResult =
-      LoopReminderUnrollResult::Unmodified;
+  bool LoopRotated = false;
+  bool ReminderUnrolled = false;
   if (ULO.Runtime) {
-    UnrollReminderResult = UnrollRuntimeLoopRemainder(
+    // Call unroll with disabled rotation, to see if it is possible without it.
+    ReminderUnrolled = UnrollRuntimeLoopRemainder(
         L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
         ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
         PreserveLCSSA, ULO.SCEVExpansionBudget, ULO.RuntimeUnrollMultiExit,
-        /*AllowLoopRotation*/ true, RemainderLoop);
+        RemainderLoop);
+
+    // If unroll is not possible, then try with loop rotation.
+    if (!ReminderUnrolled) {
+      BasicBlock *OrigHeader = L->getHeader();
+      BranchInst *BI = dyn_cast<BranchInst>(OrigHeader->getTerminator());
+      if (BI && !BI->isUnconditional() &&
+          isa<SCEVCouldNotCompute>(SE->getExitCount(L, L->getLoopLatch())) &&
+          !isa<SCEVCouldNotCompute>(SE->getExitCount(L, OrigHeader))) {
+        LLVM_DEBUG(
+            dbgs() << "  Rotating loop to make the exit count computable.\n");
+        SimplifyQuery SQ{OrigHeader->getDataLayout()};
+        SQ.TLI = nullptr;
+        SQ.DT = DT;
+        SQ.AC = AC;
+        LoopRotated =
+            llvm::LoopRotation(L, LI, TTI, AC, DT, SE,
+                               /*MemorySSAUpdater*/ nullptr, SQ,
+                               /*RotationOnly*/ false, /*Threshold*/ 16,
+                               /*IsUtilMode*/ false, /*PrepareForLTO*/ false,
+                               [](Loop *, ScalarEvolution *) { return true; });
+      }
+      if (LoopRotated) {
+        // Loop was rotated, try unrolling.
+        ReminderUnrolled = UnrollRuntimeLoopRemainder(
+            L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
+            ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
+            PreserveLCSSA, ULO.SCEVExpansionBudget, ULO.RuntimeUnrollMultiExit,
+            RemainderLoop);
+      }
+    }
+    // Latch block needs to be updated.
     LatchBlock = L->getLoopLatch();
     LatchIsExiting = L->isLoopExiting(LatchBlock);
   }
 
-  if (ULO.Runtime &&
-      UnrollReminderResult != LoopReminderUnrollResult::Unrolled) {
+  if (ULO.Runtime && !ReminderUnrolled) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {
@@ -556,10 +588,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                            "generated when assuming runtime trip count\n");
       // Loop might have been rotated inside of UnrollRuntimeLoopRemainder and
       // this needs to be propagated.
-      return UnrollReminderResult == LoopReminderUnrollResult::Rotated
-                 ? LoopUnrollResult::Modified
-                 : LoopUnrollResult::Unmodified;
-      ;
+      return LoopRotated ? LoopUnrollResult::Modified
+                         : LoopUnrollResult::Unmodified;
     }
   }
 

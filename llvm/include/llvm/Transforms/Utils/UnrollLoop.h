@@ -72,18 +72,6 @@ enum class LoopUnrollResult {
   FullyUnrolled
 };
 
-/// Represents the result of a \c UnrollRuntimeLoopRemainder invocation.
-enum class LoopReminderUnrollResult {
-  /// The loop reminder was not modified.
-  Unmodified,
-
-  /// The loop was rotated, but not unrolled.
-  Rotated,
-
-  /// The loop reminder was unrolled.
-  Unrolled
-};
-
 struct UnrollLoopOptions {
   unsigned Count;
   bool Force;
@@ -105,13 +93,13 @@ LLVM_ABI LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO,
                                      Loop **RemainderLoop = nullptr,
                                      AAResults *AA = nullptr);
 
-LLVM_ABI LoopReminderUnrollResult UnrollRuntimeLoopRemainder(
+LLVM_ABI bool UnrollRuntimeLoopRemainder(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
     bool UseEpilogRemainder, bool UnrollRemainder, bool ForgetAllSCEV,
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
     unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit,
-    bool AllowLoopRotation, Loop **ResultLoop = nullptr);
+    Loop **ResultLoop = nullptr);
 
 LLVM_ABI LoopUnrollResult UnrollAndJamLoop(
     Loop *L, unsigned Count, unsigned TripCount, unsigned TripMultiple,
