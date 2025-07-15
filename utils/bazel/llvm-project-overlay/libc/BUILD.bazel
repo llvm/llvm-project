@@ -4002,6 +4002,17 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "tanpif",
+    additional_deps = [
+        ":sincosf_utils",
+        ":hdr_fenv_macros",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_fputil_multiply_add",
+    ],
+)
+
+libc_math_function(
     name = "tanpif16",
     additional_deps = [
         ":sincosf16_utils",
