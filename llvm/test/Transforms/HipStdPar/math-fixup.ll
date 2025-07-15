@@ -431,6 +431,26 @@ entry:
   ret void
 }
 
+@globdbl = global double 4.200000e+01
+@globflt = global float 4.200000e+01
+
+define void @global_args() {
+; CHECK-LABEL: define void @global_args() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DBL:%.*]] = load double, ptr @globdbl, align 8
+; CHECK-NEXT:    [[FLT:%.*]] = load float, ptr @globflt, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call double @__hipstdpar_remquo_f64(double [[DBL]], double [[DBL]], ptr @globdbl)
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @__hipstdpar_remquo_f32(float [[FLT]], float [[FLT]], ptr @globflt)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %dbl = load double, ptr @globdbl
+  %flt = load float, ptr @globflt
+  %1 = call double @remquo(double %dbl, double %dbl, ptr @globdbl)
+  %2 = call float @remquof(float %flt, float %flt, ptr @globflt)
+  ret void
+}
+
 declare hidden double @remainder(double, double)
 
 declare hidden float @remainderf(float, float)
