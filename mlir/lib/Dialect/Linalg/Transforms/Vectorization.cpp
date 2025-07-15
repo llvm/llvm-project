@@ -482,18 +482,19 @@ Value VectorizationState::getOrCreateMaskFor(
   }
 
   if (assumeDynamicDimsMatchVecSizes) {
-    // Given that all _scalable vector sizes_ match the corresponding
-    // memref/tensor dim sizes, masking can be skipped provided that:
-    // * all vector sizes corresponding to dynamic dims are scalable.
-    if (llvm::all_of(llvm::zip(permutedStaticSizes, maskType.getScalableDims()),
+    // While we can _assume_ that for dynamic dim sizes the corresponding
+    // vector sizes match, we still need to check the static dim sizes to be
+    // 100% sure that masking is indeed not required.
+    if (llvm::all_of(llvm::zip(permutedStaticSizes, maskType.getShape()),
                      [](auto it) {
                        return std::get<0>(it) == ShapedType::kDynamic
-                                  ? std::get<1>(it)
-                                  : false;
-                     }))
+                                  ? true
+                                  : std::get<0>(it) == std::get<1>(it);
+                     })) {
       LDBG("Masking is not needed for masking map: " << maskingMap << "\n");
-    activeMaskCache[maskingMap] = Value();
-    return Value();
+      activeMaskCache[maskingMap] = Value();
+      return Value();
+    }
   }
 
   // Permute the iteration space value sizes to compute the mask upper bounds.
