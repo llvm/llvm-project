@@ -11,7 +11,7 @@
 #ifndef LIBCXXABI_DEMANGLE_VISIBILITY_H
 #define LIBCXXABI_DEMANGLE_VISIBILITY_H
 
-// The DEMANGLE_ABI macro resovles to nothing when building libcxxabi. Only
+// The DEMANGLE_ABI macro resolves to nothing when building libc++abi. Only
 // the llvm copy defines DEMANGLE_ABI as a visibility attribute.
 #define DEMANGLE_ABI
 
