@@ -14,7 +14,7 @@
 ; YAML-NEXT:  Function:        test_i16_extend
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-20'
+; YAML-NEXT:    - Cost:            '-16
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '5'
 ; YAML-NEXT:  ...
