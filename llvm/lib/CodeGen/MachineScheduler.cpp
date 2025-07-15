@@ -190,7 +190,7 @@ cl::opt<MISched::Direction> PreRADirection(
         clEnumValN(MISched::Bidirectional, "bidirectional",
                    "Force bidirectional pre reg-alloc list scheduling")));
 
-cl::opt<MISched::Direction> PostRADirection(
+static cl::opt<MISched::Direction> PostRADirection(
     "misched-postra-direction", cl::Hidden,
     cl::desc("Post reg-alloc list scheduling direction"),
     cl::init(MISched::Unspecified),
@@ -4335,25 +4335,6 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
     RegionPolicy.OnlyBottomUp = false;
     RegionPolicy.OnlyTopDown = false;
   }
-
-  LLVM_DEBUG({
-    const char *DirStr = "default";
-    switch (PostRADirection) {
-    case MISched::TopDown:
-      DirStr = "topdown";
-      break;
-    case MISched::BottomUp:
-      DirStr = "bottomup";
-      break;
-    case MISched::Bidirectional:
-      DirStr = "bidirectional";
-      break;
-    default:;
-    }
-
-    dbgs() << "Post-MI-sched direction (" << MF.getName() << "): " << DirStr
-           << '\n';
-  });
 
   BotIdx = NumRegionInstrs - 1;
   this->NumRegionInstrs = NumRegionInstrs;
