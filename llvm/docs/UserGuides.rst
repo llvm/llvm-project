@@ -47,7 +47,6 @@ intermediate LLVM representation.
    InstCombineContributorGuide
    InstrProfileFormat
    InstrRefDebugInfo
-   KeyInstructionsClang
    KeyInstructionsDebugInfo
    LinkTimeOptimization
    LoopTerminology
@@ -104,10 +103,6 @@ Clang
 
 :doc:`CFIVerify`
   A description of the verification tool for Control Flow Integrity.
-
-:doc:`KeyInstructionsClang`
-   This document explains how the debug info feature Key Instructions is
-   implemented in Clang.
 
 LLVM Builds and Distributions
 -----------------------------
