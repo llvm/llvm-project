@@ -1513,11 +1513,9 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       TypeSummaryImplSP(new ScriptSummaryFormat(
           stl_summary_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.ForwardListSummaryProvider")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::variant<.+>$", eFormatterMatchRegex,
-      TypeSummaryImplSP(new ScriptSummaryFormat(
-          stl_summary_flags,
-          "lldb.formatters.cpp.gnu_libstdcpp.VariantSummaryProvider")));
+  AddCXXSummary(cpp_category_sp, LibStdcppVariantSummaryProvider,
+                "libstdc++ std::variant summary provider", "^std::variant<.+>$",
+                stl_summary_flags, true);
 
   AddCXXSynthetic(
       cpp_category_sp,
