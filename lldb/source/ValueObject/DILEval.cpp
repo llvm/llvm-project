@@ -50,8 +50,9 @@ lldb::ValueObjectSP LookupGlobalIdentifier(
   // Get a global variables list without the locals from the current frame
   SymbolContext symbol_context =
       stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::VariableListSP variable_list =
-      symbol_context.comp_unit->GetVariableList(true);
+  lldb::VariableListSP variable_list;
+  if (symbol_context.comp_unit)
+    variable_list = symbol_context.comp_unit->GetVariableList(true);
 
   name_ref.consume_front("::");
   lldb::ValueObjectSP value_sp;

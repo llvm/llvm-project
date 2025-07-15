@@ -541,6 +541,12 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "Use true 16-bit registers"
 >;
 
+def FeatureBF16TransInsts : SubtargetFeature<"bf16-trans-insts",
+  "HasBF16TransInsts",
+  "true",
+  "Has bf16 transcendental instructions"
+>;
+
 def FeatureBF16ConversionInsts : SubtargetFeature<"bf16-cvt-insts",
   "HasBF16ConversionInsts",
   "true",
@@ -1128,6 +1134,12 @@ def FeaturePointSampleAccel : SubtargetFeature<"point-sample-accel",
   "HasPointSampleAccel",
   "true",
   "Has point sample acceleration feature"
+>;
+
+def Feature64BitLiterals : SubtargetFeature<"64-bit-literals",
+  "Has64BitLiterals",
+  "true",
+  "Can use 64-bit literals with single DWORD instructions"
 >;
 
 def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
@@ -1931,6 +1943,7 @@ def FeatureISAVersion12_50 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
    FeatureCuMode,
+   Feature64BitLiterals,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
@@ -1960,6 +1973,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,
    FeatureTransposeLoadF4F6Insts,
+   FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureCvtPkF16F32Inst,
    FeatureMinimum3Maximum3PKF16,
@@ -2305,6 +2319,10 @@ def isNotGFX1250Plus :
   Predicate<"!Subtarget->hasGFX1250Insts()">,
   AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
+def isGFX940orGFX1250 :
+  Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX1250Insts)>;
+
 def HasIEEEMinimumMaximumInsts :
   Predicate<"Subtarget->hasIEEEMinimumMaximumInsts()">,
   AssemblerPredicate<(all_of FeatureIEEEMinimumMaximumInsts)>;
@@ -2431,6 +2449,9 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
+def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
+  AssemblerPredicate<(all_of FeatureBF16TransInsts)>;
+
 def HasBF16ConversionInsts : Predicate<"Subtarget->hasBF16ConversionInsts()">,
   AssemblerPredicate<(all_of FeatureBF16ConversionInsts)>;
 
@@ -2476,6 +2497,10 @@ def HasPkMovB32 : Predicate<"Subtarget->hasPkMovB32()">,
 def HasFmaakFmamkF32Insts :
   Predicate<"Subtarget->hasFmaakFmamkF32Insts()">,
   AssemblerPredicate<(any_of FeatureGFX10Insts, FeatureGFX940Insts)>;
+
+def HasFmaakFmamkF64Insts :
+  Predicate<"Subtarget->hasFmaakFmamkF64Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;
@@ -2673,6 +2698,9 @@ def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
 
 def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
   AssemblerPredicate<(all_of FeatureBVHDualAndBVH8Insts)>;
+
+def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
+  AssemblerPredicate<(all_of Feature64BitLiterals)>;
 
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;

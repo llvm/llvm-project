@@ -949,7 +949,7 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
     ReturnType = SemaRef.SubstType(
         ReturnType, Args, AliasTemplate->getLocation(),
         Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate));
-  };
+  }
 
   SmallVector<TypeSourceInfo *> IsDeducibleTypeTraitArgs = {
       Context.getTrivialTypeSourceInfo(
@@ -981,7 +981,8 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
     //   template<typename T>
     //   using AliasFoo1 = Foo<T>; // a class/type alias template specialization
     Template = TST->getTemplateName().getAsTemplateDecl();
-    AliasRhsTemplateArgs = TST->template_arguments();
+    AliasRhsTemplateArgs =
+        TST->getAsNonAliasTemplateSpecializationType()->template_arguments();
   } else if (const auto *RT = RhsType->getAs<RecordType>()) {
     // Cases where template arguments in the RHS of the alias are not
     // dependent. e.g.
@@ -1025,6 +1026,24 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   auto [Template, AliasRhsTemplateArgs] =
       getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate);
 
+  // We need both types desugared, before we continue to perform type deduction.
+  // The intent is to get the template argument list 'matched', e.g. in the
+  // following case:
+  //
+  //
+  //  template <class T>
+  //  struct A {};
+  //  template <class T>
+  //  using Foo = A<A<T>>;
+  //  template <class U = int>
+  //  using Bar = Foo<U>;
+  //
+  // In terms of Bar, we want U (which has the default argument) to appear in
+  // the synthesized deduction guide, but U would remain undeduced if we deduced
+  // A<A<T>> using Foo<U> directly.
+  //
+  // Instead, we need to canonicalize both against A, i.e. A<A<T>> and A<A<U>>,
+  // such that T can be deduced as U.
   auto RType = F->getTemplatedDecl()->getReturnType();
   // The (trailing) return type of the deduction guide.
   const TemplateSpecializationType *FReturnType =
@@ -1034,7 +1053,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     FReturnType = InjectedCNT->getInjectedTST();
   else if (const auto *ET = RType->getAs<ElaboratedType>())
     // explicit deduction guide.
-    FReturnType = ET->getNamedType()->getAs<TemplateSpecializationType>();
+    FReturnType = ET->getNamedType()->getAsNonAliasTemplateSpecializationType();
   assert(FReturnType && "expected to see a return type");
   // Deduce template arguments of the deduction guide f from the RHS of
   // the alias.

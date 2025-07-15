@@ -133,6 +133,11 @@ LANGOPT(PointerAuthInitFiniAddressDiscrimination, 1, 0, NotCompatible,
 LANGOPT(PointerAuthELFGOT, 1, 0, NotCompatible, "authenticate pointers from GOT")
 LANGOPT(AArch64JumpTableHardening, 1, 0, NotCompatible, "use hardened lowering for jump-table dispatch")
 
+LANGOPT(PointerAuthObjcIsa, 1, 0, NotCompatible, "authentication of isa and super pointers in ObjC instances")
+LANGOPT(PointerAuthObjcInterfaceSel, 1, 0, NotCompatible, "authentication of SEL fields of ObjC interfaces")
+LANGOPT(PointerAuthObjcInterfaceSelKey, 16, 0, NotCompatible, "authentication key for SEL fields of ObjC interfaces")
+LANGOPT(PointerAuthObjcClassROPointers, 1, 0, Benign, "class_ro_t pointer authentication")
+
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, NotCompatible, "'[[]]' attributes extension for all language standard modes")
 LANGOPT(ExperimentalLateParseAttributes, 1, 0, NotCompatible, "experimental late parsing of attributes")
 
@@ -390,6 +395,7 @@ LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, Compatible, "retain documentation
 
 LANGOPT(APINotes, 1, 0, NotCompatible, "use external API notes")
 LANGOPT(APINotesModules, 1, 0, NotCompatible, "use module-based external API notes")
+LANGOPT(SwiftVersionIndependentAPINotes, 1, 0, NotCompatible, "use external API notes capturing all versions")
 
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, NotCompatible, "controls how aggressive is ASan "
                                                       "field padding (0: none, 1:least "
