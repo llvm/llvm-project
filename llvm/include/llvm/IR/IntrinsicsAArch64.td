@@ -9,6 +9,7 @@
 // This file defines all of the AARCH64-specific intrinsics.
 //
 //===----------------------------------------------------------------------===//
+
 let TargetPrefix = "aarch64" in {
 
 def int_aarch64_ldxr : Intrinsic<[llvm_i64_ty], [llvm_anyptr_ty],
