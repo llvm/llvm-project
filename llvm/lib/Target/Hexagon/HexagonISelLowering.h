@@ -31,6 +31,7 @@ namespace llvm {
 
 namespace HexagonISD {
 
+// clang-format off
 enum NodeType : unsigned {
   OP_BEGIN = ISD::BUILTIN_OP_END,
 
@@ -122,6 +123,7 @@ enum NodeType : unsigned {
 };
 
 } // end namespace HexagonISD
+// clang-format on
 
 class HexagonSubtarget;
 
