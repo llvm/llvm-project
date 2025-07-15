@@ -206,8 +206,8 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(MCStreamer &Streamer,
   auto &C = getContext();
   for (const auto *Operand : FuncInfo->operands()) {
     const auto *MD = cast<MDNode>(Operand);
-    auto *GUID = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
-    auto *Hash = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
+    auto *GUID = mdconst::extract<ConstantInt>(MD->getOperand(0));
+    auto *Hash = mdconst::extract<ConstantInt>(MD->getOperand(1));
     auto *Name = cast<MDString>(MD->getOperand(2));
     auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
         TM->getFunctionSections() ? Name->getString() : StringRef());
