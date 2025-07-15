@@ -412,7 +412,7 @@ public:
   };
 
 private:
-  /// Used to allocate Distict Attribute storages. The managed memory is freed
+  /// Used to allocate distict attribute storages. The managed memory is freed
   /// automatically when the allocator instance is destroyed.
   llvm::BumpPtrAllocator allocator;
 
