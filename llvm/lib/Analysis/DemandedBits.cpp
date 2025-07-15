@@ -258,8 +258,8 @@ void DemandedBits::determineLiveOperandBits(
       const APInt *DivAmnt;
       if (match(UserI->getOperand(1), m_APInt(DivAmnt))) {
         uint64_t D = DivAmnt->getZExtValue();
-        if (isPowerOf2_64(D)) {
-          unsigned Sh = Log2_64(D);
+        if (DivAmnt->isPowerOf2()) {
+          unsigned Sh = DivAmnt->countr_zero();
           if (IsDiv) {
             AB = AOut.shl(Sh);
           } else {
@@ -274,7 +274,7 @@ void DemandedBits::determineLiveOperandBits(
           //                         ^ each step emits 1 quotient bit
           //                         |
           //                         |
-          //   C fits in m = ⌈log₂ C⌉ bits
+          //   C fits in m = ⌈log2 C⌉ bits
           //   Each new quotient bit consumes the window of m low bits and
           //   shifts one position left.
 
@@ -291,7 +291,7 @@ void DemandedBits::determineLiveOperandBits(
           //   TopIndex = k + m-1 = 3 + 2 = 5;
           //   The dividend bits b5...b0 are enough we don't care for b6 and b7.
           unsigned LowQ = AOut.getActiveBits();
-          unsigned Need = LowQ + Log2_64_Ceil(D);
+          unsigned Need = LowQ + DivAmnt->ceilLogBase2();
           if (IsSigned)
             Need++;
           AB = APInt::getLowBitsSet(BitWidth, std::min(BitWidth, Need));
