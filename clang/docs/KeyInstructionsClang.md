@@ -1,6 +1,6 @@
 # Key Instructions in Clang
 
-Key Instructions is an LLVM feature that reduces the jumpiness of optimized code debug stepping. This document explains how Clang applies the necessary metadata.
+Key Instructions is an LLVM feature that reduces the jumpiness of optimized code debug stepping by discriminating the significance of instrucions that make up source language statements. This document explains how Clang applies the necessary metadata.
 
 ## Implementation
 
@@ -10,11 +10,11 @@ Clang needs to annotate key instructions with the new metadata. Variable assignm
 
 Class `ApplyAtomGroup` - This is a scoped helper similar to `ApplyDebugLocation` that creates a new source atom group which instructions can be added to. It's used during CodeGen to declare that a new source atom has started, e.g. in `CodeGenFunction::EmitBinaryOperatorLValue`.
 
-`CodeGenFunction::addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction, llvm::Value *Backup)` adds an instruction (and a backup instruction if non-null) to the current "atom group" defined with `ApplyAtomGroup`. The Key Instruction gets rank 1, and backup instructions get higher ranks (the function looks through casts, applying increasing rank as it goes). There are a lot of sites in Clang that need to call this (mostly stores and store-like instructions). FIXME?: Currently it's called at the CGBuilderTy callsites; it could instead make sense to always call the function inside the CGBuilderTy calls, with some calls opting out.
+`CodeGenFunction::addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction, llvm::Value *Backup)` adds an instruction (and a backup instruction if non-null) to the current "atom group" defined with `ApplyAtomGroup`. The Key Instruction gets rank 1, and backup instructions get higher ranks (the function looks through casts, applying increasing rank as it goes). There are a lot of sites in Clang that need to call this (mostly stores and store-like instructions). Most stores created through `CGBuilderTy` are annotated, but some that don't need to be key are not. It's important to remember that if there's no active atom group, i.e. no active `ApplyAtomGroup` instance, then `addInstToCurrentSourceAtom` does not annotate the instructions.
 
 `CodeGenFunction::addInstToNewSourceAtom(llvm::Instruction *KeyInstruction, llvm::Value *Backup)` adds an instruction (and a backup instruction if non-null) to a new "atom group". Currently mostly used in loop handling code.
 
-There are a couple of other helpers, including `addInstToSpecificSourceAtom` used for `rets` which is covered in the examples below.
+`CodeGenFunction::addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction, llvm::Value *Backup, uint64_t Atom)` adds the instruction (and backup instruction if non-null) to the specific group `Atom`. This is currently only used for `rets` which is explored in the examples below. Special handling is needed due to the fact that an existing atom group needs to be reused in some circumstances, so neither of the other helper functions are appropriate.
 
 ## Examples
 
@@ -39,7 +39,7 @@ entry:
 }
 ```
 
-The store is the key instruction for the assignment (`atomGroup` 1). The instruction corresponding to the final (and in this case only) RHS value, the load from `%a.addr`, is a good backup location for `is_stmt` if the store gets optimized away. It's part of the same source atom, but has lower `is_stmt` precedence, so it gets a higher `atomRank`.
+The store is the key instruction for the assignment (`atomGroup` 1). The instruction corresponding to the final (and in this case only) RHS value, the load from `%a.addr`, is a good backup location for `is_stmt` if the store gets optimized away. It's part of the same source atom, but has lower `is_stmt` precedence, so it gets a higher `atomRank`. This is achieved by starting an atom group with `ApplyAtomGroup` for the source atom (in this case a variable init) in `EmitAutoVarInit`. The instructions (both key and backup) are then annotated by call to `addInstToCurrentSourceAtom` called from `EmitStoreOfScalar`.
 
 The implicit return is also key (`atomGroup` 2) so that it's stepped on, to match existing non-key-instructions behaviour. This is achieved by calling  `addInstToNewSourceAtom` from within `EmitFunctionEpilog`.
 

@@ -1,14 +1,14 @@
 # Key Instructions debug info in LLVM
 
-Key Instructions reduces the jumpiness of optimized code debug stepping. This document explains the feature and how it is implemented in LLVM. For Clang support please see the [Clang docs](../../clang/docs/KeyInstructionsClang.md)
+Key Instructions is an LLVM feature that reduces the jumpiness of optimized code debug stepping by discriminating the significance of instrucions that make up source language statements. This document explains the feature and how it is implemented in LLVM. For Clang support please see the [Clang docs](../../clang/docs/KeyInstructionsClang.md)
 
 ## Status
 
-In development, but mostly complete. The feature is currently disabled for coroutines.
+Feature complete except for coroutines, which fall back to not-key-instructions handling for now but will get support soon (there is no fundemental reason why they cannot be supported, we've just not got to it at time of writing).
 
 Tell Clang [not] to produce Key Instructions metadata with `-g[no-]key-instructions`. See the Clang docs for implementation info.
 
-The feature improves optimized code stepping; it's intended for the feature to be used with optimisations enabled. Although the feature works at O0 it is not recommended because in some cases the effect of editing variables may not always be immediately realised. (This is a quirk of the current implementation, rather than fundemental limitation, covered in more detail later).
+The feature improves optimized code stepping; it's intended for the feature to be used with optimisations enabled. Although the feature works at O0 it is not recommended because in some cases the effect of editing variables may not always be immediately realised. In some cases, debuggers may place a breakpoint after parts of an expression have been evaluated, which limits the ability to have variable edits affect expressions. (This is a quirk of the current implementation, rather than fundemental limitation, covered in more detail [later](#disabled-at-o0).)
 
 This is a DWARF-based feature. There is currently no plan to support CodeView.
 
@@ -20,7 +20,7 @@ A lot of the noise in stepping comes from code motion and instruction scheduling
 
 DWARF provides a helpful tool the compiler can employ to mitigate this jumpiness, the `is_stmt` flag, which indicates that an instruction is a recommended breakpoint location. However, LLVM's current approach to deciding `is_stmt` placement essentially reduces down to "is the associated line number different to the previous instruction's?".
 
-(Note: It's up to the debugger if it wants to interpret `is_stmt` or not, and at time of writing LLDB doesn't; possibly because until now LLVM's is_stmts convey no information that can't already be deduced from the rest of the line table.)
+(Note: It's up to the debugger if it wants to interpret `is_stmt` or not, and at time of writing LLDB doesn't; possibly because until now LLVM's `is_stmt`s convey no information that can't already be deduced from the rest of the line table.)
 
 ## Solution overview
 
@@ -43,7 +43,7 @@ From the perspective of a source-level debugger user:
 
 1. *The metadata* - The two new `DILocation` fields are `atomGroup` and `atomRank` and are both are unsigned integers. `atomGroup` is 61 bits and `atomRank` 3 bits. Instructions in the same function with the same `(atomGroup, inlinedAt)` pair are part of the same source atom. `atomRank` determines `is_stmt` preference within that group, where a lower number is higher precedence. Higher rank instructions act as "backup" `is_stmt` locations, providing good fallback locations if/when the primary candidate gets optimized away. The default values of 0 indicate the instruction isn’t interesting - it's not an `is_stmt` candidate. If `keyInstructions` in `DISubprogram` is false (default) then the new `DILocation` metadata is ignored for the function (including inlined instances) when emitting DWARF.
 
-2. *Clang annotates key instructions* with the new metadata. Variable assignments (stores, memory intrinsics), control flow (branches and their conditions, some unconditional branches), and exception handling instructions are annotated. Calls are ignored as they're unconditionally marked is_stmt.
+2. *Clang annotates key instructions* with the new metadata. Variable assignments (stores, memory intrinsics), control flow (branches and their conditions, some unconditional branches), and exception handling instructions are annotated. Calls are ignored as they're unconditionally marked `is_stmt`.
 
 3. *Throughout optimisation*, the `DILocation` is propagated normally. Cloned instructions get the original’s `DILocation`, the new fields get merged in `getMergedLocation`, etc. However, pass writers need to intercede in cases where a code path is duplicated, e.g. unrolling, jump-threading. In these cases we want to emit key instructions in both the original and duplicated code, so the duplicated must be assigned new `atomGroup` numbers, in a similar way that instruction operands must get remapped. There are facilities to help this: `mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap)` adds an entry to `VMap` which can later be used for remapping using `llvm::RemapSourceAtom(Instruction *I, ValueToValueMapTy &VM)`. `mapAtomInstance` is called from `llvm::CloneBasicBlock` and `llvm::RemapSourceAtom` is called from `llvm::RemapInstruction` so in many cases no additional work is actually needed.
 
@@ -57,15 +57,15 @@ We’ve used contiguous line numbers rather than atom membership as the test the
 
 ## Adding the feature to a front end
 
-Front ends that want to use the feature need to do some heavy lifting; they need to annotate Key Instructions and their backups with `DILocations` with the necessary `atomGroup` and `atomRank` values. They also need to set `keyInstructions` true in `DISubprogram`s to tell LLVM to interpret the new metadata in those functions.
+Front ends that want to use the feature need to group and rank instructions according to their source atoms and interingness by attaching `DILocations` with the necessary `atomGroup` and `atomRank` values. They also need to set the `keyInstructions` field to `true` in `DISubprogram`s to tell LLVM to interpret the new metadata in those functions.
 
-The prototype had LLVM annotate instructions (instead of Clang) using simple heuristics (just looking at kind of instructions). This doesn't exist anywhere upstream, but could be shared if there's interest (e.g., so another front end can try it out before committing to a full implementation), feel fre to reach out on Discourse (@OCHyams, @jmorse).
+The prototype had LLVM annotate instructions (instead of Clang) using simple heuristics (just looking at kind of instructions, e.g., annotating all stores, conditional branches, etc). This doesn't exist anywhere upstream, but could be shared if there's interest (e.g., so another front end can try it out before committing to a full implementation), feel free to reach out on Discourse (@OCHyams, @jmorse).
 
 ## Limitations
 
 ### Lack of multiple atom membership
 
-Using a number to represent atom membership is limiting; currently an instruction cannot belong to multiple atoms. Does this come up in practice? Yes. Both in the front end and during optimisations. Consider this C code:
+Using a number to represent atom membership is limiting; currently an instruction that belongs to multiple source atoms cannot belong to multiple atom groups. This does occur in practice, both in the front end and during optimisations. Consider this C code:
 ```c
 a = b = c;
 ```
@@ -86,7 +86,7 @@ Consider the following code without optimisations:
 int c =
     a + b;
 ```
-In the current implementation an `is_stmt` won't be generated for the `a + b` instruction, meaning debuggers will likely step over the `add` and stop at the `store` of the result into `c` (which does get `is_stmt`). A user might have hoped to edit `a` or `b` on the previous line in order to alter the result stored to `c`, which they now won't have the chance to do (they'd need to edit the variables on a previous line instead). If the expression was all on one line then they would be able to edit the values before the `add`. For these reasons we're choosing to recommend that the feature should not be enabled at O0.
+In the current implementation an `is_stmt` won't be generated for the `a + b` instruction, meaning debuggers will likely step over the `add` and stop at the `store` of the result into `c` (which does get `is_stmt`). A user might have wished to edit `a` or `b` on the previous line in order to alter the result stored to `c`, which they now won't have the chance to do (they'd need to edit the variables on a previous line instead). If the expression was all on one line then they would be able to edit the values before the `add`. For these reasons we're choosing to recommend that the feature should not be enabled at O0.
 
 It should be possible to fix this case if we make a few changes: add all the instructions in the statement (i.e., including the loads) to the atom, and tweak the DwarfEmission code to understand this situation (same atom, different line). So there is room to persue this in the future. Though that gets tricky in some cases due to the [other limitation mentioned above](#lack-of-multiple-atom-membership), e.g.:
 ```c
@@ -110,5 +110,5 @@ O0 isn't a key use-case so solving this is not a priority for the initial implem
 ---
 
 **References**
-* [1] Key Instructions: Solving the Code Location Problem for Optimized Code (C. Tice, . S. L. Graham, 2000)
+* [1] Key Instructions: Solving the Code Location Problem for Optimized Code (C. Tice, S. L. Graham, 2000)
 * [2] Debugging Optimized Code: Concepts and Implementation on DIGITAL Alpha Systems (R. F. Brender et al)

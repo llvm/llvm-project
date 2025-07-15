@@ -47,6 +47,8 @@ intermediate LLVM representation.
    InstCombineContributorGuide
    InstrProfileFormat
    InstrRefDebugInfo
+   KeyInstructionsClang
+   KeyInstructionsDebugInfo
    LinkTimeOptimization
    LoopTerminology
    MarkdownQuickstartTemplate
@@ -64,7 +66,6 @@ intermediate LLVM representation.
    ResponseGuide
    Remarks
    RemoveDIsDebugInfo
-   KeyInstructions
    RISCVUsage
    RISCV/RISCVVectorExtension
    SourceLevelDebugging
@@ -104,7 +105,7 @@ Clang
 :doc:`CFIVerify`
   A description of the verification tool for Control Flow Integrity.
 
-:doc: `KeyInstructionsClang`
+:doc:`KeyInstructionsClang`
    This document explains how the debug info feature Key Instructions is
    implemented in Clang.
 
@@ -198,7 +199,7 @@ Optimizations
    This is a migration guide describing how to move from debug info using
    intrinsics such as dbg.value to using the non-instruction DbgRecord object.
 
-:doc: `KeyInstructionsDebugInfo`
+:doc:`KeyInstructionsDebugInfo`
    This document explains how the debug info feature Key Instructions is
    implemented in LLVM.
 
