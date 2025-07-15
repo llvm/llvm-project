@@ -446,8 +446,6 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
       const auto *UO = dyn_cast<UnaryOperator>(Ex);
       if (UO && UO->getOpcode() == UO_AddrOf)
         classify(UO->getSubExpr(), isTrivialBody ? Ignore : ConstPtrUse);
-      else
-        classify(Ex, Ignore);
     }
   }
 }
