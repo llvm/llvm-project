@@ -34,8 +34,8 @@ int main(int, char**) {
 
   // Parameter value "-1L" doesn't cause ambiguity with the char_type overload.
   in.ignore(100, -1L); // ignore up to EOF, which is the default behavior
-  assert(in.eof()); // stream should be at EOF now
-  // assert(in.gcount() == 5);
+  assert(in.eof());    // stream should be at EOF now
+  assert(in.gcount() == 5);
 
   return 0;
 }
