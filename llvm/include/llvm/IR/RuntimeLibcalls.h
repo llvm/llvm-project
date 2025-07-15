@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -77,12 +78,16 @@ struct RuntimeLibcallsInfo {
   /// Get the libcall routine name for the specified libcall.
   // FIXME: This should be removed. Only LibcallImpl should have a name.
   const char *getLibcallName(RTLIB::Libcall Call) const {
-    return LibCallImplNames[LibcallImpls[Call]];
+    return getLibcallImplName(LibcallImpls[Call]);
   }
 
   /// Get the libcall routine name for the specified libcall implementation.
+  // FIXME: Change to return StringRef
   static const char *getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
-    return LibCallImplNames[CallImpl];
+    if (CallImpl == RTLIB::Unsupported)
+      return nullptr;
+    return RuntimeLibcallImplNameTable[RuntimeLibcallNameOffsetTable[CallImpl]]
+        .data();
   }
 
   /// Return the lowering's selection of implementation call for \p Call
@@ -144,7 +149,9 @@ private:
 
   /// Names of concrete implementations of runtime calls. e.g. __ashlsi3 for
   /// SHL_I32
-  LLVM_ABI static const char *const LibCallImplNames[RTLIB::NumLibcallImpls];
+  LLVM_ABI static const char RuntimeLibcallImplNameTableStorage[];
+  LLVM_ABI static const StringTable RuntimeLibcallImplNameTable;
+  LLVM_ABI static const uint16_t RuntimeLibcallNameOffsetTable[];
 
   /// Map from a concrete LibcallImpl implementation to its RTLIB::Libcall kind.
   LLVM_ABI static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
