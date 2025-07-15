@@ -1204,6 +1204,22 @@ def : Pat<(i16 (atomic_load_nonext_16 addr:$src)), (MOV16rm addr:$src)>;
 def : Pat<(i32 (atomic_load_nonext_32 addr:$src)), (MOV32rm addr:$src)>;
 def : Pat<(i64 (atomic_load_nonext_64 addr:$src)), (MOV64rm addr:$src)>;
 
+// load atomic <2 x i16>
+def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
+  (MOVDI2PDIrm addr:$src)>, Requires<[UseSSE2]>;
+def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
+  (VMOVSSrm addr:$src)>, Requires<[UseAVX]>;
+def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
+  (VMOVSSZrm addr:$src)>, Requires<[HasAVX512]>;
+
+// load atomic <2 x i32,float>
+def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
+  (MOV64toPQIrm addr:$src)>, Requires<[UseSSE2]>;
+def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
+  (VMOV64toPQIrm addr:$src)>, Requires<[UseAVX]>;
+def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
+  (VMOV64toPQIZrm addr:$src)>, Requires<[HasAVX512]>;
+
 // Floating point loads/stores.
 def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
           (MOVSSmr addr:$dst, FR32:$src)>, Requires<[UseSSE1]>;
