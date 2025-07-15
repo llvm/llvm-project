@@ -300,11 +300,84 @@ bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
   return replaceDynamicExtractElementInst(EEI);
 }
 
+static void buildConstExprGEPChain(GetElementPtrInst &GEPI, Value *CurrentPtr,
+                                   SmallVector<ConstantExpr *, 4> &GEPChain,
+                                   IRBuilder<> &Builder) {
+  // Process the rest of the chain in reverse order (skipping the innermost)
+  for (int I = GEPChain.size() - 2; I >= 0; I--) {
+    ConstantExpr *CE = GEPChain[I];
+    GetElementPtrInst *GEPInst =
+        cast<GetElementPtrInst>(CE->getAsInstruction());
+    GEPInst->insertBefore(GEPI.getIterator());
+    SmallVector<Value *, MaxVecSize> CurrIndices(GEPInst->indices());
+
+    // Create a new GEP instruction
+    Type *SourceTy = GEPInst->getSourceElementType();
+    CurrentPtr =
+        Builder.CreateGEP(SourceTy, CurrentPtr, CurrIndices, GEPInst->getName(),
+                          GEPInst->getNoWrapFlags());
+
+    // If this is the outermost GEP, update the main GEPI
+    if (I == 0) {
+      GEPI.setOperand(GEPI.getPointerOperandIndex(), CurrentPtr);
+    }
+
+    // Clean up the temporary instruction
+    GEPInst->eraseFromParent();
+  }
+}
+
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   Value *PtrOperand = GEPI.getPointerOperand();
   Type *OrigGEPType = GEPI.getSourceElementType();
   Type *NewGEPType = OrigGEPType;
   bool NeedsTransform = false;
+  // Check if the pointer operand is a ConstantExpr GEP
+  if (auto *PtrOpGEPCE = dyn_cast<ConstantExpr>(PtrOperand);
+      PtrOpGEPCE && PtrOpGEPCE->getOpcode() == Instruction::GetElementPtr) {
+
+    // Collect all nested GEPs in the chain
+    SmallVector<ConstantExpr *, 4> GEPChain;
+    Value *BasePointer = PtrOpGEPCE->getOperand(0);
+    GEPChain.push_back(PtrOpGEPCE);
+
+    // Walk up the chain to find all nested GEPs and the base pointer
+    while (auto *NextGEP = dyn_cast<ConstantExpr>(BasePointer)) {
+      if (NextGEP->getOpcode() != Instruction::GetElementPtr)
+        break;
+
+      GEPChain.push_back(NextGEP);
+      BasePointer = NextGEP->getOperand(0);
+    }
+
+    // Check if the base pointer is a global that needs replacement
+    if (GlobalVariable *NewGlobal = lookupReplacementGlobal(BasePointer)) {
+      IRBuilder<> Builder(&GEPI);
+
+      // Create a new GEP for the innermost GEP (last in the chain)
+      ConstantExpr *InnerGEPCE = GEPChain.back();
+      GetElementPtrInst *InnerGEP =
+          cast<GetElementPtrInst>(InnerGEPCE->getAsInstruction());
+      InnerGEP->insertBefore(GEPI.getIterator());
+
+      SmallVector<Value *, MaxVecSize> Indices(InnerGEP->indices());
+      Type *NewGEPType = NewGlobal->getValueType();
+      Value *NewInnerGEP =
+          Builder.CreateGEP(NewGEPType, NewGlobal, Indices, InnerGEP->getName(),
+                            InnerGEP->getNoWrapFlags());
+
+      // If there's only one GEP in the chain, update the main GEPI directly
+      if (GEPChain.size() == 1)
+        GEPI.setOperand(GEPI.getPointerOperandIndex(), NewInnerGEP);
+      else
+        // For multiple GEPs, we need to create a chain of GEPs
+        buildConstExprGEPChain(GEPI, NewInnerGEP, GEPChain, Builder);
+
+      // Clean up the innermost GEP
+      InnerGEP->eraseFromParent();
+      return true;
+    }
+  }
 
   if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand)) {
     NewGEPType = NewGlobal->getValueType();
