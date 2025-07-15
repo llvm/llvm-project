@@ -2396,6 +2396,8 @@ public:
     return getTypeDeclType(getObjCSelDecl());
   }
 
+  PointerAuthQualifier getObjCMemberSelTypePtrAuth();
+
   /// Retrieve the typedef declaration corresponding to the predefined
   /// Objective-C 'Class' type.
   TypedefDecl *getObjCClassDecl() const;

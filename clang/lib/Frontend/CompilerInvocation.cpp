@@ -1742,6 +1742,22 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
 
     Opts.ObjCMethodListFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+    Opts.ObjCMethodListPointer =
+        PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                          MethodListPointerConstantDiscriminator);
+    if (LangOpts.PointerAuthObjcIsa) {
+      Opts.ObjCIsaPointers =
+          PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                            IsaPointerConstantDiscriminator);
+      Opts.ObjCSuperPointers =
+          PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                            SuperPointerConstantDiscriminator);
+    }
+
+    if (LangOpts.PointerAuthObjcClassROPointers)
+      Opts.ObjCClassROPointers =
+          PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                            ClassROConstantDiscriminator);
   }
   Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
   Opts.AuthTraps = LangOpts.PointerAuthAuthTraps;
@@ -3867,6 +3883,13 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     if (Opts.PointerAuthKernelABIVersion)
       GenerateArg(Consumer, OPT_fptrauth_kernel_abi_version);
   }
+
+  if (Opts.PointerAuthObjcIsa)
+    GenerateArg(Consumer, OPT_fptrauth_objc_isa);
+  if (Opts.PointerAuthObjcInterfaceSel)
+    GenerateArg(Consumer, OPT_fptrauth_objc_interface_sel);
+  if (Opts.PointerAuthObjcClassROPointers)
+    GenerateArg(Consumer, OPT_fptrauth_objc_class_ro);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
@@ -3899,6 +3922,15 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthABIVersion =
       getLastArgIntValue(Args, OPT_fptrauth_abi_version_EQ, 0, Diags);
   Opts.PointerAuthKernelABIVersion = Args.hasArg(OPT_fptrauth_kernel_abi_version);
+
+  Opts.PointerAuthObjcIsa = Args.hasArg(OPT_fptrauth_objc_isa);
+  Opts.PointerAuthObjcClassROPointers = Args.hasArg(OPT_fptrauth_objc_class_ro);
+  Opts.PointerAuthObjcInterfaceSel =
+      Args.hasArg(OPT_fptrauth_objc_interface_sel);
+
+  if (Opts.PointerAuthObjcInterfaceSel)
+    Opts.PointerAuthObjcInterfaceSelKey =
+        static_cast<unsigned>(PointerAuthSchema::ARM8_3Key::ASDB);
 }
 
 /// Check if input file kind and language standard are compatible.
