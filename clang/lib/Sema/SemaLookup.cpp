@@ -3304,7 +3304,10 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     // Inline SPIR-V types are treated as fundamental types.
     case Type::HLSLInlineSpirv:
       break;
+    case Type::OverflowBehavior:
+      T = cast<OverflowBehaviorType>(T)->getUnderlyingType().getTypePtr();
     }
+
 
     if (Queue.empty())
       break;

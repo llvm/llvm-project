@@ -10066,6 +10066,18 @@ public:
   /// floating-point or integral promotion.
   bool IsComplexPromotion(QualType FromType, QualType ToType);
 
+  /// IsOverflowBehaviorTypePromotion - Determines whether the conversion from
+  /// FromType to ToType involves an OverflowBehaviorType FromType being
+  /// promoted to an OverflowBehaviorType ToType which has a larger bitwidth.
+  /// If so, returns true and sets FromType to ToType.
+  bool IsOverflowBehaviorTypePromotion(QualType FromType, QualType ToType);
+
+  /// IsOverflowBehaviorTypeConversion - Determines whether the conversion from
+  /// FromType to ToType necessarily involves both an OverflowBehaviorType and
+  /// a non-OverflowBehaviorType. If so, returns true and sets FromType to
+  /// ToType.
+  bool IsOverflowBehaviorTypeConversion(QualType FromType, QualType ToType);
+
   /// IsPointerConversion - Determines whether the conversion of the
   /// expression From, which has the (possibly adjusted) type FromType,
   /// can be converted to the type ToType via a pointer conversion (C++
