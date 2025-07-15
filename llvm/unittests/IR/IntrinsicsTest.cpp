@@ -100,7 +100,7 @@ TEST(IntrinsicNameLookup, NonNullterminatedStringRef) {
   // in that StringRef can be flagged by asan. Here, the String `S` is of size
   // 18, and backed by a heap allocated buffer `Data`, so access to S[18] will
   // be flagged bby asan.
-  std::unique_ptr<char[]> Data = std::make_unique<char[]>(Name.size());
+  auto Data = std::make_unique<char[]>(Name.size());
   std::strncpy(Data.get(), Name.data(), Name.size());
   StringRef S(Data.get(), Name.size());
   EXPECT_EQ(memcpy_inline, lookupIntrinsicID(S));
