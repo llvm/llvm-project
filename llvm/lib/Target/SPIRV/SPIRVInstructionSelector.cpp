@@ -4040,7 +4040,7 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
       ++VarPos;
     }
     // Advance VarPos to the next instruction after OpFunction, it will either
-    // be an OpFunctionParameter, so that we can start the next loop, or the 
+    // be an OpFunctionParameter, so that we can start the next loop, or the
     // position to insert the OpVariable instruction.
     ++VarPos;
     while (VarPos != EntryBB.end() &&
