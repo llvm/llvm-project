@@ -887,26 +887,13 @@ struct PackOpTiling
 
     ArrayRef<OpFoldResult> offsets(allOffsets[0]);
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
-
     auto packOp = cast<PackOp>(op);
-    // It is not trivial to infer dest tile from source tile if `packOp` has
-    // padding semantic.
-    if (packOp.getPaddingValue())
-      return failure();
-
     Location loc = packOp.getLoc();
-
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
     DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
         packOp.getDimAndTileMapping();
     for (auto dim : llvm::seq<int64_t>(packOp.getSourceRank())) {
       if (dimAndTileMapping.count(dim)) {
-        FailureOr<int64_t> cstSize =
-            ValueBoundsConstraintSet::computeConstantBound(
-                presburger::BoundType::UB, sizes[dim],
-                /*stopCondition=*/nullptr, /*closedUB=*/true);
-        std::optional<int64_t> cstInnerSize =
-            getConstantIntValue(dimAndTileMapping[dim]);
         // Currently fusing `packOp` as consumer only expects perfect tiling
         // scenario because even if without padding semantic, the `packOp` may
         // also yield incomplete tiles. E.g. tensor<30xf32> -> tensor<5x6xf32>,
@@ -916,12 +903,25 @@ struct PackOpTiling
         // (0,0)~(0,4) at first row.
         // 2. the second slice is extracted from (5) to (9) and SHOULD BE
         // respectively inserted into two rows with different length, including
-        // first row: (0,5) and second row (1,0)~(1,3). It is hard to coordinate
-        // them, thus adding below constraint to bypass them temporarily. In
-        // another word, we can only support tiling with consumer if the tile
-        // size for the producer is a multiple of the inner tile size for the
-        // packed dimensions at this moment.
-        if (failed(cstSize) || !cstInnerSize || *cstSize % *cstInnerSize != 0) {
+        // first row: (0,5) and second row (1,0)~(1,3).
+        // It is hard to coordinate them, thus adding below constraint to bypass
+        // them temporarily. In another word, we can only support tiling with
+        // consumer if the tile size for the producer is either a multiple of
+        // the inner tile size for the packed dimensions or the dimension is not
+        // tiled at this moment.
+        FailureOr<int64_t> cstTileSize =
+            ValueBoundsConstraintSet::computeConstantBound(
+                presburger::BoundType::UB, sizes[dim],
+                /*stopCondition=*/nullptr, /*closedUB=*/true);
+        std::optional<int64_t> cstInnerSize =
+            getConstantIntValue(dimAndTileMapping[dim]);
+        int64_t dimSize = packOp.getSourceType().getDimSize(dim);
+        // TODO: It could be untiled if the `dimSize` is dynamic. It is a hard
+        // check to determine if a dimension is tiled or not.
+        bool isTiled = failed(cstTileSize) || ShapedType::isDynamic(dimSize) ||
+                       cstTileSize.value() != dimSize;
+        if (isTiled && (failed(cstTileSize) || !cstInnerSize ||
+                        *cstTileSize % *cstInnerSize != 0)) {
           return failure();
         }
 
@@ -988,7 +988,8 @@ struct PackOpTiling
         loc, packOp.getDest(), outputOffsets, outputSizes, strides);
     tiledOperands.push_back(outSlice);
 
-    assert(!packOp.getPaddingValue() && "Expect no padding semantic");
+    if (auto val = packOp.getPaddingValue())
+      tiledOperands.push_back(val);
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
