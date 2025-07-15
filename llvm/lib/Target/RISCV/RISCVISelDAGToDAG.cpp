@@ -3776,21 +3776,18 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
 // Select a constant that can be represented as (sign_extend(imm5) << imm2).
 bool RISCVDAGToDAGISel::selectSimm5Shl2(SDValue N, SDValue &Simm5,
                                         SDValue &Shl2) {
-  if (auto *C = dyn_cast<ConstantSDNode>(N)) {
-    int64_t Offset = C->getSExtValue();
-    unsigned Shift;
-    for (Shift = 0; Shift < 4; Shift++)
-      if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0))
-        break;
+  auto *C = dyn_cast<ConstantSDNode>(N);
+  if (!C)
+    return false;
 
-    // Constant cannot be encoded.
-    if (Shift == 4)
-      return false;
-
-    EVT Ty = N->getValueType(0);
-    Simm5 = CurDAG->getSignedTargetConstant(Offset >> Shift, SDLoc(N), Ty);
-    Shl2 = CurDAG->getTargetConstant(Shift, SDLoc(N), Ty);
-    return true;
+  int64_t Offset = C->getSExtValue();
+  for (unsigned Shift = 0; Shift < 4; Shift++) {
+    if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0)) {
+      EVT VT = N->getValueType(0);
+      Simm5 = CurDAG->getSignedTargetConstant(Offset >> Shift, SDLoc(N), VT);
+      Shl2 = CurDAG->getTargetConstant(Shift, SDLoc(N), VT);
+      return true;
+    }
   }
 
   return false;
