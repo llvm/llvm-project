@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CIR_DIALECT_CIR_TYPES
-#define MLIR_CIR_DIALECT_CIR_TYPES
+#ifndef CLANG_CIR_DIALECT_IR_CIRTYPES_TD
+#define CLANG_CIR_DIALECT_IR_CIRTYPES_TD
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypeConstraints.td"
@@ -638,4 +638,4 @@ def CIR_AnyType : AnyTypeOf<[
   CIR_ComplexType
 ]>;
 
-#endif // MLIR_CIR_DIALECT_CIR_TYPES
+#endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD
