@@ -1,11 +1,10 @@
-//===- DistinctAttributeAllocatorTest.cpp - DistinctAttr storage alloc test
-//-===//
+//=== DistinctAttributeAllocatorTest.cpp - DistinctAttr storage alloc test ===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===-----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
 
@@ -19,7 +18,7 @@ using namespace mlir;
 
 //
 // Test that a DistinctAttr that is created on a separate thread does
-// not have its storage deleted when the thread joins
+// not have its storage deleted when the thread joins.
 //
 TEST(DistinctAttributeAllocatorTest, TestAttributeWellFormedAfterThreadJoin) {
   MLIRContext ctx;

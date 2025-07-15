@@ -395,8 +395,8 @@ private:
 };
 
 /// An allocator for distinct attribute storage instances. Uses a synchronized
-/// BumpPtrAllocator to ensure allocated storage is deleted when the
-/// DistinctAttributeAllocator is destroyed
+/// BumpPtrAllocator to ensure thread-safety. The allocated storage is deleted
+/// when the DistinctAttributeAllocator is destroyed.
 class DistinctAttributeAllocator final {
 public:
   DistinctAttributeAllocator() = default;
@@ -412,11 +412,11 @@ public:
   };
 
 private:
-  /// Used to allocate Distict Attribute storage. When this allocator destroyed
-  /// in till also dealllocate any storage instances
+  /// Used to allocate Distict Attribute storages. The managed memory is freed
+  /// automatically when the allocator instance is destroyed.
   llvm::BumpPtrAllocator allocator;
 
-  /// Used to lock access to the allocator
+  /// Used to lock access to the allocator.
   std::mutex allocatorMutex;
 };
 } // namespace detail
