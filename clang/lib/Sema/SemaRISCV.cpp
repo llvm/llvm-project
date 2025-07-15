@@ -1635,6 +1635,118 @@ bool SemaRISCV::isValidFMVExtension(StringRef Ext) {
   return -1 != RISCVISAInfo::getRISCVFeaturesBitsInfo(Ext).second;
 }
 
+enum FirstParam { Unsupported, Duplicate, Unknown };
+enum SecondParam { None, CPU, Tune };
+enum ThirdParam { Target, TargetClones, TargetVersion };
+
+bool SemaRISCV::checkTargetVersionAttr(StringRef Str, SourceLocation Loc) {
+  llvm::SmallVector<StringRef, 8> AttrStrs;
+  Str.split(AttrStrs, ';');
+
+  bool HasArch = false;
+  bool HasPriority = false;
+  bool HasDefault = false;
+  bool DuplicateAttr = false;
+  for (StringRef AttrStr : AttrStrs) {
+    // Only support arch=+ext,... syntax.
+    if (AttrStr.starts_with("arch=+")) {
+      if (HasArch)
+        DuplicateAttr = true;
+      HasArch = true;
+      ParsedTargetAttr TargetAttr =
+          getASTContext().getTargetInfo().parseTargetAttr(AttrStr);
+
+      if (TargetAttr.Features.empty() ||
+          llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
+            return !isValidFMVExtension(Ext);
+          }))
+        return Diag(Loc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << AttrStr << TargetVersion;
+    } else if (AttrStr.starts_with("default")) {
+      if (HasDefault)
+        DuplicateAttr = true;
+      HasDefault = true;
+    } else if (AttrStr.consume_front("priority=")) {
+      if (HasPriority)
+        DuplicateAttr = true;
+      HasPriority = true;
+      unsigned Digit;
+      if (AttrStr.getAsInteger(0, Digit))
+        return Diag(Loc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << AttrStr << TargetVersion;
+    } else {
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << AttrStr << TargetVersion;
+    }
+  }
+
+  if (((HasPriority || HasArch) && HasDefault) || DuplicateAttr ||
+      (HasPriority && !HasArch))
+    return Diag(Loc, diag::warn_unsupported_target_attribute)
+           << Unsupported << None << Str << TargetVersion;
+
+  return false;
+}
+
+bool SemaRISCV::checkTargetClonesAttr(
+    SmallVectorImpl<StringRef> &Strs, SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &Buffer) {
+  assert(Strs.size() == Locs.size() &&
+         "Mismatch between number of strings and locations");
+
+  bool HasDefault = false;
+  for (unsigned I = 0; I < Strs.size(); ++I) {
+    StringRef Str = Strs[I].trim();
+    SourceLocation Loc = Locs[I];
+
+    llvm::SmallVector<StringRef, 8> AttrStrs;
+    Str.split(AttrStrs, ";");
+
+    bool IsPriority = false;
+    bool IsDefault = false;
+    for (StringRef AttrStr : AttrStrs) {
+      // Only support arch=+ext,... syntax.
+      if (AttrStr.starts_with("arch=+")) {
+        ParsedTargetAttr TargetAttr =
+            getASTContext().getTargetInfo().parseTargetAttr(AttrStr);
+
+        if (TargetAttr.Features.empty() ||
+            llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
+              return !isValidFMVExtension(Ext);
+            }))
+          return Diag(Loc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << Str << TargetClones;
+      } else if (AttrStr.starts_with("default")) {
+        if (HasDefault)
+          Diag(Loc, diag::warn_target_clone_duplicate_options);
+        IsDefault = true;
+        HasDefault = true;
+      } else if (AttrStr.consume_front("priority=")) {
+        IsPriority = true;
+        unsigned Digit;
+        if (AttrStr.getAsInteger(0, Digit))
+          return Diag(Loc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << Str << TargetClones;
+      } else {
+        return Diag(Loc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << Str << TargetClones;
+      }
+    }
+
+    if (IsPriority && IsDefault)
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << Str << TargetClones;
+
+    if (llvm::is_contained(Buffer, Str))
+      Diag(Loc, diag::warn_target_clone_duplicate_options);
+    Buffer.push_back(Str);
+  }
+  if (!HasDefault)
+    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+
+  return false;
+}
+
 SemaRISCV::SemaRISCV(Sema &S) : SemaBase(S) {}
 
 } // namespace clang

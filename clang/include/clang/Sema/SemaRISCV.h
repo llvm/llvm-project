@@ -55,6 +55,11 @@ public:
   bool DeclareAndesVectorBuiltins = false;
 
   std::unique_ptr<sema::RISCVIntrinsicManager> IntrinsicManager;
+
+  bool checkTargetVersionAttr(StringRef Str, SourceLocation Loc);
+  bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Strs,
+                             SmallVectorImpl<SourceLocation> &Locs,
+                             SmallVectorImpl<SmallString<64>> &Buffer);
 };
 
 std::unique_ptr<sema::RISCVIntrinsicManager>

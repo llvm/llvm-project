@@ -1056,4 +1056,62 @@ void SemaX86::handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL) {
                  X86ForceAlignArgPointerAttr(getASTContext(), AL));
 }
 
+enum FirstParam { Unsupported, Duplicate, Unknown };
+enum SecondParam { None, CPU, Tune };
+enum ThirdParam { Target, TargetClones, TargetVersion };
+
+bool SemaX86::checkTargetClonesAttr(SmallVectorImpl<StringRef> &Strs,
+                                    SmallVectorImpl<SourceLocation> &Locs,
+                                    SmallVectorImpl<SmallString<64>> &Buffer) {
+  assert(Strs.size() == Locs.size() &&
+         "Mismatch between number of strings and locations");
+
+  bool HasDefault = false;
+  bool HasComma = false;
+  for (unsigned I = 0; I < Strs.size(); ++I) {
+    StringRef Str = Strs[I].trim();
+    SourceLocation Loc = Locs[I];
+
+    if (Str.empty() || Str.ends_with(','))
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << "" << TargetClones;
+
+    if (Str.contains(','))
+      HasComma = true;
+
+    StringRef LHS;
+    StringRef RHS = Str;
+    do {
+      std::tie(LHS, RHS) = RHS.split(',');
+      LHS = LHS.trim();
+      SourceLocation CurLoc = Loc.getLocWithOffset(LHS.data() - Str.data());
+
+      if (LHS.starts_with("arch=")) {
+        if (!getASTContext().getTargetInfo().isValidCPUName(
+                LHS.drop_front(sizeof("arch=") - 1)))
+          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << CPU << LHS.drop_front(sizeof("arch=") - 1)
+                 << TargetClones;
+      } else if (LHS == "default")
+        HasDefault = true;
+      else if (!getASTContext().getTargetInfo().isValidFeatureName(LHS) ||
+               getASTContext().getTargetInfo().getFMVPriority(LHS) == 0)
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << LHS << TargetClones;
+
+      if (llvm::is_contained(Buffer, LHS))
+        Diag(CurLoc, diag::warn_target_clone_duplicate_options);
+      // Note: Add even if there are duplicates, since it changes name mangling.
+      Buffer.push_back(LHS);
+    } while (!RHS.empty());
+  }
+  if (HasComma && Strs.size() > 1)
+    Diag(Locs[0], diag::warn_target_clone_mixed_values);
+
+  if (!HasDefault)
+    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+
+  return false;
+}
+
 } // namespace clang

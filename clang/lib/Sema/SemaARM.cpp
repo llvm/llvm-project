@@ -1535,4 +1535,91 @@ bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
          IsLaxCompatible(SecondType, FirstType);
 }
 
+enum FirstParam { Unsupported, Duplicate, Unknown };
+enum SecondParam { None, CPU, Tune };
+enum ThirdParam { Target, TargetClones, TargetVersion };
+
+bool SemaARM::checkTargetVersionAttr(StringRef Str, SourceLocation Loc) {
+  llvm::SmallVector<StringRef, 8> Features;
+  Str.split(Features, '+');
+  for (StringRef Feat : Features) {
+    Feat = Feat.trim();
+    if (Feat == "default")
+      continue;
+    if (!getASTContext().getTargetInfo().validateCpuSupports(Feat))
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << Feat << TargetVersion;
+  }
+  return false;
+}
+
+bool SemaARM::checkTargetClonesAttr(SmallVectorImpl<StringRef> &Strs,
+                                    SmallVectorImpl<SourceLocation> &Locs,
+                                    SmallVectorImpl<SmallString<64>> &Buffer) {
+  if (!getASTContext().getTargetInfo().hasFeature("fmv"))
+    return true;
+
+  assert(Strs.size() == Locs.size() &&
+         "Mismatch between number of strings and locations");
+
+  bool HasDefault = false;
+  bool HasNonDefault = false;
+  for (unsigned I = 0; I < Strs.size(); ++I) {
+    StringRef Str = Strs[I].trim();
+    SourceLocation Loc = Locs[I];
+
+    if (Str.empty())
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << "" << TargetClones;
+
+    if (Str == "default") {
+      if (HasDefault)
+        Diag(Loc, diag::warn_target_clone_duplicate_options);
+      else {
+        Buffer.push_back(Str);
+        HasDefault = true;
+      }
+      continue;
+    }
+
+    bool HasCodeGenImpact = false;
+    llvm::SmallVector<StringRef, 8> Features;
+    llvm::SmallVector<StringRef, 8> ValidFeatures;
+    Str.split(Features, '+');
+    for (StringRef Feat : Features) {
+      Feat = Feat.trim();
+      if (!getASTContext().getTargetInfo().validateCpuSupports(Feat)) {
+        Diag(Loc, diag::warn_unsupported_target_attribute)
+            << Unsupported << None << Feat << TargetClones;
+        continue;
+      }
+      if (getASTContext().getTargetInfo().doesFeatureAffectCodeGen(Feat))
+        HasCodeGenImpact = true;
+      ValidFeatures.push_back(Feat);
+    }
+    // Canonize TargetClones Attributes
+    SmallString<64> NewStr;
+    llvm::sort(ValidFeatures);
+    for (StringRef Feat : ValidFeatures) {
+      if (!NewStr.empty())
+        NewStr.append("+");
+      NewStr.append(Feat);
+    }
+    if (llvm::is_contained(Buffer, NewStr))
+      Diag(Loc, diag::warn_target_clone_duplicate_options);
+    else if (!HasCodeGenImpact)
+      // Ignore features in target_clone attribute that don't impact
+      // code generation
+      Diag(Loc, diag::warn_target_clone_no_impact_options);
+    else if (!NewStr.empty()) {
+      Buffer.push_back(NewStr);
+      HasNonDefault = true;
+    }
+  }
+  if (!HasNonDefault)
+    return true;
+
+  return false;
+}
+
 } // namespace clang

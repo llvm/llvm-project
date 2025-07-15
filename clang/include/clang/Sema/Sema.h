@@ -4922,13 +4922,6 @@ public:
   // handled later in the process, once we know how many exist.
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
 
-  /// Check Target Version attrs
-  bool checkTargetVersionAttr(SourceLocation Loc, Decl *D, StringRef Str);
-  bool checkTargetClonesAttrString(
-      SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
-      Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
-      SmallVectorImpl<SmallString<64>> &StringsBuffer);
-
   ErrorAttr *mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
                             StringRef NewUserDiagnostic);
   FormatAttr *mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
