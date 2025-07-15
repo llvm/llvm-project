@@ -573,8 +573,7 @@ static bool needsPCRel(const MCExpr *Expr) {
     auto *SE = cast<MCSymbolRefExpr>(Expr);
     auto Spec = AMDGPU::getSpecifier(SE);
     return Spec != AMDGPUMCExpr::S_ABS32_LO &&
-           Spec != AMDGPUMCExpr::S_ABS32_HI &&
-           Spec != AMDGPUMCExpr::S_ABS64;
+           Spec != AMDGPUMCExpr::S_ABS32_HI && Spec != AMDGPUMCExpr::S_ABS64;
   }
   case MCExpr::Binary: {
     auto *BE = cast<MCBinaryExpr>(Expr);

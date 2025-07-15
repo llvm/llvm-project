@@ -8516,7 +8516,7 @@ buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   //   $symbol@*@hi with lower 32 bits and higher 32 bits of a literal constant,
   //   which is a 64-bit pc-relative offset from the encoding of the $symbol
   //   operand to the global variable.
-  if (((const GCNSubtarget&)DAG.getSubtarget()).has64BitLiterals()) {
+  if (((const GCNSubtarget &)DAG.getSubtarget()).has64BitLiterals()) {
     assert(GAFlags != SIInstrInfo::MO_NONE);
 
     SDValue Ptr =
