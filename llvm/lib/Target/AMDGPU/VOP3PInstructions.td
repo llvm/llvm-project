@@ -1774,7 +1774,7 @@ class SWMMACPat_w64<Instruction Inst, SDPatternOperator node, VOP3PWMMA_Profile 
             let WaveSizePredicate = isWave64;
           }
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX11PlusNot12_50, OtherPredicates = [HasWMMA128bInsts] in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12PlusNot12_50 in {
   defm : WMMAPat<"V_WMMA_F32_16X16X16_F16_w32",     int_amdgcn_wmma_f32_16x16x16_f16,     F32_F16_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F32_16X16X16_BF16_w32",    int_amdgcn_wmma_f32_16x16x16_bf16,    F32_BF16_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F16_16X16X16_F16_w32",     int_amdgcn_wmma_f16_16x16x16_f16,     F16_F16_WMMA_w32,1>;
@@ -1801,7 +1801,7 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX11PlusNot12_50, Othe
   def : SWMMACPat<V_SWMMAC_F32_16X16X32_BF8_BF8_w32_twoaddr, int_amdgcn_swmmac_f32_16x16x32_bf8_bf8, F32_FP8BF8_SWMMAC_w32>;
 }
 
-let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX11PlusNot12_50, OtherPredicates = [HasWMMA128bInsts] in {
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_50 in {
   defm : WMMAPat<"V_WMMA_F32_16X16X16_F16_w64",     int_amdgcn_wmma_f32_16x16x16_f16,     F32_F16_WMMA_w64>;
   defm : WMMAPat<"V_WMMA_F32_16X16X16_BF16_w64",    int_amdgcn_wmma_f32_16x16x16_bf16,    F32_BF16_WMMA_w64>;
   defm : WMMAPat<"V_WMMA_F16_16X16X16_F16_w64",     int_amdgcn_wmma_f16_16x16x16_f16,     F16_F16_WMMA_w64,1>;
