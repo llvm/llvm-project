@@ -73,8 +73,8 @@ def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
 }
 
 def LoweringPrepare : Pass<"cir-lowering-prepare"> {
-  let summary = "Lower to more fine-grained CIR operations before lowering to
-    other dialects";
+  let summary = "Lower to more fine-grained CIR operations before lowering to "
+    "other dialects";
   let description = [{
     This pass does preparation work for lowering to other dialects. For example,
     it may expand the global variable initialziation in a more ABI-friendly form.
