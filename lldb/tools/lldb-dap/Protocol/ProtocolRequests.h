@@ -242,6 +242,12 @@ struct Configuration {
   std::string platformName;
 };
 
+enum Console : unsigned {
+  eConsoleInternal,
+  eConsoleIntegratedTerminal,
+  eConsoleExternalTerminal
+};
+
 /// lldb-dap specific launch arguments.
 struct LaunchRequestArguments {
   /// Common lldb-dap configuration values for launching/attaching operations.
@@ -290,9 +296,9 @@ struct LaunchRequestArguments {
   /// Set whether to shell expand arguments to the process when launching.
   bool shellExpandArguments = false;
 
-  /// Launch the program inside an integrated terminal in the IDE. Useful for
-  /// debugging interactive command line programs.
-  bool runInTerminal = false;
+  /// Specify where to launch the program: internal console, integrated
+  /// terminal or external terminal.
+  Console console = eConsoleInternal;
 
   /// @}
 };
@@ -398,13 +404,12 @@ bool fromJSON(const llvm::json::Value &, SetVariableArguments &,
 
 /// Response to `setVariable` request.
 struct SetVariableResponseBody {
-
   /// The new value of the variable.
   std::string value;
 
   /// The type of the new value. Typically shown in the UI when hovering over
   /// the value.
-  std::optional<std::string> type;
+  std::string type;
 
   /// If `variablesReference` is > 0, the new value is structured and its
   /// children can be retrieved by passing `variablesReference` to the
@@ -414,26 +419,26 @@ struct SetVariableResponseBody {
   /// If this property is included in the response, any `variablesReference`
   /// previously associated with the updated variable, and those of its
   /// children, are no longer valid.
-  std::optional<uint64_t> variablesReference;
+  uint64_t variablesReference = 0;
 
   /// The number of named child variables.
   /// The client can use this information to present the variables in a paged
   /// UI and fetch them in chunks.
   /// The value should be less than or equal to 2147483647 (2^31-1).
-  std::optional<uint32_t> namedVariables;
+  uint32_t namedVariables = 0;
 
   /// The number of indexed child variables.
   /// The client can use this information to present the variables in a paged
   /// UI and fetch them in chunks.
   /// The value should be less than or equal to 2147483647 (2^31-1).
-  std::optional<uint32_t> indexedVariables;
+  uint32_t indexedVariables = 0;
 
   /// A memory reference to a location appropriate for this result.
   /// For pointer type eval results, this is generally a reference to the
   /// memory address contained in the pointer.
   /// This attribute may be returned by a debug adapter if corresponding
   /// capability `supportsMemoryReferences` is true.
-  std::optional<std::string> memoryReference;
+  lldb::addr_t memoryReference = LLDB_INVALID_ADDRESS;
 
   /// A reference that allows the client to request the location where the new
   /// value is declared. For example, if the new value is function pointer, the
@@ -442,7 +447,7 @@ struct SetVariableResponseBody {
   ///
   /// This reference shares the same lifetime as the `variablesReference`. See
   /// 'Lifetime of Object References' in the Overview section for details.
-  std::optional<uint64_t> valueLocationReference;
+  uint64_t valueLocationReference = 0;
 };
 llvm::json::Value toJSON(const SetVariableResponseBody &);
 
@@ -805,26 +810,26 @@ llvm::json::Value toJSON(const SetExceptionBreakpointsResponseBody &);
 struct DisassembleArguments {
   /// Memory reference to the base location containing the instructions to
   /// disassemble.
-  std::string memoryReference;
+  lldb::addr_t memoryReference = LLDB_INVALID_ADDRESS;
 
   /// Offset (in bytes) to be applied to the reference location before
   /// disassembling. Can be negative.
-  std::optional<int64_t> offset;
+  int64_t offset = 0;
 
   /// Offset (in instructions) to be applied after the byte offset (if any)
   /// before disassembling. Can be negative.
-  std::optional<int64_t> instructionOffset;
+  int64_t instructionOffset = 0;
 
   /// Number of instructions to disassemble starting at the specified location
   /// and offset.
   /// An adapter must return exactly this number of instructions - any
   /// unavailable instructions should be replaced with an implementation-defined
   /// 'invalid instruction' value.
-  uint32_t instructionCount;
+  uint32_t instructionCount = 0;
 
   /// If true, the adapter should attempt to resolve memory addresses and other
   /// values to symbolic names.
-  std::optional<bool> resolveSymbols;
+  bool resolveSymbols = false;
 };
 bool fromJSON(const llvm::json::Value &, DisassembleArguments &,
               llvm::json::Path);
@@ -842,14 +847,14 @@ llvm::json::Value toJSON(const DisassembleResponseBody &);
 /// Arguments for `readMemory` request.
 struct ReadMemoryArguments {
   /// Memory reference to the base location from which data should be read.
-  lldb::addr_t memoryReference;
+  lldb::addr_t memoryReference = LLDB_INVALID_ADDRESS;
 
   /// Offset (in bytes) to be applied to the reference location before reading
   /// data. Can be negative.
   int64_t offset = 0;
 
   /// Number of bytes to read at the specified location and offset.
-  uint64_t count;
+  uint64_t count = 0;
 };
 bool fromJSON(const llvm::json::Value &, ReadMemoryArguments &,
               llvm::json::Path);
@@ -859,7 +864,7 @@ struct ReadMemoryResponseBody {
   /// The address of the first byte of data returned.
   /// Treated as a hex value if prefixed with `0x`, or as a decimal value
   /// otherwise.
-  std::string address;
+  lldb::addr_t address = LLDB_INVALID_ADDRESS;
 
   /// The number of unreadable bytes encountered after the last successfully
   /// read byte.
@@ -896,14 +901,62 @@ struct ModulesResponseBody {
 };
 llvm::json::Value toJSON(const ModulesResponseBody &);
 
+/// Arguments for `variables` request.
+struct VariablesArguments {
+  /// The variable for which to retrieve its children. The `variablesReference`
+  /// must have been obtained in the current suspended state. See 'Lifetime of
+  /// Object References' in the Overview section for details.
+  uint64_t variablesReference;
+
+  enum VariablesFilter : unsigned {
+    eVariablesFilterBoth = 0,
+    eVariablesFilterIndexed = 1 << 0,
+    eVariablesFilterNamed = 1 << 1,
+  };
+
+  /// Filter to limit the child variables to either named or indexed. If
+  /// omitted, both types are fetched.
+  VariablesFilter filter = eVariablesFilterBoth;
+
+  /// The index of the first variable to return; if omitted children start at 0.
+  ///
+  /// The attribute is only honored by a debug adapter if the corresponding
+  /// capability `supportsVariablePaging` is true.
+  uint64_t start = 0;
+
+  /// The number of variables to return. If count is missing or 0, all variables
+  /// are returned.
+  ///
+  /// The attribute is only honored by a debug adapter if the corresponding
+  /// capability `supportsVariablePaging` is true.
+  uint64_t count = 0;
+
+  /// Specifies details on how to format the Variable values.
+  ///
+  /// The attribute is only honored by a debug adapter if the corresponding
+  /// capability `supportsValueFormattingOptions` is true.
+  std::optional<ValueFormat> format;
+};
+bool fromJSON(const llvm::json::Value &Param,
+              VariablesArguments::VariablesFilter &VA, llvm::json::Path Path);
+bool fromJSON(const llvm::json::Value &, VariablesArguments &,
+              llvm::json::Path);
+
+/// Response to `variables` request.
+struct VariablesResponseBody {
+  /// All (or a range) of variables for the given variable reference.
+  std::vector<Variable> variables;
+};
+llvm::json::Value toJSON(const VariablesResponseBody &);
+
 /// Arguments for `writeMemory` request.
 struct WriteMemoryArguments {
   /// Memory reference to the base location to which data should be written.
-  lldb::addr_t memoryReference;
+  lldb::addr_t memoryReference = LLDB_INVALID_ADDRESS;
 
   /// Offset (in bytes) to be applied to the reference location before writing
   /// data. Can be negative.
-  std::optional<int64_t> offset;
+  int64_t offset = 0;
 
   /// Property to control partial writes. If true, the debug adapter should
   /// attempt to write memory even if the entire memory region is not writable.
@@ -912,7 +965,7 @@ struct WriteMemoryArguments {
   /// the response via the `offset` and `bytesWritten` properties.
   /// If false or missing, a debug adapter should attempt to verify the region
   /// is writable before writing, and fail the response if it is not.
-  std::optional<bool> allowPartial;
+  bool allowPartial = false;
 
   /// Bytes to write, encoded using base64.
   std::string data;
