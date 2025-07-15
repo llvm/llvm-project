@@ -19,8 +19,7 @@ using namespace mlir;
 
 //
 // Test that a DistinctAttr that is created on a separate thread does
-// not have its storage deleted when thread local storage is disabled
-// on the MLIRContext.
+// not have its storage deleted when the thread joins
 //
 TEST(DistinctAttributeAllocatorTest, TestAttributeWellFormedAfterThreadJoin) {
   MLIRContext ctx;

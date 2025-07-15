@@ -411,12 +411,6 @@ private:
 
 LogicalResult PassManager::runWithCrashRecovery(Operation *op,
                                                 AnalysisManager am) {
-  // Notify the context to disable the use of thread-local storage for
-  // allocating attribute storage while the pass manager is running in a crash
-  // recovery context thread. Re-enable the thread-local storage upon function
-  // exit. This is required to persist any attribute storage allocated in
-  // thread-local storage during passes beyond the lifetime of the recovery
-  // context thread.
   const bool threadingEnabled = getContext()->isMultithreadingEnabled();
   crashReproGenerator->initialize(getPasses(), op, verifyPasses);
 
