@@ -204,9 +204,7 @@ public:
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
 
-  bool hasBF16TransInsts() const {
-    return HasBF16TransInsts;
-  }
+  bool hasBF16TransInsts() const { return HasBF16TransInsts; }
 
   bool hasBF16ConversionInsts() const {
     return HasBF16ConversionInsts;

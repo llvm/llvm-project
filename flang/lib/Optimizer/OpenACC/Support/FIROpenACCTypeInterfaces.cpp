@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/OpenACC/FIROpenACCTypeInterfaces.h"
+#include "flang/Optimizer/OpenACC/Support/FIROpenACCTypeInterfaces.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
