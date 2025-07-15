@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_AST_ASTCONTEXT_H
 #define LLVM_CLANG_AST_ASTCONTEXT_H
 
+#include "Type.h"
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CommentCommandTraits.h"
@@ -291,6 +292,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
+  mutable llvm::FoldingSet<OverflowBehaviorType> OverflowBehaviorTypes;
   llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
 
@@ -938,6 +940,8 @@ public:
   bool isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
                                 const QualType &Ty) const;
 
+  bool isUnaryOverflowPatternExcluded(const UnaryOperator *UO);
+
   const XRayFunctionFilter &getXRayFilter() const {
     return *XRayFilter;
   }
@@ -1037,6 +1041,15 @@ public:
   /// preprocessor is not available.
   comments::FullComment *getCommentForDecl(const Decl *D,
                                            const Preprocessor *PP) const;
+
+  /// Attempts to merge two types that may be OverflowBehaviorTypes.
+  ///
+  /// \returns A QualType if the types were handled, std::nullopt otherwise.
+  /// A null QualType indicates an incompatible merge.
+  std::optional<QualType>
+  tryMergeOverflowBehaviorTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
+                                bool Unqualified, bool BlockReturnType,
+                                bool IsConditionalOperator);
 
   /// Return parsed documentation comment attached to a given declaration.
   /// Returns nullptr if no comment is attached. Does not look at any
@@ -1913,6 +1926,13 @@ public:
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
                                    QualType Wrapped) const;
 
+  QualType getOverflowBehaviorType(const OverflowBehaviorAttr *Attr,
+                                   QualType Wrapped) const;
+
+  QualType
+  getOverflowBehaviorType(OverflowBehaviorType::OverflowBehaviorKind Kind,
+                          QualType Wrapped) const;
+
   QualType getHLSLAttributedResourceType(
       QualType Wrapped, QualType Contained,
       const HLSLAttributedResourceType::Attributes &Attrs);
@@ -2609,6 +2629,11 @@ public:
   /// \note This ignores whether they are target-specific (AltiVec or Neon)
   /// types.
   bool areCompatibleVectorTypes(QualType FirstVec, QualType SecondVec);
+
+  /// Return true if two OverflowBehaviorTypes are compatible for assignment.
+  /// This checks both the underlying type compatibility and the overflow
+  /// behavior kind (trap vs wrap).
+  bool areCompatibleOverflowBehaviorTypes(QualType LHS, QualType RHS);
 
   /// Return true if the given types are an RISC-V vector builtin type and a
   /// VectorType that is a fixed-length representation of the RISC-V vector
