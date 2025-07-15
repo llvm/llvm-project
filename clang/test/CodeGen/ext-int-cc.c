@@ -36,7 +36,6 @@ void ParamPassing(_BitInt(128) b, _BitInt(64) c) {}
 // WIN64: define dso_local void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
 // LIN32: define{{.*}} void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
 // WIN32: define dso_local void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
-// NACL: define{{.*}} void @ParamPassing(ptr byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // NVPTX64: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
 // NVPTX: define{{.*}} void @ParamPassing(ptr byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // SPARCV9: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
@@ -67,7 +66,6 @@ void ParamPassing2(_BitInt(127) b, _BitInt(63) c) {}
 // WIN64: define dso_local void @ParamPassing2(ptr %{{.+}}, i63 %{{.+}})
 // LIN32: define{{.*}} void @ParamPassing2(ptr %{{.+}}, i63 %{{.+}})
 // WIN32: define dso_local void @ParamPassing2(ptr %{{.+}}, i63 %{{.+}})
-// NACL: define{{.*}} void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
 // NVPTX64: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 %{{.+}})
 // NVPTX: define{{.*}} void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
 // SPARCV9: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 signext %{{.+}})
@@ -99,7 +97,6 @@ void ParamPassing3(_BitInt(15) a, _BitInt(31) b) {}
 // WIN64: define dso_local void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
 // LIN32: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // WIN32: define dso_local void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
-// NACL: define{{.*}} void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
 // NVPTX64: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // NVPTX: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // SPARCV9: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
@@ -136,7 +133,6 @@ void ParamPassing4(_BitInt(129) a) {}
 // LIN32: define{{.*}} void @ParamPassing4(ptr %{{.+}})
 // WIN32: define dso_local void @ParamPassing4(ptr %{{.+}})
 // AARCH64: define{{.*}} void @ParamPassing4(ptr %{{.+}})
-// NACL-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // NVPTX64-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // NVPTX-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // SPARCV9-NOT: define{{.*}} void @ParamPassing4(ptr %{{.+}})
@@ -167,7 +163,6 @@ _BitInt(63) ReturnPassing(void) { return 0; }
 // WIN64: define dso_local i63 @ReturnPassing(
 // LIN32: define{{.*}} i63 @ReturnPassing(
 // WIN32: define dso_local i63 @ReturnPassing(
-// NACL: define{{.*}} i63 @ReturnPassing(
 // NVPTX64: define{{.*}} i63 @ReturnPassing(
 // NVPTX: define{{.*}} i63 @ReturnPassing(
 // SPARCV9: define{{.*}} signext i63 @ReturnPassing(
@@ -198,7 +193,6 @@ _BitInt(64) ReturnPassing2(void) { return 0; }
 // WIN64: define dso_local i64 @ReturnPassing2(
 // LIN32: define{{.*}} i64 @ReturnPassing2(
 // WIN32: define dso_local i64 @ReturnPassing2(
-// NACL: define{{.*}} i64 @ReturnPassing2(
 // NVPTX64: define{{.*}} i64 @ReturnPassing2(
 // NVPTX: define{{.*}} i64 @ReturnPassing2(
 // SPARCV9: define{{.*}} i64 @ReturnPassing2(
@@ -229,7 +223,6 @@ _BitInt(127) ReturnPassing3(void) { return 0; }
 // WIN64: define dso_local void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // LIN32: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // WIN32: define dso_local void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
-// NACL: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // NVPTX/64 makes the intentional choice to put all return values direct, even
 // large structures, so we do the same here.
 // NVPTX64: define{{.*}} i127 @ReturnPassing3(
@@ -262,7 +255,6 @@ _BitInt(128) ReturnPassing4(void) { return 0; }
 // WIN64: define dso_local void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // LIN32: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // WIN32: define dso_local void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
-// NACL: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // NVPTX64: define{{.*}} i128 @ReturnPassing4(
 // NVPTX: define{{.*}} i128 @ReturnPassing4(
 // SPARCV9: define{{.*}} i128 @ReturnPassing4(
@@ -295,7 +287,6 @@ _BitInt(129) ReturnPassing5(void) { return 0; }
 // LIN32: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // WIN32: define dso_local void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // AARCH64: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
-// NACL-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // NVPTX64-NOT: define{{.*}} i129 @ReturnPassing5(
 // NVPTX-NOT: define{{.*}} i129 @ReturnPassing5(
 // SPARCV9-NOT: define{{.*}} i129 @ReturnPassing5(
