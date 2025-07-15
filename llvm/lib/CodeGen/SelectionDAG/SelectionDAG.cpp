@@ -5550,6 +5550,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::UMAX:
   case ISD::AND:
   case ISD::XOR:
+  case ISD::ABS:
   case ISD::ROTL:
   case ISD::ROTR:
   case ISD::FSHL:
