@@ -37,6 +37,9 @@ jobs:
           email=$(gh api graphql -f login="$PR_AUTHOR" -f query="$query" -H "Authorization: Bearer $GITHUB_TOKEN" --jq '.data.user.email')
           echo "EMAIL_AUTHOR_GH_UI=$email" >> "$GITHUB_OUTPUT"
 
+          # Print the email to the log for debugging purposes.
+          echo "GitHub user's email: $email"
+
           # Create empty comment file
           echo "[]" > comments
 
