@@ -14,15 +14,17 @@ export namespace std {
 
   using std::timespec _LIBCPP_USING_IF_EXISTS;
   using std::tm _LIBCPP_USING_IF_EXISTS;
-
   using std::asctime _LIBCPP_USING_IF_EXISTS;
   using std::clock _LIBCPP_USING_IF_EXISTS;
+  using std::strftime _LIBCPP_USING_IF_EXISTS;
+
+#ifndef _LIBCPP_ABI_VCRUNTIME
   using std::ctime _LIBCPP_USING_IF_EXISTS;
   using std::difftime _LIBCPP_USING_IF_EXISTS;
   using std::gmtime _LIBCPP_USING_IF_EXISTS;
   using std::localtime _LIBCPP_USING_IF_EXISTS;
   using std::mktime _LIBCPP_USING_IF_EXISTS;
-  using std::strftime _LIBCPP_USING_IF_EXISTS;
   using std::time _LIBCPP_USING_IF_EXISTS;
   using std::timespec_get _LIBCPP_USING_IF_EXISTS;
+#endif
 } // namespace std

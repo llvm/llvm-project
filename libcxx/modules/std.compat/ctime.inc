@@ -14,15 +14,17 @@ export {
 
   using ::timespec _LIBCPP_USING_IF_EXISTS;
   using ::tm _LIBCPP_USING_IF_EXISTS;
-
   using ::asctime _LIBCPP_USING_IF_EXISTS;
   using ::clock _LIBCPP_USING_IF_EXISTS;
+  using ::strftime _LIBCPP_USING_IF_EXISTS;
+
+#ifndef _LIBCPP_ABI_VCRUNTIME
   using ::ctime _LIBCPP_USING_IF_EXISTS;
   using ::difftime _LIBCPP_USING_IF_EXISTS;
   using ::gmtime _LIBCPP_USING_IF_EXISTS;
   using ::localtime _LIBCPP_USING_IF_EXISTS;
   using ::mktime _LIBCPP_USING_IF_EXISTS;
-  using ::strftime _LIBCPP_USING_IF_EXISTS;
   using ::time _LIBCPP_USING_IF_EXISTS;
   using ::timespec_get _LIBCPP_USING_IF_EXISTS;
+#endif
 } // export

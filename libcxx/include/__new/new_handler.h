@@ -17,6 +17,11 @@
 
 #if defined(_LIBCPP_ABI_VCRUNTIME)
 #  include <new.h>
+// <new.h> does not define 'get_new_handler'
+// which makes the 'std' module build fail, this fixes it
+namespace std {
+_LIBCPP_EXPORTED_FROM_ABI new_handler get_new_handler() _NOEXCEPT;
+}
 #else
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 typedef void (*new_handler)();

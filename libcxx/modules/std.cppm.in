@@ -51,6 +51,9 @@ module;
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#ifdef _LIBCPP_ABI_VCRUNTIME
+#define _BUILD_STD_MODULE
+#endif
 #include <ctime>
 #include <cuchar>
 #include <cwchar>
