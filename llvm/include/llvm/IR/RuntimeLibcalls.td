@@ -1102,7 +1102,7 @@ defvar WindowsMathRemovals = [
   frexpf, frexp_f80, frexp_f128, frexp_ppcf128
 ];
 
-defvar MostPowI = !listremove(PowiLibcallImpls, [__powitf2_f128]);
+defvar MostPowI = !listremove(PowiLibcallImpls, [__powitf2_f128, __powitf2_ppc128]);
 defvar WindowsExclusions = !listconcat(WindowsMathRemovals, MostPowI);
 
 // Targets which support windows should start with these as a base and
