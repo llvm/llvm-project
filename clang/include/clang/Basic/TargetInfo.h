@@ -1698,8 +1698,11 @@ public:
   /// Controls if __arithmetic_fence is supported in the targeted backend.
   virtual bool checkArithmeticFenceSupported() const { return false; }
 
-  /// Gets the default calling convention for the given target and
-  /// declaration context.
+  /// Gets the default calling convention for the given target.
+  ///
+  /// This function does not take into account any user options to override the
+  /// default calling convention. For that, see
+  /// ASTContext::getDefaultCallingConvention().
   virtual CallingConv getDefaultCallingConv() const {
     // Not all targets will specify an explicit calling convention that we can
     // express.  This will always do the right thing, even though it's not
