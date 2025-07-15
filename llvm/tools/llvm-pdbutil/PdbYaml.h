@@ -11,6 +11,7 @@
 
 #include "OutputStyle.h"
 
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
@@ -80,6 +81,7 @@ struct PdbDbiStream {
   PDB_Machine MachineType = PDB_Machine::x86;
 
   std::vector<PdbDbiModuleInfo> ModInfos;
+  COFF::header FakeHeader;
 };
 
 struct PdbTpiStream {

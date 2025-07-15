@@ -1136,7 +1136,7 @@ multiclass vrint_inst_anpm<string opc, bits<2> rm,
 }
 
 defm VRINTA : vrint_inst_anpm<"a", 0b00, fround>;
-defm VRINTN : vrint_inst_anpm<"n", 0b01, int_arm_neon_vrintn>;
+defm VRINTN : vrint_inst_anpm<"n", 0b01, froundeven>;
 defm VRINTP : vrint_inst_anpm<"p", 0b10, fceil>;
 defm VRINTM : vrint_inst_anpm<"m", 0b11, ffloor>;
 
@@ -2513,6 +2513,9 @@ class MovFromVFP<bits<4> opc19_16, dag oops, dag iops, string opc, string asm,
   let Inst{3-0}   = 0b0000;
   let Unpredictable{7-5} = 0b111;
   let Unpredictable{3-0} = 0b1111;
+
+  // Needed to avoid errors when a MachineInstrt::FrameSetup flag is set.
+  let mayStore = 0;
 }
 
 let DecoderMethod = "DecodeForVMRSandVMSR" in {

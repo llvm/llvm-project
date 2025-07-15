@@ -461,15 +461,10 @@ define i8 @sel_constants_udiv_constant(i1 %cond) {
 ; CHECK-GI-LABEL: sel_constants_udiv_constant:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #-4 // =0xfffffffc
-; CHECK-GI-NEXT:    mov w10, #23 // =0x17
+; CHECK-GI-NEXT:    mov w9, #50 // =0x32
+; CHECK-GI-NEXT:    mov w10, #4 // =0x4
 ; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w8, w9, w10, ne
-; CHECK-GI-NEXT:    mov w9, #205 // =0xcd
-; CHECK-GI-NEXT:    and w8, w8, #0xff
-; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    lsr w8, w8, #8
-; CHECK-GI-NEXT:    lsr w0, w8, #2
+; CHECK-GI-NEXT:    csel w0, w9, w10, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = udiv i8 %sel, 5

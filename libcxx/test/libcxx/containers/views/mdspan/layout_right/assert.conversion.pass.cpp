@@ -37,14 +37,14 @@ int main(int, char**) {
   }
   // mismatch of static extent
   {
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_right::mapping<std::extents<int, D, 3>> m(arg); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { [[maybe_unused]] std::layout_right::mapping<std::extents<int, D, 3>> m(arg); }()),
                                "extents construction: mismatch of provided arguments with static extents.");
   }
   // non-representability of extents itself
   {
     TEST_LIBCPP_ASSERT_FAILURE(
         ([=] {
-          std::layout_right::mapping<std::extents<signed char, D>> m(
+          [[maybe_unused]] std::layout_right::mapping<std::extents<signed char, D>> m(
               std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(500)));
         }()),
         "extents ctor: arguments must be representable as index_type and nonnegative");
@@ -55,7 +55,7 @@ int main(int, char**) {
     [[maybe_unused]] std::extents<signed char, D, 5> e(arg_exts);
     // but the product is not, so we can't use it for layout_right
     TEST_LIBCPP_ASSERT_FAILURE(
-        ([=] { std::layout_right::mapping<std::extents<signed char, D, 5>> m(arg); }()),
+        ([=] { [[maybe_unused]] std::layout_right::mapping<std::extents<signed char, D, 5>> m(arg); }()),
         "layout_right::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
   return 0;

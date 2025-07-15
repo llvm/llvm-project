@@ -118,7 +118,7 @@ program p
   print *, 'main, should call wft: ', t(4)
 
   ! CHECK:   %[[V_33:[0-9]+]] = fir.shape %c2{{.*}} : (index) -> !fir.shape<1>
-  ! CHECK:   %[[V_34:[0-9]+]] = hlfir.designate %7#0 (%c2{{.*}}:%c3{{.*}}:%c1{{.*}})  shape %[[V_33]] : (!fir.ref<!fir.array<5x!fir.type<_QMmTt{n:i32}>>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.type<_QMmTt{n:i32}>>>
+  ! CHECK:   %[[V_34:[0-9]+]] = hlfir.designate %{{.*}}#0 (%c2{{.*}}:%c3{{.*}}:%c1{{.*}})  shape %[[V_33]] : (!fir.ref<!fir.array<5x!fir.type<_QMmTt{n:i32}>>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.type<_QMmTt{n:i32}>>>
   ! CHECK:   %[[V_35:[0-9]+]] = fir.shape %c2{{.*}} : (index) -> !fir.shape<1>
   ! CHECK:   %[[V_36:[0-9]+]] = fir.embox %[[V_34]](%[[V_35]]) : (!fir.ref<!fir.array<2x!fir.type<_QMmTt{n:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QMmTt{n:i32}>>>
   ! CHECK:   %[[V_37:[0-9]+]] = fir.convert %[[V_36]] : (!fir.box<!fir.array<2x!fir.type<_QMmTt{n:i32}>>>) -> !fir.box<none>

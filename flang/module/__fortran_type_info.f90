@@ -52,7 +52,8 @@ module __fortran_type_info
     integer(1) :: noInitializationNeeded ! 1 if no component w/ init
     integer(1) :: noDestructionNeeded ! 1 if no component w/ dealloc/final
     integer(1) :: noFinalizationNeeded ! 1 if nothing finalizeable
-    integer(1) :: __padding0(4)
+    integer(1) :: noDefinedAssignment ! 1 if no defined ASSIGNMENT(=)
+    integer(1) :: __padding0(3)
   end type
 
   type :: Binding
@@ -116,7 +117,7 @@ module __fortran_type_info
   type, bind(c) :: SpecialBinding
     integer(1) :: which ! SpecialBinding::Which
     integer(1) :: isArgDescriptorSet
-    integer(1) :: isTypeBound
+    integer(1) :: isTypeBound ! binding index + 1, if any
     integer(1) :: isArgContiguousSet
     integer(1) :: __padding0(4)
     type(__builtin_c_funptr) :: proc

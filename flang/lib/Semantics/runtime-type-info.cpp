@@ -58,7 +58,7 @@ public:
   void DescribeTypes(Scope &scope, bool inSchemata);
 
 private:
-  const Symbol *DescribeType(Scope &);
+  const Symbol *DescribeType(Scope &, bool wantUninstantiatedPDT);
   const Symbol &GetSchemaSymbol(const char *) const;
   const DeclTypeSpec &GetSchema(const char *) const;
   SomeExpr GetEnumValue(const char *) const;
@@ -82,17 +82,17 @@ private:
       const SomeExpr &genre, std::int64_t = 0) const;
   SomeExpr PackageIntValueExpr(const SomeExpr &genre, std::int64_t = 0) const;
   std::vector<evaluate::StructureConstructor> DescribeBindings(
-      const Scope &dtScope, Scope &);
+      const Scope &dtScope, Scope &, const SymbolVector &bindings);
   std::map<int, evaluate::StructureConstructor> DescribeSpecialGenerics(
-      const Scope &dtScope, const Scope &thisScope,
-      const DerivedTypeSpec *) const;
+      const Scope &dtScope, const Scope &thisScope, const DerivedTypeSpec *,
+      const SymbolVector &bindings) const;
   void DescribeSpecialGeneric(const GenericDetails &,
       std::map<int, evaluate::StructureConstructor> &, const Scope &,
-      const DerivedTypeSpec *) const;
+      const DerivedTypeSpec *, const SymbolVector &bindings) const;
   void DescribeSpecialProc(std::map<int, evaluate::StructureConstructor> &,
       const Symbol &specificOrBinding, bool isAssignment, bool isFinal,
       std::optional<common::DefinedIo>, const Scope *, const DerivedTypeSpec *,
-      bool isTypeBound) const;
+      const SymbolVector *bindings) const;
   void IncorporateDefinedIoGenericInterfaces(
       std::map<int, evaluate::StructureConstructor> &, common::DefinedIo,
       const Scope *, const DerivedTypeSpec *);
@@ -238,7 +238,7 @@ void RuntimeTableBuilder::DescribeTypes(Scope &scope, bool inSchemata) {
   inSchemata |= ignoreScopes_.find(&scope) != ignoreScopes_.end();
   if (scope.IsDerivedType()) {
     if (!inSchemata) { // don't loop trying to describe a schema
-      DescribeType(scope);
+      DescribeType(scope, /*wantUninstantiatedPDT=*/false);
     }
   } else {
     scope.InstantiateDerivedTypes();
@@ -310,10 +310,10 @@ static SomeExpr StructureExpr(evaluate::StructureConstructor &&x) {
   return SomeExpr{evaluate::Expr<evaluate::SomeDerived>{std::move(x)}};
 }
 
-static int GetIntegerKind(const Symbol &symbol) {
+static int GetIntegerKind(const Symbol &symbol, bool canBeUninstantiated) {
   auto dyType{evaluate::DynamicType::From(symbol)};
   CHECK((dyType && dyType->category() == TypeCategory::Integer) ||
-      symbol.owner().context().HasError(symbol));
+      symbol.owner().context().HasError(symbol) || canBeUninstantiated);
   return dyType && dyType->category() == TypeCategory::Integer
       ? dyType->kind()
       : symbol.owner().context().GetDefaultKind(TypeCategory::Integer);
@@ -395,7 +395,8 @@ static std::optional<std::string> GetSuffixIfTypeKindParameters(
   return std::nullopt;
 }
 
-const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
+const Symbol *RuntimeTableBuilder::DescribeType(
+    Scope &dtScope, bool wantUninstantiatedPDT) {
   if (const Symbol * info{dtScope.runtimeDerivedTypeDescription()}) {
     return info;
   }
@@ -449,7 +450,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
             GetSuffixIfTypeKindParameters(*derivedTypeSpec, parameters)}) {
       distinctName += *suffix;
     }
-  } else if (isPDTDefinitionWithKindParameters) {
+  } else if (isPDTDefinitionWithKindParameters && !wantUninstantiatedPDT) {
     return nullptr;
   }
   std::string dtDescName{(fir::kTypeDescriptorSeparator + distinctName).str()};
@@ -480,7 +481,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
   }
   if (const Symbol *
       uninstDescObject{isPDTInstantiation
-              ? DescribeType(DEREF(const_cast<Scope *>(dtSymbol->scope())))
+              ? DescribeType(DEREF(const_cast<Scope *>(dtSymbol->scope())),
+                    /*wantUninstantiatedPDT=*/true)
               : nullptr}) {
     AddValue(dtValues, derivedTypeSchema_, "uninstantiated"s,
         evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
@@ -516,7 +518,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
           }
           kinds.emplace_back(value);
         } else { // LEN= parameter
-          lenKinds.emplace_back(GetIntegerKind(*inst));
+          lenKinds.emplace_back(
+              GetIntegerKind(*inst, isPDTDefinitionWithKindParameters));
         }
       }
     }
@@ -592,8 +595,9 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
     // Compile the "vtable" of type-bound procedure bindings
     std::uint32_t specialBitSet{0};
     if (!dtSymbol->attrs().test(Attr::ABSTRACT)) {
+      SymbolVector boundProcedures{CollectBindings(dtScope)};
       std::vector<evaluate::StructureConstructor> bindings{
-          DescribeBindings(dtScope, scope)};
+          DescribeBindings(dtScope, scope, boundProcedures)};
       AddValue(dtValues, derivedTypeSchema_, bindingDescCompName,
           SaveDerivedPointerTarget(scope,
               SaveObjectName(
@@ -606,12 +610,14 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
       // subroutines override any parent bindings, but FINAL subroutines do not
       // (the runtime will call all of them).
       std::map<int, evaluate::StructureConstructor> specials{
-          DescribeSpecialGenerics(dtScope, dtScope, derivedTypeSpec)};
+          DescribeSpecialGenerics(
+              dtScope, dtScope, derivedTypeSpec, boundProcedures)};
       if (derivedTypeSpec) {
-        for (auto &ref : FinalsForDerivedTypeInstantiation(*derivedTypeSpec)) {
-          DescribeSpecialProc(specials, *ref, /*isAssignment-*/ false,
+        for (const Symbol &symbol :
+            FinalsForDerivedTypeInstantiation(*derivedTypeSpec)) {
+          DescribeSpecialProc(specials, symbol, /*isAssignment-*/ false,
               /*isFinal=*/true, std::nullopt, nullptr, derivedTypeSpec,
-              /*isTypeBound=*/true);
+              &boundProcedures);
         }
         IncorporateDefinedIoGenericInterfaces(specials,
             common::DefinedIo::ReadFormatted, &scope, derivedTypeSpec);
@@ -658,6 +664,10 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
     AddValue(dtValues, derivedTypeSchema_, "nofinalizationneeded"s,
         IntExpr<1>(
             derivedTypeSpec && !MayRequireFinalization(*derivedTypeSpec)));
+    // Similarly, a flag to enable optimized runtime assignment.
+    AddValue(dtValues, derivedTypeSchema_, "nodefinedassignment"s,
+        IntExpr<1>(
+            derivedTypeSpec && !MayHaveDefinedAssignment(*derivedTypeSpec)));
   }
   dtObject.get<ObjectEntityDetails>().set_init(MaybeExpr{
       StructureExpr(Structure(derivedTypeSchema_, std::move(dtValues)))});
@@ -804,7 +814,9 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     const DerivedTypeSpec &spec{dyType.GetDerivedTypeSpec()};
     Scope *derivedScope{const_cast<Scope *>(
         spec.scope() ? spec.scope() : spec.typeSymbol().scope())};
-    if (const Symbol * derivedDescription{DescribeType(DEREF(derivedScope))}) {
+    if (const Symbol *
+        derivedDescription{DescribeType(
+            DEREF(derivedScope), /*wantUninstantiatedPDT=*/false)}) {
       AddValue(values, componentSchema_, "derived"s,
           evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
               evaluate::Designator<evaluate::SomeDerived>{
@@ -1013,9 +1025,11 @@ SymbolVector CollectBindings(const Scope &dtScope) {
       if (overriderIter != localBindings.end()) {
         Symbol &overrider{*overriderIter->second};
         if (symbol.attrs().test(Attr::PRIVATE) &&
+            !symbol.attrs().test(Attr::DEFERRED) &&
             FindModuleContaining(symbol.owner()) !=
                 FindModuleContaining(dtScope)) {
-          // Don't override inaccessible PRIVATE bindings
+          // Don't override inaccessible PRIVATE bindings, unless
+          // they are deferred
           auto &binding{overrider.get<ProcBindingDetails>()};
           binding.set_numPrivatesNotOverridden(
               binding.numPrivatesNotOverridden() + 1);
@@ -1034,15 +1048,16 @@ SymbolVector CollectBindings(const Scope &dtScope) {
 }
 
 std::vector<evaluate::StructureConstructor>
-RuntimeTableBuilder::DescribeBindings(const Scope &dtScope, Scope &scope) {
+RuntimeTableBuilder::DescribeBindings(
+    const Scope &dtScope, Scope &scope, const SymbolVector &bindings) {
   std::vector<evaluate::StructureConstructor> result;
-  for (const SymbolRef &ref : CollectBindings(dtScope)) {
+  for (const Symbol &symbol : bindings) {
     evaluate::StructureConstructorValues values;
     AddValue(values, bindingSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{
-            ref.get().get<ProcBindingDetails>().symbol()}});
+            symbol.get<ProcBindingDetails>().symbol()}});
     AddValue(values, bindingSchema_, "name"s,
-        SaveNameAsPointerTarget(scope, ref.get().name().ToString()));
+        SaveNameAsPointerTarget(scope, symbol.name().ToString()));
     result.emplace_back(DEREF(bindingSchema_.AsDerived()), std::move(values));
   }
   return result;
@@ -1050,16 +1065,18 @@ RuntimeTableBuilder::DescribeBindings(const Scope &dtScope, Scope &scope) {
 
 std::map<int, evaluate::StructureConstructor>
 RuntimeTableBuilder::DescribeSpecialGenerics(const Scope &dtScope,
-    const Scope &thisScope, const DerivedTypeSpec *derivedTypeSpec) const {
+    const Scope &thisScope, const DerivedTypeSpec *derivedTypeSpec,
+    const SymbolVector &bindings) const {
   std::map<int, evaluate::StructureConstructor> specials;
   if (const Scope * parentScope{dtScope.GetDerivedTypeParent()}) {
-    specials =
-        DescribeSpecialGenerics(*parentScope, thisScope, derivedTypeSpec);
+    specials = DescribeSpecialGenerics(
+        *parentScope, thisScope, derivedTypeSpec, bindings);
   }
-  for (auto pair : dtScope) {
+  for (const auto &pair : dtScope) {
     const Symbol &symbol{*pair.second};
     if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
-      DescribeSpecialGeneric(*generic, specials, thisScope, derivedTypeSpec);
+      DescribeSpecialGeneric(
+          *generic, specials, thisScope, derivedTypeSpec, bindings);
     }
   }
   return specials;
@@ -1067,15 +1084,16 @@ RuntimeTableBuilder::DescribeSpecialGenerics(const Scope &dtScope,
 
 void RuntimeTableBuilder::DescribeSpecialGeneric(const GenericDetails &generic,
     std::map<int, evaluate::StructureConstructor> &specials,
-    const Scope &dtScope, const DerivedTypeSpec *derivedTypeSpec) const {
+    const Scope &dtScope, const DerivedTypeSpec *derivedTypeSpec,
+    const SymbolVector &bindings) const {
   common::visit(
       common::visitors{
           [&](const GenericKind::OtherKind &k) {
             if (k == GenericKind::OtherKind::Assignment) {
-              for (auto ref : generic.specificProcs()) {
-                DescribeSpecialProc(specials, *ref, /*isAssignment=*/true,
+              for (const Symbol &specific : generic.specificProcs()) {
+                DescribeSpecialProc(specials, specific, /*isAssignment=*/true,
                     /*isFinal=*/false, std::nullopt, &dtScope, derivedTypeSpec,
-                    /*isTypeBound=*/true);
+                    &bindings);
               }
             }
           },
@@ -1085,10 +1103,10 @@ void RuntimeTableBuilder::DescribeSpecialGeneric(const GenericDetails &generic,
             case common::DefinedIo::ReadUnformatted:
             case common::DefinedIo::WriteFormatted:
             case common::DefinedIo::WriteUnformatted:
-              for (auto ref : generic.specificProcs()) {
-                DescribeSpecialProc(specials, *ref, /*isAssignment=*/false,
+              for (const Symbol &specific : generic.specificProcs()) {
+                DescribeSpecialProc(specials, specific, /*isAssignment=*/false,
                     /*isFinal=*/false, io, &dtScope, derivedTypeSpec,
-                    /*isTypeBound=*/true);
+                    &bindings);
               }
               break;
             }
@@ -1102,7 +1120,8 @@ void RuntimeTableBuilder::DescribeSpecialProc(
     std::map<int, evaluate::StructureConstructor> &specials,
     const Symbol &specificOrBinding, bool isAssignment, bool isFinal,
     std::optional<common::DefinedIo> io, const Scope *dtScope,
-    const DerivedTypeSpec *derivedTypeSpec, bool isTypeBound) const {
+    const DerivedTypeSpec *derivedTypeSpec,
+    const SymbolVector *bindings) const {
   const auto *binding{specificOrBinding.detailsIf<ProcBindingDetails>()};
   if (binding && dtScope) { // use most recent override
     binding = &DEREF(dtScope->FindComponent(specificOrBinding.name()))
@@ -1116,11 +1135,14 @@ void RuntimeTableBuilder::DescribeSpecialProc(
     int argThatMightBeDescriptor{0};
     MaybeExpr which;
     if (isAssignment) {
-      // Only type-bound asst's with the same type on both dummy arguments
+      // Only type-bound asst's with compatible types on both dummy arguments
       // are germane to the runtime, which needs only these to implement
       // component assignment as part of intrinsic assignment.
-      // Non-type-bound generic INTERFACEs and assignments from distinct
+      // Non-type-bound generic INTERFACEs and assignments from incompatible
       // types must not be used for component intrinsic assignment.
+      if (!binding) {
+        return;
+      }
       CHECK(proc->dummyArguments.size() == 2);
       const auto t1{
           DEREF(std::get_if<evaluate::characteristics::DummyDataObject>(
@@ -1130,15 +1152,19 @@ void RuntimeTableBuilder::DescribeSpecialProc(
           DEREF(std::get_if<evaluate::characteristics::DummyDataObject>(
                     &proc->dummyArguments[1].u))
               .type.type()};
-      if (!binding || t1.category() != TypeCategory::Derived ||
+      if (t1.category() != TypeCategory::Derived ||
           t2.category() != TypeCategory::Derived ||
-          t1.IsUnlimitedPolymorphic() || t2.IsUnlimitedPolymorphic() ||
-          t1.GetDerivedTypeSpec() != t2.GetDerivedTypeSpec()) {
+          t1.IsUnlimitedPolymorphic() || t2.IsUnlimitedPolymorphic()) {
+        return;
+      }
+      if (!derivedTypeSpec ||
+          !derivedTypeSpec->MatchesOrExtends(t1.GetDerivedTypeSpec()) ||
+          !derivedTypeSpec->MatchesOrExtends(t2.GetDerivedTypeSpec())) {
         return;
       }
       which = proc->IsElemental() ? elementalAssignmentEnum_
                                   : scalarAssignmentEnum_;
-      if (binding && binding->passName() &&
+      if (binding->passName() &&
           *binding->passName() == proc->dummyArguments[1].name) {
         argThatMightBeDescriptor = 1;
         isArgDescriptorSet |= 2;
@@ -1223,14 +1249,25 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         values, specialSchema_, "which"s, SomeExpr{std::move(which.value())});
     AddValue(values, specialSchema_, "isargdescriptorset"s,
         IntExpr<1>(isArgDescriptorSet));
-    AddValue(values, specialSchema_, "istypebound"s,
-        IntExpr<1>(isTypeBound ? 1 : 0));
+    int bindingIndex{0};
+    if (bindings) {
+      int j{0};
+      for (const Symbol &bind : DEREF(bindings)) {
+        ++j;
+        if (&bind.get<ProcBindingDetails>().symbol() == &specific) {
+          bindingIndex = j; // index offset by 1
+          break;
+        }
+      }
+    }
+    CHECK(bindingIndex <= 255);
+    AddValue(values, specialSchema_, "istypebound"s, IntExpr<1>(bindingIndex));
     AddValue(values, specialSchema_, "isargcontiguousset"s,
         IntExpr<1>(isArgContiguousSet));
     AddValue(values, specialSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{specific}});
     // index might already be present in the case of an override
-    specials.emplace(*index,
+    specials.insert_or_assign(*index,
         evaluate::StructureConstructor{
             DEREF(specialSchema_.AsDerived()), std::move(values)});
   }
@@ -1249,7 +1286,7 @@ void RuntimeTableBuilder::IncorporateDefinedIoGenericInterfaces(
       CHECK(std::get<common::DefinedIo>(genericDetails.kind().u) == definedIo);
       for (auto ref : genericDetails.specificProcs()) {
         DescribeSpecialProc(specials, *ref, false, false, definedIo, nullptr,
-            derivedTypeSpec, false);
+            derivedTypeSpec, /*bindings=*/nullptr);
       }
     }
   }

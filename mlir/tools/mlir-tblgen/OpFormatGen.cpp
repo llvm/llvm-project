@@ -882,7 +882,7 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
     }
 
   } else if (auto *custom = dyn_cast<CustomDirective>(element)) {
-    for (FormatElement *paramElement : custom->getArguments())
+    for (FormatElement *paramElement : custom->getElements())
       genElementParserStorage(paramElement, op, body);
 
   } else if (isa<OperandsDirective>(element)) {
@@ -1037,7 +1037,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   // * Add a local variable for optional operands and types. This provides a
   //   better API to the user defined parser methods.
   // * Set the location of operand variables.
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     if (auto *operand = dyn_cast<OperandVariable>(param)) {
       auto *var = operand->getVar();
       body << "    " << var->name
@@ -1089,7 +1089,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   }
 
   body << "    auto odsResult = parse" << dir->getName() << "(parser";
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     body << ", ";
     genCustomParameterParser(param, body);
   }
@@ -1103,7 +1103,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   }
 
   // After parsing, add handling for any of the optional constructs.
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     if (auto *attr = dyn_cast<AttributeVariable>(param)) {
       const NamedAttribute *var = attr->getVar();
       if (var->attr.isOptional() || var->attr.hasDefaultValue())
@@ -1300,6 +1300,11 @@ if (!dict) {
   emitError() << "expected DictionaryAttr to set properties";
   return ::mlir::failure();
 }
+// keep track of used keys in the input dictionary to be able to error out
+// if there are some unknown ones.
+::mlir::DenseSet<::mlir::StringAttr> usedKeys;
+::mlir::MLIRContext *ctx = dict.getContext();
+(void)ctx;
 )decl";
 
   // {0}: fromAttribute call
@@ -1310,7 +1315,9 @@ auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
          ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::mlir::LogicalResult {{
   {0};
 };
-auto attr = dict.get("{1}");
+auto {1}AttrName = ::mlir::StringAttr::get(ctx, "{1}");
+usedKeys.insert({1}AttrName);
+auto attr = dict.get({1}AttrName);
 if (!attr && {2}) {{
   emitError() << "expected key entry for {1} in DictionaryAttr to set "
              "Properties.";
@@ -1356,7 +1363,9 @@ if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
     bool isRequired = !attr.isOptional() && !attr.hasDefaultValue();
     body << formatv(R"decl(
 auto &propStorage = prop.{0};
-auto attr = dict.get("{0}");
+auto {0}AttrName = ::mlir::StringAttr::get(ctx, "{0}");
+auto attr = dict.get({0}AttrName);
+usedKeys.insert({0}AttrName);
 if (attr || /*isRequired=*/{1}) {{
   if (!attr) {{
     emitError() << "expected key entry for {0} in DictionaryAttr to set "
@@ -1374,7 +1383,14 @@ if (attr || /*isRequired=*/{1}) {{
 )decl",
                     namedAttr.name, isRequired);
   }
-  body << "return ::mlir::success();\n";
+  body << R"decl(
+for (::mlir::NamedAttribute attr : dict) {
+  if (!usedKeys.contains(attr.getName()))
+    return emitError() << "unknown key '" << attr.getName() <<
+        "' when parsing properties dictionary";
+}
+return ::mlir::success();
+)decl";
 }
 
 void OperationFormat::genParser(Operator &op, OpClass &opClass) {
@@ -2215,7 +2231,7 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
 static void genCustomDirectivePrinter(CustomDirective *customDir,
                                       const Operator &op, MethodBody &body) {
   body << "  print" << customDir->getName() << "(_odsPrinter, *this";
-  for (FormatElement *param : customDir->getArguments()) {
+  for (FormatElement *param : customDir->getElements()) {
     body << ", ";
     genCustomDirectiveParameterPrinter(param, op, body);
   }
@@ -2359,7 +2375,7 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
       .Case([&](CustomDirective *ele) {
         body << '(';
         llvm::interleave(
-            ele->getArguments(), body,
+            ele->getElements(), body,
             [&](FormatElement *child) {
               body << '(';
               genOptionalGroupPrinterAnchor(child, op, body);
@@ -2375,7 +2391,7 @@ void collect(FormatElement *element,
   TypeSwitch<FormatElement *>(element)
       .Case([&](VariableElement *var) { variables.emplace_back(var); })
       .Case([&](CustomDirective *ele) {
-        for (FormatElement *arg : ele->getArguments())
+        for (FormatElement *arg : ele->getElements())
           collect(arg, variables);
       })
       .Case([&](OptionalElement *ele) {
@@ -2771,6 +2787,11 @@ private:
   void handleTypesMatchConstraint(
       StringMap<TypeResolutionInstance> &variableTyResolver, const Record &def);
 
+  /// Check for inferable type resolution based on
+  /// `ShapedTypeMatchesElementCountAndTypes` constraint.
+  void handleShapedTypeMatchesElementCountAndTypesConstraint(
+      StringMap<TypeResolutionInstance> &variableTyResolver, const Record &def);
+
   /// Returns an argument or attribute with the given name that has been seen
   /// within the format.
   ConstArgument findSeenArg(StringRef name);
@@ -2834,6 +2855,9 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
       handleSameTypesConstraint(variableTyResolver, /*includeResults=*/true);
     } else if (def.isSubClassOf("TypesMatchWith")) {
       handleTypesMatchConstraint(variableTyResolver, def);
+    } else if (def.isSubClassOf("ShapedTypeMatchesElementCountAndTypes")) {
+      handleShapedTypeMatchesElementCountAndTypesConstraint(variableTyResolver,
+                                                            def);
     } else if (!op.allResultTypesKnown()) {
       // This doesn't check the name directly to handle
       //    DeclareOpInterfaceMethods<InferTypeOpInterface>
@@ -3273,6 +3297,24 @@ void OpFormatParser::handleTypesMatchConstraint(
     variableTyResolver[rhsName] = {arg, transformer};
 }
 
+void OpFormatParser::handleShapedTypeMatchesElementCountAndTypesConstraint(
+    StringMap<TypeResolutionInstance> &variableTyResolver, const Record &def) {
+  StringRef shapedArg = def.getValueAsString("shaped");
+  StringRef elementsArg = def.getValueAsString("elements");
+
+  // Check if the 'shaped' argument is seen, then we can infer the 'elements'
+  // types.
+  if (ConstArgument arg = findSeenArg(shapedArg)) {
+    variableTyResolver[elementsArg] = {
+        arg, "::llvm::SmallVector<::mlir::Type>(::llvm::cast<::mlir::"
+             "ShapedType>($_self).getNumElements(), "
+             "::llvm::cast<::mlir::ShapedType>($_self).getElementType())"};
+  }
+
+  // Type inference in the opposite direction is not possible as the actual
+  // shaped type can't be inferred from the variadic elements.
+}
+
 ConstArgument OpFormatParser::findSeenArg(StringRef name) {
   if (const NamedTypeConstraint *arg = findArg(op.getOperands(), name))
     return seenOperandTypes.test(arg - op.operand_begin()) ? arg : nullptr;
@@ -3334,11 +3376,13 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
     if (ctx == TopLevelContext || ctx == CustomDirectiveContext) {
       if (hasAllRegions || !seenRegions.insert(region).second)
         return emitError(loc, "region '" + name + "' is already bound");
-    } else if (ctx == RefDirectiveContext && !seenRegions.count(region)) {
-      return emitError(loc, "region '" + name +
-                                "' must be bound before it is referenced");
+    } else if (ctx == RefDirectiveContext) {
+      if (!seenRegions.count(region))
+        return emitError(loc, "region '" + name +
+                                  "' must be bound before it is referenced");
     } else {
-      return emitError(loc, "regions can only be used at the top level");
+      return emitError(loc, "regions can only be used at the top level "
+                            "or in a ref directive");
     }
     return create<RegionVariable>(region);
   }
@@ -3354,11 +3398,13 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
     if (ctx == TopLevelContext || ctx == CustomDirectiveContext) {
       if (hasAllSuccessors || !seenSuccessors.insert(successor).second)
         return emitError(loc, "successor '" + name + "' is already bound");
-    } else if (ctx == RefDirectiveContext && !seenSuccessors.count(successor)) {
-      return emitError(loc, "successor '" + name +
-                                "' must be bound before it is referenced");
+    } else if (ctx == RefDirectiveContext) {
+      if (!seenSuccessors.count(successor))
+        return emitError(loc, "successor '" + name +
+                                  "' must be bound before it is referenced");
     } else {
-      return emitError(loc, "successors can only be used at the top level");
+      return emitError(loc, "successors can only be used at the top level "
+                            "or in a ref directive");
     }
 
     return create<SuccessorVariable>(successor);
@@ -3733,7 +3779,8 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
         Property prop = propEle->getVar()->prop;
         if (isAnchor && !(prop.hasDefaultValue() && prop.hasOptionalParser()))
           return emitError(loc, "only properties with default values "
-                                "that can be optionally parsed "
+                                "that can be optionally parsed (have the `let "
+                                "optionalParser = ...` field defined) "
                                 "can be used to anchor an optional group");
         return success();
       })
@@ -3774,7 +3821,7 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
           return success();
         // Verify each child as being valid in an optional group. They are all
         // potential anchors if the custom directive was marked as one.
-        for (FormatElement *child : ele->getArguments()) {
+        for (FormatElement *child : ele->getElements()) {
           if (isa<RefDirective>(child))
             continue;
           if (failed(verifyOptionalGroupElement(loc, child, /*isAnchor=*/true)))
@@ -3806,8 +3853,14 @@ void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass,
   // TODO: Operator doesn't expose all necessary functionality via
   // the const interface.
   Operator &op = const_cast<Operator &>(constOp);
-  if (!op.hasAssemblyFormat())
+  if (!op.hasAssemblyFormat()) {
+    // We still need to generate the parsed attribute properties setter for
+    // allowing it to be reused in custom assembly implementations.
+    OperationFormat format(op, hasProperties);
+    format.hasPropDict = true;
+    genParsedAttrPropertiesSetter(format, op, opClass);
     return;
+  }
 
   // Parse the format description.
   llvm::SourceMgr mgr;

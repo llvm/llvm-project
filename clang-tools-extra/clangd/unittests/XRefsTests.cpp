@@ -2303,7 +2303,23 @@ TEST(FindReferences, WithinAST) {
         bool $decl[[operator]]"" _u^dl(unsigned long long value);
         bool x = $(x)[[1_udl]];
       )cpp",
-  };
+      R"cpp(
+        struct S {
+        public:
+          static void $decl(S)[[operator]] delete(void *);
+          static void deleteObject(S *S) {
+            $(S::deleteObject)[[de^lete]] S;
+          }
+        };
+      )cpp",
+      // Array designators
+      R"cpp(
+        const int $def[[F^oo]] = 0;
+        int Bar[] = {
+          [$(Bar)[[F^oo]]...$(Bar)[[Fo^o]] + 1] = 0,
+          [$(Bar)[[^Foo]] + 2] = 1
+        };
+      )cpp"};
   for (const char *Test : Tests)
     checkFindRefs(Test);
 }

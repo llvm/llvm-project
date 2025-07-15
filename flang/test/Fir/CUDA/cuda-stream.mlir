@@ -17,5 +17,5 @@ module attributes {gpu.container_module} {
 
 // CHECK-LABEL: func.func @_QMmod1Phost_sub()
 // CHECK: %[[STREAM:.*]] = fir.alloca i64
-// CHECK: %[[TOKEN:.*]] = cuf.stream_cast %[[STREAM]] : <i64>
+// CHECK: %[[TOKEN:.*]] = cuf.stream_cast %[[STREAM]] : !fir.ref<i64>
 // CHECK: gpu.launch_func [%[[TOKEN]]] @cuda_device_mod::@_QMmod1Psub1

@@ -96,7 +96,7 @@ let Definition = "target" in {
     DefaultUnsignedValue<6>,
     Desc<"The maximum number of zeroes to insert when displaying a very small float before falling back to scientific notation.">;
   def MaxChildrenCount: Property<"max-children-count", "UInt64">,
-    DefaultUnsignedValue<256>,
+    DefaultUnsignedValue<24>,
     Desc<"Maximum number of children to expand in any level of depth.">;
   def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
     DefaultUnsignedValue<0xFFFFFFFF>,
@@ -299,6 +299,9 @@ let Definition = "process" in {
     DefaultEnumValue<"eFollowParent">,
     EnumValues<"OptionEnumValues(g_follow_fork_mode_values)">,
     Desc<"Debugger's behavior upon fork or vfork.">;
+  def TrackMemoryCacheChanges: Property<"track-memory-cache-changes", "Boolean">,
+    DefaultTrue,
+    Desc<"If true, memory cache modifications (which happen often during expressions evaluation) will bump process state ID (and invalidate all synthetic children). Disabling this option helps to avoid synthetic children reevaluation when pretty printers heavily use expressions. The downside of disabled setting is that convenience variables won't reevaluate synthetic children automatically.">;
 }
 
 let Definition = "platform" in {

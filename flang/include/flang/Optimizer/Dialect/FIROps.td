@@ -305,7 +305,7 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
   }];
 
   let arguments = (ins AnyReferenceLike:$memref,
-                  OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
                   OpBuilder<(ins "mlir::Type":$resTy, "mlir::Value":$refVal)>];
@@ -337,9 +337,8 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
     `%p`, is undefined or null.
   }];
 
-  let arguments = (ins AnyType:$value,
-                   AnyReferenceLike:$memref,
-                   OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
+  let arguments = (ins AnyType:$value, AnyReferenceLike:$memref,
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
 
   let builders = [OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$memref)>];
 
@@ -835,15 +834,11 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
         - allocator_idx: specify special allocator to use.
   }];
 
-  let arguments = (ins
-    AnyReferenceLike:$memref,
-    Optional<AnyShapeType>:$shape,
-    Optional<fir_SliceType>:$slice,
-    Variadic<AnyIntegerType>:$typeparams,
-    Optional<fir_ClassType>:$sourceBox,
-    OptionalAttr<AffineMapAttr>:$accessMap,
-    OptionalAttr<I32Attr>:$allocator_idx
-  );
+  let arguments = (ins AnyReferenceLike:$memref, Optional<AnyShapeType>:$shape,
+      Optional<fir_SliceType>:$slice, Variadic<AnyIntegerType>:$typeparams,
+      Optional<BoxOrClassType>:$sourceBox,
+      OptionalAttr<AffineMapAttr>:$accessMap,
+      OptionalAttr<I32Attr>:$allocator_idx);
 
   let results = (outs BoxOrClassType);
 
@@ -2058,8 +2053,8 @@ def fir_SliceOp : fir_Op<"slice", [NoMemoryEffect, AttrSizedOperandSegments]> {
 
   let builders = [
     OpBuilder<(ins "mlir::ValueRange":$triples,
-      CArg<"mlir::ValueRange", "std::nullopt">:$fields,
-      CArg<"mlir::ValueRange", "std::nullopt">:$substr)>
+      CArg<"mlir::ValueRange", "{}">:$fields,
+      CArg<"mlir::ValueRange", "{}">:$substr)>
   ];
 
   let hasVerifier = 1;
@@ -2128,6 +2123,11 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoMemoryEffect]> {
 
   let assemblyFormat = [{
     $seq `,` $val custom<CustomRangeSubscript>($coor) attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    /// Is this insert_on_range inserting on all the values of the result type?
+    bool isFullRange();
   }];
 
   let hasVerifier = 1;
@@ -2249,8 +2249,8 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     OpBuilder<(ins "mlir::Value":$lowerBound, "mlir::Value":$upperBound,
       "mlir::Value":$step, CArg<"bool", "false">:$unordered,
       CArg<"bool", "false">:$finalCountValue,
-      CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
-      CArg<"mlir::ValueRange", "std::nullopt">:$reduceOperands,
+      CArg<"mlir::ValueRange", "{}">:$iterArgs,
+      CArg<"mlir::ValueRange", "{}">:$reduceOperands,
       CArg<"llvm::ArrayRef<mlir::Attribute>", "{}">:$reduceAttrs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
   ];
@@ -2319,9 +2319,13 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
   }];
 }
 
-def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-    "getRegionInvocationBounds", "getEntrySuccessorRegions"]>, RecursiveMemoryEffects,
-    NoRegionArguments]> {
+def fir_IfOp
+    : region_Op<
+          "if", [DeclareOpInterfaceMethods<
+                     RegionBranchOpInterface, ["getRegionInvocationBounds",
+                                               "getEntrySuccessorRegions"]>,
+                 RecursiveMemoryEffects, NoRegionArguments,
+                 WeightedRegionBranchOpInterface]> {
   let summary = "if-then-else conditional operation";
   let description = [{
     Used to conditionally execute operations. This operation is the FIR
@@ -2338,7 +2342,8 @@ def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterfac
     ```
   }];
 
-  let arguments = (ins I1:$condition);
+  let arguments = (ins I1:$condition,
+      OptionalAttr<DenseI32ArrayAttr>:$region_weights);
   let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region
@@ -2367,6 +2372,21 @@ def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterfac
 
     void resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
                            unsigned resultNum);
+
+    /// Returns the display name string for the region_weights attribute.
+    static constexpr llvm::StringRef getWeightsAttrAssemblyName() {
+      return "weights";
+    }
+
+    /// Sets WeightedRegionBranchOpInterface weights to indicate
+    /// that either THEN or ELSE branch is unlikely.
+    /// By default, THEN branch is set to be unlikely.
+    void setUnlikelyIfWeights(bool unlikelyElse = false) {
+      if (unlikelyElse)
+        setWeights({1, 0});
+      else
+        setWeights({0, 1});
+    }
   }];
 }
 
@@ -2417,7 +2437,7 @@ def fir_IterWhileOp : region_Op<"iterate_while",
     OpBuilder<(ins "mlir::Value":$lowerBound, "mlir::Value":$upperBound,
       "mlir::Value":$step, "mlir::Value":$iterate,
       CArg<"bool", "false">:$finalCountValue,
-      CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
+      CArg<"mlir::ValueRange", "{}">:$iterArgs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
   ];
 
@@ -2756,7 +2776,7 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [NoMemoryEffect]> {
+def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
   let summary = "cast between volatile and non-volatile types";
   let description = [{
     Cast between volatile and non-volatile types. The types must be otherwise
@@ -3236,11 +3256,17 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
     descriptor implementation must have, only the base_addr and derived_type
     descriptor fields can be addressed.
 
+    It also accepts the address of a fir.boxchar and returns
+    address of the data pointer encapsulated by the fir.boxchar.
+
     ```
         %addr = fir.box_offset %box base_addr : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
         %tdesc = fir.box_offset %box derived_type : (!fir.ref<!fir.box<!fir.type<t>>>) -> !fir.llvm_ptr<!fir.tdesc<!fir.type<t>>>
 
+        %addr1 = fir.box_offset %boxchar base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<fir.char<1,?>>>
     ```
+
+    The derived_type field cannot be used when the input to this op is a reference to a fir.boxchar.
   }];
 
   let arguments = (ins
@@ -3486,6 +3512,243 @@ def fir_BoxTotalElementsOp
   let hasCanonicalizer = 1;
 }
 
+def YieldOp : fir_Op<"yield",
+    [Pure, ReturnLike, Terminator,
+     ParentOneOf<["LocalitySpecifierOp", "DeclareReductionOp"]>]> {
+  let summary = "loop yield and termination operation";
+  let description = [{
+    "fir.yield" yields SSA values from a fir dialect op region and
+    terminates the region. The semantics of how the values are yielded is
+    defined by the parent operation.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$results);
+
+  let builders = [
+    OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>
+  ];
+
+  let assemblyFormat = "( `(` $results^ `:` type($results) `)` )? attr-dict";
+}
+
+def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
+  let summary = "Provides declaration of local and local_init logic.";
+  let description = [{
+    This operation provides a declaration of how to implement the
+    localization of a variable. The dialect users should provide
+    which type should be allocated for this variable. The allocated (usually by
+    alloca) variable is passed to the initialization region which does everything
+    else (e.g. initialization of Fortran runtime descriptors). Information about
+    how to initialize the copy from the original item should be given in the
+    copy region, and if needed, how to deallocate memory (allocated by the
+    initialization region) in the dealloc region.
+
+    Examples:
+
+    * `local(x)` would not need any regions because no initialization is
+      required by the standard for i32 variables and this is not local_init.
+    ```
+    fir.local {type = local} @x.localizer : i32
+    ```
+
+    * `local_init(x)` would be emitted as:
+    ```
+    fir.local {type = local_init} @x.localizer : i32 copy {
+    ^bb0(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>):
+    // %arg0 is the original host variable.
+    // %arg1 represents the memory allocated for this private variable.
+    ... copy from host to the localized clone ....
+    fir.yield(%arg1 : !fir.ref<i32>)
+    }
+    ```
+
+    * `local(x)` for "allocatables" would be emitted as:
+    ```
+    fir.local {type = local} @x.localizer : !some.type init {
+    ^bb0(%arg0: !fir.ref<!some.type>, %arg1: !fir.ref<!some.type>):
+    // initialize %arg1, using %arg0 as a mold for allocations.
+    // For example if %arg0 is a heap allocated array with a runtime determined
+    // length and !some.type is a runtime type descriptor, the init region
+    // will read the array length from %arg0, and heap allocate an array of the
+    // right length and initialize %arg1 to contain the array allocation and
+    // length.
+    fir.yield(%arg1 : !fir.ref<!some.type>)
+    } dealloc {
+    ^bb0(%arg0: !fir.ref<!some.type>):
+    // ... deallocate memory allocated by the init region...
+    // In the example above, this will free the heap allocated array data.
+    fir.yield
+    }
+    ```
+
+    There are no restrictions on the body except for:
+    - The `dealloc` regions has a single argument.
+    - The `init` & `copy` regions have 2 arguments.
+    - All three regions are terminated by `fir.yield` ops.
+    The above restrictions and other obvious restrictions (e.g. verifying the
+    type of yielded values) are verified by the custom op verifier. The actual
+    contents of the blocks inside all regions are not verified.
+
+    Instances of this op would then be used by ops that model directives that
+    accept data-sharing attribute clauses.
+
+    The `sym_name` attribute provides a symbol by which the privatizer op can be
+    referenced by other dialect ops.
+
+    The `type` attribute is the type of the value being localized. This type
+    will be implicitly allocated in MLIR->LLVMIR conversion and passed as the
+    second argument to the init region. Therefore the type of arguments to
+    the regions should be a type which represents a pointer to `type`.
+
+    The `locality_specifier_type` attribute specifies whether the localized
+    corresponds to a `local` or a `local_init` specifier.
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttrOf<AnyType>:$type,
+                       LocalitySpecifierTypeAttr:$locality_specifier_type);
+
+  let regions = (region AnyRegion:$init_region,
+                        AnyRegion:$copy_region,
+                        AnyRegion:$dealloc_region);
+
+  let assemblyFormat = [{
+    $locality_specifier_type $sym_name `:` $type
+      (`init` $init_region^)?
+      (`copy` $copy_region^)?
+      (`dealloc` $dealloc_region^)?
+      attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::BlockArgument getInitMoldArg() {
+      auto &region = getInitRegion();
+      return region.empty() ? nullptr : region.getArgument(0);
+    }
+    mlir::BlockArgument getInitPrivateArg() {
+      auto &region = getInitRegion();
+      return region.empty() ? nullptr : region.getArgument(1);
+    }
+
+    /// Returns true if the init region might read from the mold argument
+    bool initReadsFromMold() {
+      mlir::BlockArgument moldArg = getInitMoldArg();
+      return moldArg && !moldArg.use_empty();
+    }
+
+    /// Get the type for arguments to nested regions. This should
+    /// generally be either the same as getType() or some pointer
+    /// type (pointing to the type allocated by this op).
+    /// This method will return Type{nullptr} if there are no nested
+    /// regions.
+    mlir::Type getArgType() {
+      for (mlir::Region *region : getRegions())
+        for (mlir::Type ty : region->getArgumentTypes())
+          return ty;
+      return nullptr;
+    }
+  }];
+
+  let hasRegionVerifier = 1;
+}
+
+def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
+                                                         Symbol]> {
+  let summary = "declares a reduction kind";
+  let description = [{
+    Note: this operation is adapted from omp::DeclareReductionOp. There is a lot
+    duplication at the moment. TODO Combine both ops into one. See:
+    https://discourse.llvm.org/t/dialect-for-data-locality-sharing-specifiers-clauses-in-openmp-openacc-and-do-concurrent/86108.
+
+    Declares a `do concurrent` reduction. This requires two mandatory and three
+    optional regions.
+
+      1. The optional alloc region specifies how to allocate the thread-local
+         reduction value. This region should not contain control flow and all
+         IR should be suitable for inlining straight into an entry block. In
+         the common case this is expected to contain only allocas. It is
+         expected to `fir.yield` the allocated value on all control paths.
+         If allocation is conditional (e.g. only allocate if the mold is
+         allocated), this should be done in the initilizer region and this
+         region not included. The alloc region is not used for by-value
+         reductions (where allocation is implicit).
+      2. The initializer region specifies how to initialize the thread-local
+         reduction value. This is usually the neutral element of the reduction.
+         For convenience, the region has an argument that contains the value
+         of the reduction accumulator at the start of the reduction. If an alloc
+         region is specified, there is a second block argument containing the
+         address of the allocated memory. The initializer region is expected to
+         `fir.yield` the new value on all control flow paths.
+      3. The reduction region specifies how to combine two values into one, i.e.
+         the reduction operator. It accepts the two values as arguments and is
+         expected to `fir.yield` the combined value on all control flow paths.
+      4. The atomic reduction region is optional and specifies how two values
+         can be combined atomically given local accumulator variables. It is
+         expected to store the combined value in the first accumulator variable.
+      5. The cleanup region is optional and specifies how to clean up any memory
+         allocated by the initializer region. The region has an argument that
+         contains the value of the thread-local reduction accumulator. This will
+         be executed after the reduction has completed.
+
+    Note that the MLIR type system does not allow for type-polymorphic
+    reductions. Separate reduction declarations should be created for different
+    element and accumulator types.
+
+    For initializer and reduction regions, the operand to `fir.yield` must
+    match the parent operation's results.
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttr:$type);
+
+  let regions = (region MaxSizedRegion<1>:$allocRegion,
+                        AnyRegion:$initializerRegion,
+                        AnyRegion:$reductionRegion,
+                        AnyRegion:$atomicReductionRegion,
+                        AnyRegion:$cleanupRegion);
+
+  let assemblyFormat = "$sym_name `:` $type attr-dict-with-keyword "
+                       "( `alloc` $allocRegion^ )? "
+                       "`init` $initializerRegion "
+                       "`combiner` $reductionRegion "
+                       "( `atomic` $atomicReductionRegion^ )? "
+                       "( `cleanup` $cleanupRegion^ )? ";
+
+  let extraClassDeclaration = [{
+    mlir::BlockArgument getAllocMoldArg() {
+      auto &region = getAllocRegion();
+      return region.empty() ? nullptr : region.getArgument(0);
+    }
+    mlir::BlockArgument getInitializerMoldArg() {
+      return getInitializerRegion().getArgument(0);
+    }
+    mlir::BlockArgument getInitializerAllocArg() {
+      return getAllocRegion().empty() ?
+          nullptr : getInitializerRegion().getArgument(1);
+    }
+    mlir::BlockArgument getReductionLhsArg() {
+      return getReductionRegion().getArgument(0);
+    }
+    mlir::BlockArgument getReductionRhsArg() {
+      return getReductionRegion().getArgument(1);
+    }
+    mlir::BlockArgument getAtomicReductionLhsArg() {
+      auto &region = getAtomicReductionRegion();
+      return region.empty() ? nullptr : region.getArgument(0);
+    }
+    mlir::BlockArgument getAtomicReductionRhsArg() {
+      auto &region = getAtomicReductionRegion();
+      return region.empty() ? nullptr : region.getArgument(1);
+    }
+    mlir::BlockArgument getCleanupAllocArg() {
+      auto &region = getCleanupRegion();
+      return region.empty() ? nullptr : region.getArgument(0);
+    }
+  }];
+
+  let hasRegionVerifier = 1;
+}
+
 def fir_DoConcurrentOp : fir_Op<"do_concurrent",
     [SingleBlock, AutomaticAllocationScope]> {
   let summary = "do concurrent loop wrapper";
@@ -3517,6 +3780,32 @@ def fir_DoConcurrentOp : fir_Op<"do_concurrent",
   let hasVerifier = 1;
 }
 
+def fir_LocalSpecifier {
+  dag arguments = (ins
+    Variadic<AnyType>:$local_vars,
+    OptionalAttr<SymbolRefArrayAttr>:$local_syms
+  );
+}
+
+def fir_ReduceSpecifier {
+  dag arguments = (ins
+    Variadic<AnyType>:$reduce_vars,
+    OptionalAttr<DenseBoolArrayAttr>:$reduce_byref,
+
+    // This introduces redundency in how reductions are modelled. In particular,
+    // a single reduction is represented by 2 attributes:
+    //
+    // 1. `$reduce_syms` which is a list of `DeclareReductionOp`s.
+    // 2. `$reduce_attrs` which is an array of `fir::ReduceAttr` values.
+    //
+    // The first makes it easier to map `do concurrent` to parallization models
+    // (e.g. OpenMP and OpenACC) while the second makes it easier to map it to
+    // nests of `fir.do_loop ... unodered` ops.
+    OptionalAttr<SymbolRefArrayAttr>:$reduce_syms,
+    OptionalAttr<ArrayAttr>:$reduce_attrs
+  );
+}
+
 def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopLikeOpInterface,
                                                          ["getLoopInductionVars"]>,
@@ -3526,7 +3815,7 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
   let description = [{
     An operation that models a Fortran `do concurrent` loop's header and block.
     This is a single-region single-block terminator op that is expected to
-    terminate the region of a `omp.do_concurrent` wrapper op.
+    terminate the region of a `fir.do_concurrent` wrapper op.
 
     This op borrows from both `scf.parallel` and `fir.do_loop` ops. Similar to
     `scf.parallel`, a loop nest takes 3 groups of SSA values as operands that
@@ -3564,20 +3853,20 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
     - `lowerBound`: The group of SSA values for the nest's lower bounds.
     - `upperBound`: The group of SSA values for the nest's upper bounds.
     - `step`: The group of SSA values for the nest's steps.
-    - `reduceOperands`: The reduction SSA values, if any.
-    - `reduceAttrs`: Attributes to store reduction operations, if any.
     - `loopAnnotation`: Loop metadata to be passed down the compiler pipeline to
       LLVM.
   }];
 
-  let arguments = (ins
+  defvar opArgs = (ins
     Variadic<Index>:$lowerBound,
     Variadic<Index>:$upperBound,
     Variadic<Index>:$step,
-    Variadic<AnyType>:$reduceOperands,
-    OptionalAttr<ArrayAttr>:$reduceAttrs,
     OptionalAttr<LoopAnnotationAttr>:$loopAnnotation
   );
+
+  let arguments = !con(opArgs,
+    fir_LocalSpecifier.arguments,
+    fir_ReduceSpecifier.arguments);
 
   let regions = (region SizedRegion<1>:$region);
 
@@ -3585,10 +3874,36 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    // Get Number of reduction operands
-    unsigned getNumReduceOperands() {
-      return getReduceOperands().size();
+    unsigned getNumInductionVars() {
+      return getLowerBound().size();
     }
+
+    unsigned getNumLocalOperands() {
+      return getLocalVars().size();
+    }
+
+    unsigned getNumReduceOperands() {
+      return getReduceVars().size();
+    }
+
+    mlir::Block::BlockArgListType getInductionVars() {
+      return getBody()->getArguments().slice(0, getNumInductionVars());
+    }
+
+    mlir::Block::BlockArgListType getRegionLocalArgs() {
+      return getBody()->getArguments().slice(getNumInductionVars(),
+                                             getNumLocalOperands());
+    }
+
+    mlir::Block::BlockArgListType getRegionReduceArgs() {
+      return getBody()->getArguments().slice(getNumInductionVars()
+                                               + getNumLocalOperands(),
+                                             getNumReduceOperands());
+    }
+
+    /// Number of operands controlling the loop
+    unsigned getNumControlOperands() { return getLowerBound().size() * 3; }
+
   }];
 }
 

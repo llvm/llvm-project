@@ -92,16 +92,10 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
   }
 
   Lexer *TheLexer = new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile);
-  if (getPreprocessorOpts().DependencyDirectivesForFile &&
-      FID != PredefinesFileID) {
-    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID)) {
-      if (std::optional<ArrayRef<dependency_directives_scan::Directive>>
-              DepDirectives =
-                  getPreprocessorOpts().DependencyDirectivesForFile(*File)) {
-        TheLexer->DepDirectives = *DepDirectives;
-      }
-    }
-  }
+  if (GetDependencyDirectives && FID != PredefinesFileID)
+    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID))
+      if (auto MaybeDepDirectives = (*GetDependencyDirectives)(*File))
+        TheLexer->DepDirectives = *MaybeDepDirectives;
 
   EnterSourceFileWithLexer(TheLexer, CurDir);
   return false;
@@ -717,7 +711,7 @@ void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc,
   ModMap.resolveConflicts(M, /*Complain=*/false);
 
   // If this is the first time we've entered this module, set up its state.
-  auto R = Submodules.insert(std::make_pair(M, SubmoduleState()));
+  auto R = Submodules.try_emplace(M);
   auto &State = R.first->second;
   bool FirstTime = R.second;
   if (FirstTime) {

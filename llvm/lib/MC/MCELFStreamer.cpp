@@ -21,7 +21,6 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
@@ -84,11 +83,6 @@ void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
     Symbol->setType(ELF::STT_TLS);
 }
 
-void MCELFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
-  // Let the target do whatever target specific stuff it needs to do.
-  getAssembler().getBackend().handleAssemblerFlag(Flag);
-}
-
 // If bundle alignment is used and there are any instructions in the section, it
 // needs to be aligned to at least the bundle size.
 static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
@@ -117,11 +111,16 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   Asm.registerSymbol(*Section->getBeginSymbol());
 }
 
-void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
-  getAssembler().registerSymbol(*Symbol);
-  const MCExpr *Value = MCSymbolRefExpr::create(
-      Symbol, MCSymbolRefExpr::VK_WEAKREF, getContext());
-  Alias->setVariableValue(Value);
+void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) {
+  auto *A = cast<MCSymbolELF>(Alias);
+  if (A->isDefined()) {
+    getContext().reportError(getStartTokLoc(), "symbol '" + A->getName() +
+                                                   "' is already defined");
+    return;
+  }
+  A->setVariableValue(MCSymbolRefExpr::create(Target, getContext()));
+  A->setIsWeakref();
+  getWriter().Weakrefs.push_back(A);
 }
 
 // When GNU as encounters more than one .type declaration for an object it seems
@@ -322,7 +321,7 @@ void MCELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
 }
 
 void MCELFStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                         unsigned ValueSize,
+                                         uint8_t ValueSize,
                                          unsigned MaxBytesToEmit) {
   if (isBundleLocked())
     report_fatal_error("Emitting values inside a locked bundle is forbidden");
@@ -449,17 +448,22 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   // Emit instruction directly into data fragment.
   size_t FixupStartIndex = DF->getFixups().size();
   size_t CodeOffset = DF->getContents().size();
-  Assembler.getEmitter().encodeInstruction(Inst, DF->getContents(),
-                                           DF->getFixups(), STI);
+  SmallVector<MCFixup, 1> Fixups;
+  Assembler.getEmitter().encodeInstruction(Inst, DF->getContentsForAppending(),
+                                           Fixups, STI);
+  DF->doneAppending();
+  if (!Fixups.empty())
+    DF->appendFixups(Fixups);
 
-  auto Fixups = MutableArrayRef(DF->getFixups()).slice(FixupStartIndex);
-  for (auto &Fixup : Fixups)
+  for (auto &Fixup : MutableArrayRef(DF->getFixups()).slice(FixupStartIndex)) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
+    if (Fixup.isLinkerRelaxable()) {
+      DF->setLinkerRelaxable();
+      getCurrentSectionOnly()->setLinkerRelaxable();
+    }
+  }
 
   DF->setHasInstructions(STI);
-  if (!Fixups.empty() && Fixups.back().getTargetKind() ==
-                             getAssembler().getBackend().RelaxFixupKind)
-    DF->setLinkerRelaxable();
 }
 
 void MCELFStreamer::emitBundleAlignMode(Align Alignment) {

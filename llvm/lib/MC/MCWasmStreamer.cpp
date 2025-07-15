@@ -11,14 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCWasmStreamer.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionWasm.h"
@@ -59,14 +56,6 @@ void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
     Symbol->setTLS();
 }
 
-void MCWasmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
-  // Let the target do whatever target specific stuff it needs to do.
-  getAssembler().getBackend().handleAssemblerFlag(Flag);
-
-  // Do any generic stuff we need to do.
-  llvm_unreachable("invalid assembler flag!");
-}
-
 void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
   auto *SectionWasm = cast<MCSectionWasm>(Section);
@@ -76,14 +65,6 @@ void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 
   this->MCObjectStreamer::changeSection(Section, Subsection);
   Asm.registerSymbol(*Section->getBeginSymbol());
-}
-
-void MCWasmStreamer::emitWeakReference(MCSymbol *Alias,
-                                       const MCSymbol *Symbol) {
-  getAssembler().registerSymbol(*Symbol);
-  const MCExpr *Value = MCSymbolRefExpr::create(
-      Symbol, MCSymbolRefExpr::VK_WEAKREF, getContext());
-  Alias->setVariableValue(Value);
 }
 
 bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
@@ -165,26 +146,6 @@ void MCWasmStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
 void MCWasmStreamer::emitIdent(StringRef IdentString) {
   // TODO(sbc): Add the ident section once we support mergable strings
   // sections in the object format
-}
-
-void MCWasmStreamer::emitInstToData(const MCInst &Inst,
-                                    const MCSubtargetInfo &STI) {
-  MCAssembler &Assembler = getAssembler();
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  Assembler.getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // Append the encoded instruction to the current data fragment (or create a
-  // new such fragment if the current fragment is not a data fragment).
-  MCDataFragment *DF = getOrCreateDataFragment();
-
-  // Add the fixups and data.
-  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
-    Fixups[I].setOffset(Fixups[I].getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixups[I]);
-  }
-  DF->setHasInstructions(STI);
-  DF->appendContents(Code);
 }
 
 void MCWasmStreamer::finishImpl() {
