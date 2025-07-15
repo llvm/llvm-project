@@ -1090,7 +1090,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x128_bf8_bf8;
       break;
-      case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x128_fp8_fp8:
+    case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x128_fp8_fp8:
       ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x128_fp8_fp8;
       break;
