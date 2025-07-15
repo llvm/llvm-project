@@ -133,8 +133,6 @@ C++2c Feature Support
 
 - Implemented `P0963R3 Structured binding declaration as a condition <https://wg21.link/P0963R3>`_.
 
-- Implemented `P2719R4 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_.
-
 - Implemented `P3618R0 Allow attaching main to the global module <https://wg21.link/P3618>`_.
 
 C++23 Feature Support
@@ -376,6 +374,8 @@ New Compiler Flags
 
 - New option ``-ignore-pch`` added to disable precompiled headers. It overrides ``-emit-pch`` and ``-include-pch``. (#GH142409, `PCHDocs <https://clang.llvm.org/docs/UsersManual.html#ignoring-a-pch-file>`_).
 
+- New options ``-g[no-]key-instructions`` added, disabled by default. Reduces jumpiness of debug stepping for optimized code in some debuggers (not LLDB at this time). Not recommended for use without optimizations. DWARF only. Note both the positive and negative flags imply ``-g``.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -472,6 +472,9 @@ related warnings within the method body.
 
 - Clang now disallows the use of attributes applied before an
   ``extern template`` declaration (#GH79893).
+
+- Clang will print the "reason" string argument passed on to
+  ``[[clang::warn_unused_result("reason")]]`` as part of the warning diagnostic.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -875,7 +878,7 @@ Bug Fixes to C++ Support
 - Clang no longer crashes when trying to unify the types of arrays with
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
-- Fixed type alias CTAD issues involving default template arguments. (#GH134471)
+- Fixed type alias CTAD issues involving default template arguments. (#GH133132), (#GH134471)
 - Fixed CTAD issues when initializing anonymous fields with designated initializers. (#GH67173)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
@@ -955,6 +958,9 @@ Bug Fixes to C++ Support
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
 - Fix a crash in the presence of invalid base classes. (#GH147186)
+- Fix a crash with NTTP when instantiating local class.
+- Fixed a crash involving list-initialization of an empty class with a
+  non-empty initializer list. (#GH147949)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1016,7 +1022,9 @@ Arm and AArch64 Support
   `as specified here <https://github.com/ARM-software/acle/blob/main/main/acle.md#modal-8-bit-floating-point-extensions>`_
   is now available.
 - Support has been added for the following processors (command-line identifiers in parentheses):
+
   - Arm Cortex-A320 (``cortex-a320``)
+
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
 - The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
   ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is
@@ -1024,7 +1032,19 @@ Arm and AArch64 Support
 - When a feature that depends on NEON (``simd``) is used, NEON is now automatically enabled.
 - When NEON is disabled (``+nosimd``), all features that depend on NEON will now be disabled.
 
--  Support for __ptrauth type qualifier has been added.
+- Pointer authentication
+
+  - Support for __ptrauth type qualifier has been added.
+  - Objective-C adoption of pointer authentication
+
+    - ``isa`` and ``super`` pointers are protected with address diversity and separate
+      usage specific discriminators.
+    - methodlist pointers and content are protected with address diversity and methodlist
+      pointers have a usage specific discriminator.
+    - ``class_ro_t`` pointers are protected with address diversity and usage specific
+      discriminators.
+    - ``SEL`` typed ivars are protected with address diversity and usage specific
+      discriminators.
 
 - For AArch64, added support for generating executable-only code sections by using the
   ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
@@ -1135,6 +1155,8 @@ clang-format
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
+- Add ``MacrosSkippedByRemoveParentheses`` option so that their invocations are
+  skipped by ``RemoveParentheses``.
 
 clang-refactor
 --------------
@@ -1186,6 +1208,9 @@ New features
   so frequent 'not yet implemented' diagnostics should be expected.  Also, the
   ACC MLIR dialect does not currently implement any lowering to LLVM-IR, so no
   code generation is possible for OpenACC.
+- Implemented `P2719R5 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_
+  as an extension in all C++ language modes.
+
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

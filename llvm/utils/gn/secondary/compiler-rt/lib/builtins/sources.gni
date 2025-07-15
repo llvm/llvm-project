@@ -429,6 +429,7 @@ if (current_cpu == "arm") {
 if (current_cpu == "arm64") {
   builtins_sources -= [ "fp_mode.c" ]
   builtins_sources += [
+    "aarch64/emupac.cpp",
     "aarch64/fp_mode.c",
     "cpu_model/aarch64.c",
   ]
