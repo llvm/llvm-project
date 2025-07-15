@@ -2936,8 +2936,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 /// Similar to SelectAddrRegImm, except that the offset is restricted to uimm9.
 bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
                                           SDValue &Offset) {
-  if (SelectAddrFrameIndex(Addr, Base, Offset))
-    return true;
+  // FIXME: Support FrameIndex. Need to teach eliminateFrameIndex that only
+  // a 9-bit immediate can be folded.
 
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
@@ -2947,8 +2947,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
     if (isUInt<9>(CVal)) {
       Base = Addr.getOperand(0);
 
-      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
-        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
+      // FIXME: Support FrameIndex. Need to teach eliminateFrameIndex that only
+      // a 9-bit immediate can be folded.
       Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
       return true;
     }
