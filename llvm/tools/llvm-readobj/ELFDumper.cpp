@@ -6443,7 +6443,8 @@ void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
       reportWarning(std::move(Err), FileName);
     }
 
-    DictScope SectionScope(W, formatv("SFrame section '{0}'", SectionName).str());
+    DictScope SectionScope(W,
+                           formatv("SFrame section '{0}'", SectionName).str());
 
     StringRef SectionContent;
     if (Error Err = Section.getContents().moveInto(SectionContent)) {
