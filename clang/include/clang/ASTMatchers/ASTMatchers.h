@@ -710,7 +710,8 @@ AST_MATCHER(FieldDecl, isBitField) {
 /// fieldDecl(hasBitWidth(2))
 ///   matches 'int a;' and 'int c;' but not 'int b;'.
 AST_MATCHER_P(FieldDecl, hasBitWidth, unsigned, Width) {
-  return Node.isBitField() && Node.getBitWidthValue() == Width;
+  return Node.isBitField() && Node.hasConstantIntegerBitWidth() &&
+         Node.getBitWidthValue() == Width;
 }
 
 /// Matches non-static data members that have an in-class initializer.

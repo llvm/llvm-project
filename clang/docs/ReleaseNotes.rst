@@ -800,6 +800,8 @@ Bug Fixes in This Version
   declaration statements. Clang now emits a warning for these patterns. (#GH141659)
 - Fixed false positives for redeclaration errors of using enum in
   nested scopes. (#GH147495)
+- Fixed a failed assertion with an operator call expression which comes from a
+  macro expansion when performing analysis for nullability attributes. (#GH138371)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -967,6 +969,7 @@ Bug Fixes to C++ Support
 - Fix a crash with NTTP when instantiating local class.
 - Fixed a crash involving list-initialization of an empty class with a
   non-empty initializer list. (#GH147949)
+- Fixed constant evaluation of equality comparisons of constexpr-unknown references. (#GH147663)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1143,6 +1146,8 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 
+- Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
+  parameters.
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
