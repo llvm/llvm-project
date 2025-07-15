@@ -63,9 +63,9 @@ func.func @async_cp(%dst : memref<2x7x5xf32, 3>, %src : memref<4x5xf32>){
   %c0 = arith.constant 0 : index
   // CHECK: nvgpu.device_async_copy %{{.*}}[{{.*}}, {{.*}}], %{{.*}}[{{.*}}, {{.*}}, {{.*}}], 4 : memref<4x5xf32> to memref<2x7x5xf32, 3>
   %0 = nvgpu.device_async_copy %src[%c0, %c0], %dst[%c0, %c0, %c0], 4 : memref<4x5xf32> to memref<2x7x5xf32, 3>
-  // CHECK: %{{.*}} = nvgpu.device_async_create_group
-  %token = nvgpu.device_async_create_group %0
-  // CHECK: nvgpu.device_async_wait %{{.*}} {numGroups = 1 : i32}
-  nvgpu.device_async_wait %token {numGroups = 1 : i32}
+  // CHECK: nvgpu.device_async_create_group
+  nvgpu.device_async_create_group %0
+  // CHECK: nvgpu.device_async_wait <{numGroups = 1 : i32}>
+  nvgpu.device_async_wait {numGroups = 1 : i32}
   return
 }

@@ -19,8 +19,8 @@ func.func @optimize_128x32xf16_32x128xf16(%arg0: memref<128x128xf16>,
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shm]][[[stRow]], [[stColPerm]]]
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
       : memref<128x128xf16> to memref<128x32xf16, 3>
-  %1 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_create_group %0
+  nvgpu.device_async_wait { numGroups = 1 : i32}
 
   // CHECK: [[c6:%.+]] = arith.constant 6 : index
   // CHECK: [[srcBits:%.+]] = arith.andi [[fragRow]], [[c6]]
@@ -39,8 +39,8 @@ func.func @optimize_128x32xf16_32x128xf16(%arg0: memref<128x128xf16>,
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shmB]][[[stRow]], [[stColPerm]]]
   %2 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shmB[%stRow, %stCol], 8
       : memref<128x128xf16> to memref<32x128xf16, 3>
-  %3 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_create_group %0
+  nvgpu.device_async_wait { numGroups = 1 : i32}
 
   // CHECK: [[c15:%.+]] = arith.constant 15 : index
   // CHECK: [[srcBits:%.+]] = arith.andi [[fragRow]], [[c15]]
@@ -76,8 +76,8 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shm]][[[stRow]], [[stColPerm]]]
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 4
       : memref<128x128xf32> to memref<64x16xf32, 3>
-  %1 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_create_group %0
+  nvgpu.device_async_wait { numGroups = 1 : i32}
 
   // CHECK: [[c6:%.+]] = arith.constant 6 : index
   // CHECK: [[srcBits:%.+]] = arith.andi [[fragRow]], [[c6]]
@@ -132,8 +132,8 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shmB]][[[stRow]], [[stColPerm]]]
   %2 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shmB[%stRow, %stCol], 4
       : memref<128x128xf32> to memref<16x64xf32, 3>
-  %3 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_create_group %0
+  nvgpu.device_async_wait { numGroups = 1 : i32}
 
   // CHECK: [[c15:%.+]] = arith.constant 15 : index
   // CHECK: [[srcBits:%.+]] = arith.andi [[fragRow]], [[c15]]
@@ -177,8 +177,8 @@ func.func @small_column_size_f64(%arg0: memref<32x32xf64>,
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shm]][[[stRow]], [[stColPerm]]]
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 2
       : memref<32x32xf64> to memref<32x4xf64, 3>
-  %1 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_create_group %0
+  nvgpu.device_async_wait { numGroups = 1 : i32}
 
   // CHECK: [[c6:%.+]] = arith.constant 4 : index
   // CHECK: [[srcBits:%.+]] = arith.andi [[fragRow]], [[c6]]
@@ -203,8 +203,8 @@ func.func @too_small_column_size_f16(%arg0: memref<128x128xf16>,
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shm]][[[stRow]], [[stCol]]]
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
       : memref<128x128xf16> to memref<128x8xf16, 3>
-  %1 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_create_group %0
+  nvgpu.device_async_wait { numGroups = 1 : i32}
 
   // CHECK: nvgpu.ldmatrix [[shm]][[[fragRow]], [[fragCol]]]
   %mat = nvgpu.ldmatrix %shm[%fragRow, %fragCol] {numTiles = 1 : i32, transpose = false}
@@ -229,8 +229,8 @@ func.func @abort_if_subview(%arg0: memref<128x128xf16>,
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shm]][[[stRow]], [[stCol]]]
   %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
       : memref<128x128xf16> to memref<128x32xf16, 3>
-  %1 = nvgpu.device_async_create_group %0
-  nvgpu.device_async_wait %1 { numGroups = 1 : i32}
+  nvgpu.device_async_create_group %0
+  nvgpu.device_async_wait { numGroups = 1 : i32}
 
   // CHECK: nvgpu.ldmatrix [[shmView]][[[fragRow]], [[fragCol]]]
   %mat = nvgpu.ldmatrix %shmView[%fragRow, %fragCol] {numTiles = 1 : i32, transpose = false}
