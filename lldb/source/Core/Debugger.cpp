@@ -1216,14 +1216,47 @@ void Debugger::RestoreInputTerminalState() {
 
 void Debugger::RedrawStatusline(bool update) {
   std::lock_guard<std::mutex> guard(m_statusline_mutex);
+
+  if (!update && m_statusline) {
+    m_statusline->Redraw(nullptr, nullptr);
+    return;
+  }
+
+  // Always compute the execution and symbol context, regardless of whether the
+  // statusline is enabled. This code gets called from the default event handler
+  // thread and has uncovered threading issues that otherwise only reproduce
+  // when the statusline is enabled.
+  SelectedContext ctx = GetSelectedContext();
   if (m_statusline)
-    m_statusline->Redraw(update);
+    m_statusline->Redraw(&ctx.exe_ctx,
+                         ctx.sym_ctx ? &ctx.sym_ctx.value() : nullptr);
 }
 
 ExecutionContext Debugger::GetSelectedExecutionContext() {
   bool adopt_selected = true;
   ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
   return ExecutionContext(exe_ctx_ref);
+}
+
+Debugger::SelectedContext Debugger::GetSelectedContext() {
+  SelectedContext context;
+  context.exe_ctx = GetSelectedExecutionContext();
+
+  if (!context.exe_ctx.HasTargetScope())
+    context.exe_ctx.SetTargetPtr(&GetSelectedOrDummyTarget());
+
+  if (ProcessSP process_sp = context.exe_ctx.GetProcessSP()) {
+    // Check if the process is stopped, and if it is, make sure it remains
+    // stopped until we've computed the symbol context.
+    Process::StopLocker stop_locker;
+    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
+      if (auto frame_sp = context.exe_ctx.GetFrameSP())
+        context.sym_ctx.emplace(
+            frame_sp->GetSymbolContext(eSymbolContextEverything));
+    }
+  }
+
+  return context;
 }
 
 void Debugger::DispatchInputInterrupt() {
@@ -2117,6 +2150,7 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
   while (!done) {
     EventSP event_sp;
     if (listener_sp->GetEvent(event_sp, std::nullopt)) {
+      bool update_statusline = false;
       if (event_sp) {
         Broadcaster *broadcaster = event_sp->GetBroadcaster();
         if (broadcaster) {
@@ -2124,6 +2158,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           ConstString broadcaster_class(broadcaster->GetBroadcasterClass());
           if (broadcaster_class == broadcaster_class_process) {
             HandleProcessEvent(event_sp);
+            update_statusline =
+                (event_type & Process::eBroadcastBitStateChanged) != 0;
           } else if (broadcaster_class == broadcaster_class_target) {
             if (Breakpoint::BreakpointEventData::GetEventDataFromEvent(
                     event_sp.get())) {
@@ -2168,7 +2204,7 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
         if (m_forward_listener_sp)
           m_forward_listener_sp->AddEvent(event_sp);
       }
-      RedrawStatusline();
+      RedrawStatusline(update_statusline);
     }
   }
 
