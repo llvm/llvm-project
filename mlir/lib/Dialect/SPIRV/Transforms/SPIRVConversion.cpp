@@ -650,12 +650,6 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     // Hnadle 8 bit float types.
     type = cast<MemRefType>(convertShaped8BitFloatType(type, options));
     arrayElemType = type.getElementType();
-    // if (options.emulateUnsupportedFloatTypes && floatType &&
-    //     floatType.getWidth() == 8) {
-    //   // If this is an 8 bit float type, try to convert it to a supported
-    //   // integer type.
-    //   arrayElemType = convert8BitFloatType(options, floatType);
-    // }
   } else {
     LLVM_DEBUG(
         llvm::dbgs()
