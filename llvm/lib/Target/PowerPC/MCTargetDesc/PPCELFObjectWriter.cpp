@@ -96,7 +96,7 @@ unsigned PPCELFObjectWriter::getRelocType(const MCFixup &Fixup,
   // determine the type of the relocation
   unsigned Type = 0;
   if (IsPCRel) {
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
     default:
       llvm_unreachable("Unimplemented");
     case PPC::fixup_ppc_br24:
@@ -173,7 +173,7 @@ unsigned PPCELFObjectWriter::getRelocType(const MCFixup &Fixup,
       break;
     }
   } else {
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
       default: llvm_unreachable("invalid fixup kind!");
     case PPC::fixup_ppc_br24abs:
       Type = ELF::R_PPC_ADDR24;

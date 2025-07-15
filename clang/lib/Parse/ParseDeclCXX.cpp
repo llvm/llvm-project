@@ -2252,7 +2252,7 @@ void Parser::ParseBaseClause(Decl *ClassDecl) {
   while (true) {
     // Parse a base-specifier.
     BaseResult Result = ParseBaseSpecifier(ClassDecl);
-    if (Result.isInvalid()) {
+    if (!Result.isUsable()) {
       // Skip the rest of this base specifier, up until the comma or
       // opening brace.
       SkipUntil(tok::comma, tok::l_brace, StopAtSemi | StopBeforeMatch);
@@ -4941,20 +4941,16 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   }
 
   // Construct our identifier
-  StringRef Signature = StrLiteral.value()->getString();
+  StringLiteral *Signature = StrLiteral.value();
   auto [DeclIdent, Found] =
-      Actions.HLSL().ActOnStartRootSignatureDecl(Signature);
+      Actions.HLSL().ActOnStartRootSignatureDecl(Signature->getString());
   // If we haven't found an already defined DeclIdent then parse the root
   // signature string and construct the in-memory elements
   if (!Found) {
-    // Offset location 1 to account for '"'
-    SourceLocation SignatureLoc =
-        StrLiteral.value()->getExprLoc().getLocWithOffset(1);
     // Invoke the root signature parser to construct the in-memory constructs
-    hlsl::RootSignatureLexer Lexer(Signature, SignatureLoc);
-    SmallVector<llvm::hlsl::rootsig::RootElement> RootElements;
+    SmallVector<hlsl::RootSignatureElement> RootElements;
     hlsl::RootSignatureParser Parser(getLangOpts().HLSLRootSigVer, RootElements,
-                                     Lexer, PP);
+                                     Signature, PP);
     if (Parser.parse()) {
       T.consumeClose();
       return;

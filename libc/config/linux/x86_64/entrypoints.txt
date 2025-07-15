@@ -384,11 +384,18 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcscat
     libc.src.wchar.wcsstr
     libc.src.wchar.wcsncat
+    libc.src.wchar.wcslcat
     libc.src.wchar.wcscpy
+    libc.src.wchar.wcslcpy
     libc.src.wchar.wmemchr
     libc.src.wchar.wcpcpy
     libc.src.wchar.wcpncpy
     libc.src.wchar.wcstok
+    libc.src.wchar.wcstol
+    libc.src.wchar.wcstoll
+    libc.src.wchar.wcstoul
+    libc.src.wchar.wcstoull
+
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -657,6 +664,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.tanpif
     libc.src.math.totalorder
     libc.src.math.totalorderf
     libc.src.math.totalorderl

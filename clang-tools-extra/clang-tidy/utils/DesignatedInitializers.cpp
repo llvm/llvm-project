@@ -57,7 +57,7 @@ public:
     }
   }
   // Returns false if the type was not an aggregate.
-  operator bool() { return Valid; }
+  operator bool() const { return Valid; }
   // Advance to the next element in the aggregate.
   void next() {
     if (IsArray)

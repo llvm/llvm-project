@@ -535,6 +535,7 @@ set(files
   __locale_dir/time.h
   __locale_dir/wbuffer_convert.h
   __locale_dir/wstring_convert.h
+  __log_hardening_failure
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -944,6 +945,7 @@ set(files
   __vector/vector_bool.h
   __vector/vector_bool_formatter.h
   __verbose_abort
+  __verbose_trap
   algorithm
   any
   array
@@ -1569,6 +1571,7 @@ set(files
   __cxx03/__utility/unreachable.h
   __cxx03/__variant/monostate.h
   __cxx03/__verbose_abort
+  __cxx03/__verbose_trap
   __cxx03/algorithm
   __cxx03/array
   __cxx03/atomic
@@ -1708,7 +1711,7 @@ list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
-target_link_libraries(cxx-headers INTERFACE libcxx-libc-headers libcxx-abi-headers)
+target_link_libraries(cxx-headers INTERFACE runtimes-libc-headers libcxx-abi-headers)
 add_dependencies(cxx-headers generate-cxx-headers)
 # It's important that the arch directory be included first so that its header files
 # which interpose on the default include dir be included instead of the default ones.

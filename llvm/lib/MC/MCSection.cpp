@@ -11,7 +11,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -35,18 +34,6 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 }
 
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
-
-MCSection::~MCSection() {
-  // If ~MCRelaxableFragment becomes trivial (no longer store a MCInst member),
-  // this dtor can be made empty.
-  for (auto &[_, Chain] : Subsections) {
-    for (MCFragment *X = Chain.Head, *Y; X; X = Y) {
-      Y = X->Next;
-      if (auto *F = dyn_cast<MCRelaxableFragment>(X))
-        F->~MCRelaxableFragment();
-    }
-  }
-}
 
 void MCSection::setBundleLockState(BundleLockStateType NewState) {
   if (NewState == NotBundleLocked) {

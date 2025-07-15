@@ -16,6 +16,15 @@ New entries should be added directly below the "Version" header.
 Version 21.0
 ------------
 
+* [libc++] Optimize ctype::to{lower,upper}
+
+  This patch removed __classic_upper_table() and __classic_lower_table(), which were only ever accessed from the dylib.
+
+  x86_64-unknown-gnu-linux
+  ------------------------
+  Symbol removed: _ZNSt3__15ctypeIcE21__classic_lower_tableEv
+  Symbol removed: _ZNSt3__15ctypeIcE21__classic_upper_tableEv
+
 * [libc++] Instantiate hash function externally
 
   This has multiple benefits:
@@ -26,6 +35,14 @@ Version 21.0
   All platforms
   -------------
   Symbol added: _ZNSt3__113__hash_memoryEPKvm
+
+* [libc++][hardening] Introduce a dylib function to log hardening errors.
+
+  This patch added a function to log hardening failures to the dylib.
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__123__log_hardening_failureEPKc
 
 ------------
 Version 20.0

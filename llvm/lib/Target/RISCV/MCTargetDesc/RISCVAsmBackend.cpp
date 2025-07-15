@@ -76,12 +76,13 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_branch", 0, 32, 0},
       {"fixup_riscv_rvc_jump", 2, 11, 0},
       {"fixup_riscv_rvc_branch", 0, 16, 0},
+      {"fixup_riscv_rvc_imm", 0, 16, 0},
       {"fixup_riscv_call", 0, 64, 0},
       {"fixup_riscv_call_plt", 0, 64, 0},
 
       {"fixup_riscv_qc_e_branch", 0, 48, 0},
       {"fixup_riscv_qc_e_32", 16, 32, 0},
-      {"fixup_riscv_qc_abs20_u", 12, 20, 0},
+      {"fixup_riscv_qc_abs20_u", 0, 32, 0},
       {"fixup_riscv_qc_e_call_plt", 0, 48, 0},
 
       // Andes fixups
@@ -134,15 +135,19 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
     // For jump instructions the immediate must be in the range
     // [-1048576, 1048574]
     return Offset > 1048574 || Offset < -1048576;
+  case RISCV::fixup_riscv_rvc_imm:
+    // This fixup can never be emitted as a relocation, so always needs to be
+    // relaxed.
+    return true;
   }
 }
 
 // Given a compressed control flow instruction this function returns
 // the expanded instruction, or the original instruction code if no
 // expansion is available.
-static unsigned getRelaxedOpcode(const MCInst &Inst,
+static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
                                  const MCSubtargetInfo &STI) {
-  switch (Inst.getOpcode()) {
+  switch (Opcode) {
   case RISCV::C_BEQZ:
     return RISCV::BEQ;
   case RISCV::C_BNEZ:
@@ -152,13 +157,25 @@ static unsigned getRelaxedOpcode(const MCInst &Inst,
     // This only relaxes one "step" - i.e. from C.J to JAL, not from C.J to
     // QC.E.J, because we can always relax again if needed.
     return RISCV::JAL;
+  case RISCV::C_LI:
+    if (!STI.hasFeature(RISCV::FeatureVendorXqcili))
+      break;
+    // We only need this because `QC.E.LI` can be compressed into a `C.LI`. This
+    // happens because the `simm6` MCOperandPredicate accepts bare symbols, and
+    // `QC.E.LI` is the only instruction that accepts bare symbols at parse-time
+    // and compresses to `C.LI`. `C.LI` does not itself accept bare symbols at
+    // parse time.
+    //
+    // If we have a bare symbol, we need to turn this back to a `QC.E.LI`, as we
+    // have no way to emit a relocation on a `C.LI` instruction.
+    return RISCV::QC_E_LI;
   case RISCV::JAL: {
     // We can only relax JAL if we have Xqcilb
     if (!STI.hasFeature(RISCV::FeatureVendorXqcilb))
       break;
 
     // And only if it is using X0 or X1 for rd.
-    MCRegister Reg = Inst.getOperand(0).getReg();
+    MCRegister Reg = Operands[0].getReg();
     if (Reg == RISCV::X0)
       return RISCV::QC_E_J;
     if (Reg == RISCV::X1)
@@ -205,7 +222,7 @@ static unsigned getRelaxedOpcode(const MCInst &Inst,
   }
 
   // Returning the original opcode means we cannot relax the instruction.
-  return Inst.getOpcode();
+  return Opcode;
 }
 
 void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
@@ -223,7 +240,8 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::C_JAL: {
     [[maybe_unused]] bool Success = RISCVRVC::uncompress(Res, Inst, STI);
     assert(Success && "Can't uncompress instruction");
-    assert(Res.getOpcode() == getRelaxedOpcode(Inst, STI) &&
+    assert(Res.getOpcode() ==
+               getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI) &&
            "Branch Relaxation Error");
     break;
   }
@@ -235,7 +253,24 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
     assert((Inst.getOperand(0).getReg() == RISCV::X0 ||
             Inst.getOperand(0).getReg() == RISCV::X1) &&
            "JAL only relaxable with rd=x0 or rd=x1");
-    Res.setOpcode(getRelaxedOpcode(Inst, STI));
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
+    Res.addOperand(Inst.getOperand(1));
+    break;
+  }
+  case RISCV::C_LI: {
+    // This should only be hit when trying to relax a `C.LI` into a `QC.E.LI`
+    // because the `C.LI` has a bare symbol. We cannot use
+    // `RISCVRVC::uncompress` because it will use decompression patterns. The
+    // `QC.E.LI` compression pattern to `C.LI` is compression-only (because we
+    // don't want `c.li` ever printed as `qc.e.li`, which might be done if the
+    // pattern applied to decompression), but that doesn't help much becuase
+    // `C.LI` with a bare symbol will decompress to an `ADDI` anyway (because
+    // `simm12`'s MCOperandPredicate accepts a bare symbol and that pattern
+    // comes first), and we still cannot emit an `ADDI` with a bare symbol.
+    assert(STI.hasFeature(RISCV::FeatureVendorXqcili) &&
+           "C.LI is only relaxable with Xqcili");
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
+    Res.addOperand(Inst.getOperand(0));
     Res.addOperand(Inst.getOperand(1));
     break;
   }
@@ -257,7 +292,7 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::QC_E_BGEI:
   case RISCV::QC_E_BLTUI:
   case RISCV::QC_E_BGEUI:
-    Res.setOpcode(getRelaxedOpcode(Inst, STI));
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
     Res.addOperand(Inst.getOperand(0));
     Res.addOperand(Inst.getOperand(1));
     Res.addOperand(Inst.getOperand(2));
@@ -399,7 +434,8 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(MCLEBFragment &LF,
   return std::make_pair(Expr.evaluateKnownAbsolute(Value, *Asm), false);
 }
 
-bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+bool RISCVAsmBackend::mayNeedRelaxation(unsigned Opcode,
+                                        ArrayRef<MCOperand> Operands,
                                         const MCSubtargetInfo &STI) const {
   // This function has access to two STIs, the member of the AsmBackend, and the
   // one passed as an argument. The latter is more specific, so we query it for
@@ -407,7 +443,7 @@ bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   if (STI.hasFeature(RISCV::FeatureExactAssembly))
     return false;
 
-  return getRelaxedOpcode(Inst, STI) != Inst.getOpcode();
+  return getRelaxedOpcode(Opcode, Operands, STI) != Opcode;
 }
 
 bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
@@ -438,7 +474,7 @@ bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext &Ctx) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     llvm_unreachable("Unknown fixup kind!");
   case FK_Data_1:
@@ -537,10 +573,18 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
             (Bit5 << 2);
     return Value;
   }
+  case RISCV::fixup_riscv_rvc_imm: {
+    if (!isInt<6>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    unsigned Bit5 = (Value >> 5) & 0x1;
+    unsigned Bit4_0 = Value & 0x1f;
+    Value = (Bit5 << 12) | (Bit4_0 << 2);
+    return Value;
+  }
   case RISCV::fixup_riscv_qc_e_32: {
     if (!isInt<32>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-    return ((Value & 0xffffffff) << 16);
+    return Value & 0xffffffffu;
   }
   case RISCV::fixup_riscv_qc_abs20_u: {
     if (!isInt<20>(Value))
@@ -662,7 +706,7 @@ std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
   const MCFixup *AUIPCFixup;
   const MCFragment *AUIPCDF;
   MCValue AUIPCTarget;
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     // Use default handling for `Value` and `IsResolved`.
     return {};
@@ -708,7 +752,7 @@ std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
 void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
                                           const MCFixup &Fixup) {
   StringRef VendorIdentifier;
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     // No Vendor Relocation Required.
     return;
