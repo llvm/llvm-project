@@ -1346,9 +1346,7 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
     const MachineInstr &UserMI = *UserOp.getParent();
     LLVM_DEBUG(dbgs() << "  Checking user: " << UserMI << "\n");
 
-    if (UserMI.isCopy() && UserMI.getOperand(0).getReg().isVirtual() &&
-        UserMI.getOperand(0).getSubReg() == RISCV::NoSubRegister &&
-        UserMI.getOperand(1).getSubReg() == RISCV::NoSubRegister) {
+    if (UserMI.isFullCopy() && UserMI.getOperand(0).getReg().isVirtual()) {
       LLVM_DEBUG(dbgs() << "    Peeking through uses of COPY\n");
       Worklist.insert_range(llvm::make_pointer_range(
           MRI->use_operands(UserMI.getOperand(0).getReg())));
