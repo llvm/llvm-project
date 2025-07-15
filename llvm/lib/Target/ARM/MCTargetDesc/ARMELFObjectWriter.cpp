@@ -105,7 +105,7 @@ unsigned ARMELFObjectWriter::getRelocType(const MCFixup &Fixup,
   }
 
   if (IsPCRel) {
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
     default:
       reportError(Fixup.getLoc(), "unsupported relocation type");
       return ELF::R_ARM_NONE;

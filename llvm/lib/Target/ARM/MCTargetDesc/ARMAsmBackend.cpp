@@ -215,7 +215,7 @@ static const char *checkPCRelOffset(uint64_t Value, int64_t Min, int64_t Max) {
 
 const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
                                                     uint64_t Value) const {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case ARM::fixup_arm_thumb_br: {
     // Relaxing tB to t2B. tB has a signed 12-bit displacement with the
     // low bit being an implied zero. There's an implied +4 offset for the
@@ -1093,7 +1093,7 @@ std::optional<bool> ARMAsmBackend::evaluateFixup(const MCFragment &F,
   // For a few PC-relative fixups in Thumb mode, offsets need to be aligned
   // down. We compensate here because the default handler's `Value` decrement
   // doesn't account for this alignment.
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case ARM::fixup_t2_ldst_pcrel_12:
   case ARM::fixup_t2_pcrel_10:
   case ARM::fixup_t2_pcrel_9:
