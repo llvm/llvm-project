@@ -291,6 +291,9 @@ lldb_private::formatters::MsvcStlVectorSyntheticFrontEndCreator(
   if (!valobj_sp)
     return nullptr;
 
+  // We can't check the template parameter here, because PDB doesn't include
+  // this information.
+
   // vector<T>
   if (valobj_sp->GetChildMemberWithName("_Mypair") != nullptr)
     return new MsvcStlVectorSyntheticFrontEnd(valobj_sp);
