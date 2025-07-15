@@ -4778,7 +4778,8 @@ commonPermutationOfPackAndUnPackOp(OpTy packOrUnPackOp,
 //===----------------------------------------------------------------------===//
 
 void PackOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getResult(), "pack");
+  if (hasPureTensorSemantics() && !getResult().empty())
+    setNameFn(*getResult().begin(), "pack");
 }
 
 void PackOp::build(OpBuilder &builder, OperationState &state, Value source,
@@ -5228,14 +5229,17 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     rewriter.modifyOpInPlace(packOp, [&] {
       packOp.getSourceMutable().assign(source);
       packOp.getDestMutable().assign(dest);
-      packOp.getResult().setType(cast<RankedTensorType>(dest.getType()));
+      if (packOp.hasPureTensorSemantics() && !packOp.getResult().empty())
+        (*packOp.getResult().begin())
+            .setType(cast<RankedTensorType>(dest.getType()));
     });
     // Insert a cast if needed
-    if (needUpdateDestType) {
+    if (needUpdateDestType && packOp.hasPureTensorSemantics()) {
       rewriter.setInsertionPointAfter(packOp);
-      auto castOp =
-          rewriter.create<tensor::CastOp>(loc, originalResultType, packOp);
-      rewriter.replaceAllUsesExcept(packOp, castOp, castOp);
+      auto castOp = rewriter.create<tensor::CastOp>(
+          loc, originalResultType, *packOp.getResult().begin());
+      rewriter.replaceAllUsesExcept(*packOp.getResult().begin(), castOp,
+                                    castOp);
     }
 
     return success();
@@ -5282,18 +5286,21 @@ bool PackOp::isLikePad() {
   return isLikePadUnPad(*this, packedTensorType);
 }
 
-OpFoldResult PackOp::fold(FoldAdaptor adaptor) {
+LogicalResult PackOp::fold(FoldAdaptor adaptor,
+                           SmallVectorImpl<OpFoldResult> &results) {
   if (!hasPureTensorSemantics())
-    return {};
+    return failure();
 
   std::optional<Attribute> paddingValue;
   if (auto pad = adaptor.getPaddingValue())
     paddingValue = pad;
   if (OpFoldResult reshapedSource = reshapeConstantSource(
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
-          cast<TensorType>(getDestType()), paddingValue))
-    return reshapedSource;
-  return {};
+          cast<TensorType>(getDestType()), paddingValue)) {
+    results.push_back(reshapedSource);
+    return success();
+  }
+  return failure();
 }
 
 /// Folds a tensor.cast op into a consuming PackOp op if the
@@ -5340,8 +5347,8 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
     newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
     // Replace op.
-    Value oldResult = op.getResult();
-    Value newResult = newOp.getResult();
+    Value oldResult = *op.getResult().begin();
+    Value newResult = *newOp.getResult().begin();
     Value replacement = (newResult.getType() != oldResult.getType())
                             ? rewriter.create<tensor::CastOp>(
                                   op->getLoc(), oldResult.getType(), newResult)
@@ -5359,7 +5366,8 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
 
 void UnPackOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getResult(), "unpack");
+  if (hasPureTensorSemantics() && !getResult().empty())
+    setNameFn(*getResult().begin(), "unpack");
 }
 
 LogicalResult
@@ -5550,7 +5558,8 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
           extractSliceUser.getMixedStrides());
       rewriter.modifyOpInPlace(unPackOp, [&]() {
         unPackOp.setDpsInitOperand(0, newDest);
-        unPackOp.getResult().setType(newDest.getType());
+        if (unPackOp.hasPureTensorSemantics() && !unPackOp.getResult().empty())
+          (*unPackOp.getResult().begin()).setType(newDest.getType());
       });
       rewriter.replaceOp(extractSliceUser, unPackOp);
       return success();
@@ -5573,11 +5582,16 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
       dest =
           rewriter.create<tensor::CastOp>(loc, newDestType, unPackOp.getDest());
     }
-    Value newOp = rewriter.create<UnPackOp>(
+    UnPackOp newOp = rewriter.create<UnPackOp>(
         loc, source, dest, unPackOp.getInnerDimsPos(), unPackOp.getMixedTiles(),
         unPackOp.getOuterDimsPerm());
-    rewriter.replaceOpWithNewOp<tensor::CastOp>(
-        unPackOp, unPackOp.getResult().getType(), newOp);
+    if (unPackOp.hasPureTensorSemantics() && !unPackOp.getResult().empty()) {
+      rewriter.replaceOpWithNewOp<tensor::CastOp>(
+          unPackOp, (*unPackOp.getResult().begin()).getType(),
+          *newOp.getResult().begin());
+    } else {
+      rewriter.replaceOp(unPackOp, newOp);
+    }
     return success();
   }
 
@@ -5589,14 +5603,17 @@ bool UnPackOp::isLikeUnPad() {
   return isLikePadUnPad(*this, packedTensorType);
 }
 
-OpFoldResult UnPackOp::fold(FoldAdaptor adaptor) {
+LogicalResult UnPackOp::fold(FoldAdaptor adaptor,
+                             SmallVectorImpl<OpFoldResult> &results) {
   if (!hasPureTensorSemantics())
-    return {};
+    return failure();
   if (OpFoldResult reshapedSource = reshapeConstantSource(
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
-          cast<TensorType>(getResult().getType())))
-    return reshapedSource;
-  return {};
+          cast<TensorType>((*getResult().begin()).getType()))) {
+    results.push_back(reshapedSource);
+    return success();
+  }
+  return failure();
 }
 
 /// Folds a tensor.cast op into a consuming UnPackOp op if the
@@ -5644,8 +5661,8 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
     newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
     // Replace op.
-    Value oldResult = op.getResult();
-    Value newResult = newOp.getResult();
+    Value oldResult = *op.getResult().begin();
+    Value newResult = *newOp.getResult().begin();
     Value replacement = (newResult.getType() != oldResult.getType())
                             ? rewriter.create<tensor::CastOp>(
                                   op->getLoc(), oldResult.getType(), newResult)

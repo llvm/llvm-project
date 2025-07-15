@@ -512,7 +512,7 @@ func.func @fold_self_copy(%0 : memref<4x16xf32>) {
 // -----
 
 // CHECK-LABEL: func @no_fold_fill_like_memref
-//  CHECK-NEXT:   linalg.generic 
+//  CHECK-NEXT:   linalg.generic
 func.func @no_fold_fill_like_memref(%in_out : memref<4x16xf32>, %fill_val : f32) {
   linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                    affine_map<(d0, d1) -> (d0, d1)>],
@@ -528,7 +528,7 @@ func.func @no_fold_fill_like_memref(%in_out : memref<4x16xf32>, %fill_val : f32)
 // -----
 
 // CHECK-LABEL: func @no_fold_fill_like_tensor
-//  CHECK-NEXT:   linalg.generic 
+//  CHECK-NEXT:   linalg.generic
 func.func @no_fold_fill_like_tensor(%in_out : tensor<4x16xf32>, %fill_val : f32) -> tensor<4x16xf32> {
   %result = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                    affine_map<(d0, d1) -> (d0, d1)>],
