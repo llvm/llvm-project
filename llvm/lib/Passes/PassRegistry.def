@@ -59,6 +59,7 @@ MODULE_PASS("canonicalize-aliases", CanonicalizeAliasesPass())
 MODULE_PASS("check-debugify", NewPMCheckDebugifyPass())
 MODULE_PASS("constmerge", ConstantMergePass())
 MODULE_PASS("coro-cleanup", CoroCleanupPass())
+MODULE_PASS("stack-protect-attributor", StackProtectAttributorPass())
 MODULE_PASS("coro-early", CoroEarlyPass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("ctx-instr-gen",
