@@ -221,7 +221,7 @@ private:
   selectSWMMACIndex8(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectSWMMACIndex16(MachineOperand &Root) const;
-   InstructionSelector::ComplexRendererFns
+  InstructionSelector::ComplexRendererFns
   selectSWMMACIndex32(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
