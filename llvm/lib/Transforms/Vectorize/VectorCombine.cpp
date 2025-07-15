@@ -52,9 +52,9 @@ STATISTIC(NumScalarOps, "Number of scalar unary + binary ops formed");
 STATISTIC(NumScalarCmp, "Number of scalar compares formed");
 STATISTIC(NumScalarIntrinsic, "Number of scalar intrinsic calls formed");
 
-static cl::opt<bool>
-    DisableVectorCombine("disable-vector-combine", cl::init(false), cl::Hidden,
-                         cl::desc("Disable all vector combine transforms"));
+static cl::opt<bool> DisableVectorCombine(
+    "disable-vector-combine", cl::init(false), cl::Hidden,
+    cl::desc("Disable all vector combine transforms"));
 
 static cl::opt<bool> DisableBinopExtractShuffle(
     "disable-binop-extract-shuffle", cl::init(false), cl::Hidden,
@@ -808,16 +808,13 @@ bool VectorCombine::foldInsExtBinop(Instruction &I) {
   return true;
 }
 
+/// Match: bitop(castop(x), castop(y)) -> castop(bitop(x, y))
+/// Supports: bitcast, trunc, sext, zext
 bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
-  // Match: bitop(castop(x), castop(y)) -> castop(bitop(x, y))
-  // Supports: bitcast, trunc, sext, zext
-
   // Check if this is a bitwise logic operation
   auto *BinOp = dyn_cast<BinaryOperator>(&I);
   if (!BinOp || !BinOp->isBitwiseLogicOp())
     return false;
-
-  LLVM_DEBUG(dbgs() << "Found bitwise logic op: " << I << "\n");
 
   // Get the cast instructions
   auto *LHSCast = dyn_cast<CastInst>(BinOp->getOperand(0));
@@ -826,9 +823,6 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
     LLVM_DEBUG(dbgs() << "  One or both operands are not cast instructions\n");
     return false;
   }
-
-  LLVM_DEBUG(dbgs() << "  LHS cast: " << *LHSCast << "\n");
-  LLVM_DEBUG(dbgs() << "  RHS cast: " << *RHSCast << "\n");
 
   // Both casts must be the same type
   Instruction::CastOps CastOpcode = LHSCast->getOpcode();
@@ -863,52 +857,39 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
       !DstVecTy->getScalarType()->isIntegerTy())
     return false;
 
-  // Validate cast operation constraints
-  switch (CastOpcode) {
-  case Instruction::BitCast:
-    // Total bit width must be preserved
-    if (SrcVecTy->getPrimitiveSizeInBits() !=
-        DstVecTy->getPrimitiveSizeInBits())
-      return false;
-    break;
-  case Instruction::Trunc:
-    // Source elements must be wider
-    if (SrcVecTy->getScalarSizeInBits() <= DstVecTy->getScalarSizeInBits())
-      return false;
-    break;
-  case Instruction::SExt:
-  case Instruction::ZExt:
-    // Source elements must be narrower
-    if (SrcVecTy->getScalarSizeInBits() >= DstVecTy->getScalarSizeInBits())
-      return false;
-    break;
-  }
-
   // Cost Check :
   // OldCost = bitlogic + 2*casts
   // NewCost = bitlogic + cast
+  
+  // Calculate specific costs for each cast with instruction context
+  InstructionCost LHSCastCost = TTI.getCastInstrCost(
+      CastOpcode, DstVecTy, SrcVecTy,
+      TTI::CastContextHint::None, CostKind, LHSCast);
+  InstructionCost RHSCastCost = TTI.getCastInstrCost(
+      CastOpcode, DstVecTy, SrcVecTy,
+      TTI::CastContextHint::None, CostKind, RHSCast);
+
   InstructionCost OldCost =
-      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstVecTy) +
-      TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
-                           TTI::CastContextHint::None) *
-          2;
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstVecTy, CostKind) +
+      LHSCastCost + RHSCastCost;
 
+  // For new cost, we can't provide an instruction (it doesn't exist yet)
+  InstructionCost GenericCastCost = TTI.getCastInstrCost(
+      CastOpcode, DstVecTy, SrcVecTy,
+      TTI::CastContextHint::None, CostKind);
+  
   InstructionCost NewCost =
-      TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy) +
-      TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
-                           TTI::CastContextHint::None);
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy, CostKind) +
+      GenericCastCost;
 
-  // Account for multi-use casts
+  // Account for multi-use casts using specific costs
   if (!LHSCast->hasOneUse())
-    NewCost += TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
-                                    TTI::CastContextHint::None);
+    NewCost += LHSCastCost;
   if (!RHSCast->hasOneUse())
-    NewCost += TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
-                                    TTI::CastContextHint::None);
+    NewCost += RHSCastCost;
 
-  LLVM_DEBUG(dbgs() << "Found bitwise logic op of cast ops: " << I
-                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "foldBitOpOfCastops: OldCost=" << OldCost 
+                    << " NewCost=" << NewCost << "\n");
 
   if (NewCost > OldCost)
     return false;
@@ -1086,7 +1067,8 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   InstructionCost OldCost = 2 * SplatCost + VectorOpCost;
 
   // Determine scalar opcode
-  std::optional<unsigned> FunctionalOpcode = VPI.getFunctionalOpcode();
+  std::optional<unsigned> FunctionalOpcode =
+      VPI.getFunctionalOpcode();
   std::optional<Intrinsic::ID> ScalarIntrID = std::nullopt;
   if (!FunctionalOpcode) {
     ScalarIntrID = VPI.getFunctionalIntrinsicID();
