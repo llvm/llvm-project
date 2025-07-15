@@ -5922,12 +5922,30 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
       return bcastOp.getSource();
   }
 
-  // shape_cast(constant) -> constant,
-  // if element type of the source and result are the same
+  // shape_cast(constant) -> constant
   if (auto splatAttr =
           llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
-    if (splatAttr.getElementType() == resultType.getElementType())
-      return splatAttr.reshape(getType());
+
+    // The shape and 'scalable dims' of the new attribute must match the result
+    // of the shape_cast:
+    auto newShape = resultType.getShape();
+    auto newScalableDims = resultType.getScalableDims();
+
+    // The element type must be retained. Note that this is to handle currently
+    // valid IR like
+    //
+    // ```
+    // %0 = llvm.mlir.constant(dense<0.> : vector<1xf8E4M3FN>) : vector<1xi8>
+    // %1 = vector.shape_cast %0 : vector<1xi8> to vector<1x1xi8>
+    // ```
+    //
+    // where the element types of the attribute and result do not match.
+    auto newElementType = splatAttr.getElementType();
+
+    auto newAttr = VectorType::get(newShape, newElementType, newScalableDims);
+
+    return DenseElementsAttr::get(newAttr,
+                                  splatAttr.getSplatValue<Attribute>());
   }
 
   // shape_cast(poison) -> poison

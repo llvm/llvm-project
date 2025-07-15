@@ -1003,11 +1003,11 @@ func.func @fold_broadcast_shapecast(%arg0: vector<4xf32>) -> vector<4xf32> {
 // -----
 
 // CHECK-LABEL: func @canonicalize_extract_shapecast_different_element_type
+// CHECK: %[[CONST:.*]] = llvm.mlir.constant
+// CHECK-NEXT: return %[[CONST]]
 func.func @canonicalize_extract_shapecast_different_element_type()->vector<12xi8> {
   %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<12xf8E4M3FN>) : vector<12xi8>
-  // CHECK-NOT: vector.shape_cast
   %1 = vector.shape_cast %0 : vector<12xi8> to vector<1x12xi8>
-  // CHECK-NOT: vector.extract
   %2 = vector.extract %1[0] : vector<12xi8> from vector<1x12xi8>
   return %2 : vector<12xi8>
 }
