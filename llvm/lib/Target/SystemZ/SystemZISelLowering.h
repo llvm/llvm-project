@@ -805,6 +805,10 @@ private:
   SDValue combineAND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineOR(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineXOR(SDNode *N, DAGCombinerInfo &DCI) const;
+  bool combineLogicalOpCCMask(SDValue &Op0, SDValue &Op1, unsigned Opcode,
+                              SDValue &TrueVal, SDValue &FalseVal, int &CCValid,
+                              int &CCMask, SDValue &CCReg,
+                              DAGCombinerInfo &DCI) const;
 
   SDValue unwrapAddress(SDValue N) const override;
 
