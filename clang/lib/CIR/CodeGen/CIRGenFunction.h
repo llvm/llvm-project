@@ -757,6 +757,11 @@ public:
   RValue emitAnyExpr(const clang::Expr *e,
                      AggValueSlot aggSlot = AggValueSlot::ignored());
 
+  /// Emits the code necessary to evaluate an arbitrary expression into the
+  /// given memory location.
+  void emitAnyExprToMem(const Expr *e, Address location, Qualifiers quals,
+                        bool isInitializer);
+
   /// Similarly to emitAnyExpr(), however, the result will always be accessible
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
@@ -828,6 +833,7 @@ public:
   mlir::Value emitCheckedArgForAssume(const Expr *e);
 
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
+  LValue emitCompoundLiteralLValue(const CompoundLiteralExpr *e);
 
   void emitConstructorBody(FunctionArgList &args);
   void emitDestructorBody(FunctionArgList &args);
