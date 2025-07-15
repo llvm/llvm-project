@@ -23,13 +23,13 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   LoweringPreparePass() = default;
   void runOnOperation() override;
 
-  void runOnOp(Operation *op);
-  void lowerUnaryOp(UnaryOp op);
+  void runOnOp(mlir::Operation *op);
+  void lowerUnaryOp(cir::UnaryOp op);
 };
 
 } // namespace
 
-void LoweringPreparePass::lowerUnaryOp(UnaryOp op) {
+void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
   mlir::Type ty = op.getType();
   if (!mlir::isa<cir::ComplexType>(ty))
     return;
@@ -65,28 +65,27 @@ void LoweringPreparePass::lowerUnaryOp(UnaryOp op) {
     break;
   }
 
-  auto result = builder.createComplexCreate(loc, resultReal, resultImag);
+  mlir::Value result = builder.createComplexCreate(loc, resultReal, resultImag);
   op.replaceAllUsesWith(result);
   op.erase();
 }
 
-void LoweringPreparePass::runOnOp(Operation *op) {
-  if (auto unary = dyn_cast<UnaryOp>(op)) {
+void LoweringPreparePass::runOnOp(mlir::Operation *op) {
+  if (auto unary = dyn_cast<cir::UnaryOp>(op))
     lowerUnaryOp(unary);
-  }
 }
 
 void LoweringPreparePass::runOnOperation() {
   mlir::Operation *op = getOperation();
 
-  llvm::SmallVector<Operation *> opsToTransform;
+  llvm::SmallVector<mlir::Operation *> opsToTransform;
 
-  op->walk([&](Operation *op) {
-    if (isa<UnaryOp>(op))
+  op->walk([&](mlir::Operation *op) {
+    if (mlir::isa<cir::UnaryOp>(op))
       opsToTransform.push_back(op);
   });
 
-  for (auto *o : opsToTransform)
+  for (mlir::Operation *o : opsToTransform)
     runOnOp(o);
 }
 
