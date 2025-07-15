@@ -516,6 +516,21 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   return MachineInstrBuilder(MF, MI).copyMIMetadata(MIMD);
 }
 
+/// This version of the builder inserts the newly-built instruction after the
+/// given position in the given MachineBasicBlock, and does NOT take a
+/// destination register.
+inline MachineInstrBuilder BuildMIAfter(MachineBasicBlock &BB,
+                                        MachineBasicBlock::iterator I,
+                                        const MIMetadata &MIMD,
+                                        const MCInstrDesc &MCID) {
+  MachineFunction &MF = *BB.getParent();
+  MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
+  BB.insertAfter(I, MI);
+  return MachineInstrBuilder(MF, MI)
+      .setPCSections(MIMD.getPCSections())
+      .setMMRAMetadata(MIMD.getMMRAMetadata());
+}
+
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                                    MachineBasicBlock::instr_iterator I,
                                    const MIMetadata &MIMD,
