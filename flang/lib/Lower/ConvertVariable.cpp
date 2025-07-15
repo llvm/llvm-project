@@ -830,7 +830,8 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
               }
 
               if (coordinates.empty())
-                TODO(loc, "device resident component in complex derived-type hierarchy");
+                TODO(loc, "device resident component in complex derived-type "
+                          "hierarchy");
 
               mlir::Value comp = builder.create<fir::CoordinateOp>(
                   loc, builder.getRefType(fieldTy), alloc, coordinates);
