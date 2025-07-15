@@ -1722,31 +1722,6 @@ func.func @infer_and_fold_pack_unpack_same_tiles(%t: tensor<10x20x4x4xf32>) -> t
 
 // -----
 
-func.func @infer_and_fold_pack_unpack_same_tiles_memref(%t: memref<10x20x4x4xf32>) -> memref<10x20x4x4xf32> {
-  %c40 = arith.constant 40 : index
-  %c80 = arith.constant 80 : index
-  %buf_unpacked = memref.alloc() : memref<40x80xf32>
-  %unpacked = linalg.unpack %t inner_dims_pos = [0, 1] inner_tiles = [4, 4] into %buf_unpacked : memref<10x20x4x4xf32> -> memref<40x80xf32>
-  %buf_packed = memref.alloc() : memref<10x20x4x4xf32>
-  %packed = linalg.pack %unpacked inner_dims_pos = [0, 1] inner_tiles = [4, 4] into %buf_packed : memref<40x80xf32> -> memref<10x20x4x4xf32>
-  return %packed : memref<10x20x4x4xf32>
-}
-// CHECK-LABEL: func.func @infer_and_fold_pack_unpack_same_tiles_memref
-// CHECK-SAME:    %[[SRC:[0-9a-zA-Z]+]]
-// CHECK:         return %[[SRC]]
-
-// -----
-
-func.func @fold_pack_unpack_memref(%arg0: memref<2x3xf32>, %arg1: memref<2x3xf32>) -> memref<2x3xf32> {
-  %c1 = arith.constant 1 : index
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %pack_dest = memref.alloc() : memref<2x3x1x1xf32>
-  %pack = linalg.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [1, 1] into %pack_dest : memref<2x3xf32> -> memref<2x3x1x1xf32>
-  %unpack = linalg.unpack %pack inner_dims_pos = [0, 1] inner_tiles = [1, 1] into %arg1 : memref<2x3x1x1xf32> -> memref<2x3xf32>
-  return %arg1 : memref<2x3xf32>
-}
-
 // CHECK-LABEL:   func.func @pack_dont_drop_attributes(
 // CHECK: linalg.pack {{.*}}  {test_attr}
 func.func @pack_dont_drop_attributes(%arg0: tensor<?x?x?xf16>, %arg1: tensor<128x?x100x16x1xf16>) -> tensor<128x?x100x16x1xf16> {
@@ -1909,13 +1884,28 @@ func.func @fold_pack_unpack_tensor(%x: tensor<2x3xf32>) -> tensor<2x3xf32> {
 
 // -----
 
-// CHECK-LABEL: func.func @fold_pack_unpack_memref
-// CHECK-SAME:  (%[[ARG0:.*]]: memref<2x3xf32>) -> memref<2x3xf32>
-// CHECK:       return %[[ARG0]] : memref<2x3xf32>
-func.func @fold_pack_unpack_memref(%x: memref<2x3xf32>) -> memref<2x3xf32> {
-  %unpacked = linalg.unpack %x outer_dims_perm = [] inner_dims_pos = [] inner_tiles = []
-               into %x : memref<2x3xf32> -> memref<2x3xf32>
-  %packed = linalg.pack %unpacked outer_dims_perm = [] inner_dims_pos = [] inner_tiles = []
-             into %x : memref<2x3xf32> -> memref<2x3xf32>
-  return %packed : memref<2x3xf32>
+// Test that pack/unpack canonicalization is disabled for memref versions
+// CHECK-LABEL: func.func @pack_unpack_memref_no_canonicalization
+// CHECK: linalg.pack
+// CHECK: linalg.unpack
+// CHECK: return
+func.func @pack_unpack_memref_no_canonicalization(%source: memref<128x256xf32>, %packed: memref<16x8x8x32xf32>, %dest: memref<128x256xf32>) {
+  linalg.pack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %packed : memref<128x256xf32> -> memref<16x8x8x32xf32>
+  linalg.unpack %packed inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %dest : memref<16x8x8x32xf32> -> memref<128x256xf32>
+  return
 }
+
+// -----
+
+// Test that unpack/pack canonicalization is disabled for memref versions
+// CHECK-LABEL: func.func @unpack_pack_memref_no_canonicalization
+// CHECK: linalg.unpack
+// CHECK: linalg.pack
+// CHECK: return
+func.func @unpack_pack_memref_no_canonicalization(%packed: memref<16x8x8x32xf32>, %unpacked: memref<128x256xf32>, %dest: memref<16x8x8x32xf32>) {
+  linalg.unpack %packed inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %unpacked : memref<16x8x8x32xf32> -> memref<128x256xf32>
+  linalg.pack %unpacked inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %dest : memref<128x256xf32> -> memref<16x8x8x32xf32>
+  return
+}
+
+

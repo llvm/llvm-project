@@ -392,7 +392,7 @@ static void printNamedStructuredOp(OpAsmPrinter &p, Operation *op,
 // TODO: Move this to a utility library.
 // The public methods on this class are referenced directly from generated code.
 // Helper build the unary, binary, and type conversion functions defined by the
-// DSL. See LinalgNamedStructuredOps.yamlgen.cpp.inc for the code that uses this
+// DSL. See LinalgNamedStructuredOps.yamlgen.cpp for the code that uses this
 // class.
 //
 // Implementations of the math functions must be polymorphic over numeric types,
@@ -4984,6 +4984,9 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
 }
 
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   // Fold an pack(unpack(x)) to x.
   if (auto unPackOp = packOp.getSource().getDefiningOp<UnPackOp>()) {
     if (unPackOp.getSourceType() != packOp.getDestType())
@@ -5308,6 +5311,9 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
 
 LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
+  if (!unPackOp.hasPureTensorSemantics())
+    return failure();
+
   /// unpack(pack(x)) -> x
   if (PackOp packOp = unPackOp.getSource().getDefiningOp<PackOp>()) {
     if (packOp.getSourceType() != unPackOp.getDestType())
