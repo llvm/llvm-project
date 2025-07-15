@@ -201,6 +201,10 @@ private:
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsNeg(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsNegs(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsNegAbs(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
@@ -217,6 +221,8 @@ private:
   selectSWMMACIndex8(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectSWMMACIndex16(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectSWMMACIndex32(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3OpSelMods(MachineOperand &Root) const;
@@ -410,6 +416,9 @@ private:
   // Returns true if TargetOpcode::G_AND MachineInstr `MI`'s masking of the
   // shift amount operand's `ShAmtBits` bits is unneeded.
   bool isUnneededShiftMask(const MachineInstr &MI, unsigned ShAmtBits) const;
+
+  /// Match an any extend from a 32-bit value to 64-bit.
+  Register matchAnyExtendFromS32(Register Reg) const;
 
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
