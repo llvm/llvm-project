@@ -27,6 +27,19 @@ define i64 @mul_select(i64 %a, i64 %b) {
   ret i64 %select
 }
 
+; (select (icmp x, 0, eq), 0, (mul x, y)) -> (mul x, y)
+define i64 @mul_select_comm(i64 %a, i64 %b) {
+; CHECK-LABEL: @mul_select_comm(
+; CHECK-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[B_FR]], [[A:%.*]]
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+  %cond = icmp eq i64 %a, 0
+  %mul = mul i64 %b, %a
+  %select = select i1 %cond, i64 0, i64 %mul
+  ret i64 %select
+}
+
 ; (select (icmp x, 0, eq), 0, (shl x, y)) -> (shl x, y)
 define i64 @shl_select(i64 %a, i64 %b) {
 ; CHECK-LABEL: @shl_select(
@@ -50,6 +63,19 @@ define i64 @and_select(i64 %a, i64 %b) {
 ;
   %cond = icmp eq i64 %a, 0
   %and = and i64 %a, %b
+  %select = select i1 %cond, i64 0, i64 %and
+  ret i64 %select
+}
+
+; (select (icmp x, 0, eq), 0, (and x, y)) -> (and x, y)
+define i64 @and_select_comm(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_select_comm(
+; CHECK-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[B_FR]], [[A:%.*]]
+; CHECK-NEXT:    ret i64 [[AND]]
+;
+  %cond = icmp eq i64 %a, 0
+  %and = and i64 %b, %a
   %select = select i1 %cond, i64 0, i64 %and
   ret i64 %select
 }
