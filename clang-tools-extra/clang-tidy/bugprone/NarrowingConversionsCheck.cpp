@@ -562,11 +562,10 @@ bool NarrowingConversionsCheck::handleConditionalOperator(
 
 void NarrowingConversionsCheck::handleConditionalOperatorArgument(
     const ASTContext &Context, const Expr &Lhs, const Expr *Arg) {
-  if (const auto *ICE = llvm::dyn_cast<ImplicitCastExpr>(Arg)) {
-    if (!Arg->getIntegerConstantExpr(Context)) {
+  if (const auto *ICE = llvm::dyn_cast<ImplicitCastExpr>(Arg))
+    if (!Arg->getIntegerConstantExpr(Context))
       Arg = ICE->getSubExpr();
-    }
-  }
+
   handleBinaryOperator(Context, Arg->getExprLoc(), Lhs, *Arg);
 }
 
