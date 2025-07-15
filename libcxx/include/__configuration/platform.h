@@ -43,9 +43,14 @@
 #endif
 
 // TODO: Remove this deprecated behavior after LLVM 22 release
-// To build libc++ with picolibc provide RUNTIMES_USE_LIBC=picolibc
-#if __has_include(<picolibc.h>)
+#if __has_include(<picolibc.h>) && !defined(LIBCXX_LIBC_NEWLIB)
 #  define LIBCXX_LIBC_NEWLIB
+
+#  if defined(__clang__) || defined(__GNUC__)
+#    warning "To build libc++ with picolibc provide RUNTIMES_USE_LIBC=picolibc"
+#  else
+#    pragma message("To build libc++ with picolibc provide RUNTIMES_USE_LIBC=picolibc")
+#  endif
 #endif
 
 #ifndef __BYTE_ORDER__
