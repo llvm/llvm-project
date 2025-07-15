@@ -9585,10 +9585,13 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
       };
   auto SaveRangeIfNonEmpty = [&RangeLen, &Ranges, &RangeBegin, &RangeEnd]() {
     // At least one unsafe register is not dead. We do not want to outline at
-    // this point. If it is long enough to outline from, save the range
-    // [RangeBegin, RangeEnd).
-    if (RangeLen > 1)
-      Ranges.push_back(std::make_pair(RangeBegin, RangeEnd));
+    // this point. If it is long enough to outline from and does not cross a
+    // bundle boundary, save the range [RangeBegin, RangeEnd).
+    if (RangeLen <= 1)
+      return;
+    if (RangeBegin->isBundledWithPred())
+      return;
+    Ranges.push_back(std::make_pair(RangeBegin, RangeEnd));
   };
   // Find the first point where all unsafe registers are dead.
   // FIND: <safe instr> <-- end of first potential range
