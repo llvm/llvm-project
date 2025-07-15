@@ -169,6 +169,7 @@ static spirv::ScalarType getIndexType(MLIRContext *ctx,
 // SPIR-V dialect. Keeping it local till the use case arises.
 static std::optional<int64_t>
 getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
+
   if (isa<spirv::ScalarType>(type)) {
     auto bitWidth = type.getIntOrFloatBitWidth();
     // According to the SPIR-V spec:
@@ -180,6 +181,15 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
     if (bitWidth == 1)
       return std::nullopt;
     return bitWidth / 8;
+  }
+
+  // Handle 8-bit floats.
+  if (options.emulateUnsupportedFloatTypes && isa<FloatType>(type)) {
+    auto bitWidth = type.getIntOrFloatBitWidth();
+    if (bitWidth == 8)
+      return bitWidth / 8;
+    else
+      return std::nullopt;
   }
 
   if (auto complexType = dyn_cast<ComplexType>(type)) {
@@ -318,6 +328,67 @@ static Type convertSubByteIntegerType(const SPIRVConversionOptions &options,
                           type.getSignedness());
 }
 
+/// Converts 8-bit float types to integer types with the same bit width.
+/// Returns a nullptr for unsupported 8-bit float types.
+static Type convert8BitFloatType(const SPIRVConversionOptions &options,
+                                 FloatType type) {
+  if (!options.emulateUnsupportedFloatTypes)
+    return nullptr;
+  // F8 types are converted to integer types with the same bit width.
+  if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
+          Float8E8M0FNUType>(type))
+    return IntegerType::get(type.getContext(), type.getWidth());
+  LLVM_DEBUG(llvm::dbgs() << "unsupported 8-bit float type\n");
+  return nullptr;
+}
+
+/// Converts a sub-byte float ``type` to i32 regardless of target environment.
+/// Returns a nullptr for unsupported float types, including non sub-byte
+/// types.
+///
+/// We are treating 8 bit floats as sub-byte types here due to it's similar
+/// nature of being used as a packed format.
+
+/// Note that we don't recognize
+/// sub-byte types in `spirv::ScalarType` and use the above given that these
+/// sub-byte types are not supported at all in SPIR-V; there are no
+/// compute/storage capability for them like other supported integer types.
+
+// static Type convertPackedFLoatType(const SPIRVConversionOptions &options,
+//                                    FloatType type) {
+
+//   // F4, F6, F8 types are converted to integer types with the same bit width.
+
+//   if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType,
+//   Float8E5M2FNUZType,
+//           Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
+//           Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType,
+//           Float8E8M0FNUType>(type))
+//     auto emulatedType = IntegerType::get(type.getContext(), type.getWidth());
+
+//   if (type.getWidth() > 8) {
+//     LLVM_DEBUG(llvm::dbgs() << "not a packed type\n");
+//     return nullptr;
+//   }
+//   if (options.subByteTypeStorage != SPIRVSubByteTypeStorage::Packed) {
+//     LLVM_DEBUG(llvm::dbgs() << "unsupported sub-byte storage kind\n");
+//     return nullptr;
+//   }
+
+//   // if (!llvm::isPowerOf2_32(type.getWidth())) {
+//   //   LLVM_DEBUG(llvm::dbgs()
+//   //              << "unsupported non-power-of-two bitwidth in sub-byte" <<
+//   type
+//   //              << "\n");
+//   //   return nullptr;
+//   // }
+
+//   LLVM_DEBUG(llvm::dbgs() << type << " converted to 32-bit for SPIR-V\n");
+//   return IntegerType::get(type.getContext(), /*width=*/32,
+//                           type.getSignedness());
+// }
+
 /// Returns a type with the same shape but with any index element type converted
 /// to the matching integer type. This is a noop when the element type is not
 /// the index type.
@@ -339,8 +410,20 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
   type = cast<VectorType>(convertIndexElementType(type, options));
   auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
   if (!scalarType) {
-    // If this is not a spec allowed scalar type, try to handle sub-byte integer
-    // types.
+    // If this is not a spec allowed scalar type, there are 2 scenarios,
+    // 8 bit floats or sub-byte integer types. try to handle them accrodingly.
+
+    // Hnadle 8 bit float types.
+    auto floatType = dyn_cast<FloatType>(type.getElementType());
+    if (floatType && floatType.getWidth() == 8) {
+      // If this is an 8 bit float type, try to convert it to a supported
+      // integer type.
+      if (auto convertedType = convert8BitFloatType(options, floatType)) {
+        return VectorType::get(type.getShape(), convertedType);
+      }
+    }
+
+    // Handle sub-byte integer types.
     auto intType = dyn_cast<IntegerType>(type.getElementType());
     if (!intType) {
       LLVM_DEBUG(llvm::dbgs()
@@ -596,6 +679,14 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
   } else if (auto indexType = dyn_cast<IndexType>(elementType)) {
     type = cast<MemRefType>(convertIndexElementType(type, options));
     arrayElemType = type.getElementType();
+  } else if (auto floatType = dyn_cast<FloatType>(elementType)) {
+    // Hnadle 8 bit float types.
+    if (options.emulateUnsupportedFloatTypes && floatType &&
+        floatType.getWidth() == 8) {
+      // If this is an 8 bit float type, try to convert it to a supported
+      // integer type.
+      arrayElemType = convert8BitFloatType(options, floatType);
+    }
   } else {
     LLVM_DEBUG(
         llvm::dbgs()
@@ -1444,6 +1535,8 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
   addConversion([this](FloatType floatType) -> std::optional<Type> {
     if (auto scalarType = dyn_cast<spirv::ScalarType>(floatType))
       return convertScalarType(this->targetEnv, this->options, scalarType);
+    if (floatType.getWidth() == 8)
+      return convert8BitFloatType(this->options, floatType);
     return Type();
   });
 
