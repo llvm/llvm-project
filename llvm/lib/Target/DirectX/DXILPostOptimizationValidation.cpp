@@ -9,10 +9,12 @@
 #include "DXILPostOptimizationValidation.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
@@ -265,12 +267,14 @@ static bool reportOverlappingRanges(Module &M,
   // Helper to map RootParameterType to ResourceClass
   auto ParameterToResourceClass = [](uint32_t Type) -> ResourceClass {
     using namespace dxbc;
-    switch (static_cast<RootParameterType>(Type)) {
-    case RootParameterType::SRV:
+    switch (Type) {
+    case llvm::to_underlying(RootParameterType::Constants32Bit):
+      return ResourceClass::CBuffer;
+    case llvm::to_underlying(RootParameterType::SRV):
       return ResourceClass::SRV;
-    case RootParameterType::UAV:
+    case llvm::to_underlying(RootParameterType::UAV):
       return ResourceClass::UAV;
-    case RootParameterType::CBV:
+    case llvm::to_underlying(RootParameterType::CBV):
       return ResourceClass::CBuffer;
     default:
       llvm_unreachable("Unknown RootParameterType");
@@ -282,6 +286,20 @@ static bool reportOverlappingRanges(Module &M,
         RSD.ParametersContainer.getTypeAndLocForParameter(I);
     const auto &Header = RSD.ParametersContainer.getHeader(I);
     switch (Type) {
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+      dxbc::RTS0::v1::RootConstants Const =
+          RSD.ParametersContainer.getConstant(Loc);
+
+      RangeInfo Info;
+      Info.Space = Const.RegisterSpace;
+      Info.LowerBound = Const.ShaderRegister;
+      Info.UpperBound = Info.LowerBound;
+      Info.Class = ParameterToResourceClass(Type);
+      Info.Visibility = (dxbc::ShaderVisibility)Header.ShaderVisibility;
+
+      Infos.push_back(Info);
+      break;
+    }
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
     case llvm::to_underlying(dxbc::RootParameterType::CBV): {
