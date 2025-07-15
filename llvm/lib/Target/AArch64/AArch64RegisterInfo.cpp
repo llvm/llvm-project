@@ -441,7 +441,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, AArch64::WSP);
   markSuperRegs(Reserved, AArch64::WZR);
 
-  if (TFI->hasFP(MF) || TT.isOSDarwin())
+  if (TFI->isFPReserved(MF))
     markSuperRegs(Reserved, AArch64::W29);
 
   if (MF.getSubtarget<AArch64Subtarget>().isWindowsArm64EC()) {
@@ -1218,7 +1218,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       //   is valid but { z1, z2, z3, z5 } is not.
       // * One or more of the registers used by FORM_TRANSPOSED_X4 is already
       //   assigned a physical register, which means only checking that a
-      //   consectutive range of free tuple registers exists which includes
+      //   consecutive range of free tuple registers exists which includes
       //   the assigned register.
       //   e.g. in the example above, if { z0, z8 } is already allocated for
       //   %v0, we just need to ensure that { z1, z9 }, { z2, z10 } and
@@ -1369,4 +1369,9 @@ bool AArch64RegisterInfo::shouldCoalesce(
 bool AArch64RegisterInfo::shouldAnalyzePhysregInMachineLoopInfo(
     MCRegister R) const {
   return R == AArch64::VG;
+}
+
+bool AArch64RegisterInfo::isIgnoredCVReg(MCRegister LLVMReg) const {
+  return (LLVMReg >= AArch64::Z0 && LLVMReg <= AArch64::Z31) ||
+         (LLVMReg >= AArch64::P0 && LLVMReg <= AArch64::P15);
 }

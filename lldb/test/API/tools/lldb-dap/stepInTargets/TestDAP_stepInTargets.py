@@ -89,9 +89,8 @@ class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(breakpoint_ids), len(bp_lines), "expect correct number of breakpoints"
         )
-        is_supported = self.dap_server.get_initialize_value(
-            "supportsStepInTargetsRequest"
-        )
+        self.continue_to_breakpoints(breakpoint_ids)
+        is_supported = self.dap_server.get_capability("supportsStepInTargetsRequest")
 
         self.assertEqual(
             is_supported,
@@ -112,9 +111,14 @@ class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(breakpoint_ids), len(bp_lines), "expect correct number of breakpoints"
         )
-        is_supported = self.dap_server.get_initialize_value(
-            "supportsStepInTargetsRequest"
-        )
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        try:
+            is_supported = self.dap_server.get_capability(
+                "supportsStepInTargetsRequest"
+            )
+        except dap_server.NotSupportedError:
+            is_supported = False
 
         self.assertEqual(
             is_supported,

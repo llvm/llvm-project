@@ -6,7 +6,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.20.0)
 
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-  project(CompilerRTBuiltins C ASM)
+  project(CompilerRTBuiltins C CXX ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
   set(COMPILER_RT_BUILTINS_STANDALONE_BUILD TRUE)
 
@@ -63,6 +63,8 @@ include(CMakePushCheckState)
 
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
+
+include_directories(../../../third-party/siphash/include)
 
 # TODO: Need to add a mechanism for logging errors when builtin source files are
 # added to a sub-directory and not this CMakeLists file.
@@ -589,6 +591,7 @@ set(aarch64_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
   cpu_model/aarch64.c
+  aarch64/emupac.cpp
   aarch64/fp_mode.c
 )
 
@@ -600,6 +603,7 @@ if (COMPILER_RT_HAS_AARCH64_SME)
     set_source_files_properties(aarch64/arm_apple_sme_abi.s PROPERTIES COMPILE_FLAGS -march=armv8a+sme)
     message(STATUS "AArch64 Apple SME ABI routines enabled")
   elseif (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR)
+    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-assert.c)
     if(COMPILER_RT_HAS_ARM_UNALIGNED AND COMPILER_RT_HAS_ARM_FP)
       list(APPEND aarch64_SOURCES aarch64/sme-libc-opt-memset-memchr.S aarch64/sme-libc-opt-memcpy-memmove.S)
     elseif(COMPILER_RT_HAS_ARM_UNALIGNED)
@@ -835,7 +839,7 @@ else ()
     append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full BUILTIN_CFLAGS)
   endif()
 
-  append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ BUILTIN_CFLAGS)
   append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
 
   # Don't embed directives for picking any specific CRT
@@ -883,7 +887,11 @@ else ()
   if(COMPILER_RT_DISABLE_AARCH64_FMV)
     list(APPEND BUILTIN_DEFS DISABLE_AARCH64_FMV)
   elseif(COMPILER_RT_BAREMETAL_BUILD)
-    list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
+    foreach (arch ${BUILTIN_SUPPORTED_ARCH})
+      if("${arch}" MATCHES "arm64|aarch64")
+        list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
+      endif()
+    endforeach ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE HAS_ASM_LSE BUILTIN_DEFS)
@@ -953,6 +961,8 @@ else ()
                               SOURCES ${${arch}_SOURCES}
                               DEFS ${BUILTIN_DEFS}
                               CFLAGS ${BUILTIN_CFLAGS_${arch}}
+                              C_STANDARD 11
+                              CXX_STANDARD 17
                               PARENT_TARGET builtins)
       cmake_pop_check_state()
     endif ()

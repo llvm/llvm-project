@@ -101,8 +101,6 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
-LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace {
 
 enum {
@@ -2246,6 +2244,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoExt;
   case bitc::ATTR_KIND_CAPTURES:
     return Attribute::Captures;
+  case bitc::ATTR_KIND_DEAD_ON_RETURN:
+    return Attribute::DeadOnReturn;
   }
 }
 
@@ -4481,10 +4481,6 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // In preparation for the deletion of debug-intrinsics, don't allow module
-  // loading to escape intrinsics being autoupgraded to debug records.
-  TheModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
-
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
     if (Error JumpFailed = Stream.JumpToBit(ResumeBit))
@@ -4701,7 +4697,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");
-      TheModule->setTargetTriple(Triple(S));
+      TheModule->setTargetTriple(Triple(std::move(S)));
       break;
     }
     case bitc::MODULE_CODE_DATALAYOUT: {  // DATALAYOUT: [strchr x N]
@@ -5088,7 +5084,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
       unsigned Line = Record[0], Col = Record[1];
       unsigned ScopeID = Record[2], IAID = Record[3];
-      bool isImplicitCode = Record.size() == 5 && Record[4];
+      bool isImplicitCode = Record.size() >= 5 && Record[4];
+      uint64_t AtomGroup = Record.size() == 7 ? Record[5] : 0;
+      uint8_t AtomRank = Record.size() == 7 ? Record[6] : 0;
 
       MDNode *Scope = nullptr, *IA = nullptr;
       if (ScopeID) {
@@ -5103,8 +5101,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         if (!IA)
           return error("Invalid record");
       }
+
       LastLoc = DILocation::get(Scope->getContext(), Line, Col, Scope, IA,
-                                isImplicitCode);
+                                isImplicitCode, AtomGroup, AtomRank);
       I->setDebugLoc(LastLoc);
       I = nullptr;
       continue;
@@ -6996,10 +6995,6 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (Error JumpFailed = Stream.JumpToBit(DFII->second))
     return JumpFailed;
 
-  // Regardless of the debug info format we want to end up in, we need
-  // IsNewDbgInfoFormat=true to construct any debug records seen in the bitcode.
-  F->IsNewDbgInfoFormat = true;
-
   if (Error Err = parseFunctionBody(F))
     return Err;
   F->setIsMaterializable(false);
@@ -7041,7 +7036,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         MDString *MDS = cast<MDString>(MD->getOperand(0));
         StringRef ProfName = MDS->getString();
         // Check consistency of !prof branch_weights metadata.
-        if (ProfName != "branch_weights")
+        if (ProfName != MDProfLabels::BranchWeights)
           continue;
         unsigned ExpectedNumOperands = 0;
         if (BranchInst *BI = dyn_cast<BranchInst>(&I))
@@ -7521,11 +7516,9 @@ std::vector<FunctionSummary::ParamAccess>
 ModuleSummaryIndexBitcodeReader::parseParamAccesses(ArrayRef<uint64_t> Record) {
   auto ReadRange = [&]() {
     APInt Lower(FunctionSummary::ParamAccess::RangeWidth,
-                BitcodeReader::decodeSignRotatedValue(Record.front()));
-    Record = Record.drop_front();
+                BitcodeReader::decodeSignRotatedValue(Record.consume_front()));
     APInt Upper(FunctionSummary::ParamAccess::RangeWidth,
-                BitcodeReader::decodeSignRotatedValue(Record.front()));
-    Record = Record.drop_front();
+                BitcodeReader::decodeSignRotatedValue(Record.consume_front()));
     ConstantRange Range{Lower, Upper};
     assert(!Range.isFullSet());
     assert(!Range.isUpperSignWrapped());
@@ -7536,16 +7529,13 @@ ModuleSummaryIndexBitcodeReader::parseParamAccesses(ArrayRef<uint64_t> Record) {
   while (!Record.empty()) {
     PendingParamAccesses.emplace_back();
     FunctionSummary::ParamAccess &ParamAccess = PendingParamAccesses.back();
-    ParamAccess.ParamNo = Record.front();
-    Record = Record.drop_front();
+    ParamAccess.ParamNo = Record.consume_front();
     ParamAccess.Use = ReadRange();
-    ParamAccess.Calls.resize(Record.front());
-    Record = Record.drop_front();
+    ParamAccess.Calls.resize(Record.consume_front());
     for (auto &Call : ParamAccess.Calls) {
-      Call.ParamNo = Record.front();
-      Record = Record.drop_front();
-      Call.Callee = std::get<0>(getValueInfoFromValueId(Record.front()));
-      Record = Record.drop_front();
+      Call.ParamNo = Record.consume_front();
+      Call.Callee =
+          std::get<0>(getValueInfoFromValueId(Record.consume_front()));
       Call.Offsets = ReadRange();
     }
   }
@@ -8164,6 +8154,14 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ContextSizes.reserve(NumContextSizeInfoEntries);
           for (unsigned J = 0; J < NumContextSizeInfoEntries; J++) {
             assert(ContextIdIndex < PendingContextIds.size());
+            // Skip any 0 entries for MIBs without the context size info.
+            if (PendingContextIds[ContextIdIndex] == 0) {
+              // The size should also be 0 if the context was 0.
+              assert(!Record[I]);
+              ContextIdIndex++;
+              I++;
+              continue;
+            }
             // PendingContextIds read from the preceding FS_ALLOC_CONTEXT_IDS
             // should be in the same order as the total sizes.
             ContextSizes.push_back(

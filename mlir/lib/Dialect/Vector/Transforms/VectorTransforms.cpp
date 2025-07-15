@@ -1088,6 +1088,12 @@ public:
     if (!llvm::all_equal(eltwise->getOperandTypes()))
       return rewriter.notifyMatchFailure(op, "operand types are different");
 
+    // Dynamic position can cause dominance issues, so conservatively fail for
+    // now.
+    if (!op.getDynamicPosition().empty())
+      return rewriter.notifyMatchFailure(
+          op, "dynamic position not yet implemented");
+
     Type dstType = op.getType();
 
     OpBuilder::InsertionGuard g(rewriter);
@@ -2266,11 +2272,6 @@ void mlir::vector::populateVectorMaskMaterializationPatterns(
 
 void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  // TODO: Consider either:
-  //  * including DropInnerMostUnitDimsTransferRead and
-  //    DropInnerMostUnitDimsTransferWrite, or
-  //  * better naming to distinguish this and
-  //    populateVectorTransferCollapseInnerMostContiguousDimsPatterns.
   patterns.add<DropUnitDimFromElementwiseOps, DropUnitDimsFromScfForOp,
                DropUnitDimsFromTransposeOp>(patterns.getContext(), benefit);
 }
@@ -2305,9 +2306,8 @@ void mlir::vector::populateVectorReductionToContractPatterns(
       patterns.getContext(), benefit);
 }
 
-void mlir::vector::
-    populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
-        RewritePatternSet &patterns, PatternBenefit benefit) {
+void mlir::vector::populateDropInnerMostUnitDimsXferOpPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<DropInnerMostUnitDimsTransferRead,
                DropInnerMostUnitDimsTransferWrite>(patterns.getContext(),
                                                    benefit);

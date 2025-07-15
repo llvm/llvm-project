@@ -2350,6 +2350,10 @@ _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_is_first_lane)
 __attribute__((convergent)) bool WaveIsFirstLane();
 
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_count)
+__attribute__((convergent)) uint WaveGetLaneCount();
+
 //===----------------------------------------------------------------------===//
 // WaveReadLaneAt builtins
 //===----------------------------------------------------------------------===//

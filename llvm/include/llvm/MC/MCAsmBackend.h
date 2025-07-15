@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
 
@@ -27,19 +28,36 @@ class MCSymbol;
 class MCAssembler;
 class MCContext;
 struct MCDwarfFrameInfo;
-struct MCFixupKindInfo;
 class MCInst;
 class MCObjectStreamer;
 class MCObjectTargetWriter;
 class MCObjectWriter;
+class MCOperand;
 class MCSubtargetInfo;
 class MCValue;
 class raw_pwrite_stream;
 class StringRef;
 class raw_ostream;
 
+/// Target independent information on a fixup kind.
+struct MCFixupKindInfo {
+  /// A target specific name for the fixup kind. The names will be unique for
+  /// distinct kinds on any given target.
+  const char *Name;
+
+  /// The bit offset to write the relocation into.
+  uint8_t TargetOffset;
+
+  /// The number of bits written by this fixup. The bits are assumed to be
+  /// contiguous.
+  uint8_t TargetSize;
+
+  /// Flags describing additional information on this fixup kind.
+  unsigned Flags;
+};
+
 /// Generic interface to target specific assembler backends.
-class MCAsmBackend {
+class LLVM_ABI MCAsmBackend {
 protected: // Can only create subclasses.
   MCAsmBackend(llvm::endianness Endian) : Endian(Endian) {}
 
@@ -90,11 +108,6 @@ public:
   /// Get information on a fixup kind.
   virtual MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const;
 
-  // Hook used by the default `addReloc` to check if a relocation is needed.
-  virtual bool shouldForceRelocation(const MCFixup &, const MCValue &) {
-    return false;
-  }
-
   /// Hook to check if extra nop bytes must be inserted for alignment directive.
   /// For some targets this may be necessary in order to support linker
   /// relaxation. The number of bytes to insert are returned in Size.
@@ -110,14 +123,18 @@ public:
     return false;
   }
 
-  virtual bool evaluateTargetFixup(const MCFixup &Fixup, const MCValue &Target,
-                                   uint64_t &Value) {
-    llvm_unreachable("Need to implement hook if target has custom fixups");
+  // Evaluate a fixup, returning std::nullopt to use default handling for
+  // `Value` and `IsResolved`. Otherwise, returns `IsResolved` with the
+  // expectation that the hook updates `Value`.
+  virtual std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &,
+                                            MCValue &, uint64_t &) {
+    return {};
   }
 
-  virtual bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
-                        uint64_t &FixedValue, bool IsResolved);
+  void maybeAddReloc(const MCFragment &, const MCFixup &, const MCValue &,
+                     uint64_t &Value, bool IsResolved);
 
+  /// Determine if a relocation is required. In addition,
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be
@@ -131,12 +148,9 @@ public:
   /// \name Target Relaxation Interfaces
   /// @{
 
-  /// Check whether the given instruction may need relaxation.
-  ///
-  /// \param Inst - The instruction to test.
-  /// \param STI - The MCSubtargetInfo in effect when the instruction was
-  /// encoded.
-  virtual bool mayNeedRelaxation(const MCInst &Inst,
+  /// Check whether the given instruction (encoded as Opcode+Operands) may need
+  /// relaxation.
+  virtual bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                                  const MCSubtargetInfo &STI) const {
     return false;
   }
@@ -158,7 +172,11 @@ public:
   /// instruction.
   /// \param STI the subtarget information for the associated instruction.
   virtual void relaxInstruction(MCInst &Inst,
-                                const MCSubtargetInfo &STI) const {};
+                                const MCSubtargetInfo &STI) const {
+    llvm_unreachable(
+        "Needed if fixupNeedsRelaxation/fixupNeedsRelaxationAdvanced may "
+        "return true");
+  }
 
   // Defined by linker relaxation targets.
   virtual bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,

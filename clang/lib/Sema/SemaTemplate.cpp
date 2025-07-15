@@ -1773,9 +1773,9 @@ Sema::ActOnTemplateParameterList(unsigned Depth,
   for (NamedDecl *P : Params)
     warnOnReservedIdentifier(P);
 
-  return TemplateParameterList::Create(
-      Context, TemplateLoc, LAngleLoc,
-      llvm::ArrayRef(Params.data(), Params.size()), RAngleLoc, RequiresClause);
+  return TemplateParameterList::Create(Context, TemplateLoc, LAngleLoc,
+                                       llvm::ArrayRef(Params), RAngleLoc,
+                                       RequiresClause);
 }
 
 static void SetNestedNameSpecifier(Sema &S, TagDecl *T,
@@ -4749,6 +4749,8 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   EnterExpressionEvaluationContext EECtx{
       *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
+  ContextRAII CurContext(*this, CSD->getDeclContext(),
+                         /*NewThisContext=*/false);
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(
           NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
@@ -8966,8 +8968,10 @@ Sema::ActOnFinishConceptDefinition(Scope *S, ConceptDecl *C,
                                    Expr *ConstraintExpr,
                                    const ParsedAttributesView &Attrs) {
   assert(!C->hasDefinition() && "Concept already defined");
-  if (DiagnoseUnexpandedParameterPack(ConstraintExpr))
+  if (DiagnoseUnexpandedParameterPack(ConstraintExpr)) {
+    C->setInvalidDecl();
     return nullptr;
+  }
   C->setDefinition(ConstraintExpr);
   ProcessDeclAttributeList(S, C, Attrs);
 

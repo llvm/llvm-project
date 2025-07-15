@@ -22,6 +22,8 @@
 #include "lldb/lldb-private-types.h"
 #include "lldb/lldb-types.h"
 
+#include "llvm/Support/Error.h"
+
 #include <cstddef>
 #include <cstdint>
 
@@ -32,6 +34,38 @@ class RegisterValue;
 class Stream;
 class Target;
 class UnwindPlan;
+class EmulateInstruction;
+
+using BreakpointLocations = std::vector<lldb::addr_t>;
+
+class SingleStepBreakpointLocationsPredictor {
+public:
+  SingleStepBreakpointLocationsPredictor(
+      std::unique_ptr<EmulateInstruction> emulator_up)
+      : m_emulator_up{std::move(emulator_up)} {}
+
+  virtual BreakpointLocations GetBreakpointLocations(Status &status);
+
+  virtual llvm::Expected<unsigned>
+  GetBreakpointSize([[maybe_unused]] lldb::addr_t bp_addr) {
+    return 4;
+  }
+
+  virtual ~SingleStepBreakpointLocationsPredictor() = default;
+
+protected:
+  // This function retrieves the address of the next instruction as it appears
+  // in the binary file. Essentially, it reads the value of the PC register,
+  // determines the size of the current instruction (where the PC is pointing),
+  // and returns the sum of these two values.
+  lldb::addr_t GetNextInstructionAddress(Status &error);
+
+  lldb::addr_t GetBreakpointLocationAddress(lldb::addr_t entry_pc,
+                                            Status &error);
+
+  std::unique_ptr<EmulateInstruction> m_emulator_up;
+  bool m_emulation_result = false;
+};
 
 /// \class EmulateInstruction EmulateInstruction.h
 /// "lldb/Core/EmulateInstruction.h"
@@ -497,7 +531,19 @@ public:
   static uint32_t GetInternalRegisterNumber(RegisterContext *reg_ctx,
                                             const RegisterInfo &reg_info);
 
+  static std::unique_ptr<SingleStepBreakpointLocationsPredictor>
+  CreateBreakpointLocationPredictor(
+      std::unique_ptr<EmulateInstruction> emulator_up);
+
+  // Helper functions
+  std::optional<lldb::addr_t> ReadPC();
+  bool WritePC(lldb::addr_t addr);
+
 protected:
+  using BreakpointLocationsPredictorCreator =
+      std::function<std::unique_ptr<SingleStepBreakpointLocationsPredictor>(
+          std::unique_ptr<EmulateInstruction>)>;
+
   ArchSpec m_arch;
   void *m_baton = nullptr;
   ReadMemoryCallback m_read_mem_callback = &ReadMemoryDefault;
@@ -508,6 +554,21 @@ protected:
   Opcode m_opcode;
 
 private:
+  virtual BreakpointLocationsPredictorCreator
+  GetSingleStepBreakpointLocationsPredictorCreator() {
+    if (!m_arch.IsMIPS() && !m_arch.GetTriple().isPPC64() &&
+        !m_arch.GetTriple().isLoongArch()) {
+      // Unsupported architecture
+      return [](std::unique_ptr<EmulateInstruction> emulator_up) {
+        return nullptr;
+      };
+    }
+    return [](std::unique_ptr<EmulateInstruction> emulator_up) {
+      return std::make_unique<SingleStepBreakpointLocationsPredictor>(
+          std::move(emulator_up));
+    };
+  }
+
   // For EmulateInstruction only
   EmulateInstruction(const EmulateInstruction &) = delete;
   const EmulateInstruction &operator=(const EmulateInstruction &) = delete;

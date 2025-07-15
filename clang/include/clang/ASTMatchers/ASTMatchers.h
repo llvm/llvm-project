@@ -55,6 +55,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -1362,6 +1363,26 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, CXXDeductionGuideDecl>
 /// \endcode
 extern const internal::VariadicDynCastAllOfMatcher<Decl, ConceptDecl>
     conceptDecl;
+
+/// Matches concept requirement.
+///
+/// Example matches 'requires(T p) { *p; }'
+/// \code
+///   template<typename T>
+///   concept dereferencable = requires(T p) { *p; }
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Expr, RequiresExpr>
+    requiresExpr;
+
+/// Matches concept requirement body declaration.
+///
+/// Example matches '{ *p; }'
+/// \code
+///   template<typename T>
+///   concept dereferencable = requires(T p) { *p; }
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Decl, RequiresExprBodyDecl>
+    requiresExprBodyDecl;
 
 /// Matches variable declarations.
 ///
@@ -6519,11 +6540,11 @@ AST_POLYMORPHIC_MATCHER(
 /// Given
 /// \code
 ///   void a(int);
-///   void b(long);
+///   void b(unsigned long);
 ///   void c(double);
 /// \endcode
 /// functionDecl(hasAnyParameter(hasType(isInteger())))
-/// matches "a(int)", "b(long)", but not "c(double)".
+/// matches "a(int)", "b(unsigned long)", but not "c(double)".
 AST_MATCHER(QualType, isInteger) {
     return Node->isIntegerType();
 }

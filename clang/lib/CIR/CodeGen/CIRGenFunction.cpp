@@ -16,6 +16,7 @@
 #include "CIRGenCall.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -461,21 +462,23 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
-    if (isa<CXXDestructorDecl>(funcDecl))
-      getCIRGenModule().errorNYI(bodyRange, "C++ destructor definition");
-    else if (isa<CXXConstructorDecl>(funcDecl))
-      getCIRGenModule().errorNYI(bodyRange, "C++ constructor definition");
-    else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
-             funcDecl->hasAttr<CUDAGlobalAttr>())
+    if (isa<CXXDestructorDecl>(funcDecl)) {
+      emitDestructorBody(args);
+    } else if (isa<CXXConstructorDecl>(funcDecl)) {
+      emitConstructorBody(args);
+    } else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
+               funcDecl->hasAttr<CUDAGlobalAttr>()) {
       getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
-    else if (isa<CXXMethodDecl>(funcDecl) &&
-             cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker())
+    } else if (isa<CXXMethodDecl>(funcDecl) &&
+               cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker()) {
       getCIRGenModule().errorNYI(bodyRange, "Lambda static invoker");
-    else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
-             (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
-              cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator()))
-      getCIRGenModule().errorNYI(bodyRange, "Default assignment operator");
-    else if (body) {
+    } else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
+               (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
+                cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator())) {
+      // Implicit copy-assignment gets the same special treatment as implicit
+      // copy-constructors.
+      emitImplicitAssignmentOperatorBody(args);
+    } else if (body) {
       if (mlir::failed(emitFunctionBody(body))) {
         fn.erase();
         return nullptr;
@@ -495,6 +498,138 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   return fn;
 }
 
+void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
+  assert(!cir::MissingFeatures::sanitizers());
+  const auto *ctor = cast<CXXConstructorDecl>(curGD.getDecl());
+  CXXCtorType ctorType = curGD.getCtorType();
+
+  assert((cgm.getTarget().getCXXABI().hasConstructorVariants() ||
+          ctorType == Ctor_Complete) &&
+         "can only generate complete ctor for this ABI");
+
+  if (ctorType == Ctor_Complete && isConstructorDelegationValid(ctor) &&
+      cgm.getTarget().getCXXABI().hasConstructorVariants()) {
+    emitDelegateCXXConstructorCall(ctor, Ctor_Base, args, ctor->getEndLoc());
+    return;
+  }
+
+  const FunctionDecl *definition = nullptr;
+  Stmt *body = ctor->getBody(definition);
+  assert(definition == ctor && "emitting wrong constructor body");
+
+  if (isa_and_nonnull<CXXTryStmt>(body)) {
+    cgm.errorNYI(ctor->getSourceRange(), "emitConstructorBody: try body");
+    return;
+  }
+
+  assert(!cir::MissingFeatures::incrementProfileCounter());
+  assert(!cir::MissingFeatures::runCleanupsScope());
+
+  // TODO: in restricted cases, we can emit the vbase initializers of a
+  // complete ctor and then delegate to the base ctor.
+
+  // Emit the constructor prologue, i.e. the base and member initializers.
+  emitCtorPrologue(ctor, ctorType, args);
+
+  // TODO(cir): propagate this result via mlir::logical result. Just unreachable
+  // now just to have it handled.
+  if (mlir::failed(emitStmt(body, true))) {
+    cgm.errorNYI(ctor->getSourceRange(),
+                 "emitConstructorBody: emit body statement failed.");
+    return;
+  }
+}
+
+/// Emits the body of the current destructor.
+void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
+  const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(curGD.getDecl());
+  CXXDtorType dtorType = curGD.getDtorType();
+
+  // For an abstract class, non-base destructors are never used (and can't
+  // be emitted in general, because vbase dtors may not have been validated
+  // by Sema), but the Itanium ABI doesn't make them optional and Clang may
+  // in fact emit references to them from other compilations, so emit them
+  // as functions containing a trap instruction.
+  if (dtorType != Dtor_Base && dtor->getParent()->isAbstract()) {
+    cgm.errorNYI(dtor->getSourceRange(), "abstract base class destructors");
+    return;
+  }
+
+  Stmt *body = dtor->getBody();
+  assert(body && !cir::MissingFeatures::incrementProfileCounter());
+
+  // The call to operator delete in a deleting destructor happens
+  // outside of the function-try-block, which means it's always
+  // possible to delegate the destructor body to the complete
+  // destructor.  Do so.
+  if (dtorType == Dtor_Deleting) {
+    cgm.errorNYI(dtor->getSourceRange(), "deleting destructor");
+    return;
+  }
+
+  // If the body is a function-try-block, enter the try before
+  // anything else.
+  const bool isTryBody = isa_and_nonnull<CXXTryStmt>(body);
+  if (isTryBody)
+    cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
+
+  assert(!cir::MissingFeatures::sanitizers());
+  assert(!cir::MissingFeatures::dtorCleanups());
+
+  // If this is the complete variant, just invoke the base variant;
+  // the epilogue will destruct the virtual bases.  But we can't do
+  // this optimization if the body is a function-try-block, because
+  // we'd introduce *two* handler blocks.  In the Microsoft ABI, we
+  // always delegate because we might not have a definition in this TU.
+  switch (dtorType) {
+  case Dtor_Comdat:
+    llvm_unreachable("not expecting a COMDAT");
+  case Dtor_Deleting:
+    llvm_unreachable("already handled deleting case");
+
+  case Dtor_Complete:
+    assert((body || getTarget().getCXXABI().isMicrosoft()) &&
+           "can't emit a dtor without a body for non-Microsoft ABIs");
+
+    assert(!cir::MissingFeatures::dtorCleanups());
+
+    // TODO(cir): A complete destructor is supposed to call the base destructor.
+    // Since we have to emit both dtor kinds we just fall through for now and.
+    // As long as we don't support virtual bases this should be functionally
+    // equivalent.
+    assert(!cir::MissingFeatures::completeDtors());
+
+    // Fallthrough: act like we're in the base variant.
+    [[fallthrough]];
+
+  case Dtor_Base:
+    assert(body);
+
+    assert(!cir::MissingFeatures::dtorCleanups());
+    assert(!cir::MissingFeatures::vtableInitialization());
+
+    if (isTryBody) {
+      cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
+    } else if (body) {
+      (void)emitStmt(body, /*useCurrentScope=*/true);
+    } else {
+      assert(dtor->isImplicit() && "bodyless dtor not implicit");
+      // nothing to do besides what's in the epilogue
+    }
+    // -fapple-kext must inline any call to this dtor into
+    // the caller's body.
+    assert(!cir::MissingFeatures::appleKext());
+
+    break;
+  }
+
+  assert(!cir::MissingFeatures::dtorCleanups());
+
+  // Exit the try if applicable.
+  if (isTryBody)
+    cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
+}
+
 /// Given a value of type T* that may not be to a complete object, construct
 /// an l-vlaue withi the natural pointee alignment of T.
 LValue CIRGenFunction::makeNaturalAlignPointeeAddrLValue(mlir::Value val,
@@ -505,6 +640,15 @@ LValue CIRGenFunction::makeNaturalAlignPointeeAddrLValue(mlir::Value val,
   assert(!cir::MissingFeatures::opTBAA());
   CharUnits align = cgm.getNaturalTypeAlignment(ty, &baseInfo);
   return makeAddrLValue(Address(val, align), ty, baseInfo);
+}
+
+LValue CIRGenFunction::makeNaturalAlignAddrLValue(mlir::Value val,
+                                                  QualType ty) {
+  LValueBaseInfo baseInfo;
+  CharUnits alignment = cgm.getNaturalTypeAlignment(ty, &baseInfo);
+  Address addr(val, convertTypeForMem(ty), alignment);
+  assert(!cir::MissingFeatures::opTBAA());
+  return makeAddrLValue(addr, ty, baseInfo);
 }
 
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
@@ -521,16 +665,16 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
     cgm.getCXXABI().buildThisParam(*this, args);
   }
 
-  if (isa<CXXConstructorDecl>(fd))
-    cgm.errorNYI(fd->getSourceRange(),
-                 "buildFunctionArgList: CXXConstructorDecl");
+  if (const auto *cd = dyn_cast<CXXConstructorDecl>(fd))
+    if (cd->getInheritedConstructor())
+      cgm.errorNYI(fd->getSourceRange(),
+                   "buildFunctionArgList: inherited constructor");
 
   for (auto *param : fd->parameters())
     args.push_back(param);
 
   if (md && (isa<CXXConstructorDecl>(md) || isa<CXXDestructorDecl>(md)))
-    cgm.errorNYI(fd->getSourceRange(),
-                 "buildFunctionArgList: implicit structor params");
+    assert(!cir::MissingFeatures::cxxabiStructorImplicitParam());
 
   return retTy;
 }
@@ -586,6 +730,17 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   }
 }
 
+static std::string getVersionedTmpName(llvm::StringRef name, unsigned cnt) {
+  SmallString<256> buffer;
+  llvm::raw_svector_ostream out(buffer);
+  out << name << cnt;
+  return std::string(out.str());
+}
+
+std::string CIRGenFunction::getCounterAggTmpAsString() {
+  return getVersionedTmpName("agg.tmp", counterAggTmp++);
+}
+
 void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
                                             QualType ty) {
   // Ignore empty classes in C++.
@@ -627,6 +782,27 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
   const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
   builder.createStore(loc, zeroValue, destPtr);
+}
+
+// TODO(cir): should be shared with LLVM codegen.
+bool CIRGenFunction::shouldNullCheckClassCastValue(const CastExpr *ce) {
+  const Expr *e = ce->getSubExpr();
+
+  if (ce->getCastKind() == CK_UncheckedDerivedToBase)
+    return false;
+
+  if (isa<CXXThisExpr>(e->IgnoreParens())) {
+    // We always assume that 'this' is never null.
+    return false;
+  }
+
+  if (const ImplicitCastExpr *ice = dyn_cast<ImplicitCastExpr>(ce)) {
+    // And that glvalue casts are never null.
+    if (ice->isGLValue())
+      return false;
+  }
+
+  return true;
 }
 
 } // namespace clang::CIRGen

@@ -267,6 +267,7 @@ struct AccEndCombinedDirective;
 struct OpenACCDeclarativeConstruct;
 struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
+struct OpenMPLoopConstruct;
 struct OpenMPDeclarativeConstruct;
 struct OmpEndLoopDirective;
 struct OmpMemoryOrderClause;
@@ -3480,6 +3481,9 @@ struct OmpDirectiveName {
   // This allows "construct<OmpDirectiveName>(Verbatim("<name>"))".
   OmpDirectiveName(const Verbatim &name);
   using WrapperTrait = std::true_type;
+
+  bool IsExecutionPart() const; // Is allowed in the execution part
+
   CharBlock source;
   llvm::omp::Directive v{llvm::omp::Directive::OMPD_unknown};
 };
@@ -4300,6 +4304,12 @@ struct OmpHoldsClause {
   WRAPPER_CLASS_BOILERPLATE(OmpHoldsClause, common::Indirection<Expr>);
 };
 
+// Ref: [5.2: 209]
+struct OmpIndirectClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpIndirectClause, std::optional<ScalarLogicalExpr>);
+};
+
 // Ref: [5.2:72-73], in 4.5-5.1 it's scattered over individual directives
 // that allow the IF clause.
 //
@@ -4591,8 +4601,11 @@ struct OmpClauseList {
 struct OmpDirectiveSpecification {
   ENUM_CLASS(Flags, None, DeprecatedSyntax);
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
+  const OmpDirectiveName &DirName() const {
+    return std::get<OmpDirectiveName>(t);
+  }
   llvm::omp::Directive DirId() const { //
-    return std::get<OmpDirectiveName>(t).v;
+    return DirName().v;
   }
   const OmpArgumentList &Arguments() const;
   const OmpClauseList &Clauses() const;
@@ -4605,7 +4618,7 @@ struct OmpDirectiveSpecification {
 
 struct OmpMetadirectiveDirective {
   TUPLE_CLASS_BOILERPLATE(OmpMetadirectiveDirective);
-  std::tuple<OmpClauseList> t;
+  std::tuple<Verbatim, OmpClauseList> t;
   CharBlock source;
 };
 
@@ -4832,17 +4845,17 @@ struct OpenMPExecutableAllocate {
       t;
 };
 
-EMPTY_CLASS(OmpEndAllocators);
-
-// 6.7 Allocators construct [OpenMP 5.2]
-//     allocators-construct -> ALLOCATORS [allocate-clause [,]]
-//                                allocate-stmt
-//                             [omp-end-allocators-construct]
+// Ref: [5.2:180-181], [6.0:315]
+//
+// allocators-construct ->
+//    ALLOCATORS [allocate-clause...]
+//    block
+//    [END ALLOCATORS]
 struct OpenMPAllocatorsConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPAllocatorsConstruct);
   CharBlock source;
-  std::tuple<Verbatim, OmpClauseList, Statement<AllocateStmt>,
-      std::optional<OmpEndAllocators>>
+  std::tuple<OmpDirectiveSpecification, Block,
+      std::optional<OmpDirectiveSpecification>>
       t;
 };
 
@@ -4857,94 +4870,37 @@ struct OmpMemoryOrderClause {
   CharBlock source;
 };
 
-// 2.17.7 Atomic construct
-//        atomic-clause -> memory-order-clause | HINT(hint-expression) |
-//        FAIL(memory-order)
-struct OmpAtomicClause {
-  UNION_CLASS_BOILERPLATE(OmpAtomicClause);
-  CharBlock source;
-  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpHintClause> u;
-};
-
-// atomic-clause-list -> [atomic-clause, [atomic-clause], ...]
-struct OmpAtomicClauseList {
-  WRAPPER_CLASS_BOILERPLATE(OmpAtomicClauseList, std::list<OmpAtomicClause>);
-  CharBlock source;
-};
-
-// END ATOMIC
-EMPTY_CLASS(OmpEndAtomic);
-
-// ATOMIC READ
-struct OmpAtomicRead {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomicRead);
-  CharBlock source;
-  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
-      Statement<AssignmentStmt>, std::optional<OmpEndAtomic>>
-      t;
-};
-
-// ATOMIC WRITE
-struct OmpAtomicWrite {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomicWrite);
-  CharBlock source;
-  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
-      Statement<AssignmentStmt>, std::optional<OmpEndAtomic>>
-      t;
-};
-
-// ATOMIC UPDATE
-struct OmpAtomicUpdate {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomicUpdate);
-  CharBlock source;
-  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
-      Statement<AssignmentStmt>, std::optional<OmpEndAtomic>>
-      t;
-};
-
-// ATOMIC CAPTURE
-struct OmpAtomicCapture {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomicCapture);
-  CharBlock source;
-  WRAPPER_CLASS(Stmt1, Statement<AssignmentStmt>);
-  WRAPPER_CLASS(Stmt2, Statement<AssignmentStmt>);
-  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList, Stmt1, Stmt2,
-      OmpEndAtomic>
-      t;
-};
-
-struct OmpAtomicCompareIfStmt {
-  UNION_CLASS_BOILERPLATE(OmpAtomicCompareIfStmt);
-  std::variant<common::Indirection<IfStmt>, common::Indirection<IfConstruct>> u;
-};
-
-// ATOMIC COMPARE (OpenMP 5.1, OPenMP 5.2 spec: 15.8.4)
-struct OmpAtomicCompare {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomicCompare);
-  CharBlock source;
-  std::tuple<OmpAtomicClauseList, Verbatim, OmpAtomicClauseList,
-      OmpAtomicCompareIfStmt, std::optional<OmpEndAtomic>>
-      t;
-};
-
-// ATOMIC
-struct OmpAtomic {
-  TUPLE_CLASS_BOILERPLATE(OmpAtomic);
-  CharBlock source;
-  std::tuple<Verbatim, OmpAtomicClauseList, Statement<AssignmentStmt>,
-      std::optional<OmpEndAtomic>>
-      t;
-};
-
-// 2.17.7 atomic ->
-//        ATOMIC [atomic-clause-list] atomic-construct [atomic-clause-list] |
-//        ATOMIC [atomic-clause-list]
-//        atomic-construct -> READ | WRITE | UPDATE | CAPTURE | COMPARE
 struct OpenMPAtomicConstruct {
-  UNION_CLASS_BOILERPLATE(OpenMPAtomicConstruct);
-  std::variant<OmpAtomicRead, OmpAtomicWrite, OmpAtomicCapture, OmpAtomicUpdate,
-      OmpAtomicCompare, OmpAtomic>
-      u;
+  llvm::omp::Clause GetKind() const;
+  bool IsCapture() const;
+  bool IsCompare() const;
+  TUPLE_CLASS_BOILERPLATE(OpenMPAtomicConstruct);
+  CharBlock source;
+  std::tuple<OmpDirectiveSpecification, Block,
+      std::optional<OmpDirectiveSpecification>>
+      t;
+
+  // Information filled out during semantic checks to avoid duplication
+  // of analyses.
+  struct Analysis {
+    static constexpr int None = 0;
+    static constexpr int Read = 1;
+    static constexpr int Write = 2;
+    static constexpr int Update = Read | Write;
+    static constexpr int Action = 3; // Bitmask for None, Read, Write, Update
+    static constexpr int IfTrue = 4;
+    static constexpr int IfFalse = 8;
+    static constexpr int Condition = 12; // Bitmask for IfTrue, IfFalse
+
+    struct Op {
+      int what;
+      AssignmentStmt::TypedAssignment assign;
+    };
+    TypedExpr atom, cond;
+    Op op0, op1;
+  };
+
+  mutable Analysis analysis;
 };
 
 // OpenMP directives that associate with loop(s)
@@ -4986,19 +4942,11 @@ struct OpenMPDepobjConstruct {
 //                    nocontext-clause |
 //                    novariants-clause |
 //                    nowait-clause
-struct OmpDispatchDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpDispatchDirective);
-  CharBlock source;
-  std::tuple<Verbatim, OmpClauseList> t;
-};
-
-EMPTY_CLASS(OmpEndDispatchDirective);
-
 struct OpenMPDispatchConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDispatchConstruct);
   CharBlock source;
-  std::tuple<OmpDispatchDirective, Block,
-      std::optional<OmpEndDispatchDirective>>
+  std::tuple<OmpDirectiveSpecification, Block,
+      std::optional<OmpDirectiveSpecification>>
       t;
 };
 
@@ -5072,13 +5020,22 @@ struct OpenMPBlockConstruct {
 };
 
 // OpenMP directives enclosing do loop
+using NestedConstruct =
+    std::variant<DoConstruct, common::Indirection<OpenMPLoopConstruct>>;
 struct OpenMPLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
   OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
       : t({std::move(a), std::nullopt, std::nullopt}) {}
-  std::tuple<OmpBeginLoopDirective, std::optional<DoConstruct>,
+  std::tuple<OmpBeginLoopDirective, std::optional<NestedConstruct>,
       std::optional<OmpEndLoopDirective>>
       t;
+};
+
+// Lookahead class to identify execution-part OpenMP constructs without
+// parsing the entire OpenMP construct.
+struct OpenMPExecDirective {
+  WRAPPER_CLASS_BOILERPLATE(OpenMPExecDirective, OmpDirectiveName);
+  CharBlock source;
 };
 
 struct OpenMPConstruct {

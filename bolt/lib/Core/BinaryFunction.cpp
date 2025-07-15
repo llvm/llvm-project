@@ -471,6 +471,8 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Sample Count: " << RawSampleCount;
     OS << "\n  Profile Acc : " << format("%.1f%%", ProfileMatchRatio * 100.0f);
   }
+  if (ExternEntryCount)
+    OS << "\n  Extern Entry Count: " << ExternEntryCount;
 
   if (opts::PrintDynoStats && !getLayout().block_empty()) {
     OS << '\n';
@@ -3326,10 +3328,7 @@ void BinaryFunction::duplicateConstantIslands() {
 
         // Update instruction reference
         Operand = MCOperand::createExpr(BC.MIB->getTargetExprFor(
-            Inst,
-            MCSymbolRefExpr::create(ColdSymbol, MCSymbolRefExpr::VK_None,
-                                    *BC.Ctx),
-            *BC.Ctx, 0));
+            Inst, MCSymbolRefExpr::create(ColdSymbol, *BC.Ctx), *BC.Ctx, 0));
         ++OpNum;
       }
     }

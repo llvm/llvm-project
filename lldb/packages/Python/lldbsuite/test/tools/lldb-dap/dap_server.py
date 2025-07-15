@@ -135,6 +135,10 @@ class Source(object):
         return source_dict
 
 
+class NotSupportedError(KeyError):
+    """Raised if a feature is not supported due to its capabilities."""
+
+
 class DebugCommunication(object):
     def __init__(
         self,
@@ -153,7 +157,7 @@ class DebugCommunication(object):
         self.recv_thread = threading.Thread(target=self._read_packet_thread)
         self.process_event_body = None
         self.exit_status: Optional[int] = None
-        self.initialize_body: dict[str, Any] = {}
+        self.capabilities: dict[str, Any] = {}
         self.progress_events: list[Event] = []
         self.reverse_requests = []
         self.sequence = 1
@@ -175,9 +179,13 @@ class DebugCommunication(object):
     @classmethod
     def validate_response(cls, command, response):
         if command["command"] != response["command"]:
-            raise ValueError("command mismatch in response")
+            raise ValueError(
+                f"command mismatch in response {command['command']} != {response['command']}"
+            )
         if command["seq"] != response["request_seq"]:
-            raise ValueError("seq mismatch in response")
+            raise ValueError(
+                f"seq mismatch in response {command['seq']} != {response['request_seq']}"
+            )
 
     def _read_packet_thread(self):
         done = False
@@ -191,8 +199,8 @@ class DebugCommunication(object):
         finally:
             dump_dap_log(self.log_file)
 
-    def get_modules(self):
-        module_list = self.request_modules()["body"]["modules"]
+    def get_modules(self, startModule: int = 0, moduleCount: int = 0):
+        module_list = self.request_modules(startModule, moduleCount)["body"]["modules"]
         modules = {}
         for module in module_list:
             modules[module["name"]] = module
@@ -301,8 +309,8 @@ class DebugCommunication(object):
                 # Breakpoint events are sent when a breakpoint is resolved
                 self._update_verified_breakpoints([body["breakpoint"]])
             elif event == "capabilities":
-                # update the capabilities with new ones from the event.
-                self.initialize_body.update(body["capabilities"])
+                # Update the capabilities with new ones from the event.
+                self.capabilities.update(body["capabilities"])
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
@@ -311,7 +319,6 @@ class DebugCommunication(object):
         return keepGoing
 
     def _process_continued(self, all_threads_continued: bool):
-        self.threads = None
         self.frame_scopes = {}
         if all_threads_continued:
             self.thread_stop_reasons = {}
@@ -401,8 +408,8 @@ class DebugCommunication(object):
                 self.reverse_requests.append(response_or_request)
                 if response_or_request["command"] == "runInTerminal":
                     subprocess.Popen(
-                        response_or_request["arguments"]["args"],
-                        env=response_or_request["arguments"]["env"],
+                        response_or_request["arguments"].get("args"),
+                        env=response_or_request["arguments"].get("env", {}),
                     )
                     self.send_packet(
                         {
@@ -491,13 +498,13 @@ class DebugCommunication(object):
             raise ValueError("didn't get terminated event")
         return event_dict
 
-    def get_initialize_value(self, key):
+    def get_capability(self, key: str):
         """Get a value for the given key if it there is a key/value pair in
-        the "initialize" request response body.
+        the capabilities reported by the adapter.
         """
-        if self.initialize_body and key in self.initialize_body:
-            return self.initialize_body[key]
-        raise ValueError(f"no value for key: {key} in {self.initialize_body}")
+        if key in self.capabilities:
+            return self.capabilities[key]
+        raise NotSupportedError(key)
 
     def get_threads(self):
         if self.threads is None:
@@ -763,6 +770,9 @@ class DebugCommunication(object):
         return response
 
     def request_restart(self, restartArguments=None):
+        if self.exit_status is not None:
+            raise ValueError("request_restart called after process exited")
+        self.get_capability("supportsRestartRequest")
         command_dict = {
             "command": "restart",
             "type": "request",
@@ -821,6 +831,24 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+    def request_writeMemory(self, memoryReference, data, offset=0, allowPartial=False):
+        args_dict = {
+            "memoryReference": memoryReference,
+            "data": data,
+        }
+
+        if offset:
+            args_dict["offset"] = offset
+        if allowPartial:
+            args_dict["allowPartial"] = allowPartial
+
+        command_dict = {
+            "command": "writeMemory",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
@@ -870,7 +898,7 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
         if response:
             if "body" in response:
-                self.initialize_body = response["body"]
+                self.capabilities = response["body"]
         return response
 
     def request_launch(
@@ -884,7 +912,7 @@ class DebugCommunication(object):
         disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
-        runInTerminal=False,
+        console: Optional[str] = None,
         enableAutoVariableSummaries=False,
         displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
@@ -934,8 +962,8 @@ class DebugCommunication(object):
             args_dict["launchCommands"] = launchCommands
         if sourceMap:
             args_dict["sourceMap"] = sourceMap
-        if runInTerminal:
-            args_dict["runInTerminal"] = runInTerminal
+        if console:
+            args_dict["console"] = console
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if customFrameFormat:
@@ -975,6 +1003,7 @@ class DebugCommunication(object):
     def request_stepInTargets(self, frameId):
         if self.exit_status is not None:
             raise ValueError("request_stepInTargets called after process exited")
+        self.get_capability("supportsStepInTargetsRequest")
         args_dict = {"frameId": frameId}
         command_dict = {
             "command": "stepInTargets",
@@ -1043,8 +1072,12 @@ class DebugCommunication(object):
             self._update_verified_breakpoints(response["body"]["breakpoints"])
         return response
 
-    def request_setExceptionBreakpoints(self, filters):
+    def request_setExceptionBreakpoints(
+        self, *, filters: list[str] = [], filter_options: list[dict] = []
+    ):
         args_dict = {"filters": filters}
+        if filter_options:
+            args_dict["filterOptions"] = filter_options
         command_dict = {
             "command": "setExceptionBreakpoints",
             "type": "request",
@@ -1128,8 +1161,14 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_modules(self):
-        return self.send_recv({"command": "modules", "type": "request"})
+    def request_modules(self, startModule: int, moduleCount: int):
+        return self.send_recv(
+            {
+                "command": "modules",
+                "type": "request",
+                "arguments": {"startModule": startModule, "moduleCount": moduleCount},
+            }
+        )
 
     def request_stackTrace(
         self, threadId=None, startFrame=None, levels=None, format=None, dump=False
@@ -1183,6 +1222,9 @@ class DebugCommunication(object):
         with information about all threads"""
         command_dict = {"command": "threads", "type": "request", "arguments": {}}
         response = self.send_recv(command_dict)
+        if not response["success"]:
+            self.threads = None
+            return response
         body = response["body"]
         # Fill in "self.threads" correctly so that clients that call
         # self.get_threads() or self.get_thread_id(...) can get information

@@ -656,6 +656,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_BASE);
   reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_LIMIT);
 
+  // Reserve async counters pseudo registers
+  reserveRegisterTuples(Reserved, AMDGPU::ASYNCcnt);
+  reserveRegisterTuples(Reserved, AMDGPU::TENSORcnt);
+
   // Reserve src_pops_exiting_wave_id - support is not implemented in Codegen.
   reserveRegisterTuples(Reserved, AMDGPU::SRC_POPS_EXITING_WAVE_ID);
 
@@ -3553,9 +3557,7 @@ SIRegisterInfo::getVectorSuperClassForBitWidth(unsigned BitWidth) const {
 
 const TargetRegisterClass *
 SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
-  if (BitWidth == 16)
-    return &AMDGPU::SGPR_LO16RegClass;
-  if (BitWidth == 32)
+  if (BitWidth == 16 || BitWidth == 32)
     return &AMDGPU::SReg_32RegClass;
   if (BitWidth == 64)
     return &AMDGPU::SReg_64RegClass;
@@ -3748,7 +3750,11 @@ unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   default:
     return AMDGPUGenRegisterInfo::getRegPressureLimit(RC, MF);
   case AMDGPU::VGPR_32RegClassID:
-    return std::min(ST.getMaxNumVGPRs(MinOcc), ST.getMaxNumVGPRs(MF));
+    return std::min(
+        ST.getMaxNumVGPRs(
+            MinOcc,
+            MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize()),
+        ST.getMaxNumVGPRs(MF));
   case AMDGPU::SGPR_32RegClassID:
   case AMDGPU::SGPR_LO16RegClassID:
     return std::min(ST.getMaxNumSGPRs(MinOcc, true), ST.getMaxNumSGPRs(MF));
@@ -4052,20 +4058,6 @@ SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
   for (MCPhysReg Reg : reverse(RC.getRegisters()))
     if (MRI.isPhysRegUsed(Reg))
       return getHWRegIndex(Reg) + 1;
-  return 0;
-}
-
-unsigned
-SIRegisterInfo::getNumDefinedPhysRegs(const MachineRegisterInfo &MRI,
-                                      const TargetRegisterClass &RC) const {
-  for (MCPhysReg Reg : reverse(RC.getRegisters())) {
-    for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI) {
-      if (std::any_of(
-              MRI.def_instr_begin(*AI), MRI.def_instr_end(),
-              [](const MachineInstr &MI) { return !MI.isImplicitDef(); }))
-        return getHWRegIndex(Reg) + 1;
-    }
-  }
   return 0;
 }
 

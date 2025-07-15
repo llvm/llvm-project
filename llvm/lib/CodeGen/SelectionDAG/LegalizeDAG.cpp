@@ -59,6 +59,20 @@ using namespace llvm;
 
 namespace {
 
+/// Keeps track of state when getting the sign of a floating-point value as an
+/// integer.
+struct FloatSignAsInt {
+  EVT FloatVT;
+  SDValue Chain;
+  SDValue FloatPtr;
+  SDValue IntPtr;
+  MachinePointerInfo IntPointerInfo;
+  MachinePointerInfo FloatPointerInfo;
+  SDValue IntValue;
+  APInt SignMask;
+  uint8_t SignBit;
+};
+
 //===----------------------------------------------------------------------===//
 /// This takes an arbitrary SelectionDAG as input and
 /// hacks on it until the target machine can handle it.  This involves
@@ -126,12 +140,19 @@ private:
                        RTLIB::Libcall Call_F128,
                        RTLIB::Libcall Call_PPCF128,
                        SmallVectorImpl<SDValue> &Results);
-  SDValue ExpandIntLibCall(SDNode *Node, bool isSigned,
-                           RTLIB::Libcall Call_I8,
-                           RTLIB::Libcall Call_I16,
-                           RTLIB::Libcall Call_I32,
-                           RTLIB::Libcall Call_I64,
-                           RTLIB::Libcall Call_I128);
+
+  void
+  ExpandFastFPLibCall(SDNode *Node, bool IsFast,
+                      std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F32,
+                      std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F64,
+                      std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F80,
+                      std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F128,
+                      std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_PPCF128,
+                      SmallVectorImpl<SDValue> &Results);
+
+  SDValue ExpandIntLibCall(SDNode *Node, bool isSigned, RTLIB::Libcall Call_I8,
+                           RTLIB::Libcall Call_I16, RTLIB::Libcall Call_I32,
+                           RTLIB::Libcall Call_I64, RTLIB::Libcall Call_I128);
   void ExpandArgFPLibCall(SDNode *Node,
                           RTLIB::Libcall Call_F32, RTLIB::Libcall Call_F64,
                           RTLIB::Libcall Call_F80, RTLIB::Libcall Call_F128,
@@ -141,7 +162,6 @@ private:
                                    RTLIB::Libcall CallI64,
                                    RTLIB::Libcall CallI128);
   void ExpandDivRemLibCall(SDNode *Node, SmallVectorImpl<SDValue> &Results);
-  void ExpandSinCosLibCall(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
   SDValue EmitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
                            const SDLoc &dl);
@@ -152,6 +172,10 @@ private:
   SDValue ExpandSCALAR_TO_VECTOR(SDNode *Node);
   void ExpandDYNAMIC_STACKALLOC(SDNode *Node,
                                 SmallVectorImpl<SDValue> &Results);
+  void getSignAsIntValue(FloatSignAsInt &State, const SDLoc &DL,
+                         SDValue Value) const;
+  SDValue modifySignAsInt(const FloatSignAsInt &State, const SDLoc &DL,
+                          SDValue NewIntValue) const;
   SDValue ExpandFCOPYSIGN(SDNode *Node) const;
   SDValue ExpandFABS(SDNode *Node) const;
   SDValue ExpandFNEG(SDNode *Node) const;
@@ -1602,6 +1626,74 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
   return DAG.getLoad(VT, dl, StoreChain, FIPtr, PtrInfo);
 }
 
+/// Bitcast a floating-point value to an integer value. Only bitcast the part
+/// containing the sign bit if the target has no integer value capable of
+/// holding all bits of the floating-point value.
+void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
+                                             const SDLoc &DL,
+                                             SDValue Value) const {
+  EVT FloatVT = Value.getValueType();
+  unsigned NumBits = FloatVT.getScalarSizeInBits();
+  State.FloatVT = FloatVT;
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(), NumBits);
+  // Convert to an integer of the same size.
+  if (TLI.isTypeLegal(IVT)) {
+    State.IntValue = DAG.getNode(ISD::BITCAST, DL, IVT, Value);
+    State.SignMask = APInt::getSignMask(NumBits);
+    State.SignBit = NumBits - 1;
+    return;
+  }
+
+  auto &DataLayout = DAG.getDataLayout();
+  // Store the float to memory, then load the sign part out as an integer.
+  MVT LoadTy = TLI.getRegisterType(MVT::i8);
+  // First create a temporary that is aligned for both the load and store.
+  SDValue StackPtr = DAG.CreateStackTemporary(FloatVT, LoadTy);
+  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  // Then store the float to it.
+  State.FloatPtr = StackPtr;
+  MachineFunction &MF = DAG.getMachineFunction();
+  State.FloatPointerInfo = MachinePointerInfo::getFixedStack(MF, FI);
+  State.Chain = DAG.getStore(DAG.getEntryNode(), DL, Value, State.FloatPtr,
+                             State.FloatPointerInfo);
+
+  SDValue IntPtr;
+  if (DataLayout.isBigEndian()) {
+    assert(FloatVT.isByteSized() && "Unsupported floating point type!");
+    // Load out a legal integer with the same sign bit as the float.
+    IntPtr = StackPtr;
+    State.IntPointerInfo = State.FloatPointerInfo;
+  } else {
+    // Advance the pointer so that the loaded byte will contain the sign bit.
+    unsigned ByteOffset = (NumBits / 8) - 1;
+    IntPtr =
+        DAG.getMemBasePlusOffset(StackPtr, TypeSize::getFixed(ByteOffset), DL);
+    State.IntPointerInfo = MachinePointerInfo::getFixedStack(MF, FI,
+                                                             ByteOffset);
+  }
+
+  State.IntPtr = IntPtr;
+  State.IntValue = DAG.getExtLoad(ISD::EXTLOAD, DL, LoadTy, State.Chain, IntPtr,
+                                  State.IntPointerInfo, MVT::i8);
+  State.SignMask = APInt::getOneBitSet(LoadTy.getScalarSizeInBits(), 7);
+  State.SignBit = 7;
+}
+
+/// Replace the integer value produced by getSignAsIntValue() with a new value
+/// and cast the result back to a floating-point type.
+SDValue SelectionDAGLegalize::modifySignAsInt(const FloatSignAsInt &State,
+                                              const SDLoc &DL,
+                                              SDValue NewIntValue) const {
+  if (!State.Chain)
+    return DAG.getNode(ISD::BITCAST, DL, State.FloatVT, NewIntValue);
+
+  // Override the part containing the sign bit in the value stored on the stack.
+  SDValue Chain = DAG.getTruncStore(State.Chain, DL, NewIntValue, State.IntPtr,
+                                    State.IntPointerInfo, MVT::i8);
+  return DAG.getLoad(State.FloatVT, DL, Chain, State.FloatPtr,
+                     State.FloatPointerInfo);
+}
+
 SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
   SDLoc DL(Node);
   SDValue Mag = Node->getOperand(0);
@@ -1609,7 +1701,7 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
 
   // Get sign bit into an integer value.
   FloatSignAsInt SignAsInt;
-  DAG.getSignAsIntValue(SignAsInt, DL, Sign);
+  getSignAsIntValue(SignAsInt, DL, Sign);
 
   EVT IntVT = SignAsInt.IntValue.getValueType();
   SDValue SignMask = DAG.getConstant(SignAsInt.SignMask, DL, IntVT);
@@ -1630,7 +1722,7 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
 
   // Transform Mag value to integer, and clear the sign bit.
   FloatSignAsInt MagAsInt;
-  DAG.getSignAsIntValue(MagAsInt, DL, Mag);
+  getSignAsIntValue(MagAsInt, DL, Mag);
   EVT MagVT = MagAsInt.IntValue.getValueType();
   SDValue ClearSignMask = DAG.getConstant(~MagAsInt.SignMask, DL, MagVT);
   SDValue ClearedSign = DAG.getNode(ISD::AND, DL, MagVT, MagAsInt.IntValue,
@@ -1660,14 +1752,14 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
   SDValue CopiedSign = DAG.getNode(ISD::OR, DL, MagVT, ClearedSign, SignBit,
                                    SDNodeFlags::Disjoint);
 
-  return DAG.modifySignAsInt(MagAsInt, DL, CopiedSign);
+  return modifySignAsInt(MagAsInt, DL, CopiedSign);
 }
 
 SDValue SelectionDAGLegalize::ExpandFNEG(SDNode *Node) const {
   // Get the sign bit as an integer.
   SDLoc DL(Node);
   FloatSignAsInt SignAsInt;
-  DAG.getSignAsIntValue(SignAsInt, DL, Node->getOperand(0));
+  getSignAsIntValue(SignAsInt, DL, Node->getOperand(0));
   EVT IntVT = SignAsInt.IntValue.getValueType();
 
   // Flip the sign.
@@ -1676,7 +1768,7 @@ SDValue SelectionDAGLegalize::ExpandFNEG(SDNode *Node) const {
       DAG.getNode(ISD::XOR, DL, IntVT, SignAsInt.IntValue, SignMask);
 
   // Convert back to float.
-  return DAG.modifySignAsInt(SignAsInt, DL, SignFlip);
+  return modifySignAsInt(SignAsInt, DL, SignFlip);
 }
 
 SDValue SelectionDAGLegalize::ExpandFABS(SDNode *Node) const {
@@ -1692,12 +1784,12 @@ SDValue SelectionDAGLegalize::ExpandFABS(SDNode *Node) const {
 
   // Transform value to integer, clear the sign bit and transform back.
   FloatSignAsInt ValueAsInt;
-  DAG.getSignAsIntValue(ValueAsInt, DL, Value);
+  getSignAsIntValue(ValueAsInt, DL, Value);
   EVT IntVT = ValueAsInt.IntValue.getValueType();
   SDValue ClearSignMask = DAG.getConstant(~ValueAsInt.SignMask, DL, IntVT);
   SDValue ClearedSign = DAG.getNode(ISD::AND, DL, IntVT, ValueAsInt.IntValue,
                                     ClearSignMask);
-  return DAG.modifySignAsInt(ValueAsInt, DL, ClearedSign);
+  return modifySignAsInt(ValueAsInt, DL, ClearedSign);
 }
 
 void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
@@ -2140,6 +2232,37 @@ void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
   RTLIB::Libcall LC = RTLIB::getFPLibCall(Node->getSimpleValueType(0),
                                           Call_F32, Call_F64, Call_F80,
                                           Call_F128, Call_PPCF128);
+  ExpandFPLibCall(Node, LC, Results);
+}
+
+void SelectionDAGLegalize::ExpandFastFPLibCall(
+    SDNode *Node, bool IsFast,
+    std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F32,
+    std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F64,
+    std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F80,
+    std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_F128,
+    std::pair<RTLIB::Libcall, RTLIB::Libcall> Call_PPCF128,
+    SmallVectorImpl<SDValue> &Results) {
+
+  EVT VT = Node->getSimpleValueType(0);
+
+  RTLIB::Libcall LC;
+
+  // FIXME: Probably should define fast to respect nan/inf and only be
+  // approximate functions.
+
+  if (IsFast) {
+    LC = RTLIB::getFPLibCall(VT, Call_F32.first, Call_F64.first, Call_F80.first,
+                             Call_F128.first, Call_PPCF128.first);
+  }
+
+  if (!IsFast || TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
+    // Fall back if we don't have a fast implementation.
+    LC = RTLIB::getFPLibCall(VT, Call_F32.second, Call_F64.second,
+                             Call_F80.second, Call_F128.second,
+                             Call_PPCF128.second);
+  }
+
   ExpandFPLibCall(Node, LC, Results);
 }
 
@@ -3270,6 +3393,32 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Op);
     break;
   }
+  case ISD::FCANONICALIZE: {
+    // This implements llvm.canonicalize.f* by multiplication with 1.0, as
+    // suggested in
+    // https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
+    // It uses strict_fp operations even outside a strict_fp context in order
+    // to guarantee that the canonicalization is not optimized away by later
+    // passes. The result chain introduced by that is intentionally ignored
+    // since no ordering requirement is intended here.
+
+    // Create strict multiplication by 1.0.
+    SDValue Operand = Node->getOperand(0);
+    EVT VT = Operand.getValueType();
+    SDValue One = DAG.getConstantFP(1.0, dl, VT);
+    SDValue Chain = DAG.getEntryNode();
+    SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
+                              {Chain, Operand, One});
+
+    // Propagate existing flags on canonicalize, and additionally set
+    // NoFPExcept.
+    SDNodeFlags CanonicalizeFlags = Node->getFlags();
+    CanonicalizeFlags.setNoFPExcept(true);
+    Mul->setFlags(CanonicalizeFlags);
+
+    Results.push_back(Mul);
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     EVT ExtraVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
     EVT VT = Node->getValueType(0);
@@ -3476,9 +3625,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     unsigned Factor = Node->getNumOperands();
     if (Factor <= 2 || !isPowerOf2_32(Factor))
       break;
-    SmallVector<SDValue, 8> Ops;
-    for (SDValue Op : Node->ops())
-      Ops.push_back(Op);
+    SmallVector<SDValue, 8> Ops(Node->ops());
     EVT VecVT = Node->getValueType(0);
     SmallVector<EVT> HalfVTs(Factor / 2, VecVT);
     // Deinterleave at Factor/2 so each result contains two factors interleaved:
@@ -4405,6 +4552,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   return true;
 }
 
+/// Return if we can use the FAST_* variant of a math libcall for the node.
+/// FIXME: This is just guessing, we probably should have unique specific sets
+/// flags required per libcall.
+static bool canUseFastMathLibcall(const SDNode *Node) {
+  // FIXME: Probably should define fast to respect nan/inf and only be
+  // approximate functions.
+
+  SDNodeFlags Flags = Node->getFlags();
+  return Flags.hasApproximateFuncs() && Flags.hasNoNaNs() &&
+         Flags.hasNoInfs() && Flags.hasNoSignedZeros();
+}
+
 void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   LLVM_DEBUG(dbgs() << "Trying to convert node to libcall\n");
   SmallVector<SDValue, 8> Results;
@@ -4515,21 +4674,28 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::FMAX_PPCF128, Results);
     break;
   case ISD::FMINIMUMNUM:
-    ExpandFPLibCall(Node, RTLIB::FMINIMUMNUM_F32, RTLIB::FMINIMUMNUM_F64,
-                    RTLIB::FMINIMUMNUM_F80, RTLIB::FMINIMUMNUM_F128,
-                    RTLIB::FMINIMUMNUM_PPCF128, Results);
+    ExpandFPLibCall(Node, RTLIB::FMINIMUM_NUM_F32, RTLIB::FMINIMUM_NUM_F64,
+                    RTLIB::FMINIMUM_NUM_F80, RTLIB::FMINIMUM_NUM_F128,
+                    RTLIB::FMINIMUM_NUM_PPCF128, Results);
     break;
   case ISD::FMAXIMUMNUM:
-    ExpandFPLibCall(Node, RTLIB::FMAXIMUMNUM_F32, RTLIB::FMAXIMUMNUM_F64,
-                    RTLIB::FMAXIMUMNUM_F80, RTLIB::FMAXIMUMNUM_F128,
-                    RTLIB::FMAXIMUMNUM_PPCF128, Results);
+    ExpandFPLibCall(Node, RTLIB::FMAXIMUM_NUM_F32, RTLIB::FMAXIMUM_NUM_F64,
+                    RTLIB::FMAXIMUM_NUM_F80, RTLIB::FMAXIMUM_NUM_F128,
+                    RTLIB::FMAXIMUM_NUM_PPCF128, Results);
     break;
   case ISD::FSQRT:
-  case ISD::STRICT_FSQRT:
-    ExpandFPLibCall(Node, RTLIB::SQRT_F32, RTLIB::SQRT_F64,
-                    RTLIB::SQRT_F80, RTLIB::SQRT_F128,
-                    RTLIB::SQRT_PPCF128, Results);
+  case ISD::STRICT_FSQRT: {
+    // FIXME: Probably should define fast to respect nan/inf and only be
+    // approximate functions.
+    ExpandFastFPLibCall(Node, canUseFastMathLibcall(Node),
+                        {RTLIB::FAST_SQRT_F32, RTLIB::SQRT_F32},
+                        {RTLIB::FAST_SQRT_F64, RTLIB::SQRT_F64},
+                        {RTLIB::FAST_SQRT_F80, RTLIB::SQRT_F80},
+                        {RTLIB::FAST_SQRT_F128, RTLIB::SQRT_F128},
+                        {RTLIB::FAST_SQRT_PPCF128, RTLIB::SQRT_PPCF128},
+                        Results);
     break;
+  }
   case ISD::FCBRT:
     ExpandFPLibCall(Node, RTLIB::CBRT_F32, RTLIB::CBRT_F64,
                     RTLIB::CBRT_F80, RTLIB::CBRT_F128,
@@ -4766,11 +4932,15 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                        RTLIB::LLRINT_PPCF128, Results);
     break;
   case ISD::FDIV:
-  case ISD::STRICT_FDIV:
-    ExpandFPLibCall(Node, RTLIB::DIV_F32, RTLIB::DIV_F64,
-                    RTLIB::DIV_F80, RTLIB::DIV_F128,
-                    RTLIB::DIV_PPCF128, Results);
+  case ISD::STRICT_FDIV: {
+    ExpandFastFPLibCall(Node, canUseFastMathLibcall(Node),
+                        {RTLIB::FAST_DIV_F32, RTLIB::DIV_F32},
+                        {RTLIB::FAST_DIV_F64, RTLIB::DIV_F64},
+                        {RTLIB::FAST_DIV_F80, RTLIB::DIV_F80},
+                        {RTLIB::FAST_DIV_F128, RTLIB::DIV_F128},
+                        {RTLIB::FAST_DIV_PPCF128, RTLIB::DIV_PPCF128}, Results);
     break;
+  }
   case ISD::FREM:
   case ISD::STRICT_FREM:
     ExpandFPLibCall(Node, RTLIB::REM_F32, RTLIB::REM_F64,
@@ -4784,17 +4954,25 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::FMA_PPCF128, Results);
     break;
   case ISD::FADD:
-  case ISD::STRICT_FADD:
-    ExpandFPLibCall(Node, RTLIB::ADD_F32, RTLIB::ADD_F64,
-                    RTLIB::ADD_F80, RTLIB::ADD_F128,
-                    RTLIB::ADD_PPCF128, Results);
+  case ISD::STRICT_FADD: {
+    ExpandFastFPLibCall(Node, canUseFastMathLibcall(Node),
+                        {RTLIB::FAST_ADD_F32, RTLIB::ADD_F32},
+                        {RTLIB::FAST_ADD_F64, RTLIB::ADD_F64},
+                        {RTLIB::FAST_ADD_F80, RTLIB::ADD_F80},
+                        {RTLIB::FAST_ADD_F128, RTLIB::ADD_F128},
+                        {RTLIB::FAST_ADD_PPCF128, RTLIB::ADD_PPCF128}, Results);
     break;
+  }
   case ISD::FMUL:
-  case ISD::STRICT_FMUL:
-    ExpandFPLibCall(Node, RTLIB::MUL_F32, RTLIB::MUL_F64,
-                    RTLIB::MUL_F80, RTLIB::MUL_F128,
-                    RTLIB::MUL_PPCF128, Results);
+  case ISD::STRICT_FMUL: {
+    ExpandFastFPLibCall(Node, canUseFastMathLibcall(Node),
+                        {RTLIB::FAST_MUL_F32, RTLIB::MUL_F32},
+                        {RTLIB::FAST_MUL_F64, RTLIB::MUL_F64},
+                        {RTLIB::FAST_MUL_F80, RTLIB::MUL_F80},
+                        {RTLIB::FAST_MUL_F128, RTLIB::MUL_F128},
+                        {RTLIB::FAST_MUL_PPCF128, RTLIB::MUL_PPCF128}, Results);
     break;
+  }
   case ISD::FP16_TO_FP:
     if (Node->getValueType(0) == MVT::f32) {
       Results.push_back(ExpandLibCall(RTLIB::FPEXT_F16_F32, Node, false).first);
@@ -4967,11 +5145,15 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   }
   case ISD::FSUB:
-  case ISD::STRICT_FSUB:
-    ExpandFPLibCall(Node, RTLIB::SUB_F32, RTLIB::SUB_F64,
-                    RTLIB::SUB_F80, RTLIB::SUB_F128,
-                    RTLIB::SUB_PPCF128, Results);
+  case ISD::STRICT_FSUB: {
+    ExpandFastFPLibCall(Node, canUseFastMathLibcall(Node),
+                        {RTLIB::FAST_SUB_F32, RTLIB::SUB_F32},
+                        {RTLIB::FAST_SUB_F64, RTLIB::SUB_F64},
+                        {RTLIB::FAST_SUB_F80, RTLIB::SUB_F80},
+                        {RTLIB::FAST_SUB_F128, RTLIB::SUB_F128},
+                        {RTLIB::FAST_SUB_PPCF128, RTLIB::SUB_PPCF128}, Results);
     break;
+  }
   case ISD::SREM:
     Results.push_back(ExpandIntLibCall(Node, true,
                                        RTLIB::SREM_I8,

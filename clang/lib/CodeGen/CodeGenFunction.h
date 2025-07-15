@@ -234,6 +234,9 @@ class ApplyAtomGroup {
   uint64_t OriginalAtom = 0;
   CGDebugInfo *DI = nullptr;
 
+  ApplyAtomGroup(const ApplyAtomGroup &) = delete;
+  void operator=(const ApplyAtomGroup &) = delete;
+
 public:
   ApplyAtomGroup(CGDebugInfo *DI);
   ~ApplyAtomGroup();
@@ -2551,9 +2554,12 @@ public:
                           const FunctionArgList &Args);
 
   /// EmitFunctionEpilog - Emit the target specific LLVM code to return the
-  /// given temporary.
+  /// given temporary. Specify the source location atom group (Key Instructions
+  /// debug info feature) for the `ret` using \p RetKeyInstructionsSourceAtom.
+  /// If it's 0, the `ret` will get added to a new source atom group.
   void EmitFunctionEpilog(const CGFunctionInfo &FI, bool EmitRetDbgLoc,
-                          SourceLocation EndLoc);
+                          SourceLocation EndLoc,
+                          uint64_t RetKeyInstructionsSourceAtom);
 
   /// Emit a test that checks if the return value \p RV is nonnull.
   void EmitReturnValueCheck(llvm::Value *RV);
@@ -3329,10 +3335,12 @@ public:
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
 
-  /// Returns debug info, with additional annotation if enabled by
-  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[CheckKindOrdinal].
+  /// Returns debug info, with additional annotation if
+  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
+  /// any of the ordinals.
   llvm::DILocation *
-  SanitizerAnnotateDebugInfo(SanitizerKind::SanitizerOrdinal CheckKindOrdinal);
+  SanitizerAnnotateDebugInfo(ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+                             SanitizerHandler Handler);
 
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
@@ -4845,6 +4853,12 @@ public:
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                    ReturnValueSlot ReturnValue);
+
+  // Returns a builtin function that the SPIR-V backend will expand into a spec
+  // constant.
+  llvm::Function *
+  getSpecConstantFunction(const clang::QualType &SpecConstantType);
+
   llvm::Value *EmitDirectXBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitSPIRVBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,

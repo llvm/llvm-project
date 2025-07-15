@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MinGW.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
@@ -132,7 +132,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("thumb2pe");
     break;
   case llvm::Triple::aarch64:
-    if (TC.getEffectiveTriple().isWindowsArm64EC())
+    if (Args.hasArg(options::OPT_marm64x))
+      CmdArgs.push_back("arm64xpe");
+    else if (TC.getEffectiveTriple().isWindowsArm64EC())
       CmdArgs.push_back("arm64ecpe");
     else
       CmdArgs.push_back("arm64pe");

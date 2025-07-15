@@ -102,6 +102,17 @@ struct ClientInfo : public LLDBBaseTelemetryInfo {
   std::string client_data;
   std::optional<std::string> error_msg;
 
+  // For dyn_cast, isa, etc operations.
+  llvm::telemetry::KindType getKind() const override {
+    return LLDBEntryKind::ClientInfo;
+  }
+
+  static bool classof(const llvm::telemetry::TelemetryInfo *t) {
+    // Subclasses of this is also acceptable.
+    return (t->getKind() & LLDBEntryKind::ClientInfo) ==
+           LLDBEntryKind::ClientInfo;
+  }
+
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 

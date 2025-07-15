@@ -2856,7 +2856,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       if (!It->getSecond().IsReachingAlignedBarrierOnly)
         ForwardIsOk = false;
       break;
-    } while ((CurI = CurI->getNextNonDebugInstruction()));
+    } while ((CurI = CurI->getNextNode()));
 
     if (!CurI && !BEDMap.lookup(I.getParent()).IsReachingAlignedBarrierOnly)
       ForwardIsOk = false;
@@ -5232,8 +5232,7 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
         IRPosition::callsite_returned(CB),
         [&](const IRPosition &IRP, const AbstractAttribute *AA,
             bool &UsedAssumedInformation) -> std::optional<Value *> {
-          assert((isValidState() ||
-                  (SimplifiedValue && *SimplifiedValue == nullptr)) &&
+          assert((isValidState() || SimplifiedValue == nullptr) &&
                  "Unexpected invalid state!");
 
           if (!isAtFixpoint()) {

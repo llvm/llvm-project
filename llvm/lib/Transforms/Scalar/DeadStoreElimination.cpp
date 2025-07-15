@@ -1017,10 +1017,10 @@ struct DSEState {
       }
     }
 
-    // Treat byval or inalloca arguments the same as Allocas, stores to them are
-    // dead at the end of the function.
+    // Treat byval, inalloca or dead on return arguments the same as Allocas,
+    // stores to them are dead at the end of the function.
     for (Argument &AI : F.args())
-      if (AI.hasPassPointeeByValueCopyAttr())
+      if (AI.hasPassPointeeByValueCopyAttr() || AI.hasDeadOnReturnAttr())
         InvisibleToCallerAfterRet.insert({&AI, true});
 
     // Collect whether there is any irreducible control flow in the function.
@@ -2029,7 +2029,7 @@ struct DSEState {
     auto *InnerCallee = Malloc->getCalledFunction();
     if (!InnerCallee)
       return false;
-    LibFunc Func;
+    LibFunc Func = NotLibFunc;
     StringRef ZeroedVariantName;
     if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
         Func != LibFunc_malloc) {
@@ -2345,7 +2345,8 @@ bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
                                EarliestEscapeAnalysis &EA) {
   const Value *UnderlyingObj = getUnderlyingObject(Arg);
   return isIdentifiedFunctionLocal(UnderlyingObj) &&
-         EA.isNotCapturedBefore(UnderlyingObj, CB, /*OrAt*/ true);
+         capturesNothing(
+             EA.getCapturesBefore(UnderlyingObj, CB, /*OrAt*/ true));
 }
 
 SmallVector<MemoryLocation, 1>

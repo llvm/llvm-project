@@ -164,14 +164,13 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
   op.setStructured(structured);
   op.setImplicit(implicit);
   op.setDataClause(dataClause);
-  if (auto mappableTy =
-          mlir::dyn_cast<mlir::acc::MappableType>(baseAddr.getType())) {
-    op.setVarType(baseAddr.getType());
+  if (auto pointerLikeTy =
+          mlir::dyn_cast<mlir::acc::PointerLikeType>(baseAddr.getType())) {
+    op.setVarType(pointerLikeTy.getElementType());
   } else {
-    assert(mlir::isa<mlir::acc::PointerLikeType>(baseAddr.getType()) &&
-           "expected pointer-like");
-    op.setVarType(mlir::cast<mlir::acc::PointerLikeType>(baseAddr.getType())
-                      .getElementType());
+    assert(mlir::isa<mlir::acc::MappableType>(baseAddr.getType()) &&
+           "expected mappable");
+    op.setVarType(baseAddr.getType());
   }
 
   op->setAttr(Op::getOperandSegmentSizeAttr(),
@@ -653,8 +652,8 @@ void genAtomicCapture(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
   firOpBuilder.setInsertionPointToStart(&block);
-  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
-    if (Fortran::semantics::checkForSymbolMatch(
+  if (Fortran::parser::CheckForSingleVariableOnRHS(stmt1)) {
+    if (Fortran::evaluate::CheckForSymbolMatch(
             Fortran::semantics::GetExpr(stmt2Var),
             Fortran::semantics::GetExpr(stmt2Expr))) {
       // Atomic capture construct is of the form [capture-stmt, update-stmt]
@@ -961,119 +960,6 @@ static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
 }
 
 template <typename RecipeOp>
-static void genPrivateLikeInitRegion(fir::FirOpBuilder &builder,
-                                     RecipeOp recipe, mlir::Type argTy,
-                                     mlir::Location loc,
-                                     mlir::Value initValue) {
-  mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
-  mlir::Type unwrappedTy = fir::unwrapRefType(argTy);
-
-  llvm::StringRef initName;
-  if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>)
-    initName = accReductionInitName;
-  else
-    initName = accPrivateInitName;
-
-  auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
-    auto alloca = builder.create<fir::AllocaOp>(loc, ty);
-    return builder.create<hlfir::DeclareOp>(
-        loc, alloca, initName, /*shape=*/nullptr, llvm::ArrayRef<mlir::Value>{},
-        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
-  };
-
-  if (fir::isa_trivial(unwrappedTy)) {
-    auto declareOp = getDeclareOpForType(unwrappedTy);
-    if (initValue) {
-      auto convert = builder.createConvert(loc, unwrappedTy, initValue);
-      builder.create<fir::StoreOp>(loc, convert, declareOp.getBase());
-    }
-    retVal = declareOp.getBase();
-  } else if (auto seqTy =
-                 mlir::dyn_cast_or_null<fir::SequenceType>(unwrappedTy)) {
-    if (fir::isa_trivial(seqTy.getEleTy())) {
-      mlir::Value shape;
-      llvm::SmallVector<mlir::Value> extents;
-      if (seqTy.hasDynamicExtents()) {
-        // Extents are passed as block arguments. First argument is the
-        // original value.
-        for (unsigned i = 1; i < recipe.getInitRegion().getArguments().size();
-             ++i)
-          extents.push_back(recipe.getInitRegion().getArgument(i));
-        shape = builder.create<fir::ShapeOp>(loc, extents);
-      } else {
-        shape = genShapeOp(builder, seqTy, loc);
-      }
-      auto alloca = builder.create<fir::AllocaOp>(
-          loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
-      auto declareOp = builder.create<hlfir::DeclareOp>(
-          loc, alloca, initName, shape, llvm::ArrayRef<mlir::Value>{},
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
-
-      if (initValue) {
-        mlir::Type idxTy = builder.getIndexType();
-        mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
-        llvm::SmallVector<fir::DoLoopOp> loops;
-        llvm::SmallVector<mlir::Value> ivs;
-
-        if (seqTy.hasDynamicExtents()) {
-          builder.create<hlfir::AssignOp>(loc, initValue, declareOp.getBase());
-        } else {
-          for (auto ext : seqTy.getShape()) {
-            auto lb = builder.createIntegerConstant(loc, idxTy, 0);
-            auto ub = builder.createIntegerConstant(loc, idxTy, ext - 1);
-            auto step = builder.createIntegerConstant(loc, idxTy, 1);
-            auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
-                                                      /*unordered=*/false);
-            builder.setInsertionPointToStart(loop.getBody());
-            loops.push_back(loop);
-            ivs.push_back(loop.getInductionVar());
-          }
-          auto coord = builder.create<fir::CoordinateOp>(
-              loc, refTy, declareOp.getBase(), ivs);
-          builder.create<fir::StoreOp>(loc, initValue, coord);
-          builder.setInsertionPointAfter(loops[0]);
-        }
-      }
-      retVal = declareOp.getBase();
-    }
-  } else if (auto boxTy =
-                 mlir::dyn_cast_or_null<fir::BaseBoxType>(unwrappedTy)) {
-    mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
-    if (fir::isa_trivial(innerTy)) {
-      retVal = getDeclareOpForType(unwrappedTy).getBase();
-    } else if (mlir::isa<fir::SequenceType>(innerTy)) {
-      fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
-      hlfir::Entity source = hlfir::Entity{retVal};
-      auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
-      if (fir::isa_ref_type(argTy)) {
-        // When the temp is created - it is not a reference - thus we can
-        // end up with a type inconsistency. Therefore ensure storage is created
-        // for it.
-        retVal = getDeclareOpForType(unwrappedTy).getBase();
-        mlir::Value storeDst = retVal;
-        if (fir::unwrapRefType(retVal.getType()) != temp.getType()) {
-          // `createTempFromMold` makes the unfortunate choice to lose the
-          // `fir.heap` and `fir.ptr` types when wrapping with a box. Namely,
-          // when wrapping a `fir.heap<fir.array>`, it will create instead a
-          // `fir.box<fir.array>`. Cast here to deal with this inconsistency.
-          storeDst = firBuilder.createConvert(
-              loc, firBuilder.getRefType(temp.getType()), retVal);
-        }
-        builder.create<fir::StoreOp>(loc, temp, storeDst);
-      } else {
-        retVal = temp;
-      }
-    } else {
-      TODO(loc, "Unsupported boxed type for OpenACC private-like recipe");
-    }
-    if (initValue) {
-      builder.create<hlfir::AssignOp>(loc, initValue, retVal);
-    }
-  }
-  builder.create<mlir::acc::YieldOp>(loc, retVal);
-}
-
-template <typename RecipeOp>
 static RecipeOp genRecipeOp(
     fir::FirOpBuilder &builder, mlir::ModuleOp mod, llvm::StringRef recipeName,
     mlir::Location loc, mlir::Type ty,
@@ -1101,15 +987,35 @@ static RecipeOp genRecipeOp(
       }
     }
   }
-  builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
-                      argsTy, argsLoc);
+  auto initBlock = builder.createBlock(
+      &recipe.getInitRegion(), recipe.getInitRegion().end(), argsTy, argsLoc);
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
   mlir::Value initValue;
   if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>) {
     assert(op != mlir::acc::ReductionOperator::AccNone);
     initValue = getReductionInitValue(builder, loc, fir::unwrapRefType(ty), op);
   }
-  genPrivateLikeInitRegion<RecipeOp>(builder, recipe, ty, loc, initValue);
+
+  // Since we reuse the same recipe for all variables of the same type - we
+  // cannot use the actual variable name. Thus use a temporary name.
+  llvm::StringRef initName;
+  if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>)
+    initName = accReductionInitName;
+  else
+    initName = accPrivateInitName;
+
+  auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
+  assert(mappableTy &&
+         "Expected that all variable types are considered mappable");
+  auto retVal = mappableTy.generatePrivateInit(
+      builder, loc,
+      mlir::cast<mlir::TypedValue<mlir::acc::MappableType>>(
+          initBlock->getArgument(0)),
+      initName,
+      initBlock->getArguments().take_back(initBlock->getArguments().size() - 1),
+      initValue);
+  builder.create<mlir::acc::YieldOp>(loc, retVal ? retVal
+                                                 : initBlock->getArgument(0));
   return recipe;
 }
 
@@ -2150,6 +2056,70 @@ privatizeIv(Fortran::lower::AbstractConverter &converter,
   ivPrivate.push_back(privateValue);
 }
 
+static void determineDefaultLoopParMode(
+    Fortran::lower::AbstractConverter &converter, mlir::acc::LoopOp &loopOp,
+    llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &independentDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &autoDeviceTypes) {
+  auto hasDeviceNone = [](mlir::Attribute attr) -> bool {
+    return mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr).getValue() ==
+           mlir::acc::DeviceType::None;
+  };
+  bool hasDefaultSeq = llvm::any_of(seqDeviceTypes, hasDeviceNone);
+  bool hasDefaultIndependent =
+      llvm::any_of(independentDeviceTypes, hasDeviceNone);
+  bool hasDefaultAuto = llvm::any_of(autoDeviceTypes, hasDeviceNone);
+  if (hasDefaultSeq || hasDefaultIndependent || hasDefaultAuto)
+    return; // Default loop par mode is already specified.
+
+  mlir::Region *currentRegion =
+      converter.getFirOpBuilder().getBlock()->getParent();
+  mlir::Operation *parentOp = mlir::acc::getEnclosingComputeOp(*currentRegion);
+  const bool isOrphanedLoop = !parentOp;
+  if (isOrphanedLoop ||
+      mlir::isa_and_present<mlir::acc::ParallelOp>(parentOp)) {
+    // As per OpenACC 3.3 standard section 2.9.6 independent clause:
+    // A loop construct with no auto or seq clause is treated as if it has the
+    // independent clause when it is an orphaned loop construct or its parent
+    // compute construct is a parallel construct.
+    independentDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+        converter.getFirOpBuilder().getContext(), mlir::acc::DeviceType::None));
+  } else if (mlir::isa_and_present<mlir::acc::SerialOp>(parentOp)) {
+    // Serial construct implies `seq` clause on loop. However, this
+    // conflicts with parallelism assignment if already set. Therefore check
+    // that first.
+    bool hasDefaultGangWorkerOrVector =
+        loopOp.hasVector() || loopOp.getVectorValue() || loopOp.hasWorker() ||
+        loopOp.getWorkerValue() || loopOp.hasGang() ||
+        loopOp.getGangValue(mlir::acc::GangArgType::Num) ||
+        loopOp.getGangValue(mlir::acc::GangArgType::Dim) ||
+        loopOp.getGangValue(mlir::acc::GangArgType::Static);
+    if (!hasDefaultGangWorkerOrVector)
+      seqDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+          converter.getFirOpBuilder().getContext(),
+          mlir::acc::DeviceType::None));
+    // Since the loop has some parallelism assigned - we cannot assign `seq`.
+    // However, the `acc.loop` verifier will check that one of seq, independent,
+    // or auto is marked. Seems reasonable to mark as auto since the OpenACC
+    // spec does say "If not, or if it is unable to make a determination, it
+    // must treat the auto clause as if it is a seq clause, and it must
+    // ignore any gang, worker, or vector clauses on the loop construct"
+    else
+      autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+          converter.getFirOpBuilder().getContext(),
+          mlir::acc::DeviceType::None));
+  } else {
+    // As per OpenACC 3.3 standard section 2.9.7 auto clause:
+    // When the parent compute construct is a kernels construct, a loop
+    // construct with no independent or seq clause is treated as if it has the
+    // auto clause.
+    assert(mlir::isa_and_present<mlir::acc::KernelsOp>(parentOp) &&
+           "Expected kernels construct");
+    autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+        converter.getFirOpBuilder().getContext(), mlir::acc::DeviceType::None));
+  }
+}
+
 static mlir::acc::LoopOp createLoopOp(
     Fortran::lower::AbstractConverter &converter,
     mlir::Location currentLocation,
@@ -2378,8 +2348,9 @@ static mlir::acc::LoopOp createLoopOp(
       inclusiveBounds.push_back(true);
     }
   } else {
-    int64_t collapseValue = Fortran::lower::getCollapseValue(accClauseList);
-    for (unsigned i = 0; i < collapseValue; ++i) {
+    int64_t loopCount =
+        Fortran::lower::getLoopCountForCollapseAndTile(accClauseList);
+    for (unsigned i = 0; i < loopCount; ++i) {
       const Fortran::parser::LoopControl *loopControl;
       if (i == 0) {
         loopControl = &*outerDoConstruct.GetLoopControl();
@@ -2414,7 +2385,7 @@ static mlir::acc::LoopOp createLoopOp(
 
       inclusiveBounds.push_back(true);
 
-      if (i < collapseValue - 1)
+      if (i < loopCount - 1)
         crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
     }
   }
@@ -2482,6 +2453,9 @@ static mlir::acc::LoopOp createLoopOp(
     loopOp.setTileOperandsSegmentsAttr(
         builder.getDenseI32ArrayAttr(tileOperandsSegments));
 
+  // Determine the loop's default par mode - either seq, independent, or auto.
+  determineDefaultLoopParMode(converter, loopOp, seqDeviceTypes,
+                              independentDeviceTypes, autoDeviceTypes);
   if (!seqDeviceTypes.empty())
     loopOp.setSeqAttr(builder.getArrayAttr(seqDeviceTypes));
   if (!independentDeviceTypes.empty())
@@ -4494,7 +4468,8 @@ void createOpenACCRoutineConstruct(
     llvm::SmallVector<mlir::Attribute> &vectorDeviceTypes) {
 
   for (auto routineOp : mod.getOps<mlir::acc::RoutineOp>()) {
-    if (routineOp.getFuncName().str().compare(funcName) == 0) {
+    if (routineOp.getFuncName().getLeafReference().str().compare(funcName) ==
+        0) {
       // If the routine is already specified with the same clauses, just skip
       // the operation creation.
       if (compareDeviceTypeInfo(routineOp, bindNames, bindNameDeviceTypes,
@@ -4512,7 +4487,9 @@ void createOpenACCRoutineConstruct(
   mlir::OpBuilder modBuilder(mod.getBodyRegion());
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   modBuilder.create<mlir::acc::RoutineOp>(
-      loc, routineOpStr, funcName, getArrayAttrOrNull(builder, bindNames),
+      loc, routineOpStr,
+      mlir::SymbolRefAttr::get(builder.getContext(), funcName),
+      getArrayAttrOrNull(builder, bindNames),
       getArrayAttrOrNull(builder, bindNameDeviceTypes),
       getArrayAttrOrNull(builder, workerDeviceTypes),
       getArrayAttrOrNull(builder, vectorDeviceTypes),
@@ -4870,15 +4847,25 @@ void Fortran::lower::genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &builder,
   builder.create<mlir::acc::YieldOp>(loc, yieldValue);
 }
 
-int64_t Fortran::lower::getCollapseValue(
+int64_t Fortran::lower::getLoopCountForCollapseAndTile(
     const Fortran::parser::AccClauseList &clauseList) {
+  int64_t collapseLoopCount = 1;
+  int64_t tileLoopCount = 1;
   for (const Fortran::parser::AccClause &clause : clauseList.v) {
     if (const auto *collapseClause =
             std::get_if<Fortran::parser::AccClause::Collapse>(&clause.u)) {
       const parser::AccCollapseArg &arg = collapseClause->v;
       const auto &collapseValue{std::get<parser::ScalarIntConstantExpr>(arg.t)};
-      return *Fortran::semantics::GetIntValue(collapseValue);
+      collapseLoopCount = *Fortran::semantics::GetIntValue(collapseValue);
+    }
+    if (const auto *tileClause =
+            std::get_if<Fortran::parser::AccClause::Tile>(&clause.u)) {
+      const parser::AccTileExprList &tileExprList = tileClause->v;
+      const std::list<parser::AccTileExpr> &listTileExpr = tileExprList.v;
+      tileLoopCount = listTileExpr.size();
     }
   }
-  return 1;
+  if (tileLoopCount > collapseLoopCount)
+    return tileLoopCount;
+  return collapseLoopCount;
 }

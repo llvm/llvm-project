@@ -1466,7 +1466,7 @@ namespace InstantiateCaseStmt {
 
 namespace ConvertedConstantExpr {
   extern int &m;
-  extern int &n; // pre-cxx23-note 2{{declared here}}
+  extern int &n; // expected-note 2{{declared here}}
 
   constexpr int k = 4;
   int &m = const_cast<int&>(k);
@@ -1475,9 +1475,9 @@ namespace ConvertedConstantExpr {
   // useless note and instead just point to the non-constant subexpression.
   enum class E {
     em = m,
-    en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}}
+    en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}} cxx23-note {{read of non-constexpr variable 'n'}}
     eo = (m + // expected-error {{not a constant expression}}
-          n // cxx11_20-note {{initializer of 'n' is unknown}}
+          n // cxx11_20-note {{initializer of 'n' is unknown}} cxx23-note {{read of non-constexpr variable 'n'}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };
@@ -1888,10 +1888,11 @@ namespace PR15884 {
 }
 
 namespace AfterError {
-  constexpr int error() {
+  constexpr int error() { // pre-cxx23-error {{no return statement in constexpr function}}
     return foobar; // expected-error {{undeclared identifier}}
-  }
-  constexpr int k = error(); // expected-error {{constexpr variable 'k' must be initialized by a constant expression}}
+  } // cxx23-note {{control reached end of constexpr function}}
+  constexpr int k = error(); // cxx23-error {{constexpr variable 'k' must be initialized by a constant expression}} \
+                                cxx23-note {{in call to 'error()'}}
 }
 
 namespace std {
@@ -2513,6 +2514,9 @@ void testValueInRangeOfEnumerationValues() {
   // expected-error@-1 {{constexpr variable 'x2' must be initialized by a constant expression}}
   // expected-note@-2 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
   E1 x2b = static_cast<E1>(8); // ok, not a constant expression context
+  static_assert(static_cast<E1>(8), "");
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+  // expected-note@-2 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
 
   constexpr E2 x3 = static_cast<E2>(-8);
   // expected-error@-1 {{constexpr variable 'x3' must be initialized by a constant expression}}
@@ -2551,6 +2555,10 @@ void testValueInRangeOfEnumerationValues() {
   // expected-note@-2 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for the enumeration type 'EMaxInt'}}
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
+  constexpr NumberType neg_one_constexpr = neg_one;
+  // expected-error@-1 {{constexpr variable 'neg_one_constexpr' must be initialized by a constant expression}}
+  // expected-note@-2 {{initializer of 'neg_one' is not a constant expression}}
+  // expected-note@-4 {{declared here}}
 
   CONSTEXPR_CAST_TO_SYSTEM_ENUM_OUTSIDE_OF_RANGE;
   // expected-error@-1 {{constexpr variable 'system_enum' must be initialized by a constant expression}}

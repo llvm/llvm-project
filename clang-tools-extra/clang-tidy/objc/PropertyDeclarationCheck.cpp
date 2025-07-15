@@ -88,7 +88,7 @@ bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
   auto RegexExp = llvm::Regex(llvm::StringRef(validPropertyNameRegex(false)));
   return RegexExp.match(PropertyName.substr(Start + 1));
 }
-}  // namespace
+} // namespace
 
 void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(objcPropertyDecl(
@@ -102,7 +102,7 @@ void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
 void PropertyDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl =
       Result.Nodes.getNodeAs<ObjCPropertyDecl>("property");
-  assert(MatchedDecl->getName().size() > 0);
+  assert(!MatchedDecl->getName().empty());
   auto *DeclContext = MatchedDecl->getDeclContext();
   auto *CategoryDecl = llvm::dyn_cast<ObjCCategoryDecl>(DeclContext);
 

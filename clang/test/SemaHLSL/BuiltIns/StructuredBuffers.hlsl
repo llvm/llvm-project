@@ -28,4 +28,8 @@ StructuredBuffer<Empty> BufferErr4;
 void main() {
   (void)Buff.__handle; // expected-error {{'__handle' is a private member of 'hlsl::StructuredBuffer<vector<float, 3>>'}}
   // expected-note@* {{implicitly declared private here}}
+
+  // expected-error@+2 {{cannot assign to return value because function 'operator[]' returns a const value}}
+  // expected-note@* {{function 'operator[]' which returns const-qualified type 'vector<float const hlsl_device &, 3>' declared here}}
+  Buff[0] = 0.0;
 }

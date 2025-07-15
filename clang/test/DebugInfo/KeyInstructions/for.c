@@ -27,6 +27,7 @@ void a(int A) {
 // CHECK: store i32 %inc, ptr %i{{.*}}, !dbg [[G4R1:!.*]]
   for (int i = 0; i < A; ++i) {
   }
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 void b(int A) {
@@ -55,6 +56,7 @@ void b(int A) {
     if (A > 1)
       ;
   }
+// CHECK: ret{{.*}}, !dbg [[bRET:!.*]]
 }
 
 void c(int A) {
@@ -111,6 +113,7 @@ void e() {
 // CHECK-NEXT: br label %for.inc, !dbg [[eG4R1:!.*]]
   for (; i < 3; ee())
     x = i;
+// CHECK: ret{{.*}}, !dbg [[eRET:!.*]]
 }
 
 
@@ -138,6 +141,7 @@ void g() {
   {
     break;
   }
+// CHECK: ret{{.*}}, !dbg [[gRET:!.*]]
 }
 
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
@@ -146,30 +150,34 @@ void g() {
 // CHECK: [[G5R1]] = !DILocation(line: 29,{{.*}} atomGroup: 5, atomRank: 1)
 // CHECK: [[G4R2]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 2)
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: 6, atomRank: 1)
 
 // CHECK: [[bG1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[bG2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[bG3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
 // CHECK: [[bG4R2]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 2)
 // CHECK: [[bG4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
-// CHECK: [[bG6R1]] = !DILocation(line: 57,{{.*}} atomGroup: 6, atomRank: 1)
+// CHECK: [[bG6R1]] = !DILocation(line: 58,{{.*}} atomGroup: 6, atomRank: 1)
 // CHECK: [[bG5R2]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 2)
 // CHECK: [[bG5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
+// CHECK: [[bRET]] = !DILocation({{.*}}, atomGroup: 7, atomRank: 1)
 
 // CHECK: [[cG1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
 // CHECK: [[cG1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
-// CHECK: [[cG3R1]] = !DILocation(line: 81,{{.*}} atomGroup: 3, atomRank: 1)
+// CHECK: [[cG3R1]] = !DILocation(line: 83,{{.*}} atomGroup: 3, atomRank: 1)
 // CHECK: [[cG2R2]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 2)
 // CHECK: [[cG2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 
-// CHECK: [[dG1R1]] = !DILocation(line: 91, column: 3, scope: ![[#]], atomGroup: 1, atomRank: 1)
+// CHECK: [[dG1R1]] = !DILocation(line: 93, column: 3, scope: ![[#]], atomGroup: 1, atomRank: 1)
 
 // CHECK: [[eG1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[eG2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[eG3R2]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 2)
 // CHECK: [[eG3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
-// CHECK: [[eG4R1]] = !DILocation(line: 113, column: 5, scope: ![[#]], atomGroup: 4, atomRank: 1)
+// CHECK: [[eG4R1]] = !DILocation(line: 115, column: 5, scope: ![[#]], atomGroup: 4, atomRank: 1)
+// CHECK: [[eRET]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
 
-// CHECK: [[fG1R1]] = !DILocation(line: 126, column: 5, scope: ![[#]], atomGroup: 1, atomRank: 1)
+// CHECK: [[fG1R1]] = !DILocation(line: 129, column: 5, scope: ![[#]], atomGroup: 1, atomRank: 1)
 
-// CHECK: [[gG1R1]] = !DILocation(line: 139, column: 5, scope: ![[#]], atomGroup: 1, atomRank: 1)
+// CHECK: [[gG1R1]] = !DILocation(line: 142, column: 5, scope: ![[#]], atomGroup: 1, atomRank: 1)
+// CHECK: [[gRET]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)

@@ -1123,14 +1123,13 @@ unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
 
 StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
                              StringLiteralKind Kind, bool Pascal, QualType Ty,
-                             const SourceLocation *Loc,
-                             unsigned NumConcatenated)
+                             ArrayRef<SourceLocation> Locs)
     : Expr(StringLiteralClass, Ty, VK_LValue, OK_Ordinary) {
 
   unsigned Length = Str.size();
 
   StringLiteralBits.Kind = llvm::to_underlying(Kind);
-  StringLiteralBits.NumConcatenated = NumConcatenated;
+  StringLiteralBits.NumConcatenated = Locs.size();
 
   if (Kind != StringLiteralKind::Unevaluated) {
     assert(Ctx.getAsConstantArrayType(Ty) &&
@@ -1169,11 +1168,10 @@ StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
 
   // Initialize the trailing array of SourceLocation.
   // This is safe since SourceLocation is POD-like.
-  std::memcpy(getTrailingObjects<SourceLocation>(), Loc,
-              NumConcatenated * sizeof(SourceLocation));
+  llvm::copy(Locs, getTrailingObjects<SourceLocation>());
 
   // Initialize the trailing array of char holding the string data.
-  std::memcpy(getTrailingObjects<char>(), Str.data(), Str.size());
+  llvm::copy(Str, getTrailingObjects<char>());
 
   setDependence(ExprDependence::None);
 }
@@ -1188,13 +1186,12 @@ StringLiteral::StringLiteral(EmptyShell Empty, unsigned NumConcatenated,
 
 StringLiteral *StringLiteral::Create(const ASTContext &Ctx, StringRef Str,
                                      StringLiteralKind Kind, bool Pascal,
-                                     QualType Ty, const SourceLocation *Loc,
-                                     unsigned NumConcatenated) {
+                                     QualType Ty,
+                                     ArrayRef<SourceLocation> Locs) {
   void *Mem = Ctx.Allocate(totalSizeToAlloc<unsigned, SourceLocation, char>(
-                               1, NumConcatenated, Str.size()),
+                               1, Locs.size(), Str.size()),
                            alignof(StringLiteral));
-  return new (Mem)
-      StringLiteral(Ctx, Str, Kind, Pascal, Ty, Loc, NumConcatenated);
+  return new (Mem) StringLiteral(Ctx, Str, Kind, Pascal, Ty, Locs);
 }
 
 StringLiteral *StringLiteral::CreateEmpty(const ASTContext &Ctx,
@@ -1359,8 +1356,7 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
     SourceLocation StrTokSpellingLoc = SM.getSpellingLoc(StrTokLoc);
 
     // Re-lex the token to get its length and original spelling.
-    std::pair<FileID, unsigned> LocInfo =
-        SM.getDecomposedLoc(StrTokSpellingLoc);
+    FileIDAndOffset LocInfo = SM.getDecomposedLoc(StrTokSpellingLoc);
     bool Invalid = false;
     StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
     if (Invalid) {
@@ -2024,7 +2020,8 @@ CXXBaseSpecifier **CastExpr::path_buffer() {
 #define ABSTRACT_STMT(x)
 #define CASTEXPR(Type, Base)                                                   \
   case Stmt::Type##Class:                                                      \
-    return static_cast<Type *>(this)->getTrailingObjects<CXXBaseSpecifier *>();
+    return static_cast<Type *>(this)                                           \
+        ->getTrailingObjectsNonStrict<CXXBaseSpecifier *>();
 #define STMT(Type, Base)
 #include "clang/AST/StmtNodes.inc"
   default:
@@ -3396,6 +3393,10 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     //     an anonymous union, in declaration order.
     const InitListExpr *ILE = cast<InitListExpr>(this);
     assert(ILE->isSemanticForm() && "InitListExpr must be in semantic form");
+
+    if (ILE->isTransparent())
+      return ILE->getInit(0)->isConstantInitializer(Ctx, false, Culprit);
+
     if (ILE->getType()->isArrayType()) {
       unsigned numInits = ILE->getNumInits();
       for (unsigned i = 0; i < numInits; i++) {
@@ -3611,7 +3612,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case PackExpansionExprClass:
   case SubstNonTypeTemplateParmPackExprClass:
   case FunctionParmPackExprClass:
-  case TypoExprClass:
   case RecoveryExprClass:
   case CXXFoldExprClass:
     // Make a conservative assumption for dependent nodes.
@@ -4407,7 +4407,7 @@ void ShuffleVectorExpr::setExprs(const ASTContext &C, ArrayRef<Expr *> Exprs) {
 
   this->ShuffleVectorExprBits.NumExprs = Exprs.size();
   SubExprs = new (C) Stmt *[ShuffleVectorExprBits.NumExprs];
-  memcpy(SubExprs, Exprs.data(), sizeof(Expr *) * Exprs.size());
+  llvm::copy(Exprs, SubExprs);
 }
 
 GenericSelectionExpr::GenericSelectionExpr(
@@ -4592,7 +4592,7 @@ const IdentifierInfo *DesignatedInitExpr::Designator::getFieldName() const {
 }
 
 DesignatedInitExpr::DesignatedInitExpr(const ASTContext &C, QualType Ty,
-                                       llvm::ArrayRef<Designator> Designators,
+                                       ArrayRef<Designator> Designators,
                                        SourceLocation EqualOrColonLoc,
                                        bool GNUSyntax,
                                        ArrayRef<Expr *> IndexExprs, Expr *Init)
@@ -4625,12 +4625,12 @@ DesignatedInitExpr::DesignatedInitExpr(const ASTContext &C, QualType Ty,
   setDependence(computeDependence(this));
 }
 
-DesignatedInitExpr *
-DesignatedInitExpr::Create(const ASTContext &C,
-                           llvm::ArrayRef<Designator> Designators,
-                           ArrayRef<Expr*> IndexExprs,
-                           SourceLocation ColonOrEqualLoc,
-                           bool UsesColonSyntax, Expr *Init) {
+DesignatedInitExpr *DesignatedInitExpr::Create(const ASTContext &C,
+                                               ArrayRef<Designator> Designators,
+                                               ArrayRef<Expr *> IndexExprs,
+                                               SourceLocation ColonOrEqualLoc,
+                                               bool UsesColonSyntax,
+                                               Expr *Init) {
   void *Mem = C.Allocate(totalSizeToAlloc<Stmt *>(IndexExprs.size() + 1),
                          alignof(DesignatedInitExpr));
   return new (Mem) DesignatedInitExpr(C, C.VoidTy, Designators,
@@ -5449,4 +5449,18 @@ ConvertVectorExpr *ConvertVectorExpr::Create(
   void *Mem = C.Allocate(Size, alignof(ConvertVectorExpr));
   return new (Mem) ConvertVectorExpr(SrcExpr, TI, DstType, VK, OK, BuiltinLoc,
                                      RParenLoc, FPFeatures);
+}
+
+APValue &CompoundLiteralExpr::getOrCreateStaticValue(ASTContext &Ctx) const {
+  assert(hasStaticStorage());
+  if (!StaticValue) {
+    StaticValue = new (Ctx) APValue;
+    Ctx.addDestruction(StaticValue);
+  }
+  return *StaticValue;
+}
+
+APValue &CompoundLiteralExpr::getStaticValue() const {
+  assert(StaticValue);
+  return *StaticValue;
 }

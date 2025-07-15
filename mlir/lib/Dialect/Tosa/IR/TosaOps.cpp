@@ -22,12 +22,10 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
@@ -849,7 +847,7 @@ static LogicalResult verifyPoolingOp(T op) {
              << kernelSize << ") / " << strideSize;
 
     const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
-    if (!ShapedType::isDynamic(outputSize) && calculatedOutSize != outputSize)
+    if (ShapedType::isStatic(outputSize) && calculatedOutSize != outputSize)
       return op.emitOpError("calculated output ")
              << dimName << " did not match expected: "
              << "calculated=" << calculatedOutSize
@@ -1301,12 +1299,12 @@ LogicalResult tosa::RFFT2dOp::verify() {
     return success();
 
   const int64_t height = inputType.getDimSize(1);
-  if (!ShapedType::isDynamic(height) &&
+  if (ShapedType::isStatic(height) &&
       failed(verifyDimIsPowerOfTwo(*this, height, "height")))
     return failure();
 
   const int64_t width = inputType.getDimSize(2);
-  if (!ShapedType::isDynamic(width) &&
+  if (ShapedType::isStatic(width) &&
       failed(verifyDimIsPowerOfTwo(*this, width, "width")))
     return failure();
 
@@ -1323,7 +1321,7 @@ LogicalResult tosa::RFFT2dOp::verify() {
 
   // Output width dimension expected to be input_width / 2 + 1
   const int64_t outputWidth = outputType.getDimSize(2);
-  if (!ShapedType::isDynamic(width) && !ShapedType::isDynamic(outputWidth) &&
+  if (ShapedType::isStatic(width) && ShapedType::isStatic(outputWidth) &&
       (outputWidth != (width / 2) + 1))
     return emitOpError(
                "expected output width to be equal to input_width / 2 + 1, got ")
@@ -1357,13 +1355,13 @@ LogicalResult tosa::FFT2dOp::verify() {
 
   const int64_t height = trySelectStaticDim(inputRealType.getDimSize(1),
                                             inputImagType.getDimSize(1));
-  if (!ShapedType::isDynamic(height) &&
+  if (ShapedType::isStatic(height) &&
       failed(verifyDimIsPowerOfTwo(*this, height, "height")))
     return failure();
 
   const int64_t width = trySelectStaticDim(inputRealType.getDimSize(2),
                                            inputImagType.getDimSize(2));
-  if (!ShapedType::isDynamic(width) &&
+  if (ShapedType::isStatic(width) &&
       failed(verifyDimIsPowerOfTwo(*this, width, "width")))
     return failure();
 
@@ -1857,7 +1855,8 @@ LogicalResult tosa::MulOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::MulOp::verify() {
-  auto resElemType = getElementTypeOrSelf(getOutput());
+  const Value output = getOutput();
+  auto resElemType = getElementTypeOrSelf(output);
 
   // Verify if the element type among operands and result match tosa
   // specification.
@@ -1897,59 +1896,39 @@ LogicalResult tosa::MulOp::verify() {
   // Verify the op has same ranks for all main operands (excludes extra operands
   // such as shift of mul op, so this is the only difference with the built-in
   // `SameOperandsAndResultRank` trait) and results types, if known.
+  TypeRange operandTypes = getOperandTypes();
+  ShapedType aType = cast<ShapedType>(operandTypes[0]);
+  ShapedType bType = cast<ShapedType>(operandTypes[1]);
 
-  // delegate function that returns true if type is a shaped type with known
-  // rank
-  auto hasRank = [](const Type type) {
-    if (auto shaped_type = dyn_cast<ShapedType>(type))
-      return shaped_type.hasRank();
+  const bool aHasRank = aType.hasRank();
+  const bool bHasRank = bType.hasRank();
+  if (aHasRank && bHasRank) {
+    const int64_t aRank = aType.getRank();
+    const int64_t bRank = bType.getRank();
+    if (aRank != bRank)
+      return emitOpError("a and b operands don't have matching ranks, got ")
+             << aRank << " and " << bRank;
 
-    return false;
-  };
+    // check for broadcast compatible shapes
+    SmallVector<int64_t> resultShape;
+    if (!mlir::OpTrait::util::getBroadcastedShape(
+            aType.getShape(), bType.getShape(), resultShape))
+      return emitOpError("a and b operands don't have broadcast-compatible "
+                         "shapes, got ")
+             << aType << " and " << bType;
+  }
 
-  auto rankedOperandTypes =
-      llvm::to_vector(llvm::make_filter_range(getOperandTypes(), hasRank));
-
-  auto rankedResultTypes =
-      llvm::make_filter_range(getOperation()->getResultTypes(), hasRank);
-
-  // If all operands and results are unranked, then no further verification.
-  if (rankedOperandTypes.empty() && rankedResultTypes.empty())
+  ShapedType resultType = cast<ShapedType>(output.getType());
+  if (!resultType.hasRank())
     return success();
 
-  // delegate function that returns rank of shaped type with known rank
-  auto getRank = [](const Type type) {
-    return cast<ShapedType>(type).getRank();
-  };
-
-  auto rank = !rankedOperandTypes.empty() ? getRank(*rankedOperandTypes.begin())
-                                          : getRank(*rankedResultTypes.begin());
-
-  for (size_t i = 0; i < 2; ++i) {
-    if (rank != getRank(rankedOperandTypes[i])) {
-      return emitOpError("operands don't have matching ranks");
-    }
-  }
-
-  for (const auto type : rankedResultTypes) {
-    if (rank != getRank(type)) {
-      return emitOpError("result type has different rank than operands");
-    }
-  }
-
-  // check for broadcast compatible shapes in first two operands (ignoring
-  // shift)
-
-  // delegate function that returns shape of shaped type
-  auto getShape = [](const Type type) {
-    return mlir::cast<ShapedType>(type).getShape();
-  };
-  SmallVector<int64_t> resultShape;
-  if (!mlir::OpTrait::util::getBroadcastedShape(getShape(rankedOperandTypes[0]),
-                                                getShape(rankedOperandTypes[1]),
-                                                resultShape)) {
-    return emitOpError("operands don't have broadcast-compatible shapes");
-  }
+  const int64_t resultRank = resultType.getRank();
+  if (aHasRank && resultRank != aType.getRank())
+    return emitOpError("result type has different rank than a, got ")
+           << resultRank << " vs " << aType.getRank();
+  if (bHasRank && resultRank != bType.getRank())
+    return emitOpError("result type has different rank than b, got ")
+           << resultRank << " vs " << bType.getRank();
 
   return success();
 }
@@ -1984,7 +1963,7 @@ LogicalResult tosa::TableOp::verify() {
   for (auto it : llvm::enumerate(llvm::zip(inputDims, outputDims))) {
     int64_t dim = it.index();
     auto [inputDim, outputDim] = it.value();
-    if (!ShapedType::isDynamic(outputDim) && outputDim != inputDim) {
+    if (ShapedType::isStatic(outputDim) && outputDim != inputDim) {
       return emitOpError() << "dim(result, " << dim << ") = " << outputDim
                            << " doesn't match dim(input, " << dim
                            << ") = " << inputDim;
@@ -2119,7 +2098,7 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   int64_t numElements = inputShape.getNumElements();
   int64_t staticMul = 1;
   for (auto val : newShapeValue) {
-    if (!ShapedType::isDynamic(val)) {
+    if (ShapedType::isStatic(val)) {
       staticMul *= val;
     }
   }
@@ -2552,16 +2531,26 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
   }
 
   // Compute the output shape based on attributes: scale, offset, and border.
-  outputShape[1] =
+  const int64_t outputHeight =
       (((inputHeight - 1) * scaleInt[0] - offsetInt[0] + borderInt[0]) /
        scaleInt[1]) +
       1;
 
-  outputShape[2] =
+  const int64_t outputWidth =
       (((inputWidth - 1) * scaleInt[2] - offsetInt[1] + borderInt[1]) /
        scaleInt[3]) +
       1;
 
+  if (outputHeight < 0 || outputWidth < 0) {
+    return emitOptionalError(
+        location,
+        "calculated output height and width must be non-negative, "
+        "got height = ",
+        outputHeight, ", width = ", outputWidth);
+  }
+
+  outputShape[1] = outputHeight;
+  outputShape[2] = outputWidth;
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   return success();
 }
@@ -2692,6 +2681,73 @@ LogicalResult tosa::ScatterOp::verify() {
           .failed()) {
     return failure();
   }
+
+  const ShapeAdaptor valuesInShape(getValuesIn().getType());
+  const ShapeAdaptor indicesShape(getIndices().getType());
+  const ShapeAdaptor inputShape(getInput().getType());
+  const ShapeAdaptor outputShape(getValuesOut().getType());
+
+  int64_t N = ShapedType::kDynamic;
+  int64_t K = ShapedType::kDynamic;
+  int64_t W = ShapedType::kDynamic;
+  int64_t C = ShapedType::kDynamic;
+  if (valuesInShape.hasRank()) {
+    N = valuesInShape.getDimSize(0);
+    K = valuesInShape.getDimSize(1);
+    C = valuesInShape.getDimSize(2);
+  }
+  if (indicesShape.hasRank()) {
+    const int64_t indicesN = indicesShape.getDimSize(0);
+    W = indicesShape.getDimSize(1);
+    if (N == ShapedType::kDynamic)
+      N = indicesN;
+    else if (indicesN != ShapedType::kDynamic && N != indicesN)
+      return emitOpError() << "requires indices dimension 0 to have size " << N
+                           << ", got " << indicesN;
+  }
+  if (inputShape.hasRank()) {
+    const int64_t inputN = inputShape.getDimSize(0);
+    const int64_t inputW = inputShape.getDimSize(1);
+    const int64_t inputC = inputShape.getDimSize(2);
+    if (N == ShapedType::kDynamic)
+      N = inputN;
+    else if (inputN != ShapedType::kDynamic && N != inputN)
+      return emitOpError() << "requires input dimension 0 to have size " << N
+                           << ", got " << inputN;
+    if (W == ShapedType::kDynamic)
+      W = inputW;
+    else if (inputW != ShapedType::kDynamic && W != inputW)
+      return emitOpError() << "requires input dimension 1 to have size " << W
+                           << ", got " << inputW;
+
+    if (C == ShapedType::kDynamic)
+      C = inputC;
+    else if (inputC != ShapedType::kDynamic && C != inputC)
+      return emitOpError() << "requires input dimension 2 to have size " << C
+                           << ", got " << inputC;
+  }
+  if (outputShape.hasRank()) {
+    const int64_t outputN = outputShape.getDimSize(0);
+    const int64_t outputK = outputShape.getDimSize(1);
+    const int64_t outputC = outputShape.getDimSize(2);
+    if (N != ShapedType::kDynamic && outputN != ShapedType::kDynamic &&
+        N != outputN)
+      return emitOpError() << "requires values_out dimension 0 to have size "
+                           << N << ", got " << outputN;
+    if (K == ShapedType::kDynamic)
+      K = outputK;
+    else if (outputK != ShapedType::kDynamic && K != outputK)
+      return emitOpError() << "requires values_out dimension 1 to have size "
+                           << K << ", got " << outputK;
+    if (C != ShapedType::kDynamic && outputC != ShapedType::kDynamic &&
+        C != outputC)
+      return emitOpError() << "requires values_out dimension 2 to have size "
+                           << C << ", got " << outputC;
+  }
+  if (K != ShapedType::kDynamic && W != ShapedType::kDynamic && !(K >= W))
+    return emitOpError() << "requires dimensions K >= W, got K=" << K
+                         << " and W=" << W;
+
   return success();
 }
 
@@ -2930,12 +2986,12 @@ static LogicalResult poolingInferReturnTypes(
   int64_t height = inputShape.getDimSize(1);
   int64_t width = inputShape.getDimSize(2);
 
-  if (!ShapedType::isDynamic(height)) {
+  if (ShapedType::isStatic(height)) {
     int64_t padded = height + pad[0] + pad[1] - kernel[0];
     outputShape[1] = padded / stride[0] + 1;
   }
 
-  if (!ShapedType::isDynamic(width)) {
+  if (ShapedType::isStatic(width)) {
     int64_t padded = width + pad[2] + pad[3] - kernel[1];
     outputShape[2] = padded / stride[1] + 1;
   }
@@ -2984,16 +3040,14 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
   llvm::ArrayRef<int64_t> stride = adaptor.getStride();
   llvm::ArrayRef<int64_t> padding = adaptor.getPad();
 
-  if (!ShapedType::isDynamic(inputHeight) &&
-      !ShapedType::isDynamic(weightHeight)) {
+  if (ShapedType::isStatic(inputHeight) && ShapedType::isStatic(weightHeight)) {
     int64_t inputSize = inputHeight + padding[0] + padding[1];
     int64_t filterSize = (weightHeight - 1) * dilation[0] + 1;
     int64_t unstridedResult = inputSize - filterSize + 1;
     outputShape[1] = (unstridedResult - 1) / stride[0] + 1;
   }
 
-  if (!ShapedType::isDynamic(inputWidth) &&
-      !ShapedType::isDynamic(weightWidth)) {
+  if (ShapedType::isStatic(inputWidth) && ShapedType::isStatic(weightWidth)) {
     int64_t inputSize = inputWidth + padding[2] + padding[3];
     int64_t filterSize = (weightWidth - 1) * dilation[1] + 1;
     int64_t unstridedResult = inputSize - filterSize + 1;
@@ -3053,24 +3107,21 @@ LogicalResult Conv3DOp::inferReturnTypeComponents(
   llvm::ArrayRef<int64_t> stride = adaptor.getStride();
   llvm::ArrayRef<int64_t> pad = adaptor.getPad();
 
-  if (!ShapedType::isDynamic(inputDepth) &&
-      !ShapedType::isDynamic(weightDepth)) {
+  if (ShapedType::isStatic(inputDepth) && ShapedType::isStatic(weightDepth)) {
     int32_t inputSize = inputDepth + pad[0] + pad[1];
     int32_t filterSize = (weightDepth - 1) * dilation[0] + 1;
     int32_t unstridedResult = inputSize - filterSize + 1;
     outputShape[1] = (unstridedResult - 1) / stride[0] + 1;
   }
 
-  if (!ShapedType::isDynamic(inputHeight) &&
-      !ShapedType::isDynamic(weightHeight)) {
+  if (ShapedType::isStatic(inputHeight) && ShapedType::isStatic(weightHeight)) {
     int32_t inputSize = inputHeight + pad[2] + pad[3];
     int32_t filterSize = (weightHeight - 1) * dilation[1] + 1;
     int32_t unstridedResult = inputSize - filterSize + 1;
     outputShape[2] = (unstridedResult - 1) / stride[1] + 1;
   }
 
-  if (!ShapedType::isDynamic(inputWidth) &&
-      !ShapedType::isDynamic(weightWidth)) {
+  if (ShapedType::isStatic(inputWidth) && ShapedType::isStatic(weightWidth)) {
     int32_t inputSize = inputWidth + pad[4] + pad[5];
     int32_t filterSize = (weightWidth - 1) * dilation[2] + 1;
     int32_t unstridedResult = inputSize - filterSize + 1;
@@ -3155,8 +3206,8 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
 
   // If both inputChannels and depthChannels are available we can determine
   // the output channels.
-  if (!ShapedType::isDynamic(inputChannels) &&
-      !ShapedType::isDynamic(depthChannels)) {
+  if (ShapedType::isStatic(inputChannels) &&
+      ShapedType::isStatic(depthChannels)) {
     outputShape[3] = inputChannels * depthChannels;
   }
 
@@ -3172,16 +3223,14 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
   llvm::ArrayRef<int64_t> padding = adaptor.getPad();
   llvm::ArrayRef<int64_t> stride = adaptor.getStride();
 
-  if (!ShapedType::isDynamic(inputHeight) &&
-      !ShapedType::isDynamic(weightHeight)) {
+  if (ShapedType::isStatic(inputHeight) && ShapedType::isStatic(weightHeight)) {
     int64_t inputSize = inputHeight + padding[0] + padding[1];
     int64_t filterSize = (weightHeight - 1) * dilation[0] + 1;
     int64_t unstridedResult = inputSize - filterSize + 1;
     outputShape[1] = (unstridedResult - 1) / stride[0] + 1;
   }
 
-  if (!ShapedType::isDynamic(inputWidth) &&
-      !ShapedType::isDynamic(weightWidth)) {
+  if (ShapedType::isStatic(inputWidth) && ShapedType::isStatic(weightWidth)) {
     int64_t inputSize = inputWidth + padding[2] + padding[3];
     int64_t filterSize = (weightWidth - 1) * dilation[1] + 1;
     int64_t unstridedResult = inputSize - filterSize + 1;
@@ -3241,16 +3290,14 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
   llvm::ArrayRef<int64_t> padding = adaptor.getOutPad();
   llvm::ArrayRef<int64_t> stride = adaptor.getStride();
 
-  if (!ShapedType::isDynamic(inputHeight) &&
-      !ShapedType::isDynamic(weightHeight)) {
+  if (ShapedType::isStatic(inputHeight) && ShapedType::isStatic(weightHeight)) {
     int64_t calculateSize =
         (inputHeight - 1) * stride[0] + padding[0] + padding[1] + weightHeight;
     outputShape[1] =
         ShapedType::isDynamic(outputShape[1]) ? calculateSize : outputShape[1];
   }
 
-  if (!ShapedType::isDynamic(inputWidth) &&
-      !ShapedType::isDynamic(weightWidth)) {
+  if (ShapedType::isStatic(inputWidth) && ShapedType::isStatic(weightWidth)) {
     int64_t calculateSize =
         (inputWidth - 1) * stride[1] + padding[2] + padding[3] + weightWidth;
     outputShape[2] =
@@ -3296,7 +3343,7 @@ LogicalResult TransposeConv2DOp::verify() {
 
   if (weightType) {
     const int64_t kernelHeight = weightType.getDimSize(1);
-    if (!ShapedType::isDynamic(kernelHeight)) {
+    if (ShapedType::isStatic(kernelHeight)) {
       if (failed(checkPadAgainstKernelDim(outPadTop, kernelHeight,
                                           "out_pad_top", "KH")))
         return failure();
@@ -3307,7 +3354,7 @@ LogicalResult TransposeConv2DOp::verify() {
     }
 
     const int64_t kernelWidth = weightType.getDimSize(2);
-    if (!ShapedType::isDynamic(kernelWidth)) {
+    if (ShapedType::isStatic(kernelWidth)) {
       if (failed(checkPadAgainstKernelDim(outPadLeft, kernelWidth,
                                           "out_pad_left", "KW")))
         return failure();
@@ -3330,8 +3377,8 @@ LogicalResult TransposeConv2DOp::verify() {
     const int64_t kernelHeight = weightType.getDimSize(1);
     const int64_t outputHeight = outputType.getDimSize(1);
 
-    if (!ShapedType::isDynamic(inputHeight) &&
-        !ShapedType::isDynamic(outputHeight)) {
+    if (ShapedType::isStatic(inputHeight) &&
+        ShapedType::isStatic(outputHeight)) {
       if (outputHeight !=
           (inputHeight - 1) * strideY + outPadTop + outPadBottom + kernelHeight)
         return emitOpError(
@@ -3346,8 +3393,7 @@ LogicalResult TransposeConv2DOp::verify() {
     const int64_t kernelWidth = weightType.getDimSize(2);
     const int64_t outputWidth = outputType.getDimSize(2);
 
-    if (!ShapedType::isDynamic(inputWidth) &&
-        !ShapedType::isDynamic(outputWidth)) {
+    if (ShapedType::isStatic(inputWidth) && ShapedType::isStatic(outputWidth)) {
       if (outputWidth !=
           (inputWidth - 1) * strideX + outPadLeft + outPadRight + kernelWidth)
         return emitOpError(
@@ -3771,16 +3817,16 @@ LogicalResult ReverseOp::verify() {
 
 LogicalResult tosa::SelectOp::verify() {
   // verify input2 and input3 have same element type as output
-  if (verifySameElementTypes(*this, /* inType = */ getInput2().getType(),
+  if (verifySameElementTypes(*this, /* inType = */ getOnTrue().getType(),
                              /* outType = */ getOutput().getType())
           .failed() ||
-      verifySameElementTypes(*this, /* inType = */ getInput3().getType(),
+      verifySameElementTypes(*this, /* inType = */ getOnFalse().getType(),
                              /* outType = */ getOutput().getType())
           .failed()) {
     return failure();
   }
   // verify input1 has element type of bool
-  auto predicateType = llvm::dyn_cast<ShapedType>(getInput1().getType());
+  auto predicateType = llvm::dyn_cast<ShapedType>(getPred().getType());
   if (!predicateType) {
     return emitOpError("expect shaped tensor for input1, got ")
            << getInput1().getType();

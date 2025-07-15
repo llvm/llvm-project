@@ -215,20 +215,6 @@ public:
 
 LLVM_ABI void checkForCycles(const SelectionDAG *DAG, bool force = false);
 
-/// Keeps track of state when getting the sign of a floating-point value as an
-/// integer.
-struct FloatSignAsInt {
-  EVT FloatVT;
-  SDValue Chain;
-  SDValue FloatPtr;
-  SDValue IntPtr;
-  MachinePointerInfo IntPointerInfo;
-  MachinePointerInfo FloatPointerInfo;
-  SDValue IntValue;
-  APInt SignMask;
-  uint8_t SignBit;
-};
-
 /// This is used to represent a portion of an LLVM function in a low-level
 /// Data Dependence DAG representation suitable for instruction selection.
 /// This DAG is constructed as the first step of instruction selection in order
@@ -251,6 +237,8 @@ class SelectionDAG {
   Pass *SDAGISelPass = nullptr;
   LLVMContext *Context;
   CodeGenOptLevel OptLevel;
+
+  bool DivergentTarget = false;
 
   UniformityInfo *UA = nullptr;
   FunctionLoweringInfo * FLI = nullptr;
@@ -485,14 +473,16 @@ public:
                      Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
                      UniformityInfo *UA, ProfileSummaryInfo *PSIin,
                      BlockFrequencyInfo *BFIin, MachineModuleInfo &MMI,
-                     FunctionVarLocs const *FnVarLocs);
+                     FunctionVarLocs const *FnVarLocs, bool HasDivergency);
 
   void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
             MachineFunctionAnalysisManager &AM,
             const TargetLibraryInfo *LibraryInfo, UniformityInfo *UA,
             ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
-            MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs) {
-    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs);
+            MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs,
+            bool HasDivergency) {
+    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs,
+         HasDivergency);
     MFAM = &AM;
   }
 
@@ -2031,16 +2021,6 @@ public:
   /// value types.
   LLVM_ABI SDValue CreateStackTemporary(EVT VT1, EVT VT2);
 
-  /// Bitcast a floating-point value to an integer value. Only bitcast the part
-  /// containing the sign bit if the target has no integer value capable of
-  /// holding all bits of the floating-point value.
-  void getSignAsIntValue(FloatSignAsInt &State, const SDLoc &DL, SDValue Value);
-
-  /// Replace the integer value produced by getSignAsIntValue() with a new value
-  /// and cast the result back to a floating-point type.
-  SDValue modifySignAsInt(const FloatSignAsInt &State, const SDLoc &DL,
-                          SDValue NewIntValue);
-
   LLVM_ABI SDValue FoldSymbolOffset(unsigned Opcode, EVT VT,
                                     const GlobalAddressSDNode *GA,
                                     const SDNode *N2);
@@ -2053,6 +2033,11 @@ public:
   /// undefined.
   LLVM_ABI SDValue foldConstantFPMath(unsigned Opcode, const SDLoc &DL, EVT VT,
                                       ArrayRef<SDValue> Ops);
+
+  /// Fold BUILD_VECTOR of constants/undefs to the destination type
+  /// BUILD_VECTOR of constants/undefs elements.
+  LLVM_ABI SDValue FoldConstantBuildVector(BuildVectorSDNode *BV,
+                                           const SDLoc &DL, EVT DstEltVT);
 
   /// Constant fold a setcc to true or false.
   LLVM_ABI SDValue FoldSetCC(EVT VT, SDValue N1, SDValue N2, ISD::CondCode Cond,
@@ -2503,8 +2488,7 @@ public:
 
   /// Check if a value \op N is a constant using the target's BooleanContent for
   /// its type.
-  LLVM_ABI std::optional<bool>
-  isBoolConstant(SDValue N, bool AllowTruncation = false) const;
+  LLVM_ABI std::optional<bool> isBoolConstant(SDValue N) const;
 
   /// Set CallSiteInfo to be associated with Node.
   void addCallSiteInfo(const SDNode *Node, CallSiteInfo &&CallInfo) {
