@@ -56,6 +56,11 @@ struct _LIBCPP_EXPORTED_FROM_ABI base {
     template <typename _T2 = _Tp>
     Alloc(Alloc<_T2> const& __rhs) : Alloc(__rhs.__alloc_bytes_, __rhs.__dealloc_bytes_) {}
 
+    Alloc()
+        : __alloc_bytes_([](size_t __sz) { return std::allocator<std::byte>().allocate(__sz); }),
+          __dealloc_bytes_([](std::byte* __ptr, size_t __sz) { std::allocator<std::byte>().deallocate(__ptr, __sz); }) {
+    }
+
     // XXX Alignment?
     using value_type = _Tp;
     [[nodiscard]] _Tp* allocate(size_t __sz) { return (_Tp*)__alloc_bytes_(__sz * sizeof(_Tp)); }

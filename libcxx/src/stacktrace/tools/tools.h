@@ -27,7 +27,6 @@
 #include <__stacktrace/basic.h>
 #include <__stacktrace/entry.h>
 
-#include "stacktrace/utils/debug.h"
 #include "stacktrace/utils/failed.h"
 #include "stacktrace/utils/fd.h"
 
@@ -152,9 +151,7 @@ struct pspawn_tool : pspawn {
 
   pspawn_tool(tool const& a2l, base& trace, char* buf, size_t size)
       : pspawn{a2l}, base_(trace), fd_(fa_.redirectOutFD()), buf_(fd_, buf, size), stream_(buf_) {
-    if (!debug::enabled()) {
-      fa_.redirectErrNull();
-    }
+    fa_.redirectErrNull();
     fa_.redirectInNull();
   }
 
@@ -167,14 +164,6 @@ struct pspawn_tool : pspawn {
     }
 
     auto argStrings = tool_.buildArgs(base_);
-    if (debug::enabled()) {
-      debug() << "Trying to get stacktrace using:";
-      for (auto& str : argStrings) {
-        debug() << " \"" << str << '"';
-      }
-      debug() << '\n';
-    }
-
     spawn(argStrings);
 
     auto end = base_.__entries_.end();
