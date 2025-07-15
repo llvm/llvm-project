@@ -256,17 +256,28 @@ define amdgpu_ps <2 x float> @v_lshl_add_u64(i64 %a) {
 ; No folding into VOP2 promoted to VOP3
 
 define amdgpu_ps <2 x float> @v_fma_f64(double %a, double %b) {
-; GCN-LABEL: v_fma_f64:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b64_e32 v[4:5], lit64(0x4063233333333333)
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_fmac_f64_e32 v[4:5], v[0:1], v[2:3]
-; GCN-NEXT:    v_mov_b64_e32 v[2:3], lit64(0x4069033333333333)
-; GCN-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], v[2:3]
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_fmac_f64_e32 v[2:3], v[0:1], v[4:5]
-; GCN-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
-; GCN-NEXT:    ; return to shader part epilog
+; GCN-SDAG-LABEL: v_fma_f64:
+; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    v_fmaak_f64 v[4:5], v[0:1], v[2:3], lit64(0x4063233333333333)
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[2:3], lit64(0x4069033333333333)
+; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GCN-SDAG-NEXT:    v_fmaak_f64 v[0:1], v[0:1], v[4:5], lit64(0x4069033333333333)
+; GCN-SDAG-NEXT:    v_fmac_f64_e32 v[2:3], v[0:1], v[4:5]
+; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-SDAG-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
+; GCN-SDAG-NEXT:    ; return to shader part epilog
+;
+; GCN-GISEL-LABEL: v_fma_f64:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[4:5], lit64(0x4063233333333333)
+; GCN-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-GISEL-NEXT:    v_fmac_f64_e32 v[4:5], v[0:1], v[2:3]
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[2:3], lit64(0x4069033333333333)
+; GCN-GISEL-NEXT:    v_fmaak_f64 v[0:1], v[0:1], v[4:5], lit64(0x4069033333333333)
+; GCN-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GCN-GISEL-NEXT:    v_fmac_f64_e32 v[2:3], v[0:1], v[4:5]
+; GCN-GISEL-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
+; GCN-GISEL-NEXT:    ; return to shader part epilog
   %r1 = call double @llvm.fma.f64(double %a, double %b, double 153.1) nounwind readnone
   %r2 = call double @llvm.fma.f64(double %a, double %r1, double 200.1) nounwind readnone
   %r3 = call double @llvm.fma.f64(double %r2, double %r1, double 200.1) nounwind readnone
