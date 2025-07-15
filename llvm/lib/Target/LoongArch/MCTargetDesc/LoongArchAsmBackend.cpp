@@ -90,7 +90,7 @@ static void reportOutOfRangeError(MCContext &Ctx, SMLoc Loc, unsigned N) {
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext &Ctx) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     llvm_unreachable("Unknown fixup kind");
   case FK_Data_1:
@@ -247,7 +247,7 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
 
 bool LoongArchAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
                                                 const MCValue &Target) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     return STI.hasFeature(LoongArch::FeatureRelax);
   case FK_Data_1:
