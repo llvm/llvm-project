@@ -11,27 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
-#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "vector-broadcast-lowering"
 
@@ -131,12 +120,12 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
     VectorType initialValueType = scanOp.getInitialValueType();
     int64_t initialValueRank = initialValueType.getRank();
 
-    SmallVector<int64_t> reductionShape(destShape.begin(), destShape.end());
+    SmallVector<int64_t> reductionShape(destShape);
     reductionShape[reductionDim] = 1;
     VectorType reductionType = VectorType::get(reductionShape, elType);
     SmallVector<int64_t> offsets(destRank, 0);
     SmallVector<int64_t> strides(destRank, 1);
-    SmallVector<int64_t> sizes(destShape.begin(), destShape.end());
+    SmallVector<int64_t> sizes(destShape);
     sizes[reductionDim] = 1;
     ArrayAttr scanSizes = rewriter.getI64ArrayAttr(sizes);
     ArrayAttr scanStrides = rewriter.getI64ArrayAttr(strides);

@@ -19,7 +19,6 @@
 
 // In some environment, FE_ALL_EXCEPT is set to 0 and the remaining exceptions
 // FE_* are missing.
-#if (FE_ALL_EXCEPT == 0)
 #ifndef FE_DIVBYZERO
 #define FE_DIVBYZERO 0
 #endif // FE_DIVBYZERO
@@ -39,12 +38,6 @@
 #ifndef FE_UNDERFLOW
 #define FE_UNDERFLOW 0
 #endif // FE_UNDERFLOW
-#else
-// If this is not provided by the system, define it for use internally.
-#ifndef __FE_DENORM
-#define __FE_DENORM (1 << 6)
-#endif
-#endif
 
 // Rounding mode macros might be missing.
 #ifndef FE_DOWNWARD

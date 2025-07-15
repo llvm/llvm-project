@@ -9,15 +9,18 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_GPU_ALLOCATOR_H
 #define LLVM_LIBC_SRC___SUPPORT_GPU_ALLOCATOR_H
 
+#include "src/__support/macros/config.h"
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace gpu {
 
 void *allocate(uint64_t size);
 void deallocate(void *ptr);
+void *reallocate(void *ptr, uint64_t size);
+void *aligned_allocate(uint32_t alignment, uint64_t size);
 
 } // namespace gpu
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_GPU_ALLOCATOR_H

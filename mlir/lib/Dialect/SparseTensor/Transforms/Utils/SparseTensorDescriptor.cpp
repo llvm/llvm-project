@@ -9,7 +9,6 @@
 #include "SparseTensorDescriptor.h"
 #include "CodegenUtils.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
@@ -38,12 +37,14 @@ convertSparseTensorType(RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
   if (!stt.hasEncoding())
     return std::nullopt;
 
+  unsigned numFields = fields.size();
+  (void)numFields;
   foreachFieldAndTypeInSparseTensor(
       stt,
-      [&fields](Type fieldType, FieldIndex fieldIdx,
-                SparseTensorFieldKind /*fieldKind*/, Level /*lvl*/,
-                LevelType /*lt*/) -> bool {
-        assert(fieldIdx == fields.size());
+      [&](Type fieldType, FieldIndex fieldIdx,
+          SparseTensorFieldKind /*fieldKind*/, Level /*lvl*/,
+          LevelType /*lt*/) -> bool {
+        assert(numFields + fieldIdx == fields.size());
         fields.push_back(fieldType);
         return true;
       });
@@ -54,20 +55,21 @@ convertSparseTensorType(RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
 // The sparse tensor type converter (defined in Passes.h).
 //===----------------------------------------------------------------------===//
 
+static Value materializeTuple(OpBuilder &builder, RankedTensorType tp,
+                              ValueRange inputs, Location loc) {
+  if (!getSparseTensorEncoding(tp))
+    // Not a sparse tensor.
+    return Value();
+  // Sparsifier knows how to cancel out these casts.
+  return genTuple(builder, loc, tp, inputs);
+}
+
 SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
   addConversion([](Type type) { return type; });
   addConversion(convertSparseTensorType);
 
   // Required by scf.for 1:N type conversion.
-  addSourceMaterialization([](OpBuilder &builder, RankedTensorType tp,
-                              ValueRange inputs,
-                              Location loc) -> std::optional<Value> {
-    if (!getSparseTensorEncoding(tp))
-      // Not a sparse tensor.
-      return std::nullopt;
-    // Sparsifier knows how to cancel out these casts.
-    return genTuple(builder, loc, tp, inputs);
-  });
+  addSourceMaterialization(materializeTuple);
 }
 
 //===----------------------------------------------------------------------===//

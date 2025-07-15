@@ -9,7 +9,6 @@
 #include "mlir/Dialect/NVGPU/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/NVGPU/Transforms/Utils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -24,8 +23,8 @@ template <typename OpTy>
 static bool isContiguousXferOp(OpTy op) {
   return op.getPermutationMap().isMinorIdentity() && op.isDimInBounds(0) &&
          op.hasPureBufferSemantics() &&
-         isLastMemrefDimUnitStride(
-             cast<MemRefType>(nvgpu::getMemrefOperand(op).getType()));
+         cast<MemRefType>(nvgpu::getMemrefOperand(op).getType())
+             .isLastDimUnitStride();
 }
 
 /// Return "true" if the given op is a contiguous and suitable

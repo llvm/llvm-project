@@ -30,6 +30,7 @@
 namespace mlir {
 class Builder;
 class OpBuilder;
+class ImplicitLocOpBuilder;
 
 /// This class implements `Optional` functionality for ParseResult. We don't
 /// directly use Optional here, because it provides an implicit conversion
@@ -74,7 +75,10 @@ void ensureRegionTerminator(
 
 /// Structure used by default as a "marker" when no "Properties" are set on an
 /// Operation.
-struct EmptyProperties {};
+struct EmptyProperties {
+  bool operator==(const EmptyProperties &) const { return true; }
+  bool operator!=(const EmptyProperties &) const { return false; }
+};
 
 /// Traits to detect whether an Operation defined a `Properties` type, otherwise
 /// it'll default to `EmptyProperties`.
@@ -269,11 +273,12 @@ class OpFoldResult : public PointerUnion<Attribute, Value> {
   using PointerUnion<Attribute, Value>::PointerUnion;
 
 public:
-  void dump() const { llvm::errs() << *this << "\n"; }
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << "\n"; }
 
   MLIRContext *getContext() const {
-    return is<Attribute>() ? get<Attribute>().getContext()
-                           : get<Value>().getContext();
+    PointerUnion pu = *this;
+    return isa<Attribute>(pu) ? cast<Attribute>(pu).getContext()
+                              : cast<Value>(pu).getContext();
   }
 };
 
@@ -381,6 +386,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 // Operand Traits
+//===----------------------------------------------------------------------===//
 
 namespace detail {
 /// Utility trait base that provides accessors for derived traits that have
@@ -510,6 +516,7 @@ class VariadicOperands
 
 //===----------------------------------------------------------------------===//
 // Region Traits
+//===----------------------------------------------------------------------===//
 
 /// This class provides verification for ops that are known to have zero
 /// regions.
@@ -602,6 +609,7 @@ class VariadicRegions
 
 //===----------------------------------------------------------------------===//
 // Result Traits
+//===----------------------------------------------------------------------===//
 
 /// This class provides return value APIs for ops that are known to have
 /// zero results.
@@ -753,6 +761,7 @@ class VariadicResults
 
 //===----------------------------------------------------------------------===//
 // Terminator Traits
+//===----------------------------------------------------------------------===//
 
 /// This class indicates that the regions associated with this op don't have
 /// terminators.
@@ -864,6 +873,7 @@ class VariadicSuccessors
 
 //===----------------------------------------------------------------------===//
 // SingleBlock
+//===----------------------------------------------------------------------===//
 
 /// This class provides APIs and verifiers for ops with regions having a single
 /// block.
@@ -945,6 +955,7 @@ public:
 
 //===----------------------------------------------------------------------===//
 // SingleBlockImplicitTerminator
+//===----------------------------------------------------------------------===//
 
 /// This class provides APIs and verifiers for ops with regions having a single
 /// block that must terminate with `TerminatorOpType`.
@@ -1030,6 +1041,7 @@ struct hasSingleBlockImplicitTerminator<Op, false> {
 
 //===----------------------------------------------------------------------===//
 // Misc Traits
+//===----------------------------------------------------------------------===//
 
 /// This class provides verification for ops that are known to have the same
 /// operand shape: all operands are scalars, vectors/tensors of the same
@@ -1510,6 +1522,7 @@ bool hasElementwiseMappableTraits(Operation *op);
 namespace op_definition_impl {
 //===----------------------------------------------------------------------===//
 // Trait Existence
+//===----------------------------------------------------------------------===//
 
 /// Returns true if this given Trait ID matches the IDs of any of the provided
 /// trait types `Traits`.
@@ -1528,6 +1541,7 @@ inline bool hasTrait<>(TypeID traitID) {
 
 //===----------------------------------------------------------------------===//
 // Trait Folding
+//===----------------------------------------------------------------------===//
 
 /// Trait to check if T provides a 'foldTrait' method for single result
 /// operations.
@@ -1600,6 +1614,7 @@ static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
 
 //===----------------------------------------------------------------------===//
 // Trait Verification
+//===----------------------------------------------------------------------===//
 
 /// Trait to check if T provides a `verifyTrait` method.
 template <typename T, typename... Args>
@@ -1617,14 +1632,11 @@ using detect_has_verify_region_trait =
 
 /// Verify the given trait if it provides a verifier.
 template <typename T>
-std::enable_if_t<detect_has_verify_trait<T>::value, LogicalResult>
-verifyTrait(Operation *op) {
-  return T::verifyTrait(op);
-}
-template <typename T>
-inline std::enable_if_t<!detect_has_verify_trait<T>::value, LogicalResult>
-verifyTrait(Operation *) {
-  return success();
+LogicalResult verifyTrait(Operation *op) {
+  if constexpr (detect_has_verify_trait<T>::value)
+    return T::verifyTrait(op);
+  else
+    return success();
 }
 
 /// Given a set of traits, return the result of verifying the given operation.
@@ -1635,15 +1647,11 @@ LogicalResult verifyTraits(Operation *op) {
 
 /// Verify the given trait if it provides a region verifier.
 template <typename T>
-std::enable_if_t<detect_has_verify_region_trait<T>::value, LogicalResult>
-verifyRegionTrait(Operation *op) {
-  return T::verifyRegionTrait(op);
-}
-template <typename T>
-inline std::enable_if_t<!detect_has_verify_region_trait<T>::value,
-                        LogicalResult>
-verifyRegionTrait(Operation *) {
-  return success();
+LogicalResult verifyRegionTrait(Operation *op) {
+  if constexpr (detect_has_verify_region_trait<T>::value)
+    return T::verifyRegionTrait(op);
+  else
+    return success();
 }
 
 /// Given a set of traits, return the result of verifying the regions of the

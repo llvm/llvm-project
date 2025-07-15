@@ -138,9 +138,8 @@ static bool ReadAddress(ExecutionContextScope *exe_scope,
     // If we have any sections that are loaded, try and resolve using the
     // section load list
     Target *target = exe_ctx.GetTargetPtr();
-    if (target && !target->GetSectionLoadList().IsEmpty()) {
-      if (target->GetSectionLoadList().ResolveLoadAddress(deref_addr,
-                                                          deref_so_addr))
+    if (target && target->HasLoadedSections()) {
+      if (target->ResolveLoadAddress(deref_addr, deref_so_addr))
         return true;
     } else {
       // If we were not running, yet able to read an integer, we must have a
@@ -264,22 +263,11 @@ bool Address::ResolveAddressUsingFileSections(addr_t file_addr,
   return false; // Failed to resolve this address to a section offset value
 }
 
-/// if "addr_range_ptr" is not NULL, then fill in with the address range of the function.
-bool Address::ResolveFunctionScope(SymbolContext &sym_ctx,
-                                   AddressRange *addr_range_ptr) {
+bool Address::ResolveFunctionScope(SymbolContext &sym_ctx) {
   constexpr SymbolContextItem resolve_scope =
     eSymbolContextFunction | eSymbolContextSymbol;
 
-  if (!(CalculateSymbolContext(&sym_ctx, resolve_scope) & resolve_scope)) {
-    if (addr_range_ptr)
-      addr_range_ptr->Clear();
-   return false;
-  }
-
-  if (!addr_range_ptr)
-    return true;
-
-  return sym_ctx.GetAddressRange(resolve_scope, 0, false, *addr_range_ptr);
+  return CalculateSymbolContext(&sym_ctx, resolve_scope) & resolve_scope;
 }
 
 ModuleSP Address::GetModule() const {
@@ -1046,8 +1034,9 @@ AddressClass Address::GetAddressClass() const {
 
 bool Address::SetLoadAddress(lldb::addr_t load_addr, Target *target,
                              bool allow_section_end) {
-  if (target && target->GetSectionLoadList().ResolveLoadAddress(
-                    load_addr, *this, allow_section_end))
+  if (target && target->ResolveLoadAddress(load_addr, *this,
+                                           SectionLoadHistory::eStopIDNow,
+                                           allow_section_end))
     return true;
   m_section_wp.reset();
   m_offset = load_addr;

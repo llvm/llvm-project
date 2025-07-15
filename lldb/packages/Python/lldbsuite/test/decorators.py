@@ -1,6 +1,6 @@
 # System modules
 from functools import wraps
-from pkg_resources import packaging
+from packaging import version
 import ctypes
 import locale
 import os
@@ -9,6 +9,7 @@ import re
 import sys
 import tempfile
 import subprocess
+import json
 
 # Third-party modules
 import unittest
@@ -66,9 +67,7 @@ def _check_expected_version(comparison, expected, actual):
         "<=": fn_leq,
     }
 
-    return op_lookup[comparison](
-        packaging.version.parse(actual), packaging.version.parse(expected)
-    )
+    return op_lookup[comparison](version.parse(actual), version.parse(expected))
 
 
 def _match_decorator_property(expected, actual):
@@ -399,6 +398,10 @@ def skipIf(
     )
 
 
+def skip(bugnumber=None):
+    return _decorateTest(DecorateMode.Skip, bugnumber=bugnumber)
+
+
 def _skip_fn_for_android(reason, api_levels, archs):
     def impl():
         result = lldbplatformutil.match_android_device(
@@ -428,18 +431,6 @@ def add_test_categories(cat):
     return impl
 
 
-def benchmarks_test(func):
-    """Decorate the item as a benchmarks test."""
-
-    def should_skip_benchmarks_test():
-        return "benchmarks test"
-
-    # Mark this function as such to separate them from the regular tests.
-    result = skipTestIfFn(should_skip_benchmarks_test)(func)
-    result.__benchmarks_test__ = True
-    return result
-
-
 def no_debug_info_test(func):
     """Decorate the item as a test what don't use any debug info. If this annotation is specified
     then the test runner won't generate a separate test for each debug info format."""
@@ -461,24 +452,66 @@ def apple_simulator_test(platform):
     """
     Decorate the test as a test requiring a simulator for a specific platform.
 
-    Consider that a simulator is available if you have the corresponding SDK installed.
-    The SDK identifiers for simulators are iphonesimulator, appletvsimulator, watchsimulator
+    Consider that a simulator is available if you have the corresponding SDK
+    and runtime installed.
+
+    The SDK identifiers for simulators are iphonesimulator, appletvsimulator,
+    watchsimulator
     """
 
     def should_skip_simulator_test():
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
+
+        # Make sure we recognize the platform.
+        mapping = {
+            "iphone": "ios",
+            "appletv": "tvos",
+            "watch": "watchos",
+        }
+        if platform not in mapping:
+            return "unknown simulator platform: {}".format(platform)
+
+        # Make sure we have an SDK.
         try:
-            DEVNULL = open(os.devnull, "w")
             output = subprocess.check_output(
-                ["xcodebuild", "-showsdks"], stderr=DEVNULL
+                ["xcodebuild", "-showsdks"], stderr=subprocess.DEVNULL
             ).decode("utf-8")
-            if re.search("%ssimulator" % platform, output):
-                return None
-            else:
+            if not re.search("%ssimulator" % platform, output):
                 return "%s simulator is not supported on this system." % platform
         except subprocess.CalledProcessError:
             return "Simulators are unsupported on this system (xcodebuild failed)"
+
+        # Make sure we a simulator runtime.
+        try:
+            sim_devices_str = subprocess.check_output(
+                ["xcrun", "simctl", "list", "-j", "devices"]
+            ).decode("utf-8")
+
+            sim_devices = json.loads(sim_devices_str)["devices"]
+            for simulator in sim_devices:
+                if isinstance(simulator, dict):
+                    runtime = simulator["name"]
+                    devices = simulator["devices"]
+                else:
+                    runtime = simulator
+                    devices = sim_devices[simulator]
+
+                if not mapping[platform] in runtime.lower():
+                    continue
+
+                for device in devices:
+                    if (
+                        "availability" in device
+                        and device["availability"] == "(available)"
+                    ):
+                        return None
+                    if "isAvailable" in device and device["isAvailable"]:
+                        return None
+
+            return "{} simulator is not supported on this system.".format(platform)
+        except (subprocess.CalledProcessError, json.decoder.JSONDecodeError):
+            return "Simulators are unsupported on this system (simctl failed)"
 
     return skipTestIfFn(should_skip_simulator_test)
 
@@ -1004,13 +1037,19 @@ def skipUnlessAArch64MTELinuxCompiler(func):
 
     def is_toolchain_with_mte():
         compiler_path = lldbplatformutil.getCompiler()
-        compiler = os.path.basename(compiler_path)
-        f = tempfile.NamedTemporaryFile()
+        f = tempfile.NamedTemporaryFile(delete=False)
         if lldbplatformutil.getPlatform() == "windows":
             return "MTE tests are not compatible with 'windows'"
 
-        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
-        if os.popen(cmd).close() is not None:
+        # Note hostos may be Windows.
+        f.close()
+
+        cmd = f"{compiler_path} -x c -o {f.name} -"
+        if (
+            subprocess.run(cmd, shell=True, input="int main() {}".encode()).returncode
+            != 0
+        ):
+            os.remove(f.name)
             # Cannot compile at all, don't skip the test
             # so that we report the broken compiler normally.
             return None
@@ -1025,12 +1064,10 @@ def skipUnlessAArch64MTELinuxCompiler(func):
             int main() {
                 void* ptr = __arm_mte_create_random_tag((void*)(0), 0);
             }"""
-        cmd = "echo '%s' | %s -march=armv8.5-a+memtag -x c -o %s -" % (
-            test_src,
-            compiler_path,
-            f.name,
-        )
-        if os.popen(cmd).close() is not None:
+        cmd = f"{compiler_path} -march=armv8.5-a+memtag -x c -o {f.name} -"
+        res = subprocess.run(cmd, shell=True, input=test_src.encode())
+        os.remove(f.name)
+        if res.returncode != 0:
             return "Toolchain does not support MTE"
         return None
 
@@ -1053,6 +1090,10 @@ def _get_bool_config(key, fail_value=True):
 def _get_bool_config_skip_if_decorator(key):
     have = _get_bool_config(key)
     return unittest.skipIf(not have, "requires " + key)
+
+
+def skipIfCurlSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("curl")(func)
 
 
 def skipIfCursesSupportMissing(func):
@@ -1092,9 +1133,8 @@ def skipUnlessFeature(feature):
     def is_feature_enabled():
         if platform.system() == "Darwin":
             try:
-                DEVNULL = open(os.devnull, "w")
                 output = subprocess.check_output(
-                    ["/usr/sbin/sysctl", feature], stderr=DEVNULL
+                    ["/usr/sbin/sysctl", feature], stderr=subprocess.DEVNULL
                 ).decode("utf-8")
                 # If 'feature: 1' was output, then this feature is available and
                 # the test should not be skipped.
@@ -1106,3 +1146,16 @@ def skipUnlessFeature(feature):
                 return "%s is not supported on this system." % feature
 
     return skipTestIfFn(is_feature_enabled)
+
+
+def skipIfBuildType(types: list[str]):
+    """Skip tests if built in a specific CMAKE_BUILD_TYPE.
+
+    Supported types include 'Release', 'RelWithDebInfo', 'Debug', 'MinSizeRel'.
+    """
+    types = [name.lower() for name in types]
+    return unittest.skipIf(
+        configuration.cmake_build_type is not None
+        and configuration.cmake_build_type.lower() in types,
+        "skip on {} build type(s)".format(", ".join(types)),
+    )

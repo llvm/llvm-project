@@ -1,7 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Core
   DebugInfoDWARF
-  DWP
+  DebugInfoDWARFLowLevel
   JITLink
   MC
   Object
@@ -26,6 +26,7 @@ add_llvm_library(LLVMBOLTRewrite
   RewriteInstance.cpp
   SDTRewriter.cpp
 
+  NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
 
   LINK_LIBS

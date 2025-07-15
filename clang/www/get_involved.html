@@ -83,7 +83,7 @@ itself, to benefit the whole Clang community. However, extensions
 for Clang. The benefits of the extension need to be evaluated against
 these costs. The Clang project uses the following criteria for this
 evaluation:</p>
-
+<p>
 <ol>
   <li>Evidence of a significant user community: This is based on a number of
   factors, including an existing user community, the perceived likelihood that
@@ -126,8 +126,43 @@ evaluation:</p>
   extension is not broken by ongoing maintenance in Clang. The test suite
   should be complete enough that another compiler vendor could conceivably
   validate their implementation of the feature against it.</li>
-</ol>
 
+  <li>A support story for other impacted projects within the monorepo: If the
+  extension can impact other parts of the project (libc++, lldb, compiler-rt,
+  etc), the proposal needs to document the impact for these projects to fully
+  support the extension and what level of support is expected. The impacted
+  project communities need to agree with that plan.</li>
+</ol>
+</p>
+<p>
+The Clang community uses an RFC process to evaluate potential extensions for
+inclusion in the tool. First, write a post in the <code>Clang Frontend</code>
+category of <a href="https://discourse.llvm.org/c/clang/6">Discourse</a>. The
+title should include <code>[RFC]</code> so it is clear that it is a proposed
+change. The post should have detailed information about the change itself, the
+motivation for needing the change, how it addresses the criteria listed above,
+and any other relevant details the community should be aware of.
+</p>
+<p>
+The community will discuss the proposal in Discourse, asking questions about
+the proposal to improve their understanding and giving support or dissent for
+the idea. Eventually, consensus will be determined as to whether the proposal
+should proceed or be rejected. If a proposal receives little or no feedback,
+that typically means that the proposal is rejected due to lack of interest.
+</p>
+<p>
+Sometimes, a consensus position is unclear and the proposal author will need
+additional guidance on what next steps to take. In such a case, the Clang Area
+Team may get involved. The Clang Area Team secretary will proactively look for
+RFCs that appear to not have a clear path forward to add them to the team's
+agenda. If anyone would like to put an RFC onto the team's agenda explicitly,
+they can tag any one of the <a href="https://github.com/llvm/llvm-project/blob/main/clang/AreaTeamMembers.txt">
+Clang Area Team</a> members in a comment on the RFC to get their attention. The
+area team will host a meeting to discuss the RFC and determine next steps for
+the proposal. In the event no clear community consensus position seems likely
+to ever form, the Clang Area Team will make a final judgement call on whether
+the RFC will proceed or not. <!-- TODO: link to area team processes -->
+</p>
 </div>
 </body>
 </html>

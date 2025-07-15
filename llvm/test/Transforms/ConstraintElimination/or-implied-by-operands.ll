@@ -6,8 +6,7 @@ define i1 @test_second_or_condition_implied_by_first(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[OR:%.*]] = or i1 true, [[T_1]]
-; CHECK-NEXT:    br i1 [[OR]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -31,8 +30,7 @@ define i1 @test_first_or_condition_implied_by_second_ops(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T_1]], true
-; CHECK-NEXT:    br i1 [[OR]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -105,8 +103,7 @@ define i1 @test_same_cond_for_or(i8 %x) {
 ; CHECK-LABEL: @test_same_cond_for_or(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[OR:%.*]] = or i1 false, [[C_1]]
-; CHECK-NEXT:    br i1 [[OR]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -152,8 +149,7 @@ define i1 @test_second_or_condition_not_implied_by_first(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C_2]], false
-; CHECK-NEXT:    br i1 [[OR]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C_2]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -244,8 +240,7 @@ define i1 @test_or_used_in_false_branch(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[X]], 5
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C_1]], false
-; CHECK-NEXT:    br i1 [[OR]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 [[T_1]]
 ; CHECK:       else:
@@ -270,8 +265,7 @@ define i1 @test_or_used_in_false_branch2(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[OR:%.*]] = or i1 false, [[T_1]]
-; CHECK-NEXT:    br i1 [[OR]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[T_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 [[T_1]]
 ; CHECK:       else:
@@ -305,5 +299,19 @@ entry:
   %incdec.ptr12.i = getelementptr inbounds i32, ptr %a, i64 1
   %cmp.eq.1 = icmp eq ptr %incdec.ptr12.i, %b
   %or = select i1 %cmp.eq, i1 true, i1 %cmp.eq.1
+  ret i1 %or
+}
+
+define i1 @test_or_disjoint_set_operand(i8 %x) {
+; CHECK-LABEL: @test_or_disjoint_set_operand(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %cmp1 = icmp slt i8 %x, 1
+  %cmp2 = icmp ne i8 %x, 0
+  %or = or disjoint i1 %cmp2, %cmp1
   ret i1 %or
 }

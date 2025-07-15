@@ -32,7 +32,6 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Threading.h"
-#include <algorithm>
 #include <cassert>
 
 #define GET_TARGET_REGBANK_IMPL
@@ -42,6 +41,7 @@
 #include "AArch64GenRegisterBankInfo.def"
 
 using namespace llvm;
+static const unsigned CustomMappingID = 1;
 
 AArch64RegisterBankInfo::AArch64RegisterBankInfo(
     const TargetRegisterInfo &TRI) {
@@ -163,17 +163,18 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
     unsigned PartialMapSrcIdx = PMI_##RBNameSrc##Size - PMI_Min;               \
     (void)PartialMapDstIdx;                                                    \
     (void)PartialMapSrcIdx;                                                    \
-    const ValueMapping *Map = getCopyMapping(                                  \
-        AArch64::RBNameDst##RegBankID, AArch64::RBNameSrc##RegBankID, Size);  \
+    const ValueMapping *Map = getCopyMapping(AArch64::RBNameDst##RegBankID,    \
+                                             AArch64::RBNameSrc##RegBankID,    \
+                                             TypeSize::getFixed(Size));        \
     (void)Map;                                                                 \
     assert(Map[0].BreakDown ==                                                 \
                &AArch64GenRegisterBankInfo::PartMappings[PartialMapDstIdx] &&  \
-           Map[0].NumBreakDowns == 1 && #RBNameDst #Size                       \
-           " Dst is incorrectly initialized");                                 \
+           Map[0].NumBreakDowns == 1 &&                                        \
+           #RBNameDst #Size " Dst is incorrectly initialized");                \
     assert(Map[1].BreakDown ==                                                 \
                &AArch64GenRegisterBankInfo::PartMappings[PartialMapSrcIdx] &&  \
-           Map[1].NumBreakDowns == 1 && #RBNameSrc #Size                       \
-           " Src is incorrectly initialized");                                 \
+           Map[1].NumBreakDowns == 1 &&                                        \
+           #RBNameSrc #Size " Src is incorrectly initialized");                \
                                                                                \
   } while (false)
 
@@ -218,7 +219,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
 
 unsigned AArch64RegisterBankInfo::copyCost(const RegisterBank &A,
                                            const RegisterBank &B,
-                                           TypeSize Size) const {
+                                           const TypeSize Size) const {
   // What do we do with different size?
   // copy are same size.
   // Will introduce other hooks for different size:
@@ -239,56 +240,12 @@ unsigned AArch64RegisterBankInfo::copyCost(const RegisterBank &A,
 
 const RegisterBank &
 AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                                LLT) const {
+                                                LLT Ty) const {
   switch (RC.getID()) {
-  case AArch64::FPR8RegClassID:
-  case AArch64::FPR16RegClassID:
-  case AArch64::FPR16_loRegClassID:
-  case AArch64::FPR32_with_hsub_in_FPR16_loRegClassID:
-  case AArch64::FPR32RegClassID:
-  case AArch64::FPR64RegClassID:
-  case AArch64::FPR128RegClassID:
-  case AArch64::FPR64_loRegClassID:
-  case AArch64::FPR128_loRegClassID:
-  case AArch64::FPR128_0to7RegClassID:
-  case AArch64::DDRegClassID:
-  case AArch64::DDDRegClassID:
-  case AArch64::DDDDRegClassID:
-  case AArch64::QQRegClassID:
-  case AArch64::QQQRegClassID:
-  case AArch64::QQQQRegClassID:
-  case AArch64::ZPRRegClassID:
-    return getRegBank(AArch64::FPRRegBankID);
-  case AArch64::GPR32commonRegClassID:
-  case AArch64::GPR32RegClassID:
-  case AArch64::GPR32spRegClassID:
-  case AArch64::GPR32sponlyRegClassID:
-  case AArch64::GPR32argRegClassID:
-  case AArch64::GPR32allRegClassID:
-  case AArch64::GPR64commonRegClassID:
-  case AArch64::GPR64RegClassID:
-  case AArch64::GPR64spRegClassID:
   case AArch64::GPR64sponlyRegClassID:
-  case AArch64::GPR64argRegClassID:
-  case AArch64::GPR64allRegClassID:
-  case AArch64::GPR64noipRegClassID:
-  case AArch64::GPR64common_and_GPR64noipRegClassID:
-  case AArch64::GPR64noip_and_tcGPR64RegClassID:
-  case AArch64::tcGPR64RegClassID:
-  case AArch64::tcGPRx16x17RegClassID:
-  case AArch64::tcGPRx17RegClassID:
-  case AArch64::tcGPRnotx16RegClassID:
-  case AArch64::WSeqPairsClassRegClassID:
-  case AArch64::XSeqPairsClassRegClassID:
-  case AArch64::MatrixIndexGPR32_8_11RegClassID:
-  case AArch64::MatrixIndexGPR32_12_15RegClassID:
-  case AArch64::GPR64_with_sub_32_in_MatrixIndexGPR32_8_11RegClassID:
-  case AArch64::GPR64_with_sub_32_in_MatrixIndexGPR32_12_15RegClassID:
     return getRegBank(AArch64::GPRRegBankID);
-  case AArch64::CCRRegClassID:
-    return getRegBank(AArch64::CCRegBankID);
   default:
-    llvm_unreachable("Register class not supported");
+    return AArch64GenRegisterBankInfo::getRegBankFromRegClass(RC, Ty);
   }
 }
 
@@ -304,7 +261,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
   case TargetOpcode::G_OR: {
     // 32 and 64-bit or can be mapped on either FPR or
     // GPR for the same cost.
-    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
     if (Size != 32 && Size != 64)
       break;
 
@@ -325,7 +282,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     return AltMappings;
   }
   case TargetOpcode::G_BITCAST: {
-    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
     if (Size != 32 && Size != 64)
       break;
 
@@ -365,7 +322,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     return AltMappings;
   }
   case TargetOpcode::G_LOAD: {
-    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    TypeSize Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
     if (Size != 64)
       break;
 
@@ -377,15 +334,17 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     InstructionMappings AltMappings;
     const InstructionMapping &GPRMapping = getInstructionMapping(
         /*ID*/ 1, /*Cost*/ 1,
-        getOperandsMapping({getValueMapping(PMI_FirstGPR, Size),
-                            // Addresses are GPR 64-bit.
-                            getValueMapping(PMI_FirstGPR, 64)}),
+        getOperandsMapping(
+            {getValueMapping(PMI_FirstGPR, Size),
+             // Addresses are GPR 64-bit.
+             getValueMapping(PMI_FirstGPR, TypeSize::getFixed(64))}),
         /*NumOperands*/ 2);
     const InstructionMapping &FPRMapping = getInstructionMapping(
         /*ID*/ 2, /*Cost*/ 1,
-        getOperandsMapping({getValueMapping(PMI_FirstFPR, Size),
-                            // Addresses are GPR 64-bit.
-                            getValueMapping(PMI_FirstGPR, 64)}),
+        getOperandsMapping(
+            {getValueMapping(PMI_FirstFPR, Size),
+             // Addresses are GPR 64-bit.
+             getValueMapping(PMI_FirstGPR, TypeSize::getFixed(64))}),
         /*NumOperands*/ 2);
 
     AltMappings.push_back(&GPRMapping);
@@ -420,6 +379,26 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     MI.getOperand(2).setReg(Ext.getReg(0));
     return applyDefaultMapping(OpdMapper);
   }
+  case AArch64::G_DUP: {
+    // Extend smaller gpr to 32-bits
+    assert(MRI.getType(MI.getOperand(1).getReg()).getSizeInBits() < 32 &&
+           "Expected sources smaller than 32-bits");
+    Builder.setInsertPt(*MI.getParent(), MI.getIterator());
+
+    Register ConstReg;
+    auto ConstMI = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (ConstMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+      auto CstVal = ConstMI->getOperand(1).getCImm()->getValue();
+      ConstReg =
+          Builder.buildConstant(LLT::scalar(32), CstVal.sext(32)).getReg(0);
+    } else {
+      ConstReg = Builder.buildAnyExt(LLT::scalar(32), MI.getOperand(1).getReg())
+                     .getReg(0);
+    }
+    MRI.setRegBank(ConstReg, getRegBank(AArch64::GPRRegBankID));
+    MI.getOperand(1).setReg(ConstReg);
+    return applyDefaultMapping(OpdMapper);
+  }
   default:
     llvm_unreachable("Don't know how to handle that operation");
   }
@@ -437,7 +416,7 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(
          "This code is for instructions with 3 or less operands");
 
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-  unsigned Size = Ty.getSizeInBits();
+  TypeSize Size = Ty.getSizeInBits();
   bool IsFPR = Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc);
 
   PartialMappingIdx RBIdx = IsFPR ? PMI_FirstFPR : PMI_FirstGPR;
@@ -487,6 +466,21 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_fminv:
   case Intrinsic::aarch64_neon_fmaxnmv:
   case Intrinsic::aarch64_neon_fminnmv:
+  case Intrinsic::aarch64_neon_fmulx:
+  case Intrinsic::aarch64_neon_frecpe:
+  case Intrinsic::aarch64_neon_frecps:
+  case Intrinsic::aarch64_neon_frecpx:
+  case Intrinsic::aarch64_neon_frsqrte:
+  case Intrinsic::aarch64_neon_frsqrts:
+  case Intrinsic::aarch64_neon_facge:
+  case Intrinsic::aarch64_neon_facgt:
+  case Intrinsic::aarch64_neon_fabd:
+  case Intrinsic::aarch64_sisd_fabd:
+  case Intrinsic::aarch64_neon_sqrdmlah:
+  case Intrinsic::aarch64_neon_sqrdmlsh:
+  case Intrinsic::aarch64_neon_sqrdmulh:
+  case Intrinsic::aarch64_neon_sqadd:
+  case Intrinsic::aarch64_neon_sqsub:
     return true;
   case Intrinsic::aarch64_neon_saddlv: {
     const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
@@ -494,6 +488,20 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
            SrcTy.getElementCount().getFixedValue() >= 4;
   }
   }
+}
+
+bool AArch64RegisterBankInfo::isPHIWithFPConstraints(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI, const unsigned Depth) const {
+  if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
+    return false;
+
+  return any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                [&](const MachineInstr &UseMI) {
+                  if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
+                    return true;
+                  return isPHIWithFPConstraints(UseMI, MRI, TRI, Depth + 1);
+                });
 }
 
 bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
@@ -541,10 +549,31 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_FPTOSI_SAT:
+  case TargetOpcode::G_FPTOUI_SAT:
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
     return true;
+  case TargetOpcode::G_INTRINSIC:
+    switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+    case Intrinsic::aarch64_neon_fcvtas:
+    case Intrinsic::aarch64_neon_fcvtau:
+    case Intrinsic::aarch64_neon_fcvtzs:
+    case Intrinsic::aarch64_neon_fcvtzu:
+    case Intrinsic::aarch64_neon_fcvtms:
+    case Intrinsic::aarch64_neon_fcvtmu:
+    case Intrinsic::aarch64_neon_fcvtns:
+    case Intrinsic::aarch64_neon_fcvtnu:
+    case Intrinsic::aarch64_neon_fcvtps:
+    case Intrinsic::aarch64_neon_fcvtpu:
+      // Force FPR register bank for half types, as those types otherwise
+      // don't get legalized correctly resulting in fp16 <-> gpr32 COPY's.
+      return MRI.getType(MI.getOperand(2).getReg()) == LLT::float16();
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
@@ -609,7 +638,7 @@ bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
     // Look at the first element of the array to determine its type
     if (isa<ArrayType>(EltTy))
       EltTy = EltTy->getArrayElementType();
-  } else {
+  } else if (!isa<Constant>(LdVal)) {
     // FIXME: grubbing around uses is pretty ugly, but with no more
     // `getPointerElementType` there's not much else we can do.
     for (const auto *LdUser : LdVal->users()) {
@@ -700,9 +729,9 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // If both RB are null that means both registers are generic.
       // We shouldn't be here.
       assert(DstRB && SrcRB && "Both RegBank were nullptr");
-      unsigned Size = getSizeInBits(DstReg, MRI, TRI);
+      TypeSize Size = getSizeInBits(DstReg, MRI, TRI);
       return getInstructionMapping(
-          DefaultMappingID, copyCost(*DstRB, *SrcRB, TypeSize::getFixed(Size)),
+          DefaultMappingID, copyCost(*DstRB, *SrcRB, Size),
           getCopyMapping(DstRB->getID(), SrcRB->getID(), Size),
           // We only care about the mapping of the destination.
           /*NumOperands*/ 1);
@@ -713,7 +742,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_BITCAST: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
-    unsigned Size = DstTy.getSizeInBits();
+    TypeSize Size = DstTy.getSizeInBits();
     bool DstIsGPR = !DstTy.isVector() && DstTy.getSizeInBits() <= 64;
     bool SrcIsGPR = !SrcTy.isVector() && SrcTy.getSizeInBits() <= 64;
     const RegisterBank &DstRB =
@@ -721,7 +750,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     const RegisterBank &SrcRB =
         SrcIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
     return getInstructionMapping(
-        DefaultMappingID, copyCost(DstRB, SrcRB, TypeSize::getFixed(Size)),
+        DefaultMappingID, copyCost(DstRB, SrcRB, Size),
         getCopyMapping(DstRB.getID(), SrcRB.getID(), Size),
         // We only care about the mapping of the destination for COPY.
         /*NumOperands*/ Opc == TargetOpcode::G_BITCAST ? 2 : 1);
@@ -774,8 +803,14 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
              (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
               onlyDefinesFP(*ScalarDef, MRI, TRI)))
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
-    else
+    else {
+      if (ScalarTy.getSizeInBits() < 32 &&
+          getRegBank(ScalarReg, MRI, TRI) == &AArch64::GPRRegBank) {
+        // Calls applyMappingImpl()
+        MappingID = CustomMappingID;
+      }
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR};
+    }
     break;
   }
   case TargetOpcode::G_TRUNC: {
@@ -799,6 +834,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_FPTOSI_SAT:
+  case TargetOpcode::G_FPTOUI_SAT:
   case TargetOpcode::G_INTRINSIC_LRINT:
   case TargetOpcode::G_INTRINSIC_LLRINT:
     if (MRI.getType(MI.getOperand(0).getReg()).isVector())
@@ -851,13 +888,18 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // instead of blind map every scalar to GPR.
     if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
                [&](const MachineInstr &UseMI) {
-                 // If we have at least one direct use in a FP instruction,
+                 // If we have at least one direct or indirect use
+                 // in a FP instruction,
                  // assume this was a floating point load in the IR. If it was
                  // not, we would have had a bitcast before reaching that
                  // instruction.
                  //
                  // Int->FP conversion operations are also captured in
                  // onlyDefinesFP().
+
+                 if (isPHIWithFPConstraints(UseMI, MRI, TRI))
+                   return true;
+
                  return onlyUsesFP(UseMI, MRI, TRI) ||
                         onlyDefinesFP(UseMI, MRI, TRI);
                }))
@@ -991,8 +1033,10 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // If the type is i8/i16, and the regank will be GPR, then we change the
       // type to i32 in applyMappingImpl.
       LLT Ty = MRI.getType(MI.getOperand(2).getReg());
-      if (Ty.getSizeInBits() == 8 || Ty.getSizeInBits() == 16)
-        MappingID = 1;
+      if (Ty.getSizeInBits() == 8 || Ty.getSizeInBits() == 16) {
+        // Calls applyMappingImpl()
+        MappingID = CustomMappingID;
+      }
       OpRegBankIdx[2] = PMI_FirstGPR;
     }
 
@@ -1072,24 +1116,41 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
-    // Check if we know that the intrinsic has any constraints on its register
-    // banks. If it does, then update the mapping accordingly.
-    unsigned Idx = 0;
-    if (onlyDefinesFP(MI, MRI, TRI))
-      for (const auto &Op : MI.defs()) {
-        if (Op.isReg())
-          OpRegBankIdx[Idx] = PMI_FirstFPR;
-        ++Idx;
-      }
-    else
-      Idx += MI.getNumExplicitDefs();
+    switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+    case Intrinsic::aarch64_neon_vcvtfxs2fp:
+    case Intrinsic::aarch64_neon_vcvtfxu2fp:
+    case Intrinsic::aarch64_neon_vcvtfp2fxs:
+    case Intrinsic::aarch64_neon_vcvtfp2fxu:
+      // Override these intrinsics, because they would have a partial
+      // mapping. This is needed for 'half' types, which otherwise don't
+      // get legalised correctly.
+      OpRegBankIdx[0] = PMI_FirstFPR;
+      OpRegBankIdx[2] = PMI_FirstFPR;
+      // OpRegBankIdx[1] is the intrinsic ID.
+      // OpRegBankIdx[3] is an integer immediate.
+      break;
+    default: {
+      // Check if we know that the intrinsic has any constraints on its register
+      // banks. If it does, then update the mapping accordingly.
+      unsigned Idx = 0;
+      if (onlyDefinesFP(MI, MRI, TRI))
+        for (const auto &Op : MI.defs()) {
+          if (Op.isReg())
+            OpRegBankIdx[Idx] = PMI_FirstFPR;
+          ++Idx;
+        }
+      else
+        Idx += MI.getNumExplicitDefs();
 
-    if (onlyUsesFP(MI, MRI, TRI))
-      for (const auto &Op : MI.explicit_uses()) {
-        if (Op.isReg())
-          OpRegBankIdx[Idx] = PMI_FirstFPR;
-        ++Idx;
-      }
+      if (onlyUsesFP(MI, MRI, TRI))
+        for (const auto &Op : MI.explicit_uses()) {
+          if (Op.isReg())
+            OpRegBankIdx[Idx] = PMI_FirstFPR;
+          ++Idx;
+        }
+      break;
+    }
+    }
     break;
   }
   case TargetOpcode::G_LROUND:
@@ -1107,7 +1168,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       LLT Ty = MRI.getType(MI.getOperand(Idx).getReg());
       if (!Ty.isValid())
         continue;
-      auto Mapping = getValueMapping(OpRegBankIdx[Idx], OpSize[Idx]);
+      auto Mapping =
+          getValueMapping(OpRegBankIdx[Idx], TypeSize::getFixed(OpSize[Idx]));
       if (!Mapping->isValid())
         return getInvalidInstructionMapping();
 

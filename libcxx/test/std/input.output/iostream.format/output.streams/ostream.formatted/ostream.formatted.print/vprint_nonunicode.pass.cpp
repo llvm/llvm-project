@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -148,6 +149,7 @@ static void test_write_failure() {
   assert(os.fail());
 }
 
+// Test the formatting does no padding.
 static void test_stream_formatting() {
   std::stringstream sstr;
   auto test = [&]<class... Args>(std::string_view expected, test_format_string<char, Args...> fmt, Args&&... args) {
@@ -163,37 +165,20 @@ static void test_stream_formatting() {
   test("hello", "{}", "hello");
 
   sstr.width(10);
-  test("     hello", "{}", "hello");
+  test("hello", "{}", "hello");
+  assert(sstr.width() == 10);
 
   sstr.fill('+');
 
   sstr.width(10);
-  test("+++++hello", "{}", "hello");
+  test("hello", "{}", "hello");
+  assert(sstr.width() == 10);
 
   // *** Test embedded NUL character ***
   using namespace std::literals;
   sstr.width(15);
-  test("++++hello\0world"sv, "hello{}{}", '\0', "world");
-
-  // *** Test Unicode ***
-  // Streams count code units not code points
-  // 2-byte code points
-  sstr.width(5);
-  test("+++\u00a1", "{}", "\u00a1"); // INVERTED EXCLAMATION MARK
-  sstr.width(5);
-  test("+++\u07ff", "{}", "\u07ff"); // NKO TAMAN SIGN
-
-  // 3-byte code points
-  sstr.width(5);
-  test("++\u0800", "{}", "\u0800"); // SAMARITAN LETTER ALAF
-  sstr.width(5);
-  test("++\ufffd", "{}", "\ufffd"); // REPLACEMENT CHARACTER
-
-  // 4-byte code points
-  sstr.width(5);
-  test("+\U00010000", "{}", "\U00010000"); // LINEAR B SYLLABLE B008 A
-  sstr.width(5);
-  test("+\U0010FFFF", "{}", "\U0010FFFF"); // Undefined Character
+  test("hello\0world"sv, "hello{}{}", '\0', "world");
+  assert(sstr.width() == 15);
 }
 
 int main(int, char**) {

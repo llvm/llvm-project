@@ -1,5 +1,14 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
+; StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat implicitly
+; declare Shader, causing a SPIR-V module to be rejected by the OpenCL
+; run-time. See https://github.com/KhronosGroup/SPIRV-Headers/issues/487
+; De-facto, OpImageRead and OpImageWrite are allowed to use Unknown Image
+; Formats when the Kernel capability is declared. We reflect this behavior
+; in the test case, and leave the check under CHECK-SPIRV-NOT to track
+; the issue and follow-up its final resolution when ready.
+; CHECK-SPIRV-NOT: OpCapability StorageImageReadWithoutFormat
+
 ; CHECK-SPIRV: %[[#]] = OpImageRead %[[#]] %[[#]] %[[#]] Sample %[[#]]
 
 define spir_kernel void @sample_test(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0) %source, i32 %sampler, <4 x float> addrspace(1)* nocapture %results) {

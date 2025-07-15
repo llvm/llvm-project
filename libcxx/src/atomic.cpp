@@ -94,11 +94,11 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
 
 static void
 __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
-  _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAIT, __val, NULL, NULL);
+  _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAIT, __val, nullptr, nullptr);
 }
 
 static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
-  _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAKE, __notify_one ? 1 : INT_MAX, NULL, NULL);
+  _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAKE, __notify_one ? 1 : INT_MAX, nullptr, nullptr);
 }
 
 #else // <- Add other operating systems here
@@ -151,7 +151,10 @@ __libcpp_contention_monitor_for_wait(__cxx_atomic_contention_t volatile* /*__con
 static void __libcpp_contention_wait(__cxx_atomic_contention_t volatile* __contention_state,
                                      __cxx_atomic_contention_t const volatile* __platform_state,
                                      __cxx_contention_t __old_value) {
-  __cxx_atomic_fetch_add(__contention_state, __cxx_contention_t(1), memory_order_seq_cst);
+  __cxx_atomic_fetch_add(__contention_state, __cxx_contention_t(1), memory_order_relaxed);
+  // https://github.com/llvm/llvm-project/issues/109290
+  // There are no platform guarantees of a memory barrier in the platform wait implementation
+  __cxx_atomic_thread_fence(memory_order_seq_cst);
   // We sleep as long as the monitored value hasn't changed.
   __libcpp_platform_wait_on_address(__platform_state, __old_value);
   __cxx_atomic_fetch_sub(__contention_state, __cxx_contention_t(1), memory_order_release);
@@ -163,23 +166,24 @@ static void __libcpp_contention_wait(__cxx_atomic_contention_t volatile* __conte
 static void __libcpp_atomic_notify(void const volatile* __location) {
   auto const __entry = __libcpp_contention_state(__location);
   // The value sequence laundering happens on the next line below.
-  __cxx_atomic_fetch_add(&__entry->__platform_state, __cxx_contention_t(1), memory_order_release);
+  __cxx_atomic_fetch_add(&__entry->__platform_state, __cxx_contention_t(1), memory_order_seq_cst);
   __libcpp_contention_notify(
       &__entry->__contention_state,
       &__entry->__platform_state,
       false /* when laundering, we can't handle notify_one */);
 }
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile* __location) {
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile* __location) noexcept {
   __libcpp_atomic_notify(__location);
 }
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile* __location) {
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile* __location) noexcept {
   __libcpp_atomic_notify(__location);
 }
-_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile* __location) {
+_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile* __location) noexcept {
   auto const __entry = __libcpp_contention_state(__location);
   return __libcpp_contention_monitor_for_wait(&__entry->__contention_state, &__entry->__platform_state);
 }
-_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait(void const volatile* __location, __cxx_contention_t __old_value) {
+_LIBCPP_EXPORTED_FROM_ABI void
+__libcpp_atomic_wait(void const volatile* __location, __cxx_contention_t __old_value) noexcept {
   auto const __entry = __libcpp_contention_state(__location);
   __libcpp_contention_wait(&__entry->__contention_state, &__entry->__platform_state, __old_value);
 }
@@ -187,19 +191,19 @@ _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait(void const volatile* __locat
 /* When the incoming atomic happens to be the platform wait size, we still need to use the
    table for the contention detection, but we can use the atomic directly for the wait. */
 
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile* __location) {
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile* __location) noexcept {
   __libcpp_contention_notify(&__libcpp_contention_state(__location)->__contention_state, __location, true);
 }
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile* __location) {
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile* __location) noexcept {
   __libcpp_contention_notify(&__libcpp_contention_state(__location)->__contention_state, __location, false);
 }
 // This function is never used, but still exported for ABI compatibility.
 _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t
-__libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile* __location) {
+__libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile* __location) noexcept {
   return __libcpp_contention_monitor_for_wait(&__libcpp_contention_state(__location)->__contention_state, __location);
 }
 _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait(__cxx_atomic_contention_t const volatile* __location, __cxx_contention_t __old_value) {
+__libcpp_atomic_wait(__cxx_atomic_contention_t const volatile* __location, __cxx_contention_t __old_value) noexcept {
   __libcpp_contention_wait(&__libcpp_contention_state(__location)->__contention_state, __location, __old_value);
 }
 

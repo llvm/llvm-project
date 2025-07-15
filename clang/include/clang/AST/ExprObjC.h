@@ -217,12 +217,10 @@ public:
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
 
   /// Retrieve elements of array of literals.
-  Expr **getElements() { return getTrailingObjects<Expr *>(); }
+  Expr **getElements() { return getTrailingObjects(); }
 
   /// Retrieve elements of array of literals.
-  const Expr * const *getElements() const {
-    return getTrailingObjects<Expr *>();
-  }
+  const Expr *const *getElements() const { return getTrailingObjects(); }
 
   /// getNumElements - Return number of elements of objective-c array literal.
   unsigned getNumElements() const { return NumElements; }
@@ -271,7 +269,7 @@ struct ObjCDictionaryElement {
 
   /// The number of elements this pack expansion will expand to, if
   /// this is a pack expansion and is known.
-  std::optional<unsigned> NumExpansions;
+  UnsignedOrNone NumExpansions;
 
   /// Determines whether this dictionary element is a pack expansion.
   bool isPackExpansion() const { return EllipsisLoc.isValid(); }
@@ -752,28 +750,24 @@ public:
     setMethodRefFlag(MethodRef_Setter, val);
   }
 
-  const Expr *getBase() const {
-    return cast<Expr>(Receiver.get<Stmt*>());
-  }
-  Expr *getBase() {
-    return cast<Expr>(Receiver.get<Stmt*>());
-  }
+  const Expr *getBase() const { return cast<Expr>(cast<Stmt *>(Receiver)); }
+  Expr *getBase() { return cast<Expr>(cast<Stmt *>(Receiver)); }
 
   SourceLocation getLocation() const { return IdLoc; }
 
   SourceLocation getReceiverLocation() const { return ReceiverLoc; }
 
   QualType getSuperReceiverType() const {
-    return QualType(Receiver.get<const Type*>(), 0);
+    return QualType(cast<const Type *>(Receiver), 0);
   }
 
   ObjCInterfaceDecl *getClassReceiver() const {
-    return Receiver.get<ObjCInterfaceDecl*>();
+    return cast<ObjCInterfaceDecl *>(Receiver);
   }
 
-  bool isObjectReceiver() const { return Receiver.is<Stmt*>(); }
-  bool isSuperReceiver() const { return Receiver.is<const Type*>(); }
-  bool isClassReceiver() const { return Receiver.is<ObjCInterfaceDecl*>(); }
+  bool isObjectReceiver() const { return isa<Stmt *>(Receiver); }
+  bool isSuperReceiver() const { return isa<const Type *>(Receiver); }
+  bool isClassReceiver() const { return isa<ObjCInterfaceDecl *>(Receiver); }
 
   /// Determine the type of the base, regardless of the kind of receiver.
   QualType getReceiverType(const ASTContext &ctx) const;
@@ -787,7 +781,7 @@ public:
 
   // Iterators
   child_range children() {
-    if (Receiver.is<Stmt*>()) {
+    if (isa<Stmt *>(Receiver)) {
       Stmt **begin = reinterpret_cast<Stmt**>(&Receiver); // hack!
       return child_range(begin, begin+1);
     }
@@ -1427,8 +1421,7 @@ public:
     if (hasStandardSelLocs())
       return getStandardSelectorLoc(
           Index, getSelector(), getSelLocsKind() == SelLoc_StandardWithSpace,
-          llvm::ArrayRef(const_cast<Expr **>(getArgs()), getNumArgs()),
-          RBracLoc);
+          ArrayRef(const_cast<Expr **>(getArgs()), getNumArgs()), RBracLoc);
     return getStoredSelLocs()[Index];
   }
 

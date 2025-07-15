@@ -51,10 +51,11 @@ void PrintOpStatsPass::runOnOperation() {
   // Compute the operation statistics for the currently visited operation.
   getOperation()->walk(
       [&](Operation *op) { ++opCount[op->getName().getStringRef()]; });
-  if (printAsJSON) {
+  if (printAsJSON)
     printSummaryInJSON();
-  } else
+  else
     printSummary();
+  markAllAnalysesPreserved();
 }
 
 void PrintOpStatsPass::printSummary() {

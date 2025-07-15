@@ -217,7 +217,7 @@ OPTIONS
 
 .. option:: --offloading
 
-  Display the content of the LLVM offloading section.
+  Display the content of the LLVM offloading sections and HIP offload bundles.
 
 .. option:: --prefix=<prefix>
 
@@ -272,13 +272,13 @@ OPTIONS
   When printing a PC-relative global symbol reference, print it as an offset from the leading symbol.
 
   When a bb-address-map section is present (i.e., the object file is built with
-  ``-fbasic-block-sections=labels``), labels are retrieved from that section
+  ``-fbasic-block-address-map``), labels are retrieved from that section
   instead. If a pgo-analysis-map is present alongside the bb-address-map, any
   available analyses are printed after the relevant block label. By default,
   any analysis with a special representation (i.e. BlockFrequency,
   BranchProbability, etc) are printed as raw hex values.
 
-  Only works with PowerPC objects or X86 linked images.
+  Only supported for AArch64, BPF, PowerPC, and X86.
 
   Example:
     A non-symbolized branch instruction with a local target and pc-relative memory access like

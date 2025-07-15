@@ -20,7 +20,6 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
@@ -78,7 +77,8 @@ public:
       const SparsificationOptions &sparsificationOptions,
       bool createSparseDeallocs, bool enableRuntimeLibrary,
       bool enableBufferInitialization, unsigned vl, bool vla, bool index32,
-      bool gpu)
+      bool gpu, SparseEmitStrategy emitStrategy,
+      SparseParallelizationStrategy parallelizationStrategy)
       : bufferizationOptions(bufferizationOptions),
         sparsificationOptions(sparsificationOptions),
         createSparseDeallocs(createSparseDeallocs),
@@ -89,6 +89,8 @@ public:
     enableVLAVectorization = vla;
     enableSIMDIndex32 = index32;
     enableGPULibgen = gpu;
+    sparseEmitStrategy = emitStrategy;
+    parallelization = parallelizationStrategy;
   }
 
   /// Bufferize all dense ops. This assumes that no further analysis is needed
@@ -111,8 +113,11 @@ public:
       return false;
     });
 
+    bufferization::BufferizationState bufferizationState;
+
     if (failed(bufferization::bufferizeModuleOp(cast<ModuleOp>(getOperation()),
-                                                updatedOptions)))
+                                                updatedOptions,
+                                                bufferizationState)))
       return failure();
 
     bufferization::removeBufferizationAttributesInModule(getOperation());
@@ -120,6 +125,12 @@ public:
   }
 
   void runOnOperation() override {
+    // Overrides the default emit strategy using user-provided value.
+    this->sparsificationOptions.sparseEmitStrategy = sparseEmitStrategy;
+
+    // Overrides the default parallelization strategy using user-provided value.
+    this->sparsificationOptions.parallelizationStrategy = parallelization;
+
     // Run enabling transformations.
     {
       OpPassManager pm("builtin.module");
@@ -140,8 +151,10 @@ public:
     // invalidate the results of the analysis. From now on, only small and
     // localized rewrites are allowed, such as replacing a tensor op with its
     // memref equivalent.
-    if (failed(bufferization::insertTensorCopies(getOperation(),
-                                                 bufferizationOptions)))
+    bufferization::BufferizationState bufferizationState;
+
+    if (failed(bufferization::insertTensorCopies(
+            getOperation(), bufferizationOptions, bufferizationState)))
       return signalPassFailure();
 
     // Option `testAnalysisOnly` is a debug/testing flag. If set, the results of
@@ -159,6 +172,12 @@ public:
         pm.addPass(createSparseGPUCodegenPass(0, enableRuntimeLibrary));
       pm.addPass(createSparseReinterpretMapPass(ReinterpretMapScope::kAll));
       pm.addPass(createSparsificationPass(sparsificationOptions));
+      if (sparsificationOptions.sparseEmitStrategy ==
+          SparseEmitStrategy::kSparseIterator) {
+        pm.addNestedPass<func::FuncOp>(createSparseSpaceCollapsePass());
+        pm.addNestedPass<func::FuncOp>(createLowerSparseIterationToSCFPass());
+      }
+
       pm.addNestedPass<func::FuncOp>(createStageSparseOperationsPass());
       pm.addPass(createLowerSparseOpsToForeachPass(enableRuntimeLibrary,
                                                    /*enableConvert=*/true));
@@ -203,10 +222,10 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
   OneShotBufferizationOptions options;
   options.bufferizeFunctionBoundaries = true;
   options.setFunctionBoundaryTypeConversion(LayoutMapOption::IdentityLayoutMap);
-  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
+  options.unknownTypeConverterFn = [](TensorType tensorType,
+                                      Attribute memorySpace,
                                       const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(
-        cast<TensorType>(value.getType()), memorySpace);
+    return getMemRefTypeWithStaticIdentityLayout(tensorType, memorySpace);
   };
   if (analysisOnly) {
     options.testAnalysisOnly = true;
@@ -237,10 +256,13 @@ std::unique_ptr<mlir::Pass> mlir::createSparsificationAndBufferizationPass(
     const SparsificationOptions &sparsificationOptions,
     bool createSparseDeallocs, bool enableRuntimeLibrary,
     bool enableBufferInitialization, unsigned vectorLength,
-    bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen) {
+    bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen,
+    SparseEmitStrategy emitStrategy,
+    SparseParallelizationStrategy parallelizationStrategy) {
   return std::make_unique<
       mlir::sparse_tensor::SparsificationAndBufferizationPass>(
       bufferizationOptions, sparsificationOptions, createSparseDeallocs,
       enableRuntimeLibrary, enableBufferInitialization, vectorLength,
-      enableVLAVectorization, enableSIMDIndex32, enableGPULibgen);
+      enableVLAVectorization, enableSIMDIndex32, enableGPULibgen, emitStrategy,
+      parallelizationStrategy);
 }

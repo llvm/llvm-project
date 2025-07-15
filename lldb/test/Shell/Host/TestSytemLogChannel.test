@@ -1,0 +1,3 @@
+RUN: %lldb -o 'log list' -o 'log disable system' 2>&1 | FileCheck %s
+CHECK-NOT: Logging categories for 'system'
+CHECK: Invalid log channel 'system'

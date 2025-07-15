@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVFixupKinds.h"
-#include "MCTargetDesc/RISCVMCExpr.h"
+#include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -27,16 +27,15 @@ public:
 
   // Return true if the given relocation must be with a symbol rather than
   // section plus offset.
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override {
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override {
     // TODO: this is very conservative, update once RISC-V psABI requirements
     //       are clarified.
     return true;
   }
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 };
 }
 
@@ -46,45 +45,48 @@ RISCVELFObjectWriter::RISCVELFObjectWriter(uint8_t OSABI, bool Is64Bit)
 
 RISCVELFObjectWriter::~RISCVELFObjectWriter() = default;
 
-unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
-                                            const MCFixup &Fixup,
                                             bool IsPCRel) const {
-  const MCExpr *Expr = Fixup.getValue();
-  // Determine the type of the relocation
-  unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
+  auto Kind = Fixup.getKind();
+  auto Spec = Target.getSpecifier();
+  switch (Spec) {
+  case ELF::R_RISCV_TPREL_HI20:
+  case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TLS_GD_HI20:
+  case ELF::R_RISCV_TLSDESC_HI20:
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    break;
+  case ELF::R_RISCV_PLT32:
+  case ELF::R_RISCV_GOT32_PCREL:
+    if (Kind == FK_Data_4)
+      break;
+    reportError(Fixup.getLoc(), "%" + RISCV::getSpecifierName(Spec) +
+                                    " can only be used in a .word directive");
+    return ELF::R_RISCV_NONE;
+  default:
+    break;
+  }
+
+  // Extract the relocation type from the fixup kind, after applying STT_TLS as
+  // needed.
+  if (mc::isRelocation(Fixup.getKind()))
+    return Kind;
+
   if (IsPCRel) {
     switch (Kind) {
     default:
-      Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
+      reportError(Fixup.getLoc(), "unsupported relocation type");
       return ELF::R_RISCV_NONE;
     case FK_Data_4:
-    case FK_PCRel_4:
-      return Target.getAccessVariant() == MCSymbolRefExpr::VK_PLT
-                 ? ELF::R_RISCV_PLT32
-                 : ELF::R_RISCV_32_PCREL;
+      return ELF::R_RISCV_32_PCREL;
     case RISCV::fixup_riscv_pcrel_hi20:
       return ELF::R_RISCV_PCREL_HI20;
     case RISCV::fixup_riscv_pcrel_lo12_i:
       return ELF::R_RISCV_PCREL_LO12_I;
     case RISCV::fixup_riscv_pcrel_lo12_s:
       return ELF::R_RISCV_PCREL_LO12_S;
-    case RISCV::fixup_riscv_got_hi20:
-      return ELF::R_RISCV_GOT_HI20;
-    case RISCV::fixup_riscv_tls_got_hi20:
-      return ELF::R_RISCV_TLS_GOT_HI20;
-    case RISCV::fixup_riscv_tls_gd_hi20:
-      return ELF::R_RISCV_TLS_GD_HI20;
-    case RISCV::fixup_riscv_tlsdesc_hi20:
-      return ELF::R_RISCV_TLSDESC_HI20;
-    case RISCV::fixup_riscv_tlsdesc_load_lo12:
-      return ELF::R_RISCV_TLSDESC_LOAD_LO12;
-    case RISCV::fixup_riscv_tlsdesc_add_lo12:
-      return ELF::R_RISCV_TLSDESC_ADD_LO12;
-    case RISCV::fixup_riscv_tlsdesc_call:
-      return ELF::R_RISCV_TLSDESC_CALL;
     case RISCV::fixup_riscv_jal:
       return ELF::R_RISCV_JAL;
     case RISCV::fixup_riscv_branch:
@@ -97,32 +99,33 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_RISCV_CALL_PLT;
     case RISCV::fixup_riscv_call_plt:
       return ELF::R_RISCV_CALL_PLT;
+    case RISCV::fixup_riscv_qc_e_branch:
+      return ELF::R_RISCV_QC_E_BRANCH;
+    case RISCV::fixup_riscv_qc_e_call_plt:
+      return ELF::R_RISCV_QC_E_CALL_PLT;
+    case RISCV::fixup_riscv_nds_branch_10:
+      return ELF::R_RISCV_NDS_BRANCH_10;
     }
   }
 
   switch (Kind) {
   default:
-    Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
+    reportError(Fixup.getLoc(), "unsupported relocation type");
     return ELF::R_RISCV_NONE;
-  case RISCV::fixup_riscv_tlsdesc_load_lo12:
-    return ELF::R_RISCV_TLSDESC_LOAD_LO12;
-  case RISCV::fixup_riscv_tlsdesc_add_lo12:
-    return ELF::R_RISCV_TLSDESC_ADD_LO12;
-  case RISCV::fixup_riscv_tlsdesc_call:
-    return ELF::R_RISCV_TLSDESC_CALL;
 
   case FK_Data_1:
-    Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "1-byte data relocations not supported");
     return ELF::R_RISCV_NONE;
   case FK_Data_2:
-    Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "2-byte data relocations not supported");
     return ELF::R_RISCV_NONE;
   case FK_Data_4:
-    if (Expr->getKind() == MCExpr::Target &&
-        cast<RISCVMCExpr>(Expr)->getKind() == RISCVMCExpr::VK_RISCV_32_PCREL)
-      return ELF::R_RISCV_32_PCREL;
-    if (Target.getSymA()->getKind() == MCSymbolRefExpr::VK_GOTPCREL)
-      return ELF::R_RISCV_GOT32_PCREL;
+    switch (Spec) {
+    case ELF::R_RISCV_32_PCREL:
+    case ELF::R_RISCV_GOT32_PCREL:
+    case ELF::R_RISCV_PLT32:
+      return Spec;
+    }
     return ELF::R_RISCV_32;
   case FK_Data_8:
     return ELF::R_RISCV_64;
@@ -132,18 +135,13 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_LO12_I;
   case RISCV::fixup_riscv_lo12_s:
     return ELF::R_RISCV_LO12_S;
-  case RISCV::fixup_riscv_tprel_hi20:
-    return ELF::R_RISCV_TPREL_HI20;
-  case RISCV::fixup_riscv_tprel_lo12_i:
-    return ELF::R_RISCV_TPREL_LO12_I;
-  case RISCV::fixup_riscv_tprel_lo12_s:
-    return ELF::R_RISCV_TPREL_LO12_S;
-  case RISCV::fixup_riscv_tprel_add:
-    return ELF::R_RISCV_TPREL_ADD;
-  case RISCV::fixup_riscv_relax:
-    return ELF::R_RISCV_RELAX;
-  case RISCV::fixup_riscv_align:
-    return ELF::R_RISCV_ALIGN;
+  case RISCV::fixup_riscv_rvc_imm:
+    reportError(Fixup.getLoc(), "No relocation for CI-type instructions");
+    return ELF::R_RISCV_NONE;
+  case RISCV::fixup_riscv_qc_e_32:
+    return ELF::R_RISCV_QC_E_32;
+  case RISCV::fixup_riscv_qc_abs20_u:
+    return ELF::R_RISCV_QC_ABS20_U;
   }
 }
 

@@ -31,12 +31,10 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_DROPEQUIVALENTBUFFERRESULTS
+#define GEN_PASS_DEF_DROPEQUIVALENTBUFFERRESULTSPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -70,6 +68,14 @@ static func::FuncOp getCalledFunction(CallOpInterface callOp) {
 LogicalResult
 mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
   IRRewriter rewriter(module.getContext());
+
+  DenseMap<func::FuncOp, DenseSet<func::CallOp>> callerMap;
+  // Collect the mapping of functions to their call sites.
+  module.walk([&](func::CallOp callOp) {
+    if (func::FuncOp calledFunc = getCalledFunction(callOp)) {
+      callerMap[calledFunc].insert(callOp);
+    }
+  });
 
   for (auto funcOp : module.getOps<func::FuncOp>()) {
     if (funcOp.isExternal())
@@ -105,14 +111,12 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
     }
 
     // Update function.
-    funcOp.eraseResults(erasedResultIndices);
+    if (failed(funcOp.eraseResults(erasedResultIndices)))
+      return failure();
     returnOp.getOperandsMutable().assign(newReturnValues);
 
     // Update function calls.
-    module.walk([&](func::CallOp callOp) {
-      if (getCalledFunction(callOp) != funcOp)
-        return WalkResult::skip();
-
+    for (func::CallOp callOp : callerMap[funcOp]) {
       rewriter.setInsertionPoint(callOp);
       auto newCallOp = rewriter.create<func::CallOp>(callOp.getLoc(), funcOp,
                                                      callOp.getOperands());
@@ -136,8 +140,7 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
         newResults.push_back(replacement);
       }
       rewriter.replaceOp(callOp, newResults);
-      return WalkResult::advance();
-    });
+    }
   }
 
   return success();
@@ -145,7 +148,7 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
 
 namespace {
 struct DropEquivalentBufferResultsPass
-    : bufferization::impl::DropEquivalentBufferResultsBase<
+    : bufferization::impl::DropEquivalentBufferResultsPassBase<
           DropEquivalentBufferResultsPass> {
   void runOnOperation() override {
     if (failed(bufferization::dropEquivalentBufferResults(getOperation())))
@@ -153,8 +156,3 @@ struct DropEquivalentBufferResultsPass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass>
-mlir::bufferization::createDropEquivalentBufferResultsPass() {
-  return std::make_unique<DropEquivalentBufferResultsPass>();
-}

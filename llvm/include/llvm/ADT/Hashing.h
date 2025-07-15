@@ -44,6 +44,8 @@
 #ifndef LLVM_ADT_HASHING_H
 #define LLVM_ADT_HASHING_H
 
+#include "llvm/ADT/ADL.h"
+#include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SwapByteOrder.h"
@@ -126,23 +128,6 @@ hash_code hash_value(const std::basic_string<T> &arg);
 /// Compute a hash_code for a standard string.
 template <typename T> hash_code hash_value(const std::optional<T> &arg);
 
-/// Override the execution seed with a fixed value.
-///
-/// This hashing library uses a per-execution seed designed to change on each
-/// run with high probability in order to ensure that the hash codes are not
-/// attackable and to ensure that output which is intended to be stable does
-/// not rely on the particulars of the hash codes produced.
-///
-/// That said, there are use cases where it is important to be able to
-/// reproduce *exactly* a specific behavior. To that end, we provide a function
-/// which will forcibly set the seed to a fixed value. This must be done at the
-/// start of the program, before any hashes are computed. Also, it cannot be
-/// undone. This makes it thread-hostile and very hard to use outside of
-/// immediately on start of a simple program designed for reproducible
-/// behavior.
-void set_fixed_execution_hash_seed(uint64_t fixed_value);
-
-
 // All of the implementation details of actually computing the various hash
 // code values are held within this namespace. These routines are included in
 // the header file mainly to allow inlining and constant propagation.
@@ -151,7 +136,7 @@ namespace detail {
 
 inline uint64_t fetch64(const char *p) {
   uint64_t result;
-  memcpy(&result, p, sizeof(result));
+  std::memcpy(&result, p, sizeof(result));
   if (sys::IsBigEndianHost)
     sys::swapByteOrder(result);
   return result;
@@ -159,7 +144,7 @@ inline uint64_t fetch64(const char *p) {
 
 inline uint32_t fetch32(const char *p) {
   uint32_t result;
-  memcpy(&result, p, sizeof(result));
+  std::memcpy(&result, p, sizeof(result));
   if (sys::IsBigEndianHost)
     sys::swapByteOrder(result);
   return result;
@@ -322,24 +307,17 @@ struct hash_state {
   }
 };
 
-
-/// A global, fixed seed-override variable.
-///
-/// This variable can be set using the \see llvm::set_fixed_execution_seed
-/// function. See that function for details. Do not, under any circumstances,
-/// set or read this variable.
-extern uint64_t fixed_seed_override;
-
+/// In LLVM_ENABLE_ABI_BREAKING_CHECKS builds, the seed is non-deterministic
+/// per process (address of a function in LLVMSupport) to prevent having users
+/// depend on the particular hash values. On platforms without ASLR, this is
+/// still likely non-deterministic per build.
 inline uint64_t get_execution_seed() {
-  // FIXME: This needs to be a per-execution seed. This is just a placeholder
-  // implementation. Switching to a per-execution seed is likely to flush out
-  // instability bugs and so will happen as its own commit.
-  //
-  // However, if there is a fixed seed override set the first time this is
-  // called, return that instead of the per-execution seed.
-  const uint64_t seed_prime = 0xff51afd7ed558ccdULL;
-  static uint64_t seed = fixed_seed_override ? fixed_seed_override : seed_prime;
-  return seed;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  return static_cast<uint64_t>(
+      reinterpret_cast<uintptr_t>(&install_fatal_error_handler));
+#else
+  return 0xff51afd7ed558ccdULL;
+#endif
 }
 
 
@@ -401,7 +379,7 @@ bool store_and_advance(char *&buffer_ptr, char *buffer_end, const T& value,
   if (buffer_ptr + store_size > buffer_end)
     return false;
   const char *value_data = reinterpret_cast<const char *>(&value);
-  memcpy(buffer_ptr, value_data + offset, store_size);
+  std::memcpy(buffer_ptr, value_data + offset, store_size);
   buffer_ptr += store_size;
   return true;
 }
@@ -492,6 +470,10 @@ hash_code hash_combine_range(InputIteratorT first, InputIteratorT last) {
   return ::llvm::hashing::detail::hash_combine_range_impl(first, last);
 }
 
+// A wrapper for hash_combine_range above.
+template <typename RangeT> hash_code hash_combine_range(RangeT &&R) {
+  return hash_combine_range(adl_begin(R), adl_end(R));
+}
 
 // Implementation details for hash_combine.
 namespace hashing {
@@ -531,7 +513,7 @@ public:
       // with the variadic combine because that formation can have varying
       // argument types.
       size_t partial_store_size = buffer_end - buffer_ptr;
-      memcpy(buffer_ptr, &data, partial_store_size);
+      std::memcpy(buffer_ptr, &data, partial_store_size);
 
       // If the store fails, our buffer is full and ready to hash. We have to
       // either initialize the hash state (on the first full buffer) or mix
@@ -667,7 +649,7 @@ template <typename... Ts> hash_code hash_value(const std::tuple<Ts...> &arg) {
 // infrastructure is available.
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg) {
-  return hash_combine_range(arg.begin(), arg.end());
+  return hash_combine_range(arg);
 }
 
 template <typename T> hash_code hash_value(const std::optional<T> &arg) {

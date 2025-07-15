@@ -30,12 +30,12 @@ define <4 x half> @shuffle_v4f16_234u(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; REVERSEXNACK-LABEL: shuffle_v4f16_234u:
 ; REVERSEXNACK:       ; %bb.0:
 ; REVERSEXNACK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; REVERSEXNACK-NEXT:    v_mov_b32_e32 v6, v3
-; REVERSEXNACK-NEXT:    v_mov_b32_e32 v4, v1
-; REVERSEXNACK-NEXT:    v_mov_b32_e32 v3, v0
-; REVERSEXNACK-NEXT:    v_mov_b32_e32 v5, v2
-; REVERSEXNACK-NEXT:    global_load_dword v0, v[3:4], off offset:4
-; REVERSEXNACK-NEXT:    global_load_dwordx2 v[1:2], v[5:6], off
+; REVERSEXNACK-NEXT:    v_mov_b32_e32 v6, v1
+; REVERSEXNACK-NEXT:    v_mov_b32_e32 v5, v0
+; REVERSEXNACK-NEXT:    v_mov_b32_e32 v4, v3
+; REVERSEXNACK-NEXT:    v_mov_b32_e32 v3, v2
+; REVERSEXNACK-NEXT:    global_load_dword v0, v[5:6], off offset:4
+; REVERSEXNACK-NEXT:    global_load_dwordx2 v[1:2], v[3:4], off
 ; REVERSEXNACK-NEXT:    s_waitcnt vmcnt(0)
 ; REVERSEXNACK-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -48,6 +48,6 @@ define <4 x half> @shuffle_v4f16_234u(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; NOXNACK-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, ptr addrspace(1) %arg0
   %val1 = load <4 x half>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 4, i32 undef>
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 4, i32 poison>
   ret <4 x half> %shuffle
 }

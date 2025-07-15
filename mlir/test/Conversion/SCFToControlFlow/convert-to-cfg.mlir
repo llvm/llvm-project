@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @simple_std_for_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 //  CHECK-NEXT:  cf.br ^bb1(%{{.*}} : index)
@@ -673,5 +673,39 @@ func.func @forall(%num_threads: index) {
     scf.forall.in_parallel {
     }
   }
+  return
+}
+
+// -----
+
+//      CHECK: #[[LOOP_UNROLL:.*]] = #llvm.loop_unroll<full = true>
+// CHECK-DAG: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+
+// CHECK-DAG: #[[FULL_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL]]>
+// CHECK-DAG: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK: func @simple_std_for_loops_annotation
+//      CHECK: ^[[bb1:.*]](%{{.*}}: index):
+//      CHECK:   cf.cond_br %{{.*}}, ^[[bb2:.*]], ^[[bb6:.*]]
+//      CHECK: ^[[bb2]]:
+//      CHECK:   cf.br ^[[bb3:.*]]({{.*}})
+//      CHECK: ^[[bb3]](%{{.*}}: index):
+//      CHECK:   cf.cond_br %{{.*}}, ^[[bb4:.*]], ^[[bb5:.*]]
+//      CHECK: ^[[bb4]]:
+//      CHECK:   cf.br ^[[bb3]]({{.*}}) {llvm.loop_annotation = #[[FULL_UNROLL]]}
+//      CHECK: ^[[bb5]]:
+//      CHECK:   cf.br ^[[bb1]]({{.*}}) {llvm.loop_annotation = #[[NO_UNROLL]]}
+//      CHECK: ^[[bb6]]:
+//      CHECK:   return
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+#full_unroll = #llvm.loop_annotation<unroll = <full = true>>
+func.func @simple_std_for_loops_annotation(%arg0 : index, %arg1 : index, %arg2 : index) {
+  scf.for %i0 = %arg0 to %arg1 step %arg2 {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c4 = arith.constant 4 : index
+    scf.for %i1 = %c0 to %c4 step %c1 {
+      %c1_0 = arith.constant 1 : index
+    } {llvm.loop_annotation = #full_unroll}
+  } {llvm.loop_annotation = #no_unroll}
   return
 }

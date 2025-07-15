@@ -9,12 +9,15 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_BOOL_CONSTANT_H
 
 #include "src/__support/CPP/type_traits/integral_constant.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // bool_constant
 template <bool V> using bool_constant = cpp::integral_constant<bool, V>;
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_BOOL_CONSTANT_H

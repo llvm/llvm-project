@@ -2,9 +2,9 @@
 // appropriately.
 //
 // RUN: %clangxx_xray -fxray-instrument -std=c++11 %s -o %t
-// RUN: XRAY_OPTIONS="patch_premain=false" %run %t 2>&1 | FileCheck %s
+// RUN: env XRAY_OPTIONS="patch_premain=false" %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_xray -fxray-instrument -fno-xray-function-index -std=c++11 %s -o %t
-// RUN: XRAY_OPTIONS="patch_premain=false" %run %t 2>&1 | FileCheck %s
+// RUN: env XRAY_OPTIONS="patch_premain=false" %run %t 2>&1 | FileCheck %s
 
 // UNSUPPORTED: target-is-mips64,target-is-mips64el
 

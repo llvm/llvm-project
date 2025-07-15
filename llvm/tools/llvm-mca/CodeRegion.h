@@ -104,11 +104,9 @@ public:
   dropInstructions(const llvm::SmallPtrSetImpl<const llvm::MCInst *> &Insts) {
     if (Insts.empty())
       return Instructions;
-    Instructions.erase(std::remove_if(Instructions.begin(), Instructions.end(),
-                                      [&Insts](const llvm::MCInst &Inst) {
-                                        return Insts.contains(&Inst);
-                                      }),
-                       Instructions.end());
+    llvm::erase_if(Instructions, [&Insts](const llvm::MCInst &Inst) {
+      return Insts.contains(&Inst);
+    });
     return Instructions;
   }
 
@@ -212,7 +210,7 @@ struct InstrumentRegions : public CodeRegions {
                    UniqueInstrument Instrument) override;
   void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;
 
-  const SmallVector<Instrument *> getActiveInstruments(llvm::SMLoc Loc) const;
+  SmallVector<Instrument *> getActiveInstruments(llvm::SMLoc Loc) const;
 };
 
 } // namespace mca

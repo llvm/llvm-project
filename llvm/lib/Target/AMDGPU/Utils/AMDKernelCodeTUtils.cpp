@@ -14,11 +14,11 @@
 #include "AMDKernelCodeT.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/IndexedMap.h"
+#include "Utils/SIDefinesUtils.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/MathExtras.h"
@@ -72,17 +72,11 @@ using namespace llvm::AMDGPU;
   class GetMember##member {                                                    \
   public:                                                                      \
     static const MCExpr *Phony;                                                \
-    template <typename U, typename std::enable_if_t<IsMCExpr##member::RESULT,  \
-                                                    U> * = nullptr>            \
-    static const MCExpr *&Get(U &C) {                                          \
-      assert(IsMCExpr##member::RESULT &&                                       \
-             "Trying to retrieve member that does not exist.");                \
-      return C.member;                                                         \
-    }                                                                          \
-    template <typename U, typename std::enable_if_t<!IsMCExpr##member::RESULT, \
-                                                    U> * = nullptr>            \
-    static const MCExpr *&Get(U &C) {                                          \
-      return Phony;                                                            \
+    template <typename U> static const MCExpr *&Get(U &C) {                    \
+      if constexpr (IsMCExpr##member::RESULT)                                  \
+        return C.member;                                                       \
+      else                                                                     \
+        return Phony;                                                          \
     }                                                                          \
   };                                                                           \
   const MCExpr *GetMember##member::Phony = nullptr;
@@ -220,77 +214,35 @@ static int get_amd_kernel_code_t_FieldIndex(StringRef name) {
   return map.lookup(name) - 1; // returns -1 if not found
 }
 
-static constexpr std::pair<unsigned, unsigned> getShiftMask(unsigned Value) {
-  unsigned Shift = 0;
-  unsigned Mask = 0;
-
-  Mask = ~Value;
-  for (; !(Mask & 1); Shift++, Mask >>= 1) {
-  }
-
-  return std::make_pair(Shift, Mask);
-}
-
-static const MCExpr *MaskShiftSet(const MCExpr *Val, uint32_t Mask,
-                                  uint32_t Shift, MCContext &Ctx) {
-  if (Mask) {
-    const MCExpr *MaskExpr = MCConstantExpr::create(Mask, Ctx);
-    Val = MCBinaryExpr::createAnd(Val, MaskExpr, Ctx);
-  }
-  if (Shift) {
-    const MCExpr *ShiftExpr = MCConstantExpr::create(Shift, Ctx);
-    Val = MCBinaryExpr::createShl(Val, ShiftExpr, Ctx);
-  }
-  return Val;
-}
-
-static const MCExpr *MaskShiftGet(const MCExpr *Val, uint32_t Mask,
-                                  uint32_t Shift, MCContext &Ctx) {
-  if (Shift) {
-    const MCExpr *ShiftExpr = MCConstantExpr::create(Shift, Ctx);
-    Val = MCBinaryExpr::createLShr(Val, ShiftExpr, Ctx);
-  }
-  if (Mask) {
-    const MCExpr *MaskExpr = MCConstantExpr::create(Mask, Ctx);
-    Val = MCBinaryExpr::createAnd(Val, MaskExpr, Ctx);
-  }
-  return Val;
-}
-
 class PrintField {
 public:
-  template <typename T, T AMDGPUMCKernelCodeT::*ptr,
-            typename std::enable_if_t<!std::is_integral_v<T>, T> * = nullptr>
+  template <typename T, T AMDGPUMCKernelCodeT::*ptr>
   static void printField(StringRef Name, const AMDGPUMCKernelCodeT &C,
-                         raw_ostream &OS, MCContext &Ctx) {
-    OS << Name << " = ";
-    const MCExpr *Value = C.*ptr;
-    int64_t Val;
-    if (Value->evaluateAsAbsolute(Val))
-      OS << Val;
-    else
-      Value->print(OS, Ctx.getAsmInfo());
-  }
-
-  template <typename T, T AMDGPUMCKernelCodeT::*ptr,
-            typename std::enable_if_t<std::is_integral_v<T>, T> * = nullptr>
-  static void printField(StringRef Name, const AMDGPUMCKernelCodeT &C,
-                         raw_ostream &OS, MCContext &) {
-    OS << Name << " = " << (int)(C.*ptr);
+                         raw_ostream &OS, MCContext &Ctx,
+                         AMDGPUMCKernelCodeT::PrintHelper Helper) {
+    if constexpr (!std::is_integral_v<T>) {
+      OS << Name << " = ";
+      const MCExpr *Value = C.*ptr;
+      Helper(Value, OS, Ctx.getAsmInfo());
+    } else {
+      OS << Name << " = " << (int)(C.*ptr);
+    }
   }
 };
 
 template <typename T, T AMDGPUMCKernelCodeT::*ptr, int shift, int width = 1>
 static void printBitField(StringRef Name, const AMDGPUMCKernelCodeT &C,
-                          raw_ostream &OS, MCContext &) {
+                          raw_ostream &OS, MCContext &,
+                          AMDGPUMCKernelCodeT::PrintHelper) {
   const auto Mask = (static_cast<T>(1) << width) - 1;
   OS << Name << " = " << (int)((C.*ptr >> shift) & Mask);
 }
 
 using PrintFx = void (*)(StringRef, const AMDGPUMCKernelCodeT &, raw_ostream &,
-                         MCContext &);
+                         MCContext &, AMDGPUMCKernelCodeT::PrintHelper Helper);
 
-static ArrayRef<PrintFx> getPrinterTable() {
+static ArrayRef<PrintFx>
+getPrinterTable(AMDGPUMCKernelCodeT::PrintHelper Helper) {
   static const PrintFx Table[] = {
 #define COMPPGM1(name, aname, AccMacro)                                        \
   COMPPGM(name, aname, C_00B848_##AccMacro, S_00B848_##AccMacro, 0)
@@ -299,22 +251,18 @@ static ArrayRef<PrintFx> getPrinterTable() {
 #define PRINTFIELD(sname, aname, name) PrintField::printField<FLD_T(name)>
 #define PRINTCOMP(Complement, PGMType)                                         \
   [](StringRef Name, const AMDGPUMCKernelCodeT &C, raw_ostream &OS,            \
-     MCContext &Ctx) {                                                         \
+     MCContext &Ctx, AMDGPUMCKernelCodeT::PrintHelper Helper) {                \
     OS << Name << " = ";                                                       \
     auto [Shift, Mask] = getShiftMask(Complement);                             \
     const MCExpr *Value;                                                       \
     if (PGMType == 0) {                                                        \
       Value =                                                                  \
-          MaskShiftGet(C.compute_pgm_resource1_registers, Mask, Shift, Ctx);   \
+          maskShiftGet(C.compute_pgm_resource1_registers, Mask, Shift, Ctx);   \
     } else {                                                                   \
       Value =                                                                  \
-          MaskShiftGet(C.compute_pgm_resource2_registers, Mask, Shift, Ctx);   \
+          maskShiftGet(C.compute_pgm_resource2_registers, Mask, Shift, Ctx);   \
     }                                                                          \
-    int64_t Val;                                                               \
-    if (Value->evaluateAsAbsolute(Val))                                        \
-      OS << Val;                                                               \
-    else                                                                       \
-      Value->print(OS, Ctx.getAsmInfo());                                      \
+    Helper(Value, OS, Ctx.getAsmInfo());                                       \
   }
 #define RECORD(name, altName, print, parse) print
 #include "Utils/AMDKernelCodeTInfo.h"
@@ -392,7 +340,7 @@ static ArrayRef<ParseFx> getParserTable() {
     if (!parseExpr(MCParser, Value, Err))                                      \
       return false;                                                            \
     auto [Shift, Mask] = getShiftMask(Complement);                             \
-    Value = MaskShiftSet(Value, Mask, Shift, Ctx);                             \
+    Value = maskShiftSet(Value, Mask, Shift, Ctx);                             \
     const MCExpr *Compl = MCConstantExpr::create(Complement, Ctx);             \
     if (PGMType == 0) {                                                        \
       C.compute_pgm_resource1_registers = MCBinaryExpr::createAnd(             \
@@ -415,10 +363,11 @@ static ArrayRef<ParseFx> getParserTable() {
 }
 
 static void printAmdKernelCodeField(const AMDGPUMCKernelCodeT &C, int FldIndex,
-                                    raw_ostream &OS, MCContext &Ctx) {
-  auto Printer = getPrinterTable()[FldIndex];
+                                    raw_ostream &OS, MCContext &Ctx,
+                                    AMDGPUMCKernelCodeT::PrintHelper Helper) {
+  auto Printer = getPrinterTable(Helper)[FldIndex];
   if (Printer)
-    Printer(get_amd_kernel_code_t_FldNames()[FldIndex + 1], C, OS, Ctx);
+    Printer(get_amd_kernel_code_t_FldNames()[FldIndex + 1], C, OS, Ctx, Helper);
 }
 
 void AMDGPUMCKernelCodeT::initDefault(const MCSubtargetInfo *STI,
@@ -492,23 +441,20 @@ bool AMDGPUMCKernelCodeT::ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser,
     return true;
   }
   auto Parser = getParserTable()[Idx];
-  return Parser ? Parser(*this, MCParser, Err) : false;
+  return Parser && Parser(*this, MCParser, Err);
 }
 
-void AMDGPUMCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, MCContext &Ctx) {
+void AMDGPUMCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, MCContext &Ctx,
+                                          PrintHelper Helper) {
   const int Size = hasMCExprVersionTable().size();
   for (int i = 0; i < Size; ++i) {
     OS << "\t\t";
     if (hasMCExprVersionTable()[i]) {
       OS << get_amd_kernel_code_t_FldNames()[i + 1] << " = ";
-      int64_t Val;
       const MCExpr *Value = getMCExprForIndex(i);
-      if (Value->evaluateAsAbsolute(Val))
-        OS << Val;
-      else
-        Value->print(OS, Ctx.getAsmInfo());
+      Helper(Value, OS, Ctx.getAsmInfo());
     } else {
-      printAmdKernelCodeField(*this, i, OS, Ctx);
+      printAmdKernelCodeField(*this, i, OS, Ctx, Helper);
     }
     OS << '\n';
   }
@@ -542,7 +488,7 @@ void AMDGPUMCKernelCodeT::EmitKernelCodeT(MCStreamer &OS, MCContext &Ctx) {
     const MCExpr *CodeProps = MCConstantExpr::create(code_properties, Ctx);
     CodeProps = MCBinaryExpr::createOr(
         CodeProps,
-        MaskShiftSet(is_dynamic_callstack,
+        maskShiftSet(is_dynamic_callstack,
                      (1 << AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_WIDTH) - 1,
                      AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_SHIFT, Ctx),
         Ctx);

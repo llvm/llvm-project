@@ -10,7 +10,6 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -48,7 +47,7 @@ static SmallVector<Value> makeCanonicalAffineApplies(OpBuilder &b, Location loc,
   auto dims = map.getNumDims();
   for (auto e : map.getResults()) {
     auto exprMap = AffineMap::get(dims, map.getNumSymbols(), e);
-    SmallVector<Value> operands(vals.begin(), vals.end());
+    SmallVector<Value> operands(vals);
     affine::canonicalizeMapAndOperands(&exprMap, &operands);
     res.push_back(b.create<affine::AffineApplyOp>(loc, exprMap, operands));
   }
@@ -133,7 +132,7 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
   SmallVector<Value> indexedValues;
   indexedValues.reserve(linalgOp->getNumOperands());
 
-  auto allIvsPlusDims = SmallVector<Value>(allIvs.begin(), allIvs.end());
+  auto allIvsPlusDims = SmallVector<Value>(allIvs);
 
   // TODO: Avoid the loads if the corresponding argument of the
   // region has no uses.
@@ -303,7 +302,7 @@ struct FoldAffineOp : public RewritePattern {
       }
       return failure();
     }
-    if (dyn_cast<AffineDimExpr>(expr) || dyn_cast<AffineSymbolExpr>(expr)) {
+    if (isa<AffineDimExpr, AffineSymbolExpr>(expr)) {
       rewriter.replaceOp(op, op->getOperand(0));
       return success();
     }
@@ -321,7 +320,7 @@ static void lowerLinalgToLoopsImpl(Operation *enclosingOp) {
   affine::AffineApplyOp::getCanonicalizationPatterns(patterns, context);
   patterns.add<FoldAffineOp>(context);
   // Just apply the patterns greedily.
-  (void)applyPatternsAndFoldGreedily(enclosingOp, std::move(patterns));
+  (void)applyPatternsGreedily(enclosingOp, std::move(patterns));
 }
 
 struct LowerToAffineLoops

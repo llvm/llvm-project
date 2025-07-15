@@ -167,13 +167,11 @@ createSymbolIndexManager(StringRef FilePath) {
     // Parse input and fill the database with it.
     // <symbol>=<header><, header...>
     // Multiple symbols can be given, separated by semicolons.
-    std::map<std::string, std::vector<std::string>> SymbolsMap;
     SmallVector<StringRef, 4> SemicolonSplits;
     StringRef(Input).split(SemicolonSplits, ";");
     std::vector<find_all_symbols::SymbolAndSignals> Symbols;
     for (StringRef Pair : SemicolonSplits) {
       auto Split = Pair.split('=');
-      std::vector<std::string> Headers;
       SmallVector<StringRef, 4> CommaSplits;
       Split.second.split(CommaSplits, ",");
       for (size_t I = 0, E = CommaSplits.size(); I != E; ++I)
@@ -415,7 +413,7 @@ int includeFixerMain(int argc, const char **argv) {
       llvm::errs() << llvm::toString(InsertStyle.takeError()) << "\n";
       return 1;
     }
-    auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
+    auto Buffer = llvm::MemoryBuffer::getFile(FilePath, /*IsText=*/true);
     if (!Buffer) {
       errs() << "Couldn't open file: " + FilePath.str() + ": "
              << Buffer.getError().message() + "\n";
@@ -455,9 +453,9 @@ int includeFixerMain(int argc, const char **argv) {
   }
 
   // Set up a new source manager for applying the resulting replacements.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
-  DiagnosticsEngine Diagnostics(new DiagnosticIDs, &*DiagOpts);
-  TextDiagnosticPrinter DiagnosticPrinter(outs(), &*DiagOpts);
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diagnostics(new DiagnosticIDs, DiagOpts);
+  TextDiagnosticPrinter DiagnosticPrinter(outs(), DiagOpts);
   SourceManager SM(Diagnostics, tool.getFiles());
   Diagnostics.setClient(&DiagnosticPrinter, false);
 

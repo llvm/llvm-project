@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
 
 ; Check for successful compilation.
 ; Expect that the truncate to v32i8 is lowered to vdeale.

@@ -177,7 +177,7 @@ the file. The standard header looks like this:
 
 .. code-block:: c++
 
-  //===-- llvm/Instruction.h - Instruction class definition -------*- C++ -*-===//
+  //===----------------------------------------------------------------------===//
   //
   // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
   // See https://llvm.org/LICENSE.txt for license information.
@@ -191,17 +191,7 @@ the file. The standard header looks like this:
   ///
   //===----------------------------------------------------------------------===//
 
-A few things to note about this particular format: The "``-*- C++ -*-``" string
-on the first line is there to tell Emacs that the source file is a C++ file, not
-a C file (Emacs assumes ``.h`` files are C files by default).
-
-.. note::
-
-    This tag is not necessary in ``.cpp`` files.  The name of the file is also
-    on the first line, along with a very short description of the purpose of the
-    file.
-
-The next section in the file is a concise note that defines the license that the
+The first section in the file is a concise note that defines the license that the
 file is released under.  This makes it perfectly clear what terms the source
 code can be distributed under and should not be modified in any way.
 
@@ -601,6 +591,8 @@ rather than C-style casts. There are two exceptions to this:
 
 * When casting to ``void`` to suppress warnings about unused variables (as an
   alternative to ``[[maybe_unused]]``). Prefer C-style casts in this instance.
+  Note that if the variable is unused because it's used only in ``assert``, use
+  ``[[maybe_unused]]`` instead of a C-style void cast.
 
 * When casting between integral types (including enums that are not strongly-
   typed), functional-style casts are permitted as an alternative to
@@ -692,7 +684,7 @@ something notionally equivalent. Examples:
   };
 
   // The Foo constructor call is reading a file, don't use braces to call it.
-  std::fill(foo.begin(), foo.end(), Foo("name"));
+  llvm::fill(foo, Foo("name"));
 
   // The pair is being constructed like an aggregate, use braces.
   bar_map.insert({my_key, my_value});
@@ -1298,16 +1290,25 @@ These are two interesting different cases. In the first case, the call to
 ``V.size()`` is only useful for the assert, and we don't want it executed when
 assertions are disabled.  Code like this should move the call into the assert
 itself.  In the second case, the side effects of the call must happen whether
-the assert is enabled or not.  In this case, the value should be cast to void to
-disable the warning.  To be specific, it is preferred to write the code like
-this:
+the assert is enabled or not. In this case, the value should be defined using
+the ``[[maybe_unused]]`` attribute to suppress the warning. To be specific, it is
+preferred to write the code like this:
 
 .. code-block:: c++
 
   assert(V.size() > 42 && "Vector smaller than it should be");
 
-  bool NewToSet = Myset.insert(Value); (void)NewToSet;
+  [[maybe_unused]] bool NewToSet = Myset.insert(Value);
   assert(NewToSet && "The value shouldn't be in the set yet");
+
+In C code where ``[[maybe_unused]]`` is not supported, use ``void`` cast to
+suppress unused variable warning as follows:
+
+.. code-block:: c
+
+    LLVMValueRef Value = LLVMMetadataAsValue(Context, NodeMD);
+    assert(LLVMIsAValueAsMetadata(Value) != NULL);
+    (void)Value;
 
 Do Not Use ``using namespace std``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1589,17 +1590,24 @@ clarification.
 
 .. _static:
 
-Anonymous Namespaces
-^^^^^^^^^^^^^^^^^^^^
+Restrict Visibility
+^^^^^^^^^^^^^^^^^^^
 
-After talking about namespaces in general, you may be wondering about anonymous
-namespaces in particular.  Anonymous namespaces are a great language feature
-that tells the C++ compiler that the contents of the namespace are only visible
-within the current translation unit, allowing more aggressive optimization and
-eliminating the possibility of symbol name collisions.  Anonymous namespaces are
-to C++ as "static" is to C functions and global variables.  While "``static``"
-is available in C++, anonymous namespaces are more general: they can make entire
-classes private to a file.
+Functions and variables should have the most restricted visibility possible.
+For class members, that means using appropriate ``private``, ``protected``, or
+``public`` keyword to restrict their access. For non-member functions, variables,
+and classes, that means restricting visibility to a single ``.cpp`` file if it's
+not referenced outside that file.
+
+Visibility of file-scope non-member variables and functions can be restricted to
+the current translation unit by using either the ``static`` keyword or an anonymous
+namespace. Anonymous namespaces are a great language feature that tells the C++
+compiler that the contents of the namespace are only visible within the current
+translation unit, allowing more aggressive optimization and eliminating the
+possibility of symbol name collisions.  Anonymous namespaces are to C++ as
+``static`` is to C functions and global variables.  While ``static`` is available
+in C++, anonymous namespaces are more general: they can make entire classes
+private to a file.
 
 The problem with anonymous namespaces is that they naturally want to encourage
 indentation of their body, and they reduce locality of reference: if you see a
@@ -1710,6 +1718,17 @@ would help to avoid running into a "dangling else" situation.
     // In this `else` case, it is necessary that we explain the situation with
     // this surprisingly long comment, so it would be unclear without the braces
     // whether the following statement is in the scope of the `if`.
+    handleOtherDecl(D);
+  }
+
+  // Use braces for the `else if` and `else` block to keep it uniform with the
+  // `if` block.
+  if (isa<FunctionDecl>(D)) {
+    verifyFunctionDecl(D);
+    handleFunctionDecl(D);
+  } else if (isa<GlobalVarDecl>(D)) {
+    handleGlobalVarDecl(D);
+  } else {
     handleOtherDecl(D);
   }
 

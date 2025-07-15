@@ -12,18 +12,17 @@ declare void @llvm.amdgcn.s.barrier() #2
 
 ; SI-LABEL: {{^}}test_private_array_ptr_calc:
 
-; SI-ALLOCA: v_add_i32_e32 [[PTRREG:v[0-9]+]], vcc, 0, v{{[0-9]+}}
+; SI-ALLOCA: buffer_load_dword [[LOAD_A:v[0-9]+]]
+; SI-ALLOCA: buffer_load_dword [[LOAD_B:v[0-9]+]]
+
+; SI-ALLOCA: v_lshlrev_b32_e32 [[SIZE_SCALE:v[0-9]+]], 2, [[LOAD_A]]
+
+; SI-ALLOCA: v_mov_b32_e32 [[PTRREG:v[0-9]+]], [[SIZE_SCALE]]
 ; SI-ALLOCA: buffer_store_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], 0 offen offset:64
 ; SI-ALLOCA: s_barrier
 ; SI-ALLOCA: buffer_load_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], 0 offen offset:64
 ;
-; FIXME: The AMDGPUPromoteAlloca pass should be able to convert this
-; alloca to a vector.  It currently fails because it does not know how
-; to interpret:
-; getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 1, i32 %b
-
-; SI-PROMOTE: v_add_i32_e32 [[PTRREG:v[0-9]+]], vcc, 64
-; SI-PROMOTE: ds_write_b32 [[PTRREG]]
+; SI-PROMOTE: LDSByteSize: 0
 define amdgpu_kernel void @test_private_array_ptr_calc(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %inA, ptr addrspace(1) noalias %inB) #0 {
   %alloca = alloca [16 x i32], align 16, addrspace(5)
   %mbcnt.lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0);

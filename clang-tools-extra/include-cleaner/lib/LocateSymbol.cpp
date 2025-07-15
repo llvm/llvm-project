@@ -14,7 +14,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/raw_ostream.h"
 #include <utility>
 #include <vector>
 
@@ -41,11 +40,8 @@ Hints declHints(const Decl *D) {
 std::vector<Hinted<SymbolLocation>> locateDecl(const Decl &D) {
   std::vector<Hinted<SymbolLocation>> Result;
   // FIXME: Should we also provide physical locations?
-  if (auto SS = tooling::stdlib::Recognizer()(&D)) {
-    Result.push_back({*SS, Hints::CompleteSymbol});
-    if (!D.hasBody())
-      return Result;
-  }
+  if (auto SS = tooling::stdlib::Recognizer()(&D))
+    return {{*SS, Hints::CompleteSymbol}};
   // FIXME: Signal foreign decls, e.g. a forward declaration not owned by a
   // library. Some useful signals could be derived by checking the DeclContext.
   // Most incidental forward decls look like:
@@ -58,20 +54,24 @@ std::vector<Hinted<SymbolLocation>> locateDecl(const Decl &D) {
   return Result;
 }
 
-std::vector<Hinted<SymbolLocation>> locateMacro(const Macro &M) {
+std::vector<Hinted<SymbolLocation>> locateMacro(const Macro &M,
+                                                const tooling::stdlib::Lang L) {
   // FIXME: Should we also provide physical locations?
-  if (auto SS = tooling::stdlib::Symbol::named("", M.Name->getName()))
+  if (auto SS = tooling::stdlib::Symbol::named("", M.Name->getName(), L))
     return {{*SS, Hints::CompleteSymbol}};
   return {{M.Definition, Hints::CompleteSymbol}};
 }
 } // namespace
 
-std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S) {
+std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S,
+                                                 const LangOptions &LO) {
+  const auto L = !LO.CPlusPlus && LO.C99 ? tooling::stdlib::Lang::C
+                                         : tooling::stdlib::Lang::CXX;
   switch (S.kind()) {
   case Symbol::Declaration:
     return locateDecl(S.declaration());
   case Symbol::Macro:
-    return locateMacro(S.macro());
+    return locateMacro(S.macro(), L);
   }
   llvm_unreachable("Unknown Symbol::Kind enum");
 }

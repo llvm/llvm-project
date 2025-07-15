@@ -12,8 +12,7 @@ define i8 @test_binop(i1 %cond, i8 %a) {
 ; CHECK-NEXT:    [[A_EXT:%.*]] = zext i8 [[A]] to i16
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i16 [ undef, %[[ENTRY]] ], [ [[A_EXT]], %[[IF]] ]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[PHI]], -1
+; CHECK-NEXT:    [[AND:%.*]] = phi i16 [ undef, %[[ENTRY]] ], [ [[A_EXT]], %[[IF]] ]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[AND]] to i8
 ; CHECK-NEXT:    ret i8 [[TRUNC]]
 ;

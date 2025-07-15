@@ -4,22 +4,22 @@
 define dso_local i16 @main() local_unnamed_addr #0 !dbg !7 {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i16 9, metadata !12, metadata !DIExpression()), !dbg !13
-; CHECK-NEXT:    br label [[BB2:%.*]], !dbg !14
+; CHECK-NEXT:      #dbg_value(i16 9, [[META12:![0-9]+]], !DIExpression(), [[META13:![0-9]+]])
+; CHECK-NEXT:    br label [[BB2:%.*]], !dbg [[DBG14:![0-9]+]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ 9, [[ENTRY:%.*]] ], [ [[TMP5:%.*]], [[BB2]] ]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i16 [[TMP1]], metadata !12, metadata !DIExpression()), !dbg !13
-; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @wibble(i16 [[TMP1]]), !dbg !14
-; CHECK-NEXT:    [[TMP5]] = add nsw i16 [[TMP4]], [[TMP1]], !dbg !14
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i16 [[TMP5]], metadata !12, metadata !DIExpression()), !dbg !13
-; CHECK-NEXT:    [[TMP6:%.*]] = call i16 @wibble(i16 [[TMP4]]), !dbg !14
-; CHECK-NEXT:    [[TMP7:%.*]] = mul nsw i16 [[TMP6]], 3, !dbg !14
-; CHECK-NEXT:    [[TMP8:%.*]] = call i16 @wibble(i16 [[TMP7]]), !dbg !14
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[TMP5]], 17, !dbg !14
-; CHECK-NEXT:    br i1 [[TMP2]], label [[BB2]], label [[BB3:%.*]], !dbg !14
+; CHECK-NEXT:      #dbg_value(i16 [[TMP1]], [[META12]], !DIExpression(), [[META13]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @wibble(i16 [[TMP1]]), !dbg [[DBG14]]
+; CHECK-NEXT:    [[TMP5]] = add nsw i16 [[TMP4]], [[TMP1]], !dbg [[DBG14]]
+; CHECK-NEXT:      #dbg_value(i16 [[TMP5]], [[META12]], !DIExpression(), [[META13]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i16 @wibble(i16 [[TMP4]]), !dbg [[DBG14]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nsw i16 [[TMP6]], 3, !dbg [[DBG14]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i16 @wibble(i16 [[TMP7]]), !dbg [[DBG14]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[TMP5]], 17, !dbg [[DBG14]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[BB2]], label [[BB3:%.*]], !dbg [[DBG14]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP10:%.*]] = call i16 @wibble(i16 8), !dbg !14
-; CHECK-NEXT:    ret i16 [[TMP10]], !dbg !14
+; CHECK-NEXT:    [[TMP10:%.*]] = call i16 @wibble(i16 8), !dbg [[DBG14]]
+; CHECK-NEXT:    ret i16 [[TMP10]], !dbg [[DBG14]]
 ;
 entry:
   call void @llvm.dbg.value(metadata i16 9, metadata !12, metadata !DIExpression()), !dbg !13

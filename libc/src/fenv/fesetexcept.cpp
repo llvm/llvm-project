@@ -9,11 +9,12 @@
 #include "src/fenv/fesetexcept.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fesetexcept, (int excepts)) {
   return fputil::set_except(excepts);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -18,7 +18,7 @@ bb3:
 bb4:
   br label %exit.sink.split
 exit.sink.split:
-  %.sink = phi i32 [ 5, %bb4 ], [ %b, %bb1 ], [ 3, %bb3 ], [ %a, %entry ]
+  %.sink = phi i32 [ 5, %bb4 ], [ %b, %bb1 ], [ 7, %bb3 ], [ %a, %entry ]
   store i32 %.sink, ptr %to
   br label %exit
 exit:

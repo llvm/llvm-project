@@ -10,11 +10,12 @@
 #define LLVM_LIBC_SRC_STDFIX_SQRTUHK_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 unsigned short accum sqrtuhk(unsigned short accum x);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDFIX_SQRTUHK_H

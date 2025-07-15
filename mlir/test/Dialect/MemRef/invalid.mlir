@@ -217,6 +217,15 @@ func.func @memref_reinterpret_cast_no_map_but_offset(%in: memref<?xf32>) {
 
 // -----
 
+func.func @memref_reinterpret_cast_offset_mismatch_dynamic(%in: memref<?xf32>, %offset : index) {
+  // expected-error @+1 {{expected result type with offset = dynamic instead of 0}}
+  %out = memref.reinterpret_cast %in to offset: [%offset], sizes: [10], strides: [1]
+         : memref<?xf32> to memref<10xf32>
+  return
+}
+
+// -----
+
 func.func @memref_reinterpret_cast_no_map_but_stride(%in: memref<?xf32>) {
   // expected-error @+1 {{expected result type with stride = 10 instead of 1 in dim = 0}}
   %out = memref.reinterpret_cast %in to offset: [0], sizes: [10], strides: [10]
@@ -231,16 +240,6 @@ func.func @memref_reinterpret_cast_no_map_but_strides(%in: memref<?x?xf32>) {
   %out = memref.reinterpret_cast %in to
            offset: [0], sizes: [9, 10], strides: [42, 1]
          : memref<?x?xf32> to memref<9x10xf32>
-  return
-}
-
-// -----
-
-func.func @memref_reinterpret_cast_non_strided_layout(%in: memref<?x?xf32>) {
-  // expected-error @+1 {{expected result type to have strided layout but found 'memref<9x10xf32, affine_map<(d0, d1) -> (d0)>>}}
-  %out = memref.reinterpret_cast %in to
-           offset: [0], sizes: [9, 10], strides: [42, 1]
-         : memref<?x?xf32> to memref<9x10xf32, affine_map<(d0, d1) -> (d0)>>
   return
 }
 
@@ -340,6 +339,16 @@ memref.global constant "private" @foo : memref<2x2xf32>  = "foo"
 
 // expected-error @+1 {{op visibility expected to be one of ["public", "private", "nested"], but got "priate"}}
 memref.global "priate" constant @memref5 : memref<2xf32>  = uninitialized
+
+// -----
+
+// expected-error @+1 {{op initial value element expected to be of type 'f16', but was of type 'f32'}}
+"memref.global"() <{constant, initial_value = dense<1.000000e+00> : tensor<1xf32>, sym_name = "memref6", sym_visibility = "private", type = memref<1xf16>}> : () -> ()
+
+// -----
+
+// expected-error @+1 {{op initial value shape expected to be 1, 2 but was 2, 2}}
+"memref.global"() <{constant, initial_value = dense<1.000000e+00> : tensor<2x2xf16>, sym_name = "memref7", sym_visibility = "private", type = memref<1x2xf16>}> : () -> ()
 
 // -----
 
@@ -704,7 +713,7 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result element type to be 'f32'}}
+  // expected-error@+1 {{expected result element type to be 'f32', but got 'memref<8x16x4xi32>'}}
   %1 = memref.subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to
       memref<8x16x4xi32>
@@ -715,10 +724,26 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result rank to be smaller or equal to the source rank.}}
+  // expected-error@+1 {{expected result rank to be smaller or equal to the source rank, but got 'memref<8x16x4x3xf32>'}}
   %1 = memref.subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to
-      memref<8x16x4x3xi32>
+      memref<8x16x4x3xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_subview(%arg0: memref<10xf32>) {
+  // expected-error@+1 {{offset 0 is out-of-bounds: 10 >= 10}}
+  %0 = memref.subview %arg0 [10][1][1] : memref<10xf32> to memref<1xf32, strided<[1], offset: 10>>
+  return
+}
+
+// -----
+
+func.func @invalid_subview(%arg0: memref<9xf32>) {
+  // expected-error@+1 {{slice along dimension 0 runs out-of-bounds: 9 >= 9}}
+  %0 = memref.subview %arg0 [3][4][2] : memref<9xf32> to memref<4xf32, strided<[2], offset: 3>>
   return
 }
 
@@ -863,7 +888,7 @@ func.func @invalid_memref_cast() {
 // alignment is not power of 2.
 func.func @assume_alignment(%0: memref<4x4xf16>) {
   // expected-error@+1 {{alignment must be power of 2}}
-  memref.assume_alignment %0, 12 : memref<4x4xf16>
+  %1 = memref.assume_alignment %0, 12 : memref<4x4xf16>
   return
 }
 
@@ -872,7 +897,7 @@ func.func @assume_alignment(%0: memref<4x4xf16>) {
 // 0 alignment value.
 func.func @assume_alignment(%0: memref<4x4xf16>) {
   // expected-error@+1 {{attribute 'alignment' failed to satisfy constraint: 32-bit signless integer attribute whose value is positive}}
-  memref.assume_alignment %0, 0 : memref<4x4xf16>
+  %1 = memref.assume_alignment %0, 0 : memref<4x4xf16>
   return
 }
 

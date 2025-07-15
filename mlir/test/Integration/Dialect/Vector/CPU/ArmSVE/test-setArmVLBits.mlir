@@ -4,11 +4,11 @@
 // DEFINE: %{compile} = mlir-opt %s -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd -march=aarch64 -mattr=+sve \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
-// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%mlir_arm_runner_utils
+// DEFINE:  -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_mlir_arm_runner_utils
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
-func.func @checkVScale() {
+func.func @checkVScale() attributes {no_inline} {
   %vscale = vector.vscale
   vector.print str "vscale = "
   vector.print %vscale : index

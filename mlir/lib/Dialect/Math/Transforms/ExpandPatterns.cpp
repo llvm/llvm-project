@@ -215,37 +215,17 @@ static LogicalResult convertFmaFOp(math::FmaOp op, PatternRewriter &rewriter) {
   return success();
 }
 
-// Converts a floorf() function to the following:
-// floorf(float x) ->
-//     y = (float)(int) x
-//     if (x < 0) then incr = -1 else incr = 0
-//     y = y + incr    <= replace this op with the floorf op.
-static LogicalResult convertFloorOp(math::FloorOp op,
-                                    PatternRewriter &rewriter) {
-  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
-  Value operand = op.getOperand();
-  Type opType = operand.getType();
-  Value fpFixedConvert = createTruncatedFPValue(operand, b);
-
-  // Creating constants for later use.
-  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
-  Value negOne = createFloatConst(op->getLoc(), opType, -1.00, rewriter);
-
-  Value negCheck =
-      b.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, operand, zero);
-  Value incrValue =
-      b.create<arith::SelectOp>(op->getLoc(), negCheck, negOne, zero);
-  Value ret = b.create<arith::AddFOp>(opType, fpFixedConvert, incrValue);
-  rewriter.replaceOp(op, ret);
-  return success();
-}
-
 // Converts a ceilf() function to the following:
 // ceilf(float x) ->
 //      y = (float)(int) x
 //      if (x > y) then incr = 1 else incr = 0
 //      y = y + incr   <= replace this op with the ceilf op.
 static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
+  // Creating constants assumes the static shaped type.
+  auto shapedType = dyn_cast<ShapedType>(op.getType());
+  if (shapedType && !shapedType.hasStaticShape())
+    return failure();
+
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
@@ -336,32 +316,76 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
   return success();
 }
 
-// Converts  Powf(float a, float b) (meaning a^b) to exp^(b * ln(a))
+// Converts Powf(float a, float b) (meaning a^b) to exp^(b * ln(a))
+// Some special cases where b is constant are handled separately:
+// when b == 0, or |b| == 0.5, 1.0, or 2.0.
 static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operandA = op.getOperand(0);
   Value operandB = op.getOperand(1);
-  Type opType = operandA.getType();
-  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
-  Value two = createFloatConst(op->getLoc(), opType, 2.00, rewriter);
-  Value negOne = createFloatConst(op->getLoc(), opType, -1.00, rewriter);
-  Value opASquared = b.create<arith::MulFOp>(opType, operandA, operandA);
-  Value opBHalf = b.create<arith::DivFOp>(opType, operandB, two);
+  auto typeA = operandA.getType();
+  auto typeB = operandB.getType();
 
-  Value logA = b.create<math::LogOp>(opType, opASquared);
-  Value mult = b.create<arith::MulFOp>(opType, opBHalf, logA);
-  Value expResult = b.create<math::ExpOp>(opType, mult);
-  Value negExpResult = b.create<arith::MulFOp>(opType, expResult, negOne);
-  Value remainder = b.create<arith::RemFOp>(opType, operandB, two);
-  Value negCheck =
-      b.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, operandA, zero);
-  Value oddPower =
-      b.create<arith::CmpFOp>(arith::CmpFPredicate::ONE, remainder, zero);
-  Value oddAndNeg = b.create<arith::AndIOp>(op->getLoc(), oddPower, negCheck);
+  auto &sem =
+      cast<mlir::FloatType>(getElementTypeOrSelf(typeB)).getFloatSemantics();
+  APFloat valueB(sem);
+  auto mulf = [&](Value x, Value y) -> Value {
+    return b.create<arith::MulFOp>(x, y);
+  };
+  if (matchPattern(operandB, m_ConstantFloat(&valueB))) {
+    if (valueB.isZero()) {
+      // a^0 -> 1
+      Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
+      rewriter.replaceOp(op, one);
+      return success();
+    }
+    if (valueB.isExactlyValue(1.0)) {
+      // a^1 -> a
+      rewriter.replaceOp(op, operandA);
+      return success();
+    }
+    if (valueB.isExactlyValue(-1.0)) {
+      // a^(-1) -> 1 / a
+      Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
+      Value div = b.create<arith::DivFOp>(one, operandA);
+      rewriter.replaceOp(op, div);
+      return success();
+    }
+    if (valueB.isExactlyValue(0.5)) {
+      // a^(1/2) -> sqrt(a)
+      Value sqrt = b.create<math::SqrtOp>(operandA);
+      rewriter.replaceOp(op, sqrt);
+      return success();
+    }
+    if (valueB.isExactlyValue(-0.5)) {
+      // a^(-1/2) -> 1 / sqrt(a)
+      Value rsqrt = b.create<math::RsqrtOp>(operandA);
+      rewriter.replaceOp(op, rsqrt);
+      return success();
+    }
+    if (valueB.isExactlyValue(2.0)) {
+      // a^2 -> a * a
+      rewriter.replaceOp(op, mulf(operandA, operandA));
+      return success();
+    }
+    if (valueB.isExactlyValue(-2.0)) {
+      // a^(-2) -> 1 / (a * a)
+      Value one =
+          createFloatConst(op->getLoc(), operandA.getType(), 1.0, rewriter);
+      Value div = b.create<arith::DivFOp>(one, mulf(operandA, operandA));
+      rewriter.replaceOp(op, div);
+      return success();
+    }
+    if (valueB.isExactlyValue(3.0)) {
+      rewriter.replaceOp(op, mulf(mulf(operandA, operandA), operandA));
+      return success();
+    }
+  }
 
-  Value res = b.create<arith::SelectOp>(op->getLoc(), oddAndNeg, negExpResult,
-                                        expResult);
-  rewriter.replaceOp(op, res);
+  Value logA = b.create<math::LogOp>(operandA);
+  Value mult = b.create<arith::MulFOp>(operandB, logA);
+  Value expResult = b.create<math::ExpOp>(mult);
+  rewriter.replaceOp(op, expResult);
   return success();
 }
 
@@ -621,6 +645,11 @@ static LogicalResult convertRsqrtOp(math::RsqrtOp op,
 
   auto operand = op.getOperand();
   auto operandTy = operand.getType();
+  // Operand type must be shatic shaped type to create const float.
+  auto shapedOperandType = dyn_cast<ShapedType>(operandTy);
+  if (shapedOperandType && !shapedOperandType.hasStaticShape())
+    return failure();
+
   auto eTy = getElementTypeOrSelf(operandTy);
   if (!isa<FloatType>(eTy))
     return failure();
@@ -686,10 +715,6 @@ void mlir::populateExpandFPowIPattern(RewritePatternSet &patterns) {
 
 void mlir::populateExpandRoundFPattern(RewritePatternSet &patterns) {
   patterns.add(convertRoundOp);
-}
-
-void mlir::populateExpandFloorFPattern(RewritePatternSet &patterns) {
-  patterns.add(convertFloorOp);
 }
 
 void mlir::populateExpandRoundEvenPattern(RewritePatternSet &patterns) {

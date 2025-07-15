@@ -25,7 +25,7 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/        "Returns a FastmathFlagsAttr attribute for the operation",
-      /*returnType=*/  "FastmathFlagsAttr",
+      /*returnType=*/  "::mlir::LLVM::FastmathFlagsAttr",
       /*methodName=*/  "getFastmathAttr",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
@@ -37,7 +37,7 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
     StaticInterfaceMethod<
       /*desc=*/        [{Returns the name of the FastmathFlagsAttr attribute
                          for the operation}],
-      /*returnType=*/  "StringRef",
+      /*returnType=*/  "::llvm::StringRef",
       /*methodName=*/  "getFastmathAttrName",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
@@ -87,39 +87,84 @@ def IntegerOverflowFlagsInterface : OpInterface<"IntegerOverflowFlagsInterface">
   ];
 }
 
-def BranchWeightOpInterface : OpInterface<"BranchWeightOpInterface"> {
+def ExactFlagInterface : OpInterface<"ExactFlagInterface"> {
   let description = [{
-    An interface for operations that can carry branch weights metadata. It
-    provides setters and getters for the operation's branch weights attribute.
-    The default implementation of the interface methods expect the operation to
-    have an attribute of type DenseI32ArrayAttr named branch_weights.
+    This interface defines an LLVM operation with an exact flag and
+    provides a uniform API for accessing it.
   }];
 
   let cppNamespace = "::mlir::LLVM";
 
   let methods = [
-    InterfaceMethod<
-      /*desc=*/        "Returns the branch weights attribute or nullptr",
-      /*returnType=*/  "DenseI32ArrayAttr",
-      /*methodName=*/  "getBranchWeightsOrNull",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        return op.getBranchWeightsAttr();
-      }]
-      >,
-    InterfaceMethod<
-      /*desc=*/        "Sets the branch weights attribute",
-      /*returnType=*/  "void",
-      /*methodName=*/  "setBranchWeights",
-      /*args=*/        (ins "DenseI32ArrayAttr":$attr),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        op.setBranchWeightsAttr(attr);
-      }]
-      >
+    InterfaceMethod<[{
+      Get the exact flag for the operation.
+    }], "bool", "getIsExact", (ins), [{}], [{
+      return $_op.getProperties().isExact;
+    }]>,
+    InterfaceMethod<[{
+      Set the exact flag for the operation.
+    }], "void", "setIsExact", (ins "bool":$isExact), [{}], [{
+      $_op.getProperties().isExact = isExact;
+    }]>,
+    StaticInterfaceMethod<[{
+      Get the attribute name of the isExact property.
+    }], "StringRef", "getIsExactName", (ins), [{}], [{
+      return "isExact";
+    }]>,
+  ];
+}
+
+def DisjointFlagInterface : OpInterface<"DisjointFlagInterface"> {
+  let description = [{
+    This interface defines an LLVM operation with a disjoint flag and
+    provides a uniform API for accessing it.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<[{
+      Get the disjoint flag for the operation.
+    }], "bool", "getIsDisjoint", (ins), [{}], [{
+      return $_op.getProperties().isDisjoint;
+    }]>,
+    InterfaceMethod<[{
+      Set the disjoint flag for the operation.
+    }], "void", "setIsDisjoint", (ins "bool":$isDisjoint), [{}], [{
+      $_op.getProperties().isDisjoint = isDisjoint;
+    }]>,
+    StaticInterfaceMethod<[{
+      Get the attribute name of the isDisjoint property.
+    }], "StringRef", "getIsDisjointName", (ins), [{}], [{
+      return "isDisjoint";
+    }]>,
+  ];
+}
+
+def NonNegFlagInterface : OpInterface<"NonNegFlagInterface"> {
+  let description = [{
+    This interface defines an LLVM operation with an nneg flag and
+    provides a uniform API for accessing it.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<[{
+      Get the nneg flag for the operation.
+    }], "bool", "getNonNeg", (ins), [{}], [{
+      return $_op.getProperties().nonNeg;
+    }]>,
+    InterfaceMethod<[{
+      Set the nneg flag for the operation.
+    }], "void", "setNonNeg", (ins "bool":$nonNeg), [{}], [{
+      $_op.getProperties().nonNeg = nonNeg;
+    }]>,
+    StaticInterfaceMethod<[{
+      Get the attribute name of the nonNeg property.
+    }], "StringRef", "getNonNegName", (ins), [{}], [{
+      return "nonNeg";
+    }]>,
   ];
 }
 
@@ -137,7 +182,7 @@ def AccessGroupOpInterface : OpInterface<"AccessGroupOpInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/        "Returns the access groups attribute or nullptr",
-      /*returnType=*/  "ArrayAttr",
+      /*returnType=*/  "::mlir::ArrayAttr",
       /*methodName=*/  "getAccessGroupsOrNull",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
@@ -150,7 +195,7 @@ def AccessGroupOpInterface : OpInterface<"AccessGroupOpInterface"> {
       /*desc=*/        "Sets the access groups attribute",
       /*returnType=*/  "void",
       /*methodName=*/  "setAccessGroups",
-      /*args=*/        (ins "const ArrayAttr":$attr),
+      /*args=*/        (ins "const ::mlir::ArrayAttr":$attr),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
         auto op = cast<ConcreteOp>(this->getOperation());
@@ -175,7 +220,7 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/        "Returns the alias scopes attribute or nullptr",
-      /*returnType=*/  "ArrayAttr",
+      /*returnType=*/  "::mlir::ArrayAttr",
       /*methodName=*/  "getAliasScopesOrNull",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
@@ -188,7 +233,7 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
       /*desc=*/        "Sets the alias scopes attribute",
       /*returnType=*/  "void",
       /*methodName=*/  "setAliasScopes",
-      /*args=*/        (ins "const ArrayAttr":$attr),
+      /*args=*/        (ins "const ::mlir::ArrayAttr":$attr),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
         auto op = cast<ConcreteOp>(this->getOperation());
@@ -197,7 +242,7 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
       >,
     InterfaceMethod<
       /*desc=*/        "Returns the noalias scopes attribute or nullptr",
-      /*returnType=*/  "ArrayAttr",
+      /*returnType=*/  "::mlir::ArrayAttr",
       /*methodName=*/  "getNoAliasScopesOrNull",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
@@ -210,7 +255,7 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
       /*desc=*/        "Sets the noalias scopes attribute",
       /*returnType=*/  "void",
       /*methodName=*/  "setNoAliasScopes",
-      /*args=*/        (ins "const ArrayAttr":$attr),
+      /*args=*/        (ins "const ::mlir::ArrayAttr":$attr),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
         auto op = cast<ConcreteOp>(this->getOperation());
@@ -219,7 +264,7 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
       >,
     InterfaceMethod<
       /*desc=*/        "Returns the tbaa attribute or nullptr",
-      /*returnType=*/  "ArrayAttr",
+      /*returnType=*/  "::mlir::ArrayAttr",
       /*methodName=*/  "getTBAATagsOrNull",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
@@ -232,7 +277,7 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
       /*desc=*/        "Sets the tbaa attribute",
       /*returnType=*/  "void",
       /*methodName=*/  "setTBAATags",
-      /*args=*/        (ins "const ArrayAttr":$attr),
+      /*args=*/        (ins "const ::mlir::ArrayAttr":$attr),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
         auto op = cast<ConcreteOp>(this->getOperation());
@@ -249,25 +294,39 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
   ];
 }
 
-def GetResultPtrElementType : OpInterface<"GetResultPtrElementType"> {
+def DereferenceableOpInterface : OpInterface<"DereferenceableOpInterface"> {
   let description = [{
-    An interface for operations that yield an LLVMPointer. Allows the
-    operation to provide the type of the element an LLVMPointer points to,
-    if known. This is only a hint as to how to interpret a given pointer,
-    translating how the current operation understands it.
+    An interface for memory operations that can carry dereferenceable metadata.
+    It provides setters and getters for the operation's dereferenceable
+    attributes. The default implementations of the interface methods expect
+    the operation to have an attribute of type DereferenceableAttr.
   }];
 
   let cppNamespace = "::mlir::LLVM";
+  let verify = [{ return detail::verifyDereferenceableOpInterface($_op); }];
 
   let methods = [
     InterfaceMethod<
-      /*desc=*/        [{Returns the the element type hint of the result
-                         LLVMPointer, if known. Returns nullptr if the
-                         requested result is not an LLVMPointer or if the
-                         element type is unknown.}],
-      /*returnType=*/  "Type",
-      /*methodName=*/  "getResultPtrElementType",
-      /*args=*/        (ins)
+      /*desc=*/        "Returns the dereferenceable attribute or nullptr",
+      /*returnType=*/  "::mlir::LLVM::DereferenceableAttr",
+      /*methodName=*/  "getDereferenceableOrNull",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getDereferenceableAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the dereferenceable attribute",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setDereferenceable",
+      /*args=*/        (ins "::mlir::LLVM::DereferenceableAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setDereferenceableAttr(attr);
+      }]
       >
   ];
 }
@@ -283,7 +342,7 @@ def FPExceptionBehaviorOpInterface : OpInterface<"FPExceptionBehaviorOpInterface
   let methods = [
     InterfaceMethod<
       /*desc=*/        "Returns a FPExceptionBehavior attribute for the operation",
-      /*returnType=*/  "FPExceptionBehaviorAttr",
+      /*returnType=*/  "::mlir::LLVM::FPExceptionBehaviorAttr",
       /*methodName=*/  "getFPExceptionBehaviorAttr",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
@@ -295,7 +354,7 @@ def FPExceptionBehaviorOpInterface : OpInterface<"FPExceptionBehaviorOpInterface
     StaticInterfaceMethod<
       /*desc=*/        [{Returns the name of the FPExceptionBehaviorAttr
                         attribute for the operation}],
-      /*returnType=*/  "StringRef",
+      /*returnType=*/  "::llvm::StringRef",
       /*methodName=*/  "getFPExceptionBehaviorAttrName",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
@@ -317,7 +376,7 @@ def RoundingModeOpInterface : OpInterface<"RoundingModeOpInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/        "Returns a RoundingMode attribute for the operation",
-      /*returnType=*/  "RoundingModeAttr",
+      /*returnType=*/  "::mlir::LLVM::RoundingModeAttr",
       /*methodName=*/  "getRoundingModeAttr",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
@@ -329,13 +388,64 @@ def RoundingModeOpInterface : OpInterface<"RoundingModeOpInterface"> {
     StaticInterfaceMethod<
       /*desc=*/        [{Returns the name of the RoundingModeAttr attribute
                          for the operation}],
-      /*returnType=*/  "StringRef",
+      /*returnType=*/  "::llvm::StringRef",
       /*methodName=*/  "getRoundingModeAttrName",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
         return "roundingmode";
       }]
+    >,
+  ];
+}
+
+def OneToOneIntrinsicOpInterface : OpInterface<"OneToOneIntrinsicOpInterface"> {
+  let description = [{
+    An interface for operations modelling LLVM intrinsics suitable for
+    1-to-1 conversion.
+
+    An op implementing this interface can be directly replaced by a call
+    to a matching intrinsic function.
+    The op must ensure that the combinations of its arguments and results
+    have valid intrinsic counterparts.
+
+    For example, an operation supporting different inputs:
+    ```mlir
+      %res_v8 = intr.op %value_v8 : vector<8xf32>
+      %res_v16 = intr.op %value_v16 : vector<16xf32>
+    ```
+    can be converted to the following intrinsic calls:
+    ```mlir
+      %res_v8 = llvm.call_intrinsic "llvm.x86.op.intr.256"(%value_v8)
+      %res_v16 = llvm.call_intrinsic "llvm.x86.op.intr.512"(%value_v16)
+    ```
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns mangled LLVM intrinsic function name matching the operation
+        variant.
+      }],
+      /*retType=*/"std::string",
+      /*methodName=*/"getIntrinsicName"
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns operands for a corresponding LLVM intrinsic.
+
+        Additional operations may be created to facilitate mapping
+        between the source operands and the target intrinsic.
+      }],
+      /*retType=*/"SmallVector<Value>",
+      /*methodName=*/"getIntrinsicOperands",
+      /*args=*/(ins "::mlir::ArrayRef<Value>":$operands,
+                    "const ::mlir::LLVMTypeConverter &":$typeConverter,
+                    "::mlir::RewriterBase &":$rewriter),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return SmallVector<Value>(operands);"
     >,
   ];
 }
@@ -359,7 +469,7 @@ def LLVM_PointerElementTypeInterface
       /*description=*/"Returns the size of the type in bytes.",
       /*retTy=*/"unsigned",
       /*methodName=*/"getSizeInBytes",
-      /*args=*/(ins "const DataLayout &":$dataLayout),
+      /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return dataLayout.getTypeSize($_type);
@@ -406,7 +516,7 @@ def LLVM_DIRecursiveTypeAttrInterface
   let methods = [
     InterfaceMethod<[{
       Get whether this attr describes a recursive self reference.
-    }], "bool", "isRecSelf", (ins)>,
+    }], "bool", "getIsRecSelf", (ins)>,
     InterfaceMethod<[{
       Get the recursive ID used for matching "rec-decl" with "rec-self".
       If this attr instance is not recursive, return a null attribute.

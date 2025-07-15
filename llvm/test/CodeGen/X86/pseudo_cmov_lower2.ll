@@ -201,6 +201,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 define double @foo1_g(float %p1, double %p2, double %p3) nounwind !dbg !4 {
 ; CHECK-LABEL: foo1_g:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    .file   1 "." "test.c"
+; CHECK-NEXT:    .loc 1 3 0 prologue_end
 ; CHECK-NEXT:    xorps %xmm3, %xmm3
 ; CHECK-NEXT:    ucomiss %xmm3, %xmm0
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.25E+0,0.0E+0]

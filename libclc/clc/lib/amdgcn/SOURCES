@@ -1,0 +1,8 @@
+math/clc_fmax.cl
+math/clc_fmin.cl
+math/clc_ldexp_override.cl
+workitem/clc_get_global_offset.cl
+workitem/clc_get_global_size.cl
+workitem/clc_get_group_id.cl
+workitem/clc_get_local_id.cl
+workitem/clc_get_work_dim.cl

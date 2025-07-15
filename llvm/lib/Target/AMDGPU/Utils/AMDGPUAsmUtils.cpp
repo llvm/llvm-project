@@ -9,8 +9,7 @@
 #include "AMDGPUBaseInfo.h"
 #include "SIDefines.h"
 
-namespace llvm {
-namespace AMDGPU {
+namespace llvm::AMDGPU {
 
 //===----------------------------------------------------------------------===//
 // Custom Operands.
@@ -217,7 +216,7 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_SCRATCH_BASE_HI"},     ID_FLAT_SCR_HI,         isGFX12Plus},
   {{"HW_REG_SHADER_CYCLES_LO"},    ID_SHADER_CYCLES,       isGFX12Plus},
 
-  // GFX940 specific registers
+  // GFX942 specific registers
   {{"HW_REG_XCC_ID"},                 ID_XCC_ID,                 isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_DATA"},  ID_SQ_PERF_SNAPSHOT_DATA,  isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_DATA1"}, ID_SQ_PERF_SNAPSHOT_DATA1, isGFX940},
@@ -646,14 +645,18 @@ unsigned const DfmtNfmt2UFmtGFX11[] = {
 
 namespace Swizzle {
 
+// clang-format off
 // This must be in sync with llvm::AMDGPU::Swizzle::Id enum members, see SIDefines.h.
-const char* const IdSymbolic[] = {
+const char *const IdSymbolic[] = {
   "QUAD_PERM",
   "BITMASK_PERM",
   "SWAP",
   "REVERSE",
   "BROADCAST",
+  "FFT",
+  "ROTATE",
 };
+// clang-format on
 
 } // namespace Swizzle
 
@@ -669,5 +672,19 @@ const char* const IdSymbolic[] = {
 
 } // namespace VGPRIndexMode
 
-} // namespace AMDGPU
-} // namespace llvm
+namespace UCVersion {
+
+ArrayRef<GFXVersion> getGFXVersions() {
+  // GFX6, GFX8 and GFX9 don't support s_version and there are no
+  // UC_VERSION_GFX* codes for them.
+  static const GFXVersion Versions[] = {{"UC_VERSION_GFX7", 0},
+                                        {"UC_VERSION_GFX10", 4},
+                                        {"UC_VERSION_GFX11", 6},
+                                        {"UC_VERSION_GFX12", 9}};
+
+  return Versions;
+}
+
+} // namespace UCVersion
+
+} // namespace llvm::AMDGPU

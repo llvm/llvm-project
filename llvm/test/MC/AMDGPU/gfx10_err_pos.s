@@ -1,10 +1,10 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64 %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
 
 //==============================================================================
 // operands are not valid for this GPU or mode
 
 image_atomic_add v252, v2, s[8:15]
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: missing dim operand
 // CHECK-NEXT:{{^}}image_atomic_add v252, v2, s[8:15]
 // CHECK-NEXT:{{^}}^
 
@@ -484,21 +484,41 @@ v_mov_b32_sdwa v1, sext(u)
 // CHECK-NEXT:{{^}}                        ^
 
 //==============================================================================
-// expected an identifier
+// expected a valid identifier or number in a valid range
 
 v_mov_b32_sdwa v5, v1 dst_sel:
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an identifier
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 // CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:
 // CHECK-NEXT:{{^}}                              ^
 
-v_mov_b32_sdwa v5, v1 dst_sel:0
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an identifier
-// CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:0
+v_mov_b32_sdwa v5, v1 dst_sel:0a
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:0a
+// CHECK-NEXT:{{^}}                               ^
+
+v_mov_b32_sdwa v5, v1 dst_sel:BYTE_1x
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dst_sel value
+// CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:BYTE_1
 // CHECK-NEXT:{{^}}                              ^
 
 v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:[UNUSED_PAD]
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an identifier
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression
 // CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:[UNUSED_PAD]
+// CHECK-NEXT:{{^}}                                               ^
+
+v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:XXX
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dst_unused value
+// CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:XXX
+// CHECK-NEXT:{{^}}                                               ^
+
+v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dst_unused value
+// CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:3
+// CHECK-NEXT:{{^}}                                               ^
+
+v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:-1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dst_unused value
+// CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:-1
 // CHECK-NEXT:{{^}}                                               ^
 
 //==============================================================================
@@ -1104,12 +1124,12 @@ v_add_nc_i32 v256, v0, v1
 // register not available on this GPU
 
 s_and_b32     ttmp9, tma_hi, 0x0000ffff
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: tma_hi register not available on this GPU
 // CHECK-NEXT:{{^}}s_and_b32     ttmp9, tma_hi, 0x0000ffff
 // CHECK-NEXT:{{^}}                     ^
 
 s_mov_b32 flat_scratch, -1
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: flat_scratch register not available on this GPU
 // CHECK-NEXT:{{^}}s_mov_b32 flat_scratch, -1
 // CHECK-NEXT:{{^}}          ^
 

@@ -70,21 +70,21 @@ void simple(float *a, float *b, int *c) {
 // CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP4]], i64 128) ]
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[P]], align 8
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP5]], i64 64) ]
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [32 x i32], ptr [[D]], i64 0, i64 0
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARRAYDECAY]], i64 16) ]
 // CHECK-NEXT:    store i32 3, ptr [[I1]], align 4
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[I1]], ptr [[TMP6]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED2]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED2]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[I1]], align 4
 // CHECK-NEXT:    store i32 [[TMP8]], ptr [[TMP7]], align 4
 // CHECK-NEXT:    call void @__captured_stmt(ptr [[DOTCOUNT_ADDR]], ptr [[AGG_CAPTURED]])
 // CHECK-NEXT:    [[DOTCOUNT:%.*]] = load i32, ptr [[DOTCOUNT_ADDR]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_PREHEADER:%.*]]
 // CHECK:       omp_loop.preheader:
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP4]], i64 128) ]
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP5]], i64 64) ]
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARRAYDECAY]], i64 16) ]
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER:%.*]]
 // CHECK:       omp_loop.header:
 // CHECK-NEXT:    [[OMP_LOOP_IV:%.*]] = phi i32 [ 0, [[OMP_LOOP_PREHEADER]] ], [ [[OMP_LOOP_NEXT:%.*]], [[OMP_LOOP_INC:%.*]] ]
@@ -99,12 +99,12 @@ void simple(float *a, float *b, int *c) {
 // CHECK-NEXT:    [[IDXPROM3:%.*]] = sext i32 [[TMP10]] to i64
 // CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[IDXPROM3]]
 // CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX4]], align 4, !llvm.access.group [[ACC_GRP5]]
-// CHECK-NEXT:    [[A5:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i32 0, i32 0
+// CHECK-NEXT:    [[A5:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[A5]], align 4, !llvm.access.group [[ACC_GRP5]]
 // CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP12]] to float
 // CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP11]], [[CONV]]
 // CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[P]], align 8, !llvm.access.group [[ACC_GRP5]]
-// CHECK-NEXT:    [[A6:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[TMP13]], i32 0, i32 0
+// CHECK-NEXT:    [[A6:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP13]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[A6]], align 4, !llvm.access.group [[ACC_GRP5]]
 // CHECK-NEXT:    [[CONV7:%.*]] = sitofp i32 [[TMP14]] to float
 // CHECK-NEXT:    [[ADD8:%.*]] = fadd float [[ADD]], [[CONV7]]
@@ -127,9 +127,9 @@ void simple(float *a, float *b, int *c) {
 // CHECK-NEXT:    br label [[OMP_LOOP_AFTER:%.*]]
 // CHECK:       omp_loop.after:
 // CHECK-NEXT:    store i32 3, ptr [[J]], align 4
-// CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], ptr [[AGG_CAPTURED15]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_1]], ptr [[AGG_CAPTURED15]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[J]], ptr [[TMP19]], align 8
-// CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], ptr [[AGG_CAPTURED16]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_2]], ptr [[AGG_CAPTURED16]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[J]], align 4
 // CHECK-NEXT:    store i32 [[TMP21]], ptr [[TMP20]], align 4
 // CHECK-NEXT:    call void @__captured_stmt.2(ptr [[DOTCOUNT_ADDR17]], ptr [[AGG_CAPTURED15]])
@@ -145,7 +145,7 @@ void simple(float *a, float *b, int *c) {
 // CHECK-NEXT:    br i1 [[OMP_LOOP_CMP27]], label [[OMP_LOOP_BODY22:%.*]], label [[OMP_LOOP_EXIT24:%.*]]
 // CHECK:       omp_loop.body22:
 // CHECK-NEXT:    call void @__captured_stmt.3(ptr [[J]], i32 [[OMP_LOOP_IV26]], ptr [[AGG_CAPTURED16]]), !llvm.access.group [[ACC_GRP9:![0-9]+]]
-// CHECK-NEXT:    [[A29:%.*]] = getelementptr inbounds [[STRUCT_P]], ptr [[PP]], i32 0, i32 0
+// CHECK-NEXT:    [[A29:%.*]] = getelementptr inbounds nuw [[STRUCT_P]], ptr [[PP]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[A29]], align 4, !llvm.access.group [[ACC_GRP9]]
 // CHECK-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !llvm.access.group [[ACC_GRP9]]
 // CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[J]], align 4, !llvm.access.group [[ACC_GRP9]]
@@ -173,7 +173,7 @@ void simple(float *a, float *b, int *c) {
 // CHECK-NEXT:    store ptr [[DISTANCE]], ptr [[DISTANCE_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTSTART]], align 4
@@ -212,7 +212,7 @@ void simple(float *a, float *b, int *c) {
 // CHECK-NEXT:    store i32 [[LOGICAL]], ptr [[LOGICAL_ADDR]], align 4
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LOGICAL_ADDR]], align 4
 // CHECK-NEXT:    [[MUL:%.*]] = mul i32 5, [[TMP3]]
@@ -233,7 +233,7 @@ void simple(float *a, float *b, int *c) {
 // CHECK-NEXT:    store ptr [[DISTANCE]], ptr [[DISTANCE_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_1:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_1:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTSTART]], align 4
@@ -272,7 +272,7 @@ void simple(float *a, float *b, int *c) {
 // CHECK-NEXT:    store i32 [[LOGICAL]], ptr [[LOGICAL_ADDR]], align 4
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_2:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_2:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LOGICAL_ADDR]], align 4
 // CHECK-NEXT:    [[MUL:%.*]] = mul i32 5, [[TMP3]]
@@ -282,20 +282,20 @@ void simple(float *a, float *b, int *c) {
 // CHECK-NEXT:    ret void
 //
 //.
-// CHECK: attributes #0 = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// CHECK: attributes #1 = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// CHECK: attributes #2 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
+// CHECK: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 //.
-// CHECK: !0 = !{i32 1, !"wchar_size", i32 4}
-// CHECK: !1 = !{i32 7, !"openmp", i32 50}
-// CHECK: !2 = !{!"
-// CHECK: !3 = distinct !{!3, !4}
-// CHECK: !4 = !{!"llvm.loop.mustprogress"}
-// CHECK: !5 = distinct !{}
-// CHECK: !6 = distinct !{!6, !7, !8}
-// CHECK: !7 = !{!"llvm.loop.parallel_accesses", !5}
-// CHECK: !8 = !{!"llvm.loop.vectorize.enable", i1 true}
-// CHECK: !9 = distinct !{}
-// CHECK: !10 = distinct !{!10, !11, !8}
-// CHECK: !11 = !{!"llvm.loop.parallel_accesses", !9}
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+// CHECK: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]]}
+// CHECK: [[META4]] = !{!"llvm.loop.mustprogress"}
+// CHECK: [[ACC_GRP5]] = distinct !{}
+// CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
+// CHECK: [[META7]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP5]]}
+// CHECK: [[META8]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: [[ACC_GRP9]] = distinct !{}
+// CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]], [[META8]]}
+// CHECK: [[META11]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP9]]}
 //.

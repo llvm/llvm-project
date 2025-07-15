@@ -13,24 +13,23 @@ using namespace clang;
 namespace {
 
 // Matches (optional) explicit template parameters.
-class LambdaTemplateParametersVisitor
-  : public ExpectedLocationVisitor<LambdaTemplateParametersVisitor> {
+class LambdaTemplateParametersVisitor : public ExpectedLocationVisitor {
 public:
-  bool shouldVisitImplicitCode() const { return false; }
+  LambdaTemplateParametersVisitor() { ShouldVisitImplicitCode = false; }
 
-  bool VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
+  bool VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) override {
     EXPECT_FALSE(D->isImplicit());
     Match(D->getName(), D->getBeginLoc());
     return true;
   }
 
-  bool VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
+  bool VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) override {
     EXPECT_FALSE(D->isImplicit());
     Match(D->getName(), D->getBeginLoc());
     return true;
   }
 
-  bool VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
+  bool VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) override {
     EXPECT_FALSE(D->isImplicit());
     Match(D->getName(), D->getBeginLoc());
     return true;

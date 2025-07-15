@@ -42,7 +42,7 @@ config.test_source_root = os.path.dirname(__file__)
 config.test_exec_root = os.path.join(config.clang_tools_binary_dir, "test")
 
 # Tools need the same environment setup as clang (we don't need clang itself).
-llvm_config.use_clang(required=False)
+llvm_config.clang_setup()
 
 if config.clang_tidy_staticanalyzer:
     config.available_features.add("static-analyzer")

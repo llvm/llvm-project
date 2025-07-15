@@ -8,12 +8,10 @@
 
 #include "Utils/CodegenUtils.h"
 
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
@@ -24,7 +22,8 @@ using namespace sparse_tensor;
 //===----------------------------------------------------------------------===//
 
 // Convert type range to new types range, with sparse tensors externalized.
-static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
+static void convTypes(bool &hasAnnotation, TypeRange types,
+                      SmallVectorImpl<Type> &convTypes,
                       SmallVectorImpl<Type> *extraTypes, bool directOut) {
   for (auto type : types) {
     // All "dense" data passes through unmodified.
@@ -32,6 +31,7 @@ static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
       convTypes.push_back(type);
       continue;
     }
+    hasAnnotation = true;
 
     // Convert the external representations of the pos/crd/val arrays.
     const SparseTensorType stt(cast<RankedTensorType>(type));
@@ -176,12 +176,14 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     SmallVector<Type> inputTypes;
     SmallVector<Type> outputTypes;
     SmallVector<Type> extraTypes;
-    convTypes(funcOp.getArgumentTypes(), inputTypes, nullptr, false);
-    convTypes(funcOp.getResultTypes(), outputTypes, &extraTypes, directOut);
+    bool hasAnnotation = false;
+    convTypes(hasAnnotation, funcOp.getArgumentTypes(), inputTypes, nullptr,
+              false);
+    convTypes(hasAnnotation, funcOp.getResultTypes(), outputTypes, &extraTypes,
+              directOut);
 
     // Only sparse inputs or outputs need a wrapper method.
-    if (inputTypes.size() == funcOp.getArgumentTypes().size() &&
-        outputTypes.size() == funcOp.getResultTypes().size())
+    if (!hasAnnotation)
       return failure();
 
     // Modify the original method into an internal, private method.

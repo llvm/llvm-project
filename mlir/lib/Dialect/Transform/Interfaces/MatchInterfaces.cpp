@@ -8,6 +8,8 @@
 
 #include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.h"
 
+#include "llvm/Support/InterleavedRange.h"
+
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
@@ -68,8 +70,7 @@ void transform::printTransformMatchDims(OpAsmPrinter &printer, Operation *op,
   if (isInverted) {
     printer << kDimExceptKeyword << "(";
   }
-  llvm::interleaveComma(rawDimList.asArrayRef(), printer.getStream(),
-                        [&](int64_t value) { printer << value; });
+  printer << llvm::interleaved(rawDimList.asArrayRef());
   if (isInverted) {
     printer << ")";
   }
@@ -93,7 +94,7 @@ LogicalResult transform::verifyTransformMatchDimsOp(Operation *op,
                                 "'all' is not specified";
   }
   SmallVector<int64_t> rawVector = llvm::to_vector(raw);
-  auto *it = std::unique(rawVector.begin(), rawVector.end());
+  auto *it = llvm::unique(rawVector);
   if (it != rawVector.end())
     return op->emitOpError() << "expected the listed values to be unique";
 

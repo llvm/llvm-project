@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -41,7 +40,8 @@ Value mlir::x86vector::avx2::inline_asm::mm256BlendPsAsm(
   auto asmOp = b.create<LLVM::InlineAsmOp>(
       v1.getType(), /*operands=*/asmVals, /*asm_string=*/asmStr,
       /*constraints=*/asmCstr, /*has_side_effects=*/false,
-      /*is_align_stack=*/false, /*asm_dialect=*/asmDialectAttr,
+      /*is_align_stack=*/false, LLVM::TailCallKind::None,
+      /*asm_dialect=*/asmDialectAttr,
       /*operand_attrs=*/ArrayAttr());
   return asmOp.getResult(0);
 }
@@ -66,8 +66,8 @@ Value mlir::x86vector::avx2::intrin::mm256ShufflePs(ImplicitLocOpBuilder &b,
                                                     uint8_t mask) {
   uint8_t b01, b23, b45, b67;
   MaskHelper::extractShuffle(mask, b01, b23, b45, b67);
-  SmallVector<int64_t> shuffleMask{b01,     b23,     b45 + 8,     b67 + 8,
-                                   b01 + 4, b23 + 4, b45 + 8 + 4, b67 + 8 + 4};
+  SmallVector<int64_t> shuffleMask = {
+      b01, b23, b45 + 8, b67 + 8, b01 + 4, b23 + 4, b45 + 8 + 4, b67 + 8 + 4};
   return b.create<vector::ShuffleOp>(v1, v2, shuffleMask);
 }
 

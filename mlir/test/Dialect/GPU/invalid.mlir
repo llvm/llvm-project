@@ -333,8 +333,41 @@ func.func @reduce_invalid_op_type_maximumf(%arg0 : i32) {
 
 // -----
 
+func.func @subgroup_reduce_zero_cluster_size(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster size 0 is not a power of two}}
+  %res = gpu.subgroup_reduce add %arg0 cluster(size = 0) : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_npot_cluster_size(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster size 3 is not a power of two}}
+  %res = gpu.subgroup_reduce add %arg0 cluster(size = 3) : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_zero_cluster_stride(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster stride 0 is not a power of two}}
+  %res = gpu.subgroup_reduce add %arg0 cluster(size = 4, stride = 0) : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_cluster_stride_without_size(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster stride can only be specified if cluster size is specified}}
+  %res = gpu.subgroup_reduce add %arg0 { cluster_stride = 2 : i32 } : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+
+// -----
+
 func.func @subgroup_reduce_bad_type(%arg0 : vector<2x2xf32>) {
-  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or vector of}}
+  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or fixed-length vector of}}
   %res = gpu.subgroup_reduce add %arg0 : (vector<2x2xf32>) -> vector<2x2xf32>
   return
 }
@@ -342,7 +375,7 @@ func.func @subgroup_reduce_bad_type(%arg0 : vector<2x2xf32>) {
 // -----
 
 func.func @subgroup_reduce_bad_type_scalable(%arg0 : vector<[2]xf32>) {
-  // expected-error@+1 {{is not compatible with scalable vector types}}
+  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or fixed-length vector of}}
   %res = gpu.subgroup_reduce add %arg0 : (vector<[2]xf32>) -> vector<[2]xf32>
   return
 }
@@ -430,8 +463,94 @@ func.func @shuffle_mismatching_type(%arg0 : f32, %arg1 : i32, %arg2 : i32) {
 // -----
 
 func.func @shuffle_unsupported_type(%arg0 : index, %arg1 : i32, %arg2 : i32) {
-  // expected-error@+1 {{operand #0 must be i32, i64, f32 or f64}}
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'index'}}
   %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : index
+  return
+}
+
+// -----
+
+func.func @shuffle_unsupported_type_vec(%arg0 : vector<[4]xf32>, %arg1 : i32, %arg2 : i32) {
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'vector<[4]xf32>'}}
+  %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : vector<[4]xf32>
+  return
+}
+
+// -----
+
+func.func @rotate_mismatching_type(%arg0 : f32) {
+  %offset = arith.constant 4 : i32
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op failed to verify that all of {value, rotateResult} have same type}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (i32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_type(%arg0 : index) {
+  %offset = arith.constant 4 : i32
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'index'}}
+  %rotate, %valid = gpu.rotate %arg0, %offset, %width : index
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_type_vec(%arg0 : vector<[4]xf32>) {
+  %offset = arith.constant 4 : i32
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'vector<[4]xf32>'}}
+  %rotate, %valid = gpu.rotate %arg0, %offset, %width : vector<[4]xf32>
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_width(%arg0 : f32) {
+  %offset = arith.constant 4 : i32
+  %width = arith.constant 15 : i32
+  // expected-error@+1 {{op width must be a power of two}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_offset(%arg0 : f32) {
+  %offset = arith.constant 16 : i32
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op offset must be in the range [0, 16)}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_offset_minus(%arg0 : f32) {
+  %offset = arith.constant -1 : i32
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op offset must be in the range [0, 16)}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_offset_non_constant(%arg0 : f32, %offset : i32) {
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op offset is not a constant value}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_width_non_constant(%arg0 : f32, %width : i32) {
+  %offset = arith.constant 0 : i32
+  // expected-error@+1 {{op width is not a constant value}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
   return
 }
 
@@ -704,11 +823,9 @@ func.func @alloc() {
 // -----
 
 module attributes {gpu.container_module} {
-  gpu.module @kernel {
-    // expected-error@+1 {{'gpu.func' op gpu.known_block_size must be a dense i32 array}}
-    gpu.func @kernel() kernel attributes {gpu.known_block_size = 32 : i32} {
-      gpu.return
-    }
+  // expected-error@+1 {{'func.func' op gpu.known_block_size must be a dense i32 array}}
+  func.func @kernel() attributes {gpu.known_block_size = 32 : i32} {
+    func.return
   }
 }
 
@@ -716,10 +833,19 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernel {
-    // expected-error@+1 {{'gpu.func' op gpu.known_block_size must contain exactly 3 elements}}
-    gpu.func @kernel() kernel attributes {gpu.known_block_size = array<i32: 2, 1>} {
+    // expected-error@+1 {{'gpu.func' op attribute 'known_block_size' failed to satisfy constraint: i32 dense array attribute with 3 elements (if present)}}
+    gpu.func @kernel() kernel attributes {known_block_size = array<i32: 2, 1>} {
       gpu.return
     }
+  }
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{'func.func' op gpu.known_block_size must contain exactly 3 elements}}
+  func.func @kernel() attributes {gpu.known_block_size = array<i32: 2, 1>} {
+    func.return
   }
 }
 
@@ -824,4 +950,102 @@ module attributes {gpu.container_module} {
   // expected-error@+1 {{expected attribute value}}
   gpu.module @kernel <> {
   }
+}
+
+// -----
+
+gpu.binary @binary [#gpu.object<#rocdl.target<chip = "gfx900">,
+  // expected-error@+1{{expected all kernels to be uniquely named}}
+    kernels = #gpu.kernel_table<[
+      #gpu.kernel_metadata<"kernel", (i32) -> ()>,
+      #gpu.kernel_metadata<"kernel", (i32, f32) -> (), metadata = {sgpr_count = 255}>
+  // expected-error@below{{failed to parse GPU_ObjectAttr parameter 'kernels' which is to be a `KernelTableAttr`}}
+    ]>,
+    bin = "BLOB">
+  ]
+
+// -----
+
+func.func @warp_wrong_num_outputs(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected same number of yield operands and return values.}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
+  }
+  return
+}
+
+// -----
+
+func.func @warp_wrong_num_inputs(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected same number op arguments and block arguments.}}
+  gpu.warp_execute_on_lane_0(%laneid)[64] {
+  ^bb0(%arg0 : vector<128xi32>) :
+  }
+  return
+}
+
+// -----
+
+func.func @warp_wrong_return_distribution(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    gpu.yield %0 : vector<128xi32>
+  }
+  return
+}
+
+
+// -----
+
+func.func @warp_wrong_arg_distribution(%laneid: index, %v0 : vector<4xi32>) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
+  gpu.warp_execute_on_lane_0(%laneid)[64]
+  args(%v0 : vector<4xi32>) {
+   ^bb0(%arg0 : vector<128xi32>) :
+  }
+  return
+}
+
+// -----
+
+func.func @warp_2_distributed_dims(%laneid: index) {
+  // expected-error@+1 {{incompatible distribution dimensions from 'vector<128x128xi32>' to 'vector<4x4xi32>' with warp size = 32}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
+    %0 = arith.constant dense<2>: vector<128x128xi32>
+    gpu.yield %0 : vector<128x128xi32>
+  }
+  return
+}
+
+// -----
+
+func.func @warp_2_distributed_dims(%laneid: index) {
+  // expected-error@+1 {{expected expanded vector dimension #1 (8) to be a multipler of the distributed vector dimension (3)}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x3xi32>) {
+    %0 = arith.constant dense<2>: vector<4x8xi32>
+    gpu.yield %0 : vector<4x8xi32>
+  }
+  return
+}
+
+// -----
+
+func.func @warp_mismatch_rank(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected distributed vectors to have same rank and element type.}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    gpu.yield %0 : vector<128xi32>
+  }
+  return
+}
+
+// -----
+
+func.func @warp_mismatch_rank(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected vector type for distributed operands.}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (i32) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    gpu.yield %0 : vector<128xi32>
+  }
+  return
 }

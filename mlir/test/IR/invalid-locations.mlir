@@ -95,13 +95,6 @@ func.func @location_fused_missing_r_square() {
 // -----
 
 func.func @location_invalid_alias() {
-  // expected-error@+1 {{expected location, but found dialect attribute: '#foo.loc'}}
-  return loc(#foo.loc)
-}
-
-// -----
-
-func.func @location_invalid_alias() {
   // expected-error@+1 {{operation location alias was never defined}}
   return loc(#invalid_alias)
 }

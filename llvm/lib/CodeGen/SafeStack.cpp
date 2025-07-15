@@ -59,7 +59,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -192,7 +191,7 @@ public:
   SafeStack(Function &F, const TargetLoweringBase &TL, const DataLayout &DL,
             DomTreeUpdater *DTU, ScalarEvolution &SE)
       : F(F), TL(TL), DL(DL), DTU(DTU), SE(SE),
-        StackPtrTy(PointerType::getUnqual(F.getContext())),
+        StackPtrTy(DL.getAllocaPtrType(F.getContext())),
         IntPtrTy(DL.getIntPtrType(F.getContext())),
         Int32Ty(Type::getInt32Ty(F.getContext())) {}
 
@@ -368,7 +367,7 @@ Value *SafeStack::getStackGuard(IRBuilder<> &IRB, Function &F) {
 
   if (!StackGuardVar) {
     TL.insertSSPDeclarations(*M);
-    return IRB.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::stackguard));
+    return IRB.CreateIntrinsic(Intrinsic::stackguard, {});
   }
 
   return IRB.CreateLoad(StackPtrTy, StackGuardVar, "StackGuard");
@@ -476,8 +475,16 @@ void SafeStack::checkStackGuard(IRBuilder<> &IRB, Function &F, Instruction &RI,
       SplitBlockAndInsertIfThen(Cmp, &RI, /* Unreachable */ true, Weights, DTU);
   IRBuilder<> IRBFail(CheckTerm);
   // FIXME: respect -fsanitize-trap / -ftrap-function here?
+  const char *StackChkFailName =
+      TL.getLibcallName(RTLIB::STACKPROTECTOR_CHECK_FAIL);
+  if (!StackChkFailName) {
+    F.getContext().emitError(
+        "no libcall available for stackprotector check fail");
+    return;
+  }
+
   FunctionCallee StackChkFail =
-      F.getParent()->getOrInsertFunction("__stack_chk_fail", IRB.getVoidTy());
+      F.getParent()->getOrInsertFunction(StackChkFailName, IRB.getVoidTy());
   IRBFail.CreateCall(StackChkFail, {});
 }
 
@@ -616,7 +623,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
       IRBuilder<> IRBUser(InsertBefore);
       Value *Off =
           IRBUser.CreatePtrAdd(BasePointer, ConstantInt::get(Int32Ty, -Offset));
-      Value *Replacement = IRBUser.CreateBitCast(Off, AI->getType(), Name);
+      Value *Replacement =
+          IRBUser.CreateAddrSpaceCast(Off, AI->getType(), Name);
 
       if (auto *PHI = dyn_cast<PHINode>(User))
         // PHI nodes may have multiple incoming edges from the same BB (why??),
@@ -791,8 +799,16 @@ bool SafeStack::run() {
     IRB.SetCurrentDebugLocation(
         DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
   if (SafeStackUsePointerAddress) {
+    const char *SafestackPointerAddressName =
+        TL.getLibcallName(RTLIB::SAFESTACK_POINTER_ADDRESS);
+    if (!SafestackPointerAddressName) {
+      F.getContext().emitError(
+          "no libcall available for safestack pointer address");
+      return false;
+    }
+
     FunctionCallee Fn = F.getParent()->getOrInsertFunction(
-        "__safestack_pointer_address", IRB.getPtrTy(0));
+        SafestackPointerAddressName, IRB.getPtrTy(0));
     UnsafeStackPtr = IRB.CreateCall(Fn);
   } else {
     UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB);
@@ -886,7 +902,7 @@ public:
     if (!TL)
       report_fatal_error("TargetLowering instance is required");
 
-    auto *DL = &F.getParent()->getDataLayout();
+    auto *DL = &F.getDataLayout();
     auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     auto &ACT = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
 
@@ -898,7 +914,7 @@ public:
     bool ShouldPreserveDominatorTree;
     std::optional<DominatorTree> LazilyComputedDomTree;
 
-    // Do we already have a DominatorTree avaliable from the previous pass?
+    // Do we already have a DominatorTree available from the previous pass?
     // Note that we should *NOT* require it, to avoid the case where we end up
     // not needing it, but the legacy PM would have computed it for us anyways.
     if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>()) {
@@ -946,7 +962,7 @@ PreservedAnalyses SafeStackPass::run(Function &F,
   if (!TL)
     report_fatal_error("TargetLowering instance is required");
 
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   // preserve DominatorTree
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);

@@ -16,7 +16,7 @@ define void @t() {
 ; CHECK-NEXT:    store i32 20, ptr [[GVE]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %malloccall = tail call ptr @malloc(i64 mul (i64 100, i64 4)) nobuiltin
+  %malloccall = tail call ptr @malloc(i64 400) nobuiltin
   store ptr %malloccall, ptr @G
   %GV = load ptr, ptr @G
   %GVe = getelementptr i32, ptr %GV, i32 40

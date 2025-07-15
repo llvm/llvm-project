@@ -8,24 +8,24 @@
 define i32 @reduce_sum_4xi32(<4 x i32> %v) {
 ; RV32-LABEL: reduce_sum_4xi32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a1, 12(a0)
+; RV32-NEXT:    lw a1, 0(a0)
 ; RV32-NEXT:    lw a2, 4(a0)
-; RV32-NEXT:    lw a3, 0(a0)
-; RV32-NEXT:    lw a0, 8(a0)
-; RV32-NEXT:    add a2, a3, a2
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    add a0, a2, a0
+; RV32-NEXT:    lw a3, 8(a0)
+; RV32-NEXT:    lw a0, 12(a0)
+; RV32-NEXT:    add a1, a1, a2
+; RV32-NEXT:    add a0, a3, a0
+; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: reduce_sum_4xi32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lw a1, 24(a0)
+; RV64-NEXT:    lw a1, 0(a0)
 ; RV64-NEXT:    lw a2, 8(a0)
-; RV64-NEXT:    lw a3, 0(a0)
-; RV64-NEXT:    lw a0, 16(a0)
-; RV64-NEXT:    add a2, a3, a2
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    addw a0, a2, a0
+; RV64-NEXT:    lw a3, 16(a0)
+; RV64-NEXT:    lw a0, 24(a0)
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    add a0, a3, a0
+; RV64-NEXT:    addw a0, a1, a0
 ; RV64-NEXT:    ret
   %e0 = extractelement <4 x i32> %v, i32 0
   %e1 = extractelement <4 x i32> %v, i32 1
@@ -40,24 +40,24 @@ define i32 @reduce_sum_4xi32(<4 x i32> %v) {
 define i32 @reduce_xor_4xi32(<4 x i32> %v) {
 ; RV32-LABEL: reduce_xor_4xi32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a1, 12(a0)
+; RV32-NEXT:    lw a1, 0(a0)
 ; RV32-NEXT:    lw a2, 4(a0)
-; RV32-NEXT:    lw a3, 0(a0)
-; RV32-NEXT:    lw a0, 8(a0)
-; RV32-NEXT:    xor a2, a3, a2
-; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    xor a0, a2, a0
+; RV32-NEXT:    lw a3, 8(a0)
+; RV32-NEXT:    lw a0, 12(a0)
+; RV32-NEXT:    xor a1, a1, a2
+; RV32-NEXT:    xor a0, a3, a0
+; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: reduce_xor_4xi32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    ld a1, 24(a0)
+; RV64-NEXT:    ld a1, 0(a0)
 ; RV64-NEXT:    ld a2, 8(a0)
-; RV64-NEXT:    ld a3, 0(a0)
-; RV64-NEXT:    ld a0, 16(a0)
-; RV64-NEXT:    xor a2, a3, a2
-; RV64-NEXT:    xor a0, a0, a1
-; RV64-NEXT:    xor a0, a2, a0
+; RV64-NEXT:    ld a3, 16(a0)
+; RV64-NEXT:    ld a0, 24(a0)
+; RV64-NEXT:    xor a1, a1, a2
+; RV64-NEXT:    xor a0, a3, a0
+; RV64-NEXT:    xor a0, a1, a0
 ; RV64-NEXT:    ret
   %e0 = extractelement <4 x i32> %v, i32 0
   %e1 = extractelement <4 x i32> %v, i32 1
@@ -72,24 +72,24 @@ define i32 @reduce_xor_4xi32(<4 x i32> %v) {
 define i32 @reduce_or_4xi32(<4 x i32> %v) {
 ; RV32-LABEL: reduce_or_4xi32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a1, 12(a0)
+; RV32-NEXT:    lw a1, 0(a0)
 ; RV32-NEXT:    lw a2, 4(a0)
-; RV32-NEXT:    lw a3, 0(a0)
-; RV32-NEXT:    lw a0, 8(a0)
-; RV32-NEXT:    or a2, a3, a2
-; RV32-NEXT:    or a0, a0, a1
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    lw a3, 8(a0)
+; RV32-NEXT:    lw a0, 12(a0)
+; RV32-NEXT:    or a1, a1, a2
+; RV32-NEXT:    or a0, a3, a0
+; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: reduce_or_4xi32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    ld a1, 24(a0)
+; RV64-NEXT:    ld a1, 0(a0)
 ; RV64-NEXT:    ld a2, 8(a0)
-; RV64-NEXT:    ld a3, 0(a0)
-; RV64-NEXT:    ld a0, 16(a0)
-; RV64-NEXT:    or a2, a3, a2
-; RV64-NEXT:    or a0, a0, a1
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    ld a3, 16(a0)
+; RV64-NEXT:    ld a0, 24(a0)
+; RV64-NEXT:    or a1, a1, a2
+; RV64-NEXT:    or a0, a3, a0
+; RV64-NEXT:    or a0, a1, a0
 ; RV64-NEXT:    ret
   %e0 = extractelement <4 x i32> %v, i32 0
   %e1 = extractelement <4 x i32> %v, i32 1

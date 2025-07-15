@@ -10,7 +10,9 @@ template <class T>
 T &&move(T &x) {
 }
 
-template <class T>
+template <typename T> class default_delete {};
+
+template <class T, typename Deleter = std::default_delete<T>>
 class unique_ptr {
 };
 

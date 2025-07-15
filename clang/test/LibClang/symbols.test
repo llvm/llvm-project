@@ -1,6 +1,6 @@
 # Check that there are no unversioned clang symbols in libclang.so
 RUN: llvm-nm -Dj --defined-only %libclang | grep -v -e '@@LLVM_[0-9]\+$' | not grep '^clang'
 
-# Check that here are no local clang_ symbols (ignoring symbols with .cold or
+# Check that there are no local clang_ symbols (ignoring symbols with .cold or
 # .localalias suffxies.)
-RUN: llvm-nm %libclang | not grep '[a-z] clang_[^.]\+$'
+RUN: llvm-nm %libclang | not grep '[a-z] clang_[^.$]\+$'

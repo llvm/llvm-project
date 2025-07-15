@@ -27,6 +27,7 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -117,8 +118,8 @@ static void reportErrorAndExit() {
   exit(1);
 }
 
-cl::list<std::string> InputArgv(cl::Positional,
-                                cl::desc("<program arguments>..."));
+static cl::list<std::string> InputArgv(cl::Positional,
+                                       cl::desc("<program arguments>..."));
 
 int main(int argc, char *argv[]) {
   // Initialize LLVM.

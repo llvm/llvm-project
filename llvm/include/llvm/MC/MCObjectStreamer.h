@@ -12,7 +12,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 
@@ -26,8 +25,6 @@ class MCAssembler;
 class MCCodeEmitter;
 class MCSubtargetInfo;
 class MCExpr;
-class MCFragment;
-class MCDataFragment;
 class MCAsmBackend;
 class raw_ostream;
 class raw_pwrite_stream;
@@ -43,9 +40,6 @@ class MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
   bool EmitEHFrame;
   bool EmitDebugFrame;
-  SmallVector<MCSymbol *, 2> PendingLabels;
-  SmallSetVector<MCSection *, 4> PendingLabelSections;
-  unsigned CurSubsectionIdx = 0;
   struct PendingMCFixup {
     const MCSymbol *Sym;
     MCFixup Fixup;
@@ -65,10 +59,9 @@ class MCObjectStreamer : public MCStreamer {
   DenseMap<const MCSymbol *, SmallVector<PendingAssignment, 1>>
       pendingAssignments;
 
-  virtual void emitInstToData(const MCInst &Inst, const MCSubtargetInfo&) = 0;
+  virtual void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &);
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
-  MCSymbol *emitCFILabel() override;
   void emitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
   void resolvePendingFixups();
 
@@ -86,15 +79,16 @@ public:
   bool isIntegratedAssemblerRequired() const override { return true; }
 
   void emitFrames(MCAsmBackend *MAB);
+  MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug) override;
 
-  MCFragment *getCurrentFragment() const;
-
   void insert(MCFragment *F) {
-    flushPendingLabels(F);
-    MCSection *CurSection = getCurrentSectionOnly();
-    CurSection->addFragment(*F);
-    F->setParent(CurSection);
+    auto *Sec = CurFrag->getParent();
+    F->setParent(Sec);
+    F->setLayoutOrder(CurFrag->getLayoutOrder() + 1);
+    CurFrag->Next = F;
+    CurFrag = F;
+    Sec->curFragList()->Tail = F;
   }
 
   /// Get a data fragment to write into, creating a new one if the current
@@ -104,25 +98,10 @@ public:
   MCDataFragment *getOrCreateDataFragment(const MCSubtargetInfo* STI = nullptr);
 
 protected:
-  bool changeSectionImpl(MCSection *Section, const MCExpr *Subsection);
-
-  /// Assign a label to the current Section and Subsection even though a
-  /// fragment is not yet present. Use flushPendingLabels(F) to associate
-  /// a fragment with this label.
-  void addPendingLabel(MCSymbol* label);
-
-  /// If any labels have been emitted but not assigned fragments in the current
-  /// Section and Subsection, ensure that they get assigned to fragment F.
-  /// Optionally, one can provide an offset \p FOffset as a symbol offset within
-  /// the fragment.
-  void flushPendingLabels(MCFragment *F, uint64_t FOffset = 0);
+  bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
 
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
-
-  /// Create a data fragment for any pending labels across all Sections
-  /// and Subsections.
-  void flushPendingLabels();
 
   MCAssembler &getAssembler() { return *Assembler; }
   MCAssembler *getAssemblerPtr() override;
@@ -130,7 +109,7 @@ public:
   /// @{
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
+  virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
                               uint64_t Offset);
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitConditionalAssignment(MCSymbol *Symbol,
@@ -139,20 +118,21 @@ public:
                      SMLoc Loc = SMLoc()) override;
   void emitULEB128Value(const MCExpr *Value) override;
   void emitSLEB128Value(const MCExpr *Value) override;
-  void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
-  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) override;
+  void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
+  void switchSectionNoPrint(MCSection *Section) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// Emit an instruction to a special fragment, because this instruction
   /// can change its size during relaxation.
-  virtual void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
+  void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
 
   void emitBundleAlignMode(Align Alignment) override;
   void emitBundleLock(bool AlignToEnd) override;
   void emitBundleUnlock() override;
   void emitBytes(StringRef Data) override;
-  void emitValueToAlignment(Align Alignment, int64_t Value = 0,
-                            unsigned ValueSize = 1,
+  void emitValueToAlignment(Align Alignment, int64_t Fill = 0,
+                            uint8_t FillLen = 1,
                             unsigned MaxBytesToEmit = 0) override;
   void emitCodeAlignment(Align ByteAlignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
@@ -160,12 +140,13 @@ public:
                          SMLoc Loc) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
                              unsigned Flags, unsigned Isa,
-                             unsigned Discriminator,
-                             StringRef FileName) override;
+                             unsigned Discriminator, StringRef FileName,
+                             StringRef Comment = {}) override;
   void emitDwarfAdvanceLineAddr(int64_t LineDelta, const MCSymbol *LastLabel,
                                 const MCSymbol *Label,
                                 unsigned PointerSize) override;
-  void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel) override;
+  void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel,
+                             MCSymbol *EndLabel = nullptr) override;
   void emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                  const MCSymbol *Label, SMLoc Loc);
   void emitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,
@@ -184,12 +165,6 @@ public:
   void emitCVStringTableDirective() override;
   void emitCVFileChecksumsDirective() override;
   void emitCVFileChecksumOffsetDirective(unsigned FileNo) override;
-  void emitDTPRel32Value(const MCExpr *Value) override;
-  void emitDTPRel64Value(const MCExpr *Value) override;
-  void emitTPRel32Value(const MCExpr *Value) override;
-  void emitTPRel64Value(const MCExpr *Value) override;
-  void emitGPRel32Value(const MCExpr *Value) override;
-  void emitGPRel64Value(const MCExpr *Value) override;
   std::optional<std::pair<bool, std::string>>
   emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
                      SMLoc Loc, const MCSubtargetInfo &STI) override;

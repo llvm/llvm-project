@@ -58,7 +58,7 @@ public:
   }
 
   void addLazyDecl(ASTContext &C, GlobalDeclID ID, AccessSpecifier AS) {
-    Decls.push_back(DeclAccessPair::makeLazy(ID.get(), AS), C);
+    Decls.push_back(DeclAccessPair::makeLazy(ID.getRawValue(), AS), C);
   }
 
   /// Replaces the given declaration with the new one, once.

@@ -13,13 +13,14 @@
 #ifndef LLVM_XRAY_RECORDPRINTER_H
 #define LLVM_XRAY_RECORDPRINTER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/XRay/FDRRecords.h"
 
 namespace llvm {
 namespace xray {
 
-class RecordPrinter : public RecordVisitor {
+class LLVM_ABI RecordPrinter : public RecordVisitor {
   raw_ostream &OS;
   std::string Delim;
 

@@ -220,7 +220,7 @@ define void @test7() {
 define void @test8() {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr noundef nonnull align 4 dereferenceable(20) getelementptr inbounds (i8, ptr @H, i64 20), i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr noundef nonnull align 4 dereferenceable(20) getelementptr inbounds nuw (i8, ptr @H, i64 20), i64 20, i1 false)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -234,7 +234,7 @@ define void @test8() {
 define void @test8_addrspacecast() {
 ; CHECK-LABEL: @test8_addrspacecast(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef align 4 dereferenceable(20) addrspacecast (ptr getelementptr inbounds (i8, ptr @H, i64 20) to ptr addrspace(1)), i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef align 4 dereferenceable(20) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr @H, i64 20) to ptr addrspace(1)), i64 20, i1 false)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -246,7 +246,7 @@ define void @test8_addrspacecast() {
 
 define void @test9() {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds (i8, ptr @H, i64 20)) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds nuw (i8, ptr @H, i64 20)) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 4
@@ -257,7 +257,7 @@ define void @test9() {
 
 define void @test9_addrspacecast() {
 ; CHECK-LABEL: @test9_addrspacecast(
-; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds (i8, ptr @H, i64 20)) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds nuw (i8, ptr @H, i64 20)) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 4
@@ -380,7 +380,7 @@ define void @volatile_memcpy() {
 ; and then forwarding it by readonly nocapture reference.
 define void @memcpy_to_nocapture_readonly() {
 ; CHECK-LABEL: @memcpy_to_nocapture_readonly(
-; CHECK-NEXT:    call void @bar(ptr nocapture nonnull readonly @H)
+; CHECK-NEXT:    call void @bar(ptr nonnull readonly captures(none) @H)
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
@@ -411,7 +411,7 @@ define void @memcpy_to_aliased_nocapture_readonly() {
 ; CHECK-LABEL: @memcpy_to_aliased_nocapture_readonly(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i1 false)
-; CHECK-NEXT:    call void @two_params(ptr nocapture nonnull readonly [[A]], ptr nocapture nonnull [[A]])
+; CHECK-NEXT:    call void @two_params(ptr nonnull readonly captures(none) [[A]], ptr nonnull captures(none) [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16

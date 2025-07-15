@@ -8,16 +8,12 @@
 
 #include "mlir/Dialect/Mesh/Transforms/Passes.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Mesh/IR/MeshDialect.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -57,10 +53,10 @@ static llvm::raw_ostream &operator<<(llvm::raw_ostream &stream,
 template <typename Stream, typename Range>
 static Stream &printRange(Stream &stream, Range &&range) {
   stream << "[";
-  llvm::for_each(range, [&stream](auto &v) {
+  for (auto &v : range) {
     stream << v;
     stream << ", ";
-  });
+  }
   return stream << "]";
 }
 
@@ -109,16 +105,15 @@ operator<<(llvm::raw_ostream &stream, ReshardingRquirementKind v) {
 // specific shardings. For example, mustShardings = [shard0, None] and
 // optionalShardings = [None, shard1], the result will be [[shard0, shard1],
 // [shard0, None]]
-static SmallVector<SmallVector<MeshShardingAttr>>
-getOrderedPossibleShardingAttrs(ArrayRef<MeshShardingAttr> mustShardings,
-                                ArrayRef<MeshShardingAttr> optionalShardings) {
-  SmallVector<SmallVector<MeshShardingAttr>> allShardingAttrs;
-  SmallVector<MeshShardingAttr> curShardingAttrs;
+static SmallVector<std::vector<MeshSharding>>
+getOrderedPossibleShardingAttrs(ArrayRef<MeshSharding> mustShardings,
+                                ArrayRef<MeshSharding> optionalShardings) {
+  SmallVector<std::vector<MeshSharding>> allShardingAttrs;
+  std::vector<MeshSharding> curShardingAttrs;
 
   std::function<void(size_t)> dfsCreateShardingAttrs = [&](size_t i) {
     if (i == mustShardings.size()) {
-      allShardingAttrs.push_back(
-          SmallVector<MeshShardingAttr>(curShardingAttrs));
+      allShardingAttrs.push_back(std::vector<MeshSharding>(curShardingAttrs));
       return;
     }
 
@@ -133,13 +128,13 @@ getOrderedPossibleShardingAttrs(ArrayRef<MeshShardingAttr> mustShardings,
       curShardingAttrs.push_back(optionalShardings[i]);
       dfsCreateShardingAttrs(i + 1);
       curShardingAttrs.pop_back();
-      curShardingAttrs.push_back(nullptr);
+      curShardingAttrs.push_back({});
       dfsCreateShardingAttrs(i + 1);
       curShardingAttrs.pop_back();
       return;
     }
 
-    curShardingAttrs.push_back(nullptr);
+    curShardingAttrs.push_back({});
     dfsCreateShardingAttrs(i + 1);
     curShardingAttrs.pop_back();
   };
@@ -159,8 +154,7 @@ getOrderedPossibleShardingAttrs(ArrayRef<MeshShardingAttr> mustShardings,
 // 3. All other cases. Resharding is required for operands/results with
 //   annotation targeting explicitly this operation.
 ReshardingRquirementKind getReshardingRquirementKind(
-    Operation *op,
-    const SmallVector<MeshShardingAttr> &operandAndResultShardings) {
+    Operation *op, const std::vector<MeshSharding> &operandAndResultShardings) {
   ReshardingRquirementKind res = ReshardingRquirementKind::NO_RESHARDING;
 
   size_t operandsCount = op->getOperands().size();
@@ -177,7 +171,7 @@ ReshardingRquirementKind getReshardingRquirementKind(
     if (!shardOp) {
       continue;
     }
-    bool needsResharding = shardOp.getShardAttr() != sharding;
+    bool needsResharding = sharding != shardOp.getSharding();
     bool isExplicitAnnotationForThisOp = shardOp.getAnnotateForUsers();
     if (needsResharding) {
       if (isExplicitAnnotationForThisOp) {
@@ -195,7 +189,7 @@ ReshardingRquirementKind getReshardingRquirementKind(
       if (!shardOp) {
         continue;
       }
-      bool needsResharding = shardOp.getShardAttr() != sharding;
+      bool needsResharding = sharding != shardOp.getSharding();
       bool isExplicitAnnotationForThisOp = !shardOp.getAnnotateForUsers();
       if (needsResharding) {
         if (isExplicitAnnotationForThisOp) {
@@ -219,14 +213,13 @@ ReshardingRquirementKind getReshardingRquirementKind(
 // 3. Resharding of existing explicit sharding annotations for this op.
 static FailureOr<ShardingOption> selectShardingOption(
     ShardingInterface shardingOp,
-    ArrayRef<SmallVector<MeshShardingAttr>> possibleOperandShardingAttrs,
-    ArrayRef<SmallVector<MeshShardingAttr>> possibleResultShardingAttrs) {
+    ArrayRef<std::vector<MeshSharding>> possibleOperandShardingAttrs,
+    ArrayRef<std::vector<MeshSharding>> possibleResultShardingAttrs) {
   SmallVector<std::tuple<ShardingOption, ReshardingRquirementKind>>
       shardingOptionsAndReshardingRequirements;
 
-  for (ArrayRef<MeshShardingAttr> resultShardings :
-       possibleResultShardingAttrs) {
-    for (ArrayRef<MeshShardingAttr> operandShardings :
+  for (ArrayRef<MeshSharding> resultShardings : possibleResultShardingAttrs) {
+    for (ArrayRef<MeshSharding> operandShardings :
          possibleOperandShardingAttrs) {
       FailureOr<ShardingOption> shardingOption =
           shardingOp.getShardingOption(operandShardings, resultShardings);
@@ -238,14 +231,14 @@ static FailureOr<ShardingOption> selectShardingOption(
       // They may be missing some annotations.
       // Whatever is returned by getShardingAnnotations is exactly what the op
       // needs.
-      FailureOr<SmallVector<MeshShardingAttr>> operandAndResultShardings =
+      FailureOr<std::vector<MeshSharding>> operandAndResultShardings =
           shardingOp.getShardingAnnotations(*shardingOption);
       if (failed(operandAndResultShardings)) {
         return failure();
       }
 
-      LLVM_DEBUG(DBGS() << "operandAndResultShardings = "
-                        << *operandAndResultShardings << "\n";);
+      // LLVM_DEBUG(DBGS() << "operandAndResultShardings = "
+      //                   << *operandAndResultShardings << "\n";);
 
       ReshardingRquirementKind reshardingRquirement =
           getReshardingRquirementKind(shardingOp, *operandAndResultShardings);
@@ -286,23 +279,25 @@ static FailureOr<ShardingOption> selectShardingOption(
 // a `mesh.shard` operation for all remaining operands and results that do not
 // have sharding annotations.
 static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
-  if (op->hasTrait<OpTrait::IsTerminator>() || llvm::isa<mesh::ShardOp>(op))
+  ShardingInterface shardingOp = llvm::dyn_cast<ShardingInterface>(op);
+  if (op->hasTrait<OpTrait::IsTerminator>() ||
+      (op->hasTrait<OpTrait::ConstantLike>() && !shardingOp) ||
+      llvm::isa<mesh::ShardOp, mesh::ShardingOp, mesh::GetShardingOp>(op))
     return success();
 
-  ShardingInterface shardingOp = llvm::dyn_cast<ShardingInterface>(op);
   if (!shardingOp) {
     op->emitOpError() << "sharding interface is not implemented.";
     return failure();
   }
 
-  // collect MeshShardingAttr from results
-  SmallVector<MeshShardingAttr> allowConflictsResultShardings;
+  // collect MeshSharding from results
+  std::vector<MeshSharding> allowConflictsResultShardings;
   allowConflictsResultShardings.resize(op->getNumResults());
-  SmallVector<MeshShardingAttr> resultMustShardings;
+  std::vector<MeshSharding> resultMustShardings;
   resultMustShardings.resize(op->getNumResults());
   for (OpResult result : op->getResults()) {
-    FailureOr<std::pair<bool, MeshShardingAttr>> maybeShardAttr =
-        getMeshShardingAttr(result);
+    FailureOr<std::pair<bool, MeshSharding>> maybeShardAttr =
+        getMeshSharding(result);
     if (failed(maybeShardAttr))
       continue;
     if (!maybeShardAttr->first)
@@ -312,14 +307,14 @@ static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
           maybeShardAttr->second;
   }
 
-  // collect MeshShardingAttr from operands
-  SmallVector<MeshShardingAttr> allowConflictsOperandShardings;
+  // collect MeshSharding from operands
+  std::vector<MeshSharding> allowConflictsOperandShardings;
   allowConflictsOperandShardings.resize(op->getNumOperands());
-  SmallVector<MeshShardingAttr> operandMustShardings;
+  std::vector<MeshSharding> operandMustShardings;
   operandMustShardings.resize(op->getNumOperands());
   for (OpOperand &opOperand : op->getOpOperands()) {
-    FailureOr<std::pair<bool, MeshShardingAttr>> maybeShardAttr =
-        getMeshShardingAttr(opOperand);
+    FailureOr<std::pair<bool, MeshSharding>> maybeShardAttr =
+        getMeshSharding(opOperand);
     if (failed(maybeShardAttr))
       continue;
 
@@ -332,10 +327,10 @@ static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
   }
 
   // try to get the sharding option
-  SmallVector<SmallVector<MeshShardingAttr>> possibleOperandShardingAttrs =
+  SmallVector<std::vector<MeshSharding>> possibleOperandShardingAttrs =
       getOrderedPossibleShardingAttrs(operandMustShardings,
                                       allowConflictsOperandShardings);
-  SmallVector<SmallVector<MeshShardingAttr>> possibleResultShardingAttrs =
+  SmallVector<std::vector<MeshSharding>> possibleResultShardingAttrs =
       getOrderedPossibleShardingAttrs(resultMustShardings,
                                       allowConflictsResultShardings);
   FailureOr<ShardingOption> shardingOption = selectShardingOption(
@@ -364,6 +359,9 @@ static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
 //===----------------------------------------------------------------------===//
 struct ShardingPropagation
     : public mesh::impl::ShardingPropagationBase<ShardingPropagation> {
+
+  using ShardingPropagationBase<ShardingPropagation>::ShardingPropagationBase;
+
   void runOnOperation() override {
     FunctionOpInterface funcOp = getOperation();
     MLIRContext *ctx = funcOp.getContext();
@@ -371,7 +369,7 @@ struct ShardingPropagation
     OpBuilder builder(ctx);
     if (!region.hasOneBlock()) {
       funcOp.emitOpError() << "only one block is supported!";
-      signalPassFailure();
+      return signalPassFailure();
     }
     Block &block = region.front();
 
@@ -384,18 +382,31 @@ struct ShardingPropagation
             shardingOp.printLoopTypesAndIndexingMaps(llvm::dbgs());
         });
 
-    // 1. propagate in reversed order
-    for (Operation &op : llvm::make_early_inc_range(llvm::reverse(block)))
-      if (failed(visitOp(&op, builder)))
-        return signalPassFailure();
+    auto traverse = [&](auto &&range, OpBuilder &builder,
+                        const char *order) -> bool {
+      for (Operation &op : range) {
+        if (failed(visitOp(&op, builder))) {
+          signalPassFailure();
+          return true;
+        }
+      }
+      LLVM_DEBUG(DBGS() << "After " << order << " order propagation:\n"
+                        << funcOp << "\n");
+      LLVM_DEBUG(assert(succeeded(mlir::verify(funcOp))));
+      return false;
+    };
 
-    LLVM_DEBUG(DBGS() << "After reversed order propagation:\n"
-                      << funcOp << "\n");
-    LLVM_DEBUG(assert(succeeded(mlir::verify(funcOp))));
+    // 1. Propagate in reversed order.
+    if (traversal == TraversalOrder::Backward ||
+        traversal == TraversalOrder::BackwardForward)
+      traverse(llvm::reverse(block), builder, "backward");
 
-    // 2. propagate in original order
-    for (Operation &op : llvm::make_early_inc_range(block))
-      if (failed(visitOp(&op, builder)))
-        return signalPassFailure();
+    // 2. Propagate in original order.
+    if (traversal != TraversalOrder::Backward)
+      traverse(block, builder, "forward");
+
+    // 3. Propagate in backward order if needed.
+    if (traversal == TraversalOrder::ForwardBackward)
+      traverse(llvm::reverse(block), builder, "backward");
   }
 };

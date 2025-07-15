@@ -13,13 +13,14 @@
 #include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "clang/Analysis/CallGraph.h"
 #include "llvm/ADT/SCCIterator.h"
-#include "llvm/ADT/SmallVector.h"
 
 using namespace clang::ast_matchers;
+using clang::ast_matchers::internal::Matcher;
 using clang::tidy::utils::hasPtrOrReferenceInFunc;
 
-namespace clang {
-namespace ast_matchers {
+namespace clang::tidy::bugprone {
+
+namespace {
 /// matches a Decl if it has a  "no return" attribute of any kind
 AST_MATCHER(Decl, declHasNoReturnAttr) {
   return Node.hasAttr<NoReturnAttr>() || Node.hasAttr<CXX11NoReturnAttr>() ||
@@ -30,23 +31,21 @@ AST_MATCHER(Decl, declHasNoReturnAttr) {
 AST_MATCHER(FunctionType, typeHasNoReturnAttr) {
   return Node.getNoReturnAttr();
 }
-} // namespace ast_matchers
-namespace tidy::bugprone {
+} // namespace
 
-static internal::Matcher<Stmt>
-loopEndingStmt(internal::Matcher<Stmt> Internal) {
-  internal::Matcher<QualType> isNoReturnFunType =
+static Matcher<Stmt> loopEndingStmt(Matcher<Stmt> Internal) {
+  Matcher<QualType> IsNoReturnFunType =
       ignoringParens(functionType(typeHasNoReturnAttr()));
-  internal::Matcher<Decl> isNoReturnDecl =
-      anyOf(declHasNoReturnAttr(), functionDecl(hasType(isNoReturnFunType)),
-            varDecl(hasType(blockPointerType(pointee(isNoReturnFunType)))));
+  Matcher<Decl> IsNoReturnDecl =
+      anyOf(declHasNoReturnAttr(), functionDecl(hasType(IsNoReturnFunType)),
+            varDecl(hasType(blockPointerType(pointee(IsNoReturnFunType)))));
 
   return stmt(anyOf(
       mapAnyOf(breakStmt, returnStmt, gotoStmt, cxxThrowExpr).with(Internal),
       callExpr(Internal,
                callee(mapAnyOf(functionDecl, /* block callee */ varDecl)
-                          .with(isNoReturnDecl))),
-      objcMessageExpr(Internal, callee(isNoReturnDecl))));
+                          .with(IsNoReturnDecl))),
+      objcMessageExpr(Internal, callee(IsNoReturnDecl))));
 }
 
 /// Return whether `Var` was changed in `LoopStmt`.
@@ -83,8 +82,8 @@ static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
              isChanged(LoopStmt, Var, Context);
       // FIXME: Track references.
     }
-  } else if (isa<MemberExpr, CallExpr,
-                 ObjCIvarRefExpr, ObjCPropertyRefExpr, ObjCMessageExpr>(Cond)) {
+  } else if (isa<MemberExpr, CallExpr, ObjCIvarRefExpr, ObjCPropertyRefExpr,
+                 ObjCMessageExpr>(Cond)) {
     // FIXME: Handle MemberExpr.
     return true;
   } else if (const auto *CE = dyn_cast<CastExpr>(Cond)) {
@@ -274,8 +273,7 @@ static bool hasRecursionOverStaticLoopCondVariables(const Expr *Cond,
 
 void InfiniteLoopCheck::registerMatchers(MatchFinder *Finder) {
   const auto LoopCondition = allOf(
-      hasCondition(
-          expr(forCallable(decl().bind("func"))).bind("condition")),
+      hasCondition(expr(forCallable(decl().bind("func"))).bind("condition")),
       unless(hasBody(hasDescendant(
           loopEndingStmt(forCallable(equalsBoundNode("func")))))));
 
@@ -303,7 +301,7 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
     }
   }
 
-  if (ExprMutationAnalyzer::isUnevaluated(LoopStmt, *LoopStmt, *Result.Context))
+  if (ExprMutationAnalyzer::isUnevaluated(LoopStmt, *Result.Context))
     return;
 
   if (isAtLeastOneCondVarChanged(Func, LoopStmt, Cond, Result.Context))
@@ -324,9 +322,8 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
     diag(LoopStmt->getBeginLoc(),
          "this loop is infinite; none of its condition variables (%0)"
          " are updated in the loop body")
-      << CondVarNames;
+        << CondVarNames;
   }
 }
 
-} // namespace tidy::bugprone
-} // namespace clang
+} // namespace clang::tidy::bugprone

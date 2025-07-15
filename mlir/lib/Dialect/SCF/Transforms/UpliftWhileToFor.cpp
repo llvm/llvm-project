@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
-
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
@@ -48,10 +46,46 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
       diag << "Expected single condition use: " << *cmp;
     });
 
+  // If all 'before' arguments are forwarded but the order is different from
+  // 'after' arguments, here is the mapping from the 'after' argument index to
+  // the 'before' argument index.
+  std::optional<SmallVector<unsigned>> argReorder;
   // All `before` block args must be directly forwarded to ConditionOp.
   // They will be converted to `scf.for` `iter_vars` except induction var.
-  if (ValueRange(beforeBody->getArguments()) != beforeTerm.getArgs())
-    return rewriter.notifyMatchFailure(loop, "Invalid args order");
+  if (ValueRange(beforeBody->getArguments()) != beforeTerm.getArgs()) {
+    auto getArgReordering =
+        [](Block *beforeBody,
+           scf::ConditionOp cond) -> std::optional<SmallVector<unsigned>> {
+      // Skip further checking if their sizes mismatch.
+      if (beforeBody->getNumArguments() != cond.getArgs().size())
+        return std::nullopt;
+      // Bitset on which 'before' argument is forwarded.
+      llvm::SmallBitVector forwarded(beforeBody->getNumArguments(), false);
+      // The forwarding order of 'before' arguments.
+      SmallVector<unsigned> order;
+      for (Value a : cond.getArgs()) {
+        BlockArgument arg = dyn_cast<BlockArgument>(a);
+        // Skip if 'arg' is not a 'before' argument.
+        if (!arg || arg.getOwner() != beforeBody)
+          return std::nullopt;
+        unsigned idx = arg.getArgNumber();
+        // Skip if 'arg' is already forwarded in another place.
+        if (forwarded[idx])
+          return std::nullopt;
+        // Record the presence of 'arg' and its order.
+        forwarded[idx] = true;
+        order.push_back(idx);
+      }
+      // Skip if not all 'before' arguments are forwarded.
+      if (!forwarded.all())
+        return std::nullopt;
+      return order;
+    };
+    // Check if 'before' arguments are all forwarded but just reordered.
+    argReorder = getArgReordering(beforeBody, beforeTerm);
+    if (!argReorder)
+      return rewriter.notifyMatchFailure(loop, "Invalid args order");
+  }
 
   using Pred = arith::CmpIPredicate;
   Pred predicate = cmp.getPredicate();
@@ -104,7 +138,14 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   unsigned argNumber = inductionVar.getArgNumber();
   Value afterTermIndArg = afterTerm.getResults()[argNumber];
 
-  Value inductionVarAfter = afterBody->getArgument(argNumber);
+  auto findAfterArgNo = [](ArrayRef<unsigned> indices, unsigned beforeArgNo) {
+    return std::distance(indices.begin(),
+                         llvm::find_if(indices, [beforeArgNo](unsigned n) {
+                           return n == beforeArgNo;
+                         }));
+  };
+  Value inductionVarAfter = afterBody->getArgument(
+      argReorder ? findAfterArgNo(*argReorder, argNumber) : argNumber);
 
   // Find suitable `addi` op inside `after` block, one of the args must be an
   // Induction var passed from `before` block and second arg must be defined
@@ -130,7 +171,7 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   assert(lb.getType() == ub.getType());
   assert(lb.getType() == step.getType());
 
-  llvm::SmallVector<Value> newArgs;
+  SmallVector<Value> newArgs;
 
   // Populate inits for new `scf.for`, skip induction var.
   newArgs.reserve(loop.getInits().size());
@@ -164,6 +205,14 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
       newArgs.emplace_back(newBodyArgs[i]);
     }
   }
+  if (argReorder) {
+    // Reorder arguments following the 'after' argument order from the original
+    // 'while' loop.
+    SmallVector<Value> args;
+    for (unsigned order : *argReorder)
+      args.push_back(newArgs[order]);
+    newArgs = args;
+  }
 
   rewriter.inlineBlockBefore(loop.getAfterBody(), newBody, newBody->end(),
                              newArgs);
@@ -189,7 +238,7 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   if (isa<IndexType>(step.getType())) {
     one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
   } else {
-    one = rewriter.create<arith::ConstantIntOp>(loc, 1, step.getType());
+    one = rewriter.create<arith::ConstantIntOp>(loc, step.getType(), 1);
   }
 
   Value stepDec = rewriter.create<arith::SubIOp>(loc, step, one);
@@ -205,6 +254,14 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   newArgs.clear();
   llvm::append_range(newArgs, newLoop.getResults());
   newArgs.insert(newArgs.begin() + argNumber, res);
+  if (argReorder) {
+    // Reorder arguments following the 'after' argument order from the original
+    // 'while' loop.
+    SmallVector<Value> results;
+    for (unsigned order : *argReorder)
+      results.push_back(newArgs[order]);
+    newArgs = results;
+  }
   rewriter.replaceOp(loop, newArgs);
   return newLoop;
 }

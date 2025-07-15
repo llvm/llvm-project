@@ -24,7 +24,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -181,9 +180,8 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::MemRefAllocaToGlobalOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  producesHandle(getGlobal(), effects);
-  producesHandle(getGetGlobal(), effects);
-  consumesHandle(getAlloca(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getAllocaMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -249,7 +247,7 @@ transform::MemRefEraseDeadAllocAndStoresOp::applyToOne(
 
 void transform::MemRefEraseDeadAllocAndStoresOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getTargetMutable(), effects);
   transform::modifiesPayload(effects);
 }
 void transform::MemRefEraseDeadAllocAndStoresOp::build(OpBuilder &builder,
@@ -310,6 +308,8 @@ class MemRefTransformDialectExtension
     : public transform::TransformDialectExtension<
           MemRefTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(MemRefTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

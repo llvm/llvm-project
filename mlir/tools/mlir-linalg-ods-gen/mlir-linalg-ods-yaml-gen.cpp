@@ -31,9 +31,6 @@
 using namespace mlir;
 
 using llvm::yaml::Input;
-using llvm::yaml::MappingTraits;
-using llvm::yaml::ScalarEnumerationTraits;
-using llvm::yaml::ScalarTraits;
 
 #define DEBUG_TYPE "linalg-ods-gen"
 
@@ -120,9 +117,9 @@ struct ScalarAssign {
 };
 
 struct LinalgStructuredOpConfig {
-  SmallVector<LinalgOperandDef> args;
+  SmallVector<LinalgOperandDef, 4> args;
   LinalgIndexingMapsConfig indexingMaps;
-  SmallVector<LinalgIteratorTypeDef> iteratorTypes;
+  SmallVector<LinalgIteratorTypeDef, 4> iteratorTypes;
   std::vector<ScalarAssign> assignments;
 };
 
@@ -378,7 +375,6 @@ static std::string generateCppExpression(SerializedAffineMap self,
   std::string printedStr;
   llvm::raw_string_ostream printedSs(printedStr);
   self.affineMapAttr.print(printedSs);
-  printedSs.flush();
 
   static const char exprFormat[] =
       R"FMT(llvm::cast<AffineMapAttr>(mlir::parseAttribute("{0}", {1})).getValue())FMT";
@@ -391,7 +387,6 @@ static std::string interleaveToString(Container &container,
   std::string result;
   llvm::raw_string_ostream ss(result);
   llvm::interleave(container, ss, separator);
-  ss.flush();
   return result;
 }
 
@@ -564,9 +559,10 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
       SmallVector<utils::IteratorType> getIteratorTypesArray();
       ArrayAttr getIndexingMaps();
       static void regionBuilder(ImplicitLocOpBuilder &b,
-                                Block &block, ArrayRef<NamedAttribute> attrs);
+                                Block &block, ArrayRef<NamedAttribute> attrs,
+                                function_ref<InFlightDiagnostic()> emitError);
       static std::function<void(ImplicitLocOpBuilder &,
-                                Block &, ArrayRef<NamedAttribute>)>
+                                Block &, ArrayRef<NamedAttribute>, function_ref<InFlightDiagnostic()> emitError)>
       getRegionBuilder() {{
         return regionBuilder;
       }
@@ -634,7 +630,7 @@ ArrayAttr {0}::getIndexingMaps() {{
   MLIRContext *context = getContext();
   auto symbolBindings = getSymbolBindings(*this);
   SmallVector<AffineMap> maps;
-  {2}
+  {1}
   cached = Builder(context).getAffineMapArrayAttr(maps);
   getOperation()->setAttr(memoizeAttr, cached);
   return cached;
@@ -656,7 +652,7 @@ ArrayAttr {0}::getIndexingMaps() {{
 }
 )FMT";
 
-// Implementations of fold and getEffects.
+// Implementations of fold, getEffects and getSpeculatability.
 // Parameters:
 // {0}: Class name
 const char structuredOpFoldersFormat[] = R"FMT(
@@ -669,6 +665,9 @@ void {0}::getEffects(SmallVectorImpl<
       if (hasPureTensorSemantics()) return;
       getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
 }
+Speculation::Speculatability {0}::getSpeculatability() {{
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
 )FMT";
 
 // Implementation of parse/print.
@@ -680,7 +679,10 @@ ParseResult {0}::parse(OpAsmParser &parser, OperationState &result) {{
     {0}::getNumRegionArgs(), {0}::getRegionBuilder());
 }
 void {0}::print(OpAsmPrinter &p) {{
-  ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs());
+  SmallVector<StringRef, 3> elidedAttrs = {{"operandSegmentSizes",
+                                           "linalg.memoized_indexing_maps"};
+  ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
+                           elidedAttrs);
 }
 )FMT";
 
@@ -824,7 +826,6 @@ generateNamedGenericOpDefns(LinalgOpConfig &opConfig,
                               break;
                             }
                           });
-    ss.flush();
     os << llvm::formatv(structuredOpIteratorTypesFormat, className,
                         iteratorsStr);
   } else {
@@ -889,7 +890,6 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
         std::string symbolBindingsStr;
         llvm::raw_string_ostream symbolBindingsSs(symbolBindingsStr);
         llvm::interleave(symbolBindings, symbolBindingsSs, "\n");
-        symbolBindingsSs.flush();
 
         os << llvm::formatv(structuredOpSymbolBindingsFormat, className,
                             symbolBindingsStr);
@@ -910,7 +910,6 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
         llvm::raw_string_ostream dimIdentsSs(dimIdentsStr);
         llvm::interleaveComma(dimIndices, dimIdentsSs,
                               [&](unsigned i) { dimIdentsSs << "d" << i; });
-        dimIdentsSs.flush();
 
         // Statements to add and simplify each affine map.
         SmallVector<std::string> stmts;
@@ -929,7 +928,7 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
         // TODO: This needs to be memoized and/or converted to non-parser based
         // C++ codegen prior to real use.
         os << llvm::formatv(structuredOpIndexingMapsFormat, className,
-                            dimIdentsStr, interleaveToString(stmts, "\n  "));
+                            interleaveToString(stmts, "\n  "));
       }
     } else {
       os << llvm::formatv(rankPolyStructuredOpIndexingMapsFormat, className);
@@ -1012,7 +1011,8 @@ LogicalResult {0}::verifyIndexingMapRequiredAttributes() {{
     // {3}: Statements
     static const char structuredOpRegionBuilderFormat[] = R"FMT(
 void {0}::regionBuilder(ImplicitLocOpBuilder &b,
-                        Block &block, ArrayRef<NamedAttribute> attrs) {{
+                        Block &block, ArrayRef<NamedAttribute> attrs,
+                        function_ref<InFlightDiagnostic()> emitError) {{
   assert({1} > 0 && block.getNumArguments() == {1} &&
          "{0} regionBuilder expects {1} (>=0) args");
   RegionBuilderHelper helper(b, block);
@@ -1139,8 +1139,13 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
           // Call the function builder.
           std::string cppIdent = llvm::formatv("value{0}", ++localCounter);
           stmts.push_back(llvm::formatv(
-              "Value {0} = helper.build{1}({2}, {3});", cppIdent, enumName,
-              funcType, interleaveToString(operandCppValues, ", ")));
+              R"mlir(
+              Value {0} = helper.build{1}({2}, {3}, emitError);
+              if (!{0})
+                return;
+              )mlir",
+              cppIdent, enumName, funcType,
+              interleaveToString(operandCppValues, ", ")));
           return cppIdent;
         }
         emitError(genContext.getLoc()) << "unknown ScalarExpression type";

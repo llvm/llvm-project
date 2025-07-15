@@ -19,11 +19,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/SMLoc.h"
-#include <numeric>
 
 using namespace mlir;
 using namespace mlir::irdl;

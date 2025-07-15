@@ -54,6 +54,11 @@ static cl::opt<unsigned> StrNCmpInlineThreshold(
     cl::desc("The maximum length of a constant string for a builtin string cmp "
              "call eligible for inlining. The default value is 3."));
 
+static cl::opt<unsigned>
+    MemChrInlineThreshold("memchr-inline-threshold", cl::init(3), cl::Hidden,
+                          cl::desc("The maximum length of a constant string to "
+                                   "inline a memchr call."));
+
 /// Match a pattern for a bitwise funnel/rotate operation that partially guards
 /// against undefined behavior by branching around the funnel-shift/rotation
 /// when the shift amount is 0.
@@ -130,13 +135,10 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
   if (!DT.dominates(ShVal0, TermI) || !DT.dominates(ShVal1, TermI))
     return false;
 
-  ICmpInst::Predicate Pred;
   BasicBlock *PhiBB = Phi.getParent();
-  if (!match(TermI, m_Br(m_ICmp(Pred, m_Specific(ShAmt), m_ZeroInt()),
+  if (!match(TermI, m_Br(m_SpecificICmp(CmpInst::ICMP_EQ, m_Specific(ShAmt),
+                                        m_ZeroInt()),
                          m_SpecificBB(PhiBB), m_SpecificBB(FunnelBB))))
-    return false;
-
-  if (Pred != CmpInst::ICMP_EQ)
     return false;
 
   IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
@@ -170,8 +172,8 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
   //   %cond = phi i32 [ %fsh, %FunnelBB ], [ %ShVal0, %GuardBB ]
   // -->
   // llvm.fshl.i32(i32 %ShVal0, i32 %ShVal1, i32 %ShAmt)
-  Function *F = Intrinsic::getDeclaration(Phi.getModule(), IID, Phi.getType());
-  Phi.replaceAllUsesWith(Builder.CreateCall(F, {ShVal0, ShVal1, ShAmt}));
+  Phi.replaceAllUsesWith(
+      Builder.CreateIntrinsic(IID, Phi.getType(), {ShVal0, ShVal1, ShAmt}));
   return true;
 }
 
@@ -179,6 +181,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
 /// the bit indexes (Mask) needed by a masked compare. If we're matching a chain
 /// of 'and' ops, then we also need to capture the fact that we saw an
 /// "and X, 1", so that's an extra return value for that case.
+namespace {
 struct MaskOps {
   Value *Root = nullptr;
   APInt Mask;
@@ -188,6 +191,7 @@ struct MaskOps {
   MaskOps(unsigned BitWidth, bool MatchAnds)
       : Mask(APInt::getZero(BitWidth)), MatchAndChain(MatchAnds) {}
 };
+} // namespace
 
 /// This is a recursive helper for foldAnyOrAllBitsSet() that walks through a
 /// chain of 'and' or 'or' instructions looking for shift ops of a common source
@@ -324,16 +328,33 @@ static bool tryToRecognizePopCount(Instruction &I) {
                               m_SpecificInt(Mask33))))) {
         Value *Root, *SubOp1;
         // Matching "i - ((i >> 1) & 0x55555555...)".
+        const APInt *AndMask;
         if (match(AndOp0, m_Sub(m_Value(Root), m_Value(SubOp1))) &&
             match(SubOp1, m_And(m_LShr(m_Specific(Root), m_SpecificInt(1)),
-                                m_SpecificInt(Mask55)))) {
-          LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-          IRBuilder<> Builder(&I);
-          Function *Func = Intrinsic::getDeclaration(
-              I.getModule(), Intrinsic::ctpop, I.getType());
-          I.replaceAllUsesWith(Builder.CreateCall(Func, {Root}));
-          ++NumPopCountRecognized;
-          return true;
+                                m_APInt(AndMask)))) {
+          auto CheckAndMask = [&]() {
+            if (*AndMask == Mask55)
+              return true;
+
+            // Exact match failed, see if any bits are known to be 0 where we
+            // expect a 1 in the mask.
+            if (!AndMask->isSubsetOf(Mask55))
+              return false;
+
+            APInt NeededMask = Mask55 & ~*AndMask;
+            return MaskedValueIsZero(cast<Instruction>(SubOp1)->getOperand(0),
+                                     NeededMask,
+                                     SimplifyQuery(I.getDataLayout()));
+          };
+
+          if (CheckAndMask()) {
+            LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+            IRBuilder<> Builder(&I);
+            I.replaceAllUsesWith(
+                Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+            ++NumPopCountRecognized;
+            return true;
+          }
         }
       }
     }
@@ -396,9 +417,8 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
     return false;
 
   IRBuilder<> Builder(&I);
-  Function *Fn = Intrinsic::getDeclaration(I.getModule(), Intrinsic::fptosi_sat,
-                                           {SatTy, FpTy});
-  Value *Sat = Builder.CreateCall(Fn, In);
+  Value *Sat =
+      Builder.CreateIntrinsic(Intrinsic::fptosi_sat, {SatTy, FpTy}, In);
   I.replaceAllUsesWith(Builder.CreateSExt(Sat, IntTy));
   return true;
 }
@@ -409,9 +429,6 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
 static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
                      TargetLibraryInfo &TLI, AssumptionCache &AC,
                      DominatorTree &DT) {
-
-  Module *M = Call->getModule();
-
   // If (1) this is a sqrt libcall, (2) we can assume that NAN is not created
   // (because NNAN or the operand arg must not be less than -0.0) and (2) we
   // would not end up lowering to a libcall anyway (which could change the value
@@ -423,13 +440,10 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
   if (TTI.haveFastSqrt(Ty) &&
       (Call->hasNoNaNs() ||
        cannotBeOrderedLessThanZero(
-           Arg, 0, SimplifyQuery(M->getDataLayout(), &TLI, &DT, &AC, Call)))) {
+           Arg, SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
-    IRBuilderBase::FastMathFlagGuard Guard(Builder);
-    Builder.setFastMathFlags(Call->getFastMathFlags());
-
-    Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, Ty);
-    Value *NewSqrt = Builder.CreateCall(Sqrt, Arg, "sqrt");
+    Value *NewSqrt =
+        Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg, Call, "sqrt");
     Call->replaceAllUsesWith(NewSqrt);
 
     // Explicitly erase the old call because a call with side effects is not
@@ -533,7 +547,7 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
     return false;
 
   GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
-  if (!GEP || !GEP->isInBounds() || GEP->getNumIndices() != 2)
+  if (!GEP || !GEP->hasNoUnsignedSignedWrap() || GEP->getNumIndices() != 2)
     return false;
 
   if (!GEP->getSourceElementType()->isArrayTy())
@@ -678,14 +692,15 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
       Load2Ptr->stripAndAccumulateConstantOffsets(DL, Offset2,
                                                   /* AllowNonInbounds */ true);
 
-  // Verify if both loads have same base pointers and load sizes are same.
+  // Verify if both loads have same base pointers
   uint64_t LoadSize1 = LI1->getType()->getPrimitiveSizeInBits();
   uint64_t LoadSize2 = LI2->getType()->getPrimitiveSizeInBits();
-  if (Load1Ptr != Load2Ptr || LoadSize1 != LoadSize2)
+  if (Load1Ptr != Load2Ptr)
     return false;
 
-  // Support Loadsizes greater or equal to 8bits and only power of 2.
-  if (LoadSize1 < 8 || !isPowerOf2_64(LoadSize1))
+  // Make sure that there are no padding bits.
+  if (!DL.typeSizeEqualsStoreSize(LI1->getType()) ||
+      !DL.typeSizeEqualsStoreSize(LI2->getType()))
     return false;
 
   // Alias Analysis to check for stores b/w the loads.
@@ -704,9 +719,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
       return false;
 
-    // Ignore debug info so that's not counted against MaxInstrsToScan.
-    // Otherwise debug info could affect codegen.
-    if (!isa<DbgInfoIntrinsic>(Inst) && ++NumScanned > MaxInstrsToScan)
+    if (++NumScanned > MaxInstrsToScan)
       return false;
   }
 
@@ -805,8 +818,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     APInt Offset1(DL.getIndexTypeSizeInBits(Load1Ptr->getType()), 0);
     Load1Ptr = Load1Ptr->stripAndAccumulateConstantOffsets(
         DL, Offset1, /* AllowNonInbounds */ true);
-    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr,
-                                    Builder.getInt32(Offset1.getZExtValue()));
+    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),
@@ -830,6 +842,62 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   return true;
 }
 
+/// Combine away instructions providing they are still equivalent when compared
+/// against 0. i.e do they have any bits set.
+static Value *optimizeShiftInOrChain(Value *V, IRBuilder<> &Builder) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || I->getOpcode() != Instruction::Or || !I->hasOneUse())
+    return nullptr;
+
+  Value *A;
+
+  // Look deeper into the chain of or's, combining away shl (so long as they are
+  // nuw or nsw).
+  Value *Op0 = I->getOperand(0);
+  if (match(Op0, m_CombineOr(m_NSWShl(m_Value(A), m_Value()),
+                             m_NUWShl(m_Value(A), m_Value()))))
+    Op0 = A;
+  else if (auto *NOp = optimizeShiftInOrChain(Op0, Builder))
+    Op0 = NOp;
+
+  Value *Op1 = I->getOperand(1);
+  if (match(Op1, m_CombineOr(m_NSWShl(m_Value(A), m_Value()),
+                             m_NUWShl(m_Value(A), m_Value()))))
+    Op1 = A;
+  else if (auto *NOp = optimizeShiftInOrChain(Op1, Builder))
+    Op1 = NOp;
+
+  if (Op0 != I->getOperand(0) || Op1 != I->getOperand(1))
+    return Builder.CreateOr(Op0, Op1);
+  return nullptr;
+}
+
+static bool foldICmpOrChain(Instruction &I, const DataLayout &DL,
+                            TargetTransformInfo &TTI, AliasAnalysis &AA,
+                            const DominatorTree &DT) {
+  CmpPredicate Pred;
+  Value *Op0;
+  if (!match(&I, m_ICmp(Pred, m_Value(Op0), m_Zero())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  // If the chain or or's matches a load, combine to that before attempting to
+  // remove shifts.
+  if (auto OpI = dyn_cast<Instruction>(Op0))
+    if (OpI->getOpcode() == Instruction::Or)
+      if (foldConsecutiveLoads(*OpI, DL, TTI, AA, DT))
+        return true;
+
+  IRBuilder<> Builder(&I);
+  // icmp eq/ne or(shl(a), b), 0 -> icmp eq/ne or(a, b), 0
+  if (auto *Res = optimizeShiftInOrChain(Op0, Builder)) {
+    I.replaceAllUsesWith(Builder.CreateICmp(Pred, Res, I.getOperand(1)));
+    return true;
+  }
+
+  return false;
+}
+
 // Calculate GEP Stride and accumulated const ModOffset. Return Stride and
 // ModOffset
 static std::pair<APInt, APInt>
@@ -840,13 +908,13 @@ getStrideAndModOffsetOfGEP(Value *PtrOp, const DataLayout &DL) {
   // Return a minimum gep stride, greatest common divisor of consective gep
   // index scales(c.f. Bézout's identity).
   while (auto *GEP = dyn_cast<GEPOperator>(PtrOp)) {
-    MapVector<Value *, APInt> VarOffsets;
+    SmallMapVector<Value *, APInt, 4> VarOffsets;
     if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset))
       break;
 
     for (auto [V, Scale] : VarOffsets) {
       // Only keep a power of two factor for non-inbounds
-      if (!GEP->isInBounds())
+      if (!GEP->hasNoUnsignedSignedWrap())
         Scale = APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
 
       if (!Stride)
@@ -1049,6 +1117,13 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
                                    bool Swapped) {
   auto &Ctx = CI->getContext();
   IRBuilder<> B(Ctx);
+  // We want these instructions to be recognized as inlined instructions for the
+  // compare call, but we don't have a source location for the definition of
+  // that function, since we're generating that code now. Because the generated
+  // code is a viable point for a memory access error, we make the pragmatic
+  // choice here to directly use CI's location so that we have useful
+  // attribution for the generated code.
+  B.SetCurrentDebugLocation(CI->getDebugLoc());
 
   BasicBlock *BBCI = CI->getParent();
   BasicBlock *BBTail =
@@ -1102,6 +1177,82 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
   }
 }
 
+/// Convert memchr with a small constant string into a switch
+static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
+                       const DataLayout &DL) {
+  if (isa<Constant>(Call->getArgOperand(1)))
+    return false;
+
+  StringRef Str;
+  Value *Base = Call->getArgOperand(0);
+  if (!getConstantStringInfo(Base, Str, /*TrimAtNul=*/false))
+    return false;
+
+  uint64_t N = Str.size();
+  if (auto *ConstInt = dyn_cast<ConstantInt>(Call->getArgOperand(2))) {
+    uint64_t Val = ConstInt->getZExtValue();
+    // Ignore the case that n is larger than the size of string.
+    if (Val > N)
+      return false;
+    N = Val;
+  } else
+    return false;
+
+  if (N > MemChrInlineThreshold)
+    return false;
+
+  BasicBlock *BB = Call->getParent();
+  BasicBlock *BBNext = SplitBlock(BB, Call, DTU);
+  IRBuilder<> IRB(BB);
+  IRB.SetCurrentDebugLocation(Call->getDebugLoc());
+  IntegerType *ByteTy = IRB.getInt8Ty();
+  BB->getTerminator()->eraseFromParent();
+  SwitchInst *SI = IRB.CreateSwitch(
+      IRB.CreateTrunc(Call->getArgOperand(1), ByteTy), BBNext, N);
+  Type *IndexTy = DL.getIndexType(Call->getType());
+  SmallVector<DominatorTree::UpdateType, 8> Updates;
+
+  BasicBlock *BBSuccess = BasicBlock::Create(
+      Call->getContext(), "memchr.success", BB->getParent(), BBNext);
+  IRB.SetInsertPoint(BBSuccess);
+  PHINode *IndexPHI = IRB.CreatePHI(IndexTy, N, "memchr.idx");
+  Value *FirstOccursLocation = IRB.CreateInBoundsPtrAdd(Base, IndexPHI);
+  IRB.CreateBr(BBNext);
+  if (DTU)
+    Updates.push_back({DominatorTree::Insert, BBSuccess, BBNext});
+
+  SmallPtrSet<ConstantInt *, 4> Cases;
+  for (uint64_t I = 0; I < N; ++I) {
+    ConstantInt *CaseVal = ConstantInt::get(ByteTy, Str[I]);
+    if (!Cases.insert(CaseVal).second)
+      continue;
+
+    BasicBlock *BBCase = BasicBlock::Create(Call->getContext(), "memchr.case",
+                                            BB->getParent(), BBSuccess);
+    SI->addCase(CaseVal, BBCase);
+    IRB.SetInsertPoint(BBCase);
+    IndexPHI->addIncoming(ConstantInt::get(IndexTy, I), BBCase);
+    IRB.CreateBr(BBSuccess);
+    if (DTU) {
+      Updates.push_back({DominatorTree::Insert, BB, BBCase});
+      Updates.push_back({DominatorTree::Insert, BBCase, BBSuccess});
+    }
+  }
+
+  PHINode *PHI =
+      PHINode::Create(Call->getType(), 2, Call->getName(), BBNext->begin());
+  PHI->addIncoming(Constant::getNullValue(Call->getType()), BB);
+  PHI->addIncoming(FirstOccursLocation, BBSuccess);
+
+  Call->replaceAllUsesWith(PHI);
+  Call->eraseFromParent();
+
+  if (DTU)
+    DTU->applyUpdates(Updates);
+
+  return true;
+}
+
 static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
                          TargetLibraryInfo &TLI, AssumptionCache &AC,
                          DominatorTree &DT, const DataLayout &DL,
@@ -1134,6 +1285,12 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
       return true;
     }
     break;
+  case LibFunc_memchr:
+    if (foldMemChr(CI, &DTU, DL)) {
+      MadeCFGChange = true;
+      return true;
+    }
+    break;
   default:;
   }
   return false;
@@ -1152,7 +1309,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
     if (!DT.isReachableFromEntry(&BB))
       continue;
 
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
 
     // Walk the block backwards for efficiency. We're matching a chain of
     // use->defs, so we're more likely to succeed by starting from the bottom.
@@ -1167,6 +1324,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= tryToRecognizeTableBasedCttz(I);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
+      MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
@@ -1188,7 +1346,7 @@ static bool runImpl(Function &F, AssumptionCache &AC, TargetTransformInfo &TTI,
                     TargetLibraryInfo &TLI, DominatorTree &DT,
                     AliasAnalysis &AA, bool &MadeCFGChange) {
   bool MadeChange = false;
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   TruncInstCombine TIC(AC, TLI, DL, DT);
   MadeChange |= TIC.run(F);
   MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA, AC, MadeCFGChange);

@@ -143,6 +143,19 @@ class SBFormattersAPITestCase(TestBase):
         self.dbg.GetCategory("JASSynth").SetEnabled(True)
         self.expect("frame variable foo", matching=True, substrs=["X = 1"])
 
+        self.dbg.GetCategory("CCCSynth2").SetEnabled(True)
+        self.expect(
+            "frame variable ccc",
+            matching=True,
+            substrs=[
+                "CCC object with leading synthetic value (int) b = 222",
+                "a = 111",
+                "b = 222",
+                "c = 333",
+            ],
+        )
+        self.dbg.GetCategory("CCCSynth2").SetEnabled(False)
+
         self.dbg.GetCategory("CCCSynth").SetEnabled(True)
         self.expect(
             "frame variable ccc",
@@ -152,6 +165,15 @@ class SBFormattersAPITestCase(TestBase):
                 "a = 111",
                 "b = 222",
                 "c = 333",
+            ],
+        )
+
+        self.dbg.GetCategory("BarIntSynth").SetEnabled(True)
+        self.expect(
+            "frame variable bar_int",
+            matching=True,
+            substrs=[
+                "(int) bar_int = 20 bar_int synthetic: No value",
             ],
         )
 

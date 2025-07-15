@@ -946,3 +946,38 @@ func.func @index_switch(%pred: index, %b: tensor<5xf32>, %c: tensor<5xf32>) -> t
   // CHECK: return %[[r]]
   return %0 : tensor<5xf32>
 }
+
+// -----
+
+// See Issue https://github.com/llvm/llvm-project/issues/133964 . Checks that
+// tensor.parallel_insert_slice dest operand does not have read semantics.
+func.func @check_scfforall_inplace_bufferizer(%arg0 : tensor<?x?xf32>,
+    %arg1 : tensor<?x?xf32>,
+    %arg2 : tensor<?xf32> {bufferization.writable = true}) ->  tensor<?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %d0 = tensor.dim %arg2, %c0 : tensor<?xf32>
+  %d1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
+  %0 = scf.forall (%arg3) in (%c1) shared_outs(%arg4 = %arg2) -> (tensor<?xf32>) {
+    %1 = tensor.extract_slice %arg0[0, 0][%d0, %d1][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+    %2 = tensor.extract_slice %arg1[0, 0][%d0, %d1][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+    %3 = linalg.generic {
+        indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                         affine_map<(d0, d1) -> (d0, d1)>,
+                         affine_map<(d0, d1) -> (d0)>],
+        iterator_types = ["parallel", "reduction"]}
+        ins(%1, %2 : tensor<?x?xf32>, tensor<?x?xf32>)
+        outs(%arg4 : tensor<?xf32>) {
+      ^bb0(%b0 : f32, %b1: f32, %b2 : f32):
+        %4 = arith.mulf %b0, %b1 : f32
+        %5 = arith.addf %4, %b2 : f32
+        linalg.yield %5 : f32
+    } -> tensor<?xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %3 into %arg4[0] [%d0] [1] : tensor<?xf32> into tensor<?xf32>
+    }
+  }
+  return %0 : tensor<?xf32>
+}
+// CHECK-LABEL: func @check_scfforall_inplace_bufferizer
+//   CHECK-NOT:   memref.alloc

@@ -1,15 +1,15 @@
 ; RUN: opt -disable-output -aa-pipeline=basic-aa -passes='loop-mssa(licm),print<memoryssa>' < %s 2>&1 | FileCheck %s
 
-; CHECK-LABEL: @f()
+; CHECK-LABEL: @f(i1 %arg)
 
 ; CHECK: lbl1:
 ; CHECK-NEXT: ; [[NO4:.*]] = MemoryPhi({entry,liveOnEntry},{lbl1.backedge,[[NO9:.*]]})
 ; CHECK-NEXT: ; [[NO2:.*]] = MemoryDef([[NO4]])
 ; CHECK-NEXT:  call void @g()
-; CHECK-NEXT:  br i1 undef, label %for.end, label %if.else
+; CHECK-NEXT:  br i1 %arg, label %for.end, label %if.else
 
 ; CHECK: for.end:
-; CHECK-NEXT:  br i1 undef, label %lbl3, label %lbl2
+; CHECK-NEXT:  br i1 %arg, label %lbl3, label %lbl2
 
 ; CHECK: lbl2:
 ; CHECK-NEXT: ; [[NO8:.*]] = MemoryPhi({lbl3,[[NO7:.*]]},{for.end,[[NO2]]})
@@ -32,7 +32,7 @@
 ; CHECK-NEXT:  3 = MemoryDef([[NO6]])
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0(i64 1, ptr null)
 
-define void @f() {
+define void @f(i1 %arg) {
 entry:
   %e = alloca i16, align 1
   br label %lbl1
@@ -40,16 +40,16 @@ entry:
 lbl1:                                             ; preds = %if.else, %cleanup, %entry
   store i16 undef, ptr %e, align 1
   call void @g()
-  br i1 undef, label %for.end, label %if.else
+  br i1 %arg, label %for.end, label %if.else
 
 for.end:                                          ; preds = %lbl1
-  br i1 undef, label %lbl3, label %lbl2
+  br i1 %arg, label %lbl3, label %lbl2
 
 lbl2:                                             ; preds = %lbl3, %for.end
   br label %lbl3
 
 lbl3:                                             ; preds = %lbl2, %for.end
-  br i1 undef, label %lbl2, label %cleanup
+  br i1 %arg, label %lbl2, label %cleanup
 
 cleanup:                                          ; preds = %lbl3
   %cleanup.dest = load i32, ptr undef, align 1

@@ -45,7 +45,7 @@ struct NVVMAttachTarget
 
 DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
   UnitAttr unitAttr = builder.getUnitAttr();
-  SmallVector<NamedAttribute, 2> flags;
+  SmallVector<NamedAttribute, 3> flags;
   auto addFlag = [&](StringRef flag) {
     flags.push_back(builder.getNamedAttr(flag, unitAttr));
   };
@@ -53,6 +53,22 @@ DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
     addFlag("fast");
   if (ftzFlag)
     addFlag("ftz");
+
+  // Tokenize and set the optional command line options.
+  if (!cmdOptions.empty()) {
+    auto options = gpu::TargetOptions::tokenizeCmdOptions(cmdOptions);
+    if (!options.second.empty()) {
+      llvm::SmallVector<mlir::Attribute> nvvmOptionAttrs;
+      for (const char *opt : options.second) {
+        nvvmOptionAttrs.emplace_back(
+            mlir::StringAttr::get(builder.getContext(), StringRef(opt)));
+      }
+      flags.push_back(builder.getNamedAttr(
+          "ptxas-cmd-options",
+          mlir::ArrayAttr::get(builder.getContext(), nvvmOptionAttrs)));
+    }
+  }
+
   if (!flags.empty())
     return builder.getDictionaryAttr(flags);
   return nullptr;
@@ -61,7 +77,7 @@ DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
 void NVVMAttachTarget::runOnOperation() {
   OpBuilder builder(&getContext());
   ArrayRef<std::string> libs(linkLibs);
-  SmallVector<StringRef> filesToLink(libs.begin(), libs.end());
+  SmallVector<StringRef> filesToLink(libs);
   auto target = builder.getAttr<NVVMTargetAttr>(
       optLevel, triple, chip, features, getFlags(builder),
       filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink));
@@ -78,8 +94,7 @@ void NVVMAttachTarget::runOnOperation() {
           targets.append(attrs->getValue().begin(), attrs->getValue().end());
         targets.push_back(target);
         // Remove any duplicate targets.
-        targets.erase(std::unique(targets.begin(), targets.end()),
-                      targets.end());
+        targets.erase(llvm::unique(targets), targets.end());
         // Update the target attribute array.
         module.setTargetsAttr(builder.getArrayAttr(targets));
       }

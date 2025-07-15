@@ -14,8 +14,10 @@
 #ifndef LLVM_ADT_DENSESET_H
 #define LLVM_ADT_DENSESET_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/type_traits.h"
 #include <cstddef>
@@ -77,6 +79,10 @@ public:
     insert(Elems.begin(), Elems.end());
   }
 
+  template <typename Range>
+  DenseSetImpl(llvm::from_range_t, Range &&R)
+      : DenseSetImpl(adl_begin(R), adl_end(R)) {}
+
   bool empty() const { return TheMap.empty(); }
   size_type size() const { return TheMap.size(); }
   size_t getMemorySize() const { return TheMap.getMemorySize(); }
@@ -89,18 +95,12 @@ public:
   /// before resizing again.
   void reserve(size_t Size) { TheMap.reserve(Size); }
 
-  void clear() {
-    TheMap.clear();
-  }
+  void clear() { TheMap.clear(); }
 
   /// Return 1 if the specified key is in the set, 0 otherwise.
-  size_type count(const_arg_type_t<ValueT> V) const {
-    return TheMap.count(V);
-  }
+  size_type count(const_arg_type_t<ValueT> V) const { return TheMap.count(V); }
 
-  bool erase(const ValueT &V) {
-    return TheMap.erase(V);
-  }
+  bool erase(const ValueT &V) { return TheMap.erase(V); }
 
   void swap(DenseSetImpl &RHS) { TheMap.swap(RHS.TheMap); }
 
@@ -128,8 +128,15 @@ public:
     ValueT *operator->() { return &I->getFirst(); }
     const ValueT *operator->() const { return &I->getFirst(); }
 
-    Iterator& operator++() { ++I; return *this; }
-    Iterator operator++(int) { auto T = *this; ++I; return T; }
+    Iterator &operator++() {
+      ++I;
+      return *this;
+    }
+    Iterator operator++(int) {
+      auto T = *this;
+      ++I;
+      return T;
+    }
     friend bool operator==(const Iterator &X, const Iterator &Y) {
       return X.I == Y.I;
     }
@@ -157,8 +164,15 @@ public:
     const ValueT &operator*() const { return I->getFirst(); }
     const ValueT *operator->() const { return &I->getFirst(); }
 
-    ConstIterator& operator++() { ++I; return *this; }
-    ConstIterator operator++(int) { auto T = *this; ++I; return T; }
+    ConstIterator &operator++() {
+      ++I;
+      return *this;
+    }
+    ConstIterator operator++(int) {
+      auto T = *this;
+      ++I;
+      return T;
+    }
     friend bool operator==(const ConstIterator &X, const ConstIterator &Y) {
       return X.I == Y.I;
     }
@@ -191,8 +205,7 @@ public:
   /// The DenseMapInfo is responsible for supplying methods
   /// getHashValue(LookupKeyT) and isEqual(LookupKeyT, KeyT) for each key type
   /// used.
-  template <class LookupKeyT>
-  iterator find_as(const LookupKeyT &Val) {
+  template <class LookupKeyT> iterator find_as(const LookupKeyT &Val) {
     return Iterator(TheMap.find_as(Val));
   }
   template <class LookupKeyT>
@@ -226,10 +239,13 @@ public:
   }
 
   // Range insertion of values.
-  template<typename InputIt>
-  void insert(InputIt I, InputIt E) {
+  template <typename InputIt> void insert(InputIt I, InputIt E) {
     for (; I != E; ++I)
       insert(*I);
+  }
+
+  template <typename Range> void insert_range(Range &&R) {
+    insert(adl_begin(R), adl_end(R));
   }
 };
 
@@ -266,8 +282,9 @@ bool operator!=(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
 /// Implements a dense probed hash-table based set.
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
 class DenseSet : public detail::DenseSetImpl<
-                     ValueT, DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
-                                      detail::DenseSetPair<ValueT>>,
+                     ValueT,
+                     DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
+                              detail::DenseSetPair<ValueT>>,
                      ValueInfoT> {
   using BaseT =
       detail::DenseSetImpl<ValueT,
@@ -285,12 +302,14 @@ template <typename ValueT, unsigned InlineBuckets = 4,
           typename ValueInfoT = DenseMapInfo<ValueT>>
 class SmallDenseSet
     : public detail::DenseSetImpl<
-          ValueT, SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets,
-                                ValueInfoT, detail::DenseSetPair<ValueT>>,
+          ValueT,
+          SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets,
+                        ValueInfoT, detail::DenseSetPair<ValueT>>,
           ValueInfoT> {
   using BaseT = detail::DenseSetImpl<
-      ValueT, SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets,
-                            ValueInfoT, detail::DenseSetPair<ValueT>>,
+      ValueT,
+      SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets, ValueInfoT,
+                    detail::DenseSetPair<ValueT>>,
       ValueInfoT>;
 
 public:

@@ -22,7 +22,7 @@ define void @t(ptr nocapture %in, ptr nocapture %out, ptr nocapture %rk, i32 %r)
 ; GENERIC-NEXT:    movq _Te1@GOTPCREL(%rip), %rax
 ; GENERIC-NEXT:    movq _Te3@GOTPCREL(%rip), %r10
 ; GENERIC-NEXT:    movq %rcx, %r11
-; GENERIC-NEXT:    .p2align 4, 0x90
+; GENERIC-NEXT:    .p2align 4
 ; GENERIC-NEXT:  LBB0_1: ## %bb
 ; GENERIC-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; GENERIC-NEXT:    movzbl %r8b, %r14d
@@ -105,7 +105,7 @@ define void @t(ptr nocapture %in, ptr nocapture %out, ptr nocapture %rk, i32 %r)
 ; ATOM-NEXT:    movq _Te3@GOTPCREL(%rip), %r10
 ; ATOM-NEXT:    decl %ecx
 ; ATOM-NEXT:    movq %rcx, %r11
-; ATOM-NEXT:    .p2align 4, 0x90
+; ATOM-NEXT:    .p2align 4
 ; ATOM-NEXT:  LBB0_1: ## %bb
 ; ATOM-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ATOM-NEXT:    movl %r15d, %ebx
@@ -315,7 +315,7 @@ define i32 @f(i32 %i, ptr nocapture %a) nounwind uwtable readonly ssp {
 ; GENERIC-NEXT:    leaq (%rsi,%rax,4), %rcx
 ; GENERIC-NEXT:    xorl %eax, %eax
 ; GENERIC-NEXT:    xorl %edx, %edx
-; GENERIC-NEXT:    .p2align 4, 0x90
+; GENERIC-NEXT:    .p2align 4
 ; GENERIC-NEXT:  LBB1_2: ## %for.body
 ; GENERIC-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; GENERIC-NEXT:    movl (%rcx), %esi
@@ -339,7 +339,7 @@ define i32 @f(i32 %i, ptr nocapture %a) nounwind uwtable readonly ssp {
 ; ATOM-NEXT:    xorl %edx, %edx
 ; ATOM-NEXT:    leaq (%rsi,%rax,4), %rcx
 ; ATOM-NEXT:    xorl %eax, %eax
-; ATOM-NEXT:    .p2align 4, 0x90
+; ATOM-NEXT:    .p2align 4
 ; ATOM-NEXT:  LBB1_2: ## %for.body
 ; ATOM-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ATOM-NEXT:    movl (%rcx), %esi

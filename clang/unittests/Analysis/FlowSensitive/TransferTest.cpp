@@ -25,6 +25,7 @@
 #include "gtest/gtest.h"
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace clang {
@@ -141,6 +142,15 @@ void runDataflowOnLambda(
 
 const Formula &getFormula(const ValueDecl &D, const Environment &Env) {
   return cast<BoolValue>(Env.getValue(D))->formula();
+}
+
+const BindingDecl *findBindingDecl(ASTContext &ASTCtx, std::string_view Name) {
+  using ast_matchers::bindingDecl;
+  using ast_matchers::hasName;
+  auto TargetNodes =
+      ast_matchers::match(bindingDecl(hasName(Name)).bind("v"), ASTCtx);
+  assert(TargetNodes.size() == 1 && "Name must be unique");
+  return ast_matchers::selectFirst<BindingDecl>("v", TargetNodes);
 }
 
 TEST(TransferTest, CNotSupported) {
@@ -1634,6 +1644,49 @@ TEST(TransferTest, StructModeledFieldsWithAccessor) {
         ASSERT_THAT(Fields, UnorderedElementsAre(
             findValueDecl(ASTCtx, "Ptr"), findValueDecl(ASTCtx, "PtrNonConst"),
             findValueDecl(ASTCtx, "Int"), findValueDecl(ASTCtx, "IntRef")));
+      });
+}
+
+TEST(TransferTest, StructModeledFieldsInTypeid) {
+  // Test that we model fields mentioned inside a `typeid()` expression only if
+  // that expression is potentially evaluated -- i.e. if the expression inside
+  // `typeid()` is a glvalue of polymorphic type (see
+  // `CXXTypeidExpr::isPotentiallyEvaluated()` and [expr.typeid]p3).
+  std::string Code = R"(
+    // Definitions needed for `typeid`.
+    namespace std {
+      class type_info {};
+      class bad_typeid {};
+    }  // namespace std
+
+    struct NonPolymorphic {};
+
+    struct Polymorphic {
+      virtual ~Polymorphic() = default;
+    };
+
+    struct S {
+      NonPolymorphic *NonPoly;
+      Polymorphic *Poly;
+    };
+
+    void target(S &s) {
+      typeid(*s.NonPoly);
+      typeid(*s.Poly);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &SLoc = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s");
+        std::vector<const ValueDecl *> Fields;
+        for (auto [Field, _] : SLoc.children())
+          Fields.push_back(Field);
+        EXPECT_THAT(Fields,
+                    UnorderedElementsAre(findValueDecl(ASTCtx, "Poly")));
       });
 }
 
@@ -3265,7 +3318,7 @@ TEST(TransferTest, ResultObjectLocationForStdInitializerListExpr) {
   std::string Code = R"(
     namespace std {
     template <typename T>
-    struct initializer_list {};
+    struct initializer_list { const T *a, *b; };
     } // namespace std
 
     void target() {
@@ -3789,36 +3842,51 @@ TEST(TransferTest, AddrOfReference) {
 TEST(TransferTest, Preincrement) {
   std::string Code = R"(
     void target(int I) {
+      (void)0; // [[before]]
       int &IRef = ++I;
-      // [[p]]
+      // [[after]]
     }
   )";
   runDataflow(
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const Environment &EnvBefore =
+            getEnvironmentAtAnnotation(Results, "before");
+        const Environment &EnvAfter =
+            getEnvironmentAtAnnotation(Results, "after");
 
-        EXPECT_EQ(&getLocForDecl(ASTCtx, Env, "IRef"),
-                  &getLocForDecl(ASTCtx, Env, "I"));
+        EXPECT_EQ(&getLocForDecl(ASTCtx, EnvAfter, "IRef"),
+                  &getLocForDecl(ASTCtx, EnvBefore, "I"));
+
+        const ValueDecl *IDecl = findValueDecl(ASTCtx, "I");
+        EXPECT_NE(EnvBefore.getValue(*IDecl), nullptr);
+        EXPECT_EQ(EnvAfter.getValue(*IDecl), nullptr);
       });
 }
 
 TEST(TransferTest, Postincrement) {
   std::string Code = R"(
     void target(int I) {
+      (void)0; // [[before]]
       int OldVal = I++;
-      // [[p]]
+      // [[after]]
     }
   )";
   runDataflow(
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const Environment &EnvBefore =
+            getEnvironmentAtAnnotation(Results, "before");
+        const Environment &EnvAfter =
+            getEnvironmentAtAnnotation(Results, "after");
 
-        EXPECT_EQ(&getValueForDecl(ASTCtx, Env, "OldVal"),
-                  &getValueForDecl(ASTCtx, Env, "I"));
+        EXPECT_EQ(&getValueForDecl(ASTCtx, EnvBefore, "I"),
+                  &getValueForDecl(ASTCtx, EnvAfter, "OldVal"));
+
+        const ValueDecl *IDecl = findValueDecl(ASTCtx, "I");
+        EXPECT_EQ(EnvAfter.getValue(*IDecl), nullptr);
       });
 }
 
@@ -4820,7 +4888,7 @@ TEST(TransferTest, PointerEquality) {
 
       // We won't duplicate all of the tests above with `!=`, as we know that
       // the implementation simply negates the result of the `==` comparison.
-      // Instaed, just spot-check one case.
+      // Instead, just spot-check one case.
       bool p1_ne_p1 = (p1 != p1);
 
       (void)0; // [[p]]
@@ -4903,6 +4971,41 @@ TEST(TransferTest, IntegerLiteralEquality) {
         auto &Equal =
             getValueForDecl<BoolValue>(ASTCtx, Env, "equal").formula();
         EXPECT_TRUE(Env.proves(Equal));
+      });
+}
+
+TEST(TransferTest, UnsupportedValueEquality) {
+  std::string Code = R"(
+    // An explicitly unsupported type by the framework.
+    enum class EC {
+      A,
+      B
+    };
+  
+    void target() {
+      EC ec = EC::A;
+
+      bool unsupported_eq_same = (EC::A == EC::A);
+      bool unsupported_eq_other = (EC::A == EC::B);
+      bool unsupported_eq_var = (ec == EC::B);
+
+      (void)0; // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        // We do not model the values of unsupported types, so this
+        // seemingly-trivial case will not be true either.
+        EXPECT_TRUE(isa<AtomicBoolValue>(
+            getValueForDecl<BoolValue>(ASTCtx, Env, "unsupported_eq_same")));
+        EXPECT_TRUE(isa<AtomicBoolValue>(
+            getValueForDecl<BoolValue>(ASTCtx, Env, "unsupported_eq_other")));
+        EXPECT_TRUE(isa<AtomicBoolValue>(
+            getValueForDecl<BoolValue>(ASTCtx, Env, "unsupported_eq_var")));
       });
 }
 
@@ -5457,10 +5560,10 @@ TEST(TransferTest, StructuredBindingAssignFromTupleLikeType) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
 
-        const ValueDecl *BoundFooDecl = findValueDecl(ASTCtx, "BoundFoo");
+        const ValueDecl *BoundFooDecl = findBindingDecl(ASTCtx, "BoundFoo");
         ASSERT_THAT(BoundFooDecl, NotNull());
 
-        const ValueDecl *BoundBarDecl = findValueDecl(ASTCtx, "BoundBar");
+        const ValueDecl *BoundBarDecl = findBindingDecl(ASTCtx, "BoundBar");
         ASSERT_THAT(BoundBarDecl, NotNull());
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
@@ -5538,10 +5641,10 @@ TEST(TransferTest, StructuredBindingAssignRefFromTupleLikeType) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
 
-        const ValueDecl *BoundFooDecl = findValueDecl(ASTCtx, "BoundFoo");
+        const ValueDecl *BoundFooDecl = findBindingDecl(ASTCtx, "BoundFoo");
         ASSERT_THAT(BoundFooDecl, NotNull());
 
-        const ValueDecl *BoundBarDecl = findValueDecl(ASTCtx, "BoundBar");
+        const ValueDecl *BoundBarDecl = findBindingDecl(ASTCtx, "BoundBar");
         ASSERT_THAT(BoundBarDecl, NotNull());
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");

@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "tosa-sharding-impl"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
@@ -55,8 +54,49 @@ struct MatMulOpSharding
     SmallVector<AffineMap> maps;
     maps.push_back(AffineMap::getMultiDimMapWithTargets(4, {0, 1, 3}, ctx));
     maps.push_back(AffineMap::getMultiDimMapWithTargets(4, {0, 3, 2}, ctx));
+    maps.push_back(AffineMap::get(0, 0, {}, ctx));
+    maps.push_back(AffineMap::get(0, 0, {}, ctx));
     maps.push_back(AffineMap::getMultiDimMapWithTargets(4, {0, 1, 2}, ctx));
     return maps;
+  }
+};
+
+struct NegateOpSharding
+    : public ShardingInterface::ExternalModel<NegateOpSharding, NegateOp> {
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
+    Value val = op->getOperand(0);
+    auto type = dyn_cast<RankedTensorType>(val.getType());
+    if (!type)
+      return {};
+    SmallVector<utils::IteratorType> types(type.getRank(),
+                                           utils::IteratorType::parallel);
+    return types;
+  }
+
+  SmallVector<AffineMap> getIndexingMaps(Operation *op) const {
+    MLIRContext *ctx = op->getContext();
+    Value val = op->getOperand(0);
+    auto type = dyn_cast<RankedTensorType>(val.getType());
+    if (!type)
+      return {};
+    int64_t rank = type.getRank();
+    SmallVector<AffineMap> maps = {
+        AffineMap::getMultiDimIdentityMap(rank, ctx),
+        AffineMap::get(0, 0, {}, ctx), AffineMap::get(0, 0, {}, ctx),
+        AffineMap::getMultiDimIdentityMap(rank, ctx)};
+    return maps;
+  }
+
+  LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
+                        ArrayRef<MeshSharding> operandShardings,
+                        ArrayRef<MeshSharding> resultShardings,
+                        IRMapping &spmdizationMap,
+                        SymbolTableCollection &symbolTable,
+                        OpBuilder &builder) const {
+    spmdizeTriviallyShardableOperation(*op, spmdizedOperands, operandShardings,
+                                       resultShardings, spmdizationMap,
+                                       symbolTable, builder);
+    return success();
   }
 };
 
@@ -82,9 +122,10 @@ void mlir::tosa::registerShardingInterfaceExternalModels(
         BitwiseOrOp, BitwiseXorOp, IntDivOp, LogicalAndOp, LogicalLeftShiftOp,
         LogicalRightShiftOp, LogicalOrOp, LogicalXorOp, MaximumOp, MinimumOp,
         MulOp, PowOp, SubOp, AbsOp, BitwiseNotOp, CeilOp, ClzOp, ExpOp, FloorOp,
-        LogOp, LogicalNotOp, NegateOp, ReciprocalOp, RsqrtOp, SelectOp, EqualOp,
+        LogOp, LogicalNotOp, ReciprocalOp, RsqrtOp, SelectOp, EqualOp,
         GreaterOp, GreaterEqualOp>(ctx);
 
     MatMulOp::attachInterface<MatMulOpSharding>(*ctx);
+    NegateOp::attachInterface<NegateOpSharding>(*ctx);
   });
 }

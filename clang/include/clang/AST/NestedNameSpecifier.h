@@ -52,8 +52,7 @@ class NestedNameSpecifier : public llvm::FoldingSetNode {
   enum StoredSpecifierKind {
     StoredIdentifier = 0,
     StoredDecl = 1,
-    StoredTypeSpec = 2,
-    StoredTypeSpecWithTemplate = 3
+    StoredTypeSpec = 2
   };
 
   /// The nested name specifier that precedes this nested name
@@ -88,10 +87,6 @@ public:
 
     /// A type, stored as a Type*.
     TypeSpec,
-
-    /// A type that was preceded by the 'template' keyword,
-    /// stored as a Type*.
-    TypeSpecWithTemplate,
 
     /// The global specifier '::'. There is no stored value.
     Global,
@@ -137,9 +132,8 @@ public:
                                      const NamespaceAliasDecl *Alias);
 
   /// Builds a nested name specifier that names a type.
-  static NestedNameSpecifier *Create(const ASTContext &Context,
-                                     NestedNameSpecifier *Prefix,
-                                     bool Template, const Type *T);
+  static NestedNameSpecifier *
+  Create(const ASTContext &Context, NestedNameSpecifier *Prefix, const Type *T);
 
   /// Builds a specifier that consists of just an identifier.
   ///
@@ -194,12 +188,16 @@ public:
 
   /// Retrieve the type stored in this nested name specifier.
   const Type *getAsType() const {
-    if (Prefix.getInt() == StoredTypeSpec ||
-        Prefix.getInt() == StoredTypeSpecWithTemplate)
+    if (Prefix.getInt() == StoredTypeSpec)
       return (const Type *)Specifier;
 
     return nullptr;
   }
+
+  /// Fully translate this nested name specifier to a type.
+  /// Unlike getAsType, this will convert this entire nested
+  /// name specifier chain into its equivalent type.
+  const Type *translateToType(const ASTContext &Context) const;
 
   NestedNameSpecifierDependence getDependence() const;
 
@@ -223,7 +221,8 @@ public:
   /// `ns::SomeTemplate<int, MyClass>` instead of
   /// `ns::SomeTemplate<Container::value_type, T>`.
   void print(raw_ostream &OS, const PrintingPolicy &Policy,
-             bool ResolveTemplateArguments = false) const;
+             bool ResolveTemplateArguments = false,
+             bool PrintFinalScopeResOp = true) const;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddPointer(Prefix.getOpaqueValue());
@@ -284,7 +283,9 @@ public:
   /// For example, if this instance refers to a nested-name-specifier
   /// \c \::std::vector<int>::, the returned source range would cover
   /// from the initial '::' to the last '::'.
-  SourceRange getSourceRange() const LLVM_READONLY;
+  SourceRange getSourceRange() const LLVM_READONLY {
+    return SourceRange(getBeginLoc(), getEndLoc());
+  }
 
   /// Retrieve the source range covering just the last part of
   /// this nested-name-specifier, not including the prefix.
@@ -297,14 +298,18 @@ public:
   /// Retrieve the location of the beginning of this
   /// nested-name-specifier.
   SourceLocation getBeginLoc() const {
-    return getSourceRange().getBegin();
+    if (!Qualifier)
+      return SourceLocation();
+
+    NestedNameSpecifierLoc First = *this;
+    while (NestedNameSpecifierLoc Prefix = First.getPrefix())
+      First = Prefix;
+    return First.getLocalSourceRange().getBegin();
   }
 
   /// Retrieve the location of the end of this
   /// nested-name-specifier.
-  SourceLocation getEndLoc() const {
-    return getSourceRange().getEnd();
-  }
+  SourceLocation getEndLoc() const { return getLocalSourceRange().getEnd(); }
 
   /// Retrieve the location of the beginning of this
   /// component of the nested-name-specifier.
@@ -395,13 +400,10 @@ public:
   /// \param Context The AST context in which this nested-name-specifier
   /// resides.
   ///
-  /// \param TemplateKWLoc The location of the 'template' keyword, if present.
-  ///
   /// \param TL The TypeLoc that describes the type preceding the '::'.
   ///
   /// \param ColonColonLoc The location of the trailing '::'.
-  void Extend(ASTContext &Context, SourceLocation TemplateKWLoc, TypeLoc TL,
-              SourceLocation ColonColonLoc);
+  void Extend(ASTContext &Context, TypeLoc TL, SourceLocation ColonColonLoc);
 
   /// Extend the current nested-name-specifier by another
   /// nested-name-specifier component of the form 'identifier::'.

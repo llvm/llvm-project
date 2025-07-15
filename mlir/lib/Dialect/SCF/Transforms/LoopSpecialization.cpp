@@ -24,7 +24,6 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFFORLOOPPEELING
@@ -206,12 +205,11 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
   return success();
 }
 
-/// When the `peelFront` option is set as true, the first iteration of the loop
-/// is peeled off. This function rewrites the original scf::ForOp as two
-/// scf::ForOp Ops, the first scf::ForOp corresponds to the first iteration of
-/// the loop which can be canonicalized away in the following optimization. The
-/// second loop Op contains the remaining iteration, and the new lower bound is
-/// the original lower bound plus the number of steps.
+/// Rewrites the original scf::ForOp as two scf::ForOp Ops, the first
+/// scf::ForOp corresponds to the first iteration of the loop which can be
+/// canonicalized away in the following optimizations. The second loop Op
+/// contains the remaining iterations, with a lower bound updated as the
+/// original lower bound plus the step (i.e. skips the first iteration).
 LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
                                                    ForOp &firstIteration) {
   RewriterBase::InsertionGuard guard(b);
@@ -332,7 +330,7 @@ struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
     MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
     patterns.add<ForLoopPeelingPattern>(ctx, peelFront, skipPartial);
-    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns));
+    (void)applyPatternsGreedily(parentOp, std::move(patterns));
 
     // Drop the markers.
     parentOp->walk([](Operation *op) {

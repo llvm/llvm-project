@@ -158,7 +158,7 @@ define void @merge_2_v4f32_align32_mix_ntstore(ptr %a0, ptr %a1) nounwind {
 }
 
 ; AVX2 can't perform NT-load-ymm on 16-byte aligned memory.
-; Must be kept seperate as VMOVNTDQA xmm.
+; Must be kept separate as VMOVNTDQA xmm.
 define void @merge_2_v4f32_align16_ntload(ptr %a0, ptr %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align16_ntload:
 ; X86:       # %bb.0:
@@ -211,7 +211,7 @@ define void @merge_2_v4f32_align16_ntload(ptr %a0, ptr %a1) nounwind {
 }
 
 ; AVX can't perform NT-store-ymm on 16-byte aligned memory.
-; Must be kept seperate as VMOVNTPS xmm.
+; Must be kept separate as VMOVNTPS xmm.
 define void @merge_2_v4f32_align16_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align16_ntstore:
 ; X86:       # %bb.0:

@@ -96,6 +96,7 @@ module LLVM_BinaryFormat {
     textual header "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
     textual header "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
     textual header "llvm/BinaryFormat/ELFRelocs/RISCV.def"
+    textual header "llvm/BinaryFormat/ELFRelocs/RISCV_nonstandard.def"
     textual header "llvm/BinaryFormat/ELFRelocs/Sparc.def"
     textual header "llvm/BinaryFormat/ELFRelocs/SystemZ.def"
     textual header "llvm/BinaryFormat/ELFRelocs/VE.def"
@@ -121,6 +122,13 @@ module LLVM_DebugInfo_DWARF {
   requires cplusplus
 
   umbrella "llvm/DebugInfo/DWARF"
+  module * { export * }
+}
+
+module LLVM_DebugInfo_DWARF_LowLevel {
+  requires cplusplus
+
+  umbrella "llvm/DebugInfo/DWARF/LowLevel"
   module * { export * }
 }
 
@@ -177,9 +185,10 @@ module LLVM_DebugInfo_CodeView {
   module * { export * }
 
   // These are intended for (repeated) textual inclusion.
+  textual header "llvm/DebugInfo/CodeView/CodeViewLanguages.def"
   textual header "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
-  textual header "llvm/DebugInfo/CodeView/CodeViewTypes.def"
   textual header "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
+  textual header "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 }
 
 module LLVM_DWARFLinker {
@@ -266,7 +275,6 @@ module LLVM_IR {
   textual header "llvm/IR/FixedMetadataKinds.def"
   textual header "llvm/IR/Value.def"
   textual header "llvm/IR/VPIntrinsics.def"
-  textual header "llvm/IR/RuntimeLibcalls.def"
 }
 
 module LLVM_IRReader {
@@ -346,6 +354,8 @@ extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
 // TargetParser module before building the TargetParser module itself.
 module TargetParserGen {
   module AArch64TargetParserDef {
+    textual header "llvm/TargetParser/AArch64CPUFeatures.inc"
+    textual header "llvm/TargetParser/AArch64FeatPriorities.inc"
     header "llvm/TargetParser/AArch64TargetParser.h"
     extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
     export *
@@ -425,4 +435,13 @@ module LLVM_WindowsManifest {
   requires cplusplus
   umbrella "llvm/WindowsManifest"
   module * { export * }
+}
+
+module LLVM_SandboxIR {
+  requires cplusplus
+
+  umbrella "llvm/SandboxIR"
+  module * { export * }
+
+  textual header "llvm/SandboxIR/Values.def"
 }

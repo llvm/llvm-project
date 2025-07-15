@@ -15,6 +15,7 @@
 #include <vector>
 
 namespace lldb_private {
+class ScriptInterpreter;
 namespace python {
 class SWIGBridge;
 }
@@ -73,11 +74,12 @@ protected:
   friend class SBThread;
   friend class SBWatchpoint;
 
+  friend class lldb_private::ScriptInterpreter;
   friend class lldb_private::python::SWIGBridge;
 
   SBEvent(lldb::EventSP &event_sp);
 
-  SBEvent(lldb_private::Event *event_sp);
+  SBEvent(lldb_private::Event *event);
 
   lldb::EventSP &GetSP() const;
 

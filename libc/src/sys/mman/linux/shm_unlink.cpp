@@ -7,16 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/mman/shm_unlink.h"
+#include "src/__support/macros/config.h"
 #include "src/sys/mman/linux/shm_common.h"
 #include "src/unistd/unlink.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
+
+// TODO: stop calling the public unlink function. It should be calling an
+// internal shared utility.
 
 LLVM_LIBC_FUNCTION(int, shm_unlink, (const char *name)) {
-  using namespace shm_common;
-  if (cpp::optional<SHMPath> buffer = translate_name(name))
-    return unlink(buffer->data());
+  if (cpp::optional<shm_common::SHMPath> buffer =
+          shm_common::translate_name(name))
+    return LIBC_NAMESPACE::unlink(buffer->data());
   return -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

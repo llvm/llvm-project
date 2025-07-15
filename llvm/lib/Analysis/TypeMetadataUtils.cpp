@@ -33,6 +33,8 @@ findCallsAtConstantOffset(SmallVectorImpl<DevirtCallSite> &DevirtCalls,
     // after indirect call promotion and inlining, where we may have uses
     // of the vtable pointer guarded by a function pointer check, and a fallback
     // indirect call.
+    if (CI->getFunction() != User->getFunction())
+      continue;
     if (!DT.dominates(CI, User))
       continue;
     if (isa<BitCastInst>(User)) {
@@ -52,6 +54,9 @@ findCallsAtConstantOffset(SmallVectorImpl<DevirtCallSite> &DevirtCalls,
 static void findLoadCallsAtConstantOffset(
     const Module *M, SmallVectorImpl<DevirtCallSite> &DevirtCalls, Value *VPtr,
     int64_t Offset, const CallInst *CI, DominatorTree &DT) {
+  if (!VPtr->hasUseList())
+    return;
+
   for (const Use &U : VPtr->uses()) {
     Value *User = U.getUser();
     if (isa<BitCastInst>(User)) {

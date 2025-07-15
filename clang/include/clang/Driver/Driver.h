@@ -72,6 +72,28 @@ enum ModuleHeaderMode {
   HeaderMode_System
 };
 
+/// Options for specifying CUID used by CUDA/HIP for uniquely identifying
+/// compilation units.
+class CUIDOptions {
+public:
+  enum class Kind { Hash, Random, Fixed, None, Invalid };
+
+  CUIDOptions() = default;
+  CUIDOptions(llvm::opt::DerivedArgList &Args, const Driver &D);
+
+  // Get the CUID for an input string
+  std::string getCUID(StringRef InputFile,
+                      llvm::opt::DerivedArgList &Args) const;
+
+  bool isEnabled() const {
+    return UseCUID != Kind::None && UseCUID != Kind::Invalid;
+  }
+
+private:
+  Kind UseCUID = Kind::None;
+  StringRef FixedCUID;
+};
+
 /// Driver - Encapsulate logic for constructing compilation processes
 /// from a set of gcc-driver-like command line arguments.
 class Driver {
@@ -118,6 +140,9 @@ class Driver {
 
   /// LTO mode selected via -f(no-offload-)?lto(=.*)? options.
   LTOKind OffloadLTOMode;
+
+  /// Options for CUID
+  CUIDOptions CUIDOpts;
 
 public:
   enum OpenMPRuntimeKind {
@@ -297,8 +322,11 @@ private:
   /// Object that stores strings read from configuration file.
   llvm::StringSaver Saver;
 
-  /// Arguments originated from configuration file.
-  std::unique_ptr<llvm::opt::InputArgList> CfgOptions;
+  /// Arguments originated from configuration file (head part).
+  std::unique_ptr<llvm::opt::InputArgList> CfgOptionsHead;
+
+  /// Arguments originated from configuration file (tail part).
+  std::unique_ptr<llvm::opt::InputArgList> CfgOptionsTail;
 
   /// Arguments originated from command line.
   std::unique_ptr<llvm::opt::InputArgList> CLOptions;
@@ -339,10 +367,9 @@ private:
   /// stored in it, and will clean them up when torn down.
   mutable llvm::StringMap<std::unique_ptr<ToolChain>> ToolChains;
 
-  /// Cache of known offloading architectures for the ToolChain already derived.
-  /// This should only be modified when we first initialize the offloading
-  /// toolchains.
-  llvm::DenseMap<const ToolChain *, llvm::DenseSet<llvm::StringRef>> KnownArchs;
+  /// The associated offloading architectures with each toolchain.
+  llvm::DenseMap<const ToolChain *, llvm::SmallVector<llvm::StringRef>>
+      OffloadArchs;
 
 private:
   /// TranslateInputArgs - Create a new derived argument list from the input
@@ -379,8 +406,7 @@ public:
 
   /// Takes the path to a binary that's either in bin/ or lib/ and returns
   /// the path to clang's resource directory.
-  static std::string GetResourcesPath(StringRef BinaryPath,
-                                      StringRef CustomResourceDir = "");
+  static std::string GetResourcesPath(StringRef BinaryPath);
 
   Driver(StringRef ClangExecutable, StringRef TargetTriple,
          DiagnosticsEngine &Diags, std::string Title = "clang LLVM compiler",
@@ -464,7 +490,7 @@ public:
   /// ArgList.
   llvm::opt::InputArgList ParseArgStrings(ArrayRef<const char *> Args,
                                           bool UseDriverMode,
-                                          bool &ContainsError);
+                                          bool &ContainsError) const;
 
   /// BuildInputs - Construct the list of inputs and their types from
   /// the given arguments.
@@ -499,19 +525,20 @@ public:
   /// \param C - The compilation that is being built.
   /// \param Args - The input arguments.
   /// \param Input - The input type and arguments
+  /// \param CUID - The CUID for \p Input
   /// \param HostAction - The host action used in the offloading toolchain.
   Action *BuildOffloadingActions(Compilation &C,
                                  llvm::opt::DerivedArgList &Args,
-                                 const InputTy &Input,
+                                 const InputTy &Input, StringRef CUID,
                                  Action *HostAction) const;
 
   /// Returns the set of bound architectures active for this offload kind.
   /// If there are no bound architctures we return a set containing only the
-  /// empty string. The \p SuppressError option is used to suppress errors.
-  llvm::DenseSet<StringRef>
+  /// empty string.
+  llvm::SmallVector<StringRef>
   getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
                   Action::OffloadKind Kind, const ToolChain *TC,
-                  bool SuppressError = false) const;
+                  bool SpecificToolchain = true) const;
 
   /// Check that the file referenced by Value exists. If it doesn't,
   /// issue a diagnostic and return false.
@@ -628,8 +655,9 @@ public:
   /// treated before building actions or binding tools.
   ///
   /// \return Whether any compilation should be built for this
-  /// invocation.
-  bool HandleImmediateArgs(const Compilation &C);
+  /// invocation. The compilation can only be modified when
+  /// this function returns false.
+  bool HandleImmediateArgs(Compilation &C);
 
   /// ConstructAction - Construct the appropriate action to do for
   /// \p Phase on the \p Input, taking in to account arguments
@@ -714,14 +742,19 @@ public:
   ModuleHeaderMode getModuleHeaderMode() const { return CXX20HeaderType; }
 
   /// Returns true if we are performing any kind of LTO.
-  bool isUsingLTO(bool IsOffload = false) const {
-    return getLTOMode(IsOffload) != LTOK_None;
-  }
+  bool isUsingLTO() const { return getLTOMode() != LTOK_None; }
 
   /// Get the specific kind of LTO being performed.
-  LTOKind getLTOMode(bool IsOffload = false) const {
-    return IsOffload ? OffloadLTOMode : LTOMode;
-  }
+  LTOKind getLTOMode() const { return LTOMode; }
+
+  /// Returns true if we are performing any kind of offload LTO.
+  bool isUsingOffloadLTO() const { return getOffloadLTOMode() != LTOK_None; }
+
+  /// Get the specific kind of offload LTO being performed.
+  LTOKind getOffloadLTOMode() const { return OffloadLTOMode; }
+
+  /// Get the CUID option.
+  const CUIDOptions &getCUIDOpts() const { return CUIDOpts; }
 
 private:
 
@@ -736,6 +769,11 @@ private:
   /// \returns true if error occurred.
   bool loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx);
 
+  /// Tries to load options from customization file.
+  ///
+  /// \returns true if error occurred.
+  bool loadZOSCustomizationFile(llvm::cl::ExpansionContext &);
+
   /// Read options from the specified file.
   ///
   /// \param [in] FileName File to read.
@@ -746,9 +784,6 @@ private:
   /// Set the driver mode (cl, gcc, etc) from the value of the `--driver-mode`
   /// option.
   void setDriverMode(StringRef DriverModeValue);
-
-  /// Set the resource directory, depending on which driver is being used.
-  void setResourceDirectory();
 
   /// Parse the \p Args list for LTO options and record the type of LTO
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
@@ -761,22 +796,14 @@ private:
   const ToolChain &getToolChain(const llvm::opt::ArgList &Args,
                                 const llvm::Triple &Target) const;
 
-  /// @}
-
-  /// Retrieves a ToolChain for a particular device \p Target triple
-  ///
-  /// \param[in] HostTC is the host ToolChain paired with the device
-  ///
-  /// \param[in] TargetDeviceOffloadKind (e.g. OFK_Cuda/OFK_OpenMP/OFK_SYCL) is
-  /// an Offloading action that is optionally passed to a ToolChain (used by
-  /// CUDA, to specify if it's used in conjunction with OpenMP)
+  /// Retrieves a ToolChain for a particular \p Target triple for offloading.
   ///
   /// Will cache ToolChains for the life of the driver object, and create them
   /// on-demand.
-  const ToolChain &getOffloadingDeviceToolChain(
-      const llvm::opt::ArgList &Args, const llvm::Triple &Target,
-      const ToolChain &HostTC,
-      const Action::OffloadKind &TargetDeviceOffloadKind) const;
+  const ToolChain &getOffloadToolChain(const llvm::opt::ArgList &Args,
+                                       const Action::OffloadKind Kind,
+                                       const llvm::Triple &Target,
+                                       const llvm::Triple &AuxTarget) const;
 
   /// Get bitmasks for which option flags to include and exclude based on
   /// the driver mode.
@@ -851,7 +878,7 @@ llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
 /// See applyOneOverrideOption.
 void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                           const char *OverrideOpts,
-                          llvm::StringSet<> &SavedStrings,
+                          llvm::StringSet<> &SavedStrings, StringRef EnvVar,
                           raw_ostream *OS = nullptr);
 
 } // end namespace driver

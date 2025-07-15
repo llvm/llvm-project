@@ -12,13 +12,11 @@
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"
-#include <errno.h>
 
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
@@ -42,7 +40,7 @@ private:
 
   void test_one_input(RoundToIntegerFunc func, F input, I expected,
                       bool expectError) {
-    LIBC_NAMESPACE::libc_errno = 0;
+    libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
     ASSERT_EQ(func(input), expected);
@@ -51,12 +49,10 @@ private:
     // 0 for errno and exceptions, but this doesn't hold for
     // all math functions using RoundToInteger test:
     // https://github.com/llvm/llvm-project/pull/88816
-#ifndef LIBC_TARGET_ARCH_IS_GPU
     if (expectError) {
       ASSERT_FP_EXCEPTION(FE_INVALID);
       ASSERT_MATH_ERRNO(EDOM);
     }
-#endif
   }
 
 public:
@@ -117,7 +113,8 @@ public:
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    constexpr int COUNT = 1'000'001;
+    // Arbitrary, trades off completeness with testing time (esp. on failure)
+    constexpr int COUNT = 1'000;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
         StorageType(1));
@@ -169,7 +166,13 @@ public:
 #define LIST_ROUND_TO_INTEGER_TESTS(F, I, func)                                \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, false)
 
+// The GPU target does not support different rounding modes.
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, I, func)                     \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, false)
+#else
 #define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, I, func)                     \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, true)
+#endif
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H

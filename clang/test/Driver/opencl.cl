@@ -35,7 +35,7 @@
 // CHECK-OPT-DISABLE: "-cc1" {{.*}} "-cl-opt-disable"
 // CHECK-STRICT-ALIASING: "-cc1" {{.*}} "-cl-strict-aliasing"
 // CHECK-SINGLE-PRECISION-CONST: "-cc1" {{.*}} "-cl-single-precision-constant"
-// CHECK-FINITE-MATH-ONLY: "-cc1" {{.*}} "-cl-finite-math-only"
+// CHECK-FINITE-MATH-ONLY: "-cc1" {{.*}} "-menable-no-infs" "-menable-no-nans" "-cl-finite-math-only"
 // CHECK-KERNEL-ARG-INFO: "-cc1" {{.*}} "-cl-kernel-arg-info"
 // CHECK-UNSAFE-MATH-OPT: "-cc1" {{.*}} "-cl-unsafe-math-optimizations"
 // CHECK-FAST-RELAXED-MATH: "-cc1" {{.*}} "-cl-fast-relaxed-math"

@@ -14,7 +14,7 @@
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "cuda.h"
 #include "cuda_bf16.h"
@@ -56,14 +56,10 @@
 
 thread_local static int32_t defaultDevice = 0;
 
-const char *kDebugEnvironmentVariable = "MLIR_CUDA_DEBUG";
-
 /// Helper method that checks environment value for debugging.
 bool isDebugEnabled() {
-  static bool isInitialized = false;
-  static bool isEnabled = false;
-  if (!isInitialized)
-    isEnabled = getenv(kDebugEnvironmentVariable) != nullptr;
+  const char *kDebugEnvironmentVariable = "MLIR_CUDA_DEBUG";
+  static bool isEnabled = getenv(kDebugEnvironmentVariable) != nullptr;
   return isEnabled;
 }
 
@@ -237,11 +233,18 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventRecord(CUevent event,
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
-mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/, bool /*isHostShared*/) {
+mgpuMemAlloc(uint64_t sizeBytes, CUstream stream, bool isHostShared) {
   ScopedContext scopedContext;
   CUdeviceptr ptr = 0;
-  if (sizeBytes != 0)
-    CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
+  if (sizeBytes == 0)
+    return reinterpret_cast<void *>(ptr);
+
+  if (isHostShared) {
+    CUDA_REPORT_IF_ERROR(
+        cuMemAllocManaged(&ptr, sizeBytes, CU_MEM_ATTACH_GLOBAL));
+    return reinterpret_cast<void *>(ptr);
+  }
+  CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
   return reinterpret_cast<void *>(ptr);
 }
 

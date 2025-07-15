@@ -70,3 +70,74 @@ define i32 @mask_offset_scale_zext_i32_i64(ptr %base, i32 %i) {
   %load = load i32, ptr %arrayidx, align 4
   ret i32 %load
 }
+
+; PR97533 - multiple uses of shl node (add + gep) in the same dependency chain.
+define i64 @add_shl_zext(ptr %ptr, i8 %arg) nounwind {
+; X86-LABEL: add_shl_zext:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl 4(%esi,%ecx,4), %edx
+; X86-NEXT:    leal (,%ecx,8), %eax
+; X86-NEXT:    addl (%esi,%ecx,4), %eax
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: add_shl_zext:
+; X64:       # %bb.0:
+; X64-NEXT:    movzbl %sil, %eax
+; X64-NEXT:    shll $3, %eax
+; X64-NEXT:    addq (%rdi,%rax), %rax
+; X64-NEXT:    retq
+  %idx = zext i8 %arg to i64
+  %gep = getelementptr ptr, ptr %ptr, i64 %idx
+  %val = load i64, ptr %gep, align 8
+  %shl = shl i64 %idx, 3
+  %sum = add i64 %val, %shl
+  ret i64 %sum
+}
+
+define i32 @PR55714_i32(i32 %n, i32 %q) {
+; X86-LABEL: PR55714_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (,%ecx,8), %eax
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR55714_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (%rdi,%rsi,8), %eax
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    retq
+  %mul = mul i32 %q, 7
+  %add = add i32 %mul, %n
+  ret i32 %add
+}
+
+define i64 @PR55714_i64(i64 %n, i64 %q) {
+; X86-LABEL: PR55714_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $7, %eax
+; X86-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NEXT:    leal (%edx,%ecx,8), %edx
+; X86-NEXT:    subl %ecx, %edx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR55714_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    leaq (%rdi,%rsi,8), %rax
+; X64-NEXT:    subq %rsi, %rax
+; X64-NEXT:    retq
+  %mul = mul i64 %q, 7
+  %add = add i64 %mul, %n
+  ret i64 %add
+}

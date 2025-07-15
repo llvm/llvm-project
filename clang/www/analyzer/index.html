@@ -72,45 +72,9 @@
 <p>The Clang Static Analyzer is a source code analysis tool that finds bugs in
 C, C++, and Objective-C programs.</p>
 
-<p>Currently it can be run either from the <a href="command-line.html">command
-  line</a> or if you use macOS then <a href="xcode.html">within Xcode</a>. When
-invoked from the command line, it is intended to be run in tandem with a build
-of a codebase.</p>
-
-<p>The analyzer is 100% open source and is part of the <a
-href="https://clang.llvm.org">Clang</a> project. Like the rest of Clang, the
-analyzer is implemented as a C++ library that can be used by other tools and
-applications.</p>
-
-<h2>Download</h2>
-
-<div style="padding:0px; font-size: 90%">
- <b class="spiffy">
- <b class="spiffy1"><b></b></b>
- <b class="spiffy2"><b></b></b>
- <b class="spiffy3"></b>
- <b class="spiffy4"></b>
- <b class="spiffy5"></b></b>
- <div class="spiffyfg">
-  <div style="padding:15px">
-   <h3 style="margin:0px;padding:0px">Mac OS X</h3>
-   <ul>
-    <li>Latest build (10.8+):<br>
-     <!--#include virtual="latest_checker.html.incl"-->
-    </li>
-    <li><a href="/release_notes.html">Release notes</a></li>
-    <li>This build can be used both from the command line and from within Xcode</li>
-    <li><a href="/installation.html">Installation</a> and <a href="/scan-build.html">usage</a></li>
-   </ul>
-  </div>
- </div>
- <b class="spiffy">
- <b class="spiffy5"></b>
- <b class="spiffy4"></b>
- <b class="spiffy3"></b>
- <b class="spiffy2"><b></b></b>
- <b class="spiffy1"><b></b></b></b>
-</div>
+<p>The analyzer is 100% open source and is part of the <a href="https://clang.llvm.org">Clang</a>
+project. Like the rest of Clang, the analyzer is implemented as a C++ library
+that can be used by other tools and applications.</p>
 
 <div style="padding:0; margin-top:10px; font-size: 90%">
  <b class="spiffy">
@@ -121,10 +85,27 @@ applications.</p>
  <b class="spiffy5"></b></b>
  <div class="spiffyfg">
   <div style="padding:15px">
-   <h3 style="margin:0px;padding:0px">Other Platforms</h3>
-   <p>For other platforms, please follow the instructions for <a
-   href="/installation#OtherPlatforms">building the analyzer</a> from
-   source code.<p>
+
+    <p>To get started with the Clang Static Analyzer, visit the
+    <a href="https://releases.llvm.org/download.html">LLVM
+    releases page</a> for download and installation instructions. The official
+    releases include both the analyzer and <a href="scan-build.html">scan-build</a>,
+    a command-line tool for running the analyzer on your codebase.</p>
+
+    <p>If you're installing Clang from a different source, such as
+    a Linux package repository, then scan-build may be packaged
+    separately as an individual package, or as part of
+    a "clang tools" package.</p>
+
+    <p>If your IDE is using Clang, it may natively integrate the static analyzer.
+    On macOS, the easiest way to use the static analyzer is to invoke it
+    <a href="https://clang.llvm.org/docs/analyzer/user-docs/UsingWithXCode.html">directly
+    from Xcode</a>.</p>
+
+    <p>Additionally, if you're using <a href="https://clang.llvm.org/extra/clang-tidy/">clang-tidy</a>,
+    you can naturally make the static analyzer run alongside clang-tidy
+    by enabling the <a href="https://clang.llvm.org/extra/clang-tidy/checks/list.html">clang-analyzer</a>
+    checks.</p>
   </div>
  </div>
  <b class="spiffy">

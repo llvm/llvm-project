@@ -30,6 +30,8 @@ static_library("Interpreter") {
     "IncrementalParser.cpp",
     "Interpreter.cpp",
     "InterpreterUtils.cpp",
+    "InterpreterValuePrinter.cpp",
+    "RemoteJITUtils.cpp",
     "Value.cpp",
   ]
 }

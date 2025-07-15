@@ -122,6 +122,7 @@ struct OMPTaskDataTy final {
   bool IsReductionWithTaskMod = false;
   bool IsWorksharingReduction = false;
   bool HasNowaitClause = false;
+  bool HasModifier = false;
 };
 
 /// Class intended to support codegen of all kind of the reduction clauses.
@@ -312,12 +313,9 @@ protected:
   llvm::OpenMPIRBuilder OMPBuilder;
 
   /// Helper to determine the min/max number of threads/teams for \p D.
-  void computeMinAndMaxThreadsAndTeams(const OMPExecutableDirective &D,
-                                       CodeGenFunction &CGF,
-                                       int32_t &MinThreadsVal,
-                                       int32_t &MaxThreadsVal,
-                                       int32_t &MinTeamsVal,
-                                       int32_t &MaxTeamsVal);
+  void computeMinAndMaxThreadsAndTeams(
+      const OMPExecutableDirective &D, CodeGenFunction &CGF,
+      llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs);
 
   /// Helper to emit outlined function for 'target' directive.
   /// \param D Directive to emit.
@@ -352,7 +350,7 @@ protected:
   /// Emits \p Callee function call with arguments \p Args with location \p Loc.
   void emitCall(CodeGenFunction &CGF, SourceLocation Loc,
                 llvm::FunctionCallee Callee,
-                ArrayRef<llvm::Value *> Args = std::nullopt) const;
+                ArrayRef<llvm::Value *> Args = {}) const;
 
   /// Emits address of the word in a memory where current thread id is
   /// stored.
@@ -388,10 +386,6 @@ protected:
   /// Map for SourceLocation and OpenMP runtime library debug locations.
   typedef llvm::DenseMap<SourceLocation, llvm::Value *> OpenMPDebugLocMapTy;
   OpenMPDebugLocMapTy OpenMPDebugLocMap;
-  /// The type for a microtask which gets passed to __kmpc_fork_call().
-  /// Original representation is:
-  /// typedef void (kmpc_micro)(kmp_int32 global_tid, kmp_int32 bound_tid,...);
-  llvm::FunctionType *Kmpc_MicroTy = nullptr;
   /// Stores debug location and ThreadID for the function.
   struct DebugLocThreadIdTy {
     llvm::Value *DebugLoc;
@@ -532,9 +526,6 @@ protected:
   /// Build type kmp_routine_entry_t (if not built yet).
   void emitKmpRoutineEntryT(QualType KmpInt32Ty);
 
-  /// Returns pointer to kmpc_micro type.
-  llvm::Type *getKmpc_MicroPointerTy();
-
   /// If the specified mangled name is not in the module, create and
   /// return threadprivate cache object. This object is a pointer's worth of
   /// storage that's reserved for use by the OpenMP runtime.
@@ -557,15 +548,6 @@ protected:
   void emitThreadPrivateVarInit(CodeGenFunction &CGF, Address VDAddr,
                                 llvm::Value *Ctor, llvm::Value *CopyCtor,
                                 llvm::Value *Dtor, SourceLocation Loc);
-
-  /// Emit the array initialization or deletion portion for user-defined mapper
-  /// code generation.
-  void emitUDMapperArrayInitOrDel(CodeGenFunction &MapperCGF,
-                                  llvm::Value *Handle, llvm::Value *BasePtr,
-                                  llvm::Value *Ptr, llvm::Value *Size,
-                                  llvm::Value *MapType, llvm::Value *MapName,
-                                  CharUnits ElementSize,
-                                  llvm::BasicBlock *ExitBB, bool IsInit);
 
   struct TaskResultTy {
     llvm::Value *NewTask = nullptr;
@@ -946,6 +928,14 @@ public:
                                    unsigned IVSize, bool IVSigned, bool Ordered,
                                    const DispatchRTInput &DispatchValues);
 
+  /// This is used for non static scheduled types and when the ordered
+  /// clause is present on the loop construct.
+  ///
+  /// \param CGF Reference to current CodeGenFunction.
+  /// \param Loc Clang source location.
+  ///
+  virtual void emitForDispatchDeinit(CodeGenFunction &CGF, SourceLocation Loc);
+
   /// Struct with the values to be passed to the static runtime function
   struct StaticRTInput {
     /// Size of the iteration variable in bits.
@@ -1211,8 +1201,20 @@ public:
   struct ReductionOptionsTy {
     bool WithNowait;
     bool SimpleReduction;
+    llvm::SmallVector<bool, 8> IsPrivateVarReduction;
     OpenMPDirectiveKind ReductionKind;
   };
+
+  /// Emits code for private variable reduction
+  /// \param Privates List of private copies for original reduction arguments.
+  /// \param LHSExprs List of LHS in \a ReductionOps reduction operations.
+  /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
+  /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
+  /// or 'operator binop(LHS, RHS)'.
+  void emitPrivateReduction(CodeGenFunction &CGF, SourceLocation Loc,
+                            const Expr *Privates, const Expr *LHSExprs,
+                            const Expr *RHSExprs, const Expr *ReductionOps);
+
   /// Emit a code for reduction clause. Next code should be emitted for
   /// reduction:
   /// \code
@@ -1535,7 +1537,7 @@ public:
   virtual void
   emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
                            llvm::FunctionCallee OutlinedFn,
-                           ArrayRef<llvm::Value *> Args = std::nullopt) const;
+                           ArrayRef<llvm::Value *> Args = {}) const;
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.
@@ -1828,6 +1830,14 @@ public:
                            const OpenMPScheduleTy &ScheduleKind,
                            unsigned IVSize, bool IVSigned, bool Ordered,
                            const DispatchRTInput &DispatchValues) override;
+
+  /// This is used for non static scheduled types and when the ordered
+  /// clause is present on the loop construct.
+  ///
+  /// \param CGF Reference to current CodeGenFunction.
+  /// \param Loc Clang source location.
+  ///
+  void emitForDispatchDeinit(CodeGenFunction &CGF, SourceLocation Loc) override;
 
   /// Call the appropriate runtime routine to initialize it before start
   /// of loop.

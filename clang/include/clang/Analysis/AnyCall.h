@@ -143,7 +143,7 @@ public:
   /// \returns formal parameters for direct calls (including virtual calls)
   ArrayRef<ParmVarDecl *> parameters() const {
     if (!D)
-      return std::nullopt;
+      return {};
 
     if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
       return FD->parameters();
@@ -152,7 +152,7 @@ public:
     } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
       return BD->parameters();
     } else {
-      return std::nullopt;
+      return {};
     }
   }
 

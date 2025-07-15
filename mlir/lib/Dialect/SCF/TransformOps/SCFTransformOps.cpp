@@ -7,17 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
+
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -47,6 +46,11 @@ void transform::ApplySCFStructuralConversionPatternsOp::
                                   ConversionTarget &conversionTarget) {
   scf::populateSCFStructuralTypeConversionTarget(typeConverter,
                                                  conversionTarget);
+}
+
+void transform::ApplySCFToControlFlowPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  populateSCFToControlFlowConversionPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -261,8 +265,10 @@ loopScheduling(scf::ForOp forOp,
     return 1;
   };
 
-  std::optional<int64_t> ubConstant = getConstantIntValue(forOp.getUpperBound());
-  std::optional<int64_t> lbConstant = getConstantIntValue(forOp.getLowerBound());
+  std::optional<int64_t> ubConstant =
+      getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> lbConstant =
+      getConstantIntValue(forOp.getLowerBound());
   DenseMap<Operation *, unsigned> opCycles;
   std::map<unsigned, std::vector<Operation *>> wrappedSchedule;
   for (Operation &op : forOp.getBody()->getOperations()) {
@@ -330,7 +336,7 @@ DiagnosedSilenceableFailure transform::LoopPromoteIfOneIterationOp::applyToOne(
 
 void transform::LoopPromoteIfOneIterationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
+  consumesHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -348,12 +354,36 @@ transform::LoopUnrollOp::applyToOne(transform::TransformRewriter &rewriter,
     result = loopUnrollByFactor(scfFor, getFactor());
   else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op))
     result = loopUnrollByFactor(affineFor, getFactor());
+  else
+    return emitSilenceableError()
+           << "failed to unroll, incorrect type of payload";
 
-  if (failed(result)) {
-    DiagnosedSilenceableFailure diag = emitSilenceableError()
-                                       << "failed to unroll";
-    return diag;
-  }
+  if (failed(result))
+    return emitSilenceableError() << "failed to unroll";
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopUnrollAndJamOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::LoopUnrollAndJamOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *op,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  LogicalResult result(failure());
+  if (scf::ForOp scfFor = dyn_cast<scf::ForOp>(op))
+    result = loopUnrollJamByFactor(scfFor, getFactor());
+  else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op))
+    result = loopUnrollJamByFactor(affineFor, getFactor());
+  else
+    return emitSilenceableError()
+           << "failed to unroll and jam, incorrect type of payload";
+
+  if (failed(result))
+    return emitSilenceableError() << "failed to unroll and jam";
+
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -415,7 +445,7 @@ DiagnosedSilenceableFailure transform::TakeAssumedBranchOp::applyToOne(
 
 void transform::TakeAssumedBranchOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -561,9 +591,10 @@ transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
   } else if (isForallWithIdenticalConfiguration(target, source)) {
     fusedLoop = fuseIndependentSiblingForallLoops(
         cast<scf::ForallOp>(target), cast<scf::ForallOp>(source), rewriter);
-  } else
+  } else {
     return emitSilenceableFailure(target->getLoc())
            << "operations cannot be fused";
+  }
 
   assert(fusedLoop && "failed to fuse operations");
 
@@ -580,6 +611,8 @@ class SCFTransformDialectExtension
     : public transform::TransformDialectExtension<
           SCFTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SCFTransformDialectExtension)
+
   using Base::Base;
 
   void init() {
