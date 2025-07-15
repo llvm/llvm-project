@@ -623,7 +623,7 @@ std::error_code access(const Twine &Path, AccessMode Mode) {
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
-  if (::access(P.begin(), convertAccessMode(Mode)) == -1)
+  if (llvm::access(P.begin(), convertAccessMode(Mode)) == -1)
     return errnoAsErrorCode();
 
   if (Mode == AccessMode::Execute) {
@@ -978,7 +978,7 @@ ErrorOr<basic_file_status> directory_entry::status() const {
 static bool hasProcSelfFD() {
   // If we have a /proc filesystem mounted, we can quickly establish the
   // real name of the file with readlink
-  static const bool Result = (access("/proc/self/fd", R_OK) == 0);
+  static const bool Result = (llvm::access("/proc/self/fd", R_OK) == 0);
   return Result;
 }
 #endif
