@@ -34,6 +34,35 @@ using namespace mlir;
 
 namespace {
 
+bool isDistributable(ArrayRef<int64_t> sgLayout, ArrayRef<int64_t> sgData,
+                     ArrayRef<int64_t> wgShape) {
+  // Check rank consistency
+  if (sgLayout.size() != sgData.size() || sgLayout.size() != wgShape.size())
+    return false;
+
+  for (size_t i = 0; i < sgLayout.size(); ++i) {
+    int64_t subgroupCount = sgLayout[i];
+    int64_t subgroupData = sgData[i];
+    int64_t shape = wgShape[i];
+
+    // Each subgroup must have positive data size
+    if (subgroupData <= 0 || subgroupCount <= 0 || shape <= 0)
+      return false;
+
+    // Total data assigned to all subgroups in this dimension
+    int64_t totalSubgroupData = subgroupCount * subgroupData;
+
+    // Subgroups must not collectively exceed the shape
+    if (totalSubgroupData > shape)
+      return false;
+
+    // Each subgroup's data must evenly divide the shape
+    if (shape % subgroupData != 0)
+      return false;
+  }
+  return true;
+}
+
 static std::pair<SmallVector<int64_t>, int>
 getSgShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
   int count = 1;
@@ -356,6 +385,16 @@ struct WgToSgVectorBroadcastOp
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
+
+    // Check if the output layout is distributable
+    SmallVector<int64_t> sgLayout;
+    if (auto sgLayoutAttr = layout.getSgLayout())
+      sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
+    else
+      return failure();
+
+    if (!isDistributable(sgLayout, sgShape, wgShape))
+      return failure();
 
     // Check if the srcShape has unit dim in dimensions being broadcasted,
     // and the other dimensions are the same as the destination type
