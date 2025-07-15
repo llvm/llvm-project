@@ -56,11 +56,13 @@ void test() {
   {
     std::expected<void, int> e;
     e.transform_error(return_unexpected<int&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
+    // expected-error-re@*:* 1 {{no matching constructor for initialization of{{.*}}}}
     // expected-error-re@*:* {{static assertion failed {{.*}}A program that instantiates expected<T, E> with a E that is not a valid argument for unexpected<E> is ill-formed}}
     // expected-error-re@*:* 0-1 {{call to deleted constructor of {{.*}}}}
     // expected-error-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}}}
 
     e.transform_error(return_no_object<int&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
+    // expected-error-re@*:* 1 {{no matching constructor for initialization of{{.*}}}}
     // expected-error-re@*:* {{static assertion failed {{.*}}A program that instantiates expected<T, E> with a E that is not a valid argument for unexpected<E> is ill-formed}}
     // expected-warning-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}, which is a Microsoft extension}}
   }
@@ -78,6 +80,7 @@ void test() {
     std::expected<void, int> e;
     std::move(e).transform_error(return_unexpected<int&&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
     std::move(e).transform_error(return_no_object<int&&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
+    // expected-error-re@*:* 1 {{no matching constructor for initialization of{{.*}}}}
   }
 
   // Test const&& overload
@@ -85,6 +88,7 @@ void test() {
     const std::expected<void, int> e;
     std::move(e).transform_error(return_unexpected<const int&&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
     std::move(e).transform_error(return_no_object<const int&&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
+    // expected-error-re@*:* 1 {{no matching constructor for initialization of{{.*}}}}
   }
 }
 // clang-format on
