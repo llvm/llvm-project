@@ -16541,12 +16541,8 @@ static inline bool CheckOperatorNewDeleteTypes(
   if (IsPotentiallyTypeAware) {
     // We don't emit this diagnosis for template instantiations as we will
     // have already emitted it for the original template declaration.
-    if (!FnDecl->isTemplateInstantiation()) {
-      unsigned DiagID = SemaRef.getLangOpts().CPlusPlus26
-                            ? diag::warn_cxx26_type_aware_allocators
-                            : diag::ext_cxx26_type_aware_allocators;
-      SemaRef.Diag(FnDecl->getLocation(), DiagID);
-    }
+    if (!FnDecl->isTemplateInstantiation())
+      SemaRef.Diag(FnDecl->getLocation(), diag::warn_ext_type_aware_allocators);
 
     if (OperatorKind == AllocationOperatorKind::New) {
       SizeParameterIndex = 1;
