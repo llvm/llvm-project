@@ -24,12 +24,11 @@
 
 #include "check_assertion.h"
 
-int main(int, char**) {
+int main(int, char **) {
   {
-    TEST_LIBCPP_ASSERT_FAILURE(
-        [] { [[maybe_unused]] std::latch l(-1); }(),
-        "latch::latch(ptrdiff_t): latch cannot be "
-        "initialized with a negative value");
+    TEST_LIBCPP_ASSERT_FAILURE([]{ std::latch l(-1); }(),
+                               "latch::latch(ptrdiff_t): latch cannot be "
+                               "initialized with a negative value");
   }
 
   // We can't check the precondition for max() because there's no value

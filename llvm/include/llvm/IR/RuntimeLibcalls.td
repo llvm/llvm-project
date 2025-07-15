@@ -362,6 +362,9 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall;
 def STACK_SMASH_HANDLER : RuntimeLibcall;
 
+// Safe stack
+def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall;
+
 // Deoptimization
 def DEOPTIMIZE : RuntimeLibcall;
 
@@ -701,6 +704,9 @@ foreach lc = LibCalls__atomic in {
 
 // Stack Protector Fail
 def __stack_chk_fail : RuntimeLibcallImpl<STACKPROTECTOR_CHECK_FAIL>;
+
+// Safe stack.
+def __safestack_pointer_address : RuntimeLibcallImpl<SAFESTACK_POINTER_ADDRESS>;
 
 // Deoptimization
 def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
@@ -2053,6 +2059,17 @@ def SPARCSystemLibrary
        LibcallImpls<(add SPARC64_MulDivCalls, Int128RTLibcalls), isSPARC64>,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128)
 >;
+
+//===----------------------------------------------------------------------===//
+// SPIRV Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isSPIRV : RuntimeLibcallPredicate<"TT.isSPIRV()">;
+
+// No calls FIXME: Add memcpy/memset is a hack to skip
+// PreISelIntrinsicLowering in favor of SPIRVPrepareFunctions;
+// probably should remove that and just use the default one.
+def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add memset, memcpy)>;
 
 //===----------------------------------------------------------------------===//
 // Windows Runtime Libcalls
