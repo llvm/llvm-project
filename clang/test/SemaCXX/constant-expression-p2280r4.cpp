@@ -319,7 +319,7 @@ namespace casting {
 }
 
 namespace pointer_comparisons {
-  extern int &extern_n; // interpreter-note 2 {{declared here}}
+  extern int &extern_n; // interpreter-note 4 {{declared here}}
   extern int &extern_n2;
   constexpr int f1(bool b, int& n) {
     if (b) {
@@ -330,14 +330,30 @@ namespace pointer_comparisons {
   // FIXME: interpreter incorrectly rejects; both sides are the same constexpr-unknown value.
   static_assert(f1(false, extern_n)); // interpreter-error {{static assertion expression is not an integral constant expression}} \
                                       // interpreter-note {{initializer of 'extern_n' is unknown}}
-  // FIXME: We should diagnose this: we don't know if the references bind
-  // to the same object.
-  static_assert(&extern_n != &extern_n2); // interpreter-error {{static assertion expression is not an integral constant expression}} \
+  static_assert(&extern_n != &extern_n2); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                          // nointerpreter-note {{comparison between pointers to unrelated objects '&extern_n' and '&extern_n2' has unspecified value}} \
                                           // interpreter-note {{initializer of 'extern_n' is unknown}}
   void f2(const int &n) {
-    // FIXME: We should not diagnose this: the two objects provably have
-    // different addresses because the lifetime of "n" extends across
-    // the initialization.
-    constexpr int x = &x == &n; // nointerpreter-error {{must be initialized by a constant expression}}
+    constexpr int x = &x == &n; // nointerpreter-error {{must be initialized by a constant expression}} \
+                                // nointerpreter-note {{comparison between pointers to unrelated objects '&x' and '&n' has unspecified value}}
+    // Distinct variables are not equal, even if they're local variables.
+    constexpr int y = &x == &y;
+    static_assert(!y);
   }
+  constexpr int f3() {
+    int x;
+    return &x == &extern_n; // nointerpreter-note {{comparison between pointers to unrelated objects '&x' and '&extern_n' has unspecified value}} \
+                            // interpreter-note {{initializer of 'extern_n' is unknown}}
+  }
+  static_assert(!f3()); // expected-error {{static assertion expression is not an integral constant expression}} \
+                        // expected-note {{in call to 'f3()'}}
+  constexpr int f4() {
+    int *p = new int;
+    bool b = p == &extern_n; // nointerpreter-note {{comparison between pointers to unrelated objects '&{*new int#0}' and '&extern_n' has unspecified value}} \
+                             // interpreter-note {{initializer of 'extern_n' is unknown}}
+    delete p;
+    return b;
+  }
+  static_assert(!f4()); // expected-error {{static assertion expression is not an integral constant expression}} \
+                        // expected-note {{in call to 'f4()'}}
 }
