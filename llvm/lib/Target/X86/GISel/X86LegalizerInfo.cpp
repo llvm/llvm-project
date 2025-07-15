@@ -881,7 +881,6 @@ bool X86LegalizerInfo::expandFPClassTestForF32OrF64(
   // In the general case use integer operations.
   unsigned BitSize = SrcTy.getScalarSizeInBits();
   LLT IntVT = LLT::scalar(BitSize);
-  // MachineInstrBuilder OpAsInt = MIRBuilder.buildBitcast(IntVT, SrcReg);
   MachineInstrBuilder OpAsInt = MIRBuilder.buildCopy(IntVT, SrcReg);
 
   // Various Mask
