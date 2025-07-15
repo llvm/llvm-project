@@ -2342,12 +2342,12 @@ static void emitInsertBits(formatted_raw_ostream &OS) {
 template <typename IntType>
 static std::enable_if_t<std::is_integral_v<IntType>, void>
 insertBits(IntType &Field, IntType Bits, unsigned StartBit, unsigned NumBits) {
-  // Check that no bit beyond numBits is set, so that a simple bitwise |
+  // Check that no bit beyond NumBits is set, so that a simple bitwise |
   // is sufficient.
   assert((~(((IntType)1 << NumBits) - 1) & Bits) == 0 &&
            "Bits has more than NumBits bits set");
   assert(StartBit + NumBits <= sizeof(IntType) * 8);
-  (void)numBits;
+  (void)NumBits;
   Field |= Bits << StartBit;
 }
 )";
