@@ -287,7 +287,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     transpose is another Intel hardware feature, which will do transpose
     operation when loading the data if the bit width of the data type is
     fp32 or fp64. It implies that vnni and transpose cannot exit at the
-    same time.
+    same time. It is only available to 1D or 2D blocked tensor_desc.
 
     In SIMT mode, result vector represents the data to be loaded by each work-item.
 
@@ -343,6 +343,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
     by the TensorDesc. It takes a set of optional cache hints for each level
     of cache, L1, L2 and L3. If hardware does not have a correspoding cache,
     Corresponding cache hint attribute will be masked.
+    It is only available to 1D or 2D blocked tensor_desc.
 
     In SIMT mode, the input vector represents the data to be stored by each work-item.
 
@@ -757,6 +758,8 @@ def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
   let assemblyFormat = [{
     $TensorDesc `,` $offsets attr-dict `:` qualified(type($TensorDesc)) `,` type($offsets)
   }];
+
+  let hasVerifier = 1;
 }
 
 def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]> {

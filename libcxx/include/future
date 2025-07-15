@@ -322,8 +322,6 @@ template <class R, class... ArgTypes>
 class packaged_task<R(ArgTypes...)>
 {
 public:
-    typedef R result_type; // extension
-
     // construction and destruction
     packaged_task() noexcept;
     template <class F>
@@ -1605,9 +1603,6 @@ inline _Rp __packaged_task_function<_Rp(_ArgTypes...)>::operator()(_ArgTypes... 
 
 template <class _Rp, class... _ArgTypes>
 class packaged_task<_Rp(_ArgTypes...)> {
-public:
-  using result_type _LIBCPP_DEPRECATED = _Rp; // extension
-
 private:
   __packaged_task_function<_Rp(_ArgTypes...)> __f_;
   promise<_Rp> __p_;
@@ -1699,9 +1694,6 @@ void packaged_task<_Rp(_ArgTypes...)>::reset() {
 
 template <class... _ArgTypes>
 class packaged_task<void(_ArgTypes...)> {
-public:
-  using result_type _LIBCPP_DEPRECATED = void; // extension
-
 private:
   __packaged_task_function<void(_ArgTypes...)> __f_;
   promise<void> __p_;

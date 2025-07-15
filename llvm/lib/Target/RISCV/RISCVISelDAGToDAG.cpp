@@ -300,8 +300,7 @@ void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, unsigned NF, bool IsMasked,
   MachineSDNode *Load =
       CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped, MVT::Other, Operands);
 
-  if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-    CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+  CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
   ReplaceUses(SDValue(Node, 0), SDValue(Load, 0));
   ReplaceUses(SDValue(Node, 1), SDValue(Load, 1));
@@ -331,8 +330,7 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, unsigned NF,
   MachineSDNode *Load = CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped,
                                                XLenVT, MVT::Other, Operands);
 
-  if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-    CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+  CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
   ReplaceUses(SDValue(Node, 0), SDValue(Load, 0)); // Result
   ReplaceUses(SDValue(Node, 1), SDValue(Load, 1)); // VL
@@ -381,8 +379,7 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned NF, bool IsMasked,
   MachineSDNode *Load =
       CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped, MVT::Other, Operands);
 
-  if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-    CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+  CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
   ReplaceUses(SDValue(Node, 0), SDValue(Load, 0));
   ReplaceUses(SDValue(Node, 1), SDValue(Load, 1));
@@ -409,8 +406,7 @@ void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, unsigned NF, bool IsMasked,
   MachineSDNode *Store =
       CurDAG->getMachineNode(P->Pseudo, DL, Node->getValueType(0), Operands);
 
-  if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-    CurDAG->setNodeMemRefs(Store, {MemOp->getMemOperand()});
+  CurDAG->setNodeMemRefs(Store, {cast<MemSDNode>(Node)->getMemOperand()});
 
   ReplaceNode(Node, Store);
 }
@@ -456,8 +452,7 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked,
   MachineSDNode *Store =
       CurDAG->getMachineNode(P->Pseudo, DL, Node->getValueType(0), Operands);
 
-  if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-    CurDAG->setNodeMemRefs(Store, {MemOp->getMemOperand()});
+  CurDAG->setNodeMemRefs(Store, {cast<MemSDNode>(Node)->getMemOperand()});
 
   ReplaceNode(Node, Store);
 }
@@ -2227,8 +2222,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MachineSDNode *Load =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
 
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, Load);
       return;
@@ -2274,8 +2268,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MachineSDNode *Load =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
 
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, Load);
       return;
@@ -2300,6 +2293,36 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                               Log2SEW, static_cast<unsigned>(LMUL));
       MachineSDNode *Load = CurDAG->getMachineNode(
           P->Pseudo, DL, Node->getVTList(), Operands);
+      CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
+
+      ReplaceNode(Node, Load);
+      return;
+    }
+    case Intrinsic::riscv_nds_vln:
+    case Intrinsic::riscv_nds_vln_mask:
+    case Intrinsic::riscv_nds_vlnu:
+    case Intrinsic::riscv_nds_vlnu_mask: {
+      bool IsMasked = IntNo == Intrinsic::riscv_nds_vln_mask ||
+                      IntNo == Intrinsic::riscv_nds_vlnu_mask;
+      bool IsUnsigned = IntNo == Intrinsic::riscv_nds_vlnu ||
+                        IntNo == Intrinsic::riscv_nds_vlnu_mask;
+
+      MVT VT = Node->getSimpleValueType(0);
+      unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
+      unsigned CurOp = 2;
+      SmallVector<SDValue, 8> Operands;
+
+      Operands.push_back(Node->getOperand(CurOp++));
+      addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked,
+                                 /*IsStridedOrIndexed=*/false, Operands,
+                                 /*IsLoad=*/true);
+
+      RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+      const RISCV::NDSVLNPseudo *P = RISCV::getNDSVLNPseudo(
+          IsMasked, IsUnsigned, Log2SEW, static_cast<unsigned>(LMUL));
+      MachineSDNode *Load =
+          CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
+
       if (auto *MemOp = dyn_cast<MemSDNode>(Node))
         CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
 
@@ -2433,8 +2456,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MachineSDNode *Store =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
 
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(Store, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(Store, {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, Store);
       return;
@@ -2464,8 +2486,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           IsMasked, IsStrided, Log2SEW, static_cast<unsigned>(LMUL));
       MachineSDNode *Store =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(Store, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(Store, {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, Store);
       return;
@@ -2675,30 +2696,29 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (Locality > 2)
       break;
 
-    if (auto *LoadStoreMem = dyn_cast<MemSDNode>(Node)) {
-      MachineMemOperand *MMO = LoadStoreMem->getMemOperand();
-      MMO->setFlags(MachineMemOperand::MONonTemporal);
+    auto *LoadStoreMem = cast<MemSDNode>(Node);
+    MachineMemOperand *MMO = LoadStoreMem->getMemOperand();
+    MMO->setFlags(MachineMemOperand::MONonTemporal);
 
-      int NontemporalLevel = 0;
-      switch (Locality) {
-      case 0:
-        NontemporalLevel = 3; // NTL.ALL
-        break;
-      case 1:
-        NontemporalLevel = 1; // NTL.PALL
-        break;
-      case 2:
-        NontemporalLevel = 0; // NTL.P1
-        break;
-      default:
-        llvm_unreachable("unexpected locality value.");
-      }
-
-      if (NontemporalLevel & 0b1)
-        MMO->setFlags(MONontemporalBit0);
-      if (NontemporalLevel & 0b10)
-        MMO->setFlags(MONontemporalBit1);
+    int NontemporalLevel = 0;
+    switch (Locality) {
+    case 0:
+      NontemporalLevel = 3; // NTL.ALL
+      break;
+    case 1:
+      NontemporalLevel = 1; // NTL.PALL
+      break;
+    case 2:
+      NontemporalLevel = 0; // NTL.P1
+      break;
+    default:
+      llvm_unreachable("unexpected locality value.");
     }
+
+    if (NontemporalLevel & 0b1)
+      MMO->setFlags(MONontemporalBit0);
+    if (NontemporalLevel & 0b10)
+      MMO->setFlags(MONontemporalBit1);
     break;
   }
 
@@ -2822,56 +2842,6 @@ static bool isWorthFoldingAdd(SDValue Add) {
   return true;
 }
 
-bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
-                                              unsigned MaxShiftAmount,
-                                              SDValue &Base, SDValue &Index,
-                                              SDValue &Scale) {
-  EVT VT = Addr.getSimpleValueType();
-  auto UnwrapShl = [this, VT, MaxShiftAmount](SDValue N, SDValue &Index,
-                                              SDValue &Shift) {
-    uint64_t ShiftAmt = 0;
-    Index = N;
-
-    if (N.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N.getOperand(1))) {
-      // Only match shifts by a value in range [0, MaxShiftAmount].
-      if (N.getConstantOperandVal(1) <= MaxShiftAmount) {
-        Index = N.getOperand(0);
-        ShiftAmt = N.getConstantOperandVal(1);
-      }
-    }
-
-    Shift = CurDAG->getTargetConstant(ShiftAmt, SDLoc(N), VT);
-    return ShiftAmt != 0;
-  };
-
-  if (Addr.getOpcode() == ISD::ADD) {
-    if (auto *C1 = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
-      SDValue AddrB = Addr.getOperand(0);
-      if (AddrB.getOpcode() == ISD::ADD &&
-          UnwrapShl(AddrB.getOperand(0), Index, Scale) &&
-          !isa<ConstantSDNode>(AddrB.getOperand(1)) &&
-          isInt<12>(C1->getSExtValue())) {
-        // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
-        SDValue C1Val =
-            CurDAG->getTargetConstant(C1->getZExtValue(), SDLoc(Addr), VT);
-        Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
-                                              AddrB.getOperand(1), C1Val),
-                       0);
-        return true;
-      }
-    } else if (UnwrapShl(Addr.getOperand(0), Index, Scale)) {
-      Base = Addr.getOperand(1);
-      return true;
-    } else {
-      UnwrapShl(Addr.getOperand(1), Index, Scale);
-      Base = Addr.getOperand(0);
-      return true;
-    }
-  }
-
-  return false;
-}
-
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -2922,8 +2892,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   // Handle ADD with large immediates.
   if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1))) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    assert(!(isInt<12>(CVal) && isInt<12>(CVal)) &&
-           "simm12 not already handled?");
+    assert(!isInt<12>(CVal) && "simm12 not already handled?");
 
     // Handle immediates in the range [-4096,-2049] or [2048, 4094]. We can use
     // an ADDI for part of the offset and fold the rest into the load/store.
@@ -2964,8 +2933,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   return true;
 }
 
-/// Similar to SelectAddrRegImm, except that the offset restricted for
-/// unsinged nine bits.
+/// Similar to SelectAddrRegImm, except that the offset is restricted to uimm9.
 bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
                                           SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -3056,6 +3024,56 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, VT);
   return true;
+}
+
+bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
+                                              unsigned MaxShiftAmount,
+                                              SDValue &Base, SDValue &Index,
+                                              SDValue &Scale) {
+  EVT VT = Addr.getSimpleValueType();
+  auto UnwrapShl = [this, VT, MaxShiftAmount](SDValue N, SDValue &Index,
+                                              SDValue &Shift) {
+    uint64_t ShiftAmt = 0;
+    Index = N;
+
+    if (N.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N.getOperand(1))) {
+      // Only match shifts by a value in range [0, MaxShiftAmount].
+      if (N.getConstantOperandVal(1) <= MaxShiftAmount) {
+        Index = N.getOperand(0);
+        ShiftAmt = N.getConstantOperandVal(1);
+      }
+    }
+
+    Shift = CurDAG->getTargetConstant(ShiftAmt, SDLoc(N), VT);
+    return ShiftAmt != 0;
+  };
+
+  if (Addr.getOpcode() == ISD::ADD) {
+    if (auto *C1 = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
+      SDValue AddrB = Addr.getOperand(0);
+      if (AddrB.getOpcode() == ISD::ADD &&
+          UnwrapShl(AddrB.getOperand(0), Index, Scale) &&
+          !isa<ConstantSDNode>(AddrB.getOperand(1)) &&
+          isInt<12>(C1->getSExtValue())) {
+        // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
+        SDValue C1Val =
+            CurDAG->getTargetConstant(C1->getZExtValue(), SDLoc(Addr), VT);
+        Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
+                                              AddrB.getOperand(1), C1Val),
+                       0);
+        return true;
+      }
+    } else if (UnwrapShl(Addr.getOperand(0), Index, Scale)) {
+      Base = Addr.getOperand(1);
+      return true;
+    } else {
+      UnwrapShl(Addr.getOperand(1), Index, Scale);
+      Base = Addr.getOperand(0);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool RISCVDAGToDAGISel::SelectAddrRegReg(SDValue Addr, SDValue &Base,
@@ -3441,12 +3459,11 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
   return false;
 }
 
-bool RISCVDAGToDAGISel::orIsAdd(const SDNode *N) const {
+bool RISCVDAGToDAGISel::orDisjoint(const SDNode *N) const {
+  assert(N->getOpcode() == ISD::OR || N->getOpcode() == RISCVISD::OR_VL);
   if (N->getFlags().hasDisjoint())
     return true;
-  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-  return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+  return CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
 }
 
 bool RISCVDAGToDAGISel::selectImm64IfCheaper(int64_t Imm, int64_t OrigImm,
@@ -3474,7 +3491,7 @@ bool RISCVDAGToDAGISel::selectZExtImm32(SDValue N, SDValue &Val) {
     case ISD::ADD:
       break;
     case ISD::OR:
-      if (orIsAdd(U))
+      if (orDisjoint(U))
         break;
       return false;
     default:
@@ -3757,21 +3774,18 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
 // Select a constant that can be represented as (sign_extend(imm5) << imm2).
 bool RISCVDAGToDAGISel::selectSimm5Shl2(SDValue N, SDValue &Simm5,
                                         SDValue &Shl2) {
-  if (auto *C = dyn_cast<ConstantSDNode>(N)) {
-    int64_t Offset = C->getSExtValue();
-    unsigned Shift;
-    for (Shift = 0; Shift < 4; Shift++)
-      if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0))
-        break;
+  auto *C = dyn_cast<ConstantSDNode>(N);
+  if (!C)
+    return false;
 
-    // Constant cannot be encoded.
-    if (Shift == 4)
-      return false;
-
-    EVT Ty = N->getValueType(0);
-    Simm5 = CurDAG->getSignedTargetConstant(Offset >> Shift, SDLoc(N), Ty);
-    Shl2 = CurDAG->getTargetConstant(Shift, SDLoc(N), Ty);
-    return true;
+  int64_t Offset = C->getSExtValue();
+  for (unsigned Shift = 0; Shift < 4; Shift++) {
+    if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0)) {
+      EVT VT = N->getValueType(0);
+      Simm5 = CurDAG->getSignedTargetConstant(Offset >> Shift, SDLoc(N), VT);
+      Shl2 = CurDAG->getTargetConstant(Shift, SDLoc(N), VT);
+      return true;
+    }
   }
 
   return false;
