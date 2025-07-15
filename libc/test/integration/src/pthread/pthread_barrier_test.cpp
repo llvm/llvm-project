@@ -22,7 +22,6 @@
 #include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
-#include <stdint.h> // uintptr_t
 
 pthread_barrier_t barrier;
 
@@ -39,7 +38,7 @@ void *increment_counter_and_wait(void *args) {
   return 0;
 }
 
-void shared_counter() {
+void single_use_barrier() {
   counter.set(0);
   const int NUM_THREADS = 30;
   pthread_t threads[NUM_THREADS];
@@ -53,34 +52,36 @@ void shared_counter() {
 
   LIBC_NAMESPACE::pthread_barrier_wait(&barrier);
   ASSERT_EQ(counter.load(), NUM_THREADS);
+
+  for (int i = 0; i < NUM_THREADS; ++i)
+    LIBC_NAMESPACE::pthread_join(threads[i], nullptr);
 }
 
-void reusable_shared_counter() {
+void reusable_barrier() {
   counter.set(0);
   const int NUM_THREADS = 30;
-  const int REPEAT = 10;
+  const int REPEAT = 20;
   pthread_t threads[NUM_THREADS * REPEAT];
   ASSERT_EQ(
       LIBC_NAMESPACE::pthread_barrier_init(&barrier, nullptr, NUM_THREADS + 1),
       0);
 
   for (int i = 0; i < REPEAT; ++i) {
-    for (int j = 0; j < NUM_THREADS; ++j) {
+    for (int j = 0; j < NUM_THREADS; ++j)
       LIBC_NAMESPACE::pthread_create(&threads[NUM_THREADS * i + j], nullptr,
                                      increment_counter_and_wait, nullptr);
-    }
+
     LIBC_NAMESPACE::pthread_barrier_wait(&barrier);
     ASSERT_EQ(counter.load(), NUM_THREADS * (i + 1));
   }
 
-  for (int i = 0; i < NUM_THREADS * REPEAT; ++i) {
+  for (int i = 0; i < NUM_THREADS * REPEAT; ++i)
     LIBC_NAMESPACE::pthread_join(threads[i], nullptr);
-  }
 }
 
 TEST_MAIN() {
   smoke_test();
-  shared_counter();
-  reusable_shared_counter();
+  single_use_barrier();
+  reusable_barrier();
   return 0;
 }
