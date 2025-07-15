@@ -200,7 +200,6 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
   LLVMContext &Ctx = Header->getContext();
 
   std::optional<bool> Enabled;
-
   if (Attrs.VectorizeEnable == LoopAttributes::Disable)
     Enabled = false;
   else if (Attrs.VectorizeEnable != LoopAttributes::Unspecified ||
