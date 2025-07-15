@@ -675,12 +675,14 @@ join(llvm::ImmutableMap<K, V> A, llvm::ImmutableMap<K, V> B,
 // TODO(opt): Consider using a bitset to represent the set of loans.
 using LoanSet = llvm::ImmutableSet<LoanID>;
 using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
+using OriginSet = llvm::ImmutableSet<OriginID>;
 
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
   OriginLoanMap::Factory OriginMapFactory;
   LoanSet::Factory LoanSetFactory;
+  OriginSet::Factory OriginSetFactory;
 
   /// Creates a singleton set containing only the given loan ID.
   LoanSet createLoanSet(LoanID LID) {
@@ -779,6 +781,78 @@ private:
 };
 
 // ========================================================================= //
+//                         Live Origins Analysis
+// ========================================================================= //
+
+/// The dataflow lattice for origin liveness analysis.
+/// It tracks the set of origins that are live at a given program point.
+struct LivenessLattice {
+  OriginSet LiveOrigins;
+
+  LivenessLattice() : LiveOrigins(nullptr) {};
+  explicit LivenessLattice(OriginSet S) : LiveOrigins(S) {}
+
+  bool operator==(const LivenessLattice &Other) const {
+    return LiveOrigins == Other.LiveOrigins;
+  }
+  bool operator!=(const LivenessLattice &Other) const {
+    return !(*this == Other);
+  }
+
+  void dump(llvm::raw_ostream &OS) const {
+    OS << "LivenessLattice State:\n";
+    if (LiveOrigins.isEmpty())
+      OS << "  <empty>\n";
+    for (const OriginID &OID : LiveOrigins)
+      OS << "  Origin " << OID << " is live\n";
+  }
+};
+
+/// The analysis that tracks which origins are live. This is a backward
+/// analysis.
+class LiveOriginAnalysis
+    : public DataflowAnalysis<LiveOriginAnalysis, LivenessLattice,
+                              Direction::Backward> {
+
+  OriginSet::Factory &SetFactory;
+
+public:
+  LiveOriginAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
+                     OriginSet::Factory &SF)
+      : DataflowAnalysis(C, AC, F), SetFactory(SF) {}
+
+  using DataflowAnalysis<LiveOriginAnalysis, Lattice,
+                         Direction::Backward>::transfer;
+
+  StringRef getAnalysisName() const { return "LiveOrigins"; }
+
+  Lattice getInitialState() { return Lattice(SetFactory.getEmptySet()); }
+
+  /// Merges two lattices by taking the union of the live origin sets.
+  Lattice join(Lattice L1, Lattice L2) const {
+    return Lattice(utils::join(L1.LiveOrigins, L2.LiveOrigins, SetFactory));
+  }
+
+  /// An assignment `p = q` kills the liveness of `p` and generates liveness
+  /// for `q`.
+  Lattice transfer(Lattice In, const AssignOriginFact &F) {
+    OriginSet S = SetFactory.remove(In.LiveOrigins, F.getDestOriginID());
+    S = SetFactory.add(S, F.getSrcOriginID());
+    return Lattice(S);
+  }
+
+  /// Issuing a new loan to an origin kills its liveness.
+  Lattice transfer(Lattice In, const IssueFact &F) {
+    return Lattice(SetFactory.remove(In.LiveOrigins, F.getOriginID()));
+  }
+
+  /// A return statement generates liveness for the returned origin.
+  Lattice transfer(Lattice In, const ReturnOfOriginFact &F) {
+    return Lattice(SetFactory.add(In.LiveOrigins, F.getReturnedOriginID()));
+  }
+};
+
+// ========================================================================= //
 //                         Expired Loans Analysis
 // ========================================================================= //
 
@@ -873,5 +947,9 @@ void runLifetimeSafetyAnalysis(const DeclContext &DC, const CFG &Cfg,
   ExpiredLoansAnalysis ExpiredLoans(Cfg, AC, FactMgr, Factory);
   ExpiredLoans.run();
   DEBUG_WITH_TYPE("LifetimeExpiredLoans", ExpiredLoans.dump());
+
+  LiveOriginAnalysis Liveness(Cfg, AC, FactMgr, Factory.OriginSetFactory);
+  Liveness.run();
+  DEBUG_WITH_TYPE("LifetimeLiveOrigins", Liveness.dump());
 }
 } // namespace clang
