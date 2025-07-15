@@ -5,8 +5,8 @@ let Definition = "target_experimental" in {
     Global, DefaultTrue,
     Desc<"If true, inject local variables explicitly into the expression text. This will fix symbol resolution when there are name collisions between ivars and local variables. But it can make expressions run much more slowly.">;
   def UseDIL : Property<"use-DIL", "Boolean">,
-    Global, DefaultFalse,
-    Desc<"If true, use the alternative DIL implementation for frame variable evaluation.">;
+    Global, DefaultTrue,
+    Desc<"If true, use the DIL implementation for frame variable evaluation.">;
 }
 
 let Definition = "target" in {
