@@ -9,10 +9,12 @@
 #include "DXILPostOptimizationValidation.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -153,6 +155,22 @@ initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
       continue;
 
     switch (Type) {
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+      dxbc::RTS0::v1::RootConstants Const =
+          RSD.ParametersContainer.getConstant(Loc);
+
+      llvm::dxil::ResourceInfo::ResourceBinding Binding;
+      Binding.LowerBound = Const.ShaderRegister;
+      Binding.Space = Const.RegisterSpace;
+      Binding.Size = 1;
+
+      // Root Constants Bind to CBuffers
+      Validation.addBinding(llvm::to_underlying(dxbc::DescriptorRangeType::CBV),
+                            Binding);
+
+      break;
+    }
+
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
     case llvm::to_underlying(dxbc::RootParameterType::CBV): {
