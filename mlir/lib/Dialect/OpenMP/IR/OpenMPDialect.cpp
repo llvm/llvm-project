@@ -33,6 +33,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include <cstddef>
@@ -3861,6 +3862,20 @@ LogicalResult ScanOp::verify() {
   return emitError("SCAN directive needs to be enclosed within a parent "
                    "worksharing loop construct or SIMD construct with INSCAN "
                    "reduction modifier");
+}
+
+/// Verifies align clause in allocate directive
+
+LogicalResult AllocateDirOp::verify() {
+  std::optional<u_int64_t> align = this->getAlign();
+
+  if (align.has_value()) {
+    if ((align.value() > 0) && !llvm::has_single_bit(align.value()))
+      return emitError() << "ALIGN value : " << align.value()
+                         << " must be power of 2";
+  }
+
+  return success();
 }
 
 #define GET_ATTRDEF_CLASSES
