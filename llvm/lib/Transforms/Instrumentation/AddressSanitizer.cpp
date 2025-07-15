@@ -3396,8 +3396,8 @@ void FunctionStackPoisoner::processDynamicAllocas() {
 static void findStoresToUninstrumentedArgAllocas(
     AddressSanitizer &ASan, Instruction &InsBefore,
     SmallVectorImpl<Instruction *> &InitInsts) {
-  Instruction *Start = InsBefore.getNextNonDebugInstruction();
-  for (Instruction *It = Start; It; It = It->getNextNonDebugInstruction()) {
+  Instruction *Start = InsBefore.getNextNode();
+  for (Instruction *It = Start; It; It = It->getNextNode()) {
     // Argument initialization looks like:
     // 1) store <Argument>, <Alloca> OR
     // 2) <CastArgument> = cast <Argument> to ...
