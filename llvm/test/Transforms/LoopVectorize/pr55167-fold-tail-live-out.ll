@@ -23,7 +23,8 @@ define i32 @test(i32 %a, i1 %c.1, i1 %c.2 ) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i32> [[VEC_PHI]], splat (i32 10)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[TMP0]], splat (i32 20)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <2 x i1> [[BROADCAST_SPLAT4]], <2 x i32> [[VEC_IND]], <2 x i32> splat (i32 9)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> splat (i32 9), <2 x i32> splat (i32 9)
+; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <2 x i1> [[BROADCAST_SPLAT4]], <2 x i32> [[VEC_IND]], <2 x i32> [[PREDPHI]]
 ; CHECK-NEXT:    [[PREDPHI6:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> [[TMP0]], <2 x i32> [[TMP3]]
 ; CHECK-NEXT:    [[PREDPHI7]] = select <2 x i1> [[BROADCAST_SPLAT4]], <2 x i32> [[VEC_PHI]], <2 x i32> [[PREDPHI6]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2

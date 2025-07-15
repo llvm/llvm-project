@@ -22,8 +22,8 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFNONE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i64 0
 ; TFNONE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call <2 x double> @exp_fixed(<2 x double> [[BROADCAST_SPLAT]])
-; TFNONE-NEXT:    [[TMP3:%.*]] = fcmp ule <2 x double> [[TMP2]], zeroinitializer
-; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP3]], <2 x double> splat (double 1.000000e+00), <2 x double> zeroinitializer
+; TFNONE-NEXT:    [[TMP3:%.*]] = fcmp ogt <2 x double> [[TMP2]], zeroinitializer
+; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP3]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
 ; TFNONE-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[PREDPHI]], i32 1
 ; TFNONE-NEXT:    store double [[TMP14]], ptr [[P:%.*]], align 8
 ; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

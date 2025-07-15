@@ -935,8 +935,8 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFNONE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[TMP7]], i64 0
 ; TFNONE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 ; TFNONE-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x double> @exp_masked_scalable(<vscale x 2 x double> [[BROADCAST_SPLAT]], <vscale x 2 x i1> splat (i1 true))
-; TFNONE-NEXT:    [[TMP9:%.*]] = fcmp ule <vscale x 2 x double> [[TMP8]], zeroinitializer
-; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x double> splat (double 1.000000e+00), <vscale x 2 x double> zeroinitializer
+; TFNONE-NEXT:    [[TMP9:%.*]] = fcmp ogt <vscale x 2 x double> [[TMP8]], zeroinitializer
+; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x double> zeroinitializer, <vscale x 2 x double> splat (double 1.000000e+00)
 ; TFNONE-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vscale.i32()
 ; TFNONE-NEXT:    [[TMP12:%.*]] = mul nuw i32 [[TMP11]], 2
 ; TFNONE-NEXT:    [[TMP13:%.*]] = sub i32 [[TMP12]], 1

@@ -924,19 +924,6 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                       Ctx.CostKind);
   }
-  case Instruction::Select: {
-    if (!getUnderlyingValue())
-      return 0;
-    // Handle cases where only the first lane is used the same way as the legacy
-    // cost model.
-    if (vputils::onlyFirstLaneUsed(this))
-      return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
-    Type *ResTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
-    Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);
-    return Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResTy, CmpTy,
-                                      CmpInst::BAD_ICMP_PREDICATE,
-                                      Ctx.CostKind);
-  }
   case VPInstruction::AnyOf: {
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticReductionCost(
@@ -2412,6 +2399,20 @@ void VPVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPBlendRecipe::execute(VPTransformState &State) {
   llvm_unreachable("VPBlendRecipe should be expanded by simplifyBlends");
+}
+
+InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  // Handle cases where only the first lane is used the same way as the legacy
+  // cost model.
+  if (vputils::onlyFirstLaneUsed(this))
+    return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+
+  Type *ResultTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
+  Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);
+  return (getNumIncomingValues() - 1) *
+         Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
+                                    CmpInst::BAD_ICMP_PREDICATE, Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
