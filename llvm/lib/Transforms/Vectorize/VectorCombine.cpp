@@ -2064,7 +2064,7 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   bool IsIdentity0 = ShuffleDstTy == Op0Ty &&
       all_of(NewMask0, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
       ShuffleVectorInst::isIdentityMask(NewMask0, NumOpElts);
-  bool IsIdentity1 =ShuffleDstTy == Op1Ty &&
+  bool IsIdentity1 = ShuffleDstTy == Op1Ty &&
       all_of(NewMask1, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
       ShuffleVectorInst::isIdentityMask(NewMask1, NumOpElts);
 
