@@ -1158,24 +1158,26 @@ GCNTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
 ScheduleDAGInstrs *
 GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  Attribute PostRADirectionAttr =
-      C->MF->getFunction().getFnAttribute("amdgpu-post-ra-direction");
+  if (PostRADirection.getNumOccurrences() == 0) {
+    Attribute PostRADirectionAttr =
+        C->MF->getFunction().getFnAttribute("amdgpu-post-ra-direction");
 
-  if (PostRADirectionAttr.isValid()) {
-    StringRef PostRADirectionStr = PostRADirectionAttr.getValueAsString();
-    if (PostRADirectionStr == "topdown")
-      PostRADirection = MISched::TopDown;
-    else if (PostRADirectionStr == "bottomup")
-      PostRADirection = MISched::BottomUp;
-    else if (PostRADirectionStr == "bidirectional")
-      PostRADirection = MISched::Bidirectional;
-    else {
-      PostRADirection = MISched::Unspecified;
-      DiagnosticInfoOptimizationFailure Diag(
-          C->MF->getFunction(), C->MF->getFunction().getSubprogram(),
-          Twine("invalid value for postRa direction attribute: '") +
-              PostRADirectionStr);
-      C->MF->getFunction().getContext().diagnose(Diag);
+    if (PostRADirectionAttr.isValid()) {
+      StringRef PostRADirectionStr = PostRADirectionAttr.getValueAsString();
+      if (PostRADirectionStr == "topdown")
+        PostRADirection = MISched::TopDown;
+      else if (PostRADirectionStr == "bottomup")
+        PostRADirection = MISched::BottomUp;
+      else if (PostRADirectionStr == "bidirectional")
+        PostRADirection = MISched::Bidirectional;
+      else {
+        PostRADirection = MISched::Unspecified;
+        DiagnosticInfoOptimizationFailure Diag(
+            C->MF->getFunction(), C->MF->getFunction().getSubprogram(),
+            Twine("invalid value for postRa direction attribute: '") +
+                PostRADirectionStr);
+        C->MF->getFunction().getContext().diagnose(Diag);
+      }
     }
   }
 
