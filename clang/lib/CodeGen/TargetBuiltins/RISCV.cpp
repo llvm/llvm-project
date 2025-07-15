@@ -413,6 +413,14 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_cv_alu_subuRN;
     break;
 
+  // XAndesBFHCvt
+  case RISCV::BI__builtin_riscv_nds_fcvt_s_bf16:
+    ID = Intrinsic::riscv_nds_fcvt_s_bf16;
+    break;
+  case RISCV::BI__builtin_riscv_nds_fcvt_bf16_s:
+    ID = Intrinsic::riscv_nds_fcvt_bf16_s;
+    break;
+
     // Vector builtins are handled from here.
 #include "clang/Basic/riscv_vector_builtin_cg.inc"
 

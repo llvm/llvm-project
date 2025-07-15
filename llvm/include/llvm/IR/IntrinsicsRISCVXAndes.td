@@ -11,6 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 let TargetPrefix = "riscv" in {
+  // Andes Scalar BFloat16 Conversion Extension
+  def int_riscv_nds_fcvt_s_bf16
+      : DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_bfloat_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+
+  def int_riscv_nds_fcvt_bf16_s
+      : DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_float_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+
   // Andes Vector BFloat16 Conversion Extension
   def int_riscv_nds_vfwcvt_s_bf16 : RISCVConversionUnMasked;
   def int_riscv_nds_vfncvt_bf16_s : RISCVConversionUnMaskedRoundingMode;
