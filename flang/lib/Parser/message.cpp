@@ -294,8 +294,6 @@ static std::string HintLanguageControlFlag(
 static constexpr int MAX_CONTEXTS_EMITTED{2};
 static constexpr bool OMIT_SHARED_CONTEXTS{true};
 
-// We think it is confusing to users to display warnings and other
-// diagnostics as errors. Don't use EffectiveSeverity() here.
 void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     bool echoSourceLine,
     const common::LanguageFeatureControl *hintFlagPtr) const {

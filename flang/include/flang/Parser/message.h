@@ -61,9 +61,8 @@ public:
     severity_ = severity;
     return *this;
   }
-
   bool IsFatal() const {
-    return severity() == Severity::Error || severity() == Severity::Todo;
+    return severity_ == Severity::Error || severity_ == Severity::Todo;
   }
 
 private:
@@ -114,13 +113,13 @@ public:
   MessageFormattedText &operator=(const MessageFormattedText &) = default;
   MessageFormattedText &operator=(MessageFormattedText &&) = default;
   const std::string &string() const { return string_; }
+  bool IsFatal() const {
+    return severity_ == Severity::Error || severity_ == Severity::Todo;
+  }
   Severity severity() const { return severity_; }
   MessageFormattedText &set_severity(Severity severity) {
     severity_ = severity;
     return *this;
-  }
-  bool IsFatal(bool warningsAreErrors = false) const {
-    return severity() == Severity::Error || severity() == Severity::Todo;
   }
   std::string MoveString() { return std::move(string_); }
   bool operator==(const MessageFormattedText &that) const {
