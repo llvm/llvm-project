@@ -154,7 +154,7 @@ void assertion_handler() {
 void function_calling_analyzer_noreturn(const bsl::optional<int>& opt)
 {
   if (!opt) {
-      assertion_handler();
+      assertion_handler(); // This will be deduced to have an implicit `analyzer_noreturn` attribute.
   }
 
   *opt; // no-warning
