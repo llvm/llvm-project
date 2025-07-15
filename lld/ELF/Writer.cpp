@@ -629,9 +629,9 @@ static bool isRelroSection(Ctx &ctx, const OutputSection *sec) {
   // magic section names.
   StringRef s = sec->name;
 
-  bool abiAgnostic = s == ".data.rel.ro" || s == ".bss.rel.ro" ||
-                     s == ".ctors" || s == ".dtors" || s == ".jcr" ||
-                     s == ".eh_frame" || s == ".fini_array" ||
+  bool abiAgnostic = s == ".data.rel.ro" || s == ".data.rel.ro.unlikely" ||
+                     s == ".bss.rel.ro" || s == ".ctors" || s == ".dtors" ||
+                     s == ".jcr" || s == ".eh_frame" || s == ".fini_array" ||
                      s == ".init_array" || s == ".preinit_array";
 
   bool abiSpecific =
