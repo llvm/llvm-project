@@ -902,11 +902,10 @@ public:
   /// block as 'this', or nullptr if no such instruction exists. Skip any pseudo
   /// operations if \c SkipPseudoOp is true.
   LLVM_ABI const Instruction *
-  getPrevNonDebugInstruction(bool SkipPseudoOp = false) const;
-  Instruction *getPrevNonDebugInstruction(bool SkipPseudoOp = false) {
+  getPrevNonPseudoOpInstruction() const;
+  Instruction *getPrevNonPseudoOpInstruction() {
     return const_cast<Instruction *>(
-        static_cast<const Instruction *>(this)->getPrevNonDebugInstruction(
-            SkipPseudoOp));
+       static_cast<const Instruction *>(this)->getPrevNonPseudoOpInstruction());
   }
 
   /// Create a copy of 'this' instruction that is identical in all ways except

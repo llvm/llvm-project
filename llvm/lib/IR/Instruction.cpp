@@ -1236,9 +1236,9 @@ bool Instruction::isDebugOrPseudoInst() const {
 }
 
 const Instruction *
-Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
+Instruction::getPrevNonPseudoOpInstruction() const {
   for (const Instruction *I = getPrevNode(); I; I = I->getPrevNode())
-    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
+    if (!isa<PseudoProbeInst>(I))
       return I;
   return nullptr;
 }
