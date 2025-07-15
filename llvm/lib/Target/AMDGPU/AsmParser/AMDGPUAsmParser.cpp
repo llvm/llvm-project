@@ -3995,8 +3995,8 @@ bool AMDGPUAsmParser::validateVOPD(const MCInst &Inst,
   bool AsVOPD3 = MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3;
 
   if (AsVOPD3) {
-    for (unsigned I = 0, E = Operands.size(); I != E; ++I) {
-      AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
+    for (const std::unique_ptr<MCParsedAsmOperand> &Operand : Operands) {
+      AMDGPUOperand &Op = (AMDGPUOperand &)*Operand;
       if ((Op.isRegKind() || Op.isImmTy(AMDGPUOperand::ImmTyNone)) &&
           (Op.getModifiers().getFPModifiersOperand() & SISrcMods::ABS))
         Error(Op.getStartLoc(), "ABS not allowed in VOPD3 instructions");
