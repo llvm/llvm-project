@@ -5572,7 +5572,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     return false;
 
   case ISD::ABS:
-    // ISD::ABD defines abs(INT_MIN) -> INT_MIN and never generates poison.
+    // ISD::ABS defines abs(INT_MIN) -> INT_MIN and never generates poison.
     // Different to Intrinsic::abs.
     return false;
 
