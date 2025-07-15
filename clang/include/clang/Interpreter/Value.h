@@ -43,8 +43,6 @@
 // HEADERS, like <string>, <memory> and etc. (That pulls a large number of
 // tokens and will impact the runtime performance of the REPL)
 
-extern "C" void *memcpy(void *dest, const void *src, size_t n);
-
 namespace llvm {
 class raw_ostream;
 
@@ -142,10 +140,7 @@ public:
 
   void *getPtr() const;
   void setPtr(void *Ptr) { Data.m_Ptr = Ptr; }
-  void setRawBits(void *Ptr, unsigned NBits = sizeof(Storage)) {
-    assert(NBits <= sizeof(Storage) && "Greater than the total size");
-    memcpy(/*dest=*/Data.m_RawBits, /*src=*/Ptr, /*nbytes=*/NBits / 8);
-  }
+  void setRawBits(void *Ptr, unsigned NBits = sizeof(Storage));
 
 #define X(type, name)                                                          \
   void set##name(type Val) { Data.m_##name = Val; }                            \
