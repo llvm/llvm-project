@@ -44,6 +44,10 @@
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/ModA.h
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/SubModA.h
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/SubSubModA.h
+// CHECK-NEXT:     link libraries:
+// CHECK-NEXT:         libModA(framework)
+// CHECK-NEXT:         libModB
+// CHECK-NEXT:         /absolute/path/to/a/lib/file
 // CHECK-NEXT:     build-args:
 // CHECK-SAME:       -cc1
 // CHECK-SAME:       -fcas-path
@@ -85,6 +89,10 @@
 // INCLUDE_TREE-NEXT:       [[PREFIX]]/Inputs/module/ModA.h
 // INCLUDE_TREE-NEXT:       [[PREFIX]]/Inputs/module/SubModA.h
 // INCLUDE_TREE-NEXT:       [[PREFIX]]/Inputs/module/SubSubModA.h
+// INCLUDE_TREE-NEXT:     link libraries:
+// INCLUDE_TREE-NEXT:         libModA(framework)
+// INCLUDE_TREE-NEXT:         libModB
+// INCLUDE_TREE-NEXT:         /absolute/path/to/a/lib/file
 // INCLUDE_TREE-NEXT:     build-args:
 // INCLUDE_TREE-SAME:       -cc1
 // INCLUDE_TREE-SAME:       -fcas-path

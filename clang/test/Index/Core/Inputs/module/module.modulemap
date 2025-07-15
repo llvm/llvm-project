@@ -8,4 +8,8 @@ module ModA {
       header "SubSubModA.h"
     }
   }
+
+  link framework "libModA"
+  link "libModB"
+  link "/absolute/path/to/a/lib/file"
 }

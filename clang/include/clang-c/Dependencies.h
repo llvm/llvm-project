@@ -738,6 +738,56 @@ clang_experimental_DependencyScanner_generateReproducer(
     CXDependencyScannerReproducerOptions CXOptions, CXString *MessageOut);
 
 /**
+ * An opaque object that contains a \c CXDepGraphModule 's list of link
+ * libraries.
+ */
+typedef struct CXOpaqueDepGraphModuleLinkLibrarySet
+    *CXDepGraphModuleLinkLibrarySet;
+
+/**
+ * An opaque object that contains information about a link library.
+ */
+typedef struct CXOpaqueDepGraphModuleLinkLibrary *CXDepGraphModuleLinkLibrary;
+
+/**
+ * Get the set of link libraries given a \c CXDepGraphModule instance.
+ * The returned set is a pointer into memory that the \c CXDepGraphModule
+ * instance owns. Therefore the set does not need to be disposed.
+ */
+CINDEX_LINKAGE CXDepGraphModuleLinkLibrarySet
+    clang_experimental_DepGraphModule_getLinkLibrarySet(CXDepGraphModule);
+
+/**
+ * Get the size of \c CXDepGraphModuleLinkLibrarySet .
+ */
+CINDEX_LINKAGE size_t clang_experimental_DepGraphModuleLinkLibrarySet_getSize(
+    CXDepGraphModuleLinkLibrarySet);
+
+/**
+ * Retrieve the \c CXDepGraphModuleLinkLibrary instance at index \p Idx from the
+ * \c CXDepGraphModuleLinkLibrarySet instance.
+ */
+CINDEX_LINKAGE CXDepGraphModuleLinkLibrary
+clang_experimental_DepGraphModuleLinkLibrarySet_getLinkLibrary(
+    CXDepGraphModuleLinkLibrarySet, size_t Idx);
+
+/**
+ * Get the `Library` string from the \c CXDepGraphModuleLinkLibrary instance.
+ * `Library` could be a library name, or an absolute path to a library or a
+ * framework, as specified in the corresponding \c CXDepGraphModule instance's
+ * modulemap.
+ */
+CINDEX_LINKAGE CXString clang_experimental_DepGraphModuleLinkLibrary_getLibrary(
+    CXDepGraphModuleLinkLibrary);
+
+/**
+ * Returns true if the \c CXDepGraphModuleLinkLibrary is a framework, false
+ * otherwise.
+ */
+CINDEX_LINKAGE bool clang_experimental_DepGraphModuleLinkLibrary_isFramework(
+    CXDepGraphModuleLinkLibrary);
+
+/**
  * @}
  */
 

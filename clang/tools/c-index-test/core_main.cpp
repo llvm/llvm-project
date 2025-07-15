@@ -870,6 +870,25 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
         // (mostly) platform-agnostic.
         if (!StringRef(FileName).ends_with("SDKSettings.json"))
           llvm::outs() << "      " << FileName << "\n";
+      CXDepGraphModuleLinkLibrarySet LinkLibs =
+          clang_experimental_DepGraphModule_getLinkLibrarySet(Mod);
+      size_t NumLinkLibs =
+          clang_experimental_DepGraphModuleLinkLibrarySet_getSize(LinkLibs);
+      if (NumLinkLibs) {
+        llvm::outs() << "    link libraries:\n";
+        for (size_t Idx = 0; Idx < NumLinkLibs; Idx++) {
+          CXDepGraphModuleLinkLibrary Lib =
+              clang_experimental_DepGraphModuleLinkLibrarySet_getLinkLibrary(
+                  LinkLibs, Idx);
+          CXString Library =
+              clang_experimental_DepGraphModuleLinkLibrary_getLibrary(Lib);
+          bool IsFramework =
+              clang_experimental_DepGraphModuleLinkLibrary_isFramework(Lib);
+          const char *IsFrameworkStr = IsFramework ? "(framework)" : "";
+          llvm::outs() << "        " << clang_getCString(Library)
+                       << IsFrameworkStr << "\n";
+        }
+      }
       llvm::outs() << "    build-args:";
       for (const auto &Arg :
            ArrayRef(BuildArguments.Strings, BuildArguments.Count))

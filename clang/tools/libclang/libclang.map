@@ -597,6 +597,11 @@ LLVM_21 {
     clang_experimental_DepScanFSCacheOutOfDateEntry_getCachedSize;
     clang_experimental_DepScanFSCacheOutOfDateEntry_getActualSize;
     clang_experimental_DepScanFSCacheOutOfDateEntrySet_disposeSet;
+    clang_experimental_DepGraphModule_getLinkLibrarySet;
+    clang_experimental_DepGraphModuleLinkLibrarySet_getSize;
+    clang_experimental_DepGraphModuleLinkLibrarySet_getLinkLibrary;
+    clang_experimental_DepGraphModuleLinkLibrary_getLibrary;
+    clang_experimental_DepGraphModuleLinkLibrary_isFramework;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

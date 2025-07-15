@@ -882,3 +882,45 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
             "located at:\n  "
          << FileCachePath << "\n  " << ReproScriptPath;
 }
+
+namespace {
+typedef llvm::SmallVectorImpl<clang::Module::LinkLibrary>
+    DepGraphModuleLinkLibrarySet;
+typedef clang::Module::LinkLibrary DepGraphModuleLinkLibrary;
+} // namespace
+
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DepGraphModuleLinkLibrarySet,
+                                   CXDepGraphModuleLinkLibrarySet)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DepGraphModuleLinkLibrary,
+                                   CXDepGraphModuleLinkLibrary)
+
+CXDepGraphModuleLinkLibrarySet
+clang_experimental_DepGraphModule_getLinkLibrarySet(CXDepGraphModule CXDepMod) {
+  const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  return wrap(&ModDeps.LinkLibraries);
+}
+
+size_t clang_experimental_DepGraphModuleLinkLibrarySet_getSize(
+    CXDepGraphModuleLinkLibrarySet S) {
+  const DepGraphModuleLinkLibrarySet *LinkLibraries = unwrap(S);
+  return LinkLibraries->size();
+}
+
+CXDepGraphModuleLinkLibrary
+clang_experimental_DepGraphModuleLinkLibrarySet_getLinkLibrary(
+    CXDepGraphModuleLinkLibrarySet S, size_t Idx) {
+  const DepGraphModuleLinkLibrarySet *LinkLibraries = unwrap(S);
+  return wrap(&(*LinkLibraries)[Idx]);
+}
+
+CXString clang_experimental_DepGraphModuleLinkLibrary_getLibrary(
+    CXDepGraphModuleLinkLibrary L) {
+  const DepGraphModuleLinkLibrary *Lib = unwrap(L);
+  return cxstring::createRef(Lib->Library.c_str());
+}
+
+bool clang_experimental_DepGraphModuleLinkLibrary_isFramework(
+    CXDepGraphModuleLinkLibrary L) {
+  const DepGraphModuleLinkLibrary *Lib = unwrap(L);
+  return Lib->IsFramework;
+}

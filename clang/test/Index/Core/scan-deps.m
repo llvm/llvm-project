@@ -29,6 +29,10 @@
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/ModA.h
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/SubModA.h
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/SubSubModA.h
+// CHECK-NEXT:     link libraries:
+// CHECK-NEXT:         libModA(framework)
+// CHECK-NEXT:         libModB
+// CHECK-NEXT:         /absolute/path/to/a/lib/file
 // CHECK-NEXT:     build-args: {{.*}} -emit-module {{.*}} -fmodule-name=ModA {{.*}} -fno-implicit-modules {{.*}}
 
 // CHECK-NEXT: dependencies:
