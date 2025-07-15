@@ -784,7 +784,6 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
           Fortran::semantics::UltimateComponentIterator components{*derived};
           auto recTy = mlir::dyn_cast<fir::RecordType>(ty);
 
-          mlir::Type fieldTy;
           llvm::SmallVector<mlir::Value> coordinates;
           for (const auto &sym : components) {
             if (Fortran::semantics::IsDeviceAllocatable(sym)) {
