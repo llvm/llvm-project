@@ -641,15 +641,17 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
 using namespace clang;
 
 // Temporary rvalue struct that need special care.
-extern "C" void *REPL_EXTERNAL_VISIBILITY __clang_Interpreter_SetValueWithAlloc(
-    void *This, void *OutVal, void *OpaqueType) {
+REPL_EXTERNAL_VISIBILITY extern "C" void *
+__clang_Interpreter_SetValueWithAlloc(void *This, void *OutVal,
+                                      void *OpaqueType) {
   Value &VRef = *(Value *)OutVal;
   VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
   return VRef.getPtr();
 }
 
-extern "C" void REPL_EXTERNAL_VISIBILITY __clang_Interpreter_SetValueNoAlloc(
-    void *This, void *OutVal, void *OpaqueType, ...) {
+REPL_EXTERNAL_VISIBILITY extern "C" void
+__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
+                                    ...) {
   Value &VRef = *(Value *)OutVal;
   Interpreter *I = static_cast<Interpreter *>(This);
   VRef = Value(I, OpaqueType);
