@@ -108,6 +108,15 @@ MDNode *MDBuilder::createRange(Constant *Lo, Constant *Hi) {
   // Return the range [Lo, Hi).
   return MDNode::get(Context, {createConstant(Lo), createConstant(Hi)});
 }
+LLVM_ABI MDNode *MDBuilder::createAlignOffset(Align Al, APInt Off) {
+  if (Al.value() == 1)
+    return nullptr;
+  Type *Int64 = Type::getInt64Ty(Context);
+  return MDNode::get(Context,
+                     {createConstant(ConstantInt::get(Int64, Al.value())),
+                      createConstant(ConstantInt::get(
+                          Type::getIntNTy(Context, Off.getBitWidth()), Off))});
+}
 
 MDNode *MDBuilder::createCallees(ArrayRef<Function *> Callees) {
   SmallVector<Metadata *, 4> Ops;

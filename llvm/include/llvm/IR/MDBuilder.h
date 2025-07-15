@@ -113,6 +113,8 @@ public:
   /// Return metadata describing the range [Lo, Hi).
   LLVM_ABI MDNode *createRange(Constant *Lo, Constant *Hi);
 
+  LLVM_ABI MDNode *createAlignOffset(Align Al, APInt Off);
+
   //===------------------------------------------------------------------===//
   // Callees metadata.
   //===------------------------------------------------------------------===//

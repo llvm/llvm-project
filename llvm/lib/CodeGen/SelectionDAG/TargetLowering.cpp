@@ -10372,17 +10372,22 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
   assert(LoadedVT.isInteger() && !LoadedVT.isVector() &&
          "Unaligned load of unsupported type.");
 
-  // Compute the new VT that is half the size of the old one.  This is an
-  // integer MVT.
+  // Compute the new VTs that are aligned/half and remainder size of the old
+  // one. This is an integer MVT.
   unsigned NumBits = LoadedVT.getSizeInBits();
-  EVT NewLoadedVT;
-  NewLoadedVT = EVT::getIntegerVT(*DAG.getContext(), NumBits/2);
-  NumBits >>= 1;
+  assert(NumBits / 8 % 2 == 0 && "NumBits is not a multiple of 2bytes!");
+  Align BaseAlignment = LD->getBaseAlign();
+  Align Alignment = LD->getAlign();
+  unsigned NumBitsAlignedOrHalf =
+      LD->getPointerInfo().AlignOffset ? Alignment.value() * 8 : NumBits / 2;
+  unsigned NumBitsRemainder = NumBits - NumBitsAlignedOrHalf;
+  EVT AlignedLoadedVT, RemainderLoadedVT;
+  AlignedLoadedVT = EVT::getIntegerVT(*DAG.getContext(), NumBitsAlignedOrHalf);
+  RemainderLoadedVT = EVT::getIntegerVT(*DAG.getContext(), NumBitsRemainder);
 
-  Align Alignment = LD->getBaseAlign();
-  unsigned IncrementSize = NumBits / 8;
+  unsigned IncrementSize = NumBitsAlignedOrHalf / 8;
+
   ISD::LoadExtType HiExtType = LD->getExtensionType();
-
   // If the original load is NON_EXTLOAD, the hi part load must be ZEXTLOAD.
   if (HiExtType == ISD::NON_EXTLOAD)
     HiExtType = ISD::ZEXTLOAD;
@@ -10391,28 +10396,31 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
   SDValue Lo, Hi;
   if (DAG.getDataLayout().isLittleEndian()) {
     Lo = DAG.getExtLoad(ISD::ZEXTLOAD, dl, VT, Chain, Ptr, LD->getPointerInfo(),
-                        NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
-                        LD->getAAInfo());
+                        AlignedLoadedVT, BaseAlignment,
+                        LD->getMemOperand()->getFlags(), LD->getAAInfo());
 
     Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
     Hi = DAG.getExtLoad(HiExtType, dl, VT, Chain, Ptr,
                         LD->getPointerInfo().getWithOffset(IncrementSize),
-                        NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
-                        LD->getAAInfo());
+                        RemainderLoadedVT, BaseAlignment,
+                        LD->getMemOperand()->getFlags(), LD->getAAInfo());
   } else {
     Hi = DAG.getExtLoad(HiExtType, dl, VT, Chain, Ptr, LD->getPointerInfo(),
-                        NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
-                        LD->getAAInfo());
+                        AlignedLoadedVT, BaseAlignment,
+                        LD->getMemOperand()->getFlags(), LD->getAAInfo());
 
     Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
     Lo = DAG.getExtLoad(ISD::ZEXTLOAD, dl, VT, Chain, Ptr,
                         LD->getPointerInfo().getWithOffset(IncrementSize),
-                        NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
-                        LD->getAAInfo());
+                        RemainderLoadedVT, BaseAlignment,
+                        LD->getMemOperand()->getFlags(), LD->getAAInfo());
   }
 
   // aggregate the two parts
-  SDValue ShiftAmount = DAG.getShiftAmountConstant(NumBits, VT, dl);
+  SDValue ShiftAmount = DAG.getShiftAmountConstant(
+      DAG.getDataLayout().isLittleEndian() ? NumBitsAlignedOrHalf
+                                           : NumBitsRemainder,
+      VT, dl);
   SDValue Result = DAG.getNode(ISD::SHL, dl, VT, Hi, ShiftAmount);
   Result = DAG.getNode(ISD::OR, dl, VT, Result, Lo);
 
@@ -10430,7 +10438,7 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
   SDValue Ptr = ST->getBasePtr();
   SDValue Val = ST->getValue();
   EVT VT = Val.getValueType();
-  Align Alignment = ST->getBaseAlign();
+  Align BaseAlignment = ST->getBaseAlign();
   auto &MF = DAG.getMachineFunction();
   EVT StoreMemVT = ST->getMemoryVT();
 
@@ -10449,7 +10457,7 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
       // FIXME: Does not handle truncating floating point stores!
       SDValue Result = DAG.getNode(ISD::BITCAST, dl, intVT, Val);
       Result = DAG.getStore(Chain, dl, Result, Ptr, ST->getPointerInfo(),
-                            Alignment, ST->getMemOperand()->getFlags());
+                            BaseAlignment, ST->getMemOperand()->getFlags());
       return Result;
     }
     // Do a (aligned) store to a stack slot, then copy from the stack slot
@@ -10517,37 +10525,51 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
 
   assert(StoreMemVT.isInteger() && !StoreMemVT.isVector() &&
          "Unaligned store of unknown type.");
-  // Get the half-size VT
-  EVT NewStoredVT = StoreMemVT.getHalfSizedIntegerVT(*DAG.getContext());
-  unsigned NumBits = NewStoredVT.getFixedSizeInBits();
-  unsigned IncrementSize = NumBits / 8;
 
-  // Divide the stored value in two parts.
-  SDValue ShiftAmount =
-      DAG.getShiftAmountConstant(NumBits, Val.getValueType(), dl);
-  SDValue Lo = Val;
+  Align Alignment = ST->getAlign();
+  bool IsLE = DAG.getDataLayout().isLittleEndian();
+
+  // Divide the stored value in two parts: aligned/half and remainder
+  unsigned NumBits = StoreMemVT.getFixedSizeInBits();
+  assert(NumBits / 8 % 2 == 0 && "NumBits is not a multiple of 2bytes!");
+  unsigned NumBitsAlignedOrHalf =
+      ST->getPointerInfo().AlignOffset ? Alignment.value() * 8 : NumBits / 2;
+  unsigned NumBitsRemainder = NumBits - NumBitsAlignedOrHalf;
+  EVT StoredVTAligned =
+      EVT::getIntegerVT(*DAG.getContext(), NumBitsAlignedOrHalf);
+  EVT StoredVTRemainder =
+      EVT::getIntegerVT(*DAG.getContext(), NumBitsRemainder);
+
+  unsigned IncrementSize = NumBitsAlignedOrHalf / 8;
+  SDValue ShiftAmount = DAG.getShiftAmountConstant(
+      IsLE ? NumBitsAlignedOrHalf : NumBitsRemainder, Val.getValueType(), dl);
+  SDValue AlignedVal, RemainderVal;
+  AlignedVal = RemainderVal = Val;
   // If Val is a constant, replace the upper bits with 0. The SRL will constant
   // fold and not use the upper bits. A smaller constant may be easier to
   // materialize.
-  if (auto *C = dyn_cast<ConstantSDNode>(Lo); C && !C->isOpaque())
-    Lo = DAG.getNode(
-        ISD::AND, dl, VT, Lo,
-        DAG.getConstant(APInt::getLowBitsSet(VT.getSizeInBits(), NumBits), dl,
-                        VT));
-  SDValue Hi = DAG.getNode(ISD::SRL, dl, VT, Val, ShiftAmount);
-
+  SDValue TempVal = Val;
+  if (auto *C = dyn_cast<ConstantSDNode>(Val); C && !C->isOpaque())
+    TempVal = DAG.getNode(
+        ISD::AND, dl, VT, Val,
+        DAG.getConstant(
+            APInt::getLowBitsSet(VT.getSizeInBits(), IsLE ? NumBitsAlignedOrHalf
+                                                          : NumBitsRemainder),
+            dl, VT));
+  AlignedVal = IsLE ? TempVal : DAG.getNode(ISD::SRL, dl, VT, Val, ShiftAmount);
+  RemainderVal =
+      IsLE ? DAG.getNode(ISD::SRL, dl, VT, Val, ShiftAmount) : TempVal;
   // Store the two parts
   SDValue Store1, Store2;
-  Store1 = DAG.getTruncStore(Chain, dl,
-                             DAG.getDataLayout().isLittleEndian() ? Lo : Hi,
-                             Ptr, ST->getPointerInfo(), NewStoredVT, Alignment,
+  Store1 = DAG.getTruncStore(Chain, dl, AlignedVal, Ptr, ST->getPointerInfo(),
+                             StoredVTAligned, BaseAlignment,
                              ST->getMemOperand()->getFlags());
 
   Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
-  Store2 = DAG.getTruncStore(
-      Chain, dl, DAG.getDataLayout().isLittleEndian() ? Hi : Lo, Ptr,
-      ST->getPointerInfo().getWithOffset(IncrementSize), NewStoredVT, Alignment,
-      ST->getMemOperand()->getFlags(), ST->getAAInfo());
+  Store2 = DAG.getTruncStore(Chain, dl, RemainderVal, Ptr,
+                             ST->getPointerInfo().getWithOffset(IncrementSize),
+                             StoredVTRemainder, BaseAlignment,
+                             ST->getMemOperand()->getFlags(), ST->getAAInfo());
 
   SDValue Result =
       DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2);
