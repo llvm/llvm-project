@@ -1347,3 +1347,13 @@ int main() {
     // expected-note@#S3-f-cand2 {{candidate function not viable: no known conversion from 'S3' to 'int' for object argument}}
 }
 }
+
+namespace GH113185 {
+
+void Bar(this int) { // expected-note {{candidate function}}
+    // expected-error@-1 {{an explicit object parameter cannot appear in a non-member function}}
+    Bar(0);
+    Bar(); // expected-error {{no matching function for call to 'Bar'}}
+}
+
+}
