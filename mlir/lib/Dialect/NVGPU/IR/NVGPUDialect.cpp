@@ -19,6 +19,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -453,6 +454,10 @@ LogicalResult TmaAsyncStoreOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// NVGPU_TmaCreateDescriptorOp
+//===----------------------------------------------------------------------===//
+
 LogicalResult TmaCreateDescriptorOp::verify() {
   if (getBoxDimensions().size() > kMaxTMATensorDimension) {
     return emitError() << "Maximum " << kMaxTMATensorDimension
@@ -465,6 +470,48 @@ LogicalResult TmaCreateDescriptorOp::verify() {
     return error.value();
 
   return success();
+}
+
+static Value
+TmaCreateDescriptorFoldBoxConstant(TmaCreateDescriptorOp op,
+                                   TmaCreateDescriptorOp::FoldAdaptor adaptor) {
+  std::vector<int64_t> staticBoxDimensions = op.getStaticBoxDimensions().vec();
+  OperandRange dynamicBoxDimensions = op.getBoxDimensions();
+  SmallVector<Value> operands = {op.getTensor()};
+  ArrayRef<Attribute> dynamicBoxDimensionAttrs = adaptor.getBoxDimensions();
+  if (staticBoxDimensions.empty())
+    return {};
+
+  // `opChange` is a flag. If it is true, it means to update `op` in place.
+  bool opChange = false;
+  unsigned idx = 0;
+
+  for (unsigned i = 0, e = staticBoxDimensions.size(); i < e; ++i) {
+    if (!ShapedType::isDynamic(staticBoxDimensions[i]))
+      continue;
+    Attribute dynamicBoxDimensionAttr = dynamicBoxDimensionAttrs[idx];
+    Value dynamicDimension = dynamicBoxDimensions[idx++];
+    if (auto attr =
+            mlir::dyn_cast_if_present<IntegerAttr>(dynamicBoxDimensionAttr)) {
+      staticBoxDimensions[i] = attr.getInt();
+      opChange = true;
+      continue;
+    }
+    operands.push_back(dynamicDimension);
+  }
+
+  if (opChange) {
+    op.setStaticBoxDimensions(staticBoxDimensions);
+    op.getOperation()->setOperands(operands);
+    return op.getResult();
+  }
+  return {};
+}
+
+OpFoldResult TmaCreateDescriptorOp::fold(FoldAdaptor adaptor) {
+  if (auto val = TmaCreateDescriptorFoldBoxConstant(*this, adaptor))
+    return val;
+  return OpFoldResult();
 }
 
 //===----------------------------------------------------------------------===//

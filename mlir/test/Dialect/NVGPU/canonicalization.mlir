@@ -28,3 +28,18 @@ gpu.module @main_kernel {
     gpu.return
   }
 }
+
+// -----
+
+!descriptor = !nvgpu.tensormap.descriptor<tensor = memref<64x16xf16, 3>, swizzle = none, l2promo=none, oob=zero, interleave=none>
+
+func.func @main() {
+  %a_host = memref.alloc() : memref<64x16xf16>
+  %c16 = arith.constant 16 : index
+  %c64 = arith.constant 64 : index
+  %a_device = gpu.alloc() : memref<64x16xf16>
+  %a_device_unranked = memref.cast %a_device : memref<64x16xf16> to memref<*xf16>
+  // CHECK: nvgpu.tma.create.descriptor %{{.*}} box [64, 16]
+  %a_device_map = nvgpu.tma.create.descriptor %a_device_unranked box[%c64, %c16] : memref<*xf16> -> !descriptor
+  return
+}

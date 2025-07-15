@@ -965,6 +965,7 @@ HopperBuilder::buildGlobalMemRefDescriptor(TypedValue<MemRefType> memref,
   SmallVector<Value> sizes =
       getValueOrCreateConstantIndexOp(rewriter, loc, mixedSizes);
 
+  SmallVector<int64_t> static_dims(sizes.size(), ShapedType::kDynamic);
   auto sharedMemorySpace = getSharedAddressSpaceAttribute(rewriter);
   Value desc = rewriter.create<nvgpu::TmaCreateDescriptorOp>(
       loc,
@@ -975,7 +976,7 @@ HopperBuilder::buildGlobalMemRefDescriptor(TypedValue<MemRefType> memref,
           TensorMapSwizzleKind::SWIZZLE_NONE,
           TensorMapL2PromoKind::L2PROMO_NONE, TensorMapOOBKind::OOB_ZERO,
           TensorMapInterleaveKind::INTERLEAVE_NONE),
-      unrankedMemRef, sizes);
+      unrankedMemRef, sizes, static_dims);
   return cast<TypedValue<nvgpu::TensorMapDescriptorType>>(desc);
 }
 

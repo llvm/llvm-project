@@ -546,12 +546,14 @@ def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
   }];
 
   let arguments = (ins AnyUnrankedMemRef:$tensor,
-                       Variadic<Index>:$boxDimensions);
+                       Variadic<Index>:$boxDimensions,
+                       DenseI64ArrayAttr:$static_boxDimensions);
   let results = (outs NVGPU_TensorMapDescriptor:$tensorMap);
   let assemblyFormat = [{
-         $tensor `box` `[` $boxDimensions `]` attr-dict `:` type($tensor) `->` type($tensorMap)
+    $tensor `box` custom<DynamicIndexList>($boxDimensions, $static_boxDimensions) attr-dict `:` type($tensor) `->` type($tensorMap)
   }];
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def NVGPU_WarpgroupGenerateDescriptorOp : NVGPU_Op<"warpgroup.generate.descriptor", []> {
