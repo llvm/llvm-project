@@ -845,10 +845,11 @@ let Predicates = [HasVendorXqcibi, IsRV32] in {
 let Predicates = [HasVendorXqcibm, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_INSBRI : QCIRVInstRI<0b1, simm11, "qc.insbri">;
-  def QC_INSBI : RVInstIBase<0b001, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
-                             (ins simm5:$imm5, uimm5_plus1:$width,
+  def QC_INSBI : RVInstIBase<0b001, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
+                             (ins GPRNoX0:$rd, simm5:$imm5, uimm5_plus1:$width,
                              uimm5:$shamt), "qc.insbi",
                              "$rd, $imm5, $width, $shamt"> {
+    let Constraints = "$rd = $rd_wb";
     bits<5> imm5;
     bits<5> shamt;
     bits<5> width;
