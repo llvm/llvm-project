@@ -279,7 +279,10 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
         {VecTupTy, PtrTy, Mask->getType(), VL->getType()});
 
     Value *Operands[] = {
-        PoisonValue::get(VecTupTy), LI->getPointerOperand(), Mask, VL,
+        PoisonValue::get(VecTupTy),
+        LI->getPointerOperand(),
+        Mask,
+        VL,
         ConstantInt::get(XLenTy,
                          RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC),
         ConstantInt::get(XLenTy, Log2_64(SEW))};
@@ -357,14 +360,13 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
           {StoredVal, InterleaveValues[i], Builder.getInt32(i)});
 
     Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
-      SI->getModule(), ScalableVssegIntrIds[Factor - 2],
-      {VecTupTy, PtrTy, Mask->getType(), VL->getType()});
+        SI->getModule(), ScalableVssegIntrIds[Factor - 2],
+        {VecTupTy, PtrTy, Mask->getType(), VL->getType()});
 
     Value *Operands[] = {StoredVal, SI->getPointerOperand(), Mask, VL,
-      ConstantInt::get(XLenTy, Log2_64(SEW))};
+                         ConstantInt::get(XLenTy, Log2_64(SEW))};
 
     Builder.CreateCall(VssegNFunc, Operands);
-
   }
 
   return true;
