@@ -129,6 +129,22 @@ public:
   cir::BoolAttr getTrueAttr() { return getCIRBoolAttr(true); }
   cir::BoolAttr getFalseAttr() { return getCIRBoolAttr(false); }
 
+  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
+                                  mlir::Value imag) {
+    auto resultComplexTy = cir::ComplexType::get(real.getType());
+    return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
+  }
+
+  mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
+    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
+    return create<cir::ComplexRealOp>(loc, operandTy.getElementType(), operand);
+  }
+
+  mlir::Value createComplexImag(mlir::Location loc, mlir::Value operand) {
+    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
+    return create<cir::ComplexImagOp>(loc, operandTy.getElementType(), operand);
+  }
+
   mlir::Value createNot(mlir::Value value) {
     return create<cir::UnaryOp>(value.getLoc(), value.getType(),
                                 cir::UnaryOpKind::Not, value);
@@ -167,6 +183,11 @@ public:
   /// Create a continue operation.
   cir::ContinueOp createContinue(mlir::Location loc) {
     return create<cir::ContinueOp>(loc);
+  }
+
+  mlir::Value createUnaryOp(mlir::Location loc, cir::UnaryOpKind kind,
+                            mlir::Value operand) {
+    return create<cir::UnaryOp>(loc, kind, operand);
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
