@@ -146,13 +146,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
                                           /*IncludeCalls=*/false);
 
   // A tail call isn't considered a call for MachineFrameInfo's purposes.
-  bool HasCalls = FrameInfo.hasCalls() || FrameInfo.hasTailCall();
-  // Functions that use the llvm.amdgcn.init.whole.wave intrinsic often have
-  // VGPR arguments that are only added for the purpose of preserving the
-  // inactive lanes. These should not be included in the number of used VGPRs.
-  bool NeedsExplicitVGPRCount = MFI->hasInitWholeWave();
-  if (!HasCalls && !NeedsExplicitVGPRCount) {
-
+  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
     Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass,
                                           /*IncludeCalls=*/false);
     return Info;
@@ -163,34 +157,24 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
-      if (NeedsExplicitVGPRCount) {
-        for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
-          const MachineOperand &MO = MI.getOperand(I);
+      for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
+        const MachineOperand &MO = MI.getOperand(I);
 
-          if (!MO.isReg())
-            continue;
-          Register Reg = MO.getReg();
-          const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(Reg);
+        if (!MO.isReg())
+          continue;
+        Register Reg = MO.getReg();
+        const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(Reg);
 
-          if (!RC || !TRI.isVGPRClass(RC))
-            continue;
+        if (!RC || !TRI.isVGPRClass(RC))
+          continue;
 
-          // Skip inactive VGPRs in chain functions with the init.whole.wave
-          // intrinsic. These will only appear as implicit use operands on the
-          // chain call, and as the def of an IMPLICIT_DEF. We're going to skip
-          // implicit defs unconditionally though because if they're important
-          // in a different context then they will be counted when they are
-          // used.
-          bool IsChainCall =
-              MFI->isChainFunction() && MI.getOpcode() == AMDGPU::SI_TCRETURN;
-          if (IsChainCall || MI.isImplicitDef())
-            continue;
+        if (MI.isCall() || MI.isImplicitDef())
+          continue;
 
-          unsigned Width = divideCeil(TRI.getRegSizeInBits(*RC), 32);
-          unsigned HWReg = TRI.getHWRegIndex(Reg);
-          int MaxUsed = HWReg + Width - 1;
-          MaxVGPR = std::max(MaxUsed, MaxVGPR);
-        }
+        unsigned Width = divideCeil(TRI.getRegSizeInBits(*RC), 32);
+        unsigned HWReg = TRI.getHWRegIndex(Reg);
+        int MaxUsed = HWReg + Width - 1;
+        MaxVGPR = std::max(MaxUsed, MaxVGPR);
       }
 
       if (MI.isCall()) {
@@ -252,10 +236,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
     }
   }
 
-  if (NeedsExplicitVGPRCount)
-    Info.NumVGPR = MaxVGPR + 1;
-  else
-    Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass, false);
+  Info.NumVGPR = MaxVGPR + 1;
 
   return Info;
 }

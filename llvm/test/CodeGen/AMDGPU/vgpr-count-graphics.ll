@@ -17,16 +17,6 @@ entry:
 }
 
 ; Neither uses not writes a VGPR
-; CHECK-LABEL: chain_func:
-; CHECK: .vgpr_count:     0x28
-define amdgpu_cs_chain void @chain_func([32 x i32] %args) {
-entry:
-  call void (ptr, i32, {}, [32 x i32], i32, ...) @llvm.amdgcn.cs.chain.p0.i32.s.a(
-        ptr @chain_func, i32 0, {} inreg {}, [32 x i32] %args, i32 0)
-  unreachable
-}
-
-; Neither uses not writes a VGPR
 ; CHECK-LABEL: gfx_func:
 ; CHECK: .vgpr_count:     0x20
 define amdgpu_gfx [32 x i32] @gfx_func([32 x i32] %args) {
