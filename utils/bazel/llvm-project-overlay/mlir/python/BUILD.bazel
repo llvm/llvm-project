@@ -711,10 +711,10 @@ gentbl_filegroup(
         "-bind-dialect=transform",
         "-dialect-extension=transform_tune_extension",
     ]},
-    tblgen = "//third_party/llvm/llvm-project/mlir:mlir-tblgen",
+    tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/TransformTuneExtensionOps.td",
     deps = [
-        "//third_party/llvm/llvm-project/mlir:TransformTuneExtensionTdFiles",
+        "//mlir:TransformTuneExtensionTdFiles",
     ],
 )
 
