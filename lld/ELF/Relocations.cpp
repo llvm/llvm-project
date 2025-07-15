@@ -2148,16 +2148,16 @@ constexpr uint32_t HEXAGON_END_OF_DUPLEX = 0 << 14;
 // relocation.
 static int getHexagonPacketOffset(const InputSection &isec,
                                   const Relocation &rel) {
-  const ArrayRef<uint8_t> SectContents = isec.content();
+  const ArrayRef<uint8_t> data = isec.content();
 
   // Search back as many as 3 instructions.
   for (unsigned i = 0;; i++) {
     if (i == 3 || rel.offset < (i + 1) * 4)
       return i * 4;
     uint32_t instWord = 0;
-    const ArrayRef<uint8_t> InstWordContents =
-        SectContents.drop_front(rel.offset - (i + 1) * 4);
-    ::memcpy(&instWord, InstWordContents.data(), sizeof(instWord));
+    const ArrayRef<uint8_t> instWordContents =
+        data.drop_front(rel.offset - (i + 1) * 4);
+    memcpy(&instWord, instWordContents.data(), sizeof(instWord));
     if (((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_PACKET) ||
         ((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_DUPLEX))
       return i * 4;
