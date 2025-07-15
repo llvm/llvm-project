@@ -26,7 +26,7 @@
 int main(int, char**) {
   {
     TEST_LIBCPP_ASSERT_FAILURE(
-        [] { [[maybe_unused]] std::counting_semaphore<> s(-1); }(),
+        [] { std::counting_semaphore<> s(-1); }(),
         "counting_semaphore::counting_semaphore(ptrdiff_t): counting_semaphore cannot be "
         "initialized with a negative value");
   }
