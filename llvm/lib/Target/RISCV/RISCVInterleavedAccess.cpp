@@ -280,6 +280,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     return true;
   }
 
+  Value *Return;
   if (isa<FixedVectorType>(ResVTy)) {
     Value *VL = Builder.CreateElementCount(XLenTy, ResVTy->getElementCount());
     Value *Mask = Builder.getAllOnesMask(ResVTy->getElementCount());
