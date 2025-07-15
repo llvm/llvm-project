@@ -2984,8 +2984,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   return true;
 }
 
-/// Similar to SelectAddrRegImm, except that the offset restricted for
-/// unsinged nine bits.
+/// Similar to SelectAddrRegImm, except that the offset is restricted to uimm9.
 bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
                                           SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
