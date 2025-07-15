@@ -214,6 +214,7 @@ Changes to the RISC-V Backend
 * `-mcpu=andes-ax45mpv` was added.
 * Removed -mattr=+no-rvc-hints that could be used to disable parsing and generation of RVC hints.
 * Adds assembler support for the Andes `XAndesvsintload` (Andes Vector INT4 Load extension).
+* Adds assembler support for the Andes `XAndesbfhcvt` (Andes Scalar BFLOAT16 Conversion extension).
 
 Changes to the WebAssembly Backend
 ----------------------------------
