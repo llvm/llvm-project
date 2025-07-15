@@ -1596,6 +1596,19 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
                     coarrayRef.set_team(Expr<SomeType>{*expr});
                   }
                 }
+              },
+              [&](const parser::ImageSelectorSpec::Notify &x) {
+                Analyze(x.v);
+                if (const auto *expr{GetExpr(context_, x.v)}) {
+                  if (coarrayRef.notify()) {
+                    Say("coindexed reference has multiple NOTIFY= specifiers"_err_en_US);
+                  } else if (auto dyType{expr->GetType()};
+                      dyType && IsNotifyType(GetDerivedTypeSpec(*dyType))) {
+                    coarrayRef.set_notify(Expr<SomeType>{*expr});
+                  } else {
+                    Say("NOTIFY= specifier must have type NOTIFY_TYPE from ISO_FORTRAN_ENV"_err_en_US);
+                  }
+                }
               }},
           imageSelSpec.u);
     }

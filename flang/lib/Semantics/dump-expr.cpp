@@ -25,6 +25,7 @@ void DumpEvaluateExpr::Show(const evaluate::CoarrayRef &x) {
   Show(x.cosubscript());
   Show(x.stat());
   Show(x.team());
+  Show(x.notify());
   Outdent();
 }
 

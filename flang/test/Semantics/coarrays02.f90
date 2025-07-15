@@ -16,6 +16,8 @@ program main
   type(event_type) event
   !ERROR: Variable 'lock' with EVENT_TYPE or LOCK_TYPE must be a coarray
   type(lock_type) lock
+  !ERROR: Variable 'notify' with NOTIFY_TYPE must be a coarray
+  type(notify_type) notify
   integer :: local[*] ! ok in main
 end
 
@@ -119,4 +121,19 @@ subroutine s4
   print *, ta(:)%a(1)[1]
   !ERROR: Subscripts must appear in a coindexed reference when its base is an array
   print *, ta(1)%a[1]
+end
+
+subroutine s5(a, notify, res)
+  use iso_fortran_env
+  type t
+    type(notify_type) :: a
+  end type
+  real, intent(in) :: a[*]
+  type(event_type), intent(in) :: notify[*]
+  !ERROR: An INTENT(OUT) dummy argument may not be, or contain, NOTIFY_TYPE
+  type(notify_type), intent(out) :: res[*]
+  !ERROR: Variable 'bad' with NOTIFY_TYPE potential component '%a' must be a coarray
+  type(t) :: bad
+  !ERROR: NOTIFY= specifier must have type NOTIFY_TYPE from ISO_FORTRAN_ENV
+  print *, a[1, NOTIFY=notify]
 end

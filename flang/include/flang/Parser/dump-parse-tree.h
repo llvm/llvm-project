@@ -385,6 +385,7 @@ public:
   NODE(parser, ImageSelectorSpec)
   NODE(ImageSelectorSpec, Stat)
   NODE(ImageSelectorSpec, Team_Number)
+  NODE(ImageSelectorSpec, Notify)
   NODE(parser, ImplicitPart)
   NODE(parser, ImplicitPartStmt)
   NODE(parser, ImplicitSpec)

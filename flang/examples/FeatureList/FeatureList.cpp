@@ -350,6 +350,7 @@ public:
   READ_FEATURE(ImageSelectorSpec)
   READ_FEATURE(ImageSelectorSpec::Stat)
   READ_FEATURE(ImageSelectorSpec::Team_Number)
+  READ_FEATURE(ImageSelectorSpec::Notify)
   READ_FEATURE(ImplicitPart)
   READ_FEATURE(ImplicitPartStmt)
   READ_FEATURE(ImplicitSpec)

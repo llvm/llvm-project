@@ -1682,12 +1682,14 @@ WRAPPER_CLASS(TeamValue, Scalar<common::Indirection<Expr>>);
 
 // R926 image-selector-spec ->
 //        STAT = stat-variable | TEAM = team-value |
-//        TEAM_NUMBER = scalar-int-expr
+//        TEAM_NUMBER = scalar-int-expr |
+//        NOTIFY = notify-variable
 struct ImageSelectorSpec {
   WRAPPER_CLASS(Stat, Scalar<Integer<common::Indirection<Variable>>>);
   WRAPPER_CLASS(Team_Number, ScalarIntExpr);
+  WRAPPER_CLASS(Notify, Scalar<common::Indirection<Variable>>);
   UNION_CLASS_BOILERPLATE(ImageSelectorSpec);
-  std::variant<Stat, TeamValue, Team_Number> u;
+  std::variant<Stat, TeamValue, Team_Number, Notify> u;
 };
 
 // R924 image-selector ->
