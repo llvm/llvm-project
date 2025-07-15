@@ -17,11 +17,22 @@ class DuplicateLibcallImplWithPrefix<RuntimeLibcallImpl Impl, string prefix>
 
 /// Libcall Predicates
 def isOSDarwin : RuntimeLibcallPredicate<"TT.isOSDarwin()">;
+def isOSOpenBSD : RuntimeLibcallPredicate<"TT.isOSOpenBSD()">;
 def isOSWindows : RuntimeLibcallPredicate<"TT.isOSWindows()">;
+def isNotOSWindows : RuntimeLibcallPredicate<"!TT.isOSWindows()">;
+def isNotOSMSVCRT : RuntimeLibcallPredicate<"!TT.isOSMSVCRT()">;
+def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
+def isNotOSWindowsOrIsCygwinMinGW
+  : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
 
+
+def isGNUEnvironment : RuntimeLibcallPredicate<"TT.isGNUEnvironment()">;
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
 def darwinHasExp10 : RuntimeLibcallPredicate<"darwinHasExp10(TT)">;
 def hasSinCos : RuntimeLibcallPredicate<"hasSinCos(TT)">;
+
+// FIXME: Way to combine predicates
+def hasSinCos_f32_f64 : RuntimeLibcallPredicate<"hasSinCos_f32_f64(TT)">;
 
 //--------------------------------------------------------------------
 // Declare all kinds of used libcalls
@@ -514,11 +525,13 @@ def __divxf3 : RuntimeLibcallImpl<DIV_F80>;
 def __divtf3 : RuntimeLibcallImpl<DIV_F128>;
 def __gcc_qdiv : RuntimeLibcallImpl<DIV_PPCF128>;
 
+defset list<RuntimeLibcallImpl> PowiLibcallImpls = {
 def __powisf2 : RuntimeLibcallImpl<POWI_F32>;
 def __powidf2 : RuntimeLibcallImpl<POWI_F64>;
 def __powixf2 : RuntimeLibcallImpl<POWI_F80>;
 def __powitf2_f128 : RuntimeLibcallImpl<POWI_F128, "__powitf2">;
 def __powitf2_ppc128 : RuntimeLibcallImpl<POWI_PPCF128, "__powitf2">;
+}
 
 // Conversion
 def __extendbfsf2 : RuntimeLibcallImpl<FPEXT_BF16_F32>;
@@ -1084,6 +1097,29 @@ defvar LibmHasSinCosF80 = LibcallImpls<(add sincos_f80), hasSinCos>;
 defvar LibmHasSinCosF128 = LibcallImpls<(add sincos_f128), hasSinCos>;
 defvar LibmHasSinCosPPCF128 = LibcallImpls<(add sincos_ppcf128), hasSinCos>;
 
+defvar WindowsMathRemovals = [
+  ldexpf, ldexp_f80, ldexp_f128, ldexp_ppcf128,
+  frexpf, frexp_f80, frexp_f128, frexp_ppcf128
+];
+
+defvar MostPowI = !listremove(PowiLibcallImpls, [__powitf2_f128, __powitf2_ppc128]);
+defvar WindowsExclusions = !listconcat(WindowsMathRemovals, MostPowI);
+
+// Targets which support windows should start with these as a base and
+// add in calls for other OSes
+defvar Win32DefaultLibcallImpls = !listremove(DefaultLibcallImpls32, WindowsExclusions);
+defvar Win64DefaultLibcallImpls = !listremove(DefaultLibcallImpls64, WindowsExclusions);
+
+defvar LibmHasFrexpF32 = LibcallImpls<(add frexpf), isNotOSWindowsOrIsCygwinMinGW>;
+defvar LibmHasLdexpF32 = LibcallImpls<(add ldexpf), isNotOSWindowsOrIsCygwinMinGW>;
+
+defvar LibmHasFrexpF80 = LibcallImpls<(add frexp_f80), isNotOSWindowsOrIsCygwinMinGW>;
+defvar LibmHasLdexpF80 = LibcallImpls<(add ldexp_f80), isNotOSWindowsOrIsCygwinMinGW>;
+
+defvar LibmHasFrexpF128 = LibcallImpls<(add frexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
+defvar LibmHasLdexpF128 = LibcallImpls<(add ldexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
+
+
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
 //===----------------------------------------------------------------------===//
@@ -1151,7 +1187,10 @@ def isAArch64_ILP64  : RuntimeLibcallPredicate<"TT.isAArch64(64)">;
 
 def AArch64SystemLibrary : SystemRuntimeLibrary<
   isAArch64_ExceptArm64EC,
-  (add DefaultRuntimeLibcallImpls,
+  (add Win64DefaultLibcallImpls,
+       LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
+       LibmHasFrexpF32, LibmHasLdexpF32,
+       LibmHasFrexpF128, LibmHasLdexpF128,
        AArch64LibcallImpls,
        LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
        LibcallImpls<(add bzero), isOSDarwin>,
@@ -1161,7 +1200,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
 
 // Prepend a # to every name
 defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
-  foreach libcall = DefaultLibcallImpls64 in {
+  foreach libcall = Win64DefaultLibcallImpls in {
     def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
   }
 
@@ -1418,11 +1457,15 @@ def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
 
 def ARMSystemLibrary
     : SystemRuntimeLibrary<isARMOrThumb,
-      (add DefaultLibcallImpls32,
+      (add Win32DefaultLibcallImpls,
+           LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
+           LibmHasFrexpF32, LibmHasLdexpF32,
+           LibmHasFrexpF128, LibmHasLdexpF128,
            WindowARMDivRemCalls,
            WindowARMFPIntCasts,
            AEABIDivRemCalls,
            DarwinSinCosStret, DarwinExp10,
+           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
 
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
@@ -1916,6 +1959,8 @@ def PPCSystemLibrary
            __extendkftf2, __trunctfkf2,
            DefaultRuntimeLibcallImpls_ppcf128,
            LibmF128Libcalls, AIX32Calls, AIX64Calls,
+           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+           LibmHasSinCosPPCF128,
            AvailableIf<memcpy, isNotAIX>,
            LibcallImpls<(add Int128RTLibcalls), isPPC64>)>;
 
@@ -2003,13 +2048,13 @@ def SPARCSystemLibrary
 // Windows Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
-// TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()
-
+defset list<RuntimeLibcallImpl> WindowsDivRemMulLibcalls = {
 def _alldiv : RuntimeLibcallImpl<SDIV_I64>;
 def _aulldiv : RuntimeLibcallImpl<UDIV_I64>;
 def _allrem : RuntimeLibcallImpl<SREM_I64>;
 def _aullrem : RuntimeLibcallImpl<UREM_I64>;
 def _allmul : RuntimeLibcallImpl<MUL_I64>;
+}
 
 //===----------------------------------------------------------------------===//
 // X86 Runtime Libcalls
@@ -2017,14 +2062,48 @@ def _allmul : RuntimeLibcallImpl<MUL_I64>;
 
 def isX86_32 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86">;
 def isX86_64 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86_64">;
+def isX86 : RuntimeLibcallPredicate<"TT.isX86()">;
+
+// Some darwins have an optimized __bzero/bzero function.
+def darwinHas__bzero : RuntimeLibcallPredicate<"TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6)">;
+
+// FIXME: This is has ldexpl/frexpl plus use f128 for long double.
+def hasFrexplLdexplF128
+  : RuntimeLibcallPredicate<[{(!TT.isOSWindows() || TT.isOSCygMing()) && !TT.isGNUEnvironment()}]>;
+
+// Use the f128 variants of math functions on x86
+defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls), isGNUEnvironment>;
+
+defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>;
+
+defvar X86CommonLibcalls =
+  (add DarwinSinCosStret, DarwinExp10,
+       X86_F128_Libcalls,
+       LibmHasSinCosF80, // FIXME: Depends on long double
+       SinCosF32F64Libcalls,
+       LibcallImpls<(add __bzero), darwinHas__bzero>,
+       LibmHasFrexpF32, LibmHasLdexpF32,
+       LibmHasFrexpF80, LibmHasLdexpF80,
+       LibcallImpls<(add frexp_f128, ldexp_f128), hasFrexplLdexplF128>,
+       DefaultRuntimeLibcallImpls_f80,
+       // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
+       // hack for one test relying on it.
+       __powitf2_f128,
+       LibcallImpls<(add MostPowI), isNotOSMSVCRT>
+);
+
+defvar Windows32DivRemMulCalls =
+  LibcallImpls<(add WindowsDivRemMulLibcalls),
+  RuntimeLibcallPredicate<"TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()">>;
 
 def X86_32SystemLibrary
     : SystemRuntimeLibrary<isX86_32,
-      (add DefaultLibcallImpls32, DefaultRuntimeLibcallImpls_f80)>;
+      (add X86CommonLibcalls,
+           Windows32DivRemMulCalls, Win32DefaultLibcallImpls)>;
 
 def X86_64SystemLibrary
     : SystemRuntimeLibrary<isX86_64,
-      (add DefaultLibcallImpls64, DefaultRuntimeLibcallImpls_f80)>;
+      (add X86CommonLibcalls, Win64DefaultLibcallImpls, Int128RTLibcalls)>;
 
 //===----------------------------------------------------------------------===//
 // XCore Runtime Libcalls
