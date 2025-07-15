@@ -1199,6 +1199,14 @@ public:
     addExpr(Inst, getImm(), isRV64Imm());
   }
 
+  void addSImm10UnsignedOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    int64_t Imm;
+    [[maybe_unused]] bool IsConstant = evaluateConstantImm(getImm(), Imm);
+    assert(IsConstant);
+    Inst.addOperand(MCOperand::createImm(SignExtend64<10>(Imm)));
+  }
+
   void addFPImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     if (isImm()) {
