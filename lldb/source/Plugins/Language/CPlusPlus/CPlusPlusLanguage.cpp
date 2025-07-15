@@ -1499,15 +1499,16 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "^std::(__debug::)?unordered_(multi)?(map|set)<.+> >$",
                 stl_summary_flags, true);
 
-  AddCXXSummary(cpp_category_sp, GenericCappedContainerSummaryProvider,
-                "libstdc++ debug std::list summary provider",
-                "^std::__(debug|cxx11)::list<.+>(( )?&)?$", stl_summary_flags,
-                true);
+  AddCXXSummary(
+      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
+      "libstdc++ debug std::list summary provider",
+      "^std::__(debug|cxx11)::list<.+>(( )?&)?$", stl_summary_flags, true);
 
-  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
-                "libstdc++ std::forward_list summary provider",
-                "^std::__(debug|cxx11)::forward_list<.+>(( )?&)?$",
-                stl_summary_flags, true);
+  cpp_category_sp->AddTypeSummary(
+      "^std::__(debug|cxx11)::forward_list<.+>(( )?&)?$", eFormatterMatchRegex,
+      TypeSummaryImplSP(new ScriptSummaryFormat(
+          stl_summary_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.ForwardListSummaryProvider")));
   AddCXXSummary(cpp_category_sp, LibStdcppVariantSummaryProvider,
                 "libstdc++ std::variant summary provider", "^std::variant<.+>$",
                 stl_summary_flags, true);
@@ -1733,9 +1734,11 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "MSVC STL/libstdc++ std::list summary provider",
                 "^std::list<.+>(( )?&)?$", stl_summary_flags, true);
-  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
-                "MSVC STL/libstdc++ std::forward_list summary provider",
-                "^std::forward_list<.+>(( )?&)?$", stl_summary_flags, true);
+  cpp_category_sp->AddTypeSummary(
+      "^std::forward_list<.+>(( )?&)?$", eFormatterMatchRegex,
+      TypeSummaryImplSP(new ScriptSummaryFormat(
+          stl_summary_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.ForwardListSummaryProvider")));
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

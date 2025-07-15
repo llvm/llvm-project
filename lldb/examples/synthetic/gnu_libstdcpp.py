@@ -6,6 +6,15 @@ import lldb.formatters.Logger
 # thing for your setup
 
 
+def ForwardListSummaryProvider(valobj, dict):
+    list_capping_size = valobj.GetTarget().GetMaximumNumberOfChildrenToDisplay()
+    text = "size=" + str(valobj.GetNumChildren())
+    if valobj.GetNumChildren() > list_capping_size:
+        return "(capped) " + text
+    else:
+        return text
+
+
 def StdOptionalSummaryProvider(valobj, dict):
     has_value = valobj.GetNumChildren() > 0
     # We add wrapping spaces for consistency with the libcxx formatter
