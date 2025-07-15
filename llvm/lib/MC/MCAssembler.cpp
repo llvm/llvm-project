@@ -94,7 +94,6 @@ void MCAssembler::reset() {
   Sections.clear();
   Symbols.clear();
   ThumbFuncs.clear();
-  BundleAlignSize = 0;
 
   // reset objects owned by us
   if (getBackendPtr())
@@ -282,87 +281,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
   llvm_unreachable("invalid fragment kind");
 }
 
-// Compute the amount of padding required before the fragment \p F to
-// obey bundling restrictions, where \p FOffset is the fragment's offset in
-// its section and \p FSize is the fragment's size.
-static uint64_t computeBundlePadding(unsigned BundleSize,
-                                     const MCEncodedFragment *F,
-                                     uint64_t FOffset, uint64_t FSize) {
-  uint64_t OffsetInBundle = FOffset & (BundleSize - 1);
-  uint64_t EndOfFragment = OffsetInBundle + FSize;
-
-  // There are two kinds of bundling restrictions:
-  //
-  // 1) For alignToBundleEnd(), add padding to ensure that the fragment will
-  //    *end* on a bundle boundary.
-  // 2) Otherwise, check if the fragment would cross a bundle boundary. If it
-  //    would, add padding until the end of the bundle so that the fragment
-  //    will start in a new one.
-  if (F->alignToBundleEnd()) {
-    // Three possibilities here:
-    //
-    // A) The fragment just happens to end at a bundle boundary, so we're good.
-    // B) The fragment ends before the current bundle boundary: pad it just
-    //    enough to reach the boundary.
-    // C) The fragment ends after the current bundle boundary: pad it until it
-    //    reaches the end of the next bundle boundary.
-    //
-    // Note: this code could be made shorter with some modulo trickery, but it's
-    // intentionally kept in its more explicit form for simplicity.
-    if (EndOfFragment == BundleSize)
-      return 0;
-    else if (EndOfFragment < BundleSize)
-      return BundleSize - EndOfFragment;
-    else { // EndOfFragment > BundleSize
-      return 2 * BundleSize - EndOfFragment;
-    }
-  } else if (OffsetInBundle > 0 && EndOfFragment > BundleSize)
-    return BundleSize - OffsetInBundle;
-  else
-    return 0;
-}
-
-void MCAssembler::layoutBundle(MCFragment *Prev, MCFragment *F) const {
-  // If bundling is enabled and this fragment has instructions in it, it has to
-  // obey the bundling restrictions. With padding, we'll have:
-  //
-  //
-  //        BundlePadding
-  //             |||
-  // -------------------------------------
-  //   Prev  |##########|       F        |
-  // -------------------------------------
-  //                    ^
-  //                    |
-  //                    F->Offset
-  //
-  // The fragment's offset will point to after the padding, and its computed
-  // size won't include the padding.
-  //
-  // ".align N" is an example of a directive that introduces multiple
-  // fragments. We could add a special case to handle ".align N" by emitting
-  // within-fragment padding (which would produce less padding when N is less
-  // than the bundle size), but for now we don't.
-  //
-  assert(isa<MCEncodedFragment>(F) &&
-         "Only MCEncodedFragment implementations have instructions");
-  MCEncodedFragment *EF = cast<MCEncodedFragment>(F);
-  uint64_t FSize = computeFragmentSize(*EF);
-
-  if (FSize > getBundleAlignSize())
-    report_fatal_error("Fragment can't be larger than a bundle size");
-
-  uint64_t RequiredBundlePadding =
-      computeBundlePadding(getBundleAlignSize(), EF, EF->Offset, FSize);
-  if (RequiredBundlePadding > UINT8_MAX)
-    report_fatal_error("Padding cannot exceed 255 bytes");
-  EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
-  EF->Offset += RequiredBundlePadding;
-  if (auto *DF = dyn_cast_or_null<MCDataFragment>(Prev))
-    if (DF->getContents().empty())
-      DF->Offset = EF->Offset;
-}
-
 // Simple getSymbolOffset helper for the non-variable case.
 static bool getLabelOffset(const MCAssembler &Asm, const MCSymbol &S,
                            bool ReportError, uint64_t &Val) {
@@ -480,41 +398,6 @@ bool MCAssembler::registerSymbol(const MCSymbol &Symbol) {
   return Changed;
 }
 
-void MCAssembler::writeFragmentPadding(raw_ostream &OS,
-                                       const MCEncodedFragment &EF,
-                                       uint64_t FSize) const {
-  assert(getBackendPtr() && "Expected assembler backend");
-  // Should NOP padding be written out before this fragment?
-  unsigned BundlePadding = EF.getBundlePadding();
-  if (BundlePadding > 0) {
-    assert(isBundlingEnabled() &&
-           "Writing bundle padding with disabled bundling");
-    assert(EF.hasInstructions() &&
-           "Writing bundle padding for a fragment without instructions");
-
-    unsigned TotalLength = BundlePadding + static_cast<unsigned>(FSize);
-    const MCSubtargetInfo *STI = EF.getSubtargetInfo();
-    if (EF.alignToBundleEnd() && TotalLength > getBundleAlignSize()) {
-      // If the padding itself crosses a bundle boundary, it must be emitted
-      // in 2 pieces, since even nop instructions must not cross boundaries.
-      //             v--------------v   <- BundleAlignSize
-      //        v---------v             <- BundlePadding
-      // ----------------------------
-      // | Prev |####|####|    F    |
-      // ----------------------------
-      //        ^-------------------^   <- TotalLength
-      unsigned DistanceToBoundary = TotalLength - getBundleAlignSize();
-      if (!getBackend().writeNopData(OS, DistanceToBoundary, STI))
-        report_fatal_error("unable to write NOP sequence of " +
-                           Twine(DistanceToBoundary) + " bytes");
-      BundlePadding -= DistanceToBoundary;
-    }
-    if (!getBackend().writeNopData(OS, BundlePadding, STI))
-      report_fatal_error("unable to write NOP sequence of " +
-                         Twine(BundlePadding) + " bytes");
-  }
-}
-
 /// Write the fragment \p F to the output file.
 static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
                           const MCFragment &F) {
@@ -522,9 +405,6 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   uint64_t FragmentSize = Asm.computeFragmentSize(F);
 
   llvm::endianness Endian = Asm.getBackend().Endian;
-
-  if (const MCEncodedFragment *EF = dyn_cast<MCEncodedFragment>(&F))
-    Asm.writeFragmentPadding(OS, *EF, FragmentSize);
 
   // This variable (and its dummy usage) is to participate in the assert at
   // the end of the function.
@@ -1101,17 +981,9 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
 }
 
 void MCAssembler::layoutSection(MCSection &Sec) {
-  MCFragment *Prev = nullptr;
   uint64_t Offset = 0;
   for (MCFragment &F : Sec) {
     F.Offset = Offset;
-    if (LLVM_UNLIKELY(isBundlingEnabled())) {
-      if (F.hasInstructions()) {
-        layoutBundle(Prev, &F);
-        Offset = F.Offset;
-      }
-      Prev = &F;
-    }
     Offset += computeFragmentSize(F);
   }
 }

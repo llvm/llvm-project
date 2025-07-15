@@ -79,10 +79,6 @@ public:
   // target-specific code.
   void finishImpl() final;
 
-  void emitBundleAlignMode(Align Alignment) override;
-  void emitBundleLock(bool AlignToEnd) override;
-  void emitBundleUnlock() override;
-
   /// ELF object attributes section emission support
   struct AttributeItem {
     // This structure holds all attributes, accounting for their string /
@@ -151,7 +147,6 @@ public:
   }
 
 private:
-  bool isBundleLocked() const;
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
 
   void finalizeCGProfileEntry(const MCSymbolRefExpr *&S, uint64_t Offset);

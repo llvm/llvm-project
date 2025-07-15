@@ -127,9 +127,6 @@ public:
   /// can change its size during relaxation.
   void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
 
-  void emitBundleAlignMode(Align Alignment) override;
-  void emitBundleLock(bool AlignToEnd) override;
-  void emitBundleUnlock() override;
   void emitBytes(StringRef Data) override;
   void emitValueToAlignment(Align Alignment, int64_t Fill = 0,
                             uint8_t FillLen = 1,

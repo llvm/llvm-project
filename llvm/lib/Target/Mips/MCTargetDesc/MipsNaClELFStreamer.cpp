@@ -112,10 +112,8 @@ private:
   void sandboxIndirectJump(const MCInst &MI, const MCSubtargetInfo &STI) {
     MCRegister AddrReg = MI.getOperand(0).getReg();
 
-    emitBundleLock(false);
     emitMask(AddrReg, IndirectBranchMaskReg, STI);
     MipsELFStreamer::emitInstruction(MI, STI);
-    emitBundleUnlock();
   }
 
   // Sandbox memory access or SP change.  Insert mask operation before and/or
@@ -123,7 +121,6 @@ private:
   void sandboxLoadStoreStackChange(const MCInst &MI, unsigned AddrIdx,
                                    const MCSubtargetInfo &STI, bool MaskBefore,
                                    bool MaskAfter) {
-    emitBundleLock(false);
     if (MaskBefore) {
       // Sandbox memory access.
       MCRegister BaseReg = MI.getOperand(AddrIdx).getReg();
@@ -136,7 +133,6 @@ private:
       assert((Mips::SP == SPReg) && "Unexpected stack-pointer register.");
       emitMask(SPReg, LoadStoreStackMaskReg, STI);
     }
-    emitBundleUnlock();
   }
 
 public:
@@ -180,7 +176,6 @@ public:
         report_fatal_error("Dangerous instruction in branch delay slot!");
 
       // Start the sandboxing sequence by emitting call.
-      emitBundleLock(true);
       if (IsIndirectCall) {
         MCRegister TargetReg = Inst.getOperand(1).getReg();
         emitMask(TargetReg, IndirectBranchMaskReg, STI);
@@ -192,7 +187,6 @@ public:
     if (PendingCall) {
       // Finish the sandboxing sequence by emitting branch delay.
       MipsELFStreamer::emitInstruction(Inst, STI);
-      emitBundleUnlock();
       PendingCall = false;
       return;
     }
@@ -264,9 +258,6 @@ createMipsNaClELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                           std::unique_ptr<MCCodeEmitter> Emitter) {
   MipsNaClELFStreamer *S = new MipsNaClELFStreamer(
       Context, std::move(TAB), std::move(OW), std::move(Emitter));
-
-  // Set bundle-alignment as required by the NaCl ABI for the target.
-  S->emitBundleAlignMode(MIPS_NACL_BUNDLE_ALIGN);
 
   return S;
 }

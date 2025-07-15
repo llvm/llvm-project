@@ -1068,19 +1068,6 @@ public:
                                const MCPseudoProbeInlineStack &InlineStack,
                                MCSymbol *FnSym);
 
-  /// Set the bundle alignment mode from now on in the section.
-  /// The value 1 means turn the bundle alignment off.
-  virtual void emitBundleAlignMode(Align Alignment);
-
-  /// The following instructions are a bundle-locked group.
-  ///
-  /// \param AlignToEnd - If true, the bundle-locked group will be aligned to
-  ///                     the end of a bundle.
-  virtual void emitBundleLock(bool AlignToEnd);
-
-  /// Ends a bundle-locked group.
-  virtual void emitBundleUnlock();
-
   /// If this file is backed by a assembly streamer, this dumps the
   /// specified string in the output .s file.  This capability is indicated by
   /// the hasRawTextSupport() predicate.  By default this aborts.
