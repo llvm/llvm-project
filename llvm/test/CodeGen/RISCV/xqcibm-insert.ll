@@ -47,6 +47,29 @@ define i32 @test_insbi_mask(i32 %a) nounwind {
   ret i32 %or
 }
 
+define i32 @test_insbi_mask_mv(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: test_insbi_mask_mv:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 16
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: test_insbi_mask_mv:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    mv a0, a1
+; RV32IXQCIBM-NEXT:    qc.insbi a0, -1, 16, 0
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: test_insbi_mask_mv:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    mv a0, a1
+; RV32IXQCIBMZBS-NEXT:    qc.insbi a0, -1, 16, 0
+; RV32IXQCIBMZBS-NEXT:    ret
+  %or = or i32 %b, 65535
+  ret i32 %or
+}
+
 define i32 @test_insbi_shifted_mask(i32 %a) nounwind {
 ; RV32I-LABEL: test_insbi_shifted_mask:
 ; RV32I:       # %bb.0:
@@ -65,6 +88,36 @@ define i32 @test_insbi_shifted_mask(i32 %a) nounwind {
 ; RV32IXQCIBMZBS-NEXT:    ret
   %or = or i32 %a, 61440
   ret i32 %or
+}
+
+define i32 @test_insbi_shifted_mask_multiple_uses(i32 %a) nounwind {
+; RV32I-LABEL: test_insbi_shifted_mask_multiple_uses:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 15
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    addi a0, a0, 10
+; RV32I-NEXT:    xor a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: test_insbi_shifted_mask_multiple_uses:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    lui a1, 15
+; RV32IXQCIBM-NEXT:    or a1, a1, a0
+; RV32IXQCIBM-NEXT:    addi a0, a0, 10
+; RV32IXQCIBM-NEXT:    xor a0, a0, a1
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: test_insbi_shifted_mask_multiple_uses:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    lui a1, 15
+; RV32IXQCIBMZBS-NEXT:    or a1, a1, a0
+; RV32IXQCIBMZBS-NEXT:    addi a0, a0, 10
+; RV32IXQCIBMZBS-NEXT:    xor a0, a0, a1
+; RV32IXQCIBMZBS-NEXT:    ret
+  %or = or i32 %a, 61440
+  %add = add i32 %a, 10
+  %xor = xor i32 %or, %add
+  ret i32 %xor
 }
 
 define i32 @test_single_bit_set(i32 %a) nounwind {
