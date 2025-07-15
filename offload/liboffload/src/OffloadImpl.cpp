@@ -84,9 +84,10 @@ struct ol_program_impl_t {
         DeviceImage(DeviceImage) {}
   plugin::DeviceImageTy *Image;
   std::unique_ptr<llvm::MemoryBuffer> ImageData;
-  llvm::SmallVector<std::unique_ptr<ol_symbol_impl_t>> Symbols;
   std::mutex SymbolListMutex;
   __tgt_device_image DeviceImage;
+  llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> KernelSymbols;
+  llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> GlobalSymbols;
 };
 
 struct ol_symbol_impl_t {
@@ -719,16 +720,20 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
   std::lock_guard<std::mutex> Lock{Program->SymbolListMutex};
 
   // If it already exists, return an existing handle
-  auto Check = llvm::find_if(Program->Symbols, [&](auto &Sym) {
-    return Sym->Kind == Kind && Sym->Name == Name;
-  });
-  if (Check != Program->Symbols.end()) {
-    *Symbol = Check->get();
-    return Error::success();
-  }
+  auto CheckCache = [&](StringMap<std::unique_ptr<ol_symbol_impl_t>> &Map)
+      -> std::optional<ol_symbol_handle_t> {
+    if (Map.contains(Name))
+      return Map[Name].get();
+    return std::nullopt;
+  };
 
   switch (Kind) {
   case OL_SYMBOL_KIND_KERNEL: {
+    if (auto Cache = CheckCache(Program->KernelSymbols)) {
+      *Symbol = *Cache;
+      return Plugin::success();
+    }
+
     auto KernelImpl = Device.constructKernel(Name);
     if (!KernelImpl)
       return KernelImpl.takeError();
@@ -736,21 +741,29 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
     if (auto Err = KernelImpl->init(Device, *Program->Image))
       return Err;
 
-    *Symbol = Program->Symbols
-                  .emplace_back(std::make_unique<ol_symbol_impl_t>(
-                      KernelImpl->getName(), &*KernelImpl))
+    *Symbol = Program->KernelSymbols
+                  .insert({Name, std::make_unique<ol_symbol_impl_t>(
+                                     KernelImpl->getName(), &*KernelImpl)})
+                  .first->getValue()
                   .get();
     return Error::success();
   }
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
+    if (auto Cache = CheckCache(Program->GlobalSymbols)) {
+      *Symbol = *Cache;
+      return Plugin::success();
+    }
+
     GlobalTy GlobalObj{Name};
     if (auto Res = Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
             Device, *Program->Image, GlobalObj))
       return Res;
 
-    *Symbol = Program->Symbols
-                  .emplace_back(std::make_unique<ol_symbol_impl_t>(
-                      GlobalObj.getName().c_str(), std::move(GlobalObj)))
+    *Symbol = Program->GlobalSymbols
+                  .insert({Name, std::make_unique<ol_symbol_impl_t>(
+                                     GlobalObj.getName().c_str(),
+                                     std::move(GlobalObj))})
+                  .first->getValue()
                   .get();
 
     return Error::success();
