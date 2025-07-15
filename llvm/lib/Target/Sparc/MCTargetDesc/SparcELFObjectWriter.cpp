@@ -93,7 +93,7 @@ unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
   }
 
   // clang-format off
-  switch(Fixup.getTargetKind()) {
+  switch(Fixup.getKind()) {
   default:
     llvm_unreachable("Unimplemented fixup -> relocation");
   case FK_NONE:                  return ELF::R_SPARC_NONE;

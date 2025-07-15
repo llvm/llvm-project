@@ -474,7 +474,7 @@ bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext &Ctx) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     llvm_unreachable("Unknown fixup kind!");
   case FK_Data_1:
@@ -706,7 +706,7 @@ std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
   const MCFixup *AUIPCFixup;
   const MCFragment *AUIPCDF;
   MCValue AUIPCTarget;
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     // Use default handling for `Value` and `IsResolved`.
     return {};
@@ -752,7 +752,7 @@ std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
 void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
                                           const MCFixup &Fixup) {
   StringRef VendorIdentifier;
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     // No Vendor Relocation Required.
     return;

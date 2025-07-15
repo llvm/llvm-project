@@ -686,7 +686,7 @@ std::optional<bool> X86AsmBackend::evaluateFixup(const MCFragment &,
                                                  MCFixup &Fixup,
                                                  MCValue &Target, uint64_t &) {
   if (Fixup.isPCRel()) {
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
     case FK_Data_1:
       Target.setConstant(Target.getConstant() - 1);
       break;
