@@ -9635,10 +9635,11 @@ def ModularFormatDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 The ``modular_format`` attribute can be applied to a function that bears the
-``format`` attribute to indicate that the implementation is modular on the
-format string argument. When the format argument for a given call is constant,
-the compiler may redirect the call to the symbol given as the first argument to
-the attribute (the modular implementation function).
+``format`` attribute (or standard library functions) to indicate that the
+implementation is modular on the format string argument. When the format string
+for a given call is constant, the compiler may redirect the call to the symbol
+given as the first argument to the attribute (the modular implementation
+function).
 
 The second argument is a implementation name, and the remaining arguments are
 aspects of the format string for the compiler to report. If the compiler does
