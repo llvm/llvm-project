@@ -10,6 +10,7 @@
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -136,8 +137,8 @@ static uint32_t parameterToRangeType(uint32_t Type) {
 }
 
 static RootSignatureBindingValidation
-initRsBindingValdation(const mcdxbc::RootSignatureDesc &RSD,
-                       dxbc::ShaderVisibility Visibility) {
+initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
+                        dxbc::ShaderVisibility Visibility) {
 
   RootSignatureBindingValidation Validation;
 
@@ -199,15 +200,17 @@ getRootSignature(RootSignatureBindingInfo &RSBI,
 
 static void reportUnboundRegisters(
     Module &M,
-    const std::vector<llvm::dxil::ResourceInfo::ResourceBinding> &Bindings,
-    iterator_range<SmallVector<dxil::ResourceInfo>::iterator> &Resources) {
+    const llvm::ArrayRef<llvm::dxil::ResourceInfo::ResourceBinding> &Bindings,
+    const iterator_range<SmallVectorImpl<dxil::ResourceInfo>::iterator>
+        &Resources) {
   for (auto Res = Resources.begin(), End = Resources.end(); Res != End; Res++) {
     bool Bound = false;
     ResourceInfo::ResourceBinding ResBinding = Res->getBinding();
     for (const auto &Binding : Bindings) {
       if (ResBinding.Space == Binding.Space &&
           ResBinding.LowerBound >= Binding.LowerBound &&
-          ResBinding.LowerBound < Binding.LowerBound + Binding.Size) {
+          ResBinding.LowerBound + ResBinding.Size - 1 <
+              Binding.LowerBound + Binding.Size) {
         Bound = true;
         break;
       }
@@ -234,22 +237,20 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
   if (auto RSD = getRootSignature(RSBI, MMI)) {
 
     RootSignatureBindingValidation Validation =
-        initRsBindingValdation(*RSD, tripleToVisibility(MMI.ShaderProfile));
-
-    auto Cbufs = DRM.cbuffers();
-    auto SRVs = DRM.srvs();
-    auto UAVs = DRM.uavs();
-    auto Samplers = DRM.samplers();
+        initRSBindingValidation(*RSD, tripleToVisibility(MMI.ShaderProfile));
 
     reportUnboundRegisters(
-        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::CBV), Cbufs);
+        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::CBV),
+        DRM.cbuffers());
     reportUnboundRegisters(
-        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::UAV), UAVs);
+        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::UAV),
+        DRM.uavs());
     reportUnboundRegisters(
         M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::Sampler),
-        Samplers);
+        DRM.samplers());
     reportUnboundRegisters(
-        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::SRV), SRVs);
+        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::SRV),
+        DRM.srvs());
   }
 }
 } // namespace
@@ -307,6 +308,7 @@ INITIALIZE_PASS_BEGIN(DXILPostOptimizationValidationLegacy, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RootSignatureAnalysisWrapper)
 INITIALIZE_PASS_END(DXILPostOptimizationValidationLegacy, DEBUG_TYPE,
                     "DXIL Post Optimization Validation", false, false)
