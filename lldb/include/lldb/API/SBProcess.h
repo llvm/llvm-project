@@ -63,10 +63,13 @@ public:
 
   size_t PutSTDIN(const char *src, size_t src_len);
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   size_t GetSTDOUT(char *dst, size_t dst_len) const;
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   size_t GetSTDERR(char *dst, size_t dst_len) const;
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   size_t GetAsyncProfileData(char *dst, size_t dst_len) const;
 
 #ifndef SWIG
@@ -197,11 +200,14 @@ public:
   ///
   void ForceScriptedState(StateType new_state);
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   size_t ReadMemory(addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   size_t WriteMemory(addr_t addr, const void *buf, size_t size,
                      lldb::SBError &error);
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   size_t ReadCStringFromMemory(addr_t addr, void *char_buf, size_t size,
                                lldb::SBError &error);
 

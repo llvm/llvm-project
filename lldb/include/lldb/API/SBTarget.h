@@ -607,6 +607,7 @@ public:
   ///
   /// \return
   ///     The amount of data read in host bytes.
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   size_t ReadMemory(const SBAddress addr, void *buf, size_t size,
                     lldb::SBError &error);
 
@@ -688,12 +689,13 @@ public:
       const SBFileSpecList &module_list,
       const SBFileSpecList &comp_unit_list);
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   lldb::SBBreakpoint BreakpointCreateByNames(
       const char *symbol_name[], uint32_t num_names,
       uint32_t
           name_type_mask, // Logical OR one or more FunctionNameType enum bits
-      lldb::LanguageType symbol_language,
-      const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list);
+      lldb::LanguageType symbol_language, const SBFileSpecList &module_list,
+      const SBFileSpecList &comp_unit_list);
 
   lldb::SBBreakpoint BreakpointCreateByNames(
       const char *symbol_name[], uint32_t num_names,
@@ -900,24 +902,27 @@ public:
                                            lldb::SBAddress end_addr,
                                            const char *flavor_string);
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   lldb::SBInstructionList GetInstructions(lldb::SBAddress base_addr,
                                           const void *buf, size_t size);
 
   // The "WithFlavor" is necessary to keep SWIG from getting confused about
   // overloaded arguments when using the buf + size -> Python Object magic.
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   lldb::SBInstructionList GetInstructionsWithFlavor(lldb::SBAddress base_addr,
                                                     const char *flavor_string,
                                                     const void *buf,
                                                     size_t size);
 
 #ifndef SWIG
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   lldb::SBInstructionList GetInstructions(lldb::addr_t base_addr,
                                           const void *buf, size_t size);
-  lldb::SBInstructionList GetInstructionsWithFlavor(lldb::addr_t base_addr,
-                                                    const char *flavor_string,
-                                                    const void *buf,
-                                                    size_t size);
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
+  lldb::SBInstructionList
+  GetInstructionsWithFlavor(lldb::addr_t base_addr, const char *flavor_string,
+                            const void *buf, size_t size);
 #endif
 
   lldb::SBSymbolContextList FindSymbols(const char *name,

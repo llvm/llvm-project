@@ -71,6 +71,7 @@ public:
 
   void SetTriple(const char *triple);
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   const uint8_t *GetUUIDBytes();
 
   size_t GetUUIDLength();

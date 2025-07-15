@@ -323,6 +323,7 @@ public:
 
   bool GetUseSourceCache() const;
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   static bool GetDefaultArchitecture(char *arch_name, size_t arch_name_len);
 
   static bool SetDefaultArchitecture(const char *arch_name);
@@ -367,6 +368,7 @@ public:
   void DispatchInput(void *baton, const void *data, size_t data_len);
 #endif
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   void DispatchInput(const void *data, size_t data_len);
 
   void DispatchInputInterrupt();

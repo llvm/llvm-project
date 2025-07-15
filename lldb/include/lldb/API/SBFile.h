@@ -34,7 +34,9 @@ public:
 
   SBFile &operator=(const SBFile &rhs);
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   SBError Read(uint8_t *buf, size_t num_bytes, size_t *OUTPUT);
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   SBError Write(const uint8_t *buf, size_t num_bytes, size_t *OUTPUT);
   SBError Flush();
   bool IsValid() const;

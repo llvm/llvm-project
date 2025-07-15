@@ -51,8 +51,10 @@ public:
 
   void SetDirectory(const char *directory);
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   uint32_t GetPath(char *dst_path, size_t dst_len) const;
 
+  [[clang::annotate("lldb-rpc-gen pointer plus len")]]
   static int ResolvePath(const char *src_path, char *dst_path, size_t dst_len);
 
   bool GetDescription(lldb::SBStream &description) const;
