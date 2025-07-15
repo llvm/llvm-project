@@ -303,7 +303,7 @@ Interpreter::Visit(const MemberOfNode *node) {
     }
   }
 
-  if (field_obj && field_obj->GetName() == node->GetFieldName()) {
+  if (field_obj) {
     if (m_use_dynamic != lldb::eNoDynamicValues) {
       lldb::ValueObjectSP dynamic_val_sp =
           field_obj->GetDynamicValue(m_use_dynamic);

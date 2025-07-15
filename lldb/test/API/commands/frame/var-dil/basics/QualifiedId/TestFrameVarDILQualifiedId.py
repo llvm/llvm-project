@@ -29,3 +29,17 @@ class TestFrameVarDILQualifiedId(TestBase):
         self.expect_var_path("ns::i", value="1")
         self.expect_var_path("::ns::ns::i", value="2")
         self.expect_var_path("ns::ns::i", value="2")
+
+        self.expect_var_path("foo", value="1")
+        self.expect_var_path("::(anonymous namespace)::foo", value="13")
+        self.expect_var_path("(anonymous namespace)::foo", value="13")
+        self.expect_var_path("ns1::(anonymous namespace)::foo", value="5")
+        self.expect_var_path(
+            "(anonymous namespace)::ns2::(anonymous namespace)::foo",
+            value="7",
+        )
+        self.expect_var_path("::ns1::(anonymous namespace)::foo", value="5")
+        self.expect_var_path(
+            "::(anonymous namespace)::ns2::(anonymous namespace)::foo",
+            value="7",
+        )
