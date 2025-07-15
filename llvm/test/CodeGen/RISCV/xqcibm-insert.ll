@@ -57,11 +57,13 @@ define i32 @test_insbi_mask_mv(i32 %a, i32 %b) nounwind {
 ;
 ; RV32IXQCIBM-LABEL: test_insbi_mask_mv:
 ; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    mv a0, a1
 ; RV32IXQCIBM-NEXT:    qc.insbi a0, -1, 16, 0
 ; RV32IXQCIBM-NEXT:    ret
 ;
 ; RV32IXQCIBMZBS-LABEL: test_insbi_mask_mv:
 ; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    mv a0, a1
 ; RV32IXQCIBMZBS-NEXT:    qc.insbi a0, -1, 16, 0
 ; RV32IXQCIBMZBS-NEXT:    ret
   %or = or i32 %b, 65535
@@ -99,14 +101,16 @@ define i32 @test_insbi_shifted_mask_multiple_uses(i32 %a) nounwind {
 ;
 ; RV32IXQCIBM-LABEL: test_insbi_shifted_mask_multiple_uses:
 ; RV32IXQCIBM:       # %bb.0:
-; RV32IXQCIBM-NEXT:    qc.insbi a1, -1, 4, 12
+; RV32IXQCIBM-NEXT:    lui a1, 15
+; RV32IXQCIBM-NEXT:    or a1, a1, a0
 ; RV32IXQCIBM-NEXT:    addi a0, a0, 10
 ; RV32IXQCIBM-NEXT:    xor a0, a0, a1
 ; RV32IXQCIBM-NEXT:    ret
 ;
 ; RV32IXQCIBMZBS-LABEL: test_insbi_shifted_mask_multiple_uses:
 ; RV32IXQCIBMZBS:       # %bb.0:
-; RV32IXQCIBMZBS-NEXT:    qc.insbi a1, -1, 4, 12
+; RV32IXQCIBMZBS-NEXT:    lui a1, 15
+; RV32IXQCIBMZBS-NEXT:    or a1, a1, a0
 ; RV32IXQCIBMZBS-NEXT:    addi a0, a0, 10
 ; RV32IXQCIBMZBS-NEXT:    xor a0, a0, a1
 ; RV32IXQCIBMZBS-NEXT:    ret
