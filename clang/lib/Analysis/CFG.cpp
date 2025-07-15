@@ -2833,11 +2833,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (!FD->isVariadic())
       findConstructionContextsForArguments(C);
 
-    if (!NoReturn) {
-      auto NoRetAttrOpt = FD->getAnalyzerNoReturn();
-      NoReturn =
-          (NoRetAttrOpt && *NoRetAttrOpt) || C->isBuiltinAssumeFalse(*Context);
-    }
+    NoReturn |= FD->getAnalyzerNoReturn().value_or(false) || C->isBuiltinAssumeFalse(*Context);
 
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
