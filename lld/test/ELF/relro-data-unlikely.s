@@ -6,7 +6,7 @@
 # RUN:  .data.rel.ro.unlikely : { *(.data.rel.ro.unlikely) } \
 # RUN: } INSERT AFTER .text " > %t.script
 
-# RUN: ld.lld --script=%t.script %t.o -o %t
+# RUN: ld.lld -z keep-data-section-prefix --script=%t.script %t.o -o %t
 # RUN: llvm-readelf -l %t | FileCheck --check-prefix=SEG %s
 # RUN: llvm-readelf -S %t | FileCheck %s
 
