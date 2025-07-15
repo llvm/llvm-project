@@ -806,14 +806,18 @@ LogicalResult NVVM::LdMatrixOp::verify() {
     return emitOpError("expected num attribute to be 1, 2 or 4");
 
   Type i32 = IntegerType::get(getContext(), 32);
-  if (getNum() == 1 && getType() != i32)
+  uint32_t num = getNum();
+  if (getShape() == LdStMatrixShape::M16N16) {
+    num *= 2;
+  }
+  if (num == 1 && getType() != i32)
     return emitOpError("expected destination type is i32");
-  if (getNum() == 2 || getNum() == 4) {
+  if (num == 2 || num == 4) {
     Type dstType = LLVM::LLVMStructType::getLiteral(
-        getContext(), SmallVector<Type>(getNum(), i32));
+        getContext(), SmallVector<Type>(num, i32));
     if (getType() != dstType)
       return emitOpError("expected destination type is a structure of ")
-             << getNum() << " elements of type i32";
+             << num << " elements of type i32";
   }
   return success();
 }
