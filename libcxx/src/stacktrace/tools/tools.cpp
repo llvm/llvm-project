@@ -110,11 +110,6 @@ void spawner::resolve_lines() {
       proc.run();
       return true;
     } catch (failed const& failed) {
-      debug() << failed.what();
-      if (failed.errno_) {
-        debug() << " (" << failed.errno_ << " " << strerror(failed.errno_) << ')';
-      }
-      debug() << '\n';
     }
     return false;
   });

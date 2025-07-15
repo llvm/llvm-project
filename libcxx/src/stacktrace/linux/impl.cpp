@@ -8,13 +8,12 @@
 
 #if defined(__linux__)
 
+#  include <__stacktrace/base.h>
 #  include <cassert>
 #  include <dlfcn.h>
 #  include <link.h>
-#  include <stacktrace>
 #  include <unistd.h>
 
-#  include "stacktrace/config.h"
 #  include "stacktrace/linux/elf.h"
 #  include "stacktrace/linux/images.h"
 #  include "stacktrace/linux/impl.h"

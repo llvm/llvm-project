@@ -10,10 +10,11 @@
 #define _LIBCPP_STACKTRACE_WIN_IMPL_H
 
 #include <__config>
-#include <__config_site>
-#include <cstddef>
-#include <cstdlib>
-#include <mutex>
+#if defined(_LIBCPP_WIN32API)
+
+#  include <cstddef>
+#  include <cstdlib>
+#  include <mutex>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
@@ -23,28 +24,29 @@ struct base;
 struct win_impl {
   base& base_;
 
-#if defined(_LIBCPP_WIN32API)
   static std::mutex mutex_;
-  std::lock_guard<std::mutex> guard_;
+  static HANDLE proc_;
+  static HMODULE exe_;
+  static IMAGE_NT_HEADERS* nt_headers_;
+  static bool initialized_;
+  static HMODULE module_handles_[1024];
+  static size_t module_count_; // 0 IFF module enumeration failed
 
-  explicit win_impl(base& base) : base_(base), guard_(mutex_) { global_init(); }
+  /*
+  The `dbghelp` APIs are not safe to call concurrently (according to their docs)
+  so we claim a lock in constructor.
+  */
+  explicit win_impl(base& base);
   ~win_impl();
 
-  void global_init();
   void collect(size_t skip, size_t max_depth);
   void ident_modules();
   void symbolize();
   void resolve_lines();
-#else
-  void global_init() {}
-  void collect(size_t, size_t) {}
-  void ident_modules() {}
-  void symbolize() {}
-  void resolve_lines() {}
-#endif // _LIBCPP_WIN32API
 };
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
+#endif // _LIBCPP_WIN32API
 #endif // _LIBCPP_STACKTRACE_WIN_IMPL_H
