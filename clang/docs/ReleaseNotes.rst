@@ -707,6 +707,12 @@ Improvements to Clang's diagnostics
 - Improve the diagnostics for placement new expression when const-qualified
   object was passed as the storage argument. (#GH143708)
 
+- Added a separate diagnostic group `-Wfunction-effect-redeclarations``, for the more pedantic
+  diagnostics for function effects (``[[clang::nonblocking]]`` and ``[[clang::nonallocating]]``).
+  Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
+  Added a new warning in this group for the case where the attribute is missing/implicit on
+  an override of a virtual method.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

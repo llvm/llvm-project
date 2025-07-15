@@ -18700,8 +18700,8 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
                                                    NewFT->getParamTypes(), EPI);
           New->setType(ModQT);
           if (Errs.empty()) {
-            // A warning here is somewhat pedantic. Skip this if there was already 
-            // a merge conflict, which is more serious.
+            // A warning here is somewhat pedantic. Skip this if there was
+            // already a merge conflict, which is more serious.
             Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
                 << Diff.effectName();
             Diag(Old->getLocation(), diag::note_overridden_virtual_function)
