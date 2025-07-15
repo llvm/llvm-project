@@ -176,6 +176,33 @@ void Listener::AddEvent(EventSP &event_sp) {
   m_events_condition.notify_all();
 }
 
+void Listener::MoveEvents(
+    ListenerSP destination,
+    Broadcaster *broadcaster, // nullptr for any broadcaster
+    uint32_t event_type_mask) {
+  Log *log = GetLog(LLDBLog::Events);
+
+  std::lock_guard<std::mutex> guard(m_events_mutex);
+  auto pos = m_events.begin();
+  while (pos != m_events.end()) {
+    EventSP &event_sp = *pos;
+    if (event_sp &&
+        ((broadcaster == nullptr) || event_sp->BroadcasterIs(broadcaster)) &&
+        (event_type_mask == 0 || event_type_mask & event_sp->GetType())) {
+      LLDB_LOGF(
+          log, "%p Listener('%s')::MoveEvents moving event %p to %p('%s')",
+          static_cast<void *>(this), m_name.c_str(),
+          static_cast<void *>(event_sp.get()),
+          static_cast<void *>(destination.get()), destination->GetName());
+
+      destination->AddEvent(event_sp);
+      pos = m_events.erase(pos);
+    } else {
+      ++pos;
+    }
+  }
+}
+
 bool Listener::FindNextEventInternal(
     std::unique_lock<std::mutex> &lock,
     Broadcaster *broadcaster, // nullptr for any broadcaster
