@@ -10096,9 +10096,15 @@ define i64 @udiv_i64_9divbits(i8 %size) {
 }
 
 define <2 x i64> @srem_zero_zero() {
-; GCN-LABEL: kernel:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_endpgm
+; GFX6-LABEL: srem_zero_zero:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: srem_zero_zero:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %B = srem <2 x i64> zeroinitializer, zeroinitializer
   ret <2 x i64> %B

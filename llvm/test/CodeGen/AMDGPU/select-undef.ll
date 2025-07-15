@@ -841,8 +841,8 @@ ret:
   ret void
 }
 
-define i64 @undef_should_freeze(i1 %cond1, i32 %val, i16 %val2, i64 noundef %a, i64 noundef %b) {
-; GCN-LABEL: undef_should_freeze:
+define i64 @poison_should_freeze(i1 %cond1, i32 %val, i16 %val2, i64 %a, i64 %b) {
+; GCN-LABEL: poison_should_freeze:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
@@ -854,9 +854,9 @@ define i64 @undef_should_freeze(i1 %cond1, i32 %val, i16 %val2, i64 noundef %a, 
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v5, v3, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v6, v4, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %undefv = insertelement <2 x i16> poison, i16 %val2, i32 1
-  %undef = bitcast <2 x i16> %undefv to i32
-  %cond2 = select i1 %cond1, i32 %undef, i32 %val
+  %poisonv = insertelement <2 x i16> poison, i16 %val2, i32 1
+  %poison = bitcast <2 x i16> %poisonv to i32
+  %cond2 = select i1 %cond1, i32 %poison, i32 %val
   %cmp = icmp eq i32 %cond2, 0
   %select = select i1 %cmp, i64 %a, i64 %b
   ret i64 %select
