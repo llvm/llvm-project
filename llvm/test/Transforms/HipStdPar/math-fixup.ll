@@ -297,6 +297,32 @@ entry:
   ret void
 }
 
+define void @test_modf(double %dbl, float %flt, ptr %pdbl, ptr %pflt) {
+; CHECK-LABEL: define void @test_modf(
+; CHECK-SAME: double [[DBL:%.*]], float [[FLT:%.*]], ptr [[PDBL:%.*]], ptr [[PFLT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call { double, double } @__hipstdpar_modf_f64(double [[DBL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { double, double } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[TMP0]], 1
+; CHECK-NEXT:    store double [[TMP2]], ptr [[PDBL]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call { float, float } @__hipstdpar_modf_f32(float [[FLT]])
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { float, float } [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { float, float } [[TMP3]], 1
+; CHECK-NEXT:    store float [[TMP5]], ptr [[PFLT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = tail call { double, double } @llvm.modf.f64(double %dbl)
+  %1 = extractvalue { double, double } %0, 0
+  %2 = extractvalue { double, double } %0, 1
+  store double %2, ptr %pdbl, align 8
+  %3 = tail call { float, float } @llvm.modf.f32(float %flt)
+  %4 = extractvalue { float, float } %3, 0
+  %5 = extractvalue { float, float } %3, 1
+  store float %5, ptr %pflt, align 4
+  ret void
+}
+
 define void @test_pow(double %dbl) {
 ; CHECK-LABEL: define void @test_pow(
 ; CHECK-SAME: double [[DBL:%.*]]) {
@@ -438,6 +464,10 @@ declare double @llvm.log2.f64(double)
 declare hidden double @log1p(double)
 
 declare hidden float @log1pf(float)
+
+declare { float, float } @llvm.modf.f32(float)
+
+declare { double, double } @llvm.modf.f64(double)
 
 declare double @llvm.pow.f64(double, double)
 
