@@ -8112,7 +8112,7 @@ bool VPRecipeBuilder::getScaledReductions(
   std::optional<unsigned> BinOpc;
   Type *ExtOpTypes[2] = {nullptr};
 
-  auto CollectExtInfo = [&Exts,
+  auto CollectExtInfo = [this, &Exts,
                          &ExtOpTypes](SmallVectorImpl<Value *> &Ops) -> bool {
     unsigned I = 0;
     for (Value *OpI : Ops) {
@@ -8120,6 +8120,11 @@ bool VPRecipeBuilder::getScaledReductions(
       if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))))
         return false;
       Exts[I] = cast<Instruction>(OpI);
+
+      // TODO: We should be able to support live-ins.
+      if (!CM.TheLoop->contains(Exts[I]))
+        return false;
+
       ExtOpTypes[I] = ExtOp->getType();
       I++;
     }
