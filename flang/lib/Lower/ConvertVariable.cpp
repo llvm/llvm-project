@@ -771,9 +771,80 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
       return builder.create<cuf::SharedMemoryOp>(loc, ty, nm, symNm, lenParams,
                                                  indices);
 
-    if (!cuf::isCUDADeviceContext(builder.getRegion()))
-      return builder.create<cuf::AllocOp>(loc, ty, nm, symNm, dataAttr,
-                                          lenParams, indices);
+    if (!cuf::isCUDADeviceContext(builder.getRegion())) {
+      mlir::Value alloc = builder.create<cuf::AllocOp>(
+          loc, ty, nm, symNm, dataAttr, lenParams, indices);
+      if (const auto *details{
+              ultimateSymbol
+                  .detailsIf<Fortran::semantics::ObjectEntityDetails>()}) {
+        const Fortran::semantics::DeclTypeSpec *type{details->type()};
+        const Fortran::semantics::DerivedTypeSpec *derived{
+            type ? type->AsDerived() : nullptr};
+        if (derived) {
+          Fortran::semantics::UltimateComponentIterator components{*derived};
+          auto recTy = mlir::dyn_cast<fir::RecordType>(ty);
+
+          mlir::Type fieldTy;
+          llvm::SmallVector<mlir::Value> coordinates;
+          for (const auto &sym : components) {
+            if (Fortran::semantics::IsDeviceAllocatable(sym)) {
+              unsigned fieldIdx = recTy.getFieldIndex(sym.name().ToString());
+              mlir::Type fieldTy;
+              std::vector<mlir::Value> coordinates;
+
+              if (fieldIdx != std::numeric_limits<unsigned>::max()) {
+                // Field found in the base record type.
+                auto fieldName = recTy.getTypeList()[fieldIdx].first;
+                fieldTy = recTy.getTypeList()[fieldIdx].second;
+                mlir::Value fieldIndex = builder.create<fir::FieldIndexOp>(
+                    loc, fir::FieldType::get(fieldTy.getContext()), fieldName,
+                    recTy,
+                    /*typeParams=*/mlir::ValueRange{});
+                coordinates.push_back(fieldIndex);
+              } else {
+                // Field not found in base record type, search in potential
+                // record type components.
+                for (auto component : recTy.getTypeList()) {
+                  if (auto childRecTy =
+                          mlir::dyn_cast<fir::RecordType>(component.second)) {
+                    fieldIdx = childRecTy.getFieldIndex(sym.name().ToString());
+                    if (fieldIdx != std::numeric_limits<unsigned>::max()) {
+                      mlir::Value parentFieldIndex =
+                          builder.create<fir::FieldIndexOp>(
+                              loc, fir::FieldType::get(childRecTy.getContext()),
+                              component.first, recTy,
+                              /*typeParams=*/mlir::ValueRange{});
+                      coordinates.push_back(parentFieldIndex);
+                      auto fieldName = childRecTy.getTypeList()[fieldIdx].first;
+                      fieldTy = childRecTy.getTypeList()[fieldIdx].second;
+                      mlir::Value childFieldIndex =
+                          builder.create<fir::FieldIndexOp>(
+                              loc, fir::FieldType::get(fieldTy.getContext()),
+                              fieldName, childRecTy,
+                              /*typeParams=*/mlir::ValueRange{});
+                      coordinates.push_back(childFieldIndex);
+                      break;
+                    }
+                  }
+                }
+              }
+
+              if (coordinates.empty())
+                TODO(loc, "device resident component in complex derived-type "
+                          "hierarchy");
+
+              mlir::Value comp = builder.create<fir::CoordinateOp>(
+                  loc, builder.getRefType(fieldTy), alloc, coordinates);
+              cuf::DataAttributeAttr dataAttr =
+                  Fortran::lower::translateSymbolCUFDataAttribute(
+                      builder.getContext(), sym);
+              builder.create<cuf::SetAllocatorIndexOp>(loc, comp, dataAttr);
+            }
+          }
+        }
+      }
+      return alloc;
+    }
   }
 
   // Let the builder do all the heavy lifting.
