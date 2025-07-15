@@ -374,6 +374,9 @@ FEATURE(clang_atomic_attributes, true)
 FEATURE(cuda_noinline_keyword, LangOpts.CUDA)
 EXTENSION(cuda_implicit_host_device_templates, LangOpts.CUDA && LangOpts.OffloadImplicitHostDeviceTemplates)
 
+// C++2d type-aware allocators
+EXTENSION(cxx_type_aware_allocators, true)
+
 // TODO(BoundsSafety): Deprecate this feature name
 FEATURE(bounds_attributes, LangOpts.BoundsSafety)
 /* TO_UPSTREAM(BoundsSafety) ON*/
