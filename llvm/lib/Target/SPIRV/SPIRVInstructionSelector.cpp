@@ -4012,56 +4012,83 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
   // At this point, the return type is not a struct anymore, but rather two
   // independent elements of SPIRVResType. We can get each independent element
   // from I.getDefs() or I.getOperands().
-  ExtInstList ExtInsts = {{SPIRV::InstructionSet::OpenCL_std, CL::modf},
-                          {SPIRV::InstructionSet::GLSL_std_450, GL::Modf}};
-  for (const auto &Ex : ExtInsts) {
-    SPIRV::InstructionSet::InstructionSet Set = Ex.first;
-    uint32_t Opcode = Ex.second;
-    if (STI.canUseExtInstSet(Set)) {
-      MachineIRBuilder MIRBuilder(I);
-      // Get pointer type for alloca variable.
-      const SPIRVType *PtrType = GR.getOrCreateSPIRVPointerType(
-          ResType, MIRBuilder, SPIRV::StorageClass::Input);
-      // Create new register for the pointer type of alloca variable.
-      Register NewRegister =
-          MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
-      MIRBuilder.getMRI()->setType(NewRegister, LLT::pointer(0, 64));
-      // Assign SPIR-V type of the pointer type of the alloca variable to the
-      // new register.
-      GR.assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
-      // Build the alloca variable.
-      Register Variable = GR.buildGlobalVariable(
-          NewRegister, PtrType, "placeholder", nullptr,
-          SPIRV::StorageClass::Function, nullptr, true, false,
-          SPIRV::LinkageType::Import, MIRBuilder, false);
-      // Modf must have 4 operands, the first two are the 2 parts of the result,
-      // the third is the operand, and the last one is the floating point value.
-      assert(I.getNumOperands() == 4 &&
-             "Expected 4 operands for modf instruction");
-      MachineBasicBlock &BB = *I.getParent();
-      // Create the OpenCLLIB::modf instruction.
-      auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-                     .addDef(ResVReg)
-                     .addUse(GR.getSPIRVTypeID(ResType))
-                     .addImm(static_cast<uint32_t>(Set))
-                     .addImm(Opcode)
-                     .setMIFlags(I.getFlags())
-                     .add(I.getOperand(3)) // Floating point value.
-                     .addUse(Variable);    // Pointer to integral part.
-      // Assign the integral part stored in the ptr to the second element of the
-      // result.
-      Register IntegralPartReg = I.getOperand(1).getReg();
-      if (IntegralPartReg.isValid()) {
-        // Load the value from the pointer to integral part.
-        auto LoadMIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
-                           .addDef(IntegralPartReg)
-                           .addUse(GR.getSPIRVTypeID(ResType))
-                           .addUse(Variable);
-        return LoadMIB.constrainAllUses(TII, TRI, RBI);
-      }
-
-      return MIB.constrainAllUses(TII, TRI, RBI);
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
+    uint32_t Opcode = CL::modf;
+    MachineIRBuilder MIRBuilder(I);
+    // Get pointer type for alloca variable.
+    const SPIRVType *PtrType = GR.getOrCreateSPIRVPointerType(
+        ResType, MIRBuilder, SPIRV::StorageClass::Function);
+    // Create new register for the pointer type of alloca variable.
+    Register PtrTyReg =
+        MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
+    MIRBuilder.getMRI()->setType(
+        PtrTyReg,
+        LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Function),
+                     GR.getPointerSize()));
+    // Assign SPIR-V type of the pointer type of the alloca variable to the
+    // new register.
+    GR.assignSPIRVTypeToVReg(PtrType, PtrTyReg, MIRBuilder.getMF());
+    MachineBasicBlock &EntryBB = I.getMF()->front();
+    // At this point it's difficult to find the right position to insert the
+    // variable, because most instructions are still MachineInstruction and
+    // don't have SPIRV opcodes yet. OpFunction and OpFunctionParameter are
+    // already translated, so we will aim to insert the variable just after the
+    // last OpFunctionParameter, if any, or just after OpFunction otherwise.
+    auto VarPos = EntryBB.begin();
+    while (VarPos != EntryBB.end() &&
+           VarPos->getOpcode() != SPIRV::OpFunction) {
+      ++VarPos;
     }
+    // Advance VarPos to the next instruction after OpFunction, it will either
+    // be an OpFunctionParameter, so that we can start the next loop, or the 
+    // position to insert the OpVariable instruction.
+    ++VarPos;
+    while (VarPos != EntryBB.end() &&
+           VarPos->getOpcode() == SPIRV::OpFunctionParameter) {
+      ++VarPos;
+    }
+    // VarPos is now pointing at after the last OpFunctionParameter, if any,
+    // or after OpFunction, if no parameters.
+    // Create a new MachineInstruction for alloca variable in the
+    // entry block.
+    auto AllocaMIB =
+        BuildMI(EntryBB, VarPos, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
+            .addDef(PtrTyReg)
+            .addUse(GR.getSPIRVTypeID(PtrType))
+            .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
+    Register Variable = AllocaMIB->getOperand(0).getReg();
+    // Modf must have 4 operands, the first two are the 2 parts of the result,
+    // the third is the operand, and the last one is the floating point value.
+    assert(I.getNumOperands() == 4 &&
+           "Expected 4 operands for modf instruction");
+    MachineBasicBlock &BB = *I.getParent();
+    // Create the OpenCLLIB::modf instruction.
+    auto MIB =
+        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+            .addDef(ResVReg)
+            .addUse(GR.getSPIRVTypeID(ResType))
+            .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
+            .addImm(Opcode)
+            .setMIFlags(I.getFlags())
+            .add(I.getOperand(3)) // Floating point value.
+            .addUse(Variable);    // Pointer to integral part.
+    // Assign the integral part stored in the ptr to the second element of the
+    // result.
+    Register IntegralPartReg = I.getOperand(1).getReg();
+    if (IntegralPartReg.isValid()) {
+      // Load the value from the pointer to integral part.
+      auto LoadMIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+                         .addDef(IntegralPartReg)
+                         .addUse(GR.getSPIRVTypeID(ResType))
+                         .addUse(Variable);
+      return LoadMIB.constrainAllUses(TII, TRI, RBI);
+    }
+
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  } else if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
+    assert(false && "GLSL::Modf is deprecated.");
+    // FIXME: GL::Modf is deprecated, use Modfstruct instead.
+    return false;
   }
   return false;
 }

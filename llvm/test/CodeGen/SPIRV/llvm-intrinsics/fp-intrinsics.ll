@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#extinst_id:]] = OpExtInstImport "OpenCL.std"
 
@@ -348,13 +349,49 @@ declare float @llvm.fma.f32(float, float, float)
 ; CHECK: OpStore %[[#fracPtr]] %[[#frac]]
 ; CHECK: OpStore %[[#integralPtr]] %[[#integral]]
 ; CHECK: OpFunctionEnd
-define void @foo(double %d, ptr addrspace(1) %frac, ptr addrspace(1) %integral) {
+define void @TestModf(double %d, ptr addrspace(1) %frac, ptr addrspace(1) %integral) {
 entry:
   %4 = tail call { double, double } @llvm.modf.f64(double %d)
   %5 = extractvalue { double, double } %4, 0
   %6 = extractvalue { double, double } %4, 1
   store double %5, ptr addrspace(1) %frac, align 8
   store double %6, ptr addrspace(1) %integral, align 8
+  ret void
+}
+
+define dso_local void @TestModf2(double noundef %d, ptr noundef %frac, ptr noundef %integral) {
+entry:
+  %d.addr = alloca double, align 4
+  %frac.addr = alloca ptr, align 8
+  %integral.addr = alloca ptr, align 8
+  store double %d, ptr %d.addr, align 4
+  store ptr %frac, ptr %frac.addr, align 8
+  store ptr %integral, ptr %integral.addr, align 8
+  %0 = load ptr, ptr %frac.addr, align 8
+  %tobool = icmp ne ptr %0, null
+  br i1 %tobool, label %lor.lhs.false, label %if.then
+
+lor.lhs.false:
+  %1 = load ptr, ptr %integral.addr, align 8
+  %tobool1 = icmp ne ptr %1, null
+  br i1 %tobool1, label %if.end, label %if.then
+
+if.then:
+  br label %return
+
+if.end:
+  %2 = load ptr, ptr %frac.addr, align 8
+  %3 = load double, ptr %2, align 4
+  %4 = load ptr, ptr %integral.addr, align 8
+  %5 = load double, ptr %4, align 4
+  %6 = tail call { double, double } @llvm.modf.f64(double %d)
+  %7 = extractvalue { double, double } %6, 0
+  %8 = extractvalue { double, double } %6, 1
+  store double %7, ptr %frac, align 4
+  store double %7, ptr %integral, align 4
+  br label %return
+
+return:
   ret void
 }
 
