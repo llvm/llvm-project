@@ -18,6 +18,7 @@ class DuplicateLibcallImplWithPrefix<RuntimeLibcallImpl Impl, string prefix>
 /// Libcall Predicates
 def isOSDarwin : RuntimeLibcallPredicate<"TT.isOSDarwin()">;
 def isOSOpenBSD : RuntimeLibcallPredicate<"TT.isOSOpenBSD()">;
+def isNotOSOpenBSD : RuntimeLibcallPredicate<"!TT.isOSOpenBSD()">;
 def isOSWindows : RuntimeLibcallPredicate<"TT.isOSWindows()">;
 def isNotOSWindows : RuntimeLibcallPredicate<"!TT.isOSWindows()">;
 def isNotOSMSVCRT : RuntimeLibcallPredicate<"!TT.isOSMSVCRT()">;
@@ -698,9 +699,6 @@ foreach lc = LibCalls__atomic in {
   def __#!tolower(!cast<string>(lc)) : RuntimeLibcallImpl<lc>;
 }
 
-// Stack Protector Fail
-def __stack_chk_fail : RuntimeLibcallImpl<STACKPROTECTOR_CHECK_FAIL>;
-
 // Deoptimization
 def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
 
@@ -945,6 +943,9 @@ def exp10l_f80 : RuntimeLibcallImpl<EXP10_F80, "exp10l">;
 def exp10l_f128 : RuntimeLibcallImpl<EXP10_F128, "exp10l">;
 def exp10l_ppcf128 : RuntimeLibcallImpl<EXP10_PPCF128, "exp10l">;
 
+// Stack Protector Fail
+def __stack_chk_fail : RuntimeLibcallImpl<STACKPROTECTOR_CHECK_FAIL>;
+
 //--------------------------------------------------------------------
 // compiler-rt/libgcc but 64-bit only, not available by default
 //--------------------------------------------------------------------
@@ -1128,6 +1129,7 @@ defvar LibmHasLdexpF80 = LibcallImpls<(add ldexp_f80), isNotOSWindowsOrIsCygwinM
 defvar LibmHasFrexpF128 = LibcallImpls<(add frexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
 
+defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), isNotOSOpenBSD>;
 
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
@@ -1205,7 +1207,8 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibcallImpls<(add bzero), isOSDarwin>,
        DarwinExp10, DarwinSinCosStret,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-       LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F128)
+       LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F128,
+       has__stack_chk_fail)
 >;
 
 // Prepend a # to every name
@@ -1221,7 +1224,7 @@ defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
 
 def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
-                           (add WinArm64ECDefaultRuntimeLibcallImpls)>;
+                           (add WinArm64ECDefaultRuntimeLibcallImpls, __stack_chk_fail)>;
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Runtime Libcalls
@@ -1481,7 +1484,8 @@ def ARMSystemLibrary
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
                         RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
-                                                  (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>)> {
+                                                  (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>,
+           has__stack_chk_fail)> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
      (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) ?
         (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
@@ -1583,7 +1587,7 @@ def HexagonSystemLibrary
     __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
     __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
     LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-    exp10f, exp10, exp10l_f128)>;
+    exp10f, exp10, exp10l_f128, __stack_chk_fail)>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
@@ -1593,7 +1597,8 @@ def isLanai : RuntimeLibcallPredicate<"TT.getArch() == Triple::lanai">;
 
 // Use fast calling convention for library functions.
 def LanaiSystemLibrary
-    : SystemRuntimeLibrary<isLanai, (add DefaultRuntimeLibcallImpls)> {
+    : SystemRuntimeLibrary<isLanai, (add DefaultRuntimeLibcallImpls,
+                                         __stack_chk_fail)> {
   let DefaultLibcallCallingConv = FASTCC;
 }
 
@@ -1884,8 +1889,10 @@ def MSP430SystemLibrary
       // TODO: __mspabi_[srli/srai/slli] ARE implemented in libgcc
       __mspabi_srll,
       __mspabi_sral,
-      __mspabi_slll
+      __mspabi_slll,
       // __mspabi_[srlll/srall/sllll/rlli/rlll] are NOT implemented in libgcc
+
+      __stack_chk_fail
   )
 >;
 
@@ -1976,7 +1983,8 @@ def PPCSystemLibrary
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
            LibmHasSinCosPPCF128,
            AvailableIf<memcpy, isNotAIX>,
-           LibcallImpls<(add Int128RTLibcalls), isPPC64>)>;
+           LibcallImpls<(add Int128RTLibcalls), isPPC64>,
+           has__stack_chk_fail)>;
 
 //===----------------------------------------------------------------------===//
 // RISCV Runtime Libcalls
@@ -1990,7 +1998,8 @@ def RISCVSystemLibrary
       (add DefaultRuntimeLibcallImpls,
            exp10f, exp10, exp10l_f128,
            __riscv_flush_icache,
-           LibcallImpls<(add Int128RTLibcalls), isRISCV64>)>;
+           LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
+           has__stack_chk_fail)>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
@@ -2057,7 +2066,8 @@ def SPARCSystemLibrary
             sparc_umul, sparc_div, sparc_udiv, sparc_rem, sparc_urem,
        LibcallImpls<(add _Q_qtoll, _Q_qtoull, _Q_lltoq, _Q_ulltoq), isSPARC32>,
        LibcallImpls<(add SPARC64_MulDivCalls, Int128RTLibcalls), isSPARC64>,
-       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128)
+       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+       has__stack_chk_fail)
 >;
 
 //===----------------------------------------------------------------------===//
@@ -2106,7 +2116,8 @@ defvar X86CommonLibcalls =
        LibcallImpls<(add MostPowI), isNotOSMSVCRT>,
        // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
        // hack for one test relying on it.
-       __powitf2_f128
+       __powitf2_f128,
+       has__stack_chk_fail
 );
 
 defvar Windows32DivRemMulCalls =
@@ -2251,7 +2262,8 @@ def WasmSystemLibrary
       (add DefaultRuntimeLibcallImpls, Int128RTLibcalls,
            CompilerRTOnlyInt64Libcalls, CompilerRTOnlyInt128Libcalls,
            exp10f, exp10,
-           emscripten_return_address)>;
+           emscripten_return_address,
+           __stack_chk_fail)>;
 
 //===----------------------------------------------------------------------===//
 // Legacy Default Runtime Libcalls
@@ -2274,5 +2286,6 @@ def LegacyDefaultSystemLibrary
          LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
          exp10f, exp10, exp10l_f128,
          __powisf2, __powidf2, __powitf2_f128,
-         LibcallImpls<(add Int128RTLibcalls), isArch64Bit>
+         LibcallImpls<(add Int128RTLibcalls), isArch64Bit>,
+         has__stack_chk_fail
 )>;
