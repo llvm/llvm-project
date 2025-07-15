@@ -5550,7 +5550,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::UMAX:
   case ISD::AND:
   case ISD::XOR:
-  case ISD::ABS:
   case ISD::ROTL:
   case ISD::ROTR:
   case ISD::FSHL:
@@ -5570,6 +5569,11 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
+    return false;
+
+  case ISD::ABS:
+    // ISD::ABD defines abs(INT_MIN) -> INT_MIN and never generates poison.
+    // Different to Intrinsic::abs.
     return false;
 
   case ISD::ADDC:
