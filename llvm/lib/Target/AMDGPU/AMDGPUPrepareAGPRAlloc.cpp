@@ -97,6 +97,8 @@ bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
 
   const MCInstrDesc &AVImmPseudo32 = TII.get(AMDGPU::AV_MOV_B32_IMM_PSEUDO);
   const MCInstrDesc &AVImmPseudo64 = TII.get(AMDGPU::AV_MOV_B64_IMM_PSEUDO);
+  const SIRegisterInfo *TRI =
+      static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
@@ -118,6 +120,20 @@ bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
         MI.setDesc(AVImmPseudo64);
         Changed = true;
         continue;
+      }
+
+      for (MachineOperand &Op : MI.operands()) {
+        if (!Op.isReg() || !Op.isDef())
+          continue;
+
+        Register DefReg = Op.getReg();
+        if (DefReg.isPhysical())
+          continue;
+
+        const TargetRegisterClass *RC = MRI.getRegClass(DefReg);
+
+        if (TRI->isAGPRClass(RC) || TRI->isVGPRClass(RC))
+          Changed |= MRI.recomputeRegClass(DefReg);
       }
     }
   }
