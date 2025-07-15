@@ -1235,14 +1235,6 @@ bool Instruction::isDebugOrPseudoInst() const {
   return isa<DbgInfoIntrinsic>(this) || isa<PseudoProbeInst>(this);
 }
 
-const Instruction *
-Instruction::getPrevNonPseudoOpInstruction() const {
-  for (const Instruction *I = getPrevNode(); I; I = I->getPrevNode())
-    if (!isa<PseudoProbeInst>(I))
-      return I;
-  return nullptr;
-}
-
 const DebugLoc &Instruction::getStableDebugLoc() const {
   return getDebugLoc();
 }

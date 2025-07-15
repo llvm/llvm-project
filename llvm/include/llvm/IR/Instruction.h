@@ -898,16 +898,6 @@ public:
   /// Return true if the instruction is a DbgInfoIntrinsic or PseudoProbeInst.
   LLVM_ABI bool isDebugOrPseudoInst() const LLVM_READONLY;
 
-  /// Return a pointer to the previous non-debug instruction in the same basic
-  /// block as 'this', or nullptr if no such instruction exists. Skip any pseudo
-  /// operations if \c SkipPseudoOp is true.
-  LLVM_ABI const Instruction *
-  getPrevNonPseudoOpInstruction() const;
-  Instruction *getPrevNonPseudoOpInstruction() {
-    return const_cast<Instruction *>(
-       static_cast<const Instruction *>(this)->getPrevNonPseudoOpInstruction());
-  }
-
   /// Create a copy of 'this' instruction that is identical in all ways except
   /// the following:
   ///   * The instruction has no parent
