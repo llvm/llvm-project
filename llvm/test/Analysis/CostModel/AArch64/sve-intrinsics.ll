@@ -930,8 +930,8 @@ define void @get_lane_mask() #0 {
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 16 for: %mask_v8i1_i32 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 undef, i32 undef)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 8 for: %mask_v4i1_i32 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 undef, i32 undef)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %mask_v2i1_i32 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 undef, i32 undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:33 Lat:33 SizeLat:33 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 undef, i64 undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 undef, i16 undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 48 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 undef, i64 undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 undef, i16 undef)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'get_lane_mask'
@@ -953,8 +953,8 @@ define void @get_lane_mask() #0 {
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 16 for: %mask_v8i1_i32 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 undef, i32 undef)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 8 for: %mask_v4i1_i32 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 undef, i32 undef)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %mask_v2i1_i32 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 undef, i32 undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:33 Lat:33 SizeLat:33 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 undef, i64 undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 undef, i16 undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 48 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 undef, i64 undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 undef, i16 undef)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'get_lane_mask'
@@ -976,8 +976,8 @@ define void @get_lane_mask() #0 {
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 16 for: %mask_v8i1_i32 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 undef, i32 undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 8 for: %mask_v4i1_i32 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 undef, i32 undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 4 for: %mask_v2i1_i32 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 undef, i32 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:33 Lat:33 SizeLat:33 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 undef, i64 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 undef, i16 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 48 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 undef, i64 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 6 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 undef, i16 undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %mask_nxv16i1_i64 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 undef, i64 undef)
