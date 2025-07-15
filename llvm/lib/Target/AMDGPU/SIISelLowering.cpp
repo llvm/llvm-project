@@ -877,7 +877,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasPrefetch() && Subtarget->hasSafeSmemPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
-  if (Subtarget->hasIEEEMinMax()) {
+  if (Subtarget->hasIEEEMinimumMaximumInsts()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
   } else {
@@ -945,6 +945,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   setTargetDAGCombine({ISD::ADD,
+                       ISD::PTRADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
                        ISD::USUBO_CARRY,
@@ -1403,6 +1404,19 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
+  case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
+  case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64: {
+    Info.opc = (IntrID == Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64)
+                   ? ISD::INTRINSIC_W_CHAIN
+                   : ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::getVT(CI.getType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.memVT = MVT::i64;
+    Info.size = 8;
+    Info.align.reset();
+    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    return true;
+  }
   case Intrinsic::amdgcn_global_atomic_csub: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
@@ -1443,6 +1457,12 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MOVolatile;
     return true;
   }
+  case Intrinsic::amdgcn_ds_load_tr6_b96:
+  case Intrinsic::amdgcn_ds_load_tr4_b64:
+  case Intrinsic::amdgcn_ds_load_tr8_b64:
+  case Intrinsic::amdgcn_ds_load_tr16_b128:
+  case Intrinsic::amdgcn_global_load_tr6_b96:
+  case Intrinsic::amdgcn_global_load_tr4_b64:
   case Intrinsic::amdgcn_global_load_tr_b64:
   case Intrinsic::amdgcn_global_load_tr_b128:
   case Intrinsic::amdgcn_ds_read_tr4_b64:
@@ -1547,12 +1567,18 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume:
+  case Intrinsic::amdgcn_ds_load_tr8_b64:
+  case Intrinsic::amdgcn_ds_load_tr16_b128:
+  case Intrinsic::amdgcn_ds_load_tr4_b64:
+  case Intrinsic::amdgcn_ds_load_tr6_b96:
   case Intrinsic::amdgcn_ds_read_tr4_b64:
   case Intrinsic::amdgcn_ds_read_tr6_b96:
   case Intrinsic::amdgcn_ds_read_tr8_b64:
   case Intrinsic::amdgcn_ds_read_tr16_b64:
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
+  case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
+  case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_csub:
@@ -1561,6 +1587,8 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
   case Intrinsic::amdgcn_global_load_tr_b64:
   case Intrinsic::amdgcn_global_load_tr_b128:
+  case Intrinsic::amdgcn_global_load_tr4_b64:
+  case Intrinsic::amdgcn_global_load_tr6_b96:
     Ptr = II->getArgOperand(0);
     break;
   case Intrinsic::amdgcn_load_to_lds:
@@ -1955,7 +1983,8 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
 }
 
 EVT SITargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   // FIXME: Should account for address space here.
 
   // The default fallback uses the private pointer size as a guess for a type to
@@ -7101,7 +7130,8 @@ SDValue SITargetLowering::lowerFMINIMUM_FMAXIMUM(SDValue Op,
   if (VT.isVector())
     return splitBinaryVectorOp(Op, DAG);
 
-  assert(!Subtarget->hasIEEEMinMax() && !Subtarget->hasMinimum3Maximum3F16() &&
+  assert(!Subtarget->hasIEEEMinimumMaximumInsts() &&
+         !Subtarget->hasMinimum3Maximum3F16() &&
          Subtarget->hasMinimum3Maximum3PKF16() && VT == MVT::f16 &&
          "should not need to widen f16 minimum/maximum to v2f16");
 
@@ -14014,7 +14044,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   // operand form.
   const SDNodeFlags Flags = N->getFlags();
   if ((Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM) &&
-      !Subtarget->hasIEEEMinMax() && Flags.hasNoNaNs()) {
+      !Subtarget->hasIEEEMinimumMaximumInsts() && Flags.hasNoNaNs()) {
     unsigned NewOpc =
         Opc == ISD::FMINIMUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
     return DAG.getNode(NewOpc, SDLoc(N), VT, Op0, Op1, Flags);
@@ -15084,6 +15114,49 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
+                                               DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  if (N1.getOpcode() == ISD::ADD) {
+    // (ptradd x, (add y, z)) -> (ptradd (ptradd x, y), z) if z is a constant,
+    //    y is not, and (add y, z) is used only once.
+    // (ptradd x, (add y, z)) -> (ptradd (ptradd x, z), y) if y is a constant,
+    //    z is not, and (add y, z) is used only once.
+    // The goal is to move constant offsets to the outermost ptradd, to create
+    // more opportunities to fold offsets into memory instructions.
+    // Together with the generic combines in DAGCombiner.cpp, this also
+    // implements (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y)).
+    //
+    // This transform is here instead of in the general DAGCombiner as it can
+    // turn in-bounds pointer arithmetic out-of-bounds, which is problematic for
+    // AArch64's CPA.
+    SDValue X = N0;
+    SDValue Y = N1.getOperand(0);
+    SDValue Z = N1.getOperand(1);
+    if (N1.hasOneUse()) {
+      bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
+      bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
+      if (ZIsConstant != YIsConstant) {
+        // If both additions in the original were NUW, the new ones are as well.
+        SDNodeFlags Flags =
+            (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+        if (YIsConstant)
+          std::swap(Y, Z);
+
+        SDValue Inner = DAG.getMemBasePlusOffset(X, Y, DL, Flags);
+        DCI.AddToWorklist(Inner.getNode());
+        return DAG.getMemBasePlusOffset(Inner, Z, DL, Flags);
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue SITargetLowering::performSubCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -15622,6 +15695,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   case ISD::ADD:
     return performAddCombine(N, DCI);
+  case ISD::PTRADD:
+    return performPtrAddCombine(N, DCI);
   case ISD::SUB:
     return performSubCombine(N, DCI);
   case ISD::UADDO_CARRY:

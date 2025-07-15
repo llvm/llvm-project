@@ -713,7 +713,7 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result element type to be 'f32'}}
+  // expected-error@+1 {{expected result element type to be 'f32', but got 'memref<8x16x4xi32>'}}
   %1 = memref.subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to
       memref<8x16x4xi32>
@@ -724,10 +724,10 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result rank to be smaller or equal to the source rank.}}
+  // expected-error@+1 {{expected result rank to be smaller or equal to the source rank, but got 'memref<8x16x4x3xf32>'}}
   %1 = memref.subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to
-      memref<8x16x4x3xi32>
+      memref<8x16x4x3xf32>
   return
 }
 

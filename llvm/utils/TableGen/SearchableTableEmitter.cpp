@@ -17,6 +17,7 @@
 #include "Common/CodeGenTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
@@ -44,13 +45,23 @@ static int64_t getInt(const Record *R, StringRef Field) {
 
 namespace {
 struct GenericEnum {
-  using Entry = std::pair<StringRef, int64_t>;
+  struct Entry {
+    StringRef Name;
+    int64_t Value;
+    Entry(StringRef N, int64_t V) : Name(N), Value(V) {}
+  };
 
   std::string Name;
   const Record *Class = nullptr;
   std::string PreprocessorGuard;
-  std::vector<std::unique_ptr<Entry>> Entries;
-  DenseMap<const Record *, Entry *> EntryMap;
+  MapVector<const Record *, Entry> Entries;
+
+  const Entry *getEntry(const Record *Def) const {
+    auto II = Entries.find(Def);
+    if (II == Entries.end())
+      return nullptr;
+    return &II->second;
+  }
 };
 
 struct GenericField {
@@ -129,11 +140,12 @@ private:
     else if (Field.IsInstruction)
       return I->getAsString();
     else if (Field.Enum) {
-      auto *Entry = Field.Enum->EntryMap[cast<DefInit>(I)->getDef()];
+      const GenericEnum::Entry *Entry =
+          Field.Enum->getEntry(cast<DefInit>(I)->getDef());
       if (!Entry)
         PrintFatalError(Loc,
                         Twine("Entry for field '") + Field.Name + "' is null");
-      return Entry->first.str();
+      return Entry->Name.str();
     }
     PrintFatalError(Loc, Twine("invalid field type for field '") + Field.Name +
                              "'; expected: bit, bits, string, or code");
@@ -221,7 +233,7 @@ int64_t SearchableTableEmitter::getNumericKey(const SearchIndex &Index,
   }
   if (Field.Enum) {
     const Record *EnumEntry = Rec->getValueAsDef(Field.Name);
-    return Field.Enum->EntryMap[EnumEntry]->second;
+    return Field.Enum->getEntry(EnumEntry)->Value;
   }
   assert(isa<BitsRecTy>(Field.RecType) && "unexpected field type");
 
@@ -272,8 +284,8 @@ bool SearchableTableEmitter::compareBy(const Record *LHS, const Record *RHS,
     } else if (Field.Enum) {
       auto LHSr = cast<DefInit>(LHSI)->getDef();
       auto RHSr = cast<DefInit>(RHSI)->getDef();
-      int64_t LHSv = Field.Enum->EntryMap[LHSr]->second;
-      int64_t RHSv = Field.Enum->EntryMap[RHSr]->second;
+      int64_t LHSv = Field.Enum->getEntry(LHSr)->Value;
+      int64_t RHSv = Field.Enum->getEntry(RHSr)->Value;
       if (LHSv < RHSv)
         return true;
       if (LHSv > RHSv)
@@ -308,8 +320,9 @@ void SearchableTableEmitter::emitGenericEnum(const GenericEnum &Enum,
   emitIfdef((Twine("GET_") + Enum.PreprocessorGuard + "_DECL").str(), OS);
 
   OS << "enum " << Enum.Name << " {\n";
-  for (const auto &Entry : Enum.Entries)
-    OS << "  " << Entry->first << " = " << Entry->second << ",\n";
+  for (const auto &[Name, Value] :
+       make_second_range(Enum.Entries.getArrayRef()))
+    OS << "  " << Name << " = " << Value << ",\n";
   OS << "};\n";
 
   OS << "#endif\n\n";
@@ -625,30 +638,28 @@ std::unique_ptr<SearchIndex> SearchableTableEmitter::parseSearchIndex(
 void SearchableTableEmitter::collectEnumEntries(
     GenericEnum &Enum, StringRef NameField, StringRef ValueField,
     ArrayRef<const Record *> Items) {
+  Enum.Entries.reserve(Items.size());
   for (const Record *EntryRec : Items) {
-    StringRef Name;
-    if (NameField.empty())
-      Name = EntryRec->getName();
-    else
-      Name = EntryRec->getValueAsString(NameField);
-
-    int64_t Value = 0;
-    if (!ValueField.empty())
-      Value = getInt(EntryRec, ValueField);
-
-    Enum.Entries.push_back(std::make_unique<GenericEnum::Entry>(Name, Value));
-    Enum.EntryMap.try_emplace(EntryRec, Enum.Entries.back().get());
+    StringRef Name = NameField.empty() ? EntryRec->getName()
+                                       : EntryRec->getValueAsString(NameField);
+    int64_t Value = ValueField.empty() ? 0 : getInt(EntryRec, ValueField);
+    Enum.Entries.try_emplace(EntryRec, Name, Value);
   }
 
+  // If no values are provided for enums, assign values in the order of sorted
+  // enum names.
   if (ValueField.empty()) {
-    llvm::stable_sort(Enum.Entries,
-                      [](const std::unique_ptr<GenericEnum::Entry> &LHS,
-                         const std::unique_ptr<GenericEnum::Entry> &RHS) {
-                        return LHS->first < RHS->first;
-                      });
+    // Copy the map entries for sorting and clear the map.
+    auto SavedEntries = Enum.Entries.takeVector();
+    using MapVectorEntryTy = std::pair<const Record *, GenericEnum::Entry>;
+    llvm::stable_sort(SavedEntries, [](const MapVectorEntryTy &LHS,
+                                       const MapVectorEntryTy &RHS) {
+      return LHS.second.Name < RHS.second.Name;
+    });
 
-    for (size_t i = 0; i < Enum.Entries.size(); ++i)
-      Enum.Entries[i]->second = i;
+    // Repopulate entries using the new sorted order.
+    for (auto [Idx, Entry] : enumerate(SavedEntries))
+      Enum.Entries.try_emplace(Entry.first, Entry.second.Name, Idx);
   }
 }
 

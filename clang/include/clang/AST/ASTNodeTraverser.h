@@ -99,7 +99,7 @@ public:
   TraversalKind GetTraversalKind() const { return Traversal; }
 
   void Visit(const Decl *D, bool VisitLocs = false) {
-    if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isImplicit())
+    if (Traversal == TK_IgnoreUnlessSpelledInSource && D && D->isImplicit())
       return;
 
     getNodeDelegate().AddChild([=] {

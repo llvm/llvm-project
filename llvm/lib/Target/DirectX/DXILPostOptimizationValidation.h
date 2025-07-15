@@ -15,125 +15,55 @@
 #define LLVM_LIB_TARGET_DIRECTX_DXILPOSTOPTIMIZATIONVALIDATION_H
 
 #include "DXILRootSignature.h"
-#include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
-static uint64_t combineUint32ToUint64(uint32_t High, uint32_t Low) {
-  return (static_cast<uint64_t>(High) << 32) | Low;
-}
-
 class RootSignatureBindingValidation {
-  using MapT =
-      llvm::IntervalMap<uint64_t, dxil::ResourceInfo::ResourceBinding,
-                        sizeof(llvm::dxil::ResourceInfo::ResourceBinding),
-                        llvm::IntervalMapInfo<uint64_t>>;
-
 private:
-  MapT::Allocator Allocator;
-  MapT CRegBindingsMap;
-  MapT TRegBindingsMap;
-  MapT URegBindingsMap;
-  MapT SamplersBindingsMap;
-
-  void addRange(const dxbc::RTS0::v2::RootDescriptor &Desc, uint32_t Type) {
-    assert((Type == llvm::to_underlying(dxbc::RootParameterType::CBV) ||
-            Type == llvm::to_underlying(dxbc::RootParameterType::SRV) ||
-            Type == llvm::to_underlying(dxbc::RootParameterType::UAV)) &&
-           "Invalid Type in add Range Method");
-
-    llvm::dxil::ResourceInfo::ResourceBinding Binding;
-    Binding.LowerBound = Desc.ShaderRegister;
-    Binding.Space = Desc.RegisterSpace;
-    Binding.Size = 1;
-
-    uint64_t LowRange =
-        combineUint32ToUint64(Binding.Space, Binding.LowerBound);
-    uint64_t HighRange = combineUint32ToUint64(
-        Binding.Space, Binding.LowerBound + Binding.Size - 1);
-
-    assert(LowRange <= HighRange && "Invalid range configuration");
-
-    switch (Type) {
-
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-      CRegBindingsMap.insert(LowRange, HighRange, Binding);
-      break;
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-      TRegBindingsMap.insert(LowRange, HighRange, Binding);
-      break;
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      URegBindingsMap.insert(LowRange, HighRange, Binding);
-      break;
-    }
-  }
-
-  void addRange(const dxbc::RTS0::v2::DescriptorRange &Range) {
-
-    llvm::dxil::ResourceInfo::ResourceBinding Binding;
-    Binding.LowerBound = Range.BaseShaderRegister;
-    Binding.Space = Range.RegisterSpace;
-    Binding.Size = Range.NumDescriptors;
-
-    uint64_t LowRange =
-        combineUint32ToUint64(Binding.Space, Binding.LowerBound);
-    uint64_t HighRange = combineUint32ToUint64(
-        Binding.Space, Binding.LowerBound + Binding.Size - 1);
-
-    assert(LowRange <= HighRange && "Invalid range configuration");
-
-    switch (Range.RangeType) {
-    case llvm::to_underlying(dxbc::DescriptorRangeType::CBV):
-      CRegBindingsMap.insert(LowRange, HighRange, Binding);
-      break;
-    case llvm::to_underlying(dxbc::DescriptorRangeType::SRV):
-      TRegBindingsMap.insert(LowRange, HighRange, Binding);
-      break;
-    case llvm::to_underlying(dxbc::DescriptorRangeType::UAV):
-      URegBindingsMap.insert(LowRange, HighRange, Binding);
-      break;
-    case llvm::to_underlying(dxbc::DescriptorRangeType::Sampler):
-      SamplersBindingsMap.insert(LowRange, HighRange, Binding);
-      break;
-    }
-  }
+  llvm::SmallVector<dxil::ResourceInfo::ResourceBinding, 16> Bindings;
+  struct TypeRange {
+    uint32_t Start;
+    uint32_t End;
+  };
+  std::unordered_map<uint32_t, TypeRange> Ranges;
 
 public:
-  RootSignatureBindingValidation()
-      : Allocator(), CRegBindingsMap(Allocator), TRegBindingsMap(Allocator),
-        URegBindingsMap(Allocator), SamplersBindingsMap(Allocator) {}
+  void addBinding(const uint32_t &Type,
+                  const dxil::ResourceInfo::ResourceBinding &Binding) {
+    auto It = Ranges.find(Type);
 
-  void addRsBindingInfo(mcdxbc::RootSignatureDesc &RSD,
-                        dxbc::ShaderVisibility Visibility);
+    if (It == Ranges.end()) {
+      uint32_t InsertPos = Bindings.size();
+      Bindings.push_back(Binding);
+      Ranges[Type] = {InsertPos, InsertPos + 1};
+    } else {
+      uint32_t InsertPos = It->second.End;
+      Bindings.insert(Bindings.begin() + InsertPos, Binding);
 
-  bool checkCRegBinding(dxil::ResourceInfo::ResourceBinding Binding) {
-    return CRegBindingsMap.overlaps(
-        combineUint32ToUint64(Binding.Space, Binding.LowerBound),
-        combineUint32ToUint64(Binding.Space,
-                              Binding.LowerBound + Binding.Size - 1));
+      It->second.End++;
+
+      for (auto &[type, range] : Ranges) {
+        if (range.Start > InsertPos) {
+          range.Start++;
+          range.End++;
+        }
+      }
+    }
   }
 
-  bool checkTRegBinding(dxil::ResourceInfo::ResourceBinding Binding) {
-    return TRegBindingsMap.overlaps(
-        combineUint32ToUint64(Binding.Space, Binding.LowerBound),
-        combineUint32ToUint64(Binding.Space,
-                              Binding.LowerBound + Binding.Size - 1));
-  }
-
-  bool checkURegBinding(dxil::ResourceInfo::ResourceBinding Binding) {
-    return URegBindingsMap.overlaps(
-        combineUint32ToUint64(Binding.Space, Binding.LowerBound),
-        combineUint32ToUint64(Binding.Space,
-                              Binding.LowerBound + Binding.Size - 1));
-  }
-
-  bool checkSamplerBinding(dxil::ResourceInfo::ResourceBinding Binding) {
-    return SamplersBindingsMap.overlaps(
-        combineUint32ToUint64(Binding.Space, Binding.LowerBound),
-        combineUint32ToUint64(Binding.Space,
-                              Binding.LowerBound + Binding.Size - 1));
+  llvm::ArrayRef<dxil::ResourceInfo::ResourceBinding>
+  getBindingsOfType(const dxbc::DescriptorRangeType &Type) const {
+    auto It = Ranges.find(llvm::to_underlying(Type));
+    if (It == Ranges.end()) {
+      return {};
+    }
+    return llvm::ArrayRef<dxil::ResourceInfo::ResourceBinding>(
+        Bindings.data() + It->second.Start, It->second.End - It->second.Start);
   }
 };
 

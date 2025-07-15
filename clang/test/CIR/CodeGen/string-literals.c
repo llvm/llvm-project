@@ -33,10 +33,10 @@ char *f1() {
   return "1";
 }
 
-// CIR: cir.func @f1()
+// CIR: cir.func{{.*}} @f1()
 // CIR:   %[[STR:.*]] = cir.get_global @[[STR1_GLOBAL]] : !cir.ptr<!cir.array<!s8i x 2>>
 
-// LLVM: define ptr @f1()
+// LLVM: define{{.*}} ptr @f1()
 // LLVM:   store ptr @[[STR1_GLOBAL]], ptr {{.*}}
 
 // OGCG: define {{.*}}ptr @f1()
@@ -46,24 +46,24 @@ char *f2() {
   return "";
 }
 
-// CIR: cir.func @f2()
+// CIR: cir.func{{.*}} @f2()
 // CIR:   %[[STR2:.*]] = cir.get_global @[[STR2_GLOBAL]] : !cir.ptr<!cir.array<!s8i x 1>>
 
-// LLVM: define ptr @f2()
+// LLVM: define{{.*}} ptr @f2()
 // LLVM:   store ptr @[[STR2_GLOBAL]], ptr {{.*}}
 
-// OGCG: define {{.*}}ptr @f2()
+// OGCG: define{{.*}} ptr @f2()
 // OGCG:   ret ptr @[[STR2_GLOBAL]]
 
 char *f3() {
   return "\00";
 }
 
-// CIR: cir.func @f3()
+// CIR: cir.func{{.*}} @f3()
 // CIR:   %[[STR3:.*]] = cir.get_global @[[STR3_GLOBAL]] : !cir.ptr<!cir.array<!s8i x 2>>
 
-// LLVM: define ptr @f3()
+// LLVM: define{{.*}} ptr @f3()
 // LLVM:   store ptr @[[STR3_GLOBAL]], ptr {{.*}}
 
-// OGCG: define {{.*}}ptr @f3()
+// OGCG: define{{.*}} ptr @f3()
 // OGCG:   ret ptr @[[STR3_GLOBAL]]

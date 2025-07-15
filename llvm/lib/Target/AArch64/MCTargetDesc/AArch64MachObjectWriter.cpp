@@ -17,7 +17,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionMachO.h"
@@ -34,8 +33,8 @@ namespace {
 
 class AArch64MachObjectWriter : public MCMachObjectTargetWriter {
   bool getAArch64FixupKindMachOInfo(const MCFixup &Fixup, unsigned &RelocType,
-                                    AArch64MCExpr::Specifier Spec,
-                                    unsigned &Log2Size, const MCAssembler &Asm);
+                                    AArch64::Specifier Spec, unsigned &Log2Size,
+                                    const MCAssembler &Asm);
 
 public:
   AArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype, bool IsILP32)
@@ -49,7 +48,7 @@ public:
 } // end anonymous namespace
 
 bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
-    const MCFixup &Fixup, unsigned &RelocType, AArch64MCExpr::Specifier Spec,
+    const MCFixup &Fixup, unsigned &RelocType, AArch64::Specifier Spec,
     unsigned &Log2Size, const MCAssembler &Asm) {
   RelocType = unsigned(MachO::ARM64_RELOC_UNSIGNED);
   Log2Size = ~0U;
@@ -148,7 +147,7 @@ static bool canUseLocalRelocation(const MCSectionMachO &Section,
 void AArch64MachObjectWriter::recordRelocation(
     MachObjectWriter *Writer, MCAssembler &Asm, const MCFragment *Fragment,
     const MCFixup &Fixup, MCValue Target, uint64_t &FixedValue) {
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
 
   // See <reloc.h>.
   uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment);
@@ -189,9 +188,8 @@ void AArch64MachObjectWriter::recordRelocation(
     return;
   }
 
-  if (!getAArch64FixupKindMachOInfo(
-          Fixup, Type, AArch64MCExpr::Specifier(Target.getSpecifier()),
-          Log2Size, Asm)) {
+  if (!getAArch64FixupKindMachOInfo(Fixup, Type, Target.getSpecifier(),
+                                    Log2Size, Asm)) {
     reportError(Fixup.getLoc(), "unknown AArch64 fixup kind!");
     return;
   }

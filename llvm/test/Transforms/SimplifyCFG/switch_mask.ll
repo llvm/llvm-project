@@ -186,7 +186,8 @@ define void @switch_lookup_with_nonconst_range(i32 %x, i1 %cond) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[ADD]], 6
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [6 x i32], ptr @switch.table.switch_lookup_with_nonconst_range, i32 0, i32 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[ADD]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [6 x i32], ptr @switch.table.switch_lookup_with_nonconst_range, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:

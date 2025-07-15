@@ -599,6 +599,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         DecW, Address, CS))
         break;
 
+      if (isGFX1250() &&
+          tryDecodeInst(DecoderTableGFX125096, DecoderTableGFX1250_FAKE1696, MI,
+                        DecW, Address, CS))
+        break;
+
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1296, DecoderTableGFX12_FAKE1696, MI,
                         DecW, Address, CS))
@@ -661,9 +666,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX10() && tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS))
         break;
 
-      // FIXME: DecoderTableGFX125064 is not defined yet.
       if (isGFX1250() &&
-          tryDecodeInst(DecoderTableGFX1250_FAKE1664, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX125064, DecoderTableGFX1250_FAKE1664, MI,
+                        QW, Address, CS))
         break;
 
       if (isGFX12() &&
@@ -722,10 +727,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         Address, CS))
         break;
 
-      // FIXME: Should use DecoderTableGFX1250_FAKE1632, but it is not generated
-      //        yet.
       if (isGFX1250() &&
-          tryDecodeInst(DecoderTableGFX125032, MI, DW, Address, CS))
+          tryDecodeInst(DecoderTableGFX125032, DecoderTableGFX1250_FAKE1632, MI,
+                        DW, Address, CS))
         break;
 
       if (isGFX12() &&
@@ -1480,6 +1484,20 @@ MCOperand AMDGPUDisassembler::decodeLiteralConstant(bool ExtendFP64) const {
   return MCOperand::createImm(ExtendFP64 ? Literal64 : Literal);
 }
 
+MCOperand AMDGPUDisassembler::decodeLiteral64Constant() const {
+  assert(STI.hasFeature(AMDGPU::Feature64BitLiterals));
+
+  if (!HasLiteral) {
+    if (Bytes.size() < 8) {
+      return errOperand(0, "cannot read literal64, inst bytes left " +
+                               Twine(Bytes.size()));
+    }
+    HasLiteral = true;
+    Literal64 = eatBytes<uint64_t>(Bytes);
+  }
+  return MCOperand::createImm(Literal64);
+}
+
 MCOperand AMDGPUDisassembler::decodeIntImmed(unsigned Imm) {
   using namespace AMDGPU::EncValues;
 
@@ -1762,6 +1780,10 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(unsigned Width,
       (INLINE_FLOATING_C_MIN <= Val && Val <= INLINE_FLOATING_C_MAX) ||
       Val == LITERAL_CONST)
     return MCOperand::createImm(Val);
+
+  if (Val == LITERAL64_CONST && STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
+    return decodeLiteral64Constant();
+  }
 
   switch (Width) {
   case 32:

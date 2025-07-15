@@ -39,8 +39,7 @@ protected:
   unsigned getRelocType(const MCFixup &, const MCValue &,
                         bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
-  bool isNonILP32reloc(const MCFixup &Fixup,
-                       AArch64MCExpr::Specifier RefKind) const;
+  bool isNonILP32reloc(const MCFixup &Fixup, AArch64::Specifier RefKind) const;
 
   bool IsILP32;
 };
@@ -56,8 +55,8 @@ AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32)
   IsILP32 ? ELF::R_AARCH64_P32_##rtype : ELF::R_AARCH64_##rtype
 
 // assumes IsILP32 is true
-bool AArch64ELFObjectWriter::isNonILP32reloc(
-    const MCFixup &Fixup, AArch64MCExpr::Specifier RefKind) const {
+bool AArch64ELFObjectWriter::isNonILP32reloc(const MCFixup &Fixup,
+                                             AArch64::Specifier RefKind) const {
   if (Fixup.getTargetKind() != AArch64::fixup_aarch64_movw)
     return false;
   switch (RefKind) {
@@ -86,9 +85,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                               const MCValue &Target,
                                               bool IsPCRel) const {
   unsigned Kind = Fixup.getTargetKind();
-  AArch64MCExpr::Specifier RefKind =
-      static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
-  AArch64MCExpr::Specifier SymLoc = AArch64::getSymbolLoc(RefKind);
+  AArch64::Specifier RefKind =
+      static_cast<AArch64::Specifier>(Target.getSpecifier());
+  AArch64::Specifier SymLoc = AArch64::getSymbolLoc(RefKind);
   bool IsNC = AArch64::isNotChecked(RefKind);
 
   switch (SymLoc) {
@@ -117,9 +116,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
     case FK_Data_2:
       return R_CLS(PREL16);
     case FK_Data_4: {
-      return AArch64MCExpr::Specifier(Target.getSpecifier()) == AArch64::S_PLT
-                 ? R_CLS(PLT32)
-                 : R_CLS(PREL32);
+      return Target.getSpecifier() == AArch64::S_PLT ? R_CLS(PLT32)
+                                                     : R_CLS(PREL32);
     }
     case FK_Data_8:
       if (IsILP32) {
@@ -221,8 +219,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
     case FK_Data_2:
       return R_CLS(ABS16);
     case FK_Data_4:
-      return (!IsILP32 && AArch64MCExpr::Specifier(Target.getSpecifier()) ==
-                              AArch64::S_GOTPCREL)
+      return (!IsILP32 && Target.getSpecifier() == AArch64::S_GOTPCREL)
                  ? ELF::R_AARCH64_GOTPCREL32
                  : R_CLS(ABS32);
     case FK_Data_8: {
@@ -352,7 +349,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
       if (SymLoc == AArch64::S_ABS && IsNC)
         return R_CLS(LDST64_ABS_LO12_NC);
       if ((SymLoc == AArch64::S_GOT || SymLoc == AArch64::S_GOT_AUTH) && IsNC) {
-        AArch64MCExpr::Specifier AddressLoc = AArch64::getAddressFrag(RefKind);
+        AArch64::Specifier AddressLoc = AArch64::getAddressFrag(RefKind);
         bool IsAuth = (SymLoc == AArch64::S_GOT_AUTH);
         if (!IsILP32) {
           if (AddressLoc == AArch64::S_LO15)
@@ -497,7 +494,7 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
   if ((Val.getSpecifier() & AArch64::S_GOT) == AArch64::S_GOT)
     return true;
   return is_contained({AArch64::S_GOTPCREL, AArch64::S_PLT},
-                      AArch64MCExpr::Specifier(Val.getSpecifier()));
+                      Val.getSpecifier());
 }
 
 std::unique_ptr<MCObjectTargetWriter>

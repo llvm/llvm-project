@@ -34,6 +34,7 @@ enum class RootSignatureElementKind {
   UAV = 4,
   CBV = 5,
   DescriptorTable = 6,
+  StaticSamplers = 7
 };
 
 class RootSignatureBindingInfo {
@@ -106,4 +107,4 @@ public:
 
 } // namespace dxil
 } // namespace llvm
-#endif
+#endif // LLVM_LIB_TARGET_DIRECTX_DXILROOTSIGNATURE_H

@@ -684,6 +684,30 @@ bool isGenericAtomic(unsigned Opc) {
          Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
 }
 
+bool isAsyncStore(unsigned Opc) {
+  return false; // placeholder before async store implementation.
+}
+
+bool isTensorStore(unsigned Opc) {
+  return Opc == TENSOR_STORE_FROM_LDS_gfx1250 ||
+         Opc == TENSOR_STORE_FROM_LDS_D2_gfx1250;
+}
+
+unsigned getTemporalHintType(const MCInstrDesc TID) {
+  if (TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet))
+    return CPol::TH_TYPE_ATOMIC;
+  unsigned Opc = TID.getOpcode();
+  // Async and Tensor store should have the temporal hint type of TH_TYPE_STORE
+  if (TID.mayStore() &&
+      (isAsyncStore(Opc) || isTensorStore(Opc) || !TID.mayLoad()))
+    return CPol::TH_TYPE_STORE;
+
+  // This will default to returning TH_TYPE_LOAD when neither MayStore nor
+  // MayLoad flag is present which is the case with instructions like
+  // image_get_resinfo.
+  return CPol::TH_TYPE_LOAD;
+}
+
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info && Info->IsTrue16;
@@ -2879,7 +2903,7 @@ bool isInlinableLiteralV2F16(uint32_t Literal) {
 
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
   if (IsFP64)
-    return !(Val & 0xffffffffu);
+    return !Lo_32(Val);
 
   return isUInt<32>(Val) || isInt<32>(Val);
 }
