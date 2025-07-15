@@ -305,6 +305,33 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   Type *OrigGEPType = GEPI.getSourceElementType();
   Type *NewGEPType = OrigGEPType;
   bool NeedsTransform = false;
+  // Check if the pointer operand is a ConstantExpr GEP
+  if (auto *PtrOpGEPCE = dyn_cast<ConstantExpr>(PtrOperand);
+      PtrOpGEPCE && PtrOpGEPCE->getOpcode() == Instruction::GetElementPtr) {
+    if (GlobalVariable *NewGlobal =
+            lookupReplacementGlobal(PtrOpGEPCE->getOperand(0))) {
+      GetElementPtrInst *NestedGEP =
+          cast<GetElementPtrInst>(PtrOpGEPCE->getAsInstruction());
+      NestedGEP->insertBefore(GEPI.getIterator());
+
+      // Create a new GEP with the replaced global directly
+      IRBuilder<> Builder(&GEPI);
+      Type *NewNestedGEPType = NewGlobal->getValueType();
+
+      // Extract indices from the ConstantExpr GEP
+      SmallVector<Value *, MaxVecSize> NestedIndices(NestedGEP->indices());
+      Value *NewNestedGEP =
+          Builder.CreateGEP(NewNestedGEPType, NewGlobal, NestedIndices,
+                            NestedGEP->getName(), NestedGEP->getNoWrapFlags());
+
+      // Update the outer GEP to use the new nested GEP
+      GEPI.setOperand(GEPI.getPointerOperandIndex(), NewNestedGEP);
+      NestedGEP->replaceAllUsesWith(NewNestedGEP);
+      NestedGEP->eraseFromParent();
+      // Return true to indicate that we've modified the instruction
+      return true;
+    }
+  }
 
   if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand)) {
     NewGEPType = NewGlobal->getValueType();
