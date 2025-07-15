@@ -3029,28 +3029,28 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
                : CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow);
 
   switch (getOverflowBehaviorConsideringType(CGF, Ty)) {
-    case LangOptions::OB_Wrap:
+  case LangOptions::OB_Wrap:
+    return Builder.CreateAdd(InVal, Amount, Name);
+  case LangOptions::OB_FWrapv:
+    if (!hasSan)
       return Builder.CreateAdd(InVal, Amount, Name);
-    case LangOptions::OB_FWrapv:
-      if (!hasSan)
-        return Builder.CreateAdd(InVal, Amount, Name);
-      [[fallthrough]];
-    case LangOptions::OB_Unset:
-      if (!E->canOverflow())
-        return Builder.CreateAdd(InVal, Amount, Name);
-      if (!hasSan)
-        return isSigned ? Builder.CreateNSWAdd(InVal, Amount, Name)
-                        : Builder.CreateAdd(InVal, Amount, Name);
-      [[fallthrough]];
-    case LangOptions::OB_NoWrap:
-      if (!Ty->getAs<OverflowBehaviorType>() && !E->canOverflow())
-        return Builder.CreateAdd(InVal, Amount, Name);
-      BinOpInfo Info = createBinOpInfoFromIncDec(
-          E, InVal, IsInc, E->getFPFeaturesInEffect(CGF.getLangOpts()));
-      if (CanElideOverflowCheck(CGF.getContext(), Info))
-        return isSigned ? Builder.CreateNSWAdd(InVal, Amount, Name)
-                        : Builder.CreateAdd(InVal, Amount, Name);
-      return EmitOverflowCheckedBinOp(Info);
+    [[fallthrough]];
+  case LangOptions::OB_Unset:
+    if (!E->canOverflow())
+      return Builder.CreateAdd(InVal, Amount, Name);
+    if (!hasSan)
+      return isSigned ? Builder.CreateNSWAdd(InVal, Amount, Name)
+                      : Builder.CreateAdd(InVal, Amount, Name);
+    [[fallthrough]];
+  case LangOptions::OB_NoWrap:
+    if (!Ty->getAs<OverflowBehaviorType>() && !E->canOverflow())
+      return Builder.CreateAdd(InVal, Amount, Name);
+    BinOpInfo Info = createBinOpInfoFromIncDec(
+        E, InVal, IsInc, E->getFPFeaturesInEffect(CGF.getLangOpts()));
+    if (CanElideOverflowCheck(CGF.getContext(), Info))
+      return isSigned ? Builder.CreateNSWAdd(InVal, Amount, Name)
+                      : Builder.CreateAdd(InVal, Amount, Name);
+    return EmitOverflowCheckedBinOp(Info);
   }
   llvm_unreachable("Unknown OverflowBehaviorKind");
 }

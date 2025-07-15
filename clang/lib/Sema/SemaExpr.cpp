@@ -1428,8 +1428,7 @@ static QualType handleOverflowBehaviorTypeConversion(Sema &S, ExprResult &LHS,
   }
 
   // NoWrap has precedence over Wrap; eagerly cast Wrap types to NoWrap types
-  if ((LhsOBT && !RhsOBT) ||
-      (LhsOBT && RhsOBT && !RhsOBT->isNoWrapKind())) {
+  if ((LhsOBT && !RhsOBT) || (LhsOBT && RhsOBT && !RhsOBT->isNoWrapKind())) {
     RHS = doIntegralCast(S, RHS.get(), LHSType);
     return LHSType;
   }
@@ -1958,16 +1957,16 @@ ExprResult Sema::CreateGenericSelectionExpr(
                           : ControllingType->getType().getCanonicalType();
       QualType AssocQT = Types[i]->getType();
 
-      const auto *ControllingOBT =
-          ControllingQT->getAs<OverflowBehaviorType>();
-      const auto *AssocOBT = AssocQT.getCanonicalType()->getAs<OverflowBehaviorType>();
+      const auto *ControllingOBT = ControllingQT->getAs<OverflowBehaviorType>();
+      const auto *AssocOBT =
+          AssocQT.getCanonicalType()->getAs<OverflowBehaviorType>();
 
       if (ControllingOBT || AssocOBT) {
         if (ControllingOBT && AssocOBT) {
           if (ControllingOBT->getBehaviorKind() == AssocOBT->getBehaviorKind())
-            Compatible = Context.typesAreCompatible(
-                ControllingOBT->getUnderlyingType(),
-                AssocOBT->getUnderlyingType());
+            Compatible =
+                Context.typesAreCompatible(ControllingOBT->getUnderlyingType(),
+                                           AssocOBT->getUnderlyingType());
           else
             Compatible = false;
         } else
@@ -9139,7 +9138,7 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
 
   if (ltrans->isOverflowBehaviorType() || rtrans->isOverflowBehaviorType()) {
     if (!S.Context.hasSameType(ltrans, rtrans))
-    return AssignConvertType::IncompatiblePointer;
+      return AssignConvertType::IncompatiblePointer;
   }
 
   if (!S.Context.typesAreCompatible(ltrans, rtrans)) {

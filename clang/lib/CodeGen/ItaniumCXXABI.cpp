@@ -3978,7 +3978,6 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
     llvm_unreachable("NoSanitize not supported for virtual functions");
   }
 
-
   llvm::Constant *VTable = nullptr;
 
   // Check if the alias exists. If it doesn't, then get or create the global.

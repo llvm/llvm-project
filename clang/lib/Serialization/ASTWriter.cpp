@@ -587,8 +587,7 @@ void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
-void TypeLocWriter::VisitOverflowBehaviorTypeLoc(
-    OverflowBehaviorTypeLoc TL) {
+void TypeLocWriter::VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
   // Nothing to do.
 }
 

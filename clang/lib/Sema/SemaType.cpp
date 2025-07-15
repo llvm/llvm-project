@@ -299,7 +299,8 @@ namespace {
       return sema.Context.getBTFTagAttributedType(BTFAttr, WrappedType);
     }
 
-    /// Get a OverflowBehaviorType type for the overflow_behavior type attribute.
+    /// Get a OverflowBehaviorType type for the overflow_behavior type
+    /// attribute.
     QualType
     getOverflowBehaviorType(OverflowBehaviorType::OverflowBehaviorKind Kind,
                             QualType UnderlyingType) {

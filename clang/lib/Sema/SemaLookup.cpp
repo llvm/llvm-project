@@ -3308,7 +3308,6 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
       T = cast<OverflowBehaviorType>(T)->getUnderlyingType().getTypePtr();
     }
 
-
     if (Queue.empty())
       break;
     T = Queue.pop_back_val();

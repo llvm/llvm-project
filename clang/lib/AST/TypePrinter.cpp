@@ -2146,23 +2146,23 @@ void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
   printAfter(T->getWrappedType(), OS);
 }
 
-void TypePrinter::printOverflowBehaviorBefore(
-    const OverflowBehaviorType *T, raw_ostream &OS) {
+void TypePrinter::printOverflowBehaviorBefore(const OverflowBehaviorType *T,
+                                              raw_ostream &OS) {
   StringRef KindName;
   switch (T->getBehaviorKind()) {
-    case clang::OverflowBehaviorType::OverflowBehaviorKind::Wrap:
-      KindName = "__wrap";
-      break;
-    case clang::OverflowBehaviorType::OverflowBehaviorKind::NoWrap:
-      KindName = "__no_wrap";
-      break;
+  case clang::OverflowBehaviorType::OverflowBehaviorKind::Wrap:
+    KindName = "__wrap";
+    break;
+  case clang::OverflowBehaviorType::OverflowBehaviorKind::NoWrap:
+    KindName = "__no_wrap";
+    break;
   }
   OS << KindName << " ";
   printBefore(T->getUnderlyingType(), OS);
 }
 
-void TypePrinter::printOverflowBehaviorAfter(
-    const OverflowBehaviorType *T, raw_ostream &OS) {
+void TypePrinter::printOverflowBehaviorAfter(const OverflowBehaviorType *T,
+                                             raw_ostream &OS) {
   printAfter(T->getUnderlyingType(), OS);
 }
 

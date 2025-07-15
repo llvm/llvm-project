@@ -3783,8 +3783,8 @@ ASTContext::adjustType(QualType Orig,
 
   case Type::OverflowBehavior: {
     const auto *OB = dyn_cast<OverflowBehaviorType>(Orig);
-    return getOverflowBehaviorType(
-        OB->getBehaviorKind(), adjustType(OB->getUnderlyingType(), Adjust));
+    return getOverflowBehaviorType(OB->getBehaviorKind(),
+                                   adjustType(OB->getUnderlyingType(), Adjust));
   }
 
   case Type::Elaborated: {
@@ -5631,8 +5631,8 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
   return QualType(Ty, 0);
 }
 
-QualType
-ASTContext::getOverflowBehaviorType(const OverflowBehaviorAttr *Attr, QualType Underlying) const {
+QualType ASTContext::getOverflowBehaviorType(const OverflowBehaviorAttr *Attr,
+                                             QualType Underlying) const {
   IdentifierInfo *II = Attr->getBehaviorKind();
   StringRef IdentName = II->getName();
   OverflowBehaviorType::OverflowBehaviorKind Kind;
@@ -5647,8 +5647,9 @@ ASTContext::getOverflowBehaviorType(const OverflowBehaviorAttr *Attr, QualType U
   return getOverflowBehaviorType(Kind, Underlying);
 }
 
-QualType
-ASTContext::getOverflowBehaviorType(OverflowBehaviorType::OverflowBehaviorKind Kind, QualType Underlying) const {
+QualType ASTContext::getOverflowBehaviorType(
+    OverflowBehaviorType::OverflowBehaviorKind Kind,
+    QualType Underlying) const {
   llvm::FoldingSetNodeID ID;
   OverflowBehaviorType::Profile(ID, Underlying, Kind);
   void *InsertPos = nullptr;
@@ -5661,13 +5662,14 @@ ASTContext::getOverflowBehaviorType(OverflowBehaviorType::OverflowBehaviorKind K
   QualType Canonical;
   if (!Underlying.isCanonical()) {
     Canonical = getOverflowBehaviorType(Kind, getCanonicalType(Underlying));
-    OverflowBehaviorType *NewOBT = OverflowBehaviorTypes.FindNodeOrInsertPos(ID, InsertPos);
+    OverflowBehaviorType *NewOBT =
+        OverflowBehaviorTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewOBT && "Shouldn't be in the map!");
     (void)NewOBT;
   }
 
   OverflowBehaviorType *Ty = new (*this, alignof(OverflowBehaviorType))
-    OverflowBehaviorType(Canonical, Underlying, Kind);
+      OverflowBehaviorType(Canonical, Underlying, Kind);
 
   Types.push_back(Ty);
   OverflowBehaviorTypes.InsertNode(Ty, InsertPos);
@@ -11747,9 +11749,9 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
   if (LHSRefTy || RHSRefTy)
     return {};
 
-  if (std::optional<QualType> MergedOBT = tryMergeOverflowBehaviorTypes(
-          LHS, RHS, OfBlockPointer, Unqualified, BlockReturnType,
-          IsConditionalOperator))
+  if (std::optional<QualType> MergedOBT =
+          tryMergeOverflowBehaviorTypes(LHS, RHS, OfBlockPointer, Unqualified,
+                                        BlockReturnType, IsConditionalOperator))
     return *MergedOBT;
 
   if (Unqualified) {

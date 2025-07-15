@@ -946,13 +946,14 @@ struct OverflowBehaviorLocInfo {}; // Nothing.
 
 class OverflowBehaviorTypeLoc
     : public ConcreteTypeLoc<UnqualTypeLoc, OverflowBehaviorTypeLoc,
-                             OverflowBehaviorType,
-                             OverflowBehaviorLocInfo> {
+                             OverflowBehaviorType, OverflowBehaviorLocInfo> {
 public:
   TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
 
   /// The no_sanitize type attribute.
-  OverflowBehaviorType::OverflowBehaviorKind getBehaviorKind() const { return getTypePtr()->getBehaviorKind(); }
+  OverflowBehaviorType::OverflowBehaviorKind getBehaviorKind() const {
+    return getTypePtr()->getBehaviorKind();
+  }
 
   SourceRange getLocalSourceRange() const;
 

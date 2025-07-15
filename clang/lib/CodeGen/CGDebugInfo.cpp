@@ -1124,7 +1124,8 @@ llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
                                   Encoding);
 }
 
-llvm::DIType *CGDebugInfo::CreateType(const OverflowBehaviorType *Ty, llvm::DIFile *U) {
+llvm::DIType *CGDebugInfo::CreateType(const OverflowBehaviorType *Ty,
+                                      llvm::DIFile *U) {
   return getOrCreateType(Ty->getUnderlyingType(), U);
 }
 
