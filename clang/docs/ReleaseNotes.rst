@@ -953,6 +953,7 @@ Bug Fixes to C++ Support
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 - Correctly handles calling an explicit object member function template overload set
   through its address (``(&Foo::bar<baz>)()``).
+- Fix a crash when using an explicit object parameter in a non-member function. (#GH113185)
 - Fix a crash when forming an invalid call to an operator with an explicit object member. (#GH147121)
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
