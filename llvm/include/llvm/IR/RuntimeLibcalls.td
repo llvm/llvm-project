@@ -357,6 +357,7 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 
 // Stack Protector Fail
 def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall;
+def STACK_SMASH_HANDLER : RuntimeLibcall;
 
 // Deoptimization
 def DEOPTIMIZE : RuntimeLibcall;
@@ -986,6 +987,9 @@ defm sincos : LibmLongDoubleLibCall;
 def bzero : RuntimeLibcallImpl<BZERO>;
 def __bzero : RuntimeLibcallImpl<BZERO>;
 def _Unwind_SjLj_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+
+// Used on OpenBSD
+def __stack_smash_handler : RuntimeLibcallImpl<STACK_SMASH_HANDLER>;
 
 def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 
