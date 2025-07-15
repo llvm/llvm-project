@@ -727,6 +727,31 @@ static SmallBitVector isUndefVector(const Value *V,
   return Res;
 }
 
+struct ExtractFromVector {
+  Value *IndexOperand;
+  Value *VectorOperand;
+
+  std::optional<unsigned> getConstantIndex() const {
+    if (auto *CI = dyn_cast<ConstantInt>(IndexOperand))
+      return CI->getZExtValue();
+    return {};
+  }
+
+  VectorType *getVectorOperandType() const {
+    return cast<VectorType>(VectorOperand->getType());
+  }
+};
+
+/// Match ExtractElementInst or Intrinsic::vector_extract
+static std::optional<ExtractFromVector> matchExtractFromVector(Value *V) {
+  if (auto *EI = dyn_cast<ExtractElementInst>(V))
+    return ExtractFromVector{EI->getIndexOperand(), EI->getVectorOperand()};
+  if (auto *IntrI = dyn_cast<IntrinsicInst>(V);
+      IntrI && IntrI->getIntrinsicID() == Intrinsic::vector_extract)
+    return ExtractFromVector{IntrI->getOperand(1), IntrI->getOperand(0)};
+  return {};
+}
+
 /// Checks if the vector of instructions can be represented as a shuffle, like:
 /// %x0 = extractelement <4 x i8> %x, i32 0
 /// %x3 = extractelement <4 x i8> %x, i32 3
@@ -752,42 +777,47 @@ static SmallBitVector isUndefVector(const Value *V,
 static std::optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
                      AssumptionCache *AC) {
-  const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
-  if (It == VL.end())
-    return std::nullopt;
-  unsigned Size =
+  unsigned ShuffleSrcSize =
       std::accumulate(VL.begin(), VL.end(), 0u, [](unsigned S, Value *V) {
-        auto *EI = dyn_cast<ExtractElementInst>(V);
-        if (!EI)
+        std::optional<ExtractFromVector> EFV = matchExtractFromVector(V);
+        if (!EFV)
           return S;
-        auto *VTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
+        auto *VTy = dyn_cast<FixedVectorType>(EFV->getVectorOperandType());
         if (!VTy)
           return S;
         return std::max(S, VTy->getNumElements());
       });
+  if (ShuffleSrcSize == 0)
+    return std::nullopt;
 
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
   bool HasNonUndefVec = any_of(VL, [&](Value *V) {
-    auto *EE = dyn_cast<ExtractElementInst>(V);
-    if (!EE)
+    std::optional<ExtractFromVector> EFV = matchExtractFromVector(V);
+    if (!EFV)
       return false;
-    Value *Vec = EE->getVectorOperand();
+    Value *Vec = EFV->VectorOperand;
     if (isa<UndefValue>(Vec))
       return false;
     return isGuaranteedNotToBePoison(Vec, AC);
   });
   enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
+  Type *ExtractedTy = VL[0]->getType();
+  unsigned EltsPerExtractInst = getNumElements(ExtractedTy);
+
+  // Note: Mask is for values of VL, which can be of vector type.
   Mask.assign(VL.size(), PoisonMaskElem);
+
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
     // Undef can be represented as an undef element in a vector.
     if (isa<UndefValue>(VL[I]))
       continue;
-    auto *EI = cast<ExtractElementInst>(VL[I]);
-    if (isa<ScalableVectorType>(EI->getVectorOperandType()))
+    std::optional<ExtractFromVector> EFV = matchExtractFromVector(VL[I]);
+    assert(EFV.has_value() && "Unexpected shuffle source.");
+    if (isa<ScalableVectorType>(EFV->getVectorOperandType()))
       return std::nullopt;
-    auto *Vec = EI->getVectorOperand();
+    auto *Vec = EFV->VectorOperand;
     // We can extractelement from undef or poison vector.
     if (isUndefVector</*isPoisonOnly=*/true>(Vec).all())
       continue;
@@ -795,16 +825,15 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
     if (isa<UndefValue>(Vec)) {
       Mask[I] = I;
     } else {
-      if (isa<UndefValue>(EI->getIndexOperand()))
+      if (isa<UndefValue>(EFV->IndexOperand))
         continue;
-      auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
-      if (!Idx)
+      std::optional<unsigned> Idx = EFV->getConstantIndex();
+      if (!Idx || *Idx % EltsPerExtractInst != 0)
         return std::nullopt;
       // Undefined behavior if Idx is negative or >= Size.
-      if (Idx->getValue().uge(Size))
+      if (*Idx >= ShuffleSrcSize)
         continue;
-      unsigned IntIdx = Idx->getValue().getZExtValue();
-      Mask[I] = IntIdx;
+      Mask[I] = *Idx / EltsPerExtractInst;
     }
     if (isUndefVector(Vec).all() && HasNonUndefVec)
       continue;
@@ -814,7 +843,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       Vec1 = Vec;
     } else if (!Vec2 || Vec2 == Vec) {
       Vec2 = Vec;
-      Mask[I] += Size;
+      Mask[I] += (ShuffleSrcSize / EltsPerExtractInst);
     } else {
       return std::nullopt;
     }
@@ -822,7 +851,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       continue;
     // If the extract index is not the same as the operation number, it is a
     // permutation.
-    if (Mask[I] % Size != I) {
+    if ((Mask[I] * EltsPerExtractInst) % ShuffleSrcSize != I) {
       CommonShuffleMode = Permute;
       continue;
     }
@@ -12068,22 +12097,30 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   /// Compute the cost of creating a vector containing the extracted values from
   /// \p VL.
   InstructionCost
-  computeExtractCost(ArrayRef<Value *> VL, ArrayRef<int> Mask,
+  computeExtractCost(ArrayRef<Value *> VL, ArrayRef<int> MaskRef,
                      ArrayRef<std::optional<TTI::ShuffleKind>> ShuffleKinds,
                      unsigned NumParts) {
     assert(VL.size() > NumParts && "Unexpected scalarized shuffle.");
     unsigned NumElts =
         std::accumulate(VL.begin(), VL.end(), 0, [](unsigned Sz, Value *V) {
-          auto *EE = dyn_cast<ExtractElementInst>(V);
-          if (!EE)
+          std::optional<ExtractFromVector> EFV = matchExtractFromVector(V);
+          if (!EFV)
             return Sz;
-          auto *VecTy = dyn_cast<FixedVectorType>(EE->getVectorOperandType());
+          auto *VecTy = dyn_cast<FixedVectorType>(EFV->getVectorOperandType());
           if (!VecTy)
             return Sz;
           return std::max(Sz, VecTy->getNumElements());
         });
     // FIXME: this must be moved to TTI for better estimation.
-    unsigned EltsPerVector = getPartNumElems(VL.size(), NumParts);
+    unsigned EltsPerExtractInst = getNumElements(VL[0]->getType());
+    unsigned EltsPerVector =
+        getPartNumElems(VL.size() * EltsPerExtractInst, NumParts);
+
+    // Make sure we get a proper shuffle mask if the elements being extracted
+    // are subvectors.
+    SmallVector<int> Mask(MaskRef.begin(), MaskRef.end());
+    transformScalarShuffleIndiciesToVector(EltsPerExtractInst, Mask);
+
     auto CheckPerRegistersShuffle = [&](MutableArrayRef<int> Mask,
                                         SmallVectorImpl<unsigned> &Indices,
                                         SmallVectorImpl<unsigned> &SubVecSizes)
@@ -12150,7 +12187,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     for (unsigned Part : seq<unsigned>(NumParts)) {
       if (!ShuffleKinds[Part])
         continue;
-      ArrayRef<int> MaskSlice = Mask.slice(
+      ArrayRef<int> MaskSlice = ArrayRef<int>(Mask).slice(
           Part * EltsPerVector, getNumElems(Mask.size(), EltsPerVector, Part));
       SmallVector<int> SubMask(EltsPerVector, PoisonMaskElem);
       copy(MaskSlice, SubMask.begin());
@@ -12555,6 +12592,8 @@ public:
         });
     SmallPtrSet<Value *, 4> UniqueBases;
     unsigned SliceSize = getPartNumElems(VL.size(), NumParts);
+    Type *ExtractedTy = VL[0]->getType();
+    const unsigned EltsPerExtractInst = getNumElements(ExtractedTy);
     SmallDenseMap<Value *, APInt, 4> VectorOpsToExtracts;
     for (unsigned Part : seq<unsigned>(NumParts)) {
       unsigned Limit = getNumElems(VL.size(), SliceSize, Part);
@@ -12571,13 +12610,14 @@ public:
         // vectorized tree.
         // Also, avoid adjusting the cost for extractelements with multiple uses
         // in different graph entries.
-        auto *EE = cast<ExtractElementInst>(V);
-        VecBase = EE->getVectorOperand();
+        ExtractFromVector EFV = matchExtractFromVector(V).value();
+        Instruction *ExtractInst = cast<Instruction>(V);
+        VecBase = EFV.VectorOperand;
         UniqueBases.insert(VecBase);
         ArrayRef<TreeEntry *> VEs = R.getTreeEntries(V);
         if (!CheckedExtracts.insert(V).second ||
             !R.areAllUsersVectorized(cast<Instruction>(V), &VectorizedVals) ||
-            any_of(EE->users(),
+            any_of(V->users(),
                    [&](User *U) {
                      return isa<GetElementPtrInst>(U) &&
                             !R.areAllUsersVectorized(cast<Instruction>(U),
@@ -12585,39 +12625,45 @@ public:
                    }) ||
             (!VEs.empty() && !is_contained(VEs, E)))
           continue;
-        std::optional<unsigned> EEIdx = getExtractIndex(EE);
+        std::optional<unsigned> EEIdx = EFV.getConstantIndex();
         if (!EEIdx)
           continue;
         unsigned Idx = *EEIdx;
         // Take credit for instruction that will become dead.
-        if (EE->hasOneUse() || !PrevNodeFound) {
-          Instruction *Ext = EE->user_back();
-          if (isa<SExtInst, ZExtInst>(Ext) &&
+        if (V->hasOneUse() || !PrevNodeFound) {
+          Instruction *Ext = ExtractInst->user_back();
+          if (isa<SExtInst, ZExtInst>(Ext) && !V->getType()->isVectorTy() &&
               all_of(Ext->users(), IsaPred<GetElementPtrInst>)) {
             // Use getExtractWithExtendCost() to calculate the cost of
             // extractelement/ext pair.
             Cost -= TTI.getExtractWithExtendCost(
-                Ext->getOpcode(), Ext->getType(), EE->getVectorOperandType(),
+                Ext->getOpcode(), Ext->getType(), EFV.getVectorOperandType(),
                 Idx, CostKind);
             // Add back the cost of s|zext which is subtracted separately.
             Cost += TTI.getCastInstrCost(
-                Ext->getOpcode(), Ext->getType(), EE->getType(),
+                Ext->getOpcode(), Ext->getType(), V->getType(),
                 TTI::getCastContextHint(Ext), CostKind, Ext);
             continue;
           }
         }
+
+        // Note: If extracting a subvector, NumExtractedElts will be >1, and the
+        // bit set in DemandedElts will correspond to a sub-vector index.
         APInt &DemandedElts =
             VectorOpsToExtracts
                 .try_emplace(VecBase,
-                             APInt::getZero(getNumElements(VecBase->getType())))
+                             APInt::getZero(getNumElements(VecBase->getType()) /
+                                            EltsPerExtractInst))
                 .first->getSecond();
-        DemandedElts.setBit(Idx);
+        DemandedElts.setBit(Idx / EltsPerExtractInst);
       }
     }
+
     for (const auto &[Vec, DemandedElts] : VectorOpsToExtracts)
-      Cost -= TTI.getScalarizationOverhead(cast<VectorType>(Vec->getType()),
-                                           DemandedElts, /*Insert=*/false,
-                                           /*Extract=*/true, CostKind);
+      Cost -= getScalarizationOverhead(TTI, VL[0]->getType(),
+                                       cast<VectorType>(Vec->getType()),
+                                       DemandedElts, /*Insert=*/false,
+                                       /*Extract=*/true, CostKind);
     // Check that gather of extractelements can be represented as just a
     // shuffle of a single/two vectors the scalars are extracted from.
     // Found the bunch of extractelement instructions that must be gathered
@@ -12704,11 +12750,12 @@ public:
                   [&](auto P) {
                     if (P.value() == PoisonMaskElem)
                       return Mask[P.index()] == PoisonMaskElem;
-                    auto *EI = cast<ExtractElementInst>(
-                        cast<const TreeEntry *>(InVectors.front())
-                            ->getOrdered(P.index()));
-                    return EI->getVectorOperand() == V1 ||
-                           EI->getVectorOperand() == V2;
+                    ExtractFromVector EFV =
+                        matchExtractFromVector(
+                            cast<const TreeEntry *>(InVectors.front())
+                                ->getOrdered(P.index()))
+                            .value();
+                    return EFV.VectorOperand == V1 || EFV.VectorOperand == V2;
                   }) &&
            "Expected extractelement vectors.");
   }
@@ -12734,8 +12781,9 @@ public:
                                isa<UndefValue>(Scalar);
                       if (isa<Constant>(V1))
                         return true;
-                      auto *EI = cast<ExtractElementInst>(Scalar);
-                      return EI->getVectorOperand() == V1;
+                      ExtractFromVector EFV =
+                          matchExtractFromVector(Scalar).value();
+                      return EFV.VectorOperand == V1;
                     }) &&
              "Expected only tree entry for extractelement vectors.");
       return;
@@ -15117,19 +15165,20 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
     MutableArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) const {
   // Scan list of gathered scalars for extractelements that can be represented
   // as shuffles.
+  // This maps the vectors we gather from to all the lanes they populate in VL.
   MapVector<Value *, SmallVector<int>> VectorOpToIdx;
   SmallVector<int> UndefVectorExtracts;
   for (int I = 0, E = VL.size(); I < E; ++I) {
-    auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
-    if (!EI) {
+    std::optional<ExtractFromVector> Match = matchExtractFromVector(VL[I]);
+    if (!Match) {
       if (isa<UndefValue>(VL[I]))
         UndefVectorExtracts.push_back(I);
       continue;
     }
-    auto *VecTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
-    if (!VecTy || !isa<ConstantInt, UndefValue>(EI->getIndexOperand()))
+    auto *VecTy = dyn_cast<FixedVectorType>(Match->getVectorOperandType());
+    if (!VecTy || !isa<ConstantInt, UndefValue>(Match->IndexOperand))
       continue;
-    std::optional<unsigned> Idx = getExtractIndex(EI);
+    std::optional<unsigned> Idx = Match->getConstantIndex();
     // Undefined index.
     if (!Idx) {
       UndefVectorExtracts.push_back(I);
@@ -15141,12 +15190,13 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
     }
     SmallBitVector ExtractMask(VecTy->getNumElements(), true);
     ExtractMask.reset(*Idx);
-    if (isUndefVector(EI->getVectorOperand(), ExtractMask).all()) {
+    if (isUndefVector(Match->VectorOperand, ExtractMask).all()) {
       UndefVectorExtracts.push_back(I);
       continue;
     }
-    VectorOpToIdx[EI->getVectorOperand()].push_back(I);
+    VectorOpToIdx[Match->VectorOperand].push_back(I);
   }
+
   // Sort the vector operands by the maximum number of uses in extractelements.
   SmallVector<std::pair<Value *, SmallVector<int>>> Vectors =
       VectorOpToIdx.takeVector();
@@ -15160,12 +15210,12 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
   if (!Vectors.empty()) {
     SingleMax = Vectors.front().second.size() + UndefSz;
     if (Vectors.size() > 1) {
-      auto *ItNext = std::next(Vectors.begin());
-      PairMax = SingleMax + ItNext->second.size();
+      PairMax = SingleMax + Vectors[1].second.size();
     }
   }
   if (SingleMax == 0 && PairMax == 0 && UndefSz == 0)
     return std::nullopt;
+
   // Check if better to perform a shuffle of 2 vectors or just of a single
   // vector.
   SmallVector<Value *> SavedVL(VL.begin(), VL.end());
@@ -15182,6 +15232,7 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
   // Add extracts from undefs too.
   for (int Idx : UndefVectorExtracts)
     std::swap(GatheredExtracts[Idx], VL[Idx]);
+
   // Check that gather of extractelements can be represented as just a
   // shuffle of a single/two vectors the scalars are extracted from.
   std::optional<TTI::ShuffleKind> Res =
@@ -15198,13 +15249,7 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
     if (Mask[I] == PoisonMaskElem && !isa<PoisonValue>(GatheredExtracts[I]) &&
         isa<UndefValue>(GatheredExtracts[I])) {
       std::swap(VL[I], GatheredExtracts[I]);
-      continue;
     }
-    auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
-    if (!EI || !isa<FixedVectorType>(EI->getVectorOperandType()) ||
-        !isa<ConstantInt, UndefValue>(EI->getIndexOperand()) ||
-        is_contained(UndefVectorExtracts, I))
-      continue;
   }
   return Res;
 }
@@ -16556,8 +16601,9 @@ public:
       int Idx = Mask[I];
       if (Idx == PoisonMaskElem)
         continue;
-      auto *EI = cast<ExtractElementInst>(VL[I]);
-      VecBase = EI->getVectorOperand();
+      ExtractFromVector EFV = matchExtractFromVector(VL[I]).value();
+      Instruction *EI = cast<Instruction>(VL[I]);
+      VecBase = EFV.VectorOperand;
       if (ArrayRef<TreeEntry *> TEs = R.getTreeEntries(VecBase); !TEs.empty())
         VecBase = TEs.front()->VectorizedValue;
       assert(VecBase && "Expected vectorized value.");
@@ -16611,7 +16657,7 @@ public:
             if (std::get<1>(D) == PoisonMaskElem)
               return S;
             Value *VecOp =
-                cast<ExtractElementInst>(std::get<0>(D))->getVectorOperand();
+                matchExtractFromVector(std::get<0>(D))->VectorOperand;
             if (ArrayRef<TreeEntry *> TEs = R.getTreeEntries(VecOp);
                 !TEs.empty())
               VecOp = TEs.front()->VectorizedValue;
@@ -16623,7 +16669,7 @@ public:
       for (const auto [V, I] : VLMask) {
         if (I == PoisonMaskElem)
           continue;
-        Value *VecOp = cast<ExtractElementInst>(V)->getVectorOperand();
+        Value *VecOp = matchExtractFromVector(V)->VectorOperand;
         if (ArrayRef<TreeEntry *> TEs = R.getTreeEntries(VecOp); !TEs.empty())
           VecOp = TEs.front()->VectorizedValue;
         assert(VecOp && "Expected vectorized value.");
@@ -17073,7 +17119,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         if (I == PoisonMaskElem)
           continue;
         if (ArrayRef<TreeEntry *> TEs = getTreeEntries(
-                cast<ExtractElementInst>(StoredGS[Idx])->getVectorOperand());
+                matchExtractFromVector(StoredGS[Idx])->VectorOperand);
             !TEs.empty())
           ExtractEntries.append(TEs.begin(), TEs.end());
       }
@@ -17280,8 +17326,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             continue;
           if (isa<UndefValue>(StoredGS[I]))
             continue;
-          auto *EI = cast<ExtractElementInst>(StoredGS[I]);
-          Value *VecOp = EI->getVectorOperand();
+          Value *VecOp = matchExtractFromVector(StoredGS[I])->VectorOperand;
           if (ArrayRef<TreeEntry *> TEs = getTreeEntries(VecOp);
               !TEs.empty() && TEs.front()->VectorizedValue)
             VecOp = TEs.front()->VectorizedValue;
