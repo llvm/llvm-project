@@ -1826,7 +1826,7 @@ body: |
 name: vrgatherei16_vv_incompatible_index_eew
 body: |
   bb.0:
-    ; CHECK-LABEL: name: vrgatherei16_vv_compatible_index_eew
+    ; CHECK-LABEL: name: vrgatherei16_vv_incompatible_index_eew
     ; CHECK: %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: early-clobber %y:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, $noreg, %x, 1, 5 /* e32 */, 0 /* tu, mu */
     %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
