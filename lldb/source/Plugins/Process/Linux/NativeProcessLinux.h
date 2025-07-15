@@ -190,8 +190,6 @@ private:
 
   // Returns a list of process threads that we have attached to.
   static llvm::Expected<std::vector<::pid_t>> Attach(::pid_t pid);
-  // Returns a list of process threads that we have seized and interrupted.
-  static llvm::Expected<std::vector<::pid_t>> Seize(::pid_t pid);
 
   static Status SetDefaultPtraceOpts(const lldb::pid_t);
 

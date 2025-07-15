@@ -312,26 +312,10 @@ NativeProcessLinux::Manager::Attach(
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid = {0:x}", pid);
 
-  // This safety check lets us decide if we should
-  // seize or attach.
-  ProcessInstanceInfo process_info;
-  if (!Host::GetProcessInfo(pid, process_info))
-    return llvm::make_error<StringError>("Unable to read process info",
-                                         llvm::inconvertibleErrorCode());
-
-  std::vector<::pid_t> tids;
-  // IsCoreDumping is an optional, so check for value then true/false.
-  if (process_info.IsCoreDumping() && *process_info.IsCoreDumping()) {
-    auto attached_or = NativeProcessLinux::Seize(pid);
-    if (!attached_or)
-      return attached_or.takeError();
-    tids = std::move(*attached_or);
-  } else {
-    auto attached_or = NativeProcessLinux::Attach(pid);
-    if (!attached_or)
-      return attached_or.takeError();
-    tids = std::move(*attached_or);
-  }
+  auto tids_or = NativeProcessLinux::Attach(pid);
+  if (!tids_or)
+    return tids_or.takeError();
+  ArrayRef<::pid_t> tids = *tids_or;
 
   llvm::Expected<ArchSpec> arch_or =
       NativeRegisterContextLinux::DetermineArchitecture(tids[0]);
@@ -461,7 +445,7 @@ NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
   SetState(StateType::eStateStopped, false);
 }
 
-llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Seize(::pid_t pid) {
+llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
   Log *log = GetLog(POSIXLog::Process);
 
   uint64_t options = GetDefaultPtraceOpts();
@@ -472,93 +456,15 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Seize(::pid_t pid) {
   while (Host::FindProcessThreads(pid, tids_to_attach)) {
     for (Host::TidMap::iterator it = tids_to_attach.begin();
          it != tids_to_attach.end();) {
-      if (it->second == true) {
-        continue;
-      }
-      lldb::tid_t tid = it->first;
-      if ((status = PtraceWrapper(PTRACE_SEIZE, tid, nullptr, (void *)options))
-              .Fail()) {
-        // No such thread. The thread may have exited. More error handling
-        // may be needed.
-        if (status.GetError() == ESRCH) {
-          it = tids_to_attach.erase(it);
-          continue;
-        }
-        if (status.GetError() == EPERM) {
-          // Depending on the value of ptrace_scope, we can return a
-          // different error that suggests how to fix it.
-          return AddPtraceScopeNote(status.ToError());
-        }
-        return status.ToError();
-      }
-
-      if ((status = PtraceWrapper(PTRACE_INTERRUPT, tid)).Fail()) {
-        // No such thread. The thread may have exited. More error handling
-        // may be needed.
-        if (status.GetError() == ESRCH) {
-          it = tids_to_attach.erase(it);
-          continue;
-        }
-        if (status.GetError() == EPERM) {
-          // Depending on the value of ptrace_scope, we can return a
-          // different error that suggests how to fix it.
-          return AddPtraceScopeNote(status.ToError());
-        }
-        return status.ToError();
-      }
-
-      int wpid =
-          llvm::sys::RetryAfterSignal(-1, ::waitpid, tid, nullptr, __WALL);
-      // Need to use __WALL otherwise we receive an error with errno=ECHLD At
-      // this point we should have a thread stopped if waitpid succeeds.
-      if (wpid < 0) {
-        // No such thread. The thread may have exited. More error handling
-        // may be needed.
-        if (errno == ESRCH) {
-          it = tids_to_attach.erase(it);
-          continue;
-        }
-        return llvm::errorCodeToError(
-            std::error_code(errno, std::generic_category()));
-      }
-
-      LLDB_LOG(log, "adding tid = {0}", tid);
-      it->second = true;
-
-      // move the loop forward
-      ++it;
-    }
-  }
-
-  size_t tid_count = tids_to_attach.size();
-  if (tid_count == 0)
-    return llvm::make_error<StringError>("No such process",
-                                         llvm::inconvertibleErrorCode());
-
-  std::vector<::pid_t> tids;
-  tids.reserve(tid_count);
-  for (const auto &p : tids_to_attach)
-    tids.push_back(p.first);
-
-  return std::move(tids);
-}
-
-llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
-  Log *log = GetLog(POSIXLog::Process);
-
-  Status status;
-  // Use a map to keep track of the threads which we have attached/need to
-  // attach.
-  Host::TidMap tids_to_attach;
-  while (Host::FindProcessThreads(pid, tids_to_attach)) {
-    for (Host::TidMap::iterator it = tids_to_attach.begin();
-         it != tids_to_attach.end();) {
       if (it->second == false) {
         lldb::tid_t tid = it->first;
 
-        // Attach to the requested process.
-        // An attach will cause the thread to stop with a SIGSTOP.
-        if ((status = PtraceWrapper(PTRACE_ATTACH, tid)).Fail()) {
+        // Seize and interrupt the requested process.
+        // This will cause the thread to stop in a TRACE_STOP state.
+        // Akin to a sigstop but without sending the signal.
+        if ((status =
+                 PtraceWrapper(PTRACE_SEIZE, tid, nullptr, (void *)options))
+                .Fail()) {
           // No such thread. The thread may have exited. More error handling
           // may be needed.
           if (status.GetError() == ESRCH) {
@@ -570,6 +476,24 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
             // error that suggests how to fix it.
             return AddPtraceScopeNote(status.ToError());
           }
+          return status.ToError();
+        }
+
+        // Send a sigstop, this makes it so our seize->interrupt is signal wise
+        // the same as ptrace_attach. We do this so any program/workflow
+        // depending on the sending of a sigstop will still receive a sigstop.
+        tgkill(tid, tid, SIGSTOP);
+
+        if ((status = PtraceWrapper(PTRACE_INTERRUPT, tid)).Fail()) {
+          // No such thread, the thread may have exited, this shouldn't
+          // happen at this stage, but we check regardless
+          if (status.GetError() == ESRCH) {
+            it = tids_to_attach.erase(it);
+            continue;
+          }
+
+          // No check for EPERM because we already checked for it above
+          // when we seized
           return status.ToError();
         }
 
@@ -587,9 +511,6 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
           return llvm::errorCodeToError(
               std::error_code(errno, std::generic_category()));
         }
-
-        if ((status = SetDefaultPtraceOpts(tid)).Fail())
-          return status.ToError();
 
         LLDB_LOG(log, "adding tid = {0}", tid);
         it->second = true;
