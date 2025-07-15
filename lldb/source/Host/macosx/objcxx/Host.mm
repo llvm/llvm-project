@@ -315,8 +315,10 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   llvm::Expected<HostThread> accept_thread = ThreadLauncher::LaunchThread(
       unix_socket_name, [&] { return AcceptPIDFromInferior(connect_url); });
 
-  if (!accept_thread)
+  if (!accept_thread) {
+    [applescript release];
     return Status::FromError(accept_thread.takeError());
+  }
 
   [applescript executeAndReturnError:nil];
 
@@ -1058,6 +1060,8 @@ static Status LaunchProcessXPC(const char *exe_path,
     LLDB_LOG(log, "error: {0}", error);
   }
 
+  xpc_release(reply);
+  xpc_release(message);
   return error;
 #else
   Status error;

@@ -477,6 +477,7 @@ CoreSimulatorSupport::Device::Spawn(ProcessLaunchInfo &launch_info) {
                         stringWithUTF8String:args.GetArgumentAtIndex(idx)]];
 
     [options setObject:args_array forKey:kSimDeviceSpawnArguments];
+    [args_array release];
   }
 
   NSMutableDictionary *env_dict = [[NSMutableDictionary alloc] init];
@@ -539,6 +540,8 @@ CoreSimulatorSupport::Device::Spawn(ProcessLaunchInfo &launch_info) {
                                                    : "unable to launch");
   }
 
+  [env_dict release];
+  [options release];
   return CoreSimulatorSupport::Process(pid, std::move(error));
 }
 

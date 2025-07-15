@@ -112,7 +112,6 @@ size_t ObjectFileJSON::GetModuleSpecifications(
     data_sp = MapFileData(file, length, file_offset);
     if (!data_sp)
       return 0;
-    data_offset = 0;
   }
 
   Log *log = GetLog(LLDBLog::Symbols);

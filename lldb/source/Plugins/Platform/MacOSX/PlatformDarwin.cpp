@@ -874,7 +874,6 @@ PlatformDarwin::FetchExtendedCrashInformation(Process &process) {
     new_annotations_sp = ExtractCrashInfoAnnotations(process);
     if (new_annotations_sp && new_annotations_sp->GetSize()) {
       process_dict_sp->AddItem(crash_info_key, new_annotations_sp);
-      annotations = new_annotations_sp.get();
     }
   }
 
@@ -883,10 +882,8 @@ PlatformDarwin::FetchExtendedCrashInformation(Process &process) {
   if (!process_dict_sp->GetValueForKeyAsDictionary(asi_info_key,
                                                    app_specific_info)) {
     new_app_specific_info_sp = ExtractAppSpecificInfo(process);
-    if (new_app_specific_info_sp && new_app_specific_info_sp->GetSize()) {
+    if (new_app_specific_info_sp && new_app_specific_info_sp->GetSize())
       process_dict_sp->AddItem(asi_info_key, new_app_specific_info_sp);
-      app_specific_info = new_app_specific_info_sp.get();
-    }
   }
 
   // Now get anything else that was in the process info dict, and add it to the

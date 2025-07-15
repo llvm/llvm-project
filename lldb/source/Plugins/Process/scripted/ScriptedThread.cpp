@@ -270,7 +270,6 @@ bool ScriptedThread::CalculateStopInfo() {
     uint32_t signal;
     llvm::StringRef description;
     if (!data_dict->GetValueForKeyAsInteger("signal", signal)) {
-        signal = LLDB_INVALID_SIGNAL_NUMBER;
         return false;
     }
     data_dict->GetValueForKeyAsString("desc", description);
