@@ -1542,16 +1542,6 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       stl_synth_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
-      lldb_private::formatters::LibStdcppSharedPtrSyntheticFrontEndCreator,
-      "std::shared_ptr synthetic children", "^std::shared_ptr<.+>(( )?&)?$",
-      stl_synth_flags, true);
-  AddCXXSynthetic(
-      cpp_category_sp,
-      lldb_private::formatters::LibStdcppSharedPtrSyntheticFrontEndCreator,
-      "std::weak_ptr synthetic children", "^std::weak_ptr<.+>(( )?&)?$",
-      stl_synth_flags, true);
-  AddCXXSynthetic(
-      cpp_category_sp,
       lldb_private::formatters::LibStdcppTupleSyntheticFrontEndCreator,
       "std::tuple synthetic children", "^std::tuple<.*>(( )?&)?$",
       stl_synth_flags, true);
@@ -1577,18 +1567,6 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       stl_deref_flags, true);
 
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibStdcppUniquePointerSummaryProvider,
-                "libstdc++ std::unique_ptr summary provider",
-                "^std::unique_ptr<.+>(( )?&)?$", stl_summary_flags, true);
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibStdcppSmartPointerSummaryProvider,
-                "libstdc++ std::shared_ptr summary provider",
-                "^std::shared_ptr<.+>(( )?&)?$", stl_summary_flags, true);
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibStdcppSmartPointerSummaryProvider,
-                "libstdc++ std::weak_ptr summary provider",
-                "^std::weak_ptr<.+>(( )?&)?$", stl_summary_flags, true);
-  AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
                 "libstdc++ std::coroutine_handle summary provider",
                 libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
@@ -1596,6 +1574,43 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::GenericOptionalSummaryProvider,
                 "libstd++ std::optional summary provider",
                 "^std::optional<.+>(( )?&)?$", stl_summary_flags, true);
+}
+
+static lldb_private::SyntheticChildrenFrontEnd *
+GenericSmartPointerSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                            lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlSmartPointer(*valobj_sp))
+    return MsvcStlSmartPointerSyntheticFrontEndCreator(valobj_sp);
+  return LibStdcppSharedPtrSyntheticFrontEndCreator(children, valobj_sp);
+}
+
+static bool
+GenericSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
+                                   const TypeSummaryOptions &options) {
+  if (IsMsvcStlSmartPointer(valobj))
+    return MsvcStlSmartPointerSummaryProvider(valobj, stream, options);
+  return LibStdcppSmartPointerSummaryProvider(valobj, stream, options);
+}
+
+static lldb_private::SyntheticChildrenFrontEnd *
+GenericUniquePtrSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                         lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlUniquePtr(*valobj_sp))
+    return MsvcStlUniquePtrSyntheticFrontEndCreator(valobj_sp);
+  return LibStdcppUniquePtrSyntheticFrontEndCreator(children, valobj_sp);
+}
+
+static bool GenericUniquePtrSummaryProvider(ValueObject &valobj, Stream &stream,
+                                            const TypeSummaryOptions &options) {
+  if (IsMsvcStlUniquePtr(valobj))
+    return MsvcStlUniquePtrSummaryProvider(valobj, stream, options);
+  return LibStdcppUniquePointerSummaryProvider(valobj, stream, options);
 }
 
 /// Load formatters that are formatting types from more than one STL
@@ -1611,6 +1626,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
+  SyntheticChildren::Flags stl_synth_flags;
+  stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
+      false);
+
   using StringElementType = StringPrinter::StringElementType;
 
   RegisterStdStringSummaryProvider(
@@ -1636,6 +1655,29 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
             return LibStdcppStringSummaryProvider(valobj, stream, options);
           },
           "MSVC STL/libstdc++ std::wstring summary provider"));
+
+  stl_summary_flags.SetDontShowChildren(false);
+  stl_summary_flags.SetSkipPointers(false);
+
+  AddCXXSynthetic(cpp_category_sp, GenericSmartPointerSyntheticFrontEndCreator,
+                  "std::shared_ptr synthetic children",
+                  "^std::shared_ptr<.+>(( )?&)?$", stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericSmartPointerSyntheticFrontEndCreator,
+                  "std::weak_ptr synthetic children",
+                  "^std::weak_ptr<.+>(( )?&)?$", stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericUniquePtrSyntheticFrontEndCreator,
+                  "std::unique_ptr synthetic children",
+                  "^std::unique_ptr<.+>(( )?&)?$", stl_synth_flags, true);
+
+  AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
+                "MSVC STL/libstdc++ std::shared_ptr summary provider",
+                "^std::shared_ptr<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
+                "MSVC STL/libstdc++ std::weak_ptr summary provider",
+                "^std::weak_ptr<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericUniquePtrSummaryProvider,
+                "MSVC STL/libstdc++ std::unique_ptr summary provider",
+                "^std::unique_ptr<.+>(( )?&)?$", stl_summary_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

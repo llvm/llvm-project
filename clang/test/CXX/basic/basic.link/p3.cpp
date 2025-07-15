@@ -1,11 +1,11 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
-// RUN: %clang_cc1 -std=c++2a -verify %t/M.cppm
-// RUN: %clang_cc1 -std=c++2a -verify %t/ImportError1.cppm
-// RUN: %clang_cc1 -std=c++2a -verify %t/ImportError2.cppm
+// RUN: %clang_cc1 -std=c++20 -verify %t/M.cpp
+// RUN: %clang_cc1 -std=c++20 -verify %t/ImportError1.cpp
+// RUN: %clang_cc1 -std=c++20 -verify %t/ImportError2.cpp
 
-//--- M.cppm
+//--- M.cpp
 module;
 
 struct import { struct inner {}; };
@@ -35,7 +35,7 @@ template<typename T> module module_var_template;
 // This is a variable named 'import' that shadows the type 'import' above.
 struct X {} import;
 
-//--- ImportError1.cppm
+//--- ImportError1.cpp
 module;
 
 struct import { struct inner {}; };
@@ -48,7 +48,7 @@ export module m; // #1
 import x = {}; // expected-error {{expected ';' after module name}}
                // expected-error@-1 {{module 'x' not found}}
 
-//--- ImportError2.cppm
+//--- ImportError2.cpp
 // expected-no-diagnostics
 module;
 

@@ -8,13 +8,11 @@
 
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -303,9 +301,7 @@ void XeGPUBlockingPass::runOnOperation() {
       // If the encoding is a ScatterTensorDescAttr, we need to
       // potentially adjust the chunk size based on the inst_data.
       if (tdescTy.isScattered()) {
-        auto scatterAttr =
-            llvm::dyn_cast_if_present<xegpu::ScatterTensorDescAttr>(encoding);
-        int64_t chunkSize = scatterAttr.getChunkSize().getInt();
+        int64_t chunkSize = tdescTy.getChunkSizeAsInt();
 
         if (chunkSize > 1) {
           int64_t blockedChunkSize = chunkSize;
@@ -315,7 +311,7 @@ void XeGPUBlockingPass::runOnOperation() {
 
           // To create a new attribute with a different chunk_size:
           auto newEncoding = xegpu::ScatterTensorDescAttr::get(
-              ctx, scatterAttr.getMemorySpace().getValue(), blockedChunkSize);
+              ctx, tdescTy.getMemorySpace(), blockedChunkSize);
 
           encoding = newEncoding;
         }
