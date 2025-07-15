@@ -146,6 +146,13 @@ static const StringMap<StringSet<>> XFailTestNames = {{
 }};
 
 struct TestData {
+  TestData() = default;
+  explicit TestData(const json::Object &TestCase)
+      : TemplateStr(*TestCase.getString("template")),
+        ExpectedStr(*TestCase.getString("expected")),
+        Name(*TestCase.getString("name")), Data(TestCase.get("data")),
+        Partials(TestCase.get("partials")) {}
+
   static Expected<TestData> createTestData(json::Object *TestCase,
                                            StringRef InputFile) {
     // If any of the needed elements are missing, we cannot continue.
@@ -157,19 +164,14 @@ struct TestData {
           llvm::inconvertibleErrorCode(),
           "invalid JSON schema in test file: " + InputFile + "\n");
 
-    return TestData{TestCase->getString("template").value(),
-                    TestCase->getString("expected").value(),
-                    TestCase->getString("name").value(), TestCase->get("data"),
-                    TestCase->get("partials")};
+    return TestData(*TestCase);
   }
-
-  TestData() = default;
 
   StringRef TemplateStr;
   StringRef ExpectedStr;
   StringRef Name;
-  Value *Data;
-  Value *Partials;
+  const Value *Data;
+  const Value *Partials;
 };
 
 static void reportTestFailure(const TestData &TD, StringRef ActualStr,
@@ -191,7 +193,7 @@ static void reportTestFailure(const TestData &TD, StringRef ActualStr,
   }
 }
 
-static void registerPartials(Value *Partials, Template &T) {
+static void registerPartials(const Value *Partials, Template &T) {
   if (!Partials)
     return;
   for (const auto &[Partial, Str] : *Partials->getAsObject())

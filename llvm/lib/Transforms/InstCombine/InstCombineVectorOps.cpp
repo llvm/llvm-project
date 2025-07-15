@@ -542,27 +542,39 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         }
       }
     } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
-      // If this is extracting an element from a shufflevector, figure out where
-      // it came from and extract from the appropriate input element instead.
-      // Restrict the following transformation to fixed-length vector.
-      if (isa<FixedVectorType>(SVI->getType()) && isa<ConstantInt>(Index)) {
-        int SrcIdx =
-            SVI->getMaskValue(cast<ConstantInt>(Index)->getZExtValue());
-        Value *Src;
-        unsigned LHSWidth = cast<FixedVectorType>(SVI->getOperand(0)->getType())
-                                ->getNumElements();
+      int SplatIndex = getSplatIndex(SVI->getShuffleMask());
+      // We know the all-0 splat must be reading from the first operand, even
+      // in the case of scalable vectors (vscale is always > 0).
+      if (SplatIndex == 0)
+        return ExtractElementInst::Create(SVI->getOperand(0),
+                                          Builder.getInt64(0));
 
-        if (SrcIdx < 0)
-          return replaceInstUsesWith(EI, PoisonValue::get(EI.getType()));
-        if (SrcIdx < (int)LHSWidth)
-          Src = SVI->getOperand(0);
-        else {
-          SrcIdx -= LHSWidth;
-          Src = SVI->getOperand(1);
+      if (isa<FixedVectorType>(SVI->getType())) {
+        std::optional<int> SrcIdx;
+        // getSplatIndex returns -1 to mean not-found.
+        if (SplatIndex != -1)
+          SrcIdx = SplatIndex;
+        else if (ConstantInt *CI = dyn_cast<ConstantInt>(Index))
+          SrcIdx = SVI->getMaskValue(CI->getZExtValue());
+
+        if (SrcIdx) {
+          Value *Src;
+          unsigned LHSWidth =
+              cast<FixedVectorType>(SVI->getOperand(0)->getType())
+                  ->getNumElements();
+
+          if (*SrcIdx < 0)
+            return replaceInstUsesWith(EI, PoisonValue::get(EI.getType()));
+          if (*SrcIdx < (int)LHSWidth)
+            Src = SVI->getOperand(0);
+          else {
+            *SrcIdx -= LHSWidth;
+            Src = SVI->getOperand(1);
+          }
+          Type *Int64Ty = Type::getInt64Ty(EI.getContext());
+          return ExtractElementInst::Create(
+              Src, ConstantInt::get(Int64Ty, *SrcIdx, false));
         }
-        Type *Int64Ty = Type::getInt64Ty(EI.getContext());
-        return ExtractElementInst::Create(
-            Src, ConstantInt::get(Int64Ty, SrcIdx, false));
       }
     } else if (auto *CI = dyn_cast<CastInst>(I)) {
       // Canonicalize extractelement(cast) -> cast(extractelement).
@@ -2533,20 +2545,6 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
 
   bool IsFNeg = S0->getOpcode() == Instruction::FNeg;
 
-  // Match 1-input (unary) shuffle.
-  // shuffle (fneg/fabs X), Mask --> fneg/fabs (shuffle X, Mask)
-  if (S0->hasOneUse() && match(Shuf.getOperand(1), m_Poison())) {
-    Value *NewShuf = Builder.CreateShuffleVector(X, Shuf.getShuffleMask());
-    if (IsFNeg)
-      return UnaryOperator::CreateFNegFMF(NewShuf, S0);
-
-    Function *FAbs = Intrinsic::getOrInsertDeclaration(
-        Shuf.getModule(), Intrinsic::fabs, Shuf.getType());
-    CallInst *NewF = CallInst::Create(FAbs, {NewShuf});
-    NewF->setFastMathFlags(S0->getFastMathFlags());
-    return NewF;
-  }
-
   // Match 2-input (binary) shuffle.
   auto *S1 = dyn_cast<Instruction>(Shuf.getOperand(1));
   Value *Y;
@@ -2573,17 +2571,16 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
 /// Canonicalize casts after shuffle.
 static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
                                     InstCombiner::BuilderTy &Builder) {
-  // Do we have 2 matching cast operands?
   auto *Cast0 = dyn_cast<CastInst>(Shuf.getOperand(0));
-  auto *Cast1 = dyn_cast<CastInst>(Shuf.getOperand(1));
-  if (!Cast0 || !Cast1 || Cast0->getOpcode() != Cast1->getOpcode() ||
-      Cast0->getSrcTy() != Cast1->getSrcTy())
+  if (!Cast0)
     return nullptr;
 
   // TODO: Allow other opcodes? That would require easing the type restrictions
   //       below here.
   CastInst::CastOps CastOpcode = Cast0->getOpcode();
   switch (CastOpcode) {
+  case Instruction::SExt:
+  case Instruction::ZExt:
   case Instruction::FPToSI:
   case Instruction::FPToUI:
   case Instruction::SIToFP:
@@ -2593,13 +2590,29 @@ static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
     return nullptr;
   }
 
+  VectorType *CastSrcTy = cast<VectorType>(Cast0->getSrcTy());
   VectorType *ShufTy = Shuf.getType();
   VectorType *ShufOpTy = cast<VectorType>(Shuf.getOperand(0)->getType());
-  VectorType *CastSrcTy = cast<VectorType>(Cast0->getSrcTy());
 
   // TODO: Allow length-increasing shuffles?
   if (ShufTy->getElementCount().getKnownMinValue() >
       ShufOpTy->getElementCount().getKnownMinValue())
+    return nullptr;
+
+  // shuffle (cast X), Poison, identity-with-extract-mask -->
+  // cast (shuffle X, Poison, identity-with-extract-mask).
+  if (isa<PoisonValue>(Shuf.getOperand(1)) && Cast0->hasOneUse() &&
+      Shuf.isIdentityWithExtract()) {
+    auto *NewIns = Builder.CreateShuffleVector(Cast0->getOperand(0),
+                                               PoisonValue::get(CastSrcTy),
+                                               Shuf.getShuffleMask());
+    return CastInst::Create(Cast0->getOpcode(), NewIns, Shuf.getType());
+  }
+
+  auto *Cast1 = dyn_cast<CastInst>(Shuf.getOperand(1));
+  // Do we have 2 matching cast operands?
+  if (!Cast1 || Cast0->getOpcode() != Cast1->getOpcode() ||
+      Cast0->getSrcTy() != Cast1->getSrcTy())
     return nullptr;
 
   // TODO: Allow element-size-decreasing casts (ex: fptosi float to i8)?

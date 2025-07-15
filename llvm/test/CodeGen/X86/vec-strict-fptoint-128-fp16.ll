@@ -32,7 +32,7 @@ define <2 x i64> @strict_vector_fptosi_v2f16_to_v2i64(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v2f16_to_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2qq %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
@@ -54,7 +54,7 @@ define <2 x i64> @strict_vector_fptoui_v2f16_to_v2i64(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v2f16_to_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2uqq %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
@@ -76,19 +76,17 @@ define <2 x i32> @strict_vector_fptosi_v2f16_to_v2i32(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v2f16_to_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2dq %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
 ; NOVL-LABEL: strict_vector_fptosi_v2f16_to_v2i32:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; NOVL-NEXT:    vcvttph2dq %ymm0, %zmm0
-; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm0
+; NOVL-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; NOVL-NEXT:    retq
   %ret = call <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f16(<2 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -99,19 +97,17 @@ define <2 x i32> @strict_vector_fptoui_v2f16_to_v2i32(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v2f16_to_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2udq %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
 ; NOVL-LABEL: strict_vector_fptoui_v2f16_to_v2i32:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; NOVL-NEXT:    vcvttph2udq %ymm0, %zmm0
-; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2usi %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2usi %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm0
+; NOVL-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; NOVL-NEXT:    retq
   %ret = call <2 x i32> @llvm.experimental.constrained.fptoui.v2i32.v2f16(<2 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -122,19 +118,18 @@ define <2 x i16> @strict_vector_fptosi_v2f16_to_v2i16(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v2f16_to_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2w %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
 ; NOVL-LABEL: strict_vector_fptosi_v2f16_to_v2i16:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vinsertf32x4 $0, %xmm0, %zmm1, %zmm0
-; NOVL-NEXT:    vcvttph2w %zmm0, %zmm0
-; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm0
+; NOVL-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; NOVL-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
 ; NOVL-NEXT:    retq
   %ret = call <2 x i16> @llvm.experimental.constrained.fptosi.v2i16.v2f16(<2 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -145,19 +140,18 @@ define <2 x i16> @strict_vector_fptoui_v2f16_to_v2i16(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v2f16_to_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2uw %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
 ; NOVL-LABEL: strict_vector_fptoui_v2f16_to_v2i16:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vinsertf32x4 $0, %xmm0, %zmm1, %zmm0
-; NOVL-NEXT:    vcvttph2uw %zmm0, %zmm0
-; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm0
+; NOVL-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; NOVL-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; NOVL-NEXT:    retq
   %ret = call <2 x i16> @llvm.experimental.constrained.fptoui.v2i16.v2f16(<2 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -168,20 +162,20 @@ define <2 x i8> @strict_vector_fptosi_v2f16_to_v2i8(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v2f16_to_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2w %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovwb %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
 ; NOVL-LABEL: strict_vector_fptosi_v2f16_to_v2i8:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vinsertf32x4 $0, %xmm0, %zmm1, %zmm0
-; NOVL-NEXT:    vcvttph2w %zmm0, %zmm0
-; NOVL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm0
+; NOVL-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; NOVL-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; NOVL-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; NOVL-NEXT:    retq
   %ret = call <2 x i8> @llvm.experimental.constrained.fptosi.v2i8.v2f16(<2 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -192,20 +186,20 @@ define <2 x i8> @strict_vector_fptoui_v2f16_to_v2i8(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v2f16_to_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2uw %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovwb %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
 ; NOVL-LABEL: strict_vector_fptoui_v2f16_to_v2i8:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vinsertf32x4 $0, %xmm0, %zmm1, %zmm0
-; NOVL-NEXT:    vcvttph2uw %zmm0, %zmm0
-; NOVL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm0
+; NOVL-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; NOVL-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; NOVL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; NOVL-NEXT:    retq
   %ret = call <2 x i8> @llvm.experimental.constrained.fptoui.v2i8.v2f16(<2 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -216,7 +210,7 @@ define <2 x i1> @strict_vector_fptosi_v2f16_to_v2i1(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v2f16_to_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2w %xmm0, %xmm0
 ; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k1
@@ -247,7 +241,7 @@ define <2 x i1> @strict_vector_fptoui_v2f16_to_v2i1(<2 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v2f16_to_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vcvttph2uw %xmm0, %xmm0
 ; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k1
@@ -335,12 +329,18 @@ define <4 x i16> @strict_vector_fptosi_v4f16_to_v4i16(<4 x half> %a) #0 {
 ;
 ; NOVL-LABEL: strict_vector_fptosi_v4f16_to_v4i16:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vinserti32x4 $0, %xmm0, %zmm1, %zmm0
-; NOVL-NEXT:    vcvttph2w %zmm0, %zmm0
-; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm1
+; NOVL-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; NOVL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; NOVL-NEXT:    vcvttsh2si %xmm2, %eax
+; NOVL-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; NOVL-NEXT:    vpsrlq $48, %xmm0, %xmm0
+; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
+; NOVL-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; NOVL-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
 ; NOVL-NEXT:    retq
   %ret = call <4 x i16> @llvm.experimental.constrained.fptosi.v4i16.v4f16(<4 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -356,12 +356,18 @@ define <4 x i16> @strict_vector_fptoui_v4f16_to_v4i16(<4 x half> %a) #0 {
 ;
 ; NOVL-LABEL: strict_vector_fptoui_v4f16_to_v4i16:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vinserti32x4 $0, %xmm0, %zmm1, %zmm0
-; NOVL-NEXT:    vcvttph2uw %zmm0, %zmm0
-; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm1
+; NOVL-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; NOVL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; NOVL-NEXT:    vcvttsh2si %xmm2, %eax
+; NOVL-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; NOVL-NEXT:    vpsrlq $48, %xmm0, %xmm0
+; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
+; NOVL-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; NOVL-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; NOVL-NEXT:    retq
   %ret = call <4 x i16> @llvm.experimental.constrained.fptoui.v4i16.v4f16(<4 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -378,12 +384,19 @@ define <4 x i8> @strict_vector_fptosi_v4f16_to_v4i8(<4 x half> %a) #0 {
 ;
 ; NOVL-LABEL: strict_vector_fptosi_v4f16_to_v4i8:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vinserti32x4 $0, %xmm0, %zmm1, %zmm0
-; NOVL-NEXT:    vcvttph2w %zmm0, %zmm0
-; NOVL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm1
+; NOVL-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; NOVL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; NOVL-NEXT:    vcvttsh2si %xmm2, %eax
+; NOVL-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; NOVL-NEXT:    vpsrlq $48, %xmm0, %xmm0
+; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
+; NOVL-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; NOVL-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; NOVL-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; NOVL-NEXT:    retq
   %ret = call <4 x i8> @llvm.experimental.constrained.fptosi.v4i8.v4f16(<4 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -400,12 +413,19 @@ define <4 x i8> @strict_vector_fptoui_v4f16_to_v4i8(<4 x half> %a) #0 {
 ;
 ; NOVL-LABEL: strict_vector_fptoui_v4f16_to_v4i8:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vinserti32x4 $0, %xmm0, %zmm1, %zmm0
-; NOVL-NEXT:    vcvttph2uw %zmm0, %zmm0
-; NOVL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
+; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
+; NOVL-NEXT:    vcvttsh2si %xmm0, %ecx
+; NOVL-NEXT:    vmovd %ecx, %xmm1
+; NOVL-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; NOVL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; NOVL-NEXT:    vcvttsh2si %xmm2, %eax
+; NOVL-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; NOVL-NEXT:    vpsrlq $48, %xmm0, %xmm0
+; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
+; NOVL-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; NOVL-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; NOVL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; NOVL-NEXT:    retq
   %ret = call <4 x i8> @llvm.experimental.constrained.fptoui.v4i8.v4f16(<4 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -554,7 +574,7 @@ define <8 x i8> @strict_vector_fptosi_v8f16_to_v8i8(<8 x half> %a) #0 {
 ; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vinsertf32x4 $0, %xmm0, %zmm1, %zmm0
 ; NOVL-NEXT:    vcvttph2w %zmm0, %zmm0
-; NOVL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; NOVL-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; NOVL-NEXT:    vzeroupper
 ; NOVL-NEXT:    retq
   %ret = call <8 x i8> @llvm.experimental.constrained.fptosi.v8i8.v8f16(<8 x half> %a,
@@ -573,8 +593,8 @@ define <8 x i8> @strict_vector_fptoui_v8f16_to_v8i8(<8 x half> %a) #0 {
 ; NOVL:       # %bb.0:
 ; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vinsertf32x4 $0, %xmm0, %zmm1, %zmm0
-; NOVL-NEXT:    vcvttph2uw %zmm0, %zmm0
-; NOVL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; NOVL-NEXT:    vcvttph2w %zmm0, %zmm0
+; NOVL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; NOVL-NEXT:    vzeroupper
 ; NOVL-NEXT:    retq
   %ret = call <8 x i8> @llvm.experimental.constrained.fptoui.v8i8.v8f16(<8 x half> %a,

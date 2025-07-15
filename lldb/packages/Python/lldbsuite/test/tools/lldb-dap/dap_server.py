@@ -179,9 +179,13 @@ class DebugCommunication(object):
     @classmethod
     def validate_response(cls, command, response):
         if command["command"] != response["command"]:
-            raise ValueError("command mismatch in response")
+            raise ValueError(
+                f"command mismatch in response {command['command']} != {response['command']}"
+            )
         if command["seq"] != response["request_seq"]:
-            raise ValueError("seq mismatch in response")
+            raise ValueError(
+                f"seq mismatch in response {command['seq']} != {response['request_seq']}"
+            )
 
     def _read_packet_thread(self):
         done = False
@@ -195,8 +199,8 @@ class DebugCommunication(object):
         finally:
             dump_dap_log(self.log_file)
 
-    def get_modules(self):
-        module_list = self.request_modules()["body"]["modules"]
+    def get_modules(self, startModule: int = 0, moduleCount: int = 0):
+        module_list = self.request_modules(startModule, moduleCount)["body"]["modules"]
         modules = {}
         for module in module_list:
             modules[module["name"]] = module
@@ -404,8 +408,8 @@ class DebugCommunication(object):
                 self.reverse_requests.append(response_or_request)
                 if response_or_request["command"] == "runInTerminal":
                     subprocess.Popen(
-                        response_or_request["arguments"]["args"],
-                        env=response_or_request["arguments"]["env"],
+                        response_or_request["arguments"].get("args"),
+                        env=response_or_request["arguments"].get("env", {}),
                     )
                     self.send_packet(
                         {
@@ -494,7 +498,7 @@ class DebugCommunication(object):
             raise ValueError("didn't get terminated event")
         return event_dict
 
-    def get_capability(self, key):
+    def get_capability(self, key: str):
         """Get a value for the given key if it there is a key/value pair in
         the capabilities reported by the adapter.
         """
@@ -827,6 +831,24 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+    def request_writeMemory(self, memoryReference, data, offset=0, allowPartial=False):
+        args_dict = {
+            "memoryReference": memoryReference,
+            "data": data,
+        }
+
+        if offset:
+            args_dict["offset"] = offset
+        if allowPartial:
+            args_dict["allowPartial"] = allowPartial
+
+        command_dict = {
+            "command": "writeMemory",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
@@ -890,7 +912,7 @@ class DebugCommunication(object):
         disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
-        runInTerminal=False,
+        console: Optional[str] = None,
         enableAutoVariableSummaries=False,
         displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
@@ -940,8 +962,8 @@ class DebugCommunication(object):
             args_dict["launchCommands"] = launchCommands
         if sourceMap:
             args_dict["sourceMap"] = sourceMap
-        if runInTerminal:
-            args_dict["runInTerminal"] = runInTerminal
+        if console:
+            args_dict["console"] = console
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if customFrameFormat:
@@ -1050,8 +1072,12 @@ class DebugCommunication(object):
             self._update_verified_breakpoints(response["body"]["breakpoints"])
         return response
 
-    def request_setExceptionBreakpoints(self, filters):
+    def request_setExceptionBreakpoints(
+        self, *, filters: list[str] = [], filter_options: list[dict] = []
+    ):
         args_dict = {"filters": filters}
+        if filter_options:
+            args_dict["filterOptions"] = filter_options
         command_dict = {
             "command": "setExceptionBreakpoints",
             "type": "request",
@@ -1135,8 +1161,14 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_modules(self):
-        return self.send_recv({"command": "modules", "type": "request"})
+    def request_modules(self, startModule: int, moduleCount: int):
+        return self.send_recv(
+            {
+                "command": "modules",
+                "type": "request",
+                "arguments": {"startModule": startModule, "moduleCount": moduleCount},
+            }
+        )
 
     def request_stackTrace(
         self, threadId=None, startFrame=None, levels=None, format=None, dump=False

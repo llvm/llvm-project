@@ -561,6 +561,8 @@ class LowerTypeTestsModule {
     return FunctionAnnotations.contains(V);
   }
 
+  void maybeReplaceComdat(Function *F, StringRef OriginalName);
+
 public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
                        ModuleSummaryIndex *ExportSummary,
@@ -1082,6 +1084,23 @@ void LowerTypeTestsModule::importTypeTest(CallInst *CI) {
   }
 }
 
+void LowerTypeTestsModule::maybeReplaceComdat(Function *F,
+                                              StringRef OriginalName) {
+  // For COFF we should also rename the comdat if this function also
+  // happens to be the key function. Even if the comdat name changes, this
+  // should still be fine since comdat and symbol resolution happens
+  // before LTO, so all symbols which would prevail have been selected.
+  if (F->hasComdat() && ObjectFormat == Triple::COFF &&
+      F->getComdat()->getName() == OriginalName) {
+    Comdat *OldComdat = F->getComdat();
+    Comdat *NewComdat = M.getOrInsertComdat(F->getName());
+    for (GlobalObject &GO : M.global_objects()) {
+      if (GO.getComdat() == OldComdat)
+        GO.setComdat(NewComdat);
+    }
+  }
+}
+
 // ThinLTO backend: the function F has a jump table entry; update this module
 // accordingly. isJumpTableCanonical describes the type of the jump table entry.
 void LowerTypeTestsModule::importFunction(
@@ -1115,6 +1134,7 @@ void LowerTypeTestsModule::importFunction(
     FDecl->setVisibility(GlobalValue::HiddenVisibility);
   } else {
     F->setName(Name + ".cfi");
+    maybeReplaceComdat(F, Name);
     F->setLinkage(GlobalValue::ExternalLinkage);
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              F->getAddressSpace(), Name, &M);
@@ -1507,11 +1527,6 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 void LowerTypeTestsModule::createJumpTable(
     Function *F, ArrayRef<GlobalTypeMember *> Functions,
     Triple::ArchType JumpTableArch) {
-  std::string AsmStr, ConstraintStr;
-  raw_string_ostream AsmOS(AsmStr), ConstraintOS(ConstraintStr);
-  SmallVector<Value *, 16> AsmArgs;
-  AsmArgs.reserve(Functions.size() * 2);
-
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
 
@@ -1681,8 +1696,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
                        GlobalValue::PrivateLinkage,
                        M.getDataLayout().getProgramAddressSpace(),
                        ".cfi.jumptable", &M);
+  ArrayType *JumpTableEntryType = ArrayType::get(Int8Ty, EntrySize);
   ArrayType *JumpTableType =
-      ArrayType::get(ArrayType::get(Int8Ty, EntrySize), Functions.size());
+      ArrayType::get(JumpTableEntryType, Functions.size());
   auto JumpTable = ConstantExpr::getPointerCast(
       JumpTableFn, PointerType::getUnqual(M.getContext()));
 
@@ -1703,7 +1719,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     if (!IsJumpTableCanonical) {
       GlobalValue::LinkageTypes LT = IsExported ? GlobalValue::ExternalLinkage
                                                 : GlobalValue::InternalLinkage;
-      GlobalAlias *JtAlias = GlobalAlias::create(F->getValueType(), 0, LT,
+      GlobalAlias *JtAlias = GlobalAlias::create(JumpTableEntryType, 0, LT,
                                                  F->getName() + ".cfi_jt",
                                                  CombinedGlobalElemPtr, &M);
       if (IsExported)
@@ -1728,25 +1744,14 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     } else {
       assert(F->getType()->getAddressSpace() == 0);
 
-      GlobalAlias *FAlias = GlobalAlias::create(
-          F->getValueType(), 0, F->getLinkage(), "", CombinedGlobalElemPtr, &M);
+      GlobalAlias *FAlias =
+          GlobalAlias::create(JumpTableEntryType, 0, F->getLinkage(), "",
+                              CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
       FAlias->takeName(F);
       if (FAlias->hasName()) {
         F->setName(FAlias->getName() + ".cfi");
-        // For COFF we should also rename the comdat if this function also
-        // happens to be the key function. Even if the comdat name changes, this
-        // should still be fine since comdat and symbol resolution happens
-        // before LTO, so all symbols which would prevail have been selected.
-        if (F->hasComdat() && ObjectFormat == Triple::COFF &&
-            F->getComdat()->getName() == FAlias->getName()) {
-          Comdat *OldComdat = F->getComdat();
-          Comdat *NewComdat = M.getOrInsertComdat(F->getName());
-          for (GlobalObject &GO : M.global_objects()) {
-            if (GO.getComdat() == OldComdat)
-              GO.setComdat(NewComdat);
-          }
-        }
+        maybeReplaceComdat(F, FAlias->getName());
       }
       replaceCfiUses(F, FAlias, IsJumpTableCanonical);
       if (!F->hasLocalLinkage())

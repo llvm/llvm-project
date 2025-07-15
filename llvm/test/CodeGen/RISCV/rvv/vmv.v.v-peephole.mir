@@ -135,3 +135,20 @@ body: |
     %3:vrnov0 = PseudoVMV_V_V_MF2 $noreg, %2, 0, 5 /* e32 */, 0 /* tu, mu */
     %7:vmv0 = COPY $v8
     %6:vrnov0 = PseudoVLSE32_V_MF2_MASK %3, $noreg, $noreg, %7, 0, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size, align 4)
+...
+---
+name: move_vleff
+body: |
+  bb.0:
+    liveins: $v8
+    ; CHECK-LABEL: name: move_vleff
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %passthru:vr = COPY $v8
+    ; CHECK-NEXT: %x:vr, %vl:gpr = PseudoVLE32FF_V_M1 %passthru, $noreg, 4, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size, align 1)
+    ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
+    %x:vr, %vl:gpr = PseudoVLE32FF_V_M1 $noreg, $noreg, 4, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size)
+    %passthru:vr = COPY $v8
+    %y:gpr = ADDI $x0, 1
+    %z:vr = PseudoVMV_V_V_M1 %passthru, %x, 4, 5 /* e32 */, 0 /* tu, mu */
+...

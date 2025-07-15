@@ -61,7 +61,8 @@ enum class sampleprof_error {
   ostream_seek_unsupported,
   uncompress_failed,
   zlib_unavailable,
-  hash_mismatch
+  hash_mismatch,
+  illegal_line_offset
 };
 
 inline std::error_code make_error_code(sampleprof_error E) {
@@ -286,11 +287,11 @@ struct LineLocation {
   LLVM_ABI void dump() const;
 
   // Serialize the line location to the output stream using ULEB128 encoding.
-  LLVM_ABI void serialize(raw_ostream &OS);
+  LLVM_ABI void serialize(raw_ostream &OS) const;
 
   bool operator<(const LineLocation &O) const {
-    return LineOffset < O.LineOffset ||
-           (LineOffset == O.LineOffset && Discriminator < O.Discriminator);
+    return std::tie(LineOffset, Discriminator) <
+           std::tie(O.LineOffset, O.Discriminator);
   }
 
   bool operator==(const LineLocation &O) const {

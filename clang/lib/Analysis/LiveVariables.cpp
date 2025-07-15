@@ -546,8 +546,8 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
 
 void LiveVariables::runOnAllBlocks(LiveVariables::Observer &obs) {
   const CFG *cfg = getImpl(impl).analysisContext.getCFG();
-  for (CFG::const_iterator it = cfg->begin(), ei = cfg->end(); it != ei; ++it)
-    getImpl(impl).runOnBlock(*it, getImpl(impl).blocksEndToLiveness[*it], &obs);
+  for (CFGBlock *B : *cfg)
+    getImpl(impl).runOnBlock(B, getImpl(impl).blocksEndToLiveness[B], &obs);
 }
 
 LiveVariables::LiveVariables(void *im) : impl(im) {}
@@ -618,10 +618,8 @@ void LiveVariables::dumpBlockLiveness(const SourceManager &M) {
 
 void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
   std::vector<const CFGBlock *> vec;
-  for (llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues>::iterator
-       it = blocksEndToLiveness.begin(), ei = blocksEndToLiveness.end();
-       it != ei; ++it) {
-    vec.push_back(it->first);
+  for (const auto &KV : blocksEndToLiveness) {
+    vec.push_back(KV.first);
   }
   llvm::sort(vec, [](const CFGBlock *A, const CFGBlock *B) {
     return A->getBlockID() < B->getBlockID();

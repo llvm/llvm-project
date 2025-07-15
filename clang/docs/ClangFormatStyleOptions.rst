@@ -1554,9 +1554,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      #define A                                                                      \
-        int aaaa;                                                                    \
-        int b;                                                                       \
+      #define A                                                            \
+        int aaaa;                                                          \
+        int b;                                                             \
         int dddddddddd;
 
 
@@ -1702,9 +1702,9 @@ the configuration (without a prefix: ``Auto``).
 .. _AllowAllArgumentsOnNextLine:
 
 **AllowAllArgumentsOnNextLine** (``Boolean``) :versionbadge:`clang-format 9` :ref:`¶ <AllowAllArgumentsOnNextLine>`
-  If a function call or braced initializer list doesn't fit on a
-  line, allow putting all arguments onto the next line, even if
-  ``BinPackArguments`` is ``false``.
+  If a function call or braced initializer list doesn't fit on a line, allow
+  putting all arguments onto the next line, even if ``BinPackArguments`` is
+  ``false``.
 
   .. code-block:: c++
 
@@ -4975,6 +4975,12 @@ the configuration (without a prefix: ``Auto``).
      A(z); -> z;
      A(a, b); // will not be expanded.
 
+.. _MacrosSkippedByRemoveParentheses:
+
+**MacrosSkippedByRemoveParentheses** (``List of Strings``) :versionbadge:`clang-format 21` :ref:`¶ <MacrosSkippedByRemoveParentheses>`
+  A vector of function-like macros whose invocations should be skipped by
+  ``RemoveParentheses``.
+
 .. _MainIncludeChar:
 
 **MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 19` :ref:`¶ <MainIncludeChar>`
@@ -5528,8 +5534,7 @@ the configuration (without a prefix: ``Auto``).
 .. _ReferenceAlignment:
 
 **ReferenceAlignment** (``ReferenceAlignmentStyle``) :versionbadge:`clang-format 13` :ref:`¶ <ReferenceAlignment>`
-  Reference alignment style (overrides ``PointerAlignment`` for
-  references).
+  Reference alignment style (overrides ``PointerAlignment`` for references).
 
   Possible values:
 
@@ -6885,8 +6890,8 @@ the configuration (without a prefix: ``Auto``).
 .. _TypenameMacros:
 
 **TypenameMacros** (``List of Strings``) :versionbadge:`clang-format 9` :ref:`¶ <TypenameMacros>`
-  A vector of macros that should be interpreted as type declarations
-  instead of as function calls.
+  A vector of macros that should be interpreted as type declarations instead
+  of as function calls.
 
   These are expected to be macros of the form:
 
@@ -6992,7 +6997,7 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
       namespace N1 {
-      namespace N2
+      namespace N2 {
       function();
       }
       }

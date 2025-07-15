@@ -11,13 +11,11 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -929,7 +927,7 @@ std::pair<Operation *, Value> sparse_tensor::genCoIteration(
     ivs.push_back(uniIdx);
 
   // Ensures all operands are valid.
-  assert(llvm::all_of(ivs, [](Value v) { return v != nullptr; }));
+  assert(!llvm::is_contained(ivs, nullptr));
   TypeRange types = ValueRange(ivs).getTypes();
   auto whileOp = builder.create<scf::WhileOp>(loc, types, ivs);
 

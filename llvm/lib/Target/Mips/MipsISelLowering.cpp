@@ -373,6 +373,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::IS_FPCLASS, MVT::f32, Legal);
     setOperationAction(ISD::IS_FPCLASS, MVT::f64, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Legal);
   } else {
     setOperationAction(ISD::FCANONICALIZE, MVT::f32, Custom);
     setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);
@@ -2698,9 +2700,6 @@ lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue MipsTargetLowering::lowerRETURNADDR(SDValue Op,
                                             SelectionDAG &DAG) const {
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   // check the depth
   if (Op.getConstantOperandVal(0) != 0) {
     DAG.getContext()->emitError(
@@ -4520,7 +4519,8 @@ MipsTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
 }
 
 EVT MipsTargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   if (Subtarget.hasMips64())
     return MVT::i64;
 
@@ -4969,17 +4969,14 @@ MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                        .Case("$28", Mips::GP_64)
                        .Case("sp", Mips::SP_64)
                        .Default(Register());
-    if (Reg)
-      return Reg;
-  } else {
-    Register Reg = StringSwitch<Register>(RegName)
-                       .Case("$28", Mips::GP)
-                       .Case("sp", Mips::SP)
-                       .Default(Register());
-    if (Reg)
-      return Reg;
+    return Reg;
   }
-  report_fatal_error("Invalid register name global variable");
+
+  Register Reg = StringSwitch<Register>(RegName)
+                     .Case("$28", Mips::GP)
+                     .Case("sp", Mips::SP)
+                     .Default(Register());
+  return Reg;
 }
 
 MachineBasicBlock *MipsTargetLowering::emitLDR_W(MachineInstr &MI,

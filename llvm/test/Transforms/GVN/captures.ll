@@ -43,8 +43,7 @@ define i32 @read_provenance_capture() {
 ; CHECK-NEXT:    call void @capture(ptr captures(address, read_provenance) [[A]])
 ; CHECK-NEXT:    store i32 1, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @unknown_call()
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 1
 ;
   %a = alloca i32
   call void @capture(ptr captures(address, read_provenance) %a)

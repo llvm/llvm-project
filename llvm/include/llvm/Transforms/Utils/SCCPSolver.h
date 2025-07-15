@@ -77,6 +77,8 @@ public:
   LLVM_ABI void addPredicateInfo(Function &F, DominatorTree &DT,
                                  AssumptionCache &AC);
 
+  LLVM_ABI void removeSSACopies(Function &F);
+
   /// markBlockExecutable - This method can be used by clients to mark all of
   /// the blocks that are known to be intrinsically live in the processed unit.
   /// This returns true if the block was not considered live before.

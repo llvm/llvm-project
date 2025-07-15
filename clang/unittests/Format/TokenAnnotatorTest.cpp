@@ -3754,6 +3754,13 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
+
+  Tokens = annotate("auto f1{&T::operator()};");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[2], BK_BracedInit);
+  // Not TT_FunctionDeclarationName.
+  EXPECT_TOKEN(Tokens[6], tok::kw_operator, TT_Unknown);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
@@ -4117,6 +4124,13 @@ TEST_F(TokenAnnotatorTest, JsonCodeInRawString) {
   EXPECT_TOKEN(Tokens[2], tok::colon, TT_DictLiteral);
   EXPECT_TOKEN(Tokens[5], tok::string_literal, TT_SelectorName);
   EXPECT_TOKEN(Tokens[6], tok::colon, TT_DictLiteral);
+}
+
+TEST_F(TokenAnnotatorTest, LineCommentTrailingBackslash) {
+  auto Tokens = annotate("// a \\\n"
+                         "// b");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::comment, TT_LineComment);
 }
 
 } // namespace
