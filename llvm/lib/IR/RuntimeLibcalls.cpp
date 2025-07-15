@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/RuntimeLibcalls.h"
+#include "llvm/ADT/StringTable.h"
 
 using namespace llvm;
 using namespace RTLIB;
