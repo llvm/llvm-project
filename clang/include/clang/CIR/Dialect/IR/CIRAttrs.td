@@ -14,10 +14,10 @@
 #define CLANG_CIR_DIALECT_IR_CIRATTRS_TD
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
-include "mlir/IR/EnumAttr.td"
 
-include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
+include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIREnumAttr.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Attrs
@@ -40,21 +40,6 @@ class CIR_TypedAttr<string name, string attrMnemonic, list<Trait> traits = []>
   ];
 
   let assemblyFormat = [{}];
-}
-
-class CIR_I32EnumAttr<string name, string summary, list<I32EnumAttrCase> cases>
-    : I32EnumAttr<name, summary, cases> {
-  let cppNamespace = "::cir";
-}
-
-class CIR_I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases>
-    : I64EnumAttr<name, summary, cases> {
-  let cppNamespace = "::cir";
-}
-
-class CIR_EnumAttr<EnumAttrInfo info, string name = "", list<Trait> traits = []>
-    : EnumAttr<CIR_Dialect, info, name, traits> {
-  let assemblyFormat = "`<` $value `>`";
 }
 
 class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
