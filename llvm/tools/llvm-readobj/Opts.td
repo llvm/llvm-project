@@ -65,7 +65,6 @@ def notes : FF<"notes", "Display notes">, Group<grp_elf>;
 def program_headers : FF<"program-headers", "Display program headers">, Group<grp_elf>;
 def version_info : FF<"version-info", "Display version sections">, Group<grp_elf>;
 
-
 // Mach-O specific options.
 def grp_mach_o : OptionGroup<"kind">, HelpText<"OPTIONS (Mach-O specific)">;
 def macho_data_in_code : FF<"macho-data-in-code", "Display Data in Code command">, Group<grp_mach_o>;

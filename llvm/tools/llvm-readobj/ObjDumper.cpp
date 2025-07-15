@@ -233,7 +233,6 @@ void ObjDumper::printSectionsAsHex(const object::ObjectFile &Obj,
 }
 
 void ObjDumper::printOffloading(const object::ObjectFile &Obj) {
-
   SmallVector<llvm::object::OffloadBundleFatBin> Bundles;
   if (Error Err = object::extractOffloadBundleFatBinary(Obj, Bundles))
     reportWarning(std::move(Err), Obj.getFileName());
