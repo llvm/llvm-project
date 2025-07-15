@@ -1096,15 +1096,6 @@ void request_disconnect(DAP &dap, const llvm::json::Object &request) {
   }
   SendTerminatedEvent(dap);
   dap.SendJSON(llvm::json::Value(std::move(response)));
-  if (dap.event_thread.joinable()) {
-    dap.broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
-    dap.event_thread.join();
-  }
-  if (dap.progress_event_thread.joinable()) {
-    dap.broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
-    dap.progress_event_thread.join();
-  }
-  dap.StopIO();
   dap.disconnecting = true;
 }
 
