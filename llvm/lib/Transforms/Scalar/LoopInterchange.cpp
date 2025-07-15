@@ -412,7 +412,7 @@ private:
 
   /// Hold instructions that have nuw/nsw flags and involved in reductions,
   /// like integer addition/multiplication. Those flags must be dropped when
-  /// exchanging the loops.
+  /// interchanging the loops.
   SmallVector<Instruction *, 4> HasNoWrapReductions;
 };
 
