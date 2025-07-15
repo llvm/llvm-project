@@ -13418,6 +13418,24 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
         }
       }
     }
+
+    // (vselect (ugt x, C), (add x, ~C), x) -> (umin (add x, ~C), x)
+    // (vselect (ult x, C), x, (add x, -C)) -> (umin x, (add x, -C))
+    APInt C;
+    if (sd_match(RHS, m_ConstInt(C)) && hasUMin(VT)) {
+      if (CC == ISD::SETUGT && LHS == N2 &&
+          sd_match(N1, m_Add(m_Specific(N2), m_SpecificInt(~C)))) {
+        SDValue AddC = DAG.getConstant(~C, DL, VT);
+        SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N2, AddC);
+        return DAG.getNode(ISD::UMIN, DL, VT, Add, N2);
+      }
+      if (CC == ISD::SETULT && LHS == N1 &&
+          sd_match(N2, m_Add(m_Specific(N1), m_SpecificInt(-C)))) {
+        SDValue AddC = DAG.getConstant(-C, DL, VT);
+        SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, AddC);
+        return DAG.getNode(ISD::UMIN, DL, VT, N1, Add);
+      }
+    }
   }
 
   if (SimplifySelectOps(N, N1, N2))
