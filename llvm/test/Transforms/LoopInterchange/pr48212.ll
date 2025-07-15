@@ -38,7 +38,7 @@ for.body3:                                        ; preds = %L2, %for.inc
   %idxprom4 = sext i32 %k1.03 to i64
   %arrayidx5 = getelementptr inbounds [5 x i32], ptr %arrayidx, i64 0, i64 %idxprom4
   %0 = load i32, ptr %arrayidx5
-  %add = add i32 %temp.12, %0
+  %add = add nsw i32 %temp.12, %0
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3

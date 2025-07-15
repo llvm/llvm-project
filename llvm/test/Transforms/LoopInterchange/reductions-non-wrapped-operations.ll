@@ -2,185 +2,8 @@
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa
 ; RUN: FileCheck -input-file=%t %s
 
-; int sum = 0;
-; for (int i = 0; i < 2; i++)
-;   for (int j = 0; j < 2; j++)
-;     sum += A[j][i];
-
-; CHECK:      --- !Missed
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedPHIOuter
-; CHECK-NEXT: Function:        reduction_add
-define void @reduction_add(ptr %A) {
-entry:
-  br label %for.i.header
-
-for.i.header:
-  %i = phi i32 [ 0, %entry ], [ %i.inc, %for.i.latch ]
-  %sum.i = phi i32 [ 0, %entry ], [ %sum.i.lcssa, %for.i.latch ]
-  br label %for.j
-
-for.j:
-  %j = phi i32 [ 0, %for.i.header ], [ %j.inc, %for.j ]
-  %sum.j = phi i32 [ %sum.i, %for.i.header ], [ %sum.j.next, %for.j ]
-  %idx = getelementptr inbounds [2 x [2 x i32]], ptr %A, i32 0, i32 %j, i32 %i
-  %a = load i32, ptr %idx, align 4
-  %sum.j.next = add nsw i32 %sum.j, %a
-  %j.inc = add i32 %j, 1
-  %cmp.j = icmp slt i32 %j.inc, 2
-  br i1 %cmp.j, label %for.j, label %for.i.latch
-
-for.i.latch:
-  %sum.i.lcssa = phi i32 [ %sum.j.next, %for.j ]
-  %i.inc = add i32 %i, 1
-  %cmp.i = icmp slt i32 %i.inc, 2
-  br i1 %cmp.i, label %for.i.header, label %exit
-
-exit:
-  ret void
-}
-
-; CHECK:      --- !Pass
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Interchanged
-; CHECK-NEXT: Function:        reduction_wrap_add
-define void @reduction_wrap_add(ptr %A) {
-entry:
-  br label %for.i.header
-
-for.i.header:
-  %i = phi i32 [ 0, %entry ], [ %i.inc, %for.i.latch ]
-  %sum.i = phi i32 [ 0, %entry ], [ %sum.i.lcssa, %for.i.latch ]
-  br label %for.j
-
-for.j:
-  %j = phi i32 [ 0, %for.i.header ], [ %j.inc, %for.j ]
-  %sum.j = phi i32 [ %sum.i, %for.i.header ], [ %sum.j.next, %for.j ]
-  %idx = getelementptr inbounds [2 x [2 x i32]], ptr %A, i32 0, i32 %j, i32 %i
-  %a = load i32, ptr %idx, align 4
-  %sum.j.next = add i32 %sum.j, %a
-  %j.inc = add i32 %j, 1
-  %cmp.j = icmp slt i32 %j.inc, 2
-  br i1 %cmp.j, label %for.j, label %for.i.latch
-
-for.i.latch:
-  %sum.i.lcssa = phi i32 [ %sum.j.next, %for.j ]
-  %i.inc = add i32 %i, 1
-  %cmp.i = icmp slt i32 %i.inc, 2
-  br i1 %cmp.i, label %for.i.header, label %exit
-
-exit:
-  ret void
-}
-
-; CHECK:      --- !Missed
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedPHIOuter
-; CHECK-NEXT: Function:        reduction_cast_add
-define void @reduction_cast_add(ptr %A) {
-entry:
-  br label %for.i.header
-
-for.i.header:
-  %i = phi i32 [ 0, %entry ], [ %i.inc, %for.i.latch ]
-  %sum.i = phi i32 [ 0, %entry ], [ %sum.i.lcssa, %for.i.latch ]
-  br label %for.j
-
-for.j:
-  %j = phi i32 [ 0, %for.i.header ], [ %j.inc, %for.j ]
-  %sum.j = phi i32 [ %sum.i, %for.i.header ], [ %sum.j.next, %for.j ]
-  %idx = getelementptr inbounds [2 x [2 x i32]], ptr %A, i32 0, i32 %j, i32 %i
-  %a = load i32, ptr %idx, align 4
-  %sum.j.trunc = trunc i32 %sum.j to i16
-  %sum.j.ext = zext i16 %sum.j.trunc to i32
-  %sum.j.next = add nsw i32 %sum.j.ext, %a
-  %j.inc = add i32 %j, 1
-  %cmp.j = icmp slt i32 %j.inc, 2
-  br i1 %cmp.j, label %for.j, label %for.i.latch
-
-for.i.latch:
-  %sum.i.lcssa = phi i32 [ %sum.j.next, %for.j ]
-  %i.inc = add i32 %i, 1
-  %cmp.i = icmp slt i32 %i.inc, 2
-  br i1 %cmp.i, label %for.i.header, label %exit
-
-exit:
-  ret void
-}
-
-
-; int prod = 1;
-; for (int i = 0; i < 2; i++)
-;   for (int j = 0; j < 2; j++)
-;     prod *= A[j][i];
-
-; CHECK:      --- !Missed
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedPHIOuter
-; CHECK-NEXT: Function:        reduction_mul
-define void @reduction_mul(ptr %A) {
-entry:
-  br label %for.i.header
-
-for.i.header:
-  %i = phi i32 [ 0, %entry ], [ %i.inc, %for.i.latch ]
-  %prod.i = phi i32 [ 1, %entry ], [ %prod.i.lcssa, %for.i.latch ]
-  br label %for.j
-
-for.j:
-  %j = phi i32 [ 0, %for.i.header ], [ %j.inc, %for.j ]
-  %prod.j = phi i32 [ %prod.i, %for.i.header ], [ %prod.j.next, %for.j ]
-  %idx = getelementptr inbounds [2 x [2 x i32]], ptr %A, i32 0, i32 %j, i32 %i
-  %a = load i32, ptr %idx, align 4
-  %prod.j.next = mul nsw i32 %prod.j, %a
-  %j.inc = add i32 %j, 1
-  %cmp.j = icmp slt i32 %j.inc, 2
-  br i1 %cmp.j, label %for.j, label %for.i.latch
-
-for.i.latch:
-  %prod.i.lcssa = phi i32 [ %prod.j.next, %for.j ]
-  %i.inc = add i32 %i, 1
-  %cmp.i = icmp slt i32 %i.inc, 2
-  br i1 %cmp.i, label %for.i.header, label %exit
-
-exit:
-  ret void
-}
-
-; CHECK:      --- !Pass
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Interchanged
-; CHECK-NEXT: Function:        reduction_wrap_mul
-define void @reduction_wrap_mul(ptr %A) {
-entry:
-  br label %for.i.header
-
-for.i.header:
-  %i = phi i32 [ 0, %entry ], [ %i.inc, %for.i.latch ]
-  %prod.i = phi i32 [ 1, %entry ], [ %prod.i.lcssa, %for.i.latch ]
-  br label %for.j
-
-for.j:
-  %j = phi i32 [ 0, %for.i.header ], [ %j.inc, %for.j ]
-  %prod.j = phi i32 [ %prod.i, %for.i.header ], [ %prod.j.next, %for.j ]
-  %idx = getelementptr inbounds [2 x [2 x i32]], ptr %A, i32 0, i32 %j, i32 %i
-  %a = load i32, ptr %idx, align 4
-  %prod.j.next = mul i32 %prod.j, %a
-  %j.inc = add i32 %j, 1
-  %cmp.j = icmp slt i32 %j.inc, 2
-  br i1 %cmp.j, label %for.j, label %for.i.latch
-
-for.i.latch:
-  %prod.i.lcssa = phi i32 [ %prod.j.next, %for.j ]
-  %i.inc = add i32 %i, 1
-  %cmp.i = icmp slt i32 %i.inc, 2
-  br i1 %cmp.i, label %for.i.header, label %exit
-
-exit:
-  ret void
-}
-
-
+; Check that exchanging the loops is legal for the bitwise-or reduction.
+;
 ; int b_or = 0;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -220,6 +43,8 @@ exit:
 }
 
 
+; Check that exchanging the loops is legal for the bitwise-and reduction.
+;
 ; int b_and = -1;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -259,6 +84,8 @@ exit:
 }
 
 
+; Check that exchanging the loops is legal for the bitwise-xor reduction.
+;
 ; int b_xor = 0;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -298,6 +125,8 @@ exit:
 }
 
 
+; Check that exchanging the loops is legal for the signed-minimum reduction.
+;
 ; int smin = init;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -338,6 +167,8 @@ exit:
 }
 
 
+; Check that exchanging the loops is legal for the signed-maximum reduction.
+;
 ; int smax = init;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -378,6 +209,8 @@ exit:
 }
 
 
+; Check that exchanging the loops is legal for the unsigned-minimum reduction.
+;
 ; unsigned umin = init;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -418,6 +251,8 @@ exit:
 }
 
 
+; Check that exchanging the loops is legal for the unsigned-maximum reduction.
+;
 ; unsigned umax = 0;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -458,6 +293,8 @@ exit:
 }
 
 
+; Check that exchanging the loops is legal for the any-of reduction.
+;
 ; int any_of = 0;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -497,6 +334,9 @@ exit:
   ret void
 }
 
+; Check that the loops aren't exchanged if there is a reduction of
+; non-reassociative floating-point addition.
+;
 ; float sum = 0;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -535,6 +375,9 @@ exit:
   ret void
 }
 
+; Check that the interchange is legal if the floation-point addition is marked
+; as reassoc.
+;
 ; CHECK:      --- !Pass
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            Interchanged
@@ -568,6 +411,9 @@ exit:
   ret void
 }
 
+; Check that the loops aren't exchanged if there is a reduction of
+; non-reassociative floating-point multiplication.
+;
 ; float prod = 1;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -606,6 +452,9 @@ exit:
   ret void
 }
 
+; Check that the interchange is legal if the floation-point multiplication is
+; marked as reassoc.
+;
 ; CHECK:      --- !Pass
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            Interchanged
@@ -639,6 +488,9 @@ exit:
   ret void
 }
 
+; Check that the loops aren't exchanged if there is a reduction of
+; non-reassociative floating-point fmuladd.
+;
 ; float fmuladd = 0;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -679,6 +531,9 @@ exit:
   ret void
 }
 
+; Check that the interchange is legal if the floation-point fmuladd is marked
+; as reassoc.
+;
 ; CHECK:      --- !Pass
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            Interchanged
@@ -714,6 +569,9 @@ exit:
   ret void
 }
 
+; Check that exchanging the loops is legal for the reassociative floating-point
+; minimum.
+;
 ; float fmin = init;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -754,6 +612,9 @@ exit:
 }
 
 
+; Check that exchanging the loops is legal for the floation-point
+; llvm.minimumnum.
+;
 ; CHECK:      --- !Pass
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            Interchanged
@@ -787,6 +648,9 @@ exit:
   ret void
 }
 
+; Check that exchanging the loops is legal for the reassociative floating-point
+; maximum.
+;
 ; float fmax = init;
 ; for (int i = 0; i < 2; i++)
 ;   for (int j = 0; j < 2; j++)
@@ -825,6 +689,9 @@ for.i.latch:
 exit:
   ret void
 }
+
+; Check that exchanging the loops is legal for the floation-point
+; llvm.maximumnum.
 
 ; CHECK:      --- !Pass
 ; CHECK-NEXT: Pass:            loop-interchange
