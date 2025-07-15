@@ -129,8 +129,6 @@
 //       will define those directly.
 #    if defined(_AIX) || defined(__MVS__)
 #      include <__locale_dir/locale_base_api/ibm.h>
-#    elif defined(__ANDROID__)
-#      include <__locale_dir/locale_base_api/android.h>
 #    elif defined(__OpenBSD__)
 #      include <__locale_dir/locale_base_api/openbsd.h>
 #    elif defined(__wasi__) || _LIBCPP_HAS_MUSL_LIBC
