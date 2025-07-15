@@ -340,6 +340,40 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
     Policy.ShouldTrackLaneMasks = true;
 }
 
+void GCNSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                             unsigned NumRegionInstrs) const {
+  switch (getPostRASchedDirection()) {
+  case MISched::TopDown:
+    Policy.OnlyTopDown = true;
+    Policy.OnlyBottomUp = false;
+    break;
+  case MISched::BottomUp:
+    Policy.OnlyTopDown = false;
+    Policy.OnlyBottomUp = true;
+    break;
+  case MISched::Bidirectional:
+  default:
+    Policy.OnlyTopDown = false;
+    Policy.OnlyBottomUp = false;
+    break;
+  }
+
+  LLVM_DEBUG({
+    const char *DirStr = "topdown";
+    switch (getPostRASchedDirection()) {
+    case MISched::BottomUp:
+      DirStr = "bottomup";
+      break;
+    case MISched::Bidirectional:
+      DirStr = "bidirectional";
+      break;
+    default:
+      break;
+    }
+    dbgs() << "Post-MI-sched direction: " << DirStr << '\n';
+  });
+}
+
 void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
   if (isWave32()) {
     // Fix implicit $vcc operands after MIParser has verified that they match
