@@ -194,7 +194,6 @@ let Predicates = [HasVSX, IsISAFuture] in {
 }
 
 // Load/Store VSX Vector with Right Length Left-justified.
-// foreach Ty = [v4i32, v2i64, v128i1] in {
 foreach Ty = [v4i32, v2i64] in {
   def : Pat<(Ty (int_ppc_vsx_lxvrl addr:$RA, i64:$RB)),
             (LXVRL memr:$RA, g8rc:$RB)>;
