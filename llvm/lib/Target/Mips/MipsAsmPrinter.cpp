@@ -16,7 +16,6 @@
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsMCAsmInfo.h"
-#include "MCTargetDesc/MipsMCNaCl.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "MCTargetDesc/MipsTargetStreamer.h"
 #include "Mips.h"
@@ -86,10 +85,6 @@ bool MipsAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     for (const auto &I : MipsFI->StubsNeeded)
       StubsNeeded.insert(I);
   MCP = MF.getConstantPool();
-
-  // In NaCl, all indirect jump targets must be aligned to bundle size.
-  if (Subtarget->isTargetNaCl())
-    NaClAlignIndirectJumpTargets(MF);
 
   AsmPrinter::runOnMachineFunction(MF);
 
@@ -400,11 +395,6 @@ const char *MipsAsmPrinter::getCurrentABIString() const {
 
 void MipsAsmPrinter::emitFunctionEntryLabel() {
   MipsTargetStreamer &TS = getTargetStreamer();
-
-  // NaCl sandboxing requires that indirect call instructions are masked.
-  // This means that function entry points should be bundle-aligned.
-  if (Subtarget->isTargetNaCl())
-    emitAlignment(std::max(MF->getAlignment(), MIPS_NACL_BUNDLE_ALIGN));
 
   if (Subtarget->inMicroMipsMode()) {
     TS.emitDirectiveSetMicroMips();
@@ -1261,27 +1251,6 @@ void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
     }
   }
   AsmPrinter::emitDebugValue(Value, Size);
-}
-
-// Align all targets of indirect branches on bundle size.  Used only if target
-// is NaCl.
-void MipsAsmPrinter::NaClAlignIndirectJumpTargets(MachineFunction &MF) {
-  // Align all blocks that are jumped to through jump table.
-  if (MachineJumpTableInfo *JtInfo = MF.getJumpTableInfo()) {
-    const std::vector<MachineJumpTableEntry> &JT = JtInfo->getJumpTables();
-    for (const auto &I : JT) {
-      const std::vector<MachineBasicBlock *> &MBBs = I.MBBs;
-
-      for (MachineBasicBlock *MBB : MBBs)
-        MBB->setAlignment(MIPS_NACL_BUNDLE_ALIGN);
-    }
-  }
-
-  // If basic block address is taken, block can be target of indirect branch.
-  for (auto &MBB : MF) {
-    if (MBB.hasAddressTaken())
-      MBB.setAlignment(MIPS_NACL_BUNDLE_ALIGN);
-  }
 }
 
 bool MipsAsmPrinter::isLongBranchPseudo(int Opcode) const {

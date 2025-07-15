@@ -503,7 +503,7 @@ for.end:                                          ; preds = %for.body
 ;   return Foo.A[a];
 ; }
 ; CHECK-LABEL: define i32 @mayAlias01(
-; CHECK-NOT: add nsw <4 x i32>
+; CHECK: add nsw <4 x i32>
 ; CHECK: ret
 
 define i32 @mayAlias01(i32 %a) nounwind {
@@ -536,7 +536,7 @@ for.end:                                          ; preds = %for.body
 ;   return Foo.A[a];
 ; }
 ; CHECK-LABEL: define i32 @mayAlias02(
-; CHECK-NOT: add nsw <4 x i32>
+; CHECK: add nsw <4 x i32>
 ; CHECK: ret
 
 define i32 @mayAlias02(i32 %a) nounwind {

@@ -24,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 //     d = round(a - b - c, D, RN);
 //     print("{", d, ",", c, ",", b, "},");
 //   };
-alignas(16) static constexpr fputil::TripleDouble EXP2_MID1[64] = {
+static constexpr fputil::TripleDouble EXP2_MID1[64] = {
     {0, 0, 0x1p0},
     {-0x1.9085b0a3d74d5p-110, -0x1.19083535b085dp-56, 0x1.02c9a3e778061p0},
     {0x1.05ff94f8d257ep-110, 0x1.d73e2a475b465p-55, 0x1.059b0d3158574p0},
@@ -102,7 +102,7 @@ alignas(16) static constexpr fputil::TripleDouble EXP2_MID1[64] = {
 //     d = round(a - b - c, D, RN);
 //     print("{", d, ",", c, ",", b, "},");
 //   };
-alignas(16) static constexpr fputil::TripleDouble EXP2_MID2[64] = {
+static constexpr fputil::TripleDouble EXP2_MID2[64] = {
     {0, 0, 0x1p0},
     {0x1.39726694630e3p-108, 0x1.ae8e38c59c72ap-54, 0x1.000b175effdc7p0},
     {0x1.e5e06ddd31156p-112, -0x1.7b5d0d58ea8f4p-58, 0x1.00162f3904052p0},

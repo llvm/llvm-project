@@ -54,8 +54,8 @@ X86FrameLowering::X86FrameLowering(const X86Subtarget &STI,
   SlotSize = TRI->getSlotSize();
   Is64Bit = STI.is64Bit();
   IsLP64 = STI.isTarget64BitLP64();
-  // standard x86_64 and NaCl use 64-bit frame/stack pointers, x32 - 32-bit.
-  Uses64BitFramePtr = STI.isTarget64BitLP64() || STI.isTargetNaCl64();
+  // standard x86_64 uses 64-bit frame/stack pointers, x32 - 32-bit.
+  Uses64BitFramePtr = STI.isTarget64BitLP64();
   StackPtr = TRI->getStackRegister();
 }
 
@@ -2412,7 +2412,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   DebugLoc DL;
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
-  // standard x86_64 and NaCl use 64-bit frame/stack pointers, x32 - 32-bit.
+  // standard x86_64 uses 64-bit frame/stack pointers, x32 - 32-bit.
   const bool Is64BitILP32 = STI.isTarget64BitILP32();
   Register FramePtr = TRI->getFrameRegister(MF);
   Register MachineFramePtr =
@@ -4241,7 +4241,7 @@ void X86FrameLowering::adjustFrameForMsvcCxxEh(MachineFunction &MF) const {
   for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
     for (WinEHHandlerType &H : TBME.HandlerArray) {
       int FrameIndex = H.CatchObj.FrameIndex;
-      if (FrameIndex != INT_MAX) {
+      if ((FrameIndex != INT_MAX) && MFI.getObjectOffset(FrameIndex) == 0) {
         // Ensure alignment.
         unsigned Align = MFI.getObjectAlign(FrameIndex).value();
         MinFixedObjOffset -= std::abs(MinFixedObjOffset) % Align;

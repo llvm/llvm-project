@@ -3298,7 +3298,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Remove an assume if it is followed by an identical assume.
     // TODO: Do we need this? Unless there are conflicting assumptions, the
     // computeKnownBits(IIOperand) below here eliminates redundant assumes.
-    Instruction *Next = II->getNextNonDebugInstruction();
+    Instruction *Next = II->getNextNode();
     if (match(Next, m_Intrinsic<Intrinsic::assume>(m_Specific(IIOperand))))
       return RemoveConditionFromAssume(Next);
 
@@ -3471,12 +3471,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Is this guard followed by another guard?  We scan forward over a small
     // fixed window of instructions to handle common cases with conditions
     // computed between guards.
-    Instruction *NextInst = II->getNextNonDebugInstruction();
+    Instruction *NextInst = II->getNextNode();
     for (unsigned i = 0; i < GuardWideningWindow; i++) {
       // Note: Using context-free form to avoid compile time blow up
       if (!isSafeToSpeculativelyExecute(NextInst))
         break;
-      NextInst = NextInst->getNextNonDebugInstruction();
+      NextInst = NextInst->getNextNode();
     }
     Value *NextCond = nullptr;
     if (match(NextInst,
@@ -3486,10 +3486,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // Remove a guard that it is immediately preceded by an identical guard.
       // Otherwise canonicalize guard(a); guard(b) -> guard(a & b).
       if (CurrCond != NextCond) {
-        Instruction *MoveI = II->getNextNonDebugInstruction();
+        Instruction *MoveI = II->getNextNode();
         while (MoveI != NextInst) {
           auto *Temp = MoveI;
-          MoveI = MoveI->getNextNonDebugInstruction();
+          MoveI = MoveI->getNextNode();
           Temp->moveBefore(II->getIterator());
         }
         replaceOperand(*II, 0, Builder.CreateAnd(CurrCond, NextCond));
@@ -3913,7 +3913,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
 // Fence instruction simplification
 Instruction *InstCombinerImpl::visitFenceInst(FenceInst &FI) {
-  auto *NFI = dyn_cast<FenceInst>(FI.getNextNonDebugInstruction());
+  auto *NFI = dyn_cast<FenceInst>(FI.getNextNode());
   // This check is solely here to handle arbitrary target-dependent syncscopes.
   // TODO: Can remove if does not matter in practice.
   if (NFI && FI.isIdenticalTo(NFI))
@@ -4048,6 +4048,34 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
   if (IntrinsicInst *IT = findInitTrampolineFromBB(AdjustTramp, TrampMem))
     return IT;
   return nullptr;
+}
+
+Instruction *InstCombinerImpl::foldPtrAuthConstantCallee(CallBase &Call) {
+  auto *CPA = dyn_cast<ConstantPtrAuth>(Call.getCalledOperand());
+  if (!CPA)
+    return nullptr;
+
+  auto *CalleeF = dyn_cast<Function>(CPA->getPointer());
+  // If the ptrauth constant isn't based on a function pointer, bail out.
+  if (!CalleeF)
+    return nullptr;
+
+  // Inspect the call ptrauth bundle to check it matches the ptrauth constant.
+  auto PAB = Call.getOperandBundle(LLVMContext::OB_ptrauth);
+  if (!PAB)
+    return nullptr;
+
+  auto *Key = cast<ConstantInt>(PAB->Inputs[0]);
+  Value *Discriminator = PAB->Inputs[1];
+
+  // If the bundle doesn't match, this is probably going to fail to auth.
+  if (!CPA->isKnownCompatibleWith(Key, Discriminator, DL))
+    return nullptr;
+
+  // If the bundle matches the constant, proceed in making this a direct call.
+  auto *NewCall = CallBase::removeOperandBundle(&Call, LLVMContext::OB_ptrauth);
+  NewCall->setCalledOperand(CalleeF);
+  return NewCall;
 }
 
 bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
@@ -4209,6 +4237,10 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
 
   if (IntrinsicInst *II = findInitTrampoline(Callee))
     return transformCallThroughTrampoline(Call, *II);
+
+  // Combine calls to ptrauth constants.
+  if (Instruction *NewCall = foldPtrAuthConstantCallee(Call))
+    return NewCall;
 
   if (isa<InlineAsm>(Callee) && !Call.doesNotThrow()) {
     InlineAsm *IA = cast<InlineAsm>(Callee);

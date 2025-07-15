@@ -88,6 +88,11 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
+- Matcher queries interpreted by clang-query are now support trailing comma (,)
+  in matcher arguments. Note that C++ still doesn't allow this in function
+  arguments. So when porting a query to C++, remove all instances of trailing
+  comma (otherwise C++ compiler will just complain about "expected expression").
+
 Improvements to include-cleaner
 -------------------------------
 - Deprecated the ``-insert`` and ``-remove`` command line options, and added
@@ -187,6 +192,10 @@ Changes in existing checks
   false positives on deleted constructors that cannot be used to construct
   objects, even if they have public or protected access.
 
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check to print stack trace
+  of a potentially escaped exception.
+
 - Added an option to :doc:`bugprone-multi-level-implicit-pointer-conversion
   <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` to
   choose whether to enable the check in C code or not.
@@ -227,6 +236,10 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-avoid-goto
   <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
   `IgnoreMacros` to ignore ``goto`` labels defined in macros.
+
+- Improved :doc:`cppcoreguidelines-interfaces-global-init
+  <clang-tidy/checks/cppcoreguidelines/interfaces-global-init>` check by
+  fixing false positives on uses of ``constinit`` variables.
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
