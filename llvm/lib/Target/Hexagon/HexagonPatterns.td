@@ -3433,7 +3433,7 @@ def HexagonREADTIMER: SDNode<"HexagonISD::READTIMER", SDTInt64Leaf,
 def: Pat<(HexagonREADTIMER), (A4_tfrcpp UTIMER)>;
 
 def SDTInt32Leaf : SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>;
-def HexagonTHREADPOINTER : SDNode<"HexagonISD::THREAD_POINTER", SDTInt32Leaf>;
+def HexagonTHREADPOINTER : SDNode<"HexagonISD::THREAD_POINTER", SDTPtrLeaf>;
 
 def : Pat<(HexagonTHREADPOINTER), (i32(COPY UGP))>;
 
