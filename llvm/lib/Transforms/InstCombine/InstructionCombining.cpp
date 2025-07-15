@@ -3644,9 +3644,6 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
                             ConstantInt::get(Type::getInt1Ty(C->getContext()),
                                              C->isFalseWhenEqual()));
       } else if (auto *SI = dyn_cast<StoreInst>(I)) {
-        for (auto *DVI : DVIs)
-          if (DVI->isAddressOfVariable())
-            ConvertDebugDeclareToDebugValue(DVI, SI, *DIB);
         for (auto *DVR : DVRs)
           if (DVR->isAddressOfVariable())
             ConvertDebugDeclareToDebugValue(DVR, SI, *DIB);

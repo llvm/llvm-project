@@ -115,13 +115,6 @@ static void createDebugValue(DIBuilder &DIB, Value *NewValue,
   DbgVariableRecord::createDbgVariableRecord(NewValue, Variable, Expression, DI,
                                              *InsertBefore);
 }
-static void createDebugValue(DIBuilder &DIB, Value *NewValue,
-                             DILocalVariable *Variable,
-                             DIExpression *Expression, const DILocation *DI,
-                             Instruction *InsertBefore) {
-  DIB.insertDbgValueIntrinsic(NewValue, Variable, Expression, DI,
-                              InsertBefore->getIterator());
-}
 
 /// Helper for updating assignment tracking debug info when promoting allocas.
 class AssignmentTrackingInfo {
@@ -625,22 +618,18 @@ rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
 
   // Record debuginfo for the store and remove the declaration's
   // debuginfo.
-  auto ConvertDebugInfoForStore = [&](auto &Container) {
-    for (auto *DbgItem : Container) {
-      if (DbgItem->isAddressOfVariable()) {
-        ConvertDebugDeclareToDebugValue(DbgItem, Info.OnlyStore, DIB);
-        DbgItem->eraseFromParent();
-      } else if (DbgItem->isValueOfVariable() &&
-                 DbgItem->getExpression()->startsWithDeref()) {
-        InsertDebugValueAtStoreLoc(DbgItem, Info.OnlyStore, DIB);
-        DbgItem->eraseFromParent();
-      } else if (DbgItem->getExpression()->startsWithDeref()) {
-        DbgItem->eraseFromParent();
-      }
+  for (DbgVariableRecord *DbgItem : Info.DPUsers) {
+    if (DbgItem->isAddressOfVariable()) {
+      ConvertDebugDeclareToDebugValue(DbgItem, Info.OnlyStore, DIB);
+      DbgItem->eraseFromParent();
+    } else if (DbgItem->isValueOfVariable() &&
+               DbgItem->getExpression()->startsWithDeref()) {
+      InsertDebugValueAtStoreLoc(DbgItem, Info.OnlyStore, DIB);
+      DbgItem->eraseFromParent();
+    } else if (DbgItem->getExpression()->startsWithDeref()) {
+      DbgItem->eraseFromParent();
     }
-  };
-  ConvertDebugInfoForStore(Info.DbgUsers);
-  ConvertDebugInfoForStore(Info.DPUsers);
+  }
 
   // Remove dbg.assigns linked to the alloca as these are now redundant.
   at::deleteAssignmentMarkers(AI);
@@ -739,15 +728,11 @@ promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
     // Update assignment tracking info for the store we're going to delete.
     Info.AssignmentTracking.updateForDeletedStore(SI, DIB, DVRAssignsToDelete);
     // Record debuginfo for the store before removing it.
-    auto DbgUpdateForStore = [&](auto &Container) {
-      for (auto *DbgItem : Container) {
-        if (DbgItem->isAddressOfVariable()) {
-          ConvertDebugDeclareToDebugValue(DbgItem, SI, DIB);
-        }
+    for (DbgVariableRecord *DbgItem : Info.DPUsers) {
+      if (DbgItem->isAddressOfVariable()) {
+        ConvertDebugDeclareToDebugValue(DbgItem, SI, DIB);
       }
-    };
-    DbgUpdateForStore(Info.DbgUsers);
-    DbgUpdateForStore(Info.DPUsers);
+    }
 
     SI->eraseFromParent();
     LBI.deleteValue(SI);
@@ -1163,13 +1148,9 @@ void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred) {
         // The currently active variable for this block is now the PHI.
         IncomingVals.set(AllocaNo, APN);
         AllocaATInfo[AllocaNo].updateForNewPhi(APN, DIB);
-        auto ConvertDbgDeclares = [&](auto &Container) {
-          for (auto *DbgItem : Container)
-            if (DbgItem->isAddressOfVariable())
-              ConvertDebugDeclareToDebugValue(DbgItem, APN, DIB);
-        };
-        ConvertDbgDeclares(AllocaDbgUsers[AllocaNo]);
-        ConvertDbgDeclares(AllocaDPUsers[AllocaNo]);
+        for (DbgVariableRecord *DbgItem : AllocaDPUsers[AllocaNo])
+          if (DbgItem->isAddressOfVariable())
+            ConvertDebugDeclareToDebugValue(DbgItem, APN, DIB);
 
         // Get the next phi node.
         ++PNI;
@@ -1225,13 +1206,9 @@ void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred) {
       IncomingLocs.set(AllocaNo, SI->getDebugLoc());
       AllocaATInfo[AllocaNo].updateForDeletedStore(SI, DIB,
                                                    &DVRAssignsToDelete);
-      auto ConvertDbgDeclares = [&](auto &Container) {
-        for (auto *DbgItem : Container)
-          if (DbgItem->isAddressOfVariable())
-            ConvertDebugDeclareToDebugValue(DbgItem, SI, DIB);
-      };
-      ConvertDbgDeclares(AllocaDbgUsers[ai->second]);
-      ConvertDbgDeclares(AllocaDPUsers[ai->second]);
+      for (DbgVariableRecord *DbgItem : AllocaDPUsers[ai->second])
+        if (DbgItem->isAddressOfVariable())
+          ConvertDebugDeclareToDebugValue(DbgItem, SI, DIB);
       SI->eraseFromParent();
     }
   }
