@@ -47,10 +47,10 @@ public:
 
       It->second.End++;
 
-      for (auto &[type, range] : Ranges) {
-        if (range.Start > InsertPos) {
-          range.Start++;
-          range.End++;
+      for (auto &[Type, Range] : Ranges) {
+        if (Range.Start > InsertPos) {
+          Range.Start++;
+          Range.End++;
         }
       }
     }
