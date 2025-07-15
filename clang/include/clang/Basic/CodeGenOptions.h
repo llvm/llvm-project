@@ -57,7 +57,7 @@ public:
     Benign,
   };
 
-  using CFBranchLabelSchemeKind = CFBranchLabelSchemeKind;
+  using CFBranchLabelSchemeKind = clang::CFBranchLabelSchemeKind;
   using ProfileInstrKind = llvm::driver::ProfileInstrKind;
   using AsanDetectStackUseAfterReturnMode =
       llvm::AsanDetectStackUseAfterReturnMode;
