@@ -54,11 +54,12 @@ static inline const StatementType *get_parent_stmt(ASTContext *context,
   if (parents.empty())
     return nullptr;
 
-  for (auto &p : parents)
-    if (const StatementType *parent_stmt = p.get<StatementType>())
-      return parent_stmt;
-    else
-      return get_parent_stmt<StatementType>(context, p.get<Stmt>());
+  const auto p = parents[0];
+
+  if (const StatementType *parent_stmt = p.get<StatementType>())
+    return parent_stmt;
+  else if (const auto pStmt = p.get<Stmt>())
+    return get_parent_stmt<StatementType>(context, pStmt);
 
   return nullptr;
 }
