@@ -99,15 +99,6 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
-  atan_fuzz
-  NEED_MPFR
-  SRCS
-    atan_fuzz.cpp
-  DEPENDS
-    libc.src.math.atan
-)
-
-add_libc_fuzzer(
   tan_fuzz
   NEED_MPFR
   SRCS
