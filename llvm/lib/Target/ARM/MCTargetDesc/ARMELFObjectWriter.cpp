@@ -75,7 +75,7 @@ bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
 unsigned ARMELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                           const MCValue &Target,
                                           bool IsPCRel) const {
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   uint8_t Specifier = Target.getSpecifier();
   auto CheckFDPIC = [&](uint32_t Type) {
     if (getOSABI() != ELF::ELFOSABI_ARM_FDPIC)
