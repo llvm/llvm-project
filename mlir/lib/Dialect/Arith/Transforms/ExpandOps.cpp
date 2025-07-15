@@ -14,8 +14,6 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/SmallVectorExtras.h"
-#include <cstdint>
 
 namespace mlir {
 namespace arith {

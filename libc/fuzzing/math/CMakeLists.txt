@@ -63,12 +63,66 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
+  exp_fuzz
+  NEED_MPFR
+  SRCS
+    exp_fuzz.cpp
+  DEPENDS
+    libc.src.math.exp
+)
+
+add_libc_fuzzer(
+  exp10_fuzz
+  NEED_MPFR
+  SRCS
+    exp10_fuzz.cpp
+  DEPENDS
+    libc.src.math.exp10
+)
+
+add_libc_fuzzer(
+  exp2_fuzz
+  NEED_MPFR
+  SRCS
+    exp2_fuzz.cpp
+  DEPENDS
+    libc.src.math.exp2
+)
+
+add_libc_fuzzer(
+  expm1_fuzz
+  NEED_MPFR
+  SRCS
+    expm1_fuzz.cpp
+  DEPENDS
+    libc.src.math.expm1
+)
+
+add_libc_fuzzer(
+  asin_fuzz
+  NEED_MPFR
+  SRCS
+    asin_fuzz.cpp
+  DEPENDS
+    libc.src.math.asin
+)
+
+add_libc_fuzzer(
   sin_fuzz
   NEED_MPFR
   SRCS
     sin_fuzz.cpp
   DEPENDS
     libc.src.math.sin
+)
+
+add_libc_fuzzer(
+  acos_fuzz
+  NEED_MPFR
+  SRCS
+    acos_fuzz.cpp
+  DEPENDS
+    libc.src.math.acos
 )
 
 add_libc_fuzzer(
@@ -81,10 +135,28 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
+  atan_fuzz
+  NEED_MPFR
+  SRCS
+    atan_fuzz.cpp
+  DEPENDS
+    libc.src.math.atan
+)
+
+add_libc_fuzzer(
   tan_fuzz
   NEED_MPFR
   SRCS
     tan_fuzz.cpp
   DEPENDS
     libc.src.math.tan
+)
+
+add_libc_fuzzer(
+  sincos_fuzz
+  NEED_MPFR
+  SRCS
+    sincos_fuzz.cpp
+  DEPENDS
+    libc.src.math.sincos
 )

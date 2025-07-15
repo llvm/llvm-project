@@ -1891,6 +1891,12 @@ defm apinotes_modules : BoolOption<"f", "apinotes-modules",
     NegFlag<SetFalse, [], [ClangOption], "Disable">,
     BothFlags<[], [ClangOption, CC1Option], " module-based external API notes support">>,
     Group<f_clang_Group>;
+defm swift_version_independent_apinotes : BoolOption<"f", "swift-version-independent-apinotes",
+  LangOpts<"SwiftVersionIndependentAPINotes">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option], " version-independent external API notes support">>,
+  Group<f_clang_Group>;
 def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">,
@@ -4684,8 +4690,8 @@ def gsimple_template_names_EQ
       Values<"simple,mangled">, Visibility<[CC1Option]>;
 def gsrc_hash_EQ : Joined<["-"], "gsrc-hash=">,
   Group<g_flags_Group>, Visibility<[CC1Option]>,
-  Values<"md5,sha1,sha256">,
-  NormalizedValues<["DSH_MD5", "DSH_SHA1", "DSH_SHA256"]>,
+  Values<"md5,sha1,sha256,none">,
+  NormalizedValues<["DSH_MD5", "DSH_SHA1", "DSH_SHA256", "DSH_NONE"]>,
   NormalizedValuesScope<"CodeGenOptions">,
   MarshallingInfoEnum<CodeGenOpts<"DebugSrcHash">, "DSH_MD5">;
 def gno_simple_template_names : Flag<["-"], "gno-simple-template-names">,
@@ -4714,9 +4720,9 @@ def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
 defm key_instructions : BoolGOption<"key-instructions",
     CodeGenOpts<"DebugKeyInstructions">, DefaultFalse,
     NegFlag<SetFalse>, PosFlag<SetTrue, [], [],
-        "Enable Key Instructions, which reduces the jumpiness of optimized code stepping (DWARF only)."
-        " Requires LLVM built with LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS.">,
-    BothFlags<[HelpHidden], [ClangOption, CLOption, CC1Option]>>;
+        "Enable Key Instructions, which reduces the jumpiness of debug stepping in optimized C/C++ code"
+        " in some debuggers. DWARF only. Implies -g.">,
+    BothFlags<[], [ClangOption, CLOption, CC1Option]>>;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
 def help : Flag<["-", "--"], "help">,
     Visibility<[ClangOption, CC1Option, CC1AsOption,
@@ -6080,7 +6086,7 @@ def stdlibxx_isystem : JoinedOrSeparate<["-"], "stdlib++-isystem">,
   Flags<[NoXarchOption]>, MetaVarName<"<directory>">;
 def unwindlib_EQ : Joined<["-", "--"], "unwindlib=">,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Unwind library to use">, Values<"libgcc,unwindlib,platform">;
+  HelpText<"Unwind library to use">, Values<"libgcc,libunwind,platform">;
 def sub__library : JoinedOrSeparate<["-"], "sub_library">;
 def sub__umbrella : JoinedOrSeparate<["-"], "sub_umbrella">;
 def system_header_prefix : Joined<["--"], "system-header-prefix=">,
