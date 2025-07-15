@@ -9998,14 +9998,6 @@ CreateX86_64ABIBuiltinVaListDecl(const ASTContext *Context) {
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
-static TypedefDecl *CreatePNaClABIBuiltinVaListDecl(const ASTContext *Context) {
-  // typedef int __builtin_va_list[4];
-  llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 4);
-  QualType IntArrayType = Context->getConstantArrayType(
-      Context->IntTy, Size, nullptr, ArraySizeModifier::Normal, 0);
-  return Context->buildImplicitTypedef(IntArrayType, "__builtin_va_list");
-}
-
 static TypedefDecl *
 CreateAAPCSABIBuiltinVaListDecl(const ASTContext *Context) {
   // struct __va_list
@@ -10203,8 +10195,6 @@ static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
     return CreatePowerABIBuiltinVaListDecl(Context);
   case TargetInfo::X86_64ABIBuiltinVaList:
     return CreateX86_64ABIBuiltinVaListDecl(Context);
-  case TargetInfo::PNaClABIBuiltinVaList:
-    return CreatePNaClABIBuiltinVaListDecl(Context);
   case TargetInfo::AAPCSABIBuiltinVaList:
     return CreateAAPCSABIBuiltinVaListDecl(Context);
   case TargetInfo::SystemZBuiltinVaList:
