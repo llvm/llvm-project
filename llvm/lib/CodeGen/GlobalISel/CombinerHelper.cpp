@@ -1704,7 +1704,7 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI,
   MachineIRBuilder HelperBuilder(MI);
   GISelObserverWrapper DummyObserver;
   LegalizerHelper Helper(HelperBuilder.getMF(), DummyObserver, HelperBuilder);
-  return Helper.lowerMemCpyFamily(MI, MaxLen, /*SkipVolatile=*/true) ==
+  return Helper.lowerMemCpyFamily(MI, MaxLen) ==
          LegalizerHelper::LegalizeResult::Legalized;
 }
 
