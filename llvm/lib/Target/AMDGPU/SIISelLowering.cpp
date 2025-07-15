@@ -9319,6 +9319,44 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
                        Op.getOperand(3), IndexKeyi32);
   }
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8: {
+    if (Op.getOperand(4).getValueType() == MVT::i64)
+      return SDValue();
+
+    SDLoc SL(Op);
+    auto IndexKeyi64 = DAG.getAnyExtOrTrunc(Op.getOperand(4), SL, MVT::i64);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                        Op.getOperand(3), IndexKeyi64, Op.getOperand(5),
+                        Op.getOperand(6)});
+  }
+  case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_bf16f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8: {
+    EVT IndexKeyTy = IntrinsicID == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8
+                         ? MVT::i64
+                         : MVT::i32;
+    if (Op.getOperand(6).getValueType() == IndexKeyTy)
+      return SDValue();
+
+    SDLoc SL(Op);
+    auto IndexKey = DAG.getAnyExtOrTrunc(Op.getOperand(6), SL, IndexKeyTy);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                        Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
+                        IndexKey, Op.getOperand(7),
+                        Op.getOperand(8)}); // No clamp operand
+  }
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
   case Intrinsic::amdgcn_swmmac_i32_16x16x64_iu4: {
