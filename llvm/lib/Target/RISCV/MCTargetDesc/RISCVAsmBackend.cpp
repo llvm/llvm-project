@@ -109,7 +109,7 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                    uint64_t Value,
                                                    bool Resolved) const {
   int64_t Offset = int64_t(Value);
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
 
   // Return true if the symbol is unresolved.
   if (!Resolved)
@@ -678,7 +678,7 @@ static const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
   for (const MCFixup &F : DF->getFixups()) {
     if (F.getOffset() != Offset)
       continue;
-    auto Kind = F.getTargetKind();
+    auto Kind = F.getKind();
     if (!mc::isRelocation(F.getKind())) {
       if (Kind == RISCV::fixup_riscv_pcrel_hi20) {
         *DFOut = DF;
@@ -745,7 +745,7 @@ std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
   Value = Asm->getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Asm->getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
-  return AUIPCFixup->getTargetKind() == RISCV::fixup_riscv_pcrel_hi20 &&
+  return AUIPCFixup->getKind() == RISCV::fixup_riscv_pcrel_hi20 &&
          isPCRelFixupResolved(AUIPCTarget.getAddSym(), *AUIPCDF);
 }
 
