@@ -136,11 +136,10 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
 
   auto IsBoundToType = refersToType(equalsBoundNode("type"));
   auto UnlessFunctionType = unless(hasUnqualifiedDesugaredType(functionType()));
-  auto IgnoreAliasing = this->IgnoreAliasing;
-  auto IsAutoDeducedToPointer = [&IgnoreAliasing](
+  auto IsAutoDeducedToPointer = [this](
                                     const std::vector<StringRef> &AllowedTypes,
                                     const auto &...InnerMatchers) {
-    if (IgnoreAliasing) {
+    if (this->IgnoreAliasing) {
       return autoType(hasDeducedType(
           hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))),
           unless(hasUnqualifiedType(
