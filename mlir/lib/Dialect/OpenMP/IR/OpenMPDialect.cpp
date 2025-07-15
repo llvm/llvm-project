@@ -3867,7 +3867,7 @@ LogicalResult ScanOp::verify() {
 /// Verifies align clause in allocate directive
 
 LogicalResult AllocateDirOp::verify() {
-  std::optional<u_int64_t> align = this->getAlign();
+  std::optional<uint64_t> align = this->getAlign();
 
   if (align.has_value()) {
     if ((align.value() > 0) && !llvm::has_single_bit(align.value()))
