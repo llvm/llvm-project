@@ -116,7 +116,7 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source) {
   [[maybe_unused]] auto ty = source.getType();
-  assert(ty.hasStaticShape());
+  assert(ty.hasStaticShape() && "expecting a memref with static shape");
 
   build(builder, state, tdesc, source, ValueRange({}) /* dynamic offsets */,
         ValueRange({}) /* empty dynamic shape */,
@@ -130,7 +130,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source,
                            llvm::ArrayRef<OpFoldResult> shape,
                            llvm::ArrayRef<OpFoldResult> strides) {
-  assert(shape.size() && strides.size() && shape.size() == strides.size());
+  assert(shape.size() && strides.size() && shape.size() == strides.size() &&
+         "Shape and strides must be present and of equal size for ui64 initialization.");
 
   llvm::SmallVector<int64_t> staticShape;
   llvm::SmallVector<int64_t> staticStrides;
@@ -152,7 +153,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<IntegerType> source,
                            llvm::ArrayRef<OpFoldResult> shape,
                            llvm::ArrayRef<OpFoldResult> strides) {
-  assert(shape.size() && strides.size() && shape.size() == strides.size());
+  assert(shape.size() && strides.size() && shape.size() == strides.size() &&
+         "Shape and strides must be present and of equal size for ui64 initialization.");
 
   llvm::SmallVector<int64_t> staticShape;
   llvm::SmallVector<int64_t> staticStrides;
@@ -255,6 +257,13 @@ LogicalResult CreateNdDescOp::verify() {
     invalidElemTy |= memrefTy.getElementType() != getElementType();
   }
 
+  if (llvm::isa<IntegerType>(getSourceType()) ) {
+    // strides and shape must present for integer source.
+    if (getMixedStrides().empty() || getMixedSizes().empty())
+      return emitOpError("Expecting strides and shape to be present for "
+                         "integer source.");
+  } 
+
   // mismatches among shape, strides, and offsets are
   // already handeled by OffsetSizeAndStrideOpInterface.
   // So they are not check here.
@@ -301,18 +310,21 @@ ParseResult parseOptionalDynamicIndexList(
         return failure();
       integerVals.push_back(integer);
     }
-
     return success();
   };
+
+  //If the optional values are given there must be left bracket
   if (parser.parseOptionalLSquare().succeeded()) {
     if (parser.parseCommaSeparatedList(parseIntegerOrValue) ||
         parser.parseRSquare())
       return parser.emitError(parser.getNameLoc())
-             << "expected SSA value or integer";
+             << "expected a list of SSA values or integers";
     integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
     return success();
   }
+  
   return success();
+
 }
 
 void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,

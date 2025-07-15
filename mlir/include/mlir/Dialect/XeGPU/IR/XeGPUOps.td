@@ -196,16 +196,21 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
       return attr;
     }
 
-
     /// wrapper for matching with OffsetSizeAndStrideOpInterface
     /// If source is IntegerType or `const_shape` is filled,
     /// it will return `const_shape`, such that mixes of `shape`
     /// and `const_shape` will be used to represent the shape of
     /// source operand. They overide static shape from source memref type.
     ArrayRef<int64_t> getStaticSizes() {
+      /// To be compatible with OffsetSizeAndStrideOpInterface, which expects valid return value and perform checks
+      static  llvm::SmallVector<int64_t, 4> emptyShape;
+      
       auto attr = getConstShapeAttr();
-      if (llvm::isa<IntegerType>(getSourceType()) || attr)
+      if (attr)
         return attr;
+
+      if (llvm::isa<IntegerType>(getSourceType()))
+        return emptyShape;
 
       auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
       assert(memrefType && "Incorrect use of getStaticSizes");
@@ -218,9 +223,15 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     /// and `const_strides` will be used to represent the strides of
     /// source operand. They overide static strides from source memref type.
     ArrayRef<int64_t> getStaticStrides() {
+      /// To be compatible with OffsetSizeAndStrideOpInterface, which expects valid return value and perform checks
+      static llvm::SmallVector<int64_t, 4> emptyStrides;
+
       auto attr = getConstStridesAttr();
-      if (llvm::isa<IntegerType>(getSourceType()) || attr)
+      if (attr)
         return attr;
+      
+      if (llvm::isa<IntegerType>(getSourceType()))
+        return emptyStrides;
 
       auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
       assert(memrefType && "Incorrect use of getStaticStrides");
