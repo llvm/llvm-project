@@ -2242,23 +2242,34 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
 
-  // Check if there are two loops (one with enabled vectorization)
+  // Check if there is one loop containing branches with and without
+  // vectorization
   const std::vector<Loop *> &TopLvl = LI.getTopLevelLoops();
-  EXPECT_EQ(TopLvl.size(), 2u);
+  EXPECT_EQ(TopLvl.size(), 1u);
 
   Loop *L = TopLvl[0];
   EXPECT_TRUE(findStringMetadataForLoop(L, "llvm.loop.parallel_accesses"));
-  EXPECT_TRUE(getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable"));
-  EXPECT_EQ(getIntLoopAttribute(L, "llvm.loop.vectorize.width"), 3);
-
-  // The second loop should have disabled vectorization
-  L = TopLvl[1];
-  EXPECT_FALSE(findStringMetadataForLoop(L, "llvm.loop.parallel_accesses"));
+  // These attributes cannot not be set because the loop is shared between simd
+  // and non-simd versions
   EXPECT_FALSE(getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable"));
-  // Check for llvm.access.group metadata attached to the printf
-  // function in the loop body.
+  EXPECT_EQ(getIntLoopAttribute(L, "llvm.loop.vectorize.width"), 0);
+
+  // Check for if condition
   BasicBlock *LoopBody = CLI->getBody();
-  EXPECT_TRUE(any_of(*LoopBody, [](Instruction &I) {
+  BranchInst *IfCond = cast<BranchInst>(LoopBody->getTerminator());
+  EXPECT_EQ(IfCond->getCondition(), IfCmp);
+  BasicBlock *TrueBranch = IfCond->getSuccessor(0);
+  BasicBlock *FalseBranch = IfCond->getSuccessor(1)->getUniqueSuccessor();
+
+  // Check for llvm.access.group metadata attached to the printf
+  // function in the true body.
+  EXPECT_TRUE(any_of(*TrueBranch, [](Instruction &I) {
+    return I.getMetadata("llvm.access.group") != nullptr;
+  }));
+
+  // Check for llvm.access.group metadata attached to the printf
+  // function in the false body.
+  EXPECT_FALSE(any_of(*FalseBranch, [](Instruction &I) {
     return I.getMetadata("llvm.access.group") != nullptr;
   }));
 }
