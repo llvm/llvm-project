@@ -5007,9 +5007,9 @@ AMDGPUInstructionSelector::selectVOP3PModsNeg(MachineOperand &Root) const {
   }};
 }
 
-// Select both neg_lo and neg_hi from the i1 immediate operand. This is specifically
-// for F16/BF16 operands in WMMA instructions, where neg_lo applies to matrix's even
-// k elements, and neg_hi applies to matrix's odd k elements.
+// Select both neg_lo and neg_hi from the i1 immediate operand. This is
+// specifically for F16/BF16 operands in WMMA instructions, where neg_lo applies
+// to matrix's even k elements, and neg_hi applies to matrix's odd k elements.
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PModsNegs(MachineOperand &Root) const {
   // Literal i1 value set in intrinsic, represents SrcMods for the next operand.

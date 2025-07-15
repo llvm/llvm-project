@@ -3521,9 +3521,9 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PModsNeg(SDValue In, SDValue &Src) const {
   return true;
 }
 
-// Select both neg_lo and neg_hi from the i1 immediate operand. This is specifically
-// for F16/BF16 operands in WMMA instructions, where neg_lo applies to matrix's even
-// k elements, and neg_hi applies to matrix's odd k elements.
+// Select both neg_lo and neg_hi from the i1 immediate operand. This is
+// specifically for F16/BF16 operands in WMMA instructions, where neg_lo applies
+// to matrix's even k elements, and neg_hi applies to matrix's odd k elements.
 bool AMDGPUDAGToDAGISel::SelectVOP3PModsNegs(SDValue In, SDValue &Src) const {
   const ConstantSDNode *C = cast<ConstantSDNode>(In);
   // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
