@@ -27,7 +27,7 @@ The most basic use case is as follows
 .. code-block:: c++
 
   #include <new>
-  #include <type_identity>
+  #include <type_traits>
 
   struct S {
    // ...
