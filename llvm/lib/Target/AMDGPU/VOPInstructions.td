@@ -432,7 +432,7 @@ class VOP3be <VOPProfile P> : Enc64 {
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0);
 }
 
-class VOP3Pe <VOPProfile P> : Enc64 {
+class VOP3Pe_Base {
   bits<8> vdst;
   bits<4> src0_modifiers;
   bits<9> src0;
@@ -443,7 +443,12 @@ class VOP3Pe <VOPProfile P> : Enc64 {
   bits<1> clamp;
   bits<2> index_key_8bit;
   bits<1> index_key_16bit;
+  bits<1> index_key_32bit;
+  bits<1> matrix_a_reuse;
+  bits<1> matrix_b_reuse;
+}
 
+class VOP3Pe <VOPProfile P> : Enc64, VOP3Pe_Base {
   let Inst{7-0} = !if(P.HasDst, vdst, 0);
   let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1}, 0); // neg_hi src0
   let Inst{9} = !if(P.HasSrc1Mods, src1_modifiers{1}, 0); // neg_hi src1
@@ -451,9 +456,13 @@ class VOP3Pe <VOPProfile P> : Enc64 {
 
   let Inst{11} = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{2}, 0); // op_sel(0)
   let Inst{12} = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{2}, 0); // op_sel(1)
-  let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2}, 0); // op_sel(2)
+  let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2},
+                     !if(P.HasMatrixReuse, matrix_a_reuse, 0));    // op_sel(2)
 
-  let Inst{14} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{3}, !if(P.IsDOT, 1, ?)); // op_sel_hi(2)
+  let Inst{14} = !cond(!and(P.HasSrc2, P.HasOpSel) : src2_modifiers{3},
+                       P.IsDOT : 1,
+                       P.HasMatrixReuse : matrix_b_reuse,
+                       1: ?); // op_sel_hi(2)
 
   let Inst{15} = !if(P.HasClamp, clamp{0}, 0);
 
