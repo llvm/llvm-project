@@ -16,6 +16,8 @@
 #include "clang-c/Platform.h"
 #include "llvm/Support/raw_ostream.h"
 
+extern "C" {
+
 // The functions below used to be part of the C API for ARCMigrate, which has
 // since been removed from Clang; they already used to print an error if Clang
 // was compiled without arcmt support, so we continue doing so.
@@ -44,3 +46,5 @@ CINDEX_LINKAGE void clang_remap_getFilenames(CXRemapping, unsigned, CXString *,
 CINDEX_LINKAGE void clang_remap_dispose(CXRemapping) {
   llvm::errs() << "error: ARCMigrate has been removed from Clang";
 }
+
+} // extern "C"
