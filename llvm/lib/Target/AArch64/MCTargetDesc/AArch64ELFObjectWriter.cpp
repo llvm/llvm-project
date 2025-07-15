@@ -57,7 +57,7 @@ AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32)
 // assumes IsILP32 is true
 bool AArch64ELFObjectWriter::isNonILP32reloc(const MCFixup &Fixup,
                                              AArch64::Specifier RefKind) const {
-  if (Fixup.getTargetKind() != AArch64::fixup_aarch64_movw)
+  if (Fixup.getKind() != AArch64::fixup_aarch64_movw)
     return false;
   switch (RefKind) {
   case AArch64::S_ABS_G3:
@@ -84,7 +84,7 @@ bool AArch64ELFObjectWriter::isNonILP32reloc(const MCFixup &Fixup,
 unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                               const MCValue &Target,
                                               bool IsPCRel) const {
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   AArch64::Specifier RefKind =
       static_cast<AArch64::Specifier>(Target.getSpecifier());
   AArch64::Specifier SymLoc = AArch64::getSymbolLoc(RefKind);

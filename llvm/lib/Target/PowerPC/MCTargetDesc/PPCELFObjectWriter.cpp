@@ -174,7 +174,8 @@ unsigned PPCELFObjectWriter::getRelocType(const MCFixup &Fixup,
     }
   } else {
     switch (Fixup.getKind()) {
-      default: llvm_unreachable("invalid fixup kind!");
+    default:
+      llvm_unreachable("invalid fixup kind!");
     case PPC::fixup_ppc_br24abs:
       Type = ELF::R_PPC_ADDR24;
       break;
