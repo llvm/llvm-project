@@ -9,15 +9,12 @@
 #include "HeaderIncludeCycleCheck.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Regex.h"
 #include <algorithm>
 #include <deque>
 #include <optional>
-#include <string>
 
 using namespace clang::ast_matchers;
 

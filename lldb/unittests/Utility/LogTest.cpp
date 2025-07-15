@@ -160,7 +160,6 @@ TEST(LogTest, Unregister) {
   llvm::llvm_shutdown_obj obj;
   Log::Register("chan", test_channel);
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
-  std::string message;
   auto log_handler_sp = std::make_shared<TestLogHandler>();
   EXPECT_TRUE(
       Log::EnableLogChannel(log_handler_sp, 0, "chan", {"foo"}, llvm::nulls()));
@@ -214,7 +213,6 @@ TEST(LogHandlerTest, TeeLogHandler) {
 
 TEST_F(LogChannelTest, Enable) {
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
-  std::string message;
   auto log_handler_sp = std::make_shared<TestLogHandler>();
   std::string error;
   ASSERT_FALSE(EnableChannel(log_handler_sp, 0, "chanchan", {}, error));
@@ -236,7 +234,6 @@ TEST_F(LogChannelTest, Enable) {
 
 TEST_F(LogChannelTest, EnableOptions) {
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
-  std::string message;
   auto log_handler_sp = std::make_shared<TestLogHandler>();
   std::string error;
   EXPECT_TRUE(EnableChannel(log_handler_sp, LLDB_LOG_OPTION_VERBOSE, "chan", {},
@@ -249,7 +246,6 @@ TEST_F(LogChannelTest, EnableOptions) {
 
 TEST_F(LogChannelTest, Disable) {
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
-  std::string message;
   auto log_handler_sp = std::make_shared<TestLogHandler>();
   std::string error;
   EXPECT_TRUE(EnableChannel(log_handler_sp, 0, "chan", {"foo", "bar"}, error));

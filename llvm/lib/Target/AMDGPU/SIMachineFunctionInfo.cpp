@@ -48,6 +48,12 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
+  // Temporarily check both the attribute and the subtarget feature, until the
+  // latter is completely removed.
+  DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
+
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
 
@@ -352,7 +358,7 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
 
     // Replace the register in SpillPhysVGPRs. This is needed to look for free
     // lanes while spilling special SGPRs like FP, BP, etc. during PEI.
-    auto *RegItr = std::find(SpillPhysVGPRs.begin(), SpillPhysVGPRs.end(), Reg);
+    auto *RegItr = llvm::find(SpillPhysVGPRs, Reg);
     if (RegItr != SpillPhysVGPRs.end()) {
       unsigned Idx = std::distance(SpillPhysVGPRs.begin(), RegItr);
       SpillPhysVGPRs[Idx] = NewReg;
@@ -716,6 +722,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
       Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
+      DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));

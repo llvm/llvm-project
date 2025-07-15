@@ -76,7 +76,9 @@ createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
     cleanedLengths = lengths;
   }
   mlir::Value emptySlice;
-  return builder.create<fir::EmboxOp>(loc, box.getBoxTy(), cleanedAddr, shape,
+  auto boxType = fir::updateTypeWithVolatility(
+      box.getBoxTy(), fir::isa_volatile_type(cleanedAddr.getType()));
+  return builder.create<fir::EmboxOp>(loc, boxType, cleanedAddr, shape,
                                       emptySlice, cleanedLengths, tdesc);
 }
 
@@ -281,6 +283,9 @@ private:
                    unsigned allocator = kDefaultAllocator) {
     mlir::Value irBox = createNewFirBox(builder, loc, box, addr, lbounds,
                                         extents, lengths, tdesc);
+    const bool valueTypeIsVolatile =
+        fir::isa_volatile_type(fir::unwrapRefType(box.getAddr().getType()));
+    irBox = builder.createVolatileCast(loc, valueTypeIsVolatile, irBox);
     builder.create<fir::StoreOp>(loc, irBox, box.getAddr());
   }
 
@@ -344,9 +349,7 @@ mlir::Value fir::factory::createUnallocatedBox(
   const bool isAssumedRank = baseBoxType.isAssumedRank();
   if (isAssumedRank)
     baseBoxType = baseBoxType.getBoxTypeWithNewShape(/*rank=*/0);
-  auto baseAddrType = baseBoxType.getEleTy();
-  if (!fir::isa_ref_type(baseAddrType))
-    baseAddrType = builder.getRefType(baseAddrType);
+  auto baseAddrType = baseBoxType.getBaseAddressType();
   auto type = fir::unwrapRefType(baseAddrType);
   auto eleTy = fir::unwrapSequenceType(type);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy))
@@ -359,7 +362,7 @@ mlir::Value fir::factory::createUnallocatedBox(
     auto zero = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
     llvm::SmallVector<mlir::Value> extents(seqTy.getDimension(), zero);
     shape = builder.createShape(
-        loc, fir::ArrayBoxValue{nullAddr, extents, /*lbounds=*/std::nullopt});
+        loc, fir::ArrayBoxValue{nullAddr, extents, /*lbounds=*/{}});
   }
   // Provide dummy length parameters if they are dynamic. If a length parameter
   // is deferred. It is set to zero here and will be set on allocation.
@@ -516,7 +519,7 @@ void fir::factory::associateMutableBox(fir::FirOpBuilder &builder,
   source.match(
       [&](const fir::PolymorphicValue &p) {
         mlir::Value sourceBox;
-        if (auto polyBox = source.getBoxOf<fir::PolymorphicValue>())
+        if (auto *polyBox = source.getBoxOf<fir::PolymorphicValue>())
           sourceBox = polyBox->getSourceBox();
         writer.updateMutableBox(p.getAddr(), /*lbounds=*/std::nullopt,
                                 /*extents=*/std::nullopt,
@@ -974,5 +977,22 @@ mlir::Value fir::factory::genNullBoxStorage(fir::FirOpBuilder &builder,
   mlir::Value nullBox = fir::factory::createUnallocatedBox(
       builder, loc, boxTy, /*nonDeferredParams=*/{});
   builder.create<fir::StoreOp>(loc, nullBox, boxStorage);
+  return boxStorage;
+}
+
+mlir::Value fir::factory::getAndEstablishBoxStorage(
+    fir::FirOpBuilder &builder, mlir::Location loc, fir::BaseBoxType boxTy,
+    mlir::Value shape, llvm::ArrayRef<mlir::Value> typeParams,
+    mlir::Value polymorphicMold) {
+  mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
+  mlir::Value nullAddr =
+      builder.createNullConstant(loc, boxTy.getBaseAddressType());
+  mlir::Value box =
+      builder.create<fir::EmboxOp>(loc, boxTy, nullAddr, shape,
+                                   /*emptySlice=*/mlir::Value{},
+                                   fir::factory::elideLengthsAlreadyInType(
+                                       boxTy.unwrapInnerType(), typeParams),
+                                   polymorphicMold);
+  builder.create<fir::StoreOp>(loc, box, boxStorage);
   return boxStorage;
 }

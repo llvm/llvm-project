@@ -34,16 +34,24 @@ static std::string MakeComment(StringRef in) {
     }
     out += std::string("/// ") +
            in.substr(LineStart, LineBreak - LineStart).str() + "\n";
-    LineStart = LineBreak + 1;
+    if (LineBreak != std::string::npos)
+      LineStart = LineBreak + 1;
   }
 
   return out;
 }
 
 static void ProcessHandle(const HandleRec &H, raw_ostream &OS) {
+  if (!H.getName().ends_with("_handle_t")) {
+    errs() << "Handle type name (" << H.getName()
+           << ") must end with '_handle_t'!\n";
+    exit(1);
+  }
+
+  auto ImplName = getHandleImplName(H);
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", H.getDesc());
-  OS << formatv("typedef struct {0}_ *{0};\n", H.getName());
+  OS << formatv("typedef struct {0} *{1};\n", ImplName, H.getName());
 }
 
 static void ProcessTypedef(const TypedefRec &T, raw_ostream &OS) {
@@ -136,11 +144,11 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
                   EnumVal.getName(), EtorVal++);
   }
 
-  // Add force uint32 val
-  OS << formatv(TAB_1 "/// @cond\n" TAB_1
+  // Add last_element/force uint32 val
+  OS << formatv(TAB_1 "/// @cond\n" TAB_1 "{0}_LAST = {1},\n" TAB_1
                       "{0}_FORCE_UINT32 = 0x7fffffff\n" TAB_1
                       "/// @endcond\n\n",
-                Enum.getEnumValNamePrefix());
+                Enum.getEnumValNamePrefix(), EtorVal);
 
   OS << formatv("} {0};\n", Enum.getName());
 }
@@ -156,6 +164,19 @@ static void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
   }
 
   OS << formatv("} {0};\n\n", Struct.getName());
+}
+
+static void ProcessFptrTypedef(const FptrTypedefRec &F, raw_ostream &OS) {
+  OS << CommentsHeader;
+  OS << formatv("/// @brief {0}\n", F.getDesc());
+  OS << formatv("typedef {0} (*{1})(", F.getReturn(), F.getName());
+  for (const auto &Param : F.getParams()) {
+    OS << formatv("\n  // {0}\n  {1} {2}", Param.getDesc(), Param.getType(),
+                  Param.getName());
+    if (Param != F.getParams().back())
+      OS << ",";
+  }
+  OS << ");\n";
 }
 
 static void ProcessFuncParamStruct(const FunctionRec &Func, raw_ostream &OS) {
@@ -213,6 +234,8 @@ void EmitOffloadAPI(const RecordKeeper &Records, raw_ostream &OS) {
       ProcessEnum(EnumRec{R}, OS);
     } else if (R->isSubClassOf("Struct")) {
       ProcessStruct(StructRec{R}, OS);
+    } else if (R->isSubClassOf("FptrTypedef")) {
+      ProcessFptrTypedef(FptrTypedefRec{R}, OS);
     }
   }
 

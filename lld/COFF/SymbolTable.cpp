@@ -231,9 +231,21 @@ void SymbolTable::reportUndefinedSymbol(const UndefinedDiag &undefDiag) {
   }
   if (numDisplayedRefs < numRefs)
     diag << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
+
+  // Hints
+  StringRef name = undefDiag.sym->getName();
+  if (name.consume_front("__imp_")) {
+    Symbol *imp = find(name);
+    if (imp && imp->isLazy()) {
+      diag << "\nNOTE: a relevant symbol '" << imp->getName()
+           << "' is available in " << toString(imp->getFile())
+           << " but cannot be used because it is not an import library.";
+    }
+  }
 }
 
 void SymbolTable::loadMinGWSymbols() {
+  std::vector<Symbol *> undefs;
   for (auto &i : symMap) {
     Symbol *sym = i.second;
     auto *undef = dyn_cast<Undefined>(sym);
@@ -241,7 +253,15 @@ void SymbolTable::loadMinGWSymbols() {
       continue;
     if (undef->getWeakAlias())
       continue;
+    undefs.push_back(sym);
+  }
 
+  for (auto sym : undefs) {
+    auto *undef = dyn_cast<Undefined>(sym);
+    if (!undef)
+      continue;
+    if (undef->getWeakAlias())
+      continue;
     StringRef name = undef->getName();
 
     if (machine == I386 && ctx.config.stdcallFixup) {
@@ -432,11 +452,10 @@ void SymbolTable::reportUnresolvable() {
   reportProblemSymbols(undefs, /*localImports=*/nullptr, true);
 }
 
-bool SymbolTable::resolveRemainingUndefines() {
+void SymbolTable::resolveRemainingUndefines() {
   llvm::TimeTraceScope timeScope("Resolve remaining undefined symbols");
   SmallPtrSet<Symbol *, 8> undefs;
   DenseMap<Symbol *, Symbol *> localImports;
-  bool foundLazy = false;
 
   for (auto &i : symMap) {
     Symbol *sym = i.second;
@@ -481,11 +500,6 @@ bool SymbolTable::resolveRemainingUndefines() {
             imp = findLocalSym(*mangledName);
         }
       }
-      if (imp && imp->isLazy()) {
-        forceLazy(imp);
-        foundLazy = true;
-        continue;
-      }
       if (imp && isa<Defined>(imp)) {
         auto *d = cast<Defined>(imp);
         replaceSymbol<DefinedLocalImport>(sym, ctx, name, d);
@@ -513,7 +527,6 @@ bool SymbolTable::resolveRemainingUndefines() {
   reportProblemSymbols(
       undefs, ctx.config.warnLocallyDefinedImported ? &localImports : nullptr,
       false);
-  return foundLazy;
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
@@ -547,7 +560,7 @@ void SymbolTable::initializeLoadConfig() {
       Warn(ctx) << "EC version of '_load_config_used' is missing";
       return;
     }
-    if (ctx.hybridSymtab) {
+    if (ctx.config.machine == ARM64X) {
       Warn(ctx) << "native version of '_load_config_used' is missing for "
                    "ARM64X target";
       return;
@@ -767,7 +780,7 @@ void SymbolTable::addLazyDLLSymbol(DLLFile *f, DLLFile::Symbol *sym,
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
-  if (!u || u->weakAlias || s->pendingArchiveLoad)
+  if (!u || (u->weakAlias && !u->isECAlias(machine)) || s->pendingArchiveLoad)
     return;
   s->pendingArchiveLoad = true;
   f->makeImport(sym);

@@ -13,6 +13,7 @@
 // ensure that all result alias declarations are defined
 
 #include <algorithm>
+#include <numeric>
 #include <memory>
 #include <type_traits>
 
@@ -62,9 +63,6 @@ static_assert(std::is_same_v<in_found_result<int>, next_permutation_result<int>>
 static_assert(std::is_same_v<in_found_result<int>, prev_permutation_result<int>>);
 
 #if TEST_STD_VER >= 23
-
 static_assert(std::is_same_v<in_value_result<int, long>, fold_left_with_iter_result<int, long>>);
-
-// static_assert(std::is_same_v<out_value_result<int>, iota_result<int>>);
-
+static_assert(std::is_same_v<out_value_result<int, int>, iota_result<int, int>>);
 #endif // TEST_STD_VER

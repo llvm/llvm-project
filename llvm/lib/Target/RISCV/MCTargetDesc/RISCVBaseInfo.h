@@ -56,6 +56,7 @@ enum {
   InstFormatQC_EB = 24,
   InstFormatQC_EJ = 25,
   InstFormatQC_ES = 26,
+  InstFormatNDS_BRANCH_10 = 27,
   InstFormatOther = 31,
 
   InstFormatMask = 31,
@@ -315,6 +316,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM8_LSB000,
   OPERAND_UIMM8_GE32,
   OPERAND_UIMM9_LSB000,
+  OPERAND_UIMM9,
   OPERAND_UIMM10,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
@@ -329,20 +331,23 @@ enum OperandType : unsigned {
   OPERAND_UIMM48,
   OPERAND_UIMM64,
   OPERAND_ZERO,
+  OPERAND_THREE,
+  OPERAND_FOUR,
   OPERAND_SIMM5,
   OPERAND_SIMM5_NONZERO,
   OPERAND_SIMM5_PLUS1,
   OPERAND_SIMM6,
   OPERAND_SIMM6_NONZERO,
+  OPERAND_SIMM10,
   OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM11,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
   OPERAND_SIMM16,
   OPERAND_SIMM16_NONZERO,
-  OPERAND_SIMM20,
+  OPERAND_SIMM20_LI,
   OPERAND_SIMM26,
-  OPERAND_SIMM32,
+  OPERAND_BARE_SIMM32,
   OPERAND_CLUI_IMM,
   OPERAND_VTYPEI10,
   OPERAND_VTYPEI11,
@@ -352,7 +357,7 @@ enum OperandType : unsigned {
   OPERAND_RVKRNUM_2_14,
   OPERAND_RLIST,
   OPERAND_RLIST_S0,
-  OPERAND_SPIMM,
+  OPERAND_STACKADJ,
   // Operand is a 3-bit rounding mode, '111' indicates FRM register.
   // Represents 'frm' argument passing to floating-point operations.
   OPERAND_FRMARG,
@@ -609,7 +614,7 @@ enum RLISTENCODE {
   INVALID_RLIST,
 };
 
-inline unsigned encodeRlist(MCRegister EndReg, bool IsRVE = false) {
+inline unsigned encodeRegList(MCRegister EndReg, bool IsRVE = false) {
   assert((!IsRVE || EndReg <= RISCV::X9) && "Invalid Rlist for RV32E");
   switch (EndReg) {
   case RISCV::X1:
@@ -641,7 +646,7 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRVE = false) {
   }
 }
 
-inline static unsigned encodeRlistNumRegs(unsigned NumRegs) {
+inline static unsigned encodeRegListNumRegs(unsigned NumRegs) {
   assert(NumRegs > 0 && NumRegs < 14 && NumRegs != 12 &&
          "Unexpected number of registers");
   if (NumRegs == 13)
@@ -651,8 +656,8 @@ inline static unsigned encodeRlistNumRegs(unsigned NumRegs) {
 }
 
 inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
-  assert(RlistVal != RLISTENCODE::INVALID_RLIST &&
-         "{ra, s0-s10} is not supported, s11 must be included.");
+  assert(RlistVal >= RLISTENCODE::RA && RlistVal <= RLISTENCODE::RA_S0_S11 &&
+         "Invalid Rlist");
   unsigned NumRegs = (RlistVal - RLISTENCODE::RA) + 1;
   // s10 and s11 are saved together.
   if (RlistVal == RLISTENCODE::RA_S0_S11)
@@ -662,7 +667,7 @@ inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   return alignTo(NumRegs * RegSize, 16);
 }
 
-void printRlist(unsigned SlistEncode, raw_ostream &OS);
+void printRegList(unsigned RlistEncode, raw_ostream &OS);
 } // namespace RISCVZC
 
 namespace RISCVVInversePseudosTable {
@@ -743,6 +748,14 @@ struct VLX_VSXPseudo {
   uint16_t Pseudo;
 };
 
+struct NDSVLNPseudo {
+  uint16_t Masked : 1;
+  uint16_t Unsigned : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t Pseudo;
+};
+
 #define GET_RISCVVSSEGTable_DECL
 #define GET_RISCVVLSEGTable_DECL
 #define GET_RISCVVLXSEGTable_DECL
@@ -751,6 +764,7 @@ struct VLX_VSXPseudo {
 #define GET_RISCVVSETable_DECL
 #define GET_RISCVVLXTable_DECL
 #define GET_RISCVVSXTable_DECL
+#define GET_RISCVNDSVLNTable_DECL
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 

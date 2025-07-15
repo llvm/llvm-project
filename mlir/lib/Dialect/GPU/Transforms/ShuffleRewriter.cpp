@@ -18,7 +18,6 @@
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
@@ -40,8 +39,9 @@ struct GpuShuffleRewriter : public OpRewritePattern<gpu::ShuffleOp> {
     auto i64 = rewriter.getI64Type();
 
     // If the type of the value is either i32 or f32, the op is already valid.
-    if (valueType.getIntOrFloatBitWidth() == 32)
-      return failure();
+    if (!valueType.isIntOrFloat() || valueType.getIntOrFloatBitWidth() != 64)
+      return rewriter.notifyMatchFailure(
+          op, "only 64-bit int/float types are supported");
 
     Value lo, hi;
 

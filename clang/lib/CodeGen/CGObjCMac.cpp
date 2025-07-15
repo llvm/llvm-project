@@ -184,25 +184,6 @@ public:
   /// SelectorPtrTy - LLVM type for selector handles (typeof(SEL))
   llvm::PointerType *SelectorPtrTy;
 
-private:
-  /// ProtocolPtrTy - LLVM type for external protocol handles
-  /// (typeof(Protocol))
-  llvm::Type *ExternalProtocolPtrTy;
-
-public:
-  llvm::Type *getExternalProtocolPtrTy() {
-    if (!ExternalProtocolPtrTy) {
-      // FIXME: It would be nice to unify this with the opaque type, so that the
-      // IR comes out a bit cleaner.
-      CodeGen::CodeGenTypes &Types = CGM.getTypes();
-      ASTContext &Ctx = CGM.getContext();
-      llvm::Type *T = Types.ConvertType(Ctx.getObjCProtoType());
-      ExternalProtocolPtrTy = llvm::PointerType::getUnqual(T);
-    }
-
-    return ExternalProtocolPtrTy;
-  }
-
   // SuperCTy - clang type for struct objc_super.
   QualType SuperCTy;
   // SuperPtrCTy - clang type for struct objc_super *.
@@ -1954,7 +1935,9 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   auto Fields = Builder.beginStruct(NSConstantStringType);
 
   // Class pointer.
-  Fields.add(Class);
+  Fields.addSignedPointer(Class,
+                          CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
   // String pointer.
   llvm::Constant *C =
@@ -2721,8 +2704,8 @@ llvm::Constant *CGObjCCommonMac::getBitmapBlockLayout(bool ComputeByrefLayout) {
   unsigned char inst = (BLOCK_LAYOUT_OPERATOR << 4) | 0;
   Layout.push_back(inst);
   std::string BitMap;
-  for (unsigned i = 0, e = Layout.size(); i != e; i++)
-    BitMap += Layout[i];
+  for (unsigned char C : Layout)
+    BitMap += C;
 
   if (CGM.getLangOpts().ObjCGCBitmapPrint) {
     if (ComputeByrefLayout)
@@ -4244,9 +4227,8 @@ FragileHazards::FragileHazards(CodeGenFunction &CGF) : CGF(CGF) {
     return;
 
   // Collect all the blocks in the function.
-  for (llvm::Function::iterator I = CGF.CurFn->begin(), E = CGF.CurFn->end();
-       I != E; ++I)
-    BlocksBeforeTry.insert(&*I);
+  for (llvm::BasicBlock &BB : *CGF.CurFn)
+    BlocksBeforeTry.insert(&BB);
 
   llvm::FunctionType *AsmFnTy = GetAsmFnType();
 
@@ -4318,9 +4300,7 @@ void FragileHazards::emitHazardsInNewBlocks() {
   CGBuilderTy Builder(CGF, CGF.getLLVMContext());
 
   // Iterate through all blocks, skipping those prior to the try.
-  for (llvm::Function::iterator FI = CGF.CurFn->begin(), FE = CGF.CurFn->end();
-       FI != FE; ++FI) {
-    llvm::BasicBlock &BB = *FI;
+  for (llvm::BasicBlock &BB : *CGF.CurFn) {
     if (BlocksBeforeTry.count(&BB))
       continue;
 
@@ -4367,10 +4347,9 @@ void FragileHazards::collectLocals() {
   // Collect all the allocas currently in the function.  This is
   // probably way too aggressive.
   llvm::BasicBlock &Entry = CGF.CurFn->getEntryBlock();
-  for (llvm::BasicBlock::iterator I = Entry.begin(), E = Entry.end(); I != E;
-       ++I)
-    if (isa<llvm::AllocaInst>(*I) && !AllocasToIgnore.count(&*I))
-      Locals.push_back(&*I);
+  for (llvm::Instruction &I : Entry)
+    if (isa<llvm::AllocaInst>(I) && !AllocasToIgnore.count(&I))
+      Locals.push_back(&I);
 }
 
 llvm::FunctionType *FragileHazards::GetAsmFnType() {
@@ -4998,10 +4977,7 @@ enum ImageInfoFlags {
   eImageInfo_GCOnly              = (1 << 2),
   eImageInfo_OptimizedByDyld     = (1 << 3), // This flag is set by the dyld shared cache.
 
-  // A flag indicating that the module has no instances of a @synthesize of a
-  // superclass variable. This flag used to be consumed by the runtime to work
-  // around miscompile by gcc.
-  eImageInfo_CorrectedSynthesize = (1 << 4), // This flag is no longer set by clang.
+  eImageInfo_SignedClassRO       = (1 << 4), // Reused (was _CorrectedSynthesize)
   eImageInfo_ImageIsSimulated    = (1 << 5),
   eImageInfo_ClassProperties     = (1 << 6)
 };
@@ -5059,6 +5035,17 @@ void CGObjCCommonMac::EmitImageInfo() {
   // Indicate whether we are generating class properties.
   Mod.addModuleFlag(llvm::Module::Error, "Objective-C Class Properties",
                     eImageInfo_ClassProperties);
+
+  // Indicate whether we want enforcement of pointer signing for class_ro_t
+  // pointers.
+  if (CGM.getLangOpts().PointerAuthObjcClassROPointers)
+    Mod.addModuleFlag(llvm::Module::Error,
+                      "Objective-C Enforce ClassRO Pointer Signing",
+                      eImageInfo_SignedClassRO);
+  else
+    Mod.addModuleFlag(llvm::Module::Error,
+                      "Objective-C Enforce ClassRO Pointer Signing",
+                      llvm::ConstantInt::get(Int8Ty, 0));
 }
 
 // struct objc_module {
@@ -5636,8 +5623,7 @@ CGObjCNonFragileABIMac::CGObjCNonFragileABIMac(CodeGen::CodeGenModule &cgm)
 /* *** */
 
 ObjCCommonTypesHelper::ObjCCommonTypesHelper(CodeGen::CodeGenModule &cgm)
-    : VMContext(cgm.getLLVMContext()), CGM(cgm),
-      ExternalProtocolPtrTy(nullptr) {
+    : VMContext(cgm.getLLVMContext()), CGM(cgm) {
   CodeGen::CodeGenTypes &Types = CGM.getTypes();
   ASTContext &Ctx = CGM.getContext();
   unsigned ProgramAS = CGM.getDataLayout().getProgramAddressSpace();
@@ -6247,11 +6233,19 @@ llvm::GlobalVariable *CGObjCNonFragileABIMac::BuildClassRoTInitializer(
         methods.push_back(MD);
   }
 
-  values.add(emitMethodList(ID->getObjCRuntimeNameAsString(),
-                            (flags & NonFragileABI_Class_Meta)
-                                ? MethodListType::ClassMethods
-                                : MethodListType::InstanceMethods,
-                            methods));
+  llvm::Constant *MethListPtr = emitMethodList(
+      ID->getObjCRuntimeNameAsString(),
+      (flags & NonFragileABI_Class_Meta) ? MethodListType::ClassMethods
+                                         : MethodListType::InstanceMethods,
+      methods);
+
+  const PointerAuthSchema &MethListSchema =
+      CGM.getCodeGenOpts().PointerAuth.ObjCMethodListPointer;
+  if (!MethListPtr->isNullValue())
+    values.addSignedPointer(MethListPtr, MethListSchema, GlobalDecl(),
+                            QualType());
+  else
+    values.add(MethListPtr);
 
   const ObjCInterfaceDecl *OID = ID->getClassInterface();
   assert(OID && "CGObjCNonFragileABIMac::BuildClassRoTInitializer");
@@ -6299,15 +6293,20 @@ llvm::GlobalVariable *CGObjCNonFragileABIMac::BuildClassObject(
     bool HiddenVisibility) {
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct(ObjCTypes.ClassnfABITy);
-  values.add(IsAGV);
-  if (SuperClassGV) {
-    values.add(SuperClassGV);
-  } else {
+  const PointerAuthOptions &PointerAuthOpts = CGM.getCodeGenOpts().PointerAuth;
+  values.addSignedPointer(IsAGV, PointerAuthOpts.ObjCIsaPointers, GlobalDecl(),
+                          QualType());
+  if (SuperClassGV)
+    values.addSignedPointer(SuperClassGV, PointerAuthOpts.ObjCSuperPointers,
+                            GlobalDecl(), QualType());
+  else
     values.addNullPointer(ObjCTypes.ClassnfABIPtrTy);
-  }
+
   values.add(ObjCEmptyCacheVar);
   values.add(ObjCEmptyVtableVar);
-  values.add(ClassRoGV);
+
+  values.addSignedPointer(ClassRoGV, PointerAuthOpts.ObjCClassROPointers,
+                          GlobalDecl(), QualType());
 
   llvm::GlobalVariable *GV = cast<llvm::GlobalVariable>(
       GetClassGlobal(CI, isMetaclass, ForDefinition));
@@ -6567,15 +6566,27 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
     }
   }
 
-  auto instanceMethodList = emitMethodList(
+  llvm::Constant *InstanceMethodList = emitMethodList(
       listName, MethodListType::CategoryInstanceMethods, instanceMethods);
-  auto classMethodList = emitMethodList(
+  const PointerAuthSchema &MethListSchema =
+      CGM.getCodeGenOpts().PointerAuth.ObjCMethodListPointer;
+  if (!InstanceMethodList->isNullValue())
+    values.addSignedPointer(InstanceMethodList, MethListSchema, GlobalDecl(),
+                            QualType());
+  else
+    values.add(InstanceMethodList);
+
+  llvm::Constant *ClassMethodList = emitMethodList(
       listName, MethodListType::CategoryClassMethods, classMethods);
-  values.add(instanceMethodList);
-  values.add(classMethodList);
+  if (!ClassMethodList->isNullValue())
+    values.addSignedPointer(ClassMethodList, MethListSchema, GlobalDecl(),
+                            QualType());
+  else
+    values.add(ClassMethodList);
+
   // Keep track of whether we have actual metadata to emit.
   bool isEmptyCategory =
-      instanceMethodList->isNullValue() && classMethodList->isNullValue();
+      InstanceMethodList->isNullValue() && ClassMethodList->isNullValue();
 
   const ObjCCategoryDecl *Category =
       Interface->FindCategoryDeclaration(OCD->getIdentifier());
@@ -6653,7 +6664,13 @@ void CGObjCNonFragileABIMac::emitMethodConstant(ConstantArrayBuilder &builder,
   } else {
     llvm::Function *fn = GetMethodDefinition(MD);
     assert(fn && "no definition for method?");
-    method.add(fn);
+    if (const PointerAuthSchema &Schema =
+            CGM.getCodeGenOpts().PointerAuth.ObjCMethodListFunctionPointers) {
+      llvm::Constant *Bitcast =
+          llvm::ConstantExpr::getBitCast(fn, ObjCTypes.Int8PtrProgramASTy);
+      method.addSignedPointer(Bitcast, Schema, GlobalDecl(), QualType());
+    } else
+      method.add(fn);
   }
 
   method.finishAndAddTo(builder);
@@ -7140,7 +7157,7 @@ RValue CGObjCNonFragileABIMac::EmitVTableMessageSend(
   // the actual argument value blank for now.
   args.add(RValue::get(nullptr), ObjCTypes.MessageRefCPtrTy);
 
-  args.insert(args.end(), formalArgs.begin(), formalArgs.end());
+  llvm::append_range(args, formalArgs);
 
   MessageSendInfo MSI = getMessageSendInfo(method, resultType, args);
 
@@ -7696,10 +7713,15 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
   }
 
   llvm::Value *VTableIdx = llvm::ConstantInt::get(CGM.Int32Ty, 2);
+  llvm::Constant *VTablePtr = llvm::ConstantExpr::getInBoundsGetElementPtr(
+      VTableGV->getValueType(), VTableGV, VTableIdx);
+
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct(ObjCTypes.EHTypeTy);
-  values.add(llvm::ConstantExpr::getInBoundsGetElementPtr(
-      VTableGV->getValueType(), VTableGV, VTableIdx));
+  const PointerAuthSchema &TypeInfoSchema =
+      CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer;
+  values.addSignedPointer(VTablePtr, TypeInfoSchema, GlobalDecl(), QualType());
+
   values.add(GetClassName(ClassName));
   values.add(GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition));
 

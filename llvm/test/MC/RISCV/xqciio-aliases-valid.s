@@ -1,5 +1,5 @@
 # Xqciio - Qualcomm uC External Input Output extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqciio -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqciio -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqciio < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqciio -M no-aliases --no-print-imm-hex -d - \

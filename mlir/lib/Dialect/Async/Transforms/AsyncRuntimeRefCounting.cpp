@@ -17,14 +17,11 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_ASYNCRUNTIMEREFCOUNTING
-#define GEN_PASS_DEF_ASYNCRUNTIMEPOLICYBASEDREFCOUNTING
+#define GEN_PASS_DEF_ASYNCRUNTIMEREFCOUNTINGPASS
+#define GEN_PASS_DEF_ASYNCRUNTIMEPOLICYBASEDREFCOUNTINGPASS
 #include "mlir/Dialect/Async/Passes.h.inc"
 } // namespace mlir
 
@@ -109,7 +106,8 @@ static LogicalResult walkReferenceCountedValues(
 namespace {
 
 class AsyncRuntimeRefCountingPass
-    : public impl::AsyncRuntimeRefCountingBase<AsyncRuntimeRefCountingPass> {
+    : public impl::AsyncRuntimeRefCountingPassBase<
+          AsyncRuntimeRefCountingPass> {
 public:
   AsyncRuntimeRefCountingPass() = default;
   void runOnOperation() override;
@@ -468,7 +466,7 @@ void AsyncRuntimeRefCountingPass::runOnOperation() {
 namespace {
 
 class AsyncRuntimePolicyBasedRefCountingPass
-    : public impl::AsyncRuntimePolicyBasedRefCountingBase<
+    : public impl::AsyncRuntimePolicyBasedRefCountingPassBase<
           AsyncRuntimePolicyBasedRefCountingPass> {
 public:
   AsyncRuntimePolicyBasedRefCountingPass() { initializeDefaultPolicy(); }
@@ -533,15 +531,15 @@ void AsyncRuntimePolicyBasedRefCountingPass::initializeDefaultPolicy() {
     bool isValue = isa<ValueType>(type);
 
     // Drop reference after async token or group error check (coro await).
-    if (dyn_cast<RuntimeIsErrorOp>(op))
+    if (isa<RuntimeIsErrorOp>(op))
       return (isToken || isGroup) ? -1 : 0;
 
     // Drop reference after async value load.
-    if (dyn_cast<RuntimeLoadOp>(op))
+    if (isa<RuntimeLoadOp>(op))
       return isValue ? -1 : 0;
 
     // Drop reference after async token added to the group.
-    if (dyn_cast<RuntimeAddToGroupOp>(op))
+    if (isa<RuntimeAddToGroupOp>(op))
       return isToken ? -1 : 0;
 
     return 0;
@@ -552,14 +550,4 @@ void AsyncRuntimePolicyBasedRefCountingPass::runOnOperation() {
   auto functor = [&](Value value) { return addRefCounting(value); };
   if (failed(walkReferenceCountedValues(getOperation(), functor)))
     signalPassFailure();
-}
-
-//----------------------------------------------------------------------------//
-
-std::unique_ptr<Pass> mlir::createAsyncRuntimeRefCountingPass() {
-  return std::make_unique<AsyncRuntimeRefCountingPass>();
-}
-
-std::unique_ptr<Pass> mlir::createAsyncRuntimePolicyBasedRefCountingPass() {
-  return std::make_unique<AsyncRuntimePolicyBasedRefCountingPass>();
 }

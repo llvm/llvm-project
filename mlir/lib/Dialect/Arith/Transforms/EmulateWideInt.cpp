@@ -1208,6 +1208,12 @@ struct EmulateWideIntPass final
     RewritePatternSet patterns(ctx);
     arith::populateArithWideIntEmulationPatterns(typeConverter, patterns);
 
+    // Populate `func.*` conversion patterns.
+    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
+        patterns, typeConverter);
+    populateCallOpTypeConversionPattern(patterns, typeConverter);
+    populateReturnOpTypeConversionPattern(patterns, typeConverter);
+
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
   }
@@ -1281,12 +1287,6 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
 void arith::populateArithWideIntEmulationPatterns(
     const WideIntEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
-  // Populate `func.*` conversion patterns.
-  populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
-                                                                 typeConverter);
-  populateCallOpTypeConversionPattern(patterns, typeConverter);
-  populateReturnOpTypeConversionPattern(patterns, typeConverter);
-
   // Populate `arith.*` conversion patterns.
   patterns.add<
       // Misc ops.

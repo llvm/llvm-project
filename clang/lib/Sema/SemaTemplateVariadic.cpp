@@ -14,6 +14,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
@@ -497,7 +498,7 @@ bool Sema::DiagnoseUnexpandedParameterPackInRequiresExpr(RequiresExpr *RE) {
   // We only care about unexpanded references to the RequiresExpr's own
   // parameter packs.
   auto Parms = RE->getLocalParameters();
-  llvm::SmallPtrSet<NamedDecl*, 8> ParmSet(Parms.begin(), Parms.end());
+  llvm::SmallPtrSet<NamedDecl *, 8> ParmSet(llvm::from_range, Parms);
   SmallVector<UnexpandedParameterPack, 2> UnexpandedParms;
   for (auto Parm : Unexpanded)
     if (ParmSet.contains(Parm.first.dyn_cast<NamedDecl *>()))
@@ -740,13 +741,11 @@ ExprResult Sema::CheckPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
   if (!Pattern->containsUnexpandedParameterPack()) {
     Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
     << Pattern->getSourceRange();
-    CorrectDelayedTyposInExpr(Pattern);
     return ExprError();
   }
 
   // Create the pack expansion expression and source-location information.
-  return new (Context)
-    PackExpansionExpr(Context.DependentTy, Pattern, EllipsisLoc, NumExpansions);
+  return new (Context) PackExpansionExpr(Pattern, EllipsisLoc, NumExpansions);
 }
 
 bool Sema::CheckParameterPacksForExpansion(
@@ -756,7 +755,7 @@ bool Sema::CheckParameterPacksForExpansion(
     bool &RetainExpansion, UnsignedOrNone &NumExpansions) {
   ShouldExpand = true;
   RetainExpansion = false;
-  std::pair<IdentifierInfo *, SourceLocation> FirstPack;
+  IdentifierLoc FirstPack;
   bool HaveFirstPack = false;
   UnsignedOrNone NumPartialExpansions = std::nullopt;
   SourceLocation PartiallySubstitutedPackLoc;
@@ -868,8 +867,7 @@ bool Sema::CheckParameterPacksForExpansion(
       // This is the first pack we've seen for which we have an argument.
       // Record it.
       NumExpansions = NewPackSize;
-      FirstPack.first = Name;
-      FirstPack.second = ParmPack.second;
+      FirstPack = IdentifierLoc(ParmPack.second, Name);
       HaveFirstPack = true;
       continue;
     }
@@ -906,9 +904,9 @@ bool Sema::CheckParameterPacksForExpansion(
       //   the same number of arguments specified.
       if (HaveFirstPack)
         Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict)
-            << FirstPack.first << Name << *NumExpansions
+            << FirstPack.getIdentifierInfo() << Name << *NumExpansions
             << (LeastNewPackSize != NewPackSize) << LeastNewPackSize
-            << SourceRange(FirstPack.second) << SourceRange(ParmPack.second);
+            << SourceRange(FirstPack.getLoc()) << SourceRange(ParmPack.second);
       else
         Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict_multilevel)
             << Name << *NumExpansions << (LeastNewPackSize != NewPackSize)
@@ -1150,16 +1148,16 @@ ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
 
   NamedDecl *ParameterPack = nullptr;
   switch (R.getResultKind()) {
-  case LookupResult::Found:
+  case LookupResultKind::Found:
     ParameterPack = R.getFoundDecl();
     break;
 
-  case LookupResult::NotFound:
-  case LookupResult::NotFoundInCurrentInstantiation: {
+  case LookupResultKind::NotFound:
+  case LookupResultKind::NotFoundInCurrentInstantiation: {
     ParameterPackValidatorCCC CCC{};
     if (TypoCorrection Corrected =
             CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, nullptr,
-                        CCC, CTK_ErrorRecovery)) {
+                        CCC, CorrectTypoKind::ErrorRecovery)) {
       diagnoseTypo(Corrected,
                    PDiag(diag::err_sizeof_pack_no_pack_name_suggest) << &Name,
                    PDiag(diag::note_parameter_pack_here));
@@ -1167,11 +1165,11 @@ ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
     }
     break;
   }
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
     break;
 
-  case LookupResult::Ambiguous:
+  case LookupResultKind::Ambiguous:
     DiagnoseAmbiguousLookup(R);
     return ExprError();
   }
@@ -1202,11 +1200,9 @@ ExprResult Sema::ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
                                        SourceLocation RSquareLoc) {
   bool isParameterPack = ::isParameterPack(PackExpression);
   if (!isParameterPack) {
-    if (!PackExpression->containsErrors()) {
-      CorrectDelayedTyposInExpr(IndexExpr);
+    if (!PackExpression->containsErrors())
       Diag(PackExpression->getBeginLoc(), diag::err_expected_name_of_pack)
           << PackExpression;
-    }
     return ExprError();
   }
   ExprResult Res =
@@ -1230,7 +1226,7 @@ ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
 
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
+        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
     if (!Res.isUsable())
       return ExprError();
     Index = Value.getExtValue();
@@ -1287,7 +1283,8 @@ TemplateArgumentLoc Sema::getTemplateArgumentPackExpansionPattern(
     Expr *Pattern = Expansion->getPattern();
     Ellipsis = Expansion->getEllipsisLoc();
     NumExpansions = Expansion->getNumExpansions();
-    return TemplateArgumentLoc(Pattern, Pattern);
+    return TemplateArgumentLoc(
+        TemplateArgument(Pattern, Argument.isCanonicalExpr()), Pattern);
   }
 
   case TemplateArgument::TemplateExpansion:
@@ -1403,11 +1400,6 @@ ExprResult Sema::ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,
   CheckFoldOperand(*this, LHS);
   CheckFoldOperand(*this, RHS);
 
-  auto DiscardOperands = [&] {
-    CorrectDelayedTyposInExpr(LHS);
-    CorrectDelayedTyposInExpr(RHS);
-  };
-
   // [expr.prim.fold]p3:
   //   In a binary fold, op1 and op2 shall be the same fold-operator, and
   //   either e1 shall contain an unexpanded parameter pack or e2 shall contain
@@ -1415,7 +1407,6 @@ ExprResult Sema::ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,
   if (LHS && RHS &&
       LHS->containsUnexpandedParameterPack() ==
           RHS->containsUnexpandedParameterPack()) {
-    DiscardOperands();
     return Diag(EllipsisLoc,
                 LHS->containsUnexpandedParameterPack()
                     ? diag::err_fold_expression_packs_both_sides
@@ -1430,7 +1421,6 @@ ExprResult Sema::ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,
     Expr *Pack = LHS ? LHS : RHS;
     assert(Pack && "fold expression with neither LHS nor RHS");
     if (!Pack->containsUnexpandedParameterPack()) {
-      DiscardOperands();
       return Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
              << Pack->getSourceRange();
     }

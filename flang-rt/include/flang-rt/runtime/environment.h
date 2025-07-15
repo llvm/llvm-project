@@ -45,6 +45,13 @@ struct ExecutionEnvironment {
   const char *GetEnv(
       const char *name, std::size_t name_length, const Terminator &terminator);
 
+  std::int32_t SetEnv(const char *name, std::size_t name_length,
+      const char *value, std::size_t value_length,
+      const Terminator &terminator);
+
+  std::int32_t UnsetEnv(
+      const char *name, std::size_t name_length, const Terminator &terminator);
+
   int argc{0};
   const char **argv{nullptr};
   char **envp{nullptr};
@@ -56,6 +63,9 @@ struct ExecutionEnvironment {
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
   bool defaultUTF8{false}; // DEFAULT_UTF8
   bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
+
+  enum InternalDebugging { WorkQueue = 1 };
+  int internalDebugging{0}; // FLANG_RT_DEBUG
 
   // CUDA related variables
   std::size_t cudaStackLimit{0}; // ACC_OFFLOAD_STACK_SIZE

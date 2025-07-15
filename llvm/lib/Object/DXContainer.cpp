@@ -9,7 +9,6 @@
 #include "llvm/Object/DXContainer.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -18,10 +17,6 @@ using namespace llvm::object;
 
 static Error parseFailed(const Twine &Msg) {
   return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
-}
-
-static Error validationFailed(const Twine &Msg) {
-  return make_error<StringError>(Msg.str(), inconvertibleErrorCode());
 }
 
 template <typename T>
@@ -100,8 +95,8 @@ Error DXContainer::parseHash(StringRef Part) {
 Error DXContainer::parseRootSignature(StringRef Part) {
   if (RootSignature)
     return parseFailed("More than one RTS0 part is present in the file");
-  RootSignature = DirectX::RootSignature();
-  if (Error Err = RootSignature->parse(Part))
+  RootSignature = DirectX::RootSignature(Part);
+  if (Error Err = RootSignature->parse())
     return Err;
   return Error::success();
 }
@@ -246,22 +241,16 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   IteratorState.Offset = Offset;
 }
 
-Error DirectX::RootSignature::parse(StringRef Data) {
-  const char *Current = Data.begin();
+Error DirectX::RootSignature::parse() {
+  const char *Current = PartData.begin();
 
   // Root Signature headers expects 6 integers to be present.
-  if (Data.size() < 6 * sizeof(uint32_t))
+  if (PartData.size() < 6 * sizeof(uint32_t))
     return parseFailed(
         "Invalid root signature, insufficient space for header.");
 
-  uint32_t VValue =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Version = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
-
-  if (!dxbc::RootSignatureValidations::isValidVersion(VValue))
-    return validationFailed("unsupported root signature version read: " +
-                            llvm::Twine(VValue));
-  Version = VValue;
 
   NumParameters =
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
@@ -279,14 +268,17 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  uint32_t FValue =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Flags = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  if (!dxbc::RootSignatureValidations::isValidRootFlag(FValue))
-    return validationFailed("unsupported root signature flag value read: " +
-                            llvm::Twine(FValue));
-  Flags = FValue;
+  ParametersHeaders.Data = PartData.substr(
+      RootParametersOffset,
+      NumParameters * sizeof(dxbc::RTS0::v1::RootParameterHeader));
+
+  StaticSamplers.Stride = sizeof(dxbc::RTS0::v1::StaticSampler);
+  StaticSamplers.Data = PartData.substr(
+      StaticSamplersOffset,
+      NumStaticSamplers * sizeof(dxbc::RTS0::v1::StaticSampler));
 
   return Error::success();
 }

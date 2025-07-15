@@ -9,16 +9,27 @@
 #include "src/sys/time/utimes.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/types/struct_timespec.h"
 #include "hdr/types/struct_timeval.h"
 
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {
+
+#ifdef SYS_utimes
+constexpr auto UTIMES_SYSCALL_ID = SYS_utimes;
+#elif defined(SYS_utimensat)
+constexpr auto UTIMES_SYSCALL_ID = SYS_utimensat;
+#elif defined(SYS_utimensat_time64)
+constexpr auto UTIMES_SYSCALL_ID = SYS_utimensat_time64;
+#else
+#error "utimes, utimensat, utimensat_time64,  syscalls not available."
+#endif
 
 LLVM_LIBC_FUNCTION(int, utimes,
                    (const char *path, const struct timeval times[2])) {
@@ -26,15 +37,15 @@ LLVM_LIBC_FUNCTION(int, utimes,
 
 #ifdef SYS_utimes
   // No need to define a timespec struct, use the syscall directly.
-  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimes, path, times);
-#elif defined(SYS_utimensat)
+  ret = LIBC_NAMESPACE::syscall_impl<int>(UTIMES_SYSCALL_ID, path, times);
+#elif defined(SYS_utimensat) || defined(SYS_utimensat_time64)
   // the utimensat syscall requires a timespec struct, not timeval.
   struct timespec ts[2];
-  struct timespec *ts_ptr = nullptr; // default value if times is NULL
+  struct timespec *ts_ptr = nullptr; // default value if times is nullptr
 
   // convert the microsec values in timeval struct times
   // to nanosecond values in timespec struct ts
-  if (times != NULL) {
+  if (times != nullptr) {
 
     // ensure consistent values
     if ((times[0].tv_usec < 0 || times[1].tv_usec < 0) ||
@@ -54,16 +65,13 @@ LLVM_LIBC_FUNCTION(int, utimes,
     ts_ptr = ts;
   }
 
-  // If times was NULL, ts_ptr remains NULL, which utimensat interprets
+  // If times was nullptr, ts_ptr remains nullptr, which utimensat interprets
   // as setting times to the current time.
 
   // utimensat syscall.
   // flags=0 means don't follow symlinks (like utimes)
-  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimensat, AT_FDCWD, path, ts_ptr,
-                                          0);
-
-#else
-#error "utimensat and utimes syscalls not available."
+  ret = LIBC_NAMESPACE::syscall_impl<int>(UTIMES_SYSCALL_ID, AT_FDCWD, path,
+                                          ts_ptr, 0);
 #endif // SYS_utimensat
 
   if (ret < 0) {

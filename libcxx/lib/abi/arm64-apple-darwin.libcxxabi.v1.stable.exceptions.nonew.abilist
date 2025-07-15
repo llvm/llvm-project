@@ -1508,6 +1508,7 @@
 {'is_defined': True, 'name': '__ZNSt3__117bad_function_callD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117bad_function_callD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117bad_function_callD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__117bad_function_call4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117iostream_categoryEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117moneypunct_bynameIcLb0EE4initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117moneypunct_bynameIcLb1EE4initEPKc', 'type': 'FUNC'}
@@ -1580,6 +1581,7 @@
 {'is_defined': True, 'name': '__ZNSt3__123__cxx_atomic_notify_oneEPVKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__123__libcpp_atomic_monitorEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__123__libcpp_atomic_monitorEPVKv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__123__log_hardening_failureEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__127__from_chars_floating_pointIdEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__127__from_chars_floating_pointIfEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE', 'type': 'FUNC'}

@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmMacro.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <string>
@@ -53,7 +54,7 @@ class AsmLexer {
   const MCAsmInfo &MAI;
 
   bool IsAtStartOfLine = true;
-  bool AtStartOfStatement = true;
+  bool JustConsumedEOL = true;
   bool IsPeeking = false;
   bool EndStatementAtEOF = true;
 
@@ -72,7 +73,7 @@ class AsmLexer {
   bool LexHLASMStrings = false;
   AsmCommentConsumer *CommentConsumer = nullptr;
 
-  AsmToken LexToken();
+  LLVM_ABI AsmToken LexToken();
 
   void SetError(SMLoc errLoc, const std::string &err) {
     ErrLoc = errLoc;
@@ -80,7 +81,7 @@ class AsmLexer {
   }
 
 public:
-  AsmLexer(const MCAsmInfo &MAI);
+  LLVM_ABI AsmLexer(const MCAsmInfo &MAI);
   AsmLexer(const AsmLexer &) = delete;
   AsmLexer &operator=(const AsmLexer &) = delete;
 
@@ -91,7 +92,7 @@ public:
   const AsmToken &Lex() {
     assert(!CurTok.empty());
     // Mark if we parsing out a EndOfStatement.
-    AtStartOfStatement = CurTok.front().getKind() == AsmToken::EndOfStatement;
+    JustConsumedEOL = CurTok.front().getKind() == AsmToken::EndOfStatement;
     CurTok.erase(CurTok.begin());
     // LexToken may generate multiple tokens via UnLex but will always return
     // the first one. Place returned value at head of CurTok vector.
@@ -103,13 +104,12 @@ public:
   }
 
   void UnLex(AsmToken const &Token) {
-    AtStartOfStatement = false;
     CurTok.insert(CurTok.begin(), Token);
   }
 
-  bool isAtStartOfStatement() { return AtStartOfStatement; }
+  bool justConsumedEOL() { return JustConsumedEOL; }
 
-  StringRef LexUntilEndOfStatement();
+  LLVM_ABI StringRef LexUntilEndOfStatement();
 
   /// Get the current source location.
   SMLoc getLoc() const { return SMLoc::getFromPointer(TokStart); }
@@ -131,7 +131,8 @@ public:
   }
 
   /// Look ahead an arbitrary number of tokens.
-  size_t peekTokens(MutableArrayRef<AsmToken> Buf, bool ShouldSkipSpace = true);
+  LLVM_ABI size_t peekTokens(MutableArrayRef<AsmToken> Buf,
+                             bool ShouldSkipSpace = true);
 
   /// Get the current error location
   SMLoc getErrLoc() { return ErrLoc; }
@@ -190,8 +191,8 @@ public:
   /// literals.
   void setLexHLASMStrings(bool V) { LexHLASMStrings = V; }
 
-  void setBuffer(StringRef Buf, const char *ptr = nullptr,
-                 bool EndStatementAtEOF = true);
+  LLVM_ABI void setBuffer(StringRef Buf, const char *ptr = nullptr,
+                          bool EndStatementAtEOF = true);
 
   const MCAsmInfo &getMAI() const { return MAI; }
 
@@ -213,8 +214,6 @@ private:
 
   StringRef LexUntilEndOfLine();
 };
-
-using MCAsmLexer = AsmLexer;
 
 } // end namespace llvm
 

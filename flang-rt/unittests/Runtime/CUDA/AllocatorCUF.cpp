@@ -35,7 +35,8 @@ TEST(AllocatableCUFTest, SimpleDeviceAllocate) {
   EXPECT_FALSE(a->HasAddendum());
   RTNAME(AllocatableSetBounds)(*a, 0, 1, 10);
   RTNAME(AllocatableAllocate)
-  (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  (*a, /*asyncObject=*/nullptr, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
+      __LINE__);
   EXPECT_TRUE(a->IsAllocated());
   RTNAME(AllocatableDeallocate)
   (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
@@ -53,7 +54,8 @@ TEST(AllocatableCUFTest, SimplePinnedAllocate) {
   EXPECT_FALSE(a->HasAddendum());
   RTNAME(AllocatableSetBounds)(*a, 0, 1, 10);
   RTNAME(AllocatableAllocate)
-  (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  (*a, /*asyncObject=*/nullptr, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
+      __LINE__);
   EXPECT_TRUE(a->IsAllocated());
   RTNAME(AllocatableDeallocate)
   (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
@@ -69,4 +71,14 @@ TEST(AllocatableCUFTest, DescriptorAllocationTest) {
   desc = RTNAME(CUFAllocDescriptor)(a->SizeInBytes());
   EXPECT_TRUE(desc != nullptr);
   RTNAME(CUFFreeDescriptor)(desc);
+}
+
+TEST(AllocatableCUFTest, CUFSetAllocatorIndex) {
+  using Fortran::common::TypeCategory;
+  RTNAME(CUFRegisterAllocator)();
+  // REAL(4), DEVICE, ALLOCATABLE :: a(:)
+  auto a{createAllocatable(TypeCategory::Real, 4)};
+  EXPECT_EQ((int)kDefaultAllocator, a->GetAllocIdx());
+  RTNAME(CUFSetAllocatorIndex)(*a, kDeviceAllocatorPos, __FILE__, __LINE__);
+  EXPECT_EQ((int)kDeviceAllocatorPos, a->GetAllocIdx());
 }

@@ -13,7 +13,7 @@
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
-#include "flang/Optimizer/CodeGen/CGOps.h"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -107,9 +107,10 @@ public:
       shapeOpers.push_back(extVal);
     }
     auto xbox = rewriter.create<fir::cg::XEmboxOp>(
-        loc, embox.getType(), embox.getMemref(), shapeOpers, std::nullopt,
-        std::nullopt, std::nullopt, std::nullopt, embox.getTypeparams(),
-        embox.getSourceBox(), embox.getAllocatorIdxAttr());
+        loc, embox.getType(), embox.getMemref(), shapeOpers, mlir::ValueRange{},
+        mlir::ValueRange{}, mlir::ValueRange{}, mlir::ValueRange{},
+        embox.getTypeparams(), embox.getSourceBox(),
+        embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();

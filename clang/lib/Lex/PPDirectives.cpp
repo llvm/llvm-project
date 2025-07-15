@@ -148,8 +148,7 @@ static bool isFeatureTestMacro(StringRef MacroName) {
       "__STDCPP_WANT_MATH_SPEC_FUNCS__",
       "__STDC_FORMAT_MACROS",
   };
-  return std::binary_search(std::begin(ReservedMacro), std::end(ReservedMacro),
-                            MacroName);
+  return llvm::binary_search(ReservedMacro, MacroName);
 }
 
 static bool isLanguageDefinedBuiltin(const SourceManager &SourceMgr,
@@ -184,9 +183,9 @@ static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
     AttributeCommonInfo::AttrArgsInfo AttrArgsInfo =
         AttributeCommonInfo::getCXX11AttrArgsInfo(II);
     if (AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Required)
-      return PP.isNextPPTokenLParen();
+      return PP.isNextPPTokenOneOf(tok::l_paren);
 
-    return !PP.isNextPPTokenLParen() ||
+    return !PP.isNextPPTokenOneOf(tok::l_paren) ||
            AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Optional;
   }
   return false;
@@ -253,8 +252,8 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
     .Cases("assert.h", "complex.h", "ctype.h", "errno.h", "fenv.h", true)
     .Cases("float.h", "inttypes.h", "iso646.h", "limits.h", "locale.h", true)
     .Cases("math.h", "setjmp.h", "signal.h", "stdalign.h", "stdarg.h", true)
-    .Cases("stdatomic.h", "stdbool.h", "stdckdint.h", "stddef.h", true)
-    .Cases("stdint.h", "stdio.h", "stdlib.h", "stdnoreturn.h", true)
+    .Cases("stdatomic.h", "stdbool.h", "stdckdint.h", "stdcountof.h", true)
+    .Cases("stddef.h", "stdint.h", "stdio.h", "stdlib.h", "stdnoreturn.h", true)
     .Cases("string.h", "tgmath.h", "threads.h", "time.h", "uchar.h", true)
     .Cases("wchar.h", "wctype.h", true)
 
@@ -371,8 +370,13 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   SourceLocation MacroNameLoc = MacroNameTok.getLocation();
   if (ShadowFlag)
     *ShadowFlag = false;
+  // Macro names with reserved identifiers are accepted if built-in or passed
+  // through the command line (the later may be present if -dD was used to
+  // generate the preprocessed file).
+  // NB: isInPredefinedFile() is relatively expensive, so keep it at the end
+  // of the condition.
   if (!SourceMgr.isInSystemHeader(MacroNameLoc) &&
-      (SourceMgr.getBufferName(MacroNameLoc) != "<built-in>")) {
+      !SourceMgr.isInPredefinedFile(MacroNameLoc)) {
     MacroDiag D = MD_NoWarn;
     if (isDefineUndef == MU_Define) {
       D = shouldWarnOnMacroDef(*this, II);
@@ -1154,7 +1158,7 @@ Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
     }
   }
 
-  for (const auto &Entry : PPOpts->EmbedEntries) {
+  for (const auto &Entry : PPOpts.EmbedEntries) {
     LookupPath.clear();
     SeparateComponents(LookupPath, Entry, Filename, false);
     llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
@@ -1702,8 +1706,7 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
-    if (!SourceMgr.isWrittenInBuiltinFile(DigitTok.getLocation()) &&
-        !SourceMgr.isWrittenInCommandLineFile(DigitTok.getLocation()))
+    if (!SourceMgr.isInPredefinedFile(DigitTok.getLocation()))
       Diag(StrTok, diag::ext_pp_gnu_line_directive);
 
     // Exiting to an empty string means pop to the including file, so leave
@@ -1916,15 +1919,15 @@ void Preprocessor::EnterAnnotationToken(SourceRange Range,
 
 /// Produce a diagnostic informing the user that a #include or similar
 /// was implicitly treated as a module import.
-static void diagnoseAutoModuleImport(
-    Preprocessor &PP, SourceLocation HashLoc, Token &IncludeTok,
-    ArrayRef<std::pair<IdentifierInfo *, SourceLocation>> Path,
-    SourceLocation PathEnd) {
+static void diagnoseAutoModuleImport(Preprocessor &PP, SourceLocation HashLoc,
+                                     Token &IncludeTok,
+                                     ArrayRef<IdentifierLoc> Path,
+                                     SourceLocation PathEnd) {
   SmallString<128> PathString;
   for (size_t I = 0, N = Path.size(); I != N; ++I) {
     if (I)
       PathString += '.';
-    PathString += Path[I].first->getName();
+    PathString += Path[I].getIdentifierInfo()->getName();
   }
 
   int IncludeKind = 0;
@@ -2073,6 +2076,15 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     return;
 
   if (FilenameTok.isNot(tok::header_name)) {
+    if (FilenameTok.is(tok::identifier) && PPOpts.SingleFileParseMode) {
+      // If we saw #include IDENTIFIER and lexing didn't turn in into a header
+      // name, it was undefined. In 'single-file-parse' mode, just skip the
+      // directive without emitting diagnostics - the identifier might be
+      // normally defined in previously-skipped include directive.
+      DiscardUntilEndOfDirective();
+      return;
+    }
+
     Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
     if (FilenameTok.isNot(tok::eod))
       DiscardUntilEndOfDirective();
@@ -2264,12 +2276,12 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   SourceLocation StartLoc = IsImportDecl ? IncludeTok.getLocation() : HashLoc;
 
   // Complain about attempts to #include files in an audit pragma.
-  if (PragmaARCCFCodeAuditedInfo.second.isValid()) {
+  if (PragmaARCCFCodeAuditedInfo.getLoc().isValid()) {
     Diag(StartLoc, diag::err_pp_include_in_arc_cf_code_audited) << IsImportDecl;
-    Diag(PragmaARCCFCodeAuditedInfo.second, diag::note_pragma_entered_here);
+    Diag(PragmaARCCFCodeAuditedInfo.getLoc(), diag::note_pragma_entered_here);
 
     // Immediately leave the pragma.
-    PragmaARCCFCodeAuditedInfo = {nullptr, SourceLocation()};
+    PragmaARCCFCodeAuditedInfo = IdentifierLoc();
   }
 
   // Complain about attempts to #include files in an assume-nonnull pragma.
@@ -2341,7 +2353,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
   enum { Enter, Import, Skip, IncludeLimitReached } Action = Enter;
 
-  if (PPOpts->SingleFileParseMode)
+  if (PPOpts.SingleFileParseMode)
     Action = IncludeLimitReached;
 
   // If we've reached the max allowed include depth, it is usually due to an
@@ -2394,10 +2406,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     // Compute the module access path corresponding to this module.
     // FIXME: Should we have a second loadModule() overload to avoid this
     // extra lookup step?
-    SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+    SmallVector<IdentifierLoc, 2> Path;
     for (Module *Mod = ModuleToImport; Mod; Mod = Mod->Parent)
-      Path.push_back(std::make_pair(getIdentifierInfo(Mod->Name),
-                                    FilenameTok.getLocation()));
+      Path.emplace_back(FilenameTok.getLocation(),
+                        getIdentifierInfo(Mod->Name));
     std::reverse(Path.begin(), Path.end());
 
     // Warn that we're replacing the include/import with a module import.
@@ -3292,23 +3304,6 @@ void Preprocessor::HandleDefineDirective(
   // If the callbacks want to know, tell them about the macro definition.
   if (Callbacks)
     Callbacks->MacroDefined(MacroNameTok, MD);
-
-  // If we're in MS compatibility mode and the macro being defined is the
-  // assert macro, implicitly add a macro definition for static_assert to work
-  // around their broken assert.h header file in C. Only do so if there isn't
-  // already a static_assert macro defined.
-  if (!getLangOpts().CPlusPlus && getLangOpts().MSVCCompat &&
-      MacroNameTok.getIdentifierInfo()->isStr("assert") &&
-      !isMacroDefined("static_assert")) {
-    MacroInfo *MI = AllocateMacroInfo(SourceLocation());
-
-    Token Tok;
-    Tok.startToken();
-    Tok.setKind(tok::kw__Static_assert);
-    Tok.setIdentifierInfo(getIdentifierInfo("_Static_assert"));
-    MI->setTokens({Tok}, BP);
-    (void)appendDefMacroDirective(getIdentifierInfo("static_assert"), MI);
-  }
 }
 
 /// HandleUndefDirective - Implements \#undef.
@@ -3420,11 +3415,11 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
       Callbacks->Ifdef(DirectiveTok.getLocation(), MacroNameTok, MD);
   }
 
-  bool RetainExcludedCB = PPOpts->RetainExcludedConditionalBlocks &&
+  bool RetainExcludedCB = PPOpts.RetainExcludedConditionalBlocks &&
     getSourceManager().isInMainFile(DirectiveTok.getLocation());
 
   // Should we include the stuff contained by this directive?
-  if (PPOpts->SingleFileParseMode && !MI) {
+  if (PPOpts.SingleFileParseMode && !MI) {
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(DirectiveTok.getLocation(),
@@ -3475,11 +3470,11 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
         IfToken.getLocation(), DER.ExprRange,
         (ConditionalTrue ? PPCallbacks::CVK_True : PPCallbacks::CVK_False));
 
-  bool RetainExcludedCB = PPOpts->RetainExcludedConditionalBlocks &&
+  bool RetainExcludedCB = PPOpts.RetainExcludedConditionalBlocks &&
     getSourceManager().isInMainFile(IfToken.getLocation());
 
   // Should we include the stuff contained by this directive?
-  if (PPOpts->SingleFileParseMode && DER.IncludedUndefinedIds) {
+  if (PPOpts.SingleFileParseMode && DER.IncludedUndefinedIds) {
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(IfToken.getLocation(), /*wasskip*/false,
@@ -3546,10 +3541,10 @@ void Preprocessor::HandleElseDirective(Token &Result, const Token &HashToken) {
   if (Callbacks)
     Callbacks->Else(Result.getLocation(), CI.IfLoc);
 
-  bool RetainExcludedCB = PPOpts->RetainExcludedConditionalBlocks &&
+  bool RetainExcludedCB = PPOpts.RetainExcludedConditionalBlocks &&
     getSourceManager().isInMainFile(Result.getLocation());
 
-  if ((PPOpts->SingleFileParseMode && !CI.FoundNonSkip) || RetainExcludedCB) {
+  if ((PPOpts.SingleFileParseMode && !CI.FoundNonSkip) || RetainExcludedCB) {
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(CI.IfLoc, /*wasskip*/false,
@@ -3626,10 +3621,10 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
     }
   }
 
-  bool RetainExcludedCB = PPOpts->RetainExcludedConditionalBlocks &&
+  bool RetainExcludedCB = PPOpts.RetainExcludedConditionalBlocks &&
     getSourceManager().isInMainFile(ElifToken.getLocation());
 
-  if ((PPOpts->SingleFileParseMode && !CI.FoundNonSkip) || RetainExcludedCB) {
+  if ((PPOpts.SingleFileParseMode && !CI.FoundNonSkip) || RetainExcludedCB) {
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(ElifToken.getLocation(), /*wasskip*/false,
@@ -3646,7 +3641,6 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
 std::optional<LexEmbedParametersResult>
 Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
   LexEmbedParametersResult Result{};
-  SmallVector<Token, 2> ParameterTokens;
   tok::TokenKind EndTokenKind = ForHasEmbed ? tok::r_paren : tok::eod;
 
   auto DiagMismatchedBracesAndSkipToEOD =
@@ -3888,7 +3882,9 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
           return std::nullopt;
       }
       if (!ForHasEmbed) {
-        Diag(CurTok, diag::err_pp_unknown_parameter) << 1 << Parameter;
+        Diag(ParamStartLoc, diag::err_pp_unknown_parameter) << 1 << Parameter;
+        if (CurTok.isNot(tok::eod))
+          DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
     }
@@ -3898,7 +3894,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
 
 void Preprocessor::HandleEmbedDirectiveImpl(
     SourceLocation HashLoc, const LexEmbedParametersResult &Params,
-    StringRef BinaryContents) {
+    StringRef BinaryContents, StringRef FileName) {
   if (BinaryContents.empty()) {
     // If we have no binary contents, the only thing we need to emit are the
     // if_empty tokens, if any.
@@ -3929,6 +3925,7 @@ void Preprocessor::HandleEmbedDirectiveImpl(
 
   EmbedAnnotationData *Data = new (BP) EmbedAnnotationData;
   Data->BinaryData = BinaryContents;
+  Data->FileName = FileName;
 
   Toks[CurIdx].startToken();
   Toks[CurIdx].setKind(tok::annot_embed);
@@ -4001,6 +3998,12 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
     Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
     return;
   }
+
+  if (MaybeFileRef->isDeviceFile()) {
+    Diag(FilenameTok, diag::err_pp_embed_device_file) << Filename;
+    return;
+  }
+
   std::optional<llvm::MemoryBufferRef> MaybeFile =
       getSourceManager().getMemoryBufferForFileOrNone(*MaybeFileRef);
   if (!MaybeFile) {
@@ -4032,5 +4035,16 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   if (Callbacks)
     Callbacks->EmbedDirective(HashLoc, Filename, isAngled, MaybeFileRef,
                               *Params);
-  HandleEmbedDirectiveImpl(HashLoc, *Params, BinaryContents);
+  // getSpelling() may return a buffer from the token itself or it may use the
+  // SmallString buffer we provided. getSpelling() may also return a string that
+  // is actually longer than FilenameTok.getLength(), so we first pass a
+  // locally created buffer to getSpelling() to get the string of real length
+  // and then we allocate a long living buffer because the buffer we used
+  // previously will only live till the end of this function and we need
+  // filename info to live longer.
+  void *Mem = BP.Allocate(OriginalFilename.size(), alignof(char *));
+  memcpy(Mem, OriginalFilename.data(), OriginalFilename.size());
+  StringRef FilenameToGo =
+      StringRef(static_cast<char *>(Mem), OriginalFilename.size());
+  HandleEmbedDirectiveImpl(HashLoc, *Params, BinaryContents, FilenameToGo);
 }

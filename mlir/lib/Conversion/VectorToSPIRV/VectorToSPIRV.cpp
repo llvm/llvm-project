@@ -287,16 +287,16 @@ struct VectorInsertOpConvert final
   LogicalResult
   matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (isa<VectorType>(insertOp.getSourceType()))
+    if (isa<VectorType>(insertOp.getValueToStoreType()))
       return rewriter.notifyMatchFailure(insertOp, "unsupported vector source");
     if (!getTypeConverter()->convertType(insertOp.getDestVectorType()))
       return rewriter.notifyMatchFailure(insertOp,
                                          "unsupported dest vector type");
 
     // Special case for inserting scalar values into size-1 vectors.
-    if (insertOp.getSourceType().isIntOrFloat() &&
+    if (insertOp.getValueToStoreType().isIntOrFloat() &&
         insertOp.getDestVectorType().getNumElements() == 1) {
-      rewriter.replaceOp(insertOp, adaptor.getSource());
+      rewriter.replaceOp(insertOp, adaptor.getValueToStore());
       return success();
     }
 
@@ -307,14 +307,15 @@ struct VectorInsertOpConvert final
             insertOp,
             "Static use of poison index handled elsewhere (folded to poison)");
       rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
-          insertOp, adaptor.getSource(), adaptor.getDest(), id.value());
+          insertOp, adaptor.getValueToStore(), adaptor.getDest(), id.value());
     } else {
       Value sanitizedIndex = sanitizeDynamicIndex(
           rewriter, insertOp.getLoc(), adaptor.getDynamicPosition()[0],
           vector::InsertOp::kPoisonIndex,
           insertOp.getDestVectorType().getNumElements());
       rewriter.replaceOpWithNewOp<spirv::VectorInsertDynamicOp>(
-          insertOp, insertOp.getDest(), adaptor.getSource(), sanitizedIndex);
+          insertOp, insertOp.getDest(), adaptor.getValueToStore(),
+          sanitizedIndex);
     }
     return success();
   }
@@ -1021,6 +1022,51 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
   }
 };
 
+struct VectorToElementOpConvert final
+    : OpConversionPattern<vector::ToElementsOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ToElementsOp toElementsOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    SmallVector<Value> results(toElementsOp->getNumResults());
+    Location loc = toElementsOp.getLoc();
+
+    // Input vectors of size 1 are converted to scalars by the type converter.
+    // We cannot use `spirv::CompositeExtractOp` directly in this case.
+    // For a scalar source, the result is just the scalar itself.
+    if (isa<spirv::ScalarType>(adaptor.getSource().getType())) {
+      results[0] = adaptor.getSource();
+      rewriter.replaceOp(toElementsOp, results);
+      return success();
+    }
+
+    Type srcElementType = toElementsOp.getElements().getType().front();
+    Type elementType = getTypeConverter()->convertType(srcElementType);
+    if (!elementType)
+      return rewriter.notifyMatchFailure(
+          toElementsOp,
+          llvm::formatv("failed to convert element type '{0}' to SPIR-V",
+                        srcElementType));
+
+    for (auto [idx, element] : llvm::enumerate(toElementsOp.getElements())) {
+      // Create an CompositeExtract operation only for results that are not
+      // dead.
+      if (element.use_empty())
+        continue;
+
+      Value result = rewriter.create<spirv::CompositeExtractOp>(
+          loc, elementType, adaptor.getSource(),
+          rewriter.getI32ArrayAttr({static_cast<int32_t>(idx)}));
+      results[idx] = result;
+    }
+
+    rewriter.replaceOp(toElementsOp, results);
+    return success();
+  }
+};
+
 } // namespace
 #define CL_INT_MAX_MIN_OPS                                                     \
   spirv::CLUMaxOp, spirv::CLUMinOp, spirv::CLSMaxOp, spirv::CLSMinOp
@@ -1038,8 +1084,8 @@ void mlir::populateVectorToSPIRVPatterns(
       VectorExtractElementOpConvert, VectorExtractOpConvert,
       VectorExtractStridedSliceOpConvert, VectorFmaOpConvert<spirv::GLFmaOp>,
       VectorFmaOpConvert<spirv::CLFmaOp>, VectorFromElementsOpConvert,
-      VectorInsertElementOpConvert, VectorInsertOpConvert,
-      VectorReductionPattern<GL_INT_MAX_MIN_OPS>,
+      VectorToElementOpConvert, VectorInsertElementOpConvert,
+      VectorInsertOpConvert, VectorReductionPattern<GL_INT_MAX_MIN_OPS>,
       VectorReductionPattern<CL_INT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<CL_FLOAT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>, VectorShapeCast,

@@ -49,6 +49,11 @@ void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
 
 void genFree(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value ptr);
 
+mlir::Value genFseek(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value unit, mlir::Value offset, mlir::Value whence);
+mlir::Value genFtell(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value unit);
+
 mlir::Value genGetUID(fir::FirOpBuilder &, mlir::Location);
 mlir::Value genGetGID(fir::FirOpBuilder &, mlir::Location);
 

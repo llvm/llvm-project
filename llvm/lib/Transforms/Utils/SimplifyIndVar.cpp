@@ -288,6 +288,7 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
     LLVM_DEBUG(dbgs() << "INDVARS: Turn to unsigned comparison: " << *ICmp
                       << '\n');
     ICmp->setPredicate(ICmpInst::getUnsignedPredicate(OriginalPred));
+    ICmp->setSameSign();
   } else
     return;
 
@@ -350,6 +351,7 @@ void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
   auto *T = Rem->getType();
   auto *N = Rem->getOperand(0), *D = Rem->getOperand(1);
   ICmpInst *ICmp = new ICmpInst(Rem->getIterator(), ICmpInst::ICMP_EQ, N, D);
+  ICmp->setDebugLoc(Rem->getDebugLoc());
   SelectInst *Sel =
       SelectInst::Create(ICmp, ConstantInt::get(T, 0), N, "iv.rem", Rem->getIterator());
   Rem->replaceAllUsesWith(Sel);
@@ -1603,13 +1605,13 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
   //
   //  - The signedness of the IV extension and comparison match
   //
-  //  - The narrow IV is always positive (and thus its sign extension is equal
-  //    to its zero extension).  For instance, let's say we're zero extending
-  //    %narrow for the following use
+  //  - The narrow IV is always non-negative (and thus its sign extension is
+  //    equal to its zero extension).  For instance, let's say we're zero
+  //    extending %narrow for the following use
   //
   //      icmp slt i32 %narrow, %val   ... (A)
   //
-  //    and %narrow is always positive.  Then
+  //    and %narrow is always non-negative.  Then
   //
   //      (A) == icmp slt i32 sext(%narrow), sext(%val)
   //          == icmp slt i32 zext(%narrow), sext(%val)
@@ -1628,6 +1630,12 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
 
   // Widen the other operand of the compare, if necessary.
   if (CastWidth < IVWidth) {
+    // If the narrow IV is always non-negative and the other operand is sext,
+    // widen using sext so we can combine them. This works for all non-signed
+    // comparison predicates.
+    if (DU.NeverNegative && isa<SExtInst>(Op) && !Cmp->isSigned())
+      CmpPreferredSign = true;
+
     Value *ExtOp = createExtendInst(Op, WideType, CmpPreferredSign, Cmp);
     DU.NarrowUse->replaceUsesOfWith(Op, ExtOp);
   }
@@ -1742,6 +1750,9 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     const SCEV *RHS = SE->getSCEV(OBO->getOperand(1));
     // TODO: Support case for NarrowDef = NarrowUse->getOperand(1).
     if (NarrowUse->getOperand(0) != NarrowDef)
+      return false;
+    // We cannot use a different extend kind for the same operand.
+    if (NarrowUse->getOperand(1) == NarrowDef)
       return false;
     if (!SE->isKnownNegative(RHS))
       return false;
@@ -2081,7 +2092,7 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
     // if the cast node is an inserted instruction without any user, we should
     // remove it to make sure the pass don't touch the function as we can not
     // wide the phi.
-    if (ExpandInst->hasNUses(0) &&
+    if (ExpandInst->use_empty() &&
         Rewriter.isInsertedInstruction(cast<Instruction>(ExpandInst)))
       DeadInsts.emplace_back(ExpandInst);
     return nullptr;
