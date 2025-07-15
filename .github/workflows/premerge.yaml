@@ -76,7 +76,7 @@ jobs:
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: llvm-premerge-windows-runners
+    runs-on: llvm-premerge-windows-2022-runners
     defaults:
       run:
         shell: bash
