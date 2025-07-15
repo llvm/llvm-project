@@ -187,7 +187,7 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   unsigned fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
                          unsigned Capacity = 0);
 
-  bool isCoveredActive(VRegMaskPair VMP, const RegisterSet Active);
+  bool isCoveredByRegSet(VRegMaskPair VMP, const RegisterSet Active);
 
 public:
   AMDGPUSSASpiller(LiveIntervals &LIS, MachineLoopInfo &LI,
@@ -310,7 +310,8 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
           auto SrcSpill = Info.SpillSet;
           dumpRegSet(SrcActive);
           dumpRegSet(SrcSpill);
-          assert((SrcActive.contains(VMP) || SrcSpill.contains(VMP)) &&
+          assert((isCoveredByRegSet(VMP, SrcActive) ||
+                  isCoveredByRegSet(VMP, SrcSpill)) &&
                  "PHI node input value is neither live out predecessor no "
                  "spilled!");
           if (SrcSpill.contains(VMP)) {
@@ -324,7 +325,7 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
         continue;
       }
 
-      if (!isCoveredActive(VMP, Active)) {
+      if (!isCoveredByRegSet(VMP, Active)) {
         // Not in reg, hence, should have been spilled before
         // FIXME: This is ODD as the Spilled set is a union among all
         // predecessors and should already contain all spilled before!
@@ -429,7 +430,7 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
           MachineBasicBlock *ValueSrc = B.getMBB();
           if (ValueSrc->getNumber() == MBB.getNumber()) {
             VRegMaskPair VMP(U, TRI, MRI);
-            if (!isCoveredActive(VMP, Active)) {
+            if (!isCoveredByRegSet(VMP, Active)) {
               Register NewVReg = reloadAtEnd(MBB, VMP);
               rewriteUses(VMP.getVReg(), NewVReg);
             }
@@ -913,7 +914,7 @@ unsigned AMDGPUSSASpiller::fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
   return Size;
 }
 
-bool AMDGPUSSASpiller::isCoveredActive(VRegMaskPair VMP,
+bool AMDGPUSSASpiller::isCoveredByRegSet(VRegMaskPair VMP,
                                        const RegisterSet Active) {
   // printVRegMaskPair(VMP);
   // dumpRegSet(Active);
