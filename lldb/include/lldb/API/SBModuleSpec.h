@@ -71,6 +71,7 @@ public:
 
   void SetTriple(const char *triple);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   const uint8_t *GetUUIDBytes();
 
   size_t GetUUIDLength();

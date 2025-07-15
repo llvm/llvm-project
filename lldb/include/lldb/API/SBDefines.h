@@ -39,6 +39,13 @@
 #define LLDB_DEPRECATED_FIXME(MSG, FIX)
 #endif
 
+#if defined(LLDB_RPC_GEN)
+#define LLDB_RPC_POINTER_PLUS_LEN                                              \
+  __attribute__((annotate("lldb-rpc-gen pointer plus len")))
+#else
+#define LLDB_RPC_POINTER_PLUS_LEN
+#endif
+
 // Forward Declarations
 namespace lldb {
 

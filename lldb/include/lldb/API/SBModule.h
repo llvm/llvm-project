@@ -274,6 +274,7 @@ public:
   ///     This function always returns the number of version numbers
   ///     that this object file has regardless of the number of
   ///     version numbers that were copied into \a versions.
+  LLDB_RPC_POINTER_PLUS_LEN
   uint32_t GetVersion(uint32_t *versions, uint32_t num_versions);
 
   /// Get accessor for the symbol file specification.
