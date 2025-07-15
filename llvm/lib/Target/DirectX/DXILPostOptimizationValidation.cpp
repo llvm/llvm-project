@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -209,6 +210,123 @@ getRootSignature(RootSignatureBindingInfo &RSBI,
   return RootSigDesc;
 }
 
+static void
+reportOverlappingRegisters(Module &M,
+                           llvm::hlsl::rootsig::OverlappingRanges Overlap) {
+  const llvm::hlsl::rootsig::RangeInfo *Info = Overlap.A;
+  const llvm::hlsl::rootsig::RangeInfo *OInfo = Overlap.B;
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  auto ResourceClassToString =
+      [](llvm::dxil::ResourceClass Class) -> const char * {
+    switch (Class) {
+
+    case ResourceClass::SRV:
+      return "SRV";
+    case ResourceClass::UAV:
+      return "UAV";
+    case ResourceClass::CBuffer:
+      return "CBuffer";
+    case ResourceClass::Sampler:
+      return "Sampler";
+      break;
+    }
+  };
+  OS << "register " << ResourceClassToString(Info->Class)
+     << " (space=" << Info->Space << ", register=" << Info->LowerBound << ")"
+     << " is overlapping with"
+     << " register " << ResourceClassToString(OInfo->Class)
+     << " (space=" << OInfo->Space << ", register=" << OInfo->LowerBound << ")"
+     << ", verify your root signature definition";
+
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
+static bool reportOverlappingRanges(Module &M,
+                                    const mcdxbc::RootSignatureDesc &RSD) {
+  using namespace llvm::hlsl::rootsig;
+
+  llvm::SmallVector<RangeInfo> Infos;
+  // Helper to map DescriptorRangeType to ResourceClass
+  auto RangeToResourceClass = [](uint32_t RangeType) -> ResourceClass {
+    using namespace dxbc;
+    switch (static_cast<DescriptorRangeType>(RangeType)) {
+    case DescriptorRangeType::SRV:
+      return ResourceClass::SRV;
+    case DescriptorRangeType::UAV:
+      return ResourceClass::UAV;
+    case DescriptorRangeType::CBV:
+      return ResourceClass::CBuffer;
+    case DescriptorRangeType::Sampler:
+      return ResourceClass::Sampler;
+    }
+  };
+
+  // Helper to map RootParameterType to ResourceClass
+  auto ParameterToResourceClass = [](uint32_t Type) -> ResourceClass {
+    using namespace dxbc;
+    switch (static_cast<RootParameterType>(Type)) {
+    case RootParameterType::SRV:
+      return ResourceClass::SRV;
+    case RootParameterType::UAV:
+      return ResourceClass::UAV;
+    case RootParameterType::CBV:
+      return ResourceClass::CBuffer;
+    default:
+      llvm_unreachable("Unknown RootParameterType");
+    }
+  };
+
+  for (size_t I = 0; I < RSD.ParametersContainer.size(); I++) {
+    const auto &[Type, Loc] =
+        RSD.ParametersContainer.getTypeAndLocForParameter(I);
+    const auto &Header = RSD.ParametersContainer.getHeader(I);
+    switch (Type) {
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+    case llvm::to_underlying(dxbc::RootParameterType::CBV): {
+      dxbc::RTS0::v2::RootDescriptor Desc =
+          RSD.ParametersContainer.getRootDescriptor(Loc);
+
+      RangeInfo Info;
+      Info.Space = Desc.RegisterSpace;
+      Info.LowerBound = Desc.ShaderRegister;
+      Info.UpperBound = Info.LowerBound;
+      Info.Class = ParameterToResourceClass(Type);
+      Info.Visibility = (dxbc::ShaderVisibility)Header.ShaderVisibility;
+
+      Infos.push_back(Info);
+      break;
+    }
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+      const mcdxbc::DescriptorTable &Table =
+          RSD.ParametersContainer.getDescriptorTable(Loc);
+
+      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+        RangeInfo Info;
+        Info.Space = Range.RegisterSpace;
+        Info.LowerBound = Range.BaseShaderRegister;
+        Info.UpperBound = Info.LowerBound + ((Range.NumDescriptors == ~0U)
+                                                 ? Range.NumDescriptors
+                                                 : Range.NumDescriptors - 1);
+        Info.Visibility = (dxbc::ShaderVisibility)Header.ShaderVisibility;
+        Info.Class = RangeToResourceClass(Range.RangeType);
+
+        Infos.push_back(Info);
+      }
+      break;
+    }
+    }
+  }
+
+  llvm::SmallVector<OverlappingRanges> Overlaps =
+      llvm::hlsl::rootsig::findOverlappingRanges(Infos);
+  for (OverlappingRanges Overlap : Overlaps)
+    reportOverlappingRegisters(M, Overlap);
+
+  return Overlaps.size() > 0;
+}
+
 static void reportInvalidRegistersBinding(
     Module &M,
     const llvm::ArrayRef<llvm::dxil::ResourceInfo::ResourceBinding> &Bindings,
@@ -254,21 +372,25 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
   if (auto RSD = getRootSignature(RSBI, MMI)) {
 
-    RootSignatureBindingValidation Validation =
-        initRSBindingValidation(*RSD, tripleToVisibility(MMI.ShaderProfile));
+    if (!reportOverlappingRanges(M, *RSD)) {
+      // Those checks require that no range is overlapping to provide correct
+      // diagnostic.
+      RootSignatureBindingValidation Validation =
+          initRSBindingValidation(*RSD, tripleToVisibility(MMI.ShaderProfile));
 
-    reportInvalidRegistersBinding(
-        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::CBV),
-        DRM.cbuffers());
-    reportInvalidRegistersBinding(
-        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::UAV),
-        DRM.uavs());
-    reportInvalidRegistersBinding(
-        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::Sampler),
-        DRM.samplers());
-    reportInvalidRegistersBinding(
-        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::SRV),
-        DRM.srvs());
+      reportInvalidRegistersBinding(
+          M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::CBV),
+          DRM.cbuffers());
+      reportInvalidRegistersBinding(
+          M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::UAV),
+          DRM.uavs());
+      reportInvalidRegistersBinding(
+          M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::Sampler),
+          DRM.samplers());
+      reportInvalidRegistersBinding(
+          M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::SRV),
+          DRM.srvs());
+    }
   }
 }
 } // namespace
