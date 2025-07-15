@@ -689,10 +689,16 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
   if (!isShiftedMask_32(C1) || isInt<12>(C1))
     return false;
 
+  // INSBI will clobber the input register in N0. Bail out if we need a copy to
+  // preserve this value.
+  SDValue N0 = Node->getOperand(0);
+  if (!N0.hasOneUse())
+    return false;
+
   // If C1 is a shifted mask (but can't be formed as an ORI),
   // use a bitfield insert of -1.
   // Transform (or x, C1)
-  //        -> (qc.insbi x, width, shift)
+  //        -> (qc.insbi x, -1, width, shift)
   const unsigned Leading = llvm::countl_zero((uint32_t)C1);
   const unsigned Trailing = llvm::countr_zero((uint32_t)C1);
   const unsigned Width = 32 - Leading - Trailing;
@@ -705,7 +711,7 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
-  SDValue Ops[] = {CurDAG->getSignedTargetConstant(-1, DL, VT),
+  SDValue Ops[] = {N0, CurDAG->getSignedTargetConstant(-1, DL, VT),
                    CurDAG->getTargetConstant(Width, DL, VT),
                    CurDAG->getTargetConstant(Trailing, DL, VT)};
   SDNode *BitIns = CurDAG->getMachineNode(RISCV::QC_INSBI, DL, VT, Ops);
