@@ -708,17 +708,15 @@ static Instruction *shrinkSplatShuffle(TruncInst &Trunc,
   auto *Shuf = dyn_cast<ShuffleVectorInst>(Trunc.getOperand(0));
   if (Shuf && Shuf->hasOneUse() && match(Shuf->getOperand(1), m_Undef()) &&
       all_equal(Shuf->getShuffleMask()) &&
-      Shuf->getType()->getScalarType() ==
-          Shuf->getOperand(0)->getType()->getScalarType()) {
+      ElementCount::isKnownGE(Shuf->getType()->getElementCount(),
+                              cast<VectorType>(Shuf->getOperand(0)->getType())
+                                  ->getElementCount())) {
     // trunc (shuf X, Undef, SplatMask) --> shuf (trunc X), Poison, SplatMask
     // trunc (shuf X, Poison, SplatMask) --> shuf (trunc X), Poison, SplatMask
-    auto *const NewTruncTy = VectorType::get(
-        Trunc.getType()->getScalarType(),
-        cast<VectorType>(Shuf->getOperand(0)->getType())->getElementCount());
-    Value *NarrowOp =
-        Builder.CreateTrunc(Shuf->getOperand(0), NewTruncTy, Trunc.getName());
-    return new ShuffleVectorInst(NarrowOp, Shuf->getShuffleMask(),
-                                 Shuf->getName());
+    Type *NewTruncTy = Shuf->getOperand(0)->getType()->getWithNewType(
+        Trunc.getType()->getScalarType());
+    Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), NewTruncTy);
+    return new ShuffleVectorInst(NarrowOp, Shuf->getShuffleMask());
   }
 
   return nullptr;
