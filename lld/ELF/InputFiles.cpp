@@ -821,6 +821,27 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       continue;
     }
 
+    // Extract Build Attributes section contents into aarch64BAsubSections.
+    // Input objects may contain both build Build Attributes and GNU
+    // properties. We delay processing Build Attributes until we have finished
+    // reading all sections so that we can check that these are consistent.
+    // FIXME: This really belongs in the following switch, but due to the
+    // combination of enum constant reuse and fallthrough it has to be
+    // here.
+    if (ctx.arg.emachine == EM_AARCH64 && type == SHT_AARCH64_ATTRIBUTES) {
+      ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
+      AArch64AttributeParser attributes;
+      if (Error e = attributes.parse(contents, ELFT::Endianness)) {
+        StringRef name = check(obj.getSectionName(sec, shstrtab));
+        InputSection isec(*this, sec, name);
+        Warn(ctx) << &isec << ": " << std::move(e);
+      } else {
+        aarch64BAsubSections = extractBuildAttributesSubsections(attributes);
+        hasAArch64BuildAttributes = true;
+      }
+      this->sections[i] = &InputSection::discarded;
+      continue;
+    }
     switch (type) {
     case SHT_GROUP: {
       if (!ctx.arg.relocatable)
@@ -854,26 +875,6 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
       break;
-    case SHT_AARCH64_ATTRIBUTES: {
-      // Extract Build Attributes section contents into aarch64BAsubSections.
-      // Input objects may contain both build Build Attributes and GNU
-      // properties. We delay processing Build Attributes until we have finished
-      // reading all sections so that we can check that these are consistent.
-      if (ctx.arg.emachine == EM_AARCH64) {
-        ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
-        AArch64AttributeParser attributes;
-        if (Error e = attributes.parse(contents, ELFT::Endianness)) {
-          StringRef name = check(obj.getSectionName(sec, shstrtab));
-          InputSection isec(*this, sec, name);
-          Warn(ctx) << &isec << ": " << std::move(e);
-        } else {
-          aarch64BAsubSections = extractBuildAttributesSubsections(attributes);
-          hasAArch64BuildAttributes = true;
-        }
-        this->sections[i] = &InputSection::discarded;
-      }
-      break;
-    }
     case SHT_LLVM_LTO:
       // Discard .llvm.lto in a relocatable link that does not use the bitcode.
       // The concatenated output does not properly reflect the linking
