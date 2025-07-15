@@ -708,8 +708,32 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
     Opc = AMDGPU::CLUSTER_LOAD_B128_SADDR;
     break;
   }
+  case AMDGPU::DDS_LOAD_MCAST_B32_LANESHARED: {
+    Opc = AMDGPU::DDS_LOAD_MCAST_B32;
+    break;
+  }
+  case AMDGPU::DDS_LOAD_MCAST_B32_LANESHARED_SADDR: {
+    Opc = AMDGPU::DDS_LOAD_MCAST_B32_SADDR;
+    break;
+  }
+  case AMDGPU::DDS_LOAD_MCAST_B64_LANESHARED: {
+    Opc = AMDGPU::DDS_LOAD_MCAST_B64;
+    break;
+  }
+  case AMDGPU::DDS_LOAD_MCAST_B64_LANESHARED_SADDR: {
+    Opc = AMDGPU::DDS_LOAD_MCAST_B64_SADDR;
+    break;
+  }
+  case AMDGPU::DDS_LOAD_MCAST_B128_LANESHARED: {
+    Opc = AMDGPU::DDS_LOAD_MCAST_B128;
+    break;
+  }
+  case AMDGPU::DDS_LOAD_MCAST_B128_LANESHARED_SADDR: {
+    Opc = AMDGPU::DDS_LOAD_MCAST_B128_SADDR;
+    break;
+  }
   default: {
-    // TODO Implement DS and DDS laneshared pseudos
+    // TODO Implement DS laneshared pseudos
     return;
   }
   }

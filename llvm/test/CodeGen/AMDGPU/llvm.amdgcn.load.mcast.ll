@@ -760,6 +760,401 @@ entry:
   ret void
 }
 
+; DDS
+
+define void @load_mcast_b32_vaddr_distributed(ptr addrspace(11) %addr, ptr addrspace(1) %use, i32 %mask) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b32_vaddr_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_mov_b32 s1, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_mov_b32 s33, s1
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b32 g1[0], v0, off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[1:2], g1[0], off
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr float, ptr addrspace(11) %addr, i32 4
+  call void @llvm.amdgcn.load.mcast.b32.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 10, i32 %mask)
+  %val = load float, ptr addrspace(10) @out, align 4
+  store float %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_b32_vaddr_imm_mask_distributed(ptr addrspace(11) %addr, ptr addrspace(1) %use) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b32_vaddr_imm_mask_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 m0, 7
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b32 g1[0], v0, off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[1:2], g1[0], off
+; CHECK-NEXT:    s_mov_b32 s0, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_mov_b32 s33, s0
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr float, ptr addrspace(11) %addr, i32 4
+  call void @llvm.amdgcn.load.mcast.b32.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 10, i32 7)
+  %val = load float, ptr addrspace(10) @out, align 4
+  store float %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_b32_vaddr_imm_mask_dstgep_distributed(ptr addrspace(11) %addr, ptr addrspace(1) %use) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b32_vaddr_imm_mask_dstgep_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 m0, 7
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b32 g1[6], v0, off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[1:2], g1[6], off
+; CHECK-NEXT:    s_mov_b32 s0, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_mov_b32 s33, s0
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr float, ptr addrspace(11) %addr, i32 4
+  %outgep = getelementptr [8 x float], ptr addrspace(10) @out, i32 0, i32 6
+  call void @llvm.amdgcn.load.mcast.b32.p10.p11(ptr addrspace(10) %outgep, ptr addrspace(11) %gep, i32 10, i32 7)
+  %val = load float, ptr addrspace(10) %outgep, align 4
+  store float %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_b32_vaddr_imm_mask_dst2_distributed(ptr addrspace(11) %addr, ptr addrspace(1) %use) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b32_vaddr_imm_mask_dst2_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 m0, 7
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b32 g1[0], v0, off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[1:2], g1[0], off
+; CHECK-NEXT:    dds_load_mcast_b32 g1[8], v0, off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[1:2], g1[8], off
+; CHECK-NEXT:    s_mov_b32 s0, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_mov_b32 s33, s0
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr float, ptr addrspace(11) %addr, i32 4
+  call void @llvm.amdgcn.load.mcast.b32.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 10, i32 7)
+  %val = load float, ptr addrspace(10) @out, align 4
+  store float %val, ptr addrspace(1) %use
+  call void @llvm.amdgcn.load.mcast.b32.p10.p11(ptr addrspace(10) @dst2, ptr addrspace(11) %gep, i32 10, i32 7)
+  %val2 = load float, ptr addrspace(10) @dst2, align 4
+  store float %val2, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_b32_vaddr_imm_mask_comp_distributed(ptr addrspace(11) %addr, ptr addrspace(1) %use) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b32_vaddr_imm_mask_comp_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 m0, 7
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b32 g1[3], v0, off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
+; CHECK-NEXT:    global_store_b32 v[1:2], g1[0], off
+; CHECK-NEXT:    s_mov_b32 s0, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_mov_b32 s33, s0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr float, ptr addrspace(11) %addr, i32 4
+  call void @llvm.amdgcn.load.mcast.b32.p10.p11(ptr addrspace(10) getelementptr inbounds (float, ptr addrspace(10) @out, i32 3), ptr addrspace(11) %gep, i32 10, i32 7)
+  %val = load float, ptr addrspace(10) @out, align 4
+  store float %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_b32_saddr_distributed(ptr addrspace(11) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b32_saddr_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    s_mov_b32 m0, s1
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_mov_b32 s2, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b32 g1[0], v2, s0 offset:16 th:TH_LOAD_NT_HT scope:SCOPE_DEV
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], g1[0], off
+; CHECK-NEXT:    s_mov_b32 s33, s2
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr float, ptr addrspace(11) %addr, i32 4
+  call void @llvm.amdgcn.load.mcast.b32.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 22, i32 %mask)
+  %val = load float, ptr addrspace(10) @out, align 4
+  store float %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_monitor_b32_saddr_scale_offset_distributed(ptr addrspace(11) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask, i32 %idx) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_monitor_b32_saddr_scale_offset_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 m0, s1
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b32 g1[0], v2, s0 scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], g1[0], off
+; CHECK-NEXT:    s_mov_b32 s2, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_mov_b32 s33, s2
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %idxprom = sext i32 %idx to i64
+  %gep = getelementptr float, ptr addrspace(11) %addr, i64 %idxprom
+  call void @llvm.amdgcn.load.mcast.b32.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 27, i32 inreg %mask)
+  %val = load float, ptr addrspace(10) @out, align 4
+  store float %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_b64_vaddr_distributed(ptr addrspace(11) %addr, ptr addrspace(1) %use, i32 %mask) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b64_vaddr_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_mov_b32 s1, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_mov_b32 s33, s1
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b64 g1[0:1], v0, off offset:32 th:TH_LOAD_NT
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b64 v[1:2], g1[0:1], off
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr <2 x float>, ptr addrspace(11) %addr, i32 4
+  call void @llvm.amdgcn.load.mcast.b64.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 1, i32 %mask)
+  %val = load <2 x float>, ptr addrspace(10) @out, align 4
+  store <2 x float> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_b64_vaddr_imm_mask_distributed(ptr addrspace(11) %addr, ptr addrspace(1) %use) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b64_vaddr_imm_mask_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 m0, 0x10007
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b64 g1[0:1], v0, off offset:32 th:TH_LOAD_HT scope:SCOPE_SE
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b64 v[1:2], g1[0:1], off
+; CHECK-NEXT:    s_mov_b32 s0, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_mov_b32 s33, s0
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr <2 x float>, ptr addrspace(11) %addr, i32 4
+  call void @llvm.amdgcn.load.mcast.b64.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 10, i32 65543)
+  %val = load <2 x float>, ptr addrspace(10) @out, align 4
+  store <2 x float> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_b64_saddr_distributed(ptr addrspace(11) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b64_saddr_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    s_mov_b32 m0, s1
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_mov_b32 s2, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b64 g1[0:1], v2, s0 offset:32 th:TH_LOAD_NT_HT scope:SCOPE_DEV
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b64 v[0:1], g1[0:1], off
+; CHECK-NEXT:    s_mov_b32 s33, s2
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr <2 x float>, ptr addrspace(11) %addr, i32 4
+  call void @llvm.amdgcn.load.mcast.b64.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 22, i32 %mask)
+  %val = load <2 x float>, ptr addrspace(10) @out, align 4
+  store <2 x float> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_monitor_b64_saddr_scale_offset_distributed(ptr addrspace(11) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask, i32 %idx) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_monitor_b64_saddr_scale_offset_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 m0, s1
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b64 g1[0:1], v2, s0 scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b64 v[0:1], g1[0:1], off
+; CHECK-NEXT:    s_mov_b32 s2, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_mov_b32 s33, s2
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %idxprom = sext i32 %idx to i64
+  %gep = getelementptr <2 x float>, ptr addrspace(11) %addr, i64 %idxprom
+  call void @llvm.amdgcn.load.mcast.b64.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 27, i32 inreg %mask)
+  %val = load <2 x float>, ptr addrspace(10) @out, align 4
+  store <2 x float> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_b128_vaddr_distributed(ptr addrspace(11) %addr, ptr addrspace(1) %use, i32 %mask) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b128_vaddr_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_mov_b32 s1, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_mov_b32 s33, s1
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b128 g1[0:3], v0, off offset:64 th:TH_LOAD_NT
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b128 v[1:2], g1[0:3], off
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr <4 x float>, ptr addrspace(11) %addr, i32 4
+  call void @llvm.amdgcn.load.mcast.b128.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 1, i32 %mask)
+  %val = load <4 x float>, ptr addrspace(10) @out, align 4
+  store <4 x float> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_b128_vaddr_imm_mask_distributed(ptr addrspace(11) %addr, ptr addrspace(1) %use) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b128_vaddr_imm_mask_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 m0, 15
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b128 g1[0:3], v0, off offset:64 th:TH_LOAD_HT scope:SCOPE_SE
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b128 v[1:2], g1[0:3], off
+; CHECK-NEXT:    s_mov_b32 s0, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_mov_b32 s33, s0
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr <4 x float>, ptr addrspace(11) %addr, i32 4
+  call void @llvm.amdgcn.load.mcast.b128.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 10, i32 15)
+  %val = load <4 x float>, ptr addrspace(10) @out, align 4
+  store <4 x float> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @load_mcast_b128_saddr_distributed(ptr addrspace(11) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask) "amdgpu-wavegroup-enable" {
+; CHECK-LABEL: load_mcast_b128_saddr_distributed:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    s_mov_b32 m0, s1
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_mov_b32 s2, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b128 g1[0:3], v2, s0 offset:64 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b128 v[0:1], g1[0:3], off
+; CHECK-NEXT:    s_mov_b32 s33, s2
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr <4 x float>, ptr addrspace(11) %addr, i32 4
+  call void @llvm.amdgcn.load.mcast.b128.p10.p11(ptr addrspace(10) @out, ptr addrspace(11) %gep, i32 27, i32 inreg %mask)
+  %val = load <4 x float>, ptr addrspace(10) @out, align 4
+  store <4 x float> %val, ptr addrspace(1) %use
+  ret void
+}
+
 ; Make sure all laneshared variables are called directly or indirectly by a wavegroup kernel
 define amdgpu_kernel void @dummy_kernel() "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
 ; CHECK-LABEL: dummy_kernel:

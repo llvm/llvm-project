@@ -3178,18 +3178,42 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
     SelectCode(N); // Let this error
     return;
   }
-  // TODO : Handle other address spaces
-  // case AMDGPUAS::DDS_ADDRESS: {
-  //  if (Size == 32)
-  //    Opcode = AMDGPU::DDS_LOAD_MCAST_B32;
-  //  else if (Size == 64)
-  //    Opcode = AMDGPU::DDS_LOAD_MCAST_B64;
-  //  else if (Size == 128)
-  //    Opcode = AMDGPU::DDS_LOAD_MCAST_B128;
-  //  else
-  //    llvm_unreachable("Unsupported size for multicast load");
-  //}
-  //
+  case AMDGPUAS::DISTRIBUTED: {
+    // Choose best addressing mode
+    if (SelectGlobalSAddrCPolM0(N, N->getOperand(3) /*Addr*/, V0 /*SAddr*/,
+                                V1 /*VOffset*/, V2 /*Offset*/, V3 /*CPol*/)) {
+      MCastOps.push_back(V0);
+      MCastOps.push_back(V1);
+      MCastOps.push_back(V2);
+      MCastOps.push_back(V3);
+      if (Size == 32)
+        Opcode = AMDGPU::DDS_LOAD_MCAST_B32_LANESHARED_SADDR;
+      else if (Size == 64)
+        Opcode = AMDGPU::DDS_LOAD_MCAST_B64_LANESHARED_SADDR;
+      else if (Size == 128)
+        Opcode = AMDGPU::DDS_LOAD_MCAST_B128_LANESHARED_SADDR;
+      else
+        llvm_unreachable("Unsupported size for multicast load");
+      break;
+    }
+    if (SelectGlobalOffset(N, N->getOperand(3) /*Addr*/, V0 /*VAddr*/,
+                           V1 /*Offset*/)) {
+      MCastOps.push_back(V0);
+      MCastOps.push_back(V1);
+      MCastOps.push_back(N->getOperand(N->getNumOperands() - 2) /*CPol*/);
+      if (Size == 32)
+        Opcode = AMDGPU::DDS_LOAD_MCAST_B32_LANESHARED;
+      else if (Size == 64)
+        Opcode = AMDGPU::DDS_LOAD_MCAST_B64_LANESHARED;
+      else if (Size == 128)
+        Opcode = AMDGPU::DDS_LOAD_MCAST_B128_LANESHARED;
+      else
+        llvm_unreachable("Unsupported size for multicast load");
+      break;
+    }
+    SelectCode(N); // Let this error
+    return;
+  }
   default:
     SelectCode(N); // Let this error
     return;
@@ -3197,7 +3221,7 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
 
   MachineMemOperand *LoadMMO = N->getMemOperand();
 
-  if (AS == AMDGPUAS::GLOBAL_ADDRESS) {
+  if (AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::DISTRIBUTED) {
     // V_STORE_IDX operands are in units of dwords.
     SDNode *Shift =
         CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,

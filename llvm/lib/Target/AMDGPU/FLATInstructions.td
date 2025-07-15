@@ -223,11 +223,11 @@ class GlobalSaddrTable <bit is_saddr, string Name = ""> {
 // saddr is 32-bit (which isn't handled here yet).
 class FLAT_Load_Pseudo<
     string opName, RegisterClass regClass, bit HasTiedOutput = 0,
-    bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1,
-    RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
-    RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64)>
+    bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1>
     : FLAT_Pseudo<opName, (outs), (ins), ""> {
 
+  RegisterClass SaddrRC = SReg_64_XEXEC_XNULL;
+  RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64);
   RegisterOperand vdata_op = getLdStRegisterOperand<regClass>.ret;
   let OutOperandList = (outs vdata_op:$vdst);
   let InOperandList = !con(
@@ -254,11 +254,9 @@ class FLAT_Load_Pseudo<
 
 class FLAT_Load_LANESHARED<
     string opName, RegisterClass regClass, bit HasTiedOutput = 0,
-    bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1,
-    RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
-    RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64)>
+    bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1>
     : FLAT_Load_Pseudo<opName, regClass, HasTiedOutput, HasSaddr, EnableSaddr,
-                       HasVaddr, SaddrRC, VaddrRC> {
+                       HasVaddr> {
   let OutOperandList = (outs);
   defvar BasicIns = !con(
       !if(EnableSaddr, (ins SaddrRC:$saddr), (ins)),
@@ -334,22 +332,35 @@ multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit Ha
   }
 }
 
-multiclass FLAT_Global_Load_LANESHARED<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
+multiclass Load_LANESHARED<string opName, RegisterClass regClass,
+    bit HasTiedOutput = 0> {
+  let is_flat_global = 1 in {
+    def _LANESHARED : FLAT_Load_LANESHARED<opName#"_LANESHARED", regClass, HasTiedOutput, 1, 0, 1>,
+      GlobalSaddrTable<0, opName#"_LANESHARED">;
+    def _LANESHARED_SADDR : FLAT_Load_LANESHARED<opName#"_LANESHARED", regClass, HasTiedOutput, 1, 1, 1>,
+      GlobalSaddrTable<1, opName#"_LANESHARED">;
+  } // End is_flat_global = 1
+}
+
+multiclass Cluster_Load<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
   let SubtargetPredicate = isGFX1250Plus in
     defm "" : FLAT_Global_Load_Pseudo<opName, regClass, HasTiedInput>;
-  let SubtargetPredicate = isGFX13Plus, is_flat_global = 1 in {
-    def _LANESHARED : FLAT_Load_LANESHARED<opName#"_LANESHARED", regClass, HasTiedInput, 1>,
-      GlobalSaddrTable<0, opName#"_LANESHARED">;
-    def _LANESHARED_SADDR : FLAT_Load_LANESHARED<opName#"_LANESHARED", regClass, HasTiedInput, 1, 1>,
-      GlobalSaddrTable<1, opName#"_LANESHARED">;
-  } // End SubtargetPredicate = isGFX13Plus, is_flat_global = 1
+  let SubtargetPredicate = isGFX13Plus in
+    defm "" : Load_LANESHARED<opName, regClass, HasTiedInput>;
 }
 
 multiclass FLAT_DDS_Load_Pseudo<string opName, RegisterClass regClass> {
-  def "" : FLAT_Load_Pseudo<opName, regClass, 0, 1, 0, 1, SReg_32, VGPR_32>,
-    GlobalSaddrTable<0, opName>;
-  def _SADDR : FLAT_Load_Pseudo<opName, regClass, 0, 1, 1, 1, SReg_32, VGPR_32>,
-    GlobalSaddrTable<1, opName>;
+  let SaddrRC = SReg_32, VaddrRC = VGPR_32 in {
+    defm "" : FLAT_Global_Load_Pseudo<opName, regClass, 0>;
+  }
+}
+
+multiclass FLAT_DDS_Load_MCAST_Pseudo<string opName, RegisterClass regClass> {
+  // Use M0 for broadcast workgroup mask.
+  let SaddrRC = SReg_32, VaddrRC = VGPR_32, Uses = [M0, EXEC] in {
+    defm "" : FLAT_Global_Load_Pseudo<opName, regClass, 0>;
+    defm "" : Load_LANESHARED<opName, regClass, 0>;
+  }
 }
 
 multiclass FLAT_Global_Load_Pseudo_t16<string opName> {
@@ -1067,9 +1078,9 @@ defm DDS_LOAD_ASYNC_TO_LDS_B128        : FLAT_DDS_Load_LDS_Pseudo<"dds_load_asyn
 defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B32   : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_mcast_to_lds_b32">;
 defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B64   : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_mcast_to_lds_b64">;
 defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B128  : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_mcast_to_lds_b128">;
-defm DDS_LOAD_MCAST_B32                : FLAT_DDS_Load_Pseudo<"dds_load_mcast_b32", VGPR_32>;
-defm DDS_LOAD_MCAST_B64                : FLAT_DDS_Load_Pseudo<"dds_load_mcast_b64", VReg_64>;
-defm DDS_LOAD_MCAST_B128               : FLAT_DDS_Load_Pseudo<"dds_load_mcast_b128", VReg_128>;
+defm DDS_LOAD_MCAST_B32                : FLAT_DDS_Load_MCAST_Pseudo<"dds_load_mcast_b32", VGPR_32>;
+defm DDS_LOAD_MCAST_B64                : FLAT_DDS_Load_MCAST_Pseudo<"dds_load_mcast_b64", VReg_64>;
+defm DDS_LOAD_MCAST_B128               : FLAT_DDS_Load_MCAST_Pseudo<"dds_load_mcast_b128", VReg_128>;
 }
 
 def : GCNPat <(UniformUnaryFrag<int_amdgcn_query_shared_rank> p11:$ptr), (S_ASHR_I32 $ptr, (i32 24))>;
@@ -1257,8 +1268,8 @@ defm GLOBAL_LOAD_DWORDX2  : FLAT_Global_Load_Pseudo <"global_load_dwordx2", VReg
 defm GLOBAL_LOAD_DWORDX3  : FLAT_Global_Load_Pseudo <"global_load_dwordx3", VReg_96>;
 defm GLOBAL_LOAD_DWORDX4  : FLAT_Global_Load_Pseudo <"global_load_dwordx4", VReg_128>;
 
-let is_flat_global = 1 in
-def GLOBAL_LOAD_SGPR_B32  : FLAT_Load_Pseudo <"global_load_sgpr_b32", SReg_32, 0, 1, 1, 0, SReg_64_XEXEC>;
+let is_flat_global = 1, SaddrRC = SReg_64_XEXEC in
+def GLOBAL_LOAD_SGPR_B32  : FLAT_Load_Pseudo <"global_load_sgpr_b32", SReg_32, 0, 1, 1, 0>;
 
 let TiedSourceNotRead = 1 in {
 defm GLOBAL_LOAD_SBYTE_D16_HI : FLAT_Global_Load_Pseudo <"global_load_sbyte_d16_hi", VGPR_32, 1>;
@@ -1491,9 +1502,9 @@ defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b1
 
 let WaveSizePredicate = isWave32 in {
 let Uses = [M0, EXEC] in { // Use M0 for broadcast workgroup mask.
-defm CLUSTER_LOAD_B32         : FLAT_Global_Load_LANESHARED <"cluster_load_b32",  VGPR_32>;
-defm CLUSTER_LOAD_B64         : FLAT_Global_Load_LANESHARED <"cluster_load_b64",  VReg_64>;
-defm CLUSTER_LOAD_B128        : FLAT_Global_Load_LANESHARED <"cluster_load_b128", VReg_128>;
+defm CLUSTER_LOAD_B32         : Cluster_Load <"cluster_load_b32",  VGPR_32>;
+defm CLUSTER_LOAD_B64         : Cluster_Load <"cluster_load_b64",  VReg_64>;
+defm CLUSTER_LOAD_B128        : Cluster_Load <"cluster_load_b128", VReg_128>;
 } // End Uses = [M0, EXEC]
 } // End WaveSizePredicate = isWave32
 
