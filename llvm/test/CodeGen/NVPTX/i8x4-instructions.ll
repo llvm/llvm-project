@@ -875,17 +875,15 @@ define <4 x i8> @test_or_computed(i8 %a) {
 ;
 ; O3-LABEL: test_or_computed(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<8>;
+; O3-NEXT:    .reg .b32 %r<6>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
-; O3-NEXT:    mov.b32 %r1, 0;
+; O3-NEXT:    ld.param.b8 %r1, [test_or_computed_param_0];
 ; O3-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
-; O3-NEXT:    ld.param.b8 %r3, [test_or_computed_param_0];
-; O3-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
-; O3-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O3-NEXT:    bfi.b32 %r6, 5, %r5, 8, 8;
-; O3-NEXT:    or.b32 %r7, %r6, %r5;
-; O3-NEXT:    st.param.b32 [func_retval0], %r7;
+; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x5410U;
+; O3-NEXT:    bfi.b32 %r4, 5, %r3, 8, 8;
+; O3-NEXT:    or.b32 %r5, %r4, %r3;
+; O3-NEXT:    st.param.b32 [func_retval0], %r5;
 ; O3-NEXT:    ret;
   %ins.0 = insertelement <4 x i8> zeroinitializer, i8 %a, i32 0
   %ins.1 = insertelement <4 x i8> %ins.0, i8 5, i32 1
@@ -967,17 +965,15 @@ define <4 x i8> @test_xor_computed(i8 %a) {
 ;
 ; O3-LABEL: test_xor_computed(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<8>;
+; O3-NEXT:    .reg .b32 %r<6>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
-; O3-NEXT:    mov.b32 %r1, 0;
+; O3-NEXT:    ld.param.b8 %r1, [test_xor_computed_param_0];
 ; O3-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
-; O3-NEXT:    ld.param.b8 %r3, [test_xor_computed_param_0];
-; O3-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
-; O3-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O3-NEXT:    bfi.b32 %r6, 5, %r5, 8, 8;
-; O3-NEXT:    xor.b32 %r7, %r6, %r5;
-; O3-NEXT:    st.param.b32 [func_retval0], %r7;
+; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x5410U;
+; O3-NEXT:    bfi.b32 %r4, 5, %r3, 8, 8;
+; O3-NEXT:    xor.b32 %r5, %r4, %r3;
+; O3-NEXT:    st.param.b32 [func_retval0], %r5;
 ; O3-NEXT:    ret;
   %ins.0 = insertelement <4 x i8> zeroinitializer, i8 %a, i32 0
   %ins.1 = insertelement <4 x i8> %ins.0, i8 5, i32 1
@@ -1059,17 +1055,15 @@ define <4 x i8> @test_and_computed(i8 %a) {
 ;
 ; O3-LABEL: test_and_computed(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<8>;
+; O3-NEXT:    .reg .b32 %r<6>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
-; O3-NEXT:    mov.b32 %r1, 0;
+; O3-NEXT:    ld.param.b8 %r1, [test_and_computed_param_0];
 ; O3-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
-; O3-NEXT:    ld.param.b8 %r3, [test_and_computed_param_0];
-; O3-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
-; O3-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O3-NEXT:    bfi.b32 %r6, 5, %r5, 8, 8;
-; O3-NEXT:    and.b32 %r7, %r6, %r5;
-; O3-NEXT:    st.param.b32 [func_retval0], %r7;
+; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x5410U;
+; O3-NEXT:    bfi.b32 %r4, 5, %r3, 8, 8;
+; O3-NEXT:    and.b32 %r5, %r4, %r3;
+; O3-NEXT:    st.param.b32 [func_retval0], %r5;
 ; O3-NEXT:    ret;
   %ins.0 = insertelement <4 x i8> zeroinitializer, i8 %a, i32 0
   %ins.1 = insertelement <4 x i8> %ins.0, i8 5, i32 1
@@ -1837,15 +1831,13 @@ define <2 x half> @test_bitcast_4xi8_to_2xhalf(i8 %a) #0 {
 ;
 ; O3-LABEL: test_bitcast_4xi8_to_2xhalf(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<6>;
+; O3-NEXT:    .reg .b32 %r<4>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
-; O3-NEXT:    mov.b32 %r1, 6;
-; O3-NEXT:    prmt.b32 %r2, %r1, 7, 0x3340U;
-; O3-NEXT:    ld.param.b8 %r3, [test_bitcast_4xi8_to_2xhalf_param_0];
-; O3-NEXT:    prmt.b32 %r4, %r3, 5, 0x3340U;
-; O3-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O3-NEXT:    st.param.b32 [func_retval0], %r5;
+; O3-NEXT:    ld.param.b8 %r1, [test_bitcast_4xi8_to_2xhalf_param_0];
+; O3-NEXT:    prmt.b32 %r2, %r1, 5, 0x3340U;
+; O3-NEXT:    prmt.b32 %r3, %r2, 1798, 0x5410U;
+; O3-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O3-NEXT:    ret;
   %ins.0 = insertelement <4 x i8> undef, i8 %a, i32 0
   %ins.1 = insertelement <4 x i8> %ins.0, i8 5, i32 1
@@ -2183,7 +2175,7 @@ define void @test_srem_v3i8(ptr %a, ptr %b, ptr %c) {
 ; O0-NEXT:    prmt.b32 %r10, %r11, %r12, 0x3340U;
 ; O0-NEXT:    prmt.b32 %r13, %r9, %r10, 0x5410U;
 ; O0-NEXT:    rem.s16 %rs17, %rs5, %rs10;
-; O0-NEXT:    mov.b32 {%rs18, _}, %r13;
+; O0-NEXT:    cvt.u16.u32 %rs18, %r13;
 ; O0-NEXT:    st.b8 [%rd3], %rs18;
 ; O0-NEXT:    shr.u16 %rs19, %rs18, 8;
 ; O0-NEXT:    st.b8 [%rd3+1], %rs19;
@@ -2229,7 +2221,7 @@ define void @test_srem_v3i8(ptr %a, ptr %b, ptr %c) {
 ; O3-NEXT:    prmt.b32 %r13, %r9, %r10, 0x5410U;
 ; O3-NEXT:    rem.s16 %rs17, %rs5, %rs10;
 ; O3-NEXT:    st.b8 [%rd3+2], %rs17;
-; O3-NEXT:    mov.b32 {%rs18, _}, %r13;
+; O3-NEXT:    cvt.u16.u32 %rs18, %r13;
 ; O3-NEXT:    st.b8 [%rd3], %rs18;
 ; O3-NEXT:    shr.u16 %rs19, %rs18, 8;
 ; O3-NEXT:    st.b8 [%rd3+1], %rs19;
