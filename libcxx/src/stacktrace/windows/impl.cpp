@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__config>
 #if defined(_LIBCPP_WIN32API)
+
 // windows.h must be first
 #  include <windows.h>
 // other windows-specific headers
@@ -14,44 +16,27 @@
 #  define PSAPI_VERSION 1
 #  include <psapi.h>
 
-#  include <stacktrace>
-
-#  include "stacktrace/utils/debug.h"
 #  include "stacktrace/windows/dll.h"
 #  include "stacktrace/windows/impl.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-namespace {
+win_impl::~win_impl() {
+  auto& dbg = dbghelp_dll::get();
+  if (initialized_) {
+    (*dbg.SymCleanup)(proc_);
+    initialized_ = false;
+  }
+}
 
-/*
-Global objects, shared among all threads and among all stacktrace operations.
-The `dbghelp` APIs are not safe to call concurrently (according to their docs)
-so we claim a lock in the `WinDebugAPIs` constructor.
-*/
+win_impl::win_impl(base& base) : base_(base) {
+  std::lock_guard<std::mutex> guard(mutex_);
 
-// Statically-initialized
-DbgHelpDLL dbg;
-PSAPIDLL ps;
+  auto& dbg = dbghelp_dll::get();
+  auto& ps  = psapi_dll::get();
 
-// Initialized once, in first WinDebugAPIs construction;
-// protected by the above mutex.
-HANDLE proc;
-HMODULE exe;
-IMAGE_NT_HEADERS* ntHeaders;
-bool globalInitialized{false};
-
-// Globals used across invocations of the functions below.
-// Also guarded by the above mutex.
-bool symsInitialized{false};
-HMODULE moduleHandles[1024];
-size_t moduleCount; // 0 IFF module enumeration failed
-
-} // namespace
-
-win_impl::global_init() {
-  if (!globalInitialized) {
+  if (!initialized_) {
     // Cannot proceed without these DLLs:
     if (!dbg) {
       return;
@@ -59,55 +44,50 @@ win_impl::global_init() {
     if (!ps) {
       return;
     }
-    proc = GetCurrentProcess();
-    if (!(exe = GetModuleHandle(nullptr))) {
+    proc_ = GetCurrentProcess();
+    if (!(exe_ = GetModuleHandle(nullptr))) {
       return;
     }
-    if (!(ntHeaders = (*dbg.ImageNtHeader)(exe))) {
+    if (!(nt_headers_ = (*dbg.ImageNtHeader)(exe_))) {
       return;
     }
 
-    globalInitialized = true;
+    initialized_ = true;
   }
 
-  // Initialize symbol machinery.
-  // Presumably the symbols in this process's space can change between
-  // stacktraces, so we'll do this each time we take a trace.
   // The final `true` means we want the runtime to enumerate all this
   // process's modules' symbol tables.
-  symsInitialized  = (*dbg.SymInitialize)(proc, nullptr, true);
+  initialized_     = (*dbg.SymInitialize)(proc_, nullptr, true);
   DWORD symOptions = (*dbg.SymGetOptions)();
   symOptions |= SYMOPT_LOAD_LINES | SYMOPT_UNDNAME;
   (*dbg.SymSetOptions)(symOptions);
 }
 
-win_impl::~win_impl() {
-  if (symsInitialized) {
-    (*dbg.SymCleanup)(proc);
-    symsInitialized = false;
-  }
-}
-
 void win_impl::ident_modules() {
-  if (!globalInitialized) {
+  if (!initialized_) {
     return;
   }
+
+  auto& ps = psapi_dll::get();
   DWORD needBytes;
-  auto enumMods = (*ps.EnumProcessModules)(proc, moduleHandles, sizeof(moduleHandles), LPDWORD(&needBytes));
+
+  auto enumMods = (*ps.EnumProcessModules)(proc_, module_handles_, sizeof(module_handles_), LPDWORD(&needBytes));
   if (enumMods) {
-    moduleCount = needBytes / sizeof(HMODULE);
+    module_count_ = needBytes / sizeof(HMODULE);
   } else {
-    moduleCount = 0;
-    Debug() << "EnumProcessModules failed: " << GetLastError() << '\n';
+    module_count_ = 0;
   }
 }
 
 void win_impl::symbolize() {
-  // Very long symbols longer than this amount will be truncated.
-  static constexpr size_t kMaxSymName = 256;
-  if (!globalInitialized) {
+  if (!initialized_) {
     return;
   }
+
+  // Very long symbols longer than this amount will be truncated.
+  static constexpr size_t kMaxSymName = 256;
+
+  auto& dbg = dbghelp_dll::get();
 
   for (auto& entry : base_.__entries_) {
     char space[sizeof(IMAGEHLP_SYMBOL64) + kMaxSymName];
@@ -115,30 +95,28 @@ void win_impl::symbolize() {
     sym->SizeOfStruct  = sizeof(IMAGEHLP_SYMBOL64);
     sym->MaxNameLength = kMaxSymName;
     uint64_t disp{0};
-    if ((*dbg.SymGetSymFromAddr64)(proc, entry.__addr_actual_, &disp, sym)) {
+    if ((*dbg.SymGetSymFromAddr64)(proc_, entry.__addr_actual_, &disp, sym)) {
       // Copy chars into the destination string which uses the caller-provided allocator.
       ((entry_base&)entry).__desc_ = {sym->Name};
-    } else {
-      Debug() << "SymGetSymFromAddr64 failed: " << GetLastError() << '\n';
     }
   }
 }
 
 void win_impl::resolve_lines() {
-  if (!globalInitialized) {
+  if (!initialized_) {
     return;
   }
+
+  auto& dbg = dbghelp_dll::get();
 
   for (auto& entry : base_.__entries_) {
     DWORD disp{0};
     IMAGEHLP_LINE64 line;
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-    if ((*dbg.SymGetLineFromAddr64)(proc, entry.__addr_actual_, &disp, &line)) {
+    if ((*dbg.SymGetLineFromAddr64)(proc_, entry.__addr_actual_, &disp, &line)) {
       // Copy chars into the destination string which uses the caller-provided allocator.
       entry.__file_ = line.FileName;
       entry.__line_ = line.LineNumber;
-    } else {
-      Debug() << "SymGetLineFromAddr64 failed: " << GetLastError() << '\n';
     }
   }
 }
@@ -151,12 +129,13 @@ and mess around with the top of the stack (making `skip` inaccurate).
 #  pragma auto_inline(off)
 
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void win_impl::collect(size_t skip, size_t max_depth) {
-  if (!globalInitialized) {
+  if (!initialized_) {
     return;
   }
 
+  auto& dbg    = dbghelp_dll::get();
   auto thread  = GetCurrentThread();
-  auto machine = ntHeaders->FileHeader.Machine;
+  auto machine = nt_headers_->FileHeader.Machine;
 
   CONTEXT ccx;
   RtlCaptureContext(&ccx);
@@ -166,14 +145,14 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void win_impl::collect(size_t skip, size_
   frame.AddrPC.Mode      = AddrModeFlat;
   frame.AddrStack.Mode   = AddrModeFlat;
   frame.AddrFrame.Mode   = AddrModeFlat;
-  frame.AddrPC.Offset    = ctrace.Rip;
-  frame.AddrStack.Offset = ctrace.Rsp;
-  frame.AddrFrame.Offset = ctrace.Rbp;
+  frame.AddrPC.Offset    = ccx.Rip;
+  frame.AddrStack.Offset = ccx.Rsp;
+  frame.AddrFrame.Offset = ccx.Rbp;
 
   while (max_depth &&
          (*dbg.StackWalk64)(
              machine,
-             proc,
+             proc_,
              thread,
              &frame,
              &ccx,
