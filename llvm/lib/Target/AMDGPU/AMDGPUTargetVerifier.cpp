@@ -47,12 +47,8 @@ public:
 };
 
 static bool IsValidInt(const Type *Ty) {
-  return Ty->isIntegerTy(1) ||
-         Ty->isIntegerTy(8) ||
-         Ty->isIntegerTy(16) ||
-         Ty->isIntegerTy(32) ||
-         Ty->isIntegerTy(64) ||
-         Ty->isIntegerTy(128);
+  return Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
+         Ty->isIntegerTy(32) || Ty->isIntegerTy(64) || Ty->isIntegerTy(128);
 }
 
 bool AMDGPUTargetVerify::run(Function &F) {
@@ -63,12 +59,11 @@ bool AMDGPUTargetVerify::run(Function &F) {
 
       // Ensure integral types are valid: i8, i16, i32, i64, i128
       if (I.getType()->isIntegerTy())
-        Check(IsValidInt(I.getType()), "Int type is invalid.", &I);
+        Check(IsValidInt(I.getType()), "int type is invalid.", &I);
       for (unsigned i = 0; i < I.getNumOperands(); ++i)
         if (I.getOperand(i)->getType()->isIntegerTy())
-          Check(IsValidInt(I.getOperand(i)->getType()),
-                "Int type is invalid.", I.getOperand(i));
-
+          Check(IsValidInt(I.getOperand(i)->getType()), "int type is invalid.",
+                I.getOperand(i));
     }
   }
 
