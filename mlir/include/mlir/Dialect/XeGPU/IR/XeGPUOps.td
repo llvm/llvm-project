@@ -186,7 +186,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
         rank = memrefType.getRank();
       else
         //nd_tdesc created from ui64, use nd_tdesc's rank
-        rank = getTensorDescShape().size();
+        rank = getMixedSizes().size();
       
       // The offsets are allowed to be empty. The Traits verification of OffsetSizeAndStrideOpInterface interface assumes offsets being present.
       // It is set to be MAX to indicate user not passed any value, instead of kDynamic which means offsets passed as value.
