@@ -20,8 +20,8 @@ IMPORTS:      DelayImport {
 IMPORTS-NEXT:   Name: test.dll
 IMPORTS-NEXT:   Attributes: 0x1
 IMPORTS-NEXT:   ModuleHandle: 0x6080
-IMPORTS-NEXT:   ImportAddressTable: 0x6088
-IMPORTS-NEXT:   ImportNameTable: 0x4390
+IMPORTS-NEXT:   ImportAddressTable: 0x8000
+IMPORTS-NEXT:   ImportNameTable: 0x4180
 IMPORTS-NEXT:   BoundDelayImportTable: 0x0
 IMPORTS-NEXT:   UnloadDelayImportTable: 0x0
 IMPORTS-NEXT:   Import {
@@ -34,8 +34,8 @@ IMPORTS:        DelayImport {
 IMPORTS-NEXT:     Name: test.dll
 IMPORTS-NEXT:     Attributes: 0x1
 IMPORTS-NEXT:     ModuleHandle: 0x6080
-IMPORTS-NEXT:     ImportAddressTable: 0x6098
-IMPORTS-NEXT:     ImportNameTable: 0x43A0
+IMPORTS-NEXT:     ImportAddressTable: 0x8010
+IMPORTS-NEXT:     ImportNameTable: 0x4190
 IMPORTS-NEXT:     BoundDelayImportTable: 0x0
 IMPORTS-NEXT:     UnloadDelayImportTable: 0x0
 IMPORTS-NEXT:     Import {
@@ -46,20 +46,20 @@ IMPORTS-NEXT:   }
 IMPORTS-NEXT: }
 
 RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
-TESTSEC: 0x180009000 10500000 98600000 00300000 10200000
+TESTSEC: 0x18000a000 10500000 10800000 00300000 10200000
 
 RUN: llvm-readobj --hex-dump=.testa out.dll | FileCheck --check-prefix=TESTSECA %s
-TESTSECA: 0x18000a000 88600000 08100000
+TESTSECA: 0x18000b000 00800000 08100000
 
 RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
 DISASM:      0000000180001000 <.text>:
 DISASM-NEXT: 180001000: 52800060     mov     w0, #0x3                // =3
 DISASM-NEXT: 180001004: d65f03c0     ret
-DISASM-NEXT: 180001008: b0000030     adrp    x16, 0x180006000
-DISASM-NEXT: 18000100c: f9404610     ldr     x16, [x16, #0x88]
+DISASM-NEXT: 180001008: f0000030     adrp    x16, 0x180008000
+DISASM-NEXT: 18000100c: f9400210     ldr     x16, [x16]
 DISASM-NEXT: 180001010: d61f0200     br      x16
-DISASM-NEXT: 180001014: b0000031     adrp    x17, 0x180006000
-DISASM-NEXT: 180001018: 91022231     add     x17, x17, #0x88
+DISASM-NEXT: 180001014: f0000031     adrp    x17, 0x180008000
+DISASM-NEXT: 180001018: 91000231     add     x17, x17, #0x0
 DISASM-NEXT: 18000101c: 14000001     b       0x180001020 <.text+0x20>
 DISASM-NEXT: 180001020: a9b37bfd     stp     x29, x30, [sp, #-0xd0]!
 DISASM-NEXT: 180001024: 910003fd     mov     x29, sp
@@ -73,7 +73,7 @@ DISASM-NEXT: 180001040: ad0497e4     stp     q4, q5, [sp, #0x90]
 DISASM-NEXT: 180001044: ad059fe6     stp     q6, q7, [sp, #0xb0]
 DISASM-NEXT: 180001048: aa1103e1     mov     x1, x17
 DISASM-NEXT: 18000104c: f0000000     adrp    x0, 0x180004000
-DISASM-NEXT: 180001050: 910d4000     add     x0, x0, #0x350
+DISASM-NEXT: 180001050: 91050000     add     x0, x0, #0x140
 DISASM-NEXT: 180001054: 97ffffeb     bl      0x180001000 <.text>
 DISASM-NEXT: 180001058: aa0003f0     mov     x16, x0
 DISASM-NEXT: 18000105c: ad459fe6     ldp     q6, q7, [sp, #0xb0]
@@ -94,16 +94,16 @@ DISASM-NEXT: 18000200c: d65f03c0     ret
 DISASM-NEXT: 180002010: f0000010     adrp    x16, 0x180005000
 DISASM-NEXT: 180002014: f9400a10     ldr     x16, [x16, #0x10]
 DISASM-NEXT: 180002018: d61f0200     br      x16
-DISASM-NEXT: 18000201c: 9000002b     adrp    x11, 0x180006000
-DISASM-NEXT: 180002020: f9404d6b     ldr     x11, [x11, #0x98]
+DISASM-NEXT: 18000201c: d000002b     adrp    x11, 0x180008000
+DISASM-NEXT: 180002020: f940096b     ldr     x11, [x11, #0x10]
 DISASM-NEXT: 180002024: 9000000a     adrp    x10, 0x180002000 <.text+0x1000>
 DISASM-NEXT: 180002028: 9100c14a     add     x10, x10, #0x30
 DISASM-NEXT: 18000202c: 17fffff5     b       0x180002000 <.text+0x1000>
 DISASM-NEXT: 180002030: 52800080     mov     w0, #0x4                // =4
 DISASM-NEXT: 180002034: d65f03c0     ret
 DISASM-NEXT:                 ...
-DISASM-NEXT: 180003000: ff 25 92 30 00 00            jmpq    *0x3092(%rip)           # 0x180006098
-DISASM-NEXT: 180003006: 48 8d 05 8b 30 00 00         leaq    0x308b(%rip), %rax      # 0x180006098
+DISASM-NEXT: 180003000: ff 25 0a 50 00 00            jmpq    *0x500a(%rip)           # 0x180008010
+DISASM-NEXT: 180003006: 48 8d 05 03 50 00 00         leaq    0x5003(%rip), %rax      # 0x180008010
 DISASM-NEXT: 18000300d: e9 00 00 00 00               jmp     0x180003012 <.text+0x2012>
 DISASM-NEXT: 180003012: 51                           pushq   %rcx
 DISASM-NEXT: 180003013: 52                           pushq   %rdx
@@ -115,7 +115,7 @@ DISASM-NEXT: 180003021: 66 0f 7f 4c 24 10            movdqa  %xmm1, 0x10(%rsp)
 DISASM-NEXT: 180003027: 66 0f 7f 54 24 20            movdqa  %xmm2, 0x20(%rsp)
 DISASM-NEXT: 18000302d: 66 0f 7f 5c 24 30            movdqa  %xmm3, 0x30(%rsp)
 DISASM-NEXT: 180003033: 48 8b d0                     movq    %rax, %rdx
-DISASM-NEXT: 180003036: 48 8d 0d 13 13 00 00         leaq    0x1313(%rip), %rcx # 0x180004350
+DISASM-NEXT: 180003036: 48 8d 0d 03 11 00 00         leaq    0x1103(%rip), %rcx # 0x180004140
 DISASM-NEXT: 18000303d: e8 c6 ef ff ff               callq   0x180002008 <.text+0x1008>
 DISASM-NEXT: 180003042: 66 0f 6f 04 24               movdqa  (%rsp), %xmm0
 DISASM-NEXT: 180003047: 66 0f 6f 4c 24 10            movdqa  0x10(%rsp), %xmm1
@@ -130,7 +130,7 @@ DISASM-NEXT: 180003063: ff e0                        jmpq    *%rax
 
 RUN: llvm-readobj --coff-load-config out.dll | FileCheck --check-prefix=LOADCFG %s
 LOADCFG:      AuxiliaryDelayloadIAT: 0x5000
-LOADCFG-NEXT: AuxiliaryDelayloadIATCopy: 0x4140
+LOADCFG-NEXT: AuxiliaryDelayloadIATCopy: 0x41C0
 
 RUN: llvm-readobj --hex-dump=.rdata out.dll | FileCheck --check-prefix=AUXIAT %s
 AUXIAT:      0x180005000 00000000 00000000 00000000 00000000
@@ -147,8 +147,8 @@ NATIVE-IMPORTS:      DelayImport {
 NATIVE-IMPORTS-NEXT:   Name: test.dll
 NATIVE-IMPORTS-NEXT:   Attributes: 0x1
 NATIVE-IMPORTS-NEXT:   ModuleHandle: 0x5080
-NATIVE-IMPORTS-NEXT:   ImportAddressTable: 0x5088
-NATIVE-IMPORTS-NEXT:   ImportNameTable: 0x3370
+NATIVE-IMPORTS-NEXT:   ImportAddressTable: 0x6000
+NATIVE-IMPORTS-NEXT:   ImportNameTable: 0x3180
 NATIVE-IMPORTS-NEXT:   BoundDelayImportTable: 0x0
 NATIVE-IMPORTS-NEXT:   UnloadDelayImportTable: 0x0
 NATIVE-IMPORTS-NEXT:   Import {
@@ -164,25 +164,25 @@ NATIVE-IMPORTS-NEXT:   DelayImport {
 NATIVE-IMPORTS-NEXT:     Name: test.dll
 NATIVE-IMPORTS-NEXT:     Attributes: 0x1
 NATIVE-IMPORTS-NEXT:     ModuleHandle: 0x5080
-NATIVE-IMPORTS-NEXT:     ImportAddressTable: 0x5098
-NATIVE-IMPORTS-NEXT:     ImportNameTable: 0x3380
+NATIVE-IMPORTS-NEXT:     ImportAddressTable: 0x6010
+NATIVE-IMPORTS-NEXT:     ImportNameTable: 0x3190
 NATIVE-IMPORTS-NEXT:     BoundDelayImportTable: 0x0
 NATIVE-IMPORTS-NEXT:     UnloadDelayImportTable: 0x0
 NATIVE-IMPORTS-NEXT:   }
 NATIVE-IMPORTS-NEXT: }
 
 RUN: llvm-readobj --hex-dump=.testa out-native.dll | FileCheck --check-prefix=NATIVE-TESTSECA %s
-NATIVE-TESTSECA: 0x180007000 88500000 08100000
+NATIVE-TESTSECA: 0x180008000 00600000 08100000
 
 RUN: llvm-objdump -d out-native.dll | FileCheck --check-prefix=NATIVE-DISASM %s
 NATIVE-DISASM:      0000000180001000 <.text>:
 NATIVE-DISASM-NEXT: 180001000: 52800060     mov     w0, #0x3                // =3
 NATIVE-DISASM-NEXT: 180001004: d65f03c0     ret
-NATIVE-DISASM-NEXT: 180001008: 90000030     adrp    x16, 0x180005000
-NATIVE-DISASM-NEXT: 18000100c: f9404610     ldr     x16, [x16, #0x88]
+NATIVE-DISASM-NEXT: 180001008: b0000030     adrp    x16, 0x180006000
+NATIVE-DISASM-NEXT: 18000100c: f9400210     ldr     x16, [x16]
 NATIVE-DISASM-NEXT: 180001010: d61f0200     br      x16
-NATIVE-DISASM-NEXT: 180001014: 90000031     adrp    x17, 0x180005000
-NATIVE-DISASM-NEXT: 180001018: 91022231     add     x17, x17, #0x88
+NATIVE-DISASM-NEXT: 180001014: b0000031     adrp    x17, 0x180006000
+NATIVE-DISASM-NEXT: 180001018: 91000231     add     x17, x17, #0x0
 NATIVE-DISASM-NEXT: 18000101c: 14000001     b       0x180001020 <.text+0x20>
 NATIVE-DISASM-NEXT: 180001020: a9b37bfd     stp     x29, x30, [sp, #-0xd0]!
 NATIVE-DISASM-NEXT: 180001024: 910003fd     mov     x29, sp
@@ -196,7 +196,7 @@ NATIVE-DISASM-NEXT: 180001040: ad0497e4     stp     q4, q5, [sp, #0x90]
 NATIVE-DISASM-NEXT: 180001044: ad059fe6     stp     q6, q7, [sp, #0xb0]
 NATIVE-DISASM-NEXT: 180001048: aa1103e1     mov     x1, x17
 NATIVE-DISASM-NEXT: 18000104c: d0000000     adrp    x0, 0x180003000
-NATIVE-DISASM-NEXT: 180001050: 910cc000     add     x0, x0, #0x330
+NATIVE-DISASM-NEXT: 180001050: 91050000     add     x0, x0, #0x140
 NATIVE-DISASM-NEXT: 180001054: 97ffffeb     bl      0x180001000 <.text>
 NATIVE-DISASM-NEXT: 180001058: aa0003f0     mov     x16, x0
 NATIVE-DISASM-NEXT: 18000105c: ad459fe6     ldp     q6, q7, [sp, #0xb0]
@@ -212,7 +212,7 @@ NATIVE-DISASM-NEXT: 180001080: d61f0200     br      x16
 
 RUN: llvm-readobj --coff-load-config out-native.dll | FileCheck --check-prefix=NATIVE-LOADCFG %s
 NATIVE-LOADCFG:      AuxiliaryDelayloadIAT: 0x4000
-NATIVE-LOADCFG-NEXT: AuxiliaryDelayloadIATCopy: 0x3140
+NATIVE-LOADCFG-NEXT: AuxiliaryDelayloadIATCopy: 0x31B0
 
 RUN: llvm-readobj --hex-dump=.rdata out-native.dll | FileCheck --check-prefix=NATIVE-AUXIAT %s
 NATIVE-AUXIAT:      0x180004000 00000000 00000000 00000000 00000000
@@ -229,8 +229,8 @@ EC-IMPORTS:      DelayImport {
 EC-IMPORTS-NEXT:   Name: test.dll
 EC-IMPORTS-NEXT:   Attributes: 0x1
 EC-IMPORTS-NEXT:   ModuleHandle: 0x6080
-EC-IMPORTS-NEXT:   ImportAddressTable: 0x6088
-EC-IMPORTS-NEXT:   ImportNameTable: 0x4388
+EC-IMPORTS-NEXT:   ImportAddressTable: 0x8000
+EC-IMPORTS-NEXT:   ImportNameTable: 0x4180
 EC-IMPORTS-NEXT:   BoundDelayImportTable: 0x0
 EC-IMPORTS-NEXT:   UnloadDelayImportTable: 0x0
 EC-IMPORTS-NEXT: }
@@ -242,8 +242,8 @@ EC-IMPORTS-NEXT:   DelayImport {
 EC-IMPORTS-NEXT:     Name: test.dll
 EC-IMPORTS-NEXT:     Attributes: 0x1
 EC-IMPORTS-NEXT:     ModuleHandle: 0x6080
-EC-IMPORTS-NEXT:     ImportAddressTable: 0x6090
-EC-IMPORTS-NEXT:     ImportNameTable: 0x4390
+EC-IMPORTS-NEXT:     ImportAddressTable: 0x8008
+EC-IMPORTS-NEXT:     ImportNameTable: 0x4188
 EC-IMPORTS-NEXT:     BoundDelayImportTable: 0x0
 EC-IMPORTS-NEXT:     UnloadDelayImportTable: 0x0
 EC-IMPORTS-NEXT:     Import {
@@ -254,7 +254,7 @@ EC-IMPORTS-NEXT:   }
 EC-IMPORTS-NEXT: }
 
 RUN: llvm-readobj --hex-dump=.test out-ec.dll | FileCheck --check-prefix=EC-TESTSEC %s
-EC-TESTSEC: 0x180009000 08500000 90600000 00300000 10200000
+EC-TESTSEC: 0x18000a000 08500000 08800000 00300000 10200000
 
 RUN: llvm-objdump -d out-ec.dll | FileCheck --check-prefix=EC-DISASM %s
 EC-DISASM:      0000000180001000 <.text>:
@@ -268,16 +268,16 @@ EC-DISASM-NEXT: 18000200c: d65f03c0     ret
 EC-DISASM-NEXT: 180002010: f0000010     adrp    x16, 0x180005000
 EC-DISASM-NEXT: 180002014: f9400610     ldr     x16, [x16, #0x8]
 EC-DISASM-NEXT: 180002018: d61f0200     br      x16
-EC-DISASM-NEXT: 18000201c: 9000002b     adrp    x11, 0x180006000
-EC-DISASM-NEXT: 180002020: f940496b     ldr     x11, [x11, #0x90]
+EC-DISASM-NEXT: 18000201c: d000002b     adrp    x11, 0x180008000
+EC-DISASM-NEXT: 180002020: f940056b     ldr     x11, [x11, #0x8]
 EC-DISASM-NEXT: 180002024: 9000000a     adrp    x10, 0x180002000 <.text+0x1000>
 EC-DISASM-NEXT: 180002028: 9100c14a     add     x10, x10, #0x30
 EC-DISASM-NEXT: 18000202c: 17fffff5     b       0x180002000 <.text+0x1000>
 EC-DISASM-NEXT: 180002030: 52800080     mov     w0, #0x4                // =4
 EC-DISASM-NEXT: 180002034: d65f03c0     ret
 EC-DISASM-NEXT:                 ...
-EC-DISASM-NEXT: 180003000: ff 25 8a 30 00 00            jmpq    *0x308a(%rip)           # 0x180006090
-EC-DISASM-NEXT: 180003006: 48 8d 05 83 30 00 00         leaq    0x3083(%rip), %rax      # 0x180006090
+EC-DISASM-NEXT: 180003000: ff 25 02 50 00 00            jmpq    *0x5002(%rip)           # 0x180008008
+EC-DISASM-NEXT: 180003006: 48 8d 05 fb 4f 00 00         leaq    0x4ffb(%rip), %rax      # 0x180008008
 EC-DISASM-NEXT: 18000300d: e9 00 00 00 00               jmp     0x180003012 <.text+0x2012>
 EC-DISASM-NEXT: 180003012: 51                           pushq   %rcx
 EC-DISASM-NEXT: 180003013: 52                           pushq   %rdx
@@ -289,7 +289,7 @@ EC-DISASM-NEXT: 180003021: 66 0f 7f 4c 24 10            movdqa  %xmm1, 0x10(%rsp
 EC-DISASM-NEXT: 180003027: 66 0f 7f 54 24 20            movdqa  %xmm2, 0x20(%rsp)
 EC-DISASM-NEXT: 18000302d: 66 0f 7f 5c 24 30            movdqa  %xmm3, 0x30(%rsp)
 EC-DISASM-NEXT: 180003033: 48 8b d0                     movq    %rax, %rdx
-EC-DISASM-NEXT: 180003036: 48 8d 0d 0b 13 00 00         leaq    0x130b(%rip), %rcx      # 0x180004348
+EC-DISASM-NEXT: 180003036: 48 8d 0d 03 11 00 00         leaq    0x1103(%rip), %rcx      # 0x180004140
 EC-DISASM-NEXT: 18000303d: e8 c6 ef ff ff               callq   0x180002008 <.text+0x1008>
 EC-DISASM-NEXT: 180003042: 66 0f 6f 04 24               movdqa  (%rsp), %xmm0
 EC-DISASM-NEXT: 180003047: 66 0f 6f 4c 24 10            movdqa  0x10(%rsp), %xmm1
@@ -304,7 +304,7 @@ EC-DISASM-NEXT: 180003063: ff e0                        jmpq    *%rax
 
 RUN: llvm-readobj --coff-load-config out-ec.dll | FileCheck --check-prefix=EC-LOADCFG %s
 EC-LOADCFG:      AuxiliaryDelayloadIAT: 0x5000
-EC-LOADCFG-NEXT: AuxiliaryDelayloadIATCopy: 0x4140
+EC-LOADCFG-NEXT: AuxiliaryDelayloadIATCopy: 0x41B0
 
 RUN: llvm-readobj --hex-dump=.rdata out-ec.dll | FileCheck --check-prefix=EC-AUXIAT %s
 EC-AUXIAT:      0x180005000 00000000 00000000 1c200080 01000000
