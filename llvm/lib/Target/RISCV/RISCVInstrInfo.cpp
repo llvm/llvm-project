@@ -4812,6 +4812,8 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
     return true;
   if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel)
     return true;
+  if (LHS.isImm() && LHS.getImm() == 0)
+    return true;
   if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
     return false;
   if (!LHS.isImm() || !RHS.isImm())
