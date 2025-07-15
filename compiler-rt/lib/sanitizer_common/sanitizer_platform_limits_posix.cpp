@@ -1223,6 +1223,10 @@ CHECK_SIZE_AND_OFFSET(wordexp_t, we_wordc);
 CHECK_SIZE_AND_OFFSET(wordexp_t, we_wordv);
 CHECK_SIZE_AND_OFFSET(wordexp_t, we_offs);
 #endif
+#if SANITIZER_AIX
+CHECK_SIZE_AND_OFFSET(wordexp_t, we_sflags);
+CHECK_SIZE_AND_OFFSET(wordexp_t, we_soffs);
+#endif
 
 CHECK_TYPE_SIZE(tm);
 CHECK_SIZE_AND_OFFSET(tm, tm_sec);
