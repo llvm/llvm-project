@@ -281,7 +281,7 @@ func.func @test_assign_type_mismatch(%arg1: f32) {
 
 func.func @test_assign_to_array(%arg1: !emitc.array<4xi32>) {
   %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<4xi32>
-  // expected-error @+1 {{invalid kind of Type specified}}
+  // expected-error @+1 {{invalid kind of type specified: expected emitc.lvalue, but found '!emitc.array<4xi32>'}}
   emitc.assign %arg1 : !emitc.array<4xi32> to %v : !emitc.array<4xi32>
   return
 }
@@ -342,6 +342,28 @@ func.func @test_expression_multiple_results(%arg0: i32) -> i32 {
     emitc.yield %a : i32
   }
   return %r : i32
+}
+
+// -----
+
+emitc.func @test_expression_no_defining_op(%a : i32) {
+  // expected-error @+1 {{'emitc.expression' op yielded value has no defining op}}
+  %res = emitc.expression : i32 {
+    emitc.yield %a : i32
+  }
+
+  return
+}
+
+// -----
+
+emitc.func @test_expression_op_outside_expression() {
+  %cond = literal "true" : i1
+  // expected-error @+1 {{'emitc.expression' op yielded value not defined within expression}}
+  %res = emitc.expression : i1 {
+    emitc.yield %cond : i1
+  }
+  return
 }
 
 // -----

@@ -47,9 +47,8 @@ BugDriver::runManyPasses(const std::vector<std::string> &AllPasses) {
     // Step 2: Run optimizer passes on the program and check for success.
     //
     outs() << "Running selected passes on program to test for crash: ";
-    for (int i = 0, e = PassesToRun.size(); i != e; i++) {
-      outs() << "-" << PassesToRun[i] << " ";
-    }
+    for (const std::string &Pass : PassesToRun)
+      outs() << "-" << Pass << " ";
 
     std::string Filename;
     if (runPasses(*Program, PassesToRun, Filename, false)) {

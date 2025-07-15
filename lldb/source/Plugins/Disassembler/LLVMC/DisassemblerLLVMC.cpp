@@ -818,7 +818,7 @@ public:
             return std::make_pair(ret, osi);
           }
         case 'x':
-          if (!str.compare("0")) {
+          if (str == "0") {
             is_hex = true;
             str.push_back(*osi);
           } else {
@@ -1146,7 +1146,7 @@ public:
       }
     }
 
-    if (Log *log = GetLog(LLDBLog::Process)) {
+    if (Log *log = GetLog(LLDBLog::Process | LLDBLog::Disassembler)) {
       StreamString ss;
 
       ss.Printf("[%s] expands to %zu operands:\n", operands_string,

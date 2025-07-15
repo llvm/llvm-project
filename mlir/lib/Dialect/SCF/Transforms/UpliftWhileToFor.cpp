@@ -240,7 +240,7 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   if (isa<IndexType>(step.getType())) {
     one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
   } else {
-    one = rewriter.create<arith::ConstantIntOp>(loc, 1, step.getType());
+    one = rewriter.create<arith::ConstantIntOp>(loc, step.getType(), 1);
   }
 
   Value stepDec = rewriter.create<arith::SubIOp>(loc, step, one);

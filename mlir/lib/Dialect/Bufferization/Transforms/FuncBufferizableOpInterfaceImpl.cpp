@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 #include <optional>
@@ -63,26 +62,42 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
   BaseMemRefType memrefType = options.functionArgTypeConverterFn(
       tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
 
-  auto layoutAttr = funcOp.getArgAttrOfType<AffineMapAttr>(
+  auto layoutAttr = funcOp.getArgAttrOfType<MemRefLayoutAttrInterface>(
       index, BufferizationDialect::kBufferLayoutAttrName);
   if (!layoutAttr)
     return memrefType;
 
   auto rankedMemrefType = dyn_cast<MemRefType>(memrefType);
   assert(rankedMemrefType && "buffer layout not supported on unranked tensors");
-  return MemRefType::get(
-      rankedMemrefType.getShape(), rankedMemrefType.getElementType(),
-      layoutAttr.getValue(), rankedMemrefType.getMemorySpace());
+  return MemRefType::get(rankedMemrefType.getShape(),
+                         rankedMemrefType.getElementType(), layoutAttr,
+                         rankedMemrefType.getMemorySpace());
 }
 
 /// Return the FuncOp called by `callOp`.
-static FuncOp getCalledFunction(CallOpInterface callOp) {
+static FuncOp getCalledFunction(CallOpInterface callOp,
+                                SymbolTableCollection &symbolTables) {
   SymbolRefAttr sym =
       llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom(callOp, sym));
+      symbolTables.lookupNearestSymbolFrom(callOp, sym));
+}
+
+/// Return the FuncOp called by `callOp`.
+static FuncOp getCalledFunction(CallOpInterface callOp,
+                                const AnalysisState &state) {
+  auto &oneShotAnalysisState = static_cast<const OneShotAnalysisState &>(state);
+
+  if (auto *funcAnalysisState =
+          oneShotAnalysisState.getExtension<FuncAnalysisState>()) {
+    // Use the cached symbol tables.
+    return getCalledFunction(callOp, funcAnalysisState->symbolTables);
+  }
+
+  SymbolTableCollection symbolTables;
+  return getCalledFunction(callOp, symbolTables);
 }
 
 /// Get FuncAnalysisState.
@@ -135,7 +150,7 @@ struct CallOpInterface
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+    FuncOp funcOp = getCalledFunction(callOp, state);
     assert(funcOp && "expected CallOp to a FuncOp");
 
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
@@ -150,7 +165,7 @@ struct CallOpInterface
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+    FuncOp funcOp = getCalledFunction(callOp, state);
     assert(funcOp && "expected CallOp to a FuncOp");
 
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
@@ -165,7 +180,7 @@ struct CallOpInterface
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+    FuncOp funcOp = getCalledFunction(callOp, state);
     assert(funcOp && "expected CallOp to a FuncOp");
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
       // FuncOp not analyzed yet. Any OpResult may be aliasing.
@@ -195,11 +210,16 @@ struct CallOpInterface
     return result;
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+
+    // TODO Avoid recomputing the symbol tables every time.
+    SymbolTableCollection symbolTable;
+
+    FuncOp funcOp = getCalledFunction(callOp, symbolTable);
     assert(funcOp && "expected CallOp to a FuncOp");
 
     // If the callee was already bufferized, we can directly take the type from
@@ -208,18 +228,20 @@ struct CallOpInterface
     Type resultType =
         funcType.getResult(cast<OpResult>(value).getResultNumber());
     if (auto bufferizedType = dyn_cast<BaseMemRefType>(resultType))
-      return bufferizedType;
+      return cast<BufferLikeType>(bufferizedType);
 
     // Otherwise, call the type converter to compute the bufferized type.
     auto tensorType = cast<TensorType>(resultType);
-    return options.functionArgTypeConverterFn(
-        tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
+    return cast<BufferLikeType>(options.functionArgTypeConverterFn(
+        tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp,
+        options));
   }
 
   /// All function arguments are writable. It is the responsibility of the
   /// CallOp to insert buffer copies where necessary.
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
 
     // 1. Compute the result types of the new CallOp.
@@ -233,8 +255,8 @@ struct CallOpInterface
       }
 
       // Returning a memref.
-      FailureOr<BaseMemRefType> resultType =
-          bufferization::getBufferType(result, options);
+      FailureOr<BufferLikeType> resultType =
+          bufferization::getBufferType(result, options, state);
       if (failed(resultType))
         return failure();
       resultTypes.push_back(*resultType);
@@ -243,7 +265,8 @@ struct CallOpInterface
     // 2. Rewrite tensor operands as memrefs based on type of the already
     //    bufferized callee.
     SmallVector<Value> newOperands;
-    FuncOp funcOp = getCalledFunction(callOp);
+
+    FuncOp funcOp = getCalledFunction(callOp, state.getSymbolTables());
     assert(funcOp && "expected CallOp to a FuncOp");
     FunctionType funcType = funcOp.getFunctionType();
 
@@ -256,7 +279,7 @@ struct CallOpInterface
 
       // Retrieve buffers for tensor operands.
       FailureOr<Value> maybeBuffer =
-          getBuffer(rewriter, opOperand.get(), options);
+          getBuffer(rewriter, opOperand.get(), options, state);
       if (failed(maybeBuffer))
         return failure();
       Value buffer = *maybeBuffer;
@@ -267,15 +290,16 @@ struct CallOpInterface
         // The called function was not bufferized yet. This can happen when
         // there cycles in the function call graph. Compute the bufferized
         // result type.
-        FailureOr<BaseMemRefType> maybeMemRefType =
+        FailureOr<BufferLikeType> maybeBufferType =
             bufferization::getBufferType(
-                funcOp.getArgument(opOperand.getOperandNumber()), options);
-        if (failed(maybeMemRefType))
+                funcOp.getArgument(opOperand.getOperandNumber()), options,
+                state);
+        if (failed(maybeBufferType))
           return failure();
-        memRefType = *maybeMemRefType;
+        memRefType = *maybeBufferType;
       }
 
-      // Since we don't yet have a clear layout story, to_memref may
+      // Since we don't yet have a clear layout story, to_buffer may
       // conservatively turn tensors into more dynamic memref than necessary.
       // If the memref type of the callee fails, introduce an extra memref.cast
       // that will either canonicalize away or fail compilation until we can do
@@ -325,7 +349,8 @@ struct ReturnOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
 #ifndef NDEBUG
     auto returnOp = cast<func::ReturnOp>(op);
     assert(isa<FuncOp>(returnOp->getParentOp()) &&
@@ -371,19 +396,20 @@ struct FuncOpInterface
     return getAliasingBranchOpOperands(op, cast<BlockArgument>(value), state);
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto funcOp = cast<FuncOp>(op);
     auto bbArg = cast<BlockArgument>(value);
 
     // Function arguments are special.
     if (bbArg.getOwner() == &funcOp.getBody().front())
-      return getBufferizedFunctionArgType(funcOp, bbArg.getArgNumber(),
-                                          options);
+      return cast<BufferLikeType>(
+          getBufferizedFunctionArgType(funcOp, bbArg.getArgNumber(), options));
 
     return OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel::
-        getBufferType(op, value, options, invocationStack);
+        getBufferType(op, value, options, state, invocationStack);
   }
 
   /// Rewrite function bbArgs and return values into buffer form. This function
@@ -394,7 +420,8 @@ struct FuncOpInterface
   /// All function bbArgs are writable unless they are explicitly marked as
   /// read-only. Callers must insert copies when needed.
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto funcOp = cast<FuncOp>(op);
     FunctionType funcType = funcOp.getFunctionType();
 
@@ -435,7 +462,7 @@ struct FuncOpInterface
     // 1. Bufferize every block.
     for (Block &block : funcOp.getBody())
       if (failed(bufferization::bufferizeBlockSignature(&block, rewriter,
-                                                        options)))
+                                                        options, state)))
         return failure();
 
     // 2. Bufferize the operands of the all return op.
@@ -456,9 +483,9 @@ struct FuncOpInterface
 
         // Note: If `inferFunctionResultLayout = true`, casts are later folded
         // away.
-        Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
+        Value toBufferOp = rewriter.create<bufferization::ToBufferOp>(
             returnOp.getLoc(), bufferizedType, returnVal);
-        returnValues.push_back(toMemrefOp);
+        returnValues.push_back(toBufferOp);
       }
 
       returnOp.getOperandsMutable().assign(returnValues);

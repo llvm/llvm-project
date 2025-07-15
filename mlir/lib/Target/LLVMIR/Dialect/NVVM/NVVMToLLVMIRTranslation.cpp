@@ -13,7 +13,6 @@
 
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -131,9 +130,8 @@ static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
     return llvm::Intrinsic::nvvm_vote_ballot_sync;
   case NVVM::VoteSyncKind::uni:
     return llvm::Intrinsic::nvvm_vote_uni_sync;
-  default:
-    llvm_unreachable("unsupported vote kind");
   }
+  llvm_unreachable("unsupported vote kind");
 }
 
 /// Return the intrinsic ID associated with ldmatrix for the given paramters.
@@ -345,7 +343,7 @@ public:
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
 
     if (attribute.getName() == NVVM::NVVMDialect::getMaxntidAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(
@@ -353,7 +351,7 @@ public:
                                        values.asArrayRef().end()));
       llvmFunc->addFnAttr("nvvm.maxntid", attr);
     } else if (attribute.getName() == NVVM::NVVMDialect::getReqntidAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(
@@ -362,7 +360,7 @@ public:
       llvmFunc->addFnAttr("nvvm.reqntid", attr);
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterDimAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(

@@ -61,8 +61,7 @@ struct InlinerCallback
     src->cloneInto(&region, mapper);
 
     // Split block before scf operation.
-    Block *continueBlock =
-        inlineBlock->splitBlock(executeRegionOp.getOperation());
+    inlineBlock->splitBlock(executeRegionOp.getOperation());
 
     // Replace all test.return with scf.yield
     for (mlir::Block &block : region) {

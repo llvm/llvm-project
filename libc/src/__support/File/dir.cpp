@@ -11,8 +11,8 @@
 #include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
+#include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h" // For error macros
 
 namespace LIBC_NAMESPACE_DECL {
 

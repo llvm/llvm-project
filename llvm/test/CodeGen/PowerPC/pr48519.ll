@@ -32,7 +32,7 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-NEXT:  # %bb.2: # %bb11
 ; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    sth r3, 0(r3)
+; CHECK-NEXT:    sth r3, 128(0)
 ;
 ; CHECK-P9-LABEL: julia__typed_vcat_20:
 ; CHECK-P9:       # %bb.0: # %bb
@@ -54,6 +54,7 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-P9-NEXT:    bdnz .LBB0_1
 ; CHECK-P9-NEXT:  # %bb.2: # %bb11
 ; CHECK-P9-NEXT:    xscvdphp f0, f0
+; CHECK-P9-NEXT:    li r3, 128
 ; CHECK-P9-NEXT:    stxsihx f0, 0, r3
 bb:
   %i = load i64, ptr addrspace(11) null, align 8
@@ -67,7 +68,7 @@ bb3:                                              ; preds = %bb3, %bb
   %i6 = add nsw i64 %i5, -1
   %i7 = add i64 %i6, 0
   %i8 = sitofp i64 %i7 to half
-  store half %i8, ptr addrspace(13) undef, align 2
+  store half %i8, ptr addrspace(13) inttoptr (i64 128 to ptr addrspace(13)), align 2
   %i9 = icmp eq i64 %i4, 0
   %i10 = add i64 %i4, 1
   br i1 %i9, label %bb11, label %bb3

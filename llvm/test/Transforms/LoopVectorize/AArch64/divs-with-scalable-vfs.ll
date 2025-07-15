@@ -8,7 +8,7 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CONV61:%.*]] = zext i32 [[X]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 8, i64 [[TMP1]])
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
@@ -21,11 +21,11 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP9]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP10]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = sdiv i64 [[M]], [[CONV6]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[TMP18]] to i32
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP18]], [[CONV61]]
@@ -40,7 +40,7 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP32]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr double, ptr [[TMP34]], i32 0
 ; CHECK-NEXT:    [[TMP37:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP38:%.*]] = mul i64 [[TMP37]], 2
+; CHECK-NEXT:    [[TMP38:%.*]] = mul nuw i64 [[TMP37]], 2
 ; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr double, ptr [[TMP34]], i64 [[TMP38]]
 ; CHECK-NEXT:    store <vscale x 2 x double> zeroinitializer, ptr [[TMP36]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x double> zeroinitializer, ptr [[TMP39]], align 8
@@ -110,15 +110,15 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP7]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP10]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[N]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[N]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 0
@@ -233,15 +233,15 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], [[TMP7]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP10]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP0]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[TMP0]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 0

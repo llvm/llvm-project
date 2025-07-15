@@ -18,7 +18,6 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/ValueRange.h"
-#include "mlir/Transforms/Inliner.h"
 #include <optional>
 
 namespace mlir {
@@ -192,6 +191,12 @@ public:
 class InlinerInterface
     : public DialectInterfaceCollection<DialectInlinerInterface> {
 public:
+  using CloneCallbackSigTy = void(OpBuilder &builder, Region *src,
+                                  Block *inlineBlock, Block *postInsertBlock,
+                                  IRMapping &mapper,
+                                  bool shouldCloneInlinedRegion);
+  using CloneCallbackTy = std::function<CloneCallbackSigTy>;
+
   using Base::Base;
 
   /// Process a set of blocks that have been inlined. This callback is invoked
@@ -256,14 +261,14 @@ public:
 /// region should be cloned into the 'inlinePoint' or spliced directly.
 LogicalResult
 inlineRegion(InlinerInterface &interface,
-             function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+             function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
              Region *src, Operation *inlinePoint, IRMapping &mapper,
              ValueRange resultsToReplace, TypeRange regionResultTypes,
              std::optional<Location> inlineLoc = std::nullopt,
              bool shouldCloneInlinedRegion = true);
 LogicalResult
 inlineRegion(InlinerInterface &interface,
-             function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+             function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
              Region *src, Block *inlineBlock, Block::iterator inlinePoint,
              IRMapping &mapper, ValueRange resultsToReplace,
              TypeRange regionResultTypes,
@@ -275,14 +280,14 @@ inlineRegion(InlinerInterface &interface,
 /// in-favor of the region arguments when inlining.
 LogicalResult
 inlineRegion(InlinerInterface &interface,
-             function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+             function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
              Region *src, Operation *inlinePoint, ValueRange inlinedOperands,
              ValueRange resultsToReplace,
              std::optional<Location> inlineLoc = std::nullopt,
              bool shouldCloneInlinedRegion = true);
 LogicalResult
 inlineRegion(InlinerInterface &interface,
-             function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+             function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
              Region *src, Block *inlineBlock, Block::iterator inlinePoint,
              ValueRange inlinedOperands, ValueRange resultsToReplace,
              std::optional<Location> inlineLoc = std::nullopt,
@@ -296,7 +301,7 @@ inlineRegion(InlinerInterface &interface,
 /// spliced directly.
 LogicalResult
 inlineCall(InlinerInterface &interface,
-           function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+           function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
            CallOpInterface call, CallableOpInterface callable, Region *src,
            bool shouldCloneInlinedRegion = true);
 

@@ -11,13 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/InliningUtils.h"
-#include "mlir/Transforms/Inliner.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/CallInterfaces.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -249,7 +247,6 @@ static void handleResultImpl(InlinerInterface &interface, OpBuilder &builder,
   }
 
   // Run the result attribute handler for the given result and attribute.
-  SmallVector<DictionaryAttr> resultAttributes;
   for (auto [result, resAttr] : llvm::zip(results, resAttrs)) {
     // Store the original result users before running the handler.
     DenseSet<Operation *> resultUsers(llvm::from_range, result.getUsers());
@@ -266,13 +263,13 @@ static void handleResultImpl(InlinerInterface &interface, OpBuilder &builder,
   }
 }
 
-static LogicalResult
-inlineRegionImpl(InlinerInterface &interface,
-                 function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
-                 Region *src, Block *inlineBlock, Block::iterator inlinePoint,
-                 IRMapping &mapper, ValueRange resultsToReplace,
-                 TypeRange regionResultTypes, std::optional<Location> inlineLoc,
-                 bool shouldCloneInlinedRegion, CallOpInterface call = {}) {
+static LogicalResult inlineRegionImpl(
+    InlinerInterface &interface,
+    function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+    Region *src, Block *inlineBlock, Block::iterator inlinePoint,
+    IRMapping &mapper, ValueRange resultsToReplace, TypeRange regionResultTypes,
+    std::optional<Location> inlineLoc, bool shouldCloneInlinedRegion,
+    CallOpInterface call = {}) {
   assert(resultsToReplace.size() == regionResultTypes.size());
   // We expect the region to have at least one block.
   if (src->empty())
@@ -369,13 +366,13 @@ inlineRegionImpl(InlinerInterface &interface,
   return success();
 }
 
-static LogicalResult
-inlineRegionImpl(InlinerInterface &interface,
-                 function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
-                 Region *src, Block *inlineBlock, Block::iterator inlinePoint,
-                 ValueRange inlinedOperands, ValueRange resultsToReplace,
-                 std::optional<Location> inlineLoc,
-                 bool shouldCloneInlinedRegion, CallOpInterface call = {}) {
+static LogicalResult inlineRegionImpl(
+    InlinerInterface &interface,
+    function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+    Region *src, Block *inlineBlock, Block::iterator inlinePoint,
+    ValueRange inlinedOperands, ValueRange resultsToReplace,
+    std::optional<Location> inlineLoc, bool shouldCloneInlinedRegion,
+    CallOpInterface call = {}) {
   // We expect the region to have at least one block.
   if (src->empty())
     return failure();
@@ -404,10 +401,10 @@ inlineRegionImpl(InlinerInterface &interface,
 
 LogicalResult mlir::inlineRegion(
     InlinerInterface &interface,
-    function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback, Region *src,
-    Operation *inlinePoint, IRMapping &mapper, ValueRange resultsToReplace,
-    TypeRange regionResultTypes, std::optional<Location> inlineLoc,
-    bool shouldCloneInlinedRegion) {
+    function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+    Region *src, Operation *inlinePoint, IRMapping &mapper,
+    ValueRange resultsToReplace, TypeRange regionResultTypes,
+    std::optional<Location> inlineLoc, bool shouldCloneInlinedRegion) {
   return inlineRegion(interface, cloneCallback, src, inlinePoint->getBlock(),
                       ++inlinePoint->getIterator(), mapper, resultsToReplace,
                       regionResultTypes, inlineLoc, shouldCloneInlinedRegion);
@@ -415,9 +412,9 @@ LogicalResult mlir::inlineRegion(
 
 LogicalResult mlir::inlineRegion(
     InlinerInterface &interface,
-    function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback, Region *src,
-    Block *inlineBlock, Block::iterator inlinePoint, IRMapping &mapper,
-    ValueRange resultsToReplace, TypeRange regionResultTypes,
+    function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+    Region *src, Block *inlineBlock, Block::iterator inlinePoint,
+    IRMapping &mapper, ValueRange resultsToReplace, TypeRange regionResultTypes,
     std::optional<Location> inlineLoc, bool shouldCloneInlinedRegion) {
   return inlineRegionImpl(
       interface, cloneCallback, src, inlineBlock, inlinePoint, mapper,
@@ -426,8 +423,8 @@ LogicalResult mlir::inlineRegion(
 
 LogicalResult mlir::inlineRegion(
     InlinerInterface &interface,
-    function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback, Region *src,
-    Operation *inlinePoint, ValueRange inlinedOperands,
+    function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+    Region *src, Operation *inlinePoint, ValueRange inlinedOperands,
     ValueRange resultsToReplace, std::optional<Location> inlineLoc,
     bool shouldCloneInlinedRegion) {
   return inlineRegion(interface, cloneCallback, src, inlinePoint->getBlock(),
@@ -437,10 +434,10 @@ LogicalResult mlir::inlineRegion(
 
 LogicalResult mlir::inlineRegion(
     InlinerInterface &interface,
-    function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback, Region *src,
-    Block *inlineBlock, Block::iterator inlinePoint, ValueRange inlinedOperands,
-    ValueRange resultsToReplace, std::optional<Location> inlineLoc,
-    bool shouldCloneInlinedRegion) {
+    function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+    Region *src, Block *inlineBlock, Block::iterator inlinePoint,
+    ValueRange inlinedOperands, ValueRange resultsToReplace,
+    std::optional<Location> inlineLoc, bool shouldCloneInlinedRegion) {
   return inlineRegionImpl(interface, cloneCallback, src, inlineBlock,
                           inlinePoint, inlinedOperands, resultsToReplace,
                           inlineLoc, shouldCloneInlinedRegion);
@@ -474,11 +471,11 @@ static Value materializeConversion(const DialectInlinerInterface *interface,
 /// failure, no changes are made to the module. 'shouldCloneInlinedRegion'
 /// corresponds to whether the source region should be cloned into the 'call' or
 /// spliced directly.
-LogicalResult
-mlir::inlineCall(InlinerInterface &interface,
-                 function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
-                 CallOpInterface call, CallableOpInterface callable,
-                 Region *src, bool shouldCloneInlinedRegion) {
+LogicalResult mlir::inlineCall(
+    InlinerInterface &interface,
+    function_ref<InlinerInterface::CloneCallbackSigTy> cloneCallback,
+    CallOpInterface call, CallableOpInterface callable, Region *src,
+    bool shouldCloneInlinedRegion) {
   // We expect the region to have at least one block.
   if (src->empty())
     return failure();

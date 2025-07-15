@@ -263,6 +263,10 @@ public:
     return bp_site_sp->GetSuggestedStackFrameIndex();
   }
 
+  bool ShouldShow() const override { return !m_was_all_internal; }
+
+  bool ShouldSelect() const override { return !m_was_all_internal; }
+
 protected:
   bool ShouldStop(Event *event_ptr) override {
     // This just reports the work done by PerformAction or the synchronous
@@ -461,7 +465,7 @@ protected:
             // should stop, then we'll run the callback for the breakpoint.  If
             // the callback says we shouldn't stop that will win.
 
-            if (bp_loc_sp->GetConditionText() == nullptr)
+            if (!bp_loc_sp->GetCondition())
               actually_hit_any_locations = true;
             else {
               Status condition_error;
@@ -480,7 +484,7 @@ protected:
                 strm << "stopped due to an error evaluating condition of "
                         "breakpoint ";
                 bp_loc_sp->GetDescription(&strm, eDescriptionLevelBrief);
-                strm << ": \"" << bp_loc_sp->GetConditionText() << "\"\n";
+                strm << ": \"" << bp_loc_sp->GetCondition().GetText() << "\"\n";
                 strm << err_str;
 
                 Debugger::ReportError(

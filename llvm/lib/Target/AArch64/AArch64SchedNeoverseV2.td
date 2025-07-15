@@ -14,7 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseV2Model : SchedMachineModel {
-  let IssueWidth            =  16; // Micro-ops dispatched at a time.
+  let IssueWidth            =   6; // This value comes from the decode bandwidth
+                                   // and empirical measurements showed that a
+                                   // lower value is better.
   let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.  NOTE: Copied from N2.
@@ -155,6 +157,7 @@ def V2Write_20c_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 20;
 def V2Write_2c_1V1   : SchedWriteRes<[V2UnitV1]>  { let Latency = 2; }
 def V2Write_2c_1V13  : SchedWriteRes<[V2UnitV13]> { let Latency = 2; }
 def V2Write_3c_1V1   : SchedWriteRes<[V2UnitV1]>  { let Latency = 3; }
+def V2Write_3c_1V13  : SchedWriteRes<[V2UnitV13]> { let Latency = 3; }
 def V2Write_4c_1V1   : SchedWriteRes<[V2UnitV1]>  { let Latency = 4; }
 def V2Write_4c_1V13  : SchedWriteRes<[V2UnitV13]> { let Latency = 4; }
 def V2Write_6c_1V1   : SchedWriteRes<[V2UnitV1]>  { let Latency = 6; }
@@ -254,8 +257,8 @@ def V2Write_4c_1L01_1V01  : SchedWriteRes<[V2UnitL01, V2UnitV01]> {
   let NumMicroOps = 2;
 }
 
-def V2Write_4c_1V13_1V : SchedWriteRes<[V2UnitV13, V2UnitV]> {
-  let Latency     = 4;
+def V2Write_5c_1V13_1V : SchedWriteRes<[V2UnitV13, V2UnitV]> {
+  let Latency     = 5;
   let NumMicroOps = 2;
 }
 
@@ -374,8 +377,8 @@ def V2Write_6c_1L_1S : SchedWriteRes<[V2UnitL, V2UnitS]> {
   let NumMicroOps = 2;
 }
 
-def V2Write_4c_2V13 : SchedWriteRes<[V2UnitV13, V2UnitV13]> {
-  let Latency     = 4;
+def V2Write_6c_2V13 : SchedWriteRes<[V2UnitV13, V2UnitV13]> {
+  let Latency     = 6;
   let NumMicroOps = 2;
 }
 
@@ -1466,14 +1469,14 @@ def : SchedAlias<WriteVq, V2Write_2c_1V>;
 def : InstRW<[V2Wr_VA, V2Rd_VA], (instregex "^[SU]ABAL?v")>;
 
 // ASIMD arith, reduce, 4H/4S
-def : InstRW<[V2Write_2c_1V13], (instregex "^(ADDV|[SU]ADDLV)v4(i16|i32)v$")>;
+def : InstRW<[V2Write_3c_1V13], (instregex "^(ADDV|[SU]ADDLV)v4(i16|i32)v$")>;
 
 // ASIMD arith, reduce, 8B/8H
-def : InstRW<[V2Write_4c_1V13_1V],
+def : InstRW<[V2Write_5c_1V13_1V],
              (instregex "^(ADDV|[SU]ADDLV)v8(i8|i16)v$")>;
 
 // ASIMD arith, reduce, 16B
-def : InstRW<[V2Write_4c_2V13], (instregex "^(ADDV|[SU]ADDLV)v16i8v$")>;
+def : InstRW<[V2Write_6c_2V13], (instregex "^(ADDV|[SU]ADDLV)v16i8v$")>;
 
 // ASIMD dot product
 // ASIMD dot product using signed and unsigned integers
@@ -1484,15 +1487,15 @@ def : InstRW<[V2Wr_VDOT, V2Rd_VDOT],
 def : InstRW<[V2Wr_VMMA, V2Rd_VMMA], (instrs SMMLA, UMMLA, USMMLA)>;
 
 // ASIMD max/min, reduce, 4H/4S
-def : InstRW<[V2Write_2c_1V13], (instregex "^[SU](MAX|MIN)Vv4i16v$",
+def : InstRW<[V2Write_3c_1V13], (instregex "^[SU](MAX|MIN)Vv4i16v$",
                                            "^[SU](MAX|MIN)Vv4i32v$")>;
 
 // ASIMD max/min, reduce, 8B/8H
-def : InstRW<[V2Write_4c_1V13_1V], (instregex "^[SU](MAX|MIN)Vv8i8v$",
+def : InstRW<[V2Write_5c_1V13_1V], (instregex "^[SU](MAX|MIN)Vv8i8v$",
                                               "^[SU](MAX|MIN)Vv8i16v$")>;
 
 // ASIMD max/min, reduce, 16B
-def : InstRW<[V2Write_4c_2V13], (instregex "[SU](MAX|MIN)Vv16i8v$")>;
+def : InstRW<[V2Write_6c_2V13], (instregex "[SU](MAX|MIN)Vv16i8v$")>;
 
 // ASIMD multiply
 def : InstRW<[V2Write_4c_1V02], (instregex "^MULv", "^SQ(R)?DMULHv")>;

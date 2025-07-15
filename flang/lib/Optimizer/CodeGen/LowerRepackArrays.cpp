@@ -38,6 +38,8 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
+#include "flang/Optimizer/OpenMP/Support/RegisterOpenMPExtensions.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -105,9 +107,37 @@ static bool canAllocateTempOnStack(mlir::Value box) {
   return !fir::isPolymorphicType(box.getType());
 }
 
+/// Return true if array repacking is safe either statically
+/// (there are no 'is_safe' attributes) or dynamically
+/// (neither of the 'is_safe' attributes claims 'isDynamicallySafe() == false').
+/// \p op is either fir.pack_array or fir.unpack_array.
+template <typename OP>
+static bool repackIsSafe(OP op) {
+  bool isSafe = true;
+  if (auto isSafeAttrs = op.getIsSafe()) {
+    // We currently support only the attributes for which
+    // isDynamicallySafe() returns false.
+    for (auto attr : *isSafeAttrs) {
+      auto iface = mlir::cast<fir::SafeTempArrayCopyAttrInterface>(attr);
+      if (iface.isDynamicallySafe())
+        TODO(op.getLoc(), "dynamically safe array repacking");
+      else
+        isSafe = false;
+    }
+  }
+  return isSafe;
+}
+
 mlir::LogicalResult
 PackArrayConversion::matchAndRewrite(fir::PackArrayOp op,
                                      mlir::PatternRewriter &rewriter) const {
+  mlir::Value box = op.getArray();
+  // If repacking is not safe, then just use the original box.
+  if (!repackIsSafe(op)) {
+    rewriter.replaceOp(op, box);
+    return mlir::success();
+  }
+
   mlir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, op.getOperation());
   if (op.getMaxSize() || op.getMaxElementSize() || op.getMinStride())
@@ -115,7 +145,6 @@ PackArrayConversion::matchAndRewrite(fir::PackArrayOp op,
   if (op.getHeuristics() != fir::PackArrayHeuristics::None)
     TODO(loc, "fir.pack_array with heuristics");
 
-  mlir::Value box = op.getArray();
   auto boxType = mlir::cast<fir::BaseBoxType>(box.getType());
 
   // For now we have to always check if the box is present.
@@ -161,12 +190,10 @@ mlir::Value PackArrayConversion::allocateTempBuffer(
   if (useStack && canAllocateTempOnStack(origBox))
     assert(!isHeapAllocation && "temp must have been allocated on the stack");
 
-  if (isHeapAllocation)
-    if (auto baseType = mlir::dyn_cast<fir::ReferenceType>(base.getType()))
-      if (mlir::isa<fir::BaseBoxType>(baseType.getEleTy()))
-        return builder.create<fir::LoadOp>(loc, base);
-
   mlir::Type ptrType = base.getType();
+  if (llvm::isa<fir::BaseBoxType>(ptrType))
+    return base;
+
   mlir::Type tempBoxType = fir::BoxType::get(mlir::isa<fir::HeapType>(ptrType)
                                                  ? ptrType
                                                  : fir::unwrapRefType(ptrType));
@@ -181,6 +208,7 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
                                     mlir::Location loc, fir::PackArrayOp op) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   mlir::Value box = op.getArray();
+
   llvm::SmallVector<mlir::Value> typeParams(op.getTypeparams().begin(),
                                             op.getTypeparams().end());
   auto boxType = mlir::cast<fir::BaseBoxType>(box.getType());
@@ -222,6 +250,8 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
 
   fir::IfOp ifOp =
       builder.create<fir::IfOp>(loc, boxType, doPack, /*withElseRegion=*/true);
+  // Assume that the repacking is unlikely.
+  ifOp.setUnlikelyIfWeights();
 
   // Return original box.
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
@@ -268,6 +298,12 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
 mlir::LogicalResult
 UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
                                        mlir::PatternRewriter &rewriter) const {
+  // If repacking is not safe, then just remove the operation.
+  if (!repackIsSafe(op)) {
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+
   mlir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, op.getOperation());
   mlir::Type predicateType = builder.getI1Type();
@@ -288,20 +324,24 @@ UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
 
     auto isNotSame = builder.genPtrCompare(loc, mlir::arith::CmpIPredicate::ne,
                                            tempAddr, originalAddr);
-    builder.genIfThen(loc, isNotSame).genThen([&]() {});
-    // Copy from temporary to the original.
-    if (!op.getNoCopy())
-      fir::runtime::genShallowCopy(builder, loc, originalBox, tempBox,
-                                   /*resultIsAllocated=*/true);
+    builder.genIfThen(loc, isNotSame)
+        .genThen([&]() {
+          // Copy from temporary to the original.
+          if (!op.getNoCopy())
+            fir::runtime::genShallowCopy(builder, loc, originalBox, tempBox,
+                                         /*resultIsAllocated=*/true);
 
-    // Deallocate, if it was allocated in heap.
-    // Note that the stack attribute does not always mean
-    // that the allocation was actually done in stack memory.
-    // There are currently cases where we delegate the allocation
-    // to the runtime that uses heap memory, even when the stack
-    // attribute is set on fir.pack_array.
-    if (!op.getStack() || !canAllocateTempOnStack(originalBox))
-      builder.create<fir::FreeMemOp>(loc, tempAddr);
+          // Deallocate, if it was allocated in heap.
+          // Note that the stack attribute does not always mean
+          // that the allocation was actually done in stack memory.
+          // There are currently cases where we delegate the allocation
+          // to the runtime that uses heap memory, even when the stack
+          // attribute is set on fir.pack_array.
+          if (!op.getStack() || !canAllocateTempOnStack(originalBox))
+            builder.create<fir::FreeMemOp>(loc, tempAddr);
+        })
+        .getIfOp()
+        .setUnlikelyIfWeights();
   });
   rewriter.eraseOp(op);
   return mlir::success();
@@ -321,9 +361,14 @@ public:
     patterns.insert<PackArrayConversion>(context);
     patterns.insert<UnpackArrayConversion>(context);
     mlir::GreedyRewriteConfig config;
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
     (void)applyPatternsGreedily(module, std::move(patterns), config);
+  }
+
+  void getDependentDialects(mlir::DialectRegistry &registry) const override {
+    fir::acc::registerTransformationalAttrsDependentDialects(registry);
+    fir::omp::registerTransformationalAttrsDependentDialects(registry);
   }
 };
 
