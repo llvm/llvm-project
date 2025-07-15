@@ -303,8 +303,9 @@ void MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
       // buffer was allocated in SelectionDAG. It marks the end of the
       // allocation -- which is a safe point for this pass to insert any TPIDR2
       // block setup.
-      if (MI.getOpcode() == AArch64::SMEStateAllocPseudo)
+      if (MI.getOpcode() == AArch64::SMEStateAllocPseudo) {
         State.AfterSMEProloguePt = MBBI;
+      }
       auto [NeededState, InsertPt] = getZAStateBeforeInst(
           *TRI, MI, /*ZAOffAtReturn=*/SMEFnAttrs.hasPrivateZAInterface());
       assert((InsertPt == MBBI ||
