@@ -747,9 +747,10 @@ HashedSyntheticChildrenFrontEnd::GetIndexOfChildWithName(ConstString name) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx == UINT32_MAX || idx >= CalculateNumChildrenIgnoringErrors())
+  auto optional_idx = ExtractIndexFromString(item_name);
+  if (!optional_idx ||
+      optional_idx.value() >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
-  return idx;
+  return optional_idx.value();
 }

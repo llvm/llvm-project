@@ -154,13 +154,19 @@ bool TypeSystemSwift::ShouldTreatScalarValueAsAddress(
       .AnySet(eTypeInstanceIsPointer | eTypeIsReference);
 }
 
-uint32_t TypeSystemSwift::GetIndexOfChildWithName(
+llvm::Expected<uint32_t> TypeSystemSwift::GetIndexOfChildWithName(
     opaque_compiler_type_t type, llvm::StringRef name,
     ExecutionContext *exe_ctx, bool omit_empty_base_classes) {
   std::vector<uint32_t> child_indexes;
   size_t num_child_indexes = GetIndexOfChildMemberWithName(
       type, name, exe_ctx, omit_empty_base_classes, child_indexes);
-  return num_child_indexes == 1 ? child_indexes.front() : UINT32_MAX;
+
+  if (num_child_indexes == 1) {
+    return child_indexes.front();
+  }
+
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.str().c_str());
 }
 
 lldb::Format TypeSystemSwift::GetFormat(opaque_compiler_type_t type) {

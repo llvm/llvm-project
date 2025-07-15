@@ -61,7 +61,9 @@ public:
     for (auto field_name : llvm::split(path, '.')) {
       uint64_t bit_offset;
       std::string name;
-      auto index_or_err = field_type.GetIndexOfChildWithName(field_name, false);
+      lldb_private::ExecutionContext exe_ctx{};
+      auto index_or_err =
+          field_type.GetIndexOfChildWithName(field_name, &exe_ctx, false);
       ASSERT_FALSE(!index_or_err);
       field_type = field_type.GetFieldAtIndex(*index_or_err, name, &bit_offset,
                                               nullptr, nullptr);

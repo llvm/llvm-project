@@ -1187,8 +1187,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
             if (target_context.symbol)
               fn_ptr_address = target_context.symbol->GetAddress();
             else if (target_context.function)
-              fn_ptr_address =
-                  target_context.function->GetAddressRange().GetBaseAddress();
+              fn_ptr_address = target_context.function->GetAddress();
           }
         }
       }
@@ -1613,13 +1612,14 @@ protected:
       return nullptr;
     }
 
-    size_t GetIndexOfChildWithName(ConstString name) override {
+    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
       for (size_t idx = 0; idx < m_projection->field_projections.size();
            idx++) {
         if (m_projection->field_projections.at(idx).name == name)
           return idx;
       }
-      return UINT32_MAX;
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
     }
 
     lldb::ChildCacheState Update() override {
@@ -2498,7 +2498,7 @@ static llvm::Expected<addr_t> ReadPtrFromAddr(Process &process, addr_t addr,
 /// access to those here would be challenging.
 static llvm::Expected<addr_t> GetCFA(Process &process, RegisterContext &regctx,
                                      addr_t pc_offset,
-                                     UnwindPlan &unwind_plan) {
+                                     const UnwindPlan &unwind_plan) {
   auto *row = unwind_plan.GetRowForFunctionOffset(pc_offset);
   if (!row)
     return llvm::createStringError(
@@ -2528,22 +2528,22 @@ static llvm::Expected<addr_t> GetCFA(Process &process, RegisterContext &regctx,
       cfa_loc.GetValueType());
 }
 
-static UnwindPlanSP GetUnwindPlanForAsyncRegister(FuncUnwinders &unwinders,
-                                                  Target &target,
-                                                  Thread &thread) {
+static std::shared_ptr<const UnwindPlan>
+GetUnwindPlanForAsyncRegister(FuncUnwinders &unwinders, Target &target,
+                              Thread &thread) {
   // We cannot trust compiler emitted unwind plans, as they respect the
   // swifttail calling convention, which assumes the async register is _not_
   // restored and therefore it is not tracked by compiler plans. If LLDB uses
   // those plans, it may take "no info" to mean "register not clobbered". For
   // those reasons, always favour the assembly plan first, it will try to track
   // the async register by assuming the usual arm calling conventions.
-  if (UnwindPlanSP asm_plan = unwinders.GetAssemblyUnwindPlan(target, thread))
+  if (auto asm_plan = unwinders.GetAssemblyUnwindPlan(target, thread))
     return asm_plan;
   // In the unlikely case the assembly plan is not available, try all others.
   return unwinders.GetUnwindPlanAtNonCallSite(target, thread);
 }
 
-static llvm::Expected<UnwindPlanSP>
+static llvm::Expected<std::shared_ptr<const UnwindPlan>>
 GetAsmUnwindPlan(Address pc, SymbolContext &sc, Thread &thread) {
   FuncUnwindersSP unwinders =
       pc.GetModule()->GetUnwindTable().GetFuncUnwindersContainingAddress(pc,
@@ -2553,7 +2553,7 @@ GetAsmUnwindPlan(Address pc, SymbolContext &sc, Thread &thread) {
                                    "function unwinder at address 0x%8.8" PRIx64,
                                    pc.GetFileAddress());
 
-  UnwindPlanSP unwind_plan = GetUnwindPlanForAsyncRegister(
+  auto unwind_plan = GetUnwindPlanForAsyncRegister(
       *unwinders, thread.GetProcess()->GetTarget(), thread);
   if (!unwind_plan)
     return llvm::createStringError(
@@ -2563,8 +2563,8 @@ GetAsmUnwindPlan(Address pc, SymbolContext &sc, Thread &thread) {
   return unwind_plan;
 }
 
-static llvm::Expected<uint32_t> GetFpRegisterNumber(UnwindPlan &unwind_plan,
-                                                    RegisterContext &regctx) {
+static llvm::Expected<uint32_t>
+GetFpRegisterNumber(const UnwindPlan &unwind_plan, RegisterContext &regctx) {
   uint32_t fp_unwind_regdomain;
   if (!regctx.ConvertBetweenRegisterKinds(
           lldb::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FP,
@@ -2581,7 +2581,7 @@ static llvm::Expected<uint32_t> GetFpRegisterNumber(UnwindPlan &unwind_plan,
 }
 
 struct FrameSetupInfo {
-  addr_t frame_setup_func_offset;
+  int64_t frame_setup_func_offset;
   int fp_cfa_offset;
 };
 
@@ -2592,7 +2592,7 @@ struct FrameSetupInfo {
 /// compared against it.
 /// 2. The CFA offset at which FP is stored, meaningless in the frameless case.
 static llvm::Expected<FrameSetupInfo>
-GetFrameSetupInfo(UnwindPlan &unwind_plan, RegisterContext &regctx) {
+GetFrameSetupInfo(const UnwindPlan &unwind_plan, RegisterContext &regctx) {
   using AbstractRegisterLocation = UnwindPlan::Row::AbstractRegisterLocation;
 
   llvm::Expected<uint32_t> fp_unwind_regdomain =
@@ -2622,7 +2622,7 @@ GetFrameSetupInfo(UnwindPlan &unwind_plan, RegisterContext &regctx) {
   // This is a frameless function, use large positive offset so that a PC can
   // still be compared against it.
   if (it == fp_locs.end())
-    return FrameSetupInfo{std::numeric_limits<addr_t>::max(), 0};
+    return FrameSetupInfo{std::numeric_limits<int64_t>::max(), 0};
 
   // This is an async function with a frame. The prologue roughly follows this
   // sequence of instructions:
@@ -2657,7 +2657,7 @@ GetFrameSetupInfo(UnwindPlan &unwind_plan, RegisterContext &regctx) {
 static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
     SymbolContext &sc, Process &process, Address pc, Address func_start_addr,
     RegisterContext &regctx, AsyncUnwindRegisterNumbers regnums) {
-  llvm::Expected<UnwindPlanSP> unwind_plan =
+  llvm::Expected<std::shared_ptr<const UnwindPlan>> unwind_plan =
       GetAsmUnwindPlan(pc, sc, regctx.GetThread());
   if (!unwind_plan)
     return unwind_plan.takeError();
@@ -2669,7 +2669,7 @@ static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
   // Is PC before the frame formation? If so, use async register directly.
   // This handles frameless functions, as frame_setup_func_offset is INT_MAX.
   addr_t pc_offset = pc.GetFileAddress() - func_start_addr.GetFileAddress();
-  if (pc_offset < frame_setup->frame_setup_func_offset)
+  if ((int64_t)pc_offset < frame_setup->frame_setup_func_offset)
     return ReadRegisterAsAddress(regctx, regnums.GetRegisterKind(),
                                  regnums.async_ctx_regnum);
 
@@ -2700,9 +2700,11 @@ DoesContinuationPointToSameFunction(addr_t async_reg, SymbolContext &sc,
   Address continuation_addr;
   continuation_addr.SetLoadAddress(process.FixCodeAddress(*continuation_ptr),
                                    &process.GetTarget());
-  if (sc.function)
-    return sc.function->GetAddressRange().ContainsLoadAddress(
-        continuation_addr, &process.GetTarget());
+  if (sc.function) {
+    AddressRange unused_range;
+    return sc.function->GetRangeContainingLoadAddress(
+        continuation_addr.GetOffset(), process.GetTarget(), unused_range);
+  }
   assert(sc.symbol);
   return sc.symbol->ContainsFileAddress(continuation_addr.GetFileAddress());
 }
@@ -2736,8 +2738,7 @@ static llvm::Expected<bool> IsIndirectContext(Process &process,
   uint32_t prologue_size = sc.function ? sc.function->GetPrologueByteSize()
                                        : sc.symbol->GetPrologueByteSize();
   Address func_start_addr =
-      sc.function ? sc.function->GetAddressRange().GetBaseAddress()
-                  : sc.symbol->GetAddress();
+      sc.function ? sc.function->GetAddress() : sc.symbol->GetAddress();
   // Include one instruction after the prologue. This is where breakpoints
   // by function name are set, so it's important to get this point right. This
   // instruction is exactly at address "base + prologue", so adding 1
@@ -2788,7 +2789,7 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   Address func_start_addr;
   ConstString mangled_name;
   if (sc.function) {
-    func_start_addr = sc.function->GetAddressRange().GetBaseAddress();
+    func_start_addr = sc.function->GetAddress();
     mangled_name = sc.function->GetMangled().GetMangledName();
   } else if (sc.symbol) {
     func_start_addr = sc.symbol->GetAddress();

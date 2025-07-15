@@ -1886,10 +1886,10 @@ void SwiftASTContext::AddExtraClangCC1Args(
 
   std::string diags;
   llvm::raw_string_ostream os(diags);
-  auto diagOpts = llvm::makeIntrusiveRefCnt<clang::DiagnosticOptions>();
+  clang::DiagnosticOptions diagOpts;
   clang::DiagnosticsEngine clangDiags(
       new clang::DiagnosticIDs(), diagOpts,
-      new clang::TextDiagnosticPrinter(os, diagOpts.get()));
+      new clang::TextDiagnosticPrinter(os, diagOpts));
 
   if (!clang::CompilerInvocation::CreateFromArgs(invocation, clangArgs,
                                                  clangDiags)) {
