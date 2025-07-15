@@ -286,6 +286,9 @@ foreach MemSize = [1, 2, 4, 8, 16] in {
 
 // Exception handling
 def UNWIND_RESUME : RuntimeLibcall;
+def UNWIND_REGISTER : RuntimeLibcall;
+def UNWIND_UNREGISTER : RuntimeLibcall;
+def UNWIND_CALL_PERSONALITY : RuntimeLibcall;
 def CXA_END_CLEANUP : RuntimeLibcall;
 
 // Note: there are two sets of atomics libcalls; see
@@ -357,6 +360,10 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 
 // Stack Protector Fail
 def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall;
+def STACK_SMASH_HANDLER : RuntimeLibcall;
+
+// Safe stack
+def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall;
 
 // Deoptimization
 def DEOPTIMIZE : RuntimeLibcall;
@@ -698,6 +705,9 @@ foreach lc = LibCalls__atomic in {
 // Stack Protector Fail
 def __stack_chk_fail : RuntimeLibcallImpl<STACKPROTECTOR_CHECK_FAIL>;
 
+// Safe stack.
+def __safestack_pointer_address : RuntimeLibcallImpl<SAFESTACK_POINTER_ADDRESS>;
+
 // Deoptimization
 def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
 
@@ -986,6 +996,12 @@ defm sincos : LibmLongDoubleLibCall;
 def bzero : RuntimeLibcallImpl<BZERO>;
 def __bzero : RuntimeLibcallImpl<BZERO>;
 def _Unwind_SjLj_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+def _Unwind_SjLj_Register : RuntimeLibcallImpl<UNWIND_REGISTER>;
+def _Unwind_SjLj_Unregister : RuntimeLibcallImpl<UNWIND_UNREGISTER>;
+def _Unwind_CallPersonality : RuntimeLibcallImpl<UNWIND_CALL_PERSONALITY>;
+
+// Used on OpenBSD
+def __stack_smash_handler : RuntimeLibcallImpl<STACK_SMASH_HANDLER>;
 
 def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 
@@ -1525,6 +1541,15 @@ def AVRSystemLibrary
               avr_sin, avr_cos)>;
 
 //===----------------------------------------------------------------------===//
+// DXIL Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isDXIL : RuntimeLibcallPredicate<"TT.isDXIL()">;
+
+// No calls
+def DXILSystemLibrary : SystemRuntimeLibrary<isDXIL, (add)>;
+
+//===----------------------------------------------------------------------===//
 // Hexagon Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
@@ -2043,6 +2068,17 @@ def SPARCSystemLibrary
        LibcallImpls<(add SPARC64_MulDivCalls, Int128RTLibcalls), isSPARC64>,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128)
 >;
+
+//===----------------------------------------------------------------------===//
+// SPIRV Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isSPIRV : RuntimeLibcallPredicate<"TT.isSPIRV()">;
+
+// No calls FIXME: Add memcpy/memset is a hack to skip
+// PreISelIntrinsicLowering in favor of SPIRVPrepareFunctions;
+// probably should remove that and just use the default one.
+def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add memset, memcpy)>;
 
 //===----------------------------------------------------------------------===//
 // Windows Runtime Libcalls

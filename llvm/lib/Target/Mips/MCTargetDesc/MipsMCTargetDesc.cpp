@@ -16,7 +16,6 @@
 #include "MipsELFStreamer.h"
 #include "MipsInstPrinter.h"
 #include "MipsMCAsmInfo.h"
-#include "MipsMCNaCl.h"
 #include "MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -199,12 +198,8 @@ static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                     std::unique_ptr<MCObjectWriter> &&OW,
                                     std::unique_ptr<MCCodeEmitter> &&Emitter) {
   MCStreamer *S;
-  if (!T.isOSNaCl())
-    S = createMipsELFStreamer(Context, std::move(MAB), std::move(OW),
-                              std::move(Emitter));
-  else
-    S = createMipsNaClELFStreamer(Context, std::move(MAB), std::move(OW),
-                                  std::move(Emitter));
+  S = createMipsELFStreamer(Context, std::move(MAB), std::move(OW),
+                            std::move(Emitter));
   return S;
 }
 

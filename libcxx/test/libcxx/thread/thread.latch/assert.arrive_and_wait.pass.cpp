@@ -18,8 +18,6 @@
 
 // REQUIRES: has-unix-headers
 // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// Without the assertion, the test will most likely time out.
-// UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <latch>

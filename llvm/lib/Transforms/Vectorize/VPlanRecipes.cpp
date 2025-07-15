@@ -67,8 +67,10 @@ bool VPRecipeBase::mayWriteToMemory() const {
                 ->onlyReadsMemory();
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
+  case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
   case VPFirstOrderRecurrencePHISC:
+  case VPReductionPHISC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
     return false;
