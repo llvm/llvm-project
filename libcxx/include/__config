@@ -147,6 +147,40 @@ _LIBCPP_HARDENING_MODE_EXTENSIVE, \
 _LIBCPP_HARDENING_MODE_DEBUG
 #  endif
 
+// Hardening assertion semantics generally mirror the evaluation semantics of C++26 Contracts:
+// - `ignore` evaluates the assertion but doesn't do anything if it fails (note that it differs from the Contracts
+//   `ignore` semantic which wouldn't evaluate the assertion at all);
+// - `observe` logs an error (indicating, if possible, that the error is fatal) and continues execution;
+// - `quick-enforce` terminates the program as fast as possible (via trapping);
+// - `enforce` logs an error and then terminates the program.
+//
+// Notes:
+// - Continuing execution after a hardening check fails results in undefined behavior; the `observe` semantic is meant
+//   to make adopting hardening easier but should not be used outside of this scenario;
+// - C++26 wording for Library Hardening precludes a conforming Hardened implementation from using the Contracts
+//   `ignore` semantic when evaluating hardened preconditions in the Library. Libc++ allows using this semantic for
+//   hardened preconditions, however, be aware that using `ignore` does not produce a conforming "Hardened"
+//   implementation, unlike the other semantics above.
+// clang-format off
+#  define _LIBCPP_ASSERTION_SEMANTIC_IGNORE        (1 << 1)
+#  define _LIBCPP_ASSERTION_SEMANTIC_OBSERVE       (1 << 2)
+#  define _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE (1 << 3)
+#  define _LIBCPP_ASSERTION_SEMANTIC_ENFORCE       (1 << 4)
+// clang-format on
+
+// Allow users to define an arbitrary assertion semantic; otherwise, use the default mapping from modes to semantics.
+// The default is for production-capable modes to use `quick-enforce` (i.e., trap) and for the `debug` mode to use
+// `enforce` (i.e., log and abort).
+#  ifndef _LIBCPP_ASSERTION_SEMANTIC
+
+#    if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+#      define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+#    else
+#      define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
+#    endif
+
+#  endif // _LIBCPP_ASSERTION_SEMANTIC
+
 // } HARDENING
 
 #  define _LIBCPP_TOSTRING2(x) #x

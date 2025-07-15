@@ -39,14 +39,14 @@ int main(int, char**) {
   }
   // mismatch of static extent
   {
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_left::mapping<std::extents<int, 3>> m(arg); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { [[maybe_unused]] std::layout_left::mapping<std::extents<int, 3>> m(arg); }()),
                                "extents construction: mismatch of provided arguments with static extents.");
   }
   // non-representability of extents itself
   {
     TEST_LIBCPP_ASSERT_FAILURE(
         ([=] {
-          std::layout_left::mapping<std::extents<signed char, D>> m(
+          [[maybe_unused]] std::layout_left::mapping<std::extents<signed char, D>> m(
               std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(500)));
         }()),
         "extents ctor: arguments must be representable as index_type and nonnegative");
