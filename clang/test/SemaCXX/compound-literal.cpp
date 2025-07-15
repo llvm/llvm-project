@@ -129,3 +129,11 @@ int f();
 #endif
 Foo o = (Foo){ {}, 1, f() };
 }
+
+#if __cplusplus >= 201103L
+namespace GH147949 {
+  // Make sure we handle transparent InitListExprs correctly.
+  struct S { int x : 3; };
+  const S* x = (const S[]){S{S{3}}};
+}
+#endif

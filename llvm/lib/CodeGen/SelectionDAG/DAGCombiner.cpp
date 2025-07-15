@@ -2606,9 +2606,7 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
       return SDValue();
   }
 
-  SDValue SelectOp = DAG.getSelect(DL, VT, Sel.getOperand(0), NewCT, NewCF);
-  SelectOp->setFlags(BO->getFlags());
-  return SelectOp;
+  return DAG.getSelect(DL, VT, Sel.getOperand(0), NewCT, NewCF, BO->getFlags());
 }
 
 static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, const SDLoc &DL,
@@ -12191,11 +12189,8 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     return V;
 
   // select (not Cond), N1, N2 -> select Cond, N2, N1
-  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false)) {
-    SDValue SelectOp = DAG.getSelect(DL, VT, F, N2, N1);
-    SelectOp->setFlags(Flags);
-    return SelectOp;
-  }
+  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false))
+    return DAG.getSelect(DL, VT, F, N2, N1, Flags);
 
   if (SDValue V = foldSelectOfConstants(N))
     return V;
@@ -28343,10 +28338,8 @@ SDValue DAGCombiner::SimplifySelect(const SDLoc &DL, SDValue N0, SDValue N1,
                                   SCC.getOperand(0), SCC.getOperand(1),
                                   SCC.getOperand(4), Flags);
       AddToWorklist(SETCC.getNode());
-      SDValue SelectNode = DAG.getSelect(SDLoc(SCC), SCC.getValueType(), SETCC,
-                                         SCC.getOperand(2), SCC.getOperand(3));
-      SelectNode->setFlags(Flags);
-      return SelectNode;
+      return DAG.getSelect(SDLoc(SCC), SCC.getValueType(), SETCC,
+                           SCC.getOperand(2), SCC.getOperand(3), Flags);
     }
 
     return SCC;

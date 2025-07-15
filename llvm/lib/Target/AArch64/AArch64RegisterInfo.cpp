@@ -1370,3 +1370,8 @@ bool AArch64RegisterInfo::shouldAnalyzePhysregInMachineLoopInfo(
     MCRegister R) const {
   return R == AArch64::VG;
 }
+
+bool AArch64RegisterInfo::isIgnoredCVReg(MCRegister LLVMReg) const {
+  return (LLVMReg >= AArch64::Z0 && LLVMReg <= AArch64::Z31) ||
+         (LLVMReg >= AArch64::P0 && LLVMReg <= AArch64::P15);
+}

@@ -108,6 +108,9 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
 
+- Improved :program:`clang-tidy` to show `CheckOptions` only for checks enabled
+  in `Checks` when running ``--dump-config``.
+
 - Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
   effect when passed via the `.clang-tidy` file.
 
@@ -166,6 +169,13 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
+- New :doc:`readability-use-concise-preprocessor-directives
+  <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check.
+
+  Finds uses of ``#if`` that can be simplified to ``#ifdef`` or ``#ifndef`` and,
+  since C23 and C++23, uses of ``#elif`` that can be simplified to ``#elifdef``
+  or ``#elifndef``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -176,6 +186,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check by fixing
   false positives on deleted constructors that cannot be used to construct
   objects, even if they have public or protected access.
+
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check to print stack trace
+  of a potentially escaped exception.
 
 - Added an option to :doc:`bugprone-multi-level-implicit-pointer-conversion
   <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` to
@@ -217,6 +231,10 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-avoid-goto
   <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
   `IgnoreMacros` to ignore ``goto`` labels defined in macros.
+
+- Improved :doc:`cppcoreguidelines-interfaces-global-init
+  <clang-tidy/checks/cppcoreguidelines/interfaces-global-init>` check by
+  fixing false positives on uses of ``constinit`` variables.
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a

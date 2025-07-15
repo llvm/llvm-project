@@ -327,6 +327,8 @@ DecodeStatus SystemZDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
                                                  raw_ostream &CS) const {
+  CommentStream = &CS;
+
   // Get the first two bytes of the instruction.
   Size = 0;
   if (Bytes.size() < 2)

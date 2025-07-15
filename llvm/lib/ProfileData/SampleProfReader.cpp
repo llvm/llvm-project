@@ -1839,7 +1839,7 @@ std::error_code SampleProfileReaderGCC::readImpl() {
 }
 
 bool SampleProfileReaderGCC::hasFormat(const MemoryBuffer &Buffer) {
-  StringRef Magic(reinterpret_cast<const char *>(Buffer.getBufferStart()));
+  StringRef Magic(Buffer.getBufferStart());
   return Magic == "adcg*704";
 }
 

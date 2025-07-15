@@ -9,9 +9,7 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;

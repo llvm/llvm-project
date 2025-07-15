@@ -942,6 +942,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 
   CHECK_PARSE_LIST(JavaImportGroups);
   CHECK_PARSE_LIST(Macros);
+  CHECK_PARSE_LIST(MacrosSkippedByRemoveParentheses);
   CHECK_PARSE_LIST(NamespaceMacros);
   CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);
   CHECK_PARSE_LIST(TableGenBreakingDAGArgOperators);

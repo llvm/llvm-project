@@ -125,6 +125,13 @@ module LLVM_DebugInfo_DWARF {
   module * { export * }
 }
 
+module LLVM_DebugInfo_DWARF_LowLevel {
+  requires cplusplus
+
+  umbrella "llvm/DebugInfo/DWARF/LowLevel"
+  module * { export * }
+}
+
 module LLVM_DebugInfo_PDB {
   requires cplusplus
 

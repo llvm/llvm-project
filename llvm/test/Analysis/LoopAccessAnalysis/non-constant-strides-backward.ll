@@ -45,12 +45,8 @@ exit:
 define void @different_non_constant_strides_known_backward_distance_larger_than_trip_count(ptr %A) {
 ; CHECK-LABEL: 'different_non_constant_strides_known_backward_distance_larger_than_trip_count'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 4096 bits
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        BackwardVectorizable:
-; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
-; CHECK-NEXT:            store i32 %add, ptr %gep.mul.2, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:

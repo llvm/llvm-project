@@ -541,6 +541,12 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "Use true 16-bit registers"
 >;
 
+def FeatureBF16TransInsts : SubtargetFeature<"bf16-trans-insts",
+  "HasBF16TransInsts",
+  "true",
+  "Has bf16 transcendental instructions"
+>;
+
 def FeatureBF16ConversionInsts : SubtargetFeature<"bf16-cvt-insts",
   "HasBF16ConversionInsts",
   "true",
@@ -1967,6 +1973,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,
    FeatureTransposeLoadF4F6Insts,
+   FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureCvtPkF16F32Inst,
    FeatureMinimum3Maximum3PKF16,
@@ -2441,6 +2448,9 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
+
+def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
+  AssemblerPredicate<(all_of FeatureBF16TransInsts)>;
 
 def HasBF16ConversionInsts : Predicate<"Subtarget->hasBF16ConversionInsts()">,
   AssemblerPredicate<(all_of FeatureBF16ConversionInsts)>;

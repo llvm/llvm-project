@@ -778,7 +778,7 @@ public:
   }
   void Unparse(const SubstringInquiry &x) {
     Walk(x.v);
-    Put(x.source.end()[-1] == 'n' ? "%LEN" : "%KIND");
+    Put(x.source.back() == 'n' ? "%LEN" : "%KIND");
   }
   void Unparse(const SubstringRange &x) { // R910
     Walk(x.t, ":");

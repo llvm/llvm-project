@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v -debug-only=loop-vectorize --disable-output \
-; RUN:   -riscv-v-vector-bits-min=128 -scalable-vectorization=off -S < %s 2>&1 | FileCheck %s
+; RUN:   -scalable-vectorization=off -S < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: foo
 ; CHECK: LV: IC is 2

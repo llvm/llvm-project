@@ -364,3 +364,21 @@ void id_print_name() {
     ((int(*)())f)();
 }
 } // namespace GH117975
+
+namespace BuildStringOnClangScope {
+
+[[clang::warn_unused_result("Discarded result")]]
+bool makeClangTrue() { return true; }
+
+[[gnu::warn_unused_result("Discarded result")]]
+bool makeGccTrue() { return true; }
+
+void doClangThings() {
+  makeClangTrue(); // expected-warning {{ignoring return value of function declared with 'clang::warn_unused_result' attribute: Discarded result}}
+}
+
+void doGccThings() {
+  makeGccTrue(); // expected-warning {{ignoring return value of function declared with 'gnu::warn_unused_result' attribute}}
+}
+
+}

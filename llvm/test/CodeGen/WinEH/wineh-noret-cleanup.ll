@@ -1,5 +1,7 @@
-; RUN: sed -e s/.Cxx:// %s | llc -mtriple=x86_64-pc-windows-msvc | FileCheck %s --check-prefix=CXX
-; RUN: sed -e s/.Seh:// %s | llc -mtriple=x86_64-pc-windows-msvc | FileCheck %s --check-prefix=SEH
+; RUN: sed -e s/.Cxx:// %s | llc -mtriple=x86_64-pc-windows-msvc | FileCheck %s --check-prefixes=CXX,X64CXX
+; RUN: sed -e s/.Seh:// %s | llc -mtriple=x86_64-pc-windows-msvc | FileCheck %s --check-prefixes=SEH
+; RUN: %if aarch64-registered-target %{ sed -e s/.Cxx:// %s | llc -mtriple=aarch64-pc-windows-msvc | FileCheck %s --check-prefix=CXX %}
+; RUN: %if aarch64-registered-target %{ sed -e s/.Seh:// %s | llc -mtriple=aarch64-pc-windows-msvc | FileCheck %s --check-prefix=SEH %}
 
 declare i32 @__CxxFrameHandler3(...)
 declare i32 @__C_specific_handler(...)
@@ -44,37 +46,44 @@ catch.body.2:
 
 ; CXX-LABEL: test:
 ; CXX-LABEL: $ip2state$test:
-; CXX-NEXT:   .long   .Lfunc_begin0@IMGREL
-; CXX-NEXT:   .long   -1
-; CXX-NEXT:   .long   .Ltmp0@IMGREL+1
-; CXX-NEXT:   .long   1
-; CXX-NEXT:   .long   .Ltmp1@IMGREL+1
-; CXX-NEXT:   .long   -1
-; CXX-NEXT:   .long   "?catch$3@?0?test@4HA"@IMGREL
-; CXX-NEXT:   .long   2
-; CXX-NEXT:   .long   .Ltmp2@IMGREL+1
-; CXX-NEXT:   .long   3
-; CXX-NEXT:   .long   .Ltmp3@IMGREL+1
-; CXX-NEXT:   .long   2
-; CXX-NEXT:   .long   "?catch$5@?0?test@4HA"@IMGREL
-; CXX-NEXT:   .long   4
+; CXX-NEXT:   .[[ENTRY:long|word]]   .Lfunc_begin0@IMGREL
+; CXX-NEXT:   .[[ENTRY]]   -1
+; CXX-NEXT:   .[[ENTRY]]   .Ltmp0@IMGREL
+; X64CXX-SAME:   +1
+; CXX-NEXT:   .[[ENTRY]]   1
+; CXX-NEXT:   .[[ENTRY]]   .Ltmp1@IMGREL
+; X64CXX-SAME:   +1
+; CXX-NEXT:   .[[ENTRY]]   -1
+; CXX-NEXT:   .[[ENTRY]]   "?catch$3@?0?test@4HA"@IMGREL
+; CXX-NEXT:   .[[ENTRY]]   2
+; CXX-NEXT:   .[[ENTRY]]   .Ltmp2@IMGREL
+; X64CXX-SAME:   +1
+; CXX-NEXT:   .[[ENTRY]]   3
+; CXX-NEXT:   .[[ENTRY]]   .Ltmp3@IMGREL
+; X64CXX-SAME:   +1
+; CXX-NEXT:   .[[ENTRY]]   2
+; CXX-NEXT:   .[[ENTRY]]   "?catch$5@?0?test@4HA"@IMGREL
+; CXX-NEXT:   .[[ENTRY]]   4
 
 ; SEH-LABEL: test:
+; SEH:        .LBB0_[[CATCH2:[0-9]+]]: {{.*}} %catch.body.2
+; SEH:        .LBB0_[[CATCH:[0-9]+]]: {{.*}} %catch.body
 ; SEH-LABEL: .Llsda_begin0:
-; SEH-NEXT:    .long   .Ltmp0@IMGREL
-; SEH-NEXT:    .long   .Ltmp1@IMGREL+1
-; SEH-NEXT:    .long   dummy_filter@IMGREL
-; SEH-NEXT:    .long   .LBB0_3@IMGREL
-; SEH-NEXT:    .long   .Ltmp0@IMGREL
-; SEH-NEXT:    .long   .Ltmp1@IMGREL+1
-; SEH-NEXT:    .long   dummy_filter@IMGREL
-; SEH-NEXT:    .long   .LBB0_5@IMGREL
-; SEH-NEXT:    .long   .Ltmp2@IMGREL
-; SEH-NEXT:    .long   .Ltmp3@IMGREL+1
-; SEH-NEXT:    .long   "?dtor$2@?0?test@4HA"@IMGREL
-; SEH-NEXT:    .long   0
-; SEH-NEXT:    .long   .Ltmp2@IMGREL
-; SEH-NEXT:    .long   .Ltmp3@IMGREL+1
-; SEH-NEXT:    .long   dummy_filter@IMGREL
-; SEH-NEXT:    .long   .LBB0_5@IMGREL
+; SEH-NEXT:    .[[ENTRY:long|word]]   .Ltmp0@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   .Ltmp1@IMGREL+1
+; SEH-NEXT:    .[[ENTRY]]   dummy_filter@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   .LBB0_[[CATCH]]@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   .Ltmp0@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   .Ltmp1@IMGREL+1
+; SEH-NEXT:    .[[ENTRY]]   dummy_filter@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   .LBB0_[[CATCH2]]@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   .Ltmp2@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   .Ltmp3@IMGREL+1
+; SEH-NEXT:    .[[ENTRY]]   "?dtor$[[DTOR:[0-9]+]]@?0?test@4HA"@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   0
+; SEH-NEXT:    .[[ENTRY]]   .Ltmp2@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   .Ltmp3@IMGREL+1
+; SEH-NEXT:    .[[ENTRY]]   dummy_filter@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   .LBB0_[[CATCH2]]@IMGREL
 ; SEH-NEXT:  .Llsda_end0:
+; SEH:        "?dtor$[[DTOR]]@?0?test@4HA"

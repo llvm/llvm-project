@@ -927,14 +927,12 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       }
 
       if (Lines[i].size() != IndentPrefix.size()) {
-        PrefixSpaceChange[i] = FirstLineSpaceChange;
-
-        if (SpacesInPrefix + PrefixSpaceChange[i] < Minimum) {
-          PrefixSpaceChange[i] +=
-              Minimum - (SpacesInPrefix + PrefixSpaceChange[i]);
-        }
-
         assert(Lines[i].size() > IndentPrefix.size());
+
+        PrefixSpaceChange[i] = SpacesInPrefix + FirstLineSpaceChange < Minimum
+                                   ? Minimum - SpacesInPrefix
+                                   : FirstLineSpaceChange;
+
         const auto FirstNonSpace = Lines[i][IndentPrefix.size()];
         const bool IsFormatComment = LineTok && switchesFormatting(*LineTok);
         const bool LineRequiresLeadingSpace =

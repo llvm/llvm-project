@@ -61,6 +61,41 @@ func.func @memref_load_i4(%arg0: index) -> i4 {
 
 // -----
 
+func.func @memref_load_f4(%arg0: index) -> f4E2M1FN {
+    %0 = memref.alloc() : memref<5xf4E2M1FN>
+    %1 = memref.load %0[%arg0] : memref<5xf4E2M1FN>
+    return %1 : f4E2M1FN
+}
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0] -> (s0 floordiv 2)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0] -> (s0 * 4 - (s0 floordiv 2) * 8)
+//      CHECK: func @memref_load_f4(
+// CHECK-SAME:     %[[ARG0:.+]]: index
+//      CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<3xi8>
+//      CHECK:   %[[INDEX:.+]] = affine.apply #[[MAP0]]()[%[[ARG0]]]
+//      CHECK:   %[[LOADVAL:.+]] = memref.load %[[ALLOC]][%[[INDEX]]]
+//      CHECK:   %[[BITOFFSET:.+]] = affine.apply #[[MAP1]]()[%[[ARG0]]]
+//      CHECK:   %[[CAST:.+]] = arith.index_cast %[[BITOFFSET]] : index to i8
+//      CHECK:   %[[SHIFTRT:.+]] = arith.shrsi %[[LOADVAL]], %[[CAST]]
+//      CHECK:   %[[TRUNC:.+]] = arith.trunci %[[SHIFTRT]] : i8 to i4
+//      CHECK:   %[[BC:.+]] = arith.bitcast %[[TRUNC]] : i4 to f4E2M1FN
+//      CHECK:   return %[[BC]]
+
+//  CHECK32-DAG: #[[MAP0:.+]] = affine_map<()[s0] -> (s0 floordiv 8)>
+//  CHECK32-DAG: #[[MAP1:.+]] = affine_map<()[s0] -> (s0 * 4 - (s0 floordiv 8) * 32)
+//      CHECK32: func @memref_load_f4(
+// CHECK32-SAME:     %[[ARG0:.+]]: index
+//      CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<1xi32>
+//      CHECK32:   %[[INDEX:.+]] = affine.apply #[[MAP0]]()[%[[ARG0]]]
+//      CHECK32:   %[[LOADVAL:.+]] = memref.load %[[ALLOC]][%[[INDEX]]]
+//      CHECK32:   %[[BITOFFSET:.+]] = affine.apply #[[MAP1]]()[%[[ARG0]]]
+//      CHECK32:   %[[CAST:.+]] = arith.index_cast %[[BITOFFSET]] : index to i32
+//      CHECK32:   %[[SHIFTRT:.+]] = arith.shrsi %[[LOADVAL]], %[[CAST]]
+//      CHECK32:   %[[TRUNC:.+]] = arith.trunci %[[SHIFTRT]] : i32 to i4
+//      CHECK32:   %[[BC:.+]] = arith.bitcast %[[TRUNC]] : i4 to f4E2M1FN
+//      CHECK32:   return %[[BC]]
+
+// -----
+
 func.func @memref_load_i4_rank2(%arg0: index, %arg1: index) -> i4 {
     %0 = memref.alloc() : memref<3x125xi4>
     %align0 = memref.assume_alignment %0, 64 : memref<3x125xi4>
@@ -465,6 +500,29 @@ func.func @rank_zero_memref_store(%arg0: i4) -> () {
 //  CHECK32-SAME:     %[[ARG0:.+]]: i4
 //       CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<i32>
 //       CHECK32:   %[[EXTUI:.+]] = arith.extui %[[ARG0]] : i4 to i32
+//       CHECK32:   %[[WRITE_RMW:.+]] = memref.atomic_rmw assign %[[EXTUI]], %[[ALLOC]][] : (i32, memref<i32>) -> i32
+//       CHECK32:   return
+
+// -----
+
+func.func @rank_zero_memref_store_f4(%arg0: f4E2M1FN) -> () {
+  %0 = memref.alloc() : memref<f4E2M1FN>
+  memref.store %arg0, %0[] : memref<f4E2M1FN>
+  return
+}
+// CHECK-LABEL: func @rank_zero_memref
+//  CHECK-SAME:     %[[ARG0:.+]]: f4E2M1FN
+//       CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<i8>
+//       CHECK:   %[[BC:.+]] = arith.bitcast %[[ARG0]] : f4E2M1FN to i4
+//       CHECK:   %[[EXTUI:.+]] = arith.extui %[[BC]] : i4 to i8
+//       CHECK:   %[[WRITE_RMW:.+]] = memref.atomic_rmw assign %[[EXTUI]], %[[ALLOC]][] : (i8, memref<i8>) -> i8
+//       CHECK:   return
+
+// CHECK32-LABEL: func @rank_zero_memref
+//  CHECK32-SAME:     %[[ARG0:.+]]: f4E2M1FN
+//       CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<i32>
+//       CHECK32:   %[[BC:.+]] = arith.bitcast %[[ARG0]] : f4E2M1FN to i4
+//       CHECK32:   %[[EXTUI:.+]] = arith.extui %[[BC]] : i4 to i32
 //       CHECK32:   %[[WRITE_RMW:.+]] = memref.atomic_rmw assign %[[EXTUI]], %[[ALLOC]][] : (i32, memref<i32>) -> i32
 //       CHECK32:   return
 

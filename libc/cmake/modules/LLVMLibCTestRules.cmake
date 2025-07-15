@@ -327,7 +327,7 @@ function(create_libc_unittest fq_target_name)
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
     add_custom_target(
       ${fq_target_name}
-      COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${fq_build_target_name}
+      COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}
       COMMENT "Running unit test ${fq_target_name}"
       DEPENDS ${fq_build_target_name}
     )

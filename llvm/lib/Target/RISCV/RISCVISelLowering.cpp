@@ -15032,10 +15032,15 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 
 // Optimize (add (shl x, c0), (shl y, c1)) ->
 //          (SLLI (SH*ADD x, y), c0), if c1-c0 equals to [1|2|3].
+// or
+//          (SLLI (QC.SHLADD x, y, c1 - c0), c0), if 4 <= (c1-c0) <=31.
 static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
-  // Perform this optimization only in the zba/xandesperf extension.
-  if (!Subtarget.hasStdExtZba() && !Subtarget.hasVendorXAndesPerf())
+  const bool HasStdExtZba = Subtarget.hasStdExtZba();
+  const bool HasVendorXAndesPerf = Subtarget.hasVendorXAndesPerf();
+  const bool HasVendorXqciac = Subtarget.hasVendorXqciac();
+  // Perform this optimization only in the zba/xandesperf/xqciac extension.
+  if (!HasStdExtZba && !HasVendorXAndesPerf && !HasVendorXqciac)
     return SDValue();
 
   // Skip for vector types and larger types.
@@ -15060,14 +15065,22 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   if (C0 <= 0 || C1 <= 0)
     return SDValue();
 
-  // Skip if SH1ADD/SH2ADD/SH3ADD are not applicable.
-  int64_t Bits = std::min(C0, C1);
   int64_t Diff = std::abs(C0 - C1);
-  if (Diff != 1 && Diff != 2 && Diff != 3)
+  bool IsShXaddDiff = Diff == 1 || Diff == 2 || Diff == 3;
+  bool HasShXadd = HasStdExtZba || HasVendorXAndesPerf;
+
+  // Skip if SH1ADD/SH2ADD/SH3ADD are not applicable.
+  if ((!IsShXaddDiff && HasShXadd && !HasVendorXqciac) ||
+      (IsShXaddDiff && !HasShXadd && HasVendorXqciac))
+    return SDValue();
+
+  // Skip if QC_SHLADD is not applicable.
+  if (Diff == 0 || Diff > 31)
     return SDValue();
 
   // Build nodes.
   SDLoc DL(N);
+  int64_t Bits = std::min(C0, C1);
   SDValue NS = (C0 < C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue NL = (C0 > C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, NL,

@@ -28479,6 +28479,10 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("MOCK_METHOD(void, Function, (), override);",
                "MOCK_METHOD(void, Function, (), (override));", Style);
 
+  Style.MacrosSkippedByRemoveParentheses.push_back("FOO");
+  verifyFormat("FOO((a && b));", Style);
+  verifyFormat("FOO((int), func, ((std::map<int, int>)), (override));", Style);
+
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
   verifyFormat("#define Return0 return (0);", Style);
   verifyFormat("return 0;", "return (0);", Style);

@@ -84,8 +84,9 @@ static std::optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
     return 0;
   if (Hi->isVariable() || Lo->isVariable())
     return std::nullopt;
-  auto *LoF = dyn_cast_or_null<MCDataFragment>(Lo->getFragment());
-  if (!LoF || Hi->getFragment() != LoF || LoF->isLinkerRelaxable())
+  auto *LoF = Lo->getFragment();
+  if (!LoF || LoF->getKind() != MCFragment::FT_Data ||
+      Hi->getFragment() != LoF || LoF->isLinkerRelaxable())
     return std::nullopt;
 
   return Hi->getOffset() - Lo->getOffset();
@@ -579,13 +580,13 @@ void MCObjectStreamer::emitBytes(StringRef Data) {
   DF->appendContents(ArrayRef(Data.data(), Data.size()));
 }
 
-void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                            unsigned ValueSize,
+void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
+                                            uint8_t FillLen,
                                             unsigned MaxBytesToEmit) {
   if (MaxBytesToEmit == 0)
     MaxBytesToEmit = Alignment.value();
-  insert(getContext().allocFragment<MCAlignFragment>(
-      Alignment, Value, ValueSize, MaxBytesToEmit));
+  insert(getContext().allocFragment<MCAlignFragment>(Alignment, Fill, FillLen,
+                                                     MaxBytesToEmit));
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *CurSec = getCurrentSectionOnly();

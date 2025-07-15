@@ -328,7 +328,7 @@ This option overrides the 'UseColor' option in
 
 static cl::opt<bool> VerifyConfig("verify-config", desc(R"(
 Check the config files to ensure each check and
-option is recognized.
+option is recognized without running any checks.
 )"),
                                   cl::init(false), cl::cat(ClangTidyCategory));
 
@@ -659,9 +659,10 @@ int clangTidyMain(int argc, const char **argv) {
   if (DumpConfig) {
     EffectiveOptions.CheckOptions =
         getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
-    llvm::outs() << configurationAsText(ClangTidyOptions::getDefaults().merge(
-                        EffectiveOptions, 0))
-                 << "\n";
+    ClangTidyOptions OptionsToDump =
+        ClangTidyOptions::getDefaults().merge(EffectiveOptions, 0);
+    filterCheckOptions(OptionsToDump, EnabledChecks);
+    llvm::outs() << configurationAsText(OptionsToDump) << "\n";
     return 0;
   }
 

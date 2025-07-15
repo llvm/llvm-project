@@ -86,9 +86,8 @@ public:
 
   void emitAlignmentDS(uint64_t ByteAlignment, std::optional<int64_t> Value,
                        unsigned ValueSize, unsigned MaxBytesToEmit);
-  void emitValueToAlignment(Align Alignment, int64_t Value = 0,
-                            unsigned ValueSize = 1,
-                            unsigned MaxBytesToEmit = 0) override;
+  void emitValueToAlignment(Align Alignment, int64_t Fill, uint8_t FillLen,
+                            unsigned MaxBytesToEmit) override;
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;

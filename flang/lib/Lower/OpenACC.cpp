@@ -960,119 +960,6 @@ static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
 }
 
 template <typename RecipeOp>
-static void genPrivateLikeInitRegion(fir::FirOpBuilder &builder,
-                                     RecipeOp recipe, mlir::Type argTy,
-                                     mlir::Location loc,
-                                     mlir::Value initValue) {
-  mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
-  mlir::Type unwrappedTy = fir::unwrapRefType(argTy);
-
-  llvm::StringRef initName;
-  if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>)
-    initName = accReductionInitName;
-  else
-    initName = accPrivateInitName;
-
-  auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
-    auto alloca = builder.create<fir::AllocaOp>(loc, ty);
-    return builder.create<hlfir::DeclareOp>(
-        loc, alloca, initName, /*shape=*/nullptr, llvm::ArrayRef<mlir::Value>{},
-        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
-  };
-
-  if (fir::isa_trivial(unwrappedTy)) {
-    auto declareOp = getDeclareOpForType(unwrappedTy);
-    if (initValue) {
-      auto convert = builder.createConvert(loc, unwrappedTy, initValue);
-      builder.create<fir::StoreOp>(loc, convert, declareOp.getBase());
-    }
-    retVal = declareOp.getBase();
-  } else if (auto seqTy =
-                 mlir::dyn_cast_or_null<fir::SequenceType>(unwrappedTy)) {
-    if (fir::isa_trivial(seqTy.getEleTy())) {
-      mlir::Value shape;
-      llvm::SmallVector<mlir::Value> extents;
-      if (seqTy.hasDynamicExtents()) {
-        // Extents are passed as block arguments. First argument is the
-        // original value.
-        for (unsigned i = 1; i < recipe.getInitRegion().getArguments().size();
-             ++i)
-          extents.push_back(recipe.getInitRegion().getArgument(i));
-        shape = builder.create<fir::ShapeOp>(loc, extents);
-      } else {
-        shape = genShapeOp(builder, seqTy, loc);
-      }
-      auto alloca = builder.create<fir::AllocaOp>(
-          loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
-      auto declareOp = builder.create<hlfir::DeclareOp>(
-          loc, alloca, initName, shape, llvm::ArrayRef<mlir::Value>{},
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
-
-      if (initValue) {
-        mlir::Type idxTy = builder.getIndexType();
-        mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
-        llvm::SmallVector<fir::DoLoopOp> loops;
-        llvm::SmallVector<mlir::Value> ivs;
-
-        if (seqTy.hasDynamicExtents()) {
-          builder.create<hlfir::AssignOp>(loc, initValue, declareOp.getBase());
-        } else {
-          for (auto ext : seqTy.getShape()) {
-            auto lb = builder.createIntegerConstant(loc, idxTy, 0);
-            auto ub = builder.createIntegerConstant(loc, idxTy, ext - 1);
-            auto step = builder.createIntegerConstant(loc, idxTy, 1);
-            auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
-                                                      /*unordered=*/false);
-            builder.setInsertionPointToStart(loop.getBody());
-            loops.push_back(loop);
-            ivs.push_back(loop.getInductionVar());
-          }
-          auto coord = builder.create<fir::CoordinateOp>(
-              loc, refTy, declareOp.getBase(), ivs);
-          builder.create<fir::StoreOp>(loc, initValue, coord);
-          builder.setInsertionPointAfter(loops[0]);
-        }
-      }
-      retVal = declareOp.getBase();
-    }
-  } else if (auto boxTy =
-                 mlir::dyn_cast_or_null<fir::BaseBoxType>(unwrappedTy)) {
-    mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
-    if (fir::isa_trivial(innerTy)) {
-      retVal = getDeclareOpForType(unwrappedTy).getBase();
-    } else if (mlir::isa<fir::SequenceType>(innerTy)) {
-      fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
-      hlfir::Entity source = hlfir::Entity{retVal};
-      auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
-      if (fir::isa_ref_type(argTy)) {
-        // When the temp is created - it is not a reference - thus we can
-        // end up with a type inconsistency. Therefore ensure storage is created
-        // for it.
-        retVal = getDeclareOpForType(unwrappedTy).getBase();
-        mlir::Value storeDst = retVal;
-        if (fir::unwrapRefType(retVal.getType()) != temp.getType()) {
-          // `createTempFromMold` makes the unfortunate choice to lose the
-          // `fir.heap` and `fir.ptr` types when wrapping with a box. Namely,
-          // when wrapping a `fir.heap<fir.array>`, it will create instead a
-          // `fir.box<fir.array>`. Cast here to deal with this inconsistency.
-          storeDst = firBuilder.createConvert(
-              loc, firBuilder.getRefType(temp.getType()), retVal);
-        }
-        builder.create<fir::StoreOp>(loc, temp, storeDst);
-      } else {
-        retVal = temp;
-      }
-    } else {
-      TODO(loc, "Unsupported boxed type for OpenACC private-like recipe");
-    }
-    if (initValue) {
-      builder.create<hlfir::AssignOp>(loc, initValue, retVal);
-    }
-  }
-  builder.create<mlir::acc::YieldOp>(loc, retVal);
-}
-
-template <typename RecipeOp>
 static RecipeOp genRecipeOp(
     fir::FirOpBuilder &builder, mlir::ModuleOp mod, llvm::StringRef recipeName,
     mlir::Location loc, mlir::Type ty,
@@ -1100,15 +987,35 @@ static RecipeOp genRecipeOp(
       }
     }
   }
-  builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
-                      argsTy, argsLoc);
+  auto initBlock = builder.createBlock(
+      &recipe.getInitRegion(), recipe.getInitRegion().end(), argsTy, argsLoc);
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
   mlir::Value initValue;
   if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>) {
     assert(op != mlir::acc::ReductionOperator::AccNone);
     initValue = getReductionInitValue(builder, loc, fir::unwrapRefType(ty), op);
   }
-  genPrivateLikeInitRegion<RecipeOp>(builder, recipe, ty, loc, initValue);
+
+  // Since we reuse the same recipe for all variables of the same type - we
+  // cannot use the actual variable name. Thus use a temporary name.
+  llvm::StringRef initName;
+  if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>)
+    initName = accReductionInitName;
+  else
+    initName = accPrivateInitName;
+
+  auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
+  assert(mappableTy &&
+         "Expected that all variable types are considered mappable");
+  auto retVal = mappableTy.generatePrivateInit(
+      builder, loc,
+      mlir::cast<mlir::TypedValue<mlir::acc::MappableType>>(
+          initBlock->getArgument(0)),
+      initName,
+      initBlock->getArguments().take_back(initBlock->getArguments().size() - 1),
+      initValue);
+  builder.create<mlir::acc::YieldOp>(loc, retVal ? retVal
+                                                 : initBlock->getArgument(0));
   return recipe;
 }
 

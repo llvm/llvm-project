@@ -50,7 +50,6 @@ enum NodeType : unsigned {
   MUL_WIDE_UNSIGNED,
   SETP_F16X2,
   SETP_BF16X2,
-  BFE,
   BFI,
   PRMT,
 
@@ -271,6 +270,11 @@ public:
 
   unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
                                      EVT ToVT) const override;
+
+  void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
+                                     const APInt &DemandedElts,
+                                     const SelectionDAG &DAG,
+                                     unsigned Depth = 0) const override;
 
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here

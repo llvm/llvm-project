@@ -231,7 +231,7 @@ Error olShutDown_impl() {
 
   for (auto &P : OldContext->Platforms) {
     // Host plugin is nullptr and has no deinit
-    if (!P.Plugin)
+    if (!P.Plugin || !P.Plugin->is_initialized())
       continue;
 
     if (auto Res = P.Plugin->deinit())

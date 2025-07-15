@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Arith/Transforms/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "llvm/Support/Debug.h"
 
 using namespace mlir;
 using namespace mlir::arith;

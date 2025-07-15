@@ -14,10 +14,22 @@ static int GlobalScopeBadInit3 = takesIntPtr(&ExternGlobal);
 static int GlobalScopeBadInit4 = 3 * (ExternGlobal + 2);
 // CHECK-MESSAGES: [[@LINE-1]]:12: warning: initializing non-local variable with non-const expression depending on uninitialized non-local variable 'ExternGlobal'
 
+#if __cplusplus >= 202002L
+extern constinit int ExternConstinitGlobal;
+static int GlobalScopeConstinit1 = ExternConstinitGlobal;
+static int GlobalScopeConstinit2 = takesInt(ExternConstinitGlobal);
+static int GlobalScopeConstinit3 = takesIntPtr(&ExternConstinitGlobal);
+static int GlobalScopeConstinit4 = 3 * (ExternConstinitGlobal + 2);
+#endif
+
 namespace ns {
 static int NamespaceScope = makesInt();
 static int NamespaceScopeBadInit = takesInt(ExternGlobal);
 // CHECK-MESSAGES: [[@LINE-1]]:12: warning: initializing non-local variable with non-const expression depending on uninitialized non-local variable 'ExternGlobal'
+
+#if __cplusplus >= 202002L
+static int NamespaceScopeConstinit = takesInt(ExternConstinitGlobal);
+#endif
 
 struct A {
   static int ClassScope;
@@ -29,6 +41,17 @@ int A::ClassScopeBadInit = takesInt(ExternGlobal);
 
 static int FromClassBadInit = takesInt(A::ClassScope);
 // CHECK-MESSAGES: [[@LINE-1]]:12: warning: initializing non-local variable with non-const expression depending on uninitialized non-local variable 'ClassScope'
+
+#if __cplusplus >= 202002L
+struct B {
+  static constinit int ClassScopeConstinit;
+  static int ClassScopeFromConstinit;
+};
+
+int B::ClassScopeFromConstinit = takesInt(ExternConstinitGlobal);
+static int FromClassScopeConstinit = takesInt(B::ClassScopeConstinit);
+#endif
+
 } // namespace ns
 
 // "const int B::I;" is fine, it just ODR-defines B::I. See [9.4.3] Static
@@ -41,6 +64,16 @@ class B1 {
 const int B1::J;
 // CHECK-MESSAGES: [[@LINE-1]]:15: warning: initializing non-local variable with non-const expression depending on uninitialized non-local variable 'I'
 const int B1::I;
+
+#if __cplusplus >= 202002L
+class D {
+  static const constinit int I = 0;
+  static const int J = I;
+};
+
+const int D::J;
+const int D::I;
+#endif
 
 void f() {
   // This is fine, it's executed after dynamic initialization occurs.
@@ -81,4 +114,3 @@ class B2 {
 };
 const int B2::I;
 const int B2::J;
-

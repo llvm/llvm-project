@@ -73,6 +73,18 @@ struct OffloadDeviceTest
       GTEST_SKIP() << "No available devices.";
   }
 
+  ol_platform_backend_t getPlatformBackend() const {
+    ol_platform_handle_t Platform = nullptr;
+    if (olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM,
+                        sizeof(ol_platform_handle_t), &Platform))
+      return OL_PLATFORM_BACKEND_UNKNOWN;
+    ol_platform_backend_t Backend;
+    if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
+                          sizeof(ol_platform_backend_t), &Backend))
+      return OL_PLATFORM_BACKEND_UNKNOWN;
+    return Backend;
+  }
+
   ol_device_handle_t Device = nullptr;
 };
 
@@ -159,6 +171,8 @@ struct OffloadQueueTest : OffloadDeviceTest {
 struct OffloadEventTest : OffloadQueueTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
+    if (getPlatformBackend() == OL_PLATFORM_BACKEND_AMDGPU)
+      GTEST_SKIP() << "AMDGPU synchronize event not implemented";
 
     // Get an event from a memcpy. We can still use it in olGetEventInfo etc
     // after it has been waited on.

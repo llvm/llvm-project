@@ -2548,6 +2548,10 @@ def warn_uninit_const_reference : Warning<
   "variable %0 is uninitialized when passed as a const reference argument "
   "here">, InGroup<UninitializedConstReference>, DefaultIgnore;
 
+def warn_uninit_const_pointer : Warning<
+  "variable %0 is uninitialized when passed as a const pointer argument here">,
+  InGroup<UninitializedConstPointer>, DefaultIgnore;
+
 def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;
 def warn_unsequenced_mod_use : Warning<
@@ -13093,6 +13097,9 @@ def err_invalid_hlsl_resource_type: Error<
 
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
+
+def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;
+def err_hlsl_invalid_rootsig_flag : Error< "invalid flags for version 1.%0">;
 
 def subst_hlsl_format_ranges: TextSubstitution<
   "%select{t|u|b|s}0[%1;%select{%3]|unbounded)}2">;

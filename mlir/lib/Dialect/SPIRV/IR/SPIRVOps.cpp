@@ -23,7 +23,6 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
@@ -39,7 +38,6 @@
 #include <cassert>
 #include <numeric>
 #include <optional>
-#include <type_traits>
 
 using namespace mlir;
 using namespace mlir::spirv::AttrNames;

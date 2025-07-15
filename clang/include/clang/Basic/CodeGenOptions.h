@@ -115,6 +115,7 @@ public:
     DSH_MD5,
     DSH_SHA1,
     DSH_SHA256,
+    DSH_NONE,
   };
 
   // This field stores one of the allowed values for the option
