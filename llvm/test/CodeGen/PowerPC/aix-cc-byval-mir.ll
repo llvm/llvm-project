@@ -134,7 +134,7 @@ define void @call_test_byval_3Byte() {
   ; 32BIT-NEXT:   ADJCALLSTACKDOWN 60, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   renamable $r3 = LI 42
   ; 32BIT-NEXT:   renamable $r4 = LWZtoc @gS3, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   STW killed renamable $r3, 56, $r1 :: (store (s32))
+  ; 32BIT-NEXT:   STW killed renamable $r3, 56, $r1 :: (store (s32) into stack + 56, align 8, basealign 16)
   ; 32BIT-NEXT:   renamable $r3 = LBZ 2, renamable $r4 :: (load (s8))
   ; 32BIT-NEXT:   renamable $r4 = LHZ 0, killed renamable $r4 :: (load (s16))
   ; 32BIT-NEXT:   renamable $r10 = RLWINM killed renamable $r3, 8, 16, 23
@@ -155,7 +155,7 @@ define void @call_test_byval_3Byte() {
   ; 64BIT-NEXT:   ADJCALLSTACKDOWN 120, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   renamable $x3 = LI8 42
   ; 64BIT-NEXT:   renamable $x4 = LDtoc @gS3, $x2 :: (load (s64) from got)
-  ; 64BIT-NEXT:   STD killed renamable $x3, 112, $x1 :: (store (s64))
+  ; 64BIT-NEXT:   STD killed renamable $x3, 112, $x1 :: (store (s64) into stack + 112, align 16)
   ; 64BIT-NEXT:   renamable $x3 = LBZ8 2, renamable $x4 :: (load (s8))
   ; 64BIT-NEXT:   renamable $x4 = LHZ8 0, killed renamable $x4 :: (load (s16))
   ; 64BIT-NEXT:   renamable $x10 = RLDIC killed renamable $x3, 40, 16

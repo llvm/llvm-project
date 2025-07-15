@@ -647,13 +647,19 @@ fir::GlobalOp Fortran::lower::defineGlobal(
 
 /// Return linkage attribute for \p var.
 static mlir::StringAttr
-getLinkageAttribute(fir::FirOpBuilder &builder,
+getLinkageAttribute(Fortran::lower::AbstractConverter &converter,
                     const Fortran::lower::pft::Variable &var) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   // Runtime type info for a same derived type is identical in each compilation
   // unit. It desired to avoid having to link against module that only define a
   // type. Therefore the runtime type info is generated everywhere it is needed
-  // with `linkonce_odr` LLVM linkage.
-  if (var.isRuntimeTypeInfoData())
+  // with `linkonce_odr` LLVM linkage (unless the skipExternalRttiDefinition
+  // option is set, in which case one will need to link against objects of
+  // modules defining types). Builtin objects rtti is always generated because
+  // the builtin module is currently not compiled or part of the runtime.
+  if (var.isRuntimeTypeInfoData() &&
+      (!converter.getLoweringOptions().getSkipExternalRttiDefinition() ||
+       Fortran::semantics::IsFromBuiltinModule(var.getSymbol())))
     return builder.createLinkOnceODRLinkage();
   if (var.isModuleOrSubmoduleVariable())
     return {}; // external linkage
@@ -673,7 +679,7 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = converter.mangleName(sym);
   mlir::Location loc = genLocation(converter, sym);
-  mlir::StringAttr linkage = getLinkageAttribute(builder, var);
+  mlir::StringAttr linkage = getLinkageAttribute(converter, var);
   fir::GlobalOp global;
   if (var.isModuleOrSubmoduleVariable()) {
     // A non-intrinsic module global is defined when lowering the module.
@@ -687,8 +693,36 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   }
   auto addrOf = builder.create<fir::AddrOfOp>(loc, global.resultType(),
                                               global.getSymbol());
+  // The type of the global cannot be trusted to be the same as the one
+  // of the variable as some existing programs map common blocks to
+  // BIND(C) module variables (e.g. mpi_argv_null in MPI and MPI_F08).
+  mlir::Type varAddrType = fir::ReferenceType::get(converter.genType(sym));
+  mlir::Value cast = builder.createConvert(loc, varAddrType, addrOf);
   Fortran::lower::StatementContext stmtCtx;
-  mapSymbolAttributes(converter, var, symMap, stmtCtx, addrOf);
+  mapSymbolAttributes(converter, var, symMap, stmtCtx, cast);
+}
+
+bool needCUDAAlloc(const Fortran::semantics::Symbol &sym) {
+  if (Fortran::semantics::IsDummy(sym))
+    return false;
+  if (const auto *details{
+          sym.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == Fortran::common::CUDADataAttr::Device ||
+         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Managed ||
+         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Unified ||
+         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Shared ||
+         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Pinned))
+      return true;
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{type ? type->AsDerived()
+                                                            : nullptr};
+    if (derived)
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived))
+        return true;
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------===//
@@ -721,7 +755,7 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   if (ultimateSymbol.test(Fortran::semantics::Symbol::Flag::CrayPointee))
     return builder.create<fir::ZeroOp>(loc, fir::ReferenceType::get(ty));
 
-  if (Fortran::semantics::NeedCUDAAlloc(ultimateSymbol)) {
+  if (needCUDAAlloc(ultimateSymbol)) {
     cuf::DataAttributeAttr dataAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
                                                         ultimateSymbol);
@@ -737,9 +771,79 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
       return builder.create<cuf::SharedMemoryOp>(loc, ty, nm, symNm, lenParams,
                                                  indices);
 
-    if (!cuf::isCUDADeviceContext(builder.getRegion()))
-      return builder.create<cuf::AllocOp>(loc, ty, nm, symNm, dataAttr,
-                                          lenParams, indices);
+    if (!cuf::isCUDADeviceContext(builder.getRegion())) {
+      mlir::Value alloc = builder.create<cuf::AllocOp>(
+          loc, ty, nm, symNm, dataAttr, lenParams, indices);
+      if (const auto *details{
+              ultimateSymbol
+                  .detailsIf<Fortran::semantics::ObjectEntityDetails>()}) {
+        const Fortran::semantics::DeclTypeSpec *type{details->type()};
+        const Fortran::semantics::DerivedTypeSpec *derived{
+            type ? type->AsDerived() : nullptr};
+        if (derived) {
+          Fortran::semantics::UltimateComponentIterator components{*derived};
+          auto recTy = mlir::dyn_cast<fir::RecordType>(ty);
+
+          llvm::SmallVector<mlir::Value> coordinates;
+          for (const auto &sym : components) {
+            if (Fortran::semantics::IsDeviceAllocatable(sym)) {
+              unsigned fieldIdx = recTy.getFieldIndex(sym.name().ToString());
+              mlir::Type fieldTy;
+              std::vector<mlir::Value> coordinates;
+
+              if (fieldIdx != std::numeric_limits<unsigned>::max()) {
+                // Field found in the base record type.
+                auto fieldName = recTy.getTypeList()[fieldIdx].first;
+                fieldTy = recTy.getTypeList()[fieldIdx].second;
+                mlir::Value fieldIndex = builder.create<fir::FieldIndexOp>(
+                    loc, fir::FieldType::get(fieldTy.getContext()), fieldName,
+                    recTy,
+                    /*typeParams=*/mlir::ValueRange{});
+                coordinates.push_back(fieldIndex);
+              } else {
+                // Field not found in base record type, search in potential
+                // record type components.
+                for (auto component : recTy.getTypeList()) {
+                  if (auto childRecTy =
+                          mlir::dyn_cast<fir::RecordType>(component.second)) {
+                    fieldIdx = childRecTy.getFieldIndex(sym.name().ToString());
+                    if (fieldIdx != std::numeric_limits<unsigned>::max()) {
+                      mlir::Value parentFieldIndex =
+                          builder.create<fir::FieldIndexOp>(
+                              loc, fir::FieldType::get(childRecTy.getContext()),
+                              component.first, recTy,
+                              /*typeParams=*/mlir::ValueRange{});
+                      coordinates.push_back(parentFieldIndex);
+                      auto fieldName = childRecTy.getTypeList()[fieldIdx].first;
+                      fieldTy = childRecTy.getTypeList()[fieldIdx].second;
+                      mlir::Value childFieldIndex =
+                          builder.create<fir::FieldIndexOp>(
+                              loc, fir::FieldType::get(fieldTy.getContext()),
+                              fieldName, childRecTy,
+                              /*typeParams=*/mlir::ValueRange{});
+                      coordinates.push_back(childFieldIndex);
+                      break;
+                    }
+                  }
+                }
+              }
+
+              if (coordinates.empty())
+                TODO(loc, "device resident component in complex derived-type "
+                          "hierarchy");
+
+              mlir::Value comp = builder.create<fir::CoordinateOp>(
+                  loc, builder.getRefType(fieldTy), alloc, coordinates);
+              cuf::DataAttributeAttr dataAttr =
+                  Fortran::lower::translateSymbolCUFDataAttribute(
+                      builder.getContext(), sym);
+              builder.create<cuf::SetAllocatorIndexOp>(loc, comp, dataAttr);
+            }
+          }
+        }
+      }
+      return alloc;
+    }
   }
 
   // Let the builder do all the heavy lifting.
@@ -1076,7 +1180,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     Fortran::lower::defaultInitializeAtRuntime(converter, var.getSymbol(),
                                                symMap);
   auto *builder = &converter.getFirOpBuilder();
-  if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol()) &&
+  if (needCUDAAlloc(var.getSymbol()) &&
       !cuf::isCUDADeviceContext(builder->getRegion())) {
     cuf::DataAttributeAttr dataAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
@@ -1260,7 +1364,7 @@ instantiateAggregateStore(Fortran::lower::AbstractConverter &converter,
   if (var.isGlobal()) {
     fir::GlobalOp global;
     auto &aggregate = var.getAggregateStore();
-    mlir::StringAttr linkage = getLinkageAttribute(builder, var);
+    mlir::StringAttr linkage = getLinkageAttribute(converter, var);
     if (var.isModuleOrSubmoduleVariable()) {
       // A module global was or will be defined when lowering the module. Emit
       // only a declaration if the global does not exist at that point.
@@ -1284,9 +1388,8 @@ instantiateAggregateStore(Fortran::lower::AbstractConverter &converter,
   auto size = std::get<1>(var.getInterval());
   fir::SequenceType::Shape shape(1, size);
   auto seqTy = fir::SequenceType::get(shape, i8Ty);
-  mlir::Value local =
-      builder.allocateLocal(loc, seqTy, aggName, "", std::nullopt, std::nullopt,
-                            /*target=*/false);
+  mlir::Value local = builder.allocateLocal(loc, seqTy, aggName, "", {}, {},
+                                            /*target=*/false);
   insertAggregateStore(storeMap, var, local);
 }
 
@@ -1834,8 +1937,8 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
                              Fortran::lower::SymMap &symMap,
                              const Fortran::semantics::Symbol &sym,
                              mlir::Value base, mlir::Value len = {},
-                             llvm::ArrayRef<mlir::Value> shape = std::nullopt,
-                             llvm::ArrayRef<mlir::Value> lbounds = std::nullopt,
+                             llvm::ArrayRef<mlir::Value> shape = {},
+                             llvm::ArrayRef<mlir::Value> lbounds = {},
                              bool force = false) {
   // In HLFIR, procedure dummy symbols are not added with an hlfir.declare
   // because they are "values", and hlfir.declare is intended for variables. It
@@ -2003,8 +2106,8 @@ genAllocatableOrPointerDeclare(Fortran::lower::AbstractConverter &converter,
     explictLength = box.nonDeferredLenParams()[0];
   }
   genDeclareSymbol(converter, symMap, sym, base, explictLength,
-                   /*shape=*/std::nullopt,
-                   /*lbounds=*/std::nullopt, force);
+                   /*shape=*/{},
+                   /*lbounds=*/{}, force);
 }
 
 /// Map a procedure pointer
@@ -2013,8 +2116,8 @@ static void genProcPointer(Fortran::lower::AbstractConverter &converter,
                            const Fortran::semantics::Symbol &sym,
                            mlir::Value addr, bool force = false) {
   genDeclareSymbol(converter, symMap, sym, addr, mlir::Value{},
-                   /*shape=*/std::nullopt,
-                   /*lbounds=*/std::nullopt, force);
+                   /*shape=*/{},
+                   /*lbounds=*/{}, force);
 }
 
 /// Map a symbol represented with a runtime descriptor to its FIR fir.box and
@@ -2466,8 +2569,7 @@ void Fortran::lower::defineModuleVariable(
     AbstractConverter &converter, const Fortran::lower::pft::Variable &var) {
   // Use empty linkage for module variables, which makes them available
   // for use in another unit.
-  mlir::StringAttr linkage =
-      getLinkageAttribute(converter.getFirOpBuilder(), var);
+  mlir::StringAttr linkage = getLinkageAttribute(converter, var);
   if (!var.isGlobal())
     fir::emitFatalError(converter.getCurrentLocation(),
                         "attempting to lower module variable as local");
@@ -2602,10 +2704,9 @@ void Fortran::lower::createIntrinsicModuleGlobal(
 void Fortran::lower::createRuntimeTypeInfoGlobal(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::semantics::Symbol &typeInfoSym) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = converter.mangleName(typeInfoSym);
   auto var = Fortran::lower::pft::Variable(typeInfoSym, /*global=*/true);
-  mlir::StringAttr linkage = getLinkageAttribute(builder, var);
+  mlir::StringAttr linkage = getLinkageAttribute(converter, var);
   defineGlobal(converter, var, globalName, linkage);
 }
 

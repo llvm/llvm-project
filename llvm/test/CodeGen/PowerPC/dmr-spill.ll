@@ -30,19 +30,19 @@ define void @spillDMRreg(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) nounwind {
 ; CHECK-NEXT:    lxv v3, 0(r4)
 ; CHECK-NEXT:    lxv vs0, 0(r5)
 ; CHECK-NEXT:    dmxvbf16gerx2pp dmr0, vsp34, vs0
+; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
+; CHECK-NEXT:    stxvp vsp36, 128(r1)
+; CHECK-NEXT:    stxvp vsp34, 96(r1)
 ; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc_hi0, 1
-; CHECK-NEXT:    dmxxextfdmr512 vsp38, vsp32, wacc0, 0
-; CHECK-NEXT:    stxvp vsp38, 128(r1)
-; CHECK-NEXT:    stxvp vsp32, 96(r1)
 ; CHECK-NEXT:    stxvp vsp36, 64(r1)
 ; CHECK-NEXT:    stxvp vsp34, 32(r1)
 ; CHECK-NEXT:    bl dummy_func@notoc
 ; CHECK-NEXT:    lxvp vsp34, 128(r1)
 ; CHECK-NEXT:    lxvp vsp36, 96(r1)
-; CHECK-NEXT:    lxvp vsp32, 64(r1)
-; CHECK-NEXT:    lxvp vsp38, 32(r1)
-; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp32, vsp38, 1
 ; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    lxvp vsp34, 64(r1)
+; CHECK-NEXT:    lxvp vsp36, 32(r1)
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp34, vsp36, 1
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp34, 96(r30)
 ; CHECK-NEXT:    stxvp vsp36, 64(r30)
@@ -72,20 +72,20 @@ define void @spillDMRreg(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) nounwind {
 ; AIX-NEXT:    lxv v3, 16(r4)
 ; AIX-NEXT:    lxv vs0, 0(r5)
 ; AIX-NEXT:    dmxvbf16gerx2pp dmr0, vsp34, vs0
+; AIX-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
+; AIX-NEXT:    stxvp vsp36, 112(r1)
+; AIX-NEXT:    stxvp vsp34, 144(r1)
 ; AIX-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc_hi0, 1
-; AIX-NEXT:    dmxxextfdmr512 vsp38, vsp32, wacc0, 0
-; AIX-NEXT:    stxvp vsp38, 112(r1)
-; AIX-NEXT:    stxvp vsp32, 144(r1)
 ; AIX-NEXT:    stxvp vsp36, 176(r1)
 ; AIX-NEXT:    stxvp vsp34, 208(r1)
 ; AIX-NEXT:    bl .dummy_func[PR]
 ; AIX-NEXT:    nop
 ; AIX-NEXT:    lxvp vsp34, 112(r1)
 ; AIX-NEXT:    lxvp vsp36, 144(r1)
-; AIX-NEXT:    lxvp vsp32, 176(r1)
-; AIX-NEXT:    lxvp vsp38, 208(r1)
-; AIX-NEXT:    dmxxinstdmr512 wacc_hi0, vsp32, vsp38, 1
 ; AIX-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp36, 0
+; AIX-NEXT:    lxvp vsp34, 176(r1)
+; AIX-NEXT:    lxvp vsp36, 208(r1)
+; AIX-NEXT:    dmxxinstdmr512 wacc_hi0, vsp34, vsp36, 1
 ; AIX-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
 ; AIX-NEXT:    stxvp vsp36, 96(r31)
 ; AIX-NEXT:    stxvp vsp34, 64(r31)
@@ -115,20 +115,20 @@ define void @spillDMRreg(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) nounwind {
 ; AIX32-NEXT:    lxv v3, 16(r4)
 ; AIX32-NEXT:    lxv vs0, 0(r5)
 ; AIX32-NEXT:    dmxvbf16gerx2pp dmr0, vsp34, vs0
+; AIX32-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
+; AIX32-NEXT:    stxvp vsp36, 64(r1)
+; AIX32-NEXT:    stxvp vsp34, 96(r1)
 ; AIX32-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc_hi0, 1
-; AIX32-NEXT:    dmxxextfdmr512 vsp38, vsp32, wacc0, 0
-; AIX32-NEXT:    stxvp vsp38, 64(r1)
-; AIX32-NEXT:    stxvp vsp32, 96(r1)
 ; AIX32-NEXT:    stxvp vsp36, 128(r1)
 ; AIX32-NEXT:    stxvp vsp34, 160(r1)
 ; AIX32-NEXT:    bl .dummy_func[PR]
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    lxvp vsp34, 64(r1)
 ; AIX32-NEXT:    lxvp vsp36, 96(r1)
-; AIX32-NEXT:    lxvp vsp32, 128(r1)
-; AIX32-NEXT:    lxvp vsp38, 160(r1)
-; AIX32-NEXT:    dmxxinstdmr512 wacc_hi0, vsp32, vsp38, 1
 ; AIX32-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp36, 0
+; AIX32-NEXT:    lxvp vsp34, 128(r1)
+; AIX32-NEXT:    lxvp vsp36, 160(r1)
+; AIX32-NEXT:    dmxxinstdmr512 wacc_hi0, vsp34, vsp36, 1
 ; AIX32-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
 ; AIX32-NEXT:    stxvp vsp36, 96(r31)
 ; AIX32-NEXT:    stxvp vsp34, 64(r31)

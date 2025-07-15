@@ -57,9 +57,9 @@ MCFixupKindInfo LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // LoongArchFixupKinds.h.
       //
       // {name, offset, bits, flags}
-      {"fixup_loongarch_b16", 10, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_loongarch_b21", 0, 26, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_loongarch_b26", 0, 26, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_loongarch_b16", 10, 16, 0},
+      {"fixup_loongarch_b21", 0, 26, 0},
+      {"fixup_loongarch_b26", 0, 26, 0},
       {"fixup_loongarch_abs_hi20", 5, 20, 0},
       {"fixup_loongarch_abs_lo12", 10, 12, 0},
       {"fixup_loongarch_abs64_lo20", 5, 20, 0},
@@ -72,7 +72,7 @@ MCFixupKindInfo LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // Fixup kinds from .reloc directive are like R_LARCH_NONE. They
   // do not require any extra processing.
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -90,7 +90,7 @@ static void reportOutOfRangeError(MCContext &Ctx, SMLoc Loc, unsigned N) {
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext &Ctx) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     llvm_unreachable("Unknown fixup kind");
   case FK_Data_1:
@@ -140,10 +140,13 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup,
     Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
 }
 
-void LoongArchAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                      const MCValue &Target,
                                      MutableArrayRef<char> Data, uint64_t Value,
                                      bool IsResolved) {
+  if (IsResolved && shouldForceRelocation(Fixup, Target))
+    IsResolved = false;
+  IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
   if (!Value)
     return; // Doesn't change encoding.
 
@@ -154,7 +157,7 @@ void LoongArchAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
   MCContext &Ctx = getContext();
 
   // Fixup leb128 separately.
-  if (Fixup.getTargetKind() == FK_Data_leb128)
+  if (Fixup.getKind() == FK_Data_leb128)
     return fixupLeb128(Ctx, Fixup, Data, Value);
 
   // Apply any target-specific value adjustments.
@@ -244,7 +247,7 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
 
 bool LoongArchAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
                                                 const MCValue &Target) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     return STI.hasFeature(LoongArch::FeatureRelax);
   case FK_Data_1:
@@ -262,23 +265,17 @@ getRelocPairForSize(unsigned Size) {
   default:
     llvm_unreachable("unsupported fixup size");
   case 6:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD6),
-                          MCFixupKind(ELF::R_LARCH_SUB6));
+    return std::make_pair(ELF::R_LARCH_ADD6, ELF::R_LARCH_SUB6);
   case 8:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD8),
-                          MCFixupKind(ELF::R_LARCH_SUB8));
+    return std::make_pair(ELF::R_LARCH_ADD8, ELF::R_LARCH_SUB8);
   case 16:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD16),
-                          MCFixupKind(ELF::R_LARCH_SUB16));
+    return std::make_pair(ELF::R_LARCH_ADD16, ELF::R_LARCH_SUB16);
   case 32:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD32),
-                          MCFixupKind(ELF::R_LARCH_SUB32));
+    return std::make_pair(ELF::R_LARCH_ADD32, ELF::R_LARCH_SUB32);
   case 64:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD64),
-                          MCFixupKind(ELF::R_LARCH_SUB64));
+    return std::make_pair(ELF::R_LARCH_ADD64, ELF::R_LARCH_SUB64);
   case 128:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD_ULEB128),
-                          MCFixupKind(ELF::R_LARCH_SUB_ULEB128));
+    return std::make_pair(ELF::R_LARCH_ADD_ULEB128, ELF::R_LARCH_SUB_ULEB128);
   }
 }
 
@@ -287,8 +284,7 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
   const MCExpr &Expr = LF.getValue();
   if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
     return std::make_pair(false, false);
-  LF.getFixups().push_back(
-      MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
+  LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128));
   return std::make_pair(true, true);
 }
 
@@ -298,9 +294,8 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
 
   int64_t LineDelta = DF.getLineDelta();
   const MCExpr &AddrDelta = DF.getAddrDelta();
-  SmallVectorImpl<char> &Data = DF.getContents();
-  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
-  size_t OldSize = Data.size();
+  SmallVector<MCFixup, 1> Fixups;
+  size_t OldSize = DF.getContents().size();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
@@ -309,8 +304,7 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
-  Data.clear();
-  Fixups.clear();
+  SmallVector<char> Data;
   raw_svector_ostream OS(Data);
 
   // INT64_MAX is a signal that this is actually a DW_LNE_end_sequence.
@@ -355,6 +349,8 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
     OS << uint8_t(dwarf::DW_LNS_copy);
   }
 
+  DF.setContents(Data);
+  DF.setFixups(Fixups);
   WasRelaxed = OldSize != Data.size();
   return true;
 }
@@ -362,9 +358,8 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
 bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
                                         bool &WasRelaxed) const {
   const MCExpr &AddrDelta = DF.getAddrDelta();
-  SmallVectorImpl<char> &Data = DF.getContents();
-  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
-  size_t OldSize = Data.size();
+  SmallVector<MCFixup, 2> Fixups;
+  size_t OldSize = DF.getContents().size();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
@@ -373,14 +368,12 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
-  Data.clear();
-  Fixups.clear();
-  raw_svector_ostream OS(Data);
-
   assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
-    WasRelaxed = OldSize != Data.size();
+    DF.clearContents();
+    DF.clearFixups();
+    WasRelaxed = OldSize != DF.getContents().size();
     return true;
   }
 
@@ -392,6 +385,8 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
     Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(FK)));
   };
 
+  SmallVector<char, 8> Data;
+  raw_svector_ostream OS(Data);
   if (isUIntN(6, Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc);
     AddFixups(0, getRelocPairForSize(6));
@@ -410,6 +405,8 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   } else {
     llvm_unreachable("unsupported CFA encoding");
   }
+  DF.setContents(Data);
+  DF.setFixups(Fixups);
 
   WasRelaxed = OldSize != Data.size();
   return true;
@@ -453,7 +450,8 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
                                    const MCValue &Target, uint64_t &FixedValue,
                                    bool IsResolved) {
   auto Fallback = [&]() {
-    return MCAsmBackend::addReloc(F, Fixup, Target, FixedValue, IsResolved);
+    MCAsmBackend::maybeAddReloc(F, Fixup, Target, FixedValue, IsResolved);
+    return true;
   };
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
