@@ -345,12 +345,12 @@ static Type convert8BitFloatType(const SPIRVConversionOptions &options,
 
 /// Returns a type with the same shape but with any 8-bit float element type
 /// converted to the same bit width integer type. This is a noop when the
-/// element type is not the 8-bit float type.
+/// element type is not the 8-bit float type or emulation flag is set to false.
 static ShapedType
 convertShaped8BitFloatType(ShapedType type,
                            const SPIRVConversionOptions &options) {
   if (!options.emulateUnsupportedFloatTypes)
-    return nullptr;
+    return type;
   auto srcElementType = type.getElementType();
   Type convertedElementType = nullptr;
   // F8 types are converted to integer types with the same bit width.
