@@ -80,6 +80,7 @@
 #include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfFlattening.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
+#include "llvm/Transforms/Instrumentation/PGOEstimateTripCounts.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
@@ -1268,8 +1269,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(MemProfUsePass(PGOOpt->MemoryProfile, PGOOpt->FS));
 
   if (PGOOpt && (PGOOpt->Action == PGOOptions::IRUse ||
-                 PGOOpt->Action == PGOOptions::SampleUse))
+                 PGOOpt->Action == PGOOptions::SampleUse)) {
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
+    // TODO: Is this the right place for this pass?  Should we enable it in any
+    // other case, such as when __builtin_expect_with_probability or
+    // __builtin_expect appears in the source code but profiles are not read?
+    MPM.addPass(PGOEstimateTripCountsPass());
+  }
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
 
