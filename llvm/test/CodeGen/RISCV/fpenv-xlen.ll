@@ -40,7 +40,6 @@ define iXLen @func_get_fpmode() {
 ; CHECK-LABEL: func_get_fpmode:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    frcsr a0
-; CHECK-NEXT:    andi  a0, a0, -32
 ; CHECK-NEXT:    ret
 entry:
   %fpenv = call iXLen @llvm.get.fpmode.iXLen()
