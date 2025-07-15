@@ -118,8 +118,8 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
   let assemblyFormat = [{
     $source ``
     custom<OptionalDynamicIndexList>($offsets, $const_offsets)
-    (`shape` `:` custom<DynamicIndexList>($shape, $const_shape)^
-     `strides``:` custom<DynamicIndexList>($strides, $const_strides))?
+    (`,` `shape` `:` custom<DynamicIndexList>($shape, $const_shape)^
+     `,` `strides``:` custom<DynamicIndexList>($strides, $const_strides))?
     attr-dict `:` type($source) `->` qualified(type($TensorDesc))
   }];
 
