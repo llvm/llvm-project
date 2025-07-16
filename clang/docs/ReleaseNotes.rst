@@ -220,6 +220,7 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+
 - Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
   ``#pragma pop_macro("")``. (#GH149762).
 - `-Wunreachable-code`` now diagnoses tautological or contradictory
@@ -229,6 +230,8 @@ Bug Fixes in This Version
   cast chain. (#GH149967).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
+  macro expansion when performing analysis for nullability attributes. (#GH138371)
+- Fixed scope of typedefs present inside a template class. (#GH91451)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
