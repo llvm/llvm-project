@@ -1695,7 +1695,6 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
   Instr->getParent()->insertDbgRecordBefore(DVRec, Instr);
 }
 
-<<<<<<< HEAD
 static void insertDbgValueOrDbgVariableRecordAfter(
     DIBuilder &Builder, Value *DV, DILocalVariable *DIVar, DIExpression *DIExpr,
     const DebugLoc &NewLoc, Instruction *Instr) {
@@ -1793,8 +1792,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                     SI->getIterator());
 }
 
-=======
->>>>>>> 7eb65f470c5e
 static DIExpression *dropInitialDeref(const DIExpression *DIExpr) {
   int NumEltDropped = DIExpr->getElements()[0] == dwarf::DW_OP_LLVM_arg ? 3 : 1;
   return DIExpression::get(DIExpr->getContext(),
