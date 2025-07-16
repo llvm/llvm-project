@@ -719,53 +719,38 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
 
   std::lock_guard<std::mutex> Lock{Program->SymbolListMutex};
 
-  // If it already exists, return an existing handle
-  auto CheckCache = [&](StringMap<std::unique_ptr<ol_symbol_impl_t>> &Map)
-      -> std::optional<ol_symbol_handle_t> {
-    if (Map.contains(Name))
-      return Map[Name].get();
-    return std::nullopt;
-  };
-
   switch (Kind) {
   case OL_SYMBOL_KIND_KERNEL: {
-    if (auto Cache = CheckCache(Program->KernelSymbols)) {
-      *Symbol = *Cache;
-      return Plugin::success();
+    auto &Kernel = Program->KernelSymbols[Name];
+    if (!Kernel) {
+      auto KernelImpl = Device.constructKernel(Name);
+      if (!KernelImpl)
+        return KernelImpl.takeError();
+
+      if (auto Err = KernelImpl->init(Device, *Program->Image))
+        return Err;
+
+      Kernel = std::make_unique<ol_symbol_impl_t>(KernelImpl->getName(),
+                                                  &*KernelImpl);
     }
 
-    auto KernelImpl = Device.constructKernel(Name);
-    if (!KernelImpl)
-      return KernelImpl.takeError();
-
-    if (auto Err = KernelImpl->init(Device, *Program->Image))
-      return Err;
-
-    *Symbol = Program->KernelSymbols
-                  .insert({Name, std::make_unique<ol_symbol_impl_t>(
-                                     KernelImpl->getName(), &*KernelImpl)})
-                  .first->getValue()
-                  .get();
+    *Symbol = Kernel.get();
     return Error::success();
   }
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
-    if (auto Cache = CheckCache(Program->GlobalSymbols)) {
-      *Symbol = *Cache;
-      return Plugin::success();
+    auto &Global = Program->KernelSymbols[Name];
+    if (!Global) {
+      GlobalTy GlobalObj{Name};
+      if (auto Res =
+              Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
+                  Device, *Program->Image, GlobalObj))
+        return Res;
+
+      Global = std::make_unique<ol_symbol_impl_t>(GlobalObj.getName().c_str(),
+                                                  std::move(GlobalObj));
     }
 
-    GlobalTy GlobalObj{Name};
-    if (auto Res = Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
-            Device, *Program->Image, GlobalObj))
-      return Res;
-
-    *Symbol = Program->GlobalSymbols
-                  .insert({Name, std::make_unique<ol_symbol_impl_t>(
-                                     GlobalObj.getName().c_str(),
-                                     std::move(GlobalObj))})
-                  .first->getValue()
-                  .get();
-
+    *Symbol = Global.get();
     return Error::success();
   }
   default:
