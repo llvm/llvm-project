@@ -41,5 +41,6 @@
 #define blake3_hash_many_avx512 llvm_blake3_hash_many_avx512
 #define _blake3_hash_many_avx512 _llvm_blake3_hash_many_avx512
 #define blake3_hash_many_neon llvm_blake3_hash_many_neon
+#define blake3_hash4_neon llvm_blake3_hash4_neon
 
 #endif /* LLVM_BLAKE3_PREFIX_H */
