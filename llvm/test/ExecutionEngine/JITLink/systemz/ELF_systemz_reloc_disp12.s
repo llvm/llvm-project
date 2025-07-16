@@ -10,7 +10,7 @@
 #
 # Check success and failure cases of R_390_12 handling.
 
-# CHECK-ERROR: relocation target "DISP" {{.*}} is out of range of
+# CHECK-ERROR: relocation target {{.*}} (DISP) is out of range of
 # CHECK-ERROR: Pointer12 fixup
 
 # jitlink-check: decode_operand(main, 2) = DISP
