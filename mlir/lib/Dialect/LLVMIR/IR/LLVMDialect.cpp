@@ -3303,12 +3303,15 @@ LogicalResult LLVM::ConstantOp::verify() {
                            << elementTypes.size();
     }
     for (auto [i, attr, type] : llvm::enumerate(arrayAttr, elementTypes)) {
-      if (!isa<IntegerAttr, FloatAttr>(attr)) {
+      if (!type.isSignlessIntOrIndexOrFloat()) {
+        return emitOpError() << "expected struct element types to be floating "
+                                "point type or integer type";
+      }
+      if (!isa<FloatAttr, IntegerAttr>(attr)) {
         return emitOpError() << "expected element of array attribute to be "
                                 "floating point or integer";
       }
-      auto attrType = cast<TypedAttr>(attr).getType();
-      if (attrType != type)
+      if (cast<TypedAttr>(attr).getType() != type)
         return emitOpError()
                << "struct element at index " << i << " is of wrong type";
     }

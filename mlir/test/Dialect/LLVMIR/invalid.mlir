@@ -418,7 +418,7 @@ llvm.func @struct_two_different_elements() -> !llvm.struct<(f64, f32)> {
 // -----
 
 llvm.func @struct_wrong_element_types() -> !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)> {
-  // expected-error @+1 {{expected element of array attribute to be floating point or integer}}
+  // expected-error @+1 {{expected struct element types to be floating point type or integer type}}
   %0 = llvm.mlir.constant([dense<[1.0, 1.0]> : tensor<2xf64>, dense<[1.0, 1.0]> : tensor<2xf64>]) : !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)>
   llvm.return %0 : !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)>
 }
@@ -523,7 +523,7 @@ llvm.func @elements_attribute_incompatible_nested_array_struct3_type() -> !llvm.
 // -----
 
 llvm.func @invalid_struct_element_type() -> !llvm.struct<(f64, array<2 x i32>)> {
-  // expected-error @below{{expected element of array attribute to be floating point or integer}}
+  // expected-error @below{{expected struct element types to be floating point type or integer type}}
   %0 = llvm.mlir.constant([1.0 : f64, dense<[1, 2]> : tensor<2xi32>]) : !llvm.struct<(f64, array<2 x i32>)>
   llvm.return %0 : !llvm.struct<(f64, array<2 x i32>)>
 }
