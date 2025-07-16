@@ -7795,7 +7795,15 @@ private:
           bool IsAttachablePointeeExpr = AttachInfo.IsValid &&
                                          AttachInfo.BasePtrDecl &&
                                          AttachInfo.BasePtrDecl == BaseDecl;
-          if (IsAttachablePointeeExpr) {
+          // Pointer attachment is needed at map-entering time or for declare
+          // mappers.
+          bool IsMapEnteringConstructOrMapper =
+              isa<const OMPDeclareMapperDecl *>(CurDir) ||
+              isOpenMPTargetMapEnteringDirective(
+                  cast<const OMPExecutableDirective *>(CurDir)
+                      ->getDirectiveKind());
+
+          if (IsAttachablePointeeExpr && IsMapEnteringConstructOrMapper) {
             AttachBaseAddr =
                 CGF.EmitLValue(AttachInfo.BasePtrExpr).getAddress();
 
@@ -8192,7 +8200,6 @@ private:
       // Get the pointer expression (NextRI) and use the candidate PteeExpr
       const Expr *BasePtrExpr = NextI->getAssociatedExpression();
       const ValueDecl *BasePtrDecl = NextI->getAssociatedDeclaration();
-      const Expr *PteeExpr = CurrentExpr;
       const auto *BeginExpr = Begin->getAssociatedExpression();
       return AttachInfo{BasePtrExpr, BasePtrDecl, BeginExpr, true};
     }
