@@ -6438,11 +6438,8 @@ void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
   constexpr endianness E = ELFT::Endianness;
   for (object::SectionRef Section :
        getSectionRefsByNameOrIndex(ObjF, Sections)) {
-    StringRef SectionName;
-    if (Error Err = Section.getName().moveInto(SectionName)) {
-      SectionName = "<error>";
-      reportWarning(std::move(Err), FileName);
-    }
+    // Validity of sections names checked in getSectionRefsByNameOrIndex
+    StringRef SectionName = cantFail(Section.getName());
 
     DictScope SectionScope(W,
                            formatv("SFrame section '{0}'", SectionName).str());
