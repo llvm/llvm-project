@@ -104,7 +104,8 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
+bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+                                                   const MCFixup &Fixup,
                                                    const MCValue &,
                                                    uint64_t Value,
                                                    bool Resolved) const {
@@ -301,14 +302,14 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   Inst = std::move(Res);
 }
 
-bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
+bool RISCVAsmBackend::relaxDwarfLineAddr(MCFragment &F,
                                          bool &WasRelaxed) const {
   MCContext &C = getContext();
 
-  int64_t LineDelta = DF.getLineDelta();
-  const MCExpr &AddrDelta = DF.getAddrDelta();
+  int64_t LineDelta = F.getDwarfLineDelta();
+  const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   SmallVector<MCFixup, 1> Fixups;
-  size_t OldSize = DF.getContents().size();
+  size_t OldSize = F.getVarSize();
 
   int64_t Value;
   [[maybe_unused]] bool IsAbsolute =
@@ -361,17 +362,16 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
     OS << uint8_t(dwarf::DW_LNS_copy);
   }
 
-  DF.setContents(Data);
-  DF.setFixups(Fixups);
+  F.setVarContents(Data);
+  F.setVarFixups(Fixups);
   WasRelaxed = OldSize != Data.size();
   return true;
 }
 
-bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
-                                    bool &WasRelaxed) const {
-  const MCExpr &AddrDelta = DF.getAddrDelta();
+bool RISCVAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
+  const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   SmallVector<MCFixup, 2> Fixups;
-  size_t OldSize = DF.getContents().size();
+  size_t OldSize = F.getVarSize();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
@@ -383,9 +383,9 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
-    DF.clearContents();
-    DF.clearFixups();
-    WasRelaxed = OldSize != DF.getContents().size();
+    F.clearVarContents();
+    F.clearVarFixups();
+    WasRelaxed = OldSize != 0;
     return true;
   }
 
@@ -416,20 +416,20 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   } else {
     llvm_unreachable("unsupported CFA encoding");
   }
-  DF.setContents(Data);
-  DF.setFixups(Fixups);
+  F.setVarContents(Data);
+  F.setVarFixups(Fixups);
 
   WasRelaxed = OldSize != Data.size();
   return true;
 }
 
-std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(MCLEBFragment &LF,
+std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(MCFragment &LF,
                                                    int64_t &Value) const {
-  if (LF.isSigned())
+  if (LF.isLEBSigned())
     return std::make_pair(false, false);
-  const MCExpr &Expr = LF.getValue();
+  const MCExpr &Expr = LF.getLEBValue();
   if (ULEB128Reloc) {
-    LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128));
+    LF.setVarFixups({MCFixup::create(0, &Expr, FK_Data_leb128)});
   }
   return std::make_pair(Expr.evaluateKnownAbsolute(Value, *Asm), false);
 }
@@ -662,14 +662,13 @@ static const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
   const MCSymbol *AUIPCSymbol = AUIPCLoc.getAddSym();
   if (!AUIPCSymbol)
     return nullptr;
-  const auto *DF = dyn_cast_or_null<MCDataFragment>(AUIPCSymbol->getFragment());
-
+  const auto *DF = AUIPCSymbol->getFragment();
   if (!DF)
     return nullptr;
 
   uint64_t Offset = AUIPCSymbol->getOffset();
   if (DF->getContents().size() == Offset) {
-    DF = dyn_cast_or_null<MCDataFragment>(DF->getNext());
+    DF = DF->getNext();
     if (!DF)
       return nullptr;
     Offset = 0;
