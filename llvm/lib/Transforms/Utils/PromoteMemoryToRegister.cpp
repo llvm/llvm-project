@@ -185,9 +185,7 @@ public:
       ConvertDebugDeclareToDebugValue(DVR, NewPhi, DIB);
   }
 
-  void clear() {
-    DVRAssigns.clear();
-  }
+  void clear() { DVRAssigns.clear(); }
   bool empty() { return DVRAssigns.empty(); }
 };
 
@@ -613,8 +611,8 @@ rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
 
   DIBuilder DIB(*AI->getModule(), /*AllowUnresolved*/ false);
   // Update assignment tracking info for the store we're going to delete.
-  Info.AssignmentTracking.updateForDeletedStore(
-      Info.OnlyStore, DIB, DVRAssignsToDelete);
+  Info.AssignmentTracking.updateForDeletedStore(Info.OnlyStore, DIB,
+                                                DVRAssignsToDelete);
 
   // Record debuginfo for the store and remove the declaration's
   // debuginfo.
