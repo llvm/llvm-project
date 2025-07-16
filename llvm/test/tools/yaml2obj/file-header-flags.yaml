@@ -1,0 +1,25 @@
+## Test for FileHeader Flags
+## When FLAGS variable isn't defined, the e_flags value is 0,
+## otherwise it's the specified value
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=NO-FLAG
+
+# RUN: yaml2obj %s -o %t -DFLAGS=[EF_ARM_EABI_VER5]
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=FLAG
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_ARM
+  Flags:           [[FLAGS=<none>]]
+
+# NO-FLAG:         Flags [ (0x0)
+# NO-FLAG-NEXT:    ]
+
+# FLAG:            Flags [ (0x5000000)
+# FLAG-NEXT:         0x1000000
+# FLAG-NEXT:         0x4000000
+# FLAG-NEXT:       ]
