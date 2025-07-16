@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_WCHAR_WCTOB_H
-#define LLVM_LIBC_SRC_WCHAR_WCTOB_H
+#ifndef LLVM_LIBC_SRC_WCTYPE_ISWALPHA_H
+#define LLVM_LIBC_SRC_WCTYPE_ISWALPHA_H
 
 #include "hdr/types/wint_t.h"
 #include "src/__support/common.h"
@@ -18,4 +18,4 @@ bool iswalpha(wint_t c);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_WCHAR_WCTOB_H
+#endif // LLVM_LIBC_SRC_WCTYPE_ISWALPHA_H
