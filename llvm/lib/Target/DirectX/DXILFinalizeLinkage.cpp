@@ -28,6 +28,18 @@ static bool finalizeLinkage(Module &M) {
     }
   }
 
+  // Remove unused global variables.
+  SmallVector<GlobalVariable *> ToErase;
+  for (GlobalVariable &GV : M.globals()) {
+    if (GV.use_empty()) {
+      ToErase.push_back(&GV);
+    }
+  }
+  for (GlobalVariable *GV : ToErase) {
+    GV->eraseFromParent();
+    MadeChange = true;
+  }
+
   SmallVector<Function *> Funcs;
 
   // Collect non-entry and non-exported functions to set to internal linkage.
