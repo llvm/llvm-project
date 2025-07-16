@@ -626,7 +626,7 @@ bool InsertStackProtectors(const TargetMachine *TM, Function *F,
 
     // If we're instrumenting a block with a tail call, the check has to be
     // inserted before the call rather than between it and the return.
-    Instruction *Prev = CheckLoc->getPrevNonDebugInstruction();
+    Instruction *Prev = CheckLoc->getPrevNode();
     if (auto *CI = dyn_cast_if_present<CallInst>(Prev))
       if (CI->isTailCall() && isInTailCallPosition(*CI, *TM))
         CheckLoc = Prev;
