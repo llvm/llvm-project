@@ -503,7 +503,7 @@ config.substitutions.append(("CHECK-%os", ("CHECK-" + config.host_os)))
 # Define %arch to check for architecture-dependent output.
 config.substitutions.append(("%arch", (config.host_arch)))
 
-if config.host_os == "Windows":
+if os.name == "nt":
     # FIXME: This isn't quite right. Specifically, it will succeed if the program
     # does not crash but exits with a non-zero exit code. We ought to merge
     # KillTheDoctor and not --crash to make the latter more useful and remove the
