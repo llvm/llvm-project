@@ -1146,6 +1146,8 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 
+- Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
+  parameters.
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
