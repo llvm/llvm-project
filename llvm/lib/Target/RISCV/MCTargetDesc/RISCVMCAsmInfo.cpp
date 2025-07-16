@@ -57,3 +57,15 @@ void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
   if (HasSpecifier)
     OS << ')';
 }
+
+
+void RISCVCOFFMCAsmInfo::anchor() {}
+
+RISCVCOFFMCAsmInfo::RISCVCOFFMCAsmInfo() {
+  HasSingleParameterDotFile = true;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
+
+  ExceptionsType = ExceptionHandling::WinEH;
+
+  AllowAtInName = true;
+}

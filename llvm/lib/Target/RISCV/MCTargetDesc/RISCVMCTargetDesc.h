@@ -13,6 +13,8 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCTARGETDESC_H
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCTARGETDESC_H
 
+#include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/DataTypes.h"
 #include <memory>
@@ -23,7 +25,9 @@ class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
 class MCObjectTargetWriter;
+class MCObjectWriter;
 class MCRegisterInfo;
+class MCStreamer;
 class MCSubtargetInfo;
 class Target;
 
@@ -34,8 +38,16 @@ MCAsmBackend *createRISCVAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 
+MCStreamer *createRISCVWinCOFFStreamer(MCContext &C,
+                                       std::unique_ptr<MCAsmBackend> &&AB,
+                                       std::unique_ptr<MCObjectWriter> &&OW,
+                                       std::unique_ptr<MCCodeEmitter> &&CE);
+
 std::unique_ptr<MCObjectTargetWriter> createRISCVELFObjectWriter(uint8_t OSABI,
                                                                  bool Is64Bit);
+
+std::unique_ptr<MCObjectTargetWriter> createRISCVWinCOFFObjectWriter(bool Is64Bit);
+	
 } // namespace llvm
 
 // Defines symbolic names for RISC-V registers.

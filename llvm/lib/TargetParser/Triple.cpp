@@ -925,6 +925,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::aarch64:
   case Triple::aarch64_32:
   case Triple::arm:
+  case Triple::riscv32:
+  case Triple::riscv64:
   case Triple::thumb:
   case Triple::x86:
   case Triple::x86_64:
@@ -964,8 +966,6 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::r600:
   case Triple::renderscript32:
   case Triple::renderscript64:
-  case Triple::riscv32:
-  case Triple::riscv64:
   case Triple::shave:
   case Triple::sparc:
   case Triple::sparcel:
