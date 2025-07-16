@@ -10801,12 +10801,27 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_cvt_to_tensor_u8_f16:
   case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_double:
   case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_scatter2:
-  case Intrinsic::amdgcn_cvt_to_tensor_u8_f32: {
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f32: {
 
     SmallVector<SDValue> Ops;
     for (unsigned I = 0, NumOp = Op->getNumOperands(); I < NumOp; ++I) {
       auto NewOp = Op->getOperand(I);
-      if (I == Op->getNumOperands() - 3)
+      // Scale
+      if (I == 2)
         NewOp = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(Op), MVT::i16, NewOp);
       Ops.push_back(NewOp);
     }

@@ -4008,13 +4008,37 @@ class AMDGPUCvtTensorScatter4<LLVMType out_data_ty, LLVMType acc_in_ty> :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]
   >;
 
-multiclass AMDGPUCvtTensor<LLVMType out_data_ty, LLVMType acc_single_ty,
-                                                 LLVMType acc_scatter2_ty = acc_single_ty,
-                                                 LLVMType acc_scatter4_ty = acc_single_ty> {
-  def NAME : AMDGPUCvtTensorSingle<out_data_ty, acc_single_ty>;
-  def _scatter2 : AMDGPUCvtTensorScatter2<out_data_ty, acc_scatter2_ty>;
-  def _scatter4 : AMDGPUCvtTensorScatter4<out_data_ty, acc_scatter4_ty>;
-}
+class AMDGPUCvtTensorSRSingle<LLVMType out_data_ty, LLVMType acc_in_ty> :
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [
+      out_data_ty,      // %out0
+    ],
+    [
+      acc_in_ty,        // %acc_in
+      llvm_i8_ty,       // %sscale
+      llvm_v2i16_ty,    // %rand
+      llvm_i32_ty,      // %aux_data
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]
+  >;
+
+class AMDGPUCvtTensorSRScatter2<LLVMType out_data_ty, LLVMType acc_in_ty> :
+  DefaultAttrsIntrinsic<
+    [
+      out_data_ty,      // %out0
+      out_data_ty,      // %out1
+    ],
+    [
+      acc_in_ty,        // %acc_in
+      llvm_i8_ty,       // %sscale
+      llvm_v2i16_ty,    // %rand
+      llvm_i32_ty,      // %aux_data
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]
+  >;
 
 // 4-bit tensor data type.
 def int_amdgcn_cvt_to_tensor_i4_f32 : AMDGPUCvtTensorSingle<llvm_i32_ty, llvm_anyfloat_ty>;
@@ -4078,6 +4102,24 @@ def int_amdgcn_cvt_to_tensor_f16_f16_scatter4 : AMDGPUCvtTensorScatter4<llvm_v2f
 def int_amdgcn_cvt_to_tensor_f16_bf16_scatter4 : AMDGPUCvtTensorScatter4<llvm_v2f16_ty, llvm_anyfloat_ty>;
 def int_amdgcn_cvt_to_tensor_bf16_f16_scatter4 : AMDGPUCvtTensorScatter4<llvm_v2bf16_ty, llvm_anyfloat_ty>;
 def int_amdgcn_cvt_to_tensor_bf16_bf16_scatter4 : AMDGPUCvtTensorScatter4<llvm_v2bf16_ty, llvm_anyfloat_ty>;
+
+// SR (stochastic rounding).
+def int_amdgcn_cvt_to_tensor_sr_fp8_f32 : AMDGPUCvtTensorSRSingle<llvm_i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_sr_fp8_f16 : AMDGPUCvtTensorSRSingle<llvm_i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_sr_fp8_bf16 : AMDGPUCvtTensorSRSingle<llvm_i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_sr_bf8_f32 : AMDGPUCvtTensorSRSingle<llvm_i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_sr_bf8_f16 : AMDGPUCvtTensorSRSingle<llvm_i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_sr_bf8_bf16 : AMDGPUCvtTensorSRSingle<llvm_i32_ty, llvm_anyfloat_ty>;
+
+def int_amdgcn_cvt_to_tensor_sr_fp8_f16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_sr_fp8_bf16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_sr_bf8_f16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_sr_bf8_bf16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
+
+def int_amdgcn_cvt_to_tensor_sr_fp8_f16_scatter2 : AMDGPUCvtTensorSRScatter2<llvm_i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_sr_fp8_bf16_scatter2 : AMDGPUCvtTensorSRScatter2<llvm_i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_sr_bf8_f16_scatter2 : AMDGPUCvtTensorSRScatter2<llvm_i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_sr_bf8_bf16_scatter2 : AMDGPUCvtTensorSRScatter2<llvm_i32_ty, llvm_anyfloat_ty>;
 
 class AMDGPU_rts_read_result: Intrinsic<
        [llvm_i64_ty], [], [IntrReadMem, IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]
