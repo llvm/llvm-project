@@ -16,7 +16,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace llvm;
 

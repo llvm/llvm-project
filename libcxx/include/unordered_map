@@ -967,9 +967,8 @@ private:
   typedef __hash_value_type<key_type, mapped_type> __value_type;
   typedef __unordered_map_hasher<key_type, value_type, hasher, key_equal> __hasher;
   typedef __unordered_map_equal<key_type, value_type, key_equal, hasher> __key_equal;
-  typedef __rebind_alloc<allocator_traits<allocator_type>, __value_type> __allocator_type;
 
-  typedef __hash_table<__value_type, __hasher, __key_equal, __allocator_type> __table;
+  typedef __hash_table<__value_type, __hasher, __key_equal, allocator_type> __table;
 
   __table __table_;
 
@@ -1777,9 +1776,8 @@ private:
   typedef __hash_value_type<key_type, mapped_type> __value_type;
   typedef __unordered_map_hasher<key_type, value_type, hasher, key_equal> __hasher;
   typedef __unordered_map_equal<key_type, value_type, key_equal, hasher> __key_equal;
-  typedef __rebind_alloc<allocator_traits<allocator_type>, __value_type> __allocator_type;
 
-  typedef __hash_table<__value_type, __hasher, __key_equal, __allocator_type> __table;
+  typedef __hash_table<__value_type, __hasher, __key_equal, allocator_type> __table;
 
   __table __table_;
 

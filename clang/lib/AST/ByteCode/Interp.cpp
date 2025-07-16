@@ -326,7 +326,6 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return true;
 
   assert(Ptr.inUnion());
-  assert(Ptr.isField() && Ptr.getField());
 
   Pointer U = Ptr.getBase();
   Pointer C = Ptr;
@@ -445,13 +444,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   assert(Desc);
 
   const auto *D = Desc->asVarDecl();
-  if (!D || !D->hasGlobalStorage())
-    return true;
-
-  if (D == S.EvaluatingDecl)
-    return true;
-
-  if (D->isConstexpr())
+  if (!D || D == S.EvaluatingDecl || D->isConstexpr())
     return true;
 
   // If we're evaluating the initializer for a constexpr variable in C23, we may
@@ -576,22 +569,13 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isConst() || Ptr.isMutable())
     return true;
 
-  // The This pointer is writable in constructors and destructors,
-  // even if isConst() returns true.
-  // TODO(perf): We could be hitting this code path quite a lot in complex
-  // constructors. Is there a better way to do this?
-  if (S.Current->getFunction()) {
-    for (const InterpFrame *Frame = S.Current; Frame; Frame = Frame->Caller) {
-      if (const Function *Func = Frame->getFunction();
-          Func && (Func->isConstructor() || Func->isDestructor()) &&
-          Ptr.block() == Frame->getThis().block()) {
-        return true;
-      }
-    }
-  }
-
   if (!Ptr.isBlockPointer())
     return false;
+
+  // The This pointer is writable in constructors and destructors,
+  // even if isConst() returns true.
+  if (llvm::find(S.InitializingBlocks, Ptr.block()))
+    return true;
 
   const QualType Ty = Ptr.getType();
   const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -819,6 +803,8 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Assign))
+    return false;
+  if (!CheckActive(S, OpPC, Ptr, AK_Assign))
     return false;
   if (!CheckGlobal(S, OpPC, Ptr))
     return false;
@@ -1515,7 +1501,6 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return cleanup();
       if (!Func->isConstructor() && !Func->isDestructor() &&
-          !Func->isCopyOrMoveOperator() &&
           !CheckActive(S, OpPC, ThisPtr, AK_MemberCall))
         return false;
     }
@@ -1524,6 +1509,9 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       return false;
     if (Func->isDestructor() && !CheckDestructor(S, OpPC, ThisPtr))
       return false;
+
+    if (Func->isConstructor() || Func->isDestructor())
+      S.InitializingBlocks.push_back(ThisPtr.block());
   }
 
   if (!Func->isFullyCompiled())
@@ -1550,16 +1538,21 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
-  if (Interpret(S)) {
-    NewFrame.release(); // Frame was delete'd already.
-    assert(S.Current == FrameBefore);
-    return true;
+  bool Success = Interpret(S);
+  // Remove initializing  block again.
+  if (Func->isConstructor() || Func->isDestructor())
+    S.InitializingBlocks.pop_back();
+
+  if (!Success) {
+    // Interpreting the function failed somehow. Reset to
+    // previous state.
+    S.Current = FrameBefore;
+    return false;
   }
 
-  // Interpreting the function failed somehow. Reset to
-  // previous state.
-  S.Current = FrameBefore;
-  return false;
+  NewFrame.release(); // Frame was delete'd already.
+  assert(S.Current == FrameBefore);
+  return true;
 }
 
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1779,6 +1772,9 @@ bool EndLifetimePop(InterpState &S, CodePtr OpPC) {
 bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
                           std::optional<uint64_t> ArraySize) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (Ptr.inUnion() && Ptr.getBase().getRecord()->isUnion())
+    Ptr.activate();
 
   // Similar to CheckStore(), but with the additional CheckTemporary() call and
   // the AccessKinds are different.

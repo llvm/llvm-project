@@ -27,6 +27,7 @@
 #include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
 #include "AMDGPUReserveWWMRegs.h"
+#include "AMDGPUResourceUsageAnalysis.h"
 #include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
@@ -557,7 +558,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUExternalAAWrapperPass(*PR);
   initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
-  initializeAMDGPUResourceUsageAnalysisPass(*PR);
+  initializeAMDGPUResourceUsageAnalysisWrapperPassPass(*PR);
   initializeGCNNSAReassignLegacyPass(*PR);
   initializeGCNPreRAOptimizationsLegacyPass(*PR);
   initializeGCNPreRALongBranchRegLegacyPass(*PR);
