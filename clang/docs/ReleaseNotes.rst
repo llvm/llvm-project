@@ -674,7 +674,7 @@ Improvements to Clang's diagnostics
   #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
-  
+
 - Clang no longer emits a spurious -Wdangling-gsl warning in C++23 when
   iterating over an element of a temporary container in a range-based
   for loop.(#GH109793, #GH145164)
@@ -970,6 +970,7 @@ Bug Fixes to C++ Support
 - Fixed a crash involving list-initialization of an empty class with a
   non-empty initializer list. (#GH147949)
 - Fixed constant evaluation of equality comparisons of constexpr-unknown references. (#GH147663)
+- Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

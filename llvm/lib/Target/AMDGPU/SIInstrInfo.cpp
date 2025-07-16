@@ -2498,6 +2498,25 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.eraseFromParent();
     break;
   }
+  case AMDGPU::SI_PC_ADD_REL_OFFSET64: {
+    MachineFunction &MF = *MBB.getParent();
+    Register Reg = MI.getOperand(0).getReg();
+    MachineOperand Op = MI.getOperand(1);
+
+    // Create a bundle so these instructions won't be re-ordered by the
+    // post-RA scheduler.
+    MIBundleBuilder Bundler(MBB, MI);
+    Bundler.append(BuildMI(MF, DL, get(AMDGPU::S_GETPC_B64), Reg));
+    if (Op.isGlobal())
+      Op.setOffset(Op.getOffset() + 4);
+    Bundler.append(
+        BuildMI(MF, DL, get(AMDGPU::S_ADD_U64), Reg).addReg(Reg).add(Op));
+
+    finalizeBundle(MBB, Bundler.begin());
+
+    MI.eraseFromParent();
+    break;
+  }
   case AMDGPU::ENTER_STRICT_WWM: {
     // This only gets its own opcode so that SIPreAllocateWWMRegs can tell when
     // Whole Wave Mode is entered.
@@ -2911,9 +2930,9 @@ bool SIInstrInfo::findCommutedOpIndices(const MCInstrDesc &Desc,
 
 bool SIInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
                                         int64_t BrOffset) const {
-  // BranchRelaxation should never have to check s_setpc_b64 because its dest
-  // block is unanalyzable.
-  assert(BranchOp != AMDGPU::S_SETPC_B64);
+  // BranchRelaxation should never have to check s_setpc_b64 or s_add_pc_i64
+  // because its dest block is unanalyzable.
+  assert(isSOPP(BranchOp) || isSOPK(BranchOp));
 
   // Convert to dwords.
   BrOffset /= 4;
@@ -2954,12 +2973,29 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+  auto I = MBB.end();
+  auto &MCCtx = MF->getContext();
+
+  if (ST.hasAddPC64Inst()) {
+    MCSymbol *Offset =
+        MCCtx.createTempSymbol("offset", /*AlwaysAddSuffix=*/true);
+    auto AddPC = BuildMI(MBB, I, DL, get(AMDGPU::S_ADD_PC_I64))
+                     .addSym(Offset, MO_FAR_BRANCH_OFFSET);
+    MCSymbol *PostAddPCLabel =
+        MCCtx.createTempSymbol("post_addpc", /*AlwaysAddSuffix=*/true);
+    AddPC->setPostInstrSymbol(*MF, PostAddPCLabel);
+    auto *OffsetExpr = MCBinaryExpr::createSub(
+        MCSymbolRefExpr::create(DestBB.getSymbol(), MCCtx),
+        MCSymbolRefExpr::create(PostAddPCLabel, MCCtx), MCCtx);
+    Offset->setVariableValue(OffsetExpr);
+    return;
+  }
+
+  assert(RS && "RegScavenger required for long branching");
 
   // FIXME: Virtual register workaround for RegScavenger not working with empty
   // blocks.
   Register PCReg = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
-
-  auto I = MBB.end();
 
   // Note: as this is used after hazard recognizer we need to apply some hazard
   // workarounds directly.
@@ -2976,7 +3012,6 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   MachineInstr *GetPC = BuildMI(MBB, I, DL, get(AMDGPU::S_GETPC_B64), PCReg);
   ApplyHazardWorkarounds();
 
-  auto &MCCtx = MF->getContext();
   MCSymbol *PostGetPCLabel =
       MCCtx.createTempSymbol("post_getpc", /*AlwaysAddSuffix=*/true);
   GetPC->setPostInstrSymbol(*MF, PostGetPCLabel);
@@ -9315,13 +9350,16 @@ SIInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
 ArrayRef<std::pair<unsigned, const char *>>
 SIInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   static const std::pair<unsigned, const char *> TargetFlags[] = {
-    { MO_GOTPCREL, "amdgpu-gotprel" },
-    { MO_GOTPCREL32_LO, "amdgpu-gotprel32-lo" },
-    { MO_GOTPCREL32_HI, "amdgpu-gotprel32-hi" },
-    { MO_REL32_LO, "amdgpu-rel32-lo" },
-    { MO_REL32_HI, "amdgpu-rel32-hi" },
-    { MO_ABS32_LO, "amdgpu-abs32-lo" },
-    { MO_ABS32_HI, "amdgpu-abs32-hi" },
+      {MO_GOTPCREL, "amdgpu-gotprel"},
+      {MO_GOTPCREL32_LO, "amdgpu-gotprel32-lo"},
+      {MO_GOTPCREL32_HI, "amdgpu-gotprel32-hi"},
+      {MO_GOTPCREL64, "amdgpu-gotprel64"},
+      {MO_REL32_LO, "amdgpu-rel32-lo"},
+      {MO_REL32_HI, "amdgpu-rel32-hi"},
+      {MO_REL64, "amdgpu-rel64"},
+      {MO_ABS32_LO, "amdgpu-abs32-lo"},
+      {MO_ABS32_HI, "amdgpu-abs32-hi"},
+      {MO_ABS64, "amdgpu-abs64"},
   };
 
   return ArrayRef(TargetFlags);

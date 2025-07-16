@@ -5540,8 +5540,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
       return std::max(Entries[I].front()->getVectorFactor(),
                       Entries[I].back()->getVectorFactor());
     });
-  unsigned NumUndefs =
-      count_if(CurrentOrder, [&](unsigned Idx) { return Idx == NumScalars; });
+  unsigned NumUndefs = count(CurrentOrder, NumScalars);
   if (ShuffledSubMasks.all() || (NumScalars > 2 && NumUndefs >= NumScalars / 2))
     return std::nullopt;
   return std::move(CurrentOrder);
@@ -8623,11 +8622,10 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                                State == LoadsState::CompressVectorize)
                              return false;
                            ConsecutiveNodesSize += VL.size();
-                           unsigned Start = std::distance(Slice.begin(), It);
-                           unsigned Sz = Slice.size() - Start;
+                           size_t Start = std::distance(Slice.begin(), It);
+                           size_t Sz = Slice.size() - Start;
                            return Sz < VL.size() ||
-                                  Slice.slice(std::distance(Slice.begin(), It),
-                                              VL.size()) != VL;
+                                  Slice.slice(Start, VL.size()) != VL;
                          }))
                 continue;
               // Try to build long masked gather loads.
@@ -22140,7 +22138,7 @@ public:
     // Try to regroup reduced values so that it gets more profitable to try to
     // reduce them. Values are grouped by their value ids, instructions - by
     // instruction op id and/or alternate op id, plus do extra analysis for
-    // loads (grouping them by the distabce between pointers) and cmp
+    // loads (grouping them by the distance between pointers) and cmp
     // instructions (grouping them by the predicate).
     SmallMapVector<
         size_t, SmallMapVector<size_t, SmallMapVector<Value *, unsigned, 2>, 2>,
@@ -22207,10 +22205,9 @@ public:
     for (auto &PossibleReducedVals : PossibleReducedValsVect) {
       auto PossibleRedVals = PossibleReducedVals.second.takeVector();
       SmallVector<SmallVector<Value *>> PossibleRedValsVect;
-      for (auto It = PossibleRedVals.begin(), E = PossibleRedVals.end();
-           It != E; ++It) {
+      for (auto &Slice : PossibleRedVals) {
         PossibleRedValsVect.emplace_back();
-        auto RedValsVect = It->second.takeVector();
+        auto RedValsVect = Slice.second.takeVector();
         stable_sort(RedValsVect, llvm::less_second());
         for (const std::pair<Value *, unsigned> &Data : RedValsVect)
           PossibleRedValsVect.back().append(Data.second, Data.first);
@@ -22370,8 +22367,8 @@ public:
       SmallVector<Value *> Candidates;
       Candidates.reserve(2 * OrigReducedVals.size());
       DenseMap<Value *, Value *> TrackedToOrig(2 * OrigReducedVals.size());
-      for (unsigned Cnt = 0, Sz = OrigReducedVals.size(); Cnt < Sz; ++Cnt) {
-        Value *RdxVal = TrackedVals.at(OrigReducedVals[Cnt]);
+      for (Value *ReducedVal : OrigReducedVals) {
+        Value *RdxVal = TrackedVals.at(ReducedVal);
         // Check if the reduction value was not overriden by the extractelement
         // instruction because of the vectorization and exclude it, if it is not
         // compatible with other values.
@@ -22382,7 +22379,7 @@ public:
             (S && !Inst))
           continue;
         Candidates.push_back(RdxVal);
-        TrackedToOrig.try_emplace(RdxVal, OrigReducedVals[Cnt]);
+        TrackedToOrig.try_emplace(RdxVal, ReducedVal);
       }
       bool ShuffledExtracts = false;
       // Try to handle shuffled extractelements.
