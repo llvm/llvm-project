@@ -193,7 +193,6 @@ class SystemZInstrInfo : public SystemZGenInstrInfo {
                        unsigned HighOpcode) const;
   void expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
                         unsigned Size) const;
-  void expandLoadStackGuard(MachineInstr *MI) const;
 
   MachineInstrBuilder
   emitGRX32Move(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
