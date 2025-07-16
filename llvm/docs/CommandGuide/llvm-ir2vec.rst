@@ -50,6 +50,9 @@ embedding training (see
 <https://github.com/thunlp/OpenKE/tree/OpenKE-PyTorch?tab=readme-ov-file#data-format> 
 for details).
 
+See `llvm/utils/mlgo-utils/IR2Vec/generateTriplets.py` for more details on how
+these two modes are used to generate the triplets and entity mappings.
+
 Triplet Generation Mode
 ~~~~~~~~~~~~~~~~~~~~~~~
 
