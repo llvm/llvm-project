@@ -14017,7 +14017,6 @@ const uint32_t ModeMask32 = ~RISCVExceptFlags::ALL;
 SDValue RISCVTargetLowering::lowerGET_FPMODE(SDValue Op,
                                              SelectionDAG &DAG) const {
   const MVT XLenVT = Subtarget.getXLenVT();
-  const uint64_t ModeMaskValue = Subtarget.is64Bit() ? ModeMask64 : ModeMask32;
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
   SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::fcsr, DL, XLenVT);
