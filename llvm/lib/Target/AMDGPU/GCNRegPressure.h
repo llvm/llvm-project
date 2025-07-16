@@ -223,7 +223,8 @@ public:
   /// Whether the current RP is at or below the defined pressure target.
   bool satisfied() const;
 
-  /// Computes achievable occupancy with the currently tracked register pressure.
+  /// Computes achievable occupancy with the currently tracked register
+  /// pressure.
   unsigned getOccupancy() const {
     return RP.getOccupancy(
         MF.getSubtarget<GCNSubtarget>(),
