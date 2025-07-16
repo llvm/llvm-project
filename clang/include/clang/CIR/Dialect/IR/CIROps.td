@@ -2935,6 +2935,45 @@ def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
 }
 
 //===----------------------------------------------------------------------===//
+// RotateOp
+//===----------------------------------------------------------------------===//
+
+def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
+  let summary = "Rotate the bits in the operand integer";
+  let description = [{
+    The `cir.rotate` rotates the bits in `input` by the given amount `amount`.
+    The rotate direction is specified by the `left` and `right` keyword.
+
+    `input` must be an unsigned integer and its width must be either 8, 16, 32,
+    or 64. The types of `input`, `amount`, and the result must all match.
+
+    Example:
+
+    ```mlir
+    %r = cir.rotate left %0, %1 : !u32i
+    %r = cir.rotate right %0, %1 : !u32i
+    ```
+  }];
+
+  let results = (outs CIR_IntType:$result);
+  let arguments = (ins
+    CIR_UIntOfWidths<[8, 16, 32, 64]>:$input,
+    CIR_IntType:$amount,
+    UnitAttr:$rotateLeft
+  );
+
+  let assemblyFormat = [{
+    (`left` $rotateLeft^) : (`right`)?
+    $input `,` $amount `:` type($result) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    bool isRotateLeft() { return getRotateLeft(); }
+    bool isRotateRight() { return !getRotateLeft(); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
