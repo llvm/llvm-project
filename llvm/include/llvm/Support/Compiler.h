@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_COMPILER_H
 #define LLVM_SUPPORT_COMPILER_H
 
+#include "llvm/Config/export-config.h"
 #include "llvm/Config/llvm-config.h"
 
 #include <stddef.h>
@@ -176,46 +177,20 @@
 /// LLVM public interface and could be conditionally excluded when not building
 /// tests in the future.
 ///
-#ifndef LLVM_ABI_GENERATING_ANNOTATIONS
-// Marker to add to classes or functions in public headers that should not have
-// export macros added to them by the clang tool
-#define LLVM_ABI_NOT_EXPORTED
-// TODO(https://github.com/llvm/llvm-project/issues/145406): eliminate need for
-// two preprocessor definitions to gate LLVM_ABI macro definitions.
-#if defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && !defined(LLVM_BUILD_STATIC)
-#if defined(_WIN32) && !defined(__MINGW32__)
-#if defined(LLVM_EXPORTS)
-#define LLVM_ABI __declspec(dllexport)
-#define LLVM_TEMPLATE_ABI
-#define LLVM_EXPORT_TEMPLATE __declspec(dllexport)
+#if defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
+#define LLVM_ABI_NOT_EXPORTED LLVM_INTERFACE_ABI_NOT_EXPORTED
+#define LLVM_ABI LLVM_INTERFACE_ABI
+#define LLVM_TEMPLATE_ABI LLVM_INTERFACE_TEMPLATE_ABI
+#define LLVM_EXPORT_TEMPLATE LLVM_INTERFACE_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT LLVM_INTERFACE_ABI_EXPORT
+#define LLVM_ABI_FOR_TEST LLVM_INTERFACE_ABI_FOR_TEST
 #else
-#define LLVM_ABI __declspec(dllimport)
-#define LLVM_TEMPLATE_ABI __declspec(dllimport)
-#define LLVM_EXPORT_TEMPLATE
-#endif
-#define LLVM_ABI_EXPORT __declspec(dllexport)
-#elif __has_attribute(visibility)
-#if defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||               \
-    defined(__MVS__) || defined(__CYGWIN__)
-#define LLVM_ABI __attribute__((visibility("default")))
-#define LLVM_TEMPLATE_ABI LLVM_ABI
-#define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ABI
-#elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
-#define LLVM_ABI __attribute__((visibility("default")))
-#define LLVM_TEMPLATE_ABI
-#define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ABI
-#endif
-#endif
-#endif
-#if !defined(LLVM_ABI)
+#define LLVM_ABI_NOT_EXPORTED
 #define LLVM_ABI
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT
-#endif
-#define LLVM_ABI_FOR_TEST LLVM_ABI
+#define LLVM_ABI_FOR_TEST
 #endif
 
 #if defined(__GNUC__)

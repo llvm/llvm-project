@@ -1229,6 +1229,9 @@ configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/config.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/config.h)
 configure_file(
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/export-config.h.cmake
+  ${LLVM_INCLUDE_DIR}/llvm/Config/export-config.h)
+configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/llvm-config.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/llvm-config.h)
 configure_file(
