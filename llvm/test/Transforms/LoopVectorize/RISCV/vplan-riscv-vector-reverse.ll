@@ -10,7 +10,7 @@
 ; RUN: -riscv-v-vector-bits-min=128 -disable-output < %s 2>&1 | FileCheck %s
 
 define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocapture noundef readonly %B, i32 noundef signext %n) {
-; CHECK: VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
+; CHECK: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
@@ -82,11 +82,11 @@ for.body:                                         ; preds = %for.body.preheader,
   store i32 %add9, ptr %arrayidx3, align 4
   %cmp = icmp ugt i64 %indvars.iv, 1
   %indvars.iv.next = add nsw i64 %indvars.iv, -1
-  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
 define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocapture noundef readonly %B, i32 noundef signext %n) {
-; CHECK: VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
+; CHECK: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
@@ -158,11 +158,5 @@ for.body:                                         ; preds = %for.body.preheader,
   store float %conv1, ptr %arrayidx3, align 4
   %cmp = icmp ugt i64 %indvars.iv, 1
   %indvars.iv.next = add nsw i64 %indvars.iv, -1
-  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
-
-!0 = distinct !{!0, !1, !2, !3, !4}
-!1 = !{!"llvm.loop.mustprogress"}
-!2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
-!4 = !{!"llvm.loop.vectorize.enable", i1 true}
