@@ -595,10 +595,10 @@ public:
 // "s_waitcnt 0" before use.
 class WaitcntBrackets {
 public:
-  WaitcntBrackets(const SIInsertWaitcnts *Parent) : Parent(Parent) {}
+  WaitcntBrackets(const SIInsertWaitcnts *Context) : Context(Context) {}
 
   bool isSmemCounter(InstCounterType T) const {
-    return T == Parent->SmemAccessCounter || T == X_CNT;
+    return T == Context->SmemAccessCounter || T == X_CNT;
   }
 
   unsigned getSgprScoresIdx(InstCounterType T) const {
@@ -656,7 +656,7 @@ public:
     return PendingEvents & (1 << E);
   }
   unsigned hasPendingEvent(InstCounterType T) const {
-    unsigned HasPending = PendingEvents & Parent->WaitEventMaskForInst[T];
+    unsigned HasPending = PendingEvents & Context->WaitEventMaskForInst[T];
     assert((HasPending != 0) == (getScoreRange(T) != 0));
     return HasPending;
   }
@@ -685,7 +685,7 @@ public:
 
   unsigned getPendingGDSWait() const {
     return std::min(getScoreUB(DS_CNT) - LastGDS,
-                    Parent->getWaitCountMax(DS_CNT) - 1);
+                    Context->getWaitCountMax(DS_CNT) - 1);
   }
 
   void setPendingGDS() { LastGDS = ScoreUBs[DS_CNT]; }
@@ -710,8 +710,8 @@ public:
 
   void setStateOnFunctionEntryOrReturn() {
     setScoreUB(STORE_CNT,
-               getScoreUB(STORE_CNT) + Parent->getWaitCountMax(STORE_CNT));
-    PendingEvents |= Parent->WaitEventMaskForInst[STORE_CNT];
+               getScoreUB(STORE_CNT) + Context->getWaitCountMax(STORE_CNT));
+    PendingEvents |= Context->WaitEventMaskForInst[STORE_CNT];
   }
 
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
@@ -747,8 +747,8 @@ private:
     if (T != EXP_CNT)
       return;
 
-    if (getScoreRange(EXP_CNT) > Parent->getWaitCountMax(EXP_CNT))
-      ScoreLBs[EXP_CNT] = ScoreUBs[EXP_CNT] - Parent->getWaitCountMax(EXP_CNT);
+    if (getScoreRange(EXP_CNT) > Context->getWaitCountMax(EXP_CNT))
+      ScoreLBs[EXP_CNT] = ScoreUBs[EXP_CNT] - Context->getWaitCountMax(EXP_CNT);
   }
 
   void setRegScore(int GprNo, InstCounterType T, unsigned Val) {
@@ -763,7 +763,7 @@ private:
                          const MachineOperand &Op, InstCounterType CntTy,
                          unsigned Val);
 
-  const SIInsertWaitcnts *Parent;
+  const SIInsertWaitcnts *Context;
 
   unsigned ScoreLBs[NUM_INST_CNTS] = {0};
   unsigned ScoreUBs[NUM_INST_CNTS] = {0};
@@ -826,7 +826,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   RegInterval Result;
 
-  MCRegister MCReg = AMDGPU::getMCReg(Op.getReg(), *Parent->ST);
+  MCRegister MCReg = AMDGPU::getMCReg(Op.getReg(), *Context->ST);
   unsigned RegIdx = TRI->getHWRegIndex(MCReg);
   assert(isUInt<8>(RegIdx));
 
@@ -884,7 +884,7 @@ void WaitcntBrackets::setScoreByOperand(const MachineInstr *MI,
 // this at compile time, so we have to assume it might be applied if the
 // instruction supports it).
 bool WaitcntBrackets::hasPointSampleAccel(const MachineInstr &MI) const {
-  if (!Parent->ST->hasPointSampleAccel() || !SIInstrInfo::isMIMG(MI))
+  if (!Context->ST->hasPointSampleAccel() || !SIInstrInfo::isMIMG(MI))
     return false;
 
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
@@ -910,7 +910,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                                     const SIRegisterInfo *TRI,
                                     const MachineRegisterInfo *MRI,
                                     WaitEventType E, MachineInstr &Inst) {
-  InstCounterType T = eventCounter(Parent->WaitEventMaskForInst, E);
+  InstCounterType T = eventCounter(Context->WaitEventMaskForInst, E);
 
   unsigned UB = getScoreUB(T);
   unsigned CurrScore = UB + 1;
@@ -1079,10 +1079,10 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
 }
 
 void WaitcntBrackets::print(raw_ostream &OS) const {
-  const GCNSubtarget *ST = Parent->ST;
+  const GCNSubtarget *ST = Context->ST;
 
   OS << '\n';
-  for (auto T : inst_counter_types(Parent->MaxCounter)) {
+  for (auto T : inst_counter_types(Context->MaxCounter)) {
     unsigned SR = getScoreRange(T);
 
     switch (T) {
@@ -1196,7 +1196,7 @@ void WaitcntBrackets::determineWait(InstCounterType T, RegInterval Interval,
     // s_waitcnt instruction.
     if ((UB >= ScoreToWait) && (ScoreToWait > LB)) {
       if ((T == LOAD_CNT || T == DS_CNT) && hasPendingFlat() &&
-          !Parent->ST->hasFlatLgkmVMemCountInOrder()) {
+          !Context->ST->hasFlatLgkmVMemCountInOrder()) {
         // If there is a pending FLAT operation, and this is a VMem or LGKM
         // waitcnt and the target can report early completion, then we need
         // to force a waitcnt 0.
@@ -1210,7 +1210,7 @@ void WaitcntBrackets::determineWait(InstCounterType T, RegInterval Interval,
         // If a counter has been maxed out avoid overflow by waiting for
         // MAX(CounterType) - 1 instead.
         unsigned NeededWait =
-            std::min(UB - ScoreToWait, Parent->getWaitCountMax(T) - 1);
+            std::min(UB - ScoreToWait, Context->getWaitCountMax(T) - 1);
         addWait(Wait, T, NeededWait);
       }
     }
@@ -1238,7 +1238,7 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
     setScoreLB(T, UB);
-    PendingEvents &= ~Parent->WaitEventMaskForInst[T];
+    PendingEvents &= ~Context->WaitEventMaskForInst[T];
   }
 }
 
@@ -1263,7 +1263,7 @@ void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
 // the decrement may go out of order.
 bool WaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
   // Scalar memory read always can go out of order.
-  if ((T == Parent->SmemAccessCounter && hasPendingEvent(SMEM_ACCESS)) ||
+  if ((T == Context->SmemAccessCounter && hasPendingEvent(SMEM_ACCESS)) ||
       (T == X_CNT && hasPendingEvent(SMEM_GROUP)))
     return true;
   return hasMixedPendingEvents(T);
@@ -2387,9 +2387,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
   VgprUB = std::max(VgprUB, Other.VgprUB);
   SgprUB = std::max(SgprUB, Other.SgprUB);
 
-  for (auto T : inst_counter_types(Parent->MaxCounter)) {
+  for (auto T : inst_counter_types(Context->MaxCounter)) {
     // Merge event flags for this counter
-    const unsigned *WaitEventMaskForInst = Parent->WaitEventMaskForInst;
+    const unsigned *WaitEventMaskForInst = Context->WaitEventMaskForInst;
     const unsigned OldEvents = PendingEvents & WaitEventMaskForInst[T];
     const unsigned OtherEvents = Other.PendingEvents & WaitEventMaskForInst[T];
     if (OtherEvents & ~OldEvents)
