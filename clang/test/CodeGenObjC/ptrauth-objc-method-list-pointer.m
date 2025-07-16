@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-objc-root-class -fptrauth-calls -triple arm64e -fptrauth-objc-class-ro %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -Wno-objc-root-class -fptrauth-calls -triple arm64e -fptrauth-objc-class-ro %s -emit-llvm -mllvm -ptrauth-emit-wrapper-globals=0 -o - | FileCheck %s
 @interface X
 @end
 

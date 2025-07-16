@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I %S/Inputs -fptrauth-calls -fptrauth-objc-isa -triple arm64-apple-ios -emit-llvm -no-enable-noundef-analysis -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -I %S/Inputs -fptrauth-calls -fptrauth-objc-isa -triple arm64-apple-ios -emit-llvm -no-enable-noundef-analysis -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - -mllvm -ptrauth-emit-wrapper-globals=0 %s | FileCheck %s
 
 #include "literal-support.h"
 
