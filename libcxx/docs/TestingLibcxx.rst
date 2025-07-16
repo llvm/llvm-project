@@ -155,11 +155,13 @@ https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/variable
 . The table below shows the variable names, their current values, and
 the runner sets to which they correspond.
 
-|Runner Set|Variable|Image Value|
-+==========+========+===========+
-|llvm-premerge-libcxx-runners|libcxx_runner_image|ghcr.io/llvm/libcxx-linux-builder:16f046281bf1a11d344eac1bc44d11f3e50e3b5d|
++------------------------------------+---------------------------+--------------------------------------------------------------------------+
+|Runner Set                          |Variable                   |Image Value                                                               |
++====================================+===========================+==========================================================================+
+|llvm-premerge-libcxx-runners        |libcxx_runner_image        |ghcr.io/llvm/libcxx-linux-builder:16f046281bf1a11d344eac1bc44d11f3e50e3b5d|
 |llvm-premerge-libcxx-release-runners|libcxx_release_runner_image|ghcr.io/llvm/libcxx-linux-builder:16f046281bf1a11d344eac1bc44d11f3e50e3b5d|
-|llvm-premerge-libcxx-next-runners|libcxx_next_runner_image|ghcr.io/llvm/libcxx-linux-builder:16f046281bf1a11d344eac1bc44d11f3e50e3b5d|
+|llvm-premerge-libcxx-next-runners   |libcxx_next_runner_image   |ghcr.io/llvm/libcxx-linux-builder:16f046281bf1a11d344eac1bc44d11f3e50e3b5d|
++------------------------------------+---------------------------+--------------------------------------------------------------------------+
 
 Note: The three runner images are (temporarily) all the same, but that
 will not normally be the case.
