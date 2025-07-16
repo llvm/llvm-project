@@ -1729,7 +1729,7 @@ def SetBitfieldOp : CIR_Op<"set_bitfield"> {
     Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$addr,
     CIR_AnyType:$src,
     BitfieldInfoAttr:$bitfield_info,
-    OptionalAttr<I64Attr>:$alignment,
+    DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
   );
 
@@ -1757,10 +1757,7 @@ def SetBitfieldOp : CIR_Op<"set_bitfield"> {
         BitfieldInfoAttr::get($_builder.getContext(),
                               name, storage_type,
                               size, offset, is_signed);
-      build($_builder, $_state, type, addr, src, info,
-            alignment == 0 ? IntegerAttr()
-                           : $_builder.getI64IntegerAttr(alignment),
-            is_volatile);
+      build($_builder, $_state, type, addr, src, info, alignment, is_volatile);
     }]>
   ];
 }
@@ -1819,7 +1816,7 @@ def GetBitfieldOp : CIR_Op<"get_bitfield"> {
   let arguments = (ins
     Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
     BitfieldInfoAttr:$bitfield_info,
-    OptionalAttr<I64Attr>:$alignment,
+    DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
     );
 
@@ -1846,10 +1843,7 @@ def GetBitfieldOp : CIR_Op<"get_bitfield"> {
         BitfieldInfoAttr::get($_builder.getContext(),
                               name, storage_type,
                               size, offset, is_signed);
-      build($_builder, $_state, type, addr, info,
-            alignment == 0 ? IntegerAttr()
-                           : $_builder.getI64IntegerAttr(alignment),
-            is_volatile);
+      build($_builder, $_state, type, addr, info, alignment, is_volatile);
     }]>
   ];
 }

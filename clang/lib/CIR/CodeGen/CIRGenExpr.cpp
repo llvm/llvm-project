@@ -337,10 +337,9 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
 
   mlir::Value dstAddr = dst.getAddress().getPointer();
 
-  return builder.createSetBitfield(
-      dstAddr.getLoc(), resLTy, dstAddr, ptr.getElementType(), src.getValue(),
-      info, dst.isVolatileQualified(), useVolatile,
-      dst.getAddress().getAlignment().getAsAlign().value());
+  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, ptr,
+                                   ptr.getElementType(), src.getValue(), info,
+                                   dst.isVolatileQualified(), useVolatile);
 }
 
 RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
@@ -352,9 +351,9 @@ RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
 
   assert(!cir::MissingFeatures::armComputeVolatileBitfields());
 
-  mlir::Value field = builder.createGetBitfield(
-      getLoc(loc), resLTy, ptr.getPointer(), ptr.getElementType(), info,
-      lv.isVolatile(), false, ptr.getAlignment().getAsAlign().value());
+  mlir::Value field =
+      builder.createGetBitfield(getLoc(loc), resLTy, ptr, ptr.getElementType(),
+                                info, lv.isVolatile(), false);
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck() && "NYI");
   return RValue::get(field);
 }
