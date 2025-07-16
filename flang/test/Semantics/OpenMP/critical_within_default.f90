@@ -4,7 +4,7 @@
 !CHECK:  MainProgram scope: MN
 !CHECK-NEXT:    j size=4 offset=0: ObjectEntity type: INTEGER(4)
 !CHECK-NEXT:    OtherConstruct scope:
-!CHECK-NEXT:      j (OmpPrivate): HostAssoc
+!CHECK-NEXT:      j (OmpPrivate, OmpImplicit): HostAssoc
 !CHECK-NEXT:      k2 (OmpCriticalLock): Unknown
 program mn
   integer :: j

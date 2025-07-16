@@ -25,8 +25,9 @@ end subroutine
 ! CHECK:   %[[IDO1_HOST_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Eido1"}
 ! CHECK:   %[[IDO2_HOST_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Eido2"}
 ! CHECK:   %[[IDO3_HOST_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Eido3"}
+! CHECK:   %[[IDO4_HOST_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Eido4"}
 
-! CHECK:   omp.parallel {
+! CHECK:   omp.parallel private(@{{.*}}do4_private{{.*}} %[[IDO4_HOST_DECL]]#0 -> %[[IDO4_PRIV_ARG:.*]]) {
 ! CHECK:     omp.simd private(
 ! CHECK-SAME:  @{{.*}}do1_private{{.*}} %[[IDO1_HOST_DECL]]#0 -> %[[IDO1_PRIV_ARG:[^[:space:]]*]],
 ! CHECK-SAME:  @{{.*}}do2_private{{.*}} %[[IDO2_HOST_DECL]]#0 -> %[[IDO2_PRIV_ARG:[^[:space:]]*]],

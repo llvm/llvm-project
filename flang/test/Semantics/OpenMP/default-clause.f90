@@ -13,16 +13,16 @@ program sample
     integer x, y, z, w, k, a 
     !$omp parallel  firstprivate(x) private(y) shared(w) default(private)
         !CHECK: OtherConstruct scope: size=0 alignment=1
-        !CHECK: a (OmpPrivate): HostAssoc
-        !CHECK: k (OmpPrivate): HostAssoc
+        !CHECK: a (OmpPrivate, OmpImplicit): HostAssoc
+        !CHECK: k (OmpPrivate, OmpImplicit): HostAssoc
         !CHECK: x (OmpFirstPrivate, OmpExplicit): HostAssoc
         !CHECK: y (OmpPrivate, OmpExplicit): HostAssoc
-        !CHECK: z (OmpPrivate): HostAssoc
+        !CHECK: z (OmpPrivate, OmpImplicit): HostAssoc
         !$omp parallel default(private)
             !CHECK: OtherConstruct scope: size=0 alignment=1
-            !CHECK: a (OmpPrivate): HostAssoc
-            !CHECK: x (OmpPrivate): HostAssoc
-            !CHECK: y (OmpPrivate): HostAssoc
+            !CHECK: a (OmpPrivate, OmpImplicit): HostAssoc
+            !CHECK: x (OmpPrivate, OmpImplicit): HostAssoc
+            !CHECK: y (OmpPrivate, OmpImplicit): HostAssoc
             y = 20
             x = 10
            !$omp parallel
@@ -33,9 +33,9 @@ program sample
 
         !$omp parallel default(firstprivate) shared(y) private(w)
             !CHECK: OtherConstruct scope: size=0 alignment=1
-            !CHECK: k (OmpFirstPrivate): HostAssoc
+            !CHECK: k (OmpFirstPrivate, OmpImplicit): HostAssoc
             !CHECK: w (OmpPrivate, OmpExplicit): HostAssoc
-            !CHECK: z (OmpFirstPrivate): HostAssoc
+            !CHECK: z (OmpFirstPrivate, OmpImplicit): HostAssoc
             y = 30
             w = 40 
             z = 50 

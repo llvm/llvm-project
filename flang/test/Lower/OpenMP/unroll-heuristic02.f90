@@ -39,8 +39,6 @@ end subroutine omp_unroll_heuristic_nested02
 !CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFomp_unroll_heuristic_nested02Eres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           %[[VAL_13:.*]] = fir.alloca i32 {bindc_name = "i", pinned, uniq_name = "_QFomp_unroll_heuristic_nested02Ei"}
 !CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] {uniq_name = "_QFomp_unroll_heuristic_nested02Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:           %[[VAL_15:.*]] = fir.alloca i32 {bindc_name = "j", pinned, uniq_name = "_QFomp_unroll_heuristic_nested02Ej"}
-!CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFomp_unroll_heuristic_nested02Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
 !CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<i32>
 !CHECK:           %[[VAL_19:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>

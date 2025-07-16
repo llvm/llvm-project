@@ -14,6 +14,16 @@
 ! CHECK-SAME:  copy {
 
 ! CHECK-LABEL: omp.private
+! CHECK-SAME:      {type = firstprivate} @[[TEST6_Z_FIRSTPRIV:.*]] : i32
+! CHECK-SAME:  copy {
+! CHECK:         hlfir.assign
+
+! CHECK-LABEL: omp.private
+! CHECK-SAME:      {type = firstprivate} @[[TEST6_X_FIRSTPRIV:.*]] : i32
+! CHECK-SAME:  copy {
+! CHECK:         hlfir.assign
+
+! CHECK-LABEL: omp.private
 ! CHECK-SAME:      {type = private} @[[TEST6_Y_PRIV:.*]] : i32
 ! CHECK-NOT:   copy {
 
@@ -22,17 +32,7 @@
 ! CHECK-NOT:   copy {
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST6_Z_FIRSTPRIV:.*]] : i32
-! CHECK-SAME:  copy {
-! CHECK:         hlfir.assign
-
-! CHECK-LABEL: omp.private
 ! CHECK-SAME:      {type = firstprivate} @[[TEST6_Y_FIRSTPRIV:.*]] : i32
-! CHECK-SAME:  copy {
-! CHECK:         hlfir.assign
-
-! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST6_X_FIRSTPRIV:.*]] : i32
 ! CHECK-SAME:  copy {
 ! CHECK:         hlfir.assign
 
@@ -59,18 +59,6 @@
 ! CHECK-SAME:      {type = firstprivate} @[[TEST4_X_FIRSTPRIV:.*]] : i32
 ! CHECK-SAME:  copy {
 ! CHECK:         hlfir.assign
-
-! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = private} @[[TEST4_Y_PRIV:.*]] : i32
-! CHECK-NOT:   copy {
-
-! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = private} @[[TEST4_Z_PRIV:.*]] : i32
-! CHECK-NOT:   copy {
-
-! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = private} @[[TEST4_X_PRIV:.*]] : i32
-! CHECK-NOT:   copy {
 
 ! CHECK-LABEL: omp.private
 ! CHECK-SAME:      {type = firstprivate} @[[TEST3_X_FIRSTPRIV:.*]] : i32
@@ -183,25 +171,22 @@ end subroutine
 !CHECK:       %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFimplicit_dsa_test4Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:       %[[Z:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFimplicit_dsa_test4Ez"}
 !CHECK:       %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z]] {uniq_name = "_QFimplicit_dsa_test4Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:       omp.parallel private({{.*}} %{{.*}}#0 -> %[[PRIV_X:.*]], {{.*}} %{{.*}}#0 -> %[[PRIV_Z:.*]], {{.*}} %{{.*}}#0 -> %[[PRIV_Y:.*]] : {{.*}}) {
-!CHECK:         %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] {uniq_name = "_QFimplicit_dsa_test4Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:         %[[PRIV_Z_DECL:.*]]:2 = hlfir.declare %[[PRIV_Z]] {uniq_name = "_QFimplicit_dsa_test4Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:         %[[PRIV_Y_DECL:.*]]:2 = hlfir.declare %[[PRIV_Y]] {uniq_name = "_QFimplicit_dsa_test4Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:         omp.task private(@[[TEST4_X_FIRSTPRIV]] %[[PRIV_X_DECL]]#0 -> %[[PRIV2_X:.*]], @[[TEST4_Z_FIRSTPRIV]] %[[PRIV_Z_DECL]]#0 -> %[[PRIV2_Z:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-!CHECK-NEXT:      %[[PRIV2_X_DECL:.*]]:2 = hlfir.declare %[[PRIV2_X]] {uniq_name = "_QFimplicit_dsa_test4Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK-NEXT:      %[[PRIV2_Z_DECL:.*]]:2 = hlfir.declare %[[PRIV2_Z]] {uniq_name = "_QFimplicit_dsa_test4Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:       omp.parallel {
+!CHECK:         omp.task private(@[[TEST4_X_FIRSTPRIV]] %[[X_DECL]]#0 -> %[[PRIV_X:.*]], @[[TEST4_Z_FIRSTPRIV]] %[[Z_DECL]]#0 -> %[[PRIV_Z:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
+!CHECK-NEXT:      %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] {uniq_name = "_QFimplicit_dsa_test4Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-NEXT:      %[[PRIV_Z_DECL:.*]]:2 = hlfir.declare %[[PRIV_Z]] {uniq_name = "_QFimplicit_dsa_test4Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           %[[ZERO:.*]] = arith.constant 0 : i32
-!CHECK-NEXT:      hlfir.assign %[[ZERO]] to %[[PRIV2_X_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK-NEXT:      hlfir.assign %[[ZERO]] to %[[PRIV_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:           %[[ONE:.*]] = arith.constant 1 : i32
-!CHECK-NEXT:      hlfir.assign %[[ONE]] to %[[PRIV2_Z_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK-NEXT:      hlfir.assign %[[ONE]] to %[[PRIV_Z_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:         }
-!CHECK:         omp.task private(@[[TEST4_X_FIRSTPRIV]] %[[PRIV_X_DECL]]#0 -> %[[PRIV2_X:.*]], @[[TEST4_Y_FIRSTPRIV]] %[[PRIV_Y_DECL]]#0 -> %[[PRIV2_Y:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-!CHECK-NEXT:      %[[PRIV2_X_DECL:.*]]:2 = hlfir.declare %[[PRIV2_X]] {uniq_name = "_QFimplicit_dsa_test4Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK-NEXT:      %[[PRIV2_Y_DECL:.*]]:2 = hlfir.declare %[[PRIV2_Y]] {uniq_name = "_QFimplicit_dsa_test4Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:         omp.task private(@[[TEST4_X_FIRSTPRIV]] %[[X_DECL]]#0 -> %[[PRIV_X:.*]], @[[TEST4_Y_FIRSTPRIV]] %[[Y_DECL]]#0 -> %[[PRIV_Y:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
+!CHECK-NEXT:      %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] {uniq_name = "_QFimplicit_dsa_test4Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-NEXT:      %[[PRIV_Y_DECL:.*]]:2 = hlfir.declare %[[PRIV_Y]] {uniq_name = "_QFimplicit_dsa_test4Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           %[[ONE:.*]] = arith.constant 1 : i32
-!CHECK-NEXT:      hlfir.assign %[[ONE]] to %[[PRIV2_X_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK-NEXT:      hlfir.assign %[[ONE]] to %[[PRIV_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:           %[[ZERO:.*]] = arith.constant 0 : i32
-!CHECK-NEXT:      hlfir.assign %[[ZERO]] to %[[PRIV2_Z_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK-NEXT:      hlfir.assign %[[ZERO]] to %[[PRIV_Y_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:         }
 !CHECK:       }
 subroutine implicit_dsa_test4
@@ -254,20 +239,18 @@ end subroutine
 !CHECK:       %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFimplicit_dsa_test6Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:       %[[Z:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFimplicit_dsa_test6Ez"}
 !CHECK:       %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z]] {uniq_name = "_QFimplicit_dsa_test6Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:       omp.task private(@[[TEST6_X_FIRSTPRIV]] %[[X_DECL]]#0 -> %[[PRIV_X:.*]], @[[TEST6_Y_FIRSTPRIV]] %[[Y_DECL]]#0 -> %[[PRIV_Y:.*]], @[[TEST6_Z_FIRSTPRIV]] %[[Z_DECL]]#0 -> %[[PRIV_Z:.*]] : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
-!CHECK-NEXT:    %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] {uniq_name = "_QFimplicit_dsa_test6Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:       omp.task private(@[[TEST6_Y_FIRSTPRIV]] %[[Y_DECL]]#0 -> %[[PRIV_Y:.*]] : !fir.ref<i32>) {
 !CHECK-NEXT:    %[[PRIV_Y_DECL:.*]]:2 = hlfir.declare %[[PRIV_Y]] {uniq_name = "_QFimplicit_dsa_test6Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK-NEXT:    %[[PRIV_Z_DECL:.*]]:2 = hlfir.declare %[[PRIV_Z]] {uniq_name = "_QFimplicit_dsa_test6Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:         omp.parallel private({{.*}} %{{.*}}#0 -> %[[PRIV2_X:.*]], {{.*}} %{{.*}}#0 -> %[[PRIV2_Y:.*]] : {{.*}}) {
-!CHECK:           %[[PRIV2_X_DECL:.*]]:2 = hlfir.declare %[[PRIV2_X]] {uniq_name = "_QFimplicit_dsa_test6Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:         omp.parallel private({{.*}} %{{.*}}#0 -> %[[PRIV_X:.*]], {{.*}} %{{.*}}#0 -> %[[PRIV2_Y:.*]] : {{.*}}) {
+!CHECK:           %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] {uniq_name = "_QFimplicit_dsa_test6Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NOT:       hlfir.assign
 !CHECK:           %[[PRIV2_Y_DECL:.*]]:2 = hlfir.declare %[[PRIV2_Y]] {uniq_name = "_QFimplicit_dsa_test6Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NOT:       hlfir.assign
-!CHECK:           hlfir.assign %{{.*}} to %[[PRIV2_X_DECL]]
+!CHECK:           hlfir.assign %{{.*}} to %[[PRIV_X_DECL]]
 !CHECK:         }
-!CHECK:         omp.parallel private({{.*firstprivate.*}} %{{.*}}#0 -> %[[PRIV3_X:.*]], {{.*firstprivate.*}} %{{.*}}#0 -> %[[PRIV3_Z:.*]] : {{.*}}) {
-!CHECK-NEXT:      %[[PRIV3_X_DECL:.*]]:2 = hlfir.declare %[[PRIV3_X]] {uniq_name = "_QFimplicit_dsa_test6Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK-NEXT:      %[[PRIV3_Z_DECL:.*]]:2 = hlfir.declare %[[PRIV3_Z]] {uniq_name = "_QFimplicit_dsa_test6Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:         omp.parallel private({{.*firstprivate.*}} %{{.*}}#0 -> %[[PRIV_X:.*]], {{.*firstprivate.*}} %{{.*}}#0 -> %[[PRIV_Z:.*]] : {{.*}}) {
+!CHECK-NEXT:      %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] {uniq_name = "_QFimplicit_dsa_test6Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-NEXT:      %[[PRIV_Z_DECL:.*]]:2 = hlfir.declare %[[PRIV_Z]] {uniq_name = "_QFimplicit_dsa_test6Ez"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           hlfir.assign %{{.*}} to %[[PRIV_Y_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:         }
 !CHECK:       }
