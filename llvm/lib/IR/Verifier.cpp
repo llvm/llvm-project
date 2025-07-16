@@ -5488,11 +5488,12 @@ void Verifier::visitInstruction(Instruction &I) {
     visitMDNode(*N, AreDebugLocsAllowed::Yes);
 
     if (auto *DL = dyn_cast<DILocation>(N)) {
-      if (DL->getAtomGroup())
+      if (DL->getAtomGroup()) {
         CheckDI(DL->getScope()->getSubprogram()->getKeyInstructionsEnabled(),
                 "DbgLoc uses atomGroup but DISubprogram doesn't have Key "
                 "Instructions enabled",
                 DL, DL->getScope()->getSubprogram());
+      }
     }
   }
 
