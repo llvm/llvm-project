@@ -3015,11 +3015,10 @@ def NVVM_GriddepcontrolLaunchDependentsOp
 // NVVM Mapa Op
 //===----------------------------------------------------------------------===//
 
-def NVVM_MapaASCheck : PredOpTrait<"Valid address-space check(or mapping) for mapa Op",
-    Or<[InputMatchesTypes<["a", "res"], [LLVM_PointerShared, LLVM_PointerSharedCluster]>.predicate,
-        InputMatchesTypes<["a", "res"], [LLVM_PointerGeneric, LLVM_PointerGeneric]>.predicate]>>;
-
-def NVVM_MapaOp: NVVM_Op<"mapa", [NVVM_MapaASCheck, NVVMRequiresSM<90>]> {
+def NVVM_MapaOp: NVVM_Op<"mapa",
+  [InputAddressIsCombinationOf<["a", "res"],
+    [[LLVM_PointerShared, LLVM_PointerSharedCluster], [LLVM_PointerGeneric, LLVM_PointerGeneric]],
+    "Valid address-space check(or mapping) for mapa Op">, NVVMRequiresSM<90>]> {
   let results = (outs AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerSharedCluster]>:$res);
   let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$a, I32:$b);
 
