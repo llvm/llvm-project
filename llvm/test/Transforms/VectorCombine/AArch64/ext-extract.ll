@@ -17,11 +17,21 @@ define void @zext_v4i8_all_lanes_used(<4 x i8> %src) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP1]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 255
 ; CHECK-NEXT:    [[TMP9:%.*]] = and i32 [[TMP1]], 255
-; CHECK-NEXT:    [[EXT9:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
-; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <4 x i32> [[EXT9]], i64 0
-; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i32> [[EXT9]], i64 1
-; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <4 x i32> [[EXT9]], i64 2
-; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <4 x i32> [[EXT9]], i64 3
+; CHECK-NEXT:    [[TMP8:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <4 x i8> [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP23]], 24
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP23]], 16
+; CHECK-NEXT:    [[TMP12:%.*]] = and i32 [[TMP11]], 255
+; CHECK-NEXT:    [[TMP13:%.*]] = lshr i32 [[TMP23]], 8
+; CHECK-NEXT:    [[TMP14:%.*]] = and i32 [[TMP13]], 255
+; CHECK-NEXT:    [[TMP15:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i8> [[TMP15]] to i32
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i32 [[TMP16]], 24
+; CHECK-NEXT:    [[TMP18:%.*]] = lshr i32 [[TMP16]], 16
+; CHECK-NEXT:    [[TMP19:%.*]] = and i32 [[TMP18]], 255
+; CHECK-NEXT:    [[TMP20:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <4 x i8> [[TMP20]] to i32
+; CHECK-NEXT:    [[TMP22:%.*]] = lshr i32 [[TMP21]], 24
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP9]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP7]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP5]])
@@ -83,10 +93,14 @@ define void @zext_v4i8_3_lanes_used_1(<4 x i8> %src) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 255
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP1]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 255
-; CHECK-NEXT:    [[EXT9:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
-; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i32> [[EXT9]], i64 1
-; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <4 x i32> [[EXT9]], i64 2
-; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <4 x i32> [[EXT9]], i64 3
+; CHECK-NEXT:    [[TMP15:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i8> [[TMP15]] to i32
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP8]], 24
+; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP8]], 16
+; CHECK-NEXT:    [[TMP11:%.*]] = and i32 [[TMP10]], 255
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i8> [[TMP12]] to i32
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP13]], 24
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP7]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP5]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP2]])
@@ -114,10 +128,14 @@ define void @zext_v4i8_3_lanes_used_2(<4 x i8> %src) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP1]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 255
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP1]], 255
-; CHECK-NEXT:    [[EXT9:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
-; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <4 x i32> [[EXT9]], i64 0
-; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i32> [[EXT9]], i64 1
-; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <4 x i32> [[EXT9]], i64 3
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i8> [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP14]], 24
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP14]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[TMP9]], 255
+; CHECK-NEXT:    [[TMP11:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i8> [[TMP11]] to i32
+; CHECK-NEXT:    [[TMP13:%.*]] = lshr i32 [[TMP12]], 24
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP7]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP5]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP2]])
@@ -145,9 +163,10 @@ define void @zext_v4i8_2_lanes_used_1(<4 x i8> %src) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP1]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 255
-; CHECK-NEXT:    [[EXT9:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
-; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i32> [[EXT9]], i64 1
-; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <4 x i32> [[EXT9]], i64 2
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i8> [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP7]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = and i32 [[TMP8]], 255
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP5]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP3]])
 ; CHECK-NEXT:    ret void
@@ -171,9 +190,10 @@ define void @zext_v4i8_2_lanes_used_2(<4 x i8> %src) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP1]], 255
-; CHECK-NEXT:    [[EXT9:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
-; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <4 x i32> [[EXT9]], i64 0
-; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <4 x i32> [[EXT9]], i64 2
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i8> [[TMP9]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP6]], 16
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 255
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP5]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP3]])
 ; CHECK-NEXT:    ret void
@@ -199,11 +219,18 @@ define void @zext_v4i8_all_lanes_used_noundef(<4 x i8> noundef %src) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 255
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP0]], 255
-; CHECK-NEXT:    [[EXT9:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
-; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <4 x i32> [[EXT9]], i64 0
-; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i32> [[EXT9]], i64 1
-; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <4 x i32> [[EXT9]], i64 2
-; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <4 x i32> [[EXT9]], i64 3
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i8> [[SRC]] to i32
+; CHECK-NEXT:    [[TMP19:%.*]] = lshr i32 [[TMP7]], 24
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP7]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[TMP9]], 255
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP7]], 8
+; CHECK-NEXT:    [[TMP12:%.*]] = and i32 [[TMP11]], 255
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i8> [[SRC]] to i32
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP13]], 24
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr i32 [[TMP13]], 16
+; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 255
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i8> [[SRC]] to i32
+; CHECK-NEXT:    [[TMP18:%.*]] = lshr i32 [[TMP17]], 24
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP8]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP6]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP4]])
@@ -268,11 +295,21 @@ define void @zext_v4i16_all_lanes_used(<4 x i16> %src) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP1]], 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 65535
 ; CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP1]], 65535
-; CHECK-NEXT:    [[EXT9:%.*]] = zext nneg <4 x i16> [[SRC]] to <4 x i64>
-; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <4 x i64> [[EXT9]], i64 0
-; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i64> [[EXT9]], i64 1
-; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <4 x i64> [[EXT9]], i64 2
-; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <4 x i64> [[EXT9]], i64 3
+; CHECK-NEXT:    [[TMP8:%.*]] = freeze <4 x i16> [[SRC]]
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <4 x i16> [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = lshr i64 [[TMP23]], 48
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i64 [[TMP23]], 32
+; CHECK-NEXT:    [[TMP12:%.*]] = and i64 [[TMP11]], 65535
+; CHECK-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP23]], 16
+; CHECK-NEXT:    [[TMP14:%.*]] = and i64 [[TMP13]], 65535
+; CHECK-NEXT:    [[TMP15:%.*]] = freeze <4 x i16> [[SRC]]
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP15]] to i64
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i64 [[TMP16]], 48
+; CHECK-NEXT:    [[TMP18:%.*]] = lshr i64 [[TMP16]], 32
+; CHECK-NEXT:    [[TMP19:%.*]] = and i64 [[TMP18]], 65535
+; CHECK-NEXT:    [[TMP20:%.*]] = freeze <4 x i16> [[SRC]]
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <4 x i16> [[TMP20]] to i64
+; CHECK-NEXT:    [[TMP22:%.*]] = lshr i64 [[TMP21]], 48
 ; CHECK-NEXT:    call void @use.i64(i64 [[TMP9]])
 ; CHECK-NEXT:    call void @use.i64(i64 [[TMP7]])
 ; CHECK-NEXT:    call void @use.i64(i64 [[TMP5]])
@@ -301,9 +338,9 @@ define void @zext_v2i32_all_lanes_used(<2 x i32> %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 32
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[EXT9:%.*]] = zext nneg <2 x i32> [[SRC]] to <2 x i64>
-; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <2 x i64> [[EXT9]], i64 0
-; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <2 x i64> [[EXT9]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <2 x i32> [[SRC]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP7]], 32
 ; CHECK-NEXT:    call void @use.i64(i64 [[TMP5]])
 ; CHECK-NEXT:    call void @use.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    ret void

@@ -448,9 +448,7 @@ define <4 x float> @ins_bo_ext_ext_uses(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @PR34724(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @PR34724(
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B:%.*]], <4 x i32> <i32 poison, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 poison, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 poison, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    [[V3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x float> [[V3]]

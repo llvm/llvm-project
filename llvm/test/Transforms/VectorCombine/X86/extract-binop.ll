@@ -448,9 +448,7 @@ define <4 x float> @ins_bo_ext_ext_uses(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @PR34724(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @PR34724(
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[A]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 3, i32 poison>
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 3, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A]], [[SHIFT]]
 ; CHECK-NEXT:    [[SHIFT1:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[B]], [[SHIFT1]]
@@ -575,6 +573,7 @@ define i64 @instsimplify_folder_crash(<4 x i64> %in) {
 ; CHECK-NEXT:    [[SHUFFLE_1:%.*]] = shufflevector <4 x i64> [[IN:%.*]], <4 x i64> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[E_0:%.*]] = extractelement <4 x i64> zeroinitializer, i64 0
 ; CHECK-NEXT:    [[E_1:%.*]] = extractelement <4 x i64> [[SHUFFLE_1]], i64 1
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i64> [[SHUFFLE_1]], <4 x i64> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[OR:%.*]] = or i64 [[E_1]], [[E_0]]
 ; CHECK-NEXT:    ret i64 [[OR]]
 ;
