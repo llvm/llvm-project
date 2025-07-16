@@ -6924,7 +6924,7 @@ private:
     llvm::errs() << "DEBUG getExprTypeSize: ENTRY\n";
     llvm::errs() << "  Expression: ";
     E->dump();
-    
+
     QualType ExprTy = E->getType().getCanonicalType();
 
     // Calculate the size for array shaping expression.
@@ -6939,7 +6939,8 @@ private:
                                       SE->getExprLoc());
         Size = CGF.Builder.CreateNUWMul(Size, Sz);
       }
-      llvm::errs() << "DEBUG getExprTypeSize: Returning size for ArrayShapingExpr\n";
+      llvm::errs()
+          << "DEBUG getExprTypeSize: Returning size for ArrayShapingExpr\n";
       return Size;
     }
 
@@ -6961,7 +6962,8 @@ private:
       // base.
       if (!OAE->getLength() && OAE->getColonLocFirst().isValid() &&
           !OAE->getLowerBound()) {
-        llvm::errs() << "DEBUG getExprTypeSize: Using whole length of base for ArraySection\n";
+        llvm::errs() << "DEBUG getExprTypeSize: Using whole length of base for "
+                        "ArraySection\n";
         return CGF.getTypeSize(BaseTy);
       }
 
@@ -7021,7 +7023,7 @@ private:
     llvm::errs() << "  AddPtrFlag: " << AddPtrFlag << "\n";
     llvm::errs() << "  AddIsTargetParamFlag: " << AddIsTargetParamFlag << "\n";
     llvm::errs() << "  IsNonContiguous: " << IsNonContiguous << "\n";
-    
+
     OpenMPOffloadMappingFlags Bits =
         IsImplicit ? OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT
                    : OpenMPOffloadMappingFlags::OMP_MAP_NONE;
@@ -7064,9 +7066,10 @@ private:
       Bits |= OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
     if (IsNonContiguous)
       Bits |= OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG;
-    
+
     // DEBUG: Print final flags
-    llvm::errs() << "DEBUG getMapTypeBits: Final bits = " << static_cast<unsigned>(Bits) << "\n";
+    llvm::errs() << "DEBUG getMapTypeBits: Final bits = "
+                 << static_cast<unsigned>(Bits) << "\n";
     return Bits;
   }
 
@@ -7077,18 +7080,20 @@ private:
     llvm::errs() << "DEBUG isFinalArraySectionExpression: ENTRY\n";
     llvm::errs() << "  Expression: ";
     E->dump();
-    
+
     const auto *OASE = dyn_cast<ArraySectionExpr>(E);
 
     // It is not an array section and therefore not a unity-size one.
     if (!OASE) {
-      llvm::errs() << "DEBUG isFinalArraySectionExpression: Not ArraySectionExpr, returning false\n";
+      llvm::errs() << "DEBUG isFinalArraySectionExpression: Not "
+                      "ArraySectionExpr, returning false\n";
       return false;
     }
 
     // An array section with no colon always refer to a single element.
     if (OASE->getColonLocFirst().isInvalid()) {
-      llvm::errs() << "DEBUG isFinalArraySectionExpression: No colon, single element, returning false\n";
+      llvm::errs() << "DEBUG isFinalArraySectionExpression: No colon, single "
+                      "element, returning false\n";
       return false;
     }
 
@@ -7112,27 +7117,35 @@ private:
     // Check if the length evaluates to 1.
     Expr::EvalResult Result;
     if (!Length->EvaluateAsInt(Result, CGF.getContext())) {
-      llvm::errs() << "DEBUG isFinalArraySectionExpression: Cannot evaluate length as int, returning true\n";
+      llvm::errs() << "DEBUG isFinalArraySectionExpression: Cannot evaluate "
+                      "length as int, returning true\n";
       return true; // Can have more that size 1.
     }
 
     llvm::APSInt ConstLength = Result.Val.getInt();
     bool result = ConstLength.getSExtValue() != 1;
-    llvm::errs() << "DEBUG isFinalArraySectionExpression: Length = " << ConstLength.getSExtValue() 
-                 << ", returning " << result << "\n";
+    llvm::errs() << "DEBUG isFinalArraySectionExpression: Length = "
+                 << ConstLength.getSExtValue() << ", returning " << result
+                 << "\n";
     return result;
   }
 
   /// Utility function to add an ATTACH entry to the CombinedInfo structure.
-  /// Generates an ATTACH entry: &pointer, &pointer[idx], sizeof(pointer), ATTACH
+  /// Generates an ATTACH entry: &pointer, &pointer[idx], sizeof(pointer),
+  /// ATTACH
   void addAttachEntry(CodeGenFunction &CGF, MapCombinedInfoTy &CombinedInfo,
                       Address AttachBaseAddr, Address AttachFirstElemAddr,
                       const ValueDecl *BaseDecl, const Expr *MapExpr) const {
     llvm::errs() << "DEBUG addAttachEntry: Adding ATTACH entry\n";
-    llvm::errs() << "  AttachBaseAddr = "; AttachBaseAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
-    llvm::errs() << "  AttachFirstElemAddr = "; AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
-    
-    // Size is the size of the pointer itself - use pointer size, not BaseDecl size
+    llvm::errs() << "  AttachBaseAddr = ";
+    AttachBaseAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs());
+    llvm::errs() << "\n";
+    llvm::errs() << "  AttachFirstElemAddr = ";
+    AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs());
+    llvm::errs() << "\n";
+
+    // Size is the size of the pointer itself - use pointer size, not BaseDecl
+    // size
     llvm::Value *PointerSize = CGF.Builder.CreateIntCast(
         llvm::ConstantInt::get(
             CGF.CGM.SizeTy,
@@ -7150,7 +7163,7 @@ private:
     CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
     CombinedInfo.Mappers.push_back(nullptr);
     CombinedInfo.NonContigInfo.Dims.push_back(1);
-    
+
     llvm::errs() << "DEBUG addAttachEntry: ATTACH entry added successfully\n";
   }
 
@@ -7171,13 +7184,14 @@ private:
       const ValueDecl *BaseDecl = nullptr, const Expr *MapExpr = nullptr,
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
           OverlappedElements = {}) const {
-    
+
     // DEBUG: Print function entry information
     llvm::errs() << "DEBUG generateInfoForComponentList: ENTRY\n";
     llvm::errs() << "  MapType: " << MapType << "\n";
     llvm::errs() << "  IsFirstComponentList: " << IsFirstComponentList << "\n";
     llvm::errs() << "  IsImplicit: " << IsImplicit << "\n";
-    llvm::errs() << "  GenerateAllInfoForClauses: " << GenerateAllInfoForClauses << "\n";
+    llvm::errs() << "  GenerateAllInfoForClauses: " << GenerateAllInfoForClauses
+                 << "\n";
     llvm::errs() << "  ForDeviceAddr: " << ForDeviceAddr << "\n";
     llvm::errs() << "  Components.size(): " << Components.size() << "\n";
     if (BaseDecl) {
@@ -7187,9 +7201,7 @@ private:
       llvm::errs() << "  MapExpr: ";
       MapExpr->dump();
     }
-    
 
-    Expr *PossibleBasePtr = nullptr;
     // The following summarizes what has to be generated for each map and the
     // types below. The generated information is expressed in this order:
     // base pointer, section pointer, size, flags
@@ -7418,7 +7430,7 @@ private:
     Address AttachFirstElemAddr = Address::invalid();
 
     // Find the component that should use ATTACH-style mapping.
-    auto AttachInfo = findAttachComponent(Components);
+    auto AttachInfo = findAttachBasePointer(Components);
 
     llvm::errs() << "DEBUG generateInfoForComponentList: Computing initial BP\n";
     if (isa<MemberExpr>(AssocExpr)) {
@@ -7485,10 +7497,6 @@ private:
           FirstPointerInComplexData = true;
         }
 
-        if (I->getAssociatedExpression()->getType()->isAnyPointerType() && std::next(I) != CE)
-          PossibleBasePtr = I->getAssociatedExpression();
-
-
         ++I;
         // DEBUG: Print what I now points to after increment
         if (I != CE) {
@@ -7553,7 +7561,7 @@ private:
     bool IsMappingWholeStruct = true;
     llvm::errs() << "DEBUG generateInfoForComponentList: Checking IsMappingWholeStruct logic\n";
     llvm::errs() << "  GenerateAllInfoForClauses: " << GenerateAllInfoForClauses << "\n";
-    
+
     if (!GenerateAllInfoForClauses) {
       llvm::errs() << "  Setting IsMappingWholeStruct=false (GenerateAllInfoForClauses=false)\n";
       IsMappingWholeStruct = false;
@@ -7586,7 +7594,7 @@ private:
         llvm::errs() << "  AssociatedExpression: ";
         I->getAssociatedExpression()->dump();
       }
-      
+
       // If the current component is member of a struct (parent struct) mark it.
       if (!EncounteredME) {
         EncounteredME = dyn_cast<MemberExpr>(I->getAssociatedExpression());
@@ -7628,7 +7636,7 @@ private:
       bool IsFinalArraySection =
           !IsNonContiguous &&
           isFinalArraySectionExpression(I->getAssociatedExpression());
-      
+
       // DEBUG: Print array section information
       llvm::errs() << "DEBUG generateInfoForComponentList: IsFinalArraySection: " << IsFinalArraySection << "\n";
 
@@ -7639,7 +7647,7 @@ private:
                                      : BaseDecl;
       MapExpr = (I->getAssociatedExpression()) ? I->getAssociatedExpression()
                                                : MapExpr;
-      
+
       // DEBUG: Print mapping declaration and expression
       llvm::errs() << "DEBUG generateInfoForComponentList: MapDecl: ";
       if (MapDecl) {
@@ -7652,7 +7660,7 @@ private:
       // special treatment for array sections given that they are built-in
       // types.
       llvm::errs() << "DEBUG generateInfoForComponentList: Analyzing expression types\n";
-      
+
       const auto *OASE =
           dyn_cast<ArraySectionExpr>(I->getAssociatedExpression());
       const auto *ASE =
@@ -7661,13 +7669,13 @@ private:
           dyn_cast<OMPArrayShapingExpr>(I->getAssociatedExpression());
       const auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression());
       const auto *BO = dyn_cast<BinaryOperator>(I->getAssociatedExpression());
-      
+
       llvm::errs() << "  OASE (ArraySectionExpr): " << (OASE ? "yes" : "no") << "\n";
       llvm::errs() << "  ASE (ArraySubscriptExpr): " << (ASE ? "yes" : "no") << "\n";
       llvm::errs() << "  OAShE (OMPArrayShapingExpr): " << (OAShE ? "yes" : "no") << "\n";
       llvm::errs() << "  UO (UnaryOperator): " << (UO ? "yes" : "no") << "\n";
       llvm::errs() << "  BO (BinaryOperator): " << (BO ? "yes" : "no") << "\n";
-      
+
       bool IsPointer =
           OAShE ||
           (OASE && ArraySectionExpr::getBaseOriginalType(OASE)
@@ -7680,7 +7688,7 @@ private:
       bool IsNonDerefPointer = IsPointer &&
                                !(UO && UO->getOpcode() != UO_Deref) && !BO &&
                                !IsNonContiguous;
-      
+
       llvm::errs() << "  IsPointer: " << IsPointer << "\n";
       llvm::errs() << "  IsMemberReference: " << IsMemberReference << "\n";
       llvm::errs() << "  IsNonDerefPointer: " << IsNonDerefPointer << "\n";
@@ -7695,9 +7703,6 @@ private:
       llvm::errs() << "  IsMemberReference: " << IsMemberReference << "\n";
       llvm::errs() << "  IsNonDerefPointer: " << IsNonDerefPointer << "\n";
       llvm::errs() << "  IsFinalArraySection: " << IsFinalArraySection << "\n";
-      if (I->getAssociatedExpression()->getType()->isAnyPointerType() && std::next(I) != CE) {
-        PossibleBasePtr = I->getAssociatedExpression();
-      }
       if (Next == CE || IsMemberReference || IsNonDerefPointer ||
           IsFinalArraySection) {
         llvm::errs() << "  CONDITION MET: Generating address and size info\n";
@@ -7774,7 +7779,7 @@ private:
         if (Next != CE) {
           llvm::errs() << "  Next->getAssociatedExpression()->getType()->isPointerType(): " << Next->getAssociatedExpression()->getType()->isPointerType() << "\n";
         }
-        
+
         bool IsMemberPointerOrAddr =
             EncounteredME &&
             (((IsPointer || ForDeviceAddr) &&
@@ -7782,7 +7787,7 @@ private:
              (IsPrevMemberReference && !IsPointer) ||
              (IsMemberReference && Next != CE &&
               !Next->getAssociatedExpression()->getType()->isPointerType()));
-        
+
         llvm::errs() << "  IsMemberPointerOrAddr: " << IsMemberPointerOrAddr << "\n";
         if (!OverlappedElements.empty() && Next == CE) {
           // Handle base element with the info for overlapped elements.
@@ -7880,29 +7885,9 @@ private:
           break;
         }
         llvm::Value *Size = getExprTypeSize(I->getAssociatedExpression());
-        
+
         // DEBUG: Print size calculation result
         llvm::errs() << "DEBUG generateInfoForComponentList: Size calculated for expression\n";
-
-        // Lambda to handle BP loading for global pointers
-//         auto LoadGlobalPointerIfNeeded = [&]() {
-//           if (FirstPointerInComplexData) {
-//             llvm::errs() << "DEBUG generateInfoForComponentList: LoadGlobalPointerIfNeeded - updating BP\n";
-//             llvm::errs() << "  Original BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
-//             QualType Ty = Components.rbegin()
-//                               ->getAssociatedDeclaration()
-//                               ->getType()
-//                               .getNonReferenceType();
-//             BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
-//             llvm::errs() << "  Updated BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
-//             FirstPointerInComplexData = false;
-//           }
-//         };
-//         (void) LoadGlobalPointerIfNeeded;
-//
-// //        if (IsAttachablePointeeExpr)
-//   //        LoadGlobalPointerIfNeeded();
-
         // Skip adding an entry in the CurInfo of this combined entry if the
         // whole struct is currently being mapped. The struct needs to be added
         // in the first position before any data internal to the struct is being
@@ -7962,11 +7947,11 @@ private:
           llvm::errs() << "  FirstPointerInComplexData: " << FirstPointerInComplexData << "\n";
           llvm::errs() << "  IsCaptureFirstInfo: " << IsCaptureFirstInfo << "\n";
 
-          bool AddPtrFlag = (!IsExpressionFirstInfo || RequiresReference ||
-                             FirstPointerInComplexData || IsMemberReference); //&&
-                            // !IsAttachablePointeeExpr;
+          bool AddPtrFlag =
+              (!IsExpressionFirstInfo || RequiresReference ||
+               FirstPointerInComplexData || IsMemberReference);
           llvm::errs() << "  AddPtrFlag: " << AddPtrFlag << "\n";
-          
+
           OpenMPOffloadMappingFlags Flags =
               getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
                              AddPtrFlag, IsCaptureFirstInfo && !RequiresReference,
@@ -8053,41 +8038,81 @@ private:
           PartialStruct.IsArraySection = true;
 
         if (Next == CE) {
-          llvm::errs() << "DEBUG generateInfoForComponentList: Reached the end of components\n";
-          // Generate ATTACH entry for array sections and subscripts on standalone
-          // pointers Info was already collected during the main component loop
-          // Check if we should use ATTACH-style mapping for this expression
-          bool IsAttachablePointeeExpr = AttachInfo.IsValid && AttachInfo.BasePtrDecl && AttachInfo.BasePtrDecl == BaseDecl;
-          llvm::errs() << "DEBUG generateInfoForComponentList: AttachInfo.PteeExpr: "; if (AttachInfo.PteeExpr) AttachInfo.PteeExpr->dump(); else llvm::errs() << "nullptr\n";
-          llvm::errs() << "DEBUG generateInfoForComponentList: AttachInfo.BasePtrExpr: "; if (AttachInfo.BasePtrExpr) AttachInfo.BasePtrExpr->dump(); else llvm::errs() << "nullptr\n";
-          llvm::errs() << "DEBUG generateInfoForComponentList: PossibleBasePtr: "; if (PossibleBasePtr) PossibleBasePtr->dump(); else llvm::errs() << "nullptr\n";
-          llvm::errs() << "DEBUG generateInfoForComponentList: I: "; if (I->getAssociatedExpression()) I->getAssociatedExpression()->dump(); else llvm::errs() << "nullptr\n";
+          llvm::errs() << "DEBUG generateInfoForComponentList: Reached the end "
+                          "of components\n";
+          // Generate ATTACH entry for array sections and subscripts on
+          // standalone pointers Info was already collected during the main
+          // component loop Check if we should use ATTACH-style mapping for this
+          // expression
+          bool IsAttachablePointeeExpr = AttachInfo.IsValid &&
+                                         AttachInfo.BasePtrDecl &&
+                                         AttachInfo.BasePtrDecl == BaseDecl;
+          llvm::errs()
+              << "DEBUG generateInfoForComponentList: AttachInfo.PteeExpr: ";
+          if (AttachInfo.PteeExpr)
+            AttachInfo.PteeExpr->dump();
+          else
+            llvm::errs() << "nullptr\n";
+          llvm::errs()
+              << "DEBUG generateInfoForComponentList: AttachInfo.BasePtrExpr: ";
+          if (AttachInfo.BasePtrExpr)
+            AttachInfo.BasePtrExpr->dump();
+          else
+            llvm::errs() << "nullptr\n";
+          llvm::errs() << "DEBUG generateInfoForComponentList: I: ";
+          if (I->getAssociatedExpression())
+            I->getAssociatedExpression()->dump();
+          else
+            llvm::errs() << "nullptr\n";
 
           if (IsAttachablePointeeExpr) {
-            llvm::errs() << "DEBUG generateInfoForComponentList: Computing ATTACH addresses\n";
+            llvm::errs() << "DEBUG generateInfoForComponentList: Computing "
+                            "ATTACH addresses\n";
 
             // Use BasePtrExpr for AttachBaseAddr
             llvm::errs() << "  Using BasePtrExpr for AttachBaseAddr\n";
-            AttachBaseAddr = CGF.EmitLValue(AttachInfo.BasePtrExpr).getAddress();
-            llvm::errs() << "  AttachBaseAddr = "; AttachBaseAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
+            AttachBaseAddr =
+                CGF.EmitLValue(AttachInfo.BasePtrExpr).getAddress();
+            llvm::errs() << "  AttachBaseAddr = ";
+            AttachBaseAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs());
+            llvm::errs() << "\n";
 
             if (OASE) {
-              llvm::errs() << "  ArraySectionExpr case for AttachFirstElemAddr\n";
-              AttachFirstElemAddr = CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true).getAddress();
-              llvm::errs() << "  AttachFirstElemAddr = "; AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
+              llvm::errs()
+                  << "  ArraySectionExpr case for AttachFirstElemAddr\n";
+              AttachFirstElemAddr =
+                  CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true)
+                      .getAddress();
+              llvm::errs() << "  AttachFirstElemAddr = ";
+              AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(
+                  llvm::errs());
+              llvm::errs() << "\n";
             } else if (ASE) {
-              llvm::errs() << "  ArraySubscriptExpr case for AttachFirstElemAddr\n";
+              llvm::errs()
+                  << "  ArraySubscriptExpr case for AttachFirstElemAddr\n";
               AttachFirstElemAddr = CGF.EmitLValue(ASE).getAddress();
-              llvm::errs() << "  AttachFirstElemAddr = "; AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
-            } else if (auto *ME = dyn_cast<MemberExpr>(I->getAssociatedExpression())) {
-               llvm::errs() << "  MemberExpr case for AttachFirstElemAddr\n";
-               AttachFirstElemAddr = CGF.EmitMemberExpr(ME).getAddress();
-               llvm::errs() << "  AttachFirstElemAddr = "; AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
-            } else if (auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression())) {
+              llvm::errs() << "  AttachFirstElemAddr = ";
+              AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(
+                  llvm::errs());
+              llvm::errs() << "\n";
+            } else if (auto *ME =
+                           dyn_cast<MemberExpr>(I->getAssociatedExpression())) {
+              llvm::errs() << "  MemberExpr case for AttachFirstElemAddr\n";
+              AttachFirstElemAddr = CGF.EmitMemberExpr(ME).getAddress();
+              llvm::errs() << "  AttachFirstElemAddr = ";
+              AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(
+                  llvm::errs());
+              llvm::errs() << "\n";
+            } else if (auto *UO = dyn_cast<UnaryOperator>(
+                           I->getAssociatedExpression())) {
               if (UO->getOpcode() == UO_Deref) {
-                llvm::errs() << "  UnaryOperator (dereference) case for AttachFirstElemAddr\n";
+                llvm::errs() << "  UnaryOperator (dereference) case for "
+                                "AttachFirstElemAddr\n";
                 AttachFirstElemAddr = CGF.EmitLValue(UO).getAddress();
-                llvm::errs() << "  AttachFirstElemAddr = "; AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
+                llvm::errs() << "  AttachFirstElemAddr = ";
+                AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(
+                    llvm::errs());
+                llvm::errs() << "\n";
               }
             }
           }
@@ -8104,14 +8129,6 @@ private:
           llvm::errs() << "  Current BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
           BP = IsMemberReference ? LowestElem : LB;
           llvm::errs() << "  Updated BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << " (using " << (IsMemberReference ? "LowestElem" : "LB") << ")\n";
-          // if (!EncounteredME && AttachInfo.IsValid && AttachInfo.PteeExpr &&
-          //     Next->getAssociatedExpression() == AttachInfo.PteeExpr) {
-          //   llvm::errs() << "  Doing an extra load from BP since next item is attachable: \n";
-          //   // Do an extra load from BP
-          //   BP = CGF.EmitLoadOfPointer(
-          //       BP, I->getAssociatedExpression()->getType()->castAs<PointerType>());
-          // }
-          // llvm::errs() << "  Updated BP with load = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
         }
         if (!IsPartialMapped)
           IsExpressionFirstInfo = false;
@@ -8141,21 +8158,28 @@ private:
     if (!EncounteredME)
       PartialStruct.HasCompleteRecord = true;
 
-    // Handle ATTACH entries: delay if PartialStruct is being populated, otherwise add immediately
+    // Handle ATTACH entries: delay if PartialStruct is being populated,
+    // otherwise add immediately
     if (AttachBaseAddr.isValid() && AttachFirstElemAddr.isValid()) {
       if (PartialStruct.Base.isValid()) {
-        // We're populating PartialStruct, delay ATTACH entry addition until after emitCombinedEntry
-        llvm::errs() << "DEBUG generateInfoForComponentList: Saving ATTACH info for delayed processing\n";
+        // We're populating PartialStruct, delay ATTACH entry addition until
+        // after emitCombinedEntry
+        llvm::errs() << "DEBUG generateInfoForComponentList: Saving ATTACH "
+                        "info for delayed processing\n";
         PartialStruct.AttachBaseAddr = AttachBaseAddr;
         PartialStruct.AttachFirstElemAddr = AttachFirstElemAddr;
         PartialStruct.AttachBaseDecl = BaseDecl;
         PartialStruct.AttachMapExpr = MapExpr;
       } else if (IsMappingWholeStruct) {
-        llvm::errs() << "DEBUG generateInfoForComponentList: Adding ATTACH to StructBaseCombinedInfo\n";
-        addAttachEntry(CGF, StructBaseCombinedInfo, AttachBaseAddr, AttachFirstElemAddr, BaseDecl, MapExpr);
+        llvm::errs() << "DEBUG generateInfoForComponentList: Adding ATTACH to "
+                        "StructBaseCombinedInfo\n";
+        addAttachEntry(CGF, StructBaseCombinedInfo, AttachBaseAddr,
+                       AttachFirstElemAddr, BaseDecl, MapExpr);
       } else {
-        llvm::errs() << "DEBUG generateInfoForComponentList: Adding ATTACH to CombinedInfo\n";
-        addAttachEntry(CGF, CombinedInfo, AttachBaseAddr, AttachFirstElemAddr, BaseDecl, MapExpr);
+        llvm::errs() << "DEBUG generateInfoForComponentList: Adding ATTACH to "
+                        "CombinedInfo\n";
+        addAttachEntry(CGF, CombinedInfo, AttachBaseAddr, AttachFirstElemAddr,
+                       BaseDecl, MapExpr);
       }
     }
 
@@ -8334,7 +8358,7 @@ private:
     CombinedInfo.NonContigInfo.Offsets.push_back(CurOffsets);
     CombinedInfo.NonContigInfo.Counts.push_back(CurCounts);
     CombinedInfo.NonContigInfo.Strides.push_back(CurStrides);
-    
+
     // DEBUG: Print exit information
     llvm::errs() << "DEBUG generateInfoForComponentList: EXIT\n";
     llvm::errs() << "  CombinedInfo entries added: " << CombinedInfo.BasePointers.size() << "\n";
@@ -8437,99 +8461,126 @@ private:
     }
   }
 
-/// Result structure for findAttachComponent
-struct AttachInfo {
-  const Expr *BasePtrExpr = nullptr;  // The pointer expression
-  const ValueDecl *BasePtrDecl = nullptr;  // The pointer decl, if any
-  const Expr *PteeExpr = nullptr;     // The array section/subscript expression
-  bool IsValid = false;
-};
+  /// Result structure for findAttachBasePointer
+  struct AttachInfo {
+    const Expr *BasePtrExpr = nullptr;      // The pointer expression
+    const ValueDecl *BasePtrDecl = nullptr; // The pointer decl, if any
+    const Expr *PteeExpr = nullptr; // The array section/subscript expression
+    bool IsValid = false;
+  };
 
-static AttachInfo findAttachComponent(
+  static AttachInfo findAttachBasePointer(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
-  // DEBUG: Print entry information
-  llvm::errs() << "DEBUG findAttachComponent: ENTRY\n";
+    // DEBUG: Print entry information
+    llvm::errs() << "DEBUG findAttachBasePointer: ENTRY\n";
 
-  const auto *Begin = Components.begin();
-  const auto *End = Components.end();
+    const auto *Begin = Components.begin();
+    const auto *End = Components.end();
 
-  llvm::errs() << "DEBUG findAttachComponent: Starting reverse walk\n";
+    llvm::errs() << "DEBUG findAttachBasePointer: Starting reverse walk\n";
 
-  for (const auto *I = Begin; I != End; ++I) {
-    // Check if current component is an array section or subscript
-    const Expr *CurrentExpr = I->getAssociatedExpression();
-    llvm::errs() << "DEBUG findAttachComponent: Current expr is: "; CurrentExpr->dump();
-    if (!CurrentExpr) {
-      llvm::errs() << "DEBUG findAttachComponent: No current expression, continuing\n";
-      break;
+    for (const auto *I = Begin; I != End; ++I) {
+      // Check if current component is an array section or subscript
+      const Expr *CurrentExpr = I->getAssociatedExpression();
+      llvm::errs() << "DEBUG findAttachBasePointer: Current expr is: ";
+      CurrentExpr->dump();
+      if (!CurrentExpr) {
+        llvm::errs()
+            << "DEBUG findAttachBasePointer: No current expression, continuing\n";
+        break;
+      }
+
+      // Check if the next component (in forward direction) has a pointer type
+      const auto *NextI = std::next(I);
+      if (NextI == End) {
+        llvm::errs()
+            << "DEBUG findAttachBasePointer: No next component available\n";
+        break;
+      }
+
+      // Get the type of the next component
+      QualType NextType;
+      if (const auto *NextDecl = NextI->getAssociatedDeclaration()) {
+        NextType = NextDecl->getType().getNonReferenceType().getCanonicalType();
+        llvm::errs()
+            << "DEBUG findAttachBasePointer: Next component declaration type: ";
+        NextType.dump();
+      } else if (const auto *NextExpr = NextI->getAssociatedExpression()) {
+        // If NextExpr is an array-section, compute the result type using
+        // getBaseOriginalType
+        if (const auto *ArraySection = dyn_cast<ArraySectionExpr>(NextExpr)) {
+          // Get the original base type, handling chains of array sections
+          // properly
+          QualType BaseType =
+              ArraySectionExpr::getBaseOriginalType(ArraySection->getBase());
+          if (const auto *ATy = BaseType->getAsArrayTypeUnsafe()) {
+            NextType = ATy->getElementType();
+          } else {
+            NextType = BaseType->getPointeeType();
+          }
+          NextType = NextType.getNonReferenceType().getCanonicalType();
+          llvm::errs() << "DEBUG findAttachBasePointer: Next component "
+                          "array-section result type (base -> result): ";
+          BaseType.dump();
+          llvm::errs() << " -> ";
+          NextType.dump();
+        } else {
+          NextType =
+              NextExpr->getType().getNonReferenceType().getCanonicalType();
+          llvm::errs()
+              << "DEBUG findAttachBasePointer: Next component expression type: ";
+          NextType.dump();
+        }
+      } else {
+        llvm::errs() << "DEBUG findAttachBasePointer: No next component type "
+                        "info, continuing\n";
+        break;
+      }
+
+      // Stop if the next component is a pointer type - this means we found our
+      // component
+      if (!NextType->isPointerType())
+        continue;
+
+      llvm::errs() << "DEBUG findAttachBasePointer: Found pointer type in next "
+                      "component, stopping here\n";
+
+      // Get the pointer expression (NextRI) and use the candidate PteeExpr
+      const Expr *BasePtrExpr = NextI->getAssociatedExpression();
+      const ValueDecl *BasePtrDecl = NextI->getAssociatedDeclaration();
+      const Expr *PteeExpr = CurrentExpr;
+
+      llvm::errs() << "DEBUG findAttachBasePointer: Returning AttachInfo\n";
+      llvm::errs() << "  BasePtrExpr: ";
+      if (BasePtrExpr)
+        BasePtrExpr->dump();
+      else
+        llvm::errs() << "nullptr\n";
+      llvm::errs() << "  BasePtrDecl: ";
+      if (BasePtrDecl)
+        BasePtrDecl->dump();
+      else
+        llvm::errs() << "nullptr\n";
+      llvm::errs() << "  PteeExpr: ";
+      if (PteeExpr)
+        PteeExpr->dump();
+      else
+        llvm::errs() << "nullptr\n";
+      llvm::errs() << "  RbeginExpr: ";
+      const auto *BeginExpr = Begin->getAssociatedExpression();
+      if (BeginExpr)
+        BeginExpr->dump();
+      else
+        llvm::errs() << "nullptr\n";
+      return AttachInfo{BasePtrExpr, BasePtrDecl, BeginExpr, true};
+      llvm::errs() << "DEBUG findAttachBasePointer: Next component not pointer "
+                      "type, continuing\n";
     }
 
-    // Check if the next component (in forward direction) has a pointer type
-    const auto *NextI = std::next(I);
-    if (NextI == End) {
-      llvm::errs() << "DEBUG findAttachComponent: No next component available\n";
-      break;
-    }
-
-   // Get the type of the next component
-   QualType NextType;
-   if (const auto *NextDecl = NextI->getAssociatedDeclaration()) {
-     NextType = NextDecl->getType().getNonReferenceType().getCanonicalType();
-     llvm::errs() << "DEBUG findAttachComponent: Next component declaration type: ";
-     NextType.dump();
-   } else if (const auto *NextExpr = NextI->getAssociatedExpression()) {
-     // If NextExpr is an array-section, compute the result type using getBaseOriginalType
-     if (const auto *ArraySection = dyn_cast<ArraySectionExpr>(NextExpr)) {
-       // Get the original base type, handling chains of array sections properly
-       QualType BaseType = ArraySectionExpr::getBaseOriginalType(ArraySection->getBase());
-       if (const auto *ATy = BaseType->getAsArrayTypeUnsafe()) {
-         NextType = ATy->getElementType();
-       } else {
-         NextType = BaseType->getPointeeType();
-       }
-       NextType = NextType.getNonReferenceType().getCanonicalType();
-       llvm::errs() << "DEBUG findAttachComponent: Next component array-section result type (base -> result): ";
-       BaseType.dump();
-       llvm::errs() << " -> ";
-       NextType.dump();
-     } else {
-       NextType = NextExpr->getType().getNonReferenceType().getCanonicalType();
-       llvm::errs() << "DEBUG findAttachComponent: Next component expression type: ";
-       NextType.dump();
-     }
-   } else {
-     llvm::errs() << "DEBUG findAttachComponent: No next component type info, continuing\n";
-     break;
-   }
-
-   // Stop if the next component is a pointer type - this means we found our component
-   if (!NextType->isPointerType())
-     continue;
-
-   llvm::errs() << "DEBUG findAttachComponent: Found pointer type in next component, stopping here\n";
-
-   // Get the pointer expression (NextRI) and use the candidate PteeExpr
-   const Expr *BasePtrExpr = NextI->getAssociatedExpression();
-   const ValueDecl *BasePtrDecl = NextI->getAssociatedDeclaration();
-   const Expr *PteeExpr = CurrentExpr;
-
-   llvm::errs() << "DEBUG findAttachComponent: Returning AttachInfo\n";
-   llvm::errs() << "  BasePtrExpr: ";
-   if (BasePtrExpr) BasePtrExpr->dump(); else llvm::errs() << "nullptr\n";
-   llvm::errs() << "  BasePtrDecl: ";
-   if (BasePtrDecl) BasePtrDecl->dump(); else llvm::errs() << "nullptr\n";
-   llvm::errs() << "  PteeExpr: ";
-   if (PteeExpr) PteeExpr->dump(); else llvm::errs() << "nullptr\n";
-   llvm::errs() << "  RbeginExpr: ";
-   const auto *BeginExpr = Begin->getAssociatedExpression();
-   if (BeginExpr) BeginExpr->dump(); else llvm::errs() << "nullptr\n";
-   return AttachInfo{BasePtrExpr, BasePtrDecl, BeginExpr, true};
-   llvm::errs() << "DEBUG findAttachComponent: Next component not pointer type, continuing\n";
- }
-
-  llvm::errs() << "DEBUG findAttachComponent: No suitable component found, returning invalid AttachInfo\n";
-  return AttachInfo{};
-}
+    llvm::errs() << "DEBUG findAttachBasePointer: No suitable component found, "
+                    "returning invalid AttachInfo\n";
+    return AttachInfo{};
+  }
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
   /// mappers for the extracted mappable expressions (all included in \a
@@ -8724,7 +8775,7 @@ static AttachInfo findAttachComponent(
                   // For global pointers with ATTACH-style mapping, also allow
                   // ReturnDevicePointer to ensure consistent behavior between
                   // global and local pointers
-                  (findAttachComponent(CI->Components).BasePtrDecl == VD)) {
+                  (findAttachBasePointer(CI->Components).BasePtrDecl == VD)) {
                 CI->ForDeviceAddr = IsDevAddr;
                 CI->ReturnDevicePointer = true;
                 Found = true;
@@ -8899,7 +8950,7 @@ static AttachInfo findAttachComponent(
       // Unify entries in one list making sure the struct mapping precedes the
       // individual fields:
       MapCombinedInfoTy UnionCurInfo;
-      
+
       // DEBUG: Print sizes before appending
       llvm::errs() << "DEBUG CALLER: Before unifying entries:\n";
       llvm::errs() << "  StructBaseCurInfo.BasePointers.size(): " << StructBaseCurInfo.BasePointers.size() << "\n";
@@ -8907,7 +8958,7 @@ static AttachInfo findAttachComponent(
       if (VD) {
         llvm::errs() << "  VD: " << VD->getNameAsString() << "\n";
       }
-      
+
       UnionCurInfo.append(StructBaseCurInfo);
       UnionCurInfo.append(CurInfo);
 
@@ -8920,10 +8971,13 @@ static AttachInfo findAttachComponent(
       MapCombinedInfoTy AttachCombinedInfo;
       if (PartialStruct.Base.isValid()) {
         UnionCurInfo.NonContigInfo.Dims.push_back(0);
-        llvm::errs() << "DEBUG CALLER: Emitting combined entry for PartialStruct\n";
+        llvm::errs()
+            << "DEBUG CALLER: Emitting combined entry for PartialStruct\n";
         // Emit a combined entry:
-        emitCombinedEntry(CombinedInfo, AttachCombinedInfo, UnionCurInfo.Types, PartialStruct,
-                          /*IsMapThis*/ !VD, OMPBuilder, VD, 0, true);
+        emitCombinedEntry(CombinedInfo, AttachCombinedInfo, UnionCurInfo.Types,
+                          PartialStruct,
+                          /*IsMapThis*/ !VD, OMPBuilder, VD,
+                          /*OffsetForMemberOfFlag=*/0, /*NotTargetParam=*/true);
       }
 
       llvm::errs() << "DEBUG CALLER: Before final append - CombinedInfo.BasePointers.size(): " << CombinedInfo.BasePointers.size() << "\n";
@@ -9091,17 +9145,21 @@ public:
 
     // All other current entries will be MEMBER_OF the combined entry
     // (except for PTR_AND_OBJ entries which do not have a placeholder value
-    // 0xFFFF in the MEMBER_OF field).
+    // 0xFFFF in the MEMBER_OF field, or ATTACH entries since they are expected
+    // to be handled by themselves, after all other maps).
     OpenMPOffloadMappingFlags MemberOfFlag = OMPBuilder.getMemberOfFlag(
         OffsetForMemberOfFlag + CombinedInfo.BasePointers.size() - 1);
     for (auto &M : CurTypes)
       OMPBuilder.setCorrectMemberOfFlag(M, MemberOfFlag);
-    
-    // Process delayed ATTACH entries if available - combined entry case  
-    if (PartialStruct.AttachBaseAddr.isValid() && PartialStruct.AttachFirstElemAddr.isValid()) {
-      llvm::errs() << "DEBUG emitCombinedEntry: Combined entry path - using PartialStruct\n";
-      addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachBaseAddr, PartialStruct.Base,
-                     PartialStruct.AttachBaseDecl, PartialStruct.AttachMapExpr);
+
+    // Process delayed ATTACH entries if available - combined entry case
+    if (PartialStruct.AttachBaseAddr.isValid() &&
+        PartialStruct.AttachFirstElemAddr.isValid()) {
+      llvm::errs() << "DEBUG emitCombinedEntry: Combined entry path - using "
+                      "PartialStruct\n";
+      addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachBaseAddr,
+                     PartialStruct.Base, PartialStruct.AttachBaseDecl,
+                     PartialStruct.AttachMapExpr);
     }
   }
 
@@ -9353,13 +9411,14 @@ public:
           if (PartialStruct.Base.isValid()) {
             CurCaptureVarInfo.append(PartialStruct.PreliminaryMapData);
             emitCombinedEntry(
-                CurCaptureVarInfo, AttachCombinedInfo, CurInfoForComponentLists.Types,
-                PartialStruct, Cap->capturesThis(), OMPBuilder, nullptr,
-                OffsetForMemberOfFlag,
+                CurCaptureVarInfo, AttachCombinedInfo,
+                CurInfoForComponentLists.Types, PartialStruct,
+                Cap->capturesThis(), OMPBuilder, nullptr, OffsetForMemberOfFlag,
                 /*NotTargetParams*/ !IsEligibleForTargetParamFlag);
           }
 
-          // Append in order: combined-entry -> curinfo (individual fields) -> attachinfo
+          // Append in order: combined-entry -> curinfo (individual fields) ->
+          // attachinfo
           CurCaptureVarInfo.append(CurInfoForComponentLists);
           CurCaptureVarInfo.append(AttachCombinedInfo);
         };
