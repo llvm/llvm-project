@@ -53,6 +53,8 @@ define <4 x float> @extend_to_float_high_i8x16_u(<8 x i8> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.const -1, 0, 0, 0
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_u
 ; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    f32x4.convert_i32x4_u
@@ -109,6 +111,8 @@ define <4 x float> @extend_to_float_high_i8x16_s(<8 x i8> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.const -1, 0, 0, 0
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    f32x4.convert_i32x4_s

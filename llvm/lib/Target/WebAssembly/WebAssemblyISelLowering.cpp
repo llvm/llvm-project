@@ -2719,18 +2719,52 @@ WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   Ops[OpIdx++] = Op.getOperand(0);
   Ops[OpIdx++] = Op.getOperand(1);
 
+  std::bitset<16> DefinedLaneBytes = 0xFFFF;
   // Expand mask indices to byte indices and materialize them as operands
   for (int M : Mask) {
     for (size_t J = 0; J < LaneBytes; ++J) {
       // Lower undefs (represented by -1 in mask) to {0..J}, which use a
       // whole lane of vector input, to allow further reduction at VM. E.g.
       // match an 8x16 byte shuffle to an equivalent cheaper 32x4 shuffle.
+      if (M == -1) {
+        DefinedLaneBytes[OpIdx - 2] = 0;
+      }
       uint64_t ByteIndex = M == -1 ? J : (uint64_t)M * LaneBytes + J;
       Ops[OpIdx++] = DAG.getConstant(ByteIndex, DL, MVT::i32);
     }
   }
+  EVT VT = Op.getValueType();
+  SDValue Shuffle = DAG.getNode(WebAssemblyISD::SHUFFLE, DL, VT, Ops);
 
-  return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
+  // If only the lower four or eight bytes are actually defined by the
+  // shuffle, insert an AND so a VM can know that it can ignore the higher,
+  // undef, lanes.
+  if (DefinedLaneBytes == 0xF) {
+    SDValue LowLaneMask[] = {
+        DAG.getConstant(uint32_t(-1), DL, MVT::i32),
+        DAG.getConstant(uint32_t(0), DL, MVT::i32),
+        DAG.getConstant(uint32_t(0), DL, MVT::i32),
+        DAG.getConstant(uint32_t(0), DL, MVT::i32),
+    };
+    SDValue UndefMask =
+        DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v4i32, LowLaneMask);
+    SDValue MaskedShuffle =
+        DAG.getNode(ISD::AND, DL, MVT::v4i32,
+                    DAG.getBitcast(MVT::v4i32, Shuffle), UndefMask);
+    return DAG.getBitcast(VT, MaskedShuffle);
+  } else if (DefinedLaneBytes == 0xFF) {
+    SDValue LowLaneMask[] = {
+        DAG.getConstant(uint64_t(-1), DL, MVT::i64),
+        DAG.getConstant(uint32_t(0), DL, MVT::i64),
+    };
+    SDValue UndefMask =
+        DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i64, LowLaneMask);
+    SDValue MaskedShuffle =
+        DAG.getNode(ISD::AND, DL, MVT::v2i64,
+                    DAG.getBitcast(MVT::v2i64, Shuffle), UndefMask);
+    return DAG.getBitcast(VT, MaskedShuffle);
+  }
+  return Shuffle;
 }
 
 SDValue WebAssemblyTargetLowering::LowerSETCC(SDValue Op,

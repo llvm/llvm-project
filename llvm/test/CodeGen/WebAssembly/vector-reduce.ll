@@ -18,12 +18,14 @@ define i32 @pairwise_add_v4i32(<4 x i32> %arg) {
 ; SIMD128:         .functype pairwise_add_v4i32 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.add $push5=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push4=, $0=, $pop5
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.add $push2=, $pop4, $pop1
-; SIMD128-NEXT:    i32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    return $pop3
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i32x4.add $push7=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    i32x4.add $push4=, $pop6, $pop3
+; SIMD128-NEXT:    i32x4.extract_lane $push5=, $pop4, 0
+; SIMD128-NEXT:    return $pop5
   %res = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %arg)
   ret i32 %res
 }
@@ -33,15 +35,19 @@ define i16 @pairwise_add_v8i16(<8 x i16> %arg) {
 ; SIMD128:         .functype pairwise_add_v8i16 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.add $push8=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push7=, $0=, $pop8
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.add $push6=, $pop7, $pop1
-; SIMD128-NEXT:    local.tee $push5=, $0=, $pop6
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.add $push3=, $pop5, $pop2
-; SIMD128-NEXT:    i16x8.extract_lane_u $push4=, $pop3, 0
-; SIMD128-NEXT:    return $pop4
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i16x8.add $push12=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push11=, $0=, $pop12
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i16x8.add $push10=, $pop11, $pop5
+; SIMD128-NEXT:    local.tee $push9=, $0=, $pop10
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    i16x8.add $push7=, $pop9, $pop6
+; SIMD128-NEXT:    i16x8.extract_lane_u $push8=, $pop7, 0
+; SIMD128-NEXT:    return $pop8
   %res = tail call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %arg)
   ret i16 %res
 }
@@ -51,18 +57,22 @@ define i8 @pairwise_add_v16i8(<16 x i8> %arg) {
 ; SIMD128:         .functype pairwise_add_v16i8 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.add $push11=, $0, $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i8x16.add $push15=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push14=, $0=, $pop15
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i8x16.add $push13=, $pop14, $pop5
+; SIMD128-NEXT:    local.tee $push12=, $0=, $pop13
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    i8x16.add $push11=, $pop12, $pop6
 ; SIMD128-NEXT:    local.tee $push10=, $0=, $pop11
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.add $push9=, $pop10, $pop1
-; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.add $push7=, $pop8, $pop2
-; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
-; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.add $push4=, $pop6, $pop3
-; SIMD128-NEXT:    i8x16.extract_lane_u $push5=, $pop4, 0
-; SIMD128-NEXT:    return $pop5
+; SIMD128-NEXT:    i8x16.shuffle $push7=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    i8x16.add $push8=, $pop10, $pop7
+; SIMD128-NEXT:    i8x16.extract_lane_u $push9=, $pop8, 0
+; SIMD128-NEXT:    return $pop9
   %res = tail call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %arg)
   ret i8 %res
 }
@@ -84,12 +94,14 @@ define i32 @pairwise_mul_v4i32(<4 x i32> %arg) {
 ; SIMD128:         .functype pairwise_mul_v4i32 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.mul $push5=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push4=, $0=, $pop5
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.mul $push2=, $pop4, $pop1
-; SIMD128-NEXT:    i32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    return $pop3
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i32x4.mul $push7=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    i32x4.mul $push4=, $pop6, $pop3
+; SIMD128-NEXT:    i32x4.extract_lane $push5=, $pop4, 0
+; SIMD128-NEXT:    return $pop5
   %res = tail call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %arg)
   ret i32 %res
 }
@@ -99,15 +111,19 @@ define i16 @pairwise_mul_v8i16(<8 x i16> %arg) {
 ; SIMD128:         .functype pairwise_mul_v8i16 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.mul $push8=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push7=, $0=, $pop8
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.mul $push6=, $pop7, $pop1
-; SIMD128-NEXT:    local.tee $push5=, $0=, $pop6
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.mul $push3=, $pop5, $pop2
-; SIMD128-NEXT:    i16x8.extract_lane_u $push4=, $pop3, 0
-; SIMD128-NEXT:    return $pop4
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i16x8.mul $push12=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push11=, $0=, $pop12
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i16x8.mul $push10=, $pop11, $pop5
+; SIMD128-NEXT:    local.tee $push9=, $0=, $pop10
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    i16x8.mul $push7=, $pop9, $pop6
+; SIMD128-NEXT:    i16x8.extract_lane_u $push8=, $pop7, 0
+; SIMD128-NEXT:    return $pop8
   %res = tail call i16 @llvm.vector.reduce.mul.v8i16(<8 x i16> %arg)
   ret i16 %res
 }
@@ -171,12 +187,14 @@ define i32 @pairwise_and_v4i32(<4 x i32> %arg) {
 ; SIMD128:         .functype pairwise_and_v4i32 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    v128.and $push5=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push4=, $0=, $pop5
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    v128.and $push2=, $pop4, $pop1
-; SIMD128-NEXT:    i32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    return $pop3
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    v128.and $push7=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    v128.and $push4=, $pop6, $pop3
+; SIMD128-NEXT:    i32x4.extract_lane $push5=, $pop4, 0
+; SIMD128-NEXT:    return $pop5
   %res = tail call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %arg)
   ret i32 %res
 }
@@ -186,15 +204,19 @@ define i16 @pairwise_and_v8i16(<8 x i16> %arg) {
 ; SIMD128:         .functype pairwise_and_v8i16 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    v128.and $push8=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push7=, $0=, $pop8
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    v128.and $push6=, $pop7, $pop1
-; SIMD128-NEXT:    local.tee $push5=, $0=, $pop6
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    v128.and $push3=, $pop5, $pop2
-; SIMD128-NEXT:    i16x8.extract_lane_u $push4=, $pop3, 0
-; SIMD128-NEXT:    return $pop4
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    v128.and $push12=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push11=, $0=, $pop12
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    v128.and $push10=, $pop11, $pop5
+; SIMD128-NEXT:    local.tee $push9=, $0=, $pop10
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.and $push7=, $pop9, $pop6
+; SIMD128-NEXT:    i16x8.extract_lane_u $push8=, $pop7, 0
+; SIMD128-NEXT:    return $pop8
   %res = tail call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> %arg)
   ret i16 %res
 }
@@ -204,18 +226,22 @@ define i8 @pairwise_and_v16i8(<16 x i8> %arg) {
 ; SIMD128:         .functype pairwise_and_v16i8 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.and $push11=, $0, $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    v128.and $push15=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push14=, $0=, $pop15
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    v128.and $push13=, $pop14, $pop5
+; SIMD128-NEXT:    local.tee $push12=, $0=, $pop13
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push11=, $pop12, $pop6
 ; SIMD128-NEXT:    local.tee $push10=, $0=, $pop11
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.and $push9=, $pop10, $pop1
-; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.and $push7=, $pop8, $pop2
-; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
-; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.and $push4=, $pop6, $pop3
-; SIMD128-NEXT:    i8x16.extract_lane_u $push5=, $pop4, 0
-; SIMD128-NEXT:    return $pop5
+; SIMD128-NEXT:    i8x16.shuffle $push7=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push8=, $pop10, $pop7
+; SIMD128-NEXT:    i8x16.extract_lane_u $push9=, $pop8, 0
+; SIMD128-NEXT:    return $pop9
   %res = tail call i8 @llvm.vector.reduce.and.v16i8(<16 x i8> %arg)
   ret i8 %res
 }
@@ -237,12 +263,14 @@ define i32 @pairwise_or_v4i32(<4 x i32> %arg) {
 ; SIMD128:         .functype pairwise_or_v4i32 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    v128.or $push5=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push4=, $0=, $pop5
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    v128.or $push2=, $pop4, $pop1
-; SIMD128-NEXT:    i32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    return $pop3
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    v128.or $push7=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    v128.or $push4=, $pop6, $pop3
+; SIMD128-NEXT:    i32x4.extract_lane $push5=, $pop4, 0
+; SIMD128-NEXT:    return $pop5
   %res = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %arg)
   ret i32 %res
 }
@@ -252,15 +280,19 @@ define i16 @pairwise_or_v8i16(<8 x i16> %arg) {
 ; SIMD128:         .functype pairwise_or_v8i16 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    v128.or $push8=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push7=, $0=, $pop8
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    v128.or $push6=, $pop7, $pop1
-; SIMD128-NEXT:    local.tee $push5=, $0=, $pop6
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    v128.or $push3=, $pop5, $pop2
-; SIMD128-NEXT:    i16x8.extract_lane_u $push4=, $pop3, 0
-; SIMD128-NEXT:    return $pop4
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    v128.or $push12=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push11=, $0=, $pop12
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    v128.or $push10=, $pop11, $pop5
+; SIMD128-NEXT:    local.tee $push9=, $0=, $pop10
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.or $push7=, $pop9, $pop6
+; SIMD128-NEXT:    i16x8.extract_lane_u $push8=, $pop7, 0
+; SIMD128-NEXT:    return $pop8
   %res = tail call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> %arg)
   ret i16 %res
 }
@@ -270,18 +302,22 @@ define i8 @pairwise_or_v16i8(<16 x i8> %arg) {
 ; SIMD128:         .functype pairwise_or_v16i8 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.or $push11=, $0, $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    v128.or $push15=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push14=, $0=, $pop15
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    v128.or $push13=, $pop14, $pop5
+; SIMD128-NEXT:    local.tee $push12=, $0=, $pop13
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.or $push11=, $pop12, $pop6
 ; SIMD128-NEXT:    local.tee $push10=, $0=, $pop11
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.or $push9=, $pop10, $pop1
-; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.or $push7=, $pop8, $pop2
-; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
-; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.or $push4=, $pop6, $pop3
-; SIMD128-NEXT:    i8x16.extract_lane_u $push5=, $pop4, 0
-; SIMD128-NEXT:    return $pop5
+; SIMD128-NEXT:    i8x16.shuffle $push7=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.or $push8=, $pop10, $pop7
+; SIMD128-NEXT:    i8x16.extract_lane_u $push9=, $pop8, 0
+; SIMD128-NEXT:    return $pop9
   %res = tail call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %arg)
   ret i8 %res
 }
@@ -303,12 +339,14 @@ define i32 @pairwise_xor_v4i32(<4 x i32> %arg) {
 ; SIMD128:         .functype pairwise_xor_v4i32 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    v128.xor $push5=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push4=, $0=, $pop5
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    v128.xor $push2=, $pop4, $pop1
-; SIMD128-NEXT:    i32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    return $pop3
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    v128.xor $push7=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    v128.xor $push4=, $pop6, $pop3
+; SIMD128-NEXT:    i32x4.extract_lane $push5=, $pop4, 0
+; SIMD128-NEXT:    return $pop5
   %res = tail call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> %arg)
   ret i32 %res
 }
@@ -318,15 +356,19 @@ define i16 @pairwise_xor_v8i16(<8 x i16> %arg) {
 ; SIMD128:         .functype pairwise_xor_v8i16 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    v128.xor $push8=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push7=, $0=, $pop8
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    v128.xor $push6=, $pop7, $pop1
-; SIMD128-NEXT:    local.tee $push5=, $0=, $pop6
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    v128.xor $push3=, $pop5, $pop2
-; SIMD128-NEXT:    i16x8.extract_lane_u $push4=, $pop3, 0
-; SIMD128-NEXT:    return $pop4
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    v128.xor $push12=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push11=, $0=, $pop12
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    v128.xor $push10=, $pop11, $pop5
+; SIMD128-NEXT:    local.tee $push9=, $0=, $pop10
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.xor $push7=, $pop9, $pop6
+; SIMD128-NEXT:    i16x8.extract_lane_u $push8=, $pop7, 0
+; SIMD128-NEXT:    return $pop8
   %res = tail call i16 @llvm.vector.reduce.xor.v8i16(<8 x i16> %arg)
   ret i16 %res
 }
@@ -336,18 +378,22 @@ define i8 @pairwise_xor_v16i8(<16 x i8> %arg) {
 ; SIMD128:         .functype pairwise_xor_v16i8 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.xor $push11=, $0, $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    v128.xor $push15=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push14=, $0=, $pop15
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    v128.xor $push13=, $pop14, $pop5
+; SIMD128-NEXT:    local.tee $push12=, $0=, $pop13
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.xor $push11=, $pop12, $pop6
 ; SIMD128-NEXT:    local.tee $push10=, $0=, $pop11
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.xor $push9=, $pop10, $pop1
-; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.xor $push7=, $pop8, $pop2
-; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
-; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    v128.xor $push4=, $pop6, $pop3
-; SIMD128-NEXT:    i8x16.extract_lane_u $push5=, $pop4, 0
-; SIMD128-NEXT:    return $pop5
+; SIMD128-NEXT:    i8x16.shuffle $push7=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.xor $push8=, $pop10, $pop7
+; SIMD128-NEXT:    i8x16.extract_lane_u $push9=, $pop8, 0
+; SIMD128-NEXT:    return $pop9
   %res = tail call i8 @llvm.vector.reduce.xor.v16i8(<16 x i8> %arg)
   ret i8 %res
 }
@@ -356,12 +402,14 @@ define i64 @pairwise_smax_v2i64(<2 x i64> %arg) {
 ; SIMD128-LABEL: pairwise_smax_v2i64:
 ; SIMD128:         .functype pairwise_smax_v2i64 (v128) -> (i64)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    i8x16.shuffle $push4=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
-; SIMD128-NEXT:    local.tee $push3=, $1=, $pop4
-; SIMD128-NEXT:    i64x2.gt_s $push0=, $0, $1
-; SIMD128-NEXT:    v128.bitselect $push1=, $0, $pop3, $pop0
-; SIMD128-NEXT:    i64x2.extract_lane $push2=, $pop1, 0
-; SIMD128-NEXT:    return $pop2
+; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push6=, $pop0, $pop1
+; SIMD128-NEXT:    local.tee $push5=, $1=, $pop6
+; SIMD128-NEXT:    i64x2.gt_s $push2=, $0, $1
+; SIMD128-NEXT:    v128.bitselect $push3=, $0, $pop5, $pop2
+; SIMD128-NEXT:    i64x2.extract_lane $push4=, $pop3, 0
+; SIMD128-NEXT:    return $pop4
   %res = tail call i64 @llvm.vector.reduce.smax.v2i64(<2 x i64> %arg)
   ret i64 %res
 }
@@ -371,12 +419,16 @@ define i32 @pairwise_smax_v4i32(<4 x i32> %arg) {
 ; SIMD128:         .functype pairwise_smax_v4i32 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.max_s $push5=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push4=, $0=, $pop5
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.max_s $push2=, $pop4, $pop1
-; SIMD128-NEXT:    i32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    return $pop3
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i32x4.max_s $push9=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i32x4.max_s $push6=, $pop8, $pop5
+; SIMD128-NEXT:    i32x4.extract_lane $push7=, $pop6, 0
+; SIMD128-NEXT:    return $pop7
   %res = tail call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %arg)
   ret i32 %res
 }
@@ -386,15 +438,19 @@ define i16 @pairwise_smax_v8i16(<8 x i16> %arg) {
 ; SIMD128:         .functype pairwise_smax_v8i16 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.max_s $push8=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push7=, $0=, $pop8
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.max_s $push6=, $pop7, $pop1
-; SIMD128-NEXT:    local.tee $push5=, $0=, $pop6
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.max_s $push3=, $pop5, $pop2
-; SIMD128-NEXT:    i16x8.extract_lane_u $push4=, $pop3, 0
-; SIMD128-NEXT:    return $pop4
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i16x8.max_s $push12=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push11=, $0=, $pop12
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i16x8.max_s $push10=, $pop11, $pop5
+; SIMD128-NEXT:    local.tee $push9=, $0=, $pop10
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    i16x8.max_s $push7=, $pop9, $pop6
+; SIMD128-NEXT:    i16x8.extract_lane_u $push8=, $pop7, 0
+; SIMD128-NEXT:    return $pop8
   %res = tail call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> %arg)
   ret i16 %res
 }
@@ -404,18 +460,22 @@ define i8 @pairwise_smax_v16i8(<16 x i8> %arg) {
 ; SIMD128:         .functype pairwise_smax_v16i8 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.max_s $push11=, $0, $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i8x16.max_s $push15=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push14=, $0=, $pop15
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i8x16.max_s $push13=, $pop14, $pop5
+; SIMD128-NEXT:    local.tee $push12=, $0=, $pop13
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    i8x16.max_s $push11=, $pop12, $pop6
 ; SIMD128-NEXT:    local.tee $push10=, $0=, $pop11
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.max_s $push9=, $pop10, $pop1
-; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.max_s $push7=, $pop8, $pop2
-; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
-; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.max_s $push4=, $pop6, $pop3
-; SIMD128-NEXT:    i8x16.extract_lane_u $push5=, $pop4, 0
-; SIMD128-NEXT:    return $pop5
+; SIMD128-NEXT:    i8x16.shuffle $push7=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    i8x16.max_s $push8=, $pop10, $pop7
+; SIMD128-NEXT:    i8x16.extract_lane_u $push9=, $pop8, 0
+; SIMD128-NEXT:    return $pop9
   %res = tail call i8 @llvm.vector.reduce.smax.v16i8(<16 x i8> %arg)
   ret i8 %res
 }
@@ -424,12 +484,14 @@ define i64 @pairwise_smin_v2i64(<2 x i64> %arg) {
 ; SIMD128-LABEL: pairwise_smin_v2i64:
 ; SIMD128:         .functype pairwise_smin_v2i64 (v128) -> (i64)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    i8x16.shuffle $push4=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
-; SIMD128-NEXT:    local.tee $push3=, $1=, $pop4
-; SIMD128-NEXT:    i64x2.lt_s $push0=, $0, $1
-; SIMD128-NEXT:    v128.bitselect $push1=, $0, $pop3, $pop0
-; SIMD128-NEXT:    i64x2.extract_lane $push2=, $pop1, 0
-; SIMD128-NEXT:    return $pop2
+; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push6=, $pop0, $pop1
+; SIMD128-NEXT:    local.tee $push5=, $1=, $pop6
+; SIMD128-NEXT:    i64x2.lt_s $push2=, $0, $1
+; SIMD128-NEXT:    v128.bitselect $push3=, $0, $pop5, $pop2
+; SIMD128-NEXT:    i64x2.extract_lane $push4=, $pop3, 0
+; SIMD128-NEXT:    return $pop4
   %res = tail call i64 @llvm.vector.reduce.smin.v2i64(<2 x i64> %arg)
   ret i64 %res
 }
@@ -439,12 +501,16 @@ define i32 @pairwise_smin_v4i32(<4 x i32> %arg) {
 ; SIMD128:         .functype pairwise_smin_v4i32 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.min_s $push5=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push4=, $0=, $pop5
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.min_s $push2=, $pop4, $pop1
-; SIMD128-NEXT:    i32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    return $pop3
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i32x4.min_s $push9=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i32x4.min_s $push6=, $pop8, $pop5
+; SIMD128-NEXT:    i32x4.extract_lane $push7=, $pop6, 0
+; SIMD128-NEXT:    return $pop7
   %res = tail call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %arg)
   ret i32 %res
 }
@@ -454,15 +520,19 @@ define i16 @pairwise_smin_v8i16(<8 x i16> %arg) {
 ; SIMD128:         .functype pairwise_smin_v8i16 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.min_s $push8=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push7=, $0=, $pop8
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.min_s $push6=, $pop7, $pop1
-; SIMD128-NEXT:    local.tee $push5=, $0=, $pop6
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.min_s $push3=, $pop5, $pop2
-; SIMD128-NEXT:    i16x8.extract_lane_u $push4=, $pop3, 0
-; SIMD128-NEXT:    return $pop4
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i16x8.min_s $push12=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push11=, $0=, $pop12
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i16x8.min_s $push10=, $pop11, $pop5
+; SIMD128-NEXT:    local.tee $push9=, $0=, $pop10
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    i16x8.min_s $push7=, $pop9, $pop6
+; SIMD128-NEXT:    i16x8.extract_lane_u $push8=, $pop7, 0
+; SIMD128-NEXT:    return $pop8
   %res = tail call i16 @llvm.vector.reduce.smin.v8i16(<8 x i16> %arg)
   ret i16 %res
 }
@@ -472,18 +542,22 @@ define i8 @pairwise_smin_v16i8(<16 x i8> %arg) {
 ; SIMD128:         .functype pairwise_smin_v16i8 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.min_s $push11=, $0, $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i8x16.min_s $push15=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push14=, $0=, $pop15
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i8x16.min_s $push13=, $pop14, $pop5
+; SIMD128-NEXT:    local.tee $push12=, $0=, $pop13
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    i8x16.min_s $push11=, $pop12, $pop6
 ; SIMD128-NEXT:    local.tee $push10=, $0=, $pop11
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.min_s $push9=, $pop10, $pop1
-; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.min_s $push7=, $pop8, $pop2
-; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
-; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.min_s $push4=, $pop6, $pop3
-; SIMD128-NEXT:    i8x16.extract_lane_u $push5=, $pop4, 0
-; SIMD128-NEXT:    return $pop5
+; SIMD128-NEXT:    i8x16.shuffle $push7=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    i8x16.min_s $push8=, $pop10, $pop7
+; SIMD128-NEXT:    i8x16.extract_lane_u $push9=, $pop8, 0
+; SIMD128-NEXT:    return $pop9
   %res = tail call i8 @llvm.vector.reduce.smin.v16i8(<16 x i8> %arg)
   ret i8 %res
 }
@@ -492,18 +566,20 @@ define i64 @pairwise_umax_v2i64(<2 x i64> %arg) {
 ; SIMD128-LABEL: pairwise_umax_v2i64:
 ; SIMD128:         .functype pairwise_umax_v2i64 (v128) -> (i64)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    i8x16.shuffle $push10=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
-; SIMD128-NEXT:    local.tee $push9=, $1=, $pop10
-; SIMD128-NEXT:    i64.const $push4=, -1
-; SIMD128-NEXT:    i64.const $push3=, 0
-; SIMD128-NEXT:    i64x2.extract_lane $push1=, $0, 0
-; SIMD128-NEXT:    i64x2.extract_lane $push0=, $1, 0
-; SIMD128-NEXT:    i64.gt_u $push2=, $pop1, $pop0
-; SIMD128-NEXT:    i64.select $push5=, $pop4, $pop3, $pop2
-; SIMD128-NEXT:    i64x2.replace_lane $push6=, $0, 0, $pop5
-; SIMD128-NEXT:    v128.bitselect $push7=, $0, $pop9, $pop6
-; SIMD128-NEXT:    i64x2.extract_lane $push8=, $pop7, 0
-; SIMD128-NEXT:    return $pop8
+; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push12=, $pop0, $pop1
+; SIMD128-NEXT:    local.tee $push11=, $1=, $pop12
+; SIMD128-NEXT:    i64.const $push6=, -1
+; SIMD128-NEXT:    i64.const $push5=, 0
+; SIMD128-NEXT:    i64x2.extract_lane $push3=, $0, 0
+; SIMD128-NEXT:    i64x2.extract_lane $push2=, $1, 0
+; SIMD128-NEXT:    i64.gt_u $push4=, $pop3, $pop2
+; SIMD128-NEXT:    i64.select $push7=, $pop6, $pop5, $pop4
+; SIMD128-NEXT:    i64x2.replace_lane $push8=, $0, 0, $pop7
+; SIMD128-NEXT:    v128.bitselect $push9=, $0, $pop11, $pop8
+; SIMD128-NEXT:    i64x2.extract_lane $push10=, $pop9, 0
+; SIMD128-NEXT:    return $pop10
   %res = tail call i64 @llvm.vector.reduce.umax.v2i64(<2 x i64> %arg)
   ret i64 %res
 }
@@ -513,12 +589,16 @@ define i32 @pairwise_umax_v4i32(<4 x i32> %arg) {
 ; SIMD128:         .functype pairwise_umax_v4i32 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.max_u $push5=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push4=, $0=, $pop5
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.max_u $push2=, $pop4, $pop1
-; SIMD128-NEXT:    i32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    return $pop3
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i32x4.max_u $push9=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i32x4.max_u $push6=, $pop8, $pop5
+; SIMD128-NEXT:    i32x4.extract_lane $push7=, $pop6, 0
+; SIMD128-NEXT:    return $pop7
   %res = tail call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %arg)
   ret i32 %res
 }
@@ -528,15 +608,19 @@ define i16 @pairwise_umax_v8i16(<8 x i16> %arg) {
 ; SIMD128:         .functype pairwise_umax_v8i16 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.max_u $push8=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push7=, $0=, $pop8
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.max_u $push6=, $pop7, $pop1
-; SIMD128-NEXT:    local.tee $push5=, $0=, $pop6
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.max_u $push3=, $pop5, $pop2
-; SIMD128-NEXT:    i16x8.extract_lane_u $push4=, $pop3, 0
-; SIMD128-NEXT:    return $pop4
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i16x8.max_u $push12=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push11=, $0=, $pop12
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i16x8.max_u $push10=, $pop11, $pop5
+; SIMD128-NEXT:    local.tee $push9=, $0=, $pop10
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    i16x8.max_u $push7=, $pop9, $pop6
+; SIMD128-NEXT:    i16x8.extract_lane_u $push8=, $pop7, 0
+; SIMD128-NEXT:    return $pop8
   %res = tail call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> %arg)
   ret i16 %res
 }
@@ -546,18 +630,22 @@ define i8 @pairwise_umax_v16i8(<16 x i8> %arg) {
 ; SIMD128:         .functype pairwise_umax_v16i8 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.max_u $push11=, $0, $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i8x16.max_u $push15=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push14=, $0=, $pop15
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i8x16.max_u $push13=, $pop14, $pop5
+; SIMD128-NEXT:    local.tee $push12=, $0=, $pop13
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    i8x16.max_u $push11=, $pop12, $pop6
 ; SIMD128-NEXT:    local.tee $push10=, $0=, $pop11
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.max_u $push9=, $pop10, $pop1
-; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.max_u $push7=, $pop8, $pop2
-; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
-; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.max_u $push4=, $pop6, $pop3
-; SIMD128-NEXT:    i8x16.extract_lane_u $push5=, $pop4, 0
-; SIMD128-NEXT:    return $pop5
+; SIMD128-NEXT:    i8x16.shuffle $push7=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    i8x16.max_u $push8=, $pop10, $pop7
+; SIMD128-NEXT:    i8x16.extract_lane_u $push9=, $pop8, 0
+; SIMD128-NEXT:    return $pop9
   %res = tail call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> %arg)
   ret i8 %res
 }
@@ -566,18 +654,20 @@ define i64 @pairwise_umin_v2i64(<2 x i64> %arg) {
 ; SIMD128-LABEL: pairwise_umin_v2i64:
 ; SIMD128:         .functype pairwise_umin_v2i64 (v128) -> (i64)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    i8x16.shuffle $push10=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
-; SIMD128-NEXT:    local.tee $push9=, $1=, $pop10
-; SIMD128-NEXT:    i64.const $push4=, -1
-; SIMD128-NEXT:    i64.const $push3=, 0
-; SIMD128-NEXT:    i64x2.extract_lane $push1=, $0, 0
-; SIMD128-NEXT:    i64x2.extract_lane $push0=, $1, 0
-; SIMD128-NEXT:    i64.lt_u $push2=, $pop1, $pop0
-; SIMD128-NEXT:    i64.select $push5=, $pop4, $pop3, $pop2
-; SIMD128-NEXT:    i64x2.replace_lane $push6=, $0, 0, $pop5
-; SIMD128-NEXT:    v128.bitselect $push7=, $0, $pop9, $pop6
-; SIMD128-NEXT:    i64x2.extract_lane $push8=, $pop7, 0
-; SIMD128-NEXT:    return $pop8
+; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push12=, $pop0, $pop1
+; SIMD128-NEXT:    local.tee $push11=, $1=, $pop12
+; SIMD128-NEXT:    i64.const $push6=, -1
+; SIMD128-NEXT:    i64.const $push5=, 0
+; SIMD128-NEXT:    i64x2.extract_lane $push3=, $0, 0
+; SIMD128-NEXT:    i64x2.extract_lane $push2=, $1, 0
+; SIMD128-NEXT:    i64.lt_u $push4=, $pop3, $pop2
+; SIMD128-NEXT:    i64.select $push7=, $pop6, $pop5, $pop4
+; SIMD128-NEXT:    i64x2.replace_lane $push8=, $0, 0, $pop7
+; SIMD128-NEXT:    v128.bitselect $push9=, $0, $pop11, $pop8
+; SIMD128-NEXT:    i64x2.extract_lane $push10=, $pop9, 0
+; SIMD128-NEXT:    return $pop10
   %res = tail call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> %arg)
   ret i64 %res
 }
@@ -587,12 +677,16 @@ define i32 @pairwise_umin_v4i32(<4 x i32> %arg) {
 ; SIMD128:         .functype pairwise_umin_v4i32 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.min_u $push5=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push4=, $0=, $pop5
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    i32x4.min_u $push2=, $pop4, $pop1
-; SIMD128-NEXT:    i32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    return $pop3
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i32x4.min_u $push9=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i32x4.min_u $push6=, $pop8, $pop5
+; SIMD128-NEXT:    i32x4.extract_lane $push7=, $pop6, 0
+; SIMD128-NEXT:    return $pop7
   %res = tail call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %arg)
   ret i32 %res
 }
@@ -602,15 +696,19 @@ define i16 @pairwise_umin_v8i16(<8 x i16> %arg) {
 ; SIMD128:         .functype pairwise_umin_v8i16 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.min_u $push8=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push7=, $0=, $pop8
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.min_u $push6=, $pop7, $pop1
-; SIMD128-NEXT:    local.tee $push5=, $0=, $pop6
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; SIMD128-NEXT:    i16x8.min_u $push3=, $pop5, $pop2
-; SIMD128-NEXT:    i16x8.extract_lane_u $push4=, $pop3, 0
-; SIMD128-NEXT:    return $pop4
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i16x8.min_u $push12=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push11=, $0=, $pop12
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i16x8.min_u $push10=, $pop11, $pop5
+; SIMD128-NEXT:    local.tee $push9=, $0=, $pop10
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; SIMD128-NEXT:    i16x8.min_u $push7=, $pop9, $pop6
+; SIMD128-NEXT:    i16x8.extract_lane_u $push8=, $pop7, 0
+; SIMD128-NEXT:    return $pop8
   %res = tail call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> %arg)
   ret i16 %res
 }
@@ -620,18 +718,22 @@ define i8 @pairwise_umin_v16i8(<16 x i8> %arg) {
 ; SIMD128:         .functype pairwise_umin_v16i8 (v128) -> (i32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.min_u $push11=, $0, $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    i8x16.min_u $push15=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push14=, $0=, $pop15
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    i8x16.min_u $push13=, $pop14, $pop5
+; SIMD128-NEXT:    local.tee $push12=, $0=, $pop13
+; SIMD128-NEXT:    i8x16.shuffle $push6=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    i8x16.min_u $push11=, $pop12, $pop6
 ; SIMD128-NEXT:    local.tee $push10=, $0=, $pop11
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.min_u $push9=, $pop10, $pop1
-; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
-; SIMD128-NEXT:    i8x16.shuffle $push2=, $0, $0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.min_u $push7=, $pop8, $pop2
-; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
-; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; SIMD128-NEXT:    i8x16.min_u $push4=, $pop6, $pop3
-; SIMD128-NEXT:    i8x16.extract_lane_u $push5=, $pop4, 0
-; SIMD128-NEXT:    return $pop5
+; SIMD128-NEXT:    i8x16.shuffle $push7=, $0, $0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; SIMD128-NEXT:    i8x16.min_u $push8=, $pop10, $pop7
+; SIMD128-NEXT:    i8x16.extract_lane_u $push9=, $pop8, 0
+; SIMD128-NEXT:    return $pop9
   %res = tail call i8 @llvm.vector.reduce.umin.v16i8(<16 x i8> %arg)
   ret i8 %res
 }
@@ -763,14 +865,16 @@ define float @pairwise_mul_v4f32_reassoc(<4 x float> %arg) {
 ; SIMD128:         .functype pairwise_mul_v4f32_reassoc (v128) -> (f32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    f32x4.mul $push7=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push6=, $0=, $pop7
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    f32x4.mul $push2=, $pop6, $pop1
-; SIMD128-NEXT:    f32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    f32.const $push4=, -0x0p0
-; SIMD128-NEXT:    f32.mul $push5=, $pop3, $pop4
-; SIMD128-NEXT:    return $pop5
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    f32x4.mul $push9=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    f32x4.mul $push4=, $pop8, $pop3
+; SIMD128-NEXT:    f32x4.extract_lane $push5=, $pop4, 0
+; SIMD128-NEXT:    f32.const $push6=, -0x0p0
+; SIMD128-NEXT:    f32.mul $push7=, $pop5, $pop6
+; SIMD128-NEXT:    return $pop7
   %res = tail call reassoc float @llvm.vector.reduce.fmul.v4f32(float -0.0, <4 x float> %arg)
   ret float %res
 }
@@ -792,9 +896,11 @@ define double @pairwise_max_v2f64_fast(<2 x double> %arg) {
 ; SIMD128:         .functype pairwise_max_v2f64_fast (v128) -> (f64)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
-; SIMD128-NEXT:    f64x2.pmax $push1=, $0, $pop0
-; SIMD128-NEXT:    f64x2.extract_lane $push2=, $pop1, 0
-; SIMD128-NEXT:    return $pop2
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    f64x2.pmax $push3=, $0, $pop2
+; SIMD128-NEXT:    f64x2.extract_lane $push4=, $pop3, 0
+; SIMD128-NEXT:    return $pop4
   %res = tail call fast double @llvm.vector.reduce.fmax.v2f64(<2 x double> %arg)
   ret double%res
 }
@@ -820,12 +926,16 @@ define float @pairwise_max_v4f32_fast(<4 x float> %arg) {
 ; SIMD128:         .functype pairwise_max_v4f32_fast (v128) -> (f32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    f32x4.pmax $push5=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push4=, $0=, $pop5
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    f32x4.pmax $push2=, $pop4, $pop1
-; SIMD128-NEXT:    f32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    return $pop3
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    f32x4.pmax $push9=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    f32x4.pmax $push6=, $pop8, $pop5
+; SIMD128-NEXT:    f32x4.extract_lane $push7=, $pop6, 0
+; SIMD128-NEXT:    return $pop7
   %res = tail call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
   ret float %res
 }
@@ -863,9 +973,11 @@ define double @pairwise_min_v2f64_fast(<2 x double> %arg) {
 ; SIMD128:         .functype pairwise_min_v2f64_fast (v128) -> (f64)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
-; SIMD128-NEXT:    f64x2.pmin $push1=, $0, $pop0
-; SIMD128-NEXT:    f64x2.extract_lane $push2=, $pop1, 0
-; SIMD128-NEXT:    return $pop2
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    f64x2.pmin $push3=, $0, $pop2
+; SIMD128-NEXT:    f64x2.extract_lane $push4=, $pop3, 0
+; SIMD128-NEXT:    return $pop4
   %res = tail call fast double @llvm.vector.reduce.fmin.v2f64(<2 x double> %arg)
   ret double%res
 }
@@ -891,12 +1003,16 @@ define float @pairwise_min_v4f32_fast(<4 x float> %arg) {
 ; SIMD128:         .functype pairwise_min_v4f32_fast (v128) -> (f32)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    f32x4.pmin $push5=, $0, $pop0
-; SIMD128-NEXT:    local.tee $push4=, $0=, $pop5
-; SIMD128-NEXT:    i8x16.shuffle $push1=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    f32x4.pmin $push2=, $pop4, $pop1
-; SIMD128-NEXT:    f32x4.extract_lane $push3=, $pop2, 0
-; SIMD128-NEXT:    return $pop3
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    f32x4.pmin $push9=, $0, $pop2
+; SIMD128-NEXT:    local.tee $push8=, $0=, $pop9
+; SIMD128-NEXT:    i8x16.shuffle $push3=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; SIMD128-NEXT:    v128.const $push4=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push5=, $pop3, $pop4
+; SIMD128-NEXT:    f32x4.pmin $push6=, $pop8, $pop5
+; SIMD128-NEXT:    f32x4.extract_lane $push7=, $pop6, 0
+; SIMD128-NEXT:    return $pop7
   %res = tail call fast float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
   ret float %res
 }

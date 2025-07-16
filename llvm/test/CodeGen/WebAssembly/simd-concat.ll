@@ -24,6 +24,8 @@ define <8 x i8> @concat_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 16, 17, 18, 19, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.const -1, 0
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    # fallthrough-return
   %v = shufflevector <4 x i8> %a, <4 x i8> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i8> %v
@@ -48,6 +50,8 @@ define <4 x i8> @concat_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.shuffle 0, 1, 16, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.const -1, 0, 0, 0
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    # fallthrough-return
   %v = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i8> %v
@@ -60,6 +64,8 @@ define <4 x i16> @concat_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    v128.const -1, 0
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    # fallthrough-return
   %v = shufflevector <2 x i16> %a, <2 x i16> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i16> %v

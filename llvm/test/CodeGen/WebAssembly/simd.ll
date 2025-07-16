@@ -1261,7 +1261,9 @@ define <4 x i32> @shuffle_undef_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; SIMD128:         .functype shuffle_undef_v4i32 (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    return $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    return $pop2
 ;
 ; NO-SIMD128-LABEL: shuffle_undef_v4i32:
 ; NO-SIMD128:         .functype shuffle_undef_v4i32 (i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
@@ -1520,7 +1522,9 @@ define <2 x i64> @shuffle_undef_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; SIMD128:         .functype shuffle_undef_v2i64 (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
-; SIMD128-NEXT:    return $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    return $pop2
 ;
 ; NO-SIMD128-LABEL: shuffle_undef_v2i64:
 ; NO-SIMD128:         .functype shuffle_undef_v2i64 (i32, i64, i64, i64, i64) -> ()
@@ -1788,7 +1792,9 @@ define <4 x float> @shuffle_undef_v4f32(<4 x float> %x, <4 x float> %y) {
 ; SIMD128:         .functype shuffle_undef_v4f32 (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-; SIMD128-NEXT:    return $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0, 0, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    return $pop2
 ;
 ; NO-SIMD128-LABEL: shuffle_undef_v4f32:
 ; NO-SIMD128:         .functype shuffle_undef_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
@@ -2048,7 +2054,9 @@ define <2 x double> @shuffle_undef_v2f64(<2 x double> %x, <2 x double> %y) {
 ; SIMD128:         .functype shuffle_undef_v2f64 (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
 ; SIMD128-NEXT:    i8x16.shuffle $push0=, $0, $0, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7
-; SIMD128-NEXT:    return $pop0
+; SIMD128-NEXT:    v128.const $push1=, -1, 0
+; SIMD128-NEXT:    v128.and $push2=, $pop0, $pop1
+; SIMD128-NEXT:    return $pop2
 ;
 ; NO-SIMD128-LABEL: shuffle_undef_v2f64:
 ; NO-SIMD128:         .functype shuffle_undef_v2f64 (i32, f64, f64, f64, f64) -> ()
