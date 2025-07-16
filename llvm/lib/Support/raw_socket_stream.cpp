@@ -119,14 +119,6 @@ ListeningSocket::ListeningSocket(ListeningSocket &&LS)
 Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
                                                       int MaxBacklog) {
 
-  // If SocketPath is too long, the path will be truncated, and there may be
-  // collisions with other truncated addresses that the fs::exists check below
-  // will be unable to detect.
-  if (SocketPath.size() >= sizeof(sockaddr_un::sun_path))
-    return llvm::make_error<StringError>(
-        std::make_error_code(std::errc::filename_too_long),
-        "SocketPath too long");
-
   // Handle instances where the target socket address already exists and
   // differentiate between a preexisting file with and without a bound socket
   //
