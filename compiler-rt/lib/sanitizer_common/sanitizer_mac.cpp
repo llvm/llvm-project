@@ -769,11 +769,17 @@ void internal_join_thread(void *th) { pthread_join((pthread_t)th, 0); }
 static Mutex syslog_lock;
 #  endif
 
+#  if SANITIZER_DRIVERKIT
+#    define SANITIZER_OS_LOG os_log
+#  else
+#    define SANITIZER_OS_LOG os_log_error
+#  endif
+
 void WriteOneLineToSyslog(const char *s) {
 #if !SANITIZER_GO
   syslog_lock.CheckLocked();
   if (GetMacosAlignedVersion() >= MacosVersion(10, 12)) {
-    os_log_error(OS_LOG_DEFAULT, "%{public}s", s);
+    SANITIZER_OS_LOG(OS_LOG_DEFAULT, "%{public}s", s);
   } else {
 #pragma clang diagnostic push
 // as_log is deprecated.
@@ -837,12 +843,6 @@ void LogMessageOnPrintf(const char *str) {
 
 void LogFullErrorReport(const char *buffer) {
 #  if !SANITIZER_GO
-#    if SANITIZER_DRIVERKIT
-#      define SANITIZER_OS_LOG os_log
-#    else
-#      define SANITIZER_OS_LOG os_log_error
-#    endif
-
   // Log with os_log.*. This will make it into the crash log.
   if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
                        sizeof("AddressSanitizer") - 1) == 0)
@@ -859,7 +859,6 @@ void LogFullErrorReport(const char *buffer) {
 
   if (common_flags()->log_to_syslog)
     SANITIZER_OS_LOG(OS_LOG_DEFAULT, "Consult syslog for more information.");
-#    undef SANITIZER_OS_LOG
 
   // Log to syslog.
   // The logging on OS X may call pthread_create so we need the threading
