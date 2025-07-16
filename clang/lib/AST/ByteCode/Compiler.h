@@ -307,7 +307,8 @@ protected:
                      const Expr *E);
   bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
                           std::optional<PrimType> InitT);
-  bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl);
+  bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl,
+                     bool Activate);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
@@ -342,6 +343,7 @@ private:
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
   bool visitZeroArrayInitializer(QualType T, const Expr *E);
+  bool visitAssignment(const Expr *LHS, const Expr *RHS, const Expr *E);
 
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
