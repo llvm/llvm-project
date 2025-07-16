@@ -7,7 +7,7 @@
 
 //--- errors.cpp
 module;
-export int a; // expected-error {{export declaration can only be used within a module purview}}
+export int a; // expected-error {{export declaration can only be used within a module interface}}
 export module M;
 export int b; // #1
 namespace N {
@@ -37,8 +37,8 @@ namespace N {
 //--- impl.cpp
 module M; // #M
 
-export int b2; // expected-error {{export declaration can only be used within a module purview}}
+export int b2; // expected-error {{export declaration can only be used within a module interface}}
 namespace N {
-  export int c2; // expected-error {{export declaration can only be used within a module purview}}
+  export int c2; // expected-error {{export declaration can only be used within a module interface}}
 }
 // expected-note@#M 2+{{add 'export'}}
