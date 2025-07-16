@@ -257,7 +257,7 @@ void MachineSMEABI::pickBundleZAStates(MachineFunction &MF) {
         LLVM_DEBUG(dbgs() << " DesiredIncomingState: "
                           << getZAStateString(DesiredIncomingState));
       }
-      ZAState DesiredOutgoingState = Block.Insts.front().NeededState;
+      ZAState DesiredOutgoingState = Block.Insts.back().NeededState;
       if (OutEdge && isLegalEdgeBundleZAState(DesiredOutgoingState)) {
         EdgeStateCounts[DesiredOutgoingState]++;
         LLVM_DEBUG(dbgs() << " DesiredOutgoingState: "
