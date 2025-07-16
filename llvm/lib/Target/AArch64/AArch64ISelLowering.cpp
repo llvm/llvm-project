@@ -17486,9 +17486,8 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 }
 
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    Instruction *Load, Value *Mask,
-    ArrayRef<Value *> DeinterleavedValues) const {
-  unsigned Factor = DeinterleavedValues.size();
+    Instruction *Load, Value *Mask, IntrinsicInst *DI) const {
+  const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   if (Factor != 2 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
     return false;
@@ -17498,9 +17497,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     return false;
   assert(!Mask && "Unexpected mask on a load\n");
 
-  Value *FirstActive = *llvm::find_if(DeinterleavedValues,
-                                      [](Value *V) { return V != nullptr; });
-  VectorType *VTy = cast<VectorType>(FirstActive->getType());
+  VectorType *VTy = getDeinterleavedVectorType(DI);
 
   const DataLayout &DL = LI->getModule()->getDataLayout();
   bool UseScalable;
@@ -17528,6 +17525,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
         Builder.CreateVectorSplat(LdTy->getElementCount(), Builder.getTrue());
 
   Value *BaseAddr = LI->getPointerOperand();
+  Value *Result = nullptr;
   if (NumLoads > 1) {
     // Create multiple legal small ldN.
     SmallVector<Value *, 4> ExtractedLdValues(Factor, PoisonValue::get(VTy));
@@ -17548,25 +17546,20 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
       }
       LLVM_DEBUG(dbgs() << "LdN4 res: "; LdN->dump());
     }
-    // Replace output of deinterleave2 intrinsic by output of ldN2/ldN4
-    for (unsigned J = 0; J < Factor; ++J) {
-      if (DeinterleavedValues[J])
-        DeinterleavedValues[J]->replaceAllUsesWith(ExtractedLdValues[J]);
-    }
+
+    // Merge the values from different factors.
+    Result = PoisonValue::get(DI->getType());
+    for (unsigned J = 0; J < Factor; ++J)
+      Result = Builder.CreateInsertValue(Result, ExtractedLdValues[J], J);
   } else {
-    Value *Result;
     if (UseScalable)
       Result = Builder.CreateCall(LdNFunc, {Pred, BaseAddr}, "ldN");
     else
       Result = Builder.CreateCall(LdNFunc, BaseAddr, "ldN");
-    // Replace output of deinterleave2 intrinsic by output of ldN2/ldN4
-    for (unsigned I = 0; I < Factor; I++) {
-      if (DeinterleavedValues[I]) {
-        Value *NewExtract = Builder.CreateExtractValue(Result, I);
-        DeinterleavedValues[I]->replaceAllUsesWith(NewExtract);
-      }
-    }
   }
+
+  // Replace output of deinterleave2 intrinsic by output of ldN2/ldN4
+  DI->replaceAllUsesWith(Result);
   return true;
 }
 
