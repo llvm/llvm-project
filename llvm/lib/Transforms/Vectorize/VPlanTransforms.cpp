@@ -1745,7 +1745,7 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
     if (!PhiR)
       continue;
     RecurKind RK = PhiR->getRecurrenceKind();
-    if (RK != RecurKind::Add && RK != RecurKind::Mul)
+    if (RK != RecurKind::Add && RK != RecurKind::Mul && RK != RecurKind::Sub)
       continue;
 
     for (VPUser *U : collectUsersRecursively(PhiR))
