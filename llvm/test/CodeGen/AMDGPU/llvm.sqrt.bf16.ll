@@ -66,6 +66,7 @@ define amdgpu_kernel void @sqrt_v2bf16(ptr addrspace(1) %r, ptr addrspace(1) %a)
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_sqrt_bf16_e32 v1.l, v0.l
+; GFX12-TRUE16-NEXT:    v_nop
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_sqrt_bf16_e32 v0.l, v0.l
@@ -90,6 +91,7 @@ define amdgpu_kernel void @sqrt_v2bf16(ptr addrspace(1) %r, ptr addrspace(1) %a)
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s5, s1
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    v_sqrt_bf16_e32 v1, v0
+; GFX12-FAKE16-NEXT:    v_nop
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_sqrt_bf16_e32 v0, v0
