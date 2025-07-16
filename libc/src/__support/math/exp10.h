@@ -68,7 +68,7 @@ namespace {
 // > P;
 // Error bounds:
 //   | output - (10^dx - 1) / dx | < 2^-52.
-LIBC_INLINE static constexpr double poly_approx_d(double dx) {
+LIBC_INLINE static double poly_approx_d(double dx) {
   // dx^2
   double dx2 = dx * dx;
   double c0 =
@@ -128,7 +128,7 @@ static constexpr Float128 poly_approx_f128(const Float128 &dx) {
 // Compute 10^(x) using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-static constexpr Float128 exp10_f128(double x, double kd, int idx1, int idx2) {
+static Float128 exp10_f128(double x, double kd, int idx1, int idx2) {
   double t1 = fputil::multiply_add(kd, MLOG10_2_EXP2_M12_HI, x); // exact
   double t2 = kd * MLOG10_2_EXP2_M12_MID_32;                     // exact
   double t3 = kd * MLOG10_2_EXP2_M12_LO; // Error < 2^-144
@@ -159,7 +159,7 @@ static constexpr Float128 exp10_f128(double x, double kd, int idx1, int idx2) {
 }
 
 // Compute 10^x with double-double precision.
-static constexpr DoubleDouble exp10_double_double(double x, double kd,
+static DoubleDouble exp10_double_double(double x, double kd,
                                                   const DoubleDouble &exp_mid) {
   // Recalculate dx:
   //   dx = x - k * 2^-12 * log10(2)
@@ -182,7 +182,7 @@ static constexpr DoubleDouble exp10_double_double(double x, double kd,
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // When output is denormal.
-static constexpr double exp10_denorm(double x) {
+static double exp10_denorm(double x) {
   // Range reduction.
   double tmp = fputil::multiply_add(x, LOG2_10, 0x1.8000'0000'4p21);
   int k = static_cast<int>(cpp::bit_cast<uint64_t>(tmp) >> 19);
