@@ -160,7 +160,7 @@ spirv.module Logical GLSL450 {
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, ReplicatedCompositesEXT], [SPV_EXT_replicated_composites]> {
+spirv.module Logical GLSL450 {
 
   spirv.SpecConstant @sc_i32_1 = 1 : i32
 

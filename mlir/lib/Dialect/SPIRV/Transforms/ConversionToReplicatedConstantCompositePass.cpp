@@ -28,7 +28,7 @@ using namespace mlir;
 
 namespace {
 
-Attribute getSplatAttribute(Attribute valueAttr, uint32_t splatCount) {
+Attribute getSplatAttribute(Attribute valueAttr, uint32_t &splatCount) {
   Attribute attr;
   if (auto denseAttr = dyn_cast<DenseElementsAttr>(valueAttr)) {
     if (denseAttr.isSplat()) {
