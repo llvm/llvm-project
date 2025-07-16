@@ -160,6 +160,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMRotateOpLowering
+    : public mlir::OpConversionPattern<cir::RotateOp> {
+public:
+  using mlir::OpConversionPattern<cir::RotateOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::RotateOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMCallOpLowering : public mlir::OpConversionPattern<cir::CallOp> {
 public:
   using mlir::OpConversionPattern<cir::CallOp>::OpConversionPattern;

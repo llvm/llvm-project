@@ -57,6 +57,20 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::get(result);
 }
 
+RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
+  mlir::Value input = emitScalarExpr(e->getArg(0));
+  mlir::Value amount = emitScalarExpr(e->getArg(1));
+
+  // TODO(cir): MSVC flavor bit rotate builtins use different types for input
+  // and amount, but cir.rotate requires them to have the same type. Cast amount
+  // to the type of input when necessary.
+  assert(!cir::MissingFeatures::msvcBuiltins());
+
+  auto r = builder.create<cir::RotateOp>(getLoc(e->getSourceRange()), input,
+                                         amount, isRotateLeft);
+  return RValue::get(r);
+}
+
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
@@ -219,6 +233,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value arg = emitScalarExpr(e->getArg(0));
     return RValue::get(builder.create<cir::BitReverseOp>(loc, arg));
   }
+
+  case Builtin::BI__builtin_rotateleft8:
+  case Builtin::BI__builtin_rotateleft16:
+  case Builtin::BI__builtin_rotateleft32:
+  case Builtin::BI__builtin_rotateleft64:
+    return emitRotate(e, /*isRotateLeft=*/true);
+
+  case Builtin::BI__builtin_rotateright8:
+  case Builtin::BI__builtin_rotateright16:
+  case Builtin::BI__builtin_rotateright32:
+  case Builtin::BI__builtin_rotateright64:
+    return emitRotate(e, /*isRotateLeft=*/false);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit

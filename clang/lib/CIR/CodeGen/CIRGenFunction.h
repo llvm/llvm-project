@@ -1030,6 +1030,8 @@ public:
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
+  RValue emitRotate(const CallExpr *e, bool isRotateLeft);
+
   mlir::Value emitScalarConstant(const ConstantEmission &constant, Expr *e);
 
   /// Emit a conversion from the specified type to the specified destination
