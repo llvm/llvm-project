@@ -189,7 +189,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
         rank = getMixedSizes().size();
       
       // The offsets are allowed to be empty. The Traits verification of OffsetSizeAndStrideOpInterface interface assumes offsets being present.
-      // It is set to be MAX to indicate user not passed any value, instead of kDynamic which means offsets passed as value.
+      // place-holder value MAX indicating user doesn't provide offsets, instead of kDynamic which means offsets passed as value.
       setConstOffsets(llvm::SmallVector<int64_t, 4>(rank, std::numeric_limits<int64_t>::max()));
 
       attr = getConstOffsetsAttr();
@@ -204,7 +204,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     ArrayRef<int64_t> getStaticSizes() {
       /// To be compatible with OffsetSizeAndStrideOpInterface, which expects valid return value and perform checks
       static  llvm::SmallVector<int64_t, 4> emptyShape;
-      
+
       auto attr = getConstShapeAttr();
       if (attr)
         return attr;

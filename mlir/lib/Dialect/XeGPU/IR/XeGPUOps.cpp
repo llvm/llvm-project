@@ -334,6 +334,7 @@ void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                    TypeRange valueTypes = TypeRange()) {
 
   if (values.empty() && llvm::all_of(integers, [](int64_t i) {
+        // place-holder value MAX indicating user doesn't provide offsets
         return i == std::numeric_limits<int64_t>::max();
       }))
     return;
