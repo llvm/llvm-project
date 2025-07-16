@@ -159,13 +159,13 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a2, a1, 3
 ; RV64-NEXT:    lui a3, 149797
-; RV64-NEXT:    subw a2, a2, a1
+; RV64-NEXT:    sub a2, a2, a1
 ; RV64-NEXT:    addi a1, a3, -1755
 ; RV64-NEXT:    slli a3, a2, 32
 ; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    mulhu a1, a3, a1
 ; RV64-NEXT:    srli a1, a1, 32
-; RV64-NEXT:    subw a2, a2, a1
+; RV64-NEXT:    sub a2, a2, a1
 ; RV64-NEXT:    srliw a2, a2, 1
 ; RV64-NEXT:    add a1, a2, a1
 ; RV64-NEXT:    srli a1, a1, 2
@@ -363,13 +363,13 @@ define void @store_factor7_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <v
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a2, a1, 3
 ; RV64-NEXT:    lui a3, 149797
-; RV64-NEXT:    subw a2, a2, a1
+; RV64-NEXT:    sub a2, a2, a1
 ; RV64-NEXT:    addi a1, a3, -1755
 ; RV64-NEXT:    slli a3, a2, 32
 ; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    mulhu a1, a3, a1
 ; RV64-NEXT:    srli a1, a1, 32
-; RV64-NEXT:    subw a2, a2, a1
+; RV64-NEXT:    sub a2, a2, a1
 ; RV64-NEXT:    srliw a2, a2, 1
 ; RV64-NEXT:    add a1, a2, a1
 ; RV64-NEXT:    srli a1, a1, 2
