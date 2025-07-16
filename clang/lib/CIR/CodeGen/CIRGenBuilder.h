@@ -426,19 +426,21 @@ public:
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
                                 mlir::Value dstAddr, mlir::Type storageType,
                                 mlir::Value src, const CIRGenBitFieldInfo &info,
-                                bool isLvalueVolatile, bool useVolatile) {
-    return create<cir::SetBitfieldOp>(loc, resultType, dstAddr, storageType,
-                                      src, info.name, info.size, info.offset,
-                                      info.isSigned, isLvalueVolatile);
+                                bool isLvalueVolatile, bool useVolatile,
+                                unsigned alignment = 0) {
+    return create<cir::SetBitfieldOp>(
+        loc, resultType, dstAddr, storageType, src, info.name, info.size,
+        info.offset, info.isSigned, isLvalueVolatile, alignment);
   }
 
   mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,
                                 mlir::Value addr, mlir::Type storageType,
                                 const CIRGenBitFieldInfo &info,
-                                bool isLvalueVolatile, bool useVolatile) {
-    return create<cir::GetBitfieldOp>(loc, resultType, addr, storageType,
-                                      info.name, info.size, info.offset,
-                                      info.isSigned, isLvalueVolatile);
+                                bool isLvalueVolatile, bool useVolatile,
+                                unsigned alignment = 0) {
+    return create<cir::GetBitfieldOp>(
+        loc, resultType, addr, storageType, info.name, info.size, info.offset,
+        info.isSigned, isLvalueVolatile, alignment);
   }
 };
 

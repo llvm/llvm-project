@@ -337,9 +337,10 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
 
   mlir::Value dstAddr = dst.getAddress().getPointer();
 
-  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, dstAddr,
-                                   ptr.getElementType(), src.getValue(), info,
-                                   dst.isVolatileQualified(), useVolatile);
+  return builder.createSetBitfield(
+      dstAddr.getLoc(), resLTy, dstAddr, ptr.getElementType(), src.getValue(),
+      info, dst.isVolatileQualified(), useVolatile,
+      dst.getAddress().getAlignment().getAsAlign().value());
 }
 
 RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
@@ -353,7 +354,7 @@ RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
 
   mlir::Value field = builder.createGetBitfield(
       getLoc(loc), resLTy, ptr.getPointer(), ptr.getElementType(), info,
-      lv.isVolatile(), false);
+      lv.isVolatile(), false, ptr.getAlignment().getAsAlign().value());
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck() && "NYI");
   return RValue::get(field);
 }
@@ -366,7 +367,10 @@ Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
   cir::PointerType fieldPtr = cir::PointerType::get(fieldType);
   cir::GetMemberOp sea = getBuilder().createGetMember(
       loc, fieldPtr, base.getPointer(), field->getName(), index);
-  return Address(sea, CharUnits::One());
+  auto rec = cast<cir::RecordType>(base.getAddress().getElementType());
+  CharUnits offset = CharUnits::fromQuantity(
+      rec.getElementOffset(cgm.getDataLayout().layout, index));
+  return Address(sea, base.getAlignment().alignmentAtOffset(offset));
 }
 
 LValue CIRGenFunction::emitLValueForBitField(LValue base,
