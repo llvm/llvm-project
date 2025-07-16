@@ -2129,7 +2129,7 @@ defvar X86CommonLibcalls =
 );
 
 defvar Windows32DivRemMulCalls =
-  LibcallImpls<(add WindowsDivRemMulLibcalls),
+  LibcallsWithCC<(add WindowsDivRemMulLibcalls), X86_STDCALL,
   RuntimeLibcallPredicate<"TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()">>;
 
 def X86_32SystemLibrary
