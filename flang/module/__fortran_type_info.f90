@@ -118,7 +118,7 @@ module __fortran_type_info
     integer(1) :: which ! SpecialBinding::Which
     integer(1) :: isArgDescriptorSet
     integer(1) :: isTypeBound ! binding index + 1, if any
-    integer(1) :: isArgContiguousSet
+    integer(1) :: specialCaseFlag
     integer(1) :: __padding0(4)
     type(__builtin_c_funptr) :: proc
   end type
