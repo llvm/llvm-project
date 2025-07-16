@@ -66,6 +66,115 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor
   ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
 }
 
+define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor3_partial(ptr %ptr, i32 %evl) {
+; RV32-LABEL: load_factor3_partial:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a2, a1, 1
+; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    lui a2, 699051
+; RV32-NEXT:    addi a2, a2, -1365
+; RV32-NEXT:    mulhu a1, a1, a2
+; RV32-NEXT:    srli a1, a1, 1
+; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV32-NEXT:    vlseg3e32.v v7, (a0)
+; RV32-NEXT:    vmv1r.v v8, v7
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: load_factor3_partial:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a2, a1, 1
+; RV64-NEXT:    add a1, a2, a1
+; RV64-NEXT:    lui a2, 699051
+; RV64-NEXT:    addi a2, a2, -1365
+; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    slli a2, a2, 32
+; RV64-NEXT:    mulhu a1, a1, a2
+; RV64-NEXT:    srli a1, a1, 33
+; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV64-NEXT:    vlseg3e32.v v7, (a0)
+; RV64-NEXT:    vmv1r.v v8, v7
+; RV64-NEXT:    ret
+  %rvl = mul i32 %evl, 3
+  %wide.masked.load = call <vscale x 6 x i32> @llvm.vp.load(ptr %ptr, <vscale x 6 x i1> splat (i1 true), i32 %rvl)
+  %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave3(<vscale x 6 x i32> %wide.masked.load)
+  %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
+  %t2 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 2
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t2, 1
+  ret { <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
+}
+
+; InterleavedAccess should kick in even if the users of deinterleave intrinsic are not extractvalue.
+define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor3_no_extract(ptr %ptr, i32 %evl) {
+; RV32-LABEL: load_factor3_no_extract:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, 12
+; RV32-NEXT:    beq a1, a2, .LBB3_2
+; RV32-NEXT:  # %bb.1: # %bb0
+; RV32-NEXT:    slli a2, a1, 1
+; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    lui a2, 699051
+; RV32-NEXT:    addi a2, a2, -1365
+; RV32-NEXT:    mulhu a1, a1, a2
+; RV32-NEXT:    srli a1, a1, 1
+; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV32-NEXT:    vlseg3e32.v v7, (a0)
+; RV32-NEXT:    j .LBB3_3
+; RV32-NEXT:  .LBB3_2: # %bb1
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vlseg3e32.v v7, (a0)
+; RV32-NEXT:  .LBB3_3: # %merge
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; RV32-NEXT:    vmv1r.v v8, v7
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: load_factor3_no_extract:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a2, a1
+; RV64-NEXT:    li a3, 12
+; RV64-NEXT:    beq a2, a3, .LBB3_2
+; RV64-NEXT:  # %bb.1: # %bb0
+; RV64-NEXT:    slli a2, a1, 1
+; RV64-NEXT:    add a1, a2, a1
+; RV64-NEXT:    lui a2, 699051
+; RV64-NEXT:    addi a2, a2, -1365
+; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    slli a2, a2, 32
+; RV64-NEXT:    mulhu a1, a1, a2
+; RV64-NEXT:    srli a1, a1, 33
+; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV64-NEXT:    vlseg3e32.v v7, (a0)
+; RV64-NEXT:    j .LBB3_3
+; RV64-NEXT:  .LBB3_2: # %bb1
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vlseg3e32.v v7, (a0)
+; RV64-NEXT:  .LBB3_3: # %merge
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; RV64-NEXT:    vmv1r.v v8, v7
+; RV64-NEXT:    ret
+  %p = icmp ne i32 %evl, 12
+  br i1 %p, label %bb0, label %bb1
+
+bb0:
+  %rvl.0 = mul i32 %evl, 3
+  %wide.load.0 = call <vscale x 6 x i32> @llvm.vp.load(ptr %ptr, <vscale x 6 x i1> splat (i1 true), i32 %rvl.0)
+  %deinterleaved.results.0 = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave3(<vscale x 6 x i32> %wide.load.0)
+  br label %merge
+
+bb1:
+  %wide.load.1 = call <vscale x 6 x i32> @llvm.vp.load(ptr %ptr, <vscale x 6 x i1> splat (i1 true), i32 12)
+  %deinterleaved.results.1 = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave3(<vscale x 6 x i32> %wide.load.1)
+  br label %merge
+
+merge:
+  %deinterleaved.results = phi { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [%deinterleaved.results.0, %bb0], [%deinterleaved.results.1, %bb1]
+  %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
+  %t2 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 2
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t2, 1
+  ret { <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
+}
+
 define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor4_v2(ptr %ptr, i32 %evl) {
 ; RV32-LABEL: load_factor4_v2:
 ; RV32:       # %bb.0:

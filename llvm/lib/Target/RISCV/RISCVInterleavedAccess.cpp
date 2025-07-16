@@ -14,6 +14,7 @@
 #include "RISCVISelLowering.h"
 #include "RISCVSubtarget.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -256,17 +257,14 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 }
 
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    Instruction *Load, Value *Mask,
-    ArrayRef<Value *> DeinterleaveValues) const {
-  const unsigned Factor = DeinterleaveValues.size();
+    Instruction *Load, Value *Mask, IntrinsicInst *DI) const {
+  const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   if (Factor > 8)
     return false;
 
   IRBuilder<> Builder(Load);
 
-  Value *FirstActive =
-      *llvm::find_if(DeinterleaveValues, [](Value *V) { return V != nullptr; });
-  VectorType *ResVTy = cast<VectorType>(FirstActive->getType());
+  VectorType *ResVTy = getDeinterleavedVectorType(DI);
 
   const DataLayout &DL = Load->getDataLayout();
   auto *XLenTy = Type::getIntNTy(Load->getContext(), Subtarget.getXLen());
@@ -346,16 +344,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     }
   }
 
-  for (auto [Idx, DIV] : enumerate(DeinterleaveValues)) {
-    if (!DIV)
-      continue;
-    // We have to create a brand new ExtractValue to replace each
-    // of these old ExtractValue instructions.
-    Value *NewEV =
-        Builder.CreateExtractValue(Return, {static_cast<unsigned>(Idx)});
-    DIV->replaceAllUsesWith(NewEV);
-  }
-
+  DI->replaceAllUsesWith(Return);
   return true;
 }
 
