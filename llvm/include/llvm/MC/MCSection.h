@@ -225,13 +225,13 @@ private:
   FragmentType Kind;
 
 protected:
-  /// Used by subclasses for better packing.
-  ///
-  /// MCEncodedFragment
-  bool HasInstructions : 1;
-  /// MCDataFragment
   bool LinkerRelaxable : 1;
-  /// MCRelaxableFragment: x86-specific
+
+  /// Used by certain fragment types for better packing.
+  ///
+  /// FT_Data, FT_Relaxable
+  bool HasInstructions : 1;
+  /// FT_Relaxable, x86-specific
   bool AllowAutoPadding : 1;
 
   uint32_t ContentStart = 0;
@@ -485,10 +485,6 @@ protected:
   MCEncodedFragment(MCFragment::FragmentType FType, bool HasInstructions)
       : MCFragment(FType, HasInstructions) {}
 };
-
-// TODO Delete
-using MCDataFragment = MCFragment;
-using MCRelaxableFragment = MCFragment;
 
 class MCAlignFragment : public MCFragment {
   /// Flag to indicate that (optimal) NOPs should be emitted instead
