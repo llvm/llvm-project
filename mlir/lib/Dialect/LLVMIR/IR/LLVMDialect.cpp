@@ -3294,9 +3294,8 @@ LogicalResult LLVM::ConstantOp::verify() {
   }
   if (auto structType = dyn_cast<LLVMStructType>(getType())) {
     auto arrayAttr = dyn_cast<ArrayAttr>(getValue());
-    if (!arrayAttr) {
-      return emitOpError() << "expected array attribute for a struct constant";
-    }
+    if (!arrayAttr)
+      return emitOpError() << "expected array attribute for struct type";
 
     ArrayRef<Type> elementTypes = structType.getBody();
     if (arrayAttr.size() != elementTypes.size()) {
@@ -3309,17 +3308,15 @@ LogicalResult LLVM::ConstantOp::verify() {
                                 "floating point or integer";
       }
       auto attrType = cast<TypedAttr>(attr).getType();
-      if (attrType != type) {
+      if (attrType != type)
         return emitOpError()
                << "struct element at index " << i << " is of wrong type";
-      }
     }
 
     return success();
   }
-  if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType())) {
+  if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType()))
     return emitOpError() << "does not support target extension type.";
-  }
 
   // Check that an attribute whose element type has floating point semantics
   // `attributeFloatSemantics` is compatible with a type whose element type
@@ -3342,9 +3339,9 @@ LogicalResult LLVM::ConstantOp::verify() {
     }
     unsigned floatWidth = APFloat::getSizeInBits(attributeFloatSemantics);
     if (isa<IntegerType>(constantElementType)) {
-      if (!constantElementType.isInteger(floatWidth)) {
+      if (!constantElementType.isInteger(floatWidth))
         return emitOpError() << "expected integer type of width " << floatWidth;
-      }
+
       return success();
     }
     return success();
@@ -3387,9 +3384,13 @@ LogicalResult LLVM::ConstantOp::verify() {
           "expected integer element type for integer elements attribute");
     }
   } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
+
+    // The case where the constant is LLVMStructType has already been handled.
     auto arrayType = dyn_cast<LLVM::LLVMArrayType>(getType());
     if (!arrayType)
-      return emitOpError() << "expected array type";
+      return emitOpError()
+             << "expected array or struct type for array attribute";
+
     // When the attribute is an ArrayAttr, check that its nesting matches the
     // corresponding ArrayType or VectorType nesting.
     return verifyStructArrayConstant(*this, arrayType, arrayAttr, /*dim=*/0);

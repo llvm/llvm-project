@@ -394,7 +394,7 @@ llvm.func @array_attribute_two_different_types() -> !llvm.struct<(f64, f64)> {
 // -----
 
 llvm.func @struct_wrong_attribute_type() -> !llvm.struct<(f64, f64)> {
-  // expected-error @+1 {{expected array attribute}}
+  // expected-error @+1 {{expected array attribute for struct type}}
   %0 = llvm.mlir.constant(1.0 : f64) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -443,7 +443,7 @@ llvm.func @scalable_vec_requires_splat() -> vector<[4]xf64> {
 // -----
 
 llvm.func @int_attr_requires_int_type() -> f32 {
-  // expected-error @+1 {{expected integer type}}
+  // expected-error @below{{expected integer type}}
   %0 = llvm.mlir.constant(1 : index) : f32
   llvm.return %0 : f32
 }
@@ -451,7 +451,7 @@ llvm.func @int_attr_requires_int_type() -> f32 {
 // -----
 
 llvm.func @vector_int_attr_requires_int_type() -> vector<2xf32> {
-  // expected-error @+1 {{expected integer element type}}
+  // expected-error @below{{expected integer element type}}
   %0 = llvm.mlir.constant(dense<[1, 2]> : vector<2xi32>) : vector<2xf32>
   llvm.return %0 : vector<2xf32>
 }
@@ -498,7 +498,15 @@ llvm.func @vector_with_non_vector_type() -> f32 {
 
 // -----
 
-llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
+llvm.func @array_attr_with_invalid_type() -> i32 {
+  // expected-error @below{{expected array or struct type for array attribute}}
+  %0 = llvm.mlir.constant([1 : i32]) : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+llvm.func @elements_attribute_incompatible_nested_array_struct1_type() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
   // expected-error @below{{expected integer element type for integer elements attribute}}
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
   llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
@@ -506,7 +514,7 @@ llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x st
 
 // -----
 
-llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
+llvm.func @elements_attribute_incompatible_nested_array_struct3_type() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
   // expected-error @below{{expected integer element type for integer elements attribute}}
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
   llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
@@ -535,8 +543,6 @@ llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
   %0 = llvm.mlir.constant([1.0 : f32, 1.0 : f32]) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
-
-// -----
 
 // -----
 
@@ -583,13 +589,13 @@ func.func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !ll
   return %b : !llvm.array<4 x vector<8xf32>>
 }
 
-
 // -----
 
 func.func @extractvalue_non_llvm_type(%a : i32, %b : tensor<*xi32>) {
   // expected-error@+2 {{expected LLVM IR Dialect type}}
   llvm.extractvalue %b[0] : tensor<*xi32>
 }
+
 // -----
 
 func.func @extractvalue_struct_out_of_bounds() {
@@ -758,6 +764,7 @@ func.func @atomicrmw_scalable_vector(%ptr : !llvm.ptr, %f32_vec : vector<[2]xf32
   %0 = llvm.atomicrmw fadd %ptr, %f32_vec unordered : !llvm.ptr, vector<[2]xf32>
   llvm.return
 }
+
 // -----
 
 func.func @atomicrmw_vector_expected_float(%ptr : !llvm.ptr, %i32_vec : vector<3xi32>) {
@@ -1765,7 +1772,6 @@ func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[]: !llvm.ptr<3>, !llvm.ptr
   return
 }
-
 
 // -----
 
