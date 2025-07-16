@@ -130,9 +130,9 @@ func.func @broadcast_vec1d_from_vec1d_scalable(%arg0: vector<[2]xf32>) -> vector
 
 // -----
 
-// CHECK-LABEL: @broadcast_scalar_0d
+// CHECK-LABEL: @broadcast_vec0d_from_scalar
 // CHECK-SAME: %[[ELT:.*]]: f32
-func.func @broadcast_scalar_0d(%elt: f32) -> vector<f32> {
+func.func @broadcast_vec0d_from_scalar(%elt: f32) -> vector<f32> {
   %v = vector.broadcast %elt : f32 to vector<f32>
   return %v : vector<f32>
 }
@@ -144,37 +144,33 @@ func.func @broadcast_scalar_0d(%elt: f32) -> vector<f32> {
 
 // -----
 
-// CHECK-LABEL: @broadcast_scalar
+// CHECK-LABEL: @broadcast_vec1d_from_scalar
 // CHECK-SAME: %[[VEC:[0-9a-zA-Z]+]]: vector<4xf32>
 // CHECK-SAME: %[[ELT:[0-9a-zA-Z]+]]: f32
-func.func @broadcast_scalar(%vec: vector<4xf32>, %elt: f32) -> vector<4xf32> {
+func.func @broadcast_vec1d_from_scalar(%vec: vector<4xf32>, %elt: f32) -> vector<4xf32> {
   %vb = vector.broadcast %elt : f32 to vector<4xf32>
-  %r = arith.mulf %vec, %vb : vector<4xf32>
-  return %r : vector<4xf32>
+  return %vb : vector<4xf32>
 }
 // CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<4xf32>
 // CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<4xf32>
 // CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
-// CHECK-NEXT: %[[SCALE:[0-9]+]] = arith.mulf %[[VEC]], %[[SPLAT]] : vector<4xf32>
-// CHECK-NEXT: return %[[SCALE]] : vector<4xf32>
+// CHECK-NEXT: return %[[SPLAT]] : vector<4xf32>
 
 // -----
 
-// CHECK-LABEL: @broadcast_scalar_scalable
+// CHECK-LABEL: @broadcast_scalable_vec1d_from_scalar
 // CHECK-SAME: %[[VEC:[0-9a-zA-Z]+]]: vector<[4]xf32>
 // CHECK-SAME: %[[ELT:[0-9a-zA-Z]+]]: f32
-func.func @broadcast_scalar_scalable(%vec: vector<[4]xf32>, %elt: f32) -> vector<[4]xf32> {
+func.func @broadcast_scalable_vec1d_from_scalar(%vec: vector<[4]xf32>, %elt: f32) -> vector<[4]xf32> {
   %vb = vector.broadcast %elt : f32 to vector<[4]xf32>
-  %r = arith.mulf %vec, %vb : vector<[4]xf32>
-  return %r : vector<[4]xf32>
+  return %vb : vector<[4]xf32>
 }
 // CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<[4]xf32>
 // CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<[4]xf32>
 // CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
-// CHECK-NEXT: %[[SCALE:[0-9]+]] = arith.mulf %[[VEC]], %[[SPLAT]] : vector<[4]xf32>
-// CHECK-NEXT: return %[[SCALE]] : vector<[4]xf32>
+// CHECK-NEXT: return %[[SPLAT]] : vector<[4]xf32>
 
 //===----------------------------------------------------------------------===//
 // vector.shuffle
@@ -2287,7 +2283,7 @@ func.func @compress_store_op_index(%arg0: memref<?xindex>, %arg1: vector<11xi1>,
 // vector.splat
 //===----------------------------------------------------------------------===//
 
-// vector.splat should be converted to vector.broadcast, which in turn is converted to LLVM.
+// vector.splat is converted to vector.broadcast. Then, vector.broadcast is converted to LLVM.
 // CHECK-LABEL: @splat_0d
 // CHECK-NOT: splat
 // CHECK: return

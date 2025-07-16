@@ -182,21 +182,20 @@ func.func @broadcast_vec2d_from_vec0d(%arg0: vector<f32>) -> vector<3x2xf32> {
   %0 = vector.broadcast %arg0 : vector<f32> to vector<3x2xf32>
   return %0 : vector<3x2xf32>
 }
-
 // CHECK-LABEL: @broadcast_vec2d_from_vec0d(
-//  CHECK-SAME: %[[ARG_RANK0:.*]]: vector<f32>)
-//   CHECK-DAG: %[[ARG_RANK1:.*]]   = builtin.unrealized_conversion_cast %[[ARG_RANK0]] : vector<f32> to vector<1xf32>
-//   CHECK-DAG: %[[ZERO_64:.*]]     = llvm.mlir.constant(0 : i64) : i64
-//   CHECK-DAG: %[[ARG_SCALAR:.*]]  = llvm.extractelement %[[ARG_RANK1]][%[[ZERO_64]] : i64] : vector<1xf32>
-//   CHECK-DAG: %[[UB_POISON:.*]]   = ub.poison : vector<3x2xf32>
-//   CHECK-DAG: %[[FULL_POISON:.*]] = builtin.unrealized_conversion_cast %[[UB_POISON]] {{.*}} !llvm.array<3 x vector<2xf32>>
-//       CHECK: %[[PART_RANK1:.*]]  = llvm.insertelement %[[ARG_SCALAR]]
-//       CHECK: %[[FULL_RANK1:.*]]  = llvm.shufflevector %[[PART_RANK1]]
-//       CHECK: %[[INSERT1:.*]]     = llvm.insertvalue %[[FULL_RANK1]], %[[FULL_POISON]][0] : !llvm.array<3 x vector<2xf32>>
-//       CHECK: %[[INSERT2:.*]]     = llvm.insertvalue %[[FULL_RANK1]], %[[INSERT1]][1] : !llvm.array<3 x vector<2xf32>>
-//       CHECK: %[[INSERT3:.*]]     = llvm.insertvalue %[[FULL_RANK1]], %[[INSERT2]][2] : !llvm.array<3 x vector<2xf32>>
-//       CHECK: %[[FINAL:.*]]       = builtin.unrealized_conversion_cast %[[INSERT3]] : !llvm.array<3 x vector<2xf32>> to vector<3x2xf32>
-//       CHECK: return %[[FINAL]] : vector<3x2xf32>
+// CHECK-SAME:  %[[A:.*]]: vector<f32>)
+//       CHECK: %[[T0:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<f32> to vector<1xf32>
+//       CHECK: %[[T1:.*]] = ub.poison : vector<3x2xf32>
+//       CHECK: %[[T2:.*]] = builtin.unrealized_conversion_cast %[[T1]] : vector<3x2xf32> to !llvm.array<3 x vector<2xf32>>
+//       CHECK: %[[T4:.*]] = llvm.mlir.constant(0 : i64) : i64
+//       CHECK: %[[T5:.*]] = llvm.extractelement %[[T0]][%[[T4]] : i64] : vector<1xf32>
+//       CHECK: %[[T6Insert:.*]] = llvm.insertelement %[[T5]]
+//       CHECK: %[[T6:.*]] = llvm.shufflevector %[[T6Insert]]
+//       CHECK: %[[T7:.*]] = llvm.insertvalue %[[T6]], %[[T2]][0] : !llvm.array<3 x vector<2xf32>>
+//       CHECK: %[[T8:.*]] = llvm.insertvalue %[[T6]], %[[T7]][1] : !llvm.array<3 x vector<2xf32>>
+//       CHECK: %[[T9:.*]] = llvm.insertvalue %[[T6]], %[[T8]][2] : !llvm.array<3 x vector<2xf32>>
+//       CHECK: %[[T10:.*]] = builtin.unrealized_conversion_cast %[[T9]] : !llvm.array<3 x vector<2xf32>> to vector<3x2xf32>
+//       CHECK: return %[[T10]] : vector<3x2xf32>
 
 // -----
 
@@ -1488,7 +1487,7 @@ func.func @constant_mask_2d() -> vector<4x4xi1> {
 }
 
 // CHECK-LABEL: func @constant_mask_2d
-// CHECK: %[[VAL_0:.*]] = arith.constant
+// CHECK: %[[VAL_0:.*]] = arith.constant 
 // CHECK-SAME{LITERAL}: dense<[[true, true, false, false], [true, true, false, false], [false, false, false, false], [false, false, false, false]]> : vector<4x4xi1>
 // CHECK: return %[[VAL_0]] : vector<4x4xi1>
 
