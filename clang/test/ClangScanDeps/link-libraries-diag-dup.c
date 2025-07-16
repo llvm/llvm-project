@@ -6,14 +6,29 @@
 module A {
   umbrella header "A.h"
 
+  module B {
+    header "B.h"
+    link "libraryB"
+  }
+
   link "libraryA"
   link "libraryA"
 }
 
+module C {
+  header "C.h"
+  link "libraryA"
+}
+
 //--- A.h
+#include "B.h"
+//--- B.h
+// empty
+//--- C.h
 // empty
 //--- TU.c
 #include "A.h"
+#include "C.h"
 
 //--- cdb.json.template
 [{
@@ -26,5 +41,7 @@ module A {
 // RUN: not clang-scan-deps -compilation-database %t/cdb.json -format \
 // RUN:   experimental-full 2>&1 | FileCheck %s
 
-// CHECK:      module.modulemap:5:3: error: redeclaration of link library 'libraryA'
-// CHECK-NEXT: module.modulemap:4:3: note: previously declared here
+// CHECK:      module.modulemap:6:5: error: link decl is not allowed in submodules
+// CHECK-NEXT: module.modulemap:10:3: error: redeclaration of link library 'libraryA'
+// CHECK-NEXT: module.modulemap:9:3: note: previously declared here
+// CHECK-NOT: module.modulemap:15:3: error: redeclaration of link library 'libraryA'

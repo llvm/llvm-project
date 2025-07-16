@@ -1570,10 +1570,6 @@ class ModuleMapLoader {
   /// 'textual' to match the original intent.
   llvm::SmallPtrSet<Module *, 2> UsesRequiresExcludedHack;
 
-  /// Tracks the link library decls in the module map.
-  llvm::DenseMap<Module *, llvm::StringMap<SourceLocation>>
-      LinkLibraryLibStrMap;
-
   void handleModuleDecl(const modulemap::ModuleDecl &MD);
   void handleExternModuleDecl(const modulemap::ExternModuleDecl &EMD);
   void handleRequiresDecl(const modulemap::RequiresDecl &RD);
@@ -2071,14 +2067,6 @@ void ModuleMapLoader::handleUseDecl(const modulemap::UseDecl &UD) {
 }
 
 void ModuleMapLoader::handleLinkDecl(const modulemap::LinkDecl &LD) {
-  auto &LibStrMap = LinkLibraryLibStrMap[ActiveModule];
-  auto [It, Inserted] =
-      LibStrMap.insert(std::make_pair(LD.Library, LD.Location));
-  if (!Inserted) {
-    Diags.Report(LD.Location, diag::err_mmap_link_redecalration) << LD.Library;
-    Diags.Report(It->second, diag::note_mmap_prev_link_declaration);
-    return;
-  }
   ActiveModule->LinkLibraries.push_back(
       Module::LinkLibrary(std::string{LD.Library}, LD.Framework));
 }

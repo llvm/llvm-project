@@ -118,7 +118,8 @@ struct ModuleMapFileParser {
   std::optional<ExcludeDecl> parseExcludeDecl(clang::SourceLocation LeadingLoc);
   std::optional<UmbrellaDirDecl>
   parseUmbrellaDirDecl(SourceLocation UmbrellaLoc);
-  std::optional<LinkDecl> parseLinkDecl();
+  std::optional<LinkDecl>
+  parseLinkDecl(llvm::StringMap<SourceLocation> &SeenLinkDecl, bool TopLevel);
 
   SourceLocation consumeToken();
   void skipUntil(MMToken::TokenKind K);
@@ -325,6 +326,7 @@ std::optional<ModuleDecl> ModuleMapFileParser::parseModuleDecl(bool TopLevel) {
   SourceLocation LBraceLoc = consumeToken();
 
   bool Done = false;
+  llvm::StringMap<SourceLocation> SeenLinkDecl;
   do {
     std::optional<Decl> SubDecl;
     switch (Tok.Kind) {
@@ -405,7 +407,7 @@ std::optional<ModuleDecl> ModuleMapFileParser::parseModuleDecl(bool TopLevel) {
       break;
 
     case MMToken::LinkKeyword:
-      SubDecl = parseLinkDecl();
+      SubDecl = parseLinkDecl(SeenLinkDecl, TopLevel);
       break;
 
     default:
@@ -822,7 +824,8 @@ ModuleMapFileParser::parseUmbrellaDirDecl(clang::SourceLocation UmbrellaLoc) {
 ///
 ///   module-declaration:
 ///     'link' 'framework'[opt] string-literal
-std::optional<LinkDecl> ModuleMapFileParser::parseLinkDecl() {
+std::optional<LinkDecl> ModuleMapFileParser::parseLinkDecl(
+    llvm::StringMap<SourceLocation> &SeenLinkDecl, bool TopLevel) {
   assert(Tok.is(MMToken::LinkKeyword));
   LinkDecl LD;
   LD.Location = consumeToken();
@@ -838,12 +841,33 @@ std::optional<LinkDecl> ModuleMapFileParser::parseLinkDecl() {
   if (!Tok.is(MMToken::StringLiteral)) {
     Diags.Report(Tok.getLocation(), diag::err_mmap_expected_library_name)
         << LD.Framework << SourceRange(LD.Location);
+    consumeToken();
     HadError = true;
     return std::nullopt;
   }
 
-  LD.Library = Tok.getString();
+  StringRef Library = Tok.getString();
+
+  LD.Library = Library;
   consumeToken();
+
+  // Make sure we eat all the tokens when we report the errors so parsing
+  // can continue.
+  if (!TopLevel) {
+    Diags.Report(LD.Location, diag::err_mmap_submodule_link_decl);
+    HadError = true;
+    return std::nullopt;
+  }
+
+  auto [It, Inserted] =
+      SeenLinkDecl.insert(std::make_pair(Library, LD.Location));
+  if (!Inserted) {
+    Diags.Report(LD.Location, diag::err_mmap_link_redecalration) << Library;
+    Diags.Report(It->second, diag::note_mmap_prev_link_declaration);
+    HadError = true;
+    return std::nullopt;
+  }
+
   return std::move(LD);
 }
 

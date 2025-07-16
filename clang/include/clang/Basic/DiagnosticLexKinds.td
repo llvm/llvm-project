@@ -911,6 +911,8 @@ def err_mmap_expected_feature : Error<"expected a feature name">;
 def err_mmap_expected_attribute : Error<"expected an attribute name">;
 def err_mmap_link_redecalration : Error<"redeclaration of link library '%0'">;
 def note_mmap_prev_link_declaration : Note<"previously declared here">;
+def err_mmap_submodule_link_decl
+    : Error<"link declaration is not allowed in submodules">;
 def warn_mmap_unknown_attribute : Warning<"unknown attribute '%0'">,
   InGroup<IgnoredAttributes>;
 def warn_mmap_mismatched_private_submodule : Warning<
