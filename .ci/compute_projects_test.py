@@ -183,13 +183,12 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(env_variables["projects_to_build"], "clang;flang;llvm;mlir")
         self.assertEqual(
-            env_variables["project_check_targets"],
-            "check-flang check-mlir",
+            env_variables["project_check_targets"], "check-flang check-mlir",
         )
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
-        self.assertEqual(env_variables["enable_cir"], "ON")
+        self.assertEqual(env_variables["enable_cir"], "OFF")
 
     def test_flang(self):
         env_variables = compute_projects.get_env_variables(

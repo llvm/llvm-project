@@ -196,11 +196,7 @@ def _compute_projects_to_build(
     projects_to_test: Set[str], runtimes: Set[str]
 ) -> Set[str]:
     projects_with_deps = _add_dependencies(projects_to_test, runtimes)
-    # CIR is used as a pseudo-project in this script. We detect modifications
-    # to clang's CIR-specific subdirectories and add CIR as a modified project
-    # if a file in these directories is modified, but we need to remove it
-    # explicitly here.
-    return projects_with_deps - {"CIR"}
+    return projects_with_deps
 
 
 def _compute_project_check_targets(projects_to_test: Set[str]) -> Set[str]:
@@ -261,9 +257,8 @@ def _get_modified_projects(modified_files: list[str]) -> Set[str]:
             or path_parts[:3] == ("clang", "test", "CIR")
             or path_parts[:4] == ("clang", "include", "clang", "CIR")
         ):
-            modified_projects.add("clang")
             modified_projects.add("CIR")
-            continue
+            # Fall through to add clang.
         modified_projects.add(pathlib.Path(modified_file).parts[0])
     return modified_projects
 
@@ -285,10 +280,11 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
         runtimes_to_test_needs_reconfig
     )
 
-    # Check if both clang and mlir are in projects_to_build to enable CIR
-    enable_cir = (
-        "ON" if "clang" in projects_to_build and "mlir" in projects_to_build else "OFF"
-    )
+    # CIR is used as a pseudo-project in this script. It is built as part of the
+    # clang build, but it requires an explicit option to enable. We set that
+    # option here, and remove it from the projects_to_build list.
+    enable_cir = "ON" if "CIR" in projects_to_build else "OFF"
+    projects_to_build.discard("CIR")
 
     # We use a semicolon to separate the projects/runtimes as they get passed
     # to the CMake invocation and thus we need to use the CMake list separator
