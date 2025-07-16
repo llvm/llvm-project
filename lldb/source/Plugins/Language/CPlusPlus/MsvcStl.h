@@ -51,6 +51,11 @@ SyntheticChildrenFrontEnd *
 MsvcStlTupleSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                      lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::vector<>
+bool IsMsvcStlVector(ValueObject &valobj);
+lldb_private::SyntheticChildrenFrontEnd *
+MsvcStlVectorSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
