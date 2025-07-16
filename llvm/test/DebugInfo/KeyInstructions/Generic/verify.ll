@@ -7,7 +7,7 @@
 
 define dso_local void @f() !dbg !10 {
 entry:
-; include non-key location to check verifier is checking the whole function.
+; Include non-key location to check verifier is checking the whole function.
   %0 = add i32 0, 0, !dbg !14
   ret void, !dbg !13
 }
