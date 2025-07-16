@@ -10,7 +10,9 @@
 #define blake3_hasher llvm_blake3_hasher
 #define blake3_chunk_state llvm_blake3_chunk_state
 #define blake3_compress_in_place llvm_blake3_compress_in_place
+#define blake3_compress_subtree_wide llvm_blake3_compress_subtree_wide
 #define blake3_compress_xof llvm_blake3_compress_xof
+#define blake3_xof_many llvm_blake3_xof_many
 #define blake3_hash_many llvm_blake3_hash_many
 #define blake3_simd_degree llvm_blake3_simd_degree
 #define blake3_compress_in_place_portable llvm_blake3_compress_in_place_portable
