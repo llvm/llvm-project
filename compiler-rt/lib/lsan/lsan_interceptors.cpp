@@ -390,7 +390,7 @@ INTERCEPTOR(void, thr_exit, thid_t *state) {
   ThreadFinish();
   REAL(thr_exit)(state);
 }
-#define LSAN_MAYBE_INTERCEPT_THR_EXIT INTERCEPT_FUNCTION(thr_exit)
+#  define LSAN_MAYBE_INTERCEPT_THR_EXIT INTERCEPT_FUNCTION(thr_exit)
 #else
 #define LSAN_MAYBE_INTERCEPT_THR_EXIT
 #endif

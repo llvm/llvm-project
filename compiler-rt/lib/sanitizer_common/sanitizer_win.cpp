@@ -108,9 +108,7 @@ int internal_dlinfo(void *handle, int request, void *p) {
 
 // In contrast to POSIX, on Windows GetCurrentThreadId()
 // returns a system-unique identifier.
-thid_t GetTid() {
-  return GetCurrentThreadId();
-}
+thid_t GetTid() { return GetCurrentThreadId(); }
 
 uptr GetThreadSelf() {
   return GetTid();

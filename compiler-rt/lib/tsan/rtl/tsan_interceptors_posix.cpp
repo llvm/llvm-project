@@ -2893,7 +2893,7 @@ TSAN_INTERCEPTOR(void, thr_exit, thid_t *state) {
   DestroyThreadState();
   REAL(thr_exit(state));
 }
-#define TSAN_MAYBE_INTERCEPT_THR_EXIT TSAN_INTERCEPT(thr_exit)
+#  define TSAN_MAYBE_INTERCEPT_THR_EXIT TSAN_INTERCEPT(thr_exit)
 #else
 #define TSAN_MAYBE_INTERCEPT_THR_EXIT
 #endif
