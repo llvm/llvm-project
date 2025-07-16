@@ -4900,14 +4900,13 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // to the operand. So we first find the operand that is not guaranteed to be
   // poison.
   Value *MaybePoisonOperand = nullptr;
-  for (Use &U : OrigOpInst->operands()) {
-    if (isa<MetadataAsValue>(U.get()) ||
-        isGuaranteedNotToBeUndefOrPoison(U.get()) ||
+  for (Value *V : OrigOpInst->operands()) {
+    if (isa<MetadataAsValue>(V) || isGuaranteedNotToBeUndefOrPoison(V) ||
         // Treat identical operands as a single operand.
-        (MaybePoisonOperand && MaybePoisonOperand == U.get()))
+        (MaybePoisonOperand && MaybePoisonOperand == V))
       continue;
     if (!MaybePoisonOperand)
-      MaybePoisonOperand = U.get();
+      MaybePoisonOperand = V;
     else
       return nullptr;
   }
