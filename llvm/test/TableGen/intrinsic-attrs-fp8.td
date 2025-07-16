@@ -24,8 +24,8 @@ def int_aarch64_get_fpmr_set_za   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [In
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoSync),
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoFree),
 // CHECK-NEXT:      Attribute::get(C, Attribute::WillReturn),
-// CHECK-NEXT:      // ArgMem: ModRef, InaccessibleMem: ModRef, ErrnoMem: ModRef, AARCH64_FPMR: Ref, AARCH64_ZA: Mod, Other: ModRef
-// CHECK-NEXT:      Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(3711)),
+// CHECK-NEXT:      // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, AARCH64_FPMR: Ref, AARCH64_ZA: Mod, Other: NoModRef
+// CHECK-NEXT:      Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(576)),
 // CHECK-NEXT:    });
 // CHECK-NEXT:  case 1:
 // CHECK-NEXT:    return AttributeSet::get(C, {
@@ -34,8 +34,8 @@ def int_aarch64_get_fpmr_set_za   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [In
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoSync),
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoFree),
 // CHECK-NEXT:      Attribute::get(C, Attribute::WillReturn),
-// CHECK-NEXT:      // ArgMem: ModRef, InaccessibleMem: ModRef, ErrnoMem: ModRef, AARCH64_FPMR: ModRef, AARCH64_ZA: Ref, Other: ModRef
-// CHECK-NEXT:      Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(3583)),
+// CHECK-NEXT:      // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, AARCH64_FPMR: NoModRef, AARCH64_ZA: Ref, Other: NoModRef
+// CHECK-NEXT:      Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(256)),
 // CHECK-NEXT:    });
 // CHECK-NEXT:  case 2:
 // CHECK-NEXT:    return AttributeSet::get(C, {
@@ -44,8 +44,8 @@ def int_aarch64_get_fpmr_set_za   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [In
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoSync),
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoFree),
 // CHECK-NEXT:      Attribute::get(C, Attribute::WillReturn),
-// CHECK-NEXT:      // ArgMem: ModRef, InaccessibleMem: ModRef, ErrnoMem: ModRef, AARCH64_FPMR: Mod, AARCH64_ZA: ModRef, Other: ModRef
-// CHECK-NEXT:      Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(4031)),
+// CHECK-NEXT:      // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, AARCH64_FPMR: Mod, AARCH64_ZA: NoModRef, Other: NoModRef
+// CHECK-NEXT:      Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(128)),
 
 // CHECK: static constexpr uint16_t IntrinsicsToAttributesMap[] = {
 // CHECK-NEXT:    0 << 8 | 0, // llvm.aarch64.get.fpmr.set.za
