@@ -9589,7 +9589,9 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
     // bundle boundary, save the range [RangeBegin, RangeEnd).
     if (RangeLen <= 1)
       return;
-    if (RangeBegin->isBundledWithPred())
+    if (!RangeBegin.isEnd() && RangeBegin->isBundledWithPred())
+      return;
+    if (!RangeEnd.isEnd() && RangeEnd->isBundledWithPred())
       return;
     Ranges.emplace_back(RangeBegin, RangeEnd);
   };
