@@ -3538,13 +3538,12 @@ static void printBindName(mlir::OpAsmPrinter &p, mlir::Operation *op,
   }
 
   // Print the combined sequence
-  if (!allBindNames.empty()) {
+  if (!allBindNames.empty())
     llvm::interleaveComma(llvm::zip(allBindNames, allDeviceTypes), p,
                           [&](const auto &pair) {
                             p << std::get<0>(pair);
                             printSingleDeviceType(p, std::get<1>(pair));
                           });
-  }
 }
 
 static ParseResult parseRoutineGangClause(OpAsmParser &parser,

@@ -4400,9 +4400,8 @@ getAttributeValueByDeviceType(llvm::SmallVector<mlir::Attribute> &attributes,
 static std::optional<llvm::StringRef> getBindNameStringValue(
     const std::optional<std::variant<mlir::SymbolRefAttr, mlir::StringAttr>>
         &bindNameValue) {
-  if (!bindNameValue.has_value()) {
+  if (!bindNameValue.has_value())
     return std::nullopt;
-  }
 
   return std::visit(
       [](const auto &attr) -> std::optional<llvm::StringRef> {
