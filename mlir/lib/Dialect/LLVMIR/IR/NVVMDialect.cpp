@@ -807,7 +807,7 @@ LogicalResult NVVM::LdMatrixOp::verify() {
 
   Type i32 = IntegerType::get(getContext(), 32);
   uint32_t num = getNum();
-  if (getShape() == LdStMatrixShape::M16N16) {
+  if (getShape().getM() == 16 && getShape().getN() == 16) {
     num *= 2;
   }
   if (num == 1 && getType() != i32)

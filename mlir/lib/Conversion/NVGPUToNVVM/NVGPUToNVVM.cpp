@@ -285,12 +285,13 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
     Value srcPtr =
         getStridedElementPtr(rewriter, b.getLoc(), srcMemrefType,
                              adaptor.getSrcMemref(), adaptor.getIndices());
+    auto shape = NVVM::LdStMatrixShapeAttr::get(rewriter.getContext(), 8, 8);
     Value ldMatrixResult = b.create<NVVM::LdMatrixOp>(
         ldMatrixResultType, srcPtr,
         /*num=*/op.getNumTiles(),
         /*layout=*/op.getTranspose() ? NVVM::MMALayout::col
                                      : NVVM::MMALayout::row,
-        NVVM::LdStMatrixShape::M8N8, NVVM::LdStMatrixEltType::B16);
+        /*shape=*/shape, /*elttype=*/NVVM::LdStMatrixEltType::B16);
 
     // The ldmatrix operation returns either a single i32 value or a struct of
     // i32 values. Here we unpack those values and cast them back to their
