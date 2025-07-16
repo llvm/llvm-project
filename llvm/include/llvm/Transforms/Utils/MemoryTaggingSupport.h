@@ -23,6 +23,7 @@
 
 namespace llvm {
 class DominatorTree;
+class DbgVariableIntrinsic;
 class IntrinsicInst;
 class PostDominatorTree;
 class AllocaInst;
@@ -52,6 +53,8 @@ struct AllocaInfo {
   AllocaInst *AI;
   SmallVector<IntrinsicInst *, 2> LifetimeStart;
   SmallVector<IntrinsicInst *, 2> LifetimeEnd;
+  SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
+  // Non-intrinsic records of variable locations.
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
 };
 
