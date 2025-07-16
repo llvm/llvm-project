@@ -10642,7 +10642,7 @@ def warn_dangling_reference_captured_by_unknown : Warning<
    "the full-expression">, InGroup<DanglingCapture>;
 
 def warn_experimental_lifetime_safety_dummy_warning : Warning<
-   "todo: remove this warning after we have atleast one warning based on the lifetime analysis">,
+   "todo: remove this warning after we have atleast one warning based on the lifetime analysis">, 
    InGroup<LifetimeSafety>, DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
@@ -12540,7 +12540,7 @@ def warn_zero_as_null_pointer_constant : Warning<
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
 def warn_not_eliding_copy_on_return : Warning<
-  "not eliding copy on return">,
+  "not eliding copy on return">, 
   InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<
