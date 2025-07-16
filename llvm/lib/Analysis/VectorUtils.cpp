@@ -264,6 +264,48 @@ Intrinsic::ID llvm::getDeinterleaveIntrinsicID(unsigned Factor) {
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
 
+unsigned llvm::getInterleaveIntrinsicFactor(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::vector_interleave2:
+    return 2;
+  case Intrinsic::vector_interleave3:
+    return 3;
+  case Intrinsic::vector_interleave4:
+    return 4;
+  case Intrinsic::vector_interleave5:
+    return 5;
+  case Intrinsic::vector_interleave6:
+    return 6;
+  case Intrinsic::vector_interleave7:
+    return 7;
+  case Intrinsic::vector_interleave8:
+    return 8;
+  default:
+    return 0;
+  }
+}
+
+unsigned llvm::getDeinterleaveIntrinsicFactor(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::vector_deinterleave2:
+    return 2;
+  case Intrinsic::vector_deinterleave3:
+    return 3;
+  case Intrinsic::vector_deinterleave4:
+    return 4;
+  case Intrinsic::vector_deinterleave5:
+    return 5;
+  case Intrinsic::vector_deinterleave6:
+    return 6;
+  case Intrinsic::vector_deinterleave7:
+    return 7;
+  case Intrinsic::vector_deinterleave8:
+    return 8;
+  default:
+    return 0;
+  }
+}
+
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
 /// from the vector.

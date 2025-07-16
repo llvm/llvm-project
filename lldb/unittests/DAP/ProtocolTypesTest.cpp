@@ -605,15 +605,17 @@ TEST(ProtocolTypesTest, DisassembledInstruction) {
       parse<DisassembledInstruction>(R"({"address":1})",
                                      "disassemblyInstruction"),
       FailedWithMessage("expected string at disassemblyInstruction.address"));
-  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(R"({"address":"-1"})",
-                                                      "disassemblyInstruction"),
-                       FailedWithMessage("expected string encoded uint64_t at "
-                                         "disassemblyInstruction.address"));
-  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(
-                           R"({"address":"0xfffffffffffffffffffffffffff"})",
-                           "disassemblyInstruction"),
-                       FailedWithMessage("expected string encoded uint64_t at "
-                                         "disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(
+      parse<DisassembledInstruction>(R"({"address":"-1"})",
+                                     "disassemblyInstruction"),
+      FailedWithMessage(
+          "malformed memory reference at disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(
+      parse<DisassembledInstruction>(
+          R"({"address":"0xfffffffffffffffffffffffffff"})",
+          "disassemblyInstruction"),
+      FailedWithMessage(
+          "malformed memory reference at disassemblyInstruction.address"));
 }
 
 TEST(ProtocolTypesTest, Thread) {
@@ -780,7 +782,7 @@ TEST(ProtocolTypesTest, ReadMemoryArguments) {
 
 TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
   ReadMemoryResponseBody response;
-  response.address = "0xdeadbeef";
+  response.address = 0xdeadbeef;
   const std::string data_str = "hello world!";
   std::transform(data_str.begin(), data_str.end(),
                  std::back_inserter(response.data),
@@ -788,7 +790,7 @@ TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
   response.unreadableBytes = 1;
 
   Expected<Value> expected = json::parse(
-      R"({ "address": "0xdeadbeef", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
+      R"({ "address": "0xDEADBEEF", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
 }
@@ -880,6 +882,123 @@ TEST(ProtocolTypesTest, ModulesResponseBody) {
                     { "id": "second id", "name": "second name"}
                   ],
                   "totalModules": 2 })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(response));
+}
+
+TEST(ProtocolTypesTest, VariablePresentationHint) {
+  VariablePresentationHint hint;
+  hint.kind = "kind";
+  hint.attributes = {"a", "b", "c"};
+  hint.visibility = "public";
+  hint.lazy = true;
+
+  const StringRef json = R"({
+  "attributes": [
+    "a",
+    "b",
+    "c"
+  ],
+  "kind": "kind",
+  "lazy": true,
+  "visibility": "public"
+})";
+
+  EXPECT_EQ(pp(Value(hint)), json);
+  EXPECT_THAT_EXPECTED(json::parse(json), HasValue(Value(hint)));
+}
+
+TEST(ProtocolTypesTest, Variable) {
+  Variable var;
+  var.name = "var1";
+  var.variablesReference = 42;
+  var.value = "value";
+  var.type = "type";
+
+  VariablePresentationHint hint;
+  hint.kind = "kind";
+  var.presentationHint = std::move(hint);
+  var.evaluateName = "my_name";
+  var.namedVariables = 7;
+  var.indexedVariables = 7;
+  var.memoryReference = 291u;
+  var.declarationLocationReference = 24;
+  var.valueLocationReference = 100;
+
+  const StringRef json = R"({
+  "declarationLocationReference": 24,
+  "evaluateName": "my_name",
+  "indexedVariables": 7,
+  "memoryReference": "0x123",
+  "name": "var1",
+  "namedVariables": 7,
+  "presentationHint": {
+    "kind": "kind"
+  },
+  "type": "type",
+  "value": "value",
+  "valueLocationReference": 100,
+  "variablesReference": 42
+})";
+
+  EXPECT_EQ(pp(Value(var)), json);
+  EXPECT_THAT_EXPECTED(json::parse(json), HasValue(Value(var)));
+}
+
+TEST(ProtocolTypesTest, VariablesArguments) {
+  llvm::Expected<VariablesArguments> expected = parse<VariablesArguments>(R"({
+    "variablesReference": 42,
+    "filter": "indexed",
+    "start": 10,
+    "count": 5,
+    "format": {
+      "hex": true
+    }
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->variablesReference, 42u);
+  EXPECT_EQ(expected->filter, VariablesArguments::eVariablesFilterIndexed);
+  EXPECT_EQ(expected->start, 10u);
+  EXPECT_EQ(expected->count, 5u);
+  EXPECT_EQ(expected->format->hex, true);
+
+  EXPECT_THAT_EXPECTED(
+      parse<VariablesArguments>(R"({})"),
+      FailedWithMessage("missing value at (root).variablesReference"));
+  EXPECT_THAT_EXPECTED(
+      parse<VariablesArguments>(
+          R"({"variablesReference": 42, "filter": "my-filter"})"),
+      FailedWithMessage(
+          "unexpected value, expected 'named' or 'indexed' at (root).filter"));
+}
+
+TEST(ProtocolTypesTest, VariablesResponseBody) {
+  Variable var1;
+  var1.name = "var1";
+  var1.variablesReference = 42;
+  var1.value = "<var1-value>";
+
+  Variable var2;
+  var2.name = "var2";
+  var2.variablesReference = 3;
+  var2.value = "<var2-value>";
+
+  VariablesResponseBody response{{var1, var2}};
+
+  Expected<json::Value> expected = json::parse(R"({
+      "variables": [
+        {
+          "name": "var1",
+          "value": "<var1-value>",
+          "variablesReference": 42
+        },
+        {
+          "name": "var2",
+          "value": "<var2-value>",
+          "variablesReference": 3
+        }
+      ]
+    })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
 }

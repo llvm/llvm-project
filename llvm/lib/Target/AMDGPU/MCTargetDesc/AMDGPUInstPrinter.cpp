@@ -76,6 +76,18 @@ void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
   O << formatHex(MI->getOperand(OpNo).getImm() & 0xffffffff);
 }
 
+void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
+  // KIMM64
+  // This part needs to align with AMDGPUInstPrinter::printImmediate64.
+  uint64_t Imm = MI->getOperand(OpNo).getImm();
+  if (STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Imm))
+    O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
+  else
+    O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
+}
+
 void AMDGPUInstPrinter::printNamedBit(const MCInst *MI, unsigned OpNo,
                                       raw_ostream &O, StringRef BitName) {
   if (MI->getOperand(OpNo).getImm()) {
@@ -604,15 +616,21 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
   else if (Imm == 0x3fc45f306dc9c882 &&
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494309189532";
-  else if (IsFP) {
-    assert(AMDGPU::isValid32BitLiteral(Imm, true));
-    O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
-  } else {
-    assert(isUInt<32>(Imm) || isInt<32>(Imm));
+  else {
+    // This part needs to align with AMDGPUOperand::addLiteralImmOperand.
+    if (IsFP) {
+      if (STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Imm))
+        O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
+      else
+        O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
+      return;
+    }
 
-    // In rare situations, we will have a 32-bit literal in a 64-bit
-    // operand. This is technically allowed for the encoding of s_mov_b64.
-    O << formatHex(static_cast<uint64_t>(Imm));
+    if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+        (!isInt<32>(Imm) || !isUInt<32>(Imm)))
+      O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
+    else
+      O << formatHex(static_cast<uint64_t>(Imm));
   }
 }
 
@@ -1305,6 +1323,16 @@ void AMDGPUInstPrinter::printIndexKey8bit(const MCInst *MI, unsigned OpNo,
 }
 
 void AMDGPUInstPrinter::printIndexKey16bit(const MCInst *MI, unsigned OpNo,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  auto Imm = MI->getOperand(OpNo).getImm() & 0x7;
+  if (Imm == 0)
+    return;
+
+  O << " index_key:" << Imm;
+}
+
+void AMDGPUInstPrinter::printIndexKey32bit(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
   auto Imm = MI->getOperand(OpNo).getImm() & 0x7;

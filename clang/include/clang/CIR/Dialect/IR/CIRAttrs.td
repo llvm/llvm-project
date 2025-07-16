@@ -10,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+#ifndef CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+#define CLANG_CIR_DIALECT_IR_CIRATTRS_TD
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
-include "mlir/IR/EnumAttr.td"
 
-include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
+include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIREnumAttr.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Attrs
@@ -40,21 +40,6 @@ class CIR_TypedAttr<string name, string attrMnemonic, list<Trait> traits = []>
   ];
 
   let assemblyFormat = [{}];
-}
-
-class CIR_I32EnumAttr<string name, string summary, list<I32EnumAttrCase> cases>
-    : I32EnumAttr<name, summary, cases> {
-  let cppNamespace = "::cir";
-}
-
-class CIR_I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases>
-    : I64EnumAttr<name, summary, cases> {
-  let cppNamespace = "::cir";
-}
-
-class CIR_EnumAttr<EnumAttrInfo info, string name = "", list<Trait> traits = []>
-    : EnumAttr<CIR_Dialect, info, name, traits> {
-  let assemblyFormat = "`<` $value `>`";
 }
 
 class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
@@ -489,31 +474,31 @@ def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
       is 4 bits wide, starts at offset 0, and is signed.
   }];
   let parameters = (ins "mlir::StringAttr":$name,
-                        "mlir::Type":$storageType,
+                        "mlir::Type":$storage_type,
                         "uint64_t":$size,
                         "uint64_t":$offset,
-                        "bool":$isSigned);
+                        "bool":$is_signed);
 
   let assemblyFormat = [{`<` struct($name,
-                                    $storageType,
+                                    $storage_type,
                                     $size,
                                     $offset,
-                                    $isSigned)
+                                    $is_signed)
                          `>`
                         }];
 
   let builders = [
     AttrBuilder<(ins "llvm::StringRef":$name,
-                     "mlir::Type":$storageType,
+                     "mlir::Type":$storage_type,
                      "uint64_t":$size,
                      "uint64_t":$offset,
-                     "bool":$isSigned
+                     "bool":$is_signed
                      ), [{
-      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), storageType,
-                   size, offset, isSigned);
+      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), storage_type,
+                   size, offset, is_signed);
     }]>
   ];
 }
 
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
+#endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

@@ -55,6 +55,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -709,7 +710,8 @@ AST_MATCHER(FieldDecl, isBitField) {
 /// fieldDecl(hasBitWidth(2))
 ///   matches 'int a;' and 'int c;' but not 'int b;'.
 AST_MATCHER_P(FieldDecl, hasBitWidth, unsigned, Width) {
-  return Node.isBitField() && Node.getBitWidthValue() == Width;
+  return Node.isBitField() && Node.hasConstantIntegerBitWidth() &&
+         Node.getBitWidthValue() == Width;
 }
 
 /// Matches non-static data members that have an in-class initializer.
@@ -1362,6 +1364,26 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, CXXDeductionGuideDecl>
 /// \endcode
 extern const internal::VariadicDynCastAllOfMatcher<Decl, ConceptDecl>
     conceptDecl;
+
+/// Matches concept requirement.
+///
+/// Example matches 'requires(T p) { *p; }'
+/// \code
+///   template<typename T>
+///   concept dereferencable = requires(T p) { *p; }
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Expr, RequiresExpr>
+    requiresExpr;
+
+/// Matches concept requirement body declaration.
+///
+/// Example matches '{ *p; }'
+/// \code
+///   template<typename T>
+///   concept dereferencable = requires(T p) { *p; }
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Decl, RequiresExprBodyDecl>
+    requiresExprBodyDecl;
 
 /// Matches variable declarations.
 ///

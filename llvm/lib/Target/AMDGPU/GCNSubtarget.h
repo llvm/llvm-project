@@ -231,6 +231,7 @@ protected:
   bool HasSALUFloatInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
+  bool Has64BitLiterals = false;
   bool HasBitOp3Insts = false;
   bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
@@ -1099,6 +1100,8 @@ public:
     return getGeneration() >= GFX10 || hasGFX940Insts();
   }
 
+  bool hasFmaakFmamkF64Insts() const { return hasGFX1250Insts(); }
+
   bool hasImageInsts() const {
     return HasImageInsts;
   }
@@ -1153,7 +1156,7 @@ public:
 
   bool hasMadF16() const;
 
-  bool hasMovB64() const { return GFX940Insts; }
+  bool hasMovB64() const { return GFX940Insts || GFX1250Insts; }
 
   bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
@@ -1374,6 +1377,8 @@ public:
     return HasMinimum3Maximum3F16;
   }
 
+  bool hasAddPC64Inst() const { return GFX1250Insts; }
+
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
@@ -1383,6 +1388,9 @@ public:
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1250.
   bool hasWaitXCnt() const { return HasWaitXcnt; }
+
+  // A single DWORD instructions can use a 64-bit literal.
+  bool has64BitLiterals() const { return Has64BitLiterals; }
 
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
@@ -1477,6 +1485,8 @@ public:
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
   bool hasGFX1250Insts() const { return GFX1250Insts; }
+
+  bool hasVOPD3() const { return GFX1250Insts; }
 
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }

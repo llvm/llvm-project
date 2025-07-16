@@ -4727,7 +4727,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // Build the type anyway.
       }
       DeclaratorChunk::ArrayTypeInfo &ATI = DeclType.Arr;
-      Expr *ArraySize = static_cast<Expr*>(ATI.NumElts);
+      Expr *ArraySize = ATI.NumElts;
       ArraySizeModifier ASM;
 
       // Microsoft property fields can have multiple sizeless array chunks
@@ -4860,7 +4860,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             S.Diag(First->getBeginLoc(),
                    diag::err_explicit_object_parameter_invalid)
                 << First->getSourceRange();
-
+          // Do let non-member function have explicit parameters
+          // to not break assumptions elsewhere in the code.
+          First->setExplicitObjectParameterLoc(SourceLocation());
           D.setInvalidType();
           AreDeclaratorChunksValid = false;
         }
@@ -6531,7 +6533,7 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       return;
     }
 
-    Expr *ASArgExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
+    Expr *ASArgExpr = Attr.getArgAsExpr(0);
     LangAS ASIdx;
     if (!BuildAddressSpaceIndex(S, ASIdx, ASArgExpr, Attr.getLoc())) {
       Attr.setInvalid();

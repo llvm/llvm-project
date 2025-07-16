@@ -1269,7 +1269,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::SubstringInquiry &x) {
   if (MaybeExpr substring{Analyze(x.v)}) {
     CHECK(x.source.size() >= 8);
-    int nameLen{x.source.end()[-1] == 'n' ? 3 /*LEN*/ : 4 /*KIND*/};
+    int nameLen{x.source.back() == 'n' ? 3 /*LEN*/ : 4 /*KIND*/};
     parser::CharBlock name{
         x.source.end() - nameLen, static_cast<std::size_t>(nameLen)};
     CHECK(name == "len" || name == "kind");
