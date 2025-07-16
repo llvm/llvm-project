@@ -79,13 +79,40 @@
 
 // CHECK-PASS-AUTO:   "-plugin-opt=opt-remarks-hotness-threshold=auto"
 
-// Check -foutput-file-base effect on -foptimization-record-file.
-// RUN: %clang --target=x86_64-linux -### -fuse-ld=lld -B%S/Inputs/lld -flto -fsave-optimization-record -foutput-file-base=/dir/file.ext %s 2>&1 | FileCheck %s -check-prefix=CHECK-BASE
-// RUN: %clang --target=x86_64-linux -### -o FOO -fuse-ld=lld -B%S/Inputs/lld -flto -fsave-optimization-record -foutput-file-base=/dir/file.ext %s 2>&1 | FileCheck %s -check-prefix=CHECK-BASE
-// RUN: %clang --target=x86_64-linux -### -fuse-ld=lld -B%S/Inputs/lld -flto -fsave-optimization-record -foptimization-record-file=user-file.ext -foutput-file-base=/dir/file.ext %s 2>&1 | FileCheck %s -check-prefix=CHECK-IGNORE-BASE
-
-// CHECK-BASE:      "-plugin-opt=opt-remarks-filename=/dir/file.ext.opt.ld.yaml"
-// CHECK-BASE-SAME: "-plugin-opt=opt-remarks-format=yaml"
-
-// CHECK-IGNORE-BASE:      "-plugin-opt=opt-remarks-filename=user-file.ext.opt.ld.yaml"
-// CHECK-IGNORE-BASE-SAME: "-plugin-opt=opt-remarks-format=yaml"
+// Check -foutput-file-base effect on -foptimization-record-file and
+// -gsplit-dwarf.
+//
+// DEFINE: %{RUN-BASE} = \
+// DEFINE:   %clang --target=x86_64-linux -### -fuse-ld=lld -B%S/Inputs/lld \
+// DEFINE:       -flto -fsave-optimization-record -gsplit-dwarf %s
+//
+// RUN: %{RUN-BASE} 2>&1 | FileCheck %s -check-prefix=CHECK-BASE-NONE
+//
+// RUN: %{RUN-BASE} -o FOO 2>&1 | FileCheck %s -check-prefix=CHECK-BASE-O
+//
+// RUN: %{RUN-BASE} -foutput-file-base=/dir/file.ext 2>&1 | \
+// RUN:   FileCheck %s -check-prefix=CHECK-BASE
+//
+// RUN: %{RUN-BASE} -o FOO -foutput-file-base=/dir/file.ext 2>&1 | \
+// RUN:   FileCheck %s -check-prefix=CHECK-BASE
+//
+// There is currently no option to ignore -foutput-file-base in the case of
+// -gsplit-dwarf.
+// RUN: %{RUN-BASE} -foutput-file-base=/dir/file.ext \
+// RUN:     -foptimization-record-file=user-file.ext 2>&1 | \
+// RUN:   FileCheck %s -check-prefix=CHECK-BASE-IGNORE
+//
+//        CHECK-BASE-NONE: "-plugin-opt=dwo_dir=a.out_dwo"
+//   CHECK-BASE-NONE-SAME: "-plugin-opt=opt-remarks-filename=a.out.opt.ld.yaml"
+//   CHECK-BASE-NONE-SAME: "-plugin-opt=opt-remarks-format=yaml"
+//
+//           CHECK-BASE-O: "-plugin-opt=dwo_dir=FOO_dwo"
+//      CHECK-BASE-O-SAME: "-plugin-opt=opt-remarks-filename=FOO.opt.ld.yaml"
+//      CHECK-BASE-O-SAME: "-plugin-opt=opt-remarks-format=yaml"
+//
+//             CHECK-BASE: "-plugin-opt=dwo_dir=/dir/file.ext_dwo"
+//        CHECK-BASE-SAME: "-plugin-opt=opt-remarks-filename=/dir/file.ext.opt.ld.yaml"
+//        CHECK-BASE-SAME: "-plugin-opt=opt-remarks-format=yaml"
+//
+//      CHECK-BASE-IGNORE: "-plugin-opt=opt-remarks-filename=user-file.ext.opt.ld.yaml"
+// CHECK-BASE-IGNORE-SAME: "-plugin-opt=opt-remarks-format=yaml"

@@ -1068,9 +1068,15 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     }
   }
 
-  if (Args.hasArg(options::OPT_gsplit_dwarf))
+  if (Args.hasArg(options::OPT_gsplit_dwarf)) {
+    StringRef F;
+    if (const Arg *A = Args.getLastArg(options::OPT_foutput_file_base))
+      F = A->getValue();
+    else
+      F = Output.getFilename();
     CmdArgs.push_back(Args.MakeArgString(
-        Twine(PluginOptPrefix) + "dwo_dir=" + Output.getFilename() + "_dwo"));
+        Twine(PluginOptPrefix) + "dwo_dir=" + F + "_dwo"));
+  }
 
   if (IsThinLTO && !IsOSAIX)
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "thinlto"));
