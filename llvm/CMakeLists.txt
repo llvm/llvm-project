@@ -181,8 +181,9 @@ endif()
 
 if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR "Clang is not enabled, but is required for lldb.")
-  endif ()
+    message(STATUS "Enabling clang as a dependency of lldb")
+    list(APPEND LLVM_ENABLE_PROJECTS "clang")
+  endif()
 endif ()
 
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
