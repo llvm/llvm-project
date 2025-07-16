@@ -72,6 +72,7 @@
 #include "llvm/CodeGen/PostRAMachineSink.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/ProcessImplicitDefs.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
@@ -171,8 +172,12 @@ public:
 
     // Target should override TM.Options.EnableIPRA in their target-specific
     // LLVMTM ctor. See TargetMachine::setGlobalISel for example.
-    if (Opt.EnableIPRA)
+    if (Opt.EnableIPRA) {
       TM.Options.EnableIPRA = *Opt.EnableIPRA;
+    } else {
+      // If not explicitly specified, use target default.
+      TM.Options.EnableIPRA |= TM.useIPRA();
+    }
 
     if (Opt.EnableGlobalISelAbort)
       TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;

@@ -4015,6 +4015,7 @@ cc_library(
         ":VectorToSCF",
         ":VectorToSPIRV",
         ":VectorToXeGPU",
+        ":XeVMToLLVM",
     ],
 )
 
@@ -4639,6 +4640,7 @@ cc_library(
         ":VCIXToLLVMIRTranslation",
         ":VectorToLLVM",
         ":VectorTransformOps",
+        ":XeVMToLLVM",
     ],
 )
 
@@ -5435,6 +5437,7 @@ cc_library(
         ":Transforms",
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
+        ":XeVMDialect",
         ":config",
         "//llvm:Core",
         "//llvm:MC",
@@ -13642,4 +13645,29 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/XeVMOps.td",
     deps = [":XeVMTdFiles"],
+)
+
+cc_library(
+    name = "XeVMToLLVM",
+    srcs = glob([
+        "lib/Conversion/XeVMToLLVM/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/XeVMToLLVM/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":XeVMDialect",
+        ":ConversionPassIncGen",
+	":ConvertToLLVMInterface",
+	":GPUDialect",
+        ":IR",
+	":LLVMCommonConversion",
+	":LLVMDialect",
+        ":Pass",
+	":Support",
+        ":TransformUtils",
+        ":VectorDialect",
+	"//llvm:Support",
+    ],
 )
