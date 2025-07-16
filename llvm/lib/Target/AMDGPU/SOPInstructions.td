@@ -154,6 +154,10 @@ class SOP1_1 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   let has_sdst = 0;
 }
 
+class SOP1_1_REGIMM64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs), (ins SSrc_b64:$src0), "$src0", pattern> {
+  let has_sdst = 0;
+}
 
 class UniformUnaryFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0),
@@ -317,6 +321,9 @@ let isTerminator = 1, isBarrier = 1, SchedRW = [WriteBranch] in {
 
 let isBranch = 1, isIndirectBranch = 1 in {
 def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
+
+let SubtargetPredicate = HasAddPC64Inst in
+def S_ADD_PC_I64 : SOP1_1_REGIMM64 <"s_add_pc_i64">;
 } // End isBranch = 1, isIndirectBranch = 1
 
 let isReturn = 1 in {
@@ -1764,6 +1771,27 @@ let OtherPredicates = [HasExportInsts] in
                 [(int_amdgcn_s_wait_kmcnt timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX12Plus, hasSideEffects = 1
 
+let SubtargetPredicate = isGFX1250Plus, hasSideEffects = 1 in {
+  def S_WAIT_ASYNCCNT :
+    SOPP_Pseudo<"s_wait_asynccnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_asynccnt timm:$simm16)]> {
+      let mayLoad = 1;
+      let mayStore = 1;
+      let maybeAtomic = 0;
+      let Uses = [ASYNCcnt];
+      let Defs = [ASYNCcnt];
+    }
+  def S_WAIT_TENSORCNT :
+    SOPP_Pseudo<"s_wait_tensorcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_tensorcnt timm:$simm16)]> {
+      let mayLoad = 1;
+      let mayStore = 1;
+      let maybeAtomic = 0;
+      let Uses = [TENSORcnt];
+      let Defs = [TENSORcnt];
+    }
+} // End SubtargetPredicate = isGFX1250Plus, hasSideEffects = 1
+
 let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
   def S_WAIT_XCNT :
     SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
@@ -2108,6 +2136,9 @@ defm S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_IMM_Real_gfx12<0x04f>;
 defm S_GET_BARRIER_STATE_IMM      : SOP1_IMM_Real_gfx12<0x050>;
 defm S_ALLOC_VGPR                 : SOP1_Real_gfx12<0x053>;
 defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12<0x058>;
+
+// GFX1250
+defm S_ADD_PC_I64                 : SOP1_Real_gfx12<0x04b>;
 
 //===----------------------------------------------------------------------===//
 // SOP1 - GFX1150, GFX12
@@ -2609,6 +2640,8 @@ defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12<0x049>;
 //===----------------------------------------------------------------------===//
 defm S_SETPRIO_INC_WG : SOPP_Real_32_gfx12<0x03e>;
 defm S_WAIT_XCNT      : SOPP_Real_32_gfx12<0x045>;
+defm S_WAIT_ASYNCCNT  : SOPP_Real_32_gfx12<0x04a>;
+defm S_WAIT_TENSORCNT : SOPP_Real_32_gfx12<0x04b>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX11, GFX12.

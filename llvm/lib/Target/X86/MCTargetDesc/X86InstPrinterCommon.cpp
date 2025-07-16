@@ -26,6 +26,10 @@
 
 using namespace llvm;
 
+void X86InstPrinterCommon::printExprOperand(raw_ostream &OS, const MCExpr &E) {
+  MAI.printExpr(OS, E);
+}
+
 void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
@@ -374,7 +378,7 @@ void X86InstPrinterCommon::printPCRelImm(const MCInst *MI, uint64_t Address,
       markup(O, Markup::Immediate) << formatHex((uint64_t)Address);
     } else {
       // Otherwise, just print the expression.
-      MAI.printExpr(O, *Op.getExpr());
+      printExprOperand(O, *Op.getExpr());
     }
   }
 }
