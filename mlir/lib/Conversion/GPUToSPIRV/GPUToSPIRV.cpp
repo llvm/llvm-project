@@ -385,9 +385,11 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
   if (auto attr = moduleOp->getAttrOfType<spirv::TargetEnvAttr>(
           spirv::getTargetEnvAttrName()))
     spvModule->setAttr(spirv::getTargetEnvAttrName(), attr);
-  for (const Attribute &targetAttr : moduleOp.getTargetsAttr())
-    if (auto spirvTargetEnvAttr = dyn_cast<spirv::TargetEnvAttr>(targetAttr))
-      spvModule->setAttr(spirv::getTargetEnvAttrName(), spirvTargetEnvAttr);
+  if (const ArrayAttr &targets = moduleOp.getTargetsAttr()) {
+    for (const Attribute &targetAttr : targets)
+      if (auto spirvTargetEnvAttr = dyn_cast<spirv::TargetEnvAttr>(targetAttr))
+        spvModule->setAttr(spirv::getTargetEnvAttrName(), spirvTargetEnvAttr);
+  }
 
   rewriter.eraseOp(moduleOp);
   return success();
