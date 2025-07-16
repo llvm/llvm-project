@@ -15264,13 +15264,13 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
   }
 
   if (Opcode == ISD::AssertZext && N0.getOpcode() == ISD::AND &&
-      N0.hasOneUse() && isa<ConstantSDNode>(N0.getOperand(1))) {
+      isa<ConstantSDNode>(N0.getOperand(1))) {
     const APInt &Mask = N0.getConstantOperandAPInt(1);
 
     // If we have (AssertZext (and (AssertSext X, iX), M), iY) and Y is smaller
     // than X, and the And doesn't change the lower iX bits, we can move the
     // AssertZext in front of the And and drop the AssertSext.
-    if (N0.getOperand(0).getOpcode() == ISD::AssertSext) {
+    if (N0.getOperand(0).getOpcode() == ISD::AssertSext && N0.hasOneUse()) {
       SDValue BigA = N0.getOperand(0);
       EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
       if (AssertVT.bitsLT(BigA_AssertVT) &&
@@ -15285,11 +15285,8 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
 
     // Remove AssertZext entirely if the mask guarantees the assertion cannot
     // fail.
-    if (Mask.isMask() && Mask.countr_one() <= AssertVT.getScalarSizeInBits()) {
-      SDLoc DL(N);
-      return DAG.getNode(ISD::AND, DL, N0.getValueType(), N0.getOperand(0),
-                         N0.getOperand(1));
-    }
+    if (Mask.isMask() && Mask.countr_one() <= AssertVT.getScalarSizeInBits())
+      return N0;
   }
 
   return SDValue();
