@@ -731,8 +731,8 @@ BasicBlock *CreateFailBB(Function *F, const TargetLowering &TLI) {
   }
 
   if (StackChkFail) {
-    cast<Function>(StackChkFail.getCallee())->addFnAttr(Attribute::NoReturn);
-    B.CreateCall(StackChkFail, Args);
+    CallInst *Call = B.CreateCall(StackChkFail, Args);
+    Call->addFnAttr(Attribute::NoReturn);
   }
 
   B.CreateUnreachable();
