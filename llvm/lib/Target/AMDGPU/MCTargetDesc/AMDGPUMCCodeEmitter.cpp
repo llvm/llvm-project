@@ -564,7 +564,8 @@ static bool needsPCRel(const MCExpr *Expr) {
   case MCExpr::SymbolRef: {
     auto *SE = cast<MCSymbolRefExpr>(Expr);
     auto Spec = AMDGPU::getSpecifier(SE);
-    return Spec != AMDGPUMCExpr::S_ABS32_LO && Spec != AMDGPUMCExpr::S_ABS32_HI;
+    return Spec != AMDGPUMCExpr::S_ABS32_LO &&
+           Spec != AMDGPUMCExpr::S_ABS32_HI && Spec != AMDGPUMCExpr::S_ABS64;
   }
   case MCExpr::Binary: {
     auto *BE = cast<MCBinaryExpr>(Expr);
@@ -687,7 +688,12 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
     uint32_t Offset = Desc.getSize();
     assert(Offset == 4 || Offset == 8);
-    addFixup(Fixups, Offset, MO.getExpr(), FK_Data_4, PCRel);
+    auto OpType = Desc.operands()[OpNo].OperandType;
+    MCFixupKind Kind = (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+                        OpType == AMDGPU::OPERAND_REG_IMM_INT64)
+                           ? FK_Data_8
+                           : FK_Data_4;
+    addFixup(Fixups, Offset, MO.getExpr(), Kind, PCRel);
   }
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
