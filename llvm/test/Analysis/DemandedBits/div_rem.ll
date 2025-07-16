@@ -130,6 +130,22 @@ define i8 @test_udiv(i32 %a, i32 %b) {
   ret i8 %div.t
 }
 
+define i8 @test_srem_zext_trunc_const_amount2(i8 %a) {
+; CHECK-LABEL: 'test_srem_const_amount_4'
+; CHECK-DAG: DemandedBits: 0xff for   %rem.t = trunc i32 %rem to i8
+; CHECK-DAG: DemandedBits: 0xff for %rem in   %rem.t = trunc i32 %rem to i8
+; CHECK-DAG: DemandedBits: 0xff for   %rem = srem i32 %ext, 2
+; CHECK-DAG: DemandedBits: 0xffffffff for %ext in   %rem = srem i32 %ext, 2
+; CHECK-DAG: DemandedBits: 0xffffffff for 2 in   %rem = srem i32 %ext, 2
+; CHECK-DAG: DemandedBits: 0xffffffff for   %ext = sext i8 %a to i32
+; CHECK-DAG: DemandedBits: 0xff for %a in   %ext = sext i8 %a to i32
+;
+  %ext = sext i8 %a to i32
+  %rem = srem i32 %ext, 2
+  %rem.t = trunc i32 %rem to i8
+  ret i8 %rem.t
+}
+
 define i8 @test_srem_const_amount_4(i32 %a) {
 ; CHECK-LABEL: 'test_srem_const_amount_4'
 ; CHECK-DAG: DemandedBits: 0xff for   %rem.t = trunc i32 %rem to i8

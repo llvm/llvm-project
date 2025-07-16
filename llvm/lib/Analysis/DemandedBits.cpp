@@ -36,7 +36,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
@@ -257,7 +256,6 @@ void DemandedBits::determineLiveOperandBits(
     if (OperandNo == 0) {
       const APInt *DivAmnt;
       if (match(UserI->getOperand(1), m_APInt(DivAmnt))) {
-        uint64_t D = DivAmnt->getZExtValue();
         if (DivAmnt->isPowerOf2()) {
           unsigned Sh = DivAmnt->countr_zero();
           if (IsDiv) {
@@ -278,10 +276,10 @@ void DemandedBits::determineLiveOperandBits(
           //   Each new quotient bit consumes the window of m low bits and
           //   shifts one position left.
 
-          //   To produce the first LowQ quotient/rem bits we slide the window
+          //   To produce the first LowQ quotient bits we slide the window
           //   LowQ times --> need at most LowQ + m low bits of the dividend.
           //   Need = LowQ + Ceil(log2(C))             (+1 sign bit for
-          //   sdiv/srem). For example : Assume x = b7 b6 b5 b4 b3 b2 b1 b0.
+          //   sdiv). For example : Assume x = b7 b6 b5 b4 b3 b2 b1 b0.
           //   LowQ = 4, C = 5 and ceil(log_2(C)) = 3.
           //   step 0: b2 b1 b0, produces quotient q[0].
           //   step 1: b3 b2 b1, produces quotient q[1].
