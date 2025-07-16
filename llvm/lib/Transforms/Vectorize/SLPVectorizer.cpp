@@ -22140,7 +22140,7 @@ public:
     // Try to regroup reduced values so that it gets more profitable to try to
     // reduce them. Values are grouped by their value ids, instructions - by
     // instruction op id and/or alternate op id, plus do extra analysis for
-    // loads (grouping them by the distabce between pointers) and cmp
+    // loads (grouping them by the distance between pointers) and cmp
     // instructions (grouping them by the predicate).
     SmallMapVector<
         size_t, SmallMapVector<size_t, SmallMapVector<Value *, unsigned, 2>, 2>,
@@ -22207,10 +22207,9 @@ public:
     for (auto &PossibleReducedVals : PossibleReducedValsVect) {
       auto PossibleRedVals = PossibleReducedVals.second.takeVector();
       SmallVector<SmallVector<Value *>> PossibleRedValsVect;
-      for (auto It = PossibleRedVals.begin(), E = PossibleRedVals.end();
-           It != E; ++It) {
+      for (auto &Slice : PossibleRedVals) {
         PossibleRedValsVect.emplace_back();
-        auto RedValsVect = It->second.takeVector();
+        auto RedValsVect = Slice.second.takeVector();
         stable_sort(RedValsVect, llvm::less_second());
         for (const std::pair<Value *, unsigned> &Data : RedValsVect)
           PossibleRedValsVect.back().append(Data.second, Data.first);
@@ -22370,8 +22369,8 @@ public:
       SmallVector<Value *> Candidates;
       Candidates.reserve(2 * OrigReducedVals.size());
       DenseMap<Value *, Value *> TrackedToOrig(2 * OrigReducedVals.size());
-      for (unsigned Cnt = 0, Sz = OrigReducedVals.size(); Cnt < Sz; ++Cnt) {
-        Value *RdxVal = TrackedVals.at(OrigReducedVals[Cnt]);
+      for (Value *ReducedVal : OrigReducedVals) {
+        Value *RdxVal = TrackedVals.at(ReducedVal);
         // Check if the reduction value was not overriden by the extractelement
         // instruction because of the vectorization and exclude it, if it is not
         // compatible with other values.
@@ -22382,7 +22381,7 @@ public:
             (S && !Inst))
           continue;
         Candidates.push_back(RdxVal);
-        TrackedToOrig.try_emplace(RdxVal, OrigReducedVals[Cnt]);
+        TrackedToOrig.try_emplace(RdxVal, ReducedVal);
       }
       bool ShuffledExtracts = false;
       // Try to handle shuffled extractelements.
