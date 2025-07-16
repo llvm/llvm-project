@@ -1663,7 +1663,6 @@ public:
       if (!MOrErr)
         return MOrErr.takeError();
 
-      auto FS = vfs::getRealFileSystem();
       return thinBackend(Conf, FS, Task, CGAddStream, **MOrErr, CombinedIndex,
                          ImportList, DefinedGlobals, &ModuleMap,
                          Conf.CodeGenOnly, IRAddStream);
@@ -1759,7 +1758,6 @@ public:
       std::unique_ptr<Module> LoadedModule =
           cgdata::loadModuleForTwoRounds(BM, Task, BackendContext, *IRFiles);
 
-      auto FS = vfs::getRealFileSystem();
       return thinBackend(Conf, FS, Task, AddStream, *LoadedModule, CombinedIndex,
                          ImportList, DefinedGlobals, &ModuleMap,
                          /*CodeGenOnly=*/true);
