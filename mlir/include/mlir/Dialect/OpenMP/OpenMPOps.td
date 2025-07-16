@@ -2129,10 +2129,31 @@ def TargetAllocMemOp : OpenMP_Op<"target_allocmem",
     The memory is uninitialized after allocation. Operations must be paired with 
     `omp.target_freemem` to avoid memory leaks.
 
-    ```mlir
-      %device = arith.constant 0 : i32
-      %ptr = omp.target_allocmem %device : i32, vector<3x3xi32>
-    ```
+    * `$device`: The integer ID of the OpenMP device where the memory will be allocated.
+    * `$in_type`: The type of the object for which memory is being allocated. 
+      For arrays, this can be a static or dynamic array type.
+    * `$uniq_name`: An optional unique name for the allocated memory.
+    * `$bindc_name`: An optional name used for C interoperability.
+    * `$typeparams`: Runtime type parameters for polymorphic or parameterized types. 
+      These are typically integer values that define aspects of a type not fixed at compile time.
+    * `$shape`: Runtime shape operands for dynamic arrays. 
+      Each operand is an integer value representing the extent of a specific dimension. 
+
+  ```mlir
+    // Allocate a static 3x3 integer vector on device 0
+    %device_0 = arith.constant 0 : i32
+    %ptr_static = omp.target_allocmem %device_0 : i32, vector<3x3xi32>
+    // ... use %ptr_static ...
+    omp.target_freemem %device_0, %ptr_static : i32, i64
+
+    // Allocate a dynamic 2D Fortran array (fir.array) on device 1
+    %device_1 = arith.constant 1 : i32
+    %rows = arith.constant 10 : index
+    %cols = arith.constant 20 : index
+    %ptr_dynamic = omp.target_allocmem %device_1 : i32, !fir.array<?x?xf32>, %rows, %cols : index, index
+    // ... use %ptr_dynamic ...
+    omp.target_freemem %device_1, %ptr_dynamic : i32, i64
+  ```
   }];
 
   let arguments = (ins
@@ -2162,13 +2183,22 @@ def TargetFreeMemOp : OpenMP_Op<"target_freemem",
   let summary = "free memory on an openmp device";
 
   let description = [{
-    Deallocates memory on the specified OpenMP device that was previously 
-    allocated by an `omp.target_allocmem` operation. The memory is placed 
-    in an undefined state after deallocation.
-    ```
-      %device = arith.constant 0 : i32
-      %ptr = omp.target_allocmem %device : i32, vector<3x3xi32>
-      omp.target_freemem %device, %ptr : i32, i64
+    Deallocates memory on the specified OpenMP device that was previously
+    allocated by an `omp.target_allocmem` operation. After this operation, the
+    deallocated memory is in an undefined state and should not be accessed.
+    It is crucial to ensure that all accesses to the memory region are completed
+    before `omp.target_freemem` is called to avoid undefined behavior.
+
+    * `$device`: The integer ID of the OpenMP device from which the memory will be freed.
+    * `$heapref`: The integer value representing the device pointer to the memory
+      to be deallocated, which was previously returned by `omp.target_allocmem`.
+
+    ```mlir
+      // Example of allocating and freeing memory on an OpenMP device
+      %device_id = arith.constant 0 : i32
+      %allocated_ptr = omp.target_allocmem %device_id : i32, vector<3x3xi32>
+      // ... operations using %allocated_ptr on the device ...
+      omp.target_freemem %device_id, %allocated_ptr : i32, i64
     ```
   }];
 

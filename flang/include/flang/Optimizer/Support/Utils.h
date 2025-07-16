@@ -224,34 +224,9 @@ mlir::Value computeElementDistance(mlir::Location loc,
 // We do this for arrays without a constant interior or arrays of character with
 // dynamic length arrays, since those are the only ones that get decayed to a
 // pointer to the element type.
-template <typename OP>
-inline mlir::Value
-genAllocationScaleSize(OP op, mlir::Type ity,
-                       mlir::ConversionPatternRewriter &rewriter) {
-  mlir::Location loc = op.getLoc();
-  mlir::Type dataTy = op.getInType();
-  auto seqTy = mlir::dyn_cast<fir::SequenceType>(dataTy);
-  fir::SequenceType::Extent constSize = 1;
-  if (seqTy) {
-    int constRows = seqTy.getConstantRows();
-    const fir::SequenceType::ShapeRef &shape = seqTy.getShape();
-    if (constRows != static_cast<int>(shape.size())) {
-      for (auto extent : shape) {
-        if (constRows-- > 0)
-          continue;
-        if (extent != fir::SequenceType::getUnknownExtent())
-          constSize *= extent;
-      }
-    }
-  }
-
-  if (constSize != 1) {
-    mlir::Value constVal{
-        fir::genConstantIndex(loc, ity, rewriter, constSize).getResult()};
-    return constVal;
-  }
-  return nullptr;
-}
+mlir::Value genAllocationScaleSize(mlir::Location loc, mlir::Type dataTy,
+                                   mlir::Type ity,
+                                   mlir::ConversionPatternRewriter &rewriter);
 
 /// Perform an extension or truncation as needed on an integer value. Lowering
 /// to the specific target may involve some sign-extending or truncation of

@@ -77,6 +77,33 @@ fir::computeElementDistance(mlir::Location loc, mlir::Type llvmObjectType,
   return fir::genConstantIndex(loc, idxTy, rewriter, distance);
 }
 
+mlir::Value
+fir::genAllocationScaleSize(mlir::Location loc, mlir::Type dataTy,
+                            mlir::Type ity,
+                            mlir::ConversionPatternRewriter &rewriter) {
+  auto seqTy = mlir::dyn_cast<fir::SequenceType>(dataTy);
+  fir::SequenceType::Extent constSize = 1;
+  if (seqTy) {
+    int constRows = seqTy.getConstantRows();
+    const fir::SequenceType::ShapeRef &shape = seqTy.getShape();
+    if (constRows != static_cast<int>(shape.size())) {
+      for (auto extent : shape) {
+        if (constRows-- > 0)
+          continue;
+        if (extent != fir::SequenceType::getUnknownExtent())
+          constSize *= extent;
+      }
+    }
+  }
+
+  if (constSize != 1) {
+    mlir::Value constVal{
+        fir::genConstantIndex(loc, ity, rewriter, constSize).getResult()};
+    return constVal;
+  }
+  return nullptr;
+}
+
 mlir::Value fir::integerCast(const fir::LLVMTypeConverter &converter,
                              mlir::Location loc,
                              mlir::ConversionPatternRewriter &rewriter,

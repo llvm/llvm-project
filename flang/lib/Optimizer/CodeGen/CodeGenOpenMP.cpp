@@ -145,7 +145,8 @@ struct TargetAllocMemOpConversion
                 "parameters");
     mlir::Value size = fir::computeElementDistance(
         loc, llvmObjectTy, ity, rewriter, lowerTy().getDataLayout());
-    if (auto scaleSize = fir::genAllocationScaleSize(allocmemOp, ity, rewriter))
+    if (auto scaleSize = fir::genAllocationScaleSize(
+            loc, allocmemOp.getInType(), ity, rewriter))
       size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
     for (mlir::Value opnd : adaptor.getOperands().drop_front())
       size = rewriter.create<mlir::LLVM::MulOp>(
