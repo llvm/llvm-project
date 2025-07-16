@@ -14295,6 +14295,36 @@ Semantics:
 
 Note this intrinsic is only verified on AArch64 and ARM.
 
+'``llvm.stackaddress``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptr @llvm.stackaddress()
+
+Overview:
+"""""""""
+
+The '``llvm.stackaddress``' instrinsic returns the starting address of the stack region that may be
+used by called functions.
+
+Semantics:
+""""""""""
+
+This intrinsic returns the *logical* value of the stack pointer register, that is, the address
+separating the stack space of the current function from the stack space that may be modified by
+called functions.
+
+On certain targets (e.g. x86), the logical and actual (or physical) values of the stack pointer
+register are the same. However, on other architectures (e.g. SPARCv9), the logical value of the
+stack pointer register may differ from the physical value. '``llvm.stackaddress``' handles this
+discrepancy and returns the correct boundary address.
+
+**Note**: This intrinsic is currently only implemented for x86 and x86-64.
+
 '``llvm.frameaddress``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
