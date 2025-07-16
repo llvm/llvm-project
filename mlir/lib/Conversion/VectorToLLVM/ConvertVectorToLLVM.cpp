@@ -2139,16 +2139,9 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
   return res;
 }
 
-/// Progressive lowering of TransposeOp.
-/// One:
-///   %x = vector.transpose %y, [1, 0]
-/// is replaced by:
-///   %z = arith.constant dense<0.000000e+00>
-///   %0 = vector.extract %y[0, 0]
-///   %1 = vector.insert %0, %z [0, 0]
-///   ..
-///   %x = vector.insert .., .. [.., ..]
-class TransposeOpLowering : public OpRewritePattern<vector::TransposeOp> {
+/// Lowers vector.transpose to llvm.intr.matrix.transpose
+class TransposeOpToMatrixTransposeOpLowering
+    : public OpRewritePattern<vector::TransposeOp> {
 public:
   using OpRewritePattern<TransposeOp>::OpRewritePattern;
 
@@ -2191,24 +2184,15 @@ void mlir::vector::populateVectorRankReducingFMAPattern(
   patterns.add<VectorFMAOpNDRewritePattern>(patterns.getContext());
 }
 
-/// Pattern to lower `vector.contract` to `llvm.intr.matrix.multiply`.
-///
-/// Given the high benefit, this will be prioriotised over other
-/// contract-lowering patterns. As such, the convert-vector-to-llvm pass will
-/// only run this registration conditionally.
 void mlir::vector::populateVectorContractToMatrixMultiply(
-    RewritePatternSet &patterns) {
-  patterns.add<ContractionOpToMatmulOpLowering>(patterns.getContext(), 100);
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<ContractionOpToMatmulOpLowering>(patterns.getContext(), benefit);
 }
 
-/// Pattern to lower `vector.transpose` to `llvm.intr.matrix.flat_transpose`.
-///
-/// Given the high benefit, this will be prioriotised over other
-/// transpose-lowering patterns. As such, the convert-vector-to-llvm pass will
-/// only run this registration conditionally.
 void mlir::vector::populateVectorTransposeToFlatTranspose(
-    RewritePatternSet &patterns) {
-  patterns.add<TransposeOpLowering>(patterns.getContext(), 100);
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<TransposeOpToMatrixTransposeOpLowering>(patterns.getContext(),
+                                                       benefit);
 }
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
