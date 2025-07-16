@@ -103,6 +103,8 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: PolymorphicOpConversion
 // PASSES-NEXT: AssumedRankOpConversion
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   OptimizeArrayRepacking
 // PASSES-NEXT: LowerRepackArraysPass
 // PASSES-NEXT: SimplifyFIROperations
 // PASSES-NEXT: AddAliasTags

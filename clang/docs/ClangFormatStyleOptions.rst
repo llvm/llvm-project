@@ -1554,9 +1554,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      #define A                                                                      \
-        int aaaa;                                                                    \
-        int b;                                                                       \
+      #define A                                                            \
+        int aaaa;                                                          \
+        int b;                                                             \
         int dddddddddd;
 
 
@@ -4974,6 +4974,12 @@ the configuration (without a prefix: ``Auto``).
      A(); -> y;
      A(z); -> z;
      A(a, b); // will not be expanded.
+
+.. _MacrosSkippedByRemoveParentheses:
+
+**MacrosSkippedByRemoveParentheses** (``List of Strings``) :versionbadge:`clang-format 21` :ref:`¶ <MacrosSkippedByRemoveParentheses>`
+  A vector of function-like macros whose invocations should be skipped by
+  ``RemoveParentheses``.
 
 .. _MainIncludeChar:
 

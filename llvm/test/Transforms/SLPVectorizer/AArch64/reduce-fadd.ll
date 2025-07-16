@@ -3,13 +3,19 @@
 ; RUN: opt < %s -S -passes=slp-vectorizer -mtriple=aarch64-unknown-linux -mattr=+fullfp16 | FileCheck %s --check-prefixes=CHECK,FULLFP16
 
 define half @reduce_fast_half2(<2 x half> %vec2) {
-; CHECK-LABEL: define half @reduce_fast_half2(
-; CHECK-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x half> [[VEC2]], i64 0
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[VEC2]], i64 1
-; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
-; CHECK-NEXT:    ret half [[ADD1]]
+; NOFP16-LABEL: define half @reduce_fast_half2(
+; NOFP16-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
+; NOFP16-NEXT:  [[ENTRY:.*:]]
+; NOFP16-NEXT:    [[ELT0:%.*]] = extractelement <2 x half> [[VEC2]], i64 0
+; NOFP16-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[VEC2]], i64 1
+; NOFP16-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
+; NOFP16-NEXT:    ret half [[ADD1]]
+;
+; FULLFP16-LABEL: define half @reduce_fast_half2(
+; FULLFP16-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
+; FULLFP16-NEXT:  [[ENTRY:.*:]]
+; FULLFP16-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> [[VEC2]])
+; FULLFP16-NEXT:    ret half [[TMP0]]
 ;
 entry:
   %elt0 = extractelement <2 x half> %vec2, i64 0
@@ -20,7 +26,7 @@ entry:
 
 define half @reduce_half2(<2 x half> %vec2) {
 ; CHECK-LABEL: define half @reduce_half2(
-; CHECK-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x half> [[VEC2]], i64 0
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[VEC2]], i64 1
@@ -269,9 +275,7 @@ define float @reduce_fast_float2(<2 x float> %vec2) {
 ; CHECK-LABEL: define float @reduce_fast_float2(
 ; CHECK-SAME: <2 x float> [[VEC2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x float> [[VEC2]], i64 0
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[VEC2]], i64 1
-; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast float [[ELT1]], [[ELT0]]
+; CHECK-NEXT:    [[ADD1:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[VEC2]])
 ; CHECK-NEXT:    ret float [[ADD1]]
 ;
 entry:
@@ -409,9 +413,7 @@ define double @reduce_fast_double2(<2 x double> %vec2) {
 ; CHECK-LABEL: define double @reduce_fast_double2(
 ; CHECK-SAME: <2 x double> [[VEC2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x double> [[VEC2]], i64 0
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x double> [[VEC2]], i64 1
-; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast double [[ELT1]], [[ELT0]]
+; CHECK-NEXT:    [[ADD1:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[VEC2]])
 ; CHECK-NEXT:    ret double [[ADD1]]
 ;
 entry:
@@ -552,8 +554,9 @@ define float @reduce_fast_float_case2(ptr %a, ptr %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> [[TMP1]], i64 0)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> [[TMP2]], <4 x float> [[TMP0]], i64 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP0]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[RED3:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP3]])
 ; CHECK-NEXT:    ret float [[RED3]]
 ;

@@ -291,6 +291,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SETCC, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+      setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
@@ -352,7 +353,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
-      setOperationAction(ISD::CONCAT_VECTORS, VT, Legal);
+      setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
 
       setOperationAction(ISD::SETCC, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
@@ -499,6 +501,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG);
+  case ISD::CONCAT_VECTORS:
+    return lowerCONCAT_VECTORS(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::BITREVERSE:
@@ -2520,6 +2524,72 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
   }
 
   return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerCONCAT_VECTORS(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT ResVT = Op.getSimpleValueType();
+  assert(ResVT.is256BitVector() && Op.getNumOperands() == 2);
+
+  unsigned NumOperands = Op.getNumOperands();
+  unsigned NumFreezeUndef = 0;
+  unsigned NumZero = 0;
+  unsigned NumNonZero = 0;
+  unsigned NonZeros = 0;
+  SmallSet<SDValue, 4> Undefs;
+  for (unsigned i = 0; i != NumOperands; ++i) {
+    SDValue SubVec = Op.getOperand(i);
+    if (SubVec.isUndef())
+      continue;
+    if (ISD::isFreezeUndef(SubVec.getNode())) {
+      // If the freeze(undef) has multiple uses then we must fold to zero.
+      if (SubVec.hasOneUse()) {
+        ++NumFreezeUndef;
+      } else {
+        ++NumZero;
+        Undefs.insert(SubVec);
+      }
+    } else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
+      ++NumZero;
+    else {
+      assert(i < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
+      NonZeros |= 1 << i;
+      ++NumNonZero;
+    }
+  }
+
+  // If we have more than 2 non-zeros, build each half separately.
+  if (NumNonZero > 2) {
+    MVT HalfVT = ResVT.getHalfNumVectorElementsVT();
+    ArrayRef<SDUse> Ops = Op->ops();
+    SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                             Ops.slice(0, NumOperands / 2));
+    SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                             Ops.slice(NumOperands / 2));
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Lo, Hi);
+  }
+
+  // Otherwise, build it up through insert_subvectors.
+  SDValue Vec = NumZero ? DAG.getConstant(0, DL, ResVT)
+                        : (NumFreezeUndef ? DAG.getFreeze(DAG.getUNDEF(ResVT))
+                                          : DAG.getUNDEF(ResVT));
+
+  // Replace Undef operands with ZeroVector.
+  for (SDValue U : Undefs)
+    DAG.ReplaceAllUsesWith(U, DAG.getConstant(0, DL, U.getSimpleValueType()));
+
+  MVT SubVT = Op.getOperand(0).getSimpleValueType();
+  unsigned NumSubElems = SubVT.getVectorNumElements();
+  for (unsigned i = 0; i != NumOperands; ++i) {
+    if ((NonZeros & (1 << i)) == 0)
+      continue;
+
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ResVT, Vec, Op.getOperand(i),
+                      DAG.getVectorIdxConstant(i * NumSubElems, DL));
+  }
+
+  return Vec;
 }
 
 SDValue

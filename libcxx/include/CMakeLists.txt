@@ -514,7 +514,6 @@ set(files
   __locale_dir/check_grouping.h
   __locale_dir/get_c_locale.h
   __locale_dir/locale_base_api.h
-  __locale_dir/locale_base_api/android.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
@@ -944,6 +943,7 @@ set(files
   __vector/vector_bool.h
   __vector/vector_bool_formatter.h
   __verbose_abort
+  __verbose_trap
   algorithm
   any
   array
@@ -1569,6 +1569,7 @@ set(files
   __cxx03/__utility/unreachable.h
   __cxx03/__variant/monostate.h
   __cxx03/__verbose_abort
+  __cxx03/__verbose_trap
   __cxx03/algorithm
   __cxx03/array
   __cxx03/atomic
