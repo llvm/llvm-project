@@ -107,8 +107,7 @@ public:
   /// \param TL The TypeLoc that describes the type preceding the '::'.
   ///
   /// \param ColonColonLoc The location of the trailing '::'.
-  void Extend(ASTContext &Context, SourceLocation TemplateKWLoc, TypeLoc TL,
-              SourceLocation ColonColonLoc);
+  void Extend(ASTContext &Context, TypeLoc TL, SourceLocation ColonColonLoc);
 
   /// Extend the current nested-name-specifier by another
   /// nested-name-specifier component of the form 'identifier::'.
@@ -1822,8 +1821,8 @@ public:
     if (DeleteBindings)
       delete[] Bindings;
     else
-      llvm::for_each(llvm::MutableArrayRef(Bindings, NumBindings),
-                     [](Binding &B) { B.Attrs.reset(); });
+      for (Binding &B : llvm::MutableArrayRef(Bindings, NumBindings))
+        B.Attrs.reset();
     Bindings = nullptr;
     NumBindings = 0;
     DeleteBindings = false;
@@ -1919,7 +1918,7 @@ private:
   /// parsed.  This is pushed from the identifier out, which means that element
   /// #0 will be the most closely bound to the identifier, and
   /// DeclTypeInfo.back() will be the least closely bound.
-  SmallVector<DeclaratorChunk, 8> DeclTypeInfo;
+  SmallVector<DeclaratorChunk, 4> DeclTypeInfo;
 
   /// InvalidType - Set by Sema::GetTypeForDeclarator().
   LLVM_PREFERRED_TYPE(bool)

@@ -230,3 +230,14 @@ void foo() {
 
   ignore_unused(c, x, d);
 }
+
+enum [[clang::flag_enum]] FlagEnum {
+  FE_BIT_1 = 1 << 0,
+  FE_BIT_2 = 1 << 1,
+  FE_BIT_3 = 1 << 2,
+};
+
+void testFlagEnum_gh_76208(void) {
+  FlagEnum First2BitsSet = (FlagEnum)(FE_BIT_1 | FE_BIT_2); // no-warning: Enums with the attribute 'flag_enum' are not checked
+  (void)First2BitsSet;
+}

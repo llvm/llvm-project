@@ -1439,7 +1439,7 @@ TEST_F(FileCheckTest, Substitution) {
   // Substitution of an undefined string variable fails and error holds that
   // variable's name.
   StringSubstitution StringSubstitution(&Context, "VAR404", 42);
-  Expected<std::string> SubstValue = StringSubstitution.getResult();
+  Expected<std::string> SubstValue = StringSubstitution.getResultRegex();
   expectUndefErrors({"VAR404"}, SubstValue.takeError());
 
   // Numeric substitution blocks constituted of defined numeric variables are
@@ -1452,20 +1452,20 @@ TEST_F(FileCheckTest, Substitution) {
       std::move(NVarUse), ExpressionFormat(ExpressionFormat::Kind::HexUpper));
   NumericSubstitution SubstitutionN(&Context, "N", std::move(ExpressionN),
                                     /*InsertIdx=*/30);
-  SubstValue = SubstitutionN.getResult();
+  SubstValue = SubstitutionN.getResultRegex();
   ASSERT_THAT_EXPECTED(SubstValue, Succeeded());
   EXPECT_EQ("A", *SubstValue);
 
   // Substitution of an undefined numeric variable fails, error holds name of
   // undefined variable.
   NVar.clearValue();
-  SubstValue = SubstitutionN.getResult();
+  SubstValue = SubstitutionN.getResultRegex();
   expectUndefErrors({"N"}, SubstValue.takeError());
 
   // Substitution of a defined string variable returns the right value.
   Pattern P(Check::CheckPlain, &Context, 1);
   StringSubstitution = llvm::StringSubstitution(&Context, "FOO", 42);
-  SubstValue = StringSubstitution.getResult();
+  SubstValue = StringSubstitution.getResultRegex();
   ASSERT_THAT_EXPECTED(SubstValue, Succeeded());
   EXPECT_EQ("BAR", *SubstValue);
 }

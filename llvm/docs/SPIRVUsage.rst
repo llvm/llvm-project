@@ -153,6 +153,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_INTEL_2d_block_io``
+     - Adds additional subgroup block prefetch, load, load transposed, load transformed and store instructions to read two-dimensional blocks of data from a two-dimensional region of memory, or to write two-dimensional blocks of data to a two dimensional region of memory.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
@@ -186,7 +188,7 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
    * - ``SPV_INTEL_variable_length_array``
      - Allows to allocate local arrays whose number of elements is unknown at compile time.
    * - ``SPV_INTEL_joint_matrix``
-     - Adds few matrix capabilities on top of SPV_KHR_cooperative_matrix extension, such as matrix prefetch, get element coordinate and checked load/store/construct instructions, tensor float 32 and bfloat type interpretations for multuply-add instruction.
+     - Adds few matrix capabilities on top of SPV_KHR_cooperative_matrix extension, such as matrix prefetch, get element coordinate and checked load/store/construct instructions, tensor float 32 and bfloat type interpretations for multiply-add instruction.
    * - ``SPV_KHR_bit_instructions``
      - Enables bit instructions to be used by SPIR-V modules without requiring the Shader capability.
    * - ``SPV_KHR_expect_assume``
@@ -209,6 +211,14 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds the ability to declare extended instruction sets that have no semantic impact and can be safely removed from a module.
    * - ``SPV_INTEL_fp_max_error``
      - Adds the ability to specify the maximum error for floating-point operations.
+   * - ``SPV_INTEL_ternary_bitwise_function``
+     - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform. 
+   * - ``SPV_INTEL_subgroup_matrix_multiply_accumulate``
+     - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
+   * - ``SPV_INTEL_int4``
+     - Adds support for 4-bit integer type, and allow this type to be used in cooperative matrices.
+   * - ``SPV_KHR_float_controls2``
+     - Adds ability to specify the floating-point environment in shaders. It can be used on whole modules and individual instructions.
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
@@ -243,19 +253,21 @@ using target extension types and are represented as follows:
 
   .. table:: SPIR-V Opaque Types
 
-     ================== ====================== ===========================================================================================
-     SPIR-V Type        LLVM type name         LLVM type arguments
-     ================== ====================== ===========================================================================================
-     OpTypeImage        ``spirv.Image``        sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
-     OpTypeSampler      ``spirv.Sampler``      (none)
-     OpTypeSampledImage ``spirv.SampledImage`` sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
-     OpTypeEvent        ``spirv.Event``        (none)
-     OpTypeDeviceEvent  ``spirv.DeviceEvent``  (none)
-     OpTypeReserveId    ``spirv.ReserveId``    (none)
-     OpTypeQueue        ``spirv.Queue``        (none)
-     OpTypePipe         ``spirv.Pipe``         access qualifier
-     OpTypePipeStorage  ``spirv.PipeStorage``  (none)
-     ================== ====================== ===========================================================================================
+     ================== ======================= ===========================================================================================
+     SPIR-V Type        LLVM type name          LLVM type arguments
+     ================== ======================= ===========================================================================================
+     OpTypeImage        ``spirv.Image``         sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
+     OpTypeImage        ``spirv.SignedImage``   sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
+     OpTypeSampler      ``spirv.Sampler``       (none)
+     OpTypeSampledImage ``spirv.SampledImage``  sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
+     OpTypeEvent        ``spirv.Event``         (none)
+     OpTypeDeviceEvent  ``spirv.DeviceEvent``   (none)
+     OpTypeReserveId    ``spirv.ReserveId``     (none)
+     OpTypeQueue        ``spirv.Queue``         (none)
+     OpTypePipe         ``spirv.Pipe``          access qualifier
+     OpTypePipeStorage  ``spirv.PipeStorage``   (none)
+     NA                 ``spirv.VulkanBuffer``  ElementType, StorageClass, IsWriteable
+     ================== ======================= ===========================================================================================
 
 All integer arguments take the same value as they do in their `corresponding
 SPIR-V instruction <https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_type_declaration_instructions>`_.
@@ -265,6 +277,63 @@ dimensionality parameter as ``1`` meaning 2D. Sampled image types include the
 parameters of its underlying image type, so that a sampled image for the
 previous type has the representation
 ``target("spirv.SampledImage, void, 1, 1, 0, 0, 0, 0, 0)``.
+
+The differences between ``spirv.Image`` and ``spirv.SignedImage`` is that the
+backend will generate code assuming that the format of the image is a signed
+integer instead of unsigned. This is required because llvm-ir will create the
+same sampled type for signed and unsigned integers. If the image format is
+unknown, the backend cannot distinguish the two case.
+
+See `wg-hlsl proposal 0018 <https://github.com/llvm/wg-hlsl/blob/main/proposals/0018-spirv-resource-representation.md>`_
+for details on ``spirv.VulkanBuffer``.
+
+.. _inline-spirv-types:
+
+Inline SPIR-V Types
+-------------------
+
+HLSL allows users to create types representing specific SPIR-V types, using ``vk::SpirvType`` and
+``vk::SpirvOpaqueType``. These are specified in the `Inline SPIR-V`_ proposal. They may be
+represented using target extension types:
+
+.. _Inline SPIR-V: https://microsoft.github.io/hlsl-specs/proposals/0011-inline-spirv.html#types
+
+  .. table:: Inline SPIR-V Types
+
+    ========================== =================== =========================
+    LLVM type name             LLVM type arguments LLVM integer arguments
+    ========================== =================== =========================
+    ``spirv.Type``             SPIR-V operands     opcode, size, alignment
+    ``spirv.IntegralConstant`` integral type       value
+    ``spirv.Literal``          (none)              value
+    ========================== =================== =========================
+
+The operand arguments to ``spirv.Type`` may be either a ``spirv.IntegralConstant`` type,
+representing an ``OpConstant`` id operand, a ``spirv.Literal`` type, representing an immediate
+literal operand, or any other type, representing the id of that type as an operand.
+``spirv.IntegralConstant`` and ``spirv.Literal`` may not be used outside of this context.
+
+For example, ``OpTypeArray`` (opcode 28) takes an id for the element type and an id for the element
+length, so an array of 16 integers could be declared as:
+
+``target("spirv.Type", i32, target("spirv.IntegralConstant", i32, 16), 28, 64, 32)``
+
+This will be lowered to:
+
+``OpTypeArray %int %int_16``
+
+``OpTypeVector`` takes an id for the component type and a literal for the component count, so a
+4-integer vector could be declared as:
+
+``target("spirv.Type", i32, target("spirv.Literal", 4), 23, 16, 32)``
+
+This will be lowered to:
+
+``OpTypeVector %int 4``
+
+See `Target Extension Types for Inline SPIR-V and Decorated Types`_ for further details.
+
+.. _Target Extension Types for Inline SPIR-V and Decorated Types: https://github.com/llvm/wg-hlsl/blob/main/proposals/0017-inline-spirv-and-decorated-types.md
 
 .. _spirv-intrinsics:
 
@@ -405,6 +474,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - 32-bit Integer
      - `[32-bit Integer]`
      - Retrieves the thread ID within a workgroup. Essential for identifying execution context in parallel compute operations.
+   * - `int_spv_flattened_thread_id_in_group`
+     - 32-bit Integer
+     - `[32-bit Integer]`
+     - Provides a flattened index for a given thread within a given group (SV_GroupIndex)
    * - `int_spv_create_handle`
      - Pointer
      - `[8-bit Integer]`

@@ -30,7 +30,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -73,6 +72,29 @@ static DimensionSize operator*(DimensionSize lhs, DimensionSize rhs) {
     return DimensionSize::dynamic();
   }
   return lhs.value() * rhs.value();
+}
+
+SmallVector<Value> mlir::mesh::getMixedAsValues(OpBuilder b,
+                                                const Location &loc,
+                                                llvm::ArrayRef<int64_t> statics,
+                                                ValueRange dynamics,
+                                                Type type) {
+  SmallVector<Value> values;
+  auto dyn = dynamics.begin();
+  Type i64 = b.getI64Type();
+  if (!type)
+    type = i64;
+  assert((i64 == type || b.getIndexType() == type) &&
+         "expected an i64 or an intex type");
+  for (auto s : statics) {
+    if (s == ShapedType::kDynamic) {
+      values.emplace_back(*(dyn++));
+    } else {
+      TypedAttr val = type == i64 ? b.getI64IntegerAttr(s) : b.getIndexAttr(s);
+      values.emplace_back(b.create<arith::ConstantOp>(loc, type, val));
+    }
+  }
+  return values;
 }
 
 //===----------------------------------------------------------------------===//
@@ -241,7 +263,7 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
       // add halo sizes if requested
       int haloAxis = 0;
       for (auto [tensorAxis, innerSplitAxes] : llvm::enumerate(splitAxes)) {
-        if (!ShapedType::isDynamic(outShape[tensorAxis]) &&
+        if (ShapedType::isStatic(outShape[tensorAxis]) &&
             !innerSplitAxes.empty()) {
           if (haloSizes[haloAxis * 2] >= 0 &&
               haloSizes[haloAxis * 2 + 1] >= 0) {
@@ -269,19 +291,18 @@ ShapedType mesh::shardShapedType(ShapedType shape, MeshOp mesh,
 
 Type mesh::shardType(Type type, MeshOp mesh, MeshSharding sharding) {
   RankedTensorType rankedTensorType = dyn_cast<RankedTensorType>(type);
-  if (rankedTensorType) {
+  if (rankedTensorType && !rankedTensorType.getShape().empty()) {
     return shardShapedType(rankedTensorType, mesh, sharding);
   }
   return type;
 }
 
-void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
-                                                     OpOperand &operand,
-                                                     OpBuilder &builder,
-                                                     ShardOp &newShardOp) {
+static void maybeInsertTargetShardingAnnotationImpl(MeshSharding sharding,
+                                                    Value &operandValue,
+                                                    Operation *operandOp,
+                                                    OpBuilder &builder,
+                                                    ShardOp &newShardOp) {
   OpBuilder::InsertionGuard insertionGuard(builder);
-  Value operandValue = operand.get();
-  Operation *operandOp = operand.getOwner();
   builder.setInsertionPointAfterValue(operandValue);
   ShardOp shardOp = dyn_cast<ShardOp>(operandOp);
   if (shardOp && sharding == shardOp.getSharding() &&
@@ -300,9 +321,8 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
         builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
                                 /*annotate_for_users*/ false);
   }
-  IRRewriter rewriter(builder);
-  rewriter.replaceUsesWithIf(
-      operandValue, newShardOp, [operandOp, operandValue](OpOperand &use) {
+  operandValue.replaceUsesWithIf(
+      newShardOp, [operandOp, operandValue](OpOperand &use) {
         return use.getOwner() == operandOp && use.get() == operandValue;
       });
 
@@ -313,16 +333,20 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
   auto newShardOp2 = builder.create<ShardOp>(operandValue.getLoc(), newShardOp,
                                              newShardOp.getSharding(),
                                              /*annotate_for_users*/ true);
-  rewriter.replaceAllUsesExcept(newShardOp, newShardOp2, newShardOp2);
-  return;
+  newShardOp.getResult().replaceAllUsesExcept(newShardOp2, newShardOp2);
 }
 
 void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
                                                      OpResult result,
                                                      OpBuilder &builder) {
   ShardOp newShardOp;
-  for (auto &use : llvm::make_early_inc_range(result.getUses())) {
-    maybeInsertTargetShardingAnnotation(sharding, use, builder, newShardOp);
+  SmallVector<std::pair<Value, Operation *>> uses;
+  for (auto &use : result.getUses()) {
+    uses.emplace_back(use.get(), use.getOwner());
+  }
+  for (auto &[operandValue, operandOp] : uses) {
+    maybeInsertTargetShardingAnnotationImpl(sharding, operandValue, operandOp,
+                                            builder, newShardOp);
   }
 }
 
@@ -390,7 +414,7 @@ LogicalResult MeshOp::verify() {
     return emitOpError("rank of mesh is expected to be a positive integer");
 
   for (int64_t dimSize : getShape()) {
-    if (dimSize < 0 && !ShapedType::isDynamic(dimSize))
+    if (dimSize < 0 && ShapedType::isStatic(dimSize))
       return emitOpError("dimension size of a mesh is expected to be "
                          "non-negative or dynamic");
   }
@@ -584,7 +608,7 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   auto shardedDimsOffsets = getStaticShardedDimsOffsets();
   if (!shardedDimsOffsets.empty()) {
     auto meshShape = mesh.value().getShape();
-    assert(!ShapedType::isDynamicShape(meshShape));
+    assert(ShapedType::isStaticShape(meshShape));
     uint64_t pos = 0;
     for (auto [tensorAxis, innerSplitAxes] : llvm::enumerate(getSplitAxes())) {
       if (!innerSplitAxes.empty()) {
@@ -596,7 +620,7 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
           if (shardedDimsOffsets.size() <= pos + i) {
             return emitError() << "sharded dims offsets has wrong size.";
           }
-          if (!ShapedType::isDynamic(shardedDimsOffsets[pos + i])) {
+          if (ShapedType::isStatic(shardedDimsOffsets[pos + i])) {
             if (shardedDimsOffsets[pos + i] < off) {
               return emitError()
                      << "sharded dims offsets must be non-decreasing.";
@@ -693,10 +717,7 @@ bool MeshSharding::equalSplitAndPartialAxes(const MeshSharding &rhs) const {
 
   if (getPartialAxes().size() != rhs.getPartialAxes().size() ||
       (!getPartialAxes().empty() && getPartialType() != rhs.getPartialType()) ||
-      !llvm::equal(
-          llvm::make_range(getPartialAxes().begin(), getPartialAxes().end()),
-          llvm::make_range(rhs.getPartialAxes().begin(),
-                           rhs.getPartialAxes().end()))) {
+      !llvm::equal(getPartialAxes(), rhs.getPartialAxes())) {
     return false;
   }
 
@@ -708,11 +729,9 @@ bool MeshSharding::equalSplitAndPartialAxes(const MeshSharding &rhs) const {
     return false;
   }
 
-  return llvm::all_of(llvm::make_range(getSplitAxes().begin() + minSize,
-                                       getSplitAxes().end()),
+  return llvm::all_of(llvm::drop_begin(getSplitAxes(), minSize),
                       std::mem_fn(&MeshAxesAttr::empty)) &&
-         llvm::all_of(llvm::make_range(rhs.getSplitAxes().begin() + minSize,
-                                       rhs.getSplitAxes().end()),
+         llvm::all_of(llvm::drop_begin(rhs.getSplitAxes(), minSize),
                       std::mem_fn(&MeshAxesAttr::empty));
 }
 
@@ -723,19 +742,14 @@ bool MeshSharding::equalHaloAndShardSizes(const MeshSharding &rhs) const {
 bool MeshSharding::equalShardSizes(const MeshSharding &rhs) const {
   if (rhs.getStaticShardedDimsOffsets().size() !=
           getStaticShardedDimsOffsets().size() ||
-      !llvm::equal(llvm::make_range(getStaticShardedDimsOffsets().begin(),
-                                    getStaticShardedDimsOffsets().end()),
-                   llvm::make_range(rhs.getStaticShardedDimsOffsets().begin(),
-                                    rhs.getStaticShardedDimsOffsets().end()))) {
+      !llvm::equal(getStaticShardedDimsOffsets(),
+                   rhs.getStaticShardedDimsOffsets())) {
     return false;
   }
   if (rhs.getDynamicShardedDimsOffsets().size() !=
           getDynamicShardedDimsOffsets().size() ||
-      !llvm::equal(
-          llvm::make_range(getDynamicShardedDimsOffsets().begin(),
-                           getDynamicShardedDimsOffsets().end()),
-          llvm::make_range(rhs.getDynamicShardedDimsOffsets().begin(),
-                           rhs.getDynamicShardedDimsOffsets().end()))) {
+      !llvm::equal(getDynamicShardedDimsOffsets(),
+                   rhs.getDynamicShardedDimsOffsets())) {
     return false;
   }
   return true;
@@ -743,17 +757,11 @@ bool MeshSharding::equalShardSizes(const MeshSharding &rhs) const {
 
 bool MeshSharding::equalHaloSizes(const MeshSharding &rhs) const {
   if (rhs.getStaticHaloSizes().size() != getStaticHaloSizes().size() ||
-      !llvm::equal(llvm::make_range(getStaticHaloSizes().begin(),
-                                    getStaticHaloSizes().end()),
-                   llvm::make_range(rhs.getStaticHaloSizes().begin(),
-                                    rhs.getStaticHaloSizes().end()))) {
+      !llvm::equal(getStaticHaloSizes(), rhs.getStaticHaloSizes())) {
     return false;
   }
   if (rhs.getDynamicHaloSizes().size() != getDynamicHaloSizes().size() ||
-      !llvm::equal(llvm::make_range(getDynamicHaloSizes().begin(),
-                                    getDynamicHaloSizes().end()),
-                   llvm::make_range(rhs.getDynamicHaloSizes().begin(),
-                                    rhs.getDynamicHaloSizes().end()))) {
+      !llvm::equal(getDynamicHaloSizes(), rhs.getDynamicHaloSizes())) {
     return false;
   }
   return true;
@@ -1027,8 +1035,8 @@ static LogicalResult verifyInGroupDevice(Location loc, StringRef deviceName,
   }
 
   for (size_t i = 0; i < device.size(); ++i) {
-    if (!ShapedType::isDynamic(device[i]) &&
-        !ShapedType::isDynamic(meshShape[meshAxes[i]]) &&
+    if (ShapedType::isStatic(device[i]) &&
+        ShapedType::isStatic(meshShape[meshAxes[i]]) &&
         meshShape[meshAxes[i]] <= device[i]) {
       return emitError(loc)
              << "Out of bounds coordinate " << i << " for in-group device \""
@@ -1056,8 +1064,7 @@ static LogicalResult verifyDimensionCompatibility(Location loc,
                                                   int64_t expectedDimSize,
                                                   int64_t resultDimSize,
                                                   int64_t resultAxis) {
-  if (!ShapedType::isDynamic(resultDimSize) &&
-      expectedDimSize != resultDimSize) {
+  if (ShapedType::isStatic(resultDimSize) && expectedDimSize != resultDimSize) {
     return emitError(loc) << "Dimension size mismatch for result axis "
                           << resultAxis << ". Expected "
                           << (ShapedType::isDynamic(expectedDimSize)
@@ -1521,7 +1528,7 @@ LogicalResult ShiftOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   auto meshAxes = getMeshAxes();
   auto shiftAxis = getShiftAxis().getZExtValue();
-  if (llvm::find(meshAxes, shiftAxis) == meshAxes.end()) {
+  if (!llvm::is_contained(meshAxes, shiftAxis)) {
     return emitError() << "Invalid shift axis " << shiftAxis
                        << ". It must be one of the grouping mesh axes.";
   }

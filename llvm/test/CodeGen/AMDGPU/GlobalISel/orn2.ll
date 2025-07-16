@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX6 %s
 ; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
+; RUN: llc -global-isel -amdgpu-codegenprepare-widen-16-bit-ops=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
 
 define amdgpu_ps i32 @s_orn2_i32(i32 inreg %src0, i32 inreg %src1) {
 ; GCN-LABEL: s_orn2_i32:
@@ -391,20 +391,20 @@ define amdgpu_ps i16 @s_orn2_i16_commute(i16 inreg %src0, i16 inreg %src1) {
 define amdgpu_ps { i16, i16 } @s_orn2_i16_multi_use(i16 inreg %src0, i16 inreg %src1) {
 ; GCN-LABEL: s_orn2_i16_multi_use:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_xor_b32 s1, s3, -1
+; GCN-NEXT:    s_not_b32 s1, s3
 ; GCN-NEXT:    s_orn2_b32 s0, s2, s3
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_orn2_i16_multi_use:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_orn2_b32 s0, s2, s3
-; GFX10-NEXT:    s_xor_b32 s1, s3, -1
+; GFX10-NEXT:    s_not_b32 s1, s3
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_orn2_i16_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_or_not1_b32 s0, s2, s3
-; GFX11-NEXT:    s_xor_b32 s1, s3, -1
+; GFX11-NEXT:    s_not_b32 s1, s3
 ; GFX11-NEXT:    ; return to shader part epilog
   %not.src1 = xor i16 %src1, -1
   %or = or i16 %src0, %not.src1
@@ -482,14 +482,14 @@ define amdgpu_ps float @v_orn2_i16_sv(i16 inreg %src0, i16 %src1) {
 define amdgpu_ps float @v_orn2_i16_vs(i16 %src0, i16 inreg %src1) {
 ; GCN-LABEL: v_orn2_i16_vs:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_xor_b32 s0, s2, -1
+; GCN-NEXT:    s_not_b32 s0, s2
 ; GCN-NEXT:    v_or_b32_e32 v0, s0, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: v_orn2_i16_vs:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_xor_b32 s0, s2, -1
+; GFX10PLUS-NEXT:    s_not_b32 s0, s2
 ; GFX10PLUS-NEXT:    v_or_b32_e32 v0, s0, v0
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog

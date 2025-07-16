@@ -547,11 +547,6 @@ void DeclRefExpr::setDecl(ValueDecl *NewD) {
   setDependence(computeDependence(this, NewD->getASTContext()));
 }
 
-SourceLocation DeclRefExpr::getBeginLoc() const {
-  if (hasQualifier())
-    return getQualifierLoc().getBeginLoc();
-  return getNameInfo().getBeginLoc();
-}
 SourceLocation DeclRefExpr::getEndLoc() const {
   if (hasExplicitTemplateArgs())
     return getRAngleLoc();
@@ -596,7 +591,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context) const {
 std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
                                                   QualType Ty) {
   auto MangleCallback = [](ASTContext &Ctx,
-                           const NamedDecl *ND) -> std::optional<unsigned> {
+                           const NamedDecl *ND) -> UnsignedOrNone {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
       return RD->getDeviceLambdaManglingNumber();
     return std::nullopt;
@@ -692,9 +687,9 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
           GD = GlobalDecl(CD, Ctor_Base);
         else if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(ND))
           GD = GlobalDecl(DD, Dtor_Base);
-        else if (ND->hasAttr<CUDAGlobalAttr>())
-          GD = GlobalDecl(cast<FunctionDecl>(ND));
-        else
+        else if (auto FD = dyn_cast<FunctionDecl>(ND)) {
+          GD = FD->isReferenceableKernel() ? GlobalDecl(FD) : GlobalDecl(ND);
+        } else
           GD = GlobalDecl(ND);
         MC->mangleName(GD, Out);
 
@@ -1104,6 +1099,7 @@ unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
   switch (SK) {
   case StringLiteralKind::Ordinary:
   case StringLiteralKind::UTF8:
+  case StringLiteralKind::Binary:
     CharByteWidth = Target.getCharWidth();
     break;
   case StringLiteralKind::Wide:
@@ -1127,14 +1123,13 @@ unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
 
 StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
                              StringLiteralKind Kind, bool Pascal, QualType Ty,
-                             const SourceLocation *Loc,
-                             unsigned NumConcatenated)
+                             ArrayRef<SourceLocation> Locs)
     : Expr(StringLiteralClass, Ty, VK_LValue, OK_Ordinary) {
 
   unsigned Length = Str.size();
 
   StringLiteralBits.Kind = llvm::to_underlying(Kind);
-  StringLiteralBits.NumConcatenated = NumConcatenated;
+  StringLiteralBits.NumConcatenated = Locs.size();
 
   if (Kind != StringLiteralKind::Unevaluated) {
     assert(Ctx.getAsConstantArrayType(Ty) &&
@@ -1173,11 +1168,10 @@ StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
 
   // Initialize the trailing array of SourceLocation.
   // This is safe since SourceLocation is POD-like.
-  std::memcpy(getTrailingObjects<SourceLocation>(), Loc,
-              NumConcatenated * sizeof(SourceLocation));
+  llvm::copy(Locs, getTrailingObjects<SourceLocation>());
 
   // Initialize the trailing array of char holding the string data.
-  std::memcpy(getTrailingObjects<char>(), Str.data(), Str.size());
+  llvm::copy(Str, getTrailingObjects<char>());
 
   setDependence(ExprDependence::None);
 }
@@ -1192,13 +1186,12 @@ StringLiteral::StringLiteral(EmptyShell Empty, unsigned NumConcatenated,
 
 StringLiteral *StringLiteral::Create(const ASTContext &Ctx, StringRef Str,
                                      StringLiteralKind Kind, bool Pascal,
-                                     QualType Ty, const SourceLocation *Loc,
-                                     unsigned NumConcatenated) {
+                                     QualType Ty,
+                                     ArrayRef<SourceLocation> Locs) {
   void *Mem = Ctx.Allocate(totalSizeToAlloc<unsigned, SourceLocation, char>(
-                               1, NumConcatenated, Str.size()),
+                               1, Locs.size(), Str.size()),
                            alignof(StringLiteral));
-  return new (Mem)
-      StringLiteral(Ctx, Str, Kind, Pascal, Ty, Loc, NumConcatenated);
+  return new (Mem) StringLiteral(Ctx, Str, Kind, Pascal, Ty, Locs);
 }
 
 StringLiteral *StringLiteral::CreateEmpty(const ASTContext &Ctx,
@@ -1216,6 +1209,7 @@ void StringLiteral::outputString(raw_ostream &OS) const {
   switch (getKind()) {
   case StringLiteralKind::Unevaluated:
   case StringLiteralKind::Ordinary:
+  case StringLiteralKind::Binary:
     break; // no prefix.
   case StringLiteralKind::Wide:
     OS << 'L';
@@ -1332,6 +1326,11 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
                                  const LangOptions &Features,
                                  const TargetInfo &Target, unsigned *StartToken,
                                  unsigned *StartTokenByteOffset) const {
+  // No source location of bytes for binary literals since they don't come from
+  // source.
+  if (getKind() == StringLiteralKind::Binary)
+    return getStrTokenLoc(0);
+
   assert((getKind() == StringLiteralKind::Ordinary ||
           getKind() == StringLiteralKind::UTF8 ||
           getKind() == StringLiteralKind::Unevaluated) &&
@@ -1357,8 +1356,7 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
     SourceLocation StrTokSpellingLoc = SM.getSpellingLoc(StrTokLoc);
 
     // Re-lex the token to get its length and original spelling.
-    std::pair<FileID, unsigned> LocInfo =
-        SM.getDecomposedLoc(StrTokSpellingLoc);
+    FileIDAndOffset LocInfo = SM.getDecomposedLoc(StrTokSpellingLoc);
     bool Invalid = false;
     StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
     if (Invalid) {
@@ -1447,6 +1445,29 @@ OverloadedOperatorKind UnaryOperator::getOverloadedOperator(Opcode Opc) {
 //===----------------------------------------------------------------------===//
 // Postfix Operators.
 //===----------------------------------------------------------------------===//
+#ifndef NDEBUG
+static unsigned SizeOfCallExprInstance(Expr::StmtClass SC) {
+  switch (SC) {
+  case Expr::CallExprClass:
+    return sizeof(CallExpr);
+  case Expr::CXXOperatorCallExprClass:
+    return sizeof(CXXOperatorCallExpr);
+  case Expr::CXXMemberCallExprClass:
+    return sizeof(CXXMemberCallExpr);
+  case Expr::UserDefinedLiteralClass:
+    return sizeof(UserDefinedLiteral);
+  case Expr::CUDAKernelCallExprClass:
+    return sizeof(CUDAKernelCallExpr);
+  default:
+    llvm_unreachable("unexpected class deriving from CallExpr!");
+  }
+}
+#endif
+
+// changing the size of SourceLocation, CallExpr, and
+// subclasses requires careful considerations
+static_assert(sizeof(SourceLocation) == 4 && sizeof(CXXOperatorCallExpr) <= 32,
+              "we assume CXXOperatorCallExpr is at most 32 bytes");
 
 CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
                    ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
@@ -1457,11 +1478,8 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   unsigned NumPreArgs = PreArgs.size();
   CallExprBits.NumPreArgs = NumPreArgs;
   assert((NumPreArgs == getNumPreArgs()) && "NumPreArgs overflow!");
-
-  unsigned OffsetToTrailingObjects = offsetToTrailingObjects(SC);
-  CallExprBits.OffsetToTrailingObjects = OffsetToTrailingObjects;
-  assert((CallExprBits.OffsetToTrailingObjects == OffsetToTrailingObjects) &&
-         "OffsetToTrailingObjects overflow!");
+  assert(SizeOfCallExprInstance(SC) <= OffsetToTrailingObjects &&
+         "This CallExpr subclass is too big or unsupported");
 
   CallExprBits.UsesADL = static_cast<bool>(UsesADL);
 
@@ -1477,6 +1495,9 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
 
   CallExprBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   CallExprBits.IsCoroElideSafe = false;
+  CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = false;
+  CallExprBits.HasTrailingSourceLoc = false;
+
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
 }
@@ -1486,13 +1507,10 @@ CallExpr::CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,
     : Expr(SC, Empty), NumArgs(NumArgs) {
   CallExprBits.NumPreArgs = NumPreArgs;
   assert((NumPreArgs == getNumPreArgs()) && "NumPreArgs overflow!");
-
-  unsigned OffsetToTrailingObjects = offsetToTrailingObjects(SC);
-  CallExprBits.OffsetToTrailingObjects = OffsetToTrailingObjects;
-  assert((CallExprBits.OffsetToTrailingObjects == OffsetToTrailingObjects) &&
-         "OffsetToTrailingObjects overflow!");
   CallExprBits.HasFPFeatures = HasFPFeatures;
   CallExprBits.IsCoroElideSafe = false;
+  CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = false;
+  CallExprBits.HasTrailingSourceLoc = false;
 }
 
 CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,
@@ -1503,41 +1521,41 @@ CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,
   unsigned NumArgs = std::max<unsigned>(Args.size(), MinNumArgs);
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/0, NumArgs, FPFeatures.requiresTrailingStorage());
-  void *Mem =
-      Ctx.Allocate(sizeof(CallExpr) + SizeOfTrailingObjects, alignof(CallExpr));
-  return new (Mem) CallExpr(CallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
-                            RParenLoc, FPFeatures, MinNumArgs, UsesADL);
+  void *Mem = Ctx.Allocate(
+      sizeToAllocateForCallExprSubclass<CallExpr>(SizeOfTrailingObjects),
+      alignof(CallExpr));
+  CallExpr *E =
+      new (Mem) CallExpr(CallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
+                         RParenLoc, FPFeatures, MinNumArgs, UsesADL);
+  E->updateTrailingSourceLoc();
+  return E;
 }
 
 CallExpr *CallExpr::CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
                                 bool HasFPFeatures, EmptyShell Empty) {
   unsigned SizeOfTrailingObjects =
       CallExpr::sizeOfTrailingObjects(/*NumPreArgs=*/0, NumArgs, HasFPFeatures);
-  void *Mem =
-      Ctx.Allocate(sizeof(CallExpr) + SizeOfTrailingObjects, alignof(CallExpr));
+  void *Mem = Ctx.Allocate(
+      sizeToAllocateForCallExprSubclass<CallExpr>(SizeOfTrailingObjects),
+      alignof(CallExpr));
   return new (Mem)
       CallExpr(CallExprClass, /*NumPreArgs=*/0, NumArgs, HasFPFeatures, Empty);
 }
 
-unsigned CallExpr::offsetToTrailingObjects(StmtClass SC) {
-  switch (SC) {
-  case CallExprClass:
-    return sizeof(CallExpr);
-  case CXXOperatorCallExprClass:
-    return sizeof(CXXOperatorCallExpr);
-  case CXXMemberCallExprClass:
-    return sizeof(CXXMemberCallExpr);
-  case UserDefinedLiteralClass:
-    return sizeof(UserDefinedLiteral);
-  case CUDAKernelCallExprClass:
-    return sizeof(CUDAKernelCallExpr);
-  default:
-    llvm_unreachable("unexpected class deriving from CallExpr!");
-  }
-}
-
 Decl *Expr::getReferencedDeclOfCallee() {
-  Expr *CEE = IgnoreParenImpCasts();
+
+  // Optimize for the common case first
+  // (simple function or member function call)
+  // then try more exotic possibilities.
+  Expr *CEE = IgnoreImpCasts();
+
+  if (auto *DRE = dyn_cast<DeclRefExpr>(CEE))
+    return DRE->getDecl();
+
+  if (auto *ME = dyn_cast<MemberExpr>(CEE))
+    return ME->getMemberDecl();
+
+  CEE = CEE->IgnoreParens();
 
   while (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(CEE))
     CEE = NTTP->getReplacement()->IgnoreParenImpCasts();
@@ -1629,40 +1647,6 @@ CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
     if (const auto *A = TD->getDecl()->getAttr<WarnUnusedResultAttr>())
       return {TD->getDecl(), A};
   return {nullptr, nullptr};
-}
-
-SourceLocation CallExpr::getBeginLoc() const {
-  if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
-    return OCE->getBeginLoc();
-
-  // A non-dependent call to a member function with an explicit object parameter
-  // is modelled with the object expression being the first argument, e.g. in
-  // `o.f(x)`, the callee will be just `f`, and `o` will be the first argument.
-  // Since the first argument is written before the callee, the expression's
-  // begin location should come from the first argument.
-  // This does not apply to dependent calls, which are modelled with `o.f`
-  // being the callee.
-  if (!isTypeDependent()) {
-    if (const auto *Method =
-            dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
-        Method && Method->isExplicitObjectMemberFunction())
-      return getArg(0)->getBeginLoc();
-  }
-
-  SourceLocation begin = getCallee()->getBeginLoc();
-  if (begin.isInvalid() && getNumArgs() > 0 && getArg(0))
-    begin = getArg(0)->getBeginLoc();
-  return begin;
-}
-
-SourceLocation CallExpr::getEndLoc() const {
-  if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
-    return OCE->getEndLoc();
-
-  SourceLocation end = getRParenLoc();
-  if (end.isInvalid() && getNumArgs() > 0 && getArg(getNumArgs() - 1))
-    end = getArg(getNumArgs() - 1)->getEndLoc();
-  return end;
 }
 
 OffsetOfExpr *OffsetOfExpr::Create(const ASTContext &C, QualType type,
@@ -2036,7 +2020,8 @@ CXXBaseSpecifier **CastExpr::path_buffer() {
 #define ABSTRACT_STMT(x)
 #define CASTEXPR(Type, Base)                                                   \
   case Stmt::Type##Class:                                                      \
-    return static_cast<Type *>(this)->getTrailingObjects<CXXBaseSpecifier *>();
+    return static_cast<Type *>(this)                                           \
+        ->getTrailingObjectsNonStrict<CXXBaseSpecifier *>();
 #define STMT(Type, Base)
 #include "clang/AST/StmtNodes.inc"
   default:
@@ -2101,8 +2086,8 @@ ImplicitCastExpr *ImplicitCastExpr::Create(const ASTContext &C, QualType T,
   ImplicitCastExpr *E =
       new (Buffer) ImplicitCastExpr(T, Kind, Operand, PathSize, FPO, VK);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath,
+                             E->getTrailingObjects<CXXBaseSpecifier *>());
   return E;
 }
 
@@ -2128,8 +2113,8 @@ CStyleCastExpr *CStyleCastExpr::Create(const ASTContext &C, QualType T,
   CStyleCastExpr *E =
       new (Buffer) CStyleCastExpr(T, VK, K, Op, PathSize, FPO, WrittenTy, L, R);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath,
+                             E->getTrailingObjects<CXXBaseSpecifier *>());
   return E;
 }
 
@@ -2235,6 +2220,16 @@ bool BinaryOperator::isNullPointerArithmeticExtension(ASTContext &Ctx,
     PExp = RHS;
   } else {
     return false;
+  }
+
+  // Workaround for old glibc's __PTR_ALIGN macro
+  if (auto *Select =
+          dyn_cast<ConditionalOperator>(PExp->IgnoreParenNoopCasts(Ctx))) {
+    // If the condition can be constant evaluated, we check the selected arm.
+    bool EvalResult;
+    if (!Select->getCond()->EvaluateAsBooleanCondition(EvalResult, Ctx))
+      return false;
+    PExp = EvalResult ? Select->getTrueExpr() : Select->getFalseExpr();
   }
 
   // Check that the pointer is a nullptr.
@@ -3243,8 +3238,8 @@ bool Expr::isTemporaryObject(ASTContext &C, const CXXRecordDecl *TempTy) const {
   // refer to temporaries of that type:
 
   // - implicit derived-to-base conversions
-  if (isa<ImplicitCastExpr>(E)) {
-    switch (cast<ImplicitCastExpr>(E)->getCastKind()) {
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    switch (ICE->getCastKind()) {
     case CK_DerivedToBase:
     case CK_UncheckedDerivedToBase:
       return false;
@@ -3257,7 +3252,7 @@ bool Expr::isTemporaryObject(ASTContext &C, const CXXRecordDecl *TempTy) const {
   if (isa<MemberExpr>(E))
     return false;
 
-  if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(E))
+  if (const auto *BO = dyn_cast<BinaryOperator>(E))
     if (BO->isPtrMemOp())
       return false;
 
@@ -3398,6 +3393,10 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     //     an anonymous union, in declaration order.
     const InitListExpr *ILE = cast<InitListExpr>(this);
     assert(ILE->isSemanticForm() && "InitListExpr must be in semantic form");
+
+    if (ILE->isTransparent())
+      return ILE->getInit(0)->isConstantInitializer(Ctx, false, Culprit);
+
     if (ILE->getType()->isArrayType()) {
       unsigned numInits = ILE->getNumInits();
       for (unsigned i = 0; i < numInits; i++) {
@@ -3613,7 +3612,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case PackExpansionExprClass:
   case SubstNonTypeTemplateParmPackExprClass:
   case FunctionParmPackExprClass:
-  case TypoExprClass:
   case RecoveryExprClass:
   case CXXFoldExprClass:
     // Make a conservative assumption for dependent nodes.
@@ -4395,7 +4393,8 @@ ShuffleVectorExpr::ShuffleVectorExpr(const ASTContext &C, ArrayRef<Expr *> args,
                                      QualType Type, SourceLocation BLoc,
                                      SourceLocation RP)
     : Expr(ShuffleVectorExprClass, Type, VK_PRValue, OK_Ordinary),
-      BuiltinLoc(BLoc), RParenLoc(RP), NumExprs(args.size()) {
+      BuiltinLoc(BLoc), RParenLoc(RP) {
+  ShuffleVectorExprBits.NumExprs = args.size();
   SubExprs = new (C) Stmt*[args.size()];
   for (unsigned i = 0; i != args.size(); i++)
     SubExprs[i] = args[i];
@@ -4406,9 +4405,9 @@ ShuffleVectorExpr::ShuffleVectorExpr(const ASTContext &C, ArrayRef<Expr *> args,
 void ShuffleVectorExpr::setExprs(const ASTContext &C, ArrayRef<Expr *> Exprs) {
   if (SubExprs) C.Deallocate(SubExprs);
 
-  this->NumExprs = Exprs.size();
-  SubExprs = new (C) Stmt*[NumExprs];
-  memcpy(SubExprs, Exprs.data(), sizeof(Expr *) * Exprs.size());
+  this->ShuffleVectorExprBits.NumExprs = Exprs.size();
+  SubExprs = new (C) Stmt *[ShuffleVectorExprBits.NumExprs];
+  llvm::copy(Exprs, SubExprs);
 }
 
 GenericSelectionExpr::GenericSelectionExpr(
@@ -4429,11 +4428,10 @@ GenericSelectionExpr::GenericSelectionExpr(
   GenericSelectionExprBits.GenericLoc = GenericLoc;
   getTrailingObjects<Stmt *>()[getIndexOfControllingExpression()] =
       ControllingExpr;
-  std::copy(AssocExprs.begin(), AssocExprs.end(),
-            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
-  std::copy(AssocTypes.begin(), AssocTypes.end(),
-            getTrailingObjects<TypeSourceInfo *>() +
-                getIndexOfStartOfAssociatedTypes());
+  llvm::copy(AssocExprs,
+             getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
+  llvm::copy(AssocTypes, getTrailingObjects<TypeSourceInfo *>() +
+                             getIndexOfStartOfAssociatedTypes());
 
   setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
 }
@@ -4457,11 +4455,10 @@ GenericSelectionExpr::GenericSelectionExpr(
   GenericSelectionExprBits.GenericLoc = GenericLoc;
   getTrailingObjects<TypeSourceInfo *>()[getIndexOfControllingType()] =
       ControllingType;
-  std::copy(AssocExprs.begin(), AssocExprs.end(),
-            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
-  std::copy(AssocTypes.begin(), AssocTypes.end(),
-            getTrailingObjects<TypeSourceInfo *>() +
-                getIndexOfStartOfAssociatedTypes());
+  llvm::copy(AssocExprs,
+             getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
+  llvm::copy(AssocTypes, getTrailingObjects<TypeSourceInfo *>() +
+                             getIndexOfStartOfAssociatedTypes());
 
   setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
 }
@@ -4482,11 +4479,10 @@ GenericSelectionExpr::GenericSelectionExpr(
   GenericSelectionExprBits.GenericLoc = GenericLoc;
   getTrailingObjects<Stmt *>()[getIndexOfControllingExpression()] =
       ControllingExpr;
-  std::copy(AssocExprs.begin(), AssocExprs.end(),
-            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
-  std::copy(AssocTypes.begin(), AssocTypes.end(),
-            getTrailingObjects<TypeSourceInfo *>() +
-                getIndexOfStartOfAssociatedTypes());
+  llvm::copy(AssocExprs,
+             getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
+  llvm::copy(AssocTypes, getTrailingObjects<TypeSourceInfo *>() +
+                             getIndexOfStartOfAssociatedTypes());
 
   setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
 }
@@ -4507,11 +4503,10 @@ GenericSelectionExpr::GenericSelectionExpr(
   GenericSelectionExprBits.GenericLoc = GenericLoc;
   getTrailingObjects<TypeSourceInfo *>()[getIndexOfControllingType()] =
       ControllingType;
-  std::copy(AssocExprs.begin(), AssocExprs.end(),
-            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
-  std::copy(AssocTypes.begin(), AssocTypes.end(),
-            getTrailingObjects<TypeSourceInfo *>() +
-                getIndexOfStartOfAssociatedTypes());
+  llvm::copy(AssocExprs,
+             getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
+  llvm::copy(AssocTypes, getTrailingObjects<TypeSourceInfo *>() +
+                             getIndexOfStartOfAssociatedTypes());
 
   setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
 }
@@ -4597,7 +4592,7 @@ const IdentifierInfo *DesignatedInitExpr::Designator::getFieldName() const {
 }
 
 DesignatedInitExpr::DesignatedInitExpr(const ASTContext &C, QualType Ty,
-                                       llvm::ArrayRef<Designator> Designators,
+                                       ArrayRef<Designator> Designators,
                                        SourceLocation EqualOrColonLoc,
                                        bool GNUSyntax,
                                        ArrayRef<Expr *> IndexExprs, Expr *Init)
@@ -4630,12 +4625,12 @@ DesignatedInitExpr::DesignatedInitExpr(const ASTContext &C, QualType Ty,
   setDependence(computeDependence(this));
 }
 
-DesignatedInitExpr *
-DesignatedInitExpr::Create(const ASTContext &C,
-                           llvm::ArrayRef<Designator> Designators,
-                           ArrayRef<Expr*> IndexExprs,
-                           SourceLocation ColonOrEqualLoc,
-                           bool UsesColonSyntax, Expr *Init) {
+DesignatedInitExpr *DesignatedInitExpr::Create(const ASTContext &C,
+                                               ArrayRef<Designator> Designators,
+                                               ArrayRef<Expr *> IndexExprs,
+                                               SourceLocation ColonOrEqualLoc,
+                                               bool UsesColonSyntax,
+                                               Expr *Init) {
   void *Mem = C.Allocate(totalSizeToAlloc<Stmt *>(IndexExprs.size() + 1),
                          alignof(DesignatedInitExpr));
   return new (Mem) DesignatedInitExpr(C, C.VoidTy, Designators,
@@ -4760,9 +4755,7 @@ ParenListExpr::ParenListExpr(SourceLocation LParenLoc, ArrayRef<Expr *> Exprs,
     : Expr(ParenListExprClass, QualType(), VK_PRValue, OK_Ordinary),
       LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
   ParenListExprBits.NumExprs = Exprs.size();
-
-  for (unsigned I = 0, N = Exprs.size(); I != N; ++I)
-    getTrailingObjects<Stmt *>()[I] = Exprs[I];
+  llvm::copy(Exprs, getTrailingObjects());
   setDependence(computeDependence(this));
 }
 
@@ -5023,17 +5016,19 @@ PseudoObjectExpr::PseudoObjectExpr(QualType type, ExprValueKind VK,
     : Expr(PseudoObjectExprClass, type, VK, OK_Ordinary) {
   PseudoObjectExprBits.NumSubExprs = semantics.size() + 1;
   PseudoObjectExprBits.ResultIndex = resultIndex + 1;
+  MutableArrayRef<Expr *> Trail = getTrailingObjects(semantics.size() + 1);
+  Trail[0] = syntax;
 
-  for (unsigned i = 0, e = semantics.size() + 1; i != e; ++i) {
-    Expr *E = (i == 0 ? syntax : semantics[i-1]);
-    getSubExprsBuffer()[i] = E;
+  assert(llvm::all_of(semantics,
+                      [](const Expr *E) {
+                        return !isa<OpaqueValueExpr>(E) ||
+                               cast<OpaqueValueExpr>(E)->getSourceExpr() !=
+                                   nullptr;
+                      }) &&
+         "opaque-value semantic expressions for pseudo-object "
+         "operations must have sources");
 
-    if (isa<OpaqueValueExpr>(E))
-      assert(cast<OpaqueValueExpr>(E)->getSourceExpr() != nullptr &&
-             "opaque-value semantic expressions for pseudo-object "
-             "operations must have sources");
-  }
-
+  llvm::copy(semantics, Trail.drop_front().begin());
   setDependence(computeDependence(this));
 }
 
@@ -5220,7 +5215,7 @@ RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,
   assert(!T.isNull());
   assert(!llvm::is_contained(SubExprs, nullptr));
 
-  llvm::copy(SubExprs, getTrailingObjects<Expr *>());
+  llvm::copy(SubExprs, getTrailingObjects());
   setDependence(computeDependence(this));
 }
 
@@ -5287,9 +5282,7 @@ OMPArrayShapingExpr *OMPArrayShapingExpr::CreateEmpty(const ASTContext &Context,
 }
 
 void OMPIteratorExpr::setIteratorDeclaration(unsigned I, Decl *D) {
-  assert(I < NumIterators &&
-         "Idx is greater or equal the number of iterators definitions.");
-  getTrailingObjects<Decl *>()[I] = D;
+  getTrailingObjects<Decl *>(NumIterators)[I] = D;
 }
 
 void OMPIteratorExpr::setAssignmentLoc(unsigned I, SourceLocation Loc) {
@@ -5456,4 +5449,18 @@ ConvertVectorExpr *ConvertVectorExpr::Create(
   void *Mem = C.Allocate(Size, alignof(ConvertVectorExpr));
   return new (Mem) ConvertVectorExpr(SrcExpr, TI, DstType, VK, OK, BuiltinLoc,
                                      RParenLoc, FPFeatures);
+}
+
+APValue &CompoundLiteralExpr::getOrCreateStaticValue(ASTContext &Ctx) const {
+  assert(hasStaticStorage());
+  if (!StaticValue) {
+    StaticValue = new (Ctx) APValue;
+    Ctx.addDestruction(StaticValue);
+  }
+  return *StaticValue;
+}
+
+APValue &CompoundLiteralExpr::getStaticValue() const {
+  assert(StaticValue);
+  return *StaticValue;
 }

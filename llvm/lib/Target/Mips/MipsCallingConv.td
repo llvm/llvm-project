@@ -267,15 +267,8 @@ def CC_Mips_FastCC : CallingConv<[
 
   // Integer arguments are passed in integer registers. All scratch registers,
   // except for AT, V0 and T9, are available to be used as argument registers.
-  CCIfType<[i32], CCIfSubtargetNot<"isTargetNaCl()",
-      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, T6, T7, T8, V1]>>>,
-
-  // In NaCl, T6, T7 and T8 are reserved and not available as argument
-  // registers for fastcc.  T6 contains the mask for sandboxing control flow
-  // (indirect jumps and calls).  T7 contains the mask for sandboxing memory
-  // accesses (loads and stores).  T8 contains the thread pointer.
-  CCIfType<[i32], CCIfSubtarget<"isTargetNaCl()",
-      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, V1]>>>,
+  CCIfType<[i32],
+      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, T6, T7, T8, V1]>>,
 
   // f32 arguments are passed in single-precision floating pointer registers.
   CCIfType<[f32], CCIfSubtarget<"useOddSPReg()",
@@ -339,7 +332,7 @@ def CC_Mips_FixedArg : CallingConv<[
 
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_Mips_FastCC>>,
 
-  CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
+  CCIfSubtarget<"isABI_O32()", CCIfSubtargetNot<"isGP64bit()", CCDelegateTo<CC_MipsO32_FP>>>,
   CCDelegateTo<CC_MipsN>
 ]>;
 

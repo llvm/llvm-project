@@ -330,6 +330,10 @@ if config.have_zlib:
 if config.have_internal_symbolizer:
     config.available_features.add("internal_symbolizer")
 
+if config.have_disable_symbolizer_path_search:
+    config.available_features.add("disable_symbolizer_path_search")
+
+
 # Use ugly construction to explicitly prohibit "clang", "clang++" etc.
 # in RUN lines.
 config.substitutions.append(
@@ -371,6 +375,31 @@ def get_ios_commands_dir():
         config.compiler_rt_src_root, "test", "sanitizer_common", "ios_commands"
     )
 
+
+# When cmake flag to disable path search is set, symbolizer is not allowed to search in $PATH,
+# need to specify it via XXX_SYMBOLIZER_PATH
+tool_symbolizer_path_list = [
+    "ASAN_SYMBOLIZER_PATH",
+    "HWASAN_SYMBOLIZER_PATH",
+    "RTSAN_SYMBOLIZER_PATH",
+    "TSAN_SYMBOLIZER_PATH",
+    "MSAN_SYMBOLIZER_PATH",
+    "LSAN_SYMBOLIZER_PATH",
+    "UBSAN_SYMBOLIZER_PATH",
+]
+
+if config.have_disable_symbolizer_path_search:
+    symbolizer_path = os.path.join(config.llvm_tools_dir, "llvm-symbolizer")
+
+    for sanitizer in tool_symbolizer_path_list:
+        if sanitizer not in config.environment:
+            config.environment[sanitizer] = symbolizer_path
+
+env_utility = "/opt/freeware/bin/env" if config.host_os == "AIX" else "env"
+env_unset_command = " ".join(f"-u {var}" for var in tool_symbolizer_path_list)
+config.substitutions.append(
+    ("%env_unset_tool_symbolizer_path", f"{env_utility} {env_unset_command}")
+)
 
 # Allow tests to be executed on a simulator or remotely.
 if emulator:
@@ -474,7 +503,7 @@ config.substitutions.append(("CHECK-%os", ("CHECK-" + config.host_os)))
 # Define %arch to check for architecture-dependent output.
 config.substitutions.append(("%arch", (config.host_arch)))
 
-if config.host_os == "Windows":
+if os.name == "nt":
     # FIXME: This isn't quite right. Specifically, it will succeed if the program
     # does not crash but exits with a non-zero exit code. We ought to merge
     # KillTheDoctor and not --crash to make the latter more useful and remove the

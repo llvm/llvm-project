@@ -712,8 +712,8 @@ define amdgpu_kernel void @udiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    v_fma_f32 v2, -v3, v0, v2
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 vcc_lo, |v2|, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, 0, v3, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v2, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b16 v4, v2, s[0:1]
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB4_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -824,9 +824,9 @@ define amdgpu_kernel void @urem16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f32 v2, -v3, v0, v2
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v3, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 vcc_lo, |v2|, v0
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, 0, v3, vcc_lo
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v2, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_lo_u32 v2, v2, s2
@@ -959,11 +959,10 @@ define amdgpu_kernel void @sdiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    s_and_b32 s5, s5, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s4, s4, 0
 ; GFX11-NEXT:    s_and_b32 s5, 0xffff, s3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    v_add_nc_u32_e32 v2, s4, v2
-; GFX11-NEXT:    s_lshl_b32 s5, s5, 1
 ; GFX11-NEXT:    s_add_i32 s3, s3, 1
-; GFX11-NEXT:    v_mov_b32_e32 v3, s5
+; GFX11-NEXT:    s_lshl_b32 s5, s5, 1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v3, s5 :: v_dual_add_nc_u32 v2, s4, v2
 ; GFX11-NEXT:    s_and_b32 s4, s3, 0xffff
 ; GFX11-NEXT:    s_cmpk_eq_i32 s4, 0x400
 ; GFX11-NEXT:    global_store_b16 v3, v2, s[0:1]

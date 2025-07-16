@@ -1,4 +1,5 @@
 # RUN: llc -o - %s -run-pass=shrink-wrap | FileCheck %s
+# RUN: llc -o - %s -passes='shrink-wrap' | FileCheck %s
 --- |
   ; ModuleID = '<stdin>'
   source_filename = "t.c"

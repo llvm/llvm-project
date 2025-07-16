@@ -823,17 +823,9 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
   if (maskRank == 0) {
     mlir::Type i1Type = builder.getI1Type();
     mlir::Type logical = maskElemType;
-    mlir::IndexType idxTy = builder.getIndexType();
-
-    fir::SequenceType::Shape singleElement(1, 1);
-    mlir::Type arrTy = fir::SequenceType::get(singleElement, logical);
-    mlir::Type boxArrTy = fir::BoxType::get(arrTy);
-    mlir::Value array = builder.create<fir::ConvertOp>(loc, boxArrTy, mask);
-
-    mlir::Value indx = builder.createIntegerConstant(loc, idxTy, 0);
     mlir::Type logicalRefTy = builder.getRefType(logical);
     mlir::Value condAddr =
-        builder.create<fir::CoordinateOp>(loc, logicalRefTy, array, indx);
+        builder.create<fir::BoxAddrOp>(loc, logicalRefTy, mask);
     mlir::Value cond = builder.create<fir::LoadOp>(loc, condAddr);
     mlir::Value condI1 = builder.create<fir::ConvertOp>(loc, i1Type, cond);
 

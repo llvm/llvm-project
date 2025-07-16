@@ -130,11 +130,11 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef FooParamLocation =
     LLVMDIBuilderCreateDebugLocation(LLVMGetGlobalContext(), 42, 0,
                                      ReplaceableFunctionMetadata, NULL);
-  LLVMMetadataRef FunctionMetadata =
-    LLVMDIBuilderCreateFunction(DIB, File, "foo", 3, "foo", 3,
-                                File, 42, FunctionTy, true, true,
-                                42, 0, false);
+  LLVMMetadataRef FunctionMetadata = LLVMDIBuilderCreateFunction(
+      DIB, File, "foo", 3, "foo", 3, File, 42, NULL, true, true, 42, 0, false);
   LLVMMetadataReplaceAllUsesWith(ReplaceableFunctionMetadata, FunctionMetadata);
+
+  LLVMDISubprogramReplaceType(FunctionMetadata, FunctionTy);
 
   LLVMMetadataRef FooParamExpression =
     LLVMDIBuilderCreateExpression(DIB, NULL, 0);
@@ -214,6 +214,73 @@ int llvm_test_dibuilder(void) {
       EnumeratorsTest, 3, Int64Ty);
   LLVMAddNamedMetadataOperand(
       M, "EnumTest", LLVMMetadataAsValue(LLVMGetModuleContext(M), EnumTest));
+
+  LLVMMetadataRef UInt128Ty = LLVMDIBuilderCreateBasicType(
+      DIB, "UInt128", strlen("UInt128"), 128, 0, LLVMDIFlagZero);
+  const uint64_t WordsTestD[] = {0x098a224000000000ull, 0x4b3b4ca85a86c47aull};
+  const uint64_t WordsTestE[] = {0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull};
+
+  LLVMMetadataRef LargeEnumeratorTestD =
+      LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+          DIB, "Test_D", strlen("Test_D"), 128, WordsTestD, false);
+  LLVMMetadataRef LargeEnumeratorTestE =
+      LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+          DIB, "Test_E", strlen("Test_E"), 128, WordsTestE, false);
+  LLVMMetadataRef LargeEnumeratorsTest[] = {LargeEnumeratorTestD,
+                                            LargeEnumeratorTestE};
+  LLVMMetadataRef LargeEnumTest = LLVMDIBuilderCreateEnumerationType(
+      DIB, NameSpace, "LargeEnumTest", strlen("LargeEnumTest"), File, 0, 128, 0,
+      LargeEnumeratorsTest, 2, UInt128Ty);
+  LLVMAddNamedMetadataOperand(
+      M, "LargeEnumTest",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), LargeEnumTest));
+
+  LLVMValueRef FooVal3 = LLVMConstInt(LLVMInt64Type(), 8, false);
+  LLVMValueRef FooVal4 = LLVMConstInt(LLVMInt64Type(), 4, false);
+  LLVMMetadataRef lo = LLVMValueAsMetadata(FooVal1);
+  LLVMMetadataRef hi = LLVMValueAsMetadata(FooVal2);
+  LLVMMetadataRef strd = LLVMValueAsMetadata(FooVal3);
+  LLVMMetadataRef bias = LLVMValueAsMetadata(FooVal4);
+  LLVMMetadataRef SubrangeMetadataTy = LLVMDIBuilderCreateSubrangeType(
+      DIB, File, "foo", 3, 42, File, 64, 0, 0, Int64Ty, lo, hi, strd, bias);
+  LLVMAddNamedMetadataOperand(
+      M, "SubrangeType",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), SubrangeMetadataTy));
+
+  LLVMMetadataRef SetMetadataTy1 = LLVMDIBuilderCreateSetType(
+      DIB, File, "enumset", 7, File, 42, 64, 0, EnumTest);
+  LLVMMetadataRef SetMetadataTy2 = LLVMDIBuilderCreateSetType(
+      DIB, File, "subrangeset", 11, File, 42, 64, 0, SubrangeMetadataTy);
+  LLVMAddNamedMetadataOperand(
+      M, "SetType1",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), SetMetadataTy1));
+  LLVMAddNamedMetadataOperand(
+      M, "SetType2",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), SetMetadataTy2));
+
+  LLVMMetadataRef DynSubscripts[] = {
+      LLVMDIBuilderGetOrCreateSubrange(DIB, 0, 10),
+  };
+  LLVMMetadataRef Loc = LLVMDIBuilderCreateExpression(DIB, NULL, 0);
+  LLVMMetadataRef Rank = LLVMDIBuilderCreateExpression(DIB, NULL, 0);
+  LLVMMetadataRef DynamicArrayMetadataTy = LLVMDIBuilderCreateDynamicArrayType(
+      DIB, File, "foo", 3, 42, File, 64 * 10, 0, Int64Ty, DynSubscripts, 1, Loc,
+      FooVar1, NULL, Rank, NULL);
+  LLVMAddNamedMetadataOperand(
+      M, "DynType",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), DynamicArrayMetadataTy));
+
+  LLVMMetadataRef StructPTy = LLVMDIBuilderCreateForwardDecl(
+      DIB, 2 /*DW_TAG_class_type*/, "Class1", 5, NameSpace, File, 0, 0, 192, 0,
+      "FooClass", 8);
+
+  LLVMMetadataRef Int32Ty =
+      LLVMDIBuilderCreateBasicType(DIB, "Int32", 5, 32, 0, LLVMDIFlagZero);
+  LLVMMetadataRef StructElts[] = {Int64Ty, Int64Ty, Int32Ty};
+  LLVMMetadataRef ClassArr = LLVMDIBuilderGetOrCreateArray(DIB, StructElts, 3);
+  LLVMReplaceArrays(DIB, &StructPTy, &ClassArr, 1);
+  LLVMAddNamedMetadataOperand(
+      M, "ClassType", LLVMMetadataAsValue(LLVMGetModuleContext(M), StructPTy));
 
   // Using the new debug format, debug records get attached to instructions.
   // Insert a `br` and `ret` now to absorb the debug records which are

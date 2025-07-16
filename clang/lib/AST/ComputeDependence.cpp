@@ -391,7 +391,7 @@ ExprDependence clang::computeDependence(PackIndexingExpr *E) {
   if (Exprs.empty() || !E->isFullySubstituted())
     D |= PatternDep | ExprDependence::Instantiation;
   else if (!E->getIndexExpr()->isInstantiationDependent()) {
-    std::optional<unsigned> Index = E->getSelectedIndex();
+    UnsignedOrNone Index = E->getSelectedIndex();
     assert(Index && *Index < Exprs.size() && "pack index out of bound");
     D |= Exprs[*Index]->getDependence();
   }
@@ -639,12 +639,11 @@ ExprDependence clang::computeDependence(PredefinedExpr *E) {
   return toExprDependenceForImpliedType(E->getType()->getDependence());
 }
 
-ExprDependence clang::computeDependence(CallExpr *E,
-                                        llvm::ArrayRef<Expr *> PreArgs) {
+ExprDependence clang::computeDependence(CallExpr *E, ArrayRef<Expr *> PreArgs) {
   auto D = E->getCallee()->getDependence();
   if (E->getType()->isDependentType())
     D |= ExprDependence::Type;
-  for (auto *A : llvm::ArrayRef(E->getArgs(), E->getNumArgs())) {
+  for (auto *A : ArrayRef(E->getArgs(), E->getNumArgs())) {
     if (A)
       D |= A->getDependence();
   }
@@ -709,7 +708,7 @@ ExprDependence clang::computeDependence(InitListExpr *E) {
 
 ExprDependence clang::computeDependence(ShuffleVectorExpr *E) {
   auto D = toExprDependenceForImpliedType(E->getType()->getDependence());
-  for (auto *C : llvm::ArrayRef(E->getSubExprs(), E->getNumSubExprs()))
+  for (auto *C : ArrayRef(E->getSubExprs(), E->getNumSubExprs()))
     D |= C->getDependence();
   return D;
 }
@@ -758,7 +757,7 @@ ExprDependence clang::computeDependence(PseudoObjectExpr *O) {
 
 ExprDependence clang::computeDependence(AtomicExpr *A) {
   auto D = ExprDependence::None;
-  for (auto *E : llvm::ArrayRef(A->getSubExprs(), A->getNumSubExprs()))
+  for (auto *E : ArrayRef(A->getSubExprs(), A->getNumSubExprs()))
     D |= E->getDependence();
   return D;
 }

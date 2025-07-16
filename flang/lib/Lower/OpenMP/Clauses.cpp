@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Clauses.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
@@ -70,19 +70,18 @@ struct SymbolAndDesignatorExtractor {
 
   static void verify(const SymbolWithDesignator &sd) {
     const semantics::Symbol *symbol = std::get<0>(sd);
-    assert(symbol && "Expecting symbol");
-    auto &maybeDsg = std::get<1>(sd);
+    const std::optional<evaluate::Expr<evaluate::SomeType>> &maybeDsg =
+        std::get<1>(sd);
     if (!maybeDsg)
       return; // Symbol with no designator -> OK
-    std::optional<evaluate::DataRef> maybeRef =
-        evaluate::ExtractDataRef(*maybeDsg);
+    assert(symbol && "Expecting symbol");
+    std::optional<evaluate::DataRef> maybeRef = evaluate::ExtractDataRef(
+        *maybeDsg, /*intoSubstring=*/true, /*intoComplexPart=*/true);
     if (maybeRef) {
       if (&maybeRef->GetLastSymbol() == symbol)
         return; // Symbol with a designator for it -> OK
       llvm_unreachable("Expecting designator for given symbol");
     } else {
-      // This could still be a Substring or ComplexPart, but at least Substring
-      // is not allowed in OpenMP.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       maybeDsg->dump();
 #endif
@@ -132,6 +131,25 @@ Object makeObject(const parser::OmpObject &object,
   return makeObject(std::get<parser::Designator>(object.u), semaCtx);
 }
 
+ObjectList makeObjects(const parser::OmpArgumentList &objects,
+                       semantics::SemanticsContext &semaCtx) {
+  return makeList(objects.v, [&](const parser::OmpArgument &arg) {
+    return common::visit(
+        common::visitors{
+            [&](const parser::OmpLocator &locator) -> Object {
+              if (auto *object = std::get_if<parser::OmpObject>(&locator.u)) {
+                return makeObject(*object, semaCtx);
+              }
+              llvm_unreachable("Expecting object");
+            },
+            [](auto &&s) -> Object { //
+              llvm_unreachable("Expecting object");
+            },
+        },
+        arg.u);
+  });
+}
+
 std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx) {
   // If it's just the symbol, then there is no base.
@@ -164,8 +182,8 @@ std::optional<Object> getBaseObject(const Object &object,
       // as the symbol in the input object,
       // e.g. A(i) is represented as {Symbol(A), Designator(ArrayRef(A, i))}.
       // Here we have the Symbol(A), which is what we started with.
+      (void)symRef;
       assert(&**symRef == object.sym());
-      [[maybe_unused]] auto *unused = symRef;
       return std::nullopt;
     }
   } else {
@@ -230,7 +248,6 @@ MAKE_EMPTY_CLASS(Weak, Weak);
 MAKE_EMPTY_CLASS(Write, Write);
 
 // Artificial clauses
-MAKE_EMPTY_CLASS(CancellationConstructType, CancellationConstructType);
 MAKE_EMPTY_CLASS(Depobj, Depobj);
 MAKE_EMPTY_CLASS(Flush, Flush);
 MAKE_EMPTY_CLASS(MemoryOrder, MemoryOrder);
@@ -476,12 +493,13 @@ AtomicDefaultMemOrder make(const parser::OmpClause::AtomicDefaultMemOrder &inp,
                            semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAtomicDefaultMemOrderClause
   CLAUSET_ENUM_CONVERT( //
-      convert, common::OmpAtomicDefaultMemOrderType,
-      AtomicDefaultMemOrder::MemoryOrder,
+      convert, common::OmpMemoryOrderType, AtomicDefaultMemOrder::MemoryOrder,
       // clang-format off
-      MS(AcqRel,   AcqRel)
+      MS(Acq_Rel,  AcqRel)
+      MS(Acquire,  Acquire)
       MS(Relaxed,  Relaxed)
-      MS(SeqCst,   SeqCst)
+      MS(Release,  Release)
+      MS(Seq_Cst,  SeqCst)
       // clang-format on
   );
 
@@ -505,7 +523,23 @@ Bind make(const parser::OmpClause::Bind &inp,
   return Bind{/*Binding=*/convert(inp.v.v)};
 }
 
-// CancellationConstructType: empty
+CancellationConstructType
+make(const parser::OmpClause::CancellationConstructType &inp,
+     semantics::SemanticsContext &semaCtx) {
+  auto name = std::get<parser::OmpDirectiveName>(inp.v.t);
+  CLAUSET_ENUM_CONVERT(
+      convert, llvm::omp::Directive, llvm::omp::CancellationConstructType,
+      // clang-format off
+      MS(OMPD_parallel, OMP_CANCELLATION_CONSTRUCT_Parallel)
+      MS(OMPD_do, OMP_CANCELLATION_CONSTRUCT_Loop)
+      MS(OMPD_sections, OMP_CANCELLATION_CONSTRUCT_Sections)
+      MS(OMPD_taskgroup, OMP_CANCELLATION_CONSTRUCT_Taskgroup)
+      // clang-format on
+  );
+
+  return CancellationConstructType{convert(name.v)};
+}
+
 // Capture: empty
 
 Collapse make(const parser::OmpClause::Collapse &inp,
@@ -577,7 +611,7 @@ Defaultmap make(const parser::OmpClause::Defaultmap &inp,
       MS(Firstprivate, Firstprivate)
       MS(None,         None)
       MS(Default,      Default)
-      // MS(, Present)  missing-in-parser
+      MS(Present,      Present)
       // clang-format on
   );
 
@@ -750,8 +784,19 @@ Exclusive make(const parser::OmpClause::Exclusive &inp,
 
 Fail make(const parser::OmpClause::Fail &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: fail");
+  // inp.v -> parser::OmpFalClause
+  CLAUSET_ENUM_CONVERT( //
+      convert, common::OmpMemoryOrderType, Fail::MemoryOrder,
+      // clang-format off
+      MS(Acq_Rel,  AcqRel)
+      MS(Acquire,  Acquire)
+      MS(Relaxed,  Relaxed)
+      MS(Release,  Release)
+      MS(Seq_Cst,  SeqCst)
+      // clang-format on
+  );
+
+  return Fail{/*MemoryOrder=*/convert(inp.v.v)};
 }
 
 Filter make(const parser::OmpClause::Filter &inp,
@@ -829,8 +874,8 @@ HasDeviceAddr make(const parser::OmpClause::HasDeviceAddr &inp,
 
 Hint make(const parser::OmpClause::Hint &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ConstantExpr
-  return Hint{/*HintExpr=*/makeExpr(inp.v, semaCtx)};
+  // inp.v -> parser::OmpHintClause
+  return Hint{/*HintExpr=*/makeExpr(inp.v.v, semaCtx)};
 }
 
 Holds make(const parser::OmpClause::Holds &inp,
@@ -860,8 +905,8 @@ Inclusive make(const parser::OmpClause::Inclusive &inp,
 
 Indirect make(const parser::OmpClause::Indirect &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: indirect");
+  // inp.v.v -> std::optional<parser::ScalarLogicalExpr>
+  return Indirect{maybeApply(makeExprFn(semaCtx), inp.v.v)};
 }
 
 Init make(const parser::OmpClause::Init &inp,
@@ -998,7 +1043,7 @@ Map make(const parser::OmpClause::Map &inp,
   auto type = [&]() -> std::optional<Map::MapType> {
     if (t3)
       return convert1(t3->v);
-    return Map::MapType::Tofrom;
+    return std::nullopt;
   }();
 
   Map::MapTypeModifiers typeMods;
@@ -1354,9 +1399,13 @@ Uniform make(const parser::OmpClause::Uniform &inp,
 Update make(const parser::OmpClause::Update &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpUpdateClause
-  auto depType =
-      common::visit([](auto &&s) { return makeDepType(s); }, inp.v.u);
-  return Update{/*DependenceType=*/depType};
+  if (inp.v) {
+    return common::visit(
+        [](auto &&s) { return Update{/*DependenceType=*/makeDepType(s)}; },
+        inp.v->u);
+  } else {
+    return Update{/*DependenceType=*/std::nullopt};
+  }
 }
 
 Use make(const parser::OmpClause::Use &inp,

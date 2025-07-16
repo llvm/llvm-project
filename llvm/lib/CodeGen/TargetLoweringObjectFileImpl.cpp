@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
@@ -47,6 +48,7 @@
 #include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionGOFF.h"
@@ -56,6 +58,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -64,6 +67,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
@@ -114,10 +118,6 @@ static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
 //===----------------------------------------------------------------------===//
 //                                  ELF
 //===----------------------------------------------------------------------===//
-
-TargetLoweringObjectFileELF::TargetLoweringObjectFileELF() {
-  SupportDSOLocalEquivalentLowering = true;
-}
 
 void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                                              const TargetMachine &TgtM) {
@@ -322,28 +322,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
     }
   }
 
-  if (NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName)) {
-    // Emit a descriptor for every function including functions that have an
-    // available external linkage. We may not want this for imported functions
-    // that has code in another thinLTO module but we don't have a good way to
-    // tell them apart from inline functions defined in header files. Therefore
-    // we put each descriptor in a separate comdat section and rely on the
-    // linker to deduplicate.
-    for (const auto *Operand : FuncInfo->operands()) {
-      const auto *MD = cast<MDNode>(Operand);
-      auto *GUID = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
-      auto *Hash = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
-      auto *Name = cast<MDString>(MD->getOperand(2));
-      auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
-          TM->getFunctionSections() ? Name->getString() : StringRef());
-
-      Streamer.switchSection(S);
-      Streamer.emitInt64(GUID->getZExtValue());
-      Streamer.emitInt64(Hash->getZExtValue());
-      Streamer.emitULEB128IntValue(Name->getString().size());
-      Streamer.emitBytes(Name->getString());
-    }
-  }
+  emitPseudoProbeDescMetadata(Streamer, M);
 
   if (NamedMDNode *LLVMStats = M.getNamedMetadata("llvm.stats")) {
     // Emit the metadata for llvm statistics into .llvm_stats section, which is
@@ -713,7 +692,7 @@ class LoweringDiagnosticInfo : public DiagnosticInfo {
   const Twine &Msg;
 
 public:
-  LoweringDiagnosticInfo(const Twine &DiagMsg,
+  LoweringDiagnosticInfo(const Twine &DiagMsg LLVM_LIFETIME_BOUND,
                          DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Lowering, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }
@@ -983,10 +962,10 @@ MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
     return selectExplicitSectionGlobal(
         &F, Kind, TM, getContext(), getMangler(), NextUniqueID,
         Used.count(&F), /* ForceUnique = */true);
-  else
-    return selectELFSectionForGlobal(
-        getContext(), &F, Kind, getMangler(), TM, Used.count(&F),
-        /*EmitUniqueSection=*/true, Flags, &NextUniqueID);
+
+  return selectELFSectionForGlobal(
+      getContext(), &F, Kind, getMangler(), TM, Used.count(&F),
+      /*EmitUniqueSection=*/true, Flags, &NextUniqueID);
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForJumpTable(
@@ -1070,6 +1049,41 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
 
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
   return DataRelROSection;
+}
+
+MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    StringRef SectionSuffix) const {
+  // TODO: Share code between this function and
+  // MCObjectInfo::initELFMCObjectFileInfo.
+  if (SectionSuffix.empty())
+    return getSectionForConstant(DL, Kind, C, Alignment);
+
+  auto &Context = getContext();
+  if (Kind.isMergeableConst4() && MergeableConst4Section)
+    return Context.getELFSection(".rodata.cst4." + SectionSuffix,
+                                 ELF::SHT_PROGBITS,
+                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
+  if (Kind.isMergeableConst8() && MergeableConst8Section)
+    return Context.getELFSection(".rodata.cst8." + SectionSuffix,
+                                 ELF::SHT_PROGBITS,
+                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
+  if (Kind.isMergeableConst16() && MergeableConst16Section)
+    return Context.getELFSection(".rodata.cst16." + SectionSuffix,
+                                 ELF::SHT_PROGBITS,
+                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
+  if (Kind.isMergeableConst32() && MergeableConst32Section)
+    return Context.getELFSection(".rodata.cst32." + SectionSuffix,
+                                 ELF::SHT_PROGBITS,
+                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
+  if (Kind.isReadOnly())
+    return Context.getELFSection(".rodata." + SectionSuffix, ELF::SHT_PROGBITS,
+                                 ELF::SHF_ALLOC);
+
+  assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
+  return Context.getELFSection(".data.rel.ro." + SectionSuffix,
+                               ELF::SHT_PROGBITS,
+                               ELF::SHF_ALLOC | ELF::SHF_WRITE);
 }
 
 /// Returns a unique section for the given machine basic block.
@@ -1174,38 +1188,46 @@ MCSection *TargetLoweringObjectFileELF::getStaticDtorSection(
                                   KeySym);
 }
 
-const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS,
-    const TargetMachine &TM) const {
-  // We may only use a PLT-relative relocation to refer to unnamed_addr
-  // functions.
-  if (!LHS->hasGlobalUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
-    return nullptr;
+const MCExpr *TargetLoweringObjectFileELF::lowerSymbolDifference(
+    const MCSymbol *LHS, const MCSymbol *RHS, int64_t Addend,
+    std::optional<int64_t> PCRelativeOffset) const {
+  auto &Ctx = getContext();
+  const MCExpr *Res;
+  // Return a relocatable expression with the PLT specifier, %plt(GV) or
+  // %plt(GV-RHS).
+  if (PCRelativeOffset && PLTPCRelativeSpecifier) {
+    Res = MCSymbolRefExpr::create(LHS, Ctx);
+    // The current location is RHS plus *PCRelativeOffset. Compensate for it.
+    Addend += *PCRelativeOffset;
+    if (Addend)
+      Res = MCBinaryExpr::createAdd(Res, MCConstantExpr::create(Addend, Ctx),
+                                    Ctx);
+    return MCSpecifierExpr::create(Res, PLTPCRelativeSpecifier, getContext());
+  }
 
-  // Basic correctness checks.
-  if (LHS->getType()->getPointerAddressSpace() != 0 ||
-      RHS->getType()->getPointerAddressSpace() != 0 || LHS->isThreadLocal() ||
-      RHS->isThreadLocal())
+  if (!PLTRelativeSpecifier)
     return nullptr;
-
-  return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeVariantKind,
-                              getContext()),
-      MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
+  Res = MCBinaryExpr::createSub(
+      MCSymbolRefExpr::create(LHS, PLTRelativeSpecifier, Ctx),
+      MCSymbolRefExpr::create(RHS, Ctx), Ctx);
+  if (Addend)
+    Res =
+        MCBinaryExpr::createAdd(Res, MCConstantExpr::create(Addend, Ctx), Ctx);
+  return Res;
 }
 
+// Reference the PLT entry of a function, optionally with a subtrahend (`RHS`).
 const MCExpr *TargetLoweringObjectFileELF::lowerDSOLocalEquivalent(
-    const DSOLocalEquivalent *Equiv, const TargetMachine &TM) const {
-  assert(supportDSOLocalEquivalentLowering());
+    const MCSymbol *LHS, const MCSymbol *RHS, int64_t Addend,
+    std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
+  if (RHS)
+    return lowerSymbolDifference(LHS, RHS, Addend, PCRelativeOffset);
 
-  const auto *GV = Equiv->getGlobalValue();
-
-  // A PLT entry is not needed for dso_local globals.
-  if (GV->isDSOLocal() || GV->isImplicitDSOLocal())
-    return MCSymbolRefExpr::create(TM.getSymbol(GV), getContext());
-
-  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeVariantKind,
-                                 getContext());
+  // Only the legacy MCSymbolRefExpr::VariantKind approach is implemented.
+  // Reference LHS@plt or LHS@plt - RHS.
+  if (PLTRelativeSpecifier)
+    return MCSymbolRefExpr::create(LHS, PLTRelativeSpecifier, getContext());
+  return nullptr;
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForCommandLines() const {
@@ -1564,7 +1586,7 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
   // The offset must consider the original displacement from the base symbol
   // since 32-bit targets don't have a GOTPCREL to fold the PC displacement.
   Offset = -MV.getConstant();
-  const MCSymbol *BaseSym = &MV.getSymB()->getSymbol();
+  const MCSymbol *BaseSym = MV.getSubSym();
 
   // Access the final symbol via sym$non_lazy_ptr and generate the appropriated
   // non_lazy_ptr stubs.
@@ -1791,7 +1813,7 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
       // Append "$symbol" to the section name *before* IR-level mangling is
       // applied when targetting mingw. This is what GCC does, and the ld.bfd
       // COFF linker will not properly handle comdats otherwise.
-      if (getContext().getTargetTriple().isWindowsGNUEnvironment())
+      if (getContext().getTargetTriple().isOSCygMing())
         raw_svector_ostream(Name) << '$' << ComdatGV->getName();
 
       return getContext().getCOFFSection(Name, Characteristics, COMDATSymName,
@@ -2044,8 +2066,8 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
 }
 
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS,
-    const TargetMachine &TM) const {
+    const GlobalValue *LHS, const GlobalValue *RHS, int64_t Addend,
+    std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
   const Triple &T = TM.getTargetTriple();
   if (T.isOSCygMing())
     return nullptr;
@@ -2069,9 +2091,12 @@ const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
       cast<GlobalVariable>(RHS)->hasInitializer() || RHS->hasSection())
     return nullptr;
 
-  return MCSymbolRefExpr::create(TM.getSymbol(LHS),
-                                 MCSymbolRefExpr::VK_COFF_IMGREL32,
-                                 getContext());
+  const MCExpr *Res = MCSymbolRefExpr::create(
+      TM.getSymbol(LHS), MCSymbolRefExpr::VK_COFF_IMGREL32, getContext());
+  if (Addend != 0)
+    Res = MCBinaryExpr::createAdd(
+        Res, MCConstantExpr::create(Addend, getContext()), getContext());
+  return Res;
 }
 
 static std::string APIntToHexString(const APInt &AI) {
@@ -2287,25 +2312,6 @@ bool TargetLoweringObjectFileWasm::shouldPutJumpTableInFunctionSection(
   // We can always create relative relocations, so use another section
   // that can be marked non-executable.
   return false;
-}
-
-const MCExpr *TargetLoweringObjectFileWasm::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS,
-    const TargetMachine &TM) const {
-  // We may only use a PLT-relative relocation to refer to unnamed_addr
-  // functions.
-  if (!LHS->hasGlobalUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
-    return nullptr;
-
-  // Basic correctness checks.
-  if (LHS->getType()->getPointerAddressSpace() != 0 ||
-      RHS->getType()->getPointerAddressSpace() != 0 || LHS->isThreadLocal() ||
-      RHS->isThreadLocal())
-    return nullptr;
-
-  return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS), getContext()),
-      MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
 }
 
 void TargetLoweringObjectFileWasm::InitializeWasm() {
@@ -2635,13 +2641,6 @@ MCSection *TargetLoweringObjectFileXCOFF::getStaticDtorSection(
   report_fatal_error("no static destructor section on AIX");
 }
 
-const MCExpr *TargetLoweringObjectFileXCOFF::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS,
-    const TargetMachine &TM) const {
-  /* Not implemented yet, but don't crash, return nullptr. */
-  return nullptr;
-}
-
 XCOFF::StorageClass
 TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(const GlobalValue *GV) {
   assert(!isa<GlobalIFunc>(GV) && "GlobalIFunc is not supported on AIX.");
@@ -2759,6 +2758,29 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(
 //===----------------------------------------------------------------------===//
 TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF() = default;
 
+void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
+  // Construct the default names for the root SD and the ADA PR symbol.
+  StringRef FileName = sys::path::stem(M.getSourceFileName());
+  if (FileName.size() > 1 && FileName.starts_with('<') &&
+      FileName.ends_with('>'))
+    FileName = FileName.substr(1, FileName.size() - 2);
+  DefaultRootSDName = Twine(FileName).concat("#C").str();
+  DefaultADAPRName = Twine(FileName).concat("#S").str();
+  MCSectionGOFF *RootSD =
+      static_cast<MCSectionGOFF *>(TextSection)->getParent();
+  MCSectionGOFF *ADAPR = static_cast<MCSectionGOFF *>(ADASection);
+  RootSD->setName(DefaultRootSDName);
+  ADAPR->setName(DefaultADAPRName);
+  // Initialize the label for the text section.
+  MCSymbolGOFF *TextLD = static_cast<MCSymbolGOFF *>(
+      getContext().getOrCreateSymbol(RootSD->getName()));
+  TextLD->setLDAttributes(GOFF::LDAttr{
+      false, GOFF::ESD_EXE_CODE, GOFF::ESD_BST_Strong, GOFF::ESD_LT_XPLink,
+      GOFF::ESD_AMODE_64, GOFF::ESD_BSC_Section});
+  TextLD->setADA(ADAPR);
+  TextSection->setBeginSymbol(TextLD);
+}
+
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   return SelectSectionForGlobal(GO, Kind, TM);
@@ -2767,15 +2789,56 @@ MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
 MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
   std::string Name = ".gcc_exception_table." + F.getName().str();
-  return getContext().getGOFFSection(Name, SectionKind::getData(), nullptr, 0);
+
+  MCSectionGOFF *WSA = getContext().getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_WSA,
+      GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Fullword, 0},
+      static_cast<MCSectionGOFF *>(TextSection)->getParent());
+  return getContext().getGOFFSection(SectionKind::getData(), Name,
+                                     GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
+                                                  GOFF::ESD_LT_XPLink,
+                                                  GOFF::ESD_BSC_Section, 0},
+                                     WSA);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
-  if (Kind.isBSS())
-    return getContext().getGOFFSection(Symbol->getName(), SectionKind::getBSS(),
-                                       nullptr, 0);
 
-  return getContext().getObjectFileInfo()->getTextSection();
+  if (Kind.isBSS() || Kind.isData()) {
+    GOFF::ESDBindingScope PRBindingScope =
+        GO->hasExternalLinkage()
+            ? (GO->hasDefaultVisibility() ? GOFF::ESD_BSC_ImportExport
+                                          : GOFF::ESD_BSC_Library)
+            : GOFF::ESD_BSC_Section;
+    GOFF::ESDBindingScope SDBindingScope =
+        PRBindingScope == GOFF::ESD_BSC_Section ? GOFF::ESD_BSC_Section
+                                                : GOFF::ESD_BSC_Unspecified;
+    MaybeAlign Alignment;
+    if (auto *F = dyn_cast<Function>(GO))
+      Alignment = F->getAlign();
+    else if (auto *V = dyn_cast<GlobalVariable>(GO))
+      Alignment = V->getAlign();
+    GOFF::ESDAlignment Align =
+        Alignment ? static_cast<GOFF::ESDAlignment>(Log2(*Alignment))
+                  : GOFF::ESD_ALIGN_Doubleword;
+    MCSectionGOFF *SD = getContext().getGOFFSection(
+        SectionKind::getMetadata(), Symbol->getName(),
+        GOFF::SDAttr{GOFF::ESD_TA_Unspecified, SDBindingScope});
+    MCSectionGOFF *ED = getContext().getGOFFSection(
+        SectionKind::getMetadata(), GOFF::CLASS_WSA,
+        GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+                     GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                     GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, Align, 0},
+        SD);
+    return getContext().getGOFFSection(Kind, Symbol->getName(),
+                                       GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
+                                                    GOFF::ESD_LT_XPLink,
+                                                    PRBindingScope, 0},
+                                       ED);
+  }
+  return TextSection;
 }

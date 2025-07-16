@@ -43,6 +43,8 @@ T tmain(T argc, S **argv) {
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp simd collapse (S) // expected-error {{'S' does not refer to a value}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
+  #pragma omp simd collapse (0xFFFFFFFFFFFFFFFF) // expected-error {{argument to 'collapse' clause requires a value that can be represented by a 64-bit}}
+  for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
 #if __cplusplus <= 199711L
   // expected-error@+4 2 {{integral constant expression}} expected-note@+4 0+{{constant expression}}
 #else
@@ -97,3 +99,12 @@ int main(int argc, char **argv) {
   return tmain<int, char, 1, 0>(argc, argv);
 }
 
+namespace GH138493 {
+void f(void) {
+  // This would previously crash when processing an invalid expression as an
+  // argument to collapse.
+#pragma omp simd collapse(a) // expected-error {{use of undeclared identifier 'a'}}
+  for (int i = 0; i < 10; i++)
+    ;
+}
+} // namespace GH138493

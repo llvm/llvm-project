@@ -23,8 +23,8 @@ end program
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]], %[[VAL_4]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<3x2xi32> {bindc_name = ".tmp", uniq_name = ""}
-! CHECK:           %[[VAL_7:.*]] = arith.constant true
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<3x2xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<3x2xi32>>, !fir.heap<!fir.array<3x2xi32>>)
+! CHECK:           %[[VAL_7:.*]] = arith.constant true
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_9]] : (!fir.box<!fir.array<3x2xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 1 : index
@@ -38,16 +38,15 @@ end program
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>):
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
-! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_4]] : (!fir.box<!fir.array<3x2xi32>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_6]] : (!fir.box<!fir.array<3x2xi32>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_5]]#0, %[[VAL_5]]#1, %[[VAL_7]]#0, %[[VAL_7]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_9]] to %[[VAL_7]]#1 step %[[VAL_9]] unordered {
-! CHECK:             fir.do_loop %[[VAL_11:.*]] = %[[VAL_9]] to %[[VAL_5]]#1 step %[[VAL_9]] unordered {
-! CHECK:               %[[VAL_12:.*]] = fir.array_coor %[[VAL_2]](%[[VAL_8]]) %[[VAL_11]], %[[VAL_10]] : (!fir.box<!fir.array<3x2xi32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
-! CHECK:               %[[VAL_13:.*]] = fir.array_coor %[[VAL_3]](%[[VAL_8]]) %[[VAL_11]], %[[VAL_10]] : (!fir.box<!fir.array<3x2xi32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
+! CHECK:           %[[C1:.*]] = arith.constant 1 : index
+! CHECK:           %[[C3:.*]] = arith.constant 3 : index
+! CHECK:           %[[C2:.*]] = arith.constant 2 : index
+! CHECK:           %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[C1]], %[[C3]], %[[C1]], %[[C2]] : (index, index, index, index) -> !fir.shapeshift<2>
+! CHECK:           %[[C1_0:.*]] = arith.constant 1 : index
+! CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[C1_0]] to %[[C2]] step %[[C1_0]] unordered {
+! CHECK:             fir.do_loop %[[VAL_11:.*]] = %[[C1_0]] to %[[C3]] step %[[C1_0]] unordered {
+! CHECK:               %[[VAL_12:.*]] = fir.array_coor %[[VAL_2]](%[[SHAPE_SHIFT]]) %[[VAL_11]], %[[VAL_10]] : (!fir.box<!fir.array<3x2xi32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
+! CHECK:               %[[VAL_13:.*]] = fir.array_coor %[[VAL_3]](%[[SHAPE_SHIFT]]) %[[VAL_11]], %[[VAL_10]] : (!fir.box<!fir.array<3x2xi32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
 ! CHECK:               %[[VAL_14:.*]] = fir.load %[[VAL_12]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_15:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_16:.*]] = arith.addi %[[VAL_14]], %[[VAL_15]] : i32
@@ -70,6 +69,7 @@ end program
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {
+! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.box<!fir.array<3x2xi32>>
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFEi) : !fir.ref<!fir.array<3x2xi32>>
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
@@ -77,7 +77,6 @@ end program
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape_shift %[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]] : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_5]]) {uniq_name = "_QFEi"} : (!fir.ref<!fir.array<3x2xi32>>, !fir.shapeshift<2>) -> (!fir.box<!fir.array<3x2xi32>>, !fir.ref<!fir.array<3x2xi32>>)
-! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.box<!fir.array<3x2xi32>>
 ! CHECK:           fir.store %[[VAL_6]]#0 to %[[VAL_7]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
 ! CHECK:           omp.parallel reduction(byref @add_reduction_byref_box_3x2xi32 %[[VAL_7]] -> %[[VAL_8:.*]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>) {
 ! CHECK:             %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFEi"} : (!fir.ref<!fir.box<!fir.array<3x2xi32>>>) -> (!fir.ref<!fir.box<!fir.array<3x2xi32>>>, !fir.ref<!fir.box<!fir.array<3x2xi32>>>)

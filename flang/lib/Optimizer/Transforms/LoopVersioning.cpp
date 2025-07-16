@@ -51,6 +51,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
@@ -184,56 +185,42 @@ getRankAndElementSize(const fir::KindMapping &kindMap,
   return {0, 0};
 }
 
-/// if a value comes from a fir.declare, follow it to the original source,
-/// otherwise return the value
-static mlir::Value unwrapFirDeclare(mlir::Value val) {
-  // fir.declare is for source code variables. We don't have declares of
-  // declares
-  if (fir::DeclareOp declare = val.getDefiningOp<fir::DeclareOp>())
-    return declare.getMemref();
-  return val;
-}
-
-/// Return true, if \p rebox operation keeps the input array
-/// continuous in the innermost dimension, if it is initially continuous
-/// in the innermost dimension.
-static bool reboxPreservesContinuity(fir::ReboxOp rebox) {
-  // If slicing is not involved, then the rebox does not affect
-  // the continuity of the array.
-  auto sliceArg = rebox.getSlice();
-  if (!sliceArg)
-    return true;
-
-  // A slice with step=1 in the innermost dimension preserves
-  // the continuity of the array in the innermost dimension.
-  if (auto sliceOp =
-          mlir::dyn_cast_or_null<fir::SliceOp>(sliceArg.getDefiningOp())) {
-    if (sliceOp.getFields().empty() && sliceOp.getSubstr().empty()) {
-      auto triples = sliceOp.getTriples();
-      if (triples.size() > 2)
-        if (auto innermostStep = fir::getIntIfConstant(triples[2]))
-          if (*innermostStep == 1)
-            return true;
+/// If a value comes from a fir.declare of fir.pack_array,
+/// follow it to the original source, otherwise return the value.
+static mlir::Value unwrapPassThroughOps(mlir::Value val) {
+  // Instead of unwrapping fir.declare, we may try to start
+  // the analysis in this pass from fir.declare's instead
+  // of the function entry block arguments. This way the loop
+  // versioning would work even after FIR inlining.
+  while (true) {
+    if (fir::DeclareOp declare = val.getDefiningOp<fir::DeclareOp>()) {
+      val = declare.getMemref();
+      continue;
     }
-
-    LLVM_DEBUG(llvm::dbgs()
-               << "REBOX with slicing may produce non-contiguous array: "
-               << sliceOp << '\n'
-               << rebox << '\n');
-    return false;
+    // fir.pack_array might be met before fir.declare - this is how
+    // it is orifinally generated.
+    // It might also be met after fir.declare - after the optimization
+    // passes that sink fir.pack_array closer to the uses.
+    if (auto packArray = val.getDefiningOp<fir::PackArrayOp>()) {
+      val = packArray.getArray();
+      continue;
+    }
+    break;
   }
-
-  LLVM_DEBUG(llvm::dbgs() << "REBOX with unknown slice" << sliceArg << '\n'
-                          << rebox << '\n');
-  return false;
+  return val;
 }
 
 /// if a value comes from a fir.rebox, follow the rebox to the original source,
 /// of the value, otherwise return the value
 static mlir::Value unwrapReboxOp(mlir::Value val) {
   while (fir::ReboxOp rebox = val.getDefiningOp<fir::ReboxOp>()) {
-    if (!reboxPreservesContinuity(rebox))
+    if (!fir::reboxPreservesContinuity(rebox,
+                                       /*mayHaveNonDefaultLowerBounds=*/true,
+                                       /*checkWhole=*/false)) {
+      LLVM_DEBUG(llvm::dbgs() << "REBOX may produce non-contiguous array: "
+                              << rebox << '\n');
       break;
+    }
     val = rebox.getBox();
   }
   return val;
@@ -242,7 +229,7 @@ static mlir::Value unwrapReboxOp(mlir::Value val) {
 /// normalize a value (removing fir.declare and fir.rebox) so that we can
 /// more conveniently spot values which came from function arguments
 static mlir::Value normaliseVal(mlir::Value val) {
-  return unwrapFirDeclare(unwrapReboxOp(val));
+  return unwrapPassThroughOps(unwrapReboxOp(val));
 }
 
 /// some FIR operations accept a fir.shape, a fir.shift or a fir.shapeshift.

@@ -19,19 +19,16 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
@@ -41,11 +38,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -115,8 +112,9 @@ OpFoldResult linalg::createFoldedDimOp(OpBuilder &b, Location loc, Value source,
 // Support for named Linalg ops defined in ods-gen.
 //===----------------------------------------------------------------------===//
 
-using RegionBuilderFn = llvm::function_ref<void(ImplicitLocOpBuilder &, Block &,
-                                                ArrayRef<NamedAttribute>)>;
+using RegionBuilderFn = llvm::function_ref<void(
+    ImplicitLocOpBuilder &, Block &, ArrayRef<NamedAttribute>,
+    function_ref<InFlightDiagnostic()>)>;
 
 /// Fills the region of a structured operation using the provided
 /// `regionBuilder`. The method is used by both named structured ops created by
@@ -126,6 +124,7 @@ using RegionBuilderFn = llvm::function_ref<void(ImplicitLocOpBuilder &, Block &,
 static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
                                    TypeRange inputTypes, TypeRange outputTypes,
                                    ArrayRef<NamedAttribute> attrs,
+                                   function_ref<InFlightDiagnostic()> emitError,
                                    RegionBuilderFn regionBuilder) {
   SmallVector<Type, 8> argTypes;
   SmallVector<Location, 8> argLocs;
@@ -146,7 +145,7 @@ static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
 
   opBuilder.setInsertionPointToStart(body);
   ImplicitLocOpBuilder b(opBuilder.getUnknownLoc(), opBuilder);
-  regionBuilder(b, *body, attrs);
+  regionBuilder(b, *body, attrs, emitError);
 
   // indexing_maps is an auto-generated method.
 
@@ -182,7 +181,8 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
   // Create and fill the region of the structured operation.
   Region &region = *state.addRegion();
   fillStructuredOpRegion(b, region, TypeRange(inputs), TypeRange(outputs),
-                         state.attributes.getAttrs(), regionBuilder);
+                         state.attributes.getAttrs(), /*emitError=*/{},
+                         regionBuilder);
 }
 
 static void buildMatmulOp(OpBuilder &b, OperationState &state,
@@ -208,6 +208,23 @@ static void buildBatchMatmulOp(OpBuilder &b, OperationState &state,
                                RegionBuilderFn regionBuilder,
                                ArrayRef<AffineMap> indexingMaps) {
   // Initialize indexingMaps attribute, for BatchMatmulOp.
+  SmallVector<Attribute, 4> indexingMapsAttrVal;
+  indexingMapsAttrVal =
+      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
+        return AffineMapAttr::get(map);
+      });
+  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+  return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
+                           attributes, regionBuilder);
+}
+
+static void buildBatchReduceMatmulOp(OpBuilder &b, OperationState &state,
+                                     std::optional<TypeRange> resultTensorTypes,
+                                     ValueRange inputs, ValueRange outputs,
+                                     ArrayRef<NamedAttribute> attributes,
+                                     RegionBuilderFn regionBuilder,
+                                     ArrayRef<AffineMap> indexingMaps) {
+  // Initialize indexingMaps attribute, for BatchReduceMatmulOp.
   SmallVector<Attribute, 4> indexingMapsAttrVal;
   indexingMapsAttrVal =
       llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
@@ -310,7 +327,7 @@ static void printCommonStructuredOpParts(OpAsmPrinter &p, ValueRange inputs,
 static ParseResult parseNamedStructuredOpRegion(
     OpAsmParser &parser, Region &region, unsigned numRegionArgs,
     TypeRange inputTypes, TypeRange outputTypes, ArrayRef<NamedAttribute> attrs,
-    RegionBuilderFn regionBuilder) {
+    RegionBuilderFn regionBuilder, SMLoc loc) {
   if (numRegionArgs != inputTypes.size() + outputTypes.size()) {
     return parser.emitError(
         parser.getCurrentLocation(),
@@ -320,9 +337,15 @@ static ParseResult parseNamedStructuredOpRegion(
   }
 
   OpBuilder opBuilder(parser.getContext());
-  fillStructuredOpRegion(opBuilder, region, inputTypes, outputTypes, attrs,
-                         regionBuilder);
-  return success();
+  ParseResult result = success();
+  fillStructuredOpRegion(
+      opBuilder, region, inputTypes, outputTypes, attrs,
+      [&]() {
+        result = failure();
+        return parser.emitError(loc);
+      },
+      regionBuilder);
+  return result;
 }
 
 static ParseResult
@@ -339,6 +362,7 @@ static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
                                           RegionBuilderFn regionBuilder) {
   // TODO: Enable when ods-gen supports captures.
   SmallVector<Type, 1> inputTypes, outputTypes;
+  SMLoc loc = parser.getCurrentLocation();
   if (parseCommonStructuredOpParts(parser, result, inputTypes, outputTypes))
     return failure();
 
@@ -356,7 +380,7 @@ static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
   std::unique_ptr<Region> region = std::make_unique<Region>();
   if (parseNamedStructuredOpRegion(parser, *region, numRegionArgs, inputTypes,
                                    outputTypes, result.attributes.getAttrs(),
-                                   regionBuilder))
+                                   regionBuilder, loc))
     return failure();
   result.addRegion(std::move(region));
 
@@ -416,9 +440,15 @@ public:
       : builder(builder), block(block) {}
 
   // Build the unary functions defined by OpDSL.
-  Value buildUnaryFn(UnaryFn unaryFn, Value arg) {
-    if (!isFloatingPoint(arg))
+  Value buildUnaryFn(UnaryFn unaryFn, Value arg,
+                     function_ref<InFlightDiagnostic()> emitError = {}) {
+    if (!isFloatingPoint(arg)) {
+      if (emitError) {
+        emitError() << "unsupported non numeric type";
+        return nullptr;
+      }
       llvm_unreachable("unsupported non numeric type");
+    }
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     switch (unaryFn) {
@@ -453,18 +483,34 @@ public:
     case UnaryFn::erf:
       return builder.create<math::ErfOp>(arg.getLoc(), arg);
     }
+    if (emitError) {
+      emitError() << "unsupported unary function";
+      return nullptr;
+    }
     llvm_unreachable("unsupported unary function");
   }
 
   // Build the binary functions defined by OpDSL.
-  Value buildBinaryFn(BinaryFn binaryFn, Value arg0, Value arg1) {
+  // If emitError is provided, an error will be emitted if the operation is not
+  // supported and a nullptr will be returned, otherwise an assertion will be
+  // raised.
+  Value buildBinaryFn(BinaryFn binaryFn, Value arg0, Value arg1,
+                      function_ref<InFlightDiagnostic()> emitError = {}) {
     bool allComplex = isComplex(arg0) && isComplex(arg1);
     bool allFloatingPoint = isFloatingPoint(arg0) && isFloatingPoint(arg1);
     bool allInteger = isInteger(arg0) && isInteger(arg1);
     bool allBool = allInteger && arg0.getType().getIntOrFloatBitWidth() == 1 &&
                    arg1.getType().getIntOrFloatBitWidth() == 1;
-    if (!allComplex && !allFloatingPoint && !allInteger)
+    if (!allComplex && !allFloatingPoint && !allInteger) {
+      if (emitError) {
+        emitError()
+            << "Cannot build binary Linalg operation: expects allComplex, "
+               "allFloatingPoint, or allInteger, got "
+            << arg0.getType() << " and " << arg1.getType();
+        return nullptr;
+      }
       llvm_unreachable("unsupported non numeric type");
+    }
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     switch (binaryFn) {
@@ -481,8 +527,13 @@ public:
         return builder.create<complex::SubOp>(arg0.getLoc(), arg0, arg1);
       if (allFloatingPoint)
         return builder.create<arith::SubFOp>(arg0.getLoc(), arg0, arg1);
-      if (allBool)
+      if (allBool) {
+        if (emitError) {
+          emitError() << "unsupported operation: sub with bools";
+          return nullptr;
+        }
         llvm_unreachable("unsupported operation: sub with bools");
+      }
       return builder.create<arith::SubIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::mul:
       if (allComplex)
@@ -497,12 +548,22 @@ public:
         return builder.create<complex::DivOp>(arg0.getLoc(), arg0, arg1);
       if (allFloatingPoint)
         return builder.create<arith::DivFOp>(arg0.getLoc(), arg0, arg1);
-      if (allBool)
+      if (allBool) {
+        if (emitError) {
+          emitError() << "unsupported operation: div with bools";
+          return nullptr;
+        }
         llvm_unreachable("unsupported operation: div with bools");
+      }
       return builder.create<arith::DivSIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::div_unsigned:
-      if (!allInteger || allBool)
+      if (!allInteger || allBool) {
+        if (emitError) {
+          emitError() << "unsupported operation: unsigned div not on uint";
+          return nullptr;
+        }
         llvm_unreachable("unsupported operation: unsigned div not on uint");
+      }
       return builder.create<arith::DivUIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::max_signed:
       assert(!allComplex);
@@ -528,12 +589,16 @@ public:
       assert(allFloatingPoint);
       return builder.create<math::PowFOp>(arg0.getLoc(), arg0, arg1);
     }
+    if (emitError) {
+      emitError() << "unsupported binary function";
+      return nullptr;
+    }
     llvm_unreachable("unsupported binary function");
   }
 
   // Build the ternary functions defined by OpDSL.
-  Value buildTernaryFn(TernaryFn ternaryFn, Value arg0, Value arg1,
-                       Value arg2) {
+  Value buildTernaryFn(TernaryFn ternaryFn, Value arg0, Value arg1, Value arg2,
+                       function_ref<InFlightDiagnostic()> emitError = {}) {
     bool headBool =
         isInteger(arg0) && arg0.getType().getIntOrFloatBitWidth() == 1;
     bool tailFloatingPoint =
@@ -547,16 +612,25 @@ public:
         llvm_unreachable("unsupported non numeric type");
       return builder.create<arith::SelectOp>(arg0.getLoc(), arg0, arg1, arg2);
     }
+    if (emitError) {
+      emitError() << "unsupported ternary function";
+      return nullptr;
+    }
     llvm_unreachable("unsupported ternary function");
   }
 
   // Build the type functions defined by OpDSL.
-  Value buildTypeFn(TypeFn typeFn, Type toType, Value operand) {
+  Value buildTypeFn(TypeFn typeFn, Type toType, Value operand,
+                    function_ref<InFlightDiagnostic()> emitError = {}) {
     switch (typeFn) {
     case TypeFn::cast_signed:
       return cast(toType, operand, false);
     case TypeFn::cast_unsigned:
       return cast(toType, operand, true);
+    }
+    if (emitError) {
+      emitError() << "unsupported type conversion function";
+      return nullptr;
     }
     llvm_unreachable("unsupported type conversion function");
   }
@@ -598,6 +672,13 @@ private:
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     auto loc = operand.getLoc();
+    if (isa<UnknownLoc>(loc)) {
+      if (operand.getDefiningOp())
+        loc = operand.getDefiningOp()->getLoc();
+      else if (operand.getParentBlock() &&
+               operand.getParentBlock()->getParentOp())
+        loc = operand.getParentBlock()->getParentOp()->getLoc();
+    }
     return convertScalarToDtype(builder, loc, operand, toType, isUnsignedCast);
   }
 
@@ -1087,7 +1168,7 @@ void GenericOp::print(OpAsmPrinter &p) {
   auto genericAttrNames = linalgTraitAttrNames();
 
   llvm::StringSet<> genericAttrNamesSet;
-  genericAttrNamesSet.insert(genericAttrNames.begin(), genericAttrNames.end());
+  genericAttrNamesSet.insert_range(genericAttrNames);
   SmallVector<NamedAttribute, 8> genericAttrs;
   for (auto attr : (*this)->getAttrs()) {
     if (attr.getName() == getIteratorTypesAttrName()) {
@@ -1259,8 +1340,9 @@ LogicalResult GenericOp::verify() { return success(); }
 
 namespace {
 
-/// Remove any linalg operation (on tensors) that are just copying
-/// the values from inputs to the results. Requirements are
+/// Remove linalg operations that are just copying the values from inputs to
+/// results. In the memref case, the operation must be copying to and from the
+/// same value. Requirements are:
 /// 1) All iterator types are parallel
 /// 2) The body contains just a yield operation with the yielded values being
 ///    the arguments corresponding to the operands.
@@ -1285,18 +1367,27 @@ struct EraseIdentityLinalgOp : public OpRewritePattern<OpTy> {
 
     // In the buffer case, we need to check exact buffer equality.
     if (linalgOp.hasPureBufferSemantics()) {
-      if (linalgOp.getNumDpsInputs() == 1 && linalgOp.getNumDpsInits() == 1 &&
-          linalgOp.getDpsInputOperand(0)->get() ==
+      if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1 ||
+          linalgOp.getDpsInputOperand(0)->get() !=
               linalgOp.getDpsInitOperand(0)->get()) {
-        rewriter.eraseOp(linalgOp);
-        return success();
+        return rewriter.notifyMatchFailure(
+            linalgOp, "expected single input and output to be the same value");
       }
-      return failure();
+
+      auto yieldArg = dyn_cast<BlockArgument>(yieldOp.getOperand(0));
+      if (!yieldArg || yieldArg.getOwner() != &body) {
+        return rewriter.notifyMatchFailure(linalgOp,
+                                           "cannot fold fill-like op");
+      }
+
+      rewriter.eraseOp(linalgOp);
+      return success();
     }
 
-    // Mixed semantics is not supported yet.
-    if (!linalgOp.hasPureTensorSemantics())
-      return failure();
+    if (!linalgOp.hasPureTensorSemantics()) {
+      return rewriter.notifyMatchFailure(
+          linalgOp, "mixed semantics is not supported yet");
+    }
 
     // Get the argument number of the returned values. That is the operand
     // number to use for replacing uses of this operation.
@@ -1414,7 +1505,6 @@ static void addBodyWithPayloadOp(OpAsmParser &parser, OperationState &result,
   Region *body = result.addRegion();
   Block &block = body->emplaceBlock();
   b.setInsertionPointToStart(&block);
-  SmallVector<Value> bbArgs;
   for (auto &operand : operands) {
     block.addArgument(
         llvm::cast<ShapedType>(operand.getType()).getElementType(),
@@ -2281,6 +2371,24 @@ LogicalResult IndexOp::verify() {
   return success();
 }
 
+OpFoldResult IndexOp::fold(FoldAdaptor adaptor) {
+  auto linalgOp = dyn_cast_or_null<LinalgOp>((*this)->getParentOp());
+  // Bail out if `linalg.index` does not have a proper parent yet at this
+  // point, e.g., when calling `createOrFold` during IR construction in
+  // `genericOp::build`.
+  if (!linalgOp)
+    return OpFoldResult{};
+
+  // Index of unit dims is always 0.
+  SmallVector<int64_t, 4> loopBounds = linalgOp.getStaticLoopRanges();
+  uint64_t dim = getDim();
+  assert(dim < loopBounds.size() && "Dim is out of bounds");
+  if (loopBounds[dim] == 1)
+    return IntegerAttr::get(IndexType::get(getContext()), 0);
+
+  return OpFoldResult{};
+}
+
 /////// Operations corresponding to library calls defined with Tablegen ////////
 
 #include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.yamlgen.cpp.inc"
@@ -2366,7 +2474,7 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
     }
   }
   name.reserve(128);
-  std::replace(name.begin(), name.end(), '.', '_');
+  llvm::replace(name, '.', '_');
   llvm::raw_string_ostream ss(name);
   ss << "_" << fun;
   for (Type t : op->getOperandTypes()) {
@@ -2539,7 +2647,8 @@ static void createNewOperandWithStaticSizes(
     newShape.push_back(affineExprToSize[dimExpr]);
     newOperandNeeded = true;
   }
-  resultType = RankedTensorType::get(newShape, sourceType.getElementType());
+  resultType = RankedTensorType::get(newShape, sourceType.getElementType(),
+                                     sourceType.getEncoding());
   if (newOperandNeeded) {
     changeNeeded = true;
     // Get the new operand value given its size and element type by
@@ -2942,8 +3051,9 @@ LogicalResult WinogradFilterTransformOp::verify() {
   ArrayRef<int64_t> filterShape = filterType.getShape();
   int64_t filterH = filterShape[getFilterHDim()];
   int64_t filterW = filterShape[getFilterWDim()];
-  int64_t r = getR();
-  int64_t m = getM();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
 
   if (filterH != r && filterH != 1)
     return emitOpError("expect filter height either equals to r or 1");
@@ -2999,8 +3109,9 @@ LogicalResult WinogradFilterTransformOp::getResultTilePosition(
   ArrayRef<int64_t> filterShape = filterType.getShape();
   int64_t filterH = filterShape[getFilterHDim()];
   int64_t filterW = filterShape[getFilterWDim()];
-  int64_t m = getM();
-  int64_t r = getR();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   int64_t alpha = m + r - 1;
   int64_t alphaH = filterH != 1 ? alpha : 1;
   int64_t alphaW = filterW != 1 ? alpha : 1;
@@ -3077,8 +3188,9 @@ LogicalResult WinogradInputTransformOp::verify() {
   ArrayRef<int64_t> inputShape = inputType.getShape();
   int64_t inputH = inputShape[getInputHDim()];
   int64_t inputW = inputShape[getInputWDim()];
-  int m = getM();
-  int r = getR();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   int64_t tileSize = m + r - 1;
 
   auto outputType = cast<ShapedType>(getOutput().getType());
@@ -3147,8 +3259,9 @@ LogicalResult WinogradInputTransformOp::getResultTilePosition(
   int64_t outputAlphaH = outputShape[getOutputAlphaHDim()];
   int64_t outputAlphaW = outputShape[getOutputAlphaWDim()];
 
-  int64_t m = getM();
-  int64_t r = getR();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   int64_t alpha = m + r - 1;
   int64_t alphaH = outputAlphaH != 1 ? alpha : 1;
   int64_t alphaW = outputAlphaW != 1 ? alpha : 1;
@@ -3177,8 +3290,9 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
                                                  ArrayRef<OpFoldResult> offsets,
                                                  ArrayRef<OpFoldResult> sizes) {
   IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
-  int64_t m = getM();
-  int64_t r = getR();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
 
   ShapedType outputType = getOutputOperandType();
   ArrayRef<int64_t> outputShape = outputType.getShape();
@@ -3256,8 +3370,9 @@ LogicalResult WinogradOutputTransformOp::verify() {
   int64_t valueW = valueShape[getValueAlphaWDim()];
   int64_t valueTileH = valueShape[getValueTileHDim()];
   int64_t valueTileW = valueShape[getValueTileWDim()];
-  int m = getM();
-  int r = getR();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   bool leftTransform = valueH != 1;
   bool rightTransform = valueW != 1;
 
@@ -3318,7 +3433,9 @@ LogicalResult WinogradOutputTransformOp::getResultTilePosition(
     OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
     SmallVector<OpFoldResult> &resultSizes) {
-  int64_t m = getM();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
 
   Location loc = getLoc();
   MLIRContext *context = builder.getContext();
@@ -3464,19 +3581,24 @@ static LogicalResult verifyExtendedMatmulSemantic(MatmulOp matmulOp,
   return success();
 }
 
-// Check general validity of input indexing map.
-static LogicalResult verifyInputMaps(BatchMatmulOp batchMatmulOp,
+// Check general validity of input indexing map of
+// BatchMatmulOp/BatchReduceMatmulOp.
+template <typename OpTy>
+static LogicalResult verifyInputMaps(OpTy batchVariantMatmulOp,
                                      AffineMap opIndexingMap,
                                      AffineMap defaultIndexingMap, bool isLHS) {
+  assert((isa<BatchMatmulOp>(batchVariantMatmulOp) ||
+          isa<BatchReduceMatmulOp>(batchVariantMatmulOp)) &&
+         "Expected BatchMatmulOp or BatchReduceMatmulOp");
   // Check the result dims are valid.
   if (!areResultExprsSubsetOf(opIndexingMap, defaultIndexingMap))
-    return batchMatmulOp->emitOpError()
+    return batchVariantMatmulOp->emitOpError()
            << "Unexpected result dim expression (outside the set of default "
               "result dims).";
 
   // Check for valid number of result dims of input maps.
   if (opIndexingMap.getNumResults() > 3)
-    return batchMatmulOp->emitOpError()
+    return batchVariantMatmulOp->emitOpError()
            << "no. of result dim expressions exceeds 3.";
 
   auto hasValidBatchDim = [](AffineMap map) {
@@ -3486,60 +3608,83 @@ static LogicalResult verifyInputMaps(BatchMatmulOp batchMatmulOp,
 
   // Check if the requested broadcast is valid.
   if (isBroadcasted(opIndexingMap, defaultIndexingMap)) {
-    if (!batchMatmulOp.isValidLhsRhsBroadcastMap(opIndexingMap, isLHS))
-      return batchMatmulOp->emitOpError() << "Invalid broadcast requested.";
+    if (!batchVariantMatmulOp.isValidLhsRhsBroadcastMap(opIndexingMap, isLHS))
+      return batchVariantMatmulOp->emitOpError()
+             << "Invalid broadcast requested.";
   } else if (!hasValidBatchDim(opIndexingMap)) {
-    return batchMatmulOp->emitOpError()
+    return batchVariantMatmulOp->emitOpError()
            << "Invalid batch dimension expression.";
   }
   return success();
 }
 
 /// This function checks if the given AffineMap for the output of a
-/// BatchMatmulOp has exactly 3 result dimensions and if the output map result
-/// dimensions are valid.
-static LogicalResult verifyOutputMap(BatchMatmulOp batchMatmulOp,
+/// BatchMatmulOp/BatchReduceMatmulOp has exactly the desired number of result
+/// dimensions and if the output map result dimensions are valid.
+template <typename OpTy>
+static LogicalResult verifyOutputMap(OpTy batchVariantMatmulOp,
                                      AffineMap opIndexingMap) {
-  if (opIndexingMap.getNumResults() != 3)
-    return batchMatmulOp->emitOpError()
+  assert((isa<BatchMatmulOp>(batchVariantMatmulOp) ||
+          isa<BatchReduceMatmulOp>(batchVariantMatmulOp)) &&
+         "Expected BatchMatmulOp or BatchReduceMatmulOp");
+  if (isa<BatchMatmulOp>(batchVariantMatmulOp) &&
+      opIndexingMap.getNumResults() != 3) {
+
+    return batchVariantMatmulOp->emitOpError()
            << "expects 3 dims, but got (" << opIndexingMap.getNumResults()
            << ").";
+  }
+  if (isa<BatchReduceMatmulOp>(batchVariantMatmulOp) &&
+      opIndexingMap.getNumResults() != 2) {
+    return batchVariantMatmulOp->emitOpError()
+           << "expects 2 dims, but got (" << opIndexingMap.getNumResults()
+           << ").";
+  }
 
-  auto areValidOutputResultDim = [](AffineMap outputMap) {
-    return outputMap.getResult(0).isFunctionOfDim(0) &&
-           outputMap.getResult(1).isFunctionOfDim(1) &&
-           outputMap.getResult(2).isFunctionOfDim(2);
+  auto areValidOutputResultDim = [&](AffineMap outputMap) {
+    return isa<BatchMatmulOp>(batchVariantMatmulOp)
+               ? outputMap.getResult(0).isFunctionOfDim(0) &&
+                     outputMap.getResult(1).isFunctionOfDim(1) &&
+                     outputMap.getResult(2).isFunctionOfDim(2)
+               : outputMap.getResult(0).isFunctionOfDim(1) &&
+                     outputMap.getResult(1).isFunctionOfDim(2);
   };
 
-  if (!areValidOutputResultDim(opIndexingMap))
-    return batchMatmulOp->emitOpError()
+  if (!areValidOutputResultDim(opIndexingMap)) {
+    return batchVariantMatmulOp->emitOpError()
            << "Invalid output map result dimension.";
+  }
 
   return success();
 }
 
 /// Verifies the broadcast and transpose semantic specified by the explicit
-/// indexing map for the BatchMatmulOp op for each operand specified by opIndex.
+/// indexing map for the BatchMatmulOp/BatchReduceMatmulOp op for each operand
+/// specified by opIndex.
+template <typename OpTy>
 static LogicalResult
-verifyExtendedBatchMatmulSemantic(BatchMatmulOp batchMatmulOp,
-                                  unsigned opIndex) {
+verifyExtendedBatchVariantMatmulSemantic(OpTy batchVariantMatmulOp,
+                                         unsigned opIndex) {
   SmallVector<AffineMap, 3> opIndexingMaps =
-      batchMatmulOp.getIndexingMapsArray();
+      batchVariantMatmulOp.getIndexingMapsArray();
   SmallVector<AffineMap, 3> defaultIndexingMaps =
-      batchMatmulOp.getDefaultIndexingMaps(batchMatmulOp->getContext());
+      batchVariantMatmulOp.getDefaultIndexingMaps(
+          batchVariantMatmulOp->getContext());
 
   if (opIndexingMaps.size() != 3)
-    return batchMatmulOp->emitOpError()
+    return batchVariantMatmulOp->emitOpError()
            << "Indexing_map attribute must have 3 affine maps.";
 
   auto opIndexingMap = opIndexingMaps[opIndex];
   auto defaultIndexingMap = defaultIndexingMaps[opIndex];
 
-  if (opIndex == 2 && failed(verifyOutputMap(batchMatmulOp, opIndexingMap)))
+  if (opIndex == 2 &&
+      failed(verifyOutputMap(batchVariantMatmulOp, opIndexingMap)))
     return failure();
 
-  if (failed(verifyInputMaps(batchMatmulOp, opIndexingMap, defaultIndexingMap,
-                             opIndex == 0)))
+  if (opIndex != 2 &&
+      failed(verifyInputMaps(batchVariantMatmulOp, opIndexingMap,
+                             defaultIndexingMap, opIndex == 0)))
     return failure();
 
   return success();
@@ -3547,6 +3692,27 @@ verifyExtendedBatchMatmulSemantic(BatchMatmulOp batchMatmulOp,
 
 namespace mlir {
 namespace linalg {
+
+std::optional<WinogradConv2DFmr> getWinogradConv2DFmr(int64_t m, int64_t r) {
+  if (m == 2 && r == 3)
+    return WinogradConv2DFmr::F_2_3;
+  if (m == 4 && r == 3)
+    return WinogradConv2DFmr::F_4_3;
+  if (m == 2 && r == 5)
+    return WinogradConv2DFmr::F_2_5;
+  return std::nullopt;
+}
+
+std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr) {
+  switch (fmr) {
+  case WinogradConv2DFmr::F_2_3:
+    return {2, 3};
+  case WinogradConv2DFmr::F_4_3:
+    return {4, 3};
+  case WinogradConv2DFmr::F_2_5:
+    return {2, 5};
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // MatMulOp
@@ -3589,14 +3755,20 @@ bool MatmulOp::hasUserDefinedMaps() {
 /// Implements the block region builder for the MatmulOp. This is called by
 /// 'fillStructuredOpRegion'.
 void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                             ArrayRef<NamedAttribute> attrs) {
-  assert(3 > 0 && block.getNumArguments() == 3 &&
-         "MatmulOp regionBuilder expects 3 (>=0) args");
+                             ArrayRef<NamedAttribute> attrs,
+                             function_ref<InFlightDiagnostic()> emitError) {
+  if (emitError && block.getNumArguments() != 3) {
+    emitError() << "MatmulOp regionBuilder expects 3 args, got "
+                << block.getNumArguments();
+    return;
+  }
+  assert(block.getNumArguments() == 3 &&
+         "MatmulOp regionBuilder expects 3 args");
   RegionBuilderHelper helper(b, block);
   SmallVector<Value> yields;
 
   TypeFn castVal = TypeFn::cast_signed;
-  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
+  const auto *castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
     return attr.getName() == "cast";
   });
   if (castIter != attrs.end()) {
@@ -3608,19 +3780,29 @@ void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
                                     block.getArgument(0));
   Value value2 = helper.buildTypeFn(castVal, block.getArgument(2).getType(),
                                     block.getArgument(1));
-  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2);
-  Value value4 =
-      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), value3);
+  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2, emitError);
+  if (!value3)
+    return;
+  Value value4 = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
+                                      value3, emitError);
+  if (!value4)
+    return;
   yields.push_back(value4);
   helper.yieldOutputs(yields);
 }
 
-/// Returns true if the given broadcast map \p bcastMap is valid for this op.
+/// Returns true if the given bcastMap map is a valid broadcast map. A valid
+/// broadcast map must include K dimension.
+/// TODO: Strict inclusion of K dimension in the broadcast map is not
+/// necessary for both input matrices simultaneously. We can relax this
+/// condition to have K dimension for one input matrix map and infer the K
+/// dimension for other input matrix map from the one already having K
+/// dimension.
 bool MatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap) {
   assert(bcastMap.getNumResults() == 1 && "Expected single result dim expr.");
-  AffineExpr exp = bcastMap.getResult(0);
+  AffineExpr expr = bcastMap.getResult(0);
   // Invalid map if the common dimension of matmul not found.
-  return exp.isFunctionOfDim(bcastMap.getNumDims() - 1);
+  return expr.isFunctionOfDim(bcastMap.getNumDims() - 1);
 }
 
 FailureOr<ArrayAttr> parseIndexingMapsAttr(OpAsmParser &parser) {
@@ -3658,17 +3840,13 @@ ParseResult MatmulOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void MatmulOp::print(OpAsmPrinter &p) {
-  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
       MatmulOp::getDefaultIndexingMaps(getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
-  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
-    p << " indexing_maps = [";
-    llvm::interleaveComma(getIndexingMaps(), p,
-                          [&](Attribute attr) { p.printAttribute(attr); });
-    p << "]";
-  }
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
 
-  SmallVector<StringRef, 3> elidedAttrs = {
+  std::array<StringRef, 3> elidedAttrs = {
       "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
   printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                          elidedAttrs);
@@ -3736,7 +3914,13 @@ unsigned ContractOp::getNumRegionArgs() { return 3; }
 
 /// Implement block region builder, which is called by 'fillStructuredOpRegion'.
 void ContractOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                               ArrayRef<NamedAttribute> attrs) {
+                               ArrayRef<NamedAttribute> attrs,
+                               function_ref<InFlightDiagnostic()> emitError) {
+  if (emitError && block.getNumArguments() != 3) {
+    emitError() << "ContractOp regionBuilder expects 3 args, got "
+                << block.getNumArguments();
+    return;
+  }
   assert(block.getNumArguments() == 3 &&
          "ContractOp regionBuilder expects 3 args");
   RegionBuilderHelper helper(b, block);
@@ -3756,10 +3940,14 @@ void ContractOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
       helper.buildTypeFn(castSignedness, outType, block.getArgument(0));
   Value rhsAtOutType =
       helper.buildTypeFn(castSignedness, outType, block.getArgument(1));
-  Value productAtOutType =
-      helper.buildBinaryFn(BinaryFn::mul, lhsAtOutType, rhsAtOutType);
+  Value productAtOutType = helper.buildBinaryFn(BinaryFn::mul, lhsAtOutType,
+                                                rhsAtOutType, emitError);
+  if (!productAtOutType)
+    return;
   Value result = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
-                                      productAtOutType);
+                                      productAtOutType, emitError);
+  if (!result)
+    return;
   helper.yieldOutputs({result});
 }
 
@@ -3775,10 +3963,7 @@ ParseResult ContractOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void ContractOp::print(OpAsmPrinter &p) {
-  p << " indexing_maps = [";
-  llvm::interleaveComma(getIndexingMaps(), p,
-                        [&](Attribute attr) { p.printAttribute(attr); });
-  p << "]";
+  p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
   printNamedStructuredOp(
       p, getOperation(), getInputs(), getOutputs(),
       /*elidedAttrs=*/{"indexing_maps", "operandSegmentSizes"});
@@ -3925,29 +4110,45 @@ bool BatchMatmulOp::hasUserDefinedMaps() {
   return defaultMaps != explicitMaps;
 }
 
-/// Returns true if the given broadcast map bcastMap is valid for this op.
+/// Returns true if the given bcastMap map is a valid broadcast map. A valid
+/// broadcast map must include K dimension.
+/// TODO: Strict inclusion of K dimension in the broadcast map is not
+/// necessary for both input matrices simultaneously. We can relax this
+/// condition to have K dimension for one input matrix map and infer the K
+/// dimension for other input matrix map from the one already having K
+/// dimension.
 bool BatchMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS) {
   assert(bcastMap.getNumResults() < 3 &&
          "Expected less than 3 result dim expr.");
   bool isValid = false;
   enum Indices { batchPos, mPos, nPos, kPos };
   if (bcastMap.getNumResults() == 1) {
-    AffineExpr exp = bcastMap.getResult(0);
-    isValid = exp.isFunctionOfDim(kPos);
+    AffineExpr expr = bcastMap.getResult(0);
+    isValid = expr.isFunctionOfDim(kPos);
   } else if (bcastMap.getNumResults() == 2) {
-    AffineExpr exp0 = bcastMap.getResult(0);
-    AffineExpr exp1 = bcastMap.getResult(1);
-    isValid = isLHS
-                  ? (exp0.isFunctionOfDim(mPos) && exp1.isFunctionOfDim(kPos))
-                  : (exp0.isFunctionOfDim(kPos) && exp1.isFunctionOfDim(nPos));
+    AffineExpr expr0 = bcastMap.getResult(0);
+    AffineExpr expr1 = bcastMap.getResult(1);
+    isValid =
+        isLHS ? ((expr0.isFunctionOfDim(batchPos) ||
+                  expr0.isFunctionOfDim(mPos)) &&
+                 expr1.isFunctionOfDim(kPos))
+              : ((expr0.isFunctionOfDim(batchPos) &&
+                  expr1.isFunctionOfDim(kPos)) ||
+                 (expr0.isFunctionOfDim(kPos) && expr1.isFunctionOfDim(nPos)));
   }
   return isValid;
 }
 
-void BatchMatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                                  ArrayRef<NamedAttribute> attrs) {
+void BatchMatmulOp::regionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs,
+    function_ref<InFlightDiagnostic()> emitError) {
+  if (emitError && block.getNumArguments() != 3) {
+    emitError() << "BatchMatmulOp regionBuilder expects 3 args, got "
+                << block.getNumArguments();
+    return;
+  }
   assert(block.getNumArguments() == 3 &&
-         "BatchMatmulOp regionBuilder expects 3 (>=0) args");
+         "BatchMatmulOp regionBuilder expects 3 args");
   RegionBuilderHelper helper(b, block);
   SmallVector<Value> yields;
 
@@ -4011,17 +4212,13 @@ ParseResult BatchMatmulOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void BatchMatmulOp::print(OpAsmPrinter &p) {
-  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
       BatchMatmulOp::getDefaultIndexingMaps(getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
-  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
-    p << " indexing_maps = [";
-    llvm::interleaveComma(getIndexingMaps(), p,
-                          [&](Attribute attr) { p.printAttribute(attr); });
-    p << "]";
-  }
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
 
-  SmallVector<StringRef, 3> elidedAttrs = {
+  std::array<StringRef, 3> elidedAttrs = {
       "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
   ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                            elidedAttrs);
@@ -4035,7 +4232,7 @@ LogicalResult BatchMatmulOp::verify() {
     return success();
 
   for (unsigned opIndex = 0; opIndex < 3; opIndex++) {
-    if (failed(verifyExtendedBatchMatmulSemantic(*this, opIndex)))
+    if (failed(verifyExtendedBatchVariantMatmulSemantic(*this, opIndex)))
       return failure();
   }
   return success();
@@ -4202,17 +4399,13 @@ void ElementwiseOp::print(OpAsmPrinter &p) {
       getArityGroupAsUInt(getArityGroupAndKind(getKind()).arityGroup);
   unsigned numDims = getResultRank();
 
-  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
       ElementwiseOp::getDefaultIndexingMaps(arity + 1 /*output*/, numDims,
                                             getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
 
-  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
-    p << " indexing_maps = [";
-    llvm::interleaveComma(getIndexingMaps(), p,
-                          [&](Attribute attr) { p.printAttribute(attr); });
-    p << "]";
-  }
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
 
   printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                          elidedAttrs);
@@ -4227,8 +4420,9 @@ LogicalResult ElementwiseOp::verify() {
 
 /// Implements the block region builder for the ElementwiseOp. This is called by
 /// 'fillStructuredOpRegion'.
-void ElementwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                                  ArrayRef<NamedAttribute> attrs) {
+void ElementwiseOp::regionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs,
+    function_ref<InFlightDiagnostic()> emitError) {
   ElementwiseKind elemwiseKind;
   for (auto attr : attrs) {
     if (attr.getName() == b.getStringAttr("kind")) {
@@ -4242,6 +4436,13 @@ void ElementwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   ArityGroupAndKind groupAndKind = getArityGroupAndKind(elemwiseKind);
   auto arityGroup = groupAndKind.arityGroup;
   auto kind = groupAndKind.kind;
+  if (emitError && block.getNumArguments() !=
+                       getArityGroupAsUInt(arityGroup) + 1 /*output*/) {
+    emitError() << "Elementwise regionBuilder expects "
+                << (getArityGroupAsUInt(arityGroup) + 1) << " args, got "
+                << block.getNumArguments();
+    return;
+  }
   assert(block.getNumArguments() ==
              getArityGroupAsUInt(arityGroup) + 1 /*output*/
          && "Elementwise regionBuilder number of block args mismatch");
@@ -4261,8 +4462,9 @@ void ElementwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
     result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
                                    block.getArgument(1), block.getArgument(2));
 
-  } else
+  } else {
     assert(false && "found unhandled category in elemwise");
+  }
 
   yields.push_back(result);
   helper.yieldOutputs(yields);
@@ -4362,7 +4564,7 @@ static SmallVector<OpFoldResult> getMixedTilesImpl(OpTy op) {
   SmallVector<OpFoldResult> mixedInnerTiles;
   unsigned dynamicValIndex = 0;
   for (int64_t staticTile : op.getStaticInnerTiles()) {
-    if (!ShapedType::isDynamic(staticTile))
+    if (ShapedType::isStatic(staticTile))
       mixedInnerTiles.push_back(builder.getI64IntegerAttr(staticTile));
     else
       mixedInnerTiles.push_back(op.getInnerTiles()[dynamicValIndex++]);
@@ -4389,9 +4591,7 @@ static bool isInvalidPackingPosSpecification(ArrayRef<int64_t> dimsPos,
   size_t dimsPosSize = dimsPos.size();
   if (dimsPosSize > rank)
     return true;
-  DenseSet<int64_t> uniqued;
-  for (int64_t dim : dimsPos)
-    uniqued.insert(dim);
+  DenseSet<int64_t> uniqued(llvm::from_range, dimsPos);
   if (dimsPosSize != uniqued.size())
     return true;
   return llvm::any_of(dimsPos, [rank](int64_t dimPos) {
@@ -4423,8 +4623,7 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
 
   // Return true if we have a zero-value tile.
   auto hasZeros = [&](ArrayRef<OpFoldResult> tiles) {
-    return llvm::any_of(
-        tiles, [](OpFoldResult tile) { return isConstantIntValue(tile, 0); });
+    return llvm::any_of(tiles, isZeroInteger);
   };
 
   // Verify tiles. Do not allow zero tiles.
@@ -4630,7 +4829,7 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
 
     if (!constantTile) {
-      if (!ShapedType::isDynamic(outputTileSizes[pos]) &&
+      if (ShapedType::isStatic(outputTileSizes[pos]) &&
           (inputShape[pos] % outputTileSizes[pos] != 0))
         return true;
     } else if (inputShape[pos] % (*constantTile) != 0) {
@@ -4736,7 +4935,7 @@ SmallVector<OpFoldResult> PackOp::getResultShape(
   // use dispatchIndexOpFoldResults on the result, and rely on exact number of
   // dynamic dims returned by that.
   for (unsigned i = 0; i < resultDims.size(); ++i) {
-    if (!ShapedType::isDynamic(resultTypeShape[i]))
+    if (ShapedType::isStatic(resultTypeShape[i]))
       continue;
     resultDims[i] =
         getValueOrCreateConstantIndexOp(builder, loc, resultDims[i]);
@@ -4884,8 +5083,7 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
   destShape.assign(packOp.getDestType().getShape().begin(),
                    packOp.getDestType().getShape().end());
   llvm::SmallSetVector<int64_t, 4> innerDims;
-  innerDims.insert(packOp.getInnerDimsPos().begin(),
-                   packOp.getInnerDimsPos().end());
+  innerDims.insert_range(packOp.getInnerDimsPos());
   SmallVector<int64_t> inverseOuterDimsPerm;
   if (!packOp.getOuterDimsPerm().empty())
     inverseOuterDimsPerm = invertPermutationVector(packOp.getOuterDimsPerm());
@@ -5197,7 +5395,7 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
   destShape.assign(op.getDestType().getShape().begin(),
                    op.getDestType().getShape().end());
   llvm::SmallSetVector<int64_t, 4> innerDims;
-  innerDims.insert(op.getInnerDimsPos().begin(), op.getInnerDimsPos().end());
+  innerDims.insert_range(op.getInnerDimsPos());
   SmallVector<int64_t> inverseOuterDimsPerm;
   if (!op.getOuterDimsPerm().empty())
     inverseOuterDimsPerm = invertPermutationVector(op.getOuterDimsPerm());
@@ -5244,6 +5442,29 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
     rewriter.modifyOpInPlace(unPackOp,
                              [&]() { unPackOp.setDpsInitOperand(0, newDest); });
     return success();
+  }
+  /// extract_slice(unpack(x into y)) -> unpack(x into extract_slice(y))
+  if (unPackOp->hasOneUse()) {
+    auto extractSliceUser =
+        dyn_cast<tensor::ExtractSliceOp>(*unPackOp->getUsers().begin());
+    if (extractSliceUser &&
+        areAllConstantIntValue(extractSliceUser.getMixedOffsets(), 0) &&
+        areAllConstantIntValue(extractSliceUser.getMixedStrides(), 1) &&
+        extractSliceUser.getSourceType().getRank() ==
+            extractSliceUser.getResultType().getRank()) {
+      OpBuilder::InsertionGuard g(rewriter);
+      rewriter.setInsertionPoint(unPackOp);
+      auto newDest = rewriter.create<tensor::ExtractSliceOp>(
+          unPackOp->getLoc(), unPackOp.getDest(),
+          extractSliceUser.getMixedOffsets(), extractSliceUser.getMixedSizes(),
+          extractSliceUser.getMixedStrides());
+      rewriter.modifyOpInPlace(unPackOp, [&]() {
+        unPackOp.setDpsInitOperand(0, newDest);
+        unPackOp.getResult().setType(newDest.getType());
+      });
+      rewriter.replaceOp(extractSliceUser, unPackOp);
+      return success();
+    }
   }
 
   // Insert tensor.cast ops if static shape inference is available..
@@ -5339,6 +5560,182 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// BatchReduceMatmulOp
+//===----------------------------------------------------------------------===//
+SmallVector<utils::IteratorType> BatchReduceMatmulOp::getIteratorTypesArray() {
+  return SmallVector<utils::IteratorType>{
+      utils::IteratorType::reduction, utils::IteratorType::parallel,
+      utils::IteratorType::parallel, utils::IteratorType::reduction};
+}
+
+SmallVector<AffineMap>
+BatchReduceMatmulOp::getDefaultIndexingMaps(MLIRContext *context) {
+  AffineExpr d0, d1, d2, d3;
+  SmallVector<AffineMap> indexingMaps;
+  bindDims(context, d0, d1, d2, d3);
+  indexingMaps.push_back(AffineMap::get(4, 0, {d0, d1, d3}, context));
+  indexingMaps.push_back(AffineMap::get(4, 0, {d0, d3, d2}, context));
+  indexingMaps.push_back(AffineMap::get(4, 0, {d1, d2}, context));
+  return indexingMaps;
+}
+
+unsigned BatchReduceMatmulOp::getNumRegionArgs() { return 3; }
+
+std::string BatchReduceMatmulOp::getLibraryCallName() {
+  return generateLibraryCallName(getOperation());
+}
+
+/// Check if the op has broadcast and/or transpose semantic. Returns true if
+/// the user defined indexing maps are not equal to default map.
+bool BatchReduceMatmulOp::hasUserDefinedMaps() {
+  SmallVector<AffineMap, 3> defaultMaps =
+      getDefaultIndexingMaps(this->getContext());
+  SmallVector<AffineMap, 3> explicitMaps = getIndexingMapsArray();
+  return defaultMaps != explicitMaps;
+}
+
+/// Returns true if the given bcastMap map is a valid broadcast map. A valid
+/// broadcast map must include K dimension.
+/// TODO: Strict inclusion of K dimension in the broadcast map is not
+/// necessary for both input matrices simultaneously. We can relax this
+/// condition to have K dimension for one input matrix map and infer the K
+/// dimension for other input matrix map from the one already having K
+/// dimension.
+bool BatchReduceMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap,
+                                                    bool isLHS) {
+  assert(bcastMap.getNumResults() < 3 &&
+         "Expected less than 3 result dim expr.");
+  bool isValid = false;
+  enum Indices { batchPos, mPos, nPos, kPos };
+  if (bcastMap.getNumResults() == 1) {
+    AffineExpr expr = bcastMap.getResult(0);
+    isValid = expr.isFunctionOfDim(kPos);
+  } else if (bcastMap.getNumResults() == 2) {
+    AffineExpr expr0 = bcastMap.getResult(0);
+    AffineExpr expr1 = bcastMap.getResult(1);
+    isValid =
+        isLHS ? ((expr0.isFunctionOfDim(batchPos) ||
+                  expr0.isFunctionOfDim(mPos)) &&
+                 expr1.isFunctionOfDim(kPos))
+              : ((expr0.isFunctionOfDim(batchPos) &&
+                  expr1.isFunctionOfDim(kPos)) ||
+                 (expr0.isFunctionOfDim(kPos) && expr1.isFunctionOfDim(nPos)));
+  }
+  return isValid;
+}
+
+void BatchReduceMatmulOp::regionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs,
+    function_ref<InFlightDiagnostic()> emitError) {
+  if (emitError && block.getNumArguments() != 3) {
+    emitError() << "BatchReduceMatmulOp regionBuilder expects 3 args, got "
+                << block.getNumArguments();
+    return;
+  }
+  assert(block.getNumArguments() == 3 &&
+         "BatchReduceMatmulOp regionBuilder expects 3 args");
+  RegionBuilderHelper helper(b, block);
+  SmallVector<Value> yields;
+
+  auto toType = block.getArgument(2).getType();
+  Value castValA =
+      helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(0));
+  Value castValB =
+      helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(1));
+  Value mulVal = helper.buildBinaryFn(BinaryFn::mul, castValA, castValB);
+  Value addVal =
+      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), mulVal);
+  yields.push_back(addVal);
+  helper.yieldOutputs(yields);
+}
+
+ParseResult BatchReduceMatmulOp::parse(OpAsmParser &parser,
+                                       OperationState &result) {
+  SmallVector<Attribute, 3> indexingMapsAttr;
+  Attribute mapAttr;
+  if (succeeded(parser.parseOptionalKeyword("indexing_maps"))) {
+    if (parser.parseEqual())
+      return failure();
+    if (parser.parseLSquare())
+      return failure();
+
+    do {
+      if (parser.parseAttribute(mapAttr))
+        return failure();
+      if (!isa<AffineMapAttr>(mapAttr)) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected affine map attribute");
+      }
+      indexingMapsAttr.push_back(mapAttr);
+
+      if (parser.parseOptionalComma())
+        break;
+    } while (true);
+
+    if (parser.parseRSquare())
+      return failure();
+  }
+  // Initialize indexingMaps, if not supplied explicitly.
+  if (indexingMapsAttr.empty()) {
+    indexingMapsAttr = llvm::map_to_vector(
+        BatchReduceMatmulOp::getDefaultIndexingMaps(parser.getContext()),
+        [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+  }
+  result.addAttribute("indexing_maps",
+                      parser.getBuilder().getArrayAttr(indexingMapsAttr));
+  return ::parseNamedStructuredOp(parser, result,
+                                  BatchReduceMatmulOp::getNumRegionArgs(),
+                                  BatchReduceMatmulOp::getRegionBuilder());
+}
+
+void BatchReduceMatmulOp::print(OpAsmPrinter &p) {
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+      BatchReduceMatmulOp::getDefaultIndexingMaps(getContext()),
+      [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+
+  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
+    p << " indexing_maps = [";
+    llvm::interleaveComma(getIndexingMaps(), p,
+                          [&](Attribute attr) { p.printAttribute(attr); });
+    p << "]";
+  }
+
+  SmallVector<StringRef, 3> elidedAttrs = {
+      "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
+  ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
+                           elidedAttrs);
+}
+
+/// Verify the user defined indexing maps.
+LogicalResult BatchReduceMatmulOp::verify() {
+  // Verification of pure batch_reduce_matmul is handled by
+  // verifyStructuredOpInterface().
+  if (!hasUserDefinedMaps())
+    return success();
+
+  for (unsigned opIndex = 0; opIndex < 3; opIndex++) {
+    if (failed(verifyExtendedBatchVariantMatmulSemantic(*this, opIndex)))
+      return failure();
+  }
+  return success();
+}
+LogicalResult BatchReduceMatmulOp::fold(FoldAdaptor,
+                                        SmallVectorImpl<OpFoldResult> &) {
+  return memref::foldMemRefCast(*this);
+}
+void BatchReduceMatmulOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (hasPureTensorSemantics())
+    return;
+  getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+
+Speculation::Speculatability BatchReduceMatmulOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
 
 } // namespace linalg
 } // namespace mlir

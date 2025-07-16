@@ -18,8 +18,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCELFStreamer.h"
+#include "PPCMCAsmInfo.h"
 #include "PPCMCCodeEmitter.h"
-#include "PPCMCExpr.h"
 #include "PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -139,7 +139,7 @@ void PPCELFStreamer::emitGOTToPCRelReloc(const MCInst &Inst) {
   // Cast the last operand to MCSymbolRefExpr to get the symbol.
   const MCExpr *Expr = Operand.getExpr();
   const MCSymbolRefExpr *SymExpr = static_cast<const MCSymbolRefExpr *>(Expr);
-  assert(getVariantKind(SymExpr) == PPCMCExpr::VK_PCREL_OPT &&
+  assert(getSpecifier(SymExpr) == PPC::S_PCREL_OPT &&
          "Expecting a symbol of type VK_PCREL_OPT");
   MCSymbol *LabelSym =
       getContext().getOrCreateSymbol(SymExpr->getSymbol().getName());
@@ -155,13 +155,10 @@ void PPCELFStreamer::emitGOTToPCRelReloc(const MCInst &Inst) {
   const MCExpr *SubExpr2 =
       MCBinaryExpr::createSub(CurrentLocationExpr, SubExpr, getContext());
 
-  MCDataFragment *DF = static_cast<MCDataFragment *>(LabelSym->getFragment());
-  assert(DF && "Expecting a valid data fragment.");
-  MCFixupKind FixupKind = static_cast<MCFixupKind>(FirstLiteralRelocationKind +
-                                                   ELF::R_PPC64_PCREL_OPT);
-  DF->getFixups().push_back(
+  MCFragment *F = LabelSym->getFragment();
+  F->addFixup(
       MCFixup::create(LabelSym->getOffset() - 8, SubExpr2,
-                      FixupKind, Inst.getLoc()));
+                      FirstLiteralRelocationKind + ELF::R_PPC64_PCREL_OPT));
   emitLabel(CurrentLocation, Inst.getLoc());
 }
 
@@ -174,7 +171,7 @@ void PPCELFStreamer::emitGOTToPCRelLabel(const MCInst &Inst) {
   // Cast the last operand to MCSymbolRefExpr to get the symbol.
   const MCExpr *Expr = Operand.getExpr();
   const MCSymbolRefExpr *SymExpr = static_cast<const MCSymbolRefExpr *>(Expr);
-  assert(getVariantKind(SymExpr) == PPCMCExpr::VK_PCREL_OPT &&
+  assert(getSpecifier(SymExpr) == PPC::S_PCREL_OPT &&
          "Expecting a symbol of type VK_PCREL_OPT");
   MCSymbol *LabelSym =
       getContext().getOrCreateSymbol(SymExpr->getSymbol().getName());
@@ -190,7 +187,7 @@ void PPCELFStreamer::emitGOTToPCRelLabel(const MCInst &Inst) {
 // The above is a pair of such instructions and this function will not return
 // std::nullopt for either one of them. In both cases we are looking for the
 // last operand <MCOperand Expr:(.Lpcrel@<<invalid>>)> which needs to be an
-// MCExpr and has the flag PPCMCExpr::VK_PCREL_OPT. After that we just
+// MCExpr and has the flag PPC::S_PCREL_OPT. After that we just
 // look at the opcode and in the case of PLDpc we will return true. For the load
 // (or store) this function will return false indicating it has found the second
 // instruciton in the pair.
@@ -212,7 +209,7 @@ std::optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
   // Check for the variant kind VK_PCREL_OPT in this expression.
   const MCExpr *Expr = Operand.getExpr();
   const MCSymbolRefExpr *SymExpr = static_cast<const MCSymbolRefExpr *>(Expr);
-  if (!SymExpr || getVariantKind(SymExpr) != PPCMCExpr::VK_PCREL_OPT)
+  if (!SymExpr || getSpecifier(SymExpr) != PPC::S_PCREL_OPT)
     return std::nullopt;
 
   return (Inst.getOpcode() == PPC::PLDpc);

@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -31,9 +32,6 @@ namespace llvm {
 ///   2. It could be an encoding specification ("this operand encoded like so").
 ///
 class BitCodeAbbrevOp {
-  uint64_t Val;           // A literal value or data for an encoding.
-  bool IsLiteral : 1;     // Indicate whether this is a literal value or not.
-  unsigned Enc   : 3;     // The encoding to use.
 public:
   enum Encoding {
     Fixed = 1,  // A fixed width field, Val specifies number of bits.
@@ -43,6 +41,14 @@ public:
     Blob  = 5   // 32-bit aligned array of 8-bit characters.
   };
 
+protected:
+  uint64_t Val;           // A literal value or data for an encoding.
+  LLVM_PREFERRED_TYPE(bool)
+  uint64_t IsLiteral : 1; // Indicate whether this is a literal value or not.
+  LLVM_PREFERRED_TYPE(Encoding)
+  uint64_t Enc : 3;       // The encoding to use.
+
+public:
   static bool isValidEncoding(uint64_t E) {
     return E >= 1 && E <= 5;
   }

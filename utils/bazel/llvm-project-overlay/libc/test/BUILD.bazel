@@ -7,6 +7,8 @@ load("//libc:libc_build_rules.bzl", "libc_release_library")
 
 package(default_visibility = ["//visibility:public"])
 
+licenses(["notice"])
+
 exports_files(["libc_test_rules.bzl"])
 
 # Smoke test verifying libc_release_library macro functionality.

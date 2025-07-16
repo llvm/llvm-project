@@ -11,10 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -706,11 +707,15 @@ struct GetReturnObjectManager {
     Builder.CreateStore(Builder.getFalse(), GroActiveFlag);
 
     GroEmission = CGF.EmitAutoVarAlloca(*GroVarDecl);
-    auto *GroAlloca = dyn_cast_or_null<llvm::AllocaInst>(
-        GroEmission.getOriginalAllocatedAddress().getPointer());
-    assert(GroAlloca && "expected alloca to be emitted");
-    GroAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
-                           llvm::MDNode::get(CGF.CGM.getLLVMContext(), {}));
+
+    if (!GroVarDecl->isNRVOVariable()) {
+      // NRVO variables don't have allocas and won't have the same issue.
+      auto *GroAlloca = dyn_cast_or_null<llvm::AllocaInst>(
+          GroEmission.getOriginalAllocatedAddress().getPointer());
+      assert(GroAlloca && "expected alloca to be emitted");
+      GroAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                             llvm::MDNode::get(CGF.CGM.getLLVMContext(), {}));
+    }
 
     // Remember the top of EHStack before emitting the cleanup.
     auto old_top = CGF.EHStack.stable_begin();

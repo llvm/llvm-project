@@ -27,10 +27,62 @@ private:
   DynMatcher matcher;
 };
 
+class VariantMatcher::VariadicOpPayload : public VariantMatcher::Payload {
+public:
+  VariadicOpPayload(DynMatcher::VariadicOperator varOp,
+                    std::vector<VariantMatcher> args)
+      : varOp(varOp), args(std::move(args)) {}
+
+  std::optional<DynMatcher> getDynMatcher() const override {
+    std::vector<DynMatcher> dynMatchers;
+    for (auto variantMatcher : args) {
+      std::optional<DynMatcher> dynMatcher = variantMatcher.getDynMatcher();
+      if (dynMatcher)
+        dynMatchers.push_back(dynMatcher.value());
+    }
+    auto result = DynMatcher::constructVariadic(varOp, dynMatchers);
+    return *result;
+  }
+
+  std::string getTypeAsString() const override {
+    std::string inner;
+    llvm::interleave(
+        args, [&](auto const &arg) { inner += arg.getTypeAsString(); },
+        [&] { inner += " & "; });
+    return inner;
+  }
+
+private:
+  const DynMatcher::VariadicOperator varOp;
+  const std::vector<VariantMatcher> args;
+};
+
 VariantMatcher::VariantMatcher() = default;
 
 VariantMatcher VariantMatcher::SingleMatcher(DynMatcher matcher) {
   return VariantMatcher(std::make_shared<SinglePayload>(std::move(matcher)));
+}
+
+VariantMatcher
+VariantMatcher::VariadicOperatorMatcher(DynMatcher::VariadicOperator varOp,
+                                        ArrayRef<VariantMatcher> args) {
+  return VariantMatcher(
+      std::make_shared<VariadicOpPayload>(varOp, std::move(args)));
+}
+
+std::optional<DynMatcher> VariantMatcher::MatcherOps::constructVariadicOperator(
+    DynMatcher::VariadicOperator varOp,
+    ArrayRef<VariantMatcher> innerMatchers) const {
+  std::vector<DynMatcher> dynMatchers;
+  for (const auto &innerMatcher : innerMatchers) {
+    if (!innerMatcher.value)
+      return std::nullopt;
+    std::optional<DynMatcher> inner = innerMatcher.value->getDynMatcher();
+    if (!inner)
+      return std::nullopt;
+    dynMatchers.push_back(*inner);
+  }
+  return *DynMatcher::constructVariadic(varOp, dynMatchers);
 }
 
 std::optional<DynMatcher> VariantMatcher::getDynMatcher() const {
@@ -56,6 +108,14 @@ VariantValue::VariantValue(const VariantMatcher &matcher)
   value.Matcher = new VariantMatcher(matcher);
 }
 
+VariantValue::VariantValue(int64_t signedValue) : type(ValueType::Signed) {
+  value.Signed = signedValue;
+}
+
+VariantValue::VariantValue(bool setBoolean) : type(ValueType::Boolean) {
+  value.Boolean = setBoolean;
+}
+
 VariantValue::~VariantValue() { reset(); }
 
 VariantValue &VariantValue::operator=(const VariantValue &other) {
@@ -68,6 +128,12 @@ VariantValue &VariantValue::operator=(const VariantValue &other) {
     break;
   case ValueType::Matcher:
     setMatcher(other.getMatcher());
+    break;
+  case ValueType::Signed:
+    setSigned(other.getSigned());
+    break;
+  case ValueType::Boolean:
+    setBoolean(other.getBoolean());
     break;
   case ValueType::Nothing:
     type = ValueType::Nothing;
@@ -85,10 +151,32 @@ void VariantValue::reset() {
     delete value.Matcher;
     break;
   // Cases that do nothing.
+  case ValueType::Signed:
+  case ValueType::Boolean:
   case ValueType::Nothing:
     break;
   }
   type = ValueType::Nothing;
+}
+
+// Signed
+bool VariantValue::isSigned() const { return type == ValueType::Signed; }
+
+int64_t VariantValue::getSigned() const { return value.Signed; }
+
+void VariantValue::setSigned(int64_t newValue) {
+  type = ValueType::Signed;
+  value.Signed = newValue;
+}
+
+// Boolean
+bool VariantValue::isBoolean() const { return type == ValueType::Boolean; }
+
+bool VariantValue::getBoolean() const { return value.Boolean; }
+
+void VariantValue::setBoolean(bool newValue) {
+  type = ValueType::Boolean;
+  value.Boolean = newValue;
 }
 
 bool VariantValue::isString() const { return type == ValueType::String; }
@@ -123,6 +211,10 @@ std::string VariantValue::getTypeAsString() const {
     return "String";
   case ValueType::Matcher:
     return "Matcher";
+  case ValueType::Signed:
+    return "Signed";
+  case ValueType::Boolean:
+    return "Boolean";
   case ValueType::Nothing:
     return "Nothing";
   }

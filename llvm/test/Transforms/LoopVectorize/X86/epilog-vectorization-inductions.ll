@@ -38,8 +38,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <16 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_START]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
-; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], 0
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], -1
+; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], -1
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul <16 x i32> [[VEC_IND]], splat (i32 196608)
 ; CHECK-NEXT:    [[TMP14:%.*]] = lshr exact <16 x i32> [[TMP13]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP15:%.*]] = trunc <16 x i32> [[TMP14]] to <16 x i16>
@@ -75,8 +74,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[VEC_IND12:%.*]] = phi <4 x i32> [ [[INDUCTION11]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT13:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX14:%.*]] = add i64 [[IV_START]], [[INDEX8]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc i64 [[OFFSET_IDX14]] to i32
-; CHECK-NEXT:    [[TMP22:%.*]] = add i32 [[TMP21]], 0
-; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[TMP22]], -1
+; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[TMP21]], -1
 ; CHECK-NEXT:    [[TMP24:%.*]] = mul <4 x i32> [[VEC_IND12]], splat (i32 196608)
 ; CHECK-NEXT:    [[TMP25:%.*]] = lshr exact <4 x i32> [[TMP24]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP26:%.*]] = trunc <4 x i32> [[TMP25]] to <4 x i16>
@@ -163,12 +161,11 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <16 x i16> [[VEC_IND]], [[TMP1]]
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <16 x i16> [[STEP_ADD]], [[TMP1]]
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <16 x i16> [[STEP_ADD_2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <16 x i16> [[VEC_IND]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub <16 x i16> [[STEP_ADD]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub <16 x i16> [[STEP_ADD_2]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <16 x i16> [[STEP_ADD_3]], [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[K:%.*]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[K:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 16
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 32
@@ -212,9 +209,8 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT24:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND20:%.*]] = phi <8 x i16> [ [[INDUCTION17]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT21:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX12]], 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = sub <8 x i16> [[VEC_IND20]], [[DOTSPLAT14]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i16, ptr [[K]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i16, ptr [[K]], i64 [[INDEX12]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[TMP18]], i32 0
 ; CHECK-NEXT:    store <8 x i16> [[TMP17]], ptr [[TMP19]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT24]] = add nuw i64 [[INDEX12]], 8

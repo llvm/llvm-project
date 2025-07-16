@@ -321,9 +321,9 @@ def gentbl_filegroup(
       name: The name of the generated filegroup rule for use in dependencies.
       tblgen: The binary used to produce the output.
       td_file: The primary table definitions file.
-      tbl_outs: A list of tuples ([opts], out), where each 'opts' is a list of
-        options passed to tblgen, each option being a string, and 'out' is the
-        corresponding output file produced.
+      tbl_outs: Either a dict {out: [opts]} or a list of tuples ([opts], out),
+        where each 'opts' is a list of options passed to tblgen, each option
+        being a string, and 'out' is the corresponding output file produced.
       td_srcs: See gentbl_rule.td_srcs
       includes: See gentbl_rule.includes
       deps: See gentbl_rule.deps
@@ -333,6 +333,8 @@ def gentbl_filegroup(
       **kwargs: Extra keyword arguments to pass to all generated rules.
     """
 
+    if type(tbl_outs) == type({}):
+        tbl_outs = [(v, k) for k, v in tbl_outs.items()]
     for (opts, out) in tbl_outs:
         first_opt = opts[0] if opts else ""
         rule_suffix = "_{}_{}".format(
@@ -397,9 +399,9 @@ def gentbl_cc_library(
       name: The name of the generated cc_library rule for use in dependencies.
       tblgen: The binary used to produce the output.
       td_file: The primary table definitions file.
-      tbl_outs: A list of tuples ([opts], out), where each 'opts' is a list of
-        options passed to tblgen, each option being a string, and 'out' is the
-        corresponding output file produced.
+      tbl_outs: Either a dict {out: [opts]} or a list of tuples ([opts], out),
+        where each 'opts' is a list of options passed to tblgen, each option
+        being a string, and 'out' is the corresponding output file produced.
       td_srcs: See gentbl_rule.td_srcs
       includes: See gentbl_rule.includes
       deps: See gentbl_rule.deps
@@ -482,7 +484,8 @@ def gentbl_sharded_ops(
         test = False,
         includes = [],
         strip_include_prefix = None,
-        deps = []):
+        deps = [],
+        **kwargs):
     """Generate sharded op declarations and definitions.
 
     This special build rule shards op definitions in a TableGen file and generates multiple copies
@@ -508,26 +511,21 @@ def gentbl_sharded_ops(
         name = cc_lib_name,
         strip_include_prefix = strip_include_prefix,
         includes = includes,
-        tbl_outs = [
-            (
-                [
-                    "-gen-op-defs",
-                    "-op-shard-count=" + str(shard_count),
-                ],
-                src_out,
-            ),
-            (
-                [
-                    "-gen-op-decls",
-                    "-op-shard-count=" + str(shard_count),
-                ],
-                hdr_out,
-            ),
-        ],
+        tbl_outs = {
+            src_out: [
+                "-gen-op-defs",
+                "-op-shard-count=" + str(shard_count),
+            ],
+            hdr_out: [
+                "-gen-op-decls",
+                "-op-shard-count=" + str(shard_count),
+            ],
+        },
         tblgen = tblgen,
         td_file = td_file,
         test = test,
         deps = deps,
+        **kwargs
     )
     all_files = [hdr_out, src_out]
     for i in range(0, shard_count):
@@ -539,9 +537,14 @@ def gentbl_sharded_ops(
             out = out_file,
             sharder = sharder,
             src_file = src_file,
+            **kwargs
         )
         all_files.append(out_file)
-    native.filegroup(name = name, srcs = all_files)
+    native.filegroup(
+        name = name,
+        srcs = all_files,
+        **kwargs
+    )
 
 def gentbl_sharded_op_defs(name, source_file, shard_count):
     """Generates multiple copies of a source file that includes sharded op definitions.

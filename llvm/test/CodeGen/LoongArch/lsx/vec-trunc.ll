@@ -4,15 +4,9 @@
 define void @load_trunc_2i64_to_2i32(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: load_trunc_2i64_to_2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    st.w $a0, $sp, 4
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; CHECK-NEXT:    st.w $a0, $sp, 0
-; CHECK-NEXT:    ld.d $a0, $sp, 0
-; CHECK-NEXT:    st.d $a0, $a1, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 8
+; CHECK-NEXT:    vstelm.d $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %ptr
   %trunc = trunc <2 x i64> %a to <2 x i32>
@@ -23,16 +17,11 @@ define void @load_trunc_2i64_to_2i32(ptr %ptr, ptr %dst) nounwind {
 define void @load_trunc_2i64_to_2i16(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: load_trunc_2i64_to_2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $sp, 2
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    st.w $a0, $a1, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
+; CHECK-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI1_0)
+; CHECK-NEXT:    vshuf.h $vr1, $vr0, $vr0
+; CHECK-NEXT:    vstelm.w $vr1, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %ptr
   %trunc = trunc <2 x i64> %a to <2 x i16>
@@ -43,16 +32,11 @@ define void @load_trunc_2i64_to_2i16(ptr %ptr, ptr %dst) nounwind {
 define void @load_trunc_2i64_to_2i8(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: load_trunc_2i64_to_2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 1
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $a1, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
+; CHECK-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI2_0)
+; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vstelm.h $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %ptr
   %trunc = trunc <2 x i64> %a to <2 x i8>
@@ -63,19 +47,9 @@ define void @load_trunc_2i64_to_2i8(ptr %ptr, ptr %dst) nounwind {
 define void @load_trunc_4i32_to_4i16(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: load_trunc_4i32_to_4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; CHECK-NEXT:    st.h $a0, $sp, 6
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; CHECK-NEXT:    st.h $a0, $sp, 4
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $sp, 2
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $sp, 0
-; CHECK-NEXT:    ld.d $a0, $sp, 0
-; CHECK-NEXT:    st.d $a0, $a1, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vpickev.h $vr0, $vr0, $vr0
+; CHECK-NEXT:    vstelm.d $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %ptr
   %trunc = trunc <4 x i32> %a to <4 x i16>
@@ -86,20 +60,11 @@ define void @load_trunc_4i32_to_4i16(ptr %ptr, ptr %dst) nounwind {
 define void @load_trunc_4i32_to_4i8(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: load_trunc_4i32_to_4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 3
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 2
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 1
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    st.w $a0, $a1, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
+; CHECK-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI4_0)
+; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %ptr
   %trunc = trunc <4 x i32> %a to <4 x i8>
@@ -110,27 +75,9 @@ define void @load_trunc_4i32_to_4i8(ptr %ptr, ptr %dst) nounwind {
 define void @load_trunc_8i16_to_8i8(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: load_trunc_8i16_to_8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 7
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 6
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 5
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 4
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 3
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 2
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 1
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 0
-; CHECK-NEXT:    ld.d $a0, $sp, 0
-; CHECK-NEXT:    st.d $a0, $a1, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vpickev.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vstelm.d $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %ptr
   %trunc = trunc <8 x i16> %a to <8 x i8>
@@ -141,17 +88,10 @@ define void @load_trunc_8i16_to_8i8(ptr %ptr, ptr %dst) nounwind {
 define void @load_trunc_2i32_to_2i16(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: load_trunc_2i32_to_2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    ld.d $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $sp, 2
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    st.w $a0, $a1, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vshuf4i.h $vr0, $vr0, 8
+; CHECK-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %ptr
   %trunc = trunc <2 x i32> %a to <2 x i16>
@@ -162,17 +102,12 @@ define void @load_trunc_2i32_to_2i16(ptr %ptr, ptr %dst) nounwind {
 define void @load_trunc_2i32_to_2i8(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: load_trunc_2i32_to_2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    ld.d $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 1
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $a1, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI7_0)
+; CHECK-NEXT:    vld $vr0, $a2, %pc_lo12(.LCPI7_0)
+; CHECK-NEXT:    vinsgr2vr.d $vr1, $a0, 0
+; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr1, $vr0
+; CHECK-NEXT:    vstelm.h $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %ptr
   %trunc = trunc <2 x i32> %a to <2 x i8>
@@ -183,21 +118,10 @@ define void @load_trunc_2i32_to_2i8(ptr %ptr, ptr %dst) nounwind {
 define void @load_trunc_4i16_to_4i8(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: load_trunc_4i16_to_4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    ld.d $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 3
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 2
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 1
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    st.w $a0, $a1, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vpickev.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %ptr
   %trunc = trunc <4 x i16> %a to <4 x i8>
@@ -208,17 +132,10 @@ define void @load_trunc_4i16_to_4i8(ptr %ptr, ptr %dst) nounwind {
 define void @load_trunc_2i16_to_2i8(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: load_trunc_2i16_to_2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 1
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $a1, 0
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 8
+; CHECK-NEXT:    vstelm.h $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %a = load <2 x i16>, ptr %ptr
   %trunc = trunc <2 x i16> %a to <2 x i8>

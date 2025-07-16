@@ -20,8 +20,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 
@@ -83,11 +81,11 @@ struct GpuAllReduceRewriter {
 
     // Compute lane id (invocation id withing the subgroup).
     Value subgroupMask =
-        create<arith::ConstantIntOp>(kSubgroupSize - 1, int32Type);
+        create<arith::ConstantIntOp>(int32Type, kSubgroupSize - 1);
     Value laneId = create<arith::AndIOp>(invocationIdx, subgroupMask);
     Value isFirstLane =
         create<arith::CmpIOp>(arith::CmpIPredicate::eq, laneId,
-                              create<arith::ConstantIntOp>(0, int32Type));
+                              create<arith::ConstantIntOp>(int32Type, 0));
 
     Value numThreadsWithSmallerSubgroupId =
         create<arith::SubIOp>(invocationIdx, laneId);
@@ -282,7 +280,7 @@ private:
   /// The first lane returns the result, all others return values are undefined.
   Value createSubgroupReduce(Value activeWidth, Value laneId, Value operand,
                              AccumulatorFactory &accumFactory) {
-    Value subgroupSize = create<arith::ConstantIntOp>(kSubgroupSize, int32Type);
+    Value subgroupSize = create<arith::ConstantIntOp>(int32Type, kSubgroupSize);
     Value isPartialSubgroup = create<arith::CmpIOp>(arith::CmpIPredicate::slt,
                                                     activeWidth, subgroupSize);
     std::array<Type, 2> shuffleType = {valueType, rewriter.getI1Type()};
@@ -296,7 +294,7 @@ private:
           // lane is within the active range. The accumulated value is available
           // in the first lane.
           for (int i = 1; i < kSubgroupSize; i <<= 1) {
-            Value offset = create<arith::ConstantIntOp>(i, int32Type);
+            Value offset = create<arith::ConstantIntOp>(int32Type, i);
             auto shuffleOp = create<gpu::ShuffleOp>(
                 shuffleType, value, offset, activeWidth, gpu::ShuffleMode::XOR);
             // Skip the accumulation if the shuffle op read from a lane outside
@@ -318,7 +316,7 @@ private:
         [&] {
           Value value = operand;
           for (int i = 1; i < kSubgroupSize; i <<= 1) {
-            Value offset = create<arith::ConstantIntOp>(i, int32Type);
+            Value offset = create<arith::ConstantIntOp>(int32Type, i);
             auto shuffleOp =
                 create<gpu::ShuffleOp>(shuffleType, value, offset, subgroupSize,
                                        gpu::ShuffleMode::XOR);
@@ -331,7 +329,7 @@ private:
 
   /// Returns value divided by the subgroup size (i.e. 32).
   Value getDivideBySubgroupSize(Value value) {
-    Value subgroupSize = create<arith::ConstantIntOp>(kSubgroupSize, int32Type);
+    Value subgroupSize = create<arith::ConstantIntOp>(int32Type, kSubgroupSize);
     return create<arith::DivSIOp>(int32Type, value, subgroupSize);
   }
 

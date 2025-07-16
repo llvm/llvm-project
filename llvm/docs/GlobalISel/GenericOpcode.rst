@@ -148,6 +148,33 @@ G_EXTRACT for scalar types, but acts elementwise on vectors.
 
   %1:_(s16) = G_TRUNC %0:_(s32)
 
+G_TRUNC_SSAT_S
+^^^^^^^^^^^^^^
+
+Truncate a signed input to a signed result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_SSAT_S %0:_(s32)
+
+G_TRUNC_SSAT_U
+^^^^^^^^^^^^^^
+
+Truncate a signed input to an unsigned result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_SSAT_U %0:_(s32)
+
+G_TRUNC_USAT_U
+^^^^^^^^^^^^^^
+
+Truncate a unsigned input to an unsigned result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_USAT_U %0:_(s32)
+
 Type Conversions
 ----------------
 
@@ -608,6 +635,16 @@ NaN-propagating maximum that also treat -0.0 as less than 0.0. While
 FMAXNUM_IEEE follow IEEE 754-2008 semantics, FMAXIMUM follows IEEE
 754-2019 semantics.
 
+G_FMINIMUMNUM
+^^^^^^^^^^^^^
+
+IEEE-754 2019 minimumNumber
+
+G_FMAXIMUMNUM
+^^^^^^^^^^^^^
+
+IEEE-754 2019 maximumNumber
+
 G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FREM
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -725,7 +762,13 @@ Mixing scalable vectors and fixed vectors are not allowed.
 G_CONCAT_VECTORS
 ^^^^^^^^^^^^^^^^
 
-Concatenate two vectors to form a longer vector.
+Concatenate vectors to form a longer vector.
+
+.. code-block:: none
+
+  %4:_(<16 x i32>) = G_CONCAT_VECTORS %0:_(<4 x i32>), %1:_(<4 x i32>),
+                                      %2:_(<4 x i32>), %3:_(<4 x i32>)
+
 
 G_BUILD_VECTOR, G_BUILD_VECTOR_TRUNC
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -737,15 +780,33 @@ same as all source operands)
 The _TRUNC version truncates the larger operand types to fit the
 destination vector elt type.
 
+.. code-block:: none
+
+  %4:_(<4 x i32>) = G_BUILD_VECTOR %0:_(i32), %1:_(i32), %2:_(i32), %3:_(i32)
+
+  %4:_(<4 x i32>) = G_BUILD_VECTOR_TRUNC %0:_(i64), %1:_(i64), %2:_(i64), %3:_(i64)
+
+
 G_INSERT_VECTOR_ELT
 ^^^^^^^^^^^^^^^^^^^
 
 Insert an element into a vector
 
+.. code-block:: none
+
+  %4:_(<16 x i32>) = G_INSERT_VECTOR_ELT %vec:_(<16 x i32>), %elt:_(i32), %idx:_(s64)
+
+
+
 G_EXTRACT_VECTOR_ELT
 ^^^^^^^^^^^^^^^^^^^^
 
 Extract an element from a vector
+
+.. code-block:: none
+
+  %elt:_(i32) = G_EXTRACT_VECTOR_ELT %vec:_(<16 x i32>), %idx:_(s64)
+
 
 G_SHUFFLE_VECTOR
 ^^^^^^^^^^^^^^^^
@@ -898,7 +959,8 @@ operands.
                                G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
                                G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
                                G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX,
-                               G_ATOMICRMW_FMIN, G_ATOMICRMW_UINC_WRAP,
+                               G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAXIMUM,
+                               G_ATOMICRMW_FMINIMUM, G_ATOMICRMW_UINC_WRAP,
 			       G_ATOMICRMW_UDEC_WRAP, G_ATOMICRMW_USUB_COND,
 			       G_ATOMICRMW_USUB_SAT
 

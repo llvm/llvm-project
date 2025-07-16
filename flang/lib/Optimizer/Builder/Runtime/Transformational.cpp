@@ -474,6 +474,26 @@ void fir::runtime::genReshape(fir::FirOpBuilder &builder, mlir::Location loc,
   builder.create<fir::CallOp>(loc, func, args);
 }
 
+/// Generate call to ShallowCopy[Direct] runtime routine.
+/// ShallowCopyDirect is used iff \p resultIsAllocated is true.
+void fir::runtime::genShallowCopy(fir::FirOpBuilder &builder,
+                                  mlir::Location loc, mlir::Value resultBox,
+                                  mlir::Value arrayBox,
+                                  bool resultIsAllocated) {
+  auto packFunc =
+      resultIsAllocated
+          ? fir::runtime::getRuntimeFunc<mkRTKey(ShallowCopyDirect)>(loc,
+                                                                     builder)
+          : fir::runtime::getRuntimeFunc<mkRTKey(ShallowCopy)>(loc, builder);
+  auto fTy = packFunc.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
+  auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox,
+                                            arrayBox, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, packFunc, args);
+}
+
 /// Generate call to Spread intrinsic runtime routine.
 void fir::runtime::genSpread(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value resultBox, mlir::Value sourceBox,

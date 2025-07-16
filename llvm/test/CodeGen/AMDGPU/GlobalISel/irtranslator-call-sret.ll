@@ -90,5 +90,3 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ret void
 }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

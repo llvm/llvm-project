@@ -3,7 +3,6 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-GISEL %s
-target datalayout = "A5"
 
 define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_uniform:
@@ -917,7 +916,6 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0
 ; GFX9-GISEL-NEXT:  .LBB7_4: ; %Flow
 ; GFX9-GISEL-NEXT:    s_xor_b32 s4, s4, 1
-; GFX9-GISEL-NEXT:    s_and_b32 s4, s4, 1
 ; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX9-GISEL-NEXT:    s_cbranch_scc1 .LBB7_6
 ; GFX9-GISEL-NEXT:  ; %bb.5: ; %bb.0
@@ -1016,8 +1014,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:  .LBB7_4: ; %Flow
 ; GFX11-GISEL-NEXT:    s_xor_b32 s0, s0, 1
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-GISEL-NEXT:    s_and_b32 s0, s0, 1
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB7_6
 ; GFX11-GISEL-NEXT:  ; %bb.5: ; %bb.0
@@ -2253,7 +2250,6 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX9-SDAG-NEXT:    s_mov_b32 s32, s34
 ; GFX9-SDAG-NEXT:    s_mov_b32 s34, s12
 ; GFX9-SDAG-NEXT:    s_mov_b32 s33, s11
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_device_control_flow:
@@ -2320,7 +2316,6 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX9-GISEL-NEXT:    s_mov_b32 s32, s34
 ; GFX9-GISEL-NEXT:    s_mov_b32 s34, s12
 ; GFX9-GISEL-NEXT:    s_mov_b32 s33, s11
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_control_flow:

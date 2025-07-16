@@ -38,7 +38,6 @@
 #include "DNBThreadResumeActions.h"
 #include "JSON.h"
 #include "JSONGenerator.h"
-#include "JSONGenerator.h"
 #include "MacOSX/Genealogy.h"
 #include "OsLogger.h"
 #include "RNBContext.h"
@@ -243,14 +242,10 @@ void RNBRemote::CreatePacketTable() {
                      "Read memory"));
   t.push_back(Packet(read_register, &RNBRemote::HandlePacket_p, NULL, "p",
                      "Read one register"));
-  t.push_back(Packet(read_general_regs, &RNBRemote::HandlePacket_g, NULL, "g",
-                     "Read registers"));
   t.push_back(Packet(write_memory, &RNBRemote::HandlePacket_M, NULL, "M",
                      "Write memory"));
   t.push_back(Packet(write_register, &RNBRemote::HandlePacket_P, NULL, "P",
                      "Write one register"));
-  t.push_back(Packet(write_general_regs, &RNBRemote::HandlePacket_G, NULL, "G",
-                     "Write registers"));
   t.push_back(Packet(insert_mem_bp, &RNBRemote::HandlePacket_z, NULL, "Z0",
                      "Insert memory breakpoint"));
   t.push_back(Packet(remove_mem_bp, &RNBRemote::HandlePacket_z, NULL, "z0",
@@ -824,7 +819,7 @@ rnb_err_t RNBRemote::GetPacketPayload(std::string &return_packet) {
   // (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
 
   {
-    PThreadMutex::Locker locker(m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (m_rx_packets.empty()) {
       // Only reset the remote command available event if we have no more
       // packets
@@ -1056,7 +1051,7 @@ void RNBRemote::CommDataReceived(const std::string &new_data) {
   //  (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
 
   // Put the packet data into the buffer in a thread safe fashion
-  PThreadMutex::Locker locker(m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
 
   std::string data;
   // See if we have any left over data from a previous call to this
@@ -1481,7 +1476,6 @@ bool RNBRemote::InitializeRegisters(bool force) {
 
 void RNBRemote::NotifyThatProcessStopped(void) {
   RNBRemote::HandlePacket_last_signal(NULL);
-  return;
 }
 
 /* 'A arglen,argnum,arg,...'
@@ -3288,97 +3282,6 @@ rnb_err_t RNBRemote::HandlePacket_X(const char *p) {
   return SendPacket("OK");
 }
 
-/* 'g' -- read registers
- Get the contents of the registers for the current thread,
- send them to gdb.
- Should the setting of the Hg packet determine which thread's registers
- are returned?  */
-
-rnb_err_t RNBRemote::HandlePacket_g(const char *p) {
-  std::ostringstream ostrm;
-  if (!m_ctx.HasValidProcessID()) {
-    return SendErrorPacket("E11");
-  }
-
-  if (g_num_reg_entries == 0)
-    InitializeRegisters();
-
-  nub_process_t pid = m_ctx.ProcessID();
-  nub_thread_t tid = ExtractThreadIDFromThreadSuffix(p + 1);
-  if (tid == INVALID_NUB_THREAD)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "No thread specified in p packet");
-
-  // Get the register context size first by calling with NULL buffer
-  nub_size_t reg_ctx_size = DNBThreadGetRegisterContext(pid, tid, NULL, 0);
-  if (reg_ctx_size) {
-    // Now allocate enough space for the entire register context
-    std::vector<uint8_t> reg_ctx;
-    reg_ctx.resize(reg_ctx_size);
-    // Now read the register context
-    reg_ctx_size =
-        DNBThreadGetRegisterContext(pid, tid, &reg_ctx[0], reg_ctx.size());
-    if (reg_ctx_size) {
-      append_hex_value(ostrm, reg_ctx.data(), reg_ctx.size(), false);
-      return SendPacket(ostrm.str());
-    }
-  }
-  return SendErrorPacket("E74");
-}
-
-/* 'G XXX...' -- write registers
- How is the thread for these specified, beyond "the current thread"?
- Does gdb actually use the Hg packet to set this?  */
-
-rnb_err_t RNBRemote::HandlePacket_G(const char *p) {
-  if (!m_ctx.HasValidProcessID()) {
-    return SendErrorPacket("E11");
-  }
-
-  if (g_num_reg_entries == 0)
-    InitializeRegisters();
-
-  p += 1; // Skip the 'G'
-
-  nub_process_t pid = m_ctx.ProcessID();
-  nub_thread_t tid = ExtractThreadIDFromThreadSuffix(p);
-  if (tid == INVALID_NUB_THREAD)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "No thread specified in p packet");
-  // Skip the thread specification in `G;thread:3488ea;[..data...]`
-  const char *last_semi = strrchr(p, ';');
-  if (last_semi)
-    p = last_semi + 1;
-
-  StdStringExtractor packet(p);
-
-  // Get the register context size first by calling with NULL buffer
-  nub_size_t reg_ctx_size = DNBThreadGetRegisterContext(pid, tid, NULL, 0);
-  if (reg_ctx_size) {
-    // Now allocate enough space for the entire register context
-    std::vector<uint8_t> reg_ctx;
-    reg_ctx.resize(reg_ctx_size);
-
-    const nub_size_t bytes_extracted =
-        packet.GetHexBytes(&reg_ctx[0], reg_ctx.size(), 0xcc);
-    if (bytes_extracted == reg_ctx.size()) {
-      // Now write the register context
-      reg_ctx_size =
-          DNBThreadSetRegisterContext(pid, tid, reg_ctx.data(), reg_ctx.size());
-      if (reg_ctx_size == reg_ctx.size())
-        return SendPacket("OK");
-      else
-        return SendErrorPacket("E55");
-    } else {
-      DNBLogError("RNBRemote::HandlePacket_G(%s): extracted %llu of %llu "
-                  "bytes, size mismatch\n",
-                  p, (uint64_t)bytes_extracted, (uint64_t)reg_ctx_size);
-      return SendErrorPacket("E64");
-    }
-  }
-  return SendErrorPacket("E65");
-}
-
 static bool RNBRemoteShouldCancelCallback(void *not_used) {
   RNBRemoteSP remoteSP(g_remoteSP);
   if (remoteSP.get() != NULL) {
@@ -3572,7 +3475,7 @@ static bool GetProcessNameFrom_vAttach(const char *&p,
 }
 
 rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
-  uint32_t max_packet_size = 128 * 1024; // 128KBytes is a reasonable max packet
+  uint32_t max_packet_size = 128 * 1024; // 128 KiB is a reasonable max packet
                                          // size--debugger can always use less
   std::stringstream reply;
   reply << "qXfer:features:read+;PacketSize=" << std::hex << max_packet_size

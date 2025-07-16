@@ -14,7 +14,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/PatternMatch.h"
@@ -84,7 +83,7 @@ TensorType inferReshapeExpandedType(TensorType inputType,
         return totalSize / totalSizeNoPlaceholder;
       });
 
-  bool resultIsStatic = !ShapedType::isDynamicShape(resultShape);
+  bool resultIsStatic = ShapedType::isStaticShape(resultShape);
 
   // A syntactic restriction in 'tensor.expand_shape' forbids a dynamically
   // shaped input from being reshaped into a statically shaped result. We may
@@ -306,7 +305,7 @@ public:
       int64_t size = i.value();
       size_t index = i.index();
       sizes.push_back(size == -1 ? ShapedType::kDynamic : size);
-      if (!ShapedType::isDynamic(sizes.back()))
+      if (ShapedType::isStatic(sizes.back()))
         continue;
 
       auto dim = rewriter.create<tensor::DimOp>(loc, input, index);
@@ -321,8 +320,6 @@ public:
         rewriter.getDenseI64ArrayAttr(sizes),
         rewriter.getDenseI64ArrayAttr(strides));
 
-    rewriter.replaceOp(sliceOp, newSliceOp.getResult());
-
     // Remove const_shape ops when it no longer has use point.
     Operation *startConstShape = sliceOp.getStart().getDefiningOp();
     if (startConstShape->getResult(0).hasOneUse())
@@ -332,6 +329,7 @@ public:
     if (sizeConstShape->getResult(0).hasOneUse())
       rewriter.eraseOp(sizeConstShape);
 
+    rewriter.replaceOp(sliceOp, newSliceOp.getResult());
     return success();
   }
 };
@@ -362,7 +360,8 @@ public:
     // Setup the default constantAttr.
 
     Value padConstant = rewriter.createOrFold<tensor::ExtractOp>(
-        loc, padOp.getPadConst(), ValueRange({}));
+        loc, padOp.getPadConst(),
+        ValueRange({rewriter.create<arith::ConstantIndexOp>(loc, 0)}));
 
     if (!padConstant) {
       return rewriter.notifyMatchFailure(

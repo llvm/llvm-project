@@ -196,7 +196,7 @@ end subroutine
 ! CHECK:             %[[VAL_17:.*]] = arith.constant false
 ! CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_9]] : (index) -> i64
-! CHECK:             %[[VAL_20:.*]] = fir.convert %[[VAL_13]]#1 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
+! CHECK:             %[[VAL_20:.*]] = fir.convert %[[VAL_13]]#0 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_12]] : (index) -> i64
 ! CHECK:             %[[VAL_22:.*]] = fir.call @_FortranAScan1(%[[VAL_18]], %[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
 ! CHECK:             %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (i64) -> i32

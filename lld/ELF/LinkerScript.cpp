@@ -26,7 +26,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
@@ -35,7 +34,6 @@
 #include <cstdint>
 #include <limits>
 #include <string>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -182,7 +180,18 @@ void LinkerScript::expandMemoryRegions(uint64_t size) {
 
 void LinkerScript::expandOutputSection(uint64_t size) {
   state->outSec->size += size;
-  expandMemoryRegions(size);
+  size_t regionSize = size;
+  if (state->outSec->inOverlay) {
+    // Expand the overlay if necessary, and expand the region by the
+    // corresponding amount.
+    if (state->outSec->size > state->overlaySize) {
+      regionSize = state->outSec->size - state->overlaySize;
+      state->overlaySize = state->outSec->size;
+    } else {
+      regionSize = 0;
+    }
+  }
+  expandMemoryRegions(regionSize);
 }
 
 void LinkerScript::setDot(Expr e, const Twine &loc, bool inSec) {
@@ -797,7 +806,7 @@ void LinkerScript::processSectionCommands() {
   if (!potentialSpillLists.empty()) {
     DenseSet<StringRef> insertNames;
     for (InsertCommand &ic : insertCommands)
-      insertNames.insert(ic.names.begin(), ic.names.end());
+      insertNames.insert_range(ic.names);
     for (SectionCommand *&base : sectionCommands) {
       auto *osd = dyn_cast<OutputDesc>(base);
       if (!osd)
@@ -1218,6 +1227,8 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   // We can call this method multiple times during the creation of
   // thunks and want to start over calculation each time.
   sec->size = 0;
+  if (sec->firstInOverlay)
+    state->overlaySize = 0;
 
   // We visited SectionsCommands from processSectionCommands to
   // layout sections. Now, we visit SectionsCommands again to fix

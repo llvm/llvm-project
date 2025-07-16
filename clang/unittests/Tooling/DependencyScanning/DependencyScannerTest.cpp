@@ -42,7 +42,7 @@ public:
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
     auto NewDeps = getDependencies();
-    Deps.insert(Deps.end(), NewDeps.begin(), NewDeps.end());
+    llvm::append_range(Deps, NewDeps);
   }
 
 private:
@@ -57,8 +57,8 @@ public:
                      FileManager *FileMgr,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
-    CompilerInstance Compiler(std::move(PCHContainerOps));
-    Compiler.setInvocation(std::move(Invocation));
+    CompilerInstance Compiler(std::move(Invocation),
+                              std::move(PCHContainerOps));
     Compiler.setFileManager(FileMgr);
 
     Compiler.createDiagnostics(FileMgr->getVirtualFileSystem(), DiagConsumer,
@@ -299,8 +299,7 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
       ScanTool.getDependencyFile(CommandLine, CWD).moveInto(DepFile),
       llvm::Failed());
 
-  EXPECT_TRUE(llvm::find(InterceptFS->StatPaths, OtherPath) ==
-              InterceptFS->StatPaths.end());
+  EXPECT_TRUE(!llvm::is_contained(InterceptFS->StatPaths, OtherPath));
   EXPECT_EQ(InterceptFS->ReadFiles, std::vector<std::string>{"test.m"});
 }
 

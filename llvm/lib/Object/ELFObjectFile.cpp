@@ -597,6 +597,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1200";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201:
     return "gfx1201";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250:
+    return "gfx1250";
 
   // Generic AMDGCN targets
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:
@@ -736,8 +738,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
     case ARMBuildAttrs::v7: {
       std::optional<unsigned> ArchProfileAttr =
           Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
-      if (ArchProfileAttr &&
-          *ArchProfileAttr == ARMBuildAttrs::MicroControllerProfile)
+      if (ArchProfileAttr == ARMBuildAttrs::MicroControllerProfile)
         Triple += "v7m";
       else
         Triple += "v7";
@@ -778,7 +779,8 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
   TheTriple.setArchName(Triple);
 }
 
-std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
+std::vector<ELFPltEntry>
+ELFObjectFileBase::getPltEntries(const MCSubtargetInfo &STI) const {
   std::string Err;
   const auto Triple = makeTriple();
   const auto *T = TargetRegistry::lookupTarget(Triple, Err);
@@ -798,9 +800,19 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
     case Triple::aarch64_be:
       JumpSlotReloc = ELF::R_AARCH64_JUMP_SLOT;
       break;
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::thumb:
+    case Triple::thumbeb:
+      JumpSlotReloc = ELF::R_ARM_JUMP_SLOT;
+      break;
     case Triple::hexagon:
       JumpSlotReloc = ELF::R_HEX_JMP_SLOT;
       GlobDatReloc = ELF::R_HEX_GLOB_DAT;
+      break;
+    case Triple::riscv32:
+    case Triple::riscv64:
+      JumpSlotReloc = ELF::R_RISCV_JUMP_SLOT;
       break;
     default:
       return {};
@@ -836,7 +848,7 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
       llvm::append_range(
           PltEntries,
           MIA->findPltEntries(Section.getAddress(),
-                              arrayRefFromStringRef(*PltContents), Triple));
+                              arrayRefFromStringRef(*PltContents), STI));
     }
   }
 
@@ -896,8 +908,7 @@ Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
 
   const auto &Sections = cantFail(EF.sections());
   auto IsMatch = [&](const Elf_Shdr &Sec) -> Expected<bool> {
-    if (Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP &&
-        Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP_V0)
+    if (Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP)
       return false;
     if (!TextSectionIndex)
       return true;

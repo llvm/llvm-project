@@ -8,7 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -198,14 +198,10 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
         /*ToAS=*/getContext().getTargetAddressSpace(LangAS::cuda_device));
   }
 
-  // FIXME: Should also use this for OpenCL, but it requires addressing the
-  // problem of kernels being called.
-  //
   // FIXME: This doesn't apply the optimization of coercing pointers in structs
   // to global address space when using byref. This would require implementing a
   // new kind of coercion of the in-memory type when for indirect arguments.
-  if (!getContext().getLangOpts().OpenCL && LTy == OrigLTy &&
-      isAggregateTypeForABI(Ty)) {
+  if (LTy == OrigLTy && isAggregateTypeForABI(Ty)) {
     return ABIArgInfo::getIndirectAliased(
         getContext().getTypeAlignInChars(Ty),
         getContext().getTargetAddressSpace(LangAS::opencl_constant),
@@ -302,14 +298,13 @@ public:
   AMDGPUTargetCodeGenInfo(CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<AMDGPUABIInfo>(CGT)) {}
 
+  bool supportsLibCall() const override { return false; }
   void setFunctionDeclAttributes(const FunctionDecl *FD, llvm::Function *F,
                                  CodeGenModule &CGM) const;
 
-  void emitTargetGlobals(CodeGen::CodeGenModule &CGM) const override;
-
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
-  unsigned getOpenCLKernelCallingConv() const override;
+  unsigned getDeviceKernelCallingConv() const override;
 
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
@@ -342,7 +337,7 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
     return false;
 
   return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
-         (D->hasAttr<OpenCLKernelAttr>() ||
+         (D->hasAttr<DeviceKernelAttr>() ||
           (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
           (isa<VarDecl>(D) &&
            (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
@@ -355,7 +350,7 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   const auto *ReqdWGS =
       M.getLangOpts().OpenCL ? FD->getAttr<ReqdWorkGroupSizeAttr>() : nullptr;
   const bool IsOpenCLKernel =
-      M.getLangOpts().OpenCL && FD->hasAttr<OpenCLKernelAttr>();
+      M.getLangOpts().OpenCL && FD->hasAttr<DeviceKernelAttr>();
   const bool IsHIPKernel = M.getLangOpts().HIP && FD->hasAttr<CUDAGlobalAttr>();
 
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
@@ -414,40 +409,6 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   }
 }
 
-/// Emits control constants used to change per-architecture behaviour in the
-/// AMDGPU ROCm device libraries.
-void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
-    CodeGen::CodeGenModule &CGM) const {
-  StringRef Name = "__oclc_ABI_version";
-  llvm::GlobalVariable *OriginalGV = CGM.getModule().getNamedGlobal(Name);
-  if (OriginalGV && !llvm::GlobalVariable::isExternalLinkage(OriginalGV->getLinkage()))
-    return;
-
-  if (CGM.getTarget().getTargetOpts().CodeObjectVersion ==
-      llvm::CodeObjectVersionKind::COV_None)
-    return;
-
-  auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
-  llvm::Constant *COV = llvm::ConstantInt::get(
-      Type, CGM.getTarget().getTargetOpts().CodeObjectVersion);
-
-  // It needs to be constant weak_odr without externally_initialized so that
-  // the load instuction can be eliminated by the IPSCCP.
-  auto *GV = new llvm::GlobalVariable(
-      CGM.getModule(), Type, true, llvm::GlobalValue::WeakODRLinkage, COV, Name,
-      nullptr, llvm::GlobalValue::ThreadLocalMode::NotThreadLocal,
-      CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant));
-  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
-  GV->setVisibility(llvm::GlobalValue::VisibilityTypes::HiddenVisibility);
-
-  // Replace any external references to this variable with the new global.
-  if (OriginalGV) {
-    OriginalGV->replaceAllUsesWith(GV);
-    GV->takeName(OriginalGV);
-    OriginalGV->eraseFromParent();
-  }
-}
-
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
   if (requiresAMDGPUProtectedVisibility(D, GV)) {
@@ -470,7 +431,7 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     F->addFnAttr("amdgpu-ieee", "false");
 }
 
-unsigned AMDGPUTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
+unsigned AMDGPUTargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::AMDGPU_KERNEL;
 }
 
@@ -611,7 +572,7 @@ bool AMDGPUTargetCodeGenInfo::shouldEmitDWARFBitFieldSeparators() const {
 void AMDGPUTargetCodeGenInfo::setCUDAKernelCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
-      FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
+      FT, FT->getExtInfo().withCallingConv(CC_DeviceKernel));
 }
 
 /// Return IR struct type for rtinfo struct in rocm-device-libs used for device
@@ -753,12 +714,16 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
     int32_t *MaxThreadsVal) {
   unsigned Min = 0;
   unsigned Max = 0;
+  auto Eval = [&](Expr *E) {
+    return E->EvaluateKnownConstInt(getContext()).getExtValue();
+  };
   if (FlatWGS) {
-    Min = FlatWGS->getMin()->EvaluateKnownConstInt(getContext()).getExtValue();
-    Max = FlatWGS->getMax()->EvaluateKnownConstInt(getContext()).getExtValue();
+    Min = Eval(FlatWGS->getMin());
+    Max = Eval(FlatWGS->getMax());
   }
   if (ReqdWGS && Min == 0 && Max == 0)
-    Min = Max = ReqdWGS->getXDim() * ReqdWGS->getYDim() * ReqdWGS->getZDim();
+    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
+                Eval(ReqdWGS->getZDim());
 
   if (Min != 0) {
     assert(Min <= Max && "Min must be less than or equal Max");

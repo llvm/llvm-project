@@ -30,29 +30,36 @@
 class InstFormat<bits<5> val> {
   bits<5> Value = val;
 }
-def InstFormatPseudo : InstFormat<0>;
-def InstFormatR      : InstFormat<1>;
-def InstFormatR4     : InstFormat<2>;
-def InstFormatI      : InstFormat<3>;
-def InstFormatS      : InstFormat<4>;
-def InstFormatB      : InstFormat<5>;
-def InstFormatU      : InstFormat<6>;
-def InstFormatJ      : InstFormat<7>;
-def InstFormatCR     : InstFormat<8>;
-def InstFormatCI     : InstFormat<9>;
-def InstFormatCSS    : InstFormat<10>;
-def InstFormatCIW    : InstFormat<11>;
-def InstFormatCL     : InstFormat<12>;
-def InstFormatCS     : InstFormat<13>;
-def InstFormatCA     : InstFormat<14>;
-def InstFormatCB     : InstFormat<15>;
-def InstFormatCJ     : InstFormat<16>;
-def InstFormatCU     : InstFormat<17>;
-def InstFormatCLB    : InstFormat<18>;
-def InstFormatCLH    : InstFormat<19>;
-def InstFormatCSB    : InstFormat<20>;
-def InstFormatCSH    : InstFormat<21>;
-def InstFormatOther  : InstFormat<22>;
+def InstFormatPseudo        : InstFormat<0>;
+def InstFormatR             : InstFormat<1>;
+def InstFormatR4            : InstFormat<2>;
+def InstFormatI             : InstFormat<3>;
+def InstFormatS             : InstFormat<4>;
+def InstFormatB             : InstFormat<5>;
+def InstFormatU             : InstFormat<6>;
+def InstFormatJ             : InstFormat<7>;
+def InstFormatCR            : InstFormat<8>;
+def InstFormatCI            : InstFormat<9>;
+def InstFormatCSS           : InstFormat<10>;
+def InstFormatCIW           : InstFormat<11>;
+def InstFormatCL            : InstFormat<12>;
+def InstFormatCS            : InstFormat<13>;
+def InstFormatCA            : InstFormat<14>;
+def InstFormatCB            : InstFormat<15>;
+def InstFormatCJ            : InstFormat<16>;
+def InstFormatCU            : InstFormat<17>;
+def InstFormatCLB           : InstFormat<18>;
+def InstFormatCLH           : InstFormat<19>;
+def InstFormatCSB           : InstFormat<20>;
+def InstFormatCSH           : InstFormat<21>;
+def InstFormatQC_EAI        : InstFormat<22>;
+def InstFormatQC_EI         : InstFormat<23>;
+def InstFormatQC_EB         : InstFormat<24>;
+def InstFormatQC_EJ         : InstFormat<25>;
+def InstFormatQC_ES         : InstFormat<26>;
+def InstFormatNDS_BRANCH_10 : InstFormat<27>;
+def InstFormatOther         : InstFormat<31>;
+
 
 class RISCVVConstraint<bits<3> val> {
   bits<3> Value = val;
@@ -93,6 +100,8 @@ def VMConstraint  : RISCVVConstraint<0b100>;
 //
 // * vcompress: The destination vector register group cannot overlap the
 // source vector register group or the source mask register
+def WidenVNoMask : RISCVVConstraint<!or(VS2Constraint.Value,
+                                        VS1Constraint.Value)>;
 def WidenV       : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VS1Constraint.Value,
                                         VMConstraint.Value)>;
@@ -184,7 +193,9 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let AsmString = opcodestr # !if(!empty(argstr), "", "\t" # argstr);
   let Pattern = pattern;
 
-  let TSFlags{4-0} = format.Value;
+  InstFormat Format = format;
+
+  let TSFlags{4-0} = Format.Value;
 
   // Defaults
   RISCVVConstraint RVVConstraint = NoConstraint;
@@ -295,8 +306,8 @@ class PseudoQuietFCMP<DAGOperand Ty>
 }
 
 // Pseudo load instructions.
-class PseudoLoad<string opcodestr>
-    : Pseudo<(outs GPR:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {
+class PseudoLoad<string opcodestr, DAGOperand rdty = GPR>
+    : Pseudo<(outs rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
@@ -314,7 +325,7 @@ class PseudoFloatLoad<string opcodestr, RegisterClass rdty>
 }
 
 // Pseudo store instructions.
-class PseudoStore<string opcodestr, RegisterClass rsty = GPR>
+class PseudoStore<string opcodestr, DAGOperand rsty = GPR>
     : Pseudo<(outs GPR:$tmp), (ins rsty:$rs, bare_symbol:$addr), [], opcodestr, "$rs, $addr, $tmp"> {
   let hasSideEffects = 0;
   let mayLoad = 0;

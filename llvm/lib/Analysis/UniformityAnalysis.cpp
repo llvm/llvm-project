@@ -143,17 +143,15 @@ PreservedAnalyses UniformityInfoPrinterPass::run(Function &F,
 
 char UniformityInfoWrapperPass::ID = 0;
 
-UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {
-  initializeUniformityInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(UniformityInfoWrapperPass, "uniformity",
-                      "Uniformity Analysis", true, true)
+                      "Uniformity Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(UniformityInfoWrapperPass, "uniformity",
-                    "Uniformity Analysis", true, true)
+                    "Uniformity Analysis", false, true)
 
 void UniformityInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();

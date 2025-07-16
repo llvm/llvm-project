@@ -24,6 +24,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
 #include <vector>
 
@@ -266,8 +267,7 @@ void OutlinableRegion::splitCandidate() {
   // region is the same as the recorded instruction following the last
   // instruction. If they do not match, there could be problems in rewriting
   // the program after outlining, so we ignore it.
-  if (!BackInst->isTerminator() &&
-      EndInst != BackInst->getNextNonDebugInstruction())
+  if (!BackInst->isTerminator() && EndInst != BackInst->getNextNode())
     return;
 
   Instruction *StartInst = (*Candidate->begin()).Inst;
@@ -716,8 +716,6 @@ static void moveFunctionData(Function &Old, Function &New,
     if (ReturnInst *RI = dyn_cast<ReturnInst>(I))
       NewEnds.insert(std::make_pair(RI->getReturnValue(), &CurrBB));
 
-    std::vector<Instruction *> DebugInsts;
-
     for (Instruction &Val : CurrBB) {
       // Since debug-info originates from many different locations in the
       // program, it will cause incorrect reporting from a debugger if we keep
@@ -729,7 +727,7 @@ static void moveFunctionData(Function &Old, Function &New,
       // other outlined instructions.
       if (!isa<CallInst>(&Val)) {
         // Remove the debug information for outlined functions.
-        Val.setDebugLoc(DebugLoc());
+        Val.setDebugLoc(DebugLoc::getDropped());
 
         // Loop info metadata may contain line locations. Update them to have no
         // value in the new subprogram since the outlined code could be from
@@ -745,24 +743,12 @@ static void moveFunctionData(Function &Old, Function &New,
         continue;
       }
 
-      // From this point we are only handling call instructions.
-      CallInst *CI = cast<CallInst>(&Val);
-
-      // Collect debug intrinsics for later removal.
-      if (isa<DbgInfoIntrinsic>(CI)) {
-        DebugInsts.push_back(&Val);
-        continue;
-      }
-
       // Edit the scope of called functions inside of outlined functions.
       if (DISubprogram *SP = New.getSubprogram()) {
         DILocation *DI = DILocation::get(New.getContext(), 0, 0, SP);
         Val.setDebugLoc(DI);
       }
     }
-
-    for (Instruction *I : DebugInsts)
-      I->eraseFromParent();
   }
 }
 
@@ -1125,7 +1111,8 @@ static void analyzeExitPHIsForOutputUses(
     // outside of the single PHINode we should not skip over it.
     for (unsigned Idx : IncomingVals) {
       Value *V = PN.getIncomingValue(Idx);
-      if (outputHasNonPHI(V, Idx, PN, PotentialExitsFromRegion, RegionBlocks)) {
+      if (!isa<Constant>(V) &&
+          outputHasNonPHI(V, Idx, PN, PotentialExitsFromRegion, RegionBlocks)) {
         OutputsWithNonPhiUses.insert(V);
         OutputsReplacedByPHINode.erase(V);
         continue;
@@ -1152,9 +1139,9 @@ using PHINodeData = std::pair<ArgLocWithBBCanon, CanonList>;
 /// \param PND - The data to hash.
 /// \returns The hash code of \p PND.
 static hash_code encodePHINodeData(PHINodeData &PND) {
-  return llvm::hash_combine(
-      llvm::hash_value(PND.first.first), llvm::hash_value(PND.first.second),
-      llvm::hash_combine_range(PND.second.begin(), PND.second.end()));
+  return llvm::hash_combine(llvm::hash_value(PND.first.first),
+                            llvm::hash_value(PND.first.second),
+                            llvm::hash_combine_range(PND.second));
 }
 
 /// Create a special GVN for PHINodes that will be used outside of
@@ -1539,27 +1526,22 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
 /// \returns The found or newly created BasicBlock to contain the needed
 /// PHINodes to be used as outputs.
 static BasicBlock *findOrCreatePHIBlock(OutlinableGroup &Group, Value *RetVal) {
-  DenseMap<Value *, BasicBlock *>::iterator PhiBlockForRetVal,
-      ReturnBlockForRetVal;
-  PhiBlockForRetVal = Group.PHIBlocks.find(RetVal);
-  ReturnBlockForRetVal = Group.EndBBs.find(RetVal);
+  // Find if a PHIBlock exists for this return value already.  If it is
+  // the first time we are analyzing this, we will not, so we record it.
+  auto [PhiBlockForRetVal, Inserted] = Group.PHIBlocks.try_emplace(RetVal);
+  if (!Inserted)
+    return PhiBlockForRetVal->second;
+
+  auto ReturnBlockForRetVal = Group.EndBBs.find(RetVal);
   assert(ReturnBlockForRetVal != Group.EndBBs.end() &&
          "Could not find output value!");
   BasicBlock *ReturnBB = ReturnBlockForRetVal->second;
 
-  // Find if a PHIBlock exists for this return value already.  If it is
-  // the first time we are analyzing this, we will not, so we record it.
-  PhiBlockForRetVal = Group.PHIBlocks.find(RetVal);
-  if (PhiBlockForRetVal != Group.PHIBlocks.end())
-    return PhiBlockForRetVal->second;
-  
   // If we did not find a block, we create one, and insert it into the
   // overall function and record it.
-  bool Inserted = false;
   BasicBlock *PHIBlock = BasicBlock::Create(ReturnBB->getContext(), "phi_block",
                                             ReturnBB->getParent());
-  std::tie(PhiBlockForRetVal, Inserted) =
-      Group.PHIBlocks.insert(std::make_pair(RetVal, PHIBlock));
+  PhiBlockForRetVal->second = PHIBlock;
 
   // We find the predecessors of the return block in the newly created outlined
   // function in order to point them to the new PHIBlock rather than the already
@@ -1867,7 +1849,7 @@ replaceArgumentUses(OutlinableRegion &Region,
       Value *ValueOperand = SI->getValueOperand();
 
       StoreInst *NewI = cast<StoreInst>(I->clone());
-      NewI->setDebugLoc(DebugLoc());
+      NewI->setDebugLoc(DebugLoc::getDropped());
       BasicBlock *OutputBB = VBBIt->second;
       NewI->insertInto(OutputBB, OutputBB->end());
       LLVM_DEBUG(dbgs() << "Move store for instruction " << *I << " to "
@@ -1935,29 +1917,25 @@ replaceArgumentUses(OutlinableRegion &Region,
 /// \param Region [in] - The region of extracted code to be changed.
 void replaceConstants(OutlinableRegion &Region) {
   OutlinableGroup &Group = *Region.Parent;
+  Function *OutlinedFunction = Group.OutlinedFunction;
+  ValueToValueMapTy VMap;
+
   // Iterate over the constants that need to be elevated into arguments
   for (std::pair<unsigned, Constant *> &Const : Region.AggArgToConstant) {
     unsigned AggArgIdx = Const.first;
-    Function *OutlinedFunction = Group.OutlinedFunction;
     assert(OutlinedFunction && "Overall Function is not defined?");
     Constant *CST = Const.second;
     Argument *Arg = Group.OutlinedFunction->getArg(AggArgIdx);
     // Identify the argument it will be elevated to, and replace instances of
     // that constant in the function.
-
-    // TODO: If in the future constants do not have one global value number,
-    // i.e. a constant 1 could be mapped to several values, this check will
-    // have to be more strict.  It cannot be using only replaceUsesWithIf.
-
+    VMap[CST] = Arg;
     LLVM_DEBUG(dbgs() << "Replacing uses of constant " << *CST
                       << " in function " << *OutlinedFunction << " with "
-                      << *Arg << "\n");
-    CST->replaceUsesWithIf(Arg, [OutlinedFunction](Use &U) {
-      if (Instruction *I = dyn_cast<Instruction>(U.getUser()))
-        return I->getFunction() == OutlinedFunction;
-      return false;
-    });
+                      << *Arg << '\n');
   }
+
+  RemapFunction(*OutlinedFunction, VMap,
+                RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 }
 
 /// It is possible that there is a basic block that already performs the same
@@ -2303,7 +2281,6 @@ void IROutliner::deduplicateExtractedSections(
   fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove,
                       OutputMappings);
 
-  std::vector<Value *> SortedKeys;
   for (unsigned Idx = 1; Idx < CurrentGroup.Regions.size(); Idx++) {
     CurrentOS = CurrentGroup.Regions[Idx];
     AttributeFuncs::mergeAttributesForOutlining(*CurrentGroup.OutlinedFunction,
@@ -2348,7 +2325,7 @@ static bool nextIRInstructionDataMatchesNextInst(IRInstructionData &ID) {
   Instruction *NextIDLInst = NextIDIt->Inst;
   Instruction *NextModuleInst = nullptr;
   if (!ID.Inst->isTerminator())
-    NextModuleInst = ID.Inst->getNextNonDebugInstruction();
+    NextModuleInst = ID.Inst->getNextNode();
   else if (NextIDLInst != nullptr)
     NextModuleInst =
         &*NextIDIt->Inst->getParent()->instructionsWithoutDebug().begin();
@@ -2375,7 +2352,7 @@ bool IROutliner::isCompatibleWithAlreadyOutlinedCode(
   // if it does not, we fix it in the InstructionDataList.
   if (!Region.Candidate->backInstruction()->isTerminator()) {
     Instruction *NewEndInst =
-        Region.Candidate->backInstruction()->getNextNonDebugInstruction();
+        Region.Candidate->backInstruction()->getNextNode();
     assert(NewEndInst && "Next instruction is a nullptr?");
     if (Region.Candidate->end()->Inst != NewEndInst) {
       IRInstructionDataList *IDL = Region.Candidate->front()->IDL;
@@ -2709,7 +2686,7 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
 }
 
 bool IROutliner::extractSection(OutlinableRegion &Region) {
-  SetVector<Value *> ArgInputs, Outputs, SinkCands;
+  SetVector<Value *> ArgInputs, Outputs;
   assert(Region.StartBB && "StartBB for the OutlinableRegion is nullptr!");
   BasicBlock *InitialStart = Region.StartBB;
   Function *OrigF = Region.StartBB->getParent();

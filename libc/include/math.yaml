@@ -8,6 +8,12 @@ types:
 enums: []
 objects: []
 functions:
+  - name: acos
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: acosf
     standards:
       - stdc
@@ -27,6 +33,20 @@ functions:
     return_type: float
     arguments:
       - type: float
+    name: acoshf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+    name: acospif16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: asin
     standards:
       - stdc
@@ -52,6 +72,19 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: asinhf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: atan
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: atan2
     standards:
       - stdc
@@ -73,18 +106,40 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: atan2f128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: atanf
     standards:
       - stdc
     return_type: float
     arguments:
       - type: float
+  - name: atanf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: atanhf
     standards:
       - stdc
     return_type: float
     arguments:
       - type: float
+  - name: atanhf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: canonicalize
     standards:
       - stdc
@@ -679,7 +734,7 @@ functions:
       - type: float128
       - type: float128
       - type: float128
-    guards: LIBC_TYPES_HAS_FLOAT128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: ffmal
     standards:
       - stdc
@@ -736,6 +791,15 @@ functions:
       - type: float
       - type: float
       - type: float
+  - name: fmaf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: fmax
     standards:
       - stdc
@@ -1366,6 +1430,14 @@ functions:
     arguments:
       - type: float
       - type: float
+  - name: hypotf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: ilogb
     standards:
       - stdc
@@ -2452,6 +2524,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: tanpif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: tanpif16
     standards:
       - stdc

@@ -13,7 +13,6 @@
 
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -106,6 +105,36 @@ static llvm::Intrinsic::ID getShflIntrinsicId(llvm::Type *resultType,
   llvm_unreachable("unknown shuffle kind");
 }
 
+static llvm::Intrinsic::ID getMatchSyncIntrinsicId(Type valType,
+                                                   NVVM::MatchSyncKind kind) {
+  switch (kind) {
+  case NVVM::MatchSyncKind::any:
+    return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_any_sync_i32
+                                 : llvm::Intrinsic::nvvm_match_any_sync_i64;
+  case NVVM::MatchSyncKind::all:
+    // match.all instruction has two variants -- one returns a single value,
+    // another returns a pair {value, predicate}. We currently only implement
+    // the latter as that's the variant exposed by CUDA API.
+    return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_all_sync_i32p
+                                 : llvm::Intrinsic::nvvm_match_all_sync_i64p;
+  }
+  llvm_unreachable("unsupported match sync kind");
+}
+
+static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
+  switch (kind) {
+  case NVVM::VoteSyncKind::any:
+    return llvm::Intrinsic::nvvm_vote_any_sync;
+  case NVVM::VoteSyncKind::all:
+    return llvm::Intrinsic::nvvm_vote_all_sync;
+  case NVVM::VoteSyncKind::ballot:
+    return llvm::Intrinsic::nvvm_vote_ballot_sync;
+  case NVVM::VoteSyncKind::uni:
+    return llvm::Intrinsic::nvvm_vote_uni_sync;
+  }
+  llvm_unreachable("unsupported vote kind");
+}
+
 /// Return the intrinsic ID associated with ldmatrix for the given paramters.
 static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
                                                   int32_t num) {
@@ -133,6 +162,15 @@ static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
       llvm_unreachable("unsupported number of matrix");
     }
   }
+}
+
+/// Return the intrinsic ID associated with st.bulk for the given address type.
+static llvm::Intrinsic::ID
+getStBulkIntrinsicId(LLVM::LLVMPointerType addrType) {
+  bool isSharedMemory =
+      addrType.getAddressSpace() == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+  return isSharedMemory ? llvm::Intrinsic::nvvm_st_bulk_shared_cta
+                        : llvm::Intrinsic::nvvm_st_bulk;
 }
 
 static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
@@ -306,7 +344,7 @@ public:
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
 
     if (attribute.getName() == NVVM::NVVMDialect::getMaxntidAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(
@@ -314,7 +352,7 @@ public:
                                        values.asArrayRef().end()));
       llvmFunc->addFnAttr("nvvm.maxntid", attr);
     } else if (attribute.getName() == NVVM::NVVMDialect::getReqntidAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(
@@ -323,7 +361,7 @@ public:
       llvmFunc->addFnAttr("nvvm.reqntid", attr);
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterDimAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(

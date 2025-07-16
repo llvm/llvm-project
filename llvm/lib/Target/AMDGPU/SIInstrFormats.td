@@ -55,6 +55,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   // VINTERP instruction format.
   field bit VINTERP = 0;
 
+  field bit VOPD3 = 0;
+
   // High bits - other information.
   field bit VM_CNT = 0;
   field bit EXP_CNT = 0;
@@ -68,6 +70,9 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   field bit Gather4 = 0;
 
+  // wait count to manage tensor loads/stores.
+  field bit TENSOR_CNT = 0;
+
   // This is an s_store_dword* instruction that requires a cache flush
   // on wave termination. It is necessary to distinguish from mayStore
   // SMEM instructions like the cache flush ones.
@@ -76,6 +81,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // Whether the operands can be ignored when computing the
   // instruction size.
   field bit FixedSize = 0;
+
+  // wait count to manage asynchronous loads/stores.
+  field bit ASYNC_CNT = 0;
 
   // This bit indicates that this is a VOP3 opcode which supports op_sel
   // modifier.
@@ -189,6 +197,7 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{28} = LDSDIR;
   let TSFlags{29} = VINTERP;
+  let TSFlags{30} = VOPD3;
 
   let TSFlags{32} = VM_CNT;
   let TSFlags{33} = EXP_CNT;
@@ -198,14 +207,12 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{36} = DisableWQM;
   let TSFlags{37} = Gather4;
 
-  // Reserved, must be 0.
-  let TSFlags{38} = 0;
+  let TSFlags{38} = TENSOR_CNT;
 
   let TSFlags{39} = ScalarStore;
   let TSFlags{40} = FixedSize;
 
-  // Reserved, must be 0.
-  let TSFlags{41} = 0;
+  let TSFlags{41} = ASYNC_CNT;
 
   let TSFlags{42} = VOP3_OPSEL;
 

@@ -1,0 +1,74 @@
+// RUN: cir-opt %s | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+!u16i = !cir.int<u, 16>
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+!rec_C = !cir.record<class "C" incomplete>
+!rec_S = !cir.record<struct "S" incomplete>
+!rec_U = !cir.record<union "U" incomplete>
+
+// CHECK-DAG: !rec_C = !cir.record<class "C" incomplete>
+// CHECK-DAG: !rec_S = !cir.record<struct "S" incomplete>
+// CHECK-DAG: !rec_U = !cir.record<union "U" incomplete>
+
+!rec_anon_struct = !cir.record<struct {!cir.array<!cir.ptr<!u8i> x 5>}>
+!rec_anon_struct1 = !cir.record<struct {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+!rec_S1 = !cir.record<struct "S1" {!s32i, !s32i}>
+!rec_Sc = !cir.record<struct "Sc" {!u8i, !u16i, !u32i}>
+
+// CHECK-DAG: !cir.record<struct {!cir.array<!cir.ptr<!u8i> x 5>}>
+// CHECK-DAG: !cir.record<struct {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+// CHECK-DAG: !rec_S1 = !cir.record<struct "S1" {!s32i, !s32i}>
+// CHECK-DAG: !rec_Sc = !cir.record<struct "Sc" {!u8i, !u16i, !u32i}>
+
+// Packed and padded structs
+!rec_P1 = !cir.record<struct "P1" packed {!s32i, !s32i}>
+!rec_P2 = !cir.record<struct "P2" padded {!u8i, !u16i, !u32i}>
+!rec_P3 = !cir.record<struct "P3" packed padded {!u8i, !u16i, !u32i}>
+
+// CHECK-DAG: !rec_P1 = !cir.record<struct "P1" packed {!s32i, !s32i}>
+// CHECK-DAG: !rec_P2 = !cir.record<struct "P2" padded {!u8i, !u16i, !u32i}>
+// CHECK-DAG: !rec_P3 = !cir.record<struct "P3" packed padded {!u8i, !u16i, !u32i}>
+
+
+// Complete a previously incomplete record
+!rec_A = !cir.record<class "A" incomplete>
+!rec_Ac = !cir.record<class "A" {!u8i, !s32i}>
+// CHECK-DAG: !rec_A = !cir.record<class "A" {!u8i, !s32i}>
+
+// Test recursive struct parsing/printing.
+!rec_Node = !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
+// CHECK-DAG: !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
+
+module  {
+  cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!rec_S>
+  cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!rec_U>
+  cir.global external @p3 = #cir.ptr<null> : !cir.ptr<!rec_C>
+// CHECK: cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!rec_S>
+// CHECK: cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!rec_U>
+// CHECK: cir.global external @p3 = #cir.ptr<null> : !cir.ptr<!rec_C>
+
+  // Dummy function to use types and force them to be printed.
+  cir.func @useTypes(%arg0: !rec_Node,
+                     %arg1: !rec_anon_struct1,
+                     %arg2: !rec_anon_struct,
+                     %arg3: !rec_S1,
+                     %arg4: !rec_Ac,
+                     %arg5: !rec_P1,
+                     %arg6: !rec_P2,
+                     %arg7: !rec_P3) {
+    cir.return
+  }
+
+  cir.func @structs() {
+    %0 = cir.alloca !cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>, !cir.ptr<!cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>>, ["sc", init]
+    %1 = cir.alloca !cir.ptr<!cir.record<union "U" incomplete>>, !cir.ptr<!cir.ptr<!cir.record<union "U" incomplete>>>, ["u", init]
+    cir.return
+  }
+
+// CHECK: cir.func @structs() {
+// CHECK:     %0 = cir.alloca !cir.ptr<!rec_Sc>, !cir.ptr<!cir.ptr<!rec_Sc>>, ["sc", init]
+// CHECK:     %1 = cir.alloca !cir.ptr<!rec_U>, !cir.ptr<!cir.ptr<!rec_U>>, ["u", init]
+}

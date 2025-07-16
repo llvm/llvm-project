@@ -8,9 +8,17 @@ import pprint
 import socket
 import string
 import subprocess
+import signal
 import sys
 import threading
 import time
+from typing import Any, Optional, Union, BinaryIO, TextIO
+
+## DAP type references
+Event = dict[str, Any]
+Request = dict[str, Any]
+Response = dict[str, Any]
+ProtocolMessage = Union[Event, Request, Response]
 
 
 def dump_memory(base_addr, data, num_per_line, outfile):
@@ -88,68 +96,111 @@ def packet_type_is(packet, packet_type):
 
 
 def dump_dap_log(log_file):
-    print("========= DEBUG ADAPTER PROTOCOL LOGS =========")
+    print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
     if log_file is None:
-        print("no log file available")
+        print("no log file available", file=sys.stderr)
     else:
         with open(log_file, "r") as file:
-            print(file.read())
-    print("========= END =========")
+            print(file.read(), file=sys.stderr)
+    print("========= END =========", file=sys.stderr)
 
 
-def read_packet_thread(vs_comm, log_file):
-    done = False
-    try:
-        while not done:
-            packet = read_packet(vs_comm.recv, trace_file=vs_comm.trace_file)
-            # `packet` will be `None` on EOF. We want to pass it down to
-            # handle_recv_packet anyway so the main thread can handle unexpected
-            # termination of lldb-dap and stop waiting for new packets.
-            done = not vs_comm.handle_recv_packet(packet)
-    finally:
-        dump_dap_log(log_file)
+class Source(object):
+    def __init__(
+        self, path: Optional[str] = None, source_reference: Optional[int] = None
+    ):
+        self._name = None
+        self._path = None
+        self._source_reference = None
+
+        if path is not None:
+            self._name = os.path.basename(path)
+            self._path = path
+        elif source_reference is not None:
+            self._source_reference = source_reference
+        else:
+            raise ValueError("Either path or source_reference must be provided")
+
+    def __str__(self):
+        return f"Source(name={self.name}, path={self.path}), source_reference={self.source_reference})"
+
+    def as_dict(self):
+        source_dict = {}
+        if self._name is not None:
+            source_dict["name"] = self._name
+        if self._path is not None:
+            source_dict["path"] = self._path
+        if self._source_reference is not None:
+            source_dict["sourceReference"] = self._source_reference
+        return source_dict
+
+
+class NotSupportedError(KeyError):
+    """Raised if a feature is not supported due to its capabilities."""
 
 
 class DebugCommunication(object):
-    def __init__(self, recv, send, init_commands, log_file=None):
-        self.trace_file = None
+    def __init__(
+        self,
+        recv: BinaryIO,
+        send: BinaryIO,
+        init_commands: list[str],
+        log_file: Optional[TextIO] = None,
+    ):
+        # For debugging test failures, try setting `trace_file = sys.stderr`.
+        self.trace_file: Optional[TextIO] = None
+        self.log_file = log_file
         self.send = send
         self.recv = recv
-        self.recv_packets = []
+        self.recv_packets: list[Optional[ProtocolMessage]] = []
         self.recv_condition = threading.Condition()
-        self.recv_thread = threading.Thread(
-            target=read_packet_thread, args=(self, log_file)
-        )
+        self.recv_thread = threading.Thread(target=self._read_packet_thread)
         self.process_event_body = None
-        self.exit_status = None
-        self.initialize_body = None
-        self.thread_stop_reasons = {}
-        self.breakpoint_events = []
-        self.progress_events = []
+        self.exit_status: Optional[int] = None
+        self.capabilities: dict[str, Any] = {}
+        self.progress_events: list[Event] = []
         self.reverse_requests = []
         self.sequence = 1
         self.threads = None
+        self.thread_stop_reasons = {}
         self.recv_thread.start()
         self.output_condition = threading.Condition()
-        self.output = {}
+        self.output: dict[str, list[str]] = {}
         self.configuration_done_sent = False
+        self.initialized = False
         self.frame_scopes = {}
         self.init_commands = init_commands
-        self.disassembled_instructions = {}
+        self.resolved_breakpoints = {}
 
     @classmethod
-    def encode_content(cls, s):
+    def encode_content(cls, s: str) -> bytes:
         return ("Content-Length: %u\r\n\r\n%s" % (len(s), s)).encode("utf-8")
 
     @classmethod
     def validate_response(cls, command, response):
         if command["command"] != response["command"]:
-            raise ValueError("command mismatch in response")
+            raise ValueError(
+                f"command mismatch in response {command['command']} != {response['command']}"
+            )
         if command["seq"] != response["request_seq"]:
-            raise ValueError("seq mismatch in response")
+            raise ValueError(
+                f"seq mismatch in response {command['seq']} != {response['request_seq']}"
+            )
 
-    def get_modules(self):
-        module_list = self.request_modules()["body"]["modules"]
+    def _read_packet_thread(self):
+        done = False
+        try:
+            while not done:
+                packet = read_packet(self.recv, trace_file=self.trace_file)
+                # `packet` will be `None` on EOF. We want to pass it down to
+                # handle_recv_packet anyway so the main thread can handle unexpected
+                # termination of lldb-dap and stop waiting for new packets.
+                done = not self._handle_recv_packet(packet)
+        finally:
+            dump_dap_log(self.log_file)
+
+    def get_modules(self, startModule: int = 0, moduleCount: int = 0):
+        module_list = self.request_modules(startModule, moduleCount)["body"]["modules"]
         modules = {}
         for module in module_list:
             modules[module["name"]] = module
@@ -182,13 +233,13 @@ class DebugCommunication(object):
                     break
         return collected_output if collected_output else None
 
-    def enqueue_recv_packet(self, packet):
+    def _enqueue_recv_packet(self, packet: Optional[ProtocolMessage]):
         self.recv_condition.acquire()
         self.recv_packets.append(packet)
         self.recv_condition.notify()
         self.recv_condition.release()
 
-    def handle_recv_packet(self, packet):
+    def _handle_recv_packet(self, packet: Optional[ProtocolMessage]) -> bool:
         """Called by the read thread that is waiting for all incoming packets
         to store the incoming packet in "self.recv_packets" in a thread safe
         way. This function will then signal the "self.recv_condition" to
@@ -197,7 +248,7 @@ class DebugCommunication(object):
         """
         # If EOF, notify the read thread by enqueuing a None.
         if not packet:
-            self.enqueue_recv_packet(None)
+            self._enqueue_recv_packet(None)
             return False
 
         # Check the packet to see if is an event packet
@@ -223,10 +274,24 @@ class DebugCommunication(object):
                 self.output_condition.release()
                 # no need to add 'output' event packets to our packets list
                 return keepGoing
+            elif event == "initialized":
+                self.initialized = True
             elif event == "process":
                 # When a new process is attached or launched, remember the
                 # details that are available in the body of the event
                 self.process_event_body = body
+            elif event == "exited":
+                # Process exited, mark the status to indicate the process is not
+                # alive.
+                self.exit_status = body["exitCode"]
+            elif event == "continued":
+                # When the process continues, clear the known threads and
+                # thread_stop_reasons.
+                all_threads_continued = body.get("allThreadsContinued", True)
+                tid = body["threadId"]
+                if tid in self.thread_stop_reasons:
+                    del self.thread_stop_reasons[tid]
+                self._process_continued(all_threads_continued)
             elif event == "stopped":
                 # Each thread that stops with a reason will send a
                 # 'stopped' event. We need to remember the thread stop
@@ -235,28 +300,37 @@ class DebugCommunication(object):
                 self._process_stopped()
                 tid = body["threadId"]
                 self.thread_stop_reasons[tid] = body
-            elif event == "breakpoint":
-                # Breakpoint events come in when a breakpoint has locations
-                # added or removed. Keep track of them so we can look for them
-                # in tests.
-                self.breakpoint_events.append(packet)
-                # no need to add 'breakpoint' event packets to our packets list
-                return keepGoing
             elif event.startswith("progress"):
                 # Progress events come in as 'progressStart', 'progressUpdate',
                 # and 'progressEnd' events. Keep these around in case test
                 # cases want to verify them.
                 self.progress_events.append(packet)
-                # No need to add 'progress' event packets to our packets list.
-                return keepGoing
+            elif event == "breakpoint":
+                # Breakpoint events are sent when a breakpoint is resolved
+                self._update_verified_breakpoints([body["breakpoint"]])
+            elif event == "capabilities":
+                # Update the capabilities with new ones from the event.
+                self.capabilities.update(body["capabilities"])
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
                 keepGoing = False
-        self.enqueue_recv_packet(packet)
+        self._enqueue_recv_packet(packet)
         return keepGoing
 
-    def send_packet(self, command_dict, set_sequence=True):
+    def _process_continued(self, all_threads_continued: bool):
+        self.frame_scopes = {}
+        if all_threads_continued:
+            self.thread_stop_reasons = {}
+
+    def _update_verified_breakpoints(self, breakpoints: list[Event]):
+        for breakpoint in breakpoints:
+            if "id" in breakpoint:
+                self.resolved_breakpoints[str(breakpoint["id"])] = breakpoint.get(
+                    "verified", False
+                )
+
+    def send_packet(self, command_dict: Request, set_sequence=True):
         """Take the "command_dict" python dictionary and encode it as a JSON
         string and send the contents as a packet to the VSCode debug
         adapter"""
@@ -274,7 +348,12 @@ class DebugCommunication(object):
             self.send.write(self.encode_content(json_str))
             self.send.flush()
 
-    def recv_packet(self, filter_type=None, filter_event=None, timeout=None):
+    def recv_packet(
+        self,
+        filter_type: Optional[str] = None,
+        filter_event: Optional[Union[str, list[str]]] = None,
+        timeout: Optional[float] = None,
+    ) -> Optional[ProtocolMessage]:
         """Get a JSON packet from the VSCode debug adapter. This function
         assumes a thread that reads packets is running and will deliver
         any received packets by calling handle_recv_packet(...). This
@@ -310,8 +389,6 @@ class DebugCommunication(object):
             finally:
                 self.recv_condition.release()
 
-        return None
-
     def send_recv(self, command):
         """Send a command python dictionary as JSON and receive the JSON
         response. Validates that the response is the correct sequence and
@@ -331,31 +408,27 @@ class DebugCommunication(object):
                 self.reverse_requests.append(response_or_request)
                 if response_or_request["command"] == "runInTerminal":
                     subprocess.Popen(
-                        response_or_request["arguments"]["args"],
-                        env=response_or_request["arguments"]["env"],
+                        response_or_request["arguments"].get("args"),
+                        env=response_or_request["arguments"].get("env", {}),
                     )
                     self.send_packet(
                         {
                             "type": "response",
-                            "seq": 0,
                             "request_seq": response_or_request["seq"],
                             "success": True,
                             "command": "runInTerminal",
                             "body": {},
                         },
-                        set_sequence=False,
                     )
                 elif response_or_request["command"] == "startDebugging":
                     self.send_packet(
                         {
                             "type": "response",
-                            "seq": 0,
                             "request_seq": response_or_request["seq"],
                             "success": True,
                             "command": "startDebugging",
                             "body": {},
                         },
-                        set_sequence=False,
                     )
                 else:
                     desc = 'unknown reverse request "%s"' % (
@@ -365,53 +438,73 @@ class DebugCommunication(object):
 
         return None
 
-    def wait_for_event(self, filter=None, timeout=None):
-        while True:
-            return self.recv_packet(
-                filter_type="event", filter_event=filter, timeout=timeout
-            )
-        return None
+    def wait_for_event(
+        self, filter: Union[str, list[str]], timeout: Optional[float] = None
+    ) -> Optional[Event]:
+        """Wait for the first event that matches the filter."""
+        return self.recv_packet(
+            filter_type="event", filter_event=filter, timeout=timeout
+        )
 
-    def wait_for_stopped(self, timeout=None):
+    def wait_for_stopped(
+        self, timeout: Optional[float] = None
+    ) -> Optional[list[Event]]:
         stopped_events = []
         stopped_event = self.wait_for_event(
             filter=["stopped", "exited"], timeout=timeout
         )
-        exited = False
         while stopped_event:
             stopped_events.append(stopped_event)
             # If we exited, then we are done
             if stopped_event["event"] == "exited":
-                self.exit_status = stopped_event["body"]["exitCode"]
-                exited = True
                 break
             # Otherwise we stopped and there might be one or more 'stopped'
             # events for each thread that stopped with a reason, so keep
             # checking for more 'stopped' events and return all of them
-            stopped_event = self.wait_for_event(filter="stopped", timeout=0.25)
-        if exited:
-            self.threads = []
+            stopped_event = self.wait_for_event(
+                filter=["stopped", "exited"], timeout=0.25
+            )
         return stopped_events
 
-    def wait_for_exited(self):
-        event_dict = self.wait_for_event("exited")
+    def wait_for_breakpoint_events(self, timeout: Optional[float] = None):
+        breakpoint_events: list[Event] = []
+        while True:
+            event = self.wait_for_event("breakpoint", timeout=timeout)
+            if not event:
+                break
+            breakpoint_events.append(event)
+        return breakpoint_events
+
+    def wait_for_breakpoints_to_be_verified(
+        self, breakpoint_ids: list[str], timeout: Optional[float] = None
+    ):
+        """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
+        while any(id not in self.resolved_breakpoints for id in breakpoint_ids):
+            breakpoint_event = self.wait_for_event("breakpoint", timeout=timeout)
+            if breakpoint_event is None:
+                break
+
+        return [id for id in breakpoint_ids if id not in self.resolved_breakpoints]
+
+    def wait_for_exited(self, timeout: Optional[float] = None):
+        event_dict = self.wait_for_event("exited", timeout=timeout)
         if event_dict is None:
             raise ValueError("didn't get exited event")
         return event_dict
 
-    def wait_for_terminated(self):
-        event_dict = self.wait_for_event("terminated")
+    def wait_for_terminated(self, timeout: Optional[float] = None):
+        event_dict = self.wait_for_event("terminated", timeout)
         if event_dict is None:
             raise ValueError("didn't get terminated event")
         return event_dict
 
-    def get_initialize_value(self, key):
+    def get_capability(self, key: str):
         """Get a value for the given key if it there is a key/value pair in
-        the "initialize" request response body.
+        the capabilities reported by the adapter.
         """
-        if self.initialize_body and key in self.initialize_body:
-            return self.initialize_body[key]
-        return None
+        if key in self.capabilities:
+            return self.capabilities[key]
+        raise NotSupportedError(key)
 
     def get_threads(self):
         if self.threads is None:
@@ -561,31 +654,30 @@ class DebugCommunication(object):
 
     def request_attach(
         self,
-        program=None,
-        pid=None,
-        waitFor=None,
-        trace=None,
-        initCommands=None,
-        preRunCommands=None,
-        stopCommands=None,
-        exitCommands=None,
-        attachCommands=None,
-        terminateCommands=None,
-        coreFile=None,
-        postRunCommands=None,
-        sourceMap=None,
-        gdbRemotePort=None,
-        gdbRemoteHostname=None,
+        *,
+        program: Optional[str] = None,
+        pid: Optional[int] = None,
+        waitFor=False,
+        initCommands: Optional[list[str]] = None,
+        preRunCommands: Optional[list[str]] = None,
+        attachCommands: Optional[list[str]] = None,
+        postRunCommands: Optional[list[str]] = None,
+        stopCommands: Optional[list[str]] = None,
+        exitCommands: Optional[list[str]] = None,
+        terminateCommands: Optional[list[str]] = None,
+        coreFile: Optional[str] = None,
+        stopOnEntry=False,
+        sourceMap: Optional[Union[list[tuple[str, str]], dict[str, str]]] = None,
+        gdbRemotePort: Optional[int] = None,
+        gdbRemoteHostname: Optional[str] = None,
     ):
         args_dict = {}
         if pid is not None:
             args_dict["pid"] = pid
         if program is not None:
             args_dict["program"] = program
-        if waitFor is not None:
+        if waitFor:
             args_dict["waitFor"] = waitFor
-        if trace:
-            args_dict["trace"] = trace
         args_dict["initCommands"] = self.init_commands
         if initCommands:
             args_dict["initCommands"].extend(initCommands)
@@ -601,6 +693,8 @@ class DebugCommunication(object):
             args_dict["attachCommands"] = attachCommands
         if coreFile:
             args_dict["coreFile"] = coreFile
+        if stopOnEntry:
+            args_dict["stopOnEntry"] = stopOnEntry
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if sourceMap:
@@ -643,13 +737,14 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
         if response:
             self.configuration_done_sent = True
+            self.request_threads()
         return response
 
     def _process_stopped(self):
         self.threads = None
         self.frame_scopes = {}
 
-    def request_continue(self, threadId=None):
+    def request_continue(self, threadId=None, singleThread=False):
         if self.exit_status is not None:
             raise ValueError("request_continue called after process exited")
         # If we have launched or attached, then the first continue is done by
@@ -659,17 +754,25 @@ class DebugCommunication(object):
         args_dict = {}
         if threadId is None:
             threadId = self.get_thread_id()
-        args_dict["threadId"] = threadId
+        if threadId:
+            args_dict["threadId"] = threadId
+        if singleThread:
+            args_dict["singleThread"] = True
         command_dict = {
             "command": "continue",
             "type": "request",
             "arguments": args_dict,
         }
         response = self.send_recv(command_dict)
+        if response["success"]:
+            self._process_continued(response["body"]["allThreadsContinued"])
         # Caller must still call wait_for_stopped.
         return response
 
     def request_restart(self, restartArguments=None):
+        if self.exit_status is not None:
+            raise ValueError("request_restart called after process exited")
+        self.get_capability("supportsRestartRequest")
         command_dict = {
             "command": "restart",
             "type": "request",
@@ -696,11 +799,15 @@ class DebugCommunication(object):
         return self.send_recv(command_dict)
 
     def request_disassemble(
-        self, memoryReference, offset=-50, instructionCount=200, resolveSymbols=True
+        self,
+        memoryReference,
+        instructionOffset=-50,
+        instructionCount=200,
+        resolveSymbols=True,
     ):
         args_dict = {
             "memoryReference": memoryReference,
-            "offset": offset,
+            "instructionOffset": instructionOffset,
             "instructionCount": instructionCount,
             "resolveSymbols": resolveSymbols,
         }
@@ -709,9 +816,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        instructions = self.send_recv(command_dict)["body"]["instructions"]
-        for inst in instructions:
-            self.disassembled_instructions[inst["address"]] = inst
+        return self.send_recv(command_dict)["body"]["instructions"]
 
     def request_readMemory(self, memoryReference, offset, count):
         args_dict = {
@@ -721,6 +826,24 @@ class DebugCommunication(object):
         }
         command_dict = {
             "command": "readMemory",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
+    def request_writeMemory(self, memoryReference, data, offset=0, allowPartial=False):
+        args_dict = {
+            "memoryReference": memoryReference,
+            "data": data,
+        }
+
+        if offset:
+            args_dict["offset"] = offset
+        if allowPartial:
+            args_dict["allowPartial"] = allowPartial
+
+        command_dict = {
+            "command": "writeMemory",
             "type": "request",
             "arguments": args_dict,
         }
@@ -753,7 +876,7 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_initialize(self, sourceInitFile):
+    def request_initialize(self, sourceInitFile=False):
         command_dict = {
             "command": "initialize",
             "type": "request",
@@ -768,43 +891,44 @@ class DebugCommunication(object):
                 "supportsVariablePaging": True,
                 "supportsVariableType": True,
                 "supportsStartDebuggingRequest": True,
-                "sourceInitFile": sourceInitFile,
+                "supportsProgressReporting": True,
+                "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
         response = self.send_recv(command_dict)
         if response:
             if "body" in response:
-                self.initialize_body = response["body"]
+                self.capabilities = response["body"]
         return response
 
     def request_launch(
         self,
-        program,
-        args=None,
-        cwd=None,
-        env=None,
+        program: str,
+        *,
+        args: Optional[list[str]] = None,
+        cwd: Optional[str] = None,
+        env: Optional[dict[str, str]] = None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
-        trace=False,
-        initCommands=None,
-        preRunCommands=None,
-        stopCommands=None,
-        exitCommands=None,
-        terminateCommands=None,
-        sourcePath=None,
-        debuggerRoot=None,
-        launchCommands=None,
-        sourceMap=None,
-        runInTerminal=False,
-        postRunCommands=None,
+        console: Optional[str] = None,
         enableAutoVariableSummaries=False,
         displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
-        commandEscapePrefix=None,
-        customFrameFormat=None,
-        customThreadFormat=None,
+        initCommands: Optional[list[str]] = None,
+        preRunCommands: Optional[list[str]] = None,
+        launchCommands: Optional[list[str]] = None,
+        postRunCommands: Optional[list[str]] = None,
+        stopCommands: Optional[list[str]] = None,
+        exitCommands: Optional[list[str]] = None,
+        terminateCommands: Optional[list[str]] = None,
+        sourceMap: Optional[Union[list[tuple[str, str]], dict[str, str]]] = None,
+        sourcePath: Optional[str] = None,
+        debuggerRoot: Optional[str] = None,
+        commandEscapePrefix: Optional[str] = None,
+        customFrameFormat: Optional[str] = None,
+        customThreadFormat: Optional[str] = None,
     ):
         args_dict = {"program": program}
         if args:
@@ -819,8 +943,6 @@ class DebugCommunication(object):
             args_dict["disableSTDIO"] = disableSTDIO
         if shellExpandArguments:
             args_dict["shellExpandArguments"] = shellExpandArguments
-        if trace:
-            args_dict["trace"] = trace
         args_dict["initCommands"] = self.init_commands
         if initCommands:
             args_dict["initCommands"].extend(initCommands)
@@ -840,8 +962,8 @@ class DebugCommunication(object):
             args_dict["launchCommands"] = launchCommands
         if sourceMap:
             args_dict["sourceMap"] = sourceMap
-        if runInTerminal:
-            args_dict["runInTerminal"] = runInTerminal
+        if console:
+            args_dict["console"] = console
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if customFrameFormat:
@@ -853,15 +975,10 @@ class DebugCommunication(object):
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
         args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
-        args_dict["commandEscapePrefix"] = commandEscapePrefix
+        if commandEscapePrefix is not None:
+            args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
-        response = self.send_recv(command_dict)
-
-        if response["success"]:
-            # Wait for a 'process' and 'initialized' event in any order
-            self.wait_for_event(filter=["process", "initialized"])
-            self.wait_for_event(filter=["process", "initialized"])
-        return response
+        return self.send_recv(command_dict)
 
     def request_next(self, threadId, granularity="statement"):
         if self.exit_status is not None:
@@ -886,6 +1003,7 @@ class DebugCommunication(object):
     def request_stepInTargets(self, frameId):
         if self.exit_status is not None:
             raise ValueError("request_stepInTargets called after process exited")
+        self.get_capability("supportsStepInTargetsRequest")
         args_dict = {"frameId": frameId}
         command_dict = {
             "command": "stepInTargets",
@@ -915,15 +1033,13 @@ class DebugCommunication(object):
         command_dict = {"command": "scopes", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
-    def request_setBreakpoints(self, file_path, line_array, data=None):
+    def request_setBreakpoints(self, source: Source, line_array, data=None):
         """data is array of parameters for breakpoints in line_array.
         Each parameter object is 1:1 mapping with entries in line_entry.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        (dir, base) = os.path.split(file_path)
-        source_dict = {"name": base, "path": file_path}
         args_dict = {
-            "source": source_dict,
+            "source": source.as_dict(),
             "sourceModified": False,
         }
         if line_array is not None:
@@ -951,10 +1067,17 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+        if response["success"]:
+            self._update_verified_breakpoints(response["body"]["breakpoints"])
+        return response
 
-    def request_setExceptionBreakpoints(self, filters):
+    def request_setExceptionBreakpoints(
+        self, *, filters: list[str] = [], filter_options: list[dict] = []
+    ):
         args_dict = {"filters": filters}
+        if filter_options:
+            args_dict["filterOptions"] = filter_options
         command_dict = {
             "command": "setExceptionBreakpoints",
             "type": "request",
@@ -977,7 +1100,10 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+        if response["success"]:
+            self._update_verified_breakpoints(response["body"]["breakpoints"])
+        return response
 
     def request_dataBreakpointInfo(
         self, variablesReference, name, frameIndex=0, threadId=None
@@ -1035,11 +1161,17 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_modules(self):
-        return self.send_recv({"command": "modules", "type": "request"})
+    def request_modules(self, startModule: int, moduleCount: int):
+        return self.send_recv(
+            {
+                "command": "modules",
+                "type": "request",
+                "arguments": {"startModule": startModule, "moduleCount": moduleCount},
+            }
+        )
 
     def request_stackTrace(
-        self, threadId=None, startFrame=None, levels=None, dump=False
+        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
     ):
         if threadId is None:
             threadId = self.get_thread_id()
@@ -1048,6 +1180,8 @@ class DebugCommunication(object):
             args_dict["startFrame"] = startFrame
         if levels is not None:
             args_dict["levels"] = levels
+        if format is not None:
+            args_dict["format"] = format
         command_dict = {
             "command": "stackTrace",
             "type": "request",
@@ -1088,6 +1222,9 @@ class DebugCommunication(object):
         with information about all threads"""
         command_dict = {"command": "threads", "type": "request", "arguments": {}}
         response = self.send_recv(command_dict)
+        if not response["success"]:
+            self.threads = None
+            return response
         body = response["body"]
         # Fill in "self.threads" correctly so that clients that call
         # self.get_threads() or self.get_thread_id(...) can get information
@@ -1166,7 +1303,8 @@ class DebugCommunication(object):
 
     def terminate(self):
         self.send.close()
-        # self.recv.close()
+        if self.recv_thread.is_alive():
+            self.recv_thread.join()
 
     def request_setInstructionBreakpoints(self, memory_reference=[]):
         breakpoints = []
@@ -1187,11 +1325,11 @@ class DebugCommunication(object):
 class DebugAdapterServer(DebugCommunication):
     def __init__(
         self,
-        executable=None,
-        connection=None,
-        init_commands=[],
-        log_file=None,
-        env=None,
+        executable: Optional[str] = None,
+        connection: Optional[str] = None,
+        init_commands: list[str] = [],
+        log_file: Optional[TextIO] = None,
+        env: Optional[dict[str, str]] = None,
     ):
         self.process = None
         self.connection = None
@@ -1223,7 +1361,14 @@ class DebugAdapterServer(DebugCommunication):
             )
 
     @classmethod
-    def launch(cls, /, executable, env=None, log_file=None, connection=None):
+    def launch(
+        cls,
+        *,
+        executable: str,
+        env: Optional[dict[str, str]] = None,
+        log_file: Optional[TextIO] = None,
+        connection: Optional[str] = None,
+    ) -> tuple[subprocess.Popen, Optional[str]]:
         adapter_env = os.environ.copy()
         if env is not None:
             adapter_env.update(env)
@@ -1240,7 +1385,7 @@ class DebugAdapterServer(DebugCommunication):
             args,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=sys.stderr,
             env=adapter_env,
         )
 
@@ -1253,7 +1398,7 @@ class DebugAdapterServer(DebugCommunication):
         expected_prefix = "Listening for: "
         out = process.stdout.readline().decode()
         if not out.startswith(expected_prefix):
-            self.process.kill()
+            process.kill()
             raise ValueError(
                 "lldb-dap failed to print listening address, expected '{}', got '{}'".format(
                     expected_prefix, out
@@ -1265,17 +1410,49 @@ class DebugAdapterServer(DebugCommunication):
 
         return (process, connection)
 
-    def get_pid(self):
+    def get_pid(self) -> int:
         if self.process:
             return self.process.pid
         return -1
 
     def terminate(self):
-        super(DebugAdapterServer, self).terminate()
-        if self.process is not None:
-            self.process.terminate()
-            self.process.wait()
-            self.process = None
+        try:
+            if self.process is not None:
+                process = self.process
+                self.process = None
+                try:
+                    # When we close stdin it should signal the lldb-dap that no
+                    # new messages will arrive and it should shutdown on its
+                    # own.
+                    process.stdin.close()
+                    process.wait(timeout=20)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                if process.returncode != 0:
+                    raise DebugAdapterProcessError(process.returncode)
+        finally:
+            super(DebugAdapterServer, self).terminate()
+
+
+class DebugAdapterError(Exception):
+    pass
+
+
+class DebugAdapterProcessError(DebugAdapterError):
+    """Raised when the lldb-dap process exits with a non-zero exit status."""
+
+    def __init__(self, returncode):
+        self.returncode = returncode
+
+    def __str__(self):
+        if self.returncode and self.returncode < 0:
+            try:
+                return f"lldb-dap died with {signal.Signals(-self.returncode).name}."
+            except ValueError:
+                return f"lldb-dap died with unknown signal {-self.returncode}."
+        else:
+            return f"lldb-dap returned non-zero exit status {self.returncode}."
 
 
 def attach_options_specified(options):
@@ -1292,6 +1469,26 @@ def attach_options_specified(options):
 
 def run_vscode(dbg, args, options):
     dbg.request_initialize(options.sourceInitFile)
+
+    if options.sourceBreakpoints:
+        source_to_lines = {}
+        for file_line in options.sourceBreakpoints:
+            (path, line) = file_line.split(":")
+            if len(path) == 0 or len(line) == 0:
+                print('error: invalid source with line "%s"' % (file_line))
+
+            else:
+                if path in source_to_lines:
+                    source_to_lines[path].append(int(line))
+                else:
+                    source_to_lines[path] = [int(line)]
+        for source in source_to_lines:
+            dbg.request_setBreakpoints(Source(source), source_to_lines[source])
+    if options.funcBreakpoints:
+        dbg.request_setFunctionBreakpoints(options.funcBreakpoints)
+
+    dbg.request_configurationDone()
+
     if attach_options_specified(options):
         response = dbg.request_attach(
             program=options.program,
@@ -1320,23 +1517,6 @@ def run_vscode(dbg, args, options):
         )
 
     if response["success"]:
-        if options.sourceBreakpoints:
-            source_to_lines = {}
-            for file_line in options.sourceBreakpoints:
-                (path, line) = file_line.split(":")
-                if len(path) == 0 or len(line) == 0:
-                    print('error: invalid source with line "%s"' % (file_line))
-
-                else:
-                    if path in source_to_lines:
-                        source_to_lines[path].append(int(line))
-                    else:
-                        source_to_lines[path] = [int(line)]
-            for source in source_to_lines:
-                dbg.request_setBreakpoints(source, source_to_lines[source])
-        if options.funcBreakpoints:
-            dbg.request_setFunctionBreakpoints(options.funcBreakpoints)
-        dbg.request_configurationDone()
         dbg.wait_for_stopped()
     else:
         if "message" in response:

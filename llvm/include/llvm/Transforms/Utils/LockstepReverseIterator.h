@@ -57,8 +57,7 @@ public:
     Fail = false;
     if constexpr (!EarlyFailure) {
       this->ActiveBlocks.clear();
-      for (BasicBlock *BB : Blocks)
-        this->ActiveBlocks.insert(BB);
+      this->ActiveBlocks.insert_range(Blocks);
     }
     Insts.clear();
     for (BasicBlock *BB : Blocks) {
@@ -134,7 +133,7 @@ public:
       return *this;
     SmallVector<Instruction *, 4> NewInsts;
     for (Instruction *Inst : Insts) {
-      Instruction *Next = Inst->getNextNonDebugInstruction();
+      Instruction *Next = Inst->getNextNode();
       // Already at end of block.
       if (!Next) {
         Fail = true;
