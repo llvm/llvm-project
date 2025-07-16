@@ -938,6 +938,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
+  if (Subtarget->hasBF16TransInsts()) {
+    setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
+  }
+
   if (Subtarget->hasCvtPkF16F32Inst()) {
     setOperationAction(ISD::FP_ROUND,
                        {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v16f16},
@@ -8162,6 +8166,14 @@ buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   //   $symbol@*@hi with lower 32 bits and higher 32 bits of a literal constant,
   //   which is a 64-bit pc-relative offset from the encoding of the $symbol
   //   operand to the global variable.
+  if (((const GCNSubtarget &)DAG.getSubtarget()).has64BitLiterals()) {
+    assert(GAFlags != SIInstrInfo::MO_NONE);
+
+    SDValue Ptr =
+        DAG.getTargetGlobalAddress(GV, DL, MVT::i64, Offset, GAFlags + 2);
+    return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET64, DL, PtrVT, Ptr);
+  }
+
   SDValue PtrLo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset, GAFlags);
   SDValue PtrHi;
   if (GAFlags == SIInstrInfo::MO_NONE)
@@ -8211,6 +8223,13 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   }
 
   if (Subtarget->isAmdPalOS() || Subtarget->isMesa3DOS()) {
+    if (Subtarget->has64BitLiterals()) {
+      SDValue Addr = DAG.getTargetGlobalAddress(
+          GV, DL, MVT::i64, GSD->getOffset(), SIInstrInfo::MO_ABS64);
+      return SDValue(DAG.getMachineNode(AMDGPU::S_MOV_B64, DL, MVT::i64, Addr),
+                     0);
+    }
+
     SDValue AddrLo = DAG.getTargetGlobalAddress(
         GV, DL, MVT::i32, GSD->getOffset(), SIInstrInfo::MO_ABS32_LO);
     AddrLo = {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, AddrLo), 0};
@@ -9314,6 +9333,44 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
                        Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
                        Op.getOperand(3), IndexKeyi32);
+  }
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8: {
+    if (Op.getOperand(4).getValueType() == MVT::i64)
+      return SDValue();
+
+    SDLoc SL(Op);
+    auto IndexKeyi64 = DAG.getAnyExtOrTrunc(Op.getOperand(4), SL, MVT::i64);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                        Op.getOperand(3), IndexKeyi64, Op.getOperand(5),
+                        Op.getOperand(6)});
+  }
+  case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_bf16f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8: {
+    EVT IndexKeyTy = IntrinsicID == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8
+                         ? MVT::i64
+                         : MVT::i32;
+    if (Op.getOperand(6).getValueType() == IndexKeyTy)
+      return SDValue();
+
+    SDLoc SL(Op);
+    auto IndexKey = DAG.getAnyExtOrTrunc(Op.getOperand(6), SL, IndexKeyTy);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                        Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
+                        IndexKey, Op.getOperand(7),
+                        Op.getOperand(8)}); // No clamp operand
   }
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
@@ -16853,12 +16910,63 @@ static void knownBitsForWorkitemID(const GCNSubtarget &ST,
   Known.Zero.setHighBits(llvm::countl_zero(MaxValue));
 }
 
+static void knownBitsForSBFE(const MachineInstr &MI, GISelValueTracking &VT,
+                             KnownBits &Known, const APInt &DemandedElts,
+                             unsigned BFEWidth, bool SExt, unsigned Depth) {
+  const MachineRegisterInfo &MRI = VT.getMachineFunction().getRegInfo();
+  const MachineOperand &Src1 = MI.getOperand(2);
+
+  unsigned Src1Cst = 0;
+  if (Src1.isImm()) {
+    Src1Cst = Src1.getImm();
+  } else if (Src1.isReg()) {
+    auto Cst = getIConstantVRegValWithLookThrough(Src1.getReg(), MRI);
+    if (!Cst)
+      return;
+    Src1Cst = Cst->Value.getZExtValue();
+  } else {
+    return;
+  }
+
+  // Offset is at bits [4:0] for 32 bit, [5:0] for 64 bit.
+  // Width is always [22:16].
+  const unsigned Offset =
+      Src1Cst & maskTrailingOnes<unsigned>((BFEWidth == 32) ? 5 : 6);
+  const unsigned Width = (Src1Cst >> 16) & maskTrailingOnes<unsigned>(6);
+
+  if (Width >= BFEWidth) // Ill-formed.
+    return;
+
+  VT.computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                          Depth + 1);
+
+  Known = Known.extractBits(Width, Offset);
+
+  if (SExt)
+    Known = Known.sext(BFEWidth);
+  else
+    Known = Known.zext(BFEWidth);
+}
+
 void SITargetLowering::computeKnownBitsForTargetInstr(
     GISelValueTracking &VT, Register R, KnownBits &Known,
     const APInt &DemandedElts, const MachineRegisterInfo &MRI,
     unsigned Depth) const {
+  Known.resetAll();
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
+  case AMDGPU::S_BFE_I32:
+    return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/32,
+                            /*SExt=*/true, Depth);
+  case AMDGPU::S_BFE_U32:
+    return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/32,
+                            /*SExt=*/false, Depth);
+  case AMDGPU::S_BFE_I64:
+    return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/64,
+                            /*SExt=*/true, Depth);
+  case AMDGPU::S_BFE_U64:
+    return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/64,
+                            /*SExt=*/false, Depth);
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
     Intrinsic::ID IID = cast<GIntrinsic>(MI)->getIntrinsicID();
