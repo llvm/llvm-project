@@ -13489,6 +13489,12 @@ def err_acc_invalid_default_type
 def err_acc_device_type_multiple_archs
     : Error<"OpenACC 'device_type' clause on a 'set' construct only permits "
             "one architecture">;
+def warn_acc_var_referenced_lacks_op
+    : Warning<"variable of type %0 referenced in OpenACC '%1' clause does not "
+              "have a %enum_select<AccVarReferencedReason>{%DefCtor{default "
+              "constructor}|%Dtor{destructor}}2; reference has no effect">,
+      InGroup<DiagGroup<"openacc-var-lacks-operation">>,
+      DefaultError;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
