@@ -266,36 +266,6 @@ void DemandedBits::determineLiveOperandBits(
               AB.setSignBit();
             }
           }
-        } else if (IsDiv) { // Non power of 2 constant div
-          //   x =  q * C + r;
-          //   q = x / C;
-          //   We think of it like grade school division in base 2.
-          //
-          //    x = [   unused   |  window m-bits |  ...  | needed bits ]
-          //                         ^ each step emits 1 quotient bit
-          //                         |
-          //                         |
-          //   C fits in m = ⌈log2 C⌉ bits
-          //   Each new quotient bit consumes the window of m low bits and
-          //   shifts one position left.
-
-          //   To produce the first LowQ quotient bits we slide the window
-          //   LowQ times --> need at most LowQ + m low bits of the dividend.
-          //   Need = LowQ + Ceil(log2(C))             (+1 sign bit for
-          //   sdiv). For example : Assume x = b7 b6 b5 b4 b3 b2 b1 b0.
-          //   LowQ = 4, C = 5 and ceil(log_2(C)) = 3.
-          //   step 0: b2 b1 b0, produces quotient q[0].
-          //   step 1: b3 b2 b1, produces quotient q[1].
-          //   step 2: b4 b3 b2, produces quotient q[2].
-          //   step 3: b5 b4 b3, produces quotient q[3].
-          //   k = LowQ - 1;
-          //   TopIndex = k + m-1 = 3 + 2 = 5;
-          //   The dividend bits b5...b0 are enough we don't care for b6 and b7.
-          unsigned LowQ = AOut.getActiveBits();
-          unsigned Need = LowQ + DivAmnt->ceilLogBase2();
-          if (IsSigned)
-            Need++;
-          AB = APInt::getLowBitsSet(BitWidth, std::min(BitWidth, Need));
         }
       }
     }
