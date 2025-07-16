@@ -210,9 +210,7 @@ public:
     return HasBF16ConversionInsts;
   }
 
-  bool hasBF16PackedInsts() const {
-    return HasBF16PackedInsts;
-  }
+  bool hasBF16PackedInsts() const { return HasBF16PackedInsts; }
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;

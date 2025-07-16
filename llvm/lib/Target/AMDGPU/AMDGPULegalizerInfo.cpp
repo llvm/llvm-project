@@ -1343,28 +1343,28 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     if (ST.hasVOP3PInsts()) {
       getActionDefinitionsBuilder(G_ABS)
-        .legalFor({S32, S16, V2S16})
-        .clampMaxNumElements(0, S16, 2)
-        .minScalar(0, S16)
-        .widenScalarToNextPow2(0)
-        .scalarize(0)
-        .lower();
-      if (ST.hasIntMinMax64()) {
-        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
-          .legalFor({S32, S16, S64, V2S16})
-          .clampMaxNumElements(0, S16, 2)
-          .minScalar(0, S16)
-          .widenScalarToNextPow2(0)
-          .scalarize(0)
-          .lower();
-      } else {
-        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
           .legalFor({S32, S16, V2S16})
           .clampMaxNumElements(0, S16, 2)
           .minScalar(0, S16)
           .widenScalarToNextPow2(0)
           .scalarize(0)
           .lower();
+      if (ST.hasIntMinMax64()) {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+            .legalFor({S32, S16, S64, V2S16})
+            .clampMaxNumElements(0, S16, 2)
+            .minScalar(0, S16)
+            .widenScalarToNextPow2(0)
+            .scalarize(0)
+            .lower();
+      } else {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+            .legalFor({S32, S16, V2S16})
+            .clampMaxNumElements(0, S16, 2)
+            .minScalar(0, S16)
+            .widenScalarToNextPow2(0)
+            .scalarize(0)
+            .lower();
       }
     } else {
       getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
@@ -2399,7 +2399,8 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
        DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
     auto castFlatToLocalOrPrivate = [&](const DstOp &Dst) -> Register {
-      if (DestAS == AMDGPUAS::PRIVATE_ADDRESS && ST.hasGloballyAddressableScratch()) {
+      if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
+          ST.hasGloballyAddressableScratch()) {
         // flat -> private with globally addressable scratch: subtract
         // src_flat_scratch_base_lo.
         const LLT S32 = LLT::scalar(32);
@@ -2407,7 +2408,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
         Register FlatScratchBaseLo =
             B.buildInstr(AMDGPU::S_MOV_B32, {S32},
                          {Register(AMDGPU::SRC_FLAT_SCRATCH_BASE_LO)})
-            .getReg(0);
+                .getReg(0);
         MRI.setRegClass(FlatScratchBaseLo, &AMDGPU::SReg_32RegClass);
         Register Sub = B.buildSub(S32, SrcLo, FlatScratchBaseLo).getReg(0);
         return B.buildIntToPtr(Dst, Sub).getReg(0);
@@ -4620,8 +4621,8 @@ bool AMDGPULegalizerInfo::loadInputValue(
 
   if (!Arg) {
     if (ArgType == AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR) {
-      // The intrinsic may appear when we have a 0 sized kernarg segment, in which
-      // case the pointer argument may be missing and we use null.
+      // The intrinsic may appear when we have a 0 sized kernarg segment, in
+      // which case the pointer argument may be missing and we use null.
       return LoadConstant(0);
     }
 

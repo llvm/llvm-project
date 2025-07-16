@@ -5688,12 +5688,13 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineOperand &Src1 = MI.getOperand(2);
 
     if (ST.hasAddSubU64Insts()) {
-      auto I = BuildMI(*BB, MI, DL, TII->get(IsAdd ? AMDGPU::V_ADD_U64_e64
-                                                   : AMDGPU::V_SUB_U64_e64),
+      auto I = BuildMI(*BB, MI, DL,
+                       TII->get(IsAdd ? AMDGPU::V_ADD_U64_e64
+                                      : AMDGPU::V_SUB_U64_e64),
                        Dest.getReg())
-                    .add(Src0)
-                    .add(Src1)
-                    .addImm(0); // clamp
+                   .add(Src0)
+                   .add(Src1)
+                   .addImm(0); // clamp
       TII->legalizeOperands(*I);
       MI.eraseFromParent();
       return BB;
@@ -14534,8 +14535,7 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
   case ISD::FMAXIMUMNUM:
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY:
-    return (VT == MVT::f32) ||
-           (VT == MVT::f16 && Subtarget.hasMin3Max3_16()) ||
+    return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16()) ||
            (VT == MVT::v2f16 && Subtarget.hasMin3Max3PKF16());
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:

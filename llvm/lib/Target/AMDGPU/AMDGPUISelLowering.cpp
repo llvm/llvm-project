@@ -1521,8 +1521,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
     if (std::optional<uint32_t> Address =
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
       if (IsNamedBarrier) {
-        unsigned BarCnt =
-            DL.getTypeAllocSize(GV->getValueType()) / 16;
+        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
         MFI->recordNumNamedBarriers(Address.value(), BarCnt);
       }
       return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());

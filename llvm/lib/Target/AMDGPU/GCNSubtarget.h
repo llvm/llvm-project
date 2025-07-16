@@ -479,9 +479,7 @@ public:
     return HasFmaMixInsts;
   }
 
-  bool hasFmaMixBF16Insts() const {
-    return HasFmaMixBF16Insts;
-  }
+  bool hasFmaMixBF16Insts() const { return HasFmaMixBF16Insts; }
 
   bool hasCARRY() const {
     return true;
@@ -1442,15 +1440,11 @@ public:
     return HasMinimum3Maximum3F16;
   }
 
-  bool hasMin3Max3PKF16() const {
-    return HasMin3Max3PKF16;
-  }
+  bool hasMin3Max3PKF16() const { return HasMin3Max3PKF16; }
 
   bool hasTanhInsts() const { return HasTanhInsts; }
 
-
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
-
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 

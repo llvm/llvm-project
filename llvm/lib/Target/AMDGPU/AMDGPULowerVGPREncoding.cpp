@@ -1,4 +1,4 @@
-//===- AMDGPULowerVGPREncoding.cpp - Insert s_delay_alu instructions ---------===//
+//===- AMDGPULowerVGPREncoding.cpp - lower VGPRs above v255 ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,9 +17,10 @@
 /// corresponding operand VGPR number.
 ///
 /// There is no need to replace actual register operands because encoding of the
-/// high and low VGPRs is the same. I.e. v0 has the encoding 0x100, so does v256.
-/// v1 has the encoding 0x101 and v257 has the same encoding. So high VGPRs will
-/// survive until actual encoding and will result in a same actual bit encoding.
+/// high and low VGPRs is the same. I.e. v0 has the encoding 0x100, so does
+/// v256. v1 has the encoding 0x101 and v257 has the same encoding. So high
+/// VGPRs will survive until actual encoding and will result in a same actual
+/// bit encoding.
 ///
 /// As a result the pass only inserts S_SET_VGPR_MSB to provide an actual offset
 /// to a VGPR address of the subseqent instructions. The InstPrinter will take

@@ -2475,7 +2475,7 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     //  so the L0 does not need to be invalidated.
     //
     // GFX125x has a shared CU$, so no invalidates are required.
-    if  (ST.isCuModeEnabled())
+    if (ST.isCuModeEnabled())
       return false;
 
     ScopeImm = AMDGPU::CPol::SCOPE_SE;

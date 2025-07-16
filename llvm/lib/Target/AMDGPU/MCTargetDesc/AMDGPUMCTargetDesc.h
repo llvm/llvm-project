@@ -15,8 +15,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
 
-#include <cstdint>
 #include "llvm/MC/MCInstrAnalysis.h"
+#include <cstdint>
 #include <memory>
 
 namespace llvm {
