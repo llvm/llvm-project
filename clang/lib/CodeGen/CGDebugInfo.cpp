@@ -170,6 +170,10 @@ void CGDebugInfo::addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
   if (!Group || !CGM.getCodeGenOpts().DebugKeyInstructions)
     return;
 
+  llvm::DISubprogram *SP = KeyInstruction->getFunction()->getSubprogram();
+  if (!SP || !SP->getKeyInstructionsEnabled())
+    return;
+
   addInstSourceAtomMetadata(KeyInstruction, Group, /*Rank=*/1);
 
   llvm::Instruction *BackupI =
