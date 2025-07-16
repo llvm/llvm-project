@@ -567,6 +567,8 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
+  for (StringRef Arg : Args.getAllArgValues(OPT_cuda_path_EQ))
+    CmdArgs.push_back(Args.MakeArgString("--cuda-path=" + Arg));
 
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
     return std::move(Err);
