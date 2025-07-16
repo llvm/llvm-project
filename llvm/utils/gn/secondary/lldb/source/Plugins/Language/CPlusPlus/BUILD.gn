@@ -63,5 +63,7 @@ static_library("CPlusPlus") {
     "MSVCUndecoratedNameParser.cpp",
     "MsvcStl.cpp",
     "MsvcStlSmartPointer.cpp",
+    "MsvcStlTuple.cpp",
+    "MsvcStlVector.cpp",
   ]
 }
