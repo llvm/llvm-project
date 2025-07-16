@@ -26,8 +26,6 @@
 namespace llvm {
 namespace dxil {
 
-
-
 class RootSignatureBindingInfo {
 private:
   SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> FuncToRsMap;
