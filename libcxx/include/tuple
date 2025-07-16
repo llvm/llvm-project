@@ -106,6 +106,11 @@ public:
 
     void swap(tuple&) noexcept(AND(swap(declval<T&>(), declval<T&>())...));               // constexpr in C++20
     constexpr void swap(const tuple&) const noexcept(see-below);                          // C++23
+
+    template<tuple-like UTuple>
+        friend constexpr bool operator==(const tuple& t, const UTuple& u);                // C++23
+    template<tuple-like UTuple>
+        friend constexpr auto operator<=>(const tuple& t, const UTuple& u);               // C++23
 };
 
 
