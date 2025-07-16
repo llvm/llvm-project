@@ -3961,6 +3961,7 @@ cc_library(
         ":ComplexToSPIRV",
         ":ComplexToStandard",
         ":ControlFlowToLLVM",
+        ":ComplexToROCDLLibraryCalls",
         ":ControlFlowToSCF",
         ":ControlFlowToSPIRV",
         ":ConversionPassIncGen",
@@ -11888,6 +11889,25 @@ cc_library(
     ]),
     hdrs = glob([
         "include/mlir/Conversion/ComplexToLibm/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ComplexDialect",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":IR",
+        ":Pass",
+        ":TransformUtils",
+    ],
+)
+
+cc_library(
+    name = "ComplexToROCDLLibraryCalls",
+    srcs = glob([
+        "lib/Conversion/ComplexToROCDLLibraryCalls/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ComplexToROCDLLibraryCalls/*.h",
     ]),
     includes = ["include"],
     deps = [
