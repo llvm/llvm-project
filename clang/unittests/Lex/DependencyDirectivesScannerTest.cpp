@@ -639,15 +639,12 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AtImport) {
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(" @ import  A;\n", Out));
   EXPECT_STREQ("@import A;\n", Out.data());
 
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import A\n;", Out));
-  EXPECT_STREQ("@import A;\n", Out.data());
-
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import A.B;\n", Out));
   EXPECT_STREQ("@import A.B;\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
-      "@import /*x*/ A /*x*/ . /*x*/ B /*x*/ \n /*x*/ ; /*x*/", Out));
-  EXPECT_STREQ("@import A.B;\n", Out.data());
+      "@import /*x*/ A /*x*/ . /*x*/ B /*x*/ \\n /*x*/ ; /*x*/", Out));
+  EXPECT_STREQ("@import A.B\\n;\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, EmptyIncludesAndImports) {
@@ -1122,11 +1119,17 @@ ort \
     )";
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
-  EXPECT_STREQ("module\n;#include \"textual-header.h\"\nexport module m;"
-               "exp\\\nort import:l[[rename]];"
-               "import<<=3;import a b d e d e f e;"
-               "import foo[[no_unique_address]];import foo();"
-               "import f(:sefse);import f(->a=3);"
+
+  EXPECT_STREQ("module;\n"
+               "#include \"textual-header.h\"\n"
+               "export module m;\n"
+               "exp\\\nort import:l[[rename]];\n"
+               "import<<=3;\n"
+               "import a b d e d e f e;\n"
+               "import foo[[no_unique_address]];\n"
+               "import foo();\n"
+               "import f(:sefse);\n"
+               "import f(->a=3);\n"
                "<TokBeforeEOF>\n",
                Out.data());
   ASSERT_EQ(Directives.size(), 12u);
