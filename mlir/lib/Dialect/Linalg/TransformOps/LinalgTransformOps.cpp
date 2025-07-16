@@ -3920,7 +3920,8 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     }
     FailureOr<VectorizationResult> vectorResults =
         linalg::vectorize(rewriter, target, vectorSizes, getScalableSizes(),
-                          getVectorizeNdExtract().value_or(false), false,
+                          getVectorizeNdExtract().value_or(false),
+                          /*flatten1DDepthwiseConv=*/false,
                           getAssumeDynamicDimsMatchVecSizes().value_or(false),
                           getCreateNamedContraction().value_or(false));
     if (failed(vectorResults)) {
