@@ -1231,8 +1231,11 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::StringRef mathLibFuncName = mathOp.runtimeFunc;
   if (!mathLibFuncName.empty()) {
     // If we enabled MLIR complex or can use approximate operations, we should
-    // NOT use libm.
-    if (!forceMlirComplex && !canUseApprox) {
+    // NOT use libm. Avoid libm when targeting AMDGPU as those symbols are not
+    // available on the device and we rely on MLIR complex operations to
+    // later map to OCML calls.
+    bool isAMDGPU = fir::getTargetTriple(builder.getModule()).isAMDGCN();
+    if (!forceMlirComplex && !canUseApprox && !isAMDGPU) {
       result = genLibCall(builder, loc, mathOp, mathLibFuncType, args);
       LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
       return result;
