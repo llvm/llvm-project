@@ -48,7 +48,6 @@ define i128 @test2(i128 %x) nounwind {
 ; X64-NEXT:    callq __udivti3@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
-; X86 doesn't have __divti3, so the urem is expanded into a loop.
   %tmp = udiv i128 %x, -73786976294838206464
   ret i128 %tmp
 }
@@ -66,7 +65,6 @@ define i128 @test3(i128 %x) nounwind {
 ; X64-NEXT:    callq __udivti3@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
-; X86 doesn't have __divti3, so the urem is expanded into a loop.
   %tmp = udiv i128 %x, -73786976294838206467
   ret i128 %tmp
 }
