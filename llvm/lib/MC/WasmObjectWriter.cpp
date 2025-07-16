@@ -18,7 +18,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSymbolWasm.h"
@@ -698,10 +697,10 @@ static void addData(SmallVectorImpl<char> &DataBytes,
       report_fatal_error("only data supported in data sections");
 
     if (auto *Align = dyn_cast<MCAlignFragment>(&Frag)) {
-      if (Align->getValueSize() != 1)
+      if (Align->getFillLen() != 1)
         report_fatal_error("only byte values supported for alignment");
       // If nops are requested, use zeros, as this is the data section.
-      uint8_t Value = Align->hasEmitNops() ? 0 : Align->getValue();
+      uint8_t Value = Align->hasEmitNops() ? 0 : Align->getFill();
       uint64_t Size =
           std::min<uint64_t>(alignTo(DataBytes.size(), Align->getAlignment()),
                              DataBytes.size() + Align->getMaxBytesToEmit());
@@ -712,10 +711,12 @@ static void addData(SmallVectorImpl<char> &DataBytes,
         llvm_unreachable("The fill should be an assembler constant");
       DataBytes.insert(DataBytes.end(), Fill->getValueSize() * NumValues,
                        Fill->getValue());
-    } else if (auto *LEB = dyn_cast<MCLEBFragment>(&Frag)) {
-      llvm::append_range(DataBytes, LEB->getContents());
     } else {
-      llvm::append_range(DataBytes, cast<MCDataFragment>(Frag).getContents());
+      llvm::append_range(DataBytes, Frag.getContents());
+      if (Frag.getKind() == MCFragment::FT_LEB)
+        llvm::append_range(DataBytes, Frag.getVarContents());
+      else
+        assert(Frag.getKind() == MCFragment::FT_Data);
     }
   }
 
@@ -1885,7 +1886,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         if (WS.getName().substr(PrefixLength + 1).getAsInteger(10, Priority))
           report_fatal_error("invalid .init_array section priority");
       }
-      const auto &DataFrag = cast<MCDataFragment>(Frag);
+      const auto &DataFrag = Frag;
       assert(llvm::all_of(DataFrag.getContents(), [](char C) { return !C; }));
       for (const MCFixup &Fixup : DataFrag.getFixups()) {
         assert(Fixup.getKind() ==

@@ -2214,7 +2214,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constOtherLb = otherCst.getConstantBound(BoundType::LB, d);
       if (!constLb.has_value() || !constOtherLb.has_value())
         return failure();
-      std::fill(minLb.begin(), minLb.end(), 0);
+      llvm::fill(minLb, 0);
       minLb.back() = std::min(*constLb, *constOtherLb);
     }
 
@@ -2230,12 +2230,12 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constOtherUb = otherCst.getConstantBound(BoundType::UB, d);
       if (!constUb.has_value() || !constOtherUb.has_value())
         return failure();
-      std::fill(maxUb.begin(), maxUb.end(), 0);
+      llvm::fill(maxUb, 0);
       maxUb.back() = std::max(*constUb, *constOtherUb);
     }
 
-    std::fill(newLb.begin(), newLb.end(), 0);
-    std::fill(newUb.begin(), newUb.end(), 0);
+    llvm::fill(newLb, 0);
+    llvm::fill(newUb, 0);
 
     // The divisor for lb, ub, otherLb, otherUb at this point is lbDivisor,
     // and so it's the divisor for newLb and newUb as well.

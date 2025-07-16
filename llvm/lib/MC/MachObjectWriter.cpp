@@ -15,7 +15,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -800,7 +799,7 @@ uint64_t MachObjectWriter::writeObject() {
   if (!CGProfile.empty()) {
     MCSection *CGProfileSection = getContext().getMachOSection(
         "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
-    auto &Frag = cast<MCDataFragment>(*CGProfileSection->begin());
+    auto &Frag = *CGProfileSection->begin();
     Frag.clearContents();
     raw_svector_ostream OS(Frag.getContentsForAppending());
     for (const MCObjectWriter::CGProfileEntry &CGPE : CGProfile) {

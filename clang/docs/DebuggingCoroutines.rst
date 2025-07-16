@@ -221,7 +221,7 @@ suspension point.
   Line 45 of "llvm-example.cpp" starts at address 0x201b <_ZL9coro_taski.destroy+555> and ends at 0x2046 <_ZL9coro_taski.destroy+598>.
   Line 45 of "llvm-example.cpp" starts at address 0x253b <_ZL9coro_taski.cleanup+555> and ends at 0x2566 <_ZL9coro_taski.cleanup+598>.
 
-LLDB does not support looking up labels. Furthmore, those labels are only emitted
+LLDB does not support looking up labels. Furthermore, those labels are only emitted
 starting with clang 21.0.
 
 For simple cases, you might still be able to guess the suspension point correctly.

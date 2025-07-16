@@ -19,7 +19,6 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -38,12 +37,10 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
-#include <type_traits>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -338,7 +335,7 @@ VectorizationState::precomputeIterSpaceValueSizes(RewriterBase &rewriter,
                                                   LinalgOp linalgOp) {
   // TODO: Support 0-d vectors.
   for (int vecDim = 0, end = canonicalVecShape.size(); vecDim < end; ++vecDim) {
-    if (!ShapedType::isDynamic(iterSpaceStaticSizes[vecDim])) {
+    if (ShapedType::isStatic(iterSpaceStaticSizes[vecDim])) {
       // Create constant index op for static dimensions.
       iterSpaceValueSizes.push_back(rewriter.create<arith::ConstantIndexOp>(
           linalgOp.getLoc(), iterSpaceStaticSizes[vecDim]));
@@ -1655,13 +1652,13 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
     for (unsigned i = 0; i < vecToStoreRank; i++)
       inBoundsVal[i] =
           (destShape[destRank - vecToStoreRank + i] >= vecToStoreShape[i]) &&
-          !ShapedType::isDynamic(destShape[destRank - vecToStoreRank + i]);
+          ShapedType::isStatic(destShape[destRank - vecToStoreRank + i]);
   }
 
   // If missing, initialize the write indices to 0.
-  assert(writeIndices.empty() ||
-         writeIndices.size() == static_cast<size_t>(destRank) &&
-             "Invalid number of write indices!");
+  assert((writeIndices.empty() ||
+          writeIndices.size() == static_cast<size_t>(destRank)) &&
+         "Invalid number of write indices!");
   if (writeIndices.empty()) {
     auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
     writeIndices.assign(destRank, zero);

@@ -236,16 +236,14 @@ uint64_t
 PPCMCCodeEmitter::getImm34EncodingNoPCRel(const MCInst &MI, unsigned OpNo,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
-  return getImm34Encoding(MI, OpNo, Fixups, STI,
-                          (MCFixupKind)PPC::fixup_ppc_imm34);
+  return getImm34Encoding(MI, OpNo, Fixups, STI, PPC::fixup_ppc_imm34);
 }
 
 uint64_t
 PPCMCCodeEmitter::getImm34EncodingPCRel(const MCInst &MI, unsigned OpNo,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
-  return getImm34Encoding(MI, OpNo, Fixups, STI,
-                          (MCFixupKind)PPC::fixup_ppc_pcrel34);
+  return getImm34Encoding(MI, OpNo, Fixups, STI, PPC::fixup_ppc_pcrel34);
 }
 
 unsigned PPCMCCodeEmitter::getDispRIEncoding(const MCInst &MI, unsigned OpNo,

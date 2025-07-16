@@ -723,7 +723,7 @@ void StackFrameList::SelectMostRelevantFrame() {
   // Don't call into the frame recognizers on the private state thread as
   // they can cause code to run in the target, and that can cause deadlocks
   // when fetching stop events for the expression.
-  if (m_thread.GetProcess()->CurrentThreadIsPrivateStateThread())
+  if (m_thread.GetProcess()->CurrentThreadPosesAsPrivateStateThread())
     return;
 
   Log *log = GetLog(LLDBLog::Thread);

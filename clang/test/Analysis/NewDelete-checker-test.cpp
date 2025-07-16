@@ -412,7 +412,7 @@ public:
 void testDoubleDeleteClassInstance() {
   DerefClass *foo = new DerefClass();
   delete foo;
-  delete foo; // newdelete-warning {{Attempt to delete released memory}}
+  delete foo; // newdelete-warning {{Attempt to free released memory}}
 }
 
 class EmptyClass{
@@ -424,7 +424,7 @@ public:
 void testDoubleDeleteEmptyClass() {
   EmptyClass *foo = new EmptyClass();
   delete foo;
-  delete foo; // newdelete-warning {{Attempt to delete released memory}}
+  delete foo; // newdelete-warning {{Attempt to free released memory}}
 }
 
 struct Base {

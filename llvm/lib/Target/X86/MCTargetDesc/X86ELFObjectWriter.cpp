@@ -272,9 +272,8 @@ unsigned X86ELFObjectWriter::getRelocType32(SMLoc Loc, X86::Specifier Specifier,
     if (!getContext().getTargetOptions()->X86RelaxRelocations)
       return ELF::R_386_GOT32;
 
-    return Kind == MCFixupKind(X86::reloc_signed_4byte_relax)
-               ? ELF::R_386_GOT32X
-               : ELF::R_386_GOT32;
+    return Kind == X86::reloc_signed_4byte_relax ? ELF::R_386_GOT32X
+                                                 : ELF::R_386_GOT32;
   case X86::S_GOTOFF:
     assert(!IsPCRel);
     if (Type != RT32_32)

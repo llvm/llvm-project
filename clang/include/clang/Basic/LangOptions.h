@@ -77,6 +77,22 @@ public:
   using RoundingMode = llvm::RoundingMode;
   using CFBranchLabelSchemeKind = clang::CFBranchLabelSchemeKind;
 
+  /// For ASTs produced with different option value, signifies their level of
+  /// compatibility.
+  enum class CompatibilityKind {
+    /// Does affect the construction of the AST in a way that does prevent
+    /// module interoperability.
+    NotCompatible,
+    /// Does affect the construction of the AST in a way that doesn't prevent
+    /// interoperability (that is, the value can be different between an
+    /// explicit module and the user of that module).
+    Compatible,
+    /// Does not affect the construction of the AST in any way (that is, the
+    /// value can be different between an implicit module and the user of that
+    /// module).
+    Benign,
+  };
+
   enum GCMode { NonGC, GCOnly, HybridGC };
   enum StackProtectorMode { SSPOff, SSPOn, SSPStrong, SSPReq };
 
@@ -486,16 +502,17 @@ public:
   };
 
   // Define simple language options (with no accessors).
-#define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
+  unsigned Name : Bits;
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)
 #include "clang/Basic/LangOptions.def"
 
 protected:
   // Define language options of enumeration type. These are private, and will
   // have accessors (below).
-#define LANGOPT(Name, Bits, Default, Description)
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-  LLVM_PREFERRED_TYPE(Type) \
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+  LLVM_PREFERRED_TYPE(Type)                                                    \
   unsigned Name : Bits;
 #include "clang/Basic/LangOptions.def"
 };
@@ -655,8 +672,8 @@ public:
                   LangStandard::Kind LangStd = LangStandard::lang_unspecified);
 
   // Define accessors/mutators for language options of enumeration type.
-#define LANGOPT(Name, Bits, Default, Description)
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)                   \
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
   Type get##Name() const { return static_cast<Type>(Name); }                   \
   void set##Name(Type Value) {                                                 \
     assert(static_cast<unsigned>(Value) < (1u << Bits));                       \

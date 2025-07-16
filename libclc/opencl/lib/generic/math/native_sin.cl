@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_native_sin.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/native_sin.h>
 
 #define __FLOAT_ONLY
 #define FUNCTION native_sin

@@ -442,7 +442,7 @@ func.func @test_properties_rollback() {
   // CHECK: test.with_properties a = 32,
   // expected-remark @below{{op 'test.with_properties' is not legalizable}}
   test.with_properties
-      a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4]
+      a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4], array32 = [5, 6]
       {modify_inplace}
   "test.return"() : () -> ()
 }

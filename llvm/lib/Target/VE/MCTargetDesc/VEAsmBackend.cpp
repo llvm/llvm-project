@@ -11,7 +11,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -116,18 +115,12 @@ public:
                   MutableArrayRef<char>, uint64_t Value,
                   bool IsResolved) override;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override {
     // Not implemented yet.  For example, if we have a branch with
     // lager than SIMM32 immediate value, we want to relaxation such
     // branch instructions.
     return false;
-  }
-
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override {
-    // Aurora VE doesn't support relaxInstruction yet.
-    llvm_unreachable("relaxInstruction() should not be called");
   }
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
@@ -161,7 +154,7 @@ public:
 void VEAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                               const MCValue &Target, MutableArrayRef<char> Data,
                               uint64_t Value, bool IsResolved) {
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case VE::fixup_ve_tls_gd_hi32:
   case VE::fixup_ve_tls_gd_lo32:
   case VE::fixup_ve_tpoff_hi32:
