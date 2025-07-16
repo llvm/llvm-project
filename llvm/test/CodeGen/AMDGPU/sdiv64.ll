@@ -404,12 +404,11 @@ define i64 @v_test_sdiv(i64 %x, i64 %y) {
 ; GCN-IR-NEXT:  ; %bb.2: ; %udiv-preheader
 ; GCN-IR-NEXT:    v_add_i32_e32 v16, vcc, -1, v0
 ; GCN-IR-NEXT:    v_addc_u32_e32 v17, vcc, -1, v1, vcc
-; GCN-IR-NEXT:    v_not_b32_e32 v5, v10
+; GCN-IR-NEXT:    v_not_b32_e32 v4, v10
 ; GCN-IR-NEXT:    v_lshr_b64 v[8:9], v[6:7], v8
-; GCN-IR-NEXT:    v_not_b32_e32 v4, 0
-; GCN-IR-NEXT:    v_add_i32_e32 v6, vcc, v5, v11
+; GCN-IR-NEXT:    v_add_i32_e32 v6, vcc, v4, v11
 ; GCN-IR-NEXT:    v_mov_b32_e32 v10, 0
-; GCN-IR-NEXT:    v_addc_u32_e32 v7, vcc, 0, v4, vcc
+; GCN-IR-NEXT:    v_addc_u32_e64 v7, s[4:5], -1, 0, vcc
 ; GCN-IR-NEXT:    s_mov_b64 s[10:11], 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v11, 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v5, 0
