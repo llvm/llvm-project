@@ -589,11 +589,11 @@ void RuntimePointerChecking::groupChecks(
   // dependence. Not grouping the checks for a[i] and a[i + 9000] allows
   // us to perform an accurate check in this case.
   //
-  // The above case requires that we have an UnknownDependence between
-  // accesses to the same underlying object. This cannot happen unless
-  // ShouldRetryWithRuntimeChecks is set, and therefore UseDependencies
-  // is also false. In this case we will use the fallback path and create
-  // separate checking groups for all pointers.
+  // In the above case, we have a non-constant distance and an Unknown
+  // dependence between accesses to the same underlying object, and could retry
+  // with runtime checks. Therefore UseDependencies is false. In this case we
+  // will use the fallback path and create separate checking groups for all
+  // pointers.
 
   // If we don't have the dependency partitions, construct a new
   // checking pointer group for each pointer. This is also required
