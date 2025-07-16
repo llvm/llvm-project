@@ -356,14 +356,14 @@ namespace std::ranges {
   // [range.to.input], to input view
   template<input_range V>
     requires view<V>
-  class to_input_view;
+  class to_input_view; // C++26
 
   template<class V>
   constexpr bool enable_borrowed_range<to_input_view<V>> =
-      enable_borrowed_range<V>;
+      enable_borrowed_range<V>; // C++26
 
   namespace views {
-    inline constexpr unspecified to_input = unspecified;
+    inline constexpr unspecified to_input = unspecified; // C++26
   }
 }
 
