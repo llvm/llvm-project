@@ -23,7 +23,6 @@ FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
-  Machine: EM_X86_64
 Sections:
   - Name:  .sframe_bad_sh_size
     Type:  SHT_GNU_SFRAME
@@ -103,7 +102,6 @@ FileHeader:
   Class: ELFCLASS64
   Data:  ELFDATA2MSB
   Type:  ET_EXEC
-  Machine: EM_AARCH64
 Sections:
   - Name:  .sframe
     Type:  SHT_GNU_SFRAME
@@ -142,7 +140,6 @@ FileHeader:
   Class: ELFCLASS64
   Data:  ELFDATA2MSB
   Type:  ET_EXEC
-  Machine: EM_AARCH64
 Sections:
   - Name:  .corrupted
     Type:  SHT_GNU_SFRAME
