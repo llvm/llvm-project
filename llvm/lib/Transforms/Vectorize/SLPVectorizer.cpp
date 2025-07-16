@@ -5540,7 +5540,8 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
       return std::max(Entries[I].front()->getVectorFactor(),
                       Entries[I].back()->getVectorFactor());
     });
-  unsigned NumUndefs = count(CurrentOrder, NumScalars);
+  unsigned NumUndefs =
+      count_if(CurrentOrder, [&](unsigned Idx) { return Idx == NumScalars; });
   if (ShuffledSubMasks.all() || (NumScalars > 2 && NumUndefs >= NumScalars / 2))
     return std::nullopt;
   return std::move(CurrentOrder);
@@ -8622,10 +8623,11 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                                State == LoadsState::CompressVectorize)
                              return false;
                            ConsecutiveNodesSize += VL.size();
-                           size_t Start = std::distance(Slice.begin(), It);
-                           size_t Sz = Slice.size() - Start;
+                           unsigned Start = std::distance(Slice.begin(), It);
+                           unsigned Sz = Slice.size() - Start;
                            return Sz < VL.size() ||
-                                  Slice.slice(Start, VL.size()) != VL;
+                                  Slice.slice(std::distance(Slice.begin(), It),
+                                              VL.size()) != VL;
                          }))
                 continue;
               // Try to build long masked gather loads.
@@ -22205,9 +22207,9 @@ public:
     for (auto &PossibleReducedVals : PossibleReducedValsVect) {
       auto PossibleRedVals = PossibleReducedVals.second.takeVector();
       SmallVector<SmallVector<Value *>> PossibleRedValsVect;
-      for (auto &It : PossibleRedVals) {
+      for (auto &Slice : PossibleRedVals) {
         PossibleRedValsVect.emplace_back();
-        auto RedValsVect = It.second.takeVector();
+        auto RedValsVect = Slice.second.takeVector();
         stable_sort(RedValsVect, llvm::less_second());
         for (const std::pair<Value *, unsigned> &Data : RedValsVect)
           PossibleRedValsVect.back().append(Data.second, Data.first);
