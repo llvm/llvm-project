@@ -454,8 +454,9 @@ public:
   explicit PPCMCInstrAnalysis(const MCInstrInfo *Info)
       : MCInstrAnalysis(Info) {}
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
+  bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                         uint64_t &Target,
+                         const MCSubtargetInfo *STI) const override {
     unsigned NumOps = Inst.getNumOperands();
     if (NumOps == 0 ||
         Info->get(Inst.getOpcode()).operands()[NumOps - 1].OperandType !=
