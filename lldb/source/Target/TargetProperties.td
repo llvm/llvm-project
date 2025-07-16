@@ -38,8 +38,8 @@ let Definition = "target_experimental" in {
     DefaultTrue,
     Desc<"Enables caching of task pointers inside the swift tasks plugin">;
   def UseDIL : Property<"use-DIL", "Boolean">,
-    Global, DefaultFalse,
-    Desc<"If true, use the alternative DIL implementation for frame variable evaluation.">;
+    Global, DefaultTrue,
+    Desc<"If true, use the DIL implementation for frame variable evaluation.">;
 }
 
 let Definition = "target" in {
