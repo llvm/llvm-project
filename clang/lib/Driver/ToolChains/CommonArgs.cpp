@@ -1074,8 +1074,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
       F = A->getValue();
     else
       F = Output.getFilename();
-    CmdArgs.push_back(Args.MakeArgString(
-        Twine(PluginOptPrefix) + "dwo_dir=" + F + "_dwo"));
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "dwo_dir=" + F + "_dwo"));
   }
 
   if (IsThinLTO && !IsOSAIX)
