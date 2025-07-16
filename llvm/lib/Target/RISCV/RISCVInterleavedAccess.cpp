@@ -286,8 +286,8 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     auto *VPLoad = cast<VPIntrinsic>(Load);
     assert(VPLoad->getIntrinsicID() == Intrinsic::vp_load &&
            "Unexpected intrinsic");
-    Ptr = VPLoad->getArgOperand(0);
-    Alignment = VPLoad->getParamAlign(0).value_or(
+    Ptr = VPLoad->getMemoryPointerParam();
+    Alignment = VPLoad->getPointerAlignment().value_or(
         DL.getABITypeAlign(ResVTy->getElementType()));
 
     assert(Mask && "vp.load needs a mask!");
