@@ -13,6 +13,8 @@ int main() {
   std::string empty("");
   std::string q("hello world");
   std::string Q("quite a long std::strin with lots of info inside it");
+  std::string overwritten_zero("abc");
+  const_cast<char *>(overwritten_zero.data())[3] = 'd';
   std::string TheVeryLongOne(
       "123456789012345678901234567890123456789012345678901234567890123456789012"
       "345678901234567890123456789012345678901234567890123456789012345678901234"

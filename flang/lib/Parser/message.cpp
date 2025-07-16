@@ -452,8 +452,8 @@ void Messages::ResolveProvenances(const AllCookedSources &allCooked) {
 }
 
 void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
-    bool echoSourceLines,
-    const common::LanguageFeatureControl *hintFlagPtr) const {
+    bool echoSourceLines, const common::LanguageFeatureControl *hintFlagPtr,
+    std::size_t maxErrorsToEmit) const {
   std::vector<const Message *> sorted;
   for (const auto &msg : messages_) {
     sorted.push_back(&msg);
@@ -461,6 +461,7 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   std::stable_sort(sorted.begin(), sorted.end(),
       [](const Message *x, const Message *y) { return x->SortBefore(*y); });
   const Message *lastMsg{nullptr};
+  std::size_t errorsEmitted{0};
   for (const Message *msg : sorted) {
     if (lastMsg && *msg == *lastMsg) {
       // Don't emit two identical messages for the same location
@@ -468,6 +469,14 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     }
     msg->Emit(o, allCooked, echoSourceLines, hintFlagPtr);
     lastMsg = msg;
+    if (msg->IsFatal()) {
+      ++errorsEmitted;
+    }
+    // If maxErrorsToEmit is 0, emit all errors, otherwise break after
+    // maxErrorsToEmit.
+    if (maxErrorsToEmit > 0 && errorsEmitted >= maxErrorsToEmit) {
+      break;
+    }
   }
 }
 
