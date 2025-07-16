@@ -175,41 +175,37 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     }
 
     // Check if there is warp specialization.
-    auto isWarpSpecialized = [](Operation *op, int64_t &startRange,
-                                int64_t &endRange) -> bool {
+    auto isWarpSpecialized = [](Operation *op, int64_t &startOfRange,
+                                int64_t &endOfRange) -> bool {
       Operation *parent = op->getParentOp();
       // Find the outermost scf::IfOp with xegpu.sg_id_range.
       while (parent) {
         if (auto ifOp = dyn_cast<scf::IfOp>(parent)) {
-          if (Attribute attr = ifOp->getAttr("xegpu.sg_id_range")) {
-            if (auto denseAttr = dyn_cast<DenseI32ArrayAttr>(attr)) {
-              auto values = denseAttr.asArrayRef();
-              if (values.size() == 2) {
-                startRange = values[0];
-                endRange = values[1];
-              }
-            }
+          if (auto attr = llvm::dyn_cast_or_null<xegpu::RangeAttr>(
+                  ifOp->getAttr("sg_id_range"))) {
+            startOfRange = attr.getStart().getInt();
+            endOfRange = attr.getEnd().getInt();
             break;
           }
         }
         parent = parent->getParentOp();
       }
-      // Return false if startRange is 0
-      return (startRange > 0 && endRange > startRange);
+      // Return false if startOfRange is 0
+      return (startOfRange > 0 && endOfRange > startOfRange);
     };
 
-    int64_t startRange = -1, endRange = -1;
-    bool warpSpecialized = isWarpSpecialized(op, startRange, endRange);
+    int64_t startOfRange = -1, endOfRange = -1;
+    bool warpSpecialized = isWarpSpecialized(op, startOfRange, endOfRange);
 
     // If warp specialization is detected, adjust the subgroup id accordingly
     Value adjustedSgId = linearSgId;
     if (warpSpecialized) {
-      // Subtract startRange from the original subgroup id to get the adjusted
+      // Subtract startOfRange from the original subgroup id to get the adjusted
       // sg id
-      Value startRangeVal =
-          rewriter.create<arith::ConstantIndexOp>(loc, startRange);
+      Value startOfRangeVal =
+          rewriter.create<arith::ConstantIndexOp>(loc, startOfRange);
       adjustedSgId =
-          rewriter.createOrFold<index::SubOp>(loc, linearSgId, startRangeVal);
+          rewriter.createOrFold<index::SubOp>(loc, linearSgId, startOfRangeVal);
     }
 
     auto deLinearizeSgId =
