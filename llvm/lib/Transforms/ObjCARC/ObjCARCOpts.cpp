@@ -2626,7 +2626,7 @@ void ObjCARCOpt::OptimizeAutoreleasePools(Function &F) {
       case ARCInstKind::Call:
         if (!MayAutorelease(cast<CallBase>(Inst)))
           break;
-        [[fallthrough]];
+        LLVM_FALLTHROUGH;
       case ARCInstKind::Autorelease:
       case ARCInstKind::AutoreleaseRV:
       case ARCInstKind::FusedRetainAutorelease:
