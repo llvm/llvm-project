@@ -262,6 +262,9 @@ void DemandedBits::determineLiveOperandBits(
             AB = AOut.shl(Sh);
           } else {
             AB = AOut & APInt::getLowBitsSet(BitWidth, Sh);
+            if (IsSigned) {
+              AB.setSignBit();
+            }
           }
         } else if (IsDiv) { // Non power of 2 constant div
           //   x =  q * C + r;
