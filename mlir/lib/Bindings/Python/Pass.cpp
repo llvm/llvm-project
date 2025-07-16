@@ -112,6 +112,12 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             mlirPassManagerEnableVerifier(passManager.get(), enable);
           },
           "enable"_a, "Enable / disable verify-each.")
+      .def(
+          "enable_timing",
+          [](PyPassManager &passManager) {
+            mlirPassManagerEnableTiming(passManager.get());
+          },
+          "Enable pass timing.")
       .def_static(
           "parse",
           [](const std::string &pipeline, DefaultingPyMlirContext context) {
