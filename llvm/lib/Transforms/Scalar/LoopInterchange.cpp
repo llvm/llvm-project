@@ -82,6 +82,7 @@ enum class RuleTy {
   PerLoopCacheAnalysis,
   PerInstrOrderCost,
   ForVectorization,
+  Ignore
 };
 
 } // end anonymous namespace
@@ -110,7 +111,10 @@ static cl::list<RuleTy> Profitabilities(
                clEnumValN(RuleTy::PerInstrOrderCost, "instorder",
                           "Prioritize the IVs order of each instruction"),
                clEnumValN(RuleTy::ForVectorization, "vectorize",
-                          "Prioritize vectorization")));
+                          "Prioritize vectorization"),
+               clEnumValN(RuleTy::Ignore, "ignore",
+                          "Ignore profitability, force interchange (does not "
+			  "work with other options)")));
 
 #ifndef NDEBUG
 static bool noDuplicateRules(ArrayRef<RuleTy> Rules) {
@@ -1291,6 +1295,12 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
 bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
     unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM) {
+
+  // Return true if interchange is forced.
+  if (Profitabilities.size() == 1 &&
+      Profitabilities[0] == RuleTy::Ignore)
+    return true;
+
   // isProfitable() is structured to avoid endless loop interchange. If the
   // highest priority rule (isProfitablePerLoopCacheAnalysis by default) could
   // decide the profitability then, profitability check will stop and return the
@@ -1315,6 +1325,11 @@ bool LoopInterchangeProfitability::isProfitable(
     case RuleTy::ForVectorization:
       shouldInterchange =
           isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
+      break;
+    case RuleTy::Ignore:
+      // TODO? We ignore the force option when it appears in a list, i.e. it
+      // should occur as the only option to be effective, as mentioned in the
+      // help.
       break;
     }
 
