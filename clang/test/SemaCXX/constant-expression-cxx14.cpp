@@ -1389,4 +1389,59 @@ constexpr bool test_ctr(int *i) {
 static_assert(test_ctr(nullptr), ""); // expected-note {{in call to 'test_ctr(nullptr)'}}
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 
+
+// verify that we can dereference function pointers
+namespace functions {
+
+constexpr int f() {return 0;}
+constexpr int(*f_ptr)() = &f;
+constexpr int(*null_ptr)() = nullptr;
+
+constexpr int(&f_ref)() = f;
+constexpr int test = (*f_ptr)();
+constexpr int test2 = (*f_ref)();
+constexpr int test3 = (*f_ref)();
+constexpr int test4 = (*null_ptr)();
+//expected-error@-1 {{constexpr variable 'test4' must be initialized by a constant expression}} \
+//expected-note@-1 {{'(*null_ptr)' evaluates to a null function pointer}}
+
+constexpr int(*f_ptr_arr[1])() = {&f};
+constexpr int test_array_ok = (f_ptr_arr[0])();
+constexpr int test_array_err = (f_ptr_arr[1])();
+// expected-error@-1 {{constexpr variable 'test_array_err' must be initialized by a constant expression}} \
+// expected-note@-1 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
+
+struct S {
+    int(*f_ptr)() = &f;
+    int(*f_ptr_arr[1])() = {&f};
+    int(&f_ref)() = f;
+    int(*null_ptr)() = nullptr;
+};
+
+constexpr int test_member() {
+    S s {};
+    (*s.f_ptr)();
+    (*s.f_ref)();
+    (s.f_ref)();
+    (s.f_ptr_arr[0])();
+    (s.f_ptr_arr[1])();
+    // expected-note@-1 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
+    return 0;
+}
+constexpr int test_member_null() { // cxx14_20-error {{never produces a constant expression}}
+    S s {};
+    (*s.null_ptr)(); // expected-note {{'(*s.null_ptr)' evaluates to a null function pointer}} \
+                     // cxx14_20-note {{'(*s.null_ptr)' evaluates to a null function pointer}}
+    return 0;
+}
+
+static_assert(test_member(), "");
+// expected-error@-1 {{static assertion expression is not an integral constant expression}} \
+// expected-note@-1 {{in call to 'test_member()'}}
+
+static_assert(test_member_null(), "");
+// expected-error@-1 {{static assertion expression is not an integral constant expression}} \
+// expected-note@-1 {{in call to 'test_member_null()'}}
+
+}
 }

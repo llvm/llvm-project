@@ -5262,8 +5262,7 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
 
   // For references to objects, check they do not designate a one-past-the-end
   // object.
-  if (VD->getType()->isReferenceType() &&
-      !VD->getType()->isFunctionReferenceType()) {
+  if (VD->getType()->isReferenceType()) {
     return EvaluateInitForDeclOfReferenceType(Info, VD, InitE, Result, Val);
   } else if (!EvaluateInPlace(Val, Info, Result, InitE)) {
     // Wipe out any partially-computed value, to allow tracking that this
@@ -10965,8 +10964,7 @@ bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
                                   isa<CXXDefaultInitExpr>(Init));
 
     APValue &FieldVal = Result.getStructField(Field->getFieldIndex());
-    if (Field->getType()->isReferenceType() &&
-        !Field->getType()->isFunctionReferenceType()) {
+    if (Field->getType()->isReferenceType()) {
       LValue Result;
       if (!EvaluateInitForDeclOfReferenceType(Info, Field, Init, Result,
                                               FieldVal)) {
