@@ -184,7 +184,7 @@ FROM ubuntu:jammy AS android-builder-base
 
 ARG ANDROID_CLANG_VERSION
 ARG ANDROID_CLANG_PREBUILTS_COMMIT
-ARG ANDROID_SYSROOT_BID
+ARG ANDROID_SYSROOT_COMMIT
 
 RUN apt-get update && apt-get install -y curl bzip2 git unzip
 
@@ -217,19 +217,18 @@ RUN <<EOF
     ls /opt/android/clang/clang-current/bin/clang
 EOF
 
-# Install an Android sysroot. New AOSP sysroots are available at
-# https://ci.android.com/builds/branches/aosp-main/grid, the "ndk" target. The
-# NDK also makes its sysroot prebuilt available at
-# https://android.googlesource.com/platform/prebuilts/ndk/+/refs/heads/dev/platform/sysroot.
+# Install an Android sysroot. New Android sysroots are available at
+# https://android.googlesource.com/platform/prebuilts/ndk/+/refs/heads/mirror-goog-main-ndk/platform/sysroot.
 
-ENV ANDROID_SYSROOT_BID=$ANDROID_SYSROOT_BID
+ENV ANDROID_SYSROOT_COMMIT=$ANDROID_SYSROOT_COMMIT
 RUN <<EOF
   set -e
-  cd /opt/android
-  curl -L -o ndk_platform.tar.bz2 \
-      https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${ANDROID_SYSROOT_BID}/ndk/attempts/latest/artifacts/ndk_platform.tar.bz2/url
-  tar xf ndk_platform.tar.bz2
-  rm ndk_platform.tar.bz2
+  mkdir -p /opt/android/ndk
+  cd /opt/android/ndk
+  git clone --filter=blob:none https://android.googlesource.com/platform/prebuilts/ndk tmp
+  git -C tmp checkout ${ANDROID_SYSROOT_COMMIT}
+  mv tmp/platform/sysroot .
+  rm -rf tmp
 EOF
 
 # ===----------------------------------------------------------------------===##
