@@ -602,8 +602,10 @@ static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
   }
 }
 
-Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
-                       Module &Mod, const ModuleSummaryIndex &CombinedIndex,
+Error lto::thinBackend(const Config &Conf,
+                       IntrusiveRefCntPtr<vfs::FileSystem> FS, unsigned Task,
+                       AddStreamFn AddStream, Module &Mod,
+                       const ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
@@ -643,7 +645,6 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
           LLVMRemarkFileHandle DiagnosticOutputFile) {
-        auto FS = vfs::getRealFileSystem();
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, FS, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,

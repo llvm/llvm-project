@@ -54,6 +54,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VCSRevision.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
@@ -1545,7 +1546,8 @@ public:
       if (!MOrErr)
         return MOrErr.takeError();
 
-      return thinBackend(Conf, Task, AddStream, **MOrErr, CombinedIndex,
+      auto FS = vfs::getRealFileSystem();
+      return thinBackend(Conf, FS, Task, AddStream, **MOrErr, CombinedIndex,
                          ImportList, DefinedGlobals, &ModuleMap,
                          Conf.CodeGenOnly);
     };
@@ -1659,7 +1661,8 @@ public:
       if (!MOrErr)
         return MOrErr.takeError();
 
-      return thinBackend(Conf, Task, CGAddStream, **MOrErr, CombinedIndex,
+      auto FS = vfs::getRealFileSystem();
+      return thinBackend(Conf, FS, Task, CGAddStream, **MOrErr, CombinedIndex,
                          ImportList, DefinedGlobals, &ModuleMap,
                          Conf.CodeGenOnly, IRAddStream);
     };
@@ -1754,7 +1757,8 @@ public:
       std::unique_ptr<Module> LoadedModule =
           cgdata::loadModuleForTwoRounds(BM, Task, BackendContext, *IRFiles);
 
-      return thinBackend(Conf, Task, AddStream, *LoadedModule, CombinedIndex,
+      auto FS = vfs::getRealFileSystem();
+      return thinBackend(Conf, FS, Task, AddStream, *LoadedModule, CombinedIndex,
                          ImportList, DefinedGlobals, &ModuleMap,
                          /*CodeGenOnly=*/true);
     };
