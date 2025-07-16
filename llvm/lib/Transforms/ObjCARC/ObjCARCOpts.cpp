@@ -2615,8 +2615,8 @@ void ObjCARCOpt::OptimizeAutoreleasePools(Function &F) {
         PendingPush->replaceAllUsesWith(
             PoisonValue::get(PendingPush->getType()));
 
-        PendingPush->eraseFromParent();
         Pop->eraseFromParent();
+        PendingPush->eraseFromParent();
 
         Changed = true;
         ++NumNoops;

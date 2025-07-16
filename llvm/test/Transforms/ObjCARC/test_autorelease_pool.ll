@@ -11,7 +11,7 @@ declare void @use_object(ptr)
 declare ptr @object_with_thing()
 declare void @opaque_callee()
 
-; Test 1: Empty autorelease pool should be eliminated
+; Empty autorelease pool should be eliminated
 define void @test_empty_pool() {
 ; CHECK-LABEL: define void @test_empty_pool() {
 ; CHECK-NEXT:    ret void
@@ -21,7 +21,7 @@ define void @test_empty_pool() {
   ret void
 }
 
-; Test 2: Pool with only release should be removed
+; Pool with only release should be removed
 define void @test_autorelease_to_release() {
 ; CHECK-LABEL: define void @test_autorelease_to_release() {
 ; CHECK-NEXT:    [[OBJ:%.*]] = call ptr @create_object()
@@ -35,7 +35,7 @@ define void @test_autorelease_to_release() {
   ret void
 }
 
-; Test 3: Pool with autoreleases should not be optimized
+; Pool with autoreleases should not be optimized
 define void @test_multiple_autoreleases() {
 ; CHECK-LABEL: define void @test_multiple_autoreleases() {
 ; CHECK-NEXT:    [[OBJ1:%.*]] = call ptr @create_object()
@@ -59,7 +59,7 @@ define void @test_multiple_autoreleases() {
   ret void
 }
 
-; Test 4: Pool with calls should not be optimized
+; Pool with calls should not be optimized
 define void @test_calls() {
 ; CHECK-LABEL: define void @test_calls() {
 ; CHECK-NEXT:    [[POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
@@ -75,7 +75,7 @@ define void @test_calls() {
   ret void
 }
 
-; Test 5: Pool with opaque call should not be optimized
+; Pool with opaque call should not be optimized
 define void @test_opaque_call() {
 ; CHECK-LABEL: define void @test_opaque_call() {
 ; CHECK-NEXT:    [[POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
@@ -89,7 +89,7 @@ define void @test_opaque_call() {
   ret void
 }
 
-; Test 6: Nested empty pools should be eliminated
+; Nested empty pools should be eliminated
 define void @test_nested_empty_pools() {
 ; CHECK-LABEL: define void @test_nested_empty_pools() {
 ; CHECK-NEXT:    ret void
@@ -101,7 +101,7 @@ define void @test_nested_empty_pools() {
   ret void
 }
 
-; Test 7: Empty pool with cast should be eliminated
+; Empty pool with cast should be eliminated
 define void @test_empty_pool_with_cast() {
 ; CHECK-LABEL: define void @test_empty_pool_with_cast() {
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast ptr poison to ptr
@@ -113,7 +113,7 @@ define void @test_empty_pool_with_cast() {
   ret void
 }
 
-; Test 8: Autorelease shadowing - autorelease in inner pool doesn't prevent outer optimization
+; Autorelease shadowing - autorelease in inner pool doesn't prevent outer optimization
 define void @test_autorelease_shadowing_basic() {
 ; CHECK-LABEL: define void @test_autorelease_shadowing_basic() {
 ; CHECK-NEXT:    [[OBJ:%.*]] = call ptr @create_object()
@@ -132,7 +132,7 @@ define void @test_autorelease_shadowing_basic() {
   ret void
 }
 
-; Test 9: Multiple nested levels with shadowing
+; Multiple nested levels with shadowing
 define void @test_multiple_nested_shadowing() {
 ; CHECK-LABEL: define void @test_multiple_nested_shadowing() {
 ; CHECK-NEXT:    [[OBJ1:%.*]] = call ptr @create_object()
@@ -161,7 +161,7 @@ define void @test_multiple_nested_shadowing() {
   ret void
 }
 
-; Test 10: Autorelease outside inner pool prevents optimization
+; Autorelease outside inner pool prevents optimization
 define void @test_autorelease_outside_inner_pool() {
 ; CHECK-LABEL: define void @test_autorelease_outside_inner_pool() {
 ; CHECK-NEXT:    [[OBJ1:%.*]] = call ptr @create_object()
@@ -186,7 +186,7 @@ define void @test_autorelease_outside_inner_pool() {
   ret void
 }
 
-; Test 11: Known ObjC functions don't prevent optimization
+; Known ObjC functions don't prevent optimization
 define void @test_known_objc_functions() {
 ; CHECK-LABEL: define void @test_known_objc_functions() {
 ; CHECK-NEXT:    [[OBJ:%.*]] = call ptr @create_object()
@@ -203,7 +203,7 @@ define void @test_known_objc_functions() {
   ret void
 }
 
-; Test 12: Complex shadowing with mixed autoreleases
+; Complex shadowing with mixed autoreleases
 define void @test_complex_shadowing() {
 ; CHECK-LABEL: define void @test_complex_shadowing() {
 ; CHECK-NEXT:    [[OBJ1:%.*]] = call ptr @create_object()
@@ -242,7 +242,7 @@ define void @test_complex_shadowing() {
   ret void
 }
 
-; Test 13: Non-ObjC function that may autorelease prevents optimization
+; Non-ObjC function that may autorelease prevents optimization
 define void @test_non_objc_may_autorelease() {
 ; CHECK-LABEL: define void @test_non_objc_may_autorelease() {
 ; CHECK-NEXT:    [[POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
@@ -256,7 +256,7 @@ define void @test_non_objc_may_autorelease() {
   ret void
 }
 
-; Test 14: Non-ObjC function that doesn't autorelease allows optimization
+; Non-ObjC function that doesn't autorelease allows optimization
 define void @test_non_objc_no_autorelease() {
 ; CHECK-LABEL: define void @test_non_objc_no_autorelease() {
 ; CHECK-NEXT:    call void @safe_function()
@@ -268,7 +268,7 @@ define void @test_non_objc_no_autorelease() {
   ret void
 }
 
-; Test 15: Incomplete push/pop pairs across blocks - only inner pairs count
+; Incomplete push/pop pairs across blocks - only inner pairs count
 define void @test_incomplete_pairs_inner_shadowing() {
 ; CHECK-LABEL: define void @test_incomplete_pairs_inner_shadowing() {
 ; CHECK-NEXT:    [[OBJ:%.*]] = call ptr @create_object()
