@@ -165,12 +165,28 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
                                              OMPT_GET_RETURN_ADDRESS);)
 
   int Rc = OFFLOAD_SUCCESS;
+
+  // Only allocate AttachInfo for targetDataBegin
+  AttachInfoTy *AttachInfo = nullptr;
+  if (TargetDataFunction == targetDataBegin) {
+    AttachInfo = new AttachInfoTy();
+  }
+
   Rc = TargetDataFunction(Loc, *DeviceOrErr, ArgNum, ArgsBase, Args, ArgSizes,
                           ArgTypes, ArgNames, ArgMappers, AsyncInfo,
-                          false /*FromMapper=*/);
+                          AttachInfo, false /*FromMapper=*/);
 
-  if (Rc == OFFLOAD_SUCCESS)
-    Rc = AsyncInfo.synchronize();
+  if (Rc == OFFLOAD_SUCCESS) {
+    // Process deferred ATTACH entries BEFORE synchronization
+    if (AttachInfo && !AttachInfo->AttachEntries.empty())
+      Rc = processAttachEntries(*DeviceOrErr, *AttachInfo, AsyncInfo);
+
+    if (Rc == OFFLOAD_SUCCESS)
+      Rc = AsyncInfo.synchronize();
+  }
+
+  if (AttachInfo)
+    delete AttachInfo;
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
 }
