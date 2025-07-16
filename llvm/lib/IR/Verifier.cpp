@@ -5694,9 +5694,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     visitConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(Call));
     break;
   case Intrinsic::dbg_declare: // llvm.dbg.declare
-  case Intrinsic::dbg_value: // llvm.dbg.value
-  case Intrinsic::dbg_assign: // llvm.dbg.assign
-  case Intrinsic::dbg_label: // llvm.dbg.label
+  case Intrinsic::dbg_value:   // llvm.dbg.value
+  case Intrinsic::dbg_assign:  // llvm.dbg.assign
+  case Intrinsic::dbg_label:   // llvm.dbg.label
     // We no longer interpret debug intrinsics (the old variable-location
     // design). They're meaningless as far as LLVM is concerned we could make
     // it an error for them to appear, but it's possible we'll have users
