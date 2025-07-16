@@ -2112,11 +2112,26 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
 
   void handleNoMutexHeld(const NamedDecl *D, ProtectedOperationKind POK,
                          AccessKind AK, SourceLocation Loc) override {
-    assert((POK == POK_VarAccess || POK == POK_VarDereference) &&
-           "Only works for variables");
-    unsigned DiagID = POK == POK_VarAccess?
-                        diag::warn_variable_requires_any_lock:
-                        diag::warn_var_deref_requires_any_lock;
+    unsigned DiagID = 0;
+    switch (POK) {
+    case POK_VarAccess:
+    case POK_PassByRef:
+    case POK_ReturnByRef:
+    case POK_PassPointer:
+    case POK_ReturnPointer:
+      DiagID = diag::warn_variable_requires_any_lock;
+      break;
+    case POK_VarDereference:
+    case POK_PtPassByRef:
+    case POK_PtReturnByRef:
+    case POK_PtPassPointer:
+    case POK_PtReturnPointer:
+      DiagID = diag::warn_var_deref_requires_any_lock;
+      break;
+    case POK_FunctionCall:
+      llvm_unreachable("Only works for variables");
+      break;
+    }
     PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID)
       << D << getLockKindFromAccessKind(AK));
     Warnings.emplace_back(std::move(Warning), getNotes());
