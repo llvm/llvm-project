@@ -3036,6 +3036,36 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
+  // Convert various sign-bit masks to src mods. Currently disabled for 16-bit
+  // types as the codegen replaces the operand without adding a srcmod.
+  // Recognise (xor a, 0x80000000) as NEG SrcMod.
+  if (Src->getOpcode() == ISD::XOR &&
+      Src.getValueType().getFixedSizeInBits() != 16)
+    if (ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(Src->getOperand(1)))
+      if (CRHS->getAPIntValue().isSignMask()) {
+        Mods |= SISrcMods::NEG;
+        Src = Src.getOperand(0);
+      }
+
+  // Recognise (and a, 0x7fffffff) as ABS SrcMod.
+  if (Src->getOpcode() == ISD::AND && AllowAbs &&
+      Src.getValueType().getFixedSizeInBits() != 16)
+    if (ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(Src->getOperand(1)))
+      if (CRHS->getAPIntValue().isMaxSignedValue()) {
+        Mods |= SISrcMods::ABS;
+        Src = Src.getOperand(0);
+      }
+
+  // Recognise (or a, 0x80000000) as NEG+ABS SrcModifiers.
+  if (Src->getOpcode() == ISD::OR && AllowAbs &&
+      Src.getValueType().getFixedSizeInBits() != 16)
+    if (ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(Src->getOperand(1)))
+      if (CRHS->getAPIntValue().isSignMask()) {
+        Mods |= SISrcMods::ABS;
+        Mods |= SISrcMods::NEG;
+        Src = Src.getOperand(0);
+      }
+
   return true;
 }
 
