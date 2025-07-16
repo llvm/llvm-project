@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SystemZTargetMachine.h"
 #include "SystemZISelLowering.h"
+#include "SystemZTargetMachine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -369,7 +370,11 @@ public:
       if (F.hasFnAttribute("mrecord-mcount"))
         report_fatal_error("mrecord-mcount only supported with fentry-call");
     }
-
+    if (F.getParent()->getStackProtectorGuard() != "global") {
+      if (F.hasFnAttribute("mstack-protector-guard-record"))
+        report_fatal_error("mstack-protector-guard-record only supported with "
+                           "mstack-protector-guard=global");
+    }
     Subtarget = &MF.getSubtarget<SystemZSubtarget>();
     return SelectionDAGISel::runOnMachineFunction(MF);
   }

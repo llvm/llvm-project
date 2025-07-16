@@ -148,6 +148,8 @@ private:
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
                                      SystemZMCInstLower &Lower);
   void LowerPATCHABLE_RET(const MachineInstr &MI, SystemZMCInstLower &Lower);
+  Register emitLoadStackGuardAddress(const MachineInstr *MI);
+  void emitStackProtectorLocEntry();
   void emitAttributes(Module &M);
 };
 } // end namespace llvm
