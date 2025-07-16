@@ -5211,34 +5211,34 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   // XOR: llvm/test/CodeGen/AArch64/reduce-xor.ll
   // AND: llvm/test/CodeGen/AArch64/reduce-and.ll
   static const CostTblEntry CostTblNoPairwise[]{
-      {ISD::ADD, MVT::v8i8,   2},
-      {ISD::ADD, MVT::v16i8,  2},
-      {ISD::ADD, MVT::v4i16,  2},
-      {ISD::ADD, MVT::v8i16,  2},
-      {ISD::ADD, MVT::v2i32,  2},
-      {ISD::ADD, MVT::v4i32,  2},
-      {ISD::ADD, MVT::v2i64,  2},
-      {ISD::OR,  MVT::v8i8,  15},
-      {ISD::OR,  MVT::v16i8, 17},
-      {ISD::OR,  MVT::v4i16,  7},
-      {ISD::OR,  MVT::v8i16,  9},
-      {ISD::OR,  MVT::v2i32,  3},
-      {ISD::OR,  MVT::v4i32,  5},
-      {ISD::OR,  MVT::v2i64,  3},
-      {ISD::XOR, MVT::v8i8,  15},
-      {ISD::XOR, MVT::v16i8, 17},
-      {ISD::XOR, MVT::v4i16,  7},
-      {ISD::XOR, MVT::v8i16,  9},
-      {ISD::XOR, MVT::v2i32,  3},
-      {ISD::XOR, MVT::v4i32,  5},
-      {ISD::XOR, MVT::v2i64,  3},
-      {ISD::AND, MVT::v8i8,  15},
-      {ISD::AND, MVT::v16i8, 17},
-      {ISD::AND, MVT::v4i16,  7},
-      {ISD::AND, MVT::v8i16,  9},
-      {ISD::AND, MVT::v2i32,  3},
-      {ISD::AND, MVT::v4i32,  5},
-      {ISD::AND, MVT::v2i64,  3},
+      {ISD::ADD, MVT::v8i8, 2},
+      {ISD::ADD, MVT::v16i8, 2},
+      {ISD::ADD, MVT::v4i16, 2},
+      {ISD::ADD, MVT::v8i16, 2},
+      {ISD::ADD, MVT::v2i32, 2},
+      {ISD::ADD, MVT::v4i32, 2},
+      {ISD::ADD, MVT::v2i64, 2},
+      {ISD::OR, MVT::v8i8, 5},  // fmov + orr_lsr + orr_lsr + lsr + orr
+      {ISD::OR, MVT::v16i8, 7}, // ext + orr + same as v8i8
+      {ISD::OR, MVT::v4i16, 4}, // fmov + orr_lsr + lsr + orr
+      {ISD::OR, MVT::v8i16, 6}, // ext + orr + same as v4i16
+      {ISD::OR, MVT::v2i32, 3}, // fmov + lsr + orr
+      {ISD::OR, MVT::v4i32, 5}, // ext + orr + same as v2i32
+      {ISD::OR, MVT::v2i64, 3}, // ext + orr + fmov
+      {ISD::XOR, MVT::v8i8, 5}, // Same as above for or...
+      {ISD::XOR, MVT::v16i8, 7},
+      {ISD::XOR, MVT::v4i16, 4},
+      {ISD::XOR, MVT::v8i16, 6},
+      {ISD::XOR, MVT::v2i32, 3},
+      {ISD::XOR, MVT::v4i32, 5},
+      {ISD::XOR, MVT::v2i64, 3},
+      {ISD::AND, MVT::v8i8, 5}, // Same as above for or...
+      {ISD::AND, MVT::v16i8, 7},
+      {ISD::AND, MVT::v4i16, 4},
+      {ISD::AND, MVT::v8i16, 6},
+      {ISD::AND, MVT::v2i32, 3},
+      {ISD::AND, MVT::v4i32, 5},
+      {ISD::AND, MVT::v2i64, 3},
   };
   switch (ISD) {
   default:
