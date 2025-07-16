@@ -16,11 +16,7 @@
 
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
 #include "llvm/MC/DXContainerRootSignature.h"
-#include "llvm/Support/Error.h"
-#include <cstdint>
-#include <unordered_map>
 
 namespace llvm {
 class LLVMContext;

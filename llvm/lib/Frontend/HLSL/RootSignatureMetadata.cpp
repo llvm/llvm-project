@@ -13,13 +13,9 @@
 
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include <cstdint>
-#include <utility>
 
 namespace llvm {
 namespace hlsl {
