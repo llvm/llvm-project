@@ -224,8 +224,7 @@ public:
 
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;
 
-  // Return STI for fragments of type MCRelaxableFragment and MCFragment
-  // with hasInstructions() == true.
+  // Return STI for fragments with hasInstructions() == true.
   static const MCSubtargetInfo *getSubtargetInfo(const MCFragment &F);
 };
 
