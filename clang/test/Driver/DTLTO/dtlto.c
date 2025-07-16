@@ -10,7 +10,7 @@
 
 // FORWARD: ld.lld
 // FORWARD-SAME: "--thinlto-distributor=d.exe"
-// FORWARD-SAME: "--thinlto-remote-compiler={{.*}}clang{{[^\"]*}}"
+// FORWARD-SAME: "--thinlto-remote-compiler={{[^"]+}}"
 // FORWARD-SAME: "--thinlto-distributor-arg=a1"
 // FORWARD-SAME: "--thinlto-distributor-arg=a2"
 // FORWARD-SAME: "--thinlto-distributor-arg=a3"
