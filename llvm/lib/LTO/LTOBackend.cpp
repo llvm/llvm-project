@@ -236,11 +236,11 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   return TM;
 }
 
-static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
-                           unsigned OptLevel, bool IsThinLTO,
+static void runNewPMPasses(const Config &Conf,
+                           IntrusiveRefCntPtr<vfs::FileSystem> FS, Module &Mod,
+                           TargetMachine *TM, unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
                            const ModuleSummaryIndex *ImportSummary) {
-  auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
@@ -390,9 +390,10 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   // analysis in the case of a ThinLTO build where this might be an empty
   // regular LTO combined module, with a large combined index from ThinLTO.
   if (!isEmptyModule(Mod)) {
+    auto FS = vfs::getRealFileSystem();
     // FIXME: Plumb the combined index into the new pass manager.
-    runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                   ImportSummary);
+    runNewPMPasses(Conf, std::move(FS), Mod, TM, Conf.OptLevel, IsThinLTO,
+                   ExportSummary, ImportSummary);
   }
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
