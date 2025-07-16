@@ -448,290 +448,107 @@ static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
   return empty_type;
 }
 
-static CompilerType DoIntegralPromotion(CompilerType from,
-                                        std::shared_ptr<StackFrame> ctx) {
-  if (!from.IsInteger() && !from.IsUnscopedEnumerationType())
-    return from;
-
-  if (!from.IsPromotableIntegerType())
-    return from;
-
-  if (from.IsUnscopedEnumerationType())
-    return DoIntegralPromotion(from.GetEnumerationIntegerType(), ctx);
-  lldb::BasicType builtin_type =
-      from.GetCanonicalType().GetBasicTypeEnumeration();
-  lldb::TypeSystemSP type_system = from.GetTypeSystem().GetSharedPointer();
-
-  uint64_t from_size = 0;
-  if (builtin_type == lldb::eBasicTypeWChar ||
-      builtin_type == lldb::eBasicTypeSignedWChar ||
-      builtin_type == lldb::eBasicTypeUnsignedWChar ||
-      builtin_type == lldb::eBasicTypeChar16 ||
-      builtin_type == lldb::eBasicTypeChar32) {
-    // Find the type that can hold the entire range of values for our type.
-    bool is_signed = from.IsSigned();
-    if (auto temp = from.GetByteSize(ctx.get()))
-      from_size = *temp;
-
-    CompilerType promote_types[] = {
-        GetBasicType(type_system, lldb::eBasicTypeInt),
-        GetBasicType(type_system, lldb::eBasicTypeUnsignedInt),
-        GetBasicType(type_system, lldb::eBasicTypeLong),
-        GetBasicType(type_system, lldb::eBasicTypeUnsignedLong),
-        GetBasicType(type_system, lldb::eBasicTypeLongLong),
-        GetBasicType(type_system, lldb::eBasicTypeUnsignedLongLong),
-    };
-    for (auto &type : promote_types) {
-      uint64_t byte_size = 0;
-      if (auto temp = type.GetByteSize(ctx.get()))
-        byte_size = *temp;
-      if (from_size < byte_size ||
-          (from_size == byte_size &&
-           is_signed == (bool)(type.GetTypeInfo() & lldb::eTypeIsSigned))) {
-        return type;
-      }
-    }
-
-    llvm_unreachable("char type should fit into long long");
-  }
-
-  // Here we can promote only to "int" or "unsigned int".
-  CompilerType int_type = GetBasicType(type_system, lldb::eBasicTypeInt);
-  uint64_t int_byte_size = 0;
-  if (auto temp = int_type.GetByteSize(ctx.get()))
-    int_byte_size = *temp;
-
-  // Signed integer types can be safely promoted to "int".
-  if (from.IsSigned()) {
-    return int_type;
-  }
-  // Unsigned integer types are promoted to "unsigned int" if "int" cannot hold
-  // their entire value range.
-  return (from_size == int_byte_size)
-             ? GetBasicType(type_system, lldb::eBasicTypeUnsignedInt)
-             : int_type;
-}
-
-static lldb::ValueObjectSP UnaryConversion(lldb::ValueObjectSP valobj,
-                                           std::shared_ptr<StackFrame> ctx) {
-  // Perform usual conversions for unary operators.
-  CompilerType in_type = valobj->GetCompilerType();
-  CompilerType result_type;
-
-  if (valobj->GetCompilerType().IsInteger() ||
-      valobj->GetCompilerType().IsUnscopedEnumerationType()) {
-    CompilerType promoted_type =
-        DoIntegralPromotion(valobj->GetCompilerType(), ctx);
-    if (!promoted_type.CompareTypes(valobj->GetCompilerType()))
-      return valobj->CastToBasicType(promoted_type);
-  }
-
-  return valobj;
-}
-
-static size_t ConversionRank(CompilerType type) {
-  // Get integer conversion rank
-  // https://eel.is/c++draft/conv.rank
-  switch (type.GetCanonicalType().GetBasicTypeEnumeration()) {
-  case lldb::eBasicTypeBool:
-    return 1;
-  case lldb::eBasicTypeChar:
-  case lldb::eBasicTypeSignedChar:
-  case lldb::eBasicTypeUnsignedChar:
-    return 2;
-  case lldb::eBasicTypeShort:
-  case lldb::eBasicTypeUnsignedShort:
-    return 3;
-  case lldb::eBasicTypeInt:
-  case lldb::eBasicTypeUnsignedInt:
-    return 4;
-  case lldb::eBasicTypeLong:
-  case lldb::eBasicTypeUnsignedLong:
-    return 5;
-  case lldb::eBasicTypeLongLong:
-  case lldb::eBasicTypeUnsignedLongLong:
-    return 6;
-
-    // The ranks of char16_t, char32_t, and wchar_t are equal to the
-    // ranks of their underlying types.
-  case lldb::eBasicTypeWChar:
-  case lldb::eBasicTypeSignedWChar:
-  case lldb::eBasicTypeUnsignedWChar:
-    return 3;
-  case lldb::eBasicTypeChar16:
-    return 3;
-  case lldb::eBasicTypeChar32:
-    return 4;
-
-  default:
-    break;
-  }
-  return 0;
-}
-
-static lldb::BasicType BasicTypeToUnsigned(lldb::BasicType basic_type) {
-  switch (basic_type) {
-  case lldb::eBasicTypeInt:
-    return lldb::eBasicTypeUnsignedInt;
-  case lldb::eBasicTypeLong:
-    return lldb::eBasicTypeUnsignedLong;
-  case lldb::eBasicTypeLongLong:
-    return lldb::eBasicTypeUnsignedLongLong;
-  default:
-    return basic_type;
-  }
-}
-
-static void PerformIntegerConversions(std::shared_ptr<StackFrame> ctx,
-                                      lldb::ValueObjectSP &lhs,
-                                      lldb::ValueObjectSP &rhs,
-                                      bool convert_lhs, bool convert_rhs) {
-  CompilerType l_type = lhs->GetCompilerType();
-  CompilerType r_type = rhs->GetCompilerType();
-  if (r_type.IsSigned() && !l_type.IsSigned()) {
-    uint64_t l_size = 0;
-    uint64_t r_size = 0;
-    if (auto temp = l_type.GetByteSize(ctx.get()))
-      l_size = *temp;
-    ;
-    if (auto temp = r_type.GetByteSize(ctx.get()))
-      r_size = *temp;
-    if (l_size <= r_size) {
-      if (r_size == l_size) {
-        lldb::TypeSystemSP type_system =
-            l_type.GetTypeSystem().GetSharedPointer();
-        auto r_type_unsigned = GetBasicType(
-            type_system,
-            BasicTypeToUnsigned(
-                r_type.GetCanonicalType().GetBasicTypeEnumeration()));
-        if (convert_rhs)
-          rhs = rhs->CastToBasicType(r_type_unsigned);
-      }
-    }
-  }
-  if (convert_lhs)
-    lhs = lhs->CastToBasicType(rhs->GetCompilerType());
-}
-
-static CompilerType ArithmeticConversions(lldb::ValueObjectSP &lhs,
-                                          lldb::ValueObjectSP &rhs,
-                                          std::shared_ptr<StackFrame> ctx) {
-  // Apply unary conversion (e.g. intergal promotion) for both operands.
-  lhs = UnaryConversion(lhs, ctx);
-  rhs = UnaryConversion(rhs, ctx);
-
-  CompilerType lhs_type = lhs->GetCompilerType();
-  CompilerType rhs_type = rhs->GetCompilerType();
-
-  if (lhs_type.CompareTypes(rhs_type))
-    return lhs_type;
-
-  // If either of the operands is not arithmetic (e.g. pointer), we're done.
-  if (!lhs_type.IsScalarType() || !rhs_type.IsScalarType()) {
-    CompilerType bad_type;
-    return bad_type;
-  }
-
-  // Removed floating point conversions
-  if (lhs_type.IsFloat() || rhs_type.IsFloat()) {
-    CompilerType bad_type;
-    return bad_type;
-  }
-
-  if (lhs_type.IsInteger() && rhs_type.IsInteger()) {
-    using Rank = std::tuple<size_t, bool>;
-    Rank l_rank = {ConversionRank(lhs_type), !lhs_type.IsSigned()};
-    Rank r_rank = {ConversionRank(rhs_type), !rhs_type.IsSigned()};
-
-    if (l_rank < r_rank) {
-      PerformIntegerConversions(ctx, lhs, rhs, true, true);
-    } else if (l_rank > r_rank) {
-      PerformIntegerConversions(ctx, rhs, lhs, true, true);
-    }
-  }
-
-  return rhs_type;
-}
-
-llvm::Error Interpreter::PrepareBinaryAddition(lldb::ValueObjectSP &lhs,
-                                               lldb::ValueObjectSP &rhs,
-                                               uint32_t location) {
-  // Operation '+' works for:
-  //
-  //  {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
-  //  {integer,unscoped_enum} <-> pointer
-  //  pointer <-> {integer,unscoped_enum}
-  auto orig_lhs_type = lhs->GetCompilerType();
-  auto orig_rhs_type = rhs->GetCompilerType();
-  auto result_type = ArithmeticConversions(lhs, rhs, m_exe_ctx_scope);
-
-  if (result_type.IsScalarType())
-    return llvm::Error::success();
-
-  // Removed pointer arithmetics
-  return llvm::make_error<DILDiagnosticError>(m_expr, "unimplemented",
-                                              location);
-}
-
-static lldb::ValueObjectSP EvaluateArithmeticOpInteger(lldb::TargetSP target,
-                                                       BinaryOpKind kind,
-                                                       lldb::ValueObjectSP lhs,
-                                                       lldb::ValueObjectSP rhs,
-                                                       CompilerType rtype) {
-  assert(lhs->GetCompilerType().IsInteger() &&
-         rhs->GetCompilerType().IsInteger() &&
-         "invalid ast: both operands must be integers");
-
-  auto wrap = [target, rtype](auto value) {
-    return ValueObject::CreateValueObjectFromAPInt(target, value, rtype,
-                                                   "result");
+static CompilerType GetIntCompilerTypeForSize(uint32_t size, bool is_signed,
+                                              lldb::TypeSystemSP type_system,
+                                              std::shared_ptr<StackFrame> ctx) {
+  lldb::BasicType promote_types[] = {
+      lldb::eBasicTypeChar,     lldb::eBasicTypeUnsignedChar,
+      lldb::eBasicTypeShort,    lldb::eBasicTypeUnsignedShort,
+      lldb::eBasicTypeInt,      lldb::eBasicTypeUnsignedInt,
+      lldb::eBasicTypeLong,     lldb::eBasicTypeUnsignedLong,
+      lldb::eBasicTypeLongLong, lldb::eBasicTypeUnsignedLongLong,
   };
-
-  llvm::Expected<llvm::APSInt> l_value = lhs->GetValueAsAPSInt();
-  llvm::Expected<llvm::APSInt> r_value = rhs->GetValueAsAPSInt();
-
-  if (l_value && r_value) {
-    llvm::APSInt l = *l_value;
-    llvm::APSInt r = *r_value;
-
-    switch (kind) {
-    case BinaryOpKind::Add:
-      return wrap(l + r);
-
-    default:
-      assert(false && "invalid ast: invalid arithmetic operation");
-      return lldb::ValueObjectSP();
+  for (auto &basic_type : promote_types) {
+    uint64_t byte_size = 0;
+    CompilerType type = GetBasicType(type_system, basic_type);
+    if (auto temp = type.GetByteSize(ctx.get()))
+      byte_size = *temp;
+    if (size < byte_size ||
+        (size == byte_size &&
+         is_signed == (bool)(type.GetTypeInfo() & lldb::eTypeIsSigned))) {
+      return type;
     }
-  } else {
+  }
+
+  llvm_unreachable("size could not fit into long long");
+  return CompilerType();
+}
+
+static lldb::ValueObjectSP
+CreateValueObjectFromScalar(Scalar scalar, lldb::TargetSP target,
+                            lldb::TypeSystemSP type_system,
+                            std::shared_ptr<StackFrame> ctx) {
+  switch (scalar.GetType()) {
+  case Scalar::e_int: {
+    llvm::APSInt apsint = scalar.GetAPSInt();
+    auto ret_type = GetIntCompilerTypeForSize(
+        scalar.GetByteSize(), scalar.IsSigned(), type_system, ctx);
+    return ValueObject::CreateValueObjectFromAPInt(target, apsint, ret_type,
+                                                   "result");
+  }
+  case Scalar::e_float: {
+    llvm::APFloat apfloat = scalar.GetAPFloat();
+    auto ret_type =
+        scalar.GetByteSize() <= 4
+            ? type_system->GetBasicTypeFromAST(lldb::eBasicTypeFloat)
+            : type_system->GetBasicTypeFromAST(lldb::eBasicTypeDouble);
+    return ValueObject::CreateValueObjectFromAPFloat(target, apfloat, ret_type,
+                                                     "result");
+  }
+  default:
     return lldb::ValueObjectSP();
   }
 }
 
-static lldb::ValueObjectSP EvaluateArithmeticOp(lldb::TargetSP target,
-                                                BinaryOpKind kind,
-                                                lldb::ValueObjectSP lhs,
-                                                lldb::ValueObjectSP rhs,
-                                                CompilerType rtype) {
-  assert((rtype.IsInteger() || rtype.IsFloat()) &&
-         "invalid ast: result type must either integer or floating point");
-
-  // Evaluate arithmetic operation for two integral values.
-  if (rtype.IsInteger()) {
-    return EvaluateArithmeticOpInteger(target, kind, lhs, rhs, rtype);
+static Scalar GetScalarFromValueObject(lldb::ValueObjectSP valobj,
+                                       std::shared_ptr<StackFrame> ctx) {
+  if (valobj->GetCompilerType().IsInteger()) {
+    llvm::Expected<llvm::APSInt> value = valobj->GetValueAsAPSInt();
+    if (value) {
+      auto type_size = valobj->GetCompilerType().GetBitSize(ctx.get());
+      if (type_size) {
+        llvm::APInt adjusted(*type_size, value->getExtValue(),
+                             value->isSigned());
+        return Scalar(adjusted);
+      }
+    }
+  } else {
+    llvm::Expected<llvm::APFloat> l_value = valobj->GetValueAsAPFloat();
+    if (l_value)
+      return Scalar(*l_value);
   }
-
-  // Removed floating point arithmetics
-
-  return lldb::ValueObjectSP();
+  return Scalar();
 }
 
-llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
-    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+static lldb::ValueObjectSP
+EvaluateArithmeticOp(lldb::TargetSP target, BinaryOpKind kind,
+                     lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                     std::shared_ptr<StackFrame> ctx) {
+  auto type_system = lhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+  Scalar l = GetScalarFromValueObject(lhs, ctx);
+  Scalar r = GetScalarFromValueObject(rhs, ctx);
+
+  if (!l.IsValid() || !r.IsValid())
+    return lldb::ValueObjectSP();
+
+  switch (kind) {
+  case BinaryOpKind::Add:
+    return CreateValueObjectFromScalar(l + r, target, type_system, ctx);
+
+  default:
+    assert(false && "invalid ast: invalid arithmetic operation");
+    return lldb::ValueObjectSP();
+  }
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateBinaryAddition(lldb::ValueObjectSP lhs,
+                                    lldb::ValueObjectSP rhs, uint32_t location,
+                                    std::shared_ptr<StackFrame> ctx) {
   // Addition of two arithmetic types.
   if (lhs->GetCompilerType().IsScalarType() &&
       rhs->GetCompilerType().IsScalarType()) {
-    return EvaluateArithmeticOp(m_target, BinaryOpKind::Add, lhs, rhs,
-                                lhs->GetCompilerType().GetCanonicalType());
+    return EvaluateArithmeticOp(m_target, BinaryOpKind::Add, lhs, rhs, ctx);
   }
 
   // Removed pointer arithmetics
@@ -792,9 +609,8 @@ Interpreter::Visit(const BinaryOpNode *node) {
 
   switch (node->GetKind()) {
   case BinaryOpKind::Add:
-    if (auto err = PrepareBinaryAddition(lhs, rhs, node->GetLocation()))
-      return err;
-    return EvaluateBinaryAddition(lhs, rhs, node->GetLocation());
+    return EvaluateBinaryAddition(lhs, rhs, node->GetLocation(),
+                                  m_exe_ctx_scope);
 
     // Other ops
 

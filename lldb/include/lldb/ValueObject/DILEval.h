@@ -62,13 +62,9 @@ private:
   ConvertValueObjectToTypeSystem(lldb::ValueObjectSP valobj,
                                  lldb::TypeSystemSP type_system);
 
-  llvm::Error PrepareBinaryAddition(lldb::ValueObjectSP &lhs,
-                                    lldb::ValueObjectSP &rhs,
-                                    uint32_t location);
-
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
-                         uint32_t location);
+                         uint32_t location, std::shared_ptr<StackFrame> ctx);
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;
