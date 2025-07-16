@@ -23,6 +23,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
@@ -739,6 +740,31 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // It is used to handle the clobber register for builtin setjmp.
   case SystemZ::EH_SjLj_Setup:
     return;
+
+  case SystemZ::LARL:
+  case SystemZ::LGRL: {
+    // If "-mstackprotector-guard-record" was supplied on the command line,
+    // we need special handling for LARL/LGRL.
+    if (MF->getFunction().hasFnAttribute("mstackprotector-guard-record")) {
+      // Obtain the name of the stack guard, and determine if that
+      // is what we are loading here.
+      const MachineOperand &Op = MI->getOperand(1);
+      if (Op.isGlobal() && (Op.getGlobal()->getName() == "__stack_chk_guard")) {
+        // If so, drop into the __stack_protector_loc section and record
+        // this locaytion.
+        MCSymbol *Sym = OutContext.createTempSymbol();
+        OutStreamer->pushSection();
+        OutStreamer->switchSection(OutContext.getELFSection(
+            "__stack_protector_loc", ELF::SHT_PROGBITS, ELF::SHF_ALLOC));
+        OutStreamer->emitSymbolValue(Sym, getDataLayout().getPointerSize());
+        OutStreamer->popSection();
+        OutStreamer->emitLabel(Sym);
+      }
+    }
+    // Otherwise, keep the MI as it is.
+    Lower.lower(MI, LoweredMI);
+    break;
+  }
 
   default:
     Lower.lower(MI, LoweredMI);

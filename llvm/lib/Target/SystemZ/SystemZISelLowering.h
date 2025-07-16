@@ -797,6 +797,7 @@ private:
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSETCC(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineICMP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineShiftToMulAddHigh(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -851,6 +852,8 @@ private:
                                          unsigned Opcode) const;
   MachineBasicBlock *emitProbedAlloca(MachineInstr &MI,
                                       MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitMoveStackGuard(MachineInstr &MI, MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitCompareStackGuard(MachineInstr &MI, MachineBasicBlock *MBB) const;
 
   SDValue getBackchainAddress(SDValue SP, SelectionDAG &DAG) const;
 
