@@ -214,6 +214,7 @@ protected:
   bool FlatInstOffsets = false;
   bool FlatGlobalInsts = false;
   bool FlatScratchInsts = false;
+  bool FlatGVSMode = false;
   bool ScalarFlatScratchInsts = false;
   bool HasArchitectedFlatScratch = false;
   bool EnableFlatScratch = false;
@@ -1159,6 +1160,8 @@ public:
   bool hasMovB64() const { return GFX940Insts || GFX1250Insts; }
 
   bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
+
+  bool hasFlatGVSMode() const { return FlatGVSMode; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
