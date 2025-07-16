@@ -671,8 +671,8 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   }
 
   if (PRFX) {
-    finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
     transferImpOps(MI, PRFX, DOP);
+    finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
   } else
     transferImpOps(MI, DOP, DOP);
 
