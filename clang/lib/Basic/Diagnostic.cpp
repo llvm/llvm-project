@@ -659,19 +659,20 @@ void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
   Level DiagLevel = storedDiag.getLevel();
   Diagnostic Info(this, storedDiag.getLocation(), storedDiag.getID(),
                   DiagStorage, storedDiag.getMessage());
-  Report(DiagLevel, Info);
+  Report(DiagLevel, std::move(Info));
 }
 
-void DiagnosticsEngine::Report(Level DiagLevel, Diagnostic &Info) {
+void DiagnosticsEngine::Report(Level DiagLevel, Diagnostic Info) {
   assert(DiagLevel != Ignored && "Cannot emit ignored diagnostics!");
 
+  // If a nesting level was specified at creation time, do not do anything
+  // here. This can happen if a diagnostic is stored to be emitted later;
+  // in most cases, though, we want to compute the nesting level automatically.
   if (!getEnableNesting()) {
     Info.setNestingLevel(0);
   } else if (Info.shouldUseDefaultNestingLevel()) {
     Info.setNestingLevel(DiagLevel == Note ? GlobalNestingLevel + 1
                                            : GlobalNestingLevel);
-  } else {
-    Info.setNestingLevel(Info.getNestingLevel() + GlobalNestingLevel);
   }
 
   Client->HandleDiagnostic(DiagLevel, Info);
@@ -754,7 +755,7 @@ bool DiagnosticsEngine::ProcessDiag(const DiagnosticBuilder &DiagBuilder) {
     FatalErrorOccurred = true;
 
   // Finally, report it.
-  Report(DiagLevel, Info);
+  Report(DiagLevel, std::move(Info));
   return true;
 }
 
@@ -772,7 +773,7 @@ bool DiagnosticsEngine::EmitDiagnostic(const DiagnosticBuilder &DB,
     // Emit the diagnostic regardless of suppression level.
     Emitted = DiagLevel != Ignored;
     if (Emitted)
-      Report(DiagLevel, Info);
+      Report(DiagLevel, std::move(Info));
   } else {
     // Process the diagnostic, sending the accumulated information to the
     // DiagnosticConsumer.

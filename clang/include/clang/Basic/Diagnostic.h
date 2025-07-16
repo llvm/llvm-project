@@ -1070,7 +1070,7 @@ private:
   bool ProcessDiag(const DiagnosticBuilder &DiagBuilder);
 
   /// Forward a diagnostic to the DiagnosticConsumer.
-  void Report(Level DiagLevel, const Diagnostic &Info);
+  void Report(Level DiagLevel, Diagnostic Info);
 
   /// @name Diagnostic Emission
   /// @{
@@ -1699,7 +1699,9 @@ public:
 
   /// Whether the nesting level of this diagnostic should be replaced
   /// with its default value (e.g. 1 for notes).
-  bool shouldUseDefaultNestingLevel() const { return !DiagStorage.NestingLevel; }
+  bool shouldUseDefaultNestingLevel() const {
+    return !DiagStorage.NestingLevel;
+  }
 
   /// Format this diagnostic into a string, substituting the
   /// formal arguments into the %0 slots.
