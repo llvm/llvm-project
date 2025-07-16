@@ -357,3 +357,36 @@ finally:
   %val3 = phi <8 x i32> [ %val1, %then ], [ %val2, %else ]
   ret <8 x i32> %val3
 }
+
+define <8 x i32> @shuffle_v4_v8i32_cond_r1_4(ptr addrspace(1) nocapture readonly %arg0, i1 %cond) local_unnamed_addr {
+; CHECK-LABEL: define <8 x i32> @shuffle_v4_v8i32_cond_r1_4(
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG0:%.*]], i1 [[COND:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[VAL0:%.*]] = load <4 x i32>, ptr addrspace(1) [[ARG0]], align 32
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[VAL1:%.*]] = shufflevector <4 x i32> [[VAL0]], <4 x i32> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    br label %[[FINALLY:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[VAL2:%.*]] = shufflevector <4 x i32> [[VAL0]], <4 x i32> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    br label %[[FINALLY]]
+; CHECK:       [[FINALLY]]:
+; CHECK-NEXT:    [[VAL3:%.*]] = phi <8 x i32> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
+; CHECK-NEXT:    ret <8 x i32> [[VAL3]]
+;
+entry:
+  %val0 = load <4 x i32>, ptr addrspace(1) %arg0, align 32
+  br i1 %cond, label %then, label %else
+
+then:
+  %val1 = shufflevector <4 x i32> %val0, <4 x i32> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2>
+  br label %finally
+
+else:
+  %val2 = shufflevector <4 x i32> %val0, <4 x i32> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4>
+  br label %finally
+
+finally:
+  %val3 = phi <8 x i32> [ %val1, %then ], [ %val2, %else ]
+  ret <8 x i32> %val3
+}

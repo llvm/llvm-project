@@ -3767,21 +3767,13 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
       using UseEntry = std::pair<ShuffleVectorInst *, std::vector<int>>;
       SmallVector<UseEntry, 4u> NewUses;
-      unsigned const SizeDiff = OldNumElements - NewNumElements;
 
       for (llvm::Use &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
         ArrayRef<int> OldMask = Shuffle->getShuffleMask();
 
         // Create entry for new use.
-        NewUses.push_back({Shuffle, {}});
-        std::vector<int> &NewMask = NewUses.back().second;
-        for (int Index : OldMask) {
-          assert(Index <= Indices->second);
-          NewMask.push_back(Index >= static_cast<int>(OldNumElements)
-                                ? Index - SizeDiff
-                                : Index);
-        }
+        NewUses.push_back({Shuffle, OldMask});
 
         // Update costs.
         OldCost +=
@@ -3789,7 +3781,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
                                OldLoadTy, OldMask, CostKind);
         NewCost +=
             TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Shuffle->getType(),
-                               NewLoadTy, NewMask, CostKind);
+                               NewLoadTy, OldMask, CostKind);
       }
 
       LLVM_DEBUG(
