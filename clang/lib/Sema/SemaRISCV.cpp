@@ -1648,10 +1648,10 @@ bool SemaRISCV::checkTargetVersionAttr(StringRef Str, SourceLocation Loc) {
   bool HasDefault = false;
   bool DuplicateAttr = false;
   for (StringRef AttrStr : AttrStrs) {
+    AttrStr = AttrStr.trim();
     // Only support arch=+ext,... syntax.
     if (AttrStr.starts_with("arch=+")) {
-      if (HasArch)
-        DuplicateAttr = true;
+      DuplicateAttr = HasArch;
       HasArch = true;
       ParsedTargetAttr TargetAttr =
           getASTContext().getTargetInfo().parseTargetAttr(AttrStr);
@@ -1662,13 +1662,11 @@ bool SemaRISCV::checkTargetVersionAttr(StringRef Str, SourceLocation Loc) {
           }))
         return Diag(Loc, diag::warn_unsupported_target_attribute)
                << Unsupported << None << AttrStr << TargetVersion;
-    } else if (AttrStr.starts_with("default")) {
-      if (HasDefault)
-        DuplicateAttr = true;
+    } else if (AttrStr == "default") {
+      DuplicateAttr = HasDefault;
       HasDefault = true;
     } else if (AttrStr.consume_front("priority=")) {
-      if (HasPriority)
-        DuplicateAttr = true;
+      DuplicateAttr = HasPriority;
       HasPriority = true;
       unsigned Digit;
       if (AttrStr.getAsInteger(0, Digit))
@@ -1705,6 +1703,7 @@ bool SemaRISCV::checkTargetClonesAttr(
     bool IsPriority = false;
     bool IsDefault = false;
     for (StringRef AttrStr : AttrStrs) {
+      AttrStr = AttrStr.trim();
       // Only support arch=+ext,... syntax.
       if (AttrStr.starts_with("arch=+")) {
         ParsedTargetAttr TargetAttr =
@@ -1716,9 +1715,7 @@ bool SemaRISCV::checkTargetClonesAttr(
             }))
           return Diag(Loc, diag::warn_unsupported_target_attribute)
                  << Unsupported << None << Str << TargetClones;
-      } else if (AttrStr.starts_with("default")) {
-        if (HasDefault)
-          Diag(Loc, diag::warn_target_clone_duplicate_options);
+      } else if (AttrStr == "default") {
         IsDefault = true;
         HasDefault = true;
       } else if (AttrStr.consume_front("priority=")) {
