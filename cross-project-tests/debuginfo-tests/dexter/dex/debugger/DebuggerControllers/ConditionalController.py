@@ -181,7 +181,7 @@ class ConditionalController(DebuggerControllerBase):
                     )
                     timed_out = True
 
-            if timed_out:
+            if timed_out or self.debugger.is_finished:
                 break
 
             step_info = self.debugger.get_step_info(self._watches, self._step_index)
