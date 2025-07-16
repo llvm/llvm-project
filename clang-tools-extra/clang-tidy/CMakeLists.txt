@@ -66,6 +66,7 @@ add_subdirectory(linuxkernel)
 add_subdirectory(llvm)
 add_subdirectory(llvmlibc)
 add_subdirectory(misc)
+add_subdirectory(mlir)
 add_subdirectory(modernize)
 if(CLANG_TIDY_ENABLE_STATIC_ANALYZER)
   add_subdirectory(mpi)
@@ -93,6 +94,7 @@ set(ALL_CLANG_TIDY_CHECKS
   clangTidyLLVMModule
   clangTidyLLVMLibcModule
   clangTidyMiscModule
+  clangTidyMLIRModule
   clangTidyModernizeModule
   clangTidyObjCModule
   clangTidyOpenMPModule
