@@ -634,24 +634,18 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   if (!LastFactor)
     return false;
 
+  Value *Mask = nullptr;
   if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadedVal)) {
     if (VPLoad->getIntrinsicID() != Intrinsic::vp_load)
       return false;
     // Check mask operand. Handle both all-true/false and interleaved mask.
     Value *WideMask = VPLoad->getOperand(1);
-    Value *Mask =
-        getMask(WideMask, Factor, cast<VectorType>(LastFactor->getType()));
+    Mask = getMask(WideMask, Factor, cast<VectorType>(LastFactor->getType()));
     if (!Mask)
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found a vp.load with deinterleave intrinsic "
                       << *DI << " and factor = " << Factor << "\n");
-
-    // Since lowerInterleaveLoad expects Shuffles and LoadInst, use special
-    // TLI function to emit target-specific interleaved instruction.
-    if (!TLI->lowerInterleavedVPLoad(VPLoad, Mask, DeinterleaveValues))
-      return false;
-
   } else {
     auto *LI = cast<LoadInst>(LoadedVal);
     if (!LI->isSimple())
@@ -659,11 +653,12 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 
     LLVM_DEBUG(dbgs() << "IA: Found a load with deinterleave intrinsic " << *DI
                       << " and factor = " << Factor << "\n");
-
-    // Try and match this with target specific intrinsics.
-    if (!TLI->lowerDeinterleaveIntrinsicToLoad(LI, DeinterleaveValues))
-      return false;
   }
+
+  // Try and match this with target specific intrinsics.
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(cast<Instruction>(LoadedVal), Mask,
+                                             DeinterleaveValues))
+    return false;
 
   for (Value *V : DeinterleaveValues)
     if (V)
