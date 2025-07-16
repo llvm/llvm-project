@@ -963,6 +963,7 @@ Bug Fixes to C++ Support
 - Fix a crash with NTTP when instantiating local class.
 - Fixed a crash involving list-initialization of an empty class with a
   non-empty initializer list. (#GH147949)
+- Fixed spurious diagnoses of certain nested lambda expressions. (#GH149121)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
