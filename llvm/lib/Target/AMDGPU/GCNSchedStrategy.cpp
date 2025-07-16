@@ -68,6 +68,13 @@ static cl::opt<bool> GCNTrackers(
     cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
     cl::init(false));
 
+static cl::opt<bool> RematCombineVGPRSavings(
+    "amdgpu-schedule-combine-vgpr-savings", cl::Hidden,
+    cl::desc("Combine ArchVGPR/AGPR savings when computing occupancy estimates "
+             "during rematerialization stage. Set to false for generally more "
+             "aggressive rematerialization."),
+    cl::init(true));
+
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
@@ -1115,10 +1122,14 @@ bool PreRARematStage::initGCNSchedStage() {
   rematerialize();
   if (GCNTrackers)
     DAG.RegionLiveOuts.buildLiveRegMap();
-  REMAT_DEBUG(
-      dbgs() << "Retrying function scheduling with new min. occupancy of "
-             << AchievedOcc << " from rematerializing (original was "
-             << DAG.MinOccupancy << ", target was " << TargetOcc << ")\n");
+  REMAT_DEBUG({
+    dbgs() << "Retrying function scheduling with new min. occupancy of "
+           << AchievedOcc << " from rematerializing";
+    if (TargetOcc)
+      dbgs() << ", target was " << *TargetOcc;
+    dbgs() << '\n';
+  });
+
   if (AchievedOcc > DAG.MinOccupancy) {
     DAG.MinOccupancy = AchievedOcc;
     SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
@@ -1539,9 +1550,19 @@ bool ClusteredLowOccStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool PreRARematStage::shouldRevertScheduling(unsigned WavesAfter) {
-  return GCNSchedStage::shouldRevertScheduling(WavesAfter) ||
-         mayCauseSpilling(WavesAfter) ||
-         (IncreaseOccupancy && WavesAfter < TargetOcc);
+  if (mayCauseSpilling(WavesAfter))
+    return true;
+  if (!TargetOcc) {
+    // Never revert when trying to reduce spilling and RP did not increase in
+    // the region.
+    return false;
+  }
+
+  // When trying to increase occupancy, only revert if we failed to achieve the
+  // target occupancy. Compute occupancy using the RP target instead of the
+  // default RP logic to be consistent with the rest of the stage.
+  return PressureAfter.getOccupancy(ST, DAG.MFI.getDynamicVGPRBlockSize(),
+                                    RematCombineVGPRSavings) < *TargetOcc;
 }
 
 bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
@@ -1687,78 +1708,79 @@ bool PreRARematStage::allUsesAvailableAt(const MachineInstr *InstToRemat,
 }
 
 bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
-  REMAT_DEBUG({
-    dbgs() << "Collecting rematerializable instructions in ";
-    MF.getFunction().printAsOperand(dbgs(), false);
-    dbgs() << '\n';
-  });
+  const Function &F = MF.getFunction();
 
   // Maps optimizable regions (i.e., regions at minimum and register-limited
   // occupancy, or regions with spilling) to the target RP we would like to
   // reach.
   DenseMap<unsigned, GCNRPTarget> OptRegions;
-  const Function &F = MF.getFunction();
-  unsigned DynamicVGPRBlockSize =
-      MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
 
-  std::pair<unsigned, unsigned> WavesPerEU = ST.getWavesPerEU(F);
+  // Define "spilling targets" for spilling regions. This takes into account any
+  // SGPR/VGPR usage restriction requested through the "amdgpu-num-sgpr" /
+  // "amdgpu-num-vgpr" attributes beyond the limits imposed by the minimum
+  // number of waves per EU. Usage above those restrictions is considered like
+  // spill.
   const unsigned MaxSGPRsNoSpill = ST.getMaxNumSGPRs(F);
   const unsigned MaxVGPRsNoSpill = ST.getMaxNumVGPRs(F);
-  const unsigned MaxSGPRsIncOcc =
-      ST.getMaxNumSGPRs(DAG.MinOccupancy + 1, false);
-  const unsigned MaxVGPRsIncOcc =
-      ST.getMaxNumVGPRs(DAG.MinOccupancy + 1, DynamicVGPRBlockSize);
-  IncreaseOccupancy = WavesPerEU.second > DAG.MinOccupancy;
-
-  // Collect optimizable regions. If there is spilling in any region we will
-  // just try to reduce spilling. Otherwise we will try to increase occupancy by
-  // one in the whole function.
+  unsigned MinOcc = MFI.getMaxWavesPerEU();
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
-    GCNRegPressure &RP = DAG.Pressure[I];
-    // We allow ArchVGPR or AGPR savings to count as savings of the other kind
-    // of VGPR only when trying to eliminate spilling. We cannot do this when
-    // trying to increase occupancy since VGPR class swaps only occur later in
-    // the register allocator i.e., the scheduler will not be able to reason
-    // about these savings and will not report an increase in the achievable
-    // occupancy, triggering rollbacks.
+    const GCNRegPressure &RP = DAG.Pressure[I];
     GCNRPTarget Target(MaxSGPRsNoSpill, MaxVGPRsNoSpill, MF, RP,
-                       /*CombineVGPRSavings=*/true);
-    if (!Target.satisfied() && IncreaseOccupancy) {
-      // There is spilling in the region and we were so far trying to increase
-      // occupancy. Strop trying that and focus on reducing spilling.
-      IncreaseOccupancy = false;
-      OptRegions.clear();
-    } else if (IncreaseOccupancy) {
-      // There is no spilling in the region, try to increase occupancy.
-      Target = GCNRPTarget(MaxSGPRsIncOcc, MaxVGPRsIncOcc, MF, RP,
-                           /*CombineVGPRSavings=*/false);
-    }
+                       /*CombineVGPRSavings=*/RematCombineVGPRSavings);
+    MinOcc = std::min(MinOcc, Target.getOccupancy());
     if (!Target.satisfied())
       OptRegions.insert({I, Target});
   }
+
+  if (!OptRegions.empty() || MinOcc >= MFI.getMaxWavesPerEU()) {
+    // There is spilling in at least one region, or we are already at maximum
+    // occupancy.
+    TargetOcc = std::nullopt;
+  } else {
+    // There is no spilling and room to improve occupancy; set up "increased
+    // occupancy" targets for all regions. We further restrict the SGPR/VGPR
+    // limits for increasing occupancy by the "spilling limits" since the latter
+    // may end up smaller due to "amdgpu-num-sgpr" / "amdgpu-num-vgpr"
+    // attributes.
+    TargetOcc = MinOcc + 1;
+
+    unsigned DynamicVGPRBlockSize =
+        MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+    const unsigned MaxSGPRsIncOcc =
+        std::min(MaxSGPRsNoSpill, ST.getMaxNumSGPRs(*TargetOcc, false));
+    const unsigned MaxVGPRsIncOcc = std::min(
+        MaxVGPRsNoSpill, ST.getMaxNumVGPRs(*TargetOcc, DynamicVGPRBlockSize));
+    for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
+      const GCNRegPressure &RP = DAG.Pressure[I];
+      GCNRPTarget Target(MaxSGPRsIncOcc, MaxVGPRsIncOcc, MF, RP,
+                         /*CombineVGPRSavings=*/RematCombineVGPRSavings);
+      if (!Target.satisfied())
+        OptRegions.insert({I, Target});
+    }
+    assert(!OptRegions.empty() && "there should be at least one target region");
+  }
+
+  REMAT_DEBUG({
+    dbgs() << "Analyzing ";
+    MF.getFunction().printAsOperand(dbgs(), false);
+    dbgs() << ": ";
+    if (OptRegions.empty()) {
+      LLVM_DEBUG(dbgs() << "no objective to achieve, occupancy is maximal at "
+                        << MFI.getMaxWavesPerEU() << "\n");
+    } else if (!TargetOcc) {
+      LLVM_DEBUG(dbgs() << "reduce spilling (minimum target occupancy is "
+                        << MFI.getMinWavesPerEU() << ")\n");
+    } else {
+      LLVM_DEBUG(dbgs() << "increase occupancy from " << MinOcc << " to "
+                        << TargetOcc << '\n');
+    }
+    for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
+      if (auto OptIt = OptRegions.find(I); OptIt != OptRegions.end())
+        REMAT_DEBUG(dbgs() << "  [" << I << "] " << OptIt->getSecond() << '\n');
+    }
+  });
   if (OptRegions.empty())
     return false;
-
-#ifndef NDEBUG
-  if (IncreaseOccupancy) {
-    REMAT_DEBUG(dbgs() << "Occupancy minimal (" << DAG.MinOccupancy
-                       << ") in regions:\n");
-  } else {
-    REMAT_DEBUG(dbgs() << "Spilling w.r.t. minimum target occupancy ("
-                       << WavesPerEU.first << ") in regions:\n");
-  }
-  for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
-    if (auto OptIt = OptRegions.find(I); OptIt != OptRegions.end())
-      REMAT_DEBUG(dbgs() << "  [" << I << "] " << OptIt->getSecond() << '\n');
-  }
-#endif
-
-  // When we are reducing spilling, the target is the minimum target number of
-  // waves/EU determined by the subtarget. In cases where either one of
-  // "amdgpu-num-sgpr" or "amdgpu-num-vgpr" are set on the function, the current
-  // minimum region occupancy may be higher than the latter.
-  TargetOcc = IncreaseOccupancy ? DAG.MinOccupancy + 1
-                                : std::max(DAG.MinOccupancy, WavesPerEU.first);
 
   // Accounts for a reduction in RP in an optimizable region. Returns whether we
   // estimate that we have identified enough rematerialization opportunities to
@@ -1767,10 +1789,10 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   auto ReduceRPInRegion = [&](auto OptIt, Register Reg, LaneBitmask Mask,
                               bool &Progress) -> bool {
     GCNRPTarget &Target = OptIt->getSecond();
-    if (!Target.isSaveBeneficial(Reg, DAG.MRI))
+    if (!Target.isSaveBeneficial(Reg))
       return false;
     Progress = true;
-    Target.saveReg(Reg, Mask, DAG.MRI);
+    Target.saveReg(Reg, Mask);
     if (Target.satisfied())
       OptRegions.erase(OptIt->getFirst());
     return OptRegions.empty();
@@ -1876,7 +1898,7 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
     }
   }
 
-  if (IncreaseOccupancy) {
+  if (TargetOcc) {
     // We were trying to increase occupancy but failed, abort the stage.
     REMAT_DEBUG(dbgs() << "Cannot increase occupancy\n");
     Rematerializations.clear();
@@ -1979,7 +2001,7 @@ void PreRARematStage::rematerialize() {
   // All regions impacted by at least one rematerialization must be rescheduled.
   // Maximum pressure must also be recomputed for all regions where it changed
   // non-predictably and checked against the target occupancy.
-  AchievedOcc = TargetOcc;
+  AchievedOcc = MFI.getMaxWavesPerEU();
   for (auto &[I, OriginalRP] : ImpactedRegions) {
     bool IsEmptyRegion = DAG.Regions[I].first == DAG.Regions[I].second;
     RescheduleRegions[I] = !IsEmptyRegion;
@@ -2003,9 +2025,10 @@ void PreRARematStage::rematerialize() {
       }
     }
     DAG.Pressure[I] = RP;
-    AchievedOcc = std::min(
-        AchievedOcc, RP.getOccupancy(ST, MF.getInfo<SIMachineFunctionInfo>()
-                                             ->getDynamicVGPRBlockSize()));
+    unsigned NewOcc = RP.getOccupancy(
+        ST, MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize(),
+        RematCombineVGPRSavings);
+    AchievedOcc = std::min(AchievedOcc, NewOcc);
   }
   REMAT_DEBUG(dbgs() << "Achieved occupancy " << AchievedOcc << "\n");
 }
@@ -2035,7 +2058,7 @@ void PreRARematStage::finalizeGCNSchedStage() {
   // which case we do not want to rollback either (the rescheduling was already
   // reverted in PreRARematStage::shouldRevertScheduling in such cases).
   unsigned MaxOcc = std::max(AchievedOcc, DAG.MinOccupancy);
-  if (!IncreaseOccupancy || MaxOcc >= TargetOcc)
+  if (!TargetOcc || MaxOcc >= *TargetOcc)
     return;
 
   REMAT_DEBUG(dbgs() << "Rolling back all rematerializations\n");

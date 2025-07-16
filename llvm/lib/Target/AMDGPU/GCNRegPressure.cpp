@@ -14,6 +14,7 @@
 #include "GCNRegPressure.h"
 #include "AMDGPU.h"
 #include "SIMachineFunctionInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 
 using namespace llvm;
@@ -43,6 +44,18 @@ unsigned GCNRegPressure::getRegKind(const TargetRegisterClass *RC,
              : (STI->isAGPRClass(RC)
                     ? AGPR
                     : (STI->isVectorSuperClass(RC) ? AVGPR : VGPR));
+}
+
+unsigned GCNRegPressure::getOccupancy(const GCNSubtarget &ST,
+                                      unsigned DynamicVGPRBlockSize,
+                                      bool BalanceVGPRUsage) const {
+  const bool UnifiedRF = ST.hasGFX90AInsts();
+  unsigned NumVGPRs = (!UnifiedRF && BalanceVGPRUsage)
+                          ? divideCeil(getArchVGPRNum() + getAGPRNum(), 2)
+                          : getVGPRNum(UnifiedRF);
+
+  return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
+                  ST.getOccupancyWithNumVGPRs(NumVGPRs, DynamicVGPRBlockSize));
 }
 
 void GCNRegPressure::inc(unsigned Reg,
@@ -370,31 +383,33 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
 
 GCNRPTarget::GCNRPTarget(const MachineFunction &MF, const GCNRegPressure &RP,
                          bool CombineVGPRSavings)
-    : RP(RP), CombineVGPRSavings(CombineVGPRSavings) {
+    : MF(MF), RP(RP) {
   const Function &F = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  setRegLimits(ST.getMaxNumSGPRs(F), ST.getMaxNumVGPRs(F), MF);
+  setTarget(ST.getMaxNumSGPRs(F), ST.getMaxNumVGPRs(F), CombineVGPRSavings);
 }
 
 GCNRPTarget::GCNRPTarget(unsigned NumSGPRs, unsigned NumVGPRs,
                          const MachineFunction &MF, const GCNRegPressure &RP,
                          bool CombineVGPRSavings)
-    : RP(RP), CombineVGPRSavings(CombineVGPRSavings) {
-  setRegLimits(NumSGPRs, NumVGPRs, MF);
+    : MF(MF), RP(RP) {
+  setTarget(NumSGPRs, NumVGPRs, CombineVGPRSavings);
 }
 
 GCNRPTarget::GCNRPTarget(unsigned Occupancy, const MachineFunction &MF,
                          const GCNRegPressure &RP, bool CombineVGPRSavings)
-    : RP(RP), CombineVGPRSavings(CombineVGPRSavings) {
+    : MF(MF), RP(RP) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   unsigned DynamicVGPRBlockSize =
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
-  setRegLimits(ST.getMaxNumSGPRs(Occupancy, /*Addressable=*/false),
-               ST.getMaxNumVGPRs(Occupancy, DynamicVGPRBlockSize), MF);
+  setTarget(ST.getMaxNumSGPRs(Occupancy, /*Addressable=*/false),
+            ST.getMaxNumVGPRs(Occupancy, DynamicVGPRBlockSize),
+            CombineVGPRSavings);
 }
 
-void GCNRPTarget::setRegLimits(unsigned NumSGPRs, unsigned NumVGPRs,
-                               const MachineFunction &MF) {
+void GCNRPTarget::setTarget(unsigned NumSGPRs, unsigned NumVGPRs,
+                            bool CombineVGPRSavings) {
+  this->CombineVGPRSavings = CombineVGPRSavings;
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   unsigned DynamicVGPRBlockSize =
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
@@ -406,8 +421,8 @@ void GCNRPTarget::setRegLimits(unsigned NumSGPRs, unsigned NumVGPRs,
           : 0;
 }
 
-bool GCNRPTarget::isSaveBeneficial(Register Reg,
-                                   const MachineRegisterInfo &MRI) const {
+bool GCNRPTarget::isSaveBeneficial(Register Reg) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(TRI);

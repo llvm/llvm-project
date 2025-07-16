@@ -18,6 +18,8 @@
 #define LLVM_LIB_TARGET_AMDGPU_GCNREGPRESSURE_H
 
 #include "GCNSubtarget.h"
+#include "SIMachineFunctionInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include <algorithm>
@@ -83,12 +85,12 @@ struct GCNRegPressure {
   }
   unsigned getSGPRTuplesWeight() const { return Value[TOTAL_KINDS + SGPR]; }
 
-  unsigned getOccupancy(const GCNSubtarget &ST,
-                        unsigned DynamicVGPRBlockSize) const {
-    return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
-                    ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts()),
-                                                DynamicVGPRBlockSize));
-  }
+  /// Determines the occupancy achievable with the current RP, when \p
+  /// BalanceVGPRUsage is true on subtargets with non-unified RFs, the
+  /// occupancy w.r.t. the number of VGPRs is computed as if we will later be
+  /// able to evenly balance out VGPR usage among ArchVGPR and AGPR banks.
+  unsigned getOccupancy(const GCNSubtarget &ST, unsigned DynamicVGPRBlockSize,
+                        bool BalanceVGPRUsage = false) const;
 
   void inc(unsigned Reg,
            LaneBitmask PrevMask,
@@ -201,21 +203,33 @@ public:
   GCNRPTarget(unsigned Occupancy, const MachineFunction &MF,
               const GCNRegPressure &RP, bool CombineVGPRSavings = false);
 
+  /// Changes the target (same semantics as constructor).
+  void setTarget(unsigned NumSGPRs, unsigned NumVGPRs,
+                 bool CombineVGPRSavings = false);
+
   const GCNRegPressure &getCurrentRP() const { return RP; }
 
   void setRP(const GCNRegPressure &NewRP) { RP = NewRP; }
 
   /// Determines whether saving virtual register \p Reg will be beneficial
   /// towards achieving the RP target.
-  bool isSaveBeneficial(Register Reg, const MachineRegisterInfo &MRI) const;
+  bool isSaveBeneficial(Register Reg) const;
 
   /// Saves virtual register \p Reg with lanemask \p Mask.
-  void saveReg(Register Reg, LaneBitmask Mask, const MachineRegisterInfo &MRI) {
-    RP.inc(Reg, Mask, LaneBitmask::getNone(), MRI);
+  void saveReg(Register Reg, LaneBitmask Mask) {
+    RP.inc(Reg, Mask, LaneBitmask::getNone(), MF.getRegInfo());
   }
 
   /// Whether the current RP is at or below the defined pressure target.
   bool satisfied() const;
+
+  /// Computes achievable occupancy with the currently tracked register pressure.
+  unsigned getOccupancy() const {
+    return RP.getOccupancy(
+        MF.getSubtarget<GCNSubtarget>(),
+        MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize(),
+        /*BalanceVGPRUsage=*/CombineVGPRSavings);
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   friend raw_ostream &operator<<(raw_ostream &OS, const GCNRPTarget &Target) {
@@ -236,6 +250,8 @@ public:
 #endif
 
 private:
+  const MachineFunction &MF;
+
   /// Current register pressure.
   GCNRegPressure RP;
 
@@ -248,7 +264,7 @@ private:
   unsigned MaxUnifiedVGPRs;
   /// Whether we consider that the register allocator will be able to swap
   /// between ArchVGPRs and AGPRs by copying them to a super register class.
-  /// Concretely, this allows savings in one of the VGPR banks to help toward
+  /// Concretely, this allows free registers in one VGPR bank to help toward
   /// savings in the other VGPR bank.
   bool CombineVGPRSavings;
 
@@ -266,9 +282,6 @@ private:
     return NumVGPRs > MaxVGPRs || !satisfiesUnifiedTarget() ||
            (CombineVGPRSavings && !satisifiesVGPRBanksTarget());
   }
-
-  void setRegLimits(unsigned MaxSGPRs, unsigned MaxVGPRs,
-                    const MachineFunction &MF);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
