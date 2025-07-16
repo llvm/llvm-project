@@ -4322,8 +4322,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (isa<Constant>(Idx))
       return;
 
+    auto *IdxShadow = getShadow(Idx);
     Value *Truncated = IRB.CreateTrunc(
-        Idx,
+        IdxShadow,
         FixedVectorType::get(Type::getIntNTy(*MS.C, Log2_64(IdxVectorSize)),
                              IdxVectorSize));
     insertCheckShadow(Truncated, getOrigin(Idx), I);
