@@ -803,7 +803,8 @@ void GCNScheduleDAGMILive::schedule() {
 GCNRegPressure
 GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
   GCNDownwardRPTracker RPTracker(*LIS);
-  RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second, &LiveIns[RegionIdx]);
+  RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
+                    &LiveIns[RegionIdx]);
   return RPTracker.moveMaxPressure();
 }
 
