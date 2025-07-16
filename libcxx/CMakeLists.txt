@@ -481,21 +481,6 @@ include(config-ix)
 include(HandleLibC) # Setup the C library flags
 include(HandleLibCXXABI) # Setup the ABI library flags
 
-# Set C library in use to define respective macro in __config_site
-# RUNTIMES_USE_LIBC was checked in HandleLibC to be one of accepted values
-if (RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
-  set(LIBCXX_LIBC_LLVMLIBC 1)
-elseif (RUNTIMES_USE_LIBC STREQUAL "picolibc")
-  set(LIBCXX_LIBC_PICOLIBC 1)
-  # picolibc is derived from newlib and behaves the same in regards to libc++
-  # so setting both here:
-  # * LIBCXX_LIBC_NEWLIB is used now
-  # * LIBCXX_LIBC_PICOLIBC can be used for further customizations later
-  set(LIBCXX_LIBC_NEWLIB 1) 
-elseif (RUNTIMES_USE_LIBC STREQUAL "newlib")
-  set(LIBCXX_LIBC_NEWLIB 1)
-endif()
-
 # FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
 # Remove the -pedantic flag and -Wno-pedantic and -pedantic-errors
 # so they don't get transformed into -Wno and -errors respectively.
@@ -765,6 +750,18 @@ config_define(${LIBCXX_ENABLE_UNICODE} _LIBCPP_HAS_UNICODE)
 config_define(${LIBCXX_ENABLE_WIDE_CHARACTERS} _LIBCPP_HAS_WIDE_CHARACTERS)
 config_define(${LIBCXX_ENABLE_TIME_ZONE_DATABASE} _LIBCPP_HAS_TIME_ZONE_DATABASE)
 config_define(${LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS} _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS)
+
+# Set C library in use
+if (RUNTIMES_USE_LIBC STREQUAL "picolibc")
+  config_define(1 _LIBCXX_LIBC_PICOLIBC)
+  # picolibc is derived from newlib and behaves the same in regards to libc++
+  # so setting both here:
+  # * _LIBCXX_LIBC_NEWLIB is used now
+  # * _LIBCXX_LIBC_PICOLIBC can be used for further customizations later
+  config_define(1 _LIBCXX_LIBC_NEWLIB)
+elseif (RUNTIMES_USE_LIBC STREQUAL "newlib")
+  config_define(1 _LIBCXX_LIBC_NEWLIB)
+endif()
 
 # TODO: Remove in LLVM 21. We're leaving an error to make this fail explicitly.
 if (LIBCXX_ENABLE_ASSERTIONS)
