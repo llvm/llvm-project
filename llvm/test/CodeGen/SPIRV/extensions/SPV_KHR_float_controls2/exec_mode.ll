@@ -24,17 +24,12 @@ entry:
   ret void
 }
 
-define dso_local dllexport spir_kernel void @k_float_controls_fp128(fp128 %fp) {
+define dso_local dllexport spir_kernel void @k_float_controls_all(half %h, bfloat %b, float %f, double %d) {
 entry:
   ret void
 }
 
-define dso_local dllexport spir_kernel void @k_float_controls_all(half %h, bfloat %b, float %f, double %d, fp128 %fp) {
-entry:
-  ret void
-}
-
-!spirv.ExecutionMode = !{!17, !18, !19, !20, !21, !22, !23, !24, !25, !26}
+!spirv.ExecutionMode = !{!17, !18, !19, !20, !22, !23, !24, !25}
 
 ; CHECK: OpEntryPoint Kernel %[[#KERNEL_HALF:]] "k_float_controls_half"
 !0 = !{ptr @k_float_controls_half, !"k_float_controls_half", !6, i32 0, !6, !7, !8, i32 0, i32 0}
@@ -47,9 +42,6 @@ entry:
 
 ; CHECK: OpEntryPoint Kernel %[[#KERNEL_DOUBLE:]] "k_float_controls_double"
 !3 = !{ptr @k_float_controls_double, !"k_float_controls_double", !6, i32 0, !6, !7, !8, i32 0, i32 0}
-
-; CHECK: OpEntryPoint Kernel %[[#KERNEL_FP128:]] "k_float_controls_fp128"
-!4 = !{ptr @k_float_controls_fp128, !"k_float_controls_fp128", !6, i32 0, !6, !7, !8, i32 0, i32 0}
 
 ; CHECK: OpEntryPoint Kernel %[[#KERNEL_ALL:]] "k_float_controls_all"
 !5 = !{ptr @k_float_controls_all, !"k_float_controls_all", !6, i32 0, !6, !7, !8, i32 0, i32 0}
@@ -69,20 +61,14 @@ entry:
 ; CHECK-DAG: OpExecutionMode %[[#KERNEL_DOUBLE]] FPFastMathDefault %[[#DOUBLE_TYPE:]] 7 
 !20 = !{ptr @k_float_controls_double, i32 6028, double poison, i32 7}
 
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_FP128]] FPFastMathDefault %[[#FP128_TYPE:]] 65536
-!21 = !{ptr @k_float_controls_fp128, i32 6028, fp128 poison, i32 65536}
-
 ; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#HALF_TYPE]] 131072 
 ; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#FLOAT_TYPE]] 262144 
 ; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#DOUBLE_TYPE]] 458752 
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#FP128_TYPE]] 65543 
 !22 = !{ptr @k_float_controls_all, i32 6028, half poison, i32 131072}
 !23 = !{ptr @k_float_controls_all, i32 6028, bfloat poison, i32 131072}
 !24 = !{ptr @k_float_controls_all, i32 6028, float poison, i32 262144}
 !25 = !{ptr @k_float_controls_all, i32 6028, double poison, i32 458752}
-!26 = !{ptr @k_float_controls_all, i32 6028, fp128 poison, i32 65543}
 
 ; CHECK: %[[#HALF_TYPE]] = OpTypeFloat 16
 ; CHECK: %[[#FLOAT_TYPE]] = OpTypeFloat 32
 ; CHECK: %[[#DOUBLE_TYPE]] = OpTypeFloat 64
-; CHECK: %[[#FP128_TYPE]] = OpTypeFloat 128

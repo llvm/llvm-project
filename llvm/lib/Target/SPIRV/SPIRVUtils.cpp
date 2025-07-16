@@ -568,8 +568,6 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
     return Type::getFloatTy(Ctx);
   else if (TypeName.consume_front("double"))
     return Type::getDoubleTy(Ctx);
-  else if (TypeName.consume_front("fp128"))
-    return Type::getFP128Ty(Ctx);
 
   // Unable to recognize SPIRV type name
   return nullptr;
@@ -1041,10 +1039,8 @@ size_t computeFPFastMathDefaultInfoVecIndex(size_t BitWidth) {
     return 1;
   case 64: // double
     return 2;
-  case 128: // fp128
-    return 3;
   default:
-    report_fatal_error("Expected BitWidth to be 16, 32, 64, or 128", false);
+    report_fatal_error("Expected BitWidth to be 16, 32, 64", false);
   }
   assert(false && "Unreachable code");
   // This return is just to avoid compiler warnings.

@@ -572,64 +572,32 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
         // When SPV_KHR_float_controls2 is enabled, ContractionOff is
         // deprecated. We need to use FPFastMathDefault with the appropriate
         // flags instead. Since FPFastMathDefault takes a target type, we need
-        // to emit it for each floating-point type to match the effect of
-        // ContractionOff. As of now, there are 4 FP types: fp16, fp32, fp64 and
-        // fp128.
-        constexpr size_t NumFPTypes = 4;
-        for (size_t i = 0; i < NumFPTypes; ++i) {
+        // to emit it for each floating-point type that exists in the module
+        // to match the effect of ContractionOff. As of now, there are 4 FP
+        // types: fp16, fp32 and fp64.
+        for (const MachineInstr *MI :
+             MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
+          // Skip if the instruction is not OpTypeFloat.
+          if (MI->getOpcode() != SPIRV::OpTypeFloat)
+            continue;
+
+          // Skip if the target type is not fp16, fp32, fp64.
+          const unsigned OpTypeFloatSize = MI->getOperand(1).getImm();
+          if (OpTypeFloatSize != 16 && OpTypeFloatSize != 32 &&
+              OpTypeFloatSize != 64) {
+            continue;
+          }
+
           MCInst Inst;
           Inst.setOpcode(SPIRV::OpExecutionMode);
           Inst.addOperand(MCOperand::createReg(FReg));
           unsigned EM =
               static_cast<unsigned>(SPIRV::ExecutionMode::FPFastMathDefault);
           Inst.addOperand(MCOperand::createImm(EM));
-
-          Type *TargetType = nullptr;
-          switch (i) {
-          case 0:
-            TargetType = Type::getHalfTy(M.getContext());
-            break;
-          case 1:
-            TargetType = Type::getFloatTy(M.getContext());
-            break;
-          case 2:
-            TargetType = Type::getDoubleTy(M.getContext());
-            break;
-          case 3:
-            TargetType = Type::getFP128Ty(M.getContext());
-            break;
-          }
-          assert(TargetType && "Invalid target type for FPFastMathDefault");
-
-          // Find the SPIRV type matching the target type. We'll go over all the
-          // TypeConstVars instructions in the SPIRV module and find the one
-          // that matches the target type. We know the target type is a
-          // floating-point type, so we can skip anything different than
-          // OpTypeFloat. Then, we need to check the bitwidth.
-          bool SPIRVTypeFound = false;
-          for (const MachineInstr *MI :
-               MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
-            // Skip if the instruction is not OpTypeFloat.
-            if (MI->getOpcode() != SPIRV::OpTypeFloat)
-              continue;
-
-            // Skip if TargetTy bitwidth doesn't match MI->getOperand(1), which
-            // is the SPIRV type bit width.
-            if (TargetType->getScalarSizeInBits() != MI->getOperand(1).getImm())
-              continue;
-
-            SPIRVTypeFound = true;
-            const MachineFunction *MF = MI->getMF();
-            MCRegister TypeReg =
-                MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
-            Inst.addOperand(MCOperand::createReg(TypeReg));
-          }
-
-          if (!SPIRVTypeFound) {
-            // The module does not contain this FP type, so we don't need to
-            // emit FPFastMathDefault for it.
-            continue;
-          }
+          const MachineFunction *MF = MI->getMF();
+          MCRegister TypeReg =
+              MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
+          Inst.addOperand(MCOperand::createReg(TypeReg));
           // We only end up here because there is no "spirv.ExecutionMode"
           // metadata, so that means no FPFastMathDefault. Therefore, we only
           // need to make sure AllowContract is set to 0, as the rest of flags.
@@ -694,9 +662,33 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
 }
 
 void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
+  // Collect the SPIRVTypes that are OpTypeFloat.
+  std::vector<const MachineInstr *> SPIRVFloatTypes;
+  for (const MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
+    // Skip if the instruction is not OpTypeFloat.
+    if (MI->getOpcode() != SPIRV::OpTypeFloat)
+      continue;
+
+    // Collect the SPIRV type.
+    SPIRVFloatTypes.push_back(MI);
+  }
+
   for (const auto &[Func, FPFastMathDefaultInfoVec] :
        MAI->FPFastMathDefaultInfoMap) {
-    for (const auto &FPFastMathDefaultInfo : FPFastMathDefaultInfoVec) {
+    if (FPFastMathDefaultInfoVec.empty())
+      continue;
+
+    for (const MachineInstr *MI : SPIRVFloatTypes) {
+      unsigned OpTypeFloatSize = MI->getOperand(1).getImm();
+      unsigned Index = computeFPFastMathDefaultInfoVecIndex(OpTypeFloatSize);
+      assert(Index < FPFastMathDefaultInfoVec.size() &&
+             "Index out of bounds for FPFastMathDefaultInfoVec");
+      const auto &FPFastMathDefaultInfo = FPFastMathDefaultInfoVec[Index];
+      assert(FPFastMathDefaultInfo.Ty &&
+             "Expected target type for FPFastMathDefaultInfo");
+      assert(FPFastMathDefaultInfo.Ty->getScalarSizeInBits() ==
+                 OpTypeFloatSize &&
+             "Mismatched float type size");
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);
       MCRegister FuncReg = MAI->getFuncReg(Func);
@@ -704,37 +696,9 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
       Inst.addOperand(MCOperand::createReg(FuncReg));
       Inst.addOperand(
           MCOperand::createImm(SPIRV::ExecutionMode::FPFastMathDefault));
-
-      // Find the SPIRV type matching the target type. We'll go over all the
-      // TypeConstVars instructions in the SPIRV module and find the one that
-      // matches the target type. We know the target type is a floating-point
-      // type, so we can skip anything different than OpTypeFloat. Then, we
-      // need to check the bitwidth.
-      const Type *TargetTy = FPFastMathDefaultInfo.Ty;
-      assert(TargetTy && "Expected target type");
-      bool SPIRVTypeFound = false;
-      for (const MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
-        // Skip if the instruction is not OpTypeFloat.
-        if (MI->getOpcode() != SPIRV::OpTypeFloat)
-          continue;
-
-        // Skip if TargetTy bitwidth doesn't match MI->getOperand(1), which is
-        // the SPIRV type bit width.
-        if (TargetTy->getScalarSizeInBits() != MI->getOperand(1).getImm())
-          continue;
-
-        SPIRVTypeFound = true;
-        const MachineFunction *MF = MI->getMF();
-        MCRegister TypeReg =
-            MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
-        Inst.addOperand(MCOperand::createReg(TypeReg));
-      }
-      if (!SPIRVTypeFound) {
-        // The module does not contain this FP type, so we don't need to emit
-        // FPFastMathDefault for it.
-        continue;
-      }
-
+      MCRegister TypeReg =
+          MAI->getRegisterAlias(MI->getMF(), MI->getOperand(0).getReg());
+      Inst.addOperand(MCOperand::createReg(TypeReg));
       unsigned Flags = FPFastMathDefaultInfo.FastMathFlags;
       if (FPFastMathDefaultInfo.ContractionOff &&
           (Flags & SPIRV::FPFastMathMode::AllowContract) &&

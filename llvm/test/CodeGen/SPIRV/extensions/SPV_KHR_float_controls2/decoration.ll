@@ -50,9 +50,6 @@
 ; CHECK: OpDecorate %[[#maxRes]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform 
 ; CHECK: OpDecorate %[[#maxCommonRes:]] FPFastMathMode NotNaN|NotInf 
 
-target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
-target triple = "spir"
-
 ; Function Attrs: convergent mustprogress nofree nounwind willreturn memory(none)
 declare spir_func float @_Z4fmodff(float, float)
 declare dso_local spir_func noundef nofpclass(nan inf) float @_Z16__spirv_ocl_fmaxff(float noundef nofpclass(nan inf), float noundef nofpclass(nan inf)) local_unnamed_addr #1

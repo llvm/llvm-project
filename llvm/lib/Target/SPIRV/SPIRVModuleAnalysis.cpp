@@ -2094,25 +2094,24 @@ static unsigned getFastMathFlags(const MachineInstr &I,
 
   if (CanUseKHRFloatControls2) {
     // Error out if SPIRV::FPFastMathMode::Fast is enabled.
-    if (Flags & SPIRV::FPFastMathMode::Fast)
-      report_fatal_error(
-          "FPFastMathMode::Fast flag is deprecated and it is not "
-          "valid to use anymore.");
+    assert(!(Flags & SPIRV::FPFastMathMode::Fast) &&
+           "SPIRV::FPFastMathMode::Fast is deprecated and should not be used "
+           "anymore.");
 
     // Error out if AllowTransform is enabled without AllowReassoc and
     // AllowContract.
-    if ((Flags & SPIRV::FPFastMathMode::AllowTransform) &&
-        (!(Flags & SPIRV::FPFastMathMode::AllowReassoc) ||
-         !(Flags & SPIRV::FPFastMathMode::AllowContract)))
-      report_fatal_error(
-          "FPFastMathMode::AllowTransform flag requires AllowReassoc and "
-          "AllowContract flags to be enabled as well.");
+    assert(
+        !(Flags & SPIRV::FPFastMathMode::AllowTransform) ||
+        ((Flags & SPIRV::FPFastMathMode::AllowReassoc &&
+          Flags & SPIRV::FPFastMathMode::AllowContract)) &&
+            "SPIRV::FPFastMathMode::AllowTransform requires AllowReassoc and "
+            "AllowContract flags to be enabled as well.");
   }
 
   return Flags;
 }
 
-static bool isFastMathMathModeAvailable(const SPIRVSubtarget &ST) {
+static bool isFastMathModeAvailable(const SPIRVSubtarget &ST) {
   if (ST.isKernel())
     return true;
   if (ST.getSPIRVVersion() < VersionTuple(1, 2))
@@ -2123,7 +2122,7 @@ static bool isFastMathMathModeAvailable(const SPIRVSubtarget &ST) {
 static void handleMIFlagDecoration(
     MachineInstr &I, const SPIRVSubtarget &ST, const SPIRVInstrInfo &TII,
     SPIRV::RequirementHandler &Reqs, const SPIRVGlobalRegistry *GR,
-    SmallVector<SPIRV::FPFastMathDefaultInfo, 4> &FPFastMathDefaultInfoVec) {
+    SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec) {
   if (I.getFlag(MachineInstr::MIFlag::NoSWrap) && TII.canUseNSW(I) &&
       getSymbolicOperandRequirements(SPIRV::OperandCategory::DecorationOperand,
                                      SPIRV::Decoration::NoSignedWrap, ST, Reqs)
@@ -2184,7 +2183,7 @@ static void handleMIFlagDecoration(
     if (FMFlags == SPIRV::FPFastMathMode::None && !Emit)
       return;
   }
-  if (isFastMathMathModeAvailable(ST)) {
+  if (isFastMathModeAvailable(ST)) {
     Register DstReg = I.getOperand(0).getReg();
     buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode,
                     {FMFlags});
@@ -2250,7 +2249,7 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
   }
 }
 
-static SmallVector<SPIRV::FPFastMathDefaultInfo, 4> &
+static SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &
 getOrCreateFPFastMathDefaultInfoVec(const Module &M,
                                     SPIRV::ModuleAnalysisInfo &MAI,
                                     const Function *F) {
@@ -2259,29 +2258,27 @@ getOrCreateFPFastMathDefaultInfoVec(const Module &M,
     return it->second;
 
   // If the map does not contain the entry, create a new one. Initialize it to
-  // contain all 4 elements sorted by bit width of target type: {half, float,
-  // double, fp128}.
-  SmallVector<SPIRV::FPFastMathDefaultInfo, 4> FPFastMathDefaultInfoVec;
+  // contain all 3 elements sorted by bit width of target type: {half, float,
+  // double}.
+  SmallVector<SPIRV::FPFastMathDefaultInfo, 3> FPFastMathDefaultInfoVec;
   FPFastMathDefaultInfoVec.emplace_back(Type::getHalfTy(M.getContext()),
                                         SPIRV::FPFastMathMode::None);
   FPFastMathDefaultInfoVec.emplace_back(Type::getFloatTy(M.getContext()),
                                         SPIRV::FPFastMathMode::None);
   FPFastMathDefaultInfoVec.emplace_back(Type::getDoubleTy(M.getContext()),
                                         SPIRV::FPFastMathMode::None);
-  FPFastMathDefaultInfoVec.emplace_back(Type::getFP128Ty(M.getContext()),
-                                        SPIRV::FPFastMathMode::None);
   return MAI.FPFastMathDefaultInfoMap[F] = std::move(FPFastMathDefaultInfoVec);
 }
 
 static SPIRV::FPFastMathDefaultInfo &getFPFastMathDefaultInfo(
-    SmallVector<SPIRV::FPFastMathDefaultInfo, 4> &FPFastMathDefaultInfoVec,
+    SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec,
     const Type *Ty) {
   size_t BitWidth = Ty->getScalarSizeInBits();
   int Index = computeFPFastMathDefaultInfoVecIndex(BitWidth);
-  assert(Index >= 0 && Index < 4 &&
-         "Expected FPFastMathDefaultInfo for half, float, double, or fp128");
-  assert(FPFastMathDefaultInfoVec.size() == 4 &&
-         "Expected FPFastMathDefaultInfoVec to have exactly 4 elements");
+  assert(Index >= 0 && Index < 3 &&
+         "Expected FPFastMathDefaultInfo for half, float, or double");
+  assert(FPFastMathDefaultInfoVec.size() == 3 &&
+         "Expected FPFastMathDefaultInfoVec to have exactly 3 elements");
   return FPFastMathDefaultInfoVec[Index];
 }
 
@@ -2317,7 +2314,7 @@ static void collectFPFastMathDefaults(const Module &M,
             cast<ConstantInt>(
                 cast<ConstantAsMetadata>(MDN->getOperand(3))->getValue())
                 ->getZExtValue();
-        SmallVector<SPIRV::FPFastMathDefaultInfo, 4> &FPFastMathDefaultInfoVec =
+        SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
             getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
         SPIRV::FPFastMathDefaultInfo &Info =
             getFPFastMathDefaultInfo(FPFastMathDefaultInfoVec, T);
@@ -2329,7 +2326,7 @@ static void collectFPFastMathDefaults(const Module &M,
 
         // We need to save this info for every possible FP type, i.e. {half,
         // float, double, fp128}.
-        SmallVector<SPIRV::FPFastMathDefaultInfo, 4> &FPFastMathDefaultInfoVec =
+        SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
             getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
         for (SPIRV::FPFastMathDefaultInfo &Info : FPFastMathDefaultInfoVec) {
           Info.ContractionOff = true;
@@ -2342,14 +2339,13 @@ static void collectFPFastMathDefaults(const Module &M,
                 cast<ConstantAsMetadata>(MDN->getOperand(2))->getValue())
                 ->getZExtValue();
         // We need to save this info only for the FP type with TargetWidth.
-        SmallVector<SPIRV::FPFastMathDefaultInfo, 4> &FPFastMathDefaultInfoVec =
+        SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
             getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
         int Index = computeFPFastMathDefaultInfoVecIndex(TargetWidth);
-        assert(Index >= 0 && Index < 4 &&
-               "Expected FPFastMathDefaultInfo for half, float, double, or "
-               "fp128");
-        assert(FPFastMathDefaultInfoVec.size() == 4 &&
-               "Expected FPFastMathDefaultInfoVec to have exactly 4 elements");
+        assert(Index >= 0 && Index < 3 &&
+               "Expected FPFastMathDefaultInfo for half, float, or double");
+        assert(FPFastMathDefaultInfoVec.size() == 3 &&
+               "Expected FPFastMathDefaultInfoVec to have exactly 3 elements");
         FPFastMathDefaultInfoVec[Index].SignedZeroInfNanPreserve = true;
       }
     }
