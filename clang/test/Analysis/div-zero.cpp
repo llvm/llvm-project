@@ -29,6 +29,15 @@ struct C {
   C(int a, int b) : x(a), y(b) {}
 };
 
+struct D {
+  int x;
+};
+
+struct E {
+  D d;
+  E(int a) : d(a) {}
+};
+
 int t1() {
   A a(42);
   return 1 / (a.x - 42); // expected-warning {{Division by zero}}
@@ -47,5 +56,10 @@ int t3() {
 int t4() {
   C c2(0, 0);
   return 1 / (c2.x + c2.y); // expected-warning {{Division by zero}}
+}
+
+int t5() {
+  E e = 32;
+  return 1 / (e.d.x - 32); // expected-warning {{Division by zero}}
 }
 } // namespace GH148875
