@@ -478,14 +478,14 @@ def get_json_chunk(file, start, size):
 # Parse the program arguments.
 def parse_program_args(parser):
     parser.add_argument("file_name", type=str, help="json file to process")
-    parser.add_argument("--compress", action="store_true", help="create reduced report")
+    parser.add_argument("--reduce", action="store_true", help="create reduced report")
 
     report_type_group = parser.add_mutually_exclusive_group(required=True)
     report_type_group.add_argument(
-        "--report-file", type=str, help="output HTML file for the generated report"
+        "--report-html-file", type=str, help="output HTML file for the generated report"
     )
     report_type_group.add_argument(
-        "--error-test",
+        "--acceptance-test",
         action="store_true",
         help="if set, produce terminal-friendly output and return 0 iff the input file is empty or does not exist",
     )
@@ -497,7 +497,7 @@ def Main():
     parser = argparse.ArgumentParser()
     opts = parse_program_args(parser)
 
-    if opts.report_file is not None and not opts.report_file.endswith(".html"):
+    if opts.report_html_file is not None and not opts.report_html_file.endswith(".html"):
         print("error: The output file must be '.html'.")
         sys.exit(1)
 
@@ -654,7 +654,7 @@ def Main():
             if di_var_bugs:
                 di_variable_bugs[bugs_file][bugs_pass] = di_var_bugs
 
-    if opts.report_file is not None:
+    if opts.report_html_file is not None:
         generate_html_report(
             di_location_bugs,
             di_subprogram_bugs,
@@ -662,7 +662,7 @@ def Main():
             di_location_bugs_summary,
             di_sp_bugs_summary,
             di_var_bugs_summary,
-            opts.report_file,
+            opts.report_html_file,
         )
     else:
         # Pretty(ish) print the detected bugs, but check if any exist first so that we don't print an empty dict.
