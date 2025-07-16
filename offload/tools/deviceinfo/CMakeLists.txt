@@ -8,6 +8,5 @@ target_include_directories(llvm-offload-device-info PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}
 )
 target_link_libraries(llvm-offload-device-info PRIVATE
-  omp
   omptarget
 )

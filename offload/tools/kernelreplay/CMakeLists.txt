@@ -9,6 +9,5 @@ target_include_directories(llvm-omp-kernel-replay PRIVATE
 )
 target_link_libraries(llvm-omp-kernel-replay PRIVATE
   LLVMSupport
-  omp
   omptarget
 )
