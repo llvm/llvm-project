@@ -1100,6 +1100,8 @@ public:
     return getGeneration() >= GFX10 || hasGFX940Insts();
   }
 
+  bool hasFmaakFmamkF64Insts() const { return hasGFX1250Insts(); }
+
   bool hasImageInsts() const {
     return HasImageInsts;
   }
@@ -1154,7 +1156,7 @@ public:
 
   bool hasMadF16() const;
 
-  bool hasMovB64() const { return GFX940Insts; }
+  bool hasMovB64() const { return GFX940Insts || GFX1250Insts; }
 
   bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
@@ -1374,6 +1376,8 @@ public:
   bool hasMinimum3Maximum3F16() const {
     return HasMinimum3Maximum3F16;
   }
+
+  bool hasAddPC64Inst() const { return GFX1250Insts; }
 
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;

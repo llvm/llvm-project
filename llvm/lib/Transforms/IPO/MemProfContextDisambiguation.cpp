@@ -95,6 +95,8 @@ STATISTIC(NewMergedNodes, "Number of new nodes created during merging");
 STATISTIC(NonNewMergedNodes, "Number of non new nodes used during merging");
 STATISTIC(MissingAllocForContextId,
           "Number of missing alloc nodes for context ids");
+STATISTIC(SkippedCallsCloning,
+          "Number of calls skipped during cloning due to unexpected operand");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -5161,6 +5163,19 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 
       assert(!isMemProfClone(*CalledFunction));
 
+      // Because we update the cloned calls by calling setCalledOperand (see
+      // comment below), out of an abundance of caution make sure the called
+      // function was actually the called operand (or its aliasee). We also
+      // strip pointer casts when looking for calls (to match behavior during
+      // summary generation), however, with opaque pointers in theory this
+      // should not be an issue. Note we still clone the current function
+      // (containing this call) above, as that could be needed for its callers.
+      auto *GA = dyn_cast_or_null<GlobalAlias>(CB->getCalledOperand());
+      if (CalledFunction != CB->getCalledOperand() &&
+          (!GA || CalledFunction != GA->getAliaseeObject())) {
+        SkippedCallsCloning++;
+        return;
+      }
       // Update the calls per the summary info.
       // Save orig name since it gets updated in the first iteration
       // below.
@@ -5179,7 +5194,13 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           CBClone = CB;
         else
           CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
-        CBClone->setCalledFunction(NewF);
+        // Set the called operand directly instead of calling setCalledFunction,
+        // as the latter mutates the function type on the call. In rare cases
+        // we may have a slightly different type on a callee function
+        // declaration due to it being imported from a different module with
+        // incomplete types. We really just want to change the name of the
+        // function to the clone, and not make any type changes.
+        CBClone->setCalledOperand(NewF.getCallee());
         ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofCall", CBClone)
                  << ore::NV("Call", CBClone) << " in clone "
                  << ore::NV("Caller", CBClone->getFunction())

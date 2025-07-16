@@ -15,20 +15,14 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
-#include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
-#include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #include <functional>
 
@@ -1301,7 +1295,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
     }
 
     if (llvm::isa<IntegerType>(inETy) && llvm::isa<IntegerType>(outETy)) {
-      auto unsignIn = llvm::cast<IntegerType>(inETy).isUnsignedInteger();
+      const auto inIntType = llvm::cast<IntegerType>(inETy);
+      auto unsignIn = inIntType.isUnsignedInteger();
       bool trunc =
           inETy.getIntOrFloatBitWidth() > outETy.getIntOrFloatBitWidth();
       auto intVal = operand.getSplatValue<APInt>();
@@ -1309,7 +1304,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
 
       if (trunc) {
         intVal = intVal.trunc(bitwidth);
-      } else if (unsignIn) {
+        // i1 types are boolean in TOSA
+      } else if (unsignIn || inIntType.isInteger(1)) {
         intVal = intVal.zext(bitwidth);
       } else {
         intVal = intVal.sext(bitwidth);

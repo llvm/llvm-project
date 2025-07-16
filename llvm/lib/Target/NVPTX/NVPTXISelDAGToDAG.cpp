@@ -446,11 +446,18 @@ bool NVPTXDAGToDAGISel::tryUNPACK_VECTOR(SDNode *N) {
 bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   SDValue Vector = N->getOperand(0);
 
-  // We only care about 16x2 as it's the only real vector type we
-  // need to deal with.
   MVT VT = Vector.getSimpleValueType();
-  if (!Isv2x16VT(VT))
+  if (!(NVPTX::isPackedVectorTy(VT) && VT.getVectorNumElements() == 2))
     return false;
+
+  unsigned Opcode;
+  if (VT.is32BitVector())
+    Opcode = NVPTX::I32toV2I16;
+  else if (VT.is64BitVector())
+    Opcode = NVPTX::I64toV2I32;
+  else
+    llvm_unreachable("Unhandled packed type");
+
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
   for (auto *U : Vector.getNode()->users()) {
@@ -474,11 +481,11 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   if (E0.empty() || E1.empty())
     return false;
 
-  // Merge (f16 extractelt(V, 0), f16 extractelt(V,1))
-  // into f16,f16 SplitF16x2(V)
+  // Merge (EltTy extractelt(V, 0), EltTy extractelt(V,1))
+  // into EltTy,EltTy Split[EltTy]x2(V)
   MVT EltVT = VT.getVectorElementType();
   SDNode *ScatterOp =
-      CurDAG->getMachineNode(NVPTX::I32toV2I16, SDLoc(N), EltVT, EltVT, Vector);
+      CurDAG->getMachineNode(Opcode, SDLoc(N), EltVT, EltVT, Vector);
   for (auto *Node : E0)
     ReplaceUses(SDValue(Node, 0), SDValue(ScatterOp, 0));
   for (auto *Node : E1)
@@ -487,7 +494,7 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   return true;
 }
 
-static std::optional<unsigned> convertAS(unsigned AS) {
+static std::optional<NVPTX::AddressSpace> convertAS(unsigned AS) {
   switch (AS) {
   case llvm::ADDRESS_SPACE_LOCAL:
     return NVPTX::AddressSpace::Local;
@@ -508,9 +515,40 @@ static std::optional<unsigned> convertAS(unsigned AS) {
   }
 }
 
-static unsigned int getCodeAddrSpace(const MemSDNode *N) {
+NVPTX::AddressSpace NVPTXDAGToDAGISel::getAddrSpace(const MemSDNode *N) {
   return convertAS(N->getMemOperand()->getAddrSpace())
       .value_or(NVPTX::AddressSpace::Generic);
+}
+
+NVPTX::Ordering NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
+  // No "sem" orderings for SM/PTX versions which do not support memory ordering
+  if (!Subtarget->hasMemoryOrdering())
+    return NVPTX::Ordering::NotAtomic;
+  auto Ordering = N->getMergedOrdering();
+  switch (Ordering) {
+  case AtomicOrdering::NotAtomic:
+    return NVPTX::Ordering::NotAtomic;
+  case AtomicOrdering::Unordered:
+  case AtomicOrdering::Monotonic:
+    return NVPTX::Ordering::Relaxed;
+  case AtomicOrdering::Acquire:
+    return NVPTX::Ordering::Acquire;
+  case AtomicOrdering::Release:
+    return NVPTX::Ordering::Release;
+  case AtomicOrdering::AcquireRelease:
+    return NVPTX::Ordering::AcquireRelease;
+  case AtomicOrdering::SequentiallyConsistent:
+    return NVPTX::Ordering::SequentiallyConsistent;
+  }
+  llvm_unreachable("Invalid atomic ordering");
+}
+
+NVPTX::Scope NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
+  // No "scope" modifier for SM/PTX versions which do not support scoped atomics
+  // Functionally, these atomics are at device scope
+  if (!Subtarget->hasAtomScope())
+    return NVPTX::Scope::DefaultDevice;
+  return Scopes[N->getSyncScopeID()];
 }
 
 namespace {
@@ -525,7 +563,7 @@ struct OperationOrderings {
 static OperationOrderings
 getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   AtomicOrdering Ordering = N->getSuccessOrdering();
-  auto CodeAddrSpace = getCodeAddrSpace(N);
+  auto CodeAddrSpace = NVPTXDAGToDAGISel::getAddrSpace(N);
 
   bool HasMemoryOrdering = Subtarget->hasMemoryOrdering();
   bool HasRelaxedMMIO = Subtarget->hasRelaxedMMIO();
@@ -749,7 +787,7 @@ NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
 }
 
 static bool canLowerToLDG(const MemSDNode &N, const NVPTXSubtarget &Subtarget,
-                          unsigned CodeAddrSpace) {
+                          NVPTX::AddressSpace CodeAddrSpace) {
   // We use ldg (i.e. ld.global.nc) for invariant loads from the global address
   // space.
   return Subtarget.hasLDG() && CodeAddrSpace == NVPTX::AddressSpace::Global &&
@@ -781,6 +819,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acquire_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(
           formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
                   ScopeToString(S)));
@@ -800,6 +839,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_release_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(
           formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
                   ScopeToString(S)));
@@ -819,6 +859,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acq_rel_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(
           formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
                   ScopeToString(S)));
@@ -839,6 +880,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_seq_cst_gpu
                                     : NVPTX::INT_MEMBAR_GL;
     case NVPTX::Scope::Thread:
+    case NVPTX::Scope::DefaultDevice:
       report_fatal_error(formatv("Unsupported scope \"{}\" for seq_cst fence.",
                                  ScopeToString(S)));
     }
@@ -994,6 +1036,7 @@ pickOpcodeForVT(MVT::SimpleValueType VT, std::optional<unsigned> Opcode_i8,
   case MVT::i32:
   case MVT::f32:
     return Opcode_i32;
+  case MVT::v2f32:
   case MVT::i64:
   case MVT::f64:
     return Opcode_i64;
@@ -1017,7 +1060,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   const MVT LoadedVT = LoadedEVT.getSimpleVT();
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(LD);
+  const auto CodeAddrSpace = getAddrSpace(LD);
   if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
     return tryLDG(LD);
 
@@ -1089,7 +1132,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   const MVT MemVT = MemEVT.getSimpleVT();
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(LD);
+  const auto CodeAddrSpace = getAddrSpace(LD);
   if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
     return tryLDG(LD);
 
@@ -1305,7 +1348,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     return false;
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(ST);
+  const auto CodeAddrSpace = getAddrSpace(ST);
 
   SDLoc DL(ST);
   SDValue Chain = ST->getChain();
@@ -1355,7 +1398,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   assert(StoreVT.isSimple() && "Store value is not simple");
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(ST);
+  const auto CodeAddrSpace = getAddrSpace(ST);
   if (CodeAddrSpace == NVPTX::AddressSpace::Const) {
     report_fatal_error("Cannot store to pointer that points to constant "
                        "memory space");
