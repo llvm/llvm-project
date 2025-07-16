@@ -358,6 +358,10 @@ public:
   explicit Triple(const std::string &Str) : Triple(std::string(Str)) {}
   LLVM_ABI explicit Triple(const Twine &Str);
 
+  template <typename S, typename = std::enable_if_t<
+                            std::is_convertible<S, StringRef>::value>>
+  explicit Triple(const S &Str) : Triple(StringRef(Str)) {}
+
   LLVM_ABI Triple(const Twine &ArchStr, const Twine &VendorStr,
                   const Twine &OSStr);
   LLVM_ABI Triple(const Twine &ArchStr, const Twine &VendorStr,

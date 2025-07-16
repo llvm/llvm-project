@@ -1390,6 +1390,188 @@ public:
   const OptionValue<DataType> &getDefault() const { return Default; }
 };
 
+// Define a fully-specialized version of opt_storage for std::string. This
+// implementation avoids inheriting from std::string while still being
+// compatible with it in most common use cases.
+//
+template <> class opt_storage<std::string, false, true> {
+  using Self = opt_storage<std::string, false, true>;
+
+public:
+  std::string Value;
+  OptionValue<std::string> Default;
+
+  // Make sure we initialize the value with the default constructor for the
+  // type.
+  opt_storage() : Value(std::string()), Default() {}
+
+  template <class T> void setValue(const T &V, bool initial = false) {
+    Value = static_cast<std::string>(V);
+    if (initial)
+      Default = static_cast<std::string>(V);
+  }
+
+  std::string &getValue() { return Value; }
+  std::string getValue() const { return Value; }
+
+  const OptionValue<std::string> &getDefault() const { return Default; }
+
+  // Support implicit conversions to std::string and LLVM string-like types.
+  // operator std::string() const { return Value; }
+  operator std::string &() { return Value; }
+  operator const std::string &() const { return Value; }
+  operator llvm::StringRef() const { return llvm::StringRef(Value); }
+  operator llvm::Twine() const { return llvm::Twine(llvm::StringRef(Value)); }
+
+  // If the datatype is a pointer, support -> on it.
+  std::string operator->() const { return Value; }
+
+  Self &operator=(const Self &rhs) = default;
+
+  Self &operator=(const std::string &rhs) {
+    Value = rhs;
+    return *this;
+  }
+
+  Self &operator=(const char *rhs) {
+    Value = rhs;
+    return *this;
+  }
+
+  // Implement a subset of std::string methods
+  size_t size() const noexcept { return Value.size(); };
+  size_t max_size() const noexcept { return Value.max_size(); };
+  size_t length() const noexcept { return Value.length(); };
+  bool empty() const noexcept { return Value.empty(); }
+  void clear() noexcept { Value.clear(); }
+
+  const char *c_str() const { return Value.c_str(); };
+  const char *data() const { return Value.data(); };
+
+  auto begin() noexcept { return Value.begin(); }
+  auto end() noexcept { return Value.end(); }
+  auto begin() const noexcept { return Value.begin(); }
+  auto end() const noexcept { return Value.end(); }
+  auto cbegin() const noexcept { return Value.cbegin(); }
+  auto cend() const noexcept { return Value.cend(); }
+
+  auto rbegin() noexcept { return Value.rbegin(); }
+  auto rend() noexcept { return Value.rend(); }
+  auto rbegin() const noexcept { return Value.rbegin(); }
+  auto rend() const noexcept { return Value.rend(); }
+  auto crbegin() const noexcept { return Value.rbegin(); }
+  auto crend() const noexcept { return Value.rend(); }
+
+  void erase(size_t pos = 0, size_t count = std::string::npos) {
+    Value.erase(pos, count);
+  }
+
+  size_t find(const std::string &str, size_t pos = 0) const {
+    return Value.find(str, pos);
+  }
+
+  size_t find(const char *s, size_t pos = 0) const {
+    return Value.find(s, pos);
+  }
+
+  size_t find(char c, size_t pos = 0) const { return Value.find(c, pos); }
+
+  std::string substr(size_t pos = 0, size_t count = std::string::npos) const {
+    return Value.substr(pos, count);
+  }
+
+  char &at(size_t pos) { return Value[pos]; }
+  const char &at(size_t pos) const { return Value.at(pos); }
+
+  char &front() { return Value.front(); }
+  const char &front() const { return Value.front(); }
+
+  char &back() { return Value.back(); }
+  const char &back() const { return Value.back(); }
+
+  char operator[](size_t pos) const { return Value.at(pos); }
+
+  Self &assign(const std::string &rhs) {
+    Value.assign(rhs);
+    return *this;
+  }
+
+  Self &assign(const char *rhs) {
+    Value.assign(rhs);
+    return *this;
+  }
+
+  Self &operator+=(const std::string &rhs) {
+    Value += rhs;
+    return *this;
+  }
+
+  Self &operator+=(const char *rhs) {
+    Value += rhs;
+    return *this;
+  }
+
+  friend std::string operator+(Self const &lhs, std::string const &rhs) {
+    return lhs.Value + rhs;
+  }
+
+  friend std::string operator+(std::string const &lhs, Self const &rhs) {
+    return lhs + rhs.Value;
+  }
+
+  friend std::string operator+(Self const &lhs, char const *rhs) {
+    return lhs.Value + rhs;
+  }
+
+  friend std::string operator+(char const *lhs, Self const &rhs) {
+    return lhs + rhs.Value;
+  }
+
+  friend bool operator==(const Self &lhs, const Self &rhs) {
+    return lhs.Value == rhs.Value;
+  }
+
+  friend bool operator==(const Self &lhs, const std::string &rhs) {
+    return lhs.Value == rhs;
+  }
+
+  friend bool operator==(const Self &lhs, const char *rhs) {
+    return lhs.Value == rhs;
+  }
+
+  friend bool operator==(const std::string &lhs, const Self &rhs) {
+    return lhs == rhs.Value;
+  }
+
+  friend bool operator==(const char *lhs, const Self &rhs) {
+    return lhs == rhs.Value;
+  }
+
+  friend bool operator!=(const Self &lhs, const Self &rhs) {
+    return lhs.Value != rhs.Value;
+  }
+
+  friend bool operator!=(const Self &lhs, const std::string &rhs) {
+    return lhs.Value != rhs;
+  }
+
+  friend bool operator!=(const Self &lhs, const char *rhs) {
+    return lhs.Value != rhs;
+  }
+
+  friend bool operator!=(const std::string &lhs, const Self &rhs) {
+    return lhs != rhs.Value;
+  }
+
+  friend bool operator!=(const char *lhs, const Self &rhs) {
+    return lhs != rhs.Value;
+  }
+
+  friend raw_ostream &operator<<(raw_ostream &os, const Self &str) {
+    return os << str.Value;
+  }
+};
+
 // Define a partial specialization to handle things we cannot inherit from.  In
 // this case, we store an instance through containment, and overload operators
 // to get at the value.
