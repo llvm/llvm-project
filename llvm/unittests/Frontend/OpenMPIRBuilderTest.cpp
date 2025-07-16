@@ -2736,8 +2736,8 @@ TEST_P(OpenMPIRBuilderTestWithParams, DynamicWorkShareLoop) {
   EXPECT_EQ(OrigUpperBound->getValue(), 21);
   EXPECT_EQ(OrigStride->getValue(), 1);
 
-  CallInst *FiniCall = dyn_cast<CallInst>(
-      &*(LatchBlock->getTerminator()->getPrevNonDebugInstruction(true)));
+  CallInst *FiniCall =
+      dyn_cast<CallInst>(&*(LatchBlock->getTerminator()->getPrevNode()));
   EXPECT_EQ(FiniCall, nullptr);
 
   // The original loop iterator should only be used in the condition, in the
@@ -2840,8 +2840,8 @@ TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoopOrdered) {
   EXPECT_EQ(SchedVal->getValue(),
             static_cast<uint64_t>(OMPScheduleType::OrderedStaticChunked));
 
-  CallInst *FiniCall = dyn_cast<CallInst>(
-      &*(LatchBlock->getTerminator()->getPrevNonDebugInstruction(true)));
+  CallInst *FiniCall =
+      dyn_cast<CallInst>(&*(LatchBlock->getTerminator()->getPrevNode()));
   ASSERT_NE(FiniCall, nullptr);
   EXPECT_EQ(FiniCall->getCalledFunction()->getName(),
             "__kmpc_dispatch_fini_4u");

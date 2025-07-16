@@ -3424,7 +3424,7 @@ static void findStoresToUninstrumentedArgAllocas(
           isa<Argument>(cast<CastInst>(Val)->getOperand(0)) &&
           // Check that the cast appears directly before the store. Otherwise
           // moving the cast before InsBefore may break the IR.
-          Val == It->getPrevNonDebugInstruction();
+          Val == It->getPrevNode();
       bool IsArgInit = IsDirectArgInit || IsArgInitViaCast;
       if (!IsArgInit)
         continue;

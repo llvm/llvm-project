@@ -2875,7 +2875,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       if (It->getSecond().IsReachedFromAlignedBarrierOnly)
         break;
       return false;
-    } while ((CurI = CurI->getPrevNonDebugInstruction()));
+    } while ((CurI = CurI->getPrevNode()));
 
     // Delayed decision on the forward pass to allow aligned barrier detection
     // in the backwards traversal.
