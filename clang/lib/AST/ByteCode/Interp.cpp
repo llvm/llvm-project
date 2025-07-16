@@ -575,7 +575,8 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // The This pointer is writable in constructors and destructors,
   // even if isConst() returns true.
-  if (llvm::find(S.InitializingBlocks, Ptr.block()))
+  if (llvm::find(S.InitializingBlocks, Ptr.block()) !=
+      S.InitializingBlocks.end())
     return true;
 
   const QualType Ty = Ptr.getType();
