@@ -23,15 +23,22 @@ LLVM_LIBC_FUNCTION(size_t, wcstombs,
                    (char *__restrict s, const wchar_t *__restrict pwcs,
                     size_t n)) {
   static internal::mbstate internal_mbstate;
+
+  if (s == nullptr)
+    n = SIZE_MAX;
+
   internal::StringConverter<char32_t> str_conv(
       reinterpret_cast<const char32_t *>(pwcs), &internal_mbstate, n);
 
   int dst_idx = 0;
   ErrorOr<char8_t> converted = str_conv.popUTF8();
   while (converted.has_value()) {
-    if (s != nullptr) 
+    if (s != nullptr)
       s[dst_idx] = converted.value();
-    dst_idx++;
+    
+    if (converted.value() != '\0')
+      dst_idx++;
+
     converted = str_conv.popUTF8();
   }
 

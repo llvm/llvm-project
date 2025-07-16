@@ -187,7 +187,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  wcstombs
+  wcsnrtombs
   SRCS
     wcsnrtombs.cpp
   HDRS
