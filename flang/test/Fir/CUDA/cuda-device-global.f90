@@ -41,8 +41,9 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.conta
   }
 }
 
-// CHECK: fir.global @_QMmEddarrays
-// CHECK: fir.global linkonce_odr @_QMmE.dt.devicearrays
+
+// CHECK-NAG: fir.global @_QMmEddarrays
+// CHECK-NAG: fir.global linkonce_odr @_QMmE.dt.devicearrays
 // CHECK: gpu.module @cuda_device_mod
-// CHECK: fir.global @_QMmEddarrays
-// CHECK: fir.global linkonce_odr @_QMmE.dt.devicearrays
+// CHECK-NAG: fir.global @_QMmEddarrays
+// CHECK-NAG: fir.global linkonce_odr @_QMmE.dt.devicearrays
