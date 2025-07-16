@@ -1975,7 +1975,6 @@ enum {
   GNU_ABI_TAG_FREEBSD = 3,
   GNU_ABI_TAG_NETBSD = 4,
   GNU_ABI_TAG_SYLLABLE = 5,
-  GNU_ABI_TAG_NACL = 6,
 };
 
 constexpr const char *ELF_NOTE_GNU = "GNU";
