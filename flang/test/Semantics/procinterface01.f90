@@ -160,7 +160,7 @@ character*1 function tan(x)
 end function tan
 
 !DEF: /MAIN MainProgram
-program main
+program MAIN
  !REF: /module1
  use :: module1
  !DEF: /MAIN/derived1 Use
@@ -190,4 +190,4 @@ program main
  !REF: /MAIN/instance
  !REF: /module1/derived1/p8
  if (instance%p8(1.)/="a") print *, "p8 failed"
-end program main
+end program MAIN

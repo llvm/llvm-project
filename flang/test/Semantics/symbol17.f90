@@ -2,7 +2,7 @@
 ! Forward references to derived types (non-error cases)
 
 !DEF: /MAIN MainProgram
-program main
+program MAIN
  !DEF: /MAIN/t1 DerivedType
  type :: t1
   !DEF: /MAIN/t2 DerivedType

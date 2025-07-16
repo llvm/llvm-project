@@ -3,7 +3,7 @@
 ! Intrinsic function in type declaration statement: type is ignored
 
 !DEF: /P1 MainProgram
-program p1
+program P1
  !DEF: /P1/cos ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity INTEGER(4)
  integer cos
  !DEF: /P1/y (Implicit) ObjectEntity REAL(4)

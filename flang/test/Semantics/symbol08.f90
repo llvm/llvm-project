@@ -1,6 +1,6 @@
 ! RUN: %python %S/test_symbols.py %s %flang_fc1
 !DEF: /MAIN MainProgram
-program main
+program MAIN
  !DEF: /MAIN/x POINTER ObjectEntity REAL(4)
  pointer :: x
  !REF: /MAIN/x

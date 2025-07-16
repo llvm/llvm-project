@@ -9,7 +9,7 @@ module m
  namelist/a/j
 end module m
 !DEF: /MAIN MainProgram
-program main
+program MAIN
  !DEF: /MAIN/j (Implicit) ObjectEntity INTEGER(4)
  j = 1
 contains

@@ -33,7 +33,7 @@ contains
  end subroutine
 end module
 !DEF: /DEMO MainProgram
-program demo
+program DEMO
  !REF: /m
  use :: m
  !DEF: /DEMO/bar (Subroutine) Use

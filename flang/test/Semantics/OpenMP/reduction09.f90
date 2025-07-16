@@ -2,7 +2,7 @@
 ! OpenMP Version 4.5
 ! 2.15.3.6 Reduction Clause Positive cases.
 !DEF: /OMP_REDUCTION MainProgram
-program omp_reduction
+program OMP_REDUCTION
   !DEF: /OMP_REDUCTION/i ObjectEntity INTEGER(4)
   integer i
   !DEF: /OMP_REDUCTION/k ObjectEntity INTEGER(4)
@@ -73,4 +73,4 @@ program omp_reduction
     k = k+1
   end do
   !$omp end do
-end program omp_reduction
+end program OMP_REDUCTION

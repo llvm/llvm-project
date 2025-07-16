@@ -3,7 +3,7 @@
 ! 2.7.1 Do Loop constructs.
 
 !DEF: /TEST MainProgram
-program test
+program TEST
  !DEF: /TEST/i ObjectEntity INTEGER(4)
  !DEF: /TEST/j ObjectEntity INTEGER(4)
  !DEF: /TEST/k ObjectEntity INTEGER(4)
@@ -54,4 +54,4 @@ program test
   end do foo1
  end do foo
 !$omp end do
-end program test
+end program TEST

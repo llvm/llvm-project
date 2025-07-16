@@ -1,6 +1,6 @@
 ! RUN: %python %S/test_symbols.py %s %flang_fc1
 !DEF: /MAIN MainProgram
-program main
+program MAIN
  !DEF: /MAIN/t1 DerivedType
  type :: t1
   !DEF: /MAIN/t1/a1 ObjectEntity INTEGER(4)

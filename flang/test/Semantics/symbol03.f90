@@ -2,7 +2,7 @@
 ! Test host association in internal subroutine of main program.
 
 !DEF: /MAIN MainProgram
-program main
+program MAIN
  !DEF: /MAIN/x ObjectEntity INTEGER(4)
  integer x
  !DEF: /MAIN/s (Subroutine) Subprogram

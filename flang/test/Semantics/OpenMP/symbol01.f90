@@ -17,7 +17,7 @@ module md
  end type myty
 end module md
 !DEF: /MM MainProgram
-program mm
+program MM
  !REF: /md
  use :: md
  !DEF: /MM/c CommonBlockDetails

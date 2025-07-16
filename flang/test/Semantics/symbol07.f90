@@ -1,6 +1,6 @@
 ! RUN: %python %S/test_symbols.py %s %flang_fc1
 !DEF: /MAIN MainProgram
-program main
+program MAIN
  implicit complex(z)
  !DEF: /MAIN/t DerivedType
  type :: t

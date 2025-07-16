@@ -32,9 +32,9 @@ contains
   end subroutine foo
 end module mm
 !DEF: /TT MainProgram
-program tt
+program TT
   !REF: /mm
   use :: mm
   !DEF: /TT/foo (Subroutine) Use
   call foo
-end program tt
+end program TT

@@ -13,8 +13,8 @@ program main
   !ERROR: The module name or main program name cannot be in a THREADPRIVATE directive
   !$omp threadprivate(mod1)
 
-  !PORTABILITY: Name 'main' declared in a main program should not have the same name as the main program [-Wbenign-name-clash]
-  !ERROR: The module name or main program name cannot be in a THREADPRIVATE directive
+  ! This is now allowed, since "main" is implicitly declared symbol,
+  ! separate from the main program symbol.
   !$omp threadprivate(main)
 
   !ERROR: The entity with PARAMETER attribute cannot be in a THREADPRIVATE directive

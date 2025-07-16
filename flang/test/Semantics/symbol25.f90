@@ -39,7 +39,7 @@ contains
  end subroutine outer
 end module m
 !DEF: /MAIN MainProgram
-program main
+program MAIN
  !REF: /m
  use :: m
  !REF: /m/specific1

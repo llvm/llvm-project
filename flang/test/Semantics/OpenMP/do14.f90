@@ -3,7 +3,7 @@
 ! 2.7.1 Do Loop constructs.
 
 !DEF: /OMP_CYCLE MainProgram
-program omp_cycle
+program OMP_CYCLE
   !$omp do  collapse(1)
   !DEF: /OMP_CYCLE/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=0,10
@@ -88,4 +88,4 @@ program omp_cycle
     end do foo1
   end do foo
   !$omp end do
-end program omp_cycle
+end program OMP_CYCLE

@@ -16,7 +16,7 @@ program main
   !ERROR: The module name or main program name cannot be in a DECLARE TARGET directive
   !$omp declare target (mod1)
 
-  !PORTABILITY: Name 'main' declared in a main program should not have the same name as the main program [-Wbenign-name-clash]
-  !ERROR: The module name or main program name cannot be in a DECLARE TARGET directive
+  ! This is now allowed: "main" is implicitly declared symbol separate
+  ! from the main program symbol
   !$omp declare target (main)
 end

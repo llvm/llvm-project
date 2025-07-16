@@ -250,7 +250,7 @@ end subroutine
 subroutine ext3
 end subroutine
 !DEF: /MAIN MainProgram
-program main
+program MAIN
  !REF: /m
  use :: m
  !DEF: /MAIN/pdt1 Use

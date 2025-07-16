@@ -2,7 +2,7 @@
 ! Statement functions
 
 !DEF: /P1 MainProgram
-program p1
+program P1
  !DEF: /P1/f (Function, StmtFunction) Subprogram INTEGER(4)
  !DEF: /P1/i ObjectEntity INTEGER(4)
  !DEF: /P1/j ObjectEntity INTEGER(4)
