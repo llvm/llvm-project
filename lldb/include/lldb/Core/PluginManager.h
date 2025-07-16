@@ -787,6 +787,10 @@ public:
 
   static std::vector<RegisteredPluginInfo> GetUnwindAssemblyPluginInfo();
   static bool SetUnwindAssemblyPluginEnabled(llvm::StringRef name, bool enable);
+
+  static void AutoCompletePluginName(llvm::StringRef partial_name,
+                                     CompletionRequest &request);
+
   static lldb::OptionValuePropertiesSP
   GetSettingForSwiftLanguagePlugin(Debugger &debugger,
                                    llvm::StringRef setting_name);
