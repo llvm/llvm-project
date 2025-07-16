@@ -128,6 +128,7 @@ public:
     // option
     MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
     MAM.registerPass([&] { return IR2VecVocabAnalysis(); });
+    // This will throw an error if vocab is not found or invalid
     Vocab = &MAM.getResult<IR2VecVocabAnalysis>(M);
     return Vocab->isValid();
   }
@@ -196,7 +197,7 @@ public:
                    << OperandStr << '\t' << "Arg" << ArgIndex << '\n';
           });
 
-          ArgIndex++;
+          ++ArgIndex;
         }
         // Only update MaxRelation if there were operands
         if (ArgIndex > 0) {
@@ -293,11 +294,9 @@ Error processModule(Module &M, raw_ostream &OS) {
   if (Mode == EmbeddingMode) {
     // Initialize vocabulary for embedding generation
     // Note: Requires --ir2vec-vocab-path option to be set
-    if (!Tool.initializeVocabulary())
-      return createStringError(
-          errc::invalid_argument,
-          "Failed to initialize IR2Vec vocabulary. "
-          "Make sure to specify --ir2vec-vocab-path for embedding mode.");
+    auto VocabStatus = Tool.initializeVocabulary();
+    assert(VocabStatus && "Failed to initialize IR2Vec vocabulary");
+    (void)VocabStatus;
 
     if (!FunctionName.empty()) {
       // Process single function
@@ -334,12 +333,6 @@ int main(int argc, char **argv) {
       "training and embedding generation.\n\n"
       "See https://llvm.org/docs/CommandGuide/llvm-ir2vec.html for more "
       "information.\n");
-
-  // Validate input file requirement
-  if (InputFilename.empty() && Mode != EntityMode) {
-    errs() << "Error: Input file (.bc/.ll) or stdin (-) is required\n";
-    return 1;
-  }
 
   // Validate command line options
   if (Mode != EmbeddingMode) {

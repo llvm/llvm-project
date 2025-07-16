@@ -55,9 +55,9 @@ Triplet Generation Mode
 
 In triplet mode, :program:`llvm-ir2vec` analyzes LLVM IR and extracts numeric
 triplets consisting of opcode IDs, type IDs, and operand IDs. These triplets 
-are generated in train2id format. The tool outputs numeric IDs directly using 
-the ir2vec::Vocabulary mapping infrastructure, eliminating the need for 
-string-to-ID preprocessing.
+are generated in the standard format used for knowledge graph embedding training. 
+The tool outputs numeric IDs directly using the ir2vec::Vocabulary mapping 
+infrastructure, eliminating the need for string-to-ID preprocessing.
 
 Usage:
 
@@ -69,9 +69,9 @@ Entity Mapping Generation Mode
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In entity mode, :program:`llvm-ir2vec` generates the entity mappings supported by
-IR2Vec in entity2id format. This mode outputs all supported entities (opcodes, 
-types, and operands) with their corresponding numeric IDs, and is not specific for 
-an LLVM IR file.
+IR2Vec in the standard format used for knowledge graph embedding training. This
+mode outputs all supported entities (opcodes, types, and operands) with their
+corresponding numeric IDs, and is not specific for an LLVM IR file.
 
 Usage:
 
