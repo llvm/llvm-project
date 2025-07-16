@@ -64,5 +64,6 @@ static_library("CPlusPlus") {
     "MsvcStl.cpp",
     "MsvcStlSmartPointer.cpp",
     "MsvcStlTuple.cpp",
+    "MsvcStlVector.cpp",
   ]
 }
