@@ -499,13 +499,16 @@ private:
 // ========================================================================= //
 //                         Generic Dataflow Analysis
 // ========================================================================= //
-/// A generic, policy-based driver for forward dataflow analyses. It combines
+
+enum class Direction { Forward, Backward };
+
+/// A generic, policy-based driver for dataflow analyses. It combines
 /// the dataflow runner and the transferer logic into a single class hierarchy.
 ///
 /// The derived class is expected to provide:
 /// - A `Lattice` type.
 /// - `StringRef getAnalysisName() const`
-/// - `Lattice getInitialState();` The initial state at the function entry.
+/// - `Lattice getInitialState();` The initial state of the analysis.
 /// - `Lattice join(Lattice, Lattice);` Merges states from multiple CFG paths.
 /// - `Lattice transfer(Lattice, const FactType&);` Defines how a single
 ///   lifetime-relevant `Fact` transforms the lattice state. Only overloads
@@ -514,18 +517,23 @@ private:
 /// \tparam Derived The CRTP derived class that implements the specific
 /// analysis.
 /// \tparam LatticeType The dataflow lattice used by the analysis.
+/// \tparam Dir The direction of the analysis (Forward or Backward).
 /// TODO: Maybe use the dataflow framework! The framework might need changes
 /// to support the current comparison done at block-entry.
-template <typename Derived, typename LatticeType> class DataflowAnalysis {
+template <typename Derived, typename LatticeType, Direction Dir>
+class DataflowAnalysis {
 public:
   using Lattice = LatticeType;
+  using Base = DataflowAnalysis<Derived, LatticeType, Dir>;
 
 private:
   const CFG &Cfg;
   AnalysisDeclContext &AC;
 
-  llvm::DenseMap<const CFGBlock *, Lattice> BlockEntryStates;
-  llvm::DenseMap<const CFGBlock *, Lattice> BlockExitStates;
+  llvm::DenseMap<const CFGBlock *, Lattice> InStates;
+  llvm::DenseMap<const CFGBlock *, Lattice> OutStates;
+
+  static constexpr bool isForward() { return Dir == Direction::Forward; }
 
 protected:
   FactManager &AllFacts;
@@ -539,75 +547,76 @@ public:
     Derived &D = static_cast<Derived &>(*this);
     llvm::TimeTraceScope Time(D.getAnalysisName());
 
-    ForwardDataflowWorklist Worklist(Cfg, AC);
-    const CFGBlock *Entry = &Cfg.getEntry();
-    BlockEntryStates[Entry] = D.getInitialState();
-    Worklist.enqueueBlock(Entry);
-    llvm::SmallBitVector Visited;
-    Visited.resize(Cfg.getNumBlockIDs() + 1);
+    using Worklist =
+        std::conditional_t<Dir == Direction::Forward, ForwardDataflowWorklist,
+                           BackwardDataflowWorklist>;
+    Worklist W(Cfg, AC);
 
-    while (const CFGBlock *B = Worklist.dequeue()) {
-      Lattice EntryState = getEntryState(B);
-      Lattice ExitState = transferBlock(B, EntryState);
-      BlockExitStates[B] = ExitState;
+    const CFGBlock *Start = isForward() ? &Cfg.getEntry() : &Cfg.getExit();
+    InStates[Start] = D.getInitialState();
+    W.enqueueBlock(Start);
+
+    llvm::SmallBitVector Visited(Cfg.getNumBlockIDs() + 1);
+
+    while (const CFGBlock *B = W.dequeue()) {
+      Lattice StateIn = getInState(B);
+      Lattice StateOut = transferBlock(B, StateIn);
+      OutStates[B] = StateOut;
       Visited.set(B->getBlockID());
-
-      for (const CFGBlock *Successor : B->succs()) {
-        Lattice OldSuccEntryState = getEntryState(Successor);
-        Lattice NewSuccEntryState = D.join(OldSuccEntryState, ExitState);
-
-        // Enqueue the successor if its entry state has changed or if we have
+      for (const CFGBlock *AdjacentB : isForward() ? B->succs() : B->preds()) {
+        Lattice OldInState = getInState(AdjacentB);
+        Lattice NewInState = D.join(OldInState, StateOut);
+        // Enqueue the adjacent block if its in-state has changed or if we have
         // never visited it.
-        if (!Visited.test(Successor->getBlockID()) ||
-            NewSuccEntryState != OldSuccEntryState) {
-          BlockEntryStates[Successor] = NewSuccEntryState;
-          Worklist.enqueueBlock(Successor);
+        if (!Visited.test(AdjacentB->getBlockID()) ||
+            NewInState != OldInState) {
+          InStates[AdjacentB] = NewInState;
+          W.enqueueBlock(AdjacentB);
         }
       }
     }
   }
 
-  Lattice getEntryState(const CFGBlock *B) const {
-    return BlockEntryStates.lookup(B);
-  }
+  Lattice getInState(const CFGBlock *B) const { return InStates.lookup(B); }
 
-  Lattice getExitState(const CFGBlock *B) const {
-    return BlockExitStates.lookup(B);
-  }
+  Lattice getOutState(const CFGBlock *B) const { return OutStates.lookup(B); }
 
   void dump() const {
     const Derived *D = static_cast<const Derived *>(this);
     llvm::dbgs() << "==========================================\n";
     llvm::dbgs() << D->getAnalysisName() << " results:\n";
     llvm::dbgs() << "==========================================\n";
-    const CFGBlock &B = Cfg.getExit();
-    getExitState(&B).dump(llvm::dbgs());
+    const CFGBlock &B = isForward() ? Cfg.getExit() : Cfg.getEntry();
+    getOutState(&B).dump(llvm::dbgs());
   }
 
-private:
-  /// Computes the exit state of a block by applying all its facts sequentially
-  /// to a given entry state.
+  /// Computes the state at one end of a block by applying all its facts
+  /// sequentially to a given state from the other end.
   /// TODO: We might need to store intermediate states per-fact in the block for
   /// later analysis.
-  Lattice transferBlock(const CFGBlock *Block, Lattice EntryState) {
-    Lattice BlockState = EntryState;
-    for (const Fact *F : AllFacts.getFacts(Block)) {
-      BlockState = transferFact(BlockState, F);
-    }
-    return BlockState;
+  Lattice transferBlock(const CFGBlock *Block, Lattice State) {
+    auto Facts = AllFacts.getFacts(Block);
+    if constexpr (isForward())
+      for (const Fact *F : Facts)
+        State = transferFact(State, F);
+    else
+      for (const Fact *F : llvm::reverse(Facts))
+        State = transferFact(State, F);
+    return State;
   }
 
   Lattice transferFact(Lattice In, const Fact *F) {
-    Derived *d = static_cast<Derived *>(this);
+    assert(F);
+    Derived *D = static_cast<Derived *>(this);
     switch (F->getKind()) {
     case Fact::Kind::Issue:
-      return d->transfer(In, *F->getAs<IssueFact>());
+      return D->transfer(In, *F->getAs<IssueFact>());
     case Fact::Kind::Expire:
-      return d->transfer(In, *F->getAs<ExpireFact>());
+      return D->transfer(In, *F->getAs<ExpireFact>());
     case Fact::Kind::AssignOrigin:
-      return d->transfer(In, *F->getAs<AssignOriginFact>());
+      return D->transfer(In, *F->getAs<AssignOriginFact>());
     case Fact::Kind::ReturnOfOrigin:
-      return d->transfer(In, *F->getAs<ReturnOfOriginFact>());
+      return D->transfer(In, *F->getAs<ReturnOfOriginFact>());
     }
     llvm_unreachable("Unknown fact kind");
   }
@@ -715,7 +724,8 @@ struct LoanPropagationLattice {
 
 /// The analysis that tracks which loans belong to which origins.
 class LoanPropagationAnalysis
-    : public DataflowAnalysis<LoanPropagationAnalysis, LoanPropagationLattice> {
+    : public DataflowAnalysis<LoanPropagationAnalysis, LoanPropagationLattice,
+                              Direction::Forward> {
 
   LifetimeFactory &Factory;
 
@@ -724,7 +734,7 @@ public:
                           LifetimeFactory &Factory)
       : DataflowAnalysis(C, AC, F), Factory(Factory) {}
 
-  using DataflowAnalysis<LoanPropagationAnalysis, Lattice>::transfer;
+  using Base::transfer;
 
   StringRef getAnalysisName() const { return "LoanPropagation"; }
 
