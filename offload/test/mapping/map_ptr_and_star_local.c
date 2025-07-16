@@ -46,8 +46,7 @@ void f1() {
   {
     printf("%d %d %d %d\n", p[0], p_mappedptr == &p, x0_mappedptr == &p[0],
            x0_hostaddr == &p[0]);
-    // EXPECTED: 111 1 1 0
-    // CHECK:    111 1 0 1
+    // CHECK:    111 1 1 0
     p++;
   }
 
@@ -56,8 +55,7 @@ void f1() {
   {
     printf("%d %d %d %d\n", p[0], p_mappedptr == &p, x0_mappedptr == &p[-1],
            x0_hostaddr == &p[-1]);
-    // EXPECTED: 222 1 1 0
-    // CHECK:    222 1 0 1
+    // CHECK:    222 1 1 0
     p++;
   }
 
@@ -66,8 +64,7 @@ void f1() {
   {
     printf("%d %d %d %d\n", p[0], p_mappedptr == &p, x0_mappedptr == &p[-2],
            x0_hostaddr == &p[-2]);
-    // EXPECTED: 333 1 1 0
-    // CHECK:    333 1 0 1
+    // CHECK:    333 1 1 0
   }
 
   // The following map(from:p) should not bring back p, because p is an
@@ -75,8 +72,7 @@ void f1() {
   // location, &x[0], on host.
 #pragma omp target exit data map(always, from : p)
   printf("%d %d\n", p[0], p == &x[0]);
-  // EXPECTED:   111 1
-  // CHECK:      333 0
+  // CHECK:      111 1
 
 #pragma omp target exit data map(delete : p[0 : 5], p)
 }
