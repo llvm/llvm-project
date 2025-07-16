@@ -842,6 +842,26 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   }
 }
 
+static void failForInvalidBundles(const CallBase &I, StringRef Name,
+                                  ArrayRef<uint32_t> AllowedBundles) {
+  if (I.hasOperandBundlesOtherThan(AllowedBundles)) {
+    std::string Error;
+    for (unsigned i = 0, e = I.getNumOperandBundles(); i != e; ++i) {
+      OperandBundleUse U = I.getOperandBundleAt(i);
+      bool First = true;
+      if (is_contained(AllowedBundles, U.getTagID()))
+        continue;
+      if (!First)
+        Error += ", ";
+      First = false;
+      Error += U.getTagName();
+    }
+    reportFatalUsageError(
+        Twine("cannot lower ", Name)
+            .concat(Twine(" with arbitrary operand bundles: ", Error)));
+  }
+}
+
 RegsForValue::RegsForValue(const SmallVector<Register, 4> &regs, MVT regvt,
                            EVT valuevt, std::optional<CallingConv::ID> CC)
     : ValueVTs(1, valuevt), RegVTs(1, regvt), Regs(regs),
@@ -3351,30 +3371,12 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
 
   // Deopt and ptrauth bundles are lowered in helper functions, and we don't
   // have to do anything here to lower funclet bundles.
-  constexpr uint32_t kAllowedBundles[] = {
-      LLVMContext::OB_deopt,
-      LLVMContext::OB_gc_transition,
-      LLVMContext::OB_gc_live,
-      LLVMContext::OB_funclet,
-      LLVMContext::OB_cfguardtarget,
-      LLVMContext::OB_ptrauth,
-      LLVMContext::OB_clang_arc_attachedcall,
-      LLVMContext::OB_kcfi};
-  if (I.hasOperandBundlesOtherThan(kAllowedBundles)) {
-    std::string Error;
-    for (unsigned i = 0, e = I.getNumOperandBundles(); i != e; ++i) {
-      OperandBundleUse U = I.getOperandBundleAt(i);
-      bool First = true;
-      if (is_contained(kAllowedBundles, U.getTagID()))
-        continue;
-      if (!First)
-        Error += ", ";
-      First = false;
-      Error += U.getTagName();
-    }
-    reportFatalUsageError(
-        Twine("cannot lower invokes with arbitrary operand bundles: ", Error));
-  }
+  failForInvalidBundles(I, "invokes",
+                        {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
+                         LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
+                         LLVMContext::OB_cfguardtarget, LLVMContext::OB_ptrauth,
+                         LLVMContext::OB_clang_arc_attachedcall,
+                         LLVMContext::OB_kcfi});
 
   const Value *Callee(I.getCalledOperand());
   const Function *Fn = dyn_cast<Function>(Callee);
@@ -3474,10 +3476,8 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
 
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
-  if (I.hasOperandBundlesOtherThan(
-          {LLVMContext::OB_deopt, LLVMContext::OB_funclet}))
-    reportFatalUsageError(
-        "cannot lower callbrs with arbitrary operand bundles!");
+  failForInvalidBundles(I, "callbrs",
+                        {LLVMContext::OB_deopt, LLVMContext::OB_funclet});
 
   assert(I.isInlineAsm() && "Only know how to handle inlineasm callbr");
   visitInlineAsm(I);
@@ -9585,12 +9585,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
   // CFGuardTarget bundles are lowered in LowerCallTo.
-  if (I.hasOperandBundlesOtherThan(
-          {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
-           LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
-           LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
-           LLVMContext::OB_convergencectrl}))
-    reportFatalUsageError("cannot lower calls with arbitrary operand bundles!");
+  failForInvalidBundles(
+      I, "calls",
+      {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
+       LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
+       LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
+       LLVMContext::OB_convergencectrl});
 
   SDValue Callee = getValue(I.getCalledOperand());
 

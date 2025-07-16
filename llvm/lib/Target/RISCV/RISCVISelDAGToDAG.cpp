@@ -689,10 +689,16 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
   if (!isShiftedMask_32(C1) || isInt<12>(C1))
     return false;
 
+  // INSBI will clobber the input register in N0. Bail out if we need a copy to
+  // preserve this value.
+  SDValue N0 = Node->getOperand(0);
+  if (!N0.hasOneUse())
+    return false;
+
   // If C1 is a shifted mask (but can't be formed as an ORI),
   // use a bitfield insert of -1.
   // Transform (or x, C1)
-  //        -> (qc.insbi x, width, shift)
+  //        -> (qc.insbi x, -1, width, shift)
   const unsigned Leading = llvm::countl_zero((uint32_t)C1);
   const unsigned Trailing = llvm::countr_zero((uint32_t)C1);
   const unsigned Width = 32 - Leading - Trailing;
@@ -705,7 +711,7 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
-  SDValue Ops[] = {CurDAG->getSignedTargetConstant(-1, DL, VT),
+  SDValue Ops[] = {N0, CurDAG->getSignedTargetConstant(-1, DL, VT),
                    CurDAG->getTargetConstant(Width, DL, VT),
                    CurDAG->getTargetConstant(Trailing, DL, VT)};
   SDNode *BitIns = CurDAG->getMachineNode(RISCV::QC_INSBI, DL, VT, Ops);
@@ -2858,7 +2864,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    if (isInt<12>(CVal) && isInt<12>(CVal)) {
+    if (isInt<12>(CVal)) {
       Base = Addr.getOperand(0);
       if (Base.getOpcode() == RISCVISD::ADD_LO) {
         SDValue LoOperand = Base.getOperand(1);
@@ -2936,8 +2942,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 /// Similar to SelectAddrRegImm, except that the offset is restricted to uimm9.
 bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
                                           SDValue &Offset) {
-  if (SelectAddrFrameIndex(Addr, Base, Offset))
-    return true;
+  // FIXME: Support FrameIndex. Need to teach eliminateFrameIndex that only
+  // a 9-bit immediate can be folded.
 
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
@@ -2947,8 +2953,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
     if (isUInt<9>(CVal)) {
       Base = Addr.getOperand(0);
 
-      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
-        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
+      // FIXME: Support FrameIndex. Need to teach eliminateFrameIndex that only
+      // a 9-bit immediate can be folded.
       Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
       return true;
     }
@@ -3030,50 +3036,63 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
                                               unsigned MaxShiftAmount,
                                               SDValue &Base, SDValue &Index,
                                               SDValue &Scale) {
+  if (Addr.getOpcode() != ISD::ADD)
+    return false;
+  SDValue LHS = Addr.getOperand(0);
+  SDValue RHS = Addr.getOperand(1);
+
   EVT VT = Addr.getSimpleValueType();
-  auto UnwrapShl = [this, VT, MaxShiftAmount](SDValue N, SDValue &Index,
+  auto SelectShl = [this, VT, MaxShiftAmount](SDValue N, SDValue &Index,
                                               SDValue &Shift) {
-    uint64_t ShiftAmt = 0;
-    Index = N;
+    if (N.getOpcode() != ISD::SHL || !isa<ConstantSDNode>(N.getOperand(1)))
+      return false;
 
-    if (N.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N.getOperand(1))) {
-      // Only match shifts by a value in range [0, MaxShiftAmount].
-      if (N.getConstantOperandVal(1) <= MaxShiftAmount) {
-        Index = N.getOperand(0);
-        ShiftAmt = N.getConstantOperandVal(1);
-      }
-    }
+    // Only match shifts by a value in range [0, MaxShiftAmount].
+    unsigned ShiftAmt = N.getConstantOperandVal(1);
+    if (ShiftAmt > MaxShiftAmount)
+      return false;
 
+    Index = N.getOperand(0);
     Shift = CurDAG->getTargetConstant(ShiftAmt, SDLoc(N), VT);
-    return ShiftAmt != 0;
+    return true;
   };
 
-  if (Addr.getOpcode() == ISD::ADD) {
-    if (auto *C1 = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
-      SDValue AddrB = Addr.getOperand(0);
-      if (AddrB.getOpcode() == ISD::ADD &&
-          UnwrapShl(AddrB.getOperand(0), Index, Scale) &&
-          !isa<ConstantSDNode>(AddrB.getOperand(1)) &&
-          isInt<12>(C1->getSExtValue())) {
-        // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
-        SDValue C1Val =
-            CurDAG->getTargetConstant(C1->getZExtValue(), SDLoc(Addr), VT);
-        Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
-                                              AddrB.getOperand(1), C1Val),
-                       0);
-        return true;
-      }
-    } else if (UnwrapShl(Addr.getOperand(0), Index, Scale)) {
-      Base = Addr.getOperand(1);
-      return true;
-    } else {
-      UnwrapShl(Addr.getOperand(1), Index, Scale);
-      Base = Addr.getOperand(0);
+  if (auto *C1 = dyn_cast<ConstantSDNode>(RHS)) {
+    if (LHS.getOpcode() == ISD::ADD &&
+        SelectShl(LHS.getOperand(0), Index, Scale) &&
+        !isa<ConstantSDNode>(LHS.getOperand(1)) &&
+        isInt<12>(C1->getSExtValue())) {
+      // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
+      SDValue C1Val = CurDAG->getTargetConstant(*C1->getConstantIntValue(),
+                                                SDLoc(Addr), VT);
+      Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
+                                            LHS.getOperand(1), C1Val),
+                     0);
       return true;
     }
+
+    // Don't match add with constants.
+    // FIXME: Is this profitable for large constants that have 0s in the lower
+    // 12 bits that we can materialize with LUI?
+    return false;
   }
 
-  return false;
+  // Try to match a shift on the RHS.
+  if (SelectShl(RHS, Index, Scale)) {
+    Base = LHS;
+    return true;
+  }
+
+  // Try to match a shift on the LHS.
+  if (SelectShl(LHS, Index, Scale)) {
+    Base = RHS;
+    return true;
+  }
+
+  Base = LHS;
+  Index = RHS;
+  Scale = CurDAG->getTargetConstant(0, SDLoc(Addr), VT);
+  return true;
 }
 
 bool RISCVDAGToDAGISel::SelectAddrRegReg(SDValue Addr, SDValue &Base,

@@ -646,12 +646,7 @@ public:
   using reference         = value_type&;
   using pointer           = __rebind_pointer_t<_NodePtr, value_type>;
 
-  _LIBCPP_HIDE_FROM_ABI __tree_iterator() _NOEXCEPT
-#if _LIBCPP_STD_VER >= 14
-      : __ptr_(nullptr)
-#endif
-  {
-  }
+  _LIBCPP_HIDE_FROM_ABI __tree_iterator() _NOEXCEPT : __ptr_(nullptr) {}
 
   _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __get_np()->__value_; }
   _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return pointer_traits<pointer>::pointer_to(__get_np()->__value_); }
@@ -720,12 +715,7 @@ public:
   using reference         = const value_type&;
   using pointer           = __rebind_pointer_t<_NodePtr, const value_type>;
 
-  _LIBCPP_HIDE_FROM_ABI __tree_const_iterator() _NOEXCEPT
-#if _LIBCPP_STD_VER >= 14
-      : __ptr_(nullptr)
-#endif
-  {
-  }
+  _LIBCPP_HIDE_FROM_ABI __tree_const_iterator() _NOEXCEPT : __ptr_(nullptr) {}
 
 private:
   typedef __tree_iterator<_Tp, __node_pointer, difference_type> __non_const_iterator;
