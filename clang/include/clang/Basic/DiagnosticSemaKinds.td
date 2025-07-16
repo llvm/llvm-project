@@ -11530,17 +11530,28 @@ def note_in_evaluating_default_argument : Note<
 def warn_invalid_add_func_effects : Warning<
   "attribute '%0' should not be added via type conversion">,
   InGroup<FunctionEffects>, DefaultIgnore;
-def warn_mismatched_func_effect_override : Warning<
-  "attribute '%0' on overriding function does not match base declaration">,
-  InGroup<FunctionEffects>, DefaultIgnore;
-def warn_mismatched_func_effect_redeclaration : Warning<
-  "attribute '%0' on function does not match previous declaration">,
-  InGroup<FunctionEffects>, DefaultIgnore;
+def warn_conflicting_func_effect_override
+    : Warning<"attribute '%0' on overriding function conflicts with base "
+              "declaration">,
+      InGroup<FunctionEffects>,
+      DefaultIgnore;
 def warn_conflicting_func_effects : Warning<
   "effects conflict when merging declarations; kept '%0', discarded '%1'">,
   InGroup<FunctionEffects>, DefaultIgnore;
 def err_func_with_effects_no_prototype : Error<
   "'%0' function must have a prototype">;
+// These are more pedantic: in redeclarations and virtual method overrides,
+// the effect attribute(s) should be restated.
+def warn_mismatched_func_effect_override
+    : Warning<"overriding function is missing '%0' attribute from base "
+              "declaration">,
+      InGroup<FunctionEffectRedeclarations>,
+      DefaultIgnore;
+def warn_mismatched_func_effect_redeclaration
+    : Warning<
+          "redeclaration is missing '%0' attribute from previous declaration">,
+      InGroup<FunctionEffectRedeclarations>,
+      DefaultIgnore;
 
 } // end of sema category
 
