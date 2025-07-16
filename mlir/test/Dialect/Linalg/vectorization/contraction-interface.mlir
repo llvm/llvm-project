@@ -1,5 +1,11 @@
 // RUN: mlir-opt %s -transform-interpreter -split-input-file | FileCheck %s
 
+///----------------------------------------------------------------------------------------
+/// Tests for vectorizing operations implementing contraction op interface.
+/// Ops implementing the contraction interface are vectorized directly to their
+/// vector dialect named counterparts.
+///----------------------------------------------------------------------------------------
+
 func.func @matmul(%A: tensor<8x4xf32>, %B: tensor<4x16xf32>,
     %C: tensor<8x16xf32>) -> tensor<8x16xf32> {
   %0 = linalg.matmul
@@ -208,6 +214,12 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+/// Contractions' arbitrarty broadcasts are not supported in contraction interface
+/// vectorization.
+/// Dimension broadcasts are expected to be decomposed first which removes ambiguity
+/// caused by possible variants of dimensions materialization.
+/// For example, whether the below target LHS input layout is (m, k) or (k, m).
+
 func.func @negative_matmul_broadcast(%A: tensor<4xf32>, %B: tensor<4x16xf32>,
     %C: tensor<8x16xf32>) -> tensor<8x16xf32> {
   %0 = linalg.matmul
@@ -368,7 +380,9 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Generic is currently ignored in direct lowering to a named contraction.
+/// Generic can represent contractions but it does not implement contraction interface.
+/// Thus, direct lowering to vector.contract is not supported.
+/// Vectorization still works and applies generic rewrite logic.
 
 func.func @negative_generic(%A: tensor<8x4xf32>, %B: tensor<4x16xf32>,
     %C: tensor<8x16xf32>) -> tensor<8x16xf32> {
