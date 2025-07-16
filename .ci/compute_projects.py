@@ -195,8 +195,7 @@ def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set
 def _compute_projects_to_build(
     projects_to_test: Set[str], runtimes: Set[str]
 ) -> Set[str]:
-    projects_with_deps = _add_dependencies(projects_to_test, runtimes)
-    return projects_with_deps
+    return _add_dependencies(projects_to_test, runtimes)
 
 
 def _compute_project_check_targets(projects_to_test: Set[str]) -> Set[str]:
