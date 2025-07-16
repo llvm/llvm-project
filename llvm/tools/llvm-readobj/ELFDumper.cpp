@@ -6453,7 +6453,9 @@ void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
     Expected<object::SFrameParser<E>> Parser =
         object::SFrameParser<E>::create(arrayRefFromStringRef(SectionContent));
     if (!Parser) {
-      reportWarning(Parser.takeError(), FileName);
+      reportWarning(createError("invalid sframe section: " +
+                                toString(Parser.takeError())),
+                    FileName);
       continue;
     }
 

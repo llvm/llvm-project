@@ -2,20 +2,20 @@
 # RUN: yaml2obj --docnum=1 %s -o %t.1
 # RUN: llvm-readobj --sframe=.sframe_bad_sh_size --sframe=.sframe_1b \
 # RUN:   --sframe=.sframe_bad_magic --sframe=.sframe_bad_version \
-# RUN:   --sframe=.sframe_6b --sframe=.sframe_header %t.1 2>&1 \
-# RUN: | FileCheck %s --strict-whitespace --match-full-lines \
+# RUN:   --sframe=.sframe_6b --sframe=.sframe_header %t.1 2>&1 | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines \
 # RUN:   -DFILE=%t.1 --check-prefix=CASE1
 
 ## Check big-endian support and the handling of --sframe argument default.
 # RUN: yaml2obj --docnum=2 %s -o %t.2
-# RUN: llvm-readobj --sframe %t.2 2>&1 \
-# RUN: | FileCheck %s --strict-whitespace --match-full-lines \
+# RUN: llvm-readobj --sframe %t.2 2>&1 | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines \
 # RUN:   -DFILE=%t.2 --check-prefix=CASE2
 
 ## Check handling of corrupted elf files (bad sh_name)
 # RUN: yaml2obj --docnum=3 %s -o %t.3
-# RUN: not llvm-readobj --sframe %t.3 2>&1 \
-# RUN: | FileCheck %s --strict-whitespace --match-full-lines \
+# RUN: not llvm-readobj --sframe %t.3 2>&1 | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines \
 # RUN:   -DFILE=%t.3 --check-prefix=CASE3
 
 --- !ELF
@@ -36,14 +36,14 @@ Sections:
     Flags: [ SHF_ALLOC ]
     ContentArray: [ 0x00 ]
 # CASE1-LABEL:SFrame section '.sframe_1b' {
-#       CASE1:{{.*}}: warning: '[[FILE]]': unexpected end of data at offset 0x1 while reading [0x0, 0x4)
+#       CASE1:{{.*}}: warning: '[[FILE]]': invalid sframe section: unexpected end of data at offset 0x1 while reading [0x0, 0x4)
 
   - Name:  .sframe_bad_magic
     Type:  SHT_GNU_SFRAME
     Flags: [ SHF_ALLOC ]
     ContentArray: [ 0xde, 0xad, 0xbe, 0xef]
 # CASE1-LABEL:SFrame section '.sframe_bad_magic' {
-#       CASE1:{{.*}}: warning: '[[FILE]]': invalid magic number
+#       CASE1:{{.*}}: warning: '[[FILE]]': invalid sframe section: invalid magic number (0xadde)
 
   - Name:  .sframe_bad_version
     Type:  SHT_GNU_SFRAME
@@ -52,7 +52,7 @@ Sections:
       0xe2, 0xde, 0x01, 0x00  # Preamble (magic, version, flags)
     ]
 # CASE1-LABEL:SFrame section '.sframe_bad_version' {
-#       CASE1:{{.*}}: warning: '[[FILE]]': invalid/unsupported version number
+#       CASE1:{{.*}}: warning: '[[FILE]]': invalid sframe section: invalid/unsupported version number (1)
 
   - Name:  .sframe_6b
     Type:  SHT_GNU_SFRAME
@@ -63,7 +63,7 @@ Sections:
     ]
 
 # CASE1-LABEL:SFrame section '.sframe_6b' {
-#       CASE1:{{.*}}: warning: '[[FILE]]': unexpected end of data at offset 0x6 while reading [0x0, 0x1c)
+#       CASE1:{{.*}}: warning: '[[FILE]]': invalid sframe section: unexpected end of data at offset 0x6 while reading [0x0, 0x1c)
 
   - Name:  .sframe_header
     Type:  SHT_GNU_SFRAME

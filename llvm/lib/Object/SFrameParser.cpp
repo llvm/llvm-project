@@ -37,9 +37,12 @@ Expected<SFrameParser<E>> SFrameParser<E>::create(ArrayRef<uint8_t> Contents) {
     return Preamble.takeError();
 
   if (Preamble->Magic != sframe::Magic)
-    return createError("invalid magic number");
+    return createError(
+        formatv("invalid magic number ({0:x+4})", Preamble->Magic.value()));
   if (Preamble->Version != sframe::Version::V2)
-    return createError("invalid/unsupported version number");
+    return createError(
+        formatv("invalid/unsupported version number ({0})",
+                static_cast<unsigned>(Preamble->Version.value())));
 
   Expected<const sframe::Header<E> &> Header =
       getDataSliceAs<sframe::Header<E>>(Contents, 0);
