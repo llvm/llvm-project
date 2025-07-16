@@ -640,17 +640,15 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
 using namespace clang;
 
 // Temporary rvalue struct that need special care.
-REPL_EXTERNAL_VISIBILITY extern "C" void *
-__clang_Interpreter_SetValueWithAlloc(void *This, void *OutVal,
-                                      void *OpaqueType) {
+extern "C" void *REPL_EXTERNAL_VISIBILITY __clang_Interpreter_SetValueWithAlloc(
+    void *This, void *OutVal, void *OpaqueType) {
   Value &VRef = *(Value *)OutVal;
   VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
   return VRef.getPtr();
 }
 
-REPL_EXTERNAL_VISIBILITY extern "C" void
-__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
-                                    ...) {
+extern "C" void REPL_EXTERNAL_VISIBILITY __clang_Interpreter_SetValueNoAlloc(
+    void *This, void *OutVal, void *OpaqueType, ...) {
   Value &VRef = *(Value *)OutVal;
   Interpreter *I = static_cast<Interpreter *>(This);
   VRef = Value(I, OpaqueType);
@@ -732,7 +730,7 @@ __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
 // definition in the interpreter runtime. We should move it in a runtime header
 // which gets included by the interpreter and here.
 struct __clang_Interpreter_NewTag {};
-REPL_EXTERNAL_VISIBILITY void *
+void *REPL_EXTERNAL_VISIBILITY
 operator new(size_t __sz, void *__p, __clang_Interpreter_NewTag) noexcept {
   // Just forward to the standard operator placement new.
   return operator new(__sz, __p);
