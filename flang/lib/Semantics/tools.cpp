@@ -348,9 +348,9 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
 
 const Symbol &GetCrayPointer(const Symbol &crayPointee) {
   const Symbol *found{nullptr};
-  for (const auto &[pointee, pointer] :
-      crayPointee.GetUltimate().owner().crayPointers()) {
-    if (pointee == crayPointee.name()) {
+  const Symbol &ultimate{crayPointee.GetUltimate()};
+  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
+    if (pointee == ultimate.name()) {
       found = &pointer.get();
       break;
     }
