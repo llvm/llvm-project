@@ -48,70 +48,118 @@ _LIBCPP_HIDE_FROM_ABI base::str u64_string(base& base, uintptr_t __val) {
 #  define STRINGIFY0(x) #x
 #  define STRINGIFY(x) STRINGIFY0(x)
 
-void try_tools(base& base, function<bool(tool const&)> cb) {
+bool try_tools(base& base, function<bool(tool const&)> cb) {
   char const* prog_name;
 
   if ((prog_name = getenv("LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH"))) {
     if (cb(llvm_symbolizer{base, prog_name})) {
-      return;
+      return true;
     }
   } else {
 #  if defined(LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH)
     if (cb(llvm_symbolizer{base, STRINGIFY(LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH)})) {
-      return;
+      return true;
     }
 #  else
     if (cb(llvm_symbolizer{base})) {
-      return;
+      return true;
     }
 #  endif
   }
 
   if ((prog_name = getenv("LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH"))) {
     if (cb(addr2line{base, prog_name})) {
-      return;
+      return true;
     }
   } else {
 #  if defined(LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH)
     if (cb(addr2line{base, STRINGIFY(LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH)})) {
-      return;
+      return true;
     }
 #  else
     if (cb(addr2line{base})) {
-      return;
+      return true;
     }
 #  endif
   }
 
   if ((prog_name = getenv("LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH"))) {
     if (cb(atos{base, prog_name})) {
-      return;
+      return true;
     }
   } else {
 #  if defined(LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH)
     if (cb(atos{base, STRINGIFY(LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH)})) {
-      return;
+      return true;
     }
 #  else
     if (cb(atos{base})) {
-      return;
+      return true;
     }
 #  endif
   }
+
+  return false; // nothing succeeded
 }
 
 } // namespace
 
-void spawner::resolve_lines() {
-  try_tools(base_, [&](tool const& prog) {
+bool file_actions::initFileActions() {
+  if (!fa_initialized_) {
+    if (posix_spawn_file_actions_init(&fa_)) {
+      return false;
+    }
+    fa_initialized_ = true;
+  }
+  return true;
+}
+
+file_actions::~file_actions() { posix_spawn_file_actions_destroy(&fa_); }
+
+bool file_actions::addClose(int fd) { return initFileActions() && (posix_spawn_file_actions_addclose(&fa_, fd) == 0); }
+
+bool file_actions::addDup2(int fd, int std_fd) {
+  return initFileActions() && (posix_spawn_file_actions_adddup2(&fa_, fd, std_fd) == 0);
+}
+
+fd file_actions::redirectOutFD() {
+  int fds[2];
+  if (::pipe(fds)) {
+    return {}; // return invalid FD
+  }
+  addClose(fds[0]);
+  addDup2(fds[1], 1);
+  return {fds[0]};
+}
+
+pspawn::~pspawn() {
+  if (pid_) {
+    kill(pid_, SIGTERM);
+    wait();
+  }
+}
+
+bool pspawn::spawn(base::list<base::str> const& argStrings) {
+  base::vec<char const*> argv = tool_.base_.make_vec<char const*>();
+  argv.reserve(argStrings.size() + 1);
+  for (auto const& str : argStrings) {
+    argv.push_back(str.data());
+  }
+  argv.push_back(nullptr);
+  return posix_spawnp(&pid_, argv[0], &fa_.fa_, nullptr, const_cast<char**>(argv.data()), nullptr) == 0;
+}
+
+int pspawn::wait() {
+  int status;
+  waitpid(pid_, &status, 0);
+  return status;
+}
+
+bool spawner::resolve_lines() {
+  return try_tools(base_, [&](tool const& prog) {
     char buf[512];
     pspawn_tool proc(prog, base_, buf, sizeof(buf));
-    try {
-      proc.run();
-      return true;
-    } catch (failed const& failed) {
-    }
-    return false;
+    return proc.run();
   });
 }
 
@@ -170,7 +218,7 @@ Note that this includes an extra empty line as a terminator.
       line.pop_back();
     }
     if (line.empty()) {
-      return;
+      return; // done
     }
     if (!line.starts_with("  ")) {
       // The symbol has no leading whitespace, while the other
