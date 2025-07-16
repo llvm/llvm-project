@@ -414,14 +414,19 @@ private:
 
 LogicalResult PassManager::runWithCrashRecovery(Operation *op,
                                                 AnalysisManager am) {
+  const bool threadingEnabled = getContext()->isMultithreadingEnabled();
   crashReproGenerator->initialize(getPasses(), op, verifyPasses);
 
   // Safely invoke the passes within a recovery context.
   LogicalResult passManagerResult = failure();
   llvm::CrashRecoveryContext recoveryContext;
-  recoveryContext.RunSafelyOnThread(
-      [&] { passManagerResult = runPasses(op, am); });
+  const auto runPassesFn = [&] { passManagerResult = runPasses(op, am); };
+  if (threadingEnabled)
+    recoveryContext.RunSafelyOnThread(runPassesFn);
+  else
+    recoveryContext.RunSafely(runPassesFn);
   crashReproGenerator->finalize(op, passManagerResult);
+
   return passManagerResult;
 }
 
