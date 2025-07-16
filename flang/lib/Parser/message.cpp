@@ -492,12 +492,17 @@ void Messages::AttachTo(Message &msg, std::optional<Severity> severity) {
 }
 
 bool Messages::AnyFatalError(bool warningsAreErrors) const {
+  // Short-circuit in the most common case.
   if (messages_.empty()) {
     return false;
   }
+  // If warnings are errors and there are warnings or errors, this is fatal.
+  // This preserves the compiler's current behavior of treating any non-fatal
+  // message as a warning. We may want to refine this in the future.
   if (warningsAreErrors) {
     return true;
   }
+  // Otherwise, check the message buffer for fatal errors.
   for (const auto &msg : messages_) {
     if (msg.IsFatal()) {
       return true;
