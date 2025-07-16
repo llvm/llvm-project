@@ -1168,30 +1168,167 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
   }
 }
 
-// Given a two-param std::span construct call, matches iff the call has the
-// following forms:
-//   1. `std::span<T>{new T[n], n}`, where `n` is a literal or a DRE
-//   2. `std::span<T>{new T, 1}`
-//   3. `std::span<T>{&var, 1}` or `std::span<T>{std::addressof(...), 1}`
-//   4. `std::span<T>{a, n}`, where `a` is of an array-of-T with constant size
-//   `n`
-//   5. `std::span<T>{any, 0}`
-//   6. `std::span<char>{p, strlen(p)}` or `std::span<wchar_t>{p, wcslen(p)}`
-//   7. `std::span<T>{ (char *)f(args), args[N] * arg*[M]}`, where
-//       `f` is a function with attribute `alloc_size(N, M)`;
-//       `args` represents the list of arguments;
-//       `N, M` are parameter indexes to the allocating element number and size.
-//        Sometimes, there is only one parameter index representing the total
-//        size.
-//   8. `std::span<T>{x.begin(), x.end()}` where `x` is an object in the
-//      SIZED_CONTAINER_OR_VIEW_LIST.
+// Providing that `Ptr` is a pointer and `Size` is an unsigned-integral
+// expression, returns true iff they follow one of the following safe
+// patterns:
+//  1. Ptr is `DRE.data()` and Size is `DRE.size()`, where DRE is a hardened
+//     container or view;
+//
+//  2. Ptr is `a` and Size is `n`, where `a` is of an array-of-T with constant
+//     size `n`;
+//
+//  3. Ptr is `&var` and Size is `1`; or
+//     Ptr is `std::addressof(...)` and Size is `1`;
+//
+//  4. Size is `0`;
+//
 // TO_UPSTREAM(BoundsSafetyInterop) ON
-//   Interop Pattern:
+//  5. Interop Pattern:
 //      `std::span<T>{p, n}`, where `p` is a __counted_by(`n`)/__sized_by(`n`)
 //      pointer OR `std::span<char>{(char*)p, n}`, where `p` is a
 //      __sized_by(`n`) pointer. (This pattern is not in upstream, so try it
 //      last to avoid possible conflicts.)
 // TO_UPSTREAM(BoundsSafetyInterop) OFF
+static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
+                            ASTContext &Ctx) {
+  // Pattern 1:
+  if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(Ptr->IgnoreParenImpCasts()))
+    if (auto *MCESize =
+            dyn_cast<CXXMemberCallExpr>(Size->IgnoreParenImpCasts())) {
+      auto *DREOfPtr = dyn_cast<DeclRefExpr>(
+          MCEPtr->getImplicitObjectArgument()->IgnoreParenImpCasts());
+      auto *DREOfSize = dyn_cast<DeclRefExpr>(
+          MCESize->getImplicitObjectArgument()->IgnoreParenImpCasts());
+
+      if (!DREOfPtr || !DREOfSize)
+        return false; // not in safe pattern
+      // We need to make sure 'a' is identical to 'b' for 'a.data()' and
+      // 'b.size()' otherwise we do not know they match:
+      if (DREOfPtr->getDecl() != DREOfSize->getDecl())
+        return false;
+      if (MCEPtr->getMethodDecl()->getName() != "data")
+        return false;
+      // `MCEPtr->getRecordDecl()` must be non-null as `DREOfPtr` is non-null:
+      if (!MCEPtr->getRecordDecl()->isInStdNamespace())
+        return false;
+
+      auto *ObjII = MCEPtr->getRecordDecl()->getIdentifier();
+
+      if (!ObjII)
+        return false;
+
+      bool AcceptSizeBytes = Ptr->getType()->getPointeeType()->isCharType();
+
+      if (!((AcceptSizeBytes &&
+             MCESize->getMethodDecl()->getName() == "size_bytes") ||
+            // Note here the pointer must be a pointer-to-char type unless there
+            // is explicit casting.  If there is explicit casting, this branch
+            // is unreachable. Thus, at this branch "size" and "size_bytes" are
+            // equivalent as the pointer is a char pointer:
+            MCESize->getMethodDecl()->getName() == "size"))
+        return false;
+
+      return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                                ObjII->getName());
+    }
+
+  Expr::EvalResult ER;
+
+  // Pattern 2-4:
+  if (Size->EvaluateAsInt(ER, Ctx)) {
+    // Pattern 2:
+    if (auto *DRE = dyn_cast<DeclRefExpr>(Ptr->IgnoreParenImpCasts())) {
+      if (auto *CAT = Ctx.getAsConstantArrayType(DRE->getType())) {
+        llvm::APSInt SizeInt = ER.Val.getInt();
+
+        return llvm::APSInt::compareValues(
+                   SizeInt, llvm::APSInt(CAT->getSize(), true)) == 0;
+      }
+      return false;
+    }
+
+    // Pattern 3:
+    if (ER.Val.getInt().isOne()) {
+      if (auto *UO = dyn_cast<UnaryOperator>(Ptr->IgnoreParenImpCasts()))
+        return UO && UO->getOpcode() == UnaryOperator::Opcode::UO_AddrOf;
+      if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
+        auto *FnDecl = CE->getDirectCallee();
+
+        return FnDecl && FnDecl->getNameAsString() == "addressof" &&
+               FnDecl->isInStdNamespace();
+      }
+      return false;
+    }
+    // Pattern 4:
+    if (ER.Val.getInt().isZero())
+      return true;
+  }
+
+  /* TO_UPSTREAM(BoundsSafetyInterop) ON */
+  // Check interop pattern:
+  bool isCastToBytePtrType = false;
+  QualType PtrType = Ptr->getType();
+
+  if (auto *CE = dyn_cast<CastExpr>(Ptr)) {
+    if (auto DestTySize =
+            Ctx.getTypeSizeInCharsIfKnown(PtrType->getPointeeType())) {
+      if (!DestTySize->isOne())
+        return false; // If the destination pointee type is NOT of one byte
+                      // size, pattern match fails.
+      Ptr = CE->getSubExpr()->IgnoreParenImpCasts();
+      PtrType = Ptr->getType();
+      isCastToBytePtrType = true;
+    }
+  }
+  // Check pointer and count/size with respect to the count-attribute:
+  if (const auto *CAT = PtrType->getAs<CountAttributedType>()) {
+    // For the pattern of `std::span<char>{(char *) p, n}`, p must NOT be a
+    // __counted_by pointer.
+    if (!CAT->isCountInBytes() && isCastToBytePtrType)
+      return false;
+    // If `Arg0` is not a cast and is a sized_by pointer, its pointee type size
+    // must be one byte:
+    if (CAT->isCountInBytes() && !isCastToBytePtrType) {
+      std::optional<CharUnits> SizeOpt =
+          Ctx.getTypeSizeInCharsIfKnown(CAT->getPointeeType());
+      if (!SizeOpt.has_value() || !SizeOpt->isOne())
+        return false;
+    }
+
+    const Expr *MemberBase = nullptr;
+    if (const auto *ME = dyn_cast<MemberExpr>(Ptr))
+      MemberBase = ME->getBase();
+
+    if (const auto *Call = dyn_cast<CallExpr>(Ptr)) {
+      auto ValuesOpt = getDependentValuesFromCall(CAT, Call);
+      if (!ValuesOpt.has_value())
+        return false;
+      return isCompatibleWithCountExpr(Size, CAT->getCountExpr(), MemberBase,
+                                       &*ValuesOpt, Ctx);
+    }
+
+    return isCompatibleWithCountExpr(Size, CAT->getCountExpr(), MemberBase,
+                                     /*DependentValues=*/nullptr, Ctx);
+  }
+  /* TO_UPSTREAM(BoundsSafetyInterop) OFF */
+  return false;
+}
+
+// Given a two-param std::span construct call, matches iff the call has the
+// following forms:
+//   1. `std::span<T>{new T[n], n}`, where `n` is a literal or a DRE
+//   2. `std::span<T>{new T, 1}`
+//   3. `std::span<char>{p, strlen(p)}` or `std::span<wchar_t>{p, wcslen(p)}`
+//   4. `std::span<T>{ (char *)f(args), args[N] * arg*[M]}`, where
+//       `f` is a function with attribute `alloc_size(N, M)`;
+//       `args` represents the list of arguments;
+//       `N, M` are parameter indexes to the allocating element number and size.
+//        Sometimes, there is only one parameter index representing the total
+//        size.
+//   5. `std::span<T>{x.begin(), x.end()}` where `x` is an object in the
+//      SIZED_CONTAINER_OR_VIEW_LIST.
+//   6. `isPtrBufferSafe` returns true for the two arguments of the span
+//      constructor
 static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
                                         ASTContext &Ctx) {
   assert(Node.getNumArgs() == 2 &&
@@ -1218,7 +1355,7 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
     // Check form 5:
     return true;
 
-  // Check forms 1-3:
+  // Check forms 1-2:
   switch (Arg0->getStmtClass()) {
   case Stmt::CXXNewExprClass:
     if (auto Size = cast<CXXNewExpr>(Arg0)->getArraySize()) {
@@ -1232,36 +1369,11 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
       return Arg1CV && Arg1CV->isOne();
     }
     break;
-  case Stmt::UnaryOperatorClass:
-    if (cast<UnaryOperator>(Arg0)->getOpcode() ==
-        UnaryOperator::Opcode::UO_AddrOf)
-      // Check form 3:
-      return Arg1CV && Arg1CV->isOne();
-    break;
-  case Stmt::CallExprClass:
-    // Check form 3:
-    if (const auto *CE = dyn_cast<CallExpr>(Arg0)) {
-      const auto FnDecl = CE->getDirectCallee();
-      if (FnDecl && FnDecl->getNameAsString() == "addressof" &&
-          FnDecl->isInStdNamespace()) {
-        return Arg1CV && Arg1CV->isOne();
-      }
-    }
-    break;
   default:
     break;
   }
 
-  QualType Arg0Ty = Arg0->getType();
-
-  if (auto *ConstArrTy = Ctx.getAsConstantArrayType(Arg0Ty)) {
-    const llvm::APSInt ConstArrSize = llvm::APSInt(ConstArrTy->getSize());
-
-    // Check form 4:
-    return Arg1CV && llvm::APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
-  }
-
-  // Check form 6:
+  // Check form 3:
   if (const auto *Call = dyn_cast<CallExpr>(Arg1);
       Call && Call->getNumArgs() == 1) {
     if (const FunctionDecl *FD = Call->getDirectCallee();
@@ -1276,7 +1388,7 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
     }
   }
 
-  // Check form 7:
+  // Check form 4:
   if (auto CCast = dyn_cast<CStyleCastExpr>(Arg0)) {
     if (!CCast->getType()->isPointerType())
       return false;
@@ -1306,7 +1418,7 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
     }
   }
 
-  // Check form 8:
+  // Check form 5:
   auto IsMethodCallToSizedObject = [](const Stmt *Node, StringRef MethodName) {
     if (const auto *MC = dyn_cast<CXXMemberCallExpr>(Node)) {
       const auto *MD = MC->getMethodDecl();
@@ -1333,53 +1445,8 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
             ->getImplicitObjectArgument()
             ->IgnoreParenImpCasts());
 
-  /* TO_UPSTREAM(BoundsSafetyInterop) ON */
-  // Check interop pattern:
-  bool isArg0CastToBytePtrType = false;
-
-  if (auto *CE = dyn_cast<CastExpr>(Arg0)) {
-    if (auto DestTySize =
-            Ctx.getTypeSizeInCharsIfKnown(Arg0Ty->getPointeeType())) {
-      if (!DestTySize->isOne())
-        return false; // If the destination pointee type is NOT of one byte
-                      // size, pattern match fails.
-      Arg0 = CE->getSubExpr()->IgnoreParenImpCasts();
-      Arg0Ty = Arg0->getType();
-      isArg0CastToBytePtrType = true;
-    }
-  }
-  // Check pointer and count/size with respect to the count-attribute:
-  if (const auto *CAT = Arg0Ty->getAs<CountAttributedType>()) {
-    // For the pattern of `std::span<char>{(char *) p, n}`, p must NOT be a
-    // __counted_by pointer.
-    if (!CAT->isCountInBytes() && isArg0CastToBytePtrType)
-      return false;
-    // If `Arg0` is not a cast and is a sized_by pointer, its pointee type size
-    // must be one byte:
-    if (CAT->isCountInBytes() && !isArg0CastToBytePtrType) {
-      std::optional<CharUnits> SizeOpt =
-          Ctx.getTypeSizeInCharsIfKnown(CAT->getPointeeType());
-      if (!SizeOpt.has_value() || !SizeOpt->isOne())
-        return false;
-    }
-
-    const Expr *MemberBase = nullptr;
-    if (const auto *ME = dyn_cast<MemberExpr>(Arg0))
-      MemberBase = ME->getBase();
-
-    if (const auto *Call = dyn_cast<CallExpr>(Arg0)) {
-      auto ValuesOpt = getDependentValuesFromCall(CAT, Call);
-      if (!ValuesOpt.has_value())
-        return false;
-      return isCompatibleWithCountExpr(Arg1, CAT->getCountExpr(), MemberBase,
-                                       &*ValuesOpt, Ctx);
-    }
-
-    return isCompatibleWithCountExpr(Arg1, CAT->getCountExpr(), MemberBase,
-                                     /*DependentValues=*/nullptr, Ctx);
-  }
-  /* TO_UPSTREAM(BoundsSafetyInterop) OFF */
-  return false;
+  // Check 6:
+  return isPtrBufferSafe(Arg0, Arg1, Ctx);
 }
 
 static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
@@ -1859,22 +1926,10 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
   return false;
 }
 
-// This matcher requires that it is known that the callee `isNormalPrintf`.
-// Then it matches if the first two arguments of the call is a pointer and an
-// integer and they are not in a safe pattern.
-//
-// For the first two arguments: `ptr` and `size`, they are safe if in the
-// following patterns:
-//
-// Pattern 1:
-//    ptr := DRE.data();
-//    size:= DRE.size()/DRE.size_bytes()
-// And DRE is a hardened container or view.
-//
-// Pattern 2:
-//    ptr := Constant-Array-DRE;
-//    size:= any expression that has compile-time constant value equivalent to
-//           sizeof (Constant-Array-DRE)
+// This function requires that it is known that the callee `isNormalPrintf`.
+// It returns true iff the first two arguments of the call is a pointer
+// `Ptr` and an unsigned integer `Size` and they do not conform to any patterns
+// defined by `isHardcodedCountedByPointerArgumentSafe`.
 static bool hasUnsafeSnprintfBuffer(const CallExpr &Node, ASTContext &Ctx) {
   const FunctionDecl *FD = Node.getDirectCallee();
 
@@ -1891,8 +1946,9 @@ static bool hasUnsafeSnprintfBuffer(const CallExpr &Node, ASTContext &Ctx) {
   QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
   const Expr *Buf = Node.getArg(0), *Size = Node.getArg(1);
 
-  if (FirstPteTy.isConstQualified() || !Buf->getType()->isPointerType() ||
-      !Size->getType()->isIntegerType())
+  if (FirstPteTy.isConstQualified() || !FirstPteTy->isAnyCharacterType() ||
+      !Buf->getType()->isPointerType() ||
+      !Size->getType()->isUnsignedIntegerType())
     return false; // not an snprintf call
 
   if (std::optional<CharUnits> NumChars =
