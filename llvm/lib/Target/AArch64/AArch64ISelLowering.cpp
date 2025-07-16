@@ -3100,8 +3100,8 @@ AArch64TargetLowering::EmitGetSMESaveSize(MachineInstr &MI,
 
 // Helper function to find the instruction that defined a virtual register.
 // If unable to find such instruction, returns nullptr.
-static MachineInstr *stripVRegCopies(const MachineRegisterInfo &MRI,
-                                     Register Reg) {
+static const MachineInstr *stripVRegCopies(const MachineRegisterInfo &MRI,
+                                           Register Reg) {
   while (Reg.isVirtual()) {
     MachineInstr *DefMI = MRI.getVRegDef(Reg);
     assert(DefMI && "Virtual register definition not found");
@@ -3133,22 +3133,29 @@ void AArch64TargetLowering::fixupPtrauthDiscriminator(
 
   Register AddrDisc = AddrDiscOp.getReg();
   int64_t IntDisc = IntDiscOp.getImm();
-
   assert(IntDisc == 0 && "Blend components are already expanded");
 
-  MachineInstr *MaybeBlend = stripVRegCopies(MRI, AddrDisc);
-
-  if (MaybeBlend) {
-    // Detect blend(addr, imm) which is lowered as "MOVK addr, #imm, #48".
-    // Alternatively, recognize small immediate modifier passed via VReg.
-    if (MaybeBlend->getOpcode() == AArch64::MOVKXi &&
-        MaybeBlend->getOperand(3).getImm() == 48) {
-      AddrDisc = MaybeBlend->getOperand(1).getReg();
-      IntDisc = MaybeBlend->getOperand(2).getImm();
-    } else if (MaybeBlend->getOpcode() == AArch64::MOVi32imm &&
-               isUInt<16>(MaybeBlend->getOperand(1).getImm())) {
-      AddrDisc = AArch64::NoRegister;
-      IntDisc = MaybeBlend->getOperand(1).getImm();
+  const MachineInstr *DiscMI = stripVRegCopies(MRI, AddrDisc);
+  if (DiscMI) {
+    switch (DiscMI->getOpcode()) {
+    case AArch64::MOVKXi:
+      // blend(addr, imm) which is lowered as "MOVK addr, #imm, #48".
+      // #imm should be an immediate and not a global symbol, for example.
+      if (DiscMI->getOperand(2).isImm() &&
+          DiscMI->getOperand(3).getImm() == 48) {
+        AddrDisc = DiscMI->getOperand(1).getReg();
+        IntDisc = DiscMI->getOperand(2).getImm();
+      }
+      break;
+    case AArch64::MOVi32imm:
+    case AArch64::MOVi64imm:
+      // Small immediate integer constant passed via VReg.
+      if (DiscMI->getOperand(1).isImm() &&
+          isUInt<16>(DiscMI->getOperand(1).getImm())) {
+        AddrDisc = AArch64::NoRegister;
+        IntDisc = DiscMI->getOperand(1).getImm();
+      }
+      break;
     }
   }
 
