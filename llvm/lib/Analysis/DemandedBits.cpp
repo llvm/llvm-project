@@ -262,9 +262,9 @@ void DemandedBits::determineLiveOperandBits(
             AB = AOut.shl(Sh);
           } else {
             AB = AOut & APInt::getLowBitsSet(BitWidth, Sh);
-            if (IsSigned) {
-              AB.setSignBit();
-            }
+          }
+          if (IsSigned) {
+            AB.setSignBit();
           }
         }
       }
