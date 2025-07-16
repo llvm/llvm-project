@@ -24,12 +24,15 @@
 
 using namespace llvm;
 
-static_assert(std::is_trivially_destructible_v<MCDataFragment>,
+static_assert(std::is_trivially_destructible_v<MCFragment>,
               "fragment classes must be trivially destructible");
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
     : Kind(Kind), HasInstructions(HasInstructions), LinkerRelaxable(false),
-      AllowAutoPadding(false) {}
+      AllowAutoPadding(false) {
+  static_assert(sizeof(MCFragment::Tail) <= 16,
+                "Keep the variable-size tail small");
+}
 
 const MCSymbol *MCFragment::getAtom() const {
   return cast<MCSectionMachO>(Parent)->getAtom(LayoutOrder);
@@ -79,18 +82,56 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
       OS << " Nops";
     break;
   }
-  case MCFragment::FT_Data:  {
-    const auto *F = cast<MCDataFragment>(this);
-    if (F->isLinkerRelaxable())
+  case MCFragment::FT_Data:
+  case MCFragment::FT_Relaxable:
+  case MCFragment::FT_LEB:
+  case MCFragment::FT_Dwarf:
+  case MCFragment::FT_DwarfFrame: {
+    if (isLinkerRelaxable())
       OS << " LinkerRelaxable";
-    auto Contents = F->getContents();
-    OS << " Size:" << Contents.size() << " [";
-    for (unsigned i = 0, e = Contents.size(); i != e; ++i) {
+    auto Fixed = getContents();
+    auto Var = getVarContents();
+    OS << " Size:" << Fixed.size();
+    if (getKind() != MCFragment::FT_Data)
+      OS << '+' << Var.size();
+    OS << " [";
+    for (unsigned i = 0, e = Fixed.size(); i != e; ++i) {
       if (i) OS << ",";
-      OS << format("%02x", uint8_t(Contents[i]));
+      OS << format("%02x", uint8_t(Fixed[i]));
+    }
+    for (unsigned i = 0, e = Var.size(); i != e; ++i) {
+      if (Fixed.size() || i)
+        OS << ",";
+      OS << format("%02x", uint8_t(Var[i]));
     }
     OS << ']';
-    printFixups(F->getFixups());
+    switch (getKind()) {
+    case MCFragment::FT_Data:
+      break;
+    case MCFragment::FT_Relaxable:
+      OS << ' ';
+      getInst().dump_pretty(OS);
+      break;
+    case MCFragment::FT_LEB: {
+      OS << " Value:";
+      getLEBValue().print(OS, nullptr);
+      OS << " Signed:" << isLEBSigned();
+      break;
+    }
+    case MCFragment::FT_Dwarf:
+      OS << " AddrDelta:";
+      getDwarfAddrDelta().print(OS, nullptr);
+      OS << " LineDelta:" << getDwarfLineDelta();
+      break;
+    case MCFragment::FT_DwarfFrame:
+      OS << " AddrDelta:";
+      getDwarfAddrDelta().print(OS, nullptr);
+      break;
+    default:
+      llvm_unreachable("");
+    }
+    printFixups(getFixups());
+    printFixups(getVarFixups());
     break;
   }
   case MCFragment::FT_Fill:  {
@@ -107,38 +148,11 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
        << " ControlledNopLength:" << NF->getControlledNopLength();
     break;
   }
-  case MCFragment::FT_Relaxable:  {
-    const auto *F = cast<MCRelaxableFragment>(this);
-    OS << " Size:" << F->getContents().size() << ' ';
-    F->getInst().dump_pretty(OS);
-    printFixups(F->getFixups());
-    break;
-  }
   case MCFragment::FT_Org:  {
     const auto *OF = cast<MCOrgFragment>(this);
     OS << " Offset:";
     OF->getOffset().print(OS, nullptr);
     OS << " Value:" << static_cast<unsigned>(OF->getValue());
-    break;
-  }
-  case MCFragment::FT_Dwarf:  {
-    const auto *OF = cast<MCDwarfLineAddrFragment>(this);
-    OS << " AddrDelta:";
-    OF->getAddrDelta().print(OS, nullptr);
-    OS << " LineDelta:" << OF->getLineDelta();
-    break;
-  }
-  case MCFragment::FT_DwarfFrame:  {
-    const auto *CF = cast<MCDwarfCallFrameFragment>(this);
-    OS << " AddrDelta:";
-    CF->getAddrDelta().print(OS, nullptr);
-    break;
-  }
-  case MCFragment::FT_LEB: {
-    const auto *LF = cast<MCLEBFragment>(this);
-    OS << " Value:";
-    LF->getValue().print(OS, nullptr);
-    OS << " Signed:" << LF->isSigned();
     break;
   }
   case MCFragment::FT_BoundaryAlign: {
