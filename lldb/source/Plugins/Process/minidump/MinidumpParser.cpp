@@ -480,9 +480,22 @@ void MinidumpParser::PopulateMemoryRanges() {
 
 llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
                                                   size_t size) {
+  llvm::Expected<llvm::ArrayRef<uint8_t>> expected_memory = GetExpectedMemory(addr, size);
+  if (!expected_memory) {
+    llvm::consumeError(expected_memory.takeError());
+    return {};
+  }
+
+  return *expected_memory;
+}
+
+llvm::Expected<llvm::ArrayRef<uint8_t>> MinidumpParser::GetExpectedMemory(lldb::addr_t addr,
+                                                                          size_t size) {
   std::optional<minidump::Range> range = FindMemoryRange(addr);
   if (!range)
-    return {};
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No memory range found for address {0x%" PRIx64 "}",
+                                   addr);
 
   // There's at least some overlap between the beginning of the desired range
   // (addr) and the current range.  Figure out where the overlap begins and
@@ -491,7 +504,8 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
   const size_t offset = addr - range->start;
 
   if (addr < range->start || offset >= range->range_ref.size())
-    return {};
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Address {0x%" PRIx64 "} is not in range [{0x%" PRIx64 " - 0x%" PRIx64 "}]", addr, range->start, range->start + range->range_ref.size());
 
   const size_t overlap = std::min(size, range->range_ref.size() - offset);
   return range->range_ref.slice(offset, overlap);
