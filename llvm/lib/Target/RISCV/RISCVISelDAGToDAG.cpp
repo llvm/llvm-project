@@ -689,10 +689,16 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
   if (!isShiftedMask_32(C1) || isInt<12>(C1))
     return false;
 
+  // INSBI will clobber the input register in N0. Bail out if we need a copy to
+  // preserve this value.
+  SDValue N0 = Node->getOperand(0);
+  if (!N0.hasOneUse())
+    return false;
+
   // If C1 is a shifted mask (but can't be formed as an ORI),
   // use a bitfield insert of -1.
   // Transform (or x, C1)
-  //        -> (qc.insbi x, width, shift)
+  //        -> (qc.insbi x, -1, width, shift)
   const unsigned Leading = llvm::countl_zero((uint32_t)C1);
   const unsigned Trailing = llvm::countr_zero((uint32_t)C1);
   const unsigned Width = 32 - Leading - Trailing;
@@ -705,7 +711,7 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
-  SDValue Ops[] = {CurDAG->getSignedTargetConstant(-1, DL, VT),
+  SDValue Ops[] = {N0, CurDAG->getSignedTargetConstant(-1, DL, VT),
                    CurDAG->getTargetConstant(Width, DL, VT),
                    CurDAG->getTargetConstant(Trailing, DL, VT)};
   SDNode *BitIns = CurDAG->getMachineNode(RISCV::QC_INSBI, DL, VT, Ops);
@@ -2936,8 +2942,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 /// Similar to SelectAddrRegImm, except that the offset is restricted to uimm9.
 bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
                                           SDValue &Offset) {
-  if (SelectAddrFrameIndex(Addr, Base, Offset))
-    return true;
+  // FIXME: Support FrameIndex. Need to teach eliminateFrameIndex that only
+  // a 9-bit immediate can be folded.
 
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
@@ -2947,8 +2953,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
     if (isUInt<9>(CVal)) {
       Base = Addr.getOperand(0);
 
-      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
-        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
+      // FIXME: Support FrameIndex. Need to teach eliminateFrameIndex that only
+      // a 9-bit immediate can be folded.
       Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
       return true;
     }

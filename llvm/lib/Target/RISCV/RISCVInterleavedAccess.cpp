@@ -106,7 +106,8 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
     Value *Offset = ConstantInt::get(XLenTy, Indices[0] * ScalarSizeInBytes);
     Value *BasePtr = Builder.CreatePtrAdd(LI->getPointerOperand(), Offset);
     Value *Mask = Builder.getAllOnesMask(VTy->getElementCount());
-    Value *VL = Builder.getInt32(VTy->getNumElements());
+    Value *VL = Builder.CreateElementCount(Builder.getInt32Ty(),
+                                           VTy->getElementCount());
 
     CallInst *CI =
         Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
@@ -118,7 +119,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
     return true;
   };
 
-  Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
+  Value *VL = Builder.CreateElementCount(XLenTy, VTy->getElementCount());
   Value *Mask = Builder.getAllOnesMask(VTy->getElementCount());
   CallInst *VlsegN = Builder.CreateIntrinsic(
       FixedVlsegIntrIds[Factor - 2], {VTy, PtrTy, XLenTy},
@@ -191,7 +192,8 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
     Value *Offset = ConstantInt::get(XLenTy, Index * ScalarSizeInBytes);
     Value *BasePtr = Builder.CreatePtrAdd(SI->getPointerOperand(), Offset);
     Value *Mask = Builder.getAllOnesMask(DataVTy->getElementCount());
-    Value *VL = Builder.getInt32(VTy->getNumElements());
+    Value *VL = Builder.CreateElementCount(Builder.getInt32Ty(),
+                                           VTy->getElementCount());
 
     CallInst *CI = Builder.CreateIntrinsic(
         Intrinsic::experimental_vp_strided_store,
@@ -223,7 +225,7 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   // This VL should be OK (should be executable in one vsseg instruction,
   // potentially under larger LMULs) because we checked that the fixed vector
   // type fits in isLegalInterleavedAccessType
-  Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
+  Value *VL = Builder.CreateElementCount(XLenTy, VTy->getElementCount());
   Value *StoreMask = Builder.getAllOnesMask(VTy->getElementCount());
   Ops.append({SI->getPointerOperand(), StoreMask, VL});
 
@@ -255,9 +257,9 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   Type *PtrTy = LI->getPointerOperandType();
   Type *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
 
-  if (auto *FVTy = dyn_cast<FixedVectorType>(ResVTy)) {
-    Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    Value *Mask = Builder.getAllOnesMask(FVTy->getElementCount());
+  if (isa<FixedVectorType>(ResVTy)) {
+    Value *VL = Builder.CreateElementCount(XLenTy, ResVTy->getElementCount());
+    Value *Mask = Builder.getAllOnesMask(ResVTy->getElementCount());
     Return = Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2],
                                      {ResVTy, PtrTy, XLenTy},
                                      {LI->getPointerOperand(), Mask, VL});
@@ -325,13 +327,13 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 
   Type *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
 
-  if (auto *FVTy = dyn_cast<FixedVectorType>(InVTy)) {
+  if (isa<FixedVectorType>(InVTy)) {
     Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
         SI->getModule(), FixedVssegIntrIds[Factor - 2], {InVTy, PtrTy, XLenTy});
 
     SmallVector<Value *, 10> Ops(InterleaveValues);
-    Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    Value *Mask = Builder.getAllOnesMask(FVTy->getElementCount());
+    Value *VL = Builder.CreateElementCount(XLenTy, InVTy->getElementCount());
+    Value *Mask = Builder.getAllOnesMask(InVTy->getElementCount());
     Ops.append({SI->getPointerOperand(), Mask, VL});
 
     Builder.CreateCall(VssegNFunc, Ops);
@@ -453,9 +455,9 @@ bool RISCVTargetLowering::lowerInterleavedVPLoad(
       XLenTy);
 
   Value *Return = nullptr;
-  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+  if (isa<FixedVectorType>(VTy)) {
     Return = Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2],
-                                     {FVTy, PtrTy, XLenTy},
+                                     {VTy, PtrTy, XLenTy},
                                      {Load->getArgOperand(0), Mask, EVL});
   } else {
     unsigned SEW = DL.getTypeSizeInBits(VTy->getElementType());
@@ -561,11 +563,11 @@ bool RISCVTargetLowering::lowerInterleavedVPStore(
       Builder.CreateUDiv(WideEVL, ConstantInt::get(WideEVL->getType(), Factor)),
       XLenTy);
 
-  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+  if (isa<FixedVectorType>(VTy)) {
     SmallVector<Value *, 8> Operands(InterleaveOperands);
     Operands.append({Store->getArgOperand(1), Mask, EVL});
     Builder.CreateIntrinsic(FixedVssegIntrIds[Factor - 2],
-                            {FVTy, PtrTy, XLenTy}, Operands);
+                            {VTy, PtrTy, XLenTy}, Operands);
     return true;
   }
 

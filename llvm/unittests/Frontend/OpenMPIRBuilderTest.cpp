@@ -4674,7 +4674,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithThreadLimit) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -4732,7 +4732,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsUpper) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -4793,7 +4793,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsBoth) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -4860,7 +4860,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsAndThreadLimit) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -7403,8 +7403,8 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskIfCondition) {
   EXPECT_EQ(TaskBeginIfCall->getParent(),
             IfConditionBranchInst->getSuccessor(1));
 
-  EXPECT_EQ(TaskBeginIfCall->getNextNonDebugInstruction(), OulinedFnCall);
-  EXPECT_EQ(OulinedFnCall->getNextNonDebugInstruction(), TaskCompleteCall);
+  EXPECT_EQ(TaskBeginIfCall->getNextNode(), OulinedFnCall);
+  EXPECT_EQ(OulinedFnCall->getNextNode(), TaskCompleteCall);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
@@ -7488,12 +7488,12 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
                                            OMPRTL___kmpc_global_thread_num));
 
   // Checking the general structure of the IR generated is same as expected.
-  Instruction *GeneratedStoreInst = TaskgroupCall->getNextNonDebugInstruction();
+  Instruction *GeneratedStoreInst = TaskgroupCall->getNextNode();
   EXPECT_EQ(GeneratedStoreInst, InternalStoreInst);
   Instruction *GeneratedLoad32 =
-      GeneratedStoreInst->getNextNonDebugInstruction();
+      GeneratedStoreInst->getNextNode();
   EXPECT_EQ(GeneratedLoad32, InternalLoad32);
-  Instruction *GeneratedLoad128 = GeneratedLoad32->getNextNonDebugInstruction();
+  Instruction *GeneratedLoad128 = GeneratedLoad32->getNextNode();
   EXPECT_EQ(GeneratedLoad128, InternalLoad128);
 
   // Checking the ordering because of the if statements and that
