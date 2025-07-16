@@ -419,6 +419,8 @@ def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
 
 def AllowMisalignedMemAccesses : Predicate<"!Subtarget->requiresStrictAlign()">;
 
+def UseWzrToVecMove : Predicate<"Subtarget->useWzrToVecMove()">;
+
 
 //===----------------------------------------------------------------------===//
 // AArch64-specific DAG Nodes.
@@ -7377,6 +7379,7 @@ def : Pat<(v4f16 (vector_insert (v4f16 V64:$Rn),
               (i64 0)),
             dsub)>;
 
+let Predicates = [UseWzrToVecMove] in {
 def : Pat<(vector_insert (v8f16 V128:$Rn), (f16 fpimm0), (i64 VectorIndexH:$imm)),
           (INSvi16gpr V128:$Rn, VectorIndexH:$imm, WZR)>;
 def : Pat<(vector_insert (v4f16 V64:$Rn), (f16 fpimm0), (i64 VectorIndexH:$imm)),
@@ -7387,6 +7390,7 @@ def : Pat<(vector_insert (v2f32 V64:$Rn), (f32 fpimm0), (i64 VectorIndexS:$imm))
           (EXTRACT_SUBREG (INSvi32gpr (v4f32 (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), V64:$Rn, dsub)), VectorIndexS:$imm, WZR), dsub)>;
 def : Pat<(vector_insert v2f64:$Rn, (f64 fpimm0), (i64 VectorIndexD:$imm)),
           (INSvi64gpr V128:$Rn, VectorIndexS:$imm, XZR)>;
+}
 
 def : Pat<(v8f16 (vector_insert (v8f16 V128:$Rn),
             (f16 FPR16:$Rm), (i64 VectorIndexH:$imm))),
