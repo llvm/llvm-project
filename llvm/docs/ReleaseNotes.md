@@ -315,6 +315,8 @@ Changes to LLDB
   nothing at all
 * Changed the format of opcode bytes to match llvm-objdump when disassembling
   RISC-V code with `disassemble`'s `--byte` option.
+* LLDB added native support for the Model Context Protocol  (MCP). An MCP
+  server can be started with the `protocol-server start MCP` command.
 
 ### Changes to lldb-dap
 
