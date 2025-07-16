@@ -66,8 +66,12 @@ class C {
 
 // expected-error@+2{{'sycl_external' cannot be applied to an explicitly deleted function}}
 class D {
-  [[clang::sycl_external]] void del() = delete;
+  [[clang::sycl_external]] void mdel() = delete;
 };
+
+// expected-error@+1{{'sycl_external' cannot be applied to an explicitly deleted function}}
+[[clang::sycl_external]] void del() = delete;
+
 struct NonCopyable {
   ~NonCopyable() = delete;
   [[clang::sycl_external]] NonCopyable(const NonCopyable&) = default;
@@ -98,8 +102,11 @@ public:
 [[clang::sycl_external]] void fun3(int *);
 [[clang::sycl_external]] void fun4(int &);
 [[clang::sycl_external]] void fun5(int &&);
+template<typename T>
+[[clang::sycl_external]] void fun6(T) {}
+template void fun6(int *);
+template<> [[clang::sycl_external]] void fun6<long*>(long *) {}
 
 #if CPP20
 [[clang::sycl_external]] consteval int func();
 #endif
-

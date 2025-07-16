@@ -501,8 +501,7 @@ may optionally be present on subsequent declarations.
 When compiling for a SYCL device target that does not support the generic
 address space, the function shall not specify a raw pointer or reference type
 as the return type or as a parameter type.
-See section 5.9, "Address-space deduction", of the SYCL 2020 specification.
-
+See section 5.10, "SYCL offline linking", of the SYCL 2020 specification.
 The following examples demonstrate the use of this attribute:
 
 .. code-block:: c++

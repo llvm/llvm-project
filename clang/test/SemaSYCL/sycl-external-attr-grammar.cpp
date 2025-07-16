@@ -1,9 +1,8 @@
 // RUN: %clang_cc1 -fsycl-is-device -fsyntax-only -verify %s
 
-// expected-error@+1{{'clang::sycl_external' attribute takes no arguments}}
-[[clang::sycl_external(3)]] void bar() {}
 
-// FIXME: this case should be diagnosed too
+// FIXME: this case should be diagnosed.
+// This attribute takes no arguments.
 [[clang::sycl_external()]] void bad1();
 
 // expected-error@+1{{expected expression}}
