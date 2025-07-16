@@ -13,6 +13,7 @@
 //===--------------------------------------------------------------------===//
 
 #include "clang-c/CXString.h"
+#include "clang-c/Index.h"
 #include "clang-c/Platform.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -21,29 +22,26 @@ extern "C" {
 // The functions below used to be part of the C API for ARCMigrate, which has
 // since been removed from Clang; they already used to print an error if Clang
 // was compiled without arcmt support, so we continue doing so.
-typedef void *CXRemapping;
-CINDEX_LINKAGE CXRemapping clang_getRemappings(const char *) {
+CXRemapping clang_getRemappings(const char *) {
   llvm::errs() << "error: ARCMigrate has been removed from Clang";
   return nullptr;
 }
 
-CINDEX_LINKAGE
 CXRemapping clang_getRemappingsFromFileList(const char **, unsigned) {
   llvm::errs() << "error: ARCMigrate has been removed from Clang";
   return nullptr;
 }
 
-CINDEX_LINKAGE unsigned clang_remap_getNumFiles(CXRemapping) {
+unsigned clang_remap_getNumFiles(CXRemapping) {
   llvm::errs() << "error: ARCMigrate has been removed from Clang";
   return 0;
 }
 
-CINDEX_LINKAGE void clang_remap_getFilenames(CXRemapping, unsigned, CXString *,
-                                             CXString *) {
+void clang_remap_getFilenames(CXRemapping, unsigned, CXString *, CXString *) {
   llvm::errs() << "error: ARCMigrate has been removed from Clang";
 }
 
-CINDEX_LINKAGE void clang_remap_dispose(CXRemapping) {
+void clang_remap_dispose(CXRemapping) {
   llvm::errs() << "error: ARCMigrate has been removed from Clang";
 }
 
