@@ -1933,6 +1933,20 @@ def atomic_load_64 :
   let MemoryVT = i64;
 }
 
+def atomic_load_128_v2i64 :
+  PatFrag<(ops node:$ptr),
+          (atomic_load node:$ptr)> {
+  let IsAtomic = true;
+  let MemoryVT = v2i64;
+}
+
+def atomic_load_128_v4i32 :
+  PatFrag<(ops node:$ptr),
+          (atomic_load node:$ptr)> {
+  let IsAtomic = true;
+  let MemoryVT = v4i32;
+}
+
 def atomic_load_nonext_8 :
   PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
   let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
