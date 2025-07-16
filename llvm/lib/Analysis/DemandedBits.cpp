@@ -80,7 +80,7 @@ void DemandedBits::determineLiveOperandBits(
                              bool ShiftLeft) {
     APInt Range = APInt::getLowBitsSet(BitWidth, Max + 1) &
                   ~APInt::getLowBitsSet(BitWidth, Min);
-    using ShiftFn = APInt (APInt::*)(unsigned) const; // one-word shift overload
+    using ShiftFn = APInt (APInt::*)(unsigned) const;
     auto Shift = ShiftLeft ? static_cast<ShiftFn>(&APInt::shl)
                            : static_cast<ShiftFn>(&APInt::lshr);
     AB = APInt::getZero(BitWidth);
