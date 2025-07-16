@@ -1629,7 +1629,7 @@ def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
     Examples:
 
     ```mlir
-    // IFuncs have @-identifier and use a resolver function.
+    // IFuncs resolve a symbol at runtime using a resovler function.
     llvm.mlir.ifunc external @foo: !llvm.func<f32 (i64)>, !llvm.ptr @resolver
 
     llvm.func @foo_1(i64) -> f32

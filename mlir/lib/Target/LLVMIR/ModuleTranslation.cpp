@@ -1877,11 +1877,11 @@ LogicalResult ModuleTranslation::convertIFuncs() {
         convertLinkageToLLVM(op.getLinkage());
     llvm::Constant *resolver;
     if (auto *resolverFn = lookupFunction(op.getResolver())) {
-      resolver = dyn_cast<llvm::Constant>(resolverFn);
+      resolver = cast<llvm::Constant>(resolverFn);
     } else {
-      Operation *aliasTrg = symbolTable().lookupSymbolIn(parentLLVMModule(op),
-                                                         op.getResolverAttr());
-      resolver = cast<llvm::Constant>(lookupAlias(aliasTrg));
+      Operation *aliasOp = symbolTable().lookupSymbolIn(parentLLVMModule(op),
+                                                        op.getResolverAttr());
+      resolver = cast<llvm::Constant>(lookupAlias(aliasOp));
     }
 
     auto *ifunc =

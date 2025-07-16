@@ -2709,14 +2709,24 @@ void IFuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
 LogicalResult IFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   Operation *symbol =
       symbolTable.lookupSymbolIn(parentLLVMModule(*this), getResolverAttr());
+  // This matches LLVM IR verification logic, see llvm/lib/IR/Verifier.cpp
   auto resolver = dyn_cast<LLVMFuncOp>(symbol);
-  if (!resolver) {
-    // FIXME: Strip aliases to find the called function
-    if (isa<AliasOp>(symbol))
+  auto alias = dyn_cast<AliasOp>(symbol);
+  while (alias) {
+    Block &initBlock = alias.getInitializerBlock();
+    auto returnOp = cast<ReturnOp>(initBlock.getTerminator());
+    auto addrOp = dyn_cast<AddressOfOp>(returnOp.getArg().getDefiningOp());
+    // FIXME: This is a best effort solution. The AliasOp body might be more
+    // complex and in that case we bail out with success. To completely match
+    // the LLVM IR logic it would be necessary to implement proper alias and
+    // cast stripping.
+    if (!addrOp)
       return success();
-    return emitOpError("must have a function resolver");
+    resolver = addrOp.getFunction(symbolTable);
+    alias = addrOp.getAlias(symbolTable);
   }
-  // This matches LLVM IR verification logic, see from llvm/lib/IR/Verifier.cpp
+  if (!resolver)
+    return emitOpError("must have a function resolver");
   Linkage linkage = resolver.getLinkage();
   if (resolver.isExternal() || linkage == Linkage::AvailableExternally)
     return emitOpError("resolver must be a definition");

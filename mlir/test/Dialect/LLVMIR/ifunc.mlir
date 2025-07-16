@@ -31,7 +31,6 @@ llvm.func @resolver() -> !llvm.ptr {
 // -----
 
 // CHECK: llvm.mlir.ifunc weak @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver
-
 llvm.mlir.ifunc weak @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver
 llvm.func @resolver() -> !llvm.ptr {
   %0 = llvm.mlir.constant(333 : i64) : i64
