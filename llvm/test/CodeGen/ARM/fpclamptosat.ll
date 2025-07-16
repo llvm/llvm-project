@@ -3690,18 +3690,17 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    mov.w lr, #512
+; FULL-NEXT:    subs r1, #8
 ; FULL-NEXT:    subs r0, #8
 ; FULL-NEXT:    vldr s0, .LCPI54_0
-; FULL-NEXT:    mvn r2, #7
 ; FULL-NEXT:  .LBB54_1: @ =>This Inner Loop Header: Depth=1
-; FULL-NEXT:    add.w r12, r1, r2
-; FULL-NEXT:    adds r2, #8
-; FULL-NEXT:    vldr s2, [r12, #8]
+; FULL-NEXT:    vldr s2, [r1, #8]
 ; FULL-NEXT:    vmul.f32 s2, s2, s0
 ; FULL-NEXT:    vcvt.s32.f32 s2, s2
-; FULL-NEXT:    vmov r3, s2
-; FULL-NEXT:    str r3, [r0, #8]!
-; FULL-NEXT:    vldr s2, [r12, #12]
+; FULL-NEXT:    vmov r2, s2
+; FULL-NEXT:    str r2, [r0, #8]!
+; FULL-NEXT:    vldr s2, [r1, #12]
+; FULL-NEXT:    adds r1, #8
 ; FULL-NEXT:    vmul.f32 s2, s2, s0
 ; FULL-NEXT:    vcvt.s32.f32 s2, s2
 ; FULL-NEXT:    vstr s2, [r0, #4]
@@ -3865,18 +3864,17 @@ define void @unroll_minmax(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    mov.w lr, #512
+; FULL-NEXT:    subs r1, #8
 ; FULL-NEXT:    subs r0, #8
 ; FULL-NEXT:    vldr s0, .LCPI55_0
-; FULL-NEXT:    mvn r2, #7
 ; FULL-NEXT:  .LBB55_1: @ =>This Inner Loop Header: Depth=1
-; FULL-NEXT:    add.w r12, r1, r2
-; FULL-NEXT:    adds r2, #8
-; FULL-NEXT:    vldr s2, [r12, #8]
+; FULL-NEXT:    vldr s2, [r1, #8]
 ; FULL-NEXT:    vmul.f32 s2, s2, s0
 ; FULL-NEXT:    vcvt.s32.f32 s2, s2
-; FULL-NEXT:    vmov r3, s2
-; FULL-NEXT:    str r3, [r0, #8]!
-; FULL-NEXT:    vldr s2, [r12, #12]
+; FULL-NEXT:    vmov r2, s2
+; FULL-NEXT:    str r2, [r0, #8]!
+; FULL-NEXT:    vldr s2, [r1, #12]
+; FULL-NEXT:    adds r1, #8
 ; FULL-NEXT:    vmul.f32 s2, s2, s0
 ; FULL-NEXT:    vcvt.s32.f32 s2, s2
 ; FULL-NEXT:    vstr s2, [r0, #4]
