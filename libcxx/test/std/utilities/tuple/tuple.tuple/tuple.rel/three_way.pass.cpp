@@ -24,20 +24,15 @@ TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
 TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
 TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244)
 
+#include <array>
 #include <cassert>
 #include <compare>
+#include <complex>
 #include <limits>
+#include <ranges>
 #include <tuple>
 #include <type_traits> // std::is_constant_evaluated
-
-#if TEST_STD_VER >= 23
-#  include <array>
-#  include <ranges>
-#  include <utility>
-#endif
-#if TEST_STD_VER >= 26
-#  include <complex>
-#endif
+#include <utility>
 
 // A custom three-way result type
 struct CustomEquality {
