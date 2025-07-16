@@ -50,6 +50,7 @@ public:
     S_REL64,         // symbol@rel64
     S_ABS32_LO,      // symbol@abs32@lo
     S_ABS32_HI,      // symbol@abs32@hi
+    S_ABS64,         // symbol@abs64
   };
 
 private:

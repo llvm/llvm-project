@@ -2932,14 +2932,22 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   Register PCReg = PtrTy.getSizeInBits() != 32 ? DstReg :
     B.getMRI()->createGenericVirtualRegister(ConstPtrTy);
 
-  MachineInstrBuilder MIB = B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET)
-    .addDef(PCReg);
+  if (ST.has64BitLiterals()) {
+    assert(GAFlags != SIInstrInfo::MO_NONE);
 
-  MIB.addGlobalAddress(GV, Offset, GAFlags);
-  if (GAFlags == SIInstrInfo::MO_NONE)
-    MIB.addImm(0);
-  else
-    MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
+    MachineInstrBuilder MIB =
+        B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET64).addDef(PCReg);
+    MIB.addGlobalAddress(GV, Offset, GAFlags + 2);
+  } else {
+    MachineInstrBuilder MIB =
+        B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET).addDef(PCReg);
+
+    MIB.addGlobalAddress(GV, Offset, GAFlags);
+    if (GAFlags == SIInstrInfo::MO_NONE)
+      MIB.addImm(0);
+    else
+      MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
+  }
 
   if (!B.getMRI()->getRegClassOrNull(PCReg))
     B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
@@ -2954,6 +2962,15 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
     Register DstReg, LLT PtrTy, MachineIRBuilder &B, const GlobalValue *GV,
     MachineRegisterInfo &MRI) const {
   bool RequiresHighHalf = PtrTy.getSizeInBits() != 32;
+
+  if (RequiresHighHalf && ST.has64BitLiterals()) {
+    if (!MRI.getRegClassOrNull(DstReg))
+      MRI.setRegClass(DstReg, &AMDGPU::SReg_64RegClass);
+    B.buildInstr(AMDGPU::S_MOV_B64)
+        .addDef(DstReg)
+        .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS64);
+    return;
+  }
 
   LLT S32 = LLT::scalar(32);
 
