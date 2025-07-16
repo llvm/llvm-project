@@ -223,7 +223,8 @@ public:
       ArrayRef<Value *> DeinterleaveValues) const override;
 
   bool lowerInterleaveIntrinsicToStore(
-      StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
+      Instruction *Store, Value *Mask,
+      ArrayRef<Value *> InterleaveValues) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
