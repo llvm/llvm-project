@@ -3803,17 +3803,21 @@ bool VectorCombine::run() {
     }
   };
 
+  SmallVector<Instruction*, 128> InstrsForInstructionWorklist;
   for (BasicBlock &BB : F) {
     // Ignore unreachable basic blocks.
     if (!DT.isReachableFromEntry(&BB))
       continue;
-    // Use early increment range so that we can erase instructions in loop.
-    for (Instruction &I : make_early_inc_range(BB)) {
+    for (Instruction &I : BB) {
       if (I.isDebugOrPseudoInst())
         continue;
-      FoldInst(I);
+      InstrsForInstructionWorklist.push_back(&I);
     }
   }
+
+  Worklist.reserve(InstrsForInstructionWorklist.size());
+  for (auto I : reverse(InstrsForInstructionWorklist))
+    Worklist.push(I);
 
   while (!Worklist.isEmpty()) {
     Instruction *I = Worklist.removeOne();
