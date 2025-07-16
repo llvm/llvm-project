@@ -315,10 +315,7 @@ Changes to LLDB
   [DIL](https://discourse.llvm.org/t/rfc-data-inspection-language/69893) as the
   default implementation for 'frame variable'. This should not change the
   behavior of 'frame variable' at all, at this time. To revert to using the
-  old implementation use
-  ```
-     settings set target.experimental.use-DIL false
-   ```
+  old implementation use: `settings set target.experimental.use-DIL false`.
 * Disassembly of unknown instructions now produces `<unknown>` instead of
   nothing at all
 * Changed the format of opcode bytes to match llvm-objdump when disassembling
