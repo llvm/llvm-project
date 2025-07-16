@@ -4490,7 +4490,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     // If evaluateVarDeclInit sees a constexpr-unknown variable, it returns
     // a null BaseVal. Any constexpr-unknown variable seen here is an error:
     // we can't access a constexpr-unknown object.
-    if (!BaseVal) {
+    if (AK != clang::AK_Dereference && !BaseVal) {
       Info.FFDiag(E, diag::note_constexpr_access_unknown_variable, 1)
           << AK << VD;
       Info.Note(VD->getLocation(), diag::note_declared_at);
