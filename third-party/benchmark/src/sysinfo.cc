@@ -371,7 +371,7 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizesWindows() {
       case CacheTrace:
         C.type = "Trace";
         break;
-      case CacheUnknown:
+      default:
         C.type = "Unknown";
         break;
     }
