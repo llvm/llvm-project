@@ -141,10 +141,6 @@ static bool canReuseDataFragment(const MCDataFragment &F,
   // instruction cannot be resolved at assemble-time.
   if (F.isLinkerRelaxable())
     return false;
-  // When bundling is enabled, we don't want to add data to a fragment that
-  // already has instructions (see MCELFStreamer::emitInstToData for details)
-  if (Assembler.isBundlingEnabled())
-    return false;
   // If the subtarget is changed mid fragment we start a new fragment to record
   // the new STI.
   return !STI || F.getSubtargetInfo() == STI;
@@ -359,13 +355,8 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
     return;
   }
 
-  // Otherwise, relax and emit it as data if either:
-  // - The RelaxAll flag was passed
-  // - Bundling is enabled and this instruction is inside a bundle-locked
-  //   group. We want to emit all such instructions into the same data
-  //   fragment.
-  if (Assembler.getRelaxAll() ||
-      (Assembler.isBundlingEnabled() && Sec->isBundleLocked())) {
+  // Otherwise, relax and emit it as data if RelaxAll is specified.
+  if (Assembler.getRelaxAll()) {
     MCInst Relaxed = Inst;
     while (Backend.mayNeedRelaxation(Relaxed.getOpcode(), Relaxed.getOperands(),
                                      STI))
@@ -380,18 +371,27 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
 
 void MCObjectStreamer::emitInstToData(const MCInst &Inst,
                                       const MCSubtargetInfo &STI) {
-  MCDataFragment *DF = getOrCreateDataFragment();
-  SmallVector<MCFixup, 1> Fixups;
-  SmallString<256> Code;
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
+  MCDataFragment *F = getOrCreateDataFragment(&STI);
 
-  auto CodeOffset = DF->getContents().size();
-  for (MCFixup &Fixup : Fixups)
-    Fixup.setOffset(Fixup.getOffset() + CodeOffset);
+  // Append the instruction to the data fragment.
+  size_t FixupStartIndex = F->getFixups().size();
+  size_t CodeOffset = F->getContents().size();
+  SmallVector<MCFixup, 1> Fixups;
+  getAssembler().getEmitter().encodeInstruction(
+      Inst, F->getContentsForAppending(), Fixups, STI);
+  F->doneAppending();
   if (!Fixups.empty())
-    DF->appendFixups(Fixups);
-  DF->setHasInstructions(STI);
-  DF->appendContents(Code);
+    F->appendFixups(Fixups);
+
+  for (auto &Fixup : MutableArrayRef(F->getFixups()).slice(FixupStartIndex)) {
+    Fixup.setOffset(Fixup.getOffset() + CodeOffset);
+    if (Fixup.isLinkerRelaxable()) {
+      F->setLinkerRelaxable();
+      getCurrentSectionOnly()->setLinkerRelaxable();
+    }
+  }
+
+  F->setHasInstructions(STI);
 }
 
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
@@ -408,23 +408,6 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
       Inst, IF->getContentsForAppending(), Fixups, STI);
   IF->doneAppending();
   IF->appendFixups(Fixups);
-}
-
-#ifndef NDEBUG
-static const char *const BundlingNotImplementedMsg =
-  "Aligned bundling is not implemented for this object format";
-#endif
-
-void MCObjectStreamer::emitBundleAlignMode(Align Alignment) {
-  llvm_unreachable(BundlingNotImplementedMsg);
-}
-
-void MCObjectStreamer::emitBundleLock(bool AlignToEnd) {
-  llvm_unreachable(BundlingNotImplementedMsg);
-}
-
-void MCObjectStreamer::emitBundleUnlock() {
-  llvm_unreachable(BundlingNotImplementedMsg);
 }
 
 void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
