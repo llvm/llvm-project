@@ -3890,7 +3890,7 @@ bool InstCombinerImpl::removeInstructionsBeforeUnreachable(Instruction &I) {
   // This includes instructions like stores and "llvm.assume" that may not get
   // removed by simple dead code elimination.
   bool Changed = false;
-  while (Instruction *Prev = I.getPrevNonDebugInstruction()) {
+  while (Instruction *Prev = I.getPrevNode()) {
     // While we theoretically can erase EH, that would result in a block that
     // used to start with an EH no longer starting with EH, which is invalid.
     // To make it valid, we'd need to fixup predecessors to no longer refer to
