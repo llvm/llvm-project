@@ -2295,9 +2295,6 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
       SRSets[I].push_back(R);
   }
 
-  for (auto I : SRSets)
-    sortAndUniqueRegisters(I.second);
-
   // Find matching classes for all SRSets entries.  Iterate in SubRegIndex
   // numerical order to visit synthetic indices last.
   for (const CodeGenSubRegIndex &SubIdx : SubRegIndices) {
