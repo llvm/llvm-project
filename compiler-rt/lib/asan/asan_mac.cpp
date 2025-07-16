@@ -103,6 +103,7 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
 //   dispatch_after()
 //   dispatch_group_async_f()
 //   dispatch_group_async()
+//   dispatch_apply()
 // TODO(glider): libdispatch API contains other functions that we don't support
 // yet.
 //
@@ -255,6 +256,8 @@ void dispatch_source_set_cancel_handler(dispatch_source_t ds,
 void dispatch_source_set_event_handler(dispatch_source_t ds, void(^work)(void));
 dispatch_mach_t dispatch_mach_create(const char *label, dispatch_queue_t queue,
                                      dispatch_mach_handler_t handler);
+void dispatch_apply(size_t iterations, dispatch_queue_t queue,
+                    void (^block)(size_t iteration));
 }
 
 #define GET_ASAN_BLOCK(work) \
@@ -332,6 +335,20 @@ INTERCEPTOR(void *, dispatch_mach_create_f, const char *label,
       });
 }
 
-#endif
+INTERCEPTOR(void, dispatch_apply, size_t iterations, dispatch_queue_t queue,
+            void (^block)(size_t iteration)) {
+  ENABLE_FRAME_POINTER;
+  int parent_tid = GetCurrentTidOrInvalid();
+
+  void (^asan_block)(size_t) = ^(size_t iteration) {
+    GET_STACK_TRACE_THREAD;
+    asan_register_worker_thread(parent_tid, &stack);
+    block(iteration);
+  };
+
+  REAL(dispatch_apply)(iterations, queue, asan_block);
+}
+
+#  endif
 
 #endif  // SANITIZER_APPLE
