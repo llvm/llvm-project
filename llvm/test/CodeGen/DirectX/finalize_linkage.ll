@@ -4,7 +4,14 @@
 target triple = "dxilv1.5-pc-shadermodel6.5-compute"
 
 ; DXILFinalizeLinkage changes linkage of all functions that are hidden to
-; internal, and converts private global variables to internal linkage.
+; internal, converts private global variables to internal linkage, and removes
+; unused global variables.
+
+; CHECK-NOT: @aTile
+@aTile = hidden addrspace(3) global [4 x [1 x i32]] zeroinitializer, align 4
+
+; CHECK-NOT: @bTile
+@bTile = hidden addrspace(3) global [1 x <1 x i32>] zeroinitializer, align 4
 
 ; CHECK: @switch.table = internal unnamed_addr constant [4 x i32]
 @switch.table = private unnamed_addr constant [4 x i32] [i32 1, i32 257, i32 65793, i32 16843009], align 4
@@ -26,6 +33,17 @@ target triple = "dxilv1.5-pc-shadermodel6.5-compute"
 ; Hidden global should remain hidden
 ; CHECK: @hidden_var = hidden global i32
 @hidden_var = hidden global i32 1, align 4
+
+define void @anchor_function() #0 {
+entry:
+  %0 = load i32, ptr @switch.table, align 4
+  %1 = load [3 x float], ptr @private_array, align 4
+  %2 = load i32, ptr @private_var, align 4
+  %3 = load i32, ptr @internal_var, align 4
+  %4 = load i32, ptr @external_var, align 4
+  %5 = load i32, ptr @hidden_var, align 4
+  ret void
+}
 
 ; CHECK-NOT: define internal void @"?f1@@YAXXZ"()
 define void @"?f1@@YAXXZ"() #0 {
