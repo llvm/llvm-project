@@ -152,7 +152,7 @@ struct InteropTableEntry {
 
   ContainerTy Interops;
 
-  const int reservedEntriesPerThread =
+  static constexpr int reservedEntriesPerThread =
       20; // reserve some entries to avoid reallocation
 
   void add(omp_interop_val_t *obj) {
