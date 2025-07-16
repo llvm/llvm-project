@@ -107,7 +107,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @matmul_scalable(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
+func.func @matmul_dynamic_scalable(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
     %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.matmul
     ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>)
@@ -118,7 +118,7 @@ func.func @matmul_scalable(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 // CHECK: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
 // CHECK: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
 // CHECK: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
-// CHECK-LABEL: func.func @matmul_scalable(
+// CHECK-LABEL: func.func @matmul_dynamic_scalable(
 // CHECK-SAME:    %[[A:.*]]: tensor<?x?xf32>, %[[B:.*]]: tensor<?x?xf32>,
 // CHECK-SAME:    %[[C:.*]]: tensor<?x?xf32>)
 //      CHECK: %[[LOAD_A:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[A]]{{.*}}: tensor<?x?xf32>, vector<8x4xf32>
