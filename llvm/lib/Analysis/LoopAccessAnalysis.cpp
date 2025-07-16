@@ -2087,7 +2087,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
 
   // If distance is a SCEVCouldNotCompute, return Unknown immediately.
   if (isa<SCEVCouldNotCompute>(Dist)) {
-    LLVM_DEBUG(dbgs() << "LAA: Dependence because of uncomputable distance.\n");
+    LLVM_DEBUG(dbgs() << "LAA: Uncomputable distance.\n");
     return Dependence::Unknown;
   }
 
