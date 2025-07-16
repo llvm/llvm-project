@@ -6920,16 +6920,10 @@ private:
   llvm::DenseMap<const ValueDecl *, const OMPMapClause *> LambdasMap;
 
   llvm::Value *getExprTypeSize(const Expr *E) const {
-    // DEBUG: Print entry information
-    llvm::errs() << "DEBUG getExprTypeSize: ENTRY\n";
-    llvm::errs() << "  Expression: ";
-    E->dump();
-
     QualType ExprTy = E->getType().getCanonicalType();
 
     // Calculate the size for array shaping expression.
     if (const auto *OAE = dyn_cast<OMPArrayShapingExpr>(E)) {
-      llvm::errs() << "DEBUG getExprTypeSize: Handling OMPArrayShapingExpr\n";
       llvm::Value *Size =
           CGF.getTypeSize(OAE->getBase()->getType()->getPointeeType());
       for (const Expr *SE : OAE->getDimensions()) {
@@ -6939,8 +6933,6 @@ private:
                                       SE->getExprLoc());
         Size = CGF.Builder.CreateNUWMul(Size, Sz);
       }
-      llvm::errs()
-          << "DEBUG getExprTypeSize: Returning size for ArrayShapingExpr\n";
       return Size;
     }
 
@@ -6952,7 +6944,6 @@ private:
     // do the calculation based on the length of the section instead of relying
     // on CGF.getTypeSize(E->getType()).
     if (const auto *OAE = dyn_cast<ArraySectionExpr>(E)) {
-      llvm::errs() << "DEBUG getExprTypeSize: Handling ArraySectionExpr\n";
       QualType BaseTy = ArraySectionExpr::getBaseOriginalType(
                             OAE->getBase()->IgnoreParenImpCasts())
                             .getCanonicalType();
@@ -6961,11 +6952,8 @@ private:
       // not specified too, that means we are using the whole length of the
       // base.
       if (!OAE->getLength() && OAE->getColonLocFirst().isValid() &&
-          !OAE->getLowerBound()) {
-        llvm::errs() << "DEBUG getExprTypeSize: Using whole length of base for "
-                        "ArraySection\n";
+          !OAE->getLowerBound())
         return CGF.getTypeSize(BaseTy);
-      }
 
       llvm::Value *ElemSize;
       if (const auto *PTy = BaseTy->getAs<PointerType>()) {
@@ -6978,10 +6966,8 @@ private:
 
       // If we don't have a length at this point, that is because we have an
       // array section with a single element.
-      if (!OAE->getLength() && OAE->getColonLocFirst().isInvalid()) {
-        llvm::errs() << "DEBUG getExprTypeSize: Single element ArraySection\n";
+      if (!OAE->getLength() && OAE->getColonLocFirst().isInvalid())
         return ElemSize;
-      }
 
       if (const Expr *LenExpr = OAE->getLength()) {
         llvm::Value *LengthVal = CGF.EmitScalarExpr(LenExpr);
@@ -7016,14 +7002,6 @@ private:
       OpenMPMapClauseKind MapType, ArrayRef<OpenMPMapModifierKind> MapModifiers,
       ArrayRef<OpenMPMotionModifierKind> MotionModifiers, bool IsImplicit,
       bool AddPtrFlag, bool AddIsTargetParamFlag, bool IsNonContiguous) const {
-    // DEBUG: Print entry information
-    llvm::errs() << "DEBUG getMapTypeBits: ENTRY\n";
-    llvm::errs() << "  MapType: " << MapType << "\n";
-    llvm::errs() << "  IsImplicit: " << IsImplicit << "\n";
-    llvm::errs() << "  AddPtrFlag: " << AddPtrFlag << "\n";
-    llvm::errs() << "  AddIsTargetParamFlag: " << AddIsTargetParamFlag << "\n";
-    llvm::errs() << "  IsNonContiguous: " << IsNonContiguous << "\n";
-
     OpenMPOffloadMappingFlags Bits =
         IsImplicit ? OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT
                    : OpenMPOffloadMappingFlags::OMP_MAP_NONE;
@@ -7066,36 +7044,21 @@ private:
       Bits |= OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
     if (IsNonContiguous)
       Bits |= OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG;
-
-    // DEBUG: Print final flags
-    llvm::errs() << "DEBUG getMapTypeBits: Final bits = "
-                 << static_cast<unsigned>(Bits) << "\n";
     return Bits;
   }
 
   /// Return true if the provided expression is a final array section. A
   /// final array section, is one whose length can't be proved to be one.
   bool isFinalArraySectionExpression(const Expr *E) const {
-    // DEBUG: Print entry information
-    llvm::errs() << "DEBUG isFinalArraySectionExpression: ENTRY\n";
-    llvm::errs() << "  Expression: ";
-    E->dump();
-
     const auto *OASE = dyn_cast<ArraySectionExpr>(E);
 
     // It is not an array section and therefore not a unity-size one.
-    if (!OASE) {
-      llvm::errs() << "DEBUG isFinalArraySectionExpression: Not "
-                      "ArraySectionExpr, returning false\n";
+    if (!OASE)
       return false;
-    }
 
     // An array section with no colon always refer to a single element.
-    if (OASE->getColonLocFirst().isInvalid()) {
-      llvm::errs() << "DEBUG isFinalArraySectionExpression: No colon, single "
-                      "element, returning false\n";
+    if (OASE->getColonLocFirst().isInvalid())
       return false;
-    }
 
     const Expr *Length = OASE->getLength();
 
@@ -7116,18 +7079,11 @@ private:
 
     // Check if the length evaluates to 1.
     Expr::EvalResult Result;
-    if (!Length->EvaluateAsInt(Result, CGF.getContext())) {
-      llvm::errs() << "DEBUG isFinalArraySectionExpression: Cannot evaluate "
-                      "length as int, returning true\n";
+    if (!Length->EvaluateAsInt(Result, CGF.getContext()))
       return true; // Can have more that size 1.
-    }
 
     llvm::APSInt ConstLength = Result.Val.getInt();
-    bool result = ConstLength.getSExtValue() != 1;
-    llvm::errs() << "DEBUG isFinalArraySectionExpression: Length = "
-                 << ConstLength.getSExtValue() << ", returning " << result
-                 << "\n";
-    return result;
+    return ConstLength.getSExtValue() != 1;
   }
 
   /// Utility function to add an ATTACH entry to the CombinedInfo structure.
@@ -7136,13 +7092,6 @@ private:
   void addAttachEntry(CodeGenFunction &CGF, MapCombinedInfoTy &CombinedInfo,
                       Address AttachBaseAddr, Address AttachFirstElemAddr,
                       const ValueDecl *BaseDecl, const Expr *MapExpr) const {
-    llvm::errs() << "DEBUG addAttachEntry: Adding ATTACH entry\n";
-    llvm::errs() << "  AttachBaseAddr = ";
-    AttachBaseAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs());
-    llvm::errs() << "\n";
-    llvm::errs() << "  AttachFirstElemAddr = ";
-    AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs());
-    llvm::errs() << "\n";
 
     // Size is the size of the pointer itself - use pointer size, not BaseDecl
     // size
@@ -7163,8 +7112,6 @@ private:
     CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
     CombinedInfo.Mappers.push_back(nullptr);
     CombinedInfo.NonContigInfo.Dims.push_back(1);
-
-    llvm::errs() << "DEBUG addAttachEntry: ATTACH entry added successfully\n";
   }
 
   /// Generate the base pointers, section pointers, sizes, map type bits, and
@@ -7184,23 +7131,6 @@ private:
       const ValueDecl *BaseDecl = nullptr, const Expr *MapExpr = nullptr,
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
           OverlappedElements = {}) const {
-
-    // DEBUG: Print function entry information
-    llvm::errs() << "DEBUG generateInfoForComponentList: ENTRY\n";
-    llvm::errs() << "  MapType: " << MapType << "\n";
-    llvm::errs() << "  IsFirstComponentList: " << IsFirstComponentList << "\n";
-    llvm::errs() << "  IsImplicit: " << IsImplicit << "\n";
-    llvm::errs() << "  GenerateAllInfoForClauses: " << GenerateAllInfoForClauses
-                 << "\n";
-    llvm::errs() << "  ForDeviceAddr: " << ForDeviceAddr << "\n";
-    llvm::errs() << "  Components.size(): " << Components.size() << "\n";
-    if (BaseDecl) {
-      llvm::errs() << "  BaseDecl: " << BaseDecl->getNameAsString() << "\n";
-    }
-    if (MapExpr) {
-      llvm::errs() << "  MapExpr: ";
-      MapExpr->dump();
-    }
 
     // The following summarizes what has to be generated for each map and the
     // types below. The generated information is expressed in this order:
@@ -7394,24 +7324,6 @@ private:
     auto CI = Components.rbegin();
     auto CE = Components.rend();
     auto I = CI;
-    
-    // DEBUG: Print what I initially points to
-    llvm::errs() << "DEBUG generateInfoForComponentList: Initial iterator I points to:\n";
-    if (I != CE) {
-      if (I->getAssociatedDeclaration()) {
-        llvm::errs() << "  AssociatedDeclaration: " << I->getAssociatedDeclaration()->getNameAsString() << "\n";
-      } else {
-        llvm::errs() << "  AssociatedDeclaration: nullptr\n";
-      }
-      if (I->getAssociatedExpression()) {
-        llvm::errs() << "  AssociatedExpression: ";
-        I->getAssociatedExpression()->dump();
-      } else {
-        llvm::errs() << "  AssociatedExpression: nullptr\n";
-      }
-    } else {
-      llvm::errs() << "  I is already at end (CE)\n";
-    }
 
     // Track if the map information being generated is the first for a list of
     // components.
@@ -7432,33 +7344,24 @@ private:
     // Find the component that should use ATTACH-style mapping.
     auto AttachInfo = findAttachBasePointer(Components);
 
-    llvm::errs() << "DEBUG generateInfoForComponentList: Computing initial BP\n";
     if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
       // to be the base of the field being mapped.
-      llvm::errs() << "  Case: MemberExpr - using LoadCXXThisAddress\n";
       BP = CGF.LoadCXXThisAddress();
-      llvm::errs() << "  BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
     } else if ((AE && isa<CXXThisExpr>(AE->getBase()->IgnoreParenImpCasts())) ||
                (OASE &&
                 isa<CXXThisExpr>(OASE->getBase()->IgnoreParenImpCasts()))) {
-      llvm::errs() << "  Case: ArrayExpr with CXXThisExpr base - using EmitOMPSharedLValue\n";
       BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress();
-      llvm::errs() << "  BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
     } else if (OAShE &&
                isa<CXXThisExpr>(OAShE->getBase()->IgnoreParenCasts())) {
-      llvm::errs() << "  Case: OMPArrayShapingExpr with CXXThisExpr base\n";
       BP = Address(
           CGF.EmitScalarExpr(OAShE->getBase()),
           CGF.ConvertTypeForMem(OAShE->getBase()->getType()->getPointeeType()),
           CGF.getContext().getTypeAlignInChars(OAShE->getBase()->getType()));
-      llvm::errs() << "  BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
     } else {
       // The base is the reference to the variable.
       // BP = &Var.
-      llvm::errs() << "  Case: Standard variable reference - using EmitOMPSharedLValue\n";
       BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress();
-      llvm::errs() << "  BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
       if (const auto *VD =
               dyn_cast_or_null<VarDecl>(I->getAssociatedDeclaration())) {
         if (std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
@@ -7467,10 +7370,8 @@ private:
               ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
                 *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
                CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())) {
-            llvm::errs() << "  Found declare target variable - updating BP\n";
             RequiresReference = true;
             BP = CGF.CGM.getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
-            llvm::errs() << "  Updated BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
           }
         }
       }
@@ -7484,37 +7385,14 @@ private:
         // No need to generate individual map information for the pointer, it
         // can be associated with the combined storage if shared memory mode is
         // active or the base declaration is not global variable.
-        llvm::errs() << "  Pointer dereferencing case - updating BP\n";
-        llvm::errs() << "  Original BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
         const auto *VD = dyn_cast<VarDecl>(I->getAssociatedDeclaration());
         if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
-            !VD || VD->hasLocalStorage() || (AttachInfo.IsValid && VD == AttachInfo.BasePtrDecl)) {
-          llvm::errs() << "  Loading pointer value\n";
+            !VD || VD->hasLocalStorage() ||
+            (AttachInfo.IsValid && VD == AttachInfo.BasePtrDecl))
           BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
-          llvm::errs() << "  Updated BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
-        } else {
-          llvm::errs() << "  Setting FirstPointerInComplexData=true\n";
+        else
           FirstPointerInComplexData = true;
-        }
-
         ++I;
-        // DEBUG: Print what I now points to after increment
-        if (I != CE) {
-          llvm::errs() << "DEBUG generateInfoForComponentList: After increment, I now points to component with:\n";
-          if (I->getAssociatedDeclaration()) {
-            llvm::errs() << "  AssociatedDeclaration: " << I->getAssociatedDeclaration()->getNameAsString() << "\n";
-          } else {
-            llvm::errs() << "  AssociatedDeclaration: nullptr\n";
-          }
-          if (I->getAssociatedExpression()) {
-            llvm::errs() << "  AssociatedExpression: ";
-            I->getAssociatedExpression()->dump();
-          } else {
-            llvm::errs() << "  AssociatedExpression: nullptr\n";
-          }
-        } else {
-          llvm::errs() << "DEBUG generateInfoForComponentList: After increment, I reached end (CE)\n";
-        }
       }
     }
 
@@ -7559,65 +7437,35 @@ private:
     // CombinedInfo list and instead add an entry to the StructBaseCombinedInfo
     // list only when generating all info for clauses.
     bool IsMappingWholeStruct = true;
-    llvm::errs() << "DEBUG generateInfoForComponentList: Checking IsMappingWholeStruct logic\n";
-    llvm::errs() << "  GenerateAllInfoForClauses: " << GenerateAllInfoForClauses << "\n";
-
     if (!GenerateAllInfoForClauses) {
-      llvm::errs() << "  Setting IsMappingWholeStruct=false (GenerateAllInfoForClauses=false)\n";
       IsMappingWholeStruct = false;
     } else {
-      llvm::errs() << "  Scanning components for MemberExpr...\n";
       for (auto TempI = I; TempI != CE; ++TempI) {
         const MemberExpr *PossibleME =
             dyn_cast<MemberExpr>(TempI->getAssociatedExpression());
-        // Only consider non-arrow member expressions as whole struct mapping
-        // Arrow member expressions (like sp->x) are pointer-to-struct access, not struct mapping
-        // if (PossibleME && !PossibleME->isArrow()) {
         if (PossibleME) {
-          llvm::errs() << "  Found PossibleME (non-arrow) - setting IsMappingWholeStruct=false: "; 
-          PossibleME->dump();
           IsMappingWholeStruct = false;
           break;
         }
       }
     }
-    llvm::errs() << "  Final IsMappingWholeStruct: " << IsMappingWholeStruct << "\n";
 
     for (; I != CE; ++I) {
-      // DEBUG: Print component processing information
-      llvm::errs() << "DEBUG generateInfoForComponentList: Processing component " 
-                   << std::distance(Components.rbegin(), I) << "/" << Components.size() << "\n";
-      if (I->getAssociatedDeclaration()) {
-        llvm::errs() << "  AssociatedDeclaration: " << I->getAssociatedDeclaration()->getNameAsString() << "\n";
-      }
-      if (I->getAssociatedExpression()) {
-        llvm::errs() << "  AssociatedExpression: ";
-        I->getAssociatedExpression()->dump();
-      }
-
       // If the current component is member of a struct (parent struct) mark it.
       if (!EncounteredME) {
         EncounteredME = dyn_cast<MemberExpr>(I->getAssociatedExpression());
         // If we encounter a PTR_AND_OBJ entry from now on it should be marked
         // as MEMBER_OF the parent struct.
-        // However, for pointer-to-struct member access (like sp->x), we should NOT
-        // set ShouldBeMemberOf because this is not mapping a struct field but accessing
-        // through a pointer.
-        // if (EncounteredME && !EncounteredME->isArrow()) {
         if (EncounteredME) {
-          llvm::errs() << "DEBUG generateInfoForComponentList: Encountered MemberExpr (non-arrow), setting ShouldBeMemberOf=true\n";
           ShouldBeMemberOf = true;
           // Do not emit as complex pointer if this is actually not array-like
           // expression.
           if (FirstPointerInComplexData) {
-            llvm::errs() << "  FirstPointerInComplexData case - updating BP in MemberExpr\n";
-            llvm::errs() << "  Original BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
             QualType Ty = std::prev(I)
                               ->getAssociatedDeclaration()
                               ->getType()
                               .getNonReferenceType();
             BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
-            llvm::errs() << "  Updated BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
             FirstPointerInComplexData = false;
           }
         }
@@ -7637,9 +7485,6 @@ private:
           !IsNonContiguous &&
           isFinalArraySectionExpression(I->getAssociatedExpression());
 
-      // DEBUG: Print array section information
-      llvm::errs() << "DEBUG generateInfoForComponentList: IsFinalArraySection: " << IsFinalArraySection << "\n";
-
       // If we have a declaration for the mapping use that, otherwise use
       // the base declaration of the map clause.
       const ValueDecl *MapDecl = (I->getAssociatedDeclaration())
@@ -7648,19 +7493,9 @@ private:
       MapExpr = (I->getAssociatedExpression()) ? I->getAssociatedExpression()
                                                : MapExpr;
 
-      // DEBUG: Print mapping declaration and expression
-      llvm::errs() << "DEBUG generateInfoForComponentList: MapDecl: ";
-      if (MapDecl) {
-        llvm::errs() << MapDecl->getNameAsString() << "\n";
-      } else {
-        llvm::errs() << "nullptr\n";
-      }
-
       // Get information on whether the element is a pointer. Have to do a
       // special treatment for array sections given that they are built-in
       // types.
-      llvm::errs() << "DEBUG generateInfoForComponentList: Analyzing expression types\n";
-
       const auto *OASE =
           dyn_cast<ArraySectionExpr>(I->getAssociatedExpression());
       const auto *ASE =
@@ -7669,13 +7504,6 @@ private:
           dyn_cast<OMPArrayShapingExpr>(I->getAssociatedExpression());
       const auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression());
       const auto *BO = dyn_cast<BinaryOperator>(I->getAssociatedExpression());
-
-      llvm::errs() << "  OASE (ArraySectionExpr): " << (OASE ? "yes" : "no") << "\n";
-      llvm::errs() << "  ASE (ArraySubscriptExpr): " << (ASE ? "yes" : "no") << "\n";
-      llvm::errs() << "  OAShE (OMPArrayShapingExpr): " << (OAShE ? "yes" : "no") << "\n";
-      llvm::errs() << "  UO (UnaryOperator): " << (UO ? "yes" : "no") << "\n";
-      llvm::errs() << "  BO (BinaryOperator): " << (BO ? "yes" : "no") << "\n";
-
       bool IsPointer =
           OAShE ||
           (OASE && ArraySectionExpr::getBaseOriginalType(OASE)
@@ -7689,23 +7517,11 @@ private:
                                !(UO && UO->getOpcode() != UO_Deref) && !BO &&
                                !IsNonContiguous;
 
-      llvm::errs() << "  IsPointer: " << IsPointer << "\n";
-      llvm::errs() << "  IsMemberReference: " << IsMemberReference << "\n";
-      llvm::errs() << "  IsNonDerefPointer: " << IsNonDerefPointer << "\n";
-
-      if (OASE) {
+      if (OASE)
         ++DimSize;
-        llvm::errs() << "  Incremented DimSize to: " << DimSize << "\n";
-      }
 
-      llvm::errs() << "DEBUG generateInfoForComponentList: Checking entry generation condition\n";
-      llvm::errs() << "  Next == CE: " << (Next == CE) << "\n";
-      llvm::errs() << "  IsMemberReference: " << IsMemberReference << "\n";
-      llvm::errs() << "  IsNonDerefPointer: " << IsNonDerefPointer << "\n";
-      llvm::errs() << "  IsFinalArraySection: " << IsFinalArraySection << "\n";
       if (Next == CE || IsMemberReference || IsNonDerefPointer ||
           IsFinalArraySection) {
-        llvm::errs() << "  CONDITION MET: Generating address and size info\n";
         // If this is not the last component, we expect the pointer to be
         // associated with an array expression or member expression.
         assert((Next == CE ||
@@ -7737,49 +7553,30 @@ private:
           }
           return BaseLV;
         };
-        llvm::errs() << "DEBUG generateInfoForComponentList: Emitting addresses\n";
         if (OAShE) {
-          llvm::errs() << "  Handling OMPArrayShapingExpr\n";
           LowestElem = LB =
               Address(CGF.EmitScalarExpr(OAShE->getBase()),
                       CGF.ConvertTypeForMem(
                           OAShE->getBase()->getType()->getPointeeType()),
                       CGF.getContext().getTypeAlignInChars(
                           OAShE->getBase()->getType()));
-          llvm::errs() << "  LowestElem = LB = "; LB.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
         } else if (IsMemberReference) {
-          llvm::errs() << "  Handling MemberReference\n";
           const auto *ME = cast<MemberExpr>(I->getAssociatedExpression());
           LValue BaseLVal = EmitMemberExprBase(CGF, ME);
           LowestElem = CGF.EmitLValueForFieldInitialization(
                               BaseLVal, cast<FieldDecl>(MapDecl))
                            .getAddress();
-          llvm::errs() << "  LowestElem = "; LowestElem.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
           LB = CGF.EmitLoadOfReferenceLValue(LowestElem, MapDecl->getType())
                    .getAddress();
-          llvm::errs() << "  LB = "; LB.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
         } else {
-          llvm::errs() << "  Handling standard case - EmitOMPSharedLValue\n";
           LowestElem = LB =
               CGF.EmitOMPSharedLValue(I->getAssociatedExpression())
                   .getAddress();
-          llvm::errs() << "  LowestElem = LB = "; LB.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
         }
 
         // If this component is a pointer inside the base struct then we don't
         // need to create any entry for it - it will be combined with the object
         // it is pointing to into a single PTR_AND_OBJ entry.
-        llvm::errs() << "DEBUG generateInfoForComponentList: Checking IsMemberPointerOrAddr\n";
-        llvm::errs() << "  EncounteredME: " << (EncounteredME ? "yes" : "no") << "\n";
-        llvm::errs() << "  ForDeviceAddr: " << ForDeviceAddr << "\n";
-        llvm::errs() << "  IsPrevMemberReference: " << IsPrevMemberReference << "\n";
-        if (EncounteredME) {
-          llvm::errs() << "  I->getAssociatedExpression() == EncounteredME: " << (I->getAssociatedExpression() == EncounteredME) << "\n";
-        }
-        if (Next != CE) {
-          llvm::errs() << "  Next->getAssociatedExpression()->getType()->isPointerType(): " << Next->getAssociatedExpression()->getType()->isPointerType() << "\n";
-        }
-
         bool IsMemberPointerOrAddr =
             EncounteredME &&
             (((IsPointer || ForDeviceAddr) &&
@@ -7787,8 +7584,6 @@ private:
              (IsPrevMemberReference && !IsPointer) ||
              (IsMemberReference && Next != CE &&
               !Next->getAssociatedExpression()->getType()->isPointerType()));
-
-        llvm::errs() << "  IsMemberPointerOrAddr: " << IsMemberPointerOrAddr << "\n";
         if (!OverlappedElements.empty() && Next == CE) {
           // Handle base element with the info for overlapped elements.
           assert(!PartialStruct.Base.isValid() && "The base element is set.");
@@ -7804,8 +7599,8 @@ private:
                   LowestElem, CGF.VoidPtrTy, CGF.Int8Ty),
               TypeSize.getQuantity() - 1);
           PartialStruct.HighestElem = {
-              std::numeric_limits<decltype(
-                  PartialStruct.HighestElem.first)>::max(),
+              std::numeric_limits<
+                  decltype(PartialStruct.HighestElem.first)>::max(),
               HB};
           PartialStruct.Base = BP;
           PartialStruct.LB = LB;
@@ -7827,23 +7622,18 @@ private:
             for (const OMPClauseMappableExprCommon::MappableComponent &MC :
                  Component) {
               if (const ValueDecl *VD = MC.getAssociatedDeclaration()) {
-                llvm::errs() << "DEBUG generateInfoForComponentList: Computing ComponentLB for overlapped element\n";
                 const auto *FD = dyn_cast<FieldDecl>(VD);
                 if (FD && FD->getType()->isLValueReferenceType()) {
-                  llvm::errs() << "  Reference field case\n";
                   const auto *ME =
                       cast<MemberExpr>(MC.getAssociatedExpression());
                   LValue BaseLVal = EmitMemberExprBase(CGF, ME);
                   ComponentLB =
                       CGF.EmitLValueForFieldInitialization(BaseLVal, FD)
                           .getAddress();
-                  llvm::errs() << "  ComponentLB = "; ComponentLB.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
                 } else {
-                  llvm::errs() << "  Standard field case\n";
                   ComponentLB =
                       CGF.EmitOMPSharedLValue(MC.getAssociatedExpression())
                           .getAddress();
-                  llvm::errs() << "  ComponentLB = "; ComponentLB.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
                 }
                 llvm::Value *ComponentLBPtr = ComponentLB.emitRawPointer(CGF);
                 llvm::Value *LBPtr = LB.emitRawPointer(CGF);
@@ -7865,7 +7655,6 @@ private:
             CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize
                                                                       : 1);
             LB = CGF.Builder.CreateConstGEP(ComponentLB, 1);
-            llvm::errs() << "  Updated LB = "; LB.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
           }
           CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
           CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
@@ -7885,26 +7674,15 @@ private:
           break;
         }
         llvm::Value *Size = getExprTypeSize(I->getAssociatedExpression());
-
-        // DEBUG: Print size calculation result
-        llvm::errs() << "DEBUG generateInfoForComponentList: Size calculated for expression\n";
         // Skip adding an entry in the CurInfo of this combined entry if the
         // whole struct is currently being mapped. The struct needs to be added
         // in the first position before any data internal to the struct is being
         // mapped.
         // Skip adding an entry in the CurInfo of this combined entry if the
         // PartialStruct.PreliminaryMapData.BasePointers has been mapped.
-        llvm::errs() << "DEBUG generateInfoForComponentList: Checking entry addition condition\n";
-        llvm::errs() << "  IsPartialMapped: " << IsPartialMapped << "\n";
-        llvm::errs() << "  MapType != OMPC_MAP_unknown: " << (MapType != OMPC_MAP_unknown) << "\n";
-        llvm::errs() << "  (!IsMemberPointerOrAddr && !IsPartialMapped): " << (!IsMemberPointerOrAddr && !IsPartialMapped) << "\n";
-        llvm::errs() << "  (Next == CE && MapType != OMPC_MAP_unknown): " << (Next == CE && MapType != OMPC_MAP_unknown) << "\n";
-
         if ((!IsMemberPointerOrAddr && !IsPartialMapped) ||
             (Next == CE && MapType != OMPC_MAP_unknown)) {
-          llvm::errs() << "  WILL ADD ENTRY\n";
           if (!IsMappingWholeStruct) {
-            llvm::errs() << "    Adding to CombinedInfo (not mapping whole struct)\n";
             CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
             CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
             CombinedInfo.DevicePtrDecls.push_back(nullptr);
@@ -7915,7 +7693,6 @@ private:
             CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize
                                                                       : 1);
           } else {
-            llvm::errs() << "    Adding to StructBaseCombinedInfo (mapping whole struct)\n";
             StructBaseCombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
             StructBaseCombinedInfo.BasePointers.push_back(
                 BP.emitRawPointer(CGF));
@@ -7940,38 +7717,23 @@ private:
           // same expression except for the first one. We also need to signal
           // this map is the first one that relates with the current capture
           // (there is a set of entries for each capture).
-          // Don't use PTR_AND_OBJ when we have array sections/subscripts on pointers
-          llvm::errs() << "DEBUG generateInfoForComponentList: Calculating flags\n";
-          llvm::errs() << "  IsExpressionFirstInfo: " << IsExpressionFirstInfo << "\n";
-          llvm::errs() << "  RequiresReference: " << RequiresReference << "\n";
-          llvm::errs() << "  FirstPointerInComplexData: " << FirstPointerInComplexData << "\n";
-          llvm::errs() << "  IsCaptureFirstInfo: " << IsCaptureFirstInfo << "\n";
-
-          bool AddPtrFlag =
-              (!IsExpressionFirstInfo || RequiresReference ||
-               FirstPointerInComplexData || IsMemberReference);
-          llvm::errs() << "  AddPtrFlag: " << AddPtrFlag << "\n";
-
-          OpenMPOffloadMappingFlags Flags =
-              getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
-                             AddPtrFlag, IsCaptureFirstInfo && !RequiresReference,
-                             IsNonContiguous);
+          OpenMPOffloadMappingFlags Flags = getMapTypeBits(
+              MapType, MapModifiers, MotionModifiers, IsImplicit,
+              !IsExpressionFirstInfo || RequiresReference ||
+                  FirstPointerInComplexData || IsMemberReference,
+              IsCaptureFirstInfo && !RequiresReference, IsNonContiguous);
 
           if (!IsExpressionFirstInfo || IsMemberReference) {
-            llvm::errs() << "  Modifying flags for non-first expression or member reference\n";
             // If we have a PTR_AND_OBJ pair where the OBJ is a pointer as well,
             // then we reset the TO/FROM/ALWAYS/DELETE/CLOSE flags.
-            if (IsPointer || (IsMemberReference && Next != CE)) {
-              llvm::errs() << "    Resetting TO/FROM/ALWAYS/DELETE/CLOSE flags for pointer\n";
+            if (IsPointer || (IsMemberReference && Next != CE))
               Flags &= ~(OpenMPOffloadMappingFlags::OMP_MAP_TO |
                          OpenMPOffloadMappingFlags::OMP_MAP_FROM |
                          OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
                          OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
                          OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
-            }
 
             if (ShouldBeMemberOf) {
-              llvm::errs() << "    Adding MEMBER_OF flag and resetting ShouldBeMemberOf\n";
               // Set placeholder value MEMBER_OF=FFFF to indicate that the flag
               // should be later updated with the correct value of MEMBER_OF.
               Flags |= OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
@@ -7995,40 +7757,28 @@ private:
           unsigned FieldIndex = FD->getFieldIndex();
 
           // Update info about the lowest and highest elements for this struct
-          llvm::errs() << "DEBUG generateInfoForComponentList: Updating PartialStruct for field " << FieldIndex << "\n";
           if (!PartialStruct.Base.isValid()) {
-            llvm::errs() << "  Initializing PartialStruct\n";
             PartialStruct.LowestElem = {FieldIndex, LowestElem};
-            llvm::errs() << "  PartialStruct.LowestElem = {" << FieldIndex << ", "; LowestElem.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "}\n";
             if (IsFinalArraySection && OASE) {
               Address HB =
                   CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/false)
                       .getAddress();
               PartialStruct.HighestElem = {FieldIndex, HB};
-              llvm::errs() << "  PartialStruct.HighestElem = {" << FieldIndex << ", "; HB.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "} (final array section)\n";
             } else {
               PartialStruct.HighestElem = {FieldIndex, LowestElem};
-              llvm::errs() << "  PartialStruct.HighestElem = {" << FieldIndex << ", "; LowestElem.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "}\n";
             }
             PartialStruct.Base = BP;
-            llvm::errs() << "  PartialStruct.Base = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
             PartialStruct.LB = BP;
-            llvm::errs() << "  PartialStruct.LB = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
           } else if (FieldIndex < PartialStruct.LowestElem.first) {
-            llvm::errs() << "  Updating LowestElem (lower field index)\n";
             PartialStruct.LowestElem = {FieldIndex, LowestElem};
-            llvm::errs() << "  PartialStruct.LowestElem = {" << FieldIndex << ", "; LowestElem.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "}\n";
           } else if (FieldIndex > PartialStruct.HighestElem.first) {
-            llvm::errs() << "  Updating HighestElem (higher field index)\n";
             if (IsFinalArraySection && OASE) {
               Address HB =
                   CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/false)
                       .getAddress();
               PartialStruct.HighestElem = {FieldIndex, HB};
-              llvm::errs() << "  PartialStruct.HighestElem = {" << FieldIndex << ", "; HB.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "} (final array section)\n";
             } else {
               PartialStruct.HighestElem = {FieldIndex, LowestElem};
-              llvm::errs() << "  PartialStruct.HighestElem = {" << FieldIndex << ", "; LowestElem.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "}\n";
             }
           }
         }
@@ -8038,8 +7788,6 @@ private:
           PartialStruct.IsArraySection = true;
 
         if (Next == CE) {
-          llvm::errs() << "DEBUG generateInfoForComponentList: Reached the end "
-                          "of components\n";
           // Generate ATTACH entry for array sections and subscripts on
           // standalone pointers Info was already collected during the main
           // component loop Check if we should use ATTACH-style mapping for this
@@ -8047,73 +7795,23 @@ private:
           bool IsAttachablePointeeExpr = AttachInfo.IsValid &&
                                          AttachInfo.BasePtrDecl &&
                                          AttachInfo.BasePtrDecl == BaseDecl;
-          llvm::errs()
-              << "DEBUG generateInfoForComponentList: AttachInfo.PteeExpr: ";
-          if (AttachInfo.PteeExpr)
-            AttachInfo.PteeExpr->dump();
-          else
-            llvm::errs() << "nullptr\n";
-          llvm::errs()
-              << "DEBUG generateInfoForComponentList: AttachInfo.BasePtrExpr: ";
-          if (AttachInfo.BasePtrExpr)
-            AttachInfo.BasePtrExpr->dump();
-          else
-            llvm::errs() << "nullptr\n";
-          llvm::errs() << "DEBUG generateInfoForComponentList: I: ";
-          if (I->getAssociatedExpression())
-            I->getAssociatedExpression()->dump();
-          else
-            llvm::errs() << "nullptr\n";
-
           if (IsAttachablePointeeExpr) {
-            llvm::errs() << "DEBUG generateInfoForComponentList: Computing "
-                            "ATTACH addresses\n";
-
-            // Use BasePtrExpr for AttachBaseAddr
-            llvm::errs() << "  Using BasePtrExpr for AttachBaseAddr\n";
             AttachBaseAddr =
                 CGF.EmitLValue(AttachInfo.BasePtrExpr).getAddress();
-            llvm::errs() << "  AttachBaseAddr = ";
-            AttachBaseAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs());
-            llvm::errs() << "\n";
 
             if (OASE) {
-              llvm::errs()
-                  << "  ArraySectionExpr case for AttachFirstElemAddr\n";
               AttachFirstElemAddr =
                   CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true)
                       .getAddress();
-              llvm::errs() << "  AttachFirstElemAddr = ";
-              AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(
-                  llvm::errs());
-              llvm::errs() << "\n";
             } else if (ASE) {
-              llvm::errs()
-                  << "  ArraySubscriptExpr case for AttachFirstElemAddr\n";
               AttachFirstElemAddr = CGF.EmitLValue(ASE).getAddress();
-              llvm::errs() << "  AttachFirstElemAddr = ";
-              AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(
-                  llvm::errs());
-              llvm::errs() << "\n";
             } else if (auto *ME =
                            dyn_cast<MemberExpr>(I->getAssociatedExpression())) {
-              llvm::errs() << "  MemberExpr case for AttachFirstElemAddr\n";
               AttachFirstElemAddr = CGF.EmitMemberExpr(ME).getAddress();
-              llvm::errs() << "  AttachFirstElemAddr = ";
-              AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(
-                  llvm::errs());
-              llvm::errs() << "\n";
             } else if (auto *UO = dyn_cast<UnaryOperator>(
                            I->getAssociatedExpression())) {
-              if (UO->getOpcode() == UO_Deref) {
-                llvm::errs() << "  UnaryOperator (dereference) case for "
-                                "AttachFirstElemAddr\n";
+              if (UO->getOpcode() == UO_Deref)
                 AttachFirstElemAddr = CGF.EmitLValue(UO).getAddress();
-                llvm::errs() << "  AttachFirstElemAddr = ";
-                AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(
-                    llvm::errs());
-                llvm::errs() << "\n";
-              }
             }
           }
         }
@@ -8123,35 +7821,21 @@ private:
           break;
 
         // The pointer becomes the base for the next element.
-        if (Next != CE) {
-          llvm::errs() << "DEBUG generateInfoForComponentList: Updating BP for next element\n";
-          llvm::errs() << "  IsMemberReference: " << IsMemberReference << "\n";
-          llvm::errs() << "  Current BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
+        if (Next != CE)
           BP = IsMemberReference ? LowestElem : LB;
-          llvm::errs() << "  Updated BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << " (using " << (IsMemberReference ? "LowestElem" : "LB") << ")\n";
-        }
         if (!IsPartialMapped)
           IsExpressionFirstInfo = false;
         IsCaptureFirstInfo = false;
         FirstPointerInComplexData = false;
         IsPrevMemberReference = IsMemberReference;
-
-        llvm::errs() << "DEBUG generateInfoForComponentList: End of component processing\n";
-        llvm::errs() << "  Updated IsExpressionFirstInfo: " << IsExpressionFirstInfo << "\n";
-        llvm::errs() << "  Updated IsCaptureFirstInfo: " << IsCaptureFirstInfo << "\n";
-        llvm::errs() << "  Updated IsPrevMemberReference: " << IsPrevMemberReference << "\n";
       } else if (FirstPointerInComplexData) {
-        llvm::errs() << "DEBUG generateInfoForComponentList: FirstPointerInComplexData case - final BP update\n";
-        llvm::errs() << "  Original BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
         QualType Ty = Components.rbegin()
                           ->getAssociatedDeclaration()
                           ->getType()
                           .getNonReferenceType();
         BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
-        llvm::errs() << "  Updated BP = "; BP.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
         FirstPointerInComplexData = false;
       }
-
     }
     // If ran into the whole component - allocate the space for the whole
     // record.
@@ -8164,20 +7848,14 @@ private:
       if (PartialStruct.Base.isValid()) {
         // We're populating PartialStruct, delay ATTACH entry addition until
         // after emitCombinedEntry
-        llvm::errs() << "DEBUG generateInfoForComponentList: Saving ATTACH "
-                        "info for delayed processing\n";
         PartialStruct.AttachBaseAddr = AttachBaseAddr;
         PartialStruct.AttachFirstElemAddr = AttachFirstElemAddr;
         PartialStruct.AttachBaseDecl = BaseDecl;
         PartialStruct.AttachMapExpr = MapExpr;
       } else if (IsMappingWholeStruct) {
-        llvm::errs() << "DEBUG generateInfoForComponentList: Adding ATTACH to "
-                        "StructBaseCombinedInfo\n";
         addAttachEntry(CGF, StructBaseCombinedInfo, AttachBaseAddr,
                        AttachFirstElemAddr, BaseDecl, MapExpr);
       } else {
-        llvm::errs() << "DEBUG generateInfoForComponentList: Adding ATTACH to "
-                        "CombinedInfo\n";
         addAttachEntry(CGF, CombinedInfo, AttachBaseAddr, AttachFirstElemAddr,
                        BaseDecl, MapExpr);
       }
@@ -8358,11 +8036,6 @@ private:
     CombinedInfo.NonContigInfo.Offsets.push_back(CurOffsets);
     CombinedInfo.NonContigInfo.Counts.push_back(CurCounts);
     CombinedInfo.NonContigInfo.Strides.push_back(CurStrides);
-
-    // DEBUG: Print exit information
-    llvm::errs() << "DEBUG generateInfoForComponentList: EXIT\n";
-    llvm::errs() << "  CombinedInfo entries added: " << CombinedInfo.BasePointers.size() << "\n";
-    llvm::errs() << "  StructBaseCombinedInfo entries added: " << StructBaseCombinedInfo.BasePointers.size() << "\n";
   }
 
   /// Return the adjusted map modifiers if the declaration a capture refers to
@@ -8471,40 +8144,24 @@ private:
 
   static AttachInfo findAttachBasePointer(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
-    // DEBUG: Print entry information
-    llvm::errs() << "DEBUG findAttachBasePointer: ENTRY\n";
 
     const auto *Begin = Components.begin();
     const auto *End = Components.end();
 
-    llvm::errs() << "DEBUG findAttachBasePointer: Starting reverse walk\n";
-
     for (const auto *I = Begin; I != End; ++I) {
-      // Check if current component is an array section or subscript
       const Expr *CurrentExpr = I->getAssociatedExpression();
-      llvm::errs() << "DEBUG findAttachBasePointer: Current expr is: ";
-      CurrentExpr->dump();
-      if (!CurrentExpr) {
-        llvm::errs()
-            << "DEBUG findAttachBasePointer: No current expression, continuing\n";
+      if (!CurrentExpr)
         break;
-      }
+
+      const auto *NextI = std::next(I);
+      if (NextI == End)
+        break;
 
       // Check if the next component (in forward direction) has a pointer type
-      const auto *NextI = std::next(I);
-      if (NextI == End) {
-        llvm::errs()
-            << "DEBUG findAttachBasePointer: No next component available\n";
-        break;
-      }
-
-      // Get the type of the next component
       QualType NextType;
+
       if (const auto *NextDecl = NextI->getAssociatedDeclaration()) {
         NextType = NextDecl->getType().getNonReferenceType().getCanonicalType();
-        llvm::errs()
-            << "DEBUG findAttachBasePointer: Next component declaration type: ";
-        NextType.dump();
       } else if (const auto *NextExpr = NextI->getAssociatedExpression()) {
         // If NextExpr is an array-section, compute the result type using
         // getBaseOriginalType
@@ -8513,72 +8170,33 @@ private:
           // properly
           QualType BaseType =
               ArraySectionExpr::getBaseOriginalType(ArraySection->getBase());
-          if (const auto *ATy = BaseType->getAsArrayTypeUnsafe()) {
+          if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
             NextType = ATy->getElementType();
-          } else {
+          else
             NextType = BaseType->getPointeeType();
-          }
+
           NextType = NextType.getNonReferenceType().getCanonicalType();
-          llvm::errs() << "DEBUG findAttachBasePointer: Next component "
-                          "array-section result type (base -> result): ";
-          BaseType.dump();
-          llvm::errs() << " -> ";
-          NextType.dump();
         } else {
           NextType =
               NextExpr->getType().getNonReferenceType().getCanonicalType();
-          llvm::errs()
-              << "DEBUG findAttachBasePointer: Next component expression type: ";
-          NextType.dump();
         }
       } else {
-        llvm::errs() << "DEBUG findAttachBasePointer: No next component type "
-                        "info, continuing\n";
         break;
       }
 
-      // Stop if the next component is a pointer type - this means we found our
-      // component
+      // Stop if the next component is a pointer type - this means we found
+      // the base-pointer
       if (!NextType->isPointerType())
         continue;
-
-      llvm::errs() << "DEBUG findAttachBasePointer: Found pointer type in next "
-                      "component, stopping here\n";
 
       // Get the pointer expression (NextRI) and use the candidate PteeExpr
       const Expr *BasePtrExpr = NextI->getAssociatedExpression();
       const ValueDecl *BasePtrDecl = NextI->getAssociatedDeclaration();
       const Expr *PteeExpr = CurrentExpr;
-
-      llvm::errs() << "DEBUG findAttachBasePointer: Returning AttachInfo\n";
-      llvm::errs() << "  BasePtrExpr: ";
-      if (BasePtrExpr)
-        BasePtrExpr->dump();
-      else
-        llvm::errs() << "nullptr\n";
-      llvm::errs() << "  BasePtrDecl: ";
-      if (BasePtrDecl)
-        BasePtrDecl->dump();
-      else
-        llvm::errs() << "nullptr\n";
-      llvm::errs() << "  PteeExpr: ";
-      if (PteeExpr)
-        PteeExpr->dump();
-      else
-        llvm::errs() << "nullptr\n";
-      llvm::errs() << "  RbeginExpr: ";
       const auto *BeginExpr = Begin->getAssociatedExpression();
-      if (BeginExpr)
-        BeginExpr->dump();
-      else
-        llvm::errs() << "nullptr\n";
       return AttachInfo{BasePtrExpr, BasePtrDecl, BeginExpr, true};
-      llvm::errs() << "DEBUG findAttachBasePointer: Next component not pointer "
-                      "type, continuing\n";
     }
 
-    llvm::errs() << "DEBUG findAttachBasePointer: No suitable component found, "
-                    "returning invalid AttachInfo\n";
     return AttachInfo{};
   }
 
@@ -8950,29 +8568,14 @@ private:
       // Unify entries in one list making sure the struct mapping precedes the
       // individual fields:
       MapCombinedInfoTy UnionCurInfo;
-
-      // DEBUG: Print sizes before appending
-      llvm::errs() << "DEBUG CALLER: Before unifying entries:\n";
-      llvm::errs() << "  StructBaseCurInfo.BasePointers.size(): " << StructBaseCurInfo.BasePointers.size() << "\n";
-      llvm::errs() << "  CurInfo.BasePointers.size(): " << CurInfo.BasePointers.size() << "\n";
-      if (VD) {
-        llvm::errs() << "  VD: " << VD->getNameAsString() << "\n";
-      }
-
       UnionCurInfo.append(StructBaseCurInfo);
       UnionCurInfo.append(CurInfo);
-
-      llvm::errs() << "DEBUG CALLER: After unifying:\n";
-      llvm::errs() << "  UnionCurInfo.BasePointers.size(): " << UnionCurInfo.BasePointers.size() << "\n";
-      llvm::errs() << "  PartialStruct.Base.isValid(): " << PartialStruct.Base.isValid() << "\n";
 
       // If there is an entry in PartialStruct it means we have a struct with
       // individual members mapped. Emit an extra combined entry.
       MapCombinedInfoTy AttachCombinedInfo;
       if (PartialStruct.Base.isValid()) {
         UnionCurInfo.NonContigInfo.Dims.push_back(0);
-        llvm::errs()
-            << "DEBUG CALLER: Emitting combined entry for PartialStruct\n";
         // Emit a combined entry:
         emitCombinedEntry(CombinedInfo, AttachCombinedInfo, UnionCurInfo.Types,
                           PartialStruct,
@@ -8980,10 +8583,8 @@ private:
                           /*OffsetForMemberOfFlag=*/0, /*NotTargetParam=*/true);
       }
 
-      llvm::errs() << "DEBUG CALLER: Before final append - CombinedInfo.BasePointers.size(): " << CombinedInfo.BasePointers.size() << "\n";
       // We need to append the results of this capture to what we already have.
       CombinedInfo.append(UnionCurInfo);
-      llvm::errs() << "DEBUG CALLER: After final append - CombinedInfo.BasePointers.size(): " << CombinedInfo.BasePointers.size() << "\n";
       // Append AttachCombinedInfo after UnionCurInfo
       CombinedInfo.append(AttachCombinedInfo);
     }
@@ -9057,12 +8658,14 @@ public:
         ((CurTypes.back() & OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
          OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) &&
         !PartialStruct.IsArraySection) {
-      // Process delayed ATTACH entries if available - no combined entry case
-      if (PartialStruct.AttachBaseAddr.isValid() && PartialStruct.AttachFirstElemAddr.isValid()) {
-        llvm::errs() << "DEBUG emitCombinedEntry: Early return path - adding ATTACH with saved pointee\n";
-        addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachBaseAddr, PartialStruct.AttachFirstElemAddr,
-                       PartialStruct.AttachBaseDecl, PartialStruct.AttachMapExpr);
-      }
+      // Even if we are not creating a combined-entry, we need to process any
+      // previously delayed ATTACH entries.
+      if (PartialStruct.AttachBaseAddr.isValid() &&
+          PartialStruct.AttachFirstElemAddr.isValid())
+        addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachBaseAddr,
+                       PartialStruct.AttachFirstElemAddr,
+                       PartialStruct.AttachBaseDecl,
+                       PartialStruct.AttachMapExpr);
       return;
     }
     Address LBAddr = PartialStruct.LowestElem.second;
@@ -9152,15 +8755,13 @@ public:
     for (auto &M : CurTypes)
       OMPBuilder.setCorrectMemberOfFlag(M, MemberOfFlag);
 
-    // Process delayed ATTACH entries if available - combined entry case
+    // When we are emitting a combined entry, we need to use the begin address
+    // of the combined entry for the pointee address of any ATTACH maps.
     if (PartialStruct.AttachBaseAddr.isValid() &&
-        PartialStruct.AttachFirstElemAddr.isValid()) {
-      llvm::errs() << "DEBUG emitCombinedEntry: Combined entry path - using "
-                      "PartialStruct\n";
+        PartialStruct.AttachFirstElemAddr.isValid())
       addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachBaseAddr,
                      PartialStruct.Base, PartialStruct.AttachBaseDecl,
                      PartialStruct.AttachMapExpr);
-    }
   }
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
