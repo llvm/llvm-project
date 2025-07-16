@@ -495,6 +495,12 @@ template <typename Checker> struct DirectiveSpellingVisitor {
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> void Post(const T &) {}
 
+  template <typename... Ts>
+  static const parser::OmpDirectiveName &GetDirName(
+      const std::tuple<Ts...> &t) {
+    return std::get<parser::OmpDirectiveSpecification>(t).DirName();
+  }
+
   bool Pre(const parser::OmpSectionsDirective &x) {
     checker_(x.source, x.v);
     return false;
@@ -503,8 +509,8 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
     return false;
   }
-  bool Pre(const parser::OmpDispatchDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_dispatch);
+  bool Pre(const parser::OpenMPDispatchConstruct &x) {
+    checker_(GetDirName(x.t).source, Directive::OMPD_dispatch);
     return false;
   }
   bool Pre(const parser::OmpErrorDirective &x) {
@@ -520,8 +526,7 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     return false;
   }
   bool Pre(const parser::OpenMPAllocatorsConstruct &x) {
-    checker_(
-        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocators);
+    checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
     return false;
   }
   bool Pre(const parser::OmpAssumeDirective &x) {
@@ -1590,28 +1595,31 @@ void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
-  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_dispatch);
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
   const auto &block{std::get<parser::Block>(x.t)};
-  if (block.empty() || block.size() > 1) {
+  PushContextAndClauseSets(
+      dirSpec.DirName().source, llvm::omp::Directive::OMPD_dispatch);
+
+  if (block.empty()) {
     context_.Say(x.source,
-        "The DISPATCH construct is empty or contains more than one statement"_err_en_US);
+        "The DISPATCH construct should contain a single function or subroutine call"_err_en_US);
     return;
   }
 
-  auto it{block.begin()};
   bool passChecks{false};
-  if (const parser::AssignmentStmt *
-      assignStmt{parser::Unwrap<parser::AssignmentStmt>(*it)}) {
+  omp::SourcedActionStmt action{omp::GetActionStmt(block)};
+  if (const auto *assignStmt{
+          parser::Unwrap<parser::AssignmentStmt>(*action.stmt)}) {
     if (parser::Unwrap<parser::FunctionReference>(assignStmt->t)) {
       passChecks = true;
     }
-  } else if (parser::Unwrap<parser::CallStmt>(*it)) {
+  } else if (parser::Unwrap<parser::CallStmt>(*action.stmt)) {
     passChecks = true;
   }
 
   if (!passChecks) {
-    context_.Say(x.source,
-        "The DISPATCH construct does not contain a SUBROUTINE or FUNCTION"_err_en_US);
+    context_.Say(action.source,
+        "The body of the DISPATCH construct should be a function or a subroutine call"_err_en_US);
   }
 }
 
@@ -1657,26 +1665,45 @@ void OmpStructureChecker::Leave(const parser::OpenMPExecutableAllocate &x) {
 
 void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
   isPredefinedAllocator = true;
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocators);
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const auto &clause : clauseList.v) {
+
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+  auto &block{std::get<parser::Block>(x.t)};
+  PushContextAndClauseSets(
+      dirSpec.DirName().source, llvm::omp::Directive::OMPD_allocators);
+
+  if (block.empty()) {
+    context_.Say(dirSpec.source,
+        "The ALLOCATORS construct should contain a single ALLOCATE statement"_err_en_US);
+    return;
+  }
+
+  omp::SourcedActionStmt action{omp::GetActionStmt(block)};
+  const auto *allocate{
+      action ? parser::Unwrap<parser::AllocateStmt>(action.stmt) : nullptr};
+
+  if (!allocate) {
+    const parser::CharBlock &source = action ? action.source : x.source;
+    context_.Say(source,
+        "The body of the ALLOCATORS construct should be an ALLOCATE statement"_err_en_US);
+  }
+
+  for (const auto &clause : dirSpec.Clauses().v) {
     if (const auto *allocClause{
             parser::Unwrap<parser::OmpClause::Allocate>(clause)}) {
       CheckVarIsNotPartOfAnotherVar(
-          dir.source, std::get<parser::OmpObjectList>(allocClause->v.t));
+          dirSpec.source, std::get<parser::OmpObjectList>(allocClause->v.t));
     }
   }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPAllocatorsConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const auto &clause : clauseList.v) {
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+
+  for (const auto &clause : dirSpec.Clauses().v) {
     if (const auto *allocClause{
             std::get_if<parser::OmpClause::Allocate>(&clause.u)}) {
       CheckPredefinedAllocatorRestriction(
-          dir.source, std::get<parser::OmpObjectList>(allocClause->v.t));
+          dirSpec.source, std::get<parser::OmpObjectList>(allocClause->v.t));
     }
   }
   dirContext_.pop_back();

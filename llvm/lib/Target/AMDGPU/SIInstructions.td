@@ -1144,6 +1144,14 @@ def : GCNPat <
   (SI_PC_ADD_REL_OFFSET $ptr_lo, (i32 0))
 >;
 
+def SI_PC_ADD_REL_OFFSET64 : SPseudoInstSI <
+  (outs SReg_64:$dst),
+  (ins si_ga:$ptr),
+  [(set SReg_64:$dst,
+      (i64 (SIpc_add_rel_offset64 tglobaladdr:$ptr)))]> {
+  let SubtargetPredicate = Has64BitLiterals;
+}
+
 def : GCNPat<
   (AMDGPUtrap timm:$trapid),
   (S_TRAP $trapid)

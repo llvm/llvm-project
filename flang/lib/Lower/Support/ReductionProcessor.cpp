@@ -134,6 +134,7 @@ ReductionProcessor::getReductionType(const fir::ReduceOperationEnum &redOp) {
   case fir::ReduceOperationEnum::MIN:
     return ReductionIdentifier::MIN;
   }
+  llvm_unreachable("Unhandled ReductionIdentifier case");
 }
 
 bool ReductionProcessor::supportedIntrinsicProcReduction(
@@ -529,7 +530,9 @@ static void createReductionAllocAndInitRegions(
         converter, loc, type, initValue, initBlock,
         reductionDecl.getInitializerAllocArg(),
         reductionDecl.getInitializerMoldArg(), reductionDecl.getCleanupRegion(),
-        DeclOperationKind::Reduction);
+        DeclOperationKind::Reduction, /*sym=*/nullptr,
+        /*cannotHaveLowerBounds=*/false,
+        /*isDoConcurrent*/ std::is_same_v<OpType, fir::DeclareReductionOp>);
   }
 
   if (fir::isa_trivial(ty)) {
@@ -631,13 +634,25 @@ void ReductionProcessor::processReductionArguments(
     }
   }
 
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-
   // Reduction variable processing common to both intrinsic operators and
   // procedure designators
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::OpBuilder::InsertPoint dcIP;
+  constexpr bool isDoConcurrent =
+      std::is_same_v<OpType, fir::DeclareReductionOp>;
+
+  if (isDoConcurrent) {
+    dcIP = builder.saveInsertionPoint();
+    builder.setInsertionPoint(
+        builder.getRegion().getParentOfType<fir::DoConcurrentOp>());
+  }
+
   for (const semantics::Symbol *symbol : reductionSymbols) {
     mlir::Value symVal = converter.getSymbolAddress(*symbol);
+
+    if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
+      symVal = declOp.getBase();
+
     mlir::Type eleType;
     auto refType = mlir::dyn_cast_or_null<fir::ReferenceType>(symVal.getType());
     if (refType)
@@ -665,13 +680,13 @@ void ReductionProcessor::processReductionArguments(
       // boxed arrays are passed as values not by reference. Unfortunately,
       // we can't pass a box by value to omp.redution_declare, so turn it
       // into a reference
-
+      auto oldIP = builder.saveInsertionPoint();
+      builder.setInsertionPointToStart(builder.getAllocaBlock());
       auto alloca =
           builder.create<fir::AllocaOp>(currentLocation, symVal.getType());
+      builder.restoreInsertionPoint(oldIP);
       builder.create<fir::StoreOp>(currentLocation, symVal, alloca);
       symVal = alloca;
-    } else if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>()) {
-      symVal = declOp.getBase();
     }
 
     // this isn't the same as the by-val and by-ref passing later in the
@@ -691,7 +706,7 @@ void ReductionProcessor::processReductionArguments(
   unsigned idx = 0;
   for (auto [symVal, isByRef] : llvm::zip(reductionVars, reduceVarByRef)) {
     auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
-    const auto &kindMap = firOpBuilder.getKindMap();
+    const auto &kindMap = builder.getKindMap();
     std::string reductionName;
     ReductionIdentifier redId;
 
@@ -743,9 +758,12 @@ void ReductionProcessor::processReductionArguments(
     OpType decl = createDeclareReduction<OpType>(
         converter, reductionName, redId, redType, currentLocation, isByRef);
     reductionDeclSymbols.push_back(
-        mlir::SymbolRefAttr::get(firOpBuilder.getContext(), decl.getSymName()));
+        mlir::SymbolRefAttr::get(builder.getContext(), decl.getSymName()));
     ++idx;
   }
+
+  if (isDoConcurrent)
+    builder.restoreInsertionPoint(dcIP);
 }
 
 const semantics::SourceName
