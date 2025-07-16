@@ -268,9 +268,8 @@ entry:
 define i32 @test1_ands(i32 %a) {
 ; CHECK-LABEL: test1_ands:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1024 // =0x400
-; CHECK-NEXT:    movk w8, #32, lsl #16
-; CHECK-NEXT:    ands w8, w0, w8
+; CHECK-NEXT:    and w8, w0, #0x3ffc00
+; CHECK-NEXT:    ands w8, w8, #0xffe007ff
 ; CHECK-NEXT:    csel w0, w8, wzr, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -315,9 +314,8 @@ entry:
 define i64 @test4_ands(i64 %a) {
 ; CHECK-LABEL: test4_ands:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1024 // =0x400
-; CHECK-NEXT:    movk w8, #32, lsl #16
-; CHECK-NEXT:    ands x8, x0, x8
+; CHECK-NEXT:    and x8, x0, #0x3ffc00
+; CHECK-NEXT:    ands x8, x8, #0xffffffffffe007ff
 ; CHECK-NEXT:    csel x0, x8, xzr, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -330,9 +328,8 @@ entry:
 define i64 @test5_ands(i64 %a) {
 ; CHECK-LABEL: test5_ands:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #16384 // =0x4000
-; CHECK-NEXT:    movk x8, #2, lsl #32
-; CHECK-NEXT:    ands x8, x0, x8
+; CHECK-NEXT:    and x8, x0, #0x3ffffc000
+; CHECK-NEXT:    ands x8, x8, #0xfffffffe00007fff
 ; CHECK-NEXT:    csel x0, x8, xzr, eq
 ; CHECK-NEXT:    ret
 entry:
