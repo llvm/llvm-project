@@ -386,7 +386,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"name", asAddr}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"clock", &I::genNVVMTime<mlir::NVVM::ClockOp>, {}, /*isElemental=*/false},
-    {"clock64", &I::genClock64, {}, /*isElemental=*/false},
+    {"clock64",
+     &I::genNVVMTime<mlir::NVVM::Clock64Op>,
+     {},
+     /*isElemental=*/false},
     {"cmplx",
      &I::genCmplx,
      {{{"x", asValue}, {"y", asValue, handleDynamicOptional}}}},
@@ -3563,16 +3566,6 @@ IntrinsicLibrary::genChdir(std::optional<mlir::Type> resultType,
   }
 
   return {};
-}
-
-// CLOCK64
-mlir::Value IntrinsicLibrary::genClock64(mlir::Type resultType,
-                                         llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.read.ptx.sreg.clock64";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::FunctionType ftype = mlir::FunctionType::get(context, {}, {resultType});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
 }
 
 // CMPLX
@@ -7204,7 +7197,7 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
   return fir::MutableBoxValue(boxStorage, mold->nonDeferredLenParams(), {});
 }
 
-// CLOCK, GLOBALTIMER
+// CLOCK, CLOCK64, GLOBALTIMER
 template <typename OpTy>
 mlir::Value IntrinsicLibrary::genNVVMTime(mlir::Type resultType,
                                           llvm::ArrayRef<mlir::Value> args) {
