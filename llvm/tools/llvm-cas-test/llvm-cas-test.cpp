@@ -36,9 +36,7 @@ static cl::opt<CommandKind>
 // CAS configuration.
 static cl::opt<std::string>
     CASPath("cas", cl::desc("CAS path on disk for testing"), cl::Required);
-static cl::opt<bool>
-    PrintConfig("print-config",
-                cl::desc("print randomly generated configuration"));
+static cl::opt<bool> Verbose("v", cl::desc("verbose output"));
 static cl::opt<bool>
     ForceKill("force-kill",
               cl::desc("force kill subprocess to test termination"));
@@ -193,7 +191,7 @@ static int runOneTest(const char *Argv0) {
   getRandomBytes(&Conf, sizeof(Conf));
   Conf.constrainParameters();
 
-  if (PrintConfig)
+  if (Verbose)
     Conf.dump();
 
   // Start with fresh log if --keep-log is not used.
@@ -201,7 +199,7 @@ static int runOneTest(const char *Argv0) {
     static constexpr StringLiteral LogFile = "v1.log";
     SmallString<256> LogPath(CASPath);
     llvm::sys::path::append(LogPath, LogFile);
-    llvm::sys::fs::remove(LogPath);
+    llvm::sys::fs::rename(LogPath, LogPath + ".old");
   }
 
   auto DB = ExitOnErr(cas::createOnDiskUnifiedCASDatabases(CASPath));
@@ -230,7 +228,7 @@ static int runOneTest(const char *Argv0) {
       for_each(Subprocesses, [](auto &P) {
         // Wait 1 second and killed the process.
         auto WP = sys::Wait(P, 1);
-        if (WP.ReturnCode)
+        if (WP.ReturnCode && Verbose)
           llvm::errs() << "subprocess killed successfully\n";
       });
     } else {
@@ -241,10 +239,17 @@ static int runOneTest(const char *Argv0) {
     // in-process fill data.
     fillData(CAS, AC, Conf);
   }
+  if (Verbose)
+    llvm::errs() << "Finished filling data, start validating\n";
 
   // validate and prune in the end.
   ExitOnErr(CAS.validate(true));
+  if (Verbose)
+    llvm::errs() << "Finished validating, start pruning storage if needed\n";
+
   ExitOnErr(CAS.pruneStorageData());
+  if (Verbose)
+    llvm::errs() << "Finished pruning, end of iteration\n";
 
   return 0;
 }
