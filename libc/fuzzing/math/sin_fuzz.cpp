@@ -27,13 +27,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
     // remove NaN and inf as preconditions
     if (isnan(x))
-      return 0;
+      continue;
     if (isinf(x))
-      return 0;
+      continue;
 
     // signed zeros already tested in unit tests
     if (signbit(x) && x == 0.0)
-      return 0;
+      continue;
 
     mpfr_set_d(input, x, MPFR_RNDN);
     int output = mpfr_sin(input, input, MPFR_RNDN);
