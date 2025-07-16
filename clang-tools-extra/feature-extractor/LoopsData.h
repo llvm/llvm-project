@@ -14,8 +14,11 @@ class LoopsData {
 public:
   struct MetaData {
     const Stmt *for_stmt;
+    llvm::APInt loop_range;
 
     MetaData(const Stmt *fs) : for_stmt(fs) {}
+    MetaData(const Stmt *fs, const llvm::APInt &rng)
+        : for_stmt(fs), loop_range(rng) {}
 
     friend bool operator==(const MetaData &lhs, const MetaData &rhs) {
       return lhs.for_stmt == rhs.for_stmt;
