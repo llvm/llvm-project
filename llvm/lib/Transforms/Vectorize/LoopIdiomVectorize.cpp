@@ -253,7 +253,7 @@ bool LoopIdiomVectorize::run(Loop *L) {
 
   if (recognizeMinIdxPattern())
     return true;
-  
+
   return false;
 }
 
@@ -448,7 +448,6 @@ bool LoopIdiomVectorize::transformMinIdxPattern(
   auto *VecTy = ScalableVectorType::get(
       LoadType, VF); // This is the vector type for i32 values
 
-
   // High-level overview of the transformation:
   // We divide the process in three phases:
   // In the first phase, we process a chunk which is not multiple of VF.
@@ -470,6 +469,8 @@ bool LoopIdiomVectorize::transformMinIdxPattern(
   // The below basic blocks are used to process the first phase
   // and are for processing the chunk which is not multiple of VF.
   BasicBlock *VecEntry = BasicBlock::Create(Ctx, "minidx.vec.entry", F);
+  BasicBlock *VecScalarForkBlock =
+      BasicBlock::Create(Ctx, "minidx.vec.scalar.fork", F);
   BasicBlock *MinIdxPartial1If =
       BasicBlock::Create(Ctx, "minidx.partial.1.if", F);
   BasicBlock *MinIdxPartial1ProcExit =
@@ -501,8 +502,41 @@ bool LoopIdiomVectorize::transformMinIdxPattern(
 
   LI->addTopLevelLoop(VecLoop);
 
-  // Start populating preheader.
+  // In loop preheader, we check to fail fast.
+  // If the FirstIndex is equal to the SecondIndex,
+  // we branch to the exit block and return the SecondIndex.
+  // Thus, the loop preheader is split into two blocks.
+  // The original one has the early exit check
+  // and the new one sets up the code for vectorization.
+  // TODO: Can use splitBasicBlock(...) API to split the loop preheader.
+
   IRBuilder<> Builder(LoopPreheader->getTerminator());
+  Value *FirstIndexCmp =
+      Builder.CreateICmpEQ(FirstIndex, SecondIndex, "first.index.cmp");
+  Value *SecondIndexBitCast = Builder.CreateTruncOrBitCast(
+      SecondIndex, F->getReturnType(), "second.index.bitcast");
+  Builder.CreateCondBr(FirstIndexCmp, ExitBB, VecScalarForkBlock);
+
+  // Add edges from LoopPreheader to VecScalarForkBlock and ExitBB.
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, LoopPreheader, VecScalarForkBlock}});
+  DTU.applyUpdates({{DominatorTree::Insert, LoopPreheader, ExitBB}});
+
+  DTU.applyUpdates({{DominatorTree::Insert, VecScalarForkBlock, Header}});
+  DTU.applyUpdates({{DominatorTree::Insert, VecScalarForkBlock, ExitBB}});
+
+  // We change PHI values in the loop's header to point to the new block.
+  // This is done to avoid the PHI node being optimized out.
+  for (PHINode &PHI : Header->phis()) {
+    PHI.replaceIncomingBlockWith(LoopPreheader, VecScalarForkBlock);
+  }
+
+  // Change the name as it is no longer the loop preheader.
+  LoopPreheader->setName("minidx.early.exit1");
+
+  // Start populating preheader.
+  Builder.SetInsertPoint(VecScalarForkBlock);
+
   // %VScale = tail call i64 @llvm.vscale.i64()
   // %VLen = shl nuw nsw i64 %VScale, 2
   // %minidx.not = sub nsw i64 0, %VLen
@@ -571,7 +605,7 @@ bool LoopIdiomVectorize::transformMinIdxPattern(
   LoopPreheader->getTerminator()->eraseFromParent();
 
   // Add edge from preheader to VecEntry
-  DTU.applyUpdates({{DominatorTree::Insert, LoopPreheader, VecEntry}});
+  DTU.applyUpdates({{DominatorTree::Insert, VecScalarForkBlock, VecEntry}});
 
   // %minidx.entry.cmp = fcmp olt float %minidx.minVal, %init
   // br i1 %minidx.entry.cmp, label %minidx.partial.1.if, label
@@ -835,7 +869,6 @@ bool LoopIdiomVectorize::transformMinIdxPattern(
                                         {MaskTy, I64Ty}),
       {FirstIndex, MinIdxPartial2IfAdd}, "minidx.partial.2.if.mask");
 
-
   Value *FirstIndexMinus1 =
       Builder.CreateSub(FirstIndex, ConstantInt::get(I64Ty, 1),
                         "minidx.partial.2.if.firstindex.minus1");
@@ -856,8 +889,9 @@ bool LoopIdiomVectorize::transformMinIdxPattern(
                          {MinIdxPartial2IfGEP, ConstantInt::get(I32Ty, 1),
                           MinIdxPartial2IfMask, Constant::getNullValue(VecTy)},
                          "minidx.partial.2.if.load");
-  Value *MinIdxPartial2IfSelectVals = 
-      Builder.CreateSelect(MinIdxPartial2IfMask, MinIdxPartial2IfLoad, GMax, "minidx.partial2.if.finalVals");
+  Value *MinIdxPartial2IfSelectVals =
+      Builder.CreateSelect(MinIdxPartial2IfMask, MinIdxPartial2IfLoad, GMax,
+                           "minidx.partial2.if.finalVals");
 
   // Reverse the mask.
   MinIdxPartial2IfMask = Builder.CreateCall(
@@ -962,12 +996,14 @@ bool LoopIdiomVectorize::transformMinIdxPattern(
   for (PHINode *PHI : PHIsToReplace) {
     // Create PHI at the beginning of the block
     Builder.SetInsertPoint(ExitBB, ExitBB->getFirstInsertionPt());
+    // TODO: Add comment.
     PHINode *ExitPHI =
-        Builder.CreatePHI(F->getReturnType(), PHI->getNumIncomingValues() + 1);
+        Builder.CreatePHI(F->getReturnType(), PHI->getNumIncomingValues() + 2);
     for (unsigned I = 0; I < PHI->getNumIncomingValues(); ++I) {
       ExitPHI->addIncoming(PHI->getIncomingValue(I), PHI->getIncomingBlock(I));
     }
     ExitPHI->addIncoming(MinIdxRetBitCast, MinIdxEnd);
+    ExitPHI->addIncoming(SecondIndexBitCast, LoopPreheader);
     // Replace all uses of PHI with ExitPHI.
     PHI->replaceAllUsesWith(ExitPHI);
     PHI->eraseFromParent();
