@@ -2888,7 +2888,7 @@ TSAN_INTERCEPTOR(void, _lwp_exit) {
 #endif
 
 #if SANITIZER_FREEBSD
-TSAN_INTERCEPTOR(void, thr_exit, tid_t *state) {
+TSAN_INTERCEPTOR(void, thr_exit, thid_t *state) {
   SCOPED_TSAN_INTERCEPTOR(thr_exit, state);
   DestroyThreadState();
   REAL(thr_exit(state));

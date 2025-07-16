@@ -108,11 +108,11 @@ class ThreadLister {
     Incomplete,
     Ok,
   };
-  Result ListThreads(InternalMmapVector<tid_t> *threads);
-  const char *LoadStatus(tid_t tid);
+  Result ListThreads(InternalMmapVector<thid_t> *threads);
+  const char *LoadStatus(thid_t tid);
 
  private:
-  bool IsAlive(tid_t tid);
+  bool IsAlive(thid_t tid);
 
   InternalScopedString task_path_;
   InternalScopedString status_path_;

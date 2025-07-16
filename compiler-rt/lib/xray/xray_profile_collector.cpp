@@ -28,7 +28,7 @@ namespace {
 
 SpinMutex GlobalMutex;
 struct ThreadTrie {
-  tid_t TId;
+  thid_t TId;
   alignas(FunctionCallTrie) std::byte TrieStorage[sizeof(FunctionCallTrie)];
 };
 
@@ -61,7 +61,7 @@ struct ThreadData {
   FunctionCallTrie::Allocators::Buffers Buffers;
   FunctionCallTrie::Allocators Allocators;
   FunctionCallTrie FCT;
-  tid_t TId;
+  thid_t TId;
 };
 
 using ThreadDataArray = Array<ThreadData>;
@@ -105,7 +105,7 @@ static atomic_uint8_t CollectorInitialized{0};
 void post(BufferQueue *Q, FunctionCallTrie &&T,
           FunctionCallTrie::Allocators &&A,
           FunctionCallTrie::Allocators::Buffers &&B,
-          tid_t TId) XRAY_NEVER_INSTRUMENT {
+          thid_t TId) XRAY_NEVER_INSTRUMENT {
   DCHECK_NE(Q, nullptr);
 
   // Bail out early if the collector has not been initialized.

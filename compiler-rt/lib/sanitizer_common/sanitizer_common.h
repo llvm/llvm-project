@@ -78,8 +78,8 @@ uptr GetMmapGranularity();
 uptr GetMaxVirtualAddress();
 uptr GetMaxUserVirtualAddress();
 // Threads
-tid_t GetTid();
-int TgKill(pid_t pid, tid_t tid, int sig);
+thid_t GetTid();
+int TgKill(pid_t pid, thid_t tid, int sig);
 uptr GetThreadSelf();
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
                                 uptr *stack_bottom);
