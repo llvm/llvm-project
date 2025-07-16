@@ -2177,12 +2177,12 @@ void MachineInstr::clearRegisterKills(Register Reg,
                                       const TargetRegisterInfo *RegInfo) {
   if (!Reg.isPhysical())
     RegInfo = nullptr;
-  for (MachineOperand &MO : operands()) {
-    if (!MO.isReg() || !MO.isUse() || !MO.isKill())
+  for (MIBundleOperands O(*this); O.isValid(); ++O) {
+    if (!O->isReg() || !O->isUse() || !O->isKill())
       continue;
-    Register OpReg = MO.getReg();
+    Register OpReg = O->getReg();
     if ((RegInfo && RegInfo->regsOverlap(Reg, OpReg)) || Reg == OpReg)
-      MO.setIsKill(false);
+      O->setIsKill(false);
   }
 }
 
