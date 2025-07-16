@@ -6241,25 +6241,28 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
           GVDef->replaceAllUsesWith(GV);
           GA = dyn_cast<llvm::Function>(GVDef);
         } else {
-          GA = llvm::Function::Create(Fn->getFunctionType(), llvm::GlobalValue::InternalLinkage,
-                             II->getName(), &getModule());
+          GA = llvm::Function::Create(Fn->getFunctionType(),
+                                      llvm::GlobalValue::InternalLinkage,
+                                      II->getName(), &getModule());
           GA->setAttributes(Fn->getAttributes());
         }
         if (D->hasAttr<GNUInlineAttr>() || D->hasAttr<AlwaysInlineAttr>()) {
           GA->eraseFromParent();
           GA = nullptr;
         }
-        // Create a wrapper with the original symbol in case the mangled function is
-        // referenced in any hardcoded inline assembly
+        // Create a wrapper with the original symbol in case the mangled
+        // function is referenced in any hardcoded inline assembly
         if (GA) {
           if (!GA->isDeclaration())
             GA->deleteBody();
           GA->setLinkage(llvm::GlobalValue::InternalLinkage);
-          llvm::BasicBlock *BB = llvm::BasicBlock::Create(GA->getContext(), "", GA);
+          llvm::BasicBlock *BB =
+              llvm::BasicBlock::Create(GA->getContext(), "", GA);
           llvm::SmallVector<llvm::Value *> Args;
           for (auto &arg : GA->args())
             Args.push_back(&arg);
-          llvm::CallInst *CI = llvm::CallInst::Create(Fn->getFunctionType(), GV, Args, "", BB->end());
+          llvm::CallInst *CI = llvm::CallInst::Create(Fn->getFunctionType(), GV,
+                                                      Args, "", BB->end());
           if (Fn->getReturnType()->isVoidTy())
             llvm::ReturnInst::Create(GA->getContext(), BB);
           else
