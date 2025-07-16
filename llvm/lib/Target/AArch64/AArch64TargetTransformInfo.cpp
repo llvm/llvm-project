@@ -3724,7 +3724,7 @@ InstructionCost AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
 
 InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    bool HasRealUse, const Instruction *I, Value *Scalar,
+    const Instruction *I, Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
@@ -3744,12 +3744,10 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     }
 
     // The element at index zero is already inside the vector.
-    // - For a physical (HasRealUse==true) insert-element or extract-element
+    // - For a insert-element or extract-element
     // instruction that extracts integers, an explicit FPR -> GPR move is
     // needed. So it has non-zero cost.
-    // - For the rest of cases (virtual instruction or element type is float),
-    // consider the instruction free.
-    if (Index == 0 && (!HasRealUse || !Val->getScalarType()->isIntegerTy()))
+    if (Index == 0 && !Val->getScalarType()->isIntegerTy())
       return 0;
 
     // This is recognising a LD1 single-element structure to one lane of one
@@ -3899,25 +3897,28 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    unsigned Index,
                                                    const Value *Op0,
                                                    const Value *Op1) const {
-  bool HasRealUse =
-      Opcode == Instruction::InsertElement && Op0 && !isa<UndefValue>(Op0);
-  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, HasRealUse);
+  // Treat insert at lane 0 into a poison vector as having zero cost. This
+  // ensures vector broadcasts via an insert + shuffle (and will be lowered to a
+  // single dup) are treated as cheap.
+  if (Opcode == Instruction::InsertElement && Index == 0 && Op0 &&
+      isa<PoisonValue>(Op0))
+    return 0;
+  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index);
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
     Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
-  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, false, nullptr,
-                                  Scalar, ScalarUserAndIdx);
+  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, nullptr, Scalar,
+                                  ScalarUserAndIdx);
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
                                                    Type *Val,
                                                    TTI::TargetCostKind CostKind,
                                                    unsigned Index) const {
-  return getVectorInstrCostHelper(I.getOpcode(), Val, CostKind, Index,
-                                  true /* HasRealUse */, &I);
+  return getVectorInstrCostHelper(I.getOpcode(), Val, CostKind, Index, &I);
 }
 
 InstructionCost AArch64TTIImpl::getScalarizationOverhead(
