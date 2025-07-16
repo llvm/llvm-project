@@ -37,15 +37,10 @@ class VRegMaskPair {
       VRegMaskPair(const MachineOperand MO, const SIRegisterInfo *TRI,
                    const MachineRegisterInfo *MRI) {
         assert(MO.isReg() && "Not a register operand!");
-        Register R = MO.getReg();
-        const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, R);
-        assert(R.isVirtual() && "Not a virtual register!");
-        VReg = R;
-        LaneMask = getFullMaskForRC(*RC, TRI);
-        unsigned subRegIndex = MO.getSubReg();
-        if (subRegIndex) {
-          LaneMask = TRI->getSubRegIndexLaneMask(subRegIndex);
-        }
+        assert(MO.getReg().isVirtual() && "Not a virtual register!");
+        VReg = MO.getReg();
+        LaneMask = MO.getSubReg() ? TRI->getSubRegIndexLaneMask(MO.getSubReg())
+                                  : MRI->getMaxLaneMaskForVReg(VReg);
       }
 
       const Register getVReg() const { return VReg; }
@@ -53,31 +48,25 @@ class VRegMaskPair {
 
       unsigned getSubReg(const MachineRegisterInfo *MRI,
                          const SIRegisterInfo *TRI) const {
-        const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VReg);
-        LaneBitmask Mask = getFullMaskForRC(*RC, TRI);
-        if (LaneMask != Mask)
-          return getSubRegIndexForLaneMask(LaneMask, TRI);
-        return AMDGPU::NoRegister;
+        LaneBitmask Mask = MRI->getMaxLaneMaskForVReg(VReg);
+        if (LaneMask == Mask)
+          return AMDGPU::NoRegister;
+        return getSubRegIndexForLaneMask(LaneMask, TRI);
       }
 
       const TargetRegisterClass *getRegClass(const MachineRegisterInfo *MRI,
                                              const SIRegisterInfo *TRI) const {
-
         const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VReg);
-        LaneBitmask Mask = getFullMaskForRC(*RC, TRI);
+        LaneBitmask Mask = MRI->getMaxLaneMaskForVReg(VReg);
         if (LaneMask != Mask) {
           unsigned SubRegIdx = getSubRegIndexForLaneMask(LaneMask, TRI);
-          // RC = TRI->getSubRegisterClass(RC, SubRegIdx);
           return TRI->getSubRegisterClass(RC, SubRegIdx);
         }
-
         return RC;
       }
 
-      unsigned getSizeInRegs(const MachineRegisterInfo *MRI,
-                             const SIRegisterInfo *TRI) const {
-        const TargetRegisterClass *RC = getRegClass(MRI, TRI);
-        return TRI->getRegClassWeight(RC).RegWeight;
+      unsigned getSizeInRegs(const SIRegisterInfo *TRI) const {
+        return TRI->getNumCoveredRegs(LaneMask);
       }
 
       bool operator==(const VRegMaskPair &other) const {

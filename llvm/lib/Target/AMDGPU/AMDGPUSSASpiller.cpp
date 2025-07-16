@@ -223,8 +223,7 @@ AMDGPUSSASpiller::dumpRegSet(SetVector<VRegMaskPair> VMPs) {
 
 LLVM_ATTRIBUTE_NOINLINE void
 AMDGPUSSASpiller::printVRegMaskPair(const VRegMaskPair P) {
-  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, P.getVReg());
-  LaneBitmask FullMask = getFullMaskForRC(*RC, TRI);
+  LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(P.getVReg());
   dbgs() << "Vreg: [";
   if (P.getLaneMask() == FullMask) {
     dbgs() << printReg(P.getVReg()) << "] ";
@@ -314,7 +313,7 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
                   isCoveredByRegSet(VMP, SrcSpill)) &&
                  "PHI node input value is neither live out predecessor no "
                  "spilled!");
-          if (SrcSpill.contains(VMP)) {
+          if (isCoveredByRegSet(VMP, SrcSpill)) {
             // reload it at the end of the source block
             Register NewVreg = reloadAtEnd(*ValueSrc, VMP);
             VRegMaskPair NewVMP(NewVreg, VMP.getLaneMask());
@@ -634,23 +633,9 @@ void AMDGPUSSASpiller::initActiveSetLoopHeader(MachineBasicBlock &MBB) {
     Register VReg = Register::index2VirtReg(i);
     if (!LIS.hasInterval(VReg))
       continue;
-  
+
     if (takeReg(VReg) && LIS.isLiveInToMBB(LIS.getInterval(VReg), &MBB)) {
-      // we have to take care ofthe subreg index and set LaneMask accordingly
-      // LaneBitmask LaneMask = LaneBitmask::getAll();
-      // RegisterSet Preds;
-      // for (auto Pred : MBB.predecessors()) {
-      //   auto PredActive = getBlockInfo(*Pred).ActiveSet;
-      //   set_intersect()
-      //   for (auto P : PredActive) {
-      //     if (P.VReg == VReg) {
-      //       LaneMask = P.LaneMask;
-      //       break;
-      //     }
-      //   }
-      // }
-      const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VReg);
-      LiveIn.insert(VRegMaskPair(VReg, getFullMaskForRC(*RC, TRI)));
+      LiveIn.insert(VRegMaskPair(VReg, MRI->getMaxLaneMaskForVReg(VReg)));
     }
   }
 
@@ -728,19 +713,13 @@ AMDGPUSSASpiller::reloadBefore(MachineBasicBlock::iterator InsertBefore,
 
   LIS.createAndComputeVirtRegInterval(NewVReg);
   auto &Entry = getBlockInfo(*MBB);
-  Entry.ActiveSet.insert({NewVReg, getFullMaskForRC(*RC, TRI)});
+  Entry.ActiveSet.insert({NewVReg, MRI->getMaxLaneMaskForVReg(NewVReg)});
   return NewVReg;
 }
 
 void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator InsertBefore,
                                    VRegMaskPair VMP) {
-  
-  // const TargetRegisterClass *RC = VMP.getRegClass(MRI, TRI);
-  // LaneBitmask FullMask = getFullMaskForRC(*RC, TRI);
-  // unsigned SubRegIdx = VMP.getLaneMask() == FullMask
-  //                          ? AMDGPU::NoRegister
-  //                          : getSubRegIndexForLaneMask(VMP.getLaneMask(), TRI);
   const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VMP.getVReg());
   unsigned SubRegIdx = VMP.getSubReg(MRI, TRI);
   int FI = assignVirt2StackSlot(VMP);
@@ -825,7 +804,7 @@ unsigned AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
 
   while (CurRP > Limit) {
     auto P = Active.pop_back_val();
-    unsigned RegSize = P.getSizeInRegs(MRI, TRI);
+    unsigned RegSize = P.getSizeInRegs(TRI);
     unsigned SizeToSpill = CurRP - Limit;
     if (RegSize > SizeToSpill) {
 
@@ -836,7 +815,7 @@ unsigned AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
                                              : NU.getSortedSubregUses(I, P);
 
       for (auto S : Sorted) {
-        unsigned Size = S.getSizeInRegs(MRI, TRI);
+        unsigned Size = S.getSizeInRegs(TRI);
         CurRP -= Size;
         if (!Spilled.contains(S))
           ToSpill.insert(S);
@@ -893,7 +872,7 @@ unsigned AMDGPUSSASpiller::getRegSetSizeInRegs(const RegisterSet VRegs) {
   for (auto &VMP : VRegs) {
     printVRegMaskPair(VMP);
     dbgs() << "\n";
-    Size += VMP.getSizeInRegs(MRI, TRI);
+    Size += VMP.getSizeInRegs(TRI);
   }
   return Size;
 }
@@ -905,7 +884,7 @@ unsigned AMDGPUSSASpiller::fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
   unsigned Size = Capacity ? 0 : getRegSetSizeInRegs(Active);
   sortRegSetAt(MBB, MBB.getFirstNonPHI(), S);
   for (auto VMP : S) {
-    unsigned RSize = VMP.getSizeInRegs(MRI, TRI);
+    unsigned RSize = VMP.getSizeInRegs(TRI);
     if (Size + RSize > Limit)
       break;
     Active.insert(VMP);

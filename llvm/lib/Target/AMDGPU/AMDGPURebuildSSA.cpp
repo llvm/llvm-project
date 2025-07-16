@@ -191,16 +191,16 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
       // All subreg defs are found. Insert REG_SEQUENCE.
       auto *RC = TRI->getRegClassForReg(*MRI, VReg);
       CurVReg = MRI->createVirtualRegister(RC);
-      auto RS = BuildMI(MBB, I, I->getDebugLoc(), TII->get(AMDGPU::REG_SEQUENCE),
-                        CurVReg);
+      auto RS = BuildMI(MBB, I, I->getDebugLoc(),
+                        TII->get(AMDGPU::REG_SEQUENCE), CurVReg);
       for (auto O : RegSeqOps) {
         auto [R, SrcSubreg, DstSubreg] = O;
         RS.addReg(R, 0, SrcSubreg);
         RS.addImm(DstSubreg);
       }
 
-      VregNames[VReg].push_back(
-          {CurVReg, getFullMaskForRC(*RC, TRI), AMDGPU::NoRegister, RS});
+      VregNames[VReg].push_back({CurVReg, MRI->getMaxLaneMaskForVReg(CurVReg),
+                                 AMDGPU::NoRegister, RS});
     }
 
     assert(CurVReg != AMDGPU::NoRegister &&
