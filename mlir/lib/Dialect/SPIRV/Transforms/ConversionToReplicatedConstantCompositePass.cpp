@@ -1,5 +1,4 @@
-//===- ConversionToReplicatedConstantCompositePass.cpp
-//---------------------------===//
+//===- ConversionToReplicatedConstantCompositePass.cpp --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -83,7 +82,7 @@ class ConstantOpConversion : public OpRewritePattern<spirv::ConstantOp> {
 
     if (splatCount == 1)
       return rewriter.notifyMatchFailure(op,
-                                         "composite has only one consituent");
+                                         "composite has only one constituent");
 
     rewriter.replaceOpWithNewOp<spirv::EXTConstantCompositeReplicateOp>(
         op, op.getType(), splatAttr);
@@ -102,7 +101,7 @@ class SpecConstantCompositeOpConversion
     if (!compositeType)
       return rewriter.notifyMatchFailure(op, "not a composite constant");
 
-    auto constituents = op.getConstituents();
+    ArrayAttr constituents = op.getConstituents();
     if (constituents.size() == 1)
       return rewriter.notifyMatchFailure(op,
                                          "composite has only one consituent");
@@ -113,6 +112,9 @@ class SpecConstantCompositeOpConversion
 
     auto splatConstituent =
         dyn_cast<FlatSymbolRefAttr>(op.getConstituents()[0]);
+    if (!splatConstituent)
+      return rewriter.notifyMatchFailure(
+          op, "expected flat symbol reference for splat constituent");
 
     rewriter.replaceOpWithNewOp<spirv::EXTSpecConstantCompositeReplicateOp>(
         op, TypeAttr::get(op.getType()), op.getSymNameAttr(), splatConstituent);
