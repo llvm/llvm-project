@@ -14021,7 +14021,6 @@ SDValue RISCVTargetLowering::lowerGET_FPMODE(SDValue Op,
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
   SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::fcsr, DL, XLenVT);
-  SDValue ModeMask = DAG.getConstant(ModeMaskValue, DL, XLenVT);
   SDVTList VTs = DAG.getVTList(XLenVT, MVT::Other);
   SDValue Result = DAG.getNode(RISCVISD::READ_CSR, DL, VTs, Chain, SysRegNo);
   Chain = Result.getValue(1);
