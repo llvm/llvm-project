@@ -15,14 +15,14 @@
 
 // RUN: not %clang_cc1 -std=c++11 -fsyntax-only %s -fconstexpr-backtrace-limit=2 -fconstexpr-depth=8 -fno-caret-diagnostics 2>&1 | FileCheck %s -check-prefix=TEST3
 // TEST3: constant expression
-// TEST3-NEXT: reinterpret_cast
+// TEST3-NEXT: dereferencing a null pointer
 // TEST3-NEXT: in call to 'recurse(0)'
 // TEST3-NEXT: skipping 4 calls
 // TEST3-NEXT: in call to 'recurse(5)'
 
 // RUN: not %clang_cc1 -std=c++11 -fsyntax-only %s -fconstexpr-backtrace-limit=8 -fconstexpr-depth=8 -fno-caret-diagnostics 2>&1 | FileCheck %s -check-prefix=TEST4
 // TEST4: constant expression
-// TEST4-NEXT: reinterpret_cast
+// TEST4-NEXT: dereferencing a null pointer
 // TEST4-NEXT: in call to 'recurse(0)'
 // TEST4-NEXT: in call to 'recurse(1)'
 // TEST4-NEXT: in call to 'recurse(2)'
