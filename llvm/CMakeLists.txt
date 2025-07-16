@@ -179,6 +179,12 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   endif ()
 endif()
 
+if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
+  if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR "Clang is not enabled, but is required for lldb.")
+  endif ()
+endif ()
+
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
