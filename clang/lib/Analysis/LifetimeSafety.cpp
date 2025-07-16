@@ -500,6 +500,9 @@ private:
 //                         Generic Dataflow Analysis
 // ========================================================================= //
 
+// DO NOT SUBMIT: TODO: Document notion of before or after in the analyses.
+using ProgramPoint = std::pair<const CFGBlock *, const Fact *>;
+
 enum class Direction { Forward, Backward };
 
 /// A generic, policy-based driver for dataflow analyses. It combines
@@ -532,6 +535,7 @@ private:
 
   llvm::DenseMap<const CFGBlock *, Lattice> InStates;
   llvm::DenseMap<const CFGBlock *, Lattice> OutStates;
+  llvm::DenseMap<ProgramPoint, Lattice> PerPointStates;
 
   static constexpr bool isForward() { return Dir == Direction::Forward; }
 
@@ -577,6 +581,8 @@ public:
     }
   }
 
+  Lattice getState(ProgramPoint P) const { return PerPointStates.lookup(P); }
+
   Lattice getInState(const CFGBlock *B) const { return InStates.lookup(B); }
 
   Lattice getOutState(const CFGBlock *B) const { return OutStates.lookup(B); }
@@ -590,18 +596,22 @@ public:
     getOutState(&B).dump(llvm::dbgs());
   }
 
+private:
   /// Computes the state at one end of a block by applying all its facts
   /// sequentially to a given state from the other end.
-  /// TODO: We might need to store intermediate states per-fact in the block for
-  /// later analysis.
   Lattice transferBlock(const CFGBlock *Block, Lattice State) {
     auto Facts = AllFacts.getFacts(Block);
-    if constexpr (isForward())
-      for (const Fact *F : Facts)
+    if constexpr (isForward()) {
+      for (const Fact *F : Facts) {
         State = transferFact(State, F);
-    else
-      for (const Fact *F : llvm::reverse(Facts))
+        PerPointStates[{Block, F}] = State;
+      }
+    } else {
+      for (const Fact *F : llvm::reverse(Facts)) {
         State = transferFact(State, F);
+        PerPointStates[{Block, F}] = State;
+      }
+    }
     return State;
   }
 
@@ -771,6 +781,10 @@ public:
         Factory.OriginMapFactory.add(In.Origins, DestOID, SrcLoans));
   }
 
+  LoanSet getLoans(OriginID OID, ProgramPoint P) {
+    return getLoans(getState(P), OID);
+  }
+
 private:
   LoanSet getLoans(Lattice L, OriginID OID) {
     if (auto *Loans = L.Origins.lookup(OID))
@@ -849,6 +863,14 @@ public:
   Lattice transfer(Lattice In, const ReturnOfOriginFact &F) {
     return Lattice(SetFactory.add(In.LiveOrigins, F.getReturnedOriginID()));
   }
+
+  bool isLive(OriginID OID, ProgramPoint P) const {
+    return getState(P).LiveOrigins.contains(OID);
+  }
+
+  OriginSet getLiveOrigins(ProgramPoint P) const {
+    return getState(P).LiveOrigins;
+  }
 };
 
 // ========================================================================= //
@@ -908,14 +930,15 @@ public:
   Lattice transfer(Lattice In, const IssueFact &F) {
     return Lattice(Factory.remove(In.Expired, F.getLoanID()));
   }
+
+  bool isExpired(LoanID LID, ProgramPoint P) const {
+    return getState(P).Expired.contains(LID);
+  }
 };
 
 // ========================================================================= //
 //  TODO:
-// - Modifying loan propagation to answer `LoanSet getLoans(Origin O, Point P)`
-// - Modify loan expiry analysis to answer `bool isExpired(Loan L, Point P)`
-// - Modify origin liveness analysis to answer `bool isLive(Origin O, Point P)`
-// - Using the above three to perform the final error reporting.
+//   - Add error reporting <DO NOT SUBMIT> Add how would it work.
 // ========================================================================= //
 } // anonymous namespace
 
