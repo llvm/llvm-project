@@ -27,7 +27,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
     // remove NaN and inf
     if (isnan(x) || isinf(x))
-       continue;
+      continue;
     // signed zeros already tested in unit tests
     if (signbit(x) && x == 0.0)
       continue;
