@@ -131,7 +131,7 @@ define i8 @test_udiv(i32 %a, i32 %b) {
 }
 
 define i8 @test_srem_zext_trunc_const_amount2(i8 %a) {
-; CHECK-LABEL: 'test_srem_const_amount_4'
+; CHECK-LABEL: 'test_srem_zext_trunc_const_amount2'
 ; CHECK-DAG: DemandedBits: 0xff for   %rem.t = trunc i32 %rem to i8
 ; CHECK-DAG: DemandedBits: 0xff for %rem in   %rem.t = trunc i32 %rem to i8
 ; CHECK-DAG: DemandedBits: 0xff for   %rem = srem i32 %ext, 2
