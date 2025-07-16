@@ -1,4 +1,4 @@
-//===-- Implementation of mbstowcs ----------------------------------------===//
+//===-- Implementation of mbsrtowcs ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/wchar/mbstowcs.h"
+#include "src/wchar/mbsrtowcs.h"
 
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
@@ -18,20 +18,25 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(size_t, mbstowcs,
-                   (wchar_t *__restrict pwcs, const char *__restrict s,
-                    size_t n)) {
+LLVM_LIBC_FUNCTION(size_t, mbsrtowcs,
+                   (wchar_t *__restrict dst, const char **__restrict src,
+                    size_t len, mbstate_t *__restrict ps)) {
   static internal::mbstate internal_mbstate;
   internal::StringConverter<char8_t> str_conv(
-      reinterpret_cast<const char8_t *>(s), &internal_mbstate, n);
+      reinterpret_cast<const char8_t *>(src),
+      ps == nullptr ? &internal_mbstate
+                    : reinterpret_cast<internal::mbstate *>(ps),
+      len);
+
   int dst_idx = 0;
   ErrorOr<char32_t> converted = str_conv.popUTF32();
   while (converted.has_value()) {
-    if (pwcs != nullptr)
-      pwcs[dst_idx] = converted.value();
+    dst[dst_idx] = converted.value();
     dst_idx++;
     converted = str_conv.popUTF32();
   }
+
+  src += str_conv.getSourceIndex();
   if (converted.error() == -1) // if we hit conversion limit
     return dst_idx;
 
