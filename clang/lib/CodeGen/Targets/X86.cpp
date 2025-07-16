@@ -2536,7 +2536,7 @@ GetINTEGERTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
   // if we have a 128-bit integer, we can pass it safely using an i128
   // so we return that
   if (IRType->isIntegerTy(128)) {
-    assert(IROffset <= 8);
+    assert(IROffset == 0);
     return IRType;
   }
 
