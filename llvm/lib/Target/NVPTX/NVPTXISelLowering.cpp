@@ -6315,10 +6315,12 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 
   // Specialize for cmpxchg
   // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
+  SyncScope::ID SSID = cast<AtomicCmpXchgInst>(Inst)->getSyncScopeID();
   if (isReleaseOrStronger(Ord))
-    return Ord == AtomicOrdering::SequentiallyConsistent
-               ? Builder.CreateFence(AtomicOrdering::SequentiallyConsistent)
-               : Builder.CreateFence(AtomicOrdering::Release);
+    return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
+                                   ? Ord
+                                   : AtomicOrdering::Release,
+                               SSID);
 
   return nullptr;
 }
@@ -6330,15 +6332,15 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   if (!isa<AtomicCmpXchgInst>(Inst))
     return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
 
+  auto *CI = cast<AtomicCmpXchgInst>(Inst);
   auto CASWidth =
-      cast<IntegerType>(
-          dyn_cast<AtomicCmpXchgInst>(Inst)->getCompareOperand()->getType())
-          ->getBitWidth();
+      cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth();
+  SyncScope::ID SSID = CI->getSyncScopeID();
   // Do not emit a trailing fence for cmpxchg seq_cst which are not emulated
   if (isAcquireOrStronger(Ord) &&
       (Ord != AtomicOrdering::SequentiallyConsistent ||
        CASWidth < STI.getMinCmpXchgSizeInBits()))
-    return Builder.CreateFence(AtomicOrdering::Acquire);
+    return Builder.CreateFence(AtomicOrdering::Acquire, SSID);
 
   return nullptr;
 }

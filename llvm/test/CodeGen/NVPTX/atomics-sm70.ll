@@ -70,7 +70,7 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, half %
 ; CHECKPTX62-NEXT:    shl.b32 %r30, %r29, %r2;
 ; CHECKPTX62-NEXT:    and.b32 %r31, %r54, %r3;
 ; CHECKPTX62-NEXT:    or.b32 %r32, %r31, %r30;
-; CHECKPTX62-NEXT:    atom.cas.b32 %r6, [%r1], %r54, %r32;
+; CHECKPTX62-NEXT:    atom.relaxed.sys.cas.b32 %r6, [%r1], %r54, %r32;
 ; CHECKPTX62-NEXT:    setp.ne.b32 %p1, %r6, %r54;
 ; CHECKPTX62-NEXT:    mov.b32 %r54, %r6;
 ; CHECKPTX62-NEXT:    @%p1 bra $L__BB0_1;
@@ -86,7 +86,7 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, half %
 ; CHECKPTX62-NEXT:    shl.b32 %r35, %r34, %r2;
 ; CHECKPTX62-NEXT:    and.b32 %r36, %r55, %r3;
 ; CHECKPTX62-NEXT:    or.b32 %r37, %r36, %r35;
-; CHECKPTX62-NEXT:    atom.cas.b32 %r9, [%r1], %r55, %r37;
+; CHECKPTX62-NEXT:    atom.relaxed.sys.cas.b32 %r9, [%r1], %r55, %r37;
 ; CHECKPTX62-NEXT:    setp.ne.b32 %p2, %r9, %r55;
 ; CHECKPTX62-NEXT:    mov.b32 %r55, %r9;
 ; CHECKPTX62-NEXT:    @%p2 bra $L__BB0_3;
@@ -107,7 +107,7 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, half %
 ; CHECKPTX62-NEXT:    shl.b32 %r43, %r42, %r11;
 ; CHECKPTX62-NEXT:    and.b32 %r44, %r56, %r12;
 ; CHECKPTX62-NEXT:    or.b32 %r45, %r44, %r43;
-; CHECKPTX62-NEXT:    atom.global.cas.b32 %r15, [%r10], %r56, %r45;
+; CHECKPTX62-NEXT:    atom.relaxed.sys.global.cas.b32 %r15, [%r10], %r56, %r45;
 ; CHECKPTX62-NEXT:    setp.ne.b32 %p3, %r15, %r56;
 ; CHECKPTX62-NEXT:    mov.b32 %r56, %r15;
 ; CHECKPTX62-NEXT:    @%p3 bra $L__BB0_5;
@@ -128,7 +128,7 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, half %
 ; CHECKPTX62-NEXT:    shl.b32 %r51, %r50, %r17;
 ; CHECKPTX62-NEXT:    and.b32 %r52, %r57, %r18;
 ; CHECKPTX62-NEXT:    or.b32 %r53, %r52, %r51;
-; CHECKPTX62-NEXT:    atom.shared.cas.b32 %r21, [%r16], %r57, %r53;
+; CHECKPTX62-NEXT:    atom.relaxed.sys.shared.cas.b32 %r21, [%r16], %r57, %r53;
 ; CHECKPTX62-NEXT:    setp.ne.b32 %p4, %r21, %r57;
 ; CHECKPTX62-NEXT:    mov.b32 %r57, %r21;
 ; CHECKPTX62-NEXT:    @%p4 bra $L__BB0_7;
