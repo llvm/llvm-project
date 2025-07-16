@@ -5487,12 +5487,13 @@ void Verifier::visitInstruction(Instruction &I) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
     visitMDNode(*N, AreDebugLocsAllowed::Yes);
 
-    auto *DL = cast<DILocation>(N);
-    if (DL->getAtomGroup())
-      CheckDI(DL->getScope()->getSubprogram()->getKeyInstructionsEnabled(),
-              "DbgLoc uses atomGroup but DISubprogram doesn't have Key "
-              "Instructions enabled",
-              DL, DL->getScope()->getSubprogram());
+    if (auto *DL = dyn_cast<DILocation>(N)) {
+      if (DL->getAtomGroup())
+        CheckDI(DL->getScope()->getSubprogram()->getKeyInstructionsEnabled(),
+                "DbgLoc uses atomGroup but DISubprogram doesn't have Key "
+                "Instructions enabled",
+                DL, DL->getScope()->getSubprogram());
+    }
   }
 
   if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
