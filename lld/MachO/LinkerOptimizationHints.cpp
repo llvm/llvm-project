@@ -351,9 +351,6 @@ static void applyAdrpLdrGotLdr(uint8_t *buf, const ConcatInputSection *isec,
       return;
     if (ldr3.baseRegister != ldr2.destRegister)
       return;
-    // Loads from the GOT must be pointer sized.
-    if (ldr2.p2Size != 3 || ldr2.isFloat)
-      return;
     applyAdrpLdr(buf, isec, offset1, offset2);
   }
 }
