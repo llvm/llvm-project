@@ -46,7 +46,7 @@ Note that currently ELF Core files are not supported."
 ) lldb::SBSaveCoreOptions::SetProcess;
 
 %feature("docstring", "
-    Get the process to save. If undefined, an invalid SBProcess will be returned."
+    Get the process to save. If a process is not defined, whether by calling clear or by not setting a process, an invalid process will be returned."
 ) lldb::SBSaveCoreOptions::GetProcess;
 
 %feature("docstring", "
@@ -69,7 +69,7 @@ Note that currently ELF Core files are not supported."
 
 %feature("docstring", "
     Get an SBMemoryRegionInfoList of all the Regions that LLDB will attempt to write into the Core. Note, reading from these
-    regions can fail, and it's guaraunteed every region will be present. If called without a valid process or style set an empty
+    regions can fail, and it's not guaraunteed every region will be present in the resulting core. If called without a valid process or style set an empty
     collection will be returned."
 ) lldb::SBSaveCoreOptions::GetMemoryRegionsToSave;
 

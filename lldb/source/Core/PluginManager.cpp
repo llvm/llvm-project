@@ -965,13 +965,11 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     return error;
   }
 
-  // Set the process sp if not already set.
-  ProcessSP options_sp = options.GetProcess();
-  if (!options_sp)
+  if (!options.GetProcess())
     options.SetProcess(process_sp);
 
   // Make sure the process sp is the same as the one we are using.
-  if (options_sp && options_sp != process_sp) {
+  if (options.GetProcess() != process_sp) {
     error = Status::FromErrorString(
         "Save Core Options configured for a different process.");
     return error;

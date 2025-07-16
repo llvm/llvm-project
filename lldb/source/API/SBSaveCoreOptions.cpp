@@ -142,15 +142,15 @@ lldb::SBMemoryRegionInfoList SBSaveCoreOptions::GetMemoryRegionsToSave() {
     return SBMemoryRegionInfoList();
   }
 
-  SBMemoryRegionInfoList m_memory_region_infos;
+  SBMemoryRegionInfoList memory_region_infos;
   for (const auto &range : *memory_ranges) {
     SBMemoryRegionInfo region_info(
         nullptr, range.GetRangeBase(), range.GetRangeEnd(),
         range.data.lldb_permissions, /*mapped=*/true);
-    m_memory_region_infos.Append(region_info);
+    memory_region_infos.Append(region_info);
   }
 
-  return m_memory_region_infos;
+  return memory_region_infos;
 }
 
 lldb_private::SaveCoreOptions &SBSaveCoreOptions::ref() const {

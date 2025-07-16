@@ -984,9 +984,17 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
 
     if (current_addr != addr + total_bytes_read) {
       LLDB_LOGF(log,
-                "Current addr is at expected address, 0x%" PRIx64
+                "Current addr is at unexpected address, 0x%" PRIx64
                 ", expected at 0x%" PRIx64,
                 current_addr, addr + total_bytes_read);
+
+      // Something went wrong and the address is not where it should be
+      // we'll error out of this Minidump generation.
+      addDataError = Status::FromErrorStringWithFormat(
+          "Unexpected address encounterd when reading memory in chunks "
+          "0x" PRIx64 " expected 0x" PRIx64,
+          current_addr, addr + total_bytes_read);
+      return lldb_private::IterationAction::Stop;
     }
 
     // Write to the minidump file with the chunk potentially flushing to

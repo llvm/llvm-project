@@ -194,7 +194,7 @@ llvm::Expected<uint64_t> SaveCoreOptions::GetCurrentSizeInBytes() {
   const lldb_private::CoreFileMemoryRanges &core_file_ranges =
       *core_file_ranges_maybe;
   uint64_t total_in_bytes = 0;
-  for (auto &core_range : core_file_ranges)
+  for (const auto &core_range : core_file_ranges)
     total_in_bytes += core_range.data.range.size();
 
   return total_in_bytes;

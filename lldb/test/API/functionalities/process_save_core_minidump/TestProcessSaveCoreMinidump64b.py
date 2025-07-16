@@ -13,85 +13,81 @@ from lldbsuite.test import lldbutil
 class ProcessSaveCoreMinidump64bTestCase(TestBase):
     def verify_minidump(
         self,
-        core_proc,
-        live_proc,
         options,
     ):
         """Verify that the minidump is the same byte for byte as the live process."""
-        # Get the memory regions we saved off in this core, we can't compare to the core
-        # because we pull from /proc/pid/maps, so even ranges that don't get mapped in will show up
-        # as ranges in the minidump.
-        #
-        # Instead, we have an API that returns to us the number of regions we planned to save from the live process
-        # and we compare those
-        memory_regions_to_compare = options.GetMemoryRegionsToSave()
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
+        core_target = None
+        live_proc = target.LaunchSimple(
+            None, None, self.get_process_working_directory()
+        )
+        try:
+            self.assertState(live_proc.GetState(), lldb.eStateStopped)
+            error = live_proc.SaveCore(options)
+            self.assertTrue(error.Success(), error.GetCString())
+            core_target = self.dbg.CreateTarget(None)
+            core_proc = target.LoadCore(options.GetOutputFile().fullpath)
+            # Get the memory regions we saved off in this core, we can't compare to the core
+            # because we pull from /proc/pid/maps, so even ranges that don't get mapped in will show up
+            # as ranges in the minidump.
+            #
+            # Instead, we have an API that returns to us the number of regions we planned to save from the live process
+            # and we compare those
+            memory_regions_to_compare = options.GetMemoryRegionsToSave()
 
-        for region in memory_regions_to_compare:
-            start_addr = region.GetRegionBase()
-            end_addr = region.GetRegionEnd()
-            actual_process_read_error = lldb.SBError()
-            actual = live_proc.ReadMemory(
-                start_addr, end_addr - start_addr, actual_process_read_error
-            )
-            expected_process_read_error = lldb.SBError()
-            expected = core_proc.ReadMemory(
-                start_addr, end_addr - start_addr, expected_process_read_error
-            )
-
-            # Both processes could fail to read a given memory region, so if they both pass
-            # compare, then we'll fail them if the core differs from the live process.
-            if (
-                actual_process_read_error.Success()
-                and expected_process_read_error.Success()
-            ):
-                self.assertEqual(
-                    actual, expected, "Bytes differ between live process and core"
+            for region in memory_regions_to_compare:
+                start_addr = region.GetRegionBase()
+                end_addr = region.GetRegionEnd()
+                actual_process_read_error = lldb.SBError()
+                actual = live_proc.ReadMemory(
+                    start_addr, end_addr - start_addr, actual_process_read_error
+                )
+                expected_process_read_error = lldb.SBError()
+                expected = core_proc.ReadMemory(
+                    start_addr, end_addr - start_addr, expected_process_read_error
                 )
 
-            # Now we check if the error is the same, error isn't abnormal but they should fail for the same reason
-            self.assertTrue(
-                (
+                # Both processes could fail to read a given memory region, so if they both pass
+                # compare, then we'll fail them if the core differs from the live process.
+                if (
                     actual_process_read_error.Success()
                     and expected_process_read_error.Success()
+                ):
+                    self.assertEqual(
+                        actual, expected, "Bytes differ between live process and core"
+                    )
+
+                # Now we check if the error is the same, error isn't abnormal but they should fail for the same reason
+                self.assertTrue(
+                    (
+                        actual_process_read_error.Success()
+                        and expected_process_read_error.Success()
+                    )
+                    or (
+                        actual_process_read_error.Fail()
+                        and expected_process_read_error.Fail()
+                    ),
+                    f"Address range {hex(start_addr)} - {hex(end_addr)} failed to read from live process and core for different reasons",
                 )
-                or (
-                    actual_process_read_error.Fail()
-                    and expected_process_read_error.Fail()
-                ),
-                f"Address range {hex(start_addr)} - {hex(end_addr)} failed to read from live process and core for different reasons",
-            )
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if core_target is not None:
+                self.assertTrue(self.dbg.DeleteTarget(core_target))
 
     @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_minidump_save_style_full(self):
         """Test that a full minidump is the same byte for byte."""
-
-        self.build()
-        exe = self.getBuildArtifact("a.out")
         minidump_path = self.getBuildArtifact("minidump_full_force64b.dmp")
-
         try:
-            target = self.dbg.CreateTarget(exe)
-            live_process = target.LaunchSimple(
-                None, None, self.get_process_working_directory()
-            )
-            self.assertState(live_process.GetState(), lldb.eStateStopped)
             options = lldb.SBSaveCoreOptions()
-
             options.SetOutputFile(lldb.SBFileSpec(minidump_path))
             options.SetStyle(lldb.eSaveCoreFull)
             options.SetPluginName("minidump")
-            options.SetProcess(live_process)
-
-            error = live_process.SaveCore(options)
-            self.assertTrue(error.Success(), error.GetCString())
-
-            target = self.dbg.CreateTarget(None)
-            core_proc = target.LoadCore(minidump_path)
-
-            self.verify_minidump(core_proc, live_process, options)
+            self.verify_minidump(options)
         finally:
-            self.assertTrue(self.dbg.DeleteTarget(target))
             if os.path.isfile(minidump_path):
                 os.unlink(minidump_path)
 
@@ -99,32 +95,13 @@ class ProcessSaveCoreMinidump64bTestCase(TestBase):
     @skipUnlessPlatform(["linux"])
     def test_minidump_save_style_mixed_memory(self):
         """Test that a mixed memory minidump is the same byte for byte."""
-
-        self.build()
-        exe = self.getBuildArtifact("a.out")
         minidump_path = self.getBuildArtifact("minidump_mixed_force64b.dmp")
-
         try:
-            target = self.dbg.CreateTarget(exe)
-            live_process = target.LaunchSimple(
-                None, None, self.get_process_working_directory()
-            )
-            self.assertState(live_process.GetState(), lldb.eStateStopped)
             options = lldb.SBSaveCoreOptions()
-
             options.SetOutputFile(lldb.SBFileSpec(minidump_path))
             options.SetStyle(lldb.eSaveCoreDirtyOnly)
             options.SetPluginName("minidump")
-            options.SetProcess(live_process)
-
-            error = live_process.SaveCore(options)
-            self.assertTrue(error.Success(), error.GetCString())
-
-            target = self.dbg.CreateTarget(None)
-            core_proc = target.LoadCore(minidump_path)
-
-            self.verify_minidump(core_proc, live_process, options)
+            self.verify_minidump(options)
         finally:
-            self.assertTrue(self.dbg.DeleteTarget(target))
             if os.path.isfile(minidump_path):
                 os.unlink(minidump_path)
