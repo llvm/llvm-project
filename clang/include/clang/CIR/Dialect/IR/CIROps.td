@@ -607,7 +607,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "CaseOp", "DoWhileOp", "ForOp", "IfOp", "ScopeOp", "SwitchOp",
+  "ArrayCtor", "CaseOp", "DoWhileOp", "ForOp", "IfOp", "ScopeOp", "SwitchOp",
   "TernaryOp", "WhileOp"
 ];
 
@@ -2226,6 +2226,42 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// ArrayCtor
+//===----------------------------------------------------------------------===//
+
+class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic> {
+  let arguments = (ins
+    Arg<CIR_PtrToArray, "array address", [MemWrite, MemRead]>:$addr
+  );
+
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    `(` $addr `:` qualified(type($addr)) `)` $body attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$addr,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$regionBuilder), [{
+        assert(regionBuilder && "builder callback expected");
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        mlir::Region *r = $_state.addRegion();
+        $_state.addOperands(ValueRange{addr});
+        $_builder.createBlock(r);
+        regionBuilder($_builder, $_state.location);
+    }]>
+  ];
+}
+
+def CIR_ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
+  let summary = "Initialize array elements with C++ constructors";
+  let description = [{
+    Initialize each array element using the same C++ constructor. This
+    operation has one region, with one single block. The block has an
+    incoming argument for the current array index to initialize.
+  }];
 }
 
 //===----------------------------------------------------------------------===//

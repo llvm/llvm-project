@@ -1,0 +1,70 @@
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+
+struct S {
+    S();
+};
+
+void foo() {
+    S s[42];
+}
+
+// CIR: cir.func dso_local @_Z3foov()
+// CIR:   %[[ARRAY:.*]] = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s", init]
+// CIR:   %[[CONST42:.*]] = cir.const #cir.int<42> : !u64i
+// CIR:   %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 42>>), !cir.ptr<!rec_S>
+// CIR:   %[[END_PTR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_S>, %[[CONST42]] : !u64i), !cir.ptr<!rec_S>
+// CIR:   %[[ITER:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["__array_idx"]
+// CIR:   cir.store %[[DECAY]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
+// CIR:   cir.do {
+// CIR:     %[[CURRENT:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:     %[[CONST1:.*]] = cir.const #cir.int<1> : !u64i
+// CIR:     cir.call @_ZN1SC1Ev(%[[CURRENT]]) : (!cir.ptr<!rec_S>) -> ()
+// CIR:     %[[NEXT:.*]] = cir.ptr_stride(%[[CURRENT]] : !cir.ptr<!rec_S>, %[[CONST1]] : !u64i), !cir.ptr<!rec_S>
+// CIR:     cir.store %[[NEXT]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
+// CIR:     cir.yield
+// CIR:   } while {
+// CIR:     %[[CURRENT2:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:     %[[CMP:.*]] = cir.cmp(eq, %[[CURRENT2]], %[[END_PTR]]) : !cir.ptr<!rec_S>, !cir.bool
+// CIR:     cir.condition(%[[CMP]])
+// CIR:   }
+// CIR:   cir.return
+// CIR: }
+
+// LLVM: define dso_local void @_Z3foov()
+// LLVM: %[[ARRAY:.*]] = alloca [42 x %struct.S]
+// LLVM: %[[START:.*]] = getelementptr %struct.S, ptr %[[ARRAY]], i32 0
+// LLVM: %[[END:.*]] = getelementptr %struct.S, ptr %[[START]], i64 42
+// LLVM: %[[ITER:.*]] = alloca ptr
+// LLVM: store ptr %[[START]], ptr %[[ITER]]
+// LLVM: br label %[[LOOP:.*]]
+// LLVM: [[COND:.*]]:
+// LLVM: %[[CURRENT_CHECK:.*]] = load ptr, ptr %[[ITER]]
+// LLVM: %[[DONE:.*]] = icmp eq ptr %[[CURRENT_CHECK]], %[[END]]
+// LLVM: br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
+// LLVM: [[LOOP]]:
+// LLVM: %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
+// LLVM: call void @_ZN1SC1Ev(ptr %[[CURRENT]])
+// LLVM: %[[NEXT:.*]] = getelementptr %struct.S, ptr %[[CURRENT]], i64 1
+// LLVM: store ptr %[[NEXT]], ptr %[[ITER]]
+// LLVM: br label %[[COND]]
+// LLVM: [[EXIT]]:
+// LLVM: ret void
+
+// OGCG: define dso_local void @_Z3foov()
+// OGCG: %[[ARRAY:.*]] = alloca [42 x %struct.S]
+// OGCG: %[[START:.*]] = getelementptr{{.*}} %struct.S{{.*}}
+// OGCG: %[[END:.*]] = getelementptr{{.*}} %struct.S{{.*}} i64 42
+// OGCG: br label %[[LOOP:.*]]
+// OGCG: [[LOOP]]:
+// OGCG: %[[CURRENT:.*]] = phi ptr [ %[[START]], %{{.*}} ], [ %[[NEXT:.*]], %[[LOOP]] ]
+// OGCG: call void @_ZN1SC1Ev(ptr{{.*}})
+// OGCG: %[[NEXT]] = getelementptr{{.*}} %struct.S{{.*}} i64 1
+// OGCG: %[[DONE:.*]] = icmp eq ptr %[[NEXT]], %[[END]]
+// OGCG: br i1 %[[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+// OGCG: [[EXIT]]:
+// OGCG: ret void
