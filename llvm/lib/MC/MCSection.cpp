@@ -60,7 +60,7 @@ LLVM_DUMP_METHOD void MCSection::dump(
 }
 #endif
 
-void MCEncodedFragment::setContents(ArrayRef<char> Contents) {
+void MCFragment::setContents(ArrayRef<char> Contents) {
   auto &S = getParent()->ContentStorage;
   if (ContentStart + Contents.size() > ContentEnd) {
     ContentStart = S.size();
@@ -70,9 +70,19 @@ void MCEncodedFragment::setContents(ArrayRef<char> Contents) {
   llvm::copy(Contents, S.begin() + ContentStart);
 }
 
-void MCEncodedFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
+void MCFragment::setVarContents(ArrayRef<char> Contents) {
+  auto &S = getParent()->ContentStorage;
+  if (VarContentStart + Contents.size() > VarContentEnd) {
+    VarContentStart = S.size();
+    S.resize_for_overwrite(S.size() + Contents.size());
+  }
+  VarContentEnd = VarContentStart + Contents.size();
+  llvm::copy(Contents, S.begin() + VarContentStart);
+}
 
-void MCEncodedFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
+void MCFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
+
+void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
   auto &S = getParent()->FixupStorage;
   if (LLVM_UNLIKELY(FixupEnd != S.size())) {
     // Move the elements to the end. Reserve space to avoid invalidating
@@ -86,7 +96,7 @@ void MCEncodedFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
   FixupEnd = S.size();
 }
 
-void MCEncodedFragment::setFixups(ArrayRef<MCFixup> Fixups) {
+void MCFragment::setFixups(ArrayRef<MCFixup> Fixups) {
   auto &S = getParent()->FixupStorage;
   if (FixupStart + Fixups.size() > FixupEnd) {
     FixupStart = S.size();
@@ -94,4 +104,20 @@ void MCEncodedFragment::setFixups(ArrayRef<MCFixup> Fixups) {
   }
   FixupEnd = FixupStart + Fixups.size();
   llvm::copy(Fixups, S.begin() + FixupStart);
+}
+
+void MCFragment::setVarFixups(ArrayRef<MCFixup> Fixups) {
+  auto &S = getParent()->FixupStorage;
+  if (VarFixupStart + Fixups.size() > VarFixupEnd) {
+    VarFixupStart = S.size();
+    S.resize_for_overwrite(S.size() + Fixups.size());
+  }
+  VarFixupEnd = VarFixupStart + Fixups.size();
+  // Source fixup offsets are relative to the variable part's start. Add the
+  // fixed part size to make them relative to the fixed part's start.
+  std::transform(Fixups.begin(), Fixups.end(), S.begin() + VarFixupStart,
+                 [Fixed = getFixedSize()](MCFixup F) {
+                   F.setOffset(Fixed + F.getOffset());
+                   return F;
+                 });
 }

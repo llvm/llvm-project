@@ -21,7 +21,7 @@
 using namespace llvm;
 
 // Only the address of this fragment is ever actually used.
-static MCDataFragment SentinelFragment;
+static MCFragment SentinelFragment;
 
 // Sentinel value for the absolute pseudo fragment.
 MCFragment *MCSymbol::AbsolutePseudoFragment = &SentinelFragment;
