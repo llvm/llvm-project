@@ -40,6 +40,7 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   switch (Kind) {
   default:
     break;
+  case RecurKind::Sub:
   case RecurKind::Add:
   case RecurKind::Mul:
   case RecurKind::Or:
@@ -363,10 +364,10 @@ bool RecurrenceDescriptor::AddReductionVar(
     if (Cur != Phi && IsAPhi && Cur->getParent() == Phi->getParent())
       return false;
 
-    // Reductions of instructions such as Div, and Sub is only possible if the
+    // Reductions of instructions such as Div is only possible if the
     // LHS is the reduction variable.
-    if (!Cur->isCommutative() && !IsAPhi && !isa<SelectInst>(Cur) &&
-        !isa<ICmpInst>(Cur) && !isa<FCmpInst>(Cur) &&
+    if ((Kind != RecurKind::Sub && !Cur->isCommutative()) && !IsAPhi &&
+        !isa<SelectInst>(Cur) && !isa<ICmpInst>(Cur) && !isa<FCmpInst>(Cur) &&
         !VisitedInsts.count(dyn_cast<Instruction>(Cur->getOperand(0))))
       return false;
 
@@ -374,6 +375,13 @@ bool RecurrenceDescriptor::AddReductionVar(
     // the starting value (the Phi or an AND instruction if the Phi has been
     // type-promoted).
     if (Cur != Start) {
+      // Normally the recur kind is expected to stay the same across all
+      // reduction instructions. Add and sub can appear in chained reductions so
+      // accept a sub if the recur kind is add, and vice versa.
+      if (Kind == RecurKind::Add && Cur->getOpcode() == Instruction::Sub)
+        Kind = RecurKind::Sub;
+      else if (Kind == RecurKind::Sub && Cur->getOpcode() == Instruction::Add)
+        Kind = RecurKind::Add;
       ReduxDesc =
           isRecurrenceInstr(TheLoop, Phi, Cur, Kind, ReduxDesc, FuncFMF, SE);
       ExactFPMathInst = ExactFPMathInst == nullptr
@@ -897,6 +905,7 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
   case Instruction::PHI:
     return InstDesc(I, Prev.getRecKind(), Prev.getExactFPMathInst());
   case Instruction::Sub:
+    return InstDesc(Kind == RecurKind::Sub, I);
   case Instruction::Add:
     return InstDesc(Kind == RecurKind::Add, I);
   case Instruction::Mul:
@@ -917,7 +926,8 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
                     I->hasAllowReassoc() ? nullptr : I);
   case Instruction::Select:
     if (Kind == RecurKind::FAdd || Kind == RecurKind::FMul ||
-        Kind == RecurKind::Add || Kind == RecurKind::Mul)
+        Kind == RecurKind::Add || Kind == RecurKind::Mul ||
+        Kind == RecurKind::Sub)
       return isConditionalRdxPattern(I);
     if (isFindIVRecurrenceKind(Kind) && SE)
       return isFindIVPattern(Kind, L, OrigPhi, I, *SE);
@@ -998,6 +1008,11 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   FMF.setNoSignedZeros(
       F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool());
 
+  if (AddReductionVar(Phi, RecurKind::Sub, TheLoop, FMF, RedDes, DB, AC, DT,
+                      SE)) {
+    LLVM_DEBUG(dbgs() << "Found a SUB reduction PHI." << *Phi << "\n");
+    return true;
+  }
   if (AddReductionVar(Phi, RecurKind::Add, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found an ADD reduction PHI." << *Phi << "\n");
@@ -1201,6 +1216,7 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
 
 unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   switch (Kind) {
+  case RecurKind::Sub:
   case RecurKind::Add:
     return Instruction::Add;
   case RecurKind::Mul:
@@ -1286,10 +1302,6 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     }
     // Recognize a call to the llvm.fmuladd intrinsic.
     if (isFMulAddIntrinsic(Cur))
-      return true;
-
-    // Recognize a sub reduction. It gets canonicalized to add(sub (0, ...)).
-    if (Cur->getOpcode() == Instruction::Sub && getOpcode() == Instruction::Add)
       return true;
 
     return Cur->getOpcode() == getOpcode();
