@@ -294,8 +294,9 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
     Format = A->getValue();
 
   SmallString<128> F;
-  const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
-  if (A)
+  if (const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ))
+    F = A->getValue();
+  else if (const Arg *A = Args.getLastArg(options::OPT_foutput_file_base))
     F = A->getValue();
   else if (Output.isFilename())
     F = Output.getFilename();
@@ -1320,6 +1321,9 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (Args.hasArg(options::OPT_ftime_report))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
+
+  // clang-linker-wrapper adds this without checking if it is needed.
+  Args.ClaimAllArgs(options::OPT_foutput_file_base);
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,

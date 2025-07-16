@@ -78,3 +78,14 @@
 // CHECK-PASS-RPASS-SAME: "-plugin-opt=opt-remarks-hotness-threshold=100"
 
 // CHECK-PASS-AUTO:   "-plugin-opt=opt-remarks-hotness-threshold=auto"
+
+// Check -foutput-file-base effect on -foptimization-record-file.
+// RUN: %clang --target=x86_64-linux -### -fuse-ld=lld -B%S/Inputs/lld -flto -fsave-optimization-record -foutput-file-base=/dir/file.ext %s 2>&1 | FileCheck %s -check-prefix=CHECK-BASE
+// RUN: %clang --target=x86_64-linux -### -o FOO -fuse-ld=lld -B%S/Inputs/lld -flto -fsave-optimization-record -foutput-file-base=/dir/file.ext %s 2>&1 | FileCheck %s -check-prefix=CHECK-BASE
+// RUN: %clang --target=x86_64-linux -### -fuse-ld=lld -B%S/Inputs/lld -flto -fsave-optimization-record -foptimization-record-file=user-file.ext -foutput-file-base=/dir/file.ext %s 2>&1 | FileCheck %s -check-prefix=CHECK-IGNORE-BASE
+
+// CHECK-BASE:      "-plugin-opt=opt-remarks-filename=/dir/file.ext.opt.ld.yaml"
+// CHECK-BASE-SAME: "-plugin-opt=opt-remarks-format=yaml"
+
+// CHECK-IGNORE-BASE:      "-plugin-opt=opt-remarks-filename=user-file.ext.opt.ld.yaml"
+// CHECK-IGNORE-BASE-SAME: "-plugin-opt=opt-remarks-format=yaml"

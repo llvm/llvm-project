@@ -439,6 +439,9 @@ public:
   /// The output file, if any.
   std::string OutputFile;
 
+  /// The base, if any, to use instead of OutputFile for extra output files.
+  std::string OutputFileBase;
+
   /// If given, the new suffix for fix-it rewritten files.
   std::string FixItSuffix;
 
