@@ -144,15 +144,17 @@ Updating the CI testing container images
 
 The libcxx linux premerge testing can run on one of three sets of
 runner groups. The three runner group names are
-"llvm-permerge-libcxx-runners", "llvm-premerge-libcxx-release-runners"
-or "llvm-premerge-libcxx-next-runners".  Which one of these sets is
-used, is controled by the contents of https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-build-and-test.yaml . By default, it
-uses "llvm-premerge-libcxx-runners".
+"llvm-premerge-libcxx-runners", "llvm-premerge-libcxx-release-runners"
+or "llvm-premerge-libcxx-next-runners".  Which runner set to use is
+controlled by the contents of https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-build-and-test.yaml . By default, it uses
+"llvm-premerge-libcxx-runners". To switch to one of the other runner
+sets, just replace all uses of "llvm-premerge-libcxx-runners" in the yaml
+file with the desired runner set.
 
 Which container image is used by these three runner sets is controlled
 and set by the variable values in
-https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/variables.tf
-. The table below shows the variable names, their current values, and
+https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/variables.tf.
+The table below shows the variable names, their current values, and
 the runner sets to which they correspond.
 
 +------------------------------------+---------------------------+--------------------------------------------------------------------------+
