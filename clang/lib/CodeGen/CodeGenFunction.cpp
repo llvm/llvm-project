@@ -45,6 +45,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/xxhash.h"
@@ -3027,11 +3028,76 @@ void CodeGenFunction::EmitMultiVersionResolver(
   case llvm::Triple::riscv64:
     EmitRISCVMultiVersionResolver(Resolver, Options);
     return;
-
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+    if (getContext().getTargetInfo().getTriple().isOSAIX()) {
+      EmitPPCAIXMultiVersionResolver(Resolver, Options);
+      return;
+    }
+    [[fallthrough]];
   default:
-    assert(false && "Only implemented for x86, AArch64 and RISC-V targets");
+    assert(false && "Only implemented for x86, AArch64, RISC-V, and PowerPC targets");
   }
 }
+
+/*
+ *  Desc_t *foo_desc = ppc_get_function_descriptor(&foo);
+ *  if (foo_desc->addr == ppc_get_function_entry(&foo)) {
+ *    FuncPtr fp = resolver();
+ *    __c11_atomic_store((_Atomic FuncPtr *)&foo_desc->addr, fp, 0);
+ *  }
+ *  return ((int (*)(int)) foo_desc)(a);
+ */
+void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
+		llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
+
+  llvm::PointerType *PtrTy = Builder.getPtrTy();
+  // entry:
+  llvm::BasicBlock *CurBlock = createBasicBlock("entry", Resolver);
+
+  SmallVector<std::pair<llvm::Value *, llvm::BasicBlock *>, 3> PhiArgs;
+  for (const FMVResolverOption &RO : Options) {
+    Builder.SetInsertPoint(CurBlock);
+    // The 'default' or 'generic' case.
+    if (!RO.Architecture && RO.Features.empty()) {
+      // if.default:
+      //   %fmv.default = call ptr @getEntryPoint(ptr noundef @foo_default)
+      //   br label %resolver_exit
+      assert(&RO == Options.end() - 1 && "Default or Generic case must be last");
+      Builder.CreateRet(RO.Function);
+      break;
+    }
+    // if.else_n:
+    //   %is_version_n = __builtin_cpu_supports(version_n)
+    //   br i1 %is_version_n, label %if.version_n, label %if.default
+    //
+    // if.version_n:
+    //   %fmv.version.n = call ptr @getEntryPoint(ptr noundef @foo_version_n)
+    //   br label %resolver_exit
+    assert(RO.Features.size() == 1 && "for now one feature requirement per version");
+    llvm::Value *Condition;
+    if (RO.Features[0].starts_with("cpu=")) {
+      Condition = EmitPPCBuiltinCpu(Builtin::BI__builtin_cpu_is, Builder.getInt1Ty(), RO.Features[0].split("=").second.trim());
+    } else {
+      Condition = EmitPPCBuiltinCpu(Builtin::BI__builtin_cpu_supports, Builder.getInt1Ty(), RO.Features[0]);
+    }
+    llvm::BasicBlock *ThenBlock = createBasicBlock("if.version", Resolver);
+    CurBlock = createBasicBlock("if.else", Resolver);
+    Builder.CreateCondBr(Condition, ThenBlock, CurBlock);
+
+    Builder.SetInsertPoint(ThenBlock);
+    Builder.CreateRet(RO.Function);
+  }
+
+  // If no generic/default, emit an unreachable.
+//  Builder.SetInsertPoint(CurBlock);
+//  llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
+//  TrapCall->setDoesNotReturn();
+//  TrapCall->setDoesNotThrow();
+//  Builder.CreateUnreachable();
+//  Builder.ClearInsertionPoint();
+}
+
 
 void CodeGenFunction::EmitRISCVMultiVersionResolver(
     llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {

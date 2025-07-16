@@ -678,6 +678,42 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   }
 }
 
+ParsedTargetAttr PPCTargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+  SmallVector<StringRef, 1> AttrFeatures;
+  Features.split(AttrFeatures, ",");
+
+  // Grab the various features and prepend a "+" to turn on the feature to
+  // the backend and add them to our existing set of features.
+  for (auto &Feature : AttrFeatures) {
+    // Go ahead and trim whitespace rather than either erroring or
+    // accepting it weirdly.
+    Feature = Feature.trim();
+
+    // While we're here iterating check for a different target cpu.
+    if (Feature.starts_with("cpu=")) {
+      assert(Ret.CPU.empty());
+      Ret.CPU = Feature.split("=").second.trim();
+    } else assert(0);
+//    else if (Feature.starts_with("tune=")) {
+//      if (!Ret.Tune.empty())
+//        Ret.Duplicate = "tune=";
+//      else
+//        Ret.Tune = Feature.split("=").second.trim();
+//    } else if (Feature.starts_with("no-"))
+//      Ret.Features.push_back("-" + Feature.split("-").second.str());
+//    else
+//      Ret.Features.push_back("+" + Feature.str());
+  }
+  return Ret;
+}
+
+llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  return llvm::APInt(32, Features.empty() ? 0 : 1);
+}
+
 // Make sure that registers are added in the correct array index which should be
 // the DWARF number for PPC registers.
 const char *const PPCTargetInfo::GCCRegNames[] = {

@@ -199,6 +199,10 @@ public:
 
   bool supportsTargetAttributeTune() const override { return true; }
 
+  ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
+
+  llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
+
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;

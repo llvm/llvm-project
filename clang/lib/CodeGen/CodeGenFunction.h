@@ -5557,6 +5557,9 @@ public:
   void EmitRISCVMultiVersionResolver(llvm::Function *Resolver,
                                      ArrayRef<FMVResolverOption> Options);
 
+  void EmitPPCAIXMultiVersionResolver(llvm::Function *Resolver,
+                                     ArrayRef<FMVResolverOption> Options);
+
 private:
   QualType getVarArgType(const Expr *Arg);
 

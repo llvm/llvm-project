@@ -15033,6 +15033,8 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
       StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
       if (VersionStr.starts_with("arch="))
         TargetCPU = VersionStr.drop_front(sizeof("arch=") - 1);
+      else if (Target->getTriple().isOSAIX() && VersionStr.starts_with("cpu=")) // TODO make a function that extracts CPU from a feature string
+        TargetCPU = VersionStr.drop_front(sizeof("cpu=") - 1);
       else if (VersionStr != "default")
         Features.push_back((StringRef{"+"} + VersionStr).str());
       Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
