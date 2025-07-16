@@ -815,7 +815,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return true;
 }
 
-bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
     return false;
   if (!Ptr.isDummy()) {
@@ -937,7 +937,7 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   return false;
 }
 
-bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
+static bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
   if ((S.Current->getDepth() + 1) > S.getLangOpts().ConstexprCallDepth) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_depth_limit_exceeded)
@@ -1092,8 +1092,8 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
-                      const CallExpr *CE, unsigned ArgSize) {
+static bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
+                             const CallExpr *CE, unsigned ArgSize) {
   auto Args = ArrayRef(CE->getArgs(), CE->getNumArgs());
   auto NonNullArgs = collectNonNullArgs(F->getDecl(), Args);
   unsigned Offset = 0;
