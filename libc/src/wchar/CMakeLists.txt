@@ -160,6 +160,47 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcstombs
+  SRCS
+    wcstombs.cpp
+  HDRS
+    wcstombs.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.string_converter
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  wcsrtombs
+  SRCS
+    wcsrtombs.cpp
+  HDRS
+    wcsrtombs.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.string_converter
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  wcstombs
+  SRCS
+    wcsnrtombs.cpp
+  HDRS
+    wcsnrtombs.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.string_converter
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
   wmemset
   SRCS
     wmemset.cpp
