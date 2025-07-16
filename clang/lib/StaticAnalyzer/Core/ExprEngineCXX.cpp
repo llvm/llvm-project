@@ -1237,30 +1237,27 @@ void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
 void ExprEngine::VisitCXXParenListInitExpr(const CXXParenListInitExpr *E,
                                            ExplodedNode *Pred,
                                            ExplodedNodeSet &Dst) {
+  const LocationContext *LC = Pred->getLocationContext();
+
   StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-
   ProgramStateRef S = Pred->getState();
-  QualType T = getContext().getCanonicalType(E->getType());
 
-  const LocationContext *LCtx = Pred->getLocationContext();
+  QualType T = E->getType().getCanonicalType();
+  ArrayRef<Expr *> Inits = E->getInitExprs();
 
-  SmallVector<SVal, 4> ArgVals;
-  for (Expr *Arg : E->getInitExprs())
-    ArgVals.push_back(S->getSVal(Arg, LCtx));
-
-  if (!E->isGLValue() && (T->isRecordType() || T->isArrayType())) {
+  if (Inits.size() > 1 ||
+      (E->isPRValue() && (T->isRecordType() || T->isArrayType()))) {
     llvm::ImmutableList<SVal> ArgList = getBasicVals().getEmptySValList();
-
-    for (const SVal &V : llvm::reverse(ArgVals))
-      ArgList = getBasicVals().prependSVal(V, ArgList);
+    for (Expr *E : llvm::reverse(Inits))
+      ArgList = getBasicVals().prependSVal(S->getSVal(E, LC), ArgList);
 
     Bldr.generateNode(
-        E, Pred, S->BindExpr(E, LCtx, svalBuilder.makeCompoundVal(T, ArgList)));
+        E, Pred, S->BindExpr(E, LC, svalBuilder.makeCompoundVal(T, ArgList)));
   } else {
     Bldr.generateNode(E, Pred,
-                      S->BindExpr(E, LCtx,
-                                  ArgVals.empty()
+                      S->BindExpr(E, LC,
+                                  Inits.size() == 0
                                       ? getSValBuilder().makeZeroVal(T)
-                                      : ArgVals.front()));
+                                      : S->getSVal(Inits.front(), LC)));
   }
 }
