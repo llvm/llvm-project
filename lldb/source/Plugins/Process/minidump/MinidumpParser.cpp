@@ -114,7 +114,13 @@ MinidumpParser::GetThreadContextWow64(const minidump::Thread &td) {
   // process rather than the 32-bit "guest" process we care about.  In this
   // case, we can get the 32-bit CONTEXT from the TEB (Thread Environment
   // Block) of the 64-bit process.
-  auto teb_mem = GetMemory(td.EnvironmentBlock, sizeof(TEB64));
+  auto teb_mem_maybe = GetMemory(td.EnvironmentBlock, sizeof(TEB64));
+  if (!teb_mem_maybe) {
+    llvm::consumeError(teb_mem_maybe.takeError());
+    return {};
+  }
+
+  auto teb_mem = *teb_mem_maybe;
   if (teb_mem.empty())
     return {};
 
@@ -126,8 +132,15 @@ MinidumpParser::GetThreadContextWow64(const minidump::Thread &td) {
   // Slot 1 of the thread-local storage in the 64-bit TEB points to a structure
   // that includes the 32-bit CONTEXT (after a ULONG). See:
   // https://msdn.microsoft.com/en-us/library/ms681670.aspx
-  auto context =
+  auto context_maybe =
       GetMemory(wow64teb->tls_slots[1] + 4, sizeof(MinidumpContext_x86_32));
+  if (!context_maybe) {
+    llvm::consumeError(context_maybe.takeError());
+    return {};
+  }
+
+  auto context = *context_maybe;
+
   if (context.size() < sizeof(MinidumpContext_x86_32))
     return {};
 
@@ -478,20 +491,8 @@ void MinidumpParser::PopulateMemoryRanges() {
   m_memory_ranges.Sort();
 }
 
-llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
-                                                  size_t size) {
-  llvm::Expected<llvm::ArrayRef<uint8_t>> expected_memory =
-      GetExpectedMemory(addr, size);
-  if (!expected_memory) {
-    llvm::consumeError(expected_memory.takeError());
-    return {};
-  }
-
-  return *expected_memory;
-}
-
 llvm::Expected<llvm::ArrayRef<uint8_t>>
-MinidumpParser::GetExpectedMemory(lldb::addr_t addr, size_t size) {
+MinidumpParser::GetMemory(lldb::addr_t addr, size_t size) {
   std::optional<minidump::Range> range = FindMemoryRange(addr);
   if (!range)
     return llvm::createStringError(
