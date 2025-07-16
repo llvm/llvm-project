@@ -3,7 +3,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11,GFX11-FAKE16 %s
-; RUN: not llc -mtriple=r600 -mcpu=redwood < %s
+; RUN: not --crash llc -mtriple=r600 -mcpu=redwood < %s 2>&1 | FileCheck -check-prefix=R600-ERR %s
+
+; R600-ERR: LLVM ERROR: unsupported library call operation
 
 define amdgpu_kernel void @s_fneg_f32(ptr addrspace(1) %out, float %in) {
 ; SI-LABEL: s_fneg_f32:

@@ -237,6 +237,10 @@ public:
     return isSGPRClass(getPhysRegBaseClass(Reg));
   }
 
+  bool isVGPRPhysReg(Register Reg) const {
+    return isVGPRClass(getPhysRegBaseClass(Reg));
+  }
+
   /// \returns true if this class contains only VGPR registers
   static bool isVGPRClass(const TargetRegisterClass *RC) {
     return hasVGPRs(RC) && !hasAGPRs(RC) && !hasSGPRs(RC);
@@ -485,11 +489,6 @@ public:
   // Does not go inside function calls.
   unsigned getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
                               const TargetRegisterClass &RC) const;
-
-  // \returns the number of registers of a given \p RC defined in a function.
-  // Does not go inside function calls.
-  unsigned getNumDefinedPhysRegs(const MachineRegisterInfo &MRI,
-                                 const TargetRegisterClass &RC) const;
 
   std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {
     return Name == "WWM_REG" ? AMDGPU::VirtRegFlag::WWM_REG

@@ -19,9 +19,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCWinEH.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -45,11 +45,9 @@ class MCAsmBackend;
 class MCAssembler;
 class MCContext;
 class MCExpr;
-class MCFragment;
 class MCInst;
 class MCInstPrinter;
 class MCRegister;
-class MCSection;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
@@ -809,14 +807,14 @@ public:
   /// This used to implement the .align assembler directive.
   ///
   /// \param Alignment - The alignment to reach.
-  /// \param Value - The value to use when filling bytes.
-  /// \param ValueSize - The size of the integer (in bytes) to emit for
+  /// \param Fill - The value to use when filling bytes.
+  /// \param FillLen - The size of the integer (in bytes) to emit for
   /// \p Value. This must match a native machine width.
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void emitValueToAlignment(Align Alignment, int64_t Value = 0,
-                                    unsigned ValueSize = 1,
+  virtual void emitValueToAlignment(Align Alignment, int64_t Fill = 0,
+                                    uint8_t FillLen = 1,
                                     unsigned MaxBytesToEmit = 0);
 
   /// Emit nops until the byte alignment \p ByteAlignment is reached.
@@ -1069,19 +1067,6 @@ public:
                                uint64_t Attr, uint64_t Discriminator,
                                const MCPseudoProbeInlineStack &InlineStack,
                                MCSymbol *FnSym);
-
-  /// Set the bundle alignment mode from now on in the section.
-  /// The value 1 means turn the bundle alignment off.
-  virtual void emitBundleAlignMode(Align Alignment);
-
-  /// The following instructions are a bundle-locked group.
-  ///
-  /// \param AlignToEnd - If true, the bundle-locked group will be aligned to
-  ///                     the end of a bundle.
-  virtual void emitBundleLock(bool AlignToEnd);
-
-  /// Ends a bundle-locked group.
-  virtual void emitBundleUnlock();
 
   /// If this file is backed by a assembly streamer, this dumps the
   /// specified string in the output .s file.  This capability is indicated by

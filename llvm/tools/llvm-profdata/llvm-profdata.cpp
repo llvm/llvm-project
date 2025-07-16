@@ -1705,7 +1705,10 @@ static WeightedFile parseWeightedFile(const StringRef &WeightedFilename) {
   if (WeightStr.getAsInteger(10, Weight) || Weight < 1)
     exitWithError("input weight must be a positive integer");
 
-  return {std::string(FileName), Weight};
+  llvm::SmallString<128> ResolvedFileName;
+  llvm::sys::fs::expand_tilde(FileName, ResolvedFileName);
+
+  return {std::string(ResolvedFileName), Weight};
 }
 
 static void addWeightedInput(WeightedFileVector &WNI, const WeightedFile &WF) {

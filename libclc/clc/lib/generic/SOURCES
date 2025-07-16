@@ -152,3 +152,7 @@ shared/clc_max.cl
 shared/clc_min.cl
 shared/clc_vload.cl
 shared/clc_vstore.cl
+workitem/clc_get_local_linear_id.cl
+workitem/clc_get_num_sub_groups.cl
+workitem/clc_get_sub_group_id.cl
+workitem/clc_get_sub_group_size.cl

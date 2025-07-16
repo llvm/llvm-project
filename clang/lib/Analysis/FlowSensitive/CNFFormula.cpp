@@ -49,8 +49,7 @@ struct CNFFormulaBuilder {
     // Contains literals of the simplified clause.
     llvm::SmallVector<Literal> Simplified;
     for (auto L : Literals) {
-      assert(L != NullLit &&
-             llvm::all_of(Simplified, [L](Literal S) { return S != L; }));
+      assert(L != NullLit && !llvm::is_contained(Simplified, L));
       auto X = var(L);
       if (trueVars.contains(X)) { // X must be true
         if (isPosLit(L))
@@ -103,7 +102,7 @@ CNFFormula::CNFFormula(Variable LargestVar)
 }
 
 void CNFFormula::addClause(ArrayRef<Literal> lits) {
-  assert(llvm::all_of(lits, [](Literal L) { return L != NullLit; }));
+  assert(!llvm::is_contained(lits, NullLit));
 
   if (lits.empty())
     KnownContradictory = true;

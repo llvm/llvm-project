@@ -71,11 +71,7 @@ define ptx_kernel void @baz(ptr %red, i32 %idx) {
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    st.param.b64 [param0], %rd3;
 ; CHECK-NEXT:    .param .b32 retval0;
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    texfunc,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), texfunc, (param0);
 ; CHECK-NEXT:    ld.param.b32 %r6, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    add.rn.f32 %r8, %r2, %r6;

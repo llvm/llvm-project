@@ -94,10 +94,13 @@ static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
       // I/O subroutine reads counts towards READ(SIZE=).
       startPos = io.InquirePos();
     }
+    const auto *bindings{
+        derived.binding().OffsetElement<const typeInfo::Binding>()};
     if (special.IsArgDescriptor(0)) {
       // "dtv" argument is "class(t)", pass a descriptor
       auto *p{special.GetProc<void (*)(const Descriptor &, int &, char *,
-          const Descriptor &, int &, char *, std::size_t, std::size_t)>()};
+          const Descriptor &, int &, char *, std::size_t, std::size_t)>(
+          bindings)};
       StaticDescriptor<1, true, 10 /*?*/> elementStatDesc;
       Descriptor &elementDesc{elementStatDesc.descriptor()};
       elementDesc.Establish(
@@ -108,7 +111,8 @@ static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
     } else {
       // "dtv" argument is "type(t)", pass a raw pointer
       auto *p{special.GetProc<void (*)(const void *, int &, char *,
-          const Descriptor &, int &, char *, std::size_t, std::size_t)>()};
+          const Descriptor &, int &, char *, std::size_t, std::size_t)>(
+          bindings)};
       p(descriptor.Element<char>(subscripts), unit, ioType, vListDesc, ioStat,
           ioMsg, ioTypeLen, sizeof ioMsg);
     }
@@ -150,10 +154,12 @@ static RT_API_ATTRS bool DefinedUnformattedIo(IoStatementState &io,
   std::size_t numElements{descriptor.Elements()};
   SubscriptValue subscripts[maxRank];
   descriptor.GetLowerBounds(subscripts);
+  const auto *bindings{
+      derived.binding().OffsetElement<const typeInfo::Binding>()};
   if (special.IsArgDescriptor(0)) {
     // "dtv" argument is "class(t)", pass a descriptor
     auto *p{special.GetProc<void (*)(
-        const Descriptor &, int &, int &, char *, std::size_t)>()};
+        const Descriptor &, int &, int &, char *, std::size_t)>(bindings)};
     StaticDescriptor<1, true, 10 /*?*/> elementStatDesc;
     Descriptor &elementDesc{elementStatDesc.descriptor()};
     elementDesc.Establish(derived, nullptr, 0, nullptr, CFI_attribute_pointer);
@@ -166,8 +172,9 @@ static RT_API_ATTRS bool DefinedUnformattedIo(IoStatementState &io,
     }
   } else {
     // "dtv" argument is "type(t)", pass a raw pointer
-    auto *p{special.GetProc<void (*)(
-        const void *, int &, int &, char *, std::size_t)>()};
+    auto *p{special
+            .GetProc<void (*)(const void *, int &, int &, char *, std::size_t)>(
+                bindings)};
     for (; numElements-- > 0; descriptor.IncrementSubscripts(subscripts)) {
       p(descriptor.Element<char>(subscripts), unit, ioStat, ioMsg,
           sizeof ioMsg);
@@ -444,39 +451,42 @@ RT_API_ATTRS int DescriptorIoTicket<DIR>::Begin(WorkQueue &workQueue) {
     if (const typeInfo::DerivedType *type{
             addendum ? addendum->derivedType() : nullptr}) {
       // derived type unformatted I/O
-      if (table_) {
-        if (const auto *definedIo{table_->Find(*type,
-                DIR == Direction::Input
-                    ? common::DefinedIo::ReadUnformatted
-                    : common::DefinedIo::WriteUnformatted)}) {
-          if (definedIo->subroutine) {
-            typeInfo::SpecialBinding special{DIR == Direction::Input
-                    ? typeInfo::SpecialBinding::Which::ReadUnformatted
-                    : typeInfo::SpecialBinding::Which::WriteUnformatted,
-                definedIo->subroutine, definedIo->isDtvArgPolymorphic, false,
-                false};
-            if (DefinedUnformattedIo(io_, instance_, *type, special)) {
-              anyIoTookPlace_ = true;
-              return StatOk;
+      if (DIR == Direction::Input || !io_.get_if<InquireIOLengthState>()) {
+        if (table_) {
+          if (const auto *definedIo{table_->Find(*type,
+                  DIR == Direction::Input
+                      ? common::DefinedIo::ReadUnformatted
+                      : common::DefinedIo::WriteUnformatted)}) {
+            if (definedIo->subroutine) {
+              typeInfo::SpecialBinding special{DIR == Direction::Input
+                      ? typeInfo::SpecialBinding::Which::ReadUnformatted
+                      : typeInfo::SpecialBinding::Which::WriteUnformatted,
+                  definedIo->subroutine, definedIo->isDtvArgPolymorphic, false,
+                  false};
+              if (DefinedUnformattedIo(io_, instance_, *type, special)) {
+                anyIoTookPlace_ = true;
+                return StatOk;
+              }
+            } else {
+              int status{workQueue.BeginDerivedIo<DIR>(
+                  io_, instance_, *type, table_, anyIoTookPlace_)};
+              return status == StatContinue ? StatOk : status; // done here
             }
-          } else {
-            int status{workQueue.BeginDerivedIo<DIR>(
-                io_, instance_, *type, table_, anyIoTookPlace_)};
-            return status == StatContinue ? StatOk : status; // done here
           }
         }
-      }
-      if (const typeInfo::SpecialBinding *special{
-              type->FindSpecialBinding(DIR == Direction::Input
-                      ? typeInfo::SpecialBinding::Which::ReadUnformatted
-                      : typeInfo::SpecialBinding::Which::WriteUnformatted)}) {
-        if (!table_ || !table_->ignoreNonTbpEntries || special->isTypeBound()) {
-          // defined derived type unformatted I/O
-          if (DefinedUnformattedIo(io_, instance_, *type, *special)) {
-            anyIoTookPlace_ = true;
-            return StatOk;
-          } else {
-            return IostatEnd;
+        if (const typeInfo::SpecialBinding *special{
+                type->FindSpecialBinding(DIR == Direction::Input
+                        ? typeInfo::SpecialBinding::Which::ReadUnformatted
+                        : typeInfo::SpecialBinding::Which::WriteUnformatted)}) {
+          if (!table_ || !table_->ignoreNonTbpEntries ||
+              special->IsTypeBound()) {
+            // defined derived type unformatted I/O
+            if (DefinedUnformattedIo(io_, instance_, *type, *special)) {
+              anyIoTookPlace_ = true;
+              return StatOk;
+            } else {
+              return IostatEnd;
+            }
           }
         }
       }
@@ -721,7 +731,7 @@ RT_API_ATTRS int DescriptorIoTicket<DIR>::Begin(WorkQueue &workQueue) {
                         ? typeInfo::SpecialBinding::Which::ReadFormatted
                         : typeInfo::SpecialBinding::Which::WriteFormatted)}) {
           if (!table_ || !table_->ignoreNonTbpEntries ||
-              binding->isTypeBound()) {
+              binding->IsTypeBound()) {
             special_ = binding;
           }
         }

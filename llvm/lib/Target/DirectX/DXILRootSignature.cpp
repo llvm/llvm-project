@@ -16,6 +16,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -52,6 +53,13 @@ static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
   if (auto *CI =
           mdconst::dyn_extract<ConstantInt>(Node->getOperand(OpId).get()))
     return CI->getZExtValue();
+  return std::nullopt;
+}
+
+static std::optional<float> extractMdFloatValue(MDNode *Node,
+                                                unsigned int OpId) {
+  if (auto *CI = mdconst::dyn_extract<ConstantFP>(Node->getOperand(OpId).get()))
+    return CI->getValueAPF().convertToFloat();
   return std::nullopt;
 }
 
@@ -174,6 +182,168 @@ static bool parseRootDescriptors(LLVMContext *Ctx,
   return false;
 }
 
+static bool parseDescriptorRange(LLVMContext *Ctx,
+                                 mcdxbc::DescriptorTable &Table,
+                                 MDNode *RangeDescriptorNode) {
+
+  if (RangeDescriptorNode->getNumOperands() != 6)
+    return reportError(Ctx, "Invalid format for Descriptor Range");
+
+  dxbc::RTS0::v2::DescriptorRange Range;
+
+  std::optional<StringRef> ElementText =
+      extractMdStringValue(RangeDescriptorNode, 0);
+
+  if (!ElementText.has_value())
+    return reportError(Ctx, "Descriptor Range, first element is not a string.");
+
+  Range.RangeType =
+      StringSwitch<uint32_t>(*ElementText)
+          .Case("CBV", llvm::to_underlying(dxbc::DescriptorRangeType::CBV))
+          .Case("SRV", llvm::to_underlying(dxbc::DescriptorRangeType::SRV))
+          .Case("UAV", llvm::to_underlying(dxbc::DescriptorRangeType::UAV))
+          .Case("Sampler",
+                llvm::to_underlying(dxbc::DescriptorRangeType::Sampler))
+          .Default(~0U);
+
+  if (Range.RangeType == ~0U)
+    return reportError(Ctx, "Invalid Descriptor Range type: " + *ElementText);
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 1))
+    Range.NumDescriptors = *Val;
+  else
+    return reportError(Ctx, "Invalid value for Number of Descriptor in Range");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 2))
+    Range.BaseShaderRegister = *Val;
+  else
+    return reportError(Ctx, "Invalid value for BaseShaderRegister");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 3))
+    Range.RegisterSpace = *Val;
+  else
+    return reportError(Ctx, "Invalid value for RegisterSpace");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 4))
+    Range.OffsetInDescriptorsFromTableStart = *Val;
+  else
+    return reportError(Ctx,
+                       "Invalid value for OffsetInDescriptorsFromTableStart");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 5))
+    Range.Flags = *Val;
+  else
+    return reportError(Ctx, "Invalid value for Descriptor Range Flags");
+
+  Table.Ranges.push_back(Range);
+  return false;
+}
+
+static bool parseDescriptorTable(LLVMContext *Ctx,
+                                 mcdxbc::RootSignatureDesc &RSD,
+                                 MDNode *DescriptorTableNode) {
+  const unsigned int NumOperands = DescriptorTableNode->getNumOperands();
+  if (NumOperands < 2)
+    return reportError(Ctx, "Invalid format for Descriptor Table");
+
+  dxbc::RTS0::v1::RootParameterHeader Header;
+  if (std::optional<uint32_t> Val = extractMdIntValue(DescriptorTableNode, 1))
+    Header.ShaderVisibility = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ShaderVisibility");
+
+  mcdxbc::DescriptorTable Table;
+  Header.ParameterType =
+      llvm::to_underlying(dxbc::RootParameterType::DescriptorTable);
+
+  for (unsigned int I = 2; I < NumOperands; I++) {
+    MDNode *Element = dyn_cast<MDNode>(DescriptorTableNode->getOperand(I));
+    if (Element == nullptr)
+      return reportError(Ctx, "Missing Root Element Metadata Node.");
+
+    if (parseDescriptorRange(Ctx, Table, Element))
+      return true;
+  }
+
+  RSD.ParametersContainer.addParameter(Header, Table);
+  return false;
+}
+
+static bool parseStaticSampler(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
+                               MDNode *StaticSamplerNode) {
+  if (StaticSamplerNode->getNumOperands() != 14)
+    return reportError(Ctx, "Invalid format for Static Sampler");
+
+  dxbc::RTS0::v1::StaticSampler Sampler;
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 1))
+    Sampler.Filter = *Val;
+  else
+    return reportError(Ctx, "Invalid value for Filter");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 2))
+    Sampler.AddressU = *Val;
+  else
+    return reportError(Ctx, "Invalid value for AddressU");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 3))
+    Sampler.AddressV = *Val;
+  else
+    return reportError(Ctx, "Invalid value for AddressV");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 4))
+    Sampler.AddressW = *Val;
+  else
+    return reportError(Ctx, "Invalid value for AddressW");
+
+  if (std::optional<float> Val = extractMdFloatValue(StaticSamplerNode, 5))
+    Sampler.MipLODBias = *Val;
+  else
+    return reportError(Ctx, "Invalid value for MipLODBias");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 6))
+    Sampler.MaxAnisotropy = *Val;
+  else
+    return reportError(Ctx, "Invalid value for MaxAnisotropy");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 7))
+    Sampler.ComparisonFunc = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ComparisonFunc ");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 8))
+    Sampler.BorderColor = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ComparisonFunc ");
+
+  if (std::optional<float> Val = extractMdFloatValue(StaticSamplerNode, 9))
+    Sampler.MinLOD = *Val;
+  else
+    return reportError(Ctx, "Invalid value for MinLOD");
+
+  if (std::optional<float> Val = extractMdFloatValue(StaticSamplerNode, 10))
+    Sampler.MaxLOD = *Val;
+  else
+    return reportError(Ctx, "Invalid value for MaxLOD");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 11))
+    Sampler.ShaderRegister = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ShaderRegister");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 12))
+    Sampler.RegisterSpace = *Val;
+  else
+    return reportError(Ctx, "Invalid value for RegisterSpace");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 13))
+    Sampler.ShaderVisibility = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ShaderVisibility");
+
+  RSD.StaticSamplers.push_back(Sampler);
+  return false;
+}
+
 static bool parseRootSignatureElement(LLVMContext *Ctx,
                                       mcdxbc::RootSignatureDesc &RSD,
                                       MDNode *Element) {
@@ -188,6 +358,8 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
           .Case("RootCBV", RootSignatureElementKind::CBV)
           .Case("RootSRV", RootSignatureElementKind::SRV)
           .Case("RootUAV", RootSignatureElementKind::UAV)
+          .Case("DescriptorTable", RootSignatureElementKind::DescriptorTable)
+          .Case("StaticSampler", RootSignatureElementKind::StaticSamplers)
           .Default(RootSignatureElementKind::Error);
 
   switch (ElementKind) {
@@ -200,6 +372,10 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
   case RootSignatureElementKind::SRV:
   case RootSignatureElementKind::UAV:
     return parseRootDescriptors(Ctx, RSD, Element, ElementKind);
+  case RootSignatureElementKind::DescriptorTable:
+    return parseDescriptorTable(Ctx, RSD, Element);
+  case RootSignatureElementKind::StaticSamplers:
+    return parseStaticSampler(Ctx, RSD, Element);
   case RootSignatureElementKind::Error:
     return reportError(Ctx, "Invalid Root Signature Element: " + *ElementText);
   }
@@ -223,31 +399,13 @@ static bool parse(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   return HasError;
 }
 
-static bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
-
-static bool verifyVersion(uint32_t Version) {
-  return (Version == 1 || Version == 2);
-}
-
-static bool verifyRegisterValue(uint32_t RegisterValue) {
-  return RegisterValue != ~0U;
-}
-
-// This Range is reserverved, therefore invalid, according to the spec
-// https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#all-the-values-should-be-legal
-static bool verifyRegisterSpace(uint32_t RegisterSpace) {
-  return !(RegisterSpace >= 0xFFFFFFF0 && RegisterSpace <= 0xFFFFFFFF);
-}
-
-static bool verifyDescriptorFlag(uint32_t Flags) { return (Flags & ~0xE) == 0; }
-
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
 
-  if (!verifyVersion(RSD.Version)) {
+  if (!llvm::hlsl::rootsig::verifyVersion(RSD.Version)) {
     return reportValueError(Ctx, "Version", RSD.Version);
   }
 
-  if (!verifyRootFlag(RSD.Flags)) {
+  if (!llvm::hlsl::rootsig::verifyRootFlag(RSD.Flags)) {
     return reportValueError(Ctx, "RootFlags", RSD.Flags);
   }
 
@@ -266,20 +424,82 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
     case llvm::to_underlying(dxbc::RootParameterType::SRV): {
       const dxbc::RTS0::v2::RootDescriptor &Descriptor =
           RSD.ParametersContainer.getRootDescriptor(Info.Location);
-      if (!verifyRegisterValue(Descriptor.ShaderRegister))
+      if (!llvm::hlsl::rootsig::verifyRegisterValue(Descriptor.ShaderRegister))
         return reportValueError(Ctx, "ShaderRegister",
                                 Descriptor.ShaderRegister);
 
-      if (!verifyRegisterSpace(Descriptor.RegisterSpace))
+      if (!llvm::hlsl::rootsig::verifyRegisterSpace(Descriptor.RegisterSpace))
         return reportValueError(Ctx, "RegisterSpace", Descriptor.RegisterSpace);
 
       if (RSD.Version > 1) {
-        if (!verifyDescriptorFlag(Descriptor.Flags))
-          return reportValueError(Ctx, "DescriptorFlag", Descriptor.Flags);
+        if (!llvm::hlsl::rootsig::verifyRootDescriptorFlag(RSD.Version,
+                                                           Descriptor.Flags))
+          return reportValueError(Ctx, "RootDescriptorFlag", Descriptor.Flags);
+      }
+      break;
+    }
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+      const mcdxbc::DescriptorTable &Table =
+          RSD.ParametersContainer.getDescriptorTable(Info.Location);
+      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table) {
+        if (!llvm::hlsl::rootsig::verifyRangeType(Range.RangeType))
+          return reportValueError(Ctx, "RangeType", Range.RangeType);
+
+        if (!llvm::hlsl::rootsig::verifyRegisterSpace(Range.RegisterSpace))
+          return reportValueError(Ctx, "RegisterSpace", Range.RegisterSpace);
+
+        if (!llvm::hlsl::rootsig::verifyNumDescriptors(Range.NumDescriptors))
+          return reportValueError(Ctx, "NumDescriptors", Range.NumDescriptors);
+
+        if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
+                RSD.Version, Range.RangeType, Range.Flags))
+          return reportValueError(Ctx, "DescriptorFlag", Range.Flags);
       }
       break;
     }
     }
+  }
+
+  for (const dxbc::RTS0::v1::StaticSampler &Sampler : RSD.StaticSamplers) {
+    if (!llvm::hlsl::rootsig::verifySamplerFilter(Sampler.Filter))
+      return reportValueError(Ctx, "Filter", Sampler.Filter);
+
+    if (!llvm::hlsl::rootsig::verifyAddress(Sampler.AddressU))
+      return reportValueError(Ctx, "AddressU", Sampler.AddressU);
+
+    if (!llvm::hlsl::rootsig::verifyAddress(Sampler.AddressV))
+      return reportValueError(Ctx, "AddressV", Sampler.AddressV);
+
+    if (!llvm::hlsl::rootsig::verifyAddress(Sampler.AddressW))
+      return reportValueError(Ctx, "AddressW", Sampler.AddressW);
+
+    if (!llvm::hlsl::rootsig::verifyMipLODBias(Sampler.MipLODBias))
+      return reportValueError(Ctx, "MipLODBias", Sampler.MipLODBias);
+
+    if (!llvm::hlsl::rootsig::verifyMaxAnisotropy(Sampler.MaxAnisotropy))
+      return reportValueError(Ctx, "MaxAnisotropy", Sampler.MaxAnisotropy);
+
+    if (!llvm::hlsl::rootsig::verifyComparisonFunc(Sampler.ComparisonFunc))
+      return reportValueError(Ctx, "ComparisonFunc", Sampler.ComparisonFunc);
+
+    if (!llvm::hlsl::rootsig::verifyBorderColor(Sampler.BorderColor))
+      return reportValueError(Ctx, "BorderColor", Sampler.BorderColor);
+
+    if (!llvm::hlsl::rootsig::verifyLOD(Sampler.MinLOD))
+      return reportValueError(Ctx, "MinLOD", Sampler.MinLOD);
+
+    if (!llvm::hlsl::rootsig::verifyLOD(Sampler.MaxLOD))
+      return reportValueError(Ctx, "MaxLOD", Sampler.MaxLOD);
+
+    if (!llvm::hlsl::rootsig::verifyRegisterValue(Sampler.ShaderRegister))
+      return reportValueError(Ctx, "ShaderRegister", Sampler.ShaderRegister);
+
+    if (!llvm::hlsl::rootsig::verifyRegisterSpace(Sampler.RegisterSpace))
+      return reportValueError(Ctx, "RegisterSpace", Sampler.RegisterSpace);
+
+    if (!dxbc::isValidShaderVisibility(Sampler.ShaderVisibility))
+      return reportValueError(Ctx, "ShaderVisibility",
+                              Sampler.ShaderVisibility);
   }
 
   return false;
@@ -309,9 +529,9 @@ analyzeModule(Module &M) {
     return RSDMap;
 
   for (const auto &RSDefNode : RootSignatureNode->operands()) {
-    if (RSDefNode->getNumOperands() != 2) {
-      reportError(Ctx, "Invalid format for Root Signature Definition. Pairs "
-                       "of function, root signature expected.");
+    if (RSDefNode->getNumOperands() != 3) {
+      reportError(Ctx, "Invalid Root Signature metadata - expected function, "
+                       "signature, and version.");
       continue;
     }
 
@@ -348,12 +568,21 @@ analyzeModule(Module &M) {
       reportError(Ctx, "Root Element is not a metadata node.");
       continue;
     }
-
     mcdxbc::RootSignatureDesc RSD;
+    if (std::optional<uint32_t> Version = extractMdIntValue(RSDefNode, 2))
+      RSD.Version = *Version;
+    else {
+      reportError(Ctx, "Invalid RSDefNode value, expected constant int");
+      continue;
+    }
+
     // Clang emits the root signature data in dxcontainer following a specific
     // sequence. First the header, then the root parameters. So the header
     // offset will always equal to the header size.
     RSD.RootParameterOffset = sizeof(dxbc::RTS0::v1::RootSignatureHeader);
+
+    // static sampler offset is calculated when writting dxcontainer.
+    RSD.StaticSamplersOffset = 0u;
 
     if (parse(Ctx, RSD, RootElementListNode) || validate(Ctx, RSD)) {
       return RSDMap;
@@ -367,9 +596,9 @@ analyzeModule(Module &M) {
 
 AnalysisKey RootSignatureAnalysis::Key;
 
-SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>
+RootSignatureAnalysis::Result
 RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  return analyzeModule(M);
+  return RootSignatureBindingInfo(analyzeModule(M));
 }
 
 //===----------------------------------------------------------------------===//
@@ -377,48 +606,37 @@ RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
                                                     ModuleAnalysisManager &AM) {
 
-  SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> &RSDMap =
-      AM.getResult<RootSignatureAnalysis>(M);
+  RootSignatureBindingInfo &RSDMap = AM.getResult<RootSignatureAnalysis>(M);
 
   OS << "Root Signature Definitions"
      << "\n";
-  uint8_t Space = 0;
   for (const Function &F : M) {
     auto It = RSDMap.find(&F);
     if (It == RSDMap.end())
       continue;
     const auto &RS = It->second;
     OS << "Definition for '" << F.getName() << "':\n";
-
     // start root signature header
-    Space++;
-    OS << indent(Space) << "Flags: " << format_hex(RS.Flags, 8) << "\n";
-    OS << indent(Space) << "Version: " << RS.Version << "\n";
-    OS << indent(Space) << "RootParametersOffset: " << RS.RootParameterOffset
-       << "\n";
-    OS << indent(Space) << "NumParameters: " << RS.ParametersContainer.size()
-       << "\n";
-    Space++;
+    OS << "Flags: " << format_hex(RS.Flags, 8) << "\n"
+       << "Version: " << RS.Version << "\n"
+       << "RootParametersOffset: " << RS.RootParameterOffset << "\n"
+       << "NumParameters: " << RS.ParametersContainer.size() << "\n";
     for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
       const auto &[Type, Loc] =
           RS.ParametersContainer.getTypeAndLocForParameter(I);
       const dxbc::RTS0::v1::RootParameterHeader Header =
           RS.ParametersContainer.getHeader(I);
 
-      OS << indent(Space) << "- Parameter Type: " << Type << "\n";
-      OS << indent(Space + 2)
-         << "Shader Visibility: " << Header.ShaderVisibility << "\n";
+      OS << "- Parameter Type: " << Type << "\n"
+         << "  Shader Visibility: " << Header.ShaderVisibility << "\n";
 
       switch (Type) {
       case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
         const dxbc::RTS0::v1::RootConstants &Constants =
             RS.ParametersContainer.getConstant(Loc);
-        OS << indent(Space + 2) << "Register Space: " << Constants.RegisterSpace
-           << "\n";
-        OS << indent(Space + 2)
-           << "Shader Register: " << Constants.ShaderRegister << "\n";
-        OS << indent(Space + 2)
-           << "Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
+        OS << "  Register Space: " << Constants.RegisterSpace << "\n"
+           << "  Shader Register: " << Constants.ShaderRegister << "\n"
+           << "  Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
         break;
       }
       case llvm::to_underlying(dxbc::RootParameterType::CBV):
@@ -426,36 +644,47 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       case llvm::to_underlying(dxbc::RootParameterType::SRV): {
         const dxbc::RTS0::v2::RootDescriptor &Descriptor =
             RS.ParametersContainer.getRootDescriptor(Loc);
-        OS << indent(Space + 2)
-           << "Register Space: " << Descriptor.RegisterSpace << "\n";
-        OS << indent(Space + 2)
-           << "Shader Register: " << Descriptor.ShaderRegister << "\n";
+        OS << "  Register Space: " << Descriptor.RegisterSpace << "\n"
+           << "  Shader Register: " << Descriptor.ShaderRegister << "\n";
         if (RS.Version > 1)
-          OS << indent(Space + 2) << "Flags: " << Descriptor.Flags << "\n";
+          OS << "  Flags: " << Descriptor.Flags << "\n";
+        break;
+      }
+      case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+        const mcdxbc::DescriptorTable &Table =
+            RS.ParametersContainer.getDescriptorTable(Loc);
+        OS << "  NumRanges: " << Table.Ranges.size() << "\n";
+
+        for (const dxbc::RTS0::v2::DescriptorRange Range : Table) {
+          OS << "  - Range Type: " << Range.RangeType << "\n"
+             << "    Register Space: " << Range.RegisterSpace << "\n"
+             << "    Base Shader Register: " << Range.BaseShaderRegister << "\n"
+             << "    Num Descriptors: " << Range.NumDescriptors << "\n"
+             << "    Offset In Descriptors From Table Start: "
+             << Range.OffsetInDescriptorsFromTableStart << "\n";
+          if (RS.Version > 1)
+            OS << "    Flags: " << Range.Flags << "\n";
+        }
         break;
       }
       }
-      Space--;
     }
-    OS << indent(Space) << "NumStaticSamplers: " << 0 << "\n";
-    OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
-       << "\n";
-
-    Space--;
-    // end root signature header
+    OS << "NumStaticSamplers: " << 0 << "\n";
+    OS << "StaticSamplersOffset: " << RS.StaticSamplersOffset << "\n";
   }
   return PreservedAnalyses::all();
 }
 
 //===----------------------------------------------------------------------===//
 bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
-  FuncToRsMap = analyzeModule(M);
+  FuncToRsMap = std::make_unique<RootSignatureBindingInfo>(
+      RootSignatureBindingInfo(analyzeModule(M)));
   return false;
 }
 
 void RootSignatureAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+  AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
 }
 
 char RootSignatureAnalysisWrapper::ID = 0;

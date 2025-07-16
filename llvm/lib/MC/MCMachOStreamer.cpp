@@ -18,7 +18,6 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -58,8 +57,6 @@ private:
   /// label emitted to them. Used so we don't emit extraneous linker local
   /// labels in the middle of the section.
   DenseMap<const MCSection*, bool> HasSectionLabel;
-
-  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   void emitDataRegion(MachO::DataRegionType Kind);
   void emitDataRegionEnd();
@@ -164,7 +161,7 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
   if (cast<MCSymbolMachO>(Symbol)->isSymbolLinkerVisible())
-    insert(getContext().allocFragment<MCDataFragment>());
+    insert(getContext().allocFragment<MCFragment>());
 
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
@@ -423,23 +420,6 @@ void MCMachOStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
   emitZerofill(Section, Symbol, Size, ByteAlignment);
 }
 
-void MCMachOStreamer::emitInstToData(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI) {
-  MCDataFragment *DF = getOrCreateDataFragment();
-
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // Add the fixups and data.
-  for (MCFixup &Fixup : Fixups) {
-    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixup);
-  }
-  DF->setHasInstructions(STI);
-  DF->appendContents(Code);
-}
-
 void MCMachOStreamer::finishImpl() {
   emitFrames(&getAssembler().getBackend());
 
@@ -503,8 +483,7 @@ void MCMachOStreamer::finalizeCGProfile() {
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
       W.getCGProfile().size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
-  cast<MCDataFragment>(*CGProfileSection->begin())
-      .appendContents(SectionBytes, 0);
+  (*CGProfileSection->begin()).appendContents(SectionBytes, 0);
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -533,7 +512,7 @@ void MCMachOStreamer::createAddrSigSection() {
   MCSection *AddrSigSection =
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
   changeSection(AddrSigSection);
-  auto *Frag = cast<MCDataFragment>(AddrSigSection->curFragList()->Head);
+  auto *Frag = cast<MCFragment>(AddrSigSection->curFragList()->Head);
   // We will generate a series of pointer-sized symbol relocations at offset
   // 0x0. Set the section size to be large enough to contain a single pointer
   // (instead of emitting a zero-sized section) so these relocations are

@@ -814,11 +814,7 @@ static_assert(invalid<int> also here ; // expected-error{{use of undeclared iden
 
 int foo() {
     bool b;
-    b = invalid<int> not just in declarations; // expected-error{{expected ';' after expression}}
-                                               // expected-error@-1{{use of undeclared identifier 'invalid'}}
-                                               // expected-error@-2{{expected ';' after expression}}
-                                               // expected-error@-3{{use of undeclared identifier 'just'}}
-                                               // expected-error@-4{{unknown type name 'in'}}
+    b = invalid<int> not just in declarations; // expected-error{{use of undeclared identifier 'invalid'}}
     return b;
 }
 } // namespace GH48182

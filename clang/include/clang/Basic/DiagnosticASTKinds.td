@@ -240,6 +240,8 @@ def note_constexpr_access_static_temporary : Note<
   "outside the expression that created the temporary">;
 def note_constexpr_access_unreadable_object : Note<
   "%sub{access_kind}0 object '%1' whose value is not known">;
+def note_constexpr_access_unknown_variable : Note<
+  "%sub{access_kind}0 variable %1 whose value is not known">;
 def note_constexpr_access_deleted_object : Note<
   "%sub{access_kind}0 heap allocated object that has been deleted">;
 def note_constexpr_modify_global : Note<
@@ -999,6 +1001,8 @@ def note_module_odr_violation_mismatch_decl_unknown : Note<
   "different friend declaration|different function template|different method|"
   "different instance variable|different property|another unexpected decl}2">;
 
+def err_struct_too_large : Error<
+  "structure '%0' is too large, which exceeds maximum allowed size of %1 bytes">;
 
 def remark_sanitize_address_insert_extra_padding_accepted : Remark<
     "-fsanitize-address-field-padding applied to %0">, ShowInSystemHeader,

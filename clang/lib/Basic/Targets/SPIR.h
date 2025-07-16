@@ -46,7 +46,7 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0,  // ptr32_sptr
     0,  // ptr32_uptr
     0,  // ptr64
-    0,  // hlsl_groupshared
+    3,  // hlsl_groupshared
     12, // hlsl_constant
     10, // hlsl_private
     11, // hlsl_device
@@ -82,7 +82,7 @@ static const unsigned SPIRDefIsGenMap[] = {
     0,  // ptr32_sptr
     0,  // ptr32_uptr
     0,  // ptr64
-    0,  // hlsl_groupshared
+    3,  // hlsl_groupshared
     0,  // hlsl_constant
     10, // hlsl_private
     11, // hlsl_device
@@ -205,8 +205,9 @@ public:
     AddrSpaceMap = DefaultIsGeneric ? &SPIRDefIsGenMap : &SPIRDefIsPrivMap;
   }
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    TargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
     // FIXME: SYCL specification considers unannotated pointers and references
     // to be pointing to the generic address space. See section 5.9.3 of
     // SYCL 2020 specification.
@@ -383,8 +384,9 @@ public:
   std::optional<LangAS> getConstantAddressSpace() const override {
     return ConstantAS;
   }
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    BaseSPIRVTargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    BaseSPIRVTargetInfo::adjust(Diags, Opts, Aux);
     // opencl_constant will map to UniformConstant in SPIR-V
     if (Opts.OpenCL)
       ConstantAS = LangAS::opencl_constant;
@@ -446,8 +448,9 @@ public:
 
   void setAuxTarget(const TargetInfo *Aux) override;
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    TargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
   }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
