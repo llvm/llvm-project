@@ -7899,6 +7899,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::umax:
   case Intrinsic::umin:
   case Intrinsic::scmp:
+  case Intrinsic::is_fpclass:
+  case Intrinsic::ptrmask:
   case Intrinsic::ucmp:
   case Intrinsic::bitreverse:
   case Intrinsic::bswap:
@@ -9285,9 +9287,9 @@ isImpliedCondCommonOperandWithCR(CmpPredicate LPred, const ConstantRange &LCR,
     return Res;
   if (LPred.hasSameSign() ^ RPred.hasSameSign()) {
     LPred = LPred.hasSameSign() ? ICmpInst::getFlippedSignednessPredicate(LPred)
-                                : static_cast<CmpInst::Predicate>(LPred);
+                                : LPred.dropSameSign();
     RPred = RPred.hasSameSign() ? ICmpInst::getFlippedSignednessPredicate(RPred)
-                                : static_cast<CmpInst::Predicate>(RPred);
+                                : RPred.dropSameSign();
     return CRImpliesPred(ConstantRange::makeAllowedICmpRegion(LPred, LCR),
                          RPred);
   }

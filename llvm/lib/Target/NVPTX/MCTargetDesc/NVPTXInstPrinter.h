@@ -40,8 +40,8 @@ public:
                     StringRef Modifier = {});
   void printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
                     StringRef Modifier = {});
-  void printLdStCode(const MCInst *MI, int OpNum, raw_ostream &O,
-                     StringRef Modifier = {});
+  void printAtomicCode(const MCInst *MI, int OpNum, raw_ostream &O,
+                       StringRef Modifier = {});
   void printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
                     StringRef Modifier = {});
   void printMemOperand(const MCInst *MI, int OpNum, raw_ostream &O,
@@ -54,6 +54,7 @@ public:
   void printCTAGroup(const MCInst *MI, int OpNum, raw_ostream &O);
   void printCallOperand(const MCInst *MI, int OpNum, raw_ostream &O,
                         StringRef Modifier = {});
+  void printFTZFlag(const MCInst *MI, int OpNum, raw_ostream &O);
 };
 
 }

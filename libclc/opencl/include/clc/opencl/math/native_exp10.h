@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_MATH_NATIVE_EXP10_H__
+#define __CLC_OPENCL_MATH_NATIVE_EXP10_H__
+
 #define __CLC_BODY <clc/math/unary_decl.inc>
 #define FUNCTION native_exp10
 #define __FLOAT_ONLY
@@ -13,3 +16,5 @@
 #include <clc/math/gentype.inc>
 
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_MATH_NATIVE_EXP10_H__

@@ -10,3 +10,6 @@ include "clang/Basic/BuiltinsSPIRVBase.td"
 
 def generic_cast_to_ptr_explicit
     : SPIRVBuiltin<"void*(void*, int)", [NoThrow, Const, CustomTypeChecking]>;
+def global_size : SPIRVBuiltin<"size_t(int)", [NoThrow, Const]>;
+def global_offset : SPIRVBuiltin<"size_t(int)", [NoThrow, Const]>;
+def subgroup_max_size : SPIRVBuiltin<"uint32_t()", [NoThrow, Const]>;

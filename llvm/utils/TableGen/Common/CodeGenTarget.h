@@ -176,31 +176,28 @@ public:
   /// - fixed / generic instructions as declared in TargetOpcodes.def, in order;
   /// - pseudo instructions in lexicographical order sorted by name;
   /// - other instructions in lexicographical order sorted by name.
-  ArrayRef<const CodeGenInstruction *> getInstructionsByEnumValue() const {
+  ArrayRef<const CodeGenInstruction *> getInstructions() const {
     if (InstrsByEnum.empty())
       ComputeInstrsByEnum();
     return InstrsByEnum;
   }
 
-  // Functions that return various slices of `getInstructionsByEnumValue`.
-  ArrayRef<const CodeGenInstruction *>
-  getGenericInstructionsByEnumValue() const {
-    return getInstructionsByEnumValue().take_front(getNumFixedInstructions());
+  // Functions that return various slices of `getInstructions`, ordered by
+  // their enum values.
+  ArrayRef<const CodeGenInstruction *> getGenericInstructions() const {
+    return getInstructions().take_front(getNumFixedInstructions());
   }
 
-  ArrayRef<const CodeGenInstruction *>
-  getTargetInstructionsByEnumValue() const {
-    return getInstructionsByEnumValue().drop_front(getNumFixedInstructions());
+  ArrayRef<const CodeGenInstruction *> getTargetInstructions() const {
+    return getInstructions().drop_front(getNumFixedInstructions());
   }
 
-  ArrayRef<const CodeGenInstruction *>
-  getTargetPseudoInstructionsByEnumValue() const {
-    return getTargetInstructionsByEnumValue().take_front(NumPseudoInstructions);
+  ArrayRef<const CodeGenInstruction *> getTargetPseudoInstructions() const {
+    return getTargetInstructions().take_front(NumPseudoInstructions);
   }
 
-  ArrayRef<const CodeGenInstruction *>
-  getTargetNonPseudoInstructionsByEnumValue() const {
-    return getTargetInstructionsByEnumValue().drop_front(NumPseudoInstructions);
+  ArrayRef<const CodeGenInstruction *> getTargetNonPseudoInstructions() const {
+    return getTargetInstructions().drop_front(NumPseudoInstructions);
   }
 
   /// Return the integer enum value corresponding to this instruction record.

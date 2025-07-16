@@ -3185,12 +3185,6 @@ void Verifier::visitFunction(const Function &F) {
     CheckDI(SP->describes(&F),
             "!dbg attachment points at wrong subprogram for function", N, &F,
             &I, DL, Scope, SP);
-
-    if (DL->getAtomGroup())
-      CheckDI(DL->getScope()->getSubprogram()->getKeyInstructionsEnabled(),
-              "DbgLoc uses atomGroup but DISubprogram doesn't have Key "
-              "Instructions enabled",
-              DL, DL->getScope()->getSubprogram());
   };
   for (auto &BB : F)
     for (auto &I : BB) {
@@ -5492,6 +5486,15 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
     visitMDNode(*N, AreDebugLocsAllowed::Yes);
+
+    if (auto *DL = dyn_cast<DILocation>(N)) {
+      if (DL->getAtomGroup()) {
+        CheckDI(DL->getScope()->getSubprogram()->getKeyInstructionsEnabled(),
+                "DbgLoc uses atomGroup but DISubprogram doesn't have Key "
+                "Instructions enabled",
+                DL, DL->getScope()->getSubprogram());
+      }
+    }
   }
 
   if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
@@ -5602,6 +5605,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         if (ArgCount == 3)
           Check(Call.getOperand(Elem.Begin + 2)->getType()->isIntegerTy(),
                 "third argument should be an integer if present", Call);
+        continue;
+      }
+      if (Kind == Attribute::Dereferenceable) {
+        Check(ArgCount == 2,
+              "dereferenceable assumptions should have 2 arguments", Call);
+        Check(Call.getOperand(Elem.Begin)->getType()->isPointerTy(),
+              "first argument should be a pointer", Call);
+        Check(Call.getOperand(Elem.Begin + 1)->getType()->isIntegerTy(),
+              "second argument should be an integer", Call);
         continue;
       }
       Check(ArgCount <= 2, "too many arguments", Call);
@@ -6532,7 +6544,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
 
-    auto *Next = Call.getNextNonDebugInstruction();
+    auto *Next = Call.getNextNode();
     bool IsAMDUnreachable = Next && isa<IntrinsicInst>(Next) &&
                             cast<IntrinsicInst>(Next)->getIntrinsicID() ==
                                 Intrinsic::amdgcn_unreachable;
@@ -6939,20 +6951,44 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
       break;
     }
   }
-  if (VPI.getIntrinsicID() == Intrinsic::vp_fcmp) {
+
+  switch (VPI.getIntrinsicID()) {
+  case Intrinsic::vp_fcmp: {
     auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
     Check(CmpInst::isFPPredicate(Pred),
           "invalid predicate for VP FP comparison intrinsic", &VPI);
+    break;
   }
-  if (VPI.getIntrinsicID() == Intrinsic::vp_icmp) {
+  case Intrinsic::vp_icmp: {
     auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
     Check(CmpInst::isIntPredicate(Pred),
           "invalid predicate for VP integer comparison intrinsic", &VPI);
+    break;
   }
-  if (VPI.getIntrinsicID() == Intrinsic::vp_is_fpclass) {
+  case Intrinsic::vp_is_fpclass: {
     auto TestMask = cast<ConstantInt>(VPI.getOperand(1));
     Check((TestMask->getZExtValue() & ~static_cast<unsigned>(fcAllFlags)) == 0,
           "unsupported bits for llvm.vp.is.fpclass test mask");
+    break;
+  }
+  case Intrinsic::experimental_vp_splice: {
+    VectorType *VecTy = cast<VectorType>(VPI.getType());
+    int64_t Idx = cast<ConstantInt>(VPI.getArgOperand(2))->getSExtValue();
+    int64_t KnownMinNumElements = VecTy->getElementCount().getKnownMinValue();
+    if (VPI.getParent() && VPI.getParent()->getParent()) {
+      AttributeList Attrs = VPI.getParent()->getParent()->getAttributes();
+      if (Attrs.hasFnAttr(Attribute::VScaleRange))
+        KnownMinNumElements *= Attrs.getFnAttrs().getVScaleRangeMin();
+    }
+    Check((Idx < 0 && std::abs(Idx) <= KnownMinNumElements) ||
+              (Idx >= 0 && Idx < KnownMinNumElements),
+          "The splice index exceeds the range [-VL, VL-1] where VL is the "
+          "known minimum number of elements in the vector. For scalable "
+          "vectors the minimum number of elements is determined from "
+          "vscale_range.",
+          &VPI);
+    break;
+  }
   }
 }
 
