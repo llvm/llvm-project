@@ -9998,14 +9998,6 @@ CreateX86_64ABIBuiltinVaListDecl(const ASTContext *Context) {
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
-static TypedefDecl *CreatePNaClABIBuiltinVaListDecl(const ASTContext *Context) {
-  // typedef int __builtin_va_list[4];
-  llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 4);
-  QualType IntArrayType = Context->getConstantArrayType(
-      Context->IntTy, Size, nullptr, ArraySizeModifier::Normal, 0);
-  return Context->buildImplicitTypedef(IntArrayType, "__builtin_va_list");
-}
-
 static TypedefDecl *
 CreateAAPCSABIBuiltinVaListDecl(const ASTContext *Context) {
   // struct __va_list
@@ -10203,8 +10195,6 @@ static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
     return CreatePowerABIBuiltinVaListDecl(Context);
   case TargetInfo::X86_64ABIBuiltinVaList:
     return CreateX86_64ABIBuiltinVaListDecl(Context);
-  case TargetInfo::PNaClABIBuiltinVaList:
-    return CreatePNaClABIBuiltinVaListDecl(Context);
   case TargetInfo::AAPCSABIBuiltinVaList:
     return CreateAAPCSABIBuiltinVaListDecl(Context);
   case TargetInfo::SystemZBuiltinVaList:
@@ -12688,10 +12678,9 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
 
   bool Variadic = (TypeStr[0] == '.');
 
-  FunctionType::ExtInfo EI(getDefaultCallingConvention(
-      Variadic, /*IsCXXMethod=*/false, /*IsBuiltin=*/true));
-  if (BuiltinInfo.isNoReturn(Id)) EI = EI.withNoReturn(true);
-
+  FunctionType::ExtInfo EI(Target->getDefaultCallingConv());
+  if (BuiltinInfo.isNoReturn(Id))
+    EI = EI.withNoReturn(true);
 
   // We really shouldn't be making a no-proto type here.
   if (ArgTypes.empty() && Variadic && !getLangOpts().requiresStrictPrototypes())
@@ -13075,43 +13064,38 @@ void ASTContext::forEachMultiversionedFunctionVersion(
 }
 
 CallingConv ASTContext::getDefaultCallingConvention(bool IsVariadic,
-                                                    bool IsCXXMethod,
-                                                    bool IsBuiltin) const {
+                                                    bool IsCXXMethod) const {
   // Pass through to the C++ ABI object
   if (IsCXXMethod)
     return ABI->getDefaultMethodCallConv(IsVariadic);
 
-  // Builtins ignore user-specified default calling convention and remain the
-  // Target's default calling convention.
-  if (!IsBuiltin) {
-    switch (LangOpts.getDefaultCallingConv()) {
-    case LangOptions::DCC_None:
-      break;
-    case LangOptions::DCC_CDecl:
-      return CC_C;
-    case LangOptions::DCC_FastCall:
-      if (getTargetInfo().hasFeature("sse2") && !IsVariadic)
-        return CC_X86FastCall;
-      break;
-    case LangOptions::DCC_StdCall:
-      if (!IsVariadic)
-        return CC_X86StdCall;
-      break;
-    case LangOptions::DCC_VectorCall:
-      // __vectorcall cannot be applied to variadic functions.
-      if (!IsVariadic)
-        return CC_X86VectorCall;
-      break;
-    case LangOptions::DCC_RegCall:
-      // __regcall cannot be applied to variadic functions.
-      if (!IsVariadic)
-        return CC_X86RegCall;
-      break;
-    case LangOptions::DCC_RtdCall:
-      if (!IsVariadic)
-        return CC_M68kRTD;
-      break;
-    }
+  switch (LangOpts.getDefaultCallingConv()) {
+  case LangOptions::DCC_None:
+    break;
+  case LangOptions::DCC_CDecl:
+    return CC_C;
+  case LangOptions::DCC_FastCall:
+    if (getTargetInfo().hasFeature("sse2") && !IsVariadic)
+      return CC_X86FastCall;
+    break;
+  case LangOptions::DCC_StdCall:
+    if (!IsVariadic)
+      return CC_X86StdCall;
+    break;
+  case LangOptions::DCC_VectorCall:
+    // __vectorcall cannot be applied to variadic functions.
+    if (!IsVariadic)
+      return CC_X86VectorCall;
+    break;
+  case LangOptions::DCC_RegCall:
+    // __regcall cannot be applied to variadic functions.
+    if (!IsVariadic)
+      return CC_X86RegCall;
+    break;
+  case LangOptions::DCC_RtdCall:
+    if (!IsVariadic)
+      return CC_M68kRTD;
+    break;
   }
   return Target->getDefaultCallingConv();
 }
