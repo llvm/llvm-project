@@ -415,11 +415,9 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
   // XAndesBFHCvt
   case RISCV::BI__builtin_riscv_nds_fcvt_s_bf16:
-    ID = Intrinsic::riscv_nds_fcvt_s_bf16;
-    break;
+    return Builder.CreateFPExt(Ops[0], FloatTy);
   case RISCV::BI__builtin_riscv_nds_fcvt_bf16_s:
-    ID = Intrinsic::riscv_nds_fcvt_bf16_s;
-    break;
+    return Builder.CreateFPTrunc(Ops[0], BFloatTy);
 
     // Vector builtins are handled from here.
 #include "clang/Basic/riscv_vector_builtin_cg.inc"

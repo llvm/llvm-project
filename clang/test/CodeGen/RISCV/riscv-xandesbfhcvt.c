@@ -6,7 +6,7 @@
 
 // CHECK-LABEL: @test_fcvt_s_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.riscv.nds.fcvt.s.bf16(bfloat [[BF:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = fpext bfloat [[BF:%.*]] to float
 // CHECK-NEXT:    ret float [[TMP0]]
 //
 float test_fcvt_s_bf16(__bf16 bf) {
@@ -15,7 +15,7 @@ float test_fcvt_s_bf16(__bf16 bf) {
 
 // CHECK-LABEL: @test_fcvt_bf16_s(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call bfloat @llvm.riscv.nds.fcvt.bf16.s(float [[SF:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = fptrunc float [[SF:%.*]] to bfloat
 // CHECK-NEXT:    ret bfloat [[TMP0]]
 //
 __bf16 test_fcvt_bf16_s(float sf) {

@@ -768,9 +768,9 @@ def : Sh3AddPat<NDS_LEA_D_ZE>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
 
 let Predicates = [HasVendorXAndesBFHCvt] in {
-def : Pat<(int_riscv_nds_fcvt_s_bf16 (bf16 FPR16:$rs)),
+def : Pat<(fpextend (bf16 FPR16:$rs)),
           (NDS_FCVT_S_BF16 (bf16 FPR16:$rs))>;
-def : Pat<(bf16 (int_riscv_nds_fcvt_bf16_s FPR32:$rs)),
+def : Pat<(bf16 (fpround FPR32:$rs)),
           (NDS_FCVT_BF16_S FPR32:$rs)>;
 } // Predicates = [HasVendorXAndesBFHCvt]
 

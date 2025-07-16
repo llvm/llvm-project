@@ -11,7 +11,7 @@ define float @fcvt_s_bf16(bfloat %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    nds.fcvt.s.bf16 fa0, fa0
 ; CHECK-NEXT:    ret
-  %1 = call float @llvm.riscv.nds.fcvt.s.bf16(bfloat %a)
+  %1 = fpext bfloat %a to float
   ret float %1
 }
 
@@ -22,6 +22,6 @@ define bfloat @fcvt_bf16_s(float %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    nds.fcvt.bf16.s fa0, fa0
 ; CHECK-NEXT:    ret
-  %1 = call bfloat @llvm.riscv.nds.fcvt.bf16.s(float %a)
+  %1 = fptrunc float %a to bfloat
   ret bfloat %1
 }
