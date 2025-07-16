@@ -157,6 +157,30 @@ public:
     return MemoryEffectsBase(Location::Other, MR);
   }
 
+  /// Create MemoryEffectsBase that can only read inaccessible memory.
+  static MemoryEffectsBase
+  inaccessibleReadMemOnly(Location Loc = Location::InaccessibleMem) {
+    return MemoryEffectsBase(Loc, ModRefInfo::Ref);
+  }
+
+  /// Create MemoryEffectsBase that can only write inaccessible memory.
+  static MemoryEffectsBase
+  inaccessibleWriteMemOnly(Location Loc = Location::InaccessibleMem) {
+    return MemoryEffectsBase(Loc, ModRefInfo::Mod);
+  }
+
+  /// Checks if only target-specific memory locations are set.
+  /// Ignores standard locations like ArgMem or InaccessibleMem.
+  /// Needed because `Data` may be non-zero by default unless explicitly
+  /// cleared.
+  bool onlyAccessTargetMemoryLocation() {
+    return getWithoutLoc(static_cast<IRMemLocation>(
+                             llvm::InaccessibleTargetMemLocation::AARCH64_FPMR))
+        .getWithoutLoc(static_cast<IRMemLocation>(
+            llvm::InaccessibleTargetMemLocation::AARCH64_ZA))
+        .doesNotAccessMemory();
+  }
+
   /// Create MemoryEffectsBase that can only access inaccessible or argument
   /// memory.
   static MemoryEffectsBase

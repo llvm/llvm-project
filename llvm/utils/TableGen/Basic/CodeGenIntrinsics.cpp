@@ -379,10 +379,16 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     ME &= MemoryEffects::inaccessibleMemOnly();
   else if (R->isSubClassOf("IntrInaccessibleReadMemOnly")) {
     llvm::IRMemLocation Loc = R->getLocationTypeAsInt("Loc");
-    ME = ME.getWithModRef(Loc, ModRefInfo::Ref);
+    if (ME.onlyAccessTargetMemoryLocation())
+      ME = ME.getWithModRef(Loc, ModRefInfo::Ref);
+    else
+      ME &= MemoryEffects::inaccessibleReadMemOnly(Loc);
   } else if (R->isSubClassOf("IntrInaccessibleWriteMemOnly")) {
     llvm::IRMemLocation Loc = R->getLocationTypeAsInt("Loc");
-    ME = ME.getWithModRef(Loc, ModRefInfo::Mod);
+    if (ME.onlyAccessTargetMemoryLocation())
+      ME = ME.getWithModRef(Loc, ModRefInfo::Mod);
+    else
+      ME &= MemoryEffects::inaccessibleWriteMemOnly(Loc);
   } else if (R->getName() == "IntrInaccessibleMemOrArgMemOnly")
     ME &= MemoryEffects::inaccessibleOrArgMemOnly();
   else if (R->getName() == "Commutative")
