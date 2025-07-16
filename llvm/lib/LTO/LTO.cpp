@@ -1495,13 +1495,15 @@ protected:
 
 public:
   CGThinBackend(
-      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const Config &Conf, IntrusiveRefCntPtr<vfs::FileSystem> FS,
+      ModuleSummaryIndex &CombinedIndex,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
       ThreadPoolStrategy ThinLTOParallelism)
-      : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                        OnWrite, ShouldEmitImportsFiles, ThinLTOParallelism),
+      : ThinBackendProc(Conf, std::move(FS), CombinedIndex,
+                        ModuleToDefinedGVSummaries, OnWrite,
+                        ShouldEmitImportsFiles, ThinLTOParallelism),
         AddStream(std::move(AddStream)),
         ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
     auto &Defs = CombinedIndex.cfiFunctionDefs();
@@ -1519,14 +1521,15 @@ protected:
 
 public:
   InProcessThinBackend(
-      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
-      ThreadPoolStrategy ThinLTOParallelism,
+      const Config &Conf, IntrusiveRefCntPtr<vfs::FileSystem> FS,
+      ModuleSummaryIndex &CombinedIndex, ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, FileCache Cache, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles)
-      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                      AddStream, OnWrite, ShouldEmitIndexFiles,
-                      ShouldEmitImportsFiles, ThinLTOParallelism),
+      : CGThinBackend(Conf, std::move(FS), CombinedIndex,
+                      ModuleToDefinedGVSummaries, AddStream, OnWrite,
+                      ShouldEmitIndexFiles, ShouldEmitImportsFiles,
+                      ThinLTOParallelism),
         Cache(std::move(Cache)) {}
 
   virtual Error runThinLTOBackendThread(
@@ -1546,7 +1549,6 @@ public:
       if (!MOrErr)
         return MOrErr.takeError();
 
-      auto FS = vfs::getRealFileSystem();
       return thinBackend(Conf, FS, Task, AddStream, **MOrErr, CombinedIndex,
                          ImportList, DefinedGlobals, &ModuleMap,
                          Conf.CodeGenOnly);
@@ -1631,12 +1633,12 @@ class FirstRoundThinBackend : public InProcessThinBackend {
 
 public:
   FirstRoundThinBackend(
-      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const Config &Conf, IntrusiveRefCntPtr<vfs::FileSystem> FS, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn CGAddStream, FileCache CGCache, AddStreamFn IRAddStream,
       FileCache IRCache)
-      : InProcessThinBackend(Conf, CombinedIndex, ThinLTOParallelism,
+      : InProcessThinBackend(Conf, std::move(FS), CombinedIndex, ThinLTOParallelism,
                              ModuleToDefinedGVSummaries, std::move(CGAddStream),
                              std::move(CGCache), /*OnWrite=*/nullptr,
                              /*ShouldEmitIndexFiles=*/false,
@@ -1727,13 +1729,13 @@ class SecondRoundThinBackend : public InProcessThinBackend {
 
 public:
   SecondRoundThinBackend(
-      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const Config &Conf, IntrusiveRefCntPtr<vfs::FileSystem> FS, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, FileCache Cache,
       std::unique_ptr<SmallVector<StringRef>> IRFiles,
       stable_hash CombinedCGDataHash)
-      : InProcessThinBackend(Conf, CombinedIndex, ThinLTOParallelism,
+      : InProcessThinBackend(Conf, std::move(FS), CombinedIndex, ThinLTOParallelism,
                              ModuleToDefinedGVSummaries, std::move(AddStream),
                              std::move(Cache),
                              /*OnWrite=*/nullptr,
@@ -1800,8 +1802,9 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
           AddStreamFn AddStream, FileCache Cache) {
+        auto FS = vfs::getRealFileSystem();
         return std::make_unique<InProcessThinBackend>(
-            Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
+            Conf, FS, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
             ShouldEmitImportsFiles);
       };
@@ -1849,13 +1852,13 @@ class WriteIndexesThinBackend : public ThinBackendProc {
 
 public:
   WriteIndexesThinBackend(
-      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const Config &Conf, IntrusiveRefCntPtr<vfs::FileSystem> FS, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       std::string OldPrefix, std::string NewPrefix,
       std::string NativeObjectPrefix, bool ShouldEmitImportsFiles,
       raw_fd_ostream *LinkedObjectsFile, lto::IndexWriteCallback OnWrite)
-      : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
+      : ThinBackendProc(Conf, std::move(FS), CombinedIndex, ModuleToDefinedGVSummaries,
                         OnWrite, ShouldEmitImportsFiles, ThinLTOParallelism),
         OldPrefix(OldPrefix), NewPrefix(NewPrefix),
         NativeObjectPrefix(NativeObjectPrefix),
@@ -1921,8 +1924,9 @@ ThinBackend lto::createWriteIndexesThinBackend(
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
           AddStreamFn AddStream, FileCache Cache) {
+        auto FS = vfs::getRealFileSystem();
         return std::make_unique<WriteIndexesThinBackend>(
-            Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
+            Conf, FS, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             OldPrefix, NewPrefix, NativeObjectPrefix, ShouldEmitImportsFiles,
             LinkedObjectsFile, OnWrite);
       };
@@ -2155,12 +2159,14 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // objects and optimized IRs, using the same cache directory as the original.
   cgdata::StreamCacheData CG(MaxTasks, Cache, "CG"), IR(MaxTasks, Cache, "IR");
 
+  auto FS = vfs::getRealFileSystem();
+
   // First round: Execute optimization and code generation, outputting to
   // temporary scratch objects. Serialize the optimized IRs before initiating
   // code generation.
   LLVM_DEBUG(dbgs() << "[TwoRounds] Running the first round of codegen\n");
   auto FirstRoundLTO = std::make_unique<FirstRoundThinBackend>(
-      Conf, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
+      Conf, FS, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
       CG.AddStream, CG.Cache, IR.AddStream, IR.Cache);
   if (Error E = RunBackends(FirstRoundLTO.get()))
     return E;
@@ -2176,7 +2182,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // merged data.
   LLVM_DEBUG(dbgs() << "[TwoRounds] Running the second round of codegen\n");
   auto SecondRoundLTO = std::make_unique<SecondRoundThinBackend>(
-      Conf, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
+      Conf, FS, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
       AddStream, Cache, IR.getResult(), CombinedHash);
   return RunBackends(SecondRoundLTO.get());
 }
@@ -2284,7 +2290,7 @@ class OutOfProcessThinBackend : public CGThinBackend {
 
 public:
   OutOfProcessThinBackend(
-      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const Config &Conf, IntrusiveRefCntPtr<vfs::FileSystem> FS, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, lto::IndexWriteCallback OnWrite,
@@ -2292,7 +2298,7 @@ public:
       StringRef LinkerOutputFile, StringRef Distributor,
       ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
       ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps)
-      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
+      : CGThinBackend(Conf, std::move(FS), CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, OnWrite, ShouldEmitIndexFiles,
                       ShouldEmitImportsFiles, ThinLTOParallelism),
         LinkerOutputFile(LinkerOutputFile), DistributorPath(Distributor),
@@ -2553,8 +2559,9 @@ ThinBackend lto::createOutOfProcessThinBackend(
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
           AddStreamFn AddStream, FileCache /*Cache*/) {
+        auto FS = vfs::getRealFileSystem();
         return std::make_unique<OutOfProcessThinBackend>(
-            Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
+            Conf, FS, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, OnWrite, ShouldEmitIndexFiles, ShouldEmitImportsFiles,
             LinkerOutputFile, Distributor, DistributorArgs, RemoteCompiler,
             RemoteCompilerArgs, SaveTemps);
