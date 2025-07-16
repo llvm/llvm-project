@@ -800,6 +800,8 @@ Bug Fixes in This Version
   declaration statements. Clang now emits a warning for these patterns. (#GH141659)
 - Fixed false positives for redeclaration errors of using enum in
   nested scopes. (#GH147495)
+- Fixed a failed assertion with an operator call expression which comes from a
+  macro expansion when performing analysis for nullability attributes. (#GH138371)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1144,6 +1146,8 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 
+- Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
+  parameters.
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.

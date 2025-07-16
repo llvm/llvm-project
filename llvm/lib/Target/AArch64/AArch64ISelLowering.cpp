@@ -17476,12 +17476,17 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 }
 
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    LoadInst *LI, ArrayRef<Value *> DeinterleavedValues) const {
+    Instruction *Load, Value *Mask,
+    ArrayRef<Value *> DeinterleavedValues) const {
   unsigned Factor = DeinterleavedValues.size();
   if (Factor != 2 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
     return false;
   }
+  auto *LI = dyn_cast<LoadInst>(Load);
+  if (!LI)
+    return false;
+  assert(!Mask && "Unexpected mask on a load\n");
 
   Value *FirstActive = *llvm::find_if(DeinterleavedValues,
                                       [](Value *V) { return V != nullptr; });

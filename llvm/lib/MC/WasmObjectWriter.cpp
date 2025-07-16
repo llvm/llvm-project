@@ -713,6 +713,10 @@ static void addData(SmallVectorImpl<char> &DataBytes,
                        Fill->getValue());
     } else {
       llvm::append_range(DataBytes, Frag.getContents());
+      if (Frag.getKind() == MCFragment::FT_LEB)
+        llvm::append_range(DataBytes, Frag.getVarContents());
+      else
+        assert(Frag.getKind() == MCFragment::FT_Data);
     }
   }
 

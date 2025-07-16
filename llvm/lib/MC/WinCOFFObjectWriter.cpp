@@ -1069,7 +1069,7 @@ uint64_t WinCOFFWriter::writeObject() {
   if (Mode != DwoOnly && OWriter.getEmitAddrsigSection()) {
     auto *Sec = getContext().getCOFFSection(".llvm_addrsig",
                                             COFF::IMAGE_SCN_LNK_REMOVE);
-    auto *Frag = cast<MCFragment>(Sec->curFragList()->Head);
+    auto *Frag = Sec->curFragList()->Head;
     raw_svector_ostream OS(Frag->getContentsForAppending());
     for (const MCSymbol *S : OWriter.AddrsigSyms) {
       if (!S->isRegistered())
