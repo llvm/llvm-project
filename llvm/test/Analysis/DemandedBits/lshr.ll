@@ -63,18 +63,6 @@ define i8 @test_lshr(i32 %a, i32 %b) {
   %lshr.t = trunc i32 %lshr to i8
   ret i8 %lshr.t
 }
-DemandedBits: 0xff for   %4 = lshr i32 %1, %3
-DemandedBits: 0xffffffff for %1 in   %4 = lshr i32 %1, %3
-DemandedBits: 0xffffffff for %3 in   %4 = lshr i32 %1, %3
-DemandedBits: 0xff for   %5 = trunc i32 %4 to i8
-DemandedBits: 0xff for %4 in   %5 = trunc i32 %4 to i8
-DemandedBits: 0xffffffff for   %3 = zext i8 %2 to i32
-DemandedBits: 0xff for %2 in   %3 = zext i8 %2 to i32
-DemandedBits: 0xffffffff for   %1 = add nsw i32 %a, %b
-DemandedBits: 0xffffffff for %a in   %1 = add nsw i32 %a, %b
-DemandedBits: 0xffffffff for %b in   %1 = add nsw i32 %a, %b
-DemandedBits: 0xff for   %2 = trunc i32 %1 to i8
-DemandedBits: 0xff for %1 in   %2 = trunc i32 %1 to i8
 
 define i8 @test_lshr_var_amount(i32 %a, i32 %b){
 ; CHECK-LABEL: 'test_lshr_var_amount'

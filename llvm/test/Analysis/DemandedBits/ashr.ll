@@ -89,6 +89,7 @@ define i8 @test_ashr_var_amount(i32 %a, i32 %b){
   ret i8 %5
 }
 
+define i8 @test_ashr_var_amount_nsw(i32 %a, i32 %b){
  ; CHECK-LABEL 'test_ashr_var_amount_nsw'
  ; CHECK-DAG: DemandedBits: 0xff for   %5 = trunc i32 %4 to i8
  ; CHECK-DAG: DemandedBits: 0xff for %4 in   %5 = trunc i32 %4 to i8

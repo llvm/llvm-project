@@ -78,17 +78,12 @@ void DemandedBits::determineLiveOperandBits(
       };
   auto GetShiftedRange = [&](unsigned const Min, unsigned const Max,
                              bool ShiftLeft) {
-    APInt Range = APInt::getLowBitsSet(BitWidth, Max + 1) &
-                  ~APInt::getLowBitsSet(BitWidth, Min);
     using ShiftFn = APInt (APInt::*)(unsigned) const;
     auto Shift = ShiftLeft ? static_cast<ShiftFn>(&APInt::shl)
                            : static_cast<ShiftFn>(&APInt::lshr);
     AB = APInt::getZero(BitWidth);
-    APInt Bits = AOut;
-    while (Bits != 0) {
-      unsigned I = Bits.countr_zero();
-      AB |= (Range.*Shift)(I);
-      Bits.clearBit(I);
+    for (unsigned ShiftAmount = Min; ShiftAmount <= Max; ++ShiftAmount) {
+      AB |= (AOut.*Shift)(ShiftAmount);
     }
   };
 
@@ -203,7 +198,7 @@ void DemandedBits::determineLiveOperandBits(
         unsigned Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
         unsigned Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
         // similar to Lshr case
-        GetShiftedRange(Min, Max, false);
+        GetShiftedRange(Min, Max, /*ShiftLeft=*/false);
         const auto *S = cast<ShlOperator>(UserI);
         if (S->hasNoSignedWrap())
           AB |= APInt::getHighBitsSet(BitWidth, Max + 1);
@@ -229,13 +224,12 @@ void DemandedBits::determineLiveOperandBits(
         unsigned Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
         // Suppose AOut == 0b0000 1001
         // [min, max] = [1, 3]
-        // we create the range 0b0000 1110
-        // shift by 1 we get 0b0001 1100
-        // shift by 2 we get 0b0011 1000
-        // shift by 3 we get 0b0111 0000
+        // shift by 1 we get 0b0001 00100
+        // shift by 2 we get 0b0010 0100
+        // shift by 3 we get 0b0100 1000
         // we take the or for every shift to cover all the positions.
         //
-        GetShiftedRange(Min, Max, true);
+        GetShiftedRange(Min, Max, /*ShiftLeft=*/true);
         if (cast<LShrOperator>(UserI)->isExact())
           AB |= APInt::getLowBitsSet(BitWidth, Max);
       }
@@ -262,7 +256,7 @@ void DemandedBits::determineLiveOperandBits(
         ComputeKnownBits(BitWidth, UserI->getOperand(1), nullptr);
         unsigned Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
         unsigned Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
-        GetShiftedRange(Min, Max, true);
+        GetShiftedRange(Min, Max, /*ShiftLeft=*/true);
         if (Max) {
           // Suppose AOut = 0011 1100
           // [min, max] = [1, 3]
