@@ -402,6 +402,11 @@ private:
   // if the specified OpenMP version is less than 6.0, rewrite the affected
   // modifiers back into the pre-6.0 forms.
   void CanonicalizeMapModifiers(parser::OmpMapClause &map) {
+    unsigned version{context_.langOptions().OpenMPVersion};
+    if (version >= 60) {
+      return;
+    }
+
     // Omp{Always, Close, Present, xHold}Modifier -> OmpMapTypeModifier
     // OmpDeleteModifier -> OmpMapType
     using Modifier = parser::OmpMapClause::Modifier;

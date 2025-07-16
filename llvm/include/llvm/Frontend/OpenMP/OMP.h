@@ -64,6 +64,8 @@ static constexpr inline bool isPrivatizingClause(Clause C) {
   }
 }
 
+LLVM_ABI bool isMapEnteringConstruct(Directive D);
+
 static constexpr unsigned FallbackVersion = 52;
 LLVM_ABI ArrayRef<unsigned> getOpenMPVersions();
 

@@ -712,7 +712,15 @@ public:
   void Post(const parser::EorLabel &eorLabel) { CheckSourceLabel(eorLabel.v); }
 
   void Post(const parser::OmpMapClause &x) {
-    Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
+    unsigned version{context_.langOptions().OpenMPVersion};
+    llvm::omp::Directive id{GetContext().directive};
+    std::optional<Symbol::Flag> ompFlag;
+    // Expand "storage" into either "alloc" or "release", depending on the
+    // type of the construct.
+    Symbol::Flag ompFlagForStorage = llvm::omp::isMapEnteringConstruct(id)
+        ? Symbol::Flag::OmpMapAlloc
+        : Symbol::Flag::OmpMapRelease;
+
     auto &mods{OmpGetModifiers(x)};
     if (auto *mapType{OmpGetUniqueModifier<parser::OmpMapType>(mods)}) {
       switch (mapType->v) {
@@ -734,10 +742,29 @@ public:
       case parser::OmpMapType::Value::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
-      default:
+      case parser::OmpMapType::Value::Storage:
+        ompFlag = ompFlagForStorage;
         break;
       }
     }
+    if (!ompFlag) {
+      if (version >= 60) {
+        // [6.0:275:12-15]
+        // When a map-type is not specified for a clause on which it may be
+        // specified, the map-type defaults to storage if the delete-modifier
+        // is present on the clause or if the list item for which the map-type
+        // is not specified is an assumed-size array.
+        if (OmpGetUniqueModifier<parser::OmpDeleteModifier>(mods)) {
+          ompFlag = ompFlagForStorage;
+        }
+        // Otherwise, if delete-modifier is absent, leave ompFlag unset.
+      } else {
+        // [5.2:151:10]
+        // If a map-type is not specified, the map-type defaults to tofrom.
+        ompFlag = Symbol::Flag::OmpMapToFrom;
+      }
+    }
+
     const auto &ompObjList{std::get<parser::OmpObjectList>(x.t)};
     for (const auto &ompObj : ompObjList.v) {
       common::visit(
@@ -746,15 +773,14 @@ public:
                 if (const auto *name{
                         semantics::getDesignatorNameIfDataRef(designator)}) {
                   if (name->symbol) {
-                    name->symbol->set(ompFlag);
-                    AddToContextObjectWithDSA(*name->symbol, ompFlag);
-                  }
-                  if (name->symbol &&
-                      semantics::IsAssumedSizeArray(*name->symbol)) {
-                    context_.Say(designator.source,
-                        "Assumed-size whole arrays may not appear on the %s "
-                        "clause"_err_en_US,
-                        "MAP");
+                    name->symbol->set(ompFlag.value_or(ompFlagForStorage));
+                    AddToContextObjectWithDSA(*name->symbol, *ompFlag);
+                    if (semantics::IsAssumedSizeArray(*name->symbol)) {
+                      context_.Say(designator.source,
+                          "Assumed-size whole arrays may not appear on the %s "
+                          "clause"_err_en_US,
+                          "MAP");
+                    }
                   }
                 }
               },
@@ -762,7 +788,7 @@ public:
           },
           ompObj.u);
 
-      ResolveOmpObject(ompObj, ompFlag);
+      ResolveOmpObject(ompObj, ompFlag.value_or(ompFlagForStorage));
     }
   }
 
