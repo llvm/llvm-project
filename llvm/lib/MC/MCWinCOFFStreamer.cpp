@@ -278,7 +278,7 @@ void MCWinCOFFStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {
 
 void MCWinCOFFStreamer::emitCOFFSectionIndex(const MCSymbol *Symbol) {
   visitUsedSymbol(*Symbol);
-  MCDataFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getOrCreateDataFragment();
   const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Symbol, getContext());
   MCFixup Fixup = MCFixup::create(DF->getContents().size(), SRE, FK_SecRel_2);
   DF->addFixup(Fixup);
@@ -288,7 +288,7 @@ void MCWinCOFFStreamer::emitCOFFSectionIndex(const MCSymbol *Symbol) {
 void MCWinCOFFStreamer::emitCOFFSecRel32(const MCSymbol *Symbol,
                                          uint64_t Offset) {
   visitUsedSymbol(*Symbol);
-  MCDataFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getOrCreateDataFragment();
   // Create Symbol A for the relocation relative reference.
   const MCExpr *MCE = MCSymbolRefExpr::create(Symbol, getContext());
   // Add the constant offset, if given.
@@ -306,7 +306,7 @@ void MCWinCOFFStreamer::emitCOFFSecRel32(const MCSymbol *Symbol,
 void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
                                          int64_t Offset) {
   visitUsedSymbol(*Symbol);
-  MCDataFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getOrCreateDataFragment();
   // Create Symbol A for the relocation relative reference.
   const MCExpr *MCE = MCSymbolRefExpr::create(
       Symbol, MCSymbolRefExpr::VK_COFF_IMGREL32, getContext());
@@ -324,7 +324,7 @@ void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
 
 void MCWinCOFFStreamer::emitCOFFSecNumber(MCSymbol const *Symbol) {
   visitUsedSymbol(*Symbol);
-  MCDataFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getOrCreateDataFragment();
   // Create Symbol for section number.
   const MCExpr *MCE = MCCOFFSectionNumberTargetExpr::create(
       *Symbol, this->getWriter(), getContext());
@@ -338,7 +338,7 @@ void MCWinCOFFStreamer::emitCOFFSecNumber(MCSymbol const *Symbol) {
 
 void MCWinCOFFStreamer::emitCOFFSecOffset(MCSymbol const *Symbol) {
   visitUsedSymbol(*Symbol);
-  MCDataFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getOrCreateDataFragment();
   // Create Symbol for section offset.
   const MCExpr *MCE =
       MCCOFFSectionOffsetTargetExpr::create(*Symbol, getContext());

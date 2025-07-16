@@ -200,10 +200,10 @@ MCInst *MCContext::createMCInst() {
   return new (MCInstAllocator.Allocate()) MCInst;
 }
 
-// Allocate the initial MCDataFragment for the begin symbol.
-MCDataFragment *MCContext::allocInitialFragment(MCSection &Sec) {
+// Allocate the initial MCFragment for the begin symbol.
+MCFragment *MCContext::allocInitialFragment(MCSection &Sec) {
   assert(!Sec.curFragList()->Head);
-  auto *F = allocFragment<MCDataFragment>();
+  auto *F = allocFragment<MCFragment>();
   F->setParent(&Sec);
   Sec.curFragList()->Head = F;
   Sec.curFragList()->Tail = F;

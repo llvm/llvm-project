@@ -1069,7 +1069,7 @@ uint64_t WinCOFFWriter::writeObject() {
   if (Mode != DwoOnly && OWriter.getEmitAddrsigSection()) {
     auto *Sec = getContext().getCOFFSection(".llvm_addrsig",
                                             COFF::IMAGE_SCN_LNK_REMOVE);
-    auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
+    auto *Frag = Sec->curFragList()->Head;
     raw_svector_ostream OS(Frag->getContentsForAppending());
     for (const MCSymbol *S : OWriter.AddrsigSyms) {
       if (!S->isRegistered())
@@ -1092,7 +1092,7 @@ uint64_t WinCOFFWriter::writeObject() {
   if (Mode != DwoOnly && !OWriter.getCGProfile().empty()) {
     auto *Sec = getContext().getCOFFSection(".llvm.call-graph-profile",
                                             COFF::IMAGE_SCN_LNK_REMOVE);
-    auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
+    auto *Frag = Sec->curFragList()->Head;
     raw_svector_ostream OS(Frag->getContentsForAppending());
     for (const auto &CGPE : OWriter.getCGProfile()) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
