@@ -348,22 +348,6 @@ public:
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), align);
   }
 
-  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
-                                  mlir::Value imag) {
-    auto resultComplexTy = cir::ComplexType::get(real.getType());
-    return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
-  }
-
-  mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
-    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
-    return create<cir::ComplexRealOp>(loc, operandTy.getElementType(), operand);
-  }
-
-  mlir::Value createComplexImag(mlir::Location loc, mlir::Value operand) {
-    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
-    return create<cir::ComplexImagOp>(loc, operandTy.getElementType(), operand);
-  }
-
   /// Create a cir.complex.real_ptr operation that derives a pointer to the real
   /// part of the complex value pointed to by the specified pointer value.
   mlir::Value createComplexRealPtr(mlir::Location loc, mlir::Value value) {
