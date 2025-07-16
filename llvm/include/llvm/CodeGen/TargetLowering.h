@@ -3251,7 +3251,7 @@ public:
   ///
   /// \p Load is the accompanying load instruction.  Can be either a plain load
   /// instruction or a vp.load intrinsic.
-  /// \p DeinterleaveValues contains the deinterleaved values.
+  /// \p DI represents the deinterleaveN intrinsic.
   virtual bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
                                                 IntrinsicInst *DI) const {
     return false;
