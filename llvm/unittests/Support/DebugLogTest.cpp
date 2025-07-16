@@ -28,7 +28,8 @@ TEST(DebugLogTest, Basic) {
   EXPECT_THAT(os1.str(), AllOf(HasSubstr("A\n"), HasSubstr("B\n")));
 
   setCurrentDebugType("A");
-  volatile int x = 0;
+  // Just check that the macro doesn't result in dangling else.
+  int x = 0;
   if (x == 0)
     DEBUGLOG_WITH_STREAM_AND_TYPE(os2, "A") << "A";
   else

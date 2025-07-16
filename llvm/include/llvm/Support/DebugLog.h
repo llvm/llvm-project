@@ -22,7 +22,7 @@ namespace llvm {
 // Output with given inputs and trailing newline. E.g.,
 //   LLVM_DLOG() << "Bitset contains: " << Bitset;
 // is equivalent to
-//   LLVM_DEBUG(dbgs() << DEBUG_TYPE << " " << __FILE__ << ":" << __LINE__
+//   LLVM_DEBUG(dbgs() << DEBUG_TYPE << " [" << __FILE__ << ":" << __LINE__
 //              << "] " << "Bitset contains: " << Bitset << "\n");
 #define LLVM_DLOG(...)                                                         \
   DEBUGLOG_WITH_STREAM_AND_TYPE(llvm::dbgs(), DEBUG_TYPE, __VA_ARGS__)
@@ -39,7 +39,7 @@ public:
                  raw_ostream &os)
       : os(os) {
     if (debug_type)
-      os << debug_type << " ";
+      os << debug_type << " [";
     os << file << ":" << line << "] ";
   }
   ~LogWithNewline() { os << '\n'; }
