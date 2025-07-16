@@ -160,7 +160,7 @@ static Float128 exp10_f128(double x, double kd, int idx1, int idx2) {
 
 // Compute 10^x with double-double precision.
 static DoubleDouble exp10_double_double(double x, double kd,
-                                                  const DoubleDouble &exp_mid) {
+                                        const DoubleDouble &exp_mid) {
   // Recalculate dx:
   //   dx = x - k * 2^-12 * log10(2)
   double t1 = fputil::multiply_add(kd, MLOG10_2_EXP2_M12_HI, x); // exact
