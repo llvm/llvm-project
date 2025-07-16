@@ -616,7 +616,8 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> break_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-break",
-          "Set a breakpoint using one of several shorthand formats.",
+          "List all breakpoints, or set a breakpoint using one of several "
+          "shorthand formats.",
           "\n"
           "_regexp-break <filename>:<linenum>:<colnum>\n"
           "              main.c:12:21          // Break at line 12 and column "
