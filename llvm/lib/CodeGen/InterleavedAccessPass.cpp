@@ -632,13 +632,6 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 
     LLVM_DEBUG(dbgs() << "IA: Found a vp.load with deinterleave intrinsic "
                       << *DI << " and factor = " << Factor << "\n");
-
-    // Since lowerInterleaveLoad expects Shuffles and LoadInst, use special
-    // TLI function to emit target-specific interleaved instruction.
-    VectorDeinterleaving VD(DI);
-    if (!TLI->lowerInterleavedVPLoad(VPLoad, Mask, VD))
-      return false;
-
   } else {
     auto *LI = cast<LoadInst>(LoadedVal);
     if (!LI->isSimple())
@@ -646,11 +639,12 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 
     LLVM_DEBUG(dbgs() << "IA: Found a load with deinterleave intrinsic " << *DI
                       << " and factor = " << Factor << "\n");
-
-    // Try and match this with target specific intrinsics.
-    if (!TLI->lowerDeinterleaveIntrinsicToLoad(LI, DI))
-      return false;
   }
+
+  // Try and match this with target specific intrinsics.
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(cast<Instruction>(LoadedVal), Mask,
+                                             DI))
+    return false;
 
   DeadInsts.insert(DI);
   // We now have a target-specific load, so delete the old one.
