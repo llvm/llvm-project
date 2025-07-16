@@ -38,6 +38,7 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -272,7 +273,11 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
       CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   /// Create the actual file system.
-  Clang->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DiagsBuffer);
+  auto VFS = [] {
+    auto BypassSandbox = llvm::sys::sandbox_scoped_disable();
+    return llvm::vfs::getRealFileSystem();
+  }();
+  Clang->createVirtualFileSystem(std::move(VFS), DiagsBuffer);
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();

@@ -31,6 +31,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SMLoc.h"
@@ -399,10 +400,12 @@ void RealFileSystem::printImpl(raw_ostream &OS, PrintType Type,
 IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
   static IntrusiveRefCntPtr<FileSystem> FS =
       makeIntrusiveRefCnt<RealFileSystem>(true);
+  sys::sandbox_violation_if_enabled();
   return FS;
 }
 
 std::unique_ptr<FileSystem> vfs::createPhysicalFileSystem() {
+  sys::sandbox_violation_if_enabled();
   return std::make_unique<RealFileSystem>(false);
 }
 
