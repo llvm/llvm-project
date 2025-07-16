@@ -201,7 +201,8 @@ run the tests on QEMU user automatically.
 You will see a number of failures compared to a normal test run. Reasons for
 this can be, but are not limited to:
 
-* QEMU's built-in debug stub acting differently to ``lldb-server``. We try to
+* QEMU's built-in debug stub acting differently and supporting different
+  features to different extents, when compared to ``lldb-server``. We try to
   be compatible but LLDB is not regularly tested with QEMU user.
 
 * Tests that spawn new processes to attach to. QEMU user only emulates a single
