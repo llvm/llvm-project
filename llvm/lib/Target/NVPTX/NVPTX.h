@@ -174,7 +174,8 @@ enum Scope : ScopeUnderlyingType {
   Cluster = 2,
   Device = 3,
   System = 4,
-  LASTSCOPE = System
+  DefaultDevice = 5, //  For SM < 70: denotes PTX op implicit/default .gpu scope
+  LASTSCOPE = DefaultDevice
 };
 
 using AddressSpaceUnderlyingType = unsigned int;
