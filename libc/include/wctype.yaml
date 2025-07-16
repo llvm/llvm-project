@@ -1,10 +1,6 @@
 header: wctype.h
-header_template: wctype.h.def
-macros: []
 types:
   - type_name: wint_t
-enums: []
-objects: []
 functions:
   - name: iswalpha
     standards:
