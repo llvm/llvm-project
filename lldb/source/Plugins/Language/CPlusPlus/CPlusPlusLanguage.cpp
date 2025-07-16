@@ -1404,7 +1404,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   stl_deref_flags.SetFrontEndWantsDereference();
 
   cpp_category_sp->AddTypeSynthetic(
-      "^std::(__debug::)?vector<.+>(( )?&)?$", eFormatterMatchRegex,
+      "^std::__debug::vector<.+>(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider")));
@@ -1465,10 +1465,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "libstdc++ std::bitset summary provider",
       "^std::(__debug::)?bitset<.+>(( )?&)?$", stl_summary_flags, true);
 
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::vector summary provider",
-      "^std::(__debug::)?vector<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libstdc++ std::__debug::vector summary provider",
+                "^std::__debug::vector<.+>(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
@@ -1615,6 +1615,20 @@ GenericTupleSyntheticFrontEndCreator(CXXSyntheticChildren *children,
   return LibStdcppTupleSyntheticFrontEndCreator(children, valobj_sp);
 }
 
+static SyntheticChildrenFrontEnd *
+GenericVectorSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                      lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  // checks for vector<T> and vector<bool>
+  if (auto *msvc = MsvcStlVectorSyntheticFrontEndCreator(valobj_sp))
+    return msvc;
+
+  return new ScriptedSyntheticChildren::FrontEnd(
+      "lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider", *valobj_sp);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -1686,6 +1700,12 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "MSVC STL/libstdc++ std::tuple summary provider",
                 "^std::tuple<.*>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "MSVC/libstdc++ std::vector summary provider",
+                "^std::vector<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericVectorSyntheticFrontEndCreator,
+                  "MSVC/libstdc++ std::vector synthetic provider",
+                  "^std::vector<.+>(( )?&)?$", stl_synth_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
