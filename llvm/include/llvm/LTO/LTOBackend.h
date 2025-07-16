@@ -35,8 +35,8 @@ class Target;
 namespace lto {
 
 /// Runs middle-end LTO optimizations on \p Mod.
-LLVM_ABI bool opt(const Config &Conf, TargetMachine *TM, unsigned Task,
-                  Module &Mod, bool IsThinLTO,
+LLVM_ABI bool opt(const Config &Conf, IntrusiveRefCntPtr<vfs::FileSystem> FS,
+                  TargetMachine *TM, unsigned Task, Module &Mod, bool IsThinLTO,
                   ModuleSummaryIndex *ExportSummary,
                   const ModuleSummaryIndex *ImportSummary,
                   const std::vector<uint8_t> &CmdArgs);
