@@ -572,13 +572,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 
   const unsigned IOCTL_NOT_PRESENT = 0;
 
-  // On AIX, some variables are unsigned long types.
-#  if SANITIZER_AIX
-  using ioctl_alttype = uptr;
-#  else
-  using ioctl_alttype = unsigned;
-#  endif
-
   ioctl_alttype IOCTL_FIONBIO = FIONBIO;
 #  if !SANITIZER_HAIKU
   ioctl_alttype IOCTL_FIOASYNC = FIOASYNC;
