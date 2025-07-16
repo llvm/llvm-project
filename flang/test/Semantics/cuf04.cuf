@@ -4,9 +4,9 @@ module m
  contains
   attributes(device) subroutine devsubr(n)
     integer, intent(in) :: n
-    !WARNING: 'x1' should not have the SAVE attribute or initialization in a device subprogram
+    !WARNING: 'x1' should not have the SAVE attribute or initialization in a device subprogram [-Wcuda-usage]
     real, save :: x1
-    !WARNING: 'x2' should not have the SAVE attribute or initialization in a device subprogram
+    !WARNING: 'x2' should not have the SAVE attribute or initialization in a device subprogram [-Wcuda-usage]
     real :: x2 = 1.
     !ERROR: Device subprogram 'devsubr' cannot call itself
     if (n > 0) call devsubr(n-1)

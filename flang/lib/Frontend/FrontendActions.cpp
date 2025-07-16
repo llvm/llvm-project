@@ -74,10 +74,6 @@
 #include <memory>
 #include <system_error>
 
-namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
-
 using namespace Fortran::frontend;
 
 constexpr llvm::StringLiteral timingIdParse = "Parse";
@@ -753,6 +749,8 @@ void CodeGenAction::generateLLVMIR() {
 
   if (ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
     config.NSWOnLoopVarInc = false;
+
+  config.ComplexRange = opts.getComplexRange();
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());

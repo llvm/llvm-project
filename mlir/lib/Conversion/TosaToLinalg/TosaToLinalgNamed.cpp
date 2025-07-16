@@ -14,21 +14,13 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-
-#include <numeric>
 #include <type_traits>
 
 using namespace mlir;
@@ -815,6 +807,8 @@ public:
         ValueRange{paddedInput, fakeWindowDims}, filledEmptyTensor, strideAttr,
         dilationAttr);
 
+    rewriter.setInsertionPointAfter(op);
+    StringRef nanMode = op.getNanMode();
     rewriter.replaceOp(op, resultOp);
 
     // NaN propagation has no meaning for non floating point types.
@@ -828,11 +822,10 @@ public:
     // we've already produced a named op we will just take its body and modify
     // it to include the appropriate checks. If the current value is NaN the
     // old value of pool will be taken otherwise we use the result.
-    if (const auto nanMode = op.getNanMode(); nanMode == "IGNORE") {
+    if (nanMode == "IGNORE") {
       auto genericOp = rewriter.create<linalg::GenericOp>(
-          op->getLoc(), resultOp.getType(0), resultOp.getInputs(),
-          resultOp.getOutputs(), resultOp.getIndexingMapsArray(),
-          resultOp.getIteratorTypesArray(),
+          loc, resultOp.getType(0), resultOp.getInputs(), resultOp.getOutputs(),
+          resultOp.getIndexingMapsArray(), resultOp.getIteratorTypesArray(),
           [&](OpBuilder &opBuilder, Location loc, ValueRange blockArgs) {
             IRMapping map;
             auto oldBlock = resultOp.getRegion().begin();
@@ -841,10 +834,10 @@ public:
             map.map(oldArgs, blockArgs);
             auto *newOp = opBuilder.clone(oldMaxOp, map);
             Value isNaN = opBuilder.create<arith::CmpFOp>(
-                op->getLoc(), arith::CmpFPredicate::UNO, blockArgs.front(),
+                loc, arith::CmpFPredicate::UNO, blockArgs.front(),
                 blockArgs.front());
             auto selectOp = opBuilder.create<arith::SelectOp>(
-                op->getLoc(), isNaN, blockArgs.back(), newOp->getResult(0));
+                loc, isNaN, blockArgs.back(), newOp->getResult(0));
             opBuilder.create<linalg::YieldOp>(loc, selectOp.getResult());
           });
       rewriter.replaceOp(resultOp, genericOp);
@@ -1073,11 +1066,11 @@ public:
             int64_t outBitwidth = resultETy.getIntOrFloatBitWidth();
 
             auto min = rewriter.create<arith::ConstantIntOp>(
-                loc, APInt::getSignedMinValue(outBitwidth).getSExtValue(),
-                accETy);
+                loc, accETy,
+                APInt::getSignedMinValue(outBitwidth).getSExtValue());
             auto max = rewriter.create<arith::ConstantIntOp>(
-                loc, APInt::getSignedMaxValue(outBitwidth).getSExtValue(),
-                accETy);
+                loc, accETy,
+                APInt::getSignedMaxValue(outBitwidth).getSExtValue());
             auto clamp = clampIntHelper(loc, scaled, min, max, rewriter,
                                         /*isUnsigned=*/false);
 

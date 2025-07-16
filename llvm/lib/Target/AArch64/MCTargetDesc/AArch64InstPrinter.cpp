@@ -1784,6 +1784,10 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,
                                            unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
+  // Do not print the numeric target address when symbolizing.
+  if (SymbolizeOperands)
+    return;
+
   const MCOperand &Op = MI->getOperand(OpNum);
 
   // If the label has already been resolved to an immediate offset (say, when
@@ -1813,6 +1817,12 @@ void AArch64InstPrinter::printAdrAdrpLabel(const MCInst *MI, uint64_t Address,
                                            unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
+  // Do not print the numeric target address when symbolizing.
+  // However, do print for ADRP, as this is typically used together with an ADD
+  // or an immediate-offset ldr/str and the label is likely at the wrong point.
+  if (SymbolizeOperands && MI->getOpcode() != AArch64::ADRP)
+    return;
+
   const MCOperand &Op = MI->getOperand(OpNum);
 
   // If the label has already been resolved to an immediate offset (say, when

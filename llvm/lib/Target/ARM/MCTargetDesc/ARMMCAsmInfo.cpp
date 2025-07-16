@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {ARM::S_GOT_PREL, "GOT_PREL"},
     {ARM::S_ARM_NONE, "none"},
     {ARM::S_PREL31, "prel31"},
@@ -34,7 +34,7 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
     {ARM::S_GOTTPOFF, "GOTTPOFF"},
     {ARM::S_GOTTPOFF_FDPIC, "gottpoff_fdpic"},
     {ARM::S_PLT, "PLT"},
-    {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
+    {ARM::S_COFF_SECREL, "SECREL32"},
     {ARM::S_TLSCALL, "tlscall"},
     {ARM::S_TLSDESC, "tlsdesc"},
     {ARM::S_TLSGD, "TLSGD"},
@@ -53,6 +53,7 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
 
   Data64bitsDirective = nullptr;
   CommentString = "@";
+  AllowDollarAtStartOfIdentifier = false;
   UseDataRegionDirectives = true;
 
   SupportsDebugInformation = true;
@@ -65,7 +66,7 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
                        ? ExceptionHandling::SjLj
                        : ExceptionHandling::DwarfCFI;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMELFMCAsmInfo::anchor() { }
@@ -80,6 +81,7 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
 
   Data64bitsDirective = nullptr;
   CommentString = "@";
+  AllowDollarAtStartOfIdentifier = false;
 
   SupportsDebugInformation = true;
 
@@ -100,7 +102,7 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
   UseAtForSpecifier = false;
   UseParensForSpecifier = true;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
@@ -127,7 +129,7 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }
@@ -137,6 +139,7 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   HasSingleParameterDotFile = true;
 
   CommentString = "@";
+  AllowDollarAtStartOfIdentifier = false;
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
@@ -151,7 +154,7 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARM::printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,

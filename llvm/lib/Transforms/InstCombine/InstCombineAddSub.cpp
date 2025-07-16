@@ -1194,7 +1194,9 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
   Value *DivOpV;
   APInt DivOpC;
   if (MatchRem(Rem, X, C0, IsSigned) &&
-      MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV && C0 == DivOpC) {
+      MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV && C0 == DivOpC &&
+      // Avoid unprofitable replacement of and with mul.
+      !(C1.isOne() && !IsSigned && DivOpC.isPowerOf2() && DivOpC != 2)) {
     APInt NewC = C1 - C2 * C0;
     if (!NewC.isZero() && !Rem->hasOneUse())
       return nullptr;
@@ -1896,7 +1898,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
                                           {Sub, Builder.getFalse()});
     Value *Ret = Builder.CreateSub(
         ConstantInt::get(A->getType(), A->getType()->getScalarSizeInBits()),
-        Ctlz, "", /*HasNUW*/ true, /*HasNSW*/ true);
+        Ctlz, "", /*HasNUW=*/true, /*HasNSW=*/true);
     return replaceInstUsesWith(I, Builder.CreateZExtOrTrunc(Ret, I.getType()));
   }
 
@@ -2164,10 +2166,14 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
 
   // If this is a single inbounds GEP and the original sub was nuw,
   // then the final multiplication is also nuw.
-  if (auto *I = dyn_cast<Instruction>(Result))
+  if (auto *I = dyn_cast<OverflowingBinaryOperator>(Result))
     if (IsNUW && match(Offset2, m_Zero()) && Base.LHSNW.isInBounds() &&
-        I->getOpcode() == Instruction::Mul)
-      I->setHasNoUnsignedWrap();
+        (I->use_empty() || I->hasOneUse()) && I->hasNoSignedWrap() &&
+        !I->hasNoUnsignedWrap() &&
+        ((I->getOpcode() == Instruction::Mul &&
+          match(I->getOperand(1), m_NonNegative())) ||
+         I->getOpcode() == Instruction::Shl))
+      cast<Instruction>(I)->setHasNoUnsignedWrap();
 
   // If we have a 2nd GEP of the same base pointer, subtract the offsets.
   // If both GEPs are inbounds, then the subtract does not have signed overflow.
@@ -2363,8 +2369,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     OverflowingBinaryOperator *LHSSub = cast<OverflowingBinaryOperator>(Op0);
     bool HasNUW = I.hasNoUnsignedWrap() && LHSSub->hasNoUnsignedWrap();
     bool HasNSW = HasNUW && I.hasNoSignedWrap() && LHSSub->hasNoSignedWrap();
-    Value *Add = Builder.CreateAdd(Y, Op1, "", /* HasNUW */ HasNUW,
-                                   /* HasNSW */ HasNSW);
+    Value *Add = Builder.CreateAdd(Y, Op1, "", /*HasNUW=*/HasNUW,
+                                   /*HasNSW=*/HasNSW);
     BinaryOperator *Sub = BinaryOperator::CreateSub(X, Add);
     Sub->setHasNoUnsignedWrap(HasNUW);
     Sub->setHasNoSignedWrap(HasNSW);
@@ -2835,6 +2841,51 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
 
+  // (sub (sext (add nsw (X, Y)), sext (X))) --> (sext (Y))
+  if (match(Op1, m_SExtLike(m_Value(X))) &&
+      match(Op0, m_SExtLike(m_c_NSWAdd(m_Specific(X), m_Value(Y))))) {
+    Value *SExtY = Builder.CreateSExt(Y, I.getType());
+    return replaceInstUsesWith(I, SExtY);
+  }
+
+  // (sub[ nsw] (sext (add nsw (X, Y)), sext (add nsw (X, Z)))) -->
+  // --> (sub[ nsw] (sext (Y), sext (Z)))
+  {
+    Value *Z, *Add0, *Add1;
+    if (match(Op0, m_SExtLike(m_Value(Add0))) &&
+        match(Op1, m_SExtLike(m_Value(Add1))) &&
+        ((match(Add0, m_NSWAdd(m_Value(X), m_Value(Y))) &&
+          match(Add1, m_c_NSWAdd(m_Specific(X), m_Value(Z)))) ||
+         (match(Add0, m_NSWAdd(m_Value(Y), m_Value(X))) &&
+          match(Add1, m_c_NSWAdd(m_Specific(X), m_Value(Z)))))) {
+      unsigned NumOfNewInstrs = 0;
+      // Non-constant Y, Z require new SExt.
+      NumOfNewInstrs += !isa<Constant>(Y) ? 1 : 0;
+      NumOfNewInstrs += !isa<Constant>(Z) ? 1 : 0;
+      // Check if we can trade some of the old instructions for the new ones.
+      unsigned NumOfDeadInstrs = 0;
+      if (Op0->hasOneUse()) {
+        // If Op0 (sext) has multiple uses, then we keep it
+        // and the add that it uses, otherwise, we can remove
+        // the sext and probably the add (depending on the number of its uses).
+        ++NumOfDeadInstrs;
+        NumOfDeadInstrs += Add0->hasOneUse() ? 1 : 0;
+      }
+      if (Op1->hasOneUse()) {
+        ++NumOfDeadInstrs;
+        NumOfDeadInstrs += Add1->hasOneUse() ? 1 : 0;
+      }
+      if (NumOfDeadInstrs >= NumOfNewInstrs) {
+        Value *SExtY = Builder.CreateSExt(Y, I.getType());
+        Value *SExtZ = Builder.CreateSExt(Z, I.getType());
+        Value *Sub = Builder.CreateSub(SExtY, SExtZ, "",
+                                       /*HasNUW=*/false,
+                                       /*HasNSW=*/I.hasNoSignedWrap());
+        return replaceInstUsesWith(I, Sub);
+      }
+    }
+  }
+
   return TryToNarrowDeduceFlags();
 }
 
@@ -2997,6 +3048,17 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     Value *NegY = Builder.CreateFNegFMF(Y, FMF);
     Value *NewCopySign = Builder.CreateCopySign(X, NegY, FMF);
     return replaceInstUsesWith(I, NewCopySign);
+  }
+
+  // fneg (shuffle x, Mask) --> shuffle (fneg x), Mask
+  ArrayRef<int> Mask;
+  if (match(OneUse, m_Shuffle(m_Value(X), m_Poison(), m_Mask(Mask))))
+    return new ShuffleVectorInst(Builder.CreateFNegFMF(X, &I), Mask);
+
+  // fneg (reverse x) --> reverse (fneg x)
+  if (match(OneUse, m_VecReverse(m_Value(X)))) {
+    Value *Reverse = Builder.CreateVectorReverse(Builder.CreateFNegFMF(X, &I));
+    return replaceInstUsesWith(I, Reverse);
   }
 
   return nullptr;

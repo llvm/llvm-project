@@ -45,6 +45,25 @@ TYPED_TEST(STLForwardCompatRemoveCVRefTest, RemoveCVRefT) {
                             llvm::remove_cvref_t<From>>::value));
 }
 
+template <typename T> class TypeIdentityTest : public ::testing::Test {
+public:
+  using TypeIdentity = llvm::type_identity<T>;
+};
+
+struct A {
+  struct B {};
+};
+using TypeIdentityTestTypes =
+    ::testing::Types<int, volatile int, A, const A::B>;
+
+TYPED_TEST_SUITE(TypeIdentityTest, TypeIdentityTestTypes, /*NameGenerator*/);
+
+TYPED_TEST(TypeIdentityTest, Identity) {
+  // TestFixture is the instantiated TypeIdentityTest.
+  EXPECT_TRUE(
+      (std::is_same_v<TypeParam, typename TestFixture::TypeIdentity::type>));
+}
+
 TEST(TransformTest, TransformStd) {
   std::optional<int> A;
 

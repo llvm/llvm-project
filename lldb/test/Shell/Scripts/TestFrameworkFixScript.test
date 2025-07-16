@@ -9,3 +9,4 @@ RUN: cat %t/Outputs/SBAddress.h | FileCheck %s
 # e.g. #include "lldb/API/SBDefines.h" -> #include <LLDB/SBDefines.h>
 CHECK: #include <LLDB/SBDefines.h>
 CHECK: #include <LLDB/SBModule.h>
+CHECK: #include <LLDB/lldb-types.h>

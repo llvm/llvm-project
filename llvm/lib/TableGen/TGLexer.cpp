@@ -102,7 +102,7 @@ SMRange TGLexer::getLocRange() const {
 }
 
 /// ReturnError - Set the error to the specified string at the specified
-/// location.  This is defined to always return tgtok::Error.
+/// location. This is defined to always return tgtok::Error.
 tgtok::TokKind TGLexer::ReturnError(SMLoc Loc, const Twine &Msg) {
   PrintError(Loc, Msg);
   return tgtok::Error;
@@ -116,7 +116,7 @@ bool TGLexer::processEOF() {
   SMLoc ParentIncludeLoc = SrcMgr.getParentIncludeLoc(CurBuffer);
   if (ParentIncludeLoc != SMLoc()) {
     // If prepExitInclude() detects a problem with the preprocessing
-    // control stack, it will return false.  Pretend that we reached
+    // control stack, it will return false. Pretend that we reached
     // the final EOF and stop lexing more tokens by returning false
     // to LexToken().
     if (!prepExitInclude(false))
@@ -147,7 +147,7 @@ int TGLexer::getNextChar() {
 
   case 0: {
     // A NUL character in the stream is either the end of the current buffer or
-    // a spurious NUL in the file.  Disambiguate that here.
+    // a spurious NUL in the file. Disambiguate that here.
     if (CurPtr - 1 == CurBuf.end()) {
       --CurPtr; // Arrange for another call to return EOF again.
       return EOF;
@@ -160,7 +160,7 @@ int TGLexer::getNextChar() {
   case '\n':
   case '\r':
     // Handle the newline character by ignoring it and incrementing the line
-    // count.  However, be careful about 'dos style' files with \n\r in them.
+    // count. However, be careful about 'dos style' files with \n\r in them.
     // Only treat a \n\r or \r\n as a single line.
     if ((*CurPtr == '\n' || (*CurPtr == '\r')) &&
         *CurPtr != CurChar)
@@ -259,7 +259,7 @@ tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
     int NextChar = 0;
     if (isDigit(CurChar)) {
       // Allow identifiers to start with a number if it is followed by
-      // an identifier.  This can happen with paste operations like
+      // an identifier. This can happen with paste operations like
       // foo#8i.
       int i = 0;
       do {
@@ -422,7 +422,7 @@ tgtok::TokKind TGLexer::LexIdentifier() {
   return Kind;
 }
 
-/// LexInclude - We just read the "include" token.  Get the string token that
+/// LexInclude - We just read the "include" token. Get the string token that
 /// comes next and enter the include.
 bool TGLexer::LexInclude() {
   // The token after the include must be a string.
@@ -461,7 +461,7 @@ void TGLexer::SkipBCPLComment() {
   CurPtr = (EOLPos == StringRef::npos) ? CurBuf.end() : CurBuf.data() + EOLPos;
 }
 
-/// SkipCComment - This skips C-style /**/ comments.  The only difference from C
+/// SkipCComment - This skips C-style /**/ comments. The only difference from C
 /// is that we allow nesting.
 bool TGLexer::SkipCComment() {
   ++CurPtr;  // skip the star.
@@ -554,8 +554,8 @@ tgtok::TokKind TGLexer::LexNumber() {
   return Base == 2 ? tgtok::BinaryIntVal : tgtok::IntVal;
 }
 
-/// LexBracket - We just read '['.  If this is a code block, return it,
-/// otherwise return the bracket.  Match: '[' and '[{ ( [^}]+ | }[^]] )* }]'
+/// LexBracket - We just read '['. If this is a code block, return it,
+/// otherwise return the bracket. Match: '[' and '[{ ( [^}]+ | }[^]] )* }]'
 tgtok::TokKind TGLexer::LexBracket() {
   if (CurPtr[0] != '{')
     return tgtok::l_square;
@@ -687,7 +687,7 @@ tgtok::TokKind TGLexer::prepIsDirective() const {
         NextChar == '\n' ||
         // It looks like TableGen does not support '\r' as the actual
         // carriage return, e.g. getNextChar() treats a single '\r'
-        // as '\n'.  So we do the same here.
+        // as '\n'. So we do the same here.
         NextChar == '\r')
       return Kind;
 
@@ -700,7 +700,7 @@ tgtok::TokKind TGLexer::prepIsDirective() const {
     //     #define/**/ AND #define//
     //
     // These cases will be reported as incorrect after calling
-    // prepLexMacroName().  We could have supported C-style comments
+    // prepLexMacroName(). We could have supported C-style comments
     // after #ifdef/#define, but this would complicate the code
     // for little benefit.
     if (NextChar == '/') {
@@ -733,7 +733,7 @@ void TGLexer::prepEatPreprocessorDirective(tgtok::TokKind Kind) {
 
 tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
                                         bool ReturnNextLiveToken) {
-  // We must be looking at a preprocessing directive.  Eat it!
+  // We must be looking at a preprocessing directive. Eat it!
   prepEatPreprocessorDirective(Kind);
 
   if (Kind == tgtok::Ifdef || Kind == tgtok::Ifndef) {
@@ -879,7 +879,7 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
     tgtok::TokKind Kind = prepIsDirective();
 
     // If we did not find a preprocessing directive or it is #define,
-    // then just skip to the next line.  We do not have to do anything
+    // then just skip to the next line. We do not have to do anything
     // for #define in the line-skipping mode.
     if (Kind == tgtok::Error || Kind == tgtok::Define)
       continue;
@@ -909,7 +909,7 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
   } while (CurPtr != CurBuf.end());
 
   // We have reached the end of the file, but never left the lines-skipping
-  // mode.  This means there is no matching #endif.
+  // mode. This means there is no matching #endif.
   prepReportPreprocessorStackError();
   return false;
 }
@@ -939,8 +939,8 @@ bool TGLexer::prepSkipLineBegin() {
         // Skip C-style comment.
         // Note that we do not care about skipping the C++-style comments.
         // If the line contains "//", it may not contain any processable
-        // preprocessing directive.  Just return CurPtr pointing to
-        // the first '/' in this case.  We also do not care about
+        // preprocessing directive. Just return CurPtr pointing to
+        // the first '/' in this case. We also do not care about
         // incorrect symbols after the first '/' - we are in lines-skipping
         // mode, so incorrect code is allowed to some extent.
 
@@ -968,7 +968,7 @@ bool TGLexer::prepSkipLineBegin() {
     ++CurPtr;
   }
 
-  // We have reached the end of the file.  Return to the lines skipping
+  // We have reached the end of the file. Return to the lines skipping
   // code, and allow it to handle the EOF as needed.
   return true;
 }
@@ -994,7 +994,7 @@ bool TGLexer::prepSkipDirectiveEnd() {
         SkipBCPLComment();
       } else if (NextChar == '*') {
         // When we are skipping C-style comment at the end of a preprocessing
-        // directive, we can skip several lines.  If any meaningful TD token
+        // directive, we can skip several lines. If any meaningful TD token
         // follows the end of the C-style comment on the same line, it will
         // be considered as an invalid usage of TD token.
         // For example, we want to forbid usages like this one:
@@ -1003,7 +1003,7 @@ bool TGLexer::prepSkipDirectiveEnd() {
         //     #define MACRO /* This macro is used
         //                      to ... */ class Class {}
         // One can argue that this should be allowed, but it does not seem
-        // to be worth of the complication.  Moreover, this matches
+        // to be worth of the complication. Moreover, this matches
         // the C preprocessor behavior.
 
         // Set TokStart to the beginning of the comment to enable proper

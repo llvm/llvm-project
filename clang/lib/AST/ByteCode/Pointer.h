@@ -761,6 +761,9 @@ public:
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
 
+  /// Compute an integer that can be used to compare this pointer to
+  /// another one. This is usually NOT the same as the pointer offset
+  /// regarding the AST record layout.
   size_t computeOffsetForComparison() const;
 
 private:
@@ -806,13 +809,13 @@ private:
   /// Next link in the pointer chain.
   Pointer *Next = nullptr;
 
+  Storage StorageKind = Storage::Int;
   union {
     BlockPointer BS;
     IntPointer Int;
     FunctionPointer Fn;
     TypeidPointer Typeid;
   } PointeeStorage;
-  Storage StorageKind = Storage::Int;
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {

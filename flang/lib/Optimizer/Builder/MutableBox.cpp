@@ -362,7 +362,7 @@ mlir::Value fir::factory::createUnallocatedBox(
     auto zero = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
     llvm::SmallVector<mlir::Value> extents(seqTy.getDimension(), zero);
     shape = builder.createShape(
-        loc, fir::ArrayBoxValue{nullAddr, extents, /*lbounds=*/std::nullopt});
+        loc, fir::ArrayBoxValue{nullAddr, extents, /*lbounds=*/{}});
   }
   // Provide dummy length parameters if they are dynamic. If a length parameter
   // is deferred. It is set to zero here and will be set on allocation.

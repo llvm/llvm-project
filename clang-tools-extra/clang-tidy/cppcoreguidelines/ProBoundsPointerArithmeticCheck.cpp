@@ -15,16 +15,13 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::cppcoreguidelines {
 
 void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   const auto AllPointerTypes =
-      anyOf(hasType(pointerType()),
+      anyOf(hasType(hasUnqualifiedDesugaredType(pointerType())),
             hasType(autoType(
                 hasDeducedType(hasUnqualifiedDesugaredType(pointerType())))),
             hasType(decltypeType(hasUnderlyingType(pointerType()))));
 
-  // Flag all operators +, -, +=, -=, ++, -- that result in a pointer
+  // Flag all operators +, -, +=, -= that result in a pointer
   Finder->addMatcher(
       binaryOperator(
           hasAnyOperatorName("+", "-", "+=", "-="), AllPointerTypes,
@@ -32,8 +29,12 @@ void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
           .bind("expr"),
       this);
 
+  // Flag all operators ++, -- that result in a pointer
   Finder->addMatcher(
-      unaryOperator(hasAnyOperatorName("++", "--"), hasType(pointerType()))
+      unaryOperator(hasAnyOperatorName("++", "--"),
+                    hasType(hasUnqualifiedDesugaredType(pointerType())),
+                    unless(hasUnaryOperand(
+                        ignoringImpCasts(declRefExpr(to(isImplicit()))))))
           .bind("expr"),
       this);
 
@@ -42,7 +43,8 @@ void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
       arraySubscriptExpr(
           hasBase(ignoringImpCasts(
               anyOf(AllPointerTypes,
-                    hasType(decayedType(hasDecayedType(pointerType())))))))
+                    hasType(decayedType(hasDecayedType(pointerType())))))),
+          hasIndex(hasType(isInteger())))
           .bind("expr"),
       this);
 }

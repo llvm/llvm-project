@@ -1371,7 +1371,7 @@ private:
         Tok->setType(TT_InlineASMColon);
       } else if (Contexts.back().ColonIsDictLiteral || Style.isProto()) {
         Tok->setType(TT_DictLiteral);
-        if (Prev && Style.isTextProto())
+        if (Style.isTextProto())
           Prev->setType(TT_SelectorName);
       } else if (Contexts.back().ColonIsObjCMethodExpr ||
                  Line.startsWith(TT_ObjCMethodSpecifier)) {
@@ -1408,19 +1408,16 @@ private:
         }
       } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
         Tok->setType(TT_GenericSelectionColon);
-        assert(Prev);
         if (Prev->isPointerOrReference())
           Prev->setFinalizedType(TT_PointerOrReference);
       } else if ((CurrentToken && CurrentToken->is(tok::numeric_constant)) ||
-                 (Prev && Prev->is(TT_StartOfName) && !Scopes.empty() &&
+                 (Prev->is(TT_StartOfName) && !Scopes.empty() &&
                   Scopes.back() == ST_Class)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
                  !Line.getFirstNonComment()->isOneOf(tok::kw_enum, tok::kw_case,
                                                      tok::kw_default) &&
                  !Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
-        if (!Prev)
-          break;
         if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept) ||
             Prev->ClosesRequiresClause) {
           Tok->setType(TT_CtorInitializerColon);
@@ -2093,7 +2090,8 @@ private:
             TT_RecordLBrace, TT_StructLBrace, TT_UnionLBrace, TT_RequiresClause,
             TT_RequiresClauseInARequiresExpression, TT_RequiresExpression,
             TT_RequiresExpressionLParen, TT_RequiresExpressionLBrace,
-            TT_CompoundRequirementLBrace, TT_BracedListLBrace)) {
+            TT_CompoundRequirementLBrace, TT_BracedListLBrace,
+            TT_FunctionLikeMacro)) {
       CurrentToken->setType(TT_Unknown);
     }
     CurrentToken->Role.reset();

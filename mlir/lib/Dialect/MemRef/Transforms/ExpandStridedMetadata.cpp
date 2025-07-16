@@ -118,7 +118,7 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   // Assert that the computed offset matches the offset of the result type of
   // the subview op (if both are static).
   std::optional<int64_t> computedOffset = getConstantIntValue(finalOffset);
-  if (computedOffset && !ShapedType::isDynamic(resultOffset))
+  if (computedOffset && ShapedType::isStatic(resultOffset))
     assert(*computedOffset == resultOffset &&
            "mismatch between computed offset and result type offset");
 #endif // NDEBUG
@@ -158,7 +158,7 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
     // Assert that the computed stride matches the stride of the result type of
     // the subview op (if both are static).
     std::optional<int64_t> computedStride = getConstantIntValue(strides[i]);
-    if (computedStride && !ShapedType::isDynamic(resultStrides[j]))
+    if (computedStride && ShapedType::isStatic(resultStrides[j]))
       assert(*computedStride == resultStrides[j] &&
              "mismatch between computed stride and result type stride");
     ++j;
@@ -458,7 +458,7 @@ getCollapsedSize(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
   MemRefType collapseShapeType = collapseShape.getResultType();
 
   uint64_t size = collapseShapeType.getDimSize(groupId);
-  if (!ShapedType::isDynamic(size)) {
+  if (ShapedType::isStatic(size)) {
     collapsedSize.push_back(builder.getIndexAttr(size));
     return collapsedSize;
   }
@@ -1091,7 +1091,7 @@ class ExtractStridedMetadataOpCastFolder
 
     auto getConstantOrValue = [&rewriter](int64_t constant,
                                           OpFoldResult ofr) -> OpFoldResult {
-      return !ShapedType::isDynamic(constant)
+      return ShapedType::isStatic(constant)
                  ? OpFoldResult(rewriter.getIndexAttr(constant))
                  : ofr;
     };

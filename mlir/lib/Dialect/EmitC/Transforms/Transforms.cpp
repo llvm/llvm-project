@@ -10,14 +10,12 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/Support/Debug.h"
 
 namespace mlir {
 namespace emitc {
 
 ExpressionOp createExpression(Operation *op, OpBuilder &builder) {
-  assert(op->hasTrait<OpTrait::emitc::CExpression>() &&
-         "Expected a C expression");
+  assert(isa<emitc::CExpressionInterface>(op) && "Expected a C expression");
 
   // Create an expression yielding the value returned by op.
   assert(op->getNumResults() == 1 && "Expected exactly one result");
