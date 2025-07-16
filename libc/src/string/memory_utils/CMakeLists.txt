@@ -7,7 +7,6 @@ add_header_library(
     aarch64/inline_memcpy.h
     aarch64/inline_memmove.h
     aarch64/inline_memset.h
-    arm/common.h
     arm/inline_memcpy.h
     generic/aligned_access.h
     generic/byte_per_byte.h
