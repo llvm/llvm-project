@@ -28,8 +28,8 @@ static_assert(std::is_trivially_destructible_v<MCDataFragment>,
               "fragment classes must be trivially destructible");
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
-    : Kind(Kind), HasInstructions(HasInstructions), AlignToBundleEnd(false),
-      LinkerRelaxable(false), AllowAutoPadding(false) {}
+    : Kind(Kind), HasInstructions(HasInstructions), LinkerRelaxable(false),
+      AllowAutoPadding(false) {}
 
 const MCSymbol *MCFragment::getAtom() const {
   return cast<MCSectionMachO>(Parent)->getAtom(LayoutOrder);
@@ -58,10 +58,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_PseudoProbe:   OS << "PseudoProbe"; break;
     // clang-format on
   }
-
-  if (const auto *EF = dyn_cast<MCEncodedFragment>(this))
-    if (auto Pad = static_cast<unsigned>(EF->getBundlePadding()))
-      OS << " BundlePadding:" << Pad;
 
   auto printFixups = [&](llvm::ArrayRef<MCFixup> Fixups) {
     if (Fixups.empty())

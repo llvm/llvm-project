@@ -61,13 +61,6 @@ public:
     SV_DXContainer,
   };
 
-  /// Express the state of bundle locked groups while emitting code.
-  enum BundleLockStateType {
-    NotBundleLocked,
-    BundleLocked,
-    BundleLockedAlignToEnd
-  };
-
   struct iterator {
     MCFragment *F = nullptr;
     iterator() = default;
@@ -93,16 +86,6 @@ private:
   Align Alignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
-
-  /// Keeping track of bundle-locked state.
-  BundleLockStateType BundleLockState = NotBundleLocked;
-
-  /// Current nesting depth of bundle_lock directives.
-  unsigned BundleLockNestingDepth = 0;
-
-  /// We've seen a bundle_lock directive but not its first instruction
-  /// yet.
-  bool BundleGroupBeforeFirstInst : 1;
 
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
@@ -168,17 +151,6 @@ public:
 
   unsigned getOrdinal() const { return Ordinal; }
   void setOrdinal(unsigned Value) { Ordinal = Value; }
-
-  BundleLockStateType getBundleLockState() const { return BundleLockState; }
-  void setBundleLockState(BundleLockStateType NewState);
-  bool isBundleLocked() const { return BundleLockState != NotBundleLocked; }
-
-  bool isBundleGroupBeforeFirstInst() const {
-    return BundleGroupBeforeFirstInst;
-  }
-  void setBundleGroupBeforeFirstInst(bool IsFirst) {
-    BundleGroupBeforeFirstInst = IsFirst;
-  }
 
   bool hasInstructions() const { return HasInstructions; }
   void setHasInstructions(bool Value) { HasInstructions = Value; }
@@ -259,7 +231,6 @@ protected:
   ///
   /// MCEncodedFragment
   bool HasInstructions : 1;
-  bool AlignToBundleEnd : 1;
   /// MCDataFragment
   bool LinkerRelaxable : 1;
   /// MCRelaxableFragment: x86-specific
@@ -297,7 +268,6 @@ public:
 /// Interface implemented by fragments that contain encoded instructions and/or
 /// data.
 class MCEncodedFragment : public MCFragment {
-  uint8_t BundlePadding = 0;
   uint32_t ContentStart = 0;
   uint32_t ContentEnd = 0;
   uint32_t FixupStart = 0;
@@ -328,21 +298,6 @@ public:
       return true;
     }
   }
-
-  /// Should this fragment be placed at the end of an aligned bundle?
-  bool alignToBundleEnd() const { return AlignToBundleEnd; }
-  void setAlignToBundleEnd(bool V) { AlignToBundleEnd = V; }
-
-  /// Get the padding size that must be inserted before this fragment.
-  /// Used for bundling. By default, no padding is inserted.
-  /// Note that padding size is restricted to 8 bits. This is an optimization
-  /// to reduce the amount of space used for each fragment. In practice, larger
-  /// padding should never be required.
-  uint8_t getBundlePadding() const { return BundlePadding; }
-
-  /// Set the padding size for this fragment. By default it's a no-op,
-  /// and only some fragments have a meaningful implementation.
-  void setBundlePadding(uint8_t N) { BundlePadding = N; }
 
   /// Retrieve the MCSubTargetInfo in effect when the instruction was encoded.
   /// Guaranteed to be non-null if hasInstructions() == true
