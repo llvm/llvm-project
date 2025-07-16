@@ -18,9 +18,7 @@
 
 namespace llvm {
 
-class MCAlignFragment;
 class MCFragment;
-class MCLEBFragment;
 class MCSymbol;
 class MCAssembler;
 class MCContext;
@@ -108,15 +106,14 @@ public:
   /// Hook to check if extra nop bytes must be inserted for alignment directive.
   /// For some targets this may be necessary in order to support linker
   /// relaxation. The number of bytes to insert are returned in Size.
-  virtual bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
+  virtual bool shouldInsertExtraNopBytesForCodeAlign(const MCFragment &AF,
                                                      unsigned &Size) {
     return false;
   }
 
   /// Hook which indicates if the target requires a fixup to be generated when
   /// handling an align directive in an executable section
-  virtual bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                             MCAlignFragment &AF) {
+  virtual bool shouldInsertFixupForCodeAlign(MCAssembler &Asm, MCFragment &AF) {
     return false;
   }
 
