@@ -322,7 +322,8 @@ size_t ProcessMinidump::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
 size_t ProcessMinidump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                      Status &error) {
 
-  llvm::Expected<llvm::ArrayRef<uint8_t>> mem_maybe = m_minidump_parser->GetExpectedMemory(addr, size);
+  llvm::Expected<llvm::ArrayRef<uint8_t>> mem_maybe =
+      m_minidump_parser->GetExpectedMemory(addr, size);
   if (!mem_maybe) {
     error = Status::FromError(mem_maybe.takeError());
     return 0;
