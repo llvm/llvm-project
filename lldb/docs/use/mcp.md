@@ -75,7 +75,69 @@ Configuration example for [Visual Studio Code](https://code.visualstudio.com/doc
 }
 ```
 
-### Troubleshooting
+## Tools
+
+Tools are a primitive in the Model Context Protocol that enable servers to
+expose functionality to clients.
+
+LLDB's MCP integration exposes one tool, named `lldb_command` which allows the
+model to run the same commands a user would type in the LLDB command
+interpreter. It takes two arguments:
+
+1. The unique debugger ID as a number.
+2. The command and its arguments as a string.
+
+## Resources
+
+Resources are a primitive in the Model Context Protocol that allow servers to
+expose content that can be read by clients.
+
+LLDB's MCP integration exposes a resource for each debugger and target
+instance. Debugger resources are accessible using the following URI:
+
+```
+lldb://debugger/<debugger id>
+```
+
+Example output:
+
+```json
+{
+  "contents": [
+    {
+      "uri": "lldb://debugger/1",
+      "mimeType": "application/json",
+      "text": "{\"debugger_id\":1,\"name\":\"debugger_1\",\"num_targets\":1}"
+    }
+  ]
+}
+```
+
+Debuggers can contain one or more targets, which are accessible using the
+following URI:
+
+```
+lldb://debugger/<debugger id>/target/<target idx>
+```
+
+Example output:
+
+```json
+{
+  "contents": [
+    {
+      "uri": "lldb://debugger/1/target/0",
+      "mimeType": "application/json",
+      "text": "{\"arch\":\"arm64-apple-macosx26.0.0\",\"debugger_id\":1,\"dummy\":false,\"path\":\"/bin/count\",\"platform\":\"host\",\"selected\":true,\"target_idx\":0}"
+    }
+  ]
+}
+```
+
+Note that unlike the debugger id, which is unique, the target index is not
+stable and may be reused when a target is removed and a new target is added.
+
+## Troubleshooting
 
 The MCP server uses the `Host` log channel. You can enable logging with the
 `log enable` command.
