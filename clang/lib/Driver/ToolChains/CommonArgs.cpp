@@ -1322,6 +1322,17 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
 
+  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-remote-compiler=" +
+                           Twine(ToolChain.getDriver().getClangProgramPath())));
+
+    for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
+  }
+
   // clang-linker-wrapper adds this without checking if it is needed.
   Args.ClaimAllArgs(options::OPT_foutput_file_base);
 }

@@ -966,6 +966,13 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VADC_VIM:
   case RISCV::VADC_VVM:
   case RISCV::VADC_VXM:
+  case RISCV::VMADC_VIM:
+  case RISCV::VMADC_VVM:
+  case RISCV::VMADC_VXM:
+  case RISCV::VSBC_VVM:
+  case RISCV::VSBC_VXM:
+  case RISCV::VMSBC_VVM:
+  case RISCV::VMSBC_VXM:
   // Vector Widening Integer Multiply-Add Instructions
   case RISCV::VWMACCU_VV:
   case RISCV::VWMACCU_VX:
@@ -1132,6 +1139,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMFLE_VV:
   case RISCV::VMFGT_VF:
   case RISCV::VMFGE_VF:
+  // Vector Floating-Point Classify Instruction
+  case RISCV::VFCLASS_V:
   // Vector Floating-Point Merge Instruction
   case RISCV::VFMERGE_VFM:
   // Vector Floating-Point Move Instruction
@@ -1346,9 +1355,7 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
     const MachineInstr &UserMI = *UserOp.getParent();
     LLVM_DEBUG(dbgs() << "  Checking user: " << UserMI << "\n");
 
-    if (UserMI.isCopy() && UserMI.getOperand(0).getReg().isVirtual() &&
-        UserMI.getOperand(0).getSubReg() == RISCV::NoSubRegister &&
-        UserMI.getOperand(1).getSubReg() == RISCV::NoSubRegister) {
+    if (UserMI.isFullCopy() && UserMI.getOperand(0).getReg().isVirtual()) {
       LLVM_DEBUG(dbgs() << "    Peeking through uses of COPY\n");
       Worklist.insert_range(llvm::make_pointer_range(
           MRI->use_operands(UserMI.getOperand(0).getReg())));
