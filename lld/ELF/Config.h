@@ -404,8 +404,8 @@ struct Config {
   bool zIfuncNoplt;
   bool zInitfirst;
   bool zInterpose;
-  bool zKeepTextSectionPrefix;
   bool zKeepDataSectionPrefix;
+  bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
   bool zNoBtCfi;
   bool zNodefaultlib;

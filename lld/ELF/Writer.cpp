@@ -554,11 +554,12 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
 }
 
 // Returns true if the section is a data section that's read only and
-// relocatable.
-static bool isRelRoDataSection(Ctx &ctx, StringRef SectionName) {
-  // If -z keep-data-section-prefix is given, '<section>.hot' and
-  // '<section>.unlikely' is considered a split of '<section>' based on hotness.
-  // They should share the same section attributes.
+// relocatable per its section name. Note this function doesn't look at section
+// sh_type or sh_flags.
+static bool isRelRoDataSectionByName(Ctx &ctx, StringRef SectionName) {
+  //  If  -z keep-data-section-prefix is given, '<section>.hot' and
+  //  '<section>.unlikely' is considered a split of '<section>' based on
+  //  hotness. They should share the same section attributes.
   if (ctx.arg.zKeepDataSectionPrefix) {
     if (SectionName.ends_with(".hot"))
       SectionName = SectionName.drop_back(4);
@@ -645,7 +646,7 @@ static bool isRelroSection(Ctx &ctx, const OutputSection *sec) {
   // magic section names.
   StringRef s = sec->name;
 
-  bool abiAgnostic = isRelRoDataSection(ctx, s) || s == ".bss.rel.ro" ||
+  bool abiAgnostic = isRelRoDataSectionByName(ctx, s) || s == ".bss.rel.ro" ||
                      s == ".ctors" || s == ".dtors" || s == ".jcr" ||
                      s == ".eh_frame" || s == ".fini_array" ||
                      s == ".init_array" || s == ".preinit_array";

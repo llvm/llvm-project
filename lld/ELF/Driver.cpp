@@ -1625,10 +1625,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zIfuncNoplt = hasZOption(args, "ifunc-noplt");
   ctx.arg.zInitfirst = hasZOption(args, "initfirst");
   ctx.arg.zInterpose = hasZOption(args, "interpose");
-  ctx.arg.zKeepTextSectionPrefix = getZFlag(
-      args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zKeepDataSectionPrefix = getZFlag(
       args, "keep-data-section-prefix", "nokeep-data-section-prefix", false);
+  ctx.arg.zKeepTextSectionPrefix = getZFlag(
+      args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
       getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
   ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
