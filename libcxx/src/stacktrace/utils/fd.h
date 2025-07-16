@@ -19,8 +19,6 @@
 #include <unistd.h>
 #include <utility>
 
-#include "stacktrace/utils/failed.h"
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
@@ -28,10 +26,9 @@ namespace __stacktrace {
 force some component to "own" this, although it's freely convertible back to
 integer form.  Default-constructed, closed, and moved-out-of instances will have
 the invalid fd `-1`. */
-class _LIBCPP_HIDE_FROM_ABI fd {
+struct _LIBCPP_HIDE_FROM_ABI fd {
   int fd_{-1};
 
-public:
   fd() : fd(-1) {}
   fd(int fdint) : fd_(fdint) {}
 
@@ -73,20 +70,19 @@ public:
 };
 
 /** Wraps a readable fd using the `streambuf` interface.  I/O errors arising
-from reading the provided fd will result in a `Failed` being thrown. */
+from reading the provided fd will result in EOF. */
 struct _LIBCPP_HIDE_FROM_ABI fd_streambuf final : std::streambuf {
   fd& fd_;
   char* buf_;
   size_t size_;
+
   _LIBCPP_HIDE_FROM_ABI fd_streambuf(fd& fd, char* buf, size_t size) : fd_(fd), buf_(buf), size_(size) {}
   _LIBCPP_HIDE_FROM_ABI virtual ~fd_streambuf() = default;
 
   _LIBCPP_HIDE_FROM_ABI int underflow() override {
     int bytesRead = ::read(fd_, buf_, size_);
-    if (bytesRead < 0) {
-      throw ::std::__stacktrace::failed("I/O error reading from child process", errno);
-    }
-    if (bytesRead == 0) {
+    if (bytesRead <= 0) {
+      // error or EOF: return eof to stop
       return traits_type::eof();
     }
     setg(buf_, buf_, buf_ + bytesRead);
