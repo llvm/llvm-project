@@ -385,6 +385,41 @@ func.func @extract_strided_slice_of_constant_mask() -> (vector<2x1xi1>) {
 
 // -----
 
+// CHECK-LABEL: func.func @extract_strided_slice_of_create_mask
+// CHECK-SAME: (%[[DIM0:.+]]: index, %[[DIM1:.+]]: index)
+func.func @extract_strided_slice_of_create_mask(%dim0: index, %dim1: index) -> (vector<2x2xi1>) {
+  %0 = vector.create_mask %dim0, %dim1 : vector<4x3xi1>
+  %1 = vector.extract_strided_slice %0
+    {offsets = [2, 1], sizes = [2, 2], strides = [1, 1]}
+      : vector<4x3xi1> to vector<2x2xi1>
+  // CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
+  // CHECK-DAG: %[[C2:.+]] = arith.constant 2 : index
+  // CHECK-DAG: %[[A:.+]] = arith.subi %[[DIM0]], %[[C2]]
+  // CHECK-DAG: %[[B:.+]] = arith.subi %[[DIM1]], %[[C1]]
+  // CHECK: vector.create_mask %[[A]], %[[B]] : vector<2x2xi1>
+  return %1 : vector<2x2xi1>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_strided_slice_partial_of_create_mask
+// CHECK-SAME: (%[[DIM0:.+]]: index, %[[DIM1:.+]]: index, %[[DIM2:.+]]: index)
+func.func @extract_strided_slice_partial_of_create_mask(
+  %dim0: index, %dim1: index, %dim2 : index) -> (vector<2x2x8xi1>) {
+  %0 = vector.create_mask %dim0, %dim1, %dim2 : vector<4x3x8xi1>
+  %1 = vector.extract_strided_slice %0
+    {offsets = [2, 1], sizes = [2, 2], strides = [1, 1]}
+      : vector<4x3x8xi1> to vector<2x2x8xi1>
+  // CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
+  // CHECK-DAG: %[[C2:.+]] = arith.constant 2 : index
+  // CHECK-DAG: %[[A:.+]] = arith.subi %[[DIM0]], %[[C2]]
+  // CHECK-DAG: %[[B:.+]] = arith.subi %[[DIM1]], %[[C1]]
+  // CHECK: vector.create_mask %[[A]], %[[B]], %[[DIM2]] : vector<2x2x8xi1>
+  return %1 : vector<2x2x8xi1>
+}
+
+// -----
+
 // CHECK-LABEL: extract_strided_fold
 //  CHECK-SAME: (%[[ARG:.*]]: vector<4x3xi1>)
 //  CHECK-NEXT:   return %[[ARG]] : vector<4x3xi1>
@@ -1340,6 +1375,21 @@ func.func @extract_strided_broadcast4(%arg0: f32) -> vector<1x4xf32> {
       {offsets = [0, 4], sizes = [1, 4], strides = [1, 1]}
       : vector<1x8xf32> to vector<1x4xf32>
   return %1 : vector<1x4xf32>
+}
+
+// -----
+
+// Check the case where the same dimension is both broadcasted and sliced 
+// CHECK-LABEL: func @extract_strided_broadcast5
+//  CHECK-SAME: (%[[ARG:.+]]: vector<2x1xf32>)
+//       CHECK: %[[V:.+]] = vector.broadcast %[[ARG]] : vector<2x1xf32> to vector<2x4xf32>
+//       CHECK: return %[[V]]
+func.func @extract_strided_broadcast5(%arg0: vector<2x1xf32>) -> vector<2x4xf32> {
+ %0 = vector.broadcast %arg0 : vector<2x1xf32> to vector<2x8xf32>
+ %1 = vector.extract_strided_slice %0
+      {offsets = [0, 4], sizes = [2, 4], strides = [1, 1]}
+      : vector<2x8xf32> to vector<2x4xf32>
+  return %1 : vector<2x4xf32>
 }
 
 // -----

@@ -1246,33 +1246,33 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    ubfx x12, x9, #48, #4
-; CHECK-NEXT:    ubfx x10, x9, #52, #4
-; CHECK-NEXT:    ubfx x14, x9, #32, #4
+; CHECK-NEXT:    lsr x10, x9, #52
+; CHECK-NEXT:    ubfx x13, x9, #32, #4
 ; CHECK-NEXT:    ubfx w15, w9, #16, #4
-; CHECK-NEXT:    ubfx x11, x9, #36, #4
-; CHECK-NEXT:    ubfx w13, w9, #20, #4
+; CHECK-NEXT:    lsr x11, x9, #36
+; CHECK-NEXT:    lsr w14, w9, #20
 ; CHECK-NEXT:    fmov s1, w12
-; CHECK-NEXT:    fmov s2, w14
-; CHECK-NEXT:    ubfx w12, w9, #4, #4
+; CHECK-NEXT:    fmov s2, w13
+; CHECK-NEXT:    lsr w12, w9, #4
 ; CHECK-NEXT:    fmov s3, w15
 ; CHECK-NEXT:    mov.h v1[1], w10
 ; CHECK-NEXT:    and w10, w9, #0xf
 ; CHECK-NEXT:    mov.h v2[1], w11
 ; CHECK-NEXT:    fmov s4, w10
-; CHECK-NEXT:    ubfx x11, x9, #56, #4
-; CHECK-NEXT:    mov.h v3[1], w13
-; CHECK-NEXT:    ubfx x10, x9, #40, #4
+; CHECK-NEXT:    lsr x11, x9, #56
+; CHECK-NEXT:    mov.h v3[1], w14
+; CHECK-NEXT:    lsr x10, x9, #40
 ; CHECK-NEXT:    mov.h v4[1], w12
-; CHECK-NEXT:    ubfx w12, w9, #24, #4
+; CHECK-NEXT:    lsr w12, w9, #24
 ; CHECK-NEXT:    mov.h v1[2], w11
-; CHECK-NEXT:    ubfx w11, w9, #8, #4
+; CHECK-NEXT:    lsr w11, w9, #8
 ; CHECK-NEXT:    mov.h v2[2], w10
 ; CHECK-NEXT:    lsr x10, x9, #60
 ; CHECK-NEXT:    mov.h v3[2], w12
-; CHECK-NEXT:    ubfx x12, x9, #44, #4
+; CHECK-NEXT:    lsr x12, x9, #44
 ; CHECK-NEXT:    mov.h v4[2], w11
 ; CHECK-NEXT:    lsr w11, w9, #28
-; CHECK-NEXT:    ubfx w9, w9, #12, #4
+; CHECK-NEXT:    lsr w9, w9, #12
 ; CHECK-NEXT:    mov.h v1[3], w10
 ; CHECK-NEXT:    mov.h v2[3], w12
 ; CHECK-NEXT:    mov.h v3[3], w11
@@ -1300,38 +1300,37 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    ldr x9, [x0, x8]
 ; CHECK-BE-NEXT:    add x8, x8, #16
 ; CHECK-BE-NEXT:    cmp x8, #128
-; CHECK-BE-NEXT:    ubfx w12, w9, #12, #4
+; CHECK-BE-NEXT:    ubfx w11, w9, #12, #4
 ; CHECK-BE-NEXT:    lsr w14, w9, #28
-; CHECK-BE-NEXT:    ubfx w10, w9, #8, #4
+; CHECK-BE-NEXT:    lsr w10, w9, #8
 ; CHECK-BE-NEXT:    ubfx x15, x9, #44, #4
-; CHECK-BE-NEXT:    ubfx w11, w9, #24, #4
-; CHECK-BE-NEXT:    ubfx x13, x9, #40, #4
-; CHECK-BE-NEXT:    fmov s1, w12
-; CHECK-BE-NEXT:    lsr x12, x9, #60
+; CHECK-BE-NEXT:    lsr w12, w9, #24
+; CHECK-BE-NEXT:    lsr x13, x9, #40
+; CHECK-BE-NEXT:    fmov s1, w11
+; CHECK-BE-NEXT:    lsr x11, x9, #60
 ; CHECK-BE-NEXT:    fmov s2, w14
 ; CHECK-BE-NEXT:    fmov s3, w15
-; CHECK-BE-NEXT:    fmov s4, w12
-; CHECK-BE-NEXT:    ubfx w12, w9, #20, #4
+; CHECK-BE-NEXT:    fmov s4, w11
+; CHECK-BE-NEXT:    lsr w11, w9, #20
 ; CHECK-BE-NEXT:    mov v1.h[1], w10
-; CHECK-BE-NEXT:    ubfx x10, x9, #56, #4
-; CHECK-BE-NEXT:    mov v2.h[1], w11
-; CHECK-BE-NEXT:    ubfx w11, w9, #4, #4
+; CHECK-BE-NEXT:    lsr x10, x9, #56
+; CHECK-BE-NEXT:    mov v2.h[1], w12
+; CHECK-BE-NEXT:    lsr w12, w9, #4
 ; CHECK-BE-NEXT:    mov v3.h[1], w13
 ; CHECK-BE-NEXT:    mov v4.h[1], w10
-; CHECK-BE-NEXT:    ubfx x10, x9, #36, #4
-; CHECK-BE-NEXT:    mov v1.h[2], w11
-; CHECK-BE-NEXT:    ubfx x11, x9, #52, #4
-; CHECK-BE-NEXT:    mov v2.h[2], w12
+; CHECK-BE-NEXT:    lsr x10, x9, #36
+; CHECK-BE-NEXT:    mov v1.h[2], w12
+; CHECK-BE-NEXT:    lsr x12, x9, #52
+; CHECK-BE-NEXT:    mov v2.h[2], w11
 ; CHECK-BE-NEXT:    mov v3.h[2], w10
-; CHECK-BE-NEXT:    and w10, w9, #0xf
-; CHECK-BE-NEXT:    ubfx w12, w9, #16, #4
-; CHECK-BE-NEXT:    mov v4.h[2], w11
-; CHECK-BE-NEXT:    ubfx x11, x9, #32, #4
-; CHECK-BE-NEXT:    ubfx x9, x9, #48, #4
-; CHECK-BE-NEXT:    mov v1.h[3], w10
-; CHECK-BE-NEXT:    mov v2.h[3], w12
-; CHECK-BE-NEXT:    add x10, x1, #32
+; CHECK-BE-NEXT:    lsr w10, w9, #16
+; CHECK-BE-NEXT:    lsr x11, x9, #32
+; CHECK-BE-NEXT:    mov v4.h[2], w12
+; CHECK-BE-NEXT:    mov v1.h[3], w9
+; CHECK-BE-NEXT:    lsr x9, x9, #48
+; CHECK-BE-NEXT:    mov v2.h[3], w10
 ; CHECK-BE-NEXT:    mov v3.h[3], w11
+; CHECK-BE-NEXT:    add x10, x1, #32
 ; CHECK-BE-NEXT:    mov v4.h[3], w9
 ; CHECK-BE-NEXT:    add x9, x1, #48
 ; CHECK-BE-NEXT:    ushll v1.4s, v1.4h, #0

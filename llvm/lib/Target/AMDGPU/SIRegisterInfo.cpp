@@ -3557,9 +3557,7 @@ SIRegisterInfo::getVectorSuperClassForBitWidth(unsigned BitWidth) const {
 
 const TargetRegisterClass *
 SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
-  if (BitWidth == 16)
-    return &AMDGPU::SGPR_LO16RegClass;
-  if (BitWidth == 32)
+  if (BitWidth == 16 || BitWidth == 32)
     return &AMDGPU::SReg_32RegClass;
   if (BitWidth == 64)
     return &AMDGPU::SReg_64RegClass;
