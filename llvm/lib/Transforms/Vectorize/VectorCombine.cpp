@@ -3776,10 +3776,12 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         // Create entry for new use.
         NewUses.push_back({Shuffle, {}});
         std::vector<int> &NewMask = NewUses.back().second;
-        for (int Index : OldMask)
+        for (int Index : OldMask) {
+          assert(Index <= Indices->second);
           NewMask.push_back(Index >= static_cast<int>(OldNumElements)
                                 ? Index - SizeDiff
                                 : Index);
+        }
 
         // Update costs.
         OldCost +=
