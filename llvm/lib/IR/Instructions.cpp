@@ -355,7 +355,7 @@ bool CallBase::isTailCall() const {
 }
 
 Intrinsic::ID CallBase::getIntrinsicID() const {
-  if (auto *F = getCalledFunction())
+  if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
     return F->getIntrinsicID();
   return Intrinsic::not_intrinsic;
 }

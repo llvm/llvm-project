@@ -1518,6 +1518,8 @@ math_test(name = "tanf")
 
 math_test(name = "tanhf")
 
+math_test(name = "tanpif")
+
 math_test(
     name = "totalorder",
     hdrs = ["TotalOrderTest.h"],

@@ -32,27 +32,33 @@ namespace Fortran::common {
 // AddOverflow and MulOverflow are copied from
 // llvm/include/llvm/Support/MathExtras.h and specialised to int64_t.
 
+// __has_builtin is not defined in some compilers. Make sure it is defined.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
 /// Add two signed integers, computing the two's complement truncated result,
 /// returning true if overflow occurred.
-static inline bool AddOverflow(int64_t X, int64_t Y, int64_t &Result) {
+static inline bool AddOverflow(
+    std::int64_t x, std::int64_t y, std::int64_t &result) {
 #if __has_builtin(__builtin_add_overflow)
-  return __builtin_add_overflow(X, Y, &Result);
+  return __builtin_add_overflow(x, y, &result);
 #else
   // Perform the unsigned addition.
-  const uint64_t UX = static_cast<uint64_t>(X);
-  const uint64_t UY = static_cast<uint64_t>(Y);
-  const uint64_t UResult = UX + UY;
+  const std::uint64_t ux{static_cast<std::uint64_t>(x)};
+  const std::uint64_t uy{static_cast<std::uint64_t>(y)};
+  const std::uint64_t uresult{ux + uy};
 
   // Convert to signed.
-  Result = static_cast<int64_t>(UResult);
+  result = static_cast<std::int64_t>(uresult);
 
   // Adding two positive numbers should result in a positive number.
-  if (X > 0 && Y > 0) {
-    return Result <= 0;
+  if (x > 0 && y > 0) {
+    return result <= 0;
   }
   // Adding two negatives should result in a negative number.
-  if (X < 0 && Y < 0) {
-    return Result >= 0;
+  if (x < 0 && y < 0) {
+    return result >= 0;
   }
   return false;
 #endif
@@ -60,36 +66,39 @@ static inline bool AddOverflow(int64_t X, int64_t Y, int64_t &Result) {
 
 /// Multiply two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow occurred.
-static inline bool MulOverflow(int64_t X, int64_t Y, int64_t &Result) {
+static inline bool MulOverflow(
+    std::int64_t x, std::int64_t y, std::int64_t &result) {
 #if __has_builtin(__builtin_mul_overflow)
-  return __builtin_mul_overflow(X, Y, &Result);
+  return __builtin_mul_overflow(x, y, &result);
 #else
   // Perform the unsigned multiplication on absolute values.
-  const uint64_t UX =
-      X < 0 ? (0 - static_cast<uint64_t>(X)) : static_cast<uint64_t>(X);
-  const uint64_t UY =
-      Y < 0 ? (0 - static_cast<uint64_t>(Y)) : static_cast<uint64_t>(Y);
-  const uint64_t UResult = UX * UY;
+  const std::uint64_t ux{x < 0 ? (0 - static_cast<std::uint64_t>(x))
+                               : static_cast<std::uint64_t>(x)};
+  const std::uint64_t uy{y < 0 ? (0 - static_cast<std::uint64_t>(y))
+                               : static_cast<std::uint64_t>(y)};
+  const std::uint64_t uresult{ux * uy};
 
   // Convert to signed.
-  const bool IsNegative = (X < 0) ^ (Y < 0);
-  Result = IsNegative ? (0 - UResult) : UResult;
+  const bool isNegative = (x < 0) ^ (y < 0);
+  result = isNegative ? (0 - uresult) : uresult;
 
   // If any of the args was 0, result is 0 and no overflow occurs.
-  if (UX == 0 || UY == 0) {
+  if (ux == 0 || uy == 0) {
     return false;
   }
 
-  // UX and UY are in [1, 2^n], where n is the number of digits.
+  // ux and uy are in [1, 2^n], where n is the number of digits.
   // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
   // positive) divided by an argument compares to the other.
-  if (IsNegative) {
-    return UX > (static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) +
-                    uint64_t(1)) /
-        UY;
+  if (isNegative) {
+    return ux >
+        (static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) +
+            std::uint64_t{1}) /
+        uy;
   } else {
-    return UX >
-        (static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) / UY;
+    return ux >
+        (static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max())) /
+        uy;
   }
 #endif
 }
@@ -206,10 +215,10 @@ private:
   Token token_{}; // current token
   Token knrToken_{}; // k, n, or r UnsignedInteger token
   Token scaleFactorToken_{}; // most recent scale factor token P
-  int64_t integerValue_{-1}; // value of UnsignedInteger token
-  int64_t knrValue_{-1}; // -1 ==> not present
-  int64_t scaleFactorValue_{}; // signed k in kP
-  int64_t wValue_{-1};
+  std::int64_t integerValue_{-1}; // value of UnsignedInteger token
+  std::int64_t knrValue_{-1}; // -1 ==> not present
+  std::int64_t scaleFactorValue_{}; // signed k in kP
+  std::int64_t wValue_{-1};
   char argString_[3]{}; // 1-2 character msg arg; usually edit descriptor name
   bool formatHasErrors_{false};
   bool unterminatedFormatError_{false};
@@ -280,18 +289,18 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
   case '7':
   case '8':
   case '9': {
-    const CHAR *lastCursor;
+    const CHAR *lastCursor{};
     integerValue_ = 0;
     bool overflow{false};
     do {
       lastCursor = cursor_;
       if (!overflow) {
-        overflow =
-            MulOverflow(static_cast<int64_t>(10), integerValue_, integerValue_);
+        overflow = MulOverflow(
+            static_cast<std::int64_t>(10), integerValue_, integerValue_);
       }
       if (!overflow) {
         overflow = AddOverflow(
-            integerValue_, static_cast<int64_t>(c - '0'), integerValue_);
+            integerValue_, static_cast<std::int64_t>(c - '0'), integerValue_);
       }
       c = NextChar();
     } while (c >= '0' && c <= '9');
