@@ -1664,14 +1664,6 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
   Instr->getParent()->insertDbgRecordBefore(DVRec, Instr);
 }
 
-static void insertDbgValueOrDbgVariableRecordAfter(
-    DIBuilder &Builder, Value *DV, DILocalVariable *DIVar, DIExpression *DIExpr,
-    const DebugLoc &NewLoc, Instruction *Instr) {
-  BasicBlock::iterator NextIt = std::next(Instr->getIterator());
-  NextIt.setHeadBit(true);
-  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc, NextIt);
-}
-
 static DIExpression *dropInitialDeref(const DIExpression *DIExpr) {
   int NumEltDropped = DIExpr->getElements()[0] == dwarf::DW_OP_LLVM_arg ? 3 : 1;
   return DIExpression::get(DIExpr->getContext(),
