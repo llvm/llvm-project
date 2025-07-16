@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/RuntimeLibcalls.h"
+#include "llvm/ADT/StringTable.h"
 
 using namespace llvm;
 using namespace RTLIB;
@@ -100,6 +101,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
   if (TT.isOSOpenBSD()) {
     setLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL, RTLIB::Unsupported);
+    setLibcallImpl(RTLIB::STACK_SMASH_HANDLER, RTLIB::__stack_smash_handler);
   }
 
   // Skip default manual processing for targets that have been fully ported to
