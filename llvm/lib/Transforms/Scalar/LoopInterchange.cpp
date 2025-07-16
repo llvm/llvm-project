@@ -870,6 +870,7 @@ findInnerReductionPhi(Loop *L, Value *V,
           for (Instruction *I : Ops) {
             assert(I->getOpcode() == OpCode &&
                    "Expected the instruction to be the reduction operation");
+            (void)OpCode;
 
             // If the instruction has nuw/nsw flags, we must drop them when the
             // transformation is actually performed.

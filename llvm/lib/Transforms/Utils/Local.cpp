@@ -2442,7 +2442,7 @@ static bool rewriteDebugUsers(
 
   SmallPtrSet<DbgVariableRecord *, 1> UndefOrSalvageDVR;
   if (isa<Instruction>(&To)) {
-    bool DomPointAfterFrom = From.getNextNonDebugInstruction() == &DomPoint;
+    bool DomPointAfterFrom = From.getNextNode() == &DomPoint;
 
     // DbgVariableRecord implementation of the above.
     for (auto *DVR : DPUsers) {
@@ -2807,9 +2807,9 @@ static bool markAliveBlocks(Function &F,
           // If we found a call to a no-return function, insert an unreachable
           // instruction after it.  Make sure there isn't *already* one there
           // though.
-          if (!isa<UnreachableInst>(CI->getNextNonDebugInstruction())) {
+          if (!isa<UnreachableInst>(CI->getNextNode())) {
             // Don't insert a call to llvm.trap right before the unreachable.
-            changeToUnreachable(CI->getNextNonDebugInstruction(), false, DTU);
+            changeToUnreachable(CI->getNextNode(), false, DTU);
             Changed = true;
           }
           break;
