@@ -67,15 +67,38 @@ void UnusedUSECheck::Enter(const parser::Name &name) {
     return;
   }
 
-  if (importedSymbols_.find(name.symbol) != importedSymbols_.end()) {
-    usedSymbols_.insert(name.symbol);
+  const semantics::Symbol *symbol = name.symbol;
+
+  if (importedSymbols_.find(symbol) != importedSymbols_.end()) {
+    usedSymbols_.insert(symbol);
     return;
   }
 
-  if (const auto *details = name.symbol->detailsIf<semantics::UseDetails>()) {
-    const semantics::Symbol *moduleSymbol = details->symbol().owner().symbol();
-    if (wholeModuleImports_.find(moduleSymbol) != wholeModuleImports_.end()) {
+  const semantics::Symbol &ultimate = symbol->GetUltimate();
+  const semantics::Symbol *ownerSymbol = ultimate.owner().symbol();
+  if (ownerSymbol && ownerSymbol->has<semantics::ModuleDetails>() &&
+      wholeModuleImports_.find(ownerSymbol) != wholeModuleImports_.end()) {
+    usedModules_.insert(ownerSymbol);
+    return;
+  }
+
+  if (const auto *useDetails = ultimate.detailsIf<semantics::UseDetails>()) {
+    const semantics::Symbol *moduleSymbol =
+        useDetails->symbol().owner().symbol();
+    if (moduleSymbol && moduleSymbol->has<semantics::ModuleDetails>() &&
+        wholeModuleImports_.find(moduleSymbol) != wholeModuleImports_.end()) {
       usedModules_.insert(moduleSymbol);
+    }
+  }
+
+  if (symbol != &ultimate) {
+    if (const auto *useDetails = symbol->detailsIf<semantics::UseDetails>()) {
+      const semantics::Symbol *moduleSymbol =
+          useDetails->symbol().owner().symbol();
+      if (moduleSymbol && moduleSymbol->has<semantics::ModuleDetails>() &&
+          wholeModuleImports_.find(moduleSymbol) != wholeModuleImports_.end()) {
+        usedModules_.insert(moduleSymbol);
+      }
     }
   }
 }
