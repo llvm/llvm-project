@@ -1377,6 +1377,8 @@ public:
     return HasMinimum3Maximum3F16;
   }
 
+  bool hasAddPC64Inst() const { return GFX1250Insts; }
+
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
