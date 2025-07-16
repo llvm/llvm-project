@@ -75,7 +75,7 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
                                   const CXXConstructorDecl *constructor,
                                   FunctionArgList &args) {
   assert(memberInit->isAnyMemberInitializer() &&
-         "Mush have member initializer!");
+         "Must have member initializer!");
   assert(memberInit->getInit() && "Must have initializer!");
 
   assert(!cir::MissingFeatures::generateDebugInfo());

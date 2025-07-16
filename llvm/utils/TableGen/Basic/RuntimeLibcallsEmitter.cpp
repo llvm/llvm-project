@@ -8,10 +8,12 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
@@ -305,8 +307,6 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
 
 void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallNames(
     raw_ostream &OS) const {
-  // TODO: Emit libcall names as string offset table.
-
   OS << "const RTLIB::LibcallImpl "
         "llvm::RTLIB::RuntimeLibcallsInfo::"
         "DefaultLibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {\n";
@@ -331,17 +331,24 @@ void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallNames(
         "};\n\n";
 
   // Emit the implementation names
-  OS << "const char *const llvm::RTLIB::RuntimeLibcallsInfo::"
-        "LibCallImplNames[RTLIB::NumLibcallImpls] = {\n"
-        "  nullptr, // RTLIB::Unsupported\n";
+  StringToOffsetTable Table(/*AppendZero=*/true,
+                            "RTLIB::RuntimeLibcallsInfo::");
 
+  for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList)
+    Table.GetOrAddStringOffset(LibCallImpl.getLibcallFuncName());
+
+  Table.EmitStringTableDef(OS, "RuntimeLibcallImplNameTable");
+  OS << R"(
+const uint16_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameOffsetTable[] = {
+)";
+
+  OS << formatv("  {}, // {}\n", Table.GetStringOffset(""),
+                ""); // Unsupported entry
   for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList) {
-    OS << "  \"" << LibCallImpl.getLibcallFuncName() << "\", // ";
-    LibCallImpl.emitEnumEntry(OS);
-    OS << '\n';
+    StringRef ImplName = LibCallImpl.getLibcallFuncName();
+    OS << formatv("  {}, // {}\n", Table.GetStringOffset(ImplName), ImplName);
   }
-
-  OS << "};\n\n";
+  OS << "};\n";
 
   // Emit the reverse mapping from implementation libraries to RTLIB::Libcall
   OS << "const RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::"

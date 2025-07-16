@@ -2660,12 +2660,12 @@ static bool rewriteDebugUsers(
   SmallPtrSet<DbgVariableIntrinsic *, 1> UndefOrSalvage;
   SmallPtrSet<DbgVariableRecord *, 1> UndefOrSalvageDVR;
   if (isa<Instruction>(&To)) {
-    bool DomPointAfterFrom = From.getNextNonDebugInstruction() == &DomPoint;
+    bool DomPointAfterFrom = From.getNextNode() == &DomPoint;
 
     for (auto *DII : Users) {
       // It's common to see a debug user between From and DomPoint. Move it
       // after DomPoint to preserve the variable update without any reordering.
-      if (DomPointAfterFrom && DII->getNextNonDebugInstruction() == &DomPoint) {
+      if (DomPointAfterFrom && DII->getNextNode() == &DomPoint) {
         LLVM_DEBUG(dbgs() << "MOVE:  " << *DII << '\n');
         DII->moveAfter(&DomPoint);
         Changed = true;
@@ -2683,7 +2683,7 @@ static bool rewriteDebugUsers(
       Instruction *NextNonDebug = MarkedInstr;
       // The next instruction might still be a dbg.declare, skip over it.
       if (isa<DbgVariableIntrinsic>(NextNonDebug))
-        NextNonDebug = NextNonDebug->getNextNonDebugInstruction();
+        NextNonDebug = NextNonDebug->getNextNode();
 
       if (DomPointAfterFrom && NextNonDebug == &DomPoint) {
         LLVM_DEBUG(dbgs() << "MOVE:  " << *DVR << '\n');
@@ -3070,9 +3070,9 @@ static bool markAliveBlocks(Function &F,
           // If we found a call to a no-return function, insert an unreachable
           // instruction after it.  Make sure there isn't *already* one there
           // though.
-          if (!isa<UnreachableInst>(CI->getNextNonDebugInstruction())) {
+          if (!isa<UnreachableInst>(CI->getNextNode())) {
             // Don't insert a call to llvm.trap right before the unreachable.
-            changeToUnreachable(CI->getNextNonDebugInstruction(), false, DTU);
+            changeToUnreachable(CI->getNextNode(), false, DTU);
             Changed = true;
           }
           break;

@@ -1150,7 +1150,7 @@ bool SemaHLSL::handleRootSignatureElements(
       if (!llvm::hlsl::rootsig::verifyMaxAnisotropy(Sampler->MaxAnisotropy))
         ReportError(Loc, 0, 16);
       if (!llvm::hlsl::rootsig::verifyMipLODBias(Sampler->MipLODBias))
-        ReportFloatError(Loc, -16.f, 15.99);
+        ReportFloatError(Loc, -16.f, 15.99f);
     } else if (const auto *Clause =
                    std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
                        &Elem)) {

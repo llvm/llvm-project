@@ -1488,6 +1488,9 @@ def HasVendorXqcics
 def NoVendorXqcics
     : Predicate<"!Subtarget->hasVendorXqcics()">;
 
+def HasVendorXqcicsOrXqcicm
+    : Predicate<"Subtarget->hasVendorXqcics() || Subtarget->hasVendorXqcicm()">;
+
 def FeatureVendorXqcicsr
     : RISCVExperimentalExtension<0, 4, "Qualcomm uC CSR Extension">;
 def HasVendorXqcicsr
@@ -1598,6 +1601,14 @@ def HasVendorXAndesPerf
     : Predicate<"Subtarget->hasVendorXAndesPerf()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesPerf),
                          "'XAndesPerf' (Andes Performance Extension)">;
+
+def FeatureVendorXAndesBFHCvt
+    : RISCVExtension<5, 0, "Andes Scalar BFLOAT16 Conversion Extension",
+                     [FeatureStdExtF]>;
+def HasVendorXAndesBFHCvt
+    : Predicate<"Subtarget->hasVendorXAndesBFHCvt()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesBFHCvt),
+                         "'XAndesBFHCvt' (Andes Scalar BFLOAT16 Conversion Extension)">;
 
 def FeatureVendorXAndesVBFHCvt
     : RISCVExtension<5, 0, "Andes Vector BFLOAT16 Conversion Extension",

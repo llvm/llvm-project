@@ -6247,7 +6247,7 @@ static void handleInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleLayoutVersion(Sema &S, Decl *D, const ParsedAttr &AL) {
   uint32_t Version;
-  Expr *VersionExpr = static_cast<Expr *>(AL.getArgAsExpr(0));
+  Expr *VersionExpr = AL.getArgAsExpr(0);
   if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), Version))
     return;
 

@@ -669,6 +669,7 @@ TARGET_BUILTIN(__builtin_amdgcn_s_wait_asynccnt, "vIUs", "n", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_wait_tensorcnt, "vIUs", "n", "gfx1250-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_tanh_bf16, "yy", "nc", "bf16-trans-insts")
+TARGET_BUILTIN(__builtin_amdgcn_rcp_bf16, "yy", "nc", "bf16-trans-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_cvt_f16_fp8, "hiIi", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_f16_bf8, "hiIi", "nc", "gfx1250-insts")
