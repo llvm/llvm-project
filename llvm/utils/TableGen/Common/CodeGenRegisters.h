@@ -315,6 +315,8 @@ inline bool operator==(const CodeGenRegister &A, const CodeGenRegister &B) {
 
 class CodeGenRegisterClass {
   CodeGenRegister::Vec Members;
+  // Bit mask of members, indexed by getRegIndex.
+  BitVector MemberBV;
   // Allocation orders. Order[0] always contains all registers in Members.
   std::vector<SmallVector<const Record *, 16>> Orders;
   // Bit mask of sub-classes including this, indexed by their EnumValue.
@@ -752,7 +754,7 @@ public:
   CodeGenRegister *getReg(const Record *);
 
   // Get a Register's index into the Registers array.
-  unsigned getRegIndex(const CodeGenRegister *Reg) const {
+  static unsigned getRegIndex(const CodeGenRegister *Reg) {
     return Reg->EnumValue - 1;
   }
 

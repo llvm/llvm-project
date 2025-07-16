@@ -701,11 +701,13 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   Orders.resize(1 + AltOrders->size());
 
   // Default allocation order always contains all registers.
+  MemberBV.resize(RegBank.getRegisters().size());
   Artificial = true;
   for (const Record *Element : *Elements) {
     Orders[0].push_back(Element);
     const CodeGenRegister *Reg = RegBank.getReg(Element);
     Members.push_back(Reg);
+    MemberBV.set(CodeGenRegBank::getRegIndex(Reg));
     Artificial &= Reg->Artificial;
     if (!Reg->getSuperRegs().empty())
       RegsWithSuperRegsTopoSigs.set(Reg->getTopoSig());
@@ -767,9 +769,11 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
       RegsWithSuperRegsTopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1),
       RSI(Props.RSI), CopyCost(0), Allocatable(true), AllocationPriority(0),
       GlobalPriority(false), TSFlags(0) {
+  MemberBV.resize(RegBank.getRegisters().size());
   Artificial = true;
   GeneratePressureSet = false;
   for (const auto R : Members) {
+    MemberBV.set(CodeGenRegBank::getRegIndex(R));
     if (!R->getSuperRegs().empty())
       RegsWithSuperRegsTopoSigs.set(R->getTopoSig());
     Artificial &= R->Artificial;
@@ -833,7 +837,7 @@ bool CodeGenRegisterClass::hasType(const ValueTypeByHwMode &VT) const {
 }
 
 bool CodeGenRegisterClass::contains(const CodeGenRegister *Reg) const {
-  return llvm::binary_search(Members, Reg, deref<std::less<>>());
+  return MemberBV.test(CodeGenRegBank::getRegIndex(Reg));
 }
 
 unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank &RegBank) const {
@@ -2329,8 +2333,7 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     CodeGenRegisterClass *RC,
     std::list<CodeGenRegisterClass>::iterator FirstSubRegRC) {
   DenseSet<const CodeGenSubRegIndex *> ImpliedSubRegIndices;
-  std::vector<std::pair<const CodeGenRegister *, const CodeGenRegister *>>
-      SubToSuperRegs;
+  std::vector<const CodeGenRegister *> SubRegs;
   BitVector TopoSigs(getNumTopoSigs());
 
   // Iterate subregister indices in topological order to visit larger indices
@@ -2348,15 +2351,14 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
 
     // Build list of (Sub, Super) pairs for this SubIdx, sorted by Sub. Note
     // that the list may contain entries with the same Sub but different Supers.
-    SubToSuperRegs.clear();
+    SubRegs.clear();
     TopoSigs.reset();
     for (const CodeGenRegister *Super : RC->getMembers()) {
       const CodeGenRegister *Sub = Super->getSubRegs().find(SubIdx)->second;
       assert(Sub && "Missing sub-register");
-      SubToSuperRegs.emplace_back(Sub, Super);
+      SubRegs.push_back(Sub);
       TopoSigs.set(Sub->getTopoSig());
     }
-    sort(SubToSuperRegs, on_first<deref<std::less<>>>());
 
     // Iterate over sub-register class candidates.  Ignore classes created by
     // this loop. They will never be useful.
@@ -2371,16 +2373,10 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       // Topological shortcut: SubRC members have the wrong shape.
       if (!TopoSigs.anyCommon(SubRC.getRegsWithSuperRegsTopoSigs()))
         continue;
-      // Compute the subset of RC that maps into SubRC with a single linear scan
-      // through SubToSuperRegs and the members of SubRC.
+      // Compute the subset of RC that maps into SubRC.
       CodeGenRegister::Vec SubSetVec;
-      auto SubI = SubRC.getMembers().begin(), SubE = SubRC.getMembers().end();
-      for (auto &[Sub, Super] : SubToSuperRegs) {
-        while (SubI != SubE && **SubI < *Sub)
-          ++SubI;
-        if (SubI == SubE)
-          break;
-        if (**SubI == *Sub)
+      for (const auto &[Sub, Super] : zip_equal(SubRegs, RC->getMembers())) {
+        if (SubRC.contains(Sub))
           SubSetVec.push_back(Super);
       }
 
@@ -2388,7 +2384,6 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
         continue;
 
       // RC injects completely into SubRC.
-      sortAndUniqueRegisters(SubSetVec);
       if (SubSetVec.size() == RC->getMembers().size()) {
         SubRC.addSuperRegClass(SubIdx, RC);
 
