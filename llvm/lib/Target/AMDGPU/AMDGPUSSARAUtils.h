@@ -17,22 +17,6 @@
 
 using namespace llvm;
 
-inline LaneBitmask getFullMaskForRC(const TargetRegisterClass &RC,
-                                    const SIRegisterInfo *TRI) {
-  unsigned Size = TRI->getRegSizeInBits(RC);
-  uint64_t IntMask = LaneBitmask::getAll().getAsInteger();
-  return LaneBitmask(IntMask >> (LaneBitmask::BitWidth - Size / 16));
-}
-
-inline LaneBitmask getFullMaskForRegOp(const MachineOperand &MO,
-                                       const SIRegisterInfo *TRI,
-                                       MachineRegisterInfo *MRI) {
-  assert(MO.isReg() && MO.getReg().isVirtual() &&
-         "Error: MachineOperand must be a virtual register!\n");
-  const TargetRegisterClass *RC = TRI->getRegClassForOperandReg(*MRI, MO);
-  return getFullMaskForRC(*RC, TRI);
-}
-
 inline LaneBitmask getOperandLaneMask(const MachineOperand &MO,
                                       const SIRegisterInfo *TRI,
                                       MachineRegisterInfo *MRI) {
@@ -40,7 +24,7 @@ inline LaneBitmask getOperandLaneMask(const MachineOperand &MO,
          "Error: Only virtual register allowed!\n");
   if (MO.getSubReg())
     return TRI->getSubRegIndexLaneMask(MO.getSubReg());
-  return getFullMaskForRegOp(MO, TRI, MRI);
+  return MRI->getMaxLaneMaskForVReg(MO.getReg());
 }
 
 inline unsigned getSubRegIndexForLaneMask(LaneBitmask Mask,
