@@ -418,7 +418,7 @@ llvm.func @struct_two_different_elements() -> !llvm.struct<(f64, f32)> {
 // -----
 
 llvm.func @struct_wrong_element_types() -> !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)> {
-  // expected-error @+1 {{expected struct element types to be floating point type or integer type}}
+  // expected-error @+1 {{expected element of array attribute to be floating point or integer}}
   %0 = llvm.mlir.constant([dense<[1.0, 1.0]> : tensor<2xf64>, dense<[1.0, 1.0]> : tensor<2xf64>]) : !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)>
   llvm.return %0 : !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)>
 }
@@ -442,7 +442,7 @@ llvm.func @scalable_vec_requires_splat() -> vector<[4]xf64> {
 
 // -----
 
-llvm.func @integer_with_float_type() -> f32 {
+llvm.func @int_attr_requires_int_type() -> f32 {
   // expected-error @+1 {{expected integer type}}
   %0 = llvm.mlir.constant(1 : index) : f32
   llvm.return %0 : f32
@@ -450,10 +450,26 @@ llvm.func @integer_with_float_type() -> f32 {
 
 // -----
 
-llvm.func @incompatible_float_attribute_type() -> f32 {
-  // expected-error @below{{expected float type of width 64}}
-  %cst = llvm.mlir.constant(1.0 : f64) : f32
-  llvm.return %cst : f32
+llvm.func @vector_int_attr_requires_int_type() -> vector<2xf32> {
+  // expected-error @+1 {{expected integer element type}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : vector<2xi32>) : vector<2xf32>
+  llvm.return %0 : vector<2xf32>
+}
+
+// -----
+
+llvm.func @float_attr_and_type_required_same() -> f16 {
+  // expected-error @below{{attribute and type have different float semantics}}
+  %cst = llvm.mlir.constant(1.0 : bf16) : f16
+  llvm.return %cst : f16
+}
+
+// -----
+
+llvm.func @vector_float_attr_and_type_required_same() -> vector<2xf16> {
+  // expected-error @below{{attribute and type have different float semantics}}
+  %cst = llvm.mlir.constant(dense<[1.0, 2.0]> : vector<2xbf16>) : vector<2xf16>
+  llvm.return %cst : vector<2xf16>
 }
 
 // -----
@@ -463,6 +479,64 @@ llvm.func @incompatible_integer_type_for_float_attr() -> i32 {
   %cst = llvm.mlir.constant(1.0 : f16) : i32
   llvm.return %cst : i32
 }
+
+// -----
+
+llvm.func @vector_incompatible_integer_type_for_float_attr() -> vector<2xi8> {
+  // expected-error @below{{expected integer type of width 16}}
+  %cst = llvm.mlir.constant(dense<[1.0, 2.0]> : vector<2xf16>) : vector<2xi8>
+  llvm.return %cst : vector<2xi8>
+}
+
+// -----
+
+llvm.func @vector_with_non_vector_type() -> f32 {
+  // expected-error @below{{expected vector or array type}}
+  %cst = llvm.mlir.constant(dense<100.0> : vector<1xf64>) : f32
+  llvm.return %cst : f32
+}
+
+// -----
+
+llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
+  // expected-error @below{{expected integer element type for integer elements attribute}}
+  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
+  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
+}
+
+// -----
+
+llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
+  // expected-error @below{{expected integer element type for integer elements attribute}}
+  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
+  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
+}
+
+// -----
+
+llvm.func @invalid_struct_element_type() -> !llvm.struct<(f64, array<2 x i32>)> {
+  // expected-error @below{{expected element of array attribute to be floating point or integer}}
+  %0 = llvm.mlir.constant([1.0 : f64, dense<[1, 2]> : tensor<2xi32>]) : !llvm.struct<(f64, array<2 x i32>)>
+  llvm.return %0 : !llvm.struct<(f64, array<2 x i32>)>
+}
+
+// -----
+
+llvm.func @wrong_struct_element_attr_type() -> !llvm.struct<(f64, f64)> {
+  // expected-error @below{{expected element of array attribute to be floating point or integer}}
+  %0 = llvm.mlir.constant([dense<[1, 2]> : tensor<2xi32>, 2.0 : f64]) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
+}
+
+// -----
+
+llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
+  // expected-error @below{{struct element at index 0 is of wrong type}}
+  %0 = llvm.mlir.constant([1.0 : f32, 1.0 : f32]) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
+}
+
+// -----
 
 // -----
 
