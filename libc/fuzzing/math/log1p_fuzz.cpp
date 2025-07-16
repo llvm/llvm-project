@@ -26,10 +26,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     data += sizeof(double);
     // remove NaN and inf and values outside accepted range
     if (isnan(x) || isinf(x) || x < -1)
-      return 0;
+      continue;
     // signed zeros already tested in unit tests
     if (signbit(x) && x == 0.0)
-      return 0;
+      continue;
 
     mpfr_set_d(input, x, MPFR_RNDN);
     int output = mpfr_log1p(input, input, MPFR_RNDN);
