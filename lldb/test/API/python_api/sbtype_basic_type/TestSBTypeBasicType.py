@@ -27,6 +27,6 @@ class TestCase(TestBase):
         d = self.frame().FindVariable("d")
         self.assertTrue(d)
 
-        self.assertEqual(a.GetType().GetBasicType(), int_basic_type)
         self.assertEqual(b.GetType().GetBasicType(), int_basic_type)
         self.assertEqual(c.GetType().GetBasicType(), int_basic_type)
+        self.assertEqual(d.GetType().GetBasicType(), int_basic_type)
