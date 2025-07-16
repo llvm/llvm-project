@@ -224,16 +224,15 @@ Exit:		; preds = %Succ
 define void @b() {
 ; CHECK-LABEL: @b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[BB_NOMERGE:%.*]]
-; CHECK:       BB.nomerge:
 ; CHECK-NEXT:    br label [[SUCC:%.*]]
 ; CHECK:       Succ:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 1, [[BB_NOMERGE]] ], [ 2, [[COMMON:%.*]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT:%.*]], [[COMMON:%.*]] ]
 ; CHECK-NEXT:    [[CONDE:%.*]] = call i1 @foo()
 ; CHECK-NEXT:    br i1 [[CONDE]], label [[COMMON]], label [[EXIT:%.*]]
 ; CHECK:       Common:
 ; CHECK-NEXT:    [[COND:%.*]] = call i1 @foo()
-; CHECK-NEXT:    br i1 [[COND]], label [[BB_NOMERGE]], label [[SUCC]]
+; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[COND]], i32 1, i32 2
+; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       Exit:
 ; CHECK-NEXT:    ret void
 ;
