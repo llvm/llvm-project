@@ -29,15 +29,11 @@ static bool finalizeLinkage(Module &M) {
   }
 
   // Remove unused global variables.
-  SmallVector<GlobalVariable *> ToErase;
-  for (GlobalVariable &GV : M.globals()) {
+  for (GlobalVariable &GV : make_early_inc_range(M.globals())) {
     if (GV.use_empty()) {
-      ToErase.push_back(&GV);
+      GV.eraseFromParent();
+      MadeChange = true;
     }
-  }
-  for (GlobalVariable *GV : ToErase) {
-    GV->eraseFromParent();
-    MadeChange = true;
   }
 
   SmallVector<Function *> Funcs;
