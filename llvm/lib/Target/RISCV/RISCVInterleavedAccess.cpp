@@ -258,15 +258,14 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     Instruction *Load, Value *Mask, IntrinsicInst *DI) const {
-  VectorDeinterleaving VD(DI);
-  const unsigned Factor = VD.getFactor();
+  const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   assert(Factor && "unexpected deinterleaving factor");
   if (Factor > 8)
     return false;
 
   IRBuilder<> Builder(Load);
 
-  VectorType *ResVTy = cast<VectorType>(VD.getDeinterleavedType());
+  VectorType *ResVTy = cast<VectorType>(getDeinterleavedVectorType(DI));
 
   const DataLayout &DL = Load->getDataLayout();
   auto *XLenTy = Type::getIntNTy(Load->getContext(), Subtarget.getXLen());
@@ -438,14 +437,16 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 /// dealing with factor of 2 (extractvalue is still required for most of other
 /// factors though).
 bool RISCVTargetLowering::lowerInterleavedVPLoad(
-    VPIntrinsic *Load, Value *Mask, const VectorDeinterleaving &VD) const {
+    VPIntrinsic *Load, Value *Mask,
+    ArrayRef<Value *> DeinterleaveResults) const {
+  const unsigned Factor = DeinterleaveResults.size();
   assert(Mask && "Expect a valid mask");
   assert(Load->getIntrinsicID() == Intrinsic::vp_load &&
          "Unexpected intrinsic");
 
-  const unsigned Factor = VD.getFactor();
-  assert(Factor && "unexpected vector deinterleaving");
-  VectorType *VTy = cast<VectorType>(VD.getDeinterleavedType());
+  Value *FirstActive = *llvm::find_if(DeinterleaveResults,
+                                      [](Value *V) { return V != nullptr; });
+  VectorType *VTy = cast<VectorType>(FirstActive->getType());
 
   auto &DL = Load->getModule()->getDataLayout();
   Align Alignment = Load->getParamAlign(0).value_or(
@@ -509,18 +510,14 @@ bool RISCVTargetLowering::lowerInterleavedVPLoad(
     }
   }
 
-  if (VD.DI) {
-    VD.DI->replaceAllUsesWith(Return);
-  } else {
-    for (auto [Idx, DIO] : enumerate(VD.Values)) {
-      if (!DIO)
-        continue;
-      // We have to create a brand new ExtractValue to replace each
-      // of these old ExtractValue instructions.
-      Value *NewEV =
-          Builder.CreateExtractValue(Return, {static_cast<unsigned>(Idx)});
-      DIO->replaceAllUsesWith(NewEV);
-    }
+  for (auto [Idx, DIO] : enumerate(DeinterleaveResults)) {
+    if (!DIO)
+      continue;
+    // We have to create a brand new ExtractValue to replace each
+    // of these old ExtractValue instructions.
+    Value *NewEV =
+        Builder.CreateExtractValue(Return, {static_cast<unsigned>(Idx)});
+    DIO->replaceAllUsesWith(NewEV);
   }
 
   return true;

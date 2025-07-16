@@ -381,8 +381,7 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
     SmallVector<Value *, 4> ShuffleValues(Factor, nullptr);
     for (auto [Idx, ShuffleMaskIdx] : enumerate(Indices))
       ShuffleValues[ShuffleMaskIdx] = Shuffles[Idx];
-    VectorDeinterleaving VD(ShuffleValues);
-    if (!TLI->lowerInterleavedVPLoad(VPLoad, LaneMask, VD))
+    if (!TLI->lowerInterleavedVPLoad(VPLoad, LaneMask, ShuffleValues))
       // If Extracts is not empty, tryReplaceExtracts made changes earlier.
       return !Extracts.empty() || BinOpShuffleChanged;
   } else {
@@ -616,17 +615,17 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   if (!LoadedVal->hasOneUse() || !isa<LoadInst, VPIntrinsic>(LoadedVal))
     return false;
 
-  VectorDeinterleaving VD(DI);
-  const unsigned Factor = VD.getFactor();
+  const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   assert(Factor && "unexpected deinterleave intrinsic");
 
+  Value *Mask = nullptr;
   if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadedVal)) {
     if (VPLoad->getIntrinsicID() != Intrinsic::vp_load)
       return false;
     // Check mask operand. Handle both all-true/false and interleaved mask.
     Value *WideMask = VPLoad->getOperand(1);
-    Value *Mask =
-        getMask(WideMask, Factor, cast<VectorType>(VD.getDeinterleavedType()));
+    Mask = getMask(WideMask, Factor,
+                   cast<VectorType>(getDeinterleavedVectorType(DI)));
     if (!Mask)
       return false;
 

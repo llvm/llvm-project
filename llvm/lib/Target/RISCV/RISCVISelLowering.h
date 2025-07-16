@@ -444,7 +444,7 @@ public:
       StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
 
   bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                              const VectorDeinterleaving &VD) const override;
+                              ArrayRef<Value *> DeinterleaveRes) const override;
 
   bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
                                ArrayRef<Value *> InterleaveOps) const override;

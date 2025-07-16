@@ -17487,8 +17487,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     Instruction *Load, Value *Mask, IntrinsicInst *DI) const {
-  VectorDeinterleaving VD(DI);
-  const unsigned Factor = VD.getFactor();
+  const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   if (Factor != 2 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
     return false;
@@ -17498,7 +17497,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     return false;
   assert(!Mask && "Unexpected mask on a load\n");
 
-  VectorType *VTy = cast<VectorType>(VD.getDeinterleavedType());
+  VectorType *VTy = cast<VectorType>(getDeinterleavedVectorType(DI));
 
   const DataLayout &DL = LI->getModule()->getDataLayout();
   bool UseScalable;
