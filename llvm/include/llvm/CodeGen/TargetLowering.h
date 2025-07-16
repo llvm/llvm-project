@@ -3249,10 +3249,11 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.deinterleave{2,3,5,7}
   ///
-  /// \p LI is the accompanying load instruction.
+  /// \p Load is the accompanying load instruction.  Can be either a plain load
+  /// instruction or a vp.load intrinsic.
   /// \p DeinterleaveValues contains the deinterleaved values.
   virtual bool
-  lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
+  lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
                                    ArrayRef<Value *> DeinterleaveValues) const {
     return false;
   }
