@@ -966,8 +966,7 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
   default:
     return false;
   case MCFragment::FT_Relaxable:
-    assert(!getRelaxAll() &&
-           "Did not expect a MCRelaxableFragment in RelaxAll mode");
+    assert(!getRelaxAll() && "Did not expect a FT_Relaxable in RelaxAll mode");
     return relaxInstruction(F);
   case MCFragment::FT_LEB:
     return relaxLEB(F);
