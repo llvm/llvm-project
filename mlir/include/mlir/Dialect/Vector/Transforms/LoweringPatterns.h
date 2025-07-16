@@ -306,7 +306,7 @@ void populateVectorToFromElementsToShuffleTreePatterns(
 /// Populate the pattern set with the following patterns:
 ///
 /// [ContractionOpToMatmulOpLowering]
-/// Lowers `vector.transpose` to `llvm.intr.matrix.flat_transpose`.
+/// Lowers `vector.contract` to `llvm.intr.matrix.multiply`.
 ///
 /// Given the high benefit, this will be prioriotised over other
 /// transpose-lowering patterns. As such, the convert-vector-to-llvm pass will
@@ -317,7 +317,7 @@ void populateVectorContractToMatrixMultiply(RewritePatternSet &patterns,
 /// Populate the pattern set with the following patterns:
 ///
 /// [TransposeOpLowering]
-/// Lowers `vector.contract` to `llvm.intr.matrix.multiply`.
+/// Lowers `vector.transpose` to `llvm.intr.matrix.flat_transpose`.
 ///
 /// Given the high benefit, this will be prioriotised over other
 /// contract-lowering patterns. As such, the convert-vector-to-llvm pass will
