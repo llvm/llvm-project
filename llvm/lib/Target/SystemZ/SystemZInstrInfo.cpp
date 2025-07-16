@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -227,35 +228,6 @@ void SystemZInstrInfo::expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
     MIB.add(MO);
 
   MI.eraseFromParent();
-}
-
-void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
-  MachineBasicBlock *MBB = MI->getParent();
-  MachineFunction &MF = *MBB->getParent();
-  const Register Reg64 = MI->getOperand(0).getReg();
-  const Register Reg32 = RI.getSubReg(Reg64, SystemZ::subreg_l32);
-
-  // EAR can only load the low subregister so us a shift for %a0 to produce
-  // the GR containing %a0 and %a1.
-
-  // ear <reg>, %a0
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::EAR), Reg32)
-    .addReg(SystemZ::A0)
-    .addReg(Reg64, RegState::ImplicitDefine);
-
-  // sllg <reg>, <reg>, 32
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::SLLG), Reg64)
-    .addReg(Reg64)
-    .addReg(0)
-    .addImm(32);
-
-  // ear <reg>, %a1
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::EAR), Reg32)
-    .addReg(SystemZ::A1);
-
-  // lg <reg>, 40(<reg>)
-  MI->setDesc(get(SystemZ::LG));
-  MachineInstrBuilder(MF, MI).addReg(Reg64).addImm(40).addReg(0);
 }
 
 // Emit a zero-extending move from 32-bit GPR SrcReg to 32-bit GPR
@@ -1059,8 +1031,7 @@ void SystemZInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 // and no index.  Flag is SimpleBDXLoad for loads and SimpleBDXStore for stores.
 static bool isSimpleBD12Move(const MachineInstr *MI, unsigned Flag) {
   const MCInstrDesc &MCID = MI->getDesc();
-  return ((MCID.TSFlags & Flag) &&
-          isUInt<12>(MI->getOperand(2).getImm()) &&
+  return ((MCID.TSFlags & Flag) && isUInt<12>(MI->getOperand(2).getImm()) &&
           MI->getOperand(3).getReg() == 0);
 }
 
@@ -1808,10 +1779,6 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     splitAdjDynAlloc(MI);
     return true;
 
-  case TargetOpcode::LOAD_STACK_GUARD:
-    expandLoadStackGuard(&MI);
-    return true;
-
   default:
     return false;
   }
@@ -1833,6 +1800,28 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 18;
   if (MI.getOpcode() == TargetOpcode::PATCHABLE_RET)
     return 18 + (MI.getOperand(0).getImm() == SystemZ::CondReturn ? 4 : 0);
+  if ((MI.getOpcode() == SystemZ::MOVE_STACK_GUARD) ||
+      (MI.getOpcode() == SystemZ::COMPARE_STACK_GUARD))
+    return 6;
+  if ((MI.getOpcode() == SystemZ::LOAD_STACK_GUARD_ADDRESS) ||
+      (MI.getOpcode() == TargetOpcode::LOAD_STACK_GUARD)) {
+    StringRef GuardType = MI.getParent()
+                              ->getParent()
+                              ->getFunction()
+                              .getParent()
+                              ->getStackProtectorGuard();
+    unsigned Size = (MI.getOpcode() == TargetOpcode::LOAD_STACK_GUARD)
+                        ? 6 // lg to load value
+                        : 0;
+    if (GuardType == "global")
+      return Size + 6; // larl/lgrl
+    if (GuardType.empty() || GuardType == "tls")
+      return Size + 14; // ear,sllg,ear
+    llvm_unreachable(
+        (Twine("Unknown stack protector type \"") + GuardType + "\"")
+            .str()
+            .c_str());
+  }
 
   return MI.getDesc().getSize();
 }

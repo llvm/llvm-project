@@ -521,6 +521,20 @@ let SimpleBDXStore = 1, mayStore = 1 in {
                        [(store GR128:$src, bdxaddr20only128:$dst)]>;
   }
 }
+
+let hasNoSchedulingInfo = 1, hasSideEffects = 1 in {
+  // LOAD_STACK_GUARD_ADDRESS may not Load, because it has no (official)
+  // operands.
+  let isReMaterializable = 1 in
+    def LOAD_STACK_GUARD_ADDRESS : Pseudo<(outs ADDR64:$grdaddr), (ins), []>;
+  let mayLoad = 1 in {
+    let mayStore = 1 in def MOVE_STACK_GUARD
+        : Pseudo<(outs), (ins bdaddr12only:$grdloc, ADDR64:$grdaddr), []>;
+    let Defs = [CC] in def COMPARE_STACK_GUARD
+        : Pseudo<(outs), (ins bdaddr12only:$grdloc, ADDR64:$grdaddr), []>;
+  }
+}
+
 def STRL  : StoreRILPC<"strl", 0xC4F, aligned_store, GR32>;
 def STGRL : StoreRILPC<"stgrl", 0xC4B, aligned_store, GR64>;
 

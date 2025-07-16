@@ -159,6 +159,7 @@ CODEGENOPT(InstrumentForProfiling , 1, 0, Benign) ///< Set when -pg is enabled.
 CODEGENOPT(CallFEntry , 1, 0, Benign) ///< Set when -mfentry is enabled.
 CODEGENOPT(MNopMCount , 1, 0, Benign) ///< Set when -mnop-mcount is enabled.
 CODEGENOPT(RecordMCount , 1, 0, Benign) ///< Set when -mrecord-mcount is enabled.
+CODEGENOPT(StackProtectorGuardRecord, 1, 0, Benign) ///< Set when -mstack-protector-guard-record is enabled.
 CODEGENOPT(PackedStack , 1, 0, Benign) ///< Set when -mpacked-stack is enabled.
 CODEGENOPT(LessPreciseFPMAD  , 1, 0, Benign) ///< Enable less precise MAD instructions to
                                              ///< be generated.

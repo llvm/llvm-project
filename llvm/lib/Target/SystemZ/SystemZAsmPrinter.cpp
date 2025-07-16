@@ -24,10 +24,12 @@
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -214,6 +216,16 @@ SystemZAsmPrinter::AssociatedDataAreaTable::insert(const MachineOperand MO) {
   unsigned ADAslotType = MO.getTargetFlags();
   return insert(Sym, ADAslotType);
 }
+
+namespace {
+unsigned long getStackGuardOffset(const MachineBasicBlock *MBB) {
+  // In the TLS (default) case, AddrReg will contain the thread pointer, so we
+  // need to add 40 bytes to get the actual address of the stack guard.
+  StringRef GuardType =
+      MBB->getParent()->getFunction().getParent()->getStackProtectorGuard();
+  return (GuardType == "global") ? 0 : 40;
+}
+} // namespace
 
 void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SystemZ_MC::verifyInstructionPredicates(MI->getOpcode(),
@@ -743,11 +755,126 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SystemZ::EH_SjLj_Setup:
     return;
 
+  case SystemZ::LOAD_STACK_GUARD: {
+    // If requested, record address of stack guard address load
+    if (MF->getFunction().hasFnAttribute("mstackprotector-guard-record"))
+      emitStackProtectorLocEntry();
+    Register AddrReg = emitLoadStackGuardAddress(MI);
+    LoweredMI = MCInstBuilder(SystemZ::LG)
+                    .addReg(AddrReg)
+                    .addImm(getStackGuardOffset(MI->getParent()))
+                    .addReg(0);
+  } break;
+
+  case SystemZ::LOAD_STACK_GUARD_ADDRESS:
+    // If requested, record address of stack guard address load
+    if (MF->getFunction().hasFnAttribute("mstackprotector-guard-record"))
+      emitStackProtectorLocEntry();
+    emitLoadStackGuardAddress(MI);
+    return;
+
+  case SystemZ::COMPARE_STACK_GUARD:
+    LoweredMI = MCInstBuilder(SystemZ::CLC)
+                    .addReg(MI->getOperand(0).getReg())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addImm(8)
+                    .addReg(MI->getOperand(2).getReg())
+                    .addImm(getStackGuardOffset(MI->getParent()));
+    break;
+
+  case SystemZ::MOVE_STACK_GUARD:
+    LoweredMI = MCInstBuilder(SystemZ::MVC)
+                    .addReg(MI->getOperand(0).getReg())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addImm(8)
+                    .addReg(MI->getOperand(2).getReg())
+                    .addImm(getStackGuardOffset(MI->getParent()));
+    break;
+
   default:
     Lower.lower(MI, LoweredMI);
     break;
   }
   EmitToStreamer(*OutStreamer, LoweredMI);
+}
+
+void SystemZAsmPrinter::emitStackProtectorLocEntry() {
+  MCSymbol *Sym = OutContext.createTempSymbol();
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(OutContext.getELFSection(
+      "__stack_protector_loc", ELF::SHT_PROGBITS, ELF::SHF_ALLOC));
+  OutStreamer->emitSymbolValue(Sym, getDataLayout().getPointerSize());
+  OutStreamer->popSection();
+  OutStreamer->emitLabel(Sym);
+}
+
+// Emit the stack guard address load, depending on guard type.
+// Return the register the stack guard address was loaded into.
+Register SystemZAsmPrinter::emitLoadStackGuardAddress(const MachineInstr *MI) {
+  const MachineBasicBlock *MBB = MI->getParent();
+  const MachineFunction &MF = *MBB->getParent();
+  const Register AddrReg = MI->getOperand(0).getReg();
+  const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
+  const Register Reg32 = MRI.getSubReg(AddrReg, SystemZ::subreg_l32);
+
+  const Module *M = MF.getFunction().getParent();
+  StringRef GuardType = M->getStackProtectorGuard();
+
+  if (GuardType.empty() || (GuardType == "tls")) {
+    // EAR can only load the low subregister so use a shift for %a0 to produce
+    // the GR containing %a0 and %a1.
+
+    // ear <reg>, %a0
+    MCInst EAR1 = MCInstBuilder(SystemZ::EAR)
+                      .addReg(Reg32)
+                      .addReg(SystemZ::A0)
+                      .addReg(AddrReg);
+
+    // sllg <reg>, <reg>, 32
+    MCInst SLLG = MCInstBuilder(SystemZ::SLLG)
+                      .addReg(AddrReg)
+                      .addReg(AddrReg)
+                      .addReg(0)
+                      .addImm(32);
+
+    // ear <reg>, %a1
+    MCInst EAR2 = MCInstBuilder(SystemZ::EAR)
+                      .addReg(Reg32)
+                      .addReg(SystemZ::A1)
+                      .addReg(AddrReg);
+
+    EmitToStreamer(*OutStreamer, EAR1);
+    EmitToStreamer(*OutStreamer, SLLG);
+    EmitToStreamer(*OutStreamer, EAR2);
+  } else if (GuardType == "global") {
+    // Obtain the global value.
+    const auto *GV = M->getGlobalVariable(
+        "__stack_chk_guard", PointerType::getUnqual(M->getContext()));
+    assert(GV &&
+           "could not create reference to global variable __stack_chk_guard");
+    auto *Sym = TM.getSymbol(GV);
+    // Ref->
+    // Emit the address load.
+    MCInst Load;
+    if (M->getPICLevel() == PICLevel::NotPIC) {
+      Load = MCInstBuilder(SystemZ::LARL)
+                 .addReg(AddrReg)
+                 .addExpr(MCSymbolRefExpr::create(Sym, OutContext));
+    } else {
+      Load =
+          MCInstBuilder(SystemZ::LGRL)
+              .addReg(AddrReg)
+              .addExpr(MCSymbolRefExpr::create(Sym, SystemZ::S_GOT, OutContext))
+              .addExpr(getGlobalOffsetTable(OutContext));
+    }
+    EmitToStreamer(*OutStreamer, Load);
+  } else {
+    llvm_unreachable(
+        (Twine("Unknown stack protector type \"") + GuardType + "\"")
+            .str()
+            .c_str());
+  }
+  return AddrReg;
 }
 
 // Emit the largest nop instruction smaller than or equal to NumBytes
