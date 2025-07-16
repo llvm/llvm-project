@@ -3745,7 +3745,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
   // Get the range of vector elements used by shufflevector instructions.
   if (std::optional<IndexRange> Indices = GetIndexRangeInShuffles()) {
-    unsigned const NewNumElements = (Indices->second + 1u) - Indices->first;
+    unsigned const NewNumElements = (Indices->second + 1) - Indices->first;
 
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
@@ -3768,7 +3768,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
       using UseEntry = std::pair<ShuffleVectorInst *, std::vector<int>>;
       SmallVector<UseEntry, 4u> NewUses;
       unsigned const LowOffset = Indices->first;
-      unsigned const HighOffset = OldNumElements - NewNumElements;
+      unsigned const HighOffset = OldNumElements - (Indices->second + 1);
 
       for (llvm::Use &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
@@ -3777,10 +3777,14 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         // Create entry for new use.
         NewUses.push_back({Shuffle, {}});
         std::vector<int> &NewMask = NewUses.back().second;
-        for (int Index : OldMask)
-          NewMask.push_back(Index >= static_cast<int>(OldNumElements)
-                                ? Index - HighOffset
-                                : Index - LowOffset);
+        for (int Index : OldMask) {
+          int NewIndex = Index >= static_cast<int>(OldNumElements)
+                             ? Index - LowOffset - HighOffset
+                             : Index - LowOffset;
+          if (NewIndex >= static_cast<int>(NewNumElements * 2u))
+            return false;
+          NewMask.push_back(NewIndex);
+        }
 
         // Update costs.
         OldCost +=
