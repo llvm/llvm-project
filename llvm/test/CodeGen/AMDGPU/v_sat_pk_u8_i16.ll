@@ -742,19 +742,18 @@ define amdgpu_kernel void @vec_smax_smin_sgpr(ptr addrspace(1) %out, <2 x i16> i
 ; GISEL-VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GISEL-VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GISEL-VI-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-VI-NEXT:    s_lshr_b32 s3, s2, 16
-; GISEL-VI-NEXT:    s_sext_i32_i16 s3, s3
-; GISEL-VI-NEXT:    s_sext_i32_i16 s2, s2
-; GISEL-VI-NEXT:    s_max_i32 s3, s3, 0
+; GISEL-VI-NEXT:    s_sext_i32_i16 s3, s2
+; GISEL-VI-NEXT:    s_bfe_i32 s2, s2, 0x100010
 ; GISEL-VI-NEXT:    s_max_i32 s2, s2, 0
-; GISEL-VI-NEXT:    s_sext_i32_i16 s3, s3
+; GISEL-VI-NEXT:    s_max_i32 s3, s3, 0
 ; GISEL-VI-NEXT:    s_sext_i32_i16 s2, s2
-; GISEL-VI-NEXT:    s_min_i32 s3, s3, 0xff
+; GISEL-VI-NEXT:    s_sext_i32_i16 s3, s3
 ; GISEL-VI-NEXT:    s_min_i32 s2, s2, 0xff
-; GISEL-VI-NEXT:    s_and_b32 s3, 0xffff, s3
+; GISEL-VI-NEXT:    s_min_i32 s3, s3, 0xff
 ; GISEL-VI-NEXT:    s_and_b32 s2, 0xffff, s2
-; GISEL-VI-NEXT:    s_lshl_b32 s3, s3, 16
-; GISEL-VI-NEXT:    s_or_b32 s2, s2, s3
+; GISEL-VI-NEXT:    s_and_b32 s3, 0xffff, s3
+; GISEL-VI-NEXT:    s_lshl_b32 s2, s2, 16
+; GISEL-VI-NEXT:    s_or_b32 s2, s3, s2
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v2, s2
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v1, s1

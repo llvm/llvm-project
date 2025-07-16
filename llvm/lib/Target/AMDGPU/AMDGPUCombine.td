@@ -210,5 +210,5 @@ def AMDGPURegBankCombiner : GICombiner<
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
-   lower_uniform_sbfx, lower_uniform_ubfx]> {
+   lower_uniform_sbfx, lower_uniform_ubfx, form_bitfield_extract]> {
 }
