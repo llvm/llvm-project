@@ -45,6 +45,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -672,7 +673,10 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   DiagClient->setPrefix("clang -cc1as");
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagClient);
 
-  auto VFS = vfs::getRealFileSystem();
+  auto VFS = [] {
+    auto BypassSandbox = sys::sandbox_scoped_disable();
+    return vfs::getRealFileSystem();
+  }();
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
