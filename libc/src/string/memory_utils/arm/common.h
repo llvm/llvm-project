@@ -14,6 +14,9 @@
 
 #include <stddef.h> // size_t
 
+// Our minimum supported compiler version does not recognize the standard
+// [[likely]] / [[unlikely]] attributes so we use the preprocessor.
+
 // https://libc.llvm.org/compiler_support.html
 // Support for [[likely]] / [[unlikely]]
 //  [X] GCC 12.2
