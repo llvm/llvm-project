@@ -5899,8 +5899,7 @@ def foutput_file_base : Joined<["-"], "foutput-file-base=">,
   Flags<[NoXarchOption, HelpHidden]>,
   Visibility<[ClangOption]>,
   HelpText<"Name extra output files after <base> not the main output file">,
-  MetaVarName<"<base>">,
-  MarshallingInfoString<FrontendOpts<"OutputFileBase">>;
+  MetaVarName<"<base>">;
 def object_file_name_EQ : Joined<["-"], "object-file-name=">,
   Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption, DXCOption]>,
   HelpText<"Set the output <file> for debug infos">, MetaVarName<"<file>">,
