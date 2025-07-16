@@ -8,6 +8,7 @@
 
 // REQUIRES: std-at-least-c++23
 // ADDITIONAL_COMPILE_FLAGS: -g -O0
+// UNSUPPORTED: asan, msan, tsan, hwasan, sanitizer-new-delete
 
 #include <cassert>
 #include <cstdlib>
@@ -17,6 +18,8 @@
  * This file includes tests which ensure any allocations performed by `basic_stacktrace`
  * are done via the user-provided allocator.  We intercept the usual ways to allocate,
  * counting the number of calls, through and not through the allocator.
+ *
+ * (This won't work properly with sanitizers, hence the `UNSUPPORTED` above.)
  */
 
 unsigned new_count;
