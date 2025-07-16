@@ -2490,29 +2490,35 @@ IntegerRelation IntegerRelation::rangeProduct(const IntegerRelation &rel) {
 
   // explicit copy of `this`
   IntegerRelation result = *this;
-  unsigned relRangeVarStart = rel.getVarKindOffset(VarKind::Range);
-  unsigned numRelRangeVars = rel.getNumRangeVars();
-  unsigned numThisRangeVars = getNumRangeVars();
 
-  result.appendVar(VarKind::Range, numRelRangeVars);
+  // An explicit copy of `rel` is needed to merge and align symbols, since that
+  // function mutates both relations.
+  IntegerRelation relCopy = rel;
+  result.mergeAndAlignSymbols(relCopy);
+
+  unsigned relRangeVarStart = rel.getVarKindOffset(VarKind::Range);
+  unsigned numThisRangeVars = getNumRangeVars();
+  unsigned numNewSymbolVars = result.getNumSymbolVars() - getNumSymbolVars();
+
+  result.appendVar(VarKind::Range, rel.getNumRangeVars());
 
   // Copy each equality from `rel` and update the copy to account for range
   // variables from `this`. The `rel` equality is a list of coefficients of the
   // variables from `rel`, and so the range variables need to be shifted right
-  // by the number of `this` range variables.
+  // by the number of `this` range variables and symbols.
   for (unsigned i = 0; i < rel.getNumEqualities(); ++i) {
     SmallVector<DynamicAPInt> copy =
         SmallVector<DynamicAPInt>(rel.getEquality(i));
-    copy.insert(copy.begin() + relRangeVarStart, numThisRangeVars,
-                DynamicAPInt(0));
+    copy.insert(copy.begin() + relRangeVarStart,
+                numThisRangeVars + numNewSymbolVars, DynamicAPInt(0));
     result.addEquality(copy);
   }
 
   for (unsigned i = 0; i < rel.getNumInequalities(); ++i) {
     SmallVector<DynamicAPInt> copy =
         SmallVector<DynamicAPInt>(rel.getInequality(i));
-    copy.insert(copy.begin() + relRangeVarStart, numThisRangeVars,
-                DynamicAPInt(0));
+    copy.insert(copy.begin() + relRangeVarStart,
+                numThisRangeVars + numNewSymbolVars, DynamicAPInt(0));
     result.addInequality(copy);
   }
 
