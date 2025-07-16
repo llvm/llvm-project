@@ -375,9 +375,8 @@ entry:
 define i32 @test1_eor(i32 %a) {
 ; CHECK-LABEL: test1_eor:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1024 // =0x400
-; CHECK-NEXT:    movk w8, #32, lsl #16
-; CHECK-NEXT:    eor w0, w0, w8
+; CHECK-NEXT:    eor w8, w0, #0x400
+; CHECK-NEXT:    eor w0, w8, #0x200000
 ; CHECK-NEXT:    ret
 entry:
   %eor = xor i32 %a, 2098176
@@ -413,9 +412,8 @@ entry:
 define i64 @test4_eor(i64 %a) {
 ; CHECK-LABEL: test4_eor:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1024 // =0x400
-; CHECK-NEXT:    movk w8, #32, lsl #16
-; CHECK-NEXT:    eor x0, x0, x8
+; CHECK-NEXT:    eor x8, x0, #0x400
+; CHECK-NEXT:    eor x0, x8, #0x200000
 ; CHECK-NEXT:    ret
 entry:
   %eor = xor i64 %a, 2098176
@@ -425,9 +423,8 @@ entry:
 define i64 @test5_eor(i64 %a) {
 ; CHECK-LABEL: test5_eor:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #16384 // =0x4000
-; CHECK-NEXT:    movk x8, #2, lsl #32
-; CHECK-NEXT:    eor x0, x0, x8
+; CHECK-NEXT:    eor x8, x0, #0x4000
+; CHECK-NEXT:    eor x0, x8, #0x200000000
 ; CHECK-NEXT:    ret
 entry:
   %eor = xor i64 %a, 8589950976
@@ -464,9 +461,8 @@ entry:
 define i32 @test1_orr(i32 %a) {
 ; CHECK-LABEL: test1_orr:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1024 // =0x400
-; CHECK-NEXT:    movk w8, #32, lsl #16
-; CHECK-NEXT:    orr w0, w0, w8
+; CHECK-NEXT:    orr w8, w0, #0x400
+; CHECK-NEXT:    orr w0, w8, #0x200000
 ; CHECK-NEXT:    ret
 entry:
   %orr = or i32 %a, 2098176
@@ -502,9 +498,8 @@ entry:
 define i64 @test4_orr(i64 %a) {
 ; CHECK-LABEL: test4_orr:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1024 // =0x400
-; CHECK-NEXT:    movk w8, #32, lsl #16
-; CHECK-NEXT:    orr x0, x0, x8
+; CHECK-NEXT:    orr x8, x0, #0x400
+; CHECK-NEXT:    orr x0, x8, #0x200000
 ; CHECK-NEXT:    ret
 entry:
   %orr = or i64 %a, 2098176
@@ -514,9 +509,8 @@ entry:
 define i64 @test5_orr(i64 %a) {
 ; CHECK-LABEL: test5_orr:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #16384 // =0x4000
-; CHECK-NEXT:    movk x8, #2, lsl #32
-; CHECK-NEXT:    orr x0, x0, x8
+; CHECK-NEXT:    orr x8, x0, #0x4000
+; CHECK-NEXT:    orr x0, x8, #0x200000000
 ; CHECK-NEXT:    ret
 entry:
   %orr = or i64 %a, 8589950976
