@@ -83,10 +83,11 @@ public:
         NearestUseV0SU = &SU;
 
         // Copy may not be a real use, so skip it here.
-        if (DefMask.size() > 1 && !MI->isCopy())
+        if (DefMask.size() > 1 && !MI->isCopy()) {
           for (SUnit *Def : DefMask)
             if (DAG->canAddEdge(Def, &SU))
               DAG->addEdge(Def, SDep(&SU, SDep::Artificial));
+        }
 
         if (!DefMask.empty())
           DefMask.erase(DefMask.begin());
