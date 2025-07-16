@@ -598,7 +598,7 @@ func.func @cast_int_to_int_sign() -> tensor<i32> {
 // CHECK: func.func @cast_i1_true_to_i32
 func.func @cast_i1_true_to_i32() -> tensor<i32> {
   %splat = "tosa.const"() {values = dense<true> : tensor<i1>} : () -> tensor<i1>
-  // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<-1> : tensor<i32>}
+  // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<1> : tensor<i32>}
   %cast = tosa.cast %splat : (tensor<i1>) -> tensor<i32>
   // CHECK: return %[[SPLAT]]
   return %cast : tensor<i32>

@@ -1303,7 +1303,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
 
       if (trunc) {
         intVal = intVal.trunc(bitwidth);
-      } else if (unsignIn) {
+      } else if (unsignIn || inETy.getIntOrFloatBitWidth() == 1) {
+        // Casting from i1 to iX will treat it as unsigned.
         intVal = intVal.zext(bitwidth);
       } else {
         intVal = intVal.sext(bitwidth);
