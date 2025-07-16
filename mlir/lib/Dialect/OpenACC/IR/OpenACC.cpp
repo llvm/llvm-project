@@ -332,6 +332,13 @@ checkValidModifier(Op op, acc::DataClauseModifier validModifiers) {
   return success();
 }
 
+template <typename Op>
+static LogicalResult checkNoRecipe(Op op) {
+  if (op.getRecipe().has_value())
+    return op.emitError("no recipes are allowed");
+  return success();
+}
+
 static ParseResult parseVar(mlir::OpAsmParser &parser,
                             OpAsmParser::UnresolvedOperand &var) {
   // Either `var` or `varPtr` keyword is required.
@@ -1063,6 +1070,24 @@ checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
       return op->emitOpError()
              << "expected as many " << symbolName << " symbol reference as "
              << operandName << " operands";
+    if (attributes) {
+      for (auto operandAndAttribute : llvm::zip(operands, *attributes)) {
+        mlir::Value operand = std::get<0>(operandAndAttribute);
+        if (auto *definingOp = operand.getDefiningOp()) {
+          mlir::SymbolRefAttr operandRecipe = getRecipe(definingOp);
+          // If the operand operation has a recipe - check that it is consistent
+          // with the one recorded in the construct.
+          if (operandRecipe) {
+            if (operandRecipe.getLeafReference().compare(
+                    llvm::cast<mlir::SymbolRefAttr>(
+                        std::get<1>(operandAndAttribute))
+                        .getLeafReference()) != 0)
+              return op->emitOpError() << "expected consistent recipe for "
+                                       << operandName << " operand";
+          }
+        }
+      }
+    }
   } else {
     if (attributes)
       return op->emitOpError()
@@ -4073,6 +4098,15 @@ mlir::acc::getMutableDataOperands(mlir::Operation *accOp) {
               [&](auto entry) { return entry.getDataClauseOperandsMutable(); })
           .Default([&](mlir::Operation *) { return nullptr; })};
   return dataOperands;
+}
+
+mlir::SymbolRefAttr mlir::acc::getRecipe(mlir::Operation *accOp) {
+  auto recipe{
+      llvm::TypeSwitch<mlir::Operation *, mlir::SymbolRefAttr>(accOp)
+          .Case<ACC_DATA_ENTRY_OPS>(
+              [&](auto entry) { return entry.getRecipeAttr(); })
+          .Default([&](mlir::Operation *) { return mlir::SymbolRefAttr{}; })};
+  return recipe;
 }
 
 mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {

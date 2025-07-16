@@ -514,7 +514,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
           DefaultValuedAttr<BoolAttr, "false">:$implicit,
           DefaultValuedAttr<OpenACC_DataClauseModifierAttr,
             "mlir::acc::DataClauseModifier::none">:$modifiers,
-          OptionalAttr<StrAttr>:$name));
+          OptionalAttr<StrAttr>:$name,
+          OptionalAttr<SymbolRefAttr>:$recipe));
 
   let description = !strconcat(extraDescription, [{
     Description of arguments:
@@ -623,7 +624,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
-          /*name=*/nullptr);
+          /*name=*/nullptr, /*recipe=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
@@ -641,7 +642,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
-          /*name=*/$_builder.getStringAttr(name));
+          /*name=*/$_builder.getStringAttr(name), /*recipe=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Type":$accVarType, "::mlir::Value":$var,
                    "::mlir::Type":$varType, "::mlir::Value":$varPtrPtr,
@@ -652,9 +653,26 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
                    "::mlir::acc::DataClause":$dataClause, "bool":$structured,
                    "bool":$implicit, "::mlir::StringAttr":$name),
       [{
+        // Builder provided to ease transition for new data clause modifiers operand.
         build($_builder, $_state, accVarType, var, varType, varPtrPtr, bounds,
           asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
           structured, implicit, ::mlir::acc::DataClauseModifier::none, name);
+      }]>,
+    OpBuilder<(ins "::mlir::Type":$accVarType, "::mlir::Value":$var,
+                   "::mlir::Type":$varType, "::mlir::Value":$varPtrPtr,
+                   "::mlir::ValueRange":$bounds,
+                   "::mlir::ValueRange":$asyncOperands,
+                   "::mlir::ArrayAttr":$asyncOperandsDeviceType,
+                   "::mlir::ArrayAttr":$asyncOnly,
+                   "::mlir::acc::DataClause":$dataClause, "bool":$structured,
+                   "bool":$implicit,
+                   "::mlir::acc::DataClauseModifier":$modifiers,
+                   "::mlir::StringAttr":$name),
+      [{
+        // Builder provided to simplify building after recipe operand was added.
+        build($_builder, $_state, accVarType, var, varType, varPtrPtr, bounds,
+              asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
+              structured, implicit, modifiers, name, /*recipe=*/nullptr);
       }]>,
     ];
 }

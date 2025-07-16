@@ -1340,6 +1340,8 @@ static void genPrivatizationRecipes(
           builder, operandLocation, info.addr, asFortran, bounds, true,
           /*implicit=*/false, mlir::acc::DataClause::acc_private, retTy, async,
           asyncDeviceTypes, asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true);
+      op.setRecipeAttr(mlir::SymbolRefAttr::get(builder.getContext(),
+                                                recipe.getSymName().str()));
       dataOperands.push_back(op.getAccVar());
     } else {
       std::string suffix =
@@ -1353,6 +1355,8 @@ static void genPrivatizationRecipes(
           /*implicit=*/false, mlir::acc::DataClause::acc_firstprivate, retTy,
           async, asyncDeviceTypes, asyncOnlyDeviceTypes,
           /*unwrapBoxAddr=*/true);
+      op.setRecipeAttr(mlir::SymbolRefAttr::get(builder.getContext(),
+                                                recipe.getSymName().str()));
       dataOperands.push_back(op.getAccVar());
     }
     privatizationRecipes.push_back(mlir::SymbolRefAttr::get(
@@ -1787,6 +1791,8 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     mlir::acc::ReductionRecipeOp recipe =
         Fortran::lower::createOrGetReductionRecipe(
             builder, recipeName, operandLocation, ty, mlirOp, bounds);
+    op.setRecipeAttr(mlir::SymbolRefAttr::get(builder.getContext(),
+                                              recipe.getSymName().str()));
     reductionRecipes.push_back(mlir::SymbolRefAttr::get(
         builder.getContext(), recipe.getSymName().str()));
     reductionOperands.push_back(op.getAccVar());
@@ -2038,6 +2044,8 @@ privatizeIv(Fortran::lower::AbstractConverter &converter,
         builder, loc, ivValue, asFortran, {}, true, /*implicit=*/true,
         mlir::acc::DataClause::acc_private, ivValue.getType(),
         /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    op.setRecipeAttr(mlir::SymbolRefAttr::get(builder.getContext(),
+                                              recipe.getSymName().str()));
     privateOp = op.getOperation();
 
     privateOperands.push_back(op.getAccVar());

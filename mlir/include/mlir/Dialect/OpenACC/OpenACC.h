@@ -151,6 +151,9 @@ mlir::ValueRange getDataOperands(mlir::Operation *accOp);
 /// Used to get a mutable range iterating over the data operands.
 mlir::MutableOperandRange getMutableDataOperands(mlir::Operation *accOp);
 
+/// Used to get the recipe attribute from a data clause operation.
+mlir::SymbolRefAttr getRecipe(mlir::Operation *accOp);
+
 /// Used to obtain the enclosing compute construct operation that contains
 /// the provided `region`. Returns nullptr if no compute construct operation
 /// is found. The returns operation is one of types defined by
