@@ -29,6 +29,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/thread.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -210,6 +211,7 @@ using ImportsFilesContainer = llvm::SmallVector<std::string>;
 class ThinBackendProc {
 protected:
   const Config &Conf;
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
   ModuleSummaryIndex &CombinedIndex;
   const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries;
   IndexWriteCallback OnWrite;
@@ -220,11 +222,12 @@ protected:
 
 public:
   ThinBackendProc(
-      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const Config &Conf, IntrusiveRefCntPtr<vfs::FileSystem> FS,
+      ModuleSummaryIndex &CombinedIndex,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       lto::IndexWriteCallback OnWrite, bool ShouldEmitImportsFiles,
       ThreadPoolStrategy ThinLTOParallelism)
-      : Conf(Conf), CombinedIndex(CombinedIndex),
+      : Conf(Conf), FS(std::move(FS)), CombinedIndex(CombinedIndex),
         ModuleToDefinedGVSummaries(ModuleToDefinedGVSummaries),
         OnWrite(OnWrite), ShouldEmitImportsFiles(ShouldEmitImportsFiles),
         BackendThreadPool(ThinLTOParallelism) {}
