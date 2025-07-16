@@ -35,7 +35,5 @@ namespace N {
 }
 
 //--- impl.cpp
-module M; // #M
-
+module M; // expected-note {{add 'export'}}
 export int b2; // expected-error {{export declaration can only be used within a module purview}}
-// expected-note@#M 2+{{add 'export'}}
