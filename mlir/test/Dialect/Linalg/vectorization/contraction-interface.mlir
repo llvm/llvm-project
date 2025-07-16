@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -transform-interpreter -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -split-input-file -verify-diagnostics | FileCheck %s
 
 ///----------------------------------------------------------------------------------------
 /// Tests for vectorizing operations implementing contraction op interface.
@@ -214,7 +214,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-/// Contractions' arbitrarty broadcasts are not supported in contraction interface
+/// Contractions with arbitrarty broadcasts are not supported in contraction interface
 /// vectorization.
 /// Dimension broadcasts are expected to be decomposed first which removes ambiguity
 /// caused by possible variants of dimensions materialization.
@@ -222,6 +222,7 @@ module attributes {transform.with_named_sequence} {
 
 func.func @negative_matmul_broadcast(%A: tensor<4xf32>, %B: tensor<4x16xf32>,
     %C: tensor<8x16xf32>) -> tensor<8x16xf32> {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
   %0 = linalg.matmul
     indexing_maps = [affine_map<(m, n, k) -> (k)>, // broadcast
                      affine_map<(m, n, k) -> (k, n)>,
@@ -230,10 +231,6 @@ func.func @negative_matmul_broadcast(%A: tensor<4xf32>, %B: tensor<4x16xf32>,
     outs(%C: tensor<8x16xf32>) -> tensor<8x16xf32>
   return %0 : tensor<8x16xf32>
 }
-
-// CHECK-LABEL: func.func @negative_matmul_broadcast(
-// CHECK-NOT: vector.contract
-// CHECK: vector.multi_reduction
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

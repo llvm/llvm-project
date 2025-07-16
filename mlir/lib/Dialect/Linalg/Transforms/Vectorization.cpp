@@ -2128,7 +2128,7 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
 ///   vector::TransferWriteOp - Write the result vector back to the
 ///   destination
 /// The operands shapes are preserved and loaded directly into vectors.
-/// Any further permutations or numerical casting remain within contraction.
+/// Any further permutations or numerical casting remain within contraction op.
 static LogicalResult
 vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
                              LinalgOp linalgOp,
@@ -2136,22 +2136,29 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
   Location loc = linalgOp.getLoc();
   MLIRContext *ctx = linalgOp.getContext();
 
+  // For simplicity, contraction vectorization is limited to linalg named ops.
+  // Generic op is ignored as not every arbitrary contraction body can be
+  // expressed by a vector.contract.
   if (!isa<ContractionOpInterface>(linalgOp.getOperation()))
     return failure();
 
   OpOperand *outOperand = linalgOp.getDpsInitOperand(0);
   Operation *reduceOp = matchLinalgReduction(outOperand);
   auto maybeKind = getCombinerOpKind(reduceOp);
-  if (!maybeKind)
+  if (!maybeKind) {
+    LDBG("Failed to determine contraction combining kind.\n");
     return failure();
+  }
 
   // Check that all dimensions are present in the input operands.
   // Arbitrary broadcasts are not supported by the vector contraction.
-  // Broadcasts are expected to be materialized before vectorization.
+  // Broadcasts are expected to be decomposed before vectorization.
   AffineMap lhsMap = linalgOp.getIndexingMapsArray()[0];
   AffineMap rhsMap = linalgOp.getIndexingMapsArray()[1];
-  if (getUnusedDimsBitVector({lhsMap, rhsMap}).any())
+  if (getUnusedDimsBitVector({lhsMap, rhsMap}).any()) {
+    LDBG("Contractions with broadcasts are not supported.\n");
     return failure();
+  }
 
   // Load operands.
   SmallVector<Value> vecOperands;
@@ -2687,20 +2694,10 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
               return failure();
             }
 
-            // For simplicity, contraction vectorization is limited to linalg
-            // named ops. Generic op is ignored as not every arbitrary
-            // contraction body can be expressed by a vector.contract.
             if (createNamedContraction &&
-                isa<ContractionOpInterface>(linalgOp.getOperation())) {
-              // Attempt vectorizing directly into a named contraction.
-              // In case of failure, fall back to the generic path.
-              LogicalResult res = vectorizeAsLinalgContraction(
-                  rewriter, state, linalgOp, results);
-              if (succeeded(res))
-                return success();
-
-              LDBG("Failed to vectorize as a named contraction.\n");
-            }
+                isa<ContractionOpInterface>(linalgOp.getOperation()))
+              return vectorizeAsLinalgContraction(rewriter, state, linalgOp,
+                                                  results);
 
             LDBG("Vectorize generic by broadcasting to the canonical vector "
                  "shape\n");
