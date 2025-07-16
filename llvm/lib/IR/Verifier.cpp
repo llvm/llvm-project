@@ -597,6 +597,7 @@ private:
   void visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call);
   void visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI);
   void visitVPIntrinsic(VPIntrinsic &VPI);
+  void visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII);
   void visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI);
   void visitAtomicRMWInst(AtomicRMWInst &RMWI);
@@ -635,12 +636,15 @@ private:
   void verifyFrameRecoverIndices();
   void verifySiblingFuncletUnwinds();
 
+  void verifyFragmentExpression(const DbgVariableIntrinsic &I);
   void verifyFragmentExpression(const DbgVariableRecord &I);
   template <typename ValueOrMetadata>
   void verifyFragmentExpression(const DIVariable &V,
                                 DIExpression::FragmentInfo Fragment,
                                 ValueOrMetadata *Desc);
+  void verifyFnArgs(const DbgVariableIntrinsic &I);
   void verifyFnArgs(const DbgVariableRecord &DVR);
+  void verifyNotEntryValue(const DbgVariableIntrinsic &I);
   void verifyNotEntryValue(const DbgVariableRecord &I);
 
   /// Module-level debug info verification...
@@ -5509,6 +5513,11 @@ void Verifier::visitInstruction(Instruction &I) {
     }
   }
 
+  if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
+    verifyFragmentExpression(*DII);
+    verifyNotEntryValue(*DII);
+  }
+
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   I.getAllMetadata(MDs);
   for (auto Attachment : MDs) {
@@ -5713,14 +5722,18 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     visitConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(Call));
     break;
   case Intrinsic::dbg_declare: // llvm.dbg.declare
-  case Intrinsic::dbg_value:   // llvm.dbg.value
-  case Intrinsic::dbg_assign:  // llvm.dbg.assign
-  case Intrinsic::dbg_label:   // llvm.dbg.label
-    // We no longer interpret debug intrinsics (the old variable-location
-    // design). They're meaningless as far as LLVM is concerned we could make
-    // it an error for them to appear, but it's possible we'll have users
-    // converting back to intrinsics for the forseeable future (such as DXIL),
-    // so tolerate their existance.
+    Check(isa<MetadataAsValue>(Call.getArgOperand(0)),
+          "invalid llvm.dbg.declare intrinsic call 1", Call);
+    visitDbgIntrinsic("declare", cast<DbgVariableIntrinsic>(Call));
+    break;
+  case Intrinsic::dbg_value: // llvm.dbg.value
+    visitDbgIntrinsic("value", cast<DbgVariableIntrinsic>(Call));
+    break;
+  case Intrinsic::dbg_assign: // llvm.dbg.assign
+    visitDbgIntrinsic("assign", cast<DbgVariableIntrinsic>(Call));
+    break;
+  case Intrinsic::dbg_label: // llvm.dbg.label
+    visitDbgLabelIntrinsic("label", cast<DbgLabelInst>(Call));
     break;
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline:
@@ -7136,7 +7149,6 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
   }
 }
 
-<<<<<<< HEAD
 void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   auto *MD = DII.getRawLocation();
   CheckDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
@@ -7262,8 +7274,6 @@ void Verifier::verifyFragmentExpression(const DbgVariableIntrinsic &I) {
 
   verifyFragmentExpression(*V, *Fragment, &I);
 }
-=======
->>>>>>> 7caa0c9a55b3
 void Verifier::verifyFragmentExpression(const DbgVariableRecord &DVR) {
   DILocalVariable *V = dyn_cast_or_null<DILocalVariable>(DVR.getRawVariable());
   DIExpression *E = dyn_cast_or_null<DIExpression>(DVR.getRawExpression());
@@ -7309,6 +7319,34 @@ void Verifier::verifyFragmentExpression(const DIVariable &V,
   CheckDI(MSpace <= dwarf::DW_MSPACE_LLVM_hi_user, "invalid memory space", &V);
 }
 
+void Verifier::verifyFnArgs(const DbgVariableIntrinsic &I) {
+  // This function does not take the scope of noninlined function arguments into
+  // account. Don't run it if current function is nodebug, because it may
+  // contain inlined debug intrinsics.
+  if (!HasDebugInfo)
+    return;
+
+  // For performance reasons only check non-inlined ones.
+  if (I.getDebugLoc()->getInlinedAt())
+    return;
+
+  DILocalVariable *Var = I.getVariable();
+  CheckDI(Var, "dbg intrinsic without variable");
+
+  unsigned ArgNo = Var->getArg();
+  if (!ArgNo)
+    return;
+
+  // Verify there are no duplicate function argument debug info entries.
+  // These will cause hard-to-debug assertions in the DWARF backend.
+  if (DebugFnArgs.size() < ArgNo)
+    DebugFnArgs.resize(ArgNo, nullptr);
+
+  auto *Prev = DebugFnArgs[ArgNo - 1];
+  DebugFnArgs[ArgNo - 1] = Var;
+  CheckDI(!Prev || (Prev == Var), "conflicting debug info for argument", &I,
+          Prev, Var);
+}
 void Verifier::verifyFnArgs(const DbgVariableRecord &DVR) {
   // This function does not take the scope of noninlined function arguments into
   // account. Don't run it if current function is nodebug, because it may
@@ -7338,6 +7376,29 @@ void Verifier::verifyFnArgs(const DbgVariableRecord &DVR) {
           Prev, Var);
 }
 
+void Verifier::verifyNotEntryValue(const DbgVariableIntrinsic &I) {
+  DIExpression *E = dyn_cast_or_null<DIExpression>(I.getRawExpression());
+
+  // We don't know whether this intrinsic verified correctly.
+  if (!E || !E->isValid())
+    return;
+
+  if (isa<ValueAsMetadata>(I.getRawLocation())) {
+    Value *VarValue = I.getVariableLocationOp(0);
+    if (isa<UndefValue>(VarValue) || isa<PoisonValue>(VarValue))
+      return;
+    // We allow EntryValues for swift async arguments, as they have an
+    // ABI-guarantee to be turned into a specific register.
+    if (auto *ArgLoc = dyn_cast_or_null<Argument>(VarValue);
+        ArgLoc && ArgLoc->hasAttribute(Attribute::SwiftAsync))
+      return;
+  }
+
+  CheckDI(!E->isEntryValue(),
+          "Entry values are only allowed in MIR unless they target a "
+          "swiftasync Argument",
+          &I);
+}
 void Verifier::verifyNotEntryValue(const DbgVariableRecord &DVR) {
   DIExpression *E = dyn_cast_or_null<DIExpression>(DVR.getRawExpression());
 
