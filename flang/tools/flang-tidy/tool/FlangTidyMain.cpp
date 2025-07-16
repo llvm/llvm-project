@@ -302,6 +302,18 @@ extern int flangTidyMain(int &argc, const char **argv) {
         EffectiveOptions.ExtraArgs->end());
   }
 
+  // also remove --driver-mode from ExtraArgsBefore
+  if (EffectiveOptions.ExtraArgsBefore) {
+    EffectiveOptions.ExtraArgsBefore->erase(
+        std::remove_if(EffectiveOptions.ExtraArgsBefore->begin(),
+                       EffectiveOptions.ExtraArgsBefore->end(),
+                       [](std::string const &arg) {
+                         return llvm::StringRef(arg).starts_with(
+                             "--driver-mode");
+                       }),
+        EffectiveOptions.ExtraArgsBefore->end());
+  }
+
   return runFlangTidy(EffectiveOptions);
 }
 
