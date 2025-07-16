@@ -131,7 +131,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            llvm::ArrayRef<OpFoldResult> shape,
                            llvm::ArrayRef<OpFoldResult> strides) {
   assert(shape.size() && strides.size() && shape.size() == strides.size() &&
-         "Shape and strides must be present and of equal size for ui64 initialization.");
+         "Shape and strides must be present and of equal size for ui64 "
+         "initialization.");
 
   llvm::SmallVector<int64_t> staticShape;
   llvm::SmallVector<int64_t> staticStrides;
@@ -154,7 +155,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            llvm::ArrayRef<OpFoldResult> shape,
                            llvm::ArrayRef<OpFoldResult> strides) {
   assert(shape.size() && strides.size() && shape.size() == strides.size() &&
-         "Shape and strides must be present and of equal size for ui64 initialization.");
+         "Shape and strides must be present and of equal size for ui64 "
+         "initialization.");
 
   llvm::SmallVector<int64_t> staticShape;
   llvm::SmallVector<int64_t> staticStrides;
@@ -257,12 +259,12 @@ LogicalResult CreateNdDescOp::verify() {
     invalidElemTy |= memrefTy.getElementType() != getElementType();
   }
 
-  if (llvm::isa<IntegerType>(getSourceType()) ) {
+  if (llvm::isa<IntegerType>(getSourceType())) {
     // strides and shape must present for integer source.
     if (getMixedStrides().empty() || getMixedSizes().empty())
       return emitOpError("Expecting strides and shape to be present for "
                          "integer source.");
-  } 
+  }
 
   // mismatches among shape, strides, and offsets are
   // already handeled by OffsetSizeAndStrideOpInterface.
@@ -313,7 +315,7 @@ ParseResult parseOptionalDynamicIndexList(
     return success();
   };
 
-  //If the optional values are given there must be left bracket
+  // If the optional values are given there must be left bracket
   if (parser.parseOptionalLSquare().succeeded()) {
     if (parser.parseCommaSeparatedList(parseIntegerOrValue) ||
         parser.parseRSquare())
@@ -322,9 +324,8 @@ ParseResult parseOptionalDynamicIndexList(
     integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
     return success();
   }
-  
-  return success();
 
+  return success();
 }
 
 void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
