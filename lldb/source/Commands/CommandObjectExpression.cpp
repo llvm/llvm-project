@@ -470,6 +470,9 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
           return false;
         }
 
+        m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
+                                               m_cmd_name);
+
         if (suppress_result)
           if (auto result_var_sp =
                   target.GetPersistentVariable(result_valobj_sp->GetName())) {
