@@ -337,9 +337,6 @@ public:
 
   enum ExcessPrecisionKind { FPP_Standard, FPP_Fast, FPP_None };
 
-  /// Possible exception handling behavior.
-  enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
-
   enum class LaxVectorConversionKind {
     /// Permit no implicit vector bitcasts.
     None,
@@ -786,22 +783,6 @@ public:
   /// Check if leaf functions are also signed.
   bool isSignReturnAddressScopeAll() const {
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
-  }
-
-  bool hasSjLjExceptions() const {
-    return getExceptionHandling() == ExceptionHandlingKind::SjLj;
-  }
-
-  bool hasSEHExceptions() const {
-    return getExceptionHandling() == ExceptionHandlingKind::WinEH;
-  }
-
-  bool hasDWARFExceptions() const {
-    return getExceptionHandling() == ExceptionHandlingKind::DwarfCFI;
-  }
-
-  bool hasWasmExceptions() const {
-    return getExceptionHandling() == ExceptionHandlingKind::Wasm;
   }
 
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }
