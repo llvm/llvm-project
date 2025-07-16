@@ -405,7 +405,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         all appear in the stop reason."""
         breakpoint_lines = [
             line_number("main.cpp", "// end of foo check"),
-            line_number("main.cpp", "// before loop")
+            line_number("main.cpp", "// before loop"),
         ]
 
         program = self.getBuildArtifact("a.out")

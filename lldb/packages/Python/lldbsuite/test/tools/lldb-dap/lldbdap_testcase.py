@@ -192,7 +192,9 @@ class DAPTestCaseBase(TestBase):
                 if "hitBreakpointIds" not in body:
                     continue
                 hit_bps = body["hitBreakpointIds"]
-                if all(int(breakpoint_id) in hit_bps for breakpoint_id in breakpoint_ids):
+                if all(
+                    int(breakpoint_id) in hit_bps for breakpoint_id in breakpoint_ids
+                ):
                     return
         self.assertTrue(False, f"breakpoints not hit, stopped_events={stopped_events}")
 

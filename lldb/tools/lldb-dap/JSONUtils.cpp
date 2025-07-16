@@ -654,13 +654,13 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
       } else {
         body.try_emplace("reason", "breakpoint");
       }
-      std::vector<llvm::json::Value> bp_ids;
+      std::vector<lldb::break_id_t> bp_ids;
       std::ostringstream desc_sstream;
       desc_sstream << "breakpoint";
       for (size_t idx = 0; idx < thread.GetStopReasonDataCount(); idx += 2) {
         lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(idx);
         lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(idx + 1);
-        bp_ids.push_back(llvm::json::Value(bp_id));
+        bp_ids.push_back(bp_id);
         desc_sstream << " " << bp_id << "." << bp_loc_id;
       }
       std::string desc_str = desc_sstream.str();
