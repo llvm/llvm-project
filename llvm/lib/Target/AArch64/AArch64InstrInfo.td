@@ -2223,9 +2223,6 @@ let Predicates = [HasPAuth] in {
                     (ins i64imm:$Offset, i32imm:$Key, i64imm:$Disc,
                          GPR64noip:$AddrDisc),
                     []>, Sched<[]> {
-    let isCodeGenOnly = 1;
-    let hasSideEffects = 1;
-    let mayStore = 0;
     let mayLoad = 1;
     let Size = 48;
     let Defs = [X16,X17];
@@ -2239,9 +2236,6 @@ let Predicates = [HasPAuth] in {
                        (ins i64imm:$Offset, i32imm:$Key, i64imm:$Disc,
                             GPR64noip:$AddrDisc),
                     []>, Sched<[]> {
-    let isCodeGenOnly = 1;
-    let hasSideEffects = 1;
-    let mayStore = 0;
     let mayLoad = 1;
     let Size = 48;
     let Defs = [X16,X17];

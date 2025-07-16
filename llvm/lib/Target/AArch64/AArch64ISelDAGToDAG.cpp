@@ -1741,24 +1741,26 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
     return false;
   bool IsPre = AM == ISD::PRE_INC;
 
-  SDValue Chain = LD->getChain();
-  SDValue Ptr = LD->getBasePtr();
+  const SDValue Chain = LD->getChain();
+  const SDValue Ptr = LD->getBasePtr();
 
-  SDValue Base = Ptr;
-
+  // Extract the base/offset from the (possibly pre-inc) load.
+  SDValue Base;
   int64_t OffsetVal = 0;
   if (IsPre) {
+    Base = Ptr;
     OffsetVal = cast<ConstantSDNode>(LD->getOffset())->getSExtValue();
-  } else if (CurDAG->isBaseWithConstantOffset(Base)) {
-    // We support both 'base' and 'base + constant offset' modes.
-    auto *RHS = cast<ConstantSDNode>(Base.getOperand(1));
-    OffsetVal = RHS->getSExtValue();
-    Base = Base.getOperand(0);
+  } else if (CurDAG->isBaseWithConstantOffset(Ptr)) {
+    Base = Ptr.getOperand(0);
+    OffsetVal = cast<ConstantSDNode>(Ptr.getOperand(1))->getSExtValue();
+  } else {
+    Base = Ptr;
+    OffsetVal = 0;
   }
 
   // The base must be of the form:
   //   (int_ptrauth_auth <signedbase>, <key>, <disc>)
-  // with disc being either a constant int, or:
+  // with disc being folded in when it's either a constant int, or:
   //   (int_ptrauth_blend <addrdisc>, <const int disc>)
   if (Base.getOpcode() != ISD::INTRINSIC_WO_CHAIN)
     return false;
@@ -1771,7 +1773,7 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
   bool IsDKey = KeyC == AArch64PACKey::DA || KeyC == AArch64PACKey::DB;
   SDValue Disc = Base.getOperand(3);
 
-  Base = Base.getOperand(1);
+  SDValue SignedBase = Base.getOperand(1);
 
   bool ZeroDisc = isNullConstant(Disc);
   SDValue IntDisc, AddrDisc;
@@ -1829,7 +1831,7 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
     }
     // The offset is encoded as scaled, for an element size of 8 bytes.
     SDValue Offset = CurDAG->getTargetConstant(OffsetVal / 8, DL, MVT::i64);
-    SDValue Ops[] = {Base, Offset, Chain};
+    SDValue Ops[] = {SignedBase, Offset, Chain};
     Res = NeedsWriteback
               ? CurDAG->getMachineNode(Opc, DL, MVT::i64, MVT::i64, MVT::Other,
                                        Ops)
@@ -1847,7 +1849,7 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
     unsigned Opc = NeedsWriteback ? AArch64::LDRApre : AArch64::LDRA;
 
     SDValue X16Copy =
-        CurDAG->getCopyToReg(Chain, DL, AArch64::X16, Base, SDValue());
+        CurDAG->getCopyToReg(Chain, DL, AArch64::X16, SignedBase, SDValue());
     SDValue Offset = CurDAG->getTargetConstant(OffsetVal, DL, MVT::i64);
     SDValue Key = CurDAG->getTargetConstant(KeyC, DL, MVT::i32);
     SDValue Ops[] = {Offset, Key, IntDisc, AddrDisc, X16Copy.getValue(1)};
