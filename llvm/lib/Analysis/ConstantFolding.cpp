@@ -1805,23 +1805,12 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::nvvm_ceil_f:
   case Intrinsic::nvvm_ceil_ftz_f:
 
-  case Intrinsic::nvvm_cos_approx_f:
-  case Intrinsic::nvvm_cos_approx_ftz_f:
-
-  case Intrinsic::nvvm_ex2_approx_d:
-  case Intrinsic::nvvm_ex2_approx_f:
-  case Intrinsic::nvvm_ex2_approx_ftz_f:
-
   case Intrinsic::nvvm_fabs:
   case Intrinsic::nvvm_fabs_ftz:
 
   case Intrinsic::nvvm_floor_d:
   case Intrinsic::nvvm_floor_f:
   case Intrinsic::nvvm_floor_ftz_f:
-
-  case Intrinsic::nvvm_lg2_approx_d:
-  case Intrinsic::nvvm_lg2_approx_f:
-  case Intrinsic::nvvm_lg2_approx_ftz_f:
 
   case Intrinsic::nvvm_rcp_rm_d:
   case Intrinsic::nvvm_rcp_rm_f:
@@ -1835,31 +1824,19 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::nvvm_rcp_rz_d:
   case Intrinsic::nvvm_rcp_rz_f:
   case Intrinsic::nvvm_rcp_rz_ftz_f:
-  case Intrinsic::nvvm_rcp_approx_ftz_d:
-  case Intrinsic::nvvm_rcp_approx_ftz_f:
 
   case Intrinsic::nvvm_round_d:
   case Intrinsic::nvvm_round_f:
   case Intrinsic::nvvm_round_ftz_f:
 
-  case Intrinsic::nvvm_rsqrt_approx_d:
-  case Intrinsic::nvvm_rsqrt_approx_f:
-  case Intrinsic::nvvm_rsqrt_approx_ftz_d:
-  case Intrinsic::nvvm_rsqrt_approx_ftz_f:
-
   case Intrinsic::nvvm_saturate_d:
   case Intrinsic::nvvm_saturate_f:
   case Intrinsic::nvvm_saturate_ftz_f:
-
-  case Intrinsic::nvvm_sin_approx_f:
-  case Intrinsic::nvvm_sin_approx_ftz_f:
 
   case Intrinsic::nvvm_sqrt_f:
   case Intrinsic::nvvm_sqrt_rn_d:
   case Intrinsic::nvvm_sqrt_rn_f:
   case Intrinsic::nvvm_sqrt_rn_ftz_f:
-  case Intrinsic::nvvm_sqrt_approx_f:
-  case Intrinsic::nvvm_sqrt_approx_ftz_f:
     return !Call->isStrictFP();
 
   // Sign operations are actually bitwise operations, they do not raise
@@ -2023,15 +2000,6 @@ inline bool llvm_fenv_testexcept() {
     return true;
 #endif
   return false;
-}
-
-// Get only the upper word of the input double in 1.11.20 format
-// by making the lower 32-bits of the mantissa all 0.
-static const APFloat ZeroLower32Bits(const APFloat &V) {
-  assert(V.getSizeInBits(V.getSemantics()) == 64);
-  uint64_t DoubleBits = V.bitcastToAPInt().getZExtValue();
-  DoubleBits &= 0xffffffff00000000;
-  return APFloat(V.getSemantics(), APInt(64, DoubleBits, false, false));
 }
 
 static const APFloat FTZPreserveSign(const APFloat &V) {
@@ -2663,21 +2631,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
             nvvm::GetNVVMDenromMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
-      case Intrinsic::nvvm_cos_approx_ftz_f:
-      case Intrinsic::nvvm_cos_approx_f:
-        return ConstantFoldFP(
-            cos, APF, Ty,
-            nvvm::GetNVVMDenromMode(
-                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
-
-      case Intrinsic::nvvm_ex2_approx_ftz_f:
-      case Intrinsic::nvvm_ex2_approx_d:
-      case Intrinsic::nvvm_ex2_approx_f:
-        return ConstantFoldFP(
-            exp2, APF, Ty,
-            nvvm::GetNVVMDenromMode(
-                (nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID))));
-
       case Intrinsic::nvvm_fabs_ftz:
       case Intrinsic::nvvm_fabs:
         return ConstantFoldFP(
@@ -2693,23 +2646,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
             nvvm::GetNVVMDenromMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
-      case Intrinsic::nvvm_lg2_approx_ftz_f:
-      case Intrinsic::nvvm_lg2_approx_d:
-      case Intrinsic::nvvm_lg2_approx_f: {
-        if (APF.isNegative() || APF.isZero())
-          return nullptr;
-        return ConstantFoldFP(
-            log2, APF, Ty,
-            nvvm::GetNVVMDenromMode(
-                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
-      }
-
       case Intrinsic::nvvm_rcp_rm_ftz_f:
       case Intrinsic::nvvm_rcp_rn_ftz_f:
       case Intrinsic::nvvm_rcp_rp_ftz_f:
       case Intrinsic::nvvm_rcp_rz_ftz_f:
-      case Intrinsic::nvvm_rcp_approx_ftz_f:
-      case Intrinsic::nvvm_rcp_approx_ftz_d:
       case Intrinsic::nvvm_rcp_rm_d:
       case Intrinsic::nvvm_rcp_rm_f:
       case Intrinsic::nvvm_rcp_rn_d:
@@ -2719,26 +2659,15 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_rcp_rz_d:
       case Intrinsic::nvvm_rcp_rz_f: {
         APFloat::roundingMode RoundMode = nvvm::GetRCPRoundingMode(IntrinsicID);
-        bool IsApprox = nvvm::RCPIsApprox(IntrinsicID);
         bool IsFTZ = nvvm::RCPShouldFTZ(IntrinsicID);
 
         auto Denominator = IsFTZ ? FTZPreserveSign(APF) : APF;
-        if (IntrinsicID == Intrinsic::nvvm_rcp_approx_ftz_d)
-          Denominator = ZeroLower32Bits(Denominator);
-        if (IsApprox && Denominator.isZero()) {
-          // According to the PTX spec, approximate rcp should return infinity
-          // with the same sign as the denominator when dividing by 0.
-          APFloat Inf = APFloat::getInf(APF.getSemantics(), APF.isNegative());
-          return ConstantFP::get(Ty->getContext(), Inf);
-        }
         APFloat Res = APFloat::getOne(APF.getSemantics());
         APFloat::opStatus Status = Res.divide(Denominator, RoundMode);
 
         if (Status == APFloat::opOK || Status == APFloat::opInexact) {
           if (IsFTZ)
             Res = FTZPreserveSign(Res);
-          if (IntrinsicID == Intrinsic::nvvm_rcp_approx_ftz_d)
-            Res = ZeroLower32Bits(Res);
           return ConstantFP::get(Ty->getContext(), Res);
         }
         return nullptr;
@@ -2751,37 +2680,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
             round, APF, Ty,
             nvvm::GetNVVMDenromMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
-
-      case Intrinsic::nvvm_rsqrt_approx_ftz_d:
-      case Intrinsic::nvvm_rsqrt_approx_ftz_f:
-      case Intrinsic::nvvm_rsqrt_approx_d:
-      case Intrinsic::nvvm_rsqrt_approx_f: {
-        bool IsFTZ = nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID);
-        auto V = IsFTZ ? FTZPreserveSign(APF) : APF;
-
-        if (IntrinsicID == Intrinsic::nvvm_rsqrt_approx_ftz_d)
-          V = ZeroLower32Bits(V);
-
-        APFloat SqrtV(sqrt(V.convertToDouble()));
-
-        if (Ty->isFloatTy()) {
-          bool lost;
-          SqrtV.convert(APF.getSemantics(), APFloat::rmNearestTiesToEven,
-                        &lost);
-        }
-
-        APFloat Res = APFloat::getOne(APF.getSemantics());
-        Res.divide(SqrtV, APFloat::rmNearestTiesToEven);
-
-        if (IntrinsicID == Intrinsic::nvvm_rsqrt_approx_ftz_d)
-          Res = ZeroLower32Bits(Res);
-
-        // We do not need to flush the output for ftz because it is impossible
-        // for 1/sqrt(x) to be a denormal value. If x is the largest fp value,
-        // sqrt(x) will be a number with the exponent approximately halved and
-        // the reciprocal of that number can't be small enough to be denormal.
-        return ConstantFP::get(Ty->getContext(), Res);
-      }
 
       case Intrinsic::nvvm_saturate_ftz_f:
       case Intrinsic::nvvm_saturate_d:
@@ -2796,19 +2694,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         return ConstantFP::get(Ty->getContext(), APF);
       }
 
-      case Intrinsic::nvvm_sin_approx_ftz_f:
-      case Intrinsic::nvvm_sin_approx_f:
-        return ConstantFoldFP(
-            sin, APF, Ty,
-            nvvm::GetNVVMDenromMode(
-                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
-
       case Intrinsic::nvvm_sqrt_rn_ftz_f:
-      case Intrinsic::nvvm_sqrt_approx_ftz_f:
       case Intrinsic::nvvm_sqrt_f:
       case Intrinsic::nvvm_sqrt_rn_d:
       case Intrinsic::nvvm_sqrt_rn_f:
-      case Intrinsic::nvvm_sqrt_approx_f:
         if (APF.isNegative())
           return nullptr;
         return ConstantFoldFP(

@@ -56,94 +56,6 @@ define float @test_ceil_ftz_f_pos_subnorm() {
 }
 
 ;###############################################################
-;#                        Cos Approx                           #
-;###############################################################
-
-define float @test_cos_approx_f_1_25() {
-; CHECK-LABEL: define float @test_cos_approx_f_1_25() {
-; CHECK-NEXT:    ret float 0x3FD42E3DE0000000
-;
-  %res = call float @llvm.nvvm.cos.approx.f(float 1.25)
-  ret float %res
-}
-
-define float @test_cos_approx_ftz_f_1_25() {
-; CHECK-LABEL: define float @test_cos_approx_ftz_f_1_25() {
-; CHECK-NEXT:    ret float 0x3FD42E3DE0000000
-;
-  %res = call float @llvm.nvvm.cos.approx.ftz.f(float 1.25)
-  ret float %res
-}
-
-define float @test_cos_approx_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_cos_approx_f_pos_subnorm() {
-; CHECK-NEXT:    ret float 1.000000e+00
-;
-  %res = call float @llvm.nvvm.cos.approx.f(float 0x380FFFFFC0000000)
-  ret float %res
-}
-
-define float @test_cos_approx_ftz_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_cos_approx_ftz_f_pos_subnorm() {
-; CHECK-NEXT:    ret float 1.000000e+00
-;
-  %res = call float @llvm.nvvm.cos.approx.ftz.f(float 0x380FFFFFC0000000)
-  ret float %res
-}
-
-;###############################################################
-;#                        Ex2 Approx                           #
-;###############################################################
-
-define double @test_ex2_approx_d_1_25() {
-; CHECK-LABEL: define double @test_ex2_approx_d_1_25() {
-; CHECK-NEXT:    ret double 0x400306FE0A31B715
-;
-  %res = call double @llvm.nvvm.ex2.approx.d(double 1.25)
-  ret double %res
-}
-
-define float @test_ex2_approx_f_1_25() {
-; CHECK-LABEL: define float @test_ex2_approx_f_1_25() {
-; CHECK-NEXT:    ret float 0x400306FE00000000
-;
-  %res = call float @llvm.nvvm.ex2.approx.f(float 1.25)
-  ret float %res
-}
-
-define float @test_ex2_approx_ftz_f_1_25() {
-; CHECK-LABEL: define float @test_ex2_approx_ftz_f_1_25() {
-; CHECK-NEXT:    ret float 0x400306FE00000000
-;
-  %res = call float @llvm.nvvm.ex2.approx.ftz.f(float 1.25)
-  ret float %res
-}
-
-define double @test_ex2_approx_d_pos_subnorm() {
-; CHECK-LABEL: define double @test_ex2_approx_d_pos_subnorm() {
-; CHECK-NEXT:    ret double 1.000000e+00
-;
-  %res = call double @llvm.nvvm.ex2.approx.d(double 0x380FFFFFC0000000)
-  ret double %res
-}
-
-define float @test_ex2_approx_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_ex2_approx_f_pos_subnorm() {
-; CHECK-NEXT:    ret float 1.000000e+00
-;
-  %res = call float @llvm.nvvm.ex2.approx.f(float 0x380FFFFFC0000000)
-  ret float %res
-}
-
-define float @test_ex2_approx_ftz_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_ex2_approx_ftz_f_pos_subnorm() {
-; CHECK-NEXT:    ret float 1.000000e+00
-;
-  %res = call float @llvm.nvvm.ex2.approx.ftz.f(float 0x380FFFFFC0000000)
-  ret float %res
-}
-
-;###############################################################
 ;#                          FAbs                               #
 ;###############################################################
 
@@ -261,59 +173,6 @@ define float @test_floor_ftz_f_neg_subnorm() {
 ; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %res = call float @llvm.nvvm.floor.ftz.f(float 0xB80FFFFFC0000000)
-  ret float %res
-}
-
-;###############################################################
-;#                        Lg2 Approx                           #
-;###############################################################
-
-define double @test_lg2_approx_d_1_25() {
-; CHECK-LABEL: define double @test_lg2_approx_d_1_25() {
-; CHECK-NEXT:    ret double 0x3FD49A784BCD1B8B
-;
-  %res = call double @llvm.nvvm.lg2.approx.d(double 1.25)
-  ret double %res
-}
-
-define float @test_lg2_approx_f_1_25() {
-; CHECK-LABEL: define float @test_lg2_approx_f_1_25() {
-; CHECK-NEXT:    ret float 0x3FD49A7840000000
-;
-  %res = call float @llvm.nvvm.lg2.approx.f(float 1.25)
-  ret float %res
-}
-
-define float @test_lg2_approx_ftz_f_1_25() {
-; CHECK-LABEL: define float @test_lg2_approx_ftz_f_1_25() {
-; CHECK-NEXT:    ret float 0x3FD49A7840000000
-;
-  %res = call float @llvm.nvvm.lg2.approx.ftz.f(float 1.25)
-  ret float %res
-}
-
-define double @test_lg2_approx_d_pos_subnorm() {
-; CHECK-LABEL: define double @test_lg2_approx_d_pos_subnorm() {
-; CHECK-NEXT:    ret double 0xC05F800000B8AA3C
-;
-  %res = call double @llvm.nvvm.lg2.approx.d(double 0x380FFFFFC0000000)
-  ret double %res
-}
-
-define float @test_lg2_approx_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_lg2_approx_f_pos_subnorm() {
-; CHECK-NEXT:    ret float -1.260000e+02
-;
-  %res = call float @llvm.nvvm.lg2.approx.f(float 0x380FFFFFC0000000)
-  ret float %res
-}
-
-define float @test_lg2_approx_ftz_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_lg2_approx_ftz_f_pos_subnorm() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.lg2.approx.ftz.f(float 0x380FFFFFC0000000)
-; CHECK-NEXT:    ret float [[RES]]
-;
-  %res = call float @llvm.nvvm.lg2.approx.ftz.f(float 0x380FFFFFC0000000)
   ret float %res
 }
 
@@ -529,61 +388,6 @@ define float @test_rcp_rz_ftz_f_neg_subnorm() {
   ret float %res
 }
 
-;+-------------------------------------------------------------+
-;|                     rcp_approx_ftz                          |
-;+-------------------------------------------------------------+
-
-define double @test_rcp_approx_ftz_d_0_5() {
-; CHECK-LABEL: define double @test_rcp_approx_ftz_d_0_5() {
-; CHECK-NEXT:    ret double 2.000000e+00
-;
-  %res = call double @llvm.nvvm.rcp.approx.ftz.d(double 0.5)
-  ret double %res
-}
-
-define float @test_rcp_approx_ftz_f_0_5() {
-; CHECK-LABEL: define float @test_rcp_approx_ftz_f_0_5() {
-; CHECK-NEXT:    ret float 2.000000e+00
-;
-  %res = call float @llvm.nvvm.rcp.approx.ftz.f(float 0.5)
-  ret float %res
-}
-
-define double @test_rcp_approx_ftz_d_neg_subnorm() {
-; CHECK-LABEL: define double @test_rcp_approx_ftz_d_neg_subnorm() {
-; CHECK-NEXT:    ret double 0xC7D0000000000000
-;
-  %res = call double @llvm.nvvm.rcp.approx.ftz.d(double 0xB80FFFFFC0000000)
-  ret double %res
-}
-
-
-define float @test_rcp_approx_ftz_f_neg_subnorm() {
-; CHECK-LABEL: define float @test_rcp_approx_ftz_f_neg_subnorm() {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
-;
-  %res = call float @llvm.nvvm.rcp.approx.ftz.f(float 0xB80FFFFFC0000000)
-  ret float %res
-}
-
-define double @test_rcp_approx_ftz_d_pos_subnorm() {
-; CHECK-LABEL: define double @test_rcp_approx_ftz_d_pos_subnorm() {
-; CHECK-NEXT:    ret double 0x47D0000000000000
-;
-  %res = call double @llvm.nvvm.rcp.approx.ftz.d(double 0x380FFFFFC0000000)
-  ret double %res
-}
-
-
-define float @test_rcp_approx_ftz_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_rcp_approx_ftz_f_pos_subnorm() {
-; CHECK-NEXT:    ret float 0x7FF0000000000000
-;
-  %res = call float @llvm.nvvm.rcp.approx.ftz.f(float 0x380FFFFFC0000000)
-  ret float %res
-}
-
-
 ;###############################################################
 ;#                          Round                              #
 ;###############################################################
@@ -633,74 +437,6 @@ define float @test_round_ftz_f_neg_subnorm() {
 ; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %res = call float @llvm.nvvm.round.ftz.f(float 0xB80FFFFFC0000000)
-  ret float %res
-}
-
-;###############################################################
-;#                     RSqrt Approx                            #
-;###############################################################
-
-define double @test_rsqrt_approx_d_1_25() {
-; CHECK-LABEL: define double @test_rsqrt_approx_d_1_25() {
-; CHECK-NEXT:    ret double 0x3FEC9F25C5BFEDD9
-;
-  %res = call double @llvm.nvvm.rsqrt.approx.d(double 1.25)
-  ret double %res
-}
-
-define float @test_rsqrt_approx_f_1_25() {
-; CHECK-LABEL: define float @test_rsqrt_approx_f_1_25() {
-; CHECK-NEXT:    ret float 0x3FEC9F25C0000000
-;
-  %res = call float @llvm.nvvm.rsqrt.approx.f(float 1.25)
-  ret float %res
-}
-
-define double @test_rsqrt_approx_ftz_d_1_25() {
-; CHECK-LABEL: define double @test_rsqrt_approx_ftz_d_1_25() {
-; CHECK-NEXT:    ret double 0x3FEC9F2500000000
-;
-  %res = call double @llvm.nvvm.rsqrt.approx.ftz.d(double 1.25)
-  ret double %res
-}
-
-define float @test_rsqrt_approx_ftz_f_1_25() {
-; CHECK-LABEL: define float @test_rsqrt_approx_ftz_f_1_25() {
-; CHECK-NEXT:    ret float 0x3FEC9F25C0000000
-;
-  %res = call float @llvm.nvvm.rsqrt.approx.ftz.f(float 1.25)
-  ret float %res
-}
-
-define double @test_rsqrt_approx_d_pos_subnorm() {
-; CHECK-LABEL: define double @test_rsqrt_approx_d_pos_subnorm() {
-; CHECK-NEXT:    ret double 0x43E0000010000018
-;
-  %res = call double @llvm.nvvm.rsqrt.approx.d(double 0x380FFFFFC0000000)
-  ret double %res
-}
-
-define float @test_rsqrt_approx_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_rsqrt_approx_f_pos_subnorm() {
-; CHECK-NEXT:    ret float 0x43E0000020000000
-;
-  %res = call float @llvm.nvvm.rsqrt.approx.f(float 0x380FFFFFC0000000)
-  ret float %res
-}
-
-define double @test_rsqrt_approx_ftz_d_pos_subnorm() {
-; CHECK-LABEL: define double @test_rsqrt_approx_ftz_d_pos_subnorm() {
-; CHECK-NEXT:    ret double 0x43E0000000000000
-;
-  %res = call double @llvm.nvvm.rsqrt.approx.ftz.d(double 0x380FFFFFC0000000)
-  ret double %res
-}
-
-define float @test_rsqrt_approx_ftz_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_rsqrt_approx_ftz_f_pos_subnorm() {
-; CHECK-NEXT:    ret float 0x7FF0000000000000
-;
-  %res = call float @llvm.nvvm.rsqrt.approx.ftz.f(float 0x380FFFFFC0000000)
   ret float %res
 }
 
@@ -804,45 +540,8 @@ define float @test_saturate_ftz_f_pos_subnorm() {
   ret float %res
 }
 
-
 ;###############################################################
-;#                        Sin Approx                           #
-;###############################################################
-
-define float @test_sin_approx_f_1_25() {
-; CHECK-LABEL: define float @test_sin_approx_f_1_25() {
-; CHECK-NEXT:    ret float 0x3FEE5E1500000000
-;
-  %res = call float @llvm.nvvm.sin.approx.f(float 1.25)
-  ret float %res
-}
-
-define float @test_sin_approx_ftz_f_1_25() {
-; CHECK-LABEL: define float @test_sin_approx_ftz_f_1_25() {
-; CHECK-NEXT:    ret float 0x3FEE5E1500000000
-;
-  %res = call float @llvm.nvvm.sin.approx.ftz.f(float 1.25)
-  ret float %res
-}
-
-define float @test_sin_approx_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_sin_approx_f_pos_subnorm() {
-; CHECK-NEXT:    ret float 0x380FFFFFC0000000
-;
-  %res = call float @llvm.nvvm.sin.approx.f(float 0x380FFFFFC0000000)
-  ret float %res
-}
-
-define float @test_sin_approx_ftz_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_sin_approx_ftz_f_pos_subnorm() {
-; CHECK-NEXT:    ret float 0.000000e+00
-;
-  %res = call float @llvm.nvvm.sin.approx.ftz.f(float 0x380FFFFFC0000000)
-  ret float %res
-}
-
-;###############################################################
-;#                      Sqrt Approx                            #
+;#                            Sqrt                             #
 ;###############################################################
 
 define float @test_sqrt_f_4() {
@@ -874,22 +573,6 @@ define float @test_sqrt_rn_ftz_f_4() {
 ; CHECK-NEXT:    ret float 2.000000e+00
 ;
   %res = call float @llvm.nvvm.sqrt.rn.ftz.f(float 4.0)
-  ret float %res
-}
-
-define float @test_sqrt_approx_f_4() {
-; CHECK-LABEL: define float @test_sqrt_approx_f_4() {
-; CHECK-NEXT:    ret float 2.000000e+00
-;
-  %res = call float @llvm.nvvm.sqrt.approx.f(float 4.0)
-  ret float %res
-}
-
-define float @test_sqrt_approx_ftz_f_4() {
-; CHECK-LABEL: define float @test_sqrt_approx_ftz_f_4() {
-; CHECK-NEXT:    ret float 2.000000e+00
-;
-  %res = call float @llvm.nvvm.sqrt.approx.ftz.f(float 4.0)
   ret float %res
 }
 
@@ -925,33 +608,9 @@ define float @test_sqrt_rn_ftz_f_pos_subnorm() {
   ret float %res
 }
 
-define float @test_sqrt_approx_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_sqrt_approx_f_pos_subnorm() {
-; CHECK-NEXT:    ret float 0x3BFFFFFFE0000000
-;
-  %res = call float @llvm.nvvm.sqrt.approx.f(float 0x380FFFFFC0000000)
-  ret float %res
-}
-
-define float @test_sqrt_approx_ftz_f_pos_subnorm() {
-; CHECK-LABEL: define float @test_sqrt_approx_ftz_f_pos_subnorm() {
-; CHECK-NEXT:    ret float 0.000000e+00
-;
-  %res = call float @llvm.nvvm.sqrt.approx.ftz.f(float 0x380FFFFFC0000000)
-  ret float %res
-}
-
-
 declare double @llvm.nvvm.ceil.d(double)
 declare float @llvm.nvvm.ceil.f(float)
 declare float @llvm.nvvm.ceil.ftz.f(float)
-
-declare float @llvm.nvvm.cos.approx.f(float)
-declare float @llvm.nvvm.cos.approx.ftz.f(float)
-
-declare double @llvm.nvvm.ex2.approx.d(double)
-declare float @llvm.nvvm.ex2.approx.f(float)
-declare float @llvm.nvvm.ex2.approx.ftz.f(float)
 
 declare float @llvm.nvvm.fabs(float)
 declare float @llvm.nvvm.fabs.ftz(float)
@@ -959,10 +618,6 @@ declare float @llvm.nvvm.fabs.ftz(float)
 declare double @llvm.nvvm.floor.d(double)
 declare float @llvm.nvvm.floor.f(float)
 declare float @llvm.nvvm.floor.ftz.f(float)
-
-declare double @llvm.nvvm.lg2.approx.d(double)
-declare float @llvm.nvvm.lg2.approx.f(float)
-declare float @llvm.nvvm.lg2.approx.ftz.f(float)
 
 declare double @llvm.nvvm.rcp.rm.d(double)
 declare float @llvm.nvvm.rcp.rm.f(float)
@@ -976,28 +631,16 @@ declare float @llvm.nvvm.rcp.rp.ftz.f(float)
 declare double @llvm.nvvm.rcp.rz.d(double)
 declare float @llvm.nvvm.rcp.rz.f(float)
 declare float @llvm.nvvm.rcp.rz.ftz.f(float)
-declare double @llvm.nvvm.rcp.approx.ftz.d(double)
-declare float @llvm.nvvm.rcp.approx.ftz.f(float)
 
 declare double @llvm.nvvm.round.d(double)
 declare float @llvm.nvvm.round.f(float)
 declare float @llvm.nvvm.round.ftz.f(float)
 
-declare double @llvm.nvvm.rsqrt.approx.d(double)
-declare float @llvm.nvvm.rsqrt.approx.f(float)
-declare double @llvm.nvvm.rsqrt.approx.ftz.d(double)
-declare float @llvm.nvvm.rsqrt.approx.ftz.f(float)
-
 declare double @llvm.nvvm.saturate.d(double)
 declare float @llvm.nvvm.saturate.f(float)
 declare float @llvm.nvvm.saturate.ftz.f(float)
-
-declare float @llvm.nvvm.sin.approx.f(float)
-declare float @llvm.nvvm.sin.approx.ftz.f(float)
 
 declare float @llvm.nvvm.sqrt.f(float)
 declare double @llvm.nvvm.sqrt.rn.d(double)
 declare float @llvm.nvvm.sqrt.rn.f(float)
 declare float @llvm.nvvm.sqrt.rn.ftz.f(float)
-declare float @llvm.nvvm.sqrt.approx.f(float)
-declare float @llvm.nvvm.sqrt.approx.ftz.f(float)

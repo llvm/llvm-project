@@ -340,40 +340,24 @@ inline bool FMinFMaxIsXorSignAbs(Intrinsic::ID IntrinsicID) {
 inline bool UnaryMathIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_ceil_ftz_f:
-  case Intrinsic::nvvm_cos_approx_ftz_f:
-  case Intrinsic::nvvm_ex2_approx_ftz_f:
   case Intrinsic::nvvm_fabs_ftz:
   case Intrinsic::nvvm_floor_ftz_f:
-  case Intrinsic::nvvm_lg2_approx_ftz_f:
   case Intrinsic::nvvm_round_ftz_f:
-  case Intrinsic::nvvm_rsqrt_approx_ftz_d:
-  case Intrinsic::nvvm_rsqrt_approx_ftz_f:
   case Intrinsic::nvvm_saturate_ftz_f:
-  case Intrinsic::nvvm_sin_approx_ftz_f:
   case Intrinsic::nvvm_sqrt_rn_ftz_f:
-  case Intrinsic::nvvm_sqrt_approx_ftz_f:
     return true;
   case Intrinsic::nvvm_ceil_f:
   case Intrinsic::nvvm_ceil_d:
-  case Intrinsic::nvvm_cos_approx_f:
-  case Intrinsic::nvvm_ex2_approx_d:
-  case Intrinsic::nvvm_ex2_approx_f:
   case Intrinsic::nvvm_fabs:
   case Intrinsic::nvvm_floor_f:
   case Intrinsic::nvvm_floor_d:
-  case Intrinsic::nvvm_lg2_approx_d:
-  case Intrinsic::nvvm_lg2_approx_f:
   case Intrinsic::nvvm_round_f:
   case Intrinsic::nvvm_round_d:
-  case Intrinsic::nvvm_rsqrt_approx_d:
-  case Intrinsic::nvvm_rsqrt_approx_f:
   case Intrinsic::nvvm_saturate_d:
   case Intrinsic::nvvm_saturate_f:
-  case Intrinsic::nvvm_sin_approx_f:
   case Intrinsic::nvvm_sqrt_f:
   case Intrinsic::nvvm_sqrt_rn_d:
   case Intrinsic::nvvm_sqrt_rn_f:
-  case Intrinsic::nvvm_sqrt_approx_f:
     return false;
   }
   llvm_unreachable("Checking FTZ flag for invalid unary intrinsic");
@@ -385,8 +369,6 @@ inline bool RCPShouldFTZ(Intrinsic::ID IntrinsicID) {
   case Intrinsic::nvvm_rcp_rn_ftz_f:
   case Intrinsic::nvvm_rcp_rp_ftz_f:
   case Intrinsic::nvvm_rcp_rz_ftz_f:
-  case Intrinsic::nvvm_rcp_approx_ftz_f:
-  case Intrinsic::nvvm_rcp_approx_ftz_d:
     return true;
   case Intrinsic::nvvm_rcp_rm_d:
   case Intrinsic::nvvm_rcp_rm_f:
@@ -408,8 +390,6 @@ inline APFloat::roundingMode GetRCPRoundingMode(Intrinsic::ID IntrinsicID) {
   case Intrinsic::nvvm_rcp_rm_ftz_f:
     return APFloat::rmTowardNegative;
 
-  case Intrinsic::nvvm_rcp_approx_ftz_f:
-  case Intrinsic::nvvm_rcp_approx_ftz_d:
   case Intrinsic::nvvm_rcp_rn_f:
   case Intrinsic::nvvm_rcp_rn_d:
   case Intrinsic::nvvm_rcp_rn_ftz_f:
@@ -426,32 +406,6 @@ inline APFloat::roundingMode GetRCPRoundingMode(Intrinsic::ID IntrinsicID) {
     return APFloat::rmTowardZero;
   }
   llvm_unreachable("Checking rounding mode for invalid rcp intrinsic");
-}
-
-inline bool RCPIsApprox(Intrinsic::ID IntrinsicID) {
-  switch (IntrinsicID) {
-  case Intrinsic::nvvm_rcp_approx_ftz_f:
-  case Intrinsic::nvvm_rcp_approx_ftz_d:
-    return true;
-
-  case Intrinsic::nvvm_rcp_rm_f:
-  case Intrinsic::nvvm_rcp_rm_d:
-  case Intrinsic::nvvm_rcp_rm_ftz_f:
-
-  case Intrinsic::nvvm_rcp_rn_f:
-  case Intrinsic::nvvm_rcp_rn_d:
-  case Intrinsic::nvvm_rcp_rn_ftz_f:
-
-  case Intrinsic::nvvm_rcp_rp_f:
-  case Intrinsic::nvvm_rcp_rp_d:
-  case Intrinsic::nvvm_rcp_rp_ftz_f:
-
-  case Intrinsic::nvvm_rcp_rz_f:
-  case Intrinsic::nvvm_rcp_rz_d:
-  case Intrinsic::nvvm_rcp_rz_ftz_f:
-    return false;
-  }
-  llvm_unreachable("Checking approx flag for invalid rcp intrinsic");
 }
 
 inline DenormalMode GetNVVMDenromMode(bool ShouldFTZ) {
