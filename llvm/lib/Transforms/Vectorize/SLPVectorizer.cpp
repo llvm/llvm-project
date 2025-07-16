@@ -13650,8 +13650,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(Op1);
       TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(Op2);
-      InstructionCost ScalarCost = TTI->getArithmeticInstrCost(ShuffleOrOp, OrigScalarTy, CostKind,
-                                         Op1Info, Op2Info, Operands);
+      InstructionCost ScalarCost = TTI->getArithmeticInstrCost(
+          ShuffleOrOp, OrigScalarTy, CostKind, Op1Info, Op2Info, Operands);
       if (auto *I = dyn_cast<Instruction>(UniqueValues[Idx]);
           I && (ShuffleOrOp == Instruction::FAdd ||
                 ShuffleOrOp == Instruction::FSub)) {
@@ -22272,8 +22272,7 @@ public:
         // Also, do not try to reduce const values, if the operation is not
         // foldable.
         if (!EdgeInst || Level > RecursionMaxDepth ||
-            getRdxKind(EdgeInst) != RdxKind ||
-            CheckForFMA(EdgeInst) ||
+            getRdxKind(EdgeInst) != RdxKind || CheckForFMA(EdgeInst) ||
             IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
             !isVectorizable(RdxKind, EdgeInst) ||
