@@ -42,7 +42,7 @@ PrivateHeaders directory as well, though it does not need an additional
 "_private" suffix on its name.
 
 Clang will search for API notes files next to module maps only when passed the
-``-fapi-notes-modules`` option.
+``-fapinotes-modules`` option.
 
 
 Limitations

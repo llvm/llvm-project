@@ -27,6 +27,21 @@ ref_null_test:
   drop
   end_function
 
+# CHECK-LABEL: ref_test_test:
+# CHECK: ref.null_func   # encoding: [0xd0,0x70]
+# CHECK: ref.test () -> () # encoding: [0xfb,0x14,0x80'A',0x80'A',0x80'A',0x80'A',A]
+# CHECK: # fixup A - offset: 2, value: .Ltypeindex0@TYPEINDEX, kind: fixup_uleb128_i32
+# CHECK: ref.null_func   # encoding: [0xd0,0x70]
+# CHECK: ref.test () -> (i32) # encoding: [0xfb,0x14,0x80'A',0x80'A',0x80'A',0x80'A',A]
+# CHECK: # fixup A - offset: 2, value: .Ltypeindex1@TYPEINDEX, kind: fixup_uleb128_i32
+ref_test_test:
+  .functype ref_test_test () -> (i32, i32)
+  ref.null_func
+  ref.test () -> ()
+  ref.null_func
+  ref.test () -> (i32)
+  end_function
+
 # CHECK-LABEL: ref_sig_test_funcref:
 # CHECK-NEXT: .functype ref_sig_test_funcref (funcref) -> (funcref)
 ref_sig_test_funcref:

@@ -1900,6 +1900,108 @@ define i1 @icmp_add1_sle(i32 %x, i32 %y) {
   ret i1 %cmp
 }
 
+define i1 @icmp_slt_offset_with_common_divisor(i64 %x, i64 %y) {
+; CHECK-LABEL: @icmp_slt_offset_with_common_divisor(
+; CHECK-NEXT:    [[SHLX:%.*]] = shl i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[SHLY:%.*]] = shl i64 [[Y:%.*]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[SHLX]], [[SHLY]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl i64 %x, 4
+  %shly = shl i64 %y, 4
+  %shlx_offset = add nsw i64 %shlx, -16
+  %cmp = icmp slt i64 %shlx_offset, %shly
+  ret i1 %cmp
+}
+
+define i1 @icmp_slt_offset_with_smaller_common_divisor(i64 %x, i64 %y) {
+; CHECK-LABEL: @icmp_slt_offset_with_smaller_common_divisor(
+; CHECK-NEXT:    [[SHLX:%.*]] = shl i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[SHLY:%.*]] = shl i64 [[Y:%.*]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[SHLX]], [[SHLY]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl i64 %x, 4
+  %shly = shl i64 %y, 4
+  %shlx_offset = add nsw i64 %shlx, -8
+  %cmp = icmp slt i64 %shlx_offset, %shly
+  ret i1 %cmp
+}
+
+define i1 @icmp_sle_offset_with_common_divisor(i64 %x, i64 %y) {
+; CHECK-LABEL: @icmp_sle_offset_with_common_divisor(
+; CHECK-NEXT:    [[SHLX:%.*]] = shl i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[SHLY:%.*]] = shl i64 [[Y:%.*]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[SHLX]], [[SHLY]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl i64 %x, 4
+  %shly = shl i64 %y, 4
+  %shlx_offset = add nsw i64 %shlx, 16
+  %cmp = icmp sle i64 %shlx_offset, %shly
+  ret i1 %cmp
+}
+
+define i1 @icmp_ule_offset_with_common_divisor(i64 %x, i64 %y) {
+; CHECK-LABEL: @icmp_ule_offset_with_common_divisor(
+; CHECK-NEXT:    [[SHLX:%.*]] = shl i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[SHLY:%.*]] = shl i64 [[Y:%.*]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SHLX]], [[SHLY]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl i64 %x, 4
+  %shly = shl i64 %y, 4
+  %shlx_offset = add nuw i64 %shlx, 16
+  %cmp = icmp ule i64 %shlx_offset, %shly
+  ret i1 %cmp
+}
+
+; TODO: Handle non-power-of-2 divisors
+define i1 @icmp_ule_offset_with_common_non_pow2_divisor(i64 %x, i64 %y) {
+; CHECK-LABEL: @icmp_ule_offset_with_common_non_pow2_divisor(
+; CHECK-NEXT:    [[MULX:%.*]] = mul nuw i64 [[X:%.*]], 7
+; CHECK-NEXT:    [[MULY:%.*]] = mul nuw i64 [[Y:%.*]], 7
+; CHECK-NEXT:    [[MULX_OFFSET:%.*]] = add nuw i64 [[MULX]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[MULX_OFFSET]], [[MULY]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mulx = mul nuw i64 %x, 7
+  %muly = mul nuw i64 %y, 7
+  %mulx_offset = add nuw i64 %mulx, 7
+  %cmp = icmp ule i64 %mulx_offset, %muly
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_slt_offset_without_common_divisor(i64 %x, i64 %y) {
+; CHECK-LABEL: @neg_icmp_slt_offset_without_common_divisor(
+; CHECK-NEXT:    [[SHLX:%.*]] = shl i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[SHLY:%.*]] = shl i64 [[Y:%.*]], 4
+; CHECK-NEXT:    [[SHLX_OFFSET:%.*]] = add nsw i64 [[SHLX]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[SHLX_OFFSET]], [[SHLY]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl i64 %x, 4
+  %shly = shl i64 %y, 4
+  %shlx_offset = add nsw i64 %shlx, -32
+  %cmp = icmp slt i64 %shlx_offset, %shly
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_slt_offset_with_wrong_sign(i64 %x, i64 %y) {
+; CHECK-LABEL: @neg_icmp_slt_offset_with_wrong_sign(
+; CHECK-NEXT:    [[SHLX:%.*]] = shl i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[SHLY:%.*]] = shl i64 [[Y:%.*]], 4
+; CHECK-NEXT:    [[SHLX_OFFSET:%.*]] = add nsw i64 [[SHLX]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[SHLX_OFFSET]], [[SHLY]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shlx = shl i64 %x, 4
+  %shly = shl i64 %y, 4
+  %shlx_offset = add nsw i64 %shlx, 16
+  %cmp = icmp slt i64 %shlx_offset, %shly
+  ret i1 %cmp
+}
+
 define i1 @icmp_add20_sge_add57(i32 %x, i32 %y) {
 ; CHECK-LABEL: @icmp_add20_sge_add57(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[Y:%.*]], 37

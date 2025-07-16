@@ -947,8 +947,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         if (ASTReader::isAcceptableASTFile(
                 Dir->path(), FileMgr, CI.getModuleCache(),
                 CI.getPCHContainerReader(), CI.getLangOpts(),
-                CI.getTargetOpts(), CI.getPreprocessorOpts(),
-                SpecificModuleCachePath, /*RequireStrictOptionMatches=*/true)) {
+                CI.getCodeGenOpts(), CI.getTargetOpts(),
+                CI.getPreprocessorOpts(), SpecificModuleCachePath,
+                /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;
           break;
@@ -1243,12 +1244,14 @@ llvm::Error FrontendAction::Execute() {
 void FrontendAction::EndSourceFile() {
   CompilerInstance &CI = getCompilerInstance();
 
-  // Inform the diagnostic client we are done with this source file.
-  CI.getDiagnosticClient().EndSourceFile();
-
   // Inform the preprocessor we are done.
   if (CI.hasPreprocessor())
     CI.getPreprocessor().EndSourceFile();
+
+  // Inform the diagnostic client we are done with this source file.
+  // Do this after notifying the preprocessor, so that end-of-file preprocessor
+  // callbacks can report diagnostics.
+  CI.getDiagnosticClient().EndSourceFile();
 
   // Finalize the action.
   EndSourceFileAction();

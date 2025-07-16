@@ -13,7 +13,6 @@
 
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -119,6 +118,7 @@ static llvm::Intrinsic::ID getMatchSyncIntrinsicId(Type valType,
     return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_all_sync_i32p
                                  : llvm::Intrinsic::nvvm_match_all_sync_i64p;
   }
+  llvm_unreachable("unsupported match sync kind");
 }
 
 static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {

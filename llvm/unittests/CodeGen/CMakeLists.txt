@@ -51,5 +51,6 @@ add_llvm_unittest(CodeGenTests
   )
 
 add_subdirectory(GlobalISel)
+add_subdirectory(CGPluginTest)
 
 target_link_libraries(CodeGenTests PRIVATE LLVMTestingSupport)

@@ -53,14 +53,19 @@
         ! V9: lda [%i0+%l6] #ASI_SNF, %o2 ! encoding: [0xd4,0x86,0x10,0x76]
         lduwa [%i0 + %l6] (130+1), %o2
 
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: ldsw [%i0+%l6], %o2    ! encoding: [0xd4,0x46,0x00,0x16]
         ldsw [%i0 + %l6], %o2
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: ldsw [%i0+32], %o2     ! encoding: [0xd4,0x46,0x20,0x20]
         ldsw [%i0 + 32], %o2
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: ldsw [%g1], %o2        ! encoding: [0xd4,0x40,0x40,0x00]
         ldsw [%g1], %o2
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: ldswa [%i0+%l6] #ASI_SNF, %o2 ! encoding: [0xd4,0xc6,0x10,0x76]
         ldswa [%i0 + %l6] 131, %o2
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: ldswa [%i0+%l6] #ASI_SNF, %o2 ! encoding: [0xd4,0xc6,0x10,0x76]
         ldswa [%i0 + %l6] (130+1), %o2
 
@@ -121,8 +126,10 @@
         ! V9: ldx [%g2+%i5], %fsr   ! encoding: [0xc3,0x08,0x80,0x1d]
         ldx [%g2 + %i5],%fsr
 
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: ldxa [%g2+%i5] #ASI_SNF, %g0   ! encoding: [0xc0,0xd8,0x90,0x7d]
         ldxa [%g2 + %i5] 131, %g0
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: ldxa [%g2+%i5] #ASI_SNF, %g0   ! encoding: [0xc0,0xd8,0x90,0x7d]
         ldxa [%g2 + %i5] (130+1), %g0
 
@@ -134,8 +141,10 @@
         ! V9: stx %fsr, [%g2+%i5]   ! encoding: [0xc3,0x28,0x80,0x1d]
         stx %fsr,[%g2 + %i5]
 
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: stxa %g0, [%g2+%i5] #ASI_SNF   ! encoding: [0xc0,0xf0,0x90,0x7d]
         stxa %g0, [%g2 + %i5] 131
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: stxa %g0, [%g2+%i5] #ASI_SNF   ! encoding: [0xc0,0xf0,0x90,0x7d]
         stxa %g0, [%g2 + %i5] (130+1)
 
@@ -398,33 +407,45 @@
         ! V9: wr %i0, 1, %asr21         ! encoding: [0xab,0x86,0x20,0x01]
         wr %i0, 1, %clear_softint
 
+        ! V8:      [[#@LINE+2]]:9: error: invalid instruction mnemonic
         ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
         stw %o1, [%o0]
+        ! V8:      [[#@LINE+2]]:9: error: invalid instruction mnemonic
         ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
         stuw %o1, [%o0]
+        ! V8:      [[#@LINE+2]]:9: error: invalid instruction mnemonic
         ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
         stsw %o1, [%o0]
 
+        ! V8:      [[#@LINE+2]]:9: error: invalid instruction mnemonic
         ! V9: sta %o2, [%i0+%l6] #ASI_SNF ! encoding: [0xd4,0xa6,0x10,0x76]
         stwa %o2, [%i0 + %l6] 131
+        ! V8:      [[#@LINE+2]]:9: error: invalid instruction mnemonic
         ! V9: sta %o2, [%i0+%l6] #ASI_SNF ! encoding: [0xd4,0xa6,0x10,0x76]
         stuwa %o2, [%i0 + %l6] 131
+        ! V8:      [[#@LINE+2]]:9: error: invalid instruction mnemonic
         ! V9: sta %o2, [%i0+%l6] #ASI_SNF ! encoding: [0xd4,0xa6,0x10,0x76]
         stswa %o2, [%i0 + %l6] 131
 
         !! SPARCv9 provides a new variant of ASI-tagged memory accesses.
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: ldxa [%g2] %asi, %g0    ! encoding: [0xc0,0xd8,0xa0,0x00]
         ldxa [%g2] %asi, %g0
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: stxa %g0, [%g2] %asi    ! encoding: [0xc0,0xf0,0xa0,0x00]
         stxa %g0, [%g2] %asi
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: ldxa [%g2+5] %asi, %g0    ! encoding: [0xc0,0xd8,0xa0,0x05]
         ldxa [%g2 + 5] %asi, %g0
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: stxa %g0, [%g2+5] %asi    ! encoding: [0xc0,0xf0,0xa0,0x05]
         stxa %g0, [%g2 + 5] %asi
 
         !! Also make sure named ASI tags are parsed properly.
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: ldxa [%g2+%i5] #ASI_SNF, %g0   ! encoding: [0xc0,0xd8,0x90,0x7d]
         ldxa [%g2 + %i5] #ASI_SNF, %g0
+        ! V8:      [[#@LINE+2]]:9: error: instruction requires a CPU feature not currently enabled
         ! V9: stxa %g0, [%g2+%i5] #ASI_SNF   ! encoding: [0xc0,0xf0,0x90,0x7d]
         stxa %g0, [%g2 + %i5] #ASI_SNF
 

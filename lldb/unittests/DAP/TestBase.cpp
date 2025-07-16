@@ -29,7 +29,7 @@ using lldb_private::NativeFile;
 using lldb_private::Pipe;
 
 void TransportBase::SetUp() {
-  PipeTest::SetUp();
+  PipePairTest::SetUp();
   to_dap = std::make_unique<Transport>(
       "to_dap", nullptr,
       std::make_shared<NativeFile>(input.GetReadFileDescriptor(),

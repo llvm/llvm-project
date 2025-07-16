@@ -92,7 +92,7 @@ Linking TUs which have been compiled with different flags affecting code gen
 There are a lot of compiler (and library) flags which change the code generated for functions. This includes flags like
 ``-O1``, which are guaranteed by the compiler to not change the observable behaviour of a correct program, as well as
 flags like ``-fexceptions``, which **do** change the observable behaviour. libc++ allows linking of TUs which have been
-compiled whith specific flags only and makes no guarantees for any of the flags not listed below.
+compiled with specific flags only and makes no guarantees for any of the flags not listed below.
 
 The flags allowed (in any combination) are:
 - ``-f[no-]exceptions``

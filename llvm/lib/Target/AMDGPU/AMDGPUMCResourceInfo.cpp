@@ -238,7 +238,7 @@ void MCResourceInfo::assignResourceInfoExpr(
 
 void MCResourceInfo::gatherResourceInfo(
     const MachineFunction &MF,
-    const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &FRI,
+    const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo &FRI,
     MCContext &OutContext) {
   // Worst case VGPR use for non-hardware-entrypoints.
   MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
