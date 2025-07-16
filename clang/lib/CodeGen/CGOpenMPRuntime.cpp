@@ -7388,7 +7388,7 @@ private:
         const auto *VD = dyn_cast<VarDecl>(I->getAssociatedDeclaration());
         if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
             !VD || VD->hasLocalStorage() ||
-            (AttachInfo.IsValid && VD == AttachInfo.BasePtrDecl))
+            (AttachInfo && VD == AttachInfo->BasePtrDecl))
           BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
         else
           FirstPointerInComplexData = true;
@@ -7792,9 +7792,9 @@ private:
           // standalone pointers Info was already collected during the main
           // component loop Check if we should use ATTACH-style mapping for this
           // expression
-          bool IsAttachablePointeeExpr = AttachInfo.IsValid &&
-                                         AttachInfo.BasePtrDecl &&
-                                         AttachInfo.BasePtrDecl == BaseDecl;
+          bool IsAttachablePointeeExpr = AttachInfo &&
+                                         AttachInfo->BasePtrDecl &&
+                                         AttachInfo->BasePtrDecl == BaseDecl;
           // Pointer attachment is needed at map-entering time or for declare
           // mappers.
           bool IsMapEnteringConstructOrMapper =
@@ -7805,7 +7805,7 @@ private:
 
           if (IsAttachablePointeeExpr && IsMapEnteringConstructOrMapper) {
             AttachBaseAddr =
-                CGF.EmitLValue(AttachInfo.BasePtrExpr).getAddress();
+                CGF.EmitLValue(AttachInfo->BasePtrExpr).getAddress();
 
             if (OASE) {
               AttachFirstElemAddr =
@@ -8147,10 +8147,18 @@ private:
     const Expr *BasePtrExpr = nullptr;      // The pointer expression
     const ValueDecl *BasePtrDecl = nullptr; // The pointer decl, if any
     const Expr *PteeExpr = nullptr; // The array section/subscript expression
-    bool IsValid = false;
+
+    // Constructor with arguments
+    AttachInfo(const Expr *BasePtr, const ValueDecl *BaseDecl, const Expr *Ptee)
+        : BasePtrExpr(BasePtr), BasePtrDecl(BaseDecl), PteeExpr(Ptee) {}
   };
 
-  static AttachInfo findAttachBasePointer(
+  // Traverse the list of Components to find the first pointer expression, which
+  // should be the attachable-base-pointer for the current component-list.
+  // For example, for:
+  //  `map(pp->p->s.a[0])`, the base-pointer is `pp->p`, while the pointee is
+  //  `pp->p->s.a[0]`.
+  static std::optional<AttachInfo> findAttachBasePointer(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
 
     const auto *Begin = Components.begin();
@@ -8197,14 +8205,15 @@ private:
       if (!NextType->isPointerType())
         continue;
 
-      // Get the pointer expression (NextRI) and use the candidate PteeExpr
+      // The Next component is the first pointer expression encountered, so
+      // that is the attachable-base-pointer for the current component-list.
       const Expr *BasePtrExpr = NextI->getAssociatedExpression();
       const ValueDecl *BasePtrDecl = NextI->getAssociatedDeclaration();
       const auto *BeginExpr = Begin->getAssociatedExpression();
-      return AttachInfo{BasePtrExpr, BasePtrDecl, BeginExpr, true};
+      return AttachInfo{BasePtrExpr, BasePtrDecl, BeginExpr};
     }
 
-    return AttachInfo{};
+    return std::nullopt;
   }
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
@@ -8380,8 +8389,9 @@ private:
           // returned and move on to the next declaration. Exclude cases where
           // the base pointer is mapped as array subscript, array section or
           // array shaping. The base address is passed as a pointer to base in
-          // this case and cannot be used as a base for use_device_ptr list
-          // item.
+          // this case (i.e. as a PTR_AND_OBJ) and cannot be used as a base
+          // for use_device_ptr list item. However, we don't use PTR_AND_OBJ
+          // mapping for any pointers when using ATTACH-style mapping.
           if (CI != Data.end()) {
             if (IsDevAddr) {
               CI->ForDeviceAddr = IsDevAddr;
@@ -8391,16 +8401,14 @@ private:
             } else {
               auto PrevCI = std::next(CI->Components.rbegin());
               const auto *VarD = dyn_cast<VarDecl>(VD);
+              auto AttachInfo = findAttachBasePointer(CI->Components);
               if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
                   isa<MemberExpr>(IE) ||
                   !VD->getType().getNonReferenceType()->isPointerType() ||
                   PrevCI == CI->Components.rend() ||
                   isa<MemberExpr>(PrevCI->getAssociatedExpression()) || !VarD ||
                   VarD->hasLocalStorage() ||
-                  // For global pointers with ATTACH-style mapping, also allow
-                  // ReturnDevicePointer to ensure consistent behavior between
-                  // global and local pointers
-                  (findAttachBasePointer(CI->Components).BasePtrDecl == VD)) {
+                  (AttachInfo && AttachInfo->BasePtrDecl == VD)) {
                 CI->ForDeviceAddr = IsDevAddr;
                 CI->ReturnDevicePointer = true;
                 Found = true;
