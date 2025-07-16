@@ -56,16 +56,16 @@ public:
 
   // (19.6.3.4) [stacktrace.entry.query], query
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string description() const {
-    if (__desc_->empty()) {
-      return "";
+    if (__desc_.has_value()) {
+      return {__desc_->data(), __desc_->size()};
     }
-    return {__desc_->data(), __desc_->size()};
+    return {};
   }
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string source_file() const {
-    if (__desc_->empty()) {
-      return "";
+    if (__desc_.has_value()) {
+      return {__file_->data(), __file_->size()};
     }
-    return {__file_->data(), __file_->size()};
+    return {};
   }
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI uint_least32_t source_line() const { return __line_; }
 
