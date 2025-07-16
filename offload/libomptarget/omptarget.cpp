@@ -496,9 +496,8 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   //   Device.submitData(..., /*InOrder=*/IsFirstAttachEntry)
   // Where the boolean InOrder being true means that this submission should
   // wait for prior memory submissions to finish.
-  int SubmitResult =
-      Device.submitData(TgtPtrAddr, DataBuffer, HstPtrSize, AsyncInfo,
-                        PtrTPR.getEntry());
+  int SubmitResult = Device.submitData(TgtPtrAddr, DataBuffer, HstPtrSize,
+                                       AsyncInfo, PtrTPR.getEntry());
 
   AsyncInfo.addPostProcessingFunction([DataBuffer]() -> int {
     delete[] DataBuffer;
@@ -678,10 +677,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     }
 
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
-      int Ret = performPointerAttachment(Device, AsyncInfo,
-                                         (void **)PointerHstPtrBegin, HstPtrBase, HstPtrBegin,
-                                         (void **)PointerTgtPtrBegin, TgtPtrBegin,
-                                         sizeof(void *), PointerTpr);
+      int Ret = performPointerAttachment(
+          Device, AsyncInfo, (void **)PointerHstPtrBegin, HstPtrBase,
+          HstPtrBegin, (void **)PointerTgtPtrBegin, TgtPtrBegin, sizeof(void *),
+          PointerTpr);
       if (Ret != OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
     }
@@ -783,8 +782,9 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
        IsAttachAlways ? "yes" : "no");
 
     // Lambda to perform target pointer lookup and validation
-    auto LookupTargetPointer = [&](void *Ptr, int64_t Size, const char *PtrType)
-        -> std::optional<TargetPointerResultTy> {
+    auto LookupTargetPointer =
+        [&](void *Ptr, int64_t Size,
+            const char *PtrType) -> std::optional<TargetPointerResultTy> {
       // ATTACH map-type does not change ref-count, or do any allocation
       // We just need to do a lookup for the pointer/pointee.
       TargetPointerResultTy TPR = Device.getMappingInfo().getTgtPtrBegin(
