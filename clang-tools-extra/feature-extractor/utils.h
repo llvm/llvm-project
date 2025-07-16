@@ -64,6 +64,21 @@ get_for_condition_range_value(ASTContext *context, const ForStmt *fs) {
 }
 
 ///
+/// For a given for statement, tries to extract loop bound in the condition. Use
+/// this function instead of two previous ones. This one internally uses the
+/// others
+///
+static inline std::optional<llvm::APInt>
+maybe_get_for_bound(ASTContext *context, const ForStmt *fs) {
+  if (const auto method1 = get_for_condition_range_value(fs))
+    return llvm::APInt(64, method1.value().getSExtValue());
+  else if (const auto method2 = get_for_condition_range_value(context, fs))
+    return method2.value();
+  else
+    return std::nullopt;
+}
+
+///
 /// For a given Stmt \s, tries to return the nearest ancestor of type
 /// StatementType. Return nullptr in case no parent of given type was found.
 ///
@@ -99,4 +114,25 @@ static inline void run_on_all_parents_of_type(ASTContext *context,
     parent = get_parent_stmt<StatementType>(context,
                                             dyn_cast<StatementType>(parent));
   }
+}
+
+///
+/// Get repetition of each for loop, considering parent for loops. For example,
+/// for the following two nested for loops, result for the first for is 10, and
+/// the result of nested one is 200
+///
+/// for(int i = 0; i < 10; i++)
+///   for(int j = 0; j < 20; j++)
+///   {}
+///
+llvm::APInt get_total_for_repetition_count(ASTContext *context,
+                                           const ForStmt *fs) {
+  auto bounds = maybe_get_for_bound(context, fs).value_or(llvm::APInt(64, 1));
+
+  run_on_all_parents_of_type<ForStmt>(
+      context, fs, [&bounds](auto ctx, auto fss) {
+        bounds *= maybe_get_for_bound(ctx, fss).value_or(llvm::APInt(64, 1));
+      });
+
+  return bounds;
 }
