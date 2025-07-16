@@ -1367,6 +1367,28 @@ constexpr bool isEntryFunctionCC(CallingConv::ID CC) {
   }
 }
 
+// Shaders that are entry functions need to count input arguments even if
+// they're not used (i.e. not reported by AMDGPUResourceUsageAnalysis). Other
+// functions can skip including them. This is especially important for shaders
+// that use the init.whole.wave intrinsic, since they sometimes have VGPR
+// arguments that are only added for the purpose of preserving their inactive
+// lanes and should not be included in the vgpr-count.
+LLVM_READNONE
+constexpr bool shouldReportUnusedFuncArgs(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+    return true;
+  default:
+    return false;
+  }
+}
+
 LLVM_READNONE
 constexpr bool isChainCC(CallingConv::ID CC) {
   switch (CC) {

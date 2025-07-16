@@ -213,6 +213,9 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         if (!RC || !TRI.isVGPRClass(RC))
           continue;
 
+        if (MI.isCall() || MI.isImplicitDef())
+          continue;
+
         unsigned Width = divideCeil(TRI.getRegSizeInBits(*RC), 32);
         unsigned HWReg = TRI.getHWRegIndex(Reg);
         int MaxUsed = HWReg + Width - 1;
