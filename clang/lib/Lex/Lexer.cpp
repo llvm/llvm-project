@@ -41,6 +41,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -3456,7 +3457,7 @@ std::optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
     }
 
     unsigned Value = llvm::hexDigitValue(C);
-    if (Value == -1U) {
+    if (Value == std::numeric_limits<unsigned>::max()) {
       if (!Delimited)
         break;
       if (Diagnose)
@@ -4587,6 +4588,9 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
 
   if (Result.is(tok::hash) && Result.isAtStartOfLine()) {
     PP->HandleDirective(Result);
+    if (PP->hadModuleLoaderFatalFailure())
+      // With a fatal failure in the module loader, we abort parsing.
+      return true;
     return false;
   }
   if (Result.is(tok::raw_identifier)) {

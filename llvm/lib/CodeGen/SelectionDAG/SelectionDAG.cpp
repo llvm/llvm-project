@@ -1370,7 +1370,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
                         const TargetLibraryInfo *LibraryInfo,
                         UniformityInfo *NewUA, ProfileSummaryInfo *PSIin,
                         BlockFrequencyInfo *BFIin, MachineModuleInfo &MMIin,
-                        FunctionVarLocs const *VarLocs) {
+                        FunctionVarLocs const *VarLocs, bool HasDivergency) {
   MF = &NewMF;
   SDAGISelPass = PassPtr;
   ORE = &NewORE;
@@ -1383,6 +1383,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   BFI = BFIin;
   MMI = &MMIin;
   FnVarLocs = VarLocs;
+  DivergentTarget = HasDivergency;
 }
 
 SelectionDAG::~SelectionDAG() {
@@ -2329,7 +2330,8 @@ SDValue SelectionDAG::getRegister(Register Reg, EVT VT) {
     return SDValue(E, 0);
 
   auto *N = newSDNode<RegisterSDNode>(Reg, VTs);
-  N->SDNodeBits.IsDivergent = TLI->isSDNodeSourceOfDivergence(N, FLI, UA);
+  N->SDNodeBits.IsDivergent =
+      DivergentTarget && TLI->isSDNodeSourceOfDivergence(N, FLI, UA);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -5569,6 +5571,11 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::SPLAT_VECTOR:
     return false;
 
+  case ISD::ABS:
+    // ISD::ABS defines abs(INT_MIN) -> INT_MIN and never generates poison.
+    // Different to Intrinsic::abs.
+    return false;
+
   case ISD::ADDC:
   case ISD::SUBC:
   case ISD::ADDE:
@@ -5618,6 +5625,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FREM:
+  case ISD::FCOPYSIGN:
     // No poison except from flags (which is handled above)
     return false;
 
@@ -8408,7 +8416,7 @@ static SDValue getMemcpyLoadsAndStores(
                        : MemOp::Copy(Size, DstAlignCanChange, Alignment,
                                      *SrcAlign, isVol, CopyFromConstant);
   if (!TLI.findOptimalMemOpLowering(
-          MemOps, Limit, Op, DstPtrInfo.getAddrSpace(),
+          C, MemOps, Limit, Op, DstPtrInfo.getAddrSpace(),
           SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes()))
     return SDValue();
 
@@ -8600,7 +8608,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   assert(SrcAlign && "SrcAlign must be set");
   unsigned Limit = AlwaysInline ? ~0U : TLI.getMaxStoresPerMemmove(OptSize);
   if (!TLI.findOptimalMemOpLowering(
-          MemOps, Limit,
+          C, MemOps, Limit,
           MemOp::Copy(Size, DstAlignCanChange, Alignment, *SrcAlign,
                       /*IsVolatile*/ true),
           DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
@@ -8709,6 +8717,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   std::vector<EVT> MemOps;
   bool DstAlignCanChange = false;
+  LLVMContext &C = *DAG.getContext();
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   bool OptSize = shouldLowerMemFuncForSize(MF, DAG);
@@ -8719,7 +8728,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   unsigned Limit = AlwaysInline ? ~0 : TLI.getMaxStoresPerMemset(OptSize);
 
   if (!TLI.findOptimalMemOpLowering(
-          MemOps, Limit,
+          C, MemOps, Limit,
           MemOp::Set(Size, DstAlignCanChange, Alignment, IsZeroVal, isVol),
           DstPtrInfo.getAddrSpace(), ~0u, MF.getFunction().getAttributes()))
     return SDValue();
@@ -10456,7 +10465,7 @@ SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
 
   // select true, T, F --> T
   // select false, T, F --> F
-  if (auto C = isBoolConstant(Cond, /*AllowTruncation=*/true))
+  if (auto C = isBoolConstant(Cond))
     return *C ? T : F;
 
   // select ?, T, T --> T
@@ -12142,6 +12151,8 @@ static bool gluePropagatesDivergence(const SDNode *Node) {
 }
 
 bool SelectionDAG::calculateDivergence(SDNode *N) {
+  if (!DivergentTarget)
+    return false;
   if (TLI->isSDNodeAlwaysUniform(N)) {
     assert(!TLI->isSDNodeSourceOfDivergence(N, FLI, UA) &&
            "Conflicting divergence information!");
@@ -12161,6 +12172,8 @@ bool SelectionDAG::calculateDivergence(SDNode *N) {
 }
 
 void SelectionDAG::updateDivergence(SDNode *N) {
+  if (!DivergentTarget)
+    return;
   SmallVector<SDNode *, 16> Worklist(1, N);
   do {
     N = Worklist.pop_back_val();
@@ -13681,13 +13694,14 @@ bool SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) const {
   return false;
 }
 
-std::optional<bool> SelectionDAG::isBoolConstant(SDValue N,
-                                                 bool AllowTruncation) const {
-  ConstantSDNode *Const = isConstOrConstSplat(N, false, AllowTruncation);
+std::optional<bool> SelectionDAG::isBoolConstant(SDValue N) const {
+  ConstantSDNode *Const =
+      isConstOrConstSplat(N, false, /*AllowTruncation=*/true);
   if (!Const)
     return std::nullopt;
 
-  const APInt &CVal = Const->getAPIntValue();
+  EVT VT = N->getValueType(0);
+  const APInt CVal = Const->getAPIntValue().trunc(VT.getScalarSizeInBits());
   switch (TLI->getBooleanContents(N.getValueType())) {
   case TargetLowering::ZeroOrOneBooleanContent:
     if (CVal.isOne())
@@ -13720,16 +13734,20 @@ void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
     Ops[I].setInitial(Vals[I]);
     EVT VT = Ops[I].getValueType();
 
+    // Take care of the Node's operands iff target has divergence
     // Skip Chain. It does not carry divergence.
-    if (VT != MVT::Other &&
+    if (DivergentTarget && VT != MVT::Other &&
         (VT != MVT::Glue || gluePropagatesDivergence(Ops[I].getNode())) &&
         Ops[I].getNode()->isDivergent()) {
+      // Node is going to be divergent if at least one of its operand is
+      // divergent, unless it belongs to the "AlwaysUniform" exemptions.
       IsDivergent = true;
     }
   }
   Node->NumOperands = Vals.size();
   Node->OperandList = Ops;
-  if (!TLI->isSDNodeAlwaysUniform(Node)) {
+  // Check the divergence of the Node itself.
+  if (DivergentTarget && !TLI->isSDNodeAlwaysUniform(Node)) {
     IsDivergent |= TLI->isSDNodeSourceOfDivergence(Node, FLI, UA);
     Node->SDNodeBits.IsDivergent = IsDivergent;
   }

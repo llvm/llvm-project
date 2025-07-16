@@ -444,7 +444,9 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["bitop3-insts"] = true;
       Features["prng-inst"] = true;
       Features["transpose-load-f4f6-insts"] = true;
+      Features["bf16-trans-insts"] = true;
       Features["fp8-conversion-insts"] = true;
+      Features["fp8e5m3-insts"] = true;
       Features["permlane16-swap"] = true;
       Features["ashr-pk-insts"] = true;
       Features["atomic-buffer-pk-add-bf16-inst"] = true;

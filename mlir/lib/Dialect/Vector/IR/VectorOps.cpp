@@ -47,7 +47,6 @@
 
 #include <cassert>
 #include <cstdint>
-#include <numeric>
 
 #include "mlir/Dialect/Vector/IR/VectorDialect.cpp.inc"
 // Pull in all enum type and utility function definitions.
@@ -1107,7 +1106,7 @@ Type ContractionOp::getExpectedMaskType() {
         rhsType.getScalableDims()[dimIdx];
   }
 
-  assert(!ShapedType::isDynamicShape(maskShape) &&
+  assert(ShapedType::isStaticShape(maskShape) &&
          "Mask shape couldn't be computed");
 
   return VectorType::get(maskShape,
@@ -2061,7 +2060,7 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
   // `opChange` is a flag. If it is true, it means to update `op` in place.
   bool opChange = false;
   for (unsigned i = 0, e = staticPosition.size(); i < e; ++i) {
-    if (!ShapedType::isDynamic(staticPosition[i]))
+    if (ShapedType::isStatic(staticPosition[i]))
       continue;
     Attribute positionAttr = dynamicPositionAttr[index];
     Value position = dynamicPosition[index++];
@@ -3334,7 +3333,6 @@ public:
     return success();
   }
 };
-
 } // namespace
 
 static Attribute
@@ -3387,12 +3385,26 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
   return newAttr;
 }
 
+/// Folder to replace the `dest` operand of the insert op with the root dest of
+/// the insert op use chain.
+static Value foldInsertUseChain(InsertOp insertOp) {
+  auto destInsert = insertOp.getDest().getDefiningOp<InsertOp>();
+  if (!destInsert)
+    return {};
+
+  if (insertOp.getMixedPosition() != destInsert.getMixedPosition())
+    return {};
+
+  insertOp.setOperand(1, destInsert.getDest());
+  return insertOp.getResult();
+}
+
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat>(context);
 }
 
-OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
+OpFoldResult InsertOp::fold(FoldAdaptor adaptor) {
   // Do not create constants with more than `vectorSizeFoldThreashold` elements,
   // unless the source vector constant has a single use.
   constexpr int64_t vectorSizeFoldThreshold = 256;
@@ -3407,6 +3419,8 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   SmallVector<Value> operands = {getValueToStore(), getDest()};
   auto inplaceFolded = extractInsertFoldConstantOp(*this, adaptor, operands);
 
+  if (auto res = foldInsertUseChain(*this))
+    return res;
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
@@ -4081,6 +4095,75 @@ void ExtractStridedSliceOp::getOffsets(SmallVectorImpl<int64_t> &results) {
 
 namespace {
 
+// Pattern to rewrite an ExtractStridedSliceOp(CreateMaskOp) to
+// CreateMaskOp.
+//
+// Example:
+//
+// %mask = vector.create_mask %ub : vector<16xi1>
+// %slice = vector.extract_strided_slice [%offset] [8] [1]
+//
+// to
+//
+// %new_ub = arith.subi %ub, %offset
+// %mask = vector.create_mask %new_ub : vector<8xi1>
+class StridedSliceCreateMaskFolder final
+    : public OpRewritePattern<ExtractStridedSliceOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+public:
+  LogicalResult matchAndRewrite(ExtractStridedSliceOp extractStridedSliceOp,
+                                PatternRewriter &rewriter) const override {
+    Location loc = extractStridedSliceOp.getLoc();
+    // Return if 'extractStridedSliceOp' operand is not defined by a
+    // CreateMaskOp.
+    auto createMaskOp =
+        extractStridedSliceOp.getVector().getDefiningOp<CreateMaskOp>();
+    if (!createMaskOp)
+      return failure();
+    // Return if 'extractStridedSliceOp' has non-unit strides.
+    if (extractStridedSliceOp.hasNonUnitStrides())
+      return failure();
+    // Gather constant mask dimension sizes.
+    SmallVector<Value> maskDimSizes(createMaskOp.getOperands());
+    // Gather strided slice offsets and sizes.
+    SmallVector<int64_t> sliceOffsets;
+    populateFromInt64AttrArray(extractStridedSliceOp.getOffsets(),
+                               sliceOffsets);
+    SmallVector<int64_t> sliceSizes;
+    populateFromInt64AttrArray(extractStridedSliceOp.getSizes(), sliceSizes);
+
+    // Compute slice of vector mask region.
+    SmallVector<Value> sliceMaskDimSizes;
+    sliceMaskDimSizes.reserve(maskDimSizes.size());
+    // sliceOffsets.size() <= maskDimSizes.size(), so we use llvm::zip and
+    // only iterate on the leading dim sizes. The tail accounts for the
+    // remaining dim sizes.
+    for (auto [maskDimSize, sliceOffset, sliceSize] :
+         llvm::zip(maskDimSizes, sliceOffsets, sliceSizes)) {
+      // No need to clamp on min/max values, because create_mask has clamping
+      // semantics, i.e. the sliceMaskDimSize is allowed to be negative or
+      // greater than the vector dim size.
+      IntegerAttr offsetAttr =
+          rewriter.getIntegerAttr(maskDimSize.getType(), sliceOffset);
+      Value offset = rewriter.create<arith::ConstantOp>(loc, offsetAttr);
+      Value sliceMaskDimSize =
+          rewriter.create<arith::SubIOp>(loc, maskDimSize, offset);
+      sliceMaskDimSizes.push_back(sliceMaskDimSize);
+    }
+    // Add unchanged dimensions.
+    llvm::append_range(
+        sliceMaskDimSizes,
+        llvm::drop_begin(maskDimSizes, sliceMaskDimSizes.size()));
+    // Replace 'extractStridedSliceOp' with CreateMaskOp with sliced mask
+    // region.
+    rewriter.replaceOpWithNewOp<CreateMaskOp>(
+        extractStridedSliceOp, extractStridedSliceOp.getResult().getType(),
+        sliceMaskDimSizes);
+    return success();
+  }
+};
+
 // Pattern to rewrite an ExtractStridedSliceOp(ConstantMaskOp) to
 // ConstantMaskOp.
 class StridedSliceConstantMaskFolder final
@@ -4102,14 +4185,14 @@ public:
     // Gather constant mask dimension sizes.
     ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
     // Gather strided slice offsets and sizes.
-    SmallVector<int64_t, 4> sliceOffsets;
+    SmallVector<int64_t> sliceOffsets;
     populateFromInt64AttrArray(extractStridedSliceOp.getOffsets(),
                                sliceOffsets);
-    SmallVector<int64_t, 4> sliceSizes;
+    SmallVector<int64_t> sliceSizes;
     populateFromInt64AttrArray(extractStridedSliceOp.getSizes(), sliceSizes);
 
     // Compute slice of vector mask region.
-    SmallVector<int64_t, 4> sliceMaskDimSizes;
+    SmallVector<int64_t> sliceMaskDimSizes;
     sliceMaskDimSizes.reserve(maskDimSizes.size());
     for (auto [maskDimSize, sliceOffset, sliceSize] :
          llvm::zip(maskDimSizes, sliceOffsets, sliceSizes)) {
@@ -4154,28 +4237,35 @@ public:
     auto dstVecType = llvm::cast<VectorType>(op.getType());
     unsigned dstRank = dstVecType.getRank();
     unsigned rankDiff = dstRank - srcRank;
-    // Check if the most inner dimensions of the source of the broadcast are the
-    // same as the destination of the extract. If this is the case we can just
-    // use a broadcast as the original dimensions are untouched.
-    bool lowerDimMatch = true;
+    // Source dimensions can be broadcasted (1 -> n with n > 1) or sliced
+    // (n -> m with n > m). If they are originally both broadcasted *and*
+    // sliced, this can be simplified to just broadcasting.
+    bool needsSlice = false;
     for (unsigned i = 0; i < srcRank; i++) {
-      if (srcVecType.getDimSize(i) != dstVecType.getDimSize(i + rankDiff)) {
-        lowerDimMatch = false;
+      if (srcVecType.getDimSize(i) != 1 &&
+          srcVecType.getDimSize(i) != dstVecType.getDimSize(i + rankDiff)) {
+        needsSlice = true;
         break;
       }
     }
     Value source = broadcast.getSource();
-    // If the inner dimensions don't match, it means we need to extract from the
-    // source of the orignal broadcast and then broadcast the extracted value.
-    // We also need to handle degenerated cases where the source is effectively
-    // just a single scalar.
-    bool isScalarSrc = (srcRank == 0 || srcVecType.getNumElements() == 1);
-    if (!lowerDimMatch && !isScalarSrc) {
+    if (needsSlice) {
+      SmallVector<int64_t> offsets =
+          getI64SubArray(op.getOffsets(), /*dropFront=*/rankDiff);
+      SmallVector<int64_t> sizes =
+          getI64SubArray(op.getSizes(), /*dropFront=*/rankDiff);
+      for (unsigned i = 0; i < srcRank; i++) {
+        if (srcVecType.getDimSize(i) == 1) {
+          // In case this dimension was broadcasted *and* sliced, the offset
+          // and size need to be updated now that there is no broadcast before
+          // the slice.
+          offsets[i] = 0;
+          sizes[i] = 1;
+        }
+      }
       source = rewriter.create<ExtractStridedSliceOp>(
-          op->getLoc(), source,
-          getI64SubArray(op.getOffsets(), /* dropFront=*/rankDiff),
-          getI64SubArray(op.getSizes(), /* dropFront=*/rankDiff),
-          getI64SubArray(op.getStrides(), /* dropFront=*/rankDiff));
+          op->getLoc(), source, offsets, sizes,
+          getI64SubArray(op.getStrides(), /*dropFront=*/rankDiff));
     }
     rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(), source);
     return success();
@@ -4279,9 +4369,9 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   // Pattern to rewrite a ExtractStridedSliceOp(ConstantMaskOp) ->
   // ConstantMaskOp and ExtractStridedSliceOp(ConstantOp) -> ConstantOp.
-  results.add<StridedSliceConstantMaskFolder, StridedSliceBroadcast,
-              StridedSliceSplat, ContiguousExtractStridedSliceToExtract>(
-      context);
+  results.add<StridedSliceCreateMaskFolder, StridedSliceConstantMaskFolder,
+              StridedSliceBroadcast, StridedSliceSplat,
+              ContiguousExtractStridedSliceToExtract>(context);
 }
 
 //===----------------------------------------------------------------------===//
