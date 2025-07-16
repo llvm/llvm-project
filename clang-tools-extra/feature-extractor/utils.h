@@ -5,6 +5,8 @@
 
 #include <optional>
 
+namespace Utils {
+
 using namespace clang;
 
 ///
@@ -136,3 +138,5 @@ llvm::APInt get_total_for_repetition_count(ASTContext *context,
 
   return bounds;
 }
+
+} // namespace Utils
