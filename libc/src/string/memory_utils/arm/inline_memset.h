@@ -113,15 +113,12 @@ inline_memset_arm_mid_end(Ptr dst, uint8_t value, size_t size) {
             set_block_and_bump_pointers<4>(dst, value32);
           return;
         }
-      if (misaligned(dst))
-        LIBC_ATTR_UNLIKELY {
-          const size_t offset = distance_to_align_up<kWordSize>(dst);
-          if (offset & 1)
-            set_block_and_bump_pointers<1>(dst, value32);
-          if (offset & 2)
-            set_block_and_bump_pointers<2>(dst, value32);
-          size -= offset;
-        }
+      const size_t offset = distance_to_align_up<kWordSize>(dst);
+      if (offset & 1)
+        set_block_and_bump_pointers<1>(dst, value32);
+      if (offset & 2)
+        set_block_and_bump_pointers<2>(dst, value32);
+      size -= offset;
     }
   // If we tell the compiler that the stores are aligned it will generate 8 x
   // STRD instructions. By not specifying alignment, the compiler conservatively
