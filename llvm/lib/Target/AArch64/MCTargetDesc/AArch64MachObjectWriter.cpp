@@ -53,7 +53,7 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
   RelocType = unsigned(MachO::ARM64_RELOC_UNSIGNED);
   Log2Size = ~0U;
 
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     return false;
 

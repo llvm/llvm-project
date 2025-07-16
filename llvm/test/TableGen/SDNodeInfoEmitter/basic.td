@@ -35,8 +35,8 @@ def MyTarget : Target;
 // CHECK-NEXT:  #pragma GCC diagnostic pop
 // CHECK-NEXT:  #endif
 // CHECK-EMPTY:
-// CHECK-NEXT:  static constexpr llvm::StringTable MyTargetSDNodeNames =
-// CHECK-NEXT:      MyTargetSDNodeNamesStorage;
+// CHECK-NEXT:  static constexpr llvm::StringTable
+// CHECK-NEXT:  MyTargetSDNodeNames = MyTargetSDNodeNamesStorage;
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
 // CHECK-NEXT:    /* dummy */ {SDTCisVT, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}

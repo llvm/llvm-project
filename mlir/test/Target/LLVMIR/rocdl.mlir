@@ -151,6 +151,13 @@ llvm.func @rocdl.s.waitcnt() {
   llvm.return
 }
 
+llvm.func @rocdl.s.sleep() {
+  // CHECK-LABEL: rocdl.s.sleep
+  // CHECK-NEXT: call void @llvm.amdgcn.s.sleep(i32 0)
+  rocdl.s.sleep 0
+  llvm.return
+}
+
 llvm.func @rocdl.s.barrier() {
   // CHECK-LABEL: rocdl.s.barrier
   // CHECK-NEXT: call void @llvm.amdgcn.s.barrier()

@@ -67,6 +67,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
       "IsParent": true,
       "IsTypedef": false,
       "IsVirtual": true,
+      "MangledName": "",
       "Name": "F",
       "Path": "path/to/F",
       "PublicFunctions": [
@@ -112,6 +113,7 @@ TEST(JSONGeneratorTest, emitRecordJSON) {
     "Filename": "main.cpp",
     "LineNumber": 1
   },
+  "MangledName": "",
   "Name": "Foo",
   "Namespace": [
     "GlobalNamespace"

@@ -202,6 +202,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tanpif_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    tanpif_test.cpp
+  HDRS
+    sdcomp26094.h
+  DEPENDS
+    libc.src.math.tanpif
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   tanpif16_test
   NEED_MPFR
   SUITE

@@ -681,7 +681,7 @@ getSplitReductionIvs(RewriterBase &rewriter, Location loc,
   splitReductionIvs.resize(reductionDims.size(), rewriter.getIndexAttr(0));
   AffineExpr s0, s1;
   bindSymbols(rewriter.getContext(), s0, s1);
-  AffineExpr divExpr = s0.ceilDiv(s1);
+  AffineExpr divExpr = s0.floorDiv(s1);
   int ivIndex = 0;
   if (reductionStrategy ==
       ReductionTilingStrategy::PartialReductionOuterParallel) {

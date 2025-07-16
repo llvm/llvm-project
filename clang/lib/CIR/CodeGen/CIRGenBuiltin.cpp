@@ -60,15 +60,15 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
+  mlir::Location loc = getLoc(e->getSourceRange());
+
   // See if we can constant fold this builtin.  If so, don't emit it at all.
   // TODO: Extend this handling to all builtin calls that we can constant-fold.
   Expr::EvalResult result;
   if (e->isPRValue() && e->EvaluateAsRValue(result, cgm.getASTContext()) &&
       !result.hasSideEffects()) {
-    if (result.Val.isInt()) {
-      return RValue::get(builder.getConstInt(getLoc(e->getSourceRange()),
-                                             result.Val.getInt()));
-    }
+    if (result.Val.isInt())
+      return RValue::get(builder.getConstInt(loc, result.Val.getInt()));
     if (result.Val.isFloat()) {
       // Note: we are using result type of CallExpr to determine the type of
       // the constant. Classic codegen uses the result value to determine the
@@ -76,19 +76,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       // hard to imagine a builtin function evaluates to a value that
       // over/underflows its own defined type.
       mlir::Type type = convertType(e->getType());
-      return RValue::get(builder.getConstFP(getLoc(e->getExprLoc()), type,
-                                            result.Val.getFloat()));
+      return RValue::get(builder.getConstFP(loc, type, result.Val.getFloat()));
     }
   }
 
   const FunctionDecl *fd = gd.getDecl()->getAsFunction();
-
-  // If this is an alias for a lib function (e.g. __builtin_sin), emit
-  // the call using the normal call path, but using the unmangled
-  // version of the function name.
-  if (getContext().BuiltinInfo.isLibFunction(builtinID))
-    return emitLibraryCall(*this, fd, e,
-                           cgm.getBuiltinLibFunction(fd, builtinID));
 
   assert(!cir::MissingFeatures::builtinCallF128());
 
@@ -100,8 +92,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
   assert(!cir::MissingFeatures::builtinCallMathErrno());
   assert(!cir::MissingFeatures::builtinCall());
-
-  mlir::Location loc = getLoc(e->getExprLoc());
 
   switch (builtinIDIfNoAsmLabel) {
   default:
@@ -122,6 +112,28 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value imag = emitScalarExpr(e->getArg(1));
     mlir::Value complex = builder.createComplexCreate(loc, real, imag);
     return RValue::get(complex);
+  }
+
+  case Builtin::BI__builtin_creal:
+  case Builtin::BI__builtin_crealf:
+  case Builtin::BI__builtin_creall:
+  case Builtin::BIcreal:
+  case Builtin::BIcrealf:
+  case Builtin::BIcreall: {
+    mlir::Value complex = emitComplexExpr(e->getArg(0));
+    mlir::Value real = builder.createComplexReal(loc, complex);
+    return RValue::get(real);
+  }
+
+  case Builtin::BI__builtin_cimag:
+  case Builtin::BI__builtin_cimagf:
+  case Builtin::BI__builtin_cimagl:
+  case Builtin::BIcimag:
+  case Builtin::BIcimagf:
+  case Builtin::BIcimagl: {
+    mlir::Value complex = emitComplexExpr(e->getArg(0));
+    mlir::Value imag = builder.createComplexImag(loc, complex);
+    return RValue::get(imag);
   }
 
   case Builtin::BI__builtin_clrsb:
@@ -185,12 +197,36 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                       probability);
     }
 
-    auto result = builder.create<cir::ExpectOp>(getLoc(e->getSourceRange()),
-                                                argValue.getType(), argValue,
-                                                expectedValue, probAttr);
+    auto result = builder.create<cir::ExpectOp>(
+        loc, argValue.getType(), argValue, expectedValue, probAttr);
     return RValue::get(result);
   }
+
+  case Builtin::BI__builtin_bswap16:
+  case Builtin::BI__builtin_bswap32:
+  case Builtin::BI__builtin_bswap64:
+  case Builtin::BI_byteswap_ushort:
+  case Builtin::BI_byteswap_ulong:
+  case Builtin::BI_byteswap_uint64: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    return RValue::get(builder.create<cir::ByteSwapOp>(loc, arg));
   }
+
+  case Builtin::BI__builtin_bitreverse8:
+  case Builtin::BI__builtin_bitreverse16:
+  case Builtin::BI__builtin_bitreverse32:
+  case Builtin::BI__builtin_bitreverse64: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    return RValue::get(builder.create<cir::BitReverseOp>(loc, arg));
+  }
+  }
+
+  // If this is an alias for a lib function (e.g. __builtin_sin), emit
+  // the call using the normal call path, but using the unmangled
+  // version of the function name.
+  if (getContext().BuiltinInfo.isLibFunction(builtinID))
+    return emitLibraryCall(*this, fd, e,
+                           cgm.getBuiltinLibFunction(fd, builtinID));
 
   cgm.errorNYI(e->getSourceRange(), "unimplemented builtin call");
   return getUndefRValue(e->getType());

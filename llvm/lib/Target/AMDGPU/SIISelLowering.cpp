@@ -938,6 +938,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
+  if (Subtarget->hasBF16TransInsts()) {
+    setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
+  }
+
   if (Subtarget->hasCvtPkF16F32Inst()) {
     setOperationAction(ISD::FP_ROUND,
                        {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v16f16},
@@ -1983,7 +1987,8 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
 }
 
 EVT SITargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   // FIXME: Should account for address space here.
 
   // The default fallback uses the private pointer size as a guess for a type to
@@ -3892,7 +3897,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // arguments to begin at SP+0. Completely unused for non-tail calls.
   int32_t FPDiff = 0;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  auto *TRI = static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
+  auto *TRI = Subtarget->getRegisterInfo();
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
@@ -8161,6 +8166,14 @@ buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   //   $symbol@*@hi with lower 32 bits and higher 32 bits of a literal constant,
   //   which is a 64-bit pc-relative offset from the encoding of the $symbol
   //   operand to the global variable.
+  if (((const GCNSubtarget &)DAG.getSubtarget()).has64BitLiterals()) {
+    assert(GAFlags != SIInstrInfo::MO_NONE);
+
+    SDValue Ptr =
+        DAG.getTargetGlobalAddress(GV, DL, MVT::i64, Offset, GAFlags + 2);
+    return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET64, DL, PtrVT, Ptr);
+  }
+
   SDValue PtrLo = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset, GAFlags);
   SDValue PtrHi;
   if (GAFlags == SIInstrInfo::MO_NONE)
@@ -8210,6 +8223,13 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   }
 
   if (Subtarget->isAmdPalOS() || Subtarget->isMesa3DOS()) {
+    if (Subtarget->has64BitLiterals()) {
+      SDValue Addr = DAG.getTargetGlobalAddress(
+          GV, DL, MVT::i64, GSD->getOffset(), SIInstrInfo::MO_ABS64);
+      return SDValue(DAG.getMachineNode(AMDGPU::S_MOV_B64, DL, MVT::i64, Addr),
+                     0);
+    }
+
     SDValue AddrLo = DAG.getTargetGlobalAddress(
         GV, DL, MVT::i32, GSD->getOffset(), SIInstrInfo::MO_ABS32_LO);
     AddrLo = {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, AddrLo), 0};
@@ -9313,6 +9333,44 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
                        Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
                        Op.getOperand(3), IndexKeyi32);
+  }
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8: {
+    if (Op.getOperand(4).getValueType() == MVT::i64)
+      return SDValue();
+
+    SDLoc SL(Op);
+    auto IndexKeyi64 = DAG.getAnyExtOrTrunc(Op.getOperand(4), SL, MVT::i64);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                        Op.getOperand(3), IndexKeyi64, Op.getOperand(5),
+                        Op.getOperand(6)});
+  }
+  case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_bf16f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8: {
+    EVT IndexKeyTy = IntrinsicID == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8
+                         ? MVT::i64
+                         : MVT::i32;
+    if (Op.getOperand(6).getValueType() == IndexKeyTy)
+      return SDValue();
+
+    SDLoc SL(Op);
+    auto IndexKey = DAG.getAnyExtOrTrunc(Op.getOperand(6), SL, IndexKeyTy);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                        Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
+                        IndexKey, Op.getOperand(7),
+                        Op.getOperand(8)}); // No clamp operand
   }
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
@@ -12154,6 +12212,11 @@ SDValue SITargetLowering::splitBinaryBitConstantOp(
   if ((bitOpWithConstantIsReducible(Opc, ValLo) ||
        bitOpWithConstantIsReducible(Opc, ValHi)) ||
       (CRHS->hasOneUse() && !TII->isInlineConstant(CRHS->getAPIntValue()))) {
+    // We have 64-bit scalar and/or/xor, but do not have vector forms.
+    if (Subtarget->has64BitLiterals() && CRHS->hasOneUse() &&
+        !CRHS->user_begin()->isDivergent())
+      return SDValue();
+
     // If we need to materialize a 64-bit immediate, it will be split up later
     // anyway. Avoid creating the harder to understand 64-bit immediate
     // materialization.
@@ -13659,6 +13722,7 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
     case Intrinsic::amdgcn_frexp_mant:
     case Intrinsic::amdgcn_fdot2:
     case Intrinsic::amdgcn_trig_preop:
+    case Intrinsic::amdgcn_tanh:
       return true;
     default:
       break;

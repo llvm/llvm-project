@@ -2856,7 +2856,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       if (!It->getSecond().IsReachingAlignedBarrierOnly)
         ForwardIsOk = false;
       break;
-    } while ((CurI = CurI->getNextNonDebugInstruction()));
+    } while ((CurI = CurI->getNextNode()));
 
     if (!CurI && !BEDMap.lookup(I.getParent()).IsReachingAlignedBarrierOnly)
       ForwardIsOk = false;

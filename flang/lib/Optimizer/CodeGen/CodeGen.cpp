@@ -2240,7 +2240,7 @@ private:
       if (!rebox.getSubstr().empty())
         substringOffset = operands[rebox.getSubstrOperandIndex()];
       base = genBoxOffsetGep(rewriter, loc, base, llvmBaseObjectType, zero,
-                             /*cstInteriorIndices=*/std::nullopt, fieldIndices,
+                             /*cstInteriorIndices=*/{}, fieldIndices,
                              substringOffset);
     }
 
@@ -2248,7 +2248,7 @@ private:
       // The array section is of the form array[%component][substring], keep
       // the input array extents and strides.
       return finalizeRebox(rebox, adaptor, destBoxTy, dest, base,
-                           /*lbounds*/ std::nullopt, inputExtents, inputStrides,
+                           /*lbounds*/ {}, inputExtents, inputStrides,
                            rewriter);
 
     // The slice is of the form array(i:j:k)[%component]. Compute new extents
@@ -2297,7 +2297,7 @@ private:
       }
     }
     return finalizeRebox(rebox, adaptor, destBoxTy, dest, base,
-                         /*lbounds*/ std::nullopt, slicedExtents, slicedStrides,
+                         /*lbounds*/ {}, slicedExtents, slicedStrides,
                          rewriter);
   }
 
@@ -3341,26 +3341,26 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
   }
 };
 
-struct LocalitySpecifierOpConversion
-    : public fir::FIROpConversion<fir::LocalitySpecifierOp> {
-  using FIROpConversion::FIROpConversion;
+template <typename OpTy>
+struct DoConcurrentSpecifierOpConversion : public fir::FIROpConversion<OpTy> {
+  using fir::FIROpConversion<OpTy>::FIROpConversion;
   llvm::LogicalResult
-  matchAndRewrite(fir::LocalitySpecifierOp localizer, OpAdaptor adaptor,
+  matchAndRewrite(OpTy specifier, typename OpTy::Adaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
 #ifdef EXPENSIVE_CHECKS
     auto uses = mlir::SymbolTable::getSymbolUses(
-        localizer, localizer->getParentOfType<mlir::ModuleOp>());
+        specifier, specifier->getParentOfType<mlir::ModuleOp>());
 
-    // `fir.local` ops are not supposed to have any uses at this point (i.e.
-    // during lowering to LLVM). In case of serialization, the
-    // `fir.do_concurrent` users are expected to have been lowered to
+    // `fir.local|fir.declare_reduction` ops are not supposed to have any uses
+    // at this point (i.e. during lowering to LLVM). In case of serialization,
+    // the `fir.do_concurrent` users are expected to have been lowered to
     // `fir.do_loop` nests. In case of parallelization, the `fir.do_concurrent`
     // users are expected to have been lowered to the target parallel model
     // (e.g. OpenMP).
     assert(uses && uses->empty());
 #endif
 
-    rewriter.eraseOp(localizer);
+    rewriter.eraseOp(specifier);
     return mlir::success();
   }
 };
@@ -3396,7 +3396,7 @@ static void genBrOp(A caseOp, mlir::Block *dest, std::optional<B> destOps,
   if (destOps)
     rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, *destOps, dest);
   else
-    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, std::nullopt, dest);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, B{}, dest);
 }
 
 static void genCaseLadderStep(mlir::Location loc, mlir::Value cmp,
@@ -4162,7 +4162,20 @@ public:
     mathToFuncsOptions.minWidthOfFPowIExponent = 33;
     mathConvertionPM.addPass(
         mlir::createConvertMathToFuncs(mathToFuncsOptions));
-    mathConvertionPM.addPass(mlir::createConvertComplexToStandardPass());
+
+    mlir::ConvertComplexToStandardPassOptions complexToStandardOptions{};
+    if (options.ComplexRange ==
+        Fortran::frontend::CodeGenOptions::ComplexRangeKind::CX_Basic) {
+      complexToStandardOptions.complexRange =
+          mlir::complex::ComplexRangeFlags::basic;
+    } else if (options.ComplexRange == Fortran::frontend::CodeGenOptions::
+                                           ComplexRangeKind::CX_Improved) {
+      complexToStandardOptions.complexRange =
+          mlir::complex::ComplexRangeFlags::improved;
+    }
+    mathConvertionPM.addPass(
+        mlir::createConvertComplexToStandardPass(complexToStandardOptions));
+
     // Convert Math dialect operations into LLVM dialect operations.
     // There is no way to prefer MathToLLVM patterns over MathToLibm
     // patterns (applied below), so we have to run MathToLLVM conversion here.
@@ -4315,20 +4328,22 @@ void fir::populateFIRToLLVMConversionPatterns(
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
       CmpcOpConversion, VolatileCastOpConversion, ConvertOpConversion,
       CoordinateOpConversion, CopyOpConversion, DTEntryOpConversion,
-      DeclareOpConversion, DivcOpConversion, EmboxOpConversion,
-      EmboxCharOpConversion, EmboxProcOpConversion, ExtractValueOpConversion,
-      FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
-      GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
-      IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
-      LocalitySpecifierOpConversion, MulcOpConversion, NegcOpConversion,
-      NoReassocOpConversion, SelectCaseOpConversion, SelectOpConversion,
-      SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
-      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
-      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
-      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
-      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
-      XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
-      ZeroOpConversion>(converter, options);
+      DeclareOpConversion,
+      DoConcurrentSpecifierOpConversion<fir::LocalitySpecifierOp>,
+      DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
+      DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
+      EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
+      FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
+      GlobalOpConversion, InsertOnRangeOpConversion, IsPresentOpConversion,
+      LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
+      NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
+      SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
+      ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
+      SliceOpConversion, StoreOpConversion, StringLitOpConversion,
+      SubcOpConversion, TypeDescOpConversion, TypeInfoOpConversion,
+      UnboxCharOpConversion, UnboxProcOpConversion, UndefOpConversion,
+      UnreachableOpConversion, XArrayCoorOpConversion, XEmboxOpConversion,
+      XReboxOpConversion, ZeroOpConversion>(converter, options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.

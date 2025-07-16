@@ -39,7 +39,7 @@ unsigned CSKYELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                            bool IsPCRel) const {
   const MCExpr *Expr = Fixup.getValue();
   // Determine the type of the relocation
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   uint8_t Modifier = Target.getSpecifier();
 
   switch (Target.getSpecifier()) {

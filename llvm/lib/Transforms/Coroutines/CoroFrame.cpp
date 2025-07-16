@@ -639,10 +639,10 @@ static DIType *solveDIType(DIBuilder &Builder, Type *Ty,
     SmallVector<Metadata *, 16> Elements;
     for (unsigned I = 0; I < StructTy->getNumElements(); I++) {
       DIType *DITy = solveDIType(Builder, StructTy->getElementType(I), Layout,
-                                 Scope, LineNum, DITypeCache);
+                                 DIStruct, LineNum, DITypeCache);
       assert(DITy);
       Elements.push_back(Builder.createMemberType(
-          Scope, DITy->getName(), Scope->getFile(), LineNum,
+          DIStruct, DITy->getName(), DIStruct->getFile(), LineNum,
           DITy->getSizeInBits(), DITy->getAlignInBits(),
           Layout.getStructLayout(StructTy)->getElementOffsetInBits(I),
           llvm::DINode::FlagArtificial, DITy));

@@ -990,6 +990,13 @@ def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
   Visibility<[ClangOption, CLOption, FlangOption]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
+def Xthinlto_distributor_EQ : CommaJoined<["-"], "Xthinlto-distributor=">,
+  Flags<[LinkOption]>,
+  Visibility<[ClangOption, CLOption]>,
+  HelpText<"Pass <arg> to the ThinLTO distributor process. Can be specified "
+           "multiple times or with comma-separated values.">,
+  MetaVarName<"<arg>">,
+  Group<Link_Group>;
 def Xoffload_linker : JoinedAndSeparate<["-"], "Xoffload-linker">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Pass <arg> to the offload linkers or the ones identified by -<triple>">,
@@ -1023,12 +1030,13 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
 
 def fcomplex_arithmetic_EQ : Joined<["-"], "fcomplex-arithmetic=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>;
+  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>,
+  HelpText<"Controls the calculation methods of complex number multiplication and division.">;
 
 def complex_range_EQ : Joined<["-"], "complex-range=">, Group<f_Group>,
-  Visibility<[CC1Option]>,
+  Visibility<[CC1Option, FC1Option]>,
   Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>,
   MarshallingInfoEnum<LangOpts<"ComplexRange">, "CX_Full">;
@@ -1890,6 +1898,12 @@ defm apinotes_modules : BoolOption<"f", "apinotes-modules",
     NegFlag<SetFalse, [], [ClangOption], "Disable">,
     BothFlags<[], [ClangOption, CC1Option], " module-based external API notes support">>,
     Group<f_clang_Group>;
+defm swift_version_independent_apinotes : BoolOption<"f", "swift-version-independent-apinotes",
+  LangOpts<"SwiftVersionIndependentAPINotes">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option], " version-independent external API notes support">>,
+  Group<f_clang_Group>;
 def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">,
@@ -4242,7 +4256,12 @@ def ffinite_loops: Flag<["-"],  "ffinite-loops">, Group<f_Group>,
 def fno_finite_loops: Flag<["-"], "fno-finite-loops">, Group<f_Group>,
   HelpText<"Do not assume that any loop is finite.">,
   Visibility<[ClangOption, CC1Option]>;
-
+def fthinlto_distributor_EQ : Joined<["-"], "fthinlto-distributor=">,
+  Group<f_Group>,
+  HelpText<"Path to the ThinLTO distributor process. If specified, "
+           "ThinLTO backend compilations will be distributed by LLD">,
+  MetaVarName<"<path>">,
+  Visibility<[ClangOption, CLOption]>;
 def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
   HelpText<"Process trigraph sequences">, Visibility<[ClangOption, CC1Option]>;
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
@@ -4497,6 +4516,9 @@ defm ptrauth_init_fini_address_discrimination : OptInCC1FFlag<"ptrauth-init-fini
   "Enable address discrimination of function pointers in init/fini arrays">;
 defm ptrauth_elf_got : OptInCC1FFlag<"ptrauth-elf-got", "Enable authentication of pointers from GOT (ELF only)">;
 defm aarch64_jump_table_hardening: OptInCC1FFlag<"aarch64-jump-table-hardening", "Use hardened lowering for jump-table dispatch">;
+defm ptrauth_objc_isa : OptInCC1FFlag<"ptrauth-objc-isa", "Enable signing and authentication of Objective-C object's 'isa' field">;
+defm ptrauth_objc_interface_sel : OptInCC1FFlag<"ptrauth-objc-interface-sel", "Enable signing and authentication of Objective-C object's 'SEL' fields">;
+defm ptrauth_objc_class_ro : OptInCC1FFlag<"ptrauth-objc-class-ro", "Enable signing and authentication for ObjC class_ro pointers">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -4683,8 +4705,8 @@ def gsimple_template_names_EQ
       Values<"simple,mangled">, Visibility<[CC1Option]>;
 def gsrc_hash_EQ : Joined<["-"], "gsrc-hash=">,
   Group<g_flags_Group>, Visibility<[CC1Option]>,
-  Values<"md5,sha1,sha256">,
-  NormalizedValues<["DSH_MD5", "DSH_SHA1", "DSH_SHA256"]>,
+  Values<"md5,sha1,sha256,none">,
+  NormalizedValues<["DSH_MD5", "DSH_SHA1", "DSH_SHA256", "DSH_NONE"]>,
   NormalizedValuesScope<"CodeGenOptions">,
   MarshallingInfoEnum<CodeGenOpts<"DebugSrcHash">, "DSH_MD5">;
 def gno_simple_template_names : Flag<["-"], "gno-simple-template-names">,
@@ -4713,9 +4735,9 @@ def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
 defm key_instructions : BoolGOption<"key-instructions",
     CodeGenOpts<"DebugKeyInstructions">, DefaultFalse,
     NegFlag<SetFalse>, PosFlag<SetTrue, [], [],
-        "Enable Key Instructions, which reduces the jumpiness of optimized code stepping (DWARF only)."
-        " Requires LLVM built with LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS.">,
-    BothFlags<[HelpHidden], [ClangOption, CLOption, CC1Option]>>;
+        "Enable Key Instructions, which reduces the jumpiness of debug stepping in optimized C/C++ code"
+        " in some debuggers. DWARF only. Implies -g.">,
+    BothFlags<[], [ClangOption, CLOption, CC1Option]>>;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
 def help : Flag<["-", "--"], "help">,
     Visibility<[ClangOption, CC1Option, CC1AsOption,
@@ -6079,7 +6101,7 @@ def stdlibxx_isystem : JoinedOrSeparate<["-"], "stdlib++-isystem">,
   Flags<[NoXarchOption]>, MetaVarName<"<directory>">;
 def unwindlib_EQ : Joined<["-", "--"], "unwindlib=">,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Unwind library to use">, Values<"libgcc,unwindlib,platform">;
+  HelpText<"Unwind library to use">, Values<"libgcc,libunwind,platform">;
 def sub__library : JoinedOrSeparate<["-"], "sub_library">;
 def sub__umbrella : JoinedOrSeparate<["-"], "sub_umbrella">;
 def system_header_prefix : Joined<["--"], "system-header-prefix=">,

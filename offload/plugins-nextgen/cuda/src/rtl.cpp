@@ -1311,7 +1311,7 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (MaxDynCGroupMem >= MaxDynCGroupMemLimit) {
     CUresult AttrResult = cuFuncSetAttribute(
         Func, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, MaxDynCGroupMem);
-    Plugin::check(
+    return Plugin::check(
         AttrResult,
         "Error in cuLaunchKernel while setting the memory limits: %s");
     MaxDynCGroupMemLimit = MaxDynCGroupMem;
@@ -1355,13 +1355,15 @@ public:
                                  GlobalName))
       return Err;
 
-    if (CUSize != DeviceGlobal.getSize())
+    if (DeviceGlobal.getSize() && CUSize != DeviceGlobal.getSize())
       return Plugin::error(
           ErrorCode::INVALID_BINARY,
           "failed to load global '%s' due to size mismatch (%zu != %zu)",
           GlobalName, CUSize, (size_t)DeviceGlobal.getSize());
 
     DeviceGlobal.setPtr(reinterpret_cast<void *>(CUPtr));
+    DeviceGlobal.setSize(CUSize);
+
     return Plugin::success();
   }
 };

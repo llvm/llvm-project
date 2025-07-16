@@ -30,11 +30,11 @@ template <>
 struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
   using NamingCheckId = clang::tidy::RenamerClangTidyCheck::NamingCheckId;
 
-  static inline NamingCheckId getEmptyKey() {
+  static NamingCheckId getEmptyKey() {
     return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(), "EMPTY"};
   }
 
-  static inline NamingCheckId getTombstoneKey() {
+  static NamingCheckId getTombstoneKey() {
     return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
             "TOMBSTONE"};
   }

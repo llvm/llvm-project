@@ -15,6 +15,9 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+// FIXME: Add chrono::treat_as_floating_point_v and chrono::is_clock_v.
+// This will require restructuring the code to handle type traits not
+// defined directly in std.
 static const llvm::StringSet<> ValueTraits = {
     "alignment_of",
     "conjunction",
@@ -28,6 +31,7 @@ static const llvm::StringSet<> ValueTraits = {
     "is_array",
     "is_assignable",
     "is_base_of",
+    "is_bind_expression",
     "is_bounded_array",
     "is_class",
     "is_compound",
@@ -40,10 +44,14 @@ static const llvm::StringSet<> ValueTraits = {
     "is_destructible",
     "is_empty",
     "is_enum",
+    "is_error_code_enum",
+    "is_error_condition_enum",
+    "is_execution_policy",
     "is_final",
     "is_floating_point",
     "is_function",
     "is_fundamental",
+    "is_implicit_lifetime",
     "is_integral",
     "is_invocable",
     "is_invocable_r",
@@ -65,14 +73,17 @@ static const llvm::StringSet<> ValueTraits = {
     "is_nothrow_invocable_r",
     "is_nothrow_move_assignable",
     "is_nothrow_move_constructible",
+    "is_nothrow_relocatable",
     "is_nothrow_swappable",
     "is_nothrow_swappable_with",
     "is_null_pointer",
     "is_object",
+    "is_placeholder",
     "is_pointer",
     "is_pointer_interconvertible_base_of",
     "is_polymorphic",
     "is_reference",
+    "is_replaceable",
     "is_rvalue_reference",
     "is_same",
     "is_scalar",
@@ -91,15 +102,26 @@ static const llvm::StringSet<> ValueTraits = {
     "is_trivially_destructible",
     "is_trivially_move_assignable",
     "is_trivially_move_constructible",
+    "is_trivially_relocatable",
     "is_unbounded_array",
     "is_union",
     "is_unsigned",
+    "is_virtual_base_of",
     "is_void",
     "is_volatile",
     "negation",
     "rank",
+    "ratio_equal",
+    "ratio_greater_equal",
+    "ratio_greater",
+    "ratio_less_equal",
+    "ratio_less",
+    "ratio_not_equal",
     "reference_constructs_from_temporary",
     "reference_converts_from_temporary",
+    "tuple_size",
+    "uses_allocator",
+    "variant_size",
 };
 
 static const llvm::StringSet<> TypeTraits = {
@@ -130,6 +152,12 @@ static const llvm::StringSet<> TypeTraits = {
     "result_of",
     "invoke_result",
     "type_identity",
+    "compare_three_way_result",
+    "common_comparison_category",
+    "unwrap_ref_decay",
+    "unwrap_reference",
+    "tuple_element",
+    "variant_alternative",
 };
 
 static DeclarationName getName(const DependentScopeDeclRefExpr &D) {

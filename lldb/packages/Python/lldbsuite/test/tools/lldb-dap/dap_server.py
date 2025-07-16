@@ -831,6 +831,24 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+    def request_writeMemory(self, memoryReference, data, offset=0, allowPartial=False):
+        args_dict = {
+            "memoryReference": memoryReference,
+            "data": data,
+        }
+
+        if offset:
+            args_dict["offset"] = offset
+        if allowPartial:
+            args_dict["allowPartial"] = allowPartial
+
+        command_dict = {
+            "command": "writeMemory",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
@@ -894,7 +912,7 @@ class DebugCommunication(object):
         disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
-        runInTerminal=False,
+        console: Optional[str] = None,
         enableAutoVariableSummaries=False,
         displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
@@ -944,8 +962,8 @@ class DebugCommunication(object):
             args_dict["launchCommands"] = launchCommands
         if sourceMap:
             args_dict["sourceMap"] = sourceMap
-        if runInTerminal:
-            args_dict["runInTerminal"] = runInTerminal
+        if console:
+            args_dict["console"] = console
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if customFrameFormat:

@@ -3513,6 +3513,25 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
   return Register();
 }
 
+Register AMDGPUInstructionSelector::matchAnyExtendFromS32(Register Reg) const {
+  Register AnyExtSrc;
+  if (mi_match(Reg, *MRI, m_GAnyExt(m_Reg(AnyExtSrc))))
+    return MRI->getType(AnyExtSrc) == LLT::scalar(32) ? AnyExtSrc : Register();
+
+  // Match legalized form %zext = G_MERGE_VALUES (s32 %x), (s32 G_IMPLICIT_DEF)
+  const MachineInstr *Def = getDefIgnoringCopies(Reg, *MRI);
+  if (Def->getOpcode() != AMDGPU::G_MERGE_VALUES)
+    return Register();
+
+  assert(Def->getNumOperands() == 3 &&
+         MRI->getType(Def->getOperand(0).getReg()) == LLT::scalar(64));
+
+  if (mi_match(Def->getOperand(2).getReg(), *MRI, m_GImplicitDef()))
+    return Def->getOperand(1).getReg();
+
+  return Register();
+}
+
 bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   if (!Subtarget->hasVMemToLDSLoad())
     return false;
@@ -4904,6 +4923,7 @@ AMDGPUInstructionSelector::selectVOP3PModsDOT(MachineOperand &Root) const {
   return selectVOP3PRetHelper(Root, true);
 }
 
+// Select neg_lo from the i1 immediate operand.
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PModsNeg(MachineOperand &Root) const {
   // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
@@ -4914,6 +4934,50 @@ AMDGPUInstructionSelector::selectVOP3PModsNeg(MachineOperand &Root) const {
   unsigned Mods = SISrcMods::OP_SEL_1;
   if (Root.getImm() == -1)
     Mods ^= SISrcMods::NEG;
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
+  }};
+}
+
+// Select both neg_lo and neg_hi from the i1 immediate operand. This is
+// specifically for F16/BF16 operands in WMMA instructions, where neg_lo applies
+// to matrix's even k elements, and neg_hi applies to matrix's odd k elements.
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PModsNegs(MachineOperand &Root) const {
+  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
+  // Value is in Imm operand as i1 sign extended to int64_t.
+  // 1(-1) promotes packed values to signed, 0 treats them as unsigned.
+  assert((Root.isImm() && (Root.getImm() == -1 || Root.getImm() == 0)) &&
+         "expected i1 value");
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (Root.getImm() == -1)
+    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
+  }};
+}
+
+// Select neg, abs, or both neg and abs from the i16 immediate operans.
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PModsNegAbs(MachineOperand &Root) const {
+
+  assert(Root.isImm() && "Modifier for C must be an immediate");
+
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  switch (Root.getImm()) {
+  default: // Any other value will be silently ignored (considered as 0).
+    break;
+  case 1:
+    Mods ^= SISrcMods::NEG;
+    break;
+  case 2:
+    Mods ^= SISrcMods::ABS;
+    break;
+  case 3:
+    Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
+    break;
+  }
+
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
@@ -5141,6 +5205,35 @@ AMDGPUInstructionSelector::selectSWMMACIndex16(MachineOperand &Root) const {
       ShiftAmt->Value.getZExtValue() == 16) {
     Src = ShiftSrc;
     Key = 1;
+  }
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Key); } // index_key
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectSWMMACIndex32(MachineOperand &Root) const {
+  Register Src =
+      getDefIgnoringCopies(Root.getReg(), *MRI)->getOperand(0).getReg();
+  unsigned Key = 0;
+
+  Register S32 = matchZeroExtendFromS32(*MRI, Src);
+  if (!S32)
+    S32 = matchAnyExtendFromS32(Src);
+
+  if (S32) {
+    const MachineInstr *Def = getDefIgnoringCopies(S32, *MRI);
+    if (Def->getOpcode() == TargetOpcode::G_UNMERGE_VALUES) {
+      assert(Def->getNumOperands() == 3);
+      Register DstReg1 = Def->getOperand(1).getReg();
+      if (mi_match(S32, *MRI,
+                   m_any_of(m_SpecificReg(DstReg1), m_Copy(m_Reg(DstReg1))))) {
+        Src = Def->getOperand(2).getReg();
+        Key = 1;
+      }
+    }
   }
 
   return {{

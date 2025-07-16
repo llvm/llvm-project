@@ -676,7 +676,7 @@ void Parser::ParseGNUAttributeArgs(
   std::optional<ParseScope> PrototypeScope;
   if (normalizeAttrName(AttrName->getName()) == "enable_if" &&
       D && D->isFunctionDeclarator()) {
-    DeclaratorChunk::FunctionTypeInfo FTI = D->getFunctionTypeInfo();
+    const DeclaratorChunk::FunctionTypeInfo& FTI = D->getFunctionTypeInfo();
     PrototypeScope.emplace(this, Scope::FunctionPrototypeScope |
                                      Scope::FunctionDeclarationScope |
                                      Scope::DeclScope);

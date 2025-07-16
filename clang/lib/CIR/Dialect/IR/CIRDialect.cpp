@@ -21,6 +21,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/LogicalResult.h"
 
 #include <numeric>
 
@@ -2066,6 +2067,10 @@ LogicalResult cir::ComplexRealOp::verify() {
 }
 
 OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
+  if (auto complexCreateOp =
+          dyn_cast_or_null<cir::ComplexCreateOp>(getOperand().getDefiningOp()))
+    return complexCreateOp.getOperand(0);
+
   auto complex =
       mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
   return complex ? complex.getReal() : nullptr;
@@ -2084,9 +2089,47 @@ LogicalResult cir::ComplexImagOp::verify() {
 }
 
 OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
+  if (auto complexCreateOp =
+          dyn_cast_or_null<cir::ComplexCreateOp>(getOperand().getDefiningOp()))
+    return complexCreateOp.getOperand(1);
+
   auto complex =
       mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
   return complex ? complex.getImag() : nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexRealPtrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexRealPtrOp::verify() {
+  mlir::Type resultPointeeTy = getType().getPointee();
+  cir::PointerType operandPtrTy = getOperand().getType();
+  auto operandPointeeTy =
+      mlir::cast<cir::ComplexType>(operandPtrTy.getPointee());
+
+  if (resultPointeeTy != operandPointeeTy.getElementType()) {
+    return emitOpError() << ": result type does not match operand type";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexImagPtrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexImagPtrOp::verify() {
+  mlir::Type resultPointeeTy = getType().getPointee();
+  cir::PointerType operandPtrTy = getOperand().getType();
+  auto operandPointeeTy =
+      mlir::cast<cir::ComplexType>(operandPtrTy.getPointee());
+
+  if (resultPointeeTy != operandPointeeTy.getElementType()) {
+    return emitOpError()
+           << "cir.complex.imag_ptr result type does not match operand type";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

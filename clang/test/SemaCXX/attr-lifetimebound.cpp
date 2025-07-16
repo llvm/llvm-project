@@ -192,8 +192,9 @@ namespace p0936r0_examples {
 
   std::vector make_vector();
   void use_reversed_range() {
-    // FIXME: Don't expose the name of the internal range variable.
-    for (auto x : reversed(make_vector())) {} // expected-warning {{temporary implicitly bound to local reference will be destroyed at the end of the full-expression}}
+    // No warning here because C++23 extends the lifetime of the temporary
+    // in a range-based for loop.
+    for (auto x : reversed(make_vector())) {}
   }
 
   template <typename K, typename V>
