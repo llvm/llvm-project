@@ -10,7 +10,7 @@ program main
   use mod1
   integer, parameter :: i = 1
 
-  !ERROR: The module name or main program name cannot be in a THREADPRIVATE directive
+  !ERROR: The module name cannot be in a THREADPRIVATE directive
   !$omp threadprivate(mod1)
 
   ! This is now allowed, since "main" is implicitly declared symbol,

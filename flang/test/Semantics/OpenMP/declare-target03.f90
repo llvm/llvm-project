@@ -13,7 +13,7 @@ end subroutine
 program main
   use mod1
 
-  !ERROR: The module name or main program name cannot be in a DECLARE TARGET directive
+  !ERROR: The module name cannot be in a DECLARE TARGET directive
   !$omp declare target (mod1)
 
   ! This is now allowed: "main" is implicitly declared symbol separate
