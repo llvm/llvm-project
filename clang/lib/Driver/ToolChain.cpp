@@ -381,7 +381,7 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   // A difference of relocation model (absolutely addressed data, PIC, Arm
   // ROPI/RWPI) is likely to change whether a particular multilib variant is
   // compatible with a given link. Determine the relocation model of the
-  // current link, and add appropriate 
+  // current link, and add appropriate multilib flags.
   {
     RegisterEffectiveTriple TripleRAII(
         *this, llvm::Triple(ComputeEffectiveClangTriple(Args)));
