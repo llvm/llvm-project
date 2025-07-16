@@ -60,15 +60,10 @@ class ProcessSaveCoreMinidump64bTestCase(TestBase):
                     )
 
                 # Now we check if the error is the same, error isn't abnormal but they should fail for the same reason
+                # Success will be false if they both fail
                 self.assertTrue(
-                    (
-                        actual_process_read_error.Success()
-                        and expected_process_read_error.Success()
-                    )
-                    or (
-                        actual_process_read_error.Fail()
-                        and expected_process_read_error.Fail()
-                    ),
+                    actual_process_read_error.Success()
+                    == expected_process_read_error.Success(),
                     f"Address range {hex(start_addr)} - {hex(end_addr)} failed to read from live process and core for different reasons",
                 )
         finally:

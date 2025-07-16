@@ -992,7 +992,7 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
       // we'll error out of this Minidump generation.
       addDataError = Status::FromErrorStringWithFormat(
           "Unexpected address encounterd when reading memory in chunks "
-          "0x" PRIx64 " expected 0x" PRIx64,
+          "0x%" PRIx64 " expected 0x%" PRIx64,
           current_addr, addr + total_bytes_read);
       return lldb_private::IterationAction::Stop;
     }
