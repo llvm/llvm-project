@@ -624,8 +624,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
     // Check mask operand. Handle both all-true/false and interleaved mask.
     Value *WideMask = VPLoad->getOperand(1);
-    Mask = getMask(WideMask, Factor,
-                   cast<VectorType>(getDeinterleavedVectorType(DI)));
+    Mask = getMask(WideMask, Factor, getDeinterleavedVectorType(DI));
     if (!Mask)
       return false;
 

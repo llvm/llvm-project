@@ -306,13 +306,13 @@ unsigned llvm::getDeinterleaveIntrinsicFactor(Intrinsic::ID ID) {
   }
 }
 
-Type *llvm::getDeinterleavedVectorType(IntrinsicInst *DI) {
+VectorType *llvm::getDeinterleavedVectorType(IntrinsicInst *DI) {
   [[maybe_unused]] unsigned Factor =
       getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   ArrayRef<Type *> DISubtypes = DI->getType()->subtypes();
   assert(Factor && Factor == DISubtypes.size() &&
          "unexpected deinterleave factor or result type");
-  return DISubtypes[0];
+  return cast<VectorType>(DISubtypes[0]);
 }
 
 /// Given a vector and an element number, see if the scalar value is

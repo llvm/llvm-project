@@ -259,13 +259,12 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     Instruction *Load, Value *Mask, IntrinsicInst *DI) const {
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
-  assert(Factor && "unexpected deinterleaving factor");
   if (Factor > 8)
     return false;
 
   IRBuilder<> Builder(Load);
 
-  VectorType *ResVTy = cast<VectorType>(getDeinterleavedVectorType(DI));
+  VectorType *ResVTy = getDeinterleavedVectorType(DI);
 
   const DataLayout &DL = Load->getDataLayout();
   auto *XLenTy = Type::getIntNTy(Load->getContext(), Subtarget.getXLen());

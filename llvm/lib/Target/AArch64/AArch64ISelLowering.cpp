@@ -17497,7 +17497,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     return false;
   assert(!Mask && "Unexpected mask on a load\n");
 
-  VectorType *VTy = cast<VectorType>(getDeinterleavedVectorType(DI));
+  VectorType *VTy = getDeinterleavedVectorType(DI);
 
   const DataLayout &DL = LI->getModule()->getDataLayout();
   bool UseScalable;
