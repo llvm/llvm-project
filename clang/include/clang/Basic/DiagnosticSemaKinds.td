@@ -10642,7 +10642,7 @@ def warn_dangling_reference_captured_by_unknown : Warning<
    "the full-expression">, InGroup<DanglingCapture>;
 
 def warn_experimental_lifetime_safety_dummy_warning : Warning<
-   "todo: remove this warning after we have atleast one warning based on the lifetime analysis">, 
+   "todo: remove this warning after we have atleast one warning based on the lifetime analysis">,
    InGroup<LifetimeSafety>, DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
@@ -12357,7 +12357,7 @@ def err_export_using_internal : Error<
   "using declaration referring to %1 with %select{internal|module|unknown}0 "
   "linkage cannot be exported">;
 def err_export_not_in_module_interface : Error<
-  "export declaration can only be used within a module purview">;
+  "export declaration can only be used within a module interface">;
 def err_export_inline_not_defined : Error<
   "inline function not defined%select{| before the private module fragment}0">;
 def err_export_partition_impl : Error<
@@ -12540,7 +12540,7 @@ def warn_zero_as_null_pointer_constant : Warning<
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
 def warn_not_eliding_copy_on_return : Warning<
-  "not eliding copy on return">, 
+  "not eliding copy on return">,
   InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<
