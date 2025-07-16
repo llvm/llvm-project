@@ -531,6 +531,7 @@ let SubtargetPredicate = HasBF16TransInsts in {
 defm V_TANH_BF16 : VOP1Inst_t16 <"v_tanh_bf16", VOP_BF16_BF16, int_amdgcn_tanh>;
 defm V_RCP_BF16  : VOP1Inst_t16 <"v_rcp_bf16",  VOP_BF16_BF16, AMDGPUrcp>;
 defm V_SQRT_BF16 : VOP1Inst_t16 <"v_sqrt_bf16", VOP_BF16_BF16, any_amdgcn_sqrt>;
+defm V_RSQ_BF16  : VOP1Inst_t16 <"v_rsq_bf16",  VOP_BF16_BF16, AMDGPUrsq>;
 }
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 defm V_FREXP_MANT_F16 : VOP1Inst_t16 <"v_frexp_mant_f16", VOP_F16_F16, int_amdgcn_frexp_mant>;
@@ -1141,6 +1142,7 @@ defm V_CVT_F16_FP8           : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x077>;
 defm V_CVT_F16_BF8           : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x078>;
 defm V_RCP_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x079>;
 defm V_SQRT_BF16             : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07a>;
+defm V_RSQ_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07b>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
