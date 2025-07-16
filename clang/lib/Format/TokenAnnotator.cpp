@@ -3112,7 +3112,7 @@ private:
 
     // It's more likely that & represents operator& than an uninitialized
     // reference.
-    if (Tok.is(tok::amp) && PrevToken && PrevToken->Tok.isAnyIdentifier() &&
+    if (Tok.is(tok::amp) && PrevToken->Tok.isAnyIdentifier() &&
         IsChainedOperatorAmpOrMember(PrevToken->getPreviousNonComment()) &&
         NextToken && NextToken->Tok.isAnyIdentifier()) {
       if (auto NextNext = NextToken->getNextNonComment();
@@ -3121,6 +3121,9 @@ private:
         return TT_BinaryOperator;
       }
     }
+
+    if (PrevToken->isTypeName(LangOpts))
+      return TT_PointerOrReference;
 
     if (Line.Type == LT_SimpleRequirement ||
         (!Scopes.empty() && Scopes.back() == ST_CompoundRequirement)) {
