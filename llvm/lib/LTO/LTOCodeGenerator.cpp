@@ -46,6 +46,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
@@ -612,7 +613,8 @@ bool LTOCodeGenerator::optimize() {
 
   ModuleSummaryIndex CombinedIndex(false);
   TargetMach = createTargetMachine();
-  if (!opt(Config, TargetMach.get(), 0, *MergedModule, /*IsThinLTO=*/false,
+  auto FS = vfs::getRealFileSystem();
+  if (!opt(Config, FS, TargetMach.get(), 0, *MergedModule, /*IsThinLTO=*/false,
            /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
            /*CmdArgs*/ std::vector<uint8_t>())) {
     emitError("LTO middle-end optimizations failed");

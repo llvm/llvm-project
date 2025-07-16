@@ -362,8 +362,9 @@ static bool isEmptyModule(const Module &Mod) {
          Mod.getModuleInlineAsm().empty();
 }
 
-bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
-              bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
+bool lto::opt(const Config &Conf, IntrusiveRefCntPtr<vfs::FileSystem> FS,
+              TargetMachine *TM, unsigned Task, Module &Mod, bool IsThinLTO,
+              ModuleSummaryIndex *ExportSummary,
               const ModuleSummaryIndex *ImportSummary,
               const std::vector<uint8_t> &CmdArgs) {
   llvm::TimeTraceScope timeScope("opt");
@@ -390,7 +391,6 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   // analysis in the case of a ThinLTO build where this might be an empty
   // regular LTO combined module, with a large combined index from ThinLTO.
   if (!isEmptyModule(Mod)) {
-    auto FS = vfs::getRealFileSystem();
     // FIXME: Plumb the combined index into the new pass manager.
     runNewPMPasses(Conf, std::move(FS), Mod, TM, Conf.OptLevel, IsThinLTO,
                    ExportSummary, ImportSummary);
@@ -564,7 +564,8 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
   LLVM_DEBUG(dbgs() << "Running regular LTO\n");
   if (!C.CodeGenOnly) {
-    if (!opt(C, TM.get(), 0, Mod, /*IsThinLTO=*/false,
+    auto FS = vfs::getRealFileSystem();
+    if (!opt(C, FS, TM.get(), 0, Mod, /*IsThinLTO=*/false,
              /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
              /*CmdArgs*/ std::vector<uint8_t>()))
       return Error::success();
@@ -642,8 +643,9 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
           LLVMRemarkFileHandle DiagnosticOutputFile) {
+        auto FS = vfs::getRealFileSystem();
         // Perform optimization and code generation for ThinLTO.
-        if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
+        if (!opt(Conf, FS, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
                  CmdArgs))
           return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
