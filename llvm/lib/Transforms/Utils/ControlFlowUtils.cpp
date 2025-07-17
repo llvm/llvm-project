@@ -13,6 +13,7 @@
 #include "llvm/Transforms/Utils/ControlFlowUtils.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
@@ -281,7 +282,9 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
 
   for (auto [BB, Succ0, Succ1] : Branches) {
 #ifndef NDEBUG
-    assert(Incoming.insert(BB).second && "Duplicate entry for incoming block.");
+    assert(
+        (Incoming.insert(BB).second || isa<CallBrInst>(BB->getTerminator())) &&
+        "Duplicate entry for incoming block.");
 #endif
     if (Succ0)
       Outgoing.insert(Succ0);
@@ -340,4 +343,65 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
   }
 
   return {FirstGuardBlock, true};
+}
+
+/// Helper function to update the cycle or loop information after inserting a
+/// new block between a callbr instruction and one of its target blocks.  Adds
+/// the new block to the innermost cycle or loop that the callbr instruction and
+/// the original target block share.
+/// \p LCI            cycle or loop information to update
+/// \p CallBrBlock    block containing the callbr instruction
+/// \p CallBrTarget   new target block of the callbr instruction
+/// \p Succ           original target block of the callbr instruction
+template <typename TI, typename T>
+static bool updateCycleLoopInfo(TI *LCI, BasicBlock *CallBrBlock,
+                                BasicBlock *CallBrTarget, BasicBlock *Succ) {
+  static_assert(std::is_same_v<TI, CycleInfo> || std::is_same_v<TI, LoopInfo>,
+                "type must be CycleInfo or LoopInfo");
+  if (!LCI)
+    return false;
+
+  T *LC;
+  if constexpr (std::is_same_v<TI, CycleInfo>)
+    LC = LCI->getSmallestCommonCycle(CallBrBlock, Succ);
+  else
+    LC = LCI->getSmallestCommonLoop(CallBrBlock, Succ);
+  if (!LC)
+    return false;
+
+  if constexpr (std::is_same_v<TI, CycleInfo>)
+    LCI->addBlockToCycle(CallBrTarget, LC);
+  else
+    LC->addBasicBlockToLoop(CallBrTarget, *LCI);
+
+  return true;
+}
+
+BasicBlock *ControlFlowHub::createCallBrTarget(CallBrInst *CallBr,
+                                               BasicBlock *Succ,
+                                               unsigned SuccIdx, CycleInfo *CI,
+                                               DomTreeUpdater *DTU,
+                                               LoopInfo *LI, bool *UpdatedLI) {
+  BasicBlock *CallBrBlock = CallBr->getParent();
+  BasicBlock *CallBrTarget =
+      BasicBlock::Create(CallBrBlock->getContext(),
+                         CallBrBlock->getName() + ".target." + Succ->getName(),
+                         CallBrBlock->getParent());
+  // Rewire control flow from callbr to the new target block.
+  Succ->replacePhiUsesWith(CallBrBlock, CallBrTarget);
+  CallBr->setSuccessor(SuccIdx, CallBrTarget);
+  // Jump from the new target block to the original successor.
+  BranchInst::Create(Succ, CallBrTarget);
+  bool Updated =
+      updateCycleLoopInfo<LoopInfo, Loop>(LI, CallBrBlock, CallBrTarget, Succ);
+  if (UpdatedLI)
+    *UpdatedLI = Updated;
+  updateCycleLoopInfo<CycleInfo, Cycle>(CI, CallBrBlock, CallBrTarget, Succ);
+  if (DTU) {
+    DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
+    if (DTU->getDomTree().dominates(CallBrBlock, Succ))
+      DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ},
+                         {DominatorTree::Insert, CallBrTarget, Succ}});
+  }
+  return CallBrTarget;
 }
