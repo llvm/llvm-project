@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/Support/Debug.h"
@@ -915,13 +916,25 @@ struct PackOpTiling
                 /*stopCondition=*/nullptr, /*closedUB=*/true);
         std::optional<int64_t> cstInnerSize =
             getConstantIntValue(dimAndTileMapping[dim]);
-        int64_t dimSize = packOp.getSourceType().getDimSize(dim);
-        // TODO: It could be untiled if the `dimSize` is dynamic. It is a hard
-        // check to determine if a dimension is tiled or not.
-        bool isTiled = failed(cstTileSize) || ShapedType::isDynamic(dimSize) ||
-                       cstTileSize.value() != dimSize;
-        if (isTiled && (failed(cstTileSize) || !cstInnerSize ||
-                        *cstTileSize % *cstInnerSize != 0)) {
+        // If a dimension is not tiled, it is always valid to fuse the pack op,
+        // even if the op has padding semantics. Because it always generates a
+        // full slice along the dimension.
+        // TODO: It could be untiled if the `srcDimSize` is dynamic. It is a
+        // hard check to determine if a dimension is tiled or not.
+        int64_t srcDimSize = packOp.getSourceType().getDimSize(dim);
+        bool isTiled = failed(cstTileSize) ||
+                       ShapedType::isDynamic(srcDimSize) ||
+                       cstTileSize.value() != srcDimSize;
+        int64_t destDimSize = packOp.getDestType().getDimSize(dim);
+        bool needPadding = ShapedType::isDynamic(destDimSize) ||
+                           !cstInnerSize ||
+                           destDimSize * cstInnerSize.value() != srcDimSize;
+        // Prioritize the case that the op already says that it does not need
+        // padding.
+        if (!packOp.getPaddingValue()) {
+          needPadding = false;
+        }
+        if (isTiled && needPadding) {
           return failure();
         }
 
