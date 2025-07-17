@@ -176,8 +176,7 @@ class DAPTestCaseBase(TestBase):
     def verify_all_breakpoints_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify we hit
         all of the breakpoint locations in the "breakpoint_ids" array.
-        "breakpoint_ids" should be a list of breakpoint ID strings
-        (["1", "2"])."""
+        "breakpoint_ids" should be a list of int breakpoint IDs ([1, 2])."""
         stopped_events = self.dap_server.wait_for_stopped(timeout)
         for stopped_event in stopped_events:
             if "body" in stopped_event:
@@ -192,9 +191,7 @@ class DAPTestCaseBase(TestBase):
                 if "hitBreakpointIds" not in body:
                     continue
                 hit_bps = body["hitBreakpointIds"]
-                if all(
-                    int(breakpoint_id) in hit_bps for breakpoint_id in breakpoint_ids
-                ):
+                if all(breakpoint_id in hit_bps for breakpoint_id in breakpoint_ids):
                     return
         self.assertTrue(False, f"breakpoints not hit, stopped_events={stopped_events}")
 
