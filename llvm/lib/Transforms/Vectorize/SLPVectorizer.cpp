@@ -10508,13 +10508,9 @@ class InstructionsCompatibilityAnalysis {
   /// MainOpcode. For Add, returns 0. For Or, it should choose between false and
   /// the operand itself, since V or V == V.
   Value *selectBestIdempotentValue() const {
-    switch (MainOpcode) {
-    case Instruction::Add:
-      return ConstantInt::getNullValue(MainOp->getType());
-    default:
-      break;
-    }
-    llvm_unreachable("Unsupported opcode");
+    assert(MainOpcode == Instruction::Add && "Unsupported opcode");
+    return ConstantExpr::getBinOpIdentity(MainOpcode, MainOp->getType(),
+                                          !MainOp->isCommutative());
   }
 
   /// Returns the value and operands for the \p V, considering if it is original
