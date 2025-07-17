@@ -1321,9 +1321,9 @@ bool LoopInterchangeProfitability::isProfitable(
           isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
       break;
     case RuleTy::Ignore:
-      // TODO? We ignore the force option when it appears in a list, i.e. it
-      // should occur as the only option to be effective, as mentioned in the
-      // help.
+      LLVM_DEBUG(dbgs() << "Interchange profitability: option 'ignore' has no "
+                           "effect in combination with other options\n";
+                 dbgs() << "To force interchange, only use 'ignore'");
       break;
     }
 
