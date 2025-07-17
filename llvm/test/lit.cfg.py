@@ -63,7 +63,7 @@ llvm_config.with_environment("OCAMLRUNPARAM", "b")
 def get_asan_rtlib():
     if (
         not "Address" in config.llvm_use_sanitizer
-        or not "Darwin" in config.host_os
+        or not "Darwin" in config.target_os
         or not "x86" in config.host_triple
     ):
         return ""
