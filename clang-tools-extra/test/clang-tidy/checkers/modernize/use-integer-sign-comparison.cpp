@@ -121,3 +121,100 @@ int AllComparisons() {
 
     return 0;
 }
+
+namespace PR127471 {
+    int getSignedValue();
+    unsigned int getUnsignedValue();
+
+    void callExprTest() {
+
+        if (getSignedValue() < getUnsignedValue())
+            return;
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES:  if (std::cmp_less(getSignedValue() , getUnsignedValue()))
+
+        int sVar = 0;
+        if (getUnsignedValue() > sVar)
+            return;
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: if (std::cmp_greater(getUnsignedValue() , sVar))
+
+        unsigned int uVar = 0;
+        if (getSignedValue() > uVar)
+            return;
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: if (std::cmp_greater(getSignedValue() , uVar))
+
+    }
+
+    // Add a class with member functions for testing member function calls
+    class TestClass {
+    public:
+        int getSignedValue() { return -5; }
+        unsigned int getUnsignedValue() { return 5; }
+    };
+
+    void memberFunctionTests() {
+        TestClass obj;
+
+        if (obj.getSignedValue() < obj.getUnsignedValue())
+            return;
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: if (std::cmp_less(obj.getSignedValue() , obj.getUnsignedValue()))
+    }
+
+    void castFunctionTests() {
+        // C-style casts with function calls
+        if ((int)getUnsignedValue() < (unsigned int)getSignedValue())
+            return;
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: if (std::cmp_less(getUnsignedValue(),getSignedValue()))
+
+
+        // Static casts with function calls
+        if (static_cast<int>(getUnsignedValue()) < static_cast<unsigned int>(getSignedValue()))
+            return;
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: if (std::cmp_less(getUnsignedValue(),getSignedValue()))
+    }
+
+    // Define tests
+    #define SIGNED_FUNC getSignedValue()
+    #define UNSIGNED_FUNC getUnsignedValue()
+
+    void defineTests() {
+        if (SIGNED_FUNC < UNSIGNED_FUNC)
+            return;
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: if (std::cmp_less(SIGNED_FUNC , UNSIGNED_FUNC))
+    }
+
+    // Template tests (should not warn)
+    template <typename T1>
+    void templateFunctionTest(T1 value) {
+        if (value() < getUnsignedValue())
+            return;
+
+        if (value() < (getSignedValue() || getUnsignedValue()))
+          return;
+    }
+
+//GH127471
+  struct A
+  {
+    unsigned size() const;
+  };
+
+  struct B
+  {
+    A a;
+
+   bool foo(const A& a2) const {
+     return (int)a2.size() == size();
+     // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+     // CHECK-FIXES: return std::cmp_equal(a2.size(), size())
+   }
+
+   int size() const { return (int)a.size(); }
+  };
+} // namespace PR127471
