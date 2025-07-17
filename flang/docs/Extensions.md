@@ -179,6 +179,9 @@ program m
 use m
 end
 ```
+  Note that internally the main program symbol name is all uppercase, unlike
+  the names of all other symbols, which are usually all lowercase. This
+  may make a difference in testing/debugging.
 
 ## Extensions, deletions, and legacy features supported by default
 
