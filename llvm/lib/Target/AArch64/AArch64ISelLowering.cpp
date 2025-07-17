@@ -26494,8 +26494,15 @@ static SDValue commuteInsertVectorEltFMul(SDNode *N, SelectionDAG &DAG) {
   // Only handle constant 0 insertion...
   if (!(isNullConstant(InsertVal) || isNullFPConstant(InsertVal)))
     return SDValue();
-  // ... into the result of an FMUL.
+  // ... into the result of an FMUL ...
   if (InsertVec.getOpcode() != ISD::FMUL)
+    return SDValue();
+  /// ... and only when x * 0 = 0.
+  auto Flags = InsertVec->getFlags();
+  auto Options = DAG.getTarget().Options;
+  if ((!Options.NoNaNsFPMath && !Flags.hasNoNaNs()) ||
+      (!Options.NoInfsFPMath && !Flags.hasNoInfs()) ||
+      (!Options.NoSignedZerosFPMath && !Flags.hasNoSignedZeros()))
     return SDValue();
 
   // Insert into the operand of FMUL instead.
@@ -26518,6 +26525,7 @@ static SDValue commuteInsertVectorEltFMul(SDNode *N, SelectionDAG &DAG) {
     FMulOp2 = InsertOp;
   SDValue FMul = DAG.getNode(ISD::FMUL, SDLoc(InsertVec),
                              InsertVec.getValueType(), InsertOp, FMulOp2);
+  FMul->setFlags(Flags);
   DAG.ReplaceAllUsesWith(N, &FMul);
   return FMul;
 }
