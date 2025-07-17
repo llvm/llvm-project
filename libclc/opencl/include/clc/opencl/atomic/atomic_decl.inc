@@ -8,18 +8,16 @@
 
 #ifdef __CLC_SCALAR
 
-#if (defined(cl_khr_int64_base_atomics) &&                                     \
-     defined(cl_khr_int64_extended_atomics))
+#if defined(__opencl_c_fp64) && (defined(cl_khr_int64_base_atomics) &&         \
+                                 defined(cl_khr_int64_extended_atomics))
 #define HAVE_64_ATOMIC
 #endif
-#if defined(__CLC_FPSIZE) && (__CLC_FPSIZE < 64 || (defined(HAVE_64_ATOMIC) && \
-                                                    defined(__opencl_c_fp64)))
+#if defined(__CLC_FPSIZE) && (__CLC_FPSIZE < 64 || defined(HAVE_64_ATOMIC))
 #define HAVE_FP_ATOMIC
 #endif
 #if defined(__CLC_GENSIZE) &&                                                  \
     ((__CLC_GENSIZE == 32) ||                                                  \
-     (__CLC_GENSIZE == 64 &&                                                   \
-      (defined(HAVE_64_ATOMIC) && defined(__opencl_c_int64))))
+     (__CLC_GENSIZE == 64 && defined(HAVE_64_ATOMIC)))
 #define HAVE_INT_ATOMIC
 #endif
 #if defined(HAVE_FP_ATOMIC) || defined(HAVE_INT_ATOMIC)

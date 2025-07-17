@@ -7,7 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #ifdef __CLC_SCALAR
+
+#if defined(__SPIR32__) || defined(CLC_NVPTX)
+#if (defined(__CLC_FPSIZE) && __CLC_FPSIZE <= 32) ||                           \
+    (defined(__CLC_GENSIZE) && (__CLC_GENSIZE == 32))
+#define __CLC_HAS_ATOMIC
+#endif
+#else // defined(__SPIR32__) || defined(CLC_NVPTX)
 #if defined(__CLC_FPSIZE) || (__CLC_GENSIZE >= 32)
+#define __CLC_HAS_ATOMIC
+#endif
+#endif // defined(__SPIR32__) || defined(CLC_NVPTX)
+
+#ifdef __CLC_HAS_ATOMIC
 
 #ifdef __CLC_FPSIZE
 
@@ -46,5 +58,7 @@ __CLC_DEFINE_ATOMIC()
 
 #undef __CLC_DEFINE_ATOMIC
 
-#endif // defined(__CLC_FPSIZE) || (__CLC_GENSIZE >= 32)
+#endif // __CLC_HAS_ATOMIC
+#undef __CLC_HAS_ATOMIC
+
 #endif // __CLC_SCALAR

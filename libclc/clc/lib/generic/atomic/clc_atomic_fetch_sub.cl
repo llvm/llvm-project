@@ -11,8 +11,8 @@
 #define FUNCTION __clc_atomic_fetch_sub
 #define __IMPL_FUNCTION __scoped_atomic_fetch_sub
 
-#define __CLC_BODY <atomic_def.inc>
+#define __CLC_BODY <clc_atomic_def.inc>
 #include <clc/integer/gentype.inc>
 
-#define __CLC_BODY <atomic_def.inc>
+#define __CLC_BODY <clc_atomic_def.inc>
 #include <clc/math/gentype.inc>

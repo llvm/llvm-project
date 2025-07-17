@@ -11,7 +11,7 @@
 #define FUNCTION __clc_atomic_exchange
 #define __IMPL_FUNCTION __scoped_atomic_exchange_n
 
-#define __CLC_BODY <atomic_def.inc>
+#define __CLC_BODY <clc_atomic_def.inc>
 #include <clc/integer/gentype.inc>
 
 #undef __CLC_PTR_CASTTYPE
@@ -19,5 +19,5 @@
 #define __CLC_PTR_CASTTYPE __CLC_BIT_INTN
 #define __CLC_AS_RETTYPE(x) __CLC_AS_GENTYPE(x)
 
-#define __CLC_BODY <atomic_def.inc>
+#define __CLC_BODY <clc_atomic_def.inc>
 #include <clc/math/gentype.inc>
