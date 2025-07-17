@@ -260,240 +260,7 @@ InstCounterType eventCounter(const unsigned *masks, WaitEventType E) {
   llvm_unreachable("event type has no associated counter");
 }
 
-// This objects maintains the current score brackets of each wait counter, and
-// a per-register scoreboard for each wait counter.
-//
-// We also maintain the latest score for every event type that can change the
-// waitcnt in order to know if there are multiple types of events within
-// the brackets. When multiple types of event happen in the bracket,
-// wait count may get decreased out of order, therefore we need to put in
-// "s_waitcnt 0" before use.
-class WaitcntBrackets {
-public:
-  WaitcntBrackets(const GCNSubtarget *SubTarget, InstCounterType MaxCounter,
-                  HardwareLimits Limits, const unsigned *WaitEventMaskForInst,
-                  InstCounterType SmemAccessCounter)
-      : ST(SubTarget), MaxCounter(MaxCounter), Limits(Limits),
-        WaitEventMaskForInst(WaitEventMaskForInst),
-        SmemAccessCounter(SmemAccessCounter) {}
-
-  unsigned getWaitCountMax(InstCounterType T) const {
-    switch (T) {
-    case LOAD_CNT:
-      return Limits.LoadcntMax;
-    case DS_CNT:
-      return Limits.DscntMax;
-    case EXP_CNT:
-      return Limits.ExpcntMax;
-    case STORE_CNT:
-      return Limits.StorecntMax;
-    case SAMPLE_CNT:
-      return Limits.SamplecntMax;
-    case BVH_CNT:
-      return Limits.BvhcntMax;
-    case KM_CNT:
-      return Limits.KmcntMax;
-    case X_CNT:
-      return Limits.XcntMax;
-    default:
-      break;
-    }
-    return 0;
-  }
-
-  bool isSmemCounter(InstCounterType T) const {
-    return T == SmemAccessCounter || T == X_CNT;
-  }
-
-  unsigned getSgprScoresIdx(InstCounterType T) const {
-    assert(isSmemCounter(T) && "Invalid SMEM counter");
-    return T == X_CNT ? 1 : 0;
-  }
-
-  unsigned getScoreLB(InstCounterType T) const {
-    assert(T < NUM_INST_CNTS);
-    return ScoreLBs[T];
-  }
-
-  unsigned getScoreUB(InstCounterType T) const {
-    assert(T < NUM_INST_CNTS);
-    return ScoreUBs[T];
-  }
-
-  unsigned getScoreRange(InstCounterType T) const {
-    return getScoreUB(T) - getScoreLB(T);
-  }
-
-  unsigned getRegScore(int GprNo, InstCounterType T) const {
-    if (GprNo < NUM_ALL_VGPRS)
-      return VgprScores[T][GprNo];
-    return SgprScores[getSgprScoresIdx(T)][GprNo - NUM_ALL_VGPRS];
-  }
-
-  bool merge(const WaitcntBrackets &Other);
-
-  RegInterval getRegInterval(const MachineInstr *MI,
-                             const MachineRegisterInfo *MRI,
-                             const SIRegisterInfo *TRI,
-                             const MachineOperand &Op) const;
-
-  bool counterOutOfOrder(InstCounterType T) const;
-  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const;
-  void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
-
-  void determineWait(InstCounterType T, RegInterval Interval,
-                     AMDGPU::Waitcnt &Wait) const;
-  void determineWait(InstCounterType T, int RegNo,
-                     AMDGPU::Waitcnt &Wait) const {
-    determineWait(T, {RegNo, RegNo + 1}, Wait);
-  }
-
-  void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
-  void applyWaitcnt(InstCounterType T, unsigned Count);
-  void applyXcnt(const AMDGPU::Waitcnt &Wait);
-  void updateByEvent(const SIInstrInfo *TII, const SIRegisterInfo *TRI,
-                     const MachineRegisterInfo *MRI, WaitEventType E,
-                     MachineInstr &MI);
-
-  unsigned hasPendingEvent() const { return PendingEvents; }
-  unsigned hasPendingEvent(WaitEventType E) const {
-    return PendingEvents & (1 << E);
-  }
-  unsigned hasPendingEvent(InstCounterType T) const {
-    unsigned HasPending = PendingEvents & WaitEventMaskForInst[T];
-    assert((HasPending != 0) == (getScoreRange(T) != 0));
-    return HasPending;
-  }
-
-  bool hasMixedPendingEvents(InstCounterType T) const {
-    unsigned Events = hasPendingEvent(T);
-    // Return true if more than one bit is set in Events.
-    return Events & (Events - 1);
-  }
-
-  bool hasPendingFlat() const {
-    return ((LastFlat[DS_CNT] > ScoreLBs[DS_CNT] &&
-             LastFlat[DS_CNT] <= ScoreUBs[DS_CNT]) ||
-            (LastFlat[LOAD_CNT] > ScoreLBs[LOAD_CNT] &&
-             LastFlat[LOAD_CNT] <= ScoreUBs[LOAD_CNT]));
-  }
-
-  void setPendingFlat() {
-    LastFlat[LOAD_CNT] = ScoreUBs[LOAD_CNT];
-    LastFlat[DS_CNT] = ScoreUBs[DS_CNT];
-  }
-
-  bool hasPendingGDS() const {
-    return LastGDS > ScoreLBs[DS_CNT] && LastGDS <= ScoreUBs[DS_CNT];
-  }
-
-  unsigned getPendingGDSWait() const {
-    return std::min(getScoreUB(DS_CNT) - LastGDS, getWaitCountMax(DS_CNT) - 1);
-  }
-
-  void setPendingGDS() { LastGDS = ScoreUBs[DS_CNT]; }
-
-  // Return true if there might be pending writes to the vgpr-interval by VMEM
-  // instructions with types different from V.
-  bool hasOtherPendingVmemTypes(RegInterval Interval, VmemType V) const {
-    for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-      assert(RegNo < NUM_ALL_VGPRS);
-      if (VgprVmemTypes[RegNo] & ~(1 << V))
-        return true;
-    }
-    return false;
-  }
-
-  void clearVgprVmemTypes(RegInterval Interval) {
-    for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-      assert(RegNo < NUM_ALL_VGPRS);
-      VgprVmemTypes[RegNo] = 0;
-    }
-  }
-
-  void setStateOnFunctionEntryOrReturn() {
-    setScoreUB(STORE_CNT, getScoreUB(STORE_CNT) + getWaitCountMax(STORE_CNT));
-    PendingEvents |= WaitEventMaskForInst[STORE_CNT];
-  }
-
-  ArrayRef<const MachineInstr *> getLDSDMAStores() const {
-    return LDSDMAStores;
-  }
-
-  bool hasPointSampleAccel(const MachineInstr &MI) const;
-  bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
-                                      RegInterval Interval) const;
-
-  void print(raw_ostream &) const;
-  void dump() const { print(dbgs()); }
-
-private:
-  struct MergeInfo {
-    unsigned OldLB;
-    unsigned OtherLB;
-    unsigned MyShift;
-    unsigned OtherShift;
-  };
-  static bool mergeScore(const MergeInfo &M, unsigned &Score,
-                         unsigned OtherScore);
-
-  void setScoreLB(InstCounterType T, unsigned Val) {
-    assert(T < NUM_INST_CNTS);
-    ScoreLBs[T] = Val;
-  }
-
-  void setScoreUB(InstCounterType T, unsigned Val) {
-    assert(T < NUM_INST_CNTS);
-    ScoreUBs[T] = Val;
-
-    if (T != EXP_CNT)
-      return;
-
-    if (getScoreRange(EXP_CNT) > getWaitCountMax(EXP_CNT))
-      ScoreLBs[EXP_CNT] = ScoreUBs[EXP_CNT] - getWaitCountMax(EXP_CNT);
-  }
-
-  void setRegScore(int GprNo, InstCounterType T, unsigned Val) {
-    setScoreByInterval({GprNo, GprNo + 1}, T, Val);
-  }
-
-  void setScoreByInterval(RegInterval Interval, InstCounterType CntTy,
-                          unsigned Score);
-
-  void setScoreByOperand(const MachineInstr *MI, const SIRegisterInfo *TRI,
-                         const MachineRegisterInfo *MRI,
-                         const MachineOperand &Op, InstCounterType CntTy,
-                         unsigned Val);
-
-  const GCNSubtarget *ST = nullptr;
-  InstCounterType MaxCounter = NUM_EXTENDED_INST_CNTS;
-  HardwareLimits Limits = {};
-  const unsigned *WaitEventMaskForInst;
-  InstCounterType SmemAccessCounter;
-  unsigned ScoreLBs[NUM_INST_CNTS] = {0};
-  unsigned ScoreUBs[NUM_INST_CNTS] = {0};
-  unsigned PendingEvents = 0;
-  // Remember the last flat memory operation.
-  unsigned LastFlat[NUM_INST_CNTS] = {0};
-  // Remember the last GDS operation.
-  unsigned LastGDS = 0;
-  // wait_cnt scores for every vgpr.
-  // Keep track of the VgprUB and SgprUB to make merge at join efficient.
-  int VgprUB = -1;
-  int SgprUB = -1;
-  unsigned VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
-  // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
-  // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
-  // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps the
-  // X_CNT score.
-  unsigned SgprScores[2][SQ_MAX_PGM_SGPRS] = {{0}};
-  // Bitmask of the VmemTypes of VMEM instructions that might have a pending
-  // write to each vgpr.
-  unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
-  // Store representative LDS DMA operations. The only useful info here is
-  // alias info. One store is kept per unique AAInfo.
-  SmallVector<const MachineInstr *, NUM_LDS_VGPRS - 1> LDSDMAStores;
-};
+class WaitcntBrackets;
 
 // This abstracts the logic for generating and updating S_WAIT* instructions
 // away from the analysis that determines where they are needed. This was
@@ -789,6 +556,241 @@ public:
                              WaitcntBrackets &ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
                             WaitcntBrackets &ScoreBrackets);
+};
+
+// This objects maintains the current score brackets of each wait counter, and
+// a per-register scoreboard for each wait counter.
+//
+// We also maintain the latest score for every event type that can change the
+// waitcnt in order to know if there are multiple types of events within
+// the brackets. When multiple types of event happen in the bracket,
+// wait count may get decreased out of order, therefore we need to put in
+// "s_waitcnt 0" before use.
+class WaitcntBrackets {
+public:
+  WaitcntBrackets(const GCNSubtarget *SubTarget, InstCounterType MaxCounter,
+                  HardwareLimits Limits, const unsigned *WaitEventMaskForInst,
+                  InstCounterType SmemAccessCounter)
+      : ST(SubTarget), MaxCounter(MaxCounter), Limits(Limits),
+        WaitEventMaskForInst(WaitEventMaskForInst),
+        SmemAccessCounter(SmemAccessCounter) {}
+
+  unsigned getWaitCountMax(InstCounterType T) const {
+    switch (T) {
+    case LOAD_CNT:
+      return Limits.LoadcntMax;
+    case DS_CNT:
+      return Limits.DscntMax;
+    case EXP_CNT:
+      return Limits.ExpcntMax;
+    case STORE_CNT:
+      return Limits.StorecntMax;
+    case SAMPLE_CNT:
+      return Limits.SamplecntMax;
+    case BVH_CNT:
+      return Limits.BvhcntMax;
+    case KM_CNT:
+      return Limits.KmcntMax;
+    case X_CNT:
+      return Limits.XcntMax;
+    default:
+      break;
+    }
+    return 0;
+  }
+
+  bool isSmemCounter(InstCounterType T) const {
+    return T == SmemAccessCounter || T == X_CNT;
+  }
+
+  unsigned getSgprScoresIdx(InstCounterType T) const {
+    assert(isSmemCounter(T) && "Invalid SMEM counter");
+    return T == X_CNT ? 1 : 0;
+  }
+
+  unsigned getScoreLB(InstCounterType T) const {
+    assert(T < NUM_INST_CNTS);
+    return ScoreLBs[T];
+  }
+
+  unsigned getScoreUB(InstCounterType T) const {
+    assert(T < NUM_INST_CNTS);
+    return ScoreUBs[T];
+  }
+
+  unsigned getScoreRange(InstCounterType T) const {
+    return getScoreUB(T) - getScoreLB(T);
+  }
+
+  unsigned getRegScore(int GprNo, InstCounterType T) const {
+    if (GprNo < NUM_ALL_VGPRS)
+      return VgprScores[T][GprNo];
+    return SgprScores[getSgprScoresIdx(T)][GprNo - NUM_ALL_VGPRS];
+  }
+
+  bool merge(const WaitcntBrackets &Other);
+
+  RegInterval getRegInterval(const MachineInstr *MI,
+                             const MachineRegisterInfo *MRI,
+                             const SIRegisterInfo *TRI,
+                             const MachineOperand &Op) const;
+
+  bool counterOutOfOrder(InstCounterType T) const;
+  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const;
+  void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
+
+  void determineWait(InstCounterType T, RegInterval Interval,
+                     AMDGPU::Waitcnt &Wait) const;
+  void determineWait(InstCounterType T, int RegNo,
+                     AMDGPU::Waitcnt &Wait) const {
+    determineWait(T, {RegNo, RegNo + 1}, Wait);
+  }
+
+  void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
+  void applyWaitcnt(InstCounterType T, unsigned Count);
+  void applyXcnt(const AMDGPU::Waitcnt &Wait);
+  void updateByEvent(const SIInstrInfo *TII, const SIRegisterInfo *TRI,
+                     const MachineRegisterInfo *MRI, WaitEventType E,
+                     MachineInstr &MI);
+
+  unsigned hasPendingEvent() const { return PendingEvents; }
+  unsigned hasPendingEvent(WaitEventType E) const {
+    return PendingEvents & (1 << E);
+  }
+  unsigned hasPendingEvent(InstCounterType T) const {
+    unsigned HasPending = PendingEvents & WaitEventMaskForInst[T];
+    assert((HasPending != 0) == (getScoreRange(T) != 0));
+    return HasPending;
+  }
+
+  bool hasMixedPendingEvents(InstCounterType T) const {
+    unsigned Events = hasPendingEvent(T);
+    // Return true if more than one bit is set in Events.
+    return Events & (Events - 1);
+  }
+
+  bool hasPendingFlat() const {
+    return ((LastFlat[DS_CNT] > ScoreLBs[DS_CNT] &&
+             LastFlat[DS_CNT] <= ScoreUBs[DS_CNT]) ||
+            (LastFlat[LOAD_CNT] > ScoreLBs[LOAD_CNT] &&
+             LastFlat[LOAD_CNT] <= ScoreUBs[LOAD_CNT]));
+  }
+
+  void setPendingFlat() {
+    LastFlat[LOAD_CNT] = ScoreUBs[LOAD_CNT];
+    LastFlat[DS_CNT] = ScoreUBs[DS_CNT];
+  }
+
+  bool hasPendingGDS() const {
+    return LastGDS > ScoreLBs[DS_CNT] && LastGDS <= ScoreUBs[DS_CNT];
+  }
+
+  unsigned getPendingGDSWait() const {
+    return std::min(getScoreUB(DS_CNT) - LastGDS, getWaitCountMax(DS_CNT) - 1);
+  }
+
+  void setPendingGDS() { LastGDS = ScoreUBs[DS_CNT]; }
+
+  // Return true if there might be pending writes to the vgpr-interval by VMEM
+  // instructions with types different from V.
+  bool hasOtherPendingVmemTypes(RegInterval Interval, VmemType V) const {
+    for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+      assert(RegNo < NUM_ALL_VGPRS);
+      if (VgprVmemTypes[RegNo] & ~(1 << V))
+        return true;
+    }
+    return false;
+  }
+
+  void clearVgprVmemTypes(RegInterval Interval) {
+    for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+      assert(RegNo < NUM_ALL_VGPRS);
+      VgprVmemTypes[RegNo] = 0;
+    }
+  }
+
+  void setStateOnFunctionEntryOrReturn() {
+    setScoreUB(STORE_CNT, getScoreUB(STORE_CNT) + getWaitCountMax(STORE_CNT));
+    PendingEvents |= WaitEventMaskForInst[STORE_CNT];
+  }
+
+  ArrayRef<const MachineInstr *> getLDSDMAStores() const {
+    return LDSDMAStores;
+  }
+
+  bool hasPointSampleAccel(const MachineInstr &MI) const;
+  bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
+                                      RegInterval Interval) const;
+
+  void print(raw_ostream &) const;
+  void dump() const { print(dbgs()); }
+
+private:
+  struct MergeInfo {
+    unsigned OldLB;
+    unsigned OtherLB;
+    unsigned MyShift;
+    unsigned OtherShift;
+  };
+  static bool mergeScore(const MergeInfo &M, unsigned &Score,
+                         unsigned OtherScore);
+
+  void setScoreLB(InstCounterType T, unsigned Val) {
+    assert(T < NUM_INST_CNTS);
+    ScoreLBs[T] = Val;
+  }
+
+  void setScoreUB(InstCounterType T, unsigned Val) {
+    assert(T < NUM_INST_CNTS);
+    ScoreUBs[T] = Val;
+
+    if (T != EXP_CNT)
+      return;
+
+    if (getScoreRange(EXP_CNT) > getWaitCountMax(EXP_CNT))
+      ScoreLBs[EXP_CNT] = ScoreUBs[EXP_CNT] - getWaitCountMax(EXP_CNT);
+  }
+
+  void setRegScore(int GprNo, InstCounterType T, unsigned Val) {
+    setScoreByInterval({GprNo, GprNo + 1}, T, Val);
+  }
+
+  void setScoreByInterval(RegInterval Interval, InstCounterType CntTy,
+                          unsigned Score);
+
+  void setScoreByOperand(const MachineInstr *MI, const SIRegisterInfo *TRI,
+                         const MachineRegisterInfo *MRI,
+                         const MachineOperand &Op, InstCounterType CntTy,
+                         unsigned Val);
+
+  const GCNSubtarget *ST = nullptr;
+  InstCounterType MaxCounter = NUM_EXTENDED_INST_CNTS;
+  HardwareLimits Limits = {};
+  const unsigned *WaitEventMaskForInst;
+  InstCounterType SmemAccessCounter;
+  unsigned ScoreLBs[NUM_INST_CNTS] = {0};
+  unsigned ScoreUBs[NUM_INST_CNTS] = {0};
+  unsigned PendingEvents = 0;
+  // Remember the last flat memory operation.
+  unsigned LastFlat[NUM_INST_CNTS] = {0};
+  // Remember the last GDS operation.
+  unsigned LastGDS = 0;
+  // wait_cnt scores for every vgpr.
+  // Keep track of the VgprUB and SgprUB to make merge at join efficient.
+  int VgprUB = -1;
+  int SgprUB = -1;
+  unsigned VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
+  // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
+  // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
+  // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps the
+  // X_CNT score.
+  unsigned SgprScores[2][SQ_MAX_PGM_SGPRS] = {{0}};
+  // Bitmask of the VmemTypes of VMEM instructions that might have a pending
+  // write to each vgpr.
+  unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
+  // Store representative LDS DMA operations. The only useful info here is
+  // alias info. One store is kept per unique AAInfo.
+  SmallVector<const MachineInstr *, NUM_LDS_VGPRS - 1> LDSDMAStores;
 };
 
 class SIInsertWaitcntsLegacy : public MachineFunctionPass {
