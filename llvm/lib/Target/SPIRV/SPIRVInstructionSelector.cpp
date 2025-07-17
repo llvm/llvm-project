@@ -4028,7 +4028,8 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
     // new register.
     GR.assignSPIRVTypeToVReg(PtrType, PtrTyReg, MIRBuilder.getMF());
     MachineBasicBlock &EntryBB = I.getMF()->front();
-    MachineBasicBlock::iterator VarPos = getPosForOpVariableWithinBlock(EntryBB);
+    MachineBasicBlock::iterator VarPos =
+        getPosForOpVariableWithinBlock(EntryBB);
     auto AllocaMIB =
         BuildMI(EntryBB, VarPos, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
             .addDef(PtrTyReg)
