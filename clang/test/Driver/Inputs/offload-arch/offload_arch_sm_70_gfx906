@@ -1,0 +1,4 @@
+#!/bin/sh
+echo "sm_70"
+echo "gfx906"
+exit 0

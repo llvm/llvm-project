@@ -23,9 +23,10 @@ namespace llvm {
 class StringToOffsetTable {
   StringMap<unsigned> StringOffset;
   std::string AggregateString;
+  const bool AppendZero;
 
 public:
-  StringToOffsetTable() {
+  StringToOffsetTable(bool AppendZero = true) : AppendZero(AppendZero) {
     // Ensure we always put the empty string at offset zero. That lets empty
     // initialization also be zero initialization for offsets into the table.
     GetOrAddStringOffset("");
@@ -34,7 +35,7 @@ public:
   bool empty() const { return StringOffset.empty(); }
   size_t size() const { return AggregateString.size(); }
 
-  unsigned GetOrAddStringOffset(StringRef Str, bool appendZero = true);
+  unsigned GetOrAddStringOffset(StringRef Str);
 
   // Returns the offset of `Str` in the table if its preset, else return
   // std::nullopt.
@@ -45,7 +46,7 @@ public:
     return II->second;
   }
 
-  // Emit a string table definition with the provided name and indent.
+  // Emit a string table definition with the provided name.
   //
   // When possible, this uses string-literal concatenation to emit the string
   // contents in a readable and searchable way. However, for (very) large string
@@ -56,8 +57,7 @@ public:
   // The string table, and its input string contents, are always emitted as both
   // `static` and `constexpr`. Both `Name` and (`Name` + "Storage") must be
   // valid identifiers to declare.
-  void EmitStringTableDef(raw_ostream &OS, const Twine &Name,
-                          const Twine &Indent = "") const;
+  void EmitStringTableDef(raw_ostream &OS, const Twine &Name) const;
 
   // Emit the string as one single string.
   void EmitString(raw_ostream &O) const;

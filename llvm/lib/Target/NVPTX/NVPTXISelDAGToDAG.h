@@ -92,8 +92,6 @@ private:
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
   void SelectCpAsyncBulkTensorG2SCommon(SDNode *N, bool IsIm2Col = false);
-  void SelectCpAsyncBulkTensorS2GCommon(SDNode *N, bool IsIm2Col = false);
-  void SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorReduceCommon(SDNode *N, unsigned RedOp,
                                            bool IsIm2Col = false);
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
@@ -104,11 +102,10 @@ private:
   }
 
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
+  SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
   SDValue selectPossiblyImm(SDValue V);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
-
-  static unsigned GetConvertOpcode(MVT DestTy, MVT SrcTy, LoadSDNode *N);
 
   // Returns the Memory Order and Scope that the PTX memory instruction should
   // use, and inserts appropriate fence instruction before the memory

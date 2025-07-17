@@ -448,6 +448,8 @@ protected:
   OptLabelTy ContinueLabel;
   /// Default case label.
   OptLabelTy DefaultLabel;
+
+  const FunctionDecl *CompilingFunction = nullptr;
 };
 
 extern template class Compiler<ByteCodeEmitter>;

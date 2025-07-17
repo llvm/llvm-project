@@ -40,7 +40,7 @@ define i1  @test_v2i8_load(ptr %a) {
 ; CHECK-NEXT:    ld.v2.b8 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    or.b16 %rs5, %rs1, %rs2;
 ; CHECK-NEXT:    and.b16 %rs6, %rs5, 255;
-; CHECK-NEXT:    setp.eq.s16 %p1, %rs6, 0;
+; CHECK-NEXT:    setp.eq.b16 %p1, %rs6, 0;
 ; CHECK-NEXT:    selp.b32 %r1, -1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;

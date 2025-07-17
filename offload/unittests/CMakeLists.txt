@@ -1,6 +1,20 @@
 add_custom_target(OffloadUnitTests)
 set_target_properties(OffloadUnitTests PROPERTIES FOLDER "Tests/UnitTests")
 
+if (CMAKE_CROSSCOMPILING)
+  # TODO: It is possible that LLVM_GTEST_RUN_UNDER defines an emulator or
+  #       ssh remote command invocation; for this case provide an option to
+  #       enable unittests.
+  message(STATUS "Offload unittests disabled because we are cross-compiling")
+  return ()
+endif ()
+
+if (NOT TARGET llvm_gtest)
+  message(WARNING "Offload unittests disabled due to GTest being unavailable; "
+                  "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
+  return ()
+endif ()
+
 function(add_offload_test_device_code test_filename test_name)
   set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${test_filename})
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)

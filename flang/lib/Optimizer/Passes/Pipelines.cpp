@@ -113,6 +113,7 @@ void addFIRToLLVMPass(mlir::PassManager &pm,
   options.forceUnifiedTBAATree = useOldAliasTags;
   options.typeDescriptorsRenamedForAssembly =
       !disableCompilerGeneratedNamesConversion;
+  options.ComplexRange = config.ComplexRange;
   addPassConditionally(pm, disableFirToLlvmIr,
                        [&]() { return fir::createFIRToLLVMPass(options); });
   // The dialect conversion framework may leave dead unrealized_conversion_cast

@@ -17,6 +17,8 @@
 .byte 1
 .section    .section8,"",@llvm_lto
 .byte 1
+.section    .section9,"",@llvm_cfi_jump_table,1
+.byte 1
 
 # CHECK:        Name: .section1
 # CHECK-NEXT:   Type: SHT_LLVM_BB_ADDR_MAP
@@ -34,3 +36,6 @@
 # CHECK-NEXT:   Type: SHT_LLVM_OFFLOADING
 # CHECK:        Name: .section8
 # CHECK-NEXT:   Type: SHT_LLVM_LTO
+# CHECK:        Name: .section9
+# CHECK-NEXT:   Type: SHT_LLVM_CFI_JUMP_TABLE
+# CHECK:        EntrySize: 1
