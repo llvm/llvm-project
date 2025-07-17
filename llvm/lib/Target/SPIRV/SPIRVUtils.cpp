@@ -996,7 +996,7 @@ unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
 }
 
 MachineBasicBlock::iterator
-getPosForOpVariableWithinBlock(MachineBasicBlock &BB) {
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
   // Find the position to insert the OpVariable instruction.
   // We will insert it after the last OpFunctionParameter, if any, or
   // after OpFunction otherwise.
@@ -1014,7 +1014,8 @@ getPosForOpVariableWithinBlock(MachineBasicBlock &BB) {
   }
   // VarPos is now pointing at after the last OpFunctionParameter, if any,
   // or after OpFunction, if no parameters.
-  return VarPos;
+  return VarPos != BB.end() && VarPos->getOpcode() == SPIRV::OpLabel ? ++VarPos
+                                                                     : VarPos;
 }
 
 } // namespace llvm
