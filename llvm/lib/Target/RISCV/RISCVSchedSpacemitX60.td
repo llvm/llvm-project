@@ -29,39 +29,28 @@ defvar SMX60DLEN = !div(SMX60VLEN, 2);
 
 class Get1248Latency<string mx> {
   int c = !cond(
-    !eq(mx, "M1") : 1,
     !eq(mx, "M2") : 2,
     !eq(mx, "M4") : 4,
     !eq(mx, "M8") : 8,
-    !eq(mx, "MF2") : 1,
-    !eq(mx, "MF4") : 1,
-    !eq(mx, "MF8") : 1
+    true: 1
   );
 }
 
 // Used for: logical opsz, shifts, sign ext, merge/move, FP sign/recip/convert, mask ops, slides
 class Get44816Latency<string mx> {
   int c = !cond(
-    !eq(mx, "M1") : 4,
-    !eq(mx, "M2") : 4,
     !eq(mx, "M4") : 8,
     !eq(mx, "M8") : 16,
-    !eq(mx, "MF2") : 4,
-    !eq(mx, "MF4") : 4,
-    !eq(mx, "MF8") : 4
+    true: 4
   );
 }
 
 // Used for: arithmetic (add/sub/min/max), saturating/averaging, FP add/sub/min/max
 class Get4458Latency<string mx> {
   int c = !cond(
-    !eq(mx, "M1") : 4,
-    !eq(mx, "M2") : 4,
     !eq(mx, "M4") : 5,
     !eq(mx, "M8") : 8,
-    !eq(mx, "MF2") : 4,
-    !eq(mx, "MF4") : 4,
-    !eq(mx, "MF8") : 4
+    true: 4
   );
 }
 
@@ -69,39 +58,30 @@ class Get4458Latency<string mx> {
 // Used for: widening operations
 class Get4588Latency<string mx> {
   int c = !cond(
-    !eq(mx, "M1") : 4,
     !eq(mx, "M2") : 5,
     !eq(mx, "M4") : 8,
     !eq(mx, "M8") : 8, // M8 not supported for most widening, fallback
-    !eq(mx, "MF2") : 4,
-    !eq(mx, "MF4") : 4,
-    !eq(mx, "MF8") : 4
+    true: 4
   );
 }
 
 // Used for: mask-producing comparisons, carry ops with mask, FP comparisons
 class Get461018Latency<string mx> {
   int c = !cond(
-    !eq(mx, "M1") : 4,
     !eq(mx, "M2") : 6,
     !eq(mx, "M4") : 10,
     !eq(mx, "M8") : 18,
-    !eq(mx, "MF2") : 4,
-    !eq(mx, "MF4") : 4,
-    !eq(mx, "MF8") : 4
+    true: 4
   );
 }
 
 // Used for: e64 multiply pattern, complex ops
 class Get781632Latency<string mx> {
   int c = !cond(
-    !eq(mx, "M1") : 7,
     !eq(mx, "M2") : 8,
     !eq(mx, "M4") : 16,
     !eq(mx, "M8") : 32,
-    !eq(mx, "MF2") : 7,
-    !eq(mx, "MF4") : 7,
-    !eq(mx, "MF8") : 7
+    true: 7
   );
 }
 
