@@ -62,7 +62,7 @@ public:
     return {};
   }
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string source_file() const {
-    if (__desc_.has_value()) {
+    if (__file_.has_value()) {
       return {__file_->data(), __file_->size()};
     }
     return {};
