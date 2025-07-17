@@ -1,7 +1,7 @@
-RUN: %cpp_compiler %S/SimpleTest.cpp -DSIGTRAP_TEST -o %t-SigTrapTest
+RUN: %cpp_compiler %S/SigTrapTest.cpp -o %t
 
-RUN: not %run %t-SigTrapTest            2>&1 | FileCheck %s
+RUN: not %run %t            2>&1 | FileCheck %s
 CHECK: BINGO
 CHECK: ERROR: libFuzzer: deadly signal
 
-RUN: trap "%run %t-SigTrapTest -handle_trap=0" TRAP
+RUN: trap "%run %t -handle_trap=0" TRAP

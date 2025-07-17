@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <ostream>
+#include <signal.h>
 
 static volatile int Sink;
 
@@ -20,10 +21,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
       Sink = 2;
       if (Size > 2 && Data[2] == '!') {
         std::cout << "BINGO; Found the target, exiting\n" << std::flush;
-        exit(0);
+        raise(SIGTRAP);
       }
     }
   }
   return 0;
 }
-
