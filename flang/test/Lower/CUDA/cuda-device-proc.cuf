@@ -46,6 +46,8 @@ attributes(global) subroutine devsub()
   ai = atomicdec(ai, 1_4)
 
   time = clock64()
+
+  time = globalTimer()
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
@@ -83,6 +85,7 @@ end
 ! CHECK: %{{.*}} = llvm.atomicrmw udec_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 
 ! CHECK: fir.call @llvm.nvvm.read.ptx.sreg.clock64()
+! CHECK: %{{.*}} = nvvm.read.ptx.sreg.globaltimer : i64
 
 subroutine host1()
   integer, device :: a(32)

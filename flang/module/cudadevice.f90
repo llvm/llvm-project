@@ -1613,6 +1613,11 @@ implicit none
     end function
   end interface
 
+  interface
+    attributes(device) integer(8) function globalTimer()
+    end function
+  end interface
+
 contains
 
   attributes(device) subroutine syncthreads()
