@@ -2947,13 +2947,6 @@ multiclass VFLAT_Real_AllAddr_gfx12<bits<8> op,
   defm _SADDR : VFLAT_Real_gfx12<op, name>;
 }
 
-multiclass VGLOBAL_Real_AllAddr_gfx12<bits<8> op,
-                                      string name = get_FLAT_ps<NAME>.Mnemonic,
-                                      string alias = name> :
-  VFLAT_Real_Base_gfx12<op, name, alias> {
-  defm _SADDR : VFLAT_Real_gfx12<op, name>;
-}
-
 multiclass VGLOBAL_Real_AllAddr_gfx1200<bits<8> op> {
   let AssemblerPredicate = isGFX12Not12_50 in {
     defm "" : VFLAT_Real_gfx12<op>;
