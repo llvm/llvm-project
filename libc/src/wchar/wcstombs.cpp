@@ -15,38 +15,23 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/wchar/mbstate.h"
-#include "src/__support/wchar/string_converter.h"
+#include "src/__support/wchar/wcsnrtombs.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, wcstombs,
-                   (char *__restrict s, const wchar_t *__restrict pwcs,
+                   (char *__restrict s, const wchar_t *__restrict wcs,
                     size_t n)) {
   static internal::mbstate internal_mbstate;
-
-  if (s == nullptr)
-    n = SIZE_MAX;
-
-  internal::StringConverter<char32_t> str_conv(
-      reinterpret_cast<const char32_t *>(pwcs), &internal_mbstate, n);
-
-  int dst_idx = 0;
-  ErrorOr<char8_t> converted = str_conv.popUTF8();
-  while (converted.has_value()) {
-    if (s != nullptr)
-      s[dst_idx] = converted.value();
-    
-    if (converted.value() != '\0')
-      dst_idx++;
-
-    converted = str_conv.popUTF8();
+  const wchar_t *wcs_ptr_copy = wcs;
+  auto result =
+      internal::wcsnrtombs(s, &wcs_ptr_copy, SIZE_MAX, n, &internal_mbstate);
+  if (!result.has_value()) {
+    libc_errno = result.error();
+    return -1;
   }
 
-  if (converted.error() == -1) // if we hit conversion limit
-    return dst_idx;
-
-  libc_errno = converted.error();
-  return -1;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

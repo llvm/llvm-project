@@ -151,6 +151,7 @@ TEST(LlvmLibcWcsnrtombs, NullDest) {
 }
 
 TEST(LlvmLibcWcsnrtombs, InvalidState) {
+  // this is more thoroughly tested by CharacterConverter
   LIBC_NAMESPACE::internal::mbstate state;
   state.total_bytes = 100;
 

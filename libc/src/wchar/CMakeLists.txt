@@ -168,7 +168,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.wchar_t
     libc.src.__support.wchar.mbstate
-    libc.src.__support.wchar.string_converter
+    libc.src.__support.wchar.wcsnrtombs
     libc.src.__support.libc_errno
 )
 
@@ -182,7 +182,7 @@ add_entrypoint_object(
     libc.hdr.types.wchar_t
     libc.hdr.types.mbstate_t
     libc.src.__support.wchar.mbstate
-    libc.src.__support.wchar.string_converter
+    libc.src.__support.wchar.wcsnrtombs
     libc.src.__support.libc_errno
 )
 
@@ -196,7 +196,7 @@ add_entrypoint_object(
     libc.hdr.types.wchar_t
     libc.hdr.types.mbstate_t
     libc.src.__support.wchar.mbstate
-    libc.src.__support.wchar.string_converter
+    libc.src.__support.wchar.wcsnrtombs
     libc.src.__support.libc_errno
 )
 

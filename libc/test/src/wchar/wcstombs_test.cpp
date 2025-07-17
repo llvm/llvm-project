@@ -12,6 +12,9 @@
 
 using LlvmLibcWcstombs = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
+// these tests are fairly simple as this function just calls into the internal
+// wcsnrtombs which is more thoroughly tested
+
 TEST_F(LlvmLibcWcstombs, AllMultibyteLengths) {
   /// clown emoji, sigma symbol, y with diaeresis, letter A
   const wchar_t src[] = {static_cast<wchar_t>(0x1f921),
@@ -66,28 +69,17 @@ TEST_F(LlvmLibcWcstombs, DestLimit) {
   ASSERT_EQ(mbs[4], '\x01');
 }
 
-TEST_F(LlvmLibcWcstombs, NullDest) {
-  const wchar_t src[] = {static_cast<wchar_t>(0x1f921),
-                         static_cast<wchar_t>(0x2211),
-                         static_cast<wchar_t>(0xff), static_cast<wchar_t>(0x41),
-                         static_cast<wchar_t>(0x0)};
-
-  // n parameter ignored when dest is null
-  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(nullptr, src, 1), static_cast<size_t>(10));
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(nullptr, src, 100), static_cast<size_t>(10));
-  ASSERT_ERRNO_SUCCESS();
-}
-
 TEST_F(LlvmLibcWcstombs, ErrnoTest) {
   const wchar_t src[] = {static_cast<wchar_t>(0x1f921),
                          static_cast<wchar_t>(0x2211),
                          static_cast<wchar_t>(0x12ffff), // invalid widechar
                          static_cast<wchar_t>(0x0)};
+  char mbs[11];
 
   // n parameter ignored when dest is null
-  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(nullptr, src, 7), static_cast<size_t>(7));
+  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 7), static_cast<size_t>(7));
   ASSERT_ERRNO_SUCCESS();
-  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(nullptr, src, 100), static_cast<size_t>(-1));
+  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 100),
+            static_cast<size_t>(-1));
   ASSERT_ERRNO_EQ(EILSEQ);
 }
