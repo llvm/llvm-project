@@ -36,6 +36,8 @@ private:
   /// at any point in time. This is used to track Symbol definition scopes in
   /// order to tell which OMP scope defined vs. references a certain Symbol.
   struct OMPConstructSymbolVisitor {
+    OMPConstructSymbolVisitor(semantics::SemanticsContext &ctx)
+        : version(ctx.langOptions().OpenMPVersion) {}
     template <typename T>
     bool Pre(const T &) {
       return true;
@@ -45,13 +47,13 @@ private:
 
     bool Pre(const parser::OpenMPConstruct &omp) {
       // Skip constructs that may not have privatizations.
-      if (isOpenMPPrivatizingConstruct(omp))
+      if (isOpenMPPrivatizingConstruct(omp, version))
         constructs.push_back(&omp);
       return true;
     }
 
     void Post(const parser::OpenMPConstruct &omp) {
-      if (isOpenMPPrivatizingConstruct(omp))
+      if (isOpenMPPrivatizingConstruct(omp, version))
         constructs.pop_back();
     }
 
@@ -68,6 +70,9 @@ private:
     /// construct that defines symbol.
     bool isSymbolDefineBy(const semantics::Symbol *symbol,
                           lower::pft::Evaluation &eval) const;
+
+  private:
+    unsigned version;
   };
 
   mlir::OpBuilder::InsertPoint lastPrivIP;
@@ -115,7 +120,8 @@ private:
                              mlir::OpBuilder::InsertPoint *lastPrivIP);
   void insertDeallocs();
 
-  static bool isOpenMPPrivatizingConstruct(const parser::OpenMPConstruct &omp);
+  static bool isOpenMPPrivatizingConstruct(const parser::OpenMPConstruct &omp,
+                                           unsigned version);
   bool isOpenMPPrivatizingEvaluation(const pft::Evaluation &eval) const;
 
 public:
