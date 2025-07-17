@@ -1724,6 +1724,7 @@ let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predi
 
 defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_nonext_32_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_DWORDX2, atomic_load_nonext_64_flat, i64>;
+defm : FlatLoadPats <FLAT_LOAD_DWORDX2, atomic_load_nonext_64_flat, v2i32>;
 
 defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i32>;
 defm : FlatStorePats <FLAT_STORE_SHORT, truncstorei16_flat, i32>;
@@ -1735,7 +1736,7 @@ defm : FlatStorePats <FLAT_STORE_DWORD, store_flat, vt>;
 
 foreach vt = VReg_64.RegTypes in {
 defm : FlatStorePats <FLAT_STORE_DWORDX2, store_flat, vt>;
-def : FlatLoadPat <FLAT_LOAD_DWORDX2, load_flat, vt>;
+defm : FlatLoadPats <FLAT_LOAD_DWORDX2, load_flat, vt>;
 }
 
 defm : FlatStorePats <FLAT_STORE_DWORDX3, store_flat, v3i32>;
@@ -1747,6 +1748,7 @@ defm : FlatStorePats <FLAT_STORE_DWORDX4, store_flat, vt>;
 
 defm : FlatStorePats <FLAT_STORE_DWORD, atomic_store_32_flat, i32>;
 defm : FlatStorePats <FLAT_STORE_DWORDX2, atomic_store_64_flat, i64>;
+defm : FlatStorePats <FLAT_STORE_DWORDX2, atomic_store_64_flat, v2i32>;
 defm : FlatStorePats <FLAT_STORE_BYTE, atomic_store_8_flat, i32>;
 defm : FlatStorePats <FLAT_STORE_SHORT, atomic_store_16_flat, i32>;
 
@@ -1792,6 +1794,9 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_"#as, f64>;
 
 } // end foreach as
 
+defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
+defm : FlatStorePats <FLAT_STORE_SHORT, store_flat, i16>;
+
 let SubtargetPredicate = isGFX12Plus in {
   defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32 >;
 
@@ -1806,19 +1811,19 @@ defm : FlatStorePats <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
 // TODO: Handle atomic loads
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2f16>;
 
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
 }
 
 } // End OtherPredicates = [HasFlatAddressSpace]
@@ -1890,6 +1895,7 @@ defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX4, store_global, vt>;
 // appropriate waits.
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORD, atomic_load_nonext_32_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORDX2, atomic_load_nonext_64_global, i64>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORDX2, atomic_load_nonext_64_global, v2i32>;
 
 defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, truncstorei8_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, truncstorei16_global, i32>;
@@ -1929,6 +1935,7 @@ defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, atomic_store_8_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, atomic_store_16_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_DWORD, atomic_store_32_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX2, atomic_store_64_global, i64>;
+defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX2, atomic_store_64_global, v2i32>;
 
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_ADD", "atomic_load_add_global", i32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SUB", "atomic_load_sub_global", i32>;
