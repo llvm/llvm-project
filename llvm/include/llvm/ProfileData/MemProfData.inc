@@ -45,6 +45,8 @@
 
 namespace llvm {
 namespace memprof {
+#include "MemProfBinaryAccessData.inc"
+
 // A struct describing the header used for the raw binary memprof profile format.
 PACKED(struct Header {
   uint64_t Magic;
