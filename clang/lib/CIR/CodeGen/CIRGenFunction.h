@@ -930,6 +930,9 @@ public:
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);
 
+  mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv,
+                                       bool isInc, bool isPre);
+
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
@@ -980,6 +983,9 @@ public:
 
   RValue emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc);
 
+  /// Load a complex number from the specified l-value.
+  mlir::Value emitLoadOfComplex(LValue src, SourceLocation loc);
+
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
   /// returning the rvalue.
@@ -1029,6 +1035,8 @@ public:
   RValue emitReferenceBindingToExpr(const Expr *e);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
+
+  RValue emitRotate(const CallExpr *e, bool isRotateLeft);
 
   mlir::Value emitScalarConstant(const ConstantEmission &constant, Expr *e);
 
