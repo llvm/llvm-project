@@ -1,6 +1,9 @@
 # Test that we warn the user about truncated output
 # when target.max-children-count wasn't explicitly set.
 
+# link.exe discards the DWARF information needed.
+# UNSUPPORTED: system-windows
+
 # RUN: split-file %s %t
 # RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out
 # RUN: %lldb -x -b -s %t/dwim-commands.input %t.out -o exit 2>&1 \
@@ -50,11 +53,12 @@ EXPR-NOT:  *** Some of the displayed variables have more members
 
 run
 frame variable arr
+dwim-print arr
 
 VAR:      (lldb) frame variable arr
 VAR:      *** Some of the displayed variables have more members
 VAR-SAME: use the --show-all-children option to frame variable
-VAR:      (lldb) frame variable arr
+VAR:      (lldb) dwim-print arr
 VAR-NOT:  *** Some of the displayed variables have more members
 
 #--- with-setting-commands.input
