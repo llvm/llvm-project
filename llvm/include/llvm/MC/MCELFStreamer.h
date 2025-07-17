@@ -141,7 +141,8 @@ public:
   }
 
 private:
-  void finalizeCGProfileEntry(const MCSymbolRefExpr *&S, uint64_t Offset);
+  void finalizeCGProfileEntry(const MCSymbolRefExpr *Sym, uint64_t Offset,
+                              const MCSymbolRefExpr *&S);
   void finalizeCGProfile();
 
   bool SeenIdent = false;
