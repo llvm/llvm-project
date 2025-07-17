@@ -111,8 +111,12 @@ private:
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
 #if LLPC_BUILD_NPI
-  SDValue buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG, SDValue Op,
-                                           unsigned Dim) const;
+  SDValue buildWorkitemIdWavegroupMode(SelectionDAG &DAG, SDValue Op,
+                                       unsigned Dim) const;
+  SDValue buildUnsignedDivByConstant(SelectionDAG &DAG, SDValue Dividend,
+                                     unsigned Divisor) const;
+  SDValue buildUnsignedRemByConstant(SelectionDAG &DAG, SDValue Dividend,
+                                     unsigned Divisor) const;
 #endif /* LLPC_BUILD_NPI */
 
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;

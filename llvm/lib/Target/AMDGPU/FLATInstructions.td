@@ -244,15 +244,15 @@ class GlobalSaddrTable <bit is_saddr, string Name = ""> {
 class FLAT_Load_Pseudo<
     string opName, RegisterClass regClass, bit HasTiedOutput = 0,
 #ifdef LLPC_BUILD_NPI
-    bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1,
-    RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
-    RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64)>
+    bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1>
 #else /* LLPC_BUILD_NPI */
     bit HasSaddr = 0, bit EnableSaddr = 0>
 #endif /* LLPC_BUILD_NPI */
     : FLAT_Pseudo<opName, (outs), (ins), ""> {
 
 #ifdef LLPC_BUILD_NPI
+  RegisterClass SaddrRC = SReg_64_XEXEC_XNULL;
+  RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64);
   RegisterOperand vdata_op = getLdStRegisterOperand<regClass>.ret;
 #else /* LLPC_BUILD_NPI */
   defvar vdata_op = getLdStRegisterOperand<regClass>.ret;
@@ -297,11 +297,9 @@ class FLAT_Load_Pseudo<
 #ifdef LLPC_BUILD_NPI
 class FLAT_Load_LANESHARED<
     string opName, RegisterClass regClass, bit HasTiedOutput = 0,
-    bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1,
-    RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
-    RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64)>
+    bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1>
     : FLAT_Load_Pseudo<opName, regClass, HasTiedOutput, HasSaddr, EnableSaddr,
-                       HasVaddr, SaddrRC, VaddrRC> {
+                       HasVaddr> {
   let OutOperandList = (outs);
   defvar BasicIns = !con(
       !if(EnableSaddr, (ins SaddrRC:$saddr), (ins)),
@@ -408,22 +406,35 @@ multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit Ha
 }
 
 #ifdef LLPC_BUILD_NPI
-multiclass FLAT_Global_Load_LANESHARED<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
+multiclass Load_LANESHARED<string opName, RegisterClass regClass,
+    bit HasTiedOutput = 0> {
+  let is_flat_global = 1 in {
+    def _LANESHARED : FLAT_Load_LANESHARED<opName#"_LANESHARED", regClass, HasTiedOutput, 1, 0, 1>,
+      GlobalSaddrTable<0, opName#"_LANESHARED">;
+    def _LANESHARED_SADDR : FLAT_Load_LANESHARED<opName#"_LANESHARED", regClass, HasTiedOutput, 1, 1, 1>,
+      GlobalSaddrTable<1, opName#"_LANESHARED">;
+  } // End is_flat_global = 1
+}
+
+multiclass Cluster_Load<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
   let SubtargetPredicate = isGFX1250Plus in
     defm "" : FLAT_Global_Load_Pseudo<opName, regClass, HasTiedInput>;
-  let SubtargetPredicate = isGFX13Plus, is_flat_global = 1 in {
-    def _LANESHARED : FLAT_Load_LANESHARED<opName#"_LANESHARED", regClass, HasTiedInput, 1>,
-      GlobalSaddrTable<0, opName#"_LANESHARED">;
-    def _LANESHARED_SADDR : FLAT_Load_LANESHARED<opName#"_LANESHARED", regClass, HasTiedInput, 1, 1>,
-      GlobalSaddrTable<1, opName#"_LANESHARED">;
-  } // End SubtargetPredicate = isGFX13Plus, is_flat_global = 1
+  let SubtargetPredicate = isGFX13Plus in
+    defm "" : Load_LANESHARED<opName, regClass, HasTiedInput>;
 }
 
 multiclass FLAT_DDS_Load_Pseudo<string opName, RegisterClass regClass> {
-  def "" : FLAT_Load_Pseudo<opName, regClass, 0, 1, 0, 1, SReg_32, VGPR_32>,
-    GlobalSaddrTable<0, opName>;
-  def _SADDR : FLAT_Load_Pseudo<opName, regClass, 0, 1, 1, 1, SReg_32, VGPR_32>,
-    GlobalSaddrTable<1, opName>;
+  let SaddrRC = SReg_32, VaddrRC = VGPR_32 in {
+    defm "" : FLAT_Global_Load_Pseudo<opName, regClass, 0>;
+  }
+}
+
+multiclass FLAT_DDS_Load_MCAST_Pseudo<string opName, RegisterClass regClass> {
+  // Use M0 for broadcast workgroup mask.
+  let SaddrRC = SReg_32, VaddrRC = VGPR_32, Uses = [M0, EXEC] in {
+    defm "" : FLAT_Global_Load_Pseudo<opName, regClass, 0>;
+    defm "" : Load_LANESHARED<opName, regClass, 0>;
+  }
 }
 
 #endif /* LLPC_BUILD_NPI */
@@ -1212,13 +1223,8 @@ multiclass FLAT_Global_Atomic_Pseudo<
 #ifdef LLPC_BUILD_NPI
   defm "" : FLAT_Global_Atomic_Pseudo_Helper_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
   defm "" : FLAT_Global_Atomic_Pseudo_Helper_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
-#else /* LLPC_BUILD_NPI */
-  defm "" : FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
-  defm "" : FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
-#endif /* LLPC_BUILD_NPI */
 }
 
-#ifdef LLPC_BUILD_NPI
 multiclass FLAT_Global_Atomic_Pseudo_Sgpr<string opName,
   RegisterClass vdst_rc,
   ValueType vt,
@@ -1262,11 +1268,16 @@ defm DDS_LOAD_ASYNC_TO_LDS_B128        : FLAT_DDS_Load_LDS_Pseudo<"dds_load_asyn
 defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B32   : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_mcast_to_lds_b32">;
 defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B64   : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_mcast_to_lds_b64">;
 defm DDS_LOAD_ASYNC_MCAST_TO_LDS_B128  : FLAT_DDS_Load_LDS_Pseudo<"dds_load_async_mcast_to_lds_b128">;
-defm DDS_LOAD_MCAST_B32                : FLAT_DDS_Load_Pseudo<"dds_load_mcast_b32", VGPR_32>;
-defm DDS_LOAD_MCAST_B64                : FLAT_DDS_Load_Pseudo<"dds_load_mcast_b64", VReg_64>;
-defm DDS_LOAD_MCAST_B128               : FLAT_DDS_Load_Pseudo<"dds_load_mcast_b128", VReg_128>;
+defm DDS_LOAD_MCAST_B32                : FLAT_DDS_Load_MCAST_Pseudo<"dds_load_mcast_b32", VGPR_32>;
+defm DDS_LOAD_MCAST_B64                : FLAT_DDS_Load_MCAST_Pseudo<"dds_load_mcast_b64", VReg_64>;
+defm DDS_LOAD_MCAST_B128               : FLAT_DDS_Load_MCAST_Pseudo<"dds_load_mcast_b128", VReg_128>;
+#else /* LLPC_BUILD_NPI */
+  defm "" : FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
+  defm "" : FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, data_vt, data_rc>;
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
 def : GCNPat <(UniformUnaryFrag<int_amdgcn_query_shared_rank> p11:$ptr), (S_ASHR_I32 $ptr, (i32 24))>;
 def : GCNPat <(DivergentUnaryFrag<int_amdgcn_query_shared_rank> p11:$ptr), (V_ASHRREV_I32_e32 (i32 24), $ptr)>;
 
@@ -1489,8 +1500,8 @@ defm GLOBAL_LOAD_DWORDX3  : FLAT_Global_Load_Pseudo <"global_load_dwordx3", VReg
 defm GLOBAL_LOAD_DWORDX4  : FLAT_Global_Load_Pseudo <"global_load_dwordx4", VReg_128>;
 
 #ifdef LLPC_BUILD_NPI
-let is_flat_global = 1 in
-def GLOBAL_LOAD_SGPR_B32  : FLAT_Load_Pseudo <"global_load_sgpr_b32", SReg_32, 0, 1, 1, 0, SReg_64_XEXEC>;
+let is_flat_global = 1, SaddrRC = SReg_64_XEXEC in
+def GLOBAL_LOAD_SGPR_B32  : FLAT_Load_Pseudo <"global_load_sgpr_b32", SReg_32, 0, 1, 1, 0>;
 
 #endif /* LLPC_BUILD_NPI */
 let TiedSourceNotRead = 1 in {
@@ -1743,9 +1754,9 @@ defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b1
 
 let WaveSizePredicate = isWave32 in {
 let Uses = [M0, EXEC] in { // Use M0 for broadcast workgroup mask.
-defm CLUSTER_LOAD_B32         : FLAT_Global_Load_LANESHARED <"cluster_load_b32",  VGPR_32>;
-defm CLUSTER_LOAD_B64         : FLAT_Global_Load_LANESHARED <"cluster_load_b64",  VReg_64>;
-defm CLUSTER_LOAD_B128        : FLAT_Global_Load_LANESHARED <"cluster_load_b128", VReg_128>;
+defm CLUSTER_LOAD_B32         : Cluster_Load <"cluster_load_b32",  VGPR_32>;
+defm CLUSTER_LOAD_B64         : Cluster_Load <"cluster_load_b64",  VReg_64>;
+defm CLUSTER_LOAD_B128        : Cluster_Load <"cluster_load_b128", VReg_128>;
 } // End Uses = [M0, EXEC]
 } // End WaveSizePredicate = isWave32
 
@@ -2035,11 +2046,6 @@ class GlobalLoadSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType
 class FlatLoadSignedPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol))),
   (inst $vaddr, $offset, $cpol)
->;
-
-class GlobalLoadSaddrPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddrCPol (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), (i32 timm))),
-  (inst $saddr, $voffset, $offset, $cpol)
 #else /* LLPC_BUILD_NPI */
 class GlobalLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset))),
@@ -2048,10 +2054,9 @@ class GlobalLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt
 >;
 
 #ifdef LLPC_BUILD_NPI
-class FlatStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
-                         ValueType vt> : GCNPat <
-  (node vt:$data, (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol)),
-  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset, $cpol)
+class GlobalLoadSaddrPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddrCPol (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), (i32 timm))),
+  (inst $saddr, $voffset, $offset, $cpol)
 #else /* LLPC_BUILD_NPI */
 class GlobalStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                            ValueType vt> : GCNPat <
@@ -2061,6 +2066,12 @@ class GlobalStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
 >;
 
 #ifdef LLPC_BUILD_NPI
+class FlatStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
+                         ValueType vt> : GCNPat <
+  (node vt:$data, (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol)),
+  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset, $cpol)
+>;
+
 class GlobalAtomicStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                                  ValueType vt> : GCNPat <
   (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), vt:$data),
@@ -2665,7 +2676,7 @@ multiclass FlatStorePats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt>
 }
 
 multiclass FlatStorePats_t16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
-  def : FlatStorePat <inst, node, vt>;
+  def : FlatStorePat <!cast<FLAT_Pseudo>(!cast<string>(inst)#"_t16"), node, vt>;
 
   def : FlatStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR_t16"), node, vt> {
     let AddedComplexity = 9;

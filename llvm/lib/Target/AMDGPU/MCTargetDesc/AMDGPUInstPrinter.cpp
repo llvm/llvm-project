@@ -1612,7 +1612,6 @@ void AMDGPUInstPrinter::printIndexKey16bit(const MCInst *MI, unsigned OpNo,
   O << " index_key:" << Imm;
 }
 
-#if LLPC_BUILD_NPI
 void AMDGPUInstPrinter::printIndexKey32bit(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
@@ -1623,6 +1622,7 @@ void AMDGPUInstPrinter::printIndexKey32bit(const MCInst *MI, unsigned OpNo,
   O << " index_key:" << Imm;
 }
 
+#if LLPC_BUILD_NPI
 void AMDGPUInstPrinter::printMatrixFMT(const MCInst *MI, unsigned OpNo,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O, char AorB) {

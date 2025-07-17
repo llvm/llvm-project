@@ -1118,11 +1118,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
         MVT::v2bf16, Legal);
   }
 
+#endif /* LLPC_BUILD_NPI */
   if (Subtarget->hasBF16TransInsts()) {
     setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
   }
 
-#endif /* LLPC_BUILD_NPI */
   if (Subtarget->hasCvtPkF16F32Inst()) {
     setOperationAction(ISD::FP_ROUND,
                        {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v16f16},
@@ -6484,12 +6484,13 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
 #if LLPC_BUILD_NPI
     if (ST.hasAddSubU64Insts()) {
-      auto I = BuildMI(*BB, MI, DL, TII->get(IsAdd ? AMDGPU::V_ADD_U64_e64
-                                                   : AMDGPU::V_SUB_U64_e64),
+      auto I = BuildMI(*BB, MI, DL,
+                       TII->get(IsAdd ? AMDGPU::V_ADD_U64_e64
+                                      : AMDGPU::V_SUB_U64_e64),
                        Dest.getReg())
-                    .add(Src0)
-                    .add(Src1)
-                    .addImm(0); // clamp
+                   .add(Src0)
+                   .add(Src1)
+                   .addImm(0); // clamp
       TII->legalizeOperands(*I);
       MI.eraseFromParent();
       return BB;
@@ -7151,6 +7152,9 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   case MVT::f64:
     return true;
   case MVT::f16:
+#if LLPC_BUILD_NPI
+  case MVT::bf16:
+#endif /* LLPC_BUILD_NPI */
     return Subtarget->has16BitInsts() && !denormalModeIsFlushAllF64F16(MF);
   default:
     break;
@@ -9513,7 +9517,7 @@ buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   //   which is a 64-bit pc-relative offset from the encoding of the $symbol
   //   operand to the global variable.
 #if LLPC_BUILD_NPI
-  if (((const GCNSubtarget&)DAG.getSubtarget()).has64BitLiterals()) {
+  if (((const GCNSubtarget &)DAG.getSubtarget()).has64BitLiterals()) {
     assert(GAFlags != SIInstrInfo::MO_NONE);
 
     SDValue Ptr =
@@ -10444,10 +10448,9 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
     return DAG.getPOISON(Op->getValueType(0));
 
 #if LLPC_BUILD_NPI
-  // Wavegroup launch mode needs to compute workitem id
-  if (AMDGPU::getWavegroupEnable(MF.getFunction())) {
-    return buildWorkitemIdWavegroupModeISel(DAG, Op, Dim);
-  }
+  // Wavegroup launch mode needs to compute workitem id.
+  if (AMDGPU::getWavegroupEnable(MF.getFunction()))
+    return buildWorkitemIdWavegroupMode(DAG, Op, Dim);
 
 #endif /* LLPC_BUILD_NPI */
   SDValue Val = loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
@@ -10467,57 +10470,85 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
 }
 
 #if LLPC_BUILD_NPI
-SDValue SITargetLowering::buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG,
-                                                           SDValue Op,
-                                                           unsigned Dim) const {
-  /* See buildWorkitemIdWavegroupModeGISel for desc */
+SDValue SITargetLowering::buildWorkitemIdWavegroupMode(SelectionDAG &DAG,
+                                                       SDValue Op,
+                                                       unsigned Dim) const {
+  // See AMDGPULegalizerInfo::buildWorkitemIdWavegroupMode for description.
+  assert(Dim <= 2 && "Unknown value for Dim. Expected 0, 1, or 2");
   MachineFunction &MF = DAG.getMachineFunction();
-  unsigned MaxIDX = Subtarget->getMaxWorkitemID(MF.getFunction(), 0);
-  unsigned MaxIDY = Subtarget->getMaxWorkitemID(MF.getFunction(), 1);
-  unsigned MaxIDZ = Subtarget->getMaxWorkitemID(MF.getFunction(), 2);
-  assert((((MaxIDX + 1) * (MaxIDY + 1) * (MaxIDZ + 1)) % 128 == 0) &&
-         "Total threads per workgroup in wavegroup dispatch mode must be an "
-         "integer multiple of 128.");
+  unsigned SizeX = Subtarget->getMaxWorkitemID(MF.getFunction(), 0) + 1;
+  unsigned SizeY = Subtarget->getMaxWorkitemID(MF.getFunction(), 1) + 1;
+  unsigned SizeZ = Subtarget->getMaxWorkitemID(MF.getFunction(), 2) + 1;
 
   SDLoc SL(Op);
   auto VT32 = MVT::i32;
 
-  // calculate FlatWorkitemID
-  auto TTMP8 = DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP8, VT32);
-  auto WaveIdInWorkgroup =
+  // Calculate FlatWorkitemID.
+  SDValue TTMP8 =
+      DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP8, VT32);
+  SDValue WaveIdInWorkgroup =
       DAG.getNode(AMDGPUISD::BFE_U32, SL, VT32, TTMP8,
                   DAG.getConstant(25, SL, VT32), DAG.getConstant(5, SL, VT32));
-  auto ShiftAmt = DAG.getConstant(5, SL, VT32);
-  auto ThreadOffset =
+  SDValue ShiftAmt = DAG.getConstant(5, SL, VT32);
+  SDValue ThreadOffset =
       DAG.getNode(ISD::SHL, SL, VT32, WaveIdInWorkgroup, ShiftAmt);
-  auto AllOnes = DAG.getSignedTargetConstant(-1, SL, VT32);
-  auto LaneID = DAG.getConstant(0, SL, VT32);
+  SDValue AllOnes = DAG.getSignedTargetConstant(-1, SL, VT32);
+  SDValue LaneID = DAG.getConstant(0, SL, VT32);
   LaneID =
       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, VT32,
                   DAG.getTargetConstant(Intrinsic::amdgcn_mbcnt_lo, SL, VT32),
                   AllOnes, LaneID);
-  auto FlatWorkitemID = DAG.getNode(ISD::ADD, SL, VT32, ThreadOffset, LaneID);
+  SDValue FlatWorkitemID =
+      DAG.getNode(ISD::ADD, SL, VT32, ThreadOffset, LaneID);
 
-  // compute WorkitemIDX = FlatWorkitemID % DimX
-  auto DimX = DAG.getConstant(MaxIDX, SL, VT32);
-  auto DivX = DAG.getNode(ISD::UDIVREM, SL, DAG.getVTList(VT32, VT32),
-                          FlatWorkitemID, DimX);
-  auto RemX = DivX.getValue(1);
   if (Dim == 0) {
-    return RemX;
+    // If we are computing WorkitemIDX and SizeY == SizeZ == 1, can skip %SizeX.
+    if (SizeY == 1 && SizeZ == 1)
+      return FlatWorkitemID;
+    return buildUnsignedRemByConstant(DAG, FlatWorkitemID, SizeX);
   }
 
-  // compute WorkitemIDY or WorkitemIDY
-  auto DimY = DAG.getConstant(MaxIDY, SL, VT32);
-  auto DivY =
-      DAG.getNode(ISD::UDIVREM, SL, DAG.getVTList(VT32, VT32), DivX, DimY);
-  auto RemY = DivX.getValue(1);
   if (Dim == 1) {
-    return RemY; // WorkitemIDY = (FlatWorkitemID / DimX) % DimY
-  } else if (Dim == 2) {
-    return DivY; // WorkitemIDY = (FlatWorkitemID / DimX) / DimY
+    SDValue DivX = buildUnsignedDivByConstant(DAG, FlatWorkitemID, SizeX);
+    if (SizeZ == 1)
+      return DivX;
+    return buildUnsignedRemByConstant(DAG, DivX, SizeY);
   }
-  llvm_unreachable("Unknown value for Dim. Expected 0, 1, or 2");
+
+  return buildUnsignedDivByConstant(DAG, FlatWorkitemID, SizeX * SizeY);
+}
+
+// Helper to build an unsigned division when the divisor is a known integer
+// constant.
+// TODO Support vectors.
+SDValue SITargetLowering::buildUnsignedDivByConstant(SelectionDAG &DAG,
+                                                     SDValue Dividend,
+                                                     unsigned Divisor) const {
+  assert(Divisor != 0 && "Dvision by 0.");
+  EVT VT = Dividend.getValueType();
+  assert(!VT.isVector() && "Function does not yet support vector dividends.");
+
+  if (Divisor == 1)
+    return Dividend;
+  SDLoc SL(Dividend);
+  SDValue DivisorNode = DAG.getConstant(Divisor, SL, VT);
+  SDValue Quotient = DAG.getNode(ISD::UDIV, SL, VT, Dividend, DivisorNode);
+  SmallVector<SDNode *> CreatedX;
+  return BuildUDIV(Quotient.getNode(), DAG, true, true, CreatedX);
+}
+
+// Use the "magic number" method to calculate an unsigned division by constant,
+// then use that result to compute the remainder.
+// TODO Support vectors.
+SDValue SITargetLowering::buildUnsignedRemByConstant(SelectionDAG &DAG,
+                                                     SDValue Dividend,
+                                                     unsigned Divisor) const {
+  SDValue DivResult = buildUnsignedDivByConstant(DAG, Dividend, Divisor);
+  SDLoc SL(Dividend);
+  EVT VT = Dividend.getValueType();
+  SDValue DivisorNode = DAG.getConstant(Divisor, SL, VT);
+  SDValue Product = DAG.getNode(ISD::MUL, SL, VT, DivisorNode, DivResult);
+  return DAG.getNode(ISD::SUB, SL, VT, Dividend, Product);
 }
 
 #endif /* LLPC_BUILD_NPI */
@@ -11101,12 +11132,27 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_cvt_to_tensor_u8_f16:
   case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_double:
   case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_scatter2:
-  case Intrinsic::amdgcn_cvt_to_tensor_u8_f32: {
+  case Intrinsic::amdgcn_cvt_to_tensor_u8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f32:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_bf16:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_bf16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f16:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f32: {
 
     SmallVector<SDValue> Ops;
     for (unsigned I = 0, NumOp = Op->getNumOperands(); I < NumOp; ++I) {
       auto NewOp = Op->getOperand(I);
-      if (I == Op->getNumOperands() - 3)
+      // Scale
+      if (I == 2)
         NewOp = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(Op), MVT::i16, NewOp);
       Ops.push_back(NewOp);
     }
@@ -14302,13 +14348,11 @@ SDValue SITargetLowering::splitBinaryBitConstantOp(
   if ((bitOpWithConstantIsReducible(Opc, ValLo) ||
        bitOpWithConstantIsReducible(Opc, ValHi)) ||
       (CRHS->hasOneUse() && !TII->isInlineConstant(CRHS->getAPIntValue()))) {
-#if LLPC_BUILD_NPI
     // We have 64-bit scalar and/or/xor, but do not have vector forms.
     if (Subtarget->has64BitLiterals() && CRHS->hasOneUse() &&
         !CRHS->user_begin()->isDivergent())
       return SDValue();
 
-#endif /* LLPC_BUILD_NPI */
     // If we need to materialize a 64-bit immediate, it will be split up later
     // anyway. Avoid creating the harder to understand 64-bit immediate
     // materialization.
@@ -15814,9 +15858,7 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
     case Intrinsic::amdgcn_frexp_mant:
     case Intrinsic::amdgcn_fdot2:
     case Intrinsic::amdgcn_trig_preop:
-#if LLPC_BUILD_NPI
     case Intrinsic::amdgcn_tanh:
-#endif /* LLPC_BUILD_NPI */
       return true;
     default:
       break;
@@ -16106,8 +16148,7 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY:
 #if LLPC_BUILD_NPI
-    return (VT == MVT::f32) ||
-           (VT == MVT::f16 && Subtarget.hasMin3Max3_16()) ||
+    return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16()) ||
            (VT == MVT::v2f16 && Subtarget.hasMin3Max3PKF16());
 #else /* LLPC_BUILD_NPI */
     return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16());

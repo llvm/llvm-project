@@ -161,9 +161,9 @@ private:
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printIndexKey16bit(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
-#if LLPC_BUILD_NPI
   void printIndexKey32bit(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+#if LLPC_BUILD_NPI
   void printMatrixFMT(const MCInst *MI, unsigned OpNo,
                       const MCSubtargetInfo &STI, raw_ostream &O, char AorB);
   void printMatrixAFMT(const MCInst *MI, unsigned OpNo,

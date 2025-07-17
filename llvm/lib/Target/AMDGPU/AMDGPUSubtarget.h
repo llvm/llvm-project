@@ -62,9 +62,7 @@ protected:
   bool HasCvtPkF16F32Inst = false;
   bool HasF32ToF16BF16ConversionSRInsts = false;
   bool EnableRealTrue16Insts = false;
-#if LLPC_BUILD_NPI
   bool HasBF16TransInsts = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasBF16ConversionInsts = false;
 #if LLPC_BUILD_NPI
   bool HasBF16PackedInsts = false;
@@ -217,20 +215,14 @@ public:
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
 
-#if LLPC_BUILD_NPI
-  bool hasBF16TransInsts() const {
-    return HasBF16TransInsts;
-  }
+  bool hasBF16TransInsts() const { return HasBF16TransInsts; }
 
-#endif /* LLPC_BUILD_NPI */
   bool hasBF16ConversionInsts() const {
     return HasBF16ConversionInsts;
   }
 
 #if LLPC_BUILD_NPI
-  bool hasBF16PackedInsts() const {
-    return HasBF16PackedInsts;
-  }
+  bool hasBF16PackedInsts() const { return HasBF16PackedInsts; }
 
 #endif /* LLPC_BUILD_NPI */
   bool hasMadMixInsts() const {

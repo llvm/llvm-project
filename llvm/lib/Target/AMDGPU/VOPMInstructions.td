@@ -581,6 +581,12 @@ def VOPM_CVT_TO_TENSOR_16B_4x2x16 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, 
 def VOPM_CVT_TO_TENSOR_8B_4x2x16 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, untyped, i16], PixelShape.4X2X16, 1>;
 def VOPM_CVT_TO_TENSOR_4B_4x2x16 : Cvt_To_Tensor_Profile<[f32, v4f32, untyped, untyped, i16], PixelShape.4X2X16, 1>;
 
+def VOPM_CVT_TO_TENSOR_SR_8B_8x4x8 : Cvt_To_Tensor_Profile<[v2f32, v4f32, v2i16, untyped, i16], PixelShape.8X4X8, 1>;
+def VOPM_CVT_TO_TENSOR_SR_8B_4x4x8 : Cvt_To_Tensor_Profile<[f32, v2f32, v2i16, untyped, i16], PixelShape.4X4X8, 1>;
+def VOPM_CVT_TO_TENSOR_SR_8B_4x4x16 : Cvt_To_Tensor_Profile<[f32, v4f32, v2i16, f32, i16], PixelShape.4X4X16, 2>;
+def VOPM_CVT_TO_TENSOR_SR_8B_ACC16B_4x2x16 : Cvt_To_Tensor_Profile<[f32, v2f32, v2i16, untyped, i16], PixelShape.4X2X16, 1>;
+def VOPM_CVT_TO_TENSOR_SR_8B_4x2x16 : Cvt_To_Tensor_Profile<[f32, v4f32, v2i16, untyped, i16], PixelShape.4X2X16, 1>;
+
 
 class VOPM_Pseudo <VOPProfile P, list<dag> pattern = [], string opName = !tolower(NAME)> :
   VOP_Pseudo<opName, "", P, P.Outs64, P.Ins64, "", pattern> {
@@ -693,7 +699,13 @@ multiclass VOPM_Cvt_To_Tensor_MultiPseudos<string ProfilePrefix> {
  defm _BF16 : VOPM_Cvt_To_Tensor_Acc_Pseudo<ProfilePrefix #"_16B">;
 }
 
+multiclass VOPM_Cvt_To_Tensor_SR_MultiPseudos<string ProfilePrefix> {
+ defm _FP8 : VOPM_Cvt_To_Tensor_Acc_Pseudo<ProfilePrefix #"_8B">;
+ defm _BF8 : VOPM_Cvt_To_Tensor_Acc_Pseudo<ProfilePrefix #"_8B">;
+}
+
 defm V_CVT_TO_TENSOR : VOPM_Cvt_To_Tensor_MultiPseudos<"VOPM_CVT_TO_TENSOR">;
+defm V_CVT_TO_TENSOR_SR : VOPM_Cvt_To_Tensor_SR_MultiPseudos<"VOPM_CVT_TO_TENSOR_SR">;
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
   def V_SCALE_BIAS_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  f32, untyped, f32], 1>,
@@ -1356,17 +1368,12 @@ defm V_CVT_TO_TENSOR_FP8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x44>;
 defm V_CVT_TO_TENSOR_BF8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x45>;
 defm V_CVT_TO_TENSOR_F16_BF16 : Cvt_To_Tensor_16b_Real_gfx13<0x46>;
 defm V_CVT_TO_TENSOR_BF16_BF16 : Cvt_To_Tensor_16b_Real_gfx13<0x47>;
-
-
-/* TODO-GFX13:
-
-V_CVT_TO_TENSOR_SR_FP8_F32	0x048
-V_CVT_TO_TENSOR_SR_BF8_F32	0x049
-V_CVT_TO_TENSOR_SR_FP8_F16	0x04a
-V_CVT_TO_TENSOR_SR_BF8_F16	0x04b
-V_CVT_TO_TENSOR_SR_FP8_BF16	0x04c
-V_CVT_TO_TENSOR_SR_BF8_BF16	0x04d
-*/
+defm V_CVT_TO_TENSOR_SR_FP8_F32 : Cvt_To_Tensor_8b_Real_gfx13<0x048>;
+defm V_CVT_TO_TENSOR_SR_BF8_F32 : Cvt_To_Tensor_8b_Real_gfx13<0x049>;
+defm V_CVT_TO_TENSOR_SR_FP8_F16 : Cvt_To_Tensor_8b_Real_gfx13<0x04a>;
+defm V_CVT_TO_TENSOR_SR_BF8_F16 : Cvt_To_Tensor_8b_Real_gfx13<0x04b>;
+defm V_CVT_TO_TENSOR_SR_FP8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x04c>;
+defm V_CVT_TO_TENSOR_SR_BF8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x04d>;
 
 multiclass SBA<string Suffix, bits<8> op, string mnemo> {
   defm NAME # "_" # Suffix : VOP3M_SBA_Real_Base<GFX13Gen, op>;

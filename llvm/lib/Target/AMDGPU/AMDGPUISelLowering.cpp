@@ -4078,12 +4078,12 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_rcp_legacy:
   case Intrinsic::amdgcn_rsq_legacy:
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_rsq_clamp:
+#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_tanh:
   case Intrinsic::amdgcn_prng_b32: {
 #else /* LLPC_BUILD_NPI */
-  case Intrinsic::amdgcn_rsq_clamp: {
+  case Intrinsic::amdgcn_tanh: {
 #endif /* LLPC_BUILD_NPI */
     // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(1);
@@ -6286,12 +6286,8 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
-#if LLPC_BUILD_NPI
     case Intrinsic::amdgcn_rsq_clamp:
     case Intrinsic::amdgcn_tanh: {
-#else /* LLPC_BUILD_NPI */
-    case Intrinsic::amdgcn_rsq_clamp: {
-#endif /* LLPC_BUILD_NPI */
       if (SNaN)
         return true;
 

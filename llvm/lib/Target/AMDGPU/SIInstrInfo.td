@@ -1331,9 +1331,7 @@ def op_sel_hi0 : ArrayOperand0<"op_sel_hi", "OpSelHi">;
 def neg_lo0 : ArrayOperand0<"neg_lo", "NegLo">;
 def neg_hi0 : ArrayOperand0<"neg_hi", "NegHi">;
 
-#ifdef LLPC_BUILD_NPI
 def IndexKey32bit : CustomOperand<i32, 1>;
-#endif /* LLPC_BUILD_NPI */
 def IndexKey16bit : CustomOperand<i32, 1>;
 def IndexKey8bit : CustomOperand<i32, 1>;
 
@@ -1399,9 +1397,11 @@ def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
 def MatrixAScaleFmt : CustomOperand<i32, 1, "MatrixAScaleFmt">;
 def MatrixBScaleFmt : CustomOperand<i32, 1, "MatrixBScaleFmt">;
 
+#endif /* LLPC_BUILD_NPI */
 def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
 def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 
+#ifdef LLPC_BUILD_NPI
 def ScaleSel : NamedIntOperand<"scale_sel"> {
   let Validator = "isUInt<3>";
 }
@@ -1754,9 +1754,7 @@ def WMMAModsF16NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF16NegAbs">;
 def WMMAVISrc  : ComplexPattern<untyped, 1, "SelectWMMAVISrc">;
 def SWMMACIndex8  : ComplexPattern<untyped, 2, "SelectSWMMACIndex8">;
 def SWMMACIndex16  : ComplexPattern<untyped, 2, "SelectSWMMACIndex16">;
-#ifdef LLPC_BUILD_NPI
 def SWMMACIndex32  : ComplexPattern<untyped, 2, "SelectSWMMACIndex32">;
-#endif /* LLPC_BUILD_NPI */
 
 def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 
@@ -2944,8 +2942,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 #ifdef LLPC_BUILD_NPI
   field bit HasMatrixFMT = 0;
   field bit HasMatrixScale = 0;
-  field bit HasMatrixReuse = 0;
 #endif /* LLPC_BUILD_NPI */
+  field bit HasMatrixReuse = 0;
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);
@@ -3133,8 +3131,8 @@ def VOP_F16_F16 : VOPProfile<[f16, f16, untyped, untyped]>;
 def VOP_F16_I16 : VOPProfile <[f16, i16, untyped, untyped]>;
 def VOP_I16_F16 : VOPProfile <[i16, f16, untyped, untyped]>;
 def VOP_I16_I16 : VOPProfile <[i16, i16, untyped, untyped]>;
-#ifdef LLPC_BUILD_NPI
 def VOP_BF16_BF16 : VOPProfile<[bf16, bf16, untyped, untyped]>;
+#ifdef LLPC_BUILD_NPI
 def VOP1_I16_I32 :  VOPProfile<[i16, i32, untyped, untyped]>;
 def VOP_I16_V2F16 : VOPProfile<[i16, v2f16, untyped, untyped]>;
 #endif /* LLPC_BUILD_NPI */

@@ -4154,7 +4154,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (isSALUMapping(MI)) {
       // There are no scalar 64-bit min and max, use vector instruction instead.
       if (MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() == 64 &&
-         Subtarget.hasIntMinMax64())
+          Subtarget.hasIntMinMax64())
         return getDefaultMappingVOP(MI);
       return getDefaultMappingSOP(MI);
     }
@@ -4717,9 +4717,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_rsq_clamp:
-#if LLPC_BUILD_NPI
     case Intrinsic::amdgcn_tanh:
-#endif /* LLPC_BUILD_NPI */
     case Intrinsic::amdgcn_fmul_legacy:
     case Intrinsic::amdgcn_fma_legacy:
     case Intrinsic::amdgcn_frexp_mant:
@@ -5832,8 +5830,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cluster_load_b128: {
       OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-      unsigned M0Bank = getRegBankID(MI.getOperand(4).getReg(), MRI,
-                                 AMDGPU::SGPRRegBankID);
+      unsigned M0Bank =
+          getRegBankID(MI.getOperand(4).getReg(), MRI, AMDGPU::SGPRRegBankID);
       OpdsMapping[4] = AMDGPU::getValueMapping(M0Bank, 32);
       break;
     }
@@ -5853,8 +5851,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
      OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-     unsigned M0Bank = getRegBankID(MI.getOperand(5).getReg(), MRI,
-                                 AMDGPU::SGPRRegBankID);
+     unsigned M0Bank =
+         getRegBankID(MI.getOperand(5).getReg(), MRI, AMDGPU::SGPRRegBankID);
      OpdsMapping[5] = AMDGPU::getValueMapping(M0Bank, 32);
      break;
     }

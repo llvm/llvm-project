@@ -700,12 +700,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_sqrt:
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_tanh: {
-#else /* LLPC_BUILD_NPI */
-  case Intrinsic::amdgcn_rsq: {
-#endif /* LLPC_BUILD_NPI */
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))
       return IC.replaceInstUsesWith(II, Src);

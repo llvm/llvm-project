@@ -413,21 +413,17 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   // Set unused op_sel_hi bits to 1 for VOP3P and MAI instructions.
   // Note that accvgpr_read/write are MAI, have src0, but do not use op_sel.
-#if LLPC_BUILD_NPI
   if (((Desc.TSFlags & SIInstrFlags::VOP3P) ||
        Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
        Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_vi) &&
+#if LLPC_BUILD_NPI
       // Matrix B format operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_fmt) &&
       // Matrix B scale operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_scale) &&
+#endif /* LLPC_BUILD_NPI */
       // Matrix B reuse operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_reuse)) {
-#else /* LLPC_BUILD_NPI */
-  if ((Desc.TSFlags & SIInstrFlags::VOP3P) ||
-      Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
-      Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_vi) {
-#endif /* LLPC_BUILD_NPI */
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
   }
 
@@ -616,8 +612,7 @@ static bool needsPCRel(const MCExpr *Expr) {
     auto Spec = AMDGPU::getSpecifier(SE);
 #if LLPC_BUILD_NPI
     return Spec != AMDGPUMCExpr::S_ABS32_LO &&
-           Spec != AMDGPUMCExpr::S_ABS32_HI &&
-           Spec != AMDGPUMCExpr::S_ABS64;
+           Spec != AMDGPUMCExpr::S_ABS32_HI && Spec != AMDGPUMCExpr::S_ABS64;
 #else /* LLPC_BUILD_NPI */
     return Spec != AMDGPUMCExpr::S_ABS32_LO && Spec != AMDGPUMCExpr::S_ABS32_HI;
 #endif /* LLPC_BUILD_NPI */

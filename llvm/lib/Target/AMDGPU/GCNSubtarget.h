@@ -526,9 +526,7 @@ public:
   }
 
 #if LLPC_BUILD_NPI
-  bool hasFmaMixBF16Insts() const {
-    return HasFmaMixBF16Insts;
-  }
+  bool hasFmaMixBF16Insts() const { return HasFmaMixBF16Insts; }
 
 #endif /* LLPC_BUILD_NPI */
   bool hasCARRY() const {
@@ -1561,15 +1559,11 @@ public:
   }
 
 #if LLPC_BUILD_NPI
-  bool hasMin3Max3PKF16() const {
-    return HasMin3Max3PKF16;
-  }
+  bool hasMin3Max3PKF16() const { return HasMin3Max3PKF16; }
 
   bool hasTanhInsts() const { return HasTanhInsts; }
 
-
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
-
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 

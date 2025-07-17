@@ -65,4 +65,32 @@ void test_amdgcn_load_mcast_b128_local(__attribute__((address_space(10))) v4i* o
   __builtin_amdgcn_load_mcast_b128(outptr, inptr, 27, mask);
 }
 
-// TODO-GFX13 add DDS src tests
+// CHECK-GFX13-LABEL: @test_amdgcn_load_mcast_b32_distributed(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    tail call void @llvm.amdgcn.load.mcast.b32.p11(ptr addrspace(10) [[OUTPTR:%.*]], ptr addrspace(11) [[INPTR:%.*]], i32 10, i32 [[MASK:%.*]])
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_load_mcast_b32_distributed(__attribute__((address_space(10))) int* outptr, __attribute__((address_space(11))) int* inptr, int mask)
+{
+  __builtin_amdgcn_load_mcast_b32(outptr, inptr, 10, mask);
+}
+
+// CHECK-GFX13-LABEL: @test_amdgcn_load_mcast_b64_distributed(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    tail call void @llvm.amdgcn.load.mcast.b64.p11(ptr addrspace(10) [[OUTPTR:%.*]], ptr addrspace(11) [[INPTR:%.*]], i32 22, i32 [[MASK:%.*]])
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_load_mcast_b64_distributed(__attribute__((address_space(10))) v2i* outptr, __attribute__((address_space(11))) v2i* inptr, int mask)
+{
+  __builtin_amdgcn_load_mcast_b64(outptr, inptr, 22, mask);
+}
+
+// CHECK-GFX13-LABEL: @test_amdgcn_load_mcast_b128_distributed(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    tail call void @llvm.amdgcn.load.mcast.b128.p11(ptr addrspace(10) [[OUTPTR:%.*]], ptr addrspace(11) [[INPTR:%.*]], i32 27, i32 [[MASK:%.*]])
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_load_mcast_b128_distributed(__attribute__((address_space(10))) v4i* outptr, __attribute__((address_space(11))) v4i* inptr, int mask)
+{
+  __builtin_amdgcn_load_mcast_b128(outptr, inptr, 27, mask);
+}

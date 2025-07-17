@@ -1958,15 +1958,15 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
 
 #if LLPC_BUILD_NPI
 static bool isCoexecutableVALUInst(const MachineInstr &MI) {
-  return  SIInstrInfo::isVALU(MI) && !SIInstrInfo::isTRANS(MI) &&
-          !SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI); // What else?
+  return SIInstrInfo::isVALU(MI) && !SIInstrInfo::isTRANS(MI) &&
+         !SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI); // What else?
 }
 
 static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
                                        const SIInstrInfo *TII, unsigned Latency,
                                        unsigned Category) {
-  assert (TII->isXDLWMMA(MI) && (Latency == 8 || Latency == 16) &&
-          "Handle me if the xdl wmma instruction latency changes");
+  assert(TII->isXDLWMMA(MI) && (Latency == 8 || Latency == 16) &&
+         "Handle me if the xdl wmma instruction latency changes");
 
   switch (Category) {
   case 0: // Dense WMMA Instructions:
@@ -2127,7 +2127,8 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   // WaitStatesNeeded now is the number of V_NOPs we need to insert, negative
   // means not needed.
   for (int i = 0; i < WaitStatesNeeded; i++)
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::V_NOP_e32));
+    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+            TII->get(AMDGPU::V_NOP_e32));
 
   return true;
 }

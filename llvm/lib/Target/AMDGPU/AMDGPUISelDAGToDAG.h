@@ -243,7 +243,8 @@ private:
   bool SelectSMRDSgpr(SDNode *N, SDValue Addr, SDValue &SBase, SDValue &SOffset,
                       SDValue &CPol) const;
   bool SelectSMRDSgprImm(SDNode *N, SDValue Addr, SDValue &SBase,
-                         SDValue &SOffset, SDValue &Offset, SDValue &CPol) const;
+                         SDValue &SOffset, SDValue &Offset,
+                         SDValue &CPol) const;
 #else /* LLPC_BUILD_NPI */
   bool SelectSMRDSgpr(SDValue Addr, SDValue &SBase, SDValue &SOffset) const;
   bool SelectSMRDSgprImm(SDValue Addr, SDValue &SBase, SDValue &SOffset,
@@ -307,10 +308,11 @@ private:
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   bool SelectVOP3OpSelMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
-  bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 #if LLPC_BUILD_NPI
-                                 unsigned &Mods, MVT VT) const;
+  bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src, unsigned &Mods,
+                                 MVT VT) const;
 #else /* LLPC_BUILD_NPI */
+  bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
                                  unsigned &Mods) const;
 #endif /* LLPC_BUILD_NPI */
   bool SelectVOP3PMadMixModsExt(SDValue In, SDValue &Src,

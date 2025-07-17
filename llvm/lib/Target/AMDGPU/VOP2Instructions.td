@@ -175,7 +175,6 @@ multiclass VOP2Inst_e64<string opName,
     def _e64 : VOP3InstBase <opName, P, node, 1>,
                Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
 
-#ifdef LLPC_BUILD_NPI
     if P.HasExtVOP3DPP then
       def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
         let SubtargetPredicate = isGFX11Plus;
@@ -184,12 +183,6 @@ multiclass VOP2Inst_e64<string opName,
       def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
         let OtherPredicates = [HasDPALU_DPP];
       }
-#else /* LLPC_BUILD_NPI */
-    let SubtargetPredicate = isGFX11Plus in {
-      if P.HasExtVOP3DPP then
-        def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
-    } // End SubtargetPredicate = isGFX11Plus
-#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass VOP2Inst_e64_VOPD<string opName,
@@ -1562,13 +1555,9 @@ class Base_VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps,
     VOP2_DPP<op, ps, opName, p, 1> {
   let AssemblerPredicate = HasDPP16;
   let SubtargetPredicate = ps.SubtargetPredicate;
-#ifdef LLPC_BUILD_NPI
   let OtherPredicates = !listconcat(ps.OtherPredicates,
       !if(p.HasExt64BitDPP, [HasDPALU_DPP], []),
       !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []));
-#else /* LLPC_BUILD_NPI */
-  let OtherPredicates = ps.OtherPredicates;
-#endif /* LLPC_BUILD_NPI */
 }
 
 class VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps, int subtarget,
@@ -2078,12 +2067,16 @@ let SubtargetPredicate = Gen.AssemblerPredicate in {
 #ifdef LLPC_BUILD_NPI
     V_SUBBREV_U32_e32, !cast<VOP2_Real>("V_SUBREV_CO_CI_U32_e32"#Gen.Suffix), "v_subrev_co_ci_u32">;
 } // End SubtargetPredicate = Gen.AssemblerPredicate
-
-let SubtargetPredicate = HasFmacF64Inst in
-defm V_FMAC_F64 : VOP2_Real_FULL_gfx12_gfx13<0x17, 0x1f>;
 #else /* LLPC_BUILD_NPI */
     V_SUBBREV_U32_e32, V_SUBREV_CO_CI_U32_e32_gfx12, "v_subrev_co_ci_u32">;
 } // End SubtargetPredicate = isGFX12Plus
+#endif /* LLPC_BUILD_NPI */
+
+let SubtargetPredicate = HasFmacF64Inst in
+#ifdef LLPC_BUILD_NPI
+defm V_FMAC_F64 : VOP2_Real_FULL_gfx12_gfx13<0x17, 0x1f>;
+#else /* LLPC_BUILD_NPI */
+defm V_FMAC_F64 : VOP2_Real_FULL<GFX12Gen, 0x17>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI

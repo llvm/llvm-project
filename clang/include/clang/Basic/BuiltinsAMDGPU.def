@@ -729,15 +729,19 @@ TARGET_BUILTIN(__builtin_amdgcn_s_wait_tensorcnt, "vIUs", "n", "gfx1250-insts")
 #if LLPC_BUILD_NPI
 TARGET_BUILTIN(__builtin_amdgcn_tanhf, "ff", "nc", "tanh-insts")
 TARGET_BUILTIN(__builtin_amdgcn_tanhh, "hh", "nc", "tanh-insts")
+#endif /* LLPC_BUILD_NPI */
 TARGET_BUILTIN(__builtin_amdgcn_tanh_bf16, "yy", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_rcp_bf16, "yy", "nc", "bf16-trans-insts")
+#if LLPC_BUILD_NPI
 TARGET_BUILTIN(__builtin_amdgcn_sqrt_bf16, "yy", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_rsq_bf16, "yy", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_log_bf16, "yy", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_exp2_bf16, "yy", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sin_bf16, "yy", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cos_bf16, "yy", "nc", "bf16-trans-insts")
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_pk_bf16_f32, "V2yffi", "nc", "bf16-cvt-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_pk_f16_f32, "V2hffi", "nc", "gfx1250-insts")
 #endif /* LLPC_BUILD_NPI */
@@ -1179,6 +1183,20 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_u8_f16_4x4x8_4x2x16, "iV4hcIib", "
 TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_u8_f16_8x4x8, "V2iV8hcIib", "nc", "gfx13-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_u8_f32_4x2x16, "iV4fcIib", "nc", "gfx13-insts,wavefrontsize32")
 
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_fp8_f32_4x2x16, "iV4fcV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_fp8_f16_8x4x8, "V2iV8hcV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_fp8_f16_4x4x8_4x2x16, "iV4hcV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_fp8_f16_4x4x16, "vi*i*V8hcV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_fp8_bf16_8x4x8, "V2iV8ycV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_fp8_bf16_4x4x8_4x2x16, "iV4ycV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_fp8_bf16_4x4x16, "vi*i*V8ycV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_bf8_f32_4x2x16, "iV4fcV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_bf8_f16_8x4x8, "V2iV8hcV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_bf8_f16_4x4x8_4x2x16, "iV4hcV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_bf8_f16_4x4x16, "vi*i*V8hcV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_bf8_bf16_8x4x8, "V2iV8ycV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_bf8_bf16_4x4x8_4x2x16, "iV4ycV2sIib", "nc", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_to_tensor_sr_bf8_bf16_4x4x16, "vi*i*V8ycV2sIib", "nc", "gfx13-insts,wavefrontsize32")
 
 TARGET_BUILTIN(__builtin_amdgcn_discard_b32, "vv*Ii", "nc", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_discard_b128, "vv*Ii", "nc", "gfx13-insts")

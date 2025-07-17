@@ -15,10 +15,10 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
 
-#include <cstdint>
 #if LLPC_BUILD_NPI
 #include "llvm/MC/MCInstrAnalysis.h"
 #endif /* LLPC_BUILD_NPI */
+#include <cstdint>
 #include <memory>
 
 namespace llvm {

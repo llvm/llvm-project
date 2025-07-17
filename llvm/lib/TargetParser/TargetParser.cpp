@@ -536,8 +536,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["tensor-cvt-lut-insts"] = true;
 #endif /* LLPC_BUILD_NPI */
       Features["transpose-load-f4f6-insts"] = true;
-#if LLPC_BUILD_NPI
       Features["bf16-trans-insts"] = true;
+#if LLPC_BUILD_NPI
       Features["bf16-cvt-insts"] = true;
       Features["bf16-pk-insts"] = true;
 #endif /* LLPC_BUILD_NPI */

@@ -495,11 +495,7 @@ class VOP3be <VOPProfile P> : Enc64 {
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0);
 }
 
-#ifdef LLPC_BUILD_NPI
 class VOP3Pe_Base {
-#else /* LLPC_BUILD_NPI */
-class VOP3Pe <VOPProfile P> : Enc64 {
-#endif /* LLPC_BUILD_NPI */
   bits<8> vdst;
   bits<4> src0_modifiers;
   bits<9> src0;
@@ -510,22 +506,20 @@ class VOP3Pe <VOPProfile P> : Enc64 {
   bits<1> clamp;
   bits<2> index_key_8bit;
   bits<1> index_key_16bit;
-#ifdef LLPC_BUILD_NPI
   bits<1> index_key_32bit;
+#ifdef LLPC_BUILD_NPI
   bits<3> matrix_a_fmt;
   bits<3> matrix_b_fmt;
   bits<1> matrix_a_scale;
   bits<1> matrix_b_scale;
   bits<2> matrix_a_scale_fmt;
   bits<2> matrix_b_scale_fmt;
+#endif /* LLPC_BUILD_NPI */
   bits<1> matrix_a_reuse;
   bits<1> matrix_b_reuse;
 }
-#endif /* LLPC_BUILD_NPI */
 
-#ifdef LLPC_BUILD_NPI
 class VOP3Pe <VOPProfile P> : Enc64, VOP3Pe_Base {
-#endif /* LLPC_BUILD_NPI */
   let Inst{7-0} = !if(P.HasDst, vdst, 0);
 #ifdef LLPC_BUILD_NPI
   let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1},
@@ -545,21 +539,13 @@ class VOP3Pe <VOPProfile P> : Enc64, VOP3Pe_Base {
   let Inst{11} = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{2}, 0); // op_sel(0)
 #endif /* LLPC_BUILD_NPI */
   let Inst{12} = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{2}, 0); // op_sel(1)
-#ifdef LLPC_BUILD_NPI
   let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2},
                      !if(P.HasMatrixReuse, matrix_a_reuse, 0));    // op_sel(2)
-#else /* LLPC_BUILD_NPI */
-  let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2}, 0); // op_sel(2)
-#endif /* LLPC_BUILD_NPI */
 
-#ifdef LLPC_BUILD_NPI
   let Inst{14} = !cond(!and(P.HasSrc2, P.HasOpSel) : src2_modifiers{3},
                        P.IsDOT : 1,
                        P.HasMatrixReuse : matrix_b_reuse,
                        1: ?); // op_sel_hi(2)
-#else /* LLPC_BUILD_NPI */
-  let Inst{14} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{3}, !if(P.IsDOT, 1, ?)); // op_sel_hi(2)
-#endif /* LLPC_BUILD_NPI */
 
   let Inst{15} = !if(P.HasClamp, clamp{0}, 0);
 

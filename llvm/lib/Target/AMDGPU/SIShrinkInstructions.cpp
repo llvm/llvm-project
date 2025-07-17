@@ -463,12 +463,10 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
     case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
       NewOpcode = AMDGPU::V_FMAAK_F16_fake16;
       break;
-#if LLPC_BUILD_NPI
     case AMDGPU::V_FMA_F64_e64:
       if (ST->hasFmaakFmamkF64Insts())
         NewOpcode = AMDGPU::V_FMAAK_F64;
       break;
-#endif /* LLPC_BUILD_NPI */
     }
   }
 
@@ -503,12 +501,10 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
     case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
       NewOpcode = AMDGPU::V_FMAMK_F16_fake16;
       break;
-#if LLPC_BUILD_NPI
     case AMDGPU::V_FMA_F64_e64:
       if (ST->hasFmaakFmamkF64Insts())
         NewOpcode = AMDGPU::V_FMAMK_F64;
       break;
-#endif /* LLPC_BUILD_NPI */
     }
   }
 
@@ -973,13 +969,9 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_FMA_F16_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_t16_e64 ||
-#if LLPC_BUILD_NPI
           MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_fake16_e64 ||
           (MI.getOpcode() == AMDGPU::V_FMA_F64_e64 &&
            ST->hasFmaakFmamkF64Insts())) {
-#else /* LLPC_BUILD_NPI */
-          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_fake16_e64) {
-#endif /* LLPC_BUILD_NPI */
         shrinkMadFma(MI);
         continue;
       }
@@ -1076,15 +1068,11 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       // fold an immediate into the shrunk instruction as a literal operand. In
       // GFX10 VOP3 instructions can take a literal operand anyway, so there is
       // no advantage to doing this.
-#if LLPC_BUILD_NPI
       // However, if 64-bit literals are allowed we still need to shrink it
       // for such literal to be able to fold.
       if (ST->hasVOP3Literal() &&
           (!ST->has64BitLiterals() || AMDGPU::isTrue16Inst(MI.getOpcode())) &&
-	  !IsPostRA)
-#else /* LLPC_BUILD_NPI */
-      if (ST->hasVOP3Literal() && !IsPostRA)
-#endif /* LLPC_BUILD_NPI */
+          !IsPostRA)
         continue;
 
       if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&
