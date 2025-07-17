@@ -122,9 +122,9 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, tdesc, source, ValueRange({}) /* dynamic offsets */,
         ValueRange({}) /* empty dynamic shape */,
         ValueRange({}) /* empty dynamic strides */,
-        builder.getDenseI64ArrayAttr({}) /* const offsets */,
-        builder.getDenseI64ArrayAttr({}) /* empty const shape*/,
-        builder.getDenseI64ArrayAttr({}) /* empty const strides*/);
+        DenseI64ArrayAttr({}) /* const offsets */,
+        DenseI64ArrayAttr({}) /* empty const shape*/,
+        DenseI64ArrayAttr({}) /* empty const strides*/);
 }
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
