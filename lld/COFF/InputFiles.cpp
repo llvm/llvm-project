@@ -142,14 +142,14 @@ static bool fixupDllMain(COFFLinkerContext &ctx, llvm::object::Archive *file,
 }
 
 ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-    : InputFile(ctx.symtab, ArchiveKind, m) {
-  // Parse a MemoryBufferRef as an archive file.
-  file = CHECK(Archive::create(mb), this);
-}
+    : InputFile(ctx.symtab, ArchiveKind, m) {}
 
 void ArchiveFile::parse() {
   COFFLinkerContext &ctx = symtab.ctx;
   SymbolTable *archiveSymtab = &symtab;
+
+  // Parse a MemoryBufferRef as an archive file.
+  file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
   if (ctx.symtab.isEC()) {
@@ -166,9 +166,39 @@ void ArchiveFile::parse() {
       // be either a native-only ARM64 or x86_64 archive. Check the machine type
       // of the object containing a symbol to determine which symbol table to
       // use.
-      MachineTypes machine = getMachineType();
-      if (machine != IMAGE_FILE_MACHINE_UNKNOWN)
+      Archive::symbol_iterator sym = file->symbol_begin();
+      if (sym != file->symbol_end()) {
+        MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
+        Archive::Child child =
+            CHECK(sym->getMember(),
+                  file->getFileName() +
+                      ": could not get the buffer for a child of the archive");
+        MemoryBufferRef mb = CHECK(
+            child.getMemoryBufferRef(),
+            file->getFileName() +
+                ": could not get the buffer for a child buffer of the archive");
+        switch (identify_magic(mb.getBuffer())) {
+        case file_magic::coff_object: {
+          std::unique_ptr<COFFObjectFile> obj =
+              CHECK(COFFObjectFile::create(mb),
+                    check(child.getName()) + ":" + ": not a valid COFF file");
+          machine = MachineTypes(obj->getMachine());
+          break;
+        }
+        case file_magic::coff_import_library:
+          machine = MachineTypes(COFFImportFile(mb).getMachine());
+          break;
+        case file_magic::bitcode: {
+          std::unique_ptr<lto::InputFile> obj =
+              check(lto::InputFile::create(mb));
+          machine = BitcodeFile::getMachineType(obj.get());
+          break;
+        }
+        default:
+          break;
+        }
         archiveSymtab = &ctx.getSymtab(machine);
+      }
     }
   }
 
@@ -194,49 +224,6 @@ void ArchiveFile::parse() {
     }
     archiveSymtab->addLazyArchive(this, sym);
   }
-}
-
-MachineTypes ArchiveFile::getMachineType() const {
-  if (!file)
-    return IMAGE_FILE_MACHINE_UNKNOWN;
-  if (file->isEmpty())
-    return IMAGE_FILE_MACHINE_UNKNOWN;
-  Archive::symbol_iterator sym = file->symbol_begin();
-  if (sym != file->symbol_end()) {
-    Expected<Archive::Child> child = sym->getMember();
-    if (!child) {
-      consumeError(child.takeError());
-      return IMAGE_FILE_MACHINE_UNKNOWN;
-    }
-    Expected<MemoryBufferRef> mb = child->getMemoryBufferRef();
-    if (!mb) {
-      consumeError(mb.takeError());
-      return IMAGE_FILE_MACHINE_UNKNOWN;
-    }
-    switch (identify_magic(mb->getBuffer())) {
-    case file_magic::coff_object: {
-      Expected<std::unique_ptr<COFFObjectFile>> obj =
-          COFFObjectFile::create(*mb);
-      if (!obj) {
-        consumeError(obj.takeError());
-        return IMAGE_FILE_MACHINE_UNKNOWN;
-      }
-      return MachineTypes((*obj)->getMachine());
-      break;
-    }
-    case file_magic::coff_import_library:
-      return MachineTypes(COFFImportFile(*mb).getMachine());
-      break;
-    case file_magic::bitcode: {
-      std::unique_ptr<lto::InputFile> obj = check(lto::InputFile::create(*mb));
-      return BitcodeFile::getMachineType(obj.get());
-      break;
-    }
-    default:
-      break;
-    }
-  }
-  return IMAGE_FILE_MACHINE_UNKNOWN;
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.

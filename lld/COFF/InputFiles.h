@@ -121,7 +121,6 @@ public:
   explicit ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m);
   static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
   void parse() override;
-  MachineTypes getMachineType() const override;
 
   // Enqueues an archive member load for the given symbol. If we've already
   // enqueued a load for the same archive member, this function does nothing,

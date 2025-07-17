@@ -198,30 +198,6 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
 }
 
 void LinkerDriver::addFile(InputFile *file) {
-  // We need to process the machine type early on, so that APIs such as
-  // `mangle()` won't fail.
-  MachineTypes mt = file->getMachineType();
-  // The ARM64EC target must be explicitly specified and cannot be inferred.
-  if (mt == ARM64EC &&
-      (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN ||
-       (ctx.config.machineInferred &&
-        (ctx.config.machine == ARM64 || ctx.config.machine == AMD64)))) {
-    Err(ctx) << toString(file)
-             << ": machine type arm64ec is ambiguous and cannot be "
-                "inferred, use /machine:arm64ec or /machine:arm64x";
-    return;
-  }
-  if (!compatibleMachineType(ctx, mt)) {
-    Err(ctx) << toString(file) << ": machine type " << machineToStr(mt)
-             << " conflicts with " << machineToStr(ctx.config.machine);
-    return;
-  }
-  if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
-      mt != IMAGE_FILE_MACHINE_UNKNOWN) {
-    ctx.config.machineInferred = true;
-    setMachine(mt);
-  }
-
   Log(ctx) << "Reading " << toString(file);
   if (file->lazy) {
     if (auto *f = dyn_cast<BitcodeFile>(file))
@@ -242,6 +218,28 @@ void LinkerDriver::addFile(InputFile *file) {
     } else if (auto *f = dyn_cast<ImportFile>(file)) {
       ctx.importFileInstances.push_back(f);
     }
+  }
+
+  MachineTypes mt = file->getMachineType();
+  // The ARM64EC target must be explicitly specified and cannot be inferred.
+  if (mt == ARM64EC &&
+      (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN ||
+       (ctx.config.machineInferred &&
+        (ctx.config.machine == ARM64 || ctx.config.machine == AMD64)))) {
+    Err(ctx) << toString(file)
+             << ": machine type arm64ec is ambiguous and cannot be "
+                "inferred, use /machine:arm64ec or /machine:arm64x";
+    return;
+  }
+  if (!compatibleMachineType(ctx, mt)) {
+    Err(ctx) << toString(file) << ": machine type " << machineToStr(mt)
+             << " conflicts with " << machineToStr(ctx.config.machine);
+    return;
+  }
+  if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
+      mt != IMAGE_FILE_MACHINE_UNKNOWN) {
+    ctx.config.machineInferred = true;
+    setMachine(mt);
   }
 
   parseDirectives(file);
