@@ -1,4 +1,4 @@
-RUN: not %llvm-original-di-preservation %p/Inputs/sample.json --error-test | FileCheck %s
+RUN: not %llvm-original-di-preservation %p/Inputs/sample.json --acceptance-test | FileCheck %s
 CHECK:      DILocation Bugs:
 CHECK-NEXT:   test.ll:
 CHECK-NEXT:     no-name:
@@ -20,7 +20,7 @@ CHECK-NEXT:       fn_name: fn1
 CHECK-NEXT:       instr: extractvalue
 CHECK:      Errors detected for:
 
-RUN: not %llvm-original-di-preservation %p/Inputs/sample.json --error-test --compress | FileCheck %s --check-prefix=COMPRESS
+RUN: not %llvm-original-di-preservation %p/Inputs/sample.json --acceptance-test --reduce | FileCheck %s --check-prefix=COMPRESS
 COMPRESS:      DILocation Bugs:
 COMPRESS-NEXT:   test.ll:
 COMPRESS-NEXT:     no-name:
@@ -34,7 +34,7 @@ COMPRESS-NEXT:       fn_name: fn
 COMPRESS-NEXT:       instr: insertvalue
 COMPRESS:      Errors detected for:
 
-RUN: not %llvm-original-di-preservation %p/Inputs/origin.json --error-test --compress | FileCheck %s --check-prefix=ORIGIN
+RUN: not %llvm-original-di-preservation %p/Inputs/origin.json --acceptance-test --reduce | FileCheck %s --check-prefix=ORIGIN
 ORIGIN:      DILocation Bugs:
 ORIGIN-NEXT:   test.ll:
 ORIGIN-NEXT:     LoopVectorizePass:
@@ -66,5 +66,5 @@ ORIGIN-NEXT:         #18 0x00005895cfae1224 llvm::DevirtSCCRepeatedPass::run(llv
 ORIGIN-NEXT:         #19 0x00005895d1e5067d llvm::detail::PassModel, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&>::run(llvm::LazyCallGraph::SCC&, llvm::AnalysisManager&, llvm::LazyCallGraph&, llvm::CGSCCUpdateResult&) /tmp/llvm-project/llvm/include/llvm/IR/PassManagerInternal.h:91:5
 ORIGIN:      Errors detected for:
 
-RUN: %llvm-original-di-preservation %p/Inputs/non-existent.json --error-test | FileCheck %s --check-prefix=EMPTY
+RUN: %llvm-original-di-preservation %p/Inputs/non-existent.json --acceptance-test | FileCheck %s --check-prefix=EMPTY
 EMPTY: No errors detected for:

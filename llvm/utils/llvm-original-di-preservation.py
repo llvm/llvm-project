@@ -497,11 +497,13 @@ def Main():
     parser = argparse.ArgumentParser()
     opts = parse_program_args(parser)
 
-    if opts.report_html_file is not None and not opts.report_html_file.endswith(".html"):
+    if opts.report_html_file is not None and not opts.report_html_file.endswith(
+        ".html"
+    ):
         print("error: The output file must be '.html'.")
         sys.exit(1)
 
-    if opts.error_test:
+    if opts.acceptance_test:
         if os.path.isdir(opts.file_name):
             print(f"error: Directory passed as input file: '{opts.file_name}'")
             sys.exit(1)
@@ -582,7 +584,7 @@ def Main():
                     di_loc_bug = DILocBug(origin, action, bb_name, fn_name, instr)
                     if not di_loc_bug.key() in di_loc_set:
                         di_loc_set.add(di_loc_bug.key())
-                        if opts.compress:
+                        if opts.reduce:
                             pass_instr = bugs_pass + instr
                             if not pass_instr in di_loc_pass_instr_set:
                                 di_loc_pass_instr_set.add(pass_instr)
@@ -605,7 +607,7 @@ def Main():
                     di_sp_bug = DISPBug(action, name)
                     if not di_sp_bug.key() in di_sp_set:
                         di_sp_set.add(di_sp_bug.key())
-                        if opts.compress:
+                        if opts.reduce:
                             pass_fn = bugs_pass + name
                             if not pass_fn in di_sp_pass_fn_set:
                                 di_sp_pass_fn_set.add(pass_fn)
@@ -629,7 +631,7 @@ def Main():
                     di_var_bug = DIVarBug(action, name, fn_name)
                     if not di_var_bug.key() in di_var_set:
                         di_var_set.add(di_var_bug.key())
-                        if opts.compress:
+                        if opts.reduce:
                             pass_var = bugs_pass + name
                             if not pass_var in di_var_pass_var_set:
                                 di_var_pass_var_set.add(pass_var)
@@ -673,7 +675,7 @@ def Main():
         if di_variable_bugs:
             print_bugs_yaml("DIVariable Bugs", di_variable_bugs)
 
-    if opts.error_test:
+    if opts.acceptance_test:
         if any((di_location_bugs, di_subprogram_bugs, di_variable_bugs)):
             # Add a newline gap after printing at least one error.
             print()
