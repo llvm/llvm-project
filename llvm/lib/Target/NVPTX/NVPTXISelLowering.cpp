@@ -4979,8 +4979,6 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (!NVPTX::isPackedVectorTy(ElementVT) || ElementVT == MVT::v4i8)
     return SDValue();
 
-  SmallVector<SDNode *> DeadCopyToRegs;
-
   // Check whether all outputs are either used by an extractelt or are
   // glue/chain nodes
   if (!all_of(N->uses(), [&](SDUse &U) {
@@ -5006,12 +5004,6 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
           // L: f16,ch = load <p>
           // store L:0
           return !U.getUser()->use_empty();
-        }
-
-        // Handle CopyToReg nodes that will become dead after our replacement
-        if (U.getUser()->getOpcode() == ISD::CopyToReg) {
-          DeadCopyToRegs.push_back(U.getUser());
-          return true;
         }
 
         // Otherwise, this use prevents us from splitting a value.
@@ -5079,10 +5071,6 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   // Add remaining chain and glue nodes
   for (unsigned I : seq(NewLoad->getNumValues() - NewNumOutputs))
     Results.push_back(NewLoad.getValue(NewNumOutputs + I));
-
-  // Remove dead CopyToReg nodes by folding them into the chain they reference
-  for (SDNode *CTR : DeadCopyToRegs)
-    DCI.CombineTo(CTR, CTR->getOperand(0));
 
   return DCI.DAG.getMergeValues(Results, DL);
 }
