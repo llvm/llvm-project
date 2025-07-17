@@ -1,11 +1,8 @@
 # Test that we warn the user about truncated output
 # when target.max-children-count wasn't explicitly set.
 
-# link.exe discards the DWARF information needed.
-# UNSUPPORTED: system-windows
-
 # RUN: split-file %s %t
-# RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %clang_host -g %t/main.cpp -o %t.out
 # RUN: %lldb -x -b -s %t/dwim-commands.input %t.out -o exit 2>&1 \
 # RUN:       | FileCheck %s --check-prefix=DWIM
 #
