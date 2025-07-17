@@ -53,14 +53,14 @@ analyzeModule(Module &M) {
 
   /** Root Signature are specified as following in the metadata:
 
-   !dx.rootsignatures = !{!2} ; list of function/root signature pairs
-   !2 = !{ ptr @main, !3 } ; function, root signature
-   !3 = !{ !4, !5, !6, !7 } ; list of root signature elements
+    !dx.rootsignatures = !{!2} ; list of function/root signature pairs
+    !2 = !{ ptr @main, !3 } ; function, root signature
+    !3 = !{ !4, !5, !6, !7 } ; list of root signature elements
 
-   So for each MDNode inside dx.rootsignatures NamedMDNode
-   (the Root parameter of this function), the parsing process needs
-   to loop through each of its operands and process the function,
-   signature pair.
+    So for each MDNode inside dx.rootsignatures NamedMDNode
+    (the Root parameter of this function), the parsing process needs
+    to loop through each of its operands and process the function,
+    signature pair.
 */
 
   LLVMContext *Ctx = &M.getContext();

@@ -25,6 +25,7 @@ class Metadata;
 
 namespace hlsl {
 namespace rootsig {
+
 class MetadataBuilder {
 public:
   MetadataBuilder(llvm::LLVMContext &Ctx, ArrayRef<RootElement> Elements)
