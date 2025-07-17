@@ -490,8 +490,8 @@ private:
       bool isNegative, int exponent, const Fraction &, Rounding, RoundingBits,
       bool multiply = false);
 
-  // Require alignment, in case code generation code on x86_64 decides that
-  // our Real object is suitable for SSE2 instructions and then gets surprised
+  // Require alignment, in case code generation on x86_64 decides that our
+  // Real object is suitable for SSE2 instructions and then gets surprised
   // by unaligned address.
   alignas(Word::alignment / 8) Word word_{}; // an Integer<>
 };
