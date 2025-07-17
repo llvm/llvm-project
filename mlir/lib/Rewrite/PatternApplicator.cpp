@@ -15,6 +15,10 @@
 #include "ByteCode.h"
 #include "llvm/Support/Debug.h"
 
+#ifndef NDEBUG
+#include "llvm/ADT/ScopeExit.h"
+#endif
+
 #define DEBUG_TYPE "pattern-application"
 
 using namespace mlir;
@@ -206,11 +210,19 @@ LogicalResult PatternApplicator::matchAndRewrite(
           } else {
             LLVM_DEBUG(llvm::dbgs() << "Trying to match \""
                                     << bestPattern->getDebugName() << "\"\n");
-
             const auto *pattern =
                 static_cast<const RewritePattern *>(bestPattern);
-            result = pattern->matchAndRewrite(op, rewriter);
 
+#ifndef NDEBUG
+            OpBuilder::Listener *oldListener = rewriter.getListener();
+            auto loggingListener =
+                std::make_unique<RewriterBase::PatternLoggingListener>(
+                    oldListener, pattern->getDebugName());
+            rewriter.setListener(loggingListener.get());
+            auto resetListenerCallback = llvm::make_scope_exit(
+                [&] { rewriter.setListener(oldListener); });
+#endif
+            result = pattern->matchAndRewrite(op, rewriter);
             LLVM_DEBUG(llvm::dbgs()
                        << "\"" << bestPattern->getDebugName() << "\" result "
                        << succeeded(result) << "\n");
