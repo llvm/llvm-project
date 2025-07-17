@@ -297,7 +297,7 @@ functions:
     return_type: size_t
     arguments:
       - type: char *__restrict
-      - type: const wchar_t *__restrict
+      - type: const wchar_t **__restrict
       - type: size_t
       - type: size_t
       - type: mbstate_t
