@@ -309,7 +309,7 @@ void populateVectorToFromElementsToShuffleTreePatterns(
 /// Lowers `vector.contract` to `llvm.intr.matrix.multiply`.
 ///
 /// Given the high benefit, this will be prioriotised over other
-/// transpose-lowering patterns. As such, the convert-vector-to-llvm pass will
+/// contract-lowering patterns. As such, the convert-vector-to-llvm pass will
 /// only run this registration conditionally.
 void populateVectorContractToMatrixMultiply(RewritePatternSet &patterns,
                                             PatternBenefit benefit = 100);
@@ -320,7 +320,7 @@ void populateVectorContractToMatrixMultiply(RewritePatternSet &patterns,
 /// Lowers `vector.transpose` to `llvm.intr.matrix.flat_transpose`.
 ///
 /// Given the high benefit, this will be prioriotised over other
-/// contract-lowering patterns. As such, the convert-vector-to-llvm pass will
+/// transpose-lowering patterns. As such, the convert-vector-to-llvm pass will
 /// only run this registration conditionally.
 void populateVectorTransposeToFlatTranspose(RewritePatternSet &patterns,
                                             PatternBenefit benefit = 100);
