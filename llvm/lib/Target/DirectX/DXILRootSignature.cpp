@@ -17,8 +17,6 @@
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
-#include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
-#include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -34,6 +32,14 @@
 
 using namespace llvm;
 using namespace llvm::dxil;
+
+static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
+                                                 unsigned int OpId) {
+  if (auto *CI =
+          mdconst::dyn_extract<ConstantInt>(Node->getOperand(OpId).get()))
+    return CI->getZExtValue();
+  return std::nullopt;
+}
 
 static bool reportError(LLVMContext *Ctx, Twine Message,
                         DiagnosticSeverity Severity = DS_Error) {
@@ -105,8 +111,7 @@ analyzeModule(Module &M) {
       continue;
     }
     uint32_t Version = 1;
-    if (std::optional<uint32_t> V =
-            llvm::hlsl::rootsig::extractMdIntValue(RSDefNode, 2))
+    if (std::optional<uint32_t> V = extractMdIntValue(RSDefNode, 2))
       Version = *V;
     else {
       reportError(Ctx, "Invalid RSDefNode value, expected constant int");

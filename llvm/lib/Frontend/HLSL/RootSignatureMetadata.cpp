@@ -24,8 +24,30 @@ namespace rootsig {
 char GenericRSMetadataError::ID;
 char InvalidRSMetadataFormat::ID;
 char InvalidRSMetadataValue::ID;
-
 template <typename T> char RootSignatureValidationError<T>::ID;
+
+inline std::optional<uint32_t> extractMdIntValue(MDNode *Node,
+                                                 unsigned int OpId) {
+  if (auto *CI =
+          mdconst::dyn_extract<ConstantInt>(Node->getOperand(OpId).get()))
+    return CI->getZExtValue();
+  return std::nullopt;
+}
+
+inline std::optional<float> extractMdFloatValue(MDNode *Node,
+                                                unsigned int OpId) {
+  if (auto *CI = mdconst::dyn_extract<ConstantFP>(Node->getOperand(OpId).get()))
+    return CI->getValueAPF().convertToFloat();
+  return std::nullopt;
+}
+
+inline std::optional<StringRef> extractMdStringValue(MDNode *Node,
+                                                     unsigned int OpId) {
+  MDString *NodeText = dyn_cast<MDString>(Node->getOperand(OpId));
+  if (NodeText == nullptr)
+    return std::nullopt;
+  return NodeText->getString();
+}
 
 static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
     {"CBV", dxil::ResourceClass::CBuffer},
