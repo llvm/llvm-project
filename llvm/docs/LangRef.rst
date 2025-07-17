@@ -4867,7 +4867,7 @@ to be eliminated. This is because '``poison``' is stronger than '``undef``'.
 
       %D = undef
       %E = icmp slt %D, 4
-      %F = icmp gte %D, 4
+      %F = icmp sge %D, 4
 
     Safe:
       %A = undef
