@@ -29,6 +29,14 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerCastOp(cir::CastOp op);
   void lowerUnaryOp(cir::UnaryOp op);
   void lowerArrayCtor(ArrayCtor op);
+
+  ///
+  /// AST related
+  /// -----------
+
+  clang::ASTContext *astCtx;
+
+  void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
 
 } // namespace
@@ -161,6 +169,7 @@ void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
 }
 
 static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
+                                       clang::ASTContext *astCtx,
                                        mlir::Operation *op, mlir::Type eltTy,
                                        mlir::Value arrayAddr,
                                        uint64_t arrayLen) {
@@ -169,7 +178,11 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
 
   // TODO: instead of fixed integer size, create alias for PtrDiffTy and unify
   // with CIRGen stuff.
-  cir::ConstantOp numArrayElementsConst = builder.getUnsignedInt(loc, 64, arrayLen);
+  const unsigned sizeTypeSize =
+      astCtx->getTypeSize(astCtx->getSignedSizeType());
+  auto ptrDiffTy =
+      cir::IntType::get(builder.getContext(), sizeTypeSize, /*isSigned=*/false);
+  mlir::Value numArrayElementsConst = builder.getUnsignedInt(loc, arrayLen, 64);
 
   auto begin = builder.create<cir::CastOp>(
       loc, eltTy, cir::CastKind::array_to_ptrdecay, arrayAddr);
@@ -223,7 +236,8 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
   mlir::Type eltTy = op->getRegion(0).getArgument(0).getType();
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
-  lowerArrayDtorCtorIntoLoop(builder, op, eltTy, op.getAddr(), arrayLen);
+  lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
+                             arrayLen);
 }
 
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
@@ -251,4 +265,11 @@ void LoweringPreparePass::runOnOperation() {
 
 std::unique_ptr<Pass> mlir::createLoweringPreparePass() {
   return std::make_unique<LoweringPreparePass>();
+}
+
+std::unique_ptr<Pass>
+mlir::createLoweringPreparePass(clang::ASTContext *astCtx) {
+  auto pass = std::make_unique<LoweringPreparePass>();
+  pass->setASTContext(astCtx);
+  return std::move(pass);
 }
