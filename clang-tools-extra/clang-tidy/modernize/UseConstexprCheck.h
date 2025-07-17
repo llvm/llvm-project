@@ -37,7 +37,9 @@ private:
   const std::string ConstexprString;
   const std::string StaticConstexprString;
   llvm::SmallPtrSet<const FunctionDecl *, 32> Functions;
-  llvm::DenseMap<const VarDecl *, const FunctionDecl *> VariableMapping;
+  llvm::SmallPtrSet<const VarDecl *, 32> VariableMapping;
+  llvm::SmallPtrSet<const DeclStmt *, 32> DeclStmtsToDiagnose;
+  llvm::SmallPtrSet<const DeclStmt *, 32> DeclStmtsWithDiagnosedVariables;
 };
 
 } // namespace clang::tidy::modernize

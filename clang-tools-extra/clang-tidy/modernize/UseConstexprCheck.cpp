@@ -829,6 +829,20 @@ AST_MATCHER_P(VarDecl, satisfiesVariableProperties, bool,
 
   return true;
 }
+
+AST_MATCHER_P(DeclStmt, allDecls, ast_matchers::internal::Matcher<Decl>,
+              DeclMatcher) {
+  ast_matchers::internal::BoundNodesTreeBuilder Tmp = *Builder;
+  for (const Decl *D : Node.decls()) {
+    auto Result = Tmp;
+    if (DeclMatcher.matches(*D, Finder, &Result))
+      Tmp.addMatch(std::move(Result));
+    else
+      return false;
+  }
+  *Builder = std::move(Tmp);
+  return true;
+}
 } // namespace
 
 void UseConstexprCheck::registerMatchers(MatchFinder *Finder) {
@@ -846,30 +860,43 @@ void UseConstexprCheck::registerMatchers(MatchFinder *Finder) {
           .bind("func"),
       this);
 
+  const auto VarSupportingConstexpr = varDecl(
+      unless(anyOf(parmVarDecl(), isImplicit(), isInStdNamespace(),
+                   isExpansionInSystemHeader(), isConstexpr(), isExternC(),
+                   hasExternalFormalLinkage(), isInMacro())),
+      hasNoRedecl(), hasType(qualType(isConstQualified())),
+      satisfiesVariableProperties(ConservativeLiteralType),
+      hasInitializer(expr(isCXX11ConstantExpr())));
   Finder->addMatcher(
-      varDecl(
-          unless(anyOf(parmVarDecl(), isImplicit(), isInStdNamespace(),
-                       isExpansionInSystemHeader(), isConstexpr(), isExternC(),
-                       hasExternalFormalLinkage(), isInMacro())),
-          hasNoRedecl(), hasType(qualType(isConstQualified())),
-          satisfiesVariableProperties(ConservativeLiteralType),
-          hasInitializer(expr(isCXX11ConstantExpr())))
-          .bind("var"),
+      varDecl(VarSupportingConstexpr.bind("var"),
+              unless(hasParent(declStmt(unless(hasSingleDecl(anything())))))),
       this);
+  Finder->addMatcher(declStmt(unless(hasSingleDecl(anything())),
+                              allDecls(VarSupportingConstexpr))
+                         .bind("decl_stmt"),
+                     this);
+}
+
+static const FunctionDecl *
+maybeResolveToTemplateDecl(const FunctionDecl *Func) {
+  if (Func && Func->isTemplateInstantiation())
+    Func = Func->getTemplateInstantiationPattern();
+  return Func;
 }
 
 void UseConstexprCheck::check(const MatchFinder::MatchResult &Result) {
-  constexpr const auto MaybeResolveToTemplateDecl =
-      [](const FunctionDecl *Func) {
-        if (Func && Func->isTemplateInstantiation())
-          Func = Func->getTemplateInstantiationPattern();
-        return Func;
-      };
-
   if (const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func")) {
-    Func = MaybeResolveToTemplateDecl(Func);
+    Func = maybeResolveToTemplateDecl(Func);
     if (Func)
       Functions.insert(Func);
+    return;
+  }
+
+  // Since the 'constexpr' insertion would conflict for multiple variables
+  // declared in the same statement, we instead store the DeclStmt itself and
+  // diagnose all declared vars in the DeclStmt
+  if (const auto *DStmt = Result.Nodes.getNodeAs<DeclStmt>("decl_stmt")) {
+    DeclStmtsToDiagnose.insert(DStmt);
     return;
   }
 
@@ -877,9 +904,7 @@ void UseConstexprCheck::check(const MatchFinder::MatchResult &Result) {
     if (const VarDecl *VarTemplate = Var->getTemplateInstantiationPattern())
       Var = VarTemplate;
 
-    VariableMapping.insert({Var, MaybeResolveToTemplateDecl(
-                                     llvm::dyn_cast_if_present<FunctionDecl>(
-                                         Var->getDeclContext()))});
+    VariableMapping.insert(Var);
     return;
   }
 }
@@ -901,7 +926,7 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
 
   const std::string VariableReplacementWithStatic = StaticConstexprString + " ";
   const auto VariableReplacement =
-      [&FunctionReplacement, this, &VariableReplacementWithStatic](
+      [this, &FunctionReplacement, &VariableReplacementWithStatic](
           const VarDecl *Var, const FunctionDecl *FuncCtx,
           const bool IsAddingConstexprToFuncCtx) -> const std::string & {
     if (!FuncCtx)
@@ -922,19 +947,8 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
     return VariableReplacementWithStatic;
   };
 
-  for (const auto &[Var, FuncCtx] : VariableMapping) {
-    const bool IsAddingConstexprToFuncCtx = Functions.contains(FuncCtx);
-    if (FuncCtx && getLangOpts().CPlusPlus23 && Var->isStaticLocal() &&
-        IsAddingConstexprToFuncCtx)
-      continue;
-    const SourceRange R =
-        SourceRange(Var->getTypeSpecStartLoc(), Var->getLocation());
-    auto Diag =
-        diag(Var->getLocation(), "variable %0 can be declared 'constexpr'")
-        << Var << R
-        << FixItHint::CreateInsertion(
-               Var->getTypeSpecStartLoc(),
-               VariableReplacement(Var, FuncCtx, IsAddingConstexprToFuncCtx));
+  const auto MaybeRemoveConst = [&, this](DiagnosticBuilder &Diag,
+                                          const VarDecl *Var) {
     // Since either of the locs can be in a macro, use `makeFileCharRange` to be
     // sure that we have a consistent `CharSourceRange`, located entirely in the
     // source file.
@@ -948,6 +962,56 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
                 Var->getASTContext().getSourceManager())) {
       Diag << FixItHint::CreateRemoval(ConstToken->getLocation());
     }
+  };
+
+  for (const auto *DStmt : DeclStmtsToDiagnose) {
+    std::string DeclNames = "";
+
+    const VarDecl *FirstVar = nullptr;
+    for (const auto *Var : DStmt->decls()) {
+      if (const auto *VDecl = llvm::dyn_cast_if_present<VarDecl>(Var)) {
+        if (!DeclNames.empty())
+          DeclNames += ", ";
+        DeclNames += "'" + VDecl->getNameAsString() + "'";
+        FirstVar = FirstVar ? FirstVar : VDecl;
+      }
+    }
+    if (!FirstVar)
+      continue;
+
+    const auto *FuncCtx = maybeResolveToTemplateDecl(
+        llvm::dyn_cast_if_present<FunctionDecl>(FirstVar->getDeclContext()));
+    const bool IsAddingConstexprToFuncCtx = Functions.contains(FuncCtx);
+    if (FuncCtx && getLangOpts().CPlusPlus23 && FirstVar->isStaticLocal() &&
+        IsAddingConstexprToFuncCtx)
+      continue;
+
+    auto Diag = diag(DStmt->getBeginLoc(),
+                     "the variables %0 can be declared 'constexpr'")
+                << DeclNames
+                << FixItHint::CreateInsertion(
+                       FirstVar->getTypeSpecStartLoc(),
+                       VariableReplacement(FirstVar, FuncCtx,
+                                           IsAddingConstexprToFuncCtx));
+    MaybeRemoveConst(Diag, FirstVar);
+  }
+
+  for (const auto *Var : VariableMapping) {
+    const auto *FuncCtx = maybeResolveToTemplateDecl(
+        llvm::dyn_cast_if_present<FunctionDecl>(Var->getDeclContext()));
+    const bool IsAddingConstexprToFuncCtx = Functions.contains(FuncCtx);
+    if (FuncCtx && getLangOpts().CPlusPlus23 && Var->isStaticLocal() &&
+        IsAddingConstexprToFuncCtx)
+      continue;
+    const SourceRange R =
+        SourceRange(Var->getTypeSpecStartLoc(), Var->getLocation());
+    auto Diag =
+        diag(Var->getLocation(), "variable %0 can be declared 'constexpr'")
+        << Var << R
+        << FixItHint::CreateInsertion(
+               Var->getTypeSpecStartLoc(),
+               VariableReplacement(Var, FuncCtx, IsAddingConstexprToFuncCtx));
+    MaybeRemoveConst(Diag, Var);
   }
 
   Functions.clear();

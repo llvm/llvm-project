@@ -472,6 +472,8 @@ namespace variable {
         // CHECK-MESSAGES-11: :[[@LINE-1]]:17: warning: variable 'TemplatedVar1' can be declared 'constexpr' [modernize-use-constexpr]
         // CHECK-FIXES-11: constexpr T TemplatedVar1 = T{};
 
+        static volatile int VolatileInt = 10;
+
         void h1() {
         // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'h1' can be declared 'constexpr' [modernize-use-constexpr]
         // CHECK-FIXES-23: constexpr void h1() {
@@ -487,10 +489,15 @@ namespace variable {
             const auto check = [](const int & ref) { };
             // CHECK-MESSAGES-17: :[[@LINE-1]]:24: warning: variable 'check' can be declared 'constexpr' [modernize-use-constexpr]
             // CHECK-FIXES-17: constexpr  auto check = [](const int & ref) { };
-            
+
             [[maybe_unused]] const int f1 = 4;
             // CHECK-MESSAGES-11: :[[@LINE-1]]:40: warning: variable 'f1' can be declared 'constexpr' [modernize-use-constexpr]
             // CHECK-FIXES-11: {{\[\[maybe_unused\]\]}} constexpr int f1 = 4;
+
+            const int g1 = 10, h1 = 0;
+            // CHECK-MESSAGES-11: :[[@LINE-1]]:13: warning: the variables 'g1', 'h1' can be declared 'constexpr' [modernize-use-constexpr]
+            // CHECK-FIXES-11: constexpr  int g1 = 10, h1 = 0;
+            const int i1 = 0, j1 = VolatileInt;
         }
     } // namespace literal_type
 
