@@ -22,5 +22,9 @@ add_tablegen(offload-tblgen OFFLOAD
   RecordTypes.hpp
   )
 
+if(TARGET cxx-headers)
+  add_dependencies(offload-tblgen cxx-headers)
+endif()
+
 set(OFFLOAD_TABLEGEN_EXE "${OFFLOAD_TABLEGEN_EXE}" CACHE INTERNAL "")
 set(OFFLOAD_TABLEGEN_TARGET "${OFFLOAD_TABLEGEN_TARGET}" CACHE INTERNAL "")
