@@ -808,9 +808,8 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_half(half inre
   ; GISEL-GFX11-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; GISEL-GFX11-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
   ; GISEL-GFX11-TRUE16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[COPY3]], 0, [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_F16_t16_e64_]]
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; GISEL-GFX11-TRUE16-NEXT:   FLAT_STORE_SHORT [[COPY5]], [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
+  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[DEF]]
+  ; GISEL-GFX11-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 [[COPY4]], [[V_ADD_F16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
   ; GISEL-GFX11-TRUE16-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-GFX11-FAKE16-LABEL: name: amdgpu_cs_chain_preserve_cc_half
@@ -849,8 +848,7 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_half(half inre
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_F16_t16_e64_]]
-  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   FLAT_STORE_SHORT killed [[COPY3]], killed [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
+  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 killed [[COPY3]], killed [[V_ADD_F16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   S_ENDPGM 0
   ;
   ; DAGISEL-GFX11-WF32-FAKE16-LABEL: name: amdgpu_cs_chain_preserve_cc_half
@@ -875,8 +873,7 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_half(half inre
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_F16_t16_e64_]]
-  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   FLAT_STORE_SHORT killed [[COPY3]], killed [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
+  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 killed [[COPY3]], killed [[V_ADD_F16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   S_ENDPGM 0
   ;
   ; DAGISEL-GFX11-WF64-FAKE16-LABEL: name: amdgpu_cs_chain_preserve_cc_half
@@ -1019,9 +1016,8 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_i16(i16 inreg 
   ; GISEL-GFX11-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; GISEL-GFX11-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
   ; GISEL-GFX11-TRUE16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, [[COPY3]], 0, [[COPY2]], 0, 0, implicit $exec
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_NC_U16_t16_e64_]]
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; GISEL-GFX11-TRUE16-NEXT:   FLAT_STORE_SHORT [[COPY5]], [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
+  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[DEF]]
+  ; GISEL-GFX11-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 [[COPY4]], [[V_ADD_NC_U16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
   ; GISEL-GFX11-TRUE16-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-GFX11-FAKE16-LABEL: name: amdgpu_cs_chain_preserve_cc_i16
@@ -1060,8 +1056,7 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_i16(i16 inreg 
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $exec
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_NC_U16_t16_e64_]]
-  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   FLAT_STORE_SHORT killed [[COPY3]], killed [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
+  ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 killed [[COPY3]], killed [[V_ADD_NC_U16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
   ; DAGISEL-GFX11-WF32-TRUE16-NEXT:   S_ENDPGM 0
   ;
   ; DAGISEL-GFX11-WF32-FAKE16-LABEL: name: amdgpu_cs_chain_preserve_cc_i16
@@ -1086,8 +1081,7 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_i16(i16 inreg 
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $exec
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_NC_U16_t16_e64_]]
-  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   FLAT_STORE_SHORT killed [[COPY3]], killed [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
+  ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 killed [[COPY3]], killed [[V_ADD_NC_U16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
   ; DAGISEL-GFX11-WF64-TRUE16-NEXT:   S_ENDPGM 0
   ;
   ; DAGISEL-GFX11-WF64-FAKE16-LABEL: name: amdgpu_cs_chain_preserve_cc_i16

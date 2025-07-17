@@ -9,16 +9,13 @@ typedef half   v8h   __attribute__((ext_vector_type(8)));
 typedef __bf16 v2bf16 __attribute__((ext_vector_type(2)));
 typedef __bf16 v4bf16 __attribute__((ext_vector_type(4)));
 typedef __bf16 v8bf16 __attribute__((ext_vector_type(8)));
-
+typedef short  v2s   __attribute__((ext_vector_type(2)));
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 
 #define PIXEL_SHAPE_8X4X8      (0 << 0)
 #define PIXEL_SHAPE_4X4X8      (1 << 0)
 #define PIXEL_SHAPE_4X4X16     (2 << 0)
 #define PIXEL_SHAPE_4X2X16     (3 << 0)
-
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i4_f32_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -30,8 +27,6 @@ void test_amdgcn_cvt_to_tensor_i4_f32_4x2x16(global int* out, v4f acc_in, char s
   *out = __builtin_amdgcn_cvt_to_tensor_i4_f32_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i4_f16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cvt.to.tensor.i4.f16.double.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 0, i1 true)
@@ -41,8 +36,6 @@ void test_amdgcn_cvt_to_tensor_i4_f32_4x2x16(global int* out, v4f acc_in, char s
 void test_amdgcn_cvt_to_tensor_i4_f16_8x4x8(global v2i* out, v8h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_i4_f16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i4_f16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
@@ -54,8 +47,6 @@ void test_amdgcn_cvt_to_tensor_i4_f16_4x4x8(global int* out, v4h acc_in, char sc
   *out = __builtin_amdgcn_cvt_to_tensor_i4_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i4_f16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.i4.f16.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 2, i1 true)
@@ -65,8 +56,6 @@ void test_amdgcn_cvt_to_tensor_i4_f16_4x4x8(global int* out, v4h acc_in, char sc
 void test_amdgcn_cvt_to_tensor_i4_f16_4x4x16(global int* out, v8h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_i4_f16_4x4x16(acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i4_f16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -78,8 +67,6 @@ void test_amdgcn_cvt_to_tensor_i4_f16_4x2x16(global int* out, v4h acc_in, char s
   *out = __builtin_amdgcn_cvt_to_tensor_i4_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i4_bf16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cvt.to.tensor.i4.bf16.double.v8bf16(<8 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 0, i1 true)
@@ -89,8 +76,6 @@ void test_amdgcn_cvt_to_tensor_i4_f16_4x2x16(global int* out, v4h acc_in, char s
 void test_amdgcn_cvt_to_tensor_i4_bf16_8x4x8(global v2i* out, v8bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_i4_bf16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i4_bf16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
@@ -102,8 +87,6 @@ void test_amdgcn_cvt_to_tensor_i4_bf16_4x4x8(global int* out, v4bf16 acc_in, cha
   *out = __builtin_amdgcn_cvt_to_tensor_i4_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i4_bf16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.i4.bf16.v8bf16(<8 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 2, i1 true)
@@ -113,8 +96,6 @@ void test_amdgcn_cvt_to_tensor_i4_bf16_4x4x8(global int* out, v4bf16 acc_in, cha
 void test_amdgcn_cvt_to_tensor_i4_bf16_4x4x16(global int* out, v8bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_i4_bf16_4x4x16(acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i4_bf16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -126,8 +107,6 @@ void test_amdgcn_cvt_to_tensor_i4_bf16_4x2x16(global int* out, v4bf16 acc_in, ch
   *out = __builtin_amdgcn_cvt_to_tensor_i4_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u4_f32_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.u4.f32.v4f32(<4 x float> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -137,8 +116,6 @@ void test_amdgcn_cvt_to_tensor_i4_bf16_4x2x16(global int* out, v4bf16 acc_in, ch
 void test_amdgcn_cvt_to_tensor_u4_f32_4x2x16(global int* out, v4f acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_u4_f32_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u4_f16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
@@ -150,8 +127,6 @@ void test_amdgcn_cvt_to_tensor_u4_f16_8x4x8(global v2i* out, v8h acc_in, char sc
   *out = __builtin_amdgcn_cvt_to_tensor_u4_f16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u4_f16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.u4.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -161,8 +136,6 @@ void test_amdgcn_cvt_to_tensor_u4_f16_8x4x8(global v2i* out, v8h acc_in, char sc
 void test_amdgcn_cvt_to_tensor_u4_f16_4x4x8(global int* out, v4h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_u4_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u4_f16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -174,8 +147,6 @@ void test_amdgcn_cvt_to_tensor_u4_f16_4x4x16(global int* out, v8h acc_in, char s
   *out = __builtin_amdgcn_cvt_to_tensor_u4_f16_4x4x16(acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u4_f16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.u4.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -185,8 +156,6 @@ void test_amdgcn_cvt_to_tensor_u4_f16_4x4x16(global int* out, v8h acc_in, char s
 void test_amdgcn_cvt_to_tensor_u4_f16_4x2x16(global int* out, v4h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_u4_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u4_bf16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
@@ -198,8 +167,6 @@ void test_amdgcn_cvt_to_tensor_u4_bf16_8x4x8(global v2i* out, v8bf16 acc_in, cha
   *out = __builtin_amdgcn_cvt_to_tensor_u4_bf16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u4_bf16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.u4.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -209,8 +176,6 @@ void test_amdgcn_cvt_to_tensor_u4_bf16_8x4x8(global v2i* out, v8bf16 acc_in, cha
 void test_amdgcn_cvt_to_tensor_u4_bf16_4x4x8(global int* out, v4bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_u4_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u4_bf16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -222,8 +187,6 @@ void test_amdgcn_cvt_to_tensor_u4_bf16_4x4x16(global int* out, v8bf16 acc_in, ch
   *out = __builtin_amdgcn_cvt_to_tensor_u4_bf16_4x4x16(acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u4_bf16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.u4.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -233,8 +196,6 @@ void test_amdgcn_cvt_to_tensor_u4_bf16_4x4x16(global int* out, v8bf16 acc_in, ch
 void test_amdgcn_cvt_to_tensor_u4_bf16_4x2x16(global int* out, v4bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_u4_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i8_f32_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -246,8 +207,6 @@ void test_amdgcn_cvt_to_tensor_i8_f32_4x2x16(global int* out, v4f acc_in, char s
   *out = __builtin_amdgcn_cvt_to_tensor_i8_f32_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i8_f16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cvt.to.tensor.i8.f16.double.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 0, i1 true)
@@ -258,8 +217,6 @@ void test_amdgcn_cvt_to_tensor_i8_f16_8x4x8(global v2i* out, v8h acc_in, char sc
   *out = __builtin_amdgcn_cvt_to_tensor_i8_f16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i8_f16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.i8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -269,8 +226,6 @@ void test_amdgcn_cvt_to_tensor_i8_f16_8x4x8(global v2i* out, v8h acc_in, char sc
 void test_amdgcn_cvt_to_tensor_i8_f16_4x4x8(global int* out, v4h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_i8_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i8_f16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -285,7 +240,6 @@ void test_amdgcn_cvt_to_tensor_i8_f16_4x4x16(global int* out0, global int* out1,
   __builtin_amdgcn_cvt_to_tensor_i8_f16_4x4x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i8_f16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.i8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -295,8 +249,6 @@ void test_amdgcn_cvt_to_tensor_i8_f16_4x4x16(global int* out0, global int* out1,
 void test_amdgcn_cvt_to_tensor_i8_f16_4x2x16(global int* out, v4h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_i8_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i8_bf16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
@@ -308,8 +260,6 @@ void test_amdgcn_cvt_to_tensor_i8_bf16_8x4x8(global v2i* out, v8bf16 acc_in, cha
   *out = __builtin_amdgcn_cvt_to_tensor_i8_bf16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i8_bf16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.i8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -319,8 +269,6 @@ void test_amdgcn_cvt_to_tensor_i8_bf16_8x4x8(global v2i* out, v8bf16 acc_in, cha
 void test_amdgcn_cvt_to_tensor_i8_bf16_4x4x8(global int* out, v4bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_i8_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i8_bf16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -335,7 +283,6 @@ void test_amdgcn_cvt_to_tensor_i8_bf16_4x4x16(global int* out0, global int* out1
   __builtin_amdgcn_cvt_to_tensor_i8_bf16_4x4x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_i8_bf16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.i8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -345,8 +292,6 @@ void test_amdgcn_cvt_to_tensor_i8_bf16_4x4x16(global int* out0, global int* out1
 void test_amdgcn_cvt_to_tensor_i8_bf16_4x2x16(global int* out, v4bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_i8_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u8_f32_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -358,8 +303,6 @@ void test_amdgcn_cvt_to_tensor_u8_f32_4x2x16(global int* out, v4f acc_in, char s
   *out = __builtin_amdgcn_cvt_to_tensor_u8_f32_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u8_f16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cvt.to.tensor.i8.bf16.double.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 0, i1 true)
@@ -370,8 +313,6 @@ void test_amdgcn_cvt_to_tensor_u8_f16_8x4x8(global v2i* out, v8h acc_in, char sc
   *out = __builtin_amdgcn_cvt_to_tensor_u8_f16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u8_f16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.u8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -381,8 +322,6 @@ void test_amdgcn_cvt_to_tensor_u8_f16_8x4x8(global v2i* out, v8h acc_in, char sc
 void test_amdgcn_cvt_to_tensor_u8_f16_4x4x8(global int* out, v4h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_u8_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u8_f16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -397,7 +336,6 @@ void test_amdgcn_cvt_to_tensor_u8_f16_4x4x16(global int* out0, global int* out1,
   __builtin_amdgcn_cvt_to_tensor_u8_f16_4x4x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u8_f16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.u8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -407,8 +345,6 @@ void test_amdgcn_cvt_to_tensor_u8_f16_4x4x16(global int* out0, global int* out1,
 void test_amdgcn_cvt_to_tensor_u8_f16_4x2x16(global int* out, v4h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_u8_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u8_bf16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
@@ -420,8 +356,6 @@ void test_amdgcn_cvt_to_tensor_u8_bf16_8x4x8(global v2i* out, v8bf16 acc_in, cha
   *out = __builtin_amdgcn_cvt_to_tensor_u8_bf16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u8_bf16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.u8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -431,8 +365,6 @@ void test_amdgcn_cvt_to_tensor_u8_bf16_8x4x8(global v2i* out, v8bf16 acc_in, cha
 void test_amdgcn_cvt_to_tensor_u8_bf16_4x4x8(global int* out, v4bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_u8_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u8_bf16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -447,7 +379,6 @@ void test_amdgcn_cvt_to_tensor_u8_bf16_4x4x16(global int* out0, global int* out1
   __builtin_amdgcn_cvt_to_tensor_u8_bf16_4x4x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_u8_bf16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.u8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -457,8 +388,6 @@ void test_amdgcn_cvt_to_tensor_u8_bf16_4x4x16(global int* out0, global int* out1
 void test_amdgcn_cvt_to_tensor_u8_bf16_4x2x16(global int* out, v4bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_u8_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_fp8_f32_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -470,8 +399,6 @@ void test_amdgcn_cvt_to_tensor_fp8_f32_4x2x16(global int* out, v4f acc_in, char 
   *out = __builtin_amdgcn_cvt_to_tensor_fp8_f32_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_fp8_f16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cvt.to.tensor.fp8.f16.double.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 0, i1 true)
@@ -482,8 +409,6 @@ void test_amdgcn_cvt_to_tensor_fp8_f16_8x4x8(global v2i* out, v8h acc_in, char s
   *out = __builtin_amdgcn_cvt_to_tensor_fp8_f16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_fp8_f16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.fp8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -493,8 +418,6 @@ void test_amdgcn_cvt_to_tensor_fp8_f16_8x4x8(global v2i* out, v8h acc_in, char s
 void test_amdgcn_cvt_to_tensor_fp8_f16_4x4x8(global int* out, v4h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_fp8_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_fp8_f16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -509,7 +432,6 @@ void test_amdgcn_cvt_to_tensor_fp8_f16_4x4x16(global int* out0, global int* out1
   __builtin_amdgcn_cvt_to_tensor_fp8_f16_4x4x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_fp8_f16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.fp8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -519,8 +441,6 @@ void test_amdgcn_cvt_to_tensor_fp8_f16_4x4x16(global int* out0, global int* out1
 void test_amdgcn_cvt_to_tensor_fp8_f16_4x2x16(global int* out, v4h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_fp8_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_fp8_bf16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
@@ -532,8 +452,6 @@ void test_amdgcn_cvt_to_tensor_fp8_bf16_8x4x8(global v2i* out, v8bf16 acc_in, ch
   *out = __builtin_amdgcn_cvt_to_tensor_fp8_bf16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_fp8_bf16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.fp8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -543,8 +461,6 @@ void test_amdgcn_cvt_to_tensor_fp8_bf16_8x4x8(global v2i* out, v8bf16 acc_in, ch
 void test_amdgcn_cvt_to_tensor_fp8_bf16_4x4x8(global int* out, v4bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_fp8_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_fp8_bf16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -559,7 +475,6 @@ void test_amdgcn_cvt_to_tensor_fp8_bf16_4x4x16(global int* out0, global int* out
   __builtin_amdgcn_cvt_to_tensor_fp8_bf16_4x4x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_fp8_bf16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.fp8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -569,8 +484,6 @@ void test_amdgcn_cvt_to_tensor_fp8_bf16_4x4x16(global int* out0, global int* out
 void test_amdgcn_cvt_to_tensor_fp8_bf16_4x2x16(global int* out, v4bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_fp8_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf8_f32_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -582,8 +495,6 @@ void test_amdgcn_cvt_to_tensor_bf8_f32_4x2x16(global int* out, v4f acc_in, char 
   *out = __builtin_amdgcn_cvt_to_tensor_bf8_f32_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf8_f16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cvt.to.tensor.bf8.f16.double.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 0, i1 true)
@@ -594,8 +505,6 @@ void test_amdgcn_cvt_to_tensor_bf8_f16_8x4x8(global v2i* out, v8h acc_in, char s
   *out = __builtin_amdgcn_cvt_to_tensor_bf8_f16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf8_f16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.bf8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -605,8 +514,6 @@ void test_amdgcn_cvt_to_tensor_bf8_f16_8x4x8(global v2i* out, v8h acc_in, char s
 void test_amdgcn_cvt_to_tensor_bf8_f16_4x4x8(global int* out, v4h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_bf8_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf8_f16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -621,7 +528,6 @@ void test_amdgcn_cvt_to_tensor_bf8_f16_4x4x16(global int* out0, global int* out1
   __builtin_amdgcn_cvt_to_tensor_bf8_f16_4x4x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf8_f16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.bf8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -631,8 +537,6 @@ void test_amdgcn_cvt_to_tensor_bf8_f16_4x4x16(global int* out0, global int* out1
 void test_amdgcn_cvt_to_tensor_bf8_f16_4x2x16(global int* out, v4h acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_bf8_f16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf8_bf16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
@@ -644,8 +548,6 @@ void test_amdgcn_cvt_to_tensor_bf8_bf16_8x4x8(global v2i* out, v8bf16 acc_in, ch
   *out = __builtin_amdgcn_cvt_to_tensor_bf8_bf16_8x4x8(acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf8_bf16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.bf8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -655,8 +557,6 @@ void test_amdgcn_cvt_to_tensor_bf8_bf16_8x4x8(global v2i* out, v8bf16 acc_in, ch
 void test_amdgcn_cvt_to_tensor_bf8_bf16_4x4x8(global int* out, v4bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_bf8_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf8_bf16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -671,7 +571,6 @@ void test_amdgcn_cvt_to_tensor_bf8_bf16_4x4x16(global int* out0, global int* out
   __builtin_amdgcn_cvt_to_tensor_bf8_bf16_4x4x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf8_bf16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.bf8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -681,8 +580,6 @@ void test_amdgcn_cvt_to_tensor_bf8_bf16_4x4x16(global int* out0, global int* out
 void test_amdgcn_cvt_to_tensor_bf8_bf16_4x2x16(global int* out, v4bf16 acc_in, char scale) {
   *out = __builtin_amdgcn_cvt_to_tensor_bf8_bf16_4x4x8_4x2x16(acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_f16_f32_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -697,7 +594,6 @@ void test_amdgcn_cvt_to_tensor_f16_f32_4x2x16(global v2h* out0, global v2h* out1
   __builtin_amdgcn_cvt_to_tensor_f16_f32_4x2x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_f16_f16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <4 x half>, <4 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f16.scatter2.double.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 0, i1 true)
@@ -711,7 +607,6 @@ void test_amdgcn_cvt_to_tensor_f16_f16_8x4x8(global v4h* out0, global v4h* out1,
   __builtin_amdgcn_cvt_to_tensor_f16_f16_8x4x8(out0, out1, acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_f16_f16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f16.scatter2.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -724,7 +619,6 @@ void test_amdgcn_cvt_to_tensor_f16_f16_8x4x8(global v4h* out0, global v4h* out1,
 void test_amdgcn_cvt_to_tensor_f16_f16_4x4x8(global v2h* out0, global v2h* out1, v4h acc_in, char scale) {
   __builtin_amdgcn_cvt_to_tensor_f16_f16_4x4x8_4x2x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_f16_f16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -743,7 +637,6 @@ void test_amdgcn_cvt_to_tensor_f16_f16_4x4x16(global v2h* out0, global v2h* out1
   __builtin_amdgcn_cvt_to_tensor_f16_f16_4x4x16(out0, out1, out2, out3, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_f16_f16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f16.scatter2.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -756,7 +649,6 @@ void test_amdgcn_cvt_to_tensor_f16_f16_4x4x16(global v2h* out0, global v2h* out1
 void test_amdgcn_cvt_to_tensor_f16_f16_4x2x16(global v2h* out0, global v2h* out1, v4h acc_in, char scale) {
   __builtin_amdgcn_cvt_to_tensor_f16_f16_4x4x8_4x2x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_f16_bf16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
@@ -771,7 +663,6 @@ void test_amdgcn_cvt_to_tensor_f16_bf16_8x4x8(global v4h* out0, global v4h* out1
   __builtin_amdgcn_cvt_to_tensor_f16_bf16_8x4x8(out0, out1, acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_f16_bf16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.bf16.scatter2.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -784,7 +675,6 @@ void test_amdgcn_cvt_to_tensor_f16_bf16_8x4x8(global v4h* out0, global v4h* out1
 void test_amdgcn_cvt_to_tensor_f16_bf16_4x4x8(global v2h* out0, global v2h* out1, v4bf16 acc_in, char scale) {
   __builtin_amdgcn_cvt_to_tensor_f16_bf16_4x4x8_4x2x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_f16_bf16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -803,7 +693,6 @@ void test_amdgcn_cvt_to_tensor_f16_bf16_4x4x16(global v2h* out0, global v2h* out
   __builtin_amdgcn_cvt_to_tensor_f16_bf16_4x4x16(out0, out1, out2, out3, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_f16_bf16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.bf16.scatter2.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -816,7 +705,6 @@ void test_amdgcn_cvt_to_tensor_f16_bf16_4x4x16(global v2h* out0, global v2h* out
 void test_amdgcn_cvt_to_tensor_f16_bf16_4x2x16(global v2h* out0, global v2h* out1, v4bf16 acc_in, char scale) {
   __builtin_amdgcn_cvt_to_tensor_f16_bf16_4x4x8_4x2x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf16_f32_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -831,7 +719,6 @@ void test_amdgcn_cvt_to_tensor_bf16_f32_4x2x16(global v2bf16* out0, global v2bf1
   __builtin_amdgcn_cvt_to_tensor_bf16_f32_4x2x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf16_f16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <4 x bfloat>, <4 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f16.scatter2.double.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 0, i1 true)
@@ -845,7 +732,6 @@ void test_amdgcn_cvt_to_tensor_bf16_f16_8x4x8(global v4bf16* out0, global v4bf16
   __builtin_amdgcn_cvt_to_tensor_bf16_f16_8x4x8(out0, out1, acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf16_f16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f16.scatter2.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -858,7 +744,6 @@ void test_amdgcn_cvt_to_tensor_bf16_f16_8x4x8(global v4bf16* out0, global v4bf16
 void test_amdgcn_cvt_to_tensor_bf16_f16_4x4x8(global v2bf16* out0, global v2bf16* out1, v4h acc_in, char scale) {
   __builtin_amdgcn_cvt_to_tensor_bf16_f16_4x4x8_4x2x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf16_f16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -877,7 +762,6 @@ void test_amdgcn_cvt_to_tensor_bf16_f16_4x4x16(global v2bf16* out0, global v2bf1
   __builtin_amdgcn_cvt_to_tensor_bf16_f16_4x4x16(out0, out1, out2, out3, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf16_f16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f16.scatter2.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -890,7 +774,6 @@ void test_amdgcn_cvt_to_tensor_bf16_f16_4x4x16(global v2bf16* out0, global v2bf1
 void test_amdgcn_cvt_to_tensor_bf16_f16_4x2x16(global v2bf16* out0, global v2bf16* out1, v4h acc_in, char scale) {
   __builtin_amdgcn_cvt_to_tensor_bf16_f16_4x4x8_4x2x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf16_bf16_8x4x8(
 // CHECK-GFX1300-NEXT:  entry:
@@ -905,7 +788,6 @@ void test_amdgcn_cvt_to_tensor_bf16_bf16_8x4x8(global v4bf16* out0, global v4bf1
   __builtin_amdgcn_cvt_to_tensor_bf16_bf16_8x4x8(out0, out1, acc_in, scale, PIXEL_SHAPE_8X4X8, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf16_bf16_4x4x8(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.bf16.scatter2.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 1, i1 true)
@@ -918,7 +800,6 @@ void test_amdgcn_cvt_to_tensor_bf16_bf16_8x4x8(global v4bf16* out0, global v4bf1
 void test_amdgcn_cvt_to_tensor_bf16_bf16_4x4x8(global v2bf16* out0, global v2bf16* out1, v4bf16 acc_in, char scale) {
   __builtin_amdgcn_cvt_to_tensor_bf16_bf16_4x4x8_4x2x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X4X8, 1);
 }
-
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf16_bf16_4x4x16(
 // CHECK-GFX1300-NEXT:  entry:
@@ -937,7 +818,6 @@ void test_amdgcn_cvt_to_tensor_bf16_bf16_4x4x16(global v2bf16* out0, global v2bf
   __builtin_amdgcn_cvt_to_tensor_bf16_bf16_4x4x16(out0, out1, out2, out3, acc_in, scale, PIXEL_SHAPE_4X4X16, 1);
 }
 
-
 // CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_bf16_bf16_4x2x16(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.bf16.scatter2.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], i32 3, i1 true)
@@ -951,3 +831,194 @@ void test_amdgcn_cvt_to_tensor_bf16_bf16_4x2x16(global v2bf16* out0, global v2bf
   __builtin_amdgcn_cvt_to_tensor_bf16_bf16_4x4x8_4x2x16(out0, out1, acc_in, scale, PIXEL_SHAPE_4X2X16, 1);
 }
 
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_fp8_f32_4x2x16(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.sr.fp8.f32.v4f32(<4 x float> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 3, i1 true)
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_fp8_f32_4x2x16(global int* out, v4f acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_fp8_f32_4x2x16(acc_in, scale, rand, PIXEL_SHAPE_4X2X16, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_fp8_f16_8x4x8(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cvt.to.tensor.sr.fp8.f16.double.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 0, i1 true)
+// CHECK-GFX1300-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA8]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_fp8_f16_8x4x8(global v2i* out, v8h acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_fp8_f16_8x4x8(acc_in, scale, rand, PIXEL_SHAPE_8X4X8, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_fp8_f16_4x4x8(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.sr.fp8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 1, i1 true)
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_fp8_f16_4x4x8(global int* out, v4h acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_fp8_f16_4x4x8_4x2x16(acc_in, scale, rand, PIXEL_SHAPE_4X4X8, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_fp8_f16_4x4x16(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.sr.fp8.f16.scatter2.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 2, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i32 } [[TMP0]], 0
+// CHECK-GFX1300-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
+// CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i32 } [[TMP0]], 1
+// CHECK-GFX1300-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[OUT1:%.*]], align 4
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_fp8_f16_4x4x16(global int* out0, global int* out1, v8h acc_in, char scale, v2s rand) {
+  __builtin_amdgcn_cvt_to_tensor_sr_fp8_f16_4x4x16(out0, out1, acc_in, scale, rand, PIXEL_SHAPE_4X4X16, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_fp8_f16_4x2x16(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.sr.fp8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 3, i1 true)
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_fp8_f16_4x2x16(global int* out, v4h acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_fp8_f16_4x4x8_4x2x16(acc_in, scale, rand, PIXEL_SHAPE_4X2X16, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_fp8_bf16_8x4x8(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cvt.to.tensor.sr.fp8.bf16.double.v8bf16(<8 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 0, i1 true)
+// CHECK-GFX1300-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA8]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_fp8_bf16_8x4x8(global v2i* out, v8bf16 acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_fp8_bf16_8x4x8(acc_in, scale, rand, PIXEL_SHAPE_8X4X8, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_fp8_bf16_4x4x8(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.sr.fp8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 1, i1 true)
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_fp8_bf16_4x4x8(global int* out, v4bf16 acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_fp8_bf16_4x4x8_4x2x16(acc_in, scale, rand, PIXEL_SHAPE_4X4X8, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_fp8_bf16_4x4x16(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.sr.fp8.bf16.scatter2.v8bf16(<8 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 2, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i32 } [[TMP0]], 0
+// CHECK-GFX1300-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
+// CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i32 } [[TMP0]], 1
+// CHECK-GFX1300-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[OUT1:%.*]], align 4
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_fp8_bf16_4x4x16(global int* out0, global int* out1, v8bf16 acc_in, char scale, v2s rand) {
+  __builtin_amdgcn_cvt_to_tensor_sr_fp8_bf16_4x4x16(out0, out1, acc_in, scale, rand, PIXEL_SHAPE_4X4X16, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_fp8_bf16_4x2x16(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.sr.fp8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 3, i1 true)
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_fp8_bf16_4x2x16(global int* out, v4bf16 acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_fp8_bf16_4x4x8_4x2x16(acc_in, scale, rand, PIXEL_SHAPE_4X2X16, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_bf8_f32_4x2x16(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.sr.bf8.f32.v4f32(<4 x float> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 3, i1 true)
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_bf8_f32_4x2x16(global int* out, v4f acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_bf8_f32_4x2x16(acc_in, scale, rand, PIXEL_SHAPE_4X2X16, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_bf8_f16_8x4x8(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cvt.to.tensor.sr.bf8.f16.double.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 0, i1 true)
+// CHECK-GFX1300-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA8]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_bf8_f16_8x4x8(global v2i* out, v8h acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_bf8_f16_8x4x8(acc_in, scale, rand, PIXEL_SHAPE_8X4X8, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_bf8_f16_4x4x8(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.sr.bf8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 1, i1 true)
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_bf8_f16_4x4x8(global int* out, v4h acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_bf8_f16_4x4x8_4x2x16(acc_in, scale, rand, PIXEL_SHAPE_4X4X8, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_bf8_f16_4x4x16(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.sr.bf8.f16.scatter2.v8f16(<8 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 2, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i32 } [[TMP0]], 0
+// CHECK-GFX1300-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
+// CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i32 } [[TMP0]], 1
+// CHECK-GFX1300-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[OUT1:%.*]], align 4
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_bf8_f16_4x4x16(global int* out0, global int* out1, v8h acc_in, char scale, v2s rand) {
+  __builtin_amdgcn_cvt_to_tensor_sr_bf8_f16_4x4x16(out0, out1, acc_in, scale, rand, PIXEL_SHAPE_4X4X16, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_bf8_f16_4x2x16(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.sr.bf8.f16.v4f16(<4 x half> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 3, i1 true)
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_bf8_f16_4x2x16(global int* out, v4h acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_bf8_f16_4x4x8_4x2x16(acc_in, scale, rand, PIXEL_SHAPE_4X2X16, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_bf8_bf16_8x4x8(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cvt.to.tensor.sr.bf8.bf16.double.v8bf16(<8 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 0, i1 true)
+// CHECK-GFX1300-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA8]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_bf8_bf16_8x4x8(global v2i* out, v8bf16 acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_bf8_bf16_8x4x8(acc_in, scale, rand, PIXEL_SHAPE_8X4X8, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_bf8_bf16_4x4x8(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.sr.bf8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 1, i1 true)
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_bf8_bf16_4x4x8(global int* out, v4bf16 acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_bf8_bf16_4x4x8_4x2x16(acc_in, scale, rand, PIXEL_SHAPE_4X4X8, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_bf8_bf16_4x4x16(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.sr.bf8.bf16.scatter2.v8bf16(<8 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 2, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i32 } [[TMP0]], 0
+// CHECK-GFX1300-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4
+// CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i32 } [[TMP0]], 1
+// CHECK-GFX1300-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[OUT1:%.*]], align 4
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_bf8_bf16_4x4x16(global int* out0, global int* out1, v8bf16 acc_in, char scale, v2s rand) {
+  __builtin_amdgcn_cvt_to_tensor_sr_bf8_bf16_4x4x16(out0, out1, acc_in, scale, rand, PIXEL_SHAPE_4X4X16, 1);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_cvt_to_tensor_sr_bf8_bf16_4x2x16(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cvt.to.tensor.sr.bf8.bf16.v4bf16(<4 x bfloat> [[ACC_IN:%.*]], i8 [[SCALE:%.*]], <2 x i16> [[RAND:%.*]], i32 3, i1 true)
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_cvt_to_tensor_sr_bf8_bf16_4x2x16(global int* out, v4bf16 acc_in, char scale, v2s rand) {
+  *out = __builtin_amdgcn_cvt_to_tensor_sr_bf8_bf16_4x4x8_4x2x16(acc_in, scale, rand, PIXEL_SHAPE_4X2X16, 1);
+}
