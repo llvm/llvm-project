@@ -35,7 +35,7 @@ config.substitutions.append(("%clangxx ", build_invocation(clang_ubsan_cxxflags)
 config.suffixes = [".c", ".cpp"]
 
 # Check that the host supports UndefinedBehaviorSanitizerMinimal tests
-if config.host_os not in [
+if config.target_os not in [
     "Linux",
     "FreeBSD",
     "NetBSD",
