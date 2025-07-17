@@ -3240,12 +3240,24 @@ as follows:
     as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``
     address space cannot be specified as non-integral.
 
-Unless explicitly stated otherwise, on every specification that specifies
-an alignment, the value of the alignment must be in the range [1,2^16)
-and must be a power of two times the width of a byte.
-On every specification that takes a ``<abi>:<pref>``, specifying the
-``<pref>`` alignment is optional. If omitted, the preceding ``:``
-should be omitted too and ``<pref>`` will be equal to ``<abi>``.
+``<abi>`` is a lower bound on what is required for a type to be considered
+aligned. This is used in various places, such as:
+
+- The alignment for loads and stores if none is explicitly given.
+- The alignment used to compute struct layout.
+- The alignment used to compute allocation sizes and thus ``getelementptr``
+  offsets.
+- The alignment below which accesses are considered underaligned.
+
+``<pref>`` allows providing a more optimal alignment that should be used when
+possible, primarily for ``alloca`` and the alignment of global variables. It is
+an optional value that must be greater than or equal to ``<abi>``. If omitted,
+the preceding ``:`` should also be omitted and ``<pref>`` will be equal to
+``<abi>``.
+
+Unless explicitly stated otherwise, every alignment specification is provided in
+bits and must be in the range [1,2^16). The value must be a power of two times
+the width of a byte (i.e. ``align = 8 * 2^N``).
 
 When constructing the data layout for a given target, LLVM starts with a
 default set of specifications which are then (possibly) overridden by
@@ -28302,9 +28314,9 @@ Overview:
 
 The '``llvm.experimental.constrained.lrint``' intrinsic returns the first
 argument rounded to the nearest integer. An inexact floating-point exception
-will be raised if the argument is not an integer. An invalid exception is
-raised if the result is too large to fit into a supported integer type,
-and in this case the result is undefined.
+will be raised if the argument is not an integer. If the rounded value is too
+large to fit into the result type, an invalid exception is raised, and the
+return value is a non-deterministic value (equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28350,9 +28362,9 @@ Overview:
 
 The '``llvm.experimental.constrained.llrint``' intrinsic returns the first
 argument rounded to the nearest integer. An inexact floating-point exception
-will be raised if the argument is not an integer. An invalid exception is
-raised if the result is too large to fit into a supported integer type,
-and in this case the result is undefined.
+will be raised if the argument is not an integer. If the rounded value is too
+large to fit into the result type, an invalid exception is raised, and the
+return value is a non-deterministic value (equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28701,8 +28713,9 @@ Overview:
 The '``llvm.experimental.constrained.lround``' intrinsic returns the first
 argument rounded to the nearest integer with ties away from zero.  It will
 raise an inexact floating-point exception if the argument is not an integer.
-An invalid exception is raised if the result is too large to fit into a
-supported integer type, and in this case the result is undefined.
+If the rounded value is too large to fit into the result type, an invalid
+exception is raised, and the return value is a non-deterministic value
+(equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28739,8 +28752,9 @@ Overview:
 The '``llvm.experimental.constrained.llround``' intrinsic returns the first
 argument rounded to the nearest integer with ties away from zero. It will
 raise an inexact floating-point exception if the argument is not an integer.
-An invalid exception is raised if the result is too large to fit into a
-supported integer type, and in this case the result is undefined.
+If the rounded value is too large to fit into the result type, an invalid
+exception is raised, and the return value is a non-deterministic value
+(equivalent to `freeze poison`).
 
 Arguments:
 """"""""""

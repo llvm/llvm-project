@@ -32,7 +32,7 @@
 
 // Make sure 128 and 64 bit versions are passed like integers.
 void ParamPassing(_BitInt(128) b, _BitInt(64) c) {}
-// LIN64: define{{.*}} void @ParamPassing(i64 %{{.+}}, i64 %{{.+}}, i64 %{{.+}})
+// LIN64: define{{.*}} void @ParamPassing(i128 %{{.+}}, i64 %{{.+}})
 // WIN64: define dso_local void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
 // LIN32: define{{.*}} void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
 // WIN32: define dso_local void @ParamPassing(ptr %{{.+}}, i64 %{{.+}})
@@ -251,7 +251,7 @@ _BitInt(127) ReturnPassing3(void) { return 0; }
 // LA32: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 
 _BitInt(128) ReturnPassing4(void) { return 0; }
-// LIN64: define{{.*}} { i64, i64 } @ReturnPassing4(
+// LIN64: define{{.*}} i128 @ReturnPassing4(
 // WIN64: define dso_local void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // LIN32: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // WIN32: define dso_local void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
