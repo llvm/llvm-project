@@ -15,6 +15,7 @@
 
 #include "llvm/BinaryFormat/Swift.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -25,7 +26,7 @@ namespace llvm {
 class MCContext;
 class MCSection;
 
-class MCObjectFileInfo {
+class LLVM_ABI MCObjectFileInfo {
 protected:
   /// True if target object file supports a weak_definition of constant 0 for an
   /// omitted EH frame.
@@ -230,8 +231,6 @@ protected:
   MCSection *GLJMPSection = nullptr;
 
   // GOFF specific sections.
-  MCSection *PPA1Section = nullptr;
-  MCSection *PPA2Section = nullptr;
   MCSection *PPA2ListSection = nullptr;
   MCSection *ADASection = nullptr;
   MCSection *IDRLSection = nullptr;
@@ -438,8 +437,6 @@ public:
   MCSection *getGLJMPSection() const { return GLJMPSection; }
 
   // GOFF specific sections.
-  MCSection *getPPA1Section() const { return PPA1Section; }
-  MCSection *getPPA2Section() const { return PPA2Section; }
   MCSection *getPPA2ListSection() const { return PPA2ListSection; }
   MCSection *getADASection() const { return ADASection; }
   MCSection *getIDRLSection() const { return IDRLSection; }

@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86MCExpr.h"
+#include "MCTargetDesc/X86MCAsmInfo.h"
 #include "X86.h"
 #include "X86CallingConv.h"
 #include "X86FrameLowering.h"
@@ -287,7 +287,8 @@ Align X86TargetLowering::getByValTypeAlignment(Type *Ty,
 /// For vector ops we check that the overall size isn't larger than our
 /// preferred vector width.
 EVT X86TargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   if (!FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
     if (Op.size() >= 16 &&
         (!Subtarget.isUnalignedMem16Slow() || Op.isAligned(Align(16)))) {
@@ -472,7 +473,7 @@ X86TargetLowering::LowerCustomJumpTableEntry(const MachineJumpTableInfo *MJTI,
   assert(isPositionIndependent() && Subtarget.isPICStyleGOT());
   // In 32-bit ELF systems, our jump table entries are formed with @GOTOFF
   // entries.
-  return MCSymbolRefExpr::create(MBB->getSymbol(), X86MCExpr::VK_GOTOFF, Ctx);
+  return MCSymbolRefExpr::create(MBB->getSymbol(), X86::S_GOTOFF, Ctx);
 }
 
 /// Returns relocation base for the given PIC jumptable.
@@ -1929,9 +1930,9 @@ SDValue X86TargetLowering::LowerFormalArguments(
   }
 
   if (CallingConv::PreserveNone == CallConv)
-    for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
-      if (Ins[I].Flags.isSwiftSelf() || Ins[I].Flags.isSwiftAsync() ||
-          Ins[I].Flags.isSwiftError()) {
+    for (const ISD::InputArg &In : Ins) {
+      if (In.Flags.isSwiftSelf() || In.Flags.isSwiftAsync() ||
+          In.Flags.isSwiftError()) {
         errorUnsupported(DAG, dl,
                          "Swift attributes can't be used with preserve_none");
         break;
@@ -2049,6 +2050,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   MachineFunction::CallSiteInfo CSInfo;
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
+
+  if (IsIndirectCall && !IsWin64 &&
+      M->getModuleFlag("import-call-optimization"))
+    errorUnsupported(DAG, dl,
+                     "Indirect calls must have a normal calling convention if "
+                     "Import Call Optimization is enabled");
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -2415,12 +2422,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Build a sequence of copy-to-reg nodes chained together with token chain
   // and glue operands which copy the outgoing args into registers.
   SDValue InGlue;
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
-                             RegsToPass[i].second, InGlue);
+  for (const auto &[Reg, N] : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, dl, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
 
+  bool IsImpCall = false;
   if (DAG.getTarget().getCodeModel() == CodeModel::Large) {
     assert(Is64Bit && "Large code model is only legal in 64-bit mode.");
     // In the 64-bit large code model, we have to make all calls
@@ -2433,7 +2440,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // ForCall to true here has the effect of removing WrapperRIP when possible
     // to allow direct calls to be selected without first materializing the
     // address into a register.
-    Callee = LowerGlobalOrExternal(Callee, DAG, /*ForCall=*/true);
+    Callee = LowerGlobalOrExternal(Callee, DAG, /*ForCall=*/true, &IsImpCall);
   } else if (Subtarget.isTarget64BitILP32() &&
              Callee.getValueType() == MVT::i32) {
     // Zero-extend the 32-bit Callee address into a 64-bit according to x32 ABI
@@ -2455,9 +2462,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
-    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
-                                  RegsToPass[i].second.getValueType()));
+  for (const auto &[Reg, N] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
   const uint32_t *Mask = [&]() {
@@ -2555,7 +2561,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Returns a chain & a glue for retval copy to use.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-  if (IsNoTrackIndirectCall) {
+  if (IsImpCall) {
+    Chain = DAG.getNode(X86ISD::IMP_CALL, dl, NodeTys, Ops);
+  } else if (IsNoTrackIndirectCall) {
     Chain = DAG.getNode(X86ISD::NT_CALL, dl, NodeTys, Ops);
   } else if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
     // Calls with a "clang.arc.attachedcall" bundle are special. They should be
@@ -2606,9 +2614,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   if (CallingConv::PreserveNone == CallConv)
-    for (unsigned I = 0, E = Outs.size(); I != E; ++I) {
-      if (Outs[I].Flags.isSwiftSelf() || Outs[I].Flags.isSwiftAsync() ||
-          Outs[I].Flags.isSwiftError()) {
+    for (const ISD::OutputArg &Out : Outs) {
+      if (Out.Flags.isSwiftSelf() || Out.Flags.isSwiftAsync() ||
+          Out.Flags.isSwiftError()) {
         errorUnsupported(DAG, dl,
                          "Swift attributes can't be used with preserve_none");
         break;

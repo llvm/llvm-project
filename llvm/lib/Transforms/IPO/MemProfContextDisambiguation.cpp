@@ -39,6 +39,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
@@ -94,6 +95,8 @@ STATISTIC(NewMergedNodes, "Number of new nodes created during merging");
 STATISTIC(NonNewMergedNodes, "Number of non new nodes used during merging");
 STATISTIC(MissingAllocForContextId,
           "Number of missing alloc nodes for context ids");
+STATISTIC(SkippedCallsCloning,
+          "Number of calls skipped during cloning due to unexpected operand");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -179,6 +182,12 @@ static cl::opt<bool>
 static cl::opt<bool> AllowRecursiveContexts(
     "memprof-allow-recursive-contexts", cl::init(true), cl::Hidden,
     cl::desc("Allow cloning of contexts having recursive cycles"));
+
+// Set the minimum absolute count threshold for allowing inlining of indirect
+// calls promoted during cloning.
+static cl::opt<unsigned> MemProfICPNoInlineThreshold(
+    "memprof-icp-noinline-threshold", cl::init(2), cl::Hidden,
+    cl::desc("Minimum absolute count for promoted target to be inlinable"));
 
 namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
@@ -1641,7 +1650,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // this entry.
   DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
 
-  bool PrevIterCreatedNode = false;
+  [[maybe_unused]] bool PrevIterCreatedNode = false;
   bool CreatedNode = false;
   for (unsigned I = 0; I < Calls.size();
        I++, PrevIterCreatedNode = CreatedNode) {
@@ -1831,8 +1840,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     DenseMap<const FuncTy *, unsigned> FuncToIndex;
     for (const auto &[Idx, CallCtxInfo] : enumerate(Calls))
       FuncToIndex.insert({CallCtxInfo.Func, Idx});
-    std::stable_sort(
-        Calls.begin(), Calls.end(),
+    llvm::stable_sort(
+        Calls,
         [&FuncToIndex](const CallContextInfo &A, const CallContextInfo &B) {
           return A.StackIds.size() > B.StackIds.size() ||
                  (A.StackIds.size() == B.StackIds.size() &&
@@ -2182,6 +2191,9 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
 
   updateStackNodes();
 
+  if (ExportToDot)
+    exportToDot("poststackupdate");
+
   handleCallsitesWithMultipleTargets();
 
   markBackedges();
@@ -2231,9 +2243,8 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
           CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
               EmptyContext;
           unsigned I = 0;
-          assert(
-              (!MemProfReportHintedSizes && MinClonedColdBytePercent >= 100) ||
-              AN.ContextSizeInfos.size() == AN.MIBs.size());
+          assert(!metadataMayIncludeContextSizeInfo() ||
+                 AN.ContextSizeInfos.size() == AN.MIBs.size());
           // Now add all of the MIBs and their stack nodes.
           for (auto &MIB : AN.MIBs) {
             CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
@@ -2284,6 +2295,9 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
     exportToDot("prestackupdate");
 
   updateStackNodes();
+
+  if (ExportToDot)
+    exportToDot("poststackupdate");
 
   handleCallsitesWithMultipleTargets();
 
@@ -2955,11 +2969,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
   for (auto &Edge : CallerEdges)
     OS << "\t\t" << *Edge << "\n";
   if (!Clones.empty()) {
-    OS << "\tClones: ";
-    ListSeparator LS;
-    for (auto *Clone : Clones)
-      OS << LS << Clone;
-    OS << "\n";
+    OS << "\tClones: " << llvm::interleaved(Clones) << "\n";
   } else if (CloneOf) {
     OS << "\tClone of " << CloneOf << "\n";
   }
@@ -3691,27 +3701,27 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   const unsigned AllocTypeCloningPriority[] = {/*None*/ 3, /*NotCold*/ 4,
                                                /*Cold*/ 1,
                                                /*NotColdCold*/ 2};
-  std::stable_sort(Node->CallerEdges.begin(), Node->CallerEdges.end(),
-                   [&](const std::shared_ptr<ContextEdge> &A,
-                       const std::shared_ptr<ContextEdge> &B) {
-                     // Nodes with non-empty context ids should be sorted before
-                     // those with empty context ids.
-                     if (A->ContextIds.empty())
-                       // Either B ContextIds are non-empty (in which case we
-                       // should return false because B < A), or B ContextIds
-                       // are empty, in which case they are equal, and we should
-                       // maintain the original relative ordering.
-                       return false;
-                     if (B->ContextIds.empty())
-                       return true;
+  llvm::stable_sort(Node->CallerEdges,
+                    [&](const std::shared_ptr<ContextEdge> &A,
+                        const std::shared_ptr<ContextEdge> &B) {
+                      // Nodes with non-empty context ids should be sorted
+                      // before those with empty context ids.
+                      if (A->ContextIds.empty())
+                        // Either B ContextIds are non-empty (in which case we
+                        // should return false because B < A), or B ContextIds
+                        // are empty, in which case they are equal, and we
+                        // should maintain the original relative ordering.
+                        return false;
+                      if (B->ContextIds.empty())
+                        return true;
 
-                     if (A->AllocTypes == B->AllocTypes)
-                       // Use the first context id for each edge as a
-                       // tie-breaker.
-                       return *A->ContextIds.begin() < *B->ContextIds.begin();
-                     return AllocTypeCloningPriority[A->AllocTypes] <
-                            AllocTypeCloningPriority[B->AllocTypes];
-                   });
+                      if (A->AllocTypes == B->AllocTypes)
+                        // Use the first context id for each edge as a
+                        // tie-breaker.
+                        return *A->ContextIds.begin() < *B->ContextIds.begin();
+                      return AllocTypeCloningPriority[A->AllocTypes] <
+                             AllocTypeCloningPriority[B->AllocTypes];
+                    });
 
   assert(Node->AllocTypes != (uint8_t)AllocationType::None);
 
@@ -3999,6 +4009,9 @@ ModuleCallsiteContextGraph::cloneFunctionForCallsite(
   std::string Name = getMemProfFuncName(Func.func()->getName(), CloneNo);
   assert(!Func.func()->getParent()->getFunction(Name));
   NewFunc->setName(Name);
+  if (auto *SP = NewFunc->getSubprogram())
+    SP->replaceLinkageName(
+        MDString::get(NewFunc->getParent()->getContext(), Name));
   for (auto &Inst : CallsWithMetadataInFunc) {
     // This map always has the initial version in it.
     assert(Inst.cloneNo() == 0);
@@ -4183,8 +4196,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
     // their caller edge counts, putting the original non-clone node first in
     // cases of a tie. This simplifies finding an existing node to use as the
     // merge node.
-    std::stable_sort(CalleeEdges.begin(), CalleeEdges.end(),
-                     CalleeCallerEdgeLessThan);
+    llvm::stable_sort(CalleeEdges, CalleeCallerEdgeLessThan);
 
     /// Find other callers of the given set of callee edges that can
     /// share the same callee merge node. See the comments at this method
@@ -4938,6 +4950,9 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
       PrevF->eraseFromParent();
     } else
       NewF->setName(Name);
+    if (auto *SP = NewF->getSubprogram())
+      SP->replaceLinkageName(
+          MDString::get(NewF->getParent()->getContext(), Name));
     ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofClone", &F)
              << "created clone " << ore::NV("NewFunction", NewF));
 
@@ -4977,7 +4992,8 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
     // See if theFn was internalized, by checking index directly with
     // original name (this avoids the name adjustment done by getGUID() for
     // internal symbols).
-    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(F.getName()));
+    TheFnVI = ImportSummary->getValueInfo(
+        GlobalValue::getGUIDAssumingExternalLinkage(F.getName()));
   if (TheFnVI)
     return TheFnVI;
   // Now query with the original name before any promotion was performed.
@@ -5008,7 +5024,8 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
     SrcFile = dyn_cast<MDString>(SrcFileMD->getOperand(0))->getString();
   std::string OrigId = GlobalValue::getGlobalIdentifier(
       OrigName, GlobalValue::InternalLinkage, SrcFile);
-  TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+  TheFnVI = ImportSummary->getValueInfo(
+      GlobalValue::getGUIDAssumingExternalLinkage(OrigId));
   // Internal func in original module may have gotten a numbered suffix if we
   // imported an external function with the same name. This happens
   // automatically during IR linking for naming conflicts. It would have to
@@ -5019,7 +5036,8 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
     OrigName = F.getName().rsplit('.').first;
     OrigId = GlobalValue::getGlobalIdentifier(
         OrigName, GlobalValue::InternalLinkage, SrcFile);
-    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+    TheFnVI = ImportSummary->getValueInfo(
+        GlobalValue::getGUIDAssumingExternalLinkage(OrigId));
   }
   // The only way we may not have a VI is if this is a declaration created for
   // an imported reference. For distributed ThinLTO we may not have a VI for
@@ -5049,6 +5067,45 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
   }
   return true;
 }
+
+#ifndef NDEBUG
+// Sanity check that the MIB stack ids match between the summary and
+// instruction metadata.
+static void checkAllocContextIds(
+    const AllocInfo &AllocNode, const MDNode *MemProfMD,
+    const CallStack<MDNode, MDNode::op_iterator> &CallsiteContext,
+    const ModuleSummaryIndex *ImportSummary) {
+  auto MIBIter = AllocNode.MIBs.begin();
+  for (auto &MDOp : MemProfMD->operands()) {
+    assert(MIBIter != AllocNode.MIBs.end());
+    auto StackIdIndexIter = MIBIter->StackIdIndices.begin();
+    auto *MIBMD = cast<const MDNode>(MDOp);
+    MDNode *StackMDNode = getMIBStackNode(MIBMD);
+    assert(StackMDNode);
+    CallStack<MDNode, MDNode::op_iterator> StackContext(StackMDNode);
+    auto ContextIterBegin =
+        StackContext.beginAfterSharedPrefix(CallsiteContext);
+    // Skip the checking on the first iteration.
+    uint64_t LastStackContextId =
+        (ContextIterBegin != StackContext.end() && *ContextIterBegin == 0) ? 1
+                                                                           : 0;
+    for (auto ContextIter = ContextIterBegin; ContextIter != StackContext.end();
+         ++ContextIter) {
+      // If this is a direct recursion, simply skip the duplicate
+      // entries, to be consistent with how the summary ids were
+      // generated during ModuleSummaryAnalysis.
+      if (LastStackContextId == *ContextIter)
+        continue;
+      LastStackContextId = *ContextIter;
+      assert(StackIdIndexIter != MIBIter->StackIdIndices.end());
+      assert(ImportSummary->getStackIdAtIndex(*StackIdIndexIter) ==
+             *ContextIter);
+      StackIdIndexIter++;
+    }
+    MIBIter++;
+  }
+}
+#endif
 
 bool MemProfContextDisambiguation::applyImport(Module &M) {
   assert(ImportSummary);
@@ -5106,6 +5163,19 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 
       assert(!isMemProfClone(*CalledFunction));
 
+      // Because we update the cloned calls by calling setCalledOperand (see
+      // comment below), out of an abundance of caution make sure the called
+      // function was actually the called operand (or its aliasee). We also
+      // strip pointer casts when looking for calls (to match behavior during
+      // summary generation), however, with opaque pointers in theory this
+      // should not be an issue. Note we still clone the current function
+      // (containing this call) above, as that could be needed for its callers.
+      auto *GA = dyn_cast_or_null<GlobalAlias>(CB->getCalledOperand());
+      if (CalledFunction != CB->getCalledOperand() &&
+          (!GA || CalledFunction != GA->getAliaseeObject())) {
+        SkippedCallsCloning++;
+        return;
+      }
       // Update the calls per the summary info.
       // Save orig name since it gets updated in the first iteration
       // below.
@@ -5124,7 +5194,13 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           CBClone = CB;
         else
           CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
-        CBClone->setCalledFunction(NewF);
+        // Set the called operand directly instead of calling setCalledFunction,
+        // as the latter mutates the function type on the call. In rare cases
+        // we may have a slightly different type on a callee function
+        // declaration due to it being imported from a different module with
+        // incomplete types. We really just want to change the name of the
+        // function to the clone, and not make any type changes.
+        CBClone->setCalledOperand(NewF.getCallee());
         ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofCall", CBClone)
                  << ore::NV("Call", CBClone) << " in clone "
                  << ore::NV("Caller", CBClone->getFunction())
@@ -5242,40 +5318,10 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           assert(AI != FS->allocs().end());
           auto &AllocNode = *(AI++);
 
-          // Sanity check that the MIB stack ids match between the summary and
-          // instruction metadata.
-          auto MIBIter = AllocNode.MIBs.begin();
-          for (auto &MDOp : MemProfMD->operands()) {
-            assert(MIBIter != AllocNode.MIBs.end());
-            LLVM_ATTRIBUTE_UNUSED auto StackIdIndexIter =
-                MIBIter->StackIdIndices.begin();
-            auto *MIBMD = cast<const MDNode>(MDOp);
-            MDNode *StackMDNode = getMIBStackNode(MIBMD);
-            assert(StackMDNode);
-            CallStack<MDNode, MDNode::op_iterator> StackContext(StackMDNode);
-            auto ContextIterBegin =
-                StackContext.beginAfterSharedPrefix(CallsiteContext);
-            // Skip the checking on the first iteration.
-            uint64_t LastStackContextId =
-                (ContextIterBegin != StackContext.end() &&
-                 *ContextIterBegin == 0)
-                    ? 1
-                    : 0;
-            for (auto ContextIter = ContextIterBegin;
-                 ContextIter != StackContext.end(); ++ContextIter) {
-              // If this is a direct recursion, simply skip the duplicate
-              // entries, to be consistent with how the summary ids were
-              // generated during ModuleSummaryAnalysis.
-              if (LastStackContextId == *ContextIter)
-                continue;
-              LastStackContextId = *ContextIter;
-              assert(StackIdIndexIter != MIBIter->StackIdIndices.end());
-              assert(ImportSummary->getStackIdAtIndex(*StackIdIndexIter) ==
-                     *ContextIter);
-              StackIdIndexIter++;
-            }
-            MIBIter++;
-          }
+#ifndef NDEBUG
+          checkAllocContextIds(AllocNode, MemProfMD, CallsiteContext,
+                               ImportSummary);
+#endif
 
           // Perform cloning if not yet done.
           CloneFuncIfNeeded(/*NumClones=*/AllocNode.Versions.size());
@@ -5554,6 +5600,15 @@ void MemProfContextDisambiguation::performICP(
                                  .getCallee());
         }
         DirectCall.setCalledFunction(TargetToUse);
+        // During matching we generate synthetic VP metadata for indirect calls
+        // not already having any, from the memprof profile's callee GUIDs. If
+        // we subsequently promote and inline those callees, we currently lose
+        // the ability to generate this synthetic VP metadata. Optionally apply
+        // a noinline attribute to promoted direct calls, where the threshold is
+        // set to capture synthetic VP metadata targets which get a count of 1.
+        if (MemProfICPNoInlineThreshold &&
+            Candidate.Count < MemProfICPNoInlineThreshold)
+          DirectCall.setIsNoInline();
         ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofCall", CBClone)
                  << ore::NV("Call", CBClone) << " in clone "
                  << ore::NV("Caller", CBClone->getFunction())

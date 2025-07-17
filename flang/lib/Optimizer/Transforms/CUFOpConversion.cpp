@@ -22,8 +22,10 @@
 #include "flang/Runtime/CUDA/memory.h"
 #include "flang/Runtime/CUDA/pointer.h"
 #include "flang/Runtime/allocatable.h"
+#include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
@@ -128,17 +130,15 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
                            mlir::IntegerType::get(op.getContext(), 1)));
     if (op.getSource()) {
       mlir::Value stream =
-          op.getStream()
-              ? op.getStream()
-              : builder.createIntegerConstant(loc, fTy.getInput(2), -1);
+          op.getStream() ? op.getStream()
+                         : builder.createNullConstant(loc, fTy.getInput(2));
       args = fir::runtime::createArguments(
           builder, loc, fTy, op.getBox(), op.getSource(), stream, pinned,
           hasStat, errmsg, sourceFile, sourceLine);
     } else {
       mlir::Value stream =
-          op.getStream()
-              ? op.getStream()
-              : builder.createIntegerConstant(loc, fTy.getInput(1), -1);
+          op.getStream() ? op.getStream()
+                         : builder.createNullConstant(loc, fTy.getInput(1));
       args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
                                            stream, pinned, hasStat, errmsg,
                                            sourceFile, sourceLine);
@@ -924,6 +924,34 @@ struct CUFSyncDescriptorOpConversion
   }
 };
 
+struct CUFSetAllocatorIndexOpConversion
+    : public mlir::OpRewritePattern<cuf::SetAllocatorIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cuf::SetAllocatorIndexOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto mod = op->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::Location loc = op.getLoc();
+    int idx = kDefaultAllocator;
+    if (op.getDataAttr() == cuf::DataAttribute::Device) {
+      idx = kDeviceAllocatorPos;
+    } else if (op.getDataAttr() == cuf::DataAttribute::Managed) {
+      idx = kManagedAllocatorPos;
+    } else if (op.getDataAttr() == cuf::DataAttribute::Unified) {
+      idx = kUnifiedAllocatorPos;
+    } else if (op.getDataAttr() == cuf::DataAttribute::Pinned) {
+      idx = kPinnedAllocatorPos;
+    }
+    mlir::Value index =
+        builder.createIntegerConstant(loc, builder.getI32Type(), idx);
+    fir::runtime::cuda::genSetAllocatorIndex(builder, loc, op.getBox(), index);
+    op.erase();
+    return mlir::success();
+  }
+};
+
 class CUFOpConversion : public fir::impl::CUFOpConversionBase<CUFOpConversion> {
 public:
   void runOnOperation() override {
@@ -985,8 +1013,8 @@ void cuf::populateCUFToFIRConversionPatterns(
     const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns) {
   patterns.insert<CUFAllocOpConversion>(patterns.getContext(), &dl, &converter);
   patterns.insert<CUFAllocateOpConversion, CUFDeallocateOpConversion,
-                  CUFFreeOpConversion, CUFSyncDescriptorOpConversion>(
-      patterns.getContext());
+                  CUFFreeOpConversion, CUFSyncDescriptorOpConversion,
+                  CUFSetAllocatorIndexOpConversion>(patterns.getContext());
   patterns.insert<CUFDataTransferOpConversion>(patterns.getContext(), symtab,
                                                &dl, &converter);
   patterns.insert<CUFLaunchOpConversion, CUFDeviceAddressOpConversion>(

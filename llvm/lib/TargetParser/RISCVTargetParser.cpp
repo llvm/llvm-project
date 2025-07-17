@@ -57,16 +57,23 @@ bool hasFastVectorUnalignedAccess(StringRef CPU) {
   return Info && Info->FastVectorUnalignedAccess;
 }
 
-bool hasValidCPUModel(StringRef CPU) {
-  const CPUModel Model = getCPUModel(CPU);
-  return Model.MVendorID != 0 && Model.MArchID != 0 && Model.MImpID != 0;
-}
+bool hasValidCPUModel(StringRef CPU) { return getCPUModel(CPU).isValid(); }
 
 CPUModel getCPUModel(StringRef CPU) {
   const CPUInfo *Info = getCPUInfoByName(CPU);
   if (!Info)
     return {0, 0, 0};
   return Info->Model;
+}
+
+StringRef getCPUNameFromCPUModel(const CPUModel &Model) {
+  if (!Model.isValid())
+    return "";
+
+  for (auto &C : RISCVCPUInfo)
+    if (C.Model == Model)
+      return C.Name;
+  return "";
 }
 
 bool parseCPU(StringRef CPU, bool IsRV64) {
@@ -161,6 +168,15 @@ unsigned encodeVTYPE(VLMUL VLMul, unsigned SEW, bool TailAgnostic,
   if (MaskAgnostic)
     VTypeI |= 0x80;
 
+  return VTypeI;
+}
+
+unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt) {
+  assert(isValidSEW(SEW) && "Invalid SEW");
+  assert((Widen == 1 || Widen == 2 || Widen == 4) && "Invalid Widen");
+  unsigned VSEWBits = encodeSEW(SEW);
+  unsigned TWiden = Log2_32(Widen) + 1;
+  unsigned VTypeI = (VSEWBits << 3) | AltFmt << 8 | TWiden << 9;
   return VTypeI;
 }
 

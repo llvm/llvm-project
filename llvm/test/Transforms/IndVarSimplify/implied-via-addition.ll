@@ -53,7 +53,7 @@ define void @test_02(i8 %t) {
 ; CHECK-NEXT:    [[IDX:%.*]] = phi ptr [ [[T_PTR]], %[[ENTRY]] ], [ [[SNEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SNEXT]] = getelementptr inbounds i8, ptr [[IDX]], i64 1
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[BE:%.*]] = icmp ult ptr [[SNEXT]], [[P_42]]
+; CHECK-NEXT:    [[BE:%.*]] = icmp samesign ult ptr [[SNEXT]], [[P_42]]
 ; CHECK-NEXT:    br i1 [[BE]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

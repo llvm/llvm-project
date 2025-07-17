@@ -115,10 +115,12 @@ void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
       byteStride *= dim.Extent();
     }
   }
-  if (pointer.Elements() > target.Elements()) {
+  std::size_t pointerElements{pointer.Elements()};
+  std::size_t targetElements{target.Elements()};
+  if (pointerElements > targetElements) {
     terminator.Crash("PointerAssociateRemapping: too many elements in remapped "
                      "pointer (%zd > %zd)",
-        pointer.Elements(), target.Elements());
+        pointerElements, targetElements);
   }
 }
 
@@ -129,7 +131,7 @@ RT_API_ATTRS void *AllocateValidatedPointerPayload(
   byteSize = ((byteSize + align - 1) / align) * align;
   std::size_t total{byteSize + sizeof(std::uintptr_t)};
   AllocFct alloc{allocatorRegistry.GetAllocator(allocatorIdx)};
-  void *p{alloc(total, /*asyncId=*/-1)};
+  void *p{alloc(total, /*asyncObject=*/nullptr)};
   if (p && allocatorIdx == 0) {
     // Fill the footer word with the XOR of the ones' complement of
     // the base address, which is a value that would be highly unlikely

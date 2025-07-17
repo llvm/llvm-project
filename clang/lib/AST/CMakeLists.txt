@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   Core
   FrontendOpenMP
+  FrontendHLSL
   Support
   TargetParser
   )
@@ -73,7 +74,6 @@ add_clang_library(clangAST
   ByteCode/Descriptor.cpp
   ByteCode/Disasm.cpp
   ByteCode/EvalEmitter.cpp
-  ByteCode/Frame.cpp
   ByteCode/Function.cpp
   ByteCode/FunctionPointer.cpp
   ByteCode/InterpBuiltin.cpp
@@ -145,5 +145,5 @@ add_clang_library(clangAST
   ClangDriverOptions
   intrinsics_gen
   # These generated headers are included transitively.
-  AArch64TargetParserTableGen
+  target_parser_gen
   )

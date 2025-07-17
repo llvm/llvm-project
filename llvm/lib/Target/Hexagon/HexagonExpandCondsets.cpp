@@ -382,7 +382,7 @@ void HexagonExpandCondsets::updateDeadsInRange(Register Reg, LaneBitmask LM,
         return true;
     }
     MachineBasicBlock *Entry = &Dest->getParent()->front();
-    SetVector<MachineBasicBlock*> Work(Dest->pred_begin(), Dest->pred_end());
+    SetVector<MachineBasicBlock *> Work(llvm::from_range, Dest->predecessors());
     for (unsigned i = 0; i < Work.size(); ++i) {
       MachineBasicBlock *B = Work[i];
       if (Defs.count(B))

@@ -1490,6 +1490,7 @@ static StringRef segmentTypeToString(unsigned Arch, unsigned Type) {
     LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_STACK);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_RELRO);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_PROPERTY);
+    LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_SFRAME);
 
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_MUTABLE);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_RANDOMIZE);
@@ -1640,6 +1641,7 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1250, "gfx1250"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
@@ -7878,6 +7880,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
             DictScope BBED(W);
             W.printNumber("ID", BBE.ID);
             W.printHex("Offset", BBE.Offset);
+            if (!BBE.CallsiteOffsets.empty())
+              W.printList("Callsite Offsets", BBE.CallsiteOffsets);
             W.printHex("Size", BBE.Size);
             W.printBoolean("HasReturn", BBE.hasReturn());
             W.printBoolean("HasTailCall", BBE.hasTailCall());

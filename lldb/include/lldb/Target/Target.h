@@ -1093,7 +1093,7 @@ public:
 
   Architecture *GetArchitecturePlugin() const { return m_arch.GetPlugin(); }
 
-  Debugger &GetDebugger() { return m_debugger; }
+  Debugger &GetDebugger() const { return m_debugger; }
 
   size_t ReadMemoryFromFileCache(const Address &addr, void *dst, size_t dst_len,
                                  Status &error);
@@ -1157,6 +1157,11 @@ public:
                                      bool is_signed, Scalar &scalar,
                                      Status &error,
                                      bool force_live_memory = false);
+
+  int64_t ReadSignedIntegerFromMemory(const Address &addr,
+                                      size_t integer_byte_size,
+                                      int64_t fail_value, Status &error,
+                                      bool force_live_memory = false);
 
   uint64_t ReadUnsignedIntegerFromMemory(const Address &addr,
                                          size_t integer_byte_size,
@@ -1370,6 +1375,12 @@ public:
 
     bool GetAutoContinue() const { return m_auto_continue; }
 
+    void SetRunAtInitialStop(bool at_initial_stop) {
+      m_at_initial_stop = at_initial_stop;
+    }
+
+    bool GetRunAtInitialStop() const { return m_at_initial_stop; }
+
     void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
     virtual void GetSubclassDescription(Stream &s,
                                         lldb::DescriptionLevel level) const = 0;
@@ -1380,6 +1391,7 @@ public:
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
     bool m_active = true;
     bool m_auto_continue = false;
+    bool m_at_initial_stop = true;
 
     StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
   };
@@ -1446,7 +1458,9 @@ public:
 
   // Runs the stop hooks that have been registered for this target.
   // Returns true if the stop hooks cause the target to resume.
-  bool RunStopHooks();
+  // Pass at_initial_stop if this is the stop where lldb gains
+  // control over the process for the first time.
+  bool RunStopHooks(bool at_initial_stop = false);
 
   size_t GetStopHookSize();
 

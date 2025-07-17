@@ -205,7 +205,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
     }
   }
 
-  if (dyn_cast<FloatType>(operand.getType())) {
+  if (isa<FloatType>(operand.getType())) {
     FloatType toFpTy = cast<FloatType>(targetType.getElementType());
     auto toBitwidth = toFpTy.getIntOrFloatBitWidth();
     Value from = operand;
@@ -216,11 +216,11 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
       from = b.create<arith::TruncFOp>(toFpTy, from);
     }
     Value zero = b.create<mlir::arith::ConstantFloatOp>(
-        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
+        toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
     return b.create<complex::CreateOp>(targetType, from, zero);
   }
 
-  if (dyn_cast<IntegerType>(operand.getType())) {
+  if (isa<IntegerType>(operand.getType())) {
     FloatType toFpTy = cast<FloatType>(targetType.getElementType());
     Value from = operand;
     if (isUnsigned) {
@@ -229,7 +229,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
       from = b.create<arith::SIToFPOp>(toFpTy, from);
     }
     Value zero = b.create<mlir::arith::ConstantFloatOp>(
-        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
+        toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
     return b.create<complex::CreateOp>(targetType, from, zero);
   }
 

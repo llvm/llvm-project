@@ -163,8 +163,8 @@ public:
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::Type typeInTuple = fir::dyn_cast_ptrEleTy(args.addrInTuple.getType());
     assert(typeInTuple && "addrInTuple must be an address");
-    mlir::Value castBox = builder.createConvert(args.loc, typeInTuple,
-                                                fir::getBase(args.hostValue));
+    mlir::Value castBox = builder.createConvertWithVolatileCast(
+        args.loc, typeInTuple, fir::getBase(args.hostValue));
     builder.create<fir::StoreOp>(args.loc, castBox, args.addrInTuple);
   }
 
@@ -449,7 +449,7 @@ public:
     }
 
     if (canReadCapturedBoxValue(converter, sym)) {
-      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/std::nullopt);
+      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/{});
       bindCapturedSymbol(sym,
                          fir::factory::readBoxValue(builder, loc, boxValue),
                          converter, args.symMap);
@@ -470,7 +470,7 @@ public:
         box = builder.create<mlir::arith::SelectOp>(loc, isPresent, box,
                                                     absentBox);
       }
-      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/std::nullopt);
+      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/{});
       bindCapturedSymbol(sym, boxValue, converter, args.symMap);
     }
   }

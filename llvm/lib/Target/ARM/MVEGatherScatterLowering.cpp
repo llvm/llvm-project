@@ -944,7 +944,7 @@ void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
 // Check whether all usages of this instruction are as offsets of
 // gathers/scatters or simple arithmetics only used by gathers/scatters
 static bool hasAllGatScatUsers(Instruction *I, const DataLayout &DL) {
-  if (I->hasNUses(0)) {
+  if (I->use_empty()) {
     return false;
   }
   bool Gatscat = true;
@@ -1099,11 +1099,10 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
 
   // The instruction has now been "absorbed" into the phi value
   Offs->replaceAllUsesWith(NewPhi);
-  if (Offs->hasNUses(0))
-    Offs->eraseFromParent();
+  Offs->eraseFromParent();
   // Clean up the old increment in case it's unused because we built a new
   // one
-  if (IncInstruction->hasNUses(0))
+  if (IncInstruction->use_empty())
     IncInstruction->eraseFromParent();
 
   return true;

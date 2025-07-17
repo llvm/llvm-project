@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=SPV
 
 // CHECK: %"class.hlsl::RWStructuredBuffer" = type { target("dx.RawBuffer", i16, 1, 0) }
 // CHECK: %"class.hlsl::RWStructuredBuffer.0" = type { target("dx.RawBuffer", i16, 1, 0) }
@@ -14,7 +15,9 @@
 // CHECK: %"class.hlsl::RWStructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 1, 0) }
 // CHECK: %"class.hlsl::RWStructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 1, 0) }
 // CHECK: %"class.hlsl::RWStructuredBuffer.12" = type { target("dx.RawBuffer", i32, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.12" = type { target("spirv.VulkanBuffer", [0 x i32], 12, 1)
 // CHECK: %"class.hlsl::RWStructuredBuffer.13" = type { target("dx.RawBuffer", <4 x i32>, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.13" = type { target("spirv.VulkanBuffer", [0 x <4 x i32>], 12, 1)
 
 RWStructuredBuffer<int16_t> BufI16;
 RWStructuredBuffer<uint16_t> BufU16;

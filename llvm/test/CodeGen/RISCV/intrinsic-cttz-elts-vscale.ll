@@ -7,18 +7,18 @@
 define i32 @ctz_nxv4i32(<vscale x 4 x i32> %a) #0 {
 ; RV32-LABEL: ctz_nxv4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV32-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; RV32-NEXT:    vid.v v10
-; RV32-NEXT:    li a1, -1
+; RV32-NEXT:    vmv.v.i v11, -1
+; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v8, 0
 ; RV32-NEXT:    srli a0, a0, 1
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v8, a0
-; RV32-NEXT:    vmadd.vx v10, a1, v8
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vmerge.vvm v8, v8, v10, v0
+; RV32-NEXT:    vmacc.vv v8, v10, v11
+; RV32-NEXT:    vmv.v.i v9, 0
+; RV32-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; RV32-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    sub a0, a0, a1
@@ -28,18 +28,18 @@ define i32 @ctz_nxv4i32(<vscale x 4 x i32> %a) #0 {
 ;
 ; RV64-LABEL: ctz_nxv4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV64-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; RV64-NEXT:    vid.v v10
-; RV64-NEXT:    li a1, -1
+; RV64-NEXT:    vmv.v.i v11, -1
+; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-NEXT:    srli a0, a0, 1
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v8, a0
-; RV64-NEXT:    vmadd.vx v10, a1, v8
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vmerge.vvm v8, v8, v10, v0
+; RV64-NEXT:    vmacc.vv v8, v10, v11
+; RV64-NEXT:    vmv.v.i v9, 0
+; RV64-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; RV64-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV64-NEXT:    vmv.x.s a1, v8
 ; RV64-NEXT:    subw a0, a0, a1
@@ -109,17 +109,17 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ;
 ; RV64-LABEL: ctz_nxv8i1_no_range:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vid.v v16
-; RV64-NEXT:    li a1, -1
+; RV64-NEXT:    vmv.v.i v24, -1
+; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vmv.v.x v8, a0
-; RV64-NEXT:    vmadd.vx v16, a1, v8
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vmerge.vvm v8, v8, v16, v0
+; RV64-NEXT:    vmacc.vv v8, v16, v24
+; RV64-NEXT:    vmv.v.i v16, 0
+; RV64-NEXT:    vmerge.vvm v8, v16, v8, v0
 ; RV64-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV64-NEXT:    vmv.x.s a1, v8
 ; RV64-NEXT:    sub a0, a0, a1

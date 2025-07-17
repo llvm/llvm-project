@@ -269,10 +269,12 @@ getNonTbpDefinedIoTableAddr(Fortran::lower::AbstractConverter &converter,
   mlir::Type sizeTy =
       fir::runtime::getModel<std::size_t>()(builder.getContext());
   mlir::Type intTy = fir::runtime::getModel<int>()(builder.getContext());
+  mlir::Type byteTy =
+      fir::runtime::getModel<std::uint8_t>()(builder.getContext());
   mlir::Type boolTy = fir::runtime::getModel<bool>()(builder.getContext());
   mlir::Type listTy = fir::SequenceType::get(
       definedIoProcMap.size(),
-      mlir::TupleType::get(context, {refTy, refTy, intTy, boolTy}));
+      mlir::TupleType::get(context, {refTy, refTy, intTy, byteTy}));
   mlir::Type tableTy = mlir::TupleType::get(
       context, {sizeTy, fir::ReferenceType::get(listTy), boolTy});
 
@@ -339,9 +341,9 @@ getNonTbpDefinedIoTableAddr(Fortran::lower::AbstractConverter &converter,
       insert(builder.createIntegerConstant(
           loc, intTy, static_cast<int>(iface.second.definedIo)));
       // polymorphic flag is set if first defined IO dummy arg is CLASS(T)
+      // defaultInt8 flag is set if -fdefined-integer-8
       // [bool isDtvArgPolymorphic]
-      insert(builder.createIntegerConstant(loc, boolTy,
-                                           iface.second.isDtvArgPolymorphic));
+      insert(builder.createIntegerConstant(loc, byteTy, iface.second.flags));
     }
     if (tableIsLocal)
       builder.create<fir::StoreOp>(loc, list, listAddr);
@@ -836,7 +838,11 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
   } else {
     mlir::Value itemAddr = fir::getBase(item);
     mlir::Type itemTy = fir::unwrapPassByRefType(itemAddr.getType());
-    inputFuncArgs.push_back(builder.createConvert(loc, argType, itemAddr));
+
+    // Handle conversion between volatile and non-volatile reference types
+    // Need to explicitly cast when volatility qualification differs
+    inputFuncArgs.push_back(
+        builder.createConvertWithVolatileCast(loc, argType, itemAddr));
     fir::factory::CharacterExprHelper charHelper{builder, loc};
     if (charHelper.isCharacterScalar(itemTy)) {
       mlir::Value len = fir::getLen(item);

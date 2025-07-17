@@ -55,22 +55,34 @@ inline constexpr bool isPtrType(PrimType T) {
 
 enum class CastKind : uint8_t {
   Reinterpret,
-  Atomic,
+  Volatile,
+  Dynamic,
 };
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      interp::CastKind CK) {
   switch (CK) {
   case interp::CastKind::Reinterpret:
     OS << "reinterpret_cast";
     break;
-  case interp::CastKind::Atomic:
-    OS << "atomic";
+  case interp::CastKind::Volatile:
+    OS << "volatile";
+    break;
+  case interp::CastKind::Dynamic:
+    OS << "dynamic";
     break;
   }
   return OS;
 }
 
 constexpr bool isIntegralType(PrimType T) { return T <= PT_FixedPoint; }
+template <typename T> constexpr bool needsAlloc() {
+  return std::is_same_v<T, IntegralAP<false>> ||
+         std::is_same_v<T, IntegralAP<true>> || std::is_same_v<T, Floating>;
+}
+constexpr bool needsAlloc(PrimType T) {
+  return T == PT_IntAP || T == PT_IntAPS || T == PT_Float;
+}
 
 /// Mapping from primitive types to their representation.
 template <PrimType T> struct PrimConv;
@@ -201,6 +213,16 @@ static inline bool aligned(const void *P) {
       TYPE_SWITCH_CASE(PT_IntAPS, B)                                           \
     default:                                                                   \
       llvm_unreachable("Not an integer value");                                \
+    }                                                                          \
+  } while (0)
+
+#define TYPE_SWITCH_ALLOC(Expr, B)                                             \
+  do {                                                                         \
+    switch (Expr) {                                                            \
+      TYPE_SWITCH_CASE(PT_Float, B)                                            \
+      TYPE_SWITCH_CASE(PT_IntAP, B)                                            \
+      TYPE_SWITCH_CASE(PT_IntAPS, B)                                           \
+    default:;                                                                  \
     }                                                                          \
   } while (0)
 

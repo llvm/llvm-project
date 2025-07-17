@@ -5084,12 +5084,12 @@ defm : TrapExtendedMnemonic<"lng", 6>;
 defm : TrapExtendedMnemonic<"u", 31>;
 
 // Atomic loads
-def : Pat<(i32 (atomic_load_8  DForm:$src)), (LBZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_16 DForm:$src)), (LHZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_32 DForm:$src)), (LWZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_8  XForm:$src)), (LBZX memrr:$src)>;
-def : Pat<(i32 (atomic_load_16 XForm:$src)), (LHZX memrr:$src)>;
-def : Pat<(i32 (atomic_load_32 XForm:$src)), (LWZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_8  DForm:$src)), (LBZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 DForm:$src)), (LHZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 DForm:$src)), (LWZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_azext_8  XForm:$src)), (LBZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 XForm:$src)), (LHZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 XForm:$src)), (LWZX memrr:$src)>;
 
 // Atomic stores
 def : Pat<(atomic_store_8  i32:$val, DForm:$ptr), (STB  gprc:$val, memri:$ptr)>;
@@ -5142,7 +5142,6 @@ def : Pat<(int_ppc_store2r gprc:$a, ForceXForm:$ptr),
           (STHBRX gprc:$a, ForceXForm:$ptr)>;
 def : Pat<(int_ppc_store4r gprc:$a, ForceXForm:$ptr),
           (STWBRX gprc:$a, ForceXForm:$ptr)>;
-
 
 // Fast 32-bit reverse bits algorithm:
 // Step 1: 1-bit swap (swap odd 1-bit and even 1-bit):
@@ -5324,10 +5323,14 @@ def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr), "#CFENCE", []>;
 def : Pat<(i64 (bitreverse i64:$A)),
   (OR8 (RLDICR DWBytes7654.DWord, 32, 31), DWBytes3210.DWord)>;
 
+def : Pat<(int_ppc_lwarx ForceXForm:$ptr),
+          (LWARX ForceXForm:$ptr)>;
 def : Pat<(int_ppc_stwcx ForceXForm:$dst, gprc:$A),
           (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 4),
           (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
+def : Pat<(int_ppc_lbarx ForceXForm:$ptr),
+          (LBARX ForceXForm:$ptr)>;
 def : Pat<(int_ppc_stbcx ForceXForm:$dst, gprc:$A),
           (RLWINM (STBCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 1),
@@ -5360,6 +5363,9 @@ def : Pat<(int_ppc_mtmsr gprc:$RS),
           (MTMSR $RS, 0)>;
 
 let Predicates = [IsISA2_07] in {
+  def : Pat<(int_ppc_lharx ForceXForm:$ptr),
+          (LHARX ForceXForm:$ptr)>;
+
   def : Pat<(int_ppc_sthcx ForceXForm:$dst, gprc:$A),
             (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
   def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 2),

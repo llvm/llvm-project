@@ -104,3 +104,63 @@ class SBSaveCoreOptionsAPICase(TestBase):
         thread_collection = options.GetThreadsToSave()
         self.assertEqual(thread_collection.GetSize(), 3)
         self.assertIn(middle_thread, thread_collection)
+
+    def test_get_current_size_in_bytes(self):
+        """
+        Tests that ensures GetCurrentSizeInBytes properly returns an error without a process,
+        and the readable regions with a process.
+        """
+
+        options = lldb.SBSaveCoreOptions()
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
+        process = self.get_basic_process()
+        memory_range = lldb.SBMemoryRegionInfo()
+
+        # Add the memory range of 0x1000-0x1100
+        process.GetMemoryRegionInfo(0x1000, memory_range)
+        options.AddMemoryRegionToSave(memory_range)
+
+        # Check that we fail when we have no process set
+        # even though we added a memory region.
+        error = lldb.SBError()
+        total = options.GetCurrentSizeInBytes(error)
+        self.assertTrue(error.Fail(), error.GetCString())
+
+        # Check that we don't get an error now that we've added a process
+        options.SetProcess(process)
+        total = options.GetCurrentSizeInBytes(error)
+        self.assertTrue(error.Success(), error.GetCString())
+
+        # Validate the size returned is the same size as the single region we added.
+        expected_size = memory_range.GetRegionEnd() - memory_range.GetRegionBase()
+        self.assertEqual(total, expected_size)
+
+    def test_get_total_in_bytes_missing_requirements(self):
+        """
+        Tests the matrix of error responses that GetCurrentSizeInBytes
+        """
+
+        options = lldb.SBSaveCoreOptions()
+
+        # No process, no style returns an error.
+        error = lldb.SBError()
+        total = options.GetCurrentSizeInBytes(error)
+        self.assertTrue(error.Fail(), error.GetCString())
+
+        # No process returns an error
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
+        total = options.GetCurrentSizeInBytes(error)
+        self.assertTrue(error.Fail(), error.GetCString())
+
+        options.Clear()
+
+        # No style returns an error
+        process = self.get_basic_process()
+        options.SetProcess(process)
+        total = options.GetCurrentSizeInBytes(error)
+        self.assertTrue(error.Fail(), error.GetCString())
+
+        # Options that result in no valid data returns an error.
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
+        total = options.GetCurrentSizeInBytes(error)
+        self.assertTrue(error.Fail(), error.GetCString())

@@ -158,7 +158,7 @@ def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
     if (!$_self.empty()) {
       auto *alloc = static_cast<char *>(
           $_allocator.allocate($_self.size(), alignof(uint64_t)));
-      std::uninitialized_copy($_self.begin(), $_self.end(), alloc);
+      llvm::uninitialized_copy($_self, alloc);
       $_dst = ArrayRef<char>(alloc, $_self.size());
     }
   }];
@@ -535,9 +535,8 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", "dictionary"> {
     ```
   }];
   let parameters = (ins ArrayRefParameter<"NamedAttribute", "">:$value);
-  let builders = [
-    AttrBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "std::nullopt">:$value)>
-  ];
+  let builders = [AttrBuilder<(
+      ins CArg<"ArrayRef<NamedAttribute>", "{}">:$value)>];
   let extraClassDeclaration = [{
     using ValueType = ArrayRef<NamedAttribute>;
 
@@ -1003,7 +1002,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
 
 def StridedLayoutAttr : Builtin_Attr<"StridedLayout", "strided_layout",
     [DeclareAttrInterfaceMethods<MemRefLayoutAttrInterface,
-                                 ["verifyLayout"]>]> {
+                                 ["verifyLayout", "getStridesAndOffset"]>]> {
   let summary = "An Attribute representing a strided layout of a shaped type";
   let description = [{
     Syntax:

@@ -753,6 +753,48 @@ for.exit:
   ret void
 }
 
+; The histogram operation generates vectors. This example used to crash
+; due to a missing entry in a switch statement.
+define void @histogram_generates_vectors_crash(ptr %data_array, ptr noalias %indices) {
+; CHECK-LABEL: define void @histogram_generates_vectors_crash(
+; CHECK-SAME: ptr [[DATA_ARRAY:%.*]], ptr noalias [[INDICES:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[GEP_INDICES:%.*]] = getelementptr [1048576 x i32], ptr [[INDICES]], i64 [[IV]]
+; CHECK-NEXT:    [[L_IDX:%.*]] = load i32, ptr [[GEP_INDICES]], align 4
+; CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[L_IDX]] to i64
+; CHECK-NEXT:    [[GEP_BUCKET:%.*]] = getelementptr [1048576 x i32], ptr [[DATA_ARRAY]], i64 [[IDXPROM5]]
+; CHECK-NEXT:    [[L_BUCKET:%.*]] = load i32, ptr [[GEP_BUCKET]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add i32 [[L_BUCKET]], 1
+; CHECK-NEXT:    store i32 [[INC]], ptr [[GEP_BUCKET]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr [1048576 x i32], ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom5 = sext i32 %l.idx to i64
+  %gep.bucket = getelementptr [1048576 x i32], ptr %data_array, i64 %idxprom5
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 1
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1}

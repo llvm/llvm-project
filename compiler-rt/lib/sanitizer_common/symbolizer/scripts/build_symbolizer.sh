@@ -145,7 +145,7 @@ if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
   $LLVM_SRC
 fi
 cd ${LLVM_BUILD}
-ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMDebuginfod LLVMMC LLVMDemangle LLVMTextAPI LLVMTargetParser LLVMCore
+ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMDebugInfoGSYM LLVMSupport LLVMDebugInfoPDB LLVMDebuginfod LLVMMC LLVMDemangle LLVMTextAPI LLVMTargetParser LLVMCore
 
 cd ${BUILD_DIR}
 rm -rf ${SYMBOLIZER_BUILD}
@@ -174,6 +174,8 @@ $LINK $LIBCXX_ARCHIVE_DIR/libc++.a \
       $LLVM_BUILD/lib/libLLVMObject.a \
       $LLVM_BUILD/lib/libLLVMBinaryFormat.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoDWARF.a \
+      $LLVM_BUILD/lib/libLLVMDebugInfoDWARFLowLevel.a \
+      $LLVM_BUILD/lib/libLLVMDebugInfoGSYM.a \
       $LLVM_BUILD/lib/libLLVMSupport.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoMSF.a \

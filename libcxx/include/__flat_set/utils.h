@@ -11,6 +11,7 @@
 #define _LIBCPP___FLAT_SET_UTILS_H
 
 #include <__config>
+#include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__type_traits/container_traits.h>
@@ -37,7 +38,8 @@ struct __flat_set_utils {
   // When an exception is thrown during the emplacement, the function will clear the set if the container does not
   // have strong exception safety guarantee on emplacement.
   template <class _Set, class _Iter, class _KeyArg>
-  _LIBCPP_HIDE_FROM_ABI static auto __emplace_exact_pos(_Set& __set, _Iter&& __iter, _KeyArg&& __key) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto
+  __emplace_exact_pos(_Set& __set, _Iter&& __iter, _KeyArg&& __key) {
     using _KeyContainer = typename decay_t<_Set>::container_type;
     auto __on_failure   = std::__make_exception_guard([&]() noexcept {
       if constexpr (!__container_traits<_KeyContainer>::__emplacement_has_strong_exception_safety_guarantee) {
@@ -50,17 +52,19 @@ struct __flat_set_utils {
   }
 
   template <class _Set, class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI static void __append(_Set& __set, _InputIterator __first, _InputIterator __last) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static void
+  __append(_Set& __set, _InputIterator __first, _InputIterator __last) {
     __set.__keys_.insert(__set.__keys_.end(), std::move(__first), std::move(__last));
   }
 
   template <class _Set, class _Range>
-  _LIBCPP_HIDE_FROM_ABI static void __append(_Set& __set, _Range&& __rng) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static void __append(_Set& __set, _Range&& __rng) {
     if constexpr (requires { __set.__keys_.insert_range(__set.__keys_.end(), std::forward<_Range>(__rng)); }) {
       // C++23 Sequence Container should have insert_range member function
       // Note that not all Sequence Containers provide append_range.
       __set.__keys_.insert_range(__set.__keys_.end(), std::forward<_Range>(__rng));
-    } else if constexpr (ranges::common_range<_Range>) {
+    } else if constexpr (ranges::common_range<_Range> &&
+                         __has_input_iterator_category<ranges::iterator_t<_Range>>::value) {
       __set.__keys_.insert(__set.__keys_.end(), ranges::begin(__rng), ranges::end(__rng));
     } else {
       for (auto&& __x : __rng) {

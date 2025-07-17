@@ -1,7 +1,7 @@
 // RUN: c-index-test -write-pch %t.ast -arch x86_64 -mmacos-version-min=10.6 -fblocks -x objective-c %s
 // RUN: c-index-test -test-load-tu %t.ast all > %t 2>&1 && FileCheck --input-file=%t %s
 // REQUIRES: x86-registered-target
-@interface Foo 
+@interface Foo
 {
   __attribute__((iboutlet)) id myoutlet;
 }
@@ -11,7 +11,7 @@
 
 @end
 
-@interface Bar : Foo 
+@interface Bar : Foo
 {
 }
 

@@ -495,5 +495,5 @@ v_cvt_scalef32_2xpk16_bf6_f32 v[0:5], s[0:15], v[6:21], v16
 // GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 v_cvt_scalef32_2xpk16_bf6_f32 v[0:5], v[6:21], s[0:15], v16
 
-// GFX950: v_cvt_scalef32_sr_pk_fp4_f32 v0, s[2:3]/*Invalid register, operand has 'VReg_64' register class*/, v4, v5
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 v_cvt_scalef32_sr_pk_fp4_f32 v0, s[2:3], v4, v5

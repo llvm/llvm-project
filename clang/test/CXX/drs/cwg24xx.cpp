@@ -215,3 +215,34 @@ void (*q)() throw() = S();
 // since-cxx17-error@-1 {{no viable conversion from 'S' to 'void (*)() throw()'}}
 //   since-cxx17-note@#cwg2486-conv {{candidate function}}
 } // namespace cwg2486
+
+
+namespace cwg2496 { // cwg2496: 21
+#if __cplusplus >= 201102L
+struct S {
+    virtual void f(); // #cwg2496-f
+    virtual void g() &; // #cwg2496-g
+    virtual void h(); // #cwg2496-h
+    virtual void i();
+    virtual void j() &;
+    virtual void k() &&;
+    virtual void l() &;
+};
+
+struct T : S {
+    virtual void f() &;
+    // expected-error@-1 {{cannot overload a member function with ref-qualifier '&' with a member function without a ref-qualifier}}
+    // expected-note@#cwg2496-f {{previous declaration is here}}
+    virtual void g();
+    // expected-error@-1 {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&'}}
+    // expected-note@#cwg2496-g {{previous declaration is here}}
+    virtual void h() &&;
+    // expected-error@-1 {{cannot overload a member function with ref-qualifier '&&' with a member function without a ref-qualifier}}
+    // expected-note@#cwg2496-h {{previous declaration is here}}
+    virtual void i();
+    virtual void j() &;
+    virtual void k() &;
+    virtual void l() &&;
+};
+#endif
+}

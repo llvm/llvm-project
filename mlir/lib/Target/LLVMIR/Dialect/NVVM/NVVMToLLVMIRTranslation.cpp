@@ -13,7 +13,6 @@
 
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -119,6 +118,7 @@ static llvm::Intrinsic::ID getMatchSyncIntrinsicId(Type valType,
     return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_all_sync_i32p
                                  : llvm::Intrinsic::nvvm_match_all_sync_i64p;
   }
+  llvm_unreachable("unsupported match sync kind");
 }
 
 static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
@@ -344,7 +344,7 @@ public:
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
 
     if (attribute.getName() == NVVM::NVVMDialect::getMaxntidAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(
@@ -352,7 +352,7 @@ public:
                                        values.asArrayRef().end()));
       llvmFunc->addFnAttr("nvvm.maxntid", attr);
     } else if (attribute.getName() == NVVM::NVVMDialect::getReqntidAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(
@@ -361,7 +361,7 @@ public:
       llvmFunc->addFnAttr("nvvm.reqntid", attr);
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterDimAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(

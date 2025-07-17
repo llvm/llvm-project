@@ -42,9 +42,18 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
   }];
 
   let parameters = (ins
-    OptionalParameter<"MemorySpaceAttr">: $memory_space,
-    OptionalParameter<"IntegerAttr", "1">: $array_length,
-    OptionalParameter<"BoolAttr", "true">: $boundary_check
+    DefaultValuedParameter<
+      "MemorySpaceAttr",
+      "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
+      "Data memory location">: $memory_space,
+    DefaultValuedParameter<
+      "IntegerAttr",
+      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
+      "Number of continuous blocks to load">: $array_length,
+    DefaultValuedParameter<
+      "BoolAttr",
+      "BoolAttr::get($_ctxt, true)",
+      "Checking the out of boundary access">: $boundary_check
   );
 
   let builders = [
@@ -67,8 +76,8 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
         TensorDesc is located, `Global` device memory or `Shared` local memory.
         It is default to `Global`.
 
-    2.  `chunk_size`: indicates number of contiguous elements accessed for each
-        offset, default is 1. It is used with `scattered` attr only.
+    2. `chunk_size`: Specifies the number of contiguous elements accessed per offset.
+      The default value is 1.
   }];
 
   let parameters = (ins
@@ -90,6 +99,12 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
       CArg<"int", "1">: $chunk_size
     )>
   ];
+
+  let extraClassDeclaration = [{
+    int64_t getChunkSizeAsInt() {
+      return getChunkSize().getInt();
+    }
+  }];
 
   let genVerifyDecl = 1;
  }
@@ -243,8 +258,8 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   );
 
   let builders = [
-    AttrBuilder<(ins "llvm::ArrayRef<int>": $lane_layout,
-                     "llvm::ArrayRef<int>": $lane_data),
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
+                     "llvm::ArrayRef<int32_t>": $lane_data),
       [{
         auto sg_layout = DenseI32ArrayAttr();
         auto sg_data = DenseI32ArrayAttr();
@@ -253,6 +268,25 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
         return $_get($_ctxt, sg_layout, sg_data, inst_data,
                      DenseI32ArrayAttr::get($_ctxt, lane_layout),
                      DenseI32ArrayAttr::get($_ctxt, lane_data), order);
+      }]>,
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
+                     "llvm::ArrayRef<int32_t>": $lane_data,
+                     "llvm::ArrayRef<int32_t>": $order),
+      [{
+        return $_get($_ctxt,
+                     /*sg_layout =*/ nullptr,
+                     /*sg_data   =*/ nullptr,
+                     /*inst_data =*/ nullptr,
+                     DenseI32ArrayAttr::get($_ctxt, lane_layout),
+                     DenseI32ArrayAttr::get($_ctxt, lane_data),
+                     DenseI32ArrayAttr::get($_ctxt, order));
+      }]>,
+    AttrBuilder<(ins "DenseI32ArrayAttr": $lane_layout,
+                     "DenseI32ArrayAttr": $lane_data,
+                     "DenseI32ArrayAttr": $order),
+      [{
+        return $_get($_ctxt, /*sg_layout =*/ nullptr, /*sg_data =*/ nullptr,
+                  /*inst_data =*/ nullptr, lane_layout, lane_data, order);
       }]>
   ];
 
@@ -262,7 +296,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
     }
 
     bool isSgLayout() {
-      return getSgLayout() == nullptr && getLaneLayout() != nullptr;
+      return !isWgLayout();
     }
 
     int64_t getRank() {
@@ -273,6 +307,22 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
       if (auto attr = getLaneLayout())
         return attr.size();
       return 0;
+    }
+
+    LayoutAttr dropSgLayoutAndData() {
+      // avoid every field of the attribute is nullptr, which may lead to segment fault
+      if (!getInstData() && !getLaneLayout())
+        return nullptr;
+      return LayoutAttr::get(getContext(), nullptr, nullptr, getInstData(),
+                             getLaneLayout(), getLaneData(), getOrder());
+    }
+
+    LayoutAttr dropInstData() {
+      // avoid every field of the attribute is nullptr, which may lead to segment fault
+      if (!getSgLayout() && !getLaneLayout())
+        return nullptr;
+      return LayoutAttr::get(getContext(), getSgLayout(), getSgData(), nullptr,
+                             getLaneLayout(), getLaneData(), getOrder());
     }
   }];
 

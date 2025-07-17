@@ -17,9 +17,8 @@ implicit none
 
   ! Synchronization Functions
 
-  interface
-    attributes(device) subroutine syncthreads()
-    end subroutine
+  interface syncthreads
+    procedure :: syncthreads
   end interface
 
   interface
@@ -959,7 +958,17 @@ implicit none
   ! Time function
 
   interface
+    attributes(device) integer function clock()
+    end function
+  end interface
+
+  interface
     attributes(device) integer(8) function clock64()
+    end function
+  end interface
+
+  interface
+    attributes(device) integer(8) function globalTimer()
     end function
   end interface
 
@@ -1613,5 +1622,10 @@ implicit none
     attributes(device,host) logical function on_device() bind(c)
     end function
   end interface
+
+contains
+
+  attributes(device) subroutine syncthreads()
+  end subroutine
 
 end module

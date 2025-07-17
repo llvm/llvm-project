@@ -21,7 +21,7 @@
 namespace llvm {
 
 class AMDGPUMachineFunction;
-struct AMDGPUResourceUsageAnalysis;
+class AMDGPUResourceUsageAnalysis;
 class AMDGPUTargetStreamer;
 class MCCodeEmitter;
 class MCOperand;
@@ -36,11 +36,15 @@ class MetadataStreamer;
 } // namespace AMDGPU
 
 class AMDGPUAsmPrinter final : public AsmPrinter {
+public:
+  static char ID;
+
 private:
   unsigned CodeObjectVersion;
   void initializeTargetID(const Module &M);
 
-  AMDGPUResourceUsageAnalysis *ResourceUsage;
+  const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo
+      *ResourceUsage;
 
   MCResourceInfo RI;
 
