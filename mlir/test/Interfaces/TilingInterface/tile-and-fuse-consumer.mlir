@@ -500,8 +500,8 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// It is valid to fuse the pack op with padding semantics if the dimension does
-// not need padding.
+// It is valid to fuse the pack op with padding semantics if the tiled
+// dimensions do not need padding.
 
 func.func @fuse_pack_consumer_with_padding_semantics(%arg0: tensor<64x32xf32>, %arg1: tensor<64x32xf32>) -> tensor<23x2x3x16xf32> {
   %0 = scf.forall (%arg2) = (0) to (32) step (16) shared_outs(%arg3 = %arg1) -> (tensor<64x32xf32>) {
