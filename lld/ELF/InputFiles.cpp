@@ -21,6 +21,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
@@ -537,6 +538,46 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
       this);
 }
 
+template <class ELFT>
+static void
+handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
+                                const AArch64BuildAttrSubsections &baInfo) {
+  if (file->aarch64PauthAbiCoreInfo) {
+    // Check for data mismatch
+    if (file->aarch64PauthAbiCoreInfo) {
+      if (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
+          baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version)
+        Err(ctx)
+            << file
+            << " Pauth Data mismatch: file contains both GNU properties and "
+               "AArch64 build attributes sections with different Pauth data";
+    }
+    if (baInfo.AndFeatures != file->andFeatures)
+      Err(ctx) << file
+               << " Features Data mismatch: file contains both GNU "
+                  "properties and AArch64 build attributes sections with "
+                  "different And Features data";
+  } else {
+    // When BuildAttributes are missing, PauthABI value defaults to (TagPlatform
+    // = 0, TagSchema = 0). GNU properties do not write PAuthAbiCoreInfo if GNU
+    // property is not present. To match this behaviour, we only write
+    // PAuthAbiCoreInfo when there is at least one non-zero value. The
+    // specification reserves TagPlatform = 0, TagSchema = 1 values to match the
+    // 'Invalid' GNU property section with platform = 0, version = 0.
+    if (baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema) {
+      if (baInfo.Pauth.TagPlatform == 0 && baInfo.Pauth.TagSchema == 1)
+        file->aarch64PauthAbiCoreInfo = {0, 0};
+      else
+        file->aarch64PauthAbiCoreInfo = {baInfo.Pauth.TagPlatform,
+                                         baInfo.Pauth.TagSchema};
+    }
+    file->andFeatures = baInfo.AndFeatures;
+  }
+}
+
+template <typename ELFT>
+static void readGnuProperty(Ctx &, const InputSection &, ObjFile<ELFT> &);
+
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   object::ELFFile<ELFT> obj = this->getObj();
   // Read a section table. justSymbols is usually false.
@@ -552,8 +593,23 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   sections.resize(size);
+
+  AArch64BuildAttrSubsections aarch64BAsubSections;
+  bool hasAArch64BuildAttributes = false;
+
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
+    // Read GNU property section into a per-InputFile structure that will be
+    // merged at a later stage. A synthetic section will be created for the
+    // merged contents.
+    if (check(obj.getSectionName(sec, shstrtab)) == ".note.gnu.property") {
+      readGnuProperty(
+          ctx,
+          InputSection(*this, sec, check(obj.getSectionName(sec, shstrtab))),
+          *this);
+      sections[i] = &InputSection::discarded;
+    }
+
     if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
       continue;
     if (LLVM_LIKELY(sec.sh_type == SHT_GROUP)) {
@@ -637,13 +693,23 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       }
       break;
     case EM_AARCH64:
-      // FIXME: BuildAttributes have been implemented in llvm, but not yet in
-      // lld. Remove the section so that it does not accumulate in the output
-      // file. When support is implemented we expect not to output a build
-      // attributes section in files of type ET_EXEC or ET_SHARED, but ld -r
-      // ouptut will need a single merged attributes section.
-      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES)
+      // Extract Build Attributes section contents into aarch64BAsubSections.
+      // Input objects may contain both build Build Attributes and GNU
+      // properties. We delay processing Build Attributes until we have finished
+      // reading all sections so that we can check that these are consistent.
+      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES) {
+        ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
+        AArch64AttributeParser attributes;
+        if (Error e = attributes.parse(contents, ELFT::Endianness)) {
+          StringRef name = check(obj.getSectionName(sec, shstrtab));
+          InputSection isec(*this, sec, name);
+          Warn(ctx) << &isec << ": " << std::move(e);
+        } else {
+          aarch64BAsubSections = extractBuildAttributesSubsections(attributes);
+          hasAArch64BuildAttributes = true;
+        }
         sections[i] = &InputSection::discarded;
+      }
       // Producing a static binary with MTE globals is not currently supported,
       // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
       // medatada, and we don't want them to end up in the output file for
@@ -653,6 +719,13 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         sections[i] = &InputSection::discarded;
       break;
     }
+  }
+
+  if (hasAArch64BuildAttributes) {
+    // Handle AArch64 Build Attributes and GNU properties:
+    // - Err on mismatched values.
+    // - Store missing values as GNU properties.
+    handleAArch64BAAndGnuProperties<ELFT>(this, ctx, aarch64BAsubSections);
   }
 
   // Read a symbol table.
