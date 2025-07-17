@@ -94,12 +94,12 @@ bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (MI.getOpcode() == AMDGPU::V_MOV_B32_e32 ||
-          MI.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64) {
-        if (TII.isInlineConstant(MI, 1)) {
-          MI.setDesc(AVImmPseudo);
-          Changed = true;
-        }
+      if ((MI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
+           TII.isInlineConstant(MI, 1)) ||
+          (MI.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
+           MI.getOperand(1).isImm())) {
+        MI.setDesc(AVImmPseudo);
+        Changed = true;
       }
     }
   }
