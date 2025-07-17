@@ -214,7 +214,7 @@ const ModuleList &ModuleList::operator=(const ModuleList &rhs) {
 ModuleList::~ModuleList() = default;
 
 void ModuleList::AppendImpl(const ModuleSP &module_sp, bool use_notifier) {
-  if (!module_sp) 
+  if (!module_sp)
     return;
   {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
@@ -246,7 +246,6 @@ void ModuleList::AppendImpl(const ModuleSP &module_sp, bool use_notifier) {
   // NotifyModuleAdded should be thread-safe
   if (use_notifier && m_notifier)
     m_notifier->NotifyModuleAdded(*this, module_sp);
-  
 }
 
 void ModuleList::Append(const ModuleSP &module_sp, bool notify) {
