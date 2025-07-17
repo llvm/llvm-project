@@ -491,7 +491,8 @@ Value VectorizationState::getOrCreateMaskFor(
                                   ? true
                                   : std::get<0>(it) == std::get<1>(it);
                      })) {
-      LDBG("Masking is not needed for masking map: " << maskingMap << "\n");
+      LDBG("Dynamic + static dimensions match vector sizes, masking is not "
+           "required.\n");
       activeMaskCache[maskingMap] = Value();
       return Value();
     }
