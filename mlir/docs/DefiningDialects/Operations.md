@@ -306,6 +306,8 @@ Right now, the following primitive constraints are supported:
 *   `IntPositive`: Specifying an integer attribute whose value is positive
 *   `IntNonNegative`: Specifying an integer attribute whose value is
     non-negative
+*   `IntPowerOf2`: Specifying an integer attribute whose value is a power of
+    two > 0
 *   `ArrayMinCount<N>`: Specifying an array attribute to have at least `N`
     elements
 *   `ArrayMaxCount<N>`: Specifying an array attribute to have at most `N`
