@@ -18,6 +18,7 @@
 
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
+#include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySortRegion.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/PriorityQueue.h"
@@ -97,8 +98,40 @@ static void maybeUpdateTerminator(MachineBasicBlock *MBB) {
           ? MF->getBlockNumbered(MBB->getNumber() + 1)
           : nullptr;
 
-  if (AllAnalyzable)
+  if (AllAnalyzable) {
+    // There are cases we end up removing a conditional branch with a stackified
+    // register condition operand. For example:
+    // bb.0:
+    //   %0 = ...    ;; %0 is stackified
+    //   br_if %bb.1, %0
+    // bb.1:
+    //
+    // In this code, br_if will be removed, so we should unstackify %0 so that
+    // it can be correctly dropped in ExplicitLocals.
+    //
+    // There seems no good method to determine which registers to unstackify
+    // without analyzing branches thoroughly, which is supposed to be done
+    // within updateTerminator(). So we just unstackify all of them and
+    // restackify the still-remaining registers after updateTerminator().
+    SmallSet<Register, 2> StackifiedRegs;
+    auto *MF = MBB->getParent();
+    WebAssemblyFunctionInfo *MFI = MF->getInfo<WebAssemblyFunctionInfo>();
+    for (const MachineInstr &Term : MBB->terminators()) {
+      for (auto &MO : Term.explicit_uses()) {
+        if (MO.isReg() && MFI->isVRegStackified(MO.getReg())) {
+          StackifiedRegs.insert(MO.getReg());
+          MFI->unstackifyVReg(MO.getReg());
+        }
+      }
+    }
+
     MBB->updateTerminator(OriginalSuccessor);
+
+    for (const MachineInstr &Term : MBB->terminators())
+      for (auto &MO : Term.explicit_uses())
+        if (MO.isReg() && StackifiedRegs.contains(MO.getReg()))
+          MFI->stackifyVReg(MF->getRegInfo(), MO.getReg());
+  }
 }
 
 namespace {
