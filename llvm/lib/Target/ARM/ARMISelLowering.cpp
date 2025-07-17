@@ -802,10 +802,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::BSWAP, VT, Expand);
   }
 
-  if (!Subtarget->isThumb()) {
+  if (!Subtarget->isThumb1Only())
     setOperationAction(ISD::SCMP, MVT::i32, Custom);
-    setOperationAction(ISD::UCMP, MVT::i32, Custom);
-  }
+  setOperationAction(ISD::UCMP, MVT::i32, Custom);
 
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
   setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
@@ -10692,6 +10691,45 @@ SDValue ARMTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
+
+  if (Subtarget->isThumb1Only()) {
+    // For Thumb unsigned comparison, use this sequence:
+    // subs r2, r0, r1   ; r2 = LHS - RHS, sets flags
+    // sbc r2, r2        ; r2 = r2 - r2 - !carry
+    // cmp r1, r0        ; compare RHS with LHS
+    // sbc r1, r1        ; r1 = r1 - r1 - !carry
+    // subs r0, r2, r1   ; r0 = r2 - r1 (final result)
+
+    // First subtraction: LHS - RHS
+    SDValue Sub1WithFlags = DAG.getNode(
+        ARMISD::SUBC, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
+    SDValue Sub1Result = Sub1WithFlags.getValue(0);
+    SDValue Flags1 = Sub1WithFlags.getValue(1);
+
+    // SUBE: Sub1Result - Sub1Result - !carry
+    // This gives 0 if LHS >= RHS (unsigned), -1 if LHS < RHS (unsigned)
+    SDValue Sbc1 =
+        DAG.getNode(ARMISD::SUBE, dl, DAG.getVTList(MVT::i32, FlagsVT),
+                    Sub1Result, Sub1Result, Flags1);
+    SDValue Sbc1Result = Sbc1.getValue(0);
+
+    // Second comparison: RHS vs LHS (reverse comparison)
+    SDValue CmpFlags = DAG.getNode(ARMISD::CMP, dl, FlagsVT, RHS, LHS);
+
+    // SUBE: RHS - RHS - !carry
+    // This gives 0 if RHS <= LHS (unsigned), -1 if RHS > LHS (unsigned)
+    SDValue Sbc2 = DAG.getNode(
+        ARMISD::SUBE, dl, DAG.getVTList(MVT::i32, FlagsVT), RHS, RHS, CmpFlags);
+    SDValue Sbc2Result = Sbc2.getValue(0);
+
+    // Final subtraction: Sbc1Result - Sbc2Result (no flags needed)
+    SDValue Result =
+        DAG.getNode(ISD::SUB, dl, MVT::i32, Sbc1Result, Sbc2Result);
+    if (Op.getValueType() != MVT::i32)
+      Result = DAG.getSExtOrTrunc(Result, dl, Op.getValueType());
+
+    return Result;
+  }
 
   // For the ARM assembly pattern (unsigned version):
   // subs r0, r0, r1   ; subtract RHS from LHS and set flags
