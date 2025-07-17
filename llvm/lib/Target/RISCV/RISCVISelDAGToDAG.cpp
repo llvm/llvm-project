@@ -3036,6 +3036,9 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
                                               unsigned MaxShiftAmount,
                                               SDValue &Base, SDValue &Index,
                                               SDValue &Scale) {
+  if (Addr.getOpcode() != ISD::ADD)
+    return false;
+
   EVT VT = Addr.getSimpleValueType();
   auto UnwrapShl = [this, VT, MaxShiftAmount](SDValue N, SDValue &Index,
                                               SDValue &Shift) {
@@ -3054,29 +3057,27 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
     return ShiftAmt != 0;
   };
 
-  if (Addr.getOpcode() == ISD::ADD) {
-    if (auto *C1 = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
-      SDValue AddrB = Addr.getOperand(0);
-      if (AddrB.getOpcode() == ISD::ADD &&
-          UnwrapShl(AddrB.getOperand(0), Index, Scale) &&
-          !isa<ConstantSDNode>(AddrB.getOperand(1)) &&
-          isInt<12>(C1->getSExtValue())) {
-        // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
-        SDValue C1Val =
-            CurDAG->getTargetConstant(C1->getZExtValue(), SDLoc(Addr), VT);
-        Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
-                                              AddrB.getOperand(1), C1Val),
-                       0);
-        return true;
-      }
-    } else if (UnwrapShl(Addr.getOperand(0), Index, Scale)) {
-      Base = Addr.getOperand(1);
-      return true;
-    } else {
-      UnwrapShl(Addr.getOperand(1), Index, Scale);
-      Base = Addr.getOperand(0);
+  if (auto *C1 = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
+    SDValue AddrB = Addr.getOperand(0);
+    if (AddrB.getOpcode() == ISD::ADD &&
+        UnwrapShl(AddrB.getOperand(0), Index, Scale) &&
+        !isa<ConstantSDNode>(AddrB.getOperand(1)) &&
+        isInt<12>(C1->getSExtValue())) {
+      // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
+      SDValue C1Val =
+          CurDAG->getTargetConstant(C1->getZExtValue(), SDLoc(Addr), VT);
+      Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
+                                            AddrB.getOperand(1), C1Val),
+                     0);
       return true;
     }
+  } else if (UnwrapShl(Addr.getOperand(0), Index, Scale)) {
+    Base = Addr.getOperand(1);
+    return true;
+  } else {
+    UnwrapShl(Addr.getOperand(1), Index, Scale);
+    Base = Addr.getOperand(0);
+    return true;
   }
 
   return false;
