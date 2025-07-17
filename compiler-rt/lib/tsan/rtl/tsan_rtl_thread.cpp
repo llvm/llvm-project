@@ -188,7 +188,7 @@ void ThreadStart(ThreadState *thr, Tid tid, ThreadID os_id,
   }
 #endif
 
-#if !SANITIZER_GO
+#if !SANITIZER_GO && !SANITIZER_ANDROID
   // Don't imitate stack/TLS writes for the main thread,
   // because its initialization is synchronized with all
   // subsequent threads anyway.

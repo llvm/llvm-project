@@ -2411,7 +2411,7 @@ TSAN_INTERCEPTOR(int, vfork, int fake) {
 }
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
 TSAN_INTERCEPTOR(int, clone, int (*fn)(void *), void *stack, int flags,
                  void *arg, int *parent_tid, void *tls, pid_t *child_tid) {
   SCOPED_INTERCEPTOR_RAW(clone, fn, stack, flags, arg, parent_tid, tls,
@@ -3120,7 +3120,7 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(fork);
   TSAN_INTERCEPT(vfork);
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   TSAN_INTERCEPT(clone);
 #endif
 #if !SANITIZER_ANDROID
