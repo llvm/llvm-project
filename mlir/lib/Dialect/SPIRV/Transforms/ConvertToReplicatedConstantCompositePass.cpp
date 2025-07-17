@@ -1,4 +1,4 @@
-//===- ConversionToReplicatedConstantCompositePass.cpp --------------------===//
+//===- ConvertToReplicatedConstantCompositePass.cpp --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,21 +14,18 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
-namespace mlir {
-namespace spirv {
+namespace mlir::spirv {
 #define GEN_PASS_DEF_SPIRVREPLICATEDCONSTANTCOMPOSITEPASS
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
-} // namespace spirv
-} // namespace mlir
-
-using namespace mlir;
 
 namespace {
 
-Attribute getSplatAttribute(Attribute valueAttr, uint32_t &splatCount) {
+static std::pair<Attribute, uint32_t>
+getSplatAttributeAndCount(Attribute valueAttr) {
   Attribute attr;
+  uint32_t splatCount = 0;
   if (auto denseAttr = dyn_cast<DenseElementsAttr>(valueAttr)) {
     if (denseAttr.isSplat()) {
       attr = denseAttr.getSplatValue<Attribute>();
@@ -44,30 +41,27 @@ Attribute getSplatAttribute(Attribute valueAttr, uint32_t &splatCount) {
 
   if (attr) {
     if (auto typedAttr = dyn_cast<TypedAttr>(attr)) {
-      if (isa<spirv::CompositeType>(typedAttr.getType()))
-        if (Attribute newAttr = getSplatAttribute(attr, splatCount))
-          attr = newAttr;
+      if (isa<spirv::CompositeType>(typedAttr.getType())) {
+        std::pair<Attribute, uint32_t> newSplatAttrAndCount =
+            getSplatAttributeAndCount(attr);
+        if (newSplatAttrAndCount.first) {
+          return newSplatAttrAndCount;
+        }
+      }
     } else if (isa<ArrayAttr>(attr)) {
-      if (Attribute newAttr = getSplatAttribute(attr, splatCount))
-        attr = newAttr;
+      std::pair<Attribute, uint32_t> newSplatAttrAndCount =
+          getSplatAttributeAndCount(attr);
+      if (newSplatAttrAndCount.first) {
+        return newSplatAttrAndCount;
+      }
     }
   }
 
-  return attr;
+  return {attr, splatCount};
 }
 
-} // namespace
-
-namespace {
-class ConversionToReplicatedConstantCompositePass
-    : public spirv::impl::SPIRVReplicatedConstantCompositePassBase<
-          ConversionToReplicatedConstantCompositePass> {
-public:
-  void runOnOperation() override;
-};
-
-class ConstantOpConversion : public OpRewritePattern<spirv::ConstantOp> {
-  using OpRewritePattern<spirv::ConstantOp>::OpRewritePattern;
+struct ConstantOpConversion final : OpRewritePattern<spirv::ConstantOp> {
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(spirv::ConstantOp op,
                                 PatternRewriter &rewriter) const override {
@@ -75,25 +69,25 @@ class ConstantOpConversion : public OpRewritePattern<spirv::ConstantOp> {
     if (!compositeType)
       return rewriter.notifyMatchFailure(op, "not a composite constant");
 
-    uint32_t splatCount = 0;
-    Attribute splatAttr = getSplatAttribute(op.getValue(), splatCount);
-    if (!splatAttr)
+    std::pair<Attribute, uint32_t> splatAttrAndCount =
+        getSplatAttributeAndCount(op.getValue());
+    if (!splatAttrAndCount.first)
       return rewriter.notifyMatchFailure(op, "composite is not splat");
 
-    if (splatCount == 1)
+    if (splatAttrAndCount.second == 1)
       return rewriter.notifyMatchFailure(op,
                                          "composite has only one constituent");
 
     rewriter.replaceOpWithNewOp<spirv::EXTConstantCompositeReplicateOp>(
-        op, op.getType(), splatAttr);
+        op, op.getType(), splatAttrAndCount.first);
 
     return success();
   }
 };
 
-class SpecConstantCompositeOpConversion
-    : public OpRewritePattern<spirv::SpecConstantCompositeOp> {
-  using OpRewritePattern<spirv::SpecConstantCompositeOp>::OpRewritePattern;
+struct SpecConstantCompositeOpConversion final
+    : OpRewritePattern<spirv::SpecConstantCompositeOp> {
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(spirv::SpecConstantCompositeOp op,
                                 PatternRewriter &rewriter) const override {
@@ -123,15 +117,17 @@ class SpecConstantCompositeOpConversion
   }
 };
 
-void ConversionToReplicatedConstantCompositePass::runOnOperation() {
-  MLIRContext *context = &getContext();
-  RewritePatternSet patterns(context);
-  patterns.add<ConstantOpConversion>(context);
-  patterns.add<SpecConstantCompositeOpConversion>(context);
-
-  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-    signalPassFailure();
+struct ConvertToReplicatedConstantCompositePass final
+    : spirv::impl::SPIRVReplicatedConstantCompositePassBase<
+          ConvertToReplicatedConstantCompositePass> {
+  void runOnOperation() override {
+    MLIRContext *context = &getContext();
+    RewritePatternSet patterns(context);
+    patterns.add<ConstantOpConversion, SpecConstantCompositeOpConversion>(
+        context);
+    walkAndApplyPatterns(getOperation(), std::move(patterns));
   }
-}
+};
 
 } // namespace
+} // namespace mlir::spirv
