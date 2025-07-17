@@ -303,10 +303,12 @@ void multiThreadedPageInBackground(const DeferredFiles &deferred) {
   std::atomic_int index = 0;
 
   parallelFor(0, config->readThreads, [&](size_t I) {
-    while (index < (int)deferred.size()) {
-      const StringRef &buff = deferred[index].buffer.getBuffer();
+    while (true) {
+      int localIndex = index.fetch_add(1);
+      if (localIndex >= (int)deferred.size())
+        break;
+      const StringRef &buff = deferred[localIndex].buffer.getBuffer();
       totalBytes += buff.size();
-      index += 1;
 
       // Reference all file's mmap'd pages to load them into memory.
       for (const char *page = buff.data(), *end = page + buff.size();
