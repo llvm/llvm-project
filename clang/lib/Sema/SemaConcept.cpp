@@ -923,8 +923,11 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   std::optional<LocalInstantiationScope> ScopeForParameters;
   if (const NamedDecl *ND = DeclInfo.getDecl();
       ND && ND->isFunctionOrFunctionTemplate()) {
-    ScopeForParameters.emplace(S, /*CombineWithOuterScope=*/true);
+    ScopeForParameters.emplace(S);
     const FunctionDecl *FD = ND->getAsFunction();
+    if (FunctionTemplateDecl *Template = FD->getDescribedFunctionTemplate();
+        Template && Template->getInstantiatedFromMemberTemplate())
+      FD = Template->getInstantiatedFromMemberTemplate()->getTemplatedDecl();
     for (auto *PVD : FD->parameters()) {
       if (!PVD->isParameterPack()) {
         ScopeForParameters->InstantiatedLocal(PVD, PVD);
