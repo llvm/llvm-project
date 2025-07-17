@@ -28356,9 +28356,9 @@ Overview:
 
 The '``llvm.experimental.constrained.lrint``' intrinsic returns the first
 argument rounded to the nearest integer. An inexact floating-point exception
-will be raised if the argument is not an integer. An invalid exception is
-raised if the result is too large to fit into a supported integer type,
-and in this case the result is undefined.
+will be raised if the argument is not an integer. If the rounded value is too
+large to fit into the result type, an invalid exception is raised, and the
+return value is a non-deterministic value (equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28404,9 +28404,9 @@ Overview:
 
 The '``llvm.experimental.constrained.llrint``' intrinsic returns the first
 argument rounded to the nearest integer. An inexact floating-point exception
-will be raised if the argument is not an integer. An invalid exception is
-raised if the result is too large to fit into a supported integer type,
-and in this case the result is undefined.
+will be raised if the argument is not an integer. If the rounded value is too
+large to fit into the result type, an invalid exception is raised, and the
+return value is a non-deterministic value (equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28755,8 +28755,9 @@ Overview:
 The '``llvm.experimental.constrained.lround``' intrinsic returns the first
 argument rounded to the nearest integer with ties away from zero.  It will
 raise an inexact floating-point exception if the argument is not an integer.
-An invalid exception is raised if the result is too large to fit into a
-supported integer type, and in this case the result is undefined.
+If the rounded value is too large to fit into the result type, an invalid
+exception is raised, and the return value is a non-deterministic value
+(equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28793,8 +28794,9 @@ Overview:
 The '``llvm.experimental.constrained.llround``' intrinsic returns the first
 argument rounded to the nearest integer with ties away from zero. It will
 raise an inexact floating-point exception if the argument is not an integer.
-An invalid exception is raised if the result is too large to fit into a
-supported integer type, and in this case the result is undefined.
+If the rounded value is too large to fit into the result type, an invalid
+exception is raised, and the return value is a non-deterministic value
+(equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
