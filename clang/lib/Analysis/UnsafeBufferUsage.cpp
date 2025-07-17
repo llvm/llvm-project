@@ -813,7 +813,13 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
     ASTContext &Ctx;
 
     // Returns an `Expr` representing the precision if specified, null
-    // otherwise:
+    // otherwise.
+    // The parameter `Call` is a printf call and the parameter `Precision` is
+    // the precision of a format specifier of the `Call`.
+    //
+    // For example, for the `printf("%d, %.10s", 10, p)` call
+    // `Precision` can be the precision of either "%d" or "%.10s". The former
+    // one will have `NotSpecified` kind.
     const Expr *
     getPrecisionAsExpr(const analyze_printf::OptionalAmount &Precision,
                        const CallExpr *Call) {
@@ -877,7 +883,6 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
                ? ArgType->getPointeeType()->isWideCharType()
                : ArgType->getPointeeType()->isCharType());
 
-      ArgType.dump();
       if (auto *Precision = getPrecisionAsExpr(FS.getPrecision(), Call);
           Precision && IsArgTypeValid)
         if (isPtrBufferSafe(Arg, Precision, Ctx))
