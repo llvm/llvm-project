@@ -181,9 +181,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
 
       int64_t rank = getMixedSizes().size();
       
-      // Set constant offset to MAX to indicate no offsets provided
-      // or else the printer can't differeiate this with valid const_offset value (say 0)
-      setConstOffsets(llvm::SmallVector<int64_t, 4>(rank, std::numeric_limits<int64_t>::max()));
+      setConstOffsets(llvm::SmallVector<int64_t, 4>(rank, 0));
 
       attr = getConstOffsetsAttr();
       return attr;
