@@ -152,8 +152,9 @@ static const Type *unwrapPointee(const Type *T) {
   while (T && T->isPointerOrReferenceType()) {
     if (T->isReferenceType()) {
       const QualType QType = T->getPointeeType();
-      if (!QType.isNull())
-        T = QType.getTypePtr();
+      if (QType.isNull())
+        return T;
+      T = QType.getTypePtr();
     } else
       T = T->getPointeeOrArrayElementType();
   }
