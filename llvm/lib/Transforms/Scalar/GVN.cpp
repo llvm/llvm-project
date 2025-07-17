@@ -2369,13 +2369,13 @@ uint32_t GVNPass::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
   if (PHINode *PN = NumberingPhi[Num]) {
     if (PN->getParent() != PhiBlock)
       return Num;
-
     for (unsigned I = 0; I != PN->getNumIncomingValues(); ++I) {
       if (PN->getIncomingBlock(I) != Pred)
         continue;
       if (uint32_t TransVal = lookup(PN->getIncomingValue(I), false))
         return TransVal;
     }
+    return Num;
   }
 
   if (BasicBlock *BB = NumberingBB[Num]) {
