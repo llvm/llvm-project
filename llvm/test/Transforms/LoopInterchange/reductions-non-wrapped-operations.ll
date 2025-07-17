@@ -411,6 +411,44 @@ exit:
   ret void
 }
 
+; FIXME: Is it really legal to interchange the loops when
+; both reassoc and ninf are set?
+; Check that the interchange is legal if the floating-point addition is marked
+; as reassoc.
+;
+; CHECK:      --- !Pass
+; CHECK-NEXT: Pass:            loop-interchange
+; CHECK-NEXT: Name:            Interchanged
+; CHECK-NEXT: Function:        reduction_reassoc_ninf_fadd
+define void @reduction_reassoc_ninf_fadd(ptr %A) {
+entry:
+  br label %for.i.header
+
+for.i.header:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %for.i.latch ]
+  %sum.i = phi float [ 0.0, %entry ], [ %sum.i.lcssa, %for.i.latch ]
+  br label %for.j
+
+for.j:
+  %j = phi i32 [ 0, %for.i.header ], [ %j.inc, %for.j ]
+  %sum.j = phi float [ %sum.i, %for.i.header ], [ %sum.j.next, %for.j ]
+  %idx = getelementptr inbounds [2 x [2 x i32]], ptr %A, i32 0, i32 %j, i32 %i
+  %a = load float, ptr %idx, align 4
+  %sum.j.next = fadd reassoc ninf float %sum.j, %a
+  %j.inc = add i32 %j, 1
+  %cmp.j = icmp slt i32 %j.inc, 2
+  br i1 %cmp.j, label %for.j, label %for.i.latch
+
+for.i.latch:
+  %sum.i.lcssa = phi float [ %sum.j.next, %for.j ]
+  %i.inc = add i32 %i, 1
+  %cmp.i = icmp slt i32 %i.inc, 2
+  br i1 %cmp.i, label %for.i.header, label %exit
+
+exit:
+  ret void
+}
+
 ; Check that the loops aren't exchanged if there is a reduction of
 ; non-reassociative floating-point multiplication.
 ;
