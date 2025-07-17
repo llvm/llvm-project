@@ -1441,11 +1441,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   }
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32:
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f64:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32:
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64:
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_v2f16: {
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64: {
     llvm::Type *RetTy;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32:
@@ -1455,13 +1453,12 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32:
       RetTy = FloatTy;
       break;
-    case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f64:
     case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64:
       RetTy = DoubleTy;
       break;
     case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16:
-    case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_v2f16:
       RetTy = llvm::FixedVectorType::get(HalfTy, 2);
+      break;
     }
     unsigned IID;
     switch (BuiltinID) {
@@ -1469,13 +1466,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_add;
       break;
     case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32:
-    case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f64:
     case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16:
       IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd;
       break;
     case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32:
     case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64:
-    case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_v2f16:
       IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax;
       break;
     }
