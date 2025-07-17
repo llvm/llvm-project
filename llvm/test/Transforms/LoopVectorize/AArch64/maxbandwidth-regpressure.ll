@@ -33,8 +33,4 @@ for.exit:                        ; preds = %for.body
   ret i32 %add
 }
 
-!7 = distinct !{!7, !8, !9, !10}
-!8 = !{!"llvm.loop.mustprogress"}
-!9 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
-!10 = !{!"llvm.loop.vectorize.enable", i1 true}
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
