@@ -76,6 +76,17 @@ LayoutAttr getLayoutAttr(const Value value);
 /// it will check the operand itself and its defining op.
 LayoutAttr getLayoutAttr(const OpOperand &opr);
 
+/// Removes the LayoutAttr for a given OpOperand or OpResult if it exists.
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                      std::is_same_v<T, OpResult>>>
+void removeLayoutAttr(const T &operandOrResult);
+
+/// Removes the LayoutAttr for each OpOperand and OpResult of the given
+/// operation if they exist. If the operation contains regions, it is also
+/// applied recursively to the contained operations
+void removeLayoutAttrs(Operation *op);
+
 /// Sets the LayoutAttr for a given OpOperand or OpResult by attaching
 /// it to the owner's dictionary attributes
 template <typename T,
