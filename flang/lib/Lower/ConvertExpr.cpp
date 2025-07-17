@@ -596,7 +596,7 @@ absentBoxToUnallocatedBox(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Type boxType = box.getType();
   assert(mlir::isa<fir::BoxType>(boxType) && "argument must be a fir.box");
   mlir::Value emptyBox =
-      fir::factory::createUnallocatedBox(builder, loc, boxType, std::nullopt);
+      fir::factory::createUnallocatedBox(builder, loc, boxType, {});
   auto safeToReadBox =
       builder.create<mlir::arith::SelectOp>(loc, isPresent, box, emptyBox);
   return fir::substBase(exv, safeToReadBox);
@@ -2663,8 +2663,7 @@ public:
                                        /*nonDeferredParams=*/mlir::ValueRange{},
                                        /*mutableProperties=*/{});
           Fortran::lower::associateMutableBox(converter, loc, pointer, *expr,
-                                              /*lbounds=*/std::nullopt,
-                                              stmtCtx);
+                                              /*lbounds=*/{}, stmtCtx);
           caller.placeInput(arg, irBox);
           continue;
         }
@@ -6186,7 +6185,7 @@ private:
   mlir::FunctionType memcpyType() {
     auto ptrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
     llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type()};
-    return mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
+    return mlir::FunctionType::get(builder.getContext(), args, {});
   }
 
   /// Create a call to the LLVM memcpy intrinsic.

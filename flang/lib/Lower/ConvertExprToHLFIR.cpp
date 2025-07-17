@@ -1945,7 +1945,7 @@ private:
           fir::emitFatalError(loc, "pointer component designator could not be "
                                    "lowered to mutable box");
         Fortran::lower::associateMutableBox(converter, loc, *toBox, expr,
-                                            /*lbounds=*/std::nullopt, stmtCtx);
+                                            /*lbounds=*/{}, stmtCtx);
         continue;
       }
 

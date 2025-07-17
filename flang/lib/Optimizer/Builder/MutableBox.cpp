@@ -521,23 +521,23 @@ void fir::factory::associateMutableBox(fir::FirOpBuilder &builder,
         mlir::Value sourceBox;
         if (auto *polyBox = source.getBoxOf<fir::PolymorphicValue>())
           sourceBox = polyBox->getSourceBox();
-        writer.updateMutableBox(p.getAddr(), /*lbounds=*/std::nullopt,
-                                /*extents=*/std::nullopt,
-                                /*lengths=*/std::nullopt, sourceBox);
+        writer.updateMutableBox(p.getAddr(), /*lbounds=*/{},
+                                /*extents=*/{},
+                                /*lengths=*/{}, sourceBox);
       },
       [&](const fir::UnboxedValue &addr) {
-        writer.updateMutableBox(addr, /*lbounds=*/std::nullopt,
-                                /*extents=*/std::nullopt,
-                                /*lengths=*/std::nullopt);
+        writer.updateMutableBox(addr, /*lbounds=*/{},
+                                /*extents=*/{},
+                                /*lengths=*/{});
       },
       [&](const fir::CharBoxValue &ch) {
-        writer.updateMutableBox(ch.getAddr(), /*lbounds=*/std::nullopt,
-                                /*extents=*/std::nullopt, {ch.getLen()});
+        writer.updateMutableBox(ch.getAddr(), /*lbounds=*/{},
+                                /*extents=*/{}, {ch.getLen()});
       },
       [&](const fir::ArrayBoxValue &arr) {
         writer.updateMutableBox(arr.getAddr(),
                                 lbounds.empty() ? arr.getLBounds() : lbounds,
-                                arr.getExtents(), /*lengths=*/std::nullopt);
+                                arr.getExtents(), /*lengths=*/{});
       },
       [&](const fir::CharArrayBoxValue &arr) {
         writer.updateMutableBox(arr.getAddr(),
@@ -634,11 +634,11 @@ void fir::factory::associateMutableBoxWithRemap(
   source.match(
       [&](const fir::PolymorphicValue &p) {
         writer.updateMutableBox(cast(p.getAddr()), lbounds, extents,
-                                /*lengths=*/std::nullopt);
+                                /*lengths=*/{});
       },
       [&](const fir::UnboxedValue &addr) {
         writer.updateMutableBox(cast(addr), lbounds, extents,
-                                /*lengths=*/std::nullopt);
+                                /*lengths=*/{});
       },
       [&](const fir::CharBoxValue &ch) {
         writer.updateMutableBox(cast(ch.getAddr()), lbounds, extents,
@@ -646,7 +646,7 @@ void fir::factory::associateMutableBoxWithRemap(
       },
       [&](const fir::ArrayBoxValue &arr) {
         writer.updateMutableBox(cast(arr.getAddr()), lbounds, extents,
-                                /*lengths=*/std::nullopt);
+                                /*lengths=*/{});
       },
       [&](const fir::CharArrayBoxValue &arr) {
         writer.updateMutableBox(cast(arr.getAddr()), lbounds, extents,
@@ -755,8 +755,8 @@ static mlir::Value allocateAndInitNewStorage(fir::FirOpBuilder &builder,
     // there is no way to know here if a derived type needs it or not. But the
     // information is available at compile time and could be reflected here
     // somehow.
-    mlir::Value irBox = createNewFirBox(builder, loc, box, newStorage,
-                                        std::nullopt, extents, lengths);
+    mlir::Value irBox =
+        createNewFirBox(builder, loc, box, newStorage, {}, extents, lengths);
     fir::runtime::genDerivedTypeInitialize(builder, loc, irBox);
   }
   return newStorage;
