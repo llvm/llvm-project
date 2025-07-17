@@ -69,6 +69,39 @@ static const Intrinsic::ID ScalableVlsegIntrIds[] = {
     Intrinsic::riscv_vlseg6_mask, Intrinsic::riscv_vlseg7_mask,
     Intrinsic::riscv_vlseg8_mask};
 
+static const Intrinsic::ID FixedVssegIntrIds[] = {
+    Intrinsic::riscv_seg2_store_mask, Intrinsic::riscv_seg3_store_mask,
+    Intrinsic::riscv_seg4_store_mask, Intrinsic::riscv_seg5_store_mask,
+    Intrinsic::riscv_seg6_store_mask, Intrinsic::riscv_seg7_store_mask,
+    Intrinsic::riscv_seg8_store_mask};
+
+static const Intrinsic::ID ScalableVssegIntrIds[] = {
+    Intrinsic::riscv_vsseg2_mask, Intrinsic::riscv_vsseg3_mask,
+    Intrinsic::riscv_vsseg4_mask, Intrinsic::riscv_vsseg5_mask,
+    Intrinsic::riscv_vsseg6_mask, Intrinsic::riscv_vsseg7_mask,
+    Intrinsic::riscv_vsseg8_mask};
+
+static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
+  assert(N);
+  if (N == 1)
+    return true;
+
+  using namespace PatternMatch;
+  // Right now we're only recognizing the simplest pattern.
+  uint64_t C;
+  if (match(V, m_CombineOr(m_ConstantInt(C),
+                           m_NUWMul(m_Value(), m_ConstantInt(C)))) &&
+      C && C % N == 0)
+    return true;
+
+  if (isPowerOf2_32(N)) {
+    KnownBits KB = llvm::computeKnownBits(V, DL);
+    return KB.countMinTrailingZeros() >= Log2_32(N);
+  }
+
+  return false;
+}
+
 /// Lower an interleaved load into a vlsegN intrinsic.
 ///
 /// E.g. Lower an interleaved load (Factor = 2):
@@ -133,18 +166,6 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   return true;
 }
-
-static const Intrinsic::ID FixedVssegIntrIds[] = {
-    Intrinsic::riscv_seg2_store_mask, Intrinsic::riscv_seg3_store_mask,
-    Intrinsic::riscv_seg4_store_mask, Intrinsic::riscv_seg5_store_mask,
-    Intrinsic::riscv_seg6_store_mask, Intrinsic::riscv_seg7_store_mask,
-    Intrinsic::riscv_seg8_store_mask};
-
-static const Intrinsic::ID ScalableVssegIntrIds[] = {
-    Intrinsic::riscv_vsseg2_mask, Intrinsic::riscv_vsseg3_mask,
-    Intrinsic::riscv_vsseg4_mask, Intrinsic::riscv_vsseg5_mask,
-    Intrinsic::riscv_vsseg6_mask, Intrinsic::riscv_vsseg7_mask,
-    Intrinsic::riscv_vsseg8_mask};
 
 /// Lower an interleaved store into a vssegN intrinsic.
 ///
@@ -235,27 +256,6 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   return true;
 }
 
-static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
-  assert(N);
-  if (N == 1)
-    return true;
-
-  using namespace PatternMatch;
-  // Right now we're only recognizing the simplest pattern.
-  uint64_t C;
-  if (match(V, m_CombineOr(m_ConstantInt(C),
-                           m_c_Mul(m_Value(), m_ConstantInt(C)))) &&
-      C && C % N == 0)
-    return true;
-
-  if (isPowerOf2_32(N)) {
-    KnownBits KB = llvm::computeKnownBits(V, DL);
-    return KB.countMinTrailingZeros() >= Log2_32(N);
-  }
-
-  return false;
-}
-
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     Instruction *Load, Value *Mask, IntrinsicInst *DI) const {
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
@@ -296,10 +296,8 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     if (!isMultipleOfN(WideEVL, Load->getDataLayout(), Factor))
       return false;
 
-    VL = Builder.CreateZExt(
-        Builder.CreateUDiv(WideEVL,
-                           ConstantInt::get(WideEVL->getType(), Factor)),
-        XLenTy);
+    auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+    VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
   }
 
   Type *PtrTy = Ptr->getType();
@@ -387,10 +385,8 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
     if (!isMultipleOfN(WideEVL, DL, Factor))
       return false;
 
-    VL = Builder.CreateZExt(
-        Builder.CreateUDiv(WideEVL,
-                           ConstantInt::get(WideEVL->getType(), Factor)),
-        XLenTy);
+    auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+    VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
   }
   Type *PtrTy = Ptr->getType();
   unsigned AS = Ptr->getType()->getPointerAddressSpace();
@@ -489,9 +485,9 @@ bool RISCVTargetLowering::lowerInterleavedVPLoad(
 
   auto *PtrTy = Load->getArgOperand(0)->getType();
   auto *XLenTy = Type::getIntNTy(Load->getContext(), Subtarget.getXLen());
-  Value *EVL = Builder.CreateZExt(
-      Builder.CreateUDiv(WideEVL, ConstantInt::get(WideEVL->getType(), Factor)),
-      XLenTy);
+  auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+  Value *EVL =
+      Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
 
   Value *Return = nullptr;
   if (isa<FixedVectorType>(VTy)) {
@@ -596,9 +592,9 @@ bool RISCVTargetLowering::lowerInterleavedVPStore(
 
   auto *PtrTy = Store->getArgOperand(1)->getType();
   auto *XLenTy = Type::getIntNTy(Store->getContext(), Subtarget.getXLen());
-  Value *EVL = Builder.CreateZExt(
-      Builder.CreateUDiv(WideEVL, ConstantInt::get(WideEVL->getType(), Factor)),
-      XLenTy);
+  auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+  Value *EVL =
+      Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
 
   if (isa<FixedVectorType>(VTy)) {
     SmallVector<Value *, 8> Operands(InterleaveOperands);

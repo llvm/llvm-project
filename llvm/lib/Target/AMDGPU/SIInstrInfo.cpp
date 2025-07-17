@@ -6484,7 +6484,7 @@ bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
   if (OldVAddrIdx >= 0) {
     MachineOperand &VAddr = Inst.getOperand(OldVAddrIdx);
     VAddrDef = MRI.getUniqueVRegDef(VAddr.getReg());
-    if (!VAddrDef || VAddrDef->getOpcode() != AMDGPU::V_MOV_B32_e32 ||
+    if (!VAddrDef || !VAddrDef->isMoveImmediate() ||
         !VAddrDef->getOperand(1).isImm() ||
         VAddrDef->getOperand(1).getImm() != 0)
       return false;
