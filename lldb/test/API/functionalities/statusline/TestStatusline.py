@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbpexpect import PExpectTest
 from lldbgdbserverutils import get_lldb_server_exe
 
+
 # PExpect uses many timeouts internally and doesn't play well
 # under ASAN on a loaded machine..
 @skipIfAsan
@@ -145,23 +146,31 @@ class TestStatusline(PExpectTest):
                         sock.bind((host, 0))
                         return sock.getsockname()
                 except OSError:
-                    time.sleep(DELAY * 2 ** attempt)  # Exponential backoff
-            raise RuntimeError("Could not find a free port on {} after {} attempts.".format(host, MAX_RETRY_ATTEMPTS))
-        
+                    time.sleep(DELAY * 2**attempt)  # Exponential backoff
+            raise RuntimeError(
+                "Could not find a free port on {} after {} attempts.".format(
+                    host, MAX_RETRY_ATTEMPTS
+                )
+            )
+
         def _wait_for_server_ready_in_log(log_file_path, ready_message):
             """Check log file for server ready message with retry logic"""
             for attempt in range(MAX_RETRY_ATTEMPTS):
                 if os.path.exists(log_file_path):
-                    with open(log_file_path, 'r') as f:
+                    with open(log_file_path, "r") as f:
                         if ready_message in f.read():
                             return
                 time.sleep(pow(2, attempt) * DELAY)
-            raise RuntimeError("Server not ready after {} attempts.".format(MAX_RETRY_ATTEMPTS))
-        
+            raise RuntimeError(
+                "Server not ready after {} attempts.".format(MAX_RETRY_ATTEMPTS)
+            )
+
         self.build()
         exe_path = self.getBuildArtifact("a.out")
         server_log_file = self.getLogBasenameForCurrentTest() + "-lldbserver.log"
-        self.addTearDownHook(lambda: os.path.exists(server_log_file) and os.remove(server_log_file))
+        self.addTearDownHook(
+            lambda: os.path.exists(server_log_file) and os.remove(server_log_file)
+        )
 
         # Find a free port for the server
         addr = _find_free_port("localhost")
@@ -171,18 +180,18 @@ class TestStatusline(PExpectTest):
             connect_address,
             exe_path,
             "--log-file={}".format(server_log_file),
-            "--log-channels=lldb conn"
+            "--log-channels=lldb conn",
         ]
 
         server_proc = self.spawnSubprocess(
             get_lldb_server_exe(), commandline_args, install_remote=False
         )
         self.assertIsNotNone(server_proc)
-            
+
         # Wait for server to be ready by checking log file.
         server_ready_message = "Listen to {}".format(connect_address)
         _wait_for_server_ready_in_log(server_log_file, server_ready_message)
-    
+
         # Launch LLDB client and connect to lldb-server with statusline enabled
         self.launch(timeout=self.TIMEOUT)
         self.resize()
