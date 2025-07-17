@@ -6,6 +6,6 @@
 // to an error.
 
 void radar_10894044(void) {
-  printf("Hi\n"); // expected-error {{call to undeclared library function 'printf' with type 'int (const char *, ...)'}} expected-note {{include the header <stdio.h> or explicitly provide a declaration for 'printf'}}
+  printf("Hi\n"); // expected-error {{call to undeclared library function 'printf', will assume it exists with standards-mandated type 'int (const char *, ...)'; ISO C99 and later do not support implicit function declarations}} expected-note {{include the header <stdio.h> or explicitly provide a declaration for 'printf'}}
   radar_10894044_not_declared(); // expected-error {{call to undeclared function 'radar_10894044_not_declared'; ISO C99 and later do not support implicit function declarations}}
 }
