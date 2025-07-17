@@ -4414,10 +4414,34 @@ getAttributeValueByDeviceType(llvm::SmallVector<mlir::Attribute> &attributes,
   return std::nullopt;
 }
 
+// Helper function to extract string value from bind name variant
+static std::optional<llvm::StringRef> getBindNameStringValue(
+    const std::optional<std::variant<mlir::SymbolRefAttr, mlir::StringAttr>>
+        &bindNameValue) {
+  if (!bindNameValue.has_value())
+    return std::nullopt;
+
+  return std::visit(
+      [](const auto &attr) -> std::optional<llvm::StringRef> {
+        if constexpr (std::is_same_v<std::decay_t<decltype(attr)>,
+                                     mlir::StringAttr>) {
+          return attr.getValue();
+        } else if constexpr (std::is_same_v<std::decay_t<decltype(attr)>,
+                                            mlir::SymbolRefAttr>) {
+          return attr.getLeafReference();
+        } else {
+          return std::nullopt;
+        }
+      },
+      bindNameValue.value());
+}
+
 static bool compareDeviceTypeInfo(
     mlir::acc::RoutineOp op,
-    llvm::SmallVector<mlir::Attribute> &bindNameArrayAttr,
-    llvm::SmallVector<mlir::Attribute> &bindNameDeviceTypeArrayAttr,
+    llvm::SmallVector<mlir::Attribute> &bindIdNameArrayAttr,
+    llvm::SmallVector<mlir::Attribute> &bindStrNameArrayAttr,
+    llvm::SmallVector<mlir::Attribute> &bindIdNameDeviceTypeArrayAttr,
+    llvm::SmallVector<mlir::Attribute> &bindStrNameDeviceTypeArrayAttr,
     llvm::SmallVector<mlir::Attribute> &gangArrayAttr,
     llvm::SmallVector<mlir::Attribute> &gangDimArrayAttr,
     llvm::SmallVector<mlir::Attribute> &gangDimDeviceTypeArrayAttr,
@@ -4427,9 +4451,13 @@ static bool compareDeviceTypeInfo(
   for (uint32_t dtypeInt = 0;
        dtypeInt != mlir::acc::getMaxEnumValForDeviceType(); ++dtypeInt) {
     auto dtype = static_cast<mlir::acc::DeviceType>(dtypeInt);
-    if (op.getBindNameValue(dtype) !=
-        getAttributeValueByDeviceType<llvm::StringRef, mlir::StringAttr>(
-            bindNameArrayAttr, bindNameDeviceTypeArrayAttr, dtype))
+    auto bindNameValue = getBindNameStringValue(op.getBindNameValue(dtype));
+    if (bindNameValue !=
+            getAttributeValueByDeviceType<llvm::StringRef, mlir::StringAttr>(
+                bindIdNameArrayAttr, bindIdNameDeviceTypeArrayAttr, dtype) &&
+        bindNameValue !=
+            getAttributeValueByDeviceType<llvm::StringRef, mlir::StringAttr>(
+                bindStrNameArrayAttr, bindStrNameDeviceTypeArrayAttr, dtype))
       return false;
     if (op.hasGang(dtype) != hasDeviceType(gangArrayAttr, dtype))
       return false;
@@ -4476,8 +4504,10 @@ getArrayAttrOrNull(fir::FirOpBuilder &builder,
 void createOpenACCRoutineConstruct(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     mlir::ModuleOp mod, mlir::func::FuncOp funcOp, std::string funcName,
-    bool hasNohost, llvm::SmallVector<mlir::Attribute> &bindNames,
-    llvm::SmallVector<mlir::Attribute> &bindNameDeviceTypes,
+    bool hasNohost, llvm::SmallVector<mlir::Attribute> &bindIdNames,
+    llvm::SmallVector<mlir::Attribute> &bindStrNames,
+    llvm::SmallVector<mlir::Attribute> &bindIdNameDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &bindStrNameDeviceTypes,
     llvm::SmallVector<mlir::Attribute> &gangDeviceTypes,
     llvm::SmallVector<mlir::Attribute> &gangDimValues,
     llvm::SmallVector<mlir::Attribute> &gangDimDeviceTypes,
@@ -4490,7 +4520,8 @@ void createOpenACCRoutineConstruct(
         0) {
       // If the routine is already specified with the same clauses, just skip
       // the operation creation.
-      if (compareDeviceTypeInfo(routineOp, bindNames, bindNameDeviceTypes,
+      if (compareDeviceTypeInfo(routineOp, bindIdNames, bindStrNames,
+                                bindIdNameDeviceTypes, bindStrNameDeviceTypes,
                                 gangDeviceTypes, gangDimValues,
                                 gangDimDeviceTypes, seqDeviceTypes,
                                 workerDeviceTypes, vectorDeviceTypes) &&
@@ -4507,8 +4538,10 @@ void createOpenACCRoutineConstruct(
   modBuilder.create<mlir::acc::RoutineOp>(
       loc, routineOpStr,
       mlir::SymbolRefAttr::get(builder.getContext(), funcName),
-      getArrayAttrOrNull(builder, bindNames),
-      getArrayAttrOrNull(builder, bindNameDeviceTypes),
+      getArrayAttrOrNull(builder, bindIdNames),
+      getArrayAttrOrNull(builder, bindStrNames),
+      getArrayAttrOrNull(builder, bindIdNameDeviceTypes),
+      getArrayAttrOrNull(builder, bindStrNameDeviceTypes),
       getArrayAttrOrNull(builder, workerDeviceTypes),
       getArrayAttrOrNull(builder, vectorDeviceTypes),
       getArrayAttrOrNull(builder, seqDeviceTypes), hasNohost,
@@ -4525,8 +4558,10 @@ static void interpretRoutineDeviceInfo(
     llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
     llvm::SmallVector<mlir::Attribute> &vectorDeviceTypes,
     llvm::SmallVector<mlir::Attribute> &workerDeviceTypes,
-    llvm::SmallVector<mlir::Attribute> &bindNameDeviceTypes,
-    llvm::SmallVector<mlir::Attribute> &bindNames,
+    llvm::SmallVector<mlir::Attribute> &bindIdNameDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &bindStrNameDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &bindIdNames,
+    llvm::SmallVector<mlir::Attribute> &bindStrNames,
     llvm::SmallVector<mlir::Attribute> &gangDeviceTypes,
     llvm::SmallVector<mlir::Attribute> &gangDimValues,
     llvm::SmallVector<mlir::Attribute> &gangDimDeviceTypes) {
@@ -4559,16 +4594,18 @@ static void interpretRoutineDeviceInfo(
   if (dinfo.bindNameOpt().has_value()) {
     const auto &bindName = dinfo.bindNameOpt().value();
     mlir::Attribute bindNameAttr;
-    if (const auto &bindStr{std::get_if<std::string>(&bindName)}) {
+    if (const auto &bindSym{
+            std::get_if<Fortran::semantics::SymbolRef>(&bindName)}) {
+      bindNameAttr = builder.getSymbolRefAttr(converter.mangleName(*bindSym));
+      bindIdNames.push_back(bindNameAttr);
+      bindIdNameDeviceTypes.push_back(getDeviceTypeAttr());
+    } else if (const auto &bindStr{std::get_if<std::string>(&bindName)}) {
       bindNameAttr = builder.getStringAttr(*bindStr);
-    } else if (const auto &bindSym{
-                   std::get_if<Fortran::semantics::SymbolRef>(&bindName)}) {
-      bindNameAttr = builder.getStringAttr(converter.mangleName(*bindSym));
+      bindStrNames.push_back(bindNameAttr);
+      bindStrNameDeviceTypes.push_back(getDeviceTypeAttr());
     } else {
       llvm_unreachable("Unsupported bind name type");
     }
-    bindNames.push_back(bindNameAttr);
-    bindNameDeviceTypes.push_back(getDeviceTypeAttr());
   }
 }
 
@@ -4584,8 +4621,9 @@ void Fortran::lower::genOpenACCRoutineConstruct(
   bool hasNohost{false};
 
   llvm::SmallVector<mlir::Attribute> seqDeviceTypes, vectorDeviceTypes,
-      workerDeviceTypes, bindNameDeviceTypes, bindNames, gangDeviceTypes,
-      gangDimDeviceTypes, gangDimValues;
+      workerDeviceTypes, bindIdNameDeviceTypes, bindStrNameDeviceTypes,
+      bindIdNames, bindStrNames, gangDeviceTypes, gangDimDeviceTypes,
+      gangDimValues;
 
   for (const Fortran::semantics::OpenACCRoutineInfo &info : routineInfos) {
     // Device Independent Attributes
@@ -4594,24 +4632,26 @@ void Fortran::lower::genOpenACCRoutineConstruct(
     }
     // Note: Device Independent Attributes are set to the
     // none device type in `info`.
-    interpretRoutineDeviceInfo(converter, info, seqDeviceTypes,
-                               vectorDeviceTypes, workerDeviceTypes,
-                               bindNameDeviceTypes, bindNames, gangDeviceTypes,
-                               gangDimValues, gangDimDeviceTypes);
+    interpretRoutineDeviceInfo(
+        converter, info, seqDeviceTypes, vectorDeviceTypes, workerDeviceTypes,
+        bindIdNameDeviceTypes, bindStrNameDeviceTypes, bindIdNames,
+        bindStrNames, gangDeviceTypes, gangDimValues, gangDimDeviceTypes);
 
     // Device Dependent Attributes
     for (const Fortran::semantics::OpenACCRoutineDeviceTypeInfo &dinfo :
          info.deviceTypeInfos()) {
-      interpretRoutineDeviceInfo(
-          converter, dinfo, seqDeviceTypes, vectorDeviceTypes,
-          workerDeviceTypes, bindNameDeviceTypes, bindNames, gangDeviceTypes,
-          gangDimValues, gangDimDeviceTypes);
+      interpretRoutineDeviceInfo(converter, dinfo, seqDeviceTypes,
+                                 vectorDeviceTypes, workerDeviceTypes,
+                                 bindIdNameDeviceTypes, bindStrNameDeviceTypes,
+                                 bindIdNames, bindStrNames, gangDeviceTypes,
+                                 gangDimValues, gangDimDeviceTypes);
     }
   }
   createOpenACCRoutineConstruct(
-      converter, loc, mod, funcOp, funcName, hasNohost, bindNames,
-      bindNameDeviceTypes, gangDeviceTypes, gangDimValues, gangDimDeviceTypes,
-      seqDeviceTypes, workerDeviceTypes, vectorDeviceTypes);
+      converter, loc, mod, funcOp, funcName, hasNohost, bindIdNames,
+      bindStrNames, bindIdNameDeviceTypes, bindStrNameDeviceTypes,
+      gangDeviceTypes, gangDimValues, gangDimDeviceTypes, seqDeviceTypes,
+      workerDeviceTypes, vectorDeviceTypes);
 }
 
 static void
