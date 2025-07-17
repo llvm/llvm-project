@@ -24,55 +24,55 @@ using namespace ::clang::transformer;  // NOLINT: Too many names.
 
 class TypeAsWrittenStencil : public StencilInterface {
 public:
-  explicit TypeAsWrittenStencil(std::string S) : id(std::move(S)) {}
+  explicit TypeAsWrittenStencil(std::string S) : Id(std::move(S)) {}
   std::string toString() const override {
-    return (llvm::Twine("TypeAsWritten(\"") + id + "\")").str();
+    return (llvm::Twine("TypeAsWritten(\"") + Id + "\")").str();
   }
 
   llvm::Error eval(const MatchFinder::MatchResult &match,
                    std::string *result) const override {
-    llvm::Expected<CharSourceRange> n = node(id)(match);
+    llvm::Expected<CharSourceRange> n = node(Id)(match);
     if (!n)
       return n.takeError();
-    SourceRange srcRange = n->getAsRange();
-    if (srcRange.isInvalid()) {
+    const SourceRange SrcRange = n->getAsRange();
+    if (SrcRange.isInvalid()) {
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
-                                                 "srcRange is invalid");
+                                                 "SrcRange is invalid");
     }
-    const CharSourceRange range = n->getTokenRange(srcRange);
-    auto nextToken = [&](std::optional<Token> token) {
-      if (!token)
-        return token;
-      return clang::Lexer::findNextToken(token->getLocation(),
+    const CharSourceRange Range = n->getTokenRange(SrcRange);
+    auto NextToken = [&](std::optional<Token> Token) {
+      if (!Token)
+        return Token;
+      return clang::Lexer::findNextToken(Token->getLocation(),
                                          *match.SourceManager,
                                          match.Context->getLangOpts());
     };
-    std::optional<Token> lessToken = clang::Lexer::findNextToken(
-        range.getBegin(), *match.SourceManager, match.Context->getLangOpts());
-    while (lessToken && lessToken->getKind() != clang::tok::less) {
-      lessToken = nextToken(lessToken);
+    std::optional<Token> LessToken = clang::Lexer::findNextToken(
+        Range.getBegin(), *match.SourceManager, match.Context->getLangOpts());
+    while (LessToken && LessToken->getKind() != clang::tok::less) {
+      LessToken = NextToken(LessToken);
     }
-    if (!lessToken) {
+    if (!LessToken) {
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "missing '<' token");
     }
-    std::optional<Token> endToken = nextToken(lessToken);
-    for (std::optional<Token> greaterToken = nextToken(endToken);
-         greaterToken && greaterToken->getKind() != clang::tok::greater;
-         greaterToken = nextToken(greaterToken)) {
-      endToken = greaterToken;
+    std::optional<Token> EndToken = NextToken(LessToken);
+    for (std::optional<Token> GreaterToken = NextToken(EndToken);
+         GreaterToken && GreaterToken->getKind() != clang::tok::greater;
+         GreaterToken = NextToken(GreaterToken)) {
+      EndToken = GreaterToken;
     }
-    if (!endToken) {
+    if (!EndToken) {
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "missing '>' token");
     }
     *result += clang::tooling::getText(
-        CharSourceRange::getTokenRange(lessToken->getEndLoc(),
-                                       endToken->getLastLoc()),
+        CharSourceRange::getTokenRange(LessToken->getEndLoc(),
+                                       EndToken->getLastLoc()),
         *match.Context);
     return llvm::Error::success();
   }
-  std::string id;
+  std::string Id;
 };
 
 Stencil typeAsWritten(StringRef Id) {
@@ -80,7 +80,7 @@ Stencil typeAsWritten(StringRef Id) {
   return std::make_shared<TypeAsWrittenStencil>(std::string(Id));
 }
 
-RewriteRuleWith<std::string> MlirOpBuilderCheckRule() {
+RewriteRuleWith<std::string> mlirOpBuilderCheckRule() {
   return makeRule(
       cxxMemberCallExpr(
           on(expr(hasType(
@@ -98,6 +98,6 @@ RewriteRuleWith<std::string> MlirOpBuilderCheckRule() {
 
 MlirOpBuilderCheck::MlirOpBuilderCheck(StringRef Name,
                                        ClangTidyContext *Context)
-    : TransformerClangTidyCheck(MlirOpBuilderCheckRule(), Name, Context) {}
+    : TransformerClangTidyCheck(mlirOpBuilderCheckRule(), Name, Context) {}
 
 } // namespace clang::tidy::llvm_check
