@@ -1,4 +1,5 @@
-//===--- MLIROpBuilderCheck.cpp - clang-tidy -------------------------------===//
+//===--- MLIROpBuilderCheck.cpp - clang-tidy
+//-------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -96,7 +97,8 @@ RewriteRuleWith<std::string> MlirOpBuilderCheckRule() {
 }
 } // namespace
 
-MlirOpBuilderCheck::MlirOpBuilderCheck(StringRef Name, ClangTidyContext *Context)
+MlirOpBuilderCheck::MlirOpBuilderCheck(StringRef Name,
+                                       ClangTidyContext *Context)
     : TransformerClangTidyCheck(MlirOpBuilderCheckRule(), Name, Context) {}
 
-} // namespace clang::tidy::mlir_check
+} // namespace clang::tidy::llvm_check
