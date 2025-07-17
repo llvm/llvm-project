@@ -66,6 +66,91 @@ define i8 @test_ashr(i32 %a, i32 %b) {
   ret i8 %ashr.t
 }
 
+define i8 @test_ashr_range_1(i32 %a, i32 %b) {
+; CHECK-LABEL: 'test_ashr_range_1'
+; CHECK-DAG:  DemandedBits: 0xff for   %shl.t = trunc i32 %ashr to i8
+; CHECK-DAG:  DemandedBits: 0xff for %ashr in   %shl.t = trunc i32 %ashr to i8
+; CHECK-DAG:  DemandedBits: 0xffffffff for   %b2 = and i32 %b, 3
+; CHECK-DAG:  DemandedBits: 0x3 for %b in   %b2 = and i32 %b, 3
+; CHECK-DAG:  DemandedBits: 0xffffffff for 3 in   %b2 = and i32 %b, 3
+; CHECK-DAG:  DemandedBits: 0xff for   %ashr = ashr i32 %a, %b2
+; CHECK-DAG:  DemandedBits: 0x7ff for %a in   %ashr = ashr i32 %a, %b2
+; CHECK-DAG:  DemandedBits: 0xffffffff for %b2 in   %ashr = ashr i32 %a, %b2
+;
+  %b2 = and i32 %b, 3
+  %ashr = ashr i32 %a, %b2
+  %shl.t = trunc i32 %ashr to i8
+  ret i8 %shl.t
+}
+
+define i32 @test_ashr_range_2(i32 %a, i32 %b) {
+; CHECK-LABEL: 'test_ashr_range_2'
+; CHECK-DAG:  DemandedBits: 0xffffffff for   %b2 = and i32 %b, 3
+; CHECK-DAG:  DemandedBits: 0x3 for %b in   %b2 = and i32 %b, 3
+; CHECK-DAG:  DemandedBits: 0xffffffff for 3 in   %b2 = and i32 %b, 3
+; CHECK-DAG:  DemandedBits: 0xffffffff for   %ashr = ashr i32 %a, %b2
+; CHECK-DAG:  DemandedBits: 0xffffffff for %a in   %ashr = ashr i32 %a, %b2
+; CHECK-DAG:  DemandedBits: 0xffffffff for %b2 in   %ashr = ashr i32 %a, %b2
+;
+  %b2 = and i32 %b, 3
+  %ashr = ashr i32 %a, %b2
+  ret i32 %ashr
+}
+
+define i32 @test_ashr_range_3(i32 %a, i32 %b) {
+; CHECK-LABEL: 'test_ashr_range_3'
+; CHECK-DAG:  DemandedBits:  0xffff for   %ashr = ashr i32 %a, %b
+; CHECK-DAG:  DemandedBits:  0xffffffff for %a in   %ashr = ashr i32 %a, %b
+; CHECK-DAG:  DemandedBits:  0xffffffff for %b in   %ashr = ashr i32 %a, %b
+; CHECK-DAG:  DemandedBits:  0xffffffff for   %shl = shl i32 %ashr, 16
+; CHECK-DAG:  DemandedBits:  0xffff for %ashr in   %shl = shl i32 %ashr, 16
+; CHECK-DAG:  DemandedBits:  0xffffffff for 16 in   %shl = shl i32 %ashr, 16
+;
+  %ashr = ashr i32 %a, %b
+  %shl = shl i32 %ashr, 16
+  ret i32 %shl
+}
+define i32 @test_ashr_range_4(i32 %a, i32 %b) {
+; CHECK-LABEL: 'test_ashr_range_4'
+; CHECK-DAG:  DemandedBits: 0xffffffff for   %shr = lshr i32 %ashr, 8
+; CHECK-DAG:  DemandedBits: 0xffffff00 for %ashr in   %shr = lshr i32 %ashr, 8
+; CHECK-DAG:  DemandedBits: 0xffffffff for 8 in   %shr = lshr i32 %ashr, 8
+; CHECK-DAG:  DemandedBits: 0xffffff00 for   %ashr = ashr i32 %a, %b
+; CHECK-DAG:  DemandedBits: 0xffffff00 for %a in   %ashr = ashr i32 %a, %b
+; CHECK-DAG:  DemandedBits: 0xffffffff for %b in   %ashr = ashr i32 %a, %b
+  %ashr = ashr i32 %a, %b
+  %shr = lshr i32 %ashr, 8
+  ret i32 %shr
+}
+
+define i32 @test_ashr_range_5(i32 %a, i32 %b) {
+; CHECK-LABEL: 'test_ashr_range_5'
+; CHECK-DAG:  DemandedBits: 0xffffffff for   %2 = and i32 %1, 255
+; CHECK-DAG:  DemandedBits: 0xff for %1 in   %2 = and i32 %1, 255
+; CHECK-DAG:  DemandedBits: 0xffffffff for 255 in   %2 = and i32 %1, 255
+; CHECK-DAG:  DemandedBits: 0xff for   %1 = ashr i32 %a, %b
+; CHECK-DAG:  DemandedBits: 0xffffffff for %a in   %1 = ashr i32 %a, %b
+; CHECK-DAG:  DemandedBits: 0xffffffff for %b in   %1 = ashr i32 %a, %b
+;
+  %1 = ashr i32 %a, %b
+  %2 = and i32 %1, 255
+  ret i32 %2
+}
+
+define i32 @test_ashr_range_6(i32 %a, i32 %b) {
+; CHECK-LABEL: 'test_ashr_range_6'
+; CHECK-DAG:  DemandedBits: 0xffff0000 for   %lshr.1 = ashr i32 %a, %b
+; CHECK-DAG:  DemandedBits: 0xffff0000 for %a in   %lshr.1 = ashr i32 %a, %b
+; CHECK-DAG:  DemandedBits: 0xffffffff for %b in   %lshr.1 = ashr i32 %a, %b
+; CHECK-DAG:  DemandedBits: 0xffffffff for   %lshr.2 = ashr i32 %lshr.1, 16
+; CHECK-DAG:  DemandedBits: 0xffff0000 for %lshr.1 in   %lshr.2 = ashr i32 %lshr.1, 16
+; CHECK-DAG:  DemandedBits: 0xffffffff for 16 in   %lshr.2 = ashr i32 %lshr.1, 16
+;
+  %lshr.1 = ashr i32 %a, %b
+  %lshr.2 = ashr i32 %lshr.1, 16
+  ret i32 %lshr.2
+}
+
 define i8 @test_ashr_var_amount(i32 %a, i32 %b){
 ; CHECK-LABEL: 'test_ashr_var_amount'
 ; CHECK-DAG: DemandedBits: 0xff for   %4 = ashr i32 %1, %3
