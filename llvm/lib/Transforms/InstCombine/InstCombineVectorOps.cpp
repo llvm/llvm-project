@@ -444,7 +444,11 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         else
           Idx = PoisonValue::get(Ty);
         return replaceInstUsesWith(EI, Idx);
-      }
+      } else if (IID == Intrinsic::vector_extract)
+        // If II is a subvector starting at index 0, extract from the wider
+        // source vector
+        if (cast<ConstantInt>(II->getArgOperand(1))->getZExtValue() == 0)
+          return ExtractElementInst::Create(II->getArgOperand(0), Index);
     }
 
     // InstSimplify should handle cases where the index is invalid.

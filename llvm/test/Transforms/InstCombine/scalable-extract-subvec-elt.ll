@@ -4,8 +4,7 @@
 define i1 @scalable_test(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: define i1 @scalable_test(
 ; CHECK-SAME: <vscale x 4 x i1> [[A:%.*]]) {
-; CHECK-NEXT:    [[SUBVEC:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[A]], i64 0)
-; CHECK-NEXT:    [[ELT:%.*]] = extractelement <vscale x 2 x i1> [[SUBVEC]], i64 1
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <vscale x 4 x i1> [[A]], i64 1
 ; CHECK-NEXT:    ret i1 [[ELT]]
 ;
   %subvec = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1.i64(<vscale x 4 x i1> %a, i64 0)
