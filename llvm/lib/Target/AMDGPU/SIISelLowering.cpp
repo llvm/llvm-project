@@ -16910,12 +16910,63 @@ static void knownBitsForWorkitemID(const GCNSubtarget &ST,
   Known.Zero.setHighBits(llvm::countl_zero(MaxValue));
 }
 
+static void knownBitsForSBFE(const MachineInstr &MI, GISelValueTracking &VT,
+                             KnownBits &Known, const APInt &DemandedElts,
+                             unsigned BFEWidth, bool SExt, unsigned Depth) {
+  const MachineRegisterInfo &MRI = VT.getMachineFunction().getRegInfo();
+  const MachineOperand &Src1 = MI.getOperand(2);
+
+  unsigned Src1Cst = 0;
+  if (Src1.isImm()) {
+    Src1Cst = Src1.getImm();
+  } else if (Src1.isReg()) {
+    auto Cst = getIConstantVRegValWithLookThrough(Src1.getReg(), MRI);
+    if (!Cst)
+      return;
+    Src1Cst = Cst->Value.getZExtValue();
+  } else {
+    return;
+  }
+
+  // Offset is at bits [4:0] for 32 bit, [5:0] for 64 bit.
+  // Width is always [22:16].
+  const unsigned Offset =
+      Src1Cst & maskTrailingOnes<unsigned>((BFEWidth == 32) ? 5 : 6);
+  const unsigned Width = (Src1Cst >> 16) & maskTrailingOnes<unsigned>(6);
+
+  if (Width >= BFEWidth) // Ill-formed.
+    return;
+
+  VT.computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                          Depth + 1);
+
+  Known = Known.extractBits(Width, Offset);
+
+  if (SExt)
+    Known = Known.sext(BFEWidth);
+  else
+    Known = Known.zext(BFEWidth);
+}
+
 void SITargetLowering::computeKnownBitsForTargetInstr(
     GISelValueTracking &VT, Register R, KnownBits &Known,
     const APInt &DemandedElts, const MachineRegisterInfo &MRI,
     unsigned Depth) const {
+  Known.resetAll();
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
+  case AMDGPU::S_BFE_I32:
+    return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/32,
+                            /*SExt=*/true, Depth);
+  case AMDGPU::S_BFE_U32:
+    return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/32,
+                            /*SExt=*/false, Depth);
+  case AMDGPU::S_BFE_I64:
+    return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/64,
+                            /*SExt=*/true, Depth);
+  case AMDGPU::S_BFE_U64:
+    return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/64,
+                            /*SExt=*/false, Depth);
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
     Intrinsic::ID IID = cast<GIntrinsic>(MI)->getIntrinsicID();
