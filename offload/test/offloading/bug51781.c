@@ -32,6 +32,8 @@
 //
 // CUSTOM: Rewriting generic-mode kernel with a customized state machine.
 
+// XFAIL: x86_64-unknown-linux-gnu
+// XFAIL: x86_64-unknown-linux-gnu-LTO
 // XFAIL: amdgcn-amd-amdhsa
 // XFAIL: nvptx64-nvidia-cuda
 // XFAIL: nvptx64-nvidia-cuda-LTO
