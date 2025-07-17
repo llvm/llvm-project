@@ -316,7 +316,7 @@ void multiThreadedPageInBackground(const DeferredFiles &deferred) {
       // Reference each page to load it into memory.
       for (const char *page = buff.data(), *end = page + buff.size();
            page < end; page += pageSize)
-        volatile char t = *page;
+        [[maybe_unused]] volatile char t = *page;
     }
   });
 
