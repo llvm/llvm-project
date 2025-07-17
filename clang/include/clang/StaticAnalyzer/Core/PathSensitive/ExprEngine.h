@@ -499,9 +499,6 @@ public:
   void VisitGuardedExpr(const Expr *Ex, const Expr *L, const Expr *R,
                         ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
-  void VisitInitListExpr(const InitListExpr *E, ExplodedNode *Pred,
-                         ExplodedNodeSet &Dst);
-
   /// VisitAttributedStmt - Transfer function logic for AttributedStmt.
   void VisitAttributedStmt(const AttributedStmt *A, ExplodedNode *Pred,
                            ExplodedNodeSet &Dst);
@@ -586,17 +583,14 @@ public:
   void VisitCXXDeleteExpr(const CXXDeleteExpr *CDE, ExplodedNode *Pred,
                           ExplodedNodeSet &Dst);
 
-  void VisitCXXParenListInitExpr(const CXXParenListInitExpr *PLIE,
-                                 ExplodedNode *Pred, ExplodedNodeSet &Dst);
-
   /// Create a C++ temporary object for an rvalue.
   void CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
-  void CreateInitializationList(const Expr *Source, ArrayRef<Expr *> Args,
-                                bool IsTransparent, ExplodedNode *Pred,
-                                ExplodedNodeSet &Dst);
+  void ConstructInitList(const Expr *Source, ArrayRef<Expr *> Args,
+                         bool IsTransparent, ExplodedNode *Pred,
+                         ExplodedNodeSet &Dst);
 
   /// evalEagerlyAssumeBifurcation - Given the nodes in 'Src', eagerly assume
   /// concrete boolean values for 'Ex', storing the resulting nodes in 'Dst'.

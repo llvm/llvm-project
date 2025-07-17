@@ -2314,17 +2314,22 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
-    case Stmt::InitListExprClass:
+    case Stmt::InitListExprClass: {
+      const InitListExpr *E = cast<InitListExpr>(S);
       Bldr.takeNodes(Pred);
-      VisitInitListExpr(cast<InitListExpr>(S), Pred, Dst);
+      ConstructInitList(E, E->inits(), E->isTransparent(), Pred, Dst);
       Bldr.addNodes(Dst);
       break;
+    }
 
-    case Expr::CXXParenListInitExprClass:
+    case Expr::CXXParenListInitExprClass: {
+      const CXXParenListInitExpr *E = cast<CXXParenListInitExpr>(S);
       Bldr.takeNodes(Pred);
-      VisitCXXParenListInitExpr(cast<CXXParenListInitExpr>(S), Pred, Dst);
+      ConstructInitList(E, E->getInitExprs(), /*IsTransparent*/ false, Pred,
+                        Dst);
       Bldr.addNodes(Dst);
       break;
+    }
 
     case Stmt::MemberExprClass:
       Bldr.takeNodes(Pred);
@@ -4119,3 +4124,35 @@ void *ProgramStateTrait<ReplayWithoutInlining>::GDMIndex() {
 }
 
 void ExprEngine::anchor() { }
+
+void ExprEngine::ConstructInitList(const Expr *E, ArrayRef<Expr *> Args,
+                                   bool IsTransparent, ExplodedNode *Pred,
+                                   ExplodedNodeSet &Dst) {
+  assert((isa<InitListExpr>(E) || isa<CXXParenListInitExpr>(E)) &&
+         "Expected InitListExpr or CXXParenListInitExpr");
+
+  const LocationContext *LC = Pred->getLocationContext();
+
+  StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
+  ProgramStateRef S = Pred->getState();
+  QualType T = E->getType().getCanonicalType();
+
+  bool IsCompound =
+      E->isPRValue() && (T->isArrayType() || T->isRecordType() ||
+                         T->isAnyComplexType() || T->isVectorType());
+
+  if (Args.size() > 1 || (IsCompound && !IsTransparent)) {
+    llvm::ImmutableList<SVal> ArgList = getBasicVals().getEmptySValList();
+    for (Expr *E : llvm::reverse(Args))
+      ArgList = getBasicVals().prependSVal(S->getSVal(E, LC), ArgList);
+
+    B.generateNode(E, Pred,
+                   S->BindExpr(E, LC, svalBuilder.makeCompoundVal(T, ArgList)));
+  } else {
+    B.generateNode(E, Pred,
+                   S->BindExpr(E, LC,
+                               Args.size() == 0
+                                   ? getSValBuilder().makeZeroVal(T)
+                                   : S->getSVal(Args.front(), LC)));
+  }
+}

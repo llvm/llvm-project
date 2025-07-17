@@ -1233,10 +1233,3 @@ void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
 }
-
-void ExprEngine::VisitCXXParenListInitExpr(const CXXParenListInitExpr *E,
-                                           ExplodedNode *Pred,
-                                           ExplodedNodeSet &Dst) {
-  CreateInitializationList(E, E->getInitExprs(), /*IsTransparent*/ false, Pred,
-                           Dst);
-}

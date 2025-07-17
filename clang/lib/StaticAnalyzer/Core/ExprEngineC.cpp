@@ -771,12 +771,6 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
   Bldr.generateNode(B, Pred, state->BindExpr(B, Pred->getLocationContext(), X));
 }
 
-void ExprEngine::VisitInitListExpr(const InitListExpr *IE,
-                                   ExplodedNode *Pred,
-                                   ExplodedNodeSet &Dst) {
-  CreateInitializationList(IE, IE->inits(), IE->isTransparent(), Pred, Dst);
-}
-
 void ExprEngine::VisitGuardedExpr(const Expr *Ex,
                                   const Expr *L,
                                   const Expr *R,
@@ -1154,37 +1148,4 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     Bldr.addNodes(Dst3);
   }
   Dst.insert(Dst2);
-}
-
-void ExprEngine::CreateInitializationList(const Expr *E, ArrayRef<Expr *> Args,
-                                          bool IsTransparent,
-                                          ExplodedNode *Pred,
-                                          ExplodedNodeSet &Dst) {
-  assert((isa<InitListExpr>(E) || isa<CXXParenListInitExpr>(E)) &&
-         "Expected InitListExpr or CXXParenListInitExpr");
-
-  const LocationContext *LC = Pred->getLocationContext();
-
-  StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
-  ProgramStateRef S = Pred->getState();
-  QualType T = E->getType().getCanonicalType();
-
-  bool IsCompound =
-      E->isPRValue() && (T->isArrayType() || T->isRecordType() ||
-                         T->isAnyComplexType() || T->isVectorType());
-
-  if (Args.size() > 1 || (IsCompound && !IsTransparent)) {
-    llvm::ImmutableList<SVal> ArgList = getBasicVals().getEmptySValList();
-    for (Expr *E : llvm::reverse(Args))
-      ArgList = getBasicVals().prependSVal(S->getSVal(E, LC), ArgList);
-
-    B.generateNode(E, Pred,
-                   S->BindExpr(E, LC, svalBuilder.makeCompoundVal(T, ArgList)));
-  } else {
-    B.generateNode(E, Pred,
-                   S->BindExpr(E, LC,
-                               Args.size() == 0
-                                   ? getSValBuilder().makeZeroVal(T)
-                                   : S->getSVal(Args.front(), LC)));
-  }
 }
