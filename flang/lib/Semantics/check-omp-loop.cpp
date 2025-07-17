@@ -18,6 +18,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/visit.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -196,14 +197,9 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
       common::visitors{
           // Allow `!$OMP ORDERED SIMD`
           [&](const parser::OpenMPBlockConstruct &c) {
-            const auto &beginBlockDir{
-                std::get<parser::OmpBeginBlockDirective>(c.t)};
-            const auto &beginDir{
-                std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
-            if (beginDir.v == llvm::omp::Directive::OMPD_ordered) {
-              const auto &clauses{
-                  std::get<parser::OmpClauseList>(beginBlockDir.t)};
-              for (const auto &clause : clauses.v) {
+            const parser::OmpDirectiveSpecification &beginSpec{c.BeginDir()};
+            if (beginSpec.DirId() == llvm::omp::Directive::OMPD_ordered) {
+              for (const auto &clause : beginSpec.Clauses().v) {
                 if (std::get_if<parser::OmpClause::Simd>(&clause.u)) {
                   eligibleSIMD = true;
                   break;
@@ -247,7 +243,7 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
       },
       c.u);
   if (!eligibleSIMD) {
-    context_.Say(parser::FindSourceLocation(c),
+    context_.Say(parser::omp::GetOmpDirectiveName(c).source,
         "The only OpenMP constructs that can be encountered during execution "
         "of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, "
         "the `SIMD` construct, the `SCAN` construct and the `ORDERED` "
