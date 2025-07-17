@@ -314,30 +314,11 @@ gpu.func @dpas_no_sg_data(%a: memref<24x32xf32>, %b: memref<32x24xf32>) {
         %load =  xegpu.load_nd %tdesc
           : !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [8, 4], lane_data = [1, 1]>>
           -> vector<256x128xf32>
-    } {sg_id_range = #xegpu.range<[0, 1]>}
-    %cond3 = arith.cmpi sge, %sg_id, %c1 : index
-    %cond4 = arith.cmpi slt, %sg_id, %c2 : index
+    } {sg_id_range = #xegpu.range<[0, 32]>}
+    %cond3 = arith.cmpi sge, %sg_id, %c2 : index
+    %cond4 = arith.cmpi slt, %sg_id, %c31 : index
     %cond5 = arith.andi %cond3, %cond4 : i1
-     scf.if %cond5 {
-        // CHECK: %[[SGID:.*]] = gpu.subgroup_id : index
-        // CHECK: %[[C1:.*]] = arith.constant 1 : index
-        // CHECK: %[[SUB:.*]] = index.sub %{{.*}}, %[[C1]]
-        %tdesc_a = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
-          -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [8, 4], lane_data = [1, 1]>>
-        %load_a =  xegpu.load_nd %tdesc_a
-          : !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [8, 4], lane_data = [1, 1]>>
-          -> vector<256x128xf32>
-        %tdesc_b = xegpu.create_nd_tdesc %src1[0, 0] : memref<128x256xf32>
-          -> !xegpu.tensor_desc<128x256xf32, #xegpu.layout<sg_layout = [4, 8], sg_data = [32, 32], lane_layout = [4, 8], lane_data = [1, 1]>>
-        %load_b =  xegpu.load_nd %tdesc_b
-          : !xegpu.tensor_desc<128x256xf32, #xegpu.layout<sg_layout = [4, 8], sg_data = [32, 32], lane_layout = [4, 8], lane_data = [1, 1]>>
-          -> vector<128x256xf32>
-        %dpas = xegpu.dpas %load_a, %load_b {layout_result_0 = #xegpu.layout<sg_layout = [8, 8], sg_data = [32, 32], lane_layout = [4, 8], lane_data = [1, 1]>} : vector<256x128xf32>, vector<128x256xf32> -> vector<256x256xf32>
-     }{sg_id_range = #xegpu.range<[1, 2]>}
-    %cond6 = arith.cmpi sge, %sg_id, %c2 : index
-    %cond7 = arith.cmpi slt, %sg_id, %c31 : index
-    %cond8 = arith.andi %cond6, %cond7 : i1
-    scf.if %cond8 {
+    scf.if %cond5 {
       // CHECK: %[[SGID:.*]] = gpu.subgroup_id : index
       // CHECK: %[[C2:.*]] = arith.constant 2 : index
       // CHECK: %[[SUB:.*]] = index.sub %{{.*}}, %[[C2]]
@@ -377,7 +358,7 @@ gpu.func @dpas_no_sg_data(%a: memref<24x32xf32>, %b: memref<32x24xf32>) {
           -> vector<128x64xf32>
         %exp = math.exp %ld {layout_result_0 = #xegpu.layout<sg_layout = [4, 4], sg_data = [32, 16], lane_layout = [8, 4], lane_data = [1, 1]>} : vector<128x64xf32>
     }
-  } {sg_id_range = #xegpu.range<[3, 8]>}
+  } {sg_id_range = #xegpu.range<[3, 32]>}
   gpu.return
   }
 }
