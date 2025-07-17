@@ -21,7 +21,7 @@ BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
 INSTALL_DIR="${BUILD_DIR}/install"
 rm -rf "${BUILD_DIR}"
 
-ccache --zero-stats
+sccache --zero-stats
 
 mkdir -p artifacts/reproducers
 
@@ -31,7 +31,7 @@ export CLANG_CRASH_DIAGNOSTICS_DIR=`realpath artifacts/reproducers`
 function at-exit {
   retcode=$?
 
-  ccache --print-stats > artifacts/ccache_stats.txt
+  sccache --show-stats > artifacts/sccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
   cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
 
@@ -73,7 +73,8 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_LIT_ARGS="${lit_args}" \
       -D LLVM_ENABLE_LLD=ON \
       -D CMAKE_CXX_FLAGS=-gmlt \
-      -D LLVM_CCACHE_BUILD=ON \
+      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
+      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D LLDB_ENABLE_PYTHON=ON \
