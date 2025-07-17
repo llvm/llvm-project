@@ -231,7 +231,7 @@ defined the same format for multiple types on the same command,
 argument.
 
 To delete ALL formats, use ``type format clear``. To see all the formats
-defined, use type format list.
+defined, use ``type format list``.
 
 If all you need to do, however, is display one variable in a custom format,
 while leaving the others of the same type untouched, you can simply type:
