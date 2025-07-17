@@ -108,6 +108,7 @@ MinidumpParser::GetThreadContext(const minidump::Thread &td) {
 
 llvm::ArrayRef<uint8_t>
 MinidumpParser::GetThreadContextWow64(const minidump::Thread &td) {
+  Log *log = GetLog(LLDBLog::Process);
   // On Windows, a 32-bit process can run on a 64-bit machine under WOW64. If
   // the minidump was captured with a 64-bit debugger, then the CONTEXT we just
   // grabbed from the mini_dump_thread is the one for the 64-bit "native"
@@ -116,7 +117,8 @@ MinidumpParser::GetThreadContextWow64(const minidump::Thread &td) {
   // Block) of the 64-bit process.
   auto teb_mem_maybe = GetMemory(td.EnvironmentBlock, sizeof(TEB64));
   if (!teb_mem_maybe) {
-    llvm::consumeError(teb_mem_maybe.takeError());
+    LLDB_LOG_ERROR(log, teb_mem_maybe.takeError(),
+                   "Failed to read Thread Environment Block: {0}");
     return {};
   }
 
@@ -135,7 +137,8 @@ MinidumpParser::GetThreadContextWow64(const minidump::Thread &td) {
   auto context_maybe =
       GetMemory(wow64teb->tls_slots[1] + 4, sizeof(MinidumpContext_x86_32));
   if (!context_maybe) {
-    llvm::consumeError(context_maybe.takeError());
+    LLDB_LOG_ERROR(log, context_maybe.takeError(),
+                   "Failed to read WOW Thread Context: {0}");
     return {};
   }
 
