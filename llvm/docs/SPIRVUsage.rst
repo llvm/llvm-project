@@ -602,14 +602,13 @@ such instructions has the following format:
 
 Below, you will find the mappings between SPIR-V instruction and their corresponding
 LLVM IR representations.
-
 +--------------------+---------------------------------------------------------+
 | SPIR-V instruction | LLVM IR                                                 |
 +====================+=========================================================+
 | OpExecutionMode    | .. code-block:: llvm                                    |
 |                    |                                                         |
 |                    |    !spirv.ExecutionMode = !{!0}                         |
-|                    |    !0 = !{void @worker, i32 30, i32 262149}         |
+|                    |    !0 = !{void @worker, i32 30, i32 262149}             |
 |                    |    ; Set execution mode with id 30 (VecTypeHint) and    |
 |                    |    ; literal `262149` operand.                          |
 +--------------------+---------------------------------------------------------+
