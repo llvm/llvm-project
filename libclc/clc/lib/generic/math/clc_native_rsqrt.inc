@@ -7,6 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_native_rsqrt(__CLC_GENTYPE val) {
-#pragma clang fp reciprocal(on)
+  _Pragma("clang fp reciprocal(on)");
   return 1.0f / __clc_native_sqrt(val);
 }
