@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC__SUPPORT_WCHAR_WCRTOMB_H
-#define LLVM_LIBC_SRC__SUPPORT_WCHAR_WCRTOMB_H
+#ifndef LLVM_LIBC_SRC__SUPPORT_WCHAR_WCSNRTOMBS_H
+#define LLVM_LIBC_SRC__SUPPORT_WCHAR_WCSNRTOMBS_H
 
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
@@ -24,4 +24,4 @@ ErrorOr<size_t> wcsnrtombs(char *__restrict s, const wchar_t **__restrict pwcs,
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC__SUPPORT_WCHAR_WCRTOMB_H
+#endif // LLVM_LIBC_SRC__SUPPORT_WCHAR_WCSNRTOMBS_H
