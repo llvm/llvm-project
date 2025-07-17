@@ -108,6 +108,8 @@ typedef struct omp_interop_val_t {
     clearCompletionCbs();
   }
 
+  llvm::Expected<DeviceTy &> getDevice() const;
+
   bool hasOwner() const { return OwnerGtid != -1; }
 
   void setOwner(int gtid) { OwnerGtid = gtid; }
@@ -123,11 +125,6 @@ typedef struct omp_interop_val_t {
   int32_t sync_barrier(DeviceTy &Device);
   int32_t async_barrier(DeviceTy &Device);
   int32_t release(DeviceTy &Device);
-
-  int32_t flush();
-  int32_t syncBarrier();
-  int32_t asyncBarrier();
-  int32_t release();
 
   void addCompletionCb(ompx_interop_cb_t *cb, void *data) {
     CompletionCbs.push_back(omp_interop_cb_instance_t(cb, data));

@@ -298,12 +298,20 @@ int __tgt_interop_use(ident_t *LocRef, omp_interop_val_t *Interop,
     }
   }
 
+  auto DeviceOrErr = Interop->getDevice();
+  if (!DeviceOrErr) {
+    REPORT("Failed to get device for interop " DPxMOD ": %s\n",
+           DPxPTR(Interop), toString(DeviceOrErr.takeError()).c_str());
+    return OFFLOAD_FAIL;
+  }
+  auto &IOPDevice = *DeviceOrErr;
+
   if (Interop->async_info && Interop->async_info->Queue) {
     if (Nowait)
-      Interop->asyncBarrier();
+      Interop->async_barrier(IOPDevice);
     else {
-      Interop->flush();
-      Interop->syncBarrier();
+      Interop->flush(IOPDevice);
+      Interop->sync_barrier(IOPDevice);
       Interop->markClean();
     }
   }
@@ -328,7 +336,14 @@ int __tgt_interop_release(ident_t *LocRef, omp_interop_val_t *Interop,
     }
   }
 
-  return Interop->release();
+  auto DeviceOrErr = Interop->getDevice();
+  if (!DeviceOrErr) {
+    REPORT("Failed to get device for interop " DPxMOD ": %s\n",
+           DPxPTR(Interop), toString(DeviceOrErr.takeError()).c_str());
+    return OFFLOAD_FAIL;
+  }
+
+  return Interop->release(*DeviceOrErr);
 }
 
 EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
@@ -347,6 +362,10 @@ EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
 }
 
 } // extern "C"
+
+llvm::Expected<DeviceTy &> omp_interop_val_t::getDevice() const {
+    return PM->getDevice(device_id);
+}
 
 bool omp_interop_val_t::isCompatibleWith(int32_t InteropType,
                                          const interop_spec_t &Spec) {
@@ -394,42 +413,10 @@ int32_t omp_interop_val_t::async_barrier(DeviceTy &Device) {
 
 int32_t omp_interop_val_t::release(DeviceTy &Device) {
   if (async_info != nullptr && (!hasOwner() || !isClean())) {
-    flush();
-    syncBarrier();
+    flush(Device);
+    sync_barrier(Device);
   }
   return Device.RTL->release_interop(device_id, this);
-}
-
-int32_t omp_interop_val_t::flush() {
-  auto DeviceOrErr = PM->getDevice(device_id);
-  if (!DeviceOrErr)
-    FATAL_MESSAGE(device_id, "%s", toString(DeviceOrErr.takeError()).c_str());
-  DeviceTy &Device = *DeviceOrErr;
-  return flush(Device);
-}
-
-int32_t omp_interop_val_t::syncBarrier() {
-  auto DeviceOrErr = PM->getDevice(device_id);
-  if (!DeviceOrErr)
-    FATAL_MESSAGE(device_id, "%s", toString(DeviceOrErr.takeError()).c_str());
-  DeviceTy &Device = *DeviceOrErr;
-  return sync_barrier(Device);
-}
-
-int32_t omp_interop_val_t::asyncBarrier() {
-  auto DeviceOrErr = PM->getDevice(device_id);
-  if (!DeviceOrErr)
-    FATAL_MESSAGE(device_id, "%s", toString(DeviceOrErr.takeError()).c_str());
-  DeviceTy &Device = *DeviceOrErr;
-  return async_barrier(Device);
-}
-
-int32_t omp_interop_val_t::release() {
-  auto DeviceOrErr = PM->getDevice(device_id);
-  if (!DeviceOrErr)
-    FATAL_MESSAGE(device_id, "%s", toString(DeviceOrErr.takeError()).c_str());
-  DeviceTy &Device = *DeviceOrErr;
-  return release(Device);
 }
 
 void syncImplicitInterops(int Gtid, void *Event) {
@@ -443,8 +430,16 @@ void syncImplicitInterops(int Gtid, void *Event) {
     if (iop->async_info && iop->async_info->Queue && iop->isOwnedBy(Gtid) &&
         !iop->isClean()) {
 
-      iop->flush();
-      iop->syncBarrier();
+      auto DeviceOrErr = iop->getDevice();
+      if (!DeviceOrErr) {
+        REPORT("Failed to get device for interop " DPxMOD ": %s\n",
+               DPxPTR(iop), toString(DeviceOrErr.takeError()).c_str());
+        continue;
+      }
+      auto &IOPDevice = *DeviceOrErr;
+
+      iop->flush(IOPDevice);
+      iop->sync_barrier(IOPDevice);
       iop->markClean();
 
       // TODO: Alternate implementation option
@@ -464,5 +459,13 @@ void syncImplicitInterops(int Gtid, void *Event) {
 
 void InteropTblTy::clear() {
   DP("Clearing Interop Table\n");
-  PerThreadTable::clear([](auto &IOP) { IOP->release(); });
+  PerThreadTable::clear([](auto &IOP) {
+    auto DeviceOrErr = IOP->getDevice();
+    if (!DeviceOrErr) {
+      REPORT("Failed to get device for interop " DPxMOD ": %s\n",
+             DPxPTR(IOP), toString(DeviceOrErr.takeError()).c_str());
+      return;
+    }
+    IOP->release(*DeviceOrErr);
+  });
 }
