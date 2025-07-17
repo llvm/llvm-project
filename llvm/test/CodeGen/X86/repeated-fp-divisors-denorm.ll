@@ -13,10 +13,10 @@ define void @two_denorm_fdivs(float %a0, float %a1, float %a2, ptr %res) {
 ; CHECK-NEXT:    movss %xmm2, 4(%rdi)
 ; CHECK-NEXT:    retq
 entry:
-  %div0 = fdiv ninf float %a1, 0x37E5555500000000
+  %div0 = fdiv arcp float %a1, 0x37E5555500000000
   store float %div0, ptr %res
   %ptr1 = getelementptr inbounds float, ptr %res, i64 1
-  %div1 = fdiv ninf float %a2, 0x37E5555500000000
+  %div1 = fdiv arcp float %a2, 0x37E5555500000000
   store float %div1, ptr %ptr1
   ret void
 }
