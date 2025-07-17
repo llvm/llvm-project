@@ -433,6 +433,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::amdgcn_sin);
   case AMDGPU::BI__builtin_amdgcn_cosf:
   case AMDGPU::BI__builtin_amdgcn_cosh:
+  case AMDGPU::BI__builtin_amdgcn_cos_bf16:
     return emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::amdgcn_cos);
   case AMDGPU::BI__builtin_amdgcn_dispatch_ptr:
     return EmitAMDGPUDispatchPtr(*this, E);
