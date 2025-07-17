@@ -504,7 +504,7 @@ as follows:
 
 .. code-block:: bash
 
-  $ llvm-original-di-preservation.py sample.json sample.html
+  $ llvm-original-di-preservation.py sample.json --report-file sample.html
 
 Testing of original debug info preservation can be invoked from front-end level
 as follows:
