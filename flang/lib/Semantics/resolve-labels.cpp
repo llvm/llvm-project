@@ -505,8 +505,9 @@ public:
       progName = &program->statement.v.source;
       upperCaseCharBlock(*progName);
     }
-    if (const parser::CharBlock *endName{GetStmtName(
-        std::get<parser::Statement<parser::EndProgramStmt>>(mainProgram.t))}) {
+    if (const parser::CharBlock *
+        endName{GetStmtName(std::get<parser::Statement<parser::EndProgramStmt>>(
+            mainProgram.t))}) {
       upperCaseCharBlock(*endName);
       if (progName) {
         if (*endName != *progName) {
