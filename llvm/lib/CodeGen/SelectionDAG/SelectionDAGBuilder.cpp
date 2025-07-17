@@ -846,9 +846,9 @@ static void failForInvalidBundles(const CallBase &I, StringRef Name,
                                   ArrayRef<uint32_t> AllowedBundles) {
   if (I.hasOperandBundlesOtherThan(AllowedBundles)) {
     std::string Error;
+    bool First = true;
     for (unsigned i = 0, e = I.getNumOperandBundles(); i != e; ++i) {
       OperandBundleUse U = I.getOperandBundleAt(i);
-      bool First = true;
       if (is_contained(AllowedBundles, U.getTagID()))
         continue;
       if (!First)
