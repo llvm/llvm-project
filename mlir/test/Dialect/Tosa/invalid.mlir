@@ -750,6 +750,15 @@ func.func @test_mismatch_in_out_shape_clamp(%arg0: tensor<13x21x3xf32>) -> tenso
 
 // -----
 
+// CHECK-LABEL: test_unsupported_boolean_type_clamp
+func.func @test_unsupported_boolean_type_clamp(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
+  // expected-error@+1 {{'tosa.clamp' op illegal: operation operand/result data types did not align with any profile or extension, got (i1,i1), did you mean (i8,i8)?}}
+  %0 = tosa.clamp %arg0 {min_val = false, max_val = true} : (tensor<13x21x3xi1>) -> tensor<13x21x3xi1>
+  return %0 : tensor<13x21x3xi1>
+}
+
+// -----
+
 // CHECK-LABEL: test_mismatch_in_out_data_type_erf
 func.func @test_mismatch_in_out_data_type_erf(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
   // expected-error@+1 {{'tosa.erf' op requires the same element type for all operands and results}}
