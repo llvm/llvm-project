@@ -6480,20 +6480,23 @@ SanitizerOrdinalToCheckLabel(SanitizerKind::SanitizerOrdinal Ordinal) {
 llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
     ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
     SanitizerHandler Handler) {
+  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
+  auto *DI = getDebugInfo();
+  if (!DI)
+    return CheckDI;
+
   std::string Label;
   if (Ordinals.size() == 1)
     Label = SanitizerOrdinalToCheckLabel(Ordinals[0]);
   else
     Label = SanitizerHandlerToCheckLabel(Handler);
 
-  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
-
   for (auto Ord : Ordinals) {
     // TODO: deprecate ClArrayBoundsPseudoFn
     if (((ClArrayBoundsPseudoFn && Ord == SanitizerKind::SO_ArrayBounds) ||
          CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(Ord)) &&
         CheckDI) {
-      return getDebugInfo()->CreateSyntheticInlineAt(CheckDI, Label);
+      return DI->CreateSyntheticInlineAt(CheckDI, Label);
     }
   }
 
