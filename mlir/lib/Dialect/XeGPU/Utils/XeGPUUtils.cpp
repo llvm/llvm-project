@@ -202,12 +202,10 @@ xegpu::removeLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand);
 
 void xegpu::removeLayoutAttrs(Operation *op) {
   op->walk([&](Operation *nestOp) {
-    for (OpOperand &opr : nestOp->getOpOperands()) {
+    for (OpOperand &opr : nestOp->getOpOperands())
       removeLayoutAttr(opr);
-    }
-    for (OpResult result : nestOp->getOpResults()) {
+    for (OpResult result : nestOp->getOpResults())
       removeLayoutAttr(result);
-    }
   });
 }
 
