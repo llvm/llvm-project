@@ -117,7 +117,6 @@ static void generateEnumClass(ArrayRef<const Record *> Records, raw_ostream &OS,
     }
     OS << "  Last_ = " << N << ",\n";
   }
-  OS << "  Last_ = " << N << ",\n";
   OS << "};\n";
   OS << "\n";
   OS << "static constexpr std::size_t " << Enum
