@@ -946,9 +946,11 @@ struct PackOpTiling
         // (0,0)~(0,4) at first row.
         // 2. the second slice is extracted from (5) to (9) and SHOULD BE
         // respectively inserted into two rows with different length, including
-        // first row: (0,5) and second row (1,0)~(1,3).
-        // It is hard to coordinate them, thus adding below constraint to bypass
-        // them temporarily.
+        // first row: (0,5) and second row (1,0)~(1,3). It is hard to coordinate
+        // them, thus adding below constraint to bypass them temporarily. In
+        // another word, we can only support tiling with consumer if the tile
+        // size for the producer is a multiple of the inner tile size for the
+        // packed dimensions at this moment.
         if ((failed(cstTileSize) || !cstInnerSize ||
              *cstTileSize % *cstInnerSize != 0))
           return failure();
