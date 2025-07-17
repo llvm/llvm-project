@@ -390,7 +390,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_CompoundRequirementLBrace);
   EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 
-  Tokens = annotate("bool foo = requires { static_cast<int &&>(1); };");
+  Tokens = annotate("bool foo = requires { static_cast<Foo &&>(1); };");
   ASSERT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[8], tok::ampamp, TT_PointerOrReference);
 

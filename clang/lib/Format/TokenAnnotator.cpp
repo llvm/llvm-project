@@ -2996,14 +2996,18 @@ private:
     const FormatToken *PrevToken = Tok.getPreviousNonComment();
     if (!PrevToken)
       return TT_UnaryOperator;
-    if (PrevToken->is(TT_TypeName))
+    if (PrevToken->isTypeName(LangOpts))
       return TT_PointerOrReference;
     if (PrevToken->isPlacementOperator() && Tok.is(tok::ampamp))
       return TT_BinaryOperator;
 
-    const FormatToken *NextToken = Tok.getNextNonComment();
+    auto *NextToken = Tok.getNextNonComment();
     if (!NextToken)
       return TT_PointerOrReference;
+    if (NextToken->is(tok::greater)) {
+      NextToken->setFinalizedType(TT_TemplateCloser);
+      return TT_PointerOrReference;
+    }
 
     if (InTemplateArgument && NextToken->is(tok::kw_noexcept))
       return TT_BinaryOperator;
@@ -3121,9 +3125,6 @@ private:
         return TT_BinaryOperator;
       }
     }
-
-    if (PrevToken->isTypeName(LangOpts))
-      return TT_PointerOrReference;
 
     if (Line.Type == LT_SimpleRequirement ||
         (!Scopes.empty() && Scopes.back() == ST_CompoundRequirement)) {
