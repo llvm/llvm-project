@@ -316,6 +316,32 @@ findOverlappingRanges(llvm::SmallVector<RangeInfo> &Infos) {
   return Overlaps;
 }
 
+llvm::SmallVector<RangeInfo>
+findUnboundRanges(const llvm::SmallVectorImpl<RangeInfo> &Ranges,
+                  const llvm::ArrayRef<RangeInfo> &Bindings) {
+  llvm::SmallVector<RangeInfo> Unbounds;
+  for (const auto &Range : Ranges) {
+    bool Bound = false;
+    // hlsl::rootsig::RangeInfo Range;
+    // Range.Space = ResBinding.Space;
+    // Range.LowerBound = ResBinding.LowerBound;
+    // Range.UpperBound = Range.LowerBound + ResBinding.Size - 1;
+
+    for (const auto &Binding : Bindings) {
+      if (Range.Space == Binding.Space &&
+          Range.LowerBound >= Binding.LowerBound &&
+          Range.UpperBound <= Binding.UpperBound) {
+        Bound = true;
+        break;
+      }
+    }
+    if (!Bound) {
+      Unbounds.push_back(Range);
+    }
+  }
+  return Unbounds;
+}
+
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

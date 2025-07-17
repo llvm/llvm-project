@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILPostOptimizationValidation.h"
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -15,11 +16,14 @@
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/Support/DXILABI.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
@@ -27,6 +31,48 @@ using namespace llvm;
 using namespace llvm::dxil;
 
 namespace {
+static const char *ResourceClassToString(llvm::dxil::ResourceClass Class) {
+  switch (Class) {
+  case ResourceClass::SRV:
+    return "SRV";
+  case ResourceClass::UAV:
+    return "UAV";
+  case ResourceClass::CBuffer:
+    return "CBuffer";
+  case ResourceClass::Sampler:
+    return "Sampler";
+  }
+}
+
+static ResourceClass RangeToResourceClass(uint32_t RangeType) {
+  using namespace dxbc;
+  switch (static_cast<DescriptorRangeType>(RangeType)) {
+  case DescriptorRangeType::SRV:
+    return ResourceClass::SRV;
+  case DescriptorRangeType::UAV:
+    return ResourceClass::UAV;
+  case DescriptorRangeType::CBV:
+    return ResourceClass::CBuffer;
+  case DescriptorRangeType::Sampler:
+    return ResourceClass::Sampler;
+  }
+}
+
+ResourceClass ParameterToResourceClass(uint32_t Type) {
+  using namespace dxbc;
+  switch (Type) {
+  case llvm::to_underlying(RootParameterType::Constants32Bit):
+    return ResourceClass::CBuffer;
+  case llvm::to_underlying(RootParameterType::SRV):
+    return ResourceClass::SRV;
+  case llvm::to_underlying(RootParameterType::UAV):
+    return ResourceClass::UAV;
+  case llvm::to_underlying(RootParameterType::CBV):
+    return ResourceClass::CBuffer;
+  default:
+    llvm_unreachable("Unknown RootParameterType");
+  }
+}
 
 static void reportInvalidDirection(Module &M, DXILResourceMap &DRM) {
   for (const auto &UAV : DRM.uavs()) {
@@ -98,12 +144,13 @@ reportInvalidHandleTyBoundInRs(Module &M, Twine Type,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
-static void reportRegNotBound(Module &M, Twine Type,
-                              ResourceInfo::ResourceBinding Binding) {
+static void reportRegNotBound(Module &M,
+                              llvm::hlsl::rootsig::RangeInfo Unbound) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
-  OS << "register " << Type << " (space=" << Binding.Space
-     << ", register=" << Binding.LowerBound << ")"
+  OS << "register " << ResourceClassToString(Unbound.Class)
+     << " (space=" << Unbound.Space << ", register=" << Unbound.LowerBound
+     << ")"
      << " is not defined in Root Signature";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
@@ -136,24 +183,11 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   }
 }
 
-static uint32_t parameterToRangeType(uint32_t Type) {
-  switch (Type) {
-  case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    return llvm::to_underlying(dxbc::DescriptorRangeType::CBV);
-  case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    return llvm::to_underlying(dxbc::DescriptorRangeType::SRV);
-  case llvm::to_underlying(dxbc::RootParameterType::UAV):
-    return llvm::to_underlying(dxbc::DescriptorRangeType::UAV);
-  default:
-    llvm_unreachable("Root Parameter Type has no Range Type equivalent");
-  }
-}
-
-static RootSignatureBindingValidation
+static hlsl::rootsig::RootSignatureBindingValidation
 initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
                         dxbc::ShaderVisibility Visibility) {
 
-  RootSignatureBindingValidation Validation;
+  hlsl::rootsig::RootSignatureBindingValidation Validation;
 
   for (size_t I = 0; I < RSD.ParametersContainer.size(); I++) {
     const auto &[Type, Loc] =
@@ -170,14 +204,13 @@ initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
       dxbc::RTS0::v1::RootConstants Const =
           RSD.ParametersContainer.getConstant(Loc);
 
-      llvm::dxil::ResourceInfo::ResourceBinding Binding;
+      hlsl::rootsig::RangeInfo Binding;
       Binding.LowerBound = Const.ShaderRegister;
       Binding.Space = Const.RegisterSpace;
-      Binding.Size = 1;
+      Binding.UpperBound = Binding.LowerBound;
 
       // Root Constants Bind to CBuffers
-      Validation.addBinding(llvm::to_underlying(dxbc::DescriptorRangeType::CBV),
-                            Binding);
+      Validation.addBinding(ResourceClass::CBuffer, Binding);
 
       break;
     }
@@ -188,12 +221,12 @@ initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
       dxbc::RTS0::v2::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(Loc);
 
-      llvm::dxil::ResourceInfo::ResourceBinding Binding;
+      hlsl::rootsig::RangeInfo Binding;
       Binding.LowerBound = Desc.ShaderRegister;
       Binding.Space = Desc.RegisterSpace;
-      Binding.Size = 1;
+      Binding.UpperBound = Binding.LowerBound;
 
-      Validation.addBinding(parameterToRangeType(Type), Binding);
+      Validation.addBinding(ParameterToResourceClass(Type), Binding);
       break;
     }
     case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
@@ -201,11 +234,11 @@ initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
           RSD.ParametersContainer.getDescriptorTable(Loc);
 
       for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
-        llvm::dxil::ResourceInfo::ResourceBinding Binding;
+        hlsl::rootsig::RangeInfo Binding;
         Binding.LowerBound = Range.BaseShaderRegister;
         Binding.Space = Range.RegisterSpace;
-        Binding.Size = Range.NumDescriptors;
-        Validation.addBinding(Range.RangeType, Binding);
+        Binding.UpperBound = Binding.LowerBound + Range.NumDescriptors - 1;
+        Validation.addBinding(RangeToResourceClass(Range.RangeType), Binding);
       }
       break;
     }
@@ -227,34 +260,42 @@ getRootSignature(RootSignatureBindingInfo &RSBI,
   return RootSigDesc;
 }
 
-static void reportInvalidRegistersBinding(
+static void reportInvalidHandleTy(
     Module &M,
-    const llvm::ArrayRef<llvm::dxil::ResourceInfo::ResourceBinding> &Bindings,
     const iterator_range<SmallVectorImpl<dxil::ResourceInfo>::iterator>
         &Resources) {
   for (auto Res = Resources.begin(), End = Resources.end(); Res != End; Res++) {
-    bool Bound = false;
-    ResourceInfo::ResourceBinding ResBinding = Res->getBinding();
-    for (const auto &Binding : Bindings) {
-      if (ResBinding.Space == Binding.Space &&
-          ResBinding.LowerBound >= Binding.LowerBound &&
-          ResBinding.LowerBound + ResBinding.Size - 1 <
-              Binding.LowerBound + Binding.Size) {
-        Bound = true;
-        break;
-      }
-    }
-    if (!Bound) {
-      reportRegNotBound(M, Res->getName(), Res->getBinding());
-    } else {
-      TargetExtType *Handle = Res->getHandleTy();
-      auto *TypedBuffer = dyn_cast_or_null<TypedBufferExtType>(Handle);
-      auto *Texture = dyn_cast_or_null<TextureExtType>(Handle);
+    TargetExtType *Handle = Res->getHandleTy();
+    auto *TypedBuffer = dyn_cast_or_null<TypedBufferExtType>(Handle);
+    auto *Texture = dyn_cast_or_null<TextureExtType>(Handle);
 
-      if (TypedBuffer != nullptr || Texture != nullptr)
-        reportInvalidHandleTyBoundInRs(M, Res->getName(), Res->getBinding());
-    }
+    if (TypedBuffer != nullptr || Texture != nullptr)
+      reportInvalidHandleTyBoundInRs(M, Res->getName(), Res->getBinding());
   }
+}
+
+static void reportUnboundRegisters(
+    Module &M,
+    const llvm::hlsl::rootsig::RootSignatureBindingValidation &Validation,
+    ResourceClass Class,
+    const iterator_range<SmallVectorImpl<dxil::ResourceInfo>::iterator>
+        &Resources) {
+  SmallVector<hlsl::rootsig::RangeInfo> Ranges;
+  for (auto Res = Resources.begin(), End = Resources.end(); Res != End; Res++) {
+    ResourceInfo::ResourceBinding ResBinding = Res->getBinding();
+    hlsl::rootsig::RangeInfo Range;
+    Range.Space = ResBinding.Space;
+    Range.LowerBound = ResBinding.LowerBound;
+    Range.UpperBound = Range.LowerBound + ResBinding.Size - 1;
+    Range.Class = Class;
+    Ranges.push_back(Range);
+  }
+
+  SmallVector<hlsl::rootsig::RangeInfo> Unbounds =
+      hlsl::rootsig::findUnboundRanges(Ranges,
+                                       Validation.getBindingsOfType(Class));
+  for (const auto &Unbound : Unbounds)
+    reportRegNotBound(M, Unbound);
 }
 
 static void reportErrors(Module &M, DXILResourceMap &DRM,
@@ -272,21 +313,20 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
   if (auto RSD = getRootSignature(RSBI, MMI)) {
 
-    RootSignatureBindingValidation Validation =
+    llvm::hlsl::rootsig::RootSignatureBindingValidation Validation =
         initRSBindingValidation(*RSD, tripleToVisibility(MMI.ShaderProfile));
 
-    reportInvalidRegistersBinding(
-        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::CBV),
-        DRM.cbuffers());
-    reportInvalidRegistersBinding(
-        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::UAV),
-        DRM.uavs());
-    reportInvalidRegistersBinding(
-        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::Sampler),
-        DRM.samplers());
-    reportInvalidRegistersBinding(
-        M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::SRV),
-        DRM.srvs());
+    reportUnboundRegisters(M, Validation, ResourceClass::CBuffer,
+                           DRM.cbuffers());
+    reportUnboundRegisters(M, Validation, ResourceClass::UAV, DRM.uavs());
+    reportUnboundRegisters(M, Validation, ResourceClass::Sampler,
+                           DRM.samplers());
+    reportUnboundRegisters(M, Validation, ResourceClass::SRV, DRM.srvs());
+
+    reportInvalidHandleTy(M, DRM.cbuffers());
+    reportInvalidHandleTy(M, DRM.srvs());
+    reportInvalidHandleTy(M, DRM.uavs());
+    reportInvalidHandleTy(M, DRM.samplers());
   }
 }
 } // namespace
