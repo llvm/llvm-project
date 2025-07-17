@@ -68,3 +68,11 @@ void foo() {
 // OGCG: br i1 %[[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 // OGCG: [[EXIT]]:
 // OGCG: ret void
+
+void zero_sized() {
+    int s[0];
+}
+
+// CIR:     cir.func dso_local @_Z10zero_sizedv()
+// CIR-NOT:   cir.do
+// CIR:       cir.return

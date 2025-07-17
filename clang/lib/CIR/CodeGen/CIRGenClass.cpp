@@ -355,8 +355,8 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     // Just skip out if the constant count is zero.
     if (constIntAttr && constIntAttr.getUInt() == 0)
       return;
-    // Otherwise, emit the check.
   } else {
+    // Otherwise, emit the check.
     cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
   }
 
@@ -399,7 +399,8 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     }
 
     // Emit the constructor call that will execute for every array element.
-    mlir::Value arrayOp = builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
+    mlir::Value arrayOp =
+        builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
     builder.create<cir::ArrayCtor>(
         *currSrcLoc, arrayOp, [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);

@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include <iostream>
 #include <memory>
@@ -234,6 +235,7 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
   builder.setInsertionPointAfter(op.getOperation());
 
   mlir::Type eltTy = op->getRegion(0).getArgument(0).getType();
+  assert(!cir::MissingFeatures::vlas());
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
   lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),

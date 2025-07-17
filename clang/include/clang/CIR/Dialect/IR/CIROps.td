@@ -2261,6 +2261,14 @@ def CIR_ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
     Initialize each array element using the same C++ constructor. This
     operation has one region, with one single block. The block has an
     incoming argument for the current array index to initialize.
+
+    ```mlir
+    cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @_ZN1SC1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    }
+    ```
   }];
 }
 
