@@ -43,7 +43,7 @@ class ThreadContextBase {
   const u32 tid;  // Thread ID. Main thread should have tid = 0.
   u64 unique_id;  // Unique thread ID.
   u32 reuse_count;  // Number of times this tid was reused.
-  ThreadID os_id;     // PID (used for reporting).
+  ThreadID os_id;   // PID (used for reporting).
   uptr user_id;   // Some opaque user thread id (e.g. pthread_t).
   char name[64];  // As annotated by user.
 

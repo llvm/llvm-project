@@ -124,7 +124,8 @@ static std::vector<ThreadID> ReadTidsToVector(ThreadLister *thread_lister) {
   return std::vector<ThreadID>(threads.begin(), threads.end());
 }
 
-static bool Includes(std::vector<ThreadID> first, std::vector<ThreadID> second) {
+static bool Includes(std::vector<ThreadID> first,
+                     std::vector<ThreadID> second) {
   std::sort(first.begin(), first.end());
   std::sort(second.begin(), second.end());
   return std::includes(first.begin(), first.end(), second.begin(),
