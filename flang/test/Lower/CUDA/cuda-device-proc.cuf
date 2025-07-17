@@ -48,7 +48,6 @@ attributes(global) subroutine devsub()
 
   smalltime = clock()
   time = clock64()
-
   time = globalTimer()
 end
 
@@ -87,7 +86,7 @@ end
 ! CHECK: %{{.*}} = llvm.atomicrmw udec_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 
 ! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock : i32
-! CHECK: fir.call @llvm.nvvm.read.ptx.sreg.clock64()
+! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock64 : i64
 ! CHECK: %{{.*}} = nvvm.read.ptx.sreg.globaltimer : i64
 
 subroutine host1()
