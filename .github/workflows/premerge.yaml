@@ -37,6 +37,7 @@ jobs:
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
         with:
+          variant: "sccache"
           max-size: "2000M"
       - name: Build and Test
         # Mark the job as a success even if the step fails so that people do
