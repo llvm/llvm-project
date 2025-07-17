@@ -52,6 +52,11 @@ static cl::opt<unsigned>
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
                  cl::init(2), cl::Hidden);
 
+static cl::opt<std::string>
+    AMDGPUPostRADirection("amdgpu-post-ra-direction",
+                          cl::desc("Select custom AMDGPU postRA direction."),
+                          cl::Hidden, cl::init(""));
+
 GCNSubtarget::~GCNSubtarget() = default;
 
 GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
@@ -341,37 +346,63 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
 }
 
 void GCNSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                             unsigned NumRegionInstrs) const {
-  switch (getPostRASchedDirection()) {
-  case MISched::TopDown:
+                                             const MachineBasicBlock &MBB,
+                                             unsigned NumRegionInstr) const {
+  const Function &F = MBB.getParent()->getFunction();
+  Attribute PostRADirectionAttr = F.getFnAttribute("amdgpu-post-ra-direction");
+  if (!PostRADirectionAttr.isValid())
+    return;
+
+  StringRef PostRADirectionStr = PostRADirectionAttr.getValueAsString();
+  if (PostRADirectionStr == "topdown") {
     Policy.OnlyTopDown = true;
     Policy.OnlyBottomUp = false;
-    break;
-  case MISched::BottomUp:
+  } else if (PostRADirectionStr == "bottomup") {
     Policy.OnlyTopDown = false;
     Policy.OnlyBottomUp = true;
-    break;
-  case MISched::Bidirectional:
-  default:
+  } else if (PostRADirectionStr == "bidirectional") {
     Policy.OnlyTopDown = false;
     Policy.OnlyBottomUp = false;
-    break;
+  } else {
+    DiagnosticInfoOptimizationFailure Diag(
+        F, F.getSubprogram(),
+        Twine("invalid value for postRa direction attribute: '") +
+            PostRADirectionStr);
+    F.getContext().diagnose(Diag);
   }
+  // }
 
-  LLVM_DEBUG({
-    const char *DirStr = "topdown";
-    switch (getPostRASchedDirection()) {
-    case MISched::BottomUp:
-      DirStr = "bottomup";
-      break;
-    case MISched::Bidirectional:
-      DirStr = "bidirectional";
-      break;
-    default:
-      break;
-    }
-    dbgs() << "Post-MI-sched direction: " << DirStr << '\n';
-  });
+  // switch (getPostRASchedDirection()) {
+  // case MISched::TopDown:
+  //   Policy.OnlyTopDown = true;
+  //   Policy.OnlyBottomUp = false;
+  //   break;
+  // case MISched::BottomUp:
+  //   Policy.OnlyTopDown = false;
+  //   Policy.OnlyBottomUp = true;
+  //   break;
+  // case MISched::Bidirectional:
+  //   Policy.OnlyTopDown = false;
+  //   Policy.OnlyBottomUp = false;
+  //   break;
+  // default:
+  //   break;
+  // }
+
+  // LLVM_DEBUG({
+  //   const char *DirStr = "topdown";
+  //   switch (getPostRASchedDirection()) {
+  //   case MISched::BottomUp:
+  //     DirStr = "bottomup";
+  //     break;
+  //   case MISched::Bidirectional:
+  //     DirStr = "bidirectional";
+  //     break;
+  //   default:
+  //     break;
+  //   }
+  //   dbgs() << "Post-MI-sched direction: " << DirStr << '\n';
+  // });
 }
 
 void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
