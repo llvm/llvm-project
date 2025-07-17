@@ -768,11 +768,6 @@ LLDBMemoryReader::resolveRemoteAddressFromSymbolObjectFile(
 }
 
 bool LLDBMemoryReader::readMetadataFromFileCacheEnabled() const {
-  auto &triple = m_process.GetTarget().GetArchitecture().GetTriple();
-
-  // 32 doesn't have a flag bit we can reliably use, so reading from filecache
-  // is disabled on it.
-  return m_process.GetTarget().GetSwiftReadMetadataFromFileCache() &&
-         triple.isArch64Bit();
+  return m_process.GetTarget().GetSwiftReadMetadataFromFileCache();
 }
 } // namespace lldb_private
