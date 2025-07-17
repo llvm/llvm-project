@@ -707,6 +707,19 @@ public:
   /// this for uniformity with `applyDomain`.
   void applyRange(const IntegerRelation &rel);
 
+  /// Let the relation `this` be R1, and the relation `rel` be R2. Requires
+  /// R1 and R2 to have the same domain.
+  ///
+  /// Let R3 be the rangeProduct of R1 and R2. Then x R3 (y, z) iff
+  /// (x R1 y and x R2 z).
+  ///
+  /// Example:
+  ///
+  /// R1: (i, j) -> k : f(i, j, k) = 0
+  /// R2: (i, j) -> l : g(i, j, l) = 0
+  /// R1.rangeProduct(R2): (i, j) -> (k, l) : f(i, j, k) = 0 and g(i, j, l) = 0
+  IntegerRelation rangeProduct(const IntegerRelation &rel);
+
   /// Given a relation `other: (A -> B)`, this operation merges the symbol and
   /// local variables and then takes the composition of `other` on `this: (B ->
   /// C)`. The resulting relation represents tuples of the form: `A -> C`.
