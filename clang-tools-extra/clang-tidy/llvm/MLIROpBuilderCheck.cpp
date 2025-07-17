@@ -31,7 +31,7 @@ public:
 
   llvm::Error eval(const MatchFinder::MatchResult &match,
                    std::string *result) const override {
-    RangeSelector n = node(id)(match);
+    llvm::Expected<CharSourceRange> n = node(id)(match);
     if (!n)
       return n.takeError();
     SourceRange srcRange = n->getAsRange();
