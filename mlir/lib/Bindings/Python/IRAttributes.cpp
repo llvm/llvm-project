@@ -18,7 +18,6 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "pylifecycle.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/raw_ostream.h"
 
