@@ -84,7 +84,20 @@ qc.bnei t3, 14, same_section
 # OBJ-NEXT: qc.e.bgeui s2, 0x18, 0x28 <same_section>
 qc.e.bgeui s2, 24, same_section
 
-.option norelax
+## Enable compression/relaxation to check how symbols are handled.
+.option noexact
+
+# ASM: qc.bnei t1, 10, undef
+# OBJ: qc.beqi t1, 0xa, 0x42 <same_section_extern+0x16>
+# OBJ-NEXT: j 0x3e <same_section_extern+0x12>
+# OBJ-NEXT: R_RISCV_JAL undef{{$}}
+qc.bnei t1, 10, undef
+
+# ASM: qc.e.bgeui s0, 40, undef
+# OBJ-NEXT: qc.e.bltui s0, 0x28, 0x4c <same_section_extern+0x20>
+# OBJ-NEXT: j 0x48 <same_section_extern+0x1c>
+# OBJ-NEXT: R_RISCV_JAL undef{{$}}
+qc.e.bgeui s0, 40, undef
 
 .section .text.second, "ax", @progbits
 

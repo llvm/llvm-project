@@ -144,7 +144,7 @@ std::optional<bool> XtensaAsmBackend::evaluateFixup(const MCFragment &F,
   // For a few PC-relative fixups, offsets need to be aligned down. We
   // compensate here because the default handler's `Value` decrement doesn't
   // account for this alignment.
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case Xtensa::fixup_xtensa_call_18:
   case Xtensa::fixup_xtensa_l32r_16:
     Value = (Asm->getFragmentOffset(F) + Fixup.getOffset()) % 4;

@@ -11,7 +11,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Threading.h"
 
-#include <chrono>
 #include <optional>
 
 using namespace mlir;

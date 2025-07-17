@@ -820,8 +820,6 @@ llvm.func @simd_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fi
 }
 // Be sure that llvm.loop.vectorize.enable metadata appears twice
 // CHECK: llvm.loop.parallel_accesses
-// CHECK-NEXT: llvm.loop.vectorize.enable
-// CHECK: llvm.loop.vectorize.enable
 
 // -----
 

@@ -767,6 +767,13 @@ def : Sh2AddPat<NDS_LEA_W_ZE>;
 def : Sh3AddPat<NDS_LEA_D_ZE>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
 
+let Predicates = [HasVendorXAndesBFHCvt] in {
+def : Pat<(fpextend (bf16 FPR16:$rs)),
+          (NDS_FCVT_S_BF16 (bf16 FPR16:$rs))>;
+def : Pat<(bf16 (fpround FPR32:$rs)),
+          (NDS_FCVT_BF16_S FPR32:$rs)>;
+} // Predicates = [HasVendorXAndesBFHCvt]
+
 let Predicates = [HasVendorXAndesVBFHCvt] in {
 defm PseudoNDS_VFWCVT_S_BF16 : VPseudoVWCVT_S_BF16;
 defm PseudoNDS_VFNCVT_BF16_S : VPseudoVNCVT_BF16_S;
@@ -825,13 +832,13 @@ defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
 let Predicates = [HasShortForwardBranchOpt], hasSideEffects = 0,
     mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
 def PseudoCCNDS_BFOS : Pseudo<(outs GPR:$dst),
-                              (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                                GPR:$falsev, GPR:$rs1,
                                uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
                        Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                               ReadSFBALU]>;
 def PseudoCCNDS_BFOZ : Pseudo<(outs GPR:$dst),
-                              (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                                GPR:$falsev, GPR:$rs1,
                                uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
                        Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,

@@ -275,9 +275,11 @@ typedef volatile long atomic32_t;
 typedef volatile long long atomic64_t;
 typedef volatile void *atomicptr_t;
 
-static FORCEINLINE int32_t atomic_load32(atomic32_t *src) { return *src; }
+static FORCEINLINE int32_t atomic_load32(atomic32_t *src) {
+  return (int32_t)InterlockedOr(src, 0);
+}
 static FORCEINLINE void atomic_store32(atomic32_t *dst, int32_t val) {
-  *dst = val;
+  InterlockedExchange(dst, val);
 }
 static FORCEINLINE int32_t atomic_incr32(atomic32_t *val) {
   return (int32_t)InterlockedIncrement(val);
@@ -293,20 +295,22 @@ static FORCEINLINE int atomic_cas32_acquire(atomic32_t *dst, int32_t val,
   return (InterlockedCompareExchange(dst, val, ref) == ref) ? 1 : 0;
 }
 static FORCEINLINE void atomic_store32_release(atomic32_t *dst, int32_t val) {
-  *dst = val;
+  InterlockedExchange(dst, val);
 }
-static FORCEINLINE int64_t atomic_load64(atomic64_t *src) { return *src; }
+static FORCEINLINE int64_t atomic_load64(atomic64_t *src) {
+  return (int64_t)InterlockedOr64(src, 0);
+}
 static FORCEINLINE int64_t atomic_add64(atomic64_t *val, int64_t add) {
   return (int64_t)InterlockedExchangeAdd64(val, add) + add;
 }
 static FORCEINLINE void *atomic_load_ptr(atomicptr_t *src) {
-  return (void *)*src;
+  return InterlockedCompareExchangePointer(src, 0, 0);
 }
 static FORCEINLINE void atomic_store_ptr(atomicptr_t *dst, void *val) {
-  *dst = val;
+  InterlockedExchangePointer(dst, val);
 }
 static FORCEINLINE void atomic_store_ptr_release(atomicptr_t *dst, void *val) {
-  *dst = val;
+  InterlockedExchangePointer(dst, val);
 }
 static FORCEINLINE void *atomic_exchange_ptr_acquire(atomicptr_t *dst,
                                                      void *val) {

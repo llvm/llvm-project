@@ -845,10 +845,11 @@ let Predicates = [HasVendorXqcibi, IsRV32] in {
 let Predicates = [HasVendorXqcibm, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_INSBRI : QCIRVInstRI<0b1, simm11, "qc.insbri">;
-  def QC_INSBI : RVInstIBase<0b001, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
-                             (ins simm5:$imm5, uimm5_plus1:$width,
+  def QC_INSBI : RVInstIBase<0b001, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
+                             (ins GPRNoX0:$rd, simm5:$imm5, uimm5_plus1:$width,
                              uimm5:$shamt), "qc.insbi",
                              "$rd, $imm5, $width, $shamt"> {
+    let Constraints = "$rd = $rd_wb";
     bits<5> imm5;
     bits<5> shamt;
     bits<5> width;
@@ -1336,6 +1337,22 @@ class QCISELECTIICCPat<CondCode Cond, QCISELECTIICC Inst>
     : Pat<(select (i32 (setcc (i32 GPRNoX0:$rd), (i32 GPRNoX0:$rs1), Cond)), simm5:$simm1, simm5:$simm2),
           (Inst GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$simm1, simm5:$simm2)>;
 
+class QCILICCPat<CondCode Cond, QCILICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rs2), Cond)), simm5:$simm, (XLenVT GPRNoX0:$rd)),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm)>;
+
+class QCILICCPatInv<CondCode Cond, QCILICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rs2), Cond)), (XLenVT GPRNoX0:$rd), simm5:$simm),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm)>;
+
+class QCILICCIPat<CondCode Cond, QCILICC Inst, DAGOperand InTyImm>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), InTyImm:$imm, Cond)), simm5:$simm, (XLenVT GPRNoX0:$rd)),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, InTyImm:$imm, simm5:$simm)>;
+
+class QCILICCIPatInv<CondCode Cond, QCILICC Inst, DAGOperand InTyImm>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), InTyImm:$imm, Cond)), (XLenVT GPRNoX0:$rd), simm5:$simm),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, InTyImm:$imm, simm5:$simm)>;
+
 // Match `riscv_brcc` and lower to the appropriate XQCIBI branch instruction.
 class BcciPat<CondCode Cond, QCIBranchInst_rii Inst, DAGOperand InTyImm>
     : Pat<(riscv_brcc (i32 GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
@@ -1496,6 +1513,36 @@ def : QCIMVCCIPat <SETULT, QC_MVLTUI, uimm5>;
 let Predicates = [HasVendorXqcicm, NoVendorXqcics, IsRV32] in {
 def : QCIMVCCIPat <SETEQ,  QC_MVEQI, simm5>;
 def : QCIMVCCIPat <SETNE,  QC_MVNEI, simm5>;
+}
+
+let Predicates = [HasVendorXqcicli, HasVendorXqcicsOrXqcicm, IsRV32] in {
+def : QCILICCPat <SETEQ,  QC_LIEQ>;
+def : QCILICCPat <SETNE,  QC_LINE>;
+def : QCILICCPat <SETLT,  QC_LILT>;
+def : QCILICCPat <SETGE,  QC_LIGE>;
+def : QCILICCPat <SETULT, QC_LILTU>;
+def : QCILICCPat <SETUGE, QC_LIGEU>;
+
+def : QCILICCIPat <SETEQ,  QC_LIEQI, simm5>;
+def : QCILICCIPat <SETNE,  QC_LINEI, simm5>;
+def : QCILICCIPat <SETLT,  QC_LILTI, simm5>;
+def : QCILICCIPat <SETGE,  QC_LIGEI, simm5>;
+def : QCILICCIPat <SETULT, QC_LILTUI, uimm5>;
+def : QCILICCIPat <SETUGE, QC_LIGEUI, uimm5>;
+
+def : QCILICCPatInv <SETNE,  QC_LIEQ>;
+def : QCILICCPatInv <SETEQ,  QC_LINE>;
+def : QCILICCPatInv <SETGE,  QC_LILT>;
+def : QCILICCPatInv <SETLT,  QC_LIGE>;
+def : QCILICCPatInv <SETUGE, QC_LILTU>;
+def : QCILICCPatInv <SETULT, QC_LIGEU>;
+
+def : QCILICCIPatInv <SETNE,  QC_LIEQI, simm5>;
+def : QCILICCIPatInv <SETEQ,  QC_LINEI, simm5>;
+def : QCILICCIPatInv <SETGE,  QC_LILTI, simm5>;
+def : QCILICCIPatInv <SETLT,  QC_LIGEI, simm5>;
+def : QCILICCIPatInv <SETUGE, QC_LILTUI, uimm5>;
+def : QCILICCIPatInv <SETULT, QC_LIGEUI, uimm5>;
 }
 
 let Predicates = [HasVendorXqcics, IsRV32] in {
@@ -1677,3 +1724,82 @@ def : CompressPat<(QC_E_BGEUI GPRNoX0:$rs1, uimm5nonzero:$imm5, bare_simm13_lsb0
 def : CompressPat<(QC_E_BLTUI GPRNoX0:$rs1, uimm5nonzero:$imm5, bare_simm13_lsb0:$imm12),
                   (QC_BLTUI GPRNoX0:$rs1, uimm5nonzero:$imm5, bare_simm13_lsb0:$imm12)>;
 } // let isCompressOnly = true, Predicates = [HasVendorXqcibi, IsRV32]
+
+// HACKS
+// -----
+// The reasons for needing the definitions below are long and quite annoying. I'm writing
+// this so they are explained in-line, rather than anywhere else.
+//
+// Emitting an instruction to an object proceeds as:
+// - Compression (in emitInstruction)
+// - Emit to Binary Code + Fixups
+// - Assembler Relaxation
+//   - Fixup evaluation/application
+//   - If relaxed, re-emitted to Binary + Fixups
+// - Relocation generation from Fixups
+//
+// Unfortunately, the `QC.E.LI` -> `C.LI` compression pattern has an edge case that has
+// caused crashes in the past.
+//
+// How the bug happens is:
+// - QC.E.LI is parsed with a bare symbol, which is valid + expected, and can
+//   be handled by fixups/relocations.
+// - Compression turns this into a `C.LI` because the `simm6` 
+//   MCOperandPredicate accepts bare symbols.
+// - Binary Code emission didn't know how to create a fixup for a CI-type
+//   instruction containing a bare symbol.
+//
+// The solution to the last bullet is that we added the `fixup_riscv_rvc_imm`,
+// so that we could proceed past the last error, and then use Assembler Relaxation
+// to turn the `C.LI` with a bare symbol back into a `QC.E.LI`.
+//
+// This is good enough for emitting objects, but doesn't work for emitting
+// assembly. Emitting assembly is why we need the following Hacks.
+// 
+// Emitting an instruction to assembly proceeds as:
+// - Compression (in emitInstruction)
+// - Decompression (in RISCVInstPrinter::printInst)
+// - InstAliases are applied
+//
+// So in the case of `QC.E.LI` with a bare symbol, first it is compressed to
+// `C.LI` with a bare symbol, and then it is decompressed to `ADDI` with a bare
+// symbol for printing, which is printed via an alias as `li <reg>, <symbol>`.
+// Both the decompression and the alias use the MCOperandPredicate from 
+// `simm12`, which accepts bare symbols.
+//
+// The problem here is that `li <reg>, <symbol>` fails to parse, because the
+// parsers do not accept bare symbols, they only accept symbols with specifiers
+// or immediates.
+//
+// Our solution is to add another alias, which will be prioritised above the
+// `li` alias, but only when `qc.e.li` is available. We originally intended to
+// use the `bare_symbol` Operand type, but this had no MCOperandPredicate, and
+// adding one changed the error messages when parsing `qc.e.li` with a
+// too-large constant. So instead, we add a new `AsmOperand` and `Operand` type,
+// just for the alias, which parse just like a BareSymbol, but they
+// have both an MCOperandPredicate, and the error message that corresponds to
+// the existing one on `qc.e.li` for too-large immediates (which fail to parse
+// as both an immediate, and a bare symbol).
+//
+// This is fairly unpleasant, but it's the least disruptive thing we can do
+// and keeps all the hacks confined to the RISC-V backend code.
+
+def BareSymbolQC_E_LI : AsmOperandClass {
+  let Name = "BareSymbolQC_E_LI";
+  let PredicateMethod = "isBareSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidBareSymbolQC_E_LI";
+  let ParserMethod = "parseBareSymbol";
+}
+
+def hack_bare_symbol_qc_e_li : Operand<XLenVT> {
+  let ParserMatchClass = BareSymbolQC_E_LI;
+  let MCOperandPredicate = [{
+    return MCOp.isExpr() && MCOp.isBareSymbolRef();
+  }];
+}
+
+let Predicates = [HasVendorXqcili, IsRV32] in {
+def : InstAlias<"qc.e.li $rd, $sym", (ADDI GPR:$rd, X0, hack_bare_symbol_qc_e_li:$sym), 3>;
+} // Predicates = [HasVendorXqcili, IsRV32]
+// END HACKS

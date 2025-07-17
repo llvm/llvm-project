@@ -416,3 +416,141 @@ unsigned long long test_builtin_bswap64(unsigned long long x) {
 
 // OGCG-LABEL: @_Z20test_builtin_bswap64y
 // OGCG:         %{{.+}} = call i64 @llvm.bswap.i64(i64 %{{.+}})
+
+unsigned char test_builtin_rotateleft8(unsigned char x, unsigned char y) {
+  return __builtin_rotateleft8(x, y);
+}
+
+// CIR-LABEL: @_Z24test_builtin_rotateleft8hh
+// CIR:         %{{.+}} = cir.rotate left %{{.+}}, %{{.+}} : !u8i
+
+// LLVM-LABEL: @_Z24test_builtin_rotateleft8hh
+// LLVM:         %[[INPUT:.+]] = load i8, ptr %{{.+}}, align 1
+// LLVM-NEXT:    %[[AMOUNT:.+]] = load i8, ptr %{{.+}}, align 1
+// LLVM-NEXT:    %{{.+}} = call i8 @llvm.fshl.i8(i8 %[[INPUT]], i8 %[[INPUT]], i8 %[[AMOUNT]])
+
+// OGCG-LABEL: @_Z24test_builtin_rotateleft8hh
+// OGCG:         %[[INPUT:.+]] = load i8, ptr %{{.+}}, align 1
+// OGCG-NEXT:    %[[AMOUNT:.+]] = load i8, ptr %{{.+}}, align 1
+// OGCG-NEXT:    %{{.+}} = call i8 @llvm.fshl.i8(i8 %[[INPUT]], i8 %[[INPUT]], i8 %[[AMOUNT]])
+
+unsigned short test_builtin_rotateleft16(unsigned short x, unsigned short y) {
+  return __builtin_rotateleft16(x, y);
+}
+
+// CIR-LABEL: @_Z25test_builtin_rotateleft16tt
+// CIR:         %{{.+}} = cir.rotate left %{{.+}}, %{{.+}} : !u16i
+
+// LLVM-LABEL: @_Z25test_builtin_rotateleft16tt
+// LLVM:         %[[INPUT:.+]] = load i16, ptr %{{.+}}, align 2
+// LLVM-NEXT:    %[[AMOUNT:.+]] = load i16, ptr %{{.+}}, align 2
+// LLVM-NEXT:    %{{.+}} = call i16 @llvm.fshl.i16(i16 %[[INPUT]], i16 %[[INPUT]], i16 %[[AMOUNT]])
+
+// OGCG-LABEL: @_Z25test_builtin_rotateleft16tt
+// OGCG:         %[[INPUT:.+]] = load i16, ptr %{{.+}}, align 2
+// OGCG-NEXT:    %[[AMOUNT:.+]] = load i16, ptr %{{.+}}, align 2
+// OGCG-NEXT:    %{{.+}} = call i16 @llvm.fshl.i16(i16 %[[INPUT]], i16 %[[INPUT]], i16 %[[AMOUNT]])
+
+unsigned test_builtin_rotateleft32(unsigned x, unsigned y) {
+  return __builtin_rotateleft32(x, y);
+}
+
+// CIR-LABEL: @_Z25test_builtin_rotateleft32jj
+// CIR:         %{{.+}} = cir.rotate left %{{.+}}, %{{.+}} : !u32i
+
+// LLVM-LABEL: @_Z25test_builtin_rotateleft32jj
+// LLVM:         %[[INPUT:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM-NEXT:    %[[AMOUNT:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM-NEXT:    %{{.+}} = call i32 @llvm.fshl.i32(i32 %[[INPUT]], i32 %[[INPUT]], i32 %[[AMOUNT]])
+
+// OGCG-LABEL: @_Z25test_builtin_rotateleft32jj
+// OGCG:         %[[INPUT:.+]] = load i32, ptr %{{.+}}, align 4
+// OGCG-NEXT:    %[[AMOUNT:.+]] = load i32, ptr %{{.+}}, align 4
+// OGCG-NEXT:    %{{.+}} = call i32 @llvm.fshl.i32(i32 %[[INPUT]], i32 %[[INPUT]], i32 %[[AMOUNT]])
+
+unsigned long long test_builtin_rotateleft64(unsigned long long x,
+                                             unsigned long long y) {
+  return __builtin_rotateleft64(x, y);
+}
+
+// CIR-LABEL: @_Z25test_builtin_rotateleft64yy
+// CIR:         %{{.+}} = cir.rotate left %{{.+}}, %{{.+}} : !u64i
+
+// LLVM-LABEL: @_Z25test_builtin_rotateleft64yy
+// LLVM:         %[[INPUT:.+]] = load i64, ptr %{{.+}}, align 8
+// LLVM-NEXT:    %[[AMOUNT:.+]] = load i64, ptr %{{.+}}, align 8
+// LLVM-NEXT:    %{{.+}} = call i64 @llvm.fshl.i64(i64 %[[INPUT]], i64 %[[INPUT]], i64 %[[AMOUNT]])
+
+// OGCG-LABEL: @_Z25test_builtin_rotateleft64yy
+// OGCG:         %[[INPUT:.+]] = load i64, ptr %{{.+}}, align 8
+// OGCG-NEXT:    %[[AMOUNT:.+]] = load i64, ptr %{{.+}}, align 8
+// OGCG-NEXT:    %{{.+}} = call i64 @llvm.fshl.i64(i64 %[[INPUT]], i64 %[[INPUT]], i64 %[[AMOUNT]])
+
+unsigned char test_builtin_rotateright8(unsigned char x, unsigned char y) {
+  return __builtin_rotateright8(x, y);
+}
+
+// CIR-LABEL: @_Z25test_builtin_rotateright8hh
+// CIR:         %{{.+}} = cir.rotate right %{{.+}}, %{{.+}} : !u8i
+
+// LLVM-LABEL: @_Z25test_builtin_rotateright8hh
+// LLVM:         %[[INPUT:.+]] = load i8, ptr %{{.+}}, align 1
+// LLVM-NEXT:    %[[AMOUNT:.+]] = load i8, ptr %{{.+}}, align 1
+// LLVM-NEXT:    %{{.+}} = call i8 @llvm.fshr.i8(i8 %[[INPUT]], i8 %[[INPUT]], i8 %[[AMOUNT]])
+
+// OGCG-LABEL: @_Z25test_builtin_rotateright8hh
+// OGCG:         %[[INPUT:.+]] = load i8, ptr %{{.+}}, align 1
+// OGCG-NEXT:    %[[AMOUNT:.+]] = load i8, ptr %{{.+}}, align 1
+// OGCG-NEXT:    %{{.+}} = call i8 @llvm.fshr.i8(i8 %[[INPUT]], i8 %[[INPUT]], i8 %[[AMOUNT]])
+
+unsigned short test_builtin_rotateright16(unsigned short x, unsigned short y) {
+  return __builtin_rotateright16(x, y);
+}
+
+// CIR-LABEL: @_Z26test_builtin_rotateright16tt
+// CIR:         %{{.+}} = cir.rotate right %{{.+}}, %{{.+}} : !u16i
+
+// LLVM-LABEL: @_Z26test_builtin_rotateright16tt
+// LLVM:         %[[INPUT:.+]] = load i16, ptr %{{.+}}, align 2
+// LLVM-NEXT:    %[[AMOUNT:.+]] = load i16, ptr %{{.+}}, align 2
+// LLVM-NEXT:    %{{.+}} = call i16 @llvm.fshr.i16(i16 %[[INPUT]], i16 %[[INPUT]], i16 %[[AMOUNT]])
+
+// OGCG-LABEL: @_Z26test_builtin_rotateright16tt
+// OGCG:         %[[INPUT:.+]] = load i16, ptr %{{.+}}, align 2
+// OGCG-NEXT:    %[[AMOUNT:.+]] = load i16, ptr %{{.+}}, align 2
+// OGCG-NEXT:    %{{.+}} = call i16 @llvm.fshr.i16(i16 %[[INPUT]], i16 %[[INPUT]], i16 %[[AMOUNT]])
+
+unsigned test_builtin_rotateright32(unsigned x, unsigned y) {
+  return __builtin_rotateright32(x, y);
+}
+
+// CIR-LABEL: @_Z26test_builtin_rotateright32jj
+// CIR:         %{{.+}} = cir.rotate right %{{.+}}, %{{.+}} : !u32i
+
+// LLVM-LABEL: @_Z26test_builtin_rotateright32jj
+// LLVM:         %[[INPUT:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM-NEXT:    %[[AMOUNT:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM-NEXT:    %{{.+}} = call i32 @llvm.fshr.i32(i32 %[[INPUT]], i32 %[[INPUT]], i32 %[[AMOUNT]])
+
+// OGCG-LABEL: @_Z26test_builtin_rotateright32jj
+// OGCG:         %[[INPUT:.+]] = load i32, ptr %{{.+}}, align 4
+// OGCG-NEXT:    %[[AMOUNT:.+]] = load i32, ptr %{{.+}}, align 4
+// OGCG-NEXT:    %{{.+}} = call i32 @llvm.fshr.i32(i32 %[[INPUT]], i32 %[[INPUT]], i32 %[[AMOUNT]])
+
+unsigned long long test_builtin_rotateright64(unsigned long long x,
+                                              unsigned long long y) {
+  return __builtin_rotateright64(x, y);
+}
+
+// CIR-LABEL: @_Z26test_builtin_rotateright64yy
+// CIR:         %{{.+}} = cir.rotate right %{{.+}}, %{{.+}} : !u64i
+
+// LLVM-LABEL: @_Z26test_builtin_rotateright64yy
+// LLVM:         %[[INPUT:.+]] = load i64, ptr %{{.+}}, align 8
+// LLVM-NEXT:    %[[AMOUNT:.+]] = load i64, ptr %{{.+}}, align 8
+// LLVM-NEXT:    %{{.+}} = call i64 @llvm.fshr.i64(i64 %[[INPUT]], i64 %[[INPUT]], i64 %[[AMOUNT]])
+
+// OGCG-LABEL: @_Z26test_builtin_rotateright64yy
+// OGCG:         %[[INPUT:.+]] = load i64, ptr %{{.+}}, align 8
+// OGCG-NEXT:    %[[AMOUNT:.+]] = load i64, ptr %{{.+}}, align 8
+// OGCG-NEXT:    %{{.+}} = call i64 @llvm.fshr.i64(i64 %[[INPUT]], i64 %[[INPUT]], i64 %[[AMOUNT]])

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
+#ifndef CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
+#define CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
 
 include "mlir/IR/OpBase.td"
 
@@ -56,4 +56,4 @@ def CIR_Dialect : Dialect {
   }];
 }
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
+#endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_TD

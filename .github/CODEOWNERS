@@ -31,9 +31,9 @@
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
 
-/clang/include/clang/CIR @lanza @bcardosolopes
-/clang/lib/CIR @lanza @bcardosolopes
-/clang/tools/cir-* @lanza @bcardosolopes
+/clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
+/clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
 
 /lldb/ @JDevlieghere
 

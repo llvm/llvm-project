@@ -40,9 +40,8 @@
 namespace llvm {
 
 static bool isCopyToV0(const MachineInstr &MI) {
-  return MI.isCopy() && MI.getOperand(0).getReg() == RISCV::V0 &&
-         MI.getOperand(1).getReg().isVirtual() &&
-         MI.getOperand(1).getSubReg() == RISCV::NoSubRegister;
+  return MI.isFullCopy() && MI.getOperand(0).getReg() == RISCV::V0 &&
+         MI.getOperand(1).getReg().isVirtual();
 }
 
 static bool isSoleUseCopyToV0(SUnit &SU) {

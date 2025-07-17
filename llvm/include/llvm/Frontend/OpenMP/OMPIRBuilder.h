@@ -34,6 +34,9 @@ class CanonicalLoopInfo;
 struct TargetRegionEntryInfo;
 class OffloadEntriesInfoManager;
 class OpenMPIRBuilder;
+class Loop;
+class LoopAnalysis;
+class LoopInfo;
 
 /// Move the instruction after an InsertPoint to the beginning of another
 /// BasicBlock.
@@ -1114,6 +1117,7 @@ private:
   /// \param NamePrefix Optional name prefix for if.then if.else blocks.
   void createIfVersion(CanonicalLoopInfo *Loop, Value *IfCond,
                        ValueMap<const Value *, WeakTrackingVH> &VMap,
+                       LoopAnalysis &LIA, LoopInfo &LI, llvm::Loop *L,
                        const Twine &NamePrefix = "");
 
 public:

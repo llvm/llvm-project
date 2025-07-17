@@ -24,6 +24,7 @@
 
 namespace llvm {
 class TargetLibraryInfo;
+class IntrinsicInst;
 
 /// The Vector Function Database.
 ///
@@ -187,6 +188,10 @@ LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);
 
 /// Returns the corresponding factor of llvm.vector.deinterleaveN intrinsics.
 LLVM_ABI unsigned getDeinterleaveIntrinsicFactor(Intrinsic::ID ID);
+
+/// Given a deinterleaveN intrinsic, return the (narrow) vector type of each
+/// factor.
+LLVM_ABI VectorType *getDeinterleavedVectorType(IntrinsicInst *DI);
 
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted

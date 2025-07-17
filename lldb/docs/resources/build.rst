@@ -211,6 +211,7 @@ Clang. Then we build the ``ALL`` target with ninja:
 
   $ cmake -B /path/to/llvm-build -G Ninja \
           -DLLVM_ENABLE_PROJECTS=clang \
+          -DCMAKE_BUILD_TYPE=Release \
           [<more cmake options>] /path/to/llvm-project/llvm
   $ ninja
 
@@ -224,6 +225,7 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
 ::
 
   $ cmake -B /path/to/lldb-build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
   $ ninja lldb lldb-server

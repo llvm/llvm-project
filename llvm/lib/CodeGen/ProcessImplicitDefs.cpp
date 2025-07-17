@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/ProcessImplicitDefs.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -26,24 +27,15 @@ using namespace llvm;
 namespace {
 /// Process IMPLICIT_DEF instructions and make sure there is one implicit_def
 /// for each use. Add isUndef marker to implicit_def defs and their uses.
-class ProcessImplicitDefs : public MachineFunctionPass {
-  const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
-  MachineRegisterInfo *MRI = nullptr;
-
-  SmallSetVector<MachineInstr*, 16> WorkList;
-
-  void processImplicitDef(MachineInstr *MI);
-  bool canTurnIntoImplicitDef(MachineInstr *MI);
-
+class ProcessImplicitDefsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  ProcessImplicitDefs() : MachineFunctionPass(ID) {
-    initializeProcessImplicitDefsPass(*PassRegistry::getPassRegistry());
+  ProcessImplicitDefsLegacy() : MachineFunctionPass(ID) {
+    initializeProcessImplicitDefsLegacyPass(*PassRegistry::getPassRegistry());
   }
 
-  void getAnalysisUsage(AnalysisUsage &au) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -51,15 +43,29 @@ public:
     return MachineFunctionProperties().setIsSSA();
   }
 };
+
+class ProcessImplicitDefs {
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+
+  SmallSetVector<MachineInstr *, 16> WorkList;
+
+  void processImplicitDef(MachineInstr *MI);
+  bool canTurnIntoImplicitDef(MachineInstr *MI);
+
+public:
+  bool run(MachineFunction &MF);
+};
 } // end anonymous namespace
 
-char ProcessImplicitDefs::ID = 0;
-char &llvm::ProcessImplicitDefsID = ProcessImplicitDefs::ID;
+char ProcessImplicitDefsLegacy::ID = 0;
+char &llvm::ProcessImplicitDefsID = ProcessImplicitDefsLegacy::ID;
 
-INITIALIZE_PASS(ProcessImplicitDefs, DEBUG_TYPE,
+INITIALIZE_PASS(ProcessImplicitDefsLegacy, DEBUG_TYPE,
                 "Process Implicit Definitions", false, false)
 
-void ProcessImplicitDefs::getAnalysisUsage(AnalysisUsage &AU) const {
+void ProcessImplicitDefsLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addPreserved<AAResultsWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -132,9 +138,24 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "Keeping physreg: " << *MI);
 }
 
+bool ProcessImplicitDefsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return ProcessImplicitDefs().run(MF);
+}
+
+PreservedAnalyses
+ProcessImplicitDefsPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  if (!ProcessImplicitDefs().run(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<AAManager>();
+}
+
 /// processImplicitDefs - Process IMPLICIT_DEF instructions and turn them into
 /// <undef> operands.
-bool ProcessImplicitDefs::runOnMachineFunction(MachineFunction &MF) {
+bool ProcessImplicitDefs::run(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "********** PROCESS IMPLICIT DEFS **********\n"
                     << "********** Function: " << MF.getName() << '\n');

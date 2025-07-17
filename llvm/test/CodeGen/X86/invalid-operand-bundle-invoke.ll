@@ -1,6 +1,6 @@
 ; RUN: not llc -mtriple=x86_64-unknown-linux-gnu < %s 2>&1 | FileCheck %s
 
-; CHECK: LLVM ERROR: cannot lower invokes with arbitrary operand bundles!
+; CHECK: LLVM ERROR: cannot lower invokes with arbitrary operand bundles: foo
 
 declare void @g()
 declare i32 @__gxx_personality_v0(...)

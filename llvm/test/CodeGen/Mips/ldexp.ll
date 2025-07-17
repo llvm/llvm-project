@@ -125,6 +125,21 @@ define half @ldexp_f16(half %arg0, i32 %arg1) nounwind {
   ret half %ldexp
 }
 
+define fp128 @ldexp_f128(fp128 %arg0, i32 %arg1) nounwind {
+; SOFT-LABEL: ldexp_f128:
+; SOFT:       # %bb.0:
+; SOFT-NEXT:    addiu $sp, $sp, -32
+; SOFT-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; SOFT-NEXT:    lw $1, 48($sp)
+; SOFT-NEXT:    jal ldexpl
+; SOFT-NEXT:    sw $1, 16($sp)
+; SOFT-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
+; SOFT-NEXT:    jr $ra
+; SOFT-NEXT:    addiu $sp, $sp, 32
+  %ldexp = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 %arg1)
+  ret fp128 %ldexp
+}
+
 declare double @llvm.ldexp.f64.i32(double, i32) #0
 declare float @llvm.ldexp.f32.i32(float, i32) #0
 declare <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float>, <2 x i32>) #0

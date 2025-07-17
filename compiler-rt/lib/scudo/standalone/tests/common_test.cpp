@@ -11,44 +11,60 @@
 
 #include "common.h"
 #include "mem_map.h"
+
+#include <errno.h>
+#include <string.h>
+#include <sys/mman.h>
+
 #include <algorithm>
-#include <fstream>
+#include <vector>
 
 namespace scudo {
 
-static uptr getResidentMemorySize() {
-  if (!SCUDO_LINUX)
-    UNREACHABLE("Not implemented!");
-  uptr Size;
-  uptr Resident;
-  std::ifstream IFS("/proc/self/statm");
-  IFS >> Size;
-  IFS >> Resident;
-  return Resident * getPageSizeCached();
+static void getResidentPages(void *BaseAddress, size_t TotalPages,
+                             size_t *ResidentPages) {
+  std::vector<unsigned char> Pages(TotalPages, 0);
+  ASSERT_EQ(
+      0, mincore(BaseAddress, TotalPages * getPageSizeCached(), Pages.data()))
+      << strerror(errno);
+  *ResidentPages = 0;
+  for (unsigned char Value : Pages) {
+    if (Value & 1) {
+      ++*ResidentPages;
+    }
+  }
 }
 
-// Fuchsia needs getResidentMemorySize implementation.
+// Fuchsia needs getResidentPages implementation.
 TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
-  uptr OnStart = getResidentMemorySize();
-  EXPECT_GT(OnStart, 0UL);
-
-  const uptr Size = 1ull << 30;
-  const uptr Threshold = Size >> 3;
+  // Make sure to have the size of the map on a page boundary.
+  const uptr PageSize = getPageSizeCached();
+  const size_t NumPages = 1000;
+  const uptr SizeBytes = NumPages * PageSize;
 
   MemMapT MemMap;
-  ASSERT_TRUE(MemMap.map(/*Addr=*/0U, Size, "ResidentMemorySize"));
+  ASSERT_TRUE(MemMap.map(/*Addr=*/0U, SizeBytes, "ResidentMemorySize"));
   ASSERT_NE(MemMap.getBase(), 0U);
+
   void *P = reinterpret_cast<void *>(MemMap.getBase());
-  EXPECT_LT(getResidentMemorySize(), OnStart + Threshold);
+  size_t ResidentPages;
+  getResidentPages(P, NumPages, &ResidentPages);
+  EXPECT_EQ(0U, ResidentPages);
 
-  memset(P, 1, Size);
-  EXPECT_GT(getResidentMemorySize(), OnStart + Size - Threshold);
+  // Make the entire map resident.
+  memset(P, 1, SizeBytes);
+  getResidentPages(P, NumPages, &ResidentPages);
+  EXPECT_EQ(NumPages, ResidentPages);
 
-  MemMap.releasePagesToOS(MemMap.getBase(), Size);
-  EXPECT_LT(getResidentMemorySize(), OnStart + Threshold);
+  // Should release the memory to the kernel immediately.
+  MemMap.releasePagesToOS(MemMap.getBase(), SizeBytes);
+  getResidentPages(P, NumPages, &ResidentPages);
+  EXPECT_EQ(0U, ResidentPages);
 
-  memset(P, 1, Size);
-  EXPECT_GT(getResidentMemorySize(), OnStart + Size - Threshold);
+  // Make the entire map resident again.
+  memset(P, 1, SizeBytes);
+  getResidentPages(P, NumPages, &ResidentPages);
+  EXPECT_EQ(NumPages, ResidentPages);
 
   MemMap.unmap();
 }

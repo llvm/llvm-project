@@ -254,6 +254,7 @@ struct MissingFeatures {
   static bool dtorCleanups() { return false; }
   static bool completeDtors() { return false; }
   static bool vtableInitialization() { return false; }
+  static bool msvcBuiltins() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

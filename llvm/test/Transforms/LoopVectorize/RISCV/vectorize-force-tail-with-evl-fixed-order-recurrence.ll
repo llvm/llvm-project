@@ -546,17 +546,17 @@ define i32 @FOR_reduction(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP:       [[MIDDLE_BLOCK]]:
 ; NO-VP-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vscale.i32()
 ; NO-VP-NEXT:    [[TMP18:%.*]] = mul nuw i32 [[TMP17]], 4
-; NO-VP-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP18]], 2
+; NO-VP-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP18]], 1
 ; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i32 [[TMP19]]
 ; NO-VP-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vscale.i32()
 ; NO-VP-NEXT:    [[TMP21:%.*]] = mul nuw i32 [[TMP20]], 4
-; NO-VP-NEXT:    [[TMP22:%.*]] = sub i32 [[TMP21]], 1
+; NO-VP-NEXT:    [[TMP22:%.*]] = sub i32 [[TMP21]], 2
 ; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i32 [[TMP22]]
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TC]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; NO-VP:       [[SCALAR_PH]]:
 ; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; NO-VP-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 33, %[[ENTRY]] ]
+; NO-VP-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ], [ 33, %[[ENTRY]] ]
 ; NO-VP-NEXT:    br label %[[FOR_BODY:.*]]
 ; NO-VP:       [[FOR_BODY]]:
 ; NO-VP-NEXT:    [[INDVARS:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -570,7 +570,7 @@ define i32 @FOR_reduction(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_NEXT]], [[TC]]
 ; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; NO-VP:       [[FOR_END]]:
-; NO-VP-NEXT:    [[FOR1_LCSSA:%.*]] = phi i32 [ [[FOR1]], %[[FOR_BODY]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
+; NO-VP-NEXT:    [[FOR1_LCSSA:%.*]] = phi i32 [ [[FOR1]], %[[FOR_BODY]] ], [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ]
 ; NO-VP-NEXT:    ret i32 [[FOR1_LCSSA]]
 ;
 entry:

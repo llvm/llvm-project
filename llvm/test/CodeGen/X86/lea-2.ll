@@ -2,7 +2,6 @@
 ; RUN: llc < %s -mtriple=i686-linux          | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-linux        | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-linux-gnux32 | FileCheck %s --check-prefix=X64
-; RUN: llc < %s -mtriple=x86_64-nacl         | FileCheck %s --check-prefix=X64
 
 ; The computation of %t4 should match a single lea, without using actual add instructions.
 

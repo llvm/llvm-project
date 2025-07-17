@@ -2633,7 +2633,7 @@ struct IntrinsicID_match {
 
   template <typename OpTy> bool match(OpTy *V) const {
     if (const auto *CI = dyn_cast<CallInst>(V))
-      if (const auto *F = CI->getCalledFunction())
+      if (const auto *F = dyn_cast_or_null<Function>(CI->getCalledOperand()))
         return F->getIntrinsicID() == ID;
     return false;
   }

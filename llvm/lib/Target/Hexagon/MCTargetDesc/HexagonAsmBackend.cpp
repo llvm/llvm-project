@@ -46,16 +46,15 @@ class HexagonAsmBackend : public MCAsmBackend {
   MCInst * Extender;
   unsigned MaxPacketSize;
 
-  void ReplaceInstruction(MCCodeEmitter &E, MCRelaxableFragment &RF,
-                          MCInst &HMB) const {
+  void ReplaceInstruction(MCCodeEmitter &E, MCFragment &RF, MCInst &HMB) const {
     SmallVector<MCFixup, 4> Fixups;
     SmallString<256> Code;
     E.encodeInstruction(HMB, Code, Fixups, *RF.getSubtargetInfo());
 
     // Update the fragment.
     RF.setInst(HMB);
-    RF.setContents(Code);
-    RF.getFixups() = Fixups;
+    RF.setVarContents(Code);
+    RF.setVarFixups(Fixups);
   }
 
 public:
@@ -200,7 +199,7 @@ public:
   }
 
   bool shouldForceRelocation(const MCFixup &Fixup) {
-    switch(Fixup.getTargetKind()) {
+    switch(Fixup.getKind()) {
       default:
         llvm_unreachable("Unknown Fixup Kind!");
 
@@ -438,21 +437,21 @@ public:
 
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
   /// fixup requires the associated instruction to be relaxed.
-  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, const MCValue &,
-                                    uint64_t Value,
+  bool fixupNeedsRelaxationAdvanced(const MCFragment &F, const MCFixup &Fixup,
+                                    const MCValue &, uint64_t Value,
                                     bool Resolved) const override {
     MCInst const &MCB = RelaxedMCB;
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
     *RelaxTarget = nullptr;
     MCInst &MCI = const_cast<MCInst &>(HexagonMCInstrInfo::instruction(
-        MCB, Fixup.getOffset() / HEXAGON_INSTR_SIZE));
+        MCB, (Fixup.getOffset() - F.getFixedSize()) / HEXAGON_INSTR_SIZE));
     bool Relaxable = isInstRelaxable(MCI);
     if (Relaxable == false)
       return false;
     // If we cannot resolve the fixup value, it requires relaxation.
     if (!Resolved) {
-      switch (Fixup.getTargetKind()) {
+      switch (Fixup.getKind()) {
       case fixup_Hexagon_B22_PCREL:
         // GetFixupCount assumes B22 won't relax
         [[fallthrough]];
@@ -595,7 +594,7 @@ public:
             }
             case MCFragment::FT_Relaxable: {
               MCContext &Context = getContext();
-              auto &RF = cast<MCRelaxableFragment>(*Frags[K]);
+              auto &RF = *Frags[K];
               MCInst Inst = RF.getInst();
 
               const bool WouldTraverseLabel = llvm::any_of(

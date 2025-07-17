@@ -503,7 +503,7 @@ config.substitutions.append(("CHECK-%os", ("CHECK-" + config.host_os)))
 # Define %arch to check for architecture-dependent output.
 config.substitutions.append(("%arch", (config.host_arch)))
 
-if config.host_os == "Windows":
+if os.name == "nt":
     # FIXME: This isn't quite right. Specifically, it will succeed if the program
     # does not crash but exits with a non-zero exit code. We ought to merge
     # KillTheDoctor and not --crash to make the latter more useful and remove the
@@ -602,12 +602,12 @@ if config.host_os == "Darwin":
 
     def get_macos_aligned_version(macos_vers):
         platform = config.apple_platform
-        if platform == "osx":
+        macos_major, macos_minor = macos_vers
+
+        if platform == "osx" or macos_major >= 26:
             return macos_vers
 
-        macos_major, macos_minor = macos_vers
         assert macos_major >= 10
-
         if macos_major == 10:  # macOS 10.x
             major = macos_minor
             minor = 0

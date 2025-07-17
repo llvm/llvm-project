@@ -1488,6 +1488,9 @@ def HasVendorXqcics
 def NoVendorXqcics
     : Predicate<"!Subtarget->hasVendorXqcics()">;
 
+def HasVendorXqcicsOrXqcicm
+    : Predicate<"Subtarget->hasVendorXqcics() || Subtarget->hasVendorXqcicm()">;
+
 def FeatureVendorXqcicsr
     : RISCVExperimentalExtension<0, 4, "Qualcomm uC CSR Extension">;
 def HasVendorXqcicsr

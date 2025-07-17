@@ -2,9 +2,9 @@
 // RUN: mkdir %t
 // RUN: split-file %s %t
 
-// RUN: %clang_cc1  -fsyntax-only -verify %t/testing.cpp -std=c++26 -fexceptions -DTRANSPARENT_DECL=0
-// RUN: %clang_cc1  -fsyntax-only -verify %t/testing.cpp -std=c++26 -fexceptions -DTRANSPARENT_DECL=1
-// RUN: %clang_cc1  -fsyntax-only -verify %t/module_testing.cppm -std=c++26 -fexceptions -DTRANSPARENT_DECL=2
+// RUN: %clang_cc1  -fsyntax-only -verify %t/testing.cpp         -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -DTRANSPARENT_DECL=0
+// RUN: %clang_cc1  -fsyntax-only -verify %t/testing.cpp         -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -DTRANSPARENT_DECL=1
+// RUN: %clang_cc1  -fsyntax-only -verify %t/module_testing.cppm -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -DTRANSPARENT_DECL=2
 
 //--- module_testing.cppm
 // expected-no-diagnostics

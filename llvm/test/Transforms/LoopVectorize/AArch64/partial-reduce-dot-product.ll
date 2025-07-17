@@ -868,11 +868,11 @@ define i32 @not_dotp_not_loop_carried(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP21:%.*]] = mul nuw i32 [[TMP20]], 8
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP22:%.*]] = sub i32 [[TMP21]], 1
-; CHECK-INTERLEAVE1-NEXT:    [[TMP23:%.*]] = extractelement <vscale x 8 x i32> [[TMP18]], i32 [[TMP22]]
+; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 8 x i32> [[TMP16]], i32 [[TMP22]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP24:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP25:%.*]] = mul nuw i32 [[TMP24]], 8
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP26:%.*]] = sub i32 [[TMP25]], 1
-; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 8 x i32> [[TMP16]], i32 [[TMP26]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP27:%.*]] = extractelement <vscale x 8 x i32> [[TMP18]], i32 [[TMP26]]
 ; CHECK-INTERLEAVE1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
@@ -922,11 +922,11 @@ define i32 @not_dotp_not_loop_carried(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP29:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP30:%.*]] = mul nuw i32 [[TMP29]], 8
 ; CHECK-INTERLEAVED-NEXT:    [[TMP31:%.*]] = sub i32 [[TMP30]], 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP32:%.*]] = extractelement <vscale x 8 x i32> [[TMP27]], i32 [[TMP31]]
+; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 8 x i32> [[TMP25]], i32 [[TMP31]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP33:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP34:%.*]] = mul nuw i32 [[TMP33]], 8
 ; CHECK-INTERLEAVED-NEXT:    [[TMP35:%.*]] = sub i32 [[TMP34]], 1
-; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 8 x i32> [[TMP25]], i32 [[TMP35]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP32:%.*]] = extractelement <vscale x 8 x i32> [[TMP27]], i32 [[TMP35]]
 ; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       scalar.ph:
@@ -970,11 +970,11 @@ define i32 @not_dotp_not_loop_carried(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-MAXBW-NEXT:    [[TMP21:%.*]] = mul nuw i32 [[TMP20]], 8
 ; CHECK-MAXBW-NEXT:    [[TMP22:%.*]] = sub i32 [[TMP21]], 1
-; CHECK-MAXBW-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 8 x i32> [[TMP27]], i32 [[TMP22]]
+; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 8 x i32> [[TMP25]], i32 [[TMP22]]
 ; CHECK-MAXBW-NEXT:    [[TMP24:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-MAXBW-NEXT:    [[TMP30:%.*]] = mul nuw i32 [[TMP24]], 8
 ; CHECK-MAXBW-NEXT:    [[TMP31:%.*]] = sub i32 [[TMP30]], 1
-; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 8 x i32> [[TMP25]], i32 [[TMP31]]
+; CHECK-MAXBW-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 8 x i32> [[TMP27]], i32 [[TMP31]]
 ; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-MAXBW:       scalar.ph:

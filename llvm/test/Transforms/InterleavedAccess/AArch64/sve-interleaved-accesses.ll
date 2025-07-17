@@ -606,6 +606,10 @@ define void @deinterleave_nxptr_factor2(ptr %ptr) #2 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP3]], <vscale x 2 x double> [[TMP7]], i64 2)
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[LDN2]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP5]], <vscale x 2 x double> [[TMP9]], i64 2)
+; CHECK-NEXT:    [[TMP11:%.*]] = insertvalue { <vscale x 4 x double>, <vscale x 4 x double> } poison, <vscale x 4 x double> [[TMP8]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP11]], <vscale x 4 x double> [[TMP10]], 1
+; CHECK-NEXT:    [[EXTRACT1:%.*]] = extractvalue { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP12]], 0
+; CHECK-NEXT:    [[EXTRACT2:%.*]] = extractvalue { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP12]], 1
 ; CHECK-NEXT:    ret void
 ;
   %wide.vec = load <vscale x 8 x double>, ptr %ptr, align 8

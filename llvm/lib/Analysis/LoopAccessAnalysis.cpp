@@ -2085,6 +2085,12 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   if (!isa<SCEVConstant>(Dist))
     FoundNonConstantDistanceDependence |= StrideAPtrInt == StrideBPtrInt;
 
+  // If distance is a SCEVCouldNotCompute, return Unknown immediately.
+  if (isa<SCEVCouldNotCompute>(Dist)) {
+    LLVM_DEBUG(dbgs() << "LAA: Uncomputable distance.\n");
+    return Dependence::Unknown;
+  }
+
   return DepDistanceStrideAndSizeInfo(Dist, MaxStride, CommonStride,
                                       TypeByteSize, AIsWrite, BIsWrite);
 }
@@ -2121,13 +2127,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   auto &[Dist, MaxStride, CommonStride, TypeByteSize, AIsWrite, BIsWrite] =
       std::get<DepDistanceStrideAndSizeInfo>(Res);
   bool HasSameSize = TypeByteSize > 0;
-
-  if (isa<SCEVCouldNotCompute>(Dist)) {
-    if (CheckCompletelyBeforeOrAfter())
-      return Dependence::NoDep;
-    LLVM_DEBUG(dbgs() << "LAA: Dependence because of uncomputable distance.\n");
-    return Dependence::Unknown;
-  }
 
   ScalarEvolution &SE = *PSE.getSE();
   auto &DL = InnermostLoop->getHeader()->getDataLayout();

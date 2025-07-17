@@ -823,13 +823,13 @@ TEST(Local, ReplaceAllDbgUsesWith) {
 
   BasicBlock &BB = F.front();
   Instruction &A = BB.front();
-  Instruction &B = *A.getNextNonDebugInstruction();
-  Instruction &C = *B.getNextNonDebugInstruction();
-  Instruction &D = *C.getNextNonDebugInstruction();
-  Instruction &E = *D.getNextNonDebugInstruction();
-  Instruction &F_ = *E.getNextNonDebugInstruction();
-  Instruction &Barrier = *F_.getNextNonDebugInstruction();
-  Instruction &G = *Barrier.getNextNonDebugInstruction();
+  Instruction &B = *A.getNextNode();
+  Instruction &C = *B.getNextNode();
+  Instruction &D = *C.getNextNode();
+  Instruction &E = *D.getNextNode();
+  Instruction &F_ = *E.getNextNode();
+  Instruction &Barrier = *F_.getNextNode();
+  Instruction &G = *Barrier.getNextNode();
 
   // Simulate i32 <-> i64* conversion. Expect no updates: the datalayout says
   // pointers are 64 bits, so the conversion would be lossy.

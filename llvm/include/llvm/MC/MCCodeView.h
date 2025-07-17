@@ -26,7 +26,6 @@ namespace llvm {
 class MCAssembler;
 class MCCVDefRangeFragment;
 class MCCVInlineLineTableFragment;
-class MCDataFragment;
 class MCFragment;
 class MCSection;
 class MCSymbol;
@@ -231,7 +230,7 @@ private:
   StringMap<unsigned> StringTable;
 
   /// The fragment that ultimately holds our strings.
-  MCDataFragment *StrTabFragment = nullptr;
+  MCFragment *StrTabFragment = nullptr;
   SmallVector<char, 0> StrTab = {'\0'};
 
   /// Get a string table offset.

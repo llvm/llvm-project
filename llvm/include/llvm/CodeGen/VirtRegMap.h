@@ -253,10 +253,8 @@ public:
                               function_ref<StringRef(StringRef)>) const;
 
   MachineFunctionProperties getSetProperties() const {
-    if (ClearVirtRegs) {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
-    }
+    if (ClearVirtRegs)
+      return MachineFunctionProperties().setNoVRegs();
     return {};
   }
 };

@@ -6196,6 +6196,8 @@ class Return {
   Mutex mu;
   Foo foo GUARDED_BY(mu);
   Foo* foo_ptr PT_GUARDED_BY(mu);
+  Foo foo_depr GUARDED_VAR;          // test deprecated attribute
+  Foo* foo_ptr_depr PT_GUARDED_VAR;  // test deprecated attribute
 
   Foo returns_value_locked() {
     MutexLock lock(&mu);
@@ -6295,6 +6297,18 @@ class Return {
 
   Foo &returns_ref2() {
     return *foo_ptr;          // expected-warning {{returning the value that 'foo_ptr' points to by reference requires holding mutex 'mu' exclusively}}
+  }
+
+  Foo *returns_ptr_deprecated() {
+    return &foo_depr;          // expected-warning {{writing variable 'foo_depr' requires holding any mutex exclusively}}
+  }
+
+  Foo *returns_pt_ptr_deprecated() {
+    return foo_ptr_depr;       // expected-warning {{writing the value pointed to by 'foo_ptr_depr' requires holding any mutex exclusively}}
+  }
+
+  Foo &returns_ref_deprecated() {
+    return *foo_ptr_depr;      // expected-warning {{writing the value pointed to by 'foo_ptr_depr' requires holding any mutex exclusively}}
   }
 
   // FIXME: Basic alias analysis would help catch cases like below.

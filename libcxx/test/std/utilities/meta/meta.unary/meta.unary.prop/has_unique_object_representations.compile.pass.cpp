@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14
 
 // The Clang version that Android currently uses in the CI is too old.
-// XFAIL: LIBCXX-ANDROID-FIXME
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
 // type_traits
 

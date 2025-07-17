@@ -70,6 +70,10 @@ ELF Improvements
   not provided in the command line by the user and cannot be inferred from
   inputs.
 * For LoongArch, the initial-exec to local-exec TLS optimization has been implemented.
+* For LoongArch, several relaxation optimizations are supported, including relaxation for
+  ``R_LARCH_PCALA_HI20/LO12`` and ``R_LARCH_GOT_PC_HI20/LO12`` relocations, instruction
+  relaxation for ``R_LARCH_CALL36``, TLS local-exec (``LE``)/global dynamic (``GD``)/
+  local dynamic (``LD``) model relaxation, and TLSDESC code sequence relaxation.
 * For RISCV, an oscillation bug due to call relaxation is now fixed.
   (`#142899 <https://github.com/llvm/llvm-project/pull/142899>`_)
 * For x86-64, the ``.ltext`` section is now placed before ``.rodata``.

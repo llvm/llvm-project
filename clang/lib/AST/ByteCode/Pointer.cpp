@@ -502,8 +502,17 @@ void Pointer::activate() const {
   if (!getInlineDesc()->InUnion)
     return;
 
-  auto activate = [](Pointer &P) -> void {
+  std::function<void(Pointer &)> activate;
+  activate = [&activate](Pointer &P) -> void {
     P.getInlineDesc()->IsActive = true;
+    if (const Record *R = P.getRecord(); R && !R->isUnion()) {
+      for (const Record::Field &F : R->fields()) {
+        Pointer FieldPtr = P.atField(F.Offset);
+        if (!FieldPtr.getInlineDesc()->IsActive)
+          activate(FieldPtr);
+      }
+      // FIXME: Bases?
+    }
   };
 
   std::function<void(Pointer &)> deactivate;

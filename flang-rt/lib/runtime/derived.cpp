@@ -270,7 +270,7 @@ static RT_API_ATTRS void CallFinalSubroutine(const Descriptor &descriptor,
       StaticDescriptor<maxRank, true, 10> statDesc;
       Descriptor &copy{statDesc.descriptor()};
       const Descriptor *argDescriptor{&descriptor};
-      if (descriptor.rank() > 0 && special->IsArgContiguous(0) &&
+      if (descriptor.rank() > 0 && special->specialCaseFlag() &&
           !descriptor.IsContiguous()) {
         // The FINAL subroutine demands a contiguous array argument, but
         // this INTENT(OUT) or intrinsic assignment LHS isn't contiguous.

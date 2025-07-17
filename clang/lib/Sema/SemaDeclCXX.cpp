@@ -16541,12 +16541,8 @@ static inline bool CheckOperatorNewDeleteTypes(
   if (IsPotentiallyTypeAware) {
     // We don't emit this diagnosis for template instantiations as we will
     // have already emitted it for the original template declaration.
-    if (!FnDecl->isTemplateInstantiation()) {
-      unsigned DiagID = SemaRef.getLangOpts().CPlusPlus26
-                            ? diag::warn_cxx26_type_aware_allocators
-                            : diag::ext_cxx26_type_aware_allocators;
-      SemaRef.Diag(FnDecl->getLocation(), DiagID);
-    }
+    if (!FnDecl->isTemplateInstantiation())
+      SemaRef.Diag(FnDecl->getLocation(), diag::warn_ext_type_aware_allocators);
 
     if (OperatorKind == AllocationOperatorKind::New) {
       SizeParameterIndex = 1;
@@ -18686,7 +18682,7 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
         case FunctionEffectDiff::OverrideResult::NoAction:
           break;
         case FunctionEffectDiff::OverrideResult::Warn:
-          Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
+          Diag(New->getLocation(), diag::warn_conflicting_func_effect_override)
               << Diff.effectName();
           Diag(Old->getLocation(), diag::note_overridden_virtual_function)
               << Old->getReturnTypeSourceRange();
@@ -18699,6 +18695,14 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
           QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
                                                    NewFT->getParamTypes(), EPI);
           New->setType(ModQT);
+          if (Errs.empty()) {
+            // A warning here is somewhat pedantic. Skip this if there was
+            // already a merge conflict, which is more serious.
+            Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
+                << Diff.effectName();
+            Diag(Old->getLocation(), diag::note_overridden_virtual_function)
+                << Old->getReturnTypeSourceRange();
+          }
           break;
         }
         }

@@ -118,6 +118,7 @@ static llvm::Intrinsic::ID getMatchSyncIntrinsicId(Type valType,
     return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_all_sync_i32p
                                  : llvm::Intrinsic::nvvm_match_all_sync_i64p;
   }
+  llvm_unreachable("unsupported match sync kind");
 }
 
 static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
