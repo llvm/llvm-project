@@ -438,7 +438,7 @@ define <3 x i5> @not_or_neg_commute_vec(<3 x i5> %x, <3 x i5> %p)  {
 
 define i8 @not_or_neg_nsw(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @not_or_neg_nsw(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[NOT:%.*]] = and i8 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[NOT]]
@@ -452,7 +452,7 @@ define i8 @not_or_neg_nsw(i8 %x, i8 %y)  {
 define <3 x i5> @not_or_neg_commute_vec_nsw(<3 x i5> %x, <3 x i5> %p)  {
 ; CHECK-LABEL: @not_or_neg_commute_vec_nsw(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <3 x i5> [[P:%.*]], <i5 1, i5 2, i5 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <3 x i5> [[X:%.*]], splat (i5 -1)
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <3 x i5> [[X:%.*]], splat (i5 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <3 x i5> [[Y]], splat (i5 -1)
 ; CHECK-NEXT:    [[NOT:%.*]] = and <3 x i5> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <3 x i5> [[NOT]]
