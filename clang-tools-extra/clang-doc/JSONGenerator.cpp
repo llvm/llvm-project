@@ -83,7 +83,21 @@ serializeLocation(const Location &Loc,
   return LocationObj;
 }
 
-static json::Value serializeComment(const CommentInfo &I) {
+static void insertComment(Object &Description, json::Value &Comment,
+                          std::string Key) {
+  auto *CommentArray = Description.getArray(Key);
+  if (!CommentArray) {
+    auto CommentsArray = json::Array();
+    CommentsArray.push_back(Comment);
+    Description[Key] = std::move(CommentsArray);
+    Description["Has" + Key] = true;
+  } else {
+    CommentArray->push_back(Comment);
+    Description[Key] = std::move(*CommentArray);
+  }
+}
+
+static Object serializeComment(const CommentInfo &I, Object &Description) {
   // taken from PR #142273
   Object Obj = Object();
 
@@ -94,7 +108,7 @@ static json::Value serializeComment(const CommentInfo &I) {
   auto &CARef = *ChildArr.getAsArray();
   CARef.reserve(I.Children.size());
   for (const auto &C : I.Children)
-    CARef.emplace_back(serializeComment(*C));
+    CARef.emplace_back(serializeComment(*C, Description));
 
   switch (I.Kind) {
   case CommentKind::CK_TextComment: {
@@ -106,6 +120,8 @@ static json::Value serializeComment(const CommentInfo &I) {
     Child.insert({"Command", I.Name});
     Child.insert({"Children", ChildArr});
     Obj.insert({commentKindToString(I.Kind), ChildVal});
+    if (I.Name == "brief")
+      insertComment(Description, ChildVal, "BriefComments");
     return Obj;
   }
 
@@ -137,7 +153,10 @@ static json::Value serializeComment(const CommentInfo &I) {
     if (!I.CloseName.empty())
       Child.insert({"CloseName", I.CloseName});
     Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    if (I.CloseName == "endcode")
+      insertComment(Description, ChildVal, "CodeComments");
+    else if (I.CloseName == "endverbatim")
+      insertComment(Description, ChildVal, "VerbatimComments");
     return Obj;
   }
 
@@ -210,12 +229,17 @@ serializeCommonAttributes(const Info &I, json::Object &Obj,
   }
 
   if (!I.Description.empty()) {
-    json::Value DescArray = json::Array();
-    auto &DescArrayRef = *DescArray.getAsArray();
-    DescArrayRef.reserve(I.Description.size());
-    for (const auto &Comment : I.Description)
-      DescArrayRef.push_back(serializeComment(Comment));
-    Obj["Description"] = DescArray;
+    Object Description = Object();
+    // Skip straight to the FullComment's children
+    auto &Comments = I.Description.at(0).Children;
+    for (const auto &CommentInfo : Comments) {
+      json::Value Comment = serializeComment(*CommentInfo, Description);
+      // Paragraph comments might not be children
+      if (auto *ParagraphComment =
+              Comment.getAsObject()->get("ParagraphComment"))
+        insertComment(Description, *ParagraphComment, "ParagraphComments");
+    }
+    Obj["Description"] = std::move(Description);
   }
 
   // Namespaces aren't SymbolInfos, so they dont have a DefLoc
