@@ -3071,6 +3071,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
         return true;
       }
 
+      // Add is commutative so we need to check both operands.
       if (SelectShl(LHS.getOperand(0), Index, Scale)) {
         SDValue C1Val = CurDAG->getTargetConstant(*C1->getConstantIntValue(),
                                                   SDLoc(Addr), VT);
