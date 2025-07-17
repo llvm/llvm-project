@@ -1,5 +1,4 @@
-//===--- MLIROpBuilderCheck.cpp - clang-tidy
-//-------------------------------===//
+//===--- MLIROpBuilderCheck.cpp - clang-tidy ------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,15 +31,15 @@ public:
 
   llvm::Error eval(const MatchFinder::MatchResult &match,
                    std::string *result) const override {
-    auto n = node(id)(match);
+    RangeSelector n = node(id)(match);
     if (!n)
       return n.takeError();
-    auto srcRange = n->getAsRange();
+    SourceRange srcRange = n->getAsRange();
     if (srcRange.isInvalid()) {
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "srcRange is invalid");
     }
-    auto range = n->getTokenRange(srcRange);
+    const CharSourceRange range = n->getTokenRange(srcRange);
     auto nextToken = [&](std::optional<Token> token) {
       if (!token)
         return token;
@@ -48,7 +47,7 @@ public:
                                          *match.SourceManager,
                                          match.Context->getLangOpts());
     };
-    auto lessToken = clang::Lexer::findNextToken(
+    std::optional<Token> lessToken = clang::Lexer::findNextToken(
         range.getBegin(), *match.SourceManager, match.Context->getLangOpts());
     while (lessToken && lessToken->getKind() != clang::tok::less) {
       lessToken = nextToken(lessToken);
@@ -58,7 +57,7 @@ public:
                                                  "missing '<' token");
     }
     std::optional<Token> endToken = nextToken(lessToken);
-    for (auto greaterToken = nextToken(endToken);
+    for (std::optional<Token> greaterToken = nextToken(endToken);
          greaterToken && greaterToken->getKind() != clang::tok::greater;
          greaterToken = nextToken(greaterToken)) {
       endToken = greaterToken;

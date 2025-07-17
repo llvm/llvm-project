@@ -1,9 +1,9 @@
 .. title:: clang-tidy - llvm-mlir-op-builder
 
 llvm-mlir-op-builder
-===============
+====================
 
-Flags usage of old form of invoking create on MLIR's `OpBuilder` and suggesting
+Flags usage of old form of invoking create on MLIR's `OpBuilder` and suggests
 new form.
 
 Example
@@ -19,4 +19,3 @@ Transforms to:
 .. code-block:: c++
 
   FooOp::create(builder, builder.getUnknownLoc(), "baz");
-
