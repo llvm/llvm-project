@@ -11968,7 +11968,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
 
   // Store with unit-stride store and load it back with segmented load.
   MVT XLenVT = Subtarget.getXLenVT();
-  SDValue VL = getDefaultScalableVLOps(ConcatVT, DL, DAG, Subtarget).second;
+  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
   SDValue Passthru = DAG.getUNDEF(ConcatVT);
 
   // Allocate a stack slot.
@@ -11989,16 +11989,20 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer());
 
   static const Intrinsic::ID VlsegIntrinsicsIds[] = {
-      Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3, Intrinsic::riscv_vlseg4,
-      Intrinsic::riscv_vlseg5, Intrinsic::riscv_vlseg6, Intrinsic::riscv_vlseg7,
-      Intrinsic::riscv_vlseg8};
+      Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
+      Intrinsic::riscv_vlseg4_mask, Intrinsic::riscv_vlseg5_mask,
+      Intrinsic::riscv_vlseg6_mask, Intrinsic::riscv_vlseg7_mask,
+      Intrinsic::riscv_vlseg8_mask};
 
   SDValue LoadOps[] = {
       Chain,
       DAG.getTargetConstant(VlsegIntrinsicsIds[Factor - 2], DL, XLenVT),
       Passthru,
       StackPtr,
+      Mask,
       VL,
+      DAG.getTargetConstant(
+          RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC, DL, XLenVT),
       DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()), DL, XLenVT)};
 
   unsigned Sz =
@@ -12050,7 +12054,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   }
 
   MVT XLenVT = Subtarget.getXLenVT();
-  SDValue VL = DAG.getRegister(RISCV::X0, XLenVT);
+  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
 
   // If the VT is larger than LMUL=8, we need to split and reassemble.
   if ((VecVT.getSizeInBits().getKnownMinValue() * Factor) >
@@ -12099,10 +12103,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
     auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
 
     static const Intrinsic::ID IntrIds[] = {
-        Intrinsic::riscv_vsseg2, Intrinsic::riscv_vsseg3,
-        Intrinsic::riscv_vsseg4, Intrinsic::riscv_vsseg5,
-        Intrinsic::riscv_vsseg6, Intrinsic::riscv_vsseg7,
-        Intrinsic::riscv_vsseg8,
+        Intrinsic::riscv_vsseg2_mask, Intrinsic::riscv_vsseg3_mask,
+        Intrinsic::riscv_vsseg4_mask, Intrinsic::riscv_vsseg5_mask,
+        Intrinsic::riscv_vsseg6_mask, Intrinsic::riscv_vsseg7_mask,
+        Intrinsic::riscv_vsseg8_mask,
     };
 
     unsigned Sz =
@@ -12118,6 +12122,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
                      DAG.getTargetConstant(IntrIds[Factor - 2], DL, XLenVT),
                      StoredVal,
                      StackPtr,
+                     Mask,
                      VL,
                      DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()),
                                            DL, XLenVT)};
