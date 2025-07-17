@@ -475,8 +475,8 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
 
 #if !SANITIZER_AIX
   if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
-     data.kind = kAddressKindGlobal;
-     return;
+    data.kind = kAddressKindGlobal;
+    return;
   }
 #endif
 
