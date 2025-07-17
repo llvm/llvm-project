@@ -227,10 +227,9 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
 
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr) {
-    [[maybe_unused]] std::string ErrStr = toString(DeviceOrErr.takeError());
     DP("Couldn't find device %" PRId64
        " while constructing interop object: %s\n",
-       DeviceNum, ErrStr.c_str());
+       DeviceNum, toString(DeviceOrErr.takeError()).c_str());
     return omp_interop_none;
   }
   auto &Device = *DeviceOrErr;
@@ -280,18 +279,18 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
 
 int __tgt_interop_use(ident_t *LocRef, omp_interop_val_t *Interop,
                       interop_ctx_t *Ctx, dep_pack_t *Deps) {
-  bool nowait = Ctx->flags.nowait;
+  bool Nowait = Ctx->flags.nowait;
   DP("Call to %s with interop " DPxMOD ", nowait %" PRId32 "\n", __func__,
-     DPxPTR(Interop), nowait);
+     DPxPTR(Interop), Nowait);
   if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
     return OFFLOAD_FAIL;
 
   if (Interop->interop_type == kmp_interop_type_targetsync) {
     if (Deps) {
-      if (nowait) {
+      if (Nowait) {
         DP("Warning: nowait flag on interop use with dependences not supported"
            "yet. Ignored\n");
-        nowait = false;
+        Nowait = false;
       }
 
       __kmpc_omp_wait_deps(LocRef, Ctx->gtid, Deps->ndeps, Deps->deplist,
@@ -300,7 +299,7 @@ int __tgt_interop_use(ident_t *LocRef, omp_interop_val_t *Interop,
   }
 
   if (Interop->async_info && Interop->async_info->Queue) {
-    if (nowait)
+    if (Nowait)
       Interop->asyncBarrier();
     else {
       Interop->flush();
@@ -333,16 +332,16 @@ int __tgt_interop_release(ident_t *LocRef, omp_interop_val_t *Interop,
 }
 
 EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
-                                                ompx_interop_cb_t *cb,
-                                                void *data) {
+                                                ompx_interop_cb_t *CB,
+                                                void *Data) {
   DP("Call to %s with interop " DPxMOD ", property callback " DPxMOD
      "and data " DPxMOD "\n",
-     __func__, DPxPTR(Interop), DPxPTR(cb), DPxPTR(data));
+     __func__, DPxPTR(Interop), DPxPTR(CB), DPxPTR(Data));
 
   if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
     return omp_irc_other;
 
-  Interop->addCompletionCb(cb, data);
+  Interop->addCompletionCb(CB, Data);
 
   return omp_irc_success;
 }
@@ -433,15 +432,15 @@ int32_t omp_interop_val_t::release() {
   return release(Device);
 }
 
-void syncImplicitInterops(int gtid, void *event) {
+void syncImplicitInterops(int Gtid, void *Event) {
   if (PM->InteropTbl.size() == 0)
     return;
 
   DP("target_sync: syncing interops for gtid %" PRId32 ", event " DPxMOD "\n",
-     gtid, DPxPTR(event));
+     Gtid, DPxPTR(Event));
 
   for (auto iop : PM->InteropTbl) {
-    if (iop->async_info && iop->async_info->Queue && iop->isOwnedBy(gtid) &&
+    if (iop->async_info && iop->async_info->Queue && iop->isOwnedBy(Gtid) &&
         !iop->isClean()) {
 
       iop->flush();

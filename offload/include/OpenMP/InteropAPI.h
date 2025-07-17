@@ -28,10 +28,9 @@ struct interop_attrs_t {
   bool inorder : 1;
   int reserved : 31;
 
-  /* Check if the supported attributes are compatible with the current
-     attributes. Only if an attribute is supported can the value be true,
-     otherwise it needs to be false
-  */
+  /// Check if the supported attributes are compatible with the current
+  ///   attributes. Only if an attribute is supported can the value be true,
+  ///   otherwise it needs to be false
   bool checkSupportedOnly(interop_attrs_t supported) const {
     return supported.inorder || (!supported.inorder && !inorder);
   }
@@ -167,7 +166,7 @@ struct InteropTableEntry {
     }
   }
 
-  /* vector interface */
+  /// vector interface
   int size() const { return Interops.size(); }
   iterator begin() { return Interops.begin(); }
   iterator end() { return Interops.end(); }
@@ -178,5 +177,7 @@ struct InteropTblTy
     : public PerThreadTable<InteropTableEntry, omp_interop_val_t *> {
   void clear();
 };
+
+void syncImplicitInterops(int gtid, void *event);
 
 #endif // OMPTARGET_OPENMP_INTEROP_API_H

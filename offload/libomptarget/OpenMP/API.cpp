@@ -16,6 +16,7 @@
 #include "rtl.h"
 
 #include "OpenMP/InternalTypes.h"
+#include "OpenMP/InteropAPI.h"
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/omp.h"
@@ -684,7 +685,6 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
   return TPR.TargetPointer;
 }
 
-void syncImplicitInterops(int gtid, void *event);
 // This routine gets called from the Host RTL at sync points (taskwait, barrier,
 // ...) so we can synchronize the necessary objects from the offload side.
 EXTERN void __tgt_target_sync(ident_t *loc_ref, int gtid, void *current_task,
