@@ -1541,6 +1541,15 @@ def AVRSystemLibrary
               avr_sin, avr_cos)>;
 
 //===----------------------------------------------------------------------===//
+// DXIL Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isDXIL : RuntimeLibcallPredicate<"TT.isDXIL()">;
+
+// No calls
+def DXILSystemLibrary : SystemRuntimeLibrary<isDXIL, (add)>;
+
+//===----------------------------------------------------------------------===//
 // Hexagon Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
@@ -2120,7 +2129,7 @@ defvar X86CommonLibcalls =
 );
 
 defvar Windows32DivRemMulCalls =
-  LibcallImpls<(add WindowsDivRemMulLibcalls),
+  LibcallsWithCC<(add WindowsDivRemMulLibcalls), X86_STDCALL,
   RuntimeLibcallPredicate<"TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()">>;
 
 def X86_32SystemLibrary

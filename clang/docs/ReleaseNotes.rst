@@ -674,7 +674,7 @@ Improvements to Clang's diagnostics
   #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
-  
+
 - Clang no longer emits a spurious -Wdangling-gsl warning in C++23 when
   iterating over an element of a temporary container in a range-based
   for loop.(#GH109793, #GH145164)
@@ -709,6 +709,12 @@ Improvements to Clang's diagnostics
   the ``[[noreturn]]`` attribute when the function body is ended with a call via
   pointer, provided it can be proven that the pointer only points to
   ``[[noreturn]]`` functions.
+
+- Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
+  diagnostics for function effects (``[[clang::nonblocking]]`` and ``[[clang::nonallocating]]``).
+  Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
+  Added a new warning in this group for the case where the attribute is missing/implicit on
+  an override of a virtual method.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -800,6 +806,8 @@ Bug Fixes in This Version
   declaration statements. Clang now emits a warning for these patterns. (#GH141659)
 - Fixed false positives for redeclaration errors of using enum in
   nested scopes. (#GH147495)
+- Fixed a failed assertion with an operator call expression which comes from a
+  macro expansion when performing analysis for nullability attributes. (#GH138371)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -967,6 +975,8 @@ Bug Fixes to C++ Support
 - Fix a crash with NTTP when instantiating local class.
 - Fixed a crash involving list-initialization of an empty class with a
   non-empty initializer list. (#GH147949)
+- Fixed constant evaluation of equality comparisons of constexpr-unknown references. (#GH147663)
+- Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1143,6 +1153,8 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 
+- Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
+  parameters.
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.

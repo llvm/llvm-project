@@ -57,6 +57,7 @@ public:
   mlir::Value
   VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e);
   mlir::Value VisitUnaryDeref(const Expr *e);
+  mlir::Value VisitUnaryNot(const UnaryOperator *e);
 
   struct BinOpInfo {
     mlir::Location loc;
@@ -230,8 +231,7 @@ mlir::Value ComplexExprEmitter::VisitBinComma(const BinaryOperator *e) {
 mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
   if (e->getCallReturnType(cgf.getContext())->isReferenceType())
     return emitLoadOfLValue(e);
-
-  return cgf.emitCallExpr(e).getValue();
+  return cgf.emitCallExpr(e).getComplexValue();
 }
 
 mlir::Value ComplexExprEmitter::VisitCastExpr(CastExpr *e) {
@@ -336,6 +336,11 @@ mlir::Value ComplexExprEmitter::VisitSubstNonTypeTemplateParmExpr(
 
 mlir::Value ComplexExprEmitter::VisitUnaryDeref(const Expr *e) {
   return emitLoadOfLValue(e);
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryNot(const UnaryOperator *e) {
+  mlir::Value op = Visit(e->getSubExpr());
+  return builder.createNot(op);
 }
 
 mlir::Value ComplexExprEmitter::emitPromoted(const Expr *e,
