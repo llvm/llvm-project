@@ -385,10 +385,8 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
     if (!isMultipleOfN(WideEVL, DL, Factor))
       return false;
 
-    VL = Builder.CreateZExt(
-        Builder.CreateUDiv(WideEVL,
-                           ConstantInt::get(WideEVL->getType(), Factor)),
-        XLenTy);
+    auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+    VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
   }
   Type *PtrTy = Ptr->getType();
   unsigned AS = Ptr->getType()->getPointerAddressSpace();
