@@ -224,10 +224,11 @@ format, which means you are effectively formatting the address stored in the
 pointer rather than the pointee value. For this reason, you may want to use the
 -p option when defining formats.
 
-If you need to delete a custom format simply type type format delete followed
-by the name of the type to which the format applies.Even if you defined the
-same format for multiple types on the same command, type format delete will
-only remove the format for the type name passed as argument.
+If you need to delete a custom format, simply type ``type format delete``
+followed by the name of the type to which the format applies. Even if you
+defined the same format for multiple types on the same command,
+``type format delete`` will only remove the format for the type name passed as
+argument.
 
 To delete ALL formats, use ``type format clear``. To see all the formats
 defined, use type format list.
