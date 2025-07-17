@@ -74,7 +74,7 @@ define { <16 x i8>, <16 x i8>, <16 x i8> } @test_vgf2p8affineinvqb_128(<16 x i8>
 ; CHECK-NEXT:    [[TMP30:%.*]] = or <16 x i8> [[TMP29]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <16 x i1> [[TMP5]], <16 x i8> [[TMP30]], <16 x i8> [[TMP27]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> [[TMP21]], <16 x i8> [[PASSTHRU]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } undef, <16 x i8> [[TMP11]], 0
+; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } poison, <16 x i8> [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } { <16 x i8> zeroinitializer, <16 x i8> splat (i8 -1), <16 x i8> splat (i8 -1) }, <16 x i8> [[_MSPROP_SELECT]], 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[TMP32]], <16 x i8> [[TMP26]], 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[TMP33]], <16 x i8> [[_MSPROP_SELECT1]], 2
@@ -88,7 +88,7 @@ define { <16 x i8>, <16 x i8>, <16 x i8> } @test_vgf2p8affineinvqb_128(<16 x i8>
   %4 = call <16 x i8> @llvm.x86.vgf2p8affineinvqb.128(<16 x i8> %src1, <16 x i8> %src2, i8 5)
   %5 = select <16 x i1> %1, <16 x i8> %3, <16 x i8> zeroinitializer
   %6 = select <16 x i1> %1, <16 x i8> %4, <16 x i8> %passthru
-  %7 = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } undef, <16 x i8> %2, 0
+  %7 = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } poison, <16 x i8> %2, 0
   %8 = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> }    %7, <16 x i8> %5, 1
   %9 = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> }    %8, <16 x i8> %6, 2
   ret { <16 x i8>, <16 x i8>, <16 x i8> } %9
@@ -149,7 +149,7 @@ define { <32 x i8>, <32 x i8>, <32 x i8> } @test_vgf2p8affineinvqb_256(<32 x i8>
 ; CHECK-NEXT:    [[TMP30:%.*]] = or <32 x i8> [[TMP29]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <32 x i1> [[TMP5]], <32 x i8> [[TMP30]], <32 x i8> [[TMP27]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = select <32 x i1> [[TMP6]], <32 x i8> [[TMP21]], <32 x i8> [[PASSTHRU]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } undef, <32 x i8> [[TMP11]], 0
+; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } poison, <32 x i8> [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } { <32 x i8> zeroinitializer, <32 x i8> splat (i8 -1), <32 x i8> splat (i8 -1) }, <32 x i8> [[_MSPROP_SELECT]], 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } [[TMP32]], <32 x i8> [[TMP26]], 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } [[TMP33]], <32 x i8> [[_MSPROP_SELECT1]], 2
@@ -163,7 +163,7 @@ define { <32 x i8>, <32 x i8>, <32 x i8> } @test_vgf2p8affineinvqb_256(<32 x i8>
   %4 = call <32 x i8> @llvm.x86.vgf2p8affineinvqb.256(<32 x i8> %src1, <32 x i8> %src2, i8 5)
   %5 = select <32 x i1> %1, <32 x i8> %3, <32 x i8> zeroinitializer
   %6 = select <32 x i1> %1, <32 x i8> %4, <32 x i8> %passthru
-  %7 = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } undef, <32 x i8> %2, 0
+  %7 = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } poison, <32 x i8> %2, 0
   %8 = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> }    %7, <32 x i8> %5, 1
   %9 = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> }    %8, <32 x i8> %6, 2
   ret { <32 x i8>, <32 x i8>, <32 x i8> } %9
@@ -224,7 +224,7 @@ define { <64 x i8>, <64 x i8>, <64 x i8> } @test_vgf2p8affineinvqb_512(<64 x i8>
 ; CHECK-NEXT:    [[TMP30:%.*]] = or <64 x i8> [[TMP29]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <64 x i1> [[TMP5]], <64 x i8> [[TMP30]], <64 x i8> [[TMP27]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = select <64 x i1> [[TMP6]], <64 x i8> [[TMP21]], <64 x i8> [[PASSTHRU]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } undef, <64 x i8> [[TMP11]], 0
+; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } poison, <64 x i8> [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } { <64 x i8> zeroinitializer, <64 x i8> splat (i8 -1), <64 x i8> splat (i8 -1) }, <64 x i8> [[_MSPROP_SELECT]], 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } [[TMP32]], <64 x i8> [[TMP26]], 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } [[TMP33]], <64 x i8> [[_MSPROP_SELECT1]], 2
@@ -238,7 +238,7 @@ define { <64 x i8>, <64 x i8>, <64 x i8> } @test_vgf2p8affineinvqb_512(<64 x i8>
   %4 = call <64 x i8> @llvm.x86.vgf2p8affineinvqb.512(<64 x i8> %src1, <64 x i8> %src2, i8 5)
   %5 = select <64 x i1> %1, <64 x i8> %3, <64 x i8> zeroinitializer
   %6 = select <64 x i1> %1, <64 x i8> %4, <64 x i8> %passthru
-  %7 = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } undef, <64 x i8> %2, 0
+  %7 = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } poison, <64 x i8> %2, 0
   %8 = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> }    %7, <64 x i8> %5, 1
   %9 = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> }    %8, <64 x i8> %6, 2
   ret { <64 x i8>, <64 x i8>, <64 x i8> } %9
@@ -299,7 +299,7 @@ define { <16 x i8>, <16 x i8>, <16 x i8> } @test_vgf2p8affineqb_128(<16 x i8> %s
 ; CHECK-NEXT:    [[TMP30:%.*]] = or <16 x i8> [[TMP29]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <16 x i1> [[TMP5]], <16 x i8> [[TMP30]], <16 x i8> [[TMP27]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> [[TMP21]], <16 x i8> [[PASSTHRU]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } undef, <16 x i8> [[TMP11]], 0
+; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } poison, <16 x i8> [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } { <16 x i8> zeroinitializer, <16 x i8> splat (i8 -1), <16 x i8> splat (i8 -1) }, <16 x i8> [[_MSPROP_SELECT]], 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[TMP32]], <16 x i8> [[TMP26]], 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[TMP33]], <16 x i8> [[_MSPROP_SELECT1]], 2
@@ -313,7 +313,7 @@ define { <16 x i8>, <16 x i8>, <16 x i8> } @test_vgf2p8affineqb_128(<16 x i8> %s
   %4 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src1, <16 x i8> %src2, i8 5)
   %5 = select <16 x i1> %1, <16 x i8> %3, <16 x i8> zeroinitializer
   %6 = select <16 x i1> %1, <16 x i8> %4, <16 x i8> %passthru
-  %7 = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } undef, <16 x i8> %2, 0
+  %7 = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> } poison, <16 x i8> %2, 0
   %8 = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> }    %7, <16 x i8> %5, 1
   %9 = insertvalue { <16 x i8>, <16 x i8>, <16 x i8> }    %8, <16 x i8> %6, 2
   ret { <16 x i8>, <16 x i8>, <16 x i8> } %9
@@ -374,7 +374,7 @@ define { <32 x i8>, <32 x i8>, <32 x i8> } @test_vgf2p8affineqb_256(<32 x i8> %s
 ; CHECK-NEXT:    [[TMP30:%.*]] = or <32 x i8> [[TMP29]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <32 x i1> [[TMP5]], <32 x i8> [[TMP30]], <32 x i8> [[TMP27]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = select <32 x i1> [[TMP6]], <32 x i8> [[TMP21]], <32 x i8> [[PASSTHRU]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } undef, <32 x i8> [[TMP11]], 0
+; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } poison, <32 x i8> [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } { <32 x i8> zeroinitializer, <32 x i8> splat (i8 -1), <32 x i8> splat (i8 -1) }, <32 x i8> [[_MSPROP_SELECT]], 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } [[TMP32]], <32 x i8> [[TMP26]], 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } [[TMP33]], <32 x i8> [[_MSPROP_SELECT1]], 2
@@ -388,7 +388,7 @@ define { <32 x i8>, <32 x i8>, <32 x i8> } @test_vgf2p8affineqb_256(<32 x i8> %s
   %4 = call <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8> %src1, <32 x i8> %src2, i8 5)
   %5 = select <32 x i1> %1, <32 x i8> %3, <32 x i8> zeroinitializer
   %6 = select <32 x i1> %1, <32 x i8> %4, <32 x i8> %passthru
-  %7 = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } undef, <32 x i8> %2, 0
+  %7 = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> } poison, <32 x i8> %2, 0
   %8 = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> }    %7, <32 x i8> %5, 1
   %9 = insertvalue { <32 x i8>, <32 x i8>, <32 x i8> }    %8, <32 x i8> %6, 2
   ret { <32 x i8>, <32 x i8>, <32 x i8> } %9
@@ -449,7 +449,7 @@ define { <64 x i8>, <64 x i8>, <64 x i8> } @test_vgf2p8affineqb_512(<64 x i8> %s
 ; CHECK-NEXT:    [[TMP30:%.*]] = or <64 x i8> [[TMP29]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <64 x i1> [[TMP5]], <64 x i8> [[TMP30]], <64 x i8> [[TMP27]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = select <64 x i1> [[TMP6]], <64 x i8> [[TMP21]], <64 x i8> [[PASSTHRU]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } undef, <64 x i8> [[TMP11]], 0
+; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } poison, <64 x i8> [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } { <64 x i8> zeroinitializer, <64 x i8> splat (i8 -1), <64 x i8> splat (i8 -1) }, <64 x i8> [[_MSPROP_SELECT]], 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } [[TMP32]], <64 x i8> [[TMP26]], 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } [[TMP33]], <64 x i8> [[_MSPROP_SELECT1]], 2
@@ -463,7 +463,7 @@ define { <64 x i8>, <64 x i8>, <64 x i8> } @test_vgf2p8affineqb_512(<64 x i8> %s
   %4 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src1, <64 x i8> %src2, i8 5)
   %5 = select <64 x i1> %1, <64 x i8> %3, <64 x i8> zeroinitializer
   %6 = select <64 x i1> %1, <64 x i8> %4, <64 x i8> %passthru
-  %7 = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } undef, <64 x i8> %2, 0
+  %7 = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> } poison, <64 x i8> %2, 0
   %8 = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> }    %7, <64 x i8> %5, 1
   %9 = insertvalue { <64 x i8>, <64 x i8>, <64 x i8> }    %8, <64 x i8> %6, 2
   ret { <64 x i8>, <64 x i8>, <64 x i8> } %9
