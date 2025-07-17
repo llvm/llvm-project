@@ -697,6 +697,20 @@ bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
     MinMaxOp = GetMinMaxCompareValue(MinMaxR, RedPhiR);
     if (!MinMaxOp)
       return false;
+
+#ifndef NDEBUG
+    Intrinsic::ID RdxIntrinsicId =
+        Cur->getRecurrenceKind() == RecurKind::FMaxNum ? Intrinsic::maxnum
+                                                       : Intrinsic::minnum;
+    assert((isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
+            cast<VPWidenIntrinsicRecipe>(MinMaxR)->getVectorIntrinsicID() ==
+                RdxIntrinsicId) ||
+           (isa<VPReplicateRecipe>(MinMaxR) &&
+            cast<IntrinsicInst>(
+                cast<VPReplicateRecipe>(MinMaxR)->getUnderlyingInstr())
+                    ->getIntrinsicID() == RdxIntrinsicId) &&
+               "Intrinsic did not match recurrence kind");
+#endif
   }
 
   if (!RedPhiR)
