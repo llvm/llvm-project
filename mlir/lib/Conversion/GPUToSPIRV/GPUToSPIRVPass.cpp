@@ -61,8 +61,8 @@ private:
 
 spirv::TargetEnvAttr
 GPUToSPIRVPass::lookupTargetEnvInTargets(gpu::GPUModuleOp moduleOp) {
-  if (const ArrayAttr &targets = moduleOp.getTargetsAttr()) {
-    for (const Attribute &targetAttr : targets)
+  if (ArrayAttr targets = moduleOp.getTargetsAttr()) {
+    for (Attribute targetAttr : targets)
       if (auto spirvTargetEnvAttr = dyn_cast<spirv::TargetEnvAttr>(targetAttr))
         return spirvTargetEnvAttr;
   }
