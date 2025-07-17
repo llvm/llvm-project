@@ -1040,7 +1040,7 @@ inferOffloadToolchains(Compilation &C, Action::OffloadKind Kind) {
     Triples.insert(Triple);
   }
 
-  // These languages default to this if nothing is provided.
+  // Infer the default target triple if no specific architectures are given.
   if (Archs.empty() && Kind == Action::OFK_HIP)
     Triples.insert("amdgcn-amd-amdhsa");
   else if (Archs.empty() && Kind == Action::OFK_Cuda)
@@ -1183,7 +1183,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       }
 
       C.addOffloadDeviceToolChain(&TC, Kind);
-      OffloadArchs[&TC] = getOffloadArchs(C, C.getArgs(), Kind, TC);
     }
   }
 }
@@ -3456,11 +3455,11 @@ class OffloadingActionBuilder final {
 
       std::set<StringRef> GpuArchs;
       for (Action::OffloadKind Kind : {Action::OFK_Cuda, Action::OFK_HIP}) {
-        auto TCRange = C.getOffloadToolChains(Kind);
-        for (auto &I : llvm::make_range(TCRange)) {
+        for (auto &I : llvm::make_range(C.getOffloadToolChains(Kind))) {
           ToolChains.push_back(I.second);
 
-          for (auto Arch : C.getDriver().OffloadArchs.lookup(I.second))
+          for (auto Arch :
+               C.getDriver().getOffloadArchs(C, C.getArgs(), Kind, *I.second))
             GpuArchs.insert(Arch);
         }
       }
@@ -4846,7 +4845,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     // Get the product of all bound architectures and toolchains.
     SmallVector<std::pair<const ToolChain *, StringRef>> TCAndArchs;
     for (const ToolChain *TC : ToolChains) {
-      for (StringRef Arch : OffloadArchs.lookup(TC)) {
+      for (StringRef Arch : getOffloadArchs(C, C.getArgs(), Kind, *TC)) {
         TCAndArchs.push_back(std::make_pair(TC, Arch));
         DeviceActions.push_back(
             C.MakeAction<InputAction>(*InputArg, InputType, CUID));

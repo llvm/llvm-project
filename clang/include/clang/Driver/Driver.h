@@ -370,11 +370,6 @@ private:
   /// stored in it, and will clean them up when torn down.
   mutable llvm::StringMap<std::unique_ptr<ToolChain>> ToolChains;
 
-public:
-  /// The associated offloading architectures with each toolchain.
-  llvm::DenseMap<const ToolChain *, llvm::SmallVector<llvm::StringRef>>
-      OffloadArchs;
-
 private:
   /// TranslateInputArgs - Create a new derived argument list from the input
   /// arguments, after applying the standard argument translations.
