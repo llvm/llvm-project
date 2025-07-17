@@ -3,10 +3,6 @@
 ; RUN: FileCheck -input-file %t --check-prefix=PROFIT-CACHE %s
 
 ; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 \
-; RUN:     -pass-remarks-output=%t -disable-output -loop-interchange-profitabilities=ignore 
-; RUN: FileCheck -input-file %t --check-prefix=PROFIT-VEC %s
-
-; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 \
 ; RUN:     -pass-remarks-output=%t -disable-output -loop-interchange-profitabilities=vectorize,cache,instorder
 ; RUN: FileCheck -input-file %t --check-prefix=PROFIT-VEC %s
 

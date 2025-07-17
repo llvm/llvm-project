@@ -7,14 +7,7 @@
 ;       for (int j = 0; j<1024; j++)
 ;         A[i][j] = 42;
 ;
-; CHECK:      --- !Analysis
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Dependence
-; CHECK-NEXT: Function:        f
-; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Computed dependence info, invoking the transform.
-; CHECK-NEXT: ...
-; CHECK-NEXT: --- !Passed
+; CHECK:      --- !Passed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            Interchanged
 ; CHECK-NEXT: Function:        f
