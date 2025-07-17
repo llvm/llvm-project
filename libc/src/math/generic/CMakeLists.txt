@@ -3766,12 +3766,10 @@ add_entrypoint_object(
 )
 
 #TODO: Add errno include to the hyperbolic functions.
-add_object_library(
+add_header_library(
   explogxf
   HDRS
     explogxf.h
-  SRCS
-    explogxf.cpp
   DEPENDS
     .common_constants
     libc.src.__support.math.exp_utils

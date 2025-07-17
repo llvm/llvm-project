@@ -21,17 +21,6 @@ namespace LIBC_NAMESPACE_DECL {
 constexpr int LOG_P1_BITS = 6;
 constexpr int LOG_P1_SIZE = 1 << LOG_P1_BITS;
 
-// N[Table[Log[2, 1 + x], {x, 0/64, 63/64, 1/64}], 40]
-extern const double LOG_P1_LOG2[LOG_P1_SIZE];
-
-// N[Table[1/(1 + x), {x, 0/64, 63/64, 1/64}], 40]
-extern const double LOG_P1_1_OVER[LOG_P1_SIZE];
-
-// Taylor series expansion for Log[2, 1 + x] splitted to EVEN AND ODD numbers
-// K_LOG2_ODD starts from x^3
-extern const double K_LOG2_ODD[4];
-extern const double K_LOG2_EVEN[4];
-
 // The function correctly calculates sinh(x) and cosh(x) by calculating exp(x)
 // and exp(-x) simultaneously.
 // To compute e^x, we perform the following range
@@ -129,33 +118,6 @@ template <bool is_sinh> LIBC_INLINE double exp_pm_eval(float x) {
   else
     r = fputil::multiply_add(dx * mh_diff, p_odd, p_even * mh_sum);
   return r;
-}
-
-// x should be positive, normal finite value
-LIBC_INLINE static double log2_eval(double x) {
-  using FPB = fputil::FPBits<double>;
-  FPB bs(x);
-
-  double result = 0;
-  result += bs.get_exponent();
-
-  int p1 = (bs.get_mantissa() >> (FPB::FRACTION_LEN - LOG_P1_BITS)) &
-           (LOG_P1_SIZE - 1);
-
-  bs.set_uintval(bs.uintval() & (FPB::FRACTION_MASK >> LOG_P1_BITS));
-  bs.set_biased_exponent(FPB::EXP_BIAS);
-  double dx = (bs.get_val() - 1.0) * LOG_P1_1_OVER[p1];
-
-  // Taylor series for log(2,1+x)
-  double c1 = fputil::multiply_add(dx, K_LOG2_ODD[0], K_LOG2_EVEN[0]);
-  double c2 = fputil::multiply_add(dx, K_LOG2_ODD[1], K_LOG2_EVEN[1]);
-  double c3 = fputil::multiply_add(dx, K_LOG2_ODD[2], K_LOG2_EVEN[2]);
-  double c4 = fputil::multiply_add(dx, K_LOG2_ODD[3], K_LOG2_EVEN[3]);
-
-  // c0 = dx * (1.0 / ln(2)) + LOG_P1_LOG2[p1]
-  double c0 = fputil::multiply_add(dx, 0x1.71547652b82fep+0, LOG_P1_LOG2[p1]);
-  result += LIBC_NAMESPACE::fputil::polyeval(dx * dx, c0, c1, c2, c3, c4);
-  return result;
 }
 
 // x should be positive, normal finite value

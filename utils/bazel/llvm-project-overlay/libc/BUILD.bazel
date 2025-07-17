@@ -1996,7 +1996,6 @@ libc_support_library(
 
 libc_support_library(
     name = "explogxf",
-    srcs = ["src/math/generic/explogxf.cpp"],
     hdrs = ["src/math/generic/explogxf.h"],
     deps = [
         ":__support_fputil_fenv_impl",
