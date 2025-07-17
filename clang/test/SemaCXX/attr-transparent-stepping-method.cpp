@@ -5,7 +5,7 @@ struct S {
 [[clang::transparent_stepping]]
 void correct(void) {}
 
-[[clang::transparent_stepping(1)]] // expected-error {{'transparent_stepping' attribute takes no arguments}}
+[[clang::transparent_stepping(1)]] // expected-error {{'clang::transparent_stepping' attribute takes no arguments}}
 void one_arg(void) {}
 };
 
