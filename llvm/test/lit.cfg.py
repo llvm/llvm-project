@@ -93,6 +93,13 @@ config.substitutions.append(("%pluginext", config.llvm_plugin_ext))
 config.substitutions.append(("%exeext", config.llvm_exe_ext))
 config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 
+# Add IR2Vec test vocabulary path substitution
+config.substitutions.append(
+    (
+        "%ir2vec_test_vocab_dir",
+        os.path.join(config.test_source_root, "Analysis", "IR2Vec", "Inputs"),
+    )
+)
 
 lli_args = []
 # The target triple used by default by lli is the process target triple (some
