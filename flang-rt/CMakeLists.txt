@@ -159,8 +159,6 @@ check_cxx_source_compiles(
   "
   HAVE_DECL_STRERROR_S)
 
-include(CheckFortranSourceCompiles)
-include(CMakePushCheckState)
 cmake_push_check_state(RESET)
 set(CMAKE_REQUIRED_FLAGS "-ffree-form")
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)

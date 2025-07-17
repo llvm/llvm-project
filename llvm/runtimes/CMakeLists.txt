@@ -525,7 +525,6 @@ if(build_runtimes)
     endforeach()
   endif()
 
-  # TODO: Also enable Fortran for per-target runtimes needed for cross-compilation.
   if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
     list(APPEND extra_args ENABLE_FORTRAN)
   endif()
