@@ -361,30 +361,43 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     AccessSize = MaxPtrDiff;
     AccessSizeSCEV = PtrDiff;
   } else if (auto *MinAdd = dyn_cast<SCEVAddExpr>(AccessStart)) {
-    if (MinAdd->getNumOperands() != 2)
+    const auto *NewBase = dyn_cast<SCEVUnknown>(SE.getPointerBase(MinAdd));
+    const auto *OffsetSCEV = SE.removePointerBase(MinAdd);
+
+    if (!OffsetSCEV || !NewBase)
       return false;
 
-    const auto *Offset = dyn_cast<SCEVConstant>(MinAdd->getOperand(0));
-    const auto *NewBase = dyn_cast<SCEVUnknown>(MinAdd->getOperand(1));
-    if (!Offset || !NewBase)
-      return false;
+    if (const auto *Offset = dyn_cast<SCEVConstant>(OffsetSCEV)) {
+      // The following code below assumes the offset is unsigned, but GEP
+      // offsets are treated as signed so we can end up with a signed value
+      // here too. For example, suppose the initial PHI value is (i8 255),
+      // the offset will be treated as (i8 -1) and sign-extended to (i64 -1).
+      if (Offset->getAPInt().isNegative())
+        return false;
 
-    // The following code below assumes the offset is unsigned, but GEP
-    // offsets are treated as signed so we can end up with a signed value
-    // here too. For example, suppose the initial PHI value is (i8 255),
-    // the offset will be treated as (i8 -1) and sign-extended to (i64 -1).
-    if (Offset->getAPInt().isNegative())
-      return false;
+      // For the moment, restrict ourselves to the case where the offset is a
+      // multiple of the requested alignment and the base is aligned.
+      // TODO: generalize if a case found which warrants
+      if (Offset->getAPInt().urem(Alignment.value()) != 0)
+        return false;
 
-    // For the moment, restrict ourselves to the case where the offset is a
-    // multiple of the requested alignment and the base is aligned.
-    // TODO: generalize if a case found which warrants
-    if (Offset->getAPInt().urem(Alignment.value()) != 0)
-      return false;
-
-    AccessSize = MaxPtrDiff + Offset->getAPInt();
-    AccessSizeSCEV = SE.getAddExpr(PtrDiff, Offset);
-    Base = NewBase->getValue();
+      AccessSize = MaxPtrDiff + Offset->getAPInt();
+      AccessSizeSCEV = SE.getAddExpr(PtrDiff, Offset);
+      Base = NewBase->getValue();
+    } else {
+      // Same checks as above, but for a symbolic offset.
+      if (!SE.isKnownNonNegative(OffsetSCEV))
+        return false;
+      // Check divisibility by alignment
+      auto AlignVal = APInt(64, Alignment.value());
+      if (!SE.isKnownPredicate(ICmpInst::ICMP_EQ,
+            SE.getURemExpr(OffsetSCEV, SE.getConstant(AlignVal)),
+            SE.getZero(OffsetSCEV->getType())))
+        return false;
+      AccessSizeSCEV = SE.getAddExpr(PtrDiff, OffsetSCEV);
+      AccessSize = MaxPtrDiff + SE.getUnsignedRangeMax(OffsetSCEV);
+      Base = NewBase->getValue();
+    }
   } else
     return false;
 
