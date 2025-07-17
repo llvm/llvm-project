@@ -193,7 +193,9 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let AsmString = opcodestr # !if(!empty(argstr), "", "\t" # argstr);
   let Pattern = pattern;
 
-  let TSFlags{4-0} = format.Value;
+  InstFormat Format = format;
+
+  let TSFlags{4-0} = Format.Value;
 
   // Defaults
   RISCVVConstraint RVVConstraint = NoConstraint;
