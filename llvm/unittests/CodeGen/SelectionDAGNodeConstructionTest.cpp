@@ -113,8 +113,7 @@ TEST_F(SelectionDAGnodeConstructionTest, ADD) {
   EXPECT_EQ(DAG->getNode(ISD::ADD, DL, Int32VT, Op, Poison), Poison);
   EXPECT_EQ(DAG->getNode(ISD::ADD, DL, Int32VT, Poison, Op), Poison);
   EXPECT_EQ(DAG->getNode(ISD::ADD, DL, Int32VT, Poison, Undef), Poison);
-  // TODO: Should be poison.
-  EXPECT_EQ(DAG->getNode(ISD::ADD, DL, Int32VT, Undef, Poison), Undef);
+  EXPECT_EQ(DAG->getNode(ISD::ADD, DL, Int32VT, Undef, Poison), Poison);
 
   EXPECT_EQ(DAG->getNode(ISD::ADD, DL, Int32VT, Op, Undef), Undef);
   EXPECT_EQ(DAG->getNode(ISD::ADD, DL, Int32VT, Undef, Op), Undef);
@@ -132,8 +131,7 @@ TEST_F(SelectionDAGnodeConstructionTest, AND) {
   EXPECT_EQ(DAG->getNode(ISD::AND, DL, Int32VT, Op, Poison), Poison);
   EXPECT_EQ(DAG->getNode(ISD::AND, DL, Int32VT, Poison, Op), Poison);
   EXPECT_EQ(DAG->getNode(ISD::AND, DL, Int32VT, Poison, Undef), Poison);
-  // TODO: Should be poison.
-  EXPECT_EQ(DAG->getNode(ISD::AND, DL, Int32VT, Undef, Poison), Zero);
+  EXPECT_EQ(DAG->getNode(ISD::AND, DL, Int32VT, Undef, Poison), Poison);
 
   EXPECT_EQ(DAG->getNode(ISD::AND, DL, Int32VT, Op, Undef), Zero);
   EXPECT_EQ(DAG->getNode(ISD::AND, DL, Int32VT, Undef, Op), Zero);
@@ -152,8 +150,7 @@ TEST_F(SelectionDAGnodeConstructionTest, MUL) {
   EXPECT_EQ(DAG->getNode(ISD::MUL, DL, Int32VT, Op, Poison), Poison);
   EXPECT_EQ(DAG->getNode(ISD::MUL, DL, Int32VT, Poison, Op), Poison);
   EXPECT_EQ(DAG->getNode(ISD::MUL, DL, Int32VT, Poison, Undef), Poison);
-  // TODO: Should be poison.
-  EXPECT_EQ(DAG->getNode(ISD::MUL, DL, Int32VT, Undef, Poison), Zero);
+  EXPECT_EQ(DAG->getNode(ISD::MUL, DL, Int32VT, Undef, Poison), Poison);
 
   EXPECT_EQ(DAG->getNode(ISD::MUL, DL, Int32VT, Op, Undef), Zero);
   EXPECT_EQ(DAG->getNode(ISD::MUL, DL, Int32VT, Undef, Op), Zero);
@@ -172,8 +169,7 @@ TEST_F(SelectionDAGnodeConstructionTest, OR) {
   EXPECT_EQ(DAG->getNode(ISD::OR, DL, Int32VT, Op, Poison), Poison);
   EXPECT_EQ(DAG->getNode(ISD::OR, DL, Int32VT, Poison, Op), Poison);
   EXPECT_EQ(DAG->getNode(ISD::OR, DL, Int32VT, Poison, Undef), Poison);
-  // TODO: Should be poison.
-  EXPECT_EQ(DAG->getNode(ISD::OR, DL, Int32VT, Undef, Poison), AllOnes);
+  EXPECT_EQ(DAG->getNode(ISD::OR, DL, Int32VT, Undef, Poison), Poison);
 
   EXPECT_EQ(DAG->getNode(ISD::OR, DL, Int32VT, Op, Undef), AllOnes);
   EXPECT_EQ(DAG->getNode(ISD::OR, DL, Int32VT, Undef, Op), AllOnes);
@@ -192,8 +188,7 @@ TEST_F(SelectionDAGnodeConstructionTest, SADDSAT) {
   EXPECT_EQ(DAG->getNode(ISD::SADDSAT, DL, Int32VT, Op, Poison), Poison);
   EXPECT_EQ(DAG->getNode(ISD::SADDSAT, DL, Int32VT, Poison, Op), Poison);
   EXPECT_EQ(DAG->getNode(ISD::SADDSAT, DL, Int32VT, Poison, Undef), Poison);
-  // TODO: Should be poison.
-  EXPECT_EQ(DAG->getNode(ISD::SADDSAT, DL, Int32VT, Undef, Poison), AllOnes);
+  EXPECT_EQ(DAG->getNode(ISD::SADDSAT, DL, Int32VT, Undef, Poison), Poison);
 
   EXPECT_EQ(DAG->getNode(ISD::SADDSAT, DL, Int32VT, Op, Undef), AllOnes);
   EXPECT_EQ(DAG->getNode(ISD::SADDSAT, DL, Int32VT, Undef, Op), AllOnes);
@@ -222,6 +217,42 @@ TEST_F(SelectionDAGnodeConstructionTest, SDIV) {
   EXPECT_EQ(DAG->getNode(ISD::SDIV, DL, Int32VT, Undef, Op), Zero);
   // TODO: Should be poison.
   EXPECT_EQ(DAG->getNode(ISD::SDIV, DL, Int32VT, Undef, Undef), Undef);
+}
+
+TEST_F(SelectionDAGnodeConstructionTest, SMAX) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue Poison = DAG->getPOISON(Int32VT);
+  SDValue Undef = DAG->getUNDEF(Int32VT);
+  SDValue MaxInt = DAG->getConstant(APInt::getSignedMaxValue(32), DL, Int32VT);
+
+  EXPECT_EQ(DAG->getNode(ISD::SMAX, DL, Int32VT, Op, Poison), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::SMAX, DL, Int32VT, Poison, Op), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::SMAX, DL, Int32VT, Poison, Undef), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::SMAX, DL, Int32VT, Undef, Poison), Poison);
+
+  EXPECT_EQ(DAG->getNode(ISD::SMAX, DL, Int32VT, Op, Undef), MaxInt);
+  EXPECT_EQ(DAG->getNode(ISD::SMAX, DL, Int32VT, Undef, Op), MaxInt);
+  EXPECT_EQ(DAG->getNode(ISD::SMAX, DL, Int32VT, Undef, Undef), Undef);
+}
+
+TEST_F(SelectionDAGnodeConstructionTest, SMIN) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue Poison = DAG->getPOISON(Int32VT);
+  SDValue Undef = DAG->getUNDEF(Int32VT);
+  SDValue MinInt = DAG->getConstant(APInt::getSignedMinValue(32), DL, Int32VT);
+
+  EXPECT_EQ(DAG->getNode(ISD::SMIN, DL, Int32VT, Op, Poison), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::SMIN, DL, Int32VT, Poison, Op), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::SMIN, DL, Int32VT, Poison, Undef), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::SMIN, DL, Int32VT, Undef, Poison), Poison);
+
+  EXPECT_EQ(DAG->getNode(ISD::SMIN, DL, Int32VT, Op, Undef), MinInt);
+  EXPECT_EQ(DAG->getNode(ISD::SMIN, DL, Int32VT, Undef, Op), MinInt);
+  EXPECT_EQ(DAG->getNode(ISD::SMIN, DL, Int32VT, Undef, Undef), Undef);
 }
 
 TEST_F(SelectionDAGnodeConstructionTest, SREM) {
@@ -258,8 +289,7 @@ TEST_F(SelectionDAGnodeConstructionTest, SSUBSAT) {
   EXPECT_EQ(DAG->getNode(ISD::SSUBSAT, DL, Int32VT, Op, Poison), Poison);
   EXPECT_EQ(DAG->getNode(ISD::SSUBSAT, DL, Int32VT, Poison, Op), Poison);
   EXPECT_EQ(DAG->getNode(ISD::SSUBSAT, DL, Int32VT, Poison, Undef), Poison);
-  // TODO: Should be poison.
-  EXPECT_EQ(DAG->getNode(ISD::SSUBSAT, DL, Int32VT, Undef, Poison), Zero);
+  EXPECT_EQ(DAG->getNode(ISD::SSUBSAT, DL, Int32VT, Undef, Poison), Poison);
 
   EXPECT_EQ(DAG->getNode(ISD::SSUBSAT, DL, Int32VT, Op, Undef), Zero);
   EXPECT_EQ(DAG->getNode(ISD::SSUBSAT, DL, Int32VT, Undef, Op), Zero);
@@ -277,8 +307,7 @@ TEST_F(SelectionDAGnodeConstructionTest, SUB) {
   EXPECT_EQ(DAG->getNode(ISD::SUB, DL, Int32VT, Op, Poison), Poison);
   EXPECT_EQ(DAG->getNode(ISD::SUB, DL, Int32VT, Poison, Op), Poison);
   EXPECT_EQ(DAG->getNode(ISD::SUB, DL, Int32VT, Poison, Undef), Poison);
-  // TODO: Should be poison.
-  EXPECT_EQ(DAG->getNode(ISD::SUB, DL, Int32VT, Undef, Poison), Undef);
+  EXPECT_EQ(DAG->getNode(ISD::SUB, DL, Int32VT, Undef, Poison), Poison);
 
   EXPECT_EQ(DAG->getNode(ISD::SUB, DL, Int32VT, Op, Undef), Undef);
   EXPECT_EQ(DAG->getNode(ISD::SUB, DL, Int32VT, Undef, Op), Undef);
@@ -296,8 +325,7 @@ TEST_F(SelectionDAGnodeConstructionTest, UADDSAT) {
   EXPECT_EQ(DAG->getNode(ISD::UADDSAT, DL, Int32VT, Op, Poison), Poison);
   EXPECT_EQ(DAG->getNode(ISD::UADDSAT, DL, Int32VT, Poison, Op), Poison);
   EXPECT_EQ(DAG->getNode(ISD::UADDSAT, DL, Int32VT, Poison, Undef), Poison);
-  // TODO: Should be poison.
-  EXPECT_EQ(DAG->getNode(ISD::UADDSAT, DL, Int32VT, Undef, Poison), AllOnes);
+  EXPECT_EQ(DAG->getNode(ISD::UADDSAT, DL, Int32VT, Undef, Poison), Poison);
 
   EXPECT_EQ(DAG->getNode(ISD::UADDSAT, DL, Int32VT, Op, Undef), AllOnes);
   EXPECT_EQ(DAG->getNode(ISD::UADDSAT, DL, Int32VT, Undef, Op), AllOnes);
@@ -326,6 +354,42 @@ TEST_F(SelectionDAGnodeConstructionTest, UDIV) {
   EXPECT_EQ(DAG->getNode(ISD::UDIV, DL, Int32VT, Undef, Op), Zero);
   // TODO: Should be poison.
   EXPECT_EQ(DAG->getNode(ISD::UDIV, DL, Int32VT, Undef, Undef), Undef);
+}
+
+TEST_F(SelectionDAGnodeConstructionTest, UMAX) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue Poison = DAG->getPOISON(Int32VT);
+  SDValue Undef = DAG->getUNDEF(Int32VT);
+  SDValue AllOnes = DAG->getAllOnesConstant(DL, Int32VT);
+
+  EXPECT_EQ(DAG->getNode(ISD::UMAX, DL, Int32VT, Op, Poison), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::UMAX, DL, Int32VT, Poison, Op), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::UMAX, DL, Int32VT, Poison, Undef), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::UMAX, DL, Int32VT, Undef, Poison), Poison);
+
+  EXPECT_EQ(DAG->getNode(ISD::UMAX, DL, Int32VT, Op, Undef), AllOnes);
+  EXPECT_EQ(DAG->getNode(ISD::UMAX, DL, Int32VT, Undef, Op), AllOnes);
+  EXPECT_EQ(DAG->getNode(ISD::UMAX, DL, Int32VT, Undef, Undef), Undef);
+}
+
+TEST_F(SelectionDAGnodeConstructionTest, UMIN) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue Poison = DAG->getPOISON(Int32VT);
+  SDValue Undef = DAG->getUNDEF(Int32VT);
+  SDValue Zero = DAG->getConstant(0, DL, Int32VT);
+
+  EXPECT_EQ(DAG->getNode(ISD::UMIN, DL, Int32VT, Op, Poison), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::UMIN, DL, Int32VT, Poison, Op), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::UMIN, DL, Int32VT, Poison, Undef), Poison);
+  EXPECT_EQ(DAG->getNode(ISD::UMIN, DL, Int32VT, Undef, Poison), Poison);
+
+  EXPECT_EQ(DAG->getNode(ISD::UMIN, DL, Int32VT, Op, Undef), Zero);
+  EXPECT_EQ(DAG->getNode(ISD::UMIN, DL, Int32VT, Undef, Op), Zero);
+  EXPECT_EQ(DAG->getNode(ISD::UMIN, DL, Int32VT, Undef, Undef), Undef);
 }
 
 TEST_F(SelectionDAGnodeConstructionTest, UREM) {
@@ -361,8 +425,7 @@ TEST_F(SelectionDAGnodeConstructionTest, USUBSAT) {
   EXPECT_EQ(DAG->getNode(ISD::USUBSAT, DL, Int32VT, Op, Poison), Poison);
   EXPECT_EQ(DAG->getNode(ISD::USUBSAT, DL, Int32VT, Poison, Op), Poison);
   EXPECT_EQ(DAG->getNode(ISD::USUBSAT, DL, Int32VT, Poison, Undef), Poison);
-  // TODO: Should be poison.
-  EXPECT_EQ(DAG->getNode(ISD::USUBSAT, DL, Int32VT, Undef, Poison), Zero);
+  EXPECT_EQ(DAG->getNode(ISD::USUBSAT, DL, Int32VT, Undef, Poison), Poison);
 
   EXPECT_EQ(DAG->getNode(ISD::USUBSAT, DL, Int32VT, Op, Undef), Zero);
   EXPECT_EQ(DAG->getNode(ISD::USUBSAT, DL, Int32VT, Undef, Op), Zero);
