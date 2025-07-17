@@ -28,7 +28,7 @@ static_assert(std::is_trivially_destructible_v<MCFragment>,
               "fragment classes must be trivially destructible");
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
-    : Kind(Kind), HasInstructions(HasInstructions), LinkerRelaxable(false),
+    : Kind(Kind), LinkerRelaxable(false), HasInstructions(HasInstructions),
       AllowAutoPadding(false) {
   static_assert(sizeof(MCFragment::Tail) <= 16,
                 "Keep the variable-size tail small");
