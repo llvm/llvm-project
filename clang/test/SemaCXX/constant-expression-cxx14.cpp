@@ -1321,3 +1321,18 @@ constexpr bool check = different_in_loop();
   // expected-error@-1 {{}} expected-note@-1 {{in call}}
 
 }
+
+namespace comparison_dead_variable {
+  constexpr bool f() {
+    int *p1 = 0, *p2 = 0;
+    {
+        int x = 0; p1 = &x;
+    }
+    {
+        int x = 0; p2 = &x;
+    }
+    return p1 != p2;
+  }
+  // FIXME: This should fail.
+  static_assert(f(),"");
+}
