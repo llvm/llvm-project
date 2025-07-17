@@ -23,10 +23,10 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
@@ -42,6 +42,12 @@ namespace llvm {
 
 using namespace dwarf_linker;
 using namespace dwarf_linker::classic;
+
+enum InvalidStmtSeqOffset {
+  MaxStmtSeqOffset = UINT64_MAX,
+  OrigOffsetMissing = MaxStmtSeqOffset - 1,
+  NewOffsetMissing = MaxStmtSeqOffset - 2,
+};
 
 /// Hold the input and output of the debug info size in bytes.
 struct DebugInfoSize {
@@ -2315,7 +2321,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           // Some sequences are discarded by the DWARFLinker if they are invalid
           // (empty).
           if (OrigRowIter == SeqOffToOrigRow.end()) {
-            StmtSeq.set(UINT64_MAX);
+            StmtSeq.set(OrigOffsetMissing);
             continue;
           }
           size_t OrigRowIndex = OrigRowIter->second;
@@ -2325,7 +2331,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           if (NewRowIter == OrigRowToNewRow.end()) {
             // If the original row index is not found in the map, update the
             // stmt_sequence attribute to the 'invalid offset' magic value.
-            StmtSeq.set(UINT64_MAX);
+            StmtSeq.set(NewOffsetMissing);
             continue;
           }
 
