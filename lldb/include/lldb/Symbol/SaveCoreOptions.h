@@ -44,7 +44,7 @@ public:
   bool ShouldThreadBeSaved(lldb::tid_t tid) const;
   bool HasSpecifiedThreads() const;
 
-  Status EnsureValidConfiguration(lldb::ProcessSP process_sp) const;
+  Status EnsureValidConfiguration() const;
   const MemoryRanges &GetCoreFileMemoryRanges() const;
 
   void AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region);

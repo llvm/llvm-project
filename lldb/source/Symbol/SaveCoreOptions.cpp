@@ -124,16 +124,14 @@ void SaveCoreOptions::AddMemoryRegionToSave(
 const MemoryRanges &SaveCoreOptions::GetCoreFileMemoryRanges() const {
   return m_regions_to_save;
 }
-Status
-SaveCoreOptions::EnsureValidConfiguration(lldb::ProcessSP process_sp) const {
+Status SaveCoreOptions::EnsureValidConfiguration() const {
   Status error;
   std::string error_str;
   if (!m_threads_to_save.empty() && GetStyle() == lldb::eSaveCoreFull)
     error_str += "Cannot save a full core with a subset of threads\n";
 
-  if (m_process_sp && m_process_sp != process_sp)
-    error_str += "Cannot save core for process using supplied core options. "
-                 "Options were constructed targeting a different process. \n";
+  if (!m_process_sp)
+    error_str += "Need to assign a valid process\n";
 
   if (!error_str.empty())
     error = Status(error_str);
@@ -161,7 +159,7 @@ SaveCoreOptions::GetMemoryRegionsToSave() {
   if (!m_process_sp)
     return Status::FromErrorString("Requires a process to be set.").takeError();
 
-  error = EnsureValidConfiguration(m_process_sp);
+  error = EnsureValidConfiguration();
   if (error.Fail())
     return error.takeError();
 
@@ -178,7 +176,7 @@ llvm::Expected<uint64_t> SaveCoreOptions::GetCurrentSizeInBytes() {
   if (!m_process_sp)
     return Status::FromErrorString("Requires a process to be set.").takeError();
 
-  error = EnsureValidConfiguration(m_process_sp);
+  error = EnsureValidConfiguration();
   if (error.Fail())
     return error.takeError();
 
