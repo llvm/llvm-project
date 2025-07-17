@@ -245,6 +245,63 @@ TEST(LlvmLibcStringConverterTest, UTF8To32ErrorHandling) {
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 4);
 }
 
+TEST(LlvmLibcStringConverterTest, InvalidCharacterOutsideBounds) {
+  // if an invalid character exists in the source string but we don't have space
+  // to write it, we should return a "stop converting" error rather than an
+  // invalid character error
+
+  // first 4 bytes are clown emoji (🤡)
+  // next 3 form an invalid character
+  const char *src1 = "\xF0\x9F\xA4\xA1\x90\x88\x30";
+  LIBC_NAMESPACE::internal::mbstate ps1;
+  LIBC_NAMESPACE::internal::StringConverter<char8_t> sc1(
+      reinterpret_cast<const char8_t *>(src1), &ps1, 1);
+
+  auto res1 = sc1.popUTF32();
+  ASSERT_TRUE(res1.has_value());
+  ASSERT_EQ(static_cast<int>(res1.value()), 0x1f921);
+  ASSERT_EQ(static_cast<int>(sc1.getSourceIndex()), 4);
+
+  res1 = sc1.popUTF32();
+  ASSERT_FALSE(res1.has_value());
+  // no space to write error NOT invalid character error (EILSEQ)
+  ASSERT_EQ(static_cast<int>(res1.error()), -1);
+  ASSERT_EQ(static_cast<int>(sc1.getSourceIndex()), 4);
+
+  const wchar_t src2[] = {
+      static_cast<wchar_t>(0x1f921), static_cast<wchar_t>(0xffffff),
+      static_cast<wchar_t>(0x0)}; // clown emoji, invalid utf32
+  LIBC_NAMESPACE::internal::mbstate ps2;
+  LIBC_NAMESPACE::internal::StringConverter<char32_t> sc2(
+      reinterpret_cast<const char32_t *>(src2), &ps2, 4);
+
+  auto res2 = sc2.popUTF8();
+  ASSERT_TRUE(res2.has_value());
+  ASSERT_EQ(static_cast<int>(res2.value()), 0xF0);
+  ASSERT_EQ(static_cast<int>(sc2.getSourceIndex()), 1);
+
+  res2 = sc2.popUTF8();
+  ASSERT_TRUE(res2.has_value());
+  ASSERT_EQ(static_cast<int>(res2.value()), 0x9F);
+  ASSERT_EQ(static_cast<int>(sc2.getSourceIndex()), 1);
+
+  res2 = sc2.popUTF8();
+  ASSERT_TRUE(res2.has_value());
+  ASSERT_EQ(static_cast<int>(res2.value()), 0xA4);
+  ASSERT_EQ(static_cast<int>(sc2.getSourceIndex()), 1);
+
+  res2 = sc2.popUTF8();
+  ASSERT_TRUE(res2.has_value());
+  ASSERT_EQ(static_cast<int>(res2.value()), 0xA1);
+  ASSERT_EQ(static_cast<int>(sc2.getSourceIndex()), 1);
+
+  res2 = sc2.popUTF8();
+  ASSERT_FALSE(res2.has_value());
+  // no space to write error NOT invalid character error (EILSEQ)
+  ASSERT_EQ(static_cast<int>(res2.error()), -1);
+  ASSERT_EQ(static_cast<int>(sc2.getSourceIndex()), 1);
+}
+
 TEST(LlvmLibcStringConverterTest, MultipleStringConverters32To8) {
   /*
   We do NOT test partially popping a character and expecting the next
