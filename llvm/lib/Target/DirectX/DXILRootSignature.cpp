@@ -61,7 +61,7 @@ analyzeModule(Module &M) {
     (the Root parameter of this function), the parsing process needs
     to loop through each of its operands and process the function,
     signature pair.
-*/
+ */
 
   LLVMContext *Ctx = &M.getContext();
 
