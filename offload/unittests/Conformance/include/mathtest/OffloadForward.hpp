@@ -2,7 +2,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
 
 struct ol_error_struct_t;
 typedef const ol_error_struct_t *ol_result_t;
@@ -19,4 +19,4 @@ typedef struct ol_symbol_impl_t *ol_symbol_handle_t;
 
 #ifdef __cplusplus
 }
-#endif
+#endif // __cplusplus

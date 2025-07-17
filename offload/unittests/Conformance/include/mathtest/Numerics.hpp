@@ -36,7 +36,7 @@ public:
 template <> struct StorageTypeOf<float16> {
   using type = uint16_t;
 };
-#endif
+#endif // MATHTEST_HAS_FLOAT16
 
 template <> struct StorageTypeOf<float> {
   using type = uint32_t;
@@ -52,7 +52,7 @@ template <typename T> struct IsFloatingPoint : std::is_floating_point<T> {};
 
 #ifdef MATHTEST_HAS_FLOAT16
 template <> struct IsFloatingPoint<float16> : std::true_type {};
-#endif
+#endif // MATHTEST_HAS_FLOAT16
 
 template <typename T>
 inline constexpr bool IsFloatingPoint_v // NOLINT(readability-identifier-naming)
@@ -101,7 +101,7 @@ template <> struct FPLayout<float16> {
   static constexpr std::size_t ExponentLen = 5;
   static constexpr std::size_t FractionLen = 10;
 };
-#endif
+#endif // MATHTEST_HAS_FLOAT16
 
 template <> struct FPLayout<float> {
   static constexpr std::size_t SignLen = 1;
@@ -167,7 +167,7 @@ template <> [[nodiscard]] constexpr float16 getMinOrNegInf<float16>() noexcept {
 
   return __builtin_bit_cast(float16, static_cast<StorageType>(0xFC00U));
 }
-#endif
+#endif // MATHTEST_HAS_FLOAT16
 
 template <typename T> [[nodiscard]] constexpr T getMaxOrInf() noexcept {
   static_assert(std::is_arithmetic_v<T>, "Type T must be an arithmetic type");
@@ -186,7 +186,7 @@ template <> [[nodiscard]] constexpr float16 getMaxOrInf<float16>() noexcept {
 
   return __builtin_bit_cast(float16, static_cast<StorageType>(0x7C00U));
 }
-#endif
+#endif // MATHTEST_HAS_FLOAT16
 
 template <typename FloatType>
 [[nodiscard]] uint64_t computeUlpDistance(FloatType X, FloatType Y) noexcept {
