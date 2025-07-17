@@ -23,28 +23,22 @@ namespace mlir::spirv {
 namespace {
 
 static std::pair<Attribute, uint32_t>
-getSplatAttributeAndCount(Attribute valueAttr) {
+getSplatAttrAndNumElements(Attribute valueAttr) {
   Attribute attr;
   uint32_t splatCount = 0;
-  if (auto denseAttr = dyn_cast<DenseElementsAttr>(valueAttr)) {
-    if (denseAttr.isSplat()) {
-      attr = denseAttr.getSplatValue<Attribute>();
-      splatCount = denseAttr.size();
-    }
-  } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
-    if (std::adjacent_find(arrayAttr.begin(), arrayAttr.end(),
-                           std::not_equal_to<>()) == arrayAttr.end()) {
+  if (auto splatAttr = dyn_cast<SplatElementsAttr>(valueAttr)) {
+    return {splatAttr.getSplatValue<Attribute>(), splatAttr.size()};
+  }
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
+    if (llvm::all_equal(arrayAttr)) {
       attr = arrayAttr[0];
       splatCount = arrayAttr.size();
     }
-  }
 
-  if (attr) {
-    auto typedAttr = dyn_cast<TypedAttr>(attr);
-    if ((typedAttr && isa<spirv::CompositeType>(typedAttr.getType())) ||
-        isa<ArrayAttr>(attr)) {
+    if (attr) {
+      // Find the inner-most splat value for array of composites
       std::pair<Attribute, uint32_t> newSplatAttrAndCount =
-          getSplatAttributeAndCount(attr);
+          getSplatAttrAndNumElements(attr);
       if (newSplatAttrAndCount.first) {
         return newSplatAttrAndCount;
       }
@@ -63,7 +57,7 @@ struct ConstantOpConversion final : OpRewritePattern<spirv::ConstantOp> {
     if (!compositeType)
       return rewriter.notifyMatchFailure(op, "not a composite constant");
 
-    auto [splatAttr, splatCount] = getSplatAttributeAndCount(op.getValue());
+    auto [splatAttr, splatCount] = getSplatAttrAndNumElements(op.getValue());
     if (!splatAttr)
       return rewriter.notifyMatchFailure(op, "composite is not splat");
 
@@ -73,7 +67,6 @@ struct ConstantOpConversion final : OpRewritePattern<spirv::ConstantOp> {
 
     rewriter.replaceOpWithNewOp<spirv::EXTConstantCompositeReplicateOp>(
         op, op.getType(), splatAttr);
-
     return success();
   }
 };
@@ -93,8 +86,7 @@ struct SpecConstantCompositeOpConversion final
       return rewriter.notifyMatchFailure(op,
                                          "composite has only one consituent");
 
-    if (!(std::adjacent_find(constituents.begin(), constituents.end(),
-                             std::not_equal_to<>()) == constituents.end()))
+    if (!(llvm::all_equal(constituents)))
       return rewriter.notifyMatchFailure(op, "composite is not splat");
 
     auto splatConstituent = dyn_cast<FlatSymbolRefAttr>(constituents[0]);

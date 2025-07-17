@@ -1,6 +1,6 @@
-// RUN: mlir-opt --spirv-convert-to-replicated-const-composite --split-input-file --verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --spirv-promote-to-replicated-constants --split-input-file %s | FileCheck %s
 
-spirv.module Logical GLSL450 {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, ReplicatedCompositesEXT], [SPV_EXT_replicated_composites]> {
   spirv.func @splat_vector_of_i32() -> (vector<3xi32>) "None" {
     // CHECK: {{%.*}} = spirv.EXT.ConstantCompositeReplicate [2 : i32] : vector<3xi32>
     %0 = spirv.Constant dense<2> : vector<3xi32>
@@ -132,21 +132,13 @@ spirv.module Logical GLSL450 {
     %0 = spirv.Constant dense<1.0> : !spirv.arm.tensor<1xf32>
     spirv.ReturnValue %0 : !spirv.arm.tensor<1xf32>
   }
-}
 
-// -----
-
-spirv.module Logical GLSL450 {
   spirv.func @non_splat_vector_of_f32() -> (vector<3xf32>) "None" {
     // CHECK-NOT: spirv.EXT.ConstantCompositeReplicate
     %0 = spirv.Constant dense<[0.0, 1.0, 2.0]> : vector<3xf32>
     spirv.ReturnValue %0 : vector<3xf32>
   }
-}
 
-// -----
-
-spirv.module Logical GLSL450 {
   spirv.func @non_splat_array_of_vectors_of_f32() -> (!spirv.array<2xvector<2xf32>>) "None" {
     // CHECK-NOT: spirv.EXT.ConstantCompositeReplicate
     %0 = spirv.Constant [dense<[1.0, 2.0]> : vector<2xf32>, dense<[1.0, 3.0]> : vector<2xf32>] : !spirv.array<2 x vector<2xf32>>
@@ -156,7 +148,7 @@ spirv.module Logical GLSL450 {
 
 // -----
 
-spirv.module Logical GLSL450 {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, ReplicatedCompositesEXT], [SPV_EXT_replicated_composites]> {
 
   spirv.SpecConstant @sc_i32_1 = 1 : i32
 
