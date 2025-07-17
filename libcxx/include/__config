@@ -416,6 +416,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
 #  endif
 
+// Macros to enter and leave a state where deprecation warnings are suppressed.
+#  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH                                                                             \
+    _LIBCPP_DIAGNOSTIC_PUSH _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated")                                           \
+        _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+#  define _LIBCPP_SUPPRESS_DEPRECATED_POP _LIBCPP_DIAGNOSTIC_POP
+
 #  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 #    define _LIBCPP_HARDENING_SIG f
 #  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE
@@ -711,17 +717,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
 #  else
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T
-#  endif
-
-// Macros to enter and leave a state where deprecation warnings are suppressed.
-#  if defined(_LIBCPP_COMPILER_CLANG_BASED) || defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_SUPPRESS_DEPRECATED_PUSH                                                                           \
-      _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wdeprecated\"")                                \
-          _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#    define _LIBCPP_SUPPRESS_DEPRECATED_POP _Pragma("GCC diagnostic pop")
-#  else
-#    define _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-#    define _LIBCPP_SUPPRESS_DEPRECATED_POP
 #  endif
 
 #  if _LIBCPP_STD_VER <= 11
