@@ -503,7 +503,7 @@ module attributes {transform.with_named_sequence} {
 // It is valid to fuse the pack op with padding semantics if the tiled
 // dimensions do not need padding.
 
-func.func @fuse_pack_consumer_with_padding_semantics(%arg0: tensor<64x32xf32>, %arg1: tensor<64x32xf32>) -> tensor<23x2x3x16xf32> {
+func.func @fuse_pack_consumer_with_padding_semantics(%arg0: tensor<64x32xf32>, %arg1: tensor<64x32xf32>) -> tensor<22x2x3x16xf32> {
   %0 = scf.forall (%arg2) = (0) to (32) step (16) shared_outs(%arg3 = %arg1) -> (tensor<64x32xf32>) {
     %src = tensor.extract_slice %arg0[0, %arg2] [64, 16] [1, 1] : tensor<64x32xf32> to tensor<64x16xf32>
     %dest = tensor.extract_slice %arg3[0, %arg2] [64, 16] [1, 1] : tensor<64x32xf32> to tensor<64x16xf32>
@@ -512,10 +512,10 @@ func.func @fuse_pack_consumer_with_padding_semantics(%arg0: tensor<64x32xf32>, %
       tensor.parallel_insert_slice %2 into %arg3[0, %arg2] [64, 16] [1, 1] : tensor<64x16xf32> into tensor<64x32xf32>
     }
   }
-  %1 = tensor.empty() : tensor<23x2x3x16xf32>
+  %1 = tensor.empty() : tensor<22x2x3x16xf32>
   %cst = arith.constant 0.000000e+00 : f32
-  %pack = linalg.pack %0 padding_value(%cst : f32) inner_dims_pos = [0, 1] inner_tiles = [3, 16] into %1 : tensor<64x32xf32> -> tensor<23x2x3x16xf32>
-  return %pack : tensor<23x2x3x16xf32>
+  %pack = linalg.pack %0 padding_value(%cst : f32) inner_dims_pos = [0, 1] inner_tiles = [3, 16] into %1 : tensor<64x32xf32> -> tensor<22x2x3x16xf32>
+  return %pack : tensor<22x2x3x16xf32>
 }
 
 module attributes {transform.with_named_sequence} {
@@ -530,7 +530,7 @@ module attributes {transform.with_named_sequence} {
 //      CHECK: func.func @fuse_pack_consumer_with_padding_semantics(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]
-//  CHECK-DAG:   %[[OUT_INIT:.*]] = tensor.empty() : tensor<23x2x3x16xf32>
+//  CHECK-DAG:   %[[OUT_INIT:.*]] = tensor.empty() : tensor<22x2x3x16xf32>
 //  CHECK-DAG:   %[[PAD_VAL:.*]] = arith.constant 0.000000e+00 : f32
 //      CHECK:   %{{.*}}:2 = scf.forall (%[[IV:.*]]) = (0) to (32) step (16)
 // CHECK-SAME:      shared_outs(%[[FIRST_OUT_ARG:.*]] = %[[ARG1]], %[[PACK_OUT_ARG:.*]] = %[[OUT_INIT]])
@@ -540,14 +540,14 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:        ins(%[[ELEM_SRC]]
 // CHECK-SAME:        outs(%[[ELEM_DEST]]
 //  CHECK-DAG:      %[[PACK_RESULT_OFFSET:.*]] = affine.apply #[[PACK_RESULT_MAP]](%[[IV]])
-//  CHECK-DAG:      %[[TILED_PACK_DEST:.*]] = tensor.extract_slice %[[PACK_OUT_ARG]][0, %[[PACK_RESULT_OFFSET]], 0, 0] [23, 1, 3, 16] [1, 1, 1, 1]
+//  CHECK-DAG:      %[[TILED_PACK_DEST:.*]] = tensor.extract_slice %[[PACK_OUT_ARG]][0, %[[PACK_RESULT_OFFSET]], 0, 0] [22, 1, 3, 16] [1, 1, 1, 1]
 //      CHECK:      %[[TILED_PACK_OUT:.*]] = linalg.pack %[[ELEM]]
 // CHECK-SAME:        padding_value(%[[PAD_VAL]] : f32)
 // CHECK-SAME:        inner_dims_pos = [0, 1] inner_tiles = [3, 16]
 // CHECK-SAME:        into %[[TILED_PACK_DEST]]
 //      CHECK:      scf.forall.in_parallel {
 //      CHECK:          tensor.parallel_insert_slice %[[GENERIC_OUT]] into %[[FIRST_OUT_ARG]][0, %[[IV]]] [64, 16] [1, 1]
-//      CHECK:          tensor.parallel_insert_slice %[[TILED_PACK_OUT]] into %[[PACK_OUT_ARG]][0, %[[PACK_RESULT_OFFSET]], 0, 0] [23, 1, 3, 16] [1, 1, 1, 1]
+//      CHECK:          tensor.parallel_insert_slice %[[TILED_PACK_OUT]] into %[[PACK_OUT_ARG]][0, %[[PACK_RESULT_OFFSET]], 0, 0] [22, 1, 3, 16] [1, 1, 1, 1]
 
 // -----
 
