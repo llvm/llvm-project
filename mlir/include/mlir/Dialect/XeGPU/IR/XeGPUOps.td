@@ -110,23 +110,34 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     Variadic<Index>: $offsets,
     Variadic<Index>: $shape,
     Variadic<Index>: $strides,
-    DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
     OptionalAttr<DenseI64ArrayAttr>: $const_shape,
     OptionalAttr<DenseI64ArrayAttr>: $const_strides
   );
-  let results = (outs XeGPU_TensorDesc: $TensorDesc);
 
   let assemblyFormat = [{
     $source ``
-    custom<DynamicIndexList>($offsets, $const_offsets)
-    (`,` custom<DynamicIndexList>($shape, $const_shape)^
-     `,` custom<DynamicIndexList>($strides, $const_strides))?
+    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
+    (`,` `shape` `:` custom<DynamicIndexList>($shape, $const_shape)^
+     `,` `strides``:` custom<DynamicIndexList>($strides, $const_strides))?
     attr-dict `:` type($source) `->` qualified(type($TensorDesc))
   }];
+
+  let results = (outs XeGPU_TensorDesc: $TensorDesc);
 
   let hasVerifier = 1;
 
   let builders = [
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source)>,
+
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType> ": $source,
+                   "llvm::ArrayRef<OpFoldResult>": $shape,
+                   "llvm::ArrayRef<OpFoldResult>": $strides)>,
+
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<IntegerType> ": $source,
+                   "llvm::ArrayRef<OpFoldResult>": $shape,
+                   "llvm::ArrayRef<OpFoldResult>": $strides)>,
+
     OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source,
                    "llvm::ArrayRef<OpFoldResult>": $offsets)>,
 
@@ -163,7 +174,17 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     }
 
     ArrayRef<int64_t> getStaticOffsets(){
-      return getConstOffsets();
+      auto attr = getConstOffsetsAttr();
+
+      if (attr) 
+        return attr;
+
+      int64_t rank = getMixedSizes().size();
+      
+      setConstOffsets(llvm::SmallVector<int64_t, 4>(rank, 0));
+
+      attr = getConstOffsetsAttr();
+      return attr;
     }
 
     /// wrapper for matching with OffsetSizeAndStrideOpInterface
@@ -172,9 +193,15 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     /// and `const_shape` will be used to represent the shape of
     /// source operand. They overide static shape from source memref type.
     ArrayRef<int64_t> getStaticSizes() {
+      /// To be compatible with OffsetSizeAndStrideOpInterface, which expects valid return value and perform checks
+      static  llvm::SmallVector<int64_t, 4> emptyShape;
+
       auto attr = getConstShapeAttr();
-      if (llvm::isa<IntegerType>(getSourceType()) || attr)
+      if (attr)
         return attr;
+
+      if (llvm::isa<IntegerType>(getSourceType()))
+        return emptyShape;
 
       auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
       assert(memrefType && "Incorrect use of getStaticSizes");
@@ -187,9 +214,15 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     /// and `const_strides` will be used to represent the strides of
     /// source operand. They overide static strides from source memref type.
     ArrayRef<int64_t> getStaticStrides() {
+      /// To be compatible with OffsetSizeAndStrideOpInterface, which expects valid return value and perform checks
+      static llvm::SmallVector<int64_t, 4> emptyStrides;
+
       auto attr = getConstStridesAttr();
-      if (llvm::isa<IntegerType>(getSourceType()) || attr)
+      if (attr)
         return attr;
+      
+      if (llvm::isa<IntegerType>(getSourceType()))
+        return emptyStrides;
 
       auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
       assert(memrefType && "Incorrect use of getStaticStrides");
