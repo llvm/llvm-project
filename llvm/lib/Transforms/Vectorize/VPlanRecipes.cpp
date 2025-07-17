@@ -514,7 +514,6 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
-  case VPInstruction::WidePtrAdd:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::AnyOf:
     return true;
@@ -858,7 +857,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::WidePtrAdd: {
     Value *Ptr = State.get(getOperand(0), true);
-    Value *Addend = State.get(getOperand(1), vputils::onlyFirstLaneUsed(this));
+    Value *Addend = State.get(getOperand(1));
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::AnyOf: {
@@ -1090,8 +1089,9 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::ReductionStartVector:
     return true;
   case VPInstruction::PtrAdd:
-  case VPInstruction::WidePtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
+  case VPInstruction::WidePtrAdd:
+    return Op == getOperand(0);
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);

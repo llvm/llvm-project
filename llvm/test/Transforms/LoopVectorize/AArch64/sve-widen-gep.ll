@@ -162,11 +162,10 @@ define void @pointer_induction(ptr noalias %start, i64 %N) {
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 2 x i64> [[DOTSPLAT]], i32 0
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <vscale x 2 x i64> [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP20]], [[TMP21]]
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP14]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add <vscale x 2 x i64> [[DOTSPLAT]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = mul <vscale x 2 x i64> [[TMP13]], splat (i64 1)
+; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 2 x i64> [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 2 x ptr> [[VECTOR_GEP]], i32 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP15]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i8>, ptr [[TMP16]], align 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = add <vscale x 2 x i8> [[WIDE_LOAD]], splat (i8 1)
