@@ -328,7 +328,7 @@ gpu.func @dpas_no_sg_data(%a: memref<24x32xf32>, %b: memref<32x24xf32>) {
         : !xegpu.tensor_desc<128x64xf32, #xegpu.layout<sg_layout = [4, 4], sg_data = [32, 16], lane_layout = [8, 4], lane_data = [1, 1]>>
         -> vector<128x64xf32>
       %exp = math.exp %load {layout_result_0 = #xegpu.layout<sg_layout = [4, 4], sg_data = [32, 16], lane_layout = [8, 4], lane_data = [1, 1]>} : vector<128x64xf32>
-    }{sg_id_range = #xegpu.range<[2, 32]>}
+    }{sg_id_range = #xegpu.range<[2, 18]>}
     gpu.return
   }
 
@@ -358,7 +358,7 @@ gpu.func @dpas_no_sg_data(%a: memref<24x32xf32>, %b: memref<32x24xf32>) {
           -> vector<128x64xf32>
         %exp = math.exp %ld {layout_result_0 = #xegpu.layout<sg_layout = [4, 4], sg_data = [32, 16], lane_layout = [8, 4], lane_data = [1, 1]>} : vector<128x64xf32>
     }
-  } {sg_id_range = #xegpu.range<[3, 32]>}
+  } {sg_id_range = #xegpu.range<[3, 19]>}
   gpu.return
   }
 }

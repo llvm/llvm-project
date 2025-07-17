@@ -34,6 +34,26 @@ using namespace mlir;
 
 namespace {
 
+// Check if there is sg id specialization.
+static bool isSgIdSpecialized(Operation *op, int64_t &startOfRange,
+                              int64_t &endOfRange) {
+  Operation *parent = op->getParentOp();
+  // Find the outermost scf::IfOp with xegpu.sg_id_range.
+  while (parent) {
+    if (auto ifOp = dyn_cast<scf::IfOp>(parent)) {
+      if (auto attr = llvm::dyn_cast_or_null<xegpu::RangeAttr>(
+              ifOp->getAttr("sg_id_range"))) {
+        startOfRange = attr.getStart().getInt();
+        endOfRange = attr.getEnd().getInt();
+        break;
+      }
+    }
+    parent = parent->getParentOp();
+  }
+  // Return false if startOfRange is 0
+  return (startOfRange > 0 && endOfRange > startOfRange);
+}
+
 static std::pair<SmallVector<int64_t>, int>
 getSgShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
   int count = 1;
@@ -174,32 +194,16 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       sgDataDim[i] = rewriter.create<arith::ConstantIndexOp>(loc, sgShape[i]);
     }
 
-    // Check if there is warp specialization.
-    auto isWarpSpecialized = [](Operation *op, int64_t &startOfRange,
-                                int64_t &endOfRange) -> bool {
-      Operation *parent = op->getParentOp();
-      // Find the outermost scf::IfOp with xegpu.sg_id_range.
-      while (parent) {
-        if (auto ifOp = dyn_cast<scf::IfOp>(parent)) {
-          if (auto attr = llvm::dyn_cast_or_null<xegpu::RangeAttr>(
-                  ifOp->getAttr("sg_id_range"))) {
-            startOfRange = attr.getStart().getInt();
-            endOfRange = attr.getEnd().getInt();
-            break;
-          }
-        }
-        parent = parent->getParentOp();
-      }
-      // Return false if startOfRange is 0
-      return (startOfRange > 0 && endOfRange > startOfRange);
-    };
-
     int64_t startOfRange = -1, endOfRange = -1;
-    bool warpSpecialized = isWarpSpecialized(op, startOfRange, endOfRange);
+    bool sgIdSpecialized = isSgIdSpecialized(op, startOfRange, endOfRange);
 
-    // If warp specialization is detected, adjust the subgroup id accordingly
     Value adjustedSgId = linearSgId;
-    if (warpSpecialized) {
+    if (sgIdSpecialized) {
+      int64_t expectedSgLayoutSize = endOfRange - startOfRange;
+      if (computeProduct(sgLayout) != expectedSgLayoutSize) {
+        return rewriter.notifyMatchFailure(
+            op, "sg_layout size must match the sg_id_range");
+      }
       // Subtract startOfRange from the original subgroup id to get the adjusted
       // sg id
       Value startOfRangeVal =
