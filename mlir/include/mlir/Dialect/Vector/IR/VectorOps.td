@@ -1543,30 +1543,29 @@ def Vector_TransferReadOp :
   }];
 
   let builders = [
-    /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+    /// 1. Builder that sets padding to `padding` or poison if not provided and
+    /// an empty mask (variant with attrs).
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
+                   "std::optional<Value>":$padding,
                    "AffineMapAttr":$permutationMapAttr,
                    "ArrayAttr":$inBoundsAttr)>,
-    /// 2. Builder that sets padding to zero and an empty mask (variant without attrs).
+    /// 2. Builder that sets padding to `padding` or poison if not provided and
+    /// an empty mask (variant without attrs).
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
+                   "std::optional<Value>":$padding,
                    "AffineMap":$permutationMap,
                    CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
-    /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+    /// 3. Builder that sets padding to `padding` or poison if not provided and
+    /// permutation map to 'getMinorIdentityMap'.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
-                   "Value":$padding,
-                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
-    /// 4. Builder that sets padding to zero and permutation map to
-    /// 'getMinorIdentityMap'.
-    OpBuilder<(ins "VectorType":$vectorType,
-                   "Value":$source,
-                   "ValueRange":$indices,
-                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+                   "std::optional<Value>":$padding,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>
   ];
 
   let extraClassDeclaration = [{
@@ -2493,6 +2492,7 @@ def Vector_ConstantMaskOp :
 
   let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def Vector_CreateMaskOp :
@@ -3011,12 +3011,7 @@ def Vector_ScanOp :
       vector<4x8x16x32xf32>, vector<4x16x32xf32>
     ```
   }];
-  let builders = [
-    OpBuilder<(ins "Value":$source, "Value":$initial_value,
-                   "CombiningKind":$kind,
-                   CArg<"int64_t", "0">:$reduction_dim,
-                   CArg<"bool", "true">:$inclusive)>
-  ];
+
   let extraClassDeclaration = [{
     VectorType getSourceType() {
       return ::llvm::cast<VectorType>(getSource().getType());

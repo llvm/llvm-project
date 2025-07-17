@@ -15,6 +15,48 @@
 
 include "mlir/IR/OpBase.td"
 
+def CIR_IntTypeInterface : TypeInterface<"IntTypeInterface"> {
+  let description = [{
+    Contains helper functions to query properties about an integer type.
+  }];
+  let cppNamespace = "::cir";
+  let methods = [
+    InterfaceMethod<[{
+        Returns true if this is a signed integer type.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isSigned",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_type.isSigned();
+      }]
+    >,
+    InterfaceMethod<[{
+        Returns true if this is an unsigned integer type.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isUnsigned",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_type.isUnsigned();
+      }]
+    >,
+    InterfaceMethod<[{
+        Returns the bit width of this integer type.
+      }],
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getWidth",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_type.getWidth();
+      }]
+    >
+  ];
+}
+
 def CIR_FPTypeInterface : TypeInterface<"FPTypeInterface"> {
   let description = [{
     Contains helper functions to query properties about a floating-point type.

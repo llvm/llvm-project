@@ -3015,7 +3015,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
         //   %phi = phi ptr [ %0, %bb0 ], [ %2, %entry ]
         if (PredBB && PredBB->getSingleSuccessor() == BB)
           CI = dyn_cast_or_null<CallInst>(
-              PredBB->getTerminator()->getPrevNonDebugInstruction(true));
+              PredBB->getTerminator()->getPrevNode());
 
         if (CI && CI->use_empty() &&
             isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
@@ -3032,7 +3032,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
     for (BasicBlock *Pred : predecessors(BB)) {
       if (!VisitedBBs.insert(Pred).second)
         continue;
-      if (Instruction *I = Pred->rbegin()->getPrevNonDebugInstruction(true)) {
+      if (Instruction *I = Pred->rbegin()->getPrevNode()) {
         CallInst *CI = dyn_cast<CallInst>(I);
         if (CI && CI->use_empty() && TLI->mayBeEmittedAsTailCall(CI) &&
             attributesPermitTailCall(F, CI, RetI, *TLI)) {
@@ -6092,6 +6092,13 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       }
 
       if (!ResultIndex) {
+        auto PtrInst = dyn_cast<Instruction>(ResultPtr);
+        // We know that we have a pointer without any offsets. If this pointer
+        // originates from a different basic block than the current one, we
+        // must be able to recreate it in the current basic block.
+        // We do not support the recreation of any instructions yet.
+        if (PtrInst && PtrInst->getParent() != MemoryInst->getParent())
+          return Modified;
         SunkAddr = ResultPtr;
       } else {
         if (ResultPtr->getType() != I8PtrTy)
@@ -7321,7 +7328,7 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
       !TLI->isLoadExtLegal(ISD::ZEXTLOAD, LoadResultVT, TruncVT))
     return false;
 
-  IRBuilder<> Builder(Load->getNextNonDebugInstruction());
+  IRBuilder<> Builder(Load->getNextNode());
   auto *NewAnd = cast<Instruction>(
       Builder.CreateAnd(Load, ConstantInt::get(Ctx, DemandBits)));
   // Mark this instruction as "inserted by CGP", so that other

@@ -73,7 +73,16 @@ public:
   }
 
   void processFunctionScopes(mlir::func::FuncOp func);
-  fir::DummyScopeOp getDeclarationScope(fir::DeclareOp declareOp);
+  // For the given fir.declare returns the dominating fir.dummy_scope
+  // operation.
+  fir::DummyScopeOp getDeclarationScope(fir::DeclareOp declareOp) const;
+  // For the given fir.declare returns the outermost fir.dummy_scope
+  // in the current function.
+  fir::DummyScopeOp getOutermostScope(fir::DeclareOp declareOp) const;
+  // Returns true, if the given type of a memref of a FirAliasTagOpInterface
+  // operation is a descriptor or contains a descriptor
+  // (e.g. !fir.ref<!fir.type<Derived{f:!fir.box<!fir.heap<f32>>}>>).
+  bool typeReferencesDescriptor(mlir::Type type);
 
 private:
   mlir::DominanceInfo &domInfo;
@@ -90,6 +99,10 @@ private:
   // to the dominance information.
   llvm::DenseMap<mlir::func::FuncOp, llvm::SmallVector<fir::DummyScopeOp, 16>>
       sortedScopeOperations;
+
+  // Local pass cache for derived types that contain descriptor
+  // member(s), to avoid the cost of isRecordWithDescriptorMember().
+  llvm::DenseSet<mlir::Type> typesContainingDescriptors;
 };
 
 // Process fir.dummy_scope operations in the given func:
@@ -119,9 +132,8 @@ void PassState::processFunctionScopes(mlir::func::FuncOp func) {
   }
 }
 
-// For the given fir.declare returns the dominating fir.dummy_scope
-// operation.
-fir::DummyScopeOp PassState::getDeclarationScope(fir::DeclareOp declareOp) {
+fir::DummyScopeOp
+PassState::getDeclarationScope(fir::DeclareOp declareOp) const {
   auto func = declareOp->getParentOfType<mlir::func::FuncOp>();
   assert(func && "fir.declare does not have parent func.func");
   auto &scopeOps = sortedScopeOperations.at(func);
@@ -130,6 +142,31 @@ fir::DummyScopeOp PassState::getDeclarationScope(fir::DeclareOp declareOp) {
       return *II;
   }
   return nullptr;
+}
+
+fir::DummyScopeOp PassState::getOutermostScope(fir::DeclareOp declareOp) const {
+  auto func = declareOp->getParentOfType<mlir::func::FuncOp>();
+  assert(func && "fir.declare does not have parent func.func");
+  auto &scopeOps = sortedScopeOperations.at(func);
+  if (!scopeOps.empty())
+    return scopeOps[0];
+  return nullptr;
+}
+
+bool PassState::typeReferencesDescriptor(mlir::Type type) {
+  type = fir::unwrapAllRefAndSeqType(type);
+  if (mlir::isa<fir::BaseBoxType>(type))
+    return true;
+
+  if (mlir::isa<fir::RecordType>(type)) {
+    if (typesContainingDescriptors.contains(type))
+      return true;
+    if (fir::isRecordWithDescriptorMember(type)) {
+      typesContainingDescriptors.insert(type);
+      return true;
+    }
+  }
+  return false;
 }
 
 class AddAliasTagsPass : public fir::impl::AddAliasTagsBase<AddAliasTagsPass> {
@@ -187,11 +224,17 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
          "load and store only access one address");
   mlir::Value memref = accessedOperands.front();
 
-  // skip boxes. These get an "any descriptor access" tag in TBAABuilder
-  // (CodeGen). I didn't see any speedup from giving each box a separate TBAA
-  // type.
-  if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(memref.getType())))
+  // Skip boxes and derived types that contain descriptors.
+  // The box accesses get an "any descriptor access" tag in TBAABuilder
+  // (CodeGen). The derived types accesses get "any access" tag
+  // (because they access both the data and the descriptor(s)).
+  // Note that it would be incorrect to attach any "data" access
+  // tag to the derived type accesses here, because the tags
+  // attached to the descriptor accesses in CodeGen will make
+  // them non-conflicting with any descriptor accesses.
+  if (state.typeReferencesDescriptor(memref.getType()))
     return;
+
   LLVM_DEBUG(llvm::dbgs() << "Analysing " << op << "\n");
 
   const fir::AliasAnalysis::Source &source = state.getSource(memref);
@@ -278,6 +321,15 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       name = alloc.getUniqName();
     else
       unknownAllocOp = true;
+
+    if (auto declOp = source.origin.instantiationPoint) {
+      // Use the outermost scope for local allocations,
+      // because using the innermost scope may result
+      // in incorrect TBAA, when calls are inlined in MLIR.
+      auto declareOp = mlir::dyn_cast<fir::DeclareOp>(declOp);
+      assert(declareOp && "Instantiation point must be fir.declare");
+      scopeOp = state.getOutermostScope(declareOp);
+    }
 
     if (unknownAllocOp) {
       LLVM_DEBUG(llvm::dbgs().indent(2)

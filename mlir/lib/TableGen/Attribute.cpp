@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/TableGen/Record.h"
 

@@ -10,6 +10,7 @@
 
 #include "check-acc-structure.h"
 #include "check-omp-structure.h"
+#include "openmp-utils.h"
 #include "resolve-names-utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/fold.h"
@@ -353,12 +354,6 @@ public:
     return true;
   }
 
-  bool Pre(const parser::OmpDirectiveSpecification &x) {
-    PushContext(x.source, x.DirId());
-    return true;
-  }
-  void Post(const parser::OmpDirectiveSpecification &) { PopContext(); }
-
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_metadirective);
     return true;
@@ -370,6 +365,29 @@ public:
 
   void Post(const parser::OmpBeginBlockDirective &) {
     GetContext().withinConstruct = true;
+  }
+
+  bool Pre(const parser::OpenMPStandaloneConstruct &x) {
+    common::visit(
+        [&](auto &&s) {
+          using TypeS = llvm::remove_cvref_t<decltype(s)>;
+          // These two cases are handled individually.
+          if constexpr ( //
+              !std::is_same_v<TypeS, parser::OpenMPSimpleStandaloneConstruct> &&
+              !std::is_same_v<TypeS, parser::OmpMetadirectiveDirective>) {
+            PushContext(x.source, s.v.DirId());
+          }
+        },
+        x.u);
+    return true;
+  }
+
+  void Post(const parser::OpenMPStandaloneConstruct &x) {
+    // These two cases are handled individually.
+    if (!std::holds_alternative<parser::OpenMPSimpleStandaloneConstruct>(x.u) &&
+        !std::holds_alternative<parser::OmpMetadirectiveDirective>(x.u)) {
+      PopContext();
+    }
   }
 
   bool Pre(const parser::OpenMPSimpleStandaloneConstruct &);
@@ -494,6 +512,12 @@ public:
 
   bool Pre(const parser::OpenMPAllocatorsConstruct &);
   void Post(const parser::OpenMPAllocatorsConstruct &);
+
+  bool Pre(const parser::OmpDeclareVariantDirective &x) {
+    PushContext(x.source, llvm::omp::Directive::OMPD_declare_variant);
+    return true;
+  }
+  void Post(const parser::OmpDeclareVariantDirective &) { PopContext(); };
 
   void Post(const parser::OmpObjectList &x) {
     // The objects from OMP clauses should have already been resolved,
@@ -1796,10 +1820,13 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
 
   if (beginDir.v == llvm::omp::Directive::OMPD_do) {
-    if (const auto &doConstruct{
-            std::get<std::optional<parser::DoConstruct>>(x.t)}) {
-      if (doConstruct.value().IsDoWhile()) {
-        return true;
+    auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
+    if (optLoopCons.has_value()) {
+      if (const auto &doConstruct{
+              std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+        if (doConstruct->IsDoWhile()) {
+          return true;
+        }
       }
     }
   }
@@ -1962,48 +1989,69 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
   bool hasCollapseClause{
       clause ? (clause->Id() == llvm::omp::OMPC_collapse) : false};
 
-  const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  if (outer.has_value()) {
-    for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
-      if (loop->IsDoConcurrent()) {
-        // DO CONCURRENT is explicitly allowed for the LOOP construct so long as
-        // there isn't a COLLAPSE clause
-        if (isLoopConstruct) {
-          if (hasCollapseClause) {
-            // hasCollapseClause implies clause != nullptr
-            context_.Say(clause->source,
-                "DO CONCURRENT loops cannot be used with the COLLAPSE clause."_err_en_US);
+  auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
+  if (optLoopCons.has_value()) {
+    if (const auto &outer{std::get_if<parser::DoConstruct>(&*optLoopCons)}) {
+      for (const parser::DoConstruct *loop{&*outer}; loop && level > 0;
+          --level) {
+        if (loop->IsDoConcurrent()) {
+          // DO CONCURRENT is explicitly allowed for the LOOP construct so long
+          // as there isn't a COLLAPSE clause
+          if (isLoopConstruct) {
+            if (hasCollapseClause) {
+              // hasCollapseClause implies clause != nullptr
+              context_.Say(clause->source,
+                  "DO CONCURRENT loops cannot be used with the COLLAPSE clause."_err_en_US);
+            }
+          } else {
+            auto &stmt =
+                std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t);
+            context_.Say(stmt.source,
+                "DO CONCURRENT loops cannot form part of a loop nest."_err_en_US);
           }
-        } else {
-          auto &stmt =
-              std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t);
-          context_.Say(stmt.source,
-              "DO CONCURRENT loops cannot form part of a loop nest."_err_en_US);
         }
-      }
-      // go through all the nested do-loops and resolve index variables
-      const parser::Name *iv{GetLoopIndex(*loop)};
-      if (iv) {
-        if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
-          SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
-          iv->symbol = symbol; // adjust the symbol within region
-          AddToContextObjectWithDSA(*symbol, ivDSA);
-        }
+        // go through all the nested do-loops and resolve index variables
+        const parser::Name *iv{GetLoopIndex(*loop)};
+        if (iv) {
+          if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
+            SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
+            iv->symbol = symbol; // adjust the symbol within region
+            AddToContextObjectWithDSA(*symbol, ivDSA);
+          }
 
-        const auto &block{std::get<parser::Block>(loop->t)};
-        const auto it{block.begin()};
-        loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+          const auto &block{std::get<parser::Block>(loop->t)};
+          const auto it{block.begin()};
+          loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+        }
       }
+      CheckAssocLoopLevel(level, GetAssociatedClause());
+    } else if (const auto &loop{std::get_if<
+                   common::Indirection<parser::OpenMPLoopConstruct>>(
+                   &*optLoopCons)}) {
+      auto &beginDirective =
+          std::get<parser::OmpBeginLoopDirective>(loop->value().t);
+      auto &beginLoopDirective =
+          std::get<parser::OmpLoopDirective>(beginDirective.t);
+      if (beginLoopDirective.v != llvm::omp::Directive::OMPD_unroll &&
+          beginLoopDirective.v != llvm::omp::Directive::OMPD_tile) {
+        context_.Say(GetContext().directiveSource,
+            "Only UNROLL or TILE constructs are allowed between an OpenMP Loop Construct and a DO construct"_err_en_US,
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                GetContext().directive, version)
+                    .str()));
+      } else {
+        PrivatizeAssociatedLoopIndexAndCheckLoopLevel(loop->value());
+      }
+    } else {
+      context_.Say(GetContext().directiveSource,
+          "A DO loop must follow the %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(
+              llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
+                  .str()));
     }
-    CheckAssocLoopLevel(level, GetAssociatedClause());
-  } else {
-    context_.Say(GetContext().directiveSource,
-        "A DO loop must follow the %s directive"_err_en_US,
-        parser::ToUpperCaseLetters(
-            llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
-                .str()));
   }
 }
+
 void OmpAttributeVisitor::CheckAssocLoopLevel(
     std::int64_t level, const parser::OmpClause *clause) {
   if (clause && level != 0) {
@@ -2119,9 +2167,10 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPExecutableAllocate &x) {
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
-  PushContext(x.source, llvm::omp::Directive::OMPD_allocators);
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const auto &clause : clauseList.v) {
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+  PushContext(x.source, dirSpec.DirId());
+
+  for (const auto &clause : dirSpec.Clauses().v) {
     if (const auto *allocClause{
             std::get_if<parser::OmpClause::Allocate>(&clause.u)}) {
       ResolveOmpObjectList(std::get<parser::OmpObjectList>(allocClause->v.t),
@@ -2204,28 +2253,43 @@ void OmpAttributeVisitor::Post(const parser::OpenMPExecutableAllocate &x) {
 }
 
 void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const auto &clause : clauseList.v) {
-    if (const auto *alloc{
-            std::get_if<parser::OmpClause::Allocate>(&clause.u)}) {
-      CheckAllNamesInAllocateStmt(dir.source,
-          std::get<parser::OmpObjectList>(alloc->v.t),
-          std::get<parser::Statement<parser::AllocateStmt>>(x.t).statement);
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+  auto &block{std::get<parser::Block>(x.t)};
 
-      auto &modifiers{OmpGetModifiers(alloc->v)};
-      bool hasAllocator{
-          OmpGetUniqueModifier<parser::OmpAllocatorSimpleModifier>(modifiers) ||
-          OmpGetUniqueModifier<parser::OmpAllocatorComplexModifier>(modifiers)};
+  omp::SourcedActionStmt action{omp::GetActionStmt(block)};
+  const parser::AllocateStmt *allocate{[&]() {
+    if (action) {
+      if (auto *alloc{std::get_if<common::Indirection<parser::AllocateStmt>>(
+              &action.stmt->u)}) {
+        return &alloc->value();
+      }
+    }
+    return static_cast<const parser::AllocateStmt *>(nullptr);
+  }()};
 
-      // TODO: As with allocate directive, exclude the case when a requires
-      //       directive with the dynamic_allocators clause is present in
-      //       the same compilation unit (OMP5.0 2.11.3).
-      if (IsNestedInDirective(llvm::omp::Directive::OMPD_target) &&
-          !hasAllocator) {
-        context_.Say(x.source,
-            "ALLOCATORS directives that appear in a TARGET region "
-            "must specify an allocator"_err_en_US);
+  if (allocate) {
+    for (const auto &clause : dirSpec.Clauses().v) {
+      if (auto *alloc{std::get_if<parser::OmpClause::Allocate>(&clause.u)}) {
+        CheckAllNamesInAllocateStmt(
+            x.source, std::get<parser::OmpObjectList>(alloc->v.t), *allocate);
+
+        using OmpAllocatorSimpleModifier = parser::OmpAllocatorSimpleModifier;
+        using OmpAllocatorComplexModifier = parser::OmpAllocatorComplexModifier;
+
+        auto &modifiers{OmpGetModifiers(alloc->v)};
+        bool hasAllocator{
+            OmpGetUniqueModifier<OmpAllocatorSimpleModifier>(modifiers) ||
+            OmpGetUniqueModifier<OmpAllocatorComplexModifier>(modifiers)};
+
+        // TODO: As with allocate directive, exclude the case when a requires
+        //       directive with the dynamic_allocators clause is present in
+        //       the same compilation unit (OMP5.0 2.11.3).
+        if (IsNestedInDirective(llvm::omp::Directive::OMPD_target) &&
+            !hasAllocator) {
+          context_.Say(x.source,
+              "ALLOCATORS directives that appear in a TARGET region "
+              "must specify an allocator"_err_en_US);
+        }
       }
     }
   }

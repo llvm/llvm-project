@@ -63,7 +63,7 @@ template <> inline std::string printArg<Floating>(Program &P, CodePtr &OpPC) {
 
   std::string S;
   llvm::raw_string_ostream SS(S);
-  SS << Result;
+  SS << std::move(Result);
   return S;
 }
 
@@ -81,7 +81,7 @@ inline std::string printArg<IntegralAP<false>>(Program &P, CodePtr &OpPC) {
 
   std::string Str;
   llvm::raw_string_ostream SS(Str);
-  SS << Result;
+  SS << std::move(Result);
   return Str;
 }
 
@@ -99,7 +99,7 @@ inline std::string printArg<IntegralAP<true>>(Program &P, CodePtr &OpPC) {
 
   std::string Str;
   llvm::raw_string_ostream SS(Str);
-  SS << Result;
+  SS << std::move(Result);
   return Str;
 }
 
@@ -109,7 +109,7 @@ template <> inline std::string printArg<FixedPoint>(Program &P, CodePtr &OpPC) {
 
   std::string Result;
   llvm::raw_string_ostream SS(Result);
-  SS << F;
+  SS << std::move(F);
   return Result;
 }
 

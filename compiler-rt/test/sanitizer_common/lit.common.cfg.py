@@ -87,7 +87,7 @@ config.substitutions.append(("%collect_stack_traces", collect_stack_traces))
 config.substitutions.append(("%tool_name", config.tool_name))
 config.substitutions.append(("%tool_options", tool_options))
 config.substitutions.append(
-    ("%env_tool_opts=", "env " + tool_options + "=" + default_tool_options_str)
+    ("%env_tool_opts=", "%env " + tool_options + "=" + default_tool_options_str)
 )
 
 config.suffixes = [".c", ".cpp"]

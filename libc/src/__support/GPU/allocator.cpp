@@ -22,6 +22,7 @@
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/threads/sleep.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -137,6 +138,11 @@ void uniform_memset(uint32_t *s, uint32_t c, uint32_t n, uint64_t uniform) {
     s[i] = c;
 }
 
+// Indicates that the provided value is a power of two.
+static inline constexpr bool is_pow2(uint64_t x) {
+  return x && (x & (x - 1)) == 0;
+}
+
 } // namespace impl
 
 /// A slab allocator used to hand out identically sized slabs of memory.
@@ -183,7 +189,9 @@ struct Slab {
 
   // Get the number of bytes needed to contain the bitfield bits.
   constexpr static uint32_t bitfield_bytes(uint32_t chunk_size) {
-    return ((num_chunks(chunk_size) + BITS_IN_WORD - 1) / BITS_IN_WORD) * 8;
+    return __builtin_align_up(
+        ((num_chunks(chunk_size) + BITS_IN_WORD - 1) / BITS_IN_WORD) * 8,
+        MIN_ALIGNMENT + 1);
   }
 
   // The actual amount of memory available excluding the bitfield and metadata.
@@ -540,14 +548,57 @@ void deallocate(void *ptr) {
     return;
 
   // All non-slab allocations will be aligned on a 2MiB boundary.
-  if ((reinterpret_cast<uintptr_t>(ptr) & SLAB_ALIGNMENT) == 0)
+  if (__builtin_is_aligned(ptr, SLAB_ALIGNMENT + 1))
     return impl::rpc_free(ptr);
 
   // The original slab pointer is the 2MiB boundary using the given pointer.
-  Slab *slab = reinterpret_cast<Slab *>(
-      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT));
+  Slab *slab = cpp::launder(reinterpret_cast<Slab *>(
+      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT)));
   slab->deallocate(ptr);
   release_slab(slab);
+}
+
+void *reallocate(void *ptr, uint64_t size) {
+  if (ptr == nullptr)
+    return gpu::allocate(size);
+
+  // Non-slab allocations are considered foreign pointers so we fail.
+  if (__builtin_is_aligned(ptr, SLAB_ALIGNMENT + 1))
+    return nullptr;
+
+  // The original slab pointer is the 2MiB boundary using the given pointer.
+  Slab *slab = cpp::launder(reinterpret_cast<Slab *>(
+      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT)));
+  if (slab->get_chunk_size() >= size)
+    return ptr;
+
+  // If we need a new chunk we reallocate and copy it over.
+  void *new_ptr = gpu::allocate(size);
+  inline_memcpy(new_ptr, ptr, slab->get_chunk_size());
+  gpu::deallocate(ptr);
+  return new_ptr;
+}
+
+void *aligned_allocate(uint32_t alignment, uint64_t size) {
+  // All alignment values must be a non-zero power of two.
+  if (!impl::is_pow2(alignment))
+    return nullptr;
+
+  // If the requested alignment is less than what we already provide this is
+  // just a normal allocation.
+  if (alignment <= MIN_ALIGNMENT + 1)
+    return gpu::allocate(size);
+
+  // We can't handle alignments greater than 2MiB so we simply fail.
+  if (alignment > SLAB_ALIGNMENT + 1)
+    return nullptr;
+
+  // Trying to handle allocation internally would break the assumption that each
+  // chunk is identical to eachother. Allocate enough memory with worst-case
+  // alignment and then round up. The index logic will round down properly.
+  uint64_t rounded = size + alignment - MIN_ALIGNMENT;
+  void *ptr = gpu::allocate(rounded);
+  return __builtin_align_up(ptr, alignment);
 }
 
 } // namespace gpu

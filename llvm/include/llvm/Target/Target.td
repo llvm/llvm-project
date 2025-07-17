@@ -538,11 +538,11 @@ include "llvm/Target/TargetInstrPredicate.td"
 include "llvm/Target/TargetSchedule.td"
 
 class InstructionEncoding {
-  // Size of encoded instruction.
+  // Size of encoded instruction in bytes.
   int Size;
 
-  // The "namespace" in which this instruction exists, on targets like ARM
-  // which multiple ISA namespaces exist.
+  // The "namespace" in which this instruction exists (on targets like ARM
+  // where multiple ISA namespaces exist).
   string DecoderNamespace = "";
 
   // List of predicates which will be turned into isel matching code.

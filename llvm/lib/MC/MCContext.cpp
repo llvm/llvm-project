@@ -21,7 +21,6 @@
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCLabel.h"
 #include "llvm/MC/MCSectionCOFF.h"
@@ -75,6 +74,8 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
   SaveTempLabels = TargetOptions && TargetOptions->MCSaveTempLabels;
+  if (SaveTempLabels)
+    setUseNamesOnTempLabels(true);
   SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
 
   if (SrcMgr && SrcMgr->getNumBuffers())
@@ -86,9 +87,10 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     Env = IsMachO;
     break;
   case Triple::COFF:
-    if (!TheTriple.isOSWindows() && !TheTriple.isUEFI())
-      report_fatal_error(
-          "Cannot initialize MC for non-Windows COFF object files.");
+    if (!TheTriple.isOSWindows() && !TheTriple.isUEFI()) {
+      reportFatalUsageError(
+          "cannot initialize MC for non-Windows COFF object files");
+    }
 
     Env = IsCOFF;
     break;
@@ -198,10 +200,10 @@ MCInst *MCContext::createMCInst() {
   return new (MCInstAllocator.Allocate()) MCInst;
 }
 
-// Allocate the initial MCDataFragment for the begin symbol.
-MCDataFragment *MCContext::allocInitialFragment(MCSection &Sec) {
+// Allocate the initial MCFragment for the begin symbol.
+MCFragment *MCContext::allocInitialFragment(MCSection &Sec) {
   assert(!Sec.curFragList()->Head);
-  auto *F = allocFragment<MCDataFragment>();
+  auto *F = allocFragment<MCFragment>();
   F->setParent(&Sec);
   Sec.curFragList()->Head = F;
   Sec.curFragList()->Tail = F;
@@ -732,9 +734,8 @@ MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
       UniqueName.append("/").append(P->getName());
   }
   // Do the lookup. If we don't have a hit, return a new section.
-  auto IterBool = GOFFUniquingMap.insert(std::make_pair(UniqueName, nullptr));
-  auto Iter = IterBool.first;
-  if (!IterBool.second)
+  auto [Iter, Inserted] = GOFFUniquingMap.try_emplace(UniqueName);
+  if (!Inserted)
     return Iter->second;
 
   StringRef CachedName = StringRef(Iter->first.c_str(), Name.size());

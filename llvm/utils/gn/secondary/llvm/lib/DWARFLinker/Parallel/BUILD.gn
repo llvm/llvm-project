@@ -6,6 +6,7 @@ static_library("Parallel") {
     "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/DWARFLinker",
     "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/DebugInfo/DWARF/LowLevel",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",

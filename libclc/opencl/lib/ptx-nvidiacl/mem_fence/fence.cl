@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/explicit_fence/explicit_memory_fence.h>
 
 _CLC_DEF _CLC_OVERLOAD void mem_fence(cl_mem_fence_flags flags) {
   if (flags & (CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE))

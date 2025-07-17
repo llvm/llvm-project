@@ -9,11 +9,10 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define <2 x bfloat> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b32 %r1, 1073758080;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], 1073758080;
 ; CHECK-NEXT:    ret;
   ret <2 x bfloat> <bfloat 1.0, bfloat 2.0>
 }
@@ -360,12 +359,11 @@ define <2 x bfloat> @test_select_cc_bf16_f32(<2 x bfloat> %a, <2 x bfloat> %b,
 define <2 x bfloat> @test_fptrunc_2xfloat(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_fptrunc_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_fptrunc_2xfloat_param_0];
-; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r3, %r2, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_fptrunc_2xfloat_param_0];
+; CHECK-NEXT:    st.param.b32 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
   %r = fptrunc <2 x float> %a to <2 x bfloat>
   ret <2 x bfloat> %r

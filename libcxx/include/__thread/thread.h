@@ -16,6 +16,7 @@
 #include <__exception/terminate.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__locale>
 #include <__memory/addressof.h>
 #include <__memory/unique_ptr.h>
 #include <__mutex/mutex.h>
@@ -30,7 +31,6 @@
 #include <tuple>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <locale>
 #  include <sstream>
 #endif
 

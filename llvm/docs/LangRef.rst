@@ -1234,8 +1234,7 @@ Currently, only the following parameter attributes are defined:
     ``byval`` parameters). This is not a valid attribute for return
     values.
 
-    The byval type argument indicates the in-memory value type, and
-    must be the same as the pointee type of the argument.
+    The byval type argument indicates the in-memory value type.
 
     The byval attribute also supports specifying an alignment with the
     align attribute. It indicates the alignment of the stack slot to
@@ -1283,8 +1282,7 @@ Currently, only the following parameter attributes are defined:
     any parameter must have a ``"preallocated"`` operand bundle. A ``musttail``
     function call cannot have a ``"preallocated"`` operand bundle.
 
-    The preallocated attribute requires a type argument, which must be
-    the same as the pointee type of the argument.
+    The preallocated attribute requires a type argument.
 
     The preallocated attribute also supports specifying an alignment with the
     align attribute. It indicates the alignment of the stack slot to
@@ -1318,8 +1316,7 @@ Currently, only the following parameter attributes are defined:
     must be cleared off with :ref:`llvm.stackrestore
     <int_stackrestore>`.
 
-    The inalloca attribute requires a type argument, which must be the
-    same as the pointee type of the argument.
+    The inalloca attribute requires a type argument.
 
     See :doc:`InAlloca` for more information on how to use this
     attribute.
@@ -1331,8 +1328,7 @@ Currently, only the following parameter attributes are defined:
     loads and stores to the structure may be assumed by the callee not
     to trap and to be properly aligned.
 
-    The sret type argument specifies the in memory type, which must be
-    the same as the pointee type of the argument.
+    The sret type argument specifies the in memory type.
 
     A function that accepts an ``sret`` argument must return ``void``.
     A return value may not be ``sret``.
@@ -1738,6 +1734,23 @@ Currently, only the following parameter attributes are defined:
     value on unwind. This includes memory written by the implicit write implied
     by the ``writable`` attribute. The caller is allowed to access the affected
     memory, but all loads that are not preceded by a store will return poison.
+
+    This attribute cannot be applied to return values.
+
+``dead_on_return``
+    This attribute indicates that the memory pointed to by the argument is dead
+    upon function return, both upon normal return and if the calls unwinds, meaning
+    that the caller will not depend on its contents. Stores that would be observable
+    either on the return path or on the unwind path may be elided.
+
+    Specifically, the behavior is as-if any memory written through the pointer
+    during the execution of the function is overwritten with a poison value
+    upon function return. The caller may access the memory, but any load
+    not preceded by a store will return poison.
+
+    This attribute does not imply aliasing properties. For pointer arguments that
+    do not alias other memory locations, ``noalias`` attribute may be used in
+    conjunction. Conversely, this attribute always implies ``dead_on_unwind``.
 
     This attribute cannot be applied to return values.
 
@@ -3227,12 +3240,24 @@ as follows:
     as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``
     address space cannot be specified as non-integral.
 
-Unless explicitly stated otherwise, on every specification that specifies
-an alignment, the value of the alignment must be in the range [1,2^16)
-and must be a power of two times the width of a byte.
-On every specification that takes a ``<abi>:<pref>``, specifying the
-``<pref>`` alignment is optional. If omitted, the preceding ``:``
-should be omitted too and ``<pref>`` will be equal to ``<abi>``.
+``<abi>`` is a lower bound on what is required for a type to be considered
+aligned. This is used in various places, such as:
+
+- The alignment for loads and stores if none is explicitly given.
+- The alignment used to compute struct layout.
+- The alignment used to compute allocation sizes and thus ``getelementptr``
+  offsets.
+- The alignment below which accesses are considered underaligned.
+
+``<pref>`` allows providing a more optimal alignment that should be used when
+possible, primarily for ``alloca`` and the alignment of global variables. It is
+an optional value that must be greater than or equal to ``<abi>``. If omitted,
+the preceding ``:`` should also be omitted and ``<pref>`` will be equal to
+``<abi>``.
+
+Unless explicitly stated otherwise, every alignment specification is provided in
+bits and must be in the range [1,2^16). The value must be a power of two times
+the width of a byte (i.e. ``align = 8 * 2^N``).
 
 When constructing the data layout for a given target, LLVM starts with a
 default set of specifications which are then (possibly) overridden by
@@ -6975,16 +7000,25 @@ appear in the included source file.
 DILabel
 """""""
 
-``DILabel`` nodes represent labels within a :ref:`DISubprogram`. All fields of
-a ``DILabel`` are mandatory. The ``scope:`` field must be one of either a
-:ref:`DILexicalBlockFile`, a :ref:`DILexicalBlock`, or a :ref:`DISubprogram`.
-The ``name:`` field is the label identifier. The ``file:`` field is the
-:ref:`DIFile` the label is present in. The ``line:`` field is the source line
+``DILabel`` nodes represent labels within a :ref:`DISubprogram`. The ``scope:``
+field must be one of either a :ref:`DILexicalBlockFile`, a
+:ref:`DILexicalBlock`, or a :ref:`DISubprogram`. The ``name:`` field is the
+label identifier. The ``file:`` field is the :ref:`DIFile` the label is
+present in. The ``line:`` and ``column:`` field are the source line and column
 within the file where the label is declared.
+
+Furthermore, a label can be marked as artificial, i.e. compiler-generated,
+using ``isArtificial:``. Such artificial labels are generated, e.g., by
+the ``CoroSplit`` pass. In addition, the ``CoroSplit`` pass also uses the
+``coroSuspendIdx:`` field to identify the coroutine suspend points.
+
+``scope:``, ``name:``, ``file:`` and ``line:`` are mandatory. The remaining
+fields are optional.
 
 .. code-block:: text
 
-  !2 = !DILabel(scope: !0, name: "foo", file: !1, line: 7)
+  !2 = !DILabel(scope: !0, name: "foo", file: !1, line: 7, column: 4)
+  !3 = !DILabel(scope: !0, name: "__coro_resume_3", file: !1, line: 9, column: 3, isArtificial: true, coroSuspendIdx: 3)
 
 DICommonBlock
 """""""""""""
@@ -11259,7 +11293,7 @@ If the ``load`` is marked as ``atomic``, it takes an extra :ref:`ordering
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer, or
 floating-point type whose bit width is a power of two greater than or equal to
-eight and less than or equal to a target-specific size limit.  ``align`` must be
+eight. ``align`` must be
 explicitly specified on atomic loads. Note: if the alignment is not greater or
 equal to the size of the `<value>` type, the atomic operation is likely to
 require a lock and have poor performance. ``!nontemporal`` does not have any
@@ -11400,7 +11434,7 @@ If the ``store`` is marked as ``atomic``, it takes an extra :ref:`ordering
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer, or
 floating-point type whose bit width is a power of two greater than or equal to
-eight and less than or equal to a target-specific size limit.  ``align`` must be
+eight. ``align`` must be
 explicitly specified on atomic stores. Note: if the alignment is not greater or
 equal to the size of the `<value>` type, the atomic operation is likely to
 require a lock and have poor performance. ``!nontemporal`` does not have any
@@ -11545,8 +11579,8 @@ There are three arguments to the '``cmpxchg``' instruction: an address
 to operate on, a value to compare to the value currently be at that
 address, and a new value to place at that address if the compared values
 are equal. The type of '<cmp>' must be an integer or pointer type whose
-bit width is a power of two greater than or equal to eight and less
-than or equal to a target-specific size limit. '<cmp>' and '<new>' must
+bit width is a power of two greater than or equal to eight.
+'<cmp>' and '<new>' must
 have the same type, and the type of '<pointer>' must be a pointer to
 that type. If the ``cmpxchg`` is marked as ``volatile``, then the
 optimizer is not allowed to modify the number or order of execution of
@@ -11659,8 +11693,8 @@ operation. The operation must be one of the following keywords:
 -  usub_sat
 
 For most of these operations, the type of '<value>' must be an integer
-type whose bit width is a power of two greater than or equal to eight
-and less than or equal to a target-specific size limit. For xchg, this
+type whose bit width is a power of two greater than or equal to eight.
+For xchg, this
 may also be a floating point or a pointer type with the same size constraints
 as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum, this must be a floating-point
 or fixed vector of floating-point type.  The type of the '``<pointer>``'
@@ -13161,7 +13195,7 @@ This instruction requires several arguments:
    -  All ABI-impacting function attributes, such as sret, byval, inreg,
       returned, and inalloca, must match.
    -  The caller and callee prototypes must match. Pointer types of parameters
-      or return types may differ in pointee type, but not in address space.
+      or return types do not differ in address space.
 
    On the other hand, if the calling convention is `swifttailcc` or `tailcc`:
 
@@ -28280,9 +28314,9 @@ Overview:
 
 The '``llvm.experimental.constrained.lrint``' intrinsic returns the first
 argument rounded to the nearest integer. An inexact floating-point exception
-will be raised if the argument is not an integer. An invalid exception is
-raised if the result is too large to fit into a supported integer type,
-and in this case the result is undefined.
+will be raised if the argument is not an integer. If the rounded value is too
+large to fit into the result type, an invalid exception is raised, and the
+return value is a non-deterministic value (equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28328,9 +28362,9 @@ Overview:
 
 The '``llvm.experimental.constrained.llrint``' intrinsic returns the first
 argument rounded to the nearest integer. An inexact floating-point exception
-will be raised if the argument is not an integer. An invalid exception is
-raised if the result is too large to fit into a supported integer type,
-and in this case the result is undefined.
+will be raised if the argument is not an integer. If the rounded value is too
+large to fit into the result type, an invalid exception is raised, and the
+return value is a non-deterministic value (equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28679,8 +28713,9 @@ Overview:
 The '``llvm.experimental.constrained.lround``' intrinsic returns the first
 argument rounded to the nearest integer with ties away from zero.  It will
 raise an inexact floating-point exception if the argument is not an integer.
-An invalid exception is raised if the result is too large to fit into a
-supported integer type, and in this case the result is undefined.
+If the rounded value is too large to fit into the result type, an invalid
+exception is raised, and the return value is a non-deterministic value
+(equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28717,8 +28752,9 @@ Overview:
 The '``llvm.experimental.constrained.llround``' intrinsic returns the first
 argument rounded to the nearest integer with ties away from zero. It will
 raise an inexact floating-point exception if the argument is not an integer.
-An invalid exception is raised if the result is too large to fit into a
-supported integer type, and in this case the result is undefined.
+If the rounded value is too large to fit into the result type, an invalid
+exception is raised, and the return value is a non-deterministic value
+(equivalent to `freeze poison`).
 
 Arguments:
 """"""""""

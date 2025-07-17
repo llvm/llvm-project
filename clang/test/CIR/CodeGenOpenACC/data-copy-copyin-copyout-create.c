@@ -187,4 +187,32 @@ void acc_data(int parmVar) {
   // CHECK-NEXT: } loc
   // CHECK-NEXT: acc.delete accPtr(%[[CREATE2]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_create>, modifiers = #acc<data_clause_modifier zero>, name = "parmVar"}
   // CHECK-NEXT: acc.delete accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_create>, modifiers = #acc<data_clause_modifier capture>, name = "parmVar"}
+
+#pragma acc data no_create(parmVar)
+  ;
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.nocreate varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "parmVar"}
+  // CHECK-NEXT: acc.data dataOperands(%[[NOCREATE1]] : !cir.ptr<!s32i>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_no_create>, name = "parmVar"}
+
+#pragma acc data no_create(parmVar) no_create(localVar1)
+  ;
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.nocreate varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "parmVar"}
+  // CHECK-NEXT: %[[NOCREATE2:.*]] = acc.nocreate varPtr(%[[LV1]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "localVar1"}
+  // CHECK-NEXT: acc.data dataOperands(%[[NOCREATE1]], %[[NOCREATE2]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE2]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_no_create>, name = "localVar1"}
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_no_create>, name = "parmVar"}
+
+#pragma acc data no_create(parmVar, localVar1)
+  ;
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.nocreate varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "parmVar"}
+  // CHECK-NEXT: %[[NOCREATE2:.*]] = acc.nocreate varPtr(%[[LV1]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "localVar1"}
+  // CHECK-NEXT: acc.data dataOperands(%[[NOCREATE1]], %[[NOCREATE2]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE2]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_no_create>, name = "localVar1"}
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_no_create>, name = "parmVar"}
 }

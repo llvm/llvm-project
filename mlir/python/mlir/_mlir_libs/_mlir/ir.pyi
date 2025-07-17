@@ -2497,6 +2497,11 @@ class ShapedType(Type):
         Returns whether the given dimension size indicates a dynamic dimension.
         """
     @staticmethod
+    def is_static_size(dim_size: int) -> bool:
+        """
+        Returns whether the given dimension size indicates a static dimension.
+        """
+    @staticmethod
     def isinstance(other: Type) -> bool: ...
     def __init__(self, cast_from_type: Type) -> None: ...
     def get_dim_size(self, dim: int) -> int:
@@ -2507,9 +2512,17 @@ class ShapedType(Type):
         """
         Returns whether the dim-th dimension of the given shaped type is dynamic.
         """
+    def is_static_dim(self, dim: int) -> bool:
+        """
+        Returns whether the dim-th dimension of the given shaped type is static.
+        """
     def is_dynamic_stride_or_offset(self, dim_size: int) -> bool:
         """
         Returns whether the given value is used as a placeholder for dynamic strides and offsets in shaped types.
+        """
+    def is_static_stride_or_offset(self, dim_size: int) -> bool:
+        """
+        Returns whether the given shaped type stride or offset value is statically-sized.
         """
     @property
     def element_type(self) -> Type:
