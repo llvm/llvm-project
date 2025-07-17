@@ -391,7 +391,7 @@ foreach mx = SchedMxList in {
   let Latency = Get44816Latency<mx>.c, ReleaseAtCycles = [Get44816Latency<mx>.c] in {
     // Pattern of vadd, vsub, vrsub: 4/4/5/8
     // Pattern of vand, vor, vxor:   4/4/8/16
-    // They are grouped together, so we used the worst case 4/4/5/16
+    // They are grouped together, so we used the worst case 4/4/8/16
     // TODO: use InstRW to override individual instructions' scheduling data
     defm "" : LMULWriteResMX<"WriteVIALUV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIALUX", [SMX60_VIEU], mx, IsWorstCase>;
