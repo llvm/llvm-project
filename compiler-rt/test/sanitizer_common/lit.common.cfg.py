@@ -40,7 +40,7 @@ else:
 config.available_features.add(config.tool_name)
 
 if (
-    config.host_os == "Linux"
+    config.target_os == "Linux"
     and config.tool_name == "lsan"
     and config.target_arch == "i386"
 ):
@@ -49,7 +49,7 @@ if (
 if config.arm_thumb:
     config.available_features.add("thumb")
 
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     # On Darwin, we default to `abort_on_error=1`, which would make tests run
     # much slower. Let's override this and run lit tests with 'abort_on_error=0'.
     default_tool_options += ["abort_on_error=0"]
@@ -71,7 +71,7 @@ if default_tool_options_str:
 
 extra_link_flags = []
 
-if config.host_os in ["Linux"]:
+if config.target_os in ["Linux"]:
     extra_link_flags += ["-ldl"]
 
 clang_cflags = config.debug_info_flags + tool_cflags + [config.target_cflags]
@@ -95,7 +95,7 @@ config.substitutions.append(
 
 config.suffixes = [".c", ".cpp"]
 
-if config.host_os not in ["Linux", "Darwin", "NetBSD", "FreeBSD", "SunOS"]:
+if config.target_os not in ["Linux", "Darwin", "NetBSD", "FreeBSD", "SunOS"]:
     config.unsupported = True
 
 if not config.parallelism_group:
@@ -107,7 +107,7 @@ if config.tool_name == "lsan" and config.host_os == "Darwin":
   lit_config.note("LSan sanitizer_common tests disabled")
   config.unsupported = True
 
-if config.host_os == "NetBSD":
+if config.target_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
 
 if os.path.exists("/etc/services"):
