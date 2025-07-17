@@ -907,7 +907,7 @@ namespace cwg573 { // cwg573: no
   // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is an extension}}
   void f() { delete a; }
   // cxx98-23-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
-  // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
+  // since-cxx26-error@-2 {{cannot delete expression with pointer-to-'void' type 'void *'}}
   int n = d - a;
   // expected-error@-1 {{arithmetic on pointers to void}}
   // FIXME: This is ill-formed.
@@ -1298,12 +1298,12 @@ namespace cwg599 { // cwg599: partial
   void f(void *p, void (*q)(), S s, T t, U u, V v) {
     delete p;
     // cxx98-23-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
-    // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
+    // since-cxx26-error@-2 {{cannot delete expression with pointer-to-'void' type 'void *'}}
     delete q;
     // expected-error@-1 {{cannot delete expression of type 'void (*)()'}}
     delete s;
     // cxx98-23-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
-    // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
+    // since-cxx26-error@-2 {{cannot delete expression with pointer-to-'void' type 'void *'}}
     delete t;
     // expected-error@-1 {{cannot delete expression of type 'T'}}
     // FIXME: This is valid, but is rejected due to a non-conforming GNU
