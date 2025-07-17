@@ -437,11 +437,12 @@ public:
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(
-      LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                        IntrinsicInst *DI) const override;
 
   bool lowerInterleaveIntrinsicToStore(
-      StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
+      Instruction *Store, Value *Mask,
+      ArrayRef<Value *> InterleaveValues) const override;
 
   bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
                               ArrayRef<Value *> DeinterleaveRes) const override;
@@ -562,6 +563,9 @@ private:
   SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRESET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRESET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;

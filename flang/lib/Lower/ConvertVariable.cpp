@@ -802,13 +802,20 @@ initializeDeviceComponentAllocator(Fortran::lower::AbstractConverter &converter,
     const Fortran::semantics::DerivedTypeSpec *derived{type ? type->AsDerived()
                                                             : nullptr};
     if (derived) {
+      if (!FindCUDADeviceAllocatableUltimateComponent(*derived))
+        return; // No device components.
+
       fir::FirOpBuilder &builder = converter.getFirOpBuilder();
       mlir::Location loc = converter.getCurrentLocation();
 
       fir::ExtendedValue exv =
           converter.getSymbolExtendedValue(symbol.GetUltimate(), &symMap);
-      auto recTy = mlir::dyn_cast<fir::RecordType>(
-          fir::unwrapRefType(fir::getBase(exv).getType()));
+      mlir::Type baseTy = fir::unwrapRefType(fir::getBase(exv).getType());
+      if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(baseTy))
+        baseTy = boxTy.getEleTy();
+      baseTy = fir::unwrapRefType(baseTy);
+      auto recTy =
+          mlir::dyn_cast<fir::RecordType>(fir::unwrapSequenceType(baseTy));
       assert(recTy && "expected fir::RecordType");
 
       llvm::SmallVector<mlir::Value> coordinates;
