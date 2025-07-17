@@ -617,3 +617,16 @@ def testGetDenseResourceElementsAttr():
     # CHECK: BACKING MEMORY DELETED
     # CHECK: EXIT FUNCTION
     print("EXIT FUNCTION")
+
+
+print("TEST: danglingResource")
+# This error occurs only when there is an alive context with a DenseResourceElementsAttr 
+# in the end of the program, so we put it here without an encapsulating function.
+ctx = Context()
+
+with ctx, Location.unknown():
+    DenseResourceElementsAttr.get_from_buffer(
+        memoryview(np.array([1,2,3])),
+        "some_resource",
+        RankedTensorType.get((3,), IntegerType.get_signed(32))
+    )

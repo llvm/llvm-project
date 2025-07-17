@@ -18,6 +18,7 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "pylifecycle.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -1428,6 +1429,16 @@ public:
   }
 };
 
+static bool pythonIsFinalizing() {
+#if PY_VERSION_HEX >= 0x030d0000
+  return Py_IsFinalizing();
+#elif PY_VERSION_HEX >= 0x03070000
+  return _Py_IsFinalizing();
+#else
+  return _Py_Finalizing != nullptr;
+#endif
+}
+
 class PyDenseResourceElementsAttribute
     : public PyConcreteAttribute<PyDenseResourceElementsAttribute> {
 public:
@@ -1474,7 +1485,7 @@ public:
     // The userData is a Py_buffer* that the deleter owns.
     auto deleter = [](void *userData, const void *data, size_t size,
                       size_t align) {
-      if (!Py_IsInitialized())
+      if (!(Py_IsInitialized() || pythonIsFinalizing()))
         Py_Initialize();
       Py_buffer *ownedView = static_cast<Py_buffer *>(userData);
       nb::gil_scoped_acquire gil;
