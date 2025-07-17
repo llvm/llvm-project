@@ -200,6 +200,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{95-72} = !if(ps.has_offset, offset, ?);
 }
 
+// TODO: Rename to FlatSaddrTable, it now handles both global and flat GVS addressing mode.
 class GlobalSaddrTable <bit is_saddr, string Name = ""> {
   bit IsSaddr = is_saddr;
   string SaddrOp = Name;
@@ -2940,13 +2941,6 @@ multiclass VFLAT_Real_Base_gfx12<bits<8> op,
   VFLAT_Real_gfx12<op, name>;
 
 multiclass VFLAT_Real_AllAddr_gfx12<bits<8> op,
-                                      string name = get_FLAT_ps<NAME>.Mnemonic,
-                                      string alias = name> :
-  VFLAT_Real_Base_gfx12<op, name, alias> {
-  defm _SADDR : VFLAT_Real_gfx12<op, name>;
-}
-
-multiclass VGLOBAL_Real_AllAddr_gfx12<bits<8> op,
                                       string name = get_FLAT_ps<NAME>.Mnemonic,
                                       string alias = name> :
   VFLAT_Real_Base_gfx12<op, name, alias> {
