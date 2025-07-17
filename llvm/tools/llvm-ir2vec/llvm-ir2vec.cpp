@@ -48,10 +48,10 @@ namespace ir2vec {
 
 static cl::OptionCategory IR2VecToolCategory("IR2Vec Tool Options");
 
-static cl::opt<std::string> InputFilename(cl::Positional,
-                                          cl::desc("<input bitcode file>"),
-                                          cl::Required,
-                                          cl::cat(IR2VecToolCategory));
+static cl::opt<std::string>
+    InputFilename(cl::Positional,
+                  cl::desc("<input bitcode file or '-' for stdin>"),
+                  cl::init("-"), cl::cat(IR2VecToolCategory));
 
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
@@ -287,7 +287,7 @@ int main(int argc, char **argv) {
   if (Mode == TripletMode && Level.getNumOccurrences() > 0)
     errs() << "Warning: --level option is ignored in triplet mode\n";
 
-  // Parse the input LLVM IR file
+  // Parse the input LLVM IR file or stdin
   SMDiagnostic Err;
   LLVMContext Context;
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
