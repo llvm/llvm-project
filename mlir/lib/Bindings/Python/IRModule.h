@@ -599,18 +599,18 @@ class PyOperationBase {
 public:
   virtual ~PyOperationBase() = default;
   /// Implements the bound 'print' method and helps with others.
-  void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
+  void print(std::optional<int64_t> largeElementsLimit,
+             std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
              bool useNameLocAsPrefix, bool assumeVerified,
              nanobind::object fileObject, bool binary, bool skipRegions);
   void print(PyAsmState &state, nanobind::object fileObject, bool binary);
 
-  nanobind::object getAsm(bool binary,
-                          std::optional<int64_t> largeElementsLimit,
-                          bool enableDebugInfo, bool prettyDebugInfo,
-                          bool printGenericOpForm, bool useLocalScope,
-                          bool useNameLocAsPrefix, bool assumeVerified,
-                          bool skipRegions);
+  nanobind::object
+  getAsm(bool binary, std::optional<int64_t> largeElementsLimit,
+         std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
+         bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
+         bool useNameLocAsPrefix, bool assumeVerified, bool skipRegions);
 
   // Implement the bound 'writeBytecode' method.
   void writeBytecode(const nanobind::object &fileObject,

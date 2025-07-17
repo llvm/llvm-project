@@ -200,6 +200,7 @@ class _OperationBase:
     def get_asm(
         binary: Literal[True],
         large_elements_limit: int | None = None,
+        large_resource_limit: int | None = None,
         enable_debug_info: bool = False,
         pretty_debug_info: bool = False,
         print_generic_op_form: bool = False,
@@ -212,6 +213,7 @@ class _OperationBase:
         self,
         binary: bool = False,
         large_elements_limit: int | None = None,
+        large_resource_limit: int | None = None,
         enable_debug_info: bool = False,
         pretty_debug_info: bool = False,
         print_generic_op_form: bool = False,
@@ -253,6 +255,7 @@ class _OperationBase:
     def print(
         self,
         large_elements_limit: int | None = None,
+        large_resource_limit: int | None = None,
         enable_debug_info: bool = False,
         pretty_debug_info: bool = False,
         print_generic_op_form: bool = False,
@@ -270,6 +273,10 @@ class _OperationBase:
           binary: Whether to write bytes (True) or str (False). Defaults to False.
           large_elements_limit: Whether to elide elements attributes above this
             number of elements. Defaults to None (no limit).
+          large_resource_limit: Whether to elide resource strings above this
+            number of characters. Defaults to None (no limit). If large_elements_limit
+            is set and this is None, the behavior will be to use large_elements_limit
+            as large_resource_limit.
           enable_debug_info: Whether to print debug/location information. Defaults
             to False.
           pretty_debug_info: Whether to format debug information for easier reading
