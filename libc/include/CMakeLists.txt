@@ -69,7 +69,6 @@ add_header_macro(
   ../libc/include/dlfcn.yaml
   dlfcn.h
   DEPENDS
-    .llvm-libc-macros.dlfcn_macros
     .llvm_libc_common_h
 )
 
