@@ -1,4 +1,4 @@
-//===-- LibCxxList.cpp ----------------------------------------------------===//
+//===-- GenericList.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,14 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "LibCxx.h"
+#include "MsvcStl.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-enumerations.h"
@@ -25,30 +22,26 @@ using namespace lldb_private::formatters;
 
 namespace {
 
-class ListEntry {
+enum class StlType {
+  LibCxx,
+  MsvcStl,
+};
+
+template <StlType Stl> class ListEntry {
 public:
   ListEntry() = default;
   ListEntry(ValueObjectSP entry_sp) : m_entry_sp(std::move(entry_sp)) {}
   ListEntry(ValueObject *entry)
       : m_entry_sp(entry ? entry->GetSP() : ValueObjectSP()) {}
 
-  ListEntry next() {
-    if (!m_entry_sp)
-      return ListEntry();
-    return ListEntry(m_entry_sp->GetChildMemberWithName("__next_"));
-  }
-
-  ListEntry prev() {
-    if (!m_entry_sp)
-      return ListEntry();
-    return ListEntry(m_entry_sp->GetChildMemberWithName("__prev_"));
-  }
-
   uint64_t value() const {
     if (!m_entry_sp)
       return 0;
     return m_entry_sp->GetValueAsUnsigned(0);
   }
+
+  ListEntry next();
+  ListEntry prev();
 
   bool null() { return (value() == 0); }
 
@@ -66,10 +59,34 @@ private:
   ValueObjectSP m_entry_sp;
 };
 
-class ListIterator {
+template <> ListEntry<StlType::LibCxx> ListEntry<StlType::LibCxx>::next() {
+  if (!m_entry_sp)
+    return ListEntry();
+  return ListEntry(m_entry_sp->GetChildMemberWithName("__next_"));
+}
+
+template <> ListEntry<StlType::LibCxx> ListEntry<StlType::LibCxx>::prev() {
+  if (!m_entry_sp)
+    return ListEntry();
+  return ListEntry(m_entry_sp->GetChildMemberWithName("__prev_"));
+}
+
+template <> ListEntry<StlType::MsvcStl> ListEntry<StlType::MsvcStl>::next() {
+  if (!m_entry_sp)
+    return ListEntry();
+  return ListEntry(m_entry_sp->GetChildMemberWithName("_Next"));
+}
+
+template <> ListEntry<StlType::MsvcStl> ListEntry<StlType::MsvcStl>::prev() {
+  if (!m_entry_sp)
+    return ListEntry();
+  return ListEntry(m_entry_sp->GetChildMemberWithName("_Prev"));
+}
+
+template <StlType Stl> class ListIterator {
 public:
   ListIterator() = default;
-  ListIterator(ListEntry entry) : m_entry(std::move(entry)) {}
+  ListIterator(ListEntry<Stl> entry) : m_entry(std::move(entry)) {}
   ListIterator(ValueObjectSP entry) : m_entry(std::move(entry)) {}
   ListIterator(ValueObject *entry) : m_entry(entry) {}
 
@@ -101,9 +118,10 @@ protected:
   void prev() { m_entry = m_entry.prev(); }
 
 private:
-  ListEntry m_entry;
+  ListEntry<Stl> m_entry;
 };
 
+template <StlType Stl>
 class AbstractListFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
@@ -124,33 +142,31 @@ protected:
   ValueObject *m_head = nullptr;
 
   static constexpr bool g_use_loop_detect = true;
-  size_t m_loop_detected = 0; // The number of elements that have had loop
-                              // detection run over them.
-  ListEntry m_slow_runner; // Used for loop detection
-  ListEntry m_fast_runner; // Used for loop detection
+  size_t m_loop_detected = 0;   // The number of elements that have had loop
+                                // detection run over them.
+  ListEntry<Stl> m_slow_runner; // Used for loop detection
+  ListEntry<Stl> m_fast_runner; // Used for loop detection
 
   size_t m_list_capping_size = 0;
   CompilerType m_element_type;
-  std::map<size_t, ListIterator> m_iterators;
+  std::map<size_t, ListIterator<Stl>> m_iterators;
 
   bool HasLoop(size_t count);
   ValueObjectSP GetItem(size_t idx);
 };
 
-class ForwardListFrontEnd : public AbstractListFrontEnd {
+class LibCxxForwardListFrontEnd : public AbstractListFrontEnd<StlType::LibCxx> {
 public:
-  ForwardListFrontEnd(ValueObject &valobj);
+  LibCxxForwardListFrontEnd(ValueObject &valobj);
 
   llvm::Expected<uint32_t> CalculateNumChildren() override;
   ValueObjectSP GetChildAtIndex(uint32_t idx) override;
   lldb::ChildCacheState Update() override;
 };
 
-class ListFrontEnd : public AbstractListFrontEnd {
+class LibCxxListFrontEnd : public AbstractListFrontEnd<StlType::LibCxx> {
 public:
-  ListFrontEnd(lldb::ValueObjectSP valobj_sp);
-
-  ~ListFrontEnd() override = default;
+  LibCxxListFrontEnd(lldb::ValueObjectSP valobj_sp);
 
   llvm::Expected<uint32_t> CalculateNumChildren() override;
 
@@ -163,9 +179,34 @@ private:
   ValueObject *m_tail = nullptr;
 };
 
+class MsvcStlForwardListFrontEnd
+    : public AbstractListFrontEnd<StlType::MsvcStl> {
+public:
+  MsvcStlForwardListFrontEnd(ValueObject &valobj);
+
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
+  ValueObjectSP GetChildAtIndex(uint32_t idx) override;
+  lldb::ChildCacheState Update() override;
+};
+
+class MsvcStlListFrontEnd : public AbstractListFrontEnd<StlType::MsvcStl> {
+public:
+  MsvcStlListFrontEnd(lldb::ValueObjectSP valobj_sp);
+
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
+
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
+
+  lldb::ChildCacheState Update() override;
+
+private:
+  ValueObject *m_tail = nullptr;
+};
+
 } // end anonymous namespace
 
-lldb::ChildCacheState AbstractListFrontEnd::Update() {
+template <StlType Stl>
+lldb::ChildCacheState AbstractListFrontEnd<Stl>::Update() {
   m_loop_detected = 0;
   m_count = UINT32_MAX;
   m_head = nullptr;
@@ -191,7 +232,7 @@ lldb::ChildCacheState AbstractListFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool AbstractListFrontEnd::HasLoop(size_t count) {
+template <StlType Stl> bool AbstractListFrontEnd<Stl>::HasLoop(size_t count) {
   if (!g_use_loop_detect)
     return false;
   // don't bother checking for a loop if we won't actually need to jump nodes
@@ -201,7 +242,7 @@ bool AbstractListFrontEnd::HasLoop(size_t count) {
   if (m_loop_detected == 0) {
     // This is the first time we are being run (after the last update). Set up
     // the loop invariant for the first element.
-    m_slow_runner = ListEntry(m_head).next();
+    m_slow_runner = ListEntry<Stl>(m_head).next();
     m_fast_runner = m_slow_runner.next();
     m_loop_detected = 1;
   }
@@ -225,9 +266,10 @@ bool AbstractListFrontEnd::HasLoop(size_t count) {
   return m_slow_runner == m_fast_runner;
 }
 
-ValueObjectSP AbstractListFrontEnd::GetItem(size_t idx) {
+template <StlType Stl>
+ValueObjectSP AbstractListFrontEnd<Stl>::GetItem(size_t idx) {
   size_t advance = idx;
-  ListIterator current(m_head);
+  ListIterator<Stl> current(m_head);
   if (idx > 0) {
     auto cached_iterator = m_iterators.find(idx - 1);
     if (cached_iterator != m_iterators.end()) {
@@ -240,16 +282,16 @@ ValueObjectSP AbstractListFrontEnd::GetItem(size_t idx) {
   return value_sp;
 }
 
-ForwardListFrontEnd::ForwardListFrontEnd(ValueObject &valobj)
+LibCxxForwardListFrontEnd::LibCxxForwardListFrontEnd(ValueObject &valobj)
     : AbstractListFrontEnd(valobj) {
   Update();
 }
 
-llvm::Expected<uint32_t> ForwardListFrontEnd::CalculateNumChildren() {
+llvm::Expected<uint32_t> LibCxxForwardListFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
     return m_count;
 
-  ListEntry current(m_head);
+  ListEntry<StlType::LibCxx> current(m_head);
   m_count = 0;
   while (current && m_count < m_list_capping_size) {
     ++m_count;
@@ -258,7 +300,7 @@ llvm::Expected<uint32_t> ForwardListFrontEnd::CalculateNumChildren() {
   return m_count;
 }
 
-ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
+ValueObjectSP LibCxxForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx >= CalculateNumChildrenIgnoringErrors())
     return nullptr;
 
@@ -289,7 +331,7 @@ ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
                                    m_element_type);
 }
 
-lldb::ChildCacheState ForwardListFrontEnd::Update() {
+lldb::ChildCacheState LibCxxForwardListFrontEnd::Update() {
   AbstractListFrontEnd::Update();
 
   Status err;
@@ -312,13 +354,13 @@ lldb::ChildCacheState ForwardListFrontEnd::Update() {
   return ChildCacheState::eRefetch;
 }
 
-ListFrontEnd::ListFrontEnd(lldb::ValueObjectSP valobj_sp)
+LibCxxListFrontEnd::LibCxxListFrontEnd(lldb::ValueObjectSP valobj_sp)
     : AbstractListFrontEnd(*valobj_sp) {
   if (valobj_sp)
     Update();
 }
 
-llvm::Expected<uint32_t> ListFrontEnd::CalculateNumChildren() {
+llvm::Expected<uint32_t> LibCxxListFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
     return m_count;
   if (!m_head || !m_tail || m_node_address == 0)
@@ -351,7 +393,7 @@ llvm::Expected<uint32_t> ListFrontEnd::CalculateNumChildren() {
   if (next_val == prev_val)
     return 1;
   uint64_t size = 2;
-  ListEntry current(m_head);
+  ListEntry<StlType::LibCxx> current(m_head);
   while (current.next() && current.next().value() != m_node_address) {
     size++;
     current = current.next();
@@ -361,7 +403,7 @@ llvm::Expected<uint32_t> ListFrontEnd::CalculateNumChildren() {
   return m_count = (size - 1);
 }
 
-lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(uint32_t idx) {
+lldb::ValueObjectSP LibCxxListFrontEnd::GetChildAtIndex(uint32_t idx) {
   static ConstString g_value("__value_");
   static ConstString g_next("__next_");
 
@@ -412,7 +454,7 @@ lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(uint32_t idx) {
                                    m_element_type);
 }
 
-lldb::ChildCacheState ListFrontEnd::Update() {
+lldb::ChildCacheState LibCxxListFrontEnd::Update() {
   AbstractListFrontEnd::Update();
   m_tail = nullptr;
   m_node_address = 0;
@@ -432,13 +474,167 @@ lldb::ChildCacheState ListFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
+MsvcStlForwardListFrontEnd::MsvcStlForwardListFrontEnd(ValueObject &valobj)
+    : AbstractListFrontEnd(valobj) {
+  Update();
+}
+
+llvm::Expected<uint32_t> MsvcStlForwardListFrontEnd::CalculateNumChildren() {
+  if (m_count != UINT32_MAX)
+    return m_count;
+
+  ListEntry<StlType::MsvcStl> current(m_head);
+  m_count = 0;
+  while (current && m_count < m_list_capping_size) {
+    ++m_count;
+    current = current.next();
+  }
+  return m_count;
+}
+
+ValueObjectSP MsvcStlForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
+  if (idx >= CalculateNumChildrenIgnoringErrors())
+    return nullptr;
+
+  if (!m_head)
+    return nullptr;
+
+  if (HasLoop(idx + 1))
+    return nullptr;
+
+  ValueObjectSP current_sp = GetItem(idx);
+  if (!current_sp)
+    return nullptr;
+
+  current_sp = current_sp->GetChildAtIndex(1); // get the _Myval child
+  if (!current_sp)
+    return nullptr;
+
+  // we need to copy current_sp into a new object otherwise we will end up with
+  // all items named _Myval
+  DataExtractor data;
+  Status error;
+  current_sp->GetData(data, error);
+  if (error.Fail())
+    return nullptr;
+
+  return CreateValueObjectFromData(llvm::formatv("[{0}]", idx).str(), data,
+                                   m_backend.GetExecutionContextRef(),
+                                   m_element_type);
+}
+
+lldb::ChildCacheState MsvcStlForwardListFrontEnd::Update() {
+  AbstractListFrontEnd::Update();
+
+  if (auto head_sp =
+          m_backend.GetChildAtNamePath({"_Mypair", "_Myval2", "_Myhead"}))
+    m_head = head_sp.get();
+
+  return ChildCacheState::eRefetch;
+}
+
+MsvcStlListFrontEnd::MsvcStlListFrontEnd(lldb::ValueObjectSP valobj_sp)
+    : AbstractListFrontEnd(*valobj_sp) {
+  if (valobj_sp)
+    Update();
+}
+
+llvm::Expected<uint32_t> MsvcStlListFrontEnd::CalculateNumChildren() {
+  if (m_count != UINT32_MAX)
+    return m_count;
+  if (!m_head || !m_tail)
+    return 0;
+
+  auto size_sp =
+      m_backend.GetChildAtNamePath({"_Mypair", "_Myval2", "_Mysize"});
+  if (!size_sp)
+    return llvm::createStringError("Failed to resolve size.");
+
+  m_count = size_sp->GetValueAsUnsigned(UINT32_MAX);
+  if (m_count == UINT32_MAX)
+    return llvm::createStringError("Failed to read size value.");
+
+  return m_count;
+}
+
+lldb::ValueObjectSP MsvcStlListFrontEnd::GetChildAtIndex(uint32_t idx) {
+  if (idx >= CalculateNumChildrenIgnoringErrors())
+    return lldb::ValueObjectSP();
+
+  if (!m_head || !m_tail)
+    return lldb::ValueObjectSP();
+
+  if (HasLoop(idx + 1))
+    return lldb::ValueObjectSP();
+
+  ValueObjectSP current_sp = GetItem(idx);
+  if (!current_sp)
+    return lldb::ValueObjectSP();
+
+  current_sp = current_sp->GetChildAtIndex(2); // get the _Myval child
+  if (!current_sp)
+    return lldb::ValueObjectSP();
+
+  // we need to copy current_sp into a new object otherwise we will end up with
+  // all items named _Myval
+  DataExtractor data;
+  Status error;
+  current_sp->GetData(data, error);
+  if (error.Fail())
+    return lldb::ValueObjectSP();
+
+  StreamString name;
+  name.Printf("[%" PRIu64 "]", (uint64_t)idx);
+  return CreateValueObjectFromData(name.GetString(), data,
+                                   m_backend.GetExecutionContextRef(),
+                                   m_element_type);
+}
+
+lldb::ChildCacheState MsvcStlListFrontEnd::Update() {
+  AbstractListFrontEnd::Update();
+  m_tail = nullptr;
+  m_head = nullptr;
+
+  ValueObjectSP last =
+      m_backend.GetChildAtNamePath({"_Mypair", "_Myval2", "_Myhead"});
+  if (!last)
+    return lldb::ChildCacheState::eRefetch;
+  ValueObjectSP first = last->GetChildMemberWithName("_Next");
+  if (!first)
+    return lldb::ChildCacheState::eRefetch;
+
+  m_head = first.get();
+  m_tail = last.get();
+
+  return lldb::ChildCacheState::eRefetch;
+}
+
 SyntheticChildrenFrontEnd *formatters::LibcxxStdListSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  return (valobj_sp ? new ListFrontEnd(valobj_sp) : nullptr);
+  return (valobj_sp ? new LibCxxListFrontEnd(valobj_sp) : nullptr);
 }
 
 SyntheticChildrenFrontEnd *
 formatters::LibcxxStdForwardListSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  return valobj_sp ? new ForwardListFrontEnd(*valobj_sp) : nullptr;
+  return valobj_sp ? new LibCxxForwardListFrontEnd(*valobj_sp) : nullptr;
+}
+
+bool formatters::IsMsvcStlList(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_Mypair") != nullptr;
+
+  return false;
+}
+
+SyntheticChildrenFrontEnd *
+formatters::MsvcStlListSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                                lldb::ValueObjectSP valobj_sp) {
+  return (valobj_sp ? new MsvcStlListFrontEnd(valobj_sp) : nullptr);
+}
+
+SyntheticChildrenFrontEnd *
+formatters::MsvcStlForwardListSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  return valobj_sp ? new MsvcStlForwardListFrontEnd(*valobj_sp) : nullptr;
 }
