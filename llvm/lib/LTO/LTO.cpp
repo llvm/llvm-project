@@ -135,7 +135,7 @@ std::string llvm::computeLTOCacheKey(
     Hasher.update(Data);
   };
   auto AddUint8 = [&](const uint8_t I) {
-    Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&I, 1));
+    Hasher.update(ArrayRef<uint8_t>(&I, 1));
   };
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from

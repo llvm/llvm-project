@@ -28,14 +28,12 @@
 ; CHECK:      and.b16 [[A:%rs[0-9]+]], [[A8]], 1;
 ; CHECK:      setp.ne.b16 %p1, [[A]], 0
 ; CHECK:      cvt.u32.u16 [[B:%r[0-9]+]], [[A8]]
-; CHECK:      and.b32 [[C:%r[0-9]+]], [[B]], 1;
 ; CHECK:      .param .b32 param0;
-; CHECK:      st.param.b32    [param0], [[C]]
+; CHECK:      st.param.b32    [param0], [[B]]
 ; CHECK:      .param .b32 retval0;
 ; CHECK:      call.uni (retval0), test_i1,
 ; CHECK:      ld.param.b32    [[R8:%r[0-9]+]], [retval0];
-; CHECK:      and.b32         [[R:%r[0-9]+]], [[R8]], 1;
-; CHECK:      st.param.b32    [func_retval0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R8]];
 ; CHECK:      ret;
 define i1 @test_i1(i1 %a) {
   %r = tail call i1 @test_i1(i1 %a);
@@ -166,14 +164,12 @@ define i3 @test_i3(i3 %a) {
 ; CHECK-NEXT: .param .b32 test_i8_param_0
 ; CHECK:      ld.param.b8 [[A8:%rs[0-9]+]], [test_i8_param_0];
 ; CHECK:      cvt.u32.u16     [[A32:%r[0-9]+]], [[A8]];
-; CHECK:      and.b32         [[A:%r[0-9]+]], [[A32]], 255;
 ; CHECK:      .param .b32 param0;
-; CHECK:      st.param.b32    [param0], [[A]];
+; CHECK:      st.param.b32    [param0], [[A32]];
 ; CHECK:      .param .b32 retval0;
 ; CHECK:      call.uni (retval0), test_i8,
 ; CHECK:      ld.param.b32    [[R32:%r[0-9]+]], [retval0];
-; CHECK:      and.b32         [[R:%r[0-9]+]], [[R32]], 255;
-; CHECK:      st.param.b32    [func_retval0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[R32]];
 ; CHECK-NEXT: ret;
 define i8 @test_i8(i8 %a) {
        %r = tail call i8 @test_i8(i8 %a);
@@ -247,7 +243,14 @@ define <4 x i8> @test_v4i8(<4 x i8> %a) {
 ; CHECK:      call.uni (retval0), test_v5i8,
 ; CHECK-DAG:  ld.param.v4.b8  {[[RE0:%rs[0-9]+]], [[RE1:%rs[0-9]+]], [[RE2:%rs[0-9]+]], [[RE3:%rs[0-9]+]]}, [retval0];
 ; CHECK-DAG:  ld.param.b8     [[RE4:%rs[0-9]+]], [retval0+4];
-; CHECK-DAG:  st.param.v4.b8  [func_retval0], {[[RE0]], [[RE1]], [[RE2]], [[RE3]]}
+; CHECK-DAG:  cvt.u32.u16     [[R3:%r[0-9]+]], [[RE3]];
+; CHECK-DAG:  cvt.u32.u16     [[R2:%r[0-9]+]], [[RE2]];
+; CHECK-DAG:  prmt.b32        [[P0:%r[0-9]+]], [[R2]], [[R3]], 0x3340U;
+; CHECK-DAG:  cvt.u32.u16     [[R1:%r[0-9]+]], [[RE1]];
+; CHECK-DAG:  cvt.u32.u16     [[R0:%r[0-9]+]], [[RE0]];
+; CHECK-DAG:  prmt.b32        [[P1:%r[0-9]+]], [[R0]], [[R1]], 0x3340U;
+; CHECK-DAG:  prmt.b32        [[P2:%r[0-9]+]], [[P1]], [[P0]], 0x5410U;
+; CHECK-DAG:  st.param.b32  [func_retval0], [[P2]];
 ; CHECK-DAG:  st.param.b8     [func_retval0+4], [[RE4]];
 ; CHECK-NEXT: ret;
 define <5 x i8> @test_v5i8(<5 x i8> %a) {
@@ -280,8 +283,7 @@ define i11 @test_i11(i11 %a) {
 ; CHECK:      .param .b32 retval0;
 ; CHECK:      call.uni (retval0), test_i16,
 ; CHECK:      ld.param.b32    [[RE32:%r[0-9]+]], [retval0];
-; CHECK:      and.b32         [[R:%r[0-9]+]], [[RE32]], 65535;
-; CHECK:      st.param.b32    [func_retval0], [[R]];
+; CHECK:      st.param.b32    [func_retval0], [[RE32]];
 ; CHECK-NEXT: ret;
 define i16 @test_i16(i16 %a) {
        %r = tail call i16 @test_i16(i16 %a);

@@ -385,7 +385,11 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genChdir,
      {{{"name", asAddr}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
-    {"clock64", &I::genClock64, {}, /*isElemental=*/false},
+    {"clock", &I::genNVVMTime<mlir::NVVM::ClockOp>, {}, /*isElemental=*/false},
+    {"clock64",
+     &I::genNVVMTime<mlir::NVVM::Clock64Op>,
+     {},
+     /*isElemental=*/false},
     {"cmplx",
      &I::genCmplx,
      {{{"x", asValue}, {"y", asValue, handleDynamicOptional}}}},
@@ -503,6 +507,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"getgid", &I::genGetGID},
     {"getpid", &I::genGetPID},
     {"getuid", &I::genGetUID},
+    {"globaltimer",
+     &I::genNVVMTime<mlir::NVVM::GlobalTimerOp>,
+     {},
+     /*isElemental=*/false},
     {"hostnm",
      &I::genHostnm,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
@@ -933,6 +941,8 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"tand", &I::genTand},
     {"this_grid", &I::genThisGrid, {}, /*isElemental=*/false},
+    {"this_thread_block", &I::genThisThreadBlock, {}, /*isElemental=*/false},
+    {"this_warp", &I::genThisWarp, {}, /*isElemental=*/false},
     {"threadfence", &I::genThreadFence, {}, /*isElemental=*/false},
     {"threadfence_block", &I::genThreadFenceBlock, {}, /*isElemental=*/false},
     {"threadfence_system", &I::genThreadFenceSystem, {}, /*isElemental=*/false},
@@ -1229,8 +1239,11 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::StringRef mathLibFuncName = mathOp.runtimeFunc;
   if (!mathLibFuncName.empty()) {
     // If we enabled MLIR complex or can use approximate operations, we should
-    // NOT use libm.
-    if (!forceMlirComplex && !canUseApprox) {
+    // NOT use libm. Avoid libm when targeting AMDGPU as those symbols are not
+    // available on the device and we rely on MLIR complex operations to
+    // later map to OCML calls.
+    bool isAMDGPU = fir::getTargetTriple(builder.getModule()).isAMDGCN();
+    if (!forceMlirComplex && !canUseApprox && !isAMDGPU) {
       result = genLibCall(builder, loc, mathOp, mathLibFuncType, args);
       LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
       return result;
@@ -2646,16 +2659,18 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
 // ACOSD
 mlir::Value IntrinsicLibrary::genAcosd(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
+  // maps ACOSD to ACOS * 180 / pi
   assert(args.size() == 1);
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  mlir::Value result =
+      getRuntimeCallGenerator("acos", ftype)(builder, loc, {args[0]});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
+      loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
-  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
-  return getRuntimeCallGenerator("acos", ftype)(builder, loc, {arg});
+  return builder.create<mlir::arith::MulFOp>(loc, result, factor);
 }
 
 // ADJUSTL & ADJUSTR
@@ -2797,16 +2812,18 @@ IntrinsicLibrary::genAny(mlir::Type resultType,
 // ASIND
 mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
+  // maps ASIND to ASIN * 180 / pi
   assert(args.size() == 1);
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  mlir::Value result =
+      getRuntimeCallGenerator("asin", ftype)(builder, loc, {args[0]});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
+      loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
-  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
-  return getRuntimeCallGenerator("asin", ftype)(builder, loc, {arg});
+  return builder.create<mlir::arith::MulFOp>(loc, result, factor);
 }
 
 // ATAND, ATAN2D
@@ -3549,16 +3566,6 @@ IntrinsicLibrary::genChdir(std::optional<mlir::Type> resultType,
   }
 
   return {};
-}
-
-// CLOCK64
-mlir::Value IntrinsicLibrary::genClock64(mlir::Type resultType,
-                                         llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.read.ptx.sreg.clock64";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::FunctionType ftype = mlir::FunctionType::get(context, {}, {resultType});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
 }
 
 // CMPLX
@@ -5148,9 +5155,9 @@ void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
         isModes ? fir::runtime::genGetModesTypeSize(builder, loc)
                 : fir::runtime::genGetStatusTypeSize(builder, loc);
     byteSize = builder.createConvert(loc, builder.getIndexType(), byteSize);
-    addr =
-        builder.create<fir::AllocMemOp>(loc, extractSequenceType(heapTy),
-                                        /*typeparams=*/std::nullopt, byteSize);
+    addr = builder.create<fir::AllocMemOp>(loc, extractSequenceType(heapTy),
+                                           /*typeparams=*/mlir::ValueRange(),
+                                           byteSize);
     mlir::Value shape = builder.create<fir::ShapeOp>(loc, byteSize);
     builder.create<fir::StoreOp>(
         loc, builder.create<fir::EmboxOp>(loc, fieldTy, addr, shape), fieldRef);
@@ -7190,6 +7197,14 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
   return fir::MutableBoxValue(boxStorage, mold->nonDeferredLenParams(), {});
 }
 
+// CLOCK, CLOCK64, GLOBALTIMER
+template <typename OpTy>
+mlir::Value IntrinsicLibrary::genNVVMTime(mlir::Type resultType,
+                                          llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0 && "expect no arguments");
+  return builder.create<OpTy>(loc, resultType).getResult();
+}
+
 // PACK
 fir::ExtendedValue
 IntrinsicLibrary::genPack(mlir::Type resultType,
@@ -8183,6 +8198,99 @@ mlir::Value IntrinsicLibrary::genThisGrid(mlir::Type resultType,
       loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
   builder.create<fir::StoreOp>(loc, size, sizeCoord);
 
+  auto rankFieldName = recTy.getTypeList()[2].first;
+  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
+  mlir::Value rankFieldIndex = builder.create<fir::FieldIndexOp>(
+      loc, fieldIndexType, rankFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  mlir::Value rankCoord = builder.create<fir::CoordinateOp>(
+      loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
+  builder.create<fir::StoreOp>(loc, rank, rankCoord);
+  return res;
+}
+
+// THIS_THREAD_BLOCK
+mlir::Value
+IntrinsicLibrary::genThisThreadBlock(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  assert(recTy && "RecordType expepected");
+  mlir::Value res = builder.create<fir::AllocaOp>(loc, resultType);
+  mlir::Type i32Ty = builder.getI32Type();
+
+  // this_thread_block%size = blockDim.z * blockDim.y * blockDim.x;
+  mlir::Value blockDimX = builder.create<mlir::NVVM::BlockDimXOp>(loc, i32Ty);
+  mlir::Value blockDimY = builder.create<mlir::NVVM::BlockDimYOp>(loc, i32Ty);
+  mlir::Value blockDimZ = builder.create<mlir::NVVM::BlockDimZOp>(loc, i32Ty);
+  mlir::Value size =
+      builder.create<mlir::arith::MulIOp>(loc, blockDimZ, blockDimY);
+  size = builder.create<mlir::arith::MulIOp>(loc, size, blockDimX);
+
+  // this_thread_block%rank = ((threadIdx.z * blockDim.y) * blockDim.x) +
+  //   (threadIdx.y * blockDim.x) + threadIdx.x + 1;
+  mlir::Value threadIdX = builder.create<mlir::NVVM::ThreadIdXOp>(loc, i32Ty);
+  mlir::Value threadIdY = builder.create<mlir::NVVM::ThreadIdYOp>(loc, i32Ty);
+  mlir::Value threadIdZ = builder.create<mlir::NVVM::ThreadIdZOp>(loc, i32Ty);
+  mlir::Value r1 =
+      builder.create<mlir::arith::MulIOp>(loc, threadIdZ, blockDimY);
+  mlir::Value r2 = builder.create<mlir::arith::MulIOp>(loc, r1, blockDimX);
+  mlir::Value r3 =
+      builder.create<mlir::arith::MulIOp>(loc, threadIdY, blockDimX);
+  mlir::Value r2r3 = builder.create<mlir::arith::AddIOp>(loc, r2, r3);
+  mlir::Value rank = builder.create<mlir::arith::AddIOp>(loc, r2r3, threadIdX);
+  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+  rank = builder.create<mlir::arith::AddIOp>(loc, rank, one);
+
+  auto sizeFieldName = recTy.getTypeList()[1].first;
+  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
+  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
+  mlir::Value sizeFieldIndex = builder.create<fir::FieldIndexOp>(
+      loc, fieldIndexType, sizeFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  mlir::Value sizeCoord = builder.create<fir::CoordinateOp>(
+      loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
+  builder.create<fir::StoreOp>(loc, size, sizeCoord);
+
+  auto rankFieldName = recTy.getTypeList()[2].first;
+  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
+  mlir::Value rankFieldIndex = builder.create<fir::FieldIndexOp>(
+      loc, fieldIndexType, rankFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  mlir::Value rankCoord = builder.create<fir::CoordinateOp>(
+      loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
+  builder.create<fir::StoreOp>(loc, rank, rankCoord);
+  return res;
+}
+
+// THIS_WARP
+mlir::Value IntrinsicLibrary::genThisWarp(mlir::Type resultType,
+                                          llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  assert(recTy && "RecordType expepected");
+  mlir::Value res = builder.create<fir::AllocaOp>(loc, resultType);
+  mlir::Type i32Ty = builder.getI32Type();
+
+  // coalesced_group%size = 32
+  mlir::Value size = builder.createIntegerConstant(loc, i32Ty, 32);
+  auto sizeFieldName = recTy.getTypeList()[1].first;
+  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
+  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
+  mlir::Value sizeFieldIndex = builder.create<fir::FieldIndexOp>(
+      loc, fieldIndexType, sizeFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  mlir::Value sizeCoord = builder.create<fir::CoordinateOp>(
+      loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
+  builder.create<fir::StoreOp>(loc, size, sizeCoord);
+
+  // coalesced_group%rank = threadIdx.x & 31 + 1
+  mlir::Value threadIdX = builder.create<mlir::NVVM::ThreadIdXOp>(loc, i32Ty);
+  mlir::Value mask = builder.createIntegerConstant(loc, i32Ty, 31);
+  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+  mlir::Value masked =
+      builder.create<mlir::arith::AndIOp>(loc, threadIdX, mask);
+  mlir::Value rank = builder.create<mlir::arith::AddIOp>(loc, masked, one);
   auto rankFieldName = recTy.getTypeList()[2].first;
   mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
   mlir::Value rankFieldIndex = builder.create<fir::FieldIndexOp>(

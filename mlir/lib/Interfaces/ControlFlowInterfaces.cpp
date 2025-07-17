@@ -9,9 +9,7 @@
 #include <utility>
 
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
@@ -98,10 +96,6 @@ static LogicalResult verifyWeights(Operation *op,
                            << " weights to match number of " << weightRefName
                            << ": " << weights.size() << " vs "
                            << expectedWeightsNum;
-
-  for (auto [index, weight] : llvm::enumerate(weights))
-    if (weight < 0)
-      return op->emitError() << "weight #" << index << " must be non-negative";
 
   if (llvm::all_of(weights, [](int32_t value) { return value == 0; }))
     return op->emitError() << "branch weights cannot all be zero";

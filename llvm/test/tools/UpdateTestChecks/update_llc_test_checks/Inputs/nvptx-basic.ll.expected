@@ -54,8 +54,8 @@ define internal fastcc [4 x i64] @callee_St8x4(ptr nocapture noundef readonly by
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [callee_St8x4_param_0];
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [callee_St8x4_param_0+16];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd3, %rd4};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
   %1 = load i64, ptr %in, align 8
   %arrayidx.1 = getelementptr inbounds [4 x i64], ptr %in, i64 0, i64 1

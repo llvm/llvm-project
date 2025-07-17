@@ -6,5 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_COMMON_STEP_H__
+#define __CLC_OPENCL_COMMON_STEP_H__
+
 #define __CLC_BODY <clc/opencl/common/step.inc>
 #include <clc/math/gentype.inc>
+
+#endif // __CLC_OPENCL_COMMON_STEP_H__

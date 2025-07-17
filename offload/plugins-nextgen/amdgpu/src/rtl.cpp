@@ -3089,15 +3089,16 @@ struct AMDGPUGlobalHandlerTy final : public GenericGlobalHandlerTy {
     }
 
     // Check the size of the symbol.
-    if (SymbolSize != DeviceGlobal.getSize())
+    if (DeviceGlobal.getSize() && SymbolSize != DeviceGlobal.getSize())
       return Plugin::error(
           ErrorCode::INVALID_BINARY,
           "failed to load global '%s' due to size mismatch (%zu != %zu)",
           DeviceGlobal.getName().data(), SymbolSize,
           (size_t)DeviceGlobal.getSize());
 
-    // Store the symbol address on the device global metadata.
+    // Store the symbol address and size on the device global metadata.
     DeviceGlobal.setPtr(reinterpret_cast<void *>(SymbolAddr));
+    DeviceGlobal.setSize(SymbolSize);
 
     return Plugin::success();
   }
@@ -3503,6 +3504,9 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   switch (ResultCode) {
   case HSA_STATUS_ERROR_INVALID_SYMBOL_NAME:
     OffloadErrCode = ErrorCode::NOT_FOUND;
+    break;
+  case HSA_STATUS_ERROR_INVALID_CODE_OBJECT:
+    OffloadErrCode = ErrorCode::INVALID_BINARY;
     break;
   default:
     OffloadErrCode = ErrorCode::UNKNOWN;

@@ -5,9 +5,9 @@ print *, ichar('')
 print *, iachar('')
 print *, ichar('a')
 print *, iachar('a')
-!PORTABILITY: Character in intrinsic function ichar should have length one
+!PORTABILITY: Character in intrinsic function ichar should have length one [-Wportability]
 print *, ichar('ab')
-!PORTABILITY: Character in intrinsic function iachar should have length one
+!PORTABILITY: Character in intrinsic function iachar should have length one [-Wportability]
 print *, iachar('ab')
 end
 
