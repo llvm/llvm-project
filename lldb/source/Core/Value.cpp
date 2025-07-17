@@ -490,7 +490,10 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     if (exe_ctx) {
       Target *target = exe_ctx->GetTargetPtr();
       if (target) {
-        data.SetByteOrder(target->GetArchitecture().GetByteOrder());
+        // Registers are always stored in host endian.
+        data.SetByteOrder(m_context_type == ContextType::RegisterInfo
+                              ? endian::InlHostByteOrder()
+                              : target->GetArchitecture().GetByteOrder());
         data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
         break;
       }
