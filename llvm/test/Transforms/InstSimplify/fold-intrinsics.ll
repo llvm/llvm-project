@@ -87,3 +87,202 @@ define void @pow_poison(i16 %arg_int,float %arg_flt, ptr %P) {
 
   ret void
 }
+
+define void @sin_poison(ptr %P) {
+; CHECK-LABEL: @sin_poison(
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    ret void
+;
+  %sin_f32 = call float @llvm.sin(float poison)
+  store volatile float %sin_f32, ptr %P
+
+  %sin_2xf32 = call <2 x float> @llvm.sin(<2 x float> poison)
+  store volatile <2 x float> %sin_2xf32, ptr %P
+
+  %sin_4xf64 = call <4 x double> @llvm.sin(<4 x double> poison)
+  store volatile <4 x double> %sin_4xf64, ptr %P
+
+  %asin_f32 = call float @llvm.asin(float poison)
+  store volatile float %asin_f32, ptr %P
+
+  %asin_2xf32 = call <2 x float> @llvm.asin(<2 x float> poison)
+  store volatile <2 x float> %asin_2xf32, ptr %P
+
+  %asin_4xf64 = call <4 x double> @llvm.asin(<4 x double> poison)
+  store volatile <4 x double> %asin_4xf64, ptr %P
+
+  ret void
+}
+
+
+define void @cos_poison(ptr %P) {
+; CHECK-LABEL: @cos_poison(
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    ret void
+;
+  %cos_f32 = call float @llvm.cos(float poison)
+  store volatile float %cos_f32, ptr %P
+
+  %cos_2xf32 = call <2 x float> @llvm.cos(<2 x float> poison)
+  store volatile <2 x float> %cos_2xf32, ptr %P
+
+  %cos_4xf64 = call <4 x double> @llvm.cos(<4 x double> poison)
+  store volatile <4 x double> %cos_4xf64, ptr %P
+
+  %acos_f32 = call float @llvm.acos(float poison)
+  store volatile float %acos_f32, ptr %P
+
+  %acos_2xf32 = call <2 x float> @llvm.acos(<2 x float> poison)
+  store volatile <2 x float> %acos_2xf32, ptr %P
+
+  %acos_4xf64 = call <4 x double> @llvm.acos(<4 x double> poison)
+  store volatile <4 x double> %acos_4xf64, ptr %P
+
+  ret void
+}
+
+
+define void @tan_poison(ptr %P) {
+; CHECK-LABEL: @tan_poison(
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    ret void
+;
+  %tan_f32 = call float @llvm.tan(float poison)
+  store volatile float %tan_f32, ptr %P
+
+  %tan_2xf32 = call <2 x float> @llvm.tan(<2 x float> poison)
+  store volatile <2 x float> %tan_2xf32, ptr %P
+
+  %tan_4xf64 = call <4 x double> @llvm.tan(<4 x double> poison)
+  store volatile <4 x double> %tan_4xf64, ptr %P
+
+  %atan_f32 = call float @llvm.atan(float poison)
+  store volatile float %atan_f32, ptr %P
+
+  %atan_2xf32 = call <2 x float> @llvm.atan(<2 x float> poison)
+  store volatile <2 x float> %atan_2xf32, ptr %P
+
+  %atan_4xf64 = call <4 x double> @llvm.atan(<4 x double> poison)
+  store volatile <4 x double> %atan_4xf64, ptr %P
+
+  %atan2_f32 = call float @llvm.atan2(float poison, float poison)
+  store volatile float %atan2_f32, ptr %P
+
+  %atan2_2xf32 = call <2 x float> @llvm.atan2(<2 x float> poison, <2 x float> poison)
+  store volatile <2 x float> %atan2_2xf32, ptr %P
+
+  %atan2_4xf64 = call <4 x double> @llvm.atan2(<4 x double> poison, <4 x double> poison)
+  store volatile <4 x double> %atan2_4xf64, ptr %P
+
+  ret void
+}
+
+
+define void @sincos_poison(ptr %P) {
+; CHECK-LABEL: @sincos_poison(
+; CHECK-NEXT:    store volatile { float, float } poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile { <2 x float>, <2 x float> } poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile { <4 x double>, <4 x double> } poison, ptr [[P]], align 32
+; CHECK-NEXT:    store volatile { float, float } poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile { <2 x float>, <2 x float> } poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile { <4 x double>, <4 x double> } poison, ptr [[P]], align 32
+; CHECK-NEXT:    ret void
+;
+  %sincos_f32 = call { float, float } @llvm.sincos(float poison)
+  store volatile { float, float } %sincos_f32, ptr %P
+
+  %sincos_2xf32 = call { <2 x float>, <2 x float> } @llvm.sincos(<2 x float> poison)
+  store volatile { <2 x float>, <2 x float> } %sincos_2xf32, ptr %P
+
+  %sincos_4xf64 = call { <4 x double>, <4 x double> } @llvm.sincos(<4 x double> poison)
+  store volatile { <4 x double>, <4 x double> } %sincos_4xf64, ptr %P
+
+  %sincospi_f32 = call { float, float } @llvm.sincospi(float poison)
+  store volatile { float, float } %sincospi_f32, ptr %P
+
+  %sincospi_2xf32 = call { <2 x float>, <2 x float> } @llvm.sincospi(<2 x float> poison)
+  store volatile { <2 x float>, <2 x float> } %sincospi_2xf32, ptr %P
+
+  %sincospi_4xf64 = call { <4 x double>, <4 x double> } @llvm.sincospi(<4 x double> poison)
+  store volatile { <4 x double>, <4 x double> } %sincospi_4xf64, ptr %P
+
+  ret void
+}
+
+
+define void @sinh_poison(ptr %P) {
+; CHECK-LABEL: @sinh_poison(
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    ret void
+;
+  %sinh_f32 = call float @llvm.sinh(float poison)
+  store volatile float %sinh_f32, ptr %P
+
+  %sinh_2xf32 = call <2 x float> @llvm.sinh(<2 x float> poison)
+  store volatile <2 x float> %sinh_2xf32, ptr %P
+
+  %sinh_4xf64 = call <4 x double> @llvm.sinh(<4 x double> poison)
+  store volatile <4 x double> %sinh_4xf64, ptr %P
+
+  ret void
+}
+
+
+define void @cosh_poison(ptr %P) {
+; CHECK-LABEL: @cosh_poison(
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    ret void
+;
+  %cosh_f32 = call float @llvm.cosh(float poison)
+  store volatile float %cosh_f32, ptr %P
+
+  %cosh_2xf32 = call <2 x float> @llvm.cosh(<2 x float> poison)
+  store volatile <2 x float> %cosh_2xf32, ptr %P
+
+  %cosh_4xf64 = call <4 x double> @llvm.cosh(<4 x double> poison)
+  store volatile <4 x double> %cosh_4xf64, ptr %P
+
+  ret void
+}
+
+
+define void @tanh_poison(ptr %P) {
+; CHECK-LABEL: @tanh_poison(
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    ret void
+;
+  %tanh_f32 = call float @llvm.tanh(float poison)
+  store volatile float %tanh_f32, ptr %P
+
+  %tanh_2xf32 = call <2 x float> @llvm.tanh(<2 x float> poison)
+  store volatile <2 x float> %tanh_2xf32, ptr %P
+
+  %tanh_4xf64 = call <4 x double> @llvm.tanh(<4 x double> poison)
+  store volatile <4 x double> %tanh_4xf64, ptr %P
+
+  ret void
+}

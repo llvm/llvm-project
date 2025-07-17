@@ -119,6 +119,11 @@ struct True16D16Info {
   unsigned LoOp;
 };
 
+struct WMMAInstInfo {
+  uint16_t Opcode;
+  bool is_wmma_xdl;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -129,6 +134,7 @@ struct True16D16Info {
 #define GET_isMFMA_F8F6F4Table_DECL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
 #define GET_True16D16Table_DECL
+#define GET_WMMAInstInfoTable_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -592,6 +598,9 @@ bool getMAIIsDGEMM(unsigned Opc);
 
 LLVM_READONLY
 bool getMAIIsGFX940XDL(unsigned Opc);
+
+LLVM_READONLY
+bool getWMMAIsXDL(unsigned Opc);
 
 // Get an equivalent BitOp3 for a binary logical \p Opc.
 // \returns BitOp3 modifier for the logical operation or zero.

@@ -9,9 +9,7 @@
 #include <utility>
 
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 

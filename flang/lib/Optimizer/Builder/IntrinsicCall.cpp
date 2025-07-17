@@ -503,6 +503,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"getgid", &I::genGetGID},
     {"getpid", &I::genGetPID},
     {"getuid", &I::genGetUID},
+    {"globaltimer", &I::genGlobalTimer, {}, /*isElemental=*/false},
     {"hostnm",
      &I::genHostnm,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
@@ -1231,8 +1232,11 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::StringRef mathLibFuncName = mathOp.runtimeFunc;
   if (!mathLibFuncName.empty()) {
     // If we enabled MLIR complex or can use approximate operations, we should
-    // NOT use libm.
-    if (!forceMlirComplex && !canUseApprox) {
+    // NOT use libm. Avoid libm when targeting AMDGPU as those symbols are not
+    // available on the device and we rely on MLIR complex operations to
+    // later map to OCML calls.
+    bool isAMDGPU = fir::getTargetTriple(builder.getModule()).isAMDGCN();
+    if (!forceMlirComplex && !canUseApprox && !isAMDGPU) {
       result = genLibCall(builder, loc, mathOp, mathLibFuncType, args);
       LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
       return result;
@@ -4314,6 +4318,13 @@ mlir::Value IntrinsicLibrary::genGetUID(mlir::Type resultType,
   assert(args.size() == 0 && "getgid takes no input");
   return builder.createConvert(loc, resultType,
                                fir::runtime::genGetUID(builder, loc));
+}
+
+// GLOBALTIMER
+mlir::Value IntrinsicLibrary::genGlobalTimer(mlir::Type resultType,
+                                             llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0 && "globalTimer takes no args");
+  return builder.create<mlir::NVVM::GlobalTimerOp>(loc, resultType).getResult();
 }
 
 // GET_COMMAND_ARGUMENT

@@ -282,6 +282,7 @@ struct IntrinsicLibrary {
                         llvm::ArrayRef<mlir::Value> args);
   mlir::Value genGetUID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
+  mlir::Value genGlobalTimer(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genHostnm(std::optional<mlir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genIall(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);

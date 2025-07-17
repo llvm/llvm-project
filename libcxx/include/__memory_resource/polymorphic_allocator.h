@@ -50,7 +50,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI polymorphic_allocator() noexcept : __res_(std::pmr::get_default_resource()) {}
 
-  _LIBCPP_HIDE_FROM_ABI polymorphic_allocator(memory_resource* __r) noexcept : __res_(__r) {}
+  _LIBCPP_HIDE_FROM_ABI polymorphic_allocator(memory_resource* _LIBCPP_DIAGNOSE_NULLPTR __r) noexcept : __res_(__r) {
+    _LIBCPP_ASSERT_NON_NULL(__r, "Attempted to pass a nullptr resource to polymorphic_alloator");
+  }
 
   _LIBCPP_HIDE_FROM_ABI polymorphic_allocator(const polymorphic_allocator&) = default;
 
@@ -174,7 +176,7 @@ public:
     return polymorphic_allocator();
   }
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* resource() const noexcept { return __res_; }
+  [[__gnu__::__returns_nonnull__]] _LIBCPP_HIDE_FROM_ABI memory_resource* resource() const noexcept { return __res_; }
 
   _LIBCPP_HIDE_FROM_ABI friend bool
   operator==(const polymorphic_allocator& __lhs, const polymorphic_allocator& __rhs) noexcept {

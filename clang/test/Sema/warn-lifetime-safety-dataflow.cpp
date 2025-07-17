@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mllvm -debug-only=LifetimeFacts,LifetimeDataflow -Wexperimental-lifetime-safety %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -mllvm -debug-only=LifetimeFacts,LifetimeLoanPropagation -Wexperimental-lifetime-safety %s 2>&1 | FileCheck %s
 // REQUIRES: asserts
 
 struct MyObj {
@@ -19,7 +19,7 @@ MyObj* return_local_addr() {
 // CHECK:   ReturnOfOrigin (OriginID: [[O_RET_VAL]])
 // CHECK:   Expire (LoanID: [[L_X]])
 }
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK-DAG: Origin [[O_ADDR_X]] contains Loan [[L_X]]
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_X]]
 // CHECK-DAG: Origin [[O_RET_VAL]] contains Loan [[L_X]]
@@ -47,7 +47,7 @@ MyObj* assign_and_return_local_addr() {
 // CHECK: ReturnOfOrigin (OriginID: [[O_PTR2_RVAL_2]])
 // CHECK: Expire (LoanID: [[L_Y]])
 }
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK-DAG: Origin [[O_ADDR_Y]] contains Loan [[L_Y]]
 // CHECK-DAG: Origin [[O_PTR1]] contains Loan [[L_Y]]
 // CHECK-DAG: Origin [[O_PTR2]] contains Loan [[L_Y]]
@@ -65,7 +65,7 @@ int return_int_val() {
   return x;
 }
 // CHECK-NEXT: End of Block
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK:  <empty>
 
 
@@ -79,7 +79,7 @@ void loan_expires_cpp() {
 // CHECK: AssignOrigin (DestID: [[O_POBJ:[0-9]+]], SrcID: [[O_ADDR_OBJ]])
 // CHECK: Expire (LoanID: [[L_OBJ]])
 }
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK-DAG: Origin [[O_ADDR_OBJ]] contains Loan [[L_OBJ]]
 // CHECK-DAG: Origin [[O_POBJ]] contains Loan [[L_OBJ]]
 
@@ -96,7 +96,7 @@ void loan_expires_trivial() {
 // CHECK-NEXT: End of Block
   // FIXME: Add check for Expire once trivial destructors are handled for expiration.
 }
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK-DAG: Origin [[O_ADDR_TRIVIAL_OBJ]] contains Loan [[L_TRIVIAL_OBJ]]
 // CHECK-DAG: Origin [[O_PTOBJ]] contains Loan [[L_TRIVIAL_OBJ]]
 
@@ -119,7 +119,7 @@ void conditional(bool condition) {
   // CHECK: AssignOrigin (DestID: [[O_P_RVAL:[0-9]+]], SrcID: [[O_P]])
   // CHECK: AssignOrigin (DestID: [[O_Q:[0-9]+]], SrcID: [[O_P_RVAL]])
 }
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK-DAG: Origin [[O_ADDR_A]] contains Loan [[L_A]]
 // CHECK-DAG: Origin [[O_ADDR_B]] contains Loan [[L_B]]
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_A]]
@@ -163,7 +163,7 @@ void pointers_in_a_cycle(bool condition) {
 }
 // At the end of the analysis, the origins for the pointers involved in the cycle
 // (p1, p2, p3, temp) should all contain the loans from v1, v2, and v3 at the fixed point.
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK-DAG: Origin [[O_P1]] contains Loan [[L_V1]]
 // CHECK-DAG: Origin [[O_P1]] contains Loan [[L_V2]]
 // CHECK-DAG: Origin [[O_P1]] contains Loan [[L_V3]]
@@ -195,7 +195,7 @@ void overwrite_origin() {
 // CHECK:   Expire (LoanID: [[L_S2]])
 // CHECK:   Expire (LoanID: [[L_S1]])
 }
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK:     Origin [[O_P]] contains Loan [[L_S2]]
 // CHECK-NOT: Origin [[O_P]] contains Loan [[L_S1]]
 
@@ -213,7 +213,7 @@ void reassign_to_null() {
 }
 // FIXME: Have a better representation for nullptr than just an empty origin. 
 //        It should be a separate loan and origin kind.
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK: Origin [[O_P]] contains no loans
 
 
@@ -235,7 +235,7 @@ void reassign_in_if(bool condition) {
 // CHECK:   Expire (LoanID: [[L_S2]])
 // CHECK:   Expire (LoanID: [[L_S1]])
 }
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_S1]]
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_S2]]
 // CHECK-DAG: Origin [[O_ADDR_S1]] contains Loan [[L_S1]]
@@ -276,7 +276,7 @@ void assign_in_switch(int mode) {
 // CHECK-DAG:   Expire (LoanID: [[L_S2]])
 // CHECK-DAG:   Expire (LoanID: [[L_S1]])
 }
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_S1]]
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_S2]]
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_S3]]
@@ -299,7 +299,7 @@ void loan_in_loop(bool condition) {
 // CHECK:   Expire (LoanID: [[L_INNER]])
   }
 }
-// CHECK: Dataflow results:
+// CHECK: LoanPropagation results:
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_INNER]]
 // CHECK-DAG: Origin [[O_ADDR_INNER]] contains Loan [[L_INNER]]
 
@@ -326,7 +326,7 @@ void loop_with_break(int count) {
 // CHECK:   Expire (LoanID: [[L_S1]])
 }
 
-// CHECK-LABEL: Dataflow results:
+// CHECK-LABEL: LoanPropagation results:
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_S1]]
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_S2]]
 // CHECK-DAG: Origin [[O_ADDR_S1]] contains Loan [[L_S1]]
@@ -355,7 +355,7 @@ void nested_scopes() {
 // CHECK:   Expire (LoanID: [[L_OUTER]])
 }
 
-// CHECK-LABEL: Dataflow results:
+// CHECK-LABEL: LoanPropagation results:
 // CHECK-DAG: Origin [[O_P]] contains Loan [[L_INNER]]
 // CHECK-DAG: Origin [[O_ADDR_INNER]] contains Loan [[L_INNER]]
 // CHECK-DAG: Origin [[O_ADDR_OUTER]] contains Loan [[L_OUTER]]

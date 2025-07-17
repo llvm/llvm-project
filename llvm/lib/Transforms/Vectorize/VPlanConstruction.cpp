@@ -591,6 +591,30 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
+void VPlanTransforms::createExtractsForLiveOuts(VPlan &Plan) {
+  for (VPBasicBlock *EB : Plan.getExitBlocks()) {
+    VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+    VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+
+    if (EB->getSinglePredecessor() != Plan.getMiddleBlock())
+      continue;
+
+    for (VPRecipeBase &R : EB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&R);
+      for (unsigned Idx = 0; Idx != ExitIRI->getNumIncoming(); ++Idx) {
+        VPRecipeBase *Inc = ExitIRI->getIncomingValue(Idx)->getDefiningRecipe();
+        if (!Inc || !Inc->getParent()->getParent())
+          continue;
+        assert(ExitIRI->getNumOperands() == 1 &&
+               ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
+               "exit values from early exits must be fixed when branch to "
+               "early-exit is added");
+        ExitIRI->extractLastLaneOfFirstOperand(B);
+      }
+    }
+  }
+}
+
 // Likelyhood of bypassing the vectorized loop due to a runtime check block,
 // including memory overlap checks block and wrapping/unit-stride checks block.
 static constexpr uint32_t CheckBypassWeights[] = {1, 127};

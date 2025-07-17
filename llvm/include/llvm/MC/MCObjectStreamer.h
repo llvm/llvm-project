@@ -43,8 +43,8 @@ class MCObjectStreamer : public MCStreamer {
   struct PendingMCFixup {
     const MCSymbol *Sym;
     MCFixup Fixup;
-    MCDataFragment *DF;
-    PendingMCFixup(const MCSymbol *McSym, MCDataFragment *F, MCFixup McFixup)
+    MCFragment *DF;
+    PendingMCFixup(const MCSymbol *McSym, MCFragment *F, MCFixup McFixup)
         : Sym(McSym), Fixup(McFixup), DF(F) {}
   };
   SmallVector<PendingMCFixup, 2> PendingFixups;
@@ -59,7 +59,7 @@ class MCObjectStreamer : public MCStreamer {
   DenseMap<const MCSymbol *, SmallVector<PendingAssignment, 1>>
       pendingAssignments;
 
-  virtual void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &);
+  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &);
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
@@ -92,10 +92,10 @@ public:
   }
 
   /// Get a data fragment to write into, creating a new one if the current
-  /// fragment is not a data fragment.
+  /// fragment is not FT_Data.
   /// Optionally a \p STI can be passed in so that a new fragment is created
   /// if the Subtarget differs from the current fragment.
-  MCDataFragment *getOrCreateDataFragment(const MCSubtargetInfo* STI = nullptr);
+  MCFragment *getOrCreateDataFragment(const MCSubtargetInfo *STI = nullptr);
 
 protected:
   bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
@@ -109,7 +109,7 @@ public:
   /// @{
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
+  virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
                               uint64_t Offset);
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitConditionalAssignment(MCSymbol *Symbol,
@@ -127,9 +127,6 @@ public:
   /// can change its size during relaxation.
   void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
 
-  void emitBundleAlignMode(Align Alignment) override;
-  void emitBundleLock(bool AlignToEnd) override;
-  void emitBundleUnlock() override;
   void emitBytes(StringRef Data) override;
   void emitValueToAlignment(Align Alignment, int64_t Fill = 0,
                             uint8_t FillLen = 1,

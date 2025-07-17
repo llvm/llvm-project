@@ -1310,7 +1310,7 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
   BatchAAResults BatchAA(*AA);
   for (BasicBlock *BB = FromBB; BB; BB = BB->getSinglePredecessor())
     for (auto *Inst = BB == FromBB ? From : BB->getTerminator();
-         Inst != nullptr; Inst = Inst->getPrevNonDebugInstruction()) {
+         Inst != nullptr; Inst = Inst->getPrevNode()) {
       // Stop the search if limit is reached.
       if (++NumVisitedInsts > MaxNumVisitedInsts)
         return nullptr;

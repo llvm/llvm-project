@@ -1032,14 +1032,14 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.GNUCVersion && LangOpts.RTTI)
     Builder.defineMacro("__GXX_RTTI");
 
-  if (LangOpts.hasSjLjExceptions())
+  if (CGOpts.hasSjLjExceptions())
     Builder.defineMacro("__USING_SJLJ_EXCEPTIONS__");
-  else if (LangOpts.hasSEHExceptions())
+  else if (CGOpts.hasSEHExceptions())
     Builder.defineMacro("__SEH__");
-  else if (LangOpts.hasDWARFExceptions() &&
+  else if (CGOpts.hasDWARFExceptions() &&
            (TI.getTriple().isThumb() || TI.getTriple().isARM()))
     Builder.defineMacro("__ARM_DWARF_EH__");
-  else if (LangOpts.hasWasmExceptions() && TI.getTriple().isWasm())
+  else if (CGOpts.hasWasmExceptions() && TI.getTriple().isWasm())
     Builder.defineMacro("__WASM_EXCEPTIONS__");
 
   if (LangOpts.Deprecated)

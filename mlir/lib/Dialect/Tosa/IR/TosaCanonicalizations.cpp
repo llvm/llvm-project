@@ -1295,7 +1295,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
     }
 
     if (llvm::isa<IntegerType>(inETy) && llvm::isa<IntegerType>(outETy)) {
-      auto unsignIn = llvm::cast<IntegerType>(inETy).isUnsignedInteger();
+      const auto inIntType = llvm::cast<IntegerType>(inETy);
+      auto unsignIn = inIntType.isUnsignedInteger();
       bool trunc =
           inETy.getIntOrFloatBitWidth() > outETy.getIntOrFloatBitWidth();
       auto intVal = operand.getSplatValue<APInt>();
@@ -1303,7 +1304,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
 
       if (trunc) {
         intVal = intVal.trunc(bitwidth);
-      } else if (unsignIn) {
+        // i1 types are boolean in TOSA
+      } else if (unsignIn || inIntType.isInteger(1)) {
         intVal = intVal.zext(bitwidth);
       } else {
         intVal = intVal.sext(bitwidth);

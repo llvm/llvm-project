@@ -1,6 +1,5 @@
 # REQUIRES: riscv
-# Unsupported until we fix launching the filter program on Windows.
-# UNSUPPORTED: system-windows
+# REQUIRES: python
 
 # This test verifies that disassemble -b prints out the correct bytes and
 # format for standard and unknown riscv instructions of various sizes,
@@ -11,7 +10,7 @@
 
 # RUN: llvm-mc -filetype=obj -mattr=+c --triple=riscv32-unknown-unknown %s -o %t
 # RUN: %lldb -b %t "-o" "disassemble -b -n main" | FileCheck %s
-# RUN: %lldb -b %t -o "command script import %S/../../../examples/python/filter_disasm.py" -o "fdis set %S/Inputs/dis_filt.py" -o "fdis -n main" | FileCheck --check-prefix=FILTER %s
+# RUN: %lldb -b %t -o "command script import %S/../../../examples/python/filter_disasm.py" -o "fdis set %python %S/Inputs/dis_filt.py" -o "fdis -n main" | FileCheck --check-prefix=FILTER %s
 
 main:
     addi   sp, sp, -0x20               # 16 bit standard instruction
