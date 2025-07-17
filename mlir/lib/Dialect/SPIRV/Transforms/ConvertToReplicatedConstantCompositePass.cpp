@@ -1,4 +1,4 @@
-//===- ConvertToReplicatedConstantCompositePass.cpp --------------------===//
+//===- ConvertToReplicatedConstantCompositePass.cpp -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,15 +40,9 @@ getSplatAttributeAndCount(Attribute valueAttr) {
   }
 
   if (attr) {
-    if (auto typedAttr = dyn_cast<TypedAttr>(attr)) {
-      if (isa<spirv::CompositeType>(typedAttr.getType())) {
-        std::pair<Attribute, uint32_t> newSplatAttrAndCount =
-            getSplatAttributeAndCount(attr);
-        if (newSplatAttrAndCount.first) {
-          return newSplatAttrAndCount;
-        }
-      }
-    } else if (isa<ArrayAttr>(attr)) {
+    auto typedAttr = dyn_cast<TypedAttr>(attr);
+    if ((typedAttr && isa<spirv::CompositeType>(typedAttr.getType())) ||
+        isa<ArrayAttr>(attr)) {
       std::pair<Attribute, uint32_t> newSplatAttrAndCount =
           getSplatAttributeAndCount(attr);
       if (newSplatAttrAndCount.first) {
@@ -69,17 +63,16 @@ struct ConstantOpConversion final : OpRewritePattern<spirv::ConstantOp> {
     if (!compositeType)
       return rewriter.notifyMatchFailure(op, "not a composite constant");
 
-    std::pair<Attribute, uint32_t> splatAttrAndCount =
-        getSplatAttributeAndCount(op.getValue());
-    if (!splatAttrAndCount.first)
+    auto [splattAttr, splatCount] = getSplatAttributeAndCount(op.getValue());
+    if (!splattAttr)
       return rewriter.notifyMatchFailure(op, "composite is not splat");
 
-    if (splatAttrAndCount.second == 1)
+    if (splatCount == 1)
       return rewriter.notifyMatchFailure(op,
                                          "composite has only one constituent");
 
     rewriter.replaceOpWithNewOp<spirv::EXTConstantCompositeReplicateOp>(
-        op, op.getType(), splatAttrAndCount.first);
+        op, op.getType(), splattAttr);
 
     return success();
   }
@@ -104,8 +97,7 @@ struct SpecConstantCompositeOpConversion final
                              std::not_equal_to<>()) == constituents.end()))
       return rewriter.notifyMatchFailure(op, "composite is not splat");
 
-    auto splatConstituent =
-        dyn_cast<FlatSymbolRefAttr>(op.getConstituents()[0]);
+    auto splatConstituent = dyn_cast<FlatSymbolRefAttr>(constituents[0]);
     if (!splatConstituent)
       return rewriter.notifyMatchFailure(
           op, "expected flat symbol reference for splat constituent");
