@@ -355,7 +355,7 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
     if (BB == getHeader()) {
       assert(!OutsideLoopPreds.empty() && "Loop is unreachable!");
     } else if (!OutsideLoopPreds.empty()) {
-      // A non-header loop shouldn't be reachable from outside the loop,
+      // A non-header loop block shouldn't be reachable from outside the loop,
       // though it is permitted if the predecessor is not itself actually
       // reachable.
       BlockT *EntryBB = &BB->getParent()->front();

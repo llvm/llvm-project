@@ -14,6 +14,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
@@ -282,7 +283,9 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
 
   for (auto [BB, Succ0, Succ1] : Branches) {
 #ifndef NDEBUG
-    assert(Incoming.insert(BB).second && "Duplicate entry for incoming block.");
+    assert(
+        (Incoming.insert(BB).second || isa<CallBrInst>(BB->getTerminator())) &&
+        "Duplicate entry for incoming block.");
 #endif
     if (Succ0)
       Outgoing.insert(Succ0);
@@ -341,4 +344,56 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
   }
 
   return {FirstGuardBlock, true};
+}
+
+BasicBlock *ControlFlowHub::createCallBrTarget(
+    CallBrInst *CallBr, BasicBlock *Succ, unsigned SuccIdx, bool AttachToCallBr,
+    CycleInfo *CI, DomTreeUpdater *DTU, LoopInfo *LI) {
+  BasicBlock *CallBrBlock = CallBr->getParent();
+  BasicBlock *CallBrTarget =
+      BasicBlock::Create(CallBrBlock->getContext(),
+                         CallBrBlock->getName() + ".target." + Succ->getName(),
+                         CallBrBlock->getParent());
+  // Rewire control flow from callbr to the new target block.
+  Succ->replacePhiUsesWith(CallBrBlock, CallBrTarget);
+  CallBr->setSuccessor(SuccIdx, CallBrTarget);
+  // Jump from the new target block to the original successor.
+  BranchInst::Create(Succ, CallBrTarget);
+  if (LI) {
+    if (Loop *L = LI->getLoopFor(AttachToCallBr ? CallBrBlock : Succ); L) {
+      bool AddToLoop = true;
+      if (AttachToCallBr) {
+        // Check if the loops are disjoint. In that case, we do not add the
+        // intermediate target to any loop.
+        if (auto *LL = LI->getLoopFor(Succ);
+            LL && !L->contains(LL) && !LL->contains(L))
+          AddToLoop = false;
+      }
+      if (AddToLoop)
+        L->addBasicBlockToLoop(CallBrTarget, *LI);
+    }
+  }
+  if (CI) {
+    if (auto *C = CI->getCycle(AttachToCallBr ? CallBrBlock : Succ); C) {
+      bool AddToCycle = true;
+      if (AttachToCallBr) {
+        // Check if the cycles are disjoint. In that case, we do not add the
+        // intermediate target to any cycle.
+        if (auto *CC = CI->getCycle(Succ); CC) {
+          auto *CommonC = CI->getSmallestCommonCycle(C, CC);
+          if (CommonC != C && CommonC != CC)
+            AddToCycle = false;
+        }
+      }
+      if (AddToCycle)
+        CI->addBlockToCycle(CallBrTarget, C);
+    }
+  }
+  if (DTU) {
+    DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
+    if (DTU->getDomTree().dominates(CallBrBlock, Succ))
+      DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ},
+                         {DominatorTree::Insert, CallBrTarget, Succ}});
+  }
+  return CallBrTarget;
 }
