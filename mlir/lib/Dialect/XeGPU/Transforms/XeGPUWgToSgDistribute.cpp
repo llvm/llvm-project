@@ -199,8 +199,8 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
 
     Value adjustedSgId = linearSgId;
     if (sgIdSpecialized) {
-      int64_t expectedSgLayoutSize = endOfRange - startOfRange;
-      if (computeProduct(sgLayout) != expectedSgLayoutSize) {
+      int64_t sgCount = endOfRange - startOfRange;
+      if (computeProduct(sgLayout) != sgCount) {
         return rewriter.notifyMatchFailure(
             op, "sg_layout size must match the sg_id_range");
       }
