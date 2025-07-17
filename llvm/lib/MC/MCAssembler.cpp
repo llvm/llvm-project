@@ -735,13 +735,17 @@ void MCAssembler::layout() {
         // In the variable part, fixup offsets are relative to the fixed part's
         // start. Extend the variable contents to the left to account for the
         // fixed part size.
-        Contents = MutableArrayRef(F.getParent()->ContentStorage)
-                       .slice(F.VarContentStart - Contents.size(), F.getSize());
-        for (MCFixup &Fixup : F.getVarFixups()) {
-          uint64_t FixedValue;
-          MCValue Target;
-          evaluateFixup(F, Fixup, Target, FixedValue,
-                        /*RecordReloc=*/true, Contents);
+        auto VarFixups = F.getVarFixups();
+        if (VarFixups.size()) {
+          Contents =
+              MutableArrayRef(F.getParent()->ContentStorage)
+                  .slice(F.VarContentStart - Contents.size(), F.getSize());
+          for (MCFixup &Fixup : VarFixups) {
+            uint64_t FixedValue;
+            MCValue Target;
+            evaluateFixup(F, Fixup, Target, FixedValue,
+                          /*RecordReloc=*/true, Contents);
+          }
         }
       } else if (auto *AF = dyn_cast<MCAlignFragment>(&F)) {
         // For RISC-V linker relaxation, an alignment relocation might be
