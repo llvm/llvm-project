@@ -360,8 +360,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
   }
 
-  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayBase.getElementType());
-  assert(arrayTy && "expected array type");
+  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
   mlir::Type elementType = arrayTy.getElementType();
   cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
 
@@ -400,7 +399,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     }
 
     // Emit the constructor call that will execute for every array element.
-    auto arrayOp = builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
+    mlir::Value arrayOp = builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
     builder.create<cir::ArrayCtor>(
         *currSrcLoc, arrayOp, [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);

@@ -160,19 +160,16 @@ void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
   op.erase();
 }
 
-static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
+static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
                                        mlir::Operation *op, mlir::Type eltTy,
                                        mlir::Value arrayAddr,
                                        uint64_t arrayLen) {
   // Generate loop to call into ctor/dtor for every element.
-  Location loc = op->getLoc();
+  mlir::Location loc = op->getLoc();
 
   // TODO: instead of fixed integer size, create alias for PtrDiffTy and unify
   // with CIRGen stuff.
-  auto ptrDiffTy =
-      cir::IntType::get(builder.getContext(), 64, /*isSigned=*/false);
-  auto numArrayElementsConst = builder.create<cir::ConstantOp>(
-      loc, ptrDiffTy, cir::IntAttr::get(ptrDiffTy, arrayLen));
+  cir::ConstantOp numArrayElementsConst = builder.getUnsignedInt(loc, 64, arrayLen);
 
   auto begin = builder.create<cir::CastOp>(
       loc, eltTy, cir::CastKind::array_to_ptrdecay, arrayAddr);
@@ -198,8 +195,8 @@ static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         auto currentElement = b.create<cir::LoadOp>(loc, eltTy, tmpAddr);
 
-        CallOp ctorCall;
-        op->walk([&](CallOp c) { ctorCall = c; });
+        cir::CallOp ctorCall;
+        op->walk([&](cir::CallOp c) { ctorCall = c; });
         assert(ctorCall && "expected ctor call");
 
         auto one = builder.create<cir::ConstantOp>(
@@ -219,11 +216,11 @@ static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
   op->erase();
 }
 
-void LoweringPreparePass::lowerArrayCtor(ArrayCtor op) {
-  CIRBaseBuilderTy builder(getContext());
+void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
+  cir::CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op.getOperation());
 
-  Type eltTy = op->getRegion(0).getArgument(0).getType();
+  mlir::Type eltTy = op->getRegion(0).getArgument(0).getType();
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
   lowerArrayDtorCtorIntoLoop(builder, op, eltTy, op.getAddr(), arrayLen);
