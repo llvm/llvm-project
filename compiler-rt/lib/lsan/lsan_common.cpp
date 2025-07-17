@@ -412,7 +412,7 @@ void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
 #  if SANITIZER_FUCHSIA
 
 // Fuchsia handles all threads together with its own callback.
-static void ProcessThreads(SuspendedThreadsList const &, Frontier *, thid_t,
+static void ProcessThreads(SuspendedThreadsList const &, Frontier *, ThreadID,
                            uptr) {}
 
 #  else
@@ -445,7 +445,7 @@ static void ProcessThreadRegistry(Frontier *frontier) {
 
 // Scans thread data (stacks and TLS) for heap pointers.
 template <class Accessor>
-static void ProcessThread(thid_t os_id, uptr sp,
+static void ProcessThread(ThreadID os_id, uptr sp,
                           const InternalMmapVector<uptr> &registers,
                           InternalMmapVector<Range> &extra_ranges,
                           Frontier *frontier, Accessor &accessor) {
@@ -556,16 +556,16 @@ static void ProcessThread(thid_t os_id, uptr sp,
 }
 
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
-                           Frontier *frontier, thid_t caller_tid,
+                           Frontier *frontier, ThreadID caller_tid,
                            uptr caller_sp) {
-  InternalMmapVector<thid_t> done_threads;
+  InternalMmapVector<ThreadID> done_threads;
   InternalMmapVector<uptr> registers;
   InternalMmapVector<Range> extra_ranges;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
     registers.clear();
     extra_ranges.clear();
 
-    const thid_t os_id = suspended_threads.GetThreadID(i);
+    const ThreadID os_id = suspended_threads.GetThreadID(i);
     uptr sp = 0;
     PtraceRegistersStatus have_registers =
         suspended_threads.GetRegistersAndSP(i, &registers, &sp);
@@ -589,10 +589,10 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 
   if (flags()->use_detached) {
     CopyMemoryAccessor accessor;
-    InternalMmapVector<thid_t> known_threads;
+    InternalMmapVector<ThreadID> known_threads;
     GetRunningThreadsLocked(&known_threads);
     Sort(done_threads.data(), done_threads.size());
-    for (thid_t os_id : known_threads) {
+    for (ThreadID os_id : known_threads) {
       registers.clear();
       extra_ranges.clear();
 
@@ -712,7 +712,7 @@ static void CollectIgnoredCb(uptr chunk, void *arg) {
 
 // Sets the appropriate tag on each chunk.
 static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
-                              Frontier *frontier, thid_t caller_tid,
+                              Frontier *frontier, ThreadID caller_tid,
                               uptr caller_sp) {
   const InternalMmapVector<u32> &suppressed_stacks =
       GetSuppressionContext()->GetSortedSuppressedStacks();
@@ -790,13 +790,13 @@ static bool ReportUnsuspendedThreads(const SuspendedThreadsList &) {
 
 static bool ReportUnsuspendedThreads(
     const SuspendedThreadsList &suspended_threads) {
-  InternalMmapVector<thid_t> threads(suspended_threads.ThreadCount());
+  InternalMmapVector<ThreadID> threads(suspended_threads.ThreadCount());
   for (uptr i = 0; i < suspended_threads.ThreadCount(); ++i)
     threads[i] = suspended_threads.GetThreadID(i);
 
   Sort(threads.data(), threads.size());
 
-  InternalMmapVector<thid_t> known_threads;
+  InternalMmapVector<ThreadID> known_threads;
   GetRunningThreadsLocked(&known_threads);
 
   bool succeded = true;

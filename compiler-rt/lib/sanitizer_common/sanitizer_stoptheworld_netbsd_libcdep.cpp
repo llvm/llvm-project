@@ -52,17 +52,17 @@ class SuspendedThreadsListNetBSD final : public SuspendedThreadsList {
  public:
   SuspendedThreadsListNetBSD() { thread_ids_.reserve(1024); }
 
-  thid_t GetThreadID(uptr index) const;
+  ThreadID GetThreadID(uptr index) const;
   uptr ThreadCount() const;
-  bool ContainsTid(thid_t thread_id) const;
-  void Append(thid_t tid);
+  bool ContainsTid(ThreadID thread_id) const;
+  void Append(ThreadID tid);
 
   PtraceRegistersStatus GetRegistersAndSP(uptr index,
                                           InternalMmapVector<uptr> *buffer,
                                           uptr *sp) const;
 
  private:
-  InternalMmapVector<thid_t> thread_ids_;
+  InternalMmapVector<ThreadID> thread_ids_;
 };
 
 struct TracerThreadArgument {
@@ -313,7 +313,7 @@ void StopTheWorld(StopTheWorldCallback callback, void *argument) {
   }
 }
 
-thid_t SuspendedThreadsListNetBSD::GetThreadID(uptr index) const {
+ThreadID SuspendedThreadsListNetBSD::GetThreadID(uptr index) const {
   CHECK_LT(index, thread_ids_.size());
   return thread_ids_[index];
 }
@@ -322,7 +322,7 @@ uptr SuspendedThreadsListNetBSD::ThreadCount() const {
   return thread_ids_.size();
 }
 
-bool SuspendedThreadsListNetBSD::ContainsTid(thid_t thread_id) const {
+bool SuspendedThreadsListNetBSD::ContainsTid(ThreadID thread_id) const {
   for (uptr i = 0; i < thread_ids_.size(); i++) {
     if (thread_ids_[i] == thread_id)
       return true;
@@ -330,7 +330,7 @@ bool SuspendedThreadsListNetBSD::ContainsTid(thid_t thread_id) const {
   return false;
 }
 
-void SuspendedThreadsListNetBSD::Append(thid_t tid) {
+void SuspendedThreadsListNetBSD::Append(ThreadID tid) {
   thread_ids_.push_back(tid);
 }
 
