@@ -38,16 +38,18 @@ ErrorOr<size_t> mbsnrtowcs(wchar_t *__restrict dst, const char **__restrict src,
       dst[dst_idx] = converted.value();
     // null terminator should not be counted in return value
     if (converted.value() == L'\0') {
-      src = nullptr;
+      if (dst != nullptr)
+        *src = nullptr;
       return dst_idx;
     }
     dst_idx++;
     converted = str_conv.popUTF32();
   }
 
-  *src += str_conv.getSourceIndex();
-  if (converted.error() == -1) // if we hit conversion limit
+  if (converted.error() == -1) { // if we hit conversion limit
+    *src += str_conv.getSourceIndex();
     return dst_idx;
+  }
 
   return Error(converted.error());
 }

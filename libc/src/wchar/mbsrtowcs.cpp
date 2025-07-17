@@ -13,8 +13,8 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/wchar/mbsnrtowcs.h"
 #include "src/__support/wchar/mbstate.h"
-#include "src/__support/wchar/string_converter.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -22,31 +22,18 @@ LLVM_LIBC_FUNCTION(size_t, mbsrtowcs,
                    (wchar_t *__restrict dst, const char **__restrict src,
                     size_t len, mbstate_t *__restrict ps)) {
   static internal::mbstate internal_mbstate;
-  internal::StringConverter<char8_t> str_conv(
-      reinterpret_cast<const char8_t *>(*src),
+  // If destination is null, ignore len
+  len = dst == nullptr ? SIZE_MAX : len;
+  auto ret = internal::mbsnrtowcs(
+      dst, src, SIZE_MAX, len,
       ps == nullptr ? &internal_mbstate
-                    : reinterpret_cast<internal::mbstate *>(ps),
-      len);
-
-  int dst_idx = 0;
-  ErrorOr<char32_t> converted = str_conv.popUTF32();
-  while (converted.has_value()) {
-    dst[dst_idx] = converted.value();
-    // null terminator should not be counted in return value
-    if (converted.value() == L'\0') {
-      src = nullptr;
-      return dst_idx;
-    }
-    dst_idx++;
-    converted = str_conv.popUTF32();
+                    : reinterpret_cast<internal::mbstate *>(ps));
+  if (!ret.has_value()) {
+    // Encoding failure
+    libc_errno = ret.error();
+    return -1;
   }
-
-  *src += str_conv.getSourceIndex();
-  if (converted.error() == -1) // if we hit conversion limit
-    return dst_idx;
-
-  libc_errno = converted.error();
-  return -1;
+  return ret.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

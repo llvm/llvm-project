@@ -11,26 +11,26 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/string/memset.h"
-#include "src/wchar/mbsrtowcs.h"
+#include "src/wchar/mbsnrtowcs.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
-using LlvmLibcMBSRToWCSTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LlvmLibcMBSNRToWCSTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST_F(LlvmLibcMBSRToWCSTest, OneByteOneChar) {
+TEST_F(LlvmLibcMBSNRToWCSTest, OneByteOneChar) {
   const char *ch = "A";
   const char *original = ch;
   wchar_t dest[2];
   mbstate_t *mb;
   LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &ch, 1, mb);
+  size_t n = LIBC_NAMESPACE::mbsnrtowcs(dest, &ch, 1, 1, mb);
   ASSERT_EQ(static_cast<char>(*dest), 'A');
   ASSERT_EQ(static_cast<int>(n), 1);
   // Should point to null terminator now
   ASSERT_EQ(ch, original + 1);
   ASSERT_ERRNO_SUCCESS();
 
-  n = LIBC_NAMESPACE::mbsrtowcs(dest + 1, &ch, 1, mb);
+  n = LIBC_NAMESPACE::mbsnrtowcs(dest + 1, &ch, 1, 1, mb);
   ASSERT_EQ(static_cast<char>(dest[1]), '\0');
   // Should not include null terminator
   ASSERT_EQ(static_cast<int>(n), 0);
@@ -39,53 +39,69 @@ TEST_F(LlvmLibcMBSRToWCSTest, OneByteOneChar) {
   ASSERT_ERRNO_SUCCESS();
 }
 
-TEST_F(LlvmLibcMBSRToWCSTest, FourByteOneChar) {
+TEST_F(LlvmLibcMBSNRToWCSTest, FourByteOneChar) {
   const char *src = "\xf0\x9f\x98\xb9"; // laughing cat emoji 😹
+  const char *original = src;
   wchar_t dest[2];
   mbstate_t *mb;
   LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 2, mb);
+  // Not enough bytes for the full character
+  size_t n = LIBC_NAMESPACE::mbsnrtowcs(dest, &src, 3, 2, mb);
   ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(static_cast<int>(n), 0);
+  ASSERT_EQ(src, original + 3);
+  // Needs 2 more bytes (last byte of cat + null terminator)
+  n = LIBC_NAMESPACE::mbsnrtowcs(dest, &src, 2, 2, mb);
+  ASSERT_ERRNO_SUCCESS();
+  // Does not include null terminator
+  ASSERT_EQ(static_cast<int>(n), 1);
+  ASSERT_EQ(src, nullptr);
   ASSERT_EQ(static_cast<int>(dest[0]), 128569);
   ASSERT_TRUE(dest[1] == L'\0');
-  // Should not count null terminator in number
-  ASSERT_EQ(static_cast<int>(n), 1);
-  // Should now be a nullptr
-  ASSERT_EQ(src, nullptr);
 }
 
-TEST_F(LlvmLibcMBSRToWCSTest, MultiByteTwoCharacters) {
-  // Two laughing cat emojis "😹😹"
-  const char *src = "\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9";
-  wchar_t dest[3];
-  mbstate_t *mb;
-  LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 3, mb);
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_EQ(static_cast<int>(dest[0]), 128569);
-  ASSERT_EQ(static_cast<int>(dest[1]), 128569);
-  ASSERT_TRUE(dest[2] == L'\0');
-  // Should not count null terminator in number
-  ASSERT_EQ(static_cast<int>(n), 2);
-  // Should now be a nullptr
-  ASSERT_EQ(src, nullptr);
-}
-
-TEST_F(LlvmLibcMBSRToWCSTest, MixedNumberOfBytes) {
+TEST_F(LlvmLibcMBSNRToWCSTest, MixedNumberOfBytes) {
   // 'A', sigma symbol 'Σ', recycling symbol '♻', laughing cat emoji '😹'
   const char *src = "A\xce\xa3\xe2\x99\xbb\xf0\x9f\x98\xb9";
   const char *original = src;
   wchar_t dest[5];
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 4, nullptr);
+  mbstate_t *mb;
+  LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
+  
+  // Read 'A'
+  size_t n = LIBC_NAMESPACE::mbsnrtowcs(dest, &src, 1, 1, mb);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(static_cast<char>(dest[0]), 'A');
-  ASSERT_EQ(static_cast<int>(dest[1]), 931);
+    ASSERT_EQ(static_cast<int>(n), 1);
+  ASSERT_EQ(src, original + 1);
+
+  // Read sigma 'Σ'
+  n = LIBC_NAMESPACE::mbsnrtowcs(dest + 1, &src, 2, 1, mb);
+  ASSERT_ERRNO_SUCCESS();
+    ASSERT_EQ(static_cast<int>(dest[1]), 931);
+    ASSERT_EQ(static_cast<int>(n), 1);
+  ASSERT_EQ(src, original + 3);
+
+  // Read recycling '♻'
+  n = LIBC_NAMESPACE::mbsnrtowcs(dest + 2, &src, 2, 5, mb);
+  ASSERT_ERRNO_SUCCESS();
+    ASSERT_EQ(static_cast<int>(n), 0);
+  ASSERT_EQ(src, original + 5);
+  n = LIBC_NAMESPACE::mbsnrtowcs(dest + 2, &src, 1, 1, mb);
+ASSERT_ERRNO_SUCCESS();
+    ASSERT_EQ(static_cast<int>(n), 1);
+  ASSERT_EQ(src, original + 6);
   ASSERT_EQ(static_cast<int>(dest[2]), 9851);
-  ASSERT_EQ(static_cast<int>(dest[3]), 128569);
-  // Should point to null terminator (byte at 10th index)
+
+  // Read laughing cat emoji '😹'
+  n = LIBC_NAMESPACE::mbsnrtowcs(dest + 3, &src, 4, 5, mb);
+  ASSERT_ERRNO_SUCCESS();
+    ASSERT_EQ(static_cast<int>(n), 1);
   ASSERT_EQ(src, original + 10);
-  ASSERT_EQ(static_cast<int>(n), 4);
-  n = LIBC_NAMESPACE::mbsrtowcs(dest + 4, &src, 4, nullptr);
+  ASSERT_EQ(static_cast<int>(dest[3]), 128569);
+
+
+  n = LIBC_NAMESPACE::mbsnrtowcs(dest + 4, &src, 4, 4, nullptr);
   ASSERT_TRUE(dest[4] == L'\0');
   ASSERT_ERRNO_SUCCESS();
   // Should not count null terminator in number
@@ -94,13 +110,13 @@ TEST_F(LlvmLibcMBSRToWCSTest, MixedNumberOfBytes) {
   ASSERT_EQ(src, nullptr);
 }
 
-TEST_F(LlvmLibcMBSRToWCSTest, ReadLessThanStringLength) {
+TEST_F(LlvmLibcMBSNRToWCSTest, ReadLessThanStringLength) {
   // Four laughing cat emojis "😹😹😹😹"
   const char *src =
       "\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9";
   const char *original = src;
   wchar_t dest[5] = {L'a', L'b', L'c', L'd', L'e'};
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 3, nullptr);
+  size_t n = LIBC_NAMESPACE::mbsnrtowcs(dest, &src, 100, 3, nullptr);
   ASSERT_ERRNO_SUCCESS();
   // Should have read 3 emojis
   ASSERT_EQ(static_cast<int>(n), 3);
@@ -113,13 +129,13 @@ TEST_F(LlvmLibcMBSRToWCSTest, ReadLessThanStringLength) {
   ASSERT_EQ(src, original + 12);
 }
 
-TEST_F(LlvmLibcMBSRToWCSTest, InvalidFirstByte) {
+TEST_F(LlvmLibcMBSNRToWCSTest, InvalidFirstByte) {
   // 0x80 is invalid first byte of mb character
   const char *src =
       "\x80\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9";
   const char *original = src;
   wchar_t dest[3];
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 3, nullptr);
+  size_t n = LIBC_NAMESPACE::mbsnrtowcs(dest, &src, 88, 88, nullptr);
   // Should return error and set errno
   ASSERT_EQ(static_cast<int>(n), -1);
   ASSERT_ERRNO_EQ(EILSEQ);
@@ -127,25 +143,34 @@ TEST_F(LlvmLibcMBSRToWCSTest, InvalidFirstByte) {
   ASSERT_EQ(src, original);
 }
 
-TEST_F(LlvmLibcMBSRToWCSTest, InvalidMiddleByte) {
+TEST_F(LlvmLibcMBSNRToWCSTest, InvalidMiddleByte) {
   // The 7th byte is invalid for a 4 byte character
   const char *src =
       "\xf0\x9f\x98\xb9\xf0\x9f\xf0\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9";
   const char *original = src;
   wchar_t dest[3];
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 5, nullptr);
+    mbstate_t *mb;
+  LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
+  // Successfully read one character and first byte of the second character
+  size_t n = LIBC_NAMESPACE::mbsnrtowcs(dest, &src, 5, 88, mb);
+  ASSERT_EQ(static_cast<int>(n), 1);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(src, original + 5);
+  ASSERT_EQ(static_cast<int>(dest[0]), 128569);
+
+  n = LIBC_NAMESPACE::mbsnrtowcs(dest + 1, &src, 5, 88, mb);
   // Should return error, set errno, and not update the pointer
   ASSERT_EQ(static_cast<int>(n), -1);
   ASSERT_ERRNO_EQ(EILSEQ);
-  ASSERT_EQ(src, original);
+  ASSERT_EQ(src, original + 5);
 }
 
-TEST_F(LlvmLibcMBSRToWCSTest, NullDestination) {
+TEST_F(LlvmLibcMBSNRToWCSTest, NullDestination) {
   // Four laughing cat emojis "😹😹😹😹"
   const char *src =
       "\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9";
   const char *original = src;
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(nullptr, &src, 2, nullptr);
+  size_t n = LIBC_NAMESPACE::mbsnrtowcs(nullptr, &src, 88, 88, nullptr);
   ASSERT_ERRNO_SUCCESS();
   // Null destination should ignore len and read till end of string
   ASSERT_EQ(static_cast<int>(n), 4);
@@ -153,14 +178,16 @@ TEST_F(LlvmLibcMBSRToWCSTest, NullDestination) {
   ASSERT_EQ(src, original);
 }
 
-TEST_F(LlvmLibcMBSRToWCSTest, ErrnoChecks) {
+TEST_F(LlvmLibcMBSNRToWCSTest, ErrnoChecks) {
   // Two laughing cat emojis and invalid 3rd mb char (3rd byte of it)
   const char *src =
       "\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\xf0\xb9\xf0\x9f\x98\xb9";
   const char *original = src;
   wchar_t dest[5];
+  mbstate_t *mb;
+  LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
   // First two bytes are valid --> should not set errno
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 2, nullptr);
+  size_t n = LIBC_NAMESPACE::mbsnrtowcs(dest, &src, 80, 2, mb);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(static_cast<int>(n), 2);
   ASSERT_EQ(static_cast<int>(dest[0]), 128569);
@@ -168,7 +195,7 @@ TEST_F(LlvmLibcMBSRToWCSTest, ErrnoChecks) {
   ASSERT_EQ(src, original + 8);
 
   // Trying to read the 3rd byte should set errno
-  n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 2, nullptr);
+  n = LIBC_NAMESPACE::mbsnrtowcs(dest + 2, &src, 4, 2, mb);
   ASSERT_ERRNO_EQ(EILSEQ);
   ASSERT_EQ(static_cast<int>(n), -1);
   // Should not move the pointer

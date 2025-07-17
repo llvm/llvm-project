@@ -1,4 +1,4 @@
-//===-- Implementation of mbstowcs ----------------------------------------===//
+//===-- Implementation of mbsnrtowcs --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/wchar/mbstowcs.h"
+#include "src/wchar/mbsnrtowcs.h"
 
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
@@ -18,15 +18,16 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(size_t, mbstowcs,
-                   (wchar_t *__restrict pwcs, const char *__restrict s,
-                    size_t n)) {
-  // If destination is null, ignore n
-  n = pwcs == nullptr ? SIZE_MAX : n;
+LLVM_LIBC_FUNCTION(size_t, mbsnrtowcs,
+                   (wchar_t *__restrict dst, const char **__restrict src,
+                    size_t nmc, size_t len, mbstate_t *__restrict ps)) {
   static internal::mbstate internal_mbstate;
-  const char *temp = s;
-  auto ret = internal::mbsnrtowcs(pwcs, &temp, SIZE_MAX, n, &internal_mbstate);
-
+  // If destination is null, ignore len
+  len = dst == nullptr ? SIZE_MAX : len;
+  auto ret = internal::mbsnrtowcs(
+      dst, src, nmc, len,
+      ps == nullptr ? &internal_mbstate
+                    : reinterpret_cast<internal::mbstate *>(ps));
   if (!ret.has_value()) {
     // Encoding failure
     libc_errno = ret.error();
