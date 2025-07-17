@@ -482,9 +482,9 @@ Value VectorizationState::getOrCreateMaskFor(
   }
 
   if (assumeDynamicDimsMatchVecSizes) {
-    // While we can _assume_ that for dynamic dim sizes the corresponding
-    // vector sizes match, we still need to check the static dim sizes to be
-    // 100% sure that masking is indeed not required.
+    // While for _dynamic_ dim sizes we can _assume_ that the corresponding
+    // vector sizes match, we still need to check the _static_ dim sizes. Only
+    // then we can be 100% sure that masking is not required.
     if (llvm::all_of(llvm::zip(permutedStaticSizes, maskType.getShape()),
                      [](auto it) {
                        return std::get<0>(it) == ShapedType::kDynamic
