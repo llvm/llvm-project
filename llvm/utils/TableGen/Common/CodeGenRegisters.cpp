@@ -2449,11 +2449,11 @@ void CodeGenRegBank::computeInferredRegisterClasses() {
   // and assigned EnumValues yet.  That means getSubClasses(),
   // getSuperClasses(), and hasSubClass() functions are defunct.
 
+  Records.getTimer().startTimer("Compute inferred register classes");
+
   // Use one-before-the-end so it doesn't move forward when new elements are
   // added.
   auto FirstNewRC = std::prev(RegClasses.end());
-
-  Records.getTimer().startTimer("Compute inferred register classes");
 
   // Visit all register classes, including the ones being added by the loop.
   // Watch out for iterator invalidation here.
