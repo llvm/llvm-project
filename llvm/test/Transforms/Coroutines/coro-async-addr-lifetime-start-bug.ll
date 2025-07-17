@@ -87,9 +87,9 @@ loop_exit:
 }
 
 ; CHECK: define {{.*}} void @my_async_function.resume.0(
-; CHECK-NOT:  call void @llvm.lifetime.start.p0(i64 4, ptr %3)
-; CHECK:  br i1 %exitCond, label %loop_exit, label %loop
-; CHECK: lifetime.end
+; CHECK-NOT: llvm.lifetime
+; CHECK:  br i1 %exitCond, label %common.ret, label %loop
+; CHECK-NOT: llvm.lifetime
 ; CHECK: }
 
 declare { ptr, ptr, ptr, ptr } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32, ptr, ptr, ...)
