@@ -895,6 +895,48 @@ struct PackOpTiling
         packOp.getDimAndTileMapping();
     for (auto dim : llvm::seq<int64_t>(packOp.getSourceRank())) {
       if (dimAndTileMapping.count(dim)) {
+        FailureOr<int64_t> cstTileSize =
+            ValueBoundsConstraintSet::computeConstantBound(
+                presburger::BoundType::UB, sizes[dim],
+                /*stopCondition=*/nullptr, /*closedUB=*/true);
+        std::optional<int64_t> cstInnerSize =
+            getConstantIntValue(dimAndTileMapping[dim]);
+
+        // If a dimension is not tiled, it is always valid to fuse the pack op,
+        // even if the op has padding semantics. Because it always generates a
+        // full slice along the dimension.
+        // TODO: It could be untiled if the `srcDimSize` is dynamic. It is a
+        // hard check to determine if a dimension is tiled or not.
+        int64_t srcDimSize = packOp.getSourceType().getDimSize(dim);
+        int64_t destDimSize = packOp.getDestType().getDimSize(dim);
+        bool isTiled = failed(cstTileSize) ||
+                       ShapedType::isDynamic(srcDimSize) ||
+                       cstTileSize.value() != srcDimSize;
+        if (!isTiled) {
+          outerDimOffsets.push_back(offsets[dim]);
+          if (ShapedType::isStatic(destDimSize)) {
+            outerDimSizes.push_back(b.getIndexAttr(destDimSize));
+          } else {
+            outerDimSizes.push_back(
+                b.createOrFold<tensor::DimOp>(loc, packOp.getDest(), dim));
+          }
+          continue;
+        }
+
+        // If the dimension needs padding, it is not supported because there are
+        // iterations that only write padding values to the whole tile. The
+        // consumer fusion is driven by the source, so it is not possible to map
+        // an empty slice to the tile.
+        bool needExtraPadding = ShapedType::isDynamic(destDimSize) ||
+                           !cstInnerSize ||
+                           destDimSize * cstInnerSize.value() != srcDimSize;
+        // Prioritize the case that the op already says that it does not need
+        // padding.
+        if (!packOp.getPaddingValue())
+          needExtraPadding = false;
+        if (needExtraPadding)
+          return failure();
+
         // Currently fusing `packOp` as consumer only expects perfect tiling
         // scenario because even if without padding semantic, the `packOp` may
         // also yield incomplete tiles. E.g. tensor<30xf32> -> tensor<5x6xf32>,
@@ -906,37 +948,10 @@ struct PackOpTiling
         // respectively inserted into two rows with different length, including
         // first row: (0,5) and second row (1,0)~(1,3).
         // It is hard to coordinate them, thus adding below constraint to bypass
-        // them temporarily. In another word, we can only support tiling with
-        // consumer if the tile size for the producer is either a multiple of
-        // the inner tile size for the packed dimensions or the dimension is not
-        // tiled at this moment.
-        FailureOr<int64_t> cstTileSize =
-            ValueBoundsConstraintSet::computeConstantBound(
-                presburger::BoundType::UB, sizes[dim],
-                /*stopCondition=*/nullptr, /*closedUB=*/true);
-        std::optional<int64_t> cstInnerSize =
-            getConstantIntValue(dimAndTileMapping[dim]);
-        // If a dimension is not tiled, it is always valid to fuse the pack op,
-        // even if the op has padding semantics. Because it always generates a
-        // full slice along the dimension.
-        // TODO: It could be untiled if the `srcDimSize` is dynamic. It is a
-        // hard check to determine if a dimension is tiled or not.
-        int64_t srcDimSize = packOp.getSourceType().getDimSize(dim);
-        bool isTiled = failed(cstTileSize) ||
-                       ShapedType::isDynamic(srcDimSize) ||
-                       cstTileSize.value() != srcDimSize;
-        int64_t destDimSize = packOp.getDestType().getDimSize(dim);
-        bool needPadding = ShapedType::isDynamic(destDimSize) ||
-                           !cstInnerSize ||
-                           destDimSize * cstInnerSize.value() != srcDimSize;
-        // Prioritize the case that the op already says that it does not need
-        // padding.
-        if (!packOp.getPaddingValue()) {
-          needPadding = false;
-        }
-        if (isTiled && needPadding) {
+        // them temporarily.
+        if ((failed(cstTileSize) || !cstInnerSize ||
+             *cstTileSize % *cstInnerSize != 0))
           return failure();
-        }
 
         using AV = affine::AffineValueExpr;
         affine::AffineBuilder ab(b, loc);
