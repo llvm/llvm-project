@@ -359,6 +359,23 @@ entry:
   ret void
 }
 
+; CHECK: OpFunction
+; CHECK: %[[#d:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#fracPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#integralPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#entryBlock:]] = OpLabel
+; CHECK: %[[#varPtr:]] = OpVariable %[[#]] Function
+; CHECK: OpBranchConditional %[[#]] %[[#lor_lhs_falseBlock:]] %[[#if_thenBlock:]]
+; CHECK: %[[#lor_lhs_falseBlock]] = OpLabel
+; CHECK: OpBranchConditional %[[#]] %[[#if_endBlock:]] %[[#if_thenBlock]]
+; CHECK: %[[#if_thenBlock]] = OpLabel
+; CHECK: OpBranch %[[#returnBlock:]]
+; CHECK: %[[#if_endBlock]] = OpLabel
+; CHECK: %[[#frac:]] = OpExtInst %[[#var2]] %[[#extinst_id]] modf %[[#d]] %[[#varPtr]]
+; CHECK: %[[#integral:]] = OpLoad %[[#var2]] %[[#varPtr]]
+; CHECK: OpStore %[[#fracPtr]] %[[#frac]]
+; CHECK: OpStore %[[#integralPtr]] %[[#integral]]
+; CHECK: OpFunctionEnd
 define dso_local void @TestModf2(double noundef %d, ptr noundef %frac, ptr noundef %integral) {
 entry:
   %0 = load ptr, ptr %frac, align 8
