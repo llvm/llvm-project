@@ -24,28 +24,28 @@
 ; CHECK-SPIRV-DAG: OpDecorate %[[#Id20:]] BuiltIn NumWorkgroups
 ; CHECK-SPIRV-DAG: OpDecorate %[[#Id21:]] BuiltIn GlobalOffset
 
-; CHECK-SPIRV:     %[[#Id0:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id1:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id2:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id3:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id4:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id5:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id6:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id7:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id8:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id9:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id10:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id11:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id12:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id13:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id14:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id15:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id16:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id17:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id18:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id19:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id20:]] = OpVariable %[[#]]
-; CHECK-SPIRV:     %[[#Id21:]] = OpVariable %[[#]]
+; CHECK-SPIRV:     %[[#Id0:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id1:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id2:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id3:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id4:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id5:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id6:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id7:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id8:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id9:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id10:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id11:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id12:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id13:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id14:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id15:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id16:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id17:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id18:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id19:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id20:]] = OpVariable %[[#]] Input
+; CHECK-SPIRV:     %[[#Id21:]] = OpVariable %[[#]] Input
 
 define spir_kernel void @f() {
 entry:
