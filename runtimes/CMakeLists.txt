@@ -91,6 +91,16 @@ include(CheckLibraryExists)
 include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+include(ExtendPath)
+
+
+# Determine whether we are in the runtimes/runtimes-bins directory of a
+# bootstrapping build.
+set(LLVM_TREE_AVAILABLE OFF)
+if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSION)
+  set(LLVM_TREE_AVAILABLE ON)
+endif()
+
 
 # CMake omits default compiler include paths, but in runtimes build, we use
 # -nostdinc and -nostdinc++ and control include paths manually so this behavior
@@ -98,6 +108,7 @@ include(CheckCXXCompilerFlag)
 # paths that are inside the build directory disables this behavior.
 #
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/19227 for further details.
+# FIXME: This assumes compiling libc++, but creates problems for every library that uses the C++ standard library
 
 function(filter_prefixed list prefix outvar)
   foreach(str ${list})
@@ -275,6 +286,156 @@ if(LLVM_INCLUDE_TESTS)
 
   umbrella_lit_testsuite_begin(check-runtimes)
 endif()
+
+# Determine paths for files that belong into the Clang/Flang resource dir.
+if (LLVM_TREE_AVAILABLE)
+  # In a bootstrap build emit the libraries into a default search path in the
+  # build directory of the just-built compiler. This allows using the
+  # just-built compiler without specifying paths to runtime libraries.
+  #
+  # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
+  # being added to the build. Flang uses the same resource dir as clang.
+  include(GetClangResourceDir)
+  get_clang_resource_dir(RUNTIMES_OUTPUT_RESOURCE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
+  get_clang_resource_dir(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT)
+else ()
+  # In a standalone runtimes build, do not write into LLVM_BINARY_DIR. It may be
+  # read-only and/or shared by multiple runtimes with different build
+  # configurations (e.g. Debug/Release). Use the runtime's own lib dir like any
+  # non-toolchain library.
+  # For the install prefix, still use the resource dir assuming that Flang will
+  # be installed there using the same prefix. This is to not have a difference
+  # between bootstrap and standalone runtimes builds.
+  set(RUNTIMES_OUTPUT_RESOURCE_DIR "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+  set(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+endif ()
+
+# Determine build and install paths.
+# The build path is absolute, but the install dir is relative, CMake's install
+# command has to apply CMAKE_INSTALL_PREFIX itself.
+# FIXME: For shared libraries, the toolchain resource lib dir is not a good
+#        destination because it is not a ld.so default search path.
+#        The machine where the executable is eventually executed may not be the
+#        machine where the Flang compiler and its resource dir is installed, so
+#        setting RPath by the driver is not an solution. It should belong into
+#        /usr/lib/<triple>/lib<name>.so, like e.g. libgcc_s.so.
+#        But the linker as invoked by the Flang driver also requires
+#        libflang_rt.so to be found when linking and the resource lib dir is
+#        the only reliable location.
+include(GetToolchainDirs)
+get_toolchain_library_subdir(toolchain_lib_subdir)
+extend_path(RUNTIMES_OUTPUT_RESOURCE_LIB_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
+
+set(RUNTIMES_INSTALL_RESOURCE_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT}" CACHE PATH "Path to install headers, runtime libraries, and Fortran modules to (default: Clang resource dir)")
+extend_path(RUNTIMES_INSTALL_RESOURCE_LIB_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
+
+cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_DIR)
+cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_PATH)
+cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
+cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
+
+
+# Enable building Fortran modules
+# * Set up the Fortran compiler
+# * Determine files location in the Clang/Flang resource dir
+# * Install module files
+macro (flang_module_fortran_enable)
+  include(CheckLanguage)
+  check_language(Fortran)
+  if(NOT CMAKE_Fortran_COMPILER)
+    message(STATUS "Not compiling Flang modules: Fortran not enabled")
+    return ()
+  endif ()
+  enable_language(Fortran)
+
+  if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+    if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+      message(STATUS "Compiling Flang modules")
+      set(RUNTIMES_FLANG_MODULES_ENABLED ON)
+    else ()
+      # TODO: Introspection of whether intrinsic modules are already available, so the openmp modules can be built without flang-rt in LLVM_ENABLE_RUNTIMES
+      message(STATUS "Not compiling Flang modules: flang-rt not available")
+    endif ()
+  else ()
+    message(STATUS "Compiling modules for non-Flang compiler (${CMAKE_Fortran_COMPILER_ID})")
+    set(RUNTIMES_FLANG_MODULES_ENABLED ON)
+  endif ()
+
+  if (NOT RUNTIMES_FLANG_MODULES_ENABLED)
+    return ()
+  endif ()
+
+
+  if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+    get_toolchain_module_subdir(toolchain_mod_subdir)
+    extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_mod_subdir}")
+    extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_mod_subdir}")
+  else ()
+    # For non-Flang compilers, avoid the risk of Flang accidentally picking them up.
+    extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
+    extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
+  endif ()
+  cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_MOD_DIR)
+  cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_MOD_PATH)
+
+  # Avoid module files to be installed multiple times if this macro is called multiple times
+  get_property(is_installed GLOBAL PROPERTY RUNTIMES_MODS_INSTALLED)
+  if (NOT is_installed)
+    # No way to find out which mod files built by target individually, so install the entire output directory
+    # https://stackoverflow.com/questions/52712416/cmake-fortran-module-directory-to-be-used-with-add-library
+    set(destination "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
+    cmake_path(NORMAL_PATH destination)
+    install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
+      DESTINATION "${destination}"
+    )
+    set_property(GLOBAL PROPERTY RUNTIMES_MODS_INSTALLED TRUE)
+  endif ()
+endmacro ()
+
+
+# Set options to compile Fortran module files.
+#
+# Usage:
+#
+# flang_module_target(name
+#   PUBLIC
+#     Modules files are to be used by other Fortran sources. If a library is
+#     compiled multiple times (e.g. static/shared, or msvcrt variants), only
+#     one of those can be public module files; non-public modules are still
+#     generated but to be forgotten deep inside the build directory to not
+#     conflict with each other.
+#     Also, installs the module with the toolchain.
+# )
+function (flang_module_target tgtname)
+  set(options PUBLIC)
+  cmake_parse_arguments(ARG
+    "${options}"
+    ""
+    ""
+    ${ARGN})
+
+  if (NOT RUNTIMES_FLANG_MODULES_ENABLED)
+    return ()
+  endif ()
+
+  # Let it find the other public module files
+  target_compile_options(${tgtname} PRIVATE
+      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-fintrinsic-modules-path;SHELL:${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}>"
+    )
+
+  if (ARG_PUBLIC)
+    set_target_properties(${tgtname}
+      PROPERTIES
+        Fortran_MODULE_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
+      )
+  else ()
+    set_target_properties(${tgtname}
+      PROPERTIES
+        Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tgtname}.mod"
+      )
+  endif ()
+endfunction ()
+
 
 # We do this in two loops so that HAVE_* is set for each runtime before the
 # other runtimes are added.

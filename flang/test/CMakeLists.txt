@@ -59,7 +59,6 @@ set(FLANG_TEST_PARAMS
 
 set(FLANG_TEST_DEPENDS
   flang
-  module_files
   fir-opt
   tco
   bbc
@@ -97,8 +96,12 @@ if (LLVM_BUILD_EXAMPLES)
     )
 endif ()
 
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS "flang-rt-mod") # For intrinsic module files (in flang-rt/)
+endif ()
+
 if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
-  list(APPEND FLANG_TEST_DEPENDS "libomp-mod")
+  list(APPEND FLANG_TEST_DEPENDS "libomp-mod") # For omplib.mod and omplib_kinds.mod (in openmp/)
 endif ()
 
 add_custom_target(flang-test-depends DEPENDS ${FLANG_TEST_DEPENDS})

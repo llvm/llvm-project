@@ -8,7 +8,7 @@
 
 ! Fortran 2018 Clause 17
 
-#include '../include/flang/Runtime/magic-numbers.h'
+#include   '../include/flang/Runtime/magic-numbers.h'
 
 module ieee_arithmetic
   ! F18 Clause 17.1p1:
@@ -336,13 +336,28 @@ module ieee_arithmetic
   public ::  ieee_get_underflow_mode
 #undef IEEE_GET_UNDERFLOW_MODE_L
 
-#define IEEE_IS_FINITE_R(XKIND) \
-  elemental logical function ieee_is_finite_a##XKIND(x); \
-    real(XKIND), intent(in) :: x; \
-    !dir$ ignore_tkr(d) x; \
-  end function ieee_is_finite_a##XKIND;
+! #define IEEE_IS_FINITE_R(XKIND) elemental logical function ieee_is_finite_a##XKIND(x);  real(XKIND), intent(in) :: x;  !dir$ ignore_tkr(d) x;   end function ieee_is_finite_a##XKIND;
   interface ieee_is_finite
-    SPECIFICS_R(IEEE_IS_FINITE_R)
+elemental logical function ieee_is_finite_a2(x); real(2), intent(in) :: x;
+!dir$ ignore_tkr(d) x;
+end function ieee_is_finite_a2;
+elemental logical function ieee_is_finite_a3(x); real(3), intent(in) :: x;
+!dir$ ignore_tkr(d) x;
+end function ieee_is_finite_a3;
+ elemental logical function ieee_is_finite_a4(x); real(4), intent(in) :: x;
+!dir$ ignore_tkr(d) x;
+end function ieee_is_finite_a4;
+elemental logical function ieee_is_finite_a8(x); real(8), intent(in) :: x;
+!dir$ ignore_tkr(d) x;
+end function ieee_is_finite_a8;
+elemental logical function ieee_is_finite_a10(x); real(10), intent(in) :: x;
+!dir$ ignore_tkr(d) x;
+end function ieee_is_finite_a10;
+#if FLANG_SUPPORT_R16
+elemental logical function ieee_is_finite_a16(x); real(16), intent(in) :: x;
+!dir$ ignore_tkr(d) x;
+end function ieee_is_finite_a16;
+#endif
   end interface ieee_is_finite
   public :: ieee_is_finite
 #undef IEEE_IS_FINITE_R
