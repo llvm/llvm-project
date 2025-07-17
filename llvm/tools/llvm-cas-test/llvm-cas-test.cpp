@@ -10,6 +10,7 @@
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/RandomNumberGenerator.h"
@@ -305,6 +306,7 @@ static int checkLockFiles() {
 }
 
 int main(int argc, char **argv) {
+  InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv, "llvm-cas-test CAS testing tool\n");
 
   switch (Command) {
