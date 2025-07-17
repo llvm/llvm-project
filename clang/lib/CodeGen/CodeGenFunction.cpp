@@ -161,8 +161,7 @@ void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
   llvm::RoundingMode NewRoundingBehavior = FPFeatures.getRoundingMode();
   CGF.Builder.setDefaultConstrainedRounding(NewRoundingBehavior);
   auto NewExceptionBehavior =
-      ToConstrainedExceptMD(static_cast<LangOptions::FPExceptionModeKind>(
-          FPFeatures.getExceptionMode()));
+      ToConstrainedExceptMD(FPFeatures.getExceptionMode());
   CGF.Builder.setDefaultConstrainedExcept(NewExceptionBehavior);
 
   CGF.SetFastMathFlags(FPFeatures);
