@@ -397,7 +397,7 @@ def interposable : Flag<["-"], "interposable">,
     HelpText<"Indirects access to all exported symbols in an image">,
     Group<grp_opts>;
 def read_threads : Joined<["--"], "read-threads=">,
-    HelpText<"Number of threads to use if proactively paging in files.">,
+    HelpText<"Number of threads to use to proactively page in files. 20 would be a typical value, use 0 to disable this feature.">,
     Group<grp_lld>;
 def order_file : Separate<["-"], "order_file">,
     MetaVarName<"<file>">,
