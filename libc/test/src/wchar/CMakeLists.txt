@@ -114,6 +114,20 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcsrtombs_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsrtombs_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsrtombs
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.hdr.types.wchar_t
+    libc.src.string.memset
+    libc.hdr.types.mbstate_t
+)
+
+add_libc_test(
   wmemset_test 
   SUITE
     libc_wchar_unittests

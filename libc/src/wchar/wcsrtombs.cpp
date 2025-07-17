@@ -25,7 +25,7 @@ LLVM_LIBC_FUNCTION(size_t, wcsrtombs,
                     size_t n, mbstate_t *ps)) {
   static internal::mbstate internal_mbstate;
   internal::StringConverter<char32_t> str_conv(
-      reinterpret_cast<const char32_t *>(pwcs),
+      reinterpret_cast<const char32_t *>(*pwcs),
       ps == nullptr ? &internal_mbstate
                     : reinterpret_cast<internal::mbstate *>(ps),
       n);
