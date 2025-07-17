@@ -2916,10 +2916,14 @@ public:
   NestedNameSpecifier *
   getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const;
 
-  /// Retrieves the default calling convention for the current target.
+  /// Retrieves the default calling convention for the current context.
+  ///
+  /// The context's default calling convention may differ from the current
+  /// target's default calling convention if the -fdefault-calling-conv option
+  /// is used; to get the target's default calling convention, e.g. for built-in
+  /// functions, call getTargetInfo().getDefaultCallingConv() instead.
   CallingConv getDefaultCallingConvention(bool IsVariadic,
-                                          bool IsCXXMethod,
-                                          bool IsBuiltin = false) const;
+                                          bool IsCXXMethod) const;
 
   /// Retrieves the "canonical" template name that refers to a
   /// given template.

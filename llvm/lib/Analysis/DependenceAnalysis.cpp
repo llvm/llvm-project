@@ -3670,14 +3670,12 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   const SCEV *SrcEv = SE->getMinusSCEV(SrcSCEV, SrcBase);
   const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
 
-  if (Src != Dst) {
-    // Check that memory access offsets are multiples of element sizes.
-    if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
-        !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
-      LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
-      return std::make_unique<Dependence>(Src, Dst,
-                                          SCEVUnionPredicate(Assume, *SE));
-    }
+  // Check that memory access offsets are multiples of element sizes.
+  if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
+      !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
+    LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
   }
 
   if (!Assume.empty()) {
