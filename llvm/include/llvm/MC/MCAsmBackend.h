@@ -19,11 +19,8 @@
 namespace llvm {
 
 class MCAlignFragment;
-class MCDwarfCallFrameFragment;
-class MCDwarfLineAddrFragment;
 class MCFragment;
 class MCLEBFragment;
-class MCRelaxableFragment;
 class MCSymbol;
 class MCAssembler;
 class MCContext;
@@ -32,6 +29,7 @@ class MCInst;
 class MCObjectStreamer;
 class MCObjectTargetWriter;
 class MCObjectWriter;
+class MCOperand;
 class MCSubtargetInfo;
 class MCValue;
 class raw_pwrite_stream;
@@ -147,20 +145,18 @@ public:
   /// \name Target Relaxation Interfaces
   /// @{
 
-  /// Check whether the given instruction may need relaxation.
-  ///
-  /// \param Inst - The instruction to test.
-  /// \param STI - The MCSubtargetInfo in effect when the instruction was
-  /// encoded.
-  virtual bool mayNeedRelaxation(const MCInst &Inst,
+  /// Check whether the given instruction (encoded as Opcode+Operands) may need
+  /// relaxation.
+  virtual bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                                  const MCSubtargetInfo &STI) const {
     return false;
   }
 
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.
-  virtual bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &,
-                                            uint64_t, bool Resolved) const;
+  virtual bool fixupNeedsRelaxationAdvanced(const MCFragment &, const MCFixup &,
+                                            const MCValue &, uint64_t,
+                                            bool Resolved) const;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   virtual bool fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -181,18 +177,16 @@ public:
   }
 
   // Defined by linker relaxation targets.
-  virtual bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
-                                  bool &WasRelaxed) const {
+  virtual bool relaxDwarfLineAddr(MCFragment &, bool &WasRelaxed) const {
     return false;
   }
-  virtual bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
-                             bool &WasRelaxed) const {
+  virtual bool relaxDwarfCFA(MCFragment &, bool &WasRelaxed) const {
     return false;
   }
 
   // Defined by linker relaxation targets to possibly emit LEB128 relocations
   // and set Value at the relocated location.
-  virtual std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF,
+  virtual std::pair<bool, bool> relaxLEB128(MCFragment &,
                                             int64_t &Value) const {
     return std::make_pair(false, false);
   }
@@ -230,8 +224,7 @@ public:
 
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;
 
-  // Return STI for fragments of type MCRelaxableFragment and MCDataFragment
-  // with hasInstructions() == true.
+  // Return STI for fragments with hasInstructions() == true.
   static const MCSubtargetInfo *getSubtargetInfo(const MCFragment &F);
 };
 

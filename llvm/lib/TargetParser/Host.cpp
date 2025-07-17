@@ -2100,8 +2100,13 @@ const StringMap<bool> sys::getHostCPUFeatures() {
                                    .Case("fp", "fp-armv8")
                                    .Case("crc32", "crc")
                                    .Case("atomics", "lse")
+                                   .Case("sha3", "sha3")
+                                   .Case("sm4", "sm4")
                                    .Case("sve", "sve")
                                    .Case("sve2", "sve2")
+                                   .Case("sveaes", "sve-aes")
+                                   .Case("svesha3", "sve-sha3")
+                                   .Case("svesm4", "sve-sm4")
 #else
                                    .Case("half", "fp16")
                                    .Case("neon", "neon")
