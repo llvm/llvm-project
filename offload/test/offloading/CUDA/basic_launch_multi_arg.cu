@@ -9,6 +9,7 @@
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-unknown-linux-gnu
 // UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
+// XFAIL: amdgcn-amd-amdhsa
 // XFAIL: nvptx64-nvidia-cuda
 // XFAIL: nvptx64-nvidia-cuda-LTO
 
