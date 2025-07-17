@@ -48,6 +48,9 @@ flang:frontend:
   - flang/Evaluate/**/*
   - flang/Semantics/**/*
 
+libclc:
+  - libclc/**
+
 HLSL:
   - clang/*HLSL*/**/*
   - clang/**/*HLSL*
