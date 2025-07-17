@@ -971,13 +971,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   bool useAutoZeroCopy();
   virtual bool useAutoZeroCopyImpl() { return false; }
 
-  virtual omp_interop_val_t *createInterop(int32_t InteropType,
+  virtual Expected<omp_interop_val_t *> createInterop(int32_t InteropType,
                                            interop_spec_t &InteropSpec) {
     return nullptr;
   }
 
-  virtual int32_t releaseInterop(omp_interop_val_t *Interop) {
-    return OFFLOAD_SUCCESS;
+  virtual Error releaseInterop(omp_interop_val_t *Interop) {
+    return Plugin::success();
   }
 
   virtual interop_spec_t selectInteropPreference(int32_t InteropType,
@@ -1419,7 +1419,13 @@ public:
                                     interop_spec_t *InteropSpec) {
     assert(InteropSpec && "Interop spec is null");
     auto &Device = getDevice(ID);
-    return Device.createInterop(InteropContext, *InteropSpec);
+    auto InteropOrErr = Device.createInterop(InteropContext, *InteropSpec);
+    if (!InteropOrErr) {
+      REPORT("Failure to create interop object for device " DPxMOD ": %s\n",
+             DPxPTR(InteropSpec), toString(InteropOrErr.takeError()).c_str());
+      return nullptr;
+    }
+    return *InteropOrErr;
   }
 
   /// Release OpenMP interop object
@@ -1427,7 +1433,13 @@ public:
     assert(Interop && "Interop is null");
     assert(Interop->DeviceId == ID && "Interop does not match device id");
     auto &Device = getDevice(ID);
-    return Device.releaseInterop(Interop);
+    auto Err = Device.releaseInterop(Interop);
+    if (Err) {
+      REPORT("Failure to release interop object " DPxMOD ": %s\n",
+             DPxPTR(Interop), toString(std::move(Err)).c_str());
+      return OFFLOAD_FAIL;
+    }
+    return OFFLOAD_SUCCESS;
   }
 
   /// Flush the queue associated with the interop object if necessary
