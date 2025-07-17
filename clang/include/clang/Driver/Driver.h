@@ -358,6 +358,9 @@ public:
   phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
                            llvm::opt::Arg **FinalPhaseArg = nullptr) const;
 
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  executeProgram(llvm::ArrayRef<llvm::StringRef> Args) const;
+
 private:
   /// Certain options suppress the 'no input files' warning.
   LLVM_PREFERRED_TYPE(bool)
@@ -372,10 +375,6 @@ private:
 
   /// Number of parallel jobs.
   unsigned NumParallelJobs;
-
-  /// The associated offloading architectures with each toolchain.
-  llvm::DenseMap<const ToolChain *, llvm::SmallVector<llvm::StringRef>>
-      OffloadArchs;
 
 private:
   /// TranslateInputArgs - Create a new derived argument list from the input
@@ -548,8 +547,7 @@ public:
   /// empty string.
   llvm::SmallVector<StringRef>
   getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
-                  Action::OffloadKind Kind, const ToolChain *TC,
-                  bool SpecificToolchain = true) const;
+                  Action::OffloadKind Kind, const ToolChain &TC) const;
 
   /// Check that the file referenced by Value exists. If it doesn't,
   /// issue a diagnostic and return false.
