@@ -11,6 +11,11 @@ module A {
     link "libraryB"
   }
 
+  explicit module D {
+    header "D.h"
+    link "libraryD"
+  }
+
   link "libraryA"
   link "libraryA"
 }
@@ -26,9 +31,12 @@ module C {
 // empty
 //--- C.h
 // empty
+//--- D.h
+// empty
 //--- TU.c
 #include "A.h"
 #include "C.h"
+#include "D.h"
 
 //--- cdb.json.template
 [{
@@ -41,7 +49,9 @@ module C {
 // RUN: not clang-scan-deps -compilation-database %t/cdb.json -format \
 // RUN:   experimental-full 2>&1 | FileCheck %s
 
-// CHECK:      module.modulemap:6:5: error: link decl is not allowed in submodules
-// CHECK-NEXT: module.modulemap:10:3: error: redeclaration of link library 'libraryA'
-// CHECK-NEXT: module.modulemap:9:3: note: previously declared here
-// CHECK-NOT: module.modulemap:15:3: error: redeclaration of link library 'libraryA'
+// Note that module D does not report an error because it is explicit.
+// Therefore we can use CHECK-NEXT for the redeclaration error on line 15.
+// CHECK:      module.modulemap:6:5: error: link declaration is not allowed in submodules
+// CHECK-NEXT: module.modulemap:15:3: error: redeclaration of link library 'libraryA'
+// CHECK-NEXT: module.modulemap:14:3: note: previously declared here
+// CHECK-NOT:  module.modulemap:20:3: error: redeclaration of link library 'libraryA'

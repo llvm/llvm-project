@@ -119,7 +119,7 @@ struct ModuleMapFileParser {
   std::optional<UmbrellaDirDecl>
   parseUmbrellaDirDecl(SourceLocation UmbrellaLoc);
   std::optional<LinkDecl>
-  parseLinkDecl(llvm::StringMap<SourceLocation> &SeenLinkDecl, bool TopLevel);
+  parseLinkDecl(llvm::StringMap<SourceLocation> &SeenLinkDecl, bool Allowed);
 
   SourceLocation consumeToken();
   void skipUntil(MMToken::TokenKind K);
@@ -407,7 +407,9 @@ std::optional<ModuleDecl> ModuleMapFileParser::parseModuleDecl(bool TopLevel) {
       break;
 
     case MMToken::LinkKeyword:
-      SubDecl = parseLinkDecl(SeenLinkDecl, TopLevel);
+      // Link decls are only allowed in top level modules or explicit
+      // submodules.
+      SubDecl = parseLinkDecl(SeenLinkDecl, TopLevel || MDecl.Explicit);
       break;
 
     default:
@@ -825,7 +827,7 @@ ModuleMapFileParser::parseUmbrellaDirDecl(clang::SourceLocation UmbrellaLoc) {
 ///   module-declaration:
 ///     'link' 'framework'[opt] string-literal
 std::optional<LinkDecl> ModuleMapFileParser::parseLinkDecl(
-    llvm::StringMap<SourceLocation> &SeenLinkDecl, bool TopLevel) {
+    llvm::StringMap<SourceLocation> &SeenLinkDecl, bool Allowed) {
   assert(Tok.is(MMToken::LinkKeyword));
   LinkDecl LD;
   LD.Location = consumeToken();
@@ -853,7 +855,7 @@ std::optional<LinkDecl> ModuleMapFileParser::parseLinkDecl(
 
   // Make sure we eat all the tokens when we report the errors so parsing
   // can continue.
-  if (!TopLevel) {
+  if (!Allowed) {
     Diags.Report(LD.Location, diag::err_mmap_submodule_link_decl);
     HadError = true;
     return std::nullopt;
