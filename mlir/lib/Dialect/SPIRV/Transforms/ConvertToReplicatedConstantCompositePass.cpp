@@ -63,8 +63,8 @@ struct ConstantOpConversion final : OpRewritePattern<spirv::ConstantOp> {
     if (!compositeType)
       return rewriter.notifyMatchFailure(op, "not a composite constant");
 
-    auto [splattAttr, splatCount] = getSplatAttributeAndCount(op.getValue());
-    if (!splattAttr)
+    auto [splatAttr, splatCount] = getSplatAttributeAndCount(op.getValue());
+    if (!splatAttr)
       return rewriter.notifyMatchFailure(op, "composite is not splat");
 
     if (splatCount == 1)
@@ -72,7 +72,7 @@ struct ConstantOpConversion final : OpRewritePattern<spirv::ConstantOp> {
                                          "composite has only one constituent");
 
     rewriter.replaceOpWithNewOp<spirv::EXTConstantCompositeReplicateOp>(
-        op, op.getType(), splattAttr);
+        op, op.getType(), splatAttr);
 
     return success();
   }
