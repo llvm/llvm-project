@@ -398,8 +398,8 @@ public:
                            unsigned NumRegionInstrs) const override;
 
   void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                 unsigned NumRegionInstrs) const override;
+                                 const MachineFunction &MF) const override;
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif

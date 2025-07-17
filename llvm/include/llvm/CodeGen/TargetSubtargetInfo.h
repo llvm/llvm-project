@@ -241,7 +241,7 @@ public:
   /// Note that some options like tracking register pressure won't take effect
   /// in post-ra scheduling.
   virtual void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                         unsigned NumRegionInstrs) const {}
+                                         const MachineFunction &MF) const {}
 
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.

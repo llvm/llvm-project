@@ -231,8 +231,8 @@ void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   Policy.ShouldTrackPressure = true;
 }
 
-void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                               unsigned NumRegionInstrs) const {
+void RISCVSubtarget::overridePostRASchedPolicy(
+    MachineSchedPolicy &Policy, const MachineFunction &MF) const {
   MISched::Direction PostRASchedDirection = getPostRASchedDirection();
   if (PostRASchedDirection == MISched::TopDown) {
     Policy.OnlyTopDown = true;
