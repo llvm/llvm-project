@@ -721,6 +721,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  wctype
+  ../libc/include/wctype.yaml
+  wctype.h
+  DEPENDS
+    .llvm_libc_common_h    
+    .llvm-libc-types.wint_t
+)
+
+add_header_macro(
   locale
   ../libc/include/locale.yaml
   locale.h
