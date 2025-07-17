@@ -349,46 +349,70 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 }
 
 bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
-    StoreInst *SI, ArrayRef<Value *> InterleaveValues) const {
+    Instruction *Store, Value *Mask, ArrayRef<Value *> InterleaveValues) const {
   unsigned Factor = InterleaveValues.size();
   if (Factor > 8)
     return false;
 
-  assert(SI->isSimple());
-  IRBuilder<> Builder(SI);
+  IRBuilder<> Builder(Store);
 
   auto *InVTy = cast<VectorType>(InterleaveValues[0]->getType());
-  auto *PtrTy = SI->getPointerOperandType();
-  const DataLayout &DL = SI->getDataLayout();
+  const DataLayout &DL = Store->getDataLayout();
+  Type *XLenTy = Type::getIntNTy(Store->getContext(), Subtarget.getXLen());
 
-  if (!isLegalInterleavedAccessType(InVTy, Factor, SI->getAlign(),
-                                    SI->getPointerAddressSpace(), DL))
+  Value *Ptr, *VL;
+  Align Alignment;
+  if (auto *SI = dyn_cast<StoreInst>(Store)) {
+    assert(SI->isSimple());
+    Ptr = SI->getPointerOperand();
+    Alignment = SI->getAlign();
+    assert(!Mask && "Unexpected mask on a store");
+    Mask = Builder.getAllOnesMask(InVTy->getElementCount());
+    VL = isa<FixedVectorType>(InVTy)
+             ? Builder.CreateElementCount(XLenTy, InVTy->getElementCount())
+             : Constant::getAllOnesValue(XLenTy);
+  } else {
+    auto *VPStore = cast<VPIntrinsic>(Store);
+    assert(VPStore->getIntrinsicID() == Intrinsic::vp_store &&
+           "Unexpected intrinsic");
+    Ptr = VPStore->getMemoryPointerParam();
+    Alignment = VPStore->getPointerAlignment().value_or(
+        DL.getABITypeAlign(InVTy->getElementType()));
+
+    assert(Mask && "vp.store needs a mask!");
+
+    Value *WideEVL = VPStore->getVectorLengthParam();
+    // Conservatively check if EVL is a multiple of factor, otherwise some
+    // (trailing) elements might be lost after the transformation.
+    if (!isMultipleOfN(WideEVL, DL, Factor))
+      return false;
+
+    VL = Builder.CreateZExt(
+        Builder.CreateUDiv(WideEVL,
+                           ConstantInt::get(WideEVL->getType(), Factor)),
+        XLenTy);
+  }
+  Type *PtrTy = Ptr->getType();
+  unsigned AS = Ptr->getType()->getPointerAddressSpace();
+  if (!isLegalInterleavedAccessType(InVTy, Factor, Alignment, AS, DL))
     return false;
-
-  Type *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
 
   if (isa<FixedVectorType>(InVTy)) {
     Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
-        SI->getModule(), FixedVssegIntrIds[Factor - 2], {InVTy, PtrTy, XLenTy});
-
+        Store->getModule(), FixedVssegIntrIds[Factor - 2],
+        {InVTy, PtrTy, XLenTy});
     SmallVector<Value *, 10> Ops(InterleaveValues);
-    Value *VL = Builder.CreateElementCount(XLenTy, InVTy->getElementCount());
-    Value *Mask = Builder.getAllOnesMask(InVTy->getElementCount());
-    Ops.append({SI->getPointerOperand(), Mask, VL});
-
+    Ops.append({Ptr, Mask, VL});
     Builder.CreateCall(VssegNFunc, Ops);
     return true;
   }
   unsigned SEW = DL.getTypeSizeInBits(InVTy->getElementType());
   unsigned NumElts = InVTy->getElementCount().getKnownMinValue();
   Type *VecTupTy = TargetExtType::get(
-      SI->getContext(), "riscv.vector.tuple",
-      ScalableVectorType::get(Type::getInt8Ty(SI->getContext()),
+      Store->getContext(), "riscv.vector.tuple",
+      ScalableVectorType::get(Type::getInt8Ty(Store->getContext()),
                               NumElts * SEW / 8),
       Factor);
-
-  Value *VL = Constant::getAllOnesValue(XLenTy);
-  Value *Mask = Builder.getAllOnesMask(InVTy->getElementCount());
 
   Value *StoredVal = PoisonValue::get(VecTupTy);
   for (unsigned i = 0; i < Factor; ++i)
@@ -397,10 +421,10 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
         {StoredVal, InterleaveValues[i], Builder.getInt32(i)});
 
   Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
-      SI->getModule(), ScalableVssegIntrIds[Factor - 2],
+      Store->getModule(), ScalableVssegIntrIds[Factor - 2],
       {VecTupTy, PtrTy, Mask->getType(), VL->getType()});
 
-  Value *Operands[] = {StoredVal, SI->getPointerOperand(), Mask, VL,
+  Value *Operands[] = {StoredVal, Ptr, Mask, VL,
                        ConstantInt::get(XLenTy, Log2_64(SEW))};
   Builder.CreateCall(VssegNFunc, Operands);
   return true;
