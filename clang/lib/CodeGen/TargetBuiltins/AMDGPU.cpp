@@ -429,6 +429,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                                Intrinsic::amdgcn_rsq_clamp);
   case AMDGPU::BI__builtin_amdgcn_sinf:
   case AMDGPU::BI__builtin_amdgcn_sinh:
+  case AMDGPU::BI__builtin_amdgcn_sin_bf16:
     return emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::amdgcn_sin);
   case AMDGPU::BI__builtin_amdgcn_cosf:
   case AMDGPU::BI__builtin_amdgcn_cosh:

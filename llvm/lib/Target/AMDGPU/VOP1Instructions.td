@@ -534,6 +534,7 @@ defm V_SQRT_BF16 : VOP1Inst_t16 <"v_sqrt_bf16", VOP_BF16_BF16, any_amdgcn_sqrt>;
 defm V_RSQ_BF16  : VOP1Inst_t16 <"v_rsq_bf16",  VOP_BF16_BF16, AMDGPUrsq>;
 defm V_LOG_BF16  : VOP1Inst_t16 <"v_log_bf16",  VOP_BF16_BF16, AMDGPUlogf16>;
 defm V_EXP_BF16  : VOP1Inst_t16 <"v_exp_bf16",  VOP_BF16_BF16, AMDGPUexpf16>;
+defm V_SIN_BF16  : VOP1Inst_t16 <"v_sin_bf16",  VOP_BF16_BF16, AMDGPUsin>;
 }
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 defm V_FREXP_MANT_F16 : VOP1Inst_t16 <"v_frexp_mant_f16", VOP_F16_F16, int_amdgcn_frexp_mant>;
@@ -1147,6 +1148,7 @@ defm V_SQRT_BF16             : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07a>;
 defm V_RSQ_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07b>;
 defm V_LOG_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07c>;
 defm V_EXP_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07d>;
+defm V_SIN_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07e>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
