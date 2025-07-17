@@ -68,3 +68,22 @@ add_object_library(
   .character_converter
   .mbstate
 )
+
+add_object_library(
+  wcsnrtombs
+  HDRS
+    wcsnrtombs.h
+  SRCS 
+    wcsnrtombs.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.char8_t
+    libc.hdr.types.char32_t
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.error_or
+    libc.src.__support.common
+    .string_converter
+    .character_converter
+    .mbstate
+)
