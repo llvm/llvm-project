@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A simple pass that looks at local memory arrays that are statically
+// A simple pass that looks at local memory allocas that are statically
 // sized and potentially increases their alignment. This enables vectorization
-// of loads/stores to these arrays if not explicitly specified by the client.
+// of loads/stores to these allocas if not explicitly specified by the client.
 //
-// TODO: Ideally we should do a bin-packing of local arrays to maximize
+// TODO: Ideally we should do a bin-packing of local allocas to maximize
 // alignments while minimizing holes.
 //
 //===----------------------------------------------------------------------===//
@@ -28,10 +28,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    MaxLocalArrayAlignment("nvptx-use-max-local-array-alignment",
-                           cl::init(false), cl::Hidden,
-                           cl::desc("Use maximum alignment for local memory"));
+static cl::opt<unsigned> MinLocalArrayAlignment(
+    "nvptx-ensure-minimum-local-alignment", cl::init(16), cl::Hidden,
+    cl::desc(
+        "Ensure local memory objects are at least this aligned (default 16)"));
 
 static Align getMaxLocalArrayAlignment(const TargetTransformInfo &TTI) {
   const unsigned MaxBitWidth =
@@ -41,45 +41,46 @@ static Align getMaxLocalArrayAlignment(const TargetTransformInfo &TTI) {
 
 namespace {
 struct NVPTXIncreaseLocalAlignment {
-  const Align MaxAlign;
+  const Align MaxUsableAlign;
 
   NVPTXIncreaseLocalAlignment(const TargetTransformInfo &TTI)
-      : MaxAlign(getMaxLocalArrayAlignment(TTI)) {}
+      : MaxUsableAlign(getMaxLocalArrayAlignment(TTI)) {}
 
   bool run(Function &F);
   bool updateAllocaAlignment(AllocaInst *Alloca, const DataLayout &DL);
-  Align getAggressiveArrayAlignment(unsigned ArraySize);
-  Align getConservativeArrayAlignment(unsigned ArraySize);
+  Align getMaxUsefulArrayAlignment(unsigned ArraySize);
+  Align getMaxSafeLocalAlignment(unsigned ArraySize);
 };
 } // namespace
 
-/// Get the maximum useful alignment for an array. This is more likely to
+/// Get the maximum useful alignment for an allocation. This is more likely to
 /// produce holes in the local memory.
 ///
-/// Choose an alignment large enough that the entire array could be loaded with
-/// a single vector load (if possible). Cap the alignment at
-/// MaxPTXArrayAlignment.
-Align NVPTXIncreaseLocalAlignment::getAggressiveArrayAlignment(
+/// Choose an alignment large enough that the entire alloca could be loaded
+/// with a single vector load (if possible). Cap the alignment at
+/// MinLocalArrayAlignment and MaxUsableAlign.
+Align NVPTXIncreaseLocalAlignment::getMaxUsefulArrayAlignment(
     const unsigned ArraySize) {
-  return std::min(MaxAlign, Align(PowerOf2Ceil(ArraySize)));
+  const Align UpperLimit =
+      std::min(MaxUsableAlign, Align(MinLocalArrayAlignment));
+  return std::min(UpperLimit, Align(PowerOf2Ceil(ArraySize)));
 }
 
-/// Get the alignment of arrays that reduces the chances of leaving holes when
-/// arrays are allocated within a contiguous memory buffer (like shared memory
-/// and stack). Holes are still possible before and after the array allocation.
+/// Get the alignment of allocas that reduces the chances of leaving holes when
+/// they are allocated within a contiguous memory buffer (like the stack).
+/// Holes are still possible before and after the allocation.
 ///
-/// Choose the largest alignment such that the array size is a multiple of the
-/// alignment. If all elements of the buffer are allocated in order of
+/// Choose the largest alignment such that the allocation size is a multiple of
+/// the alignment. If all elements of the buffer are allocated in order of
 /// alignment (higher to lower) no holes will be left.
-Align NVPTXIncreaseLocalAlignment::getConservativeArrayAlignment(
+Align NVPTXIncreaseLocalAlignment::getMaxSafeLocalAlignment(
     const unsigned ArraySize) {
-  return commonAlignment(MaxAlign, ArraySize);
+  return commonAlignment(MaxUsableAlign, ArraySize);
 }
 
-/// Find a better alignment for local arrays
+/// Find a better alignment for local allocas.
 bool NVPTXIncreaseLocalAlignment::updateAllocaAlignment(AllocaInst *Alloca,
                                                         const DataLayout &DL) {
-  // Looking for statically sized local arrays
   if (!Alloca->isStaticAlloca())
     return false;
 
@@ -88,12 +89,15 @@ bool NVPTXIncreaseLocalAlignment::updateAllocaAlignment(AllocaInst *Alloca,
     return false;
 
   const auto ArraySizeValue = ArraySize->getFixedValue();
-  const Align PreferredAlignment =
-      MaxLocalArrayAlignment ? getAggressiveArrayAlignment(ArraySizeValue)
-                             : getConservativeArrayAlignment(ArraySizeValue);
+  if (ArraySizeValue == 0)
+    return false;
 
-  if (PreferredAlignment > Alloca->getAlign()) {
-    Alloca->setAlignment(PreferredAlignment);
+  const Align NewAlignment =
+      std::max(getMaxSafeLocalAlignment(ArraySizeValue),
+               getMaxUsefulArrayAlignment(ArraySizeValue));
+
+  if (NewAlignment > Alloca->getAlign()) {
+    Alloca->setAlignment(NewAlignment);
     return true;
   }
 
@@ -130,8 +134,7 @@ struct NVPTXIncreaseLocalAlignmentLegacyPass : public FunctionPass {
 char NVPTXIncreaseLocalAlignmentLegacyPass::ID = 0;
 INITIALIZE_PASS(NVPTXIncreaseLocalAlignmentLegacyPass,
                 "nvptx-increase-local-alignment",
-                "Increase alignment for statically sized alloca arrays", false,
-                false)
+                "Increase alignment for statically sized allocas", false, false)
 
 FunctionPass *llvm::createNVPTXIncreaseLocalAlignmentPass() {
   return new NVPTXIncreaseLocalAlignmentLegacyPass();

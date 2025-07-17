@@ -94,7 +94,7 @@ declare void @bar(ptr %a)
 define void @foo3(i32 %a) {
 ; PTX32-LABEL: foo3(
 ; PTX32:       {
-; PTX32-NEXT:    .local .align 4 .b8 __local_depot2[12];
+; PTX32-NEXT:    .local .align 16 .b8 __local_depot2[16];
 ; PTX32-NEXT:    .reg .b32 %SP;
 ; PTX32-NEXT:    .reg .b32 %SPL;
 ; PTX32-NEXT:    .reg .b32 %r<6>;
@@ -110,7 +110,7 @@ define void @foo3(i32 %a) {
 ;
 ; PTX64-LABEL: foo3(
 ; PTX64:       {
-; PTX64-NEXT:    .local .align 4 .b8 __local_depot2[12];
+; PTX64-NEXT:    .local .align 16 .b8 __local_depot2[16];
 ; PTX64-NEXT:    .reg .b64 %SP;
 ; PTX64-NEXT:    .reg .b64 %SPL;
 ; PTX64-NEXT:    .reg .b32 %r<2>;

@@ -101,7 +101,7 @@ declare void @llvm.va_end.p0(ptr)
 define dso_local i32 @foo() {
 ; CHECK-PTX-LABEL: foo(
 ; CHECK-PTX:       {
-; CHECK-PTX-NEXT:    .local .align 8 .b8 __local_depot1[40];
+; CHECK-PTX-NEXT:    .local .align 16 .b8 __local_depot1[48];
 ; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
 ; CHECK-PTX-NEXT:    .reg .b32 %r<3>;
@@ -138,7 +138,7 @@ entry:
 define dso_local i32 @variadics2(i32 noundef %first, ...) {
 ; CHECK-PTX-LABEL: variadics2(
 ; CHECK-PTX:       {
-; CHECK-PTX-NEXT:    .local .align 1 .b8 __local_depot2[3];
+; CHECK-PTX-NEXT:    .local .align 4 .b8 __local_depot2[4];
 ; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
 ; CHECK-PTX-NEXT:    .reg .b16 %rs<4>;
@@ -215,17 +215,10 @@ define dso_local i32 @bar() {
 ; CHECK-PTX-NEXT:    st.local.b8 [%rd2+1], %rs2;
 ; CHECK-PTX-NEXT:    ld.global.nc.b8 %rs3, [__const_$_bar_$_s1+5];
 ; CHECK-PTX-NEXT:    st.local.b8 [%rd2], %rs3;
-; CHECK-PTX-NEXT:    st.b32 [%SP+8], 1;
-; CHECK-PTX-NEXT:    st.b8 [%SP+12], 1;
-; CHECK-PTX-NEXT:    st.b64 [%SP+16], 1;
-; CHECK-PTX-NEXT:    add.u64 %rd3, %SP, 8;
-; CHECK-PTX-NEXT:    mov.b32 %r1, 1;
-; CHECK-PTX-NEXT:    st.b32 [%SP+16], %r1;
-; CHECK-PTX-NEXT:    mov.b16 %rs4, 1;
-; CHECK-PTX-NEXT:    st.b8 [%SP+20], %rs4;
-; CHECK-PTX-NEXT:    mov.b64 %rd3, 1;
-; CHECK-PTX-NEXT:    st.b64 [%SP+24], %rd3;
-; CHECK-PTX-NEXT:    add.u64 %rd4, %SP, 16;
+; CHECK-PTX-NEXT:    st.b32 [%SP+16], 1;
+; CHECK-PTX-NEXT:    st.b8 [%SP+20], 1;
+; CHECK-PTX-NEXT:    st.b64 [%SP+24], 1;
+; CHECK-PTX-NEXT:    add.u64 %rd3, %SP, 16;
 ; CHECK-PTX-NEXT:    { // callseq 1, 0
 ; CHECK-PTX-NEXT:    .param .b32 param0;
 ; CHECK-PTX-NEXT:    st.param.b32 [param0], 1;
