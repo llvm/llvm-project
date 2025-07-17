@@ -1261,6 +1261,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # wchar.h entrypoints
     libc.src.wchar.mbrtowc
     libc.src.wchar.mbtowc
+    libc.src.wchar.mbstowcs
+    libc.src.wchar.mbsrtowcs
     libc.src.wchar.wcrtomb
     libc.src.wchar.wctomb
   )

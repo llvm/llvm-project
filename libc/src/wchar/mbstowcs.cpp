@@ -21,14 +21,20 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(size_t, mbstowcs,
                    (wchar_t *__restrict pwcs, const char *__restrict s,
                     size_t n)) {
+  n = pwcs == nullptr ? SIZE_MAX : n;
   static internal::mbstate internal_mbstate;
   internal::StringConverter<char8_t> str_conv(
       reinterpret_cast<const char8_t *>(s), &internal_mbstate, n);
   int dst_idx = 0;
+
   ErrorOr<char32_t> converted = str_conv.popUTF32();
+
   while (converted.has_value()) {
     if (pwcs != nullptr)
       pwcs[dst_idx] = converted.value();
+    // if it is null terminator, do not count in return value
+    if (converted.value() == L'\0')
+      return dst_idx;
     dst_idx++;
     converted = str_conv.popUTF32();
   }
