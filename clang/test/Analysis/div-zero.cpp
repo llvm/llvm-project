@@ -13,7 +13,7 @@ int fooPR10616 (int qX ) {
 }
 
 namespace GH148875 {
-  struct A {
+struct A {
   int x;
   A(int v) : x(v) {}
 };
@@ -35,6 +35,10 @@ struct D {
 struct E {
   D d;
   E(int a) : d{a} {}
+};
+
+struct Storage {
+  int x;
 };
 
 int t1() {
@@ -60,5 +64,10 @@ int t4() {
 int t5() {
   E e{32};
   return 1 / (e.d.x - 32); // expected-warning {{Division by zero}}
+}
+
+int t6() {
+  Storage w{32};
+  return 1 / (w.x - 32); // expected-warning {{Division by zero}}
 }
 }

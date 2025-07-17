@@ -25,6 +25,10 @@ struct E {
   E(int a) : d(a) {}
 };
 
+struct Storage {
+  int x;
+};
+
 int t1() {
   A a{42};
   return 1 / (a.x - 42); // expected-warning {{Division by zero}}
@@ -48,5 +52,10 @@ int t4() {
 int t5() {
   E e{32};
   return 1 / (e.d.x - 32); // expected-warning {{Division by zero}}
+}
+
+int t6() {
+  Storage w(32);
+  return 1 / (w.x - 32); // expected-warning {{Division by zero}}
 }
 } // namespace GH148875
