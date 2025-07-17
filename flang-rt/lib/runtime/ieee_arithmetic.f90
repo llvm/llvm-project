@@ -8,7 +8,7 @@
 
 ! Fortran 2018 Clause 17
 
-#include   '../include/flang/Runtime/magic-numbers.h'
+#include '../../../flang/include/flang/Runtime/magic-numbers.h'
 
 module ieee_arithmetic
   ! F18 Clause 17.1p1:
@@ -336,6 +336,7 @@ module ieee_arithmetic
   public ::  ieee_get_underflow_mode
 #undef IEEE_GET_UNDERFLOW_MODE_L
 
+! Workaround for https://github.com/llvm/llvm-project/issues/139297
 ! #define IEEE_IS_FINITE_R(XKIND) elemental logical function ieee_is_finite_a##XKIND(x);  real(XKIND), intent(in) :: x;  !dir$ ignore_tkr(d) x;   end function ieee_is_finite_a##XKIND;
   interface ieee_is_finite
 elemental logical function ieee_is_finite_a2(x); real(2), intent(in) :: x;

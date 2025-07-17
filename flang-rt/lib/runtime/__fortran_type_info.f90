@@ -12,11 +12,8 @@
 ! in order to generate description tables for all other derived types.
 
 module __fortran_type_info
-#if 0
-  use       __fortran_builtins, &
-#else
-  use, intrinsic ::    __fortran_builtins, &
-#endif
+
+  use, intrinsic :: __fortran_builtins, &
     only: __builtin_c_ptr, __builtin_c_devptr, __builtin_c_funptr
   implicit none
 

@@ -12,7 +12,7 @@
 ! from being usable on INTRINSIC statements, and force the program
 ! to USE the standard intrinsic modules in order to access the
 ! standard names of the procedures.
-module    __fortran_builtins
+module __fortran_builtins
   implicit none
 
   ! Set PRIVATE by default to explicitly only export what is meant
