@@ -2391,61 +2391,57 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
 }
 
 void VPlanTransforms::simplifyEVLIVs(VPlan &Plan) {
-  auto ConvertEVLPhi = [](VPlan &Plan, VPBasicBlock *Entry,
-                          VPEVLBasedIVPHIRecipe *EVLPhi) {
-    using namespace llvm::VPlanPatternMatch;
-    VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
-
-    // Convert EVLPhi to concrete recipe.
-    auto *ScalarR = VPBuilder(EVLPhi).createScalarPhi(
-        {EVLPhi->getStartValue(), EVLIncrement}, EVLPhi->getDebugLoc(),
-        "evl.based.iv");
-    EVLPhi->replaceAllUsesWith(ScalarR);
-    EVLPhi->eraseFromParent();
-
-    // Find the latch-exiting block and convert to variable-length stepping.
-    // Before: (branch-on-count CanonicalIVInc, VectorTripCount)
-    // After: (branch-on-count EVLIVInc, TripCount)
-    auto Range =
-        VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(Entry));
-    auto It = find_if(Range, [&](VPBasicBlock *VPBB) {
-      return any_of(VPBB->successors(),
-                    [&](VPBlockBase *Succ) { return Succ == Entry; });
-    });
-    assert((It != Range.end()) && "LatchExiting is not found");
-    VPBasicBlock *LatchExiting = *It;
-    auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
-    VPValue *ScalarIVInc;
-    assert(LatchExitingBr &&
-           match(LatchExitingBr,
-                 m_BranchOnCount(m_VPValue(ScalarIVInc),
-                                 m_Specific(&Plan.getVectorTripCount()))) &&
-           "Unexpected terminator in EVL loop");
-    LatchExitingBr->setOperand(1, Plan.getTripCount());
-    ScalarIVInc->replaceAllUsesWith(EVLIncrement);
-    VPRecipeBase *IVIncR = ScalarIVInc->getDefiningRecipe();
-    VPRecipeBase *ScalarIV = IVIncR->getOperand(0)->getDefiningRecipe();
-    IVIncR->eraseFromParent();
-    ScalarIV->eraseFromParent();
-  };
-
+  using namespace llvm::VPlanPatternMatch;
   // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe
   // There should be only one EVL PHI in the entire plan
   VPEVLBasedIVPHIRecipe *EVLPhi = nullptr;
-  VPBasicBlock *EVLPhiBlock = nullptr;
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry())))
     for (VPRecipeBase &R : VPBB->phis())
       if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
-        assert(!EVLPhi && "Found multiple EVL PHIs - only one expected");
+        assert(!EVLPhi && "Found multiple EVL PHIs. Only one expected");
         EVLPhi = PhiR;
-        EVLPhiBlock = VPBB;
       }
 
-  // Process the single EVL PHI if found
-  if (EVLPhi)
-    ConvertEVLPhi(Plan, EVLPhiBlock, EVLPhi);
+  // Early return if no EVL PHI is found
+  if (!EVLPhi)
+    return;
+
+  VPBasicBlock *Entry = EVLPhi->getParent();
+  VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
+
+  // Convert EVLPhi to concrete recipe.
+  auto *ScalarR =
+      VPBuilder(EVLPhi).createScalarPhi({EVLPhi->getStartValue(), EVLIncrement},
+                                        EVLPhi->getDebugLoc(), "evl.based.iv");
+  EVLPhi->replaceAllUsesWith(ScalarR);
+  EVLPhi->eraseFromParent();
+
+  // Find the latch-exiting block and convert to variable-length stepping.
+  // Before: (branch-on-count CanonicalIVInc, VectorTripCount)
+  // After: (branch-on-count EVLIVInc, TripCount)
+  auto Range =
+      VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(Entry));
+  auto It = find_if(Range, [&Entry](VPBasicBlock *VPBB) {
+    return any_of(VPBB->successors(),
+                  [&Entry](VPBlockBase *Succ) { return Succ == Entry; });
+  });
+  assert((It != Range.end()) && "LatchExiting is not found");
+  VPBasicBlock *LatchExiting = *It;
+  auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
+  VPValue *ScalarIVInc;
+  assert(LatchExitingBr &&
+         match(LatchExitingBr,
+               m_BranchOnCount(m_VPValue(ScalarIVInc),
+                               m_Specific(&Plan.getVectorTripCount()))) &&
+         "Unexpected terminator in EVL loop");
+  LatchExitingBr->setOperand(1, Plan.getTripCount());
+  ScalarIVInc->replaceAllUsesWith(EVLIncrement);
+  VPRecipeBase *IVIncR = ScalarIVInc->getDefiningRecipe();
+  VPRecipeBase *ScalarIV = IVIncR->getOperand(0)->getDefiningRecipe();
+  IVIncR->eraseFromParent();
+  ScalarIV->eraseFromParent();
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
