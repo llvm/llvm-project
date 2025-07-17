@@ -1000,7 +1000,9 @@ ProgramStateRef CStringChecker::checkNullTerminated(CheckerContext &C,
   if (Offset >= RegionExtent)
     return State;
   for (int I = Offset; I < RegionExtent; ++I) {
-    const ElementRegion *ElemR = RegionM.getElementRegion(C.getASTContext().CharTy, SVB.makeArrayIndex(I), StrReg, C.getASTContext());
+    const ElementRegion *ElemR = RegionM.getElementRegion(
+        C.getASTContext().CharTy, SVB.makeArrayIndex(I), StrReg,
+        C.getASTContext());
     SVal ElemVal = State->getSValAsScalarOrLoc(ElemR);
     if (!State->isNonNull(ElemVal).isConstrainedTrue())
       // We have here a lower bound for the string length.
