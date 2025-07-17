@@ -6000,10 +6000,9 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
   Register ScratchReg1 = XSrc;
   if (Idx >= HalfSize) {
     ScratchReg1 = MRI.createVirtualRegister(RC);
-    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_Q), ScratchReg1)
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_D), ScratchReg1)
         .addReg(XSrc)
-        .addReg(XSrc)
-        .addImm(1);
+        .addImm(14);
   }
 
   Register ScratchSubReg1 = MRI.createVirtualRegister(SubRC);
