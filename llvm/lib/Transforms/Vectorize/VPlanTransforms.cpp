@@ -2406,24 +2406,21 @@ void VPlanTransforms::simplifyEVLIVs(VPlan &Plan) {
     // Find the latch-exiting block and convert to variable-length stepping.
     // Before: (branch-on-count CanonicalIVInc, VectorTripCount)
     // After: (branch-on-count EVLIVInc, TripCount)
-    auto FindLatchExiting = [](VPBasicBlock *Entry) {
-      auto Range =
-          VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(Entry));
-      auto It = find_if(Range, [&](VPBasicBlock *VPBB) {
-        return any_of(VPBB->successors(),
-                      [&](VPBlockBase *Succ) { return Succ == Entry; });
-      });
-      return It != Range.end() ? *It : nullptr;
-    };
-    VPBasicBlock *LatchExiting = FindLatchExiting(Entry);
-    assert(LatchExiting && "LatchExiting is not found");
+    auto Range =
+        VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(Entry));
+    auto It = find_if(Range, [&](VPBasicBlock *VPBB) {
+      return any_of(VPBB->successors(),
+                    [&](VPBlockBase *Succ) { return Succ == Entry; });
+    });
+    assert((It != Range.end()) && "LatchExiting is not found");
+    VPBasicBlock *LatchExiting = *It;
     auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
     VPValue *ScalarIVInc;
-    if (!LatchExitingBr ||
-        !match(LatchExitingBr,
-               m_BranchOnCount(m_VPValue(ScalarIVInc),
-                               m_Specific(&Plan.getVectorTripCount()))))
-      return;
+    assert(LatchExitingBr &&
+           match(LatchExitingBr,
+                 m_BranchOnCount(m_VPValue(ScalarIVInc),
+                                 m_Specific(&Plan.getVectorTripCount()))) &&
+           "Unexpected terminator in EVL loop");
     LatchExitingBr->setOperand(1, Plan.getTripCount());
     ScalarIVInc->replaceAllUsesWith(EVLIncrement);
     VPRecipeBase *IVIncR = ScalarIVInc->getDefiningRecipe();
