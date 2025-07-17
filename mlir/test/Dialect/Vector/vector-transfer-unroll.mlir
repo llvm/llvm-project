@@ -365,3 +365,19 @@ func.func @vector_gather_unroll(%mem : memref<?x?x?xf32>,
   %res = vector.gather %mem[%c0, %c0, %c0] [%indices], %mask, %pass_thru : memref<?x?x?xf32>, vector<6x4xindex>, vector<6x4xi1>, vector<6x4xf32> into vector<6x4xf32>
   return %res : vector<6x4xf32>
 }
+
+// -----
+
+// Ensure that cases with mismatched target and source
+// shape ranks do not lead to a crash.
+
+// CHECK-LABEL: func @negative_vector_transfer_write
+//   CHECK-NOT:   vector.extract_strided_slice
+//       CHECK:   vector.transfer_write
+//       CHECK:   return
+func.func @negative_vector_transfer_write(%arg0: vector<6x34x62xi8>) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<6x34x62xi8>
+  vector.transfer_write %arg0, %alloc[%c0, %c0, %c0]: vector<6x34x62xi8>, memref<6x34x62xi8>
+  return
+}
