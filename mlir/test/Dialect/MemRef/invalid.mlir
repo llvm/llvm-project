@@ -962,7 +962,7 @@ func.func @test_store_zero_results2(%x: i32, %p: memref<i32>) {
 
 // -----
 
-func.func @negative_load_alignment(%memref: memref<4xi32>) {
+func.func @invalid_load_alignment(%memref: memref<4xi32>) {
   %c0 = arith.constant 0 : index
   // expected-error @below {{'memref.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   %val = memref.load %memref[%c0] { alignment = -1 } : memref<4xi32>
@@ -971,7 +971,7 @@ func.func @negative_load_alignment(%memref: memref<4xi32>) {
 
 // -----
 
-func.func @non_power_of_2_store_alignment(%memref: memref<4xi32>, %val: i32) {
+func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: i32) {
   %c0 = arith.constant 0 : index
   // expected-error @below {{'memref.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   memref.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>
