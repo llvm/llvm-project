@@ -71,6 +71,7 @@ public:
   using DebugTemplateNamesKind = llvm::codegenoptions::DebugTemplateNamesKind;
   using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
   using DebuggerKind = llvm::DebuggerKind;
+  using CASBackendMode = llvm::CASBackendMode;
 
 #define CODEGENOPT(Name, Bits, Default, Compatibility) unsigned Name : Bits;
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)

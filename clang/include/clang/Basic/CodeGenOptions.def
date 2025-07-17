@@ -477,8 +477,8 @@ CODEGENOPT(UseCASBackend, 1, 0, Benign)
 CODEGENOPT(EmitCASIDFile, 1, 0, Benign)
 
 /// The CASObjectFormat used when CAS output is used.
-ENUM_CODEGENOPT(CASObjMode, llvm::CASBackendMode,
-                2, llvm::CASBackendMode::Native, Benign)
+ENUM_CODEGENOPT(CASObjMode, CASBackendMode,
+                2, CASBackendMode::Native, Benign)
 
 /// Modify C++ ABI to returning `this` pointer from constructors and
 /// non-deleting destructors. (No effect on Microsoft ABI.)
