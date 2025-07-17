@@ -60,17 +60,32 @@ FunctionType *InlineAsm::getFunctionType() const {
   return FTy;
 }
 
-void InlineAsm::collectAsmStrs(SmallVectorImpl<StringRef> &AsmStrs) const {
+SmallVector<StringRef> InlineAsm::collectAsmInstrs() const {
+  if (AsmString.empty())
+    return {};
   StringRef AsmStr(AsmString);
-  AsmStrs.clear();
+  // First break the assembly string into lines.
+  SmallVector<StringRef> AsmLines;
+  AsmStr.split(AsmLines, '\n');
 
-  // TODO: 1) Unify delimiter for inline asm, we also meet other delimiters
-  // for example "\0A", ";".
-  // 2) Enhance StringRef. Some of the special delimiter ("\0") can't be
-  // split in StringRef. Also empty StringRef can not call split (will stuck).
-  if (AsmStr.empty())
-    return;
-  AsmStr.split(AsmStrs, "\n\t", -1, false);
+  SmallVector<StringRef> AsmInstrs;
+  AsmInstrs.reserve(AsmLines.size());
+  for (StringRef &AsmLine : AsmLines) {
+    // First remove the comments. Note it's important to do this before breaking
+    // by ';' since the comment portion may include that character too.
+    AsmLine = AsmLine.split('#').first.split("//").first;
+    if (AsmLine.empty())
+      continue;
+    // Break by ';' to collect separate instructions in a single line.
+    SmallVector<StringRef, 1> CurrentLineAsmInstrs;
+    AsmLine.split(CurrentLineAsmInstrs, ';');
+    for (StringRef S : CurrentLineAsmInstrs) {
+      StringRef Trimmed = S.trim();
+      if (!Trimmed.empty())
+        AsmInstrs.push_back(Trimmed);
+    }
+  }
+  return AsmInstrs;
 }
 
 /// Parse - Analyze the specified string (e.g. "==&{eax}") and fill in the

@@ -87,7 +87,12 @@ public:
 
   StringRef getAsmString() const { return AsmString; }
   StringRef getConstraintString() const { return Constraints; }
-  LLVM_ABI void collectAsmStrs(SmallVectorImpl<StringRef> &AsmStrs) const;
+
+  /// collectAsmInstrs - Parses the assembly instruction and collects individual
+  /// instructions in a vector. Handles both '\n' and ';' as instruction
+  /// separators. Trims comments (marked by '#' and "//") and whitespaces from
+  /// instructions.
+  LLVM_ABI SmallVector<StringRef> collectAsmInstrs() const;
 
   /// This static method can be used by the parser to check to see if the
   /// specified constraint string is legal for the type.
