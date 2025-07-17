@@ -754,7 +754,7 @@ llvm::Error Interpreter::Undo(unsigned N) {
 
   if (N > getEffectivePTUSize())
     return llvm::make_error<llvm::StringError>("Operation failed. "
-                                               "Too many undos",
+                                               "No input left to undo",
                                                std::error_code());
   for (unsigned I = 0; I < N; I++) {
     if (IncrExecutor) {
