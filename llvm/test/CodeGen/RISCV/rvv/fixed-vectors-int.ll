@@ -5712,9 +5712,8 @@ define <8 x i8> @vsub_if_uge_v8i8(<8 x i8> %va, <8 x i8> %vb) {
 ; CHECK-LABEL: vsub_if_uge_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmsltu.vv v0, v8, v9
 ; CHECK-NEXT:    vsub.vv v9, v8, v9
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp ult <8 x i8> %va, %vb
   %select = select <8 x i1> %cmp, <8 x i8> zeroinitializer, <8 x i8> %vb
@@ -5725,9 +5724,9 @@ define <8 x i8> @vsub_if_uge_v8i8(<8 x i8> %va, <8 x i8> %vb) {
 define <8 x i8> @vsub_if_uge_swapped_v8i8(<8 x i8> %va, <8 x i8> %vb) {
 ; CHECK-LABEL: vsub_if_uge_swapped_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmsleu.vv v0, v9, v8
-; CHECK-NEXT:    vsub.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp uge <8 x i8> %va, %vb
   %select = select <8 x i1> %cmp, <8 x i8> %vb, <8 x i8> zeroinitializer
@@ -5739,9 +5738,8 @@ define <8 x i16> @vsub_if_uge_v8i16(<8 x i16> %va, <8 x i16> %vb) {
 ; CHECK-LABEL: vsub_if_uge_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmsltu.vv v0, v8, v9
 ; CHECK-NEXT:    vsub.vv v9, v8, v9
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp ult <8 x i16> %va, %vb
   %select = select <8 x i1> %cmp, <8 x i16> zeroinitializer, <8 x i16> %vb
@@ -5752,9 +5750,9 @@ define <8 x i16> @vsub_if_uge_v8i16(<8 x i16> %va, <8 x i16> %vb) {
 define <8 x i16> @vsub_if_uge_swapped_v8i16(<8 x i16> %va, <8 x i16> %vb) {
 ; CHECK-LABEL: vsub_if_uge_swapped_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; CHECK-NEXT:    vmsleu.vv v0, v9, v8
-; CHECK-NEXT:    vsub.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp uge <8 x i16> %va, %vb
   %select = select <8 x i1> %cmp, <8 x i16> %vb, <8 x i16> zeroinitializer
@@ -5766,9 +5764,8 @@ define <4 x i32> @vsub_if_uge_v4i32(<4 x i32> %va, <4 x i32> %vb) {
 ; CHECK-LABEL: vsub_if_uge_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmsltu.vv v0, v8, v9
 ; CHECK-NEXT:    vsub.vv v9, v8, v9
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp ult <4 x i32> %va, %vb
   %select = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> %vb
@@ -5779,9 +5776,9 @@ define <4 x i32> @vsub_if_uge_v4i32(<4 x i32> %va, <4 x i32> %vb) {
 define <4 x i32> @vsub_if_uge_swapped_v4i32(<4 x i32> %va, <4 x i32> %vb) {
 ; CHECK-LABEL: vsub_if_uge_swapped_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmsleu.vv v0, v9, v8
-; CHECK-NEXT:    vsub.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp uge <4 x i32> %va, %vb
   %select = select <4 x i1> %cmp, <4 x i32> %vb, <4 x i32> zeroinitializer
@@ -5793,9 +5790,8 @@ define <2 x i64> @vsub_if_uge_v2i64(<2 x i64> %va, <2 x i64> %vb) {
 ; CHECK-LABEL: vsub_if_uge_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vmsltu.vv v0, v8, v9
 ; CHECK-NEXT:    vsub.vv v9, v8, v9
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp ult <2 x i64> %va, %vb
   %select = select <2 x i1> %cmp, <2 x i64> zeroinitializer, <2 x i64> %vb
@@ -5806,9 +5802,9 @@ define <2 x i64> @vsub_if_uge_v2i64(<2 x i64> %va, <2 x i64> %vb) {
 define <2 x i64> @vsub_if_uge_swapped_v2i64(<2 x i64> %va, <2 x i64> %vb) {
 ; CHECK-LABEL: vsub_if_uge_swapped_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; CHECK-NEXT:    vmsleu.vv v0, v9, v8
-; CHECK-NEXT:    vsub.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp uge <2 x i64> %va, %vb
   %select = select <2 x i1> %cmp, <2 x i64> %vb, <2 x i64> zeroinitializer
@@ -5819,9 +5815,9 @@ define <2 x i64> @vsub_if_uge_swapped_v2i64(<2 x i64> %va, <2 x i64> %vb) {
 define <8 x i8> @sub_if_uge_C_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: sub_if_uge_C_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmsgtu.vi v0, v8, 12
-; CHECK-NEXT:    vadd.vi v8, v8, -13, v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vadd.vi v9, v8, -13
+; CHECK-NEXT:    vminu.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt <8 x i8> %x, splat (i8 12)
   %sub = add <8 x i8> %x, splat (i8 -13)
@@ -5832,11 +5828,10 @@ define <8 x i8> @sub_if_uge_C_v8i8(<8 x i8> %x) {
 define <8 x i16> @sub_if_uge_C_v8i16(<8 x i16> %x) {
 ; CHECK-LABEL: sub_if_uge_C_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 2000
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; CHECK-NEXT:    vmsgtu.vx v0, v8, a0
 ; CHECK-NEXT:    li a0, -2001
-; CHECK-NEXT:    vadd.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vadd.vx v9, v8, a0
+; CHECK-NEXT:    vminu.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt <8 x i16> %x, splat (i16 2000)
   %sub = add <8 x i16> %x, splat (i16 -2001)
@@ -5847,13 +5842,11 @@ define <8 x i16> @sub_if_uge_C_v8i16(<8 x i16> %x) {
 define <4 x i32> @sub_if_uge_C_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: sub_if_uge_C_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 16
-; CHECK-NEXT:    addi a0, a0, -16
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmsgtu.vx v0, v8, a0
 ; CHECK-NEXT:    lui a0, 1048560
 ; CHECK-NEXT:    addi a0, a0, 15
-; CHECK-NEXT:    vadd.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vadd.vx v9, v8, a0
+; CHECK-NEXT:    vminu.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt <4 x i32> %x, splat (i32 65520)
   %sub = add <4 x i32> %x, splat (i32 -65521)
@@ -5864,14 +5857,11 @@ define <4 x i32> @sub_if_uge_C_v4i32(<4 x i32> %x) {
 define <4 x i32> @sub_if_uge_C_swapped_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: sub_if_uge_C_swapped_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 16
-; CHECK-NEXT:    addi a0, a0, -15
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmsltu.vx v0, v8, a0
 ; CHECK-NEXT:    lui a0, 1048560
 ; CHECK-NEXT:    addi a0, a0, 15
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vx v9, v8, a0
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vminu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %cmp = icmp ult <4 x i32> %x, splat (i32 65521)
   %sub = add <4 x i32> %x, splat (i32 -65521)
@@ -5883,38 +5873,28 @@ define <2 x i64> @sub_if_uge_C_v2i64(<2 x i64> %x) nounwind {
 ; RV32-LABEL: sub_if_uge_C_v2i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    li a0, 1
-; RV32-NEXT:    lui a1, 172127
-; RV32-NEXT:    mv a2, sp
-; RV32-NEXT:    addi a1, a1, 512
-; RV32-NEXT:    sw a1, 0(sp)
-; RV32-NEXT:    sw a0, 4(sp)
 ; RV32-NEXT:    li a0, -2
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; RV32-NEXT:    vlse64.v v9, (a2), zero
 ; RV32-NEXT:    lui a1, 876449
 ; RV32-NEXT:    addi a1, a1, -513
 ; RV32-NEXT:    sw a1, 8(sp)
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v10, (a0), zero
-; RV32-NEXT:    vmsltu.vv v0, v9, v8
-; RV32-NEXT:    vadd.vv v8, v8, v10, v0.t
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vadd.vv v9, v8, v9
+; RV32-NEXT:    vminu.vv v8, v9, v8
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: sub_if_uge_C_v2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 2384
-; RV64-NEXT:    addi a0, a0, 761
-; RV64-NEXT:    slli a0, a0, 9
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; RV64-NEXT:    vmsgtu.vx v0, v8, a0
 ; RV64-NEXT:    lui a0, 1048278
 ; RV64-NEXT:    addi a0, a0, -95
 ; RV64-NEXT:    slli a0, a0, 12
 ; RV64-NEXT:    addi a0, a0, -513
-; RV64-NEXT:    vadd.vx v8, v8, a0, v0.t
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vadd.vx v9, v8, a0
+; RV64-NEXT:    vminu.vv v8, v9, v8
 ; RV64-NEXT:    ret
   %cmp = icmp ugt <2 x i64> %x, splat (i64 5000000000)
   %sub = add <2 x i64> %x, splat (i64 -5000000001)
