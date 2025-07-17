@@ -50,11 +50,12 @@ EXPR-NOT:  *** Some of the displayed variables have more members
 
 run
 frame variable arr
+dwim-print arr
 
 VAR:      (lldb) frame variable arr
 VAR:      *** Some of the displayed variables have more members
 VAR-SAME: use the --show-all-children option to frame variable
-VAR:      (lldb) frame variable arr
+VAR:      (lldb) dwim-print arr
 VAR-NOT:  *** Some of the displayed variables have more members
 
 #--- with-setting-commands.input
