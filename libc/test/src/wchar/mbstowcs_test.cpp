@@ -115,3 +115,20 @@ TEST_F(LlvmLibcMBSToWCSTest, NullDestination) {
   // Null destination should ignore len and read till end of string
   ASSERT_EQ(static_cast<int>(n), 4);
 }
+
+TEST_F(LlvmLibcMBSToWCSTest, ErrnoChecks) {
+  // Two laughing cat emojis and invalid 3rd mb char (3rd byte of it)
+  const char *src =
+      "\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9\xf0\x9f\xf0\xb9\xf0\x9f\x98\xb9";
+  wchar_t dest[5];
+  // First two bytes are valid --> should not set errno
+  size_t n = LIBC_NAMESPACE::mbstowcs(dest, src, 2);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(static_cast<int>(n), 2);
+  ASSERT_EQ(static_cast<int>(dest[0]), 128569);
+  ASSERT_EQ(static_cast<int>(dest[1]), 128569);
+  // Trying to read the 3rd byte should set errno
+  n = LIBC_NAMESPACE::mbstowcs(dest, src, 2);
+  ASSERT_ERRNO_EQ(EILSEQ);
+  ASSERT_EQ(static_cast<int>(n), -1);
+}
