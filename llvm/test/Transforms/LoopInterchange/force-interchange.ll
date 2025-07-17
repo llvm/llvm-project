@@ -3,8 +3,8 @@
 
 ; There should be no reason to interchange this, unless it is forced.
 ;
-;     for (int i = 0; i<N; i++)
-;       for (int j = 0; j<N; j++)
+;     for (int i = 0; i<1024; i++)
+;       for (int j = 0; j<1024; j++)
 ;         A[i][j] = 42;
 ;
 ; CHECK:      --- !Analysis
