@@ -589,13 +589,13 @@ bool InsertStackProtectors(const TargetMachine *TM, Function *F,
     Instruction *CheckLoc = dyn_cast<ReturnInst>(BB.getTerminator());
     if (!CheckLoc && !DisableCheckNoReturn)
       for (auto &Inst : BB) {
-        if (auto *IB = dyn_cast<IntrinsicInst>(&Inst))
-          if (IB->getIntrinsicID() == Intrinsic::eh_sjlj_callsite) {
-            // eh_sjlj_callsite has to be in same BB as the
-            // bb terminator. Don't insert within this range.
-            CheckLoc = IB;
-            break;
-          }
+        if (auto *IB = dyn_cast<IntrinsicInst>(&Inst) &&
+                       (IB->getIntrinsicID() == Intrinsic::eh_sjlj_callsite)) {
+          // eh_sjlj_callsite has to be in same BB as the
+          // bb terminator. Don't insert within this range.
+          CheckLoc = IB;
+          break;
+        }
         if (auto *CB = dyn_cast<CallBase>(&Inst))
           // Do stack check before noreturn calls that aren't nounwind (e.g:
           // __cxa_throw).
