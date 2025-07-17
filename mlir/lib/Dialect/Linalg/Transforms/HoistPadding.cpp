@@ -20,7 +20,6 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"

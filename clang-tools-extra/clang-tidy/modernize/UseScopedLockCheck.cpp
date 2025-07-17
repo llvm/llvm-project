@@ -104,8 +104,7 @@ getTemplateLockGuardTypeLoc(const TypeSourceInfo *SourceInfo) {
 static SourceRange getLockGuardRange(const TypeSourceInfo *SourceInfo) {
   const TypeLoc LockGuardTypeLoc = SourceInfo->getTypeLoc();
 
-  return SourceRange(LockGuardTypeLoc.getBeginLoc(),
-                     LockGuardTypeLoc.getEndLoc());
+  return {LockGuardTypeLoc.getBeginLoc(), LockGuardTypeLoc.getEndLoc()};
 }
 
 // Find the exact source range of the 'lock_guard' name token
@@ -115,8 +114,8 @@ static SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
   if (!TemplateLoc)
     return {};
 
-  return SourceRange(TemplateLoc.getTemplateNameLoc(),
-                     TemplateLoc.getLAngleLoc().getLocWithOffset(-1));
+  return {TemplateLoc.getTemplateNameLoc(),
+          TemplateLoc.getLAngleLoc().getLocWithOffset(-1)};
 }
 
 const static StringRef UseScopedLockMessage =

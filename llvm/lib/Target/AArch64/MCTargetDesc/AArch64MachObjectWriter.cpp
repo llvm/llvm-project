@@ -53,7 +53,7 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
   RelocType = unsigned(MachO::ARM64_RELOC_UNSIGNED);
   Log2Size = ~0U;
 
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     return false;
 
@@ -147,7 +147,7 @@ static bool canUseLocalRelocation(const MCSectionMachO &Section,
 void AArch64MachObjectWriter::recordRelocation(
     MachObjectWriter *Writer, MCAssembler &Asm, const MCFragment *Fragment,
     const MCFixup &Fixup, MCValue Target, uint64_t &FixedValue) {
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
 
   // See <reloc.h>.
   uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment);

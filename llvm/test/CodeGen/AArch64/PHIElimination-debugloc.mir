@@ -37,7 +37,7 @@ body: |
   bb.1:
     %x:gpr32 = COPY $wzr
   ; Test that the debug location is not copied into bb1!
-  ; CHECK: %3:gpr32 = COPY $wzr
+  ; CHECK: %3:gpr32 = COPY killed %x{{$}}
   ; CHECK-LABEL: bb.2:
   bb.2:
     %y:gpr32 = PHI %x:gpr32, %bb.1, undef %undef:gpr32, %bb.0, debug-location !14

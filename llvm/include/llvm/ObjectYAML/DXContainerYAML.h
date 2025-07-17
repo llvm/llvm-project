@@ -87,7 +87,7 @@ struct RootDescriptorYaml {
 
   LLVM_ABI uint32_t getEncodedFlags() const;
 
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) bool Val = false;
+#define ROOT_DESCRIPTOR_FLAG(Num, Enum, Flag) bool Enum = false;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
@@ -100,7 +100,7 @@ struct DescriptorRangeYaml {
 
   LLVM_ABI uint32_t getEncodedFlags() const;
 
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) bool Val = false;
+#define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag) bool Enum = false;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
@@ -165,16 +165,16 @@ struct RootParameterYamlDesc {
 };
 
 struct StaticSamplerYamlDesc {
-  uint32_t Filter = llvm::to_underlying(dxbc::StaticSamplerFilter::ANISOTROPIC);
+  uint32_t Filter = llvm::to_underlying(dxbc::SamplerFilter::Anisotropic);
   uint32_t AddressU = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
   uint32_t AddressV = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
   uint32_t AddressW = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
   float MipLODBias = 0.f;
   uint32_t MaxAnisotropy = 16u;
   uint32_t ComparisonFunc =
-      llvm::to_underlying(dxbc::SamplersComparisonFunction::LessEqual);
+      llvm::to_underlying(dxbc::ComparisonFunc::LessEqual);
   uint32_t BorderColor =
-      llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueWhite);
+      llvm::to_underlying(dxbc::StaticBorderColor::OpaqueWhite);
   float MinLOD = 0.f;
   float MaxLOD = std::numeric_limits<float>::max();
   uint32_t ShaderRegister;
@@ -203,7 +203,7 @@ struct RootSignatureYamlDesc {
   LLVM_ABI static llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
   create(const object::DirectX::RootSignature &Data);
 
-#define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
+#define ROOT_SIGNATURE_FLAG(Num, Val) bool Val = false;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 

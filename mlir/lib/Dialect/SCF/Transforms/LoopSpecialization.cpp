@@ -24,7 +24,6 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFFORLOOPPEELING

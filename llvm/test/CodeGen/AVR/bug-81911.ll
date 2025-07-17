@@ -41,31 +41,31 @@ define internal i8 @main() {
 ; CHECK-NEXT:    adiw r24, 6
 ; CHECK-NEXT:    std Y+3, r25 ; 2-byte Folded Spill
 ; CHECK-NEXT:    std Y+2, r24 ; 2-byte Folded Spill
-; CHECK-NEXT:    movw r2, r16
-; CHECK-NEXT:    movw r4, r16
-; CHECK-NEXT:    movw r6, r16
 ; CHECK-NEXT:    movw r8, r16
+; CHECK-NEXT:    movw r6, r16
+; CHECK-NEXT:    movw r4, r16
+; CHECK-NEXT:    movw r2, r16
 ; CHECK-NEXT:    rjmp .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: ; %bb1
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    andi r30, 1
 ; CHECK-NEXT:    ldd r31, Y+4 ; 1-byte Folded Reload
 ; CHECK-NEXT:    dec r31
-; CHECK-NEXT:    movw r8, r24
-; CHECK-NEXT:    movw r6, r22
-; CHECK-NEXT:    movw r4, r20
-; CHECK-NEXT:    movw r2, r18
 ; CHECK-NEXT:    cpi r30, 0
+; CHECK-NEXT:    movw r8, r18
+; CHECK-NEXT:    movw r6, r20
+; CHECK-NEXT:    movw r4, r22
+; CHECK-NEXT:    movw r2, r24
 ; CHECK-NEXT:    mov r18, r31
 ; CHECK-NEXT:    brne .LBB0_2
 ; CHECK-NEXT:    rjmp .LBB0_4
 ; CHECK-NEXT:  .LBB0_2: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    std Y+4, r18 ; 1-byte Folded Spill
-; CHECK-NEXT:    movw r18, r2
-; CHECK-NEXT:    movw r20, r4
-; CHECK-NEXT:    movw r22, r6
-; CHECK-NEXT:    movw r24, r8
+; CHECK-NEXT:    movw r18, r8
+; CHECK-NEXT:    movw r20, r6
+; CHECK-NEXT:    movw r22, r4
+; CHECK-NEXT:    movw r24, r2
 ; CHECK-NEXT:    ldi r26, 10
 ; CHECK-NEXT:    ldi r27, 0
 ; CHECK-NEXT:    movw r10, r26
@@ -85,14 +85,14 @@ define internal i8 @main() {
 ; CHECK-NEXT:    ;APP
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    ldi r30, 1
-; CHECK-NEXT:    cp r2, r1
-; CHECK-NEXT:    cpc r3, r1
-; CHECK-NEXT:    cpc r4, r16
-; CHECK-NEXT:    cpc r5, r17
+; CHECK-NEXT:    cp r8, r1
+; CHECK-NEXT:    cpc r9, r1
 ; CHECK-NEXT:    cpc r6, r16
 ; CHECK-NEXT:    cpc r7, r17
-; CHECK-NEXT:    cpc r8, r16
-; CHECK-NEXT:    cpc r9, r17
+; CHECK-NEXT:    cpc r4, r16
+; CHECK-NEXT:    cpc r5, r17
+; CHECK-NEXT:    cpc r2, r16
+; CHECK-NEXT:    cpc r3, r17
 ; CHECK-NEXT:    breq .LBB0_3
 ; CHECK-NEXT:    rjmp .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: ; %bb1

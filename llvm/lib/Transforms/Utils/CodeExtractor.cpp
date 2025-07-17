@@ -1348,8 +1348,10 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     if (!NewLabel) {
       DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
           *OldLabel->getScope(), *NewSP, Ctx, Cache);
-      NewLabel = DILabel::get(Ctx, NewScope, OldLabel->getName(),
-                              OldLabel->getFile(), OldLabel->getLine());
+      NewLabel =
+          DILabel::get(Ctx, NewScope, OldLabel->getName(), OldLabel->getFile(),
+                       OldLabel->getLine(), OldLabel->getColumn(),
+                       OldLabel->isArtificial(), OldLabel->getCoroSuspendIdx());
     }
     LabelRecord->setLabel(cast<DILabel>(NewLabel));
   };

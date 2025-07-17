@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/relational/islessgreater.h>
 #include <clc/relational/clc_islessgreater.h>
 
 #define FUNCTION islessgreater

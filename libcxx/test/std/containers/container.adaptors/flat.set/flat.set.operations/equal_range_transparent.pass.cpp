@@ -36,7 +36,7 @@ static_assert(!CanEqualRange<NonTransparentSet>);
 static_assert(!CanEqualRange<const NonTransparentSet>);
 
 template <class KeyContainer>
-void test_one() {
+constexpr void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, TransparentComparator, KeyContainer>;
 
@@ -87,9 +87,12 @@ void test_one() {
   }
 }
 
-void test() {
+constexpr bool test() {
   test_one<std::vector<std::string>>();
-  test_one<std::deque<std::string>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test_one<std::deque<std::string>>();
   test_one<MinSequenceContainer<std::string>>();
   test_one<std::vector<std::string, min_allocator<std::string>>>();
 
@@ -110,10 +113,15 @@ void test() {
     assert(first == m.begin() + 1);
     assert(last == m.begin() + 2);
   }
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

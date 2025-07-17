@@ -761,7 +761,7 @@ let TargetPrefix = "aarch64" in {
   class RNDR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_i64_ty, llvm_i1_ty], [], [IntrNoMem, IntrHasSideEffects]>;
   class FPMR_Set_Intrinsic
-    : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrInaccessibleMemOnly]>; 
+    : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrWriteMem, IntrInaccessibleMemOnly]>;
 }
 
 // FP environment registers.

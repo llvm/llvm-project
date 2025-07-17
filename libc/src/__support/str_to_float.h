@@ -1135,7 +1135,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
 
   int error = 0;
 
-  size_t index = static_cast<size_t>(first_non_whitespace(src) - src);
+  size_t index = first_non_whitespace(src);
 
   if (src[index] == '+' || src[index] == '-') {
     sign = src[index];
