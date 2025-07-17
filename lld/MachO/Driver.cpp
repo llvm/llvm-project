@@ -296,7 +296,8 @@ using DeferredFiles = std::vector<DeferredFile>;
 // This code forces the page-ins on multiple threads so
 // the process is not stalled waiting on disk buffer i/o.
 void multiThreadedPageInBackground(const DeferredFiles &deferred) {
-  static size_t pageSize = Process::getPageSizeEstimate(), totalBytes;
+  static const size_t pageSize = Process::getPageSizeEstimate();
+  size_t totalBytes = 0;
   static std::mutex mutex;
   size_t index = 0;
 
