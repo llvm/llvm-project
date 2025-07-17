@@ -2430,13 +2430,22 @@ void VPlanTransforms::simplifyEVLIVs(VPlan &Plan) {
   };
 
   // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe
+  // There should be only one EVL PHI in the entire plan
+  VPEVLBasedIVPHIRecipe *EVLPhi = nullptr;
+  VPBasicBlock *EVLPhiBlock = nullptr;
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry())))
     for (VPRecipeBase &R : VPBB->phis())
       if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
-        ConvertEVLPhi(Plan, VPBB, PhiR);
-        break;
+        assert(!EVLPhi && "Found multiple EVL PHIs - only one expected");
+        EVLPhi = PhiR;
+        EVLPhiBlock = VPBB;
       }
+
+  // Process the single EVL PHI if found
+  if (EVLPhi)
+    ConvertEVLPhi(Plan, EVLPhiBlock, EVLPhi);
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
