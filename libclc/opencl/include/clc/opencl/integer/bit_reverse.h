@@ -9,6 +9,8 @@
 #ifndef __CLC_OPENCL_INTEGER_BIT_REVERSE_H__
 #define __CLC_OPENCL_INTEGER_BIT_REVERSE_H__
 
+#ifdef cl_khr_extended_bit_ops
+
 #include <clc/opencl/opencl-base.h>
 
 #define FUNCTION bit_reverse
@@ -17,5 +19,7 @@
 #include <clc/integer/gentype.inc>
 
 #undef FUNCTION
+
+#endif // cl_khr_extended_bit_ops
 
 #endif // __CLC_OPENCL_INTEGER_BIT_REVERSE_H__
