@@ -34,7 +34,8 @@ following functions:
 ``vsnprintf``, ``vsprintf``, ``vsscanf``, ``vswprintf``, ``vswscanf``,
 ``vwprintf``, ``vwscanf``, ``wcrtomb``, ``wcscat``, ``wcscpy``,
 ``wcslen``, ``wcsncat``, ``wcsncpy``, ``wcsrtombs``, ``wcstok``, ``wcstombs``,
-``wctomb``, ``wmemcpy``, ``wmemmove``, ``wprintf``, ``wscanf``.
+``wctomb``, ``wmemcpy``, ``wmemmove``, ``wprintf``, ``wscanf``. ``ctime_r``,
+``localtime_r``
 
 If *Annex K.* is not available, replacements are suggested only for the
 following functions from the previous list:

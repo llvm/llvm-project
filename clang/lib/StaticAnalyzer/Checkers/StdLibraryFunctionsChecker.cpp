@@ -3539,15 +3539,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstTime_tPtrTy}, RetType{StructTmPtrTy}),
         Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
 
-    // struct tm *localtime_r(const time_t *restrict timer,
-    //                        struct tm *restrict result);
-    addToFunctionSummaryMap(
-        "localtime_r",
-        Signature(ArgTypes{ConstTime_tPtrRestrictTy, StructTmPtrRestrictTy},
-                  RetType{StructTmPtrTy}),
-        Summary(NoEvalCall)
-            .ArgConstraint(NotNull(ArgNo(0)))
-            .ArgConstraint(NotNull(ArgNo(1))));
+    // struct tm *localtime_r(const time_t *timer,
+    //                        struct tm *result);
+    addToFunctionSummaryMap("localtime_r",
+                            Signature(ArgTypes{ConstTime_tPtrTy, StructTmPtrTy},
+                                      RetType{StructTmPtrTy}),
+                            Summary(NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(0)))
+                                .ArgConstraint(NotNull(ArgNo(1))));
 
     // char *asctime_r(const struct tm *restrict tm, char *restrict buf);
     addToFunctionSummaryMap(

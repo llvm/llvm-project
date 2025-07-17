@@ -16,6 +16,8 @@ lconv *localeconv(void);
 typedef struct {
 } tm;
 char *asctime(const tm *timeptr);
+char *ctime(const time_t *time);
+struct tm *localtime(const time_t *time);
 
 int strcmp(const char*, const char*);
 extern void foo(char *e);
@@ -307,6 +309,34 @@ void asctime_test(void) {
   // expected-note@-1{{previous function call was here}}
   char* pp = asctime(tt);
   // expected-note@-1{{'asctime' call may invalidate the result of the previous 'asctime'}}
+
+  *p;
+  // expected-warning@-1{{dereferencing an invalid pointer}}
+  // expected-note@-2{{dereferencing an invalid pointer}}
+}
+
+void ctime_test(void) {
+  const time_t *t;
+  const time_t *tt;
+
+  char* p = ctime(t);
+  // expected-note@-1{{previous function call was here}}
+  char* pp = ctime(tt);
+  // expected-note@-1{{'ctime' call may invalidate the result of the previous 'ctime'}}
+
+  *p;
+  // expected-warning@-1{{dereferencing an invalid pointer}}
+  // expected-note@-2{{dereferencing an invalid pointer}}
+}
+
+void localtime_test(void) {
+  const time_t *t;
+  const time_t *tt;
+
+  struct tm* p = localtime(t);
+  // expected-note@-1{{previous function call was here}}
+  struct tm* pp = localtime(tt);
+  // expected-note@-1{{'localtime' call may invalidate the result of the previous 'localtime'}}
 
   *p;
   // expected-warning@-1{{dereferencing an invalid pointer}}

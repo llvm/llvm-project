@@ -174,7 +174,7 @@ int utimensat(int dirfd, const char *pathname, const struct timespec times[2], i
 int utimes(const char *filename, const struct timeval times[2]);
 int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 struct tm *localtime(const time_t *tp);
-struct tm *localtime_r(const time_t *restrict timer, struct tm *restrict result);
+struct tm *localtime_r(const time_t *timer, struct tm *result);
 char *asctime_r(const struct tm *restrict tm, char *restrict buf);
 char *ctime_r(const time_t *timep, char *buf);
 struct tm *gmtime_r(const time_t *restrict timer, struct tm *restrict result);
