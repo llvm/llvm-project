@@ -23,40 +23,6 @@ set(FLANG_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FLANG_RT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang")
 
-# CMake 3.24 is the first version of CMake that directly recognizes Flang.
-# LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang.
-if (CMAKE_VERSION VERSION_LESS "3.24")
-  cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
-    include(CMakeForceCompiler)
-    CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
-
-    set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
-    set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-
-    set(CMAKE_Fortran_SUBMODULE_SEP "-")
-    set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
-
-    set(CMAKE_Fortran_PREPROCESS_SOURCE
-      "<CMAKE_Fortran_COMPILER> -cpp <DEFINES> <INCLUDES> <FLAGS> -E <SOURCE> > <PREPROCESSED_SOURCE>")
-
-    set(CMAKE_Fortran_FORMAT_FIXED_FLAG "-ffixed-form")
-    set(CMAKE_Fortran_FORMAT_FREE_FLAG "-ffree-form")
-
-    set(CMAKE_Fortran_MODDIR_FLAG "-module-dir")
-
-    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_ON "-cpp")
-    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
-    set(CMAKE_Fortran_POSTPROCESS_FLAG "-ffixed-line-length-72")
-
-    set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
-
-    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
-    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
-  endif ()
-endif ()
-enable_language(Fortran)
-
 
 list(APPEND CMAKE_MODULE_PATH
     "${FLANG_RT_SOURCE_DIR}/cmake/modules"
