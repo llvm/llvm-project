@@ -1026,6 +1026,7 @@ UseConstexprCheck::UseConstexprCheck(StringRef Name, ClangTidyContext *Context)
       ConstexprString(Options.get("ConstexprString", "constexpr")),
       StaticConstexprString(
           Options.get("StaticConstexprString", "static " + ConstexprString)) {}
+
 void UseConstexprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ConservativeLiteralType", ConservativeLiteralType);
   Options.store(Opts, "AddConstexprToMethodOfClassWithoutConstexprConstructor",
