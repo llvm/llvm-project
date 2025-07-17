@@ -1,4 +1,4 @@
-# FIXME: Currently missing dependencies to build GPU portion automatically.
-add_offload_test_device_code(sin.c sin)
+add_offload_test_device_code(LLVMLibm.c LLVMLibm)
 
-set(OFFLOAD_TEST_DEVICE_CODE_PATH ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
+add_custom_target(conformance_device_binaries DEPENDS LLVMLibm.bin)
+set(CONFORMANCE_TEST_DEVICE_CODE_PATH ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
