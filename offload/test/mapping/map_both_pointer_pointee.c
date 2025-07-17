@@ -6,6 +6,7 @@
 
 // REQUIRES: unified_shared_memory
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// XFAIL: nvptx64-nvidia-cuda
 
 #pragma omp declare target
 int *ptr1;

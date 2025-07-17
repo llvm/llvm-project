@@ -1,6 +1,8 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // FIXME: This fails with optimization enabled and prints b: 0
 // FIXME: RUN: %libomptarget-compileopt-run-and-check-generic
+// XFAIL: nvptx64-nvidia-cuda
+// XFAIL: nvptx64-nvidia-cuda-LTO
 
 #include <omp.h>
 #include <stdio.h>

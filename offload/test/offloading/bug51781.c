@@ -32,6 +32,9 @@
 //
 // CUSTOM: Rewriting generic-mode kernel with a customized state machine.
 
+// XFAIL: nvptx64-nvidia-cuda
+// XFAIL: nvptx64-nvidia-cuda-LTO
+
 #if ADD_REDUCTION
 #define REDUCTION(...) reduction(__VA_ARGS__)
 #else

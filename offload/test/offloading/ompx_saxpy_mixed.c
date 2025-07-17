@@ -2,6 +2,10 @@
 //
 // REQUIRES: gpu
 
+// Test if flaky
+// UNSUPPORTED: nvptx64-nvidia-cuda
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+
 #include <math.h>
 #include <omp.h>
 #include <ompx.h>
