@@ -93,7 +93,7 @@ ENUM_DEBUGOPT(DebugInfo, DebugInfoKind, 4,
               DebugInfoKind::NoDebugInfo, Compatible)
 
 /// Whether to make debug info reproducible.
-DEBUGOPT(ReproducibleDebugInfo, 1, 0, Affecting)
+DEBUGOPT(ReproducibleDebugInfo, 1, 0, Compatible)
 
 /// Whether to generate macro debug info.
 DEBUGOPT(MacroDebugInfo, 1, 0, Compatible)
