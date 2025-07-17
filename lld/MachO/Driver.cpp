@@ -536,7 +536,7 @@ static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred) {
   if (!buffer)
     return;
   if (config->readThreads)
-    deferred.push_back({path, isLazy, *buffer});
+    deferred.emplace_back(path, isLazy, *buffer);
   else
     processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
 }
