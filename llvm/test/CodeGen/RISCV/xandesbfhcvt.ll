@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+xandesbfhcvt -target-abi lp64f \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 
-declare bfloat @llvm.riscv.nds.fcvt.bf16.s(float)
-
 define float @fcvt_s_bf16(bfloat %a) nounwind {
 ; CHECK-LABEL: fcvt_s_bf16:
 ; CHECK:       # %bb.0:
@@ -14,8 +12,6 @@ define float @fcvt_s_bf16(bfloat %a) nounwind {
   %1 = fpext bfloat %a to float
   ret float %1
 }
-
-declare float @llvm.riscv.nds.fcvt.s.bf16(bfloat)
 
 define bfloat @fcvt_bf16_s(float %a) nounwind {
 ; CHECK-LABEL: fcvt_bf16_s:
