@@ -282,7 +282,6 @@ struct IntrinsicLibrary {
                         llvm::ArrayRef<mlir::Value> args);
   mlir::Value genGetUID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
-  mlir::Value genGlobalTimer(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genHostnm(std::optional<mlir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genIall(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -377,6 +376,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genNorm2(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  template <typename OpTy>
+  mlir::Value genNVVMTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genParity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genPerror(llvm::ArrayRef<fir::ExtendedValue>);
