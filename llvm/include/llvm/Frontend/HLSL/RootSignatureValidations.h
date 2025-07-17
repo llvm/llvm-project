@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
-#include "llvm/Support/DXILABI.h"
 
 namespace llvm {
 namespace hlsl {
