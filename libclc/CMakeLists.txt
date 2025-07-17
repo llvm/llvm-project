@@ -405,6 +405,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
       # Error on undefined macros
       -Werror=undef
+      -fdiscard-value-names
     )
 
     if( NOT "${cpu}" STREQUAL "" )
