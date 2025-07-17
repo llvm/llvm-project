@@ -490,7 +490,7 @@ private:
       bool isNegative, int exponent, const Fraction &, Rounding, RoundingBits,
       bool multiply = false);
 
-  Word word_{}; // an Integer<>
+  alignas(Word::alignment / 8) Word word_{}; // an Integer<>
 };
 
 extern template class Real<Integer<16>, 11>; // IEEE half format
