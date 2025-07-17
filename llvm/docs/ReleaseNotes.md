@@ -233,6 +233,8 @@ Changes to the X86 Backend
 --------------------------
 
 * `fp128` will now use `*f128` libcalls on 32-bit GNU targets as well.
+* On x86-32, `fp128` and `i128` are now passed with the expected 16-byte stack
+  alignment.
 
 Changes to the OCaml bindings
 -----------------------------
