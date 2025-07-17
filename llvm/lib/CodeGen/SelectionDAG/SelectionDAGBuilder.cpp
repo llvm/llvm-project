@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -845,16 +846,13 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
 static void failForInvalidBundles(const CallBase &I, StringRef Name,
                                   ArrayRef<uint32_t> AllowedBundles) {
   if (I.hasOperandBundlesOtherThan(AllowedBundles)) {
+    ListSeparator LS;
     std::string Error;
+    raw_string_ostream OS(Error);
     for (unsigned i = 0, e = I.getNumOperandBundles(); i != e; ++i) {
       OperandBundleUse U = I.getOperandBundleAt(i);
-      bool First = true;
-      if (is_contained(AllowedBundles, U.getTagID()))
-        continue;
-      if (!First)
-        Error += ", ";
-      First = false;
-      Error += U.getTagName();
+      if (!is_contained(AllowedBundles, U.getTagID()))
+        OS << LS << U.getTagName();
     }
     reportFatalUsageError(
         Twine("cannot lower ", Name)
