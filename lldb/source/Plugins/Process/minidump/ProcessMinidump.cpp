@@ -602,6 +602,10 @@ bool ProcessMinidump::GetProcessInfo(ProcessInstanceInfo &info) {
 }
 
 std::optional<lldb_private::MemoryRegionInfo> ProcessMinidump::TryGetMemoryRegionInCore(lldb::addr_t addr, std::optional<lldb_private::MemoryRegionInfo> &closest_prior_region, std::optional<lldb_private::MemoryRegionInfo> &  closest_following_region) {
+  // Ensure memory regions are built!
+  BuildMemoryRegions();
+
+  // First try to find the region that contains the address (if any
   std::optional<minidump::Range> addr_region_maybe = m_minidump_parser->FindMemoryRange(addr);
   if (addr_region_maybe) {
     MemoryRegionInfo region = MinidumpParser::GetMemoryRegionInfo(*m_memory_regions, addr_region_maybe->start);
@@ -622,7 +626,6 @@ std::optional<lldb_private::MemoryRegionInfo> ProcessMinidump::TryGetMemoryRegio
 
 // For minidumps there's no runtime generated code so we don't need JITLoader(s)
 // Avoiding them will also speed up minidump loading since JITLoaders normally
-// try to set up symbolic breakpoints, which in turn may force loading more
 // debug information than needed.
 JITLoaderList &ProcessMinidump::GetJITLoaders() {
   if (!m_jit_loaders_up) {
@@ -1025,15 +1028,15 @@ public:
     }
 
     lldb_private::StreamString result_stream;
-    result_stream << "Address not found in Minidump";
+    result_stream << "Address not found in Minidump" << "\n";
     if (closest_prior_region)
-      result_stream << "Closest prior range: " << closest_prior_region->Dump().c_str();
+      result_stream << "Closest prior range: " << closest_prior_region->Dump().c_str() << "\n";
     else 
-      result_stream << "No prior range found";
+      result_stream << "No prior range found" << "\n";
     if (closest_following_region)
-      result_stream << "Closest superior range: " << closest_following_region->Dump().c_str();
+      result_stream << "Closest following range: " << closest_following_region->Dump().c_str() << "\n";
     else 
-      result_stream << "No superior range found";
+      result_stream << "No following range found" << "\n";
     
     result.AppendMessage(result_stream.GetString());
   }
