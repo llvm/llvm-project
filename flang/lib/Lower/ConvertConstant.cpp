@@ -374,8 +374,8 @@ static mlir::Value genStructureComponentInit(
                                "allocatable component value that is not NULL");
     } else {
       // Handle NULL() initialization
-      mlir::Value componentValue{fir::factory::createUnallocatedBox(
-          builder, loc, componentTy, std::nullopt)};
+      mlir::Value componentValue{
+          fir::factory::createUnallocatedBox(builder, loc, componentTy, {})};
       componentValue = builder.createConvert(loc, componentTy, componentValue);
 
       return builder.create<fir::InsertValueOp>(

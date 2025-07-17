@@ -496,8 +496,7 @@ Fortran::lower::genCallOpAndResult(
     auto *context = builder.getContext();
     if (mlir::isa<fir::BoxProcType>(snd) &&
         mlir::isa<mlir::FunctionType>(fst.getType())) {
-      auto funcTy =
-          mlir::FunctionType::get(context, std::nullopt, std::nullopt);
+      auto funcTy = mlir::FunctionType::get(context, {}, {});
       auto boxProcTy = builder.getBoxProcType(funcTy);
       if (mlir::Value host = argumentHostAssocs(converter, fst)) {
         cast = builder.create<fir::EmboxProcOp>(
@@ -1714,7 +1713,7 @@ void prepareUserCallArguments(
                                     /*nonDeferredParams=*/mlir::ValueRange{},
                                     /*mutableProperties=*/{});
         fir::factory::associateMutableBox(builder, loc, ptrBox, actualExv,
-                                          /*lbounds=*/std::nullopt);
+                                          /*lbounds=*/{});
         caller.placeInput(arg, irBox);
         continue;
       }

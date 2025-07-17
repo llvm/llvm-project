@@ -1403,7 +1403,7 @@ hlfir::Entity hlfir::createStackTempFromMold(mlir::Location loc,
         builder.createTemporary(loc, sequenceType, tmpName, extents, lenParams);
   } else {
     alloc = builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
-                                    /*shape=*/std::nullopt, lenParams);
+                                    /*shape=*/{}, lenParams);
   }
   auto declareOp =
       builder.create<hlfir::DeclareOp>(loc, alloc, tmpName, shape, lenParams,
