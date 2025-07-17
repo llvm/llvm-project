@@ -357,3 +357,29 @@ namespace pointer_comparisons {
   static_assert(!f4()); // expected-error {{static assertion expression is not an integral constant expression}} \
                         // expected-note {{in call to 'f4()'}}
 }
+
+namespace GH149188 {
+namespace enable_if_1 {
+  template <__SIZE_TYPE__ N>
+  constexpr void foo(const char (&Str)[N])
+  __attribute((enable_if(__builtin_strlen(Str), ""))) {}
+
+  void x() {
+      foo("1234");
+  }
+}
+
+namespace enable_if_2 {
+  constexpr const char (&f())[];
+  extern const char (&Str)[];
+  constexpr int foo()
+  __attribute((enable_if(__builtin_strlen(Str), "")))
+  {return __builtin_strlen(Str);}
+
+  constexpr const char (&f())[] {return "a";}
+  constexpr const char (&Str)[] = f();
+  void x() {
+      constexpr int x = foo();
+  }
+}
+}
