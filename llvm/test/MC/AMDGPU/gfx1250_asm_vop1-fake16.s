@@ -253,6 +253,51 @@ v_log_bf16 v5, src_scc
 v_log_bf16 v127, 0x8000
 // GFX1250: v_log_bf16_e32 v127, 0x8000             ; encoding: [0xff,0xf8,0xfe,0x7e,0x00,0x80,0x00,0x00]
 
+v_exp_bf16 v5, v1
+// GFX1250: v_exp_bf16_e32 v5, v1                   ; encoding: [0x01,0xfb,0x0a,0x7e]
+
+v_exp_bf16 v5, v127
+// GFX1250: v_exp_bf16_e32 v5, v127                 ; encoding: [0x7f,0xfb,0x0a,0x7e]
+
+v_exp_bf16 v5, s1
+// GFX1250: v_exp_bf16_e32 v5, s1                   ; encoding: [0x01,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v5, s105
+// GFX1250: v_exp_bf16_e32 v5, s105                 ; encoding: [0x69,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v5, vcc_lo
+// GFX1250: v_exp_bf16_e32 v5, vcc_lo               ; encoding: [0x6a,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v5, vcc_hi
+// GFX1250: v_exp_bf16_e32 v5, vcc_hi               ; encoding: [0x6b,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v5, ttmp15
+// GFX1250: v_exp_bf16_e32 v5, ttmp15               ; encoding: [0x7b,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v5, m0
+// GFX1250: v_exp_bf16_e32 v5, m0                   ; encoding: [0x7d,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v5, exec_lo
+// GFX1250: v_exp_bf16_e32 v5, exec_lo              ; encoding: [0x7e,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v5, exec_hi
+// GFX1250: v_exp_bf16_e32 v5, exec_hi              ; encoding: [0x7f,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v5, null
+// GFX1250: v_exp_bf16_e32 v5, null                 ; encoding: [0x7c,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v5, -1
+// GFX1250: v_exp_bf16_e32 v5, -1                   ; encoding: [0xc1,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v5, 0.5
+// GFX1250: v_exp_bf16_e32 v5, 0.5                  ; encoding: [0xf0,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v5, src_scc
+// GFX1250: v_exp_bf16_e32 v5, src_scc              ; encoding: [0xfd,0xfa,0x0a,0x7e]
+
+v_exp_bf16 v127, 0x8000
+// GFX1250: v_exp_bf16_e32 v127, 0x8000             ; encoding: [0xff,0xfa,0xfe,0x7e,0x00,0x80,0x00,0x00]
+
 v_cvt_f32_bf16 v5, v1
 // GFX1250: v_cvt_f32_bf16_e32 v5, v1               ; encoding: [0x01,0xe5,0x0a,0x7e]
 
