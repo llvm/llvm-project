@@ -95,7 +95,7 @@ define void @deref_phi_growing(ptr dereferenceable(4000) %a) {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[A_ADDR_0:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_INC]] ]
-; CHECK-NEXT:    call void @deref_phi_user(ptr nonnull [[A_ADDR_0]])
+; CHECK-NEXT:    call void @deref_phi_user(ptr noundef nonnull [[A_ADDR_0]])
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[A_ADDR_0]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[VAL]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -146,7 +146,7 @@ define void @deref_phi_shrinking(ptr dereferenceable(4000) %a) {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[A_ADDR_0:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_INC]] ]
-; CHECK-NEXT:    call void @deref_phi_user(ptr nonnull [[A_ADDR_0]])
+; CHECK-NEXT:    call void @deref_phi_user(ptr noundef nonnull [[A_ADDR_0]])
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[A_ADDR_0]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[VAL]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]

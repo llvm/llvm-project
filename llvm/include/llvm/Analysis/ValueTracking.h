@@ -773,6 +773,14 @@ LLVM_ABI bool canCreatePoison(const Operator *Op,
 /// impliesPoison returns true.
 LLVM_ABI bool impliesPoison(const Value *ValAssumedPoison, const Value *V);
 
+/// Detect if PN is a recurrence with a start value and some number of backedge
+/// values. We'll check whether we can push the freeze through the backedge
+/// values (possibly dropping poison flags along the way) until we reach the
+/// phi again. In that case, we can move the freeze to the start value.
+LLVM_ABI Use *canFoldFreezeIntoRecurrence(
+    PHINode *PN, DominatorTree *DT, bool &StartNeedsFreeze,
+    SmallVectorImpl<Instruction *> *DropFlags = nullptr);
+
 /// Return true if this function can prove that V does not have undef bits
 /// and is never poison. If V is an aggregate value or vector, check whether
 /// all elements (except padding) are not undef or poison.

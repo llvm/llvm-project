@@ -7569,6 +7569,66 @@ bool llvm::impliesPoison(const Value *ValAssumedPoison, const Value *V) {
 
 static bool programUndefinedIfUndefOrPoison(const Value *V, bool PoisonOnly);
 
+Use *llvm::canFoldFreezeIntoRecurrence(
+    PHINode *PN, DominatorTree *DT, bool &StartNeedsFreeze,
+    SmallVectorImpl<Instruction *> *DropFlags) {
+  // Detect whether this is a recurrence with a start value and some number of
+  // backedge values. We'll check whether we can push the freeze through the
+  // backedge values (possibly dropping poison flags along the way) until we
+  // reach the phi again. In that case, we can move the freeze to the start
+  // value.
+  Use *StartU = nullptr;
+  SmallVector<Value *> Worklist;
+  for (Use &U : PN->incoming_values()) {
+    if (DT && DT->dominates(PN->getParent(), PN->getIncomingBlock(U))) {
+      // Add backedge value to worklist.
+      Worklist.push_back(U.get());
+      continue;
+    }
+
+    // Don't bother handling multiple start values.
+    if (StartU)
+      return nullptr;
+    StartU = &U;
+  }
+
+  if (!StartU || Worklist.empty())
+    return nullptr; // Not a recurrence.
+
+  Value *StartV = StartU->get();
+  BasicBlock *StartBB = PN->getIncomingBlock(*StartU);
+  StartNeedsFreeze = !isGuaranteedNotToBeUndefOrPoison(StartV);
+  // We can't insert freeze if the start value is the result of the
+  // terminator (e.g. an invoke).
+  if (StartNeedsFreeze && StartBB->getTerminator() == StartV)
+    return nullptr;
+
+  SmallPtrSet<Value *, 32> Visited;
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+
+    if (Visited.size() > 32)
+      return nullptr; // Limit the total number of values we inspect.
+
+    // Assume that PN is non-poison, because it will be after the transform.
+    if (V == PN || isGuaranteedNotToBeUndefOrPoison(V))
+      continue;
+
+    Instruction *I = dyn_cast<Instruction>(V);
+    if (!I || canCreateUndefOrPoison(cast<Operator>(I),
+                                     /*ConsiderFlagsAndMetadata*/ false))
+      return nullptr;
+
+    if (DropFlags)
+      DropFlags->push_back(I);
+    append_range(Worklist, I->operands());
+  }
+
+  return StartU;
+}
+
 static bool isGuaranteedNotToBeUndefOrPoison(
     const Value *V, AssumptionCache *AC, const Instruction *CtxI,
     const DominatorTree *DT, unsigned Depth, UndefPoisonKind Kind) {
@@ -7656,6 +7716,13 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         }
       }
       if (IsWellDefined)
+        return true;
+
+      bool StartNeedsFreeze;
+      if (canFoldFreezeIntoRecurrence(const_cast<PHINode *>(PN),
+                                      const_cast<DominatorTree *>(DT),
+                                      StartNeedsFreeze) &&
+          !StartNeedsFreeze)
         return true;
     } else if (!::canCreateUndefOrPoison(Opr, Kind,
                                          /*ConsiderFlagsAndMetadata*/ true) &&

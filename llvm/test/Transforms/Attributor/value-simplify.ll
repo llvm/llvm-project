@@ -626,7 +626,7 @@ define internal ptr @test_byval2(ptr byval(%struct.X) %a) {
 ; CHECK-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_X:%.*]], align 8
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[A_PRIV]], align 8
 ; CHECK-NEXT:    call void @sync()
-; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[A_PRIV]], align 8
+; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[A_PRIV]], align 8, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[L]]
 ;
   call void @sync()
@@ -1359,7 +1359,7 @@ define internal i32 @ret_speculatable_expr(ptr %mem, i32 %a2) {
 ; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    [[MEM_PRIV:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[MEM_PRIV]], align 4
-; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[MEM_PRIV]], align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[MEM_PRIV]], align 4, !invariant.load [[META0]]
 ; CGSCC-NEXT:    [[MUL:%.*]] = mul i32 [[L]], 13
 ; CGSCC-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], 7
 ; CGSCC-NEXT:    ret i32 [[ADD]]
@@ -1708,4 +1708,8 @@ define i32 @readExtInitZeroInit() {
 ; CGSCC: attributes #[[ATTR16]] = { nofree willreturn memory(readwrite) }
 ; CGSCC: attributes #[[ATTR17]] = { nosync }
 ; CGSCC: attributes #[[ATTR18]] = { nounwind }
+;.
+; TUNIT: [[META0]] = !{}
+;.
+; CGSCC: [[META0]] = !{}
 ;.
