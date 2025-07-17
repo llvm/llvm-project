@@ -636,7 +636,7 @@ namespace yaml {
 
 // Struct representing one save/restore point in the
 // 'savePoint' / 'restorePoint' list. One point consists of machine basic block
-// name and list of saved/restored in this basic block registers. There are
+// name and list of registers saved/restored in this basic block. There are
 // two forms of Save/Restore point representation:
 // 1. Without explicit register enumeration:
 //      savePoint:       '%bb.n'

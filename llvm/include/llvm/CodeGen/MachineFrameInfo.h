@@ -86,7 +86,7 @@ private:
 public:
   const PointsMap &get() const { return Map; }
 
-  const std::vector<CalleeSavedInfo> getCSInfo(MachineBasicBlock *MBB) const {
+  std::vector<CalleeSavedInfo> getCSInfo(MachineBasicBlock *MBB) const {
     return Map.lookup(MBB);
   }
 
@@ -853,8 +853,7 @@ public:
 
   /// Returns callee saved info vector for provided save point in
   /// the current function.
-  const std::vector<CalleeSavedInfo>
-  getSaveCSInfo(MachineBasicBlock *MBB) const {
+  std::vector<CalleeSavedInfo> getSaveCSInfo(MachineBasicBlock *MBB) const {
     return SavePoints.getCSInfo(MBB);
   }
 
@@ -900,7 +899,7 @@ public:
     RestorePoints.set(std::move(NewRestorePoints));
   }
 
-  static const SaveRestorePoints::PointsMap constructSaveRestorePoints(
+  static SaveRestorePoints::PointsMap constructSaveRestorePoints(
       const SaveRestorePoints::PointsMap &SRPoints,
       const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
     SaveRestorePoints::PointsMap Pts{};

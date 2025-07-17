@@ -1107,19 +1107,20 @@ bool MIRParserImpl::initializeSaveRestorePoints(
         std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
     if (VectorRepr.empty())
       return false;
-    std::vector<CalleeSavedInfo> Registers;
+
     for (const auto &Entry : VectorRepr) {
       const auto &MBBSource = Entry.Point;
       if (parseMBBReference(PFS, MBB, MBBSource.Value))
         return true;
-      Registers.clear();
+
+      std::vector<CalleeSavedInfo> Registers;
       for (auto &RegStr : Entry.Registers) {
         Register Reg;
         if (parseNamedRegisterReference(PFS, Reg, RegStr.Value, Error))
           return error(Error, RegStr.SourceRange);
         Registers.push_back(CalleeSavedInfo(Reg));
       }
-      SRPoints.insert(std::make_pair(MBB, Registers));
+      SRPoints.try_emplace(MBB, std::move(Registers));
     }
   } else {
     yaml::StringValue StringRepr = std::get<yaml::StringValue>(YamlSRPoints);
@@ -1127,7 +1128,7 @@ bool MIRParserImpl::initializeSaveRestorePoints(
       return false;
     if (parseMBBReference(PFS, MBB, StringRepr))
       return true;
-    SRPoints.insert(std::make_pair(MBB, MFI.getCalleeSavedInfo()));
+    SRPoints.try_emplace(MBB, MFI.getCalleeSavedInfo());
   }
 
   if (IsSavePoints)

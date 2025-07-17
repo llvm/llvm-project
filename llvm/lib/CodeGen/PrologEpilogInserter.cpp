@@ -682,15 +682,14 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
 static void fillCSInfoPerBB(MachineFrameInfo &MFI,
                             DenseMap<MCRegister, CalleeSavedInfo *> &RegToInfo,
                             MBBVector &PrologEpilogBlocks, bool isSave) {
-  // CaleeSavedInfo list for each point
-  std::vector<CalleeSavedInfo> CSIV;
   // Global CalleeSavedInfo list aggregating CSIVs for all points
   std::vector<CalleeSavedInfo> GCSIV;
   const SaveRestorePoints::PointsMap &SRPoints =
       isSave ? MFI.getSavePoints() : MFI.getRestorePoints();
   SaveRestorePoints::PointsMap Inner;
   for (auto [BB, Regs] : SRPoints) {
-    CSIV.clear();
+    // CalleeSavedInfo list for each point
+    std::vector<CalleeSavedInfo> CSIV;
     for (auto &Reg : Regs) {
       auto It = RegToInfo.find(Reg.getReg());
       if (It == RegToInfo.end())
@@ -704,7 +703,7 @@ static void fillCSInfoPerBB(MachineFrameInfo &MFI,
               [](const CalleeSavedInfo &Lhs, const CalleeSavedInfo &Rhs) {
                 return Lhs.getFrameIdx() < Rhs.getFrameIdx();
               });
-    Inner.insert({BB, CSIV});
+    Inner.try_emplace(BB, std::move(CSIV));
   }
 
   // If in any case not all CSRs listed in MFI.getCalleeSavedInfo are in the
@@ -727,9 +726,10 @@ static void fillCSInfoPerBB(MachineFrameInfo &MFI,
                     });
           continue;
         }
-        CSIV.clear();
+        // CalleeSavedInfo list for each point
+        std::vector<CalleeSavedInfo> CSIV;
         CSIV.push_back(*RTI.second);
-        Inner.insert(std::make_pair(BB, CSIV));
+        Inner.try_emplace(BB, std::move(CSIV));
       }
     }
   }
