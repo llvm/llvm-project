@@ -5,10 +5,10 @@ FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2MSB
   Type:    ET_EXEC
-  Machine: EM_ARM
+  Machine: EM_SPARC32PLUS
   Flags:   [ [[FLAGS]] ]
 
-# RUN: yaml2obj -DFLAGS="EF_ARM_EABI_VER3" %s -o %t2
+# RUN: yaml2obj -DFLAGS="EF_SPARC_32PLUS " %s -o %t2
 # RUN: obj2yaml %t2 | FileCheck %s --check-prefix=FLAG
 
 # FLAG:      --- !ELF
@@ -16,10 +16,10 @@ FileHeader:
 # FLAG-NEXT:   Class:   ELFCLASS64
 # FLAG-NEXT:   Data:    ELFDATA2MSB
 # FLAG-NEXT:   Type:    ET_EXEC
-# FLAG-NEXT:   Machine: EM_ARM
-# FLAG-NEXT:   Flags:   [ EF_ARM_EABI_VER3 ]
+# FLAG-NEXT:   Machine: EM_SPARC32PLUS
+# FLAG-NEXT:   Flags:   [ EF_SPARC_32PLUS ]
 
-# RUN: yaml2obj -DFLAGS="EF_ARM_SOFT_FLOAT" %s -o %t3
+# RUN: yaml2obj -DFLAGS="EF_SPARC_HAL_R1 " %s -o %t3
 # RUN: obj2yaml %t3 | FileCheck %s --check-prefix=FLAG2
 
 # FLAG2:      --- !ELF
@@ -27,5 +27,5 @@ FileHeader:
 # FLAG2-NEXT:   Class:   ELFCLASS64
 # FLAG2-NEXT:   Data:    ELFDATA2MSB
 # FLAG2-NEXT:   Type:    ET_EXEC
-# FLAG2-NEXT:   Machine: EM_ARM
-# FLAG2-NEXT:   Flags:   [ EF_ARM_SOFT_FLOAT, EF_ARM_EABI_UNKNOWN ]
+# FLAG2-NEXT:   Machine: EM_SPARC32PLUS
+# FLAG2-NEXT:   Flags:   [ EF_SPARC_HAL_R1 ]
