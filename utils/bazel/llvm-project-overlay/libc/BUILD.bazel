@@ -1996,16 +1996,15 @@ libc_support_library(
 
 libc_support_library(
     name = "explogxf",
-    srcs = ["src/math/generic/explogxf.cpp"],
     hdrs = ["src/math/generic/explogxf.h"],
     deps = [
-        ":__support_common",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
         ":__support_math_exp_utils",
+        ":__support_math_exp10f_utils",
+        ":__support_macros_properties_cpu_features",
         ":common_constants",
     ],
 )
@@ -2047,19 +2046,6 @@ libc_support_library(
         ":__support_fputil_dyadic_float",
         ":__support_uint128",
         ":common_constants",
-    ],
-)
-
-libc_support_library(
-    name = "exp10f_impl",
-    hdrs = ["src/math/generic/exp10f_impl.h"],
-    deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":common_constants",
-        ":explogxf",
     ],
 )
 
@@ -2259,6 +2245,33 @@ libc_support_library(
         ":__support_fputil_rounding_mode",
         ":__support_fputil_triple_double",
         ":__support_integer_literals",
+        ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_exp10f_utils",
+    hdrs = ["src/__support/math/exp10f_utils.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_common",
+        ":__support_math_exp_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_exp10f",
+    hdrs = ["src/__support/math/exp10f.h"],
+    deps = [
+        ":__support_math_exp10f_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
     ],
 )
@@ -2726,10 +2739,10 @@ libc_math_function(
     name = "cosf",
     additional_deps = [
         ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":sincosf_utils",
+        ":errno",
     ],
 )
 
@@ -2875,7 +2888,8 @@ libc_math_function(
 libc_math_function(
     name = "exp10f",
     additional_deps = [
-        ":exp10f_impl",
+        ":__support_math_exp10f",
+        ":errno",
     ],
 )
 
@@ -3724,14 +3738,13 @@ libc_math_function(
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
         ":__support_fputil_sqrt",
         ":__support_fputil_triple_double",
         ":__support_macros_optimization",
+        ":__support_math_exp10f",
         ":common_constants",
         ":explogxf",
         ":exp2f_impl",
-        ":exp10f_impl",
     ],
 )
 
@@ -3840,7 +3853,6 @@ libc_math_function(
     name = "sinf",
     additional_deps = [
         ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
