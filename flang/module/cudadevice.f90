@@ -967,6 +967,11 @@ implicit none
     end function
   end interface
 
+  interface
+    attributes(device) integer(8) function globalTimer()
+    end function
+  end interface
+
   ! Warp Match Functions
 
   interface match_all_sync
@@ -1615,11 +1620,6 @@ implicit none
 
   interface
     attributes(device,host) logical function on_device() bind(c)
-    end function
-  end interface
-
-  interface
-    attributes(device) integer(8) function globalTimer()
     end function
   end interface
 
