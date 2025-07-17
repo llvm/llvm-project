@@ -3,200 +3,568 @@
 
 define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV6-LABEL: muloti_test:
-; THUMBV6:       @ %bb.0: @ %start
+; THUMBV6:       @ %bb.0: @ %overflow.entry
 ; THUMBV6-NEXT:    .save {r4, r5, r6, r7, lr}
 ; THUMBV6-NEXT:    push {r4, r5, r6, r7, lr}
-; THUMBV6-NEXT:    .pad #60
-; THUMBV6-NEXT:    sub sp, #60
+; THUMBV6-NEXT:    .pad #84
+; THUMBV6-NEXT:    sub sp, #84
 ; THUMBV6-NEXT:    mov r6, r3
-; THUMBV6-NEXT:    mov r1, r2
-; THUMBV6-NEXT:    str r2, [sp, #52] @ 4-byte Spill
-; THUMBV6-NEXT:    mov r4, r0
-; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
-; THUMBV6-NEXT:    ldr r2, [sp, #88]
-; THUMBV6-NEXT:    str r2, [sp, #48] @ 4-byte Spill
-; THUMBV6-NEXT:    movs r5, #0
-; THUMBV6-NEXT:    mov r0, r1
-; THUMBV6-NEXT:    mov r1, r5
-; THUMBV6-NEXT:    mov r3, r5
-; THUMBV6-NEXT:    bl __aeabi_lmul
-; THUMBV6-NEXT:    str r1, [sp, #28] @ 4-byte Spill
-; THUMBV6-NEXT:    str r0, [r4]
-; THUMBV6-NEXT:    ldr r2, [sp, #96]
-; THUMBV6-NEXT:    str r2, [sp, #36] @ 4-byte Spill
-; THUMBV6-NEXT:    mov r4, r6
-; THUMBV6-NEXT:    str r6, [sp, #56] @ 4-byte Spill
+; THUMBV6-NEXT:    str r0, [sp, #48] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #108]
+; THUMBV6-NEXT:    ldr r5, [sp, #104]
+; THUMBV6-NEXT:    str r5, [sp, #56] @ 4-byte Spill
+; THUMBV6-NEXT:    str r0, [sp, #52] @ 4-byte Spill
+; THUMBV6-NEXT:    orrs r5, r0
+; THUMBV6-NEXT:    ldr r1, [sp, #124]
+; THUMBV6-NEXT:    ldr r4, [sp, #120]
+; THUMBV6-NEXT:    ldr r0, [sp, #116]
+; THUMBV6-NEXT:    str r0, [sp, #68] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r3, [sp, #112]
+; THUMBV6-NEXT:    str r4, [sp, #80] @ 4-byte Spill
+; THUMBV6-NEXT:    str r1, [sp, #60] @ 4-byte Spill
+; THUMBV6-NEXT:    str r2, [sp, #72] @ 4-byte Spill
+; THUMBV6-NEXT:    str r6, [sp, #76] @ 4-byte Spill
+; THUMBV6-NEXT:    str r3, [sp, #64] @ 4-byte Spill
+; THUMBV6-NEXT:    bne .LBB0_1
+; THUMBV6-NEXT:    b .LBB0_3
+; THUMBV6-NEXT:  .LBB0_1: @ %overflow.lhs
+; THUMBV6-NEXT:    orrs r4, r1
+; THUMBV6-NEXT:    bne .LBB0_2
+; THUMBV6-NEXT:    b .LBB0_5
+; THUMBV6-NEXT:  .LBB0_2: @ %overflow
+; THUMBV6-NEXT:    str r4, [sp, #36] @ 4-byte Spill
+; THUMBV6-NEXT:    movs r4, #0
 ; THUMBV6-NEXT:    mov r0, r6
-; THUMBV6-NEXT:    mov r1, r5
-; THUMBV6-NEXT:    mov r3, r5
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r7, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r2, r7
+; THUMBV6-NEXT:    mov r3, r4
 ; THUMBV6-NEXT:    bl __aeabi_lmul
 ; THUMBV6-NEXT:    str r0, [sp, #44] @ 4-byte Spill
-; THUMBV6-NEXT:    mov r7, r1
-; THUMBV6-NEXT:    subs r0, r1, #1
-; THUMBV6-NEXT:    sbcs r7, r0
-; THUMBV6-NEXT:    ldr r0, [sp, #100]
-; THUMBV6-NEXT:    str r0, [sp, #32] @ 4-byte Spill
-; THUMBV6-NEXT:    mov r1, r5
-; THUMBV6-NEXT:    ldr r6, [sp, #52] @ 4-byte Reload
+; THUMBV6-NEXT:    str r1, [sp, #32] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #60] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r6, [sp, #72] @ 4-byte Reload
 ; THUMBV6-NEXT:    mov r2, r6
-; THUMBV6-NEXT:    mov r3, r5
-; THUMBV6-NEXT:    bl __aeabi_lmul
-; THUMBV6-NEXT:    str r0, [sp, #24] @ 4-byte Spill
-; THUMBV6-NEXT:    subs r2, r1, #1
-; THUMBV6-NEXT:    sbcs r1, r2
-; THUMBV6-NEXT:    subs r2, r4, #1
 ; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r1, [sp, #24] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r1, [sp, #44] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r1
+; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r0, r7
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r6
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r0, [sp, #44] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #40] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r1, r0
+; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    adcs r1, r4
+; THUMBV6-NEXT:    str r1, [sp, #28] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #68] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r7, [sp, #56] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r2, r7
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; THUMBV6-NEXT:    str r1, [sp, #20] @ 4-byte Spill
+; THUMBV6-NEXT:    str r5, [sp, #80] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r5, [sp, #52] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r0, r5
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r6, [sp, #64] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r2, r6
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r1, [sp, #16] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r1
+; THUMBV6-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r0, r7
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r6
+; THUMBV6-NEXT:    mov r7, r6
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r2, r1, r2
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    adcs r1, r4
+; THUMBV6-NEXT:    str r1, [sp, #56] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r1, [sp, #44] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r1
+; THUMBV6-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #40] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r2, r0
+; THUMBV6-NEXT:    str r2, [sp, #8] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r6, [sp, #72] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r0, r6
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r7
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r0, [sp, #44] @ 4-byte Spill
+; THUMBV6-NEXT:    str r1, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #76] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r7
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    mov r7, r1
+; THUMBV6-NEXT:    ldr r1, [sp, #40] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r1
+; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r7, r4
+; THUMBV6-NEXT:    mov r0, r6
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r6, [sp, #68] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r2, r6
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    ldr r2, [sp, #40] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r2
+; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r1, r4
+; THUMBV6-NEXT:    adds r0, r7, r1
+; THUMBV6-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r7, r4
+; THUMBV6-NEXT:    adcs r7, r4
+; THUMBV6-NEXT:    ldr r0, [sp, #76] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r6
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r2
+; THUMBV6-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r1, r7
+; THUMBV6-NEXT:    str r1, [sp] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #64] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r6
+; THUMBV6-NEXT:    mov r2, r4
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    mov r6, r0
+; THUMBV6-NEXT:    str r1, [sp, #64] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #72] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r7, [sp, #76] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r7
+; THUMBV6-NEXT:    mov r2, r4
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    adds r0, r0, r6
+; THUMBV6-NEXT:    ldr r2, [sp, #64] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r1, r2
+; THUMBV6-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r2, r0
+; THUMBV6-NEXT:    ldr r2, [sp] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r1, r2
+; THUMBV6-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r2
+; THUMBV6-NEXT:    str r0, [sp, #72] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r1, r0
+; THUMBV6-NEXT:    adcs r4, r4
+; THUMBV6-NEXT:    ldr r3, [sp, #32] @ 4-byte Reload
+; THUMBV6-NEXT:    subs r2, r3, #1
 ; THUMBV6-NEXT:    sbcs r3, r2
-; THUMBV6-NEXT:    ldr r4, [sp, #32] @ 4-byte Reload
-; THUMBV6-NEXT:    subs r2, r4, #1
-; THUMBV6-NEXT:    sbcs r4, r2
-; THUMBV6-NEXT:    ands r4, r3
-; THUMBV6-NEXT:    orrs r4, r1
-; THUMBV6-NEXT:    orrs r4, r7
-; THUMBV6-NEXT:    ldr r0, [sp, #44] @ 4-byte Reload
-; THUMBV6-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
-; THUMBV6-NEXT:    adds r7, r1, r0
+; THUMBV6-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
+; THUMBV6-NEXT:    subs r2, r0, #1
+; THUMBV6-NEXT:    sbcs r0, r2
+; THUMBV6-NEXT:    subs r2, r7, #1
+; THUMBV6-NEXT:    sbcs r7, r2
+; THUMBV6-NEXT:    mov r6, r7
+; THUMBV6-NEXT:    ldr r7, [sp, #60] @ 4-byte Reload
+; THUMBV6-NEXT:    subs r2, r7, #1
+; THUMBV6-NEXT:    sbcs r7, r2
+; THUMBV6-NEXT:    ands r7, r6
+; THUMBV6-NEXT:    orrs r7, r0
+; THUMBV6-NEXT:    orrs r7, r3
+; THUMBV6-NEXT:    ldr r0, [sp, #28] @ 4-byte Reload
+; THUMBV6-NEXT:    orrs r7, r0
+; THUMBV6-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
+; THUMBV6-NEXT:    subs r2, r0, #1
+; THUMBV6-NEXT:    sbcs r0, r2
+; THUMBV6-NEXT:    ldr r3, [sp, #16] @ 4-byte Reload
+; THUMBV6-NEXT:    subs r2, r3, #1
+; THUMBV6-NEXT:    sbcs r3, r2
+; THUMBV6-NEXT:    mov r6, r3
+; THUMBV6-NEXT:    ldr r3, [sp, #68] @ 4-byte Reload
+; THUMBV6-NEXT:    subs r2, r3, #1
+; THUMBV6-NEXT:    sbcs r3, r2
+; THUMBV6-NEXT:    subs r2, r5, #1
+; THUMBV6-NEXT:    sbcs r5, r2
+; THUMBV6-NEXT:    ands r5, r3
+; THUMBV6-NEXT:    orrs r5, r6
+; THUMBV6-NEXT:    orrs r5, r0
+; THUMBV6-NEXT:    ldr r0, [sp, #72] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r2, [sp, #56] @ 4-byte Reload
+; THUMBV6-NEXT:    orrs r5, r2
+; THUMBV6-NEXT:    ldr r3, [sp, #36] @ 4-byte Reload
+; THUMBV6-NEXT:    subs r2, r3, #1
+; THUMBV6-NEXT:    sbcs r3, r2
+; THUMBV6-NEXT:    mov r6, r3
+; THUMBV6-NEXT:    ldr r2, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    subs r2, r2, #1
+; THUMBV6-NEXT:    ldr r3, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    sbcs r3, r2
+; THUMBV6-NEXT:    str r3, [sp, #80] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r2, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    ands r2, r6
+; THUMBV6-NEXT:    str r2, [sp, #80] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r2, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    orrs r2, r5
+; THUMBV6-NEXT:    str r2, [sp, #80] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r5, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    orrs r5, r7
+; THUMBV6-NEXT:    orrs r5, r4
+; THUMBV6-NEXT:    b .LBB0_8
+; THUMBV6-NEXT:  .LBB0_3: @ %overflow.no.lhs
+; THUMBV6-NEXT:    mov r0, r4
+; THUMBV6-NEXT:    orrs r0, r1
+; THUMBV6-NEXT:    bne .LBB0_4
+; THUMBV6-NEXT:    b .LBB0_7
+; THUMBV6-NEXT:  .LBB0_4: @ %overflow.no.lhs.only
+; THUMBV6-NEXT:    mov r5, r4
+; THUMBV6-NEXT:    movs r4, #0
+; THUMBV6-NEXT:    mov r0, r2
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r7, r2
+; THUMBV6-NEXT:    mov r2, r5
+; THUMBV6-NEXT:    str r5, [sp, #36] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r0, [sp, #32] @ 4-byte Spill
+; THUMBV6-NEXT:    str r1, [sp, #80] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r0, r6
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r5
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    mov r6, r1
+; THUMBV6-NEXT:    ldr r1, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r1
+; THUMBV6-NEXT:    str r0, [sp, #80] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r6, r4
+; THUMBV6-NEXT:    mov r0, r7
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r5, [sp, #60] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r2, r5
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    ldr r2, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r2
+; THUMBV6-NEXT:    str r0, [sp, #28] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r1, r4
+; THUMBV6-NEXT:    adds r0, r6, r1
+; THUMBV6-NEXT:    str r0, [sp, #80] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r7, r4
+; THUMBV6-NEXT:    adcs r7, r4
+; THUMBV6-NEXT:    ldr r0, [sp, #76] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r5
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    mov r6, r1
+; THUMBV6-NEXT:    ldr r1, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r1
+; THUMBV6-NEXT:    str r0, [sp, #44] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r6, r7
 ; THUMBV6-NEXT:    ldr r0, [sp, #36] @ 4-byte Reload
 ; THUMBV6-NEXT:    mov r1, r5
-; THUMBV6-NEXT:    mov r2, r6
-; THUMBV6-NEXT:    mov r3, r5
+; THUMBV6-NEXT:    ldr r2, [sp, #56] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r3, [sp, #52] @ 4-byte Reload
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r0, [sp, #60] @ 4-byte Spill
+; THUMBV6-NEXT:    str r1, [sp, #80] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r7, [sp, #72] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r0, r7
+; THUMBV6-NEXT:    ldr r5, [sp, #76] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r5
+; THUMBV6-NEXT:    mov r2, r4
+; THUMBV6-NEXT:    mov r3, r4
 ; THUMBV6-NEXT:    bl __aeabi_lmul
 ; THUMBV6-NEXT:    str r0, [sp, #24] @ 4-byte Spill
-; THUMBV6-NEXT:    adds r0, r1, r7
-; THUMBV6-NEXT:    str r0, [sp, #20] @ 4-byte Spill
-; THUMBV6-NEXT:    mov r0, r5
-; THUMBV6-NEXT:    adcs r0, r5
-; THUMBV6-NEXT:    orrs r0, r4
-; THUMBV6-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; THUMBV6-NEXT:    ldr r0, [sp, #92]
+; THUMBV6-NEXT:    str r1, [sp, #36] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r2, [sp, #60] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r3, r0, r2
+; THUMBV6-NEXT:    ldr r2, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r2, r1
+; THUMBV6-NEXT:    ldr r0, [sp, #44] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r3
+; THUMBV6-NEXT:    str r0, [sp, #60] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r2, r6
+; THUMBV6-NEXT:    str r2, [sp, #80] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r0, r7
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r7, [sp, #64] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r2, r7
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
 ; THUMBV6-NEXT:    str r0, [sp, #44] @ 4-byte Spill
-; THUMBV6-NEXT:    ldr r7, [sp, #80]
+; THUMBV6-NEXT:    mov r6, r1
+; THUMBV6-NEXT:    mov r0, r5
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r7
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    mov r7, r1
+; THUMBV6-NEXT:    adds r6, r0, r6
+; THUMBV6-NEXT:    adcs r7, r4
+; THUMBV6-NEXT:    ldr r0, [sp, #72] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r5, [sp, #68] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r2, r5
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    adds r0, r0, r6
+; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r1, r4
+; THUMBV6-NEXT:    adds r0, r7, r1
+; THUMBV6-NEXT:    str r0, [sp, #72] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r7, r4
+; THUMBV6-NEXT:    adcs r7, r4
+; THUMBV6-NEXT:    ldr r0, [sp, #76] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r5
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    mov r6, r1
+; THUMBV6-NEXT:    ldr r1, [sp, #72] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r1
+; THUMBV6-NEXT:    str r0, [sp, #76] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r6, r7
+; THUMBV6-NEXT:    ldr r0, [sp, #64] @ 4-byte Reload
 ; THUMBV6-NEXT:    mov r1, r5
+; THUMBV6-NEXT:    ldr r2, [sp, #56] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r3, [sp, #52] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r5, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    ldr r2, [sp, #24] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r2, r0
+; THUMBV6-NEXT:    ldr r2, [sp, #36] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r1, r2
+; THUMBV6-NEXT:    ldr r2, [sp, #76] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r2, r0
+; THUMBV6-NEXT:    adcs r1, r6
+; THUMBV6-NEXT:    ldr r2, [sp, #32] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r2
+; THUMBV6-NEXT:    ldr r2, [sp, #28] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r1, r2
+; THUMBV6-NEXT:    ldr r2, [sp, #60] @ 4-byte Reload
+; THUMBV6-NEXT:    b .LBB0_6
+; THUMBV6-NEXT:  .LBB0_5: @ %overflow.no.rhs.only
+; THUMBV6-NEXT:    movs r4, #0
+; THUMBV6-NEXT:    mov r0, r3
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r7, [sp, #56] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r2, r7
+; THUMBV6-NEXT:    mov r5, r3
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r0, [sp, #36] @ 4-byte Spill
+; THUMBV6-NEXT:    str r1, [sp, #44] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #68] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r7
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    mov r6, r1
+; THUMBV6-NEXT:    ldr r1, [sp, #44] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r7, r0, r1
+; THUMBV6-NEXT:    adcs r6, r4
+; THUMBV6-NEXT:    mov r0, r5
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r5, [sp, #52] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r2, r5
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    adds r0, r0, r7
+; THUMBV6-NEXT:    str r0, [sp, #32] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r1, r4
+; THUMBV6-NEXT:    adds r0, r6, r1
+; THUMBV6-NEXT:    str r0, [sp, #44] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r6, [sp, #68] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r7, r4
+; THUMBV6-NEXT:    adcs r7, r4
+; THUMBV6-NEXT:    mov r0, r6
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r5
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    ldr r2, [sp, #44] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r2
+; THUMBV6-NEXT:    str r0, [sp, #44] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r1, r7
+; THUMBV6-NEXT:    str r1, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #56] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r5
+; THUMBV6-NEXT:    ldr r2, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r3, [sp, #60] @ 4-byte Reload
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r0, [sp, #56] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r5, r1
+; THUMBV6-NEXT:    ldr r7, [sp, #64] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r0, r7
+; THUMBV6-NEXT:    mov r1, r6
+; THUMBV6-NEXT:    mov r2, r4
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r0, [sp, #28] @ 4-byte Spill
+; THUMBV6-NEXT:    str r1, [sp, #52] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r2, [sp, #56] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r2, r0, r2
+; THUMBV6-NEXT:    adcs r5, r1
+; THUMBV6-NEXT:    ldr r0, [sp, #44] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r2
+; THUMBV6-NEXT:    str r0, [sp, #56] @ 4-byte Spill
+; THUMBV6-NEXT:    ldr r0, [sp, #40] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r5, r0
+; THUMBV6-NEXT:    mov r0, r7
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r7, [sp, #72] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r2, r7
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r0, [sp, #44] @ 4-byte Spill
+; THUMBV6-NEXT:    str r1, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r0, r6
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r7
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    mov r7, r1
+; THUMBV6-NEXT:    ldr r1, [sp, #40] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r1
+; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r7, r4
+; THUMBV6-NEXT:    ldr r0, [sp, #64] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    ldr r6, [sp, #76] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r2, r6
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    ldr r2, [sp, #40] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r2
+; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r1, r4
+; THUMBV6-NEXT:    adds r0, r7, r1
+; THUMBV6-NEXT:    str r0, [sp, #64] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r7, r4
+; THUMBV6-NEXT:    adcs r7, r4
+; THUMBV6-NEXT:    ldr r0, [sp, #68] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r4
+; THUMBV6-NEXT:    mov r2, r6
+; THUMBV6-NEXT:    mov r3, r4
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    mov r6, r1
+; THUMBV6-NEXT:    ldr r1, [sp, #64] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r1
+; THUMBV6-NEXT:    str r0, [sp, #68] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r6, r7
+; THUMBV6-NEXT:    add r2, sp, #72
+; THUMBV6-NEXT:    ldm r2, {r0, r1, r2} @ 12-byte Folded Reload
+; THUMBV6-NEXT:    ldr r3, [sp, #60] @ 4-byte Reload
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    ldr r2, [sp, #28] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r2, r0
+; THUMBV6-NEXT:    ldr r2, [sp, #52] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r1, r2
+; THUMBV6-NEXT:    ldr r2, [sp, #68] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r2, r0
+; THUMBV6-NEXT:    adcs r1, r6
+; THUMBV6-NEXT:    ldr r2, [sp, #36] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r2
+; THUMBV6-NEXT:    ldr r2, [sp, #32] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r1, r2
+; THUMBV6-NEXT:    ldr r2, [sp, #56] @ 4-byte Reload
+; THUMBV6-NEXT:  .LBB0_6: @ %overflow.res
+; THUMBV6-NEXT:    adcs r2, r4
+; THUMBV6-NEXT:    adcs r5, r4
+; THUMBV6-NEXT:    orrs r5, r2
+; THUMBV6-NEXT:    subs r2, r5, #1
+; THUMBV6-NEXT:    sbcs r5, r2
+; THUMBV6-NEXT:    b .LBB0_8
+; THUMBV6-NEXT:  .LBB0_7: @ %overflow.no
+; THUMBV6-NEXT:    movs r5, #0
+; THUMBV6-NEXT:    mov r0, r2
+; THUMBV6-NEXT:    mov r1, r5
+; THUMBV6-NEXT:    mov r7, r2
+; THUMBV6-NEXT:    mov r2, r3
+; THUMBV6-NEXT:    mov r4, r3
+; THUMBV6-NEXT:    mov r3, r5
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    str r0, [sp, #44] @ 4-byte Spill
+; THUMBV6-NEXT:    str r1, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r0, r6
+; THUMBV6-NEXT:    mov r1, r5
+; THUMBV6-NEXT:    mov r2, r4
+; THUMBV6-NEXT:    mov r3, r5
+; THUMBV6-NEXT:    bl __aeabi_lmul
+; THUMBV6-NEXT:    mov r4, r6
+; THUMBV6-NEXT:    mov r6, r1
+; THUMBV6-NEXT:    ldr r1, [sp, #40] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r1
+; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r6, r5
+; THUMBV6-NEXT:    mov r0, r7
+; THUMBV6-NEXT:    mov r1, r5
+; THUMBV6-NEXT:    ldr r7, [sp, #68] @ 4-byte Reload
 ; THUMBV6-NEXT:    mov r2, r7
 ; THUMBV6-NEXT:    mov r3, r5
 ; THUMBV6-NEXT:    bl __aeabi_lmul
-; THUMBV6-NEXT:    str r0, [sp, #12] @ 4-byte Spill
-; THUMBV6-NEXT:    mov r4, r1
-; THUMBV6-NEXT:    subs r0, r1, #1
-; THUMBV6-NEXT:    sbcs r4, r0
-; THUMBV6-NEXT:    ldr r6, [sp, #84]
-; THUMBV6-NEXT:    mov r0, r6
-; THUMBV6-NEXT:    mov r1, r5
-; THUMBV6-NEXT:    ldr r2, [sp, #48] @ 4-byte Reload
-; THUMBV6-NEXT:    mov r3, r5
-; THUMBV6-NEXT:    bl __aeabi_lmul
-; THUMBV6-NEXT:    str r0, [sp, #4] @ 4-byte Spill
-; THUMBV6-NEXT:    subs r2, r1, #1
-; THUMBV6-NEXT:    sbcs r1, r2
-; THUMBV6-NEXT:    ldr r3, [sp, #44] @ 4-byte Reload
-; THUMBV6-NEXT:    subs r2, r3, #1
-; THUMBV6-NEXT:    sbcs r3, r2
-; THUMBV6-NEXT:    str r6, [sp, #8] @ 4-byte Spill
-; THUMBV6-NEXT:    subs r2, r6, #1
-; THUMBV6-NEXT:    sbcs r6, r2
-; THUMBV6-NEXT:    ands r6, r3
-; THUMBV6-NEXT:    orrs r6, r1
-; THUMBV6-NEXT:    orrs r6, r4
-; THUMBV6-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; THUMBV6-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
-; THUMBV6-NEXT:    adds r0, r1, r0
-; THUMBV6-NEXT:    str r0, [sp, #4] @ 4-byte Spill
-; THUMBV6-NEXT:    mov r0, r7
-; THUMBV6-NEXT:    mov r1, r5
-; THUMBV6-NEXT:    ldr r4, [sp, #48] @ 4-byte Reload
-; THUMBV6-NEXT:    mov r2, r4
-; THUMBV6-NEXT:    mov r3, r5
-; THUMBV6-NEXT:    bl __aeabi_lmul
-; THUMBV6-NEXT:    str r0, [sp, #12] @ 4-byte Spill
-; THUMBV6-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
-; THUMBV6-NEXT:    adds r0, r1, r0
-; THUMBV6-NEXT:    mov r1, r5
-; THUMBV6-NEXT:    adcs r1, r5
-; THUMBV6-NEXT:    orrs r1, r6
-; THUMBV6-NEXT:    ldr r3, [sp, #36] @ 4-byte Reload
-; THUMBV6-NEXT:    ldr r2, [sp, #32] @ 4-byte Reload
-; THUMBV6-NEXT:    orrs r3, r2
-; THUMBV6-NEXT:    subs r2, r3, #1
-; THUMBV6-NEXT:    sbcs r3, r2
-; THUMBV6-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
-; THUMBV6-NEXT:    orrs r7, r2
-; THUMBV6-NEXT:    subs r2, r7, #1
-; THUMBV6-NEXT:    sbcs r7, r2
-; THUMBV6-NEXT:    ands r7, r3
-; THUMBV6-NEXT:    orrs r7, r1
-; THUMBV6-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
-; THUMBV6-NEXT:    orrs r7, r1
-; THUMBV6-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
-; THUMBV6-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
-; THUMBV6-NEXT:    adds r1, r2, r1
-; THUMBV6-NEXT:    str r1, [sp, #32] @ 4-byte Spill
-; THUMBV6-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
-; THUMBV6-NEXT:    adcs r0, r1
-; THUMBV6-NEXT:    str r0, [sp, #36] @ 4-byte Spill
-; THUMBV6-NEXT:    ldr r0, [sp, #56] @ 4-byte Reload
-; THUMBV6-NEXT:    mov r1, r5
-; THUMBV6-NEXT:    mov r2, r4
-; THUMBV6-NEXT:    mov r3, r5
-; THUMBV6-NEXT:    bl __aeabi_lmul
-; THUMBV6-NEXT:    mov r4, r1
-; THUMBV6-NEXT:    ldr r1, [sp, #28] @ 4-byte Reload
-; THUMBV6-NEXT:    adds r6, r0, r1
-; THUMBV6-NEXT:    adcs r4, r5
-; THUMBV6-NEXT:    ldr r0, [sp, #52] @ 4-byte Reload
-; THUMBV6-NEXT:    mov r1, r5
-; THUMBV6-NEXT:    ldr r2, [sp, #44] @ 4-byte Reload
-; THUMBV6-NEXT:    mov r3, r5
-; THUMBV6-NEXT:    bl __aeabi_lmul
-; THUMBV6-NEXT:    adds r0, r0, r6
 ; THUMBV6-NEXT:    ldr r2, [sp, #40] @ 4-byte Reload
-; THUMBV6-NEXT:    str r0, [r2, #4]
+; THUMBV6-NEXT:    adds r0, r0, r2
+; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
 ; THUMBV6-NEXT:    adcs r1, r5
-; THUMBV6-NEXT:    adds r0, r4, r1
-; THUMBV6-NEXT:    str r0, [sp, #28] @ 4-byte Spill
-; THUMBV6-NEXT:    mov r6, r5
-; THUMBV6-NEXT:    adcs r6, r5
-; THUMBV6-NEXT:    ldr r0, [sp, #56] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r6, r1
+; THUMBV6-NEXT:    str r0, [sp, #36] @ 4-byte Spill
+; THUMBV6-NEXT:    mov r6, r7
+; THUMBV6-NEXT:    mov r7, r5
+; THUMBV6-NEXT:    adcs r7, r5
+; THUMBV6-NEXT:    mov r0, r4
 ; THUMBV6-NEXT:    mov r1, r5
-; THUMBV6-NEXT:    ldr r4, [sp, #44] @ 4-byte Reload
-; THUMBV6-NEXT:    mov r2, r4
+; THUMBV6-NEXT:    mov r2, r6
 ; THUMBV6-NEXT:    mov r3, r5
 ; THUMBV6-NEXT:    bl __aeabi_lmul
-; THUMBV6-NEXT:    ldr r2, [sp, #28] @ 4-byte Reload
-; THUMBV6-NEXT:    adds r0, r0, r2
-; THUMBV6-NEXT:    str r0, [sp, #28] @ 4-byte Spill
-; THUMBV6-NEXT:    adcs r1, r6
-; THUMBV6-NEXT:    str r1, [sp, #24] @ 4-byte Spill
-; THUMBV6-NEXT:    ldr r0, [sp, #48] @ 4-byte Reload
-; THUMBV6-NEXT:    mov r1, r4
-; THUMBV6-NEXT:    mov r2, r5
-; THUMBV6-NEXT:    mov r3, r5
+; THUMBV6-NEXT:    mov r4, r1
+; THUMBV6-NEXT:    ldr r1, [sp, #36] @ 4-byte Reload
+; THUMBV6-NEXT:    adds r0, r0, r1
+; THUMBV6-NEXT:    str r0, [sp, #36] @ 4-byte Spill
+; THUMBV6-NEXT:    adcs r4, r7
+; THUMBV6-NEXT:    ldr r0, [sp, #64] @ 4-byte Reload
+; THUMBV6-NEXT:    mov r1, r6
+; THUMBV6-NEXT:    ldr r2, [sp, #56] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r3, [sp, #52] @ 4-byte Reload
 ; THUMBV6-NEXT:    bl __aeabi_lmul
 ; THUMBV6-NEXT:    mov r6, r0
-; THUMBV6-NEXT:    mov r4, r1
-; THUMBV6-NEXT:    ldr r0, [sp, #52] @ 4-byte Reload
-; THUMBV6-NEXT:    ldr r1, [sp, #56] @ 4-byte Reload
-; THUMBV6-NEXT:    mov r2, r5
-; THUMBV6-NEXT:    mov r3, r5
+; THUMBV6-NEXT:    mov r7, r1
+; THUMBV6-NEXT:    ldr r0, [sp, #80] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r1, [sp, #60] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r2, [sp, #72] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r3, [sp, #76] @ 4-byte Reload
 ; THUMBV6-NEXT:    bl __aeabi_lmul
 ; THUMBV6-NEXT:    adds r0, r0, r6
-; THUMBV6-NEXT:    adcs r1, r4
-; THUMBV6-NEXT:    ldr r2, [sp, #28] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r1, r7
+; THUMBV6-NEXT:    ldr r2, [sp, #36] @ 4-byte Reload
 ; THUMBV6-NEXT:    adds r0, r2, r0
-; THUMBV6-NEXT:    ldr r2, [sp, #24] @ 4-byte Reload
-; THUMBV6-NEXT:    adcs r1, r2
-; THUMBV6-NEXT:    ldr r2, [sp, #32] @ 4-byte Reload
-; THUMBV6-NEXT:    adds r0, r0, r2
-; THUMBV6-NEXT:    ldr r2, [sp, #40] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r1, r4
+; THUMBV6-NEXT:  .LBB0_8: @ %overflow.res
+; THUMBV6-NEXT:    ldr r2, [sp, #48] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r3, [sp, #44] @ 4-byte Reload
+; THUMBV6-NEXT:    str r3, [r2]
+; THUMBV6-NEXT:    ldr r3, [sp, #40] @ 4-byte Reload
+; THUMBV6-NEXT:    str r3, [r2, #4]
 ; THUMBV6-NEXT:    str r0, [r2, #8]
-; THUMBV6-NEXT:    ldr r0, [sp, #36] @ 4-byte Reload
-; THUMBV6-NEXT:    adcs r1, r0
 ; THUMBV6-NEXT:    str r1, [r2, #12]
-; THUMBV6-NEXT:    adcs r5, r5
-; THUMBV6-NEXT:    orrs r5, r7
 ; THUMBV6-NEXT:    movs r0, #1
 ; THUMBV6-NEXT:    ands r0, r5
 ; THUMBV6-NEXT:    strb r0, [r2, #16]
-; THUMBV6-NEXT:    add sp, #60
+; THUMBV6-NEXT:    add sp, #84
 ; THUMBV6-NEXT:    pop {r4, r5, r6, r7, pc}
 start:
   %0 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %l, i128 %r) #2
