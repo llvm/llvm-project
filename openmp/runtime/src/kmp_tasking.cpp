@@ -4952,7 +4952,8 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
   }
 
 #if OMPX_TASKGRAPH
-  KMP_ATOMIC_DEC(&__kmp_tdg_task_id);
+  if (taskdata->is_taskgraph)
+    KMP_ATOMIC_DEC(&__kmp_tdg_task_id);
 #endif
   // =========================================================================
   // calculate loop parameters
