@@ -329,22 +329,19 @@ ParseResult parseOptionalDynamicIndexList(
   return success();
 }
 
-
-void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
-                                   OperandRange values,
-                                   ArrayRef<int64_t> integers,
-                                   TypeRange valueTypes = TypeRange(),
-                                   AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square){
+void printOptionalDynamicIndexList(
+    OpAsmPrinter &printer, Operation *op, OperandRange values,
+    ArrayRef<int64_t> integers, TypeRange valueTypes = TypeRange(),
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
 
   if (values.empty() && llvm::all_of(integers, [](int64_t i) {
         // MAX indiates no user-provided offsets for CreateNdDescOp.
         return i == std::numeric_limits<int64_t>::max();
-      }))    
-      return;
+      }))
+    return;
 
   return printDynamicIndexList(printer, op, values, integers,
                                /*scalableFlags=*/{}, valueTypes, delimiter);
-
 }
 
 //===----------------------------------------------------------------------===//
