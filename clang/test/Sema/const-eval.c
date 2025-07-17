@@ -32,7 +32,7 @@ void f(void)
 _Complex float g16 = (1.0f + 1.0fi);
 
 // ?: in constant expressions.
-int g17[(3?:1) - 2]; 
+int g17[(3?:1) - 2];
 
 EVAL_EXPR(18, ((int)((void*)10 + 10)) == 20 ? 1 : -1);
 
@@ -41,6 +41,9 @@ struct s {
 };
 
 EVAL_EXPR(19, ((int)&*(char*)10 == 10 ? 1 : -1));
+// expected-error@-1 {{not an integer constant expression}} \
+// expected-note@-1 {{dereferencing a null pointer is not allowed in a constant expression}}
+
 
 EVAL_EXPR(20, __builtin_constant_p(*((int*) 10)));
 
