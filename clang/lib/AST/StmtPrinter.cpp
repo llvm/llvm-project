@@ -610,7 +610,7 @@ void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
     }
   }
 
-  if (auto *FS = static_cast<ObjCAtFinallyStmt *>(Node->getFinallyStmt())) {
+  if (ObjCAtFinallyStmt *FS = Node->getFinallyStmt()) {
     Indent() << "@finally";
     if (auto *CS = dyn_cast<CompoundStmt>(FS->getFinallyBody())) {
       PrintRawCompoundStmt(CS);
