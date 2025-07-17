@@ -633,11 +633,6 @@ public:
   // received as a result of a standard operator new (-fcheck-new)
   bool CheckNew = false;
 
-  // In OpenACC mode, contains a user provided override for the _OPENACC macro.
-  // This exists so that we can override the macro value and test our incomplete
-  // implementation on real-world examples.
-  std::string OpenACCMacroOverride;
-
   /// The HLSL root signature version for dxil.
   llvm::dxbc::RootSignatureVersion HLSLRootSigVer =
       llvm::dxbc::RootSignatureVersion::V1_1;
