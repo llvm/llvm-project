@@ -244,7 +244,7 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
   // Right now we're only recognizing the simplest pattern.
   uint64_t C;
   if (match(V, m_CombineOr(m_ConstantInt(C),
-                           m_c_Mul(m_Value(), m_ConstantInt(C)))) &&
+                           m_NUWMul(m_Value(), m_ConstantInt(C)))) &&
       C && C % N == 0)
     return true;
 
@@ -296,10 +296,8 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     if (!isMultipleOfN(WideEVL, Load->getDataLayout(), Factor))
       return false;
 
-    VL = Builder.CreateZExt(
-        Builder.CreateUDiv(WideEVL,
-                           ConstantInt::get(WideEVL->getType(), Factor)),
-        XLenTy);
+    auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+    VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
   }
 
   Type *PtrTy = Ptr->getType();
@@ -387,10 +385,8 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
     if (!isMultipleOfN(WideEVL, DL, Factor))
       return false;
 
-    VL = Builder.CreateZExt(
-        Builder.CreateUDiv(WideEVL,
-                           ConstantInt::get(WideEVL->getType(), Factor)),
-        XLenTy);
+    auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+    VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
   }
   Type *PtrTy = Ptr->getType();
   unsigned AS = Ptr->getType()->getPointerAddressSpace();
@@ -489,9 +485,9 @@ bool RISCVTargetLowering::lowerInterleavedVPLoad(
 
   auto *PtrTy = Load->getArgOperand(0)->getType();
   auto *XLenTy = Type::getIntNTy(Load->getContext(), Subtarget.getXLen());
-  Value *EVL = Builder.CreateZExt(
-      Builder.CreateUDiv(WideEVL, ConstantInt::get(WideEVL->getType(), Factor)),
-      XLenTy);
+  auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+  Value *EVL =
+      Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
 
   Value *Return = nullptr;
   if (isa<FixedVectorType>(VTy)) {
@@ -596,9 +592,9 @@ bool RISCVTargetLowering::lowerInterleavedVPStore(
 
   auto *PtrTy = Store->getArgOperand(1)->getType();
   auto *XLenTy = Type::getIntNTy(Store->getContext(), Subtarget.getXLen());
-  Value *EVL = Builder.CreateZExt(
-      Builder.CreateUDiv(WideEVL, ConstantInt::get(WideEVL->getType(), Factor)),
-      XLenTy);
+  auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+  Value *EVL =
+      Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
 
   if (isa<FixedVectorType>(VTy)) {
     SmallVector<Value *, 8> Operands(InterleaveOperands);
