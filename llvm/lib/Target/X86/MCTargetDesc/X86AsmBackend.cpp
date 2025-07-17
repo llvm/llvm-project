@@ -468,10 +468,6 @@ bool X86AsmBackend::canPadBranches(MCObjectStreamer &OS) const {
   if (!OS.getCurrentSectionOnly()->isText())
     return false;
 
-  // To be Done: Currently don't deal with Bundle cases.
-  if (OS.getAssembler().isBundlingEnabled())
-    return false;
-
   // Branches only need to be aligned in 32-bit or 64-bit mode.
   if (!(STI.hasFeature(X86::Is64Bit) || STI.hasFeature(X86::Is32Bit)))
     return false;
