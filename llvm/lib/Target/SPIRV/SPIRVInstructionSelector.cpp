@@ -3055,6 +3055,32 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     // a `LocalInvocationIndex` builtin variable
     return loadBuiltinInputID(SPIRV::BuiltIn::LocalInvocationIndex, ResVReg,
                               ResType, I);
+  case Intrinsic::spv_workgroup_size:
+    return loadVec3BuiltinInputID(SPIRV::BuiltIn::WorkgroupSize, ResVReg,
+                                  ResType, I);
+  case Intrinsic::spv_global_size:
+    return loadVec3BuiltinInputID(SPIRV::BuiltIn::GlobalSize, ResVReg, ResType,
+                                  I);
+  case Intrinsic::spv_global_offset:
+    return loadVec3BuiltinInputID(SPIRV::BuiltIn::GlobalOffset, ResVReg,
+                                  ResType, I);
+  case Intrinsic::spv_num_workgroups:
+    return loadVec3BuiltinInputID(SPIRV::BuiltIn::NumWorkgroups, ResVReg,
+                                  ResType, I);
+  case Intrinsic::spv_subgroup_size:
+    return loadBuiltinInputID(SPIRV::BuiltIn::SubgroupSize, ResVReg, ResType,
+                              I);
+  case Intrinsic::spv_num_subgroups:
+    return loadBuiltinInputID(SPIRV::BuiltIn::NumSubgroups, ResVReg, ResType,
+                              I);
+  case Intrinsic::spv_subgroup_id:
+    return loadBuiltinInputID(SPIRV::BuiltIn::SubgroupId, ResVReg, ResType, I);
+  case Intrinsic::spv_subgroup_local_invocation_id:
+    return loadBuiltinInputID(SPIRV::BuiltIn::SubgroupLocalInvocationId,
+                              ResVReg, ResType, I);
+  case Intrinsic::spv_subgroup_max_size:
+    return loadBuiltinInputID(SPIRV::BuiltIn::SubgroupMaxSize, ResVReg, ResType,
+                              I);
   case Intrinsic::spv_fdot:
     return selectFloatDot(ResVReg, ResType, I);
   case Intrinsic::spv_udot:
@@ -3094,6 +3120,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_normalize:
     return selectExtInst(ResVReg, ResType, I, CL::normalize, GL::Normalize);
+  case Intrinsic::spv_refract:
+    return selectExtInst(ResVReg, ResType, I, GL::Refract);
   case Intrinsic::spv_reflect:
     return selectExtInst(ResVReg, ResType, I, GL::Reflect);
   case Intrinsic::spv_rsqrt:
@@ -3993,13 +4021,13 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
 // Generate the instructions to load 3-element vector builtin input
 // IDs/Indices.
 // Like: GlobalInvocationId, LocalInvocationId, etc....
+
 bool SPIRVInstructionSelector::loadVec3BuiltinInputID(
     SPIRV::BuiltIn::BuiltIn BuiltInValue, Register ResVReg,
     const SPIRVType *ResType, MachineInstr &I) const {
   MachineIRBuilder MIRBuilder(I);
-  const SPIRVType *U32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
   const SPIRVType *Vec3Ty =
-      GR.getOrCreateSPIRVVectorType(U32Type, 3, MIRBuilder, false);
+      GR.getOrCreateSPIRVVectorType(ResType, 3, MIRBuilder, false);
   const SPIRVType *PtrType = GR.getOrCreateSPIRVPointerType(
       Vec3Ty, MIRBuilder, SPIRV::StorageClass::Input);
 

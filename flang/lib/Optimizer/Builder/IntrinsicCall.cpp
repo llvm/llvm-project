@@ -385,6 +385,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genChdir,
      {{{"name", asAddr}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"clock", &I::genNVVMTime<mlir::NVVM::ClockOp>, {}, /*isElemental=*/false},
     {"clock64", &I::genClock64, {}, /*isElemental=*/false},
     {"cmplx",
      &I::genCmplx,
@@ -503,6 +504,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"getgid", &I::genGetGID},
     {"getpid", &I::genGetPID},
     {"getuid", &I::genGetUID},
+    {"globaltimer",
+     &I::genNVVMTime<mlir::NVVM::GlobalTimerOp>,
+     {},
+     /*isElemental=*/false},
     {"hostnm",
      &I::genHostnm,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
@@ -1231,8 +1236,11 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::StringRef mathLibFuncName = mathOp.runtimeFunc;
   if (!mathLibFuncName.empty()) {
     // If we enabled MLIR complex or can use approximate operations, we should
-    // NOT use libm.
-    if (!forceMlirComplex && !canUseApprox) {
+    // NOT use libm. Avoid libm when targeting AMDGPU as those symbols are not
+    // available on the device and we rely on MLIR complex operations to
+    // later map to OCML calls.
+    bool isAMDGPU = fir::getTargetTriple(builder.getModule()).isAMDGCN();
+    if (!forceMlirComplex && !canUseApprox && !isAMDGPU) {
       result = genLibCall(builder, loc, mathOp, mathLibFuncType, args);
       LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
       return result;
@@ -7194,6 +7202,14 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
       builder, loc, boxType, mold->nonDeferredLenParams());
   builder.create<fir::StoreOp>(loc, box, boxStorage);
   return fir::MutableBoxValue(boxStorage, mold->nonDeferredLenParams(), {});
+}
+
+// CLOCK, GLOBALTIMER
+template <typename OpTy>
+mlir::Value IntrinsicLibrary::genNVVMTime(mlir::Type resultType,
+                                          llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0 && "expect no arguments");
+  return builder.create<OpTy>(loc, resultType).getResult();
 }
 
 // PACK

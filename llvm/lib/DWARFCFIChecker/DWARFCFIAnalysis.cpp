@@ -77,6 +77,7 @@ getUnwindRuleRegSet(const dwarf::UnwindRow &UnwindRow, DWARFRegNum Reg) {
   case dwarf::UnwindLocation::Location::RegPlusOffset:
     return {Loc.getRegister()};
   }
+  llvm_unreachable("Unknown dwarf::UnwindLocation::Location enum");
 }
 
 DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,

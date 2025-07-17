@@ -24,8 +24,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
-#include <algorithm>
 #include <iterator>
 
 namespace mlir {
@@ -34,8 +32,6 @@ namespace spirv {
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
 } // namespace spirv
 } // namespace mlir
-
-#define DEBUG_TYPE "spirv-unify-aliased-resource"
 
 using namespace mlir;
 

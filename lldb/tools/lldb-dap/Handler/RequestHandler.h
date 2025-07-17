@@ -540,11 +540,14 @@ public:
   Run(const protocol::ThreadsArguments &) const override;
 };
 
-class VariablesRequestHandler : public LegacyRequestHandler {
+class VariablesRequestHandler
+    : public RequestHandler<protocol::VariablesArguments,
+                            llvm::Expected<protocol::VariablesResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "variables"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::VariablesResponseBody>
+  Run(const protocol::VariablesArguments &) const override;
 };
 
 class LocationsRequestHandler : public LegacyRequestHandler {
@@ -602,6 +605,19 @@ public:
     return "_testGetTargetBreakpoints";
   }
   void operator()(const llvm::json::Object &request) const override;
+};
+
+class WriteMemoryRequestHandler final
+    : public RequestHandler<protocol::WriteMemoryArguments,
+                            llvm::Expected<protocol::WriteMemoryResponseBody>> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "writeMemory"; }
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureWriteMemoryRequest};
+  }
+  llvm::Expected<protocol::WriteMemoryResponseBody>
+  Run(const protocol::WriteMemoryArguments &args) const override;
 };
 
 } // namespace lldb_dap

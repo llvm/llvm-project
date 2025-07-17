@@ -808,15 +808,14 @@ static void updateScopeLine(Instruction *ActiveSuspend,
     return;
 
   // No subsequent instruction -> fallback to the location of ActiveSuspend.
-  if (!ActiveSuspend->getNextNonDebugInstruction()) {
+  if (!ActiveSuspend->getNextNode()) {
     if (auto DL = ActiveSuspend->getDebugLoc())
       if (SPToUpdate.getFile() == DL->getFile())
         SPToUpdate.setScopeLine(DL->getLine());
     return;
   }
 
-  BasicBlock::iterator Successor =
-      ActiveSuspend->getNextNonDebugInstruction()->getIterator();
+  BasicBlock::iterator Successor = ActiveSuspend->getNextNode()->getIterator();
   // Corosplit splits the BB around ActiveSuspend, so the meaningful
   // instructions are not in the same BB.
   if (auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
@@ -1484,12 +1483,9 @@ private:
     // If there is no DISubprogram for F, it implies the function is compiled
     // without debug info. So we also don't generate debug info for the
     // suspension points.
-    bool AddDebugLabels =
-        (DIS && DIS->getUnit() &&
-         (DIS->getUnit()->getEmissionKind() ==
-              DICompileUnit::DebugEmissionKind::FullDebug ||
-          DIS->getUnit()->getEmissionKind() ==
-              DICompileUnit::DebugEmissionKind::LineTablesOnly));
+    bool AddDebugLabels = DIS && DIS->getUnit() &&
+                          (DIS->getUnit()->getEmissionKind() ==
+                           DICompileUnit::DebugEmissionKind::FullDebug);
 
     // resume.entry:
     //  %index.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32
