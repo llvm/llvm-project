@@ -296,6 +296,7 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 #define GET_MIMGOffsetMappingTable_IMPL
 #define GET_MIMGG16MappingTable_IMPL
 #define GET_MAIInstInfoTable_IMPL
+#define GET_WMMAInstInfoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
@@ -566,6 +567,11 @@ bool getMAIIsDGEMM(unsigned Opc) {
 bool getMAIIsGFX940XDL(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
   return Info && Info->is_gfx940_xdl;
+}
+
+bool getWMMAIsXDL(unsigned Opc) {
+  const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
+  return Info ? Info->is_wmma_xdl : false;
 }
 
 uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
