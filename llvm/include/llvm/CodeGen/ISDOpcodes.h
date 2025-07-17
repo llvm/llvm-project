@@ -121,7 +121,7 @@ enum NodeType {
   /// function calling this intrinsic.
   SPONENTRY,
 
-  /// STACKADDR - Represents the llvm.stackaddr intrinsic. Takes no argument
+  /// STACKADDR - Represents the llvm.stackaddress intrinsic. Takes no argument
   /// and returns the starting address of the stack region that may be used
   /// by called functions.
   STACKADDR,
