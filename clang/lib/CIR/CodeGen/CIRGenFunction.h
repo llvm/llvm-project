@@ -936,6 +936,8 @@ public:
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);
 
+  void emitComplexExprIntoLValue(const Expr *e, LValue dest, bool isInit);
+
   mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv,
                                        bool isInc, bool isPre);
 

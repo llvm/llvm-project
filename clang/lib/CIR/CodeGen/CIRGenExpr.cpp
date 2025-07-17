@@ -1059,9 +1059,8 @@ void CIRGenFunction::emitAnyExprToMem(const Expr *e, Address location,
   // FIXME: This function should take an LValue as an argument.
   switch (getEvaluationKind(e->getType())) {
   case cir::TEK_Complex: {
-    RValue rv = RValue::get(emitComplexExpr(e));
     LValue lv = makeAddrLValue(location, e->getType());
-    emitStoreThroughLValue(rv, lv);
+    emitComplexExprIntoLValue(e, lv, isInit);
     return;
   }
 
