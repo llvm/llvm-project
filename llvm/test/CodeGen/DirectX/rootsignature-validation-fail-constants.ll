@@ -1,5 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; CHECK: error: register CB (space=666, register=2) is not defined in Root Signature
+; CHECK: error: register CBuffer (space=666, register=2) is not defined in Root Signature
 ; Root Signature(RootConstants(num32BitConstants=4, b2))
 
 %__cblayout_CB = type <{ float }>

@@ -1,6 +1,6 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
 
-; CHECK: error: register RWB (space=0, register=4294967295) is not defined in Root Signature
+; CHECK: error: register UAV (space=0, register=4294967295) is not defined in Root Signature
 
 ; Root Signature(
 ;   CBV(b3, space=666, visibility=SHADER_VISIBILITY_ALL)
