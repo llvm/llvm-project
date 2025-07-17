@@ -38,26 +38,31 @@ TEST(LlvmLibcStringConverterTest, UTF8To32) {
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x1f921);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 4);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   res = sc.popUTF32();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x2211);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 7);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   res = sc.popUTF32();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xff);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 9);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   res = sc.popUTF32();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x41);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 10);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   res = sc.popUTF32();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 11);
+  ASSERT_TRUE(sc.isConversionComplete());
 
   res = sc.popUTF32();
   ASSERT_FALSE(res.has_value());
@@ -79,60 +84,71 @@ TEST(LlvmLibcStringConverterTest, UTF32To8) {
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xF0);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x9F);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xA4);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xA1);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   // end of clown emoji, sigma symbol begins
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xE2);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 2);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x88);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 2);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x91);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 2);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   // end of sigma symbol, y with diaeresis begins
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xC3);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 3);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xBF);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 3);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   // end of y with diaeresis, letter A begins
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x41);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 4);
+  ASSERT_FALSE(sc.isConversionComplete());
 
   // null byte
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 5);
+  ASSERT_TRUE(sc.isConversionComplete());
 
   res = sc.popUTF8();
   ASSERT_FALSE(res.has_value());

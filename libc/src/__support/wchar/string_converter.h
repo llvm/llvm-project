@@ -26,6 +26,7 @@ private:
   const T *src;
   size_t src_len;
   size_t src_idx;
+  bool completed = false;
 
   // # of pops we are allowed to perform (essentially size of the dest buffer)
   size_t num_to_write;
@@ -70,8 +71,10 @@ public:
     }
 
     auto out = cr.pop_utf32();
-    if (out.has_value() && out.value() == L'\0')
+    if (out.has_value() && out.value() == L'\0') {
+      completed = true;
       src_len = src_idx;
+    }
 
     num_to_write--;
 
@@ -93,8 +96,10 @@ public:
     }
 
     auto out = cr.pop_utf8();
-    if (out.has_value() && out.value() == '\0')
+    if (out.has_value() && out.value() == '\0') {
+      completed = true;
       src_len = src_idx;
+    }
 
     num_to_write--;
 
@@ -102,6 +107,8 @@ public:
   }
 
   size_t getSourceIndex() { return src_idx; }
+
+  bool isConversionComplete() { return completed; }
 };
 
 } // namespace internal
