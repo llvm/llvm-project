@@ -428,10 +428,6 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
   if (I->isEHPad())
     return false;
 
-  // We don't want debug info removed by anything this general.
-  if (isa<DbgVariableIntrinsic>(I))
-    return false;
-
   if (const DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(I)) {
     if (DLI->getLabel())
       return false;
@@ -1632,33 +1628,6 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
 /// describes an alloca'd variable, so we need to use the alloc size of the
 /// value when doing the comparison. E.g. an i1 value will be identified as
 /// covering an n-bit fragment, if the store size of i1 is at least n bits.
-static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
-  const DataLayout &DL = DII->getDataLayout();
-  TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
-  if (std::optional<uint64_t> FragmentSize =
-          DII->getExpression()->getActiveBits(DII->getVariable()))
-    return TypeSize::isKnownGE(ValueSize, TypeSize::getFixed(*FragmentSize));
-
-  // We can't always calculate the size of the DI variable (e.g. if it is a
-  // VLA). Try to use the size of the alloca that the dbg intrinsic describes
-  // instead.
-  if (DII->isAddressOfVariable()) {
-    // DII should have exactly 1 location when it is an address.
-    assert(DII->getNumVariableLocationOps() == 1 &&
-           "address of variable must have exactly 1 location operand.");
-    if (auto *AI =
-            dyn_cast_or_null<AllocaInst>(DII->getVariableLocationOp(0))) {
-      if (std::optional<TypeSize> FragmentSize =
-              AI->getAllocationSizeInBits(DL)) {
-        return TypeSize::isKnownGE(ValueSize, *FragmentSize);
-      }
-    }
-  }
-  // Could not determine size of variable. Conservatively return false.
-  return false;
-}
-// RemoveDIs: duplicate implementation of the above, using DbgVariableRecords,
-// the replacement for dbg.values.
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableRecord *DVR) {
   const DataLayout &DL = DVR->getModule()->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
@@ -1704,6 +1673,7 @@ static void insertDbgValueOrDbgVariableRecordAfter(
   insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc, NextIt);
 }
 
+<<<<<<< HEAD
 // \p In is an expression that takes a pointer argument. Attempt to create an
 // equivalent expression that takes a value by replacing the type field to the
 // DIOpArg and adding a DIOpAddrOf after it.
@@ -1793,14 +1763,21 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                     SI->getIterator());
 }
 
+<<<<<<< HEAD
 =======
 >>>>>>> 7eb65f470c5e
+||||||| 8d2375411e71 (Revert "[DebugInfo] Strip more debug-intrinsic code from local utils (#149037)")
+=======
+=======
+>>>>>>> 5328c732a477
+>>>>>>> parent of 8d2375411e71 (Revert "[DebugInfo] Strip more debug-intrinsic code from local utils (#149037)")
 static DIExpression *dropInitialDeref(const DIExpression *DIExpr) {
   int NumEltDropped = DIExpr->getElements()[0] == dwarf::DW_OP_LLVM_arg ? 3 : 1;
   return DIExpression::get(DIExpr->getContext(),
                            DIExpr->getElements().drop_front(NumEltDropped));
 }
 
+<<<<<<< HEAD
 void llvm::InsertDebugValueAtStoreLoc(DbgVariableIntrinsic *DII, StoreInst *SI,
                                       DIBuilder &Builder) {
   auto *DIVar = DII->getVariable();
@@ -1847,6 +1824,8 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                          LI);
 }
 
+=======
+>>>>>>> 5328c732a477
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
                                            StoreInst *SI, DIBuilder &Builder) {
   assert(DVR->isAddressOfVariable() || DVR->isDbgAssign());
@@ -1916,6 +1895,7 @@ void llvm::InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
                                     SI->getIterator());
 }
 
+<<<<<<< HEAD
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
 /// llvm.dbg.declare intrinsic.
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
@@ -1955,6 +1935,8 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   }
 }
 
+=======
+>>>>>>> 5328c732a477
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
                                            DIBuilder &Builder) {
   auto *DIVar = DVR->getVariable();
@@ -2057,7 +2039,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
   if (Dbgs.empty() && DVRs.empty())
     return Changed;
 
-  auto LowerOne = [&](auto *DDI) {
+  auto LowerOne = [&](DbgVariableRecord *DDI) {
     AllocaInst *AI =
         dyn_cast_or_null<AllocaInst>(DDI->getVariableLocationOp(0));
     // If this is an alloca for a scalar variable, insert a dbg.value
@@ -2126,7 +2108,6 @@ bool llvm::LowerDbgDeclare(Function &F) {
     Changed = true;
   };
 
-  for_each(Dbgs, LowerOne);
   for_each(DVRs, LowerOne);
 
   if (Changed)
@@ -2136,12 +2117,9 @@ bool llvm::LowerDbgDeclare(Function &F) {
   return Changed;
 }
 
-// RemoveDIs: re-implementation of insertDebugValuesForPHIs, but which pulls the
-// debug-info out of the block's DbgVariableRecords rather than dbg.value
-// intrinsics.
-static void
-insertDbgVariableRecordsForPHIs(BasicBlock *BB,
-                                SmallVectorImpl<PHINode *> &InsertedPHIs) {
+/// Propagate dbg.value records through the newly inserted PHIs.
+void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
+                                    SmallVectorImpl<PHINode *> &InsertedPHIs) {
   assert(BB && "No BasicBlock to clone DbgVariableRecord(s) from.");
   if (InsertedPHIs.size() == 0)
     return;
@@ -2203,76 +2181,12 @@ insertDbgVariableRecordsForPHIs(BasicBlock *BB,
   }
 }
 
-/// Propagate dbg.value intrinsics through the newly inserted PHIs.
-void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
-                                    SmallVectorImpl<PHINode *> &InsertedPHIs) {
-  assert(BB && "No BasicBlock to clone dbg.value(s) from.");
-  if (InsertedPHIs.size() == 0)
-    return;
-
-  insertDbgVariableRecordsForPHIs(BB, InsertedPHIs);
-
-  // Map existing PHI nodes to their dbg.values.
-  ValueToValueMapTy DbgValueMap;
-  for (auto &I : *BB) {
-    if (auto DbgII = dyn_cast<DbgVariableIntrinsic>(&I)) {
-      for (Value *V : DbgII->location_ops())
-        if (auto *Loc = dyn_cast_or_null<PHINode>(V))
-          DbgValueMap.insert({Loc, DbgII});
-    }
-  }
-  if (DbgValueMap.size() == 0)
-    return;
-
-  // Map a pair of the destination BB and old dbg.value to the new dbg.value,
-  // so that if a dbg.value is being rewritten to use more than one of the
-  // inserted PHIs in the same destination BB, we can update the same dbg.value
-  // with all the new PHIs instead of creating one copy for each.
-  MapVector<std::pair<BasicBlock *, DbgVariableIntrinsic *>,
-            DbgVariableIntrinsic *>
-      NewDbgValueMap;
-  // Then iterate through the new PHIs and look to see if they use one of the
-  // previously mapped PHIs. If so, create a new dbg.value intrinsic that will
-  // propagate the info through the new PHI. If we use more than one new PHI in
-  // a single destination BB with the same old dbg.value, merge the updates so
-  // that we get a single new dbg.value with all the new PHIs.
-  for (auto *PHI : InsertedPHIs) {
-    BasicBlock *Parent = PHI->getParent();
-    // Avoid inserting an intrinsic into an EH block.
-    if (Parent->getFirstNonPHIIt()->isEHPad())
-      continue;
-    for (auto *VI : PHI->operand_values()) {
-      auto V = DbgValueMap.find(VI);
-      if (V != DbgValueMap.end()) {
-        auto *DbgII = cast<DbgVariableIntrinsic>(V->second);
-        auto [NewDI, Inserted] = NewDbgValueMap.try_emplace({Parent, DbgII});
-        if (Inserted)
-          NewDI->second = cast<DbgVariableIntrinsic>(DbgII->clone());
-        DbgVariableIntrinsic *NewDbgII = NewDI->second;
-        // If PHI contains VI as an operand more than once, we may
-        // replaced it in NewDbgII; confirm that it is present.
-        if (is_contained(NewDbgII->location_ops(), VI))
-          NewDbgII->replaceVariableLocationOp(VI, PHI);
-      }
-    }
-  }
-  // Insert thew new dbg.values into their destination blocks.
-  for (auto DI : NewDbgValueMap) {
-    BasicBlock *Parent = DI.first.first;
-    auto *NewDbgII = DI.second;
-    auto InsertionPt = Parent->getFirstInsertionPt();
-    assert(InsertionPt != Parent->end() && "Ill-formed basic block");
-    NewDbgII->insertBefore(InsertionPt);
-  }
-}
-
 bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
                              DIBuilder &Builder, uint8_t DIExprFlags,
                              int Offset) {
-  TinyPtrVector<DbgDeclareInst *> DbgDeclares = findDbgDeclares(Address);
   TinyPtrVector<DbgVariableRecord *> DVRDeclares = findDVRDeclares(Address);
 
-  auto ReplaceOne = [&](auto *DII) {
+  auto ReplaceOne = [&](DbgVariableRecord *DII) {
     assert(DII->getVariable() && "Missing variable");
     auto *DIExpr = DII->getExpression();
     DIExpr = DIExpression::prepend(DIExpr, DIExprFlags, Offset);
@@ -2280,10 +2194,9 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
     DII->replaceVariableLocationOp(Address, NewAddress);
   };
 
-  for_each(DbgDeclares, ReplaceOne);
   for_each(DVRDeclares, ReplaceOne);
 
-  return !DbgDeclares.empty() || !DVRDeclares.empty();
+  return !DVRDeclares.empty();
 }
 
 static void updateOneDbgValueForAlloca(const DebugLoc &Loc,
@@ -2930,9 +2843,13 @@ using DbgValReplacement = std::optional<DIExpression *>;
 /// possibly moving/undefing users to prevent use-before-def. Returns true if
 /// changes are made.
 static bool rewriteDebugUsers(
+<<<<<<< HEAD
     Instruction &From, Value &To, Instruction &DomPoint,
     const DominatorTree &DT,
     function_ref<DbgValReplacement(DbgVariableIntrinsic &DII)> RewriteExpr,
+=======
+    Instruction &From, Value &To, Instruction &DomPoint, DominatorTree &DT,
+>>>>>>> 5328c732a477
     function_ref<DbgValReplacement(DbgVariableRecord &DVR)> RewriteDVRExpr) {
   // Find debug users of From.
   SmallVector<DbgVariableIntrinsic *, 1> Users;
@@ -2941,43 +2858,32 @@ static bool rewriteDebugUsers(
   if (Users.empty() && DPUsers.empty())
     return false;
 
+  // Ignore intrinsic-users: they are no longer supported and should never
+  // appear.
+  assert(Users.empty());
+
   // Prevent use-before-def of To.
   bool Changed = false;
 
-  SmallPtrSet<DbgVariableIntrinsic *, 1> UndefOrSalvage;
   SmallPtrSet<DbgVariableRecord *, 1> UndefOrSalvageDVR;
   if (isa<Instruction>(&To)) {
     bool DomPointAfterFrom = From.getNextNode() == &DomPoint;
-
-    for (auto *DII : Users) {
-      // It's common to see a debug user between From and DomPoint. Move it
-      // after DomPoint to preserve the variable update without any reordering.
-      if (DomPointAfterFrom && DII->getNextNode() == &DomPoint) {
-        LLVM_DEBUG(dbgs() << "MOVE:  " << *DII << '\n');
-        DII->moveAfter(&DomPoint);
-        Changed = true;
-
-      // Users which otherwise aren't dominated by the replacement value must
-      // be salvaged or deleted.
-      } else if (!DT.dominates(&DomPoint, DII)) {
-        UndefOrSalvage.insert(DII);
-      }
-    }
 
     // DbgVariableRecord implementation of the above.
     for (auto *DVR : DPUsers) {
       Instruction *MarkedInstr = DVR->getMarker()->MarkedInstr;
       Instruction *NextNonDebug = MarkedInstr;
-      // The next instruction might still be a dbg.declare, skip over it.
-      if (isa<DbgVariableIntrinsic>(NextNonDebug))
-        NextNonDebug = NextNonDebug->getNextNode();
 
+      // It's common to see a debug user between From and DomPoint. Move it
+      // after DomPoint to preserve the variable update without any reordering.
       if (DomPointAfterFrom && NextNonDebug == &DomPoint) {
         LLVM_DEBUG(dbgs() << "MOVE:  " << *DVR << '\n');
         DVR->removeFromParent();
-        // Ensure there's a marker.
         DomPoint.getParent()->insertDbgRecordAfter(DVR, &DomPoint);
         Changed = true;
+
+      // Users which otherwise aren't dominated by the replacement value must
+      // be salvaged or deleted.
       } else if (!DT.dominates(&DomPoint, MarkedInstr)) {
         UndefOrSalvageDVR.insert(DVR);
       }
@@ -2985,19 +2891,6 @@ static bool rewriteDebugUsers(
   }
 
   // Update debug users without use-before-def risk.
-  for (auto *DII : Users) {
-    if (UndefOrSalvage.count(DII))
-      continue;
-
-    DbgValReplacement DVRepl = RewriteExpr(*DII);
-    if (!DVRepl)
-      continue;
-
-    DII->replaceVariableLocationOp(&From, &To);
-    DII->setExpression(*DVRepl);
-    LLVM_DEBUG(dbgs() << "REWRITE:  " << *DII << '\n');
-    Changed = true;
-  }
   for (auto *DVR : DPUsers) {
     if (UndefOrSalvageDVR.count(DVR))
       continue;
@@ -3012,7 +2905,7 @@ static bool rewriteDebugUsers(
     Changed = true;
   }
 
-  if (!UndefOrSalvage.empty() || !UndefOrSalvageDVR.empty()) {
+  if (!UndefOrSalvageDVR.empty()) {
     // Try to salvage the remaining debug users.
     salvageDebugInfo(From);
     Changed = true;
@@ -3150,11 +3043,14 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
   Type *FromTy = From.getType();
   Type *ToTy = To.getType();
 
+<<<<<<< HEAD
   auto Identity = [&](DbgVariableIntrinsic &DII) -> DbgValReplacement {
     if (DII.getExpression()->holdsNewElements())
       return updateNewDIExpressionArgType(DII, &From, ToTy);
     return DII.getExpression();
   };
+=======
+>>>>>>> 5328c732a477
   auto IdentityDVR = [&](DbgVariableRecord &DVR) -> DbgValReplacement {
     if (DVR.getExpression()->holdsNewElements())
       return updateNewDIExpressionArgType(DVR, &From, ToTy);
@@ -3165,7 +3061,7 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
   Module &M = *From.getModule();
   const DataLayout &DL = M.getDataLayout();
   if (isBitCastSemanticsPreserving(DL, FromTy, ToTy))
-    return rewriteDebugUsers(From, To, DomPoint, DT, Identity, IdentityDVR);
+    return rewriteDebugUsers(From, To, DomPoint, DT, IdentityDVR);
 
   // Handle integer-to-integer widening and narrowing.
   // FIXME: Use DW_OP_convert when it's available everywhere.
@@ -3177,10 +3073,11 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
     // When the width of the result grows, assume that a debugger will only
     // access the low `FromBits` bits when inspecting the source variable.
     if (FromBits < ToBits)
-      return rewriteDebugUsers(From, To, DomPoint, DT, Identity, IdentityDVR);
+      return rewriteDebugUsers(From, To, DomPoint, DT, IdentityDVR);
 
     // The width of the result has shrunk. Use sign/zero extension to describe
     // the source variable's high bits.
+<<<<<<< HEAD
     auto SignOrZeroExt = [&](DbgVariableIntrinsic &DII) -> DbgValReplacement {
       if (DII.getExpression()->holdsNewElements())
         return updateNewDIExpressionArgType(DII, &From, ToTy);
@@ -3198,6 +3095,8 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
     };
     // RemoveDIs: duplicate implementation working on DbgVariableRecords rather
     // than on dbg.value intrinsics.
+=======
+>>>>>>> 5328c732a477
     auto SignOrZeroExtDVR = [&](DbgVariableRecord &DVR) -> DbgValReplacement {
       if (DVR.getExpression()->holdsNewElements())
         return updateNewDIExpressionArgType(DVR, &From, ToTy);
@@ -3213,8 +3112,7 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
       return DIExpression::appendExt(DVR.getExpression(), ToBits, FromBits,
                                      Signed);
     };
-    return rewriteDebugUsers(From, To, DomPoint, DT, SignOrZeroExt,
-                             SignOrZeroExtDVR);
+    return rewriteDebugUsers(From, To, DomPoint, DT, SignOrZeroExtDVR);
   }
 
   if (FromTy->isPointerTy() && ToTy->isPointerTy()) {
@@ -4207,10 +4105,6 @@ void llvm::remapDebugVariable(ValueToValueMapTy &Mapping, Instruction *Inst) {
     if (I != Mapping.end())
       DA->setAddress(I->second);
   };
-  if (auto DVI = dyn_cast<DbgVariableIntrinsic>(Inst))
-    RemapDebugOperands(DVI, DVI->location_ops());
-  if (auto DAI = dyn_cast<DbgAssignIntrinsic>(Inst))
-    RemapAssignAddress(DAI);
   for (DbgVariableRecord &DVR : filterDbgVars(Inst->getDbgRecordRange())) {
     RemapDebugOperands(&DVR, DVR.location_ops());
     if (DVR.isDbgAssign())
