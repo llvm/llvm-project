@@ -708,6 +708,7 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
                          bool setDeclareAttr = false) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
+  const bool unwrapBoxAddr = true;
   for (const auto &accObject : objectList.v) {
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
@@ -735,8 +736,25 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
     Op op = createDataEntryOp<Op>(
         builder, operandLocation, baseAddr, asFortran, bounds, structured,
         implicit, dataClause, baseAddr.getType(), async, asyncDeviceTypes,
-        asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true, info.isPresent);
+        asyncOnlyDeviceTypes, unwrapBoxAddr, info.isPresent);
     dataOperands.push_back(op.getAccVar());
+
+    // For UseDeviceOp, if operand is one of a pair resulting from a
+    // declare operation, create a UseDeviceOp for the other operand as well.
+    if constexpr (std::is_same_v<Op, mlir::acc::UseDeviceOp>) {
+      if (auto declareOp =
+              mlir::dyn_cast<hlfir::DeclareOp>(baseAddr.getDefiningOp())) {
+        mlir::Value otherAddr = declareOp.getResult(1);
+        if (baseAddr != otherAddr) {
+          Op op = createDataEntryOp<Op>(builder, operandLocation, otherAddr,
+                                        asFortran, bounds, structured, implicit,
+                                        dataClause, otherAddr.getType(), async,
+                                        asyncDeviceTypes, asyncOnlyDeviceTypes,
+                                        unwrapBoxAddr, info.isPresent);
+          dataOperands.push_back(op.getAccVar());
+        }
+      }
+    }
   }
 }
 
