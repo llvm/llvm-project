@@ -971,8 +971,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   bool useAutoZeroCopy();
   virtual bool useAutoZeroCopyImpl() { return false; }
 
-  virtual Expected<omp_interop_val_t *> createInterop(int32_t InteropType,
-                                           interop_spec_t &InteropSpec) {
+  virtual Expected<omp_interop_val_t *>
+  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {
     return nullptr;
   }
 
@@ -1447,7 +1447,7 @@ public:
     assert(Interop && "Interop is null");
     auto Err = flushQueueImpl(Interop);
     if (Err) {
-      REPORT("Failure to flush interop object " DPxMOD " queue: %s\n", 
+      REPORT("Failure to flush interop object " DPxMOD " queue: %s\n",
              DPxPTR(Interop), toString(std::move(Err)).c_str());
       return OFFLOAD_FAIL;
     }
@@ -1459,7 +1459,7 @@ public:
     assert(Interop && "Interop is null");
     auto Err = syncBarrierImpl(Interop);
     if (Err) {
-      REPORT("Failure to synchronize interop object " DPxMOD ": %s\n", 
+      REPORT("Failure to synchronize interop object " DPxMOD ": %s\n",
              DPxPTR(Interop), toString(std::move(Err)).c_str());
       return OFFLOAD_FAIL;
     }
@@ -1472,7 +1472,7 @@ public:
     assert(Interop && "Interop is null");
     auto Err = asyncBarrierImpl(Interop);
     if (Err) {
-      REPORT("Failure to queue barrier in interop object " DPxMOD ": %s\n", 
+      REPORT("Failure to queue barrier in interop object " DPxMOD ": %s\n",
              DPxPTR(Interop), toString(std::move(Err)).c_str());
       return OFFLOAD_FAIL;
     }

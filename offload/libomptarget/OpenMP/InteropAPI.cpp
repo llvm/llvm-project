@@ -300,8 +300,8 @@ int __tgt_interop_use(ident_t *LocRef, omp_interop_val_t *Interop,
 
   auto DeviceOrErr = Interop->getDevice();
   if (!DeviceOrErr) {
-    REPORT("Failed to get device for interop " DPxMOD ": %s\n",
-           DPxPTR(Interop), toString(DeviceOrErr.takeError()).c_str());
+    REPORT("Failed to get device for interop " DPxMOD ": %s\n", DPxPTR(Interop),
+           toString(DeviceOrErr.takeError()).c_str());
     return OFFLOAD_FAIL;
   }
   auto &IOPDevice = *DeviceOrErr;
@@ -338,8 +338,8 @@ int __tgt_interop_release(ident_t *LocRef, omp_interop_val_t *Interop,
 
   auto DeviceOrErr = Interop->getDevice();
   if (!DeviceOrErr) {
-    REPORT("Failed to get device for interop " DPxMOD ": %s\n",
-           DPxPTR(Interop), toString(DeviceOrErr.takeError()).c_str());
+    REPORT("Failed to get device for interop " DPxMOD ": %s\n", DPxPTR(Interop),
+           toString(DeviceOrErr.takeError()).c_str());
     return OFFLOAD_FAIL;
   }
 
@@ -364,7 +364,7 @@ EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
 } // extern "C"
 
 llvm::Expected<DeviceTy &> omp_interop_val_t::getDevice() const {
-    return PM->getDevice(device_id);
+  return PM->getDevice(device_id);
 }
 
 bool omp_interop_val_t::isCompatibleWith(int32_t InteropType,
@@ -432,8 +432,8 @@ void syncImplicitInterops(int Gtid, void *Event) {
 
       auto DeviceOrErr = iop->getDevice();
       if (!DeviceOrErr) {
-        REPORT("Failed to get device for interop " DPxMOD ": %s\n",
-               DPxPTR(iop), toString(DeviceOrErr.takeError()).c_str());
+        REPORT("Failed to get device for interop " DPxMOD ": %s\n", DPxPTR(iop),
+               toString(DeviceOrErr.takeError()).c_str());
         continue;
       }
       auto &IOPDevice = *DeviceOrErr;
@@ -462,8 +462,8 @@ void InteropTblTy::clear() {
   PerThreadTable::clear([](auto &IOP) {
     auto DeviceOrErr = IOP->getDevice();
     if (!DeviceOrErr) {
-      REPORT("Failed to get device for interop " DPxMOD ": %s\n",
-             DPxPTR(IOP), toString(DeviceOrErr.takeError()).c_str());
+      REPORT("Failed to get device for interop " DPxMOD ": %s\n", DPxPTR(IOP),
+             toString(DeviceOrErr.takeError()).c_str());
       return;
     }
     IOP->release(*DeviceOrErr);
