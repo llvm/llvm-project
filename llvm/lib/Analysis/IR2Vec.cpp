@@ -304,10 +304,11 @@ Vocabulary::VocabVector Vocabulary::createDummyVocabForTest(unsigned Dim) {
   float DummyVal = 0.1f;
   // Create a dummy vocabulary with entries for all opcodes, types, and
   // operand
-  for (unsigned _ : seq(0u, Vocabulary::MaxOpcodes + Vocabulary::MaxTypeIDs +
-                                Vocabulary::MaxOperandKinds)) {
+  for ([[maybe_unused]] unsigned _ :
+       seq(0u, Vocabulary::MaxOpcodes + Vocabulary::MaxTypeIDs +
+                   Vocabulary::MaxOperandKinds)) {
     DummyVocab.push_back(Embedding(Dim, DummyVal));
-    DummyVal += 0.1;
+    DummyVal += 0.1f;
   }
   return DummyVocab;
 }
