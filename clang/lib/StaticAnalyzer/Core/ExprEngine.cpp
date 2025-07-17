@@ -4128,8 +4128,7 @@ void ExprEngine::anchor() { }
 void ExprEngine::ConstructInitList(const Expr *E, ArrayRef<Expr *> Args,
                                    bool IsTransparent, ExplodedNode *Pred,
                                    ExplodedNodeSet &Dst) {
-  assert((isa<InitListExpr>(E) || isa<CXXParenListInitExpr>(E)) &&
-         "Expected InitListExpr or CXXParenListInitExpr");
+  assert((isa<InitListExpr, CXXParenListInitExpr>(E)));
 
   const LocationContext *LC = Pred->getLocationContext();
 
@@ -4137,11 +4136,10 @@ void ExprEngine::ConstructInitList(const Expr *E, ArrayRef<Expr *> Args,
   ProgramStateRef S = Pred->getState();
   QualType T = E->getType().getCanonicalType();
 
-  bool IsCompound =
-      E->isPRValue() && (T->isArrayType() || T->isRecordType() ||
-                         T->isAnyComplexType() || T->isVectorType());
+  bool IsCompound = T->isArrayType() || T->isRecordType() ||
+                    T->isAnyComplexType() || T->isVectorType();
 
-  if (Args.size() > 1 || (IsCompound && !IsTransparent)) {
+  if (Args.size() > 1 || (E->isPRValue() && IsCompound && !IsTransparent)) {
     llvm::ImmutableList<SVal> ArgList = getBasicVals().getEmptySValList();
     for (Expr *E : llvm::reverse(Args))
       ArgList = getBasicVals().prependSVal(S->getSVal(E, LC), ArgList);
