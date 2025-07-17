@@ -8,7 +8,7 @@ module A {
 
   module B {
     header "B.h"
-    link "libraryA"
+    link "libraryB"
   }
 
   link "libraryA"
@@ -41,9 +41,7 @@ module C {
 // RUN: not clang-scan-deps -compilation-database %t/cdb.json -format \
 // RUN:   experimental-full 2>&1 | FileCheck %s
 
-// Note that the link declaration in submodule B does not conflict with the
-// first link declaration in module A, since we only check link declaration
-// duplications within the current module.
-// CHECK:      module.modulemap:10:3: error: redeclaration of link library 'libraryA'
+// CHECK:      module.modulemap:6:5: error: link decl is not allowed in submodules
+// CHECK-NEXT: module.modulemap:10:3: error: redeclaration of link library 'libraryA'
 // CHECK-NEXT: module.modulemap:9:3: note: previously declared here
-// CHECK-NOT:  module.modulemap:15:3: error: redeclaration of link library 'libraryA'
+// CHECK-NOT: module.modulemap:15:3: error: redeclaration of link library 'libraryA'

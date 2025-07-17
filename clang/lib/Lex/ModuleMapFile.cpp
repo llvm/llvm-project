@@ -853,6 +853,12 @@ std::optional<LinkDecl> ModuleMapFileParser::parseLinkDecl(
 
   // Make sure we eat all the tokens when we report the errors so parsing
   // can continue.
+  if (!TopLevel) {
+    Diags.Report(LD.Location, diag::err_mmap_submodule_link_decl);
+    HadError = true;
+    return std::nullopt;
+  }
+
   auto [It, Inserted] =
       SeenLinkDecl.insert(std::make_pair(Library, LD.Location));
   if (!Inserted) {
