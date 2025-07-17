@@ -3064,8 +3064,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
         !isa<ConstantSDNode>(AddrB.getOperand(1)) &&
         isInt<12>(C1->getSExtValue())) {
       // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
-      SDValue C1Val =
-          CurDAG->getTargetConstant(C1->getZExtValue(), SDLoc(Addr), VT);
+      SDValue C1Val = CurDAG->getTargetConstant(*C1->getConstantIntValue(),
+                                                SDLoc(Addr), VT);
       Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
                                             AddrB.getOperand(1), C1Val),
                      0);
