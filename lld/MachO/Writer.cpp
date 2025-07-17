@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSection.h"
+#include "LinkerOptimizationHints.h"
 #include "MapFile.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -1216,7 +1217,7 @@ void Writer::applyOptimizationHints() {
   TimeTraceScope timeScope("Apply linker optimization hints");
   parallelForEach(inputFiles, [buf](const InputFile *file) {
     if (const auto *objFile = dyn_cast<ObjFile>(file))
-      target->applyOptimizationHints(buf, *objFile);
+      macho::applyOptimizationHints(buf, *objFile);
   });
 }
 
