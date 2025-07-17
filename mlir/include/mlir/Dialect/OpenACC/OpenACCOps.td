@@ -2772,8 +2772,10 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name, SymbolRefAttr:$func_name,
-      OptionalAttr<StrArrayAttr>:$bindName,
-      OptionalAttr<DeviceTypeArrayAttr>:$bindNameDeviceType,
+      OptionalAttr<SymbolRefArrayAttr>:$bindIdName,
+      OptionalAttr<StrArrayAttr>:$bindStrName,
+      OptionalAttr<DeviceTypeArrayAttr>:$bindIdNameDeviceType,
+      OptionalAttr<DeviceTypeArrayAttr>:$bindStrNameDeviceType,
       OptionalAttr<DeviceTypeArrayAttr>:$worker,
       OptionalAttr<DeviceTypeArrayAttr>:$vector,
       OptionalAttr<DeviceTypeArrayAttr>:$seq, UnitAttr:$nohost,
@@ -2815,14 +2817,14 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     std::optional<int64_t> getGangDimValue();
     std::optional<int64_t> getGangDimValue(mlir::acc::DeviceType deviceType);
 
-    std::optional<llvm::StringRef> getBindNameValue();
-    std::optional<llvm::StringRef> getBindNameValue(mlir::acc::DeviceType deviceType);
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     $sym_name `func` `(` $func_name `)`
     oilist (
-        `bind` `(` custom<BindName>($bindName, $bindNameDeviceType) `)`
+        `bind` `(` custom<BindName>($bindIdName, $bindStrName ,$bindIdNameDeviceType, $bindStrNameDeviceType) `)`
       | `gang` `` custom<RoutineGangClause>($gang, $gangDim, $gangDimDeviceType)
       | `worker` custom<DeviceTypeArrayAttr>($worker)
       | `vector` custom<DeviceTypeArrayAttr>($vector)
