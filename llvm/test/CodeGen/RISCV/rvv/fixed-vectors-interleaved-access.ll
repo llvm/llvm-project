@@ -1718,6 +1718,28 @@ define void @load_factor4_one_active_storeback_full(ptr %ptr) {
   ret void
 }
 
+define <4 x i32> @vp_load_factor3_one_active(ptr %ptr) {
+; CHECK-LABEL: vp_load_factor3_one_active:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg3e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = tail call <12 x i32> @llvm.vp.load.v12i32.p0(ptr %ptr, <12 x i1>  splat (i1 true), i32 12)
+  %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  ret <4 x i32> %v0
+}
+
+define <4 x i32> @vp_load_factor5_one_active(ptr %ptr) {
+; CHECK-LABEL: vp_load_factor5_one_active:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg5e32.v v8, (a0)
+; CHECK-NEXT:    ret
+ %interleaved.vec = tail call <20 x i32> @llvm.vp.load.v20i32.p0(ptr %ptr, <20 x i1>  splat (i1 true), i32 20)
+  %v0 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
+  ret <4 x i32> %v0
+}
+
 define void @store_factor4_one_active(ptr %ptr, <4 x i32> %v) {
 ; CHECK-LABEL: store_factor4_one_active:
 ; CHECK:       # %bb.0:
@@ -1804,8 +1826,8 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_mask(ptr %ptr) {
 ; RV32-NEXT:    vle32.v v12, (a0), v0.t
 ; RV32-NEXT:    li a0, 36
 ; RV32-NEXT:    vmv.s.x v20, a1
-; RV32-NEXT:    lui a1, %hi(.LCPI51_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI51_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI53_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI53_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle16.v v21, (a1)
 ; RV32-NEXT:    vcompress.vm v8, v12, v11
@@ -1880,8 +1902,8 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_evl(ptr %ptr) {
 ; RV32-NEXT:    vmv.s.x v10, a0
 ; RV32-NEXT:    li a0, 146
 ; RV32-NEXT:    vmv.s.x v11, a0
-; RV32-NEXT:    lui a0, %hi(.LCPI52_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI52_0)
+; RV32-NEXT:    lui a0, %hi(.LCPI54_0)
+; RV32-NEXT:    addi a0, a0, %lo(.LCPI54_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle16.v v20, (a0)
 ; RV32-NEXT:    li a0, 36
