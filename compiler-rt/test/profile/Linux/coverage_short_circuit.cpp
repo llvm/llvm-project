@@ -8,7 +8,7 @@ void foo() {          // CHECK:       [[@LINE]]| 1|void foo() {
   bool cond2 = true;  // CHECK-NEXT:  [[@LINE]]| 1|  bool cond2 = true;
   if (cond1 &&        // CHECK-NEXT:  [[@LINE]]| 1|  if (cond1 &&
       cond2) {        // CHECK-NEXT:  [[@LINE]]| 0|      cond2) {
-  }                   // CHECK-NEXT:  [[@LINE]]| 0|  }
+  } // CHECK-NEXT:  [[@LINE]]| 0|  }
 } // CHECK-NEXT:  [[@LINE]]| 1|}
 
 void bar() {          // CHECK:       [[@LINE]]| 1|void bar() {
@@ -16,7 +16,7 @@ void bar() {          // CHECK:       [[@LINE]]| 1|void bar() {
   bool cond2 = false; // CHECK-NEXT:  [[@LINE]]| 1|  bool cond2 = false;
   if (cond1 &&        // CHECK-NEXT:  [[@LINE]]| 1|  if (cond1 &&
       cond2) {        // CHECK-NEXT:  [[@LINE]]| 1|      cond2) {
-  }                   // CHECK-NEXT:  [[@LINE]]| 0|  }
+  } // CHECK-NEXT:  [[@LINE]]| 0|  }
 } // CHECK-NEXT:  [[@LINE]]| 1|}
 
 void baz() {          // CHECK:       [[@LINE]]| 1|void baz() {
@@ -25,7 +25,7 @@ void baz() {          // CHECK:       [[@LINE]]| 1|void baz() {
   if (cond1           // CHECK-NEXT:  [[@LINE]]| 1|  if (cond1
       &&              // CHECK-NEXT:  [[@LINE]]| 0|      &&
       cond2) {        // CHECK-NEXT:  [[@LINE]]| 0|      cond2) {
-  }                   // CHECK-NEXT:  [[@LINE]]| 0|  }
+  } // CHECK-NEXT:  [[@LINE]]| 0|  }
 } // CHECK-NEXT:  [[@LINE]]| 1|}
 
 int main() {
