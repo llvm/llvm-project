@@ -22,7 +22,7 @@ include "mlir/IR/Utils.td"
 include "mlir/IR/AttrTypeBase.td"
 
 //===----------------------------------------------------------------------===//
-// OpTrait definitions
+// *OpTrait definitions
 //===----------------------------------------------------------------------===//
 
 // A trait that describes the structure of operation will be marked with
