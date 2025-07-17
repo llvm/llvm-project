@@ -602,12 +602,12 @@ if config.host_os == "Darwin":
 
     def get_macos_aligned_version(macos_vers):
         platform = config.apple_platform
-        if platform == "osx":
+        macos_major, macos_minor = macos_vers
+
+        if platform == "osx" or macos_major >= 26:
             return macos_vers
 
-        macos_major, macos_minor = macos_vers
         assert macos_major >= 10
-
         if macos_major == 10:  # macOS 10.x
             major = macos_minor
             minor = 0
