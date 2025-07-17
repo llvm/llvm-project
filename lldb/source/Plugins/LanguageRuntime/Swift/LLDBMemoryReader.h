@@ -98,6 +98,11 @@ public:
   /// Returns whether the filecache optimization is enabled or not.
   bool readMetadataFromFileCacheEnabled() const;
 
+protected:
+  bool readRemoteAddressImpl(swift::remote::RemoteAddress address,
+                             swift::remote::RemoteAddress &out,
+                             std::size_t integerSize) override;
+
 private:
   friend MemoryReaderLocalBufferHolder;
 
@@ -118,6 +123,12 @@ private:
   /// to an Address.
   std::optional<Address>
   remoteAddressToLLDBAddress(swift::remote::RemoteAddress address) const;
+
+  /// Implementation detail of readBytes. Returns a pair where the first element
+  /// indicates whether the memory was read successfully, the second element
+  /// indicates whether live memory was read.
+  std::pair<bool, bool> readBytesImpl(swift::remote::RemoteAddress address,
+                                      uint8_t *dest, uint64_t size);
 
   /// Reads memory from the symbol rich binary from the address into dest.
   /// \return true if it was able to successfully read memory.
