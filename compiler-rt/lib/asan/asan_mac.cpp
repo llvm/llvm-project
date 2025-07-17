@@ -104,6 +104,7 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
 //   dispatch_group_async_f()
 //   dispatch_group_async()
 //   dispatch_apply()
+//   dispatch_apply_f()
 // TODO(glider): libdispatch API contains other functions that we don't support
 // yet.
 //
@@ -244,7 +245,24 @@ INTERCEPTOR(void, dispatch_group_async_f, dispatch_group_t group,
                                asan_dispatch_call_block_and_release);
 }
 
-#if !defined(MISSING_BLOCKS_SUPPORT)
+extern "C" void asan_dispatch_apply_f_block(void *context, size_t iteration) {
+  GET_STACK_TRACE_THREAD;
+  asan_block_context_t *asan_ctxt = (asan_block_context_t *)context;
+  asan_register_worker_thread(asan_ctxt->parent_tid, &stack);
+  ((void (*)(void *, size_t))asan_ctxt->func)(asan_ctxt->block, iteration);
+}
+
+INTERCEPTOR(void, dispatch_apply_f, size_t iterations, dispatch_queue_t queue,
+            void *ctxt, void (*work)(void *, size_t)) {
+  GET_STACK_TRACE_THREAD;
+  asan_block_context_t *asan_ctxt =
+      alloc_asan_context(ctxt, (dispatch_function_t)work, &stack);
+
+  REAL(dispatch_apply_f)
+  (iterations, queue, (void *)asan_ctxt, asan_dispatch_apply_f_block);
+}
+
+#  if !defined(MISSING_BLOCKS_SUPPORT)
 extern "C" {
 void dispatch_async(dispatch_queue_t dq, void(^work)(void));
 void dispatch_group_async(dispatch_group_t dg, dispatch_queue_t dq,

@@ -2,6 +2,9 @@
 // with an empty stack.
 // This tests that dispatch_apply blocks can capture valid thread number and stack.
 
+// RUN: %clang_asan -DDISPATCH_APPLY_F %s -o %t
+// RUN: not %run %t 2>&1 | FileCheck %s
+
 // RUN: %clang_asan %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
@@ -17,8 +20,27 @@ __attribute__((noinline)) void test_dispatch_apply() {
   });
 }
 
+typedef struct {
+  char *data;
+} Context;
+
+void da_func(void *ctx, size_t i) {
+  Context *c = (Context *)ctx;
+  access_memory_frame(&c->data[i]);
+}
+
+__attribute__((noinline)) void test_dispatch_apply_f() {
+  Context *ctx = (Context *)malloc(sizeof(Context));
+  ctx->data = (char *)malloc(4);
+  dispatch_apply_f(8, dispatch_get_global_queue(0, 0), ctx, da_func);
+}
+
 int main(int argc, const char *argv[]) {
+#if DISPATCH_APPLY_F
+  test_dispatch_apply_f();
+#else
   test_dispatch_apply();
+#endif
   return 0;
 }
 
