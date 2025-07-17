@@ -958,6 +958,11 @@ implicit none
   ! Time function
 
   interface
+    attributes(device) integer function clock()
+    end function
+  end interface
+
+  interface
     attributes(device) integer(8) function clock64()
     end function
   end interface
