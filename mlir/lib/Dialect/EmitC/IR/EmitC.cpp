@@ -1248,15 +1248,6 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   }
 
   // global has non-array type
-  if (auto pointerType = llvm::dyn_cast<PointerType>(resultType)) {
-    if (pointerType.getPointee() != globalType) {
-      return emitOpError("on pointer type expects result pointee type ")
-             << pointerType.getPointee() << " to match type " << globalType
-             << " of the global @" << getName();
-    }
-    return success();
-  }
-
   auto lvalueType = dyn_cast<LValueType>(resultType);
   if (!lvalueType || lvalueType.getValueType() != globalType)
     return emitOpError("on non-array type expects result inner type ")

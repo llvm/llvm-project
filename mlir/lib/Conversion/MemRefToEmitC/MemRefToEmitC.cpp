@@ -152,12 +152,20 @@ struct ConvertGetGlobal final
 
     MemRefType opTy = op.getType();
     Type resultTy = convertMemRefType(opTy, getTypeConverter());
-    if (opTy.getRank() == 0)
-      resultTy = emitc::PointerType::get(resultTy);
 
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(),
                                          "cannot convert result type");
+    }
+
+    if (opTy.getRank() == 0) {
+      auto lvalueType = emitc::LValueType::get(resultTy);
+      auto globalLValue = rewriter.create<emitc::GetGlobalOp>(
+          op.getLoc(), lvalueType, operands.getNameAttr());
+      auto pointerType = emitc::PointerType::get(resultTy);
+      rewriter.replaceOpWithNewOp<emitc::ApplyOp>(
+          op, pointerType, rewriter.getStringAttr("&"), globalLValue);
+      return success();
     }
     rewriter.replaceOpWithNewOp<emitc::GetGlobalOp>(op, resultTy,
                                                     operands.getNameAttr());
