@@ -309,8 +309,8 @@ define i64 @lrd(ptr %a, i32 %b) {
 ; RV32IZBAXQCISLS-LABEL: lrd:
 ; RV32IZBAXQCISLS:       # %bb.0:
 ; RV32IZBAXQCISLS-NEXT:    qc.lrw a2, a0, a1, 3
-; RV32IZBAXQCISLS-NEXT:    sh3add a0, a1, a0
-; RV32IZBAXQCISLS-NEXT:    lw a1, 4(a0)
+; RV32IZBAXQCISLS-NEXT:    addi a0, a0, 4
+; RV32IZBAXQCISLS-NEXT:    qc.lrw a1, a0, a1, 3
 ; RV32IZBAXQCISLS-NEXT:    add a0, a2, a2
 ; RV32IZBAXQCISLS-NEXT:    sltu a2, a0, a2
 ; RV32IZBAXQCISLS-NEXT:    add a1, a1, a1
@@ -473,10 +473,10 @@ define void @srd(ptr %a, i32 %b, i64 %c) {
 ; RV32IZBAXQCISLS-NEXT:    add a4, a2, a2
 ; RV32IZBAXQCISLS-NEXT:    add a3, a3, a3
 ; RV32IZBAXQCISLS-NEXT:    sltu a2, a4, a2
-; RV32IZBAXQCISLS-NEXT:    add a2, a3, a2
-; RV32IZBAXQCISLS-NEXT:    sh3add a3, a1, a0
 ; RV32IZBAXQCISLS-NEXT:    qc.srw a4, a0, a1, 3
-; RV32IZBAXQCISLS-NEXT:    sw a2, 4(a3)
+; RV32IZBAXQCISLS-NEXT:    add a2, a3, a2
+; RV32IZBAXQCISLS-NEXT:    addi a0, a0, 4
+; RV32IZBAXQCISLS-NEXT:    qc.srw a2, a0, a1, 3
 ; RV32IZBAXQCISLS-NEXT:    ret
   %1 = add i64 %c, %c
   %2 = getelementptr i64, ptr %a, i32 %b
