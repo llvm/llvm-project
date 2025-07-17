@@ -1311,10 +1311,12 @@ entry:
 define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ; GFX6-LABEL: workgroup_one_as_release_fence:
 ; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15)
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: workgroup_one_as_release_fence:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15)
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX10-WGP-LABEL: workgroup_one_as_release_fence:
@@ -1325,14 +1327,17 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ;
 ; GFX10-CU-LABEL: workgroup_one_as_release_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: workgroup_one_as_release_fence:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
 ; GFX90A-NOTTGSPLIT-LABEL: workgroup_one_as_release_fence:
 ; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(15)
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX90A-TGSPLIT-LABEL: workgroup_one_as_release_fence:
@@ -1342,6 +1347,7 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ;
 ; GFX942-NOTTGSPLIT-LABEL: workgroup_one_as_release_fence:
 ; GFX942-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(15)
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: workgroup_one_as_release_fence:
@@ -1357,6 +1363,7 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ;
 ; GFX11-CU-LABEL: workgroup_one_as_release_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: workgroup_one_as_release_fence:
@@ -1378,10 +1385,12 @@ entry:
 define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ; GFX6-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15)
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15)
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX10-WGP-LABEL: workgroup_one_as_acq_rel_fence:
@@ -1393,14 +1402,17 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ;
 ; GFX10-CU-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: workgroup_one_as_acq_rel_fence:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
 ; GFX90A-NOTTGSPLIT-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(15)
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX90A-TGSPLIT-LABEL: workgroup_one_as_acq_rel_fence:
@@ -1411,6 +1423,7 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ;
 ; GFX942-NOTTGSPLIT-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX942-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(15)
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: workgroup_one_as_acq_rel_fence:
@@ -1428,6 +1441,7 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ;
 ; GFX11-CU-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: workgroup_one_as_acq_rel_fence:
@@ -1450,10 +1464,12 @@ entry:
 define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ; GFX6-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15)
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15)
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX10-WGP-LABEL: workgroup_one_as_seq_cst_fence:
@@ -1465,14 +1481,17 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ;
 ; GFX10-CU-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: workgroup_one_as_seq_cst_fence:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
 ; GFX90A-NOTTGSPLIT-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(15)
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX90A-TGSPLIT-LABEL: workgroup_one_as_seq_cst_fence:
@@ -1483,6 +1502,7 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ;
 ; GFX942-NOTTGSPLIT-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX942-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(15)
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: workgroup_one_as_seq_cst_fence:
@@ -1500,6 +1520,7 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ;
 ; GFX11-CU-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: workgroup_one_as_seq_cst_fence:

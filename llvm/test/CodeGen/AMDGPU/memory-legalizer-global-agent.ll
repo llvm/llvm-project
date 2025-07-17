@@ -2038,6 +2038,7 @@ define amdgpu_kernel void @global_agent_acq_rel_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_swap v0, v1, s[4:5]
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -2053,6 +2054,7 @@ define amdgpu_kernel void @global_agent_acq_rel_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_swap v0, v1, s[4:5]
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -2141,6 +2143,7 @@ define amdgpu_kernel void @global_agent_acq_rel_atomicrmw(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -2156,6 +2159,7 @@ define amdgpu_kernel void @global_agent_acq_rel_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -2246,6 +2250,7 @@ define amdgpu_kernel void @global_agent_seq_cst_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_swap v0, v1, s[4:5]
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -2261,6 +2266,7 @@ define amdgpu_kernel void @global_agent_seq_cst_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_swap v0, v1, s[4:5]
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -2349,6 +2355,7 @@ define amdgpu_kernel void @global_agent_seq_cst_atomicrmw(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -2364,6 +2371,7 @@ define amdgpu_kernel void @global_agent_seq_cst_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -3843,6 +3851,7 @@ define amdgpu_kernel void @global_agent_acq_rel_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -3862,6 +3871,7 @@ define amdgpu_kernel void @global_agent_acq_rel_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -3975,6 +3985,7 @@ define amdgpu_kernel void @global_agent_acq_rel_monotonic_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -3994,6 +4005,7 @@ define amdgpu_kernel void @global_agent_acq_rel_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -4116,6 +4128,7 @@ define amdgpu_kernel void @global_agent_seq_cst_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -4135,6 +4148,7 @@ define amdgpu_kernel void @global_agent_seq_cst_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -4248,6 +4262,7 @@ define amdgpu_kernel void @global_agent_seq_cst_monotonic_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -4267,6 +4282,7 @@ define amdgpu_kernel void @global_agent_seq_cst_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -4885,6 +4901,7 @@ define amdgpu_kernel void @global_agent_release_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -4904,6 +4921,7 @@ define amdgpu_kernel void @global_agent_release_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -5017,6 +5035,7 @@ define amdgpu_kernel void @global_agent_release_acquire_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -5036,6 +5055,7 @@ define amdgpu_kernel void @global_agent_release_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -5158,6 +5178,7 @@ define amdgpu_kernel void @global_agent_acq_rel_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -5177,6 +5198,7 @@ define amdgpu_kernel void @global_agent_acq_rel_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -5290,6 +5312,7 @@ define amdgpu_kernel void @global_agent_acq_rel_acquire_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -5309,6 +5332,7 @@ define amdgpu_kernel void @global_agent_acq_rel_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -5431,6 +5455,7 @@ define amdgpu_kernel void @global_agent_seq_cst_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -5450,6 +5475,7 @@ define amdgpu_kernel void @global_agent_seq_cst_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -5563,6 +5589,7 @@ define amdgpu_kernel void @global_agent_seq_cst_acquire_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -5582,6 +5609,7 @@ define amdgpu_kernel void @global_agent_seq_cst_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -6250,6 +6278,7 @@ define amdgpu_kernel void @global_agent_release_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -6269,6 +6298,7 @@ define amdgpu_kernel void @global_agent_release_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -6382,6 +6412,7 @@ define amdgpu_kernel void @global_agent_release_seq_cst_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -6401,6 +6432,7 @@ define amdgpu_kernel void @global_agent_release_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -6523,6 +6555,7 @@ define amdgpu_kernel void @global_agent_acq_rel_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -6542,6 +6575,7 @@ define amdgpu_kernel void @global_agent_acq_rel_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -6655,6 +6689,7 @@ define amdgpu_kernel void @global_agent_acq_rel_seq_cst_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -6674,6 +6709,7 @@ define amdgpu_kernel void @global_agent_acq_rel_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -6796,6 +6832,7 @@ define amdgpu_kernel void @global_agent_seq_cst_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -6815,6 +6852,7 @@ define amdgpu_kernel void @global_agent_seq_cst_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -6928,6 +6966,7 @@ define amdgpu_kernel void @global_agent_seq_cst_seq_cst_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -6947,6 +6986,7 @@ define amdgpu_kernel void @global_agent_seq_cst_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -13311,6 +13351,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_swap v0, v1, s[4:5]
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -13326,6 +13367,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_swap v0, v1, s[4:5]
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -13414,6 +13456,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_atomicrmw(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -13429,6 +13472,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -13519,6 +13563,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_swap v0, v1, s[4:5]
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -13534,6 +13579,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_swap v0, v1, s[4:5]
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -13622,6 +13668,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_atomicrmw(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -13637,6 +13684,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -15116,6 +15164,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -15135,6 +15184,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -15248,6 +15298,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -15267,6 +15318,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -15389,6 +15441,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -15408,6 +15461,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -15521,6 +15575,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -15540,6 +15595,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -16158,6 +16214,7 @@ define amdgpu_kernel void @global_agent_one_as_release_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -16177,6 +16234,7 @@ define amdgpu_kernel void @global_agent_one_as_release_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -16290,6 +16348,7 @@ define amdgpu_kernel void @global_agent_one_as_release_acquire_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -16309,6 +16368,7 @@ define amdgpu_kernel void @global_agent_one_as_release_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -16431,6 +16491,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -16450,6 +16511,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -16563,6 +16625,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_acquire_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -16582,6 +16645,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -16704,6 +16768,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -16723,6 +16788,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -16836,6 +16902,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_acquire_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -16855,6 +16922,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -17523,6 +17591,7 @@ define amdgpu_kernel void @global_agent_one_as_release_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -17542,6 +17611,7 @@ define amdgpu_kernel void @global_agent_one_as_release_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -17655,6 +17725,7 @@ define amdgpu_kernel void @global_agent_one_as_release_seq_cst_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -17674,6 +17745,7 @@ define amdgpu_kernel void @global_agent_one_as_release_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -17796,6 +17868,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -17815,6 +17888,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -17928,6 +18002,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -17947,6 +18022,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv
@@ -18069,6 +18145,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
@@ -18088,6 +18165,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v[1:2], s[4:5] offset:16
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    buffer_gl0_inv
@@ -18201,6 +18279,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
@@ -18220,6 +18299,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] offset:16
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    buffer_gl0_inv

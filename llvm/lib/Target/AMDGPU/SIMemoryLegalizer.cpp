@@ -1149,7 +1149,11 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     }
   }
 
-  if (VMCnt || LGKMCnt) {
+  // Always emit a soft wait count at a release, even if it is trivially ~0.
+  // SIInsertWaitcnts will later add additional waits such as those required
+  // from direct load to LDS (formerly known as LDS DMA).
+  if (VMCnt || LGKMCnt ||
+      (isReleaseOrStronger(Order) && Scope >= SIAtomicScope::WORKGROUP)) {
     unsigned WaitCntImmediate =
       AMDGPU::encodeWaitcnt(IV,
                             VMCnt ? 0 : getVmcntBitMask(IV),
@@ -2057,7 +2061,11 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     }
   }
 
-  if (VMCnt || LGKMCnt) {
+  // Always emit a soft wait count at a release, even if it is trivially ~0.
+  // SIInsertWaitcnts will later add additional waits such as those required
+  // from direct load to LDS (formerly known as LDS DMA).
+  if (VMCnt || LGKMCnt ||
+      (isReleaseOrStronger(Order) && Scope >= SIAtomicScope::WORKGROUP)) {
     unsigned WaitCntImmediate =
       AMDGPU::encodeWaitcnt(IV,
                             VMCnt ? 0 : getVmcntBitMask(IV),
@@ -2372,6 +2380,13 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_SAMPLECNT_soft)).addImm(0);
     }
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_LOADCNT_soft)).addImm(0);
+    Changed = true;
+  } else if (isReleaseOrStronger(Order) && Scope >= SIAtomicScope::WORKGROUP) {
+    // Always emit a soft wait count at a release, even if it is trivially ~0.
+    // SIInsertWaitcnts will later add additional waits such as those required
+    // from direct load to LDS (formerly known as LDS DMA).
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_LOADCNT_soft))
+        .addImm(getLoadcntBitMask(IV));
     Changed = true;
   }
 
