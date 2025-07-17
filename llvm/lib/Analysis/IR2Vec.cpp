@@ -243,6 +243,17 @@ const ir2vec::Embedding &Vocabulary::operator[](const Value *Arg) const {
   return Vocab[MaxOpcodes + MaxTypeIDs + static_cast<unsigned>(ArgKind)];
 }
 
+StringRef Vocabulary::getVocabKeyForOpcode(unsigned Opcode) {
+  assert(Opcode >= 1 && Opcode <= MaxOpcodes && "Invalid opcode");
+#define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
+  if (Opcode == NUM) {                                                         \
+    return #OPCODE;                                                            \
+  }
+#include "llvm/IR/Instruction.def"
+#undef HANDLE_INST
+  return "UnknownOpcode";
+}
+
 StringRef Vocabulary::getVocabKeyForTypeID(Type::TypeID TypeID) {
   switch (TypeID) {
   case Type::VoidTyID:
@@ -277,9 +288,9 @@ StringRef Vocabulary::getVocabKeyForTypeID(Type::TypeID TypeID) {
     return "MetadataTy";
   case Type::X86_AMXTyID:
   case Type::TargetExtTyID:
-  default:
     return "UnknownTy";
   }
+  return "UnknownTy";
 }
 
 StringRef Vocabulary::getVocabKeyForOperandKind(Vocabulary::OperandKind Kind) {
@@ -293,10 +304,11 @@ Vocabulary::VocabVector Vocabulary::createDummyVocabForTest(unsigned Dim) {
   float DummyVal = 0.1f;
   // Create a dummy vocabulary with entries for all opcodes, types, and
   // operand
-  for (unsigned _ : seq(0u, Vocabulary::MaxOpcodes + Vocabulary::MaxTypeIDs +
-                                Vocabulary::MaxOperandKinds)) {
+  for ([[maybe_unused]] unsigned _ :
+       seq(0u, Vocabulary::MaxOpcodes + Vocabulary::MaxTypeIDs +
+                   Vocabulary::MaxOperandKinds)) {
     DummyVocab.push_back(Embedding(Dim, DummyVal));
-    DummyVal += 0.1;
+    DummyVal += 0.1f;
   }
   return DummyVocab;
 }
@@ -316,14 +328,8 @@ StringRef Vocabulary::getStringKey(unsigned Pos) {
   assert(Pos < MaxOpcodes + MaxTypeIDs + MaxOperandKinds &&
          "Position out of bounds in vocabulary");
   // Opcode
-  if (Pos < MaxOpcodes) {
-#define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
-  if (Pos == NUM - 1) {                                                        \
-    return #OPCODE;                                                            \
-  }
-#include "llvm/IR/Instruction.def"
-#undef HANDLE_INST
-  }
+  if (Pos < MaxOpcodes)
+    return getVocabKeyForOpcode(Pos + 1);
   // Type
   if (Pos < MaxOpcodes + MaxTypeIDs)
     return getVocabKeyForTypeID(static_cast<Type::TypeID>(Pos - MaxOpcodes));
@@ -431,21 +437,18 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
   // Handle Opcodes
   std::vector<Embedding> NumericOpcodeEmbeddings(Vocabulary::MaxOpcodes,
                                                  Embedding(Dim, 0));
-#define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
-  {                                                                            \
-    auto It = OpcVocab.find(#OPCODE);                                          \
-    if (It != OpcVocab.end())                                                  \
-      NumericOpcodeEmbeddings[NUM - 1] = It->second;                           \
-    else                                                                       \
-      handleMissingEntity(#OPCODE);                                            \
+  for (unsigned Opcode : seq(0u, Vocabulary::MaxOpcodes)) {
+    StringRef VocabKey = Vocabulary::getVocabKeyForOpcode(Opcode + 1);
+    auto It = OpcVocab.find(VocabKey.str());
+    if (It != OpcVocab.end())
+      NumericOpcodeEmbeddings[Opcode] = It->second;
+    else
+      handleMissingEntity(VocabKey.str());
   }
-#include "llvm/IR/Instruction.def"
-#undef HANDLE_INST
   Vocab.insert(Vocab.end(), NumericOpcodeEmbeddings.begin(),
                NumericOpcodeEmbeddings.end());
 
-  // Handle Types using direct iteration through TypeID enum
-  // We iterate through all possible TypeID values and map them to embeddings
+  // Handle Types
   std::vector<Embedding> NumericTypeEmbeddings(Vocabulary::MaxTypeIDs,
                                                Embedding(Dim, 0));
   for (unsigned TypeID : seq(0u, Vocabulary::MaxTypeIDs)) {
@@ -499,7 +502,8 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   // Otherwise, try to read from the vocabulary file.
   if (VocabFile.empty()) {
     // FIXME: Use default vocabulary
-    Ctx->emitError("IR2Vec vocabulary file path not specified");
+    Ctx->emitError("IR2Vec vocabulary file path not specified; You may need to "
+                   "set it using --ir2vec-vocab-path");
     return Vocabulary(); // Return invalid result
   }
   if (auto Err = readVocabulary()) {
