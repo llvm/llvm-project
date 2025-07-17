@@ -473,6 +473,7 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
     return;
   }
 
+// GetGlobalAddressInformation is called earlier on AIX due to a workaround
 #if !SANITIZER_AIX
   if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
     data.kind = kAddressKindGlobal;
