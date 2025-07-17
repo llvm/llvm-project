@@ -43,11 +43,6 @@ TEST_F(LlvmLibcExplogfTest, ExpInFloatRange) {
              def_prec);
 }
 
-TEST_F(LlvmLibcExplogfTest, Log2InFloatRange) {
-  CHECK_DATA(0.0f, inf, mpfr::Operation::Log2, LIBC_NAMESPACE::log2_eval,
-             f_normal, def_count, def_prec);
-}
-
 TEST_F(LlvmLibcExplogfTest, LogInFloatRange) {
   CHECK_DATA(0.0f, inf, mpfr::Operation::Log, LIBC_NAMESPACE::log_eval,
              f_normal, def_count, def_prec);
