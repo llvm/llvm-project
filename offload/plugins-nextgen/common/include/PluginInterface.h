@@ -60,6 +60,39 @@ struct GenericKernelTy;
 struct GenericDeviceTy;
 struct RecordReplayTy;
 
+namespace Plugin {
+/// Create a success error. This is the same as calling Error::success(), but
+/// it is recommended to use this one for consistency with Plugin::error() and
+/// Plugin::check().
+static inline Error success() { return Error::success(); }
+
+/// Create an Offload error.
+template <typename... ArgsTy>
+static Error error(error::ErrorCode Code, const char *ErrFmt, ArgsTy... Args) {
+  return error::createOffloadError(Code, ErrFmt, Args...);
+}
+
+inline Error error(error::ErrorCode Code, const char *S) {
+  return make_error<error::OffloadError>(Code, S);
+}
+
+inline Error error(error::ErrorCode Code, Error &&OtherError,
+                   const char *Context) {
+  return error::createOffloadError(Code, std::move(OtherError), Context);
+}
+
+/// Check the plugin-specific error code and return an error or success
+/// accordingly. In case of an error, create a string error with the error
+/// description. The ErrFmt should follow the format:
+///     "Error in <function name>[<optional info>]: %s"
+/// The last format specifier "%s" is mandatory and will be used to place the
+/// error code's description. Notice this function should be only called from
+/// the plugin-specific code.
+/// TODO: Refactor this, must be defined individually by each plugin.
+template <typename... ArgsTy>
+static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
+} // namespace Plugin
+
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
 /// an internal one and will synchronize the current thread with the pending
@@ -1219,6 +1252,20 @@ struct GenericPluginTy {
   virtual Expected<bool> isELFCompatible(uint32_t DeviceID,
                                          StringRef Image) const = 0;
 
+  virtual Error flushQueueImpl(omp_interop_val_t *Interop) {
+    return Plugin::success();
+  }
+
+  virtual Error syncBarrierImpl(omp_interop_val_t *Interop) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "sync_barrier not supported");
+  }
+
+  virtual Error asyncBarrierImpl(omp_interop_val_t *Interop) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "async_barrier not supported");
+  }
+
 protected:
   /// Indicate whether a device id is valid.
   bool isValidDeviceId(int32_t DeviceId) const {
@@ -1370,31 +1417,54 @@ public:
   /// Create OpenMP interop with the given interop context
   omp_interop_val_t *create_interop(int32_t ID, int32_t InteropContext,
                                     interop_spec_t *InteropSpec) {
+    assert(InteropSpec && "Interop spec is null");
     auto &Device = getDevice(ID);
     return Device.createInterop(InteropContext, *InteropSpec);
   }
 
   /// Release OpenMP interop object
   int32_t release_interop(int32_t ID, omp_interop_val_t *Interop) {
+    assert(Interop && "Interop is null");
+    assert(Interop->DeviceId == ID && "Interop does not match device id");
     auto &Device = getDevice(ID);
     return Device.releaseInterop(Interop);
   }
 
   /// Flush the queue associated with the interop object if necessary
-  virtual int32_t flush_queue(omp_interop_val_t *Interop) {
+  int32_t flush_queue(omp_interop_val_t *Interop) {
+    assert(Interop && "Interop is null");
+    auto Err = flushQueueImpl(Interop);
+    if (Err) {
+      REPORT("Failure to flush interop object " DPxMOD " queue: %s\n", 
+             DPxPTR(Interop), toString(std::move(Err)).c_str());
+      return OFFLOAD_FAIL;
+    }
     return OFFLOAD_SUCCESS;
   }
-
-  /// Queue a synchronous barrier in the queue associated with the interop
+  /// Perform a host synchronization with the queue associated with the interop
   /// object and wait for it to complete.
-  virtual int32_t sync_barrier(omp_interop_val_t *Interop) {
-    return OFFLOAD_FAIL;
+  int32_t sync_barrier(omp_interop_val_t *Interop) {
+    assert(Interop && "Interop is null");
+    auto Err = syncBarrierImpl(Interop);
+    if (Err) {
+      REPORT("Failure to synchronize interop object " DPxMOD ": %s\n", 
+             DPxPTR(Interop), toString(std::move(Err)).c_str());
+      return OFFLOAD_FAIL;
+    }
+    return OFFLOAD_SUCCESS;
   }
 
   /// Queue an asynchronous barrier in the queue associated with the interop
   /// object and return immediately.
-  virtual int32_t async_barrier(omp_interop_val_t *Interop) {
-    return OFFLOAD_FAIL;
+  int32_t async_barrier(omp_interop_val_t *Interop) {
+    assert(Interop && "Interop is null");
+    auto Err = asyncBarrierImpl(Interop);
+    if (Err) {
+      REPORT("Failure to queue barrier in interop object " DPxMOD ": %s\n", 
+             DPxPTR(Interop), toString(std::move(Err)).c_str());
+      return OFFLOAD_FAIL;
+    }
+    return OFFLOAD_SUCCESS;
   }
 
 private:
@@ -1428,39 +1498,6 @@ private:
   /// The interface between the plugin and the GPU for host services.
   RecordReplayTy *RecordReplay;
 };
-
-namespace Plugin {
-/// Create a success error. This is the same as calling Error::success(), but
-/// it is recommended to use this one for consistency with Plugin::error() and
-/// Plugin::check().
-static inline Error success() { return Error::success(); }
-
-/// Create an Offload error.
-template <typename... ArgsTy>
-static Error error(error::ErrorCode Code, const char *ErrFmt, ArgsTy... Args) {
-  return error::createOffloadError(Code, ErrFmt, Args...);
-}
-
-inline Error error(error::ErrorCode Code, const char *S) {
-  return make_error<error::OffloadError>(Code, S);
-}
-
-inline Error error(error::ErrorCode Code, Error &&OtherError,
-                   const char *Context) {
-  return error::createOffloadError(Code, std::move(OtherError), Context);
-}
-
-/// Check the plugin-specific error code and return an error or success
-/// accordingly. In case of an error, create a string error with the error
-/// description. The ErrFmt should follow the format:
-///     "Error in <function name>[<optional info>]: %s"
-/// The last format specifier "%s" is mandatory and will be used to place the
-/// error code's description. Notice this function should be only called from
-/// the plugin-specific code.
-/// TODO: Refactor this, must be defined individually by each plugin.
-template <typename... ArgsTy>
-static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
-} // namespace Plugin
 
 /// Auxiliary interface class for GenericDeviceResourceManagerTy. This class
 /// acts as a reference to a device resource, such as a stream, and requires
