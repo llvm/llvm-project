@@ -830,6 +830,7 @@ public:
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
   void emitConstructorBody(FunctionArgList &args);
+  void emitDestructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
 
@@ -1028,6 +1029,8 @@ public:
   RValue emitReferenceBindingToExpr(const Expr *e);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
+
+  RValue emitRotate(const CallExpr *e, bool isRotateLeft);
 
   mlir::Value emitScalarConstant(const ConstantEmission &constant, Expr *e);
 

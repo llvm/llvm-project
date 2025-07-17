@@ -2597,12 +2597,9 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VecTy = Op->getOperand(0)->getValueType(0);
   SDValue Idx = Op->getOperand(1);
-  EVT EltTy = VecTy.getVectorElementType();
   unsigned NumElts = VecTy.getVectorNumElements();
 
-  if (isa<ConstantSDNode>(Idx) &&
-      (EltTy == MVT::i32 || EltTy == MVT::i64 || EltTy == MVT::f32 ||
-       EltTy == MVT::f64 || Idx->getAsZExtVal() < NumElts / 2))
+  if (isa<ConstantSDNode>(Idx) && Idx->getAsZExtVal() < NumElts)
     return Op;
 
   return SDValue();
