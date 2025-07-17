@@ -92,8 +92,12 @@ private:
 
       OS << '\n' << OpcStr << ' ' << TypeStr << ' ';
 
-      LLVM_DEBUG(I.print(dbgs()); dbgs() << "\n");
-      LLVM_DEBUG(I.getType()->print(dbgs()); dbgs() << " Type\n");
+      LLVM_DEBUG({
+        I.print(dbgs());
+        dbgs() << "\n";
+        I.getType()->print(dbgs());
+        dbgs() << " Type\n";
+      });
 
       for (const Use &U : I.operands())
         OS << Vocabulary::getVocabKeyForOperandKind(
