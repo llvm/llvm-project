@@ -18,6 +18,20 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+constexpr int LOG_P1_BITS = 6;
+constexpr int LOG_P1_SIZE = 1 << LOG_P1_BITS;
+
+// N[Table[Log[2, 1 + x], {x, 0/64, 63/64, 1/64}], 40]
+extern const double LOG_P1_LOG2[LOG_P1_SIZE];
+
+// N[Table[1/(1 + x), {x, 0/64, 63/64, 1/64}], 40]
+extern const double LOG_P1_1_OVER[LOG_P1_SIZE];
+
+// Taylor series expansion for Log[2, 1 + x] splitted to EVEN AND ODD numbers
+// K_LOG2_ODD starts from x^3
+extern const double K_LOG2_ODD[4];
+extern const double K_LOG2_EVEN[4];
+
 // The function correctly calculates sinh(x) and cosh(x) by calculating exp(x)
 // and exp(-x) simultaneously.
 // To compute e^x, we perform the following range
