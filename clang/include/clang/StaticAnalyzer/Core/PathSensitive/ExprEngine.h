@@ -594,6 +594,10 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
+  void CreateInitializationList(const Expr *Source, ArrayRef<Expr *> Args,
+                                bool IsTransparent, ExplodedNode *Pred,
+                                ExplodedNodeSet &Dst);
+
   /// evalEagerlyAssumeBifurcation - Given the nodes in 'Src', eagerly assume
   /// concrete boolean values for 'Ex', storing the resulting nodes in 'Dst'.
   void evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,

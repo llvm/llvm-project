@@ -1237,27 +1237,6 @@ void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
 void ExprEngine::VisitCXXParenListInitExpr(const CXXParenListInitExpr *E,
                                            ExplodedNode *Pred,
                                            ExplodedNodeSet &Dst) {
-  const LocationContext *LC = Pred->getLocationContext();
-
-  StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-  ProgramStateRef S = Pred->getState();
-
-  QualType T = E->getType().getCanonicalType();
-  ArrayRef<Expr *> Inits = E->getInitExprs();
-
-  if (Inits.size() > 1 ||
-      (E->isPRValue() && (T->isRecordType() || T->isArrayType()))) {
-    llvm::ImmutableList<SVal> ArgList = getBasicVals().getEmptySValList();
-    for (Expr *E : llvm::reverse(Inits))
-      ArgList = getBasicVals().prependSVal(S->getSVal(E, LC), ArgList);
-
-    Bldr.generateNode(
-        E, Pred, S->BindExpr(E, LC, svalBuilder.makeCompoundVal(T, ArgList)));
-  } else {
-    Bldr.generateNode(E, Pred,
-                      S->BindExpr(E, LC,
-                                  Inits.size() == 0
-                                      ? getSValBuilder().makeZeroVal(T)
-                                      : S->getSVal(Inits.front(), LC)));
-  }
+  CreateInitializationList(E, E->getInitExprs(), /*IsTransparent*/ false, Pred,
+                           Dst);
 }

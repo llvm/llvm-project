@@ -26,27 +26,27 @@ struct E {
 };
 
 int t1() {
-  A a(42);
+  A a{42};
   return 1 / (a.x - 42); // expected-warning {{Division by zero}}
 }
 
 int t2() {
-  B b;
+  B b{};
   return 1 / b.x; // expected-warning {{Division by zero}}
 }
 
 int t3() {
-  C c1(1, -1);
+  C c1{1, -1};
   return 1 / (c1.x + c1.y); // expected-warning {{Division by zero}}
 }
 
 int t4() {
-  C c2(0, 0);
+  C c2{0, 0};
   return 1 / (c2.x + c2.y); // expected-warning {{Division by zero}}
 }
 
 int t5() {
-  E e = 32;
+  E e{32};
   return 1 / (e.d.x - 32); // expected-warning {{Division by zero}}
 }
 } // namespace GH148875

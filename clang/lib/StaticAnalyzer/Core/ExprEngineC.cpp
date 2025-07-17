@@ -774,49 +774,7 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
 void ExprEngine::VisitInitListExpr(const InitListExpr *IE,
                                    ExplodedNode *Pred,
                                    ExplodedNodeSet &Dst) {
-  StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
-
-  ProgramStateRef state = Pred->getState();
-  const LocationContext *LCtx = Pred->getLocationContext();
-  QualType T = getContext().getCanonicalType(IE->getType());
-  unsigned NumInitElements = IE->getNumInits();
-
-  if (!IE->isGLValue() && !IE->isTransparent() &&
-      (T->isArrayType() || T->isRecordType() || T->isVectorType() ||
-       T->isAnyComplexType())) {
-    llvm::ImmutableList<SVal> vals = getBasicVals().getEmptySValList();
-
-    // Handle base case where the initializer has no elements.
-    // e.g: static int* myArray[] = {};
-    if (NumInitElements == 0) {
-      SVal V = svalBuilder.makeCompoundVal(T, vals);
-      B.generateNode(IE, Pred, state->BindExpr(IE, LCtx, V));
-      return;
-    }
-
-    for (const Stmt *S : llvm::reverse(*IE)) {
-      SVal V = state->getSVal(cast<Expr>(S), LCtx);
-      vals = getBasicVals().prependSVal(V, vals);
-    }
-
-    B.generateNode(IE, Pred,
-                   state->BindExpr(IE, LCtx,
-                                   svalBuilder.makeCompoundVal(T, vals)));
-    return;
-  }
-
-  // Handle scalars: int{5} and int{} and GLvalues.
-  // Note, if the InitListExpr is a GLvalue, it means that there is an address
-  // representing it, so it must have a single init element.
-  assert(NumInitElements <= 1);
-
-  SVal V;
-  if (NumInitElements == 0)
-    V = getSValBuilder().makeZeroVal(T);
-  else
-    V = state->getSVal(IE->getInit(0), LCtx);
-
-  B.generateNode(IE, Pred, state->BindExpr(IE, LCtx, V));
+  CreateInitializationList(IE, IE->inits(), IE->isTransparent(), Pred, Dst);
 }
 
 void ExprEngine::VisitGuardedExpr(const Expr *Ex,
@@ -1196,4 +1154,37 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     Bldr.addNodes(Dst3);
   }
   Dst.insert(Dst2);
+}
+
+void ExprEngine::CreateInitializationList(const Expr *E, ArrayRef<Expr *> Args,
+                                          bool IsTransparent,
+                                          ExplodedNode *Pred,
+                                          ExplodedNodeSet &Dst) {
+  assert((isa<InitListExpr>(E) || isa<CXXParenListInitExpr>(E)) &&
+         "Expected InitListExpr or CXXParenListInitExpr");
+
+  const LocationContext *LC = Pred->getLocationContext();
+
+  StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
+  ProgramStateRef S = Pred->getState();
+  QualType T = E->getType().getCanonicalType();
+
+  bool IsCompound =
+      E->isPRValue() && (T->isArrayType() || T->isRecordType() ||
+                         T->isAnyComplexType() || T->isVectorType());
+
+  if (Args.size() > 1 || (IsCompound && !IsTransparent)) {
+    llvm::ImmutableList<SVal> ArgList = getBasicVals().getEmptySValList();
+    for (Expr *E : llvm::reverse(Args))
+      ArgList = getBasicVals().prependSVal(S->getSVal(E, LC), ArgList);
+
+    B.generateNode(E, Pred,
+                   S->BindExpr(E, LC, svalBuilder.makeCompoundVal(T, ArgList)));
+  } else {
+    B.generateNode(E, Pred,
+                   S->BindExpr(E, LC,
+                               Args.size() == 0
+                                   ? getSValBuilder().makeZeroVal(T)
+                                   : S->getSVal(Args.front(), LC)));
+  }
 }
