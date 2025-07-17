@@ -200,6 +200,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` to
   choose whether to enable the check in C code or not.
 
+- Improved :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
+  false positive from analysis of a conditional expression in C.
+
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
