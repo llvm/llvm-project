@@ -121,15 +121,19 @@ define i1 @memcmp_expand_16(ptr %a, ptr %b) {
 ; CHECK-LABEL: memcmp_expand_16:
 ; CHECK:         .functype memcmp_expand_16 (i32, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i64.load $push4=, 0($0):p2align=0
-; CHECK-NEXT:    i64.load $push3=, 0($1):p2align=0
-; CHECK-NEXT:    i64.xor $push5=, $pop4, $pop3
-; CHECK-NEXT:    i64.load $push1=, 8($0):p2align=0
-; CHECK-NEXT:    i64.load $push0=, 8($1):p2align=0
-; CHECK-NEXT:    i64.xor $push2=, $pop1, $pop0
-; CHECK-NEXT:    i64.or $push6=, $pop5, $pop2
-; CHECK-NEXT:    i64.eqz $push7=, $pop6
-; CHECK-NEXT:    return $pop7
+; CHECK-NEXT:    i64.load $push7=, 0($0):p2align=0
+; CHECK-NEXT:    i64.load $push6=, 0($1):p2align=0
+; CHECK-NEXT:    i64.xor $push8=, $pop7, $pop6
+; CHECK-NEXT:    i32.const $push0=, 8
+; CHECK-NEXT:    i32.add $push3=, $0, $pop0
+; CHECK-NEXT:    i64.load $push4=, 0($pop3):p2align=0
+; CHECK-NEXT:    i32.const $push11=, 8
+; CHECK-NEXT:    i32.add $push1=, $1, $pop11
+; CHECK-NEXT:    i64.load $push2=, 0($pop1):p2align=0
+; CHECK-NEXT:    i64.xor $push5=, $pop4, $pop2
+; CHECK-NEXT:    i64.or $push9=, $pop8, $pop5
+; CHECK-NEXT:    i64.eqz $push10=, $pop9
+; CHECK-NEXT:    return $pop10
   %cmp_16 = call i32 @memcmp(ptr %a, ptr %b, i32 16)
   %res = icmp eq i32 %cmp_16, 0
   ret i1 %res
