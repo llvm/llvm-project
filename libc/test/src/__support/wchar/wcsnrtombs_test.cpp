@@ -83,6 +83,50 @@ TEST(LlvmLibcWcsnrtombs, DestLimit) {
   ASSERT_EQ(mbs[4], '\x01');
 }
 
+TEST(LlvmLibcWcsnrtombs, SrcLimit) {
+  LIBC_NAMESPACE::internal::mbstate state;
+
+  /// clown emoji, sigma symbol, y with diaeresis, letter A
+  const wchar_t src[] = {static_cast<wchar_t>(0x1f921),
+                         static_cast<wchar_t>(0x2211),
+                         static_cast<wchar_t>(0xff), static_cast<wchar_t>(0x41),
+                         static_cast<wchar_t>(0x0)};
+  const wchar_t *cur = src;
+
+  char mbs[11];
+  for (int i = 0; i < 11; ++i)
+    mbs[i] = '\x01'; // dummy initial values
+
+  auto res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, 2, 11, &state);
+  ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(res.value(), static_cast<size_t>(7));
+  ASSERT_EQ(cur, src + 2);
+  ASSERT_EQ(mbs[0], '\xF0'); // clown begin
+  ASSERT_EQ(mbs[1], '\x9F');
+  ASSERT_EQ(mbs[2], '\xA4');
+  ASSERT_EQ(mbs[3], '\xA1');
+  ASSERT_EQ(mbs[4], '\xE2'); // sigma begin
+  ASSERT_EQ(mbs[5], '\x88');
+  ASSERT_EQ(mbs[6], '\x91');
+  ASSERT_EQ(mbs[7], '\x01');
+
+  res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs + res.value(), &cur, 100, 11, &state);
+  ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(res.value(), static_cast<size_t>(3));
+  ASSERT_EQ(cur, nullptr);
+  ASSERT_EQ(mbs[0], '\xF0'); // clown begin
+  ASSERT_EQ(mbs[1], '\x9F');
+  ASSERT_EQ(mbs[2], '\xA4');
+  ASSERT_EQ(mbs[3], '\xA1');
+  ASSERT_EQ(mbs[4], '\xE2'); // sigma begin
+  ASSERT_EQ(mbs[5], '\x88');
+  ASSERT_EQ(mbs[6], '\x91');
+  ASSERT_EQ(mbs[7], '\xC3'); // y diaeresis begin
+  ASSERT_EQ(mbs[8], '\xBF');
+  ASSERT_EQ(mbs[9], '\x41'); // A begin
+  ASSERT_EQ(mbs[10], '\0');  // null terminator
+}
+
 TEST(LlvmLibcWcsnrtombs, NullDest) {
   LIBC_NAMESPACE::internal::mbstate state1;
 
@@ -106,7 +150,23 @@ TEST(LlvmLibcWcsnrtombs, NullDest) {
   ASSERT_EQ(cur, nullptr);
 }
 
-TEST(LlvmLibcWcsnrtombs, ErrorTest) {
+TEST(LlvmLibcWcsnrtombs, InvalidState) {
+  LIBC_NAMESPACE::internal::mbstate state;
+  state.total_bytes = 100;
+
+  const wchar_t src[] = {static_cast<wchar_t>(0x1f921),
+                         static_cast<wchar_t>(0x2211),
+                         static_cast<wchar_t>(0xff), static_cast<wchar_t>(0x41),
+                         static_cast<wchar_t>(0x0)};
+  const wchar_t *cur = src;
+
+  // n parameter ignored when dest is null
+  auto res = LIBC_NAMESPACE::internal::wcsnrtombs(nullptr, &cur, 5, 1, &state);
+  ASSERT_FALSE(res.has_value());
+  ASSERT_EQ(res.error(), EINVAL);
+}
+
+TEST(LlvmLibcWcsnrtombs, InvalidCharacter) {
   LIBC_NAMESPACE::internal::mbstate state1;
 
   const wchar_t src[] = {static_cast<wchar_t>(0x1f921),
@@ -114,15 +174,16 @@ TEST(LlvmLibcWcsnrtombs, ErrorTest) {
                          static_cast<wchar_t>(0x12ffff), // invalid widechar
                          static_cast<wchar_t>(0x0)};
   const wchar_t *cur = src;
+  char mbs[11];
 
   // n parameter ignored when dest is null
-  auto res = LIBC_NAMESPACE::internal::wcsnrtombs(nullptr, &cur, 5, 7, &state1);
+  auto res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, 5, 7, &state1);
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(res.value(), static_cast<size_t>(7));
 
   LIBC_NAMESPACE::internal::mbstate state2;
   cur = src;
-  res = LIBC_NAMESPACE::internal::wcsnrtombs(nullptr, &cur, 5, 100, &state2);
+  res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, 5, 11, &state2);
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(res.error(), EILSEQ);
 }
