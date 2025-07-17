@@ -331,7 +331,9 @@ static void multiThreadedPageIn(const DeferredFiles &deferred) {
 
   mutex.lock();
   if (running && (queue.empty() || deferred.empty())) {
+    mutex.unlock();
     running->join();
+    mutex.lock();
     delete running;
     running = nullptr;
   }
