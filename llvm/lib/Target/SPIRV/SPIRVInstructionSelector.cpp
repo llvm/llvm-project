@@ -4013,7 +4013,6 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
   // independent elements of SPIRVResType. We can get each independent element
   // from I.getDefs() or I.getOperands().
   if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
-    uint32_t Opcode = CL::modf;
     MachineIRBuilder MIRBuilder(I);
     // Get pointer type for alloca variable.
     const SPIRVType *PtrType = GR.getOrCreateSPIRVPointerType(
@@ -4029,28 +4028,7 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
     // new register.
     GR.assignSPIRVTypeToVReg(PtrType, PtrTyReg, MIRBuilder.getMF());
     MachineBasicBlock &EntryBB = I.getMF()->front();
-    // At this point it's difficult to find the right position to insert the
-    // variable, because most instructions are still MachineInstruction and
-    // don't have SPIRV opcodes yet. OpFunction and OpFunctionParameter are
-    // already translated, so we will aim to insert the variable just after the
-    // last OpFunctionParameter, if any, or just after OpFunction otherwise.
-    auto VarPos = EntryBB.begin();
-    while (VarPos != EntryBB.end() &&
-           VarPos->getOpcode() != SPIRV::OpFunction) {
-      ++VarPos;
-    }
-    // Advance VarPos to the next instruction after OpFunction, it will either
-    // be an OpFunctionParameter, so that we can start the next loop, or the
-    // position to insert the OpVariable instruction.
-    ++VarPos;
-    while (VarPos != EntryBB.end() &&
-           VarPos->getOpcode() == SPIRV::OpFunctionParameter) {
-      ++VarPos;
-    }
-    // VarPos is now pointing at after the last OpFunctionParameter, if any,
-    // or after OpFunction, if no parameters.
-    // Create a new MachineInstruction for alloca variable in the
-    // entry block.
+    MachineBasicBlock::iterator VarPos = getPosForOpVariableWithinBlock(EntryBB);
     auto AllocaMIB =
         BuildMI(EntryBB, VarPos, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
             .addDef(PtrTyReg)
@@ -4068,7 +4046,7 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
             .addDef(ResVReg)
             .addUse(GR.getSPIRVTypeID(ResType))
             .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
-            .addImm(Opcode)
+            .addImm(CL::modf)
             .setMIFlags(I.getFlags())
             .add(I.getOperand(3)) // Floating point value.
             .addUse(Variable);    // Pointer to integral part.
