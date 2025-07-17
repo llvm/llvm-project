@@ -716,6 +716,10 @@ Improvements to Clang's diagnostics
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
 
+ - Reworded the ``-Wimplicit-function-declaration`` diagnostic to make it more
+   clear that the type selected for the implicit declaration is based on the
+   signature of a standard (C, C++, POSIX) library function. (#GH146924)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
