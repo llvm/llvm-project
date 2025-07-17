@@ -32,6 +32,14 @@ def SDT_ARMSaveCallPC : SDTypeProfile<0, 1, []>;
 
 def SDT_ARMcall    : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
 
+def SDT_ARMCtSelect : SDTypeProfile<1, 4, [
+  /* any */                // result
+  SDTCisSameAs<1, 0>,      // value on false
+  SDTCisSameAs<2, 0>,      // value on true
+  SDTCisVT<3, CondCodeVT>, // condition code
+  SDTCisVT<4, FlagsVT>,    // in flags
+]>;
+
 def SDT_ARMCMov : SDTypeProfile<1, 4, [
   /* any */                // result
   SDTCisSameAs<1, 0>,      // value on false
@@ -189,6 +197,7 @@ def ARMseretglue     : SDNode<"ARMISD::SERET_GLUE", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMintretglue    : SDNode<"ARMISD::INTRET_GLUE", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def ARMctselect      : SDNode<"ARMISD::CTSELECT", SDT_ARMCtSelect>;
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov>;
 
 def ARMssat   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;

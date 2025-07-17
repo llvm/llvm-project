@@ -96,6 +96,9 @@ class VectorType;
 
     CMOV, // ARM conditional move instructions.
 
+    CTSELECT, // ARM constant-time select, implemented with constant-time
+              // bitwise arithmetic instructions.
+
     SSAT, // Signed saturation
     USAT, // Unsigned saturation
 
@@ -427,8 +430,12 @@ class VectorType;
     const char *getTargetNodeName(unsigned Opcode) const override;
 
     bool isSelectSupported(SelectSupportKind Kind) const override {
-      // ARM does not support scalar condition selects on vectors.
-      return (Kind != ScalarCondVectorVal);
+      if (Kind == SelectSupportKind::CtSelect) {
+        return true;
+      } else {
+        // ARM does not support scalar condition selects on vectors.
+        return (Kind != SelectSupportKind::ScalarCondVectorVal);
+      }
     }
 
     bool isReadOnly(const GlobalValue *GV) const;
@@ -1001,6 +1008,9 @@ class VectorType;
     MachineBasicBlock *EmitLowered__chkstk(MachineInstr &MI,
                                            MachineBasicBlock *MBB) const;
     MachineBasicBlock *EmitLowered__dbzchk(MachineInstr &MI,
+                                           MachineBasicBlock *MBB) const;
+
+    MachineBasicBlock *EmitLoweredCtSelect(MachineInstr &MI,
                                            MachineBasicBlock *MBB) const;
     void addMVEVectorTypes(bool HasMVEFP);
     void addAllExtLoads(const MVT From, const MVT To, LegalizeAction Action);
