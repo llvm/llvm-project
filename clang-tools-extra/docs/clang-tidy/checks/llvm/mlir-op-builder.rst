@@ -3,7 +3,7 @@
 llvm-mlir-op-builder
 ====================
 
-Flags usage of old form of invoking create on MLIR's `OpBuilder` and suggests
+Flags usage of old form of invoking create on MLIR's ``OpBuilder`` and suggests
 new form.
 
 Example

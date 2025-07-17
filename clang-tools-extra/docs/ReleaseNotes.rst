@@ -99,8 +99,8 @@ New checks
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/mlir-op-builder>` check.
 
-  Flags usage of old form of invoking create on MLIR's `OpBuilder` and suggests
-  new form.
+  Flags usage of old form of invoking create on MLIR's ``OpBuilder`` and
+  suggests new form.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
