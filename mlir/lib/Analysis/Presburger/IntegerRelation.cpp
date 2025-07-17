@@ -2490,12 +2490,6 @@ IntegerRelation IntegerRelation::rangeProduct(const IntegerRelation &rel) {
 
   // explicit copy of `this`
   IntegerRelation result = *this;
-
-  // An explicit copy of `rel` is needed to merge and align symbols, since that
-  // function mutates both relations.
-  IntegerRelation relCopy = rel;
-  result.mergeAndAlignSymbols(relCopy);
-
   unsigned relRangeVarStart = rel.getVarKindOffset(VarKind::Range);
   unsigned numThisRangeVars = getNumRangeVars();
   unsigned numNewSymbolVars = result.getNumSymbolVars() - getNumSymbolVars();

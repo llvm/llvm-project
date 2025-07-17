@@ -692,11 +692,11 @@ TEST(IntegerRelationTest, rangeProductSymbols) {
   IntegerRelation r1 = parseRelationFromSet(
       "(i, j)[s] : (2*i + 3*j + s == 0, i >= 0, j >= 0)", 1);
   IntegerRelation r2 = parseRelationFromSet(
-      "(i, l)[t] : (3*i + 4*l + t == 0, i >= 0, l >= 0)", 1);
+      "(i, l)[s] : (3*i + 4*l + s == 0, i >= 0, l >= 0)", 1);
 
   IntegerRelation rangeProd = r1.rangeProduct(r2);
   IntegerRelation expected = parseRelationFromSet(
-      "(i, j, k, l)[s, t] : (2*i + 3*j + s == 0, 3*i + 4*l + t == "
+      "(i, j, l)[s] : (2*i + 3*j + s == 0, 3*i + 4*l + s == "
       "0, i >= 0, j >= 0, l >= 0)",
       1);
 
