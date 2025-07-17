@@ -2667,6 +2667,9 @@ def HasDefaultComponentBroadcast
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
+def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+
 def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
 
 def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
