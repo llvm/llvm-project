@@ -56,6 +56,9 @@ public:
   // TODO: following functions are almost identical
   // look into templating CharacterConverter pop functions
   ErrorOr<char32_t> popUTF32() {
+    if (num_to_write == 0)
+      return Error(-1);
+
     if (cr.isEmpty() || src_idx == 0) {
       auto src_elements_read = pushFullCharacter();
       if (!src_elements_read.has_value())
@@ -79,6 +82,9 @@ public:
   }
 
   ErrorOr<char8_t> popUTF8() {
+    if (num_to_write == 0)
+      return Error(-1);
+
     if (cr.isEmpty() || src_idx == 0) {
       auto src_elements_read = pushFullCharacter();
       if (!src_elements_read.has_value())
