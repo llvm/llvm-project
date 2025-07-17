@@ -159,10 +159,10 @@ struct ConvertGetGlobal final
     }
 
     if (opTy.getRank() == 0) {
-      auto lvalueType = emitc::LValueType::get(resultTy);
-      auto globalLValue = rewriter.create<emitc::GetGlobalOp>(
+      emitc::LValueType lvalueType = emitc::LValueType::get(resultTy);
+      emitc::GetGlobalOp globalLValue = rewriter.create<emitc::GetGlobalOp>(
           op.getLoc(), lvalueType, operands.getNameAttr());
-      auto pointerType = emitc::PointerType::get(resultTy);
+      emitc::PointerType pointerType = emitc::PointerType::get(resultTy);
       rewriter.replaceOpWithNewOp<emitc::ApplyOp>(
           op, pointerType, rewriter.getStringAttr("&"), globalLValue);
       return success();
