@@ -329,24 +329,28 @@ ParseResult parseOptionalDynamicIndexList(
   return success();
 }
 
-void printOptionalDynamicIndexList(
-    OpAsmPrinter &printer, Operation *op, OperandRange values,
-    DenseI64ArrayAttr integers) {
+void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
+                                   OperandRange values,
+                                   DenseI64ArrayAttr integers) {
 
-    if (!integers) 
-      return;
+  if (!integers)
+    return;
 
-    return printDynamicIndexList(printer, op, values, integers,
-                      /*scalableFlags=*/{}, {}, AsmParser::Delimiter::Square);
-   }
+  return printDynamicIndexList(printer, op, values, integers,
+                               /*scalableFlags=*/{}, {},
+                               AsmParser::Delimiter::Square);
+}
 //===----------------------------------------------------------------------===//
 // XeGPU_PrefetchNdOp
 //===----------------------------------------------------------------------===//
 
-void PrefetchNdOp::build(OpBuilder &builder, OperationState &state, Value tensorDesc, xegpu::CachePolicyAttr l1_hint, xegpu::CachePolicyAttr l2_hint, xegpu::CachePolicyAttr l3_hint) {
+void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
+                         Value tensorDesc, xegpu::CachePolicyAttr l1_hint,
+                         xegpu::CachePolicyAttr l2_hint,
+                         xegpu::CachePolicyAttr l3_hint) {
 
-  return build(builder, state, tensorDesc, ValueRange(), DenseI64ArrayAttr(), l1_hint, l2_hint, l3_hint);
-
+  return build(builder, state, tensorDesc, ValueRange(), DenseI64ArrayAttr(),
+               l1_hint, l2_hint, l3_hint);
 }
 
 LogicalResult PrefetchNdOp::verify() {
@@ -370,10 +374,16 @@ LogicalResult PrefetchNdOp::verify() {
 // XeGPU_LoadNdOp
 //===----------------------------------------------------------------------===//
 
-void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType, Value tensorDesc, UnitAttr packed, DenseI64ArrayAttr transpose, xegpu::CachePolicyAttr l1_hint, xegpu::CachePolicyAttr l2_hint, xegpu::CachePolicyAttr l3_hint) {
+void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
+                     Value tensorDesc, UnitAttr packed,
+                     DenseI64ArrayAttr transpose,
+                     xegpu::CachePolicyAttr l1_hint,
+                     xegpu::CachePolicyAttr l2_hint,
+                     xegpu::CachePolicyAttr l3_hint) {
 
-  return build(builder, state, retType, tensorDesc, ValueRange(), DenseI64ArrayAttr(), packed, transpose, l1_hint, l2_hint, l3_hint);
-
+  return build(builder, state, retType, tensorDesc, ValueRange(),
+               DenseI64ArrayAttr(), packed, transpose, l1_hint, l2_hint,
+               l3_hint);
 }
 
 LogicalResult LoadNdOp::verify() {
@@ -464,10 +474,13 @@ LogicalResult LoadNdOp::verify() {
 // XeGPU_StoreNdOp
 //===----------------------------------------------------------------------===//
 
-void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value, Value tensorDesc, xegpu::CachePolicyAttr l1_hint, xegpu::CachePolicyAttr l2_hint, xegpu::CachePolicyAttr l3_hint) {
+void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
+                      Value tensorDesc, xegpu::CachePolicyAttr l1_hint,
+                      xegpu::CachePolicyAttr l2_hint,
+                      xegpu::CachePolicyAttr l3_hint) {
 
-  return build(builder, state, value, tensorDesc, ValueRange(), DenseI64ArrayAttr(), l1_hint, l2_hint, l3_hint);
-
+  return build(builder, state, value, tensorDesc, ValueRange(),
+               DenseI64ArrayAttr(), l1_hint, l2_hint, l3_hint);
 }
 
 LogicalResult StoreNdOp::verify() {
