@@ -6288,13 +6288,13 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     //   LDRWui %0:sub_32<def,read-undef>, %stack.0
     //
     if (IsFill && SrcMO.getSubReg() == 0 && DstMO.isUndef()) {
-      const TargetRegisterClass *FillRC;
+      const TargetRegisterClass *FillRC = nullptr;
       switch (DstMO.getSubReg()) {
       default:
-        FillRC = nullptr;
         break;
       case AArch64::sub_32:
-        FillRC = &AArch64::GPR32RegClass;
+        if (AArch64::GPR64RegClass.hasSubClassEq(getRegClass(DstReg)))
+          FillRC = &AArch64::GPR32RegClass;
         break;
       case AArch64::ssub:
         FillRC = &AArch64::FPR32RegClass;
@@ -9585,10 +9585,15 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
       };
   auto SaveRangeIfNonEmpty = [&RangeLen, &Ranges, &RangeBegin, &RangeEnd]() {
     // At least one unsafe register is not dead. We do not want to outline at
-    // this point. If it is long enough to outline from, save the range
-    // [RangeBegin, RangeEnd).
-    if (RangeLen > 1)
-      Ranges.push_back(std::make_pair(RangeBegin, RangeEnd));
+    // this point. If it is long enough to outline from and does not cross a
+    // bundle boundary, save the range [RangeBegin, RangeEnd).
+    if (RangeLen <= 1)
+      return;
+    if (!RangeBegin.isEnd() && RangeBegin->isBundledWithPred())
+      return;
+    if (!RangeEnd.isEnd() && RangeEnd->isBundledWithPred())
+      return;
+    Ranges.emplace_back(RangeBegin, RangeEnd);
   };
   // Find the first point where all unsafe registers are dead.
   // FIND: <safe instr> <-- end of first potential range

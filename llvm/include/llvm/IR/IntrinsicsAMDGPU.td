@@ -1936,7 +1936,9 @@ class AMDGPUStructBufferLoadLDS : Intrinsic <
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_struct_buffer_load_lds : AMDGPUStructBufferLoadLDS;
 
-class AMDGPUStructPtrBufferLoadLDS : Intrinsic <
+class AMDGPUStructPtrBufferLoadLDS :
+  ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_lds">,
+  Intrinsic <
   [],
   [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
@@ -3710,7 +3712,6 @@ class AMDGPUWmmaIntrinsicModsAllDiff<LLVMType DstTy, LLVMType AB, LLVMType C> :
 >;
 
 defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1250 = {
-def int_amdgcn_wmma_f64_16x16x4_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_bf16     : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_f16      : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
