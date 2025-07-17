@@ -587,7 +587,7 @@ group-based instructions. These builtins facilitate group synchronization, data 
 and collective operations essential for efficient parallel computation.
 
 SPIR-V Instructions Mapped to LLVM Metadata
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Some SPIR-V instructions don't have a direct equivalent in the LLVM IR language. To
 address this, the SPIR-V Target uses different specific LLVM named metadata to convey
 the necessary information. The SPIR-V specification allows multiple module-scope
