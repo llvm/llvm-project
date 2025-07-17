@@ -927,9 +927,9 @@ struct PackOpTiling
         // iterations that only write padding values to the whole tile. The
         // consumer fusion is driven by the source, so it is not possible to map
         // an empty slice to the tile.
-        bool needExtraPadding = ShapedType::isDynamic(destDimSize) ||
-                           !cstInnerSize ||
-                           destDimSize * cstInnerSize.value() != srcDimSize;
+        bool needExtraPadding =
+            ShapedType::isDynamic(destDimSize) || !cstInnerSize ||
+            destDimSize * cstInnerSize.value() != srcDimSize;
         // Prioritize the case that the op already says that it does not need
         // padding.
         if (!packOp.getPaddingValue())
