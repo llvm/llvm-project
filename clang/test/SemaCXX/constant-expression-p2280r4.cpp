@@ -358,6 +358,7 @@ namespace pointer_comparisons {
                         // expected-note {{in call to 'f4()'}}
 }
 
+namespace GH149188 {
 namespace enable_if_1 {
   template <__SIZE_TYPE__ N>
   constexpr void foo(const char (&Str)[N])
@@ -380,4 +381,5 @@ namespace enable_if_2 {
   void x() {
       constexpr int x = foo();
   }
+}
 }
