@@ -734,9 +734,8 @@ MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
       UniqueName.append("/").append(P->getName());
   }
   // Do the lookup. If we don't have a hit, return a new section.
-  auto IterBool = GOFFUniquingMap.insert(std::make_pair(UniqueName, nullptr));
-  auto Iter = IterBool.first;
-  if (!IterBool.second)
+  auto [Iter, Inserted] = GOFFUniquingMap.try_emplace(UniqueName);
+  if (!Inserted)
     return Iter->second;
 
   StringRef CachedName = StringRef(Iter->first.c_str(), Name.size());
