@@ -290,24 +290,15 @@ define void @tanh_poison(ptr %P) {
 
 define void @exp_poison(ptr %P) {
 ; CHECK-LABEL: @exp_poison(
-; CHECK-NEXT:    [[EXP_F32:%.*]] = call float @llvm.exp.f32(float poison)
-; CHECK-NEXT:    store volatile float [[EXP_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[EXP_2XF32:%.*]] = call <2 x float> @llvm.exp.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[EXP_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[EXP_4XF64:%.*]] = call <4 x double> @llvm.exp.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[EXP_4XF64]], ptr [[P]], align 32
-; CHECK-NEXT:    [[EXP2_F32:%.*]] = call float @llvm.exp2.f32(float poison)
-; CHECK-NEXT:    store volatile float [[EXP2_F32]], ptr [[P]], align 4
-; CHECK-NEXT:    [[EXP2_2XF32:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[EXP2_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[EXP2_4XF64:%.*]] = call <4 x double> @llvm.exp2.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[EXP2_4XF64]], ptr [[P]], align 32
-; CHECK-NEXT:    [[EXP10_F32:%.*]] = call float @llvm.exp10.f32(float poison)
-; CHECK-NEXT:    store volatile float [[EXP10_F32]], ptr [[P]], align 4
-; CHECK-NEXT:    [[EXP10_2XF32:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[EXP10_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[EXP10_4XF64:%.*]] = call <4 x double> @llvm.exp10.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[EXP10_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %exp_f32 = call float @llvm.exp(float poison)
@@ -342,24 +333,15 @@ define void @exp_poison(ptr %P) {
 
 define void @log_poison(ptr %P) {
 ; CHECK-LABEL: @log_poison(
-; CHECK-NEXT:    [[LOG_F32:%.*]] = call float @llvm.log.f32(float poison)
-; CHECK-NEXT:    store volatile float [[LOG_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[LOG_2XF32:%.*]] = call <2 x float> @llvm.log.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[LOG_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[LOG_4XF64:%.*]] = call <4 x double> @llvm.log.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[LOG_4XF64]], ptr [[P]], align 32
-; CHECK-NEXT:    [[LOG2_F32:%.*]] = call float @llvm.log2.f32(float poison)
-; CHECK-NEXT:    store volatile float [[LOG2_F32]], ptr [[P]], align 4
-; CHECK-NEXT:    [[LOG2_2XF32:%.*]] = call <2 x float> @llvm.log2.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[LOG2_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[LOG2_4XF64:%.*]] = call <4 x double> @llvm.log2.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[LOG2_4XF64]], ptr [[P]], align 32
-; CHECK-NEXT:    [[LOG10_F32:%.*]] = call float @llvm.log10.f32(float poison)
-; CHECK-NEXT:    store volatile float [[LOG10_F32]], ptr [[P]], align 4
-; CHECK-NEXT:    [[LOG10_2XF32:%.*]] = call <2 x float> @llvm.log10.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[LOG10_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[LOG10_4XF64:%.*]] = call <4 x double> @llvm.log10.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[LOG10_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %log_f32 = call float @llvm.log(float poison)
@@ -394,12 +376,9 @@ define void @log_poison(ptr %P) {
 
 define void @modf_poison(ptr %P) {
 ; CHECK-LABEL: @modf_poison(
-; CHECK-NEXT:    [[MODF_F32:%.*]] = call { float, float } @llvm.modf.f32(float poison)
-; CHECK-NEXT:    store volatile { float, float } [[MODF_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[MODF_2XF32:%.*]] = call { <2 x float>, <2 x float> } @llvm.modf.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile { <2 x float>, <2 x float> } [[MODF_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[MODF_4XF64:%.*]] = call { <4 x double>, <4 x double> } @llvm.modf.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile { <4 x double>, <4 x double> } [[MODF_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile { float, float } poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile { <2 x float>, <2 x float> } poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile { <4 x double>, <4 x double> } poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %modf_f32 = call { float, float } @llvm.modf(float poison)
@@ -417,12 +396,9 @@ define void @modf_poison(ptr %P) {
 
 define void @floor_poison(ptr %P) {
 ; CHECK-LABEL: @floor_poison(
-; CHECK-NEXT:    [[FLOOR_F32:%.*]] = call float @llvm.floor.f32(float poison)
-; CHECK-NEXT:    store volatile float [[FLOOR_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[FLOOR_2XF32:%.*]] = call <2 x float> @llvm.floor.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[FLOOR_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[FLOOR_4XF64:%.*]] = call <4 x double> @llvm.floor.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[FLOOR_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %floor_f32 = call float @llvm.floor(float poison)
@@ -440,12 +416,9 @@ define void @floor_poison(ptr %P) {
 
 define void @ceil_poison(ptr %P) {
 ; CHECK-LABEL: @ceil_poison(
-; CHECK-NEXT:    [[CEIL_F32:%.*]] = call float @llvm.ceil.f32(float poison)
-; CHECK-NEXT:    store volatile float [[CEIL_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[CEIL_2XF32:%.*]] = call <2 x float> @llvm.ceil.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[CEIL_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[CEIL_4XF64:%.*]] = call <4 x double> @llvm.ceil.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[CEIL_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %ceil_f32 = call float @llvm.ceil(float poison)
@@ -463,12 +436,9 @@ define void @ceil_poison(ptr %P) {
 
 define void @trunc_poison(ptr %P) {
 ; CHECK-LABEL: @trunc_poison(
-; CHECK-NEXT:    [[TRUNC_F32:%.*]] = call float @llvm.trunc.f32(float poison)
-; CHECK-NEXT:    store volatile float [[TRUNC_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TRUNC_2XF32:%.*]] = call <2 x float> @llvm.trunc.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[TRUNC_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TRUNC_4XF64:%.*]] = call <4 x double> @llvm.trunc.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[TRUNC_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %trunc_f32 = call float @llvm.trunc(float poison)
@@ -485,12 +455,9 @@ define void @trunc_poison(ptr %P) {
 
 define void @rint_poison(ptr %P) {
 ; CHECK-LABEL: @rint_poison(
-; CHECK-NEXT:    [[RINT_F32:%.*]] = call float @llvm.rint.f32(float poison)
-; CHECK-NEXT:    store volatile float [[RINT_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[RINT_2XF32:%.*]] = call <2 x float> @llvm.rint.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[RINT_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[RINT_4XF64:%.*]] = call <4 x double> @llvm.rint.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[RINT_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %rint_f32 = call float @llvm.rint(float poison)
@@ -507,12 +474,9 @@ define void @rint_poison(ptr %P) {
 
 define void @nearbyint_poison(ptr %P) {
 ; CHECK-LABEL: @nearbyint_poison(
-; CHECK-NEXT:    [[NEARBYINT_F32:%.*]] = call float @llvm.nearbyint.f32(float poison)
-; CHECK-NEXT:    store volatile float [[NEARBYINT_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[NEARBYINT_2XF32:%.*]] = call <2 x float> @llvm.nearbyint.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[NEARBYINT_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[NEARBYINT_4XF64:%.*]] = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[NEARBYINT_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %nearbyint_f32 = call float @llvm.nearbyint(float poison)
@@ -530,12 +494,9 @@ define void @nearbyint_poison(ptr %P) {
 
 define void @round_poison(ptr %P) {
 ; CHECK-LABEL: @round_poison(
-; CHECK-NEXT:    [[ROUND_F32:%.*]] = call float @llvm.round.f32(float poison)
-; CHECK-NEXT:    store volatile float [[ROUND_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[ROUND_2XF32:%.*]] = call <2 x float> @llvm.round.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[ROUND_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[ROUND_4XF64:%.*]] = call <4 x double> @llvm.round.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[ROUND_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %round_f32 = call float @llvm.round(float poison)
@@ -553,12 +514,9 @@ define void @round_poison(ptr %P) {
 
 define void @roundeven_poison(ptr %P) {
 ; CHECK-LABEL: @roundeven_poison(
-; CHECK-NEXT:    [[ROUNDEVEN_F32:%.*]] = call float @llvm.roundeven.f32(float poison)
-; CHECK-NEXT:    store volatile float [[ROUNDEVEN_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[ROUNDEVEN_2XF32:%.*]] = call <2 x float> @llvm.roundeven.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x float> [[ROUNDEVEN_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[ROUNDEVEN_4XF64:%.*]] = call <4 x double> @llvm.roundeven.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x double> [[ROUNDEVEN_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x double> poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %roundeven_f32 = call float @llvm.roundeven(float poison)
@@ -576,12 +534,9 @@ define void @roundeven_poison(ptr %P) {
 
 define void @lrint_poison(ptr %P) {
 ; CHECK-LABEL: @lrint_poison(
-; CHECK-NEXT:    [[LRINT_F32:%.*]] = call i32 @llvm.lrint.i32.f32(float poison)
-; CHECK-NEXT:    store volatile i32 [[LRINT_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[LRINT_2XF32:%.*]] = call <2 x i32> @llvm.lrint.v2i32.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x i32> [[LRINT_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[LRINT_4XF64:%.*]] = call <4 x i64> @llvm.lrint.v4i64.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x i64> [[LRINT_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile i32 poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x i32> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x i64> poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %lrint_f32 = call i32 @llvm.lrint(float poison)
@@ -599,12 +554,9 @@ define void @lrint_poison(ptr %P) {
 
 define void @llrint_poison(ptr %P) {
 ; CHECK-LABEL: @llrint_poison(
-; CHECK-NEXT:    [[LLRINT_F32:%.*]] = call i32 @llvm.llrint.i32.f32(float poison)
-; CHECK-NEXT:    store volatile i32 [[LLRINT_F32]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[LLRINT_2XF32:%.*]] = call <2 x i32> @llvm.llrint.v2i32.v2f32(<2 x float> poison)
-; CHECK-NEXT:    store volatile <2 x i32> [[LLRINT_2XF32]], ptr [[P]], align 8
-; CHECK-NEXT:    [[LLRINT_4XF64:%.*]] = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> poison)
-; CHECK-NEXT:    store volatile <4 x i64> [[LLRINT_4XF64]], ptr [[P]], align 32
+; CHECK-NEXT:    store volatile i32 poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x i32> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x i64> poison, ptr [[P]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %llrint_f32 = call i32 @llvm.llrint(float poison)
@@ -622,12 +574,9 @@ define void @llrint_poison(ptr %P) {
 
 define void @umul_fix_poison(ptr %P) {
 ; CHECK-LABEL: @umul_fix_poison(
-; CHECK-NEXT:    [[UMUL_FIX_I16:%.*]] = call i16 @llvm.umul.fix.i16(i16 poison, i16 poison, i32 2)
-; CHECK-NEXT:    store volatile i16 [[UMUL_FIX_I16]], ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[UMUL_FIX_I32:%.*]] = call i32 @llvm.umul.fix.i32(i32 poison, i32 poison, i32 2)
-; CHECK-NEXT:    store volatile i32 [[UMUL_FIX_I32]], ptr [[P]], align 4
-; CHECK-NEXT:    [[UMUL_FIX_4XI32:%.*]] = call <4 x i32> @llvm.umul.fix.v4i32(<4 x i32> poison, <4 x i32> poison, i32 2)
-; CHECK-NEXT:    store volatile <4 x i32> [[UMUL_FIX_4XI32]], ptr [[P]], align 16
+; CHECK-NEXT:    store volatile i16 poison, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    store volatile i32 poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile <4 x i32> poison, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %umul_fix_i16 = call i16 @llvm.umul.fix(i16 poison, i16 poison, i32 2)
@@ -645,12 +594,9 @@ define void @umul_fix_poison(ptr %P) {
 
 define void @umul_fix_sat_poison(ptr %P) {
 ; CHECK-LABEL: @umul_fix_sat_poison(
-; CHECK-NEXT:    [[UMUL_FIX_SATI16:%.*]] = call i16 @llvm.umul.fix.sat.i16(i16 poison, i16 poison, i32 2)
-; CHECK-NEXT:    store volatile i16 [[UMUL_FIX_SATI16]], ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[UMUL_FIX_SATI32:%.*]] = call i32 @llvm.umul.fix.sat.i32(i32 poison, i32 poison, i32 2)
-; CHECK-NEXT:    store volatile i32 [[UMUL_FIX_SATI32]], ptr [[P]], align 4
-; CHECK-NEXT:    [[UMUL_FIX_SAT4XI32:%.*]] = call <4 x i32> @llvm.umul.fix.sat.v4i32(<4 x i32> poison, <4 x i32> poison, i32 2)
-; CHECK-NEXT:    store volatile <4 x i32> [[UMUL_FIX_SAT4XI32]], ptr [[P]], align 16
+; CHECK-NEXT:    store volatile i16 poison, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    store volatile i32 poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile <4 x i32> poison, ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %umul_fix_sati16 = call i16 @llvm.umul.fix.sat(i16 poison, i16 poison, i32 2)
