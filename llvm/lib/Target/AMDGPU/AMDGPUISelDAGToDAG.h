@@ -215,7 +215,8 @@ private:
   bool SelectSMRDSgpr(SDNode *N, SDValue Addr, SDValue &SBase, SDValue &SOffset,
                       SDValue &CPol) const;
   bool SelectSMRDSgprImm(SDNode *N, SDValue Addr, SDValue &SBase,
-                         SDValue &SOffset, SDValue &Offset, SDValue &CPol) const;
+                         SDValue &SOffset, SDValue &Offset,
+                         SDValue &CPol) const;
   bool SelectSMRDBufferImm(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferImm32(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
@@ -270,8 +271,8 @@ private:
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   bool SelectVOP3OpSelMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
-  bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
-                                 unsigned &Mods, MVT VT) const;
+  bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src, unsigned &Mods,
+                                 MVT VT) const;
   bool SelectVOP3PMadMixModsExt(SDValue In, SDValue &Src,
                                 SDValue &SrcMods) const;
   bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;

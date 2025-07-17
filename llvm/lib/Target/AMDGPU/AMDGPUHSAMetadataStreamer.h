@@ -165,8 +165,7 @@ public:
   MetadataStreamerMsgPackV6() = default;
   ~MetadataStreamerMsgPackV6() = default;
 
-  void emitKernelAttrs(const AMDGPUTargetMachine &TM,
-                       const MachineFunction &MF,
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
                        msgpack::MapDocNode Kern) override;
 };
 

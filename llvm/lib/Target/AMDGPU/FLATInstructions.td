@@ -2246,7 +2246,7 @@ multiclass FlatStorePats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt>
 }
 
 multiclass FlatStorePats_t16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
-  def : FlatStorePat <inst, node, vt>;
+  def : FlatStorePat <!cast<FLAT_Pseudo>(!cast<string>(inst)#"_t16"), node, vt>;
 
   def : FlatStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR_t16"), node, vt> {
     let AddedComplexity = 9;
