@@ -216,6 +216,7 @@ protected:
   bool FlatInstOffsets = false;
   bool FlatGlobalInsts = false;
   bool FlatScratchInsts = false;
+  bool FlatGVSMode = false;
   bool ScalarFlatScratchInsts = false;
   bool HasArchitectedFlatScratch = false;
   bool EnableFlatScratch = false;
@@ -1172,6 +1173,8 @@ public:
 
   bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
+  bool hasFlatGVSMode() const { return FlatGVSMode; }
+
   bool enableSIScheduler() const {
     return EnableSIScheduler;
   }
@@ -1388,6 +1391,8 @@ public:
   bool hasMinimum3Maximum3F16() const {
     return HasMinimum3Maximum3F16;
   }
+
+  bool hasAddPC64Inst() const { return GFX1250Insts; }
 
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
