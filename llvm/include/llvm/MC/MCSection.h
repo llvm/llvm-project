@@ -296,6 +296,7 @@ public:
       return false;
     case MCFragment::FT_Relaxable:
     case MCFragment::FT_Data:
+    case MCFragment::FT_Align:
     case MCFragment::FT_Dwarf:
     case MCFragment::FT_DwarfFrame:
     case MCFragment::FT_LEB:

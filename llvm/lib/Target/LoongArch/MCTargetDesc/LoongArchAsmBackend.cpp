@@ -219,7 +219,7 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
   MCSection *Sec = AF.getParent();
   MCContext &Ctx = getContext();
   const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
-  MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_LARCH_ALIGN);
+  MCFixup Fixup = MCFixup::create(AF.getFixedSize(), Dummy, ELF::R_LARCH_ALIGN);
   unsigned MaxBytesToEmit = AF.getAlignMaxBytesToEmit();
 
   auto createExtendedValue = [&]() {
