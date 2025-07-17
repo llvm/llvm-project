@@ -3670,7 +3670,7 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
 
 // Returns the token after the first qualifier of the name, or nullptr if there
 // is no qualifier.
-static FormatToken* skipNameQualifier(const FormatToken *Tok) {
+static FormatToken *skipNameQualifier(const FormatToken *Tok) {
   // Qualified names must start with an identifier.
   if (!Tok->is(tok::identifier))
     return nullptr;
@@ -3734,7 +3734,11 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
       if (!Tok)
         return nullptr;
 
-      assert(Tok->is(TT_TemplateOpener));
+      // If the next token after the template keyword is not an opening bracket,
+      // it is a template instantiation, and not a function.
+      if (Tok->isNot(TT_TemplateOpener))
+        return nullptr;
+
       Tok = Tok->MatchingParen;
       if (!Tok)
         return nullptr;
