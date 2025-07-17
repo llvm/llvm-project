@@ -67,39 +67,38 @@ TEST_F(LlvmLibcMBSNRToWCSTest, MixedNumberOfBytes) {
   wchar_t dest[5];
   mbstate_t *mb;
   LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
-  
+
   // Read 'A'
   size_t n = LIBC_NAMESPACE::mbsnrtowcs(dest, &src, 1, 1, mb);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(static_cast<char>(dest[0]), 'A');
-    ASSERT_EQ(static_cast<int>(n), 1);
+  ASSERT_EQ(static_cast<int>(n), 1);
   ASSERT_EQ(src, original + 1);
 
   // Read sigma 'Σ'
   n = LIBC_NAMESPACE::mbsnrtowcs(dest + 1, &src, 2, 1, mb);
   ASSERT_ERRNO_SUCCESS();
-    ASSERT_EQ(static_cast<int>(dest[1]), 931);
-    ASSERT_EQ(static_cast<int>(n), 1);
+  ASSERT_EQ(static_cast<int>(dest[1]), 931);
+  ASSERT_EQ(static_cast<int>(n), 1);
   ASSERT_EQ(src, original + 3);
 
   // Read recycling '♻'
   n = LIBC_NAMESPACE::mbsnrtowcs(dest + 2, &src, 2, 5, mb);
   ASSERT_ERRNO_SUCCESS();
-    ASSERT_EQ(static_cast<int>(n), 0);
+  ASSERT_EQ(static_cast<int>(n), 0);
   ASSERT_EQ(src, original + 5);
   n = LIBC_NAMESPACE::mbsnrtowcs(dest + 2, &src, 1, 1, mb);
-ASSERT_ERRNO_SUCCESS();
-    ASSERT_EQ(static_cast<int>(n), 1);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(static_cast<int>(n), 1);
   ASSERT_EQ(src, original + 6);
   ASSERT_EQ(static_cast<int>(dest[2]), 9851);
 
   // Read laughing cat emoji '😹'
   n = LIBC_NAMESPACE::mbsnrtowcs(dest + 3, &src, 4, 5, mb);
   ASSERT_ERRNO_SUCCESS();
-    ASSERT_EQ(static_cast<int>(n), 1);
+  ASSERT_EQ(static_cast<int>(n), 1);
   ASSERT_EQ(src, original + 10);
   ASSERT_EQ(static_cast<int>(dest[3]), 128569);
-
 
   n = LIBC_NAMESPACE::mbsnrtowcs(dest + 4, &src, 4, 4, nullptr);
   ASSERT_TRUE(dest[4] == L'\0');
@@ -149,7 +148,7 @@ TEST_F(LlvmLibcMBSNRToWCSTest, InvalidMiddleByte) {
       "\xf0\x9f\x98\xb9\xf0\x9f\xf0\xb9\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9";
   const char *original = src;
   wchar_t dest[3];
-    mbstate_t *mb;
+  mbstate_t *mb;
   LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
   // Successfully read one character and first byte of the second character
   size_t n = LIBC_NAMESPACE::mbsnrtowcs(dest, &src, 5, 88, mb);
