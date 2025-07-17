@@ -1402,9 +1402,9 @@ void Intrinsic::emitBodyAsBuiltinCall() {
         CastToType.makeInteger(8, true);
         Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
       } else if ((T.isPoly() || (T.isVector() && T.isInteger() && !T.isSigned() &&
-                  (StringRef(Name).contains("_p8") ||
-                    StringRef(Name).contains("_p16") ||
-                    StringRef(Name).contains("_p64"))))) {
+                (StringRef(Name).contains("_p8") ||
+                  StringRef(Name).contains("_p16") ||
+                  StringRef(Name).contains("_p64"))))) {
         CastToType.makeSigned();
         Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
       } else if (LocalCK == ClassI && CastToType.isInteger()) {
@@ -1412,8 +1412,6 @@ void Intrinsic::emitBodyAsBuiltinCall() {
         Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
       }
     }
-
-
     S += Arg + ", ";
   }
 
