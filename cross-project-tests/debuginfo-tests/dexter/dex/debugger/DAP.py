@@ -257,6 +257,9 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             {"source": {"path": source}, "breakpoints": [bp.toDict() for bp in bps]},
         )
 
+    ############################################################################
+    ## DAP communication & state-handling functions
+
     # Sends a request to the adapter, returning the seq value of the request.
     def send_message(self, payload: dict) -> int:
         self.seq = self.seq + 1
@@ -458,6 +461,9 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 )
             time.sleep(0.001)
         return self._debugger_state.get_response(seq)
+
+    ## End of DAP communication methods
+    ############################################################################
 
     def _translate_stop_reason(self, reason: str | None):
         if reason is None:
@@ -756,13 +762,10 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def _evaluate_result_value(expression: str, result_string: str) -> ValueIR:
-        """ "For the result of an "evaluate" message, return a ValueIR. Implementation must be debugger-specific."""
+        """For the result of an "evaluate" message, return a ValueIR. Implementation must be debugger-specific."""
 
-    # FIXME: You don't use indexed-from-0 IDs for evaluate here, you use a unique ID assigned to each stack frame,
-    # which we get from the 'stackTrace' request; for now, we will pass that special ID and use it here, but since this
-    # can get called from more generic contexts that don't understand DAP, we need to set up some kind of translation
-    # here in future.
     def evaluate_expression(self, expression, frame_idx=0) -> ValueIR:
+        # The frame_idx passed in here needs to be translated to the debug adapter's internal frame ID.
         dap_frame_id = self._debugger_state.frame_map[frame_idx]
         eval_req_id = self.send_message(
             self.make_request(
