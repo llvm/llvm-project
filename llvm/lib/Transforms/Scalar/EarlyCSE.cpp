@@ -958,7 +958,8 @@ private:
   bool overridingStores(const ParseMemoryInst &Earlier,
                         const ParseMemoryInst &Later);
 
-  Value *getOrCreateResult(Instruction *Inst, Type *ExpectedType) const {
+  Value *getOrCreateResult(Instruction *Inst, Type *ExpectedType,
+                           bool CanCreate) const {
     // TODO: We could insert relevant casts on type mismatch.
     // The load or the store's first operand.
     Value *V;
@@ -971,7 +972,8 @@ private:
         V = II->getOperand(0);
         break;
       default:
-        return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType);
+        return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType,
+                                                     CanCreate);
       }
     } else {
       V = isa<LoadInst>(Inst) ? Inst : cast<StoreInst>(Inst)->getValueOperand();
@@ -1255,9 +1257,10 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
 
   // For stores check the result values before checking memory generation
   // (otherwise isSameMemGeneration may crash).
-  Value *Result = MemInst.isStore()
-                      ? getOrCreateResult(Matching, Other->getType())
-                      : nullptr;
+  Value *Result =
+      MemInst.isStore()
+          ? getOrCreateResult(Matching, Other->getType(), /*CanCreate=*/false)
+          : nullptr;
   if (MemInst.isStore() && InVal.DefInst != Result)
     return nullptr;
 
@@ -1278,7 +1281,7 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
     return nullptr;
 
   if (!Result)
-    Result = getOrCreateResult(Matching, Other->getType());
+    Result = getOrCreateResult(Matching, Other->getType(), /*CanCreate=*/true);
   return Result;
 }
 

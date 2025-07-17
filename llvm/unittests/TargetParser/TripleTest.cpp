@@ -2833,6 +2833,8 @@ TEST(TripleTest, DefaultExceptionHandling) {
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("msp430-unknown-unknown").getDefaultExceptionHandling());
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("m68k-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("csky-unknown-unknown").getDefaultExceptionHandling());
 
   EXPECT_EQ(ExceptionHandling::AIX,
@@ -2907,6 +2909,10 @@ TEST(TripleTest, DefaultExceptionHandling) {
 
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("x86_64-scei-ps4").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("aarch64-pc-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("aarch64-pc-windows-elf").getDefaultExceptionHandling());
 }
 
 TEST(TripleTest, NormalizeWindows) {

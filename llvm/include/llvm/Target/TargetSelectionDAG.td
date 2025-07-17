@@ -1140,6 +1140,19 @@ def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
 def vnot : PatFrag<(ops node:$in), (xor node:$in, immAllOnesV)>;
 def ineg : PatFrag<(ops node:$in), (sub 0, node:$in)>;
 
+def or_disjoint : PatFrag<(ops node:$lhs, node:$rhs),
+                          (or node:$lhs, node:$rhs), [{
+  return N->getFlags().hasDisjoint();
+}]> {
+  let GISelPredicateCode = [{
+    return MI.getFlag(MachineInstr::Disjoint);
+  }];
+}
+
+def xor_like : PatFrags<(ops node:$lhs, node:$rhs),
+                        [(xor node:$lhs, node:$rhs),
+                         (or_disjoint node:$lhs, node:$rhs)]>;
+
 def zanyext : PatFrags<(ops node:$op),
                        [(zext node:$op),
                         (anyext node:$op)]>;

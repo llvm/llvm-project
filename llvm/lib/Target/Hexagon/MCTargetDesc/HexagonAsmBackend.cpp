@@ -40,7 +40,7 @@ class HexagonAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
   StringRef CPU;
   mutable uint64_t relaxedCnt;
-  mutable const MCInst *RelaxedMCB = nullptr;
+  mutable MCInst RelaxedMCB;
   std::unique_ptr <MCInstrInfo> MCII;
   std::unique_ptr <MCInst *> RelaxTarget;
   MCInst * Extender;
@@ -428,13 +428,11 @@ public:
     return Relaxable;
   }
 
-  /// MayNeedRelaxation - Check whether the given instruction may need
-  /// relaxation.
-  ///
-  /// \param Inst - The instruction to test.
-  bool mayNeedRelaxation(MCInst const &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override {
-    RelaxedMCB = &Inst;
+    RelaxedMCB.clear();
+    RelaxedMCB.setOpcode(Opcode);
+    RelaxedMCB.setOperands(Operands);
     return true;
   }
 
@@ -443,7 +441,7 @@ public:
   bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, const MCValue &,
                                     uint64_t Value,
                                     bool Resolved) const override {
-    MCInst const &MCB = *RelaxedMCB;
+    MCInst const &MCB = RelaxedMCB;
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
     *RelaxTarget = nullptr;
@@ -598,7 +596,7 @@ public:
             case MCFragment::FT_Relaxable: {
               MCContext &Context = getContext();
               auto &RF = cast<MCRelaxableFragment>(*Frags[K]);
-              auto &Inst = const_cast<MCInst &>(RF.getInst());
+              MCInst Inst = RF.getInst();
 
               const bool WouldTraverseLabel = llvm::any_of(
                   Asm.symbols(), [&Asm, &RF, &Inst](MCSymbol const &sym) {

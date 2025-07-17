@@ -1213,9 +1213,9 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
   // loaded and stored. That's why we multiply the number of elements by 2 to
   // get the cost for this memcpy.
   std::vector<EVT> MemOps;
-  if (getTLI()->findOptimalMemOpLowering(
-          MemOps, Limit, MOp, DstAddrSpace,
-          SrcAddrSpace, F->getAttributes()))
+  LLVMContext &C = F->getContext();
+  if (getTLI()->findOptimalMemOpLowering(C, MemOps, Limit, MOp, DstAddrSpace,
+                                         SrcAddrSpace, F->getAttributes()))
     return MemOps.size() * Factor;
 
   // If we can't find an optimal memop lowering, return the default cost

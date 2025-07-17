@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -25,7 +26,7 @@ namespace llvm {
 
 class MCExpr;
 
-class MCSectionGOFF final : public MCSection {
+class LLVM_ABI MCSectionGOFF final : public MCSection {
   // Parent of this section. Implies that the parent is emitted first.
   MCSectionGOFF *Parent;
 

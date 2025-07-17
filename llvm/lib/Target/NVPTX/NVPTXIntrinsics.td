@@ -560,6 +560,30 @@ defm CP_ASYNC_BULK_PREFETCH_CH : CP_ASYNC_BULK_PREFETCH_INTR<has_ch = 1>;
 // TMA Async Bulk Tensor Copy Functions
 //-------------------------------------
 
+class TMA_DIMS_UTIL<int dim> {
+  // For example, when 'dim' is 3, this generates:
+  // an ins_dag:    B32:$d0, B32:$d1, B32:$d2
+  // with base_str: $d0, $d1, $d2
+  dag ins_dag = !dag(ins, !listsplat(B32, dim), !foreach(i, !range(dim), "d" # i));
+  string base_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+}
+
+class TMA_IM2COL_UTIL<int dim, string mode> {
+  // For im2col_w/w_128 modes, number of offsets is always 2.
+  // For im2col mode, offsets is (dim - 2).
+  // For non-im2col modes (i.e. tile) there are no offsets.
+  int offsets = !cond(
+                  !eq(mode, "im2col") : !sub(dim, 2),
+                  !eq(mode, "im2col_w") : 2,
+                  !eq(mode, "im2col_w_128") : 2,
+                  true : 0); // for all other modes
+
+  dag ins_dag = !if(!gt(offsets, 0),
+    !dag(ins, !listsplat(B16, offsets), !foreach(i, !range(offsets), "im2col" # i)),
+    (ins));
+  string base_str = !interleave(!foreach(i, !range(offsets), "$im2col" # i), ", ");
+}
+
 // From Global to Shared memory (G2S)
 class G2S_STRINGS<int dim, string mode, bit mc, bit ch, bit is_shared32 = 0> {
   string prefix = "cp.async.bulk.tensor";
@@ -583,8 +607,8 @@ def CTAGroupFlags : Operand<i32> {
 }
 
 multiclass CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, bit is_shared32, string mode> {
-  defvar dims_dag = !dag(ins, !listsplat(B32, dim), !foreach(i, !range(dim), "d" # i));
-  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str_default = "$cg [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
   defvar rc = !if(is_shared32, B32, B64);
 
@@ -628,39 +652,46 @@ foreach dim = [1, 2, 3, 4, 5] in {
   }
 }
 
-// From Shared to Global memory (S2G)
-class S2G_STRINGS<int dim, string mode, bit ch,
-                  bit is_shared32 = 0, bit is_reduce = 0> {
-  string dir = "global.shared::cta";
-  string completion = "bulk_group";
-  string inst_name = !if(is_reduce, "cp.reduce", "cp")
-                     # ".async.bulk.tensor"
-                     # "." # dim # "d"
-                     # "." # dir
-                     # "." # mode
-                     # "." # completion
-                     # !if(ch, ".L2::cache_hint", "");
-  string intr_name = "CP_ASYNC_BULK_TENSOR_"
-                     # !if(is_reduce, "RED_", "S2G_")
-                     # dim # "D"
-                     # !if(is_shared32, "_SHARED32", "")
-                     # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
-}
-
-multiclass CP_ASYNC_BULK_TENSOR_S2G_INTR<int dim, bit shared32, string mode> {
-  defvar dims_dag = !dag(ins, !listsplat(B32, dim), !foreach(i, !range(dim), "d" # i));
-  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
+                               list<Predicate> pred = [hasPTX<80>, hasSM<90>]> {
+  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
-  defvar rc = !if(shared32, B32, B64);
+
+  defvar intr = !cast<Intrinsic>(
+                  "int_nvvm_cp_async_bulk_tensor_s2g_" # mode # "_" # dim # d);
+  defvar intr_dag = !con((intr addr:$src, B64:$tmap),
+                         !setdagop(dims_dag, intr),
+                         (intr B64:$ch, 0));
+  defvar intr_dag_with_ch = !con((intr addr:$src, B64:$tmap),
+                                 !setdagop(dims_dag, intr),
+                                 (intr B64:$ch, -1));
+
+  // For im2col mode, the actual asm_str is "im2col_no_offs"
+  defvar mode_asm_str = !if(!eq(mode, "im2col"),
+                            "im2col_no_offs", mode);
+  defvar prefix = "cp.async.bulk.tensor"
+                  # "." # dim # "d"
+                  # ".global.shared::cta"
+                  # "." # mode_asm_str
+                  # ".bulk_group";
 
   def "" : NVPTXInst<(outs),
-            !con((ins rc:$src, B64:$tmap), dims_dag),
-            !strconcat(S2G_STRINGS<dim, mode, 0>.inst_name, asm_str, ";"), []>,
-            Requires<[hasPTX<80>, hasSM<90>]>;
+             !con((ins ADDR:$src, B64:$tmap), dims_dag, (ins B64:$ch)),
+             prefix # asm_str # ";",
+             [intr_dag]>,
+             Requires<pred>;
   def _CH : NVPTXInst<(outs),
-                  !con((ins rc:$src, B64:$tmap), dims_dag, (ins B64:$ch)),
-                  !strconcat(S2G_STRINGS<dim, mode, 1>.inst_name, asm_str, ", $ch;"), []>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
+              !con((ins ADDR:$src, B64:$tmap), dims_dag, (ins B64:$ch)),
+              prefix # ".L2::cache_hint" # asm_str # ", $ch;",
+              [intr_dag_with_ch]>,
+              Requires<pred>;
+}
+foreach dim = 1...5 in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    defvar suffix = !toupper(mode) # "_" # dim # D;
+    defm TMA_TENSOR_S2G_ # suffix : TMA_TENSOR_S2G_INTR<dim, mode>;
+  }
 }
 
 def TMAReductionFlags : Operand<i32> {
@@ -669,13 +700,16 @@ def TMAReductionFlags : Operand<i32> {
 
 // TMA Copy from Shared to Global memory with Reduction
 multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, bit shared32, string mode> {
-  defvar dims_dag = !dag(ins, !listsplat(B32, dim), !foreach(i, !range(dim), "d" # i));
-  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
   defvar rc = !if(shared32, B32, B64);
 
+  // For im2col mode, the actual asm_str is "im2col_no_offs"
+  defvar mode_asm_str = !if(!eq(mode, "im2col"),
+                            "im2col_no_offs", mode);
   defvar prefix = "cp.reduce.async.bulk.tensor" # "." # dim # "d" # ".global.shared::cta";
-  defvar suffix = "." # mode # ".bulk_group";
+  defvar suffix = "." # mode_asm_str # ".bulk_group";
 
   def "" : NVPTXInst<(outs),
             !con((ins rc:$src, B64:$tmap), dims_dag, (ins TMAReductionFlags:$red_op)),
@@ -689,58 +723,63 @@ multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, bit shared32, string mode> 
 
 foreach dim = [1, 2, 3, 4, 5] in {
   foreach shared32 = [true, false] in {
-    foreach mode = !if(!ge(dim, 3), ["tile", "im2col_no_offs"], ["tile"]) in {
-      defm S2G_STRINGS<dim, mode, 0, shared32>.intr_name :
-        CP_ASYNC_BULK_TENSOR_S2G_INTR<dim, shared32, mode>;
-      defm S2G_STRINGS<dim, mode, 0, shared32, 1>.intr_name :
+    foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+      defvar suffix = dim # "D"
+                      # !if(shared32, "_SHARED32", "")
+                      # "_" # !toupper(mode);
+      defm CP_ASYNC_BULK_TENSOR_RED_ # suffix :
         CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, shared32, mode>;
     }
   }
 }
 
 // TMA Prefetch from Global memory to L2 cache
-class PREFETCH_STRINGS<int dim, string mode, bit ch> {
-  string prefix = "cp.async.bulk.prefetch.tensor";
-  string dir = "L2.global";
-  string inst_name = prefix
+multiclass TMA_TENSOR_PREFETCH_INTR<int dim, string mode,
+                                    list<Predicate> pred = [hasPTX<80>, hasSM<90>]> {
+  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
+  defvar asm_str_base = " [$tmap, {{" # dims_str # "}}]";
+
+  defvar im2col_dag = TMA_IM2COL_UTIL<dim, mode>.ins_dag;
+  defvar im2col_str = TMA_IM2COL_UTIL<dim, mode>.base_str;
+  defvar asm_str = !if(!empty(im2col_str),
+                       asm_str_base,
+                       asm_str_base # ", {{" # im2col_str # "}}");
+
+  defvar inst_name = "cp.async.bulk.prefetch.tensor"
                      # "." # dim # "d"
-                     # "." # dir
-                     # "." # mode
-                     # !if(ch, ".L2::cache_hint", "");
-  string intr_name = "CP_ASYNC_BULK_TENSOR_PREFETCH_"
-                     # dim # "D"
-                     # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
+                     # "." # "L2.global"
+                     # "." # mode;
+
+  defvar intr = !cast<Intrinsic>(
+                  "int_nvvm_cp_async_bulk_tensor_prefetch_" # mode # "_" # dim # d);
+
+  defvar ins_dag  = !con((ins  B64:$tmap),
+                         dims_dag,
+                         im2col_dag,
+                         (ins B64:$ch));
+  defvar intr_dag = !con((intr B64:$tmap),
+                         !setdagop(dims_dag, intr),
+                         !setdagop(im2col_dag, intr),
+                         (intr B64:$ch, 0));
+  defvar intr_dag_with_ch = !con((intr B64:$tmap),
+                                 !setdagop(dims_dag, intr),
+                                 !setdagop(im2col_dag, intr),
+                                 (intr B64:$ch, -1));
+
+  def "" : NVPTXInst<(outs), ins_dag,
+             inst_name # asm_str # ";",
+             [intr_dag]>,
+             Requires<pred>;
+  def _CH : NVPTXInst<(outs), ins_dag,
+              inst_name # ".L2::cache_hint" # asm_str # ", $ch;",
+              [intr_dag_with_ch]>,
+              Requires<pred>;
 }
-
-multiclass CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<int dim, string mode> {
-  defvar dims_dag = !dag(ins, !listsplat(B32, dim), !foreach(i, !range(dim), "d" # i));
-  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
-  defvar asm_str_default = " [$tmap, {{" # dims_str # "}}]";
-
-  defvar num_im2col = !if(!ge(dim, 3), !add(dim, -2), 0);
-  defvar im2col_dag = !if(!eq(mode, "im2col"),
-    !dag(ins, !listsplat(B16, num_im2col), !foreach(i, !range(num_im2col), "im2col" # i)),
-    (ins));
-  defvar im2col_str = !interleave(!foreach(i, !range(num_im2col), "$im2col" # i), ", ");
-  defvar im2col_asm_str = ", {{" # im2col_str # "}}";
-
-  defvar asm_str = !if(!eq(mode, "im2col"),
-    !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
-
-  def "" : NVPTXInst<(outs),
-            !con((ins B64:$tmap), dims_dag, im2col_dag),
-            !strconcat(PREFETCH_STRINGS<dim, mode, 0>.inst_name, asm_str, ";"), []>,
-            Requires<[hasPTX<80>, hasSM<90>]>;
-  def _CH : NVPTXInst<(outs),
-                  !con((ins B64:$tmap), dims_dag, im2col_dag, (ins B64:$ch)),
-                  !strconcat(PREFETCH_STRINGS<dim, mode, 1>.inst_name, asm_str, ", $ch;"), []>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
-}
-
-foreach dim = [1, 2, 3, 4, 5] in {
+foreach dim = 1...5 in {
   foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
-    defm PREFETCH_STRINGS<dim, mode, 0>.intr_name :
-      CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<dim, mode>;
+    defvar suffix = !toupper(mode) # "_" # dim # D;
+    defm TMA_TENSOR_PF_ # suffix : TMA_TENSOR_PREFETCH_INTR<dim, mode>;
   }
 }
 
@@ -1006,12 +1045,14 @@ def INT_PM_EVENT_MASK : BasicNVPTXInst<(outs),
 // Min Max
 //
 
-def INT_NVVM_FMIN_F : F_MATH_2<"min.f32", B32, B32, B32, int_nvvm_fmin_f>;
-def INT_NVVM_FMIN_FTZ_F : F_MATH_2<"min.ftz.f32", B32, B32, B32, int_nvvm_fmin_ftz_f>;
-def INT_NVVM_FMIN_NAN_F : F_MATH_2<"min.NaN.f32", B32, B32, B32, int_nvvm_fmin_nan_f,
-  [hasPTX<70>, hasSM<80>]>;
-def INT_NVVM_FMIN_FTZ_NAN_F : F_MATH_2<"min.ftz.NaN.f32", B32, B32, B32, int_nvvm_fmin_ftz_nan_f,
-  [hasPTX<70>, hasSM<80>]>;
+def : Pat<(int_nvvm_fmin_f f32:$a, f32:$b), (MIN_f32_rr $a, $b, NoFTZ)>;
+def : Pat<(int_nvvm_fmin_ftz_f f32:$a, f32:$b), (MIN_f32_rr $a, $b, FTZ)>;
+
+let Predicates = [hasPTX<70>, hasSM<80>] in {
+  def : Pat<(int_nvvm_fmin_nan_f f32:$a, f32:$b), (MIN_NAN_f32_rr $a, $b, NoFTZ)>;
+  def : Pat<(int_nvvm_fmin_ftz_nan_f f32:$a, f32:$b), (MIN_NAN_f32_rr $a, $b, FTZ)>;
+}
+
 def INT_NVVM_FMIN_XORSIGN_ABS_F :
  F_MATH_2<"min.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmin_xorsign_abs_f,
     [hasPTX<72>, hasSM<86>]>;
@@ -1025,12 +1066,15 @@ def INT_NVVM_FMIN_FTZ_NAN_XORSIGN_ABS_F :
   F_MATH_2<"min.ftz.NaN.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmin_ftz_nan_xorsign_abs_f,
     [hasPTX<72>, hasSM<86>]>;
 
-def INT_NVVM_FMAX_F : F_MATH_2<"max.f32", B32, B32, B32, int_nvvm_fmax_f>;
-def INT_NVVM_FMAX_FTZ_F : F_MATH_2<"max.ftz.f32", B32, B32, B32, int_nvvm_fmax_ftz_f>;
-def INT_NVVM_FMAX_NAN_F : F_MATH_2<"max.NaN.f32", B32, B32, B32, int_nvvm_fmax_nan_f,
-  [hasPTX<70>, hasSM<80>]>;
-def INT_NVVM_FMAX_FTZ_NAN_F : F_MATH_2<"max.ftz.NaN.f32", B32, B32, B32, int_nvvm_fmax_ftz_nan_f,
-  [hasPTX<70>, hasSM<80>]>;
+
+def : Pat<(int_nvvm_fmax_f f32:$a, f32:$b), (MAX_f32_rr $a, $b, NoFTZ)>;
+def : Pat<(int_nvvm_fmax_ftz_f f32:$a, f32:$b), (MAX_f32_rr $a, $b, FTZ)>;
+
+let Predicates = [hasPTX<70>, hasSM<80>] in {
+  def : Pat<(int_nvvm_fmax_nan_f f32:$a, f32:$b), (MAX_NAN_f32_rr $a, $b, NoFTZ)>;
+  def : Pat<(int_nvvm_fmax_ftz_nan_f f32:$a, f32:$b), (MAX_NAN_f32_rr $a, $b, FTZ)>;
+}
+
 def INT_NVVM_FMAX_XORSIGN_ABS_F :
   F_MATH_2<"max.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmax_xorsign_abs_f,
     [hasPTX<72>, hasSM<86>]>;
@@ -1044,8 +1088,8 @@ def INT_NVVM_FMAX_FTZ_NAN_XORSIGN_ABS_F :
   F_MATH_2<"max.ftz.NaN.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmax_ftz_nan_xorsign_abs_f,
     [hasPTX<72>, hasSM<86>]>;
 
-def INT_NVVM_FMIN_D : F_MATH_2<"min.f64", B64, B64, B64, int_nvvm_fmin_d>;
-def INT_NVVM_FMAX_D : F_MATH_2<"max.f64", B64, B64, B64, int_nvvm_fmax_d>;
+def : Pat<(int_nvvm_fmin_d f64:$a, f64:$b), (MIN_f64_rr $a, $b)>;
+def : Pat<(int_nvvm_fmax_d f64:$a, f64:$b), (MAX_f64_rr $a, $b)>;
 
 //
 // Min Max f16, f16x2, bf16, bf16x2
@@ -1181,17 +1225,10 @@ def INT_NVVM_DIV_RZ_D : F_MATH_2<"div.rz.f64", B64, B64, B64, int_nvvm_div_rz_d>
 def INT_NVVM_DIV_RM_D : F_MATH_2<"div.rm.f64", B64, B64, B64, int_nvvm_div_rm_d>;
 def INT_NVVM_DIV_RP_D : F_MATH_2<"div.rp.f64", B64, B64, B64, int_nvvm_div_rp_d>;
 
-def : Pat<(int_nvvm_div_full f32:$a, f32:$b),
-          (FDIV32rr $a, $b)>;
-
-def : Pat<(int_nvvm_div_full f32:$a, fpimm:$b),
-          (FDIV32ri $a, f32imm:$b)>;
-
-def : Pat<(int_nvvm_div_full_ftz f32:$a, f32:$b),
-          (FDIV32rr_ftz $a, $b)>;
-
-def : Pat<(int_nvvm_div_full_ftz f32:$a, fpimm:$b),
-          (FDIV32ri_ftz $a, f32imm:$b)>;
+def : Pat<(int_nvvm_div_full f32:$a, f32:$b), (FDIV32rr $a, $b, NoFTZ)>;
+def : Pat<(int_nvvm_div_full f32:$a, fpimm:$b), (FDIV32ri $a, f32imm:$b, NoFTZ)>;
+def : Pat<(int_nvvm_div_full_ftz f32:$a, f32:$b), (FDIV32rr $a, $b, FTZ)>;
+def : Pat<(int_nvvm_div_full_ftz f32:$a, fpimm:$b), (FDIV32ri $a, f32imm:$b, FTZ)>;
 
 //
 // Sad
@@ -1288,48 +1325,36 @@ def : Pat<(int_nvvm_saturate_d f64:$a),     (CVT_f64_f64 $a, CvtSAT)>;
 // Exp2  Log2
 //
 
-def INT_NVVM_EX2_APPROX_FTZ_F : F_MATH_1<"ex2.approx.ftz.f32",
-  F32RT, F32RT, int_nvvm_ex2_approx_ftz_f>;
-def INT_NVVM_EX2_APPROX_F : F_MATH_1<"ex2.approx.f32",
-  F32RT, F32RT, int_nvvm_ex2_approx_f>;
-def INT_NVVM_EX2_APPROX_D : F_MATH_1<"ex2.approx.f64",
-  F64RT, F64RT, int_nvvm_ex2_approx_d>;
+def : Pat<(int_nvvm_ex2_approx_ftz_f f32:$a), (EX2_APPROX_f32 $a, FTZ)>;
+def : Pat<(int_nvvm_ex2_approx_f f32:$a), (EX2_APPROX_f32 $a, NoFTZ)>;
 
-def INT_NVVM_EX2_APPROX_F16 : F_MATH_1<"ex2.approx.f16",
-  F16RT, F16RT, int_nvvm_ex2_approx_f16, [hasPTX<70>, hasSM<75>]>;
-def INT_NVVM_EX2_APPROX_F16X2 : F_MATH_1<"ex2.approx.f16x2",
-  F16X2RT, F16X2RT, int_nvvm_ex2_approx_f16x2, [hasPTX<70>, hasSM<75>]>;
+let Predicates = [hasPTX<70>, hasSM<75>] in {
+  def : Pat<(int_nvvm_ex2_approx_f16 f16:$a), (EX2_APPROX_f16 $a)>;
+  def : Pat<(int_nvvm_ex2_approx_f16x2 v2f16:$a), (EX2_APPROX_f16x2 $a)>;
+}
 
-def : Pat<(fexp2 f32:$a), (INT_NVVM_EX2_APPROX_FTZ_F $a)>, Requires<[doF32FTZ]>;
-def : Pat<(fexp2 f32:$a), (INT_NVVM_EX2_APPROX_F $a)>;
-def : Pat<(fexp2 f16:$a), (INT_NVVM_EX2_APPROX_F16 $a)>, Requires<[useFP16Math]>;
-def : Pat<(fexp2 v2f16:$a), (INT_NVVM_EX2_APPROX_F16X2 $a)>, Requires<[useFP16Math]>;
+def LG2_APPROX_f32 :
+  BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$src), (ins FTZFlag:$ftz),
+    "lg2.approx$ftz.f32",
+    [(set f32:$dst, (flog2 f32:$src))]>;
 
-def INT_NVVM_LG2_APPROX_FTZ_F : F_MATH_1<"lg2.approx.ftz.f32",
-  F32RT, F32RT, int_nvvm_lg2_approx_ftz_f>;
-def INT_NVVM_LG2_APPROX_F : F_MATH_1<"lg2.approx.f32",
-  F32RT, F32RT, int_nvvm_lg2_approx_f>;
-def INT_NVVM_LG2_APPROX_D : F_MATH_1<"lg2.approx.f64",
-  F64RT, F64RT, int_nvvm_lg2_approx_d>;
+def LG2_APPROX_f64 :
+  BasicNVPTXInst<(outs B64:$dst), (ins B64:$src),
+    "lg2.approx.f64",
+    [(set f64:$dst, (flog2 f64:$src))]>;
 
-def : Pat<(flog2 f32:$a), (INT_NVVM_LG2_APPROX_FTZ_F $a)>,
-          Requires<[doF32FTZ]>;
-def : Pat<(flog2 f32:$a), (INT_NVVM_LG2_APPROX_F $a)>,
-          Requires<[doNoF32FTZ]>;
+def : Pat<(int_nvvm_lg2_approx_ftz_f f32:$a), (LG2_APPROX_f32 $a, FTZ)>;
+def : Pat<(int_nvvm_lg2_approx_f f32:$a), (LG2_APPROX_f32 $a, NoFTZ)>;
+def : Pat<(int_nvvm_lg2_approx_d f64:$a), (LG2_APPROX_f64 $a)>;
 
 //
 // Sin  Cos
 //
 
-def INT_NVVM_SIN_APPROX_FTZ_F : F_MATH_1<"sin.approx.ftz.f32",
-  F32RT, F32RT, int_nvvm_sin_approx_ftz_f>;
-def INT_NVVM_SIN_APPROX_F : F_MATH_1<"sin.approx.f32",
-  F32RT, F32RT, int_nvvm_sin_approx_f>;
-
-def INT_NVVM_COS_APPROX_FTZ_F : F_MATH_1<"cos.approx.ftz.f32",
-  F32RT, F32RT, int_nvvm_cos_approx_ftz_f>;
-def INT_NVVM_COS_APPROX_F : F_MATH_1<"cos.approx.f32",
-  F32RT, F32RT, int_nvvm_cos_approx_f>;
+def : Pat<(int_nvvm_sin_approx_ftz_f f32:$a), (SIN_APPROX_f32 $a, FTZ)>;
+def : Pat<(int_nvvm_sin_approx_f f32:$a), (SIN_APPROX_f32 $a, NoFTZ)>;
+def : Pat<(int_nvvm_cos_approx_ftz_f f32:$a), (COS_APPROX_f32 $a, FTZ)>;
+def : Pat<(int_nvvm_cos_approx_f f32:$a), (COS_APPROX_f32 $a, NoFTZ)>;
 
 //
 // Fma
@@ -1478,31 +1503,30 @@ def : Pat<(fsqrt_approx f32:$a), (INT_NVVM_SQRT_APPROX_F $a)>;
 // Rsqrt
 //
 
-def INT_NVVM_RSQRT_APPROX_FTZ_F
-  : F_MATH_1<"rsqrt.approx.ftz.f32", F32RT, F32RT, int_nvvm_rsqrt_approx_ftz_f>;
-def INT_NVVM_RSQRT_APPROX_FTZ_D
-  : F_MATH_1<"rsqrt.approx.ftz.f64", F64RT, F64RT, int_nvvm_rsqrt_approx_ftz_d>;
+foreach t = [F32RT, F64RT] in {
+  def RSQRT_APPROX_ # t.Ty :
+    BasicFlagsNVPTXInst<(outs t.RC:$dst),
+                        (ins t.RC:$a), (ins FTZFlag:$ftz),
+                        "rsqrt.approx$ftz.f" # t.Size>;
+}
 
-def INT_NVVM_RSQRT_APPROX_F : F_MATH_1<"rsqrt.approx.f32",
-  F32RT, F32RT, int_nvvm_rsqrt_approx_f>;
-def INT_NVVM_RSQRT_APPROX_D : F_MATH_1<"rsqrt.approx.f64",
-  F64RT, F64RT, int_nvvm_rsqrt_approx_d>;
+def : Pat<(int_nvvm_rsqrt_approx_ftz_f f32:$a), (RSQRT_APPROX_f32 $a, FTZ)>;
+def : Pat<(int_nvvm_rsqrt_approx_ftz_d f64:$a), (RSQRT_APPROX_f64 $a, FTZ)>;
+def : Pat<(int_nvvm_rsqrt_approx_f f32:$a), (RSQRT_APPROX_f32 $a, NoFTZ)>;
+def : Pat<(int_nvvm_rsqrt_approx_d f64:$a), (RSQRT_APPROX_f64 $a, NoFTZ)>;
+
 
 // 1.0f / sqrt_approx -> rsqrt_approx
-def: Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_f f32:$a)),
-         (INT_NVVM_RSQRT_APPROX_F $a)>,
-         Requires<[doRsqrtOpt]>;
-def: Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
-         (INT_NVVM_RSQRT_APPROX_FTZ_F $a)>,
-         Requires<[doRsqrtOpt]>;
+let Predicates = [doRsqrtOpt] in {
+  def : Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_f f32:$a)),
+          (RSQRT_APPROX_f32 $a, NoFTZ)>;
+  def : Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
+          (RSQRT_APPROX_f32 $a, FTZ)>;
 
-// same for int_nvvm_sqrt_f when non-precision sqrt is requested
-def: Pat<(fdiv f32imm_1, (fsqrt_approx f32:$a)),
-         (INT_NVVM_RSQRT_APPROX_F $a)>,
-         Requires<[doRsqrtOpt, doNoF32FTZ]>;
-def: Pat<(fdiv f32imm_1, (fsqrt_approx f32:$a)),
-         (INT_NVVM_RSQRT_APPROX_FTZ_F $a)>,
-         Requires<[doRsqrtOpt, doF32FTZ]>;
+  // same for int_nvvm_sqrt_f when non-precision sqrt is requested
+  def : Pat<(fdiv f32imm_1, (fsqrt_approx f32:$a)),
+          (RSQRT_APPROX_f32 $a)>;
+}
 //
 // Add
 //

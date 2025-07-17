@@ -943,6 +943,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_SUCCESS)
       Info.add("Device Name", TmpChar);
 
+    Info.add("Vendor Name", "NVIDIA");
+
     Res = cuDeviceTotalMem(&TmpSt, Device);
     if (Res == CUDA_SUCCESS)
       Info.add("Global Memory Size", TmpSt, "bytes");
@@ -1353,13 +1355,15 @@ public:
                                  GlobalName))
       return Err;
 
-    if (CUSize != DeviceGlobal.getSize())
+    if (DeviceGlobal.getSize() && CUSize != DeviceGlobal.getSize())
       return Plugin::error(
           ErrorCode::INVALID_BINARY,
           "failed to load global '%s' due to size mismatch (%zu != %zu)",
           GlobalName, CUSize, (size_t)DeviceGlobal.getSize());
 
     DeviceGlobal.setPtr(reinterpret_cast<void *>(CUPtr));
+    DeviceGlobal.setSize(CUSize);
+
     return Plugin::success();
   }
 };

@@ -5041,6 +5041,9 @@ void fir::BoxTotalElementsOp::getCanonicalizationPatterns(
 // LocalitySpecifierOp
 //===----------------------------------------------------------------------===//
 
+// TODO This is a copy of omp::PrivateClauseOp::verifiyRegions(). Once we find a
+// solution to merge both ops into one this duplication will not be needed. See:
+// https://discourse.llvm.org/t/dialect-for-data-locality-sharing-specifiers-clauses-in-openmp-openacc-and-do-concurrent/86108.
 llvm::LogicalResult fir::LocalitySpecifierOp::verifyRegions() {
   mlir::Type argType = getArgType();
   auto verifyTerminator = [&](mlir::Operation *terminator,
@@ -5136,6 +5139,84 @@ llvm::LogicalResult fir::LocalitySpecifierOp::verifyRegions() {
   return llvm::success();
 }
 
+// TODO This is a copy of omp::DeclareReductionOp::verifiyRegions(). Once we
+// find a solution to merge both ops into one this duplication will not be
+// needed.
+mlir::LogicalResult fir::DeclareReductionOp::verifyRegions() {
+  if (!getAllocRegion().empty()) {
+    for (YieldOp yieldOp : getAllocRegion().getOps<YieldOp>()) {
+      if (yieldOp.getResults().size() != 1 ||
+          yieldOp.getResults().getTypes()[0] != getType())
+        return emitOpError() << "expects alloc region to yield a value "
+                                "of the reduction type";
+    }
+  }
+
+  if (getInitializerRegion().empty())
+    return emitOpError() << "expects non-empty initializer region";
+  mlir::Block &initializerEntryBlock = getInitializerRegion().front();
+
+  if (initializerEntryBlock.getNumArguments() == 1) {
+    if (!getAllocRegion().empty())
+      return emitOpError() << "expects two arguments to the initializer region "
+                              "when an allocation region is used";
+  } else if (initializerEntryBlock.getNumArguments() == 2) {
+    if (getAllocRegion().empty())
+      return emitOpError() << "expects one argument to the initializer region "
+                              "when no allocation region is used";
+  } else {
+    return emitOpError()
+           << "expects one or two arguments to the initializer region";
+  }
+
+  for (mlir::Value arg : initializerEntryBlock.getArguments())
+    if (arg.getType() != getType())
+      return emitOpError() << "expects initializer region argument to match "
+                              "the reduction type";
+
+  for (YieldOp yieldOp : getInitializerRegion().getOps<YieldOp>()) {
+    if (yieldOp.getResults().size() != 1 ||
+        yieldOp.getResults().getTypes()[0] != getType())
+      return emitOpError() << "expects initializer region to yield a value "
+                              "of the reduction type";
+  }
+
+  if (getReductionRegion().empty())
+    return emitOpError() << "expects non-empty reduction region";
+  mlir::Block &reductionEntryBlock = getReductionRegion().front();
+  if (reductionEntryBlock.getNumArguments() != 2 ||
+      reductionEntryBlock.getArgumentTypes()[0] !=
+          reductionEntryBlock.getArgumentTypes()[1] ||
+      reductionEntryBlock.getArgumentTypes()[0] != getType())
+    return emitOpError() << "expects reduction region with two arguments of "
+                            "the reduction type";
+  for (YieldOp yieldOp : getReductionRegion().getOps<YieldOp>()) {
+    if (yieldOp.getResults().size() != 1 ||
+        yieldOp.getResults().getTypes()[0] != getType())
+      return emitOpError() << "expects reduction region to yield a value "
+                              "of the reduction type";
+  }
+
+  if (!getAtomicReductionRegion().empty()) {
+    mlir::Block &atomicReductionEntryBlock = getAtomicReductionRegion().front();
+    if (atomicReductionEntryBlock.getNumArguments() != 2 ||
+        atomicReductionEntryBlock.getArgumentTypes()[0] !=
+            atomicReductionEntryBlock.getArgumentTypes()[1])
+      return emitOpError() << "expects atomic reduction region with two "
+                              "arguments of the same type";
+  }
+
+  if (getCleanupRegion().empty())
+    return mlir::success();
+  mlir::Block &cleanupEntryBlock = getCleanupRegion().front();
+  if (cleanupEntryBlock.getNumArguments() != 1 ||
+      cleanupEntryBlock.getArgument(0).getType() != getType())
+    return emitOpError() << "expects cleanup region with one argument "
+                            "of the reduction type";
+
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // DoConcurrentOp
 //===----------------------------------------------------------------------===//
@@ -5156,6 +5237,97 @@ llvm::LogicalResult fir::DoConcurrentOp::verify() {
 //===----------------------------------------------------------------------===//
 // DoConcurrentLoopOp
 //===----------------------------------------------------------------------===//
+
+static mlir::ParseResult parseSpecifierList(
+    mlir::OpAsmParser &parser, mlir::OperationState &result,
+    llvm::StringRef specifierKeyword, llvm::StringRef symsAttrName,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::Argument> &regionArgs,
+    llvm::SmallVectorImpl<mlir::Type> &regionArgTypes,
+    int32_t &numSpecifierOperands, bool isReduce = false) {
+  auto &builder = parser.getBuilder();
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> specifierOperands;
+
+  if (failed(parser.parseOptionalKeyword(specifierKeyword)))
+    return mlir::success();
+
+  std::size_t oldArgTypesSize = regionArgTypes.size();
+  if (failed(parser.parseLParen()))
+    return mlir::failure();
+
+  llvm::SmallVector<bool> isByRefVec;
+  llvm::SmallVector<mlir::SymbolRefAttr> spceifierSymbolVec;
+  llvm::SmallVector<fir::ReduceAttr> attributes;
+
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (isReduce)
+          isByRefVec.push_back(
+              parser.parseOptionalKeyword("byref").succeeded());
+
+        if (failed(parser.parseAttribute(spceifierSymbolVec.emplace_back())))
+          return mlir::failure();
+
+        if (isReduce &&
+            failed(parser.parseAttribute(attributes.emplace_back())))
+          return mlir::failure();
+
+        if (parser.parseOperand(specifierOperands.emplace_back()) ||
+            parser.parseArrow() ||
+            parser.parseArgument(regionArgs.emplace_back()))
+          return mlir::failure();
+
+        return mlir::success();
+      })))
+    return mlir::failure();
+
+  if (failed(parser.parseColon()))
+    return mlir::failure();
+
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (failed(parser.parseType(regionArgTypes.emplace_back())))
+          return mlir::failure();
+
+        return mlir::success();
+      })))
+    return mlir::failure();
+
+  if (regionArgs.size() != regionArgTypes.size())
+    return parser.emitError(parser.getNameLoc(), "mismatch in number of " +
+                                                     specifierKeyword.str() +
+                                                     " arg and types");
+
+  if (failed(parser.parseRParen()))
+    return mlir::failure();
+
+  for (auto operandType :
+       llvm::zip_equal(specifierOperands,
+                       llvm::drop_begin(regionArgTypes, oldArgTypesSize)))
+    if (parser.resolveOperand(std::get<0>(operandType),
+                              std::get<1>(operandType), result.operands))
+      return mlir::failure();
+
+  if (isReduce)
+    result.addAttribute(
+        fir::DoConcurrentLoopOp::getReduceByrefAttrName(result.name),
+        isByRefVec.empty()
+            ? nullptr
+            : mlir::DenseBoolArrayAttr::get(builder.getContext(), isByRefVec));
+
+  llvm::SmallVector<mlir::Attribute> symbolAttrs(spceifierSymbolVec.begin(),
+                                                 spceifierSymbolVec.end());
+  result.addAttribute(symsAttrName, builder.getArrayAttr(symbolAttrs));
+
+  if (isReduce) {
+    llvm::SmallVector<mlir::Attribute> arrayAttr(attributes.begin(),
+                                                 attributes.end());
+    result.addAttribute(
+        fir::DoConcurrentLoopOp::getReduceAttrsAttrName(result.name),
+        builder.getArrayAttr(arrayAttr));
+  }
+
+  numSpecifierOperands = specifierOperands.size();
+
+  return mlir::success();
+}
 
 mlir::ParseResult fir::DoConcurrentLoopOp::parse(mlir::OpAsmParser &parser,
                                                  mlir::OperationState &result) {
@@ -5192,90 +5364,26 @@ mlir::ParseResult fir::DoConcurrentLoopOp::parse(mlir::OpAsmParser &parser,
       parser.resolveOperands(steps, builder.getIndexType(), result.operands))
     return mlir::failure();
 
-  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> reduceOperands;
-  llvm::SmallVector<mlir::Type> reduceArgTypes;
-  if (succeeded(parser.parseOptionalKeyword("reduce"))) {
-    // Parse reduction attributes and variables.
-    llvm::SmallVector<fir::ReduceAttr> attributes;
-    if (failed(parser.parseCommaSeparatedList(
-            mlir::AsmParser::Delimiter::Paren, [&]() {
-              if (parser.parseAttribute(attributes.emplace_back()) ||
-                  parser.parseArrow() ||
-                  parser.parseOperand(reduceOperands.emplace_back()) ||
-                  parser.parseColonType(reduceArgTypes.emplace_back()))
-                return mlir::failure();
-              return mlir::success();
-            })))
-      return mlir::failure();
-    // Resolve input operands.
-    for (auto operand_type : llvm::zip(reduceOperands, reduceArgTypes))
-      if (parser.resolveOperand(std::get<0>(operand_type),
-                                std::get<1>(operand_type), result.operands))
-        return mlir::failure();
-    llvm::SmallVector<mlir::Attribute> arrayAttr(attributes.begin(),
-                                                 attributes.end());
-    result.addAttribute(getReduceAttrsAttrName(result.name),
-                        builder.getArrayAttr(arrayAttr));
-  }
+  int32_t numLocalOperands = 0;
+  if (failed(parseSpecifierList(parser, result, "local",
+                                getLocalSymsAttrName(result.name), regionArgs,
+                                argTypes, numLocalOperands)))
+    return mlir::failure();
 
-  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> localOperands;
-  if (succeeded(parser.parseOptionalKeyword("local"))) {
-    std::size_t oldArgTypesSize = argTypes.size();
-    if (failed(parser.parseLParen()))
-      return mlir::failure();
-
-    llvm::SmallVector<mlir::SymbolRefAttr> localSymbolVec;
-    if (failed(parser.parseCommaSeparatedList([&]() {
-          if (failed(parser.parseAttribute(localSymbolVec.emplace_back())))
-            return mlir::failure();
-
-          if (parser.parseOperand(localOperands.emplace_back()) ||
-              parser.parseArrow() ||
-              parser.parseArgument(regionArgs.emplace_back()))
-            return mlir::failure();
-
-          return mlir::success();
-        })))
-      return mlir::failure();
-
-    if (failed(parser.parseColon()))
-      return mlir::failure();
-
-    if (failed(parser.parseCommaSeparatedList([&]() {
-          if (failed(parser.parseType(argTypes.emplace_back())))
-            return mlir::failure();
-
-          return mlir::success();
-        })))
-      return mlir::failure();
-
-    if (regionArgs.size() != argTypes.size())
-      return parser.emitError(parser.getNameLoc(),
-                              "mismatch in number of local arg and types");
-
-    if (failed(parser.parseRParen()))
-      return mlir::failure();
-
-    for (auto operandType : llvm::zip_equal(
-             localOperands, llvm::drop_begin(argTypes, oldArgTypesSize)))
-      if (parser.resolveOperand(std::get<0>(operandType),
-                                std::get<1>(operandType), result.operands))
-        return mlir::failure();
-
-    llvm::SmallVector<mlir::Attribute> symbolAttrs(localSymbolVec.begin(),
-                                                   localSymbolVec.end());
-    result.addAttribute(getLocalSymsAttrName(result.name),
-                        builder.getArrayAttr(symbolAttrs));
-  }
+  int32_t numReduceOperands = 0;
+  if (failed(parseSpecifierList(
+          parser, result, "reduce", getReduceSymsAttrName(result.name),
+          regionArgs, argTypes, numReduceOperands, /*isReduce=*/true)))
+    return mlir::failure();
 
   // Set `operandSegmentSizes` attribute.
-  result.addAttribute(DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
-                      builder.getDenseI32ArrayAttr(
-                          {static_cast<int32_t>(lower.size()),
-                           static_cast<int32_t>(upper.size()),
-                           static_cast<int32_t>(steps.size()),
-                           static_cast<int32_t>(reduceOperands.size()),
-                           static_cast<int32_t>(localOperands.size())}));
+  result.addAttribute(
+      DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(lower.size()),
+                                    static_cast<int32_t>(upper.size()),
+                                    static_cast<int32_t>(steps.size()),
+                                    static_cast<int32_t>(numLocalOperands),
+                                    static_cast<int32_t>(numReduceOperands)}));
 
   // Now parse the body.
   for (auto [arg, type] : llvm::zip_equal(regionArgs, argTypes))
@@ -5297,17 +5405,6 @@ void fir::DoConcurrentLoopOp::print(mlir::OpAsmPrinter &p) {
     << ") = (" << getLowerBound() << ") to (" << getUpperBound() << ") step ("
     << getStep() << ")";
 
-  if (!getReduceOperands().empty()) {
-    p << " reduce(";
-    auto attrs = getReduceAttrsAttr();
-    auto operands = getReduceOperands();
-    llvm::interleaveComma(llvm::zip(attrs, operands), p, [&](auto it) {
-      p << std::get<0>(it) << " -> " << std::get<1>(it) << " : "
-        << std::get<1>(it).getType();
-    });
-    p << ')';
-  }
-
   if (!getLocalVars().empty()) {
     p << " local(";
     llvm::interleaveComma(llvm::zip_equal(getLocalSymsAttr(), getLocalVars(),
@@ -5322,13 +5419,34 @@ void fir::DoConcurrentLoopOp::print(mlir::OpAsmPrinter &p) {
     p << ")";
   }
 
+  if (!getReduceVars().empty()) {
+    p << " reduce(";
+    llvm::interleaveComma(
+        llvm::zip_equal(getReduceByrefAttr().asArrayRef(), getReduceSymsAttr(),
+                        getReduceAttrsAttr(), getReduceVars(),
+                        getRegionReduceArgs()),
+        p, [&](auto it) {
+          if (std::get<0>(it))
+            p << "byref ";
+
+          p << std::get<1>(it) << " " << std::get<2>(it) << " "
+            << std::get<3>(it) << " -> " << std::get<4>(it);
+        });
+    p << " : ";
+    llvm::interleaveComma(getReduceVars(), p,
+                          [&](auto it) { p << it.getType(); });
+    p << ")";
+  }
+
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
       (*this)->getAttrs(),
       /*elidedAttrs=*/{DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
+                       DoConcurrentLoopOp::getLocalSymsAttrName(),
+                       DoConcurrentLoopOp::getReduceSymsAttrName(),
                        DoConcurrentLoopOp::getReduceAttrsAttrName(),
-                       DoConcurrentLoopOp::getLocalSymsAttrName()});
+                       DoConcurrentLoopOp::getReduceByrefAttrName()});
 }
 
 llvm::SmallVector<mlir::Region *> fir::DoConcurrentLoopOp::getLoopRegions() {
@@ -5340,6 +5458,7 @@ llvm::LogicalResult fir::DoConcurrentLoopOp::verify() {
   mlir::Operation::operand_range ubValues = getUpperBound();
   mlir::Operation::operand_range stepValues = getStep();
   mlir::Operation::operand_range localVars = getLocalVars();
+  mlir::Operation::operand_range reduceVars = getReduceVars();
 
   if (lbValues.empty())
     return emitOpError(
@@ -5353,7 +5472,8 @@ llvm::LogicalResult fir::DoConcurrentLoopOp::verify() {
   // Check that the body defines the same number of block arguments as the
   // number of tuple elements in step.
   mlir::Block *body = getBody();
-  unsigned numIndVarArgs = body->getNumArguments() - localVars.size();
+  unsigned numIndVarArgs =
+      body->getNumArguments() - localVars.size() - reduceVars.size();
 
   if (numIndVarArgs != stepValues.size())
     return emitOpError() << "expects the same number of induction variables: "

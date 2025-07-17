@@ -2184,12 +2184,9 @@ static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
 // Helper functions for extracting fields from encoded instructions.
 // InsnType must either be integral or an APInt-like object that must:
 // * be default-constructible and copy-constructible
-// * be constructible from an APInt (this can be private)
-// * Support insertBits(bits, startBit, numBits)
 // * Support extractBitsAsZExtValue(numBits, startBit)
 // * Support the ~, &, ==, and != operators with other objects of the same type
 // * Support the != and bitwise & with uint64_t
-// * Support put (<<) to raw_ostream&
 template <typename InsnType>
 #if defined(_MSC_VER) && !defined(__clang__)
 __declspec(noinline)
@@ -2221,17 +2218,17 @@ fieldFromInstruction(const InsnType &insn, unsigned startBit,
 static void emitInsertBits(formatted_raw_ostream &OS) {
   OS << R"(
 // Helper function for inserting bits extracted from an encoded instruction into
-// a field.
-template <typename InsnType>
-static void insertBits(InsnType &field, InsnType bits, unsigned startBit,
-                       unsigned numBits) {
-  if constexpr (std::is_integral<InsnType>::value) {
-    assert(startBit + numBits <= sizeof field * 8);
-    (void)numBits;
-    field |= (InsnType)bits << startBit;
-  } else {
-    field.insertBits(bits, startBit, numBits);
-  }
+// an integer-typed field.
+template <typename IntType>
+static std::enable_if_t<std::is_integral_v<IntType>, void>
+insertBits(IntType &field, IntType bits, unsigned startBit, unsigned numBits) {
+  // Check that no bit beyond numBits is set, so that a simple bitwise |
+  // is sufficient.
+  assert((~(((IntType)1 << numBits) - 1) & bits) == 0 &&
+           "bits has more than numBits bits set");
+  assert(startBit + numBits <= sizeof(IntType) * 8);
+  (void)numBits;
+  field |= bits << startBit;
 }
 )";
 }

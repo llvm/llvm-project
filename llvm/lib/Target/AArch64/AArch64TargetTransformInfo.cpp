@@ -4264,14 +4264,9 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
     TTI::OperandValueInfo Op2Info, const Instruction *I) const {
-  // TODO: Handle other cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     Op1Info, Op2Info, I);
-
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // We don't lower some vector selects well that are wider than the register
-  // width.
+  // width. TODO: Improve this with different cost kinds.
   if (isa<FixedVectorType>(ValTy) && ISD == ISD::SELECT) {
     // We would need this many instructions to hide the scalarization happening.
     const int AmortizationCost = 20;
@@ -4355,9 +4350,10 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
 
   // Treat the icmp in icmp(and, 0) or icmp(and, -1/1) when it can be folded to
   // icmp(and, 0) as free, as we can make use of ands, but only if the
-  // comparison is not unsigned.
-  if (ValTy->isIntegerTy() && ISD == ISD::SETCC && I &&
-      !CmpInst::isUnsigned(VecPred) &&
+  // comparison is not unsigned. FIXME: Enable for non-throughput cost kinds
+  // providing it will not cause performance regressions.
+  if (CostKind == TTI::TCK_RecipThroughput && ValTy->isIntegerTy() &&
+      ISD == ISD::SETCC && I && !CmpInst::isUnsigned(VecPred) &&
       TLI->isTypeLegal(TLI->getValueType(DL, ValTy)) &&
       match(I->getOperand(0), m_And(m_Value(), m_Value()))) {
     if (match(I->getOperand(1), m_Zero()))
@@ -4967,9 +4963,9 @@ void AArch64TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-Value *
-AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                                  Type *ExpectedType) const {
+Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                                         Type *ExpectedType,
+                                                         bool CanCreate) const {
   switch (Inst->getIntrinsicID()) {
   default:
     return nullptr;
@@ -4978,7 +4974,7 @@ AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::aarch64_neon_st4: {
     // Create a struct type
     StructType *ST = dyn_cast<StructType>(ExpectedType);
-    if (!ST)
+    if (!CanCreate || !ST)
       return nullptr;
     unsigned NumElts = Inst->arg_size() - 1;
     if (ST->getNumElements() != NumElts)

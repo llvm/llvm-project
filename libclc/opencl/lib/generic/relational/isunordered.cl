@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/relational/isunordered.h>
 #include <clc/relational/clc_isunordered.h>
 
 #define FUNCTION isunordered

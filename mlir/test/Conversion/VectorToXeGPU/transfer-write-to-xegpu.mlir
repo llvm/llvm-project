@@ -81,7 +81,6 @@ func.func @store_out_of_bounds(%vec: vector<8x16xf32>,
 // CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc
 // CHECK-SAME:    %[[SRC]][%[[OFFSET]], %[[OFFSET]]]
 // CHECK-SAME:    memref<7x64xf32> -> !xegpu.tensor_desc<8x16xf32,
-// CHECK-SAME:    boundary_check = true
 // CHECK:       xegpu.store_nd %[[VEC]], %[[DESC]] : vector<8x16xf32>
 
 // -----

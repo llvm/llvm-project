@@ -12,7 +12,7 @@
 # RUN:  -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-width=4 \
 # RUN:  2>&1 | FileCheck %s
 
-# REQUIRES: asserts, aarch64-registered-target
+# REQUIRES: asserts
 ---
 name: f
 tracksRegLiveness: true
@@ -22,7 +22,7 @@ body:             |
     $x3 = ADDXrr $x0, $x0
     $x4 = ADDXrr $x1, $x1
     $x5 = ADDXrr $x2, $x2
-    
+
 # CHECK-LABEL: Before MISched:
 # CHECK-NEXT: # Machine code for function f: IsSSA, NoPHIs, TracksLiveness, NoVRegs
 # CHECK-EMPTY:

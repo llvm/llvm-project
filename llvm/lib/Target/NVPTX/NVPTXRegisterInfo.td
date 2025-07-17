@@ -53,14 +53,17 @@ foreach i = 0...31 in {
 }
 
 //===----------------------------------------------------------------------===//
-//  Register classes
+//  Register classes.
+//  NOTE: if you add new vector types for a register, you must update
+//        NVPTX::packed_types() in NVPTXUtilities.h accordingly!
 //===----------------------------------------------------------------------===//
 def B1 : NVPTXRegClass<[i1], 8, (add (sequence "P%u", 0, 4))>;
 def B16 : NVPTXRegClass<[i16, f16, bf16], 16, (add (sequence "RS%u", 0, 4))>;
 def B32 : NVPTXRegClass<[i32, v2f16, v2bf16, v2i16, v4i8, f32], 32,
                               (add (sequence "R%u", 0, 4),
                               VRFrame32, VRFrameLocal32)>;
-def B64 : NVPTXRegClass<[i64, f64], 64, (add (sequence "RL%u", 0, 4), VRFrame64, VRFrameLocal64)>;
+def B64 : NVPTXRegClass<[i64, v2f32, f64], 64, (add (sequence "RL%u", 0, 4),
+                         VRFrame64, VRFrameLocal64)>;
 // 128-bit regs are not defined as general regs in NVPTX. They are used for inlineASM only.
 def B128 : NVPTXRegClass<[i128], 128, (add (sequence "RQ%u", 0, 4))>;
 

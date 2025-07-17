@@ -385,6 +385,41 @@ func.func @extract_strided_slice_of_constant_mask() -> (vector<2x1xi1>) {
 
 // -----
 
+// CHECK-LABEL: func.func @extract_strided_slice_of_create_mask
+// CHECK-SAME: (%[[DIM0:.+]]: index, %[[DIM1:.+]]: index)
+func.func @extract_strided_slice_of_create_mask(%dim0: index, %dim1: index) -> (vector<2x2xi1>) {
+  %0 = vector.create_mask %dim0, %dim1 : vector<4x3xi1>
+  %1 = vector.extract_strided_slice %0
+    {offsets = [2, 1], sizes = [2, 2], strides = [1, 1]}
+      : vector<4x3xi1> to vector<2x2xi1>
+  // CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
+  // CHECK-DAG: %[[C2:.+]] = arith.constant 2 : index
+  // CHECK-DAG: %[[A:.+]] = arith.subi %[[DIM0]], %[[C2]]
+  // CHECK-DAG: %[[B:.+]] = arith.subi %[[DIM1]], %[[C1]]
+  // CHECK: vector.create_mask %[[A]], %[[B]] : vector<2x2xi1>
+  return %1 : vector<2x2xi1>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_strided_slice_partial_of_create_mask
+// CHECK-SAME: (%[[DIM0:.+]]: index, %[[DIM1:.+]]: index, %[[DIM2:.+]]: index)
+func.func @extract_strided_slice_partial_of_create_mask(
+  %dim0: index, %dim1: index, %dim2 : index) -> (vector<2x2x8xi1>) {
+  %0 = vector.create_mask %dim0, %dim1, %dim2 : vector<4x3x8xi1>
+  %1 = vector.extract_strided_slice %0
+    {offsets = [2, 1], sizes = [2, 2], strides = [1, 1]}
+      : vector<4x3x8xi1> to vector<2x2x8xi1>
+  // CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
+  // CHECK-DAG: %[[C2:.+]] = arith.constant 2 : index
+  // CHECK-DAG: %[[A:.+]] = arith.subi %[[DIM0]], %[[C2]]
+  // CHECK-DAG: %[[B:.+]] = arith.subi %[[DIM1]], %[[C1]]
+  // CHECK: vector.create_mask %[[A]], %[[B]], %[[DIM2]] : vector<2x2x8xi1>
+  return %1 : vector<2x2x8xi1>
+}
+
+// -----
+
 // CHECK-LABEL: extract_strided_fold
 //  CHECK-SAME: (%[[ARG:.*]]: vector<4x3xi1>)
 //  CHECK-NEXT:   return %[[ARG]] : vector<4x3xi1>
@@ -3469,4 +3504,33 @@ func.func @fold_insert_constant_indices(%arg : vector<4x1xi32>) -> vector<4x1xi3
   %1 = arith.constant 1 : i32
   %res = vector.insert %1, %arg[%0, %0] : i32 into vector<4x1xi32>
   return %res : vector<4x1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_insert_use_chain(
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4x4xf32>,
+//  CHECK-SAME:   %[[VAL:.*]]: f32,
+//  CHECK-SAME:   %[[POS:.*]]: index) -> vector<4x4xf32> {
+//  CHECK-NEXT:   %[[RES:.*]] = vector.insert %[[VAL]], %[[ARG]] {{\[}}%[[POS]], 0] : f32 into vector<4x4xf32>
+//  CHECK-NEXT:   return %[[RES]] : vector<4x4xf32>
+func.func @fold_insert_use_chain(%arg : vector<4x4xf32>, %val : f32, %pos: index) -> vector<4x4xf32> {
+  %v_0 = vector.insert %val, %arg[%pos, 0] : f32 into vector<4x4xf32>
+  %v_1 = vector.insert %val, %v_0[%pos, 0] : f32 into vector<4x4xf32>
+  %v_2 = vector.insert %val, %v_1[%pos, 0] : f32 into vector<4x4xf32>
+  return %v_2 : vector<4x4xf32>  
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_insert_use_chain_mismatch_static_position(
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4xf32>,
+//  CHECK-SAME:   %[[VAL:.*]]: f32) -> vector<4xf32> {
+//       CHECK:   %[[V_0:.*]] = vector.insert %[[VAL]], %[[ARG]] [0] : f32 into vector<4xf32>
+//       CHECK:   %[[V_1:.*]] = vector.insert %[[VAL]], %[[V_0]] [1] : f32 into vector<4xf32>
+//       CHECK:   return %[[V_1]] : vector<4xf32>
+func.func @no_fold_insert_use_chain_mismatch_static_position(%arg : vector<4xf32>, %val : f32) -> vector<4xf32> {
+  %v_0 = vector.insert %val, %arg[0] : f32 into vector<4xf32>
+  %v_1 = vector.insert %val, %v_0[1] : f32 into vector<4xf32>
+  return %v_1 : vector<4xf32>  
 }

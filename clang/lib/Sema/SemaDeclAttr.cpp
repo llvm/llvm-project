@@ -1226,8 +1226,8 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  S.Diag(AL.getLoc(), diag::err_attribute_preferred_name_arg_invalid)
-      << T << CTD;
+  S.Diag(AL.getLoc(), diag::err_attribute_not_typedef_for_specialization)
+      << T << AL << CTD;
   if (const auto *TT = T->getAs<TypedefType>())
     S.Diag(TT->getDecl()->getLocation(), diag::note_entity_declared_at)
         << TT->getDecl();
@@ -2912,18 +2912,14 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const ParsedAttr &AL) {
 
     // If this is spelled as the standard C++17 attribute, but not in C++17,
     // warn about using it as an extension. If there are attribute arguments,
-    // then claim it's a C++20 extension instead.
-    // FIXME: If WG14 does not seem likely to adopt the same feature, add an
-    // extension warning for C23 mode.
+    // then claim it's a C++20 extension instead. C23 supports this attribute
+    // with the message; no extension warning is needed there beyond the one
+    // already issued for accepting attributes in older modes.
     const LangOptions &LO = S.getLangOpts();
     if (AL.getNumArgs() == 1) {
       if (LO.CPlusPlus && !LO.CPlusPlus20)
         S.Diag(AL.getLoc(), diag::ext_cxx20_attr) << AL;
 
-      // Since this is spelled [[nodiscard]], get the optional string
-      // literal. If in C++ mode, but not in C++20 mode, diagnose as an
-      // extension.
-      // FIXME: C23 should support this feature as well, even as an extension.
       if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, nullptr))
         return;
     } else if (LO.CPlusPlus && !LO.CPlusPlus17)
@@ -4194,8 +4190,9 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   if (CalleeFnProtoType->getNumParams() != EncodingIndices.size() - 1) {
-    S.Diag(AL.getLoc(), diag::err_callback_attribute_wrong_arg_count)
-        << QualType{CalleeFnProtoType, 0} << CalleeFnProtoType->getNumParams()
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_arg_count_for_func)
+        << AL << QualType{CalleeFnProtoType, 0}
+        << CalleeFnProtoType->getNumParams()
         << (unsigned)(EncodingIndices.size() - 1);
     return;
   }
@@ -8020,9 +8017,7 @@ void Sema::checkUnusedDeclAttributes(Declarator &D) {
 }
 
 void Sema::DiagnoseUnknownAttribute(const ParsedAttr &AL) {
-  std::string NormalizedFullName = '\'' + AL.getNormalizedFullName() + '\'';
   SourceRange NR = AL.getNormalizedRange();
-
   StringRef ScopeName = AL.getNormalizedScopeName();
   std::optional<StringRef> CorrectedScopeName =
       AL.tryGetCorrectedScopeName(ScopeName);
@@ -8044,7 +8039,7 @@ void Sema::DiagnoseUnknownAttribute(const ParsedAttr &AL) {
         Diag(CorrectedScopeName ? NR.getBegin() : AL.getRange().getBegin(),
              diag::warn_unknown_attribute_ignored_suggestion);
 
-    D << NormalizedFullName << CorrectedFullName;
+    D << AL << CorrectedFullName;
 
     if (AL.isExplicitScope()) {
       D << FixItHint::CreateReplacement(NR, CorrectedFullName) << NR;
@@ -8058,8 +8053,7 @@ void Sema::DiagnoseUnknownAttribute(const ParsedAttr &AL) {
       }
     }
   } else {
-    Diag(NR.getBegin(), diag::warn_unknown_attribute_ignored)
-        << NormalizedFullName << NR;
+    Diag(NR.getBegin(), diag::warn_unknown_attribute_ignored) << AL << NR;
   }
 }
 

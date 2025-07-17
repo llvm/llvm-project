@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/relational/isnormal.h>
 #include <clc/relational/clc_isnormal.h>
 
 #define FUNCTION isnormal
