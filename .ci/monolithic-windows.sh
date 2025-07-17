@@ -21,11 +21,6 @@ BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
 
 rm -rf "${BUILD_DIR}"
 
-if [[ -n "${CLEAR_CACHE:-}" ]]; then
-  echo "clearing sccache"
-  rm -rf "$SCCACHE_DIR"
-fi
-
 sccache --zero-stats
 function at-exit {
   retcode=$?

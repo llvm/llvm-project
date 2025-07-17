@@ -23,11 +23,6 @@ rm -rf "${BUILD_DIR}"
 
 ccache --zero-stats
 
-if [[ -n "${CLEAR_CACHE:-}" ]]; then
-  echo "clearing cache"
-  ccache --clear
-fi
-
 mkdir -p artifacts/reproducers
 
 # Make sure any clang reproducers will end up as artifacts.
