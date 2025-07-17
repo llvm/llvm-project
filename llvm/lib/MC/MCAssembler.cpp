@@ -398,6 +398,10 @@ bool MCAssembler::registerSymbol(const MCSymbol &Symbol) {
   return Changed;
 }
 
+void MCAssembler::addRelocDirective(RelocDirective RD) {
+  relocDirectives.push_back(RD);
+}
+
 /// Write the fragment \p F to the output file.
 static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
                           const MCFragment &F) {
@@ -694,6 +698,27 @@ void MCAssembler::layout() {
   // Fragment sizes are finalized. For RISC-V linker relaxation, this flag
   // helps check whether a PC-relative fixup is fully resolved.
   this->HasFinalLayout = true;
+
+  // Resolve .reloc offsets and add fixups.
+  for (auto &PF : relocDirectives) {
+    MCValue Res;
+    auto &O = PF.Offset;
+    if (!O.evaluateAsValue(Res, *this)) {
+      getContext().reportError(O.getLoc(), ".reloc offset is not relocatable");
+      continue;
+    }
+    auto *Sym = Res.getAddSym();
+    auto *F = Sym ? Sym->getFragment() : nullptr;
+    auto *Sec = F ? F->getParent() : nullptr;
+    if (Res.getSubSym() || !Sec) {
+      getContext().reportError(O.getLoc(),
+                               ".reloc offset is not relative to a section");
+      continue;
+    }
+
+    uint64_t Offset = Sym ? Sym->getOffset() + Res.getConstant() : 0;
+    F->addFixup(MCFixup::create(Offset, PF.Expr, PF.Kind));
+  }
 
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {
