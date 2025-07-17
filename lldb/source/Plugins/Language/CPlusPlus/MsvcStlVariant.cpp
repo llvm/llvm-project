@@ -40,42 +40,20 @@ namespace {
 //     _Which = '\x01'
 //   }
 // }
-//
-// ... when using PDB, it looks like this:
-// (lldb) fr v -R v1
-// (std::variant<int,double,char>) v1 = {
-//   std::_Variant_base<int,double,char> = {
-//     std::_Variant_storage_<1,int,double,char> = {
-//       _Head = 0
-//       _Tail = {
-//         _Head = 2
-//         _Tail = {
-//           _Head = '\0'
-//           _Tail = {}
-//         }
-//       }
-//     }
-//     _Which = '\x01'
-//   }
-// }
 
-ValueObjectSP GetStorageAtIndex(ValueObject &valobj, size_t index) {
-  // PDB flattens the members on unions to the parent
-  if (valobj.GetCompilerType().GetNumFields() == 2)
-    return valobj.GetChildAtIndex(index);
-
-  // DWARF keeps the union
+ValueObjectSP GetStorageMember(ValueObject &valobj, llvm::StringRef name) {
+  // Find the union
   ValueObjectSP union_sp = valobj.GetChildAtIndex(0);
   if (!union_sp)
     return nullptr;
-  return union_sp->GetChildAtIndex(index);
+  return union_sp->GetChildMemberWithName(name);
 }
 
 ValueObjectSP GetHead(ValueObject &valobj) {
-  return GetStorageAtIndex(valobj, 0);
+  return GetStorageMember(valobj, "_Head");
 }
 ValueObjectSP GetTail(ValueObject &valobj) {
-  return GetStorageAtIndex(valobj, 1);
+  return GetStorageMember(valobj, "_Tail");
 }
 
 std::optional<int64_t> GetIndexValue(ValueObject &valobj) {
@@ -87,20 +65,16 @@ std::optional<int64_t> GetIndexValue(ValueObject &valobj) {
 }
 
 ValueObjectSP GetNthStorage(ValueObject &outer, int64_t index) {
-  ValueObjectSP container_sp = outer.GetSP();
+  // We need to find the std::_Variant_storage base class.
 
-  // When using DWARF, we need to find the std::_Variant_storage base class.
-  // There, the top level type doesn't have any fields.
-  if (container_sp->GetCompilerType().GetNumFields() == 0) {
-    // -> std::_SMF_control (typedef to std::_Variant_base)
-    container_sp = container_sp->GetChildAtIndex(0);
-    if (!container_sp)
-      return nullptr;
-    // -> std::_Variant_storage
-    container_sp = container_sp->GetChildAtIndex(0);
-    if (!container_sp)
-      return nullptr;
-  }
+  // -> std::_SMF_control (typedef to std::_Variant_base)
+  ValueObjectSP container_sp = outer.GetSP()->GetChildAtIndex(0);
+  if (!container_sp)
+    return nullptr;
+  // -> std::_Variant_storage
+  container_sp = container_sp->GetChildAtIndex(0);
+  if (!container_sp)
+    return nullptr;
 
   for (int64_t i = 0; i < index; i++) {
     container_sp = GetTail(*container_sp);
@@ -140,20 +114,13 @@ bool formatters::MsvcStlVariantSummaryProvider(
   CompilerType storage_type = storage->GetCompilerType();
   if (!storage_type)
     return false;
-  // With DWARF, it's a typedef, with PDB, it's not
+  // Resolve the typedef
   if (storage_type.IsTypedefType())
     storage_type = storage_type.GetTypedefedType();
 
   CompilerType active_type = storage_type.GetTypeTemplateArgument(1, true);
-  if (!active_type) {
-    // not enough debug info, try the type of _Head
-    ValueObjectSP head_sp = GetHead(*storage);
-    if (!head_sp)
-      return false;
-    active_type = head_sp->GetCompilerType();
-    if (!active_type)
-      return false;
-  }
+  if (!active_type)
+    return false;
 
   stream << " Active Type = " << active_type.GetDisplayTypeName() << " ";
   return true;
