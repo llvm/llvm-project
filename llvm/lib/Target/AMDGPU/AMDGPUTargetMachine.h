@@ -183,6 +183,7 @@ public:
   void addPreEmitPass(AddMachinePass &) const;
   Error addRegAssignmentOptimized(AddMachinePass &) const;
   void addOptimizedRegAlloc(AddMachinePass &) const;
+  void addPreSched2(AddMachinePass &) const;
 
   /// Check if a pass is enabled given \p Opt option. The option always
   /// overrides defaults if explicitly used. Otherwise its default will be used
