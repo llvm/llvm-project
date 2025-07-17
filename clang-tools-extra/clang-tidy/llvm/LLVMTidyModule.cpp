@@ -14,6 +14,7 @@
 #include "../readability/QualifiedAutoCheck.h"
 #include "HeaderGuardCheck.h"
 #include "IncludeOrderCheck.h"
+#include "MLIROpBuilderCheck.h"
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
 #include "PreferRegisterOverUnsignedCheck.h"
 #include "PreferStaticOverAnonymousNamespaceCheck.h"
@@ -40,6 +41,7 @@ public:
     CheckFactories.registerCheck<readability::QualifiedAutoCheck>(
         "llvm-qualified-auto");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
+    CheckFactories.registerCheck<MlirOpBuilderCheck>("llvm-mlir-op-builder");
   }
 
   ClangTidyOptions getModuleOptions() override {

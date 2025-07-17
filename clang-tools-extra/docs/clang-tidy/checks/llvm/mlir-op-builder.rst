@@ -1,10 +1,10 @@
-.. title:: clang-tidy - mlir-op-builder
+.. title:: clang-tidy - llvm-mlir-op-builder
 
-mlir-op-builder
+llvm-mlir-op-builder
 ===============
 
-Flags usage of old form of invoking create on `OpBuilder` and suggesting new
-form.
+Flags usage of old form of invoking create on MLIR's `OpBuilder` and suggesting
+new form.
 
 Example
 -------

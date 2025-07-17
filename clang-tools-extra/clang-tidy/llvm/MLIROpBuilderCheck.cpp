@@ -1,4 +1,4 @@
-//===--- OpBuilderCheck.cpp - clang-tidy ----------------------------------===//
+//===--- MLIROpBuilderCheck.cpp - clang-tidy -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OpBuilderCheck.h"
+#include "MLIROpBuilderCheck.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/Lexer.h"
@@ -16,7 +16,7 @@
 #include "clang/Tooling/Transformer/Stencil.h"
 #include "llvm/Support/Error.h"
 
-namespace clang::tidy::mlir_check {
+namespace clang::tidy::llvm_check {
 namespace {
 
 using namespace ::clang::ast_matchers; // NOLINT: Too many names.
@@ -80,7 +80,7 @@ Stencil typeAsWritten(StringRef Id) {
   return std::make_shared<TypeAsWrittenStencil>(std::string(Id));
 }
 
-RewriteRuleWith<std::string> OpBuilderCheckRule() {
+RewriteRuleWith<std::string> MlirOpBuilderCheckRule() {
   return makeRule(
       cxxMemberCallExpr(
           on(expr(hasType(
@@ -96,7 +96,7 @@ RewriteRuleWith<std::string> OpBuilderCheckRule() {
 }
 } // namespace
 
-OpBuilderCheck::OpBuilderCheck(StringRef Name, ClangTidyContext *Context)
-    : TransformerClangTidyCheck(OpBuilderCheckRule(), Name, Context) {}
+MlirOpBuilderCheck::MlirOpBuilderCheck(StringRef Name, ClangTidyContext *Context)
+    : TransformerClangTidyCheck(MlirOpBuilderCheckRule(), Name, Context) {}
 
 } // namespace clang::tidy::mlir_check

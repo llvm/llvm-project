@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s mlir-op-builder %t
+// RUN: %check_clang_tidy --match-partial-fixes %s llvm-mlir-op-builder %t
 
 namespace mlir {
 class Location {};
@@ -33,19 +33,19 @@ struct NamedOp {
 
 void f() {
   mlir::OpBuilder builder;
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: Use OpType::create(builder, ...) instead of builder.create<OpType>(...) [mlir-op-builder]
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: Use OpType::create(builder, ...) instead of builder.create<OpType>(...) [llvm-mlir-op-builder]
   // CHECK-FIXES: mlir::  ModuleOp::create(builder, builder.getUnknownLoc())
   builder.create<mlir::  ModuleOp>(builder.getUnknownLoc());
 
   using mlir::NamedOp;
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: Use OpType::create(builder, ...) instead of builder.create<OpType>(...) [mlir-op-builder]
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: Use OpType::create(builder, ...) instead of builder.create<OpType>(...) [llvm-mlir-op-builder]
   // CHECK-FIXES: NamedOp::create(builder, builder.getUnknownLoc(), "baz")
   builder.create<NamedOp>(builder.getUnknownLoc(), "baz");
 
   mlir::ImplicitLocOpBuilder ib;
   // Note: extra space in the case where there is no other arguments. Could be
   // improved, but also clang-format will do that just post.
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: Use OpType::create(builder, ...) instead of builder.create<OpType>(...) [mlir-op-builder]
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: Use OpType::create(builder, ...) instead of builder.create<OpType>(...) [llvm-mlir-op-builder]
   // CHECK-FIXES: mlir::ModuleOp::create(ib )
   ib.create<mlir::ModuleOp>();
 }

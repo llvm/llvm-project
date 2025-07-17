@@ -7,6 +7,7 @@ add_clang_library(clangTidyLLVMModule STATIC
   HeaderGuardCheck.cpp
   IncludeOrderCheck.cpp
   LLVMTidyModule.cpp
+  MLIROpBuilderCheck.cpp
   PreferIsaOrDynCastInConditionalsCheck.cpp
   PreferRegisterOverUnsignedCheck.cpp
   PreferStaticOverAnonymousNamespaceCheck.cpp
@@ -16,6 +17,7 @@ add_clang_library(clangTidyLLVMModule STATIC
   clangTidy
   clangTidyReadabilityModule
   clangTidyUtils
+  clangTransformer
 
   DEPENDS
   omp_gen

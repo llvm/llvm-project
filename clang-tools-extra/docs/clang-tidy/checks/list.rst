@@ -24,7 +24,6 @@ Clang-Tidy Checks
    llvm/*
    llvmlibc/*
    misc/*
-   mlir/*
    modernize/*
    mpi/*
    objc/*
@@ -248,6 +247,7 @@ Clang-Tidy Checks
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
+   :doc:`llvm-mlir-op-builder <llvm/mlir-op-builder>`, "Yes"
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>`, "Yes"
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
@@ -280,7 +280,6 @@ Clang-Tidy Checks
    :doc:`misc-unused-using-decls <misc/unused-using-decls>`, "Yes"
    :doc:`misc-use-anonymous-namespace <misc/use-anonymous-namespace>`,
    :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
-   :doc:`mlir-op-builder <mlir/op-builder>`, "Yes"
    :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
    :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
    :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"

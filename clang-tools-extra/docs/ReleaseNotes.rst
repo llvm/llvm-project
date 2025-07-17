@@ -96,8 +96,8 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
-- New :doc:`mlir-op-builder
-  <clang-tidy/checks/mlir/op-builder>` check.
+- New :doc:`llvm-mlir-op-builder
+  <clang-tidy/checks/llvm/mlir-op-builder>` check.
 
   Flags usage of old OpBuilder format.
 
