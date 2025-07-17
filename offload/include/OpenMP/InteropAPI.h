@@ -57,8 +57,8 @@ struct interop_ctx_t {
 
 struct dep_pack_t {
   int32_t ndeps;
-  kmp_depend_info_t *deplist;
   int32_t ndeps_noalias;
+  kmp_depend_info_t *deplist;
   kmp_depend_info_t *noalias_deplist;
 };
 
