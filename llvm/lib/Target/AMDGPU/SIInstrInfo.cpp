@@ -10466,10 +10466,23 @@ bool SIInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
   return TargetInstrInfo::isGlobalMemoryObject(MI);
 }
 
+bool SIInstrInfo::isXDLWMMA(const MachineInstr &MI) const {
+  if (!isWMMA(MI) && !isSWMMAC(MI))
+    return false;
+
+  if (AMDGPU::isGFX1250(ST))
+    return AMDGPU::getWMMAIsXDL(MI.getOpcode());
+
+  return true;
+}
+
 bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
-  if (!SIInstrInfo::isMAI(MI) || isDGEMM(Opcode) ||
+  if (AMDGPU::isGFX12Plus(ST))
+    return isDOT(MI) || isXDLWMMA(MI);
+
+  if (!isMAI(MI) || isDGEMM(Opcode) ||
       Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||
       Opcode == AMDGPU::V_ACCVGPR_READ_B32_e64)
     return false;
