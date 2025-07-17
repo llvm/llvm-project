@@ -280,12 +280,8 @@ int main(int argc, char **argv) {
       "Generates embeddings for a given LLVM IR and "
       "supports triplet generation for vocabulary "
       "training and embedding generation.\n\n"
-      "Usage:\n"
-      "  Triplet mode:   llvm-ir2vec --mode=triplets input.bc\n"
-      "  Embedding mode: llvm-ir2vec --mode=embeddings "
-      "--ir2vec-vocab-path=vocab.json --level=func input.bc\n"
-      "  Levels: --level=inst (instructions), --level=bb (basic blocks), "
-      "--level=func (functions)\n");
+      "See https://llvm.org/docs/CommandGuide/llvm-ir2vec.html for more "
+      "information.\n");
 
   // Validate command line options
   if (Mode == TripletMode && Level.getNumOccurrences() > 0)
