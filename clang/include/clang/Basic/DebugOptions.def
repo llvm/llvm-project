@@ -55,7 +55,7 @@ DEBUGOPT(DebugOmitUnreferencedMethods, 1, 0, Compatible) ///< Omit unreferenced 
 
 /// Control DWARF extensions for heterogeneous debugging enablement and approach.
 ENUM_DEBUGOPT(HeterogeneousDwarfMode, HeterogeneousDwarfOpts, 2,
-                     HeterogeneousDwarfOpts::Disabled, Benign)
+              HeterogeneousDwarfOpts::Disabled, Benign)
 
 /// Control the Assignment Tracking debug info feature.
 ENUM_DEBUGOPT(AssignmentTrackingMode, AssignmentTrackingOpts, 2,

@@ -964,10 +964,9 @@ LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateQualifiedType(
  * \param AddressSpace      DWARF address space. (optional, pass 0 to ignore)
  * \param MemorySpace       DWARF memory space (optional, pass 0 for none).
  */
-LLVM_C_ABI LLVMMetadataRef
-LLVMDIBuilderCreateReferenceType(LLVMDIBuilderRef Builder, unsigned Tag,
-                                 LLVMMetadataRef Type, unsigned AddressSpace,
-                                 LLVMDWARFMemorySpace MemorySpace);
+LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateReferenceType(
+    LLVMDIBuilderRef Builder, unsigned Tag, LLVMMetadataRef Type,
+    unsigned AddressSpace, LLVMDWARFMemorySpace MemorySpace);
 
 /**
  * Create C++11 nullptr type.

@@ -1664,16 +1664,6 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
   Instr->getParent()->insertDbgRecordBefore(DVRec, Instr);
 }
 
-<<<<<<< HEAD
-static void insertDbgValueOrDbgVariableRecordAfter(
-    DIBuilder &Builder, Value *DV, DILocalVariable *DIVar, DIExpression *DIExpr,
-    const DebugLoc &NewLoc, Instruction *Instr) {
-  BasicBlock::iterator NextIt = std::next(Instr->getIterator());
-  NextIt.setHeadBit(true);
-  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc, NextIt);
-}
-
-<<<<<<< HEAD
 // \p In is an expression that takes a pointer argument. Attempt to create an
 // equivalent expression that takes a value by replacing the type field to the
 // DIOpArg and adding a DIOpAddrOf after it.
@@ -1709,123 +1699,12 @@ static DIExpression *tryRemoveNewDIExpressionIndirection(DIExpression *In,
   return NumReplacedArgs == 1 ? ExprBuilder.intoExpression() : nullptr;
 }
 
-/// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
-/// that has an associated llvm.dbg.declare intrinsic.
-void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
-                                           StoreInst *SI, DIBuilder &Builder) {
-  assert(DII->isAddressOfVariable() || isa<DbgAssignIntrinsic>(DII));
-  auto *DIVar = DII->getVariable();
-  assert(DIVar && "Missing variable");
-  auto *DIExpr = DII->getExpression();
-  Value *DV = SI->getValueOperand();
-
-  DIExpr = tryRemoveNewDIExpressionIndirection(DIExpr, DV->getType());
-  if (!DIExpr)
-    return;
-
-  DebugLoc NewLoc = getDebugValueLoc(DII);
-
-  // If the alloca describes the variable itself, i.e. the expression in the
-  // dbg.declare doesn't start with a dereference, we can perform the
-  // conversion if the value covers the entire fragment of DII.
-  // If the alloca describes the *address* of DIVar, i.e. DIExpr is
-  // *just* a DW_OP_deref, we use DV as is for the dbg.value.
-  // We conservatively ignore other dereferences, because the following two are
-  // not equivalent:
-  //     dbg.declare(alloca, ..., !Expr(deref, plus_uconstant, 2))
-  //     dbg.value(DV, ..., !Expr(deref, plus_uconstant, 2))
-  // The former is adding 2 to the address of the variable, whereas the latter
-  // is adding 2 to the value of the variable. As such, we insist on just a
-  // deref expression.
-  bool CanConvert =
-      DIExpr->isDeref() || (!DIExpr->startsWithDeref() &&
-                            valueCoversEntireFragment(DV->getType(), DII));
-
-  // There are no such limitations on new DIExpressions.
-  if (DIExpr->holdsNewElements())
-    CanConvert = true;
-
-  if (CanConvert) {
-    insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
-                                      SI->getIterator());
-    return;
-  }
-
-  // FIXME: If storing to a part of the variable described by the dbg.declare,
-  // then we want to insert a dbg.value for the corresponding fragment.
-  LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: " << *DII
-                    << '\n');
-  // For now, when there is a store to parts of the variable (but we do not
-  // know which part) we insert an dbg.value intrinsic to indicate that we
-  // know nothing about the variable's content.
-  DV = PoisonValue::get(DV->getType());
-  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
-                                    SI->getIterator());
-}
-
-<<<<<<< HEAD
-=======
->>>>>>> 7eb65f470c5e
-||||||| 8d2375411e71 (Revert "[DebugInfo] Strip more debug-intrinsic code from local utils (#149037)")
-=======
-=======
->>>>>>> 5328c732a477
->>>>>>> parent of 8d2375411e71 (Revert "[DebugInfo] Strip more debug-intrinsic code from local utils (#149037)")
 static DIExpression *dropInitialDeref(const DIExpression *DIExpr) {
   int NumEltDropped = DIExpr->getElements()[0] == dwarf::DW_OP_LLVM_arg ? 3 : 1;
   return DIExpression::get(DIExpr->getContext(),
                            DIExpr->getElements().drop_front(NumEltDropped));
 }
 
-<<<<<<< HEAD
-void llvm::InsertDebugValueAtStoreLoc(DbgVariableIntrinsic *DII, StoreInst *SI,
-                                      DIBuilder &Builder) {
-  auto *DIVar = DII->getVariable();
-  assert(DIVar && "Missing variable");
-  auto *DIExpr = DII->getExpression();
-  DIExpr = dropInitialDeref(DIExpr);
-  Value *DV = SI->getValueOperand();
-
-  DebugLoc NewLoc = getDebugValueLoc(DII);
-
-  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
-                                    SI->getIterator());
-}
-
-/// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
-/// that has an associated llvm.dbg.declare intrinsic.
-void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
-                                           LoadInst *LI, DIBuilder &Builder) {
-  auto *DIVar = DII->getVariable();
-  auto *DIExpr = DII->getExpression();
-  assert(DIVar && "Missing variable");
-
-  DIExpr = tryRemoveNewDIExpressionIndirection(DIExpr, LI->getType());
-  if (!DIExpr)
-    return;
-
-  if (!DIExpr->holdsNewElements() &&
-      !valueCoversEntireFragment(LI->getType(), DII)) {
-    // FIXME: If only referring to a part of the variable described by the
-    // dbg.declare, then we want to insert a dbg.value for the corresponding
-    // fragment.
-    LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: "
-                      << *DII << '\n');
-    return;
-  }
-
-  DebugLoc NewLoc = getDebugValueLoc(DII);
-
-  // We are now tracking the loaded value instead of the address. In the
-  // future if multi-location support is added to the IR, it might be
-  // preferable to keep tracking both the loaded value and the original
-  // address in case the alloca can not be elided.
-  insertDbgValueOrDbgVariableRecordAfter(Builder, LI, DIVar, DIExpr, NewLoc,
-                                         LI);
-}
-
-=======
->>>>>>> 5328c732a477
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
                                            StoreInst *SI, DIBuilder &Builder) {
   assert(DVR->isAddressOfVariable() || DVR->isDbgAssign());
@@ -1895,48 +1774,6 @@ void llvm::InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
                                     SI->getIterator());
 }
 
-<<<<<<< HEAD
-/// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
-/// llvm.dbg.declare intrinsic.
-void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
-                                           PHINode *APN, DIBuilder &Builder) {
-  auto *DIVar = DII->getVariable();
-  auto *DIExpr = DII->getExpression();
-  assert(DIVar && "Missing variable");
-
-  DIExpr = tryRemoveNewDIExpressionIndirection(DIExpr, APN->getType());
-  if (!DIExpr)
-    return;
-
-  if (PhiHasDebugValue(DIVar, DIExpr, APN))
-    return;
-
-  if (!DIExpr->holdsNewElements() &&
-      !valueCoversEntireFragment(APN->getType(), DII)) {
-    // FIXME: If only referring to a part of the variable described by the
-    // dbg.declare, then we want to insert a dbg.value for the corresponding
-    // fragment.
-    LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: "
-                      << *DII << '\n');
-    return;
-  }
-
-  BasicBlock *BB = APN->getParent();
-  auto InsertionPt = BB->getFirstInsertionPt();
-
-  DebugLoc NewLoc = getDebugValueLoc(DII);
-
-  // The block may be a catchswitch block, which does not have a valid
-  // insertion point.
-  // FIXME: Insert dbg.value markers in the successors when appropriate.
-  if (InsertionPt != BB->end()) {
-    insertDbgValueOrDbgVariableRecord(Builder, APN, DIVar, DIExpr, NewLoc,
-                                      InsertionPt);
-  }
-}
-
-=======
->>>>>>> 5328c732a477
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
                                            DIBuilder &Builder) {
   auto *DIVar = DVR->getVariable();
@@ -2843,13 +2680,8 @@ using DbgValReplacement = std::optional<DIExpression *>;
 /// possibly moving/undefing users to prevent use-before-def. Returns true if
 /// changes are made.
 static bool rewriteDebugUsers(
-<<<<<<< HEAD
     Instruction &From, Value &To, Instruction &DomPoint,
     const DominatorTree &DT,
-    function_ref<DbgValReplacement(DbgVariableIntrinsic &DII)> RewriteExpr,
-=======
-    Instruction &From, Value &To, Instruction &DomPoint, DominatorTree &DT,
->>>>>>> 5328c732a477
     function_ref<DbgValReplacement(DbgVariableRecord &DVR)> RewriteDVRExpr) {
   // Find debug users of From.
   SmallVector<DbgVariableIntrinsic *, 1> Users;
@@ -3043,14 +2875,6 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
   Type *FromTy = From.getType();
   Type *ToTy = To.getType();
 
-<<<<<<< HEAD
-  auto Identity = [&](DbgVariableIntrinsic &DII) -> DbgValReplacement {
-    if (DII.getExpression()->holdsNewElements())
-      return updateNewDIExpressionArgType(DII, &From, ToTy);
-    return DII.getExpression();
-  };
-=======
->>>>>>> 5328c732a477
   auto IdentityDVR = [&](DbgVariableRecord &DVR) -> DbgValReplacement {
     if (DVR.getExpression()->holdsNewElements())
       return updateNewDIExpressionArgType(DVR, &From, ToTy);
@@ -3077,26 +2901,6 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
 
     // The width of the result has shrunk. Use sign/zero extension to describe
     // the source variable's high bits.
-<<<<<<< HEAD
-    auto SignOrZeroExt = [&](DbgVariableIntrinsic &DII) -> DbgValReplacement {
-      if (DII.getExpression()->holdsNewElements())
-        return updateNewDIExpressionArgType(DII, &From, ToTy);
-
-      DILocalVariable *Var = DII.getVariable();
-
-      // Without knowing signedness, sign/zero extension isn't possible.
-      auto Signedness = Var->getSignedness();
-      if (!Signedness)
-        return std::nullopt;
-
-      bool Signed = *Signedness == DIBasicType::Signedness::Signed;
-      return DIExpression::appendExt(DII.getExpression(), ToBits, FromBits,
-                                     Signed);
-    };
-    // RemoveDIs: duplicate implementation working on DbgVariableRecords rather
-    // than on dbg.value intrinsics.
-=======
->>>>>>> 5328c732a477
     auto SignOrZeroExtDVR = [&](DbgVariableRecord &DVR) -> DbgValReplacement {
       if (DVR.getExpression()->holdsNewElements())
         return updateNewDIExpressionArgType(DVR, &From, ToTy);
@@ -3128,8 +2932,7 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
         return updateNewDIExpressionArgType(DVR, &From, ToTy);
       return std::nullopt;
     };
-    return rewriteDebugUsers(From, To, DomPoint, DT, IdentityNew,
-                             IdentityNewDVR);
+    return rewriteDebugUsers(From, To, DomPoint, DT, IdentityNewDVR);
   }
 
   // TODO: Floating-point conversions, vectors.
