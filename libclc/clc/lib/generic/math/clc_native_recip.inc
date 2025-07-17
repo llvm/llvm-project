@@ -7,5 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_native_recip(__CLC_GENTYPE val) {
+#pragma clang fp reciprocal(on)
   return 1.0f / val;
 }
