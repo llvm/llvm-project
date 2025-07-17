@@ -222,6 +222,7 @@ add_entrypoint_object(
     libc.hdr.wchar_macros
     libc.hdr.types.size_t
     libc.src.wchar.wchar_utils
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -234,6 +235,7 @@ add_entrypoint_object(
     libc.hdr.wchar_macros
     libc.hdr.types.size_t
     libc.src.wchar.wchar_utils
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
