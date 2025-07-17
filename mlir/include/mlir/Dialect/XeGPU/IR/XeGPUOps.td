@@ -179,17 +179,10 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
       if (attr) 
         return attr;
 
-      auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
-      int rank = 0;
-      if (memrefType) 
-        //use source memref's rank, as source memref rank may be higher
-        rank = memrefType.getRank();
-      else
-        //nd_tdesc created from ui64, use nd_tdesc's rank
-        rank = getMixedSizes().size();
+      int64_t rank = getMixedSizes().size();
       
-      // The offsets are allowed to be empty. The Traits verification of OffsetSizeAndStrideOpInterface interface assumes offsets being present.
-      // place-holder value MAX indicating user doesn't provide offsets, instead of kDynamic which means offsets passed as value.
+      // Set constant offset to MAX to indicate no offsets provided
+      // or else the printer can't differeiate this with valid const_offset value (say 0)
       setConstOffsets(llvm::SmallVector<int64_t, 4>(rank, std::numeric_limits<int64_t>::max()));
 
       attr = getConstOffsetsAttr();

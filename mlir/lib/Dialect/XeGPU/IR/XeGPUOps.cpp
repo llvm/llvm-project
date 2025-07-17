@@ -12,6 +12,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 #include "llvm/Support/Debug.h"
 
@@ -328,29 +329,22 @@ ParseResult parseOptionalDynamicIndexList(
   return success();
 }
 
+
 void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                    OperandRange values,
                                    ArrayRef<int64_t> integers,
-                                   TypeRange valueTypes = TypeRange()) {
+                                   TypeRange valueTypes = TypeRange(),
+                                   AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square){
 
   if (values.empty() && llvm::all_of(integers, [](int64_t i) {
-        // place-holder value MAX indicating user doesn't provide offsets
+        // MAX indiates no user-provided offsets for CreateNdDescOp.
         return i == std::numeric_limits<int64_t>::max();
-      }))
-    return;
-  printer << '[';
-  unsigned dynamicValIdx = 0;
-  llvm::interleaveComma(integers, printer, [&](int64_t integer) {
-    if (ShapedType::isDynamic(integer)) {
-      printer << values[dynamicValIdx];
-      if (!valueTypes.empty())
-        printer << " : " << valueTypes[dynamicValIdx];
-      ++dynamicValIdx;
-    } else {
-      printer << integer;
-    }
-  });
-  printer << ']';
+      }))    
+      return;
+
+  return printDynamicIndexList(printer, op, values, integers,
+                               /*scalableFlags=*/{}, valueTypes, delimiter);
+
 }
 
 //===----------------------------------------------------------------------===//
