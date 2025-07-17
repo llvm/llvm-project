@@ -718,6 +718,7 @@ mlgo:
   - llvm/lib/Analysis/models/**
   - llvm/test/Analysis/IR2Vec/**
   - llvm/tools/llvm-ir2vec/**
+  - llvm/docs/CommandGuide/llvm-ir2vec.rst
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
