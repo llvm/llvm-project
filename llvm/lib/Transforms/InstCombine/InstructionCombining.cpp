@@ -4933,7 +4933,8 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // poison.
   Value *MaybePoisonOperand = nullptr;
   for (Value *V : OrigOpInst->operands()) {
-    if (isa<MetadataAsValue>(V) || isGuaranteedNotToBeUndefOrPoison(V) ||
+    if (isa<MetadataAsValue>(V) ||
+        isGuaranteedNotToBeUndefOrPoison(V, &AC, &OrigFI, &DT) ||
         // Treat identical operands as a single operand.
         (MaybePoisonOperand && MaybePoisonOperand == V))
       continue;
@@ -4959,64 +4960,19 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
 
 Instruction *InstCombinerImpl::foldFreezeIntoRecurrence(FreezeInst &FI,
                                                         PHINode *PN) {
-  // Detect whether this is a recurrence with a start value and some number of
-  // backedge values. We'll check whether we can push the freeze through the
-  // backedge values (possibly dropping poison flags along the way) until we
-  // reach the phi again. In that case, we can move the freeze to the start
-  // value.
-  Use *StartU = nullptr;
-  SmallVector<Value *> Worklist;
-  for (Use &U : PN->incoming_values()) {
-    if (DT.dominates(PN->getParent(), PN->getIncomingBlock(U))) {
-      // Add backedge value to worklist.
-      Worklist.push_back(U.get());
-      continue;
-    }
-
-    // Don't bother handling multiple start values.
-    if (StartU)
-      return nullptr;
-    StartU = &U;
-  }
-
-  if (!StartU || Worklist.empty())
-    return nullptr; // Not a recurrence.
-
-  Value *StartV = StartU->get();
-  BasicBlock *StartBB = PN->getIncomingBlock(*StartU);
-  bool StartNeedsFreeze = !isGuaranteedNotToBeUndefOrPoison(StartV);
-  // We can't insert freeze if the start value is the result of the
-  // terminator (e.g. an invoke).
-  if (StartNeedsFreeze && StartBB->getTerminator() == StartV)
-    return nullptr;
-
-  SmallPtrSet<Value *, 32> Visited;
+  bool StartNeedsFreeze;
   SmallVector<Instruction *> DropFlags;
-  while (!Worklist.empty()) {
-    Value *V = Worklist.pop_back_val();
-    if (!Visited.insert(V).second)
-      continue;
-
-    if (Visited.size() > 32)
-      return nullptr; // Limit the total number of values we inspect.
-
-    // Assume that PN is non-poison, because it will be after the transform.
-    if (V == PN || isGuaranteedNotToBeUndefOrPoison(V))
-      continue;
-
-    Instruction *I = dyn_cast<Instruction>(V);
-    if (!I || canCreateUndefOrPoison(cast<Operator>(I),
-                                     /*ConsiderFlagsAndMetadata*/ false))
-      return nullptr;
-
-    DropFlags.push_back(I);
-    append_range(Worklist, I->operands());
-  }
+  Use *StartU =
+      canFoldFreezeIntoRecurrence(PN, &DT, StartNeedsFreeze, &DropFlags);
+  if (!StartU)
+    return nullptr;
 
   for (Instruction *I : DropFlags)
     I->dropPoisonGeneratingAnnotations();
 
   if (StartNeedsFreeze) {
+    Value *StartV = StartU->get();
+    BasicBlock *StartBB = PN->getIncomingBlock(*StartU);
     Builder.SetInsertPoint(StartBB->getTerminator());
     Value *FrozenStartV = Builder.CreateFreeze(StartV,
                                                StartV->getName() + ".fr");

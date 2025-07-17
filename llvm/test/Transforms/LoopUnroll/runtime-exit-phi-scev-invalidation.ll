@@ -16,13 +16,11 @@ define void @pr56282() {
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_IV_NEXT:%.*]], [[INNER_2:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OUTER_IV]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP1]], 7
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 7
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 7
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[OUTER_IV]], 7
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[OUTER_MIDDLE_UNR_LCSSA:%.*]], label [[OUTER_HEADER_NEW:%.*]]
 ; CHECK:       outer.header.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP1]], [[XTRAITER]]
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP0]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[INNER_1_HEADER:%.*]]
 ; CHECK:       inner.1.header:
 ; CHECK-NEXT:    [[INNER_1_IV:%.*]] = phi i64 [ 0, [[OUTER_HEADER_NEW]] ], [ [[INNER_1_IV_NEXT_7:%.*]], [[INNER_1_LATCH_7:%.*]] ]
