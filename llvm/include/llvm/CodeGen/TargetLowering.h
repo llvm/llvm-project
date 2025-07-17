@@ -3251,10 +3251,9 @@ public:
   ///
   /// \p Load is the accompanying load instruction.  Can be either a plain load
   /// instruction or a vp.load intrinsic.
-  /// \p DeinterleaveValues contains the deinterleaved values.
-  virtual bool
-  lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                   ArrayRef<Value *> DeinterleaveValues) const {
+  /// \p DI represents the deinterleaveN intrinsic.
+  virtual bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                                IntrinsicInst *DI) const {
     return false;
   }
 
@@ -3262,10 +3261,14 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.interleave{2,3,5,7}
   ///
-  /// \p SI is the accompanying store instruction
+  /// \p Store is the accompanying store instruction.  Can be either a plain
+  /// store or a vp.store intrinsic.
+  /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
+  /// component being interwoven) mask.  Can be nullptr, in which case the
+  /// result is uncondiitional.
   /// \p InterleaveValues contains the interleaved values.
   virtual bool
-  lowerInterleaveIntrinsicToStore(StoreInst *SI,
+  lowerInterleaveIntrinsicToStore(Instruction *Store, Value *Mask,
                                   ArrayRef<Value *> InterleaveValues) const {
     return false;
   }
