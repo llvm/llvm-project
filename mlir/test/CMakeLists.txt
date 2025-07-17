@@ -192,6 +192,9 @@ if(LLVM_BUILD_EXAMPLES)
     mlir-minimal-opt
     mlir-transform-opt
     )
+  list(APPEND MLIR_TEST_DEPENDS
+    dataflow-opt
+    )
   if(MLIR_ENABLE_EXECUTION_ENGINE)
     list(APPEND MLIR_TEST_DEPENDS
       toyc-ch6
