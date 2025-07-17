@@ -110,7 +110,7 @@ static cl::list<RuleTy> Profitabilities(
                           "Prioritize vectorization"),
                clEnumValN(RuleTy::Ignore, "ignore",
                           "Ignore profitability, force interchange (does not "
-			  "work with other options)")));
+                          "work with other options)")));
 
 #ifndef NDEBUG
 static bool noDuplicateRules(ArrayRef<RuleTy> Rules) {
@@ -1292,8 +1292,7 @@ bool LoopInterchangeProfitability::isProfitable(
     unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM) {
 
   // Return true if interchange is forced.
-  if (Profitabilities.size() == 1 &&
-      Profitabilities[0] == RuleTy::Ignore)
+  if (Profitabilities.size() == 1 && Profitabilities[0] == RuleTy::Ignore)
     return true;
 
   // isProfitable() is structured to avoid endless loop interchange. If the
