@@ -247,8 +247,7 @@ sensitive:
   untrusted code usually also includes running utilities such as make which can
   more readily perform malicious things. For example, vulnerabilities in clang,
   clangd, or the LLVM optimizer in a JIT caused by untrusted inputs are not
-  security-sensitive. We recommend the use of an external sandbox in those
-  cases.
+  security-sensitive.
 * The following parts of the run-time libraries are explicitly not considered
   security-sensitive:
 
