@@ -259,3 +259,58 @@ loop.i.latch:
 exit:
   ret void
 }
+
+; Pseudo-code that is approximately semantically equivalent to the below IR:
+;
+; void f(int A[][32]) {
+;   for (int i = 0; i < 100; i++)
+;     for (int j = 0; j < 15; j++) {
+;       int offset = (j % 2 == 0) ? 1 : 0;
+;       A[i][2 * j + offset + 0] = 1;
+;       A[i][2 * j + offset + 1] = 1;
+;     }
+; }
+;
+; There are loop-carried dependencies between the two stores. For example,
+; A[0][2] is accessed from both the former one when (i, j) = (0, 1) and the
+; latter one when (i, j) = (0, 0).
+;
+define void @non_invariant_baseptr_with_identical_obj3(ptr %A) {
+; CHECK-LABEL: 'non_invariant_baseptr_with_identical_obj3'
+; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx0, align 4
+; CHECK-NEXT:    da analyze - confused!
+; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
+; CHECK-NEXT:    da analyze - confused!
+; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
+; CHECK-NEXT:    da analyze - confused!
+;
+entry:
+  br label %loop.i.header
+
+loop.i.header:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %loop.i.latch ]
+  %A1 = getelementptr i32, ptr %A, i32 1
+  br label %loop.j
+
+loop.j:
+  %j = phi i32 [ 0, %loop.i.header ], [ %j.inc, %loop.j ]
+  %ptr0 = phi ptr [ %A1, %loop.i.header ], [ %ptr1, %loop.j ]
+  %ptr1 = phi ptr [ %A, %loop.i.header ], [ %ptr0, %loop.j ]
+  %j2_0 = shl i32 %j, 1
+  %j2_1 = add i32 %j2_0, 1
+  %idx0 = getelementptr [32 x i32], ptr %ptr0, i32 %i, i32 %j2_0
+  %idx1 = getelementptr [32 x i32], ptr %ptr0, i32 %i, i32 %j2_1
+  store i32 1, ptr %idx0
+  store i32 1, ptr %idx1
+  %j.inc = add i32 %j, 1
+  %cmp.j = icmp slt i32 %j.inc, 15
+  br i1 %cmp.j, label %loop.j, label %loop.i.latch
+
+loop.i.latch:
+  %i.inc = add i32 %i, 1
+  %cmp.i = icmp slt i32 %i.inc, 100
+  br i1 %cmp.i, label %loop.i.header, label %exit
+
+exit:
+  ret void
+}
