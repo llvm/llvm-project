@@ -675,6 +675,7 @@ TARGET_BUILTIN(__builtin_amdgcn_rsq_bf16, "yy", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_log_bf16, "yy", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_exp2_bf16, "yy", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sin_bf16, "yy", "nc", "bf16-trans-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cos_bf16, "yy", "nc", "bf16-trans-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_cvt_f16_fp8, "hiIi", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_f16_bf8, "hiIi", "nc", "gfx1250-insts")
