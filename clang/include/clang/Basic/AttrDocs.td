@@ -3645,6 +3645,8 @@ make the function's CFI jump table canonical. See :ref:`the CFI documentation
 
 def KCFISaltDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "kcfi_salt";
+  let Label = "langext-kcfi_salt";
   let Content = [{
 Use ``__attribute__((kcfi_salt("<salt>")))`` on a function declaration, function
 definition, or typedef to help distinguish CFI hashes between functions with
@@ -3655,7 +3657,7 @@ Example use:
 .. code-block:: c
 
   // .h file:
-  #define __kcfi_salt __attribute__((kcfi_salt("vogon")))
+  #define __kcfi_salt __attribute__((kcfi_salt("pepper")))
 
   // Convenient typedefs to avoid nested declarator syntax.
   typedef int (*fptr_t)(void); // Non-salted function call.
@@ -3676,26 +3678,26 @@ Example use:
     .init = internal_init,
     .exec = internal_salted_exec,
     .teardown = internal_teardown,
-  }
+  };
 
-  struct widget_generator *widget_gen = _generator;
+  struct widget_generator *widget_gen = &_generator;
 
   // 2nd .c file:
   int generate_a_widget(void) {
     int ret;
 
     // Called with non-salted CFI.
-    ret = widget_gen.init();
+    ret = widget_gen->init();
     if (ret)
       return ret;
 
     // Called with salted CFI.
-    ret = widget_gen.exec();
+    ret = widget_gen->exec();
     if (ret)
       return ret;
 
     // Called with non-salted CFI.
-    return widget_gen.teardown();
+    return widget_gen->teardown();
   }
 
   }];

@@ -4704,7 +4704,7 @@ public:
   struct alignas(void *) FunctionTypeArmAttributes {
     /// Any AArch64 SME ACLE type attributes that need to be propagated
     /// on declarations and function pointers.
-    LLVM_PREFERRED_TYPE(uint16_t)
+    LLVM_PREFERRED_TYPE(AArch64SMETypeAttributes)
     unsigned AArch64SMEAttributes : 9;
 
     FunctionTypeArmAttributes() : AArch64SMEAttributes(SME_NormalFunction) {}
@@ -5290,7 +5290,7 @@ public:
     unsigned HasTrailingReturn : 1;
     LLVM_PREFERRED_TYPE(bool)
     unsigned CFIUncheckedCallee : 1;
-    LLVM_PREFERRED_TYPE(uint16_t)
+    LLVM_PREFERRED_TYPE(AArch64SMETypeAttributes)
     unsigned AArch64SMEAttributes : 9;
 
     ExtProtoInfo()
