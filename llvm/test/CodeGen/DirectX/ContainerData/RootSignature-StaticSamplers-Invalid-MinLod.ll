@@ -3,7 +3,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: error: Invalid value for MinLOD: nan
+; CHECK: error: Invalid value for MinLOD: 0
 ; CHECK-NOT: Root Signature Definitions
 
 define void @main() #0 {

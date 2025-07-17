@@ -34,6 +34,14 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
+                                                 unsigned int OpId) {
+  if (auto *CI =
+          mdconst::dyn_extract<ConstantInt>(Node->getOperand(OpId).get()))
+    return CI->getZExtValue();
+  return std::nullopt;
+}
+
 static bool reportError(LLVMContext *Ctx, Twine Message,
                         DiagnosticSeverity Severity = DS_Error) {
   Ctx->diagnose(DiagnosticInfoGeneric(Message, Severity));
@@ -45,15 +53,15 @@ analyzeModule(Module &M) {
 
   /** Root Signature are specified as following in the metadata:
 
-    !dx.rootsignatures = !{!2} ; list of function/root signature pairs
-    !2 = !{ ptr @main, !3 } ; function, root signature
-    !3 = !{ !4, !5, !6, !7 } ; list of root signature elements
+   !dx.rootsignatures = !{!2} ; list of function/root signature pairs
+   !2 = !{ ptr @main, !3 } ; function, root signature
+   !3 = !{ !4, !5, !6, !7 } ; list of root signature elements
 
-    So for each MDNode inside dx.rootsignatures NamedMDNode
-    (the Root parameter of this function), the parsing process needs
-    to loop through each of its operands and process the function,
-    signature pair.
- */
+   So for each MDNode inside dx.rootsignatures NamedMDNode
+   (the Root parameter of this function), the parsing process needs
+   to loop through each of its operands and process the function,
+   signature pair.
+*/
 
   LLVMContext *Ctx = &M.getContext();
 
@@ -103,25 +111,13 @@ analyzeModule(Module &M) {
       reportError(Ctx, "Root Element is not a metadata node.");
       continue;
     }
-    uint32_t Version = 1;
-    if (std::optional<uint32_t> V =
-            llvm::hlsl::rootsig::extractMdIntValue(RSDefNode, 2))
-      Version = *V;
+    mcdxbc::RootSignatureDesc RSD;
+    if (std::optional<uint32_t> Version = extractMdIntValue(RSDefNode, 2))
+      RSD.Version = *Version;
     else {
       reportError(Ctx, "Invalid RSDefNode value, expected constant int");
       continue;
     }
-
-    llvm::hlsl::rootsig::MetadataParser MDParser(RootElementListNode);
-    llvm::Expected<mcdxbc::RootSignatureDesc> RSDOrErr =
-        MDParser.ParseRootSignature(Version);
-
-    if (auto Err = RSDOrErr.takeError()) {
-      reportError(Ctx, toString(std::move(Err)));
-      continue;
-    }
-
-    auto &RSD = *RSDOrErr;
 
     // Clang emits the root signature data in dxcontainer following a specific
     // sequence. First the header, then the root parameters. So the header
@@ -130,6 +126,12 @@ analyzeModule(Module &M) {
 
     // static sampler offset is calculated when writting dxcontainer.
     RSD.StaticSamplersOffset = 0u;
+
+    hlsl::rootsig::MetadataParser MDParser(RootElementListNode);
+
+    if (MDParser.ParseRootSignature(Ctx, RSD)) {
+      return RSDMap;
+    }
 
     RSDMap.insert(std::make_pair(F, RSD));
   }
