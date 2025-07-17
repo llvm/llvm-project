@@ -57,31 +57,33 @@ define float @fminnum(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i32 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP7]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP8]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[WIDE_LOAD2]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD2]], [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[TMP8]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[WIDE_LOAD2]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP6]], [[TMP9]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP8]]
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp ogt <4 x float> [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP6]], i64 [[IV]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp olt <4 x float> [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP11]], <4 x float> [[TMP12]]
-; CHECK-NEXT:    [[TMP13:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
+; CHECK-NEXT:    [[TMP13:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[SCALAR_PH]], label %[[MIDDLE_BLOCK_SPLIT:.*]]
-; CHECK:       [[MIDDLE_BLOCK_SPLIT]]:
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    [[TMP15:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = and i1 [[CMP_N]], [[TMP16]]
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK_SPLIT]] ], [ [[IV]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP13]], %[[MIDDLE_BLOCK_SPLIT]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ -1.000000e+07, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ -1.000000e+07, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -93,7 +95,7 @@ define float @fminnum(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[MAX_NEXT_LCSSA:%.*]] = phi float [ [[MAX_NEXT]], %[[LOOP]] ], [ [[TMP13]], %[[MIDDLE_BLOCK_SPLIT]] ]
+; CHECK-NEXT:    [[MAX_NEXT_LCSSA:%.*]] = phi float [ [[MAX_NEXT]], %[[LOOP]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[MAX_NEXT_LCSSA]]
 ;
 entry:

@@ -47,8 +47,8 @@ enum class RecurKind {
   FMul,     ///< Product of floats.
   FMin,     ///< FP min implemented in terms of select(cmp()).
   FMax,     ///< FP max implemented in terms of select(cmp()).
-  FMinNumNoFMFs, ///< FP min with llvm.minnum semantics and no fast-math flags.
-  FMaxNumNoFMFs, ///< FP max with llvm.maxnumsemantics and no fast-math flags.
+  FMinNum, ///< FP min with llvm.minnum semantics including NaNs.
+  FMaxNum, ///< FP max with llvm.maxnum semantics including NaNs.
   FMinimum, ///< FP min with llvm.minimum semantics
   FMaximum, ///< FP max with llvm.maximum semantics
   FMinimumNum, ///< FP min with llvm.minimumnum semantics

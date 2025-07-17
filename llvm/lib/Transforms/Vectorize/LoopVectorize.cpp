@@ -4345,14 +4345,13 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 
 bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     ElementCount VF) const {
-  // Cross iteration phis such as reductions need special handling and are
-  // currently unsupported.
+  // Cross iteration phis such as first-order recurrences and FMaxNum/FMinNum
+  // reductions need special handling and are currently unsupported.
   if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
         if (Legal->isReductionVariable(&Phi)) {
           RecurKind RK =
               Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind();
-          return RK == RecurKind::FMinNumNoFMFs ||
-                 RK == RecurKind::FMaxNumNoFMFs;
+          return RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum;
         }
         return Legal->isFixedOrderRecurrence(&Phi);
       }))
@@ -8776,6 +8775,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
+
+  // Apply mandatory transformation to handle FP maxnum/minnum reduction with
+  // NaNs if possible, bail out otherwise.
   if (!VPlanTransforms::runPass(
           VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath, *Plan))
     return nullptr;

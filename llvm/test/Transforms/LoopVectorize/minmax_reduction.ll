@@ -1004,6 +1004,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; This can be vectorized with additional runtime checks for NaNs.
 ; CHECK-LABEL: @fmin_intrinsic_nofast(
 ; CHECK: <2 x float> @llvm.minnum.v2f32
+; CHECK: fcmp uno <2 x float> [[OP:.+]], [[OP]]
 define float @fmin_intrinsic_nofast(ptr nocapture readonly %x) {
 entry:
   br label %for.body
@@ -1025,6 +1026,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; This can be vectorized with additional runtime checks for NaNs.
 ; CHECK-LABEL: @fmax_intrinsic_nofast(
 ; CHECK: <2 x float> @llvm.maxnum.v2f32
+; CHECK: fcmp uno <2 x float> [[OP:.+]], [[OP]]
 define float @fmax_intrinsic_nofast(ptr nocapture readonly %x) {
 entry:
   br label %for.body

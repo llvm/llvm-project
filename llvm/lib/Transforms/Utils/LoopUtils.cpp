@@ -938,10 +938,10 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   case RecurKind::UMin:
     return Intrinsic::vector_reduce_umin;
   case RecurKind::FMax:
-  case RecurKind::FMaxNumNoFMFs:
+  case RecurKind::FMaxNum:
     return Intrinsic::vector_reduce_fmax;
   case RecurKind::FMin:
-  case RecurKind::FMinNumNoFMFs:
+  case RecurKind::FMinNum:
     return Intrinsic::vector_reduce_fmin;
   case RecurKind::FMaximum:
     return Intrinsic::vector_reduce_fmaximum;

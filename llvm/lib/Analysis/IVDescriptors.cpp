@@ -944,23 +944,24 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
     if (isIntMinMaxRecurrenceKind(Kind))
       return isMinMaxPattern(I, Kind, Prev);
     if (isFPMinMaxRecurrenceKind(Kind)) {
+      InstDesc Res = isMinMaxPattern(I, Kind, Prev);
       if (HasRequiredFMF())
-        return isMinMaxPattern(I, Kind, Prev);
+        return Res;
+
+      if (!Res.isRecurrence())
+        return InstDesc(false, I);
+
       // We may be able to vectorize FMax/FMin reductions using maxnum/minnum
-      // intrinsics with extra checks ensuring the inputs are not NaN.
-      auto *StartV = dyn_cast<ConstantFP>(
-          OrigPhi->getIncomingValueForBlock(L->getLoopPredecessor()));
-      if (StartV && !StartV->getValue().isNaN() &&
-          isMinMaxPattern(I, Kind, Prev).isRecurrence()) {
-        if (((Kind == RecurKind::FMax &&
-              match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value()))) ||
-             Kind == RecurKind::FMaxNumNoFMFs))
-          return InstDesc(I, RecurKind::FMaxNumNoFMFs);
-        if (((Kind == RecurKind::FMin &&
-              match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value()))) ||
-             Kind == RecurKind::FMinNumNoFMFs))
-          return InstDesc(I, RecurKind::FMinNumNoFMFs);
-      }
+      // intrinsics with extra checks ensuring the vector loop handles only
+      // non-NaN inputs.
+      if (Kind == RecurKind::FMax &&
+          match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::FMaxNum);
+      if (Kind == RecurKind::FMin &&
+          match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
+        return InstDesc(I, RecurKind::FMinNum);
+
+      return InstDesc(false, I);
     } else if (isFMulAddIntrinsic(I))
       return InstDesc(Kind == RecurKind::FMulAdd, I,
                       I->hasAllowReassoc() ? nullptr : I);
