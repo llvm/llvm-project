@@ -258,10 +258,10 @@ static void getAArch64MultilibFlags(const Driver &D,
   processMultilibCustomFlags(Result, Args);
 }
 
-static void getARMMultilibFlags(const Driver &D,
-                                      const llvm::Triple &Triple,
-                                      const llvm::opt::ArgList &Args,
-                                      Multilib::flags_list &Result) {
+static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
+                                llvm::Reloc::Model RelocationModel,
+                                const llvm::opt::ArgList &Args,
+                                Multilib::flags_list &Result) {
   std::vector<StringRef> Features;
   llvm::ARM::FPUKind FPUKind = tools::arm::getARMTargetFeatures(
       D, Triple, Args, Features, false /*ForAs*/, true /*ForMultilib*/);
@@ -304,6 +304,18 @@ static void getARMMultilibFlags(const Driver &D,
     llvm_unreachable("Invalid float ABI");
   }
 
+  if (RelocationModel == llvm::Reloc::ROPI ||
+      RelocationModel == llvm::Reloc::ROPI_RWPI)
+    Result.push_back("-fropi");
+  else
+    Result.push_back("-fno-ropi");
+
+  if (RelocationModel == llvm::Reloc::RWPI ||
+      RelocationModel == llvm::Reloc::ROPI_RWPI)
+    Result.push_back("-frwpi");
+  else
+    Result.push_back("-fno-rwpi");
+
   const Arg *BranchProtectionArg =
       Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
   if (BranchProtectionArg) {
@@ -343,7 +355,18 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   std::vector<std::string> Result;
   const llvm::Triple Triple(ComputeEffectiveClangTriple(Args));
   Result.push_back("--target=" + Triple.str());
-  bool IsARM = false;
+
+  // A difference of relocation model (absolutely addressed data, PIC, Arm
+  // ROPI/RWPI) is likely to change whether a particular multilib variant is
+  // compatible with a given link. Determine the relocation model of the
+  // current link, so as to add appropriate multilib flags.
+  llvm::Reloc::Model RelocationModel;
+  unsigned PICLevel;
+  bool IsPIE;
+  {
+    RegisterEffectiveTriple TripleRAII(*this, Triple);
+    std::tie(RelocationModel, PICLevel, IsPIE) = ParsePICArgs(*this, Args);
+  }
 
   switch (Triple.getArch()) {
   case llvm::Triple::aarch64:
@@ -355,8 +378,7 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    getARMMultilibFlags(D, Triple, Args, Result);
-    IsARM = true; // for ROPI/RWPI below
+    getARMMultilibFlags(D, Triple, RelocationModel, Args, Result);
     break;
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
@@ -378,40 +400,11 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   else
     Result.push_back("-fexceptions");
 
-  // A difference of relocation model (absolutely addressed data, PIC, Arm
-  // ROPI/RWPI) is likely to change whether a particular multilib variant is
-  // compatible with a given link. Determine the relocation model of the
-  // current link, and add appropriate multilib flags.
-  {
-    RegisterEffectiveTriple TripleRAII(
-        *this, llvm::Triple(ComputeEffectiveClangTriple(Args)));
-
-    auto [RelocationModel, PICLevel, IsPIE] = tools::ParsePICArgs(*this, Args);
-
-    // ROPI and RWPI are only meaningful on Arm, so for other architectures, we
-    // expect never to find out they're enabled. But it seems confusing to add
-    // -fno-ropi and -fno-rwpi unconditionally to every other architecture's
-    // multilib flags, so instead we leave them out completely.
-    if (IsARM) {
-      if (RelocationModel == llvm::Reloc::ROPI ||
-          RelocationModel == llvm::Reloc::ROPI_RWPI)
-        Result.push_back("-fropi");
-      else
-        Result.push_back("-fno-ropi");
-
-      if (RelocationModel == llvm::Reloc::RWPI ||
-          RelocationModel == llvm::Reloc::ROPI_RWPI)
-        Result.push_back("-frwpi");
-      else
-        Result.push_back("-fno-rwpi");
-    }
-
-    if (RelocationModel == llvm::Reloc::PIC_)
-      Result.push_back(IsPIE ? (PICLevel > 1 ? "-fPIE" : "-fpie")
-                             : (PICLevel > 1 ? "-fPIC" : "-fpic"));
-    else
-      Result.push_back("-fno-pic");
-  }
+  if (RelocationModel == llvm::Reloc::PIC_)
+    Result.push_back(IsPIE ? (PICLevel > 1 ? "-fPIE" : "-fpie")
+                           : (PICLevel > 1 ? "-fPIC" : "-fpic"));
+  else
+    Result.push_back("-fno-pic");
 
   // Sort and remove duplicates.
   std::sort(Result.begin(), Result.end());
