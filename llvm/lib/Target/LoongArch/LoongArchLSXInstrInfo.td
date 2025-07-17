@@ -1838,6 +1838,10 @@ def : Pat<(vector_insert v4i32:$vd, GRLenVT:$rj, uimm2:$imm),
           (VINSGR2VR_W v4i32:$vd, GRLenVT:$rj, uimm2:$imm)>;
 def : Pat<(vector_insert v2i64:$vd, GRLenVT:$rj, uimm1:$imm),
           (VINSGR2VR_D v2i64:$vd, GRLenVT:$rj, uimm1:$imm)>;
+def : Pat<(vector_insert v4f32:$vd, (loongarch_movgr2fr_w_la64 GPR:$rj), uimm2:$imm),
+          (VINSGR2VR_W $vd, $rj, uimm2:$imm)>;
+def : Pat<(vector_insert v2f64:$vd, (f64 (bitconvert i64:$rj)), uimm1:$imm),
+          (VINSGR2VR_D $vd, $rj, uimm1:$imm)>;
 def : Pat<(vector_insert v4f32:$vd, FPR32:$fj, uimm2:$imm),
           (VINSGR2VR_W $vd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm2:$imm)>;
 def : Pat<(vector_insert v2f64:$vd, FPR64:$fj, uimm1:$imm),
@@ -2035,6 +2039,12 @@ foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
   defm : StPat<store, VST, LSX128, vt>;
   def  : RegRegStPat<store, VSTX, LSX128, vt>;
 }
+
+// Bitcast float/double element extracted from vector to integer.
+def : Pat<(loongarch_movfr2gr_s_la64 (f32 (vector_extract v4f32:$vj, uimm2:$imm))),
+          (VPICKVE2GR_W v4f32:$vj, uimm2:$imm)>;
+def : Pat<(i64 (bitconvert (f64 (vector_extract v2f64:$vj, uimm1:$imm)))),
+          (VPICKVE2GR_D v2f64:$vj, uimm1:$imm)>;
 
 // Vector extraction with constant index.
 def : Pat<(i64 (vector_extract v16i8:$vj, uimm4:$imm)),
