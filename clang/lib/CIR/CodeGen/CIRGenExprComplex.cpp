@@ -231,8 +231,7 @@ mlir::Value ComplexExprEmitter::VisitBinComma(const BinaryOperator *e) {
 mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
   if (e->getCallReturnType(cgf.getContext())->isReferenceType())
     return emitLoadOfLValue(e);
-
-  return cgf.emitCallExpr(e).getValue();
+  return cgf.emitCallExpr(e).getComplexValue();
 }
 
 mlir::Value ComplexExprEmitter::VisitCastExpr(CastExpr *e) {
