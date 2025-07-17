@@ -10,6 +10,7 @@
 #ifndef _LIBCPP_STACKTRACE_BASIC
 #define _LIBCPP_STACKTRACE_BASIC
 
+#include "__assert"
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -81,20 +82,27 @@ public:
   // (19.6.4.2)
   // Creation and assignment [stacktrace.basic.cons]
 
+  // Should be generous, but not so large that it would easily lead to an overflow
+  // when added to a given skip amount.
+  constexpr static size_type __default_max_depth = 1024;
+
   _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI static basic_stacktrace
   current(const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
-    return current(1, /* no __max_depth */ ~0, __caller_alloc);
+    return current(1, __default_max_depth, __caller_alloc);
   }
 
   _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI static basic_stacktrace
   current(size_type __skip, const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
-    return current(__skip + 1, /* no __max_depth */ ~0, __caller_alloc);
+    return current(__skip + 1, __default_max_depth, __caller_alloc);
   }
 
   _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI static basic_stacktrace
   current(size_type __skip,
           size_type __max_depth,
           const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __skip <= __skip + __max_depth, "sum of skip and max_depth too large; overflows size_type");
+
     __stacktrace::base __builder(__caller_alloc);
     __builder.build_stacktrace(__skip + 1, __max_depth);
     basic_stacktrace<_Allocator> __ret{__caller_alloc};
