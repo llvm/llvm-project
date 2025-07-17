@@ -117,8 +117,6 @@ static coff_symbol_generic *cloneSymbol(COFFSymbolRef sym) {
 // Skip importing DllMain thunks from import libraries.
 static bool fixupDllMain(COFFLinkerContext &ctx, llvm::object::Archive *file,
                          const Archive::Symbol &sym, bool &skipDllMain) {
-  if (skipDllMain)
-    return true;
   const Archive::Child &c =
       CHECK(sym.getMember(), file->getFileName() +
                                  ": could not get the member for symbol " +
@@ -144,14 +142,14 @@ static bool fixupDllMain(COFFLinkerContext &ctx, llvm::object::Archive *file,
 }
 
 ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-    : InputFile(ctx.symtab, ArchiveKind, m) {}
+    : InputFile(ctx.symtab, ArchiveKind, m) {
+  // Parse a MemoryBufferRef as an archive file.
+  file = CHECK(Archive::create(mb), this);
+}
 
 void ArchiveFile::parse() {
   COFFLinkerContext &ctx = symtab.ctx;
   SymbolTable *archiveSymtab = &symtab;
-
-  // Parse a MemoryBufferRef as an archive file.
-  file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
   if (ctx.symtab.isEC()) {
@@ -168,54 +166,77 @@ void ArchiveFile::parse() {
       // be either a native-only ARM64 or x86_64 archive. Check the machine type
       // of the object containing a symbol to determine which symbol table to
       // use.
-      Archive::symbol_iterator sym = file->symbol_begin();
-      if (sym != file->symbol_end()) {
-        MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
-        Archive::Child child =
-            CHECK(sym->getMember(),
-                  file->getFileName() +
-                      ": could not get the buffer for a child of the archive");
-        MemoryBufferRef mb = CHECK(
-            child.getMemoryBufferRef(),
-            file->getFileName() +
-                ": could not get the buffer for a child buffer of the archive");
-        switch (identify_magic(mb.getBuffer())) {
-        case file_magic::coff_object: {
-          std::unique_ptr<COFFObjectFile> obj =
-              CHECK(COFFObjectFile::create(mb),
-                    check(child.getName()) + ":" + ": not a valid COFF file");
-          machine = MachineTypes(obj->getMachine());
-          break;
-        }
-        case file_magic::coff_import_library:
-          machine = MachineTypes(COFFImportFile(mb).getMachine());
-          break;
-        case file_magic::bitcode: {
-          std::unique_ptr<lto::InputFile> obj =
-              check(lto::InputFile::create(mb));
-          machine = BitcodeFile::getMachineType(obj.get());
-          break;
-        }
-        default:
-          break;
-        }
+      MachineTypes machine = getMachineType();
+      if (machine != IMAGE_FILE_MACHINE_UNKNOWN)
         archiveSymtab = &ctx.getSymtab(machine);
-      }
     }
   }
 
-  // Read the symbol table to construct Lazy objects.
   bool skipDllMain = false;
+  StringRef mangledDllMain, impMangledDllMain;
+
+  // The calls below will fail if we haven't set the machine type yet. Instead
+  // of failing, it is preferable to skip this "imported DllMain" check if we
+  // don't know the machine type at this point.
+  if (!file->isEmpty() && ctx.config.machine != IMAGE_FILE_MACHINE_UNKNOWN) {
+    mangledDllMain = archiveSymtab->mangle("DllMain");
+    impMangledDllMain = uniqueSaver().save("__imp_" + mangledDllMain);
+  }
+
+  // Read the symbol table to construct Lazy objects.
   for (const Archive::Symbol &sym : file->symbols()) {
     // If an import library provides the DllMain symbol, skip importing it, as
     // we should be using our own DllMain, not another DLL's DllMain.
-    if (sym.getName() == "__imp_DllMain" || sym.getName() == "DllMain" ||
-        sym.getName() == "_DllMain") {
-      if (fixupDllMain(ctx, file.get(), sym, skipDllMain))
+    if (!mangledDllMain.empty() && (sym.getName() == mangledDllMain ||
+                                    sym.getName() == impMangledDllMain)) {
+      if (skipDllMain || fixupDllMain(ctx, file.get(), sym, skipDllMain))
         continue;
     }
     archiveSymtab->addLazyArchive(this, sym);
   }
+}
+
+MachineTypes ArchiveFile::getMachineType() const {
+  if (!file)
+    return IMAGE_FILE_MACHINE_UNKNOWN;
+  if (file->isEmpty())
+    return IMAGE_FILE_MACHINE_UNKNOWN;
+  Archive::symbol_iterator sym = file->symbol_begin();
+  if (sym != file->symbol_end()) {
+    Expected<Archive::Child> child = sym->getMember();
+    if (!child) {
+      consumeError(child.takeError());
+      return IMAGE_FILE_MACHINE_UNKNOWN;
+    }
+    Expected<MemoryBufferRef> mb = child->getMemoryBufferRef();
+    if (!mb) {
+      consumeError(mb.takeError());
+      return IMAGE_FILE_MACHINE_UNKNOWN;
+    }
+    switch (identify_magic(mb->getBuffer())) {
+    case file_magic::coff_object: {
+      Expected<std::unique_ptr<COFFObjectFile>> obj =
+          COFFObjectFile::create(*mb);
+      if (!obj) {
+        consumeError(obj.takeError());
+        return IMAGE_FILE_MACHINE_UNKNOWN;
+      }
+      return MachineTypes((*obj)->getMachine());
+      break;
+    }
+    case file_magic::coff_import_library:
+      return MachineTypes(COFFImportFile(*mb).getMachine());
+      break;
+    case file_magic::bitcode: {
+      std::unique_ptr<lto::InputFile> obj = check(lto::InputFile::create(*mb));
+      return BitcodeFile::getMachineType(obj.get());
+      break;
+    }
+    default:
+      break;
+    }
+  }
+  return IMAGE_FILE_MACHINE_UNKNOWN;
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.

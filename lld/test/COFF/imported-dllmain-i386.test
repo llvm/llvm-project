@@ -25,8 +25,7 @@ DISASM: DLL Name: b.dll
 DISASM-NOT: DllMain
 DISASM: bar
 DISASM: Disassembly of section .text:
-DISASM-EMPTY:
-DISASM-NEXT: b0 01                         movb    $0x1, %al
+DISASM:      b0 01                         movb    $0x1, %al
 DISASM-NEXT: c3                            retl
 
 #--- a.s

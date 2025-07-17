@@ -198,28 +198,8 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
 }
 
 void LinkerDriver::addFile(InputFile *file) {
-  Log(ctx) << "Reading " << toString(file);
-  if (file->lazy) {
-    if (auto *f = dyn_cast<BitcodeFile>(file))
-      f->parseLazy();
-    else
-      cast<ObjFile>(file)->parseLazy();
-  } else {
-    file->parse();
-    if (auto *f = dyn_cast<ObjFile>(file)) {
-      ctx.objFileInstances.push_back(f);
-    } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
-      if (ltoCompilationDone) {
-        Err(ctx) << "LTO object file " << toString(file)
-                 << " linked in after "
-                    "doing LTO compilation.";
-      }
-      f->symtab.bitcodeFileInstances.push_back(f);
-    } else if (auto *f = dyn_cast<ImportFile>(file)) {
-      ctx.importFileInstances.push_back(f);
-    }
-  }
-
+  // We need to process the machine type early on, so that APIs such as
+  // `mangle()` won't fail.
   MachineTypes mt = file->getMachineType();
   // The ARM64EC target must be explicitly specified and cannot be inferred.
   if (mt == ARM64EC &&
@@ -240,6 +220,28 @@ void LinkerDriver::addFile(InputFile *file) {
       mt != IMAGE_FILE_MACHINE_UNKNOWN) {
     ctx.config.machineInferred = true;
     setMachine(mt);
+  }
+
+  Log(ctx) << "Reading " << toString(file);
+  if (file->lazy) {
+    if (auto *f = dyn_cast<BitcodeFile>(file))
+      f->parseLazy();
+    else
+      cast<ObjFile>(file)->parseLazy();
+  } else {
+    file->parse();
+    if (auto *f = dyn_cast<ObjFile>(file)) {
+      ctx.objFileInstances.push_back(f);
+    } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
+      if (ltoCompilationDone) {
+        Err(ctx) << "LTO object file " << toString(file)
+                 << " linked in after "
+                    "doing LTO compilation.";
+      }
+      f->symtab.bitcodeFileInstances.push_back(f);
+    } else if (auto *f = dyn_cast<ImportFile>(file)) {
+      ctx.importFileInstances.push_back(f);
+    }
   }
 
   parseDirectives(file);
