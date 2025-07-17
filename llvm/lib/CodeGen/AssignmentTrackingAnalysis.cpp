@@ -2150,7 +2150,10 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
     for (auto &I : BB) {
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
         ProcessDbgRecord(&DVR);
-      if (auto Info = getUntaggedStoreAssignmentInfo(I, Fn.getDataLayout())) {
+      if (I.getMetadata(LLVMContext::MD_DIAssignID)) {
+        // Do nothing.
+      } else if (auto Info =
+                     getUntaggedStoreAssignmentInfo(I, Fn.getDataLayout())) {
         // Find markers linked to this alloca.
         auto HandleDbgAssignForStore = [&](DbgVariableRecord *Assign) {
           std::optional<DIExpression::FragmentInfo> FragInfo;
