@@ -24016,6 +24016,54 @@ static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
                       Store->getMemOperand());
 }
 
+// Combine store (fp_to_int X) with optional extensions/trunctions to use vector
+// semantics when NEON is available.
+static void combineFPToIntStore(StoreSDNode *ST,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   SelectionDAG &DAG,
+                                   const AArch64Subtarget *Subtarget) {
+  if (!Subtarget->isNeonAvailable())
+    return;
+
+  SDValue Value = ST->getValue();
+
+  // Peel
+  for (;;) {
+    if (!Value->hasOneUse())
+      break;
+    if (!ISD::isExtOpcode(Value.getOpcode()) &&
+        Value.getOpcode() != ISD::TRUNCATE && !Value->isAssert())
+      break;
+    Value = Value.getOperand(0);
+  }
+
+  if (Value.getOpcode() != ISD::FP_TO_UINT &&
+      Value.getOpcode() != ISD::FP_TO_SINT)
+    return;
+  if (!Value.hasOneUse())
+    return;
+
+  SDValue FPSrc = Value.getOperand(0);
+  EVT SrcVT = FPSrc.getValueType();
+  if (SrcVT.isVector())
+    return;
+
+  EVT VecSrcVT = EVT::getVectorVT(*DAG.getContext(), SrcVT, 1);
+  EVT DstVT = MVT::getIntegerVT(SrcVT.getScalarSizeInBits());
+  EVT VecDstVT = EVT::getVectorVT(*DAG.getContext(), DstVT, 1);
+  SDLoc DL(ST);
+  SDValue UndefVec = DAG.getUNDEF(VecSrcVT);
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue VecFP =
+      DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecSrcVT, UndefVec, FPSrc, Zero);
+
+  SDValue VecConv = DAG.getNode(Value.getOpcode(), DL, VecDstVT, VecFP);
+  SDValue Extracted =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DstVT, VecConv, Zero);
+
+  DCI.CombineTo(Value.getNode(), Extracted);
+}
+
 bool isHalvingTruncateOfLegalScalableType(EVT SrcVT, EVT DstVT) {
   return (SrcVT == MVT::nxv8i16 && DstVT == MVT::nxv8i8) ||
          (SrcVT == MVT::nxv4i32 && DstVT == MVT::nxv4i16) ||
@@ -24097,6 +24145,8 @@ static SDValue performSTORECombine(SDNode *N,
   EVT MemVT = ST->getMemoryVT();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(ST);
+
+  combineFPToIntStore(ST, DCI, DAG, Subtarget);
 
   auto hasValidElementTypeForFPTruncStore = [](EVT VT) {
     EVT EltVT = VT.getVectorElementType();
