@@ -107,8 +107,9 @@ public:
   llvm::Expected<llvm::ArrayRef<uint8_t>> GetMemory(lldb::addr_t addr,
                                                     size_t size);
 
-  // Pair of functions to get relative memory regions from the minidump file. These aren't for
-  // evaluating the data, but checking the ranges stored in the minidump and their permissions.
+  // Pair of functions to get relative memory regions from the minidump file.
+  // These aren't for evaluating the data, but checking the ranges stored in the
+  // minidump and their permissions.
   std::optional<Range> GetClosestPriorRegion(lldb::addr_t addr);
   std::optional<Range> GetClosestFollowingRegion(lldb::addr_t addr);
 

@@ -658,9 +658,9 @@ public:
           m_entries, addr, [](const Entry &lhs, B rhs_base) -> bool {
             return lhs.GetRangeEnd() <= rhs_base;
           });
-      
+
       if (pos->Contains(addr))
-          return &(*pos);
+        return &(*pos);
 
       if (pos != begin)
         return &(*std::prev(pos));

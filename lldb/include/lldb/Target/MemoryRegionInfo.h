@@ -14,8 +14,8 @@
 #include <vector>
 
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/RangeMap.h"
+#include "lldb/Utility/StreamString.h"
 #include "llvm/Support/FormatProviders.h"
 
 namespace lldb_private {
@@ -165,7 +165,7 @@ public:
       stream << "x";
     else if (m_execute == eNo)
       stream << "-";
-    else 
+    else
       stream << "?";
 
     return stream.GetString().str();
