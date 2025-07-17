@@ -8,6 +8,7 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-REGS-VP-NOT: LV(REG): Not considering vector loop of width vscale x 16 because it uses too many registers
 ; CHECK-REGS-VP: LV: Selecting VF: vscale x 8.
 ;
+; CHECK-NOREGS-VP: LV(REG): Not considering vector loop of width vscale x 8 because it uses too many registers
 ; CHECK-NOREGS-VP: LV(REG): Not considering vector loop of width vscale x 16 because it uses too many registers
 ; CHECK-NOREGS-VP: LV: Selecting VF: vscale x 4.
 entry:
