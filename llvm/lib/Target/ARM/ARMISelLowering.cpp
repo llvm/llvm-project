@@ -3545,8 +3545,7 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
     auto AFI = DAG.getMachineFunction().getInfo<ARMFunctionInfo>();
     auto T = const_cast<Type*>(CP->getType());
     auto C = const_cast<Constant*>(CP->getConstVal());
-    auto M = const_cast<Module*>(DAG.getMachineFunction().
-                                 getFunction().getParent());
+    auto M = DAG.getMachineFunction().getFunction().getParent();
     auto GV = new GlobalVariable(
                     *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
                     Twine(DAG.getDataLayout().getPrivateGlobalPrefix()) + "CP" +
