@@ -19,6 +19,7 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
+#include <__type_traits/is_unbounded_array.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -38,7 +39,10 @@ namespace ranges {
 // construct_at
 
 struct __construct_at {
-  template <class _Tp, class... _Args, class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...))>
+  template <class _Tp,
+            class... _Args,
+            class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...)),
+            __enable_if_t<!is_unbounded_array_v<_Tp>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp* operator()(_Tp* __location, _Args&&... __args) const {
     return std::construct_at(__location, std::forward<_Args>(__args)...);
   }

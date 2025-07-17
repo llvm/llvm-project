@@ -16,6 +16,7 @@
 // }
 
 #include <cassert>
+#include <concepts>
 #include <initializer_list>
 #include <memory>
 #include <type_traits>
@@ -52,12 +53,18 @@ struct Counted {
   constexpr ~Counted() { --count; }
 };
 
+struct CountDefaultInitializations {
+  CountDefaultInitializations() { ++constructions; }
+  static int constructions;
+};
+int CountDefaultInitializations::constructions = 0;
+
 constexpr bool test() {
   // Value initialization.
   {
     int x = 1;
 
-    int* result = std::ranges::construct_at(&x);
+    std::same_as<int*> auto result = std::ranges::construct_at(&x);
     assert(result == &x);
     assert(x == 0);
   }
@@ -66,7 +73,7 @@ constexpr bool test() {
   {
     int x = 1;
 
-    int* result = std::ranges::construct_at(&x, 42);
+    std::same_as<int*> auto result = std::ranges::construct_at(&x, 42);
     assert(result == &x);
     assert(x == 42);
   }
@@ -75,7 +82,7 @@ constexpr bool test() {
   {
     Foo f;
 
-    Foo* result = std::ranges::construct_at(std::addressof(f), 42, 123);
+    std::same_as<Foo*> auto result = std::ranges::construct_at(std::addressof(f), 42, 123);
     assert(result == std::addressof(f));
     assert(f.x == 42);
     assert(f.y == 123);
@@ -87,7 +94,7 @@ constexpr bool test() {
     Counted* out = alloc.allocate(2);
     int count    = 0;
 
-    Counted* result = std::ranges::construct_at(out, count);
+    std::same_as<Counted*> auto result = std::ranges::construct_at(out, count);
     assert(result == out);
     assert(count == 1);
 
@@ -99,28 +106,85 @@ constexpr bool test() {
     alloc.deallocate(out, 2);
   }
 
+  // Test LWG3436, std::ranges::construct_at with array types
+  {
+    {
+      using Array = int[1];
+      Array array;
+      std::same_as<Array*> auto result = std::ranges::construct_at(&array);
+      assert(result == &array);
+      assert(array[0] == 0);
+    }
+    {
+      using Array = int[2];
+      Array array;
+      std::same_as<Array*> auto result = std::ranges::construct_at(&array);
+      assert(result == &array);
+      assert(array[0] == 0);
+      assert(array[1] == 0);
+    }
+    {
+      using Array = int[3];
+      Array array;
+      std::same_as<Array*> auto result = std::ranges::construct_at(&array);
+      assert(result == &array);
+      assert(array[0] == 0);
+      assert(array[1] == 0);
+      assert(array[2] == 0);
+    }
+
+    // Make sure we initialize the right number of elements. This can't be done inside
+    // constexpr since it requires a global variable.
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      {
+        using Array = CountDefaultInitializations[1];
+        CountDefaultInitializations array[1];
+        CountDefaultInitializations::constructions = 0;
+        std::ranges::construct_at(&array);
+        assert(CountDefaultInitializations::constructions == 1);
+      }
+      {
+        using Array = CountDefaultInitializations[2];
+        CountDefaultInitializations array[2];
+        CountDefaultInitializations::constructions = 0;
+        std::ranges::construct_at(&array);
+        assert(CountDefaultInitializations::constructions == 2);
+      }
+      {
+        using Array = CountDefaultInitializations[3];
+        CountDefaultInitializations array[3];
+        CountDefaultInitializations::constructions = 0;
+        std::ranges::construct_at(&array);
+        assert(CountDefaultInitializations::constructions == 3);
+      }
+    }
+  }
+
   return true;
 }
 
-constexpr bool can_construct_at(auto&&... args)
-  requires requires { std::ranges::construct_at(decltype(args)(args)...); }
-{
-  return true;
-}
+template <class... Args>
+constexpr bool can_construct_at = requires { std::ranges::construct_at(std::declval<Args>()...); };
 
-constexpr bool can_construct_at(auto&&...) { return false; }
+struct NoDefault {
+  NoDefault() = delete;
+};
 
 // Check that SFINAE works.
-static_assert(can_construct_at((Foo*)nullptr, 1, 2));
-static_assert(!can_construct_at((Foo*)nullptr, 1));
-static_assert(!can_construct_at((Foo*)nullptr, 1, 2, 3));
-static_assert(!can_construct_at(nullptr, 1, 2));
-static_assert(!can_construct_at((int*)nullptr, 1, 2));
-static_assert(!can_construct_at(contiguous_iterator<Foo*>(), 1, 2));
+static_assert(can_construct_at<Foo*, int, int>);
+static_assert(!can_construct_at<Foo*, int>);
+static_assert(!can_construct_at<Foo*, int, int, int>);
+static_assert(!can_construct_at<std::nullptr_t, int, int>);
+static_assert(!can_construct_at<int*, int, int>);
+static_assert(!can_construct_at<contiguous_iterator<Foo*>, int, int>);
 // Can't construct function pointers.
-static_assert(!can_construct_at((int (*)()) nullptr));
-static_assert(!can_construct_at((int (*)()) nullptr, nullptr));
-// TODO(varconst): check that array types work once D114649 implementing LWG3639 lands.
+static_assert(!can_construct_at<int (*)()>);
+static_assert(!can_construct_at<int (*)(), std::nullptr_t>);
+
+// LWG3436
+static_assert(can_construct_at<int (*)[3]>);        // test the test
+static_assert(!can_construct_at<int (*)[]>);        // unbounded arrays should SFINAE away
+static_assert(!can_construct_at<NoDefault (*)[1]>); // non default constructible shouldn't work
 
 int main(int, char**) {
   test();

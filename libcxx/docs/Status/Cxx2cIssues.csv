@@ -77,7 +77,7 @@
 "`LWG4106 <https://wg21.link/LWG4106>`__","``basic_format_args`` should not be default-constructible","2024-06 (St. Louis)","|Complete|","19",""
 "","","","","",""
 "`LWG3216 <https://wg21.link/LWG3216>`__","Rebinding the allocator before calling ``construct``/``destroy`` in ``allocate_shared``","2024-11 (Wrocław)","","",""
-"`LWG3436 <https://wg21.link/LWG3436>`__","``std::construct_at`` should support arrays","2024-11 (Wrocław)","","",""
+"`LWG3436 <https://wg21.link/LWG3436>`__","``std::construct_at`` should support arrays","2024-11 (Wrocław)","|Complete|","21",""
 "`LWG3886 <https://wg21.link/LWG3886>`__","Monad mo' problems","2024-11 (Wrocław)","","",""
 "`LWG3899 <https://wg21.link/LWG3899>`__","``co_yield``\ing elements of an lvalue generator is unnecessarily inefficient","2024-11 (Wrocław)","","",""
 "`LWG3900 <https://wg21.link/LWG3900>`__","The ``allocator_arg_t`` overloads of ``generator::promise_type::operator new`` should not be constrained","2024-11 (Wrocław)","","",""
