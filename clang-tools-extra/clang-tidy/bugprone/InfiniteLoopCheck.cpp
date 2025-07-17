@@ -64,41 +64,35 @@ static bool isChanged(const Stmt *LoopStmt, const ValueDecl *Var,
   return ExprMutationAnalyzer(*LoopStmt, *Context).isMutated(Var);
 }
 
+static bool isVarPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
+                                 const ValueDecl *VD, ASTContext *Context) {
+  const VarDecl *Var = nullptr;
+  if (const auto *VarD = dyn_cast<VarDecl>(VD)) {
+    Var = VarD;
+  } else if (const auto *BD = dyn_cast<BindingDecl>(VD)) {
+    if (const auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl()))
+      Var = DD;
+  }
+
+  if (!Var)
+    return false;
+
+  if (!Var->isLocalVarDeclOrParm() || Var->getType().isVolatileQualified())
+    return true;
+
+  if (!VD->getType().getTypePtr()->isIntegerType())
+    return true;
+
+  return hasPtrOrReferenceInFunc(Func, VD) || isChanged(LoopStmt, VD, Context);
+  // FIXME: Track references.
+}
+
 /// Return whether `Cond` is a variable that is possibly changed in `LoopStmt`.
 static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
                                        const Stmt *Cond, ASTContext *Context) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
-    if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (!Var->isLocalVarDeclOrParm())
-        return true;
-
-      if (Var->getType().isVolatileQualified())
-        return true;
-
-      if (!Var->getType().getTypePtr()->isIntegerType())
-        return true;
-
-      return hasPtrOrReferenceInFunc(Func, Var) ||
-             isChanged(LoopStmt, Var, Context);
-      // FIXME: Track references.
-    }
-
-    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
-      if (const auto *DD =
-              dyn_cast<DecompositionDecl>(BD->getDecomposedDecl())) {
-        if (!DD->isLocalVarDeclOrParm())
-          return true;
-
-        if (DD->getType().isVolatileQualified())
-          return true;
-
-        if (!BD->getType().getTypePtr()->isIntegerType())
-          return true;
-
-        return hasPtrOrReferenceInFunc(Func, BD) ||
-               isChanged(LoopStmt, BD, Context);
-      }
-    }
+    if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl()))
+      return isVarPossiblyChanged(Func, LoopStmt, VD, Context);
   } else if (isa<MemberExpr, CallExpr, ObjCIvarRefExpr, ObjCPropertyRefExpr,
                  ObjCMessageExpr>(Cond)) {
     // FIXME: Handle MemberExpr.
