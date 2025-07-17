@@ -325,7 +325,7 @@ void multiThreadedPageInBackground(const DeferredFiles &deferred) {
 }
 
 static void multiThreadedPageIn(const DeferredFiles &deferred) {
-  static std::deque<DeferredFiles> queue;
+  static std::deque<std::unique_ptr<DeferredFiles>> queue;
   static std::thread *running;
   static std::mutex mutex;
 
@@ -339,12 +339,13 @@ static void multiThreadedPageIn(const DeferredFiles &deferred) {
   }
 
   if (!deferred.empty()) {
-    queue.emplace_back(deferred);
+    queue.emplace_back(
+        std::unique_ptr<DeferredFiles>(new DeferredFiles(deferred)));
     if (!running)
       running = new std::thread([&]() {
         mutex.lock();
         while (!queue.empty()) {
-          const DeferredFiles &deferred = queue.front();
+          const DeferredFiles &deferred = *queue.front();
           mutex.unlock();
           multiThreadedPageInBackground(deferred);
           mutex.lock();
