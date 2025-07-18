@@ -5060,12 +5060,6 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
           return !U.getUser()->use_empty();
         }
 
-        // Handle CopyToReg nodes that will become dead after our replacement
-        if (U.getUser()->getOpcode() == ISD::CopyToReg) {
-          DeadCopyToRegs.push_back(U.getUser());
-          return true;
-        }
-
         // Otherwise, this use prevents us from splitting a value.
         return false;
       }))
@@ -5131,10 +5125,6 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   // Add remaining chain and glue nodes
   for (unsigned I : seq(NewLoad->getNumValues() - NewNumOutputs))
     Results.push_back(NewLoad.getValue(NewNumOutputs + I));
-
-  // Remove dead CopyToReg nodes by folding them into the chain they reference
-  for (SDNode *CTR : DeadCopyToRegs)
-    DCI.CombineTo(CTR, CTR->getOperand(0));
 
   return DCI.DAG.getMergeValues(Results, DL);
 }
