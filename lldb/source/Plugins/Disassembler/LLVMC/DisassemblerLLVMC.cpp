@@ -1449,31 +1449,28 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
 void DisassemblerLLVMC::UpdateFeatureString(llvm::StringRef additional_features,
                                             std::string &features) {
   // Allow users to override default additional features.
-  size_t start = 0, end;
-  while (!additional_features.empty() && start < additional_features.size()) {
-    end = additional_features.find(',', start);
-    if (end == llvm::StringRef::npos) {
-      end = additional_features.size();
+  for (llvm::StringRef flag : llvm::split(additional_features, ",")) {
+    flag = flag.trim();
+    if (flag.empty()) {
+      continue;
     }
-    llvm::StringRef flag =
-        additional_features.substr(start, end - start).trim();
-    if (!flag.empty()) {
-      if (flag.starts_with('+')) {
-        std::string dissable_flag = "-" + flag.substr(1).str();
-        if (features.find(dissable_flag) == std::string::npos) {
-          if (flag.back() != ',') {
-            features = ',' + features;
-          }
-          features = flag.str() + features;
-        }
-      } else {
-        if (flag.back() != ',') {
+    // Check if disable (-c) is already present before adding default enable
+    // (+c), since enable (+c) takes precedence whether disable (-c) appears
+    // before or after in the feature string.
+    if (flag.starts_with('+')) {
+      std::string disable_flag = "-" + flag.substr(1).str();
+      if (features.find(disable_flag) == std::string::npos) {
+        if (!features.empty() && flag.back() != ',') {
           features = ',' + features;
         }
         features = flag.str() + features;
       }
+    } else {
+      if (flag.back() != ',') {
+        features = ',' + features;
+      }
+      features = flag.str() + features;
     }
-    start = end + 1;
   }
 }
 
@@ -1628,8 +1625,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       arch.GetAdditionalDisassemblyFeatureStr().data();
   // Prepend the additional_features if it's not already in the features_str to
   // avoid duplicates.
-  if (additional_features &&
-      features_str.find(additional_features) == std::string::npos) {
+  if (additional_features) {
     UpdateFeatureString(additional_features, features_str);
   }
 
