@@ -4,7 +4,7 @@
 define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-LABEL: copy_to_vreg_1:
 ; GCN:       ; %bb.0: ; %._crit_edge
-; GCN-NEXT:    s_load_dword s4, s[4:5], 0x24
+; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -29,7 +29,7 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN-NEXT:    s_xor_b64 s[8:9], exec, -1
-; GCN-NEXT:  .LBB0_2: ; %Flow2
+; GCN-NEXT:  .LBB0_2: ; %Flow3
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_and_b64 s[4:5], exec, s[8:9]
@@ -49,7 +49,7 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], exec
 ; GCN-NEXT:    global_store_byte v[2:3], v1, off
-; GCN-NEXT:  .LBB0_5: ; %Flow1
+; GCN-NEXT:  .LBB0_5: ; %Flow2
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_mov_b64 s[8:9], -1
@@ -67,28 +67,28 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-NEXT:  .LBB0_8: ; %DummyReturnBlock
 ; GCN-NEXT:    s_endpgm
 ._crit_edge:
-  %1 = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %2 = udiv i32 1, %0
+  %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %div = udiv i32 1, %0
   br label %.lr.ph27
 
 .lr.ph27:                                         ; preds = %pred.store.if41, %pred.store.continue, %._crit_edge
-  %3 = phi i32 [ %2, %._crit_edge ], [ 0, %pred.store.if41 ], [ 0, %pred.store.continue ]
-  %4 = icmp ugt i32 %3, 0
-  %broadcast.splatinsert37 = insertelement <4 x i1> zeroinitializer, i1 %4, i64 0
-  %.zext = zext i32 %1 to i64
+  %iv = phi i32 [ %div, %._crit_edge ], [ 0, %pred.store.if41 ], [ 0, %pred.store.continue ]
+  %cmp = icmp ugt i32 %iv, 0
+  %broadcast.splatinsert37 = insertelement <4 x i1> zeroinitializer, i1 %cmp, i64 0
+  %.zext = zext i32 %id.x to i64
   %broadcast.splatinsert39 = insertelement <4 x i64> zeroinitializer, i64 %.zext, i64 0
-  %5 = icmp uge <4 x i64> %broadcast.splatinsert39, splat (i64 1)
-  %6 = or <4 x i1> %5, %broadcast.splatinsert37
-  %7 = extractelement <4 x i1> %6, i64 0
-  br i1 %7, label %pred.store.if, label %pred.store.continue
+  %cmp.1 = icmp uge <4 x i64> %broadcast.splatinsert39, splat (i64 1)
+  %or = or <4 x i1> %cmp.1, %broadcast.splatinsert37
+  %extract = extractelement <4 x i1> %or, i64 0
+  br i1 %extract, label %pred.store.if, label %pred.store.continue
 
 pred.store.if:                                    ; preds = %.lr.ph27
   store i8 0, ptr addrspace(1) null, align 64
   br label %pred.store.continue
 
 pred.store.continue:                              ; preds = %pred.store.if, %.lr.ph27
-  %8 = extractelement <4 x i1> %6, i64 1
-  br i1 %8, label %pred.store.if41, label %.lr.ph27
+  %extract.1 = extractelement <4 x i1> %or, i64 1
+  br i1 %extract.1, label %pred.store.if41, label %.lr.ph27
 
 pred.store.if41:                                  ; preds = %pred.store.continue
   store i8 0, ptr addrspace(1) null, align 64
