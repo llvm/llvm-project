@@ -1935,16 +1935,18 @@ define <4 x i8> @test_fptosi_4xhalf_to_4xi8(<4 x half> %a) #0 {
 ; O0-NEXT:    .reg .b32 %r<12>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [test_fptosi_4xhalf_to_4xi8_param_0];
-; O0-NEXT:    cvt.rzi.s16.f16 %rs5, %rs4;
-; O0-NEXT:    cvt.rzi.s16.f16 %rs6, %rs3;
-; O0-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; O0-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
-; O0-NEXT:    cvt.u32.u16 %r4, %rs8;
-; O0-NEXT:    cvt.u32.u16 %r5, %rs7;
+; O0-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_fptosi_4xhalf_to_4xi8_param_0];
+; O0-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; O0-NEXT:    cvt.rzi.s16.f16 %rs3, %rs2;
+; O0-NEXT:    cvt.rzi.s16.f16 %rs4, %rs1;
+; O0-NEXT:    mov.b32 %r3, {%rs4, %rs3};
+; O0-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; O0-NEXT:    cvt.u32.u16 %r4, %rs6;
+; O0-NEXT:    cvt.u32.u16 %r5, %rs5;
 ; O0-NEXT:    prmt.b32 %r6, %r5, %r4, 0x3340U;
-; O0-NEXT:    cvt.rzi.s16.f16 %rs9, %rs2;
-; O0-NEXT:    cvt.rzi.s16.f16 %rs10, %rs1;
+; O0-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
+; O0-NEXT:    cvt.rzi.s16.f16 %rs9, %rs8;
+; O0-NEXT:    cvt.rzi.s16.f16 %rs10, %rs7;
 ; O0-NEXT:    mov.b32 %r7, {%rs10, %rs9};
 ; O0-NEXT:    mov.b32 {%rs11, %rs12}, %r7;
 ; O0-NEXT:    cvt.u32.u16 %r8, %rs12;
@@ -1989,16 +1991,18 @@ define <4 x i8> @test_fptoui_4xhalf_to_4xi8(<4 x half> %a) #0 {
 ; O0-NEXT:    .reg .b32 %r<12>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [test_fptoui_4xhalf_to_4xi8_param_0];
-; O0-NEXT:    cvt.rzi.u16.f16 %rs5, %rs4;
-; O0-NEXT:    cvt.rzi.u16.f16 %rs6, %rs3;
-; O0-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; O0-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
-; O0-NEXT:    cvt.u32.u16 %r4, %rs8;
-; O0-NEXT:    cvt.u32.u16 %r5, %rs7;
+; O0-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_fptoui_4xhalf_to_4xi8_param_0];
+; O0-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; O0-NEXT:    cvt.rzi.u16.f16 %rs3, %rs2;
+; O0-NEXT:    cvt.rzi.u16.f16 %rs4, %rs1;
+; O0-NEXT:    mov.b32 %r3, {%rs4, %rs3};
+; O0-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; O0-NEXT:    cvt.u32.u16 %r4, %rs6;
+; O0-NEXT:    cvt.u32.u16 %r5, %rs5;
 ; O0-NEXT:    prmt.b32 %r6, %r5, %r4, 0x3340U;
-; O0-NEXT:    cvt.rzi.u16.f16 %rs9, %rs2;
-; O0-NEXT:    cvt.rzi.u16.f16 %rs10, %rs1;
+; O0-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
+; O0-NEXT:    cvt.rzi.u16.f16 %rs9, %rs8;
+; O0-NEXT:    cvt.rzi.u16.f16 %rs10, %rs7;
 ; O0-NEXT:    mov.b32 %r7, {%rs10, %rs9};
 ; O0-NEXT:    mov.b32 {%rs11, %rs12}, %r7;
 ; O0-NEXT:    cvt.u32.u16 %r8, %rs12;
