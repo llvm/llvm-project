@@ -947,9 +947,8 @@ public:
   /// user options, for the given register kind.
   bool useMaxBandwidth(TargetTransformInfo::RegisterKind RegKind);
 
-  /// \return True if maximizing vector bandwidth is enabled by the target or
-  /// user options, for the given vector factor.
-  bool useMaxBandwidth(ElementCount VF);
+  /// \return True if register pressure should be calculated for the given VF.
+  bool shouldCalculateRegPressureForVF(ElementCount VF);
 
   /// \return The size (in bits) of the smallest and widest types in the code
   /// that needs to be vectorized. We ignore values that remain scalar such as
@@ -1736,6 +1735,9 @@ public:
   /// Whether this loop should be optimized for size based on function attribute
   /// or profile information.
   bool OptForSize;
+
+  /// The highest VF possible for this loop, without using MaxBandwidth.
+  FixedScalableVFPair MaxPermissibleVFWithoutMaxBW;
 };
 } // end namespace llvm
 
@@ -3832,10 +3834,16 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   return FixedScalableVFPair::getNone();
 }
 
-bool LoopVectorizationCostModel::useMaxBandwidth(ElementCount VF) {
-  return useMaxBandwidth(VF.isScalable()
-                             ? TargetTransformInfo::RGK_ScalableVector
-                             : TargetTransformInfo::RGK_FixedWidthVector);
+bool LoopVectorizationCostModel::shouldCalculateRegPressureForVF(
+    ElementCount VF) {
+  if (!useMaxBandwidth(VF.isScalable()
+                           ? TargetTransformInfo::RGK_ScalableVector
+                           : TargetTransformInfo::RGK_FixedWidthVector))
+    return false;
+  // Only calculate register pressure for VFs enabled by MaxBandwidth.
+  return ElementCount::isKnownGT(
+      VF, VF.isScalable() ? MaxPermissibleVFWithoutMaxBW.ScalableVF
+                          : MaxPermissibleVFWithoutMaxBW.FixedVF);
 }
 
 bool LoopVectorizationCostModel::useMaxBandwidth(
@@ -3911,6 +3919,12 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
                            : TargetTransformInfo::RGK_FixedWidthVector;
   ElementCount MaxVF = MaxVectorElementCount;
+
+  if (MaxVF.isScalable())
+    MaxPermissibleVFWithoutMaxBW.ScalableVF = MaxVF;
+  else
+    MaxPermissibleVFWithoutMaxBW.FixedVF = MaxVF;
+
   if (useMaxBandwidth(RegKind)) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
@@ -4264,9 +4278,11 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       if (VF.isScalar())
         continue;
 
-      /// Don't consider the VF if it exceeds the number of registers for the
-      /// target.
-      if (CM.useMaxBandwidth(VF) && RUs[I].exceedsMaxNumRegs(TTI))
+      /// If the register pressure needs to be considered for VF,
+      /// don't consider the VF as valid if it exceeds the number
+      /// of registers for the target.
+      if (CM.shouldCalculateRegPressureForVF(VF) &&
+          RUs[I].exceedsMaxNumRegs(TTI, ForceTargetNumVectorRegs))
         continue;
 
       InstructionCost C = CM.expectedCost(VF);
@@ -6289,8 +6305,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Interleave;
       case LoopVectorizationCostModel::CM_Scalarize:
       case LoopVectorizationCostModel::CM_Widen:
-        return Legal->isMaskRequired(I) ? TTI::CastContextHint::Masked
-                                        : TTI::CastContextHint::Normal;
+        return isPredicatedInst(I) ? TTI::CastContextHint::Masked
+                                   : TTI::CastContextHint::Normal;
       case LoopVectorizationCostModel::CM_Widen_Reverse:
         return TTI::CastContextHint::Reversed;
       case LoopVectorizationCostModel::CM_Unknown:
@@ -7044,7 +7060,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
       InstructionCost Cost = cost(*P, VF);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
-      if (CM.useMaxBandwidth(VF) && RUs[I].exceedsMaxNumRegs(TTI)) {
+      if (CM.shouldCalculateRegPressureForVF(VF) &&
+          RUs[I].exceedsMaxNumRegs(TTI, ForceTargetNumVectorRegs)) {
         LLVM_DEBUG(dbgs() << "LV(REG): Not considering vector loop of width "
                           << VF << " because it uses too many registers\n");
         continue;
@@ -8112,7 +8129,7 @@ bool VPRecipeBuilder::getScaledReductions(
   std::optional<unsigned> BinOpc;
   Type *ExtOpTypes[2] = {nullptr};
 
-  auto CollectExtInfo = [&Exts,
+  auto CollectExtInfo = [this, &Exts,
                          &ExtOpTypes](SmallVectorImpl<Value *> &Ops) -> bool {
     unsigned I = 0;
     for (Value *OpI : Ops) {
@@ -8120,6 +8137,11 @@ bool VPRecipeBuilder::getScaledReductions(
       if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))))
         return false;
       Exts[I] = cast<Instruction>(OpI);
+
+      // TODO: We should be able to support live-ins.
+      if (!CM.TheLoop->contains(Exts[I]))
+        return false;
+
       ExtOpTypes[I] = ExtOp->getType();
       I++;
     }
@@ -8437,56 +8459,11 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
   }
 }
 
-// Collect VPIRInstructions for phis in the exit block from the latch only.
-static SetVector<VPIRInstruction *> collectUsersInLatchExitBlock(VPlan &Plan) {
-  SetVector<VPIRInstruction *> ExitUsersToFix;
-  for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
-
-    if (ExitVPBB->getSinglePredecessor() != Plan.getMiddleBlock())
-      continue;
-
-    for (VPRecipeBase &R : ExitVPBB->phis()) {
-      auto *ExitIRI = cast<VPIRPhi>(&R);
-      assert(ExitIRI->getNumOperands() == 1 && "must have a single operand");
-      VPValue *V = ExitIRI->getOperand(0);
-      if (V->isLiveIn())
-        continue;
-      assert(V->getDefiningRecipe()->getParent()->getEnclosingLoopRegion() &&
-             "Only recipes defined inside a region should need fixing.");
-      ExitUsersToFix.insert(ExitIRI);
-    }
-  }
-  return ExitUsersToFix;
-}
-
-// Add exit values to \p Plan. Extracts are added for each entry in \p
-// ExitUsersToFix if needed and their operands are updated.
-static void
-addUsersInExitBlocks(VPlan &Plan,
-                     const SetVector<VPIRInstruction *> &ExitUsersToFix) {
-  if (ExitUsersToFix.empty())
-    return;
-
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-
-  // Introduce extract for exiting values and update the VPIRInstructions
-  // modeling the corresponding LCSSA phis.
-  for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
-    assert(ExitIRI->getNumOperands() == 1 &&
-           ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
-           "exit values from early exits must be fixed when branch to "
-           "early-exit is added");
-    ExitIRI->extractLastLaneOfFirstOperand(B);
-  }
-}
-
 /// Handle users in the exit block for first order reductions in the original
 /// exit block. The penultimate value of recurrences is fed to their LCSSA phi
 /// users in the original exit block using the VPIRInstruction wrapping to the
 /// LCSSA phi.
-static void addExitUsersForFirstOrderRecurrences(
-    VPlan &Plan, SetVector<VPIRInstruction *> &ExitUsersToFix, VFRange &Range) {
+static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *ScalarPHVPBB = Plan.getScalarPreheader();
   auto *MiddleVPBB = Plan.getMiddleBlock();
@@ -8575,14 +8552,15 @@ static void addExitUsersForFirstOrderRecurrences(
     // Now update VPIRInstructions modeling LCSSA phis in the exit block.
     // Extract the penultimate value of the recurrence and use it as operand for
     // the VPIRInstruction modeling the phi.
-    for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
-      if (ExitIRI->getOperand(0) != FOR)
+    for (VPUser *U : FOR->users()) {
+      using namespace llvm::VPlanPatternMatch;
+      if (!match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                        m_Specific(FOR))))
         continue;
       // For VF vscale x 1, if vscale = 1, we are unable to extract the
-      // penultimate value of the recurrence. Instead, we rely on function
-      // addUsersInExitBlocks to extract the last element from the result of
-      // VPInstruction::FirstOrderRecurrenceSplice by leaving the user of the
-      // recurrence phi in ExitUsersToFix.
+      // penultimate value of the recurrence. Instead we rely on the existing
+      // extract of the last element from the result of
+      // VPInstruction::FirstOrderRecurrenceSplice.
       // TODO: Consider vscale_range info and UF.
       if (LoopVectorizationPlanner::getDecisionAndClampRange(IsScalableOne,
                                                              Range))
@@ -8590,8 +8568,7 @@ static void addExitUsersForFirstOrderRecurrences(
       VPValue *PenultimateElement = MiddleBuilder.createNaryOp(
           VPInstruction::ExtractPenultimateElement, {FOR->getBackedgeValue()},
           {}, "vector.recur.extract.for.phi");
-      ExitIRI->setOperand(0, PenultimateElement);
-      ExitUsersToFix.remove(ExitIRI);
+      cast<VPInstruction>(U)->replaceAllUsesWith(PenultimateElement);
     }
   }
 }
@@ -8625,6 +8602,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()),
       Legal->hasUncountableEarlyExit(), Range);
   VPlanTransforms::createLoopRegions(*Plan);
+  VPlanTransforms::createExtractsForLiveOuts(*Plan);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8797,12 +8775,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     R->setOperand(1, WideIV->getStepValue());
   }
 
+  addExitUsersForFirstOrderRecurrences(*Plan, Range);
   DenseMap<VPValue *, VPValue *> IVEndValues;
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
-  SetVector<VPIRInstruction *> ExitUsersToFix =
-      collectUsersInLatchExitBlock(*Plan);
-  addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix, Range);
-  addUsersInExitBlocks(*Plan, ExitUsersToFix);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to

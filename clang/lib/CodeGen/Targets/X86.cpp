@@ -2470,13 +2470,12 @@ GetSSETypeAtOffset(llvm::Type *IRType, unsigned IROffset,
   return llvm::Type::getDoubleTy(getVMContext());
 }
 
-
 /// GetINTEGERTypeAtOffset - The ABI specifies that a value should be passed in
-/// an 8-byte GPR.  This means that we either have a scalar or we are talking
-/// about the high or low part of an up-to-16-byte struct.  This routine picks
-/// the best LLVM IR type to represent this, which may be i64 or may be anything
-/// else that the backend will pass in a GPR that works better (e.g. i8, %foo*,
-/// etc).
+/// one or more 8-byte GPRs.  This means that we either have a scalar or we are
+/// talking about the high and/or low part of an up-to-16-byte struct.  This
+/// routine picks the best LLVM IR type to represent this, which may be i64 or
+/// may be anything else that the backend will pass in GPRs that works better
+/// (e.g. i8, %foo*, etc).
 ///
 /// PrefType is an LLVM IR type that corresponds to (part of) the IR type for
 /// the source type.  IROffset is an offset in bytes into the LLVM IR type that
@@ -2534,6 +2533,13 @@ GetINTEGERTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
                                   SourceOffset);
   }
 
+  // if we have a 128-bit integer, we can pass it safely using an i128
+  // so we return that
+  if (IRType->isIntegerTy(128)) {
+    assert(IROffset == 0);
+    return IRType;
+  }
+
   // Okay, we don't have any better idea of what to pass, so we pass this in an
   // integer register that isn't too big to fit the rest of the struct.
   unsigned TySizeInBytes =
@@ -2572,8 +2578,7 @@ GetX86_64ByValArgumentPair(llvm::Type *Lo, llvm::Type *Hi,
   if (HiStart != 8) {
     // There are usually two sorts of types the ABI generation code can produce
     // for the low part of a pair that aren't 8 bytes in size: half, float or
-    // i8/i16/i32.  This can also include pointers when they are 32-bit (X32 and
-    // NaCl).
+    // i8/i16/i32.  This can also include pointers when they are 32-bit (X32).
     // Promote these to a larger type.
     if (Lo->isHalfTy() || Lo->isFloatTy())
       Lo = llvm::Type::getDoubleTy(Lo->getContext());
@@ -2592,8 +2597,7 @@ GetX86_64ByValArgumentPair(llvm::Type *Lo, llvm::Type *Hi,
   return Result;
 }
 
-ABIArgInfo X86_64ABIInfo::
-classifyReturnType(QualType RetTy) const {
+ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   // AMD64-ABI 3.2.3p4: Rule 1. Classify the return type with the
   // classification algorithm.
   X86_64ABIInfo::Class Lo, Hi;
@@ -2638,6 +2642,12 @@ classifyReturnType(QualType RetTy) const {
       if (RetTy->isIntegralOrEnumerationType() &&
           isPromotableIntegerTypeForABI(RetTy))
         return ABIArgInfo::getExtend(RetTy);
+    }
+
+    if (ResType->isIntegerTy(128)) {
+      // i128 are passed directly
+      assert(Hi == Integer);
+      return ABIArgInfo::getDirect(ResType);
     }
     break;
 
@@ -2784,6 +2794,11 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
         return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
     }
 
+    if (ResType->isIntegerTy(128)) {
+      assert(Hi == Integer);
+      ++neededInt;
+      return ABIArgInfo::getDirect(ResType);
+    }
     break;
 
     // AMD64-ABI 3.2.3p3: Rule 3. If the class is SSE, the next

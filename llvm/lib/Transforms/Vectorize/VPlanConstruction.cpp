@@ -25,6 +25,7 @@
 #define DEBUG_TYPE "vplan"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 namespace {
 // Class that is used to build the plain CFG for the incoming IR.
@@ -427,7 +428,6 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   VPBasicBlock *LatchVPBB, Type *IdxTy,
                                   DebugLoc DL) {
-  using namespace VPlanPatternMatch;
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
   auto *StartV = Plan.getOrAddLiveIn(StartIdx);
 
@@ -589,6 +589,30 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   TopRegion->setName("vector loop");
   TopRegion->getEntryBasicBlock()->setName("vector.body");
+}
+
+void VPlanTransforms::createExtractsForLiveOuts(VPlan &Plan) {
+  for (VPBasicBlock *EB : Plan.getExitBlocks()) {
+    VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+    VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+
+    if (EB->getSinglePredecessor() != Plan.getMiddleBlock())
+      continue;
+
+    for (VPRecipeBase &R : EB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&R);
+      for (unsigned Idx = 0; Idx != ExitIRI->getNumIncoming(); ++Idx) {
+        VPRecipeBase *Inc = ExitIRI->getIncomingValue(Idx)->getDefiningRecipe();
+        if (!Inc || !Inc->getParent()->getParent())
+          continue;
+        assert(ExitIRI->getNumOperands() == 1 &&
+               ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
+               "exit values from early exits must be fixed when branch to "
+               "early-exit is added");
+        ExitIRI->extractLastLaneOfFirstOperand(B);
+      }
+    }
+  }
 }
 
 // Likelyhood of bypassing the vectorized loop due to a runtime check block,

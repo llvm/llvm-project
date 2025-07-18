@@ -39,7 +39,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -129,7 +128,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtZfhmin())
     addRegisterClass(MVT::f16, &RISCV::FPR16RegClass);
-  if (Subtarget.hasStdExtZfbfmin())
+  if (Subtarget.hasStdExtZfbfmin() || Subtarget.hasVendorXAndesBFHCvt())
     addRegisterClass(MVT::bf16, &RISCV::FPR16RegClass);
   if (Subtarget.hasStdExtF())
     addRegisterClass(MVT::f32, &RISCV::FPR32RegClass);
@@ -656,6 +655,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::GET_FPENV, XLenVT, Custom);
     setOperationAction(ISD::SET_FPENV, XLenVT, Custom);
     setOperationAction(ISD::RESET_FPENV, MVT::Other, Custom);
+    setOperationAction(ISD::GET_FPMODE, XLenVT, Custom);
+    setOperationAction(ISD::SET_FPMODE, XLenVT, Custom);
+    setOperationAction(ISD::RESET_FPMODE, MVT::Other, Custom);
   }
 
   setOperationAction({ISD::GlobalAddress, ISD::BlockAddress, ISD::ConstantPool,
@@ -8226,6 +8228,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerSET_FPENV(Op, DAG);
   case ISD::RESET_FPENV:
     return lowerRESET_FPENV(Op, DAG);
+  case ISD::GET_FPMODE:
+    return lowerGET_FPMODE(Op, DAG);
+  case ISD::SET_FPMODE:
+    return lowerSET_FPMODE(Op, DAG);
+  case ISD::RESET_FPMODE:
+    return lowerRESET_FPMODE(Op, DAG);
   case ISD::EH_DWARF_CFA:
     return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::VP_MERGE:
@@ -11969,7 +11977,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
 
   // Store with unit-stride store and load it back with segmented load.
   MVT XLenVT = Subtarget.getXLenVT();
-  SDValue VL = getDefaultScalableVLOps(ConcatVT, DL, DAG, Subtarget).second;
+  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
   SDValue Passthru = DAG.getUNDEF(ConcatVT);
 
   // Allocate a stack slot.
@@ -11990,16 +11998,20 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer());
 
   static const Intrinsic::ID VlsegIntrinsicsIds[] = {
-      Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3, Intrinsic::riscv_vlseg4,
-      Intrinsic::riscv_vlseg5, Intrinsic::riscv_vlseg6, Intrinsic::riscv_vlseg7,
-      Intrinsic::riscv_vlseg8};
+      Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
+      Intrinsic::riscv_vlseg4_mask, Intrinsic::riscv_vlseg5_mask,
+      Intrinsic::riscv_vlseg6_mask, Intrinsic::riscv_vlseg7_mask,
+      Intrinsic::riscv_vlseg8_mask};
 
   SDValue LoadOps[] = {
       Chain,
       DAG.getTargetConstant(VlsegIntrinsicsIds[Factor - 2], DL, XLenVT),
       Passthru,
       StackPtr,
+      Mask,
       VL,
+      DAG.getTargetConstant(
+          RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC, DL, XLenVT),
       DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()), DL, XLenVT)};
 
   unsigned Sz =
@@ -12051,7 +12063,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   }
 
   MVT XLenVT = Subtarget.getXLenVT();
-  SDValue VL = DAG.getRegister(RISCV::X0, XLenVT);
+  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
 
   // If the VT is larger than LMUL=8, we need to split and reassemble.
   if ((VecVT.getSizeInBits().getKnownMinValue() * Factor) >
@@ -12100,10 +12112,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
     auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
 
     static const Intrinsic::ID IntrIds[] = {
-        Intrinsic::riscv_vsseg2, Intrinsic::riscv_vsseg3,
-        Intrinsic::riscv_vsseg4, Intrinsic::riscv_vsseg5,
-        Intrinsic::riscv_vsseg6, Intrinsic::riscv_vsseg7,
-        Intrinsic::riscv_vsseg8,
+        Intrinsic::riscv_vsseg2_mask, Intrinsic::riscv_vsseg3_mask,
+        Intrinsic::riscv_vsseg4_mask, Intrinsic::riscv_vsseg5_mask,
+        Intrinsic::riscv_vsseg6_mask, Intrinsic::riscv_vsseg7_mask,
+        Intrinsic::riscv_vsseg8_mask,
     };
 
     unsigned Sz =
@@ -12119,6 +12131,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
                      DAG.getTargetConstant(IntrIds[Factor - 2], DL, XLenVT),
                      StoredVal,
                      StackPtr,
+                     Mask,
                      VL,
                      DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()),
                                            DL, XLenVT)};
@@ -13998,6 +14011,52 @@ SDValue RISCVTargetLowering::lowerRESET_FPENV(SDValue Op,
                      EnvValue);
 }
 
+const uint64_t ModeMask64 = ~RISCVExceptFlags::ALL;
+const uint32_t ModeMask32 = ~RISCVExceptFlags::ALL;
+
+SDValue RISCVTargetLowering::lowerGET_FPMODE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  const MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::fcsr, DL, XLenVT);
+  SDVTList VTs = DAG.getVTList(XLenVT, MVT::Other);
+  SDValue Result = DAG.getNode(RISCVISD::READ_CSR, DL, VTs, Chain, SysRegNo);
+  Chain = Result.getValue(1);
+  return DAG.getMergeValues({Result, Chain}, DL);
+}
+
+SDValue RISCVTargetLowering::lowerSET_FPMODE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  const MVT XLenVT = Subtarget.getXLenVT();
+  const uint64_t ModeMaskValue = Subtarget.is64Bit() ? ModeMask64 : ModeMask32;
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue EnvValue = Op->getOperand(1);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::fcsr, DL, XLenVT);
+  SDValue ModeMask = DAG.getConstant(ModeMaskValue, DL, XLenVT);
+
+  EnvValue = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, EnvValue);
+  EnvValue = DAG.getNode(ISD::AND, DL, XLenVT, EnvValue, ModeMask);
+  Chain = DAG.getNode(RISCVISD::CLEAR_CSR, DL, MVT::Other, Chain, SysRegNo,
+                      ModeMask);
+  return DAG.getNode(RISCVISD::SET_CSR, DL, MVT::Other, Chain, SysRegNo,
+                     EnvValue);
+}
+
+SDValue RISCVTargetLowering::lowerRESET_FPMODE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  const MVT XLenVT = Subtarget.getXLenVT();
+  const uint64_t ModeMaskValue = Subtarget.is64Bit() ? ModeMask64 : ModeMask32;
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::fcsr, DL, XLenVT);
+  SDValue ModeMask = DAG.getConstant(ModeMaskValue, DL, XLenVT);
+
+  return DAG.getNode(RISCVISD::CLEAR_CSR, DL, MVT::Other, Chain, SysRegNo,
+                     ModeMask);
+}
+
 SDValue RISCVTargetLowering::lowerEH_DWARF_CFA(SDValue Op,
                                                SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -15032,10 +15091,15 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 
 // Optimize (add (shl x, c0), (shl y, c1)) ->
 //          (SLLI (SH*ADD x, y), c0), if c1-c0 equals to [1|2|3].
+// or
+//          (SLLI (QC.SHLADD x, y, c1 - c0), c0), if 4 <= (c1-c0) <=31.
 static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
-  // Perform this optimization only in the zba/xandesperf extension.
-  if (!Subtarget.hasStdExtZba() && !Subtarget.hasVendorXAndesPerf())
+  const bool HasStdExtZba = Subtarget.hasStdExtZba();
+  const bool HasVendorXAndesPerf = Subtarget.hasVendorXAndesPerf();
+  const bool HasVendorXqciac = Subtarget.hasVendorXqciac();
+  // Perform this optimization only in the zba/xandesperf/xqciac extension.
+  if (!HasStdExtZba && !HasVendorXAndesPerf && !HasVendorXqciac)
     return SDValue();
 
   // Skip for vector types and larger types.
@@ -15060,14 +15124,22 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   if (C0 <= 0 || C1 <= 0)
     return SDValue();
 
-  // Skip if SH1ADD/SH2ADD/SH3ADD are not applicable.
-  int64_t Bits = std::min(C0, C1);
   int64_t Diff = std::abs(C0 - C1);
-  if (Diff != 1 && Diff != 2 && Diff != 3)
+  bool IsShXaddDiff = Diff == 1 || Diff == 2 || Diff == 3;
+  bool HasShXadd = HasStdExtZba || HasVendorXAndesPerf;
+
+  // Skip if SH1ADD/SH2ADD/SH3ADD are not applicable.
+  if ((!IsShXaddDiff && HasShXadd && !HasVendorXqciac) ||
+      (IsShXaddDiff && !HasShXadd && HasVendorXqciac))
+    return SDValue();
+
+  // Skip if QC_SHLADD is not applicable.
+  if (Diff == 0 || Diff > 31)
     return SDValue();
 
   // Build nodes.
   SDLoc DL(N);
+  int64_t Bits = std::min(C0, C1);
   SDValue NS = (C0 < C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue NL = (C0 > C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, NL,
