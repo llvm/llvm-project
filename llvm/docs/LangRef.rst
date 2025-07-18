@@ -8454,6 +8454,24 @@ spaces. The interpretation of the address space values is target
 specific. The behavior is undefined if the runtime memory address does
 resolve to an object defined in one of the indicated address spaces.
 
+'``elf_section_properties``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The '``elf_section_properties``' metadata is attached to a function or
+global variable and is used when writing an object file in ELF format to
+specify the values of the global's section type (`sh_type`) and entry
+size (`sh_entsize`) fields. The first operand specifies the type, and
+the second operand specifies the entry size.
+
+Example:
+
+.. code-block:: llvm
+
+    @global = global i32 1, !elf_section_properties !{i32 1879002126, i32 8}
+
+This defines as global with type ``SHT_LLVM_CFI_JUMP_TABLE`` and entry
+size 8.
+
 
 Module Flags Metadata
 =====================
