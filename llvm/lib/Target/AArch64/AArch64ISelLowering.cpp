@@ -8154,7 +8154,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (Subtarget->hasCustomCallingConv())
     Subtarget->getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
 
-  if (Subtarget->useNewSMEABILowering() && !Attrs.hasAgnosticZAInterface()) {
+  if (Subtarget->useNewSMEABILowering()) {
     if (Subtarget->isTargetWindows() || hasInlineStackProbe(MF)) {
       SDValue Size;
       if (Attrs.hasZAState()) {
@@ -8965,9 +8965,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool UseNewSMEABILowering = Subtarget->useNewSMEABILowering();
   bool IsAgnosticZAFunction = CallAttrs.caller().hasAgnosticZAInterface();
   auto ZAMarkerNode = [&]() -> std::optional<unsigned> {
-    // TODO: Handle agnostic ZA functions.
-    if (!UseNewSMEABILowering || IsAgnosticZAFunction)
+    if (!UseNewSMEABILowering)
       return std::nullopt;
+    if (IsAgnosticZAFunction) {
+      if (CallAttrs.requiresPreservingAllZAState())
+        return AArch64ISD::REQUIRES_ZA_SAVE;
+      return std::nullopt;
+    }
     if (!CallAttrs.caller().hasZAState() && !CallAttrs.caller().hasZT0State())
       return std::nullopt;
     return CallAttrs.requiresLazySave() ? AArch64ISD::REQUIRES_ZA_SAVE
@@ -9047,7 +9051,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   };
 
   bool RequiresLazySave = !UseNewSMEABILowering && CallAttrs.requiresLazySave();
-  bool RequiresSaveAllZA = CallAttrs.requiresPreservingAllZAState();
+  bool RequiresSaveAllZA =
+      !UseNewSMEABILowering && CallAttrs.requiresPreservingAllZAState();
   if (RequiresLazySave) {
     const TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     MachinePointerInfo MPI =
