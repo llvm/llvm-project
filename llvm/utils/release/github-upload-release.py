@@ -71,17 +71,13 @@ AUTOMATIC_DOWNLOAD_LINKS_END -->
 
 Download links will appear here once builds have completed. <!-- AUTOMATIC_DOWNLOAD_LINKS_PLACEHOLDER -->
 
-For any other variants of platform and architecture, check the full list of release packages at the bottom of this release page.
+For any other variants of platform and architecture, check the full list of release packages at the bottom of this release page. If you do not find a release package for your platform, you may be able to find a community built package on the LLVM Discourse forum thread for this release. Remember that these are built by volunteers and may not always be available. If you rely on a platform or configuration that is not one of the defaults, we suggest you use the binaries that your platform provides, or build your own release packages.
 
 ## Package Types
 
 Each platform has one binary release package. The file name starts with either `LLVM-` or `clang+llvm-` and ends with the platform's name. For example, `LLVM-{release}-Linux-ARM64.tar.xz` contains LLVM binaries for Arm64 Linux.
 
 Except for Windows. Where `LLVM-*.exe` is an installer intended for using LLVM as a toolchain and `clang+llvm-` contains the contents of the installer, plus libraries and tools not normally used in a toolchain. You most likely want the `LLVM-` installer, unless you are developing software which itself uses LLVM, in which case choose `clang+llvm-`.
-
-If you do not find a release package for your platform, you may be able to find a community built package on the LLVM Discourse forum thread for this release. Remember that these are built by volunteers and may not always be available.
-
-If you rely on a platform or configuration that is not one of the defaults, we suggest you use the binaries that your platform provides, or build your own release packages.
 
 In addition, source archives are available:
 * `<sub-project>-{release}.src.tar.xz` are archives of the sources of specific sub-projects of `llvm-project` (except for `test-suite` which is an archive of the [LLVM Test Suite](https://github.com/llvm/llvm-test-suite)).
