@@ -101,8 +101,7 @@ define i32 @intrinsic_lround_i32_f64(double %arg) {
 ; GFX9-SDAG-NEXT:    s_brev_b32 s4, -2
 ; GFX9-SDAG-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0x3ff00000
-; GFX9-SDAG-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v5
-; GFX9-SDAG-NEXT:    v_cmp_le_f64_e32 vcc, 0.5, v[4:5]
+; GFX9-SDAG-NEXT:    v_cmp_ge_f64_e64 vcc, |v[4:5]|, 0.5
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GFX9-SDAG-NEXT:    v_bfi_b32 v1, s4, v0, v1
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
@@ -130,9 +129,8 @@ define i32 @intrinsic_lround_i32_f64(double %arg) {
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_trunc_f64_e32 v[2:3], v[0:1]
 ; GFX10-SDAG-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
-; GFX10-SDAG-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v5
-; GFX10-SDAG-NEXT:    v_cmp_le_f64_e32 vcc_lo, 0.5, v[4:5]
-; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x3ff00000, vcc_lo
+; GFX10-SDAG-NEXT:    v_cmp_ge_f64_e64 s4, |v[4:5]|, 0.5
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x3ff00000, s4
 ; GFX10-SDAG-NEXT:    v_bfi_b32 v1, 0x7fffffff, v0, v1
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-SDAG-NEXT:    v_add_f64 v[0:1], v[2:3], v[0:1]
@@ -158,10 +156,9 @@ define i32 @intrinsic_lround_i32_f64(double %arg) {
 ; GFX11-SDAG-NEXT:    v_trunc_f64_e32 v[2:3], v[0:1]
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
-; GFX11-SDAG-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v5
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_cmp_le_f64_e32 vcc_lo, 0.5, v[4:5]
-; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x3ff00000, vcc_lo
+; GFX11-SDAG-NEXT:    v_cmp_ge_f64_e64 s0, |v[4:5]|, 0.5
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x3ff00000, s0
 ; GFX11-SDAG-NEXT:    v_bfi_b32 v1, 0x7fffffff, v0, v1
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -355,8 +352,7 @@ define i64 @intrinsic_lround_i64_f64(double %arg) {
 ; GFX9-SDAG-NEXT:    s_brev_b32 s4, -2
 ; GFX9-SDAG-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-SDAG-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v5
-; GFX9-SDAG-NEXT:    v_cmp_le_f64_e32 vcc, 0.5, v[4:5]
+; GFX9-SDAG-NEXT:    v_cmp_ge_f64_e64 vcc, |v[4:5]|, 0.5
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v6, vcc
 ; GFX9-SDAG-NEXT:    v_bfi_b32 v1, s4, v4, v1
 ; GFX9-SDAG-NEXT:    v_add_f64 v[0:1], v[2:3], v[0:1]
@@ -401,9 +397,8 @@ define i64 @intrinsic_lround_i64_f64(double %arg) {
 ; GFX10-SDAG-NEXT:    v_trunc_f64_e32 v[2:3], v[0:1]
 ; GFX10-SDAG-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-SDAG-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v5
-; GFX10-SDAG-NEXT:    v_cmp_le_f64_e32 vcc_lo, 0.5, v[4:5]
-; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 0x3ff00000, vcc_lo
+; GFX10-SDAG-NEXT:    v_cmp_ge_f64_e64 s4, |v[4:5]|, 0.5
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 0x3ff00000, s4
 ; GFX10-SDAG-NEXT:    v_bfi_b32 v1, 0x7fffffff, v4, v1
 ; GFX10-SDAG-NEXT:    v_add_f64 v[0:1], v[2:3], v[0:1]
 ; GFX10-SDAG-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
@@ -436,12 +431,12 @@ define i64 @intrinsic_lround_i64_f64(double %arg) {
 ; GFX11-SDAG:       ; %bb.0: ; %entry
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_trunc_f64_e32 v[2:3], v[0:1]
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v5, 0x7fffffff, v5
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_cmp_le_f64_e32 vcc_lo, 0.5, v[4:5]
-; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 0x3ff00000, vcc_lo
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-SDAG-NEXT:    v_cmp_ge_f64_e64 s0, |v[4:5]|, 0.5
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 0x3ff00000, s0
 ; GFX11-SDAG-NEXT:    v_bfi_b32 v1, 0x7fffffff, v4, v1
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_add_f64 v[0:1], v[2:3], v[0:1]
@@ -648,8 +643,7 @@ define i64 @intrinsic_llround_i64_f64(double %arg) {
 ; GFX9-SDAG-NEXT:    s_brev_b32 s4, -2
 ; GFX9-SDAG-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-SDAG-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v5
-; GFX9-SDAG-NEXT:    v_cmp_le_f64_e32 vcc, 0.5, v[4:5]
+; GFX9-SDAG-NEXT:    v_cmp_ge_f64_e64 vcc, |v[4:5]|, 0.5
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v6, vcc
 ; GFX9-SDAG-NEXT:    v_bfi_b32 v1, s4, v4, v1
 ; GFX9-SDAG-NEXT:    v_add_f64 v[0:1], v[2:3], v[0:1]
@@ -694,9 +688,8 @@ define i64 @intrinsic_llround_i64_f64(double %arg) {
 ; GFX10-SDAG-NEXT:    v_trunc_f64_e32 v[2:3], v[0:1]
 ; GFX10-SDAG-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-SDAG-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v5
-; GFX10-SDAG-NEXT:    v_cmp_le_f64_e32 vcc_lo, 0.5, v[4:5]
-; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 0x3ff00000, vcc_lo
+; GFX10-SDAG-NEXT:    v_cmp_ge_f64_e64 s4, |v[4:5]|, 0.5
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 0x3ff00000, s4
 ; GFX10-SDAG-NEXT:    v_bfi_b32 v1, 0x7fffffff, v4, v1
 ; GFX10-SDAG-NEXT:    v_add_f64 v[0:1], v[2:3], v[0:1]
 ; GFX10-SDAG-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
@@ -729,12 +722,12 @@ define i64 @intrinsic_llround_i64_f64(double %arg) {
 ; GFX11-SDAG:       ; %bb.0: ; %entry
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_trunc_f64_e32 v[2:3], v[0:1]
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v5, 0x7fffffff, v5
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_cmp_le_f64_e32 vcc_lo, 0.5, v[4:5]
-; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 0x3ff00000, vcc_lo
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-SDAG-NEXT:    v_cmp_ge_f64_e64 s0, |v[4:5]|, 0.5
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 0x3ff00000, s0
 ; GFX11-SDAG-NEXT:    v_bfi_b32 v1, 0x7fffffff, v4, v1
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_add_f64 v[0:1], v[2:3], v[0:1]
