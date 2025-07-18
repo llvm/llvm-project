@@ -311,17 +311,16 @@ void multiThreadedPageInBackground(const DeferredFiles &deferred) {
       totalBytes += buff.size();
 
       // Reference all file's mmap'd pages to load them into memory.
+      volatile char t = 0;
       for (const char *page = buff.data(), *end = page + buff.size();
            page < end; page += pageSize)
-        volatile char t = *page;
+        t += *page;
     }
   });
 
-#ifndef NDEBUG
   if (getenv("LLD_MULTI_THREAD_PAGE"))
     llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
                  << deferred.size() << "\n";
-#endif
 }
 
 static void multiThreadedPageIn(const DeferredFiles &deferred) {
