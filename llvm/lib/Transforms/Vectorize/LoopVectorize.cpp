@@ -4278,8 +4278,9 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       if (VF.isScalar())
         continue;
 
-      /// If the VF was proposed due to MaxBandwidth, don't consider the VF if
-      /// it exceeds the number of registers for the target.
+      /// If the register pressure needs to be considered for VF,
+      /// don't consider the VF as valid if it exceeds the number
+      /// of registers for the target.
       if (CM.shouldCalculateRegPressureForVF(VF) &&
           RUs[I].exceedsMaxNumRegs(TTI, ForceTargetNumVectorRegs))
         continue;
