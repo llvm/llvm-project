@@ -3846,15 +3846,6 @@ static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
     return;
 
   CmdArgs.push_back("-fopenacc");
-
-  if (Arg *A = Args.getLastArg(options::OPT_openacc_macro_override)) {
-    StringRef Value = A->getValue();
-    int Version;
-    if (!Value.getAsInteger(10, Version))
-      A->renderAsInput(Args, CmdArgs);
-    else
-      D.Diag(diag::err_drv_clang_unsupported) << Value;
-  }
 }
 
 static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,

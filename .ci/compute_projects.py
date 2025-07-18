@@ -19,6 +19,7 @@ import sys
 PROJECT_DEPENDENCIES = {
     "llvm": set(),
     "clang": {"llvm"},
+    "CIR": {"clang", "mlir"},
     "bolt": {"clang", "lld", "llvm"},
     "clang-tools-extra": {"clang", "llvm"},
     "compiler-rt": {"clang", "lld"},
@@ -55,6 +56,7 @@ DEPENDENTS_TO_TEST = {
     ".ci": {
         "llvm",
         "clang",
+        "CIR",
         "lld",
         "lldb",
         "bolt",
@@ -128,6 +130,7 @@ PROJECT_CHECK_TARGETS = {
     "lldb": "check-lldb",
     "llvm": "check-llvm",
     "clang": "check-clang",
+    "CIR": "check-clang-cir",
     "bolt": "check-bolt",
     "lld": "check-lld",
     "flang": "check-flang",
@@ -247,6 +250,14 @@ def _get_modified_projects(modified_files: list[str]) -> Set[str]:
         # capacity.
         if len(path_parts) > 3 and path_parts[:3] == ("llvm", "utils", "gn"):
             continue
+        # If the file is in the clang/lib/CIR directory, add the CIR project.
+        if len(path_parts) > 3 and (
+            path_parts[:3] == ("clang", "lib", "CIR")
+            or path_parts[:3] == ("clang", "test", "CIR")
+            or path_parts[:4] == ("clang", "include", "clang", "CIR")
+        ):
+            modified_projects.add("CIR")
+            # Fall through to add clang.
         modified_projects.add(pathlib.Path(modified_file).parts[0])
     return modified_projects
 
@@ -267,6 +278,13 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     runtimes_check_targets_needs_reconfig = _compute_project_check_targets(
         runtimes_to_test_needs_reconfig
     )
+
+    # CIR is used as a pseudo-project in this script. It is built as part of the
+    # clang build, but it requires an explicit option to enable. We set that
+    # option here, and remove it from the projects_to_build list.
+    enable_cir = "ON" if "CIR" in projects_to_build else "OFF"
+    projects_to_build.discard("CIR")
+
     # We use a semicolon to separate the projects/runtimes as they get passed
     # to the CMake invocation and thus we need to use the CMake list separator
     # (;). We use spaces to separate the check targets as they end up getting
@@ -279,6 +297,7 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
         "runtimes_check_targets_needs_reconfig": " ".join(
             sorted(runtimes_check_targets_needs_reconfig)
         ),
+        "enable_cir": enable_cir,
     }
 
 
