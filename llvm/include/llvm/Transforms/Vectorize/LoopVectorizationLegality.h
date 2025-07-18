@@ -407,13 +407,13 @@ public:
     return UncountableExitingBB;
   }
 
-  /// Returns true if this is an early exit loop containing a store.
-  bool isConditionCopyRequired() const { return EarlyExitLoad.has_value(); }
-
-  /// Returns the load instruction, if any, directly used for an exit comparison
-  /// in and early exit loop containing state-changing or potentially-faulting
-  /// operations.
-  std::optional<LoadInst *> getEarlyExitLoad() const { return EarlyExitLoad; }
+  /// Returns true if this is an early exit loop with state-changing or
+  /// potentially-faulting operations and the IR representing the condition
+  /// for the uncounted exit must be determined before any of the state changes
+  /// or potentially faulting operations take place.
+  bool hasUncountedExitWithSideEffects() const {
+    return UncountedExitWithSideEffects;
+  }
 
   /// Return true if there is store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {
@@ -514,7 +514,7 @@ private:
   /// we read and write from memory. This method checks if it is
   /// legal to vectorize the code, considering only memory constrains.
   /// Returns true if the loop is vectorizable
-  bool canVectorizeMemory();
+  bool canVectorizeMemory(std::optional<LoadInst *>);
 
   /// If LAA cannot determine whether all dependences are safe, we may be able
   /// to further analyse some IndirectUnsafe dependences and if they match a
@@ -544,12 +544,12 @@ private:
   /// The list above is not based on theoretical limitations of vectorization,
   /// but simply a statement that more work is needed to support these
   /// additional cases safely.
-  bool isVectorizableEarlyExitLoop();
+  bool isVectorizableEarlyExitLoop(std::optional<LoadInst *> &);
 
   /// Clears any current early exit data gathered if a check failed.
   void clearEarlyExitData() {
     UncountableExitingBB = nullptr;
-    EarlyExitLoad = std::nullopt;
+    UncountedExitWithSideEffects = false;
   }
 
   /// Return true if all of the instructions in the block can be speculatively
@@ -674,9 +674,9 @@ private:
   /// exit.
   BasicBlock *UncountableExitingBB = nullptr;
 
-  /// Keep track of the load used for early exits where state-changing or
-  /// potentially faulting operations occur inside the loop.
-  std::optional<LoadInst *> EarlyExitLoad;
+  /// If true, the loop has at least one uncounted exit and operations within
+  /// the loop may have observable side effects.
+  bool UncountedExitWithSideEffects = false;
 };
 
 } // namespace llvm
