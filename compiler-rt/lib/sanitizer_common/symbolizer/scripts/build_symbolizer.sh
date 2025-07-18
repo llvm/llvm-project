@@ -120,7 +120,7 @@ ninja cxx cxxabi && ninja install-cxx install-cxxabi
 
 FLAGS="${FLAGS} -fno-rtti -fno-exceptions"
 LLVM_CFLAGS="${FLAGS} -Wno-global-constructors"
-LLVM_CXXFLAGS="${LLVM_CFLAGS} -nostdinc++ -I${ZLIB_BUILD} -isystem ${LIBCXX_INSTALL}/include -isystem ${LIBCXX_INSTALL}/include/c++/v1"
+LLVM_CXXFLAGS="-isystem ${LIBCXX_INSTALL}/include -isystem ${LIBCXX_INSTALL}/include/c++/v1 ${LLVM_CFLAGS} -nostdinc++ -I${ZLIB_BUILD}"
 
 # Build LLVM.
 if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
