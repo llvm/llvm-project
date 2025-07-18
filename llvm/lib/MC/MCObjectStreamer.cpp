@@ -106,26 +106,18 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
 }
 
-static bool canReuseDataFragment(const MCFragment &F,
-                                 const MCAssembler &Assembler,
-                                 const MCSubtargetInfo *STI) {
+static bool canReuseDataFragment(const MCFragment &F) {
   if (!F.hasInstructions())
     return true;
   // Do not add data after a linker-relaxable instruction. The difference
   // between a new label and a label at or before the linker-relaxable
   // instruction cannot be resolved at assemble-time.
-  if (F.isLinkerRelaxable())
-    return false;
-  // If the subtarget is changed mid fragment we start a new fragment to record
-  // the new STI.
-  return !STI || F.getSubtargetInfo() == STI;
+  return !F.isLinkerRelaxable();
 }
 
-MCFragment *
-MCObjectStreamer::getOrCreateDataFragment(const MCSubtargetInfo *STI) {
+MCFragment *MCObjectStreamer::getOrCreateDataFragment() {
   auto *F = getCurrentFragment();
-  if (F->getKind() != MCFragment::FT_Data ||
-      !canReuseDataFragment(*F, *Assembler, STI)) {
+  if (F->getKind() != MCFragment::FT_Data || !canReuseDataFragment(*F)) {
     F = getContext().allocFragment<MCFragment>();
     insert(F);
   }
