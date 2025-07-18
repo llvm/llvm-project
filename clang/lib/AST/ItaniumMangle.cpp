@@ -2514,10 +2514,6 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     mangleSourceNameWithAbiTags(cast<TypedefType>(Ty)->getDecl());
     break;
 
-  case Type::PredefinedSugar:
-    mangleType(cast<PredefinedSugarType>(Ty)->desugar());
-    break;
-
   case Type::UnresolvedUsing:
     mangleSourceNameWithAbiTags(
         cast<UnresolvedUsingType>(Ty)->getDecl());
