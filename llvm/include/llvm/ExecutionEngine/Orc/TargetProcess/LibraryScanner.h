@@ -20,6 +20,9 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/StringSaver.h"
+
 #include <atomic>
 #include <mutex>
 #include <queue>
@@ -117,46 +120,128 @@ private:
   std::shared_ptr<LibraryPathCache> m_cache;
 };
 
-class LibraryScanHelper;
-
-class DylibPathResolver {
+class DylibSubstitutor {
 public:
-  DylibPathResolver(LibraryScanHelper &m_helper) : m_helper(m_helper) {}
+  void configure(StringRef loaderPath);
 
-  /// Resolve a dynamic library path considering RPath, RunPath, and
-  /// substitutions.
-  std::optional<std::string> resolve(StringRef libStem,
-                                     SmallVector<StringRef, 2> RPath = {},
-                                     SmallVector<StringRef, 2> RunPath = {},
-                                     StringRef libLoader = "",
-                                     bool variateLibStem = true);
+  std::string substitute(StringRef input) const {
+    for (const auto &[ph, value] : placeholders_) {
+      if (input.starts_with(ph)) {
+        return (Twine(value) + input.drop_front(ph.size())).str();
+      }
+    }
+    return input.str();
+  }
 
 private:
-  LibraryScanHelper &m_helper;
+  StringMap<std::string> placeholders_;
+};
 
-  std::string substOne(StringRef path, StringRef pattern,
-                       StringRef replacement);
+class DylibPathValidator {
+public:
+  DylibPathValidator(PathResolver &PR) : m_pathResolver(PR) {}
 
-  /// Apply all known loader substitutions to the path
-  std::string substAll(StringRef path, StringRef loaderPath);
+  static bool isSharedLibrary(StringRef path);
 
-  std::optional<std::string> tryWithBasePath(StringRef basePath, StringRef stem,
-                                             StringRef loaderPath);
+  std::optional<std::string> normalize(StringRef path) {
+    std::error_code ec;
+    auto real = m_pathResolver.resolve(path, ec);
+    if (!real || ec)
+      return std::nullopt;
 
-  /// Try resolving the path using RPATH, searchPaths, and RUNPATH (in that
-  /// order)
-  std::optional<std::string> tryAllPaths(StringRef stem,
-                                         ArrayRef<StringRef> RPath,
-                                         ArrayRef<StringRef> RunPath,
-                                         StringRef loaderPath);
+    return real;
+  }
 
-  std::optional<std::string> tryWithExtensions(StringRef baseName,
-                                               ArrayRef<StringRef> RPath,
-                                               ArrayRef<StringRef> RunPath,
-                                               StringRef loaderPath);
+  std::optional<std::string> validate(StringRef path) {
+    auto realOpt = normalize(path);
+    if (!realOpt)
+      return std::nullopt;
 
-  std::optional<std::string> normalizeIfShared(StringRef path);
-  std::optional<std::string> normalize(StringRef path);
+    if (!isSharedLibrary(*realOpt))
+      return std::nullopt;
+
+    return realOpt;
+  }
+
+private:
+  PathResolver &m_pathResolver;
+};
+
+class SearchPathResolver {
+public:
+  SearchPathResolver(ArrayRef<StringRef> searchPaths,
+                     StringRef placeholderPrefix = "@rpath")
+      : placeholderPrefix(placeholderPrefix) {
+    for (auto &path : searchPaths)
+      paths.emplace_back(path.str());
+  }
+
+  std::optional<std::string> resolve(StringRef stem,
+                                     const DylibSubstitutor &subst,
+                                     DylibPathValidator &validator) const;
+
+private:
+  std::vector<std::string> paths;
+  std::string placeholderPrefix;
+};
+
+class DylibResolverImpl {
+public:
+  DylibResolverImpl(DylibSubstitutor substitutor, DylibPathValidator &validator,
+                    std::vector<SearchPathResolver> resolvers)
+      : substitutor(std::move(substitutor)), validator(validator),
+        resolvers(std::move(resolvers)) {}
+
+  std::optional<std::string> resolve(StringRef stem,
+                                     bool variateLibStem = false) const;
+
+private:
+  std::optional<std::string> tryWithExtensions(StringRef libstem) const;
+
+  DylibSubstitutor substitutor;
+  DylibPathValidator &validator;
+  std::vector<SearchPathResolver> resolvers;
+};
+
+class DylibResolver {
+public:
+  DylibResolver(DylibPathValidator &validator) : validator(validator) {}
+
+  void configure(StringRef loaderPath, ArrayRef<StringRef> rpaths,
+                 ArrayRef<StringRef> runpaths) {
+    DylibSubstitutor substitutor;
+    substitutor.configure(loaderPath);
+
+    std::vector<SearchPathResolver> resolvers;
+    if (!rpaths.empty())
+      resolvers.emplace_back(rpaths, "@rpath");
+    if (!runpaths.empty())
+      resolvers.emplace_back(runpaths, "@rpath"); // still usually @rpath
+
+    impl_ = std::make_unique<DylibResolverImpl>(
+        std::move(substitutor), validator, std::move(resolvers));
+  }
+
+  std::optional<std::string> resolve(StringRef libStem,
+                                     bool variateLibStem = false) const {
+    if (!impl_)
+      return std::nullopt;
+    return impl_->resolve(libStem, variateLibStem);
+  }
+
+  static std::string resolvelinkerFlag(StringRef libStem,
+                                       StringRef loaderPath) {
+    // StringRef rpath("@rpath");
+    // if (libStem.starts_with(rpath))
+    //   return libStem.drop_front(rpath.size()).str();
+    DylibSubstitutor substitutor;
+    substitutor.configure(loaderPath);
+    return substitutor.substitute(libStem);
+  }
+
+private:
+  DylibPathValidator &validator;
+  std::unique_ptr<DylibResolverImpl> impl_;
 };
 
 enum class PathType : uint8_t { User, System, Unknown };
@@ -234,39 +319,32 @@ public:
   LibraryScanner(
       LibraryScanHelper &H, LibraryManager &m_libMgr,
       shouldScanFn shouldScanCall = [](StringRef path) { return true; })
-      : m_helper(H), m_libMgr(m_libMgr), m_libResolver(DylibPathResolver(H)),
+      : m_helper(H), m_libMgr(m_libMgr),
+        // m_libResolver(DylibPathResolver(H)),
         shouldScanCall(std::move(shouldScanCall)) {}
 
   void scanNext(PathType kind, size_t batchSize = 1);
 
   struct LibraryDepsInfo {
-    std::vector<std::string> storage;
+    llvm::BumpPtrAllocator Alloc;
+    llvm::StringSaver Saver{Alloc};
 
     SmallVector<StringRef, 2> rpath;
     SmallVector<StringRef, 2> runPath;
     SmallVector<StringRef, 4> deps;
     bool isPIE = false;
 
-    void addRPath(StringRef s) {
-      storage.emplace_back(s);
-      rpath.push_back(storage.back());
-    }
+    void addRPath(StringRef s) { rpath.push_back(Saver.save(s)); }
 
-    void addRunPath(StringRef s) {
-      storage.emplace_back(s);
-      runPath.push_back(storage.back());
-    }
+    void addRunPath(StringRef s) { runPath.push_back(Saver.save(s)); }
 
-    void addDep(StringRef s) {
-      storage.emplace_back(s);
-      deps.push_back(storage.back());
-    }
+    void addDep(StringRef s) { deps.push_back(Saver.save(s)); }
   };
 
 private:
   LibraryScanHelper &m_helper;
   LibraryManager &m_libMgr;
-  DylibPathResolver m_libResolver;
+  // DylibPathResolver m_libResolver;
   shouldScanFn shouldScanCall;
 
   std::optional<std::string> shouldScan(StringRef filePath);
