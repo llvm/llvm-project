@@ -219,47 +219,45 @@ define dso_local amdgpu_kernel void @test_kernel_1() local_unnamed_addr #1 !reqd
 ; CHECK-NEXT:  .LBB5_3: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 0
-; CHECK-NEXT:    s_get_pc_i64 s[10:11]
-; CHECK-NEXT:    s_add_nc_u64 s[10:11], s[10:11], test_kernel_1.rank_0_2_3_4_5_6_7@rel64+4
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_5
 ; CHECK-NEXT:  ; %bb.4:
-; CHECK-NEXT:    s_set_pc_i64 s[10:11]
+; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64
 ; CHECK-NEXT:  .LBB5_5: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 2
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_7
 ; CHECK-NEXT:  ; %bb.6:
-; CHECK-NEXT:    s_set_pc_i64 s[10:11]
+; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64
 ; CHECK-NEXT:  .LBB5_7: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 3
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_9
 ; CHECK-NEXT:  ; %bb.8:
-; CHECK-NEXT:    s_set_pc_i64 s[10:11]
+; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64
 ; CHECK-NEXT:  .LBB5_9: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 4
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_11
 ; CHECK-NEXT:  ; %bb.10:
-; CHECK-NEXT:    s_set_pc_i64 s[10:11]
+; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64
 ; CHECK-NEXT:  .LBB5_11: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 5
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_13
 ; CHECK-NEXT:  ; %bb.12:
-; CHECK-NEXT:    s_set_pc_i64 s[10:11]
+; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64
 ; CHECK-NEXT:  .LBB5_13: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 6
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_15
 ; CHECK-NEXT:  ; %bb.14:
-; CHECK-NEXT:    s_set_pc_i64 s[10:11]
+; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64
 ; CHECK-NEXT:  .LBB5_15: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 7
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_17
 ; CHECK-NEXT:  ; %bb.16:
-; CHECK-NEXT:    s_set_pc_i64 s[10:11]
+; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_0_2_3_4_5_6_7@rel64
 ; CHECK-NEXT:  .LBB5_17: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cbranch_execnz .LBB5_2
@@ -268,10 +266,7 @@ define dso_local amdgpu_kernel void @test_kernel_1() local_unnamed_addr #1 !reqd
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 1
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_20
 ; CHECK-NEXT:  ; %bb.19:
-; CHECK-NEXT:    s_get_pc_i64 s[10:11]
-; CHECK-NEXT:    s_add_nc_u64 s[10:11], s[10:11], test_kernel_1.rank_1@rel64+4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_set_pc_i64 s[10:11]
+; CHECK-NEXT:    s_add_pc_i64 test_kernel_1.rank_1@rel64
 ; CHECK-NEXT:  .LBB5_20: ; %bb.rank_1
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr, dummy_rank1a.num_vgpr, dummy_rank1b.num_vgpr)
 ; CHECK-NEXT:    s_endpgm
