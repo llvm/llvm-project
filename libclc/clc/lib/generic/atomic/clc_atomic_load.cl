@@ -6,11 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_dec.h>
-#include <clc/opencl/atomic/atomic_dec.h>
+#include <clc/atomic/clc_atomic_load.h>
 
-#define FUNCTION atomic_dec
-#define __IMPL_FUNCTION __clc_atomic_dec
+#define FUNCTION __clc_atomic_load
+#define __IMPL_FUNCTION __scoped_atomic_load_n
+#define __CLC_NO_VALUE_ARG
 
-#define __CLC_BODY <atomic_inc_dec.inc>
+#define __CLC_BODY <clc_atomic_def.inc>
 #include <clc/integer/gentype.inc>
+
+#undef __CLC_PTR_CASTTYPE
+#undef __CLC_AS_RETTYPE
+#define __CLC_PTR_CASTTYPE __CLC_BIT_INTN
+#define __CLC_AS_RETTYPE(x) __CLC_AS_GENTYPE(x)
+
+#define __CLC_BODY <clc_atomic_def.inc>
+#include <clc/math/gentype.inc>

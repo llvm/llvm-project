@@ -6,12 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
-#define __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
+#include <clc/atomic/clc_atomic_store.h>
 
-#include <clc/opencl/opencl-base.h>
+#define FUNCTION __clc_atomic_store
+#define __IMPL_FUNCTION __scoped_atomic_store_n
+#define __CLC_RETURN_VOID
 
-#define FUNCTION atomic_sub
-#include <clc/opencl/atomic/atomic_decl_legacy.inc>
+#define __CLC_BODY <clc_atomic_def.inc>
+#include <clc/integer/gentype.inc>
 
-#endif // __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
+#undef __CLC_PTR_CASTTYPE
+#define __CLC_PTR_CASTTYPE __CLC_BIT_INTN
+
+#define __CLC_BODY <clc_atomic_def.inc>
+#include <clc/math/gentype.inc>

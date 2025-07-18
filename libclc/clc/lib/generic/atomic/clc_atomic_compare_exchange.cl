@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
-#define __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
+#include <clc/atomic/clc_atomic_compare_exchange.h>
 
-#include <clc/opencl/opencl-base.h>
+#define __CLC_BODY <clc_atomic_compare_exchange.inc>
+#include <clc/integer/gentype.inc>
 
-#define FUNCTION atomic_sub
-#include <clc/opencl/atomic/atomic_decl_legacy.inc>
-
-#endif // __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
+#define __CLC_BODY <clc_atomic_compare_exchange.inc>
+#include <clc/math/gentype.inc>
