@@ -808,6 +808,7 @@ Bug Fixes in This Version
   nested scopes. (#GH147495)
 - Fixed a failed assertion with an operator call expression which comes from a
   macro expansion when performing analysis for nullability attributes. (#GH138371)
+- Fixed a concept equivalent checking crash due to untransformed constraint expressions. (#GH146614)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
