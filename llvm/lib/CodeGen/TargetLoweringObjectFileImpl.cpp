@@ -960,6 +960,8 @@ static MCSection *selectELFSectionForGlobal(
       Flags |= ELF::SHF_GNU_RETAIN;
     }
   }
+  if (GO->hasMetadata(LLVMContext::MD_elf_section_properties))
+    EmitUniqueSection = true;
 
   MCSectionELF *Section = selectELFSectionForGlobal(
       Ctx, GO, Kind, Mang, TM, EmitUniqueSection, Flags,
