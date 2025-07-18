@@ -178,8 +178,7 @@ TEST_F(LlvmLibcMBSRToWCSTest, ErrnoChecks) {
 #if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
 TEST(LlvmLibcMBSRToWCSTest, NullptrCrash) {
   // Passing in a nullptr should crash the program.
-  EXPECT_DEATH(
-      [] { LIBC_NAMESPACE::mbsrtowcs(nullptr, nullptr, 1, nullptr); },
-      WITH_SIGNAL(-1));
+  EXPECT_DEATH([] { LIBC_NAMESPACE::mbsrtowcs(nullptr, nullptr, 1, nullptr); },
+               WITH_SIGNAL(-1));
 }
 #endif // LIBC_HAS_ADDRESS_SANITIZER
