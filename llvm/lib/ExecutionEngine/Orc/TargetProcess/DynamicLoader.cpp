@@ -134,6 +134,9 @@ bool SymbolEnumerator::enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
 
 void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
                                             SymbolQuery &unresolvedSymbols) {
+  // LLVM_DEBUG(
+  dbgs() << "Checking unresolved symbols "
+         << " in library : " << lib.getFileName() << "\n"; //);
   std::unordered_set<std::string> discoveredSymbols;
   bool hasEnumerated = false;
 
@@ -167,7 +170,17 @@ void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
     // );
     return;
   }
+
   enumerateSymbolsIfNeeded();
+
+  if (discoveredSymbols.empty()) {
+    // LLVM_DEBUG(
+    dbgs() << "  No symbols and remove library : " << lib.getFullPath()
+           << "\n"; //);
+    m_libMgr.removeLibrary(lib.getFullPath());
+    return;
+  }
+
   if (!lib.hasFilter()) {
     // LLVM_DEBUG(
     dbgs() << "Building filter for library: " << lib.getFullPath() << "\n"; //);
@@ -180,6 +193,8 @@ void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
 
   const auto &unresolved = unresolvedSymbols.getUnresolvedSymbols();
   bool hadAnySym = false;
+  // LLVM_DEBUG(
+  dbgs() << "Total unresolved symbols : " << unresolved.size() << "\n"; //);
   for (const auto &symbol : unresolved) {
     if (lib.mayContain(symbol)) {
       // LLVM_DEBUG(
@@ -249,8 +264,7 @@ done:
 void DynamicLoader::scanLibrariesIfNeeded(PathType PK) {
   // LLVM_DEBUG(
   dbgs() << "DynamicLoader::scanLibrariesIfNeeded: Scanning for "
-         << (PK == PathType::User ? "User" : "System")
-         << " libraries\n"; //);
+         << (PK == PathType::User ? "User" : "System") << " libraries\n"; //);
   if (!m_scanH.leftToScan(PK))
     return;
   LibraryScanner Scanner(m_scanH, m_libMgr, m_shouldScan);

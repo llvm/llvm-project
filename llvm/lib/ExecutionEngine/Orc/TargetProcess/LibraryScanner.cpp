@@ -54,7 +54,7 @@ bool isELFSharedLibrary(const object::ELFFile<ELFT> &ELFObj) {
   return ELFObj.getHeader().e_type == ELF::ET_DYN;
 }
 
-bool isSharedLibrary(StringRef Path) {
+bool DylibPathValidator::isSharedLibrary(StringRef Path) {
   if (isLibraryFile(Path))
     return true;
 
@@ -105,107 +105,64 @@ bool isSharedLibrary(StringRef Path) {
   return false;
 }
 
-std::string DylibPathResolver::substOne(StringRef path, StringRef pattern,
-                                        StringRef replacement) {
-  if (path.size() < pattern.size() || !path.starts_with_insensitive(pattern))
-    return path.str();
+void DylibSubstitutor::configure(StringRef loaderPath) {
+  SmallString<512> execPath(sys::fs::getMainExecutable(nullptr, nullptr));
+  sys::path::remove_filename(execPath);
 
-  SmallString<256> result(replacement);
-  result.append(path.drop_front(pattern.size()));
-
-  return result.str().str();
-}
-
-std::string DylibPathResolver::substAll(StringRef original,
-                                        StringRef loaderPath) {
-
-#ifdef __APPLE__
-  SmallString<256> mainExecutablePath(
-      sys::fs::getMainExecutable(nullptr, nullptr));
-  sys::path::remove_filename(mainExecutablePath);
-
-  SmallString<256> loaderDir;
-  if (loaderPath.empty())
-    loaderDir = mainExecutablePath;
-  else {
-    loaderDir = loaderPath;
+  SmallString<512> loaderDir;
+  if (loaderPath.empty()) {
+    loaderDir = execPath;
+  } else {
+    loaderDir = loaderPath.str();
     sys::path::remove_filename(loaderDir);
   }
 
-  // Try @loader_path
-  std::string result_path = substOne(original, "@loader_path", loaderDir);
-  // Try @executable_path
-  return substOne(result_path, "@executable_path", mainExecutablePath);
-
+#ifdef __APPLE__
+  placeholders_["@loader_path"] = std::string(loaderDir);
+  placeholders_["@executable_path"] = std::string(execPath);
 #else
-  SmallString<256> loaderDir;
-  if (loaderPath.empty())
-    loaderDir = sys::fs::getMainExecutable(nullptr, nullptr);
-  else
-    loaderDir = loaderPath;
-
-  sys::path::remove_filename(loaderDir);
-
-  // Try $origin
-  return substOne(original, "$origin", loaderDir);
-
-  // Optional: handle $lib or $platform later if needed
+  placeholders_["$origin"] = std::string(loaderDir);
 #endif
 }
 
 std::optional<std::string>
-DylibPathResolver::tryWithBasePath(StringRef basePath, StringRef stem,
-                                   StringRef loaderPath) {
-  std::string resolvedBase = substAll(basePath, loaderPath);
+SearchPathResolver::resolve(StringRef stem, const DylibSubstitutor &subst,
+                            DylibPathValidator &validator) const {
+  for (const auto &searchPath : paths) {
+    std::string base = subst.substitute(searchPath);
 
-  SmallString<256> fullPath(resolvedBase);
-  sys::path::append(fullPath, stem);
+    SmallString<512> fullPath(base);
+    if (stem.starts_with(placeholderPrefix))
+      fullPath.append(stem.drop_front(placeholderPrefix.size()));
+    else
+      sys::path::append(fullPath, stem);
 
-  return normalizeIfShared(fullPath);
-}
-
-std::optional<std::string>
-DylibPathResolver::tryAllPaths(StringRef stem, ArrayRef<StringRef> RPath,
-                               ArrayRef<StringRef> RunPath,
-                               StringRef loaderPath) {
-  // Try RPATH
-  for (const auto &rpath : RPath) {
-    if (auto found = tryWithBasePath(rpath, stem, loaderPath))
-      return found;
+    if (auto valid = validator.validate(fullPath.str()))
+      return valid;
   }
 
-  // Try search paths (like LD_LIBRARY_PATH or configured)
-  for (const auto &entry : m_helper.getAllUnits()) {
-    if (auto found = tryWithBasePath(entry->basePath, stem, loaderPath))
-      return found;
-  }
-
-  // Try RUNPATH
-  for (const auto &runpath : RunPath) {
-    if (auto found = tryWithBasePath(runpath, stem, loaderPath))
-      return found;
-  }
   return std::nullopt;
 }
 
-std::optional<std::string> DylibPathResolver::tryWithExtensions(
-    StringRef baseName, ArrayRef<StringRef> RPath, ArrayRef<StringRef> RunPath,
-    StringRef loaderPath) {
+std::optional<std::string>
+DylibResolverImpl::tryWithExtensions(StringRef libStem) const {
+  // LLVM_DEBUG(
+  dbgs() << "tryWithExtensions: baseName = " << libStem << "\n"; //);
   SmallVector<StringRef, 4> candidates;
-  candidates.push_back(baseName); // original
+  candidates.push_back(libStem); // original
 
   // Add extensions by platform
 #if defined(__APPLE__)
-  candidates.push_back(baseName.str() + ".dylib");
+  candidates.push_back(libStem.str() + ".dylib");
 #elif defined(_WIN32)
-  candidates.push_back(baseName.str() + ".dll");
+  candidates.push_back(libStem.str() + ".dll");
 #else
-  candidates.push_back(baseName.str() + ".so");
+  candidates.push_back(libStem.str() + ".so");
 #endif
 
   // Optionally try "lib" prefix if not already there
-  StringRef filename = sys::path::filename(baseName);
-  StringRef base = sys::path::parent_path(baseName);
+  StringRef filename = sys::path::filename(libStem);
+  StringRef base = sys::path::parent_path(libStem);
   SmallString<256> withPrefix(base);
   if (!filename.starts_with("lib")) {
     withPrefix += "lib";
@@ -221,70 +178,76 @@ std::optional<std::string> DylibPathResolver::tryWithExtensions(
     candidates.push_back(withPrefix.str());
   }
 
+  // LLVM_DEBUG({
+  dbgs() << "  Candidates to try:\n";
+  for (const auto &C : candidates)
+    dbgs() << "    " << C << "\n";
+  // });
+
   // Try all variants using tryAllPaths
   for (const auto &name : candidates) {
-    if (auto found = tryAllPaths(name, RPath, RunPath, loaderPath))
-      return found;
+
+    // LLVM_DEBUG(
+    dbgs() << "  Trying candidate: " << name << "\n"; //);
+
+    for (const auto &resolver : resolvers) {
+      if (auto result = resolver.resolve(libStem, substitutor, validator))
+        return result;
+    }
   }
+
+  // LLVM_DEBUG(
+  dbgs() << "  -> No candidate resolved.\n"; //);
 
   return std::nullopt;
 }
 
-std::optional<std::string> DylibPathResolver::normalize(StringRef path) {
-  std::error_code ec;
-  auto real = m_helper.getPathResolver().realpathCached(path, ec);
-  if (!real || ec)
-    return std::nullopt;
-
-  return real;
-}
-
 std::optional<std::string>
-DylibPathResolver::normalizeIfShared(StringRef path) {
-  auto realOpt = normalize(path);
-  if (!realOpt)
-    return std::nullopt;
+DylibResolverImpl::resolve(StringRef libStem, bool variateLibStem) const {
+  // LLVM_DEBUG(
+  dbgs() << "Resolving library stem: " << libStem << "\n"; //);
 
-  if (!isSharedLibrary(*realOpt))
-    return std::nullopt;
-
-  return realOpt;
-}
-
-std::optional<std::string>
-DylibPathResolver::resolve(StringRef libStem, SmallVector<StringRef, 2> RPath,
-                           SmallVector<StringRef, 2> RunPath,
-                           StringRef libLoader, bool variateLibStem) {
   // If it is an absolute path, don't try iterate over the paths.
   if (sys::path::is_absolute(libStem)) {
-    return normalizeIfShared(libStem);
+    // LLVM_DEBUG(
+    dbgs() << "  -> Absolute path detected.\n"; //);
+    return validator.validate(libStem);
   }
 
-  // Subst all known linker variables ($origin, @rpath, etc.)
-#ifdef __APPLE__
-  // On MacOS @rpath is preplaced by all paths in RPATH one by one.
-  if (libStem.starts_with_insensitive("@rpath")) {
-    for (auto &P : RPath) {
-      if (auto norm = normalizeIfShared(substOne(libStem, "@rpath", P)))
-        return norm;
+  if (!libStem.starts_with("@rpath")) {
+    if (auto norm = validator.validate(substitutor.substitute(libStem))) {
+      // LLVM_DEBUG(
+      dbgs() << "  -> Resolved after substitution: " << *norm << "\n"; //);
+
+      return norm;
     }
   } else {
-#endif
-    if (auto norm = normalizeIfShared(substAll(libStem, libLoader)))
-      return norm;
-#ifdef __APPLE__
-  }
-#endif
+    for (const auto &resolver : resolvers) {
+      if (auto result = resolver.resolve(libStem, substitutor, validator)) {
+        //  LLVM_DEBUG(
+        dbgs() << "  -> Resolved via search path: " << *result << "\n"; //);
 
+        return result;
+      }
+    }
+  }
   // Expand libStem with paths, extensions, etc.
   // std::string foundName;
   if (variateLibStem) {
-    if (auto norm = tryWithExtensions(libStem, RPath, RunPath, libLoader))
+    // LLVM_DEBUG(
+    dbgs() << "  -> Trying with extensions...\n"; //);
+
+    if (auto norm = tryWithExtensions(libStem)) {
+      // LLVM_DEBUG(
+      dbgs() << "  -> Resolved via tryWithExtensions: " << *norm << "\n";
+      //);
+
       return norm;
-  } else {
-    if (auto norm = tryAllPaths(libStem, RPath, RunPath, libLoader))
-      return norm;
+    }
   }
+
+  // LLVM_DEBUG(
+  dbgs() << "  -> Could not resolve: " << libStem << "\n"; //);
 
   return std::nullopt;
 }
@@ -423,9 +386,9 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
 
   // If result not in cache - call system function and cache result
 
-#ifndef _WIN32
   StringRef Separator(sys::path::get_separator());
   SmallString<256> resolved(Separator);
+#ifndef _WIN32
   SmallVector<StringRef, 16> Components;
 
   if (isRelative) {
@@ -641,11 +604,16 @@ PathType LibraryScanHelper::classifyKind(StringRef path) const {
 
 Expected<LibraryDepsInfo> parseMachODeps(const object::MachOObjectFile &Obj) {
   LibraryDepsInfo libdeps;
+  // LLVM_DEBUG(
+  dbgs() << "Parsing Mach-O dependencies...\n"; //);
   for (const auto &Command : Obj.load_commands()) {
     switch (Command.C.cmd) {
     case MachO::LC_LOAD_DYLIB: {
       MachO::dylib_command dylibCmd = Obj.getDylibIDLoadCommand(Command);
-      libdeps.addDep(Command.Ptr + dylibCmd.dylib.name);
+      const char *name = Command.Ptr + dylibCmd.dylib.name;
+      libdeps.addDep(name);
+      // LLVM_DEBUG(
+      dbgs() << "  Found LC_LOAD_DYLIB: " << name << "\n"; //);
     } break;
     case MachO::LC_LOAD_WEAK_DYLIB:
     case MachO::LC_REEXPORT_DYLIB:
@@ -656,13 +624,18 @@ Expected<LibraryDepsInfo> parseMachODeps(const object::MachOObjectFile &Obj) {
       // Extract RPATH
       MachO::rpath_command rpathCmd = Obj.getRpathCommand(Command);
       const char *rpath = Command.Ptr + rpathCmd.path;
+      // LLVM_DEBUG(
+      dbgs() << "  Found LC_RPATH: " << rpath << "\n"; //);
 
       SmallVector<StringRef, 4> RawPaths;
       SplitString(StringRef(rpath), RawPaths,
                   sys::EnvPathSeparator == ':' ? ":" : ";");
 
-      for (const auto &raw : RawPaths)
+      for (const auto &raw : RawPaths) {
         libdeps.addRPath(raw.str()); // Convert to std::string
+                                     // LLVM_DEBUG(
+        dbgs() << "    Parsed RPATH entry: " << raw << "\n"; //);
+      }
       break;
     }
     }
@@ -807,6 +780,7 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef filePath) {
     dbgs() << "extractDeps: File " << filePath << " is a Mach-O object\n"; //);
     return parseMachODeps(*macho);
   }
+
   // LLVM_DEBUG(
   dbgs() << "extractDeps: Unsupported binary format for file " << filePath
          << "\n"; //);
@@ -818,37 +792,72 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef filePath) {
 std::optional<std::string> LibraryScanner::shouldScan(StringRef filePath) {
   std::error_code EC;
 
+  // LLVM_DEBUG(
+  dbgs() << "[shouldScan] Checking: " << filePath << "\n"; //);
+
   // [1] Check file existence early
-  if (!sys::fs::exists(filePath))
+  if (!sys::fs::exists(filePath)) {
+    // LLVM_DEBUG(
+    dbgs() << "  -> Skipped: file does not exist.\n"; //);
+
     return std::nullopt;
+  }
 
   // [2] Resolve to canonical path
   auto CanonicalPathOpt = m_helper.resolve(filePath, EC);
-  if (EC || !CanonicalPathOpt)
+  if (EC || !CanonicalPathOpt) {
+    // LLVM_DEBUG(
+    dbgs() << "  -> Skipped: failed to resolve path (EC=" << EC.message()
+           << ").\n"; //);
+
     return std::nullopt;
+  }
 
   const std::string &CanonicalPath = *CanonicalPathOpt;
+  LLVM_DEBUG(dbgs() << "  -> Canonical path: " << CanonicalPath << "\n");
 
   // [3] Check if it's a directory — skip directories
-  if (sys::fs::is_directory(CanonicalPath))
+  if (sys::fs::is_directory(CanonicalPath)) {
+    // LLVM_DEBUG(
+    dbgs() << "  -> Skipped: path is a directory.\n"; //);
+
     return std::nullopt;
+  }
 
   // [4] Skip if it's not a shared library.
-  if (!isSharedLibrary(CanonicalPath))
+  if (!DylibPathValidator::isSharedLibrary(CanonicalPath)) {
+    // LLVM_DEBUG(
+    dbgs() << "  -> Skipped: not a shared library.\n"; //);
+
     return std::nullopt;
+  }
 
   // [5] Skip if we've already seen this path (via cache)
-  if (m_helper.hasSeenOrMark(CanonicalPath))
+  if (m_helper.hasSeenOrMark(CanonicalPath)) {
+    // LLVM_DEBUG(
+    dbgs() << "  -> Skipped: already seen.\n"; //);
+
     return std::nullopt;
+  }
 
   // [6] Already tracked in LibraryManager?
-  if (m_libMgr.hasLibrary(CanonicalPath))
+  if (m_libMgr.hasLibrary(CanonicalPath)) {
+    // LLVM_DEBUG(
+    dbgs() << "  -> Skipped: already tracked by LibraryManager.\n"; //);
+
     return std::nullopt;
+  }
 
   // [7] Run user-defined hook (default: always true)
-  if (!shouldScanCall(CanonicalPath))
-    return std::nullopt;
+  if (!shouldScanCall(CanonicalPath)) {
+    // LLVM_DEBUG(
+    dbgs() << "  -> Skipped: user-defined hook rejected.\n"; //);
 
+    return std::nullopt;
+  }
+
+  // LLVM_DEBUG(
+  dbgs() << "  -> Accepted: ready to scan " << CanonicalPath << "\n"; //);
   return CanonicalPath;
 }
 
@@ -876,6 +885,18 @@ void LibraryScanner::handleLibrary(StringRef filePath, PathType K, int level) {
 
   LibraryDepsInfo &Deps = *DepsOrErr;
 
+  // LLVM_DEBUG({
+  dbgs() << "    Found deps : \n";
+  for (const auto &dep : Deps.deps)
+    dbgs() << "        : " << dep << "\n";
+  dbgs() << "    Found @rpath : " << Deps.rpath.size() << "\n";
+  for (const auto &r : Deps.rpath)
+    dbgs() << "     : " << r << "\n";
+  dbgs() << "    Found @runpath : \n";
+  for (const auto &r : Deps.runPath)
+    dbgs() << "     : " << r << "\n";
+  // });
+
   if (Deps.isPIE && level == 0) {
     // LLVM_DEBUG(
     dbgs() << "  Skipped PIE executable at top level: " << CanonicalPath
@@ -888,9 +909,9 @@ void LibraryScanner::handleLibrary(StringRef filePath, PathType K, int level) {
   if (!added) {
     // LLVM_DEBUG(
     dbgs() << "  Already added: " << CanonicalPath << "\n"; //);
-
     return;
   }
+
   // Heuristic 1: No RPATH/RUNPATH, skip deps
   if (Deps.rpath.empty() && Deps.runPath.empty()) {
     // LLVM_DEBUG(
@@ -901,8 +922,13 @@ void LibraryScanner::handleLibrary(StringRef filePath, PathType K, int level) {
 
   // Heuristic 2: All RPATH and RUNPATH already tracked
   auto allTracked = [&](const auto &Paths) {
+    // LLVM_DEBUG(
+    dbgs() << "   Checking : " << Paths.size() << "\n"; //);
     return std::all_of(Paths.begin(), Paths.end(), [&](StringRef P) {
-      return m_helper.isTrackedBasePath(P);
+      // LLVM_DEBUG(
+      dbgs() << "      Checking isTrackedBasePath : " << P << "\n"; //);
+      return m_helper.isTrackedBasePath(
+          DylibResolver::resolvelinkerFlag(P, CanonicalPath));
     });
   };
 
@@ -913,11 +939,13 @@ void LibraryScanner::handleLibrary(StringRef filePath, PathType K, int level) {
     return;
   }
 
+  DylibPathValidator validator(m_helper.getPathResolver());
+  DylibResolver m_libResolver(validator);
+  m_libResolver.configure(CanonicalPath, Deps.rpath, Deps.runPath);
   for (StringRef dep : Deps.deps) {
     // LLVM_DEBUG(
     dbgs() << "  Resolving dep: " << dep << "\n"; //);
-    auto dep_fullopt = m_libResolver.resolve(dep, Deps.rpath, Deps.runPath,
-                                             CanonicalPath, false);
+    auto dep_fullopt = m_libResolver.resolve(dep);
     if (!dep_fullopt) {
       // LLVM_DEBUG(
       dbgs() << "    Failed to resolve dep: " << dep << "\n"; //);
