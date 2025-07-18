@@ -60,6 +60,17 @@ HTML-SHAPE:         <div class="content">
 HTML-SHAPE:             <section class="hero section-container">
 HTML-SHAPE:                 <div class="hero__title">
 HTML-SHAPE:                     <h1 class="hero__title-large">class Shape</h1>
+HTML-SHAPE:                    <div class="hero__subtitle">
+HTML-SHAPE:                                    <div>
+HTML-SHAPE:                                        <p> Abstract base class for shapes.</p>
+HTML-SHAPE:                                    </div>
+HTML-SHAPE:                                        <div>
+HTML-SHAPE:                                    <p></p>
+HTML-SHAPE:                                </div>
+HTML-SHAPE:                                    <div>
+HTML-SHAPE:                                    <p> Provides a common interface for different types of shapes.</p>
+HTML-SHAPE:                                </div>
+HTML-SHAPE:                                                </div>
 HTML-SHAPE:                 </div>
 HTML-SHAPE:             </section>
 HTML-SHAPE:             <section id="PublicMethods" class="section-container">
@@ -172,6 +183,16 @@ HTML-CALC:         <div class="content">
 HTML-CALC:             <section class="hero section-container">
 HTML-CALC:                 <div class="hero__title">
 HTML-CALC:                     <h1 class="hero__title-large">class Calculator</h1>
+HTML-CALC:                                    <div>
+HTML-CALC:                                        <p> A simple calculator class.</p>
+HTML-CALC:                                    </div>
+HTML-CALC:                                        <div>
+HTML-CALC:                                    <p></p>
+HTML-CALC:                                </div>
+HTML-CALC:                                    <div>
+HTML-CALC:                                    <p> Provides basic arithmetic operations.</p>
+HTML-CALC:                                </div>
+HTML-CALC:                                                </div>
 HTML-CALC:                 </div>
 HTML-CALC:             </section>
 HTML-CALC:             <section id="PublicMembers" class="section-container">
@@ -300,6 +321,17 @@ HTML-RECTANGLE:         <div class="content">
 HTML-RECTANGLE:             <section class="hero section-container">
 HTML-RECTANGLE:                 <div class="hero__title">
 HTML-RECTANGLE:                     <h1 class="hero__title-large">class Rectangle</h1>
+HTML-RECTANGLE:                    <div class="hero__subtitle">
+HTML-RECTANGLE:                                    <div>
+HTML-RECTANGLE:                                        <p> Rectangle class derived from Shape.</p>
+HTML-RECTANGLE:                                    </div>
+HTML-RECTANGLE:                                        <div>
+HTML-RECTANGLE:                                    <p></p>
+HTML-RECTANGLE:                                </div>
+HTML-RECTANGLE:                                    <div>
+HTML-RECTANGLE:                                    <p> Represents a rectangle with a given width and height.</p>
+HTML-RECTANGLE:                                </div>
+HTML-RECTANGLE:                                                </div>
 HTML-RECTANGLE:                 </div>
 HTML-RECTANGLE:             </section>
 HTML-RECTANGLE:             <section id="PublicMethods" class="section-container">
@@ -395,6 +427,17 @@ HTML-CIRCLE:         <div class="content">
 HTML-CIRCLE:             <section class="hero section-container">
 HTML-CIRCLE:                 <div class="hero__title">
 HTML-CIRCLE:                     <h1 class="hero__title-large">class Circle</h1>
+HTML-CIRCLE:                    <div class="hero__subtitle">
+HTML-CIRCLE:                                    <div>
+HTML-CIRCLE:                                        <p> Circle class derived from Shape.</p>
+HTML-CIRCLE:                                    </div>
+HTML-CIRCLE:                                        <div>
+HTML-CIRCLE:                                    <p></p>
+HTML-CIRCLE:                                </div>
+HTML-CIRCLE:                                    <div>
+HTML-CIRCLE:                                    <p> Represents a circle with a given radius.</p>
+HTML-CIRCLE:                                </div>
+HTML-CIRCLE:                                                </div>
 HTML-CIRCLE:                 </div>
 HTML-CIRCLE:             </section>
 HTML-CIRCLE:             <section id="PublicMethods" class="section-container">

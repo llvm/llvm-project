@@ -5,11 +5,16 @@
     
     This file defines templates for generating comments
 }}
-{{#FullComment}}
+{{#BriefComments}}
     {{#Children}}
     {{>Comments}}
     {{/Children}}
-{{/FullComment}}
+{{/BriefComments}}
+{{#ParagraphComments}}
+    {{#Children}}
+    {{>Comments}}
+    {{/Children}}
+{{/ParagraphComments}}
 {{#ParagraphComment}}
     {{#Children}}
     {{>Comments}}
