@@ -8,7 +8,7 @@
 // RUN: not %clang -### -falign-functions=65537 %s 2>&1 | FileCheck %s -check-prefix CHECK-ERR-65537
 // RUN: not %clang -### -falign-functions=a %s 2>&1 | FileCheck %s -check-prefix CHECK-ERR-A
 
-// CHECK-0: "-function-alignment" "0"
+// CHECK-0-NOT: "-function-alignment"
 // CHECK-1: "-function-alignment" "1"
 // CHECK-2: "-function-alignment" "2"
 // CHECK-3: "-function-alignment" "3"
