@@ -627,3 +627,9 @@ v_cvt_f32_fp8_e32 v1, 3
 
 v_cvt_f32_fp8_e32 v1, v3
 // GFX1250: v_cvt_f32_fp8_e32 v1, v3                ; encoding: [0x03,0xd9,0x02,0x7e]
+
+v_permlane16_swap_b32 v1, v2
+// GFX1250: v_permlane16_swap_b32_e32 v1, v2        ; encoding: [0x02,0x93,0x02,0x7e]
+
+v_permlane16_swap_b32_e32 v1, v2
+// GFX1250: v_permlane16_swap_b32_e32 v1, v2        ; encoding: [0x02,0x93,0x02,0x7e]
