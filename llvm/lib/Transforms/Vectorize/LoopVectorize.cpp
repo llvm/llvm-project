@@ -9032,7 +9032,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
             CurrentLinkI->getFastMathFlags());
         LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
         VecOp = FMulRecipe;
-      } else if (PhiR->isInLoop() && Kind == RecurKind::Sub &&
+      } else if (PhiR->isInLoop() && Kind == RecurKind::Add &&
                  CurrentLinkI->getOpcode() == Instruction::Sub) {
         Type *PhiTy = PhiR->getUnderlyingValue()->getType();
         auto *Zero = Plan->getOrAddLiveIn(ConstantInt::get(PhiTy, 0));
