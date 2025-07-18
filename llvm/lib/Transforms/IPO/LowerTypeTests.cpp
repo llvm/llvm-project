@@ -30,6 +30,8 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -73,6 +75,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/CrossDSOCFI.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
@@ -497,6 +500,10 @@ class LowerTypeTestsModule {
 
   GlobalVariable *GlobalAnnotation;
   DenseSet<Value *> FunctionAnnotations;
+
+  // Cross-DSO CFI emits jumptable entries for exported functions as well as
+  // address taken functions in case they are address taken in other modules.
+  bool CrossDsoCfi = M.getModuleFlag("Cross-DSO CFI") != nullptr;
 
   bool shouldExportConstantsAsAbsoluteSymbols();
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
@@ -1527,6 +1534,20 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 void LowerTypeTestsModule::createJumpTable(
     Function *F, ArrayRef<GlobalTypeMember *> Functions,
     Triple::ArchType JumpTableArch) {
+  unsigned JumpTableEntrySize = getJumpTableEntrySize(JumpTableArch);
+  // Give the jumptable section this type in order to enable jumptable
+  // relaxation. Only do this if cross-DSO CFI is disabled because jumptable
+  // relaxation violates cross-DSO CFI's restrictions on the ordering of the
+  // jumptable relative to other sections.
+  if (!CrossDsoCfi)
+    F->setMetadata(LLVMContext::MD_elf_section_properties,
+                   MDNode::get(F->getContext(),
+                               ArrayRef<Metadata *>{
+                                   ConstantAsMetadata::get(ConstantInt::get(
+                                       Int64Ty, ELF::SHT_LLVM_CFI_JUMP_TABLE)),
+                                   ConstantAsMetadata::get(ConstantInt::get(
+                                       Int64Ty, JumpTableEntrySize))}));
+
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
 
@@ -1547,7 +1568,7 @@ void LowerTypeTestsModule::createJumpTable(
   IRB.CreateUnreachable();
 
   // Align the whole table by entry size.
-  F->setAlignment(Align(getJumpTableEntrySize(JumpTableArch)));
+  F->setAlignment(Align(JumpTableEntrySize));
   // Skip prologue.
   // Disabled on win32 due to https://llvm.org/bugs/show_bug.cgi?id=28641#c3.
   // Luckily, this function does not get any prologue even without the
@@ -2113,10 +2134,6 @@ bool LowerTypeTestsModule::lower() {
   DenseMap<Metadata *, TIInfo> TypeIdInfo;
   unsigned CurUniqueId = 0;
   SmallVector<MDNode *, 2> Types;
-
-  // Cross-DSO CFI emits jumptable entries for exported functions as well as
-  // address taken functions in case they are address taken in other modules.
-  const bool CrossDsoCfi = M.getModuleFlag("Cross-DSO CFI") != nullptr;
 
   struct ExportedFunctionInfo {
     CfiFunctionLinkage Linkage;
