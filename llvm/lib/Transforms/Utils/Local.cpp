@@ -613,11 +613,10 @@ bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
   findDbgUsers(DbgUsers, I, &DPUsers);
-  for (auto *DII : DbgUsers)
-    DII->setKillLocation();
+  assert(DbgUsers.empty());
   for (auto *DVR : DPUsers)
     DVR->setKillLocation();
-  return !DbgUsers.empty() || !DPUsers.empty();
+  return !DPUsers.empty();
 }
 
 /// areAllUsesEqual - Check whether the uses of a value are all the same.
@@ -2022,6 +2021,7 @@ void llvm::salvageDebugInfo(Instruction &I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
   findDbgUsers(DbgUsers, &I, &DPUsers);
+  assert(DbgUsers.empty());
   salvageDebugInfoForDbgValues(I, DbgUsers, DPUsers);
 }
 
@@ -2070,66 +2070,9 @@ void llvm::salvageDebugInfoForDbgValues(
   const unsigned MaxExpressionSize = 128;
   bool Salvaged = false;
 
-  for (auto *DII : DbgUsers) {
-    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DII)) {
-      if (DAI->getAddress() == &I) {
-        salvageDbgAssignAddress(DAI);
-        Salvaged = true;
-      }
-      if (DAI->getValue() != &I)
-        continue;
-    }
+  // We should never see debug intrinsics nowadays.
+  assert(DbgUsers.empty());
 
-    // Do not add DW_OP_stack_value for DbgDeclare, because they are implicitly
-    // pointing out the value as a DWARF memory location description.
-    bool StackValue = isa<DbgValueInst>(DII);
-    auto DIILocation = DII->location_ops();
-    assert(
-        is_contained(DIILocation, &I) &&
-        "DbgVariableIntrinsic must use salvaged instruction as its location");
-    SmallVector<Value *, 4> AdditionalValues;
-    // `I` may appear more than once in DII's location ops, and each use of `I`
-    // must be updated in the DIExpression and potentially have additional
-    // values added; thus we call salvageDebugInfoImpl for each `I` instance in
-    // DIILocation.
-    Value *Op0 = nullptr;
-    DIExpression *SalvagedExpr = DII->getExpression();
-    auto LocItr = find(DIILocation, &I);
-    while (SalvagedExpr && LocItr != DIILocation.end()) {
-      SmallVector<uint64_t, 16> Ops;
-      unsigned LocNo = std::distance(DIILocation.begin(), LocItr);
-      uint64_t CurrentLocOps = SalvagedExpr->getNumLocationOperands();
-      Op0 = salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues);
-      if (!Op0)
-        break;
-      SalvagedExpr =
-          DIExpression::appendOpsToArg(SalvagedExpr, Ops, LocNo, StackValue);
-      LocItr = std::find(++LocItr, DIILocation.end(), &I);
-    }
-    // salvageDebugInfoImpl should fail on examining the first element of
-    // DbgUsers, or none of them.
-    if (!Op0)
-      break;
-
-    SalvagedExpr = SalvagedExpr->foldConstantMath();
-    DII->replaceVariableLocationOp(&I, Op0);
-    bool IsValidSalvageExpr = SalvagedExpr->getNumElements() <= MaxExpressionSize;
-    if (AdditionalValues.empty() && IsValidSalvageExpr) {
-      DII->setExpression(SalvagedExpr);
-    } else if (isa<DbgValueInst>(DII) && IsValidSalvageExpr &&
-               DII->getNumVariableLocationOps() + AdditionalValues.size() <=
-                   MaxDebugArgs) {
-      DII->addVariableLocationOps(AdditionalValues, SalvagedExpr);
-    } else {
-      // Do not salvage using DIArgList for dbg.declare, as it is not currently
-      // supported in those instructions. Also do not salvage if the resulting
-      // DIArgList would contain an unreasonably large number of values.
-      DII->setKillLocation();
-    }
-    LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
-    Salvaged = true;
-  }
-  // Duplicate of above block for DbgVariableRecords.
   for (auto *DVR : DPUsers) {
     if (DVR->isDbgAssign()) {
       if (DVR->getAddress() == &I) {
@@ -2197,9 +2140,6 @@ void llvm::salvageDebugInfoForDbgValues(
 
   if (Salvaged)
     return;
-
-  for (auto *DII : DbgUsers)
-    DII->setKillLocation();
 
   for (auto *DVR : DPUsers)
     DVR->setKillLocation();
@@ -3429,8 +3369,7 @@ void llvm::dropDebugUsers(Instruction &I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
   findDbgUsers(DbgUsers, &I, &DPUsers);
-  for (auto *DII : DbgUsers)
-    DII->eraseFromParent();
+  assert(DbgUsers.empty());
   for (auto *DVR : DPUsers)
     DVR->eraseFromParent();
 }
