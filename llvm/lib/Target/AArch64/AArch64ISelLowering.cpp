@@ -17155,13 +17155,18 @@ static Function *getStructuredStoreFunction(Module *M, unsigned Factor,
 ///        %vec0 = extractelement { <4 x i32>, <4 x i32> } %ld2, i32 0
 ///        %vec1 = extractelement { <4 x i32>, <4 x i32> } %ld2, i32 1
 bool AArch64TargetLowering::lowerInterleavedLoad(
-    LoadInst *LI, ArrayRef<ShuffleVectorInst *> Shuffles,
+    Instruction *Load, Value *Mask, ArrayRef<ShuffleVectorInst *> Shuffles,
     ArrayRef<unsigned> Indices, unsigned Factor) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   assert(!Shuffles.empty() && "Empty shufflevector input");
   assert(Shuffles.size() == Indices.size() &&
          "Unmatched number of shufflevectors and indices");
+
+  auto *LI = dyn_cast<LoadInst>(Load);
+  if (!LI)
+    return false;
+  assert(!Mask && "Unexpected mask on a load");
 
   const DataLayout &DL = LI->getDataLayout();
 
@@ -17564,12 +17569,17 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
 }
 
 bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
-    StoreInst *SI, ArrayRef<Value *> InterleavedValues) const {
+    Instruction *Store, Value *Mask,
+    ArrayRef<Value *> InterleavedValues) const {
   unsigned Factor = InterleavedValues.size();
   if (Factor != 2 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching st2 and st4 patterns failed\n");
     return false;
   }
+  StoreInst *SI = dyn_cast<StoreInst>(Store);
+  if (!SI)
+    return false;
+  assert(!Mask && "Unexpected mask on plain store");
 
   VectorType *VTy = cast<VectorType>(InterleavedValues[0]->getType());
   const DataLayout &DL = SI->getModule()->getDataLayout();
