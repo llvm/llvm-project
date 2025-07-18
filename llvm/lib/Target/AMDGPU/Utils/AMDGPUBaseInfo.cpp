@@ -296,6 +296,7 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 #define GET_MIMGOffsetMappingTable_IMPL
 #define GET_MIMGG16MappingTable_IMPL
 #define GET_MAIInstInfoTable_IMPL
+#define GET_WMMAInstInfoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
@@ -568,6 +569,11 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info && Info->is_gfx940_xdl;
 }
 
+bool getWMMAIsXDL(unsigned Opc) {
+  const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
+  return Info ? Info->is_wmma_xdl : false;
+}
+
 uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
   switch (EncodingVal) {
   case MFMAScaleFormats::FP6_E2M3:
@@ -639,6 +645,7 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_MAC_F16_e64_vi ||
          Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
+         Opc == AMDGPU::V_FMAC_F64_e64_gfx12 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx12 ||

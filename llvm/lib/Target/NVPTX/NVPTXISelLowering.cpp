@@ -57,6 +57,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -1047,9 +1048,12 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                       MVT::v32i32, MVT::v64i32, MVT::v128i32},
                      Custom);
 
-  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
-  // Enable custom lowering for the i128 bit operand with clusterlaunchcontrol
-  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i128, Custom);
+  // Enable custom lowering for the following:
+  //   * MVT::i128 - clusterlaunchcontrol
+  //   * MVT::i32 - prmt
+  //   * MVT::Other - internal.addrspace.wrap
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, {MVT::i32, MVT::i128, MVT::Other},
+                     Custom);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -1087,7 +1091,6 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::StoreV8)
     MAKE_CASE(NVPTXISD::FSHL_CLAMP)
     MAKE_CASE(NVPTXISD::FSHR_CLAMP)
-    MAKE_CASE(NVPTXISD::BFE)
     MAKE_CASE(NVPTXISD::BFI)
     MAKE_CASE(NVPTXISD::PRMT)
     MAKE_CASE(NVPTXISD::FCOPYSIGN)
@@ -2060,6 +2063,19 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getBuildVector(Node->getValueType(0), dl, Ops);
 }
 
+static SDValue getPRMT(SDValue A, SDValue B, SDValue Selector, SDLoc DL,
+                       SelectionDAG &DAG,
+                       unsigned Mode = NVPTX::PTXPrmtMode::NONE) {
+  return DAG.getNode(NVPTXISD::PRMT, DL, MVT::i32,
+                     {A, B, Selector, DAG.getConstant(Mode, DL, MVT::i32)});
+}
+
+static SDValue getPRMT(SDValue A, SDValue B, uint64_t Selector, SDLoc DL,
+                       SelectionDAG &DAG,
+                       unsigned Mode = NVPTX::PTXPrmtMode::NONE) {
+  return getPRMT(A, B, DAG.getConstant(Selector, DL, MVT::i32), DL, DAG, Mode);
+}
+
 SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   // Handle bitcasting from v2i8 without hitting the default promotion
   // strategy which goes through stack memory.
@@ -2111,15 +2127,12 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         L = DAG.getAnyExtOrTrunc(L, DL, MVT::i32);
         R = DAG.getAnyExtOrTrunc(R, DL, MVT::i32);
       }
-      return DAG.getNode(
-          NVPTXISD::PRMT, DL, MVT::v4i8,
-          {L, R, DAG.getConstant(SelectionValue, DL, MVT::i32),
-           DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
+      return getPRMT(L, R, SelectionValue, DL, DAG);
     };
     auto PRMT__10 = GetPRMT(Op->getOperand(0), Op->getOperand(1), true, 0x3340);
     auto PRMT__32 = GetPRMT(Op->getOperand(2), Op->getOperand(3), true, 0x3340);
     auto PRMT3210 = GetPRMT(PRMT__10, PRMT__32, false, 0x5410);
-    return DAG.getNode(ISD::BITCAST, DL, VT, PRMT3210);
+    return DAG.getBitcast(VT, PRMT3210);
   }
 
   // Get value or the Nth operand as an APInt(32). Undef values treated as 0.
@@ -2173,14 +2186,17 @@ SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   EVT VectorVT = Vector.getValueType();
 
   if (VectorVT == MVT::v4i8) {
-    SDValue BFE =
-        DAG.getNode(NVPTXISD::BFE, DL, MVT::i32,
-                    {Vector,
-                     DAG.getNode(ISD::MUL, DL, MVT::i32,
-                                 DAG.getZExtOrTrunc(Index, DL, MVT::i32),
-                                 DAG.getConstant(8, DL, MVT::i32)),
-                     DAG.getConstant(8, DL, MVT::i32)});
-    return DAG.getAnyExtOrTrunc(BFE, DL, Op->getValueType(0));
+    SDValue Selector = DAG.getNode(ISD::OR, DL, MVT::i32,
+                                   DAG.getZExtOrTrunc(Index, DL, MVT::i32),
+                                   DAG.getConstant(0x7770, DL, MVT::i32));
+    SDValue PRMT = getPRMT(DAG.getBitcast(MVT::i32, Vector),
+                           DAG.getConstant(0, DL, MVT::i32), Selector, DL, DAG);
+    SDValue Ext = DAG.getAnyExtOrTrunc(PRMT, DL, Op->getValueType(0));
+    SDNodeFlags Flags;
+    Flags.setNoSignedWrap(Ext.getScalarValueSizeInBits() > 8);
+    Flags.setNoUnsignedWrap(Ext.getScalarValueSizeInBits() >= 8);
+    Ext->setFlags(Flags);
+    return Ext;
   }
 
   // Constant index will be matched by tablegen.
@@ -2242,9 +2258,9 @@ SDValue NVPTXTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   }
 
   SDLoc DL(Op);
-  return DAG.getNode(NVPTXISD::PRMT, DL, MVT::v4i8, V1, V2,
-                     DAG.getConstant(Selector, DL, MVT::i32),
-                     DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32));
+  SDValue PRMT = getPRMT(DAG.getBitcast(MVT::i32, V1),
+                         DAG.getBitcast(MVT::i32, V2), Selector, DL, DAG);
+  return DAG.getBitcast(Op.getValueType(), PRMT);
 }
 /// LowerShiftRightParts - Lower SRL_PARTS, SRA_PARTS, which
 /// 1) returns two i32 values and take a 2 x i32 value to shift plus a shift
@@ -2729,10 +2745,46 @@ static SDValue LowerClusterLaunchControlQueryCancel(SDValue Op,
                      {TryCancelResponse0, TryCancelResponse1});
 }
 
+static SDValue lowerPrmtIntrinsic(SDValue Op, SelectionDAG &DAG) {
+  const unsigned Mode = [&]() {
+    switch (Op->getConstantOperandVal(0)) {
+    case Intrinsic::nvvm_prmt:
+      return NVPTX::PTXPrmtMode::NONE;
+    case Intrinsic::nvvm_prmt_b4e:
+      return NVPTX::PTXPrmtMode::B4E;
+    case Intrinsic::nvvm_prmt_ecl:
+      return NVPTX::PTXPrmtMode::ECL;
+    case Intrinsic::nvvm_prmt_ecr:
+      return NVPTX::PTXPrmtMode::ECR;
+    case Intrinsic::nvvm_prmt_f4e:
+      return NVPTX::PTXPrmtMode::F4E;
+    case Intrinsic::nvvm_prmt_rc16:
+      return NVPTX::PTXPrmtMode::RC16;
+    case Intrinsic::nvvm_prmt_rc8:
+      return NVPTX::PTXPrmtMode::RC8;
+    default:
+      llvm_unreachable("unsupported/unhandled intrinsic");
+    }
+  }();
+  SDLoc DL(Op);
+  SDValue A = Op->getOperand(1);
+  SDValue B = Op.getNumOperands() == 4 ? Op.getOperand(2)
+                                       : DAG.getConstant(0, DL, MVT::i32);
+  SDValue Selector = (Op->op_end() - 1)->get();
+  return getPRMT(A, B, Selector, DL, DAG, Mode);
+}
 static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(0)) {
   default:
     return Op;
+  case Intrinsic::nvvm_prmt:
+  case Intrinsic::nvvm_prmt_b4e:
+  case Intrinsic::nvvm_prmt_ecl:
+  case Intrinsic::nvvm_prmt_ecr:
+  case Intrinsic::nvvm_prmt_f4e:
+  case Intrinsic::nvvm_prmt_rc16:
+  case Intrinsic::nvvm_prmt_rc8:
+    return lowerPrmtIntrinsic(Op, DAG);
   case Intrinsic::nvvm_internal_addrspace_wrap:
     return Op.getOperand(1);
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
@@ -5271,31 +5323,6 @@ static SDValue PerformANDCombine(SDNode *N,
 
   SDValue AExt;
 
-  // Convert BFE-> truncate i16 -> and 255
-  // To just BFE-> truncate i16, as the value already has all the bits in the
-  // right places.
-  if (Val.getOpcode() == ISD::TRUNCATE) {
-    SDValue BFE = Val.getOperand(0);
-    if (BFE.getOpcode() != NVPTXISD::BFE)
-      return SDValue();
-
-    ConstantSDNode *BFEBits = dyn_cast<ConstantSDNode>(BFE.getOperand(0));
-    if (!BFEBits)
-      return SDValue();
-    uint64_t BFEBitsVal = BFEBits->getZExtValue();
-
-    ConstantSDNode *MaskCnst = dyn_cast<ConstantSDNode>(Mask);
-    if (!MaskCnst) {
-      // Not an AND with a constant
-      return SDValue();
-    }
-    uint64_t MaskVal = MaskCnst->getZExtValue();
-
-    if (MaskVal != (uint64_t(1) << BFEBitsVal) - 1)
-      return SDValue();
-    // If we get here, the AND is unnecessary.  Just replace it with the trunc
-    DCI.CombineTo(N, Val, false);
-  }
   // Generally, we will see zextload -> IMOV16rr -> ANY_EXTEND -> and
   if (Val.getOpcode() == ISD::ANY_EXTEND) {
     AExt = Val;
@@ -5800,11 +5827,10 @@ PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SDLoc DL(N);
   auto &DAG = DCI.DAG;
 
-  auto PRMT = DAG.getNode(
-      NVPTXISD::PRMT, DL, MVT::v4i8,
-      {Op0, Op1, DAG.getConstant((Op1Bytes << 8) | Op0Bytes, DL, MVT::i32),
-       DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
-  return DAG.getNode(ISD::BITCAST, DL, VT, PRMT);
+  auto PRMT =
+      getPRMT(DAG.getBitcast(MVT::i32, Op0), DAG.getBitcast(MVT::i32, Op1),
+              (Op1Bytes << 8) | Op0Bytes, DL, DAG);
+  return DAG.getBitcast(VT, PRMT);
 }
 
 static SDValue combineADDRSPACECAST(SDNode *N,
@@ -5822,47 +5848,120 @@ static SDValue combineADDRSPACECAST(SDNode *N,
   return SDValue();
 }
 
+// Given a constant selector value and a prmt mode, return the selector value
+// normalized to the generic prmt mode. See the PTX ISA documentation for more
+// details:
+// https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-prmt
+static APInt getPRMTSelector(const APInt &Selector, unsigned Mode) {
+  if (Mode == NVPTX::PTXPrmtMode::NONE)
+    return Selector;
+
+  const unsigned V = Selector.trunc(2).getZExtValue();
+
+  const auto GetSelector = [](unsigned S0, unsigned S1, unsigned S2,
+                              unsigned S3) {
+    return APInt(32, S0 | (S1 << 4) | (S2 << 8) | (S3 << 12));
+  };
+
+  switch (Mode) {
+  case NVPTX::PTXPrmtMode::F4E:
+    return GetSelector(V, V + 1, V + 2, V + 3);
+  case NVPTX::PTXPrmtMode::B4E:
+    return GetSelector(V, (V - 1) & 7, (V - 2) & 7, (V - 3) & 7);
+  case NVPTX::PTXPrmtMode::RC8:
+    return GetSelector(V, V, V, V);
+  case NVPTX::PTXPrmtMode::ECL:
+    return GetSelector(V, std::max(V, 1U), std::max(V, 2U), 3U);
+  case NVPTX::PTXPrmtMode::ECR:
+    return GetSelector(0, std::min(V, 1U), std::min(V, 2U), V);
+  case NVPTX::PTXPrmtMode::RC16: {
+    unsigned V1 = (V & 1) << 1;
+    return GetSelector(V1, V1 + 1, V1, V1 + 1);
+  }
+  default:
+    llvm_unreachable("Invalid PRMT mode");
+  }
+}
+
+static APInt computePRMT(APInt A, APInt B, APInt Selector, unsigned Mode) {
+  // {b, a} = {{b7, b6, b5, b4}, {b3, b2, b1, b0}}
+  APInt BitField = B.concat(A);
+  APInt SelectorVal = getPRMTSelector(Selector, Mode);
+  APInt Result(32, 0);
+  for (unsigned I : llvm::seq(4U)) {
+    APInt Sel = SelectorVal.extractBits(4, I * 4);
+    unsigned Idx = Sel.getLoBits(3).getZExtValue();
+    unsigned Sign = Sel.getHiBits(1).getZExtValue();
+    APInt Byte = BitField.extractBits(8, Idx * 8);
+    if (Sign)
+      Byte = Byte.ashr(8);
+    Result.insertBits(Byte, I * 8);
+  }
+  return Result;
+}
+
+static SDValue combinePRMT(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                           CodeGenOptLevel OptLevel) {
+  if (OptLevel == CodeGenOptLevel::None)
+    return SDValue();
+
+  // Constant fold PRMT
+  if (isa<ConstantSDNode>(N->getOperand(0)) &&
+      isa<ConstantSDNode>(N->getOperand(1)) &&
+      isa<ConstantSDNode>(N->getOperand(2)))
+    return DCI.DAG.getConstant(computePRMT(N->getConstantOperandAPInt(0),
+                                           N->getConstantOperandAPInt(1),
+                                           N->getConstantOperandAPInt(2),
+                                           N->getConstantOperandVal(3)),
+                               SDLoc(N), N->getValueType(0));
+
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
   switch (N->getOpcode()) {
-    default: break;
-    case ISD::ADD:
-      return PerformADDCombine(N, DCI, OptLevel);
-    case ISD::FADD:
-      return PerformFADDCombine(N, DCI, OptLevel);
-    case ISD::MUL:
-      return PerformMULCombine(N, DCI, OptLevel);
-    case ISD::SHL:
-      return PerformSHLCombine(N, DCI, OptLevel);
-    case ISD::AND:
-      return PerformANDCombine(N, DCI);
-    case ISD::UREM:
-    case ISD::SREM:
-      return PerformREMCombine(N, DCI, OptLevel);
-    case ISD::SETCC:
-      return PerformSETCCCombine(N, DCI, STI.getSmVersion());
-    case ISD::LOAD:
-    case NVPTXISD::LoadParamV2:
-    case NVPTXISD::LoadV2:
-    case NVPTXISD::LoadV4:
-      return combineUnpackingMovIntoLoad(N, DCI);
-    case NVPTXISD::StoreParam:
-    case NVPTXISD::StoreParamV2:
-    case NVPTXISD::StoreParamV4:
-      return PerformStoreParamCombine(N, DCI);
-    case ISD::STORE:
-    case NVPTXISD::StoreV2:
-    case NVPTXISD::StoreV4:
-      return PerformStoreCombine(N, DCI);
-    case ISD::EXTRACT_VECTOR_ELT:
-      return PerformEXTRACTCombine(N, DCI);
-    case ISD::VSELECT:
-      return PerformVSELECTCombine(N, DCI);
-    case ISD::BUILD_VECTOR:
-      return PerformBUILD_VECTORCombine(N, DCI);
-    case ISD::ADDRSPACECAST:
-      return combineADDRSPACECAST(N, DCI);
+  default:
+    break;
+  case ISD::ADD:
+    return PerformADDCombine(N, DCI, OptLevel);
+  case ISD::ADDRSPACECAST:
+    return combineADDRSPACECAST(N, DCI);
+  case ISD::AND:
+    return PerformANDCombine(N, DCI);
+  case ISD::BUILD_VECTOR:
+    return PerformBUILD_VECTORCombine(N, DCI);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return PerformEXTRACTCombine(N, DCI);
+  case ISD::FADD:
+    return PerformFADDCombine(N, DCI, OptLevel);
+  case ISD::LOAD:
+  case NVPTXISD::LoadParamV2:
+  case NVPTXISD::LoadV2:
+  case NVPTXISD::LoadV4:
+    return combineUnpackingMovIntoLoad(N, DCI);
+  case ISD::MUL:
+    return PerformMULCombine(N, DCI, OptLevel);
+  case NVPTXISD::PRMT:
+    return combinePRMT(N, DCI, OptLevel);
+  case ISD::SETCC:
+    return PerformSETCCCombine(N, DCI, STI.getSmVersion());
+  case ISD::SHL:
+    return PerformSHLCombine(N, DCI, OptLevel);
+  case ISD::SREM:
+  case ISD::UREM:
+    return PerformREMCombine(N, DCI, OptLevel);
+  case NVPTXISD::StoreParam:
+  case NVPTXISD::StoreParamV2:
+  case NVPTXISD::StoreParamV4:
+    return PerformStoreParamCombine(N, DCI);
+  case ISD::STORE:
+  case NVPTXISD::StoreV2:
+  case NVPTXISD::StoreV4:
+    return PerformStoreCombine(N, DCI);
+  case ISD::VSELECT:
+    return PerformVSELECTCombine(N, DCI);
   }
   return SDValue();
 }
@@ -6340,10 +6439,12 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 
   // Specialize for cmpxchg
   // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
+  SyncScope::ID SSID = cast<AtomicCmpXchgInst>(Inst)->getSyncScopeID();
   if (isReleaseOrStronger(Ord))
-    return Ord == AtomicOrdering::SequentiallyConsistent
-               ? Builder.CreateFence(AtomicOrdering::SequentiallyConsistent)
-               : Builder.CreateFence(AtomicOrdering::Release);
+    return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
+                                   ? Ord
+                                   : AtomicOrdering::Release,
+                               SSID);
 
   return nullptr;
 }
@@ -6355,15 +6456,15 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   if (!isa<AtomicCmpXchgInst>(Inst))
     return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
 
+  auto *CI = cast<AtomicCmpXchgInst>(Inst);
   auto CASWidth =
-      cast<IntegerType>(
-          dyn_cast<AtomicCmpXchgInst>(Inst)->getCompareOperand()->getType())
-          ->getBitWidth();
+      cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth();
+  SyncScope::ID SSID = CI->getSyncScopeID();
   // Do not emit a trailing fence for cmpxchg seq_cst which are not emulated
   if (isAcquireOrStronger(Ord) &&
       (Ord != AtomicOrdering::SequentiallyConsistent ||
        CASWidth < STI.getMinCmpXchgSizeInBits()))
-    return Builder.CreateFence(AtomicOrdering::Acquire);
+    return Builder.CreateFence(AtomicOrdering::Acquire, SSID);
 
   return nullptr;
 }
@@ -6401,4 +6502,46 @@ NVPTXTargetObjectFile::~NVPTXTargetObjectFile() = default;
 MCSection *NVPTXTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   return getDataSection();
+}
+
+static void computeKnownBitsForPRMT(const SDValue Op, KnownBits &Known,
+                                    const SelectionDAG &DAG, unsigned Depth) {
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
+  ConstantSDNode *Selector = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+  unsigned Mode = Op.getConstantOperandVal(3);
+
+  if (!Selector)
+    return;
+
+  KnownBits AKnown = DAG.computeKnownBits(A, Depth);
+  KnownBits BKnown = DAG.computeKnownBits(B, Depth);
+
+  // {b, a} = {{b7, b6, b5, b4}, {b3, b2, b1, b0}}
+  KnownBits BitField = BKnown.concat(AKnown);
+
+  APInt SelectorVal = getPRMTSelector(Selector->getAPIntValue(), Mode);
+  for (unsigned I : llvm::seq(std::min(4U, Known.getBitWidth() / 8))) {
+    APInt Sel = SelectorVal.extractBits(4, I * 4);
+    unsigned Idx = Sel.getLoBits(3).getZExtValue();
+    unsigned Sign = Sel.getHiBits(1).getZExtValue();
+    KnownBits Byte = BitField.extractBits(8, Idx * 8);
+    if (Sign)
+      Byte = KnownBits::ashr(Byte, 8);
+    Known.insertBits(Byte, I * 8);
+  }
+}
+
+void NVPTXTargetLowering::computeKnownBitsForTargetNode(
+    const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+    const SelectionDAG &DAG, unsigned Depth) const {
+  Known.resetAll();
+
+  switch (Op.getOpcode()) {
+  case NVPTXISD::PRMT:
+    computeKnownBitsForPRMT(Op, Known, DAG, Depth);
+    break;
+  default:
+    break;
+  }
 }
