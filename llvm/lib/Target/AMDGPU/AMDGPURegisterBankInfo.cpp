@@ -4546,6 +4546,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_rsq_clamp:
+    case Intrinsic::amdgcn_tanh:
     case Intrinsic::amdgcn_fmul_legacy:
     case Intrinsic::amdgcn_fma_legacy:
     case Intrinsic::amdgcn_frexp_mant:
@@ -4688,6 +4689,44 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8:
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8:
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x4_f32:
+    case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
+    case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
+    case Intrinsic::amdgcn_wmma_f16_16x16x32_f16:
+    case Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16:
+    case Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16:
+    case Intrinsic::amdgcn_wmma_f32_16x16x64_fp8_fp8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x64_fp8_bf8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x64_bf8_fp8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x64_bf8_bf8:
+    case Intrinsic::amdgcn_wmma_f16_16x16x64_fp8_fp8:
+    case Intrinsic::amdgcn_wmma_f16_16x16x64_fp8_bf8:
+    case Intrinsic::amdgcn_wmma_f16_16x16x64_bf8_fp8:
+    case Intrinsic::amdgcn_wmma_f16_16x16x64_bf8_bf8:
+    case Intrinsic::amdgcn_wmma_f16_16x16x128_fp8_fp8:
+    case Intrinsic::amdgcn_wmma_f16_16x16x128_fp8_bf8:
+    case Intrinsic::amdgcn_wmma_f16_16x16x128_bf8_fp8:
+    case Intrinsic::amdgcn_wmma_f16_16x16x128_bf8_bf8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x128_fp8_fp8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x128_fp8_bf8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x128_bf8_fp8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x128_bf8_bf8:
+    case Intrinsic::amdgcn_wmma_i32_16x16x64_iu8:
+    case Intrinsic::amdgcn_wmma_f32_32x16x128_f4:
+    case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
+    case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:
+    case Intrinsic::amdgcn_swmmac_bf16f32_16x16x64_bf16:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x64_f16:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_fp8:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_bf8:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_fp8:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_bf8:
+    case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_fp8:
+    case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_bf8:
+    case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_fp8:
+    case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8:
+    case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8:
       return getDefaultMappingVOP(MI);
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_exp2:

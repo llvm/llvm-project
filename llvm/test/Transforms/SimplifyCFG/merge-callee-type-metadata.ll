@@ -9,18 +9,22 @@ define ptr @_Z10test_diffb(i1 zeroext %b) {
 ; CHECK-LABEL: define ptr @_Z10test_diffb(
 ; CHECK-SAME: i1 zeroext [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @_Znwm(i64 4), !callee_type [[META0:![0-9]+]]
+; CHECK-NEXT:    [[FN:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr @_Znwm, ptr [[FN]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[FN]](i64 4), !callee_type [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
+  %fn = alloca ptr
+  store ptr @_Znwm, ptr %fn
   br i1 %b, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %call = call ptr @_Znwm(i64 4), !callee_type !4
+  %call = call ptr %fn(i64 4), !callee_type !4
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %call1 = call ptr @_Znwm(i64 4), !callee_type !3
+  %call1 = call ptr %fn(i64 4), !callee_type !3
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -34,18 +38,22 @@ define ptr @_Z10test_sameb(i1 zeroext %b) {
 ; CHECK-LABEL: define ptr @_Z10test_sameb(
 ; CHECK-SAME: i1 zeroext [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @_Znwm(i64 4), !callee_type [[META3:![0-9]+]]
+; CHECK-NEXT:    [[FN:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr @_Znwm, ptr [[FN]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[FN]](i64 4), !callee_type [[META3:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
+  %fn = alloca ptr
+  store ptr @_Znwm, ptr %fn
   br i1 %b, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %call = call ptr @_Znwm(i64 4), !callee_type !3
+  %call = call ptr %fn(i64 4), !callee_type !3
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %call1 = call ptr @_Znwm(i64 4), !callee_type !3
+  %call1 = call ptr %fn(i64 4), !callee_type !3
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -59,18 +67,22 @@ define ptr @_Z10test_leftb(i1 zeroext %b) {
 ; CHECK-LABEL: define ptr @_Z10test_leftb(
 ; CHECK-SAME: i1 zeroext [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @_Znwm(i64 4), !callee_type [[META4:![0-9]+]]
+; CHECK-NEXT:    [[FN:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr @_Znwm, ptr [[FN]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[FN]](i64 4), !callee_type [[META4:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
+  %fn = alloca ptr
+  store ptr @_Znwm, ptr %fn
   br i1 %b, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %call = call ptr @_Znwm(i64 4), !callee_type !4
+  %call = call ptr %fn(i64 4), !callee_type !4
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %call1 = call ptr @_Znwm(i64 4)
+  %call1 = call ptr %fn(i64 4)
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -84,18 +96,22 @@ define ptr @_Z10test_rightb(i1 zeroext %b) {
 ; CHECK-LABEL: define ptr @_Z10test_rightb(
 ; CHECK-SAME: i1 zeroext [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @_Znwm(i64 4), !callee_type [[META3]]
+; CHECK-NEXT:    [[FN:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr @_Znwm, ptr [[FN]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[FN]](i64 4), !callee_type [[META3]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
+  %fn = alloca ptr
+  store ptr @_Znwm, ptr %fn
   br i1 %b, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %call = call ptr @_Znwm(i64 4)
+  %call = call ptr %fn(i64 4)
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %call1 = call ptr @_Znwm(i64 4), !callee_type !3
+  %call1 = call ptr %fn(i64 4), !callee_type !3
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -109,18 +125,22 @@ define ptr @_Z10test_listb(i1 zeroext %b) {
 ; CHECK-LABEL: define ptr @_Z10test_listb(
 ; CHECK-SAME: i1 zeroext [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @_Znwm(i64 4), !callee_type [[META5:![0-9]+]]
+; CHECK-NEXT:    [[FN:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr @_Znwm, ptr [[FN]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[FN]](i64 4), !callee_type [[META5:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
+  %fn = alloca ptr
+  store ptr @_Znwm, ptr %fn
   br i1 %b, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %call = call ptr @_Znwm(i64 4), !callee_type !6
+  %call = call ptr %fn(i64 4), !callee_type !6
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %call1 = call ptr @_Znwm(i64 4), !callee_type !5
+  %call1 = call ptr %fn(i64 4), !callee_type !5
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

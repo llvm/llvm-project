@@ -11,7 +11,6 @@
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 #include <system_error>

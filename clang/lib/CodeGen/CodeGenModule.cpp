@@ -118,9 +118,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     return createM68kTargetCodeGenInfo(CGM);
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
-    if (Triple.getOS() == llvm::Triple::NaCl)
-      return createPNaClTargetCodeGenInfo(CGM);
-    else if (Triple.getOS() == llvm::Triple::Win32)
+    if (Triple.getOS() == llvm::Triple::Win32)
       return createWindowsMIPSTargetCodeGenInfo(CGM, /*IsOS32=*/true);
     return createMIPSTargetCodeGenInfo(CGM, /*IsOS32=*/true);
 
@@ -2995,7 +2993,7 @@ static bool hasExistingGeneralizedTypeMD(llvm::Function *F) {
   llvm::MDNode *MD = F->getMetadata(llvm::LLVMContext::MD_type);
   if (!MD)
     return false;
-  return hasGeneralizedMDString(MD);
+  return MD->hasGeneralizedMDString();
 }
 
 void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
@@ -6648,7 +6646,9 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   auto Fields = Builder.beginStruct(STy);
 
   // Class pointer.
-  Fields.add(cast<llvm::Constant>(CFConstantStringClassRef));
+  Fields.addSignedPointer(cast<llvm::Constant>(CFConstantStringClassRef),
+                          getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
   // Flags.
   if (IsSwiftABI) {

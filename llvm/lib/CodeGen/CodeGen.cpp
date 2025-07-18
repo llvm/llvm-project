@@ -106,11 +106,11 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializePatchableFunctionLegacyPass(Registry);
   initializePeepholeOptimizerLegacyPass(Registry);
   initializePostMachineSchedulerLegacyPass(Registry);
+  initializePostRAMachineSinkingLegacyPass(Registry);
   initializePostRAHazardRecognizerLegacyPass(Registry);
-  initializePostRAMachineSinkingPass(Registry);
   initializePostRASchedulerLegacyPass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
-  initializeProcessImplicitDefsPass(Registry);
+  initializeProcessImplicitDefsLegacyPass(Registry);
   initializeRABasicPass(Registry);
   initializeRAGreedyLegacyPass(Registry);
   initializeRegAllocFastPass(Registry);

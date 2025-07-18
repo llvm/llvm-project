@@ -1310,8 +1310,7 @@ MDNode *MDNode::getMergedCalleeTypeMetadata(LLVMContext &Ctx, MDNode *A,
   auto AddUniqueCallees = [&AB, &MergedCallees](MDNode *N) {
     if (!N)
       return;
-    for (const MDOperand &Op : N->operands()) {
-      Metadata *MD = Op.get();
+    for (Metadata *MD : N->operands()) {
       if (MergedCallees.insert(MD).second)
         AB.push_back(MD);
     }
