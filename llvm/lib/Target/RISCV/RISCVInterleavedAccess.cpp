@@ -103,9 +103,8 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 }
 
 /// Do the common operand retrieval and validition required by the
-/// routines below.  
-static bool getMemOperands(unsigned Factor,
-                           VectorType *VTy, Type *XLenTy,
+/// routines below.
+static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
                            Instruction *I, Value *&Ptr, Value *&Mask,
                            Value *&VL, Align &Alignment) {
 
@@ -178,8 +177,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (!getMemOperands(Factor, VTy, XLenTy, Load, Ptr, Mask, VL,
-                      Alignment))
+  if (!getMemOperands(Factor, VTy, XLenTy, Load, Ptr, Mask, VL, Alignment))
     return false;
 
   Type *PtrTy = Ptr->getType();
@@ -324,8 +322,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (!getMemOperands(Factor, ResVTy, XLenTy, Load, Ptr, Mask, VL,
-                      Alignment))
+  if (!getMemOperands(Factor, ResVTy, XLenTy, Load, Ptr, Mask, VL, Alignment))
     return false;
 
   Type *PtrTy = Ptr->getType();
@@ -388,8 +385,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (!getMemOperands(Factor, InVTy, XLenTy, Store, Ptr, Mask, VL,
-                      Alignment))
+  if (!getMemOperands(Factor, InVTy, XLenTy, Store, Ptr, Mask, VL, Alignment))
     return false;
   Type *PtrTy = Ptr->getType();
   unsigned AS = Ptr->getType()->getPointerAddressSpace();
