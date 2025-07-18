@@ -1080,6 +1080,13 @@ multiclass VOP1_Real_FULL_t16_and_fake16_gfx1250<
        VOP1_Real_FULL_with_name<GFX1250Gen, op, opName#"_fake16", asmName>;
 }
 
+multiclass VOP1_Real_OpSelIsDPP_gfx1250<bits<9> op> : VOP1_Real_e32<GFX1250Gen, op> {
+   defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
+   def _e64_gfx1250 :
+        VOP3_Real_Gen<ps, GFX1250Gen>,
+        VOP3OpSelIsDPP_gfx12<{0, 1, 1, op{6-0}}, ps.Pfl>;
+}
+
 defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX12Not12_50Gen, 0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
 defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX1250Gen, 0x06c, "V_CVT_F32_FP8_gfx1250", "v_cvt_f32_fp8">;
 
@@ -1147,6 +1154,7 @@ defm V_MOV_B64 : VOP1_Real_FULL <GFX1250Gen, 0x1d>;
 
 defm V_TANH_F32              : VOP1_Real_FULL<GFX1250Gen, 0x01e>;
 defm V_TANH_F16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x01f>;
+defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1250<0x049>;
 defm V_TANH_BF16             : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL<GFX1250Gen, 0x04b>;
 defm V_CVT_F32_BF16          : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x072, "v_cvt_f32_bf16", "V_CVT_F32_BF16_gfx1250">;
