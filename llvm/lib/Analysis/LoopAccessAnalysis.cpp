@@ -1980,13 +1980,15 @@ bool MemoryDepChecker::areAccessesCompletelyBeforeOrAfter(const SCEV *Src,
   const SCEV *BTC = PSE.getBackedgeTakenCount();
   const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
   ScalarEvolution &SE = *PSE.getSE();
-  const auto &[SrcStart_, SrcEnd_] = getStartAndEndForAccess(
-      InnermostLoop, Src, SrcTy, BTC, SymbolicMaxBTC, &SE, &PointerBounds);
+  const auto &[SrcStart_, SrcEnd_] =
+      getStartAndEndForAccess(InnermostLoop, Src, SrcTy, BTC, SymbolicMaxBTC,
+                              &SE, &PointerBounds, DT, AC);
   if (isa<SCEVCouldNotCompute>(SrcStart_) || isa<SCEVCouldNotCompute>(SrcEnd_))
     return false;
 
-  const auto &[SinkStart_, SinkEnd_] = getStartAndEndForAccess(
-      InnermostLoop, Sink, SinkTy, BTC, SymbolicMaxBTC, &SE, &PointerBounds);
+  const auto &[SinkStart_, SinkEnd_] =
+      getStartAndEndForAccess(InnermostLoop, Sink, SinkTy, BTC, SymbolicMaxBTC,
+                              &SE, &PointerBounds, DT, AC);
   if (isa<SCEVCouldNotCompute>(SinkStart_) ||
       isa<SCEVCouldNotCompute>(SinkEnd_))
     return false;
