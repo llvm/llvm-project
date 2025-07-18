@@ -43,15 +43,15 @@ ball:                                   # @ball
 	.quad	.Lfunc_begin0
 	.quad	1
 	.quad	3
-	/// Numerical hash of the callee type ID for foo.
+	/// MD5 hash of the callee type ID for foo.
     // CHECK: 2444f731 f5eecb3e
 	.quad	0x3ecbeef531f74424
 	.quad	.Ltmp0
-	/// Numerical hash of the callee type ID for bar.
+	/// MD5 hash of the callee type ID for bar.
     // CHECK: 5486bc59 814b8e30
 	.quad	0x308e4b8159bc8654
 	.quad	.Ltmp1
-	/// Numerical hash of the callee type ID for baz.
+	/// MD5 hash of the callee type ID for baz.
     // CHECK: 7ade6814 f897fd77
 	.quad	0x77fd97f81468de7a
 	.quad	.Ltmp2
