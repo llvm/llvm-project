@@ -4251,12 +4251,12 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
              (ElementType.getSizeInBits() - 1)) {
     ShiftAmt = ShiftFullAmt;
   } else {
-    SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
+    SDValue TruncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
     const SDValue ShiftMask =
         DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
     // This AND instruction will clamp out of bounds shift values.
     // It will also be removed during later instruction selection.
-    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
+    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, TruncShiftAmt, ShiftMask);
   }
 
   EVT ConcatType;
@@ -4313,16 +4313,8 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   return DAG.getNode(ISD::BITCAST, SL, VT, Vec);
 }
 
-SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
-                                                DAGCombinerInfo &DCI) const {
-  SDValue RHS = N->getOperand(1);
-  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
-  EVT VT = N->getValueType(0);
-  SDValue LHS = N->getOperand(0);
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc SL(N);
-  unsigned RHSVal;
-
+static SDValue getScalarisedShift(SDValue LHS, SDValue RHS, SelectionDAG &DAG) {
+  SDLoc SL = SDLoc(RHS);
   if (RHS->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     SDValue VAND = RHS.getOperand(0);
     if (ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1))) {
@@ -4359,12 +4351,26 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
             SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
             if (AndIndex == 0 || AndIndex == 1)
               return DAG.getNode(ISD::SRL, SL, MVT::i32, Trunc,
-                                 AndIndex == 0 ? LoAnd : HiAnd, N->getFlags());
+                                 AndIndex == 0 ? LoAnd : HiAnd, RHS->getFlags());
           }
         }
       }
     }
   }
+  return SDValue();
+}
+
+SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
+                                                DAGCombinerInfo &DCI) const {
+  SDValue RHS = N->getOperand(1);
+  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
+  EVT VT = N->getValueType(0);
+  SDValue LHS = N->getOperand(0);
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc SL(N);
+  unsigned RHSVal;
+
+
 
   if (CRHS) {
     RHSVal = CRHS->getZExtValue();
