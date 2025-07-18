@@ -2108,6 +2108,41 @@ define <2 x float> @test_uitofp_2xi32_to_2xfloat(<2 x i32> %a) #0 {
   ret <2 x float> %r
 }
 
+define void @test_trunc_to_v2bf16(<2 x float> %a, ptr %p) {
+; CHECK-LABEL: test_trunc_to_v2bf16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_trunc_to_v2bf16_param_1];
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_trunc_to_v2bf16_param_0];
+; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r3, %r2, %r1;
+; CHECK-NEXT:    st.b32 [%rd2], %r3;
+; CHECK-NEXT:    ret;
+  %trunc = fptrunc <2 x float> %a to <2 x bfloat>
+  store <2 x bfloat> %trunc, ptr %p
+  ret void
+}
+
+define void @test_trunc_to_v2f16(<2 x float> %a, ptr %p) {
+; CHECK-LABEL: test_trunc_to_v2f16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_trunc_to_v2f16_param_1];
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_trunc_to_v2f16_param_0];
+; CHECK-NEXT:    cvt.rn.f16x2.f32 %r3, %r2, %r1;
+; CHECK-NEXT:    st.b32 [%rd2], %r3;
+; CHECK-NEXT:    ret;
+  %trunc = fptrunc <2 x float> %a to <2 x half>
+  store <2 x half> %trunc, ptr %p
+  ret void
+}
+
+
 attributes #0 = { nounwind }
 attributes #1 = { "unsafe-fp-math" = "true" }
 attributes #2 = { "denormal-fp-math"="preserve-sign" }

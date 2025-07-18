@@ -1499,11 +1499,16 @@ define <2 x half> @test_sitofp_2xi32_fadd(<2 x i32> %a, <2 x half> %b) #0 {
 define <2 x half> @test_fptrunc_2xfloat(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_fptrunc_2xfloat(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fptrunc_2xfloat_param_0];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %rd1;
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_fptrunc_2xfloat_param_0];
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs1, %r2;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs2, %r1;
+; CHECK-NEXT:    mov.b32 %r3, {%rs2, %rs1};
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %r = fptrunc <2 x float> %a to <2 x half>
   ret <2 x half> %r
