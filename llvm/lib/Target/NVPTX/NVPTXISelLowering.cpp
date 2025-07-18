@@ -6538,11 +6538,10 @@ void NVPTXTargetLowering::computeKnownBitsForTargetNode(
   }
 }
 
-static void getPRMTDemandedBits(const APInt &SelectorVal,
-                                const APInt &DemandedBits, APInt &DemandedLHS,
-                                APInt &DemandedRHS) {
-  DemandedLHS = APInt(32, 0);
-  DemandedRHS = APInt(32, 0);
+static std::pair<APInt, APInt> getPRMTDemandedBits(const APInt &SelectorVal,
+                                                   const APInt &DemandedBits) {
+  APInt DemandedLHS = APInt(32, 0);
+  APInt DemandedRHS = APInt(32, 0);
 
   for (unsigned I : llvm::seq(4)) {
     if (DemandedBits.extractBits(8, I * 8).isZero())
@@ -6559,6 +6558,8 @@ static void getPRMTDemandedBits(const APInt &SelectorVal,
     else
       Src.setBits(ByteStart, ByteStart + 8);
   }
+
+  return {DemandedLHS, DemandedRHS};
 }
 
 // Replace undef with 0 as this is easier for other optimizations such as
@@ -6576,26 +6577,26 @@ static SDValue simplifyDemandedBitsForPRMT(SDValue PRMT,
                                            SelectionDAG &DAG,
                                            const TargetLowering &TLI,
                                            unsigned Depth) {
+  assert(PRMT.getOpcode() == NVPTXISD::PRMT);
   SDValue Op0 = PRMT.getOperand(0);
   SDValue Op1 = PRMT.getOperand(1);
-  ConstantSDNode *Selector = dyn_cast<ConstantSDNode>(PRMT.getOperand(2));
-  unsigned Mode = PRMT.getConstantOperandVal(3);
-  if (!Selector)
+  auto *SelectorConst = dyn_cast<ConstantSDNode>(PRMT.getOperand(2));
+  if (!SelectorConst)
     return SDValue();
 
-  const APInt SelectorVal = getPRMTSelector(Selector->getAPIntValue(), Mode);
+  unsigned Mode = PRMT.getConstantOperandVal(3);
+  const APInt Selector = getPRMTSelector(SelectorConst->getAPIntValue(), Mode);
 
   // Try to simplify the PRMT to one of the inputs if the used bytes are all
   // from the same input in the correct order.
   const unsigned LeadingBytes = DemandedBits.countLeadingZeros() / 8;
   const unsigned SelBits = (4 - LeadingBytes) * 4;
-  if (SelectorVal.getLoBits(SelBits) == APInt(32, 0x3210).getLoBits(SelBits))
+  if (Selector.getLoBits(SelBits) == APInt(32, 0x3210).getLoBits(SelBits))
     return Op0;
-  if (SelectorVal.getLoBits(SelBits) == APInt(32, 0x7654).getLoBits(SelBits))
+  if (Selector.getLoBits(SelBits) == APInt(32, 0x7654).getLoBits(SelBits))
     return Op1;
 
-  APInt DemandedLHS, DemandedRHS;
-  getPRMTDemandedBits(SelectorVal, DemandedBits, DemandedLHS, DemandedRHS);
+  auto [DemandedLHS, DemandedRHS] = getPRMTDemandedBits(Selector, DemandedBits);
 
   // Attempt to avoid multi-use ops if we don't need anything from them.
   SDValue DemandedOp0 =
@@ -6605,10 +6606,11 @@ static SDValue simplifyDemandedBitsForPRMT(SDValue PRMT,
 
   DemandedOp0 = canonicalizePRMTInput(DemandedOp0, DAG);
   DemandedOp1 = canonicalizePRMTInput(DemandedOp1, DAG);
-  if (DemandedOp0 != Op0 || DemandedOp1 != Op1) {
+  if ((DemandedOp0 && DemandedOp0 != Op0) ||
+      (DemandedOp1 && DemandedOp1 != Op1)) {
     Op0 = DemandedOp0 ? DemandedOp0 : Op0;
     Op1 = DemandedOp1 ? DemandedOp1 : Op1;
-    return getPRMT(Op0, Op1, SelectorVal.getZExtValue(), SDLoc(PRMT), DAG);
+    return getPRMT(Op0, Op1, Selector.getZExtValue(), SDLoc(PRMT), DAG);
   }
 
   return SDValue();
