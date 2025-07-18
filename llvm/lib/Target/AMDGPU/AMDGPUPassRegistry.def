@@ -114,6 +114,7 @@ MACHINE_FUNCTION_PASS("amdgpu-rewrite-partial-reg-uses", GCNRewritePartialRegUse
 MACHINE_FUNCTION_PASS("amdgpu-set-wave-priority", AMDGPUSetWavePriorityPass())
 MACHINE_FUNCTION_PASS("amdgpu-pre-ra-optimizations", GCNPreRAOptimizationsPass())
 MACHINE_FUNCTION_PASS("amdgpu-preload-kern-arg-prolog", AMDGPUPreloadKernArgPrologPass())
+MACHINE_FUNCTION_PASS("amdgpu-prepare-agpr-alloc", AMDGPUPrepareAGPRAllocPass())
 MACHINE_FUNCTION_PASS("amdgpu-nsa-reassign", GCNNSAReassignPass())
 MACHINE_FUNCTION_PASS("amdgpu-wait-sgpr-hazards", AMDGPUWaitSGPRHazardsPass())
 MACHINE_FUNCTION_PASS("gcn-create-vopd", GCNCreateVOPDPass())
