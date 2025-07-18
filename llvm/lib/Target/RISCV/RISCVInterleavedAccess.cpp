@@ -173,32 +173,9 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (auto *LI = dyn_cast<LoadInst>(Load)) {
-    assert(LI->isSimple());
-    Ptr = LI->getPointerOperand();
-    Alignment = LI->getAlign();
-    assert(!Mask && "Unexpected mask on a load\n");
-    Mask = Builder.getAllOnesMask(VTy->getElementCount());
-    VL = Builder.CreateElementCount(XLenTy, VTy->getElementCount());
-  } else {
-    auto *VPLoad = cast<VPIntrinsic>(Load);
-    assert(VPLoad->getIntrinsicID() == Intrinsic::vp_load &&
-           "Unexpected intrinsic");
-    Ptr = VPLoad->getMemoryPointerParam();
-    Alignment = VPLoad->getPointerAlignment().value_or(
-        DL.getABITypeAlign(VTy->getElementType()));
-
-    assert(Mask && "vp.load needs a mask!");
-
-    Value *WideEVL = VPLoad->getVectorLengthParam();
-    // Conservatively check if EVL is a multiple of factor, otherwise some
-    // (trailing) elements might be lost after the transformation.
-    if (!isMultipleOfN(WideEVL, DL, Factor))
-      return false;
-
-    auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
-    VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
-  }
+  if (!getMemOperands(Builder, Factor, VTy, DL, XLenTy, Load, Ptr, Mask, VL,
+                      Alignment))
+    return false;
 
   Type *PtrTy = Ptr->getType();
   unsigned AS = PtrTy->getPointerAddressSpace();
