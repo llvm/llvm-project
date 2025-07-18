@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_INDEXEDRANGE_HPP
+#define MATHTEST_INDEXEDRANGE_HPP
 
 #include "mathtest/Numerics.hpp"
 
@@ -89,3 +90,5 @@ private:
   StorageType MappedEnd;
 };
 } // namespace mathtest
+
+#endif // MATHTEST_INDEXEDRANGE_HPP

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_EXHAUSTIVEGENERATOR_HPP
+#define MATHTEST_EXHAUSTIVEGENERATOR_HPP
 
 #include "mathtest/IndexedRange.hpp"
 #include "mathtest/InputGenerator.hpp"
@@ -137,3 +138,5 @@ private:
   std::atomic<uint64_t> FlatIndexGenerator = 0;
 };
 } // namespace mathtest
+
+#endif // MATHTEST_EXHAUSTIVEGENERATOR_HPP

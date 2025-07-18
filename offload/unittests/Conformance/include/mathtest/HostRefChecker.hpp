@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_HOSTREFCHECKER_HPP
+#define MATHTEST_HOSTREFCHECKER_HPP
 
 #include "mathtest/Numerics.hpp"
 #include "mathtest/Support.hpp"
@@ -80,3 +81,5 @@ public:
   }
 };
 } // namespace mathtest
+
+#endif // MATHTEST_HOSTREFCHECKER_HPP

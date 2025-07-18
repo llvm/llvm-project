@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_DEVICECONTEXT_HPP
+#define MATHTEST_DEVICECONTEXT_HPP
 
 #include "mathtest/DeviceResources.hpp"
 #include "mathtest/Dim.hpp"
@@ -33,7 +34,7 @@ class DeviceContext {
   // and enqueued memcpy, as well as device and host memory allocation.
 
 public:
-  // TODO: Add a constructor that also takes a 'Provider'.
+  // TODO: Add a constructor that also takes a 'Platform'.
   explicit DeviceContext(std::size_t DeviceId = 0);
 
   template <typename T>
@@ -119,3 +120,5 @@ private:
   ol_device_handle_t DeviceHandle;
 };
 } // namespace mathtest
+
+#endif // MATHTEST_DEVICECONTEXT_HPP

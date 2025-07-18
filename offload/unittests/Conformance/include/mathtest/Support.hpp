@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_SUPPORT_HPP
+#define MATHTEST_SUPPORT_HPP
 
 #include <cstddef>
 #include <tuple>
@@ -136,3 +137,5 @@ inline constexpr std::size_t
     DefaultBufferSizeFor_v // NOLINT(readability-identifier-naming)
     = DefaultBufferSizeFor<OutType, InTypesTuple>::value;
 } // namespace mathtest
+
+#endif // MATHTEST_SUPPORT_HPP

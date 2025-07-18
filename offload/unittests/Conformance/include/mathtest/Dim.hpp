@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_DIM_HPP
+#define MATHTEST_DIM_HPP
 
 #include <cassert>
 #include <cstddef>
@@ -40,3 +41,5 @@ private:
   uint32_t Data[3];
 };
 } // namespace mathtest
+
+#endif // MATHTEST_DIM_HPP

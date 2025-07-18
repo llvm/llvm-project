@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_ERRORHANDLING_HPP
+#define MATHTEST_ERRORHANDLING_HPP
 
 #include "mathtest/OffloadForward.hpp"
 
@@ -27,3 +28,5 @@ namespace detail {
                                      const char *FuncName);
 } // namespace detail
 } // namespace mathtest
+
+#endif // MATHTEST_ERRORHANDLING_HPP
