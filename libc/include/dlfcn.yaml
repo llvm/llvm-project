@@ -29,6 +29,8 @@ macros:
     standards:
       - gnu
     macro_value: "0x01000"
+types:
+  - type_name: DL_info
 functions:
   - name: dlclose
     standards:
@@ -55,3 +57,10 @@ functions:
     arguments:
       - type: void *__restrict
       - type: const char *__restrict
+  - name: dladdr
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: const void *
+      - type: DL_info *
