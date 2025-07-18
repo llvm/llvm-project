@@ -113,11 +113,14 @@ static cl::list<RuleTy> Profitabilities(
                           "work with other options)")));
 
 #ifndef NDEBUG
-static bool noDuplicateRules(ArrayRef<RuleTy> Rules) {
+static bool noDuplicateRulesAndIgnore(ArrayRef<RuleTy> Rules) {
   SmallSet<RuleTy, 4> Set;
-  for (RuleTy Rule : Rules)
+  for (RuleTy Rule : Rules) {
     if (!Set.insert(Rule).second)
       return false;
+    if (Rule == RuleTy::Ignore)
+      return false;
+  }
   return true;
 }
 
@@ -1291,9 +1294,11 @@ bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
     unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM) {
 
-  // Return true if interchange is forced.
+  // Return true if interchange is forced and the cost-model ignored.
   if (Profitabilities.size() == 1 && Profitabilities[0] == RuleTy::Ignore)
     return true;
+  assert(noDuplicateRulesAndIgnore(Profitabilities) &&
+         "Duplicate rules and option 'ignore' are not allowed");
 
   // isProfitable() is structured to avoid endless loop interchange. If the
   // highest priority rule (isProfitablePerLoopCacheAnalysis by default) could
@@ -1303,7 +1308,6 @@ bool LoopInterchangeProfitability::isProfitable(
   // second highest priority rule (isProfitablePerInstrOrderCost by default).
   // Likewise, if it failed to analysis the profitability then only, the last
   // rule (isProfitableForVectorization by default) will decide.
-  assert(noDuplicateRules(Profitabilities) && "Detect duplicate rules");
   std::optional<bool> shouldInterchange;
   for (RuleTy RT : Profitabilities) {
     switch (RT) {
@@ -1321,9 +1325,7 @@ bool LoopInterchangeProfitability::isProfitable(
           isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
       break;
     case RuleTy::Ignore:
-      LLVM_DEBUG(dbgs() << "Interchange profitability: option 'ignore' has no "
-                           "effect in combination with other options\n";
-                 dbgs() << "To force interchange, only use 'ignore'");
+      // Nothing to do, this has no effect.
       break;
     }
 
