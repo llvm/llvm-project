@@ -36,9 +36,6 @@ static Type getArrayElemType(Attribute attr) {
 
 static std::pair<Attribute, uint32_t>
 getSplatAttrAndNumElements(Attribute valueAttr, Type valueType) {
-  Attribute attr;
-  uint32_t numElements = 1;
-
   auto compositeType = dyn_cast_or_null<spirv::CompositeType>(valueType);
   if (!compositeType)
     return {nullptr, 1};
@@ -49,19 +46,21 @@ getSplatAttrAndNumElements(Attribute valueAttr, Type valueType) {
 
   if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
     if (llvm::all_equal(arrayAttr)) {
-      attr = arrayAttr[0];
-      numElements = arrayAttr.size();
+      Attribute attr = arrayAttr[0];
+      uint32_t numElements = arrayAttr.size();
 
       // Find the inner-most splat value for array of composites
       auto [newAttr, newNumElements] =
           getSplatAttrAndNumElements(attr, getArrayElemType(attr));
       if (newAttr) {
-        return {newAttr, numElements * newNumElements};
+        attr = newAttr;
+        numElements *= newNumElements;
       }
+      return {attr, numElements};
     }
   }
 
-  return {attr, numElements};
+  return {nullptr, 1};
 }
 
 struct ConstantOpConversion final : OpRewritePattern<spirv::ConstantOp> {
