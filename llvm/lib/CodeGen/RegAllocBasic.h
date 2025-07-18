@@ -5,23 +5,20 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file declares the RABasic class, which provides a minimal
-// implementation of the basic register allocator.
-//
+///
+/// \file
+/// This file declares the RABasic class, which provides a minimal
+/// implementation of the basic register allocator.
+///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_REGALLOCBAISC_H_
-#define LLVM_CODEGEN_REGALLOCBAISC_H_
+#ifndef LLVM_CODEGEN_REGALLOCBASIC_H
+#define LLVM_CODEGEN_REGALLOCBASIC_H
 
-#include "AllocationOrder.h"
 #include "RegAllocBase.h"
-#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
-#include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Spiller.h"
-#include "llvm/CodeGen/VirtRegMap.h"
 #include <queue>
 
 namespace llvm {
@@ -104,4 +101,4 @@ public:
   static char ID;
 };
 } // namespace llvm
-#endif // #ifndef LLVM_CODEGEN_REGALLOCBAISC_H_
+#endif
