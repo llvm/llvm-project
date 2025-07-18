@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_DEVICERESOURCES_HPP
+#define MATHTEST_DEVICERESOURCES_HPP
 
 #include "mathtest/OffloadForward.hpp"
 
@@ -127,3 +128,5 @@ private:
   ol_symbol_handle_t Handle = nullptr;
 };
 } // namespace mathtest
+
+#endif // MATHTEST_DEVICERESOURCES_HPP

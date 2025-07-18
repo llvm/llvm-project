@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_NUMERICS_HPP
+#define MATHTEST_NUMERICS_HPP
 
 #include "mathtest/Support.hpp"
 #include "mathtest/TypeExtras.hpp"
@@ -233,3 +234,5 @@ template <typename FloatType>
                                                  : MappedY - MappedX);
 }
 } // namespace mathtest
+
+#endif // MATHTEST_NUMERICS_HPP

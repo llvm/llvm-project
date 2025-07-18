@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_TESTRESULT_HPP
+#define MATHTEST_TESTRESULT_HPP
 
 #include <cstdint>
 #include <optional>
@@ -68,3 +69,5 @@ private:
   std::optional<TestCase> WorstFailingCase;
 };
 } // namespace mathtest
+
+#endif // MATHTEST_TESTRESULT_HPP

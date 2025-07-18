@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_INPUTGENERATOR_HPP
+#define MATHTEST_INPUTGENERATOR_HPP
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -12,3 +13,5 @@ public:
   fill(llvm::MutableArrayRef<InTypes>... Buffers) noexcept = 0;
 };
 } // namespace mathtest
+
+#endif // MATHTEST_INPUTGENERATOR_HPP

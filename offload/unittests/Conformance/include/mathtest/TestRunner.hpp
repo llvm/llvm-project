@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_TESTRUNNER_HPP
+#define MATHTEST_TESTRUNNER_HPP
 
 #include "mathtest/Numerics.hpp"
 
@@ -116,3 +117,5 @@ runTest(const TestType &Test,
   return Result.hasPassed();
 }
 } // namespace mathtest
+
+#endif // MATHTEST_TESTRUNNER_HPP

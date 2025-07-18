@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_GPUMATHTEST_HPP
+#define MATHTEST_GPUMATHTEST_HPP
 
 #include "mathtest/DeviceContext.hpp"
 #include "mathtest/DeviceResources.hpp"
@@ -157,3 +158,5 @@ private:
   DeviceKernel<KernelSignature> Kernel;
 };
 } // namespace mathtest
+
+#endif // MATHTEST_GPUMATHTEST_HPP

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATHTEST_OFFLOADFORWARD_HPP
+#define MATHTEST_OFFLOADFORWARD_HPP
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,3 +21,5 @@ typedef struct ol_symbol_impl_t *ol_symbol_handle_t;
 #ifdef __cplusplus
 }
 #endif // __cplusplus
+
+#endif // MATHTEST_OFFLOADFORWARD_HPP
