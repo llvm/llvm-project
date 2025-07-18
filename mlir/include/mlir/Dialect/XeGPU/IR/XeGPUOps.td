@@ -655,7 +655,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
 }
 
 def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
-  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemRead]>
+  AllElementTypesMatch<["value", "source"]>, MemoryEffects<[MemRead]>
   ]> {
   let summary = "load a set of scattered data points from memory.";
 
@@ -698,7 +698,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
 
   }];
 
-  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
+  let arguments = (ins XeGPU_TensorDesc_or_MemRef: $source,
                        XeGPU_MaskType: $mask,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
@@ -706,8 +706,13 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
   let results = (outs XeGPU_ValueType: $value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
+
+    Type getSourceType() {
+      return getSource().getType();
+    }
+
     xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
+       return dyn_cast<xegpu::TensorDescType>(getSourceType());
     }
 
     mlir::Type getElementType() {
@@ -725,8 +730,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
 
   }];
 
-  let assemblyFormat = [{$TensorDesc `,` $mask prop-dict attr-dict
-      `:` qualified(type($TensorDesc)) `,` type($mask) `->` type($value)}];
+  let assemblyFormat = [{$source `,` $mask prop-dict attr-dict
+      `:` qualified(type($source)) `,` type($mask) `->` type($value)}];
 
   let hasVerifier = 1;
 }
