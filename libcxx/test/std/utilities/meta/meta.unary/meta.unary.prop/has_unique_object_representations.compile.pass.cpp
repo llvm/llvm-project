@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// The Clang version that Android currently uses in the CI is too old.
-// UNSUPPORTED: LIBCXX-ANDROID-FIXME
-
 // type_traits
 
 // has_unique_object_representations
