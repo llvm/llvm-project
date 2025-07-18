@@ -36,6 +36,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
+#include <iostream>
 #include <vector>
 
 namespace llvm {
@@ -2182,6 +2183,10 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
 
   if (const DWARFDebugLine::LineTable *LT =
           ObjFile.Dwarf->getLineTableForUnit(&Unit.getOrigUnit())) {
+    // Search through Prologue
+    StringRef ObjName = ObjFile.FileName;
+    llvm::outs() << "ObjName: " << ObjName << "\n";
+    bool ShouldDebug = ObjName.contains("METAAppGroup.m");
 
     DWARFDebugLine::LineTable LineTable;
 
@@ -2206,6 +2211,18 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
       InputRows.reserve(LT->Rows.size());
       for (size_t i = 0; i < LT->Rows.size(); i++)
         InputRows.emplace_back(TrackedRow{LT->Rows[i], i, false});
+
+      if (ShouldDebug) {
+        llvm::outs() << "DEBUG: InputRows setup:\n";
+        for (size_t i = 0; i < InputRows.size(); i++) {
+          llvm::outs() << "  [" << i << "] OriginalRowIndex: "
+                       << InputRows[i].OriginalRowIndex << ", Address: 0x"
+                       << llvm::format_hex(InputRows[i].Row.Address.Address, 16)
+                       << ", Line: " << InputRows[i].Row.Line
+                       << ", EndSequence: " << InputRows[i].Row.EndSequence
+                       << "\n";
+        }
+      }
 
       // This vector is the output line table (still in TrackedRow form).
       std::vector<TrackedRow> OutputRows;
@@ -2274,6 +2291,20 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           insertLineSequence(Seq, OutputRows);
       }
 
+      if (ShouldDebug) {
+        llvm::outs() << "DEBUG: OutputRows after processing:\n";
+        for (size_t i = 0; i < OutputRows.size(); i++) {
+          llvm::outs() << "  [" << i << "] OriginalRowIndex: "
+                       << OutputRows[i].OriginalRowIndex << ", Address: 0x"
+                       << llvm::format_hex(OutputRows[i].Row.Address.Address,
+                                           16)
+                       << ", Line: " << OutputRows[i].Row.Line
+                       << ", EndSequence: " << OutputRows[i].Row.EndSequence
+                       << ", isStartSeqInOutput: "
+                       << OutputRows[i].isStartSeqInOutput << "\n";
+        }
+      }
+
       // Materialize the tracked rows into final DWARFDebugLine::Row objects.
       LineTable.Rows.clear();
       LineTable.Rows.reserve(OutputRows.size());
@@ -2308,6 +2339,15 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
             LineTableMapping[Seq.StmtSeqOffset] = Seq.FirstRowIndex;
           }
 
+          if (ShouldDebug) {
+            llvm::outs() << "DEBUG: LineTableMapping from parser:\n";
+            for (const auto &Entry : LineTableMapping) {
+              llvm::outs() << "  StmtSeqOffset: 0x"
+                           << llvm::format_hex(Entry.first, 8)
+                           << " -> FirstRowIndex: " << Entry.second << "\n";
+            }
+          }
+
           // Second, manually find sequence boundaries and match them to the
           // sorted attributes to handle sequences the parser might have missed.
           auto StmtAttrs = Unit.getStmtSeqListAttributes();
@@ -2316,11 +2356,26 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
                        return A.get() < B.get();
                      });
 
+          if (ShouldDebug) {
+            llvm::outs() << "DEBUG: Sorted StmtAttrs:\n";
+            for (const auto &Attr : StmtAttrs) {
+              llvm::outs() << "  StmtSeqOffset: 0x"
+                           << llvm::format_hex(Attr.get(), 8) << "\n";
+            }
+          }
+
           std::vector<size_t> SeqStartRows;
           SeqStartRows.push_back(0);
           for (size_t i = 0; i < LT->Rows.size() - 1; ++i)
             if (LT->Rows[i].EndSequence)
               SeqStartRows.push_back(i + 1);
+
+          if (ShouldDebug) {
+            llvm::outs() << "DEBUG: SeqStartRows:\n";
+            for (size_t i = 0; i < SeqStartRows.size(); ++i) {
+              llvm::outs() << "  [" << i << "]: " << SeqStartRows[i] << "\n";
+            }
+          }
 
           // While SeqOffToOrigRow parsed from CU could be the ground truth,
           // e.g.
@@ -2383,6 +2438,12 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
                    SeqStartIdxValidAndSmallerThanNext()) {
               SeqOffToOrigRow[StmtAttrs[StmtAttrIdx].get()] =
                   SeqStartRows[SeqStartIdx];
+              if (ShouldDebug) {
+                llvm::outs()
+                    << "DEBUG: Adding dummy mapping: StmtSeqOffset 0x"
+                    << llvm::format_hex(StmtAttrs[StmtAttrIdx].get(), 8)
+                    << " -> OrigRowIndex " << SeqStartRows[SeqStartIdx] << "\n";
+              }
               ++StmtAttrIdx;
               ++SeqStartIdx;
             }
@@ -2390,14 +2451,59 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
             // LineTableMapping, We move the pointer to re-align with the
             // LineTableMapping
             while (StmtIdxValidAndSmallerThanNext()) {
+              if (ShouldDebug) {
+                llvm::outs()
+                    << "DEBUG: Skipping StmtAttr: 0x"
+                    << llvm::format_hex(StmtAttrs[StmtAttrIdx].get(), 8)
+                    << "\n";
+              }
               ++StmtAttrIdx;
             }
             while (SeqStartIdxValidAndSmallerThanNext()) {
+              if (ShouldDebug) {
+                llvm::outs() << "DEBUG: Skipping SeqStartRow: "
+                             << SeqStartRows[SeqStartIdx] << "\n";
+              }
               ++SeqStartIdx;
             }
             // Use the LineTableMapping's result as the ground truth and move
             // on.
-            SeqOffToOrigRow[NextSeqOff] = NextRow;
+            if (NextSeqOff != DummyKey) {
+              SeqOffToOrigRow[NextSeqOff] = NextRow;
+              if (ShouldDebug) {
+                llvm::outs()
+                    << "DEBUG: Adding ground truth mapping: StmtSeqOffset 0x"
+                    << llvm::format_hex(NextSeqOff, 8) << " -> OrigRowIndex "
+                    << NextRow << "\n";
+              }
+            }
+            // It is possible that the first StmtAttrIdx/SeqStartIdx point to
+            // later entries in LineTableMapping. Therefore we only increment
+            // the pointers after we validate they are pointing to the `Next`
+            // entry. e.g. LineTableMapping SeqOff     Row 0x08        9    <-
+            // NextSeqOff/NextRow 0x14       15
+            //
+            // StmtAttrs  SeqStartRows
+            // 0x14       13    <- StmtAttrIdx/SeqStartIdx
+            // 0x16       15
+            //  --        17
+            if (StmtAttrIdx < StmtAttrs.size() &&
+                StmtAttrs[StmtAttrIdx].get() == NextSeqOff) {
+              ++StmtAttrIdx;
+            }
+            if (SeqStartIdx < SeqStartRows.size() &&
+                SeqStartRows[SeqStartIdx] == NextRow) {
+              ++SeqStartIdx;
+            }
+          }
+        }
+
+        if (ShouldDebug) {
+          llvm::outs() << "DEBUG: Final SeqOffToOrigRow map:\n";
+          for (const auto &Entry : SeqOffToOrigRow) {
+            llvm::outs() << "  StmtSeqOffset: 0x"
+                         << llvm::format_hex(Entry.first, 8)
+                         << " -> OrigRowIndex: " << Entry.second << "\n";
           }
         }
 
@@ -2406,27 +2512,55 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
         for (size_t i = 0; i < OutputRows.size(); ++i)
           OrigRowToNewRow[OutputRows[i].OriginalRowIndex] = i;
 
+        if (ShouldDebug) {
+          llvm::outs() << "DEBUG: OrigRowToNewRow map:\n";
+          for (const auto &Entry : OrigRowToNewRow) {
+            llvm::outs() << "  OrigRowIndex: " << Entry.first
+                         << " -> NewRowIndex: " << Entry.second << "\n";
+          }
+        }
+
         // Patch DW_AT_LLVM_stmt_sequence attributes in the compile unit DIE
         // with the correct offset into the .debug_line section.
         for (const auto &StmtSeq : Unit.getStmtSeqListAttributes()) {
           uint64_t OrigStmtSeq = StmtSeq.get();
+          if (ShouldDebug) {
+            llvm::outs() << "DEBUG: Processing StmtSeq attribute with offset 0x"
+                         << llvm::format_hex(OrigStmtSeq, 8) << "\n";
+          }
+
           // 1. Get the original row index from the stmt list offset.
           auto OrigRowIter = SeqOffToOrigRow.find(OrigStmtSeq);
           // Check whether we have an output sequence for the StmtSeq offset.
           // Some sequences are discarded by the DWARFLinker if they are invalid
           // (empty).
           if (OrigRowIter == SeqOffToOrigRow.end()) {
-            StmtSeq.set(UINT64_MAX);
+            if (ShouldDebug) {
+              llvm::outs() << "DEBUG: StmtSeq 0x"
+                           << llvm::format_hex(OrigStmtSeq, 8)
+                           << " not found in SeqOffToOrigRow, setting to "
+                              "OrigOffsetMissing\n";
+            }
+            StmtSeq.set(OrigOffsetMissing);
             continue;
           }
           size_t OrigRowIndex = OrigRowIter->second;
+          if (ShouldDebug) {
+            llvm::outs() << "DEBUG: Found OrigRowIndex: " << OrigRowIndex
+                         << "\n";
+          }
 
           // 2. Get the new row index from the original row index.
           auto NewRowIter = OrigRowToNewRow.find(OrigRowIndex);
           if (NewRowIter == OrigRowToNewRow.end()) {
             // If the original row index is not found in the map, update the
             // stmt_sequence attribute to the 'invalid offset' magic value.
-            StmtSeq.set(UINT64_MAX);
+            if (ShouldDebug) {
+              llvm::outs() << "DEBUG: OrigRowIndex " << OrigRowIndex
+                           << " not found in OrigRowToNewRow, setting to "
+                              "NewOffsetMissing\n";
+            }
+            StmtSeq.set(NewOffsetMissing);
             continue;
           }
 
@@ -2434,6 +2568,11 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           assert(NewRowIter->second < OutputRowOffsets.size() &&
                  "New row index out of bounds");
           uint64_t NewStmtSeqOffset = OutputRowOffsets[NewRowIter->second];
+          if (ShouldDebug) {
+            llvm::outs() << "DEBUG: Found NewRowIndex: " << NewRowIter->second
+                         << ", setting to new offset 0x"
+                         << llvm::format_hex(NewStmtSeqOffset, 8) << "\n";
+          }
 
           // 4. Patch the stmt_list attribute with the new offset.
           StmtSeq.set(NewStmtSeqOffset);
