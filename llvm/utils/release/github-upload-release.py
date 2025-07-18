@@ -47,24 +47,31 @@ def create_release(repo, release, tag=None, name=None, message=None):
         # do the reflowing for us instead.
         #
         # Once all the atuomatic binary builds have completed, the HTML comments
-        # in the text below will be removed to reveal the download links.
+        # with UPPERCASE markers in them will be removed to reveal the download
+        # links later. Other lines are surrounded in <!-- --> for release uploaders
+        # to manually uncomment when they upload that package.
         message = dedent(
             """\
 ## LLVM {release} Release
 
-<!-- DOWNLOAD_LINKS_BEGIN
-**Linux:**
-* [x86_64](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-X64.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-X64.tar.xz.jsonl))
-* [Arm64](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-ARM64.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-ARM64.tar.xz.jsonl))
+<!-- AUTOMATIC_DOWNLOAD_LINKS_BEGIN
+* [Linux x86_64](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-X64.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-X64.tar.xz.jsonl))
+* [Linux Arm64](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-ARM64.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-ARM64.tar.xz.jsonl))
+AUTOMATIC_DOWNLOAD_LINKS_END -->
+<!-- * [Linux Armv7-a](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-armv7a-linux-gnueabihf.tar.gz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}}/clang+llvm-{release}-armv7a-linux-gnueabihf.tar.gz.sig)) -->
 
-**macOS:**
-* [Apple Silicon](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-ARM64.tar.xz) (ARM64) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-ARM64.tar.xz.jsonl))
-* [Intel](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-X64.tar.xz) (x86-64) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-X64.tar.xz.jsonl))
-DOWNLOAD_LINKS_END -->
+<!-- AUTOMATIC_DOWNLOAD_LINKS_BEGIN
+* [macOS Apple Silicon](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-ARM64.tar.xz) (ARM64) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-ARM64.tar.xz.jsonl))
+* [macOS Intel](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-X64.tar.xz) (x86-64) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-X64.tar.xz.jsonl))
+AUTOMATIC_DOWNLOAD_LINKS_END -->
 
-Download links for Linux and macOS will appear here when all the builds have completed. <!-- DOWNLOAD_LINKS_PLACEHOLDER -->
+<!-- * Windows x64 (64-bit): [installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win64.exe) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win64.exe.sig)), [archive](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz.sig)) -->
+<!-- * Windows x86 (32-bit): [installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win32.exe) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win32.exe.sig)) -->
+<!-- * Windows on Arm (ARM64): [installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-woa64.exe) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-woa64.exe.sig)), [archive](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.sig)) -->
 
-For Windows, and any other variants of platform and architecture, check the full list of release packages at the bottom of this release page.
+Download links will appear here once builds have completed. <!-- AUTOMATIC_DOWNLOAD_LINKS_PLACEHOLDER -->
+
+For any other variants of platform and architecture, check the full list of release packages at the bottom of this release page.
 
 ## Package Types
 
@@ -117,9 +124,9 @@ def uncomment_download_links(repo, release):
 
     new_message = []
     to_remove = [
-        "DOWNLOAD_LINKS_BEGIN",
-        "DOWNLOAD_LINKS_END",
-        "DOWNLOAD_LINKS_PLACEHOLDER",
+        "AUTOMATIC_DOWNLOAD_LINKS_BEGIN",
+        "AUTOMATIC_DOWNLOAD_LINKS_END",
+        "AUTOMATIC_DOWNLOAD_LINKS_PLACEHOLDER",
     ]
     for line in release.body.splitlines():
         for comment in to_remove:
