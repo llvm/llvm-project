@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanTransforms.h"
-#include "LoopVectorizationPlanner.h"
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
@@ -39,6 +38,8 @@
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
+
+extern cl::opt<bool> EnableWideActiveLaneMask;
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlanPtr &Plan,
@@ -1468,60 +1469,80 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
   return SE.isKnownPredicate(CmpInst::ICMP_EQ, VectorTripCount, C);
 }
 
-static void extractFromWideActiveLaneMask(VPlan &Plan, ElementCount VF,
-                                          unsigned UF) {
+static bool useWideActiveLaneMask(VPlan &Plan, ElementCount VF, unsigned UF) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
-  auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
 
+  using namespace llvm::VPlanPatternMatch;
+  if (!EnableWideActiveLaneMask || !VF.isVector() || UF == 1 ||
+      !match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
+                       m_VPValue(), m_VPValue(), m_VPValue())))))
+    return false;
+
+  auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   LLVMContext &Ctx = CanonicalIV->getScalarType()->getContext();
-  using namespace llvm::VPlanPatternMatch;
 
-  auto extractFromALM = [&](VPInstruction *ALM, VPInstruction *InsBefore,
+  auto extractFromALM = [&](VPInstruction *ALM,
                             SmallVectorImpl<VPValue *> &Extracts) {
-    VPBuilder Builder(InsBefore);
     DebugLoc DL = ALM->getDebugLoc();
     for (unsigned Part = 0; Part < UF; ++Part) {
       SmallVector<VPValue *> Ops;
       Ops.append({ALM, Plan.getOrAddLiveIn(
                            ConstantInt::get(IntegerType::getInt64Ty(Ctx),
                                             VF.getKnownMinValue() * Part))});
-      Extracts.push_back(
-          Builder.createNaryOp(VPInstruction::ExtractSubvector, Ops, DL));
+      auto *Ext = new VPWidenIntrinsicRecipe(Intrinsic::vector_extract, Ops,
+                                             IntegerType::getInt1Ty(Ctx), DL);
+      Extracts.push_back(Ext);
+      Ext->insertAfter(ALM);
     }
   };
 
   // Create a list of each active lane mask phi, ordered by unroll part.
   SmallVector<VPActiveLaneMaskPHIRecipe *> Phis(UF, nullptr);
-  for (VPRecipeBase &R : Header->phis())
-    if (auto *Phi = dyn_cast<VPActiveLaneMaskPHIRecipe>(&R))
-      Phis[Phi->getUnrollPart()] = Phi;
+  for (VPRecipeBase &R : Header->phis()) {
+    auto *Phi = dyn_cast<VPActiveLaneMaskPHIRecipe>(&R);
+    if (!Phi)
+      continue;
+    VPValue *Index;
+    match(Phi->getBackedgeValue(),
+          m_ActiveLaneMask(m_VPValue(Index), m_VPValue(), m_VPValue()));
+    if (auto II = dyn_cast<VPInstruction>(Index);
+        II && II->getOpcode() == VPInstruction::CanonicalIVIncrementForPart) {
+      auto Part = cast<ConstantInt>(II->getOperand(1)->getLiveInIRValue());
+      Phis[Part->getZExtValue()] = Phi;
+    } else
+      // Anything other than a CanonicalIVIncrementForPart is part 0
+      Phis[0] = Phi;
+  }
 
   assert(all_of(Phis, [](VPActiveLaneMaskPHIRecipe *Phi) { return Phi; }) &&
          "Expected one VPActiveLaneMaskPHIRecipe for each unroll part");
 
+  auto *EntryALM = dyn_cast<VPInstruction>(Phis[0]->getStartValue());
+  auto *LoopALM = dyn_cast<VPInstruction>(Phis[0]->getBackedgeValue());
+
+  assert((EntryALM->getOpcode() == VPInstruction::ActiveLaneMask &&
+          LoopALM->getOpcode() == VPInstruction::ActiveLaneMask) &&
+         "Expected incoming values of Phi to be ActiveLaneMasks");
+
   // When using wide lane masks, the return type of the get.active.lane.mask
-  // intrinsic is VF x UF (second operand).
+  // intrinsic is VF x UF (last operand).
   VPValue *ALMMultiplier =
       Plan.getOrAddLiveIn(ConstantInt::get(IntegerType::getInt64Ty(Ctx), UF));
-  cast<VPInstruction>(Phis[0]->getStartValue())->setOperand(2, ALMMultiplier);
-  cast<VPInstruction>(Phis[0]->getBackedgeValue())
-      ->setOperand(2, ALMMultiplier);
+  EntryALM->setOperand(2, ALMMultiplier);
+  LoopALM->setOperand(2, ALMMultiplier);
 
   // Create UF x extract vectors and insert into preheader.
   SmallVector<VPValue *> EntryExtracts;
-  auto *EntryALM = cast<VPInstruction>(Phis[0]->getStartValue());
-  extractFromALM(EntryALM, cast<VPInstruction>(&EntryALM->getParent()->back()),
-                 EntryExtracts);
+  extractFromALM(EntryALM, EntryExtracts);
 
   // Create UF x extract vectors and insert before the loop compare & branch,
   // updating the compare to use the first extract.
   SmallVector<VPValue *> LoopExtracts;
-  auto *LoopALM = cast<VPInstruction>(Phis[0]->getBackedgeValue());
+  extractFromALM(LoopALM, LoopExtracts);
   VPInstruction *Not = cast<VPInstruction>(Term->getOperand(0));
-  extractFromALM(LoopALM, Not, LoopExtracts);
   Not->setOperand(0, LoopExtracts[0]);
 
   // Update the incoming values of active lane mask phis.
@@ -1530,30 +1551,22 @@ static void extractFromWideActiveLaneMask(VPlan &Plan, ElementCount VF,
     Phis[Part]->setBackedgeValue(LoopExtracts[Part]);
   }
 
-  return;
+  return true;
 }
 
 /// Try to simplify the branch condition of \p Plan. This may restrict the
 /// resulting plan to \p BestVF and \p BestUF.
-static bool
-simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
-                                  unsigned BestUF,
-                                  PredicatedScalarEvolution &PSE,
-                                  bool DataAndControlFlowWithoutRuntimeCheck) {
+static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
+                                              unsigned BestUF,
+                                              PredicatedScalarEvolution &PSE) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
   VPValue *Cond;
   ScalarEvolution &SE = *PSE.getSE();
-  auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
-  bool BranchALM = match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
-                                   m_VPValue(), m_VPValue(), m_VPValue()))));
-
-  if (BranchALM || match(Term, m_BranchOnCount(m_VPValue(), m_VPValue()))) {
-    if (BranchALM && DataAndControlFlowWithoutRuntimeCheck &&
-        EnableWideActiveLaneMask && BestVF.isVector() && BestUF > 1)
-      extractFromWideActiveLaneMask(Plan, BestVF, BestUF);
-
+  if (match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
+      match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
+                      m_VPValue(), m_VPValue(), m_VPValue()))))) {
     // Try to simplify the branch condition if TC <= VF * UF when the latch
     // terminator is   BranchOnCount or BranchOnCond where the input is
     // Not(ActiveLaneMask).
@@ -1626,15 +1639,14 @@ simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   return true;
 }
 
-void VPlanTransforms::optimizeForVFAndUF(
-    VPlan &Plan, ElementCount BestVF, unsigned BestUF,
-    PredicatedScalarEvolution &PSE,
-    bool DataAndControlFlowWithoutRuntimeCheck) {
+void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
+                                         unsigned BestUF,
+                                         PredicatedScalarEvolution &PSE) {
   assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
 
-  bool MadeChange = simplifyBranchConditionForVFAndUF(
-      Plan, BestVF, BestUF, PSE, DataAndControlFlowWithoutRuntimeCheck);
+  bool MadeChange = useWideActiveLaneMask(Plan, BestVF, BestUF);
+  MadeChange |= simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
 
   if (MadeChange) {

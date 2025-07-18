@@ -168,8 +168,7 @@ struct VPlanTransforms {
   /// resulting plan to \p BestVF and \p BestUF.
   static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                  unsigned BestUF,
-                                 PredicatedScalarEvolution &PSE,
-                                 bool DataAndControlFlowWithoutRuntimeCheck);
+                                 PredicatedScalarEvolution &PSE);
 
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
