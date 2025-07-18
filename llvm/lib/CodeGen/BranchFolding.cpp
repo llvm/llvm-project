@@ -2109,31 +2109,28 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
     MachineBasicBlock::iterator FI = FBB->begin();
     for (MachineBasicBlock::iterator TI :
          make_early_inc_range(make_range(TBB->begin(), TIB))) {
-
-      // Hoist and kill debug instructions from FBB. Skip over pseudo
-      // instructions. After this loop FI points to the next non-debug
-      // instruction to hoist (checked in assert after the TBB debug
-      // instruction handling code).
-      while (FI->isDebugOrPseudoInstr()) {
+      // Hoist and kill debug instructions from FBB. After this loop FI points
+      // to the next non-debug instruction to hoist (checked in assert after the
+      // TBB debug instruction handling code).
+      while (FI->isDebugInstr()) {
         assert(FI != FE && "Unexpected end of FBB range");
         MachineBasicBlock::iterator FINext = std::next(FI);
         HoistAndKillDbgInstr(FI);
         FI = FINext;
       }
 
-      // Move pseudo probes without modifying them.
-      if (TI->isPseudoProbe()) {
-        TI->moveBefore(&*Loc);
-        continue;
-      }
       // Kill debug instructions before moving.
       if (TI->isDebugInstr()) {
         HoistAndKillDbgInstr(TI);
         continue;
       }
 
-      // Get the next non-meta instruction in FBB.
+      // If FI is a debug instruction, skip forward to the next non-debug
+      // instruction.
       FI = skipDebugInstructionsForward(FI, FE, false);
+      // Pseudo probes are excluded from the range when identifying foldable
+      // instructions, so we don't expect to see one now.
+      assert(!TI->isPseudoProbe() && "Unexpected psuedo probe in range");
       // NOTE: The loop above checks CheckKillDead but we can't do that here as
       // it modifies some kill markers after the check.
       assert(TI->isIdenticalTo(*FI, MachineInstr::CheckDefs) &&
