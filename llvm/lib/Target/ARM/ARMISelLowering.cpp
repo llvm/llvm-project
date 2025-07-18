@@ -20065,6 +20065,31 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = KnownOp0.intersectWith(KnownOp1);
     break;
   }
+  case ARMISD::VORRIMM: {
+    KnownBits KnownLHS = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+
+    unsigned Encoded = Op.getConstantOperandVal(1);
+    unsigned ElemSize = Op.getValueType().getScalarSizeInBits();
+    uint64_t DecodedVal = ARM_AM::decodeVMOVModImm(Encoded, ElemSize);
+    APInt Imm(Known.getBitWidth(), DecodedVal);
+
+    Known.One = KnownLHS.One | Imm;
+    Known.Zero = KnownLHS.Zero & ~Imm;
+    return;
+  }
+  case ARMISD::VBICIMM: {
+    KnownBits KnownLHS = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+
+    unsigned Encoded = Op.getConstantOperandVal(1);
+    unsigned ElemSize = Op.getValueType().getScalarSizeInBits();
+    uint64_t DecodedVal = ARM_AM::decodeVMOVModImm(Encoded, ElemSize);
+    APInt Imm(Known.getBitWidth(), DecodedVal);
+
+    APInt NotImm = ~Imm;
+    Known.One = KnownLHS.One & NotImm;
+    Known.Zero = KnownLHS.Zero | Imm;
+    return;
+  }
   }
 }
 
