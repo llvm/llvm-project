@@ -122,7 +122,7 @@ private:
       TODO(loc, "threading length parameters in field index op");
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     componentPath.emplace_back(builder.create<fir::FieldIndexOp>(
-        loc, fldTy, componentName, recTy, /*typeParams*/ std::nullopt));
+        loc, fldTy, componentName, recTy, /*typeParams=*/mlir::ValueRange{}));
     return fir::unwrapSequenceType(recTy.getType(componentName));
   }
 
