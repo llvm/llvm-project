@@ -37,7 +37,7 @@ struct E {
   E(int a) : d{a} {}
 };
 
-struct Storage {
+struct F {
   int x;
 };
 
@@ -67,7 +67,7 @@ int t5() {
 }
 
 int t6() {
-  Storage w{32};
-  return 1 / (w.x - 32); // expected-warning {{Division by zero}}
+  F f{32};
+  return 1 / (f.x - 32); // expected-warning {{Division by zero}}
 }
 }
