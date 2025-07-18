@@ -22,20 +22,39 @@ namespace mlir::spirv {
 
 namespace {
 
+static Type getArrayElemType(Attribute attr) {
+  if (auto typedAttr = dyn_cast<TypedAttr>(attr)) {
+    return typedAttr.getType();
+  }
+
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
+    return ArrayType::get(getArrayElemType(arrayAttr[0]), arrayAttr.size());
+  }
+
+  return nullptr;
+}
+
 static std::pair<Attribute, uint32_t>
-getSplatAttrAndNumElements(Attribute valueAttr) {
+getSplatAttrAndNumElements(Attribute valueAttr, Type valueType) {
   Attribute attr;
-  uint32_t numElements = 0;
+  uint32_t numElements = 1;
+
+  auto compositeType = dyn_cast_or_null<spirv::CompositeType>(valueType);
+  if (!compositeType)
+    return {nullptr, 1};
+
   if (auto splatAttr = dyn_cast<SplatElementsAttr>(valueAttr)) {
     return {splatAttr.getSplatValue<Attribute>(), splatAttr.size()};
   }
+
   if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
     if (llvm::all_equal(arrayAttr)) {
       attr = arrayAttr[0];
       numElements = arrayAttr.size();
 
       // Find the inner-most splat value for array of composites
-      auto [newAttr, newNumElements] = getSplatAttrAndNumElements(attr);
+      auto [newAttr, newNumElements] =
+          getSplatAttrAndNumElements(attr, getArrayElemType(attr));
       if (newAttr) {
         return {newAttr, numElements * newNumElements};
       }
@@ -50,11 +69,8 @@ struct ConstantOpConversion final : OpRewritePattern<spirv::ConstantOp> {
 
   LogicalResult matchAndRewrite(spirv::ConstantOp op,
                                 PatternRewriter &rewriter) const override {
-    auto compositeType = dyn_cast_or_null<spirv::CompositeType>(op.getType());
-    if (!compositeType)
-      return rewriter.notifyMatchFailure(op, "not a composite constant");
-
-    auto [attr, numElements] = getSplatAttrAndNumElements(op.getValue());
+    auto [attr, numElements] =
+        getSplatAttrAndNumElements(op.getValue(), op.getType());
     if (!attr)
       return rewriter.notifyMatchFailure(op, "composite is not splat");
 
