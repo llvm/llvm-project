@@ -14855,6 +14855,7 @@ public:
   }
   static DeclarationName getPrintable(DeclarationName N) { return N; }
   static QualType getPrintable(QualType T) { return T; }
+  static TagTypeKind getPrintable(TagTypeKind T) { return T; }
   static SourceRange getPrintable(SourceRange R) { return R; }
   static SourceRange getPrintable(SourceLocation L) { return L; }
   static SourceRange getPrintable(const Expr *E) { return E->getSourceRange(); }

@@ -6,12 +6,12 @@
 
 // The trivial case.
 class T0; // expected-note {{forward declaration}}
-void f0(T0 *a) { delete a; } // expected-warning {{deleting pointer to incomplete struct 'T0'}}
+void f0(T0 *a) { delete a; } // expected-warning {{deleting pointer to incomplete class 'T0'}}
 class T0 { ~T0(); };
 
 // The trivial case, inside a template instantiation.
 template<typename T>
-struct T1_A { T *x; ~T1_A() { delete x; } }; // expected-warning {{deleting pointer to incomplete struct 'T1_B'}}
+struct T1_A { T *x; ~T1_A() { delete x; } }; // expected-warning {{deleting pointer to incomplete class 'T1_B'}}
 class T1_B; // expected-note {{forward declaration}}
 void f0() { T1_A<T1_B> x; } // expected-note {{in instantiation of member function}}
 

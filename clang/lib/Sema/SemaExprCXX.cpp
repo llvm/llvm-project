@@ -4044,12 +4044,13 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       // FIXME: This can result in errors if the definition was imported from a
       // module but is hidden.
       if (const RecordType *RT = PointeeElem->getAs<RecordType>()) {
-        if (!RequireCompleteType(StartLoc, Pointee,
-                                 LangOpts.CPlusPlus26
-                                     ? diag::err_delete_incomplete
-                                     : diag::warn_delete_incomplete,
-                                 RT->isUnionType(), Ex.get())) {
-          PointeeRD = cast<CXXRecordDecl>(RT->getDecl());
+        PointeeRD = cast<CXXRecordDecl>(RT->getDecl());
+        if (RequireCompleteType(StartLoc, Pointee,
+                                LangOpts.CPlusPlus26
+                                    ? diag::err_delete_incomplete
+                                    : diag::warn_delete_incomplete,
+                                PointeeRD->getTagKind(), Ex.get())) {
+          PointeeRD = nullptr;
         }
       }
     }

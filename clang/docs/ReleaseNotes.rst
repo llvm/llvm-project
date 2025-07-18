@@ -977,6 +977,7 @@ Bug Fixes to C++ Support
   non-empty initializer list. (#GH147949)
 - Fixed constant evaluation of equality comparisons of constexpr-unknown references. (#GH147663)
 - Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
+- Clang no longer rejects deleting a pointer of incomplete array type. (#GH149406)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
