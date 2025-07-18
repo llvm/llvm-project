@@ -14,11 +14,6 @@
 #define LLVM_CLANG_AST_INTERP_BLOCK_H
 
 #include "Descriptor.h"
-#include "clang/AST/ComparisonCategories.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/Expr.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
