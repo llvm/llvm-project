@@ -36,7 +36,6 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
-#include <iostream>
 #include <vector>
 
 namespace llvm {
@@ -2360,16 +2359,6 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           LineTableMapping[DummyKey] = DummyVal;
           SmallVector<uint64_t> SortedLineTableKeys(LineTableMapping.keys());
           llvm::sort(SortedLineTableKeys);
-          for (auto Key : SortedLineTableKeys) {
-            std::cout << std::hex << Key << " " << LineTableMapping[Key]
-                      << "\n";
-          }
-          for (auto StmtAttr : StmtAttrs) {
-            std::cout << std::hex << StmtAttr.get() << "\n";
-          }
-          for (auto Row : SeqStartRows) {
-            std::cout << std::hex << Row << "\n";
-          }
 
           size_t StmtAttrIdx = 0, SeqStartIdx = 0;
           size_t NextSeqOff = 0;
@@ -2410,22 +2399,6 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
             // on.
             SeqOffToOrigRow[NextSeqOff] = NextRow;
           }
-          // size_t i = 0, j = 0;
-          // while (i < StmtAttrs.size() && j < SeqStartRows.size()) {
-          //   auto It = SeqOffToOrigRow.find(StmtAttrs[i].get());
-          //   // The match is not set, use current result.
-          //   if (It == SeqOffToOrigRow.end()) {
-          //     SeqOffToOrigRow.try_emplace(StmtAttrs[i].get(),
-          //     SeqStartRows[j]);
-          //   } else {
-          //     while (It->second != SeqStartRows[j] && j <
-          //     SeqStartRows.size()) {
-          //       ++j;
-          //     }
-          //   }
-          //   ++i;
-          //   ++j;
-          // }
         }
 
         // Create a map of original row indices to new row indices.
