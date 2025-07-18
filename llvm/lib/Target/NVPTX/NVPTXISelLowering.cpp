@@ -5772,7 +5772,8 @@ static SDValue PerformVSELECTCombine(SDNode *N,
 }
 
 static SDValue
-PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+PerformBUILD_VECTOROfV2i16Combine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI) {
   auto VT = N->getValueType(0);
   if (!DCI.isAfterLegalizeDAG() ||
       // only process v2*16 types
@@ -5831,6 +5832,80 @@ PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
       getPRMT(DAG.getBitcast(MVT::i32, Op0), DAG.getBitcast(MVT::i32, Op1),
               (Op1Bytes << 8) | Op0Bytes, DL, DAG);
   return DAG.getBitcast(VT, PRMT);
+}
+
+static SDValue
+PerformBUILD_VECTOROfTargetLoadCombine(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI) {
+  // Match: BUILD_VECTOR of v4i8, where first two elements are from a
+  // NVPTXISD::LoadV2 or NVPTXISD::LDUV2 of i8, and the last two elements are
+  // zero constants. Replace with: zext the loaded i16 to i32, and return as a
+  // bitcast to v4i8.
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v4i8)
+    return SDValue();
+  // Check operands: [0]=lo, [1]=hi
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  // Check that Op0 and Op1 are from the same NVPTXISD::LoadV2 or
+  // NVPTXISD::LDUV2
+  if (Op0.getNode() != Op1.getNode())
+    return SDValue();
+  if (!(Op0.getOpcode() == NVPTXISD::LoadV2 ||
+        Op0.getOpcode() == NVPTXISD::LDUV2))
+    return SDValue();
+  if (Op0.getValueType() != MVT::i16)
+    return SDValue();
+  if (!(Op0.hasOneUse() && Op1.hasOneUse()))
+    return SDValue();
+
+  // Check operands: [2]= 0 or undef, [3]= 0 or undef
+  SDValue Op2 = N->getOperand(2);
+  SDValue Op3 = N->getOperand(3);
+  if (Op2 != Op3)
+    return SDValue();
+  if (!Op2.isUndef()) {
+    auto *C2 = dyn_cast<ConstantSDNode>(Op2);
+    if (!(C2 && C2->isZero()))
+      return SDValue();
+  }
+
+  // Now, replace with: zext(load i16) -> i32, then bitcast to v4i8
+  auto &DAG = DCI.DAG;
+  // Rebuild the load as i16
+  auto *Load = cast<MemSDNode>(Op0.getNode());
+  SDLoc DL(Load);
+  SDValue LoadI16;
+  if (Load->getOpcode() == NVPTXISD::LoadV2) {
+    LoadI16 = DAG.getLoad(MVT::i16, DL, Load->getChain(), Load->getBasePtr(),
+                          Load->getPointerInfo(), Load->getAlign(),
+                          Load->getMemOperand()->getFlags());
+  } else {
+    assert(Load->getOpcode() == NVPTXISD::LDUV2);
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    SmallVector<SDValue, 4> Ops;
+    Ops.push_back(Load->getChain());
+    Ops.push_back(DAG.getConstant(Intrinsic::nvvm_ldu_global_i, DL,
+                                  TLI.getPointerTy(DAG.getDataLayout())));
+    for (unsigned i = 1; i < Load->getNumOperands(); ++i)
+      Ops.push_back(Load->getOperand(i));
+    SDVTList NodeVTList = DAG.getVTList(MVT::i16, MVT::Other);
+    LoadI16 = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, NodeVTList,
+                                      Ops, MVT::i16, Load->getPointerInfo(),
+                                      Load->getAlign());
+  }
+  DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 2), LoadI16.getValue(1));
+  SDValue Zext = DAG.getZExtOrTrunc(LoadI16, DL, MVT::i32);
+  return DAG.getBitcast(MVT::v4i8, Zext);
+}
+
+static SDValue
+PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  if (const auto V = PerformBUILD_VECTOROfV2i16Combine(N, DCI))
+    return V;
+  if (const auto V = PerformBUILD_VECTOROfTargetLoadCombine(N, DCI))
+    return V;
+  return SDValue();
 }
 
 static SDValue combineADDRSPACECAST(SDNode *N,

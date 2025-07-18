@@ -8,18 +8,13 @@ target triple = "nvptx64-nvidia-cuda"
 define void @t1() {
 ; CHECK-LABEL: t1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    mov.b64 %rd1, 0;
-; CHECK-NEXT:    ld.global.v2.b8 {%rs1, %rs2}, [%rd1];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r2, %rs1;
-; CHECK-NEXT:    prmt.b32 %r3, %r2, %r1, 0x3340U;
-; CHECK-NEXT:    prmt.b32 %r4, %r3, 0, 0x5410U;
-; CHECK-NEXT:    st.global.v4.b32 [%rd1], {%r4, 0, 0, 0};
+; CHECK-NEXT:    ld.global.b16 %r1, [%rd1];
+; CHECK-NEXT:    st.global.v4.b32 [%rd1], {%r1, 0, 0, 0};
 ; CHECK-NEXT:    ret;
 entry:
   %0 = load <2 x i8>, ptr addrspace(1) null, align 4
@@ -33,18 +28,13 @@ entry:
 define void @t2() {
 ; CHECK-LABEL: t2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    mov.b64 %rd1, 0;
-; CHECK-NEXT:    ld.global.v2.b8 {%rs1, %rs2}, [%rd1];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r2, %rs1;
-; CHECK-NEXT:    prmt.b32 %r3, %r2, %r1, 0x3340U;
-; CHECK-NEXT:    prmt.b32 %r4, %r3, 0, 0x5410U;
-; CHECK-NEXT:    st.local.b32 [%rd1], %r4;
+; CHECK-NEXT:    ld.global.b16 %r1, [%rd1];
+; CHECK-NEXT:    st.local.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %0 = load <2 x i8>, ptr addrspace(1) null, align 8
@@ -58,19 +48,14 @@ declare <2 x i8> @llvm.nvvm.ldg.global.i.v2i8.p1(ptr addrspace(1) %ptr, i32 %ali
 define void @ldg(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: ldg(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b64 %rd1, [ldg_param_0];
-; CHECK-NEXT:    ld.global.v2.b8 {%rs1, %rs2}, [%rd1];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r2, %rs1;
-; CHECK-NEXT:    prmt.b32 %r3, %r2, %r1, 0x3340U;
-; CHECK-NEXT:    prmt.b32 %r4, %r3, 0, 0x5410U;
+; CHECK-NEXT:    ld.global.b16 %r1, [%rd1];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
-; CHECK-NEXT:    st.local.b32 [%rd2], %r4;
+; CHECK-NEXT:    st.local.b32 [%rd2], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %0 = tail call <2 x i8> @llvm.nvvm.ldg.global.i.v2i8.p1(ptr addrspace(1) %ptr, i32 2)
@@ -84,19 +69,16 @@ declare <2 x i8> @llvm.nvvm.ldu.global.f.v2i8.p1(ptr addrspace(1) %ptr, i32 %ali
 define void @ldu(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: ldu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b64 %rd1, [ldu_param_0];
-; CHECK-NEXT:    ldu.global.v2.b8 {%rs1, %rs2}, [%rd1];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r2, %rs1;
-; CHECK-NEXT:    prmt.b32 %r3, %r2, %r1, 0x3340U;
-; CHECK-NEXT:    prmt.b32 %r4, %r3, 0, 0x5410U;
+; CHECK-NEXT:    ldu.global.b16 %rs1, [%rd1];
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
-; CHECK-NEXT:    st.local.b32 [%rd2], %r4;
+; CHECK-NEXT:    st.local.b32 [%rd2], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %0 = tail call <2 x i8> @llvm.nvvm.ldu.global.i.v2i8.p1(ptr addrspace(1) %ptr, i32 2)
@@ -108,18 +90,13 @@ entry:
 define void @t3() {
 ; CHECK-LABEL: t3(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %rd1, 0;
-; CHECK-NEXT:    ld.global.v2.b8 {%rs1, %rs2}, [%rd1];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r2, %rs1;
-; CHECK-NEXT:    prmt.b32 %r3, %r2, %r1, 0x3340U;
-; CHECK-NEXT:    prmt.b32 %r4, %r3, 0, 0x5410U;
-; CHECK-NEXT:    st.global.v2.b32 [%rd1], {%r4, 0};
+; CHECK-NEXT:    ld.global.b16 %r1, [%rd1];
+; CHECK-NEXT:    st.global.v2.b32 [%rd1], {%r1, 0};
 ; CHECK-NEXT:    ret;
   %1 = load <2 x i8>, ptr addrspace(1) null, align 2
   %insval2 = bitcast <2 x i8> %1 to i16
