@@ -566,7 +566,10 @@ bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
-  if (!Ptr.isConst() || Ptr.isMutable())
+  if (!Ptr.isConst())
+    return true;
+
+  if (Ptr.isMutable() && !Ptr.isConstInMutable())
     return true;
 
   if (!Ptr.isBlockPointer())
@@ -574,7 +577,7 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // The This pointer is writable in constructors and destructors,
   // even if isConst() returns true.
-  if (llvm::find(S.InitializingBlocks, Ptr.block()))
+  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
     return true;
 
   const QualType Ty = Ptr.getType();
@@ -815,7 +818,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return true;
 }
 
-bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
     return false;
   if (!Ptr.isDummy()) {
@@ -937,7 +940,7 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   return false;
 }
 
-bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
+static bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
   if ((S.Current->getDepth() + 1) > S.getLangOpts().ConstexprCallDepth) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_depth_limit_exceeded)
@@ -1092,8 +1095,8 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
-                      const CallExpr *CE, unsigned ArgSize) {
+static bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
+                             const CallExpr *CE, unsigned ArgSize) {
   auto Args = ArrayRef(CE->getArgs(), CE->getNumArgs());
   auto NonNullArgs = collectNonNullArgs(F->getDecl(), Args);
   unsigned Offset = 0;

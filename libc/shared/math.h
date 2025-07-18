@@ -12,6 +12,8 @@
 #include "libc_common.h"
 
 #include "math/exp.h"
+#include "math/exp10.h"
+#include "math/exp10f.h"
 #include "math/expf.h"
 #include "math/expf16.h"
 #include "math/frexpf.h"
