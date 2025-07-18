@@ -1,6 +1,7 @@
-## Test for FileHeader Flags
-## When FLAGS variable isn't defined, the e_flags value is 0,
-## Otherwise it's the specified value
+## Test for FileHeader Flags.
+
+## When FLAGS variable isn't defined, the e_flags value is 0.
+## Otherwise, it's the specified value.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=NO-FLAG
