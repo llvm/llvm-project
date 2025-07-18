@@ -5173,7 +5173,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
         // Use VarDecl's Tag, Scope and Line number.
         auto FieldAlign = getDeclAlignIfRequired(Field, CGM.getContext());
         auto *D = DBuilder.createAutoVariable(
-            Scope, FieldName, Unit, Line, FieldTy, CGM.getCodeGenOpts().OptimizationLevel != 0,
+            Scope, FieldName, Unit, Line, FieldTy,
+            CGM.getCodeGenOpts().OptimizationLevel != 0,
             Flags | llvm::DINode::FlagArtificial, MS, FieldAlign);
 
         // Insert an llvm.dbg.declare into the current block.
@@ -5199,9 +5200,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   llvm::DILocalVariable *D = nullptr;
   if (ArgNo) {
     llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
-    D = DBuilder.createParameterVariable(Scope, Name, *ArgNo, Unit, Line, Ty,
-                                         CGM.getCodeGenOpts().OptimizationLevel != 0, Flags, MS,
-                                         Annotations);
+    D = DBuilder.createParameterVariable(
+        Scope, Name, *ArgNo, Unit, Line, Ty,
+        CGM.getCodeGenOpts().OptimizationLevel != 0, Flags, MS, Annotations);
   } else {
     // For normal local variable, we will try to find out whether 'VD' is the
     // copy parameter of coroutine.
@@ -5242,9 +5243,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
     D = RemapCoroArgToLocalVar();
     // Or we will create a new DIVariable for this Decl if D dose not exists.
     if (!D)
-      D = DBuilder.createAutoVariable(Scope, Name, Unit, Line, Ty,
-                                      CGM.getCodeGenOpts().OptimizationLevel != 0, Flags, MS,
-                                      Align);
+      D = DBuilder.createAutoVariable(
+          Scope, Name, Unit, Line, Ty,
+          CGM.getCodeGenOpts().OptimizationLevel != 0, Flags, MS, Align);
   }
   // Insert an llvm.dbg.declare into the current block.
   DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(Expr),
