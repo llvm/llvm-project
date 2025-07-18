@@ -182,14 +182,14 @@ void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
 // could satisfy alignment by removing Nops.
 // The function returns the total Nops Size we need to insert.
 bool LoongArchAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
-    const MCAlignFragment &AF, unsigned &Size) {
+    const MCFragment &AF, unsigned &Size) {
   // Calculate Nops Size only when linker relaxation enabled.
   if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
     return false;
 
   // Ignore alignment if MaxBytesToEmit is less than the minimum Nop size.
   const unsigned MinNopLen = 4;
-  if (AF.getMaxBytesToEmit() < MinNopLen)
+  if (AF.getAlignMaxBytesToEmit() < MinNopLen)
     return false;
   Size = AF.getAlignment().value() - MinNopLen;
   return AF.getAlignment() > MinNopLen;
@@ -205,7 +205,7 @@ bool LoongArchAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
 // maximum number of bytes to emit. The maximum number of bytes is zero
 // means ignore the emit limit.
 bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                                        MCAlignFragment &AF) {
+                                                        MCFragment &AF) {
   // Insert the fixup only when linker relaxation enabled.
   if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
     return false;
@@ -219,8 +219,8 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
   MCSection *Sec = AF.getParent();
   MCContext &Ctx = getContext();
   const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
-  MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_LARCH_ALIGN);
-  unsigned MaxBytesToEmit = AF.getMaxBytesToEmit();
+  MCFixup Fixup = MCFixup::create(AF.getFixedSize(), Dummy, ELF::R_LARCH_ALIGN);
+  unsigned MaxBytesToEmit = AF.getAlignMaxBytesToEmit();
 
   auto createExtendedValue = [&]() {
     const MCSymbolRefExpr *MCSym = getSecToAlignSym()[Sec];
@@ -434,7 +434,7 @@ bool LoongArchAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
 
   // Otherwise, check if the offset between the symbol and fragment is fully
   // resolved, unaffected by linker-relaxable fragments (e.g. instructions or
-  // offset-affected MCAlignFragment). Complements the generic
+  // offset-affected FT_Align fragments). Complements the generic
   // isSymbolRefDifferenceFullyResolvedImpl.
   if (!PCRelTemp)
     PCRelTemp = getContext().createTempSymbol();
