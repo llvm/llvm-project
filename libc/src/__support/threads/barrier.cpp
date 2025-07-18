@@ -9,6 +9,7 @@
 #include "src/__support/threads/barrier.h"
 #include "barrier.h"
 #include "hdr/errno_macros.h"
+#include "src/__support/threads/CndVar.h"
 #include "src/__support/threads/mutex.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -16,7 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 const int BARRIER_FIRST_EXITED = -1;
 
 int Barrier::init(Barrier *b,
-                  const pthread_barrierattr_t *attr __attribute__((unused)),
+                  [[maybe_unused]] const pthread_barrierattr_t *attr,
                   unsigned count) {
   LIBC_ASSERT(attr == nullptr); // TODO implement barrierattr
   if (count == 0)
@@ -48,21 +49,21 @@ int Barrier::wait() {
   }
   waiting++;
 
-  if (waiting == expected) {
-    // this is the last thread to call wait(), so lets wake everyone up
-    blocking = false;
-    exiting.broadcast();
-  } else {
+  if (waiting < expected) {
     // block threads until waiting = expected
     while (blocking) {
       exiting.wait(&m);
     }
+  } else {
+    // this is the last thread to call wait(), so lets wake everyone up
+    blocking = false;
+    exiting.broadcast();
   }
   waiting--;
 
-  // all threads have exited the barrier, lets let the ones waiting to enter
-  // continue
   if (waiting == 0) {
+    // all threads have exited the barrier, let's let the ones waiting to enter
+    // continue
     blocking = true;
     entering.broadcast();
     m.unlock();

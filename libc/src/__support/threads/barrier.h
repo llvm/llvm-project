@@ -39,6 +39,15 @@ public:
   int wait();
 };
 
+static_assert(
+    sizeof(Barrier) <= sizeof(pthread_barrier_t),
+    "The public pthread_barrier_t type cannot accommodate the internal "
+    "barrier type.");
+
+static_assert(alignof(Barrier) == alignof(pthread_barrier_t),
+              "The public pthread_barrier_t type has a different alignment "
+              "than the internal barrier type.");
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC___SUPPORT_SRC_THREADS_LINUX_BARRIER_H

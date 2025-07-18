@@ -16,11 +16,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static_assert(
-    sizeof(Barrier) <= sizeof(pthread_barrier_t),
-    "The public pthread_barrier_t type cannot accommodate the internal "
-    "barrier type.");
-
 LLVM_LIBC_FUNCTION(int, pthread_barrier_init,
                    (pthread_barrier_t * b,
                     const pthread_barrierattr_t *__restrict attr,
