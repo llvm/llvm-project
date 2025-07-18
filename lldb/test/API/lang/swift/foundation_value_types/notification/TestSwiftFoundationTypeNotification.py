@@ -4,6 +4,8 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipUnlessDarwin
+@skipIf(bugnumber='rdar://156138054')  # fails sometimes in swift PR testing
 class TestSwiftFoundationTypeNotification(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
