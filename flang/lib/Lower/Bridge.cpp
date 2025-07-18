@@ -4703,8 +4703,10 @@ private:
       mlir::Value lhs = lhsMutableBox.getAddr();
       mlir::Value rhs = fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
       mlir::Value boundsDesc = createBoundArray(lbounds, ubounds, loc);
-      Fortran::lower::genPointerAssociateRemapping(*builder, loc, lhs, rhs,
-                                                   boundsDesc);
+      Fortran::lower::genPointerAssociateRemapping(
+          *builder, loc, lhs, rhs, boundsDesc,
+          lhsType && rhsType && !lhsType->IsPolymorphic() &&
+              rhsType->IsPolymorphic());
       return;
     }
     if (!lowerToHighLevelFIR() && explicitIterationSpace()) {
