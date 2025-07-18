@@ -15,6 +15,10 @@ geometric/clc_normalize.cl
 integer/clc_abs.cl
 integer/clc_abs_diff.cl
 integer/clc_add_sat.cl
+integer/clc_bitfield_extract_signed.cl
+integer/clc_bitfield_extract_unsigned.cl
+integer/clc_bitfield_insert.cl
+integer/clc_bit_reverse.cl
 integer/clc_clz.cl
 integer/clc_ctz.cl
 integer/clc_hadd.cl
