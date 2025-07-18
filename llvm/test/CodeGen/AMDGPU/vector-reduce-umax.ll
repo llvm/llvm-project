@@ -1718,7 +1718,7 @@ define i16 @test_vector_reduce_umax_v3i16(<3 x i16> %v) {
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_umax_v3i16:
 ; GFX11-SDAG-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_max_u16 v0, v0, v1
 ; GFX11-SDAG-TRUE16-NEXT:    v_max_u16 v0.l, v0.l, v0.h
@@ -1751,7 +1751,7 @@ define i16 @test_vector_reduce_umax_v3i16(<3 x i16> %v) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_max_u16 v0, v0, v1
 ; GFX12-SDAG-TRUE16-NEXT:    v_max_u16 v0.l, v0.l, v0.h
