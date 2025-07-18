@@ -296,12 +296,9 @@ static Expected<bool> hasObjCCategoryInModule(BitstreamCursor &Stream) {
 
       // Check for the i386 and other (x86_64, ARM) conventions
 
-      SmallVector<StringRef, 2> SplitName;
-      StringRef(S).split(SplitName, ',');
-      if (SplitName.size() < 2)
-        break;
-      StringRef Segment = SplitName[0].trim();
-      StringRef Section = SplitName[1].trim();
+      auto [Segment, Section] = StringRef(S).split(",");
+      Segment = Segment.trim();
+      Section = Section.trim();
 
       if (Segment == "__DATA" && Section.starts_with("__objc_catlist"))
         return true;
