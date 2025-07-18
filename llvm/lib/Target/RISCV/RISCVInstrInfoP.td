@@ -19,7 +19,6 @@
 //===----------------------------------------------------------------------===//
 
 def simm10 : RISCVSImmLeafOp<10>;
-
 def SImm10UnsignedAsmOperand : SImmAsmOperand<10, "Unsigned"> {
   let RenderMethod = "addSImm10UnsignedOperands";
 }
@@ -98,6 +97,15 @@ class RVPShift_ri<bits<3> f, bits<3> funct3, string opcodestr, Operand ImmType>
   let Inst{27}    = 0b0;
 }
 
+// N for non-packed RV64 instructions.
+class RVPShiftN_ri<bits<3> f, bits<3> funct3, string opcodestr>
+    : RVPShift_ri<f, funct3, opcodestr, uimm6> {
+  bits<6> shamt;
+
+  let Inst{26} = 0b1;
+  let Inst{25-20} = shamt;
+}
+
 class RVPShiftW_ri<bits<3> f, bits<3> funct3, string opcodestr>
     : RVPShift_ri<f, funct3, opcodestr, uimm5> {
   bits<5> shamt;
@@ -130,6 +138,38 @@ class RVPUnary_ri<bits<2> w, bits<5> uf, string opcodestr>
   let Inst{26-25} = w;
   let Inst{24-20} = uf;
 }
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPBinaryScalar<bit bfr, bits<3> f, bit aft, bits<2> w, bits<3> funct3,
+                  string opcodestr, RISCVOpcode Opcode = OPC_OP_32,
+                  dag outs = (outs GPR:$rd), dag ins = (ins GPR:$rs1, GPR:$rs2),
+                  string argstr = "$rd, $rs1, $rs2">
+    : RVInstRBase<funct3, Opcode, outs, ins, opcodestr, argstr>  {
+  let Inst{31}    = bfr;
+  let Inst{30-28} = f;
+  let Inst{27}    = aft;
+  let Inst{26-25} = w;
+}
+
+class RVPBinaryScalar_rr<bits<3> f, bits<2> w, bits<3> funct3, string opcodestr,
+                    RISCVOpcode Opcode = OPC_OP_IMM_32>
+    : RVPBinaryScalar<1, f, 1, w, funct3, opcodestr, Opcode>;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPShiftScalar_rri<bit bfr, bits<3> f, bit aft, DAGOperand TyWUImm, string opcodestr,
+                bits<3> funct3>
+    : RVInstIBase<funct3, OPC_OP_IMM_32, (outs GPR:$rd),
+     (ins GPR:$rs1, TyWUImm:$wuimm), opcodestr, "$rd, $rs1, $wuimm">  {
+  bits<7>  wuimm;
+
+  let Inst{31}    = bfr;
+  let Inst{30-28} = f;
+  let Inst{27}    = aft;
+  let Inst{26-20} = wuimm;
+}
+
+class RVPUnary1F0<bits<3> f, DAGOperand TyWUImm, string opcodestr>
+    : RVPShiftScalar_rri<1, f, 0, TyWUImm, opcodestr, 0b100>;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -184,3 +224,50 @@ let Predicates = [HasStdExtP] in
 def PLUI_H : PLUI_i<0b1111000, "plui.h">;
 let Predicates = [HasStdExtP, IsRV64] in
 def PLUI_W : PLUI_i<0b1111001, "plui.w">;
+
+let Predicates = [HasStdExtP] in {
+def PSLL_HS   : RVPBinaryScalar_rr<0b000, 0b00, 0b010, "psll.hs">;
+def PSLL_BS   : RVPBinaryScalar_rr<0b000, 0b10, 0b010, "psll.bs">;
+def PADD_HS   : RVPBinaryScalar_rr<0b001, 0b00, 0b010, "padd.hs">;
+def PADD_BS   : RVPBinaryScalar_rr<0b001, 0b10, 0b010, "padd.bs">;
+def PSSHA_HS  : RVPBinaryScalar_rr<0b110, 0b00, 0b010, "pssha.hs">;
+def PSSHAR_HS : RVPBinaryScalar_rr<0b111, 0b00, 0b010, "psshar.hs">;
+} // Predicates = [HasStdExtP]
+let DecoderNamespace = "RV32Only",
+    Predicates = [HasStdExtP, IsRV32] in {
+def SSHA        : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "ssha">;
+def SSHAR       : RVPBinaryScalar_rr<0b111, 0b01, 0b010, "sshar">;
+} // Predicates = [HasStdExtP, IsRV32]
+
+let Predicates = [HasStdExtP, IsRV64] in {
+def PSLL_WS     : RVPBinaryScalar_rr<0b000, 0b01, 0b010, "psll.ws">;
+def PADD_WS     : RVPBinaryScalar_rr<0b001, 0b01, 0b010, "padd.ws">;
+def PSSHA_WS    : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "pssha.ws">;
+def PSSHAR_WS   : RVPBinaryScalar_rr<0b111, 0b01, 0b010, "psshar.ws">;
+def SHA         : RVPBinaryScalar_rr<0b110, 0b11, 0b010, "sha">;
+def SHAR        : RVPBinaryScalar_rr<0b111, 0b11, 0b010, "shar">;
+} // Predicates = [HasStdExtP, IsRV64]
+
+let Predicates = [HasStdExtP] in {
+def PSRLI_B    : RVPShiftB_ri<0b000, 0b100, "psrli.b">;
+def PSRLI_H    : RVPShiftH_ri<0b000, 0b100, "psrli.h">;
+def PUSATI_H   : RVPShiftH_ri<0b010, 0b100, "pusati.h">;
+def PSRAI_B    : RVPShiftB_ri<0b100, 0b100, "psrai.b">;
+def PSRAI_H    : RVPShiftH_ri<0b100, 0b100, "psrai.h">;
+def PSRARI_H   : RVPShiftH_ri<0b101, 0b100, "psrari.h">;
+def PSATI_H    : RVPShiftH_ri<0b110, 0b100, "psati.h">;
+} // Predicates = [HasStdExtP]
+
+let DecoderNamespace = "RV32Only",
+    Predicates = [HasStdExtP, IsRV32] in {
+def USATI_RV32 : RVPShiftW_ri<0b010, 0b100, "usati">;
+def SRARI_RV32 : RVPShiftW_ri<0b101, 0b100, "srari">;
+def SATI_RV32  : RVPShiftW_ri<0b110, 0b100, "sati">;
+} // Predicates = [HasStdExtP, IsRV32]
+let Predicates = [HasStdExtP, IsRV64] in {
+def PSRLI_W    : RVPShiftW_ri<0b000, 0b100, "psrli.w">;
+def PUSATI_W   : RVPShiftW_ri<0b010, 0b100, "pusati.w">;
+def USATI_RV64 : RVPShiftN_ri<0b010, 0b100, "usati">;
+def SRARI_RV64 : RVPShiftN_ri<0b101, 0b100, "srari">;
+def SATI_RV64  : RVPShiftN_ri<0b110, 0b100, "sati">;
+} // Predicates = [HasStdExtP, IsRV64]
