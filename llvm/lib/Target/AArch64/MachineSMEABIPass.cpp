@@ -549,10 +549,12 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
 
   // 1. Allocate the lazy save buffer.
   if (Buffer == AArch64::NoRegister) {
-    // TODO This function grows the stack with a subtraction, which doesn't work
-    // on Windows. Some refactoring to share the functionality in
-    // LowerWindowsDYNAMIC_STACKALLOC will be required once the Windows ABI
-    // supports SME
+    // TODO: On Windows, we allocate the lazy save buffer in SelectionDAG (so
+    // Buffer != AArch64::NoRegister). This is done to reuse the existing
+    // expansions (which can insert stack checks). This works, but it means we
+    // will always allocate the lazy save buffer (even if the function contains
+    // no lazy saves). If we want to handle Windows here, we'll need to
+    // implement something similar to LowerWindowsDYNAMIC_STACKALLOC.
     assert(!Subtarget->isTargetWindows() &&
            "Lazy ZA save is not yet supported on Windows");
     Buffer = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
