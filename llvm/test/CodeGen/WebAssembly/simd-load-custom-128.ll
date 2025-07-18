@@ -6,10 +6,8 @@ define void @i128_to_v128(ptr %ptr) {
 ; CHECK-LABEL: i128_to_v128:
 ; CHECK:         .functype i128_to_v128 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i64.load $push0=, 0($0)
-; CHECK-NEXT:    i64.store 0($0), $pop0
-; CHECK-NEXT:    i64.load $push1=, 8($0)
-; CHECK-NEXT:    i64.store 8($0), $pop1
+; CHECK-NEXT:    v128.load $push0=, 0($0)
+; CHECK-NEXT:    v128.store 0($0), $pop0
 ; CHECK-NEXT:    return
     %2 = load i128, ptr %ptr
     store volatile i128 %2, ptr %ptr
