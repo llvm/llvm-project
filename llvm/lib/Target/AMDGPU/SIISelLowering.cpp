@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -46,6 +47,7 @@
 #include <optional>
 
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 #define DEBUG_TYPE "si-lower"
 
@@ -14561,7 +14563,7 @@ static SDValue tryFoldMADwithSRL(SelectionDAG &DAG, const SDLoc &SL,
 // instead of a tree.
 SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
-  assert(N->getOpcode() == ISD::ADD);
+  assert(N->isAnyAdd());
 
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
@@ -14594,7 +14596,7 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
     for (SDNode *User : LHS->users()) {
       // There is a use that does not feed into addition, so the multiply can't
       // be removed. We prefer MUL + ADD + ADDC over MAD + MUL.
-      if (User->getOpcode() != ISD::ADD)
+      if (!User->isAnyAdd())
         return SDValue();
 
       // We prefer 2xMAD over MUL + 2xADD + 2xADDC (code density), and prefer
@@ -14706,8 +14708,11 @@ SITargetLowering::foldAddSub64WithZeroLowBitsTo32(SDNode *N,
 
     SDValue Hi = getHiHalf64(LHS, DAG);
     SDValue ConstHi32 = DAG.getConstant(Hi_32(Val), SL, MVT::i32);
+    unsigned Opcode = N->getOpcode();
+    if (Opcode == ISD::PTRADD)
+      Opcode = ISD::ADD;
     SDValue AddHi =
-        DAG.getNode(N->getOpcode(), SL, MVT::i32, Hi, ConstHi32, N->getFlags());
+        DAG.getNode(Opcode, SL, MVT::i32, Hi, ConstHi32, N->getFlags());
 
     SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
     return DAG.getNode(ISD::BUILD_PAIR, SL, MVT::i64, Lo, AddHi);
@@ -15181,40 +15186,121 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
+  EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  if (N1.getOpcode() == ISD::ADD) {
-    // (ptradd x, (add y, z)) -> (ptradd (ptradd x, y), z) if z is a constant,
-    //    y is not, and (add y, z) is used only once.
-    // (ptradd x, (add y, z)) -> (ptradd (ptradd x, z), y) if y is a constant,
-    //    z is not, and (add y, z) is used only once.
-    // The goal is to move constant offsets to the outermost ptradd, to create
-    // more opportunities to fold offsets into memory instructions.
-    // Together with the generic combines in DAGCombiner.cpp, this also
-    // implements (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y)).
-    //
-    // This transform is here instead of in the general DAGCombiner as it can
-    // turn in-bounds pointer arithmetic out-of-bounds, which is problematic for
-    // AArch64's CPA.
-    SDValue X = N0;
-    SDValue Y = N1.getOperand(0);
-    SDValue Z = N1.getOperand(1);
-    if (N1.hasOneUse()) {
-      bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
-      bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
-      if (ZIsConstant != YIsConstant) {
-        // If both additions in the original were NUW, the new ones are as well.
-        SDNodeFlags Flags =
-            (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
-        if (YIsConstant)
-          std::swap(Y, Z);
+  // The following folds transform PTRADDs into regular arithmetic in cases
+  // where the PTRADD wouldn't be folded as an immediate offset into memory
+  // instructions anyway. They are target-specific in that other targets might
+  // prefer to not lose information about the pointer arithmetic.
 
-        SDValue Inner = DAG.getMemBasePlusOffset(X, Y, DL, Flags);
+  // Fold (ptradd x, shl(0 - v, k)) -> sub(x, shl(v, k)).
+  // Adapted from DAGCombiner::visitADDLikeCommutative.
+  SDValue V, K;
+  if (sd_match(N1, m_Shl(m_Neg(m_Value(V)), m_Value(K)))) {
+    SDNodeFlags ShlFlags = N1->getFlags();
+    // If the original shl is NUW and NSW, the first k+1 bits of 0-v are all 0,
+    // so v is either 0 or the first k+1 bits of v are all 1 -> NSW can be
+    // preserved.
+    SDNodeFlags NewShlFlags =
+        ShlFlags.hasNoUnsignedWrap() && ShlFlags.hasNoSignedWrap()
+            ? SDNodeFlags::NoSignedWrap
+            : SDNodeFlags();
+    SDValue Inner = DAG.getNode(ISD::SHL, DL, VT, V, K, NewShlFlags);
+    DCI.AddToWorklist(Inner.getNode());
+    return DAG.getNode(ISD::SUB, DL, VT, N0, Inner);
+  }
+
+  // Fold into Mad64 if the right-hand side is a MUL. Analogous to a fold in
+  // performAddCombine.
+  if (N1.getOpcode() == ISD::MUL) {
+    if (Subtarget->hasMad64_32()) {
+      if (SDValue Folded = tryFoldToMad64_32(N, DCI))
+        return Folded;
+    }
+  }
+
+  // If the 32 low bits of the constant are all zero, there is nothing to fold
+  // into an immediate offset, so it's better to eliminate the unnecessary
+  // addition for the lower 32 bits than to preserve the PTRADD.
+  // Analogous to a fold in performAddCombine.
+  if (VT == MVT::i64) {
+    if (SDValue Folded = foldAddSub64WithZeroLowBitsTo32(N, DCI))
+      return Folded;
+  }
+
+  if (N0.getOpcode() == ISD::PTRADD && N1.getOpcode() == ISD::Constant) {
+    // Fold (ptradd (ptradd GA, v), c) -> (ptradd (ptradd GA, c) v) with
+    // global address GA and constant c, such that c can be folded into GA.
+    SDValue GAValue = N0.getOperand(0);
+    if (const GlobalAddressSDNode *GA =
+            dyn_cast<GlobalAddressSDNode>(GAValue)) {
+      if (DCI.isBeforeLegalizeOps() && isOffsetFoldingLegal(GA)) {
+        // If both additions in the original were NUW, reassociation preserves
+        // that.
+        SDNodeFlags Flags =
+            (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+        SDValue Inner = DAG.getMemBasePlusOffset(GAValue, N1, DL, Flags);
         DCI.AddToWorklist(Inner.getNode());
-        return DAG.getMemBasePlusOffset(Inner, Z, DL, Flags);
+        return DAG.getMemBasePlusOffset(Inner, N0.getOperand(1), DL, Flags);
       }
     }
+  }
+
+  if (N1.getOpcode() != ISD::ADD || !N1.hasOneUse())
+    return SDValue();
+
+  // (ptradd x, (add y, z)) -> (ptradd (ptradd x, y), z) if z is a constant,
+  //    y is not, and (add y, z) is used only once.
+  // (ptradd x, (add y, z)) -> (ptradd (ptradd x, z), y) if y is a constant,
+  //    z is not, and (add y, z) is used only once.
+  // The goal is to move constant offsets to the outermost ptradd, to create
+  // more opportunities to fold offsets into memory instructions.
+  // Together with the generic combines in DAGCombiner.cpp, this also
+  // implements (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y)).
+  //
+  // This transform is here instead of in the general DAGCombiner as it can
+  // turn in-bounds pointer arithmetic out-of-bounds, which is problematic for
+  // AArch64's CPA.
+  SDValue X = N0;
+  SDValue Y = N1.getOperand(0);
+  SDValue Z = N1.getOperand(1);
+  bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
+  bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
+
+  // If both additions in the original were NUW, reassociation preserves that.
+  SDNodeFlags ReassocFlags =
+      (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+
+  if (ZIsConstant != YIsConstant) {
+    if (YIsConstant)
+      std::swap(Y, Z);
+    SDValue Inner = DAG.getMemBasePlusOffset(X, Y, DL, ReassocFlags);
+    DCI.AddToWorklist(Inner.getNode());
+    return DAG.getMemBasePlusOffset(Inner, Z, DL, ReassocFlags);
+  }
+
+  // If one of Y and Z is constant, they have been handled above. If both were
+  // constant, the addition would have been folded in SelectionDAG::getNode
+  // already. This ensures that the generic DAG combines won't undo the
+  // following reassociation.
+  assert(!YIsConstant && !ZIsConstant);
+
+  if (!X->isDivergent() && Y->isDivergent() != Z->isDivergent()) {
+    // Reassociate (ptradd x, (add y, z)) -> (ptradd (ptradd x, y), z) if x and
+    // y are uniform and z isn't.
+    // Reassociate (ptradd x, (add y, z)) -> (ptradd (ptradd x, z), y) if x and
+    // z are uniform and y isn't.
+    // The goal is to push uniform operands up in the computation, so that they
+    // can be handled with scalar operations. We can't use reassociateScalarOps
+    // for this since it requires two identical commutative operations to
+    // reassociate.
+    if (Y->isDivergent())
+      std::swap(Y, Z);
+    SDValue UniformInner = DAG.getMemBasePlusOffset(X, Y, DL, ReassocFlags);
+    DCI.AddToWorklist(UniformInner.getNode());
+    return DAG.getMemBasePlusOffset(UniformInner, Z, DL, ReassocFlags);
   }
 
   return SDValue();
