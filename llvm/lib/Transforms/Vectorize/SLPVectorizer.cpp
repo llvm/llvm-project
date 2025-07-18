@@ -1906,6 +1906,7 @@ public:
   void deleteTree() {
     VectorizableTree.clear();
     ScalarToTreeEntries.clear();
+    PostponedNodesWithNonVecUsers.clear();
     OperandsToTreeEntry.clear();
     ScalarsInSplitNodes.clear();
     MustGather.clear();
@@ -3896,6 +3897,9 @@ private:
 
     bool hasState() const { return S.valid(); }
 
+    /// Returns the state of the operations.
+    const InstructionsState &getOperations() const { return S; }
+
     /// When ReuseReorderShuffleIndices is empty it just returns position of \p
     /// V within vector of Scalars. Otherwise, try to remap on its reuse index.
     unsigned findLaneForValue(Value *V) const {
@@ -4290,6 +4294,13 @@ private:
                                OrdersType &CurrentOrder,
                                SmallVectorImpl<Value *> &PointerOps);
 
+  /// Checks if it is profitable to vectorize the specified list of the
+  /// instructions if not all users are vectorized.
+  bool isProfitableToVectorizeWithNonVecUsers(const InstructionsState &S,
+                                              const EdgeInfo &UserTreeIdx,
+                                              ArrayRef<Value *> Scalars,
+                                              ArrayRef<int> ScalarsMask);
+
   /// Maps a specific scalar to its tree entry(ies).
   SmallDenseMap<Value *, SmallVector<TreeEntry *>> ScalarToTreeEntries;
 
@@ -4299,6 +4310,9 @@ private:
 
   /// Scalars, used in split vectorize nodes.
   SmallDenseMap<Value *, SmallVector<TreeEntry *>> ScalarsInSplitNodes;
+
+  /// List of tree nodes indices, which have non-vectorized users.
+  SmallSet<unsigned, 4> PostponedNodesWithNonVecUsers;
 
   /// Maps a value to the proposed vectorizable size.
   SmallDenseMap<Value *, unsigned> InstrElementSize;
@@ -8993,6 +9007,81 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   return {IntrinsicCost, LibCost};
 }
 
+bool BoUpSLP::isProfitableToVectorizeWithNonVecUsers(
+    const InstructionsState &S, const EdgeInfo &UserTreeIdx,
+    ArrayRef<Value *> Scalars, ArrayRef<int> ScalarsMask) {
+  assert(S && "Expected valid instructions state.");
+  // Loads, extracts and geps are immediately scalarizable, so no need to check.
+  if (S.getOpcode() == Instruction::Load ||
+      S.getOpcode() == Instruction::ExtractElement ||
+      S.getOpcode() == Instruction::GetElementPtr)
+    return true;
+  // Check only vectorized users, others scalarized (potentially, at least)
+  // already.
+  if (!UserTreeIdx.UserTE || UserTreeIdx.UserTE->isGather() ||
+      UserTreeIdx.UserTE->State == TreeEntry::SplitVectorize)
+    return true;
+  // PHI nodes may have cyclic deps, so cannot check here.
+  if (UserTreeIdx.UserTE->getOpcode() == Instruction::PHI)
+    return true;
+  // Do not check root reduction nodes, they do not have non-vectorized users.
+  if (UserIgnoreList && UserTreeIdx.UserTE->Idx == 0)
+    return true;
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  ArrayRef<Value *> VL = UserTreeIdx.UserTE->Scalars;
+  Type *UserScalarTy = getValueType(VL.front());
+  if (!isValidElementType(UserScalarTy))
+    return true;
+  Type *ScalarTy = getValueType(Scalars.front());
+  if (!isValidElementType(ScalarTy))
+    return true;
+  // Ignore subvectors extracts.
+  if (UserScalarTy->isVectorTy())
+    return true;
+  auto *UserVecTy =
+      getWidenedType(UserScalarTy, UserTreeIdx.UserTE->getVectorFactor());
+  APInt DemandedElts = APInt::getZero(UserTreeIdx.UserTE->getVectorFactor());
+  // Check the external uses and check, if vector node + extracts is not
+  // profitable for the vectorization.
+  InstructionCost UserScalarsCost = 0;
+  for (Value *V : VL) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      continue;
+    if (areAllUsersVectorized(I, UserIgnoreList))
+      continue;
+    DemandedElts.setBit(UserTreeIdx.UserTE->findLaneForValue(V));
+    UserScalarsCost += TTI->getInstructionCost(I, CostKind);
+  }
+  // No non-vectorized users - success.
+  if (DemandedElts.isZero())
+    return true;
+  // If extracts are cheaper than the original scalars - success.
+  InstructionCost ExtractCost =
+      ::getScalarizationOverhead(*TTI, UserScalarTy, UserVecTy, DemandedElts,
+                                 /*Insert=*/false, /*Extract=*/true, CostKind);
+  if (ExtractCost <= UserScalarsCost)
+    return true;
+  SmallPtrSet<Value *, 4> CheckedExtracts;
+  InstructionCost NodeCost =
+      UserTreeIdx.UserTE->State == TreeEntry::CombinedVectorize
+          ? InstructionCost(0)
+          : getEntryCost(UserTreeIdx.UserTE, {}, CheckedExtracts);
+  // The node is profitable for vectorization - success.
+  if (ExtractCost + NodeCost <= -SLPCostThreshold)
+    return true;
+  auto *VecTy = getWidenedType(ScalarTy, Scalars.size());
+  InstructionCost ScalarsCost = ::getScalarizationOverhead(
+      *TTI, ScalarTy, VecTy, APInt::getAllOnes(Scalars.size()),
+      /*Insert=*/true, /*Extract=*/false, CostKind);
+  if (!ScalarsMask.empty())
+    ScalarsCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, VecTy,
+                                  ScalarsMask, CostKind);
+
+  // User extracts are cheaper than user scalars + immediate scalars - success.
+  return ExtractCost - (UserScalarsCost + ScalarsCost) < -SLPCostThreshold;
+}
+
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     const InstructionsState &S, ArrayRef<Value *> VL,
     bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
@@ -10280,6 +10369,17 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps);
   if (State == TreeEntry::NeedToGather) {
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
+    return;
+  }
+
+  // Postpone vectorization, if the node is not profitable because of the
+  // external uses.
+  if (!isProfitableToVectorizeWithNonVecUsers(S, UserTreeIdx, VL,
+                                              ReuseShuffleIndices)) {
+    PostponedNodesWithNonVecUsers.insert(VectorizableTree.size());
+    auto Invalid = ScheduleBundle::invalid();
+    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
+                 ReuseShuffleIndices);
     return;
   }
 
@@ -11668,6 +11768,27 @@ void BoUpSLP::transformNodes() {
       ArrayRef<Value *> VL = E.Scalars;
       const unsigned Sz = getVectorElementSize(VL.front());
       unsigned MinVF = getMinVF(2 * Sz);
+      const EdgeInfo &EI = E.UserTreeIndex;
+      // Try to vectorized postponed scalars, if external uses are vectorized.
+      if (PostponedNodesWithNonVecUsers.contains(E.Idx) &&
+          isProfitableToVectorizeWithNonVecUsers(
+              E.getOperations(), EI, E.Scalars, E.ReuseShuffleIndices)) {
+        assert(E.hasState() && "Expected to have state");
+        unsigned PrevSize = VectorizableTree.size();
+        [[maybe_unused]] unsigned PrevEntriesSize =
+            LoadEntriesToVectorize.size();
+        buildTreeRec(VL, 0, EdgeInfo(&E, UINT_MAX));
+        if (PrevSize + 1 == VectorizableTree.size() &&
+            VectorizableTree[PrevSize]->isGather()) {
+          VectorizableTree.pop_back();
+          assert(PrevEntriesSize == LoadEntriesToVectorize.size() &&
+                 "LoadEntriesToVectorize expected to remain the same");
+        } else {
+          E.CombinedEntriesWithIndices.emplace_back(PrevSize, 0);
+          continue;
+        }
+      }
+
       // Do not try partial vectorization for small nodes (<= 2), nodes with the
       // same opcode and same parent block or all constants.
       if (VL.size() <= 2 || LoadEntriesToVectorize.contains(Idx) ||
@@ -12828,7 +12949,9 @@ public:
       });
       InVectors.front() = V;
     }
-    if (!SubVectors.empty()) {
+    if (!SubVectors.empty() &&
+        (SubVectors.size() > 1 || SubVectors.front().second != 0 ||
+         SubVectors.front().first->getVectorFactor() != CommonMask.size())) {
       const PointerUnion<Value *, const TreeEntry *> &Vec = InVectors.front();
       if (InVectors.size() == 2)
         Cost += createShuffle(Vec, InVectors.back(), CommonMask);
@@ -13348,7 +13471,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   case Instruction::Trunc:
   case Instruction::FPTrunc:
   case Instruction::BitCast: {
-    auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
+    auto SrcIt =
+        MinBWs.empty() ? MinBWs.end() : MinBWs.find(getOperandEntry(E, 0));
     Type *SrcScalarTy = VL0->getOperand(0)->getType();
     auto *SrcVecTy = getWidenedType(SrcScalarTy, VL.size());
     unsigned Opcode = ShuffleOrOp;
@@ -13795,7 +13919,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Type *SrcSclTy = E->getMainOp()->getOperand(0)->getType();
         auto *SrcTy = getWidenedType(SrcSclTy, VL.size());
         if (SrcSclTy->isIntegerTy() && ScalarTy->isIntegerTy()) {
-          auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
+          auto SrcIt = MinBWs.empty() ? MinBWs.end()
+                                      : MinBWs.find(getOperandEntry(E, 0));
           unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
           unsigned SrcBWSz =
               DL->getTypeSizeInBits(E->getMainOp()->getOperand(0)->getType());
@@ -14793,6 +14918,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
       auto *Inst = cast<Instruction>(EU.Scalar);
       InstructionCost ScalarCost = TTI->getInstructionCost(Inst, CostKind);
       auto OperandIsScalar = [&](Value *V) {
+        if (!isa<Instruction>(V))
+          return true;
         if (!isVectorized(V)) {
           // Some extractelements might be not vectorized, but
           // transformed into shuffle and removed from the function,
@@ -16873,7 +17000,18 @@ public:
       });
       InVectors.front() = Vec;
     }
-    if (!SubVectors.empty()) {
+    if (SubVectors.size() == 1 && SubVectors.front().second == 0 &&
+        SubVectors.front().first->getVectorFactor() == CommonMask.size()) {
+      Value *Vec = SubVectors.front().first->VectorizedValue;
+      if (Vec->getType()->isIntOrIntVectorTy())
+        Vec = castToScalarTyElem(
+            Vec, any_of(SubVectors.front().first->Scalars, [&](Value *V) {
+              if (isa<PoisonValue>(V))
+                return false;
+              return !isKnownNonNegative(V, SimplifyQuery(*R.DL));
+            }));
+      transformMaskAfterShuffle(CommonMask, CommonMask);
+    } else if (!SubVectors.empty()) {
       Value *Vec = InVectors.front();
       if (InVectors.size() == 2) {
         Vec = createShuffle(Vec, InVectors.back(), CommonMask);
