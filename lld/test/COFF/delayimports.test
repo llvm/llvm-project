@@ -44,7 +44,7 @@ BASEREL-NEXT:   }
 UNWIND:      UnwindInformation [
 UNWIND-NEXT:   RuntimeFunction {
 UNWIND-NEXT:     StartAddress: (0x14000108A)
-UNWIND-NEXT:     EndAddress: (0x1400010DD)
+UNWIND-NEXT:     EndAddress: (0x140001101)
 UNWIND-NEXT:     UnwindInfoAddress: (0x140002000)
 UNWIND-NEXT:     UnwindInfo {
 UNWIND-NEXT:       Version: 1
