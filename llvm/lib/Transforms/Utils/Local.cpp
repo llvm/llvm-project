@@ -3158,14 +3158,17 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   }
 
   // Merge callee_type metadata.
-  // Given the called operands are identical, presence of at least one
-  // callee_type metadata guarantees the intended callee.
-  auto *JCalleeType = J->getMetadata(LLVMContext::MD_callee_type);
-  auto *KCalleeType = K->getMetadata(LLVMContext::MD_callee_type);
-  if (!AAOnly && (JCalleeType || KCalleeType)) {
-    K->setMetadata(LLVMContext::MD_callee_type,
-                   MDNode::getMergedCalleeTypeMetadata(
-                       K->getContext(), KCalleeType, JCalleeType));
+  if (!AAOnly) {
+    auto *JCalleeType = J->getMetadata(LLVMContext::MD_callee_type);
+    auto *KCalleeType = K->getMetadata(LLVMContext::MD_callee_type);
+    // Drop the callee_type metadata if either of the call instructions do not
+    // have it.
+    if (JCalleeType && KCalleeType) {
+      K->setMetadata(LLVMContext::MD_callee_type,
+                     MDNode::getMergedCalleeTypeMetadata(
+                         K->getContext(), KCalleeType, JCalleeType));
+    } else
+      K->setMetadata(LLVMContext::MD_callee_type, nullptr);
   }
 
   // Merge prof metadata.
