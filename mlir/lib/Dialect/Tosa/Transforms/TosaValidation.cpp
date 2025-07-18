@@ -1193,10 +1193,10 @@ bool checkErrorIfPad(Operation *op) {
   return true;
 }
 
-static bool isOpIsolatedFromAbove(Operation *op, Region *region) {
+static bool isOpIsolatedWithinRegion(Operation *op, Region *region) {
   return llvm::all_of(op->getOperands(), [&](auto operand) {
     Region *operandRegion = operand.getParentRegion();
-    return region->isAncestor(operandRegion);
+    return operandRegion && region->isAncestor(operandRegion);
   });
 }
 
@@ -1238,10 +1238,10 @@ bool checkErrorIfCondIf(Operation *op) {
   // to the specification.
 
   // Returns true if the region uses no external input operands.
-  auto isIsolatedRegion = [](Region &region) -> bool {
+  auto isIsolatedRegion = [](Region &regionToCheck) -> bool {
     bool noLiveInValue = true;
-    region.walk([&noLiveInValue, &region](Operation *op) {
-      if (!isOpIsolatedFromAbove(op, &region)) {
+    regionToCheck.walk([&noLiveInValue, &regionToCheck](Operation *opInRegion) {
+      if (!isOpIsolatedWithinRegion(opInRegion, &regionToCheck)) {
         noLiveInValue = false;
         return WalkResult::interrupt();
       }
@@ -1250,18 +1250,18 @@ bool checkErrorIfCondIf(Operation *op) {
     return noLiveInValue;
   };
 
-  mlir::Region &thenGraph = ifOp.getThenGraph();
-  mlir::Region &elseGraph = ifOp.getElseGraph();
-  bool isThenGraphIsolatedRegion = isIsolatedRegion(thenGraph);
-  bool isElseGraphIsolatedRegion = isIsolatedRegion(elseGraph);
-
-  if (!isThenGraphIsolatedRegion || !isElseGraphIsolatedRegion) {
+  auto checkIsolatedRegion = [&](Region &regionToCheck,
+                                 StringRef regionName) -> LogicalResult {
+    if (isIsolatedRegion(regionToCheck))
+      return success();
     op->emitOpError()
-        << "is not conformant to the TOSA specification. It requires the "
-           "then/else regions are isolated from above.\n";
-    return false;
-  }
-  return true;
+        << "is not conformant to the TOSA specification. It requires the '"
+        << regionName << "' region is isolated from above.\n";
+    return failure();
+  };
+
+  return failed(checkIsolatedRegion(ifOp.getThenGraph(), "then")) ||
+         failed(checkIsolatedRegion(ifOp.getElseGraph(), "else"));
 }
 
 bool checkErrorIfScatter(Operation *op) {
