@@ -385,8 +385,7 @@ target_include_directories(LLVMSupport
   ${LLVM_THIRD_PARTY_DIR}/siphash/include
 )
 
-if(LLVM_INTEGRATE_LIBC)
-  set_property(TARGET LLVMSupport PROPERTY CXX_STANDARD 17)
-  target_include_directories(LLVMSupport PRIVATE "${LLVM_INCLUDE_DIR}/../../libc")
-  target_compile_options(LLVMSupport PRIVATE "-Wno-c99-extensions") # _Complex warnings.
-endif()
+# Integrating LLVM libc's math functions
+set_property(TARGET LLVMSupport PROPERTY CXX_STANDARD 17)
+target_include_directories(LLVMSupport PRIVATE "${LLVM_INCLUDE_DIR}/../../libc")
+target_compile_options(LLVMSupport PRIVATE "-Wno-c99-extensions") # _Complex warnings.

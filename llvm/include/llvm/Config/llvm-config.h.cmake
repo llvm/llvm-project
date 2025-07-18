@@ -146,7 +146,4 @@
    coverage bugs, and to 0 otherwise. */
 #cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
-/* Define if LLVM and clang uses LLVM libc for math computations. */
-#cmakedefine LLVM_INTEGRATE_LIBC
-
 #endif
