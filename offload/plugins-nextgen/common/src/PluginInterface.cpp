@@ -1335,12 +1335,15 @@ Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
   return eraseEntry(*Entry);
 }
 
-Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo) {
+Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
+                                   bool RemoveQueue) {
+  std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->AllocationsMutex};
+
   if (!AsyncInfo || !AsyncInfo->Queue)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "invalid async info queue");
 
-  if (auto Err = synchronizeImpl(*AsyncInfo))
+  if (auto Err = synchronizeImpl(*AsyncInfo, RemoveQueue))
     return Err;
 
   for (auto *Ptr : AsyncInfo->AssociatedAllocations)

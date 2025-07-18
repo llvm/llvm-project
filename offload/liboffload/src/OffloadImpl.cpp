@@ -487,15 +487,9 @@ Error olSyncQueue_impl(ol_queue_handle_t Queue) {
   // Host plugin doesn't have a queue set so it's not safe to call synchronize
   // on it, but we have nothing to synchronize in that situation anyway.
   if (Queue->AsyncInfo->Queue) {
-    if (auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo))
+    if (auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo, false))
       return Err;
   }
-
-  // Recreate the stream resource so the queue can be reused
-  // TODO: Would be easier for the synchronization to (optionally) not release
-  // it to begin with.
-  if (auto Res = Queue->Device->Device->initAsyncInfo(&Queue->AsyncInfo))
-    return Res;
 
   return Error::success();
 }

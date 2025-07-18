@@ -522,6 +522,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// Get the stream of the asynchronous info structure or get a new one.
   Error getStream(AsyncInfoWrapperTy &AsyncInfoWrapper, CUstream &Stream) {
+    std::lock_guard<std::mutex> StreamLock{StreamMutex};
     // Get the stream (if any) from the async info.
     Stream = AsyncInfoWrapper.getQueueAs<CUstream>();
     if (!Stream) {
@@ -642,7 +643,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Synchronize current thread with the pending operations on the async info.
-  Error synchronizeImpl(__tgt_async_info &AsyncInfo) override {
+  Error synchronizeImpl(__tgt_async_info &AsyncInfo,
+                        bool RemoveQueue) override {
     CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo.Queue);
     CUresult Res;
     Res = cuStreamSynchronize(Stream);
@@ -650,9 +652,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     // Once the stream is synchronized, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
     // own tasks.
-    AsyncInfo.Queue = nullptr;
-    if (auto Err = CUDAStreamManager.returnResource(Stream))
-      return Err;
+    if (RemoveQueue) {
+      AsyncInfo.Queue = nullptr;
+      if (auto Err = CUDAStreamManager.returnResource(Stream))
+        return Err;
+    }
 
     return Plugin::check(Res, "error in cuStreamSynchronize: %s");
   }
@@ -1289,6 +1293,9 @@ private:
   /// The maximum number of warps that can be resident on all the SMs
   /// simultaneously.
   uint32_t HardwareParallelism = 0;
+
+  /// Mutex to guard getting/setting the stream
+  std::mutex StreamMutex;
 };
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,

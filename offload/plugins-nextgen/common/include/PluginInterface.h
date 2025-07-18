@@ -138,6 +138,7 @@ struct AsyncInfoWrapperTy {
   /// Register \p Ptr as an associated allocation that is freed after
   /// finalization.
   void freeAllocationAfterSynchronization(void *Ptr) {
+    std::lock_guard<std::mutex> AllocationGuard{AsyncInfoPtr->AllocationsMutex};
     AsyncInfoPtr->AssociatedAllocations.push_back(Ptr);
   }
 
@@ -828,8 +829,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Synchronize the current thread with the pending operations on the
   /// __tgt_async_info structure.
-  Error synchronize(__tgt_async_info *AsyncInfo);
-  virtual Error synchronizeImpl(__tgt_async_info &AsyncInfo) = 0;
+  Error synchronize(__tgt_async_info *AsyncInfo, bool RemoveQueue = true);
+  virtual Error synchronizeImpl(__tgt_async_info &AsyncInfo,
+                                bool RemoveQueue) = 0;
 
   /// Invokes any global constructors on the device if present and is required
   /// by the target.
@@ -1591,6 +1593,8 @@ public:
   /// Deinitialize the resource pool and delete all resources. This function
   /// must be called before the destructor.
   virtual Error deinit() {
+    const std::lock_guard<std::mutex> Lock(Mutex);
+
     if (NextAvailable)
       DP("Missing %d resources to be returned\n", NextAvailable);
 
