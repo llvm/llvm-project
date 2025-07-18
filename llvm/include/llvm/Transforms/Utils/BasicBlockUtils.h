@@ -21,6 +21,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Printable.h"
 #include <cassert>
 
 namespace llvm {
@@ -617,6 +618,8 @@ LLVM_ABI bool hasOnlySimpleTerminator(const Function &F);
 // Check whether the function only has blocks with simple terminators
 // (br/brcond/unreachable/ret) or callbr.
 LLVM_ABI bool hasOnlySimpleTerminatorOrCallBr(const Function &F);
+
+LLVM_ABI Printable printBBPtr(const BasicBlock *BB);
 
 } // end namespace llvm
 

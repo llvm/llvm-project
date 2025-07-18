@@ -1784,3 +1784,10 @@ bool llvm::hasOnlySimpleTerminatorOrCallBr(const Function &F) {
   return hasOnlyGivenTerminators<ReturnInst, UnreachableInst, BranchInst,
                                  CallBrInst>(F);
 }
+
+Printable llvm::printBBPtr(const BasicBlock *BB) {
+  return Printable([BB](raw_ostream &OS) {
+    if (BB)
+      return BB->printAsOperand(OS);
+  });
+}
