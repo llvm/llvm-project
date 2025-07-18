@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_FLOAT_CONSTANTS_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_FLOAT_CONSTANTS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP10F16_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_EXP10F16_UTILS_H
 
 #include "include/llvm-libc-macros/float16-macros.h"
 
@@ -61,4 +61,4 @@ exp10_range_reduction(float16 x) {
 
 #endif // LIBC_TYPES_HAS_FLOAT16
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXP10F16_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXP10F16_UTILS_H
