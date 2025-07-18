@@ -1113,7 +1113,6 @@ public:
   // that will not require an additional 4-bytes; this function assumes that it
   // will.
   bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const {
-    assert(!MO.isReg() && "isInlineConstant called on register operand!");
     if (!MO.isImm())
       return false;
     return isInlineConstant(MO.getImm(), OperandType);
