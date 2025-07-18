@@ -843,7 +843,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     }
   }
 
-  // Validate buffer instruction offsets for GFX12+ - must be non-negative
+  // Validate buffer instruction offsets for GFX12+ - must not be a negative.
   if (isGFX12Plus() && isBufferInstruction(MI)) {
     int OffsetIdx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::offset);
