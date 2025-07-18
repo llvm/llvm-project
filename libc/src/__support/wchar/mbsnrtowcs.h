@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SRC___SUPPORT_WCHAR_MBSNRTOWCS_H
+#define LLVM_LIBC_SRC___SUPPORT_WCHAR_MBSNRTOWCS_H
+
 #include "hdr/errno_macros.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
@@ -20,8 +23,10 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-ErrorOr<size_t> mbsnrtowcs(wchar_t *__restrict dst, const char **__restrict src,
-                           size_t nmc, size_t len, mbstate *__restrict ps) {
+LIBC_INLINE static ErrorOr<size_t> mbsnrtowcs(wchar_t *__restrict dst,
+                                              const char **__restrict src,
+                                              size_t nmc, size_t len,
+                                              mbstate *__restrict ps) {
   LIBC_CRASH_ON_NULLPTR(src);
   // Checking if mbstate is valid
   CharacterConverter char_conv(ps);
@@ -57,3 +62,5 @@ ErrorOr<size_t> mbsnrtowcs(wchar_t *__restrict dst, const char **__restrict src,
 } // namespace internal
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_WCHAR_MBSNRTOWCS_H
