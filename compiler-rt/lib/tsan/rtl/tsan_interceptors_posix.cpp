@@ -2146,6 +2146,7 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   rep.SetSigNum(sig);
   if (!IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack)) {
     rep.AddStack(stack, true);
+    rep.SymbolizeStackElems();
     OutputReport(thr, rep);
   }
 }
