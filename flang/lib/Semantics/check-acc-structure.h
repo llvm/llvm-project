@@ -63,6 +63,9 @@ public:
   void Enter(const parser::OpenACCCacheConstruct &);
   void Leave(const parser::OpenACCCacheConstruct &);
   void Enter(const parser::AccAtomicUpdate &);
+  void Enter(const parser::AccAtomicCapture &);
+  void Enter(const parser::AccAtomicWrite &);
+  void Enter(const parser::AccAtomicRead &);
   void Enter(const parser::OpenACCEndConstruct &);
 
   // Clauses
@@ -80,6 +83,20 @@ public:
 #include "llvm/Frontend/OpenACC/ACC.inc"
 
 private:
+  bool IsAtomicUpdateOperator(
+      const parser::Expr &expr, const parser::Variable &updatedVar) const;
+  bool IsAtomicUpdateIntrinsic(
+      const parser::Expr &expr, const parser::Variable &updatedVar) const;
+  const parser::Variable *GetIfAtomicUpdateVar(
+      const parser::AssignmentStmt &assign) const;
+  bool IsAtomicCaptureStmt(const parser::AssignmentStmt &assign,
+      const parser::Variable &updatedVar) const;
+  void CheckAtomicStmt(
+      const parser::AssignmentStmt &assign, std::string &construct);
+  void CheckAtomicUpdateStmt(const parser::AssignmentStmt &assign);
+  void CheckAtomicCaptureStmt(const parser::AssignmentStmt &assign);
+  void CheckAtomicWriteStmt(const parser::AssignmentStmt &assign);
+
   bool CheckAllowedModifier(llvm::acc::Clause clause);
   bool IsComputeConstruct(llvm::acc::Directive directive) const;
   bool IsInsideComputeConstruct() const;

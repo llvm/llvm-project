@@ -54,6 +54,7 @@ program openacc_atomic_validity
   i = c(i)
   !$acc end atomic
 
+  !TODO: Should error because c(i) references i which is the atomic update variable.
   !$acc atomic capture
   c(i) = i
   i = i + 1
