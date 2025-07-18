@@ -285,7 +285,7 @@ else()
       ${intrinsics_sources}
     )
     add_custom_target(${name}.intrinsics
-      COMMAND echo "Dependency barrier"
+      COMMAND echo "${name} Dependency barrier"
       COMMENT "Intrinsic module dependency barrier"
     )
     add_dependencies(${name}.intrinsics ${name}.intrinsics.obj)
