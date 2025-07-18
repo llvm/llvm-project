@@ -2760,9 +2760,11 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (alignment)
     F->setAlignment(llvm::Align(alignment));
 
-  if (!D->hasAttr<AlignedAttr>())
-    if (LangOpts.FunctionAlignment)
-      F->setAlignment(llvm::Align(1ull << LangOpts.FunctionAlignment));
+  if (!D->hasAttr<AlignedAttr>()) {
+    llvm::MaybeAlign Align = llvm::decodeMaybeAlign(LangOpts.FunctionAlignment);
+    if (Align)
+      F->setAlignment(*Align);
+  }
 
   // Some C++ ABIs require 2-byte alignment for member functions, in order to
   // reserve a bit for differentiating between virtual and non-virtual member

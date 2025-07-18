@@ -2120,29 +2120,33 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
 // [0, 65536].  If the value is not a power-of-two, it will be rounded up to
 // the nearest power-of-two.
 //
-// If we return `0`, the frontend will default to the backend's preferred
-// alignment.
+// If we return `MaybeAlign()`, the frontend will default to the backend's
+// preferred alignment.
 //
 // NOTE: icc only allows values between [0, 4096].  icc uses `-falign-functions`
 // to mean `-falign-functions=16`.  GCC defaults to the backend's preferred
 // alignment.  For unaligned functions, we default to the backend's preferred
 // alignment.
-unsigned tools::ParseFunctionAlignment(const ToolChain &TC,
-                                       const ArgList &Args) {
+llvm::MaybeAlign tools::ParseFunctionAlignment(const ToolChain &TC,
+                                               const ArgList &Args) {
   const Arg *A = Args.getLastArg(options::OPT_falign_functions,
                                  options::OPT_falign_functions_EQ,
                                  options::OPT_fno_align_functions);
-  if (!A || A->getOption().matches(options::OPT_fno_align_functions))
-    return 0;
+  if (!A)
+    return llvm::MaybeAlign();
+
+  if (A->getOption().matches(options::OPT_fno_align_functions))
+    return llvm::Align(1);
 
   if (A->getOption().matches(options::OPT_falign_functions))
-    return 0;
+    return llvm::MaybeAlign();
 
   unsigned Value = 0;
   if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536)
     TC.getDriver().Diag(diag::err_drv_invalid_int_value)
         << A->getAsString(Args) << A->getValue();
-  return Value ? llvm::Log2_32_Ceil(std::min(Value, 65536u)) : Value;
+  return Value ? llvm::Align(1 << llvm::Log2_32_Ceil(std::min(Value, 65536u)))
+               : llvm::MaybeAlign();
 }
 
 void tools::addDebugInfoKind(
