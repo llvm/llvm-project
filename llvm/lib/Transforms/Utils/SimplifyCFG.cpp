@@ -7493,7 +7493,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   SmallPtrSet<PHINode *, 8> Phis;
   SmallPtrSet<BasicBlock *, 8> Seen;
   DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> PhiPredIVs;
-  DenseMap<BasicBlock *, SmallVector<unsigned, 4>> BBToSuccessorIndexes;
+  DenseMap<BasicBlock *, SmallVector<unsigned, 32>> BBToSuccessorIndexes;
   SmallVector<SwitchSuccWrapper> Cases;
   Cases.reserve(SI->getNumSuccessors());
 
@@ -7505,12 +7505,6 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
     if (BB->size() != 1)
       continue;
 
-    // FIXME: This case needs some extra care because the terminators other than
-    // SI need to be updated. For now, consider only backedges to the SI.
-    if (BB->hasNPredecessorsOrMore(4) ||
-        BB->getUniquePredecessor() != SI->getParent())
-      continue;
-
     // FIXME: Relax that the terminator is a BranchInst by checking for equality
     // on other kinds of terminators. We decide to only support unconditional
     // branches for now for compile time reasons.
@@ -7518,14 +7512,24 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
     if (!BI || BI->isConditional())
       continue;
 
-    if (Seen.insert(BB).second) {
-      // Keep track of which PHIs we need as keys in PhiPredIVs below.
-      for (BasicBlock *Succ : BI->successors())
-        Phis.insert_range(llvm::make_pointer_range(Succ->phis()));
-      // Add the successor only if not previously visited.
-      Cases.emplace_back(SwitchSuccWrapper{BB, &PhiPredIVs});
+    if (!Seen.insert(BB).second) {
+      auto It = BBToSuccessorIndexes.find(BB);
+      if (It != BBToSuccessorIndexes.end())
+        It->second.emplace_back(I);
+      continue;
     }
 
+    // FIXME: This case needs some extra care because the terminators other than
+    // SI need to be updated. For now, consider only backedges to the SI.
+    if (BB->getUniquePredecessor() != SI->getParent())
+      continue;
+
+    // Keep track of which PHIs we need as keys in PhiPredIVs below.
+    for (BasicBlock *Succ : BI->successors())
+      Phis.insert_range(llvm::make_pointer_range(Succ->phis()));
+
+    // Add the successor only if not previously visited.
+    Cases.emplace_back(SwitchSuccWrapper{BB, &PhiPredIVs});
     BBToSuccessorIndexes[BB].emplace_back(I);
   }
 
