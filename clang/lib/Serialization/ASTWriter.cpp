@@ -692,17 +692,13 @@ void TypeLocWriter::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
 void TypeLocWriter::VisitPipeTypeLoc(PipeTypeLoc TL) {
   addSourceLocation(TL.getKWLoc());
 }
+
 void TypeLocWriter::VisitBitIntTypeLoc(clang::BitIntTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitDependentBitIntTypeLoc(
     clang::DependentBitIntTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
-}
-
-void TypeLocWriter::VisitPredefinedSugarTypeLoc(
-    clang::PredefinedSugarTypeLoc TL) {
-  // Nothing to do.
 }
 
 void ASTWriter::WriteTypeAbbrevs() {

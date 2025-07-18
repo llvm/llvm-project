@@ -277,11 +277,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
       ArrayParameterTypes;
 
-  /// Store the unique Type corresponding to each Kind.
-  mutable std::array<Type *,
-                     llvm::to_underlying(PredefinedSugarType::Kind::Last) + 1>
-      PredefinedSugarTypes{};
-
   /// The set of nested name specifiers.
   ///
   /// This set is managed by the NestedNameSpecifier class.
@@ -1572,8 +1567,6 @@ public:
   /// and bit count.
   QualType getDependentBitIntType(bool Unsigned, Expr *BitsExpr) const;
 
-  QualType getPredefinedSugarType(PredefinedSugarType::Kind KD) const;
-
   /// Gets the struct used to keep track of the extended descriptor for
   /// pointer to blocks.
   QualType getBlockDescriptorExtendedType() const;
@@ -2006,13 +1999,11 @@ public:
   /// <stddef.h>.
   ///
   /// The sizeof operator requires this (C99 6.5.3.4p4).
-  QualType getSizeType() const;
-
-  CanQualType getCanonicalSizeType() const;
+  CanQualType getSizeType() const;
 
   /// Return the unique signed counterpart of
   /// the integer type corresponding to size_t.
-  QualType getSignedSizeType() const;
+  CanQualType getSignedSizeType() const;
 
   /// Return the unique type for "intmax_t" (C99 7.18.1.5), defined in
   /// <stdint.h>.

@@ -2080,11 +2080,6 @@ ExpectedType clang::ASTNodeImporter::VisitDependentBitIntType(
                                                         *ToNumBitsExprOrErr);
 }
 
-ExpectedType clang::ASTNodeImporter::VisitPredefinedSugarType(
-    const clang::PredefinedSugarType *T) {
-  return Importer.getToContext().getPredefinedSugarType(T->getKind());
-}
-
 ExpectedType clang::ASTNodeImporter::VisitDependentSizedMatrixType(
     const clang::DependentSizedMatrixType *T) {
   Error Err = Error::success();
