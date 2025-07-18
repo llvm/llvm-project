@@ -30,8 +30,9 @@ using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "amdgpu-resource-usage"
 
-char llvm::AMDGPUResourceUsageAnalysis::ID = 0;
-char &llvm::AMDGPUResourceUsageAnalysisID = AMDGPUResourceUsageAnalysis::ID;
+char llvm::AMDGPUResourceUsageAnalysisWrapperPass::ID = 0;
+char &llvm::AMDGPUResourceUsageAnalysisID =
+    AMDGPUResourceUsageAnalysisWrapperPass::ID;
 
 // In code object v4 and older, we need to tell the runtime some amount ahead of
 // time if we don't know the true stack size. Assume a smaller number if this is
@@ -47,7 +48,7 @@ static cl::opt<uint32_t> clAssumedStackSizeForDynamicSizeObjects(
              "variable sized objects (in bytes)"),
     cl::Hidden, cl::init(4096));
 
-INITIALIZE_PASS(AMDGPUResourceUsageAnalysis, DEBUG_TYPE,
+INITIALIZE_PASS(AMDGPUResourceUsageAnalysisWrapperPass, DEBUG_TYPE,
                 "Function register usage analysis", true, true)
 
 static const Function *getCalleeFunction(const MachineOperand &Op) {
@@ -68,7 +69,8 @@ static bool hasAnyNonFlatUseOfReg(const MachineRegisterInfo &MRI,
   return false;
 }
 
-bool AMDGPUResourceUsageAnalysis::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPUResourceUsageAnalysisWrapperPass::runOnMachineFunction(
+    MachineFunction &MF) {
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   if (!TPC)
     return false;
@@ -90,14 +92,40 @@ bool AMDGPUResourceUsageAnalysis::runOnMachineFunction(MachineFunction &MF) {
       AssumedStackSizeForExternalCall = 0;
   }
 
-  ResourceInfo = analyzeResourceUsage(MF, AssumedStackSizeForDynamicSizeObjects,
-                                      AssumedStackSizeForExternalCall);
+  ResourceInfo = AMDGPUResourceUsageAnalysisImpl().analyzeResourceUsage(
+      MF, AssumedStackSizeForDynamicSizeObjects,
+      AssumedStackSizeForExternalCall);
 
   return false;
 }
 
-AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo
-AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
+AnalysisKey AMDGPUResourceUsageAnalysis::Key;
+AMDGPUResourceUsageAnalysis::Result
+AMDGPUResourceUsageAnalysis::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  const MCSubtargetInfo &STI = *TM.getMCSubtargetInfo();
+
+  // By default, for code object v5 and later, track only the minimum scratch
+  // size
+  uint32_t AssumedStackSizeForDynamicSizeObjects =
+      clAssumedStackSizeForDynamicSizeObjects;
+  uint32_t AssumedStackSizeForExternalCall = clAssumedStackSizeForExternalCall;
+  if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
+          AMDGPU::AMDHSA_COV5 ||
+      STI.getTargetTriple().getOS() == Triple::AMDPAL) {
+    if (!clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences())
+      AssumedStackSizeForDynamicSizeObjects = 0;
+    if (!clAssumedStackSizeForExternalCall.getNumOccurrences())
+      AssumedStackSizeForExternalCall = 0;
+  }
+
+  return AMDGPUResourceUsageAnalysisImpl().analyzeResourceUsage(
+      MF, AssumedStackSizeForDynamicSizeObjects,
+      AssumedStackSizeForExternalCall);
+}
+
+AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo
+AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
     const MachineFunction &MF, uint32_t AssumedStackSizeForDynamicSizeObjects,
     uint32_t AssumedStackSizeForExternalCall) const {
   SIFunctionResourceInfo Info;
