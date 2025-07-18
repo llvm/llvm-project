@@ -26634,7 +26634,7 @@ Arguments:
 
 The first argument is a constant integer representing the size of the
 object, or -1 if it is variable sized. The second argument is a pointer
-to to an ``alloca`` instruction.
+to an ``alloca`` instruction.
 
 Semantics:
 """"""""""
@@ -26679,8 +26679,8 @@ to an ``alloca`` instruction.
 Semantics:
 """"""""""
 
-The stack-allocated object that ``ptr`` points becomes dead after the call to
-this intrinsic.
+The stack-allocated object that ``ptr`` points to becomes dead after the call
+to this intrinsic.
 
 Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
 
