@@ -7,7 +7,7 @@
 
 cmake_minimum_required(VERSION 3.13.4)
 
-project(ROCm-Device-Libs VERSION "1.0.0")
+project(rocm-device-libs VERSION "1.0.0")
 cmake_policy(SET CMP0011 NEW)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -110,7 +110,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   # Install License file
   install ( FILES "${CPACK_RESOURCE_FILE_LICENSE}"
-          DESTINATION ${CMAKE_INSTALL_DOCDIR})
+          DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/${CPACK_PACKAGE_NAME})
 
   set ( CPACK_GENERATOR "DEB;RPM" CACHE STRING "Default packaging generators." )
 
