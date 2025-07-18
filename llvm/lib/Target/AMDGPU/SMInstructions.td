@@ -87,7 +87,7 @@ class SM_Real <SM_Pseudo ps, string opName = ps.Mnemonic>
   bits<7>  sdst;
   bits<32> offset;
   bits<8>  soffset;
-  bits<5>  cpol;
+  bits<12> cpol;
 }
 
 class OffsetMode<bit hasOffset, bit hasSOffset, string variant,
@@ -1485,6 +1485,7 @@ class SMEM_Real_Load_gfx12<bits<6> op, string ps, string opName, OffsetMode offs
   RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
   let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
 
+  let Inst{20} = cpol{CPolBit.NV}; // non-volatile
   let Inst{22-21} = cpol{4-3}; // scope
   let Inst{24-23} = cpol{1-0}; // th - only lower 2 bits are supported
 }
