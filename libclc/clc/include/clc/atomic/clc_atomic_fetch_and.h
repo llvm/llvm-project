@@ -6,12 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
-#define __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
+#ifndef __CLC_ATOMIC_CLC_ATOMIC_FETCH_AND_H__
+#define __CLC_ATOMIC_CLC_ATOMIC_FETCH_AND_H__
 
-#include <clc/opencl/opencl-base.h>
+#include <clc/internal/clc.h>
 
-#define FUNCTION atomic_sub
-#include <clc/opencl/atomic/atomic_decl_legacy.inc>
+#define FUNCTION __clc_atomic_fetch_and
 
-#endif // __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
+#define __CLC_BODY <clc/atomic/atomic_decl.inc>
+#include <clc/integer/gentype.inc>
+
+#undef FUNCTION
+
+#endif // __CLC_ATOMIC_CLC_ATOMIC_FETCH_AND_H__
