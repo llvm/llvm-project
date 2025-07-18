@@ -57,8 +57,8 @@ using type_identity_t // NOLINT(readability-identifier-naming)
 // C++23.
 template <typename Optional, typename Function,
           typename Value = typename llvm::remove_cvref_t<Optional>::value_type>
-auto transformOptional(Optional &&O, Function &&F)
-    -> std::optional<std::invoke_result_t<Function, Value>> {
+std::optional<std::invoke_result_t<Function, Value>>
+transformOptional(Optional &&O, Function &&F) {
   if (O) {
     return F(*std::forward<Optional>(O));
   }
