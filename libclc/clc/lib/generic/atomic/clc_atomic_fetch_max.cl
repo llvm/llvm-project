@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
-#define __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
+#include <clc/atomic/clc_atomic_fetch_max.h>
 
-#include <clc/opencl/opencl-base.h>
+#define FUNCTION __clc_atomic_fetch_max
+#define __IMPL_FUNCTION __scoped_atomic_fetch_max
 
-#define FUNCTION atomic_sub
-#include <clc/opencl/atomic/atomic_decl_legacy.inc>
+#define __CLC_BODY <clc_atomic_def.inc>
+#include <clc/integer/gentype.inc>
 
-#endif // __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__
+#define __CLC_BODY <clc_atomic_def.inc>
+#include <clc/math/gentype.inc>

@@ -6,11 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_dec.h>
-#include <clc/opencl/atomic/atomic_dec.h>
+#ifndef __CLC_ATOMIC_CLC_ATOMIC_FETCH_MIN_H__
+#define __CLC_ATOMIC_CLC_ATOMIC_FETCH_MIN_H__
 
-#define FUNCTION atomic_dec
-#define __IMPL_FUNCTION __clc_atomic_dec
+#include <clc/internal/clc.h>
 
-#define __CLC_BODY <atomic_inc_dec.inc>
+#define FUNCTION __clc_atomic_fetch_min
+
+#define __CLC_BODY <clc/atomic/atomic_decl.inc>
 #include <clc/integer/gentype.inc>
+
+#define __CLC_BODY <clc/atomic/atomic_decl.inc>
+#include <clc/math/gentype.inc>
+
+#undef FUNCTION
+
+#endif // __CLC_ATOMIC_CLC_ATOMIC_FETCH_MIN_H__
