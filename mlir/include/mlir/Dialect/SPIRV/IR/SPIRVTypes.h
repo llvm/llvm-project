@@ -330,10 +330,33 @@ public:
     bool hasValue() const { return !isa<UnitAttr>(decorationValue); }
   };
 
+  // Type for specifying the decoration(s) on the struct itself
+  struct StructDecorationInfo {
+    bool hasValue;
+    Decoration decoration;
+    Attribute decorationValue;
+
+    StructDecorationInfo(bool hasValue, Decoration decoration,
+                         Attribute decorationValue)
+        : hasValue(hasValue), decoration(decoration),
+          decorationValue(decorationValue) {}
+
+    bool operator==(const StructDecorationInfo &other) const {
+      return (this->decoration == other.decoration) &&
+             (this->decorationValue == other.decorationValue);
+    }
+
+    bool operator<(const StructDecorationInfo &other) const {
+      return static_cast<uint32_t>(this->decoration) <
+             static_cast<uint32_t>(other.decoration);
+    }
+  };
+
   /// Construct a literal StructType with at least one member.
   static StructType get(ArrayRef<Type> memberTypes,
                         ArrayRef<OffsetInfo> offsetInfo = {},
-                        ArrayRef<MemberDecorationInfo> memberDecorations = {});
+                        ArrayRef<MemberDecorationInfo> memberDecorations = {},
+                        ArrayRef<StructDecorationInfo> structDecorations = {});
 
   /// Construct an identified StructType. This creates a StructType whose body
   /// (member types, offset info, and decorations) is not set yet. A call to
@@ -367,6 +390,9 @@ public:
 
   bool hasOffset() const;
 
+  /// Returns true if the struct has a specified decoration.
+  bool hasDecoration(spirv::Decoration decoration) const;
+
   uint64_t getMemberOffset(unsigned) const;
 
   // Returns in `memberDecorations` the Decorations (apart from Offset)
@@ -380,12 +406,18 @@ public:
       unsigned i,
       SmallVectorImpl<StructType::MemberDecorationInfo> &decorationsInfo) const;
 
+  // Returns in `structDecorations` the Decorations associated with the
+  // StructType.
+  void getStructDecorations(SmallVectorImpl<StructType::StructDecorationInfo>
+                                &structDecorations) const;
+
   /// Sets the contents of an incomplete identified StructType. This method must
   /// be called only for identified StructTypes and it must be called only once
   /// per instance. Otherwise, failure() is returned.
   LogicalResult
   trySetBody(ArrayRef<Type> memberTypes, ArrayRef<OffsetInfo> offsetInfo = {},
-             ArrayRef<MemberDecorationInfo> memberDecorations = {});
+             ArrayRef<MemberDecorationInfo> memberDecorations = {},
+             ArrayRef<StructDecorationInfo> structDecorations = {});
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      std::optional<StorageClass> storage = std::nullopt);
@@ -395,6 +427,9 @@ public:
 
 llvm::hash_code
 hash_value(const StructType::MemberDecorationInfo &memberDecorationInfo);
+
+llvm::hash_code
+hash_value(const StructType::StructDecorationInfo &structDecorationInfo);
 
 // SPIR-V KHR cooperative matrix type
 class CooperativeMatrixType
