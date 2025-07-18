@@ -31,6 +31,7 @@
 #include "lld/Common/Reproduce.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -41,6 +42,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
@@ -297,8 +299,24 @@ using DeferredFiles = std::vector<DeferredFile>;
 // Most input files have been mapped but not yet paged in.
 // This code forces the page-ins on multiple threads so
 // the process is not stalled waiting on disk buffer i/o.
-void multiThreadedPageInBackground(const DeferredFiles &deferred) {
+void multiThreadedPageInBackground(DeferredFiles &deferred) {
   static const size_t pageSize = Process::getPageSizeEstimate();
+#if 0
+  ThreadPoolStrategy oldStrategy = llvm::parallel::strategy;
+  (void)llvm::make_scope_exit([&]() { llvm::parallel::strategy = oldStrategy; });
+  llvm::parallel::strategy = llvm::hardware_concurrency(config->readThreads);
+
+  size_t totalBytes = parallelTransformReduce(deferred, 0,
+    [](size_t acc, size_t size) { return acc + size; },
+    [&](DeferredFile &file) {
+      const StringRef &buffer = file.buffer.getBuffer();
+      for (const char *page = buffer.data(), *end = page + buffer.size();
+           page < end; page += pageSize)
+        LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
+      return buffer.size();
+    }
+    );
+#else
   static size_t totalBytes = 0;
   std::atomic_int index = 0;
 
@@ -316,7 +334,7 @@ void multiThreadedPageInBackground(const DeferredFiles &deferred) {
         LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
     }
   });
-
+#endif
   if (getenv("LLD_MULTI_THREAD_PAGE"))
     llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
                  << deferred.size() << "\n";
@@ -337,20 +355,19 @@ static void multiThreadedPageIn(const DeferredFiles &deferred) {
   }
 
   if (!deferred.empty()) {
-    queue.emplace_back(
-        std::unique_ptr<DeferredFiles>(new DeferredFiles(deferred)));
+    queue.emplace_back(std::make_unique<DeferredFiles>(deferred));
     if (!running)
       running = new std::thread([&]() {
         while (true) {
-           mutex.lock();
-           if (queue.empty) {
-             mutex.unlock();
-             break;
-           }
-           DeferredFiles deferred(*queue.front());
-           queue.pop_front();
-           mutex.unlock();
-           multiThreadedPageInBackground(deferred);
+          mutex.lock();
+          if (queue.empty()) {
+            mutex.unlock();
+            break;
+          }
+          DeferredFiles deferred(*queue.front());
+          queue.pop_front();
+          mutex.unlock();
+          multiThreadedPageInBackground(deferred);
         }
       });
   }
