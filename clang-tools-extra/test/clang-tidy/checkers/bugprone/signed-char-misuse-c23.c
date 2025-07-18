@@ -72,13 +72,11 @@ enum EType1 : signed char {
 };
 
 enum EType1 es1_1 = EType1_M128;
-// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: 'signed char' to 'enum EType1' conversion; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
 enum EType1 es1_2 = EType1_1;
 enum EType1 es1_3 = -128;
 
 void assign(enum EType1 *es) {
     *es = EType1_M128;
-// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: 'signed char' to 'enum EType1' conversion; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
 }
 
 
@@ -89,6 +87,5 @@ typedef enum EType2 : int8_t {
 } EType2_t;
 
 EType2_t es2_1 = EType2_M128;
-// CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'signed char' to 'EType2_t' (aka 'enum EType2') conversion; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
 EType2_t es2_2 = EType2_1;
 EType2_t es2_3 = -128;
