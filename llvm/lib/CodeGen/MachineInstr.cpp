@@ -2174,16 +2174,25 @@ bool MachineInstr::addRegisterKilled(Register IncomingReg,
 }
 
 void MachineInstr::clearRegisterKills(Register Reg,
-                                      const TargetRegisterInfo *RegInfo) {
+                                      const TargetRegisterInfo *RegInfo,
+                                      QueryType Type) {
   if (!Reg.isPhysical())
     RegInfo = nullptr;
-  for (MIBundleOperands O(*this); O.isValid(); ++O) {
-    if (!O->isReg() || !O->isUse() || !O->isKill())
-      continue;
-    Register OpReg = O->getReg();
-    if ((RegInfo && RegInfo->regsOverlap(Reg, OpReg)) || Reg == OpReg)
-      O->setIsKill(false);
-  }
+
+  auto clearKills = [&](auto Operands) {
+    for (MachineOperand &MO : Operands) {
+      if (!MO.isReg() || !MO.isUse() || !MO.isKill())
+        continue;
+      Register OpReg = MO.getReg();
+      if ((RegInfo && RegInfo->regsOverlap(Reg, OpReg)) || Reg == OpReg)
+        MO.setIsKill(false);
+    }
+  };
+
+  if (Type != AllInBundle || !isBundled() || isBundledWithPred())
+    clearKills(operands());
+  else
+    clearKills(mi_bundle_ops(*this));
 }
 
 bool MachineInstr::addRegisterDead(Register Reg,

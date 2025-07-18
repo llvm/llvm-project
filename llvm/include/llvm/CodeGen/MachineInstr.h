@@ -880,9 +880,9 @@ public:
   /// queries but they are bundle aware.
 
   enum QueryType {
-    IgnoreBundle,    // Ignore bundles
-    AnyInBundle,     // Return true if any instruction in bundle has property
-    AllInBundle      // Return true if all instructions in bundle have property
+    IgnoreBundle, // Ignore bundles
+    AnyInBundle,  // Check/update property for any instruction in bundle
+    AllInBundle   // Check/update property for all instructions in bundle
   };
 
   /// Return true if the instruction (or in the case of a bundle,
@@ -1700,7 +1700,8 @@ public:
   /// Clear all kill flags affecting Reg.  If RegInfo is provided, this includes
   /// all aliasing registers.
   LLVM_ABI void clearRegisterKills(Register Reg,
-                                   const TargetRegisterInfo *RegInfo);
+                                   const TargetRegisterInfo *RegInfo,
+                                   QueryType Type = AllInBundle);
 
   /// We have determined MI defined a register without a use.
   /// Look for the operand that defines it and mark it as IsDead. If
