@@ -957,6 +957,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"sin", {{"x", SameFloating}}, SameFloating},
     {"sind", {{"x", SameFloating}}, SameFloating},
     {"sinh", {{"x", SameFloating}}, SameFloating},
+    {"sinpi", {{"x", SameFloating}}, SameFloating},
     {"size",
         {{"array", AnyData, Rank::arrayOrAssumedRank},
             OptionalDIM, // unless array is assumed-size
