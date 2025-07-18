@@ -2905,6 +2905,8 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
         if (!copyField(F, /*Activate=*/true))
           return false;
       } else {
+        if (!CheckMutable(S, OpPC, Src.atField(F.Offset)))
+          return false;
         Pointer DestField = Dest.atField(F.Offset);
         zeroAll(DestField);
       }

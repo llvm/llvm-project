@@ -128,6 +128,11 @@ static bool shouldSkipInBacktrace(const Function *F) {
   if (FD->getDeclName().getCXXOverloadedOperator() == OO_New ||
       FD->getDeclName().getCXXOverloadedOperator() == OO_Array_New)
     return true;
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      MD && MD->getParent()->isAnonymousStructOrUnion())
+    return true;
+
   return false;
 }
 
