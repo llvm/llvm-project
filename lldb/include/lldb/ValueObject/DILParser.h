@@ -97,7 +97,8 @@ private:
   std::string ParseUnqualifiedId();
   std::optional<int64_t> ParseIntegerConstant();
   ASTNodeUP ParseNumericLiteral();
-  ASTNodeUP ParseNumericConstant();
+  ASTNodeUP ParseIntegerLiteral();
+  ASTNodeUP ParseFloatingPointLiteral();
 
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 
