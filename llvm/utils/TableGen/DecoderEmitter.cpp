@@ -2364,18 +2364,15 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
       ((1 << MCD::OPC_CheckPredicate) | (1 << MCD::OPC_CheckPredicateOrFail));
   const bool HasSoftFail = OpcodeMask & (1 << MCD::OPC_SoftFail);
 
-  auto emitFn = [&](StringRef FnSuffix) {
-    OS << formatv("static DecodeStatus decodeInstruction{}(const uint8_t "
-                  "DecodeTable[], MCInst &MI, {}, uint64_t Address, "
-                  "const MCDisassembler *DisAsm, const MCSubtargetInfo &STI",
-                  FnSuffix, Type.getParamDecl());
-    if (IsVarLenInst)
-      OS << ", llvm::function_ref<void(APInt &, uint64_t)> makeUp";
-    OS << ") {\n";
-  };
-
   emitTemplate(OS, Type);
-  emitFn(Suffix);
+  OS << formatv("static DecodeStatus decodeInstruction(const uint8_t "
+                "DecodeTable[], MCInst &MI, {}, uint64_t Address, "
+                "const MCDisassembler *DisAsm, const MCSubtargetInfo &STI",
+                Type.getParamDecl());
+  if (IsVarLenInst)
+    OS << ", llvm::function_ref<void(APInt &, uint64_t)> makeUp";
+  OS << ") {\n";
+
   if (HasCheckPredicate)
     OS << "  const FeatureBitset &Bits = STI.getFeatureBits();\n";
 
@@ -2572,19 +2569,6 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
 }
 
 )";
-
-  if (!Suffix.empty()) {
-    // Emit function without the suffix.
-    emitFn("");
-    OS << formatv(
-        "  return decodeInstruction{}(DecodeTable, MI, insn, Address, "
-        "DisAsm, STI",
-        Suffix);
-    if (IsVarLenInst)
-      OS << ", makeUp";
-    OS << ");\n";
-    OS << "}\n\n";
-  }
 }
 
 static void emitCommonFunctions(formatted_raw_ostream &OS) {
@@ -2832,10 +2816,17 @@ namespace {
       FilterChooser FC(NumberedEncodings, EncodingIDs, Operands,
                        IsVarLenInst ? MaxInstLen : InstrBitwidth, this);
 
-      // FIXME: Update this comment.
-      // The decode table is cleared for each top level decoder function. The
-      // predicates and decoders themselves, however, are shared across all
-      // decoders to give more opportunities for uniqueing.
+      // The decode table is cleared for each top level decoder table generated.
+      //
+      // The decoders themselves are shared across all decoder tables for a
+      // given instuction bitwidth, to give more opporuninity for uniqueing.
+      // Generally, decoders across different instruction do not have much
+      // uniqueing opportunity, and we generate a different decode function
+      // for each bitwidth, so we clear the decoders themselves for each
+      // bitwidth (at the start of `emitDecoder`).
+      //
+      // Predicates are shared across all decoders to give more opportunities
+      // for uniqueing.
       TableInfo.Table.clear();
       TableInfo.FixupStack.clear();
       TableInfo.FixupStack.emplace_back();
