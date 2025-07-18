@@ -1255,6 +1255,13 @@ public:
   bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
   bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
 
+  /// Check if this is a valid generalized type metadata node.
+  bool hasGeneralizedMDString() {
+    if (getNumOperands() < 2 || !isa<MDString>(getOperand(1)))
+      return false;
+    return cast<MDString>(getOperand(1))->getString().ends_with(".generalized");
+  }
+
   unsigned getNumTemporaryUses() const {
     assert(isTemporary() && "Only for temporaries");
     return Context.getReplaceableUses()->getNumUses();
@@ -1841,15 +1848,6 @@ public:
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_ISA_CONVERSION_FUNCTIONS(NamedMDNode, LLVMNamedMDNodeRef)
-
-// Check if a given MDNode is a valid genaralized type metadata node.
-inline bool hasGeneralizedMDString(const MDNode *MD) {
-  if (MD->getNumOperands() < 2 || !isa<MDString>(MD->getOperand(1)))
-    return false;
-  return cast<MDString>(MD->getOperand(1))
-      ->getString()
-      .ends_with(".generalized");
-}
 
 } // end namespace llvm
 

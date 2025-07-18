@@ -7,6 +7,10 @@ module mod1
     integer :: i
   end type
 
+  type :: t2
+    integer, device, allocatable, dimension(:) :: x
+  end type
+
   integer, device, dimension(11:20) :: cdev
 
 contains
@@ -419,3 +423,24 @@ end subroutine
 ! CHECK: fir.do_concurrent.loop
 ! CHECK-NOT: cuf.data_transfer
 ! CHECK: hlfir.assign
+
+
+subroutine sub22()
+  use mod1
+  type(t2) :: a
+  integer :: b(100)
+  allocate(a%x(100))
+
+  b = a%x
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub22()
+! CHECK: cuf.data_transfer
+
+subroutine sub23(n)
+  integer :: n
+  real(8), device :: d(n,n), x(n)
+  x = sum(d,dim=2) ! Was triggering Unsupported CUDA data transfer
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub23
