@@ -7245,12 +7245,6 @@ QualType TreeTransform<Derived>::TransformDependentBitIntType(
   return Result;
 }
 
-template <typename Derived>
-QualType TreeTransform<Derived>::TransformPredefinedSugarType(
-    TypeLocBuilder &TLB, PredefinedSugarTypeLoc TL) {
-  llvm_unreachable("This type does not need to be transformed.");
-}
-
   /// Simple iterator that traverses the template arguments in a
   /// container that provides a \c getArgLoc() member function.
   ///

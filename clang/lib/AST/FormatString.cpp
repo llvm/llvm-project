@@ -320,86 +320,6 @@ bool clang::analyze_format_string::ParseUTF8InvalidSpecifier(
 // Methods on ArgType.
 //===----------------------------------------------------------------------===//
 
-static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
-                                          LengthModifier::Kind &K) {
-  if (!Ctx.getLangOpts().C99 && !Ctx.getLangOpts().CPlusPlus)
-    return false;
-  for (/**/; const auto *TT = QT->getAs<TypedefType>(); QT = TT->desugar()) {
-    const auto *TD = TT->getDecl();
-    const auto *DC = TT->getDecl()->getDeclContext();
-    if (DC->isTranslationUnit() || DC->isStdNamespace()) {
-      StringRef Name = TD->getIdentifier()->getName();
-      if (Name == "size_t") {
-        K = LengthModifier::AsSizeT;
-        return true;
-      } else if (Name == "ssize_t" /*Not C99, but common in Unix.*/) {
-        K = LengthModifier::AsSizeT;
-        return true;
-      } else if (Name == "ptrdiff_t") {
-        K = LengthModifier::AsPtrDiff;
-        return true;
-      } else if (Name == "intmax_t") {
-        K = LengthModifier::AsIntMax;
-        return true;
-      } else if (Name == "uintmax_t") {
-        K = LengthModifier::AsIntMax;
-        return true;
-      }
-    }
-  }
-  if (const auto *PST = QT->getAs<PredefinedSugarType>()) {
-    using Kind = PredefinedSugarType::Kind;
-    switch (PST->getKind()) {
-    case Kind::SizeT:
-    case Kind::SignedSizeT:
-      K = LengthModifier::AsSizeT;
-      return true;
-    case Kind::PtrdiffT:
-      K = LengthModifier::AsPtrDiff;
-      return true;
-    }
-    llvm_unreachable("unexpected kind");
-  }
-  return false;
-}
-
-// Check whether T and E are compatible size_t/ptrdiff_t typedefs. E must be
-// consistent with LE.
-// T is the type of the actual expression in the code to be checked, and E is
-// the expected type parsed from the format string.
-static clang::analyze_format_string::ArgType::MatchKind
-matchesSizeTPtrdiffT(ASTContext &C, QualType T, QualType E,
-                     LengthModifier::Kind LE) {
-  using Kind = LengthModifier::Kind;
-  using MatchKind = clang::analyze_format_string::ArgType::MatchKind;
-  assert(LE == Kind::AsPtrDiff || LE == Kind::AsSizeT);
-
-  if (!T->isIntegerType())
-    return MatchKind::NoMatch;
-
-  if (C.getCorrespondingSignedType(T.getCanonicalType()) !=
-      C.getCorrespondingSignedType(E.getCanonicalType()))
-    return MatchKind::NoMatch;
-
-  // signed size_t and unsigned ptrdiff_t does not have typedefs in C and C++.
-  if (LE == Kind::AsSizeT && E->isSignedIntegerType())
-    return T->isSignedIntegerType() ? MatchKind::Match
-                                    : MatchKind::NoMatchSignedness;
-
-  if (LE == LengthModifier::Kind::AsPtrDiff && E->isUnsignedIntegerType())
-    return T->isUnsignedIntegerType() ? MatchKind::Match
-                                      : MatchKind::NoMatchSignedness;
-
-  if (Kind Actual = Kind::None; namedTypeToLengthModifierKind(C, T, Actual)) {
-    if (Actual == LE)
-      return MatchKind::Match;
-    else if (Actual == Kind::AsPtrDiff || Actual == Kind::AsSizeT)
-      return MatchKind::NoMatchSignedness;
-  }
-
-  return MatchKind::NoMatch;
-}
-
 clang::analyze_format_string::ArgType::MatchKind
 ArgType::matchesType(ASTContext &C, QualType argTy) const {
   // When using the format attribute in C++, you can receive a function or an
@@ -474,13 +394,6 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     }
 
     case SpecificTy: {
-      if (TK != TypeKind::DontCare) {
-        return matchesSizeTPtrdiffT(C, argTy, T,
-                                    TK == TypeKind::SizeT
-                                        ? LengthModifier::Kind::AsSizeT
-                                        : LengthModifier::AsPtrDiff);
-      }
-
       if (const EnumType *ETy = argTy->getAs<EnumType>()) {
         // If the enum is incomplete we know nothing about the underlying type.
         // Assume that it's 'int'. Do not use the underlying type for a scoped
@@ -740,18 +653,6 @@ ArgType::matchesArgType(ASTContext &C, const ArgType &Other) const {
 
   if (Left.K == AK::SpecificTy) {
     if (Right.K == AK::SpecificTy) {
-      if (Left.TK != TypeKind::DontCare) {
-        return matchesSizeTPtrdiffT(C, Right.T, Left.T,
-                                    Left.TK == TypeKind::SizeT
-                                        ? LengthModifier::Kind::AsSizeT
-                                        : LengthModifier::AsPtrDiff);
-      } else if (Right.TK != TypeKind::DontCare) {
-        return matchesSizeTPtrdiffT(C, Left.T, Right.T,
-                                    Right.TK == TypeKind::SizeT
-                                        ? LengthModifier::Kind::AsSizeT
-                                        : LengthModifier::AsPtrDiff);
-      }
-
       auto Canon1 = C.getCanonicalType(Left.T);
       auto Canon2 = C.getCanonicalType(Right.T);
       if (Canon1 == Canon2)
@@ -1297,12 +1198,29 @@ FormatSpecifier::getCorrectedLengthModifier() const {
   return std::nullopt;
 }
 
-bool FormatSpecifier::namedTypeToLengthModifier(ASTContext &Ctx, QualType QT,
+bool FormatSpecifier::namedTypeToLengthModifier(QualType QT,
                                                 LengthModifier &LM) {
-  if (LengthModifier::Kind Out = LengthModifier::Kind::None;
-      namedTypeToLengthModifierKind(Ctx, QT, Out)) {
-    LM.setKind(Out);
-    return true;
+  for (/**/; const auto *TT = QT->getAs<TypedefType>();
+       QT = TT->getDecl()->getUnderlyingType()) {
+    const TypedefNameDecl *Typedef = TT->getDecl();
+    const IdentifierInfo *Identifier = Typedef->getIdentifier();
+    if (Identifier->getName() == "size_t") {
+      LM.setKind(LengthModifier::AsSizeT);
+      return true;
+    } else if (Identifier->getName() == "ssize_t") {
+      // Not C99, but common in Unix.
+      LM.setKind(LengthModifier::AsSizeT);
+      return true;
+    } else if (Identifier->getName() == "intmax_t") {
+      LM.setKind(LengthModifier::AsIntMax);
+      return true;
+    } else if (Identifier->getName() == "uintmax_t") {
+      LM.setKind(LengthModifier::AsIntMax);
+      return true;
+    } else if (Identifier->getName() == "ptrdiff_t") {
+      LM.setKind(LengthModifier::AsPtrDiff);
+      return true;
+    }
   }
   return false;
 }
