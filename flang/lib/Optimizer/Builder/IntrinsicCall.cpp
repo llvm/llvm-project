@@ -503,6 +503,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"getgid", &I::genGetGID},
     {"getpid", &I::genGetPID},
     {"getuid", &I::genGetUID},
+    {"globaltimer", &I::genGlobalTimer, {}, /*isElemental=*/false},
     {"hostnm",
      &I::genHostnm,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
@@ -4317,6 +4318,13 @@ mlir::Value IntrinsicLibrary::genGetUID(mlir::Type resultType,
   assert(args.size() == 0 && "getgid takes no input");
   return builder.createConvert(loc, resultType,
                                fir::runtime::genGetUID(builder, loc));
+}
+
+// GLOBALTIMER
+mlir::Value IntrinsicLibrary::genGlobalTimer(mlir::Type resultType,
+                                             llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0 && "globalTimer takes no args");
+  return builder.create<mlir::NVVM::GlobalTimerOp>(loc, resultType).getResult();
 }
 
 // GET_COMMAND_ARGUMENT
