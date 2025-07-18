@@ -1968,6 +1968,29 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
+                                           SDValue &SAddr, SDValue &VOffset,
+                                           SDValue &Offset,
+                                           SDValue &CPol) const {
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset))
+    return false;
+
+  CPol = CurDAG->getTargetConstant(0, SDLoc(), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrGLC(SDNode *N, SDValue Addr,
+                                              SDValue &SAddr, SDValue &VOffset,
+                                              SDValue &Offset,
+                                              SDValue &CPol) const {
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset))
+    return false;
+
+  unsigned CPolVal = AMDGPU::CPol::GLC;
+  CPol = CurDAG->getTargetConstant(CPolVal, SDLoc(), MVT::i32);
+  return true;
+}
+
 static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
   if (auto *FI = dyn_cast<FrameIndexSDNode>(SAddr)) {
     SAddr = CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0));
