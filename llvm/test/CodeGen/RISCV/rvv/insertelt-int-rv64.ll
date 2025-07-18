@@ -129,9 +129,8 @@ define <vscale x 8 x i8> @insertelt_nxv8i8_idx(<vscale x 8 x i8> %v, i8 signext 
 ; CHECK-LABEL: insertelt_nxv8i8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a2, a1, 1
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vslideup.vx v8, v9, a1
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 8 x i8> %v, i8 %elt, i32 %idx
@@ -333,9 +332,8 @@ define <vscale x 4 x i16> @insertelt_nxv4i16_idx(<vscale x 4 x i16> %v, i16 sign
 ; CHECK-LABEL: insertelt_nxv4i16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a2, a1, 1
-; CHECK-NEXT:    vsetvli a3, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vslideup.vx v8, v9, a1
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 4 x i16> %v, i16 %elt, i32 %idx
@@ -503,9 +501,8 @@ define <vscale x 2 x i32> @insertelt_nxv2i32_idx(<vscale x 2 x i32> %v, i32 sign
 ; CHECK-LABEL: insertelt_nxv2i32_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a2, a1, 1
-; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vslideup.vx v8, v9, a1
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 2 x i32> %v, i32 %elt, i32 %idx

@@ -1174,7 +1174,7 @@ define double @vreduce_ord_fwadd_v32f64(ptr %x, double %s) {
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v24, fa0
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 16
