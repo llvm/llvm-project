@@ -84,7 +84,7 @@ struct ConvertLayoutOpPattern
     xegpu::LayoutAttr input_layout = op.getInputLayoutAttr();
     xegpu::LayoutAttr target_layout = op.getTargetLayoutAttr();
     if (!input_layout.getInstData() || !target_layout.getInstData())
-      return rewriter.notifyMatchFailure(op, "Skip non-target ConvertLayoutOp.");
+      return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
 
     input_layout = input_layout.dropInstData();
     target_layout = target_layout.dropInstData();
