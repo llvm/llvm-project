@@ -520,6 +520,13 @@ Currently the same as yes.
 Don't use.
 .El
 
+.It Fl -preferred-function-alignment Ns = Ns Ar align
+Specify the preferred function alignment. This flag increases the
+alignment of all user-provided executable (SHF_EXECINSTR) sections to the
+specified value unless retaining the original alignment is beneficial
+for performance reasons. For example, when using LLVM's control flow
+integrity feature, functions may retain their original alignment if
+necessary in order to move them into the jump table.
 .It Fl -print-gc-sections
 List removed unused sections.
 .It Fl -print-icf-sections

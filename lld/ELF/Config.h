@@ -358,6 +358,7 @@ struct Config {
   bool optRemarksWithHotness;
   bool picThunk;
   bool pie;
+  std::optional<uint64_t> preferredFunctionAlignment;
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
