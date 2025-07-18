@@ -166,11 +166,12 @@ PPCGenSubtargetInfo::AntiDepBreakMode PPCSubtarget::getAntiDepBreakMode() const 
 
 void PPCSubtarget::getCriticalPathRCs(RegClassVector &CriticalPathRCs) const {
   CriticalPathRCs.clear();
-  CriticalPathRCs.push_back(isPPC64() ?
-                            &PPC::G8RCRegClass : &PPC::GPRCRegClass);
+  CriticalPathRCs.push_back(isPPC64() ? &PPC::G8RCRegClass
+                                      : &PPC::GPRCRegClass);
 }
 
 void PPCSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
+                                       const MachineBasicBlock &MBB,
                                        unsigned NumRegionInstrs) const {
   // The GenericScheduler that we use defaults to scheduling bottom up only.
   // We want to schedule from both the top and the bottom and so we set

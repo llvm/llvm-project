@@ -65,6 +65,7 @@
 //
 // void <SubTarget>Subtarget::
 // overrideSchedPolicy(MachineSchedPolicy &Policy,
+//                     const MachineBasicBlock &MBB,
 //                     unsigned NumRegionInstrs) const {
 //   Policy.<Flag> = true;
 // }

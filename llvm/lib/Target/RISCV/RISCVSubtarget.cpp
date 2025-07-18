@@ -216,6 +216,7 @@ unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {
 }
 
 void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
+                                         const MachineBasicBlock &MBB,
                                          unsigned NumRegionInstrs) const {
   // Do bidirectional scheduling since it provides a more balanced scheduling
   // leading to better performance. This will increase compile time.
@@ -231,8 +232,9 @@ void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   Policy.ShouldTrackPressure = true;
 }
 
-void RISCVSubtarget::overridePostRASchedPolicy(
-    MachineSchedPolicy &Policy, const MachineFunction &MF) const {
+void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                               const MachineBasicBlock &MBB,
+                                               unsigned NumRegionInstrs) const {
   MISched::Direction PostRASchedDirection = getPostRASchedDirection();
   if (PostRASchedDirection == MISched::TopDown) {
     Policy.OnlyTopDown = true;

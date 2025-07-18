@@ -1015,11 +1015,10 @@ public:
   static bool hasHalfRate64Ops(const TargetSubtargetInfo &STI);
 
   // XXX - Why is this here if it isn't in the default pass set?
-  bool enableEarlyIfConversion() const override {
-    return true;
-  }
+  bool enableEarlyIfConversion() const override { return true; }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
+                           const MachineBasicBlock &MBB,
                            unsigned NumRegionInstrs) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;

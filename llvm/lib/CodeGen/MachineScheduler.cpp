@@ -3703,6 +3703,7 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
                                   MachineBasicBlock::iterator End,
                                   unsigned NumRegionInstrs) {
   const MachineFunction &MF = *Begin->getMF();
+  const MachineBasicBlock &MBB = *Begin->getParent();
   const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
 
   // Avoid setting up the register pressure tracker for small regions to save
@@ -3725,7 +3726,7 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   RegionPolicy.OnlyBottomUp = true;
 
   // Allow the subtarget to override default policy.
-  MF.getSubtarget().overrideSchedPolicy(RegionPolicy, NumRegionInstrs);
+  MF.getSubtarget().overrideSchedPolicy(RegionPolicy, MBB, NumRegionInstrs);
 
   // After subtarget overrides, apply command line options.
   if (!EnableRegPressure) {
@@ -4331,6 +4332,7 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
                                       MachineBasicBlock::iterator End,
                                       unsigned NumRegionInstrs) {
   const MachineFunction &MF = *Begin->getMF();
+  const MachineBasicBlock &MBB = *Begin->getParent();
 
   // Default to top-down because it was implemented first and existing targets
   // expect that behavior by default.
@@ -4338,7 +4340,8 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   RegionPolicy.OnlyBottomUp = false;
 
   // Allow the subtarget to override default policy.
-  MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, MF);
+  MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, MBB,
+                                              NumRegionInstrs);
 
   // After subtarget overrides, apply command line options.
   if (PostRADirection == MISched::TopDown) {

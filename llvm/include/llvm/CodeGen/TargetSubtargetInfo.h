@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
@@ -231,6 +232,7 @@ public:
   /// scheduling heuristics (no custom MachineSchedStrategy) to make
   /// changes to the generic scheduling policy.
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
+                                   const MachineBasicBlock &MBB,
                                    unsigned NumRegionInstrs) const {}
 
   /// Override generic post-ra scheduling policy within a region.
@@ -241,7 +243,8 @@ public:
   /// Note that some options like tracking register pressure won't take effect
   /// in post-ra scheduling.
   virtual void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                         const MachineFunction &MF) const {}
+                                         const MachineBasicBlock &MBB,
+                                         unsigned NumRegionInstrs) const {}
 
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.
