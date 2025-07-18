@@ -34,15 +34,6 @@
 #define TASK_CURRENT_NOT_QUEUED 0
 #define TASK_CURRENT_QUEUED 1
 
-#ifdef BUILD_TIED_TASK_STACK
-#define TASK_STACK_EMPTY 0 // entries when the stack is empty
-#define TASK_STACK_BLOCK_BITS 5 // Used in TASK_STACK_SIZE and TASK_STACK_MASK
-// Number of entries in each task stack array
-#define TASK_STACK_BLOCK_SIZE (1 << TASK_STACK_BLOCK_BITS)
-// Mask for determining index into stack block
-#define TASK_STACK_INDEX_MASK (TASK_STACK_BLOCK_SIZE - 1)
-#endif // BUILD_TIED_TASK_STACK
-
 #define TASK_NOT_PUSHED 1
 #define TASK_SUCCESSFULLY_PUSHED 0
 #define TASK_TIED 1
@@ -2704,23 +2695,6 @@ extern std::atomic<kmp_int32> __kmp_tdg_task_id;
 extern kmp_int32 __kmp_num_tdg;
 #endif
 
-#ifdef BUILD_TIED_TASK_STACK
-
-/* Tied Task stack definitions */
-typedef struct kmp_stack_block {
-  kmp_taskdata_t *sb_block[TASK_STACK_BLOCK_SIZE];
-  struct kmp_stack_block *sb_next;
-  struct kmp_stack_block *sb_prev;
-} kmp_stack_block_t;
-
-typedef struct kmp_task_stack {
-  kmp_stack_block_t ts_first_block; // first block of stack entries
-  kmp_taskdata_t **ts_top; // pointer to the top of stack
-  kmp_int32 ts_entries; // number of entries on the stack
-} kmp_task_stack_t;
-
-#endif // BUILD_TIED_TASK_STACK
-
 typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   /* Same fields as in the #else branch, but in reverse order */
@@ -2863,10 +2837,6 @@ typedef struct kmp_base_thread_data {
   kmp_int32 td_deque_ntasks; // Number of tasks in deque
   // GEH: shouldn't this be volatile since used in while-spin?
   kmp_int32 td_deque_last_stolen; // Thread number of last successful steal
-#ifdef BUILD_TIED_TASK_STACK
-  kmp_task_stack_t td_susp_tied_tasks; // Stack of suspended tied tasks for task
-// scheduling constraint
-#endif // BUILD_TIED_TASK_STACK
 } kmp_base_thread_data_t;
 
 #define TASK_DEQUE_BITS 8 // Used solely to define INITIAL_TASK_DEQUE_SIZE
