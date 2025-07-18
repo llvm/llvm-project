@@ -396,8 +396,9 @@ public:
   using OnSearchComplete = unique_function<void(SymbolQuery &)>;
 
   void dump() {
+    int i = 0;
     m_libMgr.forEachLibrary([&](const LibraryInfo &lib) -> bool {
-      dbgs() << ". Library Path : " << lib.getFullPath() << " -> \n\t\t:"
+      dbgs() << ++i << ". Library Path : " << lib.getFullPath() << " -> \n\t\t:"
              << " ({Type : ("
              << (lib.getKind() == PathType::User ? "User" : "System")
              << ") }, { State : "
