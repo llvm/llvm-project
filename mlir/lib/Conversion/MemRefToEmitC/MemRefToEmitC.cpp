@@ -16,6 +16,7 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -74,6 +75,78 @@ struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
     auto noInit = emitc::OpaqueAttr::get(getContext(), "");
     rewriter.replaceOpWithNewOp<emitc::VariableOp>(op, resultTy, noInit);
     return success();
+  }
+};
+
+struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(memref::AllocOp allocOp, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = allocOp.getLoc();
+    auto memrefType = allocOp.getType();
+    if (!memrefType.hasStaticShape()) {
+      // TODO: Handle Dynamic shapes in the future. If the size
+      // of the allocation is the result of some function, we could
+      // potentially evaluate the function and use the result in the call to
+      // allocate.
+      return rewriter.notifyMatchFailure(
+          loc, "cannot transform alloc with dynamic shape");
+    }
+
+    Type elementType = memrefType.getElementType();
+    mlir::Value elementTypeLiteral = rewriter.create<emitc::LiteralOp>(
+        loc, mlir::emitc::OpaqueType::get(rewriter.getContext(), "type"),
+        rewriter.getStringAttr(getCTypeName(elementType)));
+    emitc::CallOpaqueOp sizeofElementOp = rewriter.create<emitc::CallOpaqueOp>(
+        loc, mlir::emitc::SizeTType::get(rewriter.getContext()),
+        rewriter.getStringAttr("sizeof"), mlir::ValueRange{elementTypeLiteral});
+    mlir::Value sizeofElement = sizeofElementOp.getResult(0);
+
+    unsigned int elementWidth = elementType.getIntOrFloatBitWidth();
+    mlir::Value numElements;
+    if (elementType.isF32())
+      numElements = rewriter.create<emitc::ConstantOp>(
+          loc, elementType, rewriter.getFloatAttr(elementType, elementWidth));
+    else
+      numElements = rewriter.create<emitc::ConstantOp>(
+          loc, elementType, rewriter.getIntegerAttr(elementType, elementWidth));
+    mlir::Value totalSizeBytes = rewriter.create<emitc::MulOp>(
+        loc, mlir::emitc::SizeTType::get(rewriter.getContext()), sizeofElement,
+        numElements);
+
+    auto mallocCall = rewriter.create<emitc::CallOpaqueOp>(
+        loc,
+        emitc::PointerType::get(
+            rewriter.getContext(),
+            mlir::emitc::OpaqueType::get(rewriter.getContext(), "void")),
+        rewriter.getStringAttr("malloc"), mlir::ValueRange{totalSizeBytes});
+    auto targetPointerType =
+        emitc::PointerType::get(rewriter.getContext(), elementType);
+    auto castOp = rewriter.create<emitc::CastOp>(loc, targetPointerType,
+                                                 mallocCall.getResult(0));
+
+    rewriter.replaceOp(allocOp, castOp);
+    return success();
+  }
+
+private:
+  std::string getCTypeName(mlir::Type type) const {
+    if (type.isF32())
+      return "float";
+    if (type.isF64())
+      return "double";
+    if (type.isInteger(8))
+      return "int8_t";
+    if (type.isInteger(16))
+      return "int16_t";
+    if (type.isInteger(32))
+      return "int32_t";
+    if (type.isInteger(64))
+      return "int64_t";
+    if (type.isIndex())
+      return "size_t";
+    return "void";
   }
 };
 
@@ -222,6 +295,6 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
 
 void mlir::populateMemRefToEmitCConversionPatterns(
     RewritePatternSet &patterns, const TypeConverter &converter) {
-  patterns.add<ConvertAlloca, ConvertGlobal, ConvertGetGlobal, ConvertLoad,
-               ConvertStore>(converter, patterns.getContext());
+  patterns.add<ConvertAlloca, ConvertAlloc, ConvertGlobal, ConvertGetGlobal,
+               ConvertLoad, ConvertStore>(converter, patterns.getContext());
 }
