@@ -290,7 +290,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   }
 
   for (BasicBlock *P : Predecessors) {
-    if (BranchInst *Branch = dyn_cast<BranchInst>(P->getTerminator()); Branch) {
+    if (BranchInst *Branch = dyn_cast<BranchInst>(P->getTerminator())) {
       // Exactly one of the two successors is the header.
       BasicBlock *Succ0 = Branch->getSuccessor(0) == Header ? Header : nullptr;
       BasicBlock *Succ1 = Succ0 ? nullptr : Header;
@@ -302,20 +302,19 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
       LLVM_DEBUG(dbgs() << "Added internal branch: " << P->getName() << " -> "
                         << (Succ0 ? Succ0->getName() : "") << " "
                         << (Succ1 ? Succ1->getName() : "") << "\n");
-    } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator());
-               CallBr) {
+    } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator())) {
       for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
         BasicBlock *Succ = CallBr->getSuccessor(I);
         if (Succ != Header)
           continue;
-        BasicBlock *NewSucc = llvm::ControlFlowHub::createCallBrTarget(
+        BasicBlock *NewSucc = ControlFlowHub::createCallBrTarget(
             CallBr, Succ, I, false, &CI, &DTU, LI);
         CHub.addBranch(NewSucc, Succ);
         LLVM_DEBUG(dbgs() << "Added internal branch: " << NewSucc->getName()
                           << " -> " << Succ->getName() << "\n");
       }
     } else {
-      llvm_unreachable("Unsupported block terminator.");
+      llvm_unreachable("unsupported block terminator");
     }
   }
 
@@ -340,20 +339,19 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
       LLVM_DEBUG(dbgs() << "Added external branch: " << P->getName() << " -> "
                         << (Succ0 ? Succ0->getName() : "") << " "
                         << (Succ1 ? Succ1->getName() : "") << "\n");
-    } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator());
-               CallBr) {
+    } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator())) {
       for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
         BasicBlock *Succ = CallBr->getSuccessor(I);
         if (!C.contains(Succ))
           continue;
-        BasicBlock *NewSucc = llvm::ControlFlowHub::createCallBrTarget(
+        BasicBlock *NewSucc = ControlFlowHub::createCallBrTarget(
             CallBr, Succ, I, true, &CI, &DTU, LI);
         CHub.addBranch(NewSucc, Succ);
         LLVM_DEBUG(dbgs() << "Added external branch: " << NewSucc->getName()
                           << " -> " << Succ->getName() << "\n");
       }
     } else {
-      llvm_unreachable("Unsupported block terminator.");
+      llvm_unreachable("unsupported block terminator");
     }
   }
 

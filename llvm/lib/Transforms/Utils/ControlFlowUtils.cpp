@@ -360,7 +360,7 @@ BasicBlock *ControlFlowHub::createCallBrTarget(
   // Jump from the new target block to the original successor.
   BranchInst::Create(Succ, CallBrTarget);
   if (LI) {
-    if (Loop *L = LI->getLoopFor(AttachToCallBr ? CallBrBlock : Succ); L) {
+    if (Loop *L = LI->getLoopFor(AttachToCallBr ? CallBrBlock : Succ)) {
       bool AddToLoop = true;
       if (AttachToCallBr) {
         // Check if the loops are disjoint. In that case, we do not add the

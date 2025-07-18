@@ -91,7 +91,7 @@ if.else629:                                       ; preds = %backtrack
   br label %retry
 }
 
-define dso_local void @tre_tnfa_run_backtrack_callbr(i1 %arg) {
+define void @tre_tnfa_run_backtrack_callbr(i1 %arg) {
 ; CHECK-LABEL: @tre_tnfa_run_backtrack_callbr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm "", ""()
