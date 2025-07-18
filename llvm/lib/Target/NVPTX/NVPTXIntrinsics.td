@@ -4892,8 +4892,10 @@ class STMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
   : WMMA_INSTR<STMATRIX_NAME<Frag, Transposed>.record, [!con((ins ADDR:$dst), Frag.Ins)]>,
     Requires<Frag.Predicates> {
   // Build PatFrag that only matches particular address space.
-  dag PFOperands = !con((ops node:$dst), !dag(ops, !listsplat(node, !size(Frag.regs)), Frag.reg_names));
-  PatFrag IntrFrag = PatFrag<PFOperands, !foreach(tmp, PFOperands, !subst(ops, Intr, tmp)),
+  dag PFOperands = !con((ops node:$dst),
+                        !dag(ops, !listsplat(node, !size(Frag.regs)), Frag.reg_names));
+  PatFrag IntrFrag = PatFrag<PFOperands,
+                             !foreach(tmp, PFOperands, !subst(ops, Intr, tmp)),
                              !cond(!eq(Space, ".shared"): AS_match.shared,
                                    true: AS_match.generic)>;
   // Build AS-constrained pattern.
