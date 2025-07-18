@@ -1220,16 +1220,18 @@ define <4 x i8> @test_fptosi_4xhalf_to_4xi8(<4 x half> %a) #0 {
 ; CHECK-NEXT:    .reg .b32 %r<12>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [test_fptosi_4xhalf_to_4xi8_param_0];
-; CHECK-NEXT:    cvt.rzi.s16.f16 %rs5, %rs4;
-; CHECK-NEXT:    cvt.rzi.s16.f16 %rs6, %rs3;
-; CHECK-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
-; CHECK-NEXT:    cvt.u32.u16 %r4, %rs8;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs7;
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_fptosi_4xhalf_to_4xi8_param_0];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; CHECK-NEXT:    cvt.rzi.s16.f16 %rs3, %rs2;
+; CHECK-NEXT:    cvt.rzi.s16.f16 %rs4, %rs1;
+; CHECK-NEXT:    mov.b32 %r3, {%rs4, %rs3};
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs6;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs5;
 ; CHECK-NEXT:    prmt.b32 %r6, %r5, %r4, 0x3340U;
-; CHECK-NEXT:    cvt.rzi.s16.f16 %rs9, %rs2;
-; CHECK-NEXT:    cvt.rzi.s16.f16 %rs10, %rs1;
+; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
+; CHECK-NEXT:    cvt.rzi.s16.f16 %rs9, %rs8;
+; CHECK-NEXT:    cvt.rzi.s16.f16 %rs10, %rs7;
 ; CHECK-NEXT:    mov.b32 %r7, {%rs10, %rs9};
 ; CHECK-NEXT:    mov.b32 {%rs11, %rs12}, %r7;
 ; CHECK-NEXT:    cvt.u32.u16 %r8, %rs12;
@@ -1249,16 +1251,18 @@ define <4 x i8> @test_fptoui_4xhalf_to_4xi8(<4 x half> %a) #0 {
 ; CHECK-NEXT:    .reg .b32 %r<12>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [test_fptoui_4xhalf_to_4xi8_param_0];
-; CHECK-NEXT:    cvt.rzi.u16.f16 %rs5, %rs4;
-; CHECK-NEXT:    cvt.rzi.u16.f16 %rs6, %rs3;
-; CHECK-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
-; CHECK-NEXT:    cvt.u32.u16 %r4, %rs8;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs7;
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_fptoui_4xhalf_to_4xi8_param_0];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; CHECK-NEXT:    cvt.rzi.u16.f16 %rs3, %rs2;
+; CHECK-NEXT:    cvt.rzi.u16.f16 %rs4, %rs1;
+; CHECK-NEXT:    mov.b32 %r3, {%rs4, %rs3};
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs6;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs5;
 ; CHECK-NEXT:    prmt.b32 %r6, %r5, %r4, 0x3340U;
-; CHECK-NEXT:    cvt.rzi.u16.f16 %rs9, %rs2;
-; CHECK-NEXT:    cvt.rzi.u16.f16 %rs10, %rs1;
+; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
+; CHECK-NEXT:    cvt.rzi.u16.f16 %rs9, %rs8;
+; CHECK-NEXT:    cvt.rzi.u16.f16 %rs10, %rs7;
 ; CHECK-NEXT:    mov.b32 %r7, {%rs10, %rs9};
 ; CHECK-NEXT:    mov.b32 {%rs11, %rs12}, %r7;
 ; CHECK-NEXT:    cvt.u32.u16 %r8, %rs12;
