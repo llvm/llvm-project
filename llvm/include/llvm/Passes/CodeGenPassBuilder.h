@@ -72,6 +72,7 @@
 #include "llvm/CodeGen/PostRAMachineSink.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/ProcessImplicitDefs.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
@@ -280,7 +281,7 @@ protected:
 
       FunctionPassManager FPM;
       FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-      FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+      FPM.addPass(FreeMachineFunctionPass());
       if (this->PB.AddInCGSCCOrder) {
         MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
             createCGSCCToFunctionPassAdaptor(std::move(FPM))));
@@ -578,8 +579,10 @@ protected:
   void insertPass(InsertedPassT &&Pass) const {
     AfterCallbacks.emplace_back(
         [&](StringRef Name, MachineFunctionPassManager &MFPM) mutable {
-          if (Name == TargetPassT::name())
+          if (Name == TargetPassT::name() &&
+              runBeforeAdding(InsertedPassT::name())) {
             MFPM.addPass(std::forward<InsertedPassT>(Pass));
+          }
         });
   }
 

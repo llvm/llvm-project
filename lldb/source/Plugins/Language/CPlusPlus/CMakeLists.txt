@@ -14,11 +14,11 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   CxxStringTypes.cpp
   Generic.cpp
   GenericBitset.cpp
+  GenericList.cpp
   GenericOptional.cpp
   LibCxx.cpp
   LibCxxAtomic.cpp
   LibCxxInitializerList.cpp
-  LibCxxList.cpp
   LibCxxMap.cpp
   LibCxxQueue.cpp
   LibCxxRangesRefView.cpp
@@ -36,6 +36,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   MsvcStl.cpp
   MsvcStlSmartPointer.cpp
   MsvcStlTuple.cpp
+  MsvcStlVector.cpp
   MSVCUndecoratedNameParser.cpp
 
   LINK_COMPONENTS

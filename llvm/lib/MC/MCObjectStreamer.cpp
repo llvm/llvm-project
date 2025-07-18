@@ -46,35 +46,6 @@ MCAssembler *MCObjectStreamer::getAssemblerPtr() {
   return nullptr;
 }
 
-// When fixup's offset is a forward declared label, e.g.:
-//
-//   .reloc 1f, R_MIPS_JALR, foo
-// 1: nop
-//
-// postpone adding it to Fixups vector until the label is defined and its offset
-// is known.
-void MCObjectStreamer::resolvePendingFixups() {
-  for (PendingMCFixup &PendingFixup : PendingFixups) {
-    if (!PendingFixup.Sym || PendingFixup.Sym->isUndefined ()) {
-      getContext().reportError(PendingFixup.Fixup.getLoc(),
-                               "unresolved relocation offset");
-      continue;
-    }
-    PendingFixup.Fixup.setOffset(PendingFixup.Sym->getOffset() +
-                                 PendingFixup.Fixup.getOffset());
-
-    // If the location symbol to relocate is in MCEncodedFragment,
-    // put the Fixup into location symbol's fragment. Otherwise
-    // put into PendingFixup.DF
-    MCFragment *F = PendingFixup.Sym->getFragment();
-    if (F->isEncoded())
-      F->addFixup(PendingFixup.Fixup);
-    else
-      PendingFixup.DF->addFixup(PendingFixup.Fixup);
-  }
-  PendingFixups.clear();
-}
-
 // As a compile-time optimization, avoid allocating and evaluating an MCExpr
 // tree for (Hi - Lo) when Hi and Lo are offsets into the same fragment's fixed
 // part.
@@ -135,26 +106,12 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
 }
 
-static bool canReuseDataFragment(const MCFragment &F,
-                                 const MCAssembler &Assembler,
-                                 const MCSubtargetInfo *STI) {
-  if (!F.hasInstructions())
-    return true;
-  // Do not add data after a linker-relaxable instruction. The difference
-  // between a new label and a label at or before the linker-relaxable
-  // instruction cannot be resolved at assemble-time.
-  if (F.isLinkerRelaxable())
-    return false;
-  // If the subtarget is changed mid fragment we start a new fragment to record
-  // the new STI.
-  return !STI || F.getSubtargetInfo() == STI;
-}
-
-MCFragment *
-MCObjectStreamer::getOrCreateDataFragment(const MCSubtargetInfo *STI) {
+MCFragment *MCObjectStreamer::getOrCreateDataFragment() {
+  // TODO: Start a new fragment whenever finalizing the variable-size tail of a
+  // previous one, so that all getOrCreateDataFragment calls can be replaced
+  // with getCurrentFragment
   auto *F = getCurrentFragment();
-  if (F->getKind() != MCFragment::FT_Data ||
-      !canReuseDataFragment(*F, *Assembler, STI)) {
+  if (F->getKind() != MCFragment::FT_Data) {
     F = getContext().allocFragment<MCFragment>();
     insert(F);
   }
@@ -392,16 +349,23 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   F->doneAppending();
   if (!Fixups.empty())
     F->appendFixups(Fixups);
+  F->setHasInstructions(STI);
 
+  bool MarkedLinkerRelaxable = false;
   for (auto &Fixup : MutableArrayRef(F->getFixups()).slice(FixupStartIndex)) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-    if (Fixup.isLinkerRelaxable()) {
-      F->setLinkerRelaxable();
+    if (!Fixup.isLinkerRelaxable())
+      continue;
+    F->setLinkerRelaxable();
+    // Do not add data after a linker-relaxable instruction. The difference
+    // between a new label and a label at or before the linker-relaxable
+    // instruction cannot be resolved at assemble-time.
+    if (!MarkedLinkerRelaxable) {
+      MarkedLinkerRelaxable = true;
       getCurrentSectionOnly()->setLinkerRelaxable();
+      newFragment();
     }
   }
-
-  F->setHasInstructions(STI);
 }
 
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
@@ -597,8 +561,10 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
   // if the alignment is larger than the minimum NOP size.
   unsigned Size;
   if (getAssembler().getBackend().shouldInsertExtraNopBytesForCodeAlign(*F,
-                                                                        Size))
+                                                                        Size)) {
     getCurrentSectionOnly()->setLinkerRelaxable();
+    newFragment();
+  }
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
@@ -607,76 +573,14 @@ void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
   insert(getContext().allocFragment<MCOrgFragment>(*Offset, Value, Loc));
 }
 
-static std::optional<std::pair<bool, std::string>>
-getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
-                         MCFragment *&DF) {
-  if (Symbol.isVariable()) {
-    const MCExpr *SymbolExpr = Symbol.getVariableValue();
-    MCValue OffsetVal;
-    if (!SymbolExpr->evaluateAsRelocatable(OffsetVal, nullptr))
-      return std::make_pair(false,
-                            std::string("symbol in .reloc offset is not "
-                                        "relocatable"));
-    if (OffsetVal.isAbsolute()) {
-      RelocOffset = OffsetVal.getConstant();
-      MCFragment *Fragment = Symbol.getFragment();
-      // FIXME Support symbols with no DF. For example:
-      // .reloc .data, ENUM_VALUE, <some expr>
-      if (!Fragment || Fragment->getKind() != MCFragment::FT_Data)
-        return std::make_pair(false,
-                              std::string("symbol in offset has no data "
-                                          "fragment"));
-      DF = cast<MCFragment>(Fragment);
-      return std::nullopt;
-    }
-
-    if (OffsetVal.getSubSym())
-      return std::make_pair(false,
-                            std::string(".reloc symbol offset is not "
-                                        "representable"));
-
-    const MCSymbol &SA = *OffsetVal.getAddSym();
-    if (!SA.isDefined())
-      return std::make_pair(false,
-                            std::string("symbol used in the .reloc offset is "
-                                        "not defined"));
-
-    if (SA.isVariable())
-      return std::make_pair(false,
-                            std::string("symbol used in the .reloc offset is "
-                                        "variable"));
-
-    MCFragment *Fragment = SA.getFragment();
-    // FIXME Support symbols with no DF. For example:
-    // .reloc .data, ENUM_VALUE, <some expr>
-    if (!Fragment || Fragment->getKind() != MCFragment::FT_Data)
-      return std::make_pair(false,
-                            std::string("symbol in offset has no data "
-                                        "fragment"));
-    RelocOffset = SA.getOffset() + OffsetVal.getConstant();
-    DF = cast<MCFragment>(Fragment);
-  } else {
-    RelocOffset = Symbol.getOffset();
-    MCFragment *Fragment = Symbol.getFragment();
-    // FIXME Support symbols with no DF. For example:
-    // .reloc .data, ENUM_VALUE, <some expr>
-    if (!Fragment || Fragment->getKind() != MCFragment::FT_Data)
-      return std::make_pair(false,
-                            std::string("symbol in offset has no data "
-                                        "fragment"));
-    DF = cast<MCFragment>(Fragment);
-  }
-  return std::nullopt;
-}
-
-std::optional<std::pair<bool, std::string>>
-MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
-                                     const MCExpr *Expr, SMLoc Loc,
-                                     const MCSubtargetInfo &STI) {
+void MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                                          const MCExpr *Expr, SMLoc Loc) {
   std::optional<MCFixupKind> MaybeKind =
       Assembler->getBackend().getFixupKind(Name);
-  if (!MaybeKind)
-    return std::make_pair(true, std::string("unknown relocation name"));
+  if (!MaybeKind) {
+    getContext().reportError(Loc, "unknown relocation name");
+    return;
+  }
 
   MCFixupKind Kind = *MaybeKind;
   if (Expr)
@@ -685,38 +589,14 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
     Expr =
         MCSymbolRefExpr::create(getContext().createTempSymbol(), getContext());
 
-  MCFragment *DF = getOrCreateDataFragment(&STI);
-  MCValue OffsetVal;
-  if (!Offset.evaluateAsRelocatable(OffsetVal, nullptr))
-    return std::make_pair(false,
-                          std::string(".reloc offset is not relocatable"));
-  if (OffsetVal.isAbsolute()) {
-    if (OffsetVal.getConstant() < 0)
-      return std::make_pair(false, std::string(".reloc offset is negative"));
-    DF->addFixup(MCFixup::create(OffsetVal.getConstant(), Expr, Kind));
-    return std::nullopt;
+  auto *O = &Offset;
+  int64_t Val;
+  if (Offset.evaluateAsAbsolute(Val, nullptr)) {
+    auto *SecSym = getCurrentSectionOnly()->getBeginSymbol();
+    O = MCBinaryExpr::createAdd(MCSymbolRefExpr::create(SecSym, getContext()),
+                                O, getContext(), Loc);
   }
-  if (OffsetVal.getSubSym())
-    return std::make_pair(false,
-                          std::string(".reloc offset is not representable"));
-
-  const MCSymbol &Symbol = *OffsetVal.getAddSym();
-  if (Symbol.isDefined()) {
-    uint32_t SymbolOffset = 0;
-    std::optional<std::pair<bool, std::string>> Error =
-        getOffsetAndDataFragment(Symbol, SymbolOffset, DF);
-
-    if (Error != std::nullopt)
-      return Error;
-
-    DF->addFixup(
-        MCFixup::create(SymbolOffset + OffsetVal.getConstant(), Expr, Kind));
-    return std::nullopt;
-  }
-
-  PendingFixups.emplace_back(
-      &Symbol, DF, MCFixup::create(OffsetVal.getConstant(), Expr, Kind));
-  return std::nullopt;
+  getAssembler().addRelocDirective({*O, Expr, Kind});
 }
 
 void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
@@ -799,6 +679,5 @@ void MCObjectStreamer::finishImpl() {
   // Emit pseudo probes for the current module.
   MCPseudoProbeTable::emit(this);
 
-  resolvePendingFixups();
   getAssembler().Finish();
 }

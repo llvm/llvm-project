@@ -12,4 +12,4 @@
 #define FUNCTION islessequal
 #define __CLC_BODY "binary_def.inc"
 
-#include <clc/relational/floatn.inc>
+#include <clc/math/gentype.inc>

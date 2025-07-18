@@ -149,3 +149,86 @@ add_header_library(
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
 )
+
+add_header_library(
+  exp10
+  HDRS
+    exp10.h
+  DEPENDS
+    .exp_constants
+    .exp_utils
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.triple_double
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  exp10f_utils
+  HDRS
+    exp10f_utils.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
+    libc.src.__support.math.exp_utils
+)
+
+add_header_library(
+  exp10f
+  HDRS
+    exp10f.h
+  DEPENDS
+    .exp10f_utils
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  exp10_float16_constants
+  HDRS
+    exp10_float16_constants.h
+  DEPENDS
+    libc.src.__support.CPP.array
+)
+
+add_header_library(
+  exp10f16_utils
+  HDRS
+    exp10f16_utils.h
+  DEPENDS
+    .expf16_utils
+    .exp10_float16_constants
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_header_library(
+  exp10f16
+  HDRS
+    exp10f16.h
+  DEPENDS
+    .exp10f16_utils
+    libc.src.__support.FPUtil.fp_bits
+    src.__support.FPUtil.FEnvImpl
+    src.__support.FPUtil.FPBits
+    src.__support.FPUtil.cast
+    src.__support.FPUtil.rounding_mode
+    src.__support.FPUtil.except_value_utils
+    src.__support.macros.optimization
+    src.__support.macros.properties.cpu_features
+)
