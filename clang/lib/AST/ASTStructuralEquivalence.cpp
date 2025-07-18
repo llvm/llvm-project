@@ -598,9 +598,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case NestedNameSpecifier::Namespace:
     return IsStructurallyEquivalent(Context, NNS1->getAsNamespace(),
                                     NNS2->getAsNamespace());
-  case NestedNameSpecifier::NamespaceAlias:
-    return IsStructurallyEquivalent(Context, NNS1->getAsNamespaceAlias(),
-                                    NNS2->getAsNamespaceAlias());
   case NestedNameSpecifier::TypeSpec:
     return IsStructurallyEquivalent(Context, QualType(NNS1->getAsType(), 0),
                                     QualType(NNS2->getAsType(), 0));
