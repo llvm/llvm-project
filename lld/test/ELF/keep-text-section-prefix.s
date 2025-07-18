@@ -19,7 +19,7 @@
 # RUN: not ld.lld -T linker-script.lds a.o -o d.out 2>&1 | FileCheck %s
 # CHECK: error: section: .relro_padding is not contiguous with other relro sections
 
-## The first PW PT_LOAD segment has FileSiz 0x126f (0x1000 + 0x200 + 0x60 + 0xf),
+## The first RW PT_LOAD segment has FileSiz 0x126f (0x1000 + 0x200 + 0x60 + 0xf),
 ## and its p_offset p_vaddr p_paddr p_filesz should match PT_GNU_RELRO.
 #           Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # SEG:      LOAD           0x0001c8 0x00000000002011c8 0x00000000002011c8 0x000001 0x000001 R E 0x1000
