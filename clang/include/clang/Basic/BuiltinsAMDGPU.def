@@ -684,6 +684,8 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_f16_fp8, "hiIi", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_f16_bf8, "hiIi", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_f16_fp8, "V2hs", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_f16_bf8, "V2hs", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sat_pk4_i4_i8, "UsUi", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sat_pk4_u4_u8, "UsUi", "nc", "gfx1250-insts")
 
 // GFX1250 WMMA builtins
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f32_16x16x4_f32, "V8fIbV2fIbV2fIsV8fIbIb", "nc", "gfx1250-insts,wavefrontsize32")
