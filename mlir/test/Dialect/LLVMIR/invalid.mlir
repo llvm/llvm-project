@@ -1931,3 +1931,30 @@ llvm.func @invalid_xevm_matrix_3(%a: !llvm.ptr<1>, %base_width_a: i32, %base_hei
   llvm.return %loaded_a : vector<8xi16>
 }
 
+// -----
+
+llvm.func external @resolve_foo() -> !llvm.ptr attributes {dso_local}
+// expected-error@+1 {{'llvm.mlir.ifunc' op resolver must be a definition}}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
+
+// -----
+
+llvm.mlir.global external @resolve_foo() : !llvm.ptr
+// expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
+
+// -----
+
+llvm.func external @resolve_foo() -> !llvm.ptr
+// expected-error@+1 {{'llvm.mlir.ifunc' op 'common' linkage not supported in ifuncs}}
+llvm.mlir.ifunc common @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
+
+// -----
+
+llvm.mlir.global external @resolve_foo() : !llvm.ptr
+llvm.mlir.alias external @alias_resolver : !llvm.ptr {
+  %0 = llvm.mlir.addressof @resolve_foo : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+// expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @alias_resolver {dso_local}

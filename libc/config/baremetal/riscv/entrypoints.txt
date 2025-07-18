@@ -278,6 +278,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
 
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
+
     # internal entrypoints
     libc.startup.baremetal.init
     libc.startup.baremetal.fini

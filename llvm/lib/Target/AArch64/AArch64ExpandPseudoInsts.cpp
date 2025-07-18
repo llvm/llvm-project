@@ -598,6 +598,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     llvm_unreachable("Unsupported ElementSize");
   }
 
+  // Preserve undef state until DOP's reg is defined.
+  unsigned DOPRegState = MI.getOperand(DOPIdx).isUndef() ? RegState::Undef : 0;
+
   //
   // Create the destructive operation (if required)
   //
@@ -616,10 +619,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfxZero))
                .addReg(DstReg, RegState::Define)
                .addReg(MI.getOperand(PredIdx).getReg())
-               .addReg(MI.getOperand(DOPIdx).getReg());
+               .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
 
     // After the movprfx, the destructive operand is same as Dst
     DOPIdx = 0;
+    DOPRegState = 0;
 
     // Create the additional LSL to zero the lanes when the DstReg is not
     // unique. Zeros the lanes in z0 that aren't active in p0 with sequence
@@ -638,8 +642,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     assert(DOPRegIsUnique && "The destructive operand should be unique");
     PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfx))
                .addReg(DstReg, RegState::Define)
-               .addReg(MI.getOperand(DOPIdx).getReg());
+               .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
     DOPIdx = 0;
+    DOPRegState = 0;
   }
 
   //
@@ -647,10 +652,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   //
   DOP = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opcode))
     .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead));
+  DOPRegState = DOPRegState | RegState::Kill;
 
   switch (DType) {
   case AArch64::DestructiveUnaryPassthru:
-    DOP.addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+    DOP.addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
         .add(MI.getOperand(PredIdx))
         .add(MI.getOperand(SrcIdx));
     break;
@@ -659,12 +665,12 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
     DOP.add(MI.getOperand(PredIdx))
-       .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
-       .add(MI.getOperand(SrcIdx));
+        .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
+        .add(MI.getOperand(SrcIdx));
     break;
   case AArch64::DestructiveTernaryCommWithRev:
     DOP.add(MI.getOperand(PredIdx))
-        .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+        .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
         .add(MI.getOperand(SrcIdx))
         .add(MI.getOperand(Src2Idx));
     break;

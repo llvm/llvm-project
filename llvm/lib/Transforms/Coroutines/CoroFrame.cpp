@@ -1179,6 +1179,13 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       AllocaInst *Alloca = P.Alloca;
       auto *G = GetFramePointer(Alloca);
 
+      // Remove any lifetime intrinsics, now that these are no longer allocas.
+      for (User *U : make_early_inc_range(Alloca->users())) {
+        auto *I = cast<Instruction>(U);
+        if (I->isLifetimeStartOrEnd())
+          I->eraseFromParent();
+      }
+
       // We are not using ReplaceInstWithInst(P.first, cast<Instruction>(G))
       // here, as we are changing location of the instruction.
       G->takeName(Alloca);

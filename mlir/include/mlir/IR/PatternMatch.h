@@ -475,6 +475,25 @@ public:
     RewriterBase::Listener *rewriteListener;
   };
 
+  /// A listener that logs notification events to llvm::dbgs() before
+  /// forwarding to the base listener.
+  struct PatternLoggingListener : public RewriterBase::ForwardingListener {
+    PatternLoggingListener(OpBuilder::Listener *listener, StringRef patternName)
+        : RewriterBase::ForwardingListener(listener), patternName(patternName) {
+    }
+
+    void notifyOperationInserted(Operation *op, InsertPoint previous) override;
+    void notifyOperationModified(Operation *op) override;
+    void notifyOperationReplaced(Operation *op, Operation *newOp) override;
+    void notifyOperationReplaced(Operation *op,
+                                 ValueRange replacement) override;
+    void notifyOperationErased(Operation *op) override;
+    void notifyPatternBegin(const Pattern &pattern, Operation *op) override;
+
+  private:
+    StringRef patternName;
+  };
+
   /// Move the blocks that belong to "region" before the given position in
   /// another region "parent". The two regions must be different. The caller
   /// is responsible for creating or updating the operation transferring flow

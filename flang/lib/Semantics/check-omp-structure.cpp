@@ -1156,8 +1156,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                         (sym->has<MainProgramDetails>() ||
                             sym->has<ModuleDetails>())) {
                       context_.Say(name->source,
-                          "The module name or main program name cannot be in a "
-                          "%s "
+                          "The module name cannot be in a %s "
                           "directive"_err_en_US,
                           ContextDirectiveAsFortran());
                     } else if (!IsSaved(*name->symbol) &&

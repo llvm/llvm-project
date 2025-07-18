@@ -206,7 +206,7 @@ void TestIteration() {
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:14, col:16> 'int *' '+'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int[10]' lvalue Var 0x{{[^ ]*}} '__range1' 'int (&)[10]'
-  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:16> 'long' 10
+  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:16> '__ptrdiff_t':'long' 10
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:14> 'bool' '!='
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *'
@@ -274,7 +274,7 @@ void TestIteration() {
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:21, col:23> 'int *' '+'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int[10]' lvalue Var 0x{{[^ ]*}} '__range1' 'int (&)[10]'
-  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:23> 'long' 10
+  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:23> '__ptrdiff_t':'long' 10
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:21> 'bool' '!='
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int *' lvalue Var 0x{{[^ ]*}} '__begin1' 'int *'

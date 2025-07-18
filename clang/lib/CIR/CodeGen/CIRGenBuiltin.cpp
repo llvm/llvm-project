@@ -125,7 +125,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value real = emitScalarExpr(e->getArg(0));
     mlir::Value imag = emitScalarExpr(e->getArg(1));
     mlir::Value complex = builder.createComplexCreate(loc, real, imag);
-    return RValue::get(complex);
+    return RValue::getComplex(complex);
   }
 
   case Builtin::BI__builtin_creal:
@@ -148,6 +148,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value complex = emitComplexExpr(e->getArg(0));
     mlir::Value imag = builder.createComplexImag(loc, complex);
     return RValue::get(imag);
+  }
+
+  case Builtin::BI__builtin_conj:
+  case Builtin::BI__builtin_conjf:
+  case Builtin::BI__builtin_conjl:
+  case Builtin::BIconj:
+  case Builtin::BIconjf:
+  case Builtin::BIconjl: {
+    mlir::Value complex = emitComplexExpr(e->getArg(0));
+    mlir::Value conj = builder.createUnaryOp(getLoc(e->getExprLoc()),
+                                             cir::UnaryOpKind::Not, complex);
+    return RValue::getComplex(conj);
   }
 
   case Builtin::BI__builtin_clrsb:

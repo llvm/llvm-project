@@ -403,6 +403,7 @@ set(files
   __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
+  __format/range_format.h
   __format/range_formatter.h
   __format/unicode.h
   __format/width_estimation_table.h

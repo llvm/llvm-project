@@ -410,15 +410,15 @@ public:
           .genThen([&]() {
             fir::factory::associateMutableBox(builder, loc, boxInTuple,
                                               args.hostValue,
-                                              /*lbounds=*/std::nullopt);
+                                              /*lbounds=*/{});
           })
           .genElse([&]() {
             fir::factory::disassociateMutableBox(builder, loc, boxInTuple);
           })
           .end();
     } else {
-      fir::factory::associateMutableBox(
-          builder, loc, boxInTuple, args.hostValue, /*lbounds=*/std::nullopt);
+      fir::factory::associateMutableBox(builder, loc, boxInTuple,
+                                        args.hostValue, /*lbounds=*/{});
     }
   }
 

@@ -563,7 +563,7 @@ legalizeGetHighLowi64Bytes(Instruction &I,
 }
 
 static void
-legalizeLoadStoreOnArrayAllocas(Instruction &I,
+legalizeScalarLoadStoreOnArrays(Instruction &I,
                                 SmallVectorImpl<Instruction *> &ToRemove,
                                 DenseMap<Value *, Value *> &) {
 
@@ -581,23 +581,31 @@ legalizeLoadStoreOnArrayAllocas(Instruction &I,
   } else
     return;
 
-  assert(LoadStoreTy->isSingleValueType() &&
-         "Expected load/store type to be a single-valued type");
-
-  auto *AllocaPtrOp = dyn_cast<AllocaInst>(PtrOp);
-  if (!AllocaPtrOp)
+  // If the load/store is not of a single-value type (i.e., scalar or vector)
+  // then we do not modify it. It shouldn't be a vector either because the
+  // dxil-data-scalarization pass is expected to run before this, but it's not
+  // incorrect to apply this transformation to vector load/stores.
+  if (!LoadStoreTy->isSingleValueType())
     return;
 
-  Type *Ty = AllocaPtrOp->getAllocatedType();
-  if (!isa<ArrayType>(Ty))
+  Type *ArrayTy;
+  if (auto *GlobalVarPtrOp = dyn_cast<GlobalVariable>(PtrOp))
+    ArrayTy = GlobalVarPtrOp->getValueType();
+  else if (auto *AllocaPtrOp = dyn_cast<AllocaInst>(PtrOp))
+    ArrayTy = AllocaPtrOp->getAllocatedType();
+  else
     return;
-  assert(!isa<ArrayType>(Ty->getArrayElementType()) &&
-         "Expected allocated type of AllocaInst to be a flat ArrayType");
 
-  IRBuilder<> Builder(&I);
-  Value *Zero = Builder.getInt32(0);
-  Value *GEP = Builder.CreateGEP(Ty, AllocaPtrOp, {Zero, Zero}, "",
-                                 GEPNoWrapFlags::all());
+  if (!isa<ArrayType>(ArrayTy))
+    return;
+
+  assert(ArrayTy->getArrayElementType() == LoadStoreTy &&
+         "Expected array element type to be the same as to the scalar load or "
+         "store type");
+
+  Value *Zero = ConstantInt::get(Type::getInt32Ty(I.getContext()), 0);
+  Value *GEP = GetElementPtrInst::Create(
+      ArrayTy, PtrOp, {Zero, Zero}, GEPNoWrapFlags::all(), "", I.getIterator());
   I.setOperand(PtrOpIndex, GEP);
 }
 
@@ -651,7 +659,7 @@ private:
     // downcastI64toI32InsertExtractElements needs to handle.
     LegalizationPipeline[Stage2].push_back(
         downcastI64toI32InsertExtractElements);
-    LegalizationPipeline[Stage2].push_back(legalizeLoadStoreOnArrayAllocas);
+    LegalizationPipeline[Stage2].push_back(legalizeScalarLoadStoreOnArrays);
   }
 };
 

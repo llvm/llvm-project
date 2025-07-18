@@ -1047,24 +1047,6 @@ class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
 // MISC
 //
 
-class PRMT3Pat<Intrinsic prmt_intrinsic, PatLeaf prmt_mode>
-    : Pat<(prmt_intrinsic i32:$a, i32:$b, i32:$c),
-          (PRMT_B32rrr $a, $b, $c, prmt_mode)>;
-
-class PRMT2Pat<Intrinsic prmt_intrinsic, PatLeaf prmt_mode>
-    : Pat<(prmt_intrinsic i32:$a, i32:$c),
-          (PRMT_B32rir $a, (i32 0), $c, prmt_mode)>;
-
-def : PRMT3Pat<int_nvvm_prmt,      PrmtNONE>;
-def : PRMT3Pat<int_nvvm_prmt_f4e,  PrmtF4E>;
-def : PRMT3Pat<int_nvvm_prmt_b4e,  PrmtB4E>;
-
-def : PRMT2Pat<int_nvvm_prmt_rc8,  PrmtRC8>;
-def : PRMT2Pat<int_nvvm_prmt_ecl,  PrmtECL>;
-def : PRMT2Pat<int_nvvm_prmt_ecr,  PrmtECR>;
-def : PRMT2Pat<int_nvvm_prmt_rc16, PrmtRC16>;
-
-
 def INT_NVVM_NANOSLEEP_I : BasicNVPTXInst<(outs), (ins i32imm:$i), "nanosleep.u32",
                              [(int_nvvm_nanosleep imm:$i)]>,
         Requires<[hasPTX<63>, hasSM<70>]>;

@@ -25,4 +25,27 @@ define amdgpu_ps void @llvm_log2_bf16_s(ptr addrspace(1) %out, bfloat inreg %src
   ret void
 }
 
+define amdgpu_ps void @llvm_exp2_bf16_v(ptr addrspace(1) %out, bfloat %src) {
+; GCN-LABEL: llvm_exp2_bf16_v:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_exp_bf16_e32 v2, v2
+; GCN-NEXT:    global_store_b16 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
+  %exp = call bfloat @llvm.exp2.bf16(bfloat %src)
+  store bfloat %exp, ptr addrspace(1) %out, align 2
+  ret void
+}
+
+define amdgpu_ps void @llvm_exp2_bf16_s(ptr addrspace(1) %out, bfloat inreg %src) {
+; GCN-LABEL: llvm_exp2_bf16_s:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_exp_bf16_e32 v2, s0
+; GCN-NEXT:    global_store_b16 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
+  %exp = call bfloat @llvm.exp2.bf16(bfloat %src)
+  store bfloat %exp, ptr addrspace(1) %out, align 2
+  ret void
+}
+
 declare bfloat @llvm.log2.bf16(bfloat)
+declare bfloat @llvm.exp2.bf16(bfloat)
