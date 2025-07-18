@@ -1978,14 +1978,13 @@ static at::StorageToVarsMap collectEscapedLocals(const DataLayout &DL,
       continue;
 
     // Find all local variables associated with the backing storage.
-    auto CollectAssignsForStorage = [&](auto *DbgAssign) {
+    auto CollectAssignsForStorage = [&](DbgVariableRecord *DbgAssign) {
       // Skip variables from inlined functions - they are not local variables.
       if (DbgAssign->getDebugLoc().getInlinedAt())
         return;
       LLVM_DEBUG(errs() << " > DEF : " << *DbgAssign << "\n");
       EscapedLocals[Base].insert(at::VarRecord(DbgAssign));
     };
-    for_each(at::getAssignmentMarkers(Base), CollectAssignsForStorage);
     for_each(at::getDVRAssignmentMarkers(Base), CollectAssignsForStorage);
   }
   return EscapedLocals;
