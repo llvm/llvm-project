@@ -416,6 +416,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_sqrt:
   case AMDGPU::BI__builtin_amdgcn_sqrtf:
   case AMDGPU::BI__builtin_amdgcn_sqrth:
+  case AMDGPU::BI__builtin_amdgcn_sqrt_bf16:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::amdgcn_sqrt);
   case AMDGPU::BI__builtin_amdgcn_rsq:
@@ -504,6 +505,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, { Src });
   }
   case AMDGPU::BI__builtin_amdgcn_tanhf:
+  case AMDGPU::BI__builtin_amdgcn_tanhh:
   case AMDGPU::BI__builtin_amdgcn_tanh_bf16:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::amdgcn_tanh);
