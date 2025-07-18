@@ -198,3 +198,37 @@ add_header_library(
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
 )
+
+add_header_library(
+  exp10_float16_constants
+  HDRS
+    exp10_float16_constants.h
+  DEPENDS
+    libc.src.__support.CPP.array
+)
+
+add_header_library(
+  exp10f16_utils
+  HDRS
+    exp10f16_utils.h
+  DEPENDS
+    .expf16_utils
+    .exp10_float16_constants
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_header_library(
+  exp10f16
+  HDRS
+    exp10f16.h
+  DEPENDS
+    .exp10f16_utils
+    libc.src.__support.FPUtil.fp_bits
+    src.__support.FPUtil.FEnvImpl
+    src.__support.FPUtil.FPBits
+    src.__support.FPUtil.cast
+    src.__support.FPUtil.rounding_mode
+    src.__support.FPUtil.except_value_utils
+    src.__support.macros.optimization
+    src.__support.macros.properties.cpu_features
+)
