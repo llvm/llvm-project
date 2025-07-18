@@ -176,11 +176,13 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << "llvm_lto";
   else if (Type == ELF::SHT_LLVM_JT_SIZES)
     OS << "llvm_jt_sizes";
+  else if (Type == ELF::SHT_LLVM_CFI_JUMP_TABLE)
+    OS << "llvm_cfi_jump_table";
   else
     OS << "0x" << Twine::utohexstr(Type);
 
   if (EntrySize) {
-    assert(Flags & ELF::SHF_MERGE);
+    assert((Flags & ELF::SHF_MERGE) || Type == ELF::SHT_LLVM_CFI_JUMP_TABLE);
     OS << "," << EntrySize;
   }
 
