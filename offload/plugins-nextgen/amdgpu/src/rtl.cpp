@@ -2610,7 +2610,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     Status2 = hsa_system_get_info(HSA_SYSTEM_INFO_VERSION_MINOR, &Minor);
     if (Status == HSA_STATUS_SUCCESS && Status2 == HSA_STATUS_SUCCESS)
       Info.add("HSA Runtime Version",
-               std::to_string(Major) + "." + std::to_string(Minor));
+               std::to_string(Major) + "." + std::to_string(Minor), "",
+               DeviceInfo::DRIVER_VERSION);
 
     Info.add("HSA OpenMP Device Number", DeviceId);
 
@@ -2620,11 +2621,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_NAME, TmpChar);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Device Name", TmpChar);
+      Info.add("Device Name", TmpChar, "", DeviceInfo::NAME);
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_VENDOR_NAME, TmpChar);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Vendor Name", TmpChar);
+      Info.add("Vendor Name", TmpChar, "", DeviceInfo::VENDOR);
 
     hsa_device_type_t DevType;
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_DEVICE, DevType);
@@ -2700,7 +2701,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_WORKGROUP_MAX_DIM, WorkgrpMaxDim);
     if (Status == HSA_STATUS_SUCCESS) {
-      auto &MaxSize = *Info.add("Workgroup Max Size per Dimension");
+      auto &MaxSize =
+          *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
+                    DeviceInfo::MAX_WORK_GROUP_SIZE);
       MaxSize.add("x", WorkgrpMaxDim[0]);
       MaxSize.add("y", WorkgrpMaxDim[1]);
       MaxSize.add("z", WorkgrpMaxDim[2]);
