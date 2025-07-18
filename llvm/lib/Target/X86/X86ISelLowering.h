@@ -1095,7 +1095,7 @@ namespace llvm {
     /// 4-byte boundaries.
     Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     /// Returns true if it's safe to use load / store of the
@@ -1355,6 +1355,8 @@ namespace llvm {
               getTargetConstantFromLoad(cast<LoadSDNode>(Op))) ||
              TargetLowering::isTargetCanonicalConstantNode(Op);
     }
+
+    bool isTargetCanonicalSelect(SDNode *N) const override;
 
     const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
 
@@ -1659,7 +1661,7 @@ namespace llvm {
 
     /// Lower interleaved load(s) into target specific
     /// instructions/intrinsics.
-    bool lowerInterleavedLoad(LoadInst *LI,
+    bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                               ArrayRef<ShuffleVectorInst *> Shuffles,
                               ArrayRef<unsigned> Indices,
                               unsigned Factor) const override;
