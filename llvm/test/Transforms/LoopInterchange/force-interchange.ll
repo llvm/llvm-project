@@ -19,25 +19,25 @@
 
 define dso_local void @f() local_unnamed_addr #0 {
 entry:
-  br label %for.cond1.preheader
+  br label %outer.header
 
-for.cond1.preheader:
-  %indvars.iv17 = phi i64 [ 0, %entry ], [ %indvars.iv.next18, %for.cond.cleanup3 ]
-  br label %for.body4
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %inner.header ]
+  br label %inner.body
 
-for.cond.cleanup:
-  ret void
+inner.header:
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond20.not = icmp eq i64 %i.next, 1024
+  br i1 %exitcond20.not, label %exit, label %outer.header
 
-for.cond.cleanup3:
-  %indvars.iv.next18 = add nuw nsw i64 %indvars.iv17, 1
-  %exitcond20.not = icmp eq i64 %indvars.iv.next18, 1024
-  br i1 %exitcond20.not, label %for.cond.cleanup, label %for.cond1.preheader
-
-for.body4:
-  %indvars.iv = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next, %for.body4 ]
-  %arrayidx6 = getelementptr inbounds nuw [1024 x [1024 x i32]], ptr @A, i64 0, i64 %indvars.iv17, i64 %indvars.iv
+inner.body:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner.body ]
+  %arrayidx6 = getelementptr inbounds nuw [1024 x [1024 x i32]], ptr @A, i64 0, i64 %i, i64 %j
   store i32 42, ptr %arrayidx6, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 1024
-  br i1 %exitcond.not, label %for.cond.cleanup3, label %for.body4
+  %j.next = add nuw nsw i64 %j, 1
+  %exitcond.not = icmp eq i64 %j.next, 1024
+  br i1 %exitcond.not, label %inner.header, label %inner.body
+
+exit:
+  ret void
 }
