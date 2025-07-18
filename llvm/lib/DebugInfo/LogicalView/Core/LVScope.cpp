@@ -134,9 +134,6 @@ void LVScope::addElement(LVLine *Line) {
   if (!Lines)
     Lines = std::make_unique<LVLines>();
 
-  if (Line->getAddress() == 0x2fc)
-  outs() << "Set Parent for line at addr: " << Line->getAddress()
-         << "\n ";
   // Add it to parent.
   Lines->push_back(Line);
   Line->setParent(this);

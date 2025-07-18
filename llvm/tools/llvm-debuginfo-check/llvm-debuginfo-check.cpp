@@ -11,17 +11,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/TargetSelect.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/Support/TargetSelect.h"
 
 #include <string>
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace llvm;
 using namespace logicalview;
@@ -32,7 +32,8 @@ static cl::opt<std::string>
                   cl::Required);
 
 static cl::opt<bool> IncludeCode("code", cl::desc("Include asm"));
-static cl::opt<bool> IncludeRanges("ranges", cl::desc("Include variable ranges"));
+static cl::opt<bool> IncludeRanges("ranges",
+                                   cl::desc("Include variable ranges"));
 static cl::opt<bool> IncludeVars("vars", cl::desc("Include live variables"));
 
 template <typename T> T Take(Expected<T> ExpectedResult, const Twine &Msg) {
@@ -52,7 +53,7 @@ struct ScopePrinter {
       LivetimeEndsExclusive;
   raw_ostream &OS;
 
-  void Walk(raw_ostream &OS, const LVScope* Scope) {
+  void Walk(raw_ostream &OS, const LVScope *Scope) {
     if (Scope->scopeCount()) {
       for (const LVScope *ChildScope : *Scope->getScopes())
         Walk(OS, ChildScope);
@@ -60,8 +61,6 @@ struct ScopePrinter {
     if (Scope->lineCount()) {
       for (const LVLine *Line : *Scope->getLines()) {
         Lines.push_back(Line);
-        if (Line->getParentScope() != Scope)
-          OS << "";
       }
     }
     if (Scope->symbolCount()) {
@@ -72,7 +71,8 @@ struct ScopePrinter {
           continue;
 
         if (IncludeRanges) {
-          OS << "RANGES: " << Symbol->getName() << " (line " << Symbol->getLineNumber() << ")" << ": ";
+          OS << "RANGES: " << Symbol->getName() << " (line "
+             << Symbol->getLineNumber() << ")" << ": ";
         }
 
         for (const LVLocation *Loc : SymbolLocations) {
@@ -111,14 +111,15 @@ struct ScopePrinter {
       OS << "  ";
   }
 
-  static void PrintCallstack(raw_ostream& OS, const LVScope* Scope) {
+  static void PrintCallstack(raw_ostream &OS, const LVScope *Scope) {
     bool First = true;
     const LVScope *PrevScope = nullptr;
     while (Scope) {
       if (Scope->getIsFunction() || Scope->getIsInlinedFunction()) {
         OS << "[" << Scope->getName();
         if (PrevScope && PrevScope->getIsInlinedFunction()) {
-          OS << ":" << cast<LVScopeFunctionInlined>(PrevScope)->getCallLineNumber();
+          OS << ":"
+             << cast<LVScopeFunctionInlined>(PrevScope)->getCallLineNumber();
         }
         OS << "]";
         First = false;
@@ -138,7 +139,8 @@ struct ScopePrinter {
   }
 
   void Print() {
-    SetVector<const LVLocation *> LiveSymbols; // This needs to be ordered since we're iterating over it.
+    SetVector<const LVLocation *>
+        LiveSymbols; // This needs to be ordered since we're iterating over it.
     int LastLine = -1;
     StringRef LastFilename;
     for (const LVLine *Line : Lines) {
@@ -165,16 +167,13 @@ struct ScopePrinter {
           if (IncludeVars) {
             for (auto SymLoc : LiveSymbols) {
               const LVSymbol *Sym = SymLoc->getParentSymbol();
-              if (Sym->getName() == "InMRT1")
-                outs() << "";
               auto SymScope = Sym->getParentScope();
               auto LineScope = LineDebug->getParentScope();
               if (SymScope != LineScope && !IsChildScopeOf(LineScope, SymScope))
                 continue;
               PrintIndent(OS, 1);
               OS << "VAR: " << Sym->getName() << ": "
-                     << Sym->getType()->getName()
-                     << " : ";
+                 << Sym->getType()->getName() << " : ";
               SymLoc->printLocations(OS);
               OS << " (line " << Sym->getLineNumber() << ")";
               OS << "\n";
@@ -200,8 +199,8 @@ int main(int argc, char *argv[]) {
   llvm::InitializeAllTargetMCs();
   InitializeAllDisassemblers();
 
-  cl::ParseCommandLineOptions(argc, argv,
-                              "Check debug info correctness via annotations.\n");
+  cl::ParseCommandLineOptions(
+      argc, argv, "Check debug info correctness via annotations.\n");
 
   ScopedPrinter W(llvm::outs());
   LVOptions Options;
@@ -213,8 +212,8 @@ int main(int argc, char *argv[]) {
   std::vector<std::string> Objects;
   LVReaderHandler Handler(Objects, W, Options);
   auto Readers = Take(Handler.createReader(InputFilename),
-       Twine("Failed to create LV reader from '") + Twine(InputFilename) +
-           Twine("'"));
+                      Twine("Failed to create LV reader from '") +
+                          Twine(InputFilename) + Twine("'"));
 
   auto *CU = Readers->getCompileUnit();
   if (!CU)
@@ -228,7 +227,7 @@ int main(int argc, char *argv[]) {
       if (!Lines)
         continue;
       outs() << "FUNCTION: " << Child->getName() << "\n";
- 
+
       ScopePrinter P(outs(), Fn);
       P.Print();
     }

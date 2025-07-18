@@ -379,8 +379,6 @@ void DWARFFormValue::dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
     OS << format(" [%" PRIu64 "]", SectionIndex);
 }
 
-LLVM_DUMP_METHOD void DWARFFormValue::dump() const { dump(dbgs()); }
-
 void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   uint64_t UValue = Value.uval;
   bool CURelativeOffset = false;

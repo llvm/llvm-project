@@ -83,7 +83,6 @@ public:
 
   LLVM_ABI bool isFormClass(FormClass FC) const;
   const DWARFUnit *getUnit() const { return U; }
-  LLVM_DUMP_METHOD void dump() const;
   LLVM_ABI void dump(raw_ostream &OS,
                      DIDumpOptions DumpOpts = DIDumpOptions()) const;
   LLVM_ABI void dumpSectionedAddress(raw_ostream &OS, DIDumpOptions DumpOpts,

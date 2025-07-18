@@ -252,8 +252,6 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
 
   case dwarf::DW_AT_ranges:
     if (RangesDataAvailable && options().getGeneralCollectRanges()) {
-      if (CurrentScope->getID() == 2237)
-        outs() << "";
       auto GetRanges = [](const DWARFFormValue &FormValue,
                           DWARFUnit *U) -> Expected<DWARFAddressRangesVector> {
         if (FormValue.getForm() == dwarf::DW_FORM_rnglistx)
@@ -463,16 +461,17 @@ LVScope *LVDWARFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
         if (!CurrentRanges.empty()) {
           for (LVAddressRange &Range : CurrentRanges)
             addSectionRange(SectionIndex, CurrentScope, Range.first,
-                            Range.second > Range.first ? Range.second - 1
-                                                       : Range.second);
+                            Range.second > Range.first
+                                ? Range.second - 1 // Make hi-pc exclusive
+                                : Range.second);
           CurrentRanges.clear();
         }
         // If the scope is the CU, do not update the ranges set.
         if (FoundLowPC && FoundHighPC && !IsCompileUnit) {
           addSectionRange(SectionIndex, CurrentScope, CurrentLowPC,
                           CurrentHighPC > CurrentLowPC
-                              ? CurrentHighPC - 1
-                              : CurrentHighPC); // Make hi-pc exclusive
+                              ? CurrentHighPC - 1 // Make hi-pc exclusive
+                              : CurrentHighPC);
         }
       }
     }

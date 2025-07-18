@@ -733,9 +733,6 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
   for (LVLine *Line : *DebugLines) {
     // Using the current line address, get its associated lexical scope and
     // add the line information to it.
-
-    if (Line->getAddress() == 0x2fc)
-      outs() << "";
     Scope = ScopesWithRanges->getEntry(Line->getAddress());
     if (!Scope) {
       // If missing scope, use the compile unit.
