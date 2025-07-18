@@ -654,12 +654,13 @@ public:
 #endif
     if (!m_entries.empty()) {
       typename Collection::const_iterator begin = m_entries.begin();
+      typename Collection::const_iterator end = m_entries.end();
       typename Collection::const_iterator pos = llvm::lower_bound(
           m_entries, addr, [](const Entry &lhs, B rhs_base) -> bool {
             return lhs.GetRangeEnd() <= rhs_base;
           });
 
-      if (pos->Contains(addr))
+      if (pos != end && pos->Contains(addr))
         return &(*pos);
 
       if (pos != begin)
