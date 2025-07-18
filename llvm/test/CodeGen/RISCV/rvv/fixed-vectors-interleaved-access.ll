@@ -1754,6 +1754,17 @@ define void @store_factor4_one_active(ptr %ptr, <4 x i32> %v) {
   ret void
 }
 
+define void @vpstore_factor4_one_active(ptr %ptr, <4 x i32> %v) {
+; CHECK-LABEL: vpstore_factor4_one_active:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg4e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v0 = shufflevector <4 x i32> %v, <4 x i32> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
+  tail call void @llvm.vp.store.v16i32.p0(<16 x i32> %v0, ptr %ptr, <16 x i1> splat (i1 true), i32 16)
+  ret void
+}
+
 define void @store_factor4_one_active_idx1(ptr %ptr, <4 x i32> %v) {
 ; CHECK-LABEL: store_factor4_one_active_idx1:
 ; CHECK:       # %bb.0:
@@ -1828,8 +1839,8 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_mask(ptr %ptr) {
 ; RV32-NEXT:    vle32.v v12, (a0), v0.t
 ; RV32-NEXT:    li a0, 36
 ; RV32-NEXT:    vmv.s.x v20, a1
-; RV32-NEXT:    lui a1, %hi(.LCPI53_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI53_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI54_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI54_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle16.v v21, (a1)
 ; RV32-NEXT:    vcompress.vm v8, v12, v11
@@ -1904,8 +1915,8 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_evl(ptr %ptr) {
 ; RV32-NEXT:    vmv.s.x v10, a0
 ; RV32-NEXT:    li a0, 146
 ; RV32-NEXT:    vmv.s.x v11, a0
-; RV32-NEXT:    lui a0, %hi(.LCPI54_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI54_0)
+; RV32-NEXT:    lui a0, %hi(.LCPI55_0)
+; RV32-NEXT:    addi a0, a0, %lo(.LCPI55_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle16.v v20, (a0)
 ; RV32-NEXT:    li a0, 36
