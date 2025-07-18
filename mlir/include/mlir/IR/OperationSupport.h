@@ -1176,6 +1176,7 @@ private:
 class OpPrintingFlags {
 public:
   OpPrintingFlags();
+  LLVM_DEPRECATED("Use OpPrintingFlags() instead", "OpPrintingFlags()")
   OpPrintingFlags(std::nullopt_t) : OpPrintingFlags() {}
 
   /// Enables the elision of large elements attributes by printing a lexically
