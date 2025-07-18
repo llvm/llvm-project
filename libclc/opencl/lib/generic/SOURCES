@@ -43,6 +43,10 @@ geometric/normalize.cl
 integer/abs.cl
 integer/abs_diff.cl
 integer/add_sat.cl
+integer/bitfield_extract_signed.cl
+integer/bitfield_extract_unsigned.cl
+integer/bitfield_insert.cl
+integer/bit_reverse.cl
 integer/clz.cl
 integer/ctz.cl
 integer/hadd.cl
