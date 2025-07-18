@@ -758,7 +758,7 @@ void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// If the source/target of a CopyOp is a CastOp that does not modify the shape
 /// and element type, the cast can be skipped. Such CastOps only cast the layout
 /// of the type.
-LogicalResult FoldCopyOfCast(CopyOp op) {
+static LogicalResult FoldCopyOfCast(CopyOp op) {
   for (OpOperand &operand : op->getOpOperands()) {
     auto castOp = operand.get().getDefiningOp<memref::CastOp>();
     if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
