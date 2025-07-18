@@ -160,6 +160,9 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
     printTH(MI, TH, Scope, O);
     printScope(Scope, O);
 
+    if (Imm & CPol::NV)
+      O << " nv";
+
     return;
   }
 
