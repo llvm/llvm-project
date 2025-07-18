@@ -4,6 +4,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
+typedef unsigned int uint;
 typedef half __attribute__((ext_vector_type(2))) half2;
 
 // CHECK-LABEL: @test_setprio_inc_wg(
@@ -40,6 +41,24 @@ void test_s_wait_asynccnt() {
 //
 void test_s_wait_tensorcnt() {
   __builtin_amdgcn_s_wait_tensorcnt(0);
+}
+
+// CHECK-LABEL: @test_prng_b32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.prng.b32(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_prng_b32(global uint* out, uint a) {
+  *out = __builtin_amdgcn_prng_b32(a);
 }
 
 // CHECK-LABEL: @test_tanh_f32(
