@@ -151,22 +151,31 @@ TEST(DILLexerTests, IdentifiersTest) {
     Token token = lexer.GetCurrentToken();
     EXPECT_TRUE(token.IsNot(Token::identifier));
     EXPECT_TRUE(token.IsOneOf({Token::eof, Token::coloncolon, Token::l_paren,
-                               Token::r_paren, Token::numeric_constant}));
+                               Token::r_paren, Token::integer_constant}));
   }
 }
 
 TEST(DILLexerTests, NumbersTest) {
   // These strings should lex into number tokens.
-  std::vector<std::string> valid_numbers = {"123", "0x123", "0123", "0b101"};
+  std::vector<std::string> valid_integers = {"123", "0x123", "0123", "0b101"};
+  std::vector<std::string> valid_floats = {
+      "1.2",    ".2",    "2.f",     "0x1.2",    "0x.2",     ".2e1f",
+      "2.e+1f", "0x1.f", "0x1.2p1", "0x1.p-1f", "0x1.2p+3f"};
 
   // The lexer can lex these strings, but they should not be numbers.
-  std::vector<std::string> invalid_numbers = {"", "x123", "b123"};
+  std::vector<std::string> invalid_numbers = {"", "x123", "b123", "a.b"};
 
-  for (auto &str : valid_numbers) {
+  for (auto &str : valid_integers) {
     SCOPED_TRACE(str);
     EXPECT_THAT_EXPECTED(ExtractTokenData(str),
                          llvm::HasValue(testing::ElementsAre(
-                             testing::Pair(Token::numeric_constant, str))));
+                             testing::Pair(Token::integer_constant, str))));
+  }
+  for (auto &str : valid_floats) {
+    SCOPED_TRACE(str);
+    EXPECT_THAT_EXPECTED(ExtractTokenData(str),
+                         llvm::HasValue(testing::ElementsAre(
+                             testing::Pair(Token::floating_constant, str))));
   }
   // Verify that none of the invalid numbers come out as numeric tokens.
   for (auto &str : invalid_numbers) {
@@ -175,7 +184,7 @@ TEST(DILLexerTests, NumbersTest) {
     EXPECT_THAT_EXPECTED(maybe_lexer, llvm::Succeeded());
     DILLexer lexer(*maybe_lexer);
     Token token = lexer.GetCurrentToken();
-    EXPECT_TRUE(token.IsNot(Token::numeric_constant));
+    EXPECT_TRUE(token.IsNot(Token::integer_constant));
     EXPECT_TRUE(token.IsOneOf({Token::eof, Token::identifier}));
   }
 }

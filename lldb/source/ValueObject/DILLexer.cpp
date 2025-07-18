@@ -28,16 +28,18 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "coloncolon";
   case Kind::eof:
     return "eof";
+  case Kind::floating_constant:
+    return "floating_constant";
   case Kind::identifier:
     return "identifier";
+  case Kind::integer_constant:
+    return "integer_constant";
   case Kind::l_paren:
     return "l_paren";
   case Kind::l_square:
     return "l_square";
   case Kind::minus:
     return "minus";
-  case Kind::numeric_constant:
-    return "numeric_constant";
   case Kind::period:
     return "period";
   case Kind::r_paren:
@@ -72,12 +74,39 @@ static std::optional<llvm::StringRef> IsWord(llvm::StringRef expr,
 
 static bool IsNumberBodyChar(char ch) { return IsDigit(ch) || IsLetter(ch); }
 
-static std::optional<llvm::StringRef> IsNumber(llvm::StringRef expr,
-                                               llvm::StringRef &remainder) {
-  if (IsDigit(remainder[0])) {
-    llvm::StringRef number = remainder.take_while(IsNumberBodyChar);
-    remainder = remainder.drop_front(number.size());
-    return number;
+static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
+                                               bool &isFloat) {
+  llvm::StringRef::iterator cur_pos = remainder.begin();
+  if (*cur_pos == '.') {
+    auto next_pos = cur_pos + 1;
+    if (next_pos == remainder.end() || !IsDigit(*next_pos))
+      return std::nullopt;
+  }
+  if (IsDigit(*(cur_pos)) || *(cur_pos) == '.') {
+    while (IsNumberBodyChar(*cur_pos))
+      cur_pos++;
+
+    if (*cur_pos == '.') {
+      isFloat = true;
+      cur_pos++;
+      while (IsNumberBodyChar(*cur_pos))
+        cur_pos++;
+
+      // Check if there's an exponent
+      char prev_ch = *(cur_pos - 1);
+      if (prev_ch == 'e' || prev_ch == 'E' || prev_ch == 'p' ||
+          prev_ch == 'P') {
+        if (*(cur_pos) == '+' || *(cur_pos) == '-') {
+          cur_pos++;
+          while (IsNumberBodyChar(*cur_pos))
+            cur_pos++;
+        }
+      }
+    }
+
+    llvm::StringRef number = remainder.substr(0, cur_pos - remainder.begin());
+    if (remainder.consume_front(number))
+      return number;
   }
   return std::nullopt;
 }
@@ -106,9 +135,12 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(Token::eof, "", (uint32_t)expr.size());
 
   uint32_t position = cur_pos - expr.begin();
-  std::optional<llvm::StringRef> maybe_number = IsNumber(expr, remainder);
-  if (maybe_number)
-    return Token(Token::numeric_constant, maybe_number->str(), position);
+  bool isFloat = false;
+  std::optional<llvm::StringRef> maybe_number = IsNumber(remainder, isFloat);
+  if (maybe_number) {
+    auto kind = isFloat ? Token::floating_constant : Token::integer_constant;
+    return Token(kind, maybe_number->str(), position);
+  }
   std::optional<llvm::StringRef> maybe_word = IsWord(expr, remainder);
   if (maybe_word)
     return Token(Token::identifier, maybe_word->str(), position);
