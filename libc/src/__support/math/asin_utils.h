@@ -163,8 +163,8 @@ static constexpr double ASIN_COEFFS[9][12] = {
 };
 
 // We calculate the lower part of the approximation P(u).
-LIBC_INLINE static DoubleDouble
-asin_eval(const DoubleDouble &u, unsigned &idx, double &err) {
+LIBC_INLINE static DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
+                                          double &err) {
   using fputil::multiply_add;
   // k = round(u * 32).
   double k = fputil::nearest_integer(u.hi * 0x1.0p5);
