@@ -571,6 +571,8 @@ function(add_integration_test test_name)
   target_compile_options(${fq_build_target_name} PRIVATE
                          ${compile_options} ${INTEGRATION_TEST_COMPILE_OPTIONS})
 
+  set(link_libraries "")
+
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
@@ -599,17 +601,19 @@ function(add_integration_test test_name)
     set(link_options
       -nolibc
       -nostartfiles
-      -static
+      -nostdlib
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
+    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}
     ${fq_target_name}.__libc__
     libc.startup.${LIBC_TARGET_OS}.crt1
     libc.test.IntegrationTest.test
+    ${link_libraries}
   )
   add_dependencies(${fq_build_target_name}
                    libc.test.IntegrationTest.test
@@ -807,7 +811,7 @@ function(add_libc_hermetic test_name)
     set(link_options
       -nolibc
       -nostartfiles
-      -static
+      -nostdlib
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
