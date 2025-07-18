@@ -61,6 +61,26 @@ void test_tanh_f32(global float* out, float a)
   *out = __builtin_amdgcn_tanhf(a);
 }
 
+// CHECK-LABEL: @test_tanh_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr addrspace(1) [[TMP0]], align 2
+// CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.amdgcn.tanh.f16(half [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store half [[TMP2]], ptr addrspace(1) [[TMP3]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_tanh_f16(global half* out, global half* a)
+{
+  *out = __builtin_amdgcn_tanhh(*a);
+}
+
 // CHECK-LABEL: @test_tanh_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
