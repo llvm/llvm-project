@@ -90,7 +90,7 @@ void BPFAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
       Data[Fixup.getOffset() + 1] = 0x1;
       support::endian::write32be(&Data[Fixup.getOffset() + 4], Value);
     }
-  } else if (Fixup.getTargetKind() == BPF::FK_BPF_PCRel_4) {
+  } else if (Fixup.getKind() == BPF::FK_BPF_PCRel_4) {
     // The input Value represents the number of bytes.
     Value = (uint32_t)((Value - 8) / 8);
     support::endian::write<uint32_t>(&Data[Fixup.getOffset() + 4], Value,
