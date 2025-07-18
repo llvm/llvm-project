@@ -22,12 +22,10 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
@@ -3419,7 +3417,8 @@ LogicalResult TransposeConv2DOp::verify() {
     return success();
 
   const int64_t outputChannels = outputType.getDimSize(3);
-  if (biasChannels != outputChannels && biasChannels != 1)
+  if (!ShapedType::isDynamic(outputChannels) &&
+      biasChannels != outputChannels && biasChannels != 1)
     return emitOpError(
                "bias channels expected to be equal to output channels (")
            << outputChannels << ") or 1, got " << biasChannels;

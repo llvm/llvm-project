@@ -110,14 +110,12 @@ void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
     dstDesc->ApplyMold(*srcDesc, dstDesc->rank());
     dstDesc->Allocate(/*asyncObject=*/nullptr);
   }
-  if ((srcDesc->rank() > 0) && (dstDesc->Elements() < srcDesc->Elements())) {
+  if ((srcDesc->rank() > 0) && (dstDesc->Elements() <= srcDesc->Elements()) &&
+      srcDesc->IsContiguous() && dstDesc->IsContiguous()) {
     // Special case when rhs is bigger than lhs and both are contiguous arrays.
     // In this case we do a simple ptr to ptr transfer with the size of lhs.
     // This is be allowed in the reference compiler and it avoids error
     // triggered in the Assign runtime function used for the main case below.
-    if (!srcDesc->IsContiguous() || !dstDesc->IsContiguous())
-      terminator.Crash("Unsupported data transfer: mismatching element counts "
-                       "with non-contiguous arrays");
     RTNAME(CUFDataTransferPtrPtr)(dstDesc->raw().base_addr,
         srcDesc->raw().base_addr, dstDesc->Elements() * dstDesc->ElementBytes(),
         mode, sourceFile, sourceLine);
