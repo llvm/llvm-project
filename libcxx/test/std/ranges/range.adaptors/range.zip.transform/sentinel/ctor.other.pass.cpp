@@ -50,21 +50,104 @@ static_assert(std::convertible_to< //
 constexpr bool test() {
   int buffer1[4] = {1, 2, 3, 4};
   int buffer2[5] = {1, 2, 3, 4, 5};
-  std::ranges::zip_transform_view v{
-      MakeTuple{}, NonSimpleNonCommonConvertibleView(buffer1), NonSimpleNonCommonConvertibleView(buffer2)};
-  using ZipTransformView = decltype(v);
-  static_assert(!std::ranges::common_range<ZipTransformView>);
-  auto sent1                                            = v.end();
-  std::ranges::sentinel_t<const ZipTransformView> sent2 = sent1;
-  static_assert(!std::is_same_v<decltype(sent1), decltype(sent2)>);
+  {
+    std::ranges::zip_transform_view v{
+        MakeTuple{}, NonSimpleNonCommonConvertibleView(buffer1), NonSimpleNonCommonConvertibleView(buffer2)};
+    using ZipTransformView = decltype(v);
+    static_assert(!std::ranges::common_range<ZipTransformView>);
+    auto sent1                                            = v.end();
+    std::ranges::sentinel_t<const ZipTransformView> sent2 = sent1;
+    static_assert(!std::is_same_v<decltype(sent1), decltype(sent2)>);
 
-  assert(v.begin() != sent2);
-  assert(std::as_const(v).begin() != sent2);
-  assert(v.begin() + 4 == sent2);
-  assert(std::as_const(v).begin() + 4 == sent2);
+    assert(v.begin() != sent2);
+    assert(std::as_const(v).begin() != sent2);
+    assert(v.begin() + 4 == sent2);
+    assert(std::as_const(v).begin() + 4 == sent2);
 
-  // Cannot create a non-const iterator from a const iterator.
-  static_assert(!std::constructible_from<decltype(sent1), decltype(sent2)>);
+    // Cannot create a non-const iterator from a const iterator.
+    static_assert(!std::constructible_from<decltype(sent1), decltype(sent2)>);
+  }
+
+  {
+    // one range
+    std::ranges::zip_transform_view v(MakeTuple{}, NonSimpleNonCommonConvertibleView{buffer1});
+    auto sent1                                       = v.end();
+    std::ranges::sentinel_t<const decltype(v)> sent2 = sent1;
+    static_assert(!std::is_same_v<decltype(sent1), decltype(sent2)>);
+    assert(v.begin() != sent1);
+    assert(v.begin() != sent2);
+    assert(v.begin() + 4 == sent1);
+    assert(v.begin() + 4 == sent2);
+  }
+
+  {
+    // two ranges
+    std::ranges::zip_transform_view v(GetFirst{}, NonSimpleNonCommonConvertibleView{buffer1}, std::views::iota(0));
+    auto sent1                                       = v.end();
+    std::ranges::sentinel_t<const decltype(v)> sent2 = sent1;
+    static_assert(!std::is_same_v<decltype(sent1), decltype(sent2)>);
+    assert(v.begin() != sent1);
+    assert(v.begin() != sent2);
+    assert(v.begin() + 4 == sent1);
+    assert(v.begin() + 4 == sent2);
+  }
+
+  {
+    // three ranges
+    std::ranges::zip_transform_view v(
+        Tie{}, NonSimpleNonCommonConvertibleView{buffer1}, SimpleCommon{buffer1}, std::ranges::single_view(2.));
+    auto sent1                                       = v.end();
+    std::ranges::sentinel_t<const decltype(v)> sent2 = sent1;
+    static_assert(!std::is_same_v<decltype(sent1), decltype(sent2)>);
+    assert(v.begin() != sent1);
+    assert(v.begin() != sent2);
+    assert(v.begin() + 1 == sent1);
+    assert(v.begin() + 1 == sent2);
+  }
+
+  {
+    // single empty range
+    std::ranges::zip_transform_view v(MakeTuple{}, NonSimpleNonCommonConvertibleView(nullptr, 0));
+    auto sent1                                       = v.end();
+    std::ranges::sentinel_t<const decltype(v)> sent2 = sent1;
+    static_assert(!std::is_same_v<decltype(sent1), decltype(sent2)>);
+    assert(v.begin() == sent1);
+    assert(v.begin() == sent2);
+  }
+
+  {
+    // empty range at the beginning
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, std::ranges::empty_view<int>(), NonSimpleNonCommonConvertibleView{buffer1}, SimpleCommon{buffer1});
+    auto sent1                                       = v.end();
+    std::ranges::sentinel_t<const decltype(v)> sent2 = sent1;
+    static_assert(!std::is_same_v<decltype(sent1), decltype(sent2)>);
+    assert(v.begin() == sent1);
+    assert(v.begin() == sent2);
+  }
+
+  {
+    // empty range in the middle
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer1}, std::ranges::empty_view<int>(), NonSimpleNonCommonConvertibleView{buffer1});
+    auto sent1                                       = v.end();
+    std::ranges::sentinel_t<const decltype(v)> sent2 = sent1;
+    static_assert(!std::is_same_v<decltype(sent1), decltype(sent2)>);
+    assert(v.begin() == sent1);
+    assert(v.begin() == sent2);
+  }
+
+  {
+    // empty range at the end
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer1}, NonSimpleNonCommonConvertibleView{buffer1}, std::ranges::empty_view<int>());
+    auto sent1                                       = v.end();
+    std::ranges::sentinel_t<const decltype(v)> sent2 = sent1;
+    static_assert(!std::is_same_v<decltype(sent1), decltype(sent2)>);
+    assert(v.begin() == sent1);
+    assert(v.begin() == sent2);
+  }
+
   return true;
 }
 

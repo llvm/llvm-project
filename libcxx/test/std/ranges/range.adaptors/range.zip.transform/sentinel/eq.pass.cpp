@@ -131,6 +131,62 @@ constexpr bool test() {
     static_assert(!EqualComparable<Iter, ConstSentinel>);
     static_assert(EqualComparable<ConstIter, ConstSentinel>);
   }
+
+  {
+    // one range
+    std::ranges::zip_transform_view v(MakeTuple{}, ComparableView{buffer1});
+    assert(v.begin() != v.end());
+    assert(v.begin() + 4 == v.end());
+    assert(v.begin() + 4 == std::as_const(v).end());
+  }
+
+  {
+    // two ranges
+    std::ranges::zip_transform_view v(GetFirst{}, ComparableView{buffer2}, std::views::iota(0));
+    assert(v.begin() != v.end());
+    assert(v.begin() + 5 == v.end());
+    assert(v.begin() + 5 == std::as_const(v).end());
+  }
+
+  {
+    // three ranges
+    std::ranges::zip_transform_view v(Tie{}, ComparableView{buffer1}, SimpleNonCommon{buffer2}, std::ranges::single_view(2.));
+    assert(v.begin() != v.end());
+    assert(v.begin() + 1 == v.end());
+    assert(v.begin() + 1 == std::as_const(v).end());
+  }
+
+  {
+    // single empty range
+    std::ranges::zip_transform_view v(MakeTuple{}, ComparableView(nullptr, 0));
+    assert(v.begin() == v.end());
+    assert(std::as_const(v).begin() == std::as_const(v).end());
+  }
+
+  {
+    // empty range at the beginning
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, std::ranges::empty_view<int>(), ComparableView{buffer1}, SimpleCommon{buffer2});
+    assert(v.begin() == v.end());
+    assert(std::as_const(v).begin() == std::as_const(v).end());
+  }
+
+  {
+    // empty range in the middle
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer1}, std::ranges::empty_view<int>(), ComparableView{buffer2});
+    assert(v.begin() == v.end());
+    assert(std::as_const(v).begin() == std::as_const(v).end());
+  }
+
+  {
+    // empty range at the end
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer1}, ComparableView{buffer2}, std::ranges::empty_view<int>());
+    assert(v.begin() == v.end());
+    assert(std::as_const(v).begin() == std::as_const(v).end());
+  }
+
   return true;
 }
 

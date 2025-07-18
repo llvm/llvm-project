@@ -42,6 +42,15 @@ constexpr void compareOperatorTest(auto&& iter1, auto&& iter2) {
   assert(!(iter2 != iter2));
 }
 
+constexpr void spaceshipTest(auto&& iter1, auto&& iter2) {
+  using Iter = decltype(iter1);
+  static_assert(std::three_way_comparable<Iter>);
+  assert((iter1 <=> iter2) == std::strong_ordering::less);
+  assert((iter1 <=> iter1) == std::strong_ordering::equal);
+  assert((iter2 <=> iter2) == std::strong_ordering::equal);
+  assert((iter2 <=> iter1) == std::strong_ordering::greater);
+}
+
 constexpr void inequalityOperatorsDoNotExistTest(auto&& iter1, auto&& iter2) {
   using Iter1 = decltype(iter1);
   using Iter2 = decltype(iter2);
@@ -66,10 +75,7 @@ constexpr bool test() {
     using Iter = decltype(iter1);
     static_assert(std::three_way_comparable<Iter>);
     compareOperatorTest(iter1, iter2);
-
-    assert((iter1 <=> iter2) == std::strong_ordering::less);
-    assert((iter1 <=> iter1) == std::strong_ordering::equal);
-    assert((iter2 <=> iter1) == std::strong_ordering::greater);
+    spaceshipTest(iter1, iter2);
   }
 
   {
@@ -86,11 +92,74 @@ constexpr bool test() {
     auto iter2 = iter1 + 1;
 
     compareOperatorTest(iter1, iter2);
-    using Iter = decltype(iter1);
-    static_assert(std::three_way_comparable<Iter>);
-    assert((iter1 <=> iter2) == std::strong_ordering::less);
-    assert((iter1 <=> iter1) == std::strong_ordering::equal);
-    assert((iter2 <=> iter1) == std::strong_ordering::greater);
+    spaceshipTest(iter1, iter2);
+  }
+
+  int buffer[5] = {1, 2, 3, 4, 5};
+  {
+    // one range
+    std::ranges::zip_transform_view v(MakeTuple{}, SimpleCommon{buffer});
+    auto it  = v.begin();
+    auto it2 = it + 3;
+    compareOperatorTest(it, it2);
+    spaceshipTest(it, it2);
+  }
+
+  {
+    // two ranges
+    std::ranges::zip_transform_view v(GetFirst{}, SimpleCommon{buffer}, std::views::iota(0));
+    auto it  = v.begin();
+    auto it2 = it + 3;
+    compareOperatorTest(it, it2);
+    spaceshipTest(it, it2);
+  }
+
+  {
+    // three ranges
+    std::ranges::zip_transform_view v(Tie{}, SimpleCommon{buffer}, SimpleCommon{buffer}, std::ranges::single_view(2.));
+    auto it  = v.begin();
+    auto it2 = it + 1;
+    compareOperatorTest(it, it2);
+    spaceshipTest(it, it2);
+  }
+
+  {
+    // single empty range
+    std::ranges::zip_transform_view v(MakeTuple{}, std::ranges::empty_view<int>());
+    auto it  = v.begin();
+    auto it2 = v.end();
+    assert(it == it2);
+    assert(it <=> it2 == std::strong_ordering::equal);
+  }
+
+  {
+    // empty range at the beginning
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, std::ranges::empty_view<int>(), SimpleCommon{buffer}, SimpleCommon{buffer});
+    auto it  = v.begin();
+    auto it2 = v.end();
+    assert(it == it2);
+    assert(it <=> it2 == std::strong_ordering::equal);
+  }
+
+  {
+    // empty range in the middle
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer}, std::ranges::empty_view<int>(), SimpleCommon{buffer});
+    auto it  = v.begin();
+    auto it2 = v.end();
+    assert(it == it2);
+    assert(it <=> it2 == std::strong_ordering::equal);
+  }
+
+  {
+    // empty range at the end
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer}, SimpleCommon{buffer}, std::ranges::empty_view<int>());
+    auto it  = v.begin();
+    auto it2 = v.end();
+    assert(it == it2);
+    assert(it <=> it2 == std::strong_ordering::equal);
   }
 
   {
@@ -139,8 +208,8 @@ constexpr bool test() {
   {
     // underlying iterator does not support ==
     using IterNoEqualView = BasicView<cpp20_input_iterator<int*>, sentinel_wrapper<cpp20_input_iterator<int*>>>;
-    int buffer[]          = {1};
-    std::ranges::zip_transform_view r(MakeTuple{}, IterNoEqualView{buffer});
+    int buffer2[]         = {1};
+    std::ranges::zip_transform_view r(MakeTuple{}, IterNoEqualView{buffer2});
     auto it    = r.begin();
     using Iter = decltype(it);
     static_assert(!std::invocable<std::equal_to<>, Iter, Iter>);

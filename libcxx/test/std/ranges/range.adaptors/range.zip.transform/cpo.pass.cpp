@@ -17,6 +17,9 @@
 #include <cassert>
 #include <functional>
 #include <type_traits>
+#include <vector>
+
+#include "types.h"
 
 struct NotMoveConstructible {
   NotMoveConstructible()                       = default;
@@ -97,6 +100,52 @@ constexpr bool test() {
         std::views::zip_transform(id, a);
     assert(&v[0] == &a[0]);
     static_assert(std::is_same_v<std::ranges::range_reference_t<decltype(v)>, int&>);
+  }
+
+  int buffer[] = {1, 2, 3};
+  {
+    // one range
+    auto v = std::views::zip_transform(MakeTuple{}, SimpleCommon{buffer});
+    assert(std::ranges::equal(v, std::vector{std::tuple(1), std::tuple(2), std::tuple(3)}));
+  }
+
+  {
+    // two ranges
+    auto v = std::views::zip_transform(GetFirst{}, SimpleCommon{buffer}, std::views::iota(0));
+    assert(std::ranges::equal(v, std::vector{1, 2, 3}));
+  }
+
+  {
+    // three ranges
+    auto v = std::views::zip_transform(Tie{}, SimpleCommon{buffer}, SimpleCommon{buffer}, std::ranges::single_view(2.));
+    assert(std::ranges::equal(v, std::vector{std::tuple(1, 1, 2.0)}));
+  }
+
+  {
+    // single empty range
+    auto v = std::views::zip_transform(MakeTuple{}, std::ranges::empty_view<int>());
+    assert(std::ranges::empty(v));
+  }
+
+  {
+    // empty range at the beginning
+    auto v = std::views::zip_transform(
+        MakeTuple{}, std::ranges::empty_view<int>(), SimpleCommon{buffer}, SimpleCommon{buffer});
+    assert(std::ranges::empty(v));
+  }
+
+  {
+    // empty range in the middle
+    auto v = std::views::zip_transform(
+        MakeTuple{}, SimpleCommon{buffer}, std::ranges::empty_view<int>(), SimpleCommon{buffer});
+    assert(std::ranges::empty(v));
+  }
+
+  {
+    // empty range at the end
+    auto v = std::views::zip_transform(
+        MakeTuple{}, SimpleCommon{buffer}, SimpleCommon{buffer}, std::ranges::empty_view<int>());
+    assert(std::ranges::empty(v));
   }
 
   return true;

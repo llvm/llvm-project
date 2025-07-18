@@ -15,6 +15,8 @@
 #include <cassert>
 #include <type_traits>
 
+#include "types.h"
+
 constexpr int buff[] = {1, 2, 3};
 
 struct DefaultConstructibleView : std::ranges::view_base {
@@ -72,6 +74,66 @@ constexpr bool test() {
     assert(*it++ == 2);
     assert(*it++ == 4);
     assert(*it == 6);
+  }
+
+  {
+    // one range
+    using View = std::ranges::zip_transform_view<MakeTuple, DefaultConstructibleView>;
+    View v     = View(); // the default constructor is not explicit
+    auto it    = v.begin();
+    assert(*it == std::make_tuple(1));
+  }
+
+  {
+    // two ranges
+    using View = std::ranges::zip_transform_view<MakeTuple, DefaultConstructibleView, std::ranges::iota_view<int>>;
+    View v     = View(); // the default constructor is not explicit
+    auto it    = v.begin();
+    assert(*it == std::tuple(1, 0));
+  }
+
+  {
+    // three ranges
+    using View = std::ranges::
+        zip_transform_view<MakeTuple, DefaultConstructibleView, DefaultConstructibleView, std::ranges::iota_view<int>>;
+    View v  = View(); // the default constructor is not explicit
+    auto it = v.begin();
+    assert(*it == std::tuple(1, 1, 0));
+  }
+
+  {
+    // single empty range
+    std::ranges::zip_transform_view v(MakeTuple{}, std::ranges::empty_view<int>());
+    assert(v.begin() == v.end());
+    assert(std::as_const(v).begin() == std::as_const(v).end());
+  }
+
+  {
+    // empty range at the beginning
+    using View = std::ranges::
+        zip_transform_view<MakeTuple, std::ranges::empty_view<int>, DefaultConstructibleView, DefaultConstructibleView>;
+    View v = View(); // the default constructor is not explicit
+    assert(v.empty());
+  }
+
+  {
+    // empty range in the middle
+    using View =
+        std::ranges::zip_transform_view<MakeTuple,
+                                        DefaultConstructibleView,
+                                        std::ranges::empty_view<int>,
+                                        DefaultConstructibleView,
+                                        DefaultConstructibleView>;
+    View v = View(); // the default constructor is not explicit
+    assert(v.empty());
+  }
+
+  {
+    // empty range at the end
+    using View = std::ranges::
+        zip_transform_view<MakeTuple, DefaultConstructibleView, DefaultConstructibleView, std::ranges::empty_view<int>>;
+    View v = View(); // the default constructor is not explicit
+    assert(v.empty());
   }
 
   return true;

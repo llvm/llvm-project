@@ -10,7 +10,9 @@
 
 // constexpr explicit zip_transform_view(F, Views...)
 
+#include <algorithm>
 #include <ranges>
+#include <vector>
 
 #include "types.h"
 
@@ -53,6 +55,50 @@ constexpr bool test() {
   int buffer[8]  = {1, 2, 3, 4, 5, 6, 7, 8};
   int buffer2[4] = {9, 8, 7, 6};
 
+  {
+    // one range
+    std::ranges::zip_transform_view v(MakeTuple{}, SimpleCommon{buffer2});
+    assert(std::ranges::equal(v, std::vector{std::tuple(9), std::tuple(8), std::tuple(7), std::tuple(6)}));
+  }
+
+  {
+    // two ranges
+    std::ranges::zip_transform_view v(GetFirst{}, SimpleCommon{buffer}, std::views::iota(0));
+    assert(std::ranges::equal(v, std::vector{1, 2, 3, 4, 5, 6, 7, 8}));
+  }
+
+  {
+    // three ranges
+    std::ranges::zip_transform_view v(Tie{}, SimpleCommon{buffer}, SimpleCommon{buffer2}, std::ranges::single_view(2.));
+    assert(std::ranges::equal(v, std::vector{std::tuple(1, 9, 2.0)}));
+  }
+
+  {
+    // single empty range
+    std::ranges::zip_transform_view v(MakeTuple{}, std::ranges::empty_view<int>());
+    assert(std::ranges::empty(v));
+  }
+
+  {
+    // empty range at the beginning
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, std::ranges::empty_view<int>(), SimpleCommon{buffer}, SimpleCommon{buffer});
+    assert(std::ranges::empty(v));
+  }
+
+  {
+    // empty range in the middle
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer}, std::ranges::empty_view<int>(), SimpleCommon{buffer});
+    assert(std::ranges::empty(v));
+  }
+
+  {
+    // empty range at the end
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer}, SimpleCommon{buffer}, std::ranges::empty_view<int>());
+    assert(std::ranges::empty(v));
+  }
   {
     // constructor from views
     std::ranges::zip_transform_view v(

@@ -69,6 +69,59 @@ constexpr bool test() {
     assert(*it == std::tuple(6, 6));
   }
 
+  int buffer[] = {1, 2, 3, 4, 5, 6};
+
+  {
+    // one range
+    std::ranges::zip_transform_view v(MakeTuple{}, SimpleCommon{buffer});
+    auto it    = v.begin();
+    using Iter = decltype(it);
+
+    std::same_as<Iter&> decltype(auto) it_ref = ++it;
+    assert(&it_ref == &it);
+
+    assert(*it == std::tuple(2));
+
+    auto original                         = it;
+    std::same_as<Iter> decltype(auto) it2 = it++;
+    assert(original == it2);
+    assert(*it == std::tuple(3));
+  }
+
+  {
+    // two ranges
+    std::ranges::zip_transform_view v(GetFirst{}, SimpleCommon{buffer}, std::views::iota(0));
+    auto it    = v.begin();
+    using Iter = decltype(it);
+
+    std::same_as<Iter&> decltype(auto) it_ref = ++it;
+    assert(&it_ref == &it);
+
+    assert(*it == 2);
+
+    auto original                         = it;
+    std::same_as<Iter> decltype(auto) it2 = it++;
+    assert(original == it2);
+    assert(*it == 3);
+  }
+
+  {
+    // three ranges
+    std::ranges::zip_transform_view v(Tie{}, SimpleCommon{buffer}, SimpleCommon{buffer}, std::ranges::repeat_view(2.));
+    auto it    = v.begin();
+    using Iter = decltype(it);
+
+    std::same_as<Iter&> decltype(auto) it_ref = ++it;
+    assert(&it_ref == &it);
+
+    assert(*it == std::tuple(2, 2, 2.0));
+
+    auto original                         = it;
+    std::same_as<Iter> decltype(auto) it2 = it++;
+    assert(original == it2);
+    assert(*it == std::tuple(3, 3, 2.0));
+  }
+
   return true;
 }
 

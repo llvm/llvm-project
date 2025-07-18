@@ -101,6 +101,104 @@ constexpr bool test() {
   }
 
   {
+    // one range
+    std::ranges::zip_transform_view v(MakeTuple{}, SimpleCommon{buffer1});
+    auto it = v.begin();
+    assert(*it == std::make_tuple(1));
+
+    it += 4;
+    assert(*it == std::make_tuple(5));
+
+    it -= 1;
+    assert(*it == std::make_tuple(4));
+
+    auto it2 = it - 2;
+    assert(*it2 == std::make_tuple(2));
+
+    auto it3 = 3 + it2;
+    assert(*it3 == std::make_tuple(5));
+
+    assert(it3 - it2 == 3);
+  }
+
+  {
+    // two ranges
+    std::ranges::zip_transform_view v(MakeTuple{}, SimpleCommon{buffer1}, std::views::iota(0));
+    auto it = v.begin();
+    assert(*it == std::make_tuple(1, 0));
+
+    it += 4;
+    assert(*it == std::make_tuple(5, 4));
+
+    it -= 1;
+    assert(*it == std::make_tuple(4, 3));
+
+    auto it2 = it - 2;
+    assert(*it2 == std::make_tuple(2, 1));
+
+    auto it3 = 3 + it2;
+    assert(*it3 == std::make_tuple(5, 4));
+
+    assert(it3 - it2 == 3);
+  }
+
+  {
+    // three ranges
+    std::ranges::zip_transform_view v(
+        Tie{}, SimpleCommon{buffer1}, SimpleCommon{buffer1}, std::ranges::single_view(2.));
+    auto it = v.begin();
+    assert(*it == std::make_tuple(1, 1, 2.0));
+
+    it += 1;
+    assert(it == v.end());
+
+    it -= 1;
+    assert(it == v.begin());
+
+    auto it2 = it + 1;
+    assert(it2 == v.end());
+
+    auto it3 = it2 - 1;
+    assert(it3 == v.begin());
+
+    assert(it3 - it2 == -1);
+  }
+
+  {
+    // single empty range
+    std::ranges::zip_transform_view v(MakeTuple{}, std::ranges::empty_view<int>());
+    auto it  = v.begin();
+    auto it2 = v.end();
+    assert(it2 - it == 0);
+  }
+
+  {
+    // empty range at the beginning
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, std::ranges::empty_view<int>(), SimpleCommon{buffer1}, SimpleCommon{buffer1});
+    auto it  = v.begin();
+    auto it2 = v.end();
+    assert(it2 - it == 0);
+  }
+
+  {
+    // empty range in the middle
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer1}, std::ranges::empty_view<int>(), SimpleCommon{buffer1});
+    auto it  = v.begin();
+    auto it2 = v.end();
+    assert(it2 - it == 0);
+  }
+
+  {
+    // empty range at the end
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer1}, SimpleCommon{buffer1}, std::ranges::empty_view<int>());
+    auto it  = v.begin();
+    auto it2 = v.end();
+    assert(it2 - it == 0);
+  }
+  {
     // One of the ranges is not random access
     std::ranges::zip_transform_view v(MakeTuple{}, a, b, ForwardSizedView{buffer1});
     auto it1   = v.begin();

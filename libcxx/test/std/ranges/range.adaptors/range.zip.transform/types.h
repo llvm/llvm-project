@@ -30,6 +30,10 @@ struct MakeTuple {
   constexpr auto operator()(auto&&... args) const { return std::tuple(std::forward<decltype(args)>(args)...); }
 };
 
+struct Tie {
+  constexpr auto operator()(auto&&... args) const { return std::tie(std::forward<decltype(args)>(args)...); }
+};
+
 struct GetFirst {
   constexpr decltype(auto) operator()(auto&& first, auto&&...) const { return std::forward<decltype(first)>(first); }
 };

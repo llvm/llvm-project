@@ -86,6 +86,52 @@ constexpr bool test() {
     assert(&val == &a[0]);
   }
 
+  {
+    // dereference twice
+    std::ranges::zip_transform_view v(MakeTuple{}, a, b);
+    auto it = v.begin();
+    assert(*it == std::tuple(1, 4.1));
+    assert(*it == std::tuple(1, 4.1));
+  }
+
+  {
+    // back and forth
+    std::ranges::zip_transform_view v(Tie{}, a, b);
+    auto it = v.begin();
+    assert(&std::get<0>(*it) == &a[0]);
+    assert(&std::get<1>(*it) == &b[0]);
+    ++it;
+    assert(&std::get<0>(*it) == &a[1]);
+    assert(&std::get<1>(*it) == &b[1]);
+    --it;
+    assert(&std::get<0>(*it) == &a[0]);
+    assert(&std::get<1>(*it) == &b[0]);
+  }
+
+  int buffer[] = {1, 2, 3, 4, 5, 6};
+  {
+    // one range
+    std::ranges::zip_transform_view v(MakeTuple{}, SimpleCommon{buffer});
+    auto it = v.begin();
+    assert(*it == std::make_tuple(1));
+  }
+
+  {
+    // two ranges
+    std::ranges::zip_transform_view v(GetFirst{}, SimpleCommon{buffer}, std::views::iota(0));
+    auto it = v.begin();
+    assert(&*it == &buffer[0]);
+  }
+
+  {
+    // three ranges
+    std::ranges::zip_transform_view v(Tie{}, SimpleCommon{buffer}, SimpleCommon{buffer}, std::ranges::single_view(2.));
+    auto it = v.begin();
+    assert(&std::get<0>(*it) == &buffer[0]);
+    assert(&std::get<1>(*it) == &buffer[0]);
+    assert(std::get<2>(*it) == 2.0);
+  }
+
   return true;
 }
 

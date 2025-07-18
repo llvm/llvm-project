@@ -33,11 +33,18 @@ static_assert(!std::default_initializable<Iter<IterNoDefaultCtrView, IterNoDefau
 static_assert(std::default_initializable<Iter<IterDefaultCtrView>>);
 static_assert(std::default_initializable<Iter<IterDefaultCtrView, IterDefaultCtrView>>);
 
-constexpr bool test() {
-  using ZipTransformIter = std::ranges::iterator_t<std::ranges::zip_transform_view<MakeTuple, IterDefaultCtrView>>;
+template <class Fn, class... Views>
+constexpr void test() {
+  using ZipTransformIter = std::ranges::iterator_t<std::ranges::zip_transform_view<Fn, Views...>>;
   ZipTransformIter iter1 = {};
   ZipTransformIter iter2;
   assert(iter1 == iter2);
+}
+
+constexpr bool test() {
+  test<MakeTuple, IterDefaultCtrView>();
+  test<MakeTuple, IterDefaultCtrView, std::ranges::empty_view<int>>();
+  test<MakeTuple, IterDefaultCtrView, std::ranges::iota_view<int>, std::ranges::single_view<int>>();
 
   return true;
 }

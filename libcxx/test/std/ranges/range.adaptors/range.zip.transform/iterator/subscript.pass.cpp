@@ -57,6 +57,29 @@ constexpr bool test() {
     static_assert(!CanSubscript<Iter>);
   }
 
+  {
+    // one range
+    std::ranges::zip_transform_view v(MakeTuple{}, SimpleCommon{buffer});
+    auto it = v.begin();
+    assert(it[2] == std::make_tuple(3));
+  }
+
+  {
+    // two ranges
+    std::ranges::zip_transform_view v(GetFirst{}, SimpleCommon{buffer}, std::views::iota(0));
+    auto it = v.begin();
+    assert(it[0] == 1);
+  }
+
+  {
+    // three ranges
+    std::ranges::zip_transform_view v(Tie{}, SimpleCommon{buffer}, SimpleCommon{buffer}, std::ranges::repeat_view(2.));
+    auto it = v.begin();
+    assert(&std::get<0>(it[1]) == &buffer[1]);
+    assert(&std::get<1>(it[2]) == &buffer[2]);
+    assert(std::get<2>(it[3]) == 2.0);
+  }
+
   return true;
 }
 

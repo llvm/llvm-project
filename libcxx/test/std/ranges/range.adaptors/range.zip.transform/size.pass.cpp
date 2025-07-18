@@ -45,17 +45,55 @@ struct ConstNonConstDifferentSize : std::ranges::view_base {
 
 constexpr bool test() {
   {
-    // single range
-    std::ranges::zip_transform_view v(MakeTuple{}, SizedView(8));
-    assert(v.size() == 8);
-    assert(std::as_const(v).size() == 8);
+    // one range
+    std::ranges::zip_transform_view v(MakeTuple{}, SimpleCommon{buffer});
+    assert(v.size() == 9);
+    assert(std::as_const(v).size() == 9);
   }
 
   {
-    // multiple ranges
-    std::ranges::zip_transform_view v(MakeTuple{}, SizedView(2), SizedView(3));
-    assert(v.size() == 2);
-    assert(std::as_const(v).size() == 2);
+    // two ranges
+    std::ranges::zip_transform_view v(GetFirst{}, SimpleCommon{buffer}, SizedView(3));
+    assert(v.size() == 3);
+    assert(std::as_const(v).size() == 3);
+  }
+
+  {
+    // three ranges
+    std::ranges::zip_transform_view v(Tie{}, SimpleCommon{buffer}, SizedView{6}, std::ranges::single_view(2.));
+    assert(v.size() == 1);
+    assert(std::as_const(v).size() == 1);
+  }
+
+  {
+    // single empty range
+    std::ranges::zip_transform_view v(MakeTuple{}, std::ranges::empty_view<int>());
+    assert(v.size() == 0);
+    assert(std::as_const(v).size() == 0);
+  }
+
+  {
+    // empty range at the beginning
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, std::ranges::empty_view<int>(), SimpleCommon{buffer}, SimpleCommon{buffer});
+    assert(v.size() == 0);
+    assert(std::as_const(v).size() == 0);
+  }
+
+  {
+    // empty range in the middle
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer}, std::ranges::empty_view<int>(), SimpleCommon{buffer});
+    assert(v.size() == 0);
+    assert(std::as_const(v).size() == 0);
+  }
+
+  {
+    // empty range at the end
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer}, SimpleCommon{buffer}, std::ranges::empty_view<int>());
+    assert(v.size() == 0);
+    assert(std::as_const(v).size() == 0);
   }
 
   {

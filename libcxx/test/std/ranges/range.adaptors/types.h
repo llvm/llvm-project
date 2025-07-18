@@ -27,6 +27,8 @@ struct BufferView : std::ranges::view_base {
 
   template <std::size_t N>
   constexpr BufferView(T (&b)[N]) : buffer_(b), size_(N) {}
+
+  constexpr BufferView(T* b, std::size_t s) : buffer_(b), size_(s) {}
 };
 
 using IntBufferView = BufferView<int>;

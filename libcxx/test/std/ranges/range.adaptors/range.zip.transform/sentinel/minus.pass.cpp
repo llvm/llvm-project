@@ -106,6 +106,7 @@ concept SentinelHasMinus = HasMinus<std::ranges::sentinel_t<T>, std::ranges::ite
 
 constexpr bool test() {
   int buffer1[5] = {1, 2, 3, 4, 5};
+  int buffer2[3] = {1, 2, 3};
 
   {
     // shortest range
@@ -198,6 +199,75 @@ constexpr bool test() {
     assert(const_it - st == -5);
     assert(st - const_it == 5);
   }
+
+  auto testMinus = [](auto&& v, auto distance) {
+    auto it       = v.begin();
+    auto const_it = std::as_const(v).begin();
+    auto st       = v.end();
+    auto const_st = std::as_const(v).end();
+
+    assert(it - st == -distance);
+    assert(st - it == distance);
+    assert(const_it - const_st == -distance);
+    assert(const_st - const_it == distance);
+    assert(it - const_st == -distance);
+    assert(const_st - it == distance);
+    assert(const_it - st == -distance);
+    assert(st - const_it == distance);
+  };
+
+  {
+    // one range
+    std::ranges::zip_transform_view v(MakeTuple{}, ConstCompatibleForwardSized{buffer1});
+    testMinus(v, 5);
+  }
+
+  {
+    // two ranges
+    std::ranges::zip_transform_view v(GetFirst{}, ConstCompatibleForwardSized{buffer1}, std::views::iota(0, 100));
+    testMinus(v, 5);
+  }
+
+  {
+    // three ranges
+    std::ranges::zip_transform_view v(
+        Tie{},
+        ConstCompatibleForwardSized{buffer1},
+        ConstCompatibleForwardSized{buffer2},
+        std::ranges::single_view(2.));
+    testMinus(v, 1);
+  }
+
+  {
+    // single empty range
+    std::ranges::zip_transform_view v(MakeTuple{}, ConstCompatibleForwardSized(nullptr, 0));
+    testMinus(v, 0);
+  }
+
+  {
+    // empty range at the beginning
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, std::ranges::empty_view<int>(), ConstCompatibleForwardSized{buffer1}, SimpleCommon{buffer2});
+    testMinus(v, 0);
+  }
+
+  {
+    // empty range in the middle
+    std::ranges::zip_transform_view v(
+        MakeTuple{},
+        ConstCompatibleForwardSized{buffer1},
+        std::ranges::empty_view<int>(),
+        ConstCompatibleForwardSized{buffer2});
+    testMinus(v, 0);
+  }
+
+  {
+    // empty range at the end
+    std::ranges::zip_transform_view v(
+        MakeTuple{}, SimpleCommon{buffer1}, ConstCompatibleForwardSized{buffer2}, std::ranges::empty_view<int>());
+    testMinus(v, 0);
+  }
+
   return true;
 }
 

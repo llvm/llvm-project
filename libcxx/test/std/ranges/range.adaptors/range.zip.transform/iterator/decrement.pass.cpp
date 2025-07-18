@@ -73,6 +73,61 @@ constexpr bool test() {
     static_assert(!canDecrement<Iter>);
   }
 
+  int buffer[] = {1, 2, 3, 4, 5, 6};
+
+  {
+    // one range
+    std::ranges::zip_transform_view v(MakeTuple{}, SimpleCommon{buffer});
+    auto it    = v.end();
+    using Iter = decltype(it);
+
+    std::same_as<Iter&> decltype(auto) it_ref = --it;
+    assert(&it_ref == &it);
+
+    assert(*it == std::tuple(6));
+
+    auto original                         = it;
+    std::same_as<Iter> decltype(auto) it2 = it--;
+    assert(original == it2);
+    assert(*it == std::tuple(5));
+  }
+
+  {
+    // two ranges
+    std::ranges::zip_transform_view v(GetFirst{}, SimpleCommon{buffer}, std::views::iota(0));
+    auto it    = v.begin() + 5;
+    using Iter = decltype(it);
+
+    std::same_as<Iter&> decltype(auto) it_ref = --it;
+    assert(&it_ref == &it);
+
+    assert(*it == 5);
+
+    auto original                         = it;
+    std::same_as<Iter> decltype(auto) it2 = it--;
+    assert(original == it2);
+    assert(*it == 4);
+  }
+
+  {
+    // three ranges
+    std::ranges::zip_transform_view v(Tie{}, SimpleCommon{buffer}, SimpleCommon{buffer}, std::ranges::single_view(2.));
+    auto it    = v.end();
+    using Iter = decltype(it);
+
+    std::same_as<Iter&> decltype(auto) it_ref = --it;
+    assert(&it_ref == &it);
+
+    assert(*it == std::tuple(1, 1, 2.0));
+
+    ++it;
+
+    auto original                         = it;
+    std::same_as<Iter> decltype(auto) it2 = it--;
+    assert(original == it2);
+    assert(*it == std::tuple(1, 1, 2.0));
+  }
+
   return true;
 }
 
