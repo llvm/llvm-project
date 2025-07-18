@@ -275,10 +275,8 @@ void AMDGPU::fillValidArchListR600(SmallVectorImpl<StringRef> &Values) {
 AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   AMDGPU::GPUKind AK = parseArchAMDGCN(GPU);
   if (AK == AMDGPU::GPUKind::GK_NONE) {
-    if (GPU == "generic-hsa")
-      return {7, 0, 0};
     if (GPU == "generic")
-      return {6, 0, 0};
+      return {7, 0, 0};
     return {0, 0, 0};
   }
 

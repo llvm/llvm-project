@@ -161,10 +161,10 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   const GCNSubtarget *ST =
       static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F));
 
-  // Check the GPU isn't generic or generic-hsa. Generic is used for testing
+  // Check the GPU isn't generic. Generic is used for testing
   // only and we don't want this pass to interfere with it.
   StringRef GPUName = ST->getCPU();
-  if (GPUName.empty() || GPUName.starts_with("generic"))
+  if (GPUName.empty() || GPUName == "generic")
     return false;
 
   // Try to fetch the GPU's info. If we can't, it's likely an unknown processor
