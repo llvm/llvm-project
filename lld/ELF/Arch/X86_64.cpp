@@ -354,6 +354,9 @@ void X86_64::relaxCFIJumpTables() const {
             sec->file, sec->name, sec->type, sec->flags, sec->entsize,
             sec->entsize,
             sec->contentMaybeDecompress().slice(begin, end - begin));
+        // Ensure that --preferred-function-alignment does not mess with the
+        // placement of this section.
+        slice->retainAlignment = true;
         for (const Relocation &r : ArrayRef<Relocation>(rbegin, rend)) {
           slice->relocations.push_back(
               Relocation{r.expr, r.type, r.offset - begin, r.addend, r.sym});
@@ -421,6 +424,9 @@ void X86_64::relaxCFIJumpTables() const {
             // table. First add a slice for the unmodified jump table entries
             // before this one.
             addSectionSlice(begin, cur, rbegin, rcur);
+            // Ensure that --preferred-function-alignment does not mess with the
+            // placement of this section.
+            target->retainAlignment = true;
             // Add the target to our replacement list, and set the target's
             // replacement list to the empty list. This removes it from its
             // original position and adds it here, as well as causing
@@ -441,6 +447,7 @@ void X86_64::relaxCFIJumpTables() const {
       // jump table where it is and keep the last entry.
       if (lastSec) {
         addSectionSlice(begin, cur, rbegin, rcur);
+        lastSec->retainAlignment = true;
         replacements.push_back(lastSec);
         sectionReplacements[sec] = {};
         sectionReplacements[lastSec] = replacements;

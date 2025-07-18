@@ -2,6 +2,8 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 // RUN: ld.lld %t.o -shared -o %t
 // RUN: llvm-objdump -d --show-all-symbols %t | FileCheck %s
+// RUN: ld.lld %t.o -shared -o %t32 --preferred-function-alignment=32
+// RUN: llvm-objdump -d --show-all-symbols %t32 | FileCheck %s
 
 // Mostly positive cases, except for f2.
 .section .text.jt1,"ax",@llvm_cfi_jump_table,8

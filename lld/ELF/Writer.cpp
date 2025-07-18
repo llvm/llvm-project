@@ -1499,6 +1499,20 @@ static void randomizeSectionPadding(Ctx &ctx) {
   }
 }
 
+static void applyPreferredFunctionAlignment(Ctx &ctx) {
+  if (!ctx.arg.preferredFunctionAlignment)
+    return;
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage))
+      if (!isa<SyntheticSection>(sec) && !sec->retainAlignment)
+        sec->addralign = std::max<uint32_t>(
+            sec->addralign, *ctx.arg.preferredFunctionAlignment);
+  }
+}
+
 // We need to generate and finalize the content that depends on the address of
 // InputSections. As the generation of the content may also alter InputSection
 // addresses we must converge to a fixed point. We do that here. See the comment
@@ -1529,6 +1543,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     randomizeSectionPadding(ctx);
 
   ctx.target->relaxCFIJumpTables();
+
+  if (ctx.arg.preferredFunctionAlignment)
+    applyPreferredFunctionAlignment(ctx);
 
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {
