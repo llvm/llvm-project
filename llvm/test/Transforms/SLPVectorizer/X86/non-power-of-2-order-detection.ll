@@ -16,8 +16,10 @@ define void @e(ptr %c, i64 %0) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x ptr> [[TMP5]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <6 x ptr> poison, ptr [[TMP2]], i32 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <6 x ptr> [[TMP7]], ptr [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = call <6 x ptr> @llvm.vector.insert.v6p0.v2p0(<6 x ptr> [[TMP8]], <2 x ptr> [[TMP4]], i64 0)
-; CHECK-NEXT:    [[TMP10:%.*]] = call <6 x ptr> @llvm.vector.insert.v6p0.v2p0(<6 x ptr> [[TMP9]], <2 x ptr> [[TMP6]], i64 4)
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <2 x ptr> [[TMP4]], <2 x ptr> poison, <6 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <6 x ptr> [[TMP8]], <6 x ptr> [[TMP19]], <6 x i32> <i32 6, i32 7, i32 2, i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <2 x ptr> [[TMP6]], <2 x ptr> poison, <6 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <6 x ptr> [[TMP20]], <6 x ptr> [[TMP21]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint <6 x ptr> [[TMP10]] to <6 x i64>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <6 x i64> [[TMP11]], <6 x i64> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5>
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <32 x i64> poison, i64 [[TMP0]], i32 0
