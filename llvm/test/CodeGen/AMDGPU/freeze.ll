@@ -14593,8 +14593,8 @@ define void @freeze_v4i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
   ret void
 }
 
-define double @tgt(float %a, double %b, double %c) {
-; GFX6-SDAG-LABEL: tgt:
+define double @freeze_fabs_double(float %a, double %b, double %c) {
+; GFX6-SDAG-LABEL: freeze_fabs_double:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-SDAG-NEXT:    v_mov_b32_e32 v5, v0
@@ -14603,7 +14603,7 @@ define double @tgt(float %a, double %b, double %c) {
 ; GFX6-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX6-GISEL-LABEL: tgt:
+; GFX6-GISEL-LABEL: freeze_fabs_double:
 ; GFX6-GISEL:       ; %bb.0:
 ; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-GISEL-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v0
@@ -14612,7 +14612,7 @@ define double @tgt(float %a, double %b, double %c) {
 ; GFX6-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX7-SDAG-LABEL: tgt:
+; GFX7-SDAG-LABEL: freeze_fabs_double:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    v_mov_b32_e32 v5, v0
@@ -14621,7 +14621,7 @@ define double @tgt(float %a, double %b, double %c) {
 ; GFX7-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX7-GISEL-LABEL: tgt:
+; GFX7-GISEL-LABEL: freeze_fabs_double:
 ; GFX7-GISEL:       ; %bb.0:
 ; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GISEL-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v0
@@ -14630,7 +14630,7 @@ define double @tgt(float %a, double %b, double %c) {
 ; GFX7-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-SDAG-LABEL: tgt:
+; GFX8-SDAG-LABEL: freeze_fabs_double:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v5, v0
@@ -14639,7 +14639,7 @@ define double @tgt(float %a, double %b, double %c) {
 ; GFX8-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-GISEL-LABEL: tgt:
+; GFX8-GISEL-LABEL: freeze_fabs_double:
 ; GFX8-GISEL:       ; %bb.0:
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v0
@@ -14648,7 +14648,7 @@ define double @tgt(float %a, double %b, double %c) {
 ; GFX8-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: tgt:
+; GFX9-GISEL-LABEL: freeze_fabs_double:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v0
@@ -14657,7 +14657,7 @@ define double @tgt(float %a, double %b, double %c) {
 ; GFX9-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-SDAG-LABEL: tgt:
+; GFX10-SDAG-LABEL: freeze_fabs_double:
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v5, v0
@@ -14666,7 +14666,7 @@ define double @tgt(float %a, double %b, double %c) {
 ; GFX10-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-GISEL-LABEL: tgt:
+; GFX10-GISEL-LABEL: freeze_fabs_double:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v0
@@ -14675,7 +14675,7 @@ define double @tgt(float %a, double %b, double %c) {
 ; GFX10-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-LABEL: tgt:
+; GFX11-SDAG-LABEL: freeze_fabs_double:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v5, v0
@@ -14684,7 +14684,7 @@ define double @tgt(float %a, double %b, double %c) {
 ; GFX11-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-GISEL-LABEL: tgt:
+; GFX11-GISEL-LABEL: freeze_fabs_double:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v0
@@ -14702,8 +14702,8 @@ define double @tgt(float %a, double %b, double %c) {
   ret double %add
 }
 
-define <4 x float> @src(<4 x float> %A, <4 x float> %B) {
-; GFX6-SDAG-LABEL: src:
+define <4 x float> @freeze_fabs_v4float(<4 x float> %A, <4 x float> %B) {
+; GFX6-SDAG-LABEL: freeze_fabs_v4float:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-SDAG-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -14712,7 +14712,7 @@ define <4 x float> @src(<4 x float> %A, <4 x float> %B) {
 ; GFX6-SDAG-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX6-GISEL-LABEL: src:
+; GFX6-GISEL-LABEL: freeze_fabs_v4float:
 ; GFX6-GISEL:       ; %bb.0:
 ; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-GISEL-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -14725,7 +14725,7 @@ define <4 x float> @src(<4 x float> %A, <4 x float> %B) {
 ; GFX6-GISEL-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
 ; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX7-SDAG-LABEL: src:
+; GFX7-SDAG-LABEL: freeze_fabs_v4float:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -14734,7 +14734,7 @@ define <4 x float> @src(<4 x float> %A, <4 x float> %B) {
 ; GFX7-SDAG-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX7-GISEL-LABEL: src:
+; GFX7-GISEL-LABEL: freeze_fabs_v4float:
 ; GFX7-GISEL:       ; %bb.0:
 ; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GISEL-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -14747,7 +14747,7 @@ define <4 x float> @src(<4 x float> %A, <4 x float> %B) {
 ; GFX7-GISEL-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-SDAG-LABEL: src:
+; GFX8-SDAG-LABEL: freeze_fabs_v4float:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -14756,7 +14756,7 @@ define <4 x float> @src(<4 x float> %A, <4 x float> %B) {
 ; GFX8-SDAG-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-GISEL-LABEL: src:
+; GFX8-GISEL-LABEL: freeze_fabs_v4float:
 ; GFX8-GISEL:       ; %bb.0:
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -14769,7 +14769,7 @@ define <4 x float> @src(<4 x float> %A, <4 x float> %B) {
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-GISEL-LABEL: src:
+; GFX9-GISEL-LABEL: freeze_fabs_v4float:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -14782,7 +14782,7 @@ define <4 x float> @src(<4 x float> %A, <4 x float> %B) {
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-SDAG-LABEL: src:
+; GFX10-SDAG-LABEL: freeze_fabs_v4float:
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -14791,7 +14791,7 @@ define <4 x float> @src(<4 x float> %A, <4 x float> %B) {
 ; GFX10-SDAG-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-GISEL-LABEL: src:
+; GFX10-GISEL-LABEL: freeze_fabs_v4float:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -14804,7 +14804,7 @@ define <4 x float> @src(<4 x float> %A, <4 x float> %B) {
 ; GFX10-GISEL-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-SDAG-LABEL: src:
+; GFX11-SDAG-LABEL: freeze_fabs_v4float:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -14813,7 +14813,7 @@ define <4 x float> @src(<4 x float> %A, <4 x float> %B) {
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-GISEL-LABEL: src:
+; GFX11-GISEL-LABEL: freeze_fabs_v4float:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
