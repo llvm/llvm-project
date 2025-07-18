@@ -1,4 +1,4 @@
-//===-- C standard library header dlfcn.h ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_DLFCN_H
-#define LLVM_LIBC_DLFCN_H
+#include <clc/atomic/clc_atomic_fetch_xor.h>
 
-#include "__llvm-libc-common.h"
-#include "llvm-libc-macros/dlfcn-macros.h"
+#define FUNCTION __clc_atomic_fetch_xor
+#define __IMPL_FUNCTION __scoped_atomic_fetch_xor
 
-%%public_api()
-
-#endif // LLVM_LIBC_DLFCN_H
+#define __CLC_BODY <clc_atomic_def.inc>
+#include <clc/integer/gentype.inc>

@@ -443,6 +443,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx1250-insts"] = true;
       Features["bitop3-insts"] = true;
       Features["prng-inst"] = true;
+      Features["tanh-insts"] = true;
       Features["transpose-load-f4f6-insts"] = true;
       Features["bf16-trans-insts"] = true;
       Features["fp8-conversion-insts"] = true;

@@ -468,6 +468,13 @@ The core components are:
 Using IR2Vec
 ------------
 
+.. note::
+
+   This section describes how to use IR2Vec within LLVM passes. A standalone 
+   tool :doc:`CommandGuide/llvm-ir2vec` is available for generating the
+   embeddings and triplets from LLVM IR files, which can be useful for
+   training vocabularies and generating embeddings outside of compiler passes.
+
 For generating embeddings, first the vocabulary should be obtained. Then, the 
 embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
 
@@ -524,6 +531,10 @@ Further Details
 For more detailed information about the IR2Vec algorithm, its parameters, and
 advanced usage, please refer to the original paper:
 `IR2Vec: LLVM IR Based Scalable Program Embeddings <https://doi.org/10.1145/3418463>`_.
+
+For information about using IR2Vec tool for generating embeddings and
+triplets from LLVM IR, see :doc:`CommandGuide/llvm-ir2vec`.
+
 The LLVM source code for ``IR2Vec`` can also be explored to understand the 
 implementation details.
 
@@ -595,4 +606,3 @@ optimizations that are currently MLGO-enabled, it may be used as follows:
 where the ``name`` is a path fragment. We will expect to find 2 files,
 ``<name>.in`` (readable, data incoming from the managing process) and
 ``<name>.out`` (writable, the model runner sends data to the managing process)
-

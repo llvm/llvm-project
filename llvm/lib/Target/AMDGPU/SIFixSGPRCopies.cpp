@@ -378,6 +378,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
   default:
     return false;
   case AMDGPU::V_MOV_B32_e32:
+  case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
     SMovOp = AMDGPU::S_MOV_B32;
     break;
   case AMDGPU::V_MOV_B64_PSEUDO:

@@ -1,7 +1,7 @@
 ! RUN: %flang_fc1 -fopenmp -fdebug-dump-symbols -o - %s 2>&1 | FileCheck %s
 ! Check scan reduction
 
-! CHECK: MainProgram scope: omp_reduction
+! CHECK: MainProgram scope: OMP_REDUCTION
 program omp_reduction
   ! CHECK: i size=4 offset=0: ObjectEntity type: INTEGER(4)
   integer i

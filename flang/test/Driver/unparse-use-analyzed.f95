@@ -6,12 +6,12 @@
 ! RUN: %flang_fc1 -fdebug-unparse  %s | FileCheck %s --check-prefix=DEFAULT
 ! RUN: %flang_fc1 -fdebug-unparse -fno-analyzed-objects-for-unparse %s | FileCheck %s --check-prefix=DISABLED
 
-! DEFAULT: PROGRAM test
+! DEFAULT: PROGRAM TEST
 ! DEFAULT-NEXT:  REAL, PARAMETER :: val = 3.43e2_4
 ! DEFAULT-NEXT:  PRINT *, 3.47e2_4
 ! DEFAULT-NEXT: END PROGRAM
 
-! DISABLED: PROGRAM test
+! DISABLED: PROGRAM TEST
 ! DISABLED-NEXT:  REAL, PARAMETER :: val = 343.0
 ! DISABLED-NEXT:  PRINT *, val+4
 ! DISABLED-NEXT: END PROGRAM

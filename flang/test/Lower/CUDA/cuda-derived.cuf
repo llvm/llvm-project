@@ -25,6 +25,6 @@ program main
   type(t2) :: b
 end
 
-! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "main"}
+! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "MAIN"}
 ! CHECK: %{{.*}} = cuf.alloc !fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}> {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QFEa"}
 ! CHECK: %{{.*}} = cuf.alloc !fir.type<_QMm1Tt2{b:!fir.type<_QMm1Tt1{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>}> {bindc_name = "b", data_attr = #cuf.cuda<managed>, uniq_name = "_QFEb"}

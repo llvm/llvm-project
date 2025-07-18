@@ -1050,10 +1050,6 @@ void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *N
       OS << " "; // "Namespace" is printed as the decl kind.
       dumpBareDeclRef(NNS->getAsNamespace());
       break;
-    case NestedNameSpecifier::NamespaceAlias:
-      OS << " "; // "NamespaceAlias" is printed as the decl kind.
-      dumpBareDeclRef(NNS->getAsNamespaceAlias());
-      break;
     case NestedNameSpecifier::TypeSpec:
       OS << " TypeSpec";
       dumpType(QualType(NNS->getAsType(), 0));

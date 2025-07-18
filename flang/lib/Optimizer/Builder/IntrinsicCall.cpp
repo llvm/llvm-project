@@ -396,6 +396,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"command_argument_count", &I::genCommandArgumentCount},
     {"conjg", &I::genConjg},
     {"cosd", &I::genCosd},
+    {"cospi", &I::genCospi},
     {"count",
      &I::genCount,
      {{{"mask", asAddr}, {"dim", asValue}, {"kind", asValue}}},
@@ -3618,6 +3619,21 @@ mlir::Value IntrinsicLibrary::genCosd(mlir::Type resultType,
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
       loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
+  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  return getRuntimeCallGenerator("cos", ftype)(builder, loc, {arg});
+}
+
+// COSPI
+mlir::Value IntrinsicLibrary::genCospi(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor =
+      builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
   mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
   return getRuntimeCallGenerator("cos", ftype)(builder, loc, {arg});

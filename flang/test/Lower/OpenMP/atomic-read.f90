@@ -4,7 +4,7 @@
 
 ! This test checks the lowering of atomic read
 
-!CHECK: func @_QQmain() attributes {fir.bindc_name = "ompatomic"} {
+!CHECK: func @_QQmain() attributes {fir.bindc_name = "OMPATOMIC"} {
 !CHECK:    %[[A_REF:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFEa"}
 !CHECK:    %[[A_DECL:.*]]:2 = hlfir.declare %[[A_REF]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[B_REF:.*]] = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFEb"}

@@ -1,17 +1,34 @@
 header: dlfcn.h
-header_template: dlfcn.h.def
+standards:
+  - posix
 macros:
+  # Note that macro values are quoted to keep the integer literals as
+  # written.  Without the quotes, YAML will normalize them to minimal
+  # decimal, which is less readable for humans seeing the generated header.
   - macro_name: RTLD_LAZY
-    macro_header: dlfcn-macros.h
+    macro_value: "0x00001"
   - macro_name: RTLD_NOW
-    macro_header: dlfcn-macros.h
+    macro_value: "0x00002"
   - macro_name: RTLD_GLOBAL
-    macro_header: dlfcn-macros.h
+    macro_value: "0x00100"
   - macro_name: RTLD_LOCAL
-    macro_header: dlfcn-macros.h
-types: []
-enums: []
-objects: []
+    macro_value: "0"
+  - macro_name: RTLD_BINDING_MASK
+    standards:
+      - gnu
+    macro_value: "0x00003"
+  - macro_name: RTLD_NOLOAD
+    standards:
+      - gnu
+    macro_value: "0x00004"
+  - macro_name: RTLD_DEEPBIND
+    standards:
+      - gnu
+    macro_value: "0x00008"
+  - macro_name: RTLD_NODELETE
+    standards:
+      - gnu
+    macro_value: "0x01000"
 functions:
   - name: dlclose
     standards:

@@ -18,8 +18,7 @@ define void @insert_32xi8_upper(ptr %src, ptr %dst, i8 %in) nounwind {
 ; CHECK-LABEL: insert_32xi8_upper:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
 ; CHECK-NEXT:    vinsgr2vr.b $vr1, $a2, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
@@ -47,8 +46,7 @@ define void @insert_16xi16_upper(ptr %src, ptr %dst, i16 %in) nounwind {
 ; CHECK-LABEL: insert_16xi16_upper:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a2, 0
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    xvst $xr0, $a1, 0

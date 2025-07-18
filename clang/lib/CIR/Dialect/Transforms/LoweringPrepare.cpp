@@ -50,7 +50,8 @@ void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
   switch (opKind) {
   case cir::UnaryOpKind::Inc:
   case cir::UnaryOpKind::Dec:
-    llvm_unreachable("Complex unary Inc/Dec NYI");
+    resultReal = builder.createUnaryOp(loc, opKind, operandReal);
+    resultImag = operandImag;
     break;
 
   case cir::UnaryOpKind::Plus:

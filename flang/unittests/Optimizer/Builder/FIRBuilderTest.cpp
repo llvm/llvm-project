@@ -29,7 +29,7 @@ public:
     moduleOp = builder.create<mlir::ModuleOp>(loc);
     builder.setInsertionPointToStart(moduleOp->getBody());
     mlir::func::FuncOp func = builder.create<mlir::func::FuncOp>(
-        loc, "func1", builder.getFunctionType(std::nullopt, std::nullopt));
+        loc, "func1", builder.getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder.setInsertionPointToStart(entryBlock);
 
@@ -176,8 +176,7 @@ TEST_F(FIRBuilderTest, getNamedFunction) {
   auto func2 = builder.getNamedFunction("func2");
   EXPECT_EQ(nullptr, func2);
   auto loc = builder.getUnknownLoc();
-  func2 = builder.createFunction(
-      loc, "func2", builder.getFunctionType(std::nullopt, std::nullopt));
+  func2 = builder.createFunction(loc, "func2", builder.getFunctionType({}, {}));
   auto func2query = builder.getNamedFunction("func2");
   EXPECT_EQ(func2, func2query);
 }

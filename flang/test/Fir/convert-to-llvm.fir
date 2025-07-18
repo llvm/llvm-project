@@ -216,10 +216,14 @@ func.func @test_alloc_and_freemem_one() {
 }
 
 // CHECK-LABEL:  llvm.func @test_alloc_and_freemem_one() {
-// CHECK:    %[[N:.*]] = llvm.mlir.constant(4 : i64) : i64
-// CHECK-NEXT:    llvm.call @malloc(%[[N]])
-// CHECK:         llvm.call @free(%{{.*}})
-// CHECK-NEXT:    llvm.return
+// CHECK-DAG:    %[[N:.*]] = llvm.mlir.constant(4 : i64) : i64
+// CHECK-DAG:    %[[ZERO:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK-DAG:    %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK-NEXT:   %[[CMP:.*]] = llvm.icmp "sgt" %[[N]], %[[ZERO]] : i64
+// CHECK-NEXT:   %[[SZ:.*]] = llvm.select %[[CMP]], %[[N]], %[[ONE]] : i1, i64
+// CHECK-NEXT:   llvm.call @malloc(%[[SZ]])
+// CHECK:        llvm.call @free(%{{.*}})
+// CHECK-NEXT:   llvm.return
 
 // -----
 // Verify that fir.allocmem is transformed to a call to malloc
@@ -233,8 +237,12 @@ func.func @test_alloc_and_freemem_several() {
 }
 
 // CHECK-LABEL:  llvm.func @test_alloc_and_freemem_several() {
-// CHECK:      %[[N:.*]] = llvm.mlir.constant(400 : i64) : i64
-// CHECK: [[MALLOC:%.*]] = llvm.call @malloc(%[[N]])
+// CHECK-DAG: %[[N:.*]] = llvm.mlir.constant(400 : i64) : i64
+// CHECK-DAG: %[[ZERO:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK-DAG: %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK-NEXT: %[[CMP:.*]] = llvm.icmp "sgt" %[[N]], %[[ZERO]] : i64
+// CHECK-NEXT: %[[SZ:.*]] = llvm.select %[[CMP]], %[[N]], %[[ONE]] : i1, i64
+// CHECK: [[MALLOC:%.*]] = llvm.call @malloc(%[[SZ]])
 // CHECK:              llvm.call @free([[MALLOC]])
 // CHECK:              llvm.return
 
@@ -250,7 +258,11 @@ func.func @test_with_shape(%ncols: index, %nrows: index) {
 // CHECK:   %[[FOUR:.*]] = llvm.mlir.constant(4 : i64) : i64
 // CHECK:   %[[DIM1_SIZE:.*]] = llvm.mul %[[FOUR]], %[[NCOLS]]  : i64
 // CHECK:   %[[TOTAL_SIZE:.*]] = llvm.mul %[[DIM1_SIZE]], %[[NROWS]]  : i64
-// CHECK:   %[[MEM:.*]] = llvm.call @malloc(%[[TOTAL_SIZE]])
+// CHECK:   %[[ZERO:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:   %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:   %[[CMP:.*]] = llvm.icmp "sgt" %[[TOTAL_SIZE]], %[[ZERO]] : i64
+// CHECK:   %[[SZ:.*]] = llvm.select %[[CMP]], %[[TOTAL_SIZE]], %[[ONE]] : i1, i64
+// CHECK:   %[[MEM:.*]] = llvm.call @malloc(%[[SZ]])
 // CHECK:   llvm.call @free(%[[MEM]]) : (!llvm.ptr) -> ()
 // CHECK:   llvm.return
 // CHECK: }
@@ -266,7 +278,11 @@ func.func @test_string_with_shape(%len: index, %nelems: index) {
 // CHECK:   %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:   %[[LEN_SIZE:.*]] = llvm.mul %[[ONE]], %[[LEN]]  : i64
 // CHECK:   %[[TOTAL_SIZE:.*]] = llvm.mul %[[LEN_SIZE]], %[[NELEMS]]  : i64
-// CHECK:   %[[MEM:.*]] = llvm.call @malloc(%[[TOTAL_SIZE]])
+// CHECK:   %[[ZERO:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:   %[[ONEA:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:   %[[CMP:.*]] = llvm.icmp "sgt" %[[TOTAL_SIZE]], %[[ZERO]] : i64
+// CHECK:   %[[SZ:.*]] = llvm.select %[[CMP]], %[[TOTAL_SIZE]], %[[ONEA]] : i1, i64
+// CHECK:   %[[MEM:.*]] = llvm.call @malloc(%[[SZ]])
 // CHECK:   llvm.call @free(%[[MEM]]) : (!llvm.ptr) -> ()
 // CHECK:   llvm.return
 // CHECK: }

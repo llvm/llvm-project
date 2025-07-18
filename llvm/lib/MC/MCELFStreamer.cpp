@@ -314,8 +314,9 @@ void MCELFStreamer::emitIdent(StringRef IdentString) {
   popSection();
 }
 
-void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
-                                           uint64_t Offset) {
+void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *Sym,
+                                           uint64_t Offset,
+                                           const MCSymbolRefExpr *&SRE) {
   const MCSymbol *S = &SRE->getSymbol();
   if (S->isTemporary()) {
     if (!S->isInSection()) {
@@ -328,13 +329,9 @@ void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
     S->setUsedInReloc();
     SRE = MCSymbolRefExpr::create(S, getContext(), SRE->getLoc());
   }
-  const MCConstantExpr *MCOffset = MCConstantExpr::create(Offset, getContext());
-  if (std::optional<std::pair<bool, std::string>> Err =
-          MCObjectStreamer::emitRelocDirective(
-              *MCOffset, "BFD_RELOC_NONE", SRE, SRE->getLoc(),
-              *getContext().getSubtargetInfo()))
-    report_fatal_error("Relocation for CG Profile could not be created: " +
-                       Twine(Err->second));
+  auto *O = MCBinaryExpr::createAdd(
+      Sym, MCConstantExpr::create(Offset, getContext()), getContext());
+  MCObjectStreamer::emitRelocDirective(*O, "BFD_RELOC_NONE", SRE);
 }
 
 void MCELFStreamer::finalizeCGProfile() {
@@ -347,9 +344,11 @@ void MCELFStreamer::finalizeCGProfile() {
   pushSection();
   switchSection(CGProfile);
   uint64_t Offset = 0;
+  auto *Sym =
+      MCSymbolRefExpr::create(CGProfile->getBeginSymbol(), getContext());
   for (auto &E : W.getCGProfile()) {
-    finalizeCGProfileEntry(E.From, Offset);
-    finalizeCGProfileEntry(E.To, Offset);
+    finalizeCGProfileEntry(Sym, Offset, E.From);
+    finalizeCGProfileEntry(Sym, Offset, E.To);
     emitIntValue(E.Count, sizeof(uint64_t));
     Offset += sizeof(uint64_t);
   }

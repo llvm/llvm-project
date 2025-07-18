@@ -69,6 +69,13 @@ private:
 
   SmallVector<const MCSymbol *, 0> Symbols;
 
+  struct RelocDirective {
+    const MCExpr &Offset;
+    const MCExpr *Expr;
+    uint32_t Kind;
+  };
+  SmallVector<RelocDirective, 0> relocDirectives;
+
   mutable SmallVector<std::pair<SMLoc, std::string>, 0> PendingErrors;
 
   MCDwarfLineTableParams LTParams;
@@ -205,6 +212,7 @@ public:
 
   LLVM_ABI bool registerSection(MCSection &Section);
   LLVM_ABI bool registerSymbol(const MCSymbol &Symbol);
+  void addRelocDirective(RelocDirective RD);
 
   LLVM_ABI void reportError(SMLoc L, const Twine &Msg) const;
   // Record pending errors during layout iteration, as they may go away once the

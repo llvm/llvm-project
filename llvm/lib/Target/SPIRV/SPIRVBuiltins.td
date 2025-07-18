@@ -1364,7 +1364,24 @@ defm : DemangledGetBuiltin<"get_sub_group_gt_mask", OpenCL_std, Variable, Subgro
 defm : DemangledGetBuiltin<"get_sub_group_le_mask", OpenCL_std, Variable, SubgroupLeMask>;
 defm : DemangledGetBuiltin<"get_sub_group_lt_mask", OpenCL_std, Variable, SubgroupLtMask>;
 defm : DemangledGetBuiltin<"__spirv_BuiltInGlobalLinearId", OpenCL_std, Variable, GlobalLinearId>;
-defm : DemangledGetBuiltin<"__spirv_BuiltInGlobalInvocationId", OpenCL_std, Variable, GlobalInvocationId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInLocalInvocationIndex", OpenCL_std, Variable, LocalInvocationIndex>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInWorkDim", OpenCL_std, Variable, WorkDim>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupSize", OpenCL_std, Variable, SubgroupSize>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupMaxSize", OpenCL_std, Variable, SubgroupMaxSize>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInNumSubgroups", OpenCL_std, Variable, NumSubgroups>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInNumEnqueuedSubgroups", OpenCL_std, Variable, NumEnqueuedSubgroups>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupId", OpenCL_std, Variable, SubgroupId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLocalInvocationId", OpenCL_std, Variable, SubgroupLocalInvocationId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupEqMask", OpenCL_std, Variable, SubgroupEqMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupEqMaskKHR", OpenCL_std, Variable, SubgroupEqMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupGeMask", OpenCL_std, Variable, SubgroupGeMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupGeMaskKHR", OpenCL_std, Variable, SubgroupGeMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupGtMask", OpenCL_std, Variable, SubgroupGtMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupGtMaskKHR", OpenCL_std, Variable, SubgroupGtMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLeMask", OpenCL_std, Variable, SubgroupLeMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLeMaskKHR", OpenCL_std, Variable, SubgroupLeMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLtMask", OpenCL_std, Variable, SubgroupLtMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLtMaskKHR", OpenCL_std, Variable, SubgroupLtMask>;
 
 // GetQuery builtin records:
 defm : DemangledGetBuiltin<"get_local_id", OpenCL_std, GetQuery, LocalInvocationId>;
@@ -1375,6 +1392,14 @@ defm : DemangledGetBuiltin<"get_group_id", OpenCL_std, GetQuery, WorkgroupId>;
 defm : DemangledGetBuiltin<"get_enqueued_local_size", OpenCL_std, GetQuery, EnqueuedWorkgroupSize>;
 defm : DemangledGetBuiltin<"get_num_groups", OpenCL_std, GetQuery, NumWorkgroups>;
 defm : DemangledGetBuiltin<"get_global_offset", OpenCL_std, GetQuery, GlobalOffset>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInLocalInvocationId", OpenCL_std, GetQuery, LocalInvocationId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInGlobalInvocationId", OpenCL_std, GetQuery, GlobalInvocationId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInWorkgroupSize", OpenCL_std, GetQuery, WorkgroupSize>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInGlobalSize", OpenCL_std, GetQuery, GlobalSize>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInWorkgroupId", OpenCL_std, GetQuery, WorkgroupId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInEnqueuedWorkgroupSize", OpenCL_std, GetQuery, EnqueuedWorkgroupSize>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInNumWorkgroups", OpenCL_std, GetQuery, NumWorkgroups>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInGlobalOffset", OpenCL_std, GetQuery, GlobalOffset>;
 defm : DemangledGetBuiltin<"__hlsl_wave_get_lane_index", GLSL_std_450, Wave, SubgroupLocalInvocationId>;
 
 //===----------------------------------------------------------------------===//

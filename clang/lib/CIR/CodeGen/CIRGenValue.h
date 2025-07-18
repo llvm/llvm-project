@@ -58,6 +58,12 @@ public:
     return value;
   }
 
+  /// Return the value of this complex value.
+  mlir::Value getComplexValue() const {
+    assert(isComplex() && "Not a complex!");
+    return value;
+  }
+
   /// Return the value of the address of the aggregate.
   Address getAggregateAddress() const {
     assert(isAggregate() && "Not an aggregate!");

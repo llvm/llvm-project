@@ -173,7 +173,8 @@ findInsertionPoint(const Tweak::Selection &Inputs,
     if (SM.isBeforeInTranslationUnit(Inputs.Cursor, U->getUsingLoc()))
       // "Usings" is sorted, so we're done.
       break;
-    if (const auto *Namespace = U->getQualifier()->getAsNamespace()) {
+    if (const auto *Namespace = dyn_cast_if_present<NamespaceDecl>(
+            U->getQualifier()->getAsNamespace())) {
       if (Namespace->getCanonicalDecl() ==
               QualifierToRemove.getNestedNameSpecifier()
                   ->getAsNamespace()
@@ -232,7 +233,10 @@ findInsertionPoint(const Tweak::Selection &Inputs,
 
 bool isNamespaceForbidden(const Tweak::Selection &Inputs,
                           const NestedNameSpecifier &Namespace) {
-  std::string NamespaceStr = printNamespaceScope(*Namespace.getAsNamespace());
+  const auto *NS = dyn_cast<NamespaceDecl>(Namespace.getAsNamespace());
+  if (!NS)
+    return true;
+  std::string NamespaceStr = printNamespaceScope(*NS);
 
   for (StringRef Banned : Config::current().Style.FullyQualifiedNamespaces) {
     StringRef PrefixMatch = NamespaceStr;

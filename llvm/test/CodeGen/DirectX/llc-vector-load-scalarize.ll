@@ -24,7 +24,8 @@
 define <4 x i32> @load_array_vec_test() #0 {
 ; CHECK-LABEL: define <4 x i32> @load_array_vec_test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(3) @arrayofVecData.scalarized.1dim, align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [8 x i32], ptr addrspace(3) @arrayofVecData.scalarized.1dim, i32 0, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(3) [[GEP]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(3) getelementptr ([8 x i32], ptr addrspace(3) @arrayofVecData.scalarized.1dim, i32 0, i32 1), align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(3) getelementptr ([8 x i32], ptr addrspace(3) @arrayofVecData.scalarized.1dim, i32 0, i32 2), align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(3) getelementptr ([8 x i32], ptr addrspace(3) @arrayofVecData.scalarized.1dim, i32 0, i32 3), align 4
@@ -52,7 +53,8 @@ define <4 x i32> @load_array_vec_test() #0 {
 define <4 x i32> @load_vec_test() #0 {
 ; CHECK-LABEL: define <4 x i32> @load_vec_test(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) @vecData.scalarized, align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [4 x i32], ptr addrspace(3) @vecData.scalarized, i32 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[GEP]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(3) getelementptr ([4 x i32], ptr addrspace(3) @vecData.scalarized, i32 0, i32 1), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) getelementptr ([4 x i32], ptr addrspace(3) @vecData.scalarized, i32 0, i32 2), align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(3) getelementptr ([4 x i32], ptr addrspace(3) @vecData.scalarized, i32 0, i32 3), align 4
@@ -203,7 +205,8 @@ define <4 x i32> @load_static_array_of_vec_from_i8_gep_test(i32 %index) #0 {
 define <4 x i32> @multid_load_test() #0 {
 ; CHECK-LABEL: define <4 x i32> @multid_load_test(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) @groupshared2dArrayofVectors.scalarized.1dim, align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [36 x i32], ptr addrspace(3) @groupshared2dArrayofVectors.scalarized.1dim, i32 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[GEP]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(3) getelementptr ([36 x i32], ptr addrspace(3) @groupshared2dArrayofVectors.scalarized.1dim, i32 0, i32 1), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) getelementptr ([36 x i32], ptr addrspace(3) @groupshared2dArrayofVectors.scalarized.1dim, i32 0, i32 2), align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(3) getelementptr ([36 x i32], ptr addrspace(3) @groupshared2dArrayofVectors.scalarized.1dim, i32 0, i32 3), align 4

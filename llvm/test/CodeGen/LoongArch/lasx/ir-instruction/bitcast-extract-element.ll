@@ -5,8 +5,6 @@ define i32 @bitcast_extract_v8f32(<8 x float> %a) nounwind {
 ; CHECK-LABEL: bitcast_extract_v8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 7
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <8 x float> %a, i32 7
@@ -18,8 +16,6 @@ define i64 @bitcast_extract_v4f64(<4 x double> %a) nounwind {
 ; CHECK-LABEL: bitcast_extract_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
-; CHECK-NEXT:    movgr2fr.d $fa0, $a0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <4 x double> %a, i32 3

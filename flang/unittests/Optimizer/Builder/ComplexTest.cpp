@@ -25,7 +25,7 @@ public:
     moduleOp = builder.create<mlir::ModuleOp>(loc);
     builder.setInsertionPointToStart(moduleOp->getBody());
     mlir::func::FuncOp func = builder.create<mlir::func::FuncOp>(
-        loc, "func1", builder.getFunctionType(std::nullopt, std::nullopt));
+        loc, "func1", builder.getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder.setInsertionPointToStart(entryBlock);
 

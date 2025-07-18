@@ -72,26 +72,13 @@ void CXXScopeSpec::Extend(ASTContext &Context, IdentifierInfo *Identifier,
          "NestedNameSpecifierLoc range computation incorrect");
 }
 
-void CXXScopeSpec::Extend(ASTContext &Context, NamespaceDecl *Namespace,
+void CXXScopeSpec::Extend(ASTContext &Context, NamespaceBaseDecl *Namespace,
                           SourceLocation NamespaceLoc,
                           SourceLocation ColonColonLoc) {
   Builder.Extend(Context, Namespace, NamespaceLoc, ColonColonLoc);
 
   if (Range.getBegin().isInvalid())
     Range.setBegin(NamespaceLoc);
-  Range.setEnd(ColonColonLoc);
-
-  assert(Range == Builder.getSourceRange() &&
-         "NestedNameSpecifierLoc range computation incorrect");
-}
-
-void CXXScopeSpec::Extend(ASTContext &Context, NamespaceAliasDecl *Alias,
-                          SourceLocation AliasLoc,
-                          SourceLocation ColonColonLoc) {
-  Builder.Extend(Context, Alias, AliasLoc, ColonColonLoc);
-
-  if (Range.getBegin().isInvalid())
-    Range.setBegin(AliasLoc);
   Range.setEnd(ColonColonLoc);
 
   assert(Range == Builder.getSourceRange() &&

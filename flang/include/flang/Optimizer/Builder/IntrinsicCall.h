@@ -245,6 +245,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genCPtrCompare(mlir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genCospi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genDotProduct(mlir::Type,

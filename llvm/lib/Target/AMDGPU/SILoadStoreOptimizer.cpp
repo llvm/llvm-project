@@ -2225,8 +2225,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   MachineBasicBlock::iterator E = MBB->end();
   MachineBasicBlock::iterator MBBI = MI.getIterator();
   ++MBBI;
-  const SITargetLowering *TLI =
-    static_cast<const SITargetLowering *>(STM->getTargetLowering());
+  const SITargetLowering *TLI = STM->getTargetLowering();
 
   for ( ; MBBI != E; ++MBBI) {
     MachineInstr &MINext = *MBBI;

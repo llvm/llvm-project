@@ -69,7 +69,6 @@ add_header_macro(
   ../libc/include/dlfcn.yaml
   dlfcn.h
   DEPENDS
-    .llvm-libc-macros.dlfcn_macros
     .llvm_libc_common_h
 )
 
@@ -718,6 +717,15 @@ add_header_macro(
     .llvm-libc-types.size_t
     .llvm-libc-types.wint_t
     .llvm-libc-types.wchar_t
+)
+
+add_header_macro(
+  wctype
+  ../libc/include/wctype.yaml
+  wctype.h
+  DEPENDS
+    .llvm_libc_common_h    
+    .llvm-libc-types.wint_t
 )
 
 add_header_macro(

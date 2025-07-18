@@ -296,7 +296,7 @@ struct SetLengthOpConversion
     llvm::StringRef tmpName{".tmp"};
     llvm::SmallVector<mlir::Value, 1> lenParams{adaptor.getLength()};
     auto alloca = builder.createTemporary(loc, charType, tmpName,
-                                          /*shape=*/std::nullopt, lenParams);
+                                          /*shape=*/{}, lenParams);
     auto declareOp = builder.create<hlfir::DeclareOp>(
         loc, alloca, tmpName, /*shape=*/mlir::Value{}, lenParams,
         /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});

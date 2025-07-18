@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/atanhf.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY

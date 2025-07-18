@@ -7894,9 +7894,9 @@ AST_MATCHER_P_OVERLOAD(NestedNameSpecifierLoc, hasPrefix,
 ///   matches "ns::"
 AST_MATCHER_P(NestedNameSpecifier, specifiesNamespace,
               internal::Matcher<NamespaceDecl>, InnerMatcher) {
-  if (!Node.getAsNamespace())
-    return false;
-  return InnerMatcher.matches(*Node.getAsNamespace(), Finder, Builder);
+  if (auto *NS = dyn_cast_if_present<NamespaceDecl>(Node.getAsNamespace()))
+    return InnerMatcher.matches(*NS, Finder, Builder);
+  return false;
 }
 
 /// Matches attributes.

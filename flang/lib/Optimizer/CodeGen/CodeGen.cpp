@@ -1123,6 +1123,16 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     for (mlir::Value opnd : adaptor.getOperands())
       size = rewriter.create<mlir::LLVM::MulOp>(
           loc, ity, size, integerCast(loc, rewriter, ity, opnd));
+
+    // As the return value of malloc(0) is implementation defined, allocate one
+    // byte to ensure the allocation status being true. This behavior aligns to
+    // what the runtime has.
+    mlir::Value zero = genConstantIndex(loc, ity, rewriter, 0);
+    mlir::Value one = genConstantIndex(loc, ity, rewriter, 1);
+    mlir::Value cmp = rewriter.create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicate::sgt, size, zero);
+    size = rewriter.create<mlir::LLVM::SelectOp>(loc, cmp, size, one);
+
     auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
     auto mallocTy =
         mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
