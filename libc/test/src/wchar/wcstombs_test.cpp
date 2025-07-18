@@ -79,7 +79,6 @@ TEST_F(LlvmLibcWcstombs, ErrnoTest) {
   // n parameter ignored when dest is null
   ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 7), static_cast<size_t>(7));
   ASSERT_ERRNO_SUCCESS();
-  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 100),
-            static_cast<size_t>(-1));
+  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 100), static_cast<size_t>(-1));
   ASSERT_ERRNO_EQ(EILSEQ);
 }
