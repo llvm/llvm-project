@@ -8700,7 +8700,7 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
     return &name;
   }
   if (isImplicitNoneType() && !deferImplicitTyping_) {
-    Say(name, "No explicit type declared for '%s'"_err_en_US, name.source);
+    Say(name, "No explicit type declared for '%s'"_err_en_US);
     return nullptr;
   }
   // Create the symbol, then ensure that it is accessible
