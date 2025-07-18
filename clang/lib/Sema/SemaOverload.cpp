@@ -11353,13 +11353,13 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
   bool TwoPhaseResolution =
       DeferredCandidatesCount != 0 && !ResolutionByPerfectCandidateIsDisabled;
 
-  if(TwoPhaseResolution) {
-      OverloadingResult Res = BestViableFunctionImpl(S, Loc, Best);
-      if (Best != end() && Best->isPerfectMatch(S.Context)) {
-          if(!(HasDeferredTemplateConstructors &&
-               isa_and_nonnull<CXXConversionDecl>(Best->Function)))
-          return Res;
-      }
+  if (TwoPhaseResolution) {
+    OverloadingResult Res = BestViableFunctionImpl(S, Loc, Best);
+    if (Best != end() && Best->isPerfectMatch(S.Context)) {
+      if (!(HasDeferredTemplateConstructors &&
+            isa_and_nonnull<CXXConversionDecl>(Best->Function)))
+        return Res;
+    }
   }
 
   InjectNonDeducedTemplateCandidates(S);
