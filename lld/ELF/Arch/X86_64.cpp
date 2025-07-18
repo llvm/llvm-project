@@ -447,6 +447,7 @@ void X86_64::relaxCFIJumpTables() const {
       // jump table where it is and keep the last entry.
       if (lastSec) {
         addSectionSlice(begin, cur, rbegin, rcur);
+        lastSec->retainAlignment = true;
         replacements.push_back(lastSec);
         sectionReplacements[sec] = {};
         sectionReplacements[lastSec] = replacements;

@@ -251,6 +251,12 @@ public:
 
   LLVM_ABI void printPipeline(raw_ostream &OS,
                               function_ref<StringRef(StringRef)>) const;
+
+  MachineFunctionProperties getSetProperties() const {
+    if (ClearVirtRegs)
+      return MachineFunctionProperties().setNoVRegs();
+    return {};
+  }
 };
 
 } // end llvm namespace
