@@ -731,6 +731,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
   setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+  setTruncStoreAction(MVT::v2f32, MVT::v2f16, Expand);
+  setTruncStoreAction(MVT::v2f32, MVT::v2bf16, Expand);
 
   // PTX does not support load / store predicate registers
   setOperationAction(ISD::LOAD, MVT::i1, Custom);
