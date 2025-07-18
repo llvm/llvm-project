@@ -439,7 +439,6 @@ public:
            CurFrag->getParent() == getCurrentSection().first);
     return CurFrag;
   }
-
   /// Save the current and previous section on the section stack.
   void pushSection() {
     SectionStack.push_back(
@@ -466,6 +465,9 @@ public:
   virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);
 
   MCSymbol *endSection(MCSection *Section);
+
+  void insert(MCFragment *F);
+  void newFragment();
 
   /// Returns the mnemonic for \p MI, if the streamer has access to a
   /// instruction printer and returns an empty string otherwise.

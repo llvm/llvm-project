@@ -189,6 +189,7 @@ public:
 // destructors.
 class MCFragment {
   friend class MCAssembler;
+  friend class MCStreamer;
   friend class MCObjectStreamer;
   friend class MCSection;
 
