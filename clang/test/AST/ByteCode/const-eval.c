@@ -51,6 +51,8 @@ struct s {
 };
 
 EVAL_EXPR(19, ((int)&*(char*)10 == 10 ? 1 : -1));
+// ref-error@-1 {{expression is not an integer constant expression}} \
+// ref-note@-1 {{dereferencing a null pointer}}
 
 #ifndef NEW_INTERP
 EVAL_EXPR(20, __builtin_constant_p(*((int*) 10)));
