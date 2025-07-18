@@ -8357,7 +8357,6 @@ TEST(APFloatTest, hasSignBitInMSB) {
   EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
 }
 
-#ifdef LLVM_INTEGRATE_LIBC
 TEST(APFloatTest, expf) {
   std::array<llvm::RoundingMode, 4> allRoundingModes = {
       APFloat::rmNearestTiesToEven, APFloat::rmTowardPositive,
@@ -8431,6 +8430,5 @@ TEST(APFloatTest, expf) {
   EXPECT_EQ(0x1.78b562p-2f,
             llvm::exp(APFloat(-1.0f), APFloat::rmTowardZero).convertToFloat());
 }
-#endif // LLVM_INTEGRATE_LIBC
 
 } // namespace
