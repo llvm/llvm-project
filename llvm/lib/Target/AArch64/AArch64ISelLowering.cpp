@@ -6439,7 +6439,9 @@ bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
     }
   }
 
-  return true;
+  EVT PreExtScalarVT = ExtVal->getOperand(0).getValueType().getScalarType();
+  return PreExtScalarVT == MVT::i8 || PreExtScalarVT == MVT::i16 ||
+         PreExtScalarVT == MVT::i32 || PreExtScalarVT == MVT::i64;
 }
 
 unsigned getGatherVecOpcode(bool IsScaled, bool IsSigned, bool NeedsExtend) {
