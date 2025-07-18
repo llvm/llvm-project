@@ -1039,8 +1039,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
   case RecurKind::SMax:
     return Intrinsic::smax;
   case RecurKind::FMin:
+  case RecurKind::FMinNum:
     return Intrinsic::minnum;
   case RecurKind::FMax:
+  case RecurKind::FMaxNum:
     return Intrinsic::maxnum;
   case RecurKind::FMinimum:
     return Intrinsic::minimum;
@@ -1098,7 +1100,8 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
                             Value *Right) {
   Type *Ty = Left->getType();
   if (Ty->isIntOrIntVectorTy() ||
-      (RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
+      (RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum ||
+       RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
        RK == RecurKind::FMinimumNum || RK == RecurKind::FMaximumNum)) {
     // TODO: Add float minnum/maxnum support when FMF nnan is set.
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
@@ -1310,6 +1313,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::UMin:
   case RecurKind::FMax:
   case RecurKind::FMin:
+  case RecurKind::FMinNum:
+  case RecurKind::FMaxNum:
   case RecurKind::FMinimum:
   case RecurKind::FMaximum:
   case RecurKind::FMinimumNum:

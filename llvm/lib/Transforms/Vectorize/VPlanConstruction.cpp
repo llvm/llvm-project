@@ -656,25 +656,42 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
 bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPReductionPHIRecipe *RedPhiR = nullptr;
-  VPValue *MinMaxOp = nullptr;
   bool HasUnsupportedPhi = false;
 
-  auto GetMinMaxCompareValue = [](VPSingleDefRecipe *MinMaxOp,
-                                  VPReductionPHIRecipe *RedPhi) -> VPValue * {
-    auto *RepR = dyn_cast<VPReplicateRecipe>(MinMaxOp);
-    if (!isa<VPWidenIntrinsicRecipe>(MinMaxOp) &&
+  auto GetMinMaxCompareValue = [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
+    auto *MinMaxR = dyn_cast<VPRecipeWithIRFlags>(
+        RedPhiR->getBackedgeValue()->getDefiningRecipe());
+    if (!MinMaxR)
+      return nullptr;
+
+    auto *RepR = dyn_cast<VPReplicateRecipe>(MinMaxR);
+    if (!isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
         !(RepR && (isa<IntrinsicInst>(RepR->getUnderlyingInstr()))))
       return nullptr;
 
-    if (MinMaxOp->getOperand(0) == RedPhi)
-      return MinMaxOp->getOperand(1);
-    assert(MinMaxOp->getOperand(1) == RedPhi &&
+#ifndef NDEBUG
+    Intrinsic::ID RdxIntrinsicId =
+        RedPhiR->getRecurrenceKind() == RecurKind::FMaxNum ? Intrinsic::maxnum
+                                                           : Intrinsic::minnum;
+    assert((isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
+            cast<VPWidenIntrinsicRecipe>(MinMaxR)->getVectorIntrinsicID() ==
+                RdxIntrinsicId) ||
+           (RepR &&
+            cast<IntrinsicInst>(RepR->getUnderlyingInstr())->getIntrinsicID() ==
+                RdxIntrinsicId) &&
+               "Intrinsic did not match recurrence kind");
+#endif
+
+    if (MinMaxR->getOperand(0) == RedPhiR)
+      return MinMaxR->getOperand(1);
+
+    assert(MinMaxR->getOperand(1) == RedPhiR &&
            "Reduction phi operand expected");
-    return MinMaxOp->getOperand(0);
+    return MinMaxR->getOperand(0);
   };
 
   for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
-    // TODO: Also support first-order recurrence phis.
+    // TODO: Also support fixed-order recurrence phis.
     HasUnsupportedPhi |=
         !isa<VPCanonicalIVPHIRecipe, VPWidenIntOrFpInductionRecipe,
              VPReductionPHIRecipe>(&R);
@@ -688,34 +705,23 @@ bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
     if (Cur->getRecurrenceKind() != RecurKind::FMaxNum &&
         Cur->getRecurrenceKind() != RecurKind::FMinNum)
       continue;
-
     RedPhiR = Cur;
-    auto *MinMaxR = dyn_cast<VPRecipeWithIRFlags>(
-        RedPhiR->getBackedgeValue()->getDefiningRecipe());
-    if (!MinMaxR)
-      return false;
-    MinMaxOp = GetMinMaxCompareValue(MinMaxR, RedPhiR);
-    if (!MinMaxOp)
-      return false;
-
-#ifndef NDEBUG
-    Intrinsic::ID RdxIntrinsicId =
-        Cur->getRecurrenceKind() == RecurKind::FMaxNum ? Intrinsic::maxnum
-                                                       : Intrinsic::minnum;
-    assert((isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
-            cast<VPWidenIntrinsicRecipe>(MinMaxR)->getVectorIntrinsicID() ==
-                RdxIntrinsicId) ||
-           (isa<VPReplicateRecipe>(MinMaxR) &&
-            cast<IntrinsicInst>(
-                cast<VPReplicateRecipe>(MinMaxR)->getUnderlyingInstr())
-                    ->getIntrinsicID() == RdxIntrinsicId) &&
-               "Intrinsic did not match recurrence kind");
-#endif
   }
 
   if (!RedPhiR)
     return true;
 
+  RecurKind RedPhiRK = RedPhiR->getRecurrenceKind();
+  assert((RedPhiRK == RecurKind::FMaxNum || RedPhiRK == RecurKind::FMinNum) &&
+         "unsupported reduction");
+
+  VPValue *MinMaxOp = GetMinMaxCompareValue(RedPhiR);
+  if (!MinMaxOp)
+    return false;
+
+  // We won't be able to resume execution in the scalar tail, if there are
+  // unsupported header phis or there is no scalar tail at all, due to
+  // tail-folding.
   if (HasUnsupportedPhi || !Plan.hasScalarTail())
     return false;
 
@@ -729,35 +735,12 @@ bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
            Plan.getVectorLoopRegion()->getEntryBasicBlock())) {
     auto *VPBB = cast<VPBasicBlock>(VPB);
     for (auto &R : *VPBB) {
-      if (match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
-        continue;
-      if (R.mayWriteToMemory())
+      if (R.mayWriteToMemory() &&
+          !match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
         return false;
     }
   }
 
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  auto *RdxResult = dyn_cast<VPInstruction>(&MiddleVPBB->front());
-  if (!RdxResult ||
-      RdxResult->getOpcode() != VPInstruction::ComputeReductionResult ||
-      RdxResult->getOperand(0) != RedPhiR)
-    return false;
-
-  // Create a new reduction phi recipe with either FMin/FMax, replacing
-  // FMinNum/FMaxNum.
-  RecurKind NewRK = RedPhiR->getRecurrenceKind() == RecurKind::FMinNum
-                        ? RecurKind::FMin
-                        : RecurKind::FMax;
-  auto *NewRedPhiR = new VPReductionPHIRecipe(
-      cast<PHINode>(RedPhiR->getUnderlyingValue()), NewRK,
-      *RedPhiR->getStartValue(), RedPhiR->isInLoop(), RedPhiR->isOrdered());
-  NewRedPhiR->addOperand(RedPhiR->getOperand(1));
-  NewRedPhiR->insertBefore(RedPhiR);
-  RedPhiR->replaceAllUsesWith(NewRedPhiR);
-  RedPhiR->eraseFromParent();
-
-  // Update the loop exit condition to exit if either any of the inputs is NaN
-  // or the vector trip count is reached.
   VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
   VPBuilder Builder(LatchVPBB->getTerminator());
   auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
@@ -776,9 +759,18 @@ bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
 
   // If we exit early due to NaNs, compute the final reduction result based on
   // the reduction phi at the beginning of the last vector iteration.
+  auto *RdxResult = find_singleton<VPSingleDefRecipe>(
+      RedPhiR->users(), [](VPUser *U, bool) -> VPSingleDefRecipe * {
+        auto *VPI = dyn_cast<VPInstruction>(U);
+        if (VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult)
+          return VPI;
+        return nullptr;
+      });
+
+  auto *MiddleVPBB = Plan.getMiddleBlock();
   Builder.setInsertPoint(MiddleVPBB, MiddleVPBB->begin());
   auto *NewSel =
-      Builder.createSelect(AnyNaN, NewRedPhiR, RdxResult->getOperand(1));
+      Builder.createSelect(AnyNaN, RedPhiR, RdxResult->getOperand(1));
   RdxResult->setOperand(1, NewSel);
 
   auto *ScalarPH = Plan.getScalarPreheader();
