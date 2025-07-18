@@ -2182,7 +2182,6 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
 
   if (const DWARFDebugLine::LineTable *LT =
           ObjFile.Dwarf->getLineTableForUnit(&Unit.getOrigUnit())) {
-    // Search through Prologue
 
     DWARFDebugLine::LineTable LineTable;
 
@@ -2441,6 +2440,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
             continue;
           }
           size_t OrigRowIndex = OrigRowIter->second;
+
           // 2. Get the new row index from the original row index.
           auto NewRowIter = OrigRowToNewRow.find(OrigRowIndex);
           if (NewRowIter == OrigRowToNewRow.end()) {
@@ -2454,6 +2454,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           assert(NewRowIter->second < OutputRowOffsets.size() &&
                  "New row index out of bounds");
           uint64_t NewStmtSeqOffset = OutputRowOffsets[NewRowIter->second];
+
           // 4. Patch the stmt_list attribute with the new offset.
           StmtSeq.set(NewStmtSeqOffset);
         }
