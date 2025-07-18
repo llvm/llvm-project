@@ -81,7 +81,7 @@ char access(struct Outer *bar, int index) {
 // CHECK:       boundscheck.cont:
 // CHECK-NEXT:    [[LEN31:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], i64 4
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN31]], align 4, !tbaa {{![0-9]+}}
-// CHECK-NEXT:    br label [[CONT46]], !annotation {{![0-9]+}}
+// CHECK-NEXT:    br label [[CONT46]]
 // CHECK:       cont46:
 // CHECK-NEXT:    ret ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]]
 //
