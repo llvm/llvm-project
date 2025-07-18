@@ -16,7 +16,6 @@
 
 #include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
-#include "clang/Driver/Options.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -487,8 +486,12 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
       "--no-default-config",
       "-o",
       *TempFileOrErr,
-      Args.MakeArgString("-foutput-file-base=" + ExecutableName +
-                         OutputFileBase + ".img"),
+      // Without -dumpdir, Clang will place auxiliary output files in the
+      // temporary directory of TempFileOrErr, where they will not easily be
+      // found by the user and might eventually be automatically removed.  Tell
+      // Clang to instead place them alongside the final executable.
+      "-dumpdir",
+      Args.MakeArgString(ExecutableName + OutputFileBase + ".img."),
       Args.MakeArgString("--target=" + Triple.getTriple()),
   };
 

@@ -58,12 +58,12 @@
 // CHECK-NOPASS-NOT: "-plugin-opt=opt-remarks-format=yaml"
 // CHECK-NOPASS-NOT: "-plugin-opt=opt-remarks-hotness-threshold=100"
 
-// CHECK-PASS-A:      "-plugin-opt=opt-remarks-filename=a.out.opt.ld.yaml"
+// CHECK-PASS-A:      "-plugin-opt=opt-remarks-filename=a-opt.ld.yaml"
 // CHECK-PASS-A-SAME: "-plugin-opt=opt-remarks-passes=inline"
 // CHECK-PASS-A-SAME: "-plugin-opt=opt-remarks-format=yaml"
 // CHECK-PASS-A-SAME: "-plugin-opt=opt-remarks-hotness-threshold=100"
 
-// CHECK-PASS:      "-plugin-opt=opt-remarks-filename=FOO.opt.ld.yaml"
+// CHECK-PASS:      "-plugin-opt=opt-remarks-filename=FOO-opt.ld.yaml"
 // CHECK-PASS-SAME: "-plugin-opt=opt-remarks-passes=inline"
 // CHECK-PASS-SAME: "-plugin-opt=opt-remarks-format=yaml"
 // CHECK-PASS-SAME: "-plugin-opt=opt-remarks-hotness-threshold=100"
@@ -79,40 +79,16 @@
 
 // CHECK-PASS-AUTO:   "-plugin-opt=opt-remarks-hotness-threshold=auto"
 
-// Check -foutput-file-base effect on -foptimization-record-file and
-// -gsplit-dwarf.
+// Check -dumpdir effect on -foptimization-record-file.
 //
-// DEFINE: %{RUN-BASE} = \
+// DEFINE: %{RUN-DUMPDIR} = \
 // DEFINE:   %clang --target=x86_64-linux -### -fuse-ld=lld -B%S/Inputs/lld \
-// DEFINE:       -flto -fsave-optimization-record -gsplit-dwarf %s
+// DEFINE:       -flto -fsave-optimization-record -dumpdir /dir/file.ext %s
 //
-// RUN: %{RUN-BASE} 2>&1 | FileCheck %s -check-prefix=CHECK-BASE-NONE
+// RUN: %{RUN-DUMPDIR} 2>&1 | FileCheck %s -check-prefix=CHECK-DUMPDIR
+// RUN: %{RUN-DUMPDIR} -o FOO 2>&1 | FileCheck %s -check-prefix=CHECK-DUMPDIR
+// RUN: %{RUN-DUMPDIR} -foptimization-record-file=user-file.ext 2>&1 | \
+// RUN:   FileCheck %s -check-prefix=CHECK-DUMPDIR-IGNORE
 //
-// RUN: %{RUN-BASE} -o FOO 2>&1 | FileCheck %s -check-prefix=CHECK-BASE-O
-//
-// RUN: %{RUN-BASE} -foutput-file-base=/dir/file.ext 2>&1 | \
-// RUN:   FileCheck %s -check-prefix=CHECK-BASE
-//
-// RUN: %{RUN-BASE} -o FOO -foutput-file-base=/dir/file.ext 2>&1 | \
-// RUN:   FileCheck %s -check-prefix=CHECK-BASE
-//
-// There is currently no option to ignore -foutput-file-base in the case of
-// -gsplit-dwarf.
-// RUN: %{RUN-BASE} -foutput-file-base=/dir/file.ext \
-// RUN:     -foptimization-record-file=user-file.ext 2>&1 | \
-// RUN:   FileCheck %s -check-prefix=CHECK-BASE-IGNORE
-//
-//        CHECK-BASE-NONE: "-plugin-opt=dwo_dir=a.out_dwo"
-//   CHECK-BASE-NONE-SAME: "-plugin-opt=opt-remarks-filename=a.out.opt.ld.yaml"
-//   CHECK-BASE-NONE-SAME: "-plugin-opt=opt-remarks-format=yaml"
-//
-//           CHECK-BASE-O: "-plugin-opt=dwo_dir=FOO_dwo"
-//      CHECK-BASE-O-SAME: "-plugin-opt=opt-remarks-filename=FOO.opt.ld.yaml"
-//      CHECK-BASE-O-SAME: "-plugin-opt=opt-remarks-format=yaml"
-//
-//             CHECK-BASE: "-plugin-opt=dwo_dir=/dir/file.ext_dwo"
-//        CHECK-BASE-SAME: "-plugin-opt=opt-remarks-filename=/dir/file.ext.opt.ld.yaml"
-//        CHECK-BASE-SAME: "-plugin-opt=opt-remarks-format=yaml"
-//
-//      CHECK-BASE-IGNORE: "-plugin-opt=opt-remarks-filename=user-file.ext.opt.ld.yaml"
-// CHECK-BASE-IGNORE-SAME: "-plugin-opt=opt-remarks-format=yaml"
+//        CHECK-DUMPDIR: "-plugin-opt=opt-remarks-filename=/dir/file.extopt.ld.yaml"
+// CHECK-DUMPDIR-IGNORE: "-plugin-opt=opt-remarks-filename=user-file.ext.opt.ld.yaml"
