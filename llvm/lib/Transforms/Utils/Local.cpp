@@ -1606,12 +1606,8 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
   SmallVector<DbgValueInst *, 1> DbgValues;
   SmallVector<DbgVariableRecord *, 1> DbgVariableRecords;
   findDbgValues(DbgValues, APN, &DbgVariableRecords);
-  for (auto *DVI : DbgValues) {
-    assert(is_contained(DVI->getValues(), APN));
-    if ((DVI->getVariable() == DIVar) && (DVI->getExpression() == DIExpr))
-      return true;
-  }
-  for (auto *DVR : DbgVariableRecords) {
+  assert(DbgValues.empty());
+  for (DbgVariableRecord *DVR : DbgVariableRecords) {
     assert(is_contained(DVR->location_ops(), APN));
     if ((DVR->getVariable() == DIVar) && (DVR->getExpression() == DIExpr))
       return true;
@@ -1970,7 +1966,6 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
 static void updateOneDbgValueForAlloca(const DebugLoc &Loc,
                                        DILocalVariable *DIVar,
                                        DIExpression *DIExpr, Value *NewAddress,
-                                       DbgValueInst *DVI,
                                        DbgVariableRecord *DVR,
                                        DIBuilder &Builder, int Offset) {
   assert(DIVar && "Missing variable");
@@ -1986,14 +1981,8 @@ static void updateOneDbgValueForAlloca(const DebugLoc &Loc,
   if (Offset)
     DIExpr = DIExpression::prepend(DIExpr, 0, Offset);
 
-  if (DVI) {
-    DVI->setExpression(DIExpr);
-    DVI->replaceVariableLocationOp(0u, NewAddress);
-  } else {
-    assert(DVR);
-    DVR->setExpression(DIExpr);
-    DVR->replaceVariableLocationOp(0u, NewAddress);
-  }
+  DVR->setExpression(DIExpr);
+  DVR->replaceVariableLocationOp(0u, NewAddress);
 }
 
 void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
@@ -2001,18 +1990,13 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
   SmallVector<DbgValueInst *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
   findDbgValues(DbgUsers, AI, &DPUsers);
-
-  // Attempt to replace dbg.values that use this alloca.
-  for (auto *DVI : DbgUsers)
-    updateOneDbgValueForAlloca(DVI->getDebugLoc(), DVI->getVariable(),
-                               DVI->getExpression(), NewAllocaAddress, DVI,
-                               nullptr, Builder, Offset);
+  assert(DbgUsers.empty());
 
   // Replace any DbgVariableRecords that use this alloca.
   for (DbgVariableRecord *DVR : DPUsers)
     updateOneDbgValueForAlloca(DVR->getDebugLoc(), DVR->getVariable(),
-                               DVR->getExpression(), NewAllocaAddress, nullptr,
-                               DVR, Builder, Offset);
+                               DVR->getExpression(), NewAllocaAddress, DVR,
+                               Builder, Offset);
 }
 
 /// Where possible to salvage debug information for \p I do so.
