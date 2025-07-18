@@ -648,6 +648,19 @@ void LVLocation::print(LVLocations *Locations, raw_ostream &OS, bool Full) {
       Location->print(OS, Full);
 }
 
+void LVLocationSymbol::printLocations(raw_ostream &OS) const {
+  if (Entries) {
+    bool CodeViewLocation = getParentSymbol()->getHasCodeViewLocation();
+    std::string Leading;
+    for (LVOperation *Operation : *Entries) {
+      OS << Leading
+         << (CodeViewLocation ? Operation->getOperandsCodeViewInfo()
+                              : Operation->getOperandsDWARFInfo());
+      Leading = ", ";
+    }
+  }
+}
+
 void LVLocationSymbol::printExtra(raw_ostream &OS, bool Full) const {
   OS << "{Location}";
   if (getIsCallSite())
@@ -657,8 +670,11 @@ void LVLocationSymbol::printExtra(raw_ostream &OS, bool Full) const {
 
   // Print location entries.
   if (Full && Entries) {
+    std::string Str;
+    raw_string_ostream Stream(Str);
+    printLocations(Stream);
+    #if 0
     bool CodeViewLocation = getParentSymbol()->getHasCodeViewLocation();
-    std::stringstream Stream;
     std::string Leading;
     for (LVOperation *Operation : *Entries) {
       Stream << Leading
@@ -666,6 +682,7 @@ void LVLocationSymbol::printExtra(raw_ostream &OS, bool Full) const {
                                   : Operation->getOperandsDWARFInfo());
       Leading = ", ";
     }
+    #endif
     printAttributes(OS, Full, "{Entry} ", const_cast<LVLocationSymbol *>(this),
                     StringRef(Stream.str()),
                     /*UseQuotes=*/false,

@@ -252,6 +252,8 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
 
   case dwarf::DW_AT_ranges:
     if (RangesDataAvailable && options().getGeneralCollectRanges()) {
+      if (CurrentScope->getID() == 2237)
+        outs() << "";
       auto GetRanges = [](const DWARFFormValue &FormValue,
                           DWARFUnit *U) -> Expected<DWARFAddressRangesVector> {
         if (FormValue.getForm() == dwarf::DW_FORM_rnglistx)
@@ -274,7 +276,7 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
       for (DWARFAddressRange &Range : Ranges) {
         // This seems to be a tombstone for empty ranges.
         if ((Range.LowPC == Range.HighPC) ||
-            (Range.LowPC = getTombstoneAddress()))
+            (Range.LowPC == getTombstoneAddress()))
           continue;
         // Store the real upper limit for the address range.
         if (UpdateHighAddress && Range.HighPC > 0)
@@ -461,13 +463,16 @@ LVScope *LVDWARFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
         if (!CurrentRanges.empty()) {
           for (LVAddressRange &Range : CurrentRanges)
             addSectionRange(SectionIndex, CurrentScope, Range.first,
-                            Range.second);
+                            Range.second > Range.first ? Range.second - 1
+                                                       : Range.second);
           CurrentRanges.clear();
         }
         // If the scope is the CU, do not update the ranges set.
         if (FoundLowPC && FoundHighPC && !IsCompileUnit) {
           addSectionRange(SectionIndex, CurrentScope, CurrentLowPC,
-                          CurrentHighPC);
+                          CurrentHighPC > CurrentLowPC
+                              ? CurrentHighPC - 1
+                              : CurrentHighPC); // Make hi-pc exclusive
         }
       }
     }
