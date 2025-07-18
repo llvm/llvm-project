@@ -60,8 +60,7 @@ using TestContainsErrors = int[sizeof(undef())];
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
-// CHECK-NEXT:       "desugaredQualType": "unsigned long",
-// CHECK-NEXT:       "qualType": "__size_t"
+// CHECK-NEXT:       "qualType": "unsigned long"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "name": "sizeof",
