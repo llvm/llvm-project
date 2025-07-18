@@ -215,7 +215,7 @@ Vocabulary::Vocabulary(VocabVector &&Vocab)
     : Vocab(std::move(Vocab)), Valid(true) {}
 
 bool Vocabulary::isValid() const {
-  return Vocab.size() == (MaxOpcodes + MaxTypeIDs + MaxOperandKinds) && Valid;
+  return Vocab.size() == Vocabulary::expectedSize() && Valid;
 }
 
 size_t Vocabulary::size() const {
@@ -304,10 +304,11 @@ Vocabulary::VocabVector Vocabulary::createDummyVocabForTest(unsigned Dim) {
   float DummyVal = 0.1f;
   // Create a dummy vocabulary with entries for all opcodes, types, and
   // operand
-  for (unsigned _ : seq(0u, Vocabulary::MaxOpcodes + Vocabulary::MaxTypeIDs +
-                                Vocabulary::MaxOperandKinds)) {
+  for ([[maybe_unused]] unsigned _ :
+       seq(0u, Vocabulary::MaxOpcodes + Vocabulary::MaxTypeIDs +
+                   Vocabulary::MaxOperandKinds)) {
     DummyVocab.push_back(Embedding(Dim, DummyVal));
-    DummyVal += 0.1;
+    DummyVal += 0.1f;
   }
   return DummyVocab;
 }
@@ -323,8 +324,24 @@ Vocabulary::OperandKind Vocabulary::getOperandKind(const Value *Op) {
   return OperandKind::VariableID;
 }
 
+unsigned Vocabulary::getNumericID(unsigned Opcode) {
+  assert(Opcode >= 1 && Opcode <= MaxOpcodes && "Invalid opcode");
+  return Opcode - 1; // Convert to zero-based index
+}
+
+unsigned Vocabulary::getNumericID(Type::TypeID TypeID) {
+  assert(static_cast<unsigned>(TypeID) < MaxTypeIDs && "Invalid type ID");
+  return MaxOpcodes + static_cast<unsigned>(TypeID);
+}
+
+unsigned Vocabulary::getNumericID(const Value *Op) {
+  unsigned Index = static_cast<unsigned>(getOperandKind(Op));
+  assert(Index < MaxOperandKinds && "Invalid OperandKind");
+  return MaxOpcodes + MaxTypeIDs + Index;
+}
+
 StringRef Vocabulary::getStringKey(unsigned Pos) {
-  assert(Pos < MaxOpcodes + MaxTypeIDs + MaxOperandKinds &&
+  assert(Pos < Vocabulary::expectedSize() &&
          "Position out of bounds in vocabulary");
   // Opcode
   if (Pos < MaxOpcodes)
