@@ -1148,6 +1148,7 @@ defm V_MOV_B64 : VOP1_Real_FULL <GFX1250Gen, 0x1d>;
 defm V_TANH_F32              : VOP1_Real_FULL<GFX1250Gen, 0x01e>;
 defm V_TANH_F16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x01f>;
 defm V_TANH_BF16             : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x04a>;
+defm V_PRNG_B32              : VOP1_Real_FULL<GFX1250Gen, 0x04b>;
 defm V_CVT_F32_BF16          : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x072, "v_cvt_f32_bf16", "V_CVT_F32_BF16_gfx1250">;
 defm V_CVT_PK_F16_FP8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x075>;
 defm V_CVT_PK_F16_BF8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x076>;
