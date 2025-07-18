@@ -428,6 +428,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"conjg", {{"z", SameComplex}}, SameComplex},
     {"cos", {{"x", SameFloating}}, SameFloating},
     {"cosd", {{"x", SameFloating}}, SameFloating},
+    {"cospi", {{"x", SameFloating}}, SameFloating},
     {"cosh", {{"x", SameFloating}}, SameFloating},
     {"coshape", {{"coarray", AnyData, Rank::coarray}, SizeDefaultKIND}, KINDInt,
         Rank::vector, IntrinsicClass::inquiryFunction},
