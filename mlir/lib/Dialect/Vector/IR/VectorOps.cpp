@@ -1718,11 +1718,9 @@ static bool isBroadcastLike(Operation *op) {
     return false;
 
   // Check that shape_cast **only** prepends 1s, like (2,3) -> (1,1,2,3).
-  // Condition 1: dst has hight rank.
-  // Condition 2: src shape is a suffix of dst shape.
-  //
   // Note that checking that dst shape has a prefix of 1s is not sufficient,
-  // for example (2,3) -> (1,3,2) is not broadcast-like.
+  // for example (2,3) -> (1,3,2) is not broadcast-like. A sufficient condition
+  // is that the source shape is a suffix of the destination shape.
   VectorType srcType = shapeCast.getSourceVectorType();
   ArrayRef<int64_t> srcShape = srcType.getShape();
   uint64_t srcRank = srcType.getRank();
@@ -1734,16 +1732,16 @@ static bool isBroadcastLike(Operation *op) {
 ///
 /// Example:
 ///
-///        broadcast           extract
-/// (3, 4) --------> (2, 3, 4) ------> (4)
+///        broadcast             extract [1][2]
+/// (3, 4) --------> (2, 3, 4) ----------------> (4)
 ///
 /// becomes
-///                  extract
-/// (3,4) ---------------------------> (4)
+///                  extract [1]
+/// (3,4) -------------------------------------> (4)
 ///
 ///
-/// The variable names used in this implementation use names which correspond to
-/// the above shapes as,
+/// The variable names used in this implementation correspond to the above
+/// shapes as,
 ///
 /// - (3, 4) is `input` shape.
 /// - (2, 3, 4) is `broadcast` shape.
@@ -1775,14 +1773,15 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   if (extractRank > inputRank)
     return Value();
 
-  // Proof by contradiction that, at this point, input is a vector.
-  //     Suppose input is a scalar.
-  // ==> inputRank is 0.
-  // ==> extractRank is 0 (because extractRank <= inputRank).
-  // ==> extract is scalar (because rank-0 extraction is always scalar).
-  // ==> input and extract are scalar, so same type.
-  // ==> returned early (check same type).
-  //     Contradiction!
+  // The above condition guarantees that input is a vector:
+  //
+  // If input is a scalar:
+  // 1) inputRank is 0, so
+  // 2) extractRank is 0 (because extractRank <= inputRank), so
+  // 3) extract is scalar (because rank-0 extraction is always scalar), s0
+  // 4) input and extract are scalar, so same type.
+  // But then we should have returned earlier when the types were compared for
+  // equivalence. So input is not a scalar at this point.
   assert(inputType && "input must be a vector type because of previous checks");
   ArrayRef<int64_t> inputShape = inputType.getShape();
 
