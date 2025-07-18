@@ -98,9 +98,9 @@ static void fixI8UseChain(Instruction &I,
       ElementType = AI->getAllocatedType();
     if (auto *GEP = dyn_cast<GetElementPtrInst>(NewOperands[0])) {
       ElementType = GEP->getSourceElementType();
-      if (ElementType->isArrayTy())
-        ElementType = ElementType->getArrayElementType();
     }
+    if (ElementType->isArrayTy())
+      ElementType = ElementType->getArrayElementType();
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewOperands[0]);
     ReplacedValues[Load] = NewLoad;
     ToRemove.push_back(Load);
@@ -347,7 +347,6 @@ static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
   if (ByteLength == 0)
     return;
 
-  LLVMContext &Ctx = Builder.getContext();
   const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
 
   auto GetArrTyFromVal = [](Value *Val) -> ArrayType * {
@@ -392,10 +391,11 @@ static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
   assert(ByteLength % DstElemByteSize == 0 &&
          "memcpy length must be divisible by array element type");
   for (uint64_t I = 0; I < NumElemsToCopy; ++I) {
-    Value *Offset = ConstantInt::get(Type::getInt32Ty(Ctx), I);
-    Value *SrcPtr = Builder.CreateInBoundsGEP(SrcElemTy, Src, Offset, "gep");
+    SmallVector<Value *, 2> Indices = {Builder.getInt32(0),
+                                       Builder.getInt32(I)};
+    Value *SrcPtr = Builder.CreateInBoundsGEP(SrcArrTy, Src, Indices, "gep");
     Value *SrcVal = Builder.CreateLoad(SrcElemTy, SrcPtr);
-    Value *DstPtr = Builder.CreateInBoundsGEP(DstElemTy, Dst, Offset, "gep");
+    Value *DstPtr = Builder.CreateInBoundsGEP(DstArrTy, Dst, Indices, "gep");
     Builder.CreateStore(SrcVal, DstPtr);
   }
 }
@@ -403,7 +403,6 @@ static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
 static void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
                                 ConstantInt *SizeCI,
                                 DenseMap<Value *, Value *> &ReplacedValues) {
-  LLVMContext &Ctx = Builder.getContext();
   [[maybe_unused]] const DataLayout &DL =
       Builder.GetInsertBlock()->getModule()->getDataLayout();
   [[maybe_unused]] uint64_t OrigSize = SizeCI->getZExtValue();
@@ -444,8 +443,9 @@ static void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
   }
 
   for (uint64_t I = 0; I < Size; ++I) {
-    Value *Offset = ConstantInt::get(Type::getInt32Ty(Ctx), I);
-    Value *Ptr = Builder.CreateGEP(ElemTy, Dst, Offset, "gep");
+    Value *Zero = Builder.getInt32(0);
+    Value *Offset = Builder.getInt32(I);
+    Value *Ptr = Builder.CreateGEP(ArrTy, Dst, {Zero, Offset}, "gep");
     Builder.CreateStore(TypedVal, Ptr);
   }
 }
@@ -478,9 +478,9 @@ static void legalizeMemCpy(Instruction &I,
   ToRemove.push_back(CI);
 }
 
-static void removeMemSet(Instruction &I,
-                         SmallVectorImpl<Instruction *> &ToRemove,
-                         DenseMap<Value *, Value *> &ReplacedValues) {
+static void legalizeMemSet(Instruction &I,
+                           SmallVectorImpl<Instruction *> &ToRemove,
+                           DenseMap<Value *, Value *> &ReplacedValues) {
 
   CallInst *CI = dyn_cast<CallInst>(&I);
   if (!CI)
@@ -562,6 +562,53 @@ legalizeGetHighLowi64Bytes(Instruction &I,
   }
 }
 
+static void
+legalizeScalarLoadStoreOnArrays(Instruction &I,
+                                SmallVectorImpl<Instruction *> &ToRemove,
+                                DenseMap<Value *, Value *> &) {
+
+  Value *PtrOp;
+  unsigned PtrOpIndex;
+  [[maybe_unused]] Type *LoadStoreTy;
+  if (auto *LI = dyn_cast<LoadInst>(&I)) {
+    PtrOp = LI->getPointerOperand();
+    PtrOpIndex = LI->getPointerOperandIndex();
+    LoadStoreTy = LI->getType();
+  } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+    PtrOp = SI->getPointerOperand();
+    PtrOpIndex = SI->getPointerOperandIndex();
+    LoadStoreTy = SI->getValueOperand()->getType();
+  } else
+    return;
+
+  // If the load/store is not of a single-value type (i.e., scalar or vector)
+  // then we do not modify it. It shouldn't be a vector either because the
+  // dxil-data-scalarization pass is expected to run before this, but it's not
+  // incorrect to apply this transformation to vector load/stores.
+  if (!LoadStoreTy->isSingleValueType())
+    return;
+
+  Type *ArrayTy;
+  if (auto *GlobalVarPtrOp = dyn_cast<GlobalVariable>(PtrOp))
+    ArrayTy = GlobalVarPtrOp->getValueType();
+  else if (auto *AllocaPtrOp = dyn_cast<AllocaInst>(PtrOp))
+    ArrayTy = AllocaPtrOp->getAllocatedType();
+  else
+    return;
+
+  if (!isa<ArrayType>(ArrayTy))
+    return;
+
+  assert(ArrayTy->getArrayElementType() == LoadStoreTy &&
+         "Expected array element type to be the same as to the scalar load or "
+         "store type");
+
+  Value *Zero = ConstantInt::get(Type::getInt32Ty(I.getContext()), 0);
+  Value *GEP = GetElementPtrInst::Create(
+      ArrayTy, PtrOp, {Zero, Zero}, GEPNoWrapFlags::all(), "", I.getIterator());
+  I.setOperand(PtrOpIndex, GEP);
+}
+
 namespace {
 class DXILLegalizationPipeline {
 
@@ -603,7 +650,7 @@ private:
     LegalizationPipeline[Stage1].push_back(legalizeGetHighLowi64Bytes);
     LegalizationPipeline[Stage1].push_back(legalizeFreeze);
     LegalizationPipeline[Stage1].push_back(legalizeMemCpy);
-    LegalizationPipeline[Stage1].push_back(removeMemSet);
+    LegalizationPipeline[Stage1].push_back(legalizeMemSet);
     LegalizationPipeline[Stage1].push_back(updateFnegToFsub);
     // Note: legalizeGetHighLowi64Bytes and
     // downcastI64toI32InsertExtractElements both modify extractelement, so they
@@ -612,6 +659,7 @@ private:
     // downcastI64toI32InsertExtractElements needs to handle.
     LegalizationPipeline[Stage2].push_back(
         downcastI64toI32InsertExtractElements);
+    LegalizationPipeline[Stage2].push_back(legalizeScalarLoadStoreOnArrays);
   }
 };
 

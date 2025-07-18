@@ -598,9 +598,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case NestedNameSpecifier::Namespace:
     return IsStructurallyEquivalent(Context, NNS1->getAsNamespace(),
                                     NNS2->getAsNamespace());
-  case NestedNameSpecifier::NamespaceAlias:
-    return IsStructurallyEquivalent(Context, NNS1->getAsNamespaceAlias(),
-                                    NNS2->getAsNamespaceAlias());
   case NestedNameSpecifier::TypeSpec:
     return IsStructurallyEquivalent(Context, QualType(NNS1->getAsType(), 0),
                                     QualType(NNS2->getAsType(), 0));
@@ -1477,6 +1474,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (Int1->isUnsigned() != Int2->isUnsigned() ||
         !IsStructurallyEquivalent(Context, Int1->getNumBitsExpr(),
                                   Int2->getNumBitsExpr()))
+      return false;
+    break;
+  }
+  case Type::PredefinedSugar: {
+    const auto *TP1 = cast<PredefinedSugarType>(T1);
+    const auto *TP2 = cast<PredefinedSugarType>(T2);
+    if (TP1->getKind() != TP2->getKind())
       return false;
     break;
   }

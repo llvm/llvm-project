@@ -9,15 +9,25 @@ entry:
   store i8 %x, ptr %x.addr, align 1
   %fptr = load ptr, ptr %func.addr, align 8
   %x_val = load i8, ptr %x.addr, align 1  
-  ;; callee_type metdata is a type metadata instead of a list of type metadata nodes.
   ; CHECK: The callee_type metadata must be a list of type metadata nodes
   %call = call i32 %fptr(i8 signext %x_val), !callee_type !0
-  ;; callee_type metdata must be a list of "generalized" type metadata.
+  ; CHECK: Well-formed generalized type metadata must contain exactly two operands
+  %call1 = call i32 %fptr(i8 signext %x_val), !callee_type !2
+  ; CHECK: The first operand of type metadata for functions must be zero
+  %call2 = call i32 %fptr(i8 signext %x_val), !callee_type !4
+  ; CHECK: The first operand of type metadata for functions must be zero
+  %call3 = call i32 %fptr(i8 signext %x_val), !callee_type !6
   ; CHECK: Only generalized type metadata can be part of the callee_type metadata list
-  %call2 = call i32 %fptr(i8 signext %x_val), !callee_type !2
+  %call4 = call i32 %fptr(i8 signext %x_val), !callee_type !8
   ret i32 %call
 }
 
 !0 = !{i64 0, !"_ZTSFiPvcE.generalized"}
-!1 = !{i64 0, !"_ZTSFicE"}
-!2 = !{!1}
+!1 = !{!"_ZTSFicE"}
+!2 = !{!2}
+!3 = !{i64 1, !"_ZTSFicE"}
+!4 = !{!3}
+!5 = !{!"expected_int", !"_ZTSFicE"}
+!6 = !{!5}
+!7 = !{i64 0, !"_ZTSFicE"}
+!8 = !{!7}
