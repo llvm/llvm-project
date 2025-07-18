@@ -285,6 +285,7 @@ else()
       ${intrinsics_sources}
     )
     add_custom_target(${name}.intrinsics
+      COMMAND echo "Dependency barrier"
       COMMENT "Intrinsic module dependency barrier"
     )
     add_dependencies(${name}.intrinsics ${name}.intrinsics.obj)
@@ -295,6 +296,7 @@ else()
         LINK_LIBRARIES ${name}.intrinsics.obj ${Backtrace_LIBRARY}
         ADDITIONAL_HEADERS ${public_headers} ${private_headers}
       )
+    get_target_property(compile_target ${name}.compile ALIASED_TARGET)
 
     if (msvc_lib)
       set_target_properties(${name}
@@ -311,14 +313,13 @@ else()
       set(is_public "")
     else ()
       set(is_public PUBLIC)
+      add_dependencies(flang-rt-mod ${name}.intrinsics ${compile_target})
       set(_has_public_intrinsics "YES" PARENT_SCOPE)
     endif ()
 
-    get_target_property(compile_target ${name}.compile ALIASED_TARGET)
     flang_module_target(${name}.intrinsics.obj ${is_public})
     flang_module_target(${compile_target} ${is_public})
     add_dependencies(${compile_target} ${name}.intrinsics)
-    add_dependencies(flang-rt-mod ${name}.intrinsics ${compile_target})
 
     enable_cuda_compilation(${name} "${supported_sources}")
     enable_omp_offload_compilation(${name} "${supported_sources}")
