@@ -405,9 +405,12 @@ static unsigned getVFScaleFactor(VPRecipeBase *R) {
   return 1;
 }
 
-bool VPRegisterUsage::exceedsMaxNumRegs(const TargetTransformInfo &TTI) const {
-  return any_of(MaxLocalUsers, [&TTI](auto &LU) {
-    return LU.second > TTI.getNumberOfRegisters(LU.first);
+bool VPRegisterUsage::exceedsMaxNumRegs(const TargetTransformInfo &TTI,
+                                        unsigned OverrideMaxNumRegs) const {
+  return any_of(MaxLocalUsers, [&TTI, &OverrideMaxNumRegs](auto &LU) {
+    return LU.second > (OverrideMaxNumRegs > 0
+                            ? OverrideMaxNumRegs
+                            : TTI.getNumberOfRegisters(LU.first));
   });
 }
 

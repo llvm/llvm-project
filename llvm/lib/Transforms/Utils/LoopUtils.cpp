@@ -1103,7 +1103,6 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
       (RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum ||
        RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
        RK == RecurKind::FMinimumNum || RK == RecurKind::FMaximumNum)) {
-    // TODO: Add float minnum/maxnum support when FMF nnan is set.
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
     return Builder.CreateIntrinsic(Ty, Id, {Left, Right}, nullptr,
                                    "rdx.minmax");

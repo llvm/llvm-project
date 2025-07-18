@@ -6751,7 +6751,9 @@ SDValue SelectionDAG::FoldSymbolOffset(unsigned Opcode, EVT VT,
     return SDValue();
   int64_t Offset = C2->getSExtValue();
   switch (Opcode) {
-  case ISD::ADD: break;
+  case ISD::ADD:
+  case ISD::PTRADD:
+    break;
   case ISD::SUB: Offset = -uint64_t(Offset); break;
   default: return SDValue();
   }
