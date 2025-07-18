@@ -50,6 +50,7 @@ public:
   bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
+  void relaxCFIJumpTables() const override;
   void applyBranchToBranchOpt() const override;
 
 private:
@@ -317,7 +318,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   return true;
 }
 
-static void relaxJumpTables(Ctx &ctx) {
+void X86_64::relaxCFIJumpTables() const {
   // Relax CFI jump tables.
   // - Split jump table into pieces and place target functions inside the jump
   //   table if small enough.
@@ -353,6 +354,9 @@ static void relaxJumpTables(Ctx &ctx) {
             sec->file, sec->name, sec->type, sec->flags, sec->entsize,
             sec->entsize,
             sec->contentMaybeDecompress().slice(begin, end - begin));
+        // Ensure that --preferred-function-alignment does not mess with the
+        // placement of this section.
+        slice->retainAlignment = true;
         for (const Relocation &r : ArrayRef<Relocation>(rbegin, rend)) {
           slice->relocations.push_back(
               Relocation{r.expr, r.type, r.offset - begin, r.addend, r.sym});
@@ -420,6 +424,9 @@ static void relaxJumpTables(Ctx &ctx) {
             // table. First add a slice for the unmodified jump table entries
             // before this one.
             addSectionSlice(begin, cur, rbegin, rcur);
+            // Ensure that --preferred-function-alignment does not mess with the
+            // placement of this section.
+            target->retainAlignment = true;
             // Add the target to our replacement list, and set the target's
             // replacement list to the empty list. This removes it from its
             // original position and adds it here, as well as causing
@@ -482,9 +489,6 @@ static void relaxJumpTables(Ctx &ctx) {
 }
 
 bool X86_64::relaxOnce(int pass) const {
-  if (pass == 0)
-    relaxJumpTables(ctx);
-
   uint64_t minVA = UINT64_MAX, maxVA = 0;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_ALLOC))

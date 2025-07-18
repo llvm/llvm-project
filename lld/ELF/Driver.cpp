@@ -1508,6 +1508,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_package_metadata))
     parsePackageMetadata(ctx, *arg);
   ctx.arg.pie = args.hasFlag(OPT_pie, OPT_no_pie, false);
+  if (args.hasArg(OPT_preferred_function_alignment))
+    ctx.arg.preferredFunctionAlignment =
+        args::getInteger(args, OPT_preferred_function_alignment, 0);
   ctx.arg.printIcfSections =
       args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
   ctx.arg.printGcSections =
