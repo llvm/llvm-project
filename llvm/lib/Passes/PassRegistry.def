@@ -434,6 +434,7 @@ FUNCTION_PASS("extra-vector-passes",
 FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("flatten-cfg", FlattenCFGPass())
 FUNCTION_PASS("float2int", Float2IntPass())
+FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass())
 FUNCTION_PASS("gc-lowering", GCLoweringPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
