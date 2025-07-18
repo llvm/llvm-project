@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_BARRIER_WAIT_H
 
 #include "src/__support/macros/config.h"
-#include <pthread.h>
+#include "hdr/types/pthread_barrier_t.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

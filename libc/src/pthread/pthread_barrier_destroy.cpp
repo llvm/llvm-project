@@ -8,11 +8,10 @@
 
 #include "pthread_barrier_destroy.h"
 
+#include "hdr/types/pthread_barrier_t.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/barrier.h"
-
-#include <pthread.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
