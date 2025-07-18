@@ -196,4 +196,6 @@ class TestStatusline(PExpectTest):
         self.launch(timeout=self.TIMEOUT)
         self.resize()
         self.expect("settings set show-statusline true", ["no target"])
-        self.expect(f"gdb-remote {connect_address}", substrs=["Process", "stopped"])
+        self.expect(
+            f"gdb-remote {connect_address}", [b"a.out \xe2\x94\x82 signal SIGSTOP"]
+        )
