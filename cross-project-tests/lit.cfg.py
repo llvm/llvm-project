@@ -102,7 +102,7 @@ if "compiler-rt" in config.llvm_enabled_projects:
     config.available_features.add("compiler-rt")
 
 # Check which debuggers are available:
-lldb_path = llvm_config.use_llvm_tool("lldb-dap", search_env="LLDB")
+lldb_path = llvm_config.use_llvm_tool("lldb", search_env="LLDB")
 
 if lldb_path is not None:
     config.available_features.add("lldb")
@@ -142,7 +142,7 @@ def configure_dexter_substitutions():
         dependencies = ["clang", "lldb"]
         dexter_regression_test_c_builder = "clang"
         dexter_regression_test_cxx_builder = "clang++"
-        dexter_regression_test_debugger = "lldb-dap"
+        dexter_regression_test_debugger = "lldb"
         dexter_regression_test_c_flags = "-O0 -glldb -std=gnu11"
         dexter_regression_test_cxx_flags = "-O0 -glldb -std=gnu++11"
         dexter_regression_test_additional_flags = '--lldb-executable "{}"'.format(
