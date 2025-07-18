@@ -711,12 +711,10 @@ static void addData(SmallVectorImpl<char> &DataBytes,
         llvm_unreachable("The fill should be an assembler constant");
       DataBytes.insert(DataBytes.end(), Fill->getValueSize() * NumValues,
                        Fill->getValue());
+    } else if (auto *LEB = dyn_cast<MCLEBFragment>(&Frag)) {
+      llvm::append_range(DataBytes, LEB->getContents());
     } else {
-      llvm::append_range(DataBytes, Frag.getContents());
-      if (Frag.getKind() == MCFragment::FT_LEB)
-        llvm::append_range(DataBytes, Frag.getVarContents());
-      else
-        assert(Frag.getKind() == MCFragment::FT_Data);
+      llvm::append_range(DataBytes, cast<MCDataFragment>(Frag).getContents());
     }
   }
 
@@ -1886,7 +1884,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         if (WS.getName().substr(PrefixLength + 1).getAsInteger(10, Priority))
           report_fatal_error("invalid .init_array section priority");
       }
-      const auto &DataFrag = Frag;
+      const auto &DataFrag = cast<MCDataFragment>(Frag);
       assert(llvm::all_of(DataFrag.getContents(), [](char C) { return !C; }));
       for (const MCFixup &Fixup : DataFrag.getFixups()) {
         assert(Fixup.getKind() ==

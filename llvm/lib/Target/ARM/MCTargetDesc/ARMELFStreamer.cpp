@@ -650,11 +650,11 @@ private:
       // This is a tentative symbol, it won't really be emitted until it's
       // actually needed.
       ElfMappingSymbolInfo *EMS = LastEMSInfo.get();
-      auto *DF = getCurrentFragment();
-      if (DF->getKind() != MCFragment::FT_Data)
+      auto *DF = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
+      if (!DF)
         return;
       EMS->F = DF;
-      EMS->Offset = DF->getFixedSize();
+      EMS->Offset = DF->getContents().size();
       LastEMSInfo->State = EMS_Data;
       return;
     }
@@ -1145,8 +1145,9 @@ void ARMTargetELFStreamer::finish() {
     auto *Text =
         static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
     for (auto &F : *Text)
-      if (F.getSize())
-        return;
+      if (auto *DF = dyn_cast<MCDataFragment>(&F))
+        if (!DF->getContents().empty())
+          return;
     Text->setFlags(Text->getFlags() | ELF::SHF_ARM_PURECODE);
   }
 }

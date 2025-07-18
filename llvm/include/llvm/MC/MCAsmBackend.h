@@ -22,8 +22,11 @@
 namespace llvm {
 
 class MCAlignFragment;
+class MCDwarfCallFrameFragment;
+class MCDwarfLineAddrFragment;
 class MCFragment;
 class MCLEBFragment;
+class MCRelaxableFragment;
 class MCSymbol;
 class MCAssembler;
 class MCContext;
@@ -172,9 +175,8 @@ public:
 
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.
-  virtual bool fixupNeedsRelaxationAdvanced(const MCFragment &, const MCFixup &,
-                                            const MCValue &, uint64_t,
-                                            bool Resolved) const;
+  virtual bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &,
+                                            uint64_t, bool Resolved) const;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   virtual bool fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -195,16 +197,18 @@ public:
   }
 
   // Defined by linker relaxation targets.
-  virtual bool relaxDwarfLineAddr(MCFragment &, bool &WasRelaxed) const {
+  virtual bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
+                                  bool &WasRelaxed) const {
     return false;
   }
-  virtual bool relaxDwarfCFA(MCFragment &, bool &WasRelaxed) const {
+  virtual bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
+                             bool &WasRelaxed) const {
     return false;
   }
 
   // Defined by linker relaxation targets to possibly emit LEB128 relocations
   // and set Value at the relocated location.
-  virtual std::pair<bool, bool> relaxLEB128(MCFragment &,
+  virtual std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF,
                                             int64_t &Value) const {
     return std::make_pair(false, false);
   }
@@ -242,7 +246,7 @@ public:
 
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;
 
-  // Return STI for fragments of type MCRelaxableFragment and MCFragment
+  // Return STI for fragments of type MCRelaxableFragment and MCDataFragment
   // with hasInstructions() == true.
   static const MCSubtargetInfo *getSubtargetInfo(const MCFragment &F);
 };

@@ -1781,6 +1781,7 @@ MCSymbolIdFragmentRef::materialize(MCCASReader &Reader,
     Expected<Builder> B = Builder::startNode(MB.Schema, KindString);           \
     if (!B)                                                                    \
       return B.takeError();                                                    \
+    MB.Asm.writeFragmentPadding(MB.FragmentOS, F, FragmentSize);               \
     B->Data.append(MB.FragmentData);                                           \
     B->Data.append(FragmentContents.begin(), FragmentContents.end());          \
     assert(                                                                    \
@@ -1973,6 +1974,8 @@ Error MCDataFragmentMerger::emitMergedFragments() {
     switch (Candidate.first->getKind()) {
 #define MCFRAGMENT_NODE_REF(MCFragmentName, MCEnumName, MCEnumIdentifier)      \
   case MCFragment::MCEnumName: {                                               \
+    const MCFragmentName *SF = cast<MCFragmentName>(Candidate.first);          \
+    Builder.Asm.writeFragmentPadding(FragmentOS, *SF, Candidate.second);       \
     FragmentData.append(CandidateContents);                                    \
     break;                                                                     \
   }

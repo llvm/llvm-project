@@ -279,23 +279,23 @@ getRelocPairForSize(unsigned Size) {
   }
 }
 
-std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCFragment &F,
+std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
                                                        int64_t &Value) const {
-  const MCExpr &Expr = F.getLEBValue();
-  if (F.isLEBSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
+  const MCExpr &Expr = LF.getValue();
+  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
     return std::make_pair(false, false);
-  F.setVarFixups({MCFixup::create(0, &Expr, FK_Data_leb128)});
+  LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128));
   return std::make_pair(true, true);
 }
 
-bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
+bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
                                              bool &WasRelaxed) const {
   MCContext &C = getContext();
 
-  int64_t LineDelta = F.getDwarfLineDelta();
-  const MCExpr &AddrDelta = F.getDwarfAddrDelta();
+  int64_t LineDelta = DF.getLineDelta();
+  const MCExpr &AddrDelta = DF.getAddrDelta();
   SmallVector<MCFixup, 1> Fixups;
-  size_t OldSize = F.getVarSize();
+  size_t OldSize = DF.getContents().size();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
@@ -349,16 +349,17 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
     OS << uint8_t(dwarf::DW_LNS_copy);
   }
 
-  F.setVarContents(Data);
-  F.setVarFixups(Fixups);
+  DF.setContents(Data);
+  DF.setFixups(Fixups);
   WasRelaxed = OldSize != Data.size();
   return true;
 }
 
-bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
-  const MCExpr &AddrDelta = F.getDwarfAddrDelta();
+bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
+                                        bool &WasRelaxed) const {
+  const MCExpr &AddrDelta = DF.getAddrDelta();
   SmallVector<MCFixup, 2> Fixups;
-  size_t OldSize = F.getVarContents().size();
+  size_t OldSize = DF.getContents().size();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
@@ -370,9 +371,9 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
   assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
-    F.clearVarContents();
-    F.clearVarFixups();
-    WasRelaxed = OldSize != 0;
+    DF.clearContents();
+    DF.clearFixups();
+    WasRelaxed = OldSize != DF.getContents().size();
     return true;
   }
 
@@ -404,8 +405,8 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
   } else {
     llvm_unreachable("unsupported CFA encoding");
   }
-  F.setVarContents(Data);
-  F.setVarFixups(Fixups);
+  DF.setContents(Data);
+  DF.setFixups(Fixups);
 
   WasRelaxed = OldSize != Data.size();
   return true;

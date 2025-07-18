@@ -529,9 +529,11 @@ void AArch64TargetELFStreamer::finish() {
         static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
     bool Empty = true;
     for (auto &F : *Text) {
-      if (F.getSize()) {
-        Empty = false;
-        break;
+      if (auto *DF = dyn_cast<MCDataFragment>(&F)) {
+        if (!DF->getContents().empty()) {
+          Empty = false;
+          break;
+        }
       }
     }
     if (Empty)

@@ -163,7 +163,7 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
   if (cast<MCSymbolMachO>(Symbol)->isSymbolLinkerVisible())
-    insert(getContext().allocFragment<MCFragment>());
+    insert(getContext().allocFragment<MCDataFragment>());
 
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
@@ -491,7 +491,8 @@ void MCMachOStreamer::finalizeCGProfile() {
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
       W.getCGProfile().size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
-  (*CGProfileSection->begin()).appendContents(SectionBytes, 0);
+  cast<MCDataFragment>(*CGProfileSection->begin())
+      .appendContents(SectionBytes, 0);
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -520,7 +521,7 @@ void MCMachOStreamer::createAddrSigSection() {
   MCSection *AddrSigSection =
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
   changeSection(AddrSigSection);
-  auto *Frag = cast<MCFragment>(AddrSigSection->curFragList()->Head);
+  auto *Frag = cast<MCDataFragment>(AddrSigSection->curFragList()->Head);
   // We will generate a series of pointer-sized symbol relocations at offset
   // 0x0. Set the section size to be large enough to contain a single pointer
   // (instead of emitting a zero-sized section) so these relocations are
