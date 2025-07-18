@@ -102,16 +102,21 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
   return false;
 }
 
-static bool getMemOperands(IRBuilderBase &Builder, unsigned Factor,
-                           VectorType *VTy, const DataLayout &DL, Type *XLenTy,
+/// Do the common operand retrieval and validition required by the
+/// routines below.  
+static bool getMemOperands(unsigned Factor,
+                           VectorType *VTy, Type *XLenTy,
                            Instruction *I, Value *&Ptr, Value *&Mask,
                            Value *&VL, Align &Alignment) {
+
+  IRBuilder<> Builder(I);
+  const DataLayout &DL = I->getDataLayout();
   ElementCount EC = VTy->getElementCount();
   if (auto *LI = dyn_cast<LoadInst>(I)) {
     assert(LI->isSimple());
     Ptr = LI->getPointerOperand();
     Alignment = LI->getAlign();
-    assert(!Mask && "Unexpected mask on a load\n");
+    assert(!Mask && "Unexpected mask on a load");
     Mask = Builder.getAllOnesMask(EC);
     VL = isa<FixedVectorType>(VTy) ? Builder.CreateElementCount(XLenTy, EC)
                                    : Constant::getAllOnesValue(XLenTy);
@@ -135,7 +140,7 @@ static bool getMemOperands(IRBuilderBase &Builder, unsigned Factor,
   Alignment = VPLdSt->getPointerAlignment().value_or(
       DL.getABITypeAlign(VTy->getElementType()));
 
-  assert(Mask && "vp.load needs a mask!");
+  assert(Mask && "vp.load and vp.store needs a mask!");
 
   Value *WideEVL = VPLdSt->getVectorLengthParam();
   // Conservatively check if EVL is a multiple of factor, otherwise some
@@ -173,7 +178,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (!getMemOperands(Builder, Factor, VTy, DL, XLenTy, Load, Ptr, Mask, VL,
+  if (!getMemOperands(Factor, VTy, XLenTy, Load, Ptr, Mask, VL,
                       Alignment))
     return false;
 
@@ -319,7 +324,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (!getMemOperands(Builder, Factor, ResVTy, DL, XLenTy, Load, Ptr, Mask, VL,
+  if (!getMemOperands(Factor, ResVTy, XLenTy, Load, Ptr, Mask, VL,
                       Alignment))
     return false;
 
@@ -383,7 +388,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (!getMemOperands(Builder, Factor, InVTy, DL, XLenTy, Store, Ptr, Mask, VL,
+  if (!getMemOperands(Factor, InVTy, XLenTy, Store, Ptr, Mask, VL,
                       Alignment))
     return false;
   Type *PtrTy = Ptr->getType();
