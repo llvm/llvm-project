@@ -858,14 +858,13 @@ define i64 @lurwu(ptr %a, i32 %b) {
 define i64 @lrd(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
-; RV32XTHEADMEMIDX-NEXT:    slli a2, a1, 3
+; RV32XTHEADMEMIDX-NEXT:    th.lrw a2, a0, a1, 3
+; RV32XTHEADMEMIDX-NEXT:    addi a0, a0, 4
 ; RV32XTHEADMEMIDX-NEXT:    th.lrw a1, a0, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    add a0, a0, a2
-; RV32XTHEADMEMIDX-NEXT:    lw a2, 4(a0)
-; RV32XTHEADMEMIDX-NEXT:    add a0, a1, a1
-; RV32XTHEADMEMIDX-NEXT:    sltu a1, a0, a1
-; RV32XTHEADMEMIDX-NEXT:    add a2, a2, a2
-; RV32XTHEADMEMIDX-NEXT:    add a1, a2, a1
+; RV32XTHEADMEMIDX-NEXT:    add a0, a2, a2
+; RV32XTHEADMEMIDX-NEXT:    sltu a2, a0, a2
+; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a1
+; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a2
 ; RV32XTHEADMEMIDX-NEXT:    ret
 ;
 ; RV64XTHEADMEMIDX-LABEL: lrd:
@@ -908,14 +907,13 @@ define i64 @lrd_2(ptr %a, i64 %b) {
 define i64 @lurd(ptr %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lurd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
-; RV32XTHEADMEMIDX-NEXT:    slli a2, a1, 3
+; RV32XTHEADMEMIDX-NEXT:    th.lrw a2, a0, a1, 3
+; RV32XTHEADMEMIDX-NEXT:    addi a0, a0, 4
 ; RV32XTHEADMEMIDX-NEXT:    th.lrw a1, a0, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    add a0, a0, a2
-; RV32XTHEADMEMIDX-NEXT:    lw a2, 4(a0)
-; RV32XTHEADMEMIDX-NEXT:    add a0, a1, a1
-; RV32XTHEADMEMIDX-NEXT:    sltu a1, a0, a1
-; RV32XTHEADMEMIDX-NEXT:    add a2, a2, a2
-; RV32XTHEADMEMIDX-NEXT:    add a1, a2, a1
+; RV32XTHEADMEMIDX-NEXT:    add a0, a2, a2
+; RV32XTHEADMEMIDX-NEXT:    sltu a2, a0, a2
+; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a1
+; RV32XTHEADMEMIDX-NEXT:    add a1, a1, a2
 ; RV32XTHEADMEMIDX-NEXT:    ret
 ;
 ; RV64XTHEADMEMIDX-LABEL: lurd:
@@ -1047,11 +1045,10 @@ define void @srd(ptr %a, i64 %b, i64 %c) {
 ; RV32XTHEADMEMIDX-NEXT:    add a2, a3, a3
 ; RV32XTHEADMEMIDX-NEXT:    add a4, a4, a4
 ; RV32XTHEADMEMIDX-NEXT:    sltu a3, a2, a3
-; RV32XTHEADMEMIDX-NEXT:    add a3, a4, a3
-; RV32XTHEADMEMIDX-NEXT:    slli a4, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    add a4, a0, a4
 ; RV32XTHEADMEMIDX-NEXT:    th.srw a2, a0, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    sw a3, 4(a4)
+; RV32XTHEADMEMIDX-NEXT:    add a3, a4, a3
+; RV32XTHEADMEMIDX-NEXT:    addi a0, a0, 4
+; RV32XTHEADMEMIDX-NEXT:    th.srw a3, a0, a1, 3
 ; RV32XTHEADMEMIDX-NEXT:    ret
 ;
 ; RV64XTHEADMEMIDX-LABEL: srd:
@@ -1071,11 +1068,10 @@ define void @surd(ptr %a, i32 %b, i64 %c) {
 ; RV32XTHEADMEMIDX-NEXT:    add a4, a2, a2
 ; RV32XTHEADMEMIDX-NEXT:    add a3, a3, a3
 ; RV32XTHEADMEMIDX-NEXT:    sltu a2, a4, a2
-; RV32XTHEADMEMIDX-NEXT:    add a2, a3, a2
-; RV32XTHEADMEMIDX-NEXT:    slli a3, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    add a3, a0, a3
 ; RV32XTHEADMEMIDX-NEXT:    th.srw a4, a0, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    sw a2, 4(a3)
+; RV32XTHEADMEMIDX-NEXT:    add a2, a3, a2
+; RV32XTHEADMEMIDX-NEXT:    addi a0, a0, 4
+; RV32XTHEADMEMIDX-NEXT:    th.srw a2, a0, a1, 3
 ; RV32XTHEADMEMIDX-NEXT:    ret
 ;
 ; RV64XTHEADMEMIDX-LABEL: surd:

@@ -4450,7 +4450,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         }
       } else if (!IsAccess) {
         return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
-      } else if (IsConstant && Info.checkingPotentialConstantExpression() &&
+      } else if ((IsConstant || BaseType->isReferenceType()) &&
+                 Info.checkingPotentialConstantExpression() &&
                  BaseType->isLiteralType(Info.Ctx) && !VD->hasDefinition()) {
         // This variable might end up being constexpr. Don't diagnose it yet.
       } else if (IsConstant) {
@@ -4491,9 +4492,11 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     // a null BaseVal. Any constexpr-unknown variable seen here is an error:
     // we can't access a constexpr-unknown object.
     if (AK != clang::AK_Dereference && !BaseVal) {
-      Info.FFDiag(E, diag::note_constexpr_access_unknown_variable, 1)
-          << AK << VD;
-      Info.Note(VD->getLocation(), diag::note_declared_at);
+      if (!Info.checkingPotentialConstantExpression()) {
+        Info.FFDiag(E, diag::note_constexpr_access_unknown_variable, 1)
+            << AK << VD;
+        Info.Note(VD->getLocation(), diag::note_declared_at);
+      }
       return CompleteObject();
     }
   } else if (DynamicAllocLValue DA = LVal.Base.dyn_cast<DynamicAllocLValue>()) {
