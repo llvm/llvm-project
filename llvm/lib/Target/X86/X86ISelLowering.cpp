@@ -1330,7 +1330,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
 
     for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
-      setOperationAction(ISD::BITREVERSE,       VT, Custom);
+      setOperationAction(ISD::BITREVERSE, VT, Custom);
     }
   }
 
