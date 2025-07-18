@@ -812,7 +812,7 @@ LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateBasicType(
 LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreatePointerType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef PointeeTy, uint64_t SizeInBits,
     uint32_t AlignInBits, unsigned AddressSpace, LLVMDWARFMemorySpace MS,
-    const char *Name,  size_t NameLen);
+    const char *Name, size_t NameLen);
 
 /**
  * Create debugging information entry for a struct.
