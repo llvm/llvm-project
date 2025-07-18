@@ -743,7 +743,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // latch.  This is a reasonable default placement if we don't have block
   // frequencies, and if we do, well the layout will be adjusted later.
   auto BlockInsertPt = std::next(LatchBlock->getIterator());
-  SmallVector<Value *> PartialReductions;
+  SmallVector<Instruction *> PartialReductions;
   for (unsigned It = 1; It != ULO.Count; ++It) {
     SmallVector<BasicBlock *, 8> NewBlocks;
     SmallDenseMap<const Loop *, Loop *, 4> NewLoops;
@@ -773,8 +773,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           if (Reductions.contains(OrigPHI)) {
             // Collect partial  reduction results.
             if (PartialReductions.empty())
-              PartialReductions.push_back(InVal);
-            PartialReductions.push_back(VMap[InVal]);
+              PartialReductions.push_back(cast<Instruction>(InVal));
+            PartialReductions.push_back(cast<Instruction>(VMap[InVal]));
 
             // Update the start value for the cloned phis to use the identity
             // value for the reduction.
@@ -1090,13 +1090,16 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         RdxResult = PartialReductions.front();
         IRBuilder Builder(ExitBlock, ExitBlock->getFirstNonPHIIt());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
-        for (Value *RdxPart : drop_begin(PartialReductions)) {
+        for (Instruction *RdxPart : drop_begin(PartialReductions)) {
           RdxResult = Builder.CreateBinOp(
               (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
               RdxPart, RdxResult, "bin.rdx");
         }
         NeedToFixLCSSA = true;
+        for (Instruction *RdxPart : PartialReductions)
+          RdxPart->dropPoisonGeneratingFlags();
       }
+
       Phi.replaceAllUsesWith(RdxResult);
       continue;
     }
