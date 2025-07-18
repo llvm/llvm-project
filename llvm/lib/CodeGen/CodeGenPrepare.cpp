@@ -445,7 +445,6 @@ private:
   bool optimizeSwitchInst(SwitchInst *SI);
   bool optimizeExtractElementInst(Instruction *Inst);
   bool dupRetToEnableTailCallOpts(BasicBlock *BB, ModifyDT &ModifiedDT);
-  bool fixupDbgValue(Instruction *I);
   bool fixupDbgVariableRecord(DbgVariableRecord &I);
   bool fixupDbgVariableRecordsOnInst(Instruction &I);
   bool placeDbgValues(Function &F);
@@ -2762,9 +2761,6 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
     case Intrinsic::fshl:
     case Intrinsic::fshr:
       return optimizeFunnelShift(II);
-    case Intrinsic::dbg_assign:
-    case Intrinsic::dbg_value:
-      return fixupDbgValue(II);
     case Intrinsic::masked_gather:
       return optimizeGatherScatterInst(II, II->getArgOperand(0));
     case Intrinsic::masked_scatter:
@@ -3554,8 +3550,6 @@ class TypePromotionTransaction {
     /// Keep track of the original uses (pair Instruction, Index).
     SmallVector<InstructionAndIdx, 4> OriginalUses;
     /// Keep track of the debug users.
-    SmallVector<DbgValueInst *, 1> DbgValues;
-    /// And non-instruction debug-users too.
     SmallVector<DbgVariableRecord *, 1> DbgVariableRecords;
 
     /// Keep track of the new value so that we can undo it by replacing
@@ -3577,7 +3571,9 @@ class TypePromotionTransaction {
       }
       // Record the debug uses separately. They are not in the instruction's
       // use list, but they are replaced by RAUW.
+      SmallVector<DbgValueInst *> DbgValues;
       findDbgValues(DbgValues, Inst, &DbgVariableRecords);
+      assert(DbgValues.empty());
 
       // Now, we can replace the uses.
       Inst->replaceAllUsesWith(New);
@@ -3591,11 +3587,7 @@ class TypePromotionTransaction {
       // RAUW has replaced all original uses with references to the new value,
       // including the debug uses. Since we are undoing the replacements,
       // the original debug uses must also be reinstated to maintain the
-      // correctness and utility of debug value instructions.
-      for (auto *DVI : DbgValues)
-        DVI->replaceVariableLocationOp(New, Inst);
-      // Similar story with DbgVariableRecords, the non-instruction
-      // representation of dbg.values.
+      // correctness and utility of debug value records.
       for (DbgVariableRecord *DVR : DbgVariableRecords)
         DVR->replaceVariableLocationOp(New, Inst);
     }
@@ -8933,32 +8925,6 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, ModifyDT &ModifiedDT) {
   return MadeChange;
 }
 
-// Some CGP optimizations may move or alter what's computed in a block. Check
-// whether a dbg.value intrinsic could be pointed at a more appropriate operand.
-bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
-  assert(isa<DbgValueInst>(I));
-  DbgValueInst &DVI = *cast<DbgValueInst>(I);
-
-  // Does this dbg.value refer to a sunk address calculation?
-  bool AnyChange = false;
-  SmallDenseSet<Value *> LocationOps(DVI.location_ops().begin(),
-                                     DVI.location_ops().end());
-  for (Value *Location : LocationOps) {
-    WeakTrackingVH SunkAddrVH = SunkAddrs[Location];
-    Value *SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
-    if (SunkAddr) {
-      // Point dbg.value at locally computed address, which should give the best
-      // opportunity to be accurately lowered. This update may change the type
-      // of pointer being referred to; however this makes no difference to
-      // debugging information, and we can't generate bitcasts that may affect
-      // codegen.
-      DVI.replaceVariableLocationOp(Location, SunkAddr);
-      AnyChange = true;
-    }
-  }
-  return AnyChange;
-}
-
 bool CodeGenPrepare::fixupDbgVariableRecordsOnInst(Instruction &I) {
   bool AnyChange = false;
   for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
@@ -8991,14 +8957,6 @@ bool CodeGenPrepare::fixupDbgVariableRecord(DbgVariableRecord &DVR) {
     }
   }
   return AnyChange;
-}
-
-static void DbgInserterHelper(DbgValueInst *DVI, BasicBlock::iterator VI) {
-  DVI->removeFromParent();
-  if (isa<PHINode>(VI))
-    DVI->insertBefore(VI->getParent()->getFirstInsertionPt());
-  else
-    DVI->insertAfter(VI);
 }
 
 static void DbgInserterHelper(DbgVariableRecord *DVR, BasicBlock::iterator VI) {
@@ -9065,15 +9023,8 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
 
   for (BasicBlock &BB : F) {
     for (Instruction &Insn : llvm::make_early_inc_range(BB)) {
-      // Process dbg.value intrinsics.
-      DbgValueInst *DVI = dyn_cast<DbgValueInst>(&Insn);
-      if (DVI) {
-        DbgProcessor(DVI, DVI);
-        continue;
-      }
-
-      // If this isn't a dbg.value, process any attached DbgVariableRecord
-      // records attached to this instruction.
+      // Process any DbgVariableRecord records attached to this
+      // instruction.
       for (DbgVariableRecord &DVR : llvm::make_early_inc_range(
                filterDbgVars(Insn.getDbgRecordRange()))) {
         if (DVR.Type != DbgVariableRecord::LocationType::Value)
