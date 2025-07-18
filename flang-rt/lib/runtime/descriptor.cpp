@@ -85,7 +85,7 @@ RT_API_ATTRS void Descriptor::Establish(int characterKind,
 RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt,
     void *p, int rank, const SubscriptValue *extent,
     ISO::CFI_attribute_t attribute) {
-  std::size_t elementBytes{dt.sizeInBytes()};
+  auto elementBytes{static_cast<std::size_t>(dt.sizeInBytes())};
   ISO::EstablishDescriptor(
       &raw_, p, attribute, CFI_type_struct, elementBytes, rank, extent);
   if (elementBytes == 0) {
