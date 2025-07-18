@@ -114,23 +114,30 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
                             /*compressDims=*/true);
 
       // If we are padding to the next multiple of, compose with ceil(sz) * sz.
+      OpFoldResult paddingDimOfr;
       if (options.padToMultipleOf) {
         AffineExpr d0, s0;
         bindDims(rewriter.getContext(), d0);
         bindSymbols(rewriter.getContext(), s0);
         AffineMap ceilMap = AffineMap::get(1, 1, d0.ceilDiv(s0) * s0);
         AffineMap composedMap = projectedMap.compose(ceilMap);
-        OpFoldResult paddingDimOfr = affine::makeComposedFoldedAffineApply(
+        paddingDimOfr = affine::makeComposedFoldedAffineApply(
             rewriter, loc, composedMap,
             {indexingSizes[paddingDim], paddingSize},
             /*composeAffineMin=*/true);
-        terms.push_back(paddingDimOfr);
       } else {
         // Otherwise just set to paddingSize.
-        OpFoldResult paddingDimOfr = affine::makeComposedFoldedAffineApply(
+        paddingDimOfr = affine::makeComposedFoldedAffineApply(
             rewriter, loc, projectedMap, paddingSize);
-        terms.push_back(paddingDimOfr);
       }
+
+      // Adjust for the maximum accessed index which is (padding_size - 1).
+      AffineExpr d0;
+      bindDims(rewriter.getContext(), d0);
+      AffineMap subtractOneMap = AffineMap::get(1, 0, d0 - 1);
+      OpFoldResult maxAccessIdx = affine::makeComposedFoldedAffineApply(
+          rewriter, loc, subtractOneMap, {paddingDimOfr});
+      terms.push_back(maxAccessIdx);
 
       LLVM_DEBUG(DBGS() << "------new term: " << terms.back() << "\n");
     }
@@ -148,6 +155,8 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
     AffineExpr sumExpr = dims.front();
     for (unsigned i = 1; i < dims.size(); ++i)
       sumExpr = sumExpr + dims[i];
+    // Add 1 to the maximum accessed index and get the final padded size.
+    sumExpr = sumExpr + rewriter.getAffineConstantExpr(1);
     OpFoldResult paddedDimOfr =
         affine::makeComposedFoldedAffineApply(rewriter, loc, sumExpr, terms);
     paddedShape[resultIndex] = paddedDimOfr;
