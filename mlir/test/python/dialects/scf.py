@@ -33,7 +33,7 @@ def testSimpleForall():
         with InsertionPoint(loop.body):
             i, j = loop.induction_variables
             arith.addi(i, j)
-            loop.terminator
+            loop.terminator()
         # The verifier will check that the regions have been created properly.
         assert loop.verify()
 
