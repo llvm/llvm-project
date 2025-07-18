@@ -25,8 +25,8 @@ public:
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override {
     if (!NNS)
       return true;
-    if (const NamespaceDecl *ND =
-            NNS.getNestedNameSpecifier()->getAsNamespace())
+    if (const auto *ND = dyn_cast_if_present<NamespaceDecl>(
+            NNS.getNestedNameSpecifier()->getAsNamespace()))
       Match(ND->getName(), NNS.getLocalBeginLoc());
     return ExpectedLocationVisitor::TraverseNestedNameSpecifierLoc(NNS);
   }

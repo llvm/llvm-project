@@ -115,7 +115,8 @@ public:
     // The base visitor will visit NNSL prefixes, so we should only look at
     // the current NNS.
     if (NNS) {
-      const NamespaceDecl *ND = NNS.getNestedNameSpecifier()->getAsNamespace();
+      const auto *ND = dyn_cast_if_present<NamespaceDecl>(
+          NNS.getNestedNameSpecifier()->getAsNamespace());
       if (!visit(ND, NNS.getLocalBeginLoc(), NNS.getLocalEndLoc()))
         return false;
     }

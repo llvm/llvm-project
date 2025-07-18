@@ -45,7 +45,7 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
       // We still conservatively put a "std::" in front of the forward because
       // we don't know whether the code also had a "using std::forward;".
       Diag << FixItHint::CreateReplacement(CallRange, "std::" + ForwardName);
-    } else if (const NamespaceDecl *Namespace = NNS->getAsNamespace()) {
+    } else if (const NamespaceBaseDecl *Namespace = NNS->getAsNamespace()) {
       if (Namespace->getName() == "std") {
         if (!NNS->getPrefix()) {
           // Called as "std::move".

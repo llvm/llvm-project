@@ -4621,19 +4621,9 @@ NestedNameSpecifierLoc TreeTransform<Derived>::TransformNestedNameSpecifierLoc(
     }
 
     case NestedNameSpecifier::Namespace: {
-      NamespaceDecl *NS =
-          cast_or_null<NamespaceDecl>(getDerived().TransformDecl(
-              Q.getLocalBeginLoc(), QNNS->getAsNamespace()));
+      auto *NS = cast<NamespaceBaseDecl>(getDerived().TransformDecl(
+          Q.getLocalBeginLoc(), QNNS->getAsNamespace()));
       SS.Extend(SemaRef.Context, NS, Q.getLocalBeginLoc(), Q.getLocalEndLoc());
-      break;
-    }
-
-    case NestedNameSpecifier::NamespaceAlias: {
-      NamespaceAliasDecl *Alias =
-          cast_or_null<NamespaceAliasDecl>(getDerived().TransformDecl(
-              Q.getLocalBeginLoc(), QNNS->getAsNamespaceAlias()));
-      SS.Extend(SemaRef.Context, Alias, Q.getLocalBeginLoc(),
-                Q.getLocalEndLoc());
       break;
     }
 
