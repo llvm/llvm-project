@@ -4,23 +4,23 @@
 define <32 x i8> @insert_extract_v32i8(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    addi.d $fp, $sp, 64
+; CHECK-NEXT:    addi.d $sp, $sp, -96
+; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
+; CHECK-NEXT:    addi.d $fp, $sp, 96
 ; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    ld.b $a1, $sp, 31
+; CHECK-NEXT:    xvst $xr0, $sp, 32
+; CHECK-NEXT:    ld.b $a1, $sp, 63
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 1
 ; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
 ; CHECK-NEXT:    vinsgr2vr.b $vr1, $a1, 1
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    addi.d $sp, $fp, -96
+; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 96
 ; CHECK-NEXT:    ret
 entry:
   %b_lo = extractelement <32 x i8> %a, i32 15
@@ -33,23 +33,23 @@ entry:
 define <16 x i16> @insert_extract_v16i16(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    addi.d $fp, $sp, 64
+; CHECK-NEXT:    addi.d $sp, $sp, -96
+; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
+; CHECK-NEXT:    addi.d $fp, $sp, 96
 ; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
 ; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    ld.h $a1, $sp, 30
+; CHECK-NEXT:    xvst $xr0, $sp, 32
+; CHECK-NEXT:    ld.h $a1, $sp, 62
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 1
 ; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 1
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    addi.d $sp, $fp, -96
+; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 96
 ; CHECK-NEXT:    ret
 entry:
   %b_lo = extractelement <16 x i16> %a, i32 7
