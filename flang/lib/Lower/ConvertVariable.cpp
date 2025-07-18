@@ -236,9 +236,8 @@ mlir::Value Fortran::lower::genInitialDataTarget(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
           initialTarget))
-    return fir::factory::createUnallocatedBox(
-        builder, loc, boxType,
-        /*nonDeferredParams=*/std::nullopt);
+    return fir::factory::createUnallocatedBox(builder, loc, boxType,
+                                              /*nonDeferredParams=*/{});
   // Pointer initial data target, and NULL(mold).
   for (const auto &sym : Fortran::evaluate::CollectSymbols(initialTarget)) {
     // Derived type component symbols should not be instantiated as objects
@@ -354,8 +353,8 @@ static mlir::Value genComponentDefaultInit(
       // From a standard point of view, pointer without initialization do not
       // need to be disassociated, but for sanity and simplicity, do it in
       // global constructor since this has no runtime cost.
-      componentValue = fir::factory::createUnallocatedBox(
-          builder, loc, componentTy, std::nullopt);
+      componentValue =
+          fir::factory::createUnallocatedBox(builder, loc, componentTy, {});
     } else if (Fortran::lower::hasDefaultInitialization(component)) {
       // Component type has default initialization.
       componentValue = genDefaultInitializerValue(converter, loc, component,
@@ -554,7 +553,7 @@ fir::GlobalOp Fortran::lower::defineGlobal(
       createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
         mlir::Value box = fir::factory::createUnallocatedBox(
             b, loc, symTy,
-            /*nonDeferredParams=*/std::nullopt,
+            /*nonDeferredParams=*/{},
             /*typeSourceBox=*/{}, getAllocatorIdxFromDataAttr(dataAttr));
         b.create<fir::HasValueOp>(loc, box);
       });
@@ -785,6 +784,98 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   auto box{fir::factory::createNullBoxProc(builder, loc, ty)};
   builder.create<fir::StoreOp>(loc, box, res);
   return res;
+}
+
+/// Device allocatable components in a derived-type don't have the correct
+/// allocator index in their descriptor when they are created. After
+/// initialization, cuf.set_allocator_idx operations are inserted to set the
+/// correct allocator index for each device component.
+static void
+initializeDeviceComponentAllocator(Fortran::lower::AbstractConverter &converter,
+                                   const Fortran::semantics::Symbol &symbol,
+                                   Fortran::lower::SymMap &symMap) {
+  if (const auto *details{
+          symbol.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()}) {
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{type ? type->AsDerived()
+                                                            : nullptr};
+    if (derived) {
+      if (!FindCUDADeviceAllocatableUltimateComponent(*derived))
+        return; // No device components.
+
+      fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+      mlir::Location loc = converter.getCurrentLocation();
+
+      fir::ExtendedValue exv =
+          converter.getSymbolExtendedValue(symbol.GetUltimate(), &symMap);
+      mlir::Type baseTy = fir::unwrapRefType(fir::getBase(exv).getType());
+      if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(baseTy))
+        baseTy = boxTy.getEleTy();
+      baseTy = fir::unwrapRefType(baseTy);
+      auto recTy =
+          mlir::dyn_cast<fir::RecordType>(fir::unwrapSequenceType(baseTy));
+      assert(recTy && "expected fir::RecordType");
+
+      llvm::SmallVector<mlir::Value> coordinates;
+      Fortran::semantics::UltimateComponentIterator components{*derived};
+      for (const auto &sym : components) {
+        if (Fortran::semantics::IsDeviceAllocatable(sym)) {
+          unsigned fieldIdx = recTy.getFieldIndex(sym.name().ToString());
+          mlir::Type fieldTy;
+          std::vector<mlir::Value> coordinates;
+
+          if (fieldIdx != std::numeric_limits<unsigned>::max()) {
+            // Field found in the base record type.
+            auto fieldName = recTy.getTypeList()[fieldIdx].first;
+            fieldTy = recTy.getTypeList()[fieldIdx].second;
+            mlir::Value fieldIndex = builder.create<fir::FieldIndexOp>(
+                loc, fir::FieldType::get(fieldTy.getContext()), fieldName,
+                recTy,
+                /*typeParams=*/mlir::ValueRange{});
+            coordinates.push_back(fieldIndex);
+          } else {
+            // Field not found in base record type, search in potential
+            // record type components.
+            for (auto component : recTy.getTypeList()) {
+              if (auto childRecTy =
+                      mlir::dyn_cast<fir::RecordType>(component.second)) {
+                fieldIdx = childRecTy.getFieldIndex(sym.name().ToString());
+                if (fieldIdx != std::numeric_limits<unsigned>::max()) {
+                  mlir::Value parentFieldIndex =
+                      builder.create<fir::FieldIndexOp>(
+                          loc, fir::FieldType::get(childRecTy.getContext()),
+                          component.first, recTy,
+                          /*typeParams=*/mlir::ValueRange{});
+                  coordinates.push_back(parentFieldIndex);
+                  auto fieldName = childRecTy.getTypeList()[fieldIdx].first;
+                  fieldTy = childRecTy.getTypeList()[fieldIdx].second;
+                  mlir::Value childFieldIndex =
+                      builder.create<fir::FieldIndexOp>(
+                          loc, fir::FieldType::get(fieldTy.getContext()),
+                          fieldName, childRecTy,
+                          /*typeParams=*/mlir::ValueRange{});
+                  coordinates.push_back(childFieldIndex);
+                  break;
+                }
+              }
+            }
+          }
+
+          if (coordinates.empty())
+            TODO(loc, "device resident component in complex derived-type "
+                      "hierarchy");
+
+          mlir::Value comp = builder.create<fir::CoordinateOp>(
+              loc, builder.getRefType(fieldTy), fir::getBase(exv), coordinates);
+          cuf::DataAttributeAttr dataAttr =
+              Fortran::lower::translateSymbolCUFDataAttribute(
+                  builder.getContext(), sym);
+          builder.create<cuf::SetAllocatorIndexOp>(loc, comp, dataAttr);
+        }
+      }
+    }
+  }
 }
 
 /// Must \p var be default initialized at runtime when entering its scope.
@@ -1109,6 +1200,9 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   if (mustBeDefaultInitializedAtRuntime(var))
     Fortran::lower::defaultInitializeAtRuntime(converter, var.getSymbol(),
                                                symMap);
+  if (converter.getFoldingContext().languageFeatures().IsEnabled(
+          Fortran::common::LanguageFeature::CUDA))
+    initializeDeviceComponentAllocator(converter, var.getSymbol(), symMap);
   auto *builder = &converter.getFirOpBuilder();
   if (needCUDAAlloc(var.getSymbol()) &&
       !cuf::isCUDADeviceContext(builder->getRegion())) {
@@ -1367,6 +1461,9 @@ static void instantiateAlias(Fortran::lower::AbstractConverter &converter,
   if (mustBeDefaultInitializedAtRuntime(var))
     Fortran::lower::defaultInitializeAtRuntime(converter, var.getSymbol(),
                                                symMap);
+  if (converter.getFoldingContext().languageFeatures().IsEnabled(
+          Fortran::common::LanguageFeature::CUDA))
+    initializeDeviceComponentAllocator(converter, var.getSymbol(), symMap);
 }
 
 //===--------------------------------------------------------------===//

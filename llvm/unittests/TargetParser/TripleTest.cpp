@@ -2909,6 +2909,10 @@ TEST(TripleTest, DefaultExceptionHandling) {
 
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("x86_64-scei-ps4").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("aarch64-pc-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("aarch64-pc-windows-elf").getDefaultExceptionHandling());
 }
 
 TEST(TripleTest, NormalizeWindows) {

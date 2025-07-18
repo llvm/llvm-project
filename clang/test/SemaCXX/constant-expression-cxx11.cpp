@@ -1413,8 +1413,8 @@ namespace ComplexConstexpr {
   static_assert(t2p[2] == 0.0, ""); // expected-error {{constant expr}} expected-note {{one-past-the-end pointer}}
   static_assert(t2p[3] == 0.0, ""); // expected-error {{constant expr}} expected-note {{cannot refer to element 3 of array of 2 elements}}
   constexpr _Complex float *p = 0; // expected-warning {{'_Complex' is a C99 extension}}
-  constexpr float pr = __real *p; // expected-error {{constant expr}} expected-note {{cannot access real component of null}}
-  constexpr float pi = __imag *p; // expected-error {{constant expr}} expected-note {{cannot access imaginary component of null}}
+  constexpr float pr = __real *p; // expected-error {{constant expr}} expected-note {{dereferencing a null pointer}}
+  constexpr float pi = __imag *p; // expected-error {{constant expr}} expected-note {{dereferencing a null pointer}}
   constexpr const _Complex double *q = &test3 + 1; // expected-warning {{'_Complex' is a C99 extension}}
   constexpr double qr = __real *q; // expected-error {{constant expr}} expected-note {{cannot access real component of pointer past the end}}
   constexpr double qi = __imag *q; // expected-error {{constant expr}} expected-note {{cannot access imaginary component of pointer past the end}}

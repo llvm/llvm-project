@@ -313,6 +313,18 @@ def ConvertComplexToLibm : Pass<"convert-complex-to-libm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexToROCDLLibraryCalls
+//===----------------------------------------------------------------------===//
+
+def ConvertComplexToROCDLLibraryCalls : Pass<"convert-complex-to-rocdl-library-calls", "ModuleOp"> {
+  let summary = "Convert Complex dialect to ROCDL library calls";
+  let description = [{
+    This pass converts supported Complex ops to calls to the AMD device library.
+  }];
+  let dependentDialects = ["func::FuncDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexToSPIRV
 //===----------------------------------------------------------------------===//
 
@@ -1493,6 +1505,15 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
     "memref::MemRefDialect", "arith::ArithDialect",
     "vector::VectorDialect", "xegpu::XeGPUDialect"
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// XeVMToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertXeVMToLLVMPass : Pass<"convert-xevm-to-llvm"> {
+  let summary = "Convert XeVM to LLVM dialect";
+  let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
 #endif // MLIR_CONVERSION_PASSES
