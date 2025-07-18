@@ -1303,15 +1303,14 @@ static void addRange(SmallVectorImpl<ConstantInt *> &EndPoints,
   EndPoints.push_back(High);
 }
 
-MDNode *MDNode::getMergedCalleeTypeMetadata(LLVMContext &Ctx, MDNode *A,
-                                            MDNode *B) {
+MDNode *MDNode::getMergedCalleeTypeMetadata(const MDNode *A, const MDNode *B) {
   // Drop the callee_type metadata if either of the call instructions do not
   // have it.
   if (!A || !B)
     return nullptr;
   SmallVector<Metadata *, 8> AB;
   SmallPtrSet<Metadata *, 8> MergedCallees;
-  auto AddUniqueCallees = [&AB, &MergedCallees](MDNode *N) {
+  auto AddUniqueCallees = [&AB, &MergedCallees](const MDNode *N) {
     for (Metadata *MD : N->operands()) {
       if (MergedCallees.insert(MD).second)
         AB.push_back(MD);
@@ -1319,7 +1318,7 @@ MDNode *MDNode::getMergedCalleeTypeMetadata(LLVMContext &Ctx, MDNode *A,
   };
   AddUniqueCallees(A);
   AddUniqueCallees(B);
-  return MDNode::get(Ctx, AB);
+  return MDNode::get(A->getContext(), AB);
 }
 
 MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
