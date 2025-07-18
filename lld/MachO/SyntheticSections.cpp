@@ -367,6 +367,8 @@ void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA) {
     llvm_unreachable("unsupported chained fixup pointer format");
   }
 
+  // The fixup format places a 64 GiB limit on the output's size.
+  // Should we handle this gracefully?
   if (encodedVA != targetVA)
     error("rebase target address 0x" + Twine::utohexstr(targetVA) +
           " does not fit into chained fixup. Re-link with -no_fixup_chains");
