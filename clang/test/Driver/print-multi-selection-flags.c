@@ -107,3 +107,22 @@
 // CHECK-AARCH64-MULTILIB-CUSTOM-FLAG: --target=aarch64-unknown-none-eabi
 // CHECK-MULTILIB-CUSTOM-FLAG-DAG:     -fmultilib-flag=foo
 // CHECK-MULTILIB-CUSTOM-FLAG-DAG:     -fmultilib-flag=bar
+
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -fropi              | FileCheck --check-prefixes=CHECK-ROPI,CHECK-NO-RWPI,CHECK-NO-PIC %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -frwpi              | FileCheck --check-prefixes=CHECK-NO-ROPI,CHECK-RWPI,CHECK-NO-PIC %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -fropi -frwpi       | FileCheck --check-prefixes=CHECK-ROPI,CHECK-RWPI,CHECK-NO-PIC %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -fno-ropi -fno-rwpi | FileCheck --check-prefixes=CHECK-NO-ROPI,CHECK-NO-RWPI,CHECK-NO-PIC %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a                     | FileCheck --check-prefixes=CHECK-NO-ROPI,CHECK-NO-RWPI,CHECK-NO-PIC %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -fpic               | FileCheck --check-prefixes=CHECK-NO-ROPI,CHECK-NO-RWPI,CHECK-PIC1 %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -fPIC               | FileCheck --check-prefixes=CHECK-NO-ROPI,CHECK-NO-RWPI,CHECK-PIC2 %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -fpie               | FileCheck --check-prefixes=CHECK-NO-ROPI,CHECK-NO-RWPI,CHECK-PIE1 %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -fPIE               | FileCheck --check-prefixes=CHECK-NO-ROPI,CHECK-NO-RWPI,CHECK-PIE2 %s
+// CHECK-PIC2: -fPIC
+// CHECK-PIE2: -fPIE
+// CHECK-NO-PIC: -fno-pic
+// CHECK-NO-ROPI: -fno-ropi
+// CHECK-NO-RWPI: -fno-rwpi
+// CHECK-PIC1: -fpic
+// CHECK-PIE1: -fpie
+// CHECK-ROPI: -fropi
+// CHECK-RWPI: -frwpi
