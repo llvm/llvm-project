@@ -738,7 +738,8 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
                                        MachineFunction &MF, uint64_t Offset,
                                        uint64_t RealStackSize, bool EmitCFI,
                                        bool NeedProbe, uint64_t ProbeSize,
-                                       bool DynAllocation) const {
+                                       bool DynAllocation,
+                                       MachineInstr::MIFlag Flag) const {
   DebugLoc DL;
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   const RISCVInstrInfo *TII = STI.getInstrInfo();
@@ -748,7 +749,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   // Simply allocate the stack if it's not big enough to require a probe.
   if (!NeedProbe || Offset <= ProbeSize) {
     RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(-Offset),
-                  MachineInstr::FrameSetup, getStackAlign());
+                  Flag, getStackAlign());
 
     if (EmitCFI)
       CFIBuilder.buildDefCFAOffset(RealStackSize);
@@ -759,7 +760,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
           .addReg(RISCV::X0)
           .addReg(SPReg)
           .addImm(0)
-          .setMIFlags(MachineInstr::FrameSetup);
+          .setMIFlags(Flag);
     }
 
     return;
@@ -770,14 +771,13 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
     uint64_t CurrentOffset = 0;
     while (CurrentOffset + ProbeSize <= Offset) {
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
-                    StackOffset::getFixed(-ProbeSize), MachineInstr::FrameSetup,
-                    getStackAlign());
+                    StackOffset::getFixed(-ProbeSize), Flag, getStackAlign());
       // s[d|w] zero, 0(sp)
       BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
           .addReg(RISCV::X0)
           .addReg(SPReg)
           .addImm(0)
-          .setMIFlags(MachineInstr::FrameSetup);
+          .setMIFlags(Flag);
 
       CurrentOffset += ProbeSize;
       if (EmitCFI)
@@ -787,8 +787,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
     uint64_t Residual = Offset - CurrentOffset;
     if (Residual) {
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
-                    StackOffset::getFixed(-Residual), MachineInstr::FrameSetup,
-                    getStackAlign());
+                    StackOffset::getFixed(-Residual), Flag, getStackAlign());
       if (EmitCFI)
         CFIBuilder.buildDefCFAOffset(Offset);
 
@@ -798,7 +797,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
             .addReg(RISCV::X0)
             .addReg(SPReg)
             .addImm(0)
-            .setMIFlags(MachineInstr::FrameSetup);
+            .setMIFlags(Flag);
       }
     }
 
@@ -812,8 +811,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   Register TargetReg = RISCV::X6;
   // SUB TargetReg, SP, RoundedSize
   RI->adjustReg(MBB, MBBI, DL, TargetReg, SPReg,
-                StackOffset::getFixed(-RoundedSize), MachineInstr::FrameSetup,
-                getStackAlign());
+                StackOffset::getFixed(-RoundedSize), Flag, getStackAlign());
 
   if (EmitCFI) {
     // Set the CFA register to TargetReg.
@@ -830,14 +828,14 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
 
   if (Residual) {
     RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(-Residual),
-                  MachineInstr::FrameSetup, getStackAlign());
+                  Flag, getStackAlign());
     if (DynAllocation) {
       // s[d|w] zero, 0(sp)
       BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
           .addReg(RISCV::X0)
           .addReg(SPReg)
           .addImm(0)
-          .setMIFlags(MachineInstr::FrameSetup);
+          .setMIFlags(Flag);
     }
   }
 
@@ -1034,7 +1032,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
       MF.getInfo<RISCVMachineFunctionInfo>()->hasDynamicAllocation();
   if (StackSize != 0)
     allocateStack(MBB, MBBI, MF, StackSize, RealStackSize, /*EmitCFI=*/true,
-                  NeedProbe, ProbeSize, DynAllocation);
+                  NeedProbe, ProbeSize, DynAllocation,
+                  MachineInstr::FrameSetup);
 
   // Save SiFive CLIC CSRs into Stack
   emitSiFiveCLICPreemptibleSaves(MF, MBB, MBBI, DL);
@@ -1082,7 +1081,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
     allocateStack(MBB, MBBI, MF, SecondSPAdjustAmount,
                   getStackSizeWithRVVPadding(MF), !hasFP(MF), NeedProbe,
-                  ProbeSize, DynAllocation);
+                  ProbeSize, DynAllocation, MachineInstr::FrameSetup);
   }
 
   if (RVVStackSize) {
@@ -1814,7 +1813,8 @@ MachineBasicBlock::iterator RISCVFrameLowering::eliminateCallFramePseudoInstr(
         bool DynAllocation =
             MF.getInfo<RISCVMachineFunctionInfo>()->hasDynamicAllocation();
         allocateStack(MBB, MI, MF, -Amount, -Amount, !hasFP(MF),
-                      /*NeedProbe=*/true, ProbeSize, DynAllocation);
+                      /*NeedProbe=*/true, ProbeSize, DynAllocation,
+                      MachineInstr::NoFlags);
       } else {
         const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
         RI.adjustReg(MBB, MI, DL, SPReg, SPReg, StackOffset::getFixed(Amount),

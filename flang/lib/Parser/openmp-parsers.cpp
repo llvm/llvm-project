@@ -912,7 +912,7 @@ TYPE_PARSER(construct<OmpNumTasksClause>(
     scalarIntExpr))
 
 TYPE_PARSER(
-    construct<OmpObject>(designator) || construct<OmpObject>("/" >> name / "/"))
+    construct<OmpObject>(designator) || "/" >> construct<OmpObject>(name) / "/")
 
 // OMP 5.0 2.19.4.5 LASTPRIVATE ([lastprivate-modifier :] list)
 TYPE_PARSER(construct<OmpLastprivateClause>(
@@ -1194,7 +1194,7 @@ TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
         sourced(Parser<OmpNothingDirective>{}))))))
 
 TYPE_PARSER(sourced(construct<OmpMetadirectiveDirective>(
-    "METADIRECTIVE" >> Parser<OmpClauseList>{})))
+    verbatim("METADIRECTIVE"_tok), Parser<OmpClauseList>{})))
 
 // Omp directives enclosing do loop
 TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
@@ -1275,6 +1275,58 @@ struct OmpEndDirectiveParser {
 private:
   llvm::omp::Directive dir_;
 };
+
+struct OmpAllocatorsConstructParser {
+  using resultType = OpenMPAllocatorsConstruct;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    auto dirSpec{Parser<OmpDirectiveSpecification>{}.Parse(state)};
+    if (!dirSpec || dirSpec->DirId() != llvm::omp::Directive::OMPD_allocators) {
+      return std::nullopt;
+    }
+
+    // This should be an allocate-stmt. That will be checked in semantics.
+    Block block;
+    if (auto stmt{attempt(Parser<ExecutionPartConstruct>{}).Parse(state)}) {
+      block.emplace_back(std::move(*stmt));
+    }
+    // Allow empty block. Check for this in semantics.
+
+    auto end{OmpEndDirectiveParser{llvm::omp::Directive::OMPD_allocators}};
+    return OpenMPAllocatorsConstruct{
+        std::move(*dirSpec), std::move(block), *maybe(end).Parse(state)};
+  }
+};
+
+TYPE_PARSER(sourced( //
+    construct<OpenMPAllocatorsConstruct>(
+        "ALLOCATORS"_tok >= OmpAllocatorsConstructParser{})))
+
+struct OmpDispatchConstructParser {
+  using resultType = OpenMPDispatchConstruct;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    auto dirSpec{Parser<OmpDirectiveSpecification>{}.Parse(state)};
+    if (!dirSpec || dirSpec->DirId() != llvm::omp::Directive::OMPD_dispatch) {
+      return std::nullopt;
+    }
+
+    // This should be a function call. That will be checked in semantics.
+    Block block;
+    if (auto stmt{attempt(Parser<ExecutionPartConstruct>{}).Parse(state)}) {
+      block.emplace_back(std::move(*stmt));
+    }
+    // Allow empty block. Check for this in semantics.
+
+    auto end{OmpEndDirectiveParser{llvm::omp::Directive::OMPD_dispatch}};
+    return OpenMPDispatchConstruct{
+        std::move(*dirSpec), std::move(block), *maybe(end).Parse(state)};
+  }
+};
+
+TYPE_PARSER(sourced( //
+    construct<OpenMPDispatchConstruct>(
+        "DISPATCH"_tok >= OmpDispatchConstructParser{})))
 
 // Parser for an arbitrary OpenMP ATOMIC construct.
 //
@@ -1605,32 +1657,12 @@ TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(
     Parser<OmpCriticalDirective>{}, block, Parser<OmpEndCriticalDirective>{}))
 
-TYPE_PARSER(sourced(construct<OmpDispatchDirective>(
-    verbatim("DISPATCH"_tok), Parser<OmpClauseList>{})))
-
-TYPE_PARSER(
-    construct<OmpEndDispatchDirective>(startOmpLine >> "END DISPATCH"_tok))
-
-TYPE_PARSER(sourced(construct<OpenMPDispatchConstruct>(
-    Parser<OmpDispatchDirective>{} / endOmpLine, block,
-    maybe(Parser<OmpEndDispatchDirective>{} / endOmpLine))))
-
 // 2.11.3 Executable Allocate directive
 TYPE_PARSER(
     sourced(construct<OpenMPExecutableAllocate>(verbatim("ALLOCATE"_tok),
         maybe(parenthesized(Parser<OmpObjectList>{})), Parser<OmpClauseList>{},
         maybe(nonemptyList(Parser<OpenMPDeclarativeAllocate>{})) / endOmpLine,
         statement(allocateStmt))))
-
-// 6.7 Allocators construct [OpenMP 5.2]
-//     allocators-construct -> ALLOCATORS [allocate-clause [,]]
-//                                allocate-stmt
-//                             [omp-end-allocators-construct]
-TYPE_PARSER(sourced(construct<OpenMPAllocatorsConstruct>(
-    verbatim("ALLOCATORS"_tok), Parser<OmpClauseList>{} / endOmpLine,
-    statement(allocateStmt), maybe(Parser<OmpEndAllocators>{} / endOmpLine))))
-
-TYPE_PARSER(construct<OmpEndAllocators>(startOmpLine >> "END ALLOCATORS"_tok))
 
 // 2.8.2 Declare Simd construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareSimdConstruct>(
@@ -1687,7 +1719,7 @@ TYPE_PARSER(sourced(construct<OmpAssumeDirective>(
     verbatim("ASSUME"_tok), Parser<OmpClauseList>{})))
 
 TYPE_PARSER(sourced(construct<OmpEndAssumeDirective>(
-    verbatim(startOmpLine >> "END ASSUME"_tok))))
+    startOmpLine >> verbatim("END ASSUME"_tok))))
 
 TYPE_PARSER(sourced(
     construct<OpenMPAssumeConstruct>(Parser<OmpAssumeDirective>{} / endOmpLine,
@@ -1724,6 +1756,13 @@ TYPE_PARSER(maybe(startOmpLine >> "SECTION"_tok / endOmpLine) >>
 TYPE_PARSER(construct<OpenMPSectionsConstruct>(
     Parser<OmpBeginSectionsDirective>{} / endOmpLine,
     Parser<OmpSectionBlocks>{}, Parser<OmpEndSectionsDirective>{} / endOmpLine))
+
+static bool IsExecutionPart(const OmpDirectiveName &name) {
+  return name.IsExecutionPart();
+}
+
+TYPE_PARSER(construct<OpenMPExecDirective>(
+    startOmpLine >> predicated(Parser<OmpDirectiveName>{}, IsExecutionPart)))
 
 TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
     startOmpLine >>
