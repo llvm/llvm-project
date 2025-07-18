@@ -40,6 +40,7 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
@@ -5516,12 +5517,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   CheckCodeGenerationOptions(D, Args);
 
-  unsigned FunctionAlignment = ParseFunctionAlignment(TC, Args);
-  assert(FunctionAlignment <= 31 && "function alignment will be truncated!");
-  if (FunctionAlignment) {
-    CmdArgs.push_back("-function-alignment");
-    CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
-  }
+  llvm::MaybeAlign FunctionAlignment = ParseFunctionAlignment(TC, Args);
+  CmdArgs.push_back("-function-alignment");
+  CmdArgs.push_back(
+      Args.MakeArgString(std::to_string(llvm::encode(FunctionAlignment))));
 
   // We support -falign-loops=N where N is a power of 2. GCC supports more
   // forms.
