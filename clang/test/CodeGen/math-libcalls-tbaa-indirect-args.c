@@ -30,37 +30,37 @@ long double powl(long double a, long double b);
 //
 // CHECK-PPC-LABEL: define dso_local ppc_fp128 @test_powl(
 // CHECK-PPC-SAME: ppc_fp128 noundef [[A:%.*]], ppc_fp128 noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-PPC:    [[CALL:%.*]] = tail call ppc_fp128 @powl(ppc_fp128 noundef [[A]], ppc_fp128 noundef [[B]]) #[[ATTR3:[0-9]+]], !tbaa [[TBAA2:![0-9]+]]
+// CHECK-PPC:    [[CALL:%.*]] = tail call ppc_fp128 @powl(ppc_fp128 noundef [[A]], ppc_fp128 noundef [[B]]) #[[ATTR4:[0-9]+]], !tbaa [[TBAA2:![0-9]+]]
 //
 // CHECK-ARM-LABEL: define dso_local double @test_powl(
 // CHECK-ARM-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-ARM:    [[CALL:%.*]] = tail call double @powl(double noundef [[A]], double noundef [[B]]) #[[ATTR2:[0-9]+]], !tbaa [[TBAA3:![0-9]+]]
+// CHECK-ARM:    [[CALL:%.*]] = tail call double @powl(double noundef [[A]], double noundef [[B]]) #[[ATTR3:[0-9]+]], !tbaa [[TBAA3:![0-9]+]]
 //
 // CHECK-ARM-HF-LABEL: define dso_local double @test_powl(
 // CHECK-ARM-HF-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-ARM-HF:    [[CALL:%.*]] = tail call double @powl(double noundef [[A]], double noundef [[B]]) #[[ATTR2:[0-9]+]], !tbaa [[TBAA3:![0-9]+]]
+// CHECK-ARM-HF:    [[CALL:%.*]] = tail call double @powl(double noundef [[A]], double noundef [[B]]) #[[ATTR3:[0-9]+]], !tbaa [[TBAA3:![0-9]+]]
 //
 // CHECK-THUMB-LABEL: define double @test_powl(
 // CHECK-THUMB-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-THUMB:    [[CALL:%.*]] = tail call double @powl(double noundef [[A]], double noundef [[B]]) #[[ATTR2:[0-9]+]], !tbaa [[TBAA3:![0-9]+]]
+// CHECK-THUMB:    [[CALL:%.*]] = tail call double @powl(double noundef [[A]], double noundef [[B]]) #[[ATTR3:[0-9]+]], !tbaa [[TBAA3:![0-9]+]]
 //
 // CHECK-AARCH-LABEL: define dso_local fp128 @test_powl(
 // CHECK-AARCH-SAME: fp128 noundef [[A:%.*]], fp128 noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-AARCH:    [[CALL:%.*]] = tail call fp128 @powl(fp128 noundef [[A]], fp128 noundef [[B]]) #[[ATTR2:[0-9]+]], !tbaa [[TBAA2:![0-9]+]]
+// CHECK-AARCH:    [[CALL:%.*]] = tail call fp128 @powl(fp128 noundef [[A]], fp128 noundef [[B]]) #[[ATTR3:[0-9]+]], !tbaa [[TBAA2:![0-9]+]]
 //
 // CHECK-SPIR-LABEL: define dso_local spir_func double @test_powl(
 // CHECK-SPIR-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-SPIR:    [[CALL:%.*]] = tail call spir_func double @powl(double noundef [[A]], double noundef [[B]]) #[[ATTR3:[0-9]+]], !tbaa [[TBAA2:![0-9]+]]
+// CHECK-SPIR:    [[CALL:%.*]] = tail call spir_func double @powl(double noundef [[A]], double noundef [[B]]) #[[ATTR4:[0-9]+]], !tbaa [[TBAA2:![0-9]+]]
 //
 // CHECK-MINGW32-LABEL: define dso_local void @test_powl(
-// CHECK-MINGW32-SAME: ptr dead_on_unwind noalias writable writeonly sret(x86_fp80) align 16 captures(none) initializes((0, 10)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) [[TMP0:%.*]], ptr noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-MINGW32:    [[A:%.*]] = load x86_fp80, ptr [[TMP0]], align 16, !tbaa [[TBAA3:![0-9]+]]
-// CHECK-MINGW32:    [[B:%.*]] = load x86_fp80, ptr [[TMP1]], align 16, !tbaa [[TBAA3]]
-// CHECK-MINGW32:    store x86_fp80 [[A]], ptr [[BYVAL_TEMP:%.*]], align 16, !tbaa [[TBAA3]]
-// CHECK-MINGW32:    store x86_fp80 [[B]], ptr [[BYVAL_TEMP1:%.*]], align 16, !tbaa [[TBAA3]]
-// CHECK-MINGW32:    call void @powl(ptr dead_on_unwind nonnull writable sret(x86_fp80) align 16 [[TMP:%.*]], ptr noundef nonnull [[BYVAL_TEMP]], ptr noundef nonnull [[BYVAL_TEMP1]]) #[[ATTR3:[0-9]+]]
-// CHECK-MINGW32:    [[TMP2:%.*]] = load x86_fp80, ptr [[TMP]], align 16, !tbaa [[TBAA3]]
-// CHECK-MINGW32:    store x86_fp80 [[TMP2]], ptr [[AGG_RESULT]], align 16, !tbaa [[TBAA3]]
+// CHECK-MINGW32-SAME: ptr dead_on_unwind noalias writable writeonly sret(x86_fp80) align 16 captures(none) initializes((0, 10)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-MINGW32:    [[A:%.*]] = load x86_fp80, ptr [[TMP0]], align 16, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-MINGW32:    [[B:%.*]] = load x86_fp80, ptr [[TMP1]], align 16, !tbaa [[TBAA6]]
+// CHECK-MINGW32:    store x86_fp80 [[A]], ptr [[BYVAL_TEMP:%.*]], align 16, !tbaa [[TBAA6]]
+// CHECK-MINGW32:    store x86_fp80 [[B]], ptr [[BYVAL_TEMP1:%.*]], align 16, !tbaa [[TBAA6]]
+// CHECK-MINGW32:    call void @powl(ptr dead_on_unwind nonnull writable sret(x86_fp80) align 16 [[TMP:%.*]], ptr dead_on_return noundef nonnull [[BYVAL_TEMP]], ptr dead_on_return noundef nonnull [[BYVAL_TEMP1]]) #[[ATTR3:[0-9]+]]
+// CHECK-MINGW32:    [[TMP2:%.*]] = load x86_fp80, ptr [[TMP]], align 16, !tbaa [[TBAA6]]
+// CHECK-MINGW32:    store x86_fp80 [[TMP2]], ptr [[AGG_RESULT]], align 16, !tbaa [[TBAA6]]
 //
 long double test_powl(long double a, long double b) {
    return powl(a, b);
@@ -93,51 +93,51 @@ long double test_powl(long double a, long double b) {
 // CHECK-I686:    store x86_fp80 [[MUL_IR:%.*]], ptr [[AGG_RESULT_IMAGP:%.*]], align 4
 //
 // CHECK-PPC-LABEL: define dso_local void @test_cargl(
-// CHECK-PPC-SAME: ptr dead_on_unwind noalias writable writeonly sret({ ppc_fp128, ppc_fp128 }) align 16 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly byval({ ppc_fp128, ppc_fp128 }) align 16 captures(none) [[CLD:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// CHECK-PPC-SAME: ptr dead_on_unwind noalias writable writeonly sret({ ppc_fp128, ppc_fp128 }) align 16 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly byval({ ppc_fp128, ppc_fp128 }) align 16 captures(none) [[CLD:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-PPC:    [[CLD_REAL:%.*]] = load ppc_fp128, ptr [[CLD]], align 16
 // CHECK-PPC:    [[CLD_IMAG:%.*]] = load ppc_fp128, ptr [[CLD_IMAGP:%.*]], align 16
 // CHECK-PPC:    store ppc_fp128 [[CLD_REAL]], ptr [[BYVAL_TEMP:%.*]], align 16
 // CHECK-PPC:    store ppc_fp128 [[CLD_IMAG]], ptr [[BYVAL_TEMP_IMAGP:%.*]], align 16
-// CHECK-PPC:    [[CALL:%.*]] = tail call ppc_fp128 @cargl(ptr noundef nonnull byval({ ppc_fp128, ppc_fp128 }) align 16 [[BYVAL_TEMP]]) #[[ATTR3]]
+// CHECK-PPC:    [[CALL:%.*]] = tail call ppc_fp128 @cargl(ptr noundef nonnull byval({ ppc_fp128, ppc_fp128 }) align 16 [[BYVAL_TEMP]]) #[[ATTR4]]
 // CHECK-PPC:    store ppc_fp128 [[MUL_RL:%.*]], ptr [[AGG_RESULT]], align 16
 // CHECK-PPC:    store ppc_fp128 [[MUL_IR:%.*]], ptr [[AGG_RESULT_IMAGP:%.*]], align 16
 //
 // CHECK-ARM-LABEL: define dso_local void @test_cargl(
-// CHECK-ARM-SAME: ptr dead_on_unwind noalias writable writeonly sret({ double, double }) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], [2 x i64] noundef [[CLD_COERCE:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-// CHECK-ARM:    [[CALL:%.*]] = tail call double @cargl([2 x i64] noundef [[CLD_COERCE]]) #[[ATTR2]], !tbaa [[TBAA3]]
+// CHECK-ARM-SAME: ptr dead_on_unwind noalias writable writeonly sret({ double, double }) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], [2 x i64] noundef [[CLD_COERCE:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-ARM:    [[CALL:%.*]] = tail call double @cargl([2 x i64] noundef [[CLD_COERCE]]) #[[ATTR3]], !tbaa [[TBAA3]]
 // CHECK-ARM:    store double [[MUL_RL:%.*]], ptr [[AGG_RESULT]], align 8
 // CHECK-ARM:    store double [[MUL_IR:%.*]], ptr [[AGG_RESULT_IMAGP:%.*]], align 8
 //
 // CHECK-ARM-HF-LABEL: define dso_local { double, double } @test_cargl(
-// CHECK-ARM-HF-SAME: { double, double } noundef [[CLD_COERCE:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-// CHECK-ARM-HF:    [[CALL:%.*]] = tail call double @cargl({ double, double } noundef [[CLD_COERCE]]) #[[ATTR2]], !tbaa [[TBAA3]]
+// CHECK-ARM-HF-SAME: { double, double } noundef [[CLD_COERCE:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-ARM-HF:    [[CALL:%.*]] = tail call double @cargl({ double, double } noundef [[CLD_COERCE]]) #[[ATTR3]], !tbaa [[TBAA3]]
 //
 // CHECK-THUMB-LABEL: define { double, double } @test_cargl(
-// CHECK-THUMB-SAME: [2 x double] noundef [[CLD_COERCE:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-// CHECK-THUMB:    [[CALL:%.*]] = tail call double @cargl([2 x double] noundef [[CLD_COERCE]]) #[[ATTR2]], !tbaa [[TBAA3]]
+// CHECK-THUMB-SAME: [2 x double] noundef [[CLD_COERCE:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-THUMB:    [[CALL:%.*]] = tail call double @cargl([2 x double] noundef [[CLD_COERCE]]) #[[ATTR3]], !tbaa [[TBAA3]]
 //
 // CHECK-AARCH-LABEL: define dso_local { fp128, fp128 } @test_cargl(
-// CHECK-AARCH-SAME: [2 x fp128] noundef alignstack(16) [[CLD_COERCE:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-// CHECK-AARCH:    [[CALL:%.*]] = tail call fp128 @cargl([2 x fp128] noundef alignstack(16) [[CLD_COERCE]]) #[[ATTR2]], !tbaa [[TBAA2]]
+// CHECK-AARCH-SAME: [2 x fp128] noundef alignstack(16) [[CLD_COERCE:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-AARCH:    [[CALL:%.*]] = tail call fp128 @cargl([2 x fp128] noundef alignstack(16) [[CLD_COERCE]]) #[[ATTR3]], !tbaa [[TBAA2]]
 //
 // CHECK-SPIR-LABEL: define dso_local spir_func void @test_cargl(
-// CHECK-SPIR-SAME: ptr dead_on_unwind noalias writable writeonly sret({ double, double }) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly byval({ double, double }) align 8 captures(none) [[CLD:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// CHECK-SPIR-SAME: ptr dead_on_unwind noalias writable writeonly sret({ double, double }) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly byval({ double, double }) align 8 captures(none) [[CLD:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-SPIR:    [[CLD_REAL:%.*]] = load double, ptr [[CLD]], align 8
 // CHECK-SPIR:    [[CLD_IMAG:%.*]] = load double, ptr [[CLD_IMAGP:%.*]], align 8
 // CHECK-SPIR:    store double [[CLD_REAL]], ptr [[BYVAL_TEMP:%.*]], align 8
 // CHECK-SPIR:    store double [[CLD_IMAG]], ptr [[BYVAL_TEMP_IMAGP:%.*]], align 8
-// CHECK-SPIR:    [[CALL:%.*]] = tail call spir_func double @cargl(ptr noundef nonnull byval({ double, double }) align 8 [[BYVAL_TEMP]]) #[[ATTR3]]
+// CHECK-SPIR:    [[CALL:%.*]] = tail call spir_func double @cargl(ptr noundef nonnull byval({ double, double }) align 8 [[BYVAL_TEMP]]) #[[ATTR4]]
 // CHECK-SPIR:    store double [[MUL_RL:%.*]], ptr [[AGG_RESULT]], align 8
 // CHECK-SPIR:    store double [[MUL_IR:%.*]], ptr [[AGG_RESULT_IMAGP:%.*]], align 8
 //
 // CHECK-MINGW32-LABEL: define dso_local void @test_cargl(
-// CHECK-MINGW32-SAME: ptr dead_on_unwind noalias writable writeonly sret({ x86_fp80, x86_fp80 }) align 16 captures(none) initializes((0, 10), (16, 26)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) [[CLD:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-MINGW32-SAME: ptr dead_on_unwind noalias writable writeonly sret({ x86_fp80, x86_fp80 }) align 16 captures(none) initializes((0, 10), (16, 26)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[CLD:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-MINGW32:    [[CLD_REAL:%.*]] = load x86_fp80, ptr [[CLD]], align 16
 // CHECK-MINGW32:    [[CLD_IMAG:%.*]] = load x86_fp80, ptr [[CLD_IMAGP:%.*]], align 16
 // CHECK-MINGW32:    store x86_fp80 [[CLD_REAL]], ptr [[BYVAL_TEMP:%.*]], align 16
 // CHECK-MINGW32:    store x86_fp80 [[CLD_IMAG]], ptr [[BYVAL_TEMP_IMAGP:%.*]], align 16
-// CHECK-MINGW32:    call void @cargl(ptr dead_on_unwind nonnull writable sret(x86_fp80) align 16 [[TMP:%.*]], ptr noundef nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
-// CHECK-MINGW32:    [[TMP0:%.*]] = load x86_fp80, ptr [[TMP]], align 16, !tbaa [[TBAA3]]
+// CHECK-MINGW32:    call void @cargl(ptr dead_on_unwind nonnull writable sret(x86_fp80) align 16 [[TMP:%.*]], ptr dead_on_return noundef nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
+// CHECK-MINGW32:    [[TMP0:%.*]] = load x86_fp80, ptr [[TMP]], align 16, !tbaa [[TBAA6]]
 // CHECK-MINGW32:    [[CLD_REAL3:%.*]] = load x86_fp80, ptr [[CLD]], align 16
 // CHECK-MINGW32:    [[CLD_IMAG5:%.*]] = load x86_fp80, ptr [[CLD_IMAGP]], align 16
 // CHECK-MINGW32:    store x86_fp80 [[MUL_RL:%.*]], ptr [[AGG_RESULT]], align 16
@@ -166,33 +166,33 @@ int ilogbl(long double a);
 //
 // CHECK-PPC-LABEL: define dso_local i32 @test_ilogb(
 // CHECK-PPC-SAME: ppc_fp128 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-PPC:    [[CALL:%.*]] = tail call i32 @ilogbl(ppc_fp128 noundef [[A]]) #[[ATTR3]], !tbaa [[TBAA2]]
+// CHECK-PPC:    [[CALL:%.*]] = tail call i32 @ilogbl(ppc_fp128 noundef [[A]]) #[[ATTR4]], !tbaa [[TBAA2]]
 //
 // CHECK-ARM-LABEL: define dso_local i32 @test_ilogb(
 // CHECK-ARM-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-ARM:    [[CALL:%.*]] = tail call i32 @ilogbl(double noundef [[A]]) #[[ATTR2]], !tbaa [[TBAA3]]
+// CHECK-ARM:    [[CALL:%.*]] = tail call i32 @ilogbl(double noundef [[A]]) #[[ATTR3]], !tbaa [[TBAA3]]
 //
 // CHECK-ARM-HF-LABEL: define dso_local i32 @test_ilogb(
 // CHECK-ARM-HF-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-ARM-HF:    [[CALL:%.*]] = tail call i32 @ilogbl(double noundef [[A]]) #[[ATTR2]], !tbaa [[TBAA3]]
+// CHECK-ARM-HF:    [[CALL:%.*]] = tail call i32 @ilogbl(double noundef [[A]]) #[[ATTR3]], !tbaa [[TBAA3]]
 //
 // CHECK-THUMB-LABEL: define i32 @test_ilogb(
 // CHECK-THUMB-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-THUMB:    [[CALL:%.*]] = tail call i32 @ilogbl(double noundef [[A]]) #[[ATTR2]], !tbaa [[TBAA3]]
+// CHECK-THUMB:    [[CALL:%.*]] = tail call i32 @ilogbl(double noundef [[A]]) #[[ATTR3]], !tbaa [[TBAA3]]
 //
 // CHECK-AARCH-LABEL: define dso_local i32 @test_ilogb(
 // CHECK-AARCH-SAME: fp128 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-AARCH:    [[CALL:%.*]] = tail call i32 @ilogbl(fp128 noundef [[A]]) #[[ATTR2]], !tbaa [[TBAA2]]
+// CHECK-AARCH:    [[CALL:%.*]] = tail call i32 @ilogbl(fp128 noundef [[A]]) #[[ATTR3]], !tbaa [[TBAA2]]
 //
 // CHECK-SPIR-LABEL: define dso_local spir_func i32 @test_ilogb(
 // CHECK-SPIR-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-SPIR:    [[CALL:%.*]] = tail call spir_func i32 @ilogbl(double noundef [[A]]) #[[ATTR3]], !tbaa [[TBAA2]]
+// CHECK-SPIR:    [[CALL:%.*]] = tail call spir_func i32 @ilogbl(double noundef [[A]]) #[[ATTR4]], !tbaa [[TBAA2]]
 //
 // CHECK-MINGW32-LABEL: define dso_local i32 @test_ilogb(
-// CHECK-MINGW32-SAME: ptr noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-MINGW32:    [[A:%.*]] = load x86_fp80, ptr [[TMP0]], align 16, !tbaa [[TBAA3]]
-// CHECK-MINGW32:    store x86_fp80 [[A]], ptr [[BYVAL_TEMP:%.*]], align 16, !tbaa [[TBAA3]]
-// CHECK-MINGW32:    [[CALL:%.*]] = call i32 @ilogbl(ptr noundef nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
+// CHECK-MINGW32-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-MINGW32:    [[A:%.*]] = load x86_fp80, ptr [[TMP0]], align 16, !tbaa [[TBAA6]]
+// CHECK-MINGW32:    store x86_fp80 [[A]], ptr [[BYVAL_TEMP:%.*]], align 16, !tbaa [[TBAA6]]
+// CHECK-MINGW32:    [[CALL:%.*]] = call i32 @ilogbl(ptr dead_on_return noundef nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
 //
 int test_ilogb(long double a) {
    return ilogbl(a);
@@ -243,8 +243,8 @@ int test_ilogb(long double a) {
 // CHECK-SPIR: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK-SPIR: [[META5]] = !{!"Simple C/C++ TBAA"}
 //.
-// CHECK-MINGW32: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
-// CHECK-MINGW32: [[META4]] = !{!"long double", [[META5:![0-9]+]], i64 0}
-// CHECK-MINGW32: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
-// CHECK-MINGW32: [[META6]] = !{!"Simple C/C++ TBAA"}
+// CHECK-MINGW32: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK-MINGW32: [[META7]] = !{!"long double", [[META8:![0-9]+]], i64 0}
+// CHECK-MINGW32: [[META8]] = !{!"omnipotent char", [[META9:![0-9]+]], i64 0}
+// CHECK-MINGW32: [[META9]] = !{!"Simple C/C++ TBAA"}
 //.
