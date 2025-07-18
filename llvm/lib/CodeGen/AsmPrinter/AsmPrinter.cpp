@@ -1713,8 +1713,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
     OutStreamer->emitInt64(
         static_cast<uint64_t>(FunctionInfo::FunctionKind::NOT_INDIRECT_TARGET));
   } else {
-    const auto *TypeId = extractNumericCGTypeId(F);
-    if (TypeId) {
+    if (const auto *TypeId = extractNumericCGTypeId(F)) {
       OutStreamer->emitInt64(static_cast<uint64_t>(
           FunctionInfo::FunctionKind::INDIRECT_TARGET_KNOWN_TID));
       OutStreamer->emitInt64(TypeId->getZExtValue());
@@ -1727,11 +1726,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // Emit callsite labels, where each element is a pair of type id and
   // indirect callsite pc.
   const auto &CallSiteLabels = FuncInfo.CallSiteLabels;
-
-  // Emit the count of pairs.
   OutStreamer->emitInt64(CallSiteLabels.size());
-
-  // Emit the type id and call site label pairs.
   for (const auto &[TypeId, Label] : CallSiteLabels) {
     OutStreamer->emitInt64(TypeId);
     OutStreamer->emitSymbolValue(Label, TM.getProgramPointerSize());
@@ -1881,14 +1876,9 @@ void AsmPrinter::emitIndirectCalleeLabels(
     return;
 
   for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
-    // Emit label.
     MCSymbol *S = MF->getContext().createTempSymbol();
     OutStreamer->emitLabel(S);
-
-    // Get numeric callee_type id value.
     uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
-
-    // Add to function's callsite labels.
     FuncInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
   }
 }
