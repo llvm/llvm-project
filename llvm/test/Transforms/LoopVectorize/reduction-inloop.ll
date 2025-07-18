@@ -627,7 +627,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret float %result.0.lcssa
 }
 
-; We can create an in-loop reduction for sub-reductions by negating the input.
+; We can create a sub reduction, but not one in-loop
 define i32 @reduction_sub_lhs(ptr noalias nocapture %A) {
 ; CHECK-LABEL: @reduction_sub_lhs(
 ; CHECK-NEXT:  entry:

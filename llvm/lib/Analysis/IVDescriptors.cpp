@@ -364,10 +364,10 @@ bool RecurrenceDescriptor::AddReductionVar(
     if (Cur != Phi && IsAPhi && Cur->getParent() == Phi->getParent())
       return false;
 
-    // Reductions of instructions such as Div is only possible if the
+    // Reductions of instructions such as Div, and Sub is only possible if the
     // LHS is the reduction variable.
-    if ((Kind != RecurKind::Sub && !Cur->isCommutative()) && !IsAPhi &&
-        !isa<SelectInst>(Cur) && !isa<ICmpInst>(Cur) && !isa<FCmpInst>(Cur) &&
+    if (!Cur->isCommutative() && !IsAPhi && !isa<SelectInst>(Cur) &&
+        !isa<ICmpInst>(Cur) && !isa<FCmpInst>(Cur) &&
         !VisitedInsts.count(dyn_cast<Instruction>(Cur->getOperand(0))))
       return false;
 
@@ -375,13 +375,6 @@ bool RecurrenceDescriptor::AddReductionVar(
     // the starting value (the Phi or an AND instruction if the Phi has been
     // type-promoted).
     if (Cur != Start) {
-      // Normally the recur kind is expected to stay the same across all
-      // reduction instructions. Add and sub can appear in chained reductions so
-      // accept a sub if the recur kind is add, and vice versa.
-      if (Kind == RecurKind::Add && Cur->getOpcode() == Instruction::Sub)
-        Kind = RecurKind::Sub;
-      else if (Kind == RecurKind::Sub && Cur->getOpcode() == Instruction::Add)
-        Kind = RecurKind::Add;
       ReduxDesc =
           isRecurrenceInstr(TheLoop, Phi, Cur, Kind, ReduxDesc, FuncFMF, SE);
       ExactFPMathInst = ExactFPMathInst == nullptr
@@ -907,7 +900,7 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
   case Instruction::Sub:
     return InstDesc(Kind == RecurKind::Sub, I);
   case Instruction::Add:
-    return InstDesc(Kind == RecurKind::Add, I);
+    return InstDesc(Kind == RecurKind::Add || Kind == RecurKind::Sub, I);
   case Instruction::Mul:
     return InstDesc(Kind == RecurKind::Mul, I);
   case Instruction::And:
@@ -1008,14 +1001,14 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   FMF.setNoSignedZeros(
       F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool());
 
-  if (AddReductionVar(Phi, RecurKind::Sub, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
-    LLVM_DEBUG(dbgs() << "Found a SUB reduction PHI." << *Phi << "\n");
-    return true;
-  }
   if (AddReductionVar(Phi, RecurKind::Add, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found an ADD reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::Sub, TheLoop, FMF, RedDes, DB, AC, DT,
+                      SE)) {
+    LLVM_DEBUG(dbgs() << "Found a SUB reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::Mul, TheLoop, FMF, RedDes, DB, AC, DT,
