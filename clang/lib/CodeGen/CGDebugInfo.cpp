@@ -4052,7 +4052,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
     return CreateType(cast<HLSLAttributedResourceType>(Ty), Unit);
   case Type::HLSLInlineSpirv:
     return CreateType(cast<HLSLInlineSpirvType>(Ty), Unit);
-
+  case Type::PredefinedSugar:
+    return getOrCreateType(cast<PredefinedSugarType>(Ty)->desugar(), Unit);
   case Type::CountAttributed:
   case Type::Auto:
   case Type::Attributed:
