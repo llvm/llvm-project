@@ -828,9 +828,11 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
          "Invalid array element type");
   SPIRVType *SpvTypeInt32 = getOrCreateSPIRVIntegerType(32, MIRBuilder);
   SPIRVType *ArrayType = nullptr;
-  if (NumElems != 0) {
-    Register NumElementsVReg =
-        buildConstantInt(NumElems, MIRBuilder, SpvTypeInt32, EmitIR);
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (NumElems != 0 || !ST.isShader()) {
+    Register NumElementsVReg = buildConstantInt(
+        NumElems ? NumElems : 1, MIRBuilder, SpvTypeInt32, EmitIR);
     ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
       return MIRBuilder.buildInstr(SPIRV::OpTypeArray)
           .addDef(createTypeVReg(MIRBuilder))
