@@ -253,19 +253,19 @@ public:
   // into the current lattice element for all of our results.`results` stores
   // the lattices corresponding to the results of op, We use a loop to traverse
   // them.
-  for (int i = 0, e = results.size(); i < e; ++i) {
+  for (auto result : results) {
 
     // `isChanged` records whether the result has been changed.
     ChangeResult isChanged = ChangeResult::NoChange;
 
     // Op's metadata is joined result's lattice.
-    isChanged |= results[i]->join(latticeValue);
+    isChanged |= result->join(latticeValue);
 
     // All lattice of operands of op are joined to the lattice of result.
-    for (int j = 0, m = operands.size(); j < m; ++j) {
-      isChanged |= results[i]->join(*operands[j]);
-    }
-    propagateIfChanged(results[i], isChanged);
+    for (auto operand : operands)
+      isChanged |= result->join(*operand);
+
+    propagateIfChanged(result, isChanged);
   }
   return success();
   }
