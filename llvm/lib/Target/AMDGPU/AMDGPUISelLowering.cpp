@@ -731,18 +731,6 @@ static bool selectSupportsSourceMods(const SDNode *N) {
   return N->getValueType(0) == MVT::f32;
 }
 
-LLVM_READONLY
-static bool buildVectorSupportsSourceMods(const SDNode *N) {
-  if (N->getValueType(0) != MVT::v2f32)
-    return true;
-
-  if (N->getOperand(0)->getOpcode() != ISD::SELECT ||
-      N->getOperand(1)->getOpcode() != ISD::SELECT)
-    return true;
-
-  return false;
-}
-
 // Most FP instructions support source modifiers, but this could be refined
 // slightly.
 LLVM_READONLY
@@ -776,8 +764,6 @@ static bool hasSourceMods(const SDNode *N) {
       return true;
     }
   }
-  case ISD::BUILD_VECTOR:
-    return buildVectorSupportsSourceMods(N);
   case ISD::SELECT:
     return selectSupportsSourceMods(N);
   default:
@@ -4083,6 +4069,59 @@ SDValue AMDGPUTargetLowering::splitBinaryBitConstantOpImpl(
   return DAG.getNode(ISD::BITCAST, SL, MVT::i64, Vec);
 }
 
+// Part of the shift combines is to optimise for the case where its possible
+// to reduce e.g shl64 to shl32 if shift range is [63-32]. This
+// transforms: DST = shl i64 X, Y to [0, srl i32 X, (Y & 31) ]. The
+// '&' is then elided by ISel. The vector code for this was being
+// completely scalarised by the vector legalizer, but when v2i32 is
+// legal the vector legaliser only partially scalarises the
+// vector operations and the and is not elided. This function
+// scalarises the AND for this optimisation case.
+static SDValue getShiftForReduction(unsigned ShiftOpc, SDValue LHS, SDValue RHS,
+                                    SelectionDAG &DAG) {
+  assert(
+      (ShiftOpc == ISD::SRA || ShiftOpc == ISD::SRL || ShiftOpc == ISD::SHL) &&
+      "Expected shift Opcode.");
+
+  SDLoc SL = SDLoc(RHS);
+  if (RHS->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  SDValue VAND = RHS.getOperand(0);
+  if (VAND->getOpcode() != ISD::AND)
+    return SDValue();
+
+  ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1));
+  if (!CRRHS)
+    return SDValue();
+
+  SDValue LHSAND = VAND.getOperand(0);
+  SDValue RHSAND = VAND.getOperand(1);
+  if (RHSAND->getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  ConstantSDNode *CANDL = dyn_cast<ConstantSDNode>(RHSAND->getOperand(0));
+  ConstantSDNode *CANDR = dyn_cast<ConstantSDNode>(RHSAND->getOperand(1));
+  if (!CANDL || !CANDR || RHSAND->getConstantOperandVal(0) != 0x1f ||
+      RHSAND->getConstantOperandVal(1) != 0x1f)
+    return SDValue();
+  // Get the non-const AND operands and produce scalar AND
+  const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+  const SDValue One = DAG.getConstant(1, SL, MVT::i32);
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, Zero);
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
+  SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
+  SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
+  SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+  uint64_t AndIndex = RHS->getConstantOperandVal(1);
+  if (AndIndex == 0 || AndIndex == 1)
+    return DAG.getNode(ShiftOpc, SL, MVT::i32, Trunc,
+                       AndIndex == 0 ? LoAnd : HiAnd, RHS->getFlags());
+
+  return SDValue();
+}
+
 SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
@@ -4092,49 +4131,8 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   SDLoc SL(N);
   SelectionDAG &DAG = DCI.DAG;
 
-  if (RHS->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-    SDValue VAND = RHS.getOperand(0);
-    if (ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1))) {
-      uint64_t AndIndex = RHS->getConstantOperandVal(1);
-      if (VAND->getOpcode() == ISD::AND && CRRHS) {
-        SDValue LHSAND = VAND.getOperand(0);
-        SDValue RHSAND = VAND.getOperand(1);
-        if (RHSAND->getOpcode() == ISD::BUILD_VECTOR) {
-          // Part of shlcombine is to optimise for the case where its possible
-          // to reduce shl64 to shl32 if shift range is [63-32]. This
-          // transforms: DST = shl i64 X, Y to [0, shl i32 X, (Y & 31) ]. The
-          // '&' is then elided by ISel. The vector code for this was being
-          // completely scalarised by the vector legalizer, but now v2i32 is
-          // made legal the vector legaliser only partially scalarises the
-          // vector operations and the and was not elided. This check enables us
-          // to locate and scalarise the v2i32 and and re-enable ISel to elide
-          // the and instruction.
-          ConstantSDNode *CANDL =
-              dyn_cast<ConstantSDNode>(RHSAND->getOperand(0));
-          ConstantSDNode *CANDR =
-              dyn_cast<ConstantSDNode>(RHSAND->getOperand(1));
-          if (CANDL && CANDR && RHSAND->getConstantOperandVal(0) == 0x1f &&
-              RHSAND->getConstantOperandVal(1) == 0x1f) {
-            // Get the non-const AND operands and produce scalar AND
-            const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-            const SDValue One = DAG.getConstant(1, SL, MVT::i32);
-            SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32,
-                                     LHSAND, Zero);
-            SDValue Hi =
-                DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
-            SDValue LoAnd =
-                DAG.getNode(ISD::AND, SL, MVT::i32, Lo, RHSAND->getOperand(0));
-            SDValue HiAnd =
-                DAG.getNode(ISD::AND, SL, MVT::i32, Hi, RHSAND->getOperand(0));
-            SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
-            if (AndIndex == 0 || AndIndex == 1)
-              return DAG.getNode(ISD::SHL, SL, MVT::i32, Trunc,
-                                 AndIndex == 0 ? LoAnd : HiAnd, N->getFlags());
-          }
-        }
-      }
-    }
-  }
+  if (SDValue SS = getShiftForReduction(ISD::SHL, LHS, RHS, DAG))
+    return SS;
 
   unsigned RHSVal;
   if (CRHS) {
@@ -4236,6 +4234,9 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
 
+  if (SDValue SS = getShiftForReduction(ISD::SRA, LHS, RHS, DAG))
+    return SS;
+
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
@@ -4266,12 +4267,12 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
              (ElementType.getSizeInBits() - 1)) {
     ShiftAmt = ShiftFullAmt;
   } else {
-    SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
+    SDValue TruncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
     const SDValue ShiftMask =
         DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
     // This AND instruction will clamp out of bounds shift values.
     // It will also be removed during later instruction selection.
-    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
+    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, TruncShiftAmt, ShiftMask);
   }
 
   EVT ConcatType;
@@ -4338,48 +4339,8 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
   SDLoc SL(N);
   unsigned RHSVal;
 
-  if (RHS->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-    SDValue VAND = RHS.getOperand(0);
-    if (ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1))) {
-      uint64_t AndIndex = RHS->getConstantOperandVal(1);
-      if (VAND->getOpcode() == ISD::AND && CRRHS) {
-        SDValue LHSAND = VAND.getOperand(0);
-        SDValue RHSAND = VAND.getOperand(1);
-        if (RHSAND->getOpcode() == ISD::BUILD_VECTOR) {
-          // Part of srlcombine is to optimise for the case where its possible
-          // to reduce shl64 to shl32 if shift range is [63-32]. This
-          // transforms: DST = shl i64 X, Y to [0, srl i32 X, (Y & 31) ]. The
-          // '&' is then elided by ISel. The vector code for this was being
-          // completely scalarised by the vector legalizer, but now v2i32 is
-          // made legal the vector legaliser only partially scalarises the
-          // vector operations and the and was not elided. This check enables us
-          // to locate and scalarise the v2i32 and and re-enable ISel to elide
-          // the and instruction.
-          ConstantSDNode *CANDL =
-              dyn_cast<ConstantSDNode>(RHSAND->getOperand(0));
-          ConstantSDNode *CANDR =
-              dyn_cast<ConstantSDNode>(RHSAND->getOperand(1));
-          if (CANDL && CANDR && RHSAND->getConstantOperandVal(0) == 0x1f &&
-              RHSAND->getConstantOperandVal(1) == 0x1f) {
-            // Get the non-const AND operands and produce scalar AND
-            const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-            const SDValue One = DAG.getConstant(1, SL, MVT::i32);
-            SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32,
-                                     LHSAND, Zero);
-            SDValue Hi =
-                DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
-            SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
-            SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
-            SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
-            SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
-            if (AndIndex == 0 || AndIndex == 1)
-              return DAG.getNode(ISD::SRL, SL, MVT::i32, Trunc,
-                                 AndIndex == 0 ? LoAnd : HiAnd, N->getFlags());
-          }
-        }
-      }
-    }
-  }
+  if (SDValue SS = getShiftForReduction(ISD::SRL, LHS, RHS, DAG))
+    return SS;
 
   if (CRHS) {
     RHSVal = CRHS->getZExtValue();
@@ -4894,8 +4855,8 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
     if (!AMDGPUTargetLowering::allUsesHaveSourceMods(N.getNode()))
       return SDValue();
 
-    return distributeOpThroughSelect(DCI, LHS.getOpcode(), SDLoc(N), Cond, LHS,
-                                     RHS);
+    return distributeOpThroughSelect(DCI, LHS.getOpcode(),
+                                     SDLoc(N), Cond, LHS, RHS);
   }
 
   bool Inv = false;
