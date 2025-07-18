@@ -1304,17 +1304,8 @@ struct FoldReshapeWithProducerPadOpByCollapsing
     }
 
     SmallVector<int64_t> staticCollapsedShape;
-    for (OpFoldResult dim : collapsedShape) {
-      if (auto attr = dyn_cast<Attribute>(dim)) {
-        if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
-          staticCollapsedShape.push_back(intAttr.getInt());
-        } else {
-          staticCollapsedShape.push_back(ShapedType::kDynamic);
-        }
-      } else {
-        staticCollapsedShape.push_back(ShapedType::kDynamic);
-      }
-    }
+    std::tie(staticCollapsedShape, std::ignore) =
+        decomposeMixedValues(collapsedShape);
 
     auto newCollapseType = RankedTensorType::get(
         staticCollapsedShape, padOp.getSource().getType().getElementType());
