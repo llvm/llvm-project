@@ -281,14 +281,18 @@ else()
   function (add_win_flangrt_runtime libtype suffix msvc_lib)
     set(name "flang_rt.runtime.${suffix}")
 
-    add_flangrt_library(${name}.intrinsics OBJECT
+    add_flangrt_library(${name}.intrinsics.obj OBJECT
       ${intrinsics_sources}
     )
+    add_custom_target(${name}.intrinsics
+      COMMENT "Intrinsic module dependency barrier"
+    )
+    add_dependencies(${name}.intrinsics ${name}.intrinsics.obj)
 
     add_flangrt_library(${name} ${libtype}
-        ${sources} $<TARGET_OBJECTS:${name}.intrinsics>
+        ${sources} $<TARGET_OBJECTS:${name}.intrinsics.obj>
         ${ARGN}
-        LINK_LIBRARIES ${name}.intrinsics ${Backtrace_LIBRARY}
+        LINK_LIBRARIES ${name}.intrinsics.obj ${Backtrace_LIBRARY}
         ADDITIONAL_HEADERS ${public_headers} ${private_headers}
       )
 
@@ -311,8 +315,9 @@ else()
     endif ()
 
     get_target_property(compile_target ${name}.compile ALIASED_TARGET)
-    flang_module_target(${name}.intrinsics ${is_public})
+    flang_module_target(${name}.intrinsics.obj ${is_public})
     flang_module_target(${compile_target} ${is_public})
+    add_dependencies(${compile_target} ${name}.intrinsics)
     add_dependencies(flang-rt-mod ${name}.intrinsics ${compile_target})
 
     enable_cuda_compilation(${name} "${supported_sources}")
