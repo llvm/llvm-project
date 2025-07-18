@@ -931,7 +931,7 @@ public:
   mlir::Value emitComplexExpr(const Expr *e);
 
   mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                       bool isInc, bool isPre);
+                                       cir::UnaryOpKind op, bool isPre);
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
 
