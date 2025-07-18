@@ -30,6 +30,16 @@ struct ConvertMemRefToEmitCPass
     : public impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass> {
   void runOnOperation() override {
     TypeConverter converter;
+    mlir::ModuleOp module = getOperation();
+    module.walk([&](mlir::Operation *op) {
+      if (llvm::isa<mlir::memref::AllocOp, mlir::memref::CopyOp>(op)) {
+        OpBuilder builder(module.getBody(), module.getBody()->begin());
+        builder.create<emitc::IncludeOp>(module.getLoc(),
+                                         builder.getStringAttr("stdlib.h"));
+        return mlir::WalkResult::interrupt();
+      }
+      return mlir::WalkResult::advance();
+    });
 
     // Fallback for other types.
     converter.addConversion([](Type type) -> std::optional<Type> {

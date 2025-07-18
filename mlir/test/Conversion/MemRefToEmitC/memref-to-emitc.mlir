@@ -10,8 +10,12 @@ func.func @alloca() {
 
 // CHECK-LABEL: alloc()
 func.func @alloc() {
-  // CHECK-NEXT:  %0 = "emitc.constant"() <{value = 3996 : index}> : () -> index
-  // CHECK-NEXT:  %1 = emitc.call_opaque "malloc"(%0) : (index) -> !emitc.ptr<i32>
+  // CHECK-NEXT:  %0 = emitc.literal "int32_t" : !emitc.opaque<"type">
+  // CHECK-NEXT:  %1 = emitc.call_opaque "sizeof"(%0) : (!emitc.opaque<"type">) -> !emitc.size_t
+  // CHECK-NEXT:  %2 = "emitc.constant"() <{value = 32 : i32}> : () -> i32
+  // CHECK-NEXT:  %3 = emitc.mul %1, %2 : (!emitc.size_t, i32) -> !emitc.size_t
+  // CHECK-NEXT:  %4 = emitc.call_opaque "malloc"(%3) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
+  // CHECK-NEXT:  %5 = emitc.cast %4 : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
   %alloc = memref.alloc() : memref<999xi32>
   return
 }
