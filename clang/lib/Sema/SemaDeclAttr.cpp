@@ -3254,9 +3254,8 @@ static void handleCodeSegAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
-  enum FirstParam { Unsupported, Duplicate, Unknown };
-  enum SecondParam { None, CPU, Tune };
-  enum ThirdParam { Target, TargetClones };
+  using namespace DiagAttrParams;
+
   if (AttrStr.contains("fpmath="))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Unsupported << None << "fpmath=" << Target;
@@ -3332,21 +3331,21 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 }
 
 static void handleTargetVersionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  StringRef Str;
+  StringRef Param;
   SourceLocation Loc;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &Loc))
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Param, &Loc))
     return;
 
   if (S.Context.getTargetInfo().getTriple().isAArch64()) {
-    if (S.ARM().checkTargetVersionAttr(Str, Loc))
+    if (S.ARM().checkTargetVersionAttr(Param, Loc))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isRISCV()) {
-    if (S.RISCV().checkTargetVersionAttr(Str, Loc))
+    if (S.RISCV().checkTargetVersionAttr(Param, Loc))
       return;
   }
 
   TargetVersionAttr *NewAttr =
-      ::new (S.Context) TargetVersionAttr(S.Context, AL, Str);
+      ::new (S.Context) TargetVersionAttr(S.Context, AL, Param);
   D->addAttr(NewAttr);
 }
 
@@ -3383,34 +3382,34 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  SmallVector<StringRef, 2> Strings;
+  SmallVector<StringRef, 2> Params;
   SmallVector<SourceLocation, 2> Locations;
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
-    StringRef Str;
+    StringRef Param;
     SourceLocation Loc;
-    if (!S.checkStringLiteralArgumentAttr(AL, I, Str, &Loc))
+    if (!S.checkStringLiteralArgumentAttr(AL, I, Param, &Loc))
       return;
-    Strings.push_back(Str);
+    Params.push_back(Param);
     Locations.push_back(Loc);
   }
 
-  SmallVector<SmallString<64>, 2> Buffer;
+  SmallVector<SmallString<64>, 2> NewParams;
   if (S.Context.getTargetInfo().getTriple().isAArch64()) {
-    if (S.ARM().checkTargetClonesAttr(Strings, Locations, Buffer))
+    if (S.ARM().checkTargetClonesAttr(Params, Locations, NewParams))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isRISCV()) {
-    if (S.RISCV().checkTargetClonesAttr(Strings, Locations, Buffer))
+    if (S.RISCV().checkTargetClonesAttr(Params, Locations, NewParams))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isX86()) {
-    if (S.X86().checkTargetClonesAttr(Strings, Locations, Buffer))
+    if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams))
       return;
   }
-  Strings.clear();
-  for (auto &SmallStr : Buffer)
-    Strings.push_back(SmallStr.str());
+  Params.clear();
+  for (auto &SmallStr : NewParams)
+    Params.push_back(SmallStr.str());
 
   TargetClonesAttr *NewAttr = ::new (S.Context)
-      TargetClonesAttr(S.Context, AL, Strings.data(), Strings.size());
+      TargetClonesAttr(S.Context, AL, Params.data(), Params.size());
   D->addAttr(NewAttr);
 }
 

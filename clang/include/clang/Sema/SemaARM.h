@@ -92,10 +92,10 @@ public:
   /// false otherwise.
   bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
 
-  bool checkTargetVersionAttr(StringRef Str, SourceLocation Loc);
-  bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Strs,
+  bool checkTargetVersionAttr(const StringRef Str, const SourceLocation Loc);
+  bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Params,
                              SmallVectorImpl<SourceLocation> &Locs,
-                             SmallVectorImpl<SmallString<64>> &Buffer);
+                             SmallVectorImpl<SmallString<64>> &NewParams);
 };
 
 SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD);

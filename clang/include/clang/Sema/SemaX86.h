@@ -38,9 +38,9 @@ public:
   void handleAnyInterruptAttr(Decl *D, const ParsedAttr &AL);
   void handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL);
 
-  bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Strs,
+  bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Params,
                              SmallVectorImpl<SourceLocation> &Locs,
-                             SmallVectorImpl<SmallString<64>> &Buffer);
+                             SmallVectorImpl<SmallString<64>> &NewParams);
 };
 } // namespace clang
 

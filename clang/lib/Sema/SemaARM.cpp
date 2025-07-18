@@ -1535,13 +1535,12 @@ bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
          IsLaxCompatible(SecondType, FirstType);
 }
 
-enum FirstParam { Unsupported, Duplicate, Unknown };
-enum SecondParam { None, CPU, Tune };
-enum ThirdParam { Target, TargetClones, TargetVersion };
+bool SemaARM::checkTargetVersionAttr(const StringRef Param,
+                                     const SourceLocation Loc) {
+  using namespace DiagAttrParams;
 
-bool SemaARM::checkTargetVersionAttr(StringRef Str, SourceLocation Loc) {
   llvm::SmallVector<StringRef, 8> Features;
-  Str.split(Features, '+');
+  Param.split(Features, '+');
   for (StringRef Feat : Features) {
     Feat = Feat.trim();
     if (Feat == "default")
@@ -1553,30 +1552,32 @@ bool SemaARM::checkTargetVersionAttr(StringRef Str, SourceLocation Loc) {
   return false;
 }
 
-bool SemaARM::checkTargetClonesAttr(SmallVectorImpl<StringRef> &Strs,
-                                    SmallVectorImpl<SourceLocation> &Locs,
-                                    SmallVectorImpl<SmallString<64>> &Buffer) {
+bool SemaARM::checkTargetClonesAttr(
+    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams) {
+  using namespace DiagAttrParams;
+
   if (!getASTContext().getTargetInfo().hasFeature("fmv"))
     return true;
 
-  assert(Strs.size() == Locs.size() &&
-         "Mismatch between number of strings and locations");
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
 
   bool HasDefault = false;
   bool HasNonDefault = false;
-  for (unsigned I = 0; I < Strs.size(); ++I) {
-    StringRef Str = Strs[I].trim();
-    SourceLocation Loc = Locs[I];
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
 
-    if (Str.empty())
+    if (Param.empty())
       return Diag(Loc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "" << TargetClones;
 
-    if (Str == "default") {
+    if (Param == "default") {
       if (HasDefault)
         Diag(Loc, diag::warn_target_clone_duplicate_options);
       else {
-        Buffer.push_back(Str);
+        NewParams.push_back(Param);
         HasDefault = true;
       }
       continue;
@@ -1585,7 +1586,7 @@ bool SemaARM::checkTargetClonesAttr(SmallVectorImpl<StringRef> &Strs,
     bool HasCodeGenImpact = false;
     llvm::SmallVector<StringRef, 8> Features;
     llvm::SmallVector<StringRef, 8> ValidFeatures;
-    Str.split(Features, '+');
+    Param.split(Features, '+');
     for (StringRef Feat : Features) {
       Feat = Feat.trim();
       if (!getASTContext().getTargetInfo().validateCpuSupports(Feat)) {
@@ -1597,24 +1598,27 @@ bool SemaARM::checkTargetClonesAttr(SmallVectorImpl<StringRef> &Strs,
         HasCodeGenImpact = true;
       ValidFeatures.push_back(Feat);
     }
-    // Canonize TargetClones Attributes
-    SmallString<64> NewStr;
-    llvm::sort(ValidFeatures);
-    for (StringRef Feat : ValidFeatures) {
-      if (!NewStr.empty())
-        NewStr.append("+");
-      NewStr.append(Feat);
-    }
-    if (llvm::is_contained(Buffer, NewStr))
-      Diag(Loc, diag::warn_target_clone_duplicate_options);
-    else if (!HasCodeGenImpact)
-      // Ignore features in target_clone attribute that don't impact
-      // code generation
+
+    // Ignore features that don't impact code generation.
+    if (!HasCodeGenImpact) {
       Diag(Loc, diag::warn_target_clone_no_impact_options);
-    else if (!NewStr.empty()) {
-      Buffer.push_back(NewStr);
-      HasNonDefault = true;
+      continue;
     }
+
+    if (ValidFeatures.empty())
+      continue;
+
+    // Canonicalize attribute parameter.
+    llvm::sort(ValidFeatures);
+    SmallString<64> NewParam(llvm::join(ValidFeatures, "+"));
+    if (llvm::is_contained(NewParams, NewParam)) {
+      Diag(Loc, diag::warn_target_clone_duplicate_options);
+      continue;
+    }
+
+    // Valid non-default argument.
+    NewParams.push_back(NewParam);
+    HasNonDefault = true;
   }
   if (!HasNonDefault)
     return true;

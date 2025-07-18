@@ -1635,13 +1635,12 @@ bool SemaRISCV::isValidFMVExtension(StringRef Ext) {
   return -1 != RISCVISAInfo::getRISCVFeaturesBitsInfo(Ext).second;
 }
 
-enum FirstParam { Unsupported, Duplicate, Unknown };
-enum SecondParam { None, CPU, Tune };
-enum ThirdParam { Target, TargetClones, TargetVersion };
+bool SemaRISCV::checkTargetVersionAttr(const StringRef Param,
+                                       const SourceLocation Loc) {
+  using namespace DiagAttrParams;
 
-bool SemaRISCV::checkTargetVersionAttr(StringRef Str, SourceLocation Loc) {
   llvm::SmallVector<StringRef, 8> AttrStrs;
-  Str.split(AttrStrs, ';');
+  Param.split(AttrStrs, ';');
 
   bool HasArch = false;
   bool HasPriority = false;
@@ -1681,24 +1680,26 @@ bool SemaRISCV::checkTargetVersionAttr(StringRef Str, SourceLocation Loc) {
   if (((HasPriority || HasArch) && HasDefault) || DuplicateAttr ||
       (HasPriority && !HasArch))
     return Diag(Loc, diag::warn_unsupported_target_attribute)
-           << Unsupported << None << Str << TargetVersion;
+           << Unsupported << None << Param << TargetVersion;
 
   return false;
 }
 
 bool SemaRISCV::checkTargetClonesAttr(
-    SmallVectorImpl<StringRef> &Strs, SmallVectorImpl<SourceLocation> &Locs,
-    SmallVectorImpl<SmallString<64>> &Buffer) {
-  assert(Strs.size() == Locs.size() &&
-         "Mismatch between number of strings and locations");
+    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams) {
+  using namespace DiagAttrParams;
+
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
 
   bool HasDefault = false;
-  for (unsigned I = 0; I < Strs.size(); ++I) {
-    StringRef Str = Strs[I].trim();
-    SourceLocation Loc = Locs[I];
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
 
     llvm::SmallVector<StringRef, 8> AttrStrs;
-    Str.split(AttrStrs, ";");
+    Param.split(AttrStrs, ';');
 
     bool IsPriority = false;
     bool IsDefault = false;
@@ -1714,7 +1715,7 @@ bool SemaRISCV::checkTargetClonesAttr(
               return !isValidFMVExtension(Ext);
             }))
           return Diag(Loc, diag::warn_unsupported_target_attribute)
-                 << Unsupported << None << Str << TargetClones;
+                 << Unsupported << None << Param << TargetClones;
       } else if (AttrStr == "default") {
         IsDefault = true;
         HasDefault = true;
@@ -1723,20 +1724,20 @@ bool SemaRISCV::checkTargetClonesAttr(
         unsigned Digit;
         if (AttrStr.getAsInteger(0, Digit))
           return Diag(Loc, diag::warn_unsupported_target_attribute)
-                 << Unsupported << None << Str << TargetClones;
+                 << Unsupported << None << Param << TargetClones;
       } else {
         return Diag(Loc, diag::warn_unsupported_target_attribute)
-               << Unsupported << None << Str << TargetClones;
+               << Unsupported << None << Param << TargetClones;
       }
     }
 
     if (IsPriority && IsDefault)
       return Diag(Loc, diag::warn_unsupported_target_attribute)
-             << Unsupported << None << Str << TargetClones;
+             << Unsupported << None << Param << TargetClones;
 
-    if (llvm::is_contained(Buffer, Str))
+    if (llvm::is_contained(NewParams, Param))
       Diag(Loc, diag::warn_target_clone_duplicate_options);
-    Buffer.push_back(Str);
+    NewParams.push_back(Param);
   }
   if (!HasDefault)
     return Diag(Locs[0], diag::err_target_clone_must_have_default);

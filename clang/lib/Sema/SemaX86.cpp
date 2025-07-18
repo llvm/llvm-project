@@ -1056,35 +1056,34 @@ void SemaX86::handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL) {
                  X86ForceAlignArgPointerAttr(getASTContext(), AL));
 }
 
-enum FirstParam { Unsupported, Duplicate, Unknown };
-enum SecondParam { None, CPU, Tune };
-enum ThirdParam { Target, TargetClones, TargetVersion };
+bool SemaX86::checkTargetClonesAttr(
+    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams) {
+  using namespace DiagAttrParams;
 
-bool SemaX86::checkTargetClonesAttr(SmallVectorImpl<StringRef> &Strs,
-                                    SmallVectorImpl<SourceLocation> &Locs,
-                                    SmallVectorImpl<SmallString<64>> &Buffer) {
-  assert(Strs.size() == Locs.size() &&
-         "Mismatch between number of strings and locations");
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
 
   bool HasDefault = false;
   bool HasComma = false;
-  for (unsigned I = 0; I < Strs.size(); ++I) {
-    StringRef Str = Strs[I].trim();
-    SourceLocation Loc = Locs[I];
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
 
-    if (Str.empty() || Str.ends_with(','))
+    if (Param.empty() || Param.ends_with(','))
       return Diag(Loc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "" << TargetClones;
 
-    if (Str.contains(','))
+    if (Param.contains(','))
       HasComma = true;
 
     StringRef LHS;
-    StringRef RHS = Str;
+    StringRef RHS = Param;
     do {
       std::tie(LHS, RHS) = RHS.split(',');
       LHS = LHS.trim();
-      SourceLocation CurLoc = Loc.getLocWithOffset(LHS.data() - Str.data());
+      const SourceLocation &CurLoc =
+          Loc.getLocWithOffset(LHS.data() - Param.data());
 
       if (LHS.starts_with("arch=")) {
         if (!getASTContext().getTargetInfo().isValidCPUName(
@@ -1099,13 +1098,13 @@ bool SemaX86::checkTargetClonesAttr(SmallVectorImpl<StringRef> &Strs,
         return Diag(CurLoc, diag::warn_unsupported_target_attribute)
                << Unsupported << None << LHS << TargetClones;
 
-      if (llvm::is_contained(Buffer, LHS))
+      if (llvm::is_contained(NewParams, LHS))
         Diag(CurLoc, diag::warn_target_clone_duplicate_options);
       // Note: Add even if there are duplicates, since it changes name mangling.
-      Buffer.push_back(LHS);
+      NewParams.push_back(LHS);
     } while (!RHS.empty());
   }
-  if (HasComma && Strs.size() > 1)
+  if (HasComma && Params.size() > 1)
     Diag(Locs[0], diag::warn_target_clone_mixed_values);
 
   if (!HasDefault)

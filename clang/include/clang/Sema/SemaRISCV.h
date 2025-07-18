@@ -56,10 +56,10 @@ public:
 
   std::unique_ptr<sema::RISCVIntrinsicManager> IntrinsicManager;
 
-  bool checkTargetVersionAttr(StringRef Str, SourceLocation Loc);
-  bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Strs,
+  bool checkTargetVersionAttr(const StringRef Param, const SourceLocation Loc);
+  bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Params,
                              SmallVectorImpl<SourceLocation> &Locs,
-                             SmallVectorImpl<SmallString<64>> &Buffer);
+                             SmallVectorImpl<SmallString<64>> &NewParams);
 };
 
 std::unique_ptr<sema::RISCVIntrinsicManager>
