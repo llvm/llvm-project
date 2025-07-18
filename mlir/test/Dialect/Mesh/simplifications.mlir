@@ -165,3 +165,15 @@ func.func @all_reduce_arith_minsi_endomorphism(
   // CHECK: return %[[ALL_REDUCE_RES]]
   return %2 : tensor<5xi32>
 }
+
+// Ensure this case without endomorphism op not crash.
+// CHECK-LABEL: func.func @no_endomorphism_op
+func.func @no_endomorphism_op(%arg0: tensor<2xi64>) -> i64 {
+  %c0 = arith.constant 0 : index
+  %c1_i64 = arith.constant 1 : i64
+  // CHECK: tensor.extract
+  %extracted = tensor.extract %arg0[%c0] : tensor<2xi64>
+  // CHECK: arith.maxsi
+  %0 = arith.maxsi %extracted, %c1_i64 : i64
+  return %0 : i64
+}
