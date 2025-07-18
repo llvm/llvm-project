@@ -74,14 +74,14 @@ add_header_library(
   HDRS
     mbsnrtowcs.h
   DEPENDS
-  libc.hdr.errno_macros
-  libc.hdr.types.wchar_t
-  libc.hdr.types.size_t
-  libc.src.__support.common
-  libc.src.__support.error_or
-  libc.src.__support.macros.config
-  libc.src.__support.nacros.null_check
-  .character_converter
-  .mbstate
-  .string_converter
+    libc.hdr.errno_macros
+    libc.hdr.types.wchar_t
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.nacros.null_check
+    .character_converter
+    .mbstate
+    .string_converter
 )
