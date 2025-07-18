@@ -396,50 +396,36 @@ define i64 @freeze_array() {
   ret i64 %t1
 }
 
-define i32 @freeze_abdu(i8 %x, i8 %y) {
+define <8 x i16> @freeze_abdu(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-SD-LABEL: freeze_abdu:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    and w8, w0, #0xff
-; CHECK-SD-NEXT:    sub w8, w8, w1, uxtb
-; CHECK-SD-NEXT:    cmp w8, #0
-; CHECK-SD-NEXT:    cneg w0, w8, mi
+; CHECK-SD-NEXT:    uaba v0.8h, v0.8h, v1.8h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_abdu:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0xff
-; CHECK-GI-NEXT:    sub w8, w8, w1, uxtb
-; CHECK-GI-NEXT:    cmp w8, #0
-; CHECK-GI-NEXT:    cneg w0, w8, le
+; CHECK-GI-NEXT:    uabd v1.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
-  %a   = zext   i8 %x to i32
-  %b   = zext   i8 %y to i32
-  %d   = sub    i32 %a, %b
-  %t   = call   i32 @llvm.abs.i32(i32 %d, i1 false)
-  %f   = freeze i32 %t
-  ret  i32 %f
+  %d = call <8 x i16> @llvm.aarch64.neon.uabd.v8i16(<8 x i16> %a, <8 x i16> %b)
+  %f = freeze <8 x i16> %d
+  %r = add <8 x i16> %a, %f
+  ret <8 x i16> %r
 }
 
-define i32 @freeze_abds(i8 %x, i8 %y) {
+define <8 x i16> @freeze_abds(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-SD-LABEL: freeze_abds:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sxtb w8, w0
-; CHECK-SD-NEXT:    sub w8, w8, w1, sxtb
-; CHECK-SD-NEXT:    cmp w8, #0
-; CHECK-SD-NEXT:    cneg w0, w8, mi
+; CHECK-SD-NEXT:    saba v0.8h, v0.8h, v1.8h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_abds:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sxtb w8, w0
-; CHECK-GI-NEXT:    sub w8, w8, w1, sxtb
-; CHECK-GI-NEXT:    cmp w8, #0
-; CHECK-GI-NEXT:    cneg w0, w8, le
+; CHECK-GI-NEXT:    sabd v1.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
-  %a = sext i8 %x to i32
-  %b = sext i8 %y to i32
-  %d = sub i32 %a, %b
-  %abs = call i32 @llvm.abs.i32(i32 %d, i1 true)
-  %f = freeze i32 %abs
-  ret i32 %f
+  %d = call <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16> %a, <8 x i16> %b)
+  %f = freeze <8 x i16> %d
+  %r = add <8 x i16> %a, %f
+  ret <8 x i16> %r
 }
