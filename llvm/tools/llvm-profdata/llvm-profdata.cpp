@@ -2845,9 +2845,8 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   auto FS = vfs::getRealFileSystem();
   auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
-  if (Cutoffs.empty())
-    if (ShowDetailedSummary || ShowHotFuncList)
-      Cutoffs = ProfileSummaryBuilder::DefaultCutoffs;
+  if (Cutoffs.empty() && (ShowDetailedSummary || ShowHotFuncList))
+    Cutoffs = ProfileSummaryBuilder::DefaultCutoffs;
   InstrProfSummaryBuilder Builder(std::move(Cutoffs));
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
@@ -2859,7 +2858,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   int NumVPKind = IPVK_Last - IPVK_First + 1;
   std::vector<ValueSitesStats> VPStats(NumVPKind);
 
-  std::vector<std::pair<uint64_t, uint64_t>> NameRefAndMaxCount;
+  std::vector<std::pair<StringRef, uint64_t>> NameAndMaxCount;
 
   if (!TextFormat && OnlyListBelow) {
     OS << "The list of functions with the maximum counter less than "
@@ -2934,8 +2933,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       continue;
 
     if (TopNFunctions || ShowHotFuncList)
-      NameRefAndMaxCount.emplace_back(IndexedInstrProf::ComputeHash(Func.Name),
-                                      FuncMax);
+      NameAndMaxCount.emplace_back(Func.Name, FuncMax);
 
     if (Show) {
       if (!ShownFunctions)
@@ -3015,25 +3013,26 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   }
 
   // Sort by MaxCount in decreasing order
-  llvm::stable_sort(NameRefAndMaxCount, [](const auto &L, const auto &R) {
+  llvm::stable_sort(NameAndMaxCount, [](const auto &L, const auto &R) {
     return L.second > R.second;
   });
   if (TopNFunctions) {
     OS << "Top " << TopNFunctions
        << " functions with the largest internal block counts: \n";
-    auto TopFuncs = ArrayRef(NameRefAndMaxCount).take_front(TopNFunctions);
-    for (auto [NameRef, MaxCount] : TopFuncs)
-      OS << "  " << Reader->getSymtab().getFuncOrVarName(NameRef)
-         << ", max count = " << MaxCount << "\n";
+    auto TopFuncs = ArrayRef(NameAndMaxCount).take_front(TopNFunctions);
+    for (auto [Name, MaxCount] : TopFuncs)
+      OS << "  " << Name << ", max count = " << MaxCount << "\n";
   }
 
   if (ShowHotFuncList) {
     auto HotCountThreshold =
         ProfileSummaryBuilder::getHotCountThreshold(PS->getDetailedSummary());
     OS << "# Hot count threshold: " << HotCountThreshold << "\n";
-    for (auto [NameRef, MaxCount] : NameRefAndMaxCount)
-      if (MaxCount >= HotCountThreshold)
-        OS << Reader->getSymtab().getFuncOrVarName(NameRef) << "\n";
+    for (auto [Name, MaxCount] : NameAndMaxCount) {
+      if (MaxCount < HotCountThreshold)
+        break;
+      OS << Name << "\n";
+    }
   }
 
   if (ShownFunctions && ShowIndirectCallTargets) {
