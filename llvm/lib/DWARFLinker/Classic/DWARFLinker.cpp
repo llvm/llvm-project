@@ -36,6 +36,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
+#include <iostream>
 #include <vector>
 
 namespace llvm {
@@ -2297,8 +2298,135 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
 
         // Create a map of stmt sequence offsets to original row indices.
         DenseMap<uint64_t, unsigned> SeqOffToOrigRow;
-        for (const DWARFDebugLine::Sequence &Seq : LT->Sequences)
-          SeqOffToOrigRow[Seq.StmtSeqOffset] = Seq.FirstRowIndex;
+        DenseMap<uint64_t, unsigned> LineTableMapping;
+        // The DWARF parser's discovery of sequences can be incomplete. To
+        // ensure all DW_AT_LLVM_stmt_sequence attributes can be patched, we
+        // build a map from both the parser's results and a manual
+        // reconstruction.
+        if (!LT->Rows.empty()) {
+          // First, trust the sequences that the DWARF parser did identify.
+          for (const DWARFDebugLine::Sequence &Seq : LT->Sequences) {
+            LineTableMapping[Seq.StmtSeqOffset] = Seq.FirstRowIndex;
+          }
+
+          // Second, manually find sequence boundaries and match them to the
+          // sorted attributes to handle sequences the parser might have missed.
+          auto StmtAttrs = Unit.getStmtSeqListAttributes();
+          llvm::sort(StmtAttrs,
+                     [](const PatchLocation &A, const PatchLocation &B) {
+                       return A.get() < B.get();
+                     });
+
+          std::vector<size_t> SeqStartRows;
+          SeqStartRows.push_back(0);
+          for (size_t i = 0; i < LT->Rows.size() - 1; ++i)
+            if (LT->Rows[i].EndSequence)
+              SeqStartRows.push_back(i + 1);
+
+          // While SeqOffToOrigRow parsed from CU could be the ground truth,
+          // e.g.
+          //
+          // SeqOff     Row
+          // 0x08        9
+          // 0x14       15
+          //
+          // The StmtAttrs and SeqStartRows may not match perfectly, e.g.
+          //
+          // StmtAttrs  SeqStartRows
+          // 0x04        3
+          // 0x08        5
+          // 0x10        9
+          // 0x12       11
+          // 0x14       15
+          //
+          // In this case, we don't want to assign 5 to 0x08, since we know 0x08
+          // maps to 9. If we do a dummy 1:1 mapping 0x10 will be mapped to 9
+          // which is incorrect. The expected behavior is ignore 5, realign the
+          // table based on the result from the line table:
+          //
+          // StmtAttrs  SeqStartRows
+          // 0x04        3
+          //   --        5
+          // 0x08        9 <- LineTableMapping ground truth
+          // 0x10       11
+          // 0x12       --
+          // 0x14       15 <- LineTableMapping ground truth
+
+          // Dummy last element to make sure StmtAttrIdx and SeqStartIdx always
+          // run out first. Can't directly use TombstoneKey/TombstoneVal, that's
+          // preserved.
+          constexpr size_t DummyKey = UINT64_MAX - 2;
+          constexpr unsigned DummyVal = UINT32_MAX - 2;
+          LineTableMapping[DummyKey] = DummyVal;
+          SmallVector<uint64_t> SortedLineTableKeys(LineTableMapping.keys());
+          llvm::sort(SortedLineTableKeys);
+          for (auto Key : SortedLineTableKeys) {
+            std::cout << std::hex << Key << " " << LineTableMapping[Key]
+                      << "\n";
+          }
+          for (auto StmtAttr : StmtAttrs) {
+            std::cout << std::hex << StmtAttr.get() << "\n";
+          }
+          for (auto Row : SeqStartRows) {
+            std::cout << std::hex << Row << "\n";
+          }
+
+          size_t StmtAttrIdx = 0, SeqStartIdx = 0;
+          size_t NextSeqOff = 0;
+          unsigned NextRow = 0;
+
+          auto StmtIdxValidAndSmallerThanNext = [&]() {
+            return StmtAttrIdx < StmtAttrs.size() &&
+                   StmtAttrs[StmtAttrIdx].get() < NextSeqOff;
+          };
+
+          auto SeqStartIdxValidAndSmallerThanNext = [&]() {
+            return SeqStartIdx < SeqStartRows.size() &&
+                   SeqStartRows[SeqStartIdx] < NextRow;
+          };
+          for (size_t i = 0; i < SortedLineTableKeys.size(); ++i) {
+            NextSeqOff = SortedLineTableKeys[i];
+            NextRow = LineTableMapping[NextSeqOff];
+            // If both StmtAttrs and SeqStartRows points to value not in
+            // the LineTableMapping yet, we do a dummy one to one mapping and
+            // move the pointer.
+            while (StmtIdxValidAndSmallerThanNext() &&
+                   SeqStartIdxValidAndSmallerThanNext()) {
+              SeqOffToOrigRow[StmtAttrs[StmtAttrIdx].get()] =
+                  SeqStartRows[SeqStartIdx];
+              ++StmtAttrIdx;
+              ++SeqStartIdx;
+            }
+            // One of the pointer points to the value at or past Next in the
+            // LineTableMapping, We move the pointer to re-align with the
+            // LineTableMapping
+            while (StmtIdxValidAndSmallerThanNext()) {
+              ++StmtAttrIdx;
+            }
+            while (SeqStartIdxValidAndSmallerThanNext()) {
+              ++SeqStartIdx;
+            }
+            // Use the LineTableMapping's result as the ground truth and move
+            // on.
+            SeqOffToOrigRow[NextSeqOff] = NextRow;
+          }
+          // size_t i = 0, j = 0;
+          // while (i < StmtAttrs.size() && j < SeqStartRows.size()) {
+          //   auto It = SeqOffToOrigRow.find(StmtAttrs[i].get());
+          //   // The match is not set, use current result.
+          //   if (It == SeqOffToOrigRow.end()) {
+          //     SeqOffToOrigRow.try_emplace(StmtAttrs[i].get(),
+          //     SeqStartRows[j]);
+          //   } else {
+          //     while (It->second != SeqStartRows[j] && j <
+          //     SeqStartRows.size()) {
+          //       ++j;
+          //     }
+          //   }
+          //   ++i;
+          //   ++j;
+          // }
+        }
 
         // Create a map of original row indices to new row indices.
         DenseMap<size_t, size_t> OrigRowToNewRow;
