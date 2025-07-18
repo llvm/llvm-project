@@ -1,5 +1,5 @@
 RUN: llvm-profgen --perfscript=%p/Inputs/lbr-perf-for-dap.script --data-access-profile=%p/Inputs/dap-perf-trace.txt \
-RUN:  --binary=%p/Inputs/dap.perfbin --format=text --pid=3446532 \
+RUN:  --binary=%p/Inputs/dap.bin --format=text --pid=3446532 \
 RUN: -ignore-stack-samples -use-dwarf-correlation -o %t.afdo
 
 RUN: llvm-profdata show --sample --function=_Z9loop_funciii %t.afdo 2>&1 | FileCheck %s

@@ -18,8 +18,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/ToolOutputFile.h"
 
-#include <regex>
-
 #define DEBUG_TYPE "perf-reader"
 
 cl::opt<bool> SkipSymbolization("skip-symbolization",
@@ -377,15 +375,24 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
   return PerfReader;
 }
 
-void PerfReaderBase::parseDataAccessPerfTraces(
+Error PerfReaderBase::parseDataAccessPerfTraces(
     StringRef DataAccessPerfTraceFile, std::optional<int32_t> PIDFilter) {
-  std::regex logRegex(
-      R"(^.*?PERF_RECORD_SAMPLE\(.*?\):\s*(\d+)\/(\d+):\s*(0x[0-9a-fA-F]+)\s+period:\s*\d+\s+addr:\s*(0x[0-9a-fA-F]+)$)");
+  // A perf_record_sample line is like
+  // . 1282514022939813 0x87b0 [0x60]: PERF_RECORD_SAMPLE(IP, 0x4002):
+  // 3446532/3446532: 0x2608a2 period: 233 addr: 0x3b3fb0
+  constexpr static const char *const DataAccessSamplePattern =
+      "PERF_RECORD_SAMPLE\\([A-Za-z]+, 0x[0-9a-fA-F]+\\): "
+      "([0-9]+)\\/[0-9]+: (0x[0-9a-fA-F]+) period: [0-9]+ addr: "
+      "(0x[0-9a-fA-F]+)";
+
+  llvm::Regex logRegex(DataAccessSamplePattern);
 
   auto BufferOrErr = MemoryBuffer::getFile(DataAccessPerfTraceFile);
   std::error_code EC = BufferOrErr.getError();
   if (EC)
-    exitWithError("Failed to open perf trace file: " + DataAccessPerfTraceFile);
+    return make_error<StringError>("Failed to open perf trace file: " +
+                                       DataAccessPerfTraceFile,
+                                   inconvertibleErrorCode());
 
   assert(!SampleCounters.empty() && "Sample counters should not be empty!");
   SampleCounter &Counter = SampleCounters.begin()->second;
@@ -403,33 +410,28 @@ void PerfReaderBase::parseDataAccessPerfTraces(
       continue;
     }
 
-    // Skip lines that do not contain "PERF_RECORD_SAMPLE".
-    if (!Line.contains("PERF_RECORD_SAMPLE")) {
-      continue;
-    }
-
-    std::smatch matches;
-    const std::string LineStr = Line.str();
-
-    if (std::regex_search(LineStr.begin(), LineStr.end(), matches, logRegex)) {
-      if (matches.size() != 5)
-        continue;
-
-      const int32_t PID = std::stoi(matches[1].str());
-      if (PIDFilter && *PIDFilter != PID) {
+    SmallVector<StringRef> Fields;
+    if (logRegex.match(Line, &Fields)) {
+      int32_t PID = 0;
+      Fields[1].getAsInteger(0, PID);
+      if (PIDFilter.has_value() && *PIDFilter != PID) {
         continue;
       }
 
-      const uint64_t DataAddress = std::stoull(matches[4].str(), nullptr, 16);
+      uint64_t DataAddress = 0;
+      Fields[3].getAsInteger(0, DataAddress);
+
       StringRef DataSymbol = Binary->symbolizeDataAddress(
           Binary->CanonicalizeNonTextAddress(DataAddress));
       if (DataSymbol.starts_with("_ZTV")) {
-        const uint64_t IP = std::stoull(matches[3].str(), nullptr, 16);
+        uint64_t IP = 0;
+        Fields[2].getAsInteger(0, IP);
         Counter.recordDataAccessCount(Binary->canonicalizeVirtualAddress(IP),
                                       DataSymbol, 1);
       }
     }
   }
+  return Error::success();
 }
 
 PerfInputFile

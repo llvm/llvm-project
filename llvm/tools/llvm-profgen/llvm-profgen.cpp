@@ -69,7 +69,7 @@ static cl::opt<std::string> DebugBinPath(
 
 static cl::opt<std::string> DataAccessProfileFilename(
     "data-access-profile", cl::value_desc("data-access-profile"),
-    cl::desc("Path of the data access profile to be generated."),
+    cl::desc("Path to the data access profile to be generated."),
     cl::cat(ProfGenCategory));
 
 extern cl::opt<bool> ShowDisassemblyOnly;
@@ -188,7 +188,12 @@ int main(int argc, const char *argv[]) {
       // Parse the data access perf traces into <ip, data-addr> pairs, symbolize
       // the data-addr to data-symbol. If the data-addr is a vtable, increment
       // counters for the <ip, data-symbol> pair.
-      Reader->parseDataAccessPerfTraces(DataAccessProfileFilename, PIDFilter);
+      if (Error E = Reader->parseDataAccessPerfTraces(DataAccessProfileFilename,
+                                                      PIDFilter)) {
+        handleAllErrors(std::move(E), [&](const StringError &SE) {
+          exitWithError(SE.getMessage());
+        });
+      }
     }
 
     if (SkipSymbolization)

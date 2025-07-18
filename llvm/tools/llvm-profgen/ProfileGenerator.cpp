@@ -552,7 +552,7 @@ void ProfileGenerator::generateLineNumBasedProfile() {
       LineLocation Loc(
           FrameVec.back().Location.LineOffset,
           getBaseDiscriminator(FrameVec.back().Location.Discriminator));
-      FunctionProfile.getTypeSamplesAt(Loc)[FunctionId(IpData.second)] += Count;
+      FunctionProfile.addTypeSamplesAt(Loc, FunctionId(IpData.second), Count);
     }
   }
 

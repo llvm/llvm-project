@@ -293,7 +293,7 @@ class ProfiledBinary {
   struct PhdrInfo {
     uint64_t FileOffset;
     uint64_t FileSz;
-    uint64_t vAddr;
+    uint64_t VirtualAddr;
   };
 
   // Program header information for non-text PT_LOAD segments.
@@ -327,6 +327,16 @@ class ProfiledBinary {
   bool IsCOFF = false;
 
   void setPreferredTextSegmentAddresses(const ObjectFile *O);
+
+  // LLVMSymbolizer's symbolize{Code, Data} interfaces requires a section index
+  // for each address to be symbolized. This is a helper function to
+  // construct a SectionedAddress object with the given address and section
+  // index. The section index is set to UndefSection by default.
+  static object::SectionedAddress getSectionedAddress(
+      uint64_t Address,
+      uint64_t SectionIndex = object::SectionedAddress::UndefSection) {
+    return object::SectionedAddress{Address, SectionIndex};
+  }
 
   template <class ELFT>
   void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
@@ -634,8 +644,10 @@ public:
     MMapNonTextEvents.push_back(MMap);
   }
 
-  // Given a runtime address, canonicalize it to the virtual address in the
-  // binary.
+  // Given a non-text runtime address, canonicalize it to the virtual address in
+  // the binary.
+  // TODO: Consider unifying the canonicalization of text and non-text addresses
+  // in the ProfiledBinary class.
   uint64_t CanonicalizeNonTextAddress(uint64_t Address);
 
   bool getTrackFuncContextSize() { return TrackFuncContextSize; }

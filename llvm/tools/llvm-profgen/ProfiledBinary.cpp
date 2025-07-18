@@ -340,7 +340,7 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
         PhdrInfo Info;
         Info.FileOffset = Phdr.p_offset;
         Info.FileSz = Phdr.p_filesz;
-        Info.vAddr = Phdr.p_vaddr;
+        Info.VirtualAddr = Phdr.p_vaddr;
         NonTextPhdrInfo.push_back(Info);
       }
     }
@@ -369,7 +369,7 @@ uint64_t ProfiledBinary::CanonicalizeNonTextAddress(uint64_t Address) {
     if (PhdrInfo.FileOffset <= FileOffset &&
         FileOffset < PhdrInfo.FileOffset + PhdrInfo.FileSz) {
       // If it is, return the virtual address of the segment.
-      return PhdrInfo.vAddr + (FileOffset - PhdrInfo.FileOffset);
+      return PhdrInfo.VirtualAddr + (FileOffset - PhdrInfo.FileOffset);
     }
   }
 
@@ -945,11 +945,10 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
                                                    bool UseProbeDiscriminator) {
   assert(this == IP.Binary &&
          "Binary should only symbolize its own instruction");
-  auto Addr = object::SectionedAddress{IP.Address,
-                                       object::SectionedAddress::UndefSection};
-  DIInliningInfo InlineStack = unwrapOrError(
-      Symbolizer->symbolizeInlinedCode(SymbolizerPath.str(), Addr),
-      SymbolizerPath);
+  DIInliningInfo InlineStack =
+      unwrapOrError(Symbolizer->symbolizeInlinedCode(
+                        SymbolizerPath.str(), getSectionedAddress(IP.Address)),
+                    SymbolizerPath);
 
   SampleContextFrameVector CallStack;
   for (int32_t I = InlineStack.getNumberOfFrames() - 1; I >= 0; I--) {
@@ -979,11 +978,13 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
 }
 
 StringRef ProfiledBinary::symbolizeDataAddress(uint64_t Address) {
-  DIGlobal DataDIGlobal = unwrapOrError(
-      Symbolizer->symbolizeData(SymbolizerPath.str(), {Address, 0}),
-      SymbolizerPath);
-  auto It = NameStrings.insert(DataDIGlobal.Name);
-  return StringRef(*It.first);
+  DIGlobal DataDIGlobal =
+      unwrapOrError(Symbolizer->symbolizeData(SymbolizerPath.str(),
+                                              getSectionedAddress(Address)),
+                    SymbolizerPath);
+  decltype(NameStrings)::iterator Iter;
+  std::tie(Iter, std::ignore) = NameStrings.insert(DataDIGlobal.Name);
+  return StringRef(*Iter);
 }
 
 void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,

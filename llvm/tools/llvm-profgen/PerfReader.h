@@ -12,6 +12,7 @@
 #include "ProfiledBinary.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include <cstdint>
 #include <fstream>
@@ -396,6 +397,7 @@ using BranchSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // which is represented as the start and end offset pair.
 using RangeSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // <<inst-addr, vtable-data-symbol>, count> map for data access samples.
+// The instruction address is the virtual address in the binary.
 using DataAccessSample = std::map<std::pair<uint64_t, StringRef>, uint64_t>;
 // Wrapper for sample counters including range counter and branch counter
 struct SampleCounter {
@@ -581,8 +583,8 @@ public:
   virtual void parsePerfTraces() = 0;
 
   // Parse the <ip, vtable-data-symbol> from the data access perf trace file,
-  // and accummuate the data access count for each <ip, data-symbol> pair.
-  void
+  // and accumulate the data access count for each <ip, data-symbol> pair.
+  Error
   parseDataAccessPerfTraces(StringRef DataAccessPerfFile,
                             std::optional<int32_t> PIDFilter = std::nullopt);
 
@@ -615,6 +617,8 @@ public:
 
   // Parse a single line of a PERF_RECORD_MMAP event looking for a
   // mapping between the binary name and its memory layout.
+  // TODO: Move this static method from PerScriptReader (subclass) to
+  // PerfReaderBase (superclass).
   static bool extractMMapEventForBinary(ProfiledBinary *Binary, StringRef Line,
                                         MMapEvent &MMap);
 
