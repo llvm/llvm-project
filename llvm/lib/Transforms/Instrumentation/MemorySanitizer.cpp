@@ -2509,9 +2509,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //
     //    S = (S1 & S2) | (~V1 & S2) | (S1 & ~V2)
     //
-    //  Addendum if the "Or" is "disjoint":
-    //    1|1 => p;
-    //    S = S | (V1 & V2)
+    //  If the "disjoint OR" property is violated, the result is poison, and
+    //  hence the entire shadow is uninitialized:
+    //    S = S | SignExt(V1 & V2 != 0)
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
     Value *V1 = I.getOperand(0);
@@ -2532,7 +2532,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     if (ClPreciseDisjointOr && cast<PossiblyDisjointInst>(&I)->isDisjoint()) {
       Value *V1V2 = IRB.CreateAnd(V1, V2);
-      S = IRB.CreateOr(S, V1V2, "_ms_disjoint");
+      Value *DisjointOrShadow = IRB.CreateSExt(
+          IRB.CreateICmpNE(V1V2, getCleanShadow(V1V2)), V1V2->getType());
+      S = IRB.CreateOr(S, DisjointOrShadow, "_ms_disjoint");
     }
 
     setShadow(&I, S);
@@ -4322,8 +4324,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (isa<Constant>(Idx))
       return;
 
+    auto *IdxShadow = getShadow(Idx);
     Value *Truncated = IRB.CreateTrunc(
-        Idx,
+        IdxShadow,
         FixedVectorType::get(Type::getIntNTy(*MS.C, Log2_64(IdxVectorSize)),
                              IdxVectorSize));
     insertCheckShadow(Truncated, getOrigin(Idx), I);
@@ -4569,16 +4572,37 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     SC.Done(&I);
   }
 
-  // Instrument abs intrinsic.
-  // handleUnknownIntrinsic can't handle it because of the last
-  // is_int_min_poison argument which does not match the result type.
+  // Instrument @llvm.abs intrinsic.
+  //
+  // e.g., i32       @llvm.abs.i32  (i32       <Src>, i1 <is_int_min_poison>)
+  //       <4 x i32> @llvm.abs.v4i32(<4 x i32> <Src>, i1 <is_int_min_poison>)
   void handleAbsIntrinsic(IntrinsicInst &I) {
-    assert(I.getType()->isIntOrIntVectorTy());
-    assert(I.getArgOperand(0)->getType() == I.getType());
+    assert(I.arg_size() == 2);
+    Value *Src = I.getArgOperand(0);
+    Value *IsIntMinPoison = I.getArgOperand(1);
 
-    // FIXME: Handle is_int_min_poison.
+    assert(I.getType()->isIntOrIntVectorTy());
+
+    assert(Src->getType() == I.getType());
+
+    assert(IsIntMinPoison->getType()->isIntegerTy());
+    assert(IsIntMinPoison->getType()->getIntegerBitWidth() == 1);
+
     IRBuilder<> IRB(&I);
-    setShadow(&I, getShadow(&I, 0));
+    Value *SrcShadow = getShadow(Src);
+
+    APInt MinVal =
+        APInt::getSignedMinValue(Src->getType()->getScalarSizeInBits());
+    Value *MinValVec = ConstantInt::get(Src->getType(), MinVal);
+    Value *SrcIsMin = IRB.CreateICmp(CmpInst::ICMP_EQ, Src, MinValVec);
+
+    Value *PoisonedShadow = getPoisonedShadow(Src);
+    Value *PoisonedIfIntMinShadow =
+        IRB.CreateSelect(SrcIsMin, PoisonedShadow, SrcShadow);
+    Value *Shadow =
+        IRB.CreateSelect(IsIntMinPoison, PoisonedIfIntMinShadow, SrcShadow);
+
+    setShadow(&I, Shadow);
     setOrigin(&I, getOrigin(&I, 0));
   }
 

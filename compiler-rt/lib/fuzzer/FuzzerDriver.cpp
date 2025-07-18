@@ -24,10 +24,11 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
+#include <functional>
 #include <mutex>
 #include <string>
 #include <thread>
-#include <fstream>
 
 // This function should be present in the libFuzzer so that the client
 // binary can test for its existence.

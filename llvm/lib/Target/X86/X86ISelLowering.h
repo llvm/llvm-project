@@ -1356,6 +1356,8 @@ namespace llvm {
              TargetLowering::isTargetCanonicalConstantNode(Op);
     }
 
+    bool isTargetCanonicalSelect(SDNode *N) const override;
+
     const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
 
     SDValue unwrapAddress(SDValue N) const override;
@@ -1659,7 +1661,7 @@ namespace llvm {
 
     /// Lower interleaved load(s) into target specific
     /// instructions/intrinsics.
-    bool lowerInterleavedLoad(LoadInst *LI,
+    bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                               ArrayRef<ShuffleVectorInst *> Shuffles,
                               ArrayRef<unsigned> Indices,
                               unsigned Factor) const override;
