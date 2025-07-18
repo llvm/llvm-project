@@ -147,10 +147,6 @@ TEST(TransformTest, MoveTransformLlvm) {
   EXPECT_EQ(0, CountCopyAndMove::Destructions);
 }
 
-template <typename T> constexpr bool IsRvalueReference(T &&arg) {
-  return std::is_rvalue_reference_v<decltype(arg)>;
-}
-
 TEST(TransformTest, TransformCategory) {
   struct StructA {
     int x;
