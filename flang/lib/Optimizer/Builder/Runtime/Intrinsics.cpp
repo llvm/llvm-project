@@ -59,7 +59,8 @@ mlir::Value fir::runtime::genCpuTime(fir::FirOpBuilder &builder,
                                      mlir::Location loc) {
   mlir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(CpuTime)>(loc, builder);
-  return builder.create<fir::CallOp>(loc, func, std::nullopt).getResult(0);
+  return builder.create<fir::CallOp>(loc, func, mlir::ValueRange{})
+      .getResult(0);
 }
 
 void fir::runtime::genDateAndTime(fir::FirOpBuilder &builder,
@@ -280,7 +281,8 @@ void fir::runtime::genRename(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value fir::runtime::genTime(fir::FirOpBuilder &builder,
                                   mlir::Location loc) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(time)>(loc, builder);
-  return builder.create<fir::CallOp>(loc, func, std::nullopt).getResult(0);
+  return builder.create<fir::CallOp>(loc, func, mlir::ValueRange{})
+      .getResult(0);
 }
 
 /// generate runtime call to transfer intrinsic with no size argument
