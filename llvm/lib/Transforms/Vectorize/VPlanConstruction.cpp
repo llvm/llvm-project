@@ -784,6 +784,16 @@ bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
     VPValue *VecV = ResumeR->getOperand(0);
     if (VecV == RdxResult)
       continue;
+    if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
+      if (DerivedIV->getNumUsers() == 1 &&
+          DerivedIV->getOperand(1) == &Plan.getVectorTripCount()) {
+        auto *NewSel = Builder.createSelect(AnyNaN, Plan.getCanonicalIV(),
+                                            &Plan.getVectorTripCount());
+        DerivedIV->moveAfter(&*Builder.getInsertPoint());
+        DerivedIV->setOperand(1, NewSel);
+        continue;
+      }
+    }
     // Bail out and abandon the current, partially modified, VPlan if we
     // encounter resume phi that cannot be updated yet.
     if (VecV != &Plan.getVectorTripCount()) {
