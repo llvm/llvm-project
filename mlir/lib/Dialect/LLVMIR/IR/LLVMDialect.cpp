@@ -3379,9 +3379,9 @@ LogicalResult LLVM::ConstantOp::verify() {
 
     Type attrElmType = getElementType(elementsAttr.getType());
     Type resultElmType = getElementType(getType());
-    if (auto floatType = dyn_cast<FloatType>(attrElmType)) {
+    if (auto floatType = dyn_cast<FloatType>(attrElmType))
       return verifyFloatSemantics(floatType.getFloatSemantics(), resultElmType);
-    }
+
     if (isa<IntegerType>(attrElmType) && !isa<IntegerType>(resultElmType)) {
       return emitOpError(
           "expected integer element type for integer elements attribute");
