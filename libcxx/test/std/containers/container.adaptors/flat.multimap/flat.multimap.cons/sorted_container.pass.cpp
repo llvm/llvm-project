@@ -10,18 +10,17 @@
 
 // <flat_map>
 
-// flat_multimap(sorted_unique_t, key_container_type key_cont, mapped_container_type mapped_cont,
+// flat_multimap(sorted_equivalent_t, key_container_type key_cont, mapped_container_type mapped_cont,
 //          const key_compare& comp = key_compare());
 //
 // template<class Alloc>
-//   flat_multimap(sorted_unique_t, const key_container_type& key_cont,
+//   flat_multimap(sorted_equivalent_t, const key_container_type& key_cont,
 //            const mapped_container_type& mapped_cont, const Alloc& a);
 // template<class Alloc>
-//   flat_multimap(sorted_unique_t, const key_container_type& key_cont,
+//   flat_multimap(sorted_equivalent_t, const key_container_type& key_cont,
 //            const mapped_container_type& mapped_cont,
 //            const key_compare& comp, const Alloc& a);
 
-#include <__flat_map/sorted_equivalent.h>
 #include <algorithm>
 #include <deque>
 #include <flat_map>
@@ -39,7 +38,7 @@
 template <template <class...> class KeyContainer, template <class...> class ValueContainer>
 constexpr void test() {
   {
-    // flat_multimap(sorted_unique_t, key_container_type , mapped_container_type)
+    // flat_multimap(sorted_equivalent_t, key_container_type , mapped_container_type)
     using M                 = std::flat_multimap<int, char, std::less<int>, KeyContainer<int>, ValueContainer<char>>;
     KeyContainer<int> ks    = {1, 4, 4, 10};
     ValueContainer<char> vs = {4, 3, 2, 1};
@@ -58,7 +57,7 @@ constexpr void test() {
     assert(m == m2);
   }
   {
-    // flat_multimap(sorted_unique_t, key_container_type , mapped_container_type)
+    // flat_multimap(sorted_equivalent_t, key_container_type , mapped_container_type)
     // non-default container, comparator and allocator type
     using Ks = KeyContainer<int, min_allocator<int>>;
     using Vs = ValueContainer<char, min_allocator<char>>;
@@ -73,7 +72,7 @@ constexpr void test() {
     assert(std::ranges::equal(m, std::vector<std::pair<int, char>>{{10, 1}, {4, 2}, {4, 3}, {1, 4}}));
   }
   {
-    // flat_multimap(sorted_unique_t, key_container_type , mapped_container_type)
+    // flat_multimap(sorted_equivalent_t, key_container_type , mapped_container_type)
     // allocator copied into the containers
     using A = test_allocator<int>;
     using M = std::flat_multimap<int, int, std::less<int>, KeyContainer<int, A>, ValueContainer<int, A>>;
@@ -87,7 +86,7 @@ constexpr void test() {
     assert(m.values().get_allocator() == A(5));
   }
   {
-    // flat_multimap(sorted_unique_t, key_container_type , mapped_container_type, key_compare)
+    // flat_multimap(sorted_equivalent_t, key_container_type , mapped_container_type, key_compare)
     using C                 = test_less<int>;
     using M                 = std::flat_multimap<int, char, C, KeyContainer<int>, ValueContainer<char>>;
     KeyContainer<int> ks    = {1, 4, 4, 10};
@@ -103,7 +102,7 @@ constexpr void test() {
     assert(m2.key_comp() == C(4));
   }
   {
-    // flat_multimap(sorted_unique_t, key_container_type , mapped_container_type, key_compare, const Allocator&)
+    // flat_multimap(sorted_equivalent_t, key_container_type , mapped_container_type, key_compare, const Allocator&)
     using C                   = test_less<int>;
     using A                   = test_allocator<int>;
     using M                   = std::flat_multimap<int, int, C, KeyContainer<int, A>, ValueContainer<int, A>>;
@@ -123,7 +122,7 @@ constexpr void test() {
     assert(m2.values().get_allocator() == A(5));
   }
   {
-    // flat_multimap(sorted_unique_t, key_container_type , mapped_container_type, const Allocator&)
+    // flat_multimap(sorted_equivalent_t, key_container_type , mapped_container_type, const Allocator&)
     using A = test_allocator<int>;
     using M = std::flat_multimap<int, int, std::less<int>, KeyContainer<int, A>, ValueContainer<int, A>>;
     auto ks = KeyContainer<int, A>({1, 4, 4, 10}, A(4));

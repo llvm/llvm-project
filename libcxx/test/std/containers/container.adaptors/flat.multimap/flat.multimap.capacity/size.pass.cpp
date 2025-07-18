@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=200000000
 
 // <flat_map>
 
@@ -47,7 +48,7 @@ constexpr void test() {
   }
   {
     M m;
-    std::size_t s = TEST_IS_CONSTANT_EVALUATED ? 100 : 1000;
+    std::size_t s = 1000;
     for (auto i = 0u; i < s; ++i) {
       m.emplace(i, 'a');
     }

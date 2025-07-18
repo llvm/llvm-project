@@ -13,7 +13,6 @@
 // flat_multimap& operator=(flat_multimap&&);
 // Preserves the class invariant for the moved-from flat_multimap.
 
-#include <__flat_map/sorted_equivalent.h>
 #include <algorithm>
 #include <cassert>
 #include <compare>
