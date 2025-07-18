@@ -2079,6 +2079,7 @@ struct DSEState {
       AllocFnKind AllocKind =
           Attrs.getFnAttr(Attribute::AllocKind).getAllocKind() |
           AllocFnKind::Zeroed;
+      AllocKind &= ~AllocFnKind::Uninitialized;
       Attrs =
           Attrs.addFnAttribute(Ctx, Attribute::getWithAllocKind(Ctx, AllocKind))
               .removeFnAttribute(Ctx, "alloc-variant-zeroed");
