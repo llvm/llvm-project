@@ -25,6 +25,8 @@ def SDT_LoongArchFTINT : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 def SDT_LoongArchFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 def SDT_LoongArchFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 
+// ISD::BRCOND is custom-lowered to LoongArchISD::BRCOND for floating-point
+// comparisons to prevent recursive lowering.
 def loongarch_brcond : SDNode<"LoongArchISD::BRCOND", SDTBrcond, [SDNPHasChain]>;
 def loongarch_movgr2fr_w_la64
     : SDNode<"LoongArchISD::MOVGR2FR_W_LA64", SDT_LoongArchMOVGR2FR_W_LA64>;
