@@ -367,33 +367,22 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   bool BinOpShuffleChanged =
       replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, Load);
 
+  Value *Mask = nullptr;
   if (auto *VPLoad = dyn_cast<VPIntrinsic>(Load)) {
-    Value *LaneMask =
-        getMask(VPLoad->getMaskParam(), Factor, cast<VectorType>(VecTy));
-    if (!LaneMask)
+    Mask = getMask(VPLoad->getMaskParam(), Factor, cast<VectorType>(VecTy));
+    if (!Mask)
       return false;
-
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.load: " << *Load << "\n");
-
-    // Sometimes the number of Shuffles might be less than Factor, we have to
-    // fill the gaps with null. Also, lowerInterleavedVPLoad
-    // expects them to be sorted.
-    SmallVector<Value *, 4> ShuffleValues(Factor, nullptr);
-    for (auto [Idx, ShuffleMaskIdx] : enumerate(Indices))
-      ShuffleValues[ShuffleMaskIdx] = Shuffles[Idx];
-    if (!TLI->lowerInterleavedVPLoad(VPLoad, LaneMask, ShuffleValues))
-      // If Extracts is not empty, tryReplaceExtracts made changes earlier.
-      return !Extracts.empty() || BinOpShuffleChanged;
   } else {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *Load << "\n");
-
-    // Try to create target specific intrinsics to replace the load and
-    // shuffles.
-    if (!TLI->lowerInterleavedLoad(cast<LoadInst>(Load), Shuffles, Indices,
-                                   Factor))
-      // If Extracts is not empty, tryReplaceExtracts made changes earlier.
-      return !Extracts.empty() || BinOpShuffleChanged;
   }
+
+  // Try to create target specific intrinsics to replace the load and
+  // shuffles.
+  if (!TLI->lowerInterleavedLoad(cast<Instruction>(Load), Mask, Shuffles,
+                                 Indices, Factor))
+    // If Extracts is not empty, tryReplaceExtracts made changes earlier.
+    return !Extracts.empty() || BinOpShuffleChanged;
 
   DeadInsts.insert_range(Shuffles);
 

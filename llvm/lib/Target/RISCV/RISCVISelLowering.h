@@ -429,7 +429,7 @@ public:
 
   bool fallBackToDAGISel(const Instruction &Inst) const override;
 
-  bool lowerInterleavedLoad(LoadInst *LI,
+  bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
                             ArrayRef<unsigned> Indices,
                             unsigned Factor) const override;
@@ -443,9 +443,6 @@ public:
   bool lowerInterleaveIntrinsicToStore(
       Instruction *Store, Value *Mask,
       ArrayRef<Value *> InterleaveValues) const override;
-
-  bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                              ArrayRef<Value *> DeinterleaveRes) const override;
 
   bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
                                ArrayRef<Value *> InterleaveOps) const override;
