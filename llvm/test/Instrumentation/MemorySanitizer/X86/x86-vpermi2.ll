@@ -53,7 +53,7 @@ define <2 x i64> @shuffle_vpermv3_v2i64_demandedbits(<2 x i64> %x0, <2 x i64> %x
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <2 x i64> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i64> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <2 x i64> [[M]], <i64 0, i64 4>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <2 x i64> [[T]] to <2 x i1>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <2 x i64> [[TMP9]] to <2 x i1>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <2 x i64> @llvm.x86.avx512.vpermi2var.q.128(<2 x i64> [[TMP6]], <2 x i64> [[T]], <2 x i64> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i1> [[TMP10]] to i2
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i2 [[TMP12]], 0
@@ -85,7 +85,7 @@ define <2 x i64> @shuffle_vpermv3_v2i64_demandedbits_negative(<2 x i64> %x0, <2 
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <2 x i64> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i64> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <2 x i64> [[M]], <i64 0, i64 2>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <2 x i64> [[T]] to <2 x i1>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <2 x i64> [[TMP9]] to <2 x i1>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <2 x i64> @llvm.x86.avx512.vpermi2var.q.128(<2 x i64> [[TMP6]], <2 x i64> [[T]], <2 x i64> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i1> [[TMP10]] to i2
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i2 [[TMP12]], 0
@@ -146,7 +146,7 @@ define <4 x i64> @shuffle_vpermv3_v4i64_demandedbits(<4 x i64> %x0, <4 x i64> %x
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i64> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <4 x i64> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <4 x i64> [[M]], <i64 0, i64 8, i64 16, i64 32>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i64> [[T]] to <4 x i2>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i64> [[TMP9]] to <4 x i2>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <4 x i64> @llvm.x86.avx512.vpermi2var.q.256(<4 x i64> [[TMP6]], <4 x i64> [[T]], <4 x i64> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i2> [[TMP10]] to i8
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i8 [[TMP12]], 0
@@ -207,7 +207,7 @@ define <8 x i64> @shuffle_vpermv3_v8i64_demandedbits(<8 x i64> %x0, <8 x i64> %x
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <8 x i64> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <8 x i64> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <8 x i64> [[M]], <i64 0, i64 16, i64 32, i64 64, i64 256, i64 512, i64 1024, i64 -16>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <8 x i64> [[T]] to <8 x i3>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <8 x i64> [[TMP9]] to <8 x i3>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> [[TMP6]], <8 x i64> [[T]], <8 x i64> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i3> [[TMP10]] to i24
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 [[TMP12]], 0
@@ -272,7 +272,7 @@ define <4 x i32> @shuffle_vpermv3_v4i32_demandedbits(<4 x i32> %x0, <4 x i32> %x
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i32> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <4 x i32> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <4 x i32> [[M]], <i32 0, i32 8, i32 16, i32 32>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i32> [[T]] to <4 x i2>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i32> [[TMP9]] to <4 x i2>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <4 x i32> @llvm.x86.avx512.vpermi2var.d.128(<4 x i32> [[TMP6]], <4 x i32> [[T]], <4 x i32> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i2> [[TMP10]] to i8
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i8 [[TMP12]], 0
@@ -333,7 +333,7 @@ define <8 x i32> @shuffle_vpermv3_v8i32_demandedbits(<8 x i32> %x0, <8 x i32> %x
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <8 x i32> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <8 x i32> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <8 x i32> [[M]], <i32 0, i32 16, i32 32, i32 64, i32 256, i32 512, i32 -16, i32 -32>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <8 x i32> [[T]] to <8 x i3>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <8 x i32> [[TMP9]] to <8 x i3>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <8 x i32> @llvm.x86.avx512.vpermi2var.d.256(<8 x i32> [[TMP6]], <8 x i32> [[T]], <8 x i32> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i3> [[TMP10]] to i24
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 [[TMP12]], 0
@@ -394,7 +394,7 @@ define <16 x i32> @shuffle_vpermv3_v16i32_demandedbits(<16 x i32> %x0, <16 x i32
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <16 x i32> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <16 x i32> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <16 x i32> [[M]], <i32 0, i32 32, i32 64, i32 256, i32 512, i32 1024, i32 2048, i32 4096, i32 8192, i32 -32, i32 -64, i32 -128, i32 -256, i32 -512, i32 -1024, i32 -2048>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <16 x i32> [[T]] to <16 x i4>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <16 x i32> [[TMP9]] to <16 x i4>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> [[TMP6]], <16 x i32> [[T]], <16 x i32> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <16 x i4> [[TMP10]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP12]], 0
@@ -459,7 +459,7 @@ define <8 x i16> @shuffle_vpermv3_v8i16_demandedbits(<8 x i16> %x0, <8 x i16> %x
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <8 x i16> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <8 x i16> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <8 x i16> [[M]], <i16 0, i16 16, i16 32, i16 64, i16 256, i16 512, i16 -16, i16 -32>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <8 x i16> [[T]] to <8 x i3>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <8 x i16> [[TMP9]] to <8 x i3>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <8 x i16> @llvm.x86.avx512.vpermi2var.hi.128(<8 x i16> [[TMP6]], <8 x i16> [[T]], <8 x i16> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i3> [[TMP10]] to i24
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 [[TMP12]], 0
@@ -520,7 +520,7 @@ define <16 x i16> @shuffle_vpermv3_v16i16_demandedbits(<16 x i16> %x0, <16 x i16
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <16 x i16> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <16 x i16> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <16 x i16> [[M]], <i16 0, i16 32, i16 64, i16 256, i16 512, i16 1024, i16 2048, i16 4096, i16 -32, i16 -64, i16 -128, i16 -256, i16 -512, i16 -1024, i16 -2048, i16 -4096>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <16 x i16> [[T]] to <16 x i4>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <16 x i16> [[TMP9]] to <16 x i4>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <16 x i16> @llvm.x86.avx512.vpermi2var.hi.256(<16 x i16> [[TMP6]], <16 x i16> [[T]], <16 x i16> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <16 x i4> [[TMP10]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP12]], 0
@@ -581,7 +581,7 @@ define <32 x i16> @shuffle_vpermv3_v32i16_demandedbits(<32 x i16> %x0, <32 x i16
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <32 x i16> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <32 x i16> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <32 x i16> [[M]], <i16 0, i16 64, i16 128, i16 256, i16 512, i16 1024, i16 2048, i16 4096, i16 0, i16 -64, i16 -128, i16 -256, i16 -512, i16 -1024, i16 -2048, i16 -4096, i16 0, i16 64, i16 128, i16 256, i16 512, i16 1024, i16 2048, i16 4096, i16 0, i16 -64, i16 -128, i16 -256, i16 -512, i16 -1024, i16 -2048, i16 -4096>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <32 x i16> [[T]] to <32 x i5>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <32 x i16> [[TMP9]] to <32 x i5>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <32 x i16> @llvm.x86.avx512.vpermi2var.hi.512(<32 x i16> [[TMP6]], <32 x i16> [[T]], <32 x i16> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x i5> [[TMP10]] to i160
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i160 [[TMP12]], 0
@@ -646,7 +646,7 @@ define <16 x i8> @shuffle_vpermv3_v16i8_demandedbits(<16 x i8> %x0, <16 x i8> %x
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <16 x i8> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <16 x i8> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <16 x i8> [[M]], <i8 0, i8 32, i8 64, i8 -128, i8 0, i8 -32, i8 -64, i8 -128, i8 0, i8 32, i8 64, i8 -128, i8 0, i8 -32, i8 -64, i8 -128>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <16 x i8> [[T]] to <16 x i4>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <16 x i8> [[TMP9]] to <16 x i4>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <16 x i8> @llvm.x86.avx512.vpermi2var.qi.128(<16 x i8> [[TMP6]], <16 x i8> [[T]], <16 x i8> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <16 x i4> [[TMP10]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP12]], 0
@@ -707,7 +707,7 @@ define <32 x i8> @shuffle_vpermv3_v32i8_demandedbits(<32 x i8> %x0, <32 x i8> %x
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <32 x i8> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <32 x i8> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <32 x i8> [[M]], <i8 0, i8 0, i8 64, i8 -128, i8 0, i8 0, i8 -64, i8 -128, i8 0, i8 0, i8 64, i8 -128, i8 0, i8 0, i8 -64, i8 -128, i8 0, i8 0, i8 64, i8 -128, i8 0, i8 0, i8 -64, i8 -128, i8 0, i8 0, i8 64, i8 -128, i8 0, i8 0, i8 -64, i8 -128>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <32 x i8> [[T]] to <32 x i5>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <32 x i8> [[TMP9]] to <32 x i5>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <32 x i8> @llvm.x86.avx512.vpermi2var.qi.256(<32 x i8> [[TMP6]], <32 x i8> [[T]], <32 x i8> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x i5> [[TMP10]] to i160
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i160 [[TMP12]], 0
@@ -768,7 +768,7 @@ define <64 x i8> @shuffle_vpermv3_v64i8_demandedbits(<64 x i8> %x0, <64 x i8> %x
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <64 x i8> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <64 x i8> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[T:%.*]] = or <64 x i8> [[M]], <i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128, i8 0, i8 -128>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <64 x i8> [[T]] to <64 x i6>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <64 x i8> [[TMP9]] to <64 x i6>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = call <64 x i8> @llvm.x86.avx512.vpermi2var.qi.512(<64 x i8> [[TMP6]], <64 x i8> [[T]], <64 x i8> [[TMP3]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <64 x i6> [[TMP10]] to i384
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i384 [[TMP12]], 0
