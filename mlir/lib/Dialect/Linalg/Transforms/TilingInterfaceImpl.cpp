@@ -918,7 +918,7 @@ struct PackOpTiling
         int64_t destDimSize = outerShapeWithoutTranspose[dim];
         bool isTiled = failed(cstTileSize) ||
                        ShapedType::isDynamic(srcDimSize) ||
-                       cstTileSize.value() != srcDimSize;
+                       cstTileSize.value() < srcDimSize;
         if (!isTiled) {
           outerDimOffsets.push_back(offsets[dim]);
           if (ShapedType::isStatic(destDimSize)) {
