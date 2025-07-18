@@ -9,17 +9,20 @@ target triple = "wasm32-unknown-unknown"
 
 define <4 x i32> @dot_zero() {
 ; CHECK-LABEL: define <4 x i32> @dot_zero() {
-; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> zeroinitializer, <8 x i16> zeroinitializer)
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; CHECK-NEXT:    ret <4 x i32> zeroinitializer
 ;
   %res = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> zeroinitializer, <8 x i16> zeroinitializer)
   ret <4 x i32> %res
 }
 
+; a               =   1    2    3    4    5    6    7    8
+; b               =   1    2    3    4    5    6    7    8
+; k1|k2 = a * b   =   1    4    9   16   25   36   49   64
+; k1 + k2         =   (1+25) |  (4+36) | (9+49)  | (16+64)
+; result          =    26    |   40    |   58    |   80
 define <4 x i32> @dot_nonzero() {
 ; CHECK-LABEL: define <4 x i32> @dot_nonzero() {
-; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>, <8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>)
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; CHECK-NEXT:    ret <4 x i32> <i32 26, i32 40, i32 58, i32 80>
 ;
   %res = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>, <8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>)
   ret <4 x i32> %res
@@ -27,8 +30,7 @@ define <4 x i32> @dot_nonzero() {
 
 define <4 x i32> @dot_doubly_negative() {
 ; CHECK-LABEL: define <4 x i32> @dot_doubly_negative() {
-; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> splat (i16 -1), <8 x i16> splat (i16 -1))
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; CHECK-NEXT:    ret <4 x i32> splat (i32 2)
 ;
   %res = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>)
   ret <4 x i32> %res
