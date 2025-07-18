@@ -6,9 +6,9 @@
 #CHECK-LABEL:assembler backend - final-layout
 #      CHECK:Sections:[
 # CHECK-NEXT:MCSection Name:.text
-# CHECK-NEXT:0 Data Size:0 []
+# CHECK-NEXT:0 Align Size:0+0 []
+# CHECK-NEXT:  Align:4 Fill:0 FillLen:1 MaxBytesToEmit:4 Nops
 # CHECK-NEXT:  Symbol @0 .text
-# CHECK-NEXT:0 Align Align:4 Fill:0 FillLen:1 MaxBytesToEmit:4 Nops
 # CHECK-NEXT:0 Data Size:0 []
 # CHECK-NEXT:  Symbol @0 _start
 # CHECK-NEXT:  Symbol @0  Temporary
@@ -22,9 +22,9 @@
 # CHECK-NEXT:  Symbol @0  Temporary
 # CHECK-NEXT:  Symbol @16  Temporary
 # CHECK-NEXT:MCSection Name:.data
-# CHECK-NEXT:0 Data Size:0 []
+# CHECK-NEXT:0 Align Size:0+0 []
+# CHECK-NEXT:  Align:4 Fill:0 FillLen:1 MaxBytesToEmit:4
 # CHECK-NEXT:  Symbol @0 .data
-# CHECK-NEXT:0 Align Align:4 Fill:0 FillLen:1 MaxBytesToEmit:4
 # CHECK-NEXT:0 Data Size:4 [01,00,00,00]
 # CHECK-NEXT:4 Fill Value:0 ValueSize:1 NumValues:1
 # CHECK-NEXT:5 LEB Size:0+1 [15] Value:.Ltmp0-_start Signed:0

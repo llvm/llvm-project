@@ -550,8 +550,8 @@ void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
                                             unsigned MaxBytesToEmit) {
   if (MaxBytesToEmit == 0)
     MaxBytesToEmit = Alignment.value();
-  insert(getContext().allocFragment<MCAlignFragment>(Alignment, Fill, FillLen,
-                                                     MaxBytesToEmit));
+  MCFragment *F = getOrCreateDataFragment();
+  F->makeAlign(Alignment, Fill, FillLen, MaxBytesToEmit);
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *CurSec = getCurrentSectionOnly();
@@ -562,14 +562,8 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
                                          const MCSubtargetInfo *STI,
                                          unsigned MaxBytesToEmit) {
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
-  auto *F = cast<MCAlignFragment>(getCurrentFragment());
-  F->setEmitNops(true, STI);
-  // With RISC-V style linker relaxation, mark the section as linker-relaxable
-  // if the alignment is larger than the minimum NOP size.
-  unsigned Size;
-  if (getAssembler().getBackend().shouldInsertExtraNopBytesForCodeAlign(*F,
-                                                                        Size))
-    getCurrentSectionOnly()->setLinkerRelaxable();
+  auto *F = getCurrentFragment();
+  F->setAlignEmitNops(true, STI);
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,

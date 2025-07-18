@@ -923,13 +923,11 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
         continue;
       }
 
-      const uint64_t OrigSize = Asm.computeFragmentSize(F);
-
       // To keep the effects local, prefer to relax instructions closest to
       // the align directive.  This is purely about human understandability
       // of the resulting code.  If we later find a reason to expand
       // particular instructions over others, we can adjust.
-      unsigned RemainingSize = OrigSize;
+      unsigned RemainingSize = Asm.computeFragmentSize(F) - F.getFixedSize();
       while (!Relaxable.empty() && RemainingSize != 0) {
         auto &RF = *Relaxable.pop_back_val();
         // Give the backend a chance to play any tricks it wishes to increase
