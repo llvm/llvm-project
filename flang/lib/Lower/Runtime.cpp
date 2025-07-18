@@ -134,7 +134,7 @@ void Fortran::lower::genFailImageStatement(
   mlir::Location loc = converter.getCurrentLocation();
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(FailImageStatement)>(loc, builder);
-  builder.create<fir::CallOp>(loc, callee, std::nullopt);
+  builder.create<fir::CallOp>(loc, callee, mlir::ValueRange{});
   genUnreachable(builder, loc);
 }
 
@@ -199,7 +199,7 @@ void Fortran::lower::genPauseStatement(
   mlir::Location loc = converter.getCurrentLocation();
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
-  builder.create<fir::CallOp>(loc, callee, std::nullopt);
+  builder.create<fir::CallOp>(loc, callee, mlir::ValueRange{});
 }
 
 void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,
