@@ -54,6 +54,39 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 namespace ranges {
+
+template <class... _Rs>
+using __concat_reference_t _LIBCPP_NODEBUG = common_reference_t<range_reference_t<_Rs>...>;
+
+template <class... _Rs>
+using __concat_value_t _LIBCPP_NODEBUG = common_type_t<range_value_t<_Rs>...>;
+
+template <class... _Rs>
+using __concat_rvalue_reference_t _LIBCPP_NODEBUG = common_reference_t<range_rvalue_reference_t<_Rs>...>;
+
+template <class _Ref, class _RRef, class _It>
+concept __concat_indirectly_readable_impl = requires(const _It __it) {
+  { *__it } -> convertible_to<_Ref>;
+  { ranges::iter_move(__it) } -> convertible_to<_RRef>;
+};
+
+template <class... _Rs>
+concept __concat_indirectly_readable =
+    common_reference_with<__concat_reference_t<_Rs...>&&, __concat_value_t<_Rs...>&> &&
+    common_reference_with<__concat_reference_t<_Rs...>&&, __concat_rvalue_reference_t<_Rs...>&&> &&
+    common_reference_with<__concat_rvalue_reference_t<_Rs...>&&, const __concat_value_t<_Rs...>&> &&
+    (__concat_indirectly_readable_impl<__concat_reference_t<_Rs...>,
+                                       __concat_rvalue_reference_t<_Rs...>,
+                                       iterator_t<_Rs>> &&
+     ...);
+
+template <class... _Rs>
+concept __concatable = requires {
+  typename __concat_reference_t<_Rs...>;
+  typename __concat_value_t<_Rs...>;
+  typename __concat_rvalue_reference_t<_Rs...>;
+} && __concat_indirectly_readable<_Rs...>;
+
 template <class _Range>
 concept __bidirectional_common = bidirectional_range<_Range> && common_range<_Range>;
 
