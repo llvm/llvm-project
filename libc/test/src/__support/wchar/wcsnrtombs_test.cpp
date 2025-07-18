@@ -140,14 +140,13 @@ TEST(LlvmLibcWcsnrtombs, NullDest) {
   auto res = LIBC_NAMESPACE::internal::wcsnrtombs(nullptr, &cur, 5, 1, &state1);
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(res.value(), static_cast<size_t>(10));
-  ASSERT_EQ(cur, nullptr);
+  ASSERT_EQ(cur, src); // pointer not updated when dest = null
 
   LIBC_NAMESPACE::internal::mbstate state2;
-  cur = src;
   res = LIBC_NAMESPACE::internal::wcsnrtombs(nullptr, &cur, 5, 100, &state2);
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(res.value(), static_cast<size_t>(10));
-  ASSERT_EQ(cur, nullptr);
+  ASSERT_EQ(cur, src);
 }
 
 TEST(LlvmLibcWcsnrtombs, InvalidState) {

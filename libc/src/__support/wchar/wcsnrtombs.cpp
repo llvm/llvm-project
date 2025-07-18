@@ -38,7 +38,8 @@ ErrorOr<size_t> wcsnrtombs(char *__restrict s, const wchar_t **__restrict pwcs,
       s[dst_idx] = converted.value();
 
     if (converted.value() == '\0') {
-      *pwcs = nullptr;
+      if (s != nullptr)
+        *pwcs = nullptr;
       return dst_idx;
     }
 
@@ -46,7 +47,9 @@ ErrorOr<size_t> wcsnrtombs(char *__restrict s, const wchar_t **__restrict pwcs,
     converted = str_conv.popUTF8();
   }
 
-  *pwcs += str_conv.getSourceIndex();
+  if (s != nullptr)
+    *pwcs += str_conv.getSourceIndex();
+    
   if (converted.error() == -1) // if we hit conversion limit
     return dst_idx;
 
