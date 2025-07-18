@@ -1,16 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core.DivideZero -verify %s
-
-int fooPR10616 (int qX ) {
-  int a, c, d;
-
-  d = (qX-1);
-  while ( d != 0 ) {
-    d = c - (c/d) * d;
-  }
-
-  return (a % (qX-1)); // expected-warning {{Division by zero}}
-
-}
+// RUN: %clang_analyze_cc1 -analyzer-checker=core.DivideZero -std=c++20 -verify %s
 
 namespace GH148875 {
 struct A {
@@ -34,7 +22,7 @@ struct D {
 
 struct E {
   D d;
-  E(int a) : d{a} {}
+  E(int a) : d(a) {}
 };
 
 struct F {
@@ -67,7 +55,7 @@ int t5() {
 }
 
 int t6() {
-  F f{32};
+  F f(32);
   return 1 / (f.x - 32); // expected-warning {{Division by zero}}
 }
-}
+} // namespace GH148875
