@@ -320,8 +320,9 @@ def XeGPU_RangeAttr : XeGPUAttr<"Range", "range"> {
   let description = [{
     `RangeAttr` is an attribute that defines a half-open range [start, end).
     The range is inclusive of the start value and exclusive of the end value.
-    One usage of this attribute can be for subgroup specialization.
-    For subgroup specialization, this attribute can be attached to a scf.if op like
+    One usage of this attribute can be to specify the subgroup id range.
+    The subgroup id range can be specified using this attribute,
+    and it can be attached to a scf.if op like
     ```mlir
     scf.if %cond {
       // some operations

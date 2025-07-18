@@ -34,9 +34,9 @@ using namespace mlir;
 
 namespace {
 
-// Check if there is sg id specialization.
-static bool isSgIdSpecialized(Operation *op, int64_t &startOfRange,
-                              int64_t &endOfRange) {
+// Check if there is sg id range attached to the scf.if op.
+static bool isSgIdRangeSpecified(Operation *op, int64_t &startOfRange,
+                                 int64_t &endOfRange) {
   Operation *parent = op->getParentOp();
   // Find the outermost scf::IfOp with xegpu.sg_id_range.
   while (parent) {
@@ -195,10 +195,11 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     }
 
     int64_t startOfRange = -1, endOfRange = -1;
-    bool sgIdSpecialized = isSgIdSpecialized(op, startOfRange, endOfRange);
+    bool sgIdRangeSpecified =
+        isSgIdRangeSpecified(op, startOfRange, endOfRange);
 
     Value adjustedSgId = linearSgId;
-    if (sgIdSpecialized) {
+    if (sgIdRangeSpecified) {
       int64_t sgCount = endOfRange - startOfRange;
       if (computeProduct(sgLayout) != sgCount) {
         return rewriter.notifyMatchFailure(

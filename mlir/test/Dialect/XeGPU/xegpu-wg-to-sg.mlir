@@ -296,8 +296,8 @@ gpu.func @dpas_no_sg_data(%a: memref<24x32xf32>, %b: memref<32x24xf32>) {
     gpu.return
   }
 
-  // CHECK-LABEL: @warp_specialized
-  gpu.func @warp_specialized(%src: memref<256x128xf32>, %src1: memref<128x256xf32>, %src2: memref<128x64xf32>) {
+  // CHECK-LABEL: @subgroup_id_range
+  gpu.func @subgroup_id_range(%src: memref<256x128xf32>, %src1: memref<128x256xf32>, %src2: memref<128x64xf32>) {
     %sg_id = gpu.subgroup_id : index
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
