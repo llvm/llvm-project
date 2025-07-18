@@ -1474,8 +1474,8 @@ public:
                                                 const Instruction *BInstr);
   LLVM_ABI static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
-  LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(LLVMContext &Ctx,
-                                                      MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
+                                                      const MDNode *B);
 };
 
 /// Tuple of metadata.
