@@ -391,7 +391,8 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_TRUE(V9.isManuallyAlloc());
 
   Value V10;
-  llvm::cantFail(Interp->ParseAndExecute("enum D {Zero = 0, One}; One", &V10));
+  llvm::cantFail(Interp->ParseAndExecute(
+      "enum D : unsigned int {Zero = 0, One}; One", &V10));
 
   std::string prettyType;
   llvm::raw_string_ostream OSType(prettyType);
