@@ -5195,9 +5195,8 @@ void Verifier::visitCallsiteMetadata(Instruction &I, MDNode *MD) {
 }
 
 static inline bool isConstantIntMetadataOperand(const Metadata *MD) {
-  if (auto *VAL = dyn_cast<ValueAsMetadata>(MD)) {
+  if (auto *VAL = dyn_cast<ValueAsMetadata>(MD))
     return isa<ConstantInt>(VAL->getValue());
-  }
   return false;
 }
 
