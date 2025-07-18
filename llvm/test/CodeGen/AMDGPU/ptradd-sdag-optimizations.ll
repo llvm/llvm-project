@@ -263,3 +263,48 @@ define amdgpu_kernel void @fold_mad64(ptr addrspace(1) %p) {
   store float 1.0, ptr addrspace(1) %p1
   ret void
 }
+
+; Use non-zero shift amounts in v_lshl_add_u64.
+define ptr @select_v_lshl_add_u64(ptr %base, i64 %voffset) {
+; GFX942_PTRADD-LABEL: select_v_lshl_add_u64:
+; GFX942_PTRADD:       ; %bb.0:
+; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942_PTRADD-NEXT:    v_lshlrev_b64 v[2:3], 3, v[2:3]
+; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
+; GFX942_PTRADD-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942_LEGACY-LABEL: select_v_lshl_add_u64:
+; GFX942_LEGACY:       ; %bb.0:
+; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942_LEGACY-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 3, v[0:1]
+; GFX942_LEGACY-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr inbounds i64, ptr %base, i64 %voffset
+  ret ptr %gep
+}
+
+; Fold mul and add into v_mad, even if amdgpu-codegenprepare-mul24 turned the
+; mul into a mul24.
+define ptr @fold_mul24_into_mad(ptr %base, i64 %a, i64 %b) {
+; GFX942_PTRADD-LABEL: fold_mul24_into_mad:
+; GFX942_PTRADD:       ; %bb.0:
+; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942_PTRADD-NEXT:    v_and_b32_e32 v2, 0xfffff, v2
+; GFX942_PTRADD-NEXT:    v_and_b32_e32 v4, 0xfffff, v4
+; GFX942_PTRADD-NEXT:    v_mul_hi_u32_u24_e32 v3, v2, v4
+; GFX942_PTRADD-NEXT:    v_mul_u32_u24_e32 v2, v2, v4
+; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
+; GFX942_PTRADD-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942_LEGACY-LABEL: fold_mul24_into_mad:
+; GFX942_LEGACY:       ; %bb.0:
+; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942_LEGACY-NEXT:    v_and_b32_e32 v2, 0xfffff, v2
+; GFX942_LEGACY-NEXT:    v_and_b32_e32 v3, 0xfffff, v4
+; GFX942_LEGACY-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v2, v3, v[0:1]
+; GFX942_LEGACY-NEXT:    s_setpc_b64 s[30:31]
+  %a_masked = and i64 %a, u0xfffff
+  %b_masked = and i64 %b, u0xfffff
+  %mul = mul i64 %a_masked, %b_masked
+  %gep = getelementptr inbounds i8, ptr %base, i64 %mul
+  ret ptr %gep
+}
