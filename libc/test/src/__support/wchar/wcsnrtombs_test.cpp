@@ -188,3 +188,13 @@ TEST(LlvmLibcWcsnrtombs, InvalidCharacter) {
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(res.error(), EILSEQ);
 }
+
+TEST(LlvmLibcWcsnrtombs, NullSrc) {
+  EXPECT_DEATH(
+      [] {
+        LIBC_NAMESPACE::internal::mbstate state;
+        char mbs[10];
+        LIBC_NAMESPACE::internal::wcsnrtombs(mbs, nullptr, 1, 1, &state);
+      },
+      WITH_SIGNAL(-1));
+}

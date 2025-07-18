@@ -154,3 +154,43 @@ TEST_F(LlvmLibcWcsnrtombs, ErrnoTest) {
             static_cast<size_t>(-1));
   ASSERT_ERRNO_EQ(EILSEQ);
 }
+
+TEST_F(LlvmLibcWcsnrtombs, NullState) {
+  // this test is the same as DestLimit except it uses a nullptr mbstate*
+
+  /// clown emoji, sigma symbol, y with diaeresis, letter A
+  const wchar_t src[] = {static_cast<wchar_t>(0x1f921),
+                         static_cast<wchar_t>(0x2211),
+                         static_cast<wchar_t>(0xff), static_cast<wchar_t>(0x41),
+                         static_cast<wchar_t>(0x0)};
+  const wchar_t *cur = src;
+
+  char mbs[11];
+  for (int i = 0; i < 11; ++i)
+    mbs[i] = '\x01'; // dummy initial values
+
+  ASSERT_EQ(LIBC_NAMESPACE::wcsnrtombs(mbs, &cur, 5, 4, nullptr),
+            static_cast<size_t>(4));
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(cur, src + 1);
+  ASSERT_EQ(mbs[0], '\xF0');
+  ASSERT_EQ(mbs[1], '\x9F');
+  ASSERT_EQ(mbs[2], '\xA4');
+  ASSERT_EQ(mbs[3], '\xA1');
+  ASSERT_EQ(mbs[4], '\x01'); // didn't write more than 4 bytes
+
+  for (int i = 0; i < 11; ++i)
+    mbs[i] = '\x01'; // dummy initial values
+
+  // not enough bytes to convert the second character, so only converts one
+  cur = src;
+  ASSERT_EQ(LIBC_NAMESPACE::wcsnrtombs(mbs, &cur, 5, 6, nullptr),
+            static_cast<size_t>(4));
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(cur, src + 1);
+  ASSERT_EQ(mbs[0], '\xF0');
+  ASSERT_EQ(mbs[1], '\x9F');
+  ASSERT_EQ(mbs[2], '\xA4');
+  ASSERT_EQ(mbs[3], '\xA1');
+  ASSERT_EQ(mbs[4], '\x01');
+}

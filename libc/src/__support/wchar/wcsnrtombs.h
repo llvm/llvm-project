@@ -15,14 +15,20 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/string_converter.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-ErrorOr<size_t> wcsnrtombs(char *__restrict s, const wchar_t **__restrict pwcs,
-                           size_t nwc, size_t len, mbstate *ps) {
+LIBC_INLINE static ErrorOr<size_t> wcsnrtombs(char *__restrict s,
+                                              const wchar_t **__restrict pwcs,
+                                              size_t nwc, size_t len,
+                                              mbstate *ps) {
+  LIBC_CRASH_ON_NULLPTR(pwcs);
+  LIBC_CRASH_ON_NULLPTR(ps);
+
   CharacterConverter cr(ps);
   if (!cr.isValidState())
     return Error(EINVAL);
