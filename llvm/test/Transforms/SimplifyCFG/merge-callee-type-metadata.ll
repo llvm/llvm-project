@@ -61,7 +61,7 @@ if.end:                                           ; preds = %if.else, %if.then
   ret ptr %x.0
 }
 
-;; Test if the callee_type metadata is merged correctly when
+;; Test if the callee_type metadata is dropped correctly when
 ;; only the left instruction has callee_type metadata.
 define ptr @_Z10test_leftb(i1 zeroext %b) {
 ; CHECK-LABEL: define ptr @_Z10test_leftb(
@@ -69,7 +69,7 @@ define ptr @_Z10test_leftb(i1 zeroext %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[FN:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    store ptr @_Znwm, ptr [[FN]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[FN]](i64 4), !callee_type [[META4:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[FN]](i64 4)
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
@@ -90,7 +90,7 @@ if.end:                                           ; preds = %if.else, %if.then
   ret ptr %x.0
 }
 
-;; Test if the callee_type metadata is merged correctly when
+;; Test if the callee_type metadata is dropped correctly when
 ;; only the right instruction has callee_type metadata.
 define ptr @_Z10test_rightb(i1 zeroext %b) {
 ; CHECK-LABEL: define ptr @_Z10test_rightb(
@@ -98,7 +98,7 @@ define ptr @_Z10test_rightb(i1 zeroext %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[FN:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    store ptr @_Znwm, ptr [[FN]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[FN]](i64 4), !callee_type [[META3]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[FN]](i64 4)
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
@@ -127,7 +127,7 @@ define ptr @_Z10test_listb(i1 zeroext %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[FN:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    store ptr @_Znwm, ptr [[FN]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[FN]](i64 4), !callee_type [[META5:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[FN]](i64 4), !callee_type [[META4:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
@@ -162,7 +162,6 @@ declare ptr @_Znwm(i64)
 ; CHECK: [[META1]] = !{i64 0, !"callee_type2.generalized"}
 ; CHECK: [[META2]] = !{i64 0, !"callee_type0.generalized"}
 ; CHECK: [[META3]] = !{[[META2]]}
-; CHECK: [[META4]] = !{[[META1]]}
-; CHECK: [[META5]] = !{[[META2]], [[META1]], [[META6:![0-9]+]]}
-; CHECK: [[META6]] = !{i64 0, !"callee_type1.generalized"}
+; CHECK: [[META4]] = !{[[META2]], [[META1]], [[META5:![0-9]+]]}
+; CHECK: [[META5]] = !{i64 0, !"callee_type1.generalized"}
 ;.
