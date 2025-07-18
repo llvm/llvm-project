@@ -941,10 +941,12 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   Pressure.resize(Regions.size());
   RegionsWithHighRP.resize(Regions.size());
   RegionsWithExcessRP.resize(Regions.size());
+  RegionsWithExcessVGPRRP.resize(Regions.size());
   RegionsWithMinOcc.resize(Regions.size());
   RegionsWithIGLPInstrs.resize(Regions.size());
   RegionsWithHighRP.reset();
   RegionsWithExcessRP.reset();
+  RegionsWithExcessVGPRRP.reset();
   RegionsWithMinOcc.reset();
   RegionsWithIGLPInstrs.reset();
 
@@ -1263,6 +1265,14 @@ void GCNSchedStage::finalizeGCNRegion() {
   // reason that the original schedule is better.
   checkScheduling();
 
+  unsigned MaxArchVGPR = 0;
+  for (auto P : DAG.Pressure) {
+    if (P.getArchVGPRNum() > MaxArchVGPR)
+      MaxArchVGPR = P.getArchVGPRNum();
+  }
+
+  MF.getInfo<SIMachineFunctionInfo>()->setMaxArchVGPRPressure(MaxArchVGPR);
+
   if (DAG.RegionsWithIGLPInstrs[RegionIdx] &&
       StageID != GCNSchedStageID::UnclusteredHighRPReschedule)
     SavedMutations.swap(DAG.Mutations);
@@ -1330,6 +1340,9 @@ void GCNSchedStage::checkScheduling() {
   // file.
   unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
+
+  if (PressureAfter.getArchVGPRNum() > ST.getAddressableNumArchVGPRs())
+    DAG.RegionsWithExcessVGPRRP[RegionIdx] = true;
 
   if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
       PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
