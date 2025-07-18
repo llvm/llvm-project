@@ -716,6 +716,8 @@ Improvements to Clang's diagnostics
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
 
+- ``-Wimplicit-fallthrough`` was added to ``-Wextra`` for GCC compatibility.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
