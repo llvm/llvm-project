@@ -8393,9 +8393,9 @@ def ext_default_init_const : ExtWarn<
   InGroup<MicrosoftConstInit>;
 def err_delete_operand : Error<"cannot delete expression of type %0">;
 def err_delete_void_ptr_operand : Error<
-  "cannot delete expression with pointer-to-'void' type %0">;
+  "cannot delete pointer to %0">;
 def ext_delete_void_ptr_operand : ExtWarn<
-  "cannot delete expression with pointer-to-'void' type %0">,
+  "cannot delete pointer to %0">,
   InGroup<DeleteIncomplete>;
 def err_ambiguous_delete_operand : Error<
   "ambiguous conversion of delete expression of type %0 to a pointer">;

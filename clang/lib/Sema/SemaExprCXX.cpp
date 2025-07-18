@@ -4035,7 +4035,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       // But we still prohibit this since C++26.
       Diag(StartLoc, LangOpts.CPlusPlus26 ? diag::err_delete_void_ptr_operand
                                           : diag::ext_delete_void_ptr_operand)
-          << Type << Ex.get()->getSourceRange();
+          << Pointee << Ex.get()->getSourceRange();
     } else if (Pointee->isFunctionType() || Pointee->isVoidType() ||
                Pointee->isSizelessType()) {
       return ExprError(Diag(StartLoc, diag::err_delete_operand)

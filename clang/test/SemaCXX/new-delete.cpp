@@ -224,8 +224,8 @@ void bad_deletes()
   delete 0; // expected-error {{cannot delete expression of type 'int'}}
   delete [0] (int*)0; // expected-error {{expected variable name or 'this' in lambda capture list}}
   delete (void*)0;
-  // cxx98-23-warning@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
-  // since-cxx26-error@-2 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+  // cxx98-23-warning@-1 {{cannot delete pointer to 'void'}}
+  // since-cxx26-error@-2 {{cannot delete pointer to 'void'}}
   delete (T*)0;
   // cxx98-23-warning@-1 {{deleting pointer to incomplete struct 'T'}}
   // since-cxx26-error@-2 {{cannot delete pointer to incomplete struct 'T'}}
