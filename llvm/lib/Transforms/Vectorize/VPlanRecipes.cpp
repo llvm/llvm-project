@@ -471,7 +471,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::ComputeReductionResult:
-  case VPInstruction::ExtractSubvector:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
@@ -849,14 +848,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
       Res->setName(Name);
     return Res;
   }
-  case VPInstruction::ExtractSubvector: {
-    Value *Vec = State.get(getOperand(0));
-    assert(State.VF.isVector());
-    auto Idx = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
-    auto ResTy = VectorType::get(
-        State.TypeAnalysis.inferScalarType(getOperand(0)), State.VF);
-    return Builder.CreateExtractVector(ResTy, Vec, Idx);
-  }
   case VPInstruction::LogicalAnd: {
     Value *A = State.get(getOperand(0));
     Value *B = State.get(getOperand(1));
@@ -965,7 +956,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::ActiveLaneMask: {
     Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
-    Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+    unsigned Multiplier =
+        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())->getZExtValue();
+    Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF * Multiplier);
     IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
                                   {ArgTy, ArgTy});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
@@ -1055,7 +1048,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractPenultimateElement:
-  case VPInstruction::ExtractSubvector:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
@@ -1185,9 +1177,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
-    break;
-  case VPInstruction::ExtractSubvector:
-    O << "extract-subvector";
     break;
   case VPInstruction::ComputeAnyOfResult:
     O << "compute-anyof-result";
