@@ -135,51 +135,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
   }
 }
 
-RTLIB::LibcallImpl
-RuntimeLibcallsInfo::getSupportedLibcallImpl(StringRef FuncName) const {
-  const ArrayRef<uint16_t> RuntimeLibcallNameOffsets(
-      RuntimeLibcallNameOffsetTable);
-
-  iterator_range<ArrayRef<uint16_t>::const_iterator> Range =
-      getRecognizedLibcallImpls(FuncName);
-
-  for (auto I = Range.begin(); I != Range.end(); ++I) {
-    RTLIB::LibcallImpl Impl =
-        static_cast<RTLIB::LibcallImpl>(I - RuntimeLibcallNameOffsets.begin());
-
-    // FIXME: This should not depend on looking up ImplToLibcall, only the list
-    // of libcalls for the module.
-    RTLIB::LibcallImpl Recognized = LibcallImpls[ImplToLibcall[Impl]];
-    if (Recognized != RTLIB::Unsupported)
-      return Recognized;
-  }
-
-  return RTLIB::Unsupported;
-}
-
-iterator_range<ArrayRef<uint16_t>::const_iterator>
-RuntimeLibcallsInfo::getRecognizedLibcallImpls(StringRef FuncName) {
-  StringTable::Iterator It = lower_bound(RuntimeLibcallImplNameTable, FuncName);
-  if (It == RuntimeLibcallImplNameTable.end() || *It != FuncName)
-    return iterator_range(ArrayRef<uint16_t>());
-
-  uint16_t IndexVal = It.offset().value();
-  const ArrayRef<uint16_t> TableRef(RuntimeLibcallNameOffsetTable);
-
-  ArrayRef<uint16_t>::const_iterator E = TableRef.end();
-  ArrayRef<uint16_t>::const_iterator EntriesBegin =
-      std::lower_bound(TableRef.begin(), E, IndexVal);
-  ArrayRef<uint16_t>::const_iterator EntriesEnd = EntriesBegin;
-
-  while (EntriesEnd != E && *EntriesEnd == IndexVal)
-    ++EntriesEnd;
-
-  assert(EntriesBegin != E &&
-         "libcall found in name table but not offset table");
-
-  return make_range(EntriesBegin, EntriesEnd);
-}
-
 bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
   switch (TT.getOS()) {
   case Triple::MacOSX:

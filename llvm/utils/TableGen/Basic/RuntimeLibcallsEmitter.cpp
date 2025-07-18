@@ -236,19 +236,8 @@ public:
     for (RuntimeLibcall &LibCall : RuntimeLibcallDefList)
       Def2RuntimeLibcall[LibCall.getDef()] = &LibCall;
 
-    ArrayRef<const Record *> AllRuntimeLibcallImplsRaw =
+    ArrayRef<const Record *> AllRuntimeLibcallImpls =
         Records.getAllDerivedDefinitions("RuntimeLibcallImpl");
-
-    SmallVector<const Record *, 1024> AllRuntimeLibcallImpls(
-        AllRuntimeLibcallImplsRaw);
-
-    // Sort by libcall impl name, not the enum name. This keeps the order
-    // suitable for using the name table for libcall recognition binary search.
-    llvm::sort(AllRuntimeLibcallImpls, [](const Record *A, const Record *B) {
-      return A->getValueAsString("LibCallFuncName") <
-             B->getValueAsString("LibCallFuncName");
-    });
-
     RuntimeLibcallImplDefList.reserve(AllRuntimeLibcallImpls.size());
 
     size_t LibCallImplEnumVal = 1;
