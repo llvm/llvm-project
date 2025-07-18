@@ -1325,7 +1325,7 @@ bool LoopInterchangeProfitability::isProfitable(
           isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
       break;
     case RuleTy::Ignore:
-      // Nothing to do, this has no effect.
+      llvm_unreachable("Option 'ignore' is not supported with other options");
       break;
     }
 
