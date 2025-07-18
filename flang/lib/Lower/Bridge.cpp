@@ -1470,8 +1470,9 @@ private:
     assert(falseTarget && "missing conditional branch false block");
     mlir::Location loc = toLocation();
     mlir::Value bcc = builder->createConvert(loc, builder->getI1Type(), cond);
-    builder->create<mlir::cf::CondBranchOp>(loc, bcc, trueTarget, std::nullopt,
-                                            falseTarget, std::nullopt);
+    builder->create<mlir::cf::CondBranchOp>(loc, bcc, trueTarget,
+                                            mlir::ValueRange{}, falseTarget,
+                                            mlir::ValueRange{});
   }
   void genConditionalBranch(mlir::Value cond,
                             Fortran::lower::pft::Evaluation *trueTarget,
@@ -2560,8 +2561,8 @@ private:
       builder->setInsertionPointToEnd(loopWrapperOp.getBody());
       auto loopOp = builder->create<fir::DoConcurrentLoopOp>(
           loc, nestLBs, nestUBs, nestSts, /*loopAnnotation=*/nullptr,
-          /*local_vars=*/std::nullopt,
-          /*local_syms=*/nullptr, /*reduce_vars=*/std::nullopt,
+          /*local_vars=*/mlir::ValueRange{},
+          /*local_syms=*/nullptr, /*reduce_vars=*/mlir::ValueRange{},
           /*reduce_byref=*/nullptr, /*reduce_syms=*/nullptr,
           /*reduce_attrs=*/nullptr);
 
@@ -3814,9 +3815,9 @@ private:
       mlir::Block *selectCaseBlock = insertBlock(blockList[0]);
       mlir::Block *assumedSizeBlock =
           rankStarBlock ? rankStarBlock : defaultBlock;
-      builder->create<mlir::cf::CondBranchOp>(loc, isAssumedSize,
-                                              assumedSizeBlock, std::nullopt,
-                                              selectCaseBlock, std::nullopt);
+      builder->create<mlir::cf::CondBranchOp>(
+          loc, isAssumedSize, assumedSizeBlock, mlir::ValueRange{},
+          selectCaseBlock, mlir::ValueRange{});
       startBlock(selectCaseBlock);
     }
     // Create fir.select_case for the other rank cases.
@@ -4706,8 +4707,10 @@ private:
       mlir::Value lhs = lhsMutableBox.getAddr();
       mlir::Value rhs = fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
       mlir::Value boundsDesc = createBoundArray(lbounds, ubounds, loc);
-      Fortran::lower::genPointerAssociateRemapping(*builder, loc, lhs, rhs,
-                                                   boundsDesc);
+      Fortran::lower::genPointerAssociateRemapping(
+          *builder, loc, lhs, rhs, boundsDesc,
+          lhsType && rhsType && !lhsType->IsPolymorphic() &&
+              rhsType->IsPolymorphic());
       return;
     }
     if (!lowerToHighLevelFIR() && explicitIterationSpace()) {

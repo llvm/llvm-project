@@ -214,7 +214,7 @@ __device__ void Test_Func_StructTrivialCopyNoMove(StructTrivialCopyNoMove) {}
 //
 __global__ void Test_Kern_StructTrivialCopyNoMove(StructTrivialCopyNoMove) {}
 // CHECK-LABEL: define dso_local void @_Z28Test_Func_StructNoCopyNoMove18StructNoCopyNoMove(
-// CHECK-SAME: ptr addrspace(5) noundef [[TMP0:%.*]]) #[[ATTR0]] !dbg [[DBG144:![0-9]+]] {
+// CHECK-SAME: ptr addrspace(5) dead_on_return noundef [[TMP0:%.*]]) #[[ATTR0]] !dbg [[DBG144:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTINDIRECT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[DOTINDIRECT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTINDIRECT_ADDR]] to ptr

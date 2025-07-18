@@ -1193,8 +1193,8 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
   auto name = OperationName("builtin.unrealized_conversion_cast", getContext());
   auto *op = Operation::create(
       getEncodedSourceLocation(loc), name, type, /*operands=*/{},
-      /*attributes=*/std::nullopt, /*properties=*/nullptr, /*successors=*/{},
-      /*numRegions=*/0);
+      /*attributes=*/NamedAttrList(), /*properties=*/nullptr,
+      /*successors=*/{}, /*numRegions=*/0);
   forwardRefPlaceholders[op->getResult(0)] = loc;
   return op->getResult(0);
 }
