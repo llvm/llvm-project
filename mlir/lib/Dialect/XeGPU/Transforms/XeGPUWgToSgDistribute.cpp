@@ -392,6 +392,32 @@ struct WgToSgElementwiseOp : public ConversionPattern {
   }
 };
 
+// clang-format off
+// Pattern for lowering ConvertLayoutOp based on sg_layout and sg_data.
+// If input_layout and target_layout have identical sg_layout and sg_data,
+// the op is rewritten to a subgroup-level ConvertLayoutOp with these fields
+// dropped. For example:
+//   #a = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 16], inst_data = [16, 16]>
+//   #b = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 16], inst_data = [8, 16]>
+//   xegpu.convert_layout %1 <{input_layout = #a, target_layout = #b}> : vector<32x64xf32>
+// becomes:
+//   #a = #xegpu.layout<inst_data = [16, 16]>
+//   #b = #xegpu.layout<inst_data = [8, 16]>
+//   xegpu.convert_layout %1 <{input_layout = #a, target_layout = #b}> : vector<16x16xf32>
+// (vector<16x16xf32> is determined by sg_data = [16, 16])
+//
+// If sg_layout or sg_data differ, SLM is used to redistribute data across subgroups.
+// For example:
+//   #a = #xegpu.layout<sg_layout = [1, 4], sg_data = [32, 16], inst_data = [16, 16]>
+//   #b = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 32], inst_data = [8, 16]>
+//   xegpu.convert_layout %1 <{input_layout = #a, target_layout = #b}> : vector<32x64xf32>
+// is lowered to:
+//   #a = #xegpu.layout<inst_data = [16, 16]>
+//   #b = #xegpu.layout<inst_data = [8, 16]>
+//   store_matrix %1, %slm <{layout_input_0 = #a}> : vector<32x16>, metrix_desc<32x64xf32>
+//   %d = load_matrix %slm <{layout_result_0 = #a}> : metrix_desc<32x64xf32> -> vector<16x32xf32>
+//   xegpu.convert_layout %d <{input_layout = #a, target_layout = #b}> : vector<16x32xf32>
+// clang-format on
 struct WgToSgConvertLayoutOp
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
   using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
