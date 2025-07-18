@@ -236,6 +236,7 @@ protected:
   bool HasRestrictedSOffset = false;
   bool Has64BitLiterals = false;
   bool HasBitOp3Insts = false;
+  bool HasTanhInsts = false;
   bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
@@ -1391,6 +1392,8 @@ public:
   bool hasMinimum3Maximum3F16() const {
     return HasMinimum3Maximum3F16;
   }
+
+  bool hasTanhInsts() const { return HasTanhInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
