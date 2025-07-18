@@ -15,16 +15,16 @@
 namespace mathtest {
 
 template <auto Func> class HostRefChecker {
-  using FuncTraits = FunctionTraits<Func>;
-  using InTypesTuple = typename FuncTraits::ArgTypesTuple;
+  using FunctionTraits = FunctionTraits<Func>;
+  using InTypesTuple = typename FunctionTraits::ArgTypesTuple;
 
-  using FuncConfig = FunctionConfig<Func>;
+  using FunctionConfig = FunctionConfig<Func>;
 
   template <typename... Ts>
   using BuffersTupleType = std::tuple<llvm::ArrayRef<Ts>...>;
 
 public:
-  using OutType = typename FuncTraits::ReturnType;
+  using OutType = typename FunctionTraits::ReturnType;
 
 private:
   template <typename... Ts>
@@ -62,7 +62,7 @@ public:
       const OutType Expected = std::apply(Func, CurrentInputsTuple);
 
       const auto UlpDistance = computeUlpDistance(Actual, Expected);
-      const bool IsFailure = UlpDistance > FuncConfig::UlpTolerance;
+      const bool IsFailure = UlpDistance > FunctionConfig::UlpTolerance;
 
       return ResultType(UlpDistance, IsFailure,
                         typename ResultType::TestCase(
