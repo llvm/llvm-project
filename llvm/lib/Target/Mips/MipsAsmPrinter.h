@@ -112,8 +112,6 @@ private:
 
   void EmitFPCallStub(const char *, const Mips16HardFloatInfo::FuncSignature *);
 
-  void NaClAlignIndirectJumpTargets(MachineFunction &MF);
-
   bool isLongBranchPseudo(int Opcode) const;
 
 public:
