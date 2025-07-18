@@ -1719,7 +1719,7 @@ static bool isBroadcastLike(Operation *op) {
 
   // Check that shape_cast **only** prepends 1s, like (2,3) -> (1,1,2,3).
   // Checking that the destination shape has a prefix of 1s is not sufficient,
-  // for example (2,3) -> (1,3,2) is not broadcast-like. A sufficient condition
+  // for example (2,3) -> (1,3,2) is not broadcastlike. A sufficient condition
   // is that the source shape is a suffix of the destination shape.
   VectorType srcType = shapeCast.getSourceVectorType();
   ArrayRef<int64_t> srcShape = srcType.getShape();
