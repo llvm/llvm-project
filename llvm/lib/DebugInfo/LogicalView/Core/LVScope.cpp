@@ -263,7 +263,7 @@ bool LVScope::removeElement(LVElement *Element) {
     return Item == Element;
   };
   auto RemoveElement = [Element, Predicate](auto &Container) -> bool {
-    auto Iter = std::remove_if(Container->begin(), Container->end(), Predicate);
+    auto Iter = llvm::remove_if(*Container, Predicate);
     if (Iter != Container->end()) {
       Container->erase(Iter, Container->end());
       Element->resetParent();
