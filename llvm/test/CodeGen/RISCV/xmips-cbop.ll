@@ -53,22 +53,30 @@ define void @prefetch_inst_read(ptr noundef %ptr) nounwind  {
 define void @prefetch_frameindex_test_neg() nounwind {
 ; RV32XMIPSPREFETCH-LABEL: prefetch_frameindex_test_neg:
 ; RV32XMIPSPREFETCH:       # %bb.0:
-; RV32XMIPSPREFETCH-NEXT:    addi sp, sp, -512
-; RV32XMIPSPREFETCH-NEXT:    addi a0, sp, -32
+; RV32XMIPSPREFETCH-NEXT:    lui a0, 1
+; RV32XMIPSPREFETCH-NEXT:    addi a0, a0, 16
+; RV32XMIPSPREFETCH-NEXT:    sub sp, sp, a0
+; RV32XMIPSPREFETCH-NEXT:    addi a0, sp, 524
 ; RV32XMIPSPREFETCH-NEXT:    mips.pref 8, 0(a0)
-; RV32XMIPSPREFETCH-NEXT:    addi sp, sp, 512
+; RV32XMIPSPREFETCH-NEXT:    lui a0, 1
+; RV32XMIPSPREFETCH-NEXT:    addi a0, a0, 16
+; RV32XMIPSPREFETCH-NEXT:    add sp, sp, a0
 ; RV32XMIPSPREFETCH-NEXT:    ret
 ;
 ; RV64XMIPSPREFETCH-LABEL: prefetch_frameindex_test_neg:
 ; RV64XMIPSPREFETCH:       # %bb.0:
-; RV64XMIPSPREFETCH-NEXT:    addi sp, sp, -512
-; RV64XMIPSPREFETCH-NEXT:    addi a0, sp, -32
+; RV64XMIPSPREFETCH-NEXT:    lui a0, 1
+; RV64XMIPSPREFETCH-NEXT:    addi a0, a0, 16
+; RV64XMIPSPREFETCH-NEXT:    sub sp, sp, a0
+; RV64XMIPSPREFETCH-NEXT:    addi a0, sp, 524
 ; RV64XMIPSPREFETCH-NEXT:    mips.pref 8, 0(a0)
-; RV64XMIPSPREFETCH-NEXT:    addi sp, sp, 512
+; RV64XMIPSPREFETCH-NEXT:    lui a0, 1
+; RV64XMIPSPREFETCH-NEXT:    addi a0, a0, 16
+; RV64XMIPSPREFETCH-NEXT:    add sp, sp, a0
 ; RV64XMIPSPREFETCH-NEXT:    ret
- %data = alloca [128 x i32], align 4
+  %data = alloca [1024 x i32], align 4
   %base = bitcast ptr %data to ptr
-  %ptr = getelementptr [128 x i32], ptr %base, i32 0, i32 -8
+  %ptr = getelementptr [127 x i32], ptr %base, i32 0, i32 127
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
 }
@@ -87,7 +95,7 @@ define void @prefetch_frameindex_test() nounwind {
 ; RV64XMIPSPREFETCH-NEXT:    mips.pref 8, 32(sp)
 ; RV64XMIPSPREFETCH-NEXT:    addi sp, sp, 512
 ; RV64XMIPSPREFETCH-NEXT:    ret
- %data = alloca [128 x i32], align 4
+  %data = alloca [128 x i32], align 4
   %base = bitcast ptr %data to ptr
   %ptr = getelementptr [128 x i32], ptr %base, i32 0, i32 8
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)

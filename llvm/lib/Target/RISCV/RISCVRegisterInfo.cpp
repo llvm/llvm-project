@@ -573,7 +573,6 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     int64_t Val = Offset.getFixed();
     int64_t Lo12 = SignExtend64<12>(Val);
     unsigned Opc = MI.getOpcode();
-    int64_t Imm9Val = SignExtend64<9>(Val);
     auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
     if (Opc == RISCV::ADDI && !isInt<12>(Val)) {
@@ -588,9 +587,8 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                (Lo12 & 0b11111) != 0) {
       // Prefetch instructions require the offset to be 32 byte aligned.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
-    } else if ((Opc == RISCV::PREFETCH_I || Opc == RISCV::PREFETCH_R ||
-                Opc == RISCV::PREFETCH_W) &&
-               Subtarget.hasVendorXMIPSCBOP() && !isUInt<9>(Imm9Val)) {
+    } else if (Opc == RISCV::MIPS_PREFETCH && Subtarget.hasVendorXMIPSCBOP() &&
+               !isUInt<9>(Val)) {
       // MIPS Prefetch instructions require the offset to be 9 bits encoded.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
     } else if ((Opc == RISCV::PseudoRV32ZdinxLD ||
