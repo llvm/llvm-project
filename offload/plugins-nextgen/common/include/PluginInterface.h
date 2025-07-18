@@ -1593,8 +1593,6 @@ public:
   /// Deinitialize the resource pool and delete all resources. This function
   /// must be called before the destructor.
   virtual Error deinit() {
-    const std::lock_guard<std::mutex> Lock(Mutex);
-
     if (NextAvailable)
       DP("Missing %d resources to be returned\n", NextAvailable);
 
