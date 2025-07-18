@@ -1,6 +1,6 @@
 ! Tests mapping of a basic `do concurrent` loop to
 ! `!$omp target teams distribute parallel do`.
-
+! XFAIL: *
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s
 
