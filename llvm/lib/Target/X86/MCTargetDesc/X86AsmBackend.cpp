@@ -567,8 +567,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
   // DataFragment, so that we can get the size of instructions later in
   // MCAssembler::relaxBoundaryAlign. The easiest way is to insert a new empty
   // DataFragment.
-  if (isa_and_nonnull<MCDataFragment>(CF))
-    OS.insert(OS.getContext().allocFragment<MCDataFragment>());
+  OS.insert(OS.getContext().allocFragment<MCFragment>());
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *Sec = OS.getCurrentSectionOnly();
