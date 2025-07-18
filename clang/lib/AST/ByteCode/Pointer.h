@@ -576,6 +576,11 @@ public:
       return true;
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
+  bool isConstInMutable() const {
+    if (!isBlockPointer())
+      return false;
+    return isRoot() ? false : getInlineDesc()->IsConstInMutable;
+  }
 
   /// Checks if an object or a subfield is volatile.
   bool isVolatile() const {

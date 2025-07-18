@@ -101,6 +101,10 @@ struct InlineDescriptor {
   /// Flag indicating if the field is mutable (if in a record).
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
+  /// Flag indicating if this field is a const field nested in
+  /// a mutable parent field.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsConstInMutable : 1;
   /// Flag indicating if the field is an element of a composite array.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsArrayElement : 1;
