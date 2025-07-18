@@ -932,13 +932,18 @@ struct PackOpTiling
           continue;
         }
 
-        // If the dimension needs padding, it is not supported because there are
-        // iterations that only write padding values to the whole tile. The
-        // consumer fusion is driven by the source, so it is not possible to map
-        // an empty slice to the tile.
-        bool needExtraPadding =
-            ShapedType::isDynamic(destDimSize) || !cstInnerSize ||
-            destDimSize * cstInnerSize.value() != srcDimSize;
+        // If the dimension needs extra padding, it is not supported because
+        // there are iterations that only write padding values to the whole
+        // tile. The consumer fusion is driven by the source, so it is not
+        // possible to map an empty slice to the tile. Extra padding is not a
+        // regular form, and the implementation is being conversative.
+        bool needExtraPadding = true;
+        if (!ShapedType::isDynamic(srcDimSize) &&
+            !ShapedType::isDynamic(destDimSize) && cstInnerSize) {
+          needExtraPadding =
+              destDimSize >
+              (srcDimSize + cstInnerSize.value() - 1) / cstInnerSize.value();
+        }
         // Prioritize the case that the op already says that it does not need
         // padding.
         if (!packOp.getPaddingValue())
