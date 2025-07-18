@@ -947,13 +947,18 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
 
     // Copies and REG_SEQUENCE do not contribute to the final assembly
     // So, skip them but take care of the SGPR to VGPR copies bookkeeping.
-    if (Inst->isCopy() || Inst->isRegSequence()) {
-      if (TRI->isVGPR(*MRI, Inst->getOperand(0).getReg())) {
-        if (!Inst->isCopy() ||
-            !tryChangeVGPRtoSGPRinCopy(*Inst, TRI, TII)) {
-          Info.NumSVCopies++;
-          continue;
-        }
+    if (Inst->isRegSequence() &&
+        TRI->isVGPR(*MRI, Inst->getOperand(0).getReg())) {
+      Info.NumSVCopies++;
+      continue;
+    }
+    if (Inst->isCopy()) {
+      const TargetRegisterClass *SrcRC, *DstRC;
+      std::tie(SrcRC, DstRC) = getCopyRegClasses(*Inst, *TRI, *MRI);
+      if (isSGPRToVGPRCopy(SrcRC, DstRC, *TRI) &&
+          !tryChangeVGPRtoSGPRinCopy(*Inst, TRI, TII)) {
+        Info.NumSVCopies++;
+        continue;
       }
     }
 
