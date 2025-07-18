@@ -8,7 +8,7 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v -debug-only=loop-vectorize,vplan -scalable-vectorization=on \
-; RUN:   -riscv-v-vector-bits-min=128 -disable-output < %s 2>&1 | FileCheck %s
+; RUN:   -disable-output < %s 2>&1 | FileCheck %s
 
 define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocapture noundef readonly %B, i32 noundef signext %n) {
 ; CHECK-LABEL: 'vector_reverse_i64'
