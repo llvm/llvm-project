@@ -1780,10 +1780,9 @@ void AssignmentTrackingLowering::processTaggedInstruction(
 
 void AssignmentTrackingLowering::processDbgAssign(DbgVariableRecord *DbgAssign,
                                                   BlockInfo *LiveSet) {
-  // Only bother tracking variables that are at some point stack homed. Other
-  // variables can be dealt with trivially later.
-  if (!VarsWithStackSlot->count(getAggregate(DbgAssign)))
-    return;
+  // Fully promoted variables are dealt with later.
+  assert(VarsWithStackSlot->count(getAggregate(DbgAssign)) &&
+         "Not a stack variable");
 
   VariableID Var = getVariableID(DebugVariable(DbgAssign));
   Assignment AV = Assignment::make(getIDFromMarker(*DbgAssign), DbgAssign);
@@ -1822,10 +1821,9 @@ void AssignmentTrackingLowering::processDbgAssign(DbgVariableRecord *DbgAssign,
 
 void AssignmentTrackingLowering::processDbgValue(DbgVariableRecord *DbgValue,
                                                  BlockInfo *LiveSet) {
-  // Only other tracking variables that are at some point stack homed.
-  // Other variables can be dealt with trivally later.
-  if (!VarsWithStackSlot->count(getAggregate(DbgValue)))
-    return;
+  // Fully promoted variables are dealt with later.
+  assert(VarsWithStackSlot->count(getAggregate(DbgValue)) &&
+         "Not a stack variable");
 
   VariableID Var = getVariableID(DebugVariable(DbgValue));
   // We have no ID to create an Assignment with so we mark this assignment as
