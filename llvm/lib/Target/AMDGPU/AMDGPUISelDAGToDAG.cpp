@@ -3053,19 +3053,16 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
     return true;
 
   // Recognise (xor a, 0x80000000) as NEG SrcMod.
+  // Recognise (and a, 0x7fffffff) as ABS SrcMod.
+  // Recognise (or a, 0x80000000) as NEG+ABS SrcModifiers.
   if (Opc == ISD::XOR && CRHS->getAPIntValue().isSignMask()) {
     Mods |= SISrcMods::NEG;
     Src = Src.getOperand(0);
-
-  }
-  // Recognise (and a, 0x7fffffff) as ABS SrcMod.
-  else if (Opc == ISD::AND && AllowAbs &&
-           CRHS->getAPIntValue().isMaxSignedValue()) {
+  } else if (Opc == ISD::AND && AllowAbs &&
+             CRHS->getAPIntValue().isMaxSignedValue()) {
     Mods |= SISrcMods::ABS;
     Src = Src.getOperand(0);
-  }
-  // Recognise (or a, 0x80000000) as NEG+ABS SrcModifiers.
-  else if (Opc == ISD::OR && AllowAbs && CRHS->getAPIntValue().isSignMask()) {
+  } else if (Opc == ISD::OR && AllowAbs && CRHS->getAPIntValue().isSignMask()) {
     Mods |= SISrcMods::ABS;
     Mods |= SISrcMods::NEG;
     Src = Src.getOperand(0);
