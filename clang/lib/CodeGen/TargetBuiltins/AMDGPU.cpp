@@ -439,6 +439,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_log_bf16:
     return emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::amdgcn_log);
   case AMDGPU::BI__builtin_amdgcn_exp2f:
+  case AMDGPU::BI__builtin_amdgcn_exp2_bf16:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::amdgcn_exp2);
   case AMDGPU::BI__builtin_amdgcn_log_clampf:
