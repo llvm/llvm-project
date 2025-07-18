@@ -35,7 +35,6 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_HAS_LOCALIZATION=1",
       "_LIBCPP_HAS_UNICODE=1",
       "_LIBCPP_HAS_WIDE_CHARACTERS=1",
-      "_LIBCPP_HAS_NO_STD_MODULES=",
       "_LIBCPP_HAS_TERMINAL=1",
       "_LIBCPP_INSTRUMENTED_WITH_ASAN=",
       "_LIBCPP_ABI_DEFINES=",
