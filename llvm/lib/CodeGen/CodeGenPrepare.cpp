@@ -9023,7 +9023,7 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
 
   for (BasicBlock &BB : F) {
     for (Instruction &Insn : llvm::make_early_inc_range(BB)) {
-      // Process any attached DbgVariableRecord records attached to this
+      // Process any DbgVariableRecord records attached to this
       // instruction.
       for (DbgVariableRecord &DVR : llvm::make_early_inc_range(
                filterDbgVars(Insn.getDbgRecordRange()))) {
