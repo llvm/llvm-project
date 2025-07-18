@@ -654,10 +654,6 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
 }
 
 bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPReductionPHIRecipe *RedPhiR = nullptr;
-  bool HasUnsupportedPhi = false;
-
   auto GetMinMaxCompareValue = [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
     auto *MinMaxR = dyn_cast<VPRecipeWithIRFlags>(
         RedPhiR->getBackedgeValue()->getDefiningRecipe());
@@ -666,7 +662,7 @@ bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
 
     auto *RepR = dyn_cast<VPReplicateRecipe>(MinMaxR);
     if (!isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
-        !(RepR && (isa<IntrinsicInst>(RepR->getUnderlyingInstr()))))
+        !(RepR && isa<IntrinsicInst>(RepR->getUnderlyingInstr())))
       return nullptr;
 
 #ifndef NDEBUG
@@ -690,40 +686,46 @@ bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
     return MinMaxR->getOperand(0);
   };
 
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPReductionPHIRecipe *RedPhiR = nullptr;
+  bool HasUnsupportedPhi = false;
   for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
-    // TODO: Also support fixed-order recurrence phis.
-    HasUnsupportedPhi |=
-        !isa<VPCanonicalIVPHIRecipe, VPWidenIntOrFpInductionRecipe,
-             VPReductionPHIRecipe>(&R);
-    auto *Cur = dyn_cast<VPReductionPHIRecipe>(&R);
-    if (!Cur)
+    if (isa<VPCanonicalIVPHIRecipe, VPWidenIntOrFpInductionRecipe>(&R))
       continue;
+    auto *Cur = dyn_cast<VPReductionPHIRecipe>(&R);
+    if (!Cur) {
+      // TODO: Also support fixed-order recurrence phis.
+      HasUnsupportedPhi = true;
+      continue;
+    }
     // For now, only a single reduction is supported.
     // TODO: Support multiple MaxNum/MinNum reductions and other reductions.
     if (RedPhiR)
       return false;
     if (Cur->getRecurrenceKind() != RecurKind::FMaxNum &&
-        Cur->getRecurrenceKind() != RecurKind::FMinNum)
+        Cur->getRecurrenceKind() != RecurKind::FMinNum) {
+      HasUnsupportedPhi = true;
       continue;
+    }
     RedPhiR = Cur;
   }
 
   if (!RedPhiR)
     return true;
 
-  RecurKind RedPhiRK = RedPhiR->getRecurrenceKind();
-  assert((RedPhiRK == RecurKind::FMaxNum || RedPhiRK == RecurKind::FMinNum) &&
-         "unsupported reduction");
-
-  VPValue *MinMaxOp = GetMinMaxCompareValue(RedPhiR);
-  if (!MinMaxOp)
-    return false;
-
   // We won't be able to resume execution in the scalar tail, if there are
   // unsupported header phis or there is no scalar tail at all, due to
   // tail-folding.
   if (HasUnsupportedPhi || !Plan.hasScalarTail())
     return false;
+
+  VPValue *MinMaxOp = GetMinMaxCompareValue(RedPhiR);
+  if (!MinMaxOp)
+    return false;
+
+  RecurKind RedPhiRK = RedPhiR->getRecurrenceKind();
+  assert((RedPhiRK == RecurKind::FMaxNum || RedPhiRK == RecurKind::FMinNum) &&
+         "unsupported reduction");
 
   /// Check if the vector loop of \p Plan can early exit and restart
   /// execution of last vector iteration in the scalar loop. This requires all
@@ -774,7 +776,7 @@ bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
   RdxResult->setOperand(1, NewSel);
 
   auto *ScalarPH = Plan.getScalarPreheader();
-  // Update the resume phis for inductions in the scalar preheader. If AnyNaN is
+  // Update resume phis for inductions in the scalar preheader. If AnyNaN is
   // true, the resume from the start of the last vector iteration via the
   // canonical IV, otherwise from the original value.
   for (auto &R : ScalarPH->phis()) {
@@ -782,8 +784,13 @@ bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
     VPValue *VecV = ResumeR->getOperand(0);
     if (VecV == RdxResult)
       continue;
-    if (VecV != &Plan.getVectorTripCount())
+    // Bail out and abandon the current, partially modified, VPlan if we
+    // encounter resume phi that cannot be updated yet.
+    if (VecV != &Plan.getVectorTripCount()) {
+      LLVM_DEBUG(dbgs() << "Found resume phi we cannot update for VPlan with "
+                           "FMaxNum/FMinNum reduction.\n");
       return false;
+    }
     auto *NewSel = Builder.createSelect(AnyNaN, Plan.getCanonicalIV(), VecV);
     ResumeR->setOperand(0, NewSel);
   }

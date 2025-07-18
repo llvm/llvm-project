@@ -324,6 +324,122 @@ exit:
   ret float %max.next
 }
 
+define float @fmaxnum_induction_starts_at_10(ptr %src, i64 %n) {
+; CHECK-LABEL: define float @fmaxnum_induction_starts_at_10(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 10, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX:%.*]] = phi float [ -1.000000e+07, %[[ENTRY]] ], [ [[MAX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[MAX_NEXT]] = call float @llvm.maxnum.f32(float [[L]], float [[MAX]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[MAX_NEXT_LCSSA:%.*]] = phi float [ [[MAX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret float [[MAX_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 10, %entry ], [ %iv.next, %loop ]
+  %max = phi float [ -1.000000e+07, %entry ], [ %max.next, %loop ]
+  %gep.src = getelementptr inbounds nuw float, ptr %src, i64 %iv
+  %l = load float, ptr %gep.src, align 4
+  %max.next = call float @llvm.maxnum.f32(float %l, float %max)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret float %max.next
+}
+
+define float @fmaxnum_induction_starts_at_value(ptr %src, i64 %start, i64 %n) {
+; CHECK-LABEL: define float @fmaxnum_induction_starts_at_value(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[START:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX:%.*]] = phi float [ -1.000000e+07, %[[ENTRY]] ], [ [[MAX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[MAX_NEXT]] = call float @llvm.maxnum.f32(float [[L]], float [[MAX]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[MAX_NEXT_LCSSA:%.*]] = phi float [ [[MAX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret float [[MAX_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %max = phi float [ -1.000000e+07, %entry ], [ %max.next, %loop ]
+  %gep.src = getelementptr inbounds nuw float, ptr %src, i64 %iv
+  %l = load float, ptr %gep.src, align 4
+  %max.next = call float @llvm.maxnum.f32(float %l, float %max)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret float %max.next
+}
+
+define float @fmaxnum_with_additional_add(ptr noalias %src, ptr noalias %src.2, i64 %n) {
+; CHECK-LABEL: define float @fmaxnum_with_additional_add(
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[SRC_2:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX:%.*]] = phi float [ -1.000000e+07, %[[ENTRY]] ], [ [[MAX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC_2]], i64 [[IV]]
+; CHECK-NEXT:    [[L_SRC_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 4
+; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[L_SRC_2]]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[MAX_NEXT]] = call float @llvm.maxnum.f32(float [[L]], float [[MAX]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_NEXT_LCSSA:%.*]] = phi float [ [[MAX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    store i32 [[SUM_NEXT_LCSSA]], ptr [[SRC_2]], align 4
+; CHECK-NEXT:    ret float [[MAX_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %max = phi float [ -1.000000e+07, %entry ], [ %max.next, %loop ]
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
+  %gep.src.2 = getelementptr inbounds nuw i32, ptr %src.2, i64 %iv
+  %l.src.2 = load i32, ptr %gep.src.2, align 4
+  %sum.next = add i32 %sum, %l.src.2
+  %gep.src = getelementptr inbounds nuw float, ptr %src, i64 %iv
+  %l = load float, ptr %gep.src, align 4
+  %max.next = call float @llvm.maxnum.f32(float %l, float %max)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  store i32 %sum.next, ptr %src.2
+  ret float %max.next
+}
+
 define float @fmax_select_with_blend(ptr %A, ptr %B) {
 ; CHECK-LABEL: define float @fmax_select_with_blend(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {

@@ -947,10 +947,8 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
       InstDesc Res = isMinMaxPattern(I, Kind, Prev);
       if (!Res.isRecurrence())
         return InstDesc(false, I);
-
       if (HasRequiredFMF())
         return Res;
-
       // We may be able to vectorize FMax/FMin reductions using maxnum/minnum
       // intrinsics with extra checks ensuring the vector loop handles only
       // non-NaN inputs.
@@ -964,9 +962,9 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
                "unexpected recurrence kind for minnum");
         return InstDesc(I, RecurKind::FMinNum);
       }
-
       return InstDesc(false, I);
-    } else if (isFMulAddIntrinsic(I))
+    }
+    if (isFMulAddIntrinsic(I))
       return InstDesc(Kind == RecurKind::FMulAdd, I,
                       I->hasAllowReassoc() ? nullptr : I);
     return InstDesc(false, I);
