@@ -50,7 +50,7 @@ ErrorOr<size_t> wcsnrtombs(char *__restrict s, const wchar_t **__restrict pwcs,
 
   if (s != nullptr)
     *pwcs += str_conv.getSourceIndex();
-    
+
   if (converted.error() == -1) // if we hit conversion limit
     return dst_idx;
 

@@ -1,4 +1,4 @@
-//===-- Implementation header for wcsrtombs --------------------------------===//
+//===-- Implementation header for wcsrtombs -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-size_t wcsrtombs(char *__restrict s, const wchar_t **__restrict pwcs, size_t n, mbstate_t* ps);
+size_t wcsrtombs(char *__restrict s, const wchar_t **__restrict pwcs, size_t n,
+                 mbstate_t *ps);
 
 } // namespace LIBC_NAMESPACE_DECL
 

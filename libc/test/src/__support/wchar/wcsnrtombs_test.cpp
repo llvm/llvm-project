@@ -110,7 +110,8 @@ TEST(LlvmLibcWcsnrtombs, SrcLimit) {
   ASSERT_EQ(mbs[6], '\x91');
   ASSERT_EQ(mbs[7], '\x01');
 
-  res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs + res.value(), &cur, 100, 11, &state);
+  res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs + res.value(), &cur, 100, 11,
+                                             &state);
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(res.value(), static_cast<size_t>(3));
   ASSERT_EQ(cur, nullptr);
