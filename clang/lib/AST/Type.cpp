@@ -2254,8 +2254,8 @@ bool Type::isSignedIntegerType() const {
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isSigned();
 
-  if (const auto *NSAT = dyn_cast<OverflowBehaviorType>(CanonicalType))
-    return NSAT->getUnderlyingType()->isSignedIntegerType();
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isSignedIntegerType();
 
   return false;
 }
@@ -2273,8 +2273,8 @@ bool Type::isSignedIntegerOrEnumerationType() const {
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isSigned();
 
-  if (const auto *NSAT = dyn_cast<OverflowBehaviorType>(CanonicalType))
-    return NSAT->getUnderlyingType()->isSignedIntegerOrEnumerationType();
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isSignedIntegerOrEnumerationType();
 
   return false;
 }
@@ -2305,8 +2305,8 @@ bool Type::isUnsignedIntegerType() const {
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isUnsigned();
 
-  if (const auto *NSAT = dyn_cast<OverflowBehaviorType>(CanonicalType))
-    return NSAT->getUnderlyingType()->isUnsignedIntegerType();
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isUnsignedIntegerType();
 
   return false;
 }
@@ -2324,8 +2324,8 @@ bool Type::isUnsignedIntegerOrEnumerationType() const {
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isUnsigned();
 
-  if (const auto *NSAT = dyn_cast<OverflowBehaviorType>(CanonicalType))
-    return NSAT->getUnderlyingType()->isUnsignedIntegerOrEnumerationType();
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isUnsignedIntegerOrEnumerationType();
 
   return false;
 }
@@ -3096,8 +3096,8 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   if (const auto *AT = BaseTy->getAs<AtomicType>())
     return AT->getValueType()->isLiteralType(Ctx);
 
-  if (const auto *NSAT = BaseTy->getAs<OverflowBehaviorType>())
-    return NSAT->getUnderlyingType()->isLiteralType(Ctx);
+  if (const auto *OBT = BaseTy->getAs<OverflowBehaviorType>())
+    return OBT->getUnderlyingType()->isLiteralType(Ctx);
 
   // If this type hasn't been deduced yet, then conservatively assume that
   // it'll work out to be a literal type.
