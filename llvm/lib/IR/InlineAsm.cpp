@@ -61,8 +61,6 @@ FunctionType *InlineAsm::getFunctionType() const {
 }
 
 SmallVector<StringRef> InlineAsm::collectAsmInstrs() const {
-  if (AsmString.empty())
-    return {};
   StringRef AsmStr(AsmString);
   // First break the assembly string into lines.
   SmallVector<StringRef> AsmLines;
