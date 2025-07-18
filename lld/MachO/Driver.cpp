@@ -311,10 +311,9 @@ void multiThreadedPageInBackground(const DeferredFiles &deferred) {
       totalBytes += buff.size();
 
       // Reference all file's mmap'd pages to load them into memory.
-      volatile char t = 0;
       for (const char *page = buff.data(), *end = page + buff.size();
            page < end; page += pageSize)
-        t += *page;
+        LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
     }
   });
 
