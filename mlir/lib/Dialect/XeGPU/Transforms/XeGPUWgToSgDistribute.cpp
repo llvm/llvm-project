@@ -445,8 +445,8 @@ struct WgToSgConvertLayoutOp
     target = target.dropSgLayoutAndData();
 
     SmallVector<Value> newOps(adaptor.getSource());
-
     if (input && target) {
+      // keep the ConvertLayoutOp for rest fields, e.g., inst_data.
       for (auto [i, src] : llvm::enumerate(adaptor.getSource())) {
         auto newOp = rewriter.create<xegpu::ConvertLayoutOp>(
             op.getLoc(), src.getType(), src, input, target);
