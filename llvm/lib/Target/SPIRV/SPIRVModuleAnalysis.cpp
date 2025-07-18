@@ -68,7 +68,6 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
                                SPIRV::RequirementHandler &Reqs) {
   // A set of capabilities to avoid if there is another option.
   AvoidCapabilitiesSet AvoidCaps;
-
   if (!ST.isShader())
     AvoidCaps.S.insert(SPIRV::Capability::Shader);
   else
