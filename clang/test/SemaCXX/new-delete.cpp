@@ -224,11 +224,11 @@ void bad_deletes()
   delete 0; // expected-error {{cannot delete expression of type 'int'}}
   delete [0] (int*)0; // expected-error {{expected variable name or 'this' in lambda capture list}}
   delete (void*)0;
-  // cxx98-23-warning@-1 {{cannot delete pointer to 'void'}}
-  // since-cxx26-error@-2 {{cannot delete pointer to 'void'}}
+  // cxx98-23-warning@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+  // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
   delete (T*)0;
-  // cxx98-23-warning@-1 {{deleting pointer to incomplete struct 'T'}}
-  // since-cxx26-error@-2 {{cannot delete pointer to incomplete struct 'T'}}
+  // cxx98-23-warning@-1 {{deleting pointer to incomplete type 'T'}}
+  // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'T'}}
   ::S::delete (int*)0; // expected-error {{expected unqualified-id}}
 }
 
@@ -570,8 +570,8 @@ namespace DeleteIncompleteClassPointerError {
   struct A; // expected-note {{forward declaration}}
   void f(A *x) { 1+delete x; }
   // expected-error@-1 {{invalid operands to binary expression}}
-  // cxx98-23-warning@-2 {{deleting pointer to incomplete struct 'A'}}
-  // since-cxx26-error@-3 {{cannot delete pointer to incomplete struct 'A'}}
+  // cxx98-23-warning@-2 {{deleting pointer to incomplete type 'A'}}
+  // since-cxx26-error@-3 {{cannot delete pointer to incomplete type 'A'}}
 }
 
 namespace PR10504 {

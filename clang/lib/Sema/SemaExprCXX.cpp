@@ -4033,9 +4033,10 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       // effectively bans deletion of "void*". However, most compilers support
       // this, so we treat it as a warning unless we're in a SFINAE context.
       // But we still prohibit this since C++26.
-      Diag(StartLoc, LangOpts.CPlusPlus26 ? diag::err_delete_void_ptr_operand
+      Diag(StartLoc, LangOpts.CPlusPlus26 ? diag::err_delete_incomplete
                                           : diag::ext_delete_void_ptr_operand)
-          << Pointee << Ex.get()->getSourceRange();
+          << (LangOpts.CPlusPlus26 ? Pointee : Type)
+          << Ex.get()->getSourceRange();
     } else if (Pointee->isFunctionType() || Pointee->isVoidType() ||
                Pointee->isSizelessType()) {
       return ExprError(Diag(StartLoc, diag::err_delete_operand)
@@ -4044,13 +4045,12 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       // FIXME: This can result in errors if the definition was imported from a
       // module but is hidden.
       if (const RecordType *RT = PointeeElem->getAs<RecordType>()) {
-        PointeeRD = cast<CXXRecordDecl>(RT->getDecl());
-        if (RequireCompleteType(StartLoc, Pointee,
-                                LangOpts.CPlusPlus26
-                                    ? diag::err_delete_incomplete
-                                    : diag::warn_delete_incomplete,
-                                PointeeRD->getTagKind(), Ex.get())) {
-          PointeeRD = nullptr;
+        if (!RequireCompleteType(StartLoc, Pointee,
+                                 LangOpts.CPlusPlus26
+                                     ? diag::err_delete_incomplete
+                                     : diag::warn_delete_incomplete,
+                                 Ex.get())) {
+          PointeeRD = cast<CXXRecordDecl>(RT->getDecl());
         }
       }
     }
