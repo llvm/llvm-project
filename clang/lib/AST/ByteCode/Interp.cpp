@@ -566,7 +566,10 @@ bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
-  if (!Ptr.isConst() || Ptr.isMutable())
+  if (!Ptr.isConst())
+    return true;
+
+  if (Ptr.isMutable() && !Ptr.isConstInMutable())
     return true;
 
   if (!Ptr.isBlockPointer())

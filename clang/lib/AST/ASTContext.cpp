@@ -7387,21 +7387,9 @@ bool ASTContext::isSameDefaultTemplateArgument(const NamedDecl *X,
   return hasSameTemplateName(TAX.getAsTemplate(), TAY.getAsTemplate());
 }
 
-static NamespaceDecl *getNamespace(const NestedNameSpecifier *X) {
-  if (auto *NS = X->getAsNamespace())
-    return NS;
-  if (auto *NAS = X->getAsNamespaceAlias())
-    return NAS->getNamespace();
-  return nullptr;
-}
-
 static bool isSameQualifier(const NestedNameSpecifier *X,
                             const NestedNameSpecifier *Y) {
-  if (auto *NSX = getNamespace(X)) {
-    auto *NSY = getNamespace(Y);
-    if (!NSY || NSX->getCanonicalDecl() != NSY->getCanonicalDecl())
-      return false;
-  } else if (X->getKind() != Y->getKind())
+  if (X->getKind() != Y->getKind())
     return false;
 
   // FIXME: For namespaces and types, we're permitted to check that the entity
@@ -7412,8 +7400,8 @@ static bool isSameQualifier(const NestedNameSpecifier *X,
       return false;
     break;
   case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
-    // We've already checked that we named the same namespace.
+    if (!declaresSameEntity(X->getAsNamespace(), Y->getAsNamespace()))
+      return false;
     break;
   case NestedNameSpecifier::TypeSpec:
     if (X->getAsType()->getCanonicalTypeInternal() !=
@@ -7838,15 +7826,8 @@ ASTContext::getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const {
   case NestedNameSpecifier::Namespace:
     // A namespace is canonical; build a nested-name-specifier with
     // this namespace and no prefix.
-    return NestedNameSpecifier::Create(*this, nullptr,
-                                       NNS->getAsNamespace()->getFirstDecl());
-
-  case NestedNameSpecifier::NamespaceAlias:
-    // A namespace is canonical; build a nested-name-specifier with
-    // this namespace and no prefix.
     return NestedNameSpecifier::Create(
-        *this, nullptr,
-        NNS->getAsNamespaceAlias()->getNamespace()->getFirstDecl());
+        *this, nullptr, NNS->getAsNamespace()->getNamespace()->getFirstDecl());
 
   // The difference between TypeSpec and TypeSpecWithTemplate is that the
   // latter will have the 'template' keyword when printed.
@@ -13698,26 +13679,27 @@ static NestedNameSpecifier *getCommonNNS(ASTContext &Ctx,
     R = NestedNameSpecifier::Create(Ctx, P, II);
     break;
   }
-  case NestedNameSpecifier::SpecifierKind::Namespace:
-  case NestedNameSpecifier::SpecifierKind::NamespaceAlias: {
-    assert(K2 == NestedNameSpecifier::SpecifierKind::Namespace ||
-           K2 == NestedNameSpecifier::SpecifierKind::NamespaceAlias);
+  case NestedNameSpecifier::SpecifierKind::Namespace: {
+    assert(K2 == NestedNameSpecifier::SpecifierKind::Namespace);
     // The prefixes for namespaces are not significant, its declaration
     // identifies it uniquely.
     NestedNameSpecifier *P =
         ::getCommonNNS(Ctx, NNS1->getPrefix(), NNS2->getPrefix(),
                        /*IsSame=*/false);
-    NamespaceAliasDecl *A1 = NNS1->getAsNamespaceAlias(),
-                       *A2 = NNS2->getAsNamespaceAlias();
-    // Are they the same namespace alias?
-    if (declaresSameEntity(A1, A2)) {
-      R = NestedNameSpecifier::Create(Ctx, P, ::getCommonDeclChecked(A1, A2));
+    NamespaceBaseDecl *Namespace1 = NNS1->getAsNamespace(),
+                      *Namespace2 = NNS2->getAsNamespace();
+    auto Kind = Namespace1->getKind();
+    if (Kind != Namespace2->getKind() ||
+        (Kind == Decl::NamespaceAlias &&
+         !declaresSameEntity(Namespace1, Namespace2))) {
+      R = NestedNameSpecifier::Create(
+          Ctx, P,
+          ::getCommonDeclChecked(Namespace1->getNamespace(),
+                                 Namespace2->getNamespace()));
       break;
     }
-    // Otherwise, look at the namespaces only.
-    NamespaceDecl *N1 = A1 ? A1->getNamespace() : NNS1->getAsNamespace(),
-                  *N2 = A2 ? A2->getNamespace() : NNS2->getAsNamespace();
-    R = NestedNameSpecifier::Create(Ctx, P, ::getCommonDeclChecked(N1, N2));
+    R = NestedNameSpecifier::Create(
+        Ctx, P, ::getCommonDeclChecked(Namespace1, Namespace2));
     break;
   }
   case NestedNameSpecifier::SpecifierKind::TypeSpec: {
