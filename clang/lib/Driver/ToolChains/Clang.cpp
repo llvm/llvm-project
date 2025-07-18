@@ -4611,8 +4611,14 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
       CmdArgs.push_back("-gembed-source");
   }
 
+  // Enable Key Instructions by default if optimisations are enabled and
+  // we're emitting DWARF.
+  Arg *OptLevel = Args.getLastArg(options::OPT_O_Group);
+  bool KeyInstructionsOnByDefault =
+      EmitDwarf && OptLevel && !OptLevel->getOption().matches(options::OPT_O0);
   if (Args.hasFlag(options::OPT_gkey_instructions,
-                   options::OPT_gno_key_instructions, false))
+                   options::OPT_gno_key_instructions,
+                   KeyInstructionsOnByDefault))
     CmdArgs.push_back("-gkey-instructions");
 
   if (EmitCodeView) {
