@@ -62,6 +62,7 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
   ObtainCurrentStack(thr, pc, &trace);
   rep.AddStack(trace, true);
   rep.AddLocation(addr, 1);
+  rep.SymbolizeStackElems();
   OutputReport(thr, rep);
 }
 
@@ -539,15 +540,18 @@ void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
   for (int i = 0; i < r->n; i++) {
     for (int j = 0; j < (flags()->second_deadlock_stack ? 2 : 1); j++) {
       u32 stk = r->loop[i].stk[j];
+      StackTrace stack;
       if (stk && stk != kInvalidStackID) {
-        rep.AddStack(StackDepotGet(stk), true);
+        stack = StackDepotGet(stk);
       } else {
         // Sometimes we fail to extract the stack trace (FIXME: investigate),
         // but we should still produce some stack trace in the report.
-        rep.AddStack(StackTrace(&dummy_pc, 1), true);
+        stack = StackTrace(&dummy_pc, 1);
       }
+      rep.AddStack(stack, true);
     }
   }
+  rep.SymbolizeStackElems();
   OutputReport(thr, rep);
 }
 
@@ -572,6 +576,7 @@ void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
     return;
   rep.AddStack(trace, true);
   rep.AddLocation(addr, 1);
+  rep.SymbolizeStackElems();
   OutputReport(thr, rep);
 }
 

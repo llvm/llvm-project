@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -187,15 +188,87 @@ void ScopedReportBase::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
   mop->size = size;
   mop->write = !(typ & kAccessRead);
   mop->atomic = typ & kAccessAtomic;
-  mop->stack = SymbolizeStack(stack);
   mop->external_tag = external_tag;
-  if (mop->stack)
-    mop->stack->suppressable = true;
+  mop->stack_trace = stack;
   for (uptr i = 0; i < mset->Size(); i++) {
     MutexSet::Desc d = mset->Get(i);
     int id = this->AddMutex(d.addr, d.stack_id);
     ReportMopMutex mtx = {id, d.write};
     mop->mset.PushBack(mtx);
+  }
+}
+
+void ScopedReportBase::SymbolizeStackElems() {
+  // symbolize memory ops
+  for (usize i = 0; i < rep_->mops.Size(); i++) {
+    ReportMop *mop = rep_->mops[i];
+    mop->stack = SymbolizeStack(mop->stack_trace);
+    if (mop->stack)
+      mop->stack->suppressable = true;
+  }
+
+  Vector<ReportLocation *> locs_tmp;
+
+  // Repopulate the locations in the order they were added - take care with
+  // the added locations
+  usize locs_idx = 0;
+  for (usize i = 0; i < rep_->added_location_addrs.Size(); i++) {
+    AddedLocationAddr *added_loc_addr = &rep_->added_location_addrs[i];
+
+    for (; locs_idx < added_loc_addr->locs_idx; locs_idx++) {
+      ReportLocation *loc = rep_->locs[locs_idx];
+      loc->stack = SymbolizeStackId(loc->stack_id);
+      locs_tmp.PushBack(loc);
+    }
+
+    if (ReportLocation *added_loc = SymbolizeData(added_loc_addr->addr)) {
+      added_loc->suppressable = true;
+      locs_tmp.PushBack(added_loc);
+    }
+  }
+
+  // Append any remaining locations
+  for (; locs_idx < rep_->locs.Size(); locs_idx++) {
+    ReportLocation *loc = rep_->locs[locs_idx];
+    loc->stack = SymbolizeStackId(loc->stack_id);
+    locs_tmp.PushBack(loc);
+  }
+
+  rep_->locs.Reset();
+  for (usize i = 0; i < locs_tmp.Size(); i++) rep_->locs.PushBack(locs_tmp[i]);
+
+  // symbolize locations
+  for (usize i = 0; i < rep_->locs.Size(); i++) {
+    ReportLocation *loc = rep_->locs[i];
+    loc->stack = SymbolizeStackId(loc->stack_id);
+  }
+
+  usize offset = 0;
+  for (usize i = 0; i < rep_->added_location_addrs.Size(); i++) {
+    struct AddedLocationAddr *added_loc = &rep_->added_location_addrs[i];
+    if (ReportLocation *loc = SymbolizeData(added_loc->addr)) {
+      offset++;
+      loc->suppressable = true;
+      rep_->locs[added_loc->locs_idx] = loc;
+    }
+  }
+
+  // Check that all locs are populated (no-op in release)
+  for (usize i = 0; i < rep_->locs.Size(); i++)
+    CHECK_NE(rep_->locs[i], nullptr);
+
+  // symbolize threads
+  for (usize i = 0; i < rep_->threads.Size(); i++) {
+    ReportThread *rt = rep_->threads[i];
+    rt->stack = SymbolizeStackId(rt->stack_id);
+    if (rt->stack)
+      rt->stack->suppressable = rt->suppressable;
+  }
+
+  // symbolize mutexes
+  for (usize i = 0; i < rep_->mutexes.Size(); i++) {
+    ReportMutex *rm = rep_->mutexes[i];
+    rm->stack = SymbolizeStackId(rm->stack_id);
   }
 }
 
@@ -216,10 +289,8 @@ void ScopedReportBase::AddThread(const ThreadContext *tctx, bool suppressable) {
   rt->name = internal_strdup(tctx->name);
   rt->parent_tid = tctx->parent_tid;
   rt->thread_type = tctx->thread_type;
-  rt->stack = 0;
-  rt->stack = SymbolizeStackId(tctx->creation_stack_id);
-  if (rt->stack)
-    rt->stack->suppressable = suppressable;
+  rt->stack_id = tctx->creation_stack_id;
+  rt->suppressable = suppressable;
 }
 
 #if !SANITIZER_GO
@@ -270,7 +341,7 @@ int ScopedReportBase::AddMutex(uptr addr, StackID creation_stack_id) {
   rep_->mutexes.PushBack(rm);
   rm->id = rep_->mutexes.Size() - 1;
   rm->addr = addr;
-  rm->stack = SymbolizeStackId(creation_stack_id);
+  rm->stack_id = creation_stack_id;
   return rm->id;
 }
 
@@ -288,7 +359,7 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
     loc->fd_closed = closed;
     loc->fd = fd;
     loc->tid = creat_tid;
-    loc->stack = SymbolizeStackId(creat_stack);
+    loc->stack_id = creat_stack;
     rep_->locs.PushBack(loc);
     AddThread(creat_tid);
     return;
@@ -310,7 +381,7 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
     loc->heap_chunk_size = b->siz;
     loc->external_tag = b->tag;
     loc->tid = b->tid;
-    loc->stack = SymbolizeStackId(b->stk);
+    loc->stack_id = b->stk;
     rep_->locs.PushBack(loc);
     AddThread(b->tid);
     return;
@@ -324,11 +395,7 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
     AddThread(tctx);
   }
 #endif
-  if (ReportLocation *loc = SymbolizeData(addr)) {
-    loc->suppressable = true;
-    rep_->locs.PushBack(loc);
-    return;
-  }
+  rep_->added_location_addrs.PushBack({addr, rep_->locs.Size()});
 }
 
 #if !SANITIZER_GO
@@ -819,6 +886,7 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
       s[1].epoch() <= thr->last_sleep_clock.Get(s[1].sid()))
     rep.AddSleep(thr->last_sleep_stack_id);
 #endif
+  rep.SymbolizeStackElems();
   OutputReport(thr, rep);
 }
 
