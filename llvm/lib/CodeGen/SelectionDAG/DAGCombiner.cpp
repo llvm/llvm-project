@@ -16772,12 +16772,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ false,
                                              /*Depth*/ 1))
       continue;
-    bool HadMaybePoisonOperands = !MaybePoisonOperands.empty();
-    bool IsNewMaybePoisonOperand = MaybePoisonOperands.insert(Op).second;
-    if (IsNewMaybePoisonOperand)
+    if (MaybePoisonOperands.insert(Op).second)
       MaybePoisonOperandNumbers.push_back(OpNo);
-    if (!HadMaybePoisonOperands)
-      continue;
   }
   // NOTE: the whole op may be not guaranteed to not be undef or poison because
   // it could create undef or poison due to it's poison-generating flags.
