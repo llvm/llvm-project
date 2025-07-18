@@ -1323,12 +1323,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FDIV,        MVT::v2f64, Legal);
   }
 
-  if (Subtarget.hasGFNI()) {
+  if (!Subtarget.useSoftFloat() && Subtarget.hasGFNI()) {
     setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
-    setOperationAction(ISD::BITREVERSE, MVT::v16i8, Custom);
+
+    for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
+      setOperationAction(ISD::BITREVERSE,       VT, Custom);
+    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSSE3()) {
