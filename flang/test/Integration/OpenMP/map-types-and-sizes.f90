@@ -13,7 +13,7 @@
 !===============================================================================
 
 !CHECK: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 4]
-!CHECK: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 800]
+!CHECK: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 289]
 subroutine mapType_scalar
   integer :: a
   !$omp target
@@ -372,7 +372,7 @@ allocate(alloca_dtype%vertexes(2)%vertexy(10))
 end subroutine
 
 !CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] [i64 8, i64 4]
-!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 544, i64 800]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 544, i64 289]
 subroutine mapType_c_ptr
   use iso_c_binding, only : c_ptr, c_loc
   type(c_ptr) :: a
@@ -383,7 +383,7 @@ subroutine mapType_c_ptr
 end subroutine mapType_c_ptr
 
 !CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 1]
-!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 800]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 289]
 subroutine mapType_char
   character :: a
   !$omp target

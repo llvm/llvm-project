@@ -42,16 +42,42 @@ bool DataSharingProcessor::OMPConstructSymbolVisitor::isSymbolDefineBy(
                        [](const auto &functionParserNode) { return false; }});
 }
 
+static bool isConstructWithTopLevelTarget(lower::pft::Evaluation &eval) {
+  const auto *ompEval = eval.getIf<parser::OpenMPConstruct>();
+  if (ompEval) {
+    auto dir = extractOmpDirective(*ompEval);
+    switch (dir) {
+    case llvm::omp::Directive::OMPD_target:
+    case llvm::omp::Directive::OMPD_target_loop:
+    case llvm::omp::Directive::OMPD_target_parallel_do:
+    case llvm::omp::Directive::OMPD_target_parallel_do_simd:
+    case llvm::omp::Directive::OMPD_target_parallel_loop:
+    case llvm::omp::Directive::OMPD_target_teams_distribute:
+    case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do:
+    case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do_simd:
+    case llvm::omp::Directive::OMPD_target_teams_distribute_simd:
+    case llvm::omp::Directive::OMPD_target_teams_loop:
+    case llvm::omp::Directive::OMPD_target_simd:
+      return true;
+      break;
+    default:
+      return false;
+      break;
+    }
+  }
+  return false;
+}
+
 DataSharingProcessor::DataSharingProcessor(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     const List<Clause> &clauses, lower::pft::Evaluation &eval,
     bool shouldCollectPreDeterminedSymbols, bool useDelayedPrivatization,
-    lower::SymMap &symTable)
+    lower::SymMap &symTable, bool isTargetPrivitization)
     : converter(converter), semaCtx(semaCtx),
       firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
       shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
       useDelayedPrivatization(useDelayedPrivatization), symTable(symTable),
-      visitor(semaCtx) {
+      isTargetPrivitization(isTargetPrivitization), visitor(semaCtx) {
   eval.visit([&](const auto &functionParserNode) {
     parser::Walk(functionParserNode, visitor);
   });
@@ -61,17 +87,18 @@ DataSharingProcessor::DataSharingProcessor(lower::AbstractConverter &converter,
                                            semantics::SemanticsContext &semaCtx,
                                            lower::pft::Evaluation &eval,
                                            bool useDelayedPrivatization,
-                                           lower::SymMap &symTable)
+                                           lower::SymMap &symTable,
+                                           bool isTargetPrivitization)
     : DataSharingProcessor(converter, semaCtx, {}, eval,
                            /*shouldCollectPreDeterminedSymols=*/false,
-                           useDelayedPrivatization, symTable) {}
+                           useDelayedPrivatization, symTable,
+                           isTargetPrivitization) {}
 
 void DataSharingProcessor::processStep1() {
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
   collectImplicitSymbols();
   collectPreDeterminedSymbols();
-
 }
 
 void DataSharingProcessor::processStep2(
@@ -556,8 +583,19 @@ void DataSharingProcessor::collectSymbols(
   };
 
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
-    if (collectImplicit)
+    if (collectImplicit) {
+      // If we're a combined construct with a target region, implicit
+      // firstprivate captures, should only belong to the target region
+      // and not be added/captured by later directives. Parallel regions
+      // will likely want the same captures to be shared and for SIMD it's
+      // illegal to have firstprivate clauses.
+      if (isConstructWithTopLevelTarget(eval) && !isTargetPrivitization &&
+          sym->test(semantics::Symbol::Flag::OmpFirstPrivate)) {
+        return false;
+      }
+
       return sym->test(semantics::Symbol::Flag::OmpImplicit);
+    }
 
     if (collectPreDetermined)
       return sym->test(semantics::Symbol::Flag::OmpPreDetermined);

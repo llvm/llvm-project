@@ -93,6 +93,7 @@ private:
   bool useDelayedPrivatization;
   llvm::SmallSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
   lower::SymMap &symTable;
+  bool isTargetPrivitization;
   OMPConstructSymbolVisitor visitor;
   bool privatizationDone = false;
 
@@ -131,12 +132,14 @@ public:
                        const List<Clause> &clauses,
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
-                       bool useDelayedPrivatization, lower::SymMap &symTable);
+                       bool useDelayedPrivatization, lower::SymMap &symTable,
+                       bool isTargetPrivitization = false);
 
   DataSharingProcessor(lower::AbstractConverter &converter,
                        semantics::SemanticsContext &semaCtx,
                        lower::pft::Evaluation &eval,
-                       bool useDelayedPrivatization, lower::SymMap &symTable);
+                       bool useDelayedPrivatization, lower::SymMap &symTable,
+                       bool isTargetPrivitization = false);
 
   // Privatisation is split into 3 steps:
   //
