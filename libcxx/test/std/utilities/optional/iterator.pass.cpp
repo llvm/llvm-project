@@ -47,12 +47,12 @@ constexpr bool test_concepts() {
 constexpr bool test_types() {
   const std::optional<char> opt{'a'};
   std::optional<char> nonconst_opt{'n'};
-  
+
   assert((std::is_same_v<typename decltype(opt.begin())::value_type, char>));
   assert((std::is_same_v<typename decltype(opt.begin())::reference, const char&>));
   assert((std::is_same_v<typename decltype(nonconst_opt.begin())::value_type, char>));
   assert((std::is_same_v<typename decltype(nonconst_opt.begin())::reference, char&>));
-  return true; 
+  return true;
 }
 
 constexpr bool test_size() {
@@ -111,7 +111,6 @@ constexpr bool test_reset() {
   assert(*(val.begin()) == 1);
   return true;
 }
-
 
 int main(int, char**) {
   // 1: optional::iterator and optional const_iterator satisfy contiguous_iterator and random_access_iterator
