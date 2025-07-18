@@ -836,9 +836,9 @@ enum class CCEKind {
 
 /// Enums for the diagnostics of target, target_version and target_clones.
 namespace DiagAttrParams {
-  enum DiagType { Unsupported, Duplicate, Unknown };
-  enum Specifier { None, CPU, Tune };
-  enum AttrName { Target, TargetClones, TargetVersion };
+enum DiagType { Unsupported, Duplicate, Unknown };
+enum Specifier { None, CPU, Tune };
+enum AttrName { Target, TargetClones, TargetVersion };
 } // end namespace DiagAttrParams
 
 void inferNoReturnAttr(Sema &S, const Decl *D);
