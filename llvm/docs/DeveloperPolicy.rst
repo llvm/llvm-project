@@ -293,57 +293,63 @@ warranted when performing a code review.
 Quality
 -------
 
-The minimum quality standards that any change must satisfy before being
-committed to the main development branch are:
+Sending patches, PRs, RFCs, comments, etc to LLVM, is not free -- it takes a lot
+of maintainer time and energy to review those contributions. Our quality bar can
+be summarized with the **golden rule** that a contribution should be worth more
+to the project than the time it takes to review it.
 
-#. Code must adhere to the `LLVM Coding Standards <CodingStandards.html>`_.
+However, this rule is held in balance with our goal to make the LLVM project
+welcoming and open to aspiring compiler engineers who are willing to invest time
+and effort to learn and grow, because growing our contributor base and
+potentially recruiting new maintainers helps sustain the project over the long
+term.
 
-#. Code must compile cleanly (no errors, no warnings) on at least one platform.
+Contributors who repeatedly make low-value contributions according to the
+standards of our maintainers will be asked to increase the quality of their
+contributions or cease contributing. As a community, we encourage maintainers to
+invest effort in reviewing work from new contributors. We label PRs from
+first-time contributors to set maintainer expectations on quality. However, we
+expect to see a growth pattern in the quality of a contributor's work over time.
+Maintainers can use their discretion and push back against burdensome
+contributions and ask contributors to meet their quality bar. In addition to the
+minimum guidelines outlined in thie section, maintainers can set their own
+quality standards using their considerable domain expertise.
+
+The following is a checklist of some of the minimum quality standards that any
+change must satisfy before being reviewed in detail or committed to the main
+development branch:
 
 #. Bug fixes and new features should `include a testcase`_ so we know if the
    fix/feature ever regresses in the future.
 
-#. Code must pass the ``llvm/test`` test suite.
+#. The code should compile cleanly on all supported platforms.
 
-#. The code must not cause regressions on a reasonable subset of llvm-test,
-   where "reasonable" depends on the contributor's judgement and the scope of
-   the change (more invasive changes require more testing). A reasonable subset
-   might be something like "``llvm-test/MultiSource/Benchmarks``".
+#. Code must pass the relevant regression test suites on all supported
+   plaftorms.
+
+#. Code must adhere to the `LLVM Coding Standards <CodingStandards.html>`_.
 
 #. Ensure that links in source code and test files point to publicly available
    resources and are used primarily to add additional information rather than
    to supply critical context. The surrounding comments should be sufficient
    to provide the context behind such links.
 
-Additionally, the committer is responsible for addressing any problems found in
-the future that the change is responsible for.  For example:
+Our quality policy goals are captured by this quote from `Working in Public: The
+Making and Maintenance of Open Source Software
+<https://press.stripe.com/working-in-public>`_ by Nadia Eghbal:
 
-* The code should compile cleanly on all supported platforms.
+  .. pull-quote::
 
-* The changes should not cause any correctness regressions in the ``llvm-test``
-  suite and must not cause any major performance regressions.
+    "When attention is being appropriated, producers need to weigh the costs and
+    benefits of the transaction. To assess whether the appropriation of attention
+    is net-positive, it’s useful to distinguish between *extractive* and
+    *non-extractive* contributions. Extractive contributions are those where the
+    marginal cost of reviewing and merging that contribution is greater than the
+    marginal benefit to the project’s producers. In the case of a code
+    contribution, it might be a pull request that’s too complex or unwieldy to
+    review, given the potential upside."
+    -- Nadia Eghbal
 
-* The change set should not cause performance or correctness regressions for the
-  LLVM tools.
-
-* The changes should not cause performance or correctness regressions in code
-  compiled by LLVM on all applicable targets.
-
-* You are expected to address any `GitHub Issues <https://github.com/llvm/llvm-project/issues>`_ that
-  result from your change.
-
-We prefer for this to be handled before submission but understand that it isn't
-possible to test all of this for every submission.  Our build bots and nightly
-testing infrastructure normally finds these problems.  A good rule of thumb is
-to check the nightly testers for regressions the day after your change.  Build
-bots will directly email you if a group of commits that included yours caused a
-failure.  You are expected to check the build bot messages to see if they are
-your fault and, if so, fix the breakage.
-
-Commits that violate these quality standards (e.g. are very broken) may be
-reverted. This is necessary when the change blocks other developers from making
-progress. The developer is welcome to re-commit the change after the problem has
-been fixed.
 
 .. _commit messages:
 
@@ -423,6 +429,39 @@ squashing and merging PRs.
 
 For minor violations of these recommendations, the community normally favors
 reminding the contributor of this policy over reverting.
+
+Post-commit responsibilities
+----------------------------
+
+After landing a change, the committer is responsible for addressing any problems
+found in the future that the change is responsible for.  For example:
+
+* The code should compile cleanly on all supported platforms.
+
+* The changes should not cause any correctness regressions in the ``llvm-test``
+  suite and must not cause any major performance regressions.
+
+* The change set should not cause performance or correctness regressions for the
+  LLVM tools.
+
+* The changes should not cause performance or correctness regressions in code
+  compiled by LLVM on all applicable targets.
+
+* You are expected to address any `GitHub Issues <https://github.com/llvm/llvm-project/issues>`_ that
+  result from your change.
+
+We prefer for this to be handled before submission but understand that it isn't
+possible to test all of this for every submission.  Our build bots and nightly
+testing infrastructure normally finds these problems.  A good rule of thumb is
+to check the nightly testers for regressions the day after your change.  Build
+bots will directly email you if a group of commits that included yours caused a
+failure.  You are expected to check the build bot messages to see if they are
+your fault and, if so, fix the breakage.
+
+Commits that violate these quality standards (e.g. are very broken) may be
+reverted. This is necessary when the change blocks other developers from making
+progress. The developer is welcome to re-commit the change after the problem has
+been fixed.
 
 .. _revert_policy:
 
@@ -1458,6 +1497,13 @@ permission.
 AI generated contributions
 --------------------------
 
+LLVM's policy on AI-assisted tooling is fundamentally liberal -- We want to
+enable contributors to use the latest and greatest tools available. Our policy
+guided by two major concerns:
+
+1. Ensuring that contributions do not contain copyrighted content.
+2. Ensuring that contributions are not burdensome and exceed our `quality`_ bar.
+
 Artificial intelligence systems raise many questions around copyright that have
 yet to be answered. Our policy on AI tools is guided by our copyright policy:
 Contributors are responsible for ensuring that they have the right to contribute
@@ -1465,16 +1511,52 @@ code under the terms of our license, typically meaning that either they, their
 employer, or their collaborators hold the copyright. Using AI tools to
 regenerate copyrighted material does not remove the copyright, and contributors
 are responsible for ensuring that such material does not appear in their
-contributions.
+contributions. Contributions found to violate this policy will be removed just
+like any other offending contribution.
 
-As such, the LLVM policy is that contributors are permitted to use artificial
-intelligence tools to produce contributions, provided that they have the right
-to license that code under the project license. Contributions found to violate
-this policy will be removed just like any other offending contribution.
+Recent improvements in AI-assisted tooling have made it easy to generate large
+volumes of code and text with little effort on the part of the contributor. This
+has increased the asymmetry between the work of producing a contribution, and
+the work of reviewing the contribution. In order to protect the time and
+attentional resources of LLVM project maintainers, the onus is on contributors
+to justify why their contributions are not burdensome and exceed our `quality`_
+bar. Contributors who repeatedly send low-quality contributions to our project
+will be subject to escalating moderation actions and eventually a project ban.
 
-While the LLVM project has a liberal policy on AI tool use, contributors are
-considered responsible for their contributions. We encourage contributors to
-review all generated code before sending it for review to verify its
-correctness and to understand it so that they can answer questions during code
-review. Reviewing and maintaining generated code that the original contributor
-does not understand is not a good use of limited project resources.
+This policy covers, but is not limited to, the following kinds of contributions:
+
+* Code, usually in the form of a pull request
+* RFCs or design proposals
+* Issues or security vulnerabilities
+* Comments and feedback on pull requests
+
+We encourage, but do not require, contributors making large changes to document
+the tools that they used as part of the rationale for why they believe their
+contribution has merit. This is similar in spirit to including a sed or Python
+script in the commit message when making large-scale changes to the project,
+such as updating the LLVM IR textual syntax.
+
+Here are some examples of contributions that demonstrate how to apply the
+principles of this policy:
+
+* `This PR <https://github.com/llvm/llvm-project/pull/142869>`_ contains a
+  proof from Alive2, which is a strong signal of value and correctness.
+
+* This `generated documentation
+  <https://discourse.llvm.org/t/searching-for-gsym-documentation/85185/2>`_ was
+  reviewed for correctness by a human before being posted.
+
+**References:** Our policy was informed by experiences in other communities:
+
+* `Rust policy on burdensome PRs
+  <https://github.com/rust-lang/compiler-team/issues/893>`_
+
+* `Seth Larson's post <https://sethmlarson.dev/slop-security-reports>`_ on slop
+  security reports in the Python ecosystem
+
+* The METR paper `Measuring the Impact of Early-2025 AI on Experienced
+  Open-Source Developer Productivity
+  <https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/>`_.
+
+* `QEMU bans use of AI content generators
+  <https://www.qemu.org/docs/master/devel/code-provenance.html#use-of-ai-content-generators>`_
