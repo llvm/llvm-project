@@ -25,7 +25,7 @@ int x = 42; x
 // CHECK-NEXT: (int) 42
 
 &x
-// CHECK-NEXT: (int *) @0x{{[0-9a-f]+}}
+// CHECK-NEXT: (int *) 0x{{[0-9a-f]+}}
 
 x - 2
 // CHECK-NEXT: (int) 40
@@ -69,6 +69,12 @@ float farr[2][1] = { {0}, {3.14}}; farr
 
 0.00001f
 // CHECK-NEXT: (float) 1.00000e-05f
+
+int * ptr = (int*)0x123; ptr
+// CHECK-NEXT: (int *) 0x123
+
+int * null_ptr = (int*)0; null_ptr
+// CHECK-NEXT: (int *) 0x0
 
 // TODO: _Bool, _Complex, _Atomic, and _BitInt
 // union U { int I; float F; } u; u.I = 12; u.I

@@ -158,12 +158,10 @@ static std::string FunctionToString(const Value &V, const void *Ptr) {
   return Str;
 }
 
-static std::string AddressToString(const void *Ptr, char Prefix) {
+static std::string VoidPtrToString(const void *Ptr) {
   std::string Str;
   llvm::raw_string_ostream SS(Str);
-  if (!Ptr)
-    return Str;
-  SS << Prefix << Ptr;
+  SS << Ptr;
   return Str;
 }
 
@@ -335,10 +333,12 @@ std::string Interpreter::ValueDataToString(const Value &V) const {
   if (NonRefTy->isPointerType()) {
     if (NonRefTy->getPointeeType()->isCharType())
       return CharPtrToString((char *)V.getPtr());
+
+    return VoidPtrToString(V.getPtr());
   }
 
   // Fall back to printing just the address of the unknown object.
-  return AddressToString(V.getPtr(), '@');
+  return "@" + VoidPtrToString(V.getPtr());
 }
 
 std::string Interpreter::ValueTypeToString(const Value &V) const {

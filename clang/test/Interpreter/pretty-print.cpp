@@ -56,5 +56,15 @@ struct S5 { int foo() { return 42; }};
 &S5::foo
 // CHECK-NEXT: (int (S5::*)()) Function @0x{{[0-9a-f]+}}
 
+// int i = 12;
+// int &iref = i;
+// iref
+// // TODO-CHECK-NEXT: (int &) 12
+
+// int &&rref = 100;
+// rref
+
+// // TODO-CHECK-NEXT: (int &&) 100
+
 %quit
 
