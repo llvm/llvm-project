@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -debug-only=loop-vectorize -disable-output -force-vector-interleave=1 -enable-epilogue-vectorization=false -S < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-REGS-VP
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -debug-only=loop-vectorize -disable-output -force-target-num-vector-regs=1 -force-vector-interleave=1 -enable-epilogue-vectorization=false -S < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-NOREGS-VP
 
