@@ -362,6 +362,9 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall;
 def STACK_SMASH_HANDLER : RuntimeLibcall;
 
+// Safe stack
+def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall;
+
 // Deoptimization
 def DEOPTIMIZE : RuntimeLibcall;
 
@@ -701,6 +704,9 @@ foreach lc = LibCalls__atomic in {
 
 // Stack Protector Fail
 def __stack_chk_fail : RuntimeLibcallImpl<STACKPROTECTOR_CHECK_FAIL>;
+
+// Safe stack.
+def __safestack_pointer_address : RuntimeLibcallImpl<SAFESTACK_POINTER_ADDRESS>;
 
 // Deoptimization
 def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
@@ -1535,6 +1541,15 @@ def AVRSystemLibrary
               avr_sin, avr_cos)>;
 
 //===----------------------------------------------------------------------===//
+// DXIL Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isDXIL : RuntimeLibcallPredicate<"TT.isDXIL()">;
+
+// No calls
+def DXILSystemLibrary : SystemRuntimeLibrary<isDXIL, (add)>;
+
+//===----------------------------------------------------------------------===//
 // Hexagon Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
@@ -2114,7 +2129,7 @@ defvar X86CommonLibcalls =
 );
 
 defvar Windows32DivRemMulCalls =
-  LibcallImpls<(add WindowsDivRemMulLibcalls),
+  LibcallsWithCC<(add WindowsDivRemMulLibcalls), X86_STDCALL,
   RuntimeLibcallPredicate<"TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()">>;
 
 def X86_32SystemLibrary

@@ -657,6 +657,29 @@ directory.  The path to this directory is available in a lit test with the varia
 .. _FileCheck: https://llvm.org/docs/CommandGuide/FileCheck.html
 .. _test/clang-tidy/checkers/google/readability-casting.cpp: https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/test/clang-tidy/checkers/google/readability-casting.cpp
 
+
+Submitting a Pull Request
+-------------------------
+
+Before submitting a pull request, contributors are encouraged to run
+:program:`clang-tidy` and :program:`clang-format` on their changes to ensure
+code quality and catch potential issues. While :program:`clang-tidy` is not
+currently enforced in CI, following this practice helps maintain code
+consistency and prevent common errors.
+
+Here's useful command to check your staged changes:
+
+.. code-block:: console
+
+  $ git diff --staged -U0 | ./clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
+      -j $(nproc) -path build/ -p1 -only-check-in-db
+  $ git clang-format
+
+Note that some warnings may be false positives or require careful consideration
+before fixing. Use your judgment and feel free to discuss in the pull request
+if you're unsure about a particular warning.
+
+
 Out-of-tree check plugins
 -------------------------
 

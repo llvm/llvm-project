@@ -1048,13 +1048,9 @@ public:
 
   virtual void emitSyntaxDirective();
 
-  /// Record a relocation described by the .reloc directive. Return std::nullopt
-  /// if succeeded. Otherwise, return a pair (Name is invalid, error message).
-  virtual std::optional<std::pair<bool, std::string>>
-  emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
-                     SMLoc Loc, const MCSubtargetInfo &STI) {
-    return std::nullopt;
-  }
+  /// Record a relocation described by the .reloc directive.
+  virtual void emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                                  const MCExpr *Expr, SMLoc Loc = {}) {}
 
   virtual void emitAddrsig() {}
   virtual void emitAddrsigSym(const MCSymbol *Sym) {}
@@ -1067,19 +1063,6 @@ public:
                                uint64_t Attr, uint64_t Discriminator,
                                const MCPseudoProbeInlineStack &InlineStack,
                                MCSymbol *FnSym);
-
-  /// Set the bundle alignment mode from now on in the section.
-  /// The value 1 means turn the bundle alignment off.
-  virtual void emitBundleAlignMode(Align Alignment);
-
-  /// The following instructions are a bundle-locked group.
-  ///
-  /// \param AlignToEnd - If true, the bundle-locked group will be aligned to
-  ///                     the end of a bundle.
-  virtual void emitBundleLock(bool AlignToEnd);
-
-  /// Ends a bundle-locked group.
-  virtual void emitBundleUnlock();
 
   /// If this file is backed by a assembly streamer, this dumps the
   /// specified string in the output .s file.  This capability is indicated by

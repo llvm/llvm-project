@@ -3575,6 +3575,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   std::unique_ptr<DIBuilder> DIB;
   if (isa<AllocaInst>(MI)) {
     findDbgUsers(DVIs, &MI, &DVRs);
+    assert(DVIs.empty());
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
@@ -3644,9 +3645,6 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
                             ConstantInt::get(Type::getInt1Ty(C->getContext()),
                                              C->isFalseWhenEqual()));
       } else if (auto *SI = dyn_cast<StoreInst>(I)) {
-        for (auto *DVI : DVIs)
-          if (DVI->isAddressOfVariable())
-            ConvertDebugDeclareToDebugValue(DVI, SI, *DIB);
         for (auto *DVR : DVRs)
           if (DVR->isAddressOfVariable())
             ConvertDebugDeclareToDebugValue(DVR, SI, *DIB);
@@ -3890,7 +3888,7 @@ bool InstCombinerImpl::removeInstructionsBeforeUnreachable(Instruction &I) {
   // This includes instructions like stores and "llvm.assume" that may not get
   // removed by simple dead code elimination.
   bool Changed = false;
-  while (Instruction *Prev = I.getPrevNonDebugInstruction()) {
+  while (Instruction *Prev = I.getPrevNode()) {
     // While we theoretically can erase EH, that would result in a block that
     // used to start with an EH no longer starting with EH, which is invalid.
     // To make it valid, we'd need to fixup predecessors to no longer refer to
@@ -4899,13 +4897,14 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // If operand is guaranteed not to be poison, there is no need to add freeze
   // to the operand. So we first find the operand that is not guaranteed to be
   // poison.
-  Use *MaybePoisonOperand = nullptr;
-  for (Use &U : OrigOpInst->operands()) {
-    if (isa<MetadataAsValue>(U.get()) ||
-        isGuaranteedNotToBeUndefOrPoison(U.get()))
+  Value *MaybePoisonOperand = nullptr;
+  for (Value *V : OrigOpInst->operands()) {
+    if (isa<MetadataAsValue>(V) || isGuaranteedNotToBeUndefOrPoison(V) ||
+        // Treat identical operands as a single operand.
+        (MaybePoisonOperand && MaybePoisonOperand == V))
       continue;
     if (!MaybePoisonOperand)
-      MaybePoisonOperand = &U;
+      MaybePoisonOperand = V;
     else
       return nullptr;
   }
@@ -4917,10 +4916,10 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
     return OrigOp;
 
   Builder.SetInsertPoint(OrigOpInst);
-  auto *FrozenMaybePoisonOperand = Builder.CreateFreeze(
-      MaybePoisonOperand->get(), MaybePoisonOperand->get()->getName() + ".fr");
+  Value *FrozenMaybePoisonOperand = Builder.CreateFreeze(
+      MaybePoisonOperand, MaybePoisonOperand->getName() + ".fr");
 
-  replaceUse(*MaybePoisonOperand, FrozenMaybePoisonOperand);
+  OrigOpInst->replaceUsesOfWith(MaybePoisonOperand, FrozenMaybePoisonOperand);
   return OrigOp;
 }
 
@@ -5255,8 +5254,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsers;
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
   findDbgUsers(DbgUsers, I, &DbgVariableRecords);
-  if (!DbgUsers.empty())
-    tryToSinkInstructionDbgValues(I, InsertPos, SrcBlock, DestBlock, DbgUsers);
+  assert(DbgUsers.empty());
   if (!DbgVariableRecords.empty())
     tryToSinkInstructionDbgVariableRecords(I, InsertPos, SrcBlock, DestBlock,
                                            DbgVariableRecords);
@@ -5273,71 +5271,12 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   return true;
 }
 
-void InstCombinerImpl::tryToSinkInstructionDbgValues(
-    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
-    BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers) {
-  // For all debug values in the destination block, the sunk instruction
-  // will still be available, so they do not need to be dropped.
-  SmallVector<DbgVariableIntrinsic *, 2> DbgUsersToSalvage;
-  for (auto &DbgUser : DbgUsers)
-    if (DbgUser->getParent() != DestBlock)
-      DbgUsersToSalvage.push_back(DbgUser);
-
-  // Process the sinking DbgUsersToSalvage in reverse order, as we only want
-  // to clone the last appearing debug intrinsic for each given variable.
-  SmallVector<DbgVariableIntrinsic *, 2> DbgUsersToSink;
-  for (DbgVariableIntrinsic *DVI : DbgUsersToSalvage)
-    if (DVI->getParent() == SrcBlock)
-      DbgUsersToSink.push_back(DVI);
-  llvm::sort(DbgUsersToSink,
-             [](auto *A, auto *B) { return B->comesBefore(A); });
-
-  SmallVector<DbgVariableIntrinsic *, 2> DIIClones;
-  SmallSet<DebugVariable, 4> SunkVariables;
-  for (auto *User : DbgUsersToSink) {
-    // A dbg.declare instruction should not be cloned, since there can only be
-    // one per variable fragment. It should be left in the original place
-    // because the sunk instruction is not an alloca (otherwise we could not be
-    // here).
-    if (isa<DbgDeclareInst>(User))
-      continue;
-
-    DebugVariable DbgUserVariable =
-        DebugVariable(User->getVariable(), User->getExpression(),
-                      User->getDebugLoc()->getInlinedAt());
-
-    if (!SunkVariables.insert(DbgUserVariable).second)
-      continue;
-
-    // Leave dbg.assign intrinsics in their original positions and there should
-    // be no need to insert a clone.
-    if (isa<DbgAssignIntrinsic>(User))
-      continue;
-
-    DIIClones.emplace_back(cast<DbgVariableIntrinsic>(User->clone()));
-    if (isa<DbgDeclareInst>(User) && isa<CastInst>(I))
-      DIIClones.back()->replaceVariableLocationOp(I, I->getOperand(0));
-    LLVM_DEBUG(dbgs() << "CLONE: " << *DIIClones.back() << '\n');
-  }
-
-  // Perform salvaging without the clones, then sink the clones.
-  if (!DIIClones.empty()) {
-    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage, {});
-    // The clones are in reverse order of original appearance, reverse again to
-    // maintain the original order.
-    for (auto &DIIClone : llvm::reverse(DIIClones)) {
-      DIIClone->insertBefore(InsertPos);
-      LLVM_DEBUG(dbgs() << "SINK: " << *DIIClone << '\n');
-    }
-  }
-}
-
 void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
     Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
     BasicBlock *DestBlock,
     SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords) {
-  // Implementation of tryToSinkInstructionDbgValues, but for the
-  // DbgVariableRecord of variable assignments rather than dbg.values.
+  // For all debug values in the destination block, the sunk instruction
+  // will still be available, so they do not need to be dropped.
 
   // Fetch all DbgVariableRecords not already in the destination.
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecordsToSalvage;

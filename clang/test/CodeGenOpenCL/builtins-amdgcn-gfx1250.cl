@@ -42,6 +42,45 @@ void test_s_wait_tensorcnt() {
   __builtin_amdgcn_s_wait_tensorcnt(0);
 }
 
+// CHECK-LABEL: @test_tanh_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store float [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.amdgcn.tanh.f32(float [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_tanh_f32(global float* out, float a)
+{
+  *out = __builtin_amdgcn_tanhf(a);
+}
+
+// CHECK-LABEL: @test_tanh_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr addrspace(1) [[TMP0]], align 2
+// CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.amdgcn.tanh.f16(half [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store half [[TMP2]], ptr addrspace(1) [[TMP3]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_tanh_f16(global half* out, global half* a)
+{
+  *out = __builtin_amdgcn_tanhh(*a);
+}
+
 // CHECK-LABEL: @test_tanh_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
@@ -59,6 +98,120 @@ void test_s_wait_tensorcnt() {
 void test_tanh_bf16(global __bf16* out, __bf16 a)
 {
   *out = __builtin_amdgcn_tanh_bf16(a);
+}
+
+// CHECK-LABEL: @test_rcp_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = call bfloat @llvm.amdgcn.rcp.bf16(bfloat [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[TMP1]], ptr addrspace(1) [[TMP2]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_rcp_bf16(global __bf16* out, __bf16 a)
+{
+  *out = __builtin_amdgcn_rcp_bf16(a);
+}
+
+// CHECK-LABEL: @test_rsq_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = call bfloat @llvm.amdgcn.rsq.bf16(bfloat [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[TMP1]], ptr addrspace(1) [[TMP2]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_rsq_bf16(global __bf16* out, __bf16 a)
+{
+  *out = __builtin_amdgcn_rsq_bf16(a);
+}
+
+// CHECK-LABEL: @test_log_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = call bfloat @llvm.amdgcn.log.bf16(bfloat [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[TMP1]], ptr addrspace(1) [[TMP2]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_log_bf16(global __bf16* out, __bf16 a)
+{
+  *out = __builtin_amdgcn_log_bf16(a);
+}
+
+// CHECK-LABEL: @test_exp2_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = call bfloat @llvm.amdgcn.exp2.bf16(bfloat [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[TMP1]], ptr addrspace(1) [[TMP2]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_exp2_bf16(global __bf16* out, __bf16 a)
+{
+  *out = __builtin_amdgcn_exp2_bf16(a);
+}
+
+// CHECK-LABEL: @test_sin_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = call bfloat @llvm.amdgcn.sin.bf16(bfloat [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[TMP1]], ptr addrspace(1) [[TMP2]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_sin_bf16(global __bf16* out, __bf16 a)
+{
+  *out = __builtin_amdgcn_sin_bf16(a);
+}
+
+// CHECK-LABEL: @test_cos_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = call bfloat @llvm.amdgcn.cos.bf16(bfloat [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store bfloat [[TMP1]], ptr addrspace(1) [[TMP2]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_cos_bf16(global __bf16* out, __bf16 a)
+{
+  *out = __builtin_amdgcn_cos_bf16(a);
 }
 
 // CHECK-LABEL: @test_cvt_f16_fp8(
