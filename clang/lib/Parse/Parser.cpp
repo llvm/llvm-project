@@ -2361,8 +2361,6 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   // Parse a global-module-fragment, if present.
   if (getLangOpts().CPlusPlusModules && Tok.is(tok::semi)) {
     SourceLocation SemiLoc = ConsumeToken();
-    // Note: Not required to pass CI
-    TryConsumeToken(tok::eod);
     if (!Introducer.isFirstPPToken()) {
       Diag(StartLoc, diag::err_global_module_introducer_not_at_start)
         << SourceRange(StartLoc, SemiLoc);
@@ -2387,8 +2385,6 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
     SourceLocation PrivateLoc = ConsumeToken();
     DiagnoseAndSkipCXX11Attributes();
     ExpectAndConsumeSemi(diag::err_private_module_fragment_expected_semi);
-    // Note: Not required to pass CI
-    TryConsumeToken(tok::eod);
     ImportState = ImportState == Sema::ModuleImportState::ImportAllowed
                       ? Sema::ModuleImportState::PrivateFragmentImportAllowed
                       : Sema::ModuleImportState::PrivateFragmentImportFinished;
@@ -2420,8 +2416,6 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
                           /*WarnOnUnknownAttrs=*/true);
 
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
-  // Note: Not required to pass CI
-  TryConsumeToken(tok::eod);
 
   return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
                                  ImportState, Introducer.isFirstPPToken());
@@ -2567,8 +2561,6 @@ bool Parser::ParseModuleName(SourceLocation UseLoc,
 
       Diag(Tok, diag::err_module_expected_ident) << IsImport;
       SkipUntil(tok::semi);
-      // Note: Not required to pass CI
-      TryConsumeToken(tok::eod);
       return true;
     }
 
@@ -2580,8 +2572,6 @@ bool Parser::ParseModuleName(SourceLocation UseLoc,
       return false;
 
     ConsumeToken();
-    // Note: Not required to pass CI
-    TryConsumeToken(tok::eod);
   }
 }
 
