@@ -207,5 +207,4 @@ gpu.module @test_round_robin_assignment {
                                    target_layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 16], inst_data = [8, 16]>}> : vector<32x64xf32>
     gpu.return
   }
-
 }
