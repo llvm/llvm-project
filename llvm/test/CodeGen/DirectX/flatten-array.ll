@@ -218,6 +218,28 @@ define void @two_index_gep_const() {
   ret void
 }
 
+define void @zero_index_global() {
+  ; CHECK-LABEL: define void @zero_index_global(
+  ; CHECK-NEXT: [[GEP:%.*]] = getelementptr inbounds nuw [4 x float], ptr addrspace(3) @g.1dim, i32 0, i32 0
+  ; CHECK-NEXT: load float, ptr addrspace(3) [[GEP]], align 4
+  ; CHECK-NEXT: ret void
+  %1 = getelementptr inbounds nuw [2 x [2 x float]], ptr addrspace(3) @g, i32 0, i32 0, i32 0
+  %2 = load float, ptr addrspace(3) %1, align 4
+  ret void
+}
+
+; Note: A ConstantExpr GEP with all 0 indices is equivalent to the pointer
+; operand of the GEP. Therefore the visitLoadInst will not see the pointer operand
+; as a ConstantExpr GEP and will not create a GEP instruction to be visited.
+; The later dxil-legalize pass will insert a GEP in this instance.
+define void @zero_index_global_const() {
+  ; CHECK-LABEL: define void @zero_index_global_const(
+  ; CHECK-NEXT: load float, ptr addrspace(3) @g.1dim, align 4
+  ; CHECK-NEXT: ret void
+  %1 = load float, ptr addrspace(3) getelementptr inbounds nuw ([2 x [2 x float]], ptr addrspace(3) @g, i32 0, i32 0, i32 0), align 4
+  ret void
+}
+
 define void @gep_4d_index_test()  {
     ; CHECK-LABEL: gep_4d_index_test
     ; CHECK: [[a:%.*]] = alloca [16 x i32], align 4
