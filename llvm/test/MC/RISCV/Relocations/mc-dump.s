@@ -9,6 +9,7 @@
 # CHECK-NEXT:0 Data LinkerRelaxable Size:8 [97,00,00,00,e7,80,00,00]
 # CHECK-NEXT:  Fixup @0 Value:specifier(19,ext) Kind:4023
 # CHECK-NEXT:  Symbol @0 $x
+# CHECK-NEXT:8 Data Size:0 []
 # CHECK-NEXT:8 Align Align:8 Fill:0 FillLen:1 MaxBytesToEmit:8 Nops
 # CHECK-NEXT:12 Data Size:4 [13,05,30,00]
 # CHECK-NEXT:16 Align Align:8 Fill:0 FillLen:1 MaxBytesToEmit:8 Nops

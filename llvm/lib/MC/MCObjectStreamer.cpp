@@ -106,26 +106,12 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
 }
 
-static bool canReuseDataFragment(const MCFragment &F,
-                                 const MCAssembler &Assembler,
-                                 const MCSubtargetInfo *STI) {
-  if (!F.hasInstructions())
-    return true;
-  // Do not add data after a linker-relaxable instruction. The difference
-  // between a new label and a label at or before the linker-relaxable
-  // instruction cannot be resolved at assemble-time.
-  if (F.isLinkerRelaxable())
-    return false;
-  // If the subtarget is changed mid fragment we start a new fragment to record
-  // the new STI.
-  return !STI || F.getSubtargetInfo() == STI;
-}
-
-MCFragment *
-MCObjectStreamer::getOrCreateDataFragment(const MCSubtargetInfo *STI) {
+MCFragment *MCObjectStreamer::getOrCreateDataFragment() {
+  // TODO: Start a new fragment whenever finalizing the variable-size tail of a
+  // previous one, so that all getOrCreateDataFragment calls can be replaced
+  // with getCurrentFragment
   auto *F = getCurrentFragment();
-  if (F->getKind() != MCFragment::FT_Data ||
-      !canReuseDataFragment(*F, *Assembler, STI)) {
+  if (F->getKind() != MCFragment::FT_Data) {
     F = getContext().allocFragment<MCFragment>();
     insert(F);
   }
@@ -363,16 +349,23 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   F->doneAppending();
   if (!Fixups.empty())
     F->appendFixups(Fixups);
+  F->setHasInstructions(STI);
 
+  bool MarkedLinkerRelaxable = false;
   for (auto &Fixup : MutableArrayRef(F->getFixups()).slice(FixupStartIndex)) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-    if (Fixup.isLinkerRelaxable()) {
-      F->setLinkerRelaxable();
+    if (!Fixup.isLinkerRelaxable())
+      continue;
+    F->setLinkerRelaxable();
+    // Do not add data after a linker-relaxable instruction. The difference
+    // between a new label and a label at or before the linker-relaxable
+    // instruction cannot be resolved at assemble-time.
+    if (!MarkedLinkerRelaxable) {
+      MarkedLinkerRelaxable = true;
       getCurrentSectionOnly()->setLinkerRelaxable();
+      newFragment();
     }
   }
-
-  F->setHasInstructions(STI);
 }
 
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
@@ -568,8 +561,10 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
   // if the alignment is larger than the minimum NOP size.
   unsigned Size;
   if (getAssembler().getBackend().shouldInsertExtraNopBytesForCodeAlign(*F,
-                                                                        Size))
+                                                                        Size)) {
     getCurrentSectionOnly()->setLinkerRelaxable();
+    newFragment();
+  }
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
