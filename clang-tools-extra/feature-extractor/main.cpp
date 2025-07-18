@@ -9,6 +9,7 @@
 
 #include "FeatureManager.h"
 
+#include "features/LoopsRange.h"
 #include "features/NumLoops.h"
 #include "features/OmpRegions.h"
 
@@ -40,7 +41,7 @@ int main(int argc, const char **argv) {
   CommonOptionsParser &OptionsParser = ExpectedParser.get();
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
-  FeatureManager<NumLoops, OmpRegions> manager;
+  FeatureManager<NumLoops, OmpRegions, LoopsRange> manager;
 
   return Tool.run(newFrontendActionFactory(manager.get_match_finder()).get());
 }
