@@ -36,7 +36,7 @@ Potentially Breaking Changes
 
 - The Objective-C ARC migrator (ARCMigrate) has been removed.
 - Fix missing diagnostics for uses of declarations when performing typename access,
-  such as when performing member access on a '[[deprecated]]' type alias.
+  such as when performing member access on a ``[[deprecated]]`` type alias.
   (#GH58547)
 - For ARM targets when compiling assembly files, the features included in the selected CPU
   or Architecture's FPU are included. If you wish not to use a specific feature,
@@ -132,8 +132,6 @@ C++2c Feature Support
 
 
 - Implemented `P0963R3 Structured binding declaration as a condition <https://wg21.link/P0963R3>`_.
-
-- Implemented `P2719R4 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_.
 
 - Implemented `P3618R0 Allow attaching main to the global module <https://wg21.link/P3618>`_.
 
@@ -376,6 +374,8 @@ New Compiler Flags
 
 - New option ``-ignore-pch`` added to disable precompiled headers. It overrides ``-emit-pch`` and ``-include-pch``. (#GH142409, `PCHDocs <https://clang.llvm.org/docs/UsersManual.html#ignoring-a-pch-file>`_).
 
+- New options ``-g[no-]key-instructions`` added, disabled by default. Reduces jumpiness of debug stepping for optimized code in some debuggers (not LLDB at this time). Not recommended for use without optimizations. DWARF only. Note both the positive and negative flags imply ``-g``.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -472,6 +472,9 @@ related warnings within the method body.
 
 - Clang now disallows the use of attributes applied before an
   ``extern template`` declaration (#GH79893).
+
+- Clang will print the "reason" string argument passed on to
+  ``[[clang::warn_unused_result("reason")]]`` as part of the warning diagnostic.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -671,7 +674,7 @@ Improvements to Clang's diagnostics
   #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
-  
+
 - Clang no longer emits a spurious -Wdangling-gsl warning in C++23 when
   iterating over an element of a temporary container in a range-based
   for loop.(#GH109793, #GH145164)
@@ -698,6 +701,20 @@ Improvements to Clang's diagnostics
 
 - Clang now tries to avoid printing file paths that contain ``..``, instead preferring
   the canonical file path if it ends up being shorter.
+
+- Improve the diagnostics for placement new expression when const-qualified
+  object was passed as the storage argument. (#GH143708)
+
+- Clang now does not issue a warning about returning from a function declared with
+  the ``[[noreturn]]`` attribute when the function body is ended with a call via
+  pointer, provided it can be proven that the pointer only points to
+  ``[[noreturn]]`` functions.
+
+- Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
+  diagnostics for function effects (``[[clang::nonblocking]]`` and ``[[clang::nonallocating]]``).
+  Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
+  Added a new warning in this group for the case where the attribute is missing/implicit on
+  an override of a virtual method.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -789,6 +806,9 @@ Bug Fixes in This Version
   declaration statements. Clang now emits a warning for these patterns. (#GH141659)
 - Fixed false positives for redeclaration errors of using enum in
   nested scopes. (#GH147495)
+- Fixed a failed assertion with an operator call expression which comes from a
+  macro expansion when performing analysis for nullability attributes. (#GH138371)
+- Fixed a concept equivalent checking crash due to untransformed constraint expressions. (#GH146614)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -872,7 +892,7 @@ Bug Fixes to C++ Support
 - Clang no longer crashes when trying to unify the types of arrays with
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
-- Fixed type alias CTAD issues involving default template arguments. (#GH134471)
+- Fixed type alias CTAD issues involving default template arguments. (#GH133132), (#GH134471)
 - Fixed CTAD issues when initializing anonymous fields with designated initializers. (#GH67173)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
@@ -942,6 +962,7 @@ Bug Fixes to C++ Support
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 - Correctly handles calling an explicit object member function template overload set
   through its address (``(&Foo::bar<baz>)()``).
+- Fix a crash when using an explicit object parameter in a non-member function. (#GH113185)
 - Fix a crash when forming an invalid call to an operator with an explicit object member. (#GH147121)
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
@@ -952,7 +973,12 @@ Bug Fixes to C++ Support
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
 - Fix a crash in the presence of invalid base classes. (#GH147186)
-- Suppress -Wdeprecated-declarations in implicitly generated special-member functions for deprecated data-members; only explicit uses still warn. (Issue #147293)
+- Fix a crash with NTTP when instantiating local class.
+- Fixed a crash involving list-initialization of an empty class with a
+  non-empty initializer list. (#GH147949)
+- Fixed constant evaluation of equality comparisons of constexpr-unknown references. (#GH147663)
+- Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
+- Suppress -Wdeprecated-declarations in implicitly generated special-member functions for deprecated data-members; only explicit uses still warn. (#GH147293)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1014,7 +1040,9 @@ Arm and AArch64 Support
   `as specified here <https://github.com/ARM-software/acle/blob/main/main/acle.md#modal-8-bit-floating-point-extensions>`_
   is now available.
 - Support has been added for the following processors (command-line identifiers in parentheses):
+
   - Arm Cortex-A320 (``cortex-a320``)
+
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
 - The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
   ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is
@@ -1022,7 +1050,19 @@ Arm and AArch64 Support
 - When a feature that depends on NEON (``simd``) is used, NEON is now automatically enabled.
 - When NEON is disabled (``+nosimd``), all features that depend on NEON will now be disabled.
 
--  Support for __ptrauth type qualifier has been added.
+- Pointer authentication
+
+  - Support for __ptrauth type qualifier has been added.
+  - Objective-C adoption of pointer authentication
+
+    - ``isa`` and ``super`` pointers are protected with address diversity and separate
+      usage specific discriminators.
+    - methodlist pointers and content are protected with address diversity and methodlist
+      pointers have a usage specific discriminator.
+    - ``class_ro_t`` pointers are protected with address diversity and usage specific
+      discriminators.
+    - ``SEL`` typed ivars are protected with address diversity and usage specific
+      discriminators.
 
 - For AArch64, added support for generating executable-only code sections by using the
   ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
@@ -1115,6 +1155,8 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 
+- Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
+  parameters.
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
@@ -1133,6 +1175,8 @@ clang-format
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
 - Add ``SpaceAfterOperatorKeyword`` option.
+- Add ``MacrosSkippedByRemoveParentheses`` option so that their invocations are
+  skipped by ``RemoveParentheses``.
 
 clang-refactor
 --------------
@@ -1164,6 +1208,8 @@ Static Analyzer
 ---------------
 - Fixed a crash when C++20 parenthesized initializer lists are used. This issue
   was causing a crash in clang-tidy. (#GH136041)
+- The Clang Static Analyzer now handles parenthesized initialization.
+  (#GH148875)
 
 New features
 ^^^^^^^^^^^^
@@ -1184,6 +1230,9 @@ New features
   so frequent 'not yet implemented' diagnostics should be expected.  Also, the
   ACC MLIR dialect does not currently implement any lowering to LLVM-IR, so no
   code generation is possible for OpenACC.
+- Implemented `P2719R5 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_
+  as an extension in all C++ language modes.
+
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

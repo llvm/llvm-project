@@ -1111,14 +1111,14 @@ CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *vd, bool isConstant) {
 }
 
 cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl gd) {
-  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+  const auto *d = cast<FunctionDecl>(gd.getDecl());
 
-  GVALinkage linkage = astContext.GetGVALinkageForFunction(fd);
+  GVALinkage linkage = astContext.GetGVALinkageForFunction(d);
 
-  if (isa<CXXDestructorDecl>(fd))
-    errorNYI(fd->getSourceRange(), "getFunctionLinkage: CXXDestructorDecl");
+  if (const auto *dtor = dyn_cast<CXXDestructorDecl>(d))
+    return getCXXABI().getCXXDestructorLinkage(linkage, dtor, gd.getDtorType());
 
-  return getCIRLinkageForDeclarator(fd, linkage, /*IsConstantVariable=*/false);
+  return getCIRLinkageForDeclarator(d, linkage, /*isConstantVariable=*/false);
 }
 
 static cir::GlobalOp
@@ -1274,6 +1274,9 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::CXXConstructor:
     getCXXABI().emitCXXConstructors(cast<CXXConstructorDecl>(decl));
     break;
+  case Decl::CXXDestructor:
+    getCXXABI().emitCXXDestructors(cast<CXXDestructorDecl>(decl));
+    break;
 
   // C++ Decls
   case Decl::LinkageSpec:
@@ -1333,6 +1336,17 @@ cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,
   if (!funcType) {
     const auto *fd = cast<FunctionDecl>(gd.getDecl());
     funcType = convertType(fd->getType());
+  }
+
+  // Devirtualized destructor calls may come through here instead of via
+  // getAddrOfCXXStructor. Make sure we use the MS ABI base destructor instead
+  // of the complete destructor when necessary.
+  if (const auto *dd = dyn_cast<CXXDestructorDecl>(gd.getDecl())) {
+    if (getTarget().getCXXABI().isMicrosoft() &&
+        gd.getDtorType() == Dtor_Complete &&
+        dd->getParent()->getNumVBases() == 0)
+      errorNYI(dd->getSourceRange(),
+               "getAddrOfFunction: MS ABI complete destructor");
   }
 
   StringRef mangledName = getMangledName(gd);
@@ -1729,7 +1743,9 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   // All MSVC dtors other than the base dtor are linkonce_odr and delegate to
   // each other bottoming out wiht the base dtor. Therefore we emit non-base
   // dtors on usage, even if there is no dtor definition in the TU.
-  if (isa_and_nonnull<CXXDestructorDecl>(d))
+  if (isa_and_nonnull<CXXDestructorDecl>(d) &&
+      getCXXABI().useThunkForDtorVariant(cast<CXXDestructorDecl>(d),
+                                         gd.getDtorType()))
     errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: dtor");
 
   // This is the first use or definition of a mangled name. If there is a
