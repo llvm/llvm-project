@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/types/mbstate_t.h"
+#include "src/__support/macros/null_check.h"
 #include "src/string/memset.h"
 #include "src/wchar/wcsnrtombs.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"

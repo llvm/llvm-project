@@ -10,6 +10,7 @@
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/null_check.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/wcsnrtombs.h"
 #include "test/UnitTest/Test.h"
