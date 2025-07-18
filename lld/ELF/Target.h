@@ -96,6 +96,8 @@ public:
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
+  // Relax CFI jump tables if implemented by target.
+  virtual void relaxCFIJumpTables() const {}
   // Do finalize relaxation after collecting relaxation infos.
   virtual void finalizeRelax(int passes) const {}
 
@@ -245,6 +247,7 @@ template <typename ELFT> void writeARMCmseImportLib(Ctx &);
 uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections(Ctx &);
+void mergeHexagonAttributesSections(Ctx &);
 void addArmInputSectionMappingSymbols(Ctx &);
 void addArmSyntheticSectionMappingSymbol(Defined *);
 void sortArmMappingSymbols(Ctx &);

@@ -171,10 +171,6 @@ bool CompressInstEmitter::validateTypes(const Record *DagOpType,
                                         bool IsSourceInst) {
   if (DagOpType == InstOpType)
     return true;
-  // Only source instruction operands are allowed to not match Input Dag
-  // operands.
-  if (!IsSourceInst)
-    return false;
 
   if (DagOpType->isSubClassOf("RegisterClass") &&
       InstOpType->isSubClassOf("RegisterClass")) {
@@ -258,9 +254,9 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
           continue;
         }
         // Validate that Dag operand type matches the type defined in the
-        // corresponding instruction. Operands in the input Dag pattern are
-        // allowed to be a subclass of the type specified in corresponding
-        // instruction operand instead of being an exact match.
+        // corresponding instruction. Operands in the input and output Dag
+        // patterns are allowed to be a subclass of the type specified in the
+        // corresponding instruction operand instead of being an exact match.
         if (!validateTypes(DI->getDef(), OpndRec, IsSourceInst))
           PrintFatalError(Rec->getLoc(),
                           "Error in Dag '" + Dag->getAsString() +
