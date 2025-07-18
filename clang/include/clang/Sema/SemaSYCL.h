@@ -62,7 +62,6 @@ public:
                                        ParsedType ParsedTy);
 
   void handleKernelAttr(Decl *D, const ParsedAttr &AL);
-  void handleExternalAttr(Decl *D, const ParsedAttr &AL);
   void handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL);
 
   void CheckSYCLExternalFunctionDecl(FunctionDecl *FD);

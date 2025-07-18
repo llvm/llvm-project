@@ -4089,14 +4089,12 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     //   used on the first declaration of that function in the translation unit.
     //   Redeclarations of the function in the same translation unit may
     //   optionally use SYCL_EXTERNAL, but this is not required.
-    if (LangOpts.SYCLIsDevice) {
-      const SYCLExternalAttr *SEA = New->getAttr<SYCLExternalAttr>();
-      if (SEA && !Old->hasAttr<SYCLExternalAttr>()) {
-        Diag(SEA->getLocation(), diag::err_attribute_missing_on_first_decl)
-            << SEA;
-        Diag(Old->getLocation(), diag::note_previous_declaration);
-        New->dropAttr<SYCLExternalAttr>();
-      }
+    const SYCLExternalAttr *SEA = New->getAttr<SYCLExternalAttr>();
+    if (SEA && !Old->hasAttr<SYCLExternalAttr>()) {
+      Diag(SEA->getLocation(), diag::err_attribute_missing_on_first_decl)
+          << SEA;
+      Diag(Old->getLocation(), diag::note_previous_declaration);
+      New->dropAttr<SYCLExternalAttr>();
     }
 
     // (C++98 8.3.5p3):
@@ -12457,12 +12455,10 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
     return;
   }
 
-  if (getLangOpts().SYCLIsDevice) {
-    if (FD->hasAttr<SYCLExternalAttr>()) {
-      Diag(FD->getLocation(), diag::err_sycl_attribute_invalid_main);
-      FD->setInvalidDecl();
-      return;
-    }
+  if (FD->hasAttr<SYCLExternalAttr>()) {
+    Diag(FD->getLocation(), diag::err_sycl_attribute_invalid_main);
+    FD->setInvalidDecl();
+    return;
   }
 
   // Functions named main in hlsl are default entries, but don't have specific

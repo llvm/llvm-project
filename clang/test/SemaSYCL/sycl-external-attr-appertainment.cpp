@@ -1,5 +1,8 @@
+// RUN: %clang_cc1 -fsycl-is-host -fsyntax-only -std=c++17 -verify %s
 // RUN: %clang_cc1 -fsycl-is-device -fsyntax-only -std=c++17 -verify %s
+// RUN: %clang_cc1 -fsycl-is-host -fsyntax-only -std=c++20 -verify %s
 // RUN: %clang_cc1 -fsycl-is-device -fsyntax-only -std=c++20 -verify %s
+// RUN: %clang_cc1 -fsycl-is-host -fsyntax-only -std=c++23 -verify %s
 // RUN: %clang_cc1 -fsycl-is-device -fsyntax-only -std=c++23 -verify %s
 
 // expected-error@+1{{'clang::sycl_external' attribute only applies to functions}}

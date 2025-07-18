@@ -1,4 +1,6 @@
+// RUN: %clang_cc1 -fsycl-is-host -std=c++17 -fsyntax-only -verify -DCPP17 %s
 // RUN: %clang_cc1 -fsycl-is-device -std=c++17 -fsyntax-only -verify -DCPP17 %s
+// RUN: %clang_cc1 -fsycl-is-host -std=c++20 -fsyntax-only -verify -DCPP20 %s
 // RUN: %clang_cc1 -fsycl-is-device -std=c++20 -fsyntax-only -verify -DCPP20 %s
 
 // Semantic tests for the sycl_external attribute.
@@ -11,17 +13,12 @@ static void func1() {}
 namespace {
   [[clang::sycl_external]]
   void func2() {}
-
-  struct UnnX {};
 }
 
 // expected-error@+2{{'sycl_external' can only be applied to functions with external linkage}}
 namespace { struct S4 {}; }
 [[clang::sycl_external]] void func4(S4) {}
 
-// FIXME: This case is currently being diagnosed as an error because clang implements
-// default inheritance of attribute and explicit instantiation declaration names the
-// symbol that causes the instantiated specialization to have internal linkage.
 // expected-error@+3{{'sycl_external' can only be applied to functions with external linkage}}
 namespace { struct S6 {}; }
 template<typename>
@@ -29,6 +26,12 @@ template<typename>
 template void func6<S6>();
 // expected-note@-1{{in instantiation of function template specialization 'func6<(anonymous namespace)::S6>' requested here}}
 
+// FIXME: C++23 [temp.expl.spec]p12 states:
+//   ... Similarly, attributes appearing in the declaration of a template
+//   have no effect on an explicit specialization of that template.
+// Clang currently instantiates and propagates attributes from a function
+// template to its explicit specializations resulting in the following
+// spurious error.
 // expected-error@+3 2{{'sycl_external' can only be applied to functions with external linkage}}
 namespace { struct S7 {}; }
 template<typename>
@@ -36,6 +39,10 @@ template<typename>
 template<> void func7<S7>() {}
 // expected-note@-1{{in instantiation of function template specialization 'func7<(anonymous namespace)::S7>' requested here}}
 
+// FIXME: The explicit function template specialization appears to trigger
+// instantiation of a declaration from the primary template without the
+// attribute leading to a spurious diagnostic that the sycl_external
+// attribute is not present on the first declaration.
 namespace { struct S8 {}; }
 template<typename>
 void func8();
