@@ -3083,9 +3083,8 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         break;
       case LLVMContext::MD_callee_type:
         if (!AAOnly) {
-          K->setMetadata(
-              LLVMContext::MD_callee_type,
-              MDNode::getMergedCalleeTypeMetadata(K->getContext(), KMD, JMD));
+          K->setMetadata(LLVMContext::MD_callee_type,
+                         MDNode::getMergedCalleeTypeMetadata(KMD, JMD));
         }
         break;
       case LLVMContext::MD_align:
