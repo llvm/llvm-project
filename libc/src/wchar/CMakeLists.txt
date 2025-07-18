@@ -189,7 +189,6 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
     libc.src.__support.wchar.mbstate
     libc.src.__support.wchar.mbsnrtowcs
-    libc.src.__support.wchar.mbstate
 )
 
 add_entrypoint_object(
@@ -206,7 +205,6 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
     libc.src.__support.wchar.mbstate
     libc.src.__support.wchar.mbsnrtowcs
-    libc.src.__support.wchar.mbstate
 )
 
 add_entrypoint_object(

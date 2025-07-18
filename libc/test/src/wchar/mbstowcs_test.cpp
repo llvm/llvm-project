@@ -160,3 +160,11 @@ TEST_F(LlvmLibcMBSToWCSTest, ErrnoChecks) {
   // Making sure the pointer is not getting updated
   ASSERT_EQ(src, original);
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+TEST(LlvmLibcMBSToWCSTest, NullptrCrash) {
+  // Passing in a nullptr should crash the program.
+  EXPECT_DEATH([] { LIBC_NAMESPACE::mbstowcs(nullptr, nullptr, 1); },
+               WITH_SIGNAL(-1));
+}
+#endif // LIBC_HAS_ADDRESS_SANITIZER

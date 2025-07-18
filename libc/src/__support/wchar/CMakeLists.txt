@@ -69,12 +69,10 @@ add_object_library(
   .mbstate
 )
 
-add_object_library(
+add_header_library(
   mbsnrtowcs
   HDRS
     mbsnrtowcs.h
-  SRCS
-    mbsnrtowcs.cpp
   DEPENDS
   libc.hdr.errno_macros
   libc.hdr.types.wchar_t

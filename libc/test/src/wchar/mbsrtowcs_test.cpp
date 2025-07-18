@@ -21,16 +21,16 @@ TEST_F(LlvmLibcMBSRToWCSTest, OneByteOneChar) {
   const char *ch = "A";
   const char *original = ch;
   wchar_t dest[2];
-  mbstate_t *mb;
+  mbstate_t mb;
   LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &ch, 1, mb);
+  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &ch, 1, &mb);
   ASSERT_EQ(static_cast<char>(*dest), 'A');
   ASSERT_EQ(static_cast<int>(n), 1);
   // Should point to null terminator now
   ASSERT_EQ(ch, original + 1);
   ASSERT_ERRNO_SUCCESS();
 
-  n = LIBC_NAMESPACE::mbsrtowcs(dest + 1, &ch, 1, mb);
+  n = LIBC_NAMESPACE::mbsrtowcs(dest + 1, &ch, 1, &mb);
   ASSERT_EQ(static_cast<char>(dest[1]), '\0');
   // Should not include null terminator
   ASSERT_EQ(static_cast<int>(n), 0);
@@ -42,9 +42,9 @@ TEST_F(LlvmLibcMBSRToWCSTest, OneByteOneChar) {
 TEST_F(LlvmLibcMBSRToWCSTest, FourByteOneChar) {
   const char *src = "\xf0\x9f\x98\xb9"; // laughing cat emoji 😹
   wchar_t dest[2];
-  mbstate_t *mb;
+  mbstate_t mb;
   LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 2, mb);
+  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 2, &mb);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(static_cast<int>(dest[0]), 128569);
   ASSERT_TRUE(dest[1] == L'\0');
@@ -58,9 +58,9 @@ TEST_F(LlvmLibcMBSRToWCSTest, MultiByteTwoCharacters) {
   // Two laughing cat emojis "😹😹"
   const char *src = "\xf0\x9f\x98\xb9\xf0\x9f\x98\xb9";
   wchar_t dest[3];
-  mbstate_t *mb;
+  mbstate_t mb;
   LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
-  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 3, mb);
+  size_t n = LIBC_NAMESPACE::mbsrtowcs(dest, &src, 3, &mb);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(static_cast<int>(dest[0]), 128569);
   ASSERT_EQ(static_cast<int>(dest[1]), 128569);
@@ -174,3 +174,12 @@ TEST_F(LlvmLibcMBSRToWCSTest, ErrnoChecks) {
   // Should not move the pointer
   ASSERT_EQ(src, original + 8);
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+TEST(LlvmLibcMBSRToWCSTest, NullptrCrash) {
+  // Passing in a nullptr should crash the program.
+  EXPECT_DEATH(
+      [] { LIBC_NAMESPACE::mbsrtowcs(nullptr, nullptr, 1, nullptr); },
+      WITH_SIGNAL(-1));
+}
+#endif // LIBC_HAS_ADDRESS_SANITIZER
