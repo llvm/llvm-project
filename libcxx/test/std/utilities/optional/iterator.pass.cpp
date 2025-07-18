@@ -11,30 +11,94 @@
 // <optional>
 
 // template <class T> class optional::iterator;
-
-// 1: optional::iterator and optional const_iterator satisfy contiguous_iterator and random_access_iterator
-// 2. The value types and reference types for optional::iterator and optional::const_iterator are {_Tp, _Tp&} and {_Tp, const _Tp&} respectively
-// 3: The optional::begin() and optional::end() are marked noexcept.
-// 4: optionals that have a value have begin() != end(), whereas one that doesn't has begin() == end();
-// 5: The corresponding size for the following optionals is respected: has_value() == 1, !has_value() == 0
-// 6: Dereferencing an engaged optional's iterator returns the correct value.
-// 7: std::ranges::enable_view<optional<T>> == true, and std::format_kind<optional<T>> == true
-// 8: Verify that an iterator for loop counts only 1 item for an engaged optional, and 0 for an unegaged one.
-// 9: An optional with value that is reset will have a begin() == end(), then when it is reassigned a value, begin() != end(), and *begin() will contain the new value.
+// template <class T> class optional::const_iterator;
+// constexpr iterator optional::begin() noexcept;
+// constexpr iterator optional::end() noexcept;
+// constexpr const_iterator optional::begin() noexcept;
+// constexpr const_iterator optional::end() noexcept;
 
 #include <cassert>
+#include <concepts>
+#include <iterator>
 #include <optional>
+#include <ranges>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "check_assertion.h"
 
-constexpr int test_loop(const std::optional<char> val) {
-  int size = 0;
-  for (auto&& v : val) {
-    std::ignore = v;
-    size++;
-  }
-  return size;
+constexpr bool test_concepts() {
+  const std::optional<char> opt{'a'};
+  std::optional<char> nonconst_opt{'n'};
+
+  assert(std::contiguous_iterator<decltype(nonconst_opt.begin())>);
+  assert(std::contiguous_iterator<decltype(nonconst_opt.end())>);
+  assert(std::random_access_iterator<decltype(nonconst_opt.begin())>);
+  assert(std::random_access_iterator<decltype(nonconst_opt.end())>);
+
+  assert(std::contiguous_iterator<decltype(opt.begin())>);
+  assert(std::contiguous_iterator<decltype(opt.end())>);
+  assert(std::random_access_iterator<decltype(opt.begin())>);
+  assert(std::random_access_iterator<decltype(opt.end())>);
+
+  return true;
+}
+
+constexpr bool test_types() {
+  const std::optional<char> opt{'a'};
+  std::optional<char> nonconst_opt{'n'};
+  
+  assert((std::is_same_v<typename decltype(opt.begin())::value_type, char>));
+  assert((std::is_same_v<typename decltype(opt.begin())::reference, const char&>));
+  assert((std::is_same_v<typename decltype(nonconst_opt.begin())::value_type, char>));
+  assert((std::is_same_v<typename decltype(nonconst_opt.begin())::reference, char&>));
+  return true; 
+}
+
+constexpr bool test_size() {
+  const std::optional<char> opt{'a'};
+  std::optional<char> unengaged_opt;
+
+  assert(std::ranges::size(opt) == 1);
+  assert(std::ranges::size(unengaged_opt) == 0);
+
+  return true;
+}
+
+constexpr bool test_begin_end() {
+  const std::optional<char> opt{'a'};
+  std::optional<char> unengaged_opt;
+
+  assert(opt.begin() != opt.end());
+  assert(unengaged_opt.begin() == unengaged_opt.end());
+  return true;
+}
+
+constexpr bool test_noexcept() {
+  const std::optional<char> opt{'a'};
+  std::optional<char> nonconst_opt{'n'};
+
+  ASSERT_NOEXCEPT(opt.begin());
+  ASSERT_NOEXCEPT(opt.end());
+  ASSERT_NOEXCEPT(nonconst_opt.begin());
+  ASSERT_NOEXCEPT(nonconst_opt.end());
+
+  return true;
+}
+
+constexpr bool test_value() {
+  const std::optional<char> opt{'a'};
+  std::optional<char> nonconst_opt{'n'};
+
+  assert(*(opt.begin()) == 'a');
+  assert(*(nonconst_opt.begin()) == 'n');
+  return true;
+}
+
+constexpr bool test_syn() {
+  assert(std::ranges::enable_view<std::optional<char>> == true);
+  assert(std::format_kind<std::optional<char>> == std::range_format::disabled);
+  return true;
 }
 
 constexpr bool test_reset() {
@@ -48,76 +112,54 @@ constexpr bool test_reset() {
   return true;
 }
 
+
 int main(int, char**) {
-  constexpr const std::optional<char> opt{'a'};
-  constexpr std::optional<char> unengaged_opt;
-  std::optional<char> nonconst_opt{'n'};
-
-  // 1
+  // 1: optional::iterator and optional const_iterator satisfy contiguous_iterator and random_access_iterator
   {
-    static_assert(std::contiguous_iterator<decltype(nonconst_opt.begin())>);
-    static_assert(std::contiguous_iterator<decltype(nonconst_opt.end())>);
-    static_assert(std::random_access_iterator<decltype(nonconst_opt.begin())>);
-    static_assert(std::random_access_iterator<decltype(nonconst_opt.end())>);
-
-    static_assert(std::contiguous_iterator<decltype(opt.begin())>);
-    static_assert(std::contiguous_iterator<decltype(opt.end())>);
-    static_assert(std::random_access_iterator<decltype(opt.begin())>);
-    static_assert(std::random_access_iterator<decltype(opt.end())>);
+    test_concepts();
+    static_assert(test_concepts());
   }
 
-  { // 2
-    static_assert(std::same_as<typename decltype(opt.begin())::value_type, char>);
-    static_assert(std::same_as<typename decltype(opt.begin())::reference, const char&>);
-    static_assert(std::same_as<typename decltype(nonconst_opt.begin())::value_type, char>);
-    static_assert(std::same_as<typename decltype(nonconst_opt.begin())::reference, char&>);
-  }
-
-  // 3
+  // 2: The value types and reference types for optional::iterator and optional::const_iterator are {_Tp, _Tp&} and {_Tp, const _Tp&} respectively
   {
-    ASSERT_NOEXCEPT(opt.begin());
-    ASSERT_NOEXCEPT(opt.end());
-    ASSERT_NOEXCEPT(nonconst_opt.begin());
-    ASSERT_NOEXCEPT(nonconst_opt.end());
+    test_types();
+    static_assert(test_types());
   }
 
-  { // 4
-    static_assert(opt.begin() != opt.end());
-    static_assert(unengaged_opt.begin() == unengaged_opt.end());
-    assert(unengaged_opt.begin() == unengaged_opt.end());
-    assert(opt.begin() != opt.end());
-    assert(nonconst_opt.begin() != opt.end());
-  }
-
-  // 5
+  // 3: The optional::begin() and optional::end() are marked noexcept.
   {
-    static_assert(std::ranges::size(opt) == 1);
-    static_assert(std::ranges::size(unengaged_opt) == 0);
-    assert(std::ranges::size(opt) == 1);
-    assert(std::ranges::size(unengaged_opt) == 0);
+    test_noexcept();
+    static_assert(test_noexcept());
   }
 
-  { // 6
-    static_assert(*opt.begin() == 'a');
-    assert(*(opt.begin()) == 'a');
-    assert(*(nonconst_opt.begin()) == 'n');
+  // 4: optionals that have a value have begin() != end(), whereas one that doesn't has begin() == end();
+  {
+    test_begin_end();
+    static_assert(test_begin_end());
   }
 
-  { // 7
-    static_assert(std::ranges::enable_view<std::optional<char>> == true);
-    assert(std::format_kind<std::optional<char>> == std::range_format::disabled);
+  // 5: The corresponding size for the following optionals is respected: has_value() == 1, !has_value() == 0
+  {
+    test_size();
+    static_assert(test_size());
   }
 
-  { // 8
-    static_assert(test_loop(opt) == 1);
-    static_assert(test_loop(unengaged_opt) == 0);
-    assert(test_loop(opt) == 1);
-    assert(test_loop(unengaged_opt) == 0);
+  // 6: Dereferencing an engaged optional's iterator returns the correct value.
+  {
+    test_value();
+    static_assert(test_value());
   }
 
-  { // 9
+  // 7: std::ranges::enable_view<optional<T>> == true, and std::format_kind<optional<T>> == true
+  {
+    test_syn();
+    static_assert(test_syn());
+  }
+
+  // 8: An optional with value that is reset will have a begin() == end(), then when it is reassigned a value, begin() != end(), and *begin() will contain the new value.
+  {
+    test_reset();
     static_assert(test_reset());
-    assert(test_reset());
   }
 
   return 0;

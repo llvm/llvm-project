@@ -199,13 +199,17 @@ namespace std {
 #  include <__compare/three_way_comparable.h>
 #  include <__concepts/invocable.h>
 #  include <__config>
+#  include <__cstddef/ptrdiff_t.h>
 #  include <__exception/exception.h>
+#  include <__format/range_format.h>
 #  include <__functional/hash.h>
 #  include <__functional/invoke.h>
 #  include <__functional/unary_function.h>
 #  include <__fwd/functional.h>
+#  include <__iterator/wrap_iter.h>
 #  include <__memory/addressof.h>
 #  include <__memory/construct_at.h>
+#  include <__ranges/enable_view.h>
 #  include <__tuple/sfinae_helpers.h>
 #  include <__type_traits/add_pointer.h>
 #  include <__type_traits/conditional.h>
@@ -245,13 +249,6 @@ namespace std {
 #  include <__verbose_abort>
 #  include <initializer_list>
 #  include <version>
-
-#  if _LIBCPP_STD_VER >= 26
-#    include <__cstddef/ptrdiff_t.h>
-#    include <__format/range_format.h>
-#    include <__iterator/wrap_iter.h>
-#    include <__ranges/enable_view.h>
-#  endif
 
 // standard-mandated includes
 
