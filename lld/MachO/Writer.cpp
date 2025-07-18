@@ -36,6 +36,7 @@
 
 using namespace llvm;
 using namespace llvm::MachO;
+using namespace llvm::support::endian;
 using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
@@ -1283,9 +1284,10 @@ void Writer::buildFixupChains() {
             "fixups are unaligned (offset " + Twine(offset) +
             " is not a multiple of the stride). Re-link with -no_fixup_chains");
 
-      // The "next" field is in the same location for bind and rebase entries.
-      reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
-          ->next = offset / stride;
+      // Set the previous fixup's next offset (bits 51-62) to point to this.
+      void *prev = buf + loc[i - 1].offset;
+      write64le(prev, read64le(prev) | ((offset / stride) << 51));
+
       ++i;
     }
   }
