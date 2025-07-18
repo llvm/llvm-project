@@ -96,6 +96,8 @@ public:
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
+  // Relax CFI jump tables if implemented by target.
+  virtual void relaxCFIJumpTables() const {}
   // Do finalize relaxation after collecting relaxation infos.
   virtual void finalizeRelax(int passes) const {}
 

@@ -1528,6 +1528,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (ctx.arg.randomizeSectionPadding)
     randomizeSectionPadding(ctx);
 
+  ctx.target->relaxCFIJumpTables();
+
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {
     bool changed = ctx.target->needsThunks
