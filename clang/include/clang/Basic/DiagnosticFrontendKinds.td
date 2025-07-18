@@ -393,6 +393,9 @@ def warn_hlsl_langstd_minimal :
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
 
+def err_unknown_crtdll : Error<"unknown Windows/MinGW C runtime library '%0'">,
+                         DefaultFatal;
+
 // ClangIR frontend errors
 def err_cir_to_cir_transform_failed : Error<
     "CIR-to-CIR transformation failed">, DefaultFatal;
