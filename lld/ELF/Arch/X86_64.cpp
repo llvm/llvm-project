@@ -50,6 +50,7 @@ public:
   bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
+  void relaxCFIJumpTables() const override;
   void applyBranchToBranchOpt() const override;
 
 private:
@@ -317,7 +318,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   return true;
 }
 
-static void relaxJumpTables(Ctx &ctx) {
+void X86_64::relaxCFIJumpTables() const {
   // Relax CFI jump tables.
   // - Split jump table into pieces and place target functions inside the jump
   //   table if small enough.
@@ -482,9 +483,6 @@ static void relaxJumpTables(Ctx &ctx) {
 }
 
 bool X86_64::relaxOnce(int pass) const {
-  if (pass == 0)
-    relaxJumpTables(ctx);
-
   uint64_t minVA = UINT64_MAX, maxVA = 0;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_ALLOC))
