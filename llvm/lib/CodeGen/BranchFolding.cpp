@@ -2130,7 +2130,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       FI = skipDebugInstructionsForward(FI, FE, false);
       // Pseudo probes are excluded from the range when identifying foldable
       // instructions, so we don't expect to see one now.
-      assert(!TI->isPseudoProbe() && "Unexpected psuedo probe in range");
+      assert(!TI->isPseudoProbe() && "Unexpected pseudo probe in range");
       // NOTE: The loop above checks CheckKillDead but we can't do that here as
       // it modifies some kill markers after the check.
       assert(TI->isIdenticalTo(*FI, MachineInstr::CheckDefs) &&
