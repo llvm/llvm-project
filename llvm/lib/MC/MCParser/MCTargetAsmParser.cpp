@@ -25,7 +25,8 @@ MCSubtargetInfo &MCTargetAsmParser::copySTI() {
   STI = &STICopy;
   // The returned STI will likely be modified. Create a new fragment to avoid
   // mixed STI values within a fragment.
-  getStreamer().newFragment();
+  if (getStreamer().getCurrentFragment())
+    getStreamer().newFragment();
   return STICopy;
 }
 
