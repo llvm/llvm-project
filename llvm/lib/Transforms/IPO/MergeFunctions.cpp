@@ -589,7 +589,8 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
     }
   };
 
-  auto ExamineDbgDeclare = [&PDIRelated, &PDVRRelated](DbgVariableRecord *DbgDecl) {
+  auto ExamineDbgDeclare = [&PDIRelated,
+                            &PDVRRelated](DbgVariableRecord *DbgDecl) {
     LLVM_DEBUG(dbgs() << " Deciding: ");
     LLVM_DEBUG(DbgDecl->print(dbgs()));
     LLVM_DEBUG(dbgs() << "\n");

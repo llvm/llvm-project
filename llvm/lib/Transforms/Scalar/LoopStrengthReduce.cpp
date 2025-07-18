@@ -6721,8 +6721,7 @@ static void UpdateDbgValue(DVIRecoveryRec &DVIRec,
   // the terminator should already be present e.g. stack_value or fragment.
   DIExpression *SalvageExpr = DbgVal->getExpression();
   if (!DVIRec.Expr->isComplex() && SalvageExpr->isComplex()) {
-    SalvageExpr =
-        DIExpression::append(SalvageExpr, {dwarf::DW_OP_stack_value});
+    SalvageExpr = DIExpression::append(SalvageExpr, {dwarf::DW_OP_stack_value});
     DbgVal->setExpression(SalvageExpr);
   }
 }
@@ -6868,8 +6867,7 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
   }
 
   UpdateDbgValue(DVIRec, NewLocationOps, NewExpr);
-  LLVM_DEBUG(dbgs() << "scev-salvage: Updated DVI: "
-                    << *DVIRec.DbgRef << "\n");
+  LLVM_DEBUG(dbgs() << "scev-salvage: Updated DVI: " << *DVIRec.DbgRef << "\n");
   return true;
 }
 
