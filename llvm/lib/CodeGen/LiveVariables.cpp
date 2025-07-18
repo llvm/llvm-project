@@ -246,6 +246,22 @@ LiveVariables::FindLastPartialDef(Register Reg,
   return LastDef;
 }
 
+static void fixupLiveIns(MachineInstr &MI, MCPhysReg SubReg) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  if (MBB.isLiveIn(SubReg))
+    return;
+
+  for (MachineBasicBlock::reverse_iterator RIt = MI.getReverseIterator();
+       RIt != MBB.rend(); RIt++)
+    if (RIt->definesRegister(SubReg, nullptr))
+      return;
+
+  MBB.addLiveIn(SubReg);
+  for (const auto &PredMBB : MBB.predecessors())
+    if (!PredMBB->empty())
+      fixupLiveIns(PredMBB->back(), SubReg);
+}
+
 /// HandlePhysRegUse - Turn previous partial def's into read/mod/writes. Add
 /// implicit defs to a machine instruction if there was an earlier def of its
 /// super-register.
@@ -279,6 +295,7 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
         LastPartialDef->addOperand(MachineOperand::CreateReg(SubReg,
                                                              false/*IsDef*/,
                                                              true/*IsImp*/));
+        fixupLiveIns(MI, SubReg);
         PhysRegDef[SubReg] = LastPartialDef;
         Processed.insert_range(TRI->subregs(SubReg));
       }
