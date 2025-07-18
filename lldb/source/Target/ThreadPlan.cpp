@@ -80,8 +80,7 @@ Vote ThreadPlan::ShouldReportStop(Event *event_ptr) {
   Log *log = GetLog(LLDBLog::Step);
 
   if (m_report_stop_vote == eVoteNoOpinion) {
-    ThreadPlan *prev_plan = GetPreviousPlan();
-    if (prev_plan) {
+    if (ThreadPlanSP prev_plan = GetPreviousPlan()) {
       Vote prev_vote = prev_plan->ShouldReportStop(event_ptr);
       LLDB_LOG(log, "returning previous thread plan vote: {0}", prev_vote);
       return prev_vote;
@@ -93,8 +92,7 @@ Vote ThreadPlan::ShouldReportStop(Event *event_ptr) {
 
 Vote ThreadPlan::ShouldReportRun(Event *event_ptr) {
   if (m_report_run_vote == eVoteNoOpinion) {
-    ThreadPlan *prev_plan = GetPreviousPlan();
-    if (prev_plan)
+    if (ThreadPlanSP prev_plan = GetPreviousPlan())
       return prev_plan->ShouldReportRun(event_ptr);
   }
   return m_report_run_vote;
@@ -103,9 +101,9 @@ Vote ThreadPlan::ShouldReportRun(Event *event_ptr) {
 void ThreadPlan::ClearThreadCache() { m_thread = nullptr; }
 
 bool ThreadPlan::StopOthers() {
-  ThreadPlan *prev_plan;
-  prev_plan = GetPreviousPlan();
-  return (prev_plan == nullptr) ? false : prev_plan->StopOthers();
+  if (ThreadPlanSP prev_plan = GetPreviousPlan())
+    return prev_plan->StopOthers();
+  return false;
 }
 
 void ThreadPlan::SetStopOthers(bool new_value) {
