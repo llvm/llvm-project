@@ -43,12 +43,12 @@ namespace {
 class HexagonDisassembler : public MCDisassembler {
 public:
   std::unique_ptr<MCInstrInfo const> const MCII;
-  std::unique_ptr<MCInst *> CurrentBundle;
+  mutable std::unique_ptr<MCInst> CurrentBundle;
   mutable MCInst const *CurrentExtender;
 
   HexagonDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                       MCInstrInfo const *MCII)
-      : MCDisassembler(STI, Ctx), MCII(MCII), CurrentBundle(new MCInst *),
+      : MCDisassembler(STI, Ctx), MCII(MCII), CurrentBundle(nullptr),
         CurrentExtender(nullptr) {}
 
   DecodeStatus getSingleInstruction(MCInst &Instr, MCInst &MCB,
@@ -57,7 +57,23 @@ public:
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
+
+  DecodeStatus getInstructionBundle(MCInst &Instr, uint64_t &Size,
+                                    ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                    raw_ostream &CStream) const override;
+
   void remapInstruction(MCInst &Instr) const;
+
+private:
+  bool makeBundle(ArrayRef<uint8_t> Bytes, uint64_t Address,
+                  uint64_t &BytesToSkip, raw_ostream &CS) const;
+
+  void resetBundle() const {
+    CurrentBundle.reset();
+    CurrentInstruction = nullptr;
+  }
+
+  mutable MCOperand *CurrentInstruction = nullptr;
 };
 
 static uint64_t fullValue(HexagonDisassembler const &Disassembler, MCInst &MI,
@@ -171,41 +187,86 @@ LLVMInitializeHexagonDisassembler() {
                                          createHexagonDisassembler);
 }
 
+bool HexagonDisassembler::makeBundle(ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                     uint64_t &BytesToSkip,
+                                     raw_ostream &CS) const {
+  bool Complete = false;
+  DecodeStatus Result = DecodeStatus::Success;
+
+  CurrentBundle.reset(new MCInst);
+  CurrentBundle->setOpcode(Hexagon::BUNDLE);
+  CurrentBundle->addOperand(MCOperand::createImm(0));
+  while (Result == Success && !Complete) {
+    if (Bytes.size() < HEXAGON_INSTR_SIZE)
+      return false;
+    MCInst *Inst = getContext().createMCInst();
+    Result = getSingleInstruction(*Inst, *CurrentBundle, Bytes, Address, CS,
+                                  Complete);
+    CurrentBundle->addOperand(MCOperand::createInst(Inst));
+    BytesToSkip += HEXAGON_INSTR_SIZE;
+    Bytes = Bytes.slice(HEXAGON_INSTR_SIZE);
+  }
+  if (Result == MCDisassembler::Fail)
+    return false;
+  if (BytesToSkip > HEXAGON_MAX_PACKET_SIZE)
+    return false;
+
+  const auto ArchSTI = Hexagon_MC::getArchSubtarget(&STI);
+  const auto STI_ = (ArchSTI != nullptr) ? *ArchSTI : STI;
+  HexagonMCChecker Checker(getContext(), *MCII, STI_, *CurrentBundle,
+                           *getContext().getRegisterInfo(), false);
+  if (!Checker.check())
+    return false;
+  remapInstruction(*CurrentBundle);
+  return true;
+}
+
 DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
                                                  raw_ostream &CS) const {
   CommentStream = &CS;
 
-  DecodeStatus Result = DecodeStatus::Success;
-  bool Complete = false;
   Size = 0;
+  uint64_t BytesToSkip = 0;
 
-  *CurrentBundle = &MI;
-  MI.setOpcode(Hexagon::BUNDLE);
-  MI.addOperand(MCOperand::createImm(0));
-  while (Result == Success && !Complete) {
-    if (Bytes.size() < HEXAGON_INSTR_SIZE)
+  if (!CurrentBundle) {
+    if (!makeBundle(Bytes, Address, BytesToSkip, CS)) {
+      Size = BytesToSkip;
+      resetBundle();
       return MCDisassembler::Fail;
-    MCInst *Inst = getContext().createMCInst();
-    Result = getSingleInstruction(*Inst, MI, Bytes, Address, CS, Complete);
-    MI.addOperand(MCOperand::createInst(Inst));
-    Size += HEXAGON_INSTR_SIZE;
-    Bytes = Bytes.slice(HEXAGON_INSTR_SIZE);
+    }
+    CurrentInstruction = (CurrentBundle->begin() + 1);
   }
-  if (Result == MCDisassembler::Fail)
-    return Result;
-  if (Size > HEXAGON_MAX_PACKET_SIZE)
-    return MCDisassembler::Fail;
 
-  const auto ArchSTI = Hexagon_MC::getArchSubtarget(&STI);
-  const auto STI_ = (ArchSTI != nullptr) ? *ArchSTI : STI;
-  HexagonMCChecker Checker(getContext(), *MCII, STI_, MI,
-                           *getContext().getRegisterInfo(), false);
-  if (!Checker.check())
-    return MCDisassembler::Fail;
-  remapInstruction(MI);
+  MI = *(CurrentInstruction->getInst());
+  Size = HEXAGON_INSTR_SIZE;
+  if (++CurrentInstruction == CurrentBundle->end())
+    resetBundle();
   return MCDisassembler::Success;
+}
+
+DecodeStatus HexagonDisassembler::getInstructionBundle(MCInst &MI,
+                                                       uint64_t &Size,
+                                                       ArrayRef<uint8_t> Bytes,
+                                                       uint64_t Address,
+                                                       raw_ostream &CS) const {
+  CommentStream = &CS;
+  Size = 0;
+  uint64_t BytesToSkip = 0;
+  assert(!CurrentBundle);
+
+  if (!makeBundle(Bytes, Address, BytesToSkip, CS)) {
+    Size = BytesToSkip;
+    resetBundle();
+    return MCDisassembler::Fail;
+  }
+
+  MI = *CurrentBundle;
+  Size = HEXAGON_INSTR_SIZE * HexagonMCInstrInfo::bundleSize(MI);
+  resetBundle();
+
+  return Success;
 }
 
 void HexagonDisassembler::remapInstruction(MCInst &Instr) const {
@@ -482,7 +543,7 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
     unsigned Offset = 1;
     bool Vector = HexagonMCInstrInfo::isVector(*MCII, MI);
     bool PrevVector = false;
-    auto Instructions = HexagonMCInstrInfo::bundleInstructions(**CurrentBundle);
+    auto Instructions = HexagonMCInstrInfo::bundleInstructions(*CurrentBundle);
     auto i = Instructions.end() - 1;
     for (auto n = Instructions.begin() - 1;; --i, ++Offset) {
       if (i == n)

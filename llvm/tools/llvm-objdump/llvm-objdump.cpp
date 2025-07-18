@@ -693,6 +693,30 @@ public:
     } else
       OS << "\t<unknown>";
   }
+
+  virtual void emitPostInstructionInfo(formatted_raw_ostream &FOS,
+                                       const MCAsmInfo &MAI,
+                                       const MCSubtargetInfo &STI,
+                                       StringRef Comments,
+                                       LiveVariablePrinter &LVP) {
+    do {
+      if (!Comments.empty()) {
+        // Emit a line of comments.
+        StringRef Comment;
+        std::tie(Comment, Comments) = Comments.split('\n');
+        // MAI.getCommentColumn() assumes that instructions are printed at the
+        // position of 8, while getInstStartColumn() returns the actual
+        // position.
+        unsigned CommentColumn =
+            MAI.getCommentColumn() - 8 + getInstStartColumn(STI);
+        FOS.PadToColumn(CommentColumn);
+        FOS << MAI.getCommentString() << ' ' << Comment;
+      }
+      LVP.printAfterInst(FOS);
+      FOS << "\n";
+    } while (!Comments.empty());
+    FOS.flush();
+  }
 };
 PrettyPrinter PrettyPrinterInst;
 
@@ -714,6 +738,35 @@ public:
       }
     }
   }
+
+  std::string getInstructionSeparator() const {
+    SmallString<40> Separator;
+    raw_svector_ostream OS(Separator);
+    if (ShouldClosePacket) {
+      OS << " }";
+      if (IsLoop0 || IsLoop1)
+        OS << "  ";
+      if (IsLoop0)
+        OS << (IsLoop1 ? ":endloop01" : ":endloop0");
+      else if (IsLoop1)
+        OS << ":endloop1";
+    }
+    OS << '\n';
+    return OS.str().str();
+  }
+
+  void emitPostInstructionInfo(formatted_raw_ostream &FOS, const MCAsmInfo &MAI,
+                               const MCSubtargetInfo &STI, StringRef Comments,
+                               LiveVariablePrinter &LVP) override {
+    // Hexagon does not write anything to the comment stream, so we can just
+    // print the separator.
+    LVP.printAfterInst(FOS);
+    FOS << getInstructionSeparator();
+    FOS.flush();
+    if (ShouldClosePacket)
+      reset();
+  }
+
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
@@ -724,60 +777,64 @@ public:
     if (!MI) {
       printLead(Bytes, Address.Address, OS);
       OS << " <unknown>";
+      reset();
       return;
     }
-    std::string Buffer;
+
+    StringRef Preamble = IsStartOfBundle ? " { " : "   ";
+
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address, ObjectFilename, LVP, "");
+    printLead(Bytes, Address.Address, OS);
+    OS << Preamble;
+    std::string Buf;
     {
-      raw_string_ostream TempStream(Buffer);
+      raw_string_ostream TempStream(Buf);
       IP.printInst(MI, Address.Address, "", STI, TempStream);
     }
-    StringRef Contents(Buffer);
-    // Split off bundle attributes
-    auto PacketBundle = Contents.rsplit('\n');
-    // Split off first instruction from the rest
-    auto HeadTail = PacketBundle.first.split('\n');
-    auto Preamble = " { ";
-    auto Separator = "";
+    StringRef Contents(Buf);
 
-    // Hexagon's packets require relocations to be inline rather than
-    // clustered at the end of the packet.
-    std::vector<RelocationRef>::const_iterator RelCur = Rels->begin();
-    std::vector<RelocationRef>::const_iterator RelEnd = Rels->end();
-    auto PrintReloc = [&]() -> void {
-      while ((RelCur != RelEnd) && (RelCur->getOffset() <= Address.Address)) {
-        if (RelCur->getOffset() == Address.Address) {
-          printRelocation(OS, ObjectFilename, *RelCur, Address.Address, false);
-          return;
-        }
-        ++RelCur;
-      }
-    };
-
-    while (!HeadTail.first.empty()) {
-      OS << Separator;
-      Separator = "\n";
-      if (SP && (PrintSource || PrintLines))
-        SP->printSourceLine(OS, Address, ObjectFilename, LVP, "");
-      printLead(Bytes, Address.Address, OS);
-      OS << Preamble;
-      Preamble = "   ";
-      StringRef Inst;
-      auto Duplex = HeadTail.first.split('\v');
-      if (!Duplex.second.empty()) {
-        OS << Duplex.first;
-        OS << "; ";
-        Inst = Duplex.second;
-      }
-      else
-        Inst = HeadTail.first;
-      OS << Inst;
-      HeadTail = HeadTail.second.split('\n');
-      if (HeadTail.first.empty())
-        OS << " } " << PacketBundle.second;
-      PrintReloc();
-      Bytes = Bytes.slice(4);
-      Address.Address += 4;
+    auto Duplex = Contents.split('\v');
+    bool HasDuplex = !Duplex.second.empty();
+    if (HasDuplex) {
+      OS << Duplex.first;
+      OS << "; ";
+      OS << Duplex.second;
+    } else {
+      OS << Duplex.first;
     }
+
+    uint32_t Instruction = support::endian::read32le(Bytes.data());
+
+    uint32_t ParseMask = 0x0000c000;
+    uint32_t PacketEndMask = 0x0000c000;
+    uint32_t LoopEndMask = 0x00008000;
+    uint32_t ParseBits = Instruction & ParseMask;
+
+    if (ParseBits == LoopEndMask) {
+      if (IsStartOfBundle)
+        IsLoop0 = true;
+      else
+        IsLoop1 = true;
+    }
+
+    IsStartOfBundle = false;
+
+    if (ParseBits == PacketEndMask || HasDuplex)
+      ShouldClosePacket = true;
+  }
+
+private:
+  bool IsStartOfBundle = true;
+  bool IsLoop0 = false;
+  bool IsLoop1 = false;
+  bool ShouldClosePacket = false;
+
+  void reset() {
+    IsStartOfBundle = true;
+    IsLoop0 = false;
+    IsLoop1 = false;
+    ShouldClosePacket = false;
   }
 };
 HexagonPrettyPrinter HexagonPrettyPrinterInst;
@@ -1608,29 +1665,6 @@ static StringRef getSegmentName(const MachOObjectFile *MachO,
     return SegmentName;
   }
   return "";
-}
-
-static void emitPostInstructionInfo(formatted_raw_ostream &FOS,
-                                    const MCAsmInfo &MAI,
-                                    const MCSubtargetInfo &STI,
-                                    StringRef Comments,
-                                    LiveVariablePrinter &LVP) {
-  do {
-    if (!Comments.empty()) {
-      // Emit a line of comments.
-      StringRef Comment;
-      std::tie(Comment, Comments) = Comments.split('\n');
-      // MAI.getCommentColumn() assumes that instructions are printed at the
-      // position of 8, while getInstStartColumn() returns the actual position.
-      unsigned CommentColumn =
-          MAI.getCommentColumn() - 8 + getInstStartColumn(STI);
-      FOS.PadToColumn(CommentColumn);
-      FOS << MAI.getCommentString() << ' ' << Comment;
-    }
-    LVP.printAfterInst(FOS);
-    FOS << '\n';
-  } while (!Comments.empty());
-  FOS.flush();
 }
 
 static void createFakeELFSections(ObjectFile &Obj) {
@@ -2526,15 +2560,15 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         }
 
         assert(DT->Context->getAsmInfo());
-        emitPostInstructionInfo(FOS, *DT->Context->getAsmInfo(),
-                                *DT->SubtargetInfo, CommentStream.str(), LVP);
+        DT->Printer->emitPostInstructionInfo(FOS, *DT->Context->getAsmInfo(),
+                                             *DT->SubtargetInfo,
+                                             CommentStream.str(), LVP);
         Comments.clear();
 
         if (BTF)
           printBTFRelocation(FOS, *BTF, {Index, Section.getIndex()}, LVP);
 
-        // Hexagon handles relocs in pretty printer
-        if (InlineRelocs && Obj.getArch() != Triple::hexagon) {
+        if (InlineRelocs) {
           while (findRel()) {
             // When --adjust-vma is used, update the address printed.
             printRelocation(FOS, Obj.getFileName(), *RelCur,
