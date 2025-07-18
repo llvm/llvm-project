@@ -84,6 +84,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return ResTy;
   }
   case Instruction::ICmp:
+  case Instruction::FCmp:
   case VPInstruction::ActiveLaneMask:
     assert(inferScalarType(R->getOperand(0)) ==
                inferScalarType(R->getOperand(1)) &&
