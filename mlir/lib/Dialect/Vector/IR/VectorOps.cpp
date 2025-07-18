@@ -1718,7 +1718,7 @@ static bool isBroadcastLike(Operation *op) {
     return false;
 
   // Check that shape_cast **only** prepends 1s, like (2,3) -> (1,1,2,3).
-  // Note that checking that dst shape has a prefix of 1s is not sufficient,
+  // Checking that the destination shape has a prefix of 1s is not sufficient,
   // for example (2,3) -> (1,3,2) is not broadcast-like. A sufficient condition
   // is that the source shape is a suffix of the destination shape.
   VectorType srcType = shapeCast.getSourceVectorType();
@@ -1773,15 +1773,7 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   if (extractRank > inputRank)
     return Value();
 
-  // The above condition guarantees that input is a vector:
-  //
-  // If input is a scalar:
-  // 1) inputRank is 0, so
-  // 2) extractRank is 0 (because extractRank <= inputRank), so
-  // 3) extract is scalar (because rank-0 extraction is always scalar), s0
-  // 4) input and extract are scalar, so same type.
-  // But then we should have returned earlier when the types were compared for
-  // equivalence. So input is not a scalar at this point.
+  // The above condition guarantees that input is a vector.
   assert(inputType && "input must be a vector type because of previous checks");
   ArrayRef<int64_t> inputShape = inputType.getShape();
 
