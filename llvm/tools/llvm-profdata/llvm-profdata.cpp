@@ -46,6 +46,7 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
+#include <queue>
 
 using namespace llvm;
 using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
