@@ -358,6 +358,7 @@ struct Config {
   bool optRemarksWithHotness;
   bool picThunk;
   bool pie;
+  std::optional<uint64_t> preferredFunctionAlignment;
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
@@ -568,6 +569,7 @@ struct UndefinedDiag {
 // a partition.
 struct InStruct {
   std::unique_ptr<InputSection> attributes;
+  std::unique_ptr<SyntheticSection> hexagonAttributes;
   std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<BssSection> bss;
   std::unique_ptr<BssSection> bssRelRo;

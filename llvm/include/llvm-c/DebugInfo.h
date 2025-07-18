@@ -700,7 +700,7 @@ LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateArrayType(
  * \param AlignInBits    Set alignment.
  * \param BaseTy         The base type of the set.
  */
-LLVMMetadataRef LLVMDIBuilderCreateSetType(
+LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateSetType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, LLVMMetadataRef BaseTy);
@@ -722,7 +722,7 @@ LLVMMetadataRef LLVMDIBuilderCreateSetType(
  * \param Stride     Stride of the subrange.
  * \param Bias       Bias of the subrange.
  */
-LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
+LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, unsigned LineNo, LLVMMetadataRef File, uint64_t SizeInBits,
     uint32_t AlignInBits, LLVMDIFlags Flags, LLVMMetadataRef BaseTy,
@@ -743,7 +743,7 @@ LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
  * \param Rank         Rank. (DIVariable, DIExpression or NULL)
  * \param BitStride    BitStride.
  */
-LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
+LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, unsigned LineNo, LLVMMetadataRef File, uint64_t Size,
     uint32_t AlignInBits, LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts,
@@ -756,8 +756,9 @@ LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
  *
  * @see DIBuilder::replaceArrays()
  */
-void LLVMReplaceArrays(LLVMDIBuilderRef Builder, LLVMMetadataRef *T,
-                       LLVMMetadataRef *Elements, unsigned NumElements);
+LLVM_C_ABI void LLVMReplaceArrays(LLVMDIBuilderRef Builder, LLVMMetadataRef *T,
+                                  LLVMMetadataRef *Elements,
+                                  unsigned NumElements);
 
 /**
  * Create debugging information entry for a vector type.

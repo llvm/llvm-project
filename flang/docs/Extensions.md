@@ -1,9 +1,9 @@
-<!--===- docs/Extensions.md 
-  
+<!--===- docs/Extensions.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Fortran Extensions supported by Flang
@@ -170,6 +170,18 @@ end
   In the case of `DEFERRED` bindings in an `ABSTRACT` derived type,
   however, overrides are necessary, so they are permitted for inaccessible
   bindings with an optional warning.
+* Main program name is allowed to be the same as the other symbols used
+  in the main program, for example:
+```
+module m
+end
+program m
+use m
+end
+```
+  Note that internally the main program symbol name is all uppercase, unlike
+  the names of all other symbols, which are usually all lowercase. This
+  may make a difference in testing/debugging.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -252,6 +264,8 @@ end
   the type resolution of such BOZ literals usages is highly non portable).
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
+* `TRANSFER(boz, MOLD=integer or real scalar)` is accepted as an alternate
+  spelling of `INT(boz, KIND=kind(mold))` or `REAL(boz, KIND=kind(mold))`.
 * EQUIVALENCE of numeric and character sequences (a ubiquitous extension),
   as well as of sequences of non-default kinds of numeric types
   with each other.
