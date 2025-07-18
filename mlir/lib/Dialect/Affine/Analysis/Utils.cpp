@@ -710,7 +710,7 @@ void MemRefDependenceGraph::clearNodeLoadAndStores(unsigned id) {
 void MemRefDependenceGraph::forEachMemRefInputEdge(
     unsigned id, const std::function<void(Edge)> &callback) {
   if (inEdges.count(id) > 0)
-    forEachMemRefEdge(inEdges[id], callback);
+    forEachMemRefEdge(inEdges.at(id), callback);
 }
 
 // Calls 'callback' for each output edge from node 'id' which carries a
@@ -718,7 +718,7 @@ void MemRefDependenceGraph::forEachMemRefInputEdge(
 void MemRefDependenceGraph::forEachMemRefOutputEdge(
     unsigned id, const std::function<void(Edge)> &callback) {
   if (outEdges.count(id) > 0)
-    forEachMemRefEdge(outEdges[id], callback);
+    forEachMemRefEdge(outEdges.at(id), callback);
 }
 
 // Calls 'callback' for each edge in 'edges' which carries a memref
@@ -730,9 +730,6 @@ void MemRefDependenceGraph::forEachMemRefEdge(
     if (!isa<MemRefType>(edge.value.getType()))
       continue;
     assert(nodes.count(edge.id) > 0);
-    // Skip if 'edge.id' is not a loop nest.
-    if (!isa<AffineForOp>(getNode(edge.id)->op))
-      continue;
     // Visit current input edge 'edge'.
     callback(edge);
   }
