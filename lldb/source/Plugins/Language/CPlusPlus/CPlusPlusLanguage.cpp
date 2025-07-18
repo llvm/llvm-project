@@ -1665,8 +1665,6 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   SyntheticChildren::Flags stl_synth_flags;
   stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
       false);
-  SyntheticChildren::Flags stl_deref_flags = stl_synth_flags;
-  stl_deref_flags.SetFrontEndWantsDereference();
 
   using StringElementType = StringPrinter::StringElementType;
 
@@ -1715,6 +1713,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(cpp_category_sp, GenericForwardListSyntheticFrontEndCreator,
                   "std::forward_list synthetic children",
                   "^std::forward_list<.+>(( )?&)?$", stl_synth_flags, true);
+
+  SyntheticChildren::Flags stl_deref_flags = stl_synth_flags;
+  stl_deref_flags.SetFrontEndWantsDereference();
   AddCXXSynthetic(cpp_category_sp, GenericOptionalSyntheticFrontEndCreator,
                   "std::optional synthetic children",
                   "^std::optional<.+>(( )?&)?$", stl_deref_flags, true);
