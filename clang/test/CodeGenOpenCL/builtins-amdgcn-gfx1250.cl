@@ -5,6 +5,7 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 typedef unsigned int uint;
+typedef unsigned int __attribute__((ext_vector_type(2))) uint2;
 typedef half __attribute__((ext_vector_type(2))) half2;
 
 // CHECK-LABEL: @test_setprio_inc_wg(
@@ -366,6 +367,52 @@ void test_cvt_pk_f16_fp8(global half2* out, short a)
 void test_cvt_pk_f16_bf8(global half2* out, short a)
 {
   out[0] = __builtin_amdgcn_cvt_pk_f16_bf8(a);
+}
+
+// CHECK-LABEL: @test_permlane16_swap(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OLD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[OLD_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OLD_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[OLD:%.*]], ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 [[TMP0]], i32 [[TMP1]], i1 false, i1 false)
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i32 } [[TMP2]], 0
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i32 } [[TMP2]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
+// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP4]], i64 1
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr addrspace(1) [[TMP7]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP10:%.*]] = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 [[TMP8]], i32 [[TMP9]], i1 true, i1 false)
+// CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { i32, i32 } [[TMP10]], 0
+// CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { i32, i32 } [[TMP10]], 1
+// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> poison, i32 [[TMP11]], i64 0
+// CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> [[TMP13]], i32 [[TMP12]], i64 1
+// CHECK-NEXT:    [[TMP15:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x i32> [[TMP14]], ptr addrspace(1) [[TMP15]], align 8
+// CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[OLD_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP18:%.*]] = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 [[TMP16]], i32 [[TMP17]], i1 false, i1 true)
+// CHECK-NEXT:    [[TMP19:%.*]] = extractvalue { i32, i32 } [[TMP18]], 0
+// CHECK-NEXT:    [[TMP20:%.*]] = extractvalue { i32, i32 } [[TMP18]], 1
+// CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x i32> poison, i32 [[TMP19]], i64 0
+// CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x i32> [[TMP21]], i32 [[TMP20]], i64 1
+// CHECK-NEXT:    [[TMP23:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x i32> [[TMP22]], ptr addrspace(1) [[TMP23]], align 8
+// CHECK-NEXT:    ret void
+//
+void test_permlane16_swap(global uint2* out, uint old, uint src) {
+  *out = __builtin_amdgcn_permlane16_swap(old, src, false, false);
+  *out = __builtin_amdgcn_permlane16_swap(old, src, true, false);
+  *out = __builtin_amdgcn_permlane16_swap(old, src, false, true);
 }
 
 // CHECK-LABEL: @test_cvt_f32_fp8_e5m3(
