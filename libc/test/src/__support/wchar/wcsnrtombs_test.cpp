@@ -190,6 +190,7 @@ TEST(LlvmLibcWcsnrtombs, InvalidCharacter) {
   ASSERT_EQ(res.error(), EILSEQ);
 }
 
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
 TEST(LlvmLibcWcsnrtombs, NullSrc) {
   EXPECT_DEATH(
       [] {
@@ -199,3 +200,4 @@ TEST(LlvmLibcWcsnrtombs, NullSrc) {
       },
       WITH_SIGNAL(-1));
 }
+#endif // LIBC_HAS_ADDRESS_SANITIZER
