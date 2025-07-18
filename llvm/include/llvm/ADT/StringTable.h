@@ -118,13 +118,6 @@ public:
     constexpr Iterator(const Iterator &RHS) = default;
     constexpr Iterator(Iterator &&RHS) = default;
 
-    Iterator &operator=(const Iterator &RHS) {
-      Table = RHS.Table;
-      O = RHS.O;
-      S = RHS.S;
-      return *this;
-    }
-
     bool operator==(const Iterator &RHS) const {
       assert(Table == RHS.Table && "Compared iterators for unrelated tables!");
       return O == RHS.O;
@@ -139,8 +132,6 @@ public:
       O = O.value() + (*Table)[O].size() + 1;
       return *this;
     }
-
-    Offset offset() const { return O; }
   };
 
   constexpr Iterator begin() const { return Iterator(*this, 0); }
