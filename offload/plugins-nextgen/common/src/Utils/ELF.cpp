@@ -73,10 +73,17 @@ checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {
             EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC)
       return createError("Unsupported AMDGPU architecture");
   } else if (Header.e_machine == EM_CUDA) {
-    if (~Header.e_flags & EF_CUDA_64BIT_ADDRESS)
-      return createError("Invalid CUDA addressing mode");
-    if ((Header.e_flags & EF_CUDA_SM) < EF_CUDA_SM35)
-      return createError("Unsupported NVPTX architecture");
+    if (Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_CUDA_V1) {
+      if (~Header.e_flags & EF_CUDA_64BIT_ADDRESS)
+        return createError("Invalid CUDA addressing mode");
+      if ((Header.e_flags & EF_CUDA_SM) < EF_CUDA_SM35)
+        return createError("Unsupported NVPTX architecture");
+    } else if (Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_CUDA_V2) {
+      if ((Header.e_flags & EF_CUDA_SM) < EF_CUDA_SM100)
+        return createError("Unsupported NVPTX architecture");
+    } else {
+      return createError("Invalid CUDA ABI version");
+    }
   }
 
   return Header.e_machine == EMachine;
