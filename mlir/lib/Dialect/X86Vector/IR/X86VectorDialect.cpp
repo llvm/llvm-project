@@ -12,11 +12,8 @@
 
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
 
 using namespace mlir;
 
@@ -84,6 +81,29 @@ x86vector::DotOp::getIntrinsicOperands(ArrayRef<Value> operands,
   intrinsicOperands.push_back(scale);
 
   return intrinsicOperands;
+}
+
+SmallVector<Value> x86vector::DotInt8Op::getIntrinsicOperands(
+    ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
+    RewriterBase &rewriter) {
+  SmallVector<Value> intrinsicOprnds;
+  Adaptor adaptor(operands, *this);
+  intrinsicOprnds.push_back(adaptor.getW());
+  // Bitcast `a` and `b` to i32
+  Value bitcast_a = rewriter.create<LLVM::BitcastOp>(
+      getLoc(),
+      VectorType::get((getA().getType().getShape()[0] / 4),
+                      rewriter.getIntegerType(32)),
+      adaptor.getA());
+  intrinsicOprnds.push_back(bitcast_a);
+  Value bitcast_b = rewriter.create<LLVM::BitcastOp>(
+      getLoc(),
+      VectorType::get((getB().getType().getShape()[0] / 4),
+                      rewriter.getIntegerType(32)),
+      adaptor.getB());
+  intrinsicOprnds.push_back(bitcast_b);
+
+  return intrinsicOprnds;
 }
 
 SmallVector<Value> x86vector::BcstToPackedF32Op::getIntrinsicOperands(

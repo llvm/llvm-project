@@ -74,6 +74,8 @@ FormatTokenLexer::FormatTokenLexer(
     Macros.insert({Identifier, TT_StatementAttributeLikeMacro});
   }
 
+  for (const auto &Macro : Style.MacrosSkippedByRemoveParentheses)
+    MacrosSkippedByRemoveParentheses.insert(&IdentTable.get(Macro));
   for (const auto &TemplateName : Style.TemplateNames)
     TemplateNames.insert(&IdentTable.get(TemplateName));
   for (const auto &TypeName : Style.TypeNames)
@@ -1329,6 +1331,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
   if (FormatTok->is(tok::unknown))
     FormatTok->setType(TT_ImplicitStringLiteral);
 
+  const bool IsCpp = Style.isCpp();
+
   // JavaScript and Java do not allow to escape the end of the line with a
   // backslash. Backslashes are syntax errors in plain source, but can occur in
   // comments. When a single line comment ends with a \, it'll cause the next
@@ -1336,16 +1340,17 @@ FormatToken *FormatTokenLexer::getNextToken() {
   // finds comments that contain a backslash followed by a line break, truncates
   // the comment token at the backslash, and resets the lexer to restart behind
   // the backslash.
-  if ((Style.isJavaScript() || Style.isJava()) && FormatTok->is(tok::comment) &&
-      FormatTok->TokenText.starts_with("//")) {
-    size_t BackslashPos = FormatTok->TokenText.find('\\');
-    while (BackslashPos != StringRef::npos) {
-      if (BackslashPos + 1 < FormatTok->TokenText.size() &&
-          FormatTok->TokenText[BackslashPos + 1] == '\n') {
-        truncateToken(BackslashPos + 1);
+  if (const auto Text = FormatTok->TokenText;
+      Text.starts_with("//") &&
+      (IsCpp || Style.isJavaScript() || Style.isJava())) {
+    assert(FormatTok->is(tok::comment));
+    for (auto Pos = Text.find('\\'); Pos++ != StringRef::npos;
+         Pos = Text.find('\\', Pos)) {
+      if (Pos < Text.size() && Text[Pos] == '\n' &&
+          (!IsCpp || Text.substr(Pos + 1).ltrim().starts_with("//"))) {
+        truncateToken(Pos);
         break;
       }
-      BackslashPos = FormatTok->TokenText.find('\\', BackslashPos + 1);
     }
   }
 
@@ -1450,7 +1455,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     Column = FormatTok->LastLineColumnWidth;
   }
 
-  if (Style.isCpp()) {
+  if (IsCpp) {
     auto *Identifier = FormatTok->Tok.getIdentifierInfo();
     auto it = Macros.find(Identifier);
     if ((Tokens.empty() || !Tokens.back()->Tok.getIdentifierInfo() ||
@@ -1470,6 +1475,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->setType(TT_MacroBlockBegin);
       else if (MacroBlockEndRegex.match(Text))
         FormatTok->setType(TT_MacroBlockEnd);
+      else if (MacrosSkippedByRemoveParentheses.contains(Identifier))
+        FormatTok->setFinalizedType(TT_FunctionLikeMacro);
       else if (TemplateNames.contains(Identifier))
         FormatTok->setFinalizedType(TT_TemplateName);
       else if (TypeNames.contains(Identifier))
