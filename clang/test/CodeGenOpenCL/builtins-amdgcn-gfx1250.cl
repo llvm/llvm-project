@@ -5,6 +5,7 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 typedef unsigned int uint;
+typedef unsigned short int ushort;
 typedef unsigned int __attribute__((ext_vector_type(2))) uint2;
 typedef half __attribute__((ext_vector_type(2))) half2;
 
@@ -367,6 +368,30 @@ void test_cvt_pk_f16_fp8(global half2* out, short a)
 void test_cvt_pk_f16_bf8(global half2* out, short a)
 {
   out[0] = __builtin_amdgcn_cvt_pk_f16_bf8(a);
+}
+
+// CHECK-LABEL: @test_sat_pk4_i4_i8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC_ADDR]] to ptr
+// CHECK-NEXT:    store ptr [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.amdgcn.sat.pk4.i4.i8(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i16 [[TMP1]], ptr [[TMP2]], align 2
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.amdgcn.sat.pk4.u4.u8(i32 [[TMP3]])
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i16 [[TMP4]], ptr [[TMP5]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_sat_pk4_i4_i8(ushort *out, uint src)
+{
+  *out = __builtin_amdgcn_sat_pk4_i4_i8(src);
+  *out = __builtin_amdgcn_sat_pk4_u4_u8(src);
 }
 
 // CHECK-LABEL: @test_permlane16_swap(
