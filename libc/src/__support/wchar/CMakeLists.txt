@@ -69,12 +69,10 @@ add_object_library(
   .mbstate
 )
 
-add_object_library(
+add_header_library(
   wcsnrtombs
   HDRS
     wcsnrtombs.h
-  SRCS 
-    wcsnrtombs.cpp
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.types.char8_t
