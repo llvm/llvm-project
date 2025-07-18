@@ -73,20 +73,9 @@ public:
   MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug) override;
 
-  void insert(MCFragment *F) {
-    auto *Sec = CurFrag->getParent();
-    F->setParent(Sec);
-    F->setLayoutOrder(CurFrag->getLayoutOrder() + 1);
-    CurFrag->Next = F;
-    CurFrag = F;
-    Sec->curFragList()->Tail = F;
-  }
-
   /// Get a data fragment to write into, creating a new one if the current
   /// fragment is not FT_Data.
-  /// Optionally a \p STI can be passed in so that a new fragment is created
-  /// if the Subtarget differs from the current fragment.
-  MCFragment *getOrCreateDataFragment(const MCSubtargetInfo *STI = nullptr);
+  MCFragment *getOrCreateDataFragment();
 
 protected:
   bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
