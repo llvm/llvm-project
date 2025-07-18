@@ -3005,6 +3005,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_memprof:
       case LLVMContext::MD_callsite:
         break;
+      case LLVMContext::MD_callee_type:
+        if (!AAOnly) {
+          K->setMetadata(LLVMContext::MD_callee_type,
+                         MDNode::getMergedCalleeTypeMetadata(KMD, JMD));
+        }
+        break;
       case LLVMContext::MD_align:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(
