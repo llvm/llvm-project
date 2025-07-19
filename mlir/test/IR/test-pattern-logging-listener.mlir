@@ -1,3 +1,4 @@
+// REQUIRES: asserts
 // RUN: mlir-opt %s --test-walk-pattern-rewrite-driver \
 // RUN:   --allow-unregistered-dialect --debug-only=pattern-logging-listener 2>&1 | FileCheck %s
 
