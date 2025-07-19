@@ -115,7 +115,7 @@ static constexpr double ATAN_K_OVER_16[17] = {
 
 // For |x| <= 1/32 and 0 <= i <= 16, return Q(x) such that:
 //   Q(x) ~ (atan(x + i/16) - atan(i/16)) / x.
-LIBC_INLINE static constexpr double atan_eval(double x, unsigned i) {
+LIBC_INLINE static double atan_eval(double x, unsigned i) {
   double x2 = x * x;
 
   double c0 = fputil::multiply_add(x, ATAN_COEFFS[i][2], ATAN_COEFFS[i][1]);
@@ -136,7 +136,7 @@ LIBC_INLINE static constexpr double atan_eval(double x, unsigned i) {
 // So we let q = (n - d * k/16) / (d + n * k/16),
 // and approximate with Taylor polynomial:
 //   atan(q) ~ q - q^3/3 + q^5/5 - q^7/7 + q^9/9
-LIBC_INLINE static constexpr double atan_eval_no_table(double num, double den,
+LIBC_INLINE static double atan_eval_no_table(double num, double den,
                                                        double k_over_16) {
   double num_r = fputil::multiply_add(den, -k_over_16, num);
   double den_r = fputil::multiply_add(num, k_over_16, den);
@@ -166,7 +166,7 @@ static constexpr double ASIN_COEFFS[10] = {
     0x1.02311ecf99c28p-5};
 
 // Evaluate P(x^2) - 1, where P(x^2) ~ asin(x)/x
-LIBC_INLINE static constexpr double asin_eval(double xsq) {
+LIBC_INLINE static double asin_eval(double xsq) {
   double x4 = xsq * xsq;
   double r1 = fputil::polyeval(x4, ASIN_COEFFS[0], ASIN_COEFFS[2],
                                ASIN_COEFFS[4], ASIN_COEFFS[6], ASIN_COEFFS[8]);
