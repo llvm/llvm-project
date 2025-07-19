@@ -862,12 +862,12 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
   // NewCost = bitlogic + cast
 
   // Calculate specific costs for each cast with instruction context
-  InstructionCost LHSCastCost = TTI.getCastInstrCost(
-      CastOpcode, DstVecTy, SrcVecTy,
-      TTI::CastContextHint::None, CostKind, LHSCast);
-  InstructionCost RHSCastCost = TTI.getCastInstrCost(
-      CastOpcode, DstVecTy, SrcVecTy,
-      TTI::CastContextHint::None, CostKind, RHSCast);
+  InstructionCost LHSCastCost =
+      TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
+                           TTI::CastContextHint::None, CostKind, LHSCast);
+  InstructionCost RHSCastCost =
+      TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
+                           TTI::CastContextHint::None, CostKind, RHSCast);
 
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstVecTy, CostKind) +
@@ -875,8 +875,7 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
 
   // For new cost, we can't provide an instruction (it doesn't exist yet)
   InstructionCost GenericCastCost = TTI.getCastInstrCost(
-      CastOpcode, DstVecTy, SrcVecTy,
-      TTI::CastContextHint::None, CostKind);
+      CastOpcode, DstVecTy, SrcVecTy, TTI::CastContextHint::None, CostKind);
 
   InstructionCost NewCost =
       TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy, CostKind) +
