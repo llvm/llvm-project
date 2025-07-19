@@ -76,3 +76,47 @@ define i32 @scmp_to_sub_large_range(i32 range(i32 -1, 3) %a) {
   %scmp = call i32 @llvm.scmp(i32 %a, i32 0)
   ret i32 %scmp
 }
+
+; It is incorrect to convert a ucmp into sub when the input type is i1.
+define i32 @ucmp_to_sub_i1_rhs_const(i1 %a) {
+; CHECK-LABEL: define i32 @ucmp_to_sub_i1_rhs_const(
+; CHECK-SAME: i1 [[A:%.*]]) {
+; CHECK-NEXT:    [[SCMP:%.*]] = call i32 @llvm.ucmp.i32.i1(i1 [[A]], i1 false)
+; CHECK-NEXT:    ret i32 [[SCMP]]
+;
+  %scmp = call i32 @llvm.ucmp(i1 %a, i1 false)
+  ret i32 %scmp
+}
+
+; It is incorrect to convert a ucmp into sub when the input type is i1.
+define i32 @ucmp_to_sub_i1_lhs_const(i1 %a) {
+; CHECK-LABEL: define i32 @ucmp_to_sub_i1_lhs_const(
+; CHECK-SAME: i1 [[A:%.*]]) {
+; CHECK-NEXT:    [[SCMP:%.*]] = call i32 @llvm.ucmp.i32.i1(i1 false, i1 [[A]])
+; CHECK-NEXT:    ret i32 [[SCMP]]
+;
+  %scmp = call i32 @llvm.ucmp(i1 false, i1 %a)
+  ret i32 %scmp
+}
+
+; It is incorrect to convert a ucmp into sub when the input type is i1.
+define i32 @ucmp_to_sub_i1(i1 %a, i1 %b) {
+; CHECK-LABEL: define i32 @ucmp_to_sub_i1(
+; CHECK-SAME: i1 [[A:%.*]], i1 [[B:%.*]]) {
+; CHECK-NEXT:    [[SCMP:%.*]] = call i32 @llvm.ucmp.i32.i1(i1 [[A]], i1 [[B]])
+; CHECK-NEXT:    ret i32 [[SCMP]]
+;
+  %scmp = call i32 @llvm.ucmp(i1 %a, i1 %b)
+  ret i32 %scmp
+}
+
+; It is incorrect to convert a scmp into sub when the input type is i1.
+define i32 @scmp_to_sub_i1_rhs_const(i1 %a) {
+; CHECK-LABEL: define i32 @scmp_to_sub_i1_rhs_const(
+; CHECK-SAME: i1 [[A:%.*]]) {
+; CHECK-NEXT:    [[SCMP:%.*]] = call i32 @llvm.scmp.i32.i1(i1 [[A]], i1 false)
+; CHECK-NEXT:    ret i32 [[SCMP]]
+;
+  %scmp = call i32 @llvm.scmp(i1 %a, i1 false)
+  ret i32 %scmp
+}
