@@ -1,46 +1,12 @@
-;; Test for memprof metadata propagation, ensuring metadata is moved to
-;; inlined callsites.
-;; Also check that callsite metadata was updated with inlined stack ids.
-;;
-;; The following code was used to generate the following IR and its memprof
-;; profile:
-;;
-;; #include <stdlib.h>
-;; #include <string.h>
-;; #include <unistd.h>
-;; char *foo() {
-;;   return new char[10];
-;; }
-;; char *foo2() __attribute((noinline)) {
-;;   return foo();
-;; }
-;; char *bar() {
-;;   return foo2();
-;; }
-;; char *baz() {
-;;   return foo2();
-;; }
-;; int main(int argc, char **argv) {
-;;   char *c = foo();
-;;   char *d = foo();
-;;   char *e = bar();
-;;   char *f = baz();
-;;   memset(c, 0, 10);
-;;   memset(d, 0, 10);
-;;   memset(e, 0, 10);
-;;   memset(f, 0, 10);
-;;   delete[] c;
-;;   sleep(200);
-;;   delete[] d;
-;;   delete[] e;
-;;   delete[] f;
-;;   return 0;
-;; }
-
+;; This test is the same code as memprof_inline2.ll, except that it has
+;; manually synthesized context size information. This test ensures that we
+;; don't attempt to apply -memprof-callsite-cold-threshold again when
+;; rebuilding the metadata after inlining.
+;
 ; RUN: opt -passes=inline %s -S | FileCheck %s
 ;; We should not perform additional discarding of non-cold contexts when
 ;; rebuilding the tries after inlining, even with a very low threshold.
-; RUN: opt -passes=inline -memprof-callsite-cold-threshold=1 %s -S | FileCheck %s
+; RUN: opt -passes=inline -memprof-callsite-cold-threshold=0 %s -S | FileCheck %s
 
 ; ModuleID = 'memprof_inline2.cc'
 source_filename = "memprof_inline2.cc"
@@ -252,22 +218,26 @@ attributes #9 = { builtin nounwind }
 ;; but is not itself inlined into its callers. Therefore they get moved to a
 ;; new memprof metadata within foo2.
 !43 = !{!44, !46, !48, !50}
-!44 = !{!45, !"cold"}
+!44 = !{!45, !"cold", !105}
+!105 = !{i64 123, i64 5000}
 !45 = !{i64 -2458008693472584243, i64 7394638144382192936}
-!46 = !{!47, !"notcold"}
+!46 = !{!47, !"notcold", !106}
 !47 = !{i64 -2458008693472584243, i64 -8908997186479157179}
-!48 = !{!49, !"notcold"}
+!106 = !{i64 345, i64 1}
+!48 = !{!49, !"notcold", !107}
 !49 = !{i64 -2458008693472584243, i64 -8079659623765193173, i64 -4805294506621015872}
-!50 = !{!51, !"cold"}
+!107 = !{i64 678, i64 1}
+!50 = !{!51, !"cold", !108}
 !51 = !{i64 -2458008693472584243, i64 -8079659623765193173, i64 -972865200055133905}
+!108 = !{i64 234, i64 5000}
 ; CHECK: ![[ORIGMEMPROF]] = !{![[ORIGMIB1:[0-9]+]], ![[ORIGMIB2:[0-9]+]], ![[ORIGMIB3:[0-9]+]], ![[ORIGMIB4:[0-9]+]]}
-; CHECK: ![[ORIGMIB1]] = !{![[ORIGMIBSTACK1:[0-9]+]], !"cold"}
+; CHECK: ![[ORIGMIB1]] = !{![[ORIGMIBSTACK1:[0-9]+]], !"cold"
 ; CHECK: ![[ORIGMIBSTACK1]] = !{i64 -2458008693472584243, i64 7394638144382192936}
-; CHECK: ![[ORIGMIB2]] = !{![[ORIGMIBSTACK2:[0-9]+]], !"notcold"}
+; CHECK: ![[ORIGMIB2]] = !{![[ORIGMIBSTACK2:[0-9]+]], !"notcold"
 ; CHECK: ![[ORIGMIBSTACK2]] = !{i64 -2458008693472584243, i64 -8908997186479157179}
-; CHECK: ![[ORIGMIB3]] = !{![[ORIGMIBSTACK3:[0-9]+]], !"notcold"}
+; CHECK: ![[ORIGMIB3]] = !{![[ORIGMIBSTACK3:[0-9]+]], !"notcold"
 ; CHECK: ![[ORIGMIBSTACK3]] = !{i64 -2458008693472584243, i64 -8079659623765193173, i64 -4805294506621015872}
-; CHECK: ![[ORIGMIB4]] = !{![[ORIGMIBSTACK4:[0-9]+]], !"cold"}
+; CHECK: ![[ORIGMIB4]] = !{![[ORIGMIBSTACK4:[0-9]+]], !"cold"
 ; CHECK: ![[ORIGMIBSTACK4]] = !{i64 -2458008693472584243, i64 -8079659623765193173, i64 -972865200055133905}
 ; CHECK: ![[NEWMEMPROF]] = !{![[ORIGMIB3:[0-9]+]], ![[ORIGMIB4:[0-9]+]]}
 ; CHECK: ![[NEWCALLSITE]] = !{i64 -2458008693472584243, i64 -8079659623765193173}
