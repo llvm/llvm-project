@@ -917,7 +917,7 @@ public:
   mlir::Value emitScalarExpr(const clang::Expr *e);
 
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                      bool isInc, bool isPre);
+                                      cir::UnaryOpKind kind, bool isPre);
 
   /// Build a debug stoppoint if we are emitting debug info.
   void emitStopPoint(const Stmt *s);
@@ -939,7 +939,7 @@ public:
   void emitComplexExprIntoLValue(const Expr *e, LValue dest, bool isInit);
 
   mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                       bool isInc, bool isPre);
+                                       cir::UnaryOpKind op, bool isPre);
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
 
