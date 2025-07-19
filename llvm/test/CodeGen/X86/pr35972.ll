@@ -6,9 +6,10 @@ define void @test3(i32 %c, ptr %ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sbbl %ecx, %ecx
-; CHECK-NEXT:    kmovd %ecx, %k0
+; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl $-1, %edx
+; CHECK-NEXT:    cmovnel %ecx, %edx
+; CHECK-NEXT:    kmovd %edx, %k0
 ; CHECK-NEXT:    kunpckdq %k0, %k0, %k0
 ; CHECK-NEXT:    kmovq %k0, (%eax)
 ; CHECK-NEXT:    retl
