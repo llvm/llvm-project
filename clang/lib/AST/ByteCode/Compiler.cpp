@@ -6670,6 +6670,11 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   }
   // Function parameters.
   if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+    if (Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().CPlusPlus11 &&
+        !D->getType()->isIntegralOrEnumerationType()) {
+      return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                      /*InitializerFailed=*/false, E);
+    }
     if (auto It = this->Params.find(PVD); It != this->Params.end()) {
       if (IsReference || !It->second.IsPtr)
         return this->emitGetParam(classifyPrim(E), It->second.Offset, E);
