@@ -18,6 +18,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_macros.h"
+
 // Test for basic properties of C++20 16.3.3.3.6 [customization.point.object].
 template <class CPO, class... Args>
 constexpr bool test(CPO& o, Args&&...) {
@@ -97,4 +99,7 @@ static_assert(test(std::views::reverse, a));
 static_assert(test(std::views::take, a, 10));
 //static_assert(test(std::views::take_while, a, [](int x){ return x < 10; }));
 static_assert(test(std::views::transform, a, [](int x) { return x + 1; }));
+
+#if TEST_STD_VER >= 23
 static_assert(test(std::views::zip_transform, [](int x, int y) { return x + y; }, a, a));
+#endif
