@@ -1533,7 +1533,7 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // In TargetFrameLowering::determineCalleeSaves, any vector register is marked
   // as saved if any of its subregister is clobbered, this is not correct in
   // vector registers. We only want the vector register to be marked as saved
-  // only if all of its subregisters are clobbered.
+  // if all of its subregisters are clobbered.
   // For example:
   // Original behavior: If v24 is marked, v24m2, v24m4, v24m8 are also marked.
   // Correct behavior: v24m2 is marked only if v24 and v25 are marked.
@@ -1549,7 +1549,7 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.reset(CSReg);
 
     auto SubRegs = TRI.subregs(CSReg);
-    // Set the register and it's all subregisters.
+    // Set the register and its all subregisters.
     if (!MRI.def_empty(CSReg) || MRI.getUsedPhysRegsMask().test(CSReg)) {
       SavedRegs.set(CSReg);
       llvm::for_each(SubRegs, [&](unsigned Reg) { return SavedRegs.set(Reg); });
