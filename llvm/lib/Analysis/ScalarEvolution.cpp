@@ -2300,9 +2300,16 @@ CollectAddOperandsWithScales(SmallDenseMap<const SCEV *, APInt, 16> &M,
   return Interesting;
 }
 
-bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
-                                      const SCEV *LHS, const SCEV *RHS,
-                                      const Instruction *CtxI) {
+namespace {
+enum class OverflowCheckTy { WillOverflow, WillNotOverflow };
+}
+
+// Return true if (LHS BinOp RHS) is guaranteed to overflow (if \p Check is
+// WillOverflow) or to not overflow (if \p Check is WillNotOverflow).
+static bool checkOverflow(OverflowCheckTy Check, ScalarEvolution *SE,
+                          Instruction::BinaryOps BinOp, bool Signed,
+                          const SCEV *LHS, const SCEV *RHS,
+                          const Instruction *CtxI) {
   const SCEV *(ScalarEvolution::*Operation)(const SCEV *, const SCEV *,
                                             SCEV::NoWrapFlags, unsigned);
   switch (BinOp) {
@@ -2328,12 +2335,12 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
   auto *WideTy =
       IntegerType::get(NarrowTy->getContext(), NarrowTy->getBitWidth() * 2);
 
-  const SCEV *A = (this->*Extension)(
-      (this->*Operation)(LHS, RHS, SCEV::FlagAnyWrap, 0), WideTy, 0);
-  const SCEV *LHSB = (this->*Extension)(LHS, WideTy, 0);
-  const SCEV *RHSB = (this->*Extension)(RHS, WideTy, 0);
-  const SCEV *B = (this->*Operation)(LHSB, RHSB, SCEV::FlagAnyWrap, 0);
-  if (A == B)
+  const SCEV *A = (SE->*Extension)(
+      (SE->*Operation)(LHS, RHS, SCEV::FlagAnyWrap, 0), WideTy, 0);
+  const SCEV *LHSB = (SE->*Extension)(LHS, WideTy, 0);
+  const SCEV *RHSB = (SE->*Extension)(RHS, WideTy, 0);
+  const SCEV *B = (SE->*Operation)(LHSB, RHSB, SCEV::FlagAnyWrap, 0);
+  if (Check == OverflowCheckTy::WillNotOverflow && A == B)
     return true;
   // Can we use context to prove the fact we need?
   if (!CtxI)
@@ -2361,19 +2368,29 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
   }
 
   ICmpInst::Predicate Pred = Signed ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+  if (Check == OverflowCheckTy::WillOverflow)
+    Pred = CmpInst::getInversePredicate(Pred);
+
   if (OverflowDown) {
     // To avoid overflow down, we need to make sure that MIN + Magnitude <= LHS.
     APInt Min = Signed ? APInt::getSignedMinValue(NumBits)
                        : APInt::getMinValue(NumBits);
     APInt Limit = Min + Magnitude;
-    return isKnownPredicateAt(Pred, getConstant(Limit), LHS, CtxI);
+    return SE->isKnownPredicateAt(Pred, SE->getConstant(Limit), LHS, CtxI);
   } else {
     // To avoid overflow up, we need to make sure that LHS <= MAX - Magnitude.
     APInt Max = Signed ? APInt::getSignedMaxValue(NumBits)
                        : APInt::getMaxValue(NumBits);
     APInt Limit = Max - Magnitude;
-    return isKnownPredicateAt(Pred, LHS, getConstant(Limit), CtxI);
+    return SE->isKnownPredicateAt(Pred, LHS, SE->getConstant(Limit), CtxI);
   }
+}
+
+bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
+                                      const SCEV *LHS, const SCEV *RHS,
+                                      const Instruction *CtxI) {
+  return checkOverflow(OverflowCheckTy::WillNotOverflow, this, BinOp, Signed,
+                       LHS, RHS, CtxI);
 }
 
 std::optional<SCEV::NoWrapFlags>
@@ -14951,6 +14968,35 @@ const SCEVAddRecExpr *ScalarEvolution::convertSCEVToAddRecWithPredicates(
 
   if (!AddRec)
     return nullptr;
+
+  // Check if any of the transformed predicates is known to be false. In that
+  // case, it doesn't make sense to convert to an predicated AddRec, as the
+  // versioned loop will never execute.
+  for (const SCEVPredicate *Pred : TransformPreds) {
+    auto *WrapPred = dyn_cast<SCEVWrapPredicate>(Pred);
+    if (!WrapPred || WrapPred->getFlags() != SCEVWrapPredicate::IncrementNSSW)
+      continue;
+
+    const SCEVAddRecExpr *AddRecToCheck = WrapPred->getExpr();
+    const SCEV *ExitCount = getBackedgeTakenCount(AddRec->getLoop());
+    if (isa<SCEVCouldNotCompute>(ExitCount))
+      continue;
+
+    const SCEV *Step = AddRecToCheck->getStepRecurrence(*this);
+    if (!Step->isOne())
+      continue;
+
+    ExitCount = getTruncateOrSignExtend(ExitCount, Step->getType());
+    if (checkOverflow(OverflowCheckTy::WillOverflow, this, Instruction::Add,
+                      /*CheckSigned=*/true, AddRecToCheck->getStart(),
+                      ExitCount, nullptr)) {
+      return nullptr;
+    }
+    const SCEV *Add = getAddExpr(AddRecToCheck->getStart(), ExitCount);
+    if (isKnownPredicate(CmpInst::ICMP_SLT, Add, AddRecToCheck->getStart())) {
+      return nullptr;
+    }
+  }
 
   // Since the transformation was successful, we can now transfer the SCEV
   // predicates.
