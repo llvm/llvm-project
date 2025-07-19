@@ -2519,6 +2519,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     break;
   }
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
+  TryConsumeToken(tok::eod);
 
   if (SeenError)
     return nullptr;
