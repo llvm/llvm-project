@@ -963,7 +963,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:         "kind": "FunctionDecl",
 // CHECK-NEXT:         "name": "operator new",
 // CHECK-NEXT:         "type": {
-// CHECK-NEXT:          "qualType": "void *(unsigned long)"
+// CHECK-NEXT:          "qualType": "void *(__size_t)"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -994,7 +994,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:       "kind": "FunctionDecl",
 // CHECK-NEXT:       "name": "operator delete",
 // CHECK-NEXT:       "type": {
-// CHECK-NEXT:        "qualType": "void (void *, unsigned long) noexcept"
+// CHECK-NEXT:        "qualType": "void (void *, __size_t) noexcept"
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -1126,7 +1126,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:         "kind": "FunctionDecl",
 // CHECK-NEXT:         "name": "operator new[]",
 // CHECK-NEXT:         "type": {
-// CHECK-NEXT:          "qualType": "void *(unsigned long)"
+// CHECK-NEXT:          "qualType": "void *(__size_t)"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -1146,7 +1146,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "unsigned long"
+// CHECK-NEXT:           "desugaredQualType": "unsigned long",
+// CHECK-NEXT:           "qualType": "__size_t"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "IntegralCast",
@@ -1337,7 +1338,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:         "kind": "FunctionDecl",
 // CHECK-NEXT:         "name": "operator new",
 // CHECK-NEXT:         "type": {
-// CHECK-NEXT:          "qualType": "void *(unsigned long)"
+// CHECK-NEXT:          "qualType": "void *(__size_t)"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -1369,7 +1370,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:       "kind": "FunctionDecl",
 // CHECK-NEXT:       "name": "operator delete",
 // CHECK-NEXT:       "type": {
-// CHECK-NEXT:        "qualType": "void (void *, unsigned long) noexcept"
+// CHECK-NEXT:        "qualType": "void (void *, __size_t) noexcept"
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -1444,7 +1445,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  "name": "operator new",
 // CHECK-NEXT:  "mangledName": "_Znwm",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void *(unsigned long)"
+// CHECK-NEXT:   "qualType": "void *(__size_t)"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -1457,7 +1458,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
+// CHECK-NEXT:     "desugaredQualType": "unsigned long",
+// CHECK-NEXT:     "qualType": "__size_t"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
@@ -1503,7 +1505,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  "name": "operator new",
 // CHECK-NEXT:  "mangledName": "_ZnwmSt11align_val_t",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void *(unsigned long, std::align_val_t)"
+// CHECK-NEXT:   "qualType": "void *(__size_t, std::align_val_t)"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -1516,7 +1518,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
+// CHECK-NEXT:     "desugaredQualType": "unsigned long",
+// CHECK-NEXT:     "qualType": "__size_t"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
@@ -1585,7 +1588,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  "name": "operator new[]",
 // CHECK-NEXT:  "mangledName": "_Znam",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void *(unsigned long)"
+// CHECK-NEXT:   "qualType": "void *(__size_t)"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -1598,7 +1601,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
+// CHECK-NEXT:     "desugaredQualType": "unsigned long",
+// CHECK-NEXT:     "qualType": "__size_t"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
@@ -1644,7 +1648,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  "name": "operator new[]",
 // CHECK-NEXT:  "mangledName": "_ZnamSt11align_val_t",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void *(unsigned long, std::align_val_t)"
+// CHECK-NEXT:   "qualType": "void *(__size_t, std::align_val_t)"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -1657,7 +1661,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
+// CHECK-NEXT:     "desugaredQualType": "unsigned long",
+// CHECK-NEXT:     "qualType": "__size_t"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
@@ -1821,7 +1826,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  "name": "operator delete",
 // CHECK-NEXT:  "mangledName": "_ZdlPvm",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void (void *, unsigned long) noexcept"
+// CHECK-NEXT:   "qualType": "void (void *, __size_t) noexcept"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -1847,7 +1852,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
+// CHECK-NEXT:     "desugaredQualType": "unsigned long",
+// CHECK-NEXT:     "qualType": "__size_t"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
@@ -1874,7 +1880,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  "name": "operator delete",
 // CHECK-NEXT:  "mangledName": "_ZdlPvmSt11align_val_t",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void (void *, unsigned long, std::align_val_t) noexcept"
+// CHECK-NEXT:   "qualType": "void (void *, __size_t, std::align_val_t) noexcept"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -1900,7 +1906,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
+// CHECK-NEXT:     "desugaredQualType": "unsigned long",
+// CHECK-NEXT:     "qualType": "__size_t"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
@@ -2036,7 +2043,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  "name": "operator delete[]",
 // CHECK-NEXT:  "mangledName": "_ZdaPvm",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void (void *, unsigned long) noexcept"
+// CHECK-NEXT:   "qualType": "void (void *, __size_t) noexcept"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -2062,7 +2069,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
+// CHECK-NEXT:     "desugaredQualType": "unsigned long",
+// CHECK-NEXT:     "qualType": "__size_t"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
@@ -2089,7 +2097,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  "name": "operator delete[]",
 // CHECK-NEXT:  "mangledName": "_ZdaPvmSt11align_val_t",
 // CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void (void *, unsigned long, std::align_val_t) noexcept"
+// CHECK-NEXT:   "qualType": "void (void *, __size_t, std::align_val_t) noexcept"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
@@ -2115,7 +2123,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
+// CHECK-NEXT:     "desugaredQualType": "unsigned long",
+// CHECK-NEXT:     "qualType": "__size_t"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
@@ -3881,7 +3890,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "unsigned long"
+// CHECK-NEXT:             "desugaredQualType": "unsigned long",
+// CHECK-NEXT:             "qualType": "__size_t"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "name": "sizeof",
@@ -3955,7 +3965,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "unsigned long"
+// CHECK-NEXT:             "desugaredQualType": "unsigned long",
+// CHECK-NEXT:             "qualType": "__size_t"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "castKind": "IntegralCast",
@@ -4085,7 +4096,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "unsigned long"
+// CHECK-NEXT:             "desugaredQualType": "unsigned long",
+// CHECK-NEXT:             "qualType": "__size_t"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "name": "sizeof",
@@ -4159,7 +4171,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "unsigned long"
+// CHECK-NEXT:             "desugaredQualType": "unsigned long",
+// CHECK-NEXT:             "qualType": "__size_t"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "castKind": "IntegralCast",
@@ -4980,7 +4993,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
-// CHECK-NEXT:               "qualType": "long"
+// CHECK-NEXT:               "desugaredQualType": "long",
+// CHECK-NEXT:               "qualType": "__ptrdiff_t"
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "value": "10"
@@ -6503,7 +6517,8 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
-// CHECK-NEXT:               "qualType": "long"
+// CHECK-NEXT:               "desugaredQualType": "long"
+// CHECK-NEXT:               "qualType": "__ptrdiff_t"
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "value": "10"
