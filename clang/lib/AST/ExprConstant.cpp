@@ -9350,7 +9350,8 @@ bool LValueExprEvaluator::VisitUnaryDeref(const UnaryOperator *E) {
   // immediately.
   if (!Success || !E->getType().getNonReferenceType()->isObjectType())
     return Success;
-  return !!findCompleteObject(Info, E, AK_Dereference, Result, E->getType()) ||
+  return bool(findCompleteObject(Info, E, AK_Dereference, Result,
+                                 E->getType())) ||
          Info.noteUndefinedBehavior();
 }
 
