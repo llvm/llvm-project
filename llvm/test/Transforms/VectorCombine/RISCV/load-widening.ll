@@ -2,18 +2,18 @@
 ; RUN: opt < %s -passes=vector-combine -S -mtriple=riscv32 -mattr=+v | FileCheck %s
 ; RUN: opt < %s -passes=vector-combine -S -mtriple=riscv64 -mattr=+v | FileCheck %s
 
-define <8 x i16> @fixed_load_scalable_src(ptr %p) {
-; CHECK-LABEL: define <8 x i16> @fixed_load_scalable_src(
+define void @fixed_load_scalable_src(ptr %p) {
+; CHECK-LABEL: define void @fixed_load_scalable_src(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store <vscale x 4 x i16> zeroinitializer, ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret void
 ;
 entry:
   store <vscale x 4 x i16> zeroinitializer, ptr %p
   %0 = load <4 x i16>, ptr %p
   %1 = shufflevector <4 x i16> %0, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-  ret <8 x i16> %1
+  ret void
 }
