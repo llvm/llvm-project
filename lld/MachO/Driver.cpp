@@ -364,10 +364,10 @@ static void multiThreadedPageIn(const DeferredFiles &deferred) {
             mutex.unlock();
             break;
           }
-          DeferredFiles deferred(*queue.front());
+          auto deferred = std::move(queue.front());
           queue.pop_front();
           mutex.unlock();
-          multiThreadedPageInBackground(deferred);
+          multiThreadedPageInBackground(*deferred);
         }
       });
   }
