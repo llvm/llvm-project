@@ -132,39 +132,42 @@ void Sema::checkContainerDeclVerbatimLine(const BlockCommandComment *Comment) {
   const CommandInfo *Info = Traits.getCommandInfo(Comment->getCommandID());
   if (!Info->IsRecordLikeDeclarationCommand)
     return;
-  unsigned DiagSelect;
+  std::optional<unsigned> DiagSelect;
   switch (Comment->getCommandID()) {
     case CommandTraits::KCI_class:
-      DiagSelect =
-          (!isClassOrStructOrTagTypedefDecl() && !isClassTemplateDecl()) ? 1
-                                                                         : 0;
+      if (!isClassOrStructOrTagTypedefDecl() && !isClassTemplateDecl())
+        DiagSelect = diag::DeclContainerKind::Class;
+
       // Allow @class command on @interface declarations.
       // FIXME. Currently, \class and @class are indistinguishable. So,
       // \class is also allowed on an @interface declaration
       if (DiagSelect && Comment->getCommandMarker() && isObjCInterfaceDecl())
-        DiagSelect = 0;
+        DiagSelect = std::nullopt;
       break;
     case CommandTraits::KCI_interface:
-      DiagSelect = !isObjCInterfaceDecl() ? 2 : 0;
+      if (!isObjCInterfaceDecl())
+        DiagSelect = diag::DeclContainerKind::Interface;
       break;
     case CommandTraits::KCI_protocol:
-      DiagSelect = !isObjCProtocolDecl() ? 3 : 0;
+      if (!isObjCProtocolDecl())
+        DiagSelect = diag::DeclContainerKind::Protocol;
       break;
     case CommandTraits::KCI_struct:
-      DiagSelect = !isClassOrStructOrTagTypedefDecl() ? 4 : 0;
+      if (!isClassOrStructOrTagTypedefDecl())
+        DiagSelect = diag::DeclContainerKind::Struct;
       break;
     case CommandTraits::KCI_union:
-      DiagSelect = !isUnionDecl() ? 5 : 0;
+      if (!isUnionDecl())
+        DiagSelect = diag::DeclContainerKind::Union;
       break;
     default:
-      DiagSelect = 0;
+      DiagSelect = std::nullopt;
       break;
   }
   if (DiagSelect)
     Diag(Comment->getLocation(), diag::warn_doc_api_container_decl_mismatch)
-    << Comment->getCommandMarker()
-    << (DiagSelect-1) << (DiagSelect-1)
-    << Comment->getSourceRange();
+        << Comment->getCommandMarker() << (*DiagSelect) << (*DiagSelect)
+        << Comment->getSourceRange();
 }
 
 void Sema::checkContainerDecl(const BlockCommandComment *Comment) {

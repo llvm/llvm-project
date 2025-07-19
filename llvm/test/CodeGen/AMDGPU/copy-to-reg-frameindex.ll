@@ -4,10 +4,10 @@
 define amdgpu_kernel void @copy_to_reg_frameindex(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: copy_to_reg_frameindex:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_cmp_lt_u32 0, 16
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_cmp_lt_u32 0, 16
 ; CHECK-NEXT:    s_set_gpr_idx_on 0, gpr_idx(DST)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_set_gpr_idx_off

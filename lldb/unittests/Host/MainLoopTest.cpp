@@ -132,7 +132,7 @@ TEST_F(MainLoopTest, MultipleReadsPipeObject) {
         char buf[1024] = {0};
         size_t len = sizeof(buf);
         ASSERT_THAT_ERROR(file->Read(buf, len).ToError(), llvm::Succeeded());
-        EXPECT_EQ(len, 1);
+        EXPECT_EQ(len, 1U);
         EXPECT_EQ(buf[0], 'X');
       },
       error);
@@ -162,7 +162,7 @@ TEST_F(MainLoopTest, PipeDelayBetweenRegisterAndRun) {
         char buf[1024] = {0};
         size_t len = sizeof(buf);
         ASSERT_THAT_ERROR(file->Read(buf, len).ToError(), llvm::Succeeded());
-        EXPECT_EQ(len, 2);
+        EXPECT_EQ(len, 2U);
         EXPECT_EQ(buf[0], 'X');
         EXPECT_EQ(buf[1], 'X');
       },
@@ -213,7 +213,7 @@ TEST_F(MainLoopTest, NoSelfTriggersDuringPipeHandler) {
         char buf[1024] = {0};
         len = sizeof(buf);
         ASSERT_THAT_ERROR(file->Read(buf, len).ToError(), llvm::Succeeded());
-        EXPECT_EQ(len, 2);
+        EXPECT_EQ(len, 2U);
         EXPECT_EQ(buf[0], 'X');
         EXPECT_EQ(buf[1], 'Y');
 

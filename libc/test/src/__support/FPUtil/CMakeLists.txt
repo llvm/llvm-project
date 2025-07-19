@@ -38,3 +38,14 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.rounding_mode
 )
+
+add_fp_unittest(
+  bfloat16_test
+  NEED_MPFR
+  SUITE
+    libc-fputil-tests
+  SRCS
+    bfloat16_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+)

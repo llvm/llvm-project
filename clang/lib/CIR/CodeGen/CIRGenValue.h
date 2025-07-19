@@ -58,6 +58,12 @@ public:
     return value;
   }
 
+  /// Return the value of this complex value.
+  mlir::Value getComplexValue() const {
+    assert(isComplex() && "Not a complex!");
+    return value;
+  }
+
   /// Return the value of the address of the aggregate.
   Address getAggregateAddress() const {
     assert(isAggregate() && "Not an aggregate!");
@@ -185,6 +191,8 @@ public:
   bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
   bool isVolatile() const { return quals.hasVolatile(); }
+
+  bool isVolatileQualified() const { return quals.hasVolatile(); }
 
   unsigned getVRQualifiers() const {
     return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;

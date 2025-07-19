@@ -84,7 +84,8 @@ def warn_doc_function_method_decl_mismatch : Warning<
   InGroup<Documentation>, DefaultIgnore;
 
 def warn_doc_api_container_decl_mismatch : Warning<
-  "'%select{\\|@}0%select{class|interface|protocol|struct|union}1' "
+  "'%select{\\|@}0%enum_select<DeclContainerKind>{%Class{class}"
+  "|%Interface{interface}|%Protocol{protocol}|%Struct{struct}|%Union{union}}1' "
   "command should not be used in a comment attached to a "
   "non-%select{class|interface|protocol|struct|union}2 declaration">,
   InGroup<Documentation>, DefaultIgnore;

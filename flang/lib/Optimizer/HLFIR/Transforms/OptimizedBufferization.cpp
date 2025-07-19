@@ -805,8 +805,8 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
                                                shape, /*slice=*/mlir::Value{});
     } else {
       // Array references must have fixed shape, when used in assignments.
-      auto refTy = mlir::cast<fir::ReferenceType>(lhs.getType());
-      auto seqTy = mlir::cast<fir::SequenceType>(refTy.getElementType());
+      auto seqTy =
+          mlir::cast<fir::SequenceType>(fir::unwrapRefType(lhs.getType()));
       llvm::ArrayRef<int64_t> fixedShape = seqTy.getShape();
       int64_t flatExtent = 1;
       for (int64_t extent : fixedShape)
