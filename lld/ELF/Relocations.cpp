@@ -176,7 +176,7 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
 
 // True if non-preemptable symbol always has the same value regardless of where
 // the DSO is loaded.
-static bool isAbsolute(const Symbol &sym) {
+bool elf::isAbsolute(const Symbol &sym) {
   if (sym.isUndefined())
     return true;
   if (const auto *dr = dyn_cast<Defined>(&sym))
@@ -1671,8 +1671,9 @@ void RelocationScanner::scan(Relocs<RelTy> rels) {
   }
 
   // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20, R_PPC64_ADDR64 and the branch-to-branch optimization.
-  if (ctx.arg.emachine == EM_RISCV ||
+  // R_RISCV_PCREL_HI20, ALIGN relocations, R_PPC64_ADDR64 and the
+  // branch-to-branch optimization.
+  if (is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine) ||
       (ctx.arg.emachine == EM_PPC64 && sec->name == ".toc") ||
       ctx.arg.branchToBranch)
     llvm::stable_sort(sec->relocs(),

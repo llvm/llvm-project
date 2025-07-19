@@ -2524,6 +2524,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: tanpif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: tanpif16
     standards:
       - stdc
