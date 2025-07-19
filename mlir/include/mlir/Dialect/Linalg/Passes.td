@@ -94,7 +94,6 @@ def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
 
   let description = [{
     Convert a linalg op from one representation to another equivalent.
-
     For example, a linalg named op `linalg.add` can also be written as an
     category op `linalg.elementwise`, and can also be re-written as
     a `linalg.generic`, giving the morphism:
@@ -116,22 +115,16 @@ def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
     // named-op <--> category <--> generic
     Option<"namedToCategory", "named-to-category", "bool", /*default=*/"false",
            "convert named ops to category op e.g. `linalg.elementwise`">,
-
     Option<"categoryToGeneric", "category-to-generic", "bool", /*default=*/"false",
            "convert category ops e.g. `linalg.elementwise` to `linalg.generic`">,
-
     Option<"namedToGeneric", "named-to-generic", "bool", /*default=*/"false",
            "convert named ops e.g. `linalg.add` to `linalg.generic`">,
-
     Option<"genericToCategory", "generic-to-category", "bool", /*default=*/"false",
            "convert generic ops to category op e.g. `linalg.contraction`">,
-
     Option<"categoryToNamed", "category-to-named", "bool", /*default=*/"false",
            "convert category ops to equivalent named ops">,
-
     Option<"genericToNamed", "generic-to-named", "bool", /*default=*/"false",
-           "convert linalg.generic to equivalent named ops">
-  ];
+           "convert linalg.generic to equivalent named ops"> ];
 }
 
 def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops"> {
