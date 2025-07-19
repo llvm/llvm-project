@@ -58,7 +58,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_SymbolId:      OS << "SymbolId"; break;
   case MCFragment::FT_CVInlineLines: OS << "CVInlineLineTable"; break;
   case MCFragment::FT_CVDefRange:    OS << "CVDefRangeTable"; break;
-  case MCFragment::FT_PseudoProbe:   OS << "PseudoProbe"; break;
     // clang-format on
   }
 
@@ -180,12 +179,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
       OS << " RangeStart:" << RangeStartEnd.first;
       OS << " RangeEnd:" << RangeStartEnd.second;
     }
-    break;
-  }
-  case MCFragment::FT_PseudoProbe: {
-    const auto *OF = cast<MCPseudoProbeAddrFragment>(this);
-    OS << " AddrDelta:";
-    OF->getAddrDelta().print(OS, nullptr);
     break;
   }
   }

@@ -207,7 +207,6 @@ public:
     FT_SymbolId,
     FT_CVInlineLines,
     FT_CVDefRange,
-    FT_PseudoProbe,
   };
 
 private:
@@ -287,7 +286,6 @@ public:
     case MCFragment::FT_Dwarf:
     case MCFragment::FT_DwarfFrame:
     case MCFragment::FT_LEB:
-    case MCFragment::FT_PseudoProbe:
     case MCFragment::FT_CVInlineLines:
     case MCFragment::FT_CVDefRange:
       return true;
@@ -729,22 +727,6 @@ public:
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_BoundaryAlign;
-  }
-};
-
-class MCPseudoProbeAddrFragment : public MCEncodedFragment {
-  /// The expression for the difference of the two symbols that
-  /// make up the address delta between two .pseudoprobe directives.
-  const MCExpr *AddrDelta;
-
-public:
-  MCPseudoProbeAddrFragment(const MCExpr *AddrDelta)
-      : MCEncodedFragment(FT_PseudoProbe, false), AddrDelta(AddrDelta) {}
-
-  const MCExpr &getAddrDelta() const { return *AddrDelta; }
-
-  static bool classof(const MCFragment *F) {
-    return F->getKind() == MCFragment::FT_PseudoProbe;
   }
 };
 
