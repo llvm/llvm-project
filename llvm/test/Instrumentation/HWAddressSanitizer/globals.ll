@@ -4,7 +4,7 @@
 ; CHECK29: @four = global
 
 ; CHECK: @specialcaselisted = global i16 2, no_sanitize_hwaddress
-
+; CHECK: @insection = global i16 2, section "custom"
 ; CHECK: @__start_hwasan_globals = external hidden constant [0 x i8]
 ; CHECK: @__stop_hwasan_globals = external hidden constant [0 x i8]
 
@@ -22,6 +22,8 @@
 ; CHECK30: @huge.hwasan.descriptor = private constant { i32, i32 } { i32 trunc (i64 sub (i64 ptrtoint (ptr @huge.hwasan to i64), i64 ptrtoint (ptr @huge.hwasan.descriptor to i64)) to i32), i32 -1358954512 }, section "hwasan_globals", !associated [[HUGE:![0-9]+]]
 ; CHECK30: @huge.hwasan.descriptor.1 = private constant { i32, i32 } { i32 trunc (i64 add (i64 sub (i64 ptrtoint (ptr @huge.hwasan to i64), i64 ptrtoint (ptr @huge.hwasan.descriptor.1 to i64)), i64 16777200) to i32), i32 -1375731680 }, section "hwasan_globals", !associated [[HUGE]]
 
+; CHECK30-NOT: @insection.hwasan
+
 ; CHECK30: @four = alias i32, inttoptr (i64 add (i64 ptrtoint (ptr @four.hwasan to i64), i64 -6052837899185946624) to ptr)
 ; CHECK30: @sixteen = alias [16 x i8], inttoptr (i64 add (i64 ptrtoint (ptr @sixteen.hwasan to i64), i64 -5980780305148018688) to ptr)
 ; CHECK30: @huge = alias [16777232 x i8], inttoptr (i64 add (i64 ptrtoint (ptr @huge.hwasan to i64), i64 -5908722711110090752) to ptr)
@@ -37,3 +39,4 @@ source_filename = "foo"
 @sixteen = global [16 x i8] zeroinitializer
 @huge = global [16777232 x i8] zeroinitializer
 @specialcaselisted = global i16 2, no_sanitize_hwaddress
+@insection = global i16 2, section "custom"
