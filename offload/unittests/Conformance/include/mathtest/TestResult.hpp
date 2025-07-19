@@ -28,9 +28,8 @@ public:
                       TestCase &&Case) noexcept
       : MaxUlpDistance(UlpDistance), FailureCount(IsFailure ? 1 : 0),
         TestCaseCount(1) {
-    if (IsFailure) {
+    if (IsFailure)
       WorstFailingCase.emplace(std::move(Case));
-    }
   }
 
   void accumulate(const TestResult &Other) noexcept {

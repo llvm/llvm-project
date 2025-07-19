@@ -33,17 +33,13 @@ public:
     assert((Size > 0) && "The input space size must be at least 1");
 
     IndexArrayType DimSizes = {};
-    {
-      std::size_t Index = 0;
-      ((DimSizes[Index++] = Ranges.getSize()), ...);
-    }
+    std::size_t DimIndex = 0;
+    ((DimSizes[DimIndex++] = Ranges.getSize()), ...);
 
     Strides[NumInputs - 1] = 1;
-    if constexpr (NumInputs > 1) {
-      for (int Index = static_cast<int>(NumInputs) - 2; Index >= 0; --Index) {
+    if constexpr (NumInputs > 1)
+      for (int Index = static_cast<int>(NumInputs) - 2; Index >= 0; --Index)
         Strides[Index] = Strides[Index + 1] * DimSizes[Index + 1];
-      }
-    }
   }
 
   [[nodiscard]] std::size_t
@@ -94,9 +90,8 @@ private:
     bool Overflowed = false;
 
     auto Multiplier = [&](const uint64_t RangeSize) {
-      if (!Overflowed) {
+      if (!Overflowed)
         Overflowed = __builtin_mul_overflow(Size, RangeSize, &Size);
-      }
     };
 
     (Multiplier(Ranges.getSize()), ...);

@@ -60,10 +60,9 @@ public:
             llvm::StringRef KernelName) const noexcept {
     assert(Image && "Image provided to getKernel is null");
 
-    if (Image->DeviceHandle != this->DeviceHandle) {
+    if (Image->DeviceHandle != this->DeviceHandle)
       FATAL_ERROR("Image provided to getKernel was created for a different "
                   "device");
-    }
 
     ol_symbol_handle_t KernelHandle = nullptr;
     getKernelImpl(Image->Handle, KernelName, &KernelHandle);
@@ -82,10 +81,9 @@ public:
                   "Argument types provided to launchKernel do not match the "
                   "kernel's signature");
 
-    if (Kernel.Image->DeviceHandle != DeviceHandle) {
+    if (Kernel.Image->DeviceHandle != DeviceHandle)
       FATAL_ERROR("Kernel provided to launchKernel was created for a different "
                   "device");
-    }
 
     if constexpr (sizeof...(Args) == 0) {
       launchKernelImpl(Kernel.Handle, NumGroups, GroupSize, nullptr, 0);

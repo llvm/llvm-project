@@ -52,10 +52,10 @@ const std::vector<ol_device_handle_t> &getDevices() {
     // Discovers all devices that are not the host
     const auto *const ResultFromIterate = olIterateDevices(
         [](ol_device_handle_t DeviceHandle, void *Data) {
-          if (getBackend(DeviceHandle) != OL_PLATFORM_BACKEND_HOST) {
+          if (getBackend(DeviceHandle) != OL_PLATFORM_BACKEND_HOST)
             static_cast<std::vector<ol_device_handle_t> *>(Data)->push_back(
                 DeviceHandle);
-          }
+
           return true;
         },
         &TmpDevices);
@@ -86,10 +86,9 @@ DeviceContext::DeviceContext(std::size_t DeviceId)
     : DeviceId(DeviceId), DeviceHandle(nullptr) {
   const auto &Devices = getDevices();
 
-  if (DeviceId >= Devices.size()) {
+  if (DeviceId >= Devices.size())
     FATAL_ERROR("Invalid DeviceId: " + llvm::Twine(DeviceId) + ", but only " +
                 llvm::Twine(Devices.size()) + " devices are available");
-  }
 
   DeviceHandle = Devices[DeviceId];
 }
@@ -108,10 +107,10 @@ DeviceContext::loadBinary(llvm::StringRef Directory, llvm::StringRef BinaryName,
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
       llvm::MemoryBuffer::getFile(FullPath);
-  if (std::error_code ErrorCode = FileOrErr.getError()) {
+  if (std::error_code ErrorCode = FileOrErr.getError())
     FATAL_ERROR(llvm::Twine("Failed to read device binary file '") + FullPath +
                 "': " + ErrorCode.message());
-  }
+
   std::unique_ptr<llvm::MemoryBuffer> &BinaryData = *FileOrErr;
 
   ol_program_handle_t ProgramHandle = nullptr;
@@ -167,9 +166,8 @@ void DeviceContext::launchKernelImpl(
   std::size_t PropSize = 0;
   OL_CHECK(olGetDeviceInfoSize(DeviceHandle, OL_DEVICE_INFO_NAME, &PropSize));
 
-  if (PropSize == 0) {
+  if (PropSize == 0)
     return "";
-  }
 
   std::string PropValue(PropSize, '\0');
   OL_CHECK(olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_NAME, PropSize,
@@ -188,9 +186,8 @@ void DeviceContext::launchKernelImpl(
   OL_CHECK(
       olGetPlatformInfoSize(PlatformHandle, OL_PLATFORM_INFO_NAME, &PropSize));
 
-  if (PropSize == 0) {
+  if (PropSize == 0)
     return "";
-  }
 
   std::string PropValue(PropSize, '\0');
   OL_CHECK(olGetPlatformInfo(PlatformHandle, OL_PLATFORM_INFO_NAME, PropSize,

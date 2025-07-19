@@ -11,10 +11,10 @@
 #define OL_CHECK(ResultExpr)                                                   \
   do {                                                                         \
     ol_result_t Result = (ResultExpr);                                         \
-    if (Result != OL_SUCCESS) {                                                \
+    if (Result != OL_SUCCESS)                                                  \
       mathtest::detail::reportOffloadError(#ResultExpr, Result, __FILE__,      \
                                            __LINE__, __func__);                \
-    }                                                                          \
+                                                                               \
   } while (false)
 
 namespace mathtest {

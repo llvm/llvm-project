@@ -20,13 +20,12 @@ namespace mathtest {
 template <typename T> struct StorageTypeOf {
 private:
   static constexpr auto getStorageType() noexcept {
-    if constexpr (std::is_unsigned_v<T>) {
+    if constexpr (std::is_unsigned_v<T>)
       return TypeIdentityOf<T>{};
-    } else if constexpr (std::is_signed_v<T>) {
+    else if constexpr (std::is_signed_v<T>)
       return TypeIdentityOf<std::make_unsigned_t<T>>{};
-    } else {
+    else
       static_assert(!std::is_same_v<T, T>, "Unsupported type");
-    }
   }
 
 public:
@@ -74,7 +73,6 @@ template <typename UIntType, std::size_t Count>
       "Count must be less than or equal to the bit width of UIntType");
 
   return Count == 0 ? UIntType(0) : (~UIntType(0) << (TotalBits - Count));
-  ;
 }
 
 template <typename UIntType, std::size_t Count>
@@ -155,9 +153,8 @@ template <typename T> [[nodiscard]] constexpr T getMinOrNegInf() noexcept {
   static_assert(std::is_arithmetic_v<T>, "Type T must be an arithmetic type");
 
   if constexpr (std::is_floating_point_v<T> &&
-                std::numeric_limits<T>::has_infinity) {
+                std::numeric_limits<T>::has_infinity)
     return -std::numeric_limits<T>::infinity();
-  }
 
   return std::numeric_limits<T>::lowest();
 }
@@ -174,9 +171,8 @@ template <typename T> [[nodiscard]] constexpr T getMaxOrInf() noexcept {
   static_assert(std::is_arithmetic_v<T>, "Type T must be an arithmetic type");
 
   if constexpr (std::is_floating_point_v<T> &&
-                std::numeric_limits<T>::has_infinity) {
+                std::numeric_limits<T>::has_infinity)
     return std::numeric_limits<T>::infinity();
-  }
 
   return std::numeric_limits<T>::max();
 }
@@ -210,12 +206,11 @@ template <typename FloatType>
   const bool XIsNaN = FPUtils::isNaN(X);
   const bool YIsNaN = FPUtils::isNaN(Y);
 
-  if (XIsNaN && YIsNaN) {
+  if (XIsNaN && YIsNaN)
     return 0;
-  }
-  if (XIsNaN || YIsNaN) {
+
+  if (XIsNaN || YIsNaN)
     return std::numeric_limits<uint64_t>::max();
-  }
 
   constexpr StorageType SignMask = FPUtils::SignMask;
 

@@ -18,11 +18,10 @@ void printValue(llvm::raw_ostream &OS, const T &Value) noexcept {
   if constexpr (IsFloatingPoint_v<T>) {
     using FPUtils = FPUtils<T>;
 
-    if constexpr (sizeof(T) < sizeof(float)) {
+    if constexpr (sizeof(T) < sizeof(float))
       OS << float(Value);
-    } else {
+    else
       OS << Value;
-    }
 
     OS << llvm::formatv(" (0x{0})",
                         llvm::Twine::utohexstr(FPUtils::getAsBits(Value)));
@@ -38,9 +37,8 @@ void printValues(llvm::raw_ostream &OS,
       [&OS](const auto &...Values) {
         bool IsFirst = true;
         auto Print = [&](const auto &Value) {
-          if (!IsFirst) {
+          if (!IsFirst)
             OS << ", ";
-          }
           printValue(OS, Value);
           IsFirst = false;
         };
@@ -93,9 +91,8 @@ void printReport(const TestType &Test, const ResultType &Result,
   llvm::errs() << llvm::formatv("{0,-17}: {1}\n", "Status",
                                 Passed ? "PASSED" : "FAILED");
 
-  if (auto Worst = Result.getWorstFailingCase()) {
+  if (auto Worst = Result.getWorstFailingCase())
     printWorstFailingCase(llvm::errs(), Worst.value());
-  }
 
   llvm::errs().flush();
 }

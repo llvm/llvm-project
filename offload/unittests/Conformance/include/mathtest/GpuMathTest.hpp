@@ -93,9 +93,8 @@ private:
                                      .Case("llvm-libm", "LLVMLibm")
                                      .Default("");
 
-    if (BinaryName.empty()) {
+    if (BinaryName.empty())
       FATAL_ERROR(llvm::Twine("Unsupported provider: '") + Provider + "'");
-    }
 
     const auto Image = Context->loadBinary(DeviceBinsDirectory, BinaryName);
 
