@@ -75,9 +75,9 @@ $ gpg --verify <package file name>.sig <package file name>
 
 If it has a `.jsonl` file, use [gh](https://cli.github.com/manual/gh_attestation_verify) to verify the package:
 ```
-gh attestation verify --repo llvm/llvm-project <package file name>
+$ gh attestation verify --repo llvm/llvm-project <package file name>
 (if you are able to connect to GitHub)
-gh attestation verify --repo llvm/llvm-project <package file name> --bundle <package file name>.jsonl
+$ gh attestation verify --repo llvm/llvm-project <package file name> --bundle <package file name>.jsonl
 (using attestation file on disk)
 ```"""
         ).format(release=release)
