@@ -30,7 +30,6 @@ DynamicLoader::DynamicLoader(const DynamicLoader::Setup &setup)
     : m_cache(setup.cache ? setup.cache : std::make_shared<LibraryPathCache>()),
       m_PathResolver(setup.resolver ? setup.resolver
                                     : std::make_shared<PathResolver>(m_cache)),
-      // m_DylibPathResolver(setup.dylibResolver),
       m_scanH(setup.basePaths, m_cache, m_PathResolver),
       FB(setup.filterBuilder), m_libMgr(),
       m_shouldScan(setup.shouldScan ? setup.shouldScan
@@ -40,6 +39,48 @@ DynamicLoader::DynamicLoader(const DynamicLoader::Setup &setup)
   if (m_scanH.getAllUnits().empty()) {
     errs() << "Warning: No base paths provided for scanning.\n";
   }
+}
+
+std::unique_ptr<LoaderControllerImpl>
+LoaderControllerImpl::create(const DynamicLoader::Setup &setup) {
+  auto loader = std::make_unique<DynamicLoader>(setup);
+  return std::unique_ptr<LoaderControllerImpl>(
+      new LoaderControllerImpl(std::move(loader)));
+}
+
+void LoaderControllerImpl::addScanPath(const std::string &path, PathType kind) {
+  Loader->m_scanH.addBasePath(path, kind);
+}
+
+bool LoaderControllerImpl::markLibraryLoaded(StringRef path) {
+  auto lib = Loader->m_libMgr.getLibrary(path);
+  if (!lib)
+    return false;
+
+  lib->setState(LibraryManager::State::Loaded);
+  // lib->setNativeHandle(handle);
+
+  // if (onStateChange)
+  //   onStateChange(path.str(), LibraryManager::State::Loaded);
+  return true;
+}
+
+bool LoaderControllerImpl::markLibraryUnLoaded(StringRef path) {
+  auto lib = Loader->m_libMgr.getLibrary(path);
+  if (!lib)
+    return false;
+
+  lib->setState(LibraryManager::State::Unloaded);
+
+  // if (onStateChange)
+  //   onStateChange(path.str(), LibraryManager::State::Unloaded);
+  return true;
+}
+
+void LoaderControllerImpl::resolveSymbols(
+    std::vector<std::string> symbols,
+    DynamicLoader::OnSearchComplete OnCompletion, const SearchPolicy &policy) {
+  Loader->searchSymbolsInLibraries(symbols, std::move(OnCompletion), policy);
 }
 
 static bool shouldIgnoreSymbol(const object::SymbolRef &Sym,
@@ -216,7 +257,8 @@ void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
 }
 
 void DynamicLoader::searchSymbolsInLibraries(
-    std::vector<std::string> &symbolList, OnSearchComplete onComplete) {
+    std::vector<std::string> &symbolList, OnSearchComplete onComplete,
+    const SearchPolicy &policy) {
   SymbolQuery query(symbolList);
 
   using LibraryState = LibraryManager::State;
@@ -236,21 +278,13 @@ void DynamicLoader::searchSymbolsInLibraries(
     }
   };
 
-  static constexpr LibraryState kStates[] = {
-      LibraryState::Loaded, LibraryState::Queried, LibraryState::Unloaded};
-
-  static constexpr LibraryType kTypes[] = {LibraryType::User,
-                                           LibraryType::System};
-
-  for (auto type : kTypes) {
-    for (auto state : kStates) {
-      tryResolveFrom(state, type);
-      if (query.allResolved())
-        goto done;
-    }
+  for (const auto &[state, type] : policy.plan) {
+    tryResolveFrom(state, type);
+    if (query.allResolved())
+      break;
   }
 
-done:
+// done:
   // LLVM_DEBUG({
   dbgs() << "Search complete.\n";
   for (const auto &r : query.getAllResults())
