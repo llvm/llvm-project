@@ -8109,7 +8109,7 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
 
   // Check whether 'ExtMidValue' is a valid result since the assumption on
   // imaged 'NextCValue' might not hold for new float types.
-  // ppc_fp128 can't pass here when converting from max float because of 
+  // ppc_fp128 can't pass here when converting from max float because of
   // APFloat implementation.
   if (NextCValue.isInfinity()) {
     // ExtMidValue --- narrowed ---> Finite
