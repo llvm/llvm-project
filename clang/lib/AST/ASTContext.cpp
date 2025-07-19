@@ -13212,7 +13212,8 @@ QualType ASTContext::getIntTypeForBitwidth(unsigned DestWidth,
 /// this function is compatible with GCC's preference:
 /// int > signed char > short > long > long long > int128_t
 /// Returns empty type if there is no appropriate target types.
-QualType ASTContext::getGCCCompatibleIntTypeForBitwidth(unsigned DestWidth, unsigned Signed) const {
+QualType ASTContext::getGCCCompatibleIntTypeForBitwidth(unsigned DestWidth,
+                                                        unsigned Signed) const {
   const TargetInfo &Target = getTargetInfo();
   if (Target.getIntWidth() == DestWidth)
     return Signed ? IntTy : UnsignedIntTy;

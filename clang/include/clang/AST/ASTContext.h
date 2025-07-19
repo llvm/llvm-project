@@ -882,7 +882,8 @@ public:
   /// this function is compatible with GCC's preference:
   /// int > signed char > short > long > long long > int128_t
   /// Returns empty type if there is no appropriate target types.
-  QualType getGCCCompatibleIntTypeForBitwidth(unsigned DestWidth, unsigned Signed) const;
+  QualType getGCCCompatibleIntTypeForBitwidth(unsigned DestWidth,
+                                              unsigned Signed) const;
 
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.

@@ -4949,7 +4949,8 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
   QualType NewElemTy;
 
   if (IntegerMode)
-    NewElemTy = Context.getGCCCompatibleIntTypeForBitwidth(DestWidth, OldElemTy->isSignedIntegerType());
+    NewElemTy = Context.getGCCCompatibleIntTypeForBitwidth(
+        DestWidth, OldElemTy->isSignedIntegerType());
   else
     NewElemTy = Context.getRealTypeForBitwidth(DestWidth, ExplicitType);
 
