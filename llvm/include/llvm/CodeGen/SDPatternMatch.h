@@ -93,7 +93,8 @@ struct Value_match {
 
   explicit Value_match(SDValue Match) : MatchVal(Match) {}
 
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) const {
+  template <typename MatchContext>
+  bool match(const MatchContext &, SDValue N) const {
     if (MatchVal)
       return MatchVal == N;
     return N.getNode();
@@ -130,7 +131,8 @@ struct DeferredValue_match {
 
   explicit DeferredValue_match(SDValue &Match) : MatchVal(Match) {}
 
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) const {
+  template <typename MatchContext>
+  bool match(const MatchContext &, SDValue N) const {
     return N == MatchVal;
   }
 };
@@ -196,7 +198,8 @@ struct Value_bind {
 
   explicit Value_bind(SDValue &N) : BindVal(N) {}
 
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) const {
+  template <typename MatchContext>
+  bool match(const MatchContext &, SDValue N) const {
     BindVal = N;
     return true;
   }
@@ -1203,7 +1206,8 @@ struct CondCode_match {
 
   explicit CondCode_match(ISD::CondCode *CC) : BindCC(CC) {}
 
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) const {
+  template <typename MatchContext>
+  bool match(const MatchContext &, SDValue N) const {
     if (auto *CC = dyn_cast<CondCodeSDNode>(N.getNode())) {
       if (CCToMatch && *CCToMatch != CC->get())
         return false;
