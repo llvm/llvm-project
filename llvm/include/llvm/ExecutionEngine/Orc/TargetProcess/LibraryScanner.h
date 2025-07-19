@@ -85,11 +85,55 @@ private:
     std::error_code errnoCode;
   };
 
+  void insert_realpath(StringRef path, const PathInfo &info) {
+    std::unique_lock<std::shared_mutex> lock(m_mutex);
+    m_realpathCache.insert({path, info});
+  }
+
+  std::optional<PathInfo> read_realpath(StringRef path) {
+    std::shared_lock<std::shared_mutex> lock(m_mutex);
+    auto it = m_realpathCache.find(path);
+    if (it != m_realpathCache.end()) {
+      return it->second;
+    }
+    return std::nullopt;
+  }
+
   StringSet<> m_seen;
   StringMap<PathInfo> m_realpathCache;
+
 #ifndef _WIN32
   StringMap<std::string> m_readlinkCache;
   StringMap<mode_t> m_lstatCache;
+
+  void insert_link(StringRef path, const std::string &s) {
+    std::unique_lock<std::shared_mutex> lock(m_mutex);
+    m_readlinkCache.insert({path, s});
+  }
+
+  std::optional<std::string> read_link(StringRef path) {
+    std::shared_lock<std::shared_mutex> lock(m_mutex);
+    auto it = m_readlinkCache.find(path);
+    if (it != m_readlinkCache.end()) {
+      return it->second;
+    }
+    return std::nullopt;
+  }
+
+  void insert_lstat(StringRef path, mode_t m) {
+    std::unique_lock<std::shared_mutex> lock(m_mutex);
+    m_lstatCache.insert({path, m});
+  }
+
+  std::optional<mode_t> read_lstat(StringRef path) {
+    std::shared_lock<std::shared_mutex> lock(m_mutex);
+    auto it = m_lstatCache.find(path);
+    if (it != m_lstatCache.end()) {
+      return it->second;
+    }
+    return std::nullopt;
+  }
+
 #endif
 };
 
@@ -116,7 +160,7 @@ public:
                                             long symloopLevel = 40);
 
 private:
-  mutable std::shared_mutex m_mutex;
+  // mutable std::shared_mutex m_mutex;
   std::shared_ptr<LibraryPathCache> m_cache;
 };
 
