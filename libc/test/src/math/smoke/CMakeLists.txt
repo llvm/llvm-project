@@ -3990,10 +3990,9 @@ add_fp_unittest(
   SRCS
     asinpif16_test.cpp
   DEPENDS
-  libc.src.math.asinpif16  
+    libc.src.math.asinpif16
     libc.src.errno.errno
     libc.src.math.fabs
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(

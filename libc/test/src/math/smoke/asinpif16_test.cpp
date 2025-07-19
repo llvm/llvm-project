@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "src/__support/libc_errno.h"
 #include "src/math/asinpif16.h"
 #include "src/math/fabs.h"
@@ -70,10 +71,10 @@ TEST_F(LlvmLibcAsinpif16Test, OutOfRange) {
 
 TEST_F(LlvmLibcAsinpif16Test, SymmetryProperty) {
   // Test that asinpi(-x) = -asinpi(x)
-  constexpr float16 test_vals[] = {0.1f16, 0.25f16, 0.5f16, 0.75f16,
+  constexpr float16 TEST_VALS[] = {0.1f16, 0.25f16, 0.5f16, 0.75f16,
                                    0.9f16, 0.99f16, 1.0f16};
 
-  for (float16 x : test_vals) {
+  for (float16 x : TEST_VALS) {
     float16 pos_result = LIBC_NAMESPACE::asinpif16(x);
     float16 neg_result = LIBC_NAMESPACE::asinpif16(-x);
 

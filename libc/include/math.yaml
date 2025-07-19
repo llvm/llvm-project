@@ -79,12 +79,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-  - name: atan
-    standards:
-      - stdc
-    return_type: double
-    arguments:
-      - type: double
   - name: asinpif16
     standards:
       - stdc
@@ -92,6 +86,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: atan
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: atan2
     standards:
       - stdc
