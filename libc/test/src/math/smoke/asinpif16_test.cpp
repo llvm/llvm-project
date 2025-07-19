@@ -8,7 +8,6 @@
 
 #include "src/__support/libc_errno.h"
 #include "src/math/asinpif16.h"
-#include "src/math/fabs.h"
 #include "test/UnitTest/FPMatcher.h"
 
 using LlvmLibcAsinpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
@@ -75,10 +74,13 @@ TEST_F(LlvmLibcAsinpif16Test, SymmetryProperty) {
                                    0.9f16, 0.99f16, 1.0f16};
 
   for (float16 x : TEST_VALS) {
-    float16 pos_result = LIBC_NAMESPACE::asinpif16(x);
-    float16 neg_result = LIBC_NAMESPACE::asinpif16(-x);
+    FPBits neg_x_bits(x);
+    neg_x_bits.set_sign(Sign::NEG);
+    float16 neg_x = neg_x_bits.get_val();
 
-    EXPECT_FP_EQ(pos_result,
-                 static_cast<float16>(LIBC_NAMESPACE::fabs(neg_result)));
+    float16 pos_result = LIBC_NAMESPACE::asinpif16(x);
+    float16 neg_result = LIBC_NAMESPACE::asinpif16(neg_x);
+
+    EXPECT_FP_EQ(pos_result, FPBits(neg_result).abs().get_val());
   }
 }
