@@ -39,24 +39,24 @@ constexpr bool test() {
     // one range
     std::ranges::zip_transform_view v(MakeTuple{}, SimpleCommon{buffer});
     auto it = v.begin();
-    assert( it + 8 == v.end());
-    assert( it + 8 == std::as_const(v).end());
+    assert(it + 8 == v.end());
+    assert(it + 8 == std::as_const(v).end());
   }
 
   {
     // two ranges
     std::ranges::zip_transform_view v(GetFirst{}, SimpleCommon{buffer}, std::views::iota(0));
     auto it = v.begin();
-    assert( it + 8 == v.end());
-    assert( it + 8 == std::as_const(v).end());
+    assert(it + 8 == v.end());
+    assert(it + 8 == std::as_const(v).end());
   }
 
   {
     // three ranges
     std::ranges::zip_transform_view v(Tie{}, SimpleCommon{buffer}, SimpleCommon{buffer}, std::ranges::single_view(2.));
     auto it = v.begin();
-    assert( it + 1 == v.end());
-    assert( it + 1 == std::as_const(v).end());
+    assert(it + 1 == v.end());
+    assert(it + 1 == std::as_const(v).end());
   }
 
   {

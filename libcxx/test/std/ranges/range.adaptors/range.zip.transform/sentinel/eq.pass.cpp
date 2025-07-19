@@ -150,7 +150,8 @@ constexpr bool test() {
 
   {
     // three ranges
-    std::ranges::zip_transform_view v(Tie{}, ComparableView{buffer1}, SimpleNonCommon{buffer2}, std::ranges::single_view(2.));
+    std::ranges::zip_transform_view v(
+        Tie{}, ComparableView{buffer1}, SimpleNonCommon{buffer2}, std::ranges::single_view(2.));
     assert(v.begin() != v.end());
     assert(v.begin() + 1 == v.end());
     assert(v.begin() + 1 == std::as_const(v).end());
