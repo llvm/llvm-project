@@ -728,9 +728,9 @@ void MCAssembler::layout() {
                       /*RecordReloc=*/true, Contents);
       }
       if (F.getVarFixups().size()) {
-        // In the variable part, fixup offsets are relative to the fixed
-        // part's start. Extend the variable contents to the left to account
-        // for the fixed part size.
+        // In the variable part, fixup offsets are relative to the fixed part's
+        // start. Extend the variable contents to the left to account for the
+        // fixed part size.
         Contents = MutableArrayRef(F.getParent()->ContentStorage)
                        .slice(F.VarContentStart - Contents.size(), F.getSize());
         for (MCFixup &Fixup : F.getVarFixups()) {
