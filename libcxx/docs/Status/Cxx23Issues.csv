@@ -222,7 +222,7 @@
 "`LWG3765 <https://wg21.link/LWG3765>`__","``const_sentinel`` should be constrained","2022-11 (Kona)","","",""
 "`LWG3766 <https://wg21.link/LWG3766>`__","``view_interface::cbegin`` is underconstrained","2022-11 (Kona)","","",""
 "`LWG3770 <https://wg21.link/LWG3770>`__","``const_sentinel_t`` is missing","2022-11 (Kona)","","",""
-"`LWG3773 <https://wg21.link/LWG3773>`__","``views::zip_transform`` still requires ``F`` to be ``copy_constructible`` when empty pack","2022-11 (Kona)","|Complete|","21",""
+"`LWG3773 <https://wg21.link/LWG3773>`__","``views::zip_transform`` still requires ``F`` to be ``copy_constructible`` when empty pack","2022-11 (Kona)","|Complete|","22",""
 "`LWG3774 <https://wg21.link/LWG3774>`__","``<flat_set>`` should include ``<compare>``","2022-11 (Kona)","","",""
 "`LWG3775 <https://wg21.link/LWG3775>`__","Broken dependencies in the ``Cpp17Allocator`` requirements","2022-11 (Kona)","","",""
 "`LWG3778 <https://wg21.link/LWG3778>`__","``vector<bool>`` missing exception specifications","2022-11 (Kona)","|Complete|","3.7",""
