@@ -258,7 +258,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   // drops to their defs.
   // And unstackify any stackified registers that don't have any uses, so that
   // they can be dropped later. This can happen when transformations after
-  // RegStackify removes instructions that use stackified registers.
+  // RegStackify remove instructions using stackified registers.
   BitVector UseEmpty(MRI.getNumVirtRegs());
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I) {
     Register Reg = Register::index2VirtReg(I);
