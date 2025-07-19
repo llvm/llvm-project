@@ -52,6 +52,11 @@ public:
   mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *e);
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
   mlir::Value VisitInitListExpr(const InitListExpr *e);
+
+  mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
+    return emitLoadOfLValue(e);
+  }
+
   mlir::Value VisitImaginaryLiteral(const ImaginaryLiteral *il);
   mlir::Value VisitParenExpr(ParenExpr *e);
   mlir::Value
@@ -465,6 +470,15 @@ mlir::Value CIRGenFunction::emitComplexPrePostIncDec(const UnaryOperator *e,
   // If this is a postinc, return the value read from memory, otherwise use the
   // updated value.
   return isPre ? incVal : inVal;
+}
+
+void CIRGenFunction::emitComplexExprIntoLValue(const Expr *e, LValue dest,
+                                               bool isInit) {
+  assert(e && getComplexType(e->getType()) &&
+         "Invalid complex expression to emit");
+  ComplexExprEmitter emitter(*this);
+  mlir::Value value = emitter.Visit(const_cast<Expr *>(e));
+  emitter.emitStoreOfComplex(getLoc(e->getExprLoc()), value, dest, isInit);
 }
 
 mlir::Value CIRGenFunction::emitLoadOfComplex(LValue src, SourceLocation loc) {
