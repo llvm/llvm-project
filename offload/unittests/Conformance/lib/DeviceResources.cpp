@@ -11,9 +11,8 @@ using namespace mathtest;
 //===----------------------------------------------------------------------===//
 
 void detail::freeDeviceMemory(void *Address) noexcept {
-  if (Address) {
+  if (Address)
     OL_CHECK(olMemFree(Address));
-  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -21,18 +20,16 @@ void detail::freeDeviceMemory(void *Address) noexcept {
 //===----------------------------------------------------------------------===//
 
 DeviceImage::~DeviceImage() noexcept {
-  if (Handle) {
+  if (Handle)
     OL_CHECK(olDestroyProgram(Handle));
-  }
 }
 
 DeviceImage &DeviceImage::operator=(DeviceImage &&Other) noexcept {
   if (this == &Other)
     return *this;
 
-  if (Handle) {
+  if (Handle)
     OL_CHECK(olDestroyProgram(Handle));
-  }
 
   DeviceHandle = Other.DeviceHandle;
   Handle = Other.Handle;

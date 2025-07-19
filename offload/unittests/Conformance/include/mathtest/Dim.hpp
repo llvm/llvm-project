@@ -23,9 +23,8 @@ public:
            "The number of dimensions must be less than or equal to 3");
 
     std::size_t Index = 0;
-    for (uint32_t DimValue : Dimensions) {
+    for (uint32_t DimValue : Dimensions)
       Data[Index++] = DimValue;
-    }
 
     assert(Data[0] > 0 && Data[1] > 0 && Data[2] > 0 &&
            "Dimensions must be positive");

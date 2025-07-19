@@ -25,9 +25,8 @@ void freeDeviceMemory(void *Address) noexcept;
 template <typename T> class [[nodiscard]] ManagedBuffer {
 public:
   ~ManagedBuffer() noexcept {
-    if (Address) {
+    if (Address)
       detail::freeDeviceMemory(Address);
-    }
   }
 
   ManagedBuffer(const ManagedBuffer &) = delete;
@@ -43,9 +42,8 @@ public:
     if (this == &Other)
       return *this;
 
-    if (Address) {
+    if (Address)
       detail::freeDeviceMemory(Address);
-    }
 
     Address = Other.Address;
     Size = Other.Size;
