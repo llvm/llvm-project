@@ -160,6 +160,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMRotateOpLowering
+    : public mlir::OpConversionPattern<cir::RotateOp> {
+public:
+  using mlir::OpConversionPattern<cir::RotateOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::RotateOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMCallOpLowering : public mlir::OpConversionPattern<cir::CallOp> {
 public:
   using mlir::OpConversionPattern<cir::CallOp>::OpConversionPattern;
@@ -530,6 +540,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::ComplexImagOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexImagPtrOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexImagPtrOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexImagPtrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexImagPtrOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

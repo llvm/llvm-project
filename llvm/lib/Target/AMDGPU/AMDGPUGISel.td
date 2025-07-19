@@ -55,6 +55,14 @@ def gi_vop3pmodsneg :
     GIComplexOperandMatcher<s32, "selectVOP3PModsNeg">,
     GIComplexPatternEquiv<VOP3PModsNeg>;
 
+def gi_vop3pmodsnegs :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsNegs">,
+    GIComplexPatternEquiv<VOP3PModsNegs>;
+
+def gi_dotiuvop3pmodsnegabs :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsNegAbs">,
+    GIComplexPatternEquiv<VOP3PModsNegAbs>;
+
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
@@ -82,6 +90,10 @@ def gi_swmmacindex8 :
 def gi_swmmacindex16 :
     GIComplexOperandMatcher<s32, "selectSWMMACIndex16">,
     GIComplexPatternEquiv<SWMMACIndex16>;
+
+def gi_swmmacindex32 :
+    GIComplexOperandMatcher<s64, "selectSWMMACIndex32">,
+    GIComplexPatternEquiv<SWMMACIndex32>;
 
 def gi_vop3opselmods :
     GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
@@ -125,6 +137,9 @@ def gi_global_offset :
 def gi_global_saddr :
     GIComplexOperandMatcher<s64, "selectGlobalSAddr">,
     GIComplexPatternEquiv<GlobalSAddr>;
+def gi_global_saddr_glc :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrGLC">,
+    GIComplexPatternEquiv<GlobalSAddrGLC>;
 
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,

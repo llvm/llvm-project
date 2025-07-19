@@ -333,13 +333,12 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
   Address ptr = dst.getBitFieldAddress();
 
   assert(!cir::MissingFeatures::armComputeVolatileBitfields());
-  const bool useVolatile = false;
 
   mlir::Value dstAddr = dst.getAddress().getPointer();
 
-  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, dstAddr,
+  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
-                                   dst.isVolatileQualified(), useVolatile);
+                                   dst.isVolatileQualified());
 }
 
 RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
@@ -352,8 +351,7 @@ RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
   assert(!cir::MissingFeatures::armComputeVolatileBitfields());
 
   mlir::Value field = builder.createGetBitfield(
-      getLoc(loc), resLTy, ptr.getPointer(), ptr.getElementType(), info,
-      lv.isVolatile(), false);
+      getLoc(loc), resLTy, ptr, ptr.getElementType(), info, lv.isVolatile());
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck() && "NYI");
   return RValue::get(field);
 }
@@ -366,7 +364,10 @@ Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
   cir::PointerType fieldPtr = cir::PointerType::get(fieldType);
   cir::GetMemberOp sea = getBuilder().createGetMember(
       loc, fieldPtr, base.getPointer(), field->getName(), index);
-  return Address(sea, CharUnits::One());
+  auto rec = cast<cir::RecordType>(base.getAddress().getElementType());
+  CharUnits offset = CharUnits::fromQuantity(
+      rec.getElementOffset(cgm.getDataLayout().layout, index));
+  return Address(sea, base.getAlignment().alignmentAtOffset(offset));
 }
 
 LValue CIRGenFunction::emitLValueForBitField(LValue base,
@@ -637,11 +638,6 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   }
   case UO_Real:
   case UO_Imag: {
-    if (op == UO_Imag) {
-      cgm.errorNYI(e->getSourceRange(), "UnaryOp real/imag");
-      return LValue();
-    }
-
     LValue lv = emitLValue(e->getSubExpr());
     assert(lv.isSimple() && "real/imag on non-ordinary l-value");
 
@@ -656,7 +652,10 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     QualType exprTy = getContext().getCanonicalType(e->getSubExpr()->getType());
     QualType elemTy = exprTy->castAs<clang::ComplexType>()->getElementType();
     mlir::Location loc = getLoc(e->getExprLoc());
-    Address component = builder.createComplexRealPtr(loc, lv.getAddress());
+    Address component =
+        e->getOpcode() == UO_Real
+            ? builder.createComplexRealPtr(loc, lv.getAddress())
+            : builder.createComplexImagPtr(loc, lv.getAddress());
     assert(!cir::MissingFeatures::opTBAA());
     LValue elemLV = makeAddrLValue(component, elemTy);
     elemLV.getQuals().addQualifiers(lv.getQuals());
