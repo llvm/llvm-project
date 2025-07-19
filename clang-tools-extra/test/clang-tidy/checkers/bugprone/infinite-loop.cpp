@@ -852,3 +852,64 @@ void structured_binding_in_template_instantiation(int b) {
   structured_binding_in_template_bylref(b, 0);
   structured_binding_in_template_byrref(b, 0);
 }
+
+void array_structured_binding() {
+  int arr[2] = {0, 0};
+  auto [x, y] = arr;
+
+  while (x < 10) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (x) are updated in the loop body [bugprone-infinite-loop]
+    y++;
+  }
+
+  while (y < 10) {
+    y++; // no warning
+  }
+}
+
+namespace std {
+    using size_t = int;
+    template <class> struct tuple_size;
+    template <std::size_t, class> struct tuple_element;
+    template <class...> class tuple;
+
+namespace {
+    template <class T, T v>
+    struct size_helper { static const T value = v; };
+} // namespace
+
+template <class... T>
+struct tuple_size<tuple<T...>> : size_helper<std::size_t, sizeof...(T)> {};
+
+template <std::size_t I, class... T>
+struct tuple_element<I, tuple<T...>> {
+    using type =  __type_pack_element<I, T...>;
+};
+
+template <class...> class tuple {};
+
+template <std::size_t I, class... T>
+typename tuple_element<I, tuple<T...>>::type get(tuple<T...>);
+} // namespace std
+
+std::tuple<int*, int> &get_chunk();
+
+void test_structured_bindings_tuple() {
+  auto [buffer, size ] = get_chunk();
+  int maxLen = 8;
+
+  while (size < maxLen) {
+    // No warning. The loop is finite because 'size' is being incremented in each iteration and compared against 'maxLen' for termination
+    buffer[size++] = 2;
+  }
+}
+
+void test_structured_bindings_tuple_ref() {
+  auto& [buffer, size ] = get_chunk();
+  int maxLen = 8;
+
+  while (size < maxLen) {
+    // No warning. The loop is finite because 'size' is being incremented in each iteration and compared against 'maxLen' for termination
+    buffer[size++] = 2;
+  }
+}
