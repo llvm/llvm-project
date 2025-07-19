@@ -3970,6 +3970,9 @@ class VPlan {
   /// Represents the vectorization factor of the loop.
   VPValue VF;
 
+  /// Represents the symbolic unroll factor of the loop.
+  VPValue UF;
+
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPValue VFxUF;
 
@@ -4120,6 +4123,9 @@ public:
 
   /// Returns the VF of the vector loop region.
   VPValue &getVF() { return VF; };
+
+  /// Returns the symbolic UF of the vector loop region.
+  VPValue &getSymbolicUF() { return UF; };
 
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }

@@ -7223,9 +7223,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan);
   VPlanTransforms::removeBranchOnConst(BestVPlan);
-  VPlanTransforms::narrowInterleaveGroups(
-      BestVPlan, BestVF,
-      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
@@ -8336,6 +8333,14 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       if (CM.foldTailWithEVL() && !HasScalarVF)
         VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
                                  *Plan, CM.getMaxSafeElements());
+
+      if (auto P = VPlanTransforms::narrowInterleaveGroups(
+              *Plan,
+              TTI.getRegisterBitWidth(
+                  TargetTransformInfo::RGK_FixedWidthVector),
+              SubRange))
+        VPlans.push_back(std::move(P));
+
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
