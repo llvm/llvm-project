@@ -36,6 +36,9 @@ What's New in Libc++ 22.0.0?
 ==============================
 
 Implemented Papers
+
+- P3168R2: Give ``std::optional`` Range Support (`Github <https://github.com/llvm/llvm-project/issues/105430>`__)
+
 ------------------
 
 
