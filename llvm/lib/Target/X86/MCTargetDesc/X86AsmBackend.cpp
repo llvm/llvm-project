@@ -456,8 +456,6 @@ bool X86AsmBackend::canPadInst(const MCInst &Inst, MCObjectStreamer &OS) const {
 }
 
 bool X86AsmBackend::canPadBranches(MCObjectStreamer &OS) const {
-  if (!OS.getAllowAutoPadding())
-    return false;
   assert(allowAutoPadding() && "incorrect initialization!");
 
   // We only pad in text section.
@@ -491,8 +489,15 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
   // fragment will have changed.
   IsRightAfterData =
       isRightAfterData(OS.getCurrentFragment(), PrevInstPosition);
+  bool CanPadInst = false;
+  bool AutoPadding = OS.getAllowAutoPadding();
+  if (LLVM_UNLIKELY(AutoPadding || X86PadForAlign)) {
+    CanPadInst = canPadInst(Inst, OS);
+    if (CanPadInst)
+      OS.getCurrentFragment()->setAllowAutoPadding(true);
+  }
 
-  if (!canPadBranches(OS))
+  if (!AutoPadding || !canPadBranches(OS))
     return;
 
   // NB: PrevInst only valid if canPadBranches is true.
@@ -504,7 +509,7 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
   // we call canPadInst (not cheap) twice. However, in the common case, we can
   // avoid unnecessary calls to that, as this is otherwise only used for
   // relaxable fragments.
-  if (!canPadInst(Inst, OS))
+  if (!CanPadInst)
     return;
 
   if (PendingBA && PendingBA->getNext() == OS.getCurrentFragment()) {
@@ -542,15 +547,12 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
 /// Set the last fragment to be aligned for the BoundaryAlignFragment.
 void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
                                        const MCInst &Inst) {
-  MCFragment *CF = OS.getCurrentFragment();
-  if (CF->getKind() == MCFragment::FT_Relaxable)
-    CF->setAllowAutoPadding(canPadInst(Inst, OS));
-
   // Update PrevInstOpcode here, canPadInst() reads that.
+  MCFragment *CF = OS.getCurrentFragment();
   PrevInstOpcode = Inst.getOpcode();
   PrevInstPosition = std::make_pair(CF, getSizeForInstFragment(CF));
 
-  if (!canPadBranches(OS))
+  if (!OS.getAllowAutoPadding() || !canPadBranches(OS))
     return;
 
   // PrevInst is only needed if canPadBranches. Copying an MCInst isn't cheap.

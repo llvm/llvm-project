@@ -106,18 +106,6 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
 }
 
-MCFragment *MCObjectStreamer::getOrCreateDataFragment() {
-  // TODO: Start a new fragment whenever finalizing the variable-size tail of a
-  // previous one, so that all getOrCreateDataFragment calls can be replaced
-  // with getCurrentFragment
-  auto *F = getCurrentFragment();
-  if (F->getKind() != MCFragment::FT_Data) {
-    F = getContext().allocFragment<MCFragment>();
-    insert(F);
-  }
-  return F;
-}
-
 void MCObjectStreamer::visitUsedSymbol(const MCSymbol &Sym) {
   Assembler->registerSymbol(Sym);
 }
@@ -379,6 +367,7 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
   F->setVarContents(Data);
   F->setVarFixups(Fixups);
   F->setInst(Inst);
+  newFragment();
 }
 
 void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
@@ -444,6 +433,7 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
   F->Kind = MCFragment::FT_Dwarf;
   F->setDwarfAddrDelta(buildSymbolDiff(*this, Label, LastLabel, SMLoc()));
   F->setDwarfLineDelta(LineDelta);
+  newFragment();
 }
 
 void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
@@ -474,6 +464,7 @@ void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
   auto *F = getOrCreateDataFragment();
   F->Kind = MCFragment::FT_DwarfFrame;
   F->setDwarfAddrDelta(buildSymbolDiff(*this, Label, LastLabel, Loc));
+  newFragment();
 }
 
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
@@ -536,32 +527,38 @@ void MCObjectStreamer::emitBytes(StringRef Data) {
   DF->appendContents(ArrayRef(Data.data(), Data.size()));
 }
 
+MCAlignFragment *MCObjectStreamer::createAlignFragment(
+    Align Alignment, int64_t Fill, uint8_t FillLen, unsigned MaxBytesToEmit) {
+  if (MaxBytesToEmit == 0)
+    MaxBytesToEmit = Alignment.value();
+  return getContext().allocFragment<MCAlignFragment>(Alignment, Fill, FillLen,
+                                                     MaxBytesToEmit);
+}
+
 void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
                                             uint8_t FillLen,
                                             unsigned MaxBytesToEmit) {
-  if (MaxBytesToEmit == 0)
-    MaxBytesToEmit = Alignment.value();
-  insert(getContext().allocFragment<MCAlignFragment>(Alignment, Fill, FillLen,
-                                                     MaxBytesToEmit));
-
+  auto *F = createAlignFragment(Alignment, Fill, FillLen, MaxBytesToEmit);
+  insert(F);
   // Update the maximum alignment on the current section if necessary.
-  MCSection *CurSec = getCurrentSectionOnly();
-  CurSec->ensureMinAlignment(Alignment);
+  F->getParent()->ensureMinAlignment(Alignment);
 }
 
 void MCObjectStreamer::emitCodeAlignment(Align Alignment,
                                          const MCSubtargetInfo *STI,
                                          unsigned MaxBytesToEmit) {
-  emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
-  auto *F = cast<MCAlignFragment>(getCurrentFragment());
+  auto *F = createAlignFragment(Alignment, 0, 1, MaxBytesToEmit);
   F->setEmitNops(true, STI);
+  insert(F);
+  // Update the maximum alignment on the current section if necessary.
+  F->getParent()->ensureMinAlignment(Alignment);
+
   // With RISC-V style linker relaxation, mark the section as linker-relaxable
   // if the alignment is larger than the minimum NOP size.
   unsigned Size;
   if (getAssembler().getBackend().shouldInsertExtraNopBytesForCodeAlign(*F,
                                                                         Size)) {
-    getCurrentSectionOnly()->setLinkerRelaxable();
-    newFragment();
+    F->getParent()->setLinkerRelaxable();
   }
 }
 

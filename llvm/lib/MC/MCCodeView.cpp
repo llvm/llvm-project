@@ -166,8 +166,8 @@ void CodeViewContext::emitStringTable(MCObjectStreamer &OS) {
   // somewhere else. If somebody wants two string tables in their .s file, one
   // will just be empty.
   if (!StrTabFragment) {
-    StrTabFragment = Ctx.allocFragment<MCFragment>();
-    OS.insert(StrTabFragment);
+    OS.newFragment();
+    StrTabFragment = OS.getCurrentFragment();
   }
 
   OS.emitValueToAlignment(Align(4), 0);
