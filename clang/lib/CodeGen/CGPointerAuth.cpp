@@ -53,6 +53,16 @@ llvm::ConstantInt *CodeGenModule::getPointerAuthOtherDiscriminator(
   llvm_unreachable("bad discrimination kind");
 }
 
+uint16_t CodeGen::getPointerAuthTypeDiscriminator(CodeGenModule &CGM,
+                                                  QualType FunctionType) {
+  return CGM.getContext().getPointerAuthTypeDiscriminator(FunctionType);
+}
+
+uint16_t CodeGen::getPointerAuthDeclDiscriminator(CodeGenModule &CGM,
+                                                  GlobalDecl Declaration) {
+  return CGM.getPointerAuthDeclDiscriminator(Declaration);
+}
+
 /// Return the "other" decl-specific discriminator for the given decl.
 uint16_t
 CodeGenModule::getPointerAuthDeclDiscriminator(GlobalDecl Declaration) {
@@ -586,6 +596,15 @@ llvm::Constant *CodeGenModule::getConstantSignedPointer(
 
   return getConstantSignedPointer(Pointer, Schema.getKey(), StorageAddress,
                                   OtherDiscriminator);
+}
+
+llvm::Constant *
+CodeGen::getConstantSignedPointer(CodeGenModule &CGM,
+                                  llvm::Constant *pointer, unsigned key,
+                                  llvm::Constant *storageAddress,
+                                  llvm::ConstantInt *otherDiscriminator) {
+  return CGM.getConstantSignedPointer(pointer, key, storageAddress,
+                                      otherDiscriminator);
 }
 
 void CodeGenModule::destroyConstantSignedPointerCaches() {
