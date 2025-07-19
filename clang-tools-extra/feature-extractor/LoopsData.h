@@ -17,12 +17,14 @@ public:
     llvm::APInt loop_range;
     std::size_t float_ops;
     std::size_t int_ops;
+    std::size_t mem_loads;
+    std::size_t mem_stores;
 
     MetaData(const Stmt *fs) : for_stmt(fs) {}
     MetaData(const Stmt *fs, const llvm::APInt &rng, std::size_t float_ops,
-             std::size_t int_ops)
-        : for_stmt(fs), loop_range(rng), float_ops(float_ops),
-          int_ops(int_ops) {}
+             std::size_t int_ops, std::size_t lds, std::size_t strs)
+        : for_stmt(fs), loop_range(rng), float_ops(float_ops), int_ops(int_ops),
+          mem_loads(lds), mem_stores(strs) {}
 
     friend bool operator==(const MetaData &lhs, const MetaData &rhs) {
       return lhs.for_stmt == rhs.for_stmt;

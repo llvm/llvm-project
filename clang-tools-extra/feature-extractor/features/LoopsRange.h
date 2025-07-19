@@ -9,6 +9,7 @@
 #include "../utils.h"
 #include "../visitors/FloatOpCounter.h"
 #include "../visitors/IntegerOpCounter.h"
+#include "../visitors/MemoryAccessCounter.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -34,15 +35,18 @@ public:
 
           FloatOpCounter fCounter;
           IntegerOpCounter iCounter;
+          MemoryAccessCounter memCounter;
 
           fCounter.traverse(const_cast<Stmt *>(fs->getBody()));
           iCounter.traverse(const_cast<Stmt *>(fs->getBody()));
+          memCounter.traverse(const_cast<Stmt *>(fs->getBody()));
 
           loops_data.add_for(
               result.Context, parent_for,
               LoopsData::MetaData{
                   fs, Utils::get_total_for_repetition_count(result.Context, fs),
-                  fCounter.get_count(), iCounter.get_count()});
+                  fCounter.get_count(), iCounter.get_count(),
+                  memCounter.get_load_count(), memCounter.get_store_count()});
         };
 
     if (const ForStmt *fs = result.Nodes.getNodeAs<ForStmt>("topLevelFor");
@@ -65,13 +69,16 @@ public:
 
     for (auto &loop : loops_data.get_loops()) {
       loop.traverse_pre_order(
-          [&loop](const LoopsData::TreeType::TraverseResult &result) mutable {
+          [](const LoopsData::TreeType::TraverseResult &result) mutable {
             const auto &[optParentStmt, selfMetaData, depth, isLeaf] = result;
 
             llvm::outs() << std::string(depth * 2, ' ') << "for "
-                         << (isLeaf ? "(leaf) " : "") << selfMetaData.loop_range
-                         << " " << selfMetaData.float_ops << " "
-                         << selfMetaData.int_ops << "\n";
+                         << (isLeaf ? "(leaf) " : "")
+                         << "loop range: " << selfMetaData.loop_range
+                         << ", float ops: " << selfMetaData.float_ops
+                         << ", int ops: " << selfMetaData.int_ops
+                         << ", mem loads: " << selfMetaData.mem_loads
+                         << ", mem stores: " << selfMetaData.mem_stores << "\n";
           });
     }
     return loops_data.get_ids().size();
