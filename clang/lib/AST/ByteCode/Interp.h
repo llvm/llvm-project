@@ -1890,9 +1890,8 @@ inline bool CheckNull(InterpState &S, CodePtr OpPC) {
   if (Ptr.isZero()) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_dereferencing_null);
-    return false;
+    return S.noteUndefinedBehavior();
   }
-
   return true;
 }
 
