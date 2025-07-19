@@ -8,6 +8,7 @@
 
 // REQUIRES: std-at-least-c++23, has-unix-headers, libcpp-hardening-mode={{extensive|debug}}
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// ADDITIONAL_COMPILE_FLAGS: -g
 
 /*
   Hardened requirements for the `current` call with given `skip` and `max_depth` amounts:
@@ -25,7 +26,7 @@
 
 int main(int, char**) {
   TEST_LIBCPP_ASSERT_FAILURE(
-      std::stacktrace::current(1, 0xffffffffffffffff), "sum of skip and max_depth too large; overflows size_type");
+      std::stacktrace::current(1, 0xffffffffffffffff), "sum of skip and max_depth overflows size_type");
 
   return 0;
 }

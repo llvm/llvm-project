@@ -18,21 +18,25 @@
 */
 
 #include <cassert>
+#include <iostream>
 #include <stacktrace>
 
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current_with_skip_depth() {
   // current stack is: [this function, main, (possibly something else, e.g. `_start` from libc)]
   // so it's probably 3 functions deep -- but certainly at least 2 deep.
-  auto st = std::stacktrace::current();
+  auto st = std::stacktrace::current(0);
+  std::cout << st << '\n';
   assert(st.size() >= 2);
-  auto it     = st.begin();
-  auto entry1 = *(it++); // represents this function
-  auto entry2 = *(it++); // represents our caller, `main`
+  auto it = st.begin();
+  ++it;
+  auto entry = *it; // represents our caller, `main`
 
   // get current trace again, but skip the 1st
-  st = std::stacktrace::current(1, 1);
+  st = std::stacktrace::current(1);
+  std::cout << st << '\n';
   assert(st.size() >= 1);
-  assert(*st.begin() == entry2);
+  it = st.begin();
+  assert(*it == entry);
 }
 
 _LIBCPP_NO_TAIL_CALLS
