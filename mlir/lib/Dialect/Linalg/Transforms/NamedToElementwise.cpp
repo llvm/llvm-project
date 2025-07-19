@@ -20,11 +20,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
-namespace mlir {
-#define GEN_PASS_DEF_LINALGNAMEDTOELEMENTWISEPASS
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-} // namespace mlir
-
 using namespace mlir;
 using namespace mlir::linalg;
 
@@ -74,22 +69,6 @@ struct NamedToElementwisePattern : public OpRewritePattern<NamedOpTy> {
     rewriter.replaceOpWithNewOp<ElementwiseOp>(op, op.getDpsInputs(),
                                                op.getDpsInits(), attrs);
     return success();
-  }
-};
-
-struct LinalgNamedToElementwisePass
-    : public impl::LinalgNamedToElementwisePassBase<
-          LinalgNamedToElementwisePass> {
-  using impl::LinalgNamedToElementwisePassBase<
-      LinalgNamedToElementwisePass>::LinalgNamedToElementwisePassBase;
-
-  void runOnOperation() override {
-    Operation *op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    populateLinalgNamedToElementwisePatterns(patterns);
-
-    if (failed(applyPatternsGreedily(op, std::move(patterns))))
-      return signalPassFailure();
   }
 };
 } // namespace

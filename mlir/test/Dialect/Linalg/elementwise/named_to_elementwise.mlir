@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-named-to-elementwise -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -linalg-morph-ops=named-to-category -split-input-file | FileCheck %s
 
 // CHECK: @exp(%[[A:.+]]: tensor<16x8xf32>, %[[B:.+]]: tensor<16x8xf32>) ->  tensor<16x8xf32> {
 // CHECK: {{.*}} = linalg.elementwise
