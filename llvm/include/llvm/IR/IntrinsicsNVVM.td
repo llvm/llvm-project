@@ -2024,9 +2024,7 @@ foreach dim = 1...5 in {
                       tensor_dim_args,      // actual tensor dims
                       [llvm_i64_ty]),       // cache_hint
           [llvm_i1_ty],                     // Flag for cache_hint
-          [IntrConvergent,
-           ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
+          [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
 
     // Intrinsics for TMA Copy with reduction
     foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in
@@ -2037,18 +2035,31 @@ foreach dim = 1...5 in {
                          tensor_dim_args,     // actual tensor dims
                         [llvm_i64_ty]),       // cache_hint
           [llvm_i1_ty],                       // Flag for cache_hint
-          [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
+          [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
   }
 }
+
+// TMA S2G tile::scatter4
+def int_nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d
+  : DefaultAttrsIntrinsicFlags<[],
+      !listconcat([llvm_shared_ptr_ty,        // src_smem_ptr
+                   llvm_ptr_ty],              // tensormap_ptr
+                  !listsplat(llvm_i32_ty, 5), // dims
+                  [llvm_i64_ty]),             // cache_hint
+      [llvm_i1_ty],                           // Flag for cache_hint
+      [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
 
 // TMA Tensor Copy Intrinsics: G2S -> From Global to Shared memory variants
 foreach dim = 1...5 in {
   defvar tensor_dim_args = !listsplat(llvm_i32_ty, dim);
 
-  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col", "im2col_w", "im2col_w_128"], ["tile"]) in {
     defvar is_im2col = !eq(mode, "im2col");
-    defvar num_im2col_offsets = !if(is_im2col, !add(dim, -2), 0);
+    defvar is_im2colw = !or(!eq(mode, "im2col_w"), !eq(mode, "im2col_w_128"));
+
+    // For im2col_w/w128 modes, the num_offsets is always 2.
+    // For im2col mode, the num_offsets is (dim - 2).
+    defvar num_im2col_offsets = !if(is_im2colw, 2, !if(is_im2col, !add(dim, -2), 0));
     defvar im2col_offsets_args = !listsplat(llvm_i16_ty, num_im2col_offsets);
 
     defvar g2s_params = !listconcat(
@@ -2079,10 +2090,59 @@ foreach dim = 1...5 in {
                        im2col_offsets_args, // im2col offsets
                       [llvm_i64_ty]),       // cache_hint
           [llvm_i1_ty],                     // Flag for cache_hint
-          [IntrConvergent,
-           ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+          [IntrConvergent, ReadOnly<ArgIndex<0>>]>;
+
+    def int_nvvm_cp_async_bulk_tensor_g2s_cta_ # mode # _ # dim # d :
+      DefaultAttrsIntrinsicFlags<[],
+          !listconcat([llvm_shared_ptr_ty,  // dst_ptr
+                       llvm_shared_ptr_ty,  // mbarrier_ptr
+                       llvm_ptr_ty],        // tensormap_ptr
+                       tensor_dim_args,     // actual tensor dims
+                       im2col_offsets_args, // im2col offsets
+                       [llvm_i64_ty]),      // cache_hint
+          [llvm_i1_ty],                     // Flag for cache_hint
+          [IntrConvergent, WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
   }
 }
+
+// TMA copy for tile::gather4
+def int_nvvm_cp_async_bulk_tensor_g2s_tile_gather4_2d
+  : DefaultAttrsIntrinsicFlags<[],
+      !listconcat(
+      [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_ptr_ty],               // tensormap_ptr
+       !listsplat(llvm_i32_ty, 5), // co-ordinates
+      [llvm_i16_ty,                // cta_mask
+       llvm_i64_ty]),              // cache_hint
+      [llvm_i1_ty,                 // Flag for cta_mask
+       llvm_i1_ty,                 // Flag for cache_hint
+       llvm_i32_ty],               // Flag for cta_group
+      [IntrConvergent,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+       // Allowed values for cta_group are {0,1,2} i.e [0, 3).
+       Range<ArgIndex<12>, 0, 3>]>;
+
+def int_nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_2d
+  : DefaultAttrsIntrinsicFlags<[],
+      !listconcat(
+      [llvm_shared_ptr_ty,         // dst_shared_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_ptr_ty],               // tensormap_ptr
+       !listsplat(llvm_i32_ty, 5), // co-ordinates
+      [llvm_i64_ty]),              // cache_hint
+      [llvm_i1_ty],                // Flag for cache_hint
+      [IntrConvergent,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
+
+// TMA prefetch for tile::gather4
+def int_nvvm_cp_async_bulk_tensor_prefetch_tile_gather4_2d
+  : DefaultAttrsIntrinsicFlags<[],
+      !listconcat([llvm_ptr_ty],               // tensormap_ptr
+                  !listsplat(llvm_i32_ty, 5),  // co-ordinates
+                  [llvm_i64_ty]),              // cache_hint
+      [llvm_i1_ty],                            // Flag for cache_hint
+      [IntrConvergent, ReadOnly<ArgIndex<0>>]>;
 
 // Intrinsics for Prefetch and Prefetchu
 let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>] in {

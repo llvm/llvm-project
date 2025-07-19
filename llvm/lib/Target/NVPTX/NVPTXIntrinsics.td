@@ -600,12 +600,23 @@ defm CP_ASYNC_BULK_PREFETCH_CH : CP_ASYNC_BULK_PREFETCH_INTR<has_ch = 1>;
 // TMA Async Bulk Tensor Copy Functions
 //-------------------------------------
 
-class TMA_DIMS_UTIL<int dim> {
+class TMA_DIMS_UTIL<int dim, string mode = ""> {
   // For example, when 'dim' is 3, this generates:
   // an ins_dag:    B32:$d0, B32:$d1, B32:$d2
   // with base_str: $d0, $d1, $d2
   dag ins_dag = !dag(ins, !listsplat(B32, dim), !foreach(i, !range(dim), "d" # i));
   string base_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+
+  // Tile::Gather4/scatter4 actually operate on a 2D tensor,
+  // though they take 5 co-ordinates.
+  //
+  // The scatter-gather happens over 4 rows with a fixed
+  // column-index. The first co-ordinate represents the
+  // col-index followed by four row-indices.
+  int num_dims = !cond(
+                   !eq(mode, "tile_scatter4") : 2,
+                   !eq(mode, "tile_gather4")  : 2,
+                   true : dim); // for all other modes
 }
 
 class TMA_IM2COL_UTIL<int dim, string mode> {
@@ -692,14 +703,138 @@ foreach dim = [1, 2, 3, 4, 5] in {
   }
 }
 
+multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred = []> {
+  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
+  defvar asm_str_base = "$cg [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
+
+  defvar im2col_dag = TMA_IM2COL_UTIL<dim, mode>.ins_dag;
+  defvar im2col_str = TMA_IM2COL_UTIL<dim, mode>.base_str;
+  defvar asm_str = !if(!empty(im2col_str),
+                       asm_str_base,
+                       asm_str_base # ", {{" # im2col_str # "}}");
+
+  defvar dim_val = TMA_DIMS_UTIL<dim, mode>.num_dims;
+  defvar inst_name = "cp.async.bulk.tensor"
+                     # "." # dim_val # "d"
+                     # "." # "shared::cluster.global"
+                     # "." # !subst("_", "::", mode)
+                     # "." # "mbarrier::complete_tx::bytes";
+  defvar intr = !cast<Intrinsic>(
+                  "int_nvvm_cp_async_bulk_tensor_g2s_" # mode # "_" # dim_val # "d");
+
+  defvar ins_dag = !con(
+                     (ins ADDR:$dst, ADDR:$mbar, B64:$tmap),
+                     dims_dag, im2col_dag,
+                     (ins B16:$mc, B64:$ch, CTAGroupFlags:$cg));
+
+  defvar intr_dag_base = !con(
+                         (intr addr:$dst, addr:$mbar, B64:$tmap),
+                         !setdagop(dims_dag, intr),
+                         !setdagop(im2col_dag, intr),
+                         (intr B16:$mc, B64:$ch));
+  defvar intr_dag_no_hints   = !con(intr_dag_base, (intr 0,  0,  timm:$cg));
+  defvar intr_dag_with_mc    = !con(intr_dag_base, (intr -1, 0,  timm:$cg));
+  defvar intr_dag_with_ch    = !con(intr_dag_base, (intr 0, -1,  timm:$cg));
+  defvar intr_dag_with_mc_ch = !con(intr_dag_base, (intr -1, -1, timm:$cg));
+
+  def "" : NVPTXInst<(outs), ins_dag,
+             inst_name # asm_str # ";",
+             [intr_dag_no_hints]>,
+             Requires<pred>;
+  def _MC : NVPTXInst<(outs), ins_dag,
+              inst_name # ".multicast::cluster" # asm_str # ", $mc;",
+              [intr_dag_with_mc]>,
+              Requires<pred>;
+  def _CH : NVPTXInst<(outs), ins_dag,
+              inst_name # ".L2::cache_hint" # asm_str # ", $ch;",
+              [intr_dag_with_ch]>,
+              Requires<pred>;
+  def _MC_CH : NVPTXInst<(outs), ins_dag,
+                 inst_name # ".multicast::cluster.L2::cache_hint" # asm_str # ", $mc, $ch;",
+                 [intr_dag_with_mc_ch]>,
+                 Requires<pred>;
+}
+foreach dim = 3...5 in {
+  foreach mode = ["im2col_w", "im2col_w_128"] in {
+    defm TMA_G2S_ # !toupper(mode) # "_" # dim # "D"
+      : TMA_TENSOR_G2S_INTR<dim, mode, [hasTMACTAGroupSupport]>;
+  }
+}
+defm TMA_G2S_TILE_GATHER4_2D : TMA_TENSOR_G2S_INTR<5, "tile_gather4",
+                               [hasTMACTAGroupSupport]>;
+
+multiclass TMA_TENSOR_G2S_CTA_INTR<int dim, string mode, list<Predicate> pred = []> {
+  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
+  defvar asm_str_base = " [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
+
+  defvar im2col_dag = TMA_IM2COL_UTIL<dim, mode>.ins_dag;
+  defvar im2col_str = TMA_IM2COL_UTIL<dim, mode>.base_str;
+  defvar asm_str = !if(!empty(im2col_str),
+                       asm_str_base,
+                       asm_str_base # ", {{" # im2col_str # "}}");
+
+  defvar ins_dag = !con(
+                     (ins ADDR:$dst, ADDR:$mbar, B64:$tmap),
+                     dims_dag, im2col_dag,
+                     (ins B64:$ch));
+
+  defvar dim_val = TMA_DIMS_UTIL<dim, mode>.num_dims;
+  defvar intr = !cast<Intrinsic>(
+                  "int_nvvm_cp_async_bulk_tensor_g2s_cta_" # mode # "_" # dim_val # "d");
+  defvar intr_dag = !con(
+                      (intr addr:$dst, addr:$mbar, B64:$tmap),
+                      !setdagop(dims_dag, intr),
+                      !setdagop(im2col_dag, intr),
+                      (intr B64:$ch, 0));
+  defvar intr_dag_with_ch = !con(
+                              (intr addr:$dst, addr:$mbar, B64:$tmap),
+                              !setdagop(dims_dag, intr),
+                              !setdagop(im2col_dag, intr),
+                              (intr B64:$ch, -1));
+  defvar inst_name = "cp.async.bulk.tensor"
+                     # "." # dim_val # "d"
+                     # "." # "shared::cta.global"
+                     # "." # !subst("_", "::", mode)
+                     # "." # "mbarrier::complete_tx::bytes";
+
+  def "" : NVPTXInst<(outs), ins_dag,
+             inst_name # asm_str # ";",
+             [intr_dag]>,
+             Requires<pred>;
+  def _CH : NVPTXInst<(outs), ins_dag,
+              inst_name # ".L2::cache_hint" # asm_str # ", $ch;",
+              [intr_dag_with_ch]>,
+              Requires<pred>;
+}
+foreach dim = 1...5 in {
+  defm TMA_G2S_CTA_TILE_ # dim # "D"
+    : TMA_TENSOR_G2S_CTA_INTR<dim, "tile", [hasPTX<86>, hasSM<90>]>;
+}
+foreach dim = 3...5 in {
+  defm TMA_G2S_CTA_IM2COL_ # dim # "D"
+    : TMA_TENSOR_G2S_CTA_INTR<dim, "im2col", [hasPTX<86>, hasSM<90>]>;
+
+  defm TMA_G2S_CTA_IM2COL_W_ # dim # "D"
+    : TMA_TENSOR_G2S_CTA_INTR<dim, "im2col_w", [hasPTX<86>, hasSM<100>]>;
+
+  defm TMA_G2S_CTA_IM2COL_W_128_ # dim # "D"
+    : TMA_TENSOR_G2S_CTA_INTR<dim, "im2col_w_128", [hasTMACTAGroupSupport]>;
+}
+defm TMA_G2S_CTA_TILE_GATHER4_2D : TMA_TENSOR_G2S_CTA_INTR<5, "tile_gather4",
+                                   [hasPTX<86>, hasSM<100>]>;
+
 multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
                                list<Predicate> pred = [hasPTX<80>, hasSM<90>]> {
   defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
   defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
 
+  defvar dim_val = TMA_DIMS_UTIL<dim, mode>.num_dims;
   defvar intr = !cast<Intrinsic>(
-                  "int_nvvm_cp_async_bulk_tensor_s2g_" # mode # "_" # dim # d);
+                  "int_nvvm_cp_async_bulk_tensor_s2g_" # mode # "_" # dim_val # "d");
+
   defvar intr_dag = !con((intr addr:$src, B64:$tmap),
                          !setdagop(dims_dag, intr),
                          (intr B64:$ch, 0));
@@ -707,11 +842,13 @@ multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
                                  !setdagop(dims_dag, intr),
                                  (intr B64:$ch, -1));
 
-  // For im2col mode, the actual asm_str is "im2col_no_offs"
-  defvar mode_asm_str = !if(!eq(mode, "im2col"),
-                            "im2col_no_offs", mode);
+  // Fix-up the asm_str when it is im2col/scatter4.
+  defvar mode_asm_str = !cond(
+                          !eq(mode, "im2col") : "im2col_no_offs",
+                          !eq(mode, "tile_scatter4") : "tile::scatter4",
+                          true : mode);
   defvar prefix = "cp.async.bulk.tensor"
-                  # "." # dim # "d"
+                  # "." # dim_val # "d"
                   # ".global.shared::cta"
                   # "." # mode_asm_str
                   # ".bulk_group";
@@ -729,10 +866,12 @@ multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
 }
 foreach dim = 1...5 in {
   foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
-    defvar suffix = !toupper(mode) # "_" # dim # D;
+    defvar suffix = !toupper(mode) # "_" # dim # "D";
     defm TMA_TENSOR_S2G_ # suffix : TMA_TENSOR_S2G_INTR<dim, mode>;
   }
 }
+defm TMA_S2G_TILE_SCATTER4_2D : TMA_TENSOR_S2G_INTR<5, "tile_scatter4",
+                                [hasTMACTAGroupSupport]>;
 
 def TMAReductionFlags : Operand<i32> {
   let PrintMethod = "printTmaReductionMode";
@@ -786,13 +925,14 @@ multiclass TMA_TENSOR_PREFETCH_INTR<int dim, string mode,
                        asm_str_base,
                        asm_str_base # ", {{" # im2col_str # "}}");
 
+  defvar dim_val = TMA_DIMS_UTIL<dim, mode>.num_dims;
   defvar inst_name = "cp.async.bulk.prefetch.tensor"
-                     # "." # dim # "d"
+                     # "." # dim_val # "d"
                      # "." # "L2.global"
-                     # "." # mode;
+                     # "." # !subst("_", "::", mode);
 
   defvar intr = !cast<Intrinsic>(
-                  "int_nvvm_cp_async_bulk_tensor_prefetch_" # mode # "_" # dim # d);
+                  "int_nvvm_cp_async_bulk_tensor_prefetch_" # mode # "_" # dim_val # "d");
 
   defvar ins_dag  = !con((ins  B64:$tmap),
                          dims_dag,
@@ -818,10 +958,19 @@ multiclass TMA_TENSOR_PREFETCH_INTR<int dim, string mode,
 }
 foreach dim = 1...5 in {
   foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
-    defvar suffix = !toupper(mode) # "_" # dim # D;
+    defvar suffix = !toupper(mode) # "_" # dim # "D";
     defm TMA_TENSOR_PF_ # suffix : TMA_TENSOR_PREFETCH_INTR<dim, mode>;
   }
 }
+foreach dim = 3...5 in {
+  foreach mode = ["im2col_w", "im2col_w_128"] in {
+    defvar suffix = !toupper(mode) # "_" # dim # "D";
+    defm TMA_TENSOR_PF_ # suffix : TMA_TENSOR_PREFETCH_INTR<dim, mode,
+                                   [hasTMACTAGroupSupport]>;
+  }
+}
+defm TMA_TENSOR_PF_TILE_GATHER4_2D : TMA_TENSOR_PREFETCH_INTR<5, "tile_gather4",
+                                     [hasTMACTAGroupSupport]>;
 
 //Prefetch and Prefetchu 
 
