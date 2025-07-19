@@ -215,9 +215,8 @@ void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
     return;
   }
   auto *F = getOrCreateDataFragment();
-  F->Kind = MCFragment::FT_LEB;
-  F->setLEBSigned(false);
-  F->setLEBValue(Value);
+  F->makeLEB(false, Value);
+  newFragment();
 }
 
 void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
@@ -227,9 +226,8 @@ void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
     return;
   }
   auto *F = getOrCreateDataFragment();
-  F->Kind = MCFragment::FT_LEB;
-  F->setLEBSigned(true);
-  F->setLEBValue(Value);
+  F->makeLEB(true, Value);
+  newFragment();
 }
 
 void MCObjectStreamer::emitWeakReference(MCSymbol *Alias,
