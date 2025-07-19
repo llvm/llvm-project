@@ -1845,16 +1845,28 @@ define i128 @sub_if_uge_i128(i128 %x, i128 %y) {
 }
 
 define i32 @sub_if_uge_multiuse_select_i32(i32 %x, i32 %y) {
-; CHECK-LABEL: sub_if_uge_multiuse_select_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a2, a1
-; CHECK-NEXT:    sext.w a3, a0
-; CHECK-NEXT:    sltu a2, a3, a2
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    subw a0, a0, a1
-; CHECK-NEXT:    sllw a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: sub_if_uge_multiuse_select_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sext.w a2, a1
+; RV64I-NEXT:    sext.w a3, a0
+; RV64I-NEXT:    sltu a2, a3, a2
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    and a1, a2, a1
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    sllw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: sub_if_uge_multiuse_select_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    sext.w a2, a1
+; RV64ZBB-NEXT:    sext.w a3, a0
+; RV64ZBB-NEXT:    subw a0, a0, a1
+; RV64ZBB-NEXT:    sltu a2, a3, a2
+; RV64ZBB-NEXT:    addi a2, a2, -1
+; RV64ZBB-NEXT:    and a1, a2, a1
+; RV64ZBB-NEXT:    minu a0, a3, a0
+; RV64ZBB-NEXT:    sllw a0, a0, a1
+; RV64ZBB-NEXT:    ret
   %cmp = icmp ult i32 %x, %y
   %select = select i1 %cmp, i32 0, i32 %y
   %sub = sub nuw i32 %x, %select
