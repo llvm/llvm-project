@@ -14,11 +14,11 @@ using LlvmLibcAsinpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcAsinpif16Test, SpecialNumbers) {
   // zero
-  EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::asinpif16(0.0f16));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::asinpif16(zero));
 
   // +/-1
-  EXPECT_FP_EQ(float16(0.5), LIBC_NAMESPACE::asinpif16(float16(1.0)));
-  EXPECT_FP_EQ(float16(-0.5), LIBC_NAMESPACE::asinpif16(float16(-1.0)));
+  EXPECT_FP_EQ(0.5f16, LIBC_NAMESPACE::asinpif16(1.0));
+  EXPECT_FP_EQ(-0.5f16, LIBC_NAMESPACE::asinpif16(-1.0));
 
   // NaN inputs
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
@@ -42,23 +42,23 @@ TEST_F(LlvmLibcAsinpif16Test, OutOfRange) {
   // Test values > 1
   libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(float16(1.5)));
+               LIBC_NAMESPACE::asinpif16(1.5f16));
   EXPECT_MATH_ERRNO(EDOM);
 
   libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(float16(2.0)));
+               LIBC_NAMESPACE::asinpif16(2.0f16));
   EXPECT_MATH_ERRNO(EDOM);
 
   // Test values < -1
   libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(float16(-1.5)));
+               LIBC_NAMESPACE::asinpif16(-1.5f16));
   EXPECT_MATH_ERRNO(EDOM);
 
   libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::asinpif16(float16(-2.0)));
+               LIBC_NAMESPACE::asinpif16(-2.0f16));
   EXPECT_MATH_ERRNO(EDOM);
 
   // Test maximum normal value (should be > 1 for float16)
