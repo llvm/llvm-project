@@ -2011,12 +2011,9 @@ module std [system] {
   }
 
   module stacktrace {
-    module base                   { header "__stacktrace/base.h" }
-    module basic                  { header "__stacktrace/basic.h" }
-    module entry                  { header "__stacktrace/entry.h" }
-    module hash                   { header "__stacktrace/hash.h" }
-    module nonmem                 { header "__stacktrace/nonmem.h" }
-    module to_string              { header "__stacktrace/to_string.h" }
+    module basic_stacktrace       { header "__stacktrace/basic_stacktrace.h" }
+    module memory                 { header "__stacktrace/memory.h" }
+    module stacktrace_entry       { header "__stacktrace/stacktrace_entry.h" }
 
     header "stacktrace"
     export *

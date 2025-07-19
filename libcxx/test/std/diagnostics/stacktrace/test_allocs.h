@@ -40,40 +40,40 @@ struct TestAlloc {
     using other = Other<U>;
   };
 
-  static std::shared_ptr<std::allocator<std::byte>> new_arena() {
+  static std::shared_ptr<std::allocator<std::byte>> new_alloc() {
     return std::make_shared<std::allocator<std::byte>>();
   }
 
-  static std::shared_ptr<std::allocator<std::byte>> global_arena() {
-    static auto ret = new_arena();
+  static std::shared_ptr<std::allocator<std::byte>> global_alloc() {
+    static auto ret = new_alloc();
     return ret;
   }
 
   /** Type-erased allocator used for servicing allocate and deallocate.
-  Two `TestAlloc`'s are equal IFF they contain the same arena pointer.
-  Always-equal `TestAlloc`'s get a pointer to a shared `global_arena`. */
-  std::shared_ptr<std::allocator<std::byte>> arena_;
+  Two `TestAlloc`'s are equal IFF they contain the same alloc pointer.
+  Always-equal `TestAlloc`'s get a pointer to a shared `global_alloc`. */
+  std::shared_ptr<std::allocator<std::byte>> alloc_;
 
-  /** Instances are equal IFF they have the same arena pointer (even if this is "always_equals",
-  since such instances point to the global arena). */
-  bool operator==(auto const& rhs) const noexcept { return arena_.get() == rhs.arena_.get(); }
+  /** Instances are equal IFF they have the same alloc pointer (even if this is "always_equals",
+  since such instances point to the global alloc). */
+  bool operator==(auto const& rhs) const noexcept { return alloc_.get() == rhs.alloc_.get(); }
 
-  /** Construct with a new arena, or, if always-equal, the global arena. */
-  TestAlloc() noexcept(_KNoExCtors) : arena_(_KAlwaysEqual ? global_arena() : new_arena()) {}
+  /** Construct with a new alloc, or, if always-equal, the global alloc. */
+  TestAlloc() noexcept(_KNoExCtors) : alloc_(_KAlwaysEqual ? global_alloc() : new_alloc()) {}
 
   template <typename U>
-  TestAlloc(Other<U> const& rhs) : arena_(rhs.arena_) {}
+  TestAlloc(Other<U> const& rhs) : alloc_(rhs.alloc_) {}
 
   template <typename U>
   TestAlloc& operator=(Other<U> const& rhs) {
-    arena_ = rhs.arena_;
+    alloc_ = rhs.alloc_;
   }
 
-  std::allocator<T>& arena() { return *(std::allocator<T>*)arena_.get(); }
+  std::allocator<T>& alloc() { return *(std::allocator<T>*)alloc_.get(); }
 
-  T* allocate(size_t n) noexcept(_KNoExAlloc) { return arena().allocate(n); }
-  auto allocate_at_least(size_t n) noexcept(_KNoExAlloc) { return arena().allocate_at_least(n); }
-  void deallocate(T* ptr, size_t n) noexcept(_KNoExAlloc) { return arena().deallocate(ptr, n); }
+  T* allocate(size_t n) noexcept(_KNoExAlloc) { return alloc().allocate(n); }
+  auto allocate_at_least(size_t n) noexcept(_KNoExAlloc) { return alloc().allocate_at_least(n); }
+  void deallocate(T* ptr, size_t n) noexcept(_KNoExAlloc) { return alloc().deallocate(ptr, n); }
 };
 
 // For convenience and readability:
