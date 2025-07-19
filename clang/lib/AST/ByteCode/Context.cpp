@@ -245,6 +245,11 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
       return false;
 
     unsigned N = Ptr.getNumElems();
+    if (Ptr.elemSize() == 1) {
+      Result = strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), N);
+      return Result != N;
+    }
+
     PrimType ElemT = FieldDesc->getPrimType();
     Result = 0;
     for (unsigned I = Ptr.getIndex(); I != N; ++I) {
