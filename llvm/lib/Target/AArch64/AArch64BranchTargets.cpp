@@ -100,7 +100,7 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
     // If the block itself is address-taken, it could be indirectly branched
     // to, but not called.
     if (MBB.isMachineBlockAddressTaken() || MBB.isIRBlockAddressTaken() ||
-        JumpTableTargets.count(&MBB))
+        JumpTableTargets.count(&MBB) || MBB.isEHPad())
       CouldJump = true;
 
     if (CouldCall || CouldJump) {
