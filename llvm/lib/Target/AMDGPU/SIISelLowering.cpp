@@ -5334,9 +5334,12 @@ static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
   case AMDGPU::S_ADD_I32:
   case AMDGPU::S_SUB_I32:
   case AMDGPU::S_OR_B32:
+  case AMDGPU::S_OR_B64:
   case AMDGPU::S_XOR_B32:
+  case AMDGPU::S_XOR_B64:
     return std::numeric_limits<uint32_t>::min();
   case AMDGPU::S_AND_B32:
+  case AMDGPU::S_AND_B64:
     return std::numeric_limits<uint32_t>::max();
   default:
     llvm_unreachable(
@@ -5399,15 +5402,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     case AMDGPU::S_OR_B32: {
       // Idempotent operations.
       BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addReg(SrcReg);
-      RetBB = &BB;
-      break;
-    }
-    case AMDGPU::V_CMP_LT_U64_e64:   // umin
-    case AMDGPU::V_CMP_LT_I64_e64:   // min
-    case AMDGPU::V_CMP_GT_U64_e64:   // umax
-    case AMDGPU::V_CMP_GT_I64_e64: { // max
-      // Idempotent operations.
-      BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B64), DstReg).addReg(SrcReg);
       RetBB = &BB;
       break;
     }
@@ -5698,6 +5692,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                              .addReg(LaneValue->getOperand(0).getReg())
                              .setOperandDead(3); // Dead scc
         break;
+      }
+      case AMDGPU::V_CMP_GT_I64_e64:
       case AMDGPU::V_CMP_GT_U64_e64:
       case AMDGPU::V_CMP_LT_I64_e64:
       case AMDGPU::V_CMP_LT_U64_e64: {
