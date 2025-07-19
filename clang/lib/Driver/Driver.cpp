@@ -67,6 +67,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -4423,145 +4424,6 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
   }
 }
 
-static void skipWhitespace(const char *&Ptr) {
-  while (isWhitespace(*Ptr))
-    ++Ptr;
-}
-
-// Returns the length of EOL, either 0 (no end-of-line), 1 (\n) or 2 (\r\n).
-static unsigned isEOL(const char *Ptr) {
-  if (*Ptr == '\0')
-    return 0;
-  if (*(Ptr + 1) != '\0' && isVerticalWhitespace(Ptr[0]) &&
-      isVerticalWhitespace(Ptr[1]) && Ptr[0] != Ptr[1])
-    return 2;
-  return !!isVerticalWhitespace(Ptr[0]);
-}
-
-static void skipLine(const char *&Ptr) {
-  for (;;) {
-    char LastNonWhitespace = ' ';
-    while (!isVerticalWhitespace(*Ptr) && *Ptr != '\0') {
-      if (!isHorizontalWhitespace(*Ptr))
-        LastNonWhitespace = *Ptr;
-      ++Ptr;
-    }
-
-    const unsigned Len = isEOL(Ptr);
-    if (!Len)
-      return;
-
-    Ptr += Len;
-    if (LastNonWhitespace != '\\')
-      break;
-  }
-}
-
-// Returns the length of a line splice sequence (including trailing whitespace),
-// or 0 if no line splice is found.
-static unsigned isLineSplice(const char *Start) {
-  if (*Start != '\\')
-    return 0;
-
-  const char *Ptr = Start + 1;
-  while (isHorizontalWhitespace(*Ptr))
-    ++Ptr;
-
-  if (unsigned Len = isEOL(Ptr))
-    return Ptr - Start + Len;
-  return 0;
-}
-
-static bool trySkipLineSplice(const char *&Ptr) {
-  if (unsigned Len = isLineSplice(Ptr); Len) {
-    Ptr += Len;
-    return true;
-  }
-  return false;
-}
-
-static bool trySkipDirective(const char *&Ptr) {
-  if (*Ptr != '#')
-    return false;
-
-  ++Ptr;
-  skipLine(Ptr);
-  return true;
-}
-
-static bool trySkipLineComment(const char *&Ptr) {
-  if (Ptr[0] != '/' || Ptr[1] != '/')
-    return false;
-
-  Ptr += 2;
-  skipLine(Ptr);
-  return true;
-}
-
-static bool trySkipBlockComment(const char *&Ptr) {
-  if (Ptr[0] != '/' || Ptr[1] != '*')
-    return false;
-
-  Ptr += 2;
-  while (*Ptr != '\0') {
-    if (Ptr[0] == '*' && Ptr[1] == '/') {
-      Ptr += 2; // '*/'
-      return true;
-    }
-    ++Ptr;
-  }
-  return true;
-}
-
-static bool trySkipComment(const char *&Ptr) {
-  return trySkipLineComment(Ptr) || trySkipBlockComment(Ptr);
-}
-
-// Skipps over comments and (non-module) directives
-static void skipToRelevantCXXModuleText(const char *&Ptr) {
-  while (*Ptr != '\0') {
-    skipWhitespace(Ptr);
-    if (trySkipComment(Ptr) || trySkipDirective(Ptr) || trySkipLineSplice(Ptr))
-      continue;
-    break; // Found relevant text!
-  }
-}
-
-static bool scanBufferForCXXModuleUsage(const llvm::MemoryBuffer &Buffer) {
-  const char *Ptr = Buffer.getBufferStart();
-  skipToRelevantCXXModuleText(Ptr);
-
-  // Check if the buffer has enough remaining bytes left for any of the
-  // module-related declaration fragments we are checking for, without making
-  // the potentially memory-mapped buffer load unnecessary pages.
-  constexpr int MinKeywordLength = 6;
-  const char *Begin = Ptr;
-  for (int i = 0; i < MinKeywordLength; ++i) {
-    if (*Ptr == '\0')
-      return false;
-    ++Ptr;
-  }
-  StringRef Text(Begin, MinKeywordLength);
-
-  const bool IsGlobalModule = Text.starts_with("module");
-  if (!IsGlobalModule && !Text.starts_with("import") &&
-      !Text.starts_with("export"))
-    return false;
-
-  // Ensure the keyword has a proper ending and isn't part of a identifier
-  // or namespace. For this we might have to skip comments and line
-  // continuations.
-  while (*Ptr != '\0') {
-    if (isWhitespace(*Ptr) || (IsGlobalModule && *Ptr == ';'))
-      return true;
-    if (trySkipBlockComment(Ptr) || trySkipLineSplice(Ptr))
-      continue;
-    return false;
-  }
-
-  return false;
-}
-
 static bool hasCXXModuleInputType(const Driver::InputList &Inputs) {
   const auto IsTypeCXXModule = [](const auto &Input) -> bool {
     const auto TypeID = Input.first;
@@ -4571,7 +4433,7 @@ static bool hasCXXModuleInputType(const Driver::InputList &Inputs) {
 }
 
 llvm::ErrorOr<bool>
-Driver::ScanInputsForCXXModuleUsage(const InputList &Inputs) const {
+Driver::ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const {
   const auto CXXInputs = llvm::make_filter_range(
       Inputs, [](const auto &Input) { return types::isCXX(Input.first); });
 
@@ -4582,7 +4444,7 @@ Driver::ScanInputsForCXXModuleUsage(const InputList &Inputs) const {
       return ErrOrBuffer.getError();
     const auto Buffer = std::move(*ErrOrBuffer);
 
-    if (scanBufferForCXXModuleUsage(*Buffer)) {
+    if (scanInputForCXX20ModulesUsage(Buffer->getBuffer())) {
       Diags.Report(diag::remark_found_cxx20_module_usage) << Filename;
       return true;
     }
@@ -4609,7 +4471,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // Currently, this serves diagnostic purposes only.
     bool UsesCXXModules = hasCXXModuleInputType(Inputs);
     if (!UsesCXXModules) {
-      const auto ErrOrScanResult = ScanInputsForCXXModuleUsage(Inputs);
+      const auto ErrOrScanResult = ScanInputsForCXX20ModulesUsage(Inputs);
       if (!ErrOrScanResult) {
         Diags.Report(diag::err_cannot_open_file)
             << ErrOrScanResult.getError().message();

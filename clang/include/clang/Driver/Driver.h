@@ -819,7 +819,7 @@ private:
   /// \returns True if module usage is detected, false otherwise, or an error on
   /// read failure.
   llvm::ErrorOr<bool>
-  ScanInputsForCXXModuleUsage(const InputList &Inputs) const;
+  ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const;
 
   /// Retrieves a ToolChain for a particular \p Target triple.
   ///
