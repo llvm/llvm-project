@@ -34,7 +34,7 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
           TargetSym = MIB->getPCRelLoSymbol(AInst);
           if (TargetSym) {
               auto BI = II;
-              bool found = false;
+              bool foundSymbol = false;
               while(BI != BB.begin()){
                   auto *Label = MIB->getInstLabel(*BI);
                   if (Label && Label == TargetSym) {
