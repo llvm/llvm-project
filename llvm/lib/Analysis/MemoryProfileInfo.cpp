@@ -267,8 +267,7 @@ static void saveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
       // during matching, and it would be overly aggressive to do it again, and
       // we also want to maintain the same behavior with and without reporting
       // of hinted bytes enabled.
-      !BuiltFromExistingMetadata &&
-      MinCallsiteColdBytePercent < 100 &&
+      !BuiltFromExistingMetadata && MinCallsiteColdBytePercent < 100 &&
       ColdBytes > 0 &&
       ColdBytes * 100 >= MinCallsiteColdBytePercent * TotalBytes;
 
@@ -431,7 +430,8 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
     // Pass in the stack length of the MIB nodes added for the immediate caller,
     // which is the current stack length plus 1.
     saveFilteredNewMIBNodes(NewMIBNodes, MIBNodes, MIBCallStack.size() + 1,
-                            CallerTotalBytes, CallerColdBytes, BuiltFromExistingMetadata);
+                            CallerTotalBytes, CallerColdBytes,
+                            BuiltFromExistingMetadata);
     TotalBytes += CallerTotalBytes;
     ColdBytes += CallerColdBytes;
 
