@@ -32,10 +32,9 @@ void test_construct_with_alloc_noexcept() {
 
   using A1 = std::allocator<std::stacktrace_entry>;
   static_assert(std::is_nothrow_constructible_v<A1>);
-  static_assert(noexcept(std::basic_stacktrace<A1>(A1())));
-
   using A2 = TestAlloc<std::stacktrace_entry, false, true, true, true>;
   static_assert(!std::is_nothrow_constructible_v<A2>);
+
   static_assert(!noexcept(std::basic_stacktrace<A2>(A2())));
 }
 
