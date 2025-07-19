@@ -402,6 +402,6 @@ public:
                                  const MachineBasicBlock &MBB,
                                  unsigned NumRegionInstrs) const override;
 };
-} // namespace llvm
+} // End llvm namespace
 
 #endif

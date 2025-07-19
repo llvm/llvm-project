@@ -16,7 +16,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
@@ -31,6 +30,7 @@ namespace llvm {
 
 class APInt;
 class MachineFunction;
+class MachineBasicBlock;
 class ScheduleDAGMutation;
 class CallLowering;
 class GlobalValue;

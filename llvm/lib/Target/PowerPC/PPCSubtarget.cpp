@@ -166,8 +166,8 @@ PPCGenSubtargetInfo::AntiDepBreakMode PPCSubtarget::getAntiDepBreakMode() const 
 
 void PPCSubtarget::getCriticalPathRCs(RegClassVector &CriticalPathRCs) const {
   CriticalPathRCs.clear();
-  CriticalPathRCs.push_back(isPPC64() ? &PPC::G8RCRegClass
-                                      : &PPC::GPRCRegClass);
+  CriticalPathRCs.push_back(isPPC64() ?
+                            &PPC::G8RCRegClass : &PPC::GPRCRegClass);
 }
 
 void PPCSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
