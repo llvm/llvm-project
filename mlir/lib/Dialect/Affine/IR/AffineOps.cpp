@@ -49,7 +49,7 @@ using llvm::mod;
 /// top level of a `AffineScope` region is always a valid symbol for all
 /// uses in that region.
 bool mlir::affine::isTopLevelValue(Value value, Region *region) {
-  if (auto arg = llvm::dyn_cast<BlockArgument>(value))
+  if (auto arg = dyn_cast<BlockArgument>(value))
     return arg.getParentRegion() == region;
   return value.getDefiningOp()->getParentRegion() == region;
 }
@@ -249,7 +249,7 @@ Operation *AffineDialect::materializeConstant(OpBuilder &builder,
 /// conservatively assume it is not top-level. A value of index type defined at
 /// the top level is always a valid symbol.
 bool mlir::affine::isTopLevelValue(Value value) {
-  if (auto arg = llvm::dyn_cast<BlockArgument>(value)) {
+  if (auto arg = dyn_cast<BlockArgument>(value)) {
     // The block owning the argument may be unlinked, e.g. when the surrounding
     // region has not yet been attached to an Op, at which point the parent Op
     // is null.
@@ -1757,7 +1757,7 @@ AffineDmaStartOp AffineDmaStartOp::create(
   build(builder, state, srcMemRef, srcMap, srcIndices, destMemRef, dstMap,
         destIndices, tagMemRef, tagMap, tagIndices, numElements, stride,
         elementsPerStride);
-  auto result = llvm::dyn_cast<AffineDmaStartOp>(builder.create(state));
+  auto result = dyn_cast<AffineDmaStartOp>(builder.create(state));
   assert(result && "builder didn't return the right type");
   return result;
 }
@@ -1949,7 +1949,7 @@ AffineDmaWaitOp AffineDmaWaitOp::create(OpBuilder &builder, Location location,
                                         Value numElements) {
   mlir::OperationState state(location, getOperationName());
   build(builder, state, tagMemRef, tagMap, tagIndices, numElements);
-  auto result = llvm::dyn_cast<AffineDmaWaitOp>(builder.create(state));
+  auto result = dyn_cast<AffineDmaWaitOp>(builder.create(state));
   assert(result && "builder didn't return the right type");
   return result;
 }
@@ -2198,7 +2198,7 @@ static ParseResult parseBound(bool isLower, OperationState &result,
     return failure();
 
   // Parse full form - affine map followed by dim and symbol list.
-  if (auto affineMapAttr = llvm::dyn_cast<AffineMapAttr>(boundAttr)) {
+  if (auto affineMapAttr = dyn_cast<AffineMapAttr>(boundAttr)) {
     unsigned currentNumOperands = result.operands.size();
     unsigned numDims;
     if (parseDimAndSymbolList(p, result.operands, numDims))
@@ -2231,7 +2231,7 @@ static ParseResult parseBound(bool isLower, OperationState &result,
   }
 
   // Parse custom assembly form.
-  if (auto integerAttr = llvm::dyn_cast<IntegerAttr>(boundAttr)) {
+  if (auto integerAttr = dyn_cast<IntegerAttr>(boundAttr)) {
     result.attributes.pop_back();
     result.addAttribute(
         boundAttrStrName,
@@ -2801,7 +2801,7 @@ bool mlir::affine::isAffineInductionVar(Value val) {
 }
 
 AffineForOp mlir::affine::getForInductionVarOwner(Value val) {
-  auto ivArg = llvm::dyn_cast<BlockArgument>(val);
+  auto ivArg = dyn_cast<BlockArgument>(val);
   if (!ivArg || !ivArg.getOwner() || !ivArg.getOwner()->getParent())
     return AffineForOp();
   if (auto forOp =
@@ -2812,7 +2812,7 @@ AffineForOp mlir::affine::getForInductionVarOwner(Value val) {
 }
 
 AffineParallelOp mlir::affine::getAffineParallelInductionVarOwner(Value val) {
-  auto ivArg = llvm::dyn_cast<BlockArgument>(val);
+  auto ivArg = dyn_cast<BlockArgument>(val);
   if (!ivArg || !ivArg.getOwner())
     return nullptr;
   Operation *containingOp = ivArg.getOwner()->getParentOp();
@@ -3339,11 +3339,11 @@ OpFoldResult AffineLoadOp::fold(FoldAdaptor adaptor) {
 
   // Check if the global memref is a constant.
   auto cstAttr =
-      llvm::dyn_cast_or_null<DenseElementsAttr>(global.getConstantInitValue());
+      dyn_cast_or_null<DenseElementsAttr>(global.getConstantInitValue());
   if (!cstAttr)
     return {};
   // If it's a splat constant, we can fold irrespective of indices.
-  if (auto splatAttr = llvm::dyn_cast<SplatElementsAttr>(cstAttr))
+  if (auto splatAttr = dyn_cast<SplatElementsAttr>(cstAttr))
     return splatAttr.getSplatValue<Attribute>();
   // Otherwise, we can fold only if we know the indices.
   if (!getAffineMap().isConstant())
@@ -4110,19 +4110,19 @@ static bool isResultTypeMatchAtomicRMWKind(Type resultType,
   case arith::AtomicRMWKind::minimumf:
     return isa<FloatType>(resultType);
   case arith::AtomicRMWKind::maxs: {
-    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    auto intType = dyn_cast<IntegerType>(resultType);
     return intType && intType.isSigned();
   }
   case arith::AtomicRMWKind::mins: {
-    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    auto intType = dyn_cast<IntegerType>(resultType);
     return intType && intType.isSigned();
   }
   case arith::AtomicRMWKind::maxu: {
-    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    auto intType = dyn_cast<IntegerType>(resultType);
     return intType && intType.isUnsigned();
   }
   case arith::AtomicRMWKind::minu: {
-    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    auto intType = dyn_cast<IntegerType>(resultType);
     return intType && intType.isUnsigned();
   }
   case arith::AtomicRMWKind::ori:
@@ -4179,7 +4179,7 @@ LogicalResult AffineParallelOp::verify() {
   // ops
   for (auto it : llvm::enumerate((getReductions()))) {
     Attribute attr = it.value();
-    auto intAttr = llvm::dyn_cast<IntegerAttr>(attr);
+    auto intAttr = dyn_cast<IntegerAttr>(attr);
     if (!intAttr || !arith::symbolizeAtomicRMWKind(intAttr.getInt()))
       return emitOpError("invalid reduction attribute");
     auto kind = arith::symbolizeAtomicRMWKind(intAttr.getInt()).value();

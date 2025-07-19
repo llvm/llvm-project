@@ -148,7 +148,7 @@ static FailureOr<APInt> getIntOrSplatIntValue(Attribute attr) {
 
 static Attribute getBoolAttribute(Type type, bool value) {
   auto boolAttr = BoolAttr::get(type.getContext(), value);
-  ShapedType shapedType = llvm::dyn_cast_or_null<ShapedType>(type);
+  ShapedType shapedType = dyn_cast_or_null<ShapedType>(type);
   if (!shapedType)
     return boolAttr;
   return DenseElementsAttr::get(shapedType, boolAttr);
@@ -169,7 +169,7 @@ namespace {
 /// Return the type of the same shape (scalar, vector or tensor) containing i1.
 static Type getI1SameShape(Type type) {
   auto i1Type = IntegerType::get(type.getContext(), 1);
-  if (auto shapedType = llvm::dyn_cast<ShapedType>(type))
+  if (auto shapedType = dyn_cast<ShapedType>(type))
     return shapedType.cloneWith(std::nullopt, i1Type);
   if (llvm::isa<UnrankedTensorType>(type))
     return UnrankedTensorType::get(i1Type);
@@ -183,8 +183,8 @@ static Type getI1SameShape(Type type) {
 void arith::ConstantOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   auto type = getType();
-  if (auto intCst = llvm::dyn_cast<IntegerAttr>(getValue())) {
-    auto intType = llvm::dyn_cast<IntegerType>(type);
+  if (auto intCst = dyn_cast<IntegerAttr>(getValue())) {
+    auto intType = dyn_cast<IntegerType>(type);
 
     // Sugar i1 constants with 'true' and 'false'.
     if (intType && intType.getWidth() == 1)
@@ -228,7 +228,7 @@ LogicalResult arith::ConstantOp::verify() {
 
 bool arith::ConstantOp::isBuildableWith(Attribute value, Type type) {
   // The value's type must be the same as the provided type.
-  auto typedAttr = llvm::dyn_cast<TypedAttr>(value);
+  auto typedAttr = dyn_cast<TypedAttr>(value);
   if (!typedAttr || typedAttr.getType() != type)
     return false;
   // Integer values must be signless.
@@ -261,7 +261,7 @@ arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
                                                   unsigned width) {
   mlir::OperationState state(location, getOperationName());
   build(builder, state, value, width);
-  auto result = llvm::dyn_cast<ConstantIntOp>(builder.create(state));
+  auto result = dyn_cast<ConstantIntOp>(builder.create(state));
   assert(result && "builder didn't return the right type");
   return result;
 }
@@ -283,7 +283,7 @@ arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
                                                   int64_t value) {
   mlir::OperationState state(location, getOperationName());
   build(builder, state, type, value);
-  auto result = llvm::dyn_cast<ConstantIntOp>(builder.create(state));
+  auto result = dyn_cast<ConstantIntOp>(builder.create(state));
   assert(result && "builder didn't return the right type");
   return result;
 }
@@ -304,7 +304,7 @@ arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
                                                   const APInt &value) {
   mlir::OperationState state(location, getOperationName());
   build(builder, state, type, value);
-  auto result = llvm::dyn_cast<ConstantIntOp>(builder.create(state));
+  auto result = dyn_cast<ConstantIntOp>(builder.create(state));
   assert(result && "builder didn't return the right type");
   return result;
 }
@@ -333,7 +333,7 @@ arith::ConstantFloatOp arith::ConstantFloatOp::create(OpBuilder &builder,
                                                       const APFloat &value) {
   mlir::OperationState state(location, getOperationName());
   build(builder, state, type, value);
-  auto result = llvm::dyn_cast<ConstantFloatOp>(builder.create(state));
+  auto result = dyn_cast<ConstantFloatOp>(builder.create(state));
   assert(result && "builder didn't return the right type");
   return result;
 }
@@ -361,7 +361,7 @@ arith::ConstantIndexOp arith::ConstantIndexOp::create(OpBuilder &builder,
                                                       int64_t value) {
   mlir::OperationState state(location, getOperationName());
   build(builder, state, value);
-  auto result = llvm::dyn_cast<ConstantIndexOp>(builder.create(state));
+  auto result = dyn_cast<ConstantIndexOp>(builder.create(state));
   assert(result && "builder didn't return the right type");
   return result;
 }
@@ -423,7 +423,7 @@ void arith::AddIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 std::optional<SmallVector<int64_t, 4>>
 arith::AddUIExtendedOp::getShapeForUnroll() {
-  if (auto vt = llvm::dyn_cast<VectorType>(getType(0)))
+  if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
 }
@@ -569,7 +569,7 @@ void arith::MulIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 std::optional<SmallVector<int64_t, 4>>
 arith::MulSIExtendedOp::getShapeForUnroll() {
-  if (auto vt = llvm::dyn_cast<VectorType>(getType(0)))
+  if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
 }
@@ -615,7 +615,7 @@ void arith::MulSIExtendedOp::getCanonicalizationPatterns(
 
 std::optional<SmallVector<int64_t, 4>>
 arith::MulUIExtendedOp::getShapeForUnroll() {
-  if (auto vt = llvm::dyn_cast<VectorType>(getType(0)))
+  if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
 }
@@ -1895,7 +1895,7 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
     return {};
 
   /// Bitcast dense elements.
-  if (auto denseAttr = llvm::dyn_cast_or_null<DenseElementsAttr>(operand))
+  if (auto denseAttr = dyn_cast_or_null<DenseElementsAttr>(operand))
     return denseAttr.bitcast(llvm::cast<ShapedType>(resType).getElementType());
   /// Other shaped types unhandled.
   if (llvm::isa<ShapedType>(resType))
@@ -1912,7 +1912,7 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
   assert(resType.getIntOrFloatBitWidth() == bits.getBitWidth() &&
          "trying to fold on broken IR: operands have incompatible types");
 
-  if (auto resFloatType = llvm::dyn_cast<FloatType>(resType))
+  if (auto resFloatType = dyn_cast<FloatType>(resType))
     return FloatAttr::get(resType,
                           APFloat(resFloatType.getFloatSemantics(), bits));
   return IntegerAttr::get(resType, bits);
@@ -1976,10 +1976,10 @@ static bool applyCmpPredicateToEqualOperands(arith::CmpIPredicate predicate) {
 }
 
 static std::optional<int64_t> getIntegerWidth(Type t) {
-  if (auto intType = llvm::dyn_cast<IntegerType>(t)) {
+  if (auto intType = dyn_cast<IntegerType>(t)) {
     return intType.getWidth();
   }
-  if (auto vectorIntType = llvm::dyn_cast<VectorType>(t)) {
+  if (auto vectorIntType = dyn_cast<VectorType>(t)) {
     return llvm::cast<IntegerType>(vectorIntType.getElementType()).getWidth();
   }
   return std::nullopt;
@@ -2049,7 +2049,7 @@ OpFoldResult arith::CmpIOp::fold(FoldAdaptor adaptor) {
 
   // We are moving constants to the right side; So if lhs is constant rhs is
   // guaranteed to be a constant.
-  if (auto lhs = llvm::dyn_cast_if_present<TypedAttr>(adaptor.getLhs())) {
+  if (auto lhs = dyn_cast_if_present<TypedAttr>(adaptor.getLhs())) {
     return constFoldBinaryOp<IntegerAttr>(
         adaptor.getOperands(), getI1SameShape(lhs.getType()),
         [pred = getPredicate()](const APInt &lhs, const APInt &rhs) {
@@ -2119,8 +2119,8 @@ bool mlir::arith::applyCmpPredicate(arith::CmpFPredicate predicate,
 }
 
 OpFoldResult arith::CmpFOp::fold(FoldAdaptor adaptor) {
-  auto lhs = llvm::dyn_cast_if_present<FloatAttr>(adaptor.getLhs());
-  auto rhs = llvm::dyn_cast_if_present<FloatAttr>(adaptor.getRhs());
+  auto lhs = dyn_cast_if_present<FloatAttr>(adaptor.getLhs());
+  auto rhs = dyn_cast_if_present<FloatAttr>(adaptor.getRhs());
 
   // If one operand is NaN, making them both NaN does not change the result.
   if (lhs && lhs.getValue().isNaN())
@@ -2518,12 +2518,12 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
 
   // Constant-fold constant operands over non-splat constant condition.
   // select %cst_vec, %cst0, %cst1 => %cst2
-  if (auto cond = llvm::dyn_cast_if_present<DenseElementsAttr>(
-          adaptor.getCondition())) {
-    if (auto lhs = llvm::dyn_cast_if_present<DenseElementsAttr>(
-            adaptor.getTrueValue())) {
-      if (auto rhs = llvm::dyn_cast_if_present<DenseElementsAttr>(
-              adaptor.getFalseValue())) {
+  if (auto cond =
+          dyn_cast_if_present<DenseElementsAttr>(adaptor.getCondition())) {
+    if (auto lhs =
+            dyn_cast_if_present<DenseElementsAttr>(adaptor.getTrueValue())) {
+      if (auto rhs =
+              dyn_cast_if_present<DenseElementsAttr>(adaptor.getFalseValue())) {
         SmallVector<Attribute> results;
         results.reserve(static_cast<size_t>(cond.getNumElements()));
         auto condVals = llvm::make_range(cond.value_begin<BoolAttr>(),
@@ -2572,8 +2572,7 @@ void arith::SelectOp::print(OpAsmPrinter &p) {
   p << " " << getOperands();
   p.printOptionalAttrDict((*this)->getAttrs());
   p << " : ";
-  if (ShapedType condType =
-          llvm::dyn_cast<ShapedType>(getCondition().getType()))
+  if (ShapedType condType = dyn_cast<ShapedType>(getCondition().getType()))
     p << condType << ", ";
   p << getType();
 }
