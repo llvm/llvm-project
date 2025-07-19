@@ -137,7 +137,7 @@ LIBC_INLINE static double atan_eval(double x, unsigned i) {
 // and approximate with Taylor polynomial:
 //   atan(q) ~ q - q^3/3 + q^5/5 - q^7/7 + q^9/9
 LIBC_INLINE static double atan_eval_no_table(double num, double den,
-                                                       double k_over_16) {
+                                             double k_over_16) {
   double num_r = fputil::multiply_add(den, -k_over_16, num);
   double den_r = fputil::multiply_add(num, k_over_16, den);
   double q = num_r / den_r;
