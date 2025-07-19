@@ -1858,23 +1858,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     auto IT = WS.begin();
     if (IT == WS.end())
       continue;
-    const MCFragment &EmptyFrag = *IT;
-    if (EmptyFrag.getKind() != MCFragment::FT_Data)
-      report_fatal_error(".init_array section should be aligned");
-
-    const MCFragment *nextFrag = EmptyFrag.getNext();
-    while (nextFrag != nullptr) {
-      const MCFragment &AlignFrag = *nextFrag;
-      if (AlignFrag.getKind() != MCFragment::FT_Align)
-        report_fatal_error(".init_array section should be aligned");
-      if (cast<MCAlignFragment>(AlignFrag).getAlignment() !=
-          Align(is64Bit() ? 8 : 4))
-        report_fatal_error(
-            ".init_array section should be aligned for pointers");
-
-      const MCFragment &Frag = *AlignFrag.getNext();
-      nextFrag = Frag.getNext();
-      if (Frag.hasInstructions() || Frag.getKind() != MCFragment::FT_Data)
+    for (auto *Frag = &*IT; Frag; Frag = Frag->getNext()) {
+      if (Frag->hasInstructions() || (Frag->getKind() != MCFragment::FT_Align &&
+                                      Frag->getKind() != MCFragment::FT_Data))
         report_fatal_error("only data supported in .init_array section");
 
       uint16_t Priority = UINT16_MAX;
@@ -1886,9 +1872,8 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         if (WS.getName().substr(PrefixLength + 1).getAsInteger(10, Priority))
           report_fatal_error("invalid .init_array section priority");
       }
-      const auto &DataFrag = Frag;
-      assert(llvm::all_of(DataFrag.getContents(), [](char C) { return !C; }));
-      for (const MCFixup &Fixup : DataFrag.getFixups()) {
+      assert(llvm::all_of(Frag->getContents(), [](char C) { return !C; }));
+      for (const MCFixup &Fixup : Frag->getFixups()) {
         assert(Fixup.getKind() ==
                MCFixup::getDataKindForSize(is64Bit() ? 8 : 4));
         const MCExpr *Expr = Fixup.getValue();
