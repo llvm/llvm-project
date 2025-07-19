@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TEST_STD_RANGES_RANGE_ADAPTORS_TYPES_H
-#define TEST_STD_RANGES_RANGE_ADAPTORS_TYPES_H
+#ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ADAPTOR_TYPES_H
+#define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ADAPTOR_TYPES_H
 
 #include <functional>
 #include <ranges>
@@ -465,4 +465,4 @@ struct IterMoveSwapRange {
 };
 } // namespace adltest
 
-#endif // TEST_STD_RANGES_RANGE_ADAPTORS_TYPES_H
+#endif //  TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ADAPTOR_TYPES_H

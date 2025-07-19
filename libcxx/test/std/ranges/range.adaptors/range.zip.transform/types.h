@@ -15,7 +15,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "test_range.h"
-#include "../types.h"
+#include "../range_adaptor_types.h"
 
 #if TEST_STD_VER <= 20
 #  error "range.zip.transform/types.h" can only be included in builds supporting C++20
