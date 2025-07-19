@@ -1325,6 +1325,63 @@ return wrap(unwrap(Builder)->createEnumerationType(
     LineNumber, SizeInBits, AlignInBits, Elts, unwrapDI<DIType>(ClassTy)));
 }
 
+LLVMMetadataRef LLVMDIBuilderCreateSetType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
+    uint64_t SizeInBits, uint32_t AlignInBits, LLVMMetadataRef BaseTy) {
+  return wrap(unwrap(Builder)->createSetType(
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File),
+      LineNumber, SizeInBits, AlignInBits, unwrapDI<DIType>(BaseTy)));
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, unsigned LineNo, LLVMMetadataRef File, uint64_t SizeInBits,
+    uint32_t AlignInBits, LLVMDIFlags Flags, LLVMMetadataRef BaseTy,
+    LLVMMetadataRef LowerBound, LLVMMetadataRef UpperBound,
+    LLVMMetadataRef Stride, LLVMMetadataRef Bias) {
+  return wrap(unwrap(Builder)->createSubrangeType(
+      {Name, NameLen}, unwrapDI<DIFile>(File), LineNo, unwrapDI<DIScope>(Scope),
+      SizeInBits, AlignInBits, map_from_llvmDIFlags(Flags),
+      unwrapDI<DIType>(BaseTy), unwrap(LowerBound), unwrap(UpperBound),
+      unwrap(Stride), unwrap(Bias)));
+}
+
+/// MD may be nullptr, a DIExpression or DIVariable.
+PointerUnion<DIExpression *, DIVariable *> unwrapExprVar(LLVMMetadataRef MD) {
+  if (!MD)
+    return nullptr;
+  MDNode *MDN = unwrapDI<MDNode>(MD);
+  if (auto *E = dyn_cast<DIExpression>(MDN))
+    return E;
+  assert(isa<DIVariable>(MDN) && "Expected DIExpression or DIVariable");
+  return cast<DIVariable>(MDN);
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, unsigned LineNo, LLVMMetadataRef File, uint64_t Size,
+    uint32_t AlignInBits, LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts,
+    unsigned NumSubscripts, LLVMMetadataRef DataLocation,
+    LLVMMetadataRef Associated, LLVMMetadataRef Allocated, LLVMMetadataRef Rank,
+    LLVMMetadataRef BitStride) {
+  auto Subs =
+      unwrap(Builder)->getOrCreateArray({unwrap(Subscripts), NumSubscripts});
+  return wrap(unwrap(Builder)->createArrayType(
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File), LineNo,
+      Size, AlignInBits, unwrapDI<DIType>(Ty), Subs,
+      unwrapExprVar(DataLocation), unwrapExprVar(Associated),
+      unwrapExprVar(Allocated), unwrapExprVar(Rank), unwrap(BitStride)));
+}
+
+void LLVMReplaceArrays(LLVMDIBuilderRef Builder, LLVMMetadataRef *T,
+                       LLVMMetadataRef *Elements, unsigned NumElements) {
+  auto CT = unwrap<DICompositeType>(*T);
+  auto Elts =
+      unwrap(Builder)->getOrCreateArray({unwrap(Elements), NumElements});
+  unwrap(Builder)->replaceArrays(CT, Elts);
+}
+
 LLVMMetadataRef LLVMDIBuilderCreateUnionType(
   LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
   size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
@@ -2231,39 +2288,36 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   // Collect a map of {backing storage : dbg.declares} (currently "backing
   // storage" is limited to Allocas). We'll use this to find dbg.declares to
   // delete after running `trackAssignments`.
-  DenseMap<const AllocaInst *, SmallPtrSet<DbgDeclareInst *, 2>> DbgDeclares;
   DenseMap<const AllocaInst *, SmallPtrSet<DbgVariableRecord *, 2>> DVRDeclares;
   // Create another similar map of {storage : variables} that we'll pass to
   // trackAssignments.
   StorageToVarsMap Vars;
-  auto ProcessDeclare = [&](auto *Declare, auto &DeclareList) {
+  auto ProcessDeclare = [&](DbgVariableRecord &Declare) {
     // FIXME: trackAssignments doesn't let you specify any modifiers to the
     // variable (e.g. fragment) or location (e.g. offset), so we have to
     // leave dbg.declares with non-empty expressions in place.
-    if (Declare->getExpression()->getNumElements() != 0)
+    if (Declare.getExpression()->getNumElements() != 0)
       return;
-    if (!Declare->getAddress())
+    if (!Declare.getAddress())
       return;
     if (AllocaInst *Alloca =
-            dyn_cast<AllocaInst>(Declare->getAddress()->stripPointerCasts())) {
+            dyn_cast<AllocaInst>(Declare.getAddress()->stripPointerCasts())) {
       // FIXME: Skip VLAs for now (let these variables use dbg.declares).
       if (!Alloca->isStaticAlloca())
         return;
       // Similarly, skip scalable vectors (use dbg.declares instead).
       if (auto Sz = Alloca->getAllocationSize(*DL); Sz && Sz->isScalable())
         return;
-      DeclareList[Alloca].insert(Declare);
-      Vars[Alloca].insert(VarRecord(Declare));
+      DVRDeclares[Alloca].insert(&Declare);
+      Vars[Alloca].insert(VarRecord(&Declare));
     }
   };
   for (auto &BB : F) {
     for (auto &I : BB) {
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
         if (DVR.isDbgDeclare())
-          ProcessDeclare(&DVR, DVRDeclares);
+          ProcessDeclare(DVR);
       }
-      if (DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(&I))
-        ProcessDeclare(DDI, DbgDeclares);
     }
   }
 
@@ -2279,8 +2333,8 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   trackAssignments(F.begin(), F.end(), Vars, *DL);
 
   // Delete dbg.declares for variables now tracked with assignment tracking.
-  auto DeleteSubsumedDeclare = [&](const auto &Markers, auto &Declares) {
-    (void)Markers;
+  for (auto &[Insts, Declares] : DVRDeclares) {
+    auto Markers = at::getDVRAssignmentMarkers(Insts);
     for (auto *Declare : Declares) {
       // Assert that the alloca that Declare uses is now linked to a dbg.assign
       // describing the same variable (i.e. check that this dbg.declare has
@@ -2299,10 +2353,6 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
       Changed = true;
     }
   };
-  for (auto &P : DbgDeclares)
-    DeleteSubsumedDeclare(at::getAssignmentMarkers(P.first), P.second);
-  for (auto &P : DVRDeclares)
-    DeleteSubsumedDeclare(at::getDVRAssignmentMarkers(P.first), P.second);
   return Changed;
 }
 

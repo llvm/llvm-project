@@ -131,7 +131,6 @@ public:
   RelType relativeRel = 0;
   RelType iRelativeRel = 0;
   RelType symbolicRel = 0;
-  RelType iRelSymbolicRel = 0;
   RelType tlsDescRel = 0;
   RelType tlsGotRel = 0;
   RelType tlsModuleIndexRel = 0;
@@ -246,6 +245,7 @@ template <typename ELFT> void writeARMCmseImportLib(Ctx &);
 uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections(Ctx &);
+void mergeHexagonAttributesSections(Ctx &);
 void addArmInputSectionMappingSymbols(Ctx &);
 void addArmSyntheticSectionMappingSymbol(Defined *);
 void sortArmMappingSymbols(Ctx &);
