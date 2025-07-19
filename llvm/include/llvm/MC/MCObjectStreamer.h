@@ -73,12 +73,14 @@ public:
   MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug) override;
 
-  /// Get a data fragment to write into, creating a new one if the current
-  /// fragment is not FT_Data.
-  MCFragment *getOrCreateDataFragment();
+  // TODO: Change callers to use getCurrentFragment instead.
+  MCFragment *getOrCreateDataFragment() { return getCurrentFragment(); }
 
 protected:
   bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
+  MCAlignFragment *createAlignFragment(Align Alignment, int64_t Fill,
+                                       uint8_t FillLen,
+                                       unsigned MaxBytesToEmit);
 
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;

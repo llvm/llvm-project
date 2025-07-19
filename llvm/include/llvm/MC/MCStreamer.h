@@ -270,6 +270,8 @@ protected:
   /// section changes.
   virtual void changeSection(MCSection *, uint32_t);
 
+  void addFragment(MCFragment *F);
+
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
   virtual void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
 
@@ -456,8 +458,10 @@ public:
 
   MCSymbol *endSection(MCSection *Section);
 
-  void insert(MCFragment *F);
+  /// Add a new fragment to the current section without a variable-size tail.
   void newFragment();
+  /// Add a fragment with a variable-size tail and start a new empty fragment.
+  void insert(MCFragment *F);
 
   /// Returns the mnemonic for \p MI, if the streamer has access to a
   /// instruction printer and returns an empty string otherwise.
