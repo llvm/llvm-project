@@ -6524,7 +6524,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::stackaddress: {
     setValue(&I,
-             DAG.getNode(ISD::STACKADDR, sdl,
+             DAG.getNode(ISD::STACKADDRESS, sdl,
                          TLI.getValueType(DAG.getDataLayout(), I.getType())));
     return;
   }

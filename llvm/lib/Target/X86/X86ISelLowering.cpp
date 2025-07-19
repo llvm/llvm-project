@@ -28274,7 +28274,8 @@ SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   return FrameAddr;
 }
 
-SDValue X86TargetLowering::LowerSTACKADDR(SDValue Op, SelectionDAG &DAG) const {
+SDValue X86TargetLowering::LowerSTACKADDRESS(SDValue Op,
+                                             SelectionDAG &DAG) const {
   SDLoc dl(Op);
   return DAG.getCopyFromReg(DAG.getEntryNode(), dl,
                             Subtarget.getRegisterInfo()->getStackRegister(),
@@ -33644,7 +33645,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::RETURNADDR:         return LowerRETURNADDR(Op, DAG);
   case ISD::ADDROFRETURNADDR:   return LowerADDROFRETURNADDR(Op, DAG);
   case ISD::FRAMEADDR:          return LowerFRAMEADDR(Op, DAG);
-  case ISD::STACKADDR:          return LowerSTACKADDR(Op, DAG);
+  case ISD::STACKADDRESS:       return LowerSTACKADDRESS(Op, DAG);
   case ISD::FRAME_TO_ARGS_OFFSET:
                                 return LowerFRAME_TO_ARGS_OFFSET(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG);
