@@ -1,4 +1,4 @@
-; RUN: llc -mtriple aarch64-linux-gnu    -mattr=+pauth -filetype=asm -o - %s | FileCheck --check-prefix=ELF %s
+; RUN: llc -mtriple aarch64-linux-musl   -mattr=+pauth -filetype=asm -o - %s | FileCheck --check-prefix=ELF %s
 ; RUN: llc -mtriple aarch64-apple-darwin -mattr=+pauth -filetype=asm -o - %s | FileCheck --check-prefix=MACHO %s
 
 ; ELF-LABEL:   _ZTI10Disc:

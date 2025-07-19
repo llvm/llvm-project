@@ -164,6 +164,8 @@ void addGotEntry(Ctx &ctx, Symbol &sym);
 void hexagonTLSSymbolUpdate(Ctx &ctx);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
 
+bool isAbsolute(const Symbol &sym);
+
 class ThunkSection;
 class Thunk;
 class InputSectionDescription;

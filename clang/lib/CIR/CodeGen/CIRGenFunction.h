@@ -562,6 +562,19 @@ public:
   }
   Address loadCXXThisAddress();
 
+  /// Convert the given pointer to a complete class to the given direct base.
+  Address getAddressOfDirectBaseInCompleteClass(mlir::Location loc,
+                                                Address value,
+                                                const CXXRecordDecl *derived,
+                                                const CXXRecordDecl *base,
+                                                bool baseIsVirtual);
+
+  /// Determine whether a base class initialization may overlap some other
+  /// object.
+  AggValueSlot::Overlap_t getOverlapForBaseInit(const CXXRecordDecl *rd,
+                                                const CXXRecordDecl *baseRD,
+                                                bool isVirtual);
+
   /// Get an appropriate 'undef' rvalue for the given type.
   /// TODO: What's the equivalent for MLIR? Currently we're only using this for
   /// void types so it just returns RValue::get(nullptr) but it'll need
@@ -762,6 +775,9 @@ public:
   void emitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarInit(const AutoVarEmission &emission);
 
+  void emitBaseInitializer(mlir::Location loc, const CXXRecordDecl *classDecl,
+                           CXXCtorInitializer *baseInit);
+
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
@@ -814,6 +830,7 @@ public:
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
   void emitConstructorBody(FunctionArgList &args);
+  void emitDestructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
 
@@ -913,6 +930,9 @@ public:
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);
 
+  mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv,
+                                       bool isInc, bool isPre);
+
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
@@ -963,6 +983,9 @@ public:
 
   RValue emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc);
 
+  /// Load a complex number from the specified l-value.
+  mlir::Value emitLoadOfComplex(LValue src, SourceLocation loc);
+
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
   /// returning the rvalue.
@@ -1012,6 +1035,8 @@ public:
   RValue emitReferenceBindingToExpr(const Expr *e);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
+
+  RValue emitRotate(const CallExpr *e, bool isRotateLeft);
 
   mlir::Value emitScalarConstant(const ConstantEmission &constant, Expr *e);
 

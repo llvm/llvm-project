@@ -2353,9 +2353,6 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
     emitMOVZ(AArch64::X1, Disc, 0);
   }
 
-  MCSymbol *PrePACInst = OutStreamer->getContext().createTempSymbol();
-  OutStreamer->emitLabel(PrePACInst);
-
   // We don't know the subtarget because this is being emitted for a global
   // initializer. Because the performance of IFUNC resolvers is unimportant, we
   // always call the EmuPAC runtime, which will end up using the PAC instruction
@@ -2368,7 +2365,7 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
                                *STI);
   OutStreamer->popSection();
 
-  return MCSpecifierExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
+  return MCSymbolRefExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
                                  OutStreamer->getContext());
 }
 
