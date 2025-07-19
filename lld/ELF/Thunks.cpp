@@ -1538,7 +1538,7 @@ bool PPC64LongBranchThunk::isCompatibleWith(const InputSection &isec,
 // Hexagon Target Thunks
 static uint64_t getHexagonThunkDestVA(Ctx &ctx, const Symbol &s, int64_t a) {
   uint64_t v = s.isInPlt(ctx) ? s.getPltVA(ctx) : s.getVA(ctx, a);
-  return SignExtend64<32>(v); // FIXME: sign extend to 64-bit?
+  return SignExtend64<32>(v);
 }
 
 void HexagonThunk::writeTo(uint8_t *buf) {

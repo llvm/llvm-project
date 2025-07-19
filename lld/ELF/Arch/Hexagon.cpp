@@ -301,7 +301,6 @@ bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_HEX_B9_PCREL:
     return !ctx.target->inBranchRange(type, branchAddr, s.getVA(ctx, a));
   default:
-    // For unsupported relocation types, no thunk is needed
     return false;
   }
 }
