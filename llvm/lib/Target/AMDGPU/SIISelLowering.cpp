@@ -5324,12 +5324,16 @@ static MachineBasicBlock *Expand64BitScalarArithmetic(MachineInstr &MI,
 static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::S_MIN_U32:
+  case AMDGPU::V_CMP_LT_U64_e64: // umin.u64
     return std::numeric_limits<uint32_t>::max();
   case AMDGPU::S_MIN_I32:
+  case AMDGPU::V_CMP_LT_I64_e64: // min.i64
     return std::numeric_limits<int32_t>::max();
   case AMDGPU::S_MAX_U32:
+  case AMDGPU::V_CMP_GT_U64_e64: // umax.u64
     return std::numeric_limits<uint32_t>::min();
   case AMDGPU::S_MAX_I32:
+  case AMDGPU::V_CMP_GT_I64_e64: // max.i64
     return std::numeric_limits<int32_t>::min();
   case AMDGPU::S_ADD_I32:
   case AMDGPU::S_SUB_I32:
@@ -5385,16 +5389,22 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   bool isSGPR = TRI->isSGPRClass(MRI.getRegClass(SrcReg));
   Register DstReg = MI.getOperand(0).getReg();
   MachineBasicBlock *RetBB = nullptr;
+  bool is32BitOpc = TRI->getRegSizeInBits(*MRI.getRegClass(DstReg)) == 32;
   if (isSGPR) {
     switch (Opc) {
     case AMDGPU::S_MIN_U32:
+    case AMDGPU::V_CMP_LT_U64_e64: /*umin*/
     case AMDGPU::S_MIN_I32:
+    case AMDGPU::V_CMP_LT_I64_e64: /*min*/
     case AMDGPU::S_MAX_U32:
+    case AMDGPU::V_CMP_GT_U64_e64: /*umax*/
     case AMDGPU::S_MAX_I32:
+    case AMDGPU::V_CMP_GT_I64_e64: /*max*/
     case AMDGPU::S_AND_B32:
     case AMDGPU::S_OR_B32: {
       // Idempotent operations.
-      BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addReg(SrcReg);
+      unsigned movOpc = is32BitOpc ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+      BuildMI(BB, MI, DL, TII->get(movOpc), DstReg).addReg(SrcReg);
       RetBB = &BB;
       break;
     }
