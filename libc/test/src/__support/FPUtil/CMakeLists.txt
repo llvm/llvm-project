@@ -39,6 +39,10 @@ add_fp_unittest(
     libc.src.__support.FPUtil.rounding_mode
 )
 
+if(LLVM_LIBC_FULL_BUILD)
+  return()
+endif()
+
 add_fp_unittest(
   bfloat16_test
   NEED_MPFR
