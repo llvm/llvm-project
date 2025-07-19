@@ -249,6 +249,24 @@ public:
 
 using LibraryInfo = LibraryManager::LibraryInfo;
 
+struct SearchPlanEntry {
+  LibraryManager::State state; // Loaded, Queried, Unloaded
+  PathType type;               // User, System
+};
+
+struct SearchPolicy {
+  std::vector<SearchPlanEntry> plan;
+
+  static SearchPolicy defaultPlan() {
+    return {{{LibraryManager::State::Loaded, PathType::User},
+             {LibraryManager::State::Queried, PathType::User},
+             {LibraryManager::State::Unloaded, PathType::User},
+             {LibraryManager::State::Loaded, PathType::System},
+             {LibraryManager::State::Queried, PathType::System},
+             {LibraryManager::State::Unloaded, PathType::System}}};
+  }
+};
+
 /// Scans libraries and resolves symbols across user and system paths.
 ///
 /// Supports symbol enumeration and filtering via SymbolEnumerator, and tracks
@@ -355,7 +373,6 @@ public:
     std::vector<std::string> basePaths;
     std::shared_ptr<LibraryPathCache> cache;
     std::shared_ptr<PathResolver> resolver;
-    // std::shared_ptr<DylibPathResolver> dylibResolver;
 
     bool includeSys = false;
 
@@ -379,8 +396,6 @@ public:
       setup.resolver = existingResolver
                            ? existingResolver
                            : std::make_shared<PathResolver>(setup.cache);
-
-      // setup.dylibResolver = std::move(existingDylibResolver);
 
       if (customShouldScan)
         setup.shouldScan = std::move(customShouldScan);
@@ -409,8 +424,9 @@ public:
     });
   }
 
-  void searchSymbolsInLibraries(std::vector<std::string> &symbolNames,
-                                OnSearchComplete callback);
+  void searchSymbolsInLibraries(
+      std::vector<std::string> &symbolNames, OnSearchComplete callback,
+      const SearchPolicy &policy = SearchPolicy::defaultPlan());
 
 private:
   void scanLibrariesIfNeeded(PathType K);
@@ -435,6 +451,29 @@ private:
 using SymbolEnumerator = DynamicLoader::SymbolEnumerator;
 using SymbolQuery = DynamicLoader::SymbolQuery;
 using EnumerateResult = SymbolEnumerator::Result;
+
+class LoaderControllerImpl {
+public:
+  static std::unique_ptr<LoaderControllerImpl>
+  create(const DynamicLoader::Setup &setup);
+
+  void addScanPath(const std::string &path, PathType Kind);
+  bool markLibraryLoaded(StringRef path);
+  bool markLibraryUnLoaded(StringRef path);
+  void resolveSymbols(std::vector<std::string> symbols,
+                      DynamicLoader::OnSearchComplete OnCompletion,
+                      const SearchPolicy &policy = SearchPolicy::defaultPlan());
+
+  ~LoaderControllerImpl() = default;
+
+private:
+  LoaderControllerImpl(std::unique_ptr<DynamicLoader> loader)
+      : Loader(std::move(loader)) {}
+
+  std::unique_ptr<DynamicLoader> Loader;
+  // std::function<void(const std::string &, LibraryManager::State)>
+  // onStateChange;
+};
 
 } // end namespace orc
 } // end namespace llvm
