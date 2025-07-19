@@ -52,6 +52,19 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   return Func->isValid();
 }
 
+void Context::isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
+                                                 const FunctionDecl *FD) {
+  assert(Stk.empty());
+  ++EvalID;
+  size_t StackSizeBefore = Stk.size();
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  if (!C.interpretCall(FD, E)) {
+    C.cleanup();
+    Stk.clearTo(StackSizeBefore);
+  }
+}
+
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   ++EvalID;
   bool Recursing = !Stk.empty();
