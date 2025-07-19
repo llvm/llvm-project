@@ -1281,7 +1281,7 @@ SVal MallocChecker::evalMulForBufferSize(CheckerContext &C, const Expr *Blocks,
   SVal BlockBytesVal = C.getSVal(BlockBytes);
   ProgramStateRef State = C.getState();
   SVal TotalSize = SB.evalBinOp(State, BO_Mul, BlocksVal, BlockBytesVal,
-                                SB.getContext().getSizeType());
+                                SB.getContext().getCanonicalSizeType());
   return TotalSize;
 }
 
@@ -1311,11 +1311,9 @@ static bool isStandardRealloc(const CallEvent &Call) {
   const FunctionDecl *FD = dyn_cast<FunctionDecl>(Call.getDecl());
   assert(FD);
   ASTContext &AC = FD->getASTContext();
-
-  return FD->getDeclaredReturnType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(0)->getType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(1)->getType().getDesugaredType(AC) ==
-             AC.getSizeType();
+  return AC.hasSameType(FD->getDeclaredReturnType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(0)->getType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(1)->getType(), AC.getSizeType());
 }
 
 static bool isGRealloc(const CallEvent &Call) {
@@ -1323,10 +1321,9 @@ static bool isGRealloc(const CallEvent &Call) {
   assert(FD);
   ASTContext &AC = FD->getASTContext();
 
-  return FD->getDeclaredReturnType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(0)->getType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(1)->getType().getDesugaredType(AC) ==
-             AC.UnsignedLongTy;
+  return AC.hasSameType(FD->getDeclaredReturnType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(0)->getType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(1)->getType(), AC.UnsignedLongTy);
 }
 
 void MallocChecker::checkRealloc(ProgramStateRef State, const CallEvent &Call,
@@ -2830,10 +2827,10 @@ MallocChecker::ReallocMemAux(CheckerContext &C, const CallEvent &Call,
     return nullptr;
 
   // Compare the size argument to 0.
-  DefinedOrUnknownSVal SizeZero =
-      svalBuilder.evalEQ(State, TotalSize.castAs<DefinedOrUnknownSVal>(),
-                         svalBuilder.makeIntValWithWidth(
-                             svalBuilder.getContext().getSizeType(), 0));
+  DefinedOrUnknownSVal SizeZero = svalBuilder.evalEQ(
+      State, TotalSize.castAs<DefinedOrUnknownSVal>(),
+      svalBuilder.makeIntValWithWidth(
+          svalBuilder.getContext().getCanonicalSizeType(), 0));
 
   ProgramStateRef StatePtrIsNull, StatePtrNotNull;
   std::tie(StatePtrIsNull, StatePtrNotNull) = State->assume(PtrEQ);
