@@ -166,8 +166,7 @@ define void @test_2xi64(ptr noalias %data, ptr noalias %factor) {
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
-; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
-; VF2-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 8
+; VF2-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[INDEX]], 1
@@ -959,13 +958,11 @@ define void @test_2xi64_sub_of_wide_loads(ptr noalias %data, ptr noalias %A, ptr
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
-; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP6]], i32 0
-; VF2-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP6]], align 8
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
-; VF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP3]], i32 0
-; VF2-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
+; VF2-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP3]], align 8
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    [[TMP13:%.*]] = sub <2 x i64> [[BROADCAST_SPLAT]], [[BROADCAST_SPLAT2]]
