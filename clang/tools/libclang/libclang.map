@@ -568,7 +568,6 @@ LLVM_20 {
     clang_getTypePrettyPrinted;
     clang_isBeforeInTranslationUnit;
     clang_visitCXXBaseClasses;
-    clang_visitCXXMethods;
 };
 
 LLVM_21 {
@@ -580,6 +579,7 @@ LLVM_21 {
     clang_experimental_DependencyScannerReproducerOptions_create;
     clang_experimental_DependencyScannerReproducerOptions_dispose;
     clang_experimental_DependencyScanner_generateReproducer;
+    clang_visitCXXMethods;
     clang_Cursor_getGCCAssemblyTemplate;
     clang_Cursor_isGCCAssemblyHasGoto;
     clang_Cursor_getGCCAssemblyNumOutputs;
