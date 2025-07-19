@@ -990,8 +990,8 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // only the low bits are used.
   if (e == R_GOT || e == R_PLT)
     return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.isPic;
-  // R_AARCH64_AUTH_ABS64 and iRelSymbolicRel require a dynamic relocation.
-  if (e == RE_AARCH64_AUTH || type == ctx.target->iRelSymbolicRel)
+  // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
+  if (e == RE_AARCH64_AUTH)
     return false;
 
   // The behavior of an undefined weak reference is implementation defined.
@@ -1164,24 +1164,6 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
                                   addend, R_ABS});
         }
         return;
-      }
-      if (LLVM_UNLIKELY(type == ctx.target->iRelSymbolicRel)) {
-        if (sym.isPreemptible) {
-          auto diag = Err(ctx);
-          diag << "relocation " << type
-               << " cannot be used against preemptible symbol '" << &sym << "'";
-          printLocation(diag, *sec, sym, offset);
-        } else if (isIfunc) {
-          auto diag = Err(ctx);
-          diag << "relocation " << type
-               << " cannot be used against ifunc symbol '" << &sym << "'";
-          printLocation(diag, *sec, sym, offset);
-        } else {
-          part.relaDyn->addReloc({ctx.target->iRelativeRel, sec, offset,
-                                  DynamicReloc::AddendOnlyWithTargetVA, sym,
-                                  addend, R_ABS});
-          return;
-        }
       }
       part.relaDyn->addSymbolReloc(rel, *sec, offset, sym, addend, type);
 
@@ -1689,8 +1671,9 @@ void RelocationScanner::scan(Relocs<RelTy> rels) {
   }
 
   // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20, R_PPC64_ADDR64 and the branch-to-branch optimization.
-  if (ctx.arg.emachine == EM_RISCV ||
+  // R_RISCV_PCREL_HI20, ALIGN relocations, R_PPC64_ADDR64 and the
+  // branch-to-branch optimization.
+  if (is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine) ||
       (ctx.arg.emachine == EM_PPC64 && sec->name == ".toc") ||
       ctx.arg.branchToBranch)
     llvm::stable_sort(sec->relocs(),

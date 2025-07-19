@@ -55,7 +55,7 @@ jobs:
       - name: Install clang-format
         uses: aminya/setup-cpp@17c11551771948abc5752bbf3183482567c7caf0 # v1.1.1
         with:
-          clangformat: 20.1.5
+          clangformat: 20.1.8
 
       - name: Setup Python env
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
