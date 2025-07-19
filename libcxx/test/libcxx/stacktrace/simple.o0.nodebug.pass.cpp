@@ -10,11 +10,10 @@
 // ADDITIONAL_COMPILE_FLAGS: -O0 -g0
 
 #include <cassert>
-#include <stacktrace>
 #include <iostream>
+#include <stacktrace>
 
 int main(int, char**) {
-  // Get the current trace.
   // uint32_t line_number = __LINE__ + 1; // record where `current` is being called:
   auto trace = std::stacktrace::current();
   std::cout << trace << std::endl;

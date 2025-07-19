@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// ADDITIONAL_COMPILE_FLAGS: -O0 -g
 
 /*
     (19.6.3.4) Query [stacktrace.entry.query]

@@ -170,12 +170,8 @@ namespace std {
 #  include <__config>
 
 #  if _LIBCPP_STD_VER >= 23
-#    include <__stacktrace/base.h>
-#    include <__stacktrace/basic.h>
-#    include <__stacktrace/entry.h>
-#    include <__stacktrace/hash.h>
-#    include <__stacktrace/nonmem.h>
-#    include <__stacktrace/to_string.h>
+#    include <__stacktrace/basic_stacktrace.h>
+#    include <__stacktrace/stacktrace_entry.h>
 #    include <compare> // per [stacktrace.syn]
 #  endif
 
