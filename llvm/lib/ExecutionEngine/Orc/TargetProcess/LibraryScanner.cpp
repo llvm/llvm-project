@@ -40,15 +40,27 @@
 
 namespace llvm::orc {
 
-void handleError(Error Err) {
-  consumeError(llvm::handleErrors(std::move(Err), [](const ErrorInfoBase &EIB) {
-    dbgs() << "LLVM Error: " << EIB.message() << "\n";
+void handleError(Error Err, StringRef context = "") {
+  consumeError(handleErrors(std::move(Err), [&](const ErrorInfoBase &EIB) {
+    dbgs() << "LLVM Error";
+    if (!context.empty())
+      dbgs() << " [" << context << "]";
+    dbgs() << ": " << EIB.message() << "\n";
   }));
 }
 
-template <typename T> T handleErrorAndReturn(Error Err, T ReturnValue) {
-  handleError(std::move(Err));
+template <typename T>
+T handleErrorAndReturn(Error Err, T ReturnValue, StringRef context = "") {
+  handleError(std::move(Err), context);
   return ReturnValue;
+}
+
+template <typename T>
+T handleExpectedAndReturn(Expected<T> &&ValOrErr, T ReturnValue,
+                          StringRef context = "") {
+  if (!ValOrErr)
+    return handleErrorAndReturn(ValOrErr.takeError(), ReturnValue, context);
+  return *ValOrErr;
 }
 
 bool isLibraryFile(StringRef filename) {
@@ -322,30 +334,22 @@ DylibResolverImpl::resolve(StringRef libStem, bool variateLibStem) const {
 #ifndef _WIN32
 mode_t PathResolver::lstatCached(StringRef path) {
   // If already cached - retun cached result
-  std::unique_lock<std::shared_mutex> lock(m_mutex);
-
-  auto &cache = m_cache->m_lstatCache;
-
-  auto it = cache.find(path);
-  if (it != cache.end())
-    return it->second;
+  if (auto cache = m_cache->read_lstat(path))
+    return *cache;
 
   // Not cached: perform lstat and store
   struct stat buf {};
   mode_t st_mode = (lstat(path.str().c_str(), &buf) == -1) ? 0 : buf.st_mode;
 
-  cache.insert({path, st_mode});
+  m_cache->insert_lstat(path, st_mode);
 
   return st_mode;
 }
 
 std::optional<std::string> PathResolver::readlinkCached(StringRef path) {
-  std::unique_lock<std::shared_mutex> lock(m_mutex);
-  auto &cache = m_cache->m_readlinkCache;
   // If already cached - retun cached result
-  auto it = cache.find(path);
-  if (it != cache.end())
-    return it->second;
+  if (auto cache = m_cache->read_link(path))
+    return cache;
 
   // If result not in cache - call system function and cache result
   char buf[PATH_MAX];
@@ -353,8 +357,8 @@ std::optional<std::string> PathResolver::readlinkCached(StringRef path) {
   if ((len = readlink(path.str().c_str(), buf, sizeof(buf))) != -1) {
     buf[len] = '\0';
     std::string s(buf);
-    cache.insert({path, s});
-    return cache[path];
+    m_cache->insert_link(path, s);
+    return s;
   }
   return std::nullopt;
 }
@@ -431,10 +435,8 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
   // If already cached - retun cached result
   bool isRelative = sys::path::is_relative(path);
   if (!isRelative) {
-    std::shared_lock<std::shared_mutex> lock(m_mutex);
-    auto it = m_cache->m_realpathCache.find(path);
-    if (it != m_cache->m_realpathCache.end()) {
-      ec = it->second.errnoCode;
+    if (auto cached = m_cache->read_realpath(path)) {
+      ec = cached->errnoCode;
       if (ec) {
         // LLVM_DEBUG(
         dbgs() << "PathResolver::realpathCached: Cached (error) for " << path
@@ -442,9 +444,11 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
       } else {
         // LLVM_DEBUG(
         dbgs() << "PathResolver::realpathCached: Cached (success) for " << path
-               << " => " << it->second.canonicalPath << "\n"; //);
+               << " => " << cached->canonicalPath << "\n"; //);
       }
-      return it->second.canonicalPath;
+      return cached->canonicalPath.empty()
+                 ? std::nullopt
+                 : std::make_optional(cached->canonicalPath);
     }
   }
 
@@ -506,9 +510,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
       auto symlinkOpt = readlinkCached(resolvedPath);
       if (!symlinkOpt) {
         ec = std::make_error_code(std::errc::no_such_file_or_directory);
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
-        m_cache->m_realpathCache.insert(
-            {path, LibraryPathCache::PathInfo{"", ec}});
+        m_cache->insert_realpath(path, LibraryPathCache::PathInfo{"", ec});
         // LLVM_DEBUG(
         dbgs() << "    Failed to read symlink: " << resolvedPath << "\n"; //);
 
@@ -529,9 +531,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
           realpathCached(symlink, ec, resolvedBase,
                          /*baseIsResolved=*/true, symloopLevel - 1);
       if (!realSymlink) {
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
-        m_cache->m_realpathCache.insert(
-            {path, LibraryPathCache::PathInfo{"", ec}});
+        m_cache->insert_realpath(path, LibraryPathCache::PathInfo{"", ec});
         // LLVM_DEBUG(
         dbgs() << "    Failed to resolve symlink target: " << symlink
                << "\n"; //);
@@ -545,9 +545,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
 
     } else if (st_mode == 0) {
       ec = std::make_error_code(std::errc::no_such_file_or_directory);
-      std::unique_lock<std::shared_mutex> lock(m_mutex);
-      m_cache->m_realpathCache.insert(
-          {path, LibraryPathCache::PathInfo{"", ec}});
+      m_cache->insert_realpath(path, LibraryPathCache::PathInfo{"", ec});
       // LLVM_DEBUG(
       dbgs() << "    Component does not exist: " << resolvedPath << "\n"; //);
 
@@ -560,11 +558,10 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
 
   std::string canonical = resolved.str().str();
   {
-    std::unique_lock<std::shared_mutex> lock(m_mutex);
-    m_cache->m_realpathCache.insert({path, LibraryPathCache::PathInfo{
-                                               canonical,
-                                               std::error_code() // success
-                                           }});
+    m_cache->insert_realpath(path, LibraryPathCache::PathInfo{
+                                       canonical,
+                                       std::error_code() // success
+                                   });
   }
   // LLVM_DEBUG(
   dbgs() << "PathResolver::realpathCached: Final resolved: " << path << " => "
@@ -827,30 +824,54 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef filePath) {
   // LLVM_DEBUG(
   dbgs() << "extractDeps: Attempting to open file " << filePath << "\n"; //);
 
-  auto ObjOrErr = object::ObjectFile::createObjectFile(filePath);
-  if (!ObjOrErr) {
+  auto BinOrErr = object::createBinary(filePath);
+  if (!BinOrErr) {
     // LLVM_DEBUG(
     dbgs() << "extractDeps: Failed to open " << filePath << "\n"; //);
-    return handleErrorAndReturn(ObjOrErr.takeError(),
+    return handleErrorAndReturn(BinOrErr.takeError(),
                                 createStringError(std::errc::file_exists,
                                                   "Failed to open %s",
-                                                  filePath.str().c_str()));
-  }
-  object::ObjectFile *Obj = ObjOrErr.get().getBinary();
-
-  if (auto *elfObj = dyn_cast<object::ELFObjectFileBase>(Obj)) {
-    // LLVM_DEBUG(
-    dbgs() << "extractDeps: File " << filePath << " is an ELF object\n"; //);
-
-    return parseELFDeps(*elfObj);
+                                                  filePath.str().c_str()),
+                                "LibraryScanner::extractDeps");
   }
 
-  if (auto *macho = dyn_cast<object::MachOObjectFile>(Obj)) {
-    // LLVM_DEBUG(
-    dbgs() << "extractDeps: File " << filePath << " is a Mach-O object\n"; //);
-    return parseMachODeps(*macho);
-  }
+  object::Binary *Bin = BinOrErr.get().getBinary();
 
+  // Handle fat/universal binaries on macOS
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(Bin)) {
+    for (auto ObjForArch : UB->objects()) {
+      auto ObjOrErr = ObjForArch.getAsObjectFile();
+      if (!ObjOrErr) {
+        // LLVM_DEBUG(
+        dbgs() << "Failed to extract object for arch.\n";
+        handleError(ObjOrErr.takeError());
+        continue;
+      }
+
+      if (auto *macho = dyn_cast<object::MachOObjectFile>(ObjOrErr->get())) {
+        // LLVM_DEBUG(
+        dbgs() << "extractDeps: File " << filePath
+               << " is a Mach-O object\n"; //);
+        return parseMachODeps(*macho);
+      }
+    }
+  } else {
+    object::ObjectFile *Obj = dyn_cast<object::ObjectFile>(Bin);
+
+    if (auto *elfObj = dyn_cast<object::ELFObjectFileBase>(Obj)) {
+      // LLVM_DEBUG(
+      dbgs() << "extractDeps: File " << filePath << " is an ELF object\n"; //);
+
+      return parseELFDeps(*elfObj);
+    }
+
+    if (auto *macho = dyn_cast<object::MachOObjectFile>(Obj)) {
+      // LLVM_DEBUG(
+      dbgs() << "extractDeps: File " << filePath
+             << " is a Mach-O object\n"; //);
+      return parseMachODeps(*macho);
+    }
+  }
   // LLVM_DEBUG(
   dbgs() << "extractDeps: Unsupported binary format for file " << filePath
          << "\n"; //);
