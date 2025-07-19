@@ -4,8 +4,8 @@
 ;; rebuilding the metadata after inlining.
 ;
 ; RUN: opt -passes=inline %s -S | FileCheck %s
-;; We should not additional discarding of non-cold contexts when rebuilding the
-;; tries after inlining, even with a very low threshold.
+;; We should not perform additional discarding of non-cold contexts when
+;; rebuilding the tries after inlining, even with a very low threshold.
 ; RUN: opt -passes=inline -memprof-callsite-cold-threshold=0 %s -S | FileCheck %s
 
 ; ModuleID = 'memprof_inline2.cc'
