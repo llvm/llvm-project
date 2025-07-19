@@ -49,7 +49,7 @@ ElementwiseKind getKind(Operation *op) {
       .Case([](TanhOp) { return ElementwiseKind::tanh; })
       .Case([](ErfOp) { return ElementwiseKind::erf; })
       .Default([&](Operation *op) {
-        assert(false && "unexpected op");
+        llvm_unreachable("unhandled case in named to elementwise");
         return ElementwiseKind::sub;
       });
 }
