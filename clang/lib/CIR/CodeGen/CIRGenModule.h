@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 
 #include "CIRGenBuilder.h"
+#include "CIRGenCall.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
@@ -113,7 +114,20 @@ public:
 
   mlir::Operation *lastGlobalOp = nullptr;
 
+  llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
+
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
+
+  cir::GlobalOp getStaticLocalDeclAddress(const VarDecl *d) {
+    return staticLocalDeclMap[d];
+  }
+
+  void setStaticLocalDeclAddress(const VarDecl *d, cir::GlobalOp c) {
+    staticLocalDeclMap[d] = c;
+  }
+
+  cir::GlobalOp getOrCreateStaticVarDecl(const VarDecl &d,
+                                         cir::GlobalLinkageKind linkage);
 
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
@@ -141,6 +155,19 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  CharUnits computeNonVirtualBaseClassOffset(
+      const CXXRecordDecl *derivedClass,
+      llvm::iterator_range<CastExpr::path_const_iterator> path);
+
+  /// Get the CIR attributes and calling convention to use for a particular
+  /// function type.
+  ///
+  /// \param calleeInfo - The callee information these attributes are being
+  /// constructed for. If valid, the attributes applied to this decl may
+  /// contribute to the function attributes and calling convention.
+  void constructAttributeList(CIRGenCalleeInfo calleeInfo,
+                              mlir::NamedAttrList &attrs);
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -162,12 +189,54 @@ public:
   mlir::Location getLoc(clang::SourceLocation cLoc);
   mlir::Location getLoc(clang::SourceRange cRange);
 
+  /// Return the best known alignment for an unknown pointer to a
+  /// particular class.
+  clang::CharUnits getClassPointerAlignment(const clang::CXXRecordDecl *rd);
+
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
                                            LValueBaseInfo *baseInfo);
 
+  cir::FuncOp
+  getAddrOfCXXStructor(clang::GlobalDecl gd,
+                       const CIRGenFunctionInfo *fnInfo = nullptr,
+                       cir::FuncType fnType = nullptr, bool dontDefer = false,
+                       ForDefinition_t isForDefinition = NotForDefinition) {
+    return getAddrAndTypeOfCXXStructor(gd, fnInfo, fnType, dontDefer,
+                                       isForDefinition)
+        .second;
+  }
+
+  std::pair<cir::FuncType, cir::FuncOp> getAddrAndTypeOfCXXStructor(
+      clang::GlobalDecl gd, const CIRGenFunctionInfo *fnInfo = nullptr,
+      cir::FuncType fnType = nullptr, bool dontDefer = false,
+      ForDefinition_t isForDefinition = NotForDefinition);
+
+  /// This contains all the decls which have definitions but which are deferred
+  /// for emission and therefore should only be output if they are actually
+  /// used. If a decl is in this, then it is known to have not been referenced
+  /// yet.
+  std::map<llvm::StringRef, clang::GlobalDecl> deferredDecls;
+
+  // This is a list of deferred decls which we have seen that *are* actually
+  // referenced. These get code generated when the module is done.
+  std::vector<clang::GlobalDecl> deferredDeclsToEmit;
+  void addDeferredDeclToEmit(clang::GlobalDecl GD) {
+    deferredDeclsToEmit.emplace_back(GD);
+  }
+
   void emitTopLevelDecl(clang::Decl *decl);
+
+  /// Determine whether the definition must be emitted; if this returns \c
+  /// false, the definition can be emitted lazily if it's used.
+  bool mustBeEmitted(const clang::ValueDecl *d);
+
+  /// Determine whether the definition can be emitted eagerly, or should be
+  /// delayed until the end of the translation unit. This is relevant for
+  /// definitions whose linkage can change, e.g. implicit function
+  /// instantiations which may later be explicitly instantiated.
+  bool mayBeEmittedEagerly(const clang::ValueDecl *d);
 
   bool verifyModule() const;
 
@@ -179,9 +248,17 @@ public:
                     bool forVTable = false, bool dontDefer = false,
                     ForDefinition_t isForDefinition = NotForDefinition);
 
+  mlir::Operation *
+  getAddrOfGlobal(clang::GlobalDecl gd,
+                  ForDefinition_t isForDefinition = NotForDefinition);
+
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
+
+  void emitAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
+                          GlobalDecl aliasGD, cir::FuncOp aliasee,
+                          cir::GlobalLinkageKind linkage);
 
   mlir::Type convertType(clang::QualType type);
 
@@ -194,6 +271,10 @@ public:
   /// This must be called after dllimport/dllexport is set.
   void setGVProperties(mlir::Operation *op, const NamedDecl *d) const;
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
+
+  /// Set function attributes for a function declaration.
+  void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
+                             bool isIncompleteFunction, bool isThunk);
 
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
@@ -214,6 +295,14 @@ public:
 
   void emitTentativeDefinition(const VarDecl *d);
 
+  // Make sure that this type is translated.
+  void updateCompletedType(const clang::TagDecl *td);
+
+  // Produce code for this constructor/destructor. This method doesn't try to
+  // apply any ABI rules about which other constructors/destructors are needed
+  // or if they are alias to each other.
+  cir::FuncOp codegenCXXStructor(clang::GlobalDecl gd);
+
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
@@ -230,11 +319,24 @@ public:
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
 
+  /// Given a builtin id for a function like "__builtin_fabsf", return a
+  /// Function* for "fabsf".
+  cir::FuncOp getBuiltinLibFunction(const FunctionDecl *fd, unsigned builtinID);
+
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);
   }
 
+  /// Emit any needed decls for which code generation was deferred.
+  void emitDeferred();
+
+  /// Helper for `emitDeferred` to apply actual codegen.
+  void emitGlobalDecl(const clang::GlobalDecl &d);
+
   const llvm::Triple &getTriple() const { return target.getTriple(); }
+
+  // Finalize CIR code generation.
+  void release();
 
   /// -------
   /// Visibility and Linkage
@@ -246,13 +348,21 @@ public:
       clang::VisibilityAttr::VisibilityType visibility);
   cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
   static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
-
+  cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
                                                     GVALinkage linkage,
                                                     bool isConstantVariable);
+  void setFunctionLinkage(GlobalDecl gd, cir::FuncOp f) {
+    cir::GlobalLinkageKind l = getFunctionLinkage(gd);
+    f.setLinkageAttr(cir::GlobalLinkageKindAttr::get(&getMLIRContext(), l));
+    mlir::SymbolTable::setSymbolVisibility(f,
+                                           getMLIRVisibilityFromCIRLinkage(l));
+  }
 
   cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd,
                                                     bool isConstant);
+
+  void addReplacement(llvm::StringRef name, mlir::Operation *op);
 
   /// Helpers to emit "not yet implemented" error diagnostics
   DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef);
@@ -292,6 +402,17 @@ private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
+
+  // FIXME: should we use llvm::TrackingVH<mlir::Operation> here?
+  typedef llvm::StringMap<mlir::Operation *> ReplacementsTy;
+  ReplacementsTy replacements;
+  /// Call replaceAllUsesWith on all pairs in replacements.
+  void applyReplacements();
+
+  /// A helper function to replace all uses of OldF to NewF that replace
+  /// the type of pointer arguments. This is not needed to tradtional
+  /// pipeline since LLVM has opaque pointers but CIR not.
+  void replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF);
 
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 };

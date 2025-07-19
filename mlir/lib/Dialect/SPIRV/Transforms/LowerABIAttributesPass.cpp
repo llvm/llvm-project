@@ -22,7 +22,6 @@
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/SetVector.h"
 
 namespace mlir {
 namespace spirv {
@@ -282,8 +281,8 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
 
   // Creates a new function with the update signature.
   rewriter.modifyOpInPlace(funcOp, [&] {
-    funcOp.setType(rewriter.getFunctionType(
-        signatureConverter.getConvertedTypes(), std::nullopt));
+    funcOp.setType(
+        rewriter.getFunctionType(signatureConverter.getConvertedTypes(), {}));
   });
   return success();
 }

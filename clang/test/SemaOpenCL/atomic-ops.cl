@@ -167,7 +167,7 @@ void syncscope_checks(atomic_int *Ap, int scope) {
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_all_devices);
 #if __OPENCL_C_VERSION__ < CL_VERSION_3_0
   // expected-error@-2{{use of undeclared identifier 'memory_scope_all_devices'}}
-  // expected-note@* {{'memory_scope_all_svm_devices' declared here}}
+  // expected-note@opencl-c-base.h:*{{'memory_scope_all_svm_devices' declared here}}
 #endif
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_sub_group);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, scope);

@@ -342,6 +342,16 @@ memref.global "priate" constant @memref5 : memref<2xf32>  = uninitialized
 
 // -----
 
+// expected-error @+1 {{op initial value element expected to be of type 'f16', but was of type 'f32'}}
+"memref.global"() <{constant, initial_value = dense<1.000000e+00> : tensor<1xf32>, sym_name = "memref6", sym_visibility = "private", type = memref<1xf16>}> : () -> ()
+
+// -----
+
+// expected-error @+1 {{op initial value shape expected to be 1, 2 but was 2, 2}}
+"memref.global"() <{constant, initial_value = dense<1.000000e+00> : tensor<2x2xf16>, sym_name = "memref7", sym_visibility = "private", type = memref<1x2xf16>}> : () -> ()
+
+// -----
+
 func.func @nonexistent_global_memref() {
   // expected-error @+1 {{'gv' does not reference a valid global memref}}
   %0 = memref.get_global @gv : memref<3xf32>
@@ -703,7 +713,7 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result element type to be 'f32'}}
+  // expected-error@+1 {{expected result element type to be 'f32', but got 'memref<8x16x4xi32>'}}
   %1 = memref.subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to
       memref<8x16x4xi32>
@@ -714,10 +724,10 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result rank to be smaller or equal to the source rank.}}
+  // expected-error@+1 {{expected result rank to be smaller or equal to the source rank, but got 'memref<8x16x4x3xf32>'}}
   %1 = memref.subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to
-      memref<8x16x4x3xi32>
+      memref<8x16x4x3xf32>
   return
 }
 
@@ -947,6 +957,24 @@ func.func @test_store_zero_results() {
 
 func.func @test_store_zero_results2(%x: i32, %p: memref<i32>) {
   "memref.store"(%x,%p) : (i32, memref<i32>) -> i32  // expected-error {{'memref.store' op requires zero results}}
+  return
+}
+
+// -----
+
+func.func @invalid_load_alignment(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @below {{'memref.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %val = memref.load %memref[%c0] { alignment = -1 } : memref<4xi32>
+  return
+}
+
+// -----
+
+func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: i32) {
+  %c0 = arith.constant 0 : index
+  // expected-error @below {{'memref.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  memref.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>
   return
 }
 

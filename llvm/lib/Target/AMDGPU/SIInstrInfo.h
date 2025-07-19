@@ -33,6 +33,7 @@ class LiveVariables;
 class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
+class SIMachineFunctionInfo;
 class TargetRegisterClass;
 class ScheduleHazardRecognizer;
 
@@ -214,16 +215,20 @@ public:
     MO_GOTPCREL32_LO = 2,
     // MO_GOTPCREL32_HI -> symbol@gotpcrel32@hi -> R_AMDGPU_GOTPCREL32_HI.
     MO_GOTPCREL32_HI = 3,
+    // MO_GOTPCREL64 -> symbol@GOTPCREL -> R_AMDGPU_GOTPCREL.
+    MO_GOTPCREL64 = 4,
     // MO_REL32_LO -> symbol@rel32@lo -> R_AMDGPU_REL32_LO.
-    MO_REL32 = 4,
-    MO_REL32_LO = 4,
+    MO_REL32 = 5,
+    MO_REL32_LO = 5,
     // MO_REL32_HI -> symbol@rel32@hi -> R_AMDGPU_REL32_HI.
-    MO_REL32_HI = 5,
+    MO_REL32_HI = 6,
+    MO_REL64 = 7,
 
-    MO_FAR_BRANCH_OFFSET = 6,
+    MO_FAR_BRANCH_OFFSET = 8,
 
-    MO_ABS32_LO = 8,
-    MO_ABS32_HI = 9,
+    MO_ABS32_LO = 9,
+    MO_ABS32_HI = 10,
+    MO_ABS64 = 11,
   };
 
   explicit SIInstrInfo(const GCNSubtarget &ST);
@@ -282,6 +287,15 @@ public:
 
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
+
+  unsigned getVectorRegSpillSaveOpcode(Register Reg,
+                                       const TargetRegisterClass *RC,
+                                       unsigned Size,
+                                       const SIMachineFunctionInfo &MFI) const;
+  unsigned
+  getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
+                                 unsigned Size,
+                                 const SIMachineFunctionInfo &MFI) const;
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
@@ -863,6 +877,8 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
 
+  bool isXDLWMMA(const MachineInstr &MI) const;
+
   bool isXDL(const MachineInstr &MI) const;
 
   static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
@@ -1097,7 +1113,6 @@ public:
   // that will not require an additional 4-bytes; this function assumes that it
   // will.
   bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const {
-    assert(!MO.isReg() && "isInlineConstant called on register operand!");
     if (!MO.isImm())
       return false;
     return isInlineConstant(MO.getImm(), OperandType);
@@ -1304,6 +1319,8 @@ public:
   /// Fix operands in Inst to fix 16bit SALU to VALU lowering.
   void legalizeOperandsVALUt16(MachineInstr &Inst,
                                MachineRegisterInfo &MRI) const;
+  void legalizeOperandsVALUt16(MachineInstr &Inst, unsigned OpIdx,
+                               MachineRegisterInfo &MRI) const;
 
   /// Replace the instructions opcode with the equivalent VALU
   /// opcode.  This function will also move the users of MachineInstruntions
@@ -1446,8 +1463,7 @@ public:
                         Align Alignment = Align(4)) const;
 
   /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
-  /// encoded instruction. If \p Signed, this is for an instruction that
-  /// interprets the offset as signed.
+  /// encoded instruction with the given \p FlatVariant.
   bool isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
                          uint64_t FlatVariant) const;
 

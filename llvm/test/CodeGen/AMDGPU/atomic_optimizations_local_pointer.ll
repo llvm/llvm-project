@@ -405,6 +405,7 @@ define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, i32 %additive)
 ; GFX1164-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1164-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mad_u64_u32 v[1:2], null, s6, v0, s[2:3]
 ; GFX1164-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1164-NEXT:    s_mov_b32 s2, -1
@@ -1901,6 +1902,7 @@ define amdgpu_kernel void @add_i64_uniform(ptr addrspace(1) %out, i64 %additive)
 ; GFX1164-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX1164-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mad_u64_u32 v[0:1], null, s2, v2, s[4:5]
 ; GFX1164-NEXT:    s_mov_b32 s2, -1
 ; GFX1164-NEXT:    v_mad_u64_u32 v[3:4], null, s3, v2, v[1:2]
@@ -1937,6 +1939,7 @@ define amdgpu_kernel void @add_i64_uniform(ptr addrspace(1) %out, i64 %additive)
 ; GFX1132-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX1132-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mad_u64_u32 v[0:1], null, s2, v2, s[4:5]
 ; GFX1132-NEXT:    s_mov_b32 s2, -1
 ; GFX1132-NEXT:    v_mad_u64_u32 v[3:4], null, s3, v2, v[1:2]

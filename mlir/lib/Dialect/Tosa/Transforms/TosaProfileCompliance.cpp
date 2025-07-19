@@ -188,8 +188,8 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::RFFT2dOp op) {
 
 template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::SelectOp op) {
-  addValue(op.getInput2());
-  addValue(op.getInput3());
+  addValue(op.getOnTrue());
+  addValue(op.getOnFalse());
   addValue(op.getOutput());
   return success();
 }
@@ -215,34 +215,13 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::MatMulOp op) {
 
 template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableOp op) {
-  ::mlir::Attribute attr = op.getInitialValueAttr();
-  if (attr == nullptr)
-    return failure();
-
-  if (auto typedAttr = dyn_cast<TypedAttr>(attr)) {
-    addType(getElementTypeOrSelf(typedAttr));
-    return success();
-  }
-  return failure();
+  addType(op.getType());
+  return success();
 }
 
 template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableWriteOp op) {
   addValue(op.getInput1());
-  return success();
-}
-
-template <>
-LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::IfOp op) {
-  addValue(op.getCondition());
-  return success();
-}
-
-template <>
-LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::WhileOp op) {
-  Block *block = &op.getCondGraph().front();
-  Operation *terminator = block->getTerminator();
-  addValue(terminator->getOperands().front());
   return success();
 }
 
@@ -287,8 +266,6 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(MatMul)
   POPULATE_PROFILE_INFO_CUSTOM(Variable)
   POPULATE_PROFILE_INFO_CUSTOM(VariableWrite)
-  POPULATE_PROFILE_INFO_CUSTOM(If)
-  POPULATE_PROFILE_INFO_CUSTOM(While)
 
   // For the most of tosa operators, all operands are profile/extension related
   // and hence are all considered in this profile-based compilance check.
@@ -347,6 +324,8 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   // constraint for those operations.
   POPULATE_PROFILE_INFO_SKIP(ConstShape)
   POPULATE_PROFILE_INFO_SKIP(Yield)
+  POPULATE_PROFILE_INFO_SKIP(If)
+  POPULATE_PROFILE_INFO_SKIP(While)
 
   return failure();
 }

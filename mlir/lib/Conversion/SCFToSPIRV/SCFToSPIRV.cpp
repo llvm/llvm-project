@@ -12,10 +12,8 @@
 
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -421,7 +419,7 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
 
     rewriter.setInsertionPointToEnd(&beforeBlock);
     rewriter.replaceOpWithNewOp<spirv::BranchConditionalOp>(
-        cond, conditionVal, &afterBlock, condArgs, &mergeBlock, std::nullopt);
+        cond, conditionVal, &afterBlock, condArgs, &mergeBlock, ValueRange());
 
     // Convert the scf.yield op to a branch back to the header block.
     rewriter.setInsertionPointToEnd(&afterBlock);

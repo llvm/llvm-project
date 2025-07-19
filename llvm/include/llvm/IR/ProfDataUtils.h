@@ -21,12 +21,23 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+struct MDProfLabels {
+  LLVM_ABI static const char *BranchWeights;
+  LLVM_ABI static const char *ValueProfile;
+  LLVM_ABI static const char *FunctionEntryCount;
+  LLVM_ABI static const char *SyntheticFunctionEntryCount;
+  LLVM_ABI static const char *ExpectedBranchWeights;
+  LLVM_ABI static const char *UnknownBranchWeightsMarker;
+};
 
 /// Checks if an Instruction has MD_prof Metadata
 LLVM_ABI bool hasProfMD(const Instruction &I);
 
 /// Checks if an MDNode contains Branch Weight Metadata
 LLVM_ABI bool isBranchWeightMD(const MDNode *ProfileData);
+
+/// Checks if an MDNode contains value profiling Metadata
+LLVM_ABI bool isValueProfileMD(const MDNode *ProfileData);
 
 /// Checks if an instructions has Branch Weight Metadata
 ///
@@ -132,6 +143,18 @@ LLVM_ABI bool extractProfTotalWeight(const Instruction &I,
 /// \param IsExpected were these weights added from an llvm.expect* intrinsic.
 LLVM_ABI void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
                                bool IsExpected);
+
+/// Specify that the branch weights for this terminator cannot be known at
+/// compile time. This should only be called by passes, and never as a default
+/// behavior in e.g. MDBuilder. The goal is to use this info to validate passes
+/// do not accidentally drop profile info, and this API is called in cases where
+/// the pass explicitly cannot provide that info. Defaulting it in would hide
+/// bugs where the pass forgets to transfer over or otherwise specify profile
+/// info.
+LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I);
+
+LLVM_ABI bool isExplicitlyUnknownBranchWeightsMetadata(const MDNode &MD);
+LLVM_ABI bool hasExplicitlyUnknownBranchWeights(const Instruction &I);
 
 /// Scaling the profile data attached to 'I' using the ratio of S/T.
 LLVM_ABI void scaleProfData(Instruction &I, uint64_t S, uint64_t T);

@@ -12,10 +12,10 @@
 
 #include "DataSharingProcessor.h"
 
-#include "PrivateReductionUtils.h"
 #include "Utils.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -26,6 +26,8 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallSet.h"
 
 namespace Fortran {
 namespace lower {
@@ -49,7 +51,7 @@ DataSharingProcessor::DataSharingProcessor(
       firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
       shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
       useDelayedPrivatization(useDelayedPrivatization), symTable(symTable),
-      visitor() {
+      visitor(semaCtx) {
   eval.visit([&](const auto &functionParserNode) {
     parser::Walk(functionParserNode, visitor);
   });
@@ -204,6 +206,42 @@ void DataSharingProcessor::collectOmpObjectListSymbol(
 }
 
 void DataSharingProcessor::collectSymbolsForPrivatization() {
+  // Add checks here for exceptional cases where privatization is not
+  // needed and be deferred to a later phase (like OpenMP IRBuilder).
+  // Such cases are suggested to be clearly documented and explained
+  // instead of being silently skipped
+  auto isException = [&](const Fortran::semantics::Symbol *sym) -> bool {
+    // `OmpPreDetermined` symbols cannot be exceptions since
+    // their privatized symbols are heavily used in FIR.
+    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
+      return false;
+
+    // The handling of linear clause is deferred to the OpenMP
+    // IRBuilder which is responsible for all its aspects,
+    // including privatization. Privatizing linear variables at this point would
+    // cause the following structure:
+    //
+    // omp.op linear(%linear = %step : !fir.ref<type>) {
+    //	Use %linear in this BB
+    // }
+    //
+    // to be changed to the following:
+    //
+    // omp. op linear(%linear = %step : !fir.ref<type>)
+    // 	private(%linear -> %arg0 : !fir.ref<i32>) {
+    //	Declare and use %arg0 in this BB
+    // }
+    //
+    // The OpenMP IRBuilder needs to map the linear MLIR value
+    // (i.e. %linear) to its `uses` in the BB to correctly
+    // implement the functionalities of linear clause. However,
+    // privatizing here disallows the IRBuilder to
+    // draw a relation between %linear and %arg0. Hence skip.
+    if (sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
+      return true;
+    return false;
+  };
+
   for (const omp::Clause &clause : clauses) {
     if (const auto &privateClause =
             std::get_if<omp::clause::Private>(&clause.u)) {
@@ -222,10 +260,10 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   }
 
   // TODO For common blocks, add the underlying objects within the block. Doing
-  // so, we won't need to explicitely handle block objects (or forget to do
+  // so, we won't need to explicitly handle block objects (or forget to do
   // so).
   for (auto *sym : explicitlyPrivatizedSymbols)
-    if (!sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
+    if (!isException(sym))
       allPrivatizedSymbols.insert(sym);
 }
 
@@ -356,26 +394,26 @@ getSource(const semantics::SemanticsContext &semaCtx,
   const parser::CharBlock *source = nullptr;
 
   auto ompConsVisit = [&](const parser::OpenMPConstruct &x) {
-    std::visit(common::visitors{
-                   [&](const parser::OpenMPSectionsConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPLoopConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPBlockConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPCriticalConstruct &x) {
-                     source = &std::get<0>(x.t).source;
-                   },
-                   [&](const parser::OpenMPAtomicConstruct &x) {
-                     std::visit([&](const auto &x) { source = &x.source; },
-                                x.u);
-                   },
-                   [&](const auto &x) { source = &x.source; },
-               },
-               x.u);
+    std::visit(
+        common::visitors{
+            [&](const parser::OpenMPSectionsConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPLoopConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPBlockConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPCriticalConstruct &x) {
+              source = &std::get<0>(x.t).source;
+            },
+            [&](const parser::OpenMPAtomicConstruct &x) {
+              source = &std::get<parser::OmpDirectiveSpecification>(x.t).source;
+            },
+            [&](const auto &x) { source = &x.source; },
+        },
+        x.u);
   };
 
   eval.visit(common::visitors{
@@ -388,19 +426,74 @@ getSource(const semantics::SemanticsContext &semaCtx,
   return source;
 }
 
+static void collectPrivatizingConstructs(
+    llvm::SmallSet<llvm::omp::Directive, 16> &constructs, unsigned version) {
+  using Clause = llvm::omp::Clause;
+  using Directive = llvm::omp::Directive;
+
+  static const Clause privatizingClauses[] = {
+      Clause::OMPC_private,
+      Clause::OMPC_lastprivate,
+      Clause::OMPC_firstprivate,
+      Clause::OMPC_in_reduction,
+      Clause::OMPC_reduction,
+      Clause::OMPC_linear,
+      // TODO: Clause::OMPC_induction,
+      Clause::OMPC_task_reduction,
+      Clause::OMPC_detach,
+      Clause::OMPC_use_device_ptr,
+      Clause::OMPC_is_device_ptr,
+  };
+
+  for (auto dir : llvm::enum_seq_inclusive<Directive>(Directive::First_,
+                                                      Directive::Last_)) {
+    bool allowsPrivatizing = llvm::any_of(privatizingClauses, [&](Clause cls) {
+      return llvm::omp::isAllowedClauseForDirective(dir, cls, version);
+    });
+    if (allowsPrivatizing)
+      constructs.insert(dir);
+  }
+}
+
+bool DataSharingProcessor::isOpenMPPrivatizingConstruct(
+    const parser::OpenMPConstruct &omp, unsigned version) {
+  static llvm::SmallSet<llvm::omp::Directive, 16> privatizing;
+  [[maybe_unused]] static bool init =
+      (collectPrivatizingConstructs(privatizing, version), true);
+
+  // As of OpenMP 6.0, privatizing constructs (with the test being if they
+  // allow a privatizing clause) are: dispatch, distribute, do, for, loop,
+  // parallel, scope, sections, simd, single, target, target_data, task,
+  // taskgroup, taskloop, and teams.
+  return llvm::is_contained(privatizing, extractOmpDirective(omp));
+}
+
+bool DataSharingProcessor::isOpenMPPrivatizingEvaluation(
+    const pft::Evaluation &eval) const {
+  unsigned version = semaCtx.langOptions().OpenMPVersion;
+  return eval.visit([=](auto &&s) {
+    using BareS = llvm::remove_cvref_t<decltype(s)>;
+    if constexpr (std::is_same_v<BareS, parser::OpenMPConstruct>) {
+      return isOpenMPPrivatizingConstruct(s, version);
+    } else {
+      return false;
+    }
+  });
+}
+
 void DataSharingProcessor::collectSymbolsInNestedRegions(
     lower::pft::Evaluation &eval, semantics::Symbol::Flag flag,
     llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions) {
-  for (lower::pft::Evaluation &nestedEval : eval.getNestedEvaluations()) {
-    if (nestedEval.hasNestedEvaluations()) {
-      if (nestedEval.isConstruct())
-        // Recursively look for OpenMP constructs within `nestedEval`'s region
-        collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
-      else {
-        converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
-                                   /*collectSymbols=*/true,
-                                   /*collectHostAssociatedSymbols=*/false);
-      }
+  if (!eval.hasNestedEvaluations())
+    return;
+  for (pft::Evaluation &nestedEval : eval.getNestedEvaluations()) {
+    if (isOpenMPPrivatizingEvaluation(nestedEval)) {
+      converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
+                                 /*collectSymbols=*/true,
+                                 /*collectHostAssociatedSymbols=*/false);
+    } else {
+      // Recursively look for OpenMP constructs within `nestedEval`'s region
+      collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
     }
   }
 }
@@ -537,38 +630,10 @@ void DataSharingProcessor::privatizeSymbol(
     return;
   }
 
-  auto initGen = [&](mlir::omp::PrivateClauseOp result, mlir::Type argType) {
-    lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*symToPrivatize);
-    assert(hsb && "Host symbol box not found");
-    hlfir::Entity entity{hsb.getAddr()};
-    bool cannotHaveNonDefaultLowerBounds =
-        !entity.mayHaveNonDefaultLowerBounds();
-
-    mlir::Region &initRegion = result.getInitRegion();
-    mlir::Location symLoc = hsb.getAddr().getLoc();
-    mlir::Block *initBlock = firOpBuilder.createBlock(
-        &initRegion, /*insertPt=*/{}, {argType, argType}, {symLoc, symLoc});
-
-    bool emitCopyRegion =
-        symToPrivatize->test(semantics::Symbol::Flag::OmpFirstPrivate);
-
-    populateByRefInitAndCleanupRegions(
-        converter, symLoc, argType, /*scalarInitValue=*/nullptr, initBlock,
-        result.getInitPrivateArg(), result.getInitMoldArg(),
-        result.getDeallocRegion(),
-        emitCopyRegion ? omp::DeclOperationKind::FirstPrivate
-                       : omp::DeclOperationKind::Private,
-        symToPrivatize, cannotHaveNonDefaultLowerBounds);
-    // TODO: currently there are false positives from dead uses of the mold
-    // arg
-    if (result.initReadsFromMold())
-      mightHaveReadHostSym.insert(symToPrivatize);
-  };
-
   Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
                                   mlir::omp::PrivateClauseOps>(
-      converter, firOpBuilder, symTable, initGen, allPrivatizedSymbols,
-      symToPrivatize, clauseOps);
+      converter, firOpBuilder, symTable, allPrivatizedSymbols,
+      mightHaveReadHostSym, symToPrivatize, clauseOps);
 }
 } // namespace omp
 } // namespace lower

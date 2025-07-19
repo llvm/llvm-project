@@ -374,12 +374,14 @@ struct LoopNest {
 /// loop constructs currently.
 LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
                      mlir::ValueRange extents, bool isUnordered = false,
-                     bool emitWorkshareLoop = false);
+                     bool emitWorkshareLoop = false,
+                     bool couldVectorize = true);
 inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
                             mlir::Value shape, bool isUnordered = false,
-                            bool emitWorkshareLoop = false) {
+                            bool emitWorkshareLoop = false,
+                            bool couldVectorize = true) {
   return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape),
-                     isUnordered, emitWorkshareLoop);
+                     isUnordered, emitWorkshareLoop, couldVectorize);
 }
 
 /// The type of a callback that generates the body of a reduction
@@ -539,6 +541,14 @@ Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
 /// a contiguous part of the memref object given that it is
 /// contiguous.
 bool designatePreservesContinuity(hlfir::DesignateOp op);
+
+/// Return true iff the given \p base desribes an object
+/// that is contiguous. If \p checkWhole is true, then
+/// the object must be contiguous in all dimensions,
+/// otherwise, it must be contiguous in the innermost dimension.
+/// This function is an extension of hlfir::Entity::isSimplyContiguous(),
+/// and it can be used on pure FIR representation as well as on HLFIR.
+bool isSimplyContiguous(mlir::Value base, bool checkWhole = true);
 
 } // namespace hlfir
 

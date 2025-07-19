@@ -519,8 +519,31 @@ bool SemaOpenACC::CheckVarIsPointerType(OpenACCClauseKind ClauseKind,
   return false;
 }
 
+void SemaOpenACC::ActOnStartParseVar(OpenACCDirectiveKind DK,
+                                     OpenACCClauseKind CK) {
+  if (DK == OpenACCDirectiveKind::Cache) {
+    CacheInfo.ParsingCacheVarList = true;
+    CacheInfo.IsInvalidCacheRef = false;
+  }
+}
+
+void SemaOpenACC::ActOnInvalidParseVar() {
+  CacheInfo.ParsingCacheVarList = false;
+  CacheInfo.IsInvalidCacheRef = false;
+}
+
 ExprResult SemaOpenACC::ActOnCacheVar(Expr *VarExpr) {
   Expr *CurVarExpr = VarExpr->IgnoreParenImpCasts();
+  // Clear this here, so we can do the returns based on the invalid cache ref
+  // here.  Note all return statements in this function must return ExprError if
+  // IsInvalidCacheRef. However, instead of doing an 'early return' in that
+  // case, we can let the rest of the diagnostics happen, as the invalid decl
+  // ref is a warning.
+  bool WasParsingInvalidCacheRef =
+      CacheInfo.ParsingCacheVarList && CacheInfo.IsInvalidCacheRef;
+  CacheInfo.ParsingCacheVarList = false;
+  CacheInfo.IsInvalidCacheRef = false;
+
   if (!isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
     Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_cache);
     return ExprError();
@@ -540,19 +563,19 @@ ExprResult SemaOpenACC::ActOnCacheVar(Expr *VarExpr) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(CurVarExpr)) {
     if (isa<VarDecl, NonTypeTemplateParmDecl>(
             DRE->getFoundDecl()->getCanonicalDecl()))
-      return VarExpr;
+      return WasParsingInvalidCacheRef ? ExprEmpty() : VarExpr;
   }
 
   if (const auto *ME = dyn_cast<MemberExpr>(CurVarExpr)) {
     if (isa<FieldDecl>(ME->getMemberDecl()->getCanonicalDecl())) {
-      return VarExpr;
+      return WasParsingInvalidCacheRef ? ExprEmpty() : VarExpr;
     }
   }
 
   // Nothing really we can do here, as these are dependent.  So just return they
   // are valid.
   if (isa<DependentScopeDeclRefExpr, CXXDependentScopeMemberExpr>(CurVarExpr))
-    return VarExpr;
+    return WasParsingInvalidCacheRef ? ExprEmpty() : VarExpr;
 
   // There isn't really anything we can do in the case of a recovery expr, so
   // skip the diagnostic rather than produce a confusing diagnostic.
@@ -562,6 +585,105 @@ ExprResult SemaOpenACC::ActOnCacheVar(Expr *VarExpr) {
   Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_cache);
   return ExprError();
 }
+
+void SemaOpenACC::CheckDeclReference(SourceLocation Loc, Expr *E, Decl *D) {
+  if (!getLangOpts().OpenACC || !CacheInfo.ParsingCacheVarList || !D ||
+      D->isInvalidDecl())
+    return;
+  // A 'cache' variable reference MUST be declared before the 'acc.loop' we
+  // generate in codegen, so we have to mark it invalid here in some way.  We do
+  // so in a bit of a convoluted way as there is no good way to put this into
+  // the AST, so we store it in SemaOpenACC State.  We can check the Scope
+  // during parsing to make sure there is a 'loop' before the decl is
+  // declared(and skip during instantiation).
+  // We only diagnose this as a warning, as this isn't required by the standard
+  // (unless you take a VERY awkward reading of some awkward prose).
+
+  Scope *CurScope = SemaRef.getCurScope();
+
+  // if we are at TU level, we are either doing some EXTRA wacky, or are in a
+  // template instantiation, so just give up.
+  if (CurScope->getDepth() == 0)
+    return;
+
+  while (CurScope) {
+    // If we run into a loop construct scope, than this is 'correct' in that the
+    // declaration is outside of the loop.
+    if (CurScope->isOpenACCLoopConstructScope())
+      return;
+
+    if (CurScope->isDeclScope(D)) {
+      Diag(Loc, diag::warn_acc_cache_var_not_outside_loop);
+
+      CacheInfo.IsInvalidCacheRef = true;
+    }
+
+    CurScope = CurScope->getParent();
+  }
+  // If we don't find the decl at all, we assume that it must be outside of the
+  // loop (or we aren't in a loop!) so skip the diagnostic.
+}
+
+namespace {
+// Check whether the type of the thing we are referencing is OK for things like
+// private, firstprivate, and reduction, which require certain operators to be
+// available.
+ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
+                        Expr *InnerExpr) {
+  // There is nothing to do here, only these three have these sorts of
+  // restrictions.
+  if (CK != OpenACCClauseKind::Private &&
+      CK != OpenACCClauseKind::FirstPrivate &&
+      CK != OpenACCClauseKind::Reduction)
+    return VarExpr;
+
+  // We can't test this if it isn't here, or if the type isn't clear yet.
+  if (!InnerExpr || InnerExpr->isTypeDependent())
+    return VarExpr;
+
+  const auto *RD = InnerExpr->getType()->getAsCXXRecordDecl();
+
+  // if this isn't a C++ record decl, we can create/copy/destroy this thing at
+  // will without problem, so this is a success.
+  if (!RD)
+    return VarExpr;
+
+  // TODO: OpenACC:
+  // Private must have default ctor + dtor in InnerExpr
+  // FirstPrivate must have copyctor + dtor in InnerExpr
+  // Reduction must have copyctor + dtor + operation in InnerExpr
+
+  // TODO OpenACC: It isn't clear what the requirements are for default
+  // constructor/copy constructor are for First private and reduction, but
+  // private requires a default constructor.
+  if (CK == OpenACCClauseKind::Private) {
+    bool HasNonDeletedDefaultCtor =
+        llvm::find_if(RD->ctors(), [](const CXXConstructorDecl *CD) {
+          return CD->isDefaultConstructor() && !CD->isDeleted();
+        }) != RD->ctors().end();
+    if (!HasNonDeletedDefaultCtor && !RD->needsImplicitDefaultConstructor()) {
+      S.Diag(InnerExpr->getBeginLoc(),
+             clang::diag::warn_acc_var_referenced_lacks_op)
+          << InnerExpr->getType() << CK
+          << clang::diag::AccVarReferencedReason::DefCtor;
+      return ExprError();
+    }
+  }
+
+  // All 3 things need to make sure they have a dtor.
+  bool DestructorDeleted =
+      RD->getDestructor() && RD->getDestructor()->isDeleted();
+  if (DestructorDeleted && !RD->needsImplicitDestructor()) {
+    S.Diag(InnerExpr->getBeginLoc(),
+           clang::diag::warn_acc_var_referenced_lacks_op)
+        << InnerExpr->getType() << CK
+        << clang::diag::AccVarReferencedReason::Dtor;
+    return ExprError();
+  }
+  return VarExpr;
+}
+} // namespace
+
 ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                  Expr *VarExpr) {
   // This has unique enough restrictions that we should split it to a separate
@@ -598,7 +720,7 @@ ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
   if (const auto *DRE = dyn_cast<DeclRefExpr>(CurVarExpr)) {
     if (isa<VarDecl, NonTypeTemplateParmDecl>(
             DRE->getFoundDecl()->getCanonicalDecl()))
-      return VarExpr;
+      return CheckVarType(*this, CK, VarExpr, CurVarExpr);
   }
 
   // If CK is a Reduction, this special cases for OpenACC3.3 2.5.15: "A var in a
@@ -617,9 +739,9 @@ ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
         // declare, reduction, and use_device.
         const auto *This = dyn_cast<CXXThisExpr>(ME->getBase());
         if (This && This->isImplicit())
-          return VarExpr;
+          return CheckVarType(*this, CK, VarExpr, CurVarExpr);
       } else {
-        return VarExpr;
+        return CheckVarType(*this, CK, VarExpr, CurVarExpr);
       }
     }
   }
@@ -628,14 +750,14 @@ ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
   // doesn't fall into 'variable or array name'
   if (CK != OpenACCClauseKind::UseDevice &&
       DK != OpenACCDirectiveKind::Declare && isa<CXXThisExpr>(CurVarExpr))
-    return VarExpr;
+    return CheckVarType(*this, CK, VarExpr, CurVarExpr);
 
   // Nothing really we can do here, as these are dependent.  So just return they
   // are valid.
   if (isa<DependentScopeDeclRefExpr>(CurVarExpr) ||
       (CK != OpenACCClauseKind::Reduction &&
        isa<CXXDependentScopeMemberExpr>(CurVarExpr)))
-    return VarExpr;
+    return CheckVarType(*this, CK, VarExpr, CurVarExpr);
 
   // There isn't really anything we can do in the case of a recovery expr, so
   // skip the diagnostic rather than produce a confusing diagnostic.

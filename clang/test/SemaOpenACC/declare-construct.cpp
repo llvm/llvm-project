@@ -331,17 +331,18 @@ void ModList() {
   // expected-error@+1{{OpenACC 'capture' modifier not valid on 'copyin' clause}}
 #pragma acc declare copyin(always, alwaysin, readonly, capture: V8)
 
-  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+  // expected-error@+2{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc declare copyout(always, alwaysin, alwaysout, zero, readonly: V9)
-  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
-#pragma acc declare copyout(alwaysout: V10)
+  // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
+#pragma acc declare copyout(alwaysin: V10)
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc declare copyout(readonly: V11)
   // expected-error@+1{{OpenACC 'capture' modifier not valid on 'copyout' clause}}
 #pragma acc declare copyout(capture: V11B)
+  // expected-error@+2{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
   // expected-error@+1{{OpenACC 'capture' modifier not valid on 'copyout' clause}}
-#pragma acc declare copyout(always, alwaysin, zero, capture: V12)
+#pragma acc declare copyout(always, alwaysin, alwaysout, zero, capture: V12)
 
   // expected-error@+5{{OpenACC 'always' modifier not valid on 'create' clause}}
   // expected-error@+4{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}

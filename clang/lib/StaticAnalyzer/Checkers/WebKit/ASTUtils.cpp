@@ -119,6 +119,11 @@ bool tryToFindPtrOrigin(
         }
       }
 
+      if (call->isCallToStdMove() && call->getNumArgs() == 1) {
+        E = call->getArg(0)->IgnoreParenCasts();
+        continue;
+      }
+
       if (auto *callee = call->getDirectCallee()) {
         if (isCtorOfSafePtr(callee)) {
           if (StopAtFirstRefCountedObj)
@@ -172,7 +177,10 @@ bool tryToFindPtrOrigin(
       E = unaryOp->getSubExpr();
       continue;
     }
-
+    if (auto *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
+      E = BoxedExpr->getSubExpr();
+      continue;
+    }
     break;
   }
   // Some other expression.
@@ -229,6 +237,26 @@ bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
     return false;
   auto T = D->getType();
   return isOwnerPtrType(T) && T.isConstQualified();
+}
+
+bool isExprToGetCheckedPtrCapableMember(const clang::Expr *E) {
+  auto *ME = dyn_cast<MemberExpr>(E);
+  if (!ME)
+    return false;
+  auto *Base = ME->getBase();
+  if (!Base)
+    return false;
+  if (!isa<CXXThisExpr>(Base->IgnoreParenCasts()))
+    return false;
+  auto *D = ME->getMemberDecl();
+  if (!D)
+    return false;
+  auto T = D->getType();
+  auto *CXXRD = T->getAsCXXRecordDecl();
+  if (!CXXRD)
+    return false;
+  auto result = isCheckedPtrCapable(CXXRD);
+  return result && *result;
 }
 
 class EnsureFunctionVisitor

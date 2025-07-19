@@ -474,20 +474,6 @@ static void ParseLangArgs(LangOptions &Opts, ArchSpec arch) {
   // specified, or -std is set to a conforming mode.
   Opts.Trigraphs = !Opts.GNUMode;
   Opts.CharIsSigned = arch.CharIsSignedByDefault();
-  Opts.OptimizeSize = 0;
-
-  // FIXME: Eliminate this dependency.
-  //    unsigned Opt =
-  //    Args.hasArg(OPT_Os) ? 2 : getLastArgIntValue(Args, OPT_O, 0, Diags);
-  //    Opts.Optimize = Opt != 0;
-  unsigned Opt = 0;
-
-  // This is the __NO_INLINE__ define, which just depends on things like the
-  // optimization level and -fno-inline, not actually whether the backend has
-  // inlining enabled.
-  //
-  // FIXME: This is affected by other options (-fno-inline).
-  Opts.NoInlineDefine = !Opt;
 
   // This is needed to allocate the extra space for the owning module
   // on each decl.
@@ -2181,25 +2167,22 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
 }
 
 CompilerType TypeSystemClang::CreateFunctionType(
-    const CompilerType &result_type, const CompilerType *args,
-    unsigned num_args, bool is_variadic, unsigned type_quals,
-    clang::CallingConv cc, clang::RefQualifierKind ref_qual) {
+    const CompilerType &result_type, llvm::ArrayRef<CompilerType> args,
+    bool is_variadic, unsigned type_quals, clang::CallingConv cc,
+    clang::RefQualifierKind ref_qual) {
   if (!result_type || !ClangUtil::IsClangType(result_type))
     return CompilerType(); // invalid return type
 
   std::vector<QualType> qual_type_args;
-  if (num_args > 0 && args == nullptr)
-    return CompilerType(); // invalid argument array passed in
-
   // Verify that all arguments are valid and the right type
-  for (unsigned i = 0; i < num_args; ++i) {
-    if (args[i]) {
+  for (const auto &arg : args) {
+    if (arg) {
       // Make sure we have a clang type in args[i] and not a type from another
       // language whose name might match
-      const bool is_clang_type = ClangUtil::IsClangType(args[i]);
+      const bool is_clang_type = ClangUtil::IsClangType(arg);
       lldbassert(is_clang_type);
       if (is_clang_type)
-        qual_type_args.push_back(ClangUtil::GetQualType(args[i]));
+        qual_type_args.push_back(ClangUtil::GetQualType(arg));
       else
         return CompilerType(); //  invalid argument type (must be a clang type)
     } else
@@ -2423,9 +2406,12 @@ void TypeSystemClang::DumpDeclHiearchy(clang::Decl *decl) {
 
   clang::RecordDecl *record_decl = llvm::dyn_cast<clang::RecordDecl>(decl);
   if (record_decl) {
+    bool is_injected_class_name =
+        llvm::isa<clang::CXXRecordDecl>(record_decl) &&
+        llvm::cast<CXXRecordDecl>(record_decl)->isInjectedClassName();
     printf("%20s: %s%s\n", decl->getDeclKindName(),
            record_decl->getDeclName().getAsString().c_str(),
-           record_decl->isInjectedClassName() ? " (injected class name)" : "");
+           is_injected_class_name ? " (injected class name)" : "");
 
   } else {
     clang::NamedDecl *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl);
@@ -2569,6 +2555,7 @@ RemoveWrappingTypes(QualType type, ArrayRef<clang::Type::TypeClass> mask = {}) {
     case clang::Type::TypeOf:
     case clang::Type::TypeOfExpr:
     case clang::Type::Using:
+    case clang::Type::PredefinedSugar:
       type = type->getLocallyUnqualifiedSingleStepDesugaredType();
       break;
     default:
@@ -4144,6 +4131,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
+  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
   case clang::Type::UnaryTransform:
     break;
@@ -4854,6 +4842,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
+  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
 
   case clang::Type::UnaryTransform:
@@ -5027,6 +5016,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     // PowerPC -- Matrix Multiply Assist
     case clang::BuiltinType::VectorPair:
     case clang::BuiltinType::VectorQuad:
+    case clang::BuiltinType::DMR1024:
       break;
 
     // ARM -- Scalable Vector Extension
@@ -5154,6 +5144,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
+  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
   case clang::Type::UnaryTransform:
     break;

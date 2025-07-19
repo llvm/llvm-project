@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "CommonArgs.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
@@ -525,7 +525,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
                     "hipstdpar_lib.hpp"});
   };
 
-  if (DriverArgs.hasArg(options::OPT_nogpuinc)) {
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true)) {
     if (HasHipStdPar)
       HandleHipStdPar();
 
@@ -835,7 +836,7 @@ Expected<SmallVector<std::string>>
 AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
   // Detect AMD GPUs availible on the system.
   std::string Program;
-  if (Arg *A = Args.getLastArg(options::OPT_amdgpu_arch_tool_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_offload_arch_tool_EQ))
     Program = A->getValue();
   else
     Program = GetProgramPath("amdgpu-arch");

@@ -119,6 +119,9 @@ public:
   // Size of the CU data incl. header but without initial length.
   dw_offset_t GetLength() const { return m_header.getLength(); }
   uint16_t GetVersion() const override { return m_header.getVersion(); }
+  const llvm::dwarf::FormParams &GetFormParams() const {
+    return m_header.getFormParams();
+  }
   const llvm::DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
   uint8_t GetAddressByteSize() const override {

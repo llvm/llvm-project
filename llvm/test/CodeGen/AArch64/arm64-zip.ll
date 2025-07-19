@@ -413,7 +413,7 @@ define <4 x float> @shuffle_zip1(<4 x float> %arg) {
 ; CHECK-NEXT:    fmov.4s v1, #1.00000000
 ; CHECK-NEXT:    zip1.4h v0, v0, v0
 ; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v1, v0
+; CHECK-NEXT:    and.16b v0, v0, v1
 ; CHECK-NEXT:    ret
 bb:
   %inst = fcmp olt <4 x float> zeroinitializer, %arg
@@ -454,7 +454,7 @@ define <4 x i32> @shuffle_zip3(<4 x i32> %arg) {
 ; CHECK-NEXT:    zip2.4h v0, v0, v1
 ; CHECK-NEXT:    movi.4s v1, #1
 ; CHECK-NEXT:    zip1.4h v0, v0, v0
-; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    and.16b v0, v0, v1
 ; CHECK-NEXT:    ret
 bb:

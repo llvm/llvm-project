@@ -41,9 +41,14 @@ class LoopInfo;
 class MDNode;
 class StringRef;
 class TargetLibraryInfo;
+class IntrinsicInst;
 template <typename T> class ArrayRef;
 
 constexpr unsigned MaxAnalysisRecursionDepth = 6;
+
+/// The max limit of the search depth in DecomposeGEPExpression() and
+/// getUnderlyingObject().
+constexpr unsigned MaxLookupSearchDepth = 10;
 
 /// Determine which bits of V are known to be either zero or one and return
 /// them in the KnownZero/KnownOne bit sets.
@@ -54,36 +59,37 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
 /// same width as the vector element, and the bit is set only if it is true
 /// for all of the elements in the vector.
 LLVM_ABI void computeKnownBits(const Value *V, KnownBits &Known,
-                               const DataLayout &DL, unsigned Depth = 0,
+                               const DataLayout &DL,
                                AssumptionCache *AC = nullptr,
                                const Instruction *CxtI = nullptr,
                                const DominatorTree *DT = nullptr,
-                               bool UseInstrInfo = true);
+                               bool UseInstrInfo = true, unsigned Depth = 0);
 
 /// Returns the known bits rather than passing by reference.
 LLVM_ABI KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
-                                    unsigned Depth = 0,
                                     AssumptionCache *AC = nullptr,
                                     const Instruction *CxtI = nullptr,
                                     const DominatorTree *DT = nullptr,
-                                    bool UseInstrInfo = true);
+                                    bool UseInstrInfo = true,
+                                    unsigned Depth = 0);
 
 /// Returns the known bits rather than passing by reference.
 LLVM_ABI KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                    const DataLayout &DL, unsigned Depth = 0,
+                                    const DataLayout &DL,
                                     AssumptionCache *AC = nullptr,
                                     const Instruction *CxtI = nullptr,
                                     const DominatorTree *DT = nullptr,
-                                    bool UseInstrInfo = true);
+                                    bool UseInstrInfo = true,
+                                    unsigned Depth = 0);
 
 LLVM_ABI KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                    unsigned Depth, const SimplifyQuery &Q);
+                                    const SimplifyQuery &Q, unsigned Depth = 0);
 
-LLVM_ABI KnownBits computeKnownBits(const Value *V, unsigned Depth,
-                                    const SimplifyQuery &Q);
+LLVM_ABI KnownBits computeKnownBits(const Value *V, const SimplifyQuery &Q,
+                                    unsigned Depth = 0);
 
-LLVM_ABI void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
-                               const SimplifyQuery &Q);
+LLVM_ABI void computeKnownBits(const Value *V, KnownBits &Known,
+                               const SimplifyQuery &Q, unsigned Depth = 0);
 
 /// Compute known bits from the range metadata.
 /// \p KnownZero the set of bits that are known to be zero
@@ -93,22 +99,22 @@ LLVM_ABI void computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
 
 /// Merge bits known from context-dependent facts into Known.
 LLVM_ABI void computeKnownBitsFromContext(const Value *V, KnownBits &Known,
-                                          unsigned Depth,
-                                          const SimplifyQuery &Q);
+                                          const SimplifyQuery &Q,
+                                          unsigned Depth = 0);
 
 /// Using KnownBits LHS/RHS produce the known bits for logic op (and/xor/or).
 LLVM_ABI KnownBits analyzeKnownBitsFromAndXorOr(const Operator *I,
                                                 const KnownBits &KnownLHS,
                                                 const KnownBits &KnownRHS,
-                                                unsigned Depth,
-                                                const SimplifyQuery &SQ);
+                                                const SimplifyQuery &SQ,
+                                                unsigned Depth = 0);
 
 /// Adjust \p Known for the given select \p Arm to include information from the
 /// select \p Cond.
 LLVM_ABI void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
                                           Value *Arm, bool Invert,
-                                          unsigned Depth,
-                                          const SimplifyQuery &Q);
+                                          const SimplifyQuery &Q,
+                                          unsigned Depth = 0);
 
 /// Return true if LHS and RHS have no common bits set.
 LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
@@ -121,14 +127,16 @@ LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
 /// vectors of integers. If 'OrZero' is set, then return true if the given
 /// value is either a power of two or zero.
 LLVM_ABI bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
-                                     bool OrZero = false, unsigned Depth = 0,
+                                     bool OrZero = false,
                                      AssumptionCache *AC = nullptr,
                                      const Instruction *CxtI = nullptr,
                                      const DominatorTree *DT = nullptr,
-                                     bool UseInstrInfo = true);
+                                     bool UseInstrInfo = true,
+                                     unsigned Depth = 0);
 
 LLVM_ABI bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
-                                     unsigned Depth, const SimplifyQuery &Q);
+                                     const SimplifyQuery &Q,
+                                     unsigned Depth = 0);
 
 LLVM_ABI bool isOnlyUsedInZeroComparison(const Instruction *CxtI);
 
@@ -196,21 +204,21 @@ LLVM_ABI bool MaskedValueIsZero(const Value *V, const APInt &Mask,
 /// sign bits for the vector element with the mininum number of known sign
 /// bits.
 LLVM_ABI unsigned ComputeNumSignBits(const Value *Op, const DataLayout &DL,
-                                     unsigned Depth = 0,
                                      AssumptionCache *AC = nullptr,
                                      const Instruction *CxtI = nullptr,
                                      const DominatorTree *DT = nullptr,
-                                     bool UseInstrInfo = true);
+                                     bool UseInstrInfo = true,
+                                     unsigned Depth = 0);
 
 /// Get the upper bound on bit size for this Value \p Op as a signed integer.
 /// i.e.  x == sext(trunc(x to MaxSignificantBits) to bitwidth(x)).
 /// Similar to the APInt::getSignificantBits function.
 LLVM_ABI unsigned ComputeMaxSignificantBits(const Value *Op,
                                             const DataLayout &DL,
-                                            unsigned Depth = 0,
                                             AssumptionCache *AC = nullptr,
                                             const Instruction *CxtI = nullptr,
-                                            const DominatorTree *DT = nullptr);
+                                            const DominatorTree *DT = nullptr,
+                                            unsigned Depth = 0);
 
 /// Map a call instruction to an intrinsic ID.  Libcalls which have equivalent
 /// intrinsics are treated as-if they were intrinsics.
@@ -236,36 +244,36 @@ LLVM_ABI bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
 LLVM_ABI KnownFPClass computeKnownFPClass(const Value *V,
                                           const APInt &DemandedElts,
                                           FPClassTest InterestedClasses,
-                                          unsigned Depth,
-                                          const SimplifyQuery &SQ);
+                                          const SimplifyQuery &SQ,
+                                          unsigned Depth = 0);
 
 LLVM_ABI KnownFPClass computeKnownFPClass(const Value *V,
                                           FPClassTest InterestedClasses,
-                                          unsigned Depth,
-                                          const SimplifyQuery &SQ);
+                                          const SimplifyQuery &SQ,
+                                          unsigned Depth = 0);
 
 LLVM_ABI KnownFPClass computeKnownFPClass(
     const Value *V, const DataLayout &DL,
-    FPClassTest InterestedClasses = fcAllFlags, unsigned Depth = 0,
+    FPClassTest InterestedClasses = fcAllFlags,
     const TargetLibraryInfo *TLI = nullptr, AssumptionCache *AC = nullptr,
     const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
-    bool UseInstrInfo = true);
+    bool UseInstrInfo = true, unsigned Depth = 0);
 
 /// Wrapper to account for known fast math flags at the use instruction.
 LLVM_ABI KnownFPClass computeKnownFPClass(
     const Value *V, const APInt &DemandedElts, FastMathFlags FMF,
-    FPClassTest InterestedClasses, unsigned Depth, const SimplifyQuery &SQ);
+    FPClassTest InterestedClasses, const SimplifyQuery &SQ, unsigned Depth = 0);
 
 LLVM_ABI KnownFPClass computeKnownFPClass(const Value *V, FastMathFlags FMF,
                                           FPClassTest InterestedClasses,
-                                          unsigned Depth,
-                                          const SimplifyQuery &SQ);
+                                          const SimplifyQuery &SQ,
+                                          unsigned Depth = 0);
 
 /// Return true if we can prove that the specified FP value is never equal to
 /// -0.0. Users should use caution when considering PreserveSign
 /// denormal-fp-math.
-LLVM_ABI bool cannotBeNegativeZero(const Value *V, unsigned Depth,
-                                   const SimplifyQuery &SQ);
+LLVM_ABI bool cannotBeNegativeZero(const Value *V, const SimplifyQuery &SQ,
+                                   unsigned Depth = 0);
 
 /// Return true if we can prove that the specified FP value is either NaN or
 /// never less than -0.0.
@@ -275,38 +283,40 @@ LLVM_ABI bool cannotBeNegativeZero(const Value *V, unsigned Depth,
 ///       -0 --> true
 ///   x > +0 --> true
 ///   x < -0 --> false
-LLVM_ABI bool cannotBeOrderedLessThanZero(const Value *V, unsigned Depth,
-                                          const SimplifyQuery &SQ);
+LLVM_ABI bool cannotBeOrderedLessThanZero(const Value *V,
+                                          const SimplifyQuery &SQ,
+                                          unsigned Depth = 0);
 
 /// Return true if the floating-point scalar value is not an infinity or if
 /// the floating-point vector value has no infinities. Return false if a value
 /// could ever be infinity.
-LLVM_ABI bool isKnownNeverInfinity(const Value *V, unsigned Depth,
-                                   const SimplifyQuery &SQ);
+LLVM_ABI bool isKnownNeverInfinity(const Value *V, const SimplifyQuery &SQ,
+                                   unsigned Depth = 0);
 
 /// Return true if the floating-point value can never contain a NaN or infinity.
-LLVM_ABI bool isKnownNeverInfOrNaN(const Value *V, unsigned Depth,
-                                   const SimplifyQuery &SQ);
+LLVM_ABI bool isKnownNeverInfOrNaN(const Value *V, const SimplifyQuery &SQ,
+                                   unsigned Depth = 0);
 
 /// Return true if the floating-point scalar value is not a NaN or if the
 /// floating-point vector value has no NaN elements. Return false if a value
 /// could ever be NaN.
-LLVM_ABI bool isKnownNeverNaN(const Value *V, unsigned Depth,
-                              const SimplifyQuery &SQ);
+LLVM_ABI bool isKnownNeverNaN(const Value *V, const SimplifyQuery &SQ,
+                              unsigned Depth = 0);
 
 /// Return false if we can prove that the specified FP value's sign bit is 0.
 /// Return true if we can prove that the specified FP value's sign bit is 1.
 /// Otherwise return std::nullopt.
-LLVM_ABI std::optional<bool>
-computeKnownFPSignBit(const Value *V, unsigned Depth, const SimplifyQuery &SQ);
+LLVM_ABI std::optional<bool> computeKnownFPSignBit(const Value *V,
+                                                   const SimplifyQuery &SQ,
+                                                   unsigned Depth = 0);
 
 /// Return true if the sign bit of the FP value can be ignored by the user when
 /// the value is zero.
-bool canIgnoreSignBitOfZero(const Use &U);
+LLVM_ABI bool canIgnoreSignBitOfZero(const Use &U);
 
 /// Return true if the sign bit of the FP value can be ignored by the user when
 /// the value is NaN.
-bool canIgnoreSignBitOfNaN(const Use &U);
+LLVM_ABI bool canIgnoreSignBitOfNaN(const Use &U);
 
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8
@@ -427,9 +437,10 @@ LLVM_ABI bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
 /// original object being addressed. Note that the returned value has pointer
 /// type if the specified value does. If the \p MaxLookup value is non-zero, it
 /// limits the number of instructions to be stripped off.
-LLVM_ABI const Value *getUnderlyingObject(const Value *V,
-                                          unsigned MaxLookup = 6);
-inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
+LLVM_ABI const Value *
+getUnderlyingObject(const Value *V, unsigned MaxLookup = MaxLookupSearchDepth);
+inline Value *getUnderlyingObject(Value *V,
+                                  unsigned MaxLookup = MaxLookupSearchDepth) {
   // Force const to avoid infinite recursion.
   const Value *VConst = V;
   return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
@@ -470,7 +481,7 @@ LLVM_ABI const Value *getUnderlyingObjectAggressive(const Value *V);
 LLVM_ABI void getUnderlyingObjects(const Value *V,
                                    SmallVectorImpl<const Value *> &Objects,
                                    const LoopInfo *LI = nullptr,
-                                   unsigned MaxLookup = 6);
+                                   unsigned MaxLookup = MaxLookupSearchDepth);
 
 /// This is a wrapper around getUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.
@@ -716,6 +727,9 @@ LLVM_ABI bool isGuaranteedToExecuteForEveryIteration(const Instruction *I,
 /// getGuaranteedNonPoisonOp.
 LLVM_ABI bool propagatesPoison(const Use &PoisonOp);
 
+/// Return whether this intrinsic propagates poison for all operands.
+LLVM_ABI bool intrinsicPropagatesPoison(Intrinsic::ID IID);
+
 /// Return true if the given instruction must trigger undefined behavior
 /// when I is executed with any operands which appear in KnownPoison holding
 /// a poison value at the point of execution.
@@ -955,6 +969,21 @@ LLVM_ABI bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
 LLVM_ABI bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
                                     Value *&Start, Value *&Step);
 
+/// Attempt to match a simple value-accumulating recurrence of the form:
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%OtherOp, %llvm.intrinsic.acc)
+/// OR
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%llvm.intrinsic.acc, %OtherOp)
+///
+/// The recurrence relation is of kind:
+///   X_0 = %a (initial value),
+///   X_i = call @llvm.binary.intrinsic(X_i-1, %b)
+/// Where %b is not required to be loop-invariant.
+LLVM_ABI bool matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                   PHINode *&P, Value *&Init,
+                                                   Value *&OtherOp);
+
 /// Return true if RHS is known to be implied true by LHS.  Return false if
 /// RHS is known to be implied false by LHS.  Otherwise, return std::nullopt if
 /// no implication can be made. A & B must be i1 (boolean) values or a vector of
@@ -988,6 +1017,11 @@ isImpliedByDomCondition(CmpPredicate Pred, const Value *LHS, const Value *RHS,
 LLVM_ABI void
 findValuesAffectedByCondition(Value *Cond, bool IsAssume,
                               function_ref<void(Value *)> InsertAffected);
+
+/// Returns the inner value X if the expression has the form f(X)
+/// where f(X) == 0 if and only if X == 0, otherwise returns nullptr.
+LLVM_ABI Value *stripNullTest(Value *V);
+LLVM_ABI const Value *stripNullTest(const Value *V);
 
 } // end namespace llvm
 

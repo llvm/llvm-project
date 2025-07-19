@@ -9,11 +9,11 @@
 #ifndef LLDB_UTILITY_BROADCASTER_H
 #define LLDB_UTILITY_BROADCASTER_H
 
-#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <cstdint>
 #include <map>

@@ -1010,9 +1010,9 @@ void State::addInfoForInductions(BasicBlock &BB) {
   auto IncUnsigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT);
   auto IncSigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_SGT);
   bool MonotonicallyIncreasingUnsigned =
-      IncUnsigned && *IncUnsigned == ScalarEvolution::MonotonicallyIncreasing;
+      IncUnsigned == ScalarEvolution::MonotonicallyIncreasing;
   bool MonotonicallyIncreasingSigned =
-      IncSigned && *IncSigned == ScalarEvolution::MonotonicallyIncreasing;
+      IncSigned == ScalarEvolution::MonotonicallyIncreasing;
   // If SCEV guarantees that AR does not wrap, PN >= StartValue can be added
   // unconditionally.
   if (MonotonicallyIncreasingUnsigned)
@@ -1489,6 +1489,7 @@ static bool checkAndReplaceCondition(
     SmallVector<DbgVariableIntrinsic *> DbgUsers;
     SmallVector<DbgVariableRecord *> DVRUsers;
     findDbgUsers(DbgUsers, Cmp, &DVRUsers);
+    assert(DbgUsers.empty());
 
     for (auto *DVR : DVRUsers) {
       auto *DTN = DT.getNode(DVR->getParent());

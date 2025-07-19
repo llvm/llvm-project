@@ -164,7 +164,7 @@ FullSourceLoc FullSourceLoc::getExpansionLoc() const {
   return FullSourceLoc(SrcMgr->getExpansionLoc(*this), *SrcMgr);
 }
 
-std::pair<FileID, unsigned> FullSourceLoc::getDecomposedExpansionLoc() const {
+FileIDAndOffset FullSourceLoc::getDecomposedExpansionLoc() const {
   return SrcMgr->getDecomposedExpansionLoc(*this);
 }
 
@@ -274,6 +274,6 @@ StringRef FullSourceLoc::getBufferData(bool *Invalid) const {
   return SrcMgr->getBufferData(SrcMgr->getFileID(*this), Invalid);
 }
 
-std::pair<FileID, unsigned> FullSourceLoc::getDecomposedLoc() const {
+FileIDAndOffset FullSourceLoc::getDecomposedLoc() const {
   return SrcMgr->getDecomposedLoc(*this);
 }

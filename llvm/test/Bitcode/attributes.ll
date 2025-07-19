@@ -567,6 +567,11 @@ define void @captures(ptr captures(address) %p) {
   ret void
 }
 
+; CHECK: define void @dead_on_return(ptr dead_on_return %p)
+define void @dead_on_return(ptr dead_on_return %p) {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }

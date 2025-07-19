@@ -30,7 +30,6 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
@@ -1032,6 +1031,16 @@ LogicalResult ModuleImport::convertAliases() {
   return success();
 }
 
+LogicalResult ModuleImport::convertIFuncs() {
+  for (llvm::GlobalIFunc &ifunc : llvmModule->ifuncs()) {
+    if (failed(convertIFunc(&ifunc))) {
+      return emitError(UnknownLoc::get(context))
+             << "unhandled global ifunc: " << diag(ifunc);
+    }
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertDataLayout() {
   Location loc = mlirModule.getLoc();
   DataLayoutImporter dataLayoutImporter(context, llvmModule->getDataLayout());
@@ -1367,6 +1376,21 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
     aliasOp.setUnnamedAddr(convertUnnamedAddrFromLLVM(alias->getUnnamedAddr()));
   aliasOp.setVisibility_(convertVisibilityFromLLVM(alias->getVisibility()));
 
+  return success();
+}
+
+LogicalResult ModuleImport::convertIFunc(llvm::GlobalIFunc *ifunc) {
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
+
+  Type type = convertType(ifunc->getValueType());
+  llvm::Constant *resolver = ifunc->getResolver();
+  Type resolverType = convertType(resolver->getType());
+  builder.create<IFuncOp>(mlirModule.getLoc(), ifunc->getName(), type,
+                          resolver->getName(), resolverType,
+                          convertLinkageFromLLVM(ifunc->getLinkage()),
+                          ifunc->isDSOLocal(), ifunc->getAddressSpace(),
+                          convertUnnamedAddrFromLLVM(ifunc->getUnnamedAddr()),
+                          convertVisibilityFromLLVM(ifunc->getVisibility()));
   return success();
 }
 
@@ -1974,8 +1998,9 @@ ModuleImport::convertCallOperands(llvm::CallBase *callInst,
   // treated as indirect calls to constant operands that need to be converted.
   // Skip the callee operand if it's inline assembly, as it's handled separately
   // in InlineAsmOp.
-  if (!isa<llvm::Function>(callInst->getCalledOperand()) && !isInlineAsm) {
-    FailureOr<Value> called = convertValue(callInst->getCalledOperand());
+  llvm::Value *calleeOperand = callInst->getCalledOperand();
+  if (!isa<llvm::Function, llvm::GlobalIFunc>(calleeOperand) && !isInlineAsm) {
+    FailureOr<Value> called = convertValue(calleeOperand);
     if (failed(called))
       return failure();
     operands.push_back(*called);
@@ -2036,12 +2061,20 @@ ModuleImport::convertFunctionType(llvm::CallBase *callInst,
   if (failed(callType))
     return failure();
   auto *callee = dyn_cast<llvm::Function>(calledOperand);
+
+  llvm::FunctionType *origCalleeType = nullptr;
+  if (callee) {
+    origCalleeType = callee->getFunctionType();
+  } else if (auto *ifunc = dyn_cast<llvm::GlobalIFunc>(calledOperand)) {
+    origCalleeType = cast<llvm::FunctionType>(ifunc->getValueType());
+  }
+
   // For indirect calls, return the type of the call itself.
-  if (!callee)
+  if (!origCalleeType)
     return callType;
 
   FailureOr<LLVMFunctionType> calleeType =
-      castOrFailure(convertType(callee->getFunctionType()));
+      castOrFailure(convertType(origCalleeType));
   if (failed(calleeType))
     return failure();
 
@@ -2060,8 +2093,8 @@ ModuleImport::convertFunctionType(llvm::CallBase *callInst,
 
 FlatSymbolRefAttr ModuleImport::convertCalleeName(llvm::CallBase *callInst) {
   llvm::Value *calledOperand = callInst->getCalledOperand();
-  if (auto *callee = dyn_cast<llvm::Function>(calledOperand))
-    return SymbolRefAttr::get(context, callee->getName());
+  if (isa<llvm::Function, llvm::GlobalIFunc>(calledOperand))
+    return SymbolRefAttr::get(context, calledOperand->getName());
   return {};
 }
 
@@ -2636,6 +2669,11 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setTargetFeaturesAttr(
         LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
 
+  if (llvm::Attribute attr = func->getFnAttribute("reciprocal-estimates");
+      attr.isStringAttribute())
+    funcOp.setReciprocalEstimatesAttr(
+        StringAttr::get(context, attr.getValueAsString()));
+
   if (llvm::Attribute attr = func->getFnAttribute("prefer-vector-width");
       attr.isStringAttribute())
     funcOp.setPreferVectorWidth(attr.getValueAsString());
@@ -3157,6 +3195,8 @@ OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
   if (failed(moduleImport.convertFunctions()))
     return {};
   if (failed(moduleImport.convertAliases()))
+    return {};
+  if (failed(moduleImport.convertIFuncs()))
     return {};
   moduleImport.convertTargetTriple();
   return module;

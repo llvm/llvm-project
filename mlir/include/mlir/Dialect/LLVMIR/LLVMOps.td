@@ -425,7 +425,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     auto *inst = builder.CreateLoad($_resultType, $addr, $volatile_);
     $res = inst;
     if ($invariant) {
-      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), std::nullopt);
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
       inst->setMetadata(llvm::LLVMContext::MD_invariant_load, metadata);
     }
     if ($dereferenceable)
@@ -660,12 +660,12 @@ def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "FPTrunc",
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 
 // Call-related operations.
-def LLVM_InvokeOp : LLVM_Op<"invoke", [
-                      AttrSizedOperandSegments,
-                      DeclareOpInterfaceMethods<BranchOpInterface>,
-                      DeclareOpInterfaceMethods<CallOpInterface>,
-                      DeclareOpInterfaceMethods<BranchWeightOpInterface>,
-                      Terminator]> {
+def LLVM_InvokeOp
+    : LLVM_Op<"invoke", [AttrSizedOperandSegments,
+                         DeclareOpInterfaceMethods<BranchOpInterface>,
+                         DeclareOpInterfaceMethods<CallOpInterface>,
+                         DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
+                         Terminator]> {
   let arguments = (ins
                    OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$var_callee_type,
                    OptionalAttr<FlatSymbolRefAttr>:$callee,
@@ -734,12 +734,12 @@ def LLVM_VaArgOp : LLVM_Op<"va_arg"> {
 // CallOp
 //===----------------------------------------------------------------------===//
 
-def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
-                    [AttrSizedOperandSegments,
-                     DeclareOpInterfaceMethods<FastmathFlagsInterface>,
-                     DeclareOpInterfaceMethods<CallOpInterface>,
-                     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
-                     DeclareOpInterfaceMethods<BranchWeightOpInterface>]> {
+def LLVM_CallOp
+    : LLVM_MemAccessOpBase<
+          "call", [AttrSizedOperandSegments,
+                   DeclareOpInterfaceMethods<FastmathFlagsInterface>,
+                   DeclareOpInterfaceMethods<CallOpInterface>,
+                   DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Call to an LLVM function.";
   let description = [{
     In LLVM IR, functions may return either 0 or 1 value. LLVM IR dialect
@@ -788,21 +788,16 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
       OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<LLVM_Type>:$callee_operands,
       DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags,
-      OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
       DefaultValuedAttr<CConv, "CConv::C">:$CConv,
       DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind,
       OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
-      UnitAttr:$convergent,
-      UnitAttr:$no_unwind,
-      UnitAttr:$will_return,
+      UnitAttr:$convergent, UnitAttr:$no_unwind, UnitAttr:$will_return,
       VariadicOfVariadic<LLVM_Type, "op_bundle_sizes">:$op_bundle_operands,
       DenseI32ArrayAttr:$op_bundle_sizes,
       OptionalAttr<ArrayAttr>:$op_bundle_tags,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
-      OptionalAttr<DictArrayAttr>:$res_attrs,
-      UnitAttr:$no_inline,
-      UnitAttr:$always_inline,
-      UnitAttr:$inline_hint);
+      OptionalAttr<DictArrayAttr>:$res_attrs, UnitAttr:$no_inline,
+      UnitAttr:$always_inline, UnitAttr:$inline_hint);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -1047,11 +1042,12 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
     LLVM_TerminatorPassthroughOpBuilder
   ];
 }
-def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
-    [AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<BranchOpInterface>,
-     DeclareOpInterfaceMethods<BranchWeightOpInterface>,
-     Pure]> {
+def LLVM_CondBrOp
+    : LLVM_TerminatorOp<
+          "cond_br", [AttrSizedOperandSegments,
+                      DeclareOpInterfaceMethods<BranchOpInterface>,
+                      DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
+                      Pure]> {
   let arguments = (ins I1:$condition,
                    Variadic<LLVM_Type>:$trueDestOperands,
                    Variadic<LLVM_Type>:$falseDestOperands,
@@ -1136,11 +1132,12 @@ def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable"> {
   }];
 }
 
-def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
-    [AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<BranchOpInterface>,
-     DeclareOpInterfaceMethods<BranchWeightOpInterface>,
-     Pure]> {
+def LLVM_SwitchOp
+    : LLVM_TerminatorOp<
+          "switch", [AttrSizedOperandSegments,
+                     DeclareOpInterfaceMethods<BranchOpInterface>,
+                     DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
+                     Pure]> {
   let arguments = (ins
     AnySignlessInteger:$value,
     Variadic<AnyType>:$defaultOperands,
@@ -1288,6 +1285,10 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
     /// Return the llvm.mlir.alias operation that defined the value referenced
     /// here.
     AliasOp getAlias(SymbolTableCollection &symbolTable);
+
+    /// Return the llvm.mlir.ifunc operation that defined the value referenced
+    /// here.
+    IFuncOp getIFunc(SymbolTableCollection &symbolTable);
   }];
 
   let assemblyFormat = "$global_name attr-dict `:` qualified(type($res))";
@@ -1604,6 +1605,67 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
   let hasRegionVerifier = 1;
 }
 
+def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
+    [IsolatedFromAbove, Symbol, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    TypeAttr:$i_func_type,
+    FlatSymbolRefAttr:$resolver,
+    TypeAttr:$resolver_type,
+    Linkage:$linkage,
+    UnitAttr:$dso_local,
+    DefaultValuedAttr<ConfinedAttr<I32Attr, [IntNonNegative]>, "0">:$address_space,
+    DefaultValuedAttr<UnnamedAddr, "mlir::LLVM::UnnamedAddr::None">:$unnamed_addr,
+    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
+  );
+  let summary = "LLVM dialect ifunc";
+  let description = [{
+    `llvm.mlir.ifunc` is a top level operation that defines a global ifunc.
+    It defines a new symbol and takes a symbol refering to a resolver function.
+    IFuncs can be called as regular functions. The function type is the same
+    as the IFuncType. The symbol is resolved at runtime by calling a resolver
+    function.
+
+    Examples:
+
+    ```mlir
+    // IFuncs resolve a symbol at runtime using a resovler function.
+    llvm.mlir.ifunc external @foo: !llvm.func<f32 (i64)>, !llvm.ptr @resolver
+
+    llvm.func @foo_1(i64) -> f32
+    llvm.func @foo_2(i64) -> f32
+
+    llvm.func @resolve_foo() -> !llvm.ptr attributes {
+      %0 = llvm.mlir.addressof @foo_2 : !llvm.ptr
+      %1 = llvm.mlir.addressof @foo_1 : !llvm.ptr
+
+      // ... Logic selecting from foo_{1, 2}
+
+      // Return function pointer to the selected function
+      llvm.return %7 : !llvm.ptr
+    }
+
+    llvm.func @use_foo() {
+      // IFuncs are called as regular functions
+      %res = llvm.call @foo(%value) : i64 -> f32
+    }
+    ```
+  }];
+
+  let builders = [
+    OpBuilder<(ins "StringRef":$name, "Type":$i_func_type,
+      "StringRef":$resolver, "Type":$resolver_type,
+      "Linkage":$linkage, "LLVM::Visibility":$visibility)>
+  ];
+
+  let assemblyFormat = [{
+    custom<LLVMLinkage>($linkage) ($visibility_^)? ($unnamed_addr^)?
+    $sym_name `:` $i_func_type `,` $resolver_type $resolver attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+
 def LLVM_DSOLocalEquivalentOp : LLVM_Op<"dso_local_equivalent",
     [Pure, ConstantLike, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins FlatSymbolRefAttr:$function_name);
@@ -1829,7 +1891,7 @@ def LLVM_ComdatOp : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTa
 }
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
-    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface
+    AffineScope, AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface
   ]> {
   let summary = "LLVM dialect function.";
 
@@ -1893,6 +1955,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<FramePointerKindAttr>:$frame_pointer,
     OptionalAttr<StrAttr>:$target_cpu,
     OptionalAttr<StrAttr>:$tune_cpu,
+    OptionalAttr<StrAttr>:$reciprocal_estimates,
     OptionalAttr<StrAttr>:$prefer_vector_width,
     OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features,
     OptionalAttr<BoolAttr>:$unsafe_fp_math,
