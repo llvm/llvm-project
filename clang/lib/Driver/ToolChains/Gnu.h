@@ -382,6 +382,9 @@ public:
   }
 
   virtual void addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {}
+
+protected:
+  Tool *buildLinker() const override;
 };
 
 } // end namespace toolchains

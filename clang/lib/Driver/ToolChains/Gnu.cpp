@@ -3375,3 +3375,5 @@ void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
                           options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fno-use-init-array");
 }
+
+Tool *Generic_ELF::buildLinker() const { return new tools::gnutools::Linker(*this); }
