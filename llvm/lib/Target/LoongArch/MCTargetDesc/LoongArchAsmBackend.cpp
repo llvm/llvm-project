@@ -211,10 +211,11 @@ getRelocPairForSize(unsigned Size) {
   }
 }
 
-// Linker relaxation may change code size. We have to insert Nops
-// for .align directive when linker relaxation enabled. So then Linker
-// could satisfy alignment by removing Nops.
-// The function returns the total Nops Size we need to insert.
+// Check if an R_LARCH_ALIGN relocation is needed for an alignment directive.
+// If conditions are met, compute the padding size and create a fixup encoding
+// the padding size in the addend. If MaxBytesToEmit is smaller than the padding
+// size, the fixup encodes MaxBytesToEmit in the higher bits and references a
+// per-section marker symbol.
 bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
   // Use default handling unless linker relaxation is enabled and the
   // MaxBytesToEmit >= the nop size.
@@ -229,15 +230,6 @@ bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
   if (F.getAlignment() <= MinNopLen)
     return false;
 
-  // We need to insert R_LARCH_ALIGN relocation type to indicate the
-  // position of Nops and the total bytes of the Nops have been inserted
-  // when linker relaxation enabled.
-  // The function inserts fixup_loongarch_align fixup which eventually will
-  // transfer to R_LARCH_ALIGN relocation type.
-  // The improved R_LARCH_ALIGN requires symbol index. The lowest 8 bits of
-  // addend represent alignment and the other bits of addend represent the
-  // maximum number of bytes to emit. The maximum number of bytes is zero
-  // means ignore the emit limit.
   MCContext &Ctx = getContext();
   const MCExpr *Expr = nullptr;
   if (MaxBytesToEmit >= Size) {

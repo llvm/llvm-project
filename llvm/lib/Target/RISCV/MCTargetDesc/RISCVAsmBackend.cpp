@@ -302,6 +302,9 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   Inst = std::move(Res);
 }
 
+// Check if an R_RISCV_ALIGN relocation is needed for an alignment directive.
+// If conditions are met, compute the padding size and create a fixup encoding
+// the padding size in the addend.
 bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
   // Use default handling unless linker relaxation is enabled and the alignment
   // is larger than the nop size.
