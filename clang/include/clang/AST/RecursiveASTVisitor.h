@@ -789,7 +789,6 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifier(
   switch (NNS->getKind()) {
   case NestedNameSpecifier::Identifier:
   case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Super:
     return true;
@@ -813,7 +812,6 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifierLoc(
   switch (NNS.getNestedNameSpecifier()->getKind()) {
   case NestedNameSpecifier::Identifier:
   case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Super:
     return true;
