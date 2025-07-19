@@ -1090,7 +1090,8 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
       (SplatCost * !Op0->hasOneUse()) + (SplatCost * !Op1->hasOneUse());
   InstructionCost NewCost = ScalarOpCost + SplatCost + CostToKeepSplats;
 
-  LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI << "\n");
+  LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI
+                    << "\n");
   LLVM_DEBUG(dbgs() << "Cost of Intrinsic: " << OldCost
                     << ", Cost of scalarizing:" << NewCost << "\n");
 
