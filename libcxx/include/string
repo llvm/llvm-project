@@ -1065,13 +1065,15 @@ public:
   basic_string(nullptr_t) = delete;
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s, size_type __n) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s, size_type __n)
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero") {
     _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "basic_string(const char*, n) detected nullptr");
     __init(__s, __n);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   basic_string(const _CharT* __s, size_type __n, const _Allocator& __a)
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero")
       : __alloc_(__a) {
     _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "basic_string(const char*, n, allocator) detected nullptr");
     __init(__s, __n);
@@ -1394,7 +1396,8 @@ public:
     return append(__sv.data() + __pos, std::min(__n, __sz - __pos));
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(const value_type* __s, size_type __n);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(const value_type* __s, size_type __n)
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero");
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(size_type __n, value_type __c);
 
@@ -1521,8 +1524,9 @@ public:
     return assign(__sv.data() + __pos, std::min(__n, __sz - __pos));
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(const value_type* __s, size_type __n);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(const value_type* __s);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(const value_type* __s, size_type __n)
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero");
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(size_type __n, value_type __c);
 
   template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
@@ -1593,7 +1597,8 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
   insert(size_type __pos1, const basic_string& __str, size_type __pos2, size_type __n = npos);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& insert(size_type __pos, const value_type* __s, size_type __n);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& insert(size_type __pos, const value_type* __s, size_type __n)
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero");
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& insert(size_type __pos, const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& insert(size_type __pos, size_type __n, value_type __c);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator insert(const_iterator __pos, value_type __c);
@@ -1673,8 +1678,10 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
-  replace(size_type __pos, size_type __n1, const value_type* __s, size_type __n2);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& replace(size_type __pos, size_type __n1, const value_type* __s);
+  replace(size_type __pos, size_type __n1, const value_type* __s, size_type __n2)
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n2 != 0 && __s == nullptr, " if n2 is not zero");
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
+  replace(size_type __pos, size_type __n1, const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& replace(size_type __pos, size_type __n1, size_type __n2, value_type __c);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
@@ -1783,7 +1790,8 @@ public:
     return std::__str_find<value_type, size_type, traits_type, npos>(data(), size(), __sv.data(), __pos, __sv.size());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type find(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type find(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero") {
     _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "string::find(): received nullptr");
     return std::__str_find<value_type, size_type, traits_type, npos>(data(), size(), __s, __pos, __n);
   }
@@ -1814,7 +1822,8 @@ public:
     return std::__str_rfind<value_type, size_type, traits_type, npos>(data(), size(), __sv.data(), __pos, __sv.size());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type rfind(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type rfind(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero") {
     _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "string::rfind(): received nullptr");
     return std::__str_rfind<value_type, size_type, traits_type, npos>(data(), size(), __s, __pos, __n);
   }
@@ -1847,7 +1856,8 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
-  find_first_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT {
+  find_first_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero") {
     _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "string::find_first_of(): received nullptr");
     return std::__str_find_first_of<value_type, size_type, traits_type, npos>(data(), size(), __s, __pos, __n);
   }
@@ -1881,7 +1891,8 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
-  find_last_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT {
+  find_last_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero") {
     _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "string::find_last_of(): received nullptr");
     return std::__str_find_last_of<value_type, size_type, traits_type, npos>(data(), size(), __s, __pos, __n);
   }
@@ -1915,7 +1926,8 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
-  find_first_not_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT {
+  find_first_not_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero") {
     _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "string::find_first_not_of(): received nullptr");
     return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>(data(), size(), __s, __pos, __n);
   }
@@ -1949,7 +1961,8 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
-  find_last_not_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT {
+  find_last_not_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero") {
     _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "string::find_last_not_of(): received nullptr");
     return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>(data(), size(), __s, __pos, __n);
   }
@@ -2026,7 +2039,8 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 int
-  compare(size_type __pos1, size_type __n1, const value_type* __s, size_type __n2) const;
+  compare(size_type __pos1, size_type __n1, const value_type* __s, size_type __n2) const
+      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n2 != 0 && __s == nullptr, " if n2 is not zero");
 
   // starts_with
 
@@ -3564,7 +3578,8 @@ operator==(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
-operator==(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT* __rhs) _NOEXCEPT {
+operator==(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
+           const _CharT* _LIBCPP_DIAGNOSE_NULLPTR __rhs) _NOEXCEPT {
   _LIBCPP_ASSERT_NON_NULL(__rhs != nullptr, "operator==(basic_string, char*): received nullptr");
 
   using _String = basic_string<_CharT, _Traits, _Allocator>;
