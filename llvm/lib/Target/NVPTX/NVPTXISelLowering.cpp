@@ -955,7 +955,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
        {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS, ISD::FTANH}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::f32, Legal);
-    // fsin, fcos, and ftanh are not supported on f64
+    // only div/rem/sqrt are legal for f64
     if (Op == ISD::FDIV || Op == ISD::FREM || Op == ISD::FSQRT) {
       setOperationAction(Op, MVT::f64, Legal);
     }
