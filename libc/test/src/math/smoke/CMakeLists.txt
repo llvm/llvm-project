@@ -3992,7 +3992,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.asinpif16
     libc.src.errno.errno
-    libc.src.math.fabs
 )
 
 add_fp_unittest(
