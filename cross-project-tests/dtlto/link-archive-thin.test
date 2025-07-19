@@ -27,9 +27,9 @@ RUN: mkdir %t/out && cd %t/out
 RUN: lld-link /subsystem:console /machine:x64 /entry:start /out:my.exe  \
 RUN:   %t/foo.lib %t/lib/bar.lib ../start.lib %t/cat.lib \
 RUN:   /includeoptional:dog ../dog.lib \
-RUN:   /thinlto-distributor:%python \
-RUN:   /thinlto-distributor-arg:%llvm_src_root/utils/dtlto/local.py \
-RUN:   /thinlto-remote-compiler:%clang \
+RUN:   -thinlto-distributor:%python \
+RUN:   -thinlto-distributor-arg:%llvm_src_root/utils/dtlto/local.py \
+RUN:   -thinlto-remote-compiler:%clang \
 RUN:   /lldsavetemps
 
 ## Check that the required output files have been created.

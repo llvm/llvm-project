@@ -6,19 +6,19 @@ RUN: rm -rf %t && split-file %s %t && cd %t
 
 RUN: opt -thinlto-bc foo.ll -o foo.obj
 
-## Not specifying a value for /thinlto-remote-compiler should result in an
-## error if /thinlto-distributor is specified.
+## Not specifying a value for -thinlto-remote-compiler should result in an
+## error if -thinlto-distributor is specified.
 RUN: not lld-link /entry:foo /subsystem:console foo.obj /out:my.exe \
-RUN:   /thinlto-distributor:fake.exe 2>&1 | FileCheck %s --check-prefix=COMPILER
+RUN:   -thinlto-distributor:fake.exe 2>&1 | FileCheck %s --check-prefix=COMPILER
 RUN: lld-link /entry:foo /subsystem:console foo.obj /out:my.exe
 
-## Specifying an empty value for /thinlto-remote-compiler should result in an
-## error if /thinlto-distributor is specified.
+## Specifying an empty value for -thinlto-remote-compiler should result in an
+## error if -thinlto-distributor is specified.
 RUN: not lld-link /entry:foo /subsystem:console foo.obj /out:my.exe \
-RUN:   /thinlto-distributor:fake.exe \
-RUN:   /thinlto-remote-compiler:"" 2>&1 | FileCheck %s --check-prefix=COMPILER
+RUN:   -thinlto-distributor:fake.exe \
+RUN:   -thinlto-remote-compiler:"" 2>&1 | FileCheck %s --check-prefix=COMPILER
 RUN: lld-link /entry:foo /subsystem:console foo.obj /out:my.exe \
-RUN:   /thinlto-remote-compiler:""
+RUN:   -thinlto-remote-compiler:""
 
 COMPILER: error: A value must be specified for /thinlto-remote-compiler if /thinlto-distributor is specified.
 
@@ -29,13 +29,13 @@ COMPILER: error: A value must be specified for /thinlto-remote-compiler if /thin
 ## exits with an error. This allows FileCheck directives to verify the
 ## distributor inputs.
 RUN: not lld-link /entry:foo /subsystem:console foo.obj /out:my.exe \
-RUN:   /thinlto-distributor:%python \
-RUN:   /thinlto-distributor-arg:%llvm_src_root/utils/dtlto/validate.py \
-RUN:   /thinlto-distributor-arg:darg1=10 \
-RUN:   /thinlto-distributor-arg:darg2=20 \
-RUN:   /thinlto-remote-compiler:my_clang.exe \
-RUN:   /thinlto-remote-compiler-arg:carg1=20 \
-RUN:   /thinlto-remote-compiler-arg:carg2=30 2>&1 | FileCheck %s
+RUN:   -thinlto-distributor:%python \
+RUN:   -thinlto-distributor-arg:%llvm_src_root/utils/dtlto/validate.py \
+RUN:   -thinlto-distributor-arg:darg1=10 \
+RUN:   -thinlto-distributor-arg:darg2=20 \
+RUN:   -thinlto-remote-compiler:my_clang.exe \
+RUN:   -thinlto-remote-compiler-arg:carg1=20 \
+RUN:   -thinlto-remote-compiler-arg:carg2=30 2>&1 | FileCheck %s
 
 CHECK: distributor_args=['darg1=10', 'darg2=20']
 

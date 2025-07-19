@@ -8,10 +8,10 @@
 // RUN: %clang --target=x86_64-pc-windows-msvc -c -flto=thin %s -o dtlto.obj
 
 // RUN: lld-link /subsystem:console /entry:_start dtlto.obj \
-// RUN:   /thinlto-distributor:%python \
-// RUN:   /thinlto-distributor-arg:%llvm_src_root/utils/dtlto/local.py \
-// RUN:   /thinlto-remote-compiler:%clang \
-// RUN:   /thinlto-remote-compiler-arg:--save-temps
+// RUN:   -thinlto-distributor:%python \
+// RUN:   -thinlto-distributor-arg:%llvm_src_root/utils/dtlto/local.py \
+// RUN:   -thinlto-remote-compiler:%clang \
+// RUN:   -thinlto-remote-compiler-arg:--save-temps
 
 /// Check that the required output files have been created.
 // RUN: ls | sort | FileCheck %s
