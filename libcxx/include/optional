@@ -201,7 +201,6 @@ namespace std {
 #  include <__config>
 #  include <__cstddef/ptrdiff_t.h>
 #  include <__exception/exception.h>
-#  include <__format/range_format.h>
 #  include <__functional/hash.h>
 #  include <__functional/invoke.h>
 #  include <__functional/unary_function.h>
@@ -249,6 +248,10 @@ namespace std {
 #  include <__verbose_abort>
 #  include <initializer_list>
 #  include <version>
+
+#  if _LIBCPP_STD_VER >= 26
+#    include <__format/range_format.h>
+#  endif
 
 // standard-mandated includes
 
