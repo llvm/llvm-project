@@ -47,6 +47,7 @@ set(SOURCES
   Indexing.cpp
   FatalErrorHandler.cpp
   Rewrite.cpp
+  Obsolete.cpp
 
   ADDITIONAL_HEADERS
   CIndexDiagnostic.h
