@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_GENERIC_ASIN_UTILS_H
-#define LLVM_LIBC_SRC_MATH_GENERIC_ASIN_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ASIN_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_ASIN_UTILS_H
 
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
@@ -16,7 +16,6 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -25,10 +24,10 @@ namespace {
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = fputil::DyadicFloat<128>;
 
-constexpr DoubleDouble PI = {0x1.1a62633145c07p-53, 0x1.921fb54442d18p1};
+static constexpr DoubleDouble PI = {0x1.1a62633145c07p-53, 0x1.921fb54442d18p1};
 
-constexpr DoubleDouble PI_OVER_TWO = {0x1.1a62633145c07p-54,
-                                      0x1.921fb54442d18p0};
+static constexpr DoubleDouble PI_OVER_TWO = {0x1.1a62633145c07p-54,
+                                             0x1.921fb54442d18p0};
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
@@ -39,14 +38,14 @@ constexpr DoubleDouble PI_OVER_TWO = {0x1.1a62633145c07p-54,
 // > dirtyinfnorm(asin(x)/x - P, [0, 0.5]);
 // 0x1.1a71ef0a0f26a9fb7ed7e41dee788b13d1770db3dp-52
 
-constexpr double ASIN_COEFFS[12] = {
+static constexpr double ASIN_COEFFS[12] = {
     0x1.0000000000000p0,  0x1.5555555556dcfp-3,  0x1.3333333082e11p-4,
     0x1.6db6dd14099edp-5, 0x1.f1c69b35bf81fp-6,  0x1.6e97194225a67p-6,
     0x1.1babddb82ce12p-6, 0x1.d55bd078600d6p-7,  0x1.33328959e63d6p-7,
     0x1.2b5993bda1d9bp-6, -0x1.806aff270bf25p-7, 0x1.02614e5ed3936p-5,
 };
 
-LIBC_INLINE double asin_eval(double u) {
+LIBC_INLINE static constexpr double asin_eval(double u) {
   double u2 = u * u;
   double c0 = fputil::multiply_add(u, ASIN_COEFFS[1], ASIN_COEFFS[0]);
   double c1 = fputil::multiply_add(u, ASIN_COEFFS[3], ASIN_COEFFS[2]);
@@ -124,7 +123,7 @@ LIBC_INLINE double asin_eval(double u) {
 // > dirtyinfnorm(asin(x)/x - P, [-1/64, 1/64]);
 // 0x1.999075402cafp-83
 
-constexpr double ASIN_COEFFS[9][12] = {
+static constexpr double ASIN_COEFFS[9][12] = {
     {1.0, 0.0, 0x1.5555555555555p-3, 0x1.5555555555555p-57,
      0x1.3333333333333p-4, 0x1.6db6db6db6db7p-5, 0x1.f1c71c71c71c7p-6,
      0x1.6e8ba2e8ba2e9p-6, 0x1.1c4ec4ec4ec4fp-6, 0x1.c99999999999ap-7,
@@ -164,8 +163,8 @@ constexpr double ASIN_COEFFS[9][12] = {
 };
 
 // We calculate the lower part of the approximation P(u).
-LIBC_INLINE DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
-                                   double &err) {
+LIBC_INLINE static DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
+                                          double &err) {
   using fputil::multiply_add;
   // k = round(u * 32).
   double k = fputil::nearest_integer(u.hi * 0x1.0p5);
@@ -239,7 +238,7 @@ LIBC_INLINE DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
 //               + (676039 x^24)/104857600 + (1300075 x^26)/226492416 +
 //               + (5014575 x^28)/973078528 + (9694845 x^30)/2080374784.
 
-constexpr Float128 ASIN_COEFFS_F128[17][16] = {
+static constexpr Float128 ASIN_COEFFS_F128[17][16] = {
     {
         {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128},
         {Sign::POS, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128},
@@ -548,13 +547,14 @@ constexpr Float128 ASIN_COEFFS_F128[17][16] = {
     },
 };
 
-constexpr Float128 PI_OVER_TWO_F128 = {
+static constexpr Float128 PI_OVER_TWO_F128 = {
     Sign::POS, -127, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
 
-constexpr Float128 PI_F128 = {Sign::POS, -126,
-                              0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+static constexpr Float128 PI_F128 = {
+    Sign::POS, -126, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
 
-LIBC_INLINE Float128 asin_eval(const Float128 &u, unsigned idx) {
+LIBC_INLINE static constexpr Float128 asin_eval(const Float128 &u,
+                                                unsigned idx) {
   return fputil::polyeval(u, ASIN_COEFFS_F128[idx][0], ASIN_COEFFS_F128[idx][1],
                           ASIN_COEFFS_F128[idx][2], ASIN_COEFFS_F128[idx][3],
                           ASIN_COEFFS_F128[idx][4], ASIN_COEFFS_F128[idx][5],
@@ -571,4 +571,4 @@ LIBC_INLINE Float128 asin_eval(const Float128 &u, unsigned idx) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_GENERIC_ASIN_UTILS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_ASIN_UTILS_H
