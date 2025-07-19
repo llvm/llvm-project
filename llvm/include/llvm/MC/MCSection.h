@@ -443,6 +443,12 @@ public:
   }
 
   //== FT_LEB functions
+  void makeLEB(bool IsSigned, const MCExpr *Value) {
+    assert(Kind == FT_Data);
+    Kind = MCFragment::FT_LEB;
+    u.leb.IsSigned = IsSigned;
+    u.leb.Value = Value;
+  }
   const MCExpr &getLEBValue() const {
     assert(Kind == FT_LEB);
     return *u.leb.Value;
@@ -454,10 +460,6 @@ public:
   bool isLEBSigned() const {
     assert(Kind == FT_LEB);
     return u.leb.IsSigned;
-  }
-  void setLEBSigned(bool S) {
-    assert(Kind == FT_LEB);
-    u.leb.IsSigned = S;
   }
 
   //== FT_DwarfFrame functions
