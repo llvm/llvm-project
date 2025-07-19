@@ -47,7 +47,9 @@ public:
   ~Context();
 
   /// Checks if a function is a potential constant expression.
-  bool isPotentialConstantExpr(State &Parent, const FunctionDecl *FnDecl);
+  bool isPotentialConstantExpr(State &Parent, const FunctionDecl *FD);
+  void isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
+                                          const FunctionDecl *FD);
 
   /// Evaluates a toplevel expression as an rvalue.
   bool evaluateAsRValue(State &Parent, const Expr *E, APValue &Result);

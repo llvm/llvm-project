@@ -1308,7 +1308,7 @@ bool Dup(InterpState &S, CodePtr OpPC) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Pop(InterpState &S, CodePtr OpPC) {
-  S.Stk.pop<T>();
+  S.Stk.discard<T>();
   return true;
 }
 
