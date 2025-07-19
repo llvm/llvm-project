@@ -2061,7 +2061,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
       rewriter.setInsertionPoint(linalgTarget);
       for (OpOperand &operand : linalgTarget->getOpOperands()) {
         for (auto [i, dim] : llvm::enumerate(linalgTarget.getShape(&operand))) {
-          if (!ShapedType::isDynamic(dim))
+          if (ShapedType::isStatic(dim))
             continue;
           options.setSizeToPadTo(operand.getOperandNumber(), i,
                                  tensor::getMixedSize(rewriter,
@@ -3920,7 +3920,8 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     }
     FailureOr<VectorizationResult> vectorResults =
         linalg::vectorize(rewriter, target, vectorSizes, getScalableSizes(),
-                          getVectorizeNdExtract().value_or(false));
+                          getVectorizeNdExtract().value_or(false), false,
+                          getAssumeDynamicDimsMatchVecSizes().value_or(false));
     if (failed(vectorResults)) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Attempted to vectorize, but failed";

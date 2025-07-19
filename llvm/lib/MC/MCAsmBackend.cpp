@@ -105,7 +105,8 @@ MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Builtins[Kind - FK_NONE];
 }
 
-bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
+bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+                                                const MCFixup &Fixup,
                                                 const MCValue &, uint64_t Value,
                                                 bool Resolved) const {
   if (!Resolved)
@@ -138,21 +139,7 @@ bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
 
 const MCSubtargetInfo *MCAsmBackend::getSubtargetInfo(const MCFragment &F) {
   const MCSubtargetInfo *STI = nullptr;
-  switch (F.getKind()) {
-  case MCFragment::FT_Data: {
-    auto &DF = cast<MCDataFragment>(F);
-    STI = DF.getSubtargetInfo();
-    assert(!DF.hasInstructions() || STI != nullptr);
-    break;
-  }
-  case MCFragment::FT_Relaxable: {
-    auto &RF = cast<MCRelaxableFragment>(F);
-    STI = RF.getSubtargetInfo();
-    assert(!RF.hasInstructions() || STI != nullptr);
-    break;
-  }
-  default:
-    break;
-  }
+  STI = F.getSubtargetInfo();
+  assert(!F.hasInstructions() || STI != nullptr);
   return STI;
 }

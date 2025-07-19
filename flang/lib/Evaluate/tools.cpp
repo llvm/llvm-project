@@ -1154,6 +1154,36 @@ template semantics::UnorderedSymbolSet CollectCudaSymbols(
 template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SubscriptInteger> &);
 
+bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
+  semantics::UnorderedSymbolSet hostSymbols;
+  semantics::UnorderedSymbolSet deviceSymbols;
+  semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
+
+  SymbolVector symbols{GetSymbolVector(expr)};
+  std::reverse(symbols.begin(), symbols.end());
+  bool skipNext{false};
+  for (const Symbol &sym : symbols) {
+    if (cudaSymbols.find(sym) != cudaSymbols.end()) {
+      bool isComponent{sym.owner().IsDerivedType()};
+      bool skipComponent{false};
+      if (!skipNext) {
+        if (IsCUDADeviceSymbol(sym)) {
+          deviceSymbols.insert(sym);
+        } else if (isComponent) {
+          skipComponent = true; // Component is not device. Look on the base.
+        } else {
+          hostSymbols.insert(sym);
+        }
+      }
+      skipNext = isComponent && !skipComponent;
+    } else {
+      skipNext = false;
+    }
+  }
+  bool hasConstant{HasConstant(expr)};
+  return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
+}
+
 // HasVectorSubscript()
 struct HasVectorSubscriptHelper
     : public AnyTraverse<HasVectorSubscriptHelper, bool,
@@ -2194,8 +2224,7 @@ bool IsSaved(const Symbol &original) {
     return false;
   } else if (scopeKind == Scope::Kind::Module ||
       (scopeKind == Scope::Kind::MainProgram &&
-          (symbol.attrs().test(Attr::TARGET) || evaluate::IsCoarray(symbol)) &&
-          Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol))) {
+          (symbol.attrs().test(Attr::TARGET) || evaluate::IsCoarray(symbol)))) {
     // 8.5.16p4
     // In main programs, implied SAVE matters only for pointer
     // initialization targets and coarrays.
@@ -2204,8 +2233,7 @@ bool IsSaved(const Symbol &original) {
       (features.IsEnabled(common::LanguageFeature::SaveMainProgram) ||
           (features.IsEnabled(
                common::LanguageFeature::SaveBigMainProgramVariables) &&
-              symbol.size() > 32)) &&
-      Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol)) {
+              symbol.size() > 32))) {
     // With SaveBigMainProgramVariables, keeping all unsaved main program
     // variables of 32 bytes or less on the stack allows keeping numerical and
     // logical scalars, small scalar characters or derived, small arrays, and
@@ -2223,15 +2251,15 @@ bool IsSaved(const Symbol &original) {
   } else if (symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-             object && object->init()) {
+      object && object->init()) {
     return true;
   } else if (IsProcedurePointer(symbol) && symbol.has<ProcEntityDetails>() &&
       symbol.get<ProcEntityDetails>().init()) {
     return true;
   } else if (scope.hasSAVE()) {
     return true; // bare SAVE statement
-  } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
-             block && block->attrs().test(Attr::SAVE)) {
+  } else if (const Symbol *block{FindCommonBlockContaining(symbol)};
+      block && block->attrs().test(Attr::SAVE)) {
     return true; // in COMMON with SAVE
   } else {
     return false;

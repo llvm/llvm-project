@@ -565,6 +565,27 @@ namespace llvm {
     return !(LHS == RHS);
   }
 
+  template <typename T>
+  inline bool operator<(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return std::lexicographical_compare(LHS.begin(), LHS.end(), RHS.begin(),
+                                        RHS.end());
+  }
+
+  template <typename T>
+  inline bool operator>(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return RHS < LHS;
+  }
+
+  template <typename T>
+  inline bool operator<=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return !(LHS > RHS);
+  }
+
+  template <typename T>
+  inline bool operator>=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return !(LHS < RHS);
+  }
+
   /// @}
 
   template <typename T> hash_code hash_value(ArrayRef<T> S) {

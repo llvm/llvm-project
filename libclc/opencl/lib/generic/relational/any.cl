@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/relational/any.h>
 #include <clc/relational/clc_any.h>
 
 #define ANY_ID(TYPE) _CLC_OVERLOAD _CLC_DEF int any(TYPE v)

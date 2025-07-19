@@ -385,13 +385,18 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genChdir,
      {{{"name", asAddr}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
-    {"clock64", &I::genClock64, {}, /*isElemental=*/false},
+    {"clock", &I::genNVVMTime<mlir::NVVM::ClockOp>, {}, /*isElemental=*/false},
+    {"clock64",
+     &I::genNVVMTime<mlir::NVVM::Clock64Op>,
+     {},
+     /*isElemental=*/false},
     {"cmplx",
      &I::genCmplx,
      {{{"x", asValue}, {"y", asValue, handleDynamicOptional}}}},
     {"command_argument_count", &I::genCommandArgumentCount},
     {"conjg", &I::genConjg},
     {"cosd", &I::genCosd},
+    {"cospi", &I::genCospi},
     {"count",
      &I::genCount,
      {{{"mask", asAddr}, {"dim", asValue}, {"kind", asValue}}},
@@ -503,6 +508,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"getgid", &I::genGetGID},
     {"getpid", &I::genGetPID},
     {"getuid", &I::genGetUID},
+    {"globaltimer",
+     &I::genNVVMTime<mlir::NVVM::GlobalTimerOp>,
+     {},
+     /*isElemental=*/false},
     {"hostnm",
      &I::genHostnm,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
@@ -1231,8 +1240,11 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::StringRef mathLibFuncName = mathOp.runtimeFunc;
   if (!mathLibFuncName.empty()) {
     // If we enabled MLIR complex or can use approximate operations, we should
-    // NOT use libm.
-    if (!forceMlirComplex && !canUseApprox) {
+    // NOT use libm. Avoid libm when targeting AMDGPU as those symbols are not
+    // available on the device and we rely on MLIR complex operations to
+    // later map to OCML calls.
+    bool isAMDGPU = fir::getTargetTriple(builder.getModule()).isAMDGCN();
+    if (!forceMlirComplex && !canUseApprox && !isAMDGPU) {
       result = genLibCall(builder, loc, mathOp, mathLibFuncType, args);
       LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
       return result;
@@ -2648,16 +2660,18 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
 // ACOSD
 mlir::Value IntrinsicLibrary::genAcosd(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
+  // maps ACOSD to ACOS * 180 / pi
   assert(args.size() == 1);
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  mlir::Value result =
+      getRuntimeCallGenerator("acos", ftype)(builder, loc, {args[0]});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
+      loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
-  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
-  return getRuntimeCallGenerator("acos", ftype)(builder, loc, {arg});
+  return builder.create<mlir::arith::MulFOp>(loc, result, factor);
 }
 
 // ADJUSTL & ADJUSTR
@@ -2799,16 +2813,18 @@ IntrinsicLibrary::genAny(mlir::Type resultType,
 // ASIND
 mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
+  // maps ASIND to ASIN * 180 / pi
   assert(args.size() == 1);
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  mlir::Value result =
+      getRuntimeCallGenerator("asin", ftype)(builder, loc, {args[0]});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
+      loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
-  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
-  return getRuntimeCallGenerator("asin", ftype)(builder, loc, {arg});
+  return builder.create<mlir::arith::MulFOp>(loc, result, factor);
 }
 
 // ATAND, ATAN2D
@@ -3553,16 +3569,6 @@ IntrinsicLibrary::genChdir(std::optional<mlir::Type> resultType,
   return {};
 }
 
-// CLOCK64
-mlir::Value IntrinsicLibrary::genClock64(mlir::Type resultType,
-                                         llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.read.ptx.sreg.clock64";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::FunctionType ftype = mlir::FunctionType::get(context, {}, {resultType});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
-}
-
 // CMPLX
 mlir::Value IntrinsicLibrary::genCmplx(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
@@ -3613,6 +3619,21 @@ mlir::Value IntrinsicLibrary::genCosd(mlir::Type resultType,
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
       loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
+  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  return getRuntimeCallGenerator("cos", ftype)(builder, loc, {arg});
+}
+
+// COSPI
+mlir::Value IntrinsicLibrary::genCospi(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor =
+      builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
   mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
   return getRuntimeCallGenerator("cos", ftype)(builder, loc, {arg});
@@ -7190,6 +7211,14 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
       builder, loc, boxType, mold->nonDeferredLenParams());
   builder.create<fir::StoreOp>(loc, box, boxStorage);
   return fir::MutableBoxValue(boxStorage, mold->nonDeferredLenParams(), {});
+}
+
+// CLOCK, CLOCK64, GLOBALTIMER
+template <typename OpTy>
+mlir::Value IntrinsicLibrary::genNVVMTime(mlir::Type resultType,
+                                          llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0 && "expect no arguments");
+  return builder.create<OpTy>(loc, resultType).getResult();
 }
 
 // PACK

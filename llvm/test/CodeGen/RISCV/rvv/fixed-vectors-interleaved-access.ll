@@ -1662,6 +1662,25 @@ define <4 x i8> @load_factor8_one_active(ptr %ptr) vscale_range(8,1024) {
   ret <4 x i8> %v0
 }
 
+define <4 x ptr> @load_factor3_one_active_ptr(ptr %ptr) {
+; RV32-LABEL: load_factor3_one_active_ptr:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 12
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vlse32.v v8, (a0), a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: load_factor3_one_active_ptr:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 24
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vlse64.v v8, (a0), a1
+; RV64-NEXT:    ret
+  %interleaved.vec = load <12 x ptr>, ptr %ptr
+  %v0 = shufflevector <12 x ptr> %interleaved.vec, <12 x ptr> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  ret <4 x ptr> %v0
+}
+
 define void @load_factor4_one_active_storeback(ptr %ptr) {
 ; CHECK-LABEL: load_factor4_one_active_storeback:
 ; CHECK:       # %bb.0:
@@ -1699,6 +1718,30 @@ define void @load_factor4_one_active_storeback_full(ptr %ptr) {
   ret void
 }
 
+define <4 x i32> @vp_load_factor3_one_active(ptr %ptr) {
+; CHECK-LABEL: vp_load_factor3_one_active:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a1
+; CHECK-NEXT:    ret
+  %interleaved.vec = tail call <12 x i32> @llvm.vp.load.v12i32.p0(ptr %ptr, <12 x i1>  splat (i1 true), i32 12)
+  %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  ret <4 x i32> %v0
+}
+
+define <4 x i32> @vp_load_factor5_one_active(ptr %ptr) {
+; CHECK-LABEL: vp_load_factor5_one_active:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 20
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a1
+; CHECK-NEXT:    ret
+ %interleaved.vec = tail call <20 x i32> @llvm.vp.load.v20i32.p0(ptr %ptr, <20 x i1>  splat (i1 true), i32 20)
+  %v0 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
+  ret <4 x i32> %v0
+}
+
 define void @store_factor4_one_active(ptr %ptr, <4 x i32> %v) {
 ; CHECK-LABEL: store_factor4_one_active:
 ; CHECK:       # %bb.0:
@@ -1708,6 +1751,17 @@ define void @store_factor4_one_active(ptr %ptr, <4 x i32> %v) {
 ; CHECK-NEXT:    ret
   %v0 = shufflevector <4 x i32> %v, <4 x i32> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
   store <16 x i32> %v0, ptr %ptr
+  ret void
+}
+
+define void @vpstore_factor4_one_active(ptr %ptr, <4 x i32> %v) {
+; CHECK-LABEL: vpstore_factor4_one_active:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg4e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v0 = shufflevector <4 x i32> %v, <4 x i32> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
+  tail call void @llvm.vp.store.v16i32.p0(<16 x i32> %v0, ptr %ptr, <16 x i1> splat (i1 true), i32 16)
   ret void
 }
 
@@ -1748,6 +1802,25 @@ define void @store_factor4_one_active_slidedown(ptr %ptr, <4 x i32> %v) {
   ret void
 }
 
+define void @store_factor4_one_active_ptr(ptr %ptr, <4 x ptr> %v) {
+; RV32-LABEL: store_factor4_one_active_ptr:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 16
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vsse32.v v8, (a0), a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: store_factor4_one_active_ptr:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 32
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vsse64.v v8, (a0), a1
+; RV64-NEXT:    ret
+  %v0 = shufflevector <4 x ptr> %v, <4 x ptr> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
+  store <16 x ptr> %v0, ptr %ptr
+  ret void
+}
+
 ; Negative tests
 
 define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_mask(ptr %ptr) {
@@ -1766,8 +1839,8 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_mask(ptr %ptr) {
 ; RV32-NEXT:    vle32.v v12, (a0), v0.t
 ; RV32-NEXT:    li a0, 36
 ; RV32-NEXT:    vmv.s.x v20, a1
-; RV32-NEXT:    lui a1, %hi(.LCPI49_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI49_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI54_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI54_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle16.v v21, (a1)
 ; RV32-NEXT:    vcompress.vm v8, v12, v11
@@ -1842,8 +1915,8 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_evl(ptr %ptr) {
 ; RV32-NEXT:    vmv.s.x v10, a0
 ; RV32-NEXT:    li a0, 146
 ; RV32-NEXT:    vmv.s.x v11, a0
-; RV32-NEXT:    lui a0, %hi(.LCPI50_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI50_0)
+; RV32-NEXT:    lui a0, %hi(.LCPI55_0)
+; RV32-NEXT:    addi a0, a0, %lo(.LCPI55_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle16.v v20, (a0)
 ; RV32-NEXT:    li a0, 36
