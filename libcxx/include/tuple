@@ -225,9 +225,8 @@ template <class... Types>
 #  include <__config>
 #  include <__cstddef/size_t.h>
 #  include <__fwd/array.h>
-#  include <__fwd/complex.h>
+#  include <__fwd/get.h>
 #  include <__fwd/pair.h>
-#  include <__fwd/subrange.h>
 #  include <__fwd/tuple.h>
 #  include <__memory/allocator_arg_t.h>
 #  include <__memory/uses_allocator.h>
@@ -305,18 +304,14 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __tuple_compare_equal(c
 }
 
 #    if _LIBCPP_STD_VER >= 26
-template <class _Tp, class _Up, class _IndexSeq>
-inline constexpr bool __can_tuple_compare_equal_impl = false;
+template <class _Tp, class _Up, class _IndexSeq = make_index_sequence<tuple_size_v<_Tp>>>
+inline constexpr bool __can_tuple_compare_equal = false;
 template <class _Tp, class _Up, size_t... _Is>
   requires(tuple_size_v<_Tp> == tuple_size_v<_Up>)
-inline constexpr bool __can_tuple_compare_equal_impl<_Tp, _Up, index_sequence<_Is...>> =
+inline constexpr bool __can_tuple_compare_equal<_Tp, _Up, index_sequence<_Is...>> =
     __all<requires(const tuple_element_t<_Is, _Tp>& __t, const tuple_element_t<_Is, _Up>& __u) {
       { __t == __u } -> __boolean_testable;
     }...>::value;
-
-template <class _Tp, class _Up>
-inline constexpr bool __can_tuple_compare_equal =
-    __can_tuple_compare_equal_impl<_Tp, _Up, make_index_sequence<tuple_size_v<_Tp>>>;
 #    endif // _LIBCPP_STD_VER >= 26
 
 #    if _LIBCPP_STD_VER >= 20
