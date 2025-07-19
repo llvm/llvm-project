@@ -1404,7 +1404,7 @@ MCSymbol *MCStreamer::endSection(MCSection *Section) {
   return Sym;
 }
 
-void MCStreamer::insert(MCFragment *F) {
+void MCStreamer::addFragment(MCFragment *F) {
   auto *Sec = CurFrag->getParent();
   F->setParent(Sec);
   F->setLayoutOrder(CurFrag->getLayoutOrder() + 1);
@@ -1414,7 +1414,14 @@ void MCStreamer::insert(MCFragment *F) {
 }
 
 void MCStreamer::newFragment() {
-  insert(getContext().allocFragment<MCFragment>());
+  addFragment(getContext().allocFragment<MCFragment>());
+}
+
+void MCStreamer::insert(MCFragment *F) {
+  assert(F->getKind() != MCFragment::FT_Data &&
+         "F should have a variable-size tail");
+  addFragment(F);
+  newFragment();
 }
 
 static VersionTuple
