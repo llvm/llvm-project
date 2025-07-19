@@ -25,7 +25,6 @@
 #include <type_traits>
 
 #include "test_macros.h"
-#include "check_assertion.h"
 
 constexpr bool test_concepts() {
   const std::optional<char> opt{'a'};
