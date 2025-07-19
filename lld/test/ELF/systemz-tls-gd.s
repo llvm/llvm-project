@@ -1,6 +1,7 @@
 # REQUIRES: systemz
 # RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux %s -o %t.o
-# RUN: echo '.tbss; .globl b, c; b: .zero 4; c:' | llvm-mc -filetype=obj -triple=s390x-unknown-linux - -o %t1.o
+# RUN: echo '.globl __tls_get_offset; __tls_get_offset:; .tbss; .globl b, c; b: .zero 4; c:' | \
+# RUN:   llvm-mc -filetype=obj -triple=s390x-unknown-linux - -o %t1.o
 # RUN: ld.lld -shared -soname=t1.so %t1.o -o %t1.so
 
 # RUN: ld.lld -shared %t.o %t1.o -o %t.so
@@ -19,12 +20,12 @@
 # RUN: llvm-objdump --section .data.rel.ro --full-contents %t.ie | FileCheck --check-prefix=IE-DATA %s
 
 # GD-REL: Relocation section '.rela.dyn' at offset {{.*}} contains 6 entries:
-# GD-REL:      0000000000002570 0000000200000036 R_390_TLS_DTPMOD 0000000000000008 a + 0
-# GD-REL-NEXT: 0000000000002578 0000000200000037 R_390_TLS_DTPOFF 0000000000000008 a + 0
-# GD-REL-NEXT: 0000000000002580 0000000300000036 R_390_TLS_DTPMOD 000000000000000c b + 0
-# GD-REL-NEXT: 0000000000002588 0000000300000037 R_390_TLS_DTPOFF 000000000000000c b + 0
-# GD-REL-NEXT: 0000000000002590 0000000400000036 R_390_TLS_DTPMOD 0000000000000010 c + 0
-# GD-REL-NEXT: 0000000000002598 0000000400000037 R_390_TLS_DTPOFF 0000000000000010 c + 0
+# GD-REL:      0000000000002570 {{.*}}           R_390_TLS_DTPMOD 0000000000000008 a + 0
+# GD-REL-NEXT: 0000000000002578 {{.*}}           R_390_TLS_DTPOFF 0000000000000008 a + 0
+# GD-REL-NEXT: 0000000000002580 {{.*}}           R_390_TLS_DTPMOD 000000000000000c b + 0
+# GD-REL-NEXT: 0000000000002588 {{.*}}           R_390_TLS_DTPOFF 000000000000000c b + 0
+# GD-REL-NEXT: 0000000000002590 {{.*}}           R_390_TLS_DTPMOD 0000000000000010 c + 0
+# GD-REL-NEXT: 0000000000002598 {{.*}}           R_390_TLS_DTPOFF 0000000000000010 c + 0
 
 ## _GLOBAL_OFFSET_TABLE is at 0x2558
 # GD:      larl    %r12, 0x2558
@@ -80,33 +81,36 @@
 
 
 # IE-REL: Relocation section '.rela.dyn' at offset {{.*}} contains 2 entries:
-# IE-REL:      0000000001002430 0000000200000038 R_390_TLS_TPOFF 0000000000000000 b + 0
-# IE-REL-NEXT: 0000000001002438 0000000300000038 R_390_TLS_TPOFF 0000000000000000 c + 0
+# IE-REL:      0000000001002500 {{.*}}           R_390_TLS_TPOFF 0000000000000000 b + 0
+# IE-REL-NEXT: 0000000001002508 {{.*}}           R_390_TLS_TPOFF 0000000000000000 c + 0
+## Benign false dependency on __tls_get_offset
+# IE-REL: Relocation section '.rela.plt' at offset {{.*}} contains 1
+# IE-REL:                                        R_390_JMP_SLOT  0000000000000000 __tls_get_offset
 
-## _GLOBAL_OFFSET_TABLE is at 0x1002418
-# IE:      larl    %r12, 0x1002418
+## _GLOBAL_OFFSET_TABLE
+# IE:      larl    %r12, 0x10024e8
 
-## TP offset of a is at 0x1002340
-# IE-NEXT: lgrl    %r2, 0x1002340
+## TP offset of a
+# IE-NEXT: lgrl    %r2, 0x10023d0
 # IE-NEXT: jgnop
 # IE-NEXT: lgf     %r2, 0(%r2,%r7)
 
-## GOT offset of the TP offset for b is at 0x1002348
-# IE-NEXT: lgrl    %r2, 0x1002348
+## GOT offset of the TP offset for b
+# IE-NEXT: lgrl    %r2, 0x10023d8
 # IE-NEXT: lg      %r2, 0(%r2,%r12)
 # IE-NEXT: lgf     %r2, 0(%r2,%r7)
 
-## GOT offset of the TP offset for c is at 0x1002350
-# IE-NEXT: lgrl    %r2, 0x1002350
+## GOT offset of the TP offset for c
+# IE-NEXT: lgrl    %r2, 0x10023e0
 # IE-NEXT: lg      %r2, 0(%r2,%r12)
 # IE-NEXT: lgf     %r2, 0(%r2,%r7)
 
 ## TP offsets (a) / GOT offset of TP offsets (b, c)
 # a: -4
-# b: 0x1002430 / 0x18
-# c: 0x1002438 / 0x20
-# IE-DATA:      1002340 ffffffff fffffffc 00000000 00000018
-# IE-DATA-NEXT: 1002350 00000000 00000020
+# b: 0x10023d0 / 0x18
+# c: 0x10023e0 / 0x20
+# IE-DATA:      10023d0 ffffffff fffffffc 00000000 00000018
+# IE-DATA-NEXT: 10023e0 00000000 00000020
 
 
 ear     %r7,%a0

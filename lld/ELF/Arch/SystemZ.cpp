@@ -23,7 +23,6 @@ namespace {
 class SystemZ : public TargetInfo {
 public:
   SystemZ(Ctx &);
-  int getTlsGdRelaxSkip(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -277,29 +276,6 @@ RelExpr SystemZ::adjustTlsExpr(RelType type, RelExpr expr) const {
   return expr;
 }
 
-int SystemZ::getTlsGdRelaxSkip(RelType type) const {
-  // A __tls_get_offset call instruction is marked with 2 relocations:
-  //
-  //   R_390_TLS_GDCALL / R_390_TLS_LDCALL: marker relocation
-  //   R_390_PLT32DBL: __tls_get_offset
-  //
-  // After the relaxation we no longer call __tls_get_offset and should skip
-  // both relocations to not create a false dependence on __tls_get_offset
-  // being defined.
-  //
-  // Note that this mechanism only works correctly if the R_390_TLS_[GL]DCALL
-  // is seen immediately *before* the R_390_PLT32DBL.  Unfortunately, current
-  // compilers on the platform will typically generate the inverse sequence.
-  // To fix this, we sort relocations by offset in RelocationScanner::scan;
-  // this ensures the correct sequence as the R_390_TLS_[GL]DCALL applies to
-  // the first byte of the brasl instruction, while the R_390_PLT32DBL applies
-  // to its third byte (the relative displacement).
-
-  if (type == R_390_TLS_GDCALL || type == R_390_TLS_LDCALL)
-    return 2;
-  return 1;
-}
-
 void SystemZ::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
                              uint64_t val) const {
   // The general-dynamic code sequence for a global `x`:
@@ -320,6 +296,9 @@ void SystemZ::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   // Relaxing to initial-exec entails:
   // 1) Replacing the call by a load from the GOT.
   // 2) Replacing the relocation on the constant LC0 by R_390_TLS_GOTIE64.
+  //
+  // While we no longer call __tls_get_offset after optimization, we still
+  // generate an unused PLT entry. This simple behavior matches GNU ld.
 
   switch (rel.type) {
   case R_390_TLS_GDCALL:

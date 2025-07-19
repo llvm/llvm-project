@@ -91,6 +91,9 @@ lgf     %r1,0(%r1,%r2)
 lgrl    %r1, .LC3
 lgf     %r1,0(%r1,%r2)
 
+.globl __tls_get_offset
+__tls_get_offset:
+
         .section        .data.rel.ro,"aw"
         .align  8
 .LC0:
