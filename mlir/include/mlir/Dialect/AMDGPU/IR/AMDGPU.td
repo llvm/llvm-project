@@ -719,6 +719,26 @@ def AMDGPU_SchedBarrierOp :
   }];
 }
 
+def AMDGPU_WaitcntOp :
+  AMDGPU_Op<"waitcnt">,
+  Arguments<(ins
+      OptionalAttr<I32Attr>:$vmcnt,
+      OptionalAttr<I32Attr>:$expcnt,
+      OptionalAttr<I32Attr>:$lgkmcnt
+    )>
+  {
+  let summary = "Wrapper on ROCDL SWaitcntOp";
+  let description = [{
+    Covenience wrapper on `rocdl.s.waitcnt`. Hides the architecture specific
+    bitpacking from user. Missing values will be assumed maximum values supported
+    by the architecture. Large values will also be clamped to the maximum
+    supported values.
+  }];
+  let assemblyFormat = [{
+    (`vmcnt` `(` $vmcnt^ `)` )? (`expcnt` `(` $expcnt^ `)` )? (`lgkmcnt` `(` $lgkmcnt^ `)`)? attr-dict
+  }];
+}
+
 def AMDGPU_MFMAPermB : I32EnumAttr<"MFMAPermB",
     "The possible permutations of the lanes storing B available in an MFMA",
     [

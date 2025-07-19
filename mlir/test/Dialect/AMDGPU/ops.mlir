@@ -548,3 +548,16 @@ func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %
   amdgpu.gather_to_lds %mem1[%idx1],        %smem2[%idx1, %idx2] : vector<2xf16>, memref<32xf16>,    memref<32x32xf16, #gpu.address_space<workgroup>>
   func.return
 }
+
+// CHECK-LABEL: func @waitcnt
+func.func @waitcnt() {
+  // CHECK: amdgpu.waitcnt vmcnt(1) expcnt(2) lgkmcnt(3)
+  // CHECK: amdgpu.waitcnt vmcnt(1)
+  // CHECK: amdgpu.waitcnt expcnt(2)
+  // CHECK: amdgpu.waitcnt lgkmcnt(3)
+  amdgpu.waitcnt vmcnt(1) expcnt(2) lgkmcnt(3)
+  amdgpu.waitcnt vmcnt(1)
+  amdgpu.waitcnt expcnt(2)
+  amdgpu.waitcnt lgkmcnt(3)
+  func.return
+}
