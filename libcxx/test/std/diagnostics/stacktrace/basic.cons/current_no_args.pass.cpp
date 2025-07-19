@@ -17,6 +17,7 @@
 */
 
 #include <cassert>
+#include <iostream>
 #include <stacktrace>
 
 uint32_t test1_line;
@@ -36,6 +37,8 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::stacktrace test2() {
 
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current() {
   auto st = test2();
+  std::cout << st << '\n';
+
   assert(st.size() >= 3);
   assert(st[0]);
   assert(st[0].native_handle());

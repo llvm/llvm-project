@@ -40,16 +40,16 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
-  stacktrace/base.cpp
-  stacktrace/linux/elf.cpp
-  stacktrace/linux/images.cpp
-  stacktrace/linux/impl.cpp
-  stacktrace/macos/impl.cpp
-  stacktrace/to_string.cpp
-  stacktrace/tools/tools.cpp
-  stacktrace/unwind/impl.cpp
-  stacktrace/windows/dll.cpp
-  stacktrace/windows/impl.cpp
+  stacktrace.cpp
+  stacktrace/fd.h
+  stacktrace/images.cpp
+  stacktrace/impl_generic.cpp
+  stacktrace/impl_windows.cpp
+  stacktrace/tools/apple_atos.cpp
+  stacktrace/tools/gnu_addr2line.cpp
+  stacktrace/tools/llvm_symbolizer.cpp
+  stacktrace/tools/tools.h
+  stacktrace/unwinding.h
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp

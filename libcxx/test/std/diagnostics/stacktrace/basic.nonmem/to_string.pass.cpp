@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
+// ADDITIONAL_COMPILE_FLAGS: -g
 
 /*
   (19.6.4.6) Non-member functions
@@ -18,10 +19,13 @@
 */
 
 #include <cassert>
+#include <iostream>
 #include <stacktrace>
 
 int main(int, char**) {
-  auto a = std::stacktrace::current();
+  auto a    = std::stacktrace::current();
+  auto astr = std::to_string(a);
+  std::cerr << astr << '\n';
 
   assert(std::to_string(a[0]).contains("main"));
   assert(std::to_string(a[0]).contains("to_string.pass"));

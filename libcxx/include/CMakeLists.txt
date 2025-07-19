@@ -740,12 +740,10 @@ set(files
   __ranges/zip_transform_view.h
   __ranges/zip_view.h
   __split_buffer
-  __stacktrace/base.h
-  __stacktrace/basic.h
-  __stacktrace/entry.h
-  __stacktrace/hash.h
-  __stacktrace/nonmem.h
-  __stacktrace/to_string.h
+  __stacktrace/basic_stacktrace.h
+  __stacktrace/images.h
+  __stacktrace/memory.h
+  __stacktrace/stacktrace_entry.h
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
