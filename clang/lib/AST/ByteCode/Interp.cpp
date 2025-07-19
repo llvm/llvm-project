@@ -142,8 +142,12 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
     return false;
 
   if (isa<ParmVarDecl>(D)) {
-    if (D->getType()->isReferenceType())
+    if (D->getType()->isReferenceType()) {
+      if (S.inConstantContext() && S.getLangOpts().CPlusPlus &&
+          !S.getLangOpts().CPlusPlus11)
+        diagnoseNonConstVariable(S, OpPC, D);
       return false;
+    }
 
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
@@ -660,6 +664,9 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if (Ptr.isInitialized())
     return true;
+
+  if (Ptr.isExtern() && S.checkingPotentialConstantExpression())
+    return false;
 
   if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
       VD && (VD->isConstexpr() || VD->hasGlobalStorage())) {

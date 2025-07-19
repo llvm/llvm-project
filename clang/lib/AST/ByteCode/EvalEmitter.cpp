@@ -90,6 +90,19 @@ EvaluationResult EvalEmitter::interpretAsPointer(const Expr *E,
   return std::move(this->EvalResult);
 }
 
+bool EvalEmitter::interpretCall(const FunctionDecl *FD, const Expr *E) {
+  // Add parameters to the parameter map. The values in the ParamOffset don't
+  // matter in this case as reading from them can't ever work.
+  for (const ParmVarDecl *PD : FD->parameters()) {
+    this->Params.insert({PD, {0, false}});
+  }
+
+  if (!this->visit(E))
+    return false;
+  PrimType T = Ctx.classify(E).value_or(PT_Ptr);
+  return this->emitPop(T, E);
+}
+
 void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }

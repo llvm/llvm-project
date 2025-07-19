@@ -18018,6 +18018,11 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
   Info.InConstantContext = true;
   Info.CheckingPotentialConstantExpression = true;
 
+  if (Info.EnableNewConstInterp) {
+    Info.Ctx.getInterpContext().isPotentialConstantExprUnevaluated(Info, E, FD);
+    return Diags.empty();
+  }
+
   // Fabricate a call stack frame to give the arguments a plausible cover story.
   CallStackFrame Frame(Info, SourceLocation(), FD, /*This=*/nullptr,
                        /*CallExpr=*/nullptr, CallRef());
