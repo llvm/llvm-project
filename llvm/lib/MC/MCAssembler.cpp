@@ -196,6 +196,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
   switch (F.getKind()) {
   case MCFragment::FT_Data:
   case MCFragment::FT_Relaxable:
+  case MCFragment::FT_Align:
   case MCFragment::FT_LEB:
   case MCFragment::FT_Dwarf:
   case MCFragment::FT_DwarfFrame:
@@ -226,29 +227,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
 
   case MCFragment::FT_SymbolId:
     return 4;
-
-  case MCFragment::FT_Align: {
-    unsigned Offset = F.Offset + F.getFixedSize();
-    unsigned Size = offsetToAlignment(Offset, F.getAlignment());
-    auto &Frag = const_cast<MCFragment &>(F);
-    // In the nops mode, RISC-V style linker relaxation might adjust the size
-    // and add a fixup, even if `Size` is originally 0.
-    bool AlignFixup = false;
-    if (F.hasAlignEmitNops()) {
-      AlignFixup = getBackend().relaxAlign(Frag, Size);
-      // If the backend does not handle the fragment specially, pad with nops,
-      // but ensure that the padding is larger than the minimum nop size.
-      if (!AlignFixup)
-        while (Size % getBackend().getMinimumNopSize())
-          Size += F.getAlignment().value();
-    }
-    if (!AlignFixup && Size > F.getAlignMaxBytesToEmit())
-      Size = 0;
-    Frag.VarContentEnd = F.VarContentStart + Size;
-    if (Frag.VarContentEnd > Frag.getParent()->ContentStorage.size())
-      Frag.getParent()->ContentStorage.resize(Frag.VarContentEnd);
-    return F.getSize();
-  }
 
   case MCFragment::FT_Org: {
     const MCOrgFragment &OF = cast<MCOrgFragment>(F);
@@ -446,14 +424,11 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     assert((FragmentSize - F.getFixedSize()) % F.getAlignFillLen() == 0 &&
            "computeFragmentSize computed size is incorrect");
 
-    // See if we are aligning with nops, and if so do that first to try to
-    // fill the Count bytes.  Then if that did not fill any bytes or there are
-    // any bytes left to fill use the Value and ValueSize to fill the rest. If
-    // we are aligning with nops, ask that target to emit the right data.
+    // In the nops mode, call the backend hook to write `Count` nops.
     if (F.hasAlignEmitNops()) {
       if (!Asm.getBackend().writeNopData(OS, Count, F.getSubtargetInfo()))
-        report_fatal_error("unable to write nop sequence of " + Twine(Count) +
-                           " bytes");
+        reportFatalInternalError("unable to write nop sequence of " +
+                                 Twine(Count) + " bytes");
     } else {
       // Otherwise, write out in multiples of the value size.
       for (uint64_t i = 0; i != Count; ++i) {
@@ -1010,7 +985,30 @@ void MCAssembler::layoutSection(MCSection &Sec) {
   uint64_t Offset = 0;
   for (MCFragment &F : Sec) {
     F.Offset = Offset;
-    Offset += computeFragmentSize(F);
+    if (F.getKind() == MCFragment::FT_Align) {
+      Offset += F.getFixedSize();
+      unsigned Size = offsetToAlignment(Offset, F.getAlignment());
+      // In the nops mode, RISC-V style linker relaxation might adjust the size
+      // and add a fixup, even if `Size` is originally 0.
+      bool AlignFixup = false;
+      if (F.hasAlignEmitNops()) {
+        AlignFixup = getBackend().relaxAlign(F, Size);
+        // If the backend does not handle the fragment specially, pad with nops,
+        // but ensure that the padding is larger than the minimum nop size.
+        if (!AlignFixup)
+          while (Size % getBackend().getMinimumNopSize())
+            Size += F.getAlignment().value();
+      }
+      if (!AlignFixup && Size > F.getAlignMaxBytesToEmit())
+        Size = 0;
+      // Update the variable tail size. The content is ignored.
+      F.VarContentEnd = F.VarContentStart + Size;
+      if (F.VarContentEnd > F.getParent()->ContentStorage.size())
+        F.getParent()->ContentStorage.resize(F.VarContentEnd);
+      Offset += Size;
+    } else {
+      Offset += computeFragmentSize(F);
+    }
   }
 }
 
