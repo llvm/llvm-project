@@ -51,6 +51,9 @@ private:
 
 class LLDBMemoryReader : public swift::remote::MemoryReader {
 public:
+  /// Besides address space 0 (the DefaultAddressSpace), subclasses are free to
+  /// use any address space for their own implementation purposes. LLDB uses
+  /// this address space to track file addresses it sends to RemoteInspection.
   static constexpr uint8_t LLDBAddressSpace = 1;
 
   LLDBMemoryReader(Process &p,
@@ -124,11 +127,12 @@ private:
   std::optional<Address>
   remoteAddressToLLDBAddress(swift::remote::RemoteAddress address) const;
 
+  enum class ReadBytesResult { fail, success_from_file, success_from_memory };
   /// Implementation detail of readBytes. Returns a pair where the first element
   /// indicates whether the memory was read successfully, the second element
   /// indicates whether live memory was read.
-  std::pair<bool, bool> readBytesImpl(swift::remote::RemoteAddress address,
-                                      uint8_t *dest, uint64_t size);
+  ReadBytesResult readBytesImpl(swift::remote::RemoteAddress address,
+                                uint8_t *dest, uint64_t size);
 
   /// Reads memory from the symbol rich binary from the address into dest.
   /// \return true if it was able to successfully read memory.

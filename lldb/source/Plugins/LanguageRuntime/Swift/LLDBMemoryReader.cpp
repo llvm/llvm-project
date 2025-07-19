@@ -315,11 +315,11 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
 
 bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
                                  uint8_t *dest, uint64_t size) {
-  auto [success, _] = readBytesImpl(address, dest, size);
-  return success;
+  auto read_bytes_result = readBytesImpl(address, dest, size);
+  return read_bytes_result != ReadBytesResult::fail;
 }
 
-std::pair<bool, bool>
+LLDBMemoryReader::ReadBytesResult
 LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
                                 uint8_t *dest, uint64_t size) {
   Log *log = GetLog(LLDBLog::Types);
@@ -330,7 +330,7 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
     if (overflow) {
       LLDB_LOGV(log, "[MemoryReader] address {0:x} + size {1} overflows", addr,
                 size);
-      return {false, false};
+      return ReadBytesResult::fail;
     }
     if (addr >= *m_local_buffer &&
         end <= *m_local_buffer + m_local_buffer_size) {
@@ -338,7 +338,7 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
       // GetDynamicTypeAndAddress_Protocol() most likely no longer
       // hold.
       memcpy(dest, (void *)addr, size);
-      return {true, false};
+      return ReadBytesResult::success_from_file;
     }
   }
 
@@ -353,7 +353,7 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
   if (!maybeAddr) {
     LLDB_LOGV(log, "[MemoryReader] could not resolve address {0:x}",
               address.getRawAddress());
-    return {false, false};
+    return ReadBytesResult::fail;
   }
   auto addr = *maybeAddr;
   if (addr.IsSectionOffset()) {
@@ -362,15 +362,16 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
     if (object_file->GetType() == ObjectFile::Type::eTypeDebugInfo) {
       LLDB_LOGV(log, "[MemoryReader] Reading memory from symbol rich binary");
 
-      bool success = object_file->ReadSectionData(section.get(),
-                                                  addr.GetOffset(), dest, size);
-      return {success, false};
+      if (object_file->ReadSectionData(section.get(), addr.GetOffset(), dest,
+                                       size))
+        return ReadBytesResult::success_from_file;
+      return ReadBytesResult::fail;
     }
   }
 
   if (size > m_max_read_amount) {
     LLDB_LOGV(log, "[MemoryReader] memory read exceeds maximum allowed size");
-    return {false, false};
+    return ReadBytesResult::fail;
   }
   Target &target(m_process.GetTarget());
   Status error;
@@ -384,12 +385,12 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
                                &did_read_live_memory)) {
     LLDB_LOGV(log,
               "[MemoryReader] memory read returned fewer bytes than asked for");
-    return {false, did_read_live_memory};
+    return ReadBytesResult::fail;
   }
   if (error.Fail()) {
     LLDB_LOGV(log, "[MemoryReader] memory read returned error: {0}",
               error.AsCString());
-    return {false, did_read_live_memory};
+    return ReadBytesResult::fail;
   }
 
   auto format_data = [](auto dest, auto size) {
@@ -403,7 +404,8 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
   LLDB_LOGV(log, "[MemoryReader] memory read returned data: {0}",
             format_data(dest, size));
 
-  return {true, did_read_live_memory};
+  return did_read_live_memory ? ReadBytesResult::success_from_memory
+                              : ReadBytesResult::success_from_file;
 }
 
 bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
@@ -613,24 +615,31 @@ bool LLDBMemoryReader::readRemoteAddressImpl(
     std::size_t size) {
   assert((size == 4 || size == 8) &&
          "Only 32 or 64 bit architectures are supported!");
-  auto *dest = (uint8_t *)std::malloc(size);
-  auto defer = llvm::make_scope_exit([&] { free(dest); });
-
-  auto [success, did_read_live_memory] = readBytesImpl(address, dest, size);
-  if (!success)
+  if (size != 4 && size != 8)
     return false;
 
-  uint8_t addressSpace = did_read_live_memory
-                             ? swift::remote::RemoteAddress::DefaultAddressSpace
-                             : LLDBAddressSpace;
-  if (size == 4)
-    out = swift::remote::RemoteAddress(*reinterpret_cast<uint32_t *>(dest),
-                                       addressSpace);
-  else if (size == 8)
-    out = swift::remote::RemoteAddress(*reinterpret_cast<uint64_t *>(dest),
-                                       addressSpace);
-  else
+  uint64_t buf;
+  auto read_bytes_result =
+      readBytesImpl(address, reinterpret_cast<uint8_t *>(&buf), size);
+
+  uint8_t addressSpace;
+  switch (read_bytes_result) {
+  case ReadBytesResult::success_from_file:
+    addressSpace = LLDBAddressSpace;
+    break;
+  case ReadBytesResult::success_from_memory:
+    addressSpace = swift::remote::RemoteAddress::DefaultAddressSpace;
+    break;
+  case ReadBytesResult::fail:
     return false;
+  }
+  ByteOrder byte_order = m_process.GetTarget().GetArchitecture().GetByteOrder();
+  uint32_t byte_size =
+      m_process.GetTarget().GetArchitecture().GetAddressByteSize();
+  DataExtractor extractor((const void *)&buf, size, byte_order, byte_size);
+  lldb::offset_t offset = 0;
+  auto data = extractor.GetMaxU64(&offset, size);
+  out = swift::remote::RemoteAddress(data, addressSpace);
   return true;
 }
 
