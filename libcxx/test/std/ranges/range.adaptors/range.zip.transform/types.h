@@ -19,7 +19,7 @@
 
 #if TEST_STD_VER <= 20
 #  error "range.zip.transform/types.h" can only be included in builds supporting C++20
-#endif // TEST_STD_VER <= 20
+#endif
 
 struct IntView : std::ranges::view_base {
   int* begin() const;
