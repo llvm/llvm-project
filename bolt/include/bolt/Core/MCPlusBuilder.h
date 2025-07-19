@@ -192,6 +192,12 @@ public:
 
     SrcInst.erase(AnnotationOp, SrcInst.end());
   }
+  /// Copy annotations from \p SrcInst to \p DstInst.
+  void copyAnnotations (MCInst &SrcInst, MCInst &DstInst) const {
+    MCInst::iterator AnnotationOp = getAnnotationInstOp(SrcInst);
+    for (MCInst::iterator Iter = AnnotationOp; Iter != SrcInst.end(); ++Iter)
+      DstInst.addOperand(*Iter);
+  }
 
   /// Return iterator range covering def operands.
   iterator_range<MCInst::iterator> defOperands(MCInst &Inst) const {
@@ -838,6 +844,29 @@ public:
     llvm_unreachable("not implemented");
     return StringRef();
   }
+
+  /// Returns the base register used by the instruction.
+  virtual unsigned getBaseReg(const MCInst &Inst) const{
+    llvm_unreachable("not implemented");
+    return 0;
+  }
+
+  /// Matches a pair of instructions that implement a GOT load:
+  /// an AUIPC (loading the high part of the address)
+  /// followed by a GOT-loading instruction (loading the low part of the address).
+  virtual bool matchGotAuipcPair(const MCInst &Inst) const{
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Try to find a symbol referenced by a PC-relative LO (low 12 bits)
+  //  relocation in the instruction.
+  virtual const MCSymbol *getPCRelLoSymbol(const MCInst &Inst) const{
+    llvm_unreachable("not implemented");
+    return nullptr;
+  }
+
+
 
   /// Interface and basic functionality of a MCInstMatcher. The idea is to make
   /// it easy to match one or more MCInsts against a tree-like pattern and
@@ -2303,7 +2332,7 @@ public:
     // We have to use at least 2-byte alignment for functions because of C++
     // ABI.
     return 2;
-  }
+  }  
 
   // AliasMap caches a mapping of registers to the set of registers that
   // alias (are sub or superregs of itself, including itself).

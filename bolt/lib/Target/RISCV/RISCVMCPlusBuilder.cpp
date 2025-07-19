@@ -339,6 +339,42 @@ public:
     }
   }
 
+  unsigned getBaseReg(const MCInst &Inst) const override{
+    switch (Inst.getOpcode()) {
+      default:
+        return 0;
+      case RISCV::AUIPC:
+        return Inst.getOperand(0).getReg();
+      case RISCV::ADDI:
+      case RISCV::LD:
+        return Inst.getOperand(1).getReg();
+    }
+  }
+
+  bool matchGotAuipcPair(const MCInst &Inst) const override{
+    return Inst.getOpcode() == RISCV::ADDI ||
+           Inst.getOpcode() == RISCV::LD ||
+           Inst.getOpcode() == RISCV::C_JAL ||
+           Inst.getOpcode() == RISCV::C_BEQZ ||
+           Inst.getOpcode() == RISCV::C_BNEZ;
+  }
+
+
+const MCSymbol *getPCRelLoSymbol(const MCInst &Inst) const override {
+  for (unsigned i = 0; i < Inst.getNumOperands(); ++i) {
+    const auto &Op = Inst.getOperand(i);
+    if (!Op.isExpr())
+      continue;
+    const MCExpr *Expr = Op.getExpr();
+    auto *Spec = llvm::dyn_cast<MCSpecifierExpr>(Expr);
+    if (Spec && Spec->getSpecifier() == RISCV::S_PCREL_LO) {
+      return getTargetSymbol(Spec->getSubExpr());
+    }
+  }
+  return nullptr;
+}
+
+
   const MCSymbol *getTargetSymbol(const MCExpr *Expr) const override {
     auto *RISCVExpr = dyn_cast<MCSpecifierExpr>(Expr);
     if (RISCVExpr && RISCVExpr->getSubExpr())
