@@ -2868,6 +2868,7 @@ class CXXDestructorDecl : public CXXMethodDecl {
   // FIXME: Don't allocate storage for these except in the first declaration
   // of a virtual destructor.
   FunctionDecl *OperatorDelete = nullptr;
+  FunctionDecl *OperatorGlobalDelete = nullptr;
   Expr *OperatorDeleteThisArg = nullptr;
 
   CXXDestructorDecl(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
@@ -2893,9 +2894,14 @@ public:
   static CXXDestructorDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   void setOperatorDelete(FunctionDecl *OD, Expr *ThisArg);
+  void setOperatorGlobalDelete(FunctionDecl *OD);
 
   const FunctionDecl *getOperatorDelete() const {
     return getCanonicalDecl()->OperatorDelete;
+  }
+
+  const FunctionDecl *getOperatorGlobalDelete() const {
+    return getCanonicalDecl()->OperatorGlobalDelete;
   }
 
   Expr *getOperatorDeleteThisArg() const {
