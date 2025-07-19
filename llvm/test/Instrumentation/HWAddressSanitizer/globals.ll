@@ -4,7 +4,7 @@
 ; CHECK29: @four = global
 
 ; CHECK: @specialcaselisted = global i16 2, no_sanitize_hwaddress
-
+; CHECK: @insection = global i16 2, section "custom"
 ; CHECK: @__start_hwasan_globals = external hidden constant [0 x i8]
 ; CHECK: @__stop_hwasan_globals = external hidden constant [0 x i8]
 
@@ -37,3 +37,4 @@ source_filename = "foo"
 @sixteen = global [16 x i8] zeroinitializer
 @huge = global [16777232 x i8] zeroinitializer
 @specialcaselisted = global i16 2, no_sanitize_hwaddress
+@insection = global i16 2, section "custom"
