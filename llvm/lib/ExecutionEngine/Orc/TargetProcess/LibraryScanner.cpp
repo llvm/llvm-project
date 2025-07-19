@@ -20,6 +20,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -39,6 +40,17 @@
 
 namespace llvm::orc {
 
+void handleError(Error Err) {
+  consumeError(llvm::handleErrors(std::move(Err), [](const ErrorInfoBase &EIB) {
+    dbgs() << "LLVM Error: " << EIB.message() << "\n";
+  }));
+}
+
+template <typename T> T handleErrorAndReturn(Error Err, T ReturnValue) {
+  handleError(std::move(Err));
+  return ReturnValue;
+}
+
 bool isLibraryFile(StringRef filename) {
   static const std::vector<std::string> suffixes = {".so", ".so.", ".dylib",
                                                     ".dll"};
@@ -54,53 +66,108 @@ bool isELFSharedLibrary(const object::ELFFile<ELFT> &ELFObj) {
   return ELFObj.getHeader().e_type == ELF::ET_DYN;
 }
 
+bool isSharedLibraryObject(object::ObjectFile &Obj) {
+  if (Obj.isELF()) {
+    if (auto *ELF32LE = dyn_cast<object::ELF32LEObjectFile>(&Obj))
+      return isELFSharedLibrary(ELF32LE->getELFFile());
+    if (auto *ELF64LE = dyn_cast<object::ELF64LEObjectFile>(&Obj))
+      return isELFSharedLibrary(ELF64LE->getELFFile());
+    if (auto *ELF32BE = dyn_cast<object::ELF32BEObjectFile>(&Obj))
+      return isELFSharedLibrary(ELF32BE->getELFFile());
+    if (auto *ELF64BE = dyn_cast<object::ELF64BEObjectFile>(&Obj))
+      return isELFSharedLibrary(ELF64BE->getELFFile());
+  } else if (Obj.isMachO()) {
+    const object::MachOObjectFile *MachO =
+        dyn_cast<object::MachOObjectFile>(&Obj);
+    if (!MachO) {
+      //  LLVM_DEBUG(
+      dbgs() << "Failed to cast to MachOObjectFile.\n"; //);
+      return false;
+    }
+    // LLVM_DEBUG(
+    {
+      bool Result =
+          MachO->getHeader().filetype == MachO::HeaderFileType::MH_DYLIB;
+      dbgs() << "Mach-O filetype: " << MachO->getHeader().filetype
+             << " (MH_DYLIB == " << MachO::HeaderFileType::MH_DYLIB
+             << "), shared: " << Result << "\n";
+    } //);
+
+    return MachO->getHeader().filetype == MachO::HeaderFileType::MH_DYLIB;
+  } else if (Obj.isCOFF()) {
+    const object::COFFObjectFile *coff = dyn_cast<object::COFFObjectFile>(&Obj);
+    if (!coff)
+      return false;
+    return coff->getCharacteristics() & COFF::IMAGE_FILE_DLL;
+  } else {
+    // LLVM_DEBUG(
+    dbgs() << "Binary is not an ObjectFile.\n"; //);
+  }
+
+  return false;
+}
+
 bool DylibPathValidator::isSharedLibrary(StringRef Path) {
-  if (isLibraryFile(Path))
+  // LLVM_DEBUG(
+  dbgs() << "Checking if path is a shared library: " << Path << "\n"; //);
+
+  if (isLibraryFile(Path)) {
+    // LLVM_DEBUG(
+    dbgs() << "Path recognized as a library file by extension: " << Path
+           << "\n"; //);
+
     return true;
+  }
 
   auto filetype = sys::fs::get_file_type(Path, /*Follow*/ true);
   if (filetype != sys::fs::file_type::regular_file) {
-    // if (exists) {
-    //   // get_file_type returns status_error also in case of file_not_found.
-    //   *exists = filetype != sys::fs::file_type::status_error;
-    // }
+    // LLVM_DEBUG(
+    dbgs() << "File type is not a regular file for path: " << Path << "\n"; //);
     return false;
   }
 
-  Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
-      object::createBinary(Path);
-  if (!BinaryOrErr) {
+  auto BinOrErr = object::createBinary(Path);
+  if (!BinOrErr) {
+    // LLVM_DEBUG(
+    dbgs() << "Failed to open or parse binary at path: " << Path << "\n"; //);
     // Could not open or parse the binary
-    consumeError(BinaryOrErr.takeError());
+    handleError(BinOrErr.takeError());
     return false;
   }
 
-  object::Binary *Bin = BinaryOrErr->getBinary();
+  object::Binary *Bin = BinOrErr.get().getBinary();
 
-  if (auto *Obj = dyn_cast<object::ObjectFile>(Bin)) {
-    if (Obj->isELF()) {
-      if (auto *ELF32LE = dyn_cast<object::ELF32LEObjectFile>(Obj))
-        return isELFSharedLibrary(ELF32LE->getELFFile());
-      if (auto *ELF64LE = dyn_cast<object::ELF64LEObjectFile>(Obj))
-        return isELFSharedLibrary(ELF64LE->getELFFile());
-      if (auto *ELF32BE = dyn_cast<object::ELF32BEObjectFile>(Obj))
-        return isELFSharedLibrary(ELF32BE->getELFFile());
-      if (auto *ELF64BE = dyn_cast<object::ELF64BEObjectFile>(Obj))
-        return isELFSharedLibrary(ELF64BE->getELFFile());
-    } else if (Obj->isMachO()) {
-      const object::MachOObjectFile *MachO =
-          dyn_cast<object::MachOObjectFile>(Obj);
-      if (!MachO)
-        return false;
-      return MachO->getHeader().filetype == MachO::HeaderFileType::MH_DYLIB;
-    } else if (Obj->isCOFF()) {
-      const object::COFFObjectFile *coff =
-          dyn_cast<object::COFFObjectFile>(Obj);
-      if (!coff)
-        return false;
-      return coff->getCharacteristics() & COFF::IMAGE_FILE_DLL;
+  // Handle fat/universal binaries on macOS
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(Bin)) {
+    // LLVM_DEBUG(
+    dbgs() << "Universal binary detected.\n";
+
+    for (auto ObjForArch : UB->objects()) {
+      auto ObjOrErr = ObjForArch.getAsObjectFile();
+      if (!ObjOrErr) {
+        // LLVM_DEBUG(
+        dbgs() << "Failed to extract object for arch.\n";
+        handleError(ObjOrErr.takeError());
+        continue;
+      }
+
+      object::ObjectFile *Obj = ObjOrErr->get();
+      if (isSharedLibraryObject(*Obj)) {
+        // LLVM_DEBUG(
+        dbgs() << "Shared library found in universal binary.\n";
+        return true;
+      }
     }
+    // LLVM_DEBUG(
+    dbgs() << "No shared library slice found in universal binary.\n";
+    return false;
   }
+
+  if (auto *Obj = dyn_cast<object::ObjectFile>(Bin))
+    return isSharedLibraryObject(*Obj);
+
+  // LLVM_DEBUG(
+  dbgs() << "Path is not identified as a shared library: " << Path << "\n"; //);
 
   return false;
 }
@@ -363,7 +430,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
 
   // If already cached - retun cached result
   bool isRelative = sys::path::is_relative(path);
-  {
+  if (!isRelative) {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     auto it = m_cache->m_realpathCache.find(path);
     if (it != m_cache->m_realpathCache.end()) {
@@ -380,6 +447,7 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
       return it->second.canonicalPath;
     }
   }
+
   // LLVM_DEBUG(
   dbgs() << "PathResolver::realpathCached: Resolving path: " << path
          << "\n"; //);
@@ -411,6 +479,18 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
 
   // Handle path list items
   for (const auto &component : Components) {
+    if (component == ".")
+      continue;
+    if (component == "..") {
+      // collapse "a/b/../c" to "a/c"
+      size_t s = resolved.rfind(Separator);
+      if (s != llvm::StringRef::npos)
+        resolved.resize(s);
+      if (resolved.empty())
+        resolved = Separator;
+      continue;
+    }
+
     size_t oldSize = resolved.size();
     sys::path::append(resolved, component);
     const char *resolvedPath = resolved.c_str();
@@ -439,10 +519,14 @@ std::optional<std::string> PathResolver::realpathCached(StringRef path,
       // LLVM_DEBUG(
       dbgs() << "    Symlink points to: " << symlink << "\n"; //);
 
-      resolved.resize(oldSize);
+      std::string resolvedBase = "";
+      if (sys::path::is_relative(symlink)) {
+        resolved.resize(oldSize);
+        resolvedBase = resolved.str().str();
+      }
 
       auto realSymlink =
-          realpathCached(symlink, ec, resolved,
+          realpathCached(symlink, ec, resolvedBase,
                          /*baseIsResolved=*/true, symloopLevel - 1);
       if (!realSymlink) {
         std::unique_lock<std::shared_mutex> lock(m_mutex);
@@ -739,17 +823,6 @@ Expected<LibraryDepsInfo> parseELFDeps(const object::ELFObjectFileBase &obj) {
   return createStringError(std::errc::not_supported, "Unknown ELF format");
 }
 
-void handleError(Error Err) {
-  consumeError(llvm::handleErrors(std::move(Err), [](const ErrorInfoBase &EIB) {
-    dbgs() << "LLVM Error: " << EIB.message() << "\n";
-  }));
-}
-
-template <typename T> T handleErrorAndReturn(Error Err, T ReturnValue) {
-  handleError(std::move(Err));
-  return ReturnValue;
-}
-
 Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef filePath) {
   // LLVM_DEBUG(
   dbgs() << "extractDeps: Attempting to open file " << filePath << "\n"; //);
@@ -758,13 +831,10 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef filePath) {
   if (!ObjOrErr) {
     // LLVM_DEBUG(
     dbgs() << "extractDeps: Failed to open " << filePath << "\n"; //);
-    consumeError(ObjOrErr.takeError());
     return handleErrorAndReturn(ObjOrErr.takeError(),
                                 createStringError(std::errc::file_exists,
                                                   "Failed to open %s",
                                                   filePath.str().c_str()));
-    return createStringError(std::errc::file_exists, "Failed to open %s",
-                             filePath.str().c_str());
   }
   object::ObjectFile *Obj = ObjOrErr.get().getBinary();
 
