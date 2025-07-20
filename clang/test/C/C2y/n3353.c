@@ -44,9 +44,12 @@ static const void *ptr = 0o0;  /* ext-warning {{octal integer literals are a C2y
 #endif
 
 // 0 by itself is not deprecated, of course.
-int k1 = 0;
-long k2 = 0l;
-unsigned long long k3 = 0ull;
+int k1                = 0;
+unsigned int k2       = 0u;
+long k3               = 0l;
+unsigned long k4      = 0ul;
+long long k5          = 0ll;
+unsigned long long k6 = 0ull;
 
 // Test a preprocessor use of 0 by itself, which is also not deprecated.
 #if 0
