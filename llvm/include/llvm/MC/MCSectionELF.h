@@ -68,10 +68,6 @@ private:
       Group.getPointer()->setIsSignature();
   }
 
-  // TODO Delete after we stop supporting generation of GNU-style .zdebug_*
-  // sections.
-  void setSectionName(StringRef Name) { this->Name = Name; }
-
 public:
   /// Decides whether a '.section' directive should be printed before the
   /// section name
