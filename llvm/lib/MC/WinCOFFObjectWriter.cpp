@@ -1070,10 +1070,8 @@ uint64_t WinCOFFWriter::writeObject() {
 
   // Create the contents of the .llvm_addrsig section.
   if (Mode != DwoOnly && OWriter.getEmitAddrsigSection()) {
-    auto *Sec = getContext().getCOFFSection(".llvm_addrsig",
-                                            COFF::IMAGE_SCN_LNK_REMOVE);
-    auto *Frag = Sec->curFragList()->Head;
-    raw_svector_ostream OS(Frag->getContentsForAppending());
+    SmallString<0> Content;
+    raw_svector_ostream OS(Content);
     for (const MCSymbol *S : OWriter.AddrsigSyms) {
       if (!S->isRegistered())
         continue;
@@ -1088,15 +1086,15 @@ uint64_t WinCOFFWriter::writeObject() {
              "executePostLayoutBinding!");
       encodeULEB128(SectionMap[TargetSection]->Symbol->getIndex(), OS);
     }
-    Frag->doneAppending();
+    auto *Sec = getContext().getCOFFSection(".llvm_addrsig",
+                                            COFF::IMAGE_SCN_LNK_REMOVE);
+    Sec->curFragList()->Tail->setVarContents(OS.str());
   }
 
   // Create the contents of the .llvm.call-graph-profile section.
   if (Mode != DwoOnly && !OWriter.getCGProfile().empty()) {
-    auto *Sec = getContext().getCOFFSection(".llvm.call-graph-profile",
-                                            COFF::IMAGE_SCN_LNK_REMOVE);
-    auto *Frag = Sec->curFragList()->Head;
-    raw_svector_ostream OS(Frag->getContentsForAppending());
+    SmallString<0> Content;
+    raw_svector_ostream OS(Content);
     for (const auto &CGPE : OWriter.getCGProfile()) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
@@ -1104,7 +1102,9 @@ uint64_t WinCOFFWriter::writeObject() {
       support::endian::write(OS, ToIndex, W.Endian);
       support::endian::write(OS, CGPE.Count, W.Endian);
     }
-    Frag->doneAppending();
+    auto *Sec = getContext().getCOFFSection(".llvm.call-graph-profile",
+                                            COFF::IMAGE_SCN_LNK_REMOVE);
+    Sec->curFragList()->Tail->setVarContents(OS.str());
   }
 
   assignFileOffsets();
