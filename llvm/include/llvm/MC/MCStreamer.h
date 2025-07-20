@@ -430,7 +430,7 @@ public:
     // Ensure consistency with the section stack.
     assert(!getCurrentSection().first ||
            CurFrag->getParent() == getCurrentSection().first);
-    // Ensure we eagerly allocate an empty fragment when adding fragment with a
+    // Ensure we eagerly allocate an empty fragment after adding fragment with a
     // variable-size tail.
     assert(!CurFrag || CurFrag->getKind() == MCFragment::FT_Data);
     return CurFrag;

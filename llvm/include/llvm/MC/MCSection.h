@@ -91,8 +91,7 @@ private:
   bool IsRegistered : 1;
 
   bool IsText : 1;
-
-  bool IsVirtual : 1;
+  bool IsBss : 1;
 
   /// Whether the section contains linker-relaxable fragments. If true, the
   /// offset between two locations may not be fully resolved.
@@ -113,7 +112,7 @@ protected:
   StringRef Name;
   SectionVariant Variant;
 
-  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsVirtual,
+  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
             MCSymbol *Begin);
   // Protected non-virtual dtor prevents destroy through a base class pointer.
   ~MCSection() {}
@@ -178,7 +177,7 @@ public:
 
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
-  bool isVirtualSection() const { return IsVirtual; }
+  bool isBssSection() const { return IsBss; }
 };
 
 // Represents a contiguous piece of code or data within a section. Its size is
