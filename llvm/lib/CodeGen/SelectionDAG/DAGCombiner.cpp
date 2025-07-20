@@ -71,7 +71,6 @@
 #include <functional>
 #include <iterator>
 #include <optional>
-#include <queue>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -22482,38 +22481,7 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
   if (!Load->isSimple())
     return SDValue();
 
-  auto IsSafeToFold = [](StoreSDNode *Store, LoadSDNode *Load) {
-    std::queue<SDValue> Worklist;
-
-    Worklist.push(Store->getChain());
-
-    while (!Worklist.empty()) {
-      SDValue Chain = Worklist.front();
-      Worklist.pop();
-
-      SDNode *Node = Chain.getNode();
-      if (!Node)
-        return false;
-
-      if (Node == Load)
-        return true;
-
-      if (const auto *MemNode = dyn_cast<MemSDNode>(Node))
-        if (!MemNode->isSimple() || MemNode->writeMem())
-          return false;
-
-      if (Node->getOpcode() == ISD::TokenFactor) {
-        for (unsigned i = 0; i < Node->getNumOperands(); ++i)
-          Worklist.push(Node->getOperand(i));
-      } else {
-        Worklist.push(Node->getOperand(0));
-      }
-    }
-
-    return false;
-  };
-
-  if (!IsSafeToFold(Store, Load))
+  if (!Store->getChain().reachesChainWithoutSideEffects(Load->getChain()))
     return SDValue();
 
   return DAG.getMaskedStore(Store->getChain(), Dl, TrueVec, StorePtr,
