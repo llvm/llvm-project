@@ -23490,6 +23490,8 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
 
   // Try to shrink signed i64 compares if the input has enough one bits.
   // Or the input is sign extended from a 32-bit value.
+  // TODO: Should we peek through freeze?
+  // TODO: Is SIGN_EXTEND_INREG needed here?
   if (CmpVT == MVT::i64 && isX86CCSigned(X86CC) &&
       Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
       (DAG.MaskedValueIsAllOnes(Op1, APInt::getHighBitsSet(64, 32)) ||
