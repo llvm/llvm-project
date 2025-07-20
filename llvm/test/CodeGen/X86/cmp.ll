@@ -956,3 +956,16 @@ define i1 @fold_test_and_with_chain(ptr %x, ptr %y, i32 %z) {
   store i32 %z, ptr %y
   ret i1 %c
 }
+
+define i1 @sext_mask(i32 %a) {
+; CHECK-LABEL: sext_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
+; CHECK-NEXT:    cmpq $-523, %rax # encoding: [0x48,0x3d,0xf5,0xfd,0xff,0xff]
+; CHECK-NEXT:    # imm = 0xFDF5
+; CHECK-NEXT:    setl %al # encoding: [0x0f,0x9c,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a64 = sext i32 %a to i64
+  %v1 = icmp slt i64 %a64, -523
+  ret i1 %v1
+}
