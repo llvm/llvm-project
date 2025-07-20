@@ -705,6 +705,22 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
   ss.FillLastLineToColumn(opcode_pos + opcode_column_width, ' ');
   ss.PutCString(mnemonics);
 
+  // Add rich variable location annotations to the disassembly output.
+  //
+  // For each instruction, this block attempts to resolve in-scope variables
+  // and determine if the current PC falls within their
+  // DWARF location entry. If so, it prints a simplified annotation using the
+  // variable name and its resolved location (e.g., "var = reg; " ).
+  //
+  // Annotations are only included if the variable has a valid DWARF location
+  // entry, and the location string is non-empty after filtering. Decoding
+  // errors and DWARF opcodes are intentionally omitted to keep the output
+  // concise and user-friendly.
+  //
+  // The goal is to give users helpful live variable hints alongside the
+  // disassembled instruction stream, similar to how debug information
+  // enhances source-level debugging.
+
   const size_t annotation_column = 150;
 
   if (exe_ctx && exe_ctx->GetFramePtr()) {
