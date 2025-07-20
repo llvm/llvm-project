@@ -2553,7 +2553,8 @@ void elf::hexagonTLSSymbolUpdate(Ctx &ctx) {
           for (Relocation &rel : isec->relocs())
             if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
               if (needEntry) {
-                sym->allocateAux(ctx);
+                if (sym->auxIdx == 0)
+                  sym->allocateAux(ctx);
                 addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
                             ctx.target->pltRel, *sym);
                 needEntry = false;
