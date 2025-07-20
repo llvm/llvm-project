@@ -736,7 +736,8 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
         if (sc.function)
           func_load_addr = sc.function->GetAddress().GetLoadAddress(target_sp.get());
 
-        
+        // Only annotate if the current disassembly line is short enough
+        // to keep annotations aligned past the desired annotation_column.
         if(ss.GetSizeOfLastLine() < annotation_column) {
 
           std::vector<std::string> annotations;
