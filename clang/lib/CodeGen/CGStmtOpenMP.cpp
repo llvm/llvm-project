@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -709,9 +711,9 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
   (void)LocalScope.Privatize();
   for (const auto &VLASizePair : WrapperVLASizes)
     VLASizeMap[VLASizePair.second.first] = VLASizePair.second.second;
-  PGO.assignRegionCounters(GlobalDecl(CD), F);
+  PGO->assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
-  (void)LocalScope.ForceCleanup();
+  LocalScope.ForceCleanup();
   FinishFunction(CD->getBodyRBrace());
   if (!NeedWrapperFunction)
     return F;
@@ -1470,6 +1472,7 @@ void CodeGenFunction::EmitOMPReductionClauseFinal(
   llvm::SmallVector<const Expr *, 8> LHSExprs;
   llvm::SmallVector<const Expr *, 8> RHSExprs;
   llvm::SmallVector<const Expr *, 8> ReductionOps;
+  llvm::SmallVector<bool, 8> IsPrivateVarReduction;
   bool HasAtLeastOneReduction = false;
   bool IsReductionWithTaskMod = false;
   for (const auto *C : D.getClausesOfKind<OMPReductionClause>()) {
@@ -1480,6 +1483,8 @@ void CodeGenFunction::EmitOMPReductionClauseFinal(
     Privates.append(C->privates().begin(), C->privates().end());
     LHSExprs.append(C->lhs_exprs().begin(), C->lhs_exprs().end());
     RHSExprs.append(C->rhs_exprs().begin(), C->rhs_exprs().end());
+    IsPrivateVarReduction.append(C->private_var_reduction_flags().begin(),
+                                 C->private_var_reduction_flags().end());
     ReductionOps.append(C->reduction_ops().begin(), C->reduction_ops().end());
     IsReductionWithTaskMod =
         IsReductionWithTaskMod || C->getModifier() == OMPC_REDUCTION_task;
@@ -1501,7 +1506,7 @@ void CodeGenFunction::EmitOMPReductionClauseFinal(
     // parallel directive (it always has implicit barrier).
     CGM.getOpenMPRuntime().emitReduction(
         *this, D.getEndLoc(), Privates, LHSExprs, RHSExprs, ReductionOps,
-        {WithNowait, SimpleReduction, ReductionKind});
+        {WithNowait, SimpleReduction, IsPrivateVarReduction, ReductionKind});
   }
 }
 
@@ -3494,7 +3499,6 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
         Ordered = true;
     }
 
-    llvm::DenseSet<const Expr *> EmittedFinals;
     emitAlignedClause(*this, S);
     bool HasLinears = EmitOMPLinearClauseInit(S);
     // Emit helper vars inits.
@@ -3943,7 +3947,8 @@ static void emitScanBasedDirective(
       PrivScope.Privatize();
       CGF.CGM.getOpenMPRuntime().emitReduction(
           CGF, S.getEndLoc(), Privates, LHSs, RHSs, ReductionOps,
-          {/*WithNowait=*/true, /*SimpleReduction=*/true, OMPD_unknown});
+          {/*WithNowait=*/true, /*SimpleReduction=*/true,
+           /*IsPrivateVarReduction*/ {}, OMPD_unknown});
     }
     llvm::Value *NextIVal =
         CGF.Builder.CreateNUWSub(IVal, llvm::ConstantInt::get(CGF.SizeTy, 1));
@@ -4344,8 +4349,9 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
     using BodyGenCallbackTy = llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
 
-    auto FiniCB = [this](InsertPointTy IP) {
-      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+    auto FiniCB = [](InsertPointTy IP) {
+      // Don't FinalizeOMPRegion because this is done inside of OMPIRBuilder for
+      // sections.
       return llvm::Error::success();
     };
 
@@ -4782,7 +4788,7 @@ class CheckVarsEscapingUntiedTaskDeclContext final
 
 public:
   explicit CheckVarsEscapingUntiedTaskDeclContext() = default;
-  virtual ~CheckVarsEscapingUntiedTaskDeclContext() = default;
+  ~CheckVarsEscapingUntiedTaskDeclContext() = default;
   void VisitDeclStmt(const DeclStmt *S) {
     if (!S)
       return;
@@ -5747,7 +5753,8 @@ void CodeGenFunction::EmitOMPScanDirective(const OMPScanDirective &S) {
       }
       CGM.getOpenMPRuntime().emitReduction(
           *this, ParentDir.getEndLoc(), Privates, LHSs, RHSs, ReductionOps,
-          {/*WithNowait=*/true, /*SimpleReduction=*/true, OMPD_simd});
+          {/*WithNowait=*/true, /*SimpleReduction=*/true,
+           /*IsPrivateVarReduction*/ {}, OMPD_simd});
       for (unsigned I = 0, E = CopyArrayElems.size(); I < E; ++I) {
         const Expr *PrivateExpr = Privates[I];
         LValue DestLVal;

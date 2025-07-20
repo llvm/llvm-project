@@ -10,28 +10,22 @@
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 
 #include "DAPForward.h"
-#include "llvm/ADT/StringRef.h"
+#include "Protocol/ProtocolTypes.h"
+#include <optional>
 #include <string>
 
 namespace lldb_dap {
 
-struct BreakpointBase {
-  // Associated DAP session.
-  DAP &dap;
-
-  // An optional expression for conditional breakpoints.
-  std::string condition;
-  // An optional expression that controls how many hits of the breakpoint are
-  // ignored. The backend is expected to interpret the expression as needed
-  std::string hitCondition;
-
-  explicit BreakpointBase(DAP &d) : dap(d) {}
-  BreakpointBase(DAP &d, const llvm::json::Object &obj);
+class BreakpointBase {
+public:
+  explicit BreakpointBase(DAP &d) : m_dap(d) {}
+  BreakpointBase(DAP &d, const std::optional<std::string> &condition,
+                 const std::optional<std::string> &hit_condition);
   virtual ~BreakpointBase() = default;
 
   virtual void SetCondition() = 0;
   virtual void SetHitCondition() = 0;
-  virtual void CreateJsonObject(llvm::json::Object &object) = 0;
+  virtual protocol::Breakpoint ToProtocolBreakpoint() = 0;
 
   void UpdateBreakpoint(const BreakpointBase &request_bp);
 
@@ -49,6 +43,17 @@ struct BreakpointBase {
   /// breakpoint in one of the DAP breakpoints that we should report changes
   /// for.
   static constexpr const char *kDAPBreakpointLabel = "dap";
+
+protected:
+  /// Associated DAP session.
+  DAP &m_dap;
+
+  /// An optional expression for conditional breakpoints.
+  std::string m_condition;
+
+  /// An optional expression that controls how many hits of the breakpoint are
+  /// ignored. The backend is expected to interpret the expression as needed
+  std::string m_hit_condition;
 };
 
 } // namespace lldb_dap

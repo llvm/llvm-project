@@ -48,18 +48,22 @@ protected:
   static void verifyFormat(
       StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript)) {
-    EXPECT_EQ(Code.str(), format(Code, Style)) << "Expected code is not stable";
-    std::string Result = format(test::messUp(Code), Style);
-    EXPECT_EQ(Code.str(), Result) << "Formatted:\n" << Result;
+    auto Result = format(test::messUp(Code), Style);
+    EXPECT_EQ(Code, Result) << "Formatted:\n" << Result;
+    if (Code != Result)
+      return;
+    EXPECT_EQ(Code, format(Code, Style)) << "Expected code is not stable";
   }
 
   static void verifyFormat(
       StringRef Expected, StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript)) {
-    EXPECT_EQ(Expected.str(), format(Expected, Style))
+    auto Result = format(Code, Style);
+    EXPECT_EQ(Expected, Result) << "Formatted:\n" << Result;
+    if (Expected != Result)
+      return;
+    EXPECT_EQ(Expected, format(Expected, Style))
         << "Expected code is not stable";
-    std::string Result = format(Code, Style);
-    EXPECT_EQ(Expected.str(), Result) << "Formatted:\n" << Result;
   }
 };
 
@@ -833,8 +837,7 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "hello(\n"
                "    myparamnameiswaytooloooong) {\n"
                "}",
-               "async function hello(myparamnameiswaytooloooong) {}",
-               Style);
+               "async function hello(myparamnameiswaytooloooong) {}", Style);
   verifyFormat("async function\n"
                "union(\n"
                "    myparamnameiswaytooloooong) {\n"
@@ -1344,7 +1347,7 @@ TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
   // The following statements must not wrap, as otherwise the program meaning
   // would change due to automatic semicolon insertion.
   // See http://www.ecma-international.org/ecma-262/5.1/#sec-7.9.1.
-  auto Style =getGoogleJSStyleWithColumns(10);
+  auto Style = getGoogleJSStyleWithColumns(10);
   verifyFormat("return aaaaa;", Style);
   verifyFormat("yield aaaaa;", Style);
   verifyFormat("return /* hello! */ aaaaa;", Style);

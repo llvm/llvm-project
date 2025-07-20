@@ -18,8 +18,7 @@ using namespace clang::ast_matchers;
 using clang::ast_matchers::internal::Matcher;
 using clang::tidy::utils::hasPtrOrReferenceInFunc;
 
-namespace clang {
-namespace tidy::bugprone {
+namespace clang::tidy::bugprone {
 
 namespace {
 /// matches a Decl if it has a  "no return" attribute of any kind
@@ -83,8 +82,8 @@ static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
              isChanged(LoopStmt, Var, Context);
       // FIXME: Track references.
     }
-  } else if (isa<MemberExpr, CallExpr,
-                 ObjCIvarRefExpr, ObjCPropertyRefExpr, ObjCMessageExpr>(Cond)) {
+  } else if (isa<MemberExpr, CallExpr, ObjCIvarRefExpr, ObjCPropertyRefExpr,
+                 ObjCMessageExpr>(Cond)) {
     // FIXME: Handle MemberExpr.
     return true;
   } else if (const auto *CE = dyn_cast<CastExpr>(Cond)) {
@@ -274,8 +273,7 @@ static bool hasRecursionOverStaticLoopCondVariables(const Expr *Cond,
 
 void InfiniteLoopCheck::registerMatchers(MatchFinder *Finder) {
   const auto LoopCondition = allOf(
-      hasCondition(
-          expr(forCallable(decl().bind("func"))).bind("condition")),
+      hasCondition(expr(forCallable(decl().bind("func"))).bind("condition")),
       unless(hasBody(hasDescendant(
           loopEndingStmt(forCallable(equalsBoundNode("func")))))));
 
@@ -324,9 +322,8 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
     diag(LoopStmt->getBeginLoc(),
          "this loop is infinite; none of its condition variables (%0)"
          " are updated in the loop body")
-      << CondVarNames;
+        << CondVarNames;
   }
 }
 
-} // namespace tidy::bugprone
-} // namespace clang
+} // namespace clang::tidy::bugprone

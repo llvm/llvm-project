@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -105,10 +106,15 @@ struct CUFAddConstructor
         if (!attr)
           continue;
 
+        if (attr.getValue() == cuf::DataAttribute::Managed &&
+            !mlir::isa<fir::BaseBoxType>(globalOp.getType()))
+          TODO(loc, "registration of non-allocatable managed variables");
+
         mlir::func::FuncOp func;
         switch (attr.getValue()) {
         case cuf::DataAttribute::Device:
-        case cuf::DataAttribute::Constant: {
+        case cuf::DataAttribute::Constant:
+        case cuf::DataAttribute::Managed: {
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
               loc, builder);
           auto fTy = func.getFunctionType();
@@ -141,8 +147,6 @@ struct CUFAddConstructor
               builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
           builder.create<fir::CallOp>(loc, func, args);
         } break;
-        case cuf::DataAttribute::Managed:
-          TODO(loc, "registration of managed variables");
         default:
           break;
         }

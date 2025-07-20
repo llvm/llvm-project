@@ -505,5 +505,69 @@
   ! CHECK:     %[[V_302:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput
   print*, 'all[T]: ', v_all
 
+  call s1(ieee_overflow, x)
+
   stop
+  end
+
+! CHECK-LABEL: c.func @_QPs1
+
+  subroutine s1(flag, x)
+  use ieee_arithmetic, only: ieee_flag_type, ieee_support_flag
+  ! CHECK:     %[[V_1:[0-9]+]] = fir.declare %arg0 dummy_scope %{{.*}} {uniq_name = "_QFs1Eflag"}
+  type(ieee_flag_type) :: flag
+  real, intent(in) :: x(100,20,10)
+  real :: y
+  print*
+
+  ! CHECK:     %[[V_16:[0-9]+]] = fir.coordinate_of %[[V_1]], _QM__fortran_builtinsT__builtin_ieee_flag_type.flag
+  ! CHECK:     %[[V_17:[0-9]+]] = fir.load %[[V_16]] : !fir.ref<i8>
+  ! CHECK:     %[[V_18:[0-9]+]] = arith.andi %[[V_17]], %c61{{.*}} : i8
+  ! CHECK:     %[[V_19:[0-9]+]] = arith.cmpi ne, %[[V_18]], %c0{{.*}} : i8
+  ! CHECK:     %[[V_20:[0-9]+]] = fir.if %[[V_19]] -> (i1) {
+  ! CHECK:       fir.result %true{{[_0-9]*}} : i1
+  ! CHECK:     } else {
+  ! CHECK:       fir.result %false{{[_0-9]*}} : i1
+  ! CHECK:     }
+  ! CHECK:     %[[V_21:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{[0-9]+}}, %[[V_20]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
+  ! CHECK:     %[[V_22:[0-9]+]] = fir.load %[[V_16]] : !fir.ref<i8>
+  ! CHECK:     %[[V_23:[0-9]+]] = arith.andi %[[V_22]], %c61{{.*}} : i8
+  ! CHECK:     %[[V_24:[0-9]+]] = arith.cmpi ne, %[[V_23]], %c0{{.*}} : i8
+  ! CHECK:     %[[V_25:[0-9]+]] = fir.if %[[V_24]] -> (i1) {
+  ! CHECK:       fir.result %true{{[_0-9]*}} : i1
+  ! CHECK:     } else {
+  ! CHECK:       %[[V_38:[0-9]+]] = arith.cmpi eq, %[[V_22]], %c2{{.*}} : i8
+  ! CHECK:       %[[V_39:[0-9]+]] = fir.convert %[[V_22]] : (i8) -> i32
+  ! CHECK:       %[[V_40:[0-9]+]] = fir.call @_FortranASupportHalting(%[[V_39]]) fastmath<contract> : (i32) -> i1
+  ! CHECK:       %[[V_41:[0-9]+]] = arith.andi %[[V_38]], %[[V_40]] : i1
+  ! CHECK:       fir.result %[[V_41]] : i1
+  ! CHECK:     }
+  ! CHECK:     %[[V_26:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{[0-9]+}}, %[[V_25]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
+  ! CHECK:     %[[V_27:[0-9]+]] = fir.load %[[V_16]] : !fir.ref<i8>
+  ! CHECK:     %[[V_28:[0-9]+]] = arith.andi %[[V_27]], %c61{{.*}} : i8
+  ! CHECK:     %[[V_29:[0-9]+]] = arith.cmpi ne, %[[V_28]], %c0{{.*}} : i8
+  ! CHECK:     %[[V_30:[0-9]+]] = fir.if %[[V_29]] -> (i1) {
+  ! CHECK:       fir.result %true{{[_0-9]*}} : i1
+  ! CHECK:     } else {
+  ! CHECK:       %[[V_38:[0-9]+]] = arith.cmpi eq, %[[V_27]], %c2{{.*}} : i8
+  ! CHECK:       %[[V_39:[0-9]+]] = fir.convert %[[V_27]] : (i8) -> i32
+  ! CHECK:       %[[V_40:[0-9]+]] = fir.call @_FortranASupportHalting(%[[V_39]]) fastmath<contract> : (i32) -> i1
+  ! CHECK:       %[[V_41:[0-9]+]] = arith.andi %[[V_38]], %[[V_40]] : i1
+  ! CHECK:       fir.result %[[V_41]] : i1
+  ! CHECK:     }
+  ! CHECK:     %[[V_31:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{[0-9]+}}, %[[V_30]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
+  ! CHECK:     %[[V_32:[0-9]+]] = fir.load %[[V_16]] : !fir.ref<i8>
+  ! CHECK:     %[[V_33:[0-9]+]] = arith.andi %[[V_32]], %c61{{.*}} : i8
+  ! CHECK:     %[[V_34:[0-9]+]] = arith.cmpi ne, %[[V_33]], %c0{{.*}} : i8
+  ! CHECK:     %[[V_35:[0-9]+]] = fir.if %[[V_34]] -> (i1) {
+  ! CHECK:       fir.result %true{{[_0-9]*}} : i1
+  ! CHECK:     } else {
+  ! CHECK:       %[[V_38:[0-9]+]] = arith.cmpi eq, %[[V_32]], %c2{{.*}} : i8
+  ! CHECK:       %[[V_39:[0-9]+]] = fir.convert %[[V_32]] : (i8) -> i32
+  ! CHECK:       %[[V_40:[0-9]+]] = fir.call @_FortranASupportHalting(%[[V_39]]) fastmath<contract> : (i32) -> i1
+  ! CHECK:       %[[V_41:[0-9]+]] = arith.andi %[[V_38]], %[[V_40]] : i1
+  ! CHECK:       fir.result %[[V_41]] : i1
+  ! CHECK:     }
+  ! CHECK:     %[[V_36:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{[0-9]+}}, %[[V_35]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
+  print*, '[T T T T]:', ieee_support_flag(flag), ieee_support_flag(flag, x), ieee_support_flag(flag, x(3:7,13,4:9)), ieee_support_flag(flag, y)
   end

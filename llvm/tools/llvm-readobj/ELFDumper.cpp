@@ -1371,38 +1371,30 @@ getSectionFlagsForTarget(unsigned EOSAbi, unsigned EMachine) {
                                        std::end(ElfSectionFlags));
   switch (EOSAbi) {
   case ELFOSABI_SOLARIS:
-    Ret.insert(Ret.end(), std::begin(ElfSolarisSectionFlags),
-               std::end(ElfSolarisSectionFlags));
+    llvm::append_range(Ret, ElfSolarisSectionFlags);
     break;
   default:
-    Ret.insert(Ret.end(), std::begin(ElfGNUSectionFlags),
-               std::end(ElfGNUSectionFlags));
+    llvm::append_range(Ret, ElfGNUSectionFlags);
     break;
   }
   switch (EMachine) {
   case EM_AARCH64:
-    Ret.insert(Ret.end(), std::begin(ElfAArch64SectionFlags),
-               std::end(ElfAArch64SectionFlags));
+    llvm::append_range(Ret, ElfAArch64SectionFlags);
     break;
   case EM_ARM:
-    Ret.insert(Ret.end(), std::begin(ElfARMSectionFlags),
-               std::end(ElfARMSectionFlags));
+    llvm::append_range(Ret, ElfARMSectionFlags);
     break;
   case EM_HEXAGON:
-    Ret.insert(Ret.end(), std::begin(ElfHexagonSectionFlags),
-               std::end(ElfHexagonSectionFlags));
+    llvm::append_range(Ret, ElfHexagonSectionFlags);
     break;
   case EM_MIPS:
-    Ret.insert(Ret.end(), std::begin(ElfMipsSectionFlags),
-               std::end(ElfMipsSectionFlags));
+    llvm::append_range(Ret, ElfMipsSectionFlags);
     break;
   case EM_X86_64:
-    Ret.insert(Ret.end(), std::begin(ElfX86_64SectionFlags),
-               std::end(ElfX86_64SectionFlags));
+    llvm::append_range(Ret, ElfX86_64SectionFlags);
     break;
   case EM_XCORE:
-    Ret.insert(Ret.end(), std::begin(ElfXCoreSectionFlags),
-               std::end(ElfXCoreSectionFlags));
+    llvm::append_range(Ret, ElfXCoreSectionFlags);
     break;
   default:
     break;
@@ -1498,6 +1490,7 @@ static StringRef segmentTypeToString(unsigned Arch, unsigned Type) {
     LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_STACK);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_RELRO);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_PROPERTY);
+    LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_SFRAME);
 
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_MUTABLE);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_RANDOMIZE);
@@ -1648,6 +1641,7 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1250, "gfx1250"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
@@ -3497,20 +3491,13 @@ ELFDumper<ELFT>::getOtherFlagsFromSymbol(const Elf_Ehdr &Header,
     // flag overlap with other ST_MIPS_xxx flags. So consider both
     // cases separately.
     if ((Symbol.st_other & STO_MIPS_MIPS16) == STO_MIPS_MIPS16)
-      SymOtherFlags.insert(SymOtherFlags.end(),
-                           std::begin(ElfMips16SymOtherFlags),
-                           std::end(ElfMips16SymOtherFlags));
+      llvm::append_range(SymOtherFlags, ElfMips16SymOtherFlags);
     else
-      SymOtherFlags.insert(SymOtherFlags.end(),
-                           std::begin(ElfMipsSymOtherFlags),
-                           std::end(ElfMipsSymOtherFlags));
+      llvm::append_range(SymOtherFlags, ElfMipsSymOtherFlags);
   } else if (Header.e_machine == EM_AARCH64) {
-    SymOtherFlags.insert(SymOtherFlags.end(),
-                         std::begin(ElfAArch64SymOtherFlags),
-                         std::end(ElfAArch64SymOtherFlags));
+    llvm::append_range(SymOtherFlags, ElfAArch64SymOtherFlags);
   } else if (Header.e_machine == EM_RISCV) {
-    SymOtherFlags.insert(SymOtherFlags.end(), std::begin(ElfRISCVSymOtherFlags),
-                         std::end(ElfRISCVSymOtherFlags));
+    llvm::append_range(SymOtherFlags, ElfRISCVSymOtherFlags);
   }
   return SymOtherFlags;
 }
@@ -5524,7 +5511,7 @@ template <typename ELFT> static GNUAbiTag getGNUAbiTag(ArrayRef<uint8_t> Desc) {
     return {"", "", /*IsValid=*/false};
 
   static const char *OSNames[] = {
-      "Linux", "Hurd", "Solaris", "FreeBSD", "NetBSD", "Syllable", "NaCl",
+      "Linux", "Hurd", "Solaris", "FreeBSD", "NetBSD", "Syllable",
   };
   StringRef OSName = "Unknown";
   if (Words[0] < std::size(OSNames))
@@ -7893,6 +7880,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
             DictScope BBED(W);
             W.printNumber("ID", BBE.ID);
             W.printHex("Offset", BBE.Offset);
+            if (!BBE.CallsiteOffsets.empty())
+              W.printList("Callsite Offsets", BBE.CallsiteOffsets);
             W.printHex("Size", BBE.Size);
             W.printBoolean("HasReturn", BBE.hasReturn());
             W.printBoolean("HasTailCall", BBE.hasTailCall());

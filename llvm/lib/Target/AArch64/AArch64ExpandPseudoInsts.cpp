@@ -50,9 +50,7 @@ public:
 
   static char ID;
 
-  AArch64ExpandPseudo() : MachineFunctionPass(ID) {
-    initializeAArch64ExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64ExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
@@ -600,6 +598,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     llvm_unreachable("Unsupported ElementSize");
   }
 
+  // Preserve undef state until DOP's reg is defined.
+  unsigned DOPRegState = MI.getOperand(DOPIdx).isUndef() ? RegState::Undef : 0;
+
   //
   // Create the destructive operation (if required)
   //
@@ -618,10 +619,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfxZero))
                .addReg(DstReg, RegState::Define)
                .addReg(MI.getOperand(PredIdx).getReg())
-               .addReg(MI.getOperand(DOPIdx).getReg());
+               .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
 
     // After the movprfx, the destructive operand is same as Dst
     DOPIdx = 0;
+    DOPRegState = 0;
 
     // Create the additional LSL to zero the lanes when the DstReg is not
     // unique. Zeros the lanes in z0 that aren't active in p0 with sequence
@@ -640,8 +642,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     assert(DOPRegIsUnique && "The destructive operand should be unique");
     PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfx))
                .addReg(DstReg, RegState::Define)
-               .addReg(MI.getOperand(DOPIdx).getReg());
+               .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
     DOPIdx = 0;
+    DOPRegState = 0;
   }
 
   //
@@ -649,10 +652,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   //
   DOP = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opcode))
     .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead));
+  DOPRegState = DOPRegState | RegState::Kill;
 
   switch (DType) {
   case AArch64::DestructiveUnaryPassthru:
-    DOP.addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+    DOP.addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
         .add(MI.getOperand(PredIdx))
         .add(MI.getOperand(SrcIdx));
     break;
@@ -661,20 +665,20 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
     DOP.add(MI.getOperand(PredIdx))
-       .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
-       .add(MI.getOperand(SrcIdx));
+        .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
+        .add(MI.getOperand(SrcIdx));
     break;
   case AArch64::DestructiveTernaryCommWithRev:
     DOP.add(MI.getOperand(PredIdx))
-        .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+        .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
         .add(MI.getOperand(SrcIdx))
         .add(MI.getOperand(Src2Idx));
     break;
   }
 
   if (PRFX) {
-    finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
     transferImpOps(MI, PRFX, DOP);
+    finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
   } else
     transferImpOps(MI, DOP, DOP);
 
@@ -838,21 +842,22 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   // Expand CALL_RVMARKER pseudo to:
   // - a branch to the call target, followed by
-  // - the special `mov x29, x29` marker, and
+  // - the special `mov x29, x29` marker, if necessary, and
   // - another branch, to the runtime function
   // Mark the sequence as bundle, to avoid passes moving other code in between.
   MachineInstr &MI = *MBBI;
   MachineOperand &RVTarget = MI.getOperand(0);
+  bool DoEmitMarker = MI.getOperand(1).getImm();
   assert(RVTarget.isGlobal() && "invalid operand for attached call");
 
   MachineInstr *OriginalCall = nullptr;
 
   if (MI.getOpcode() == AArch64::BLRA_RVMARKER) {
     // ptrauth call.
-    const MachineOperand &CallTarget = MI.getOperand(1);
-    const MachineOperand &Key = MI.getOperand(2);
-    const MachineOperand &IntDisc = MI.getOperand(3);
-    const MachineOperand &AddrDisc = MI.getOperand(4);
+    const MachineOperand &CallTarget = MI.getOperand(2);
+    const MachineOperand &Key = MI.getOperand(3);
+    const MachineOperand &IntDisc = MI.getOperand(4);
+    const MachineOperand &AddrDisc = MI.getOperand(5);
 
     assert((Key.getImm() == AArch64PACKey::IA ||
             Key.getImm() == AArch64PACKey::IB) &&
@@ -861,19 +866,20 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     MachineOperand Ops[] = {CallTarget, Key, IntDisc, AddrDisc};
 
     OriginalCall = createCallWithOps(MBB, MBBI, TII, AArch64::BLRA, Ops,
-                                     /*RegMaskStartIdx=*/5);
+                                     /*RegMaskStartIdx=*/6);
   } else {
     assert(MI.getOpcode() == AArch64::BLR_RVMARKER && "unknown rvmarker MI");
-    OriginalCall = createCall(MBB, MBBI, TII, MI.getOperand(1),
+    OriginalCall = createCall(MBB, MBBI, TII, MI.getOperand(2),
                               // Regmask starts after the RV and call targets.
-                              /*RegMaskStartIdx=*/2);
+                              /*RegMaskStartIdx=*/3);
   }
 
-  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
-                     .addReg(AArch64::FP, RegState::Define)
-                     .addReg(AArch64::XZR)
-                     .addReg(AArch64::FP)
-                     .addImm(0);
+  if (DoEmitMarker)
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
+        .addReg(AArch64::FP, RegState::Define)
+        .addReg(AArch64::XZR)
+        .addReg(AArch64::FP)
+        .addImm(0);
 
   auto *RVCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::BL))
                      .add(RVTarget)
@@ -1591,18 +1597,22 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
          "Non-writeback variants of STGloop / STZGloop should not "
          "survive past PrologEpilogInserter.");
    case AArch64::STR_ZZZZXI:
+   case AArch64::STR_ZZZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 4);
    case AArch64::STR_ZZZXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 3);
    case AArch64::STR_ZZXI:
+   case AArch64::STR_ZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 2);
    case AArch64::STR_PPXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::STR_PXI, 2);
    case AArch64::LDR_ZZZZXI:
+   case AArch64::LDR_ZZZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 4);
    case AArch64::LDR_ZZZXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 3);
    case AArch64::LDR_ZZXI:
+   case AArch64::LDR_ZZXI_STRIDED_CONTIGUOUS:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 2);
    case AArch64::LDR_PPXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_PXI, 2);

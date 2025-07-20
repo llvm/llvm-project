@@ -18,8 +18,6 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
-#include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -129,7 +127,7 @@ public:
     weightPadding[3] =
         (weightHeight % stride[0]) ? (stride[0] - weightHeight % stride[0]) : 0;
     weightPadding[5] =
-        weightWidth % stride[1] ? stride[1] - weightWidth % stride[1] : 0;
+        (weightWidth % stride[1]) ? (stride[1] - weightWidth % stride[1]) : 0;
 
     Value weightPaddingVal =
         getTosaConstShape(rewriter, op->getLoc(), weightPadding);

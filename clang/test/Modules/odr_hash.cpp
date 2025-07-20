@@ -3380,8 +3380,8 @@ struct S17 {
 };
 #else
 S17 s17;
-// expected-error@second.h:* {{'FunctionTemplate::S17' has different definitions in different modules; first difference is definition in module 'SecondModule' found function template 'foo' with 1st template parameter with default argument 1 + 1}}
-// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template parameter with default argument 2}}
+// expected-error@second.h:* {{'FunctionTemplate::S17' has different definitions in different modules; first difference is definition in module 'SecondModule' found function template 'foo' with 1st template parameter with default argument '1 + 1'}}
+// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template parameter with default argument '2'}}
 #endif
 
 #if defined(FIRST)
@@ -5163,6 +5163,29 @@ namespace A {
 #else
 A::X x;
 #endif
+
+namespace TemplateDecltypeOperator {
+
+#if defined(FIRST) || defined(SECOND)
+template <class T6>
+T6 func();
+#endif
+
+#if defined(SECOND)
+template <class UnrelatedT>
+using UnrelatedAlias = decltype(func<UnrelatedT>())();
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+class A {
+  template <class T6>
+  operator decltype(func<T6>()) () {}
+};
+#else
+A a;
+#endif
+
+}
 
 // Keep macros contained to one file.
 #ifdef FIRST

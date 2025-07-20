@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-swapped-arguments %t
+// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-swapped-arguments %t
 
 void F(int, double);
 

@@ -162,8 +162,7 @@ void WinException::endFunction(const MachineFunction *MF) {
 
   if (!MF->getEHContTargets().empty()) {
     // Copy the function's EH Continuation targets to a module-level list.
-    EHContTargets.insert(EHContTargets.end(), MF->getEHContTargets().begin(),
-                         MF->getEHContTargets().end());
+    llvm::append_range(EHContTargets, MF->getEHContTargets());
   }
 }
 
@@ -292,8 +291,7 @@ void WinException::endFuncletImpl() {
 
     if (!MF->getEHContTargets().empty()) {
       // Copy the function's EH Continuation targets to a module-level list.
-      EHContTargets.insert(EHContTargets.end(), MF->getEHContTargets().begin(),
-                           MF->getEHContTargets().end());
+      llvm::append_range(EHContTargets, MF->getEHContTargets());
     }
 
     // Switch back to the funclet start .text section now that we are done
@@ -310,10 +308,8 @@ void WinException::endFuncletImpl() {
 const MCExpr *WinException::create32bitRef(const MCSymbol *Value) {
   if (!Value)
     return MCConstantExpr::create(0, Asm->OutContext);
-  return MCSymbolRefExpr::create(Value, useImageRel32
-                                            ? MCSymbolRefExpr::VK_COFF_IMGREL32
-                                            : MCSymbolRefExpr::VK_None,
-                                 Asm->OutContext);
+  auto Spec = useImageRel32 ? uint16_t(MCSymbolRefExpr::VK_COFF_IMGREL32) : 0;
+  return MCSymbolRefExpr::create(Value, Spec, Asm->OutContext);
 }
 
 const MCExpr *WinException::create32bitRef(const GlobalValue *GV) {

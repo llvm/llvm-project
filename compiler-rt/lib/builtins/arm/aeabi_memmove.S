@@ -17,6 +17,9 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_memmove)
         bl      memmove
         pop     {r7, pc}
 #else
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+        bti
+#endif
         b       memmove
 #endif
 END_COMPILERRT_FUNCTION(__aeabi_memmove)

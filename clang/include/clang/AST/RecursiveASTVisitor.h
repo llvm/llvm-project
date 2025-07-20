@@ -789,13 +789,11 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifier(
   switch (NNS->getKind()) {
   case NestedNameSpecifier::Identifier:
   case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Super:
     return true;
 
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     TRY_TO(TraverseType(QualType(NNS->getAsType(), 0)));
   }
 
@@ -814,13 +812,11 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifierLoc(
   switch (NNS.getNestedNameSpecifier()->getKind()) {
   case NestedNameSpecifier::Identifier:
   case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Super:
     return true;
 
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     TRY_TO(TraverseTypeLoc(NNS.getTypeLoc()));
     break;
   }
@@ -1156,6 +1152,14 @@ DEF_TRAVERSE_TYPE(BTFTagAttributedType,
 DEF_TRAVERSE_TYPE(HLSLAttributedResourceType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
+DEF_TRAVERSE_TYPE(HLSLInlineSpirvType, {
+  for (auto &Operand : T->getOperands()) {
+    if (Operand.isConstant() || Operand.isType()) {
+      TRY_TO(TraverseType(Operand.getResultType()));
+    }
+  }
+})
+
 DEF_TRAVERSE_TYPE(ParenType, { TRY_TO(TraverseType(T->getInnerType())); })
 
 DEF_TRAVERSE_TYPE(MacroQualifiedType,
@@ -1172,7 +1176,8 @@ DEF_TRAVERSE_TYPE(DependentNameType,
                   { TRY_TO(TraverseNestedNameSpecifier(T->getQualifier())); })
 
 DEF_TRAVERSE_TYPE(DependentTemplateSpecializationType, {
-  TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
+  const DependentTemplateStorage &S = T->getDependentTemplateName();
+  TRY_TO(TraverseNestedNameSpecifier(S.getQualifier()));
   TRY_TO(TraverseTemplateArguments(T->template_arguments()));
 })
 
@@ -1202,6 +1207,8 @@ DEF_TRAVERSE_TYPE(PipeType, { TRY_TO(TraverseType(T->getElementType())); })
 DEF_TRAVERSE_TYPE(BitIntType, {})
 DEF_TRAVERSE_TYPE(DependentBitIntType,
                   { TRY_TO(TraverseStmt(T->getNumBitsExpr())); })
+
+DEF_TRAVERSE_TYPE(PredefinedSugarType, {})
 
 #undef DEF_TRAVERSE_TYPE
 
@@ -1458,6 +1465,9 @@ DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
 DEF_TRAVERSE_TYPELOC(HLSLAttributedResourceType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
+DEF_TRAVERSE_TYPELOC(HLSLInlineSpirvType,
+                     { TRY_TO(TraverseType(TL.getType())); })
+
 DEF_TRAVERSE_TYPELOC(ElaboratedType, {
   if (TL.getQualifierLoc()) {
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
@@ -1515,6 +1525,8 @@ DEF_TRAVERSE_TYPELOC(BitIntType, {})
 DEF_TRAVERSE_TYPELOC(DependentBitIntType, {
   TRY_TO(TraverseStmt(TL.getTypePtr()->getNumBitsExpr()));
 })
+
+DEF_TRAVERSE_TYPELOC(PredefinedSugarType, {})
 
 #undef DEF_TRAVERSE_TYPELOC
 
@@ -1600,12 +1612,14 @@ DEF_TRAVERSE_DECL(EmptyDecl, {})
 
 DEF_TRAVERSE_DECL(HLSLBufferDecl, {})
 
+DEF_TRAVERSE_DECL(HLSLRootSignatureDecl, {})
+
 DEF_TRAVERSE_DECL(LifetimeExtendedTemporaryDecl, {
   TRY_TO(TraverseStmt(D->getTemporaryExpr()));
 })
 
 DEF_TRAVERSE_DECL(FileScopeAsmDecl,
-                  { TRY_TO(TraverseStmt(D->getAsmString())); })
+                  { TRY_TO(TraverseStmt(D->getAsmStringExpr())); })
 
 DEF_TRAVERSE_DECL(TopLevelStmtDecl, { TRY_TO(TraverseStmt(D->getStmt())); })
 
@@ -2254,8 +2268,10 @@ bool RecursiveASTVisitor<Derived>::TraverseFunctionHelper(FunctionDecl *D) {
   }
 
   // Visit the trailing requires clause, if any.
-  if (Expr *TrailingRequiresClause = D->getTrailingRequiresClause()) {
-    TRY_TO(TraverseStmt(TrailingRequiresClause));
+  if (const AssociatedConstraint &TrailingRequiresClause =
+          D->getTrailingRequiresClause()) {
+    TRY_TO(TraverseStmt(
+        const_cast<Expr *>(TrailingRequiresClause.ConstraintExpr)));
   }
 
   if (CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
@@ -2769,7 +2785,8 @@ DEF_TRAVERSE_STMT(LambdaExpr, {
 
     if (S->hasExplicitResultType())
       TRY_TO(TraverseTypeLoc(Proto.getReturnLoc()));
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getTrailingRequiresClause());
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(
+        const_cast<Expr *>(S->getTrailingRequiresClause().ConstraintExpr));
 
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getBody());
   }
@@ -2941,7 +2958,6 @@ DEF_TRAVERSE_STMT(CXXRewrittenBinaryOperator, {
   }
 })
 DEF_TRAVERSE_STMT(OpaqueValueExpr, {})
-DEF_TRAVERSE_STMT(TypoExpr, {})
 DEF_TRAVERSE_STMT(RecoveryExpr, {})
 DEF_TRAVERSE_STMT(CUDAKernelCallExpr, {})
 

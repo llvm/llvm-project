@@ -13,10 +13,8 @@
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
@@ -24,8 +22,7 @@ using namespace mlir::tensor;
 
 PadOp mlir::tensor::createPadHighOp(RankedTensorType resType, Value source,
                                     Value pad, bool nofold, Location loc,
-                                    OpBuilder &b,
-                                    SmallVector<Value> dynOutDims) {
+                                    OpBuilder &b, ValueRange dynOutDims) {
 
   // This assumption simplifies the following logic without limiting what's
   // required _today_. If needed, we can relax it in the future.
@@ -92,6 +89,37 @@ mlir::tensor::computeTransposedType(RankedTensorType rankedTensorType,
   RankedTensorType transposedTensorType =
       RTTBuilder(rankedTensorType).setShape(transposedShape);
   return transposedTensorType;
+}
+
+CollapseShapeOp
+mlir::tensor::dropGivenUnitDims(OpBuilder &b, Location loc, Value src,
+                                const llvm::SmallBitVector &dropDims) {
+  auto srcType = cast<ShapedType>(src.getType());
+  int64_t rank = srcType.getRank();
+  assert(rank == static_cast<int64_t>(dropDims.size()) &&
+         "dropDims dimension does not match src tensor rank");
+  assert(llvm::all_of(
+             dropDims.set_bits(),
+             [&](unsigned dim) { return srcType.getShape()[dim] == 1; }) &&
+         "Dropping non unit dimension");
+  // Computed reassociation map for the corresponding tensor.collapse_shape.
+  SmallVector<ReassociationIndices, 2> reassocMaps;
+  // Current reassociation group to add dropped dimension to.
+
+  int64_t nextDimToGroup = 0;
+  llvm::SmallBitVector keptDims(dropDims);
+  keptDims.flip();
+  int64_t lastSetBit = keptDims.find_last();
+  for (int64_t setBit : keptDims.set_bits()) {
+    // Group consecutive dropped dimension with the next non-dropped dimension.
+    // If this is the last set dimension, also group all subsequent dropped
+    // dimension, if any.
+    int64_t upTo = setBit == lastSetBit ? rank - 1 : setBit;
+    auto seq = llvm::seq_inclusive(nextDimToGroup, upTo);
+    reassocMaps.emplace_back(llvm::make_range(seq.begin(), seq.end()));
+    nextDimToGroup = setBit + 1;
+  }
+  return b.create<tensor::CollapseShapeOp>(loc, src, reassocMaps);
 }
 
 bool mlir::tensor::isCastLikeInsertSliceOp(InsertSliceOp op) {

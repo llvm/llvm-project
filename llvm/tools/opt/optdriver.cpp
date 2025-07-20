@@ -84,8 +84,12 @@ static cl::opt<bool> EnableLegacyPassManager(
 static cl::opt<std::string> PassPipeline(
     "passes",
     cl::desc(
-        "A textual description of the pass pipeline. To have analysis passes "
-        "available before a certain pass, add \"require<foo-analysis>\"."));
+        "A textual (comma separated) description of the pass pipeline e.g.,"
+        "-passes=\"foo,bar\", to have analysis passes available before a pass, "
+        "add \"require<foo-analysis>\". See "
+        "https://llvm.org/docs/NewPassManager.html#invoking-opt "
+        "for more details on the pass pipeline syntax. "));
+
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                cl::desc("Alias for -passes"));
 
@@ -198,6 +202,10 @@ static cl::opt<bool>
 static cl::list<std::string> DisableBuiltins(
     "disable-builtin",
     cl::desc("Disable specific target library builtin function"));
+
+static cl::list<std::string> EnableBuiltins(
+    "enable-builtin",
+    cl::desc("Enable specific target library builtin functions"));
 
 static cl::opt<bool> EnableDebugify(
     "enable-debugify",
@@ -446,7 +454,7 @@ extern "C" int optMain(
   PassPlugins.setCallback([&](const std::string &PluginPath) {
     auto Plugin = PassPlugin::Load(PluginPath);
     if (!Plugin)
-      report_fatal_error(Plugin.takeError(), /*gen_crash_diag=*/false);
+      reportFatalUsageError(Plugin.takeError());
     PluginList.emplace_back(Plugin.get());
   });
 
@@ -666,7 +674,7 @@ extern "C" int optMain(
   else {
     // Disable individual builtin functions in TargetLibraryInfo.
     LibFunc F;
-    for (auto &FuncName : DisableBuiltins)
+    for (auto &FuncName : DisableBuiltins) {
       if (TLII.getLibFunc(FuncName, F))
         TLII.setUnavailable(F);
       else {
@@ -674,6 +682,17 @@ extern "C" int optMain(
                << FuncName << '\n';
         return 1;
       }
+    }
+
+    for (auto &FuncName : EnableBuiltins) {
+      if (TLII.getLibFunc(FuncName, F))
+        TLII.setAvailable(F);
+      else {
+        errs() << argv[0] << ": cannot enable nonexistent builtin function "
+               << FuncName << '\n';
+        return 1;
+      }
+    }
   }
 
   if (UseNPM) {

@@ -14,13 +14,13 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCLabel.h"
 #include "llvm/MC/MCSectionCOFF.h"
@@ -74,6 +74,8 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
   SaveTempLabels = TargetOptions && TargetOptions->MCSaveTempLabels;
+  if (SaveTempLabels)
+    setUseNamesOnTempLabels(true);
   SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
 
   if (SrcMgr && SrcMgr->getNumBuffers())
@@ -85,9 +87,10 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     Env = IsMachO;
     break;
   case Triple::COFF:
-    if (!TheTriple.isOSWindowsOrUEFI())
-      report_fatal_error(
-          "Cannot initialize MC for non-Windows COFF object files.");
+    if (!TheTriple.isOSWindows() && !TheTriple.isUEFI()) {
+      reportFatalUsageError(
+          "cannot initialize MC for non-Windows COFF object files");
+    }
 
     Env = IsCOFF;
     break;
@@ -177,6 +180,8 @@ void MCContext::reset() {
   XCOFFUniquingMap.clear();
   DXCUniquingMap.clear();
 
+  RelSecNames.clear();
+  MacroMap.clear();
   ELFEntrySizeMap.clear();
   ELFSeenGenericMergeableSections.clear();
 
@@ -195,10 +200,10 @@ MCInst *MCContext::createMCInst() {
   return new (MCInstAllocator.Allocate()) MCInst;
 }
 
-// Allocate the initial MCDataFragment for the begin symbol.
-MCDataFragment *MCContext::allocInitialFragment(MCSection &Sec) {
+// Allocate the initial MCFragment for the begin symbol.
+MCFragment *MCContext::allocInitialFragment(MCSection &Sec) {
   assert(!Sec.curFragList()->Head);
-  auto *F = allocFragment<MCDataFragment>();
+  auto *F = allocFragment<MCFragment>();
   F->setParent(&Sec);
   Sec.curFragList()->Head = F;
   Sec.curFragList()->Tail = F;
@@ -212,6 +217,27 @@ MCDataFragment *MCContext::allocInitialFragment(MCSection &Sec) {
 MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
   SmallString<128> NameSV;
   StringRef NameRef = Name.toStringRef(NameSV);
+  if (NameRef.contains('\\')) {
+    NameSV = NameRef;
+    size_t S = 0;
+    // Support escaped \\ and \" as in GNU Assembler. GAS issues a warning for
+    // other characters following \\, which we do not implement due to code
+    // structure.
+    for (size_t I = 0, E = NameSV.size(); I != E; ++I) {
+      char C = NameSV[I];
+      if (C == '\\' && I + 1 != E) {
+        switch (NameSV[I + 1]) {
+        case '"':
+        case '\\':
+          C = NameSV[++I];
+          break;
+        }
+      }
+      NameSV[S++] = C;
+    }
+    NameSV.resize(S);
+    NameRef = NameSV;
+  }
 
   assert(!NameRef.empty() && "Normal symbols cannot be unnamed!");
 
@@ -286,6 +312,35 @@ MCSymbol *MCContext::createSymbolImpl(const MCSymbolTableEntry *Name,
   }
   return new (Name, *this)
       MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
+}
+
+MCSymbol *MCContext::cloneSymbol(MCSymbol &Sym) {
+  MCSymbol *NewSym = nullptr;
+  auto Name = Sym.getNameEntryPtr();
+  switch (getObjectFileType()) {
+  case MCContext::IsCOFF:
+    NewSym = new (Name, *this) MCSymbolCOFF(cast<MCSymbolCOFF>(Sym));
+    break;
+  case MCContext::IsELF:
+    NewSym = new (Name, *this) MCSymbolELF(cast<MCSymbolELF>(Sym));
+    break;
+  case MCContext::IsMachO:
+    NewSym = new (Name, *this) MCSymbolMachO(cast<MCSymbolMachO>(Sym));
+    break;
+  default:
+    reportFatalUsageError(".set redefinition is not supported");
+    break;
+  }
+  // Set the name and redirect the `Symbols` entry to `NewSym`.
+  NewSym->getNameEntryPtr() = Name;
+  const_cast<MCSymbolTableEntry *>(Name)->second.Symbol = NewSym;
+  // Ensure the next `registerSymbol` call will add the new symbol to `Symbols`.
+  NewSym->setIsRegistered(false);
+
+  // Ensure the original symbol is not emitted to the symbol table.
+  Sym.IsTemporary = true;
+  Sym.setExternal(false);
+  return NewSym;
 }
 
 MCSymbol *MCContext::createRenamableSymbol(const Twine &Name,
@@ -456,10 +511,10 @@ MCSymbolXCOFF *MCContext::createXCOFFSymbolImpl(const MCSymbolTableEntry *Name,
 
   // Append the hex values of '_' and invalid characters with "_Renamed..";
   // at the same time replace invalid characters with '_'.
-  for (size_t I = 0; I < InvalidName.size(); ++I) {
-    if (!MAI->isAcceptableChar(InvalidName[I]) || InvalidName[I] == '_') {
-      raw_svector_ostream(ValidName).write_hex(InvalidName[I]);
-      InvalidName[I] = '_';
+  for (char &C : InvalidName) {
+    if (!MAI->isAcceptableChar(C) || C == '_') {
+      raw_svector_ostream(ValidName).write_hex(C);
+      C = '_';
     }
   }
 
@@ -574,9 +629,6 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        const MCSymbolELF *GroupSym,
                                        bool IsComdat, unsigned UniqueID,
                                        const MCSymbolELF *LinkedToSym) {
-  StringRef Group = "";
-  if (GroupSym)
-    Group = GroupSym->getName();
   assert(!(LinkedToSym && LinkedToSym->getName().empty()));
 
   // Sections are differentiated by the quadruple (section_name, group_name,
@@ -598,16 +650,16 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
       Buffer.append(LinkedToSym->getName());
     support::endian::write(Buffer, UniqueID, endianness::native);
     StringRef UniqueMapKey = StringRef(Buffer);
-    EntryNewPair = ELFUniquingMap.insert(std::make_pair(UniqueMapKey, nullptr));
+    EntryNewPair = ELFUniquingMap.try_emplace(UniqueMapKey);
   } else if (!Section.isSingleStringRef()) {
     SmallString<128> Buffer;
     StringRef UniqueMapKey = Section.toStringRef(Buffer);
     SectionLen = UniqueMapKey.size();
-    EntryNewPair = ELFUniquingMap.insert(std::make_pair(UniqueMapKey, nullptr));
+    EntryNewPair = ELFUniquingMap.try_emplace(UniqueMapKey);
   } else {
     StringRef UniqueMapKey = Section.getSingleStringRef();
     SectionLen = UniqueMapKey.size();
-    EntryNewPair = ELFUniquingMap.insert(std::make_pair(UniqueMapKey, nullptr));
+    EntryNewPair = ELFUniquingMap.try_emplace(UniqueMapKey);
   }
 
   if (!EntryNewPair.second)
@@ -671,22 +723,49 @@ MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                                       : std::nullopt;
 }
 
-MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
-                                         MCSection *Parent,
-                                         uint32_t Subsection) {
+template <typename TAttr>
+MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
+                                         TAttr Attributes, MCSection *Parent,
+                                         bool IsVirtual) {
+  std::string UniqueName(Name);
+  if (Parent) {
+    UniqueName.append("/").append(Parent->getName());
+    if (auto *P = static_cast<MCSectionGOFF *>(Parent)->getParent())
+      UniqueName.append("/").append(P->getName());
+  }
   // Do the lookup. If we don't have a hit, return a new section.
-  auto IterBool =
-      GOFFUniquingMap.insert(std::make_pair(Section.str(), nullptr));
-  auto Iter = IterBool.first;
-  if (!IterBool.second)
+  auto [Iter, Inserted] = GOFFUniquingMap.try_emplace(UniqueName);
+  if (!Inserted)
     return Iter->second;
 
-  StringRef CachedName = Iter->first;
+  StringRef CachedName = StringRef(Iter->first.c_str(), Name.size());
   MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
-      MCSectionGOFF(CachedName, Kind, Parent, Subsection);
+      MCSectionGOFF(CachedName, Kind, IsVirtual, Attributes,
+                    static_cast<MCSectionGOFF *>(Parent));
   Iter->second = GOFFSection;
   allocInitialFragment(*GOFFSection);
   return GOFFSection;
+}
+
+MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
+                                         GOFF::SDAttr SDAttributes) {
+  return getGOFFSection<GOFF::SDAttr>(Kind, Name, SDAttributes, nullptr,
+                                      /*IsVirtual=*/true);
+}
+
+MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
+                                         GOFF::EDAttr EDAttributes,
+                                         MCSection *Parent) {
+  return getGOFFSection<GOFF::EDAttr>(
+      Kind, Name, EDAttributes, Parent,
+      /*IsVirtual=*/EDAttributes.BindAlgorithm == GOFF::ESD_BA_Merge);
+}
+
+MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
+                                         GOFF::PRAttr PRAttributes,
+                                         MCSection *Parent) {
+  return getGOFFSection<GOFF::PRAttr>(Kind, Name, PRAttributes, Parent,
+                                      /*IsVirtual=*/false);
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
@@ -710,15 +789,14 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
 
   // Do the lookup, if we have a hit, return it.
   COFFSectionKey T{Section, COMDATSymName, Selection, UniqueID};
-  auto IterBool = COFFUniquingMap.insert(std::make_pair(T, nullptr));
-  auto Iter = IterBool.first;
-  if (!IterBool.second)
+  auto [Iter, Inserted] = COFFUniquingMap.try_emplace(T);
+  if (!Inserted)
     return Iter->second;
 
   StringRef CachedName = Iter->first.SectionName;
   MCSymbol *Begin = getOrCreateSectionSymbol<MCSymbolCOFF>(Section);
   MCSectionCOFF *Result = new (COFFAllocator.Allocate()) MCSectionCOFF(
-      CachedName, Characteristics, COMDATSymbol, Selection, Begin);
+      CachedName, Characteristics, COMDATSymbol, Selection, UniqueID, Begin);
   Iter->second = Result;
   auto *F = allocInitialFragment(*Result);
   Begin->setFragment(F);

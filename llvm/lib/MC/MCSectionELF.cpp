@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
@@ -169,19 +170,19 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << "llvm_sympart";
   else if (Type == ELF::SHT_LLVM_BB_ADDR_MAP)
     OS << "llvm_bb_addr_map";
-  else if (Type == ELF::SHT_LLVM_BB_ADDR_MAP_V0)
-    OS << "llvm_bb_addr_map_v0";
   else if (Type == ELF::SHT_LLVM_OFFLOADING)
     OS << "llvm_offloading";
   else if (Type == ELF::SHT_LLVM_LTO)
     OS << "llvm_lto";
   else if (Type == ELF::SHT_LLVM_JT_SIZES)
     OS << "llvm_jt_sizes";
+  else if (Type == ELF::SHT_LLVM_CFI_JUMP_TABLE)
+    OS << "llvm_cfi_jump_table";
   else
     OS << "0x" << Twine::utohexstr(Type);
 
   if (EntrySize) {
-    assert(Flags & ELF::SHF_MERGE);
+    assert((Flags & ELF::SHF_MERGE) || Type == ELF::SHT_LLVM_CFI_JUMP_TABLE);
     OS << "," << EntrySize;
   }
 

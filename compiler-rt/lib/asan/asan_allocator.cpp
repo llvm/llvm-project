@@ -424,10 +424,15 @@ struct Allocator {
     PoisonShadow(chunk, allocated_size, kAsanHeapLeftRedzoneMagic);
   }
 
-  void ReInitialize(const AllocatorOptions &options) {
+  // Apply provided AllocatorOptions to an Allocator
+  void ApplyOptions(const AllocatorOptions &options) {
     SetAllocatorMayReturnNull(options.may_return_null);
     allocator.SetReleaseToOSIntervalMs(options.release_to_os_interval_ms);
     SharedInitCode(options);
+  }
+
+  void ReInitialize(const AllocatorOptions &options) {
+    ApplyOptions(options);
 
     // Poison all existing allocation's redzones.
     if (CanPoisonMemory()) {
@@ -975,6 +980,11 @@ void InitializeAllocator(const AllocatorOptions &options) {
 
 void ReInitializeAllocator(const AllocatorOptions &options) {
   instance.ReInitialize(options);
+}
+
+// Apply provided AllocatorOptions to an Allocator
+void ApplyAllocatorOptions(const AllocatorOptions &options) {
+  instance.ApplyOptions(options);
 }
 
 void GetAllocatorOptions(AllocatorOptions *options) {

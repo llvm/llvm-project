@@ -270,10 +270,10 @@ bool CursorVisitor::visitFileRegion() {
   ASTUnit *Unit = cxtu::getASTUnit(TU);
   SourceManager &SM = Unit->getSourceManager();
 
-  std::pair<FileID, unsigned> Begin = SM.getDecomposedLoc(
-                                  SM.getFileLoc(RegionOfInterest.getBegin())),
-                              End = SM.getDecomposedLoc(
-                                  SM.getFileLoc(RegionOfInterest.getEnd()));
+  FileIDAndOffset Begin = SM.getDecomposedLoc(
+                      SM.getFileLoc(RegionOfInterest.getBegin())),
+                  End = SM.getDecomposedLoc(
+                      SM.getFileLoc(RegionOfInterest.getEnd()));
 
   if (End.first != Begin.first) {
     // If the end does not reside in the same file, try to recover by
@@ -872,7 +872,7 @@ bool CursorVisitor::VisitFunctionDecl(FunctionDecl *ND) {
     // FIXME: Attributes?
   }
 
-  if (auto *E = ND->getTrailingRequiresClause()) {
+  if (auto *E = ND->getTrailingRequiresClause().ConstraintExpr) {
     if (Visit(E))
       return true;
   }
@@ -1438,10 +1438,6 @@ bool CursorVisitor::VisitNestedNameSpecifier(NestedNameSpecifier *NNS,
     return Visit(
         MakeCursorNamespaceRef(NNS->getAsNamespace(), Range.getBegin(), TU));
 
-  case NestedNameSpecifier::NamespaceAlias:
-    return Visit(MakeCursorNamespaceRef(NNS->getAsNamespaceAlias(),
-                                        Range.getBegin(), TU));
-
   case NestedNameSpecifier::TypeSpec: {
     // If the type has a form where we know that the beginning of the source
     // range matches up with a reference cursor. Visit the appropriate reference
@@ -1457,7 +1453,6 @@ bool CursorVisitor::VisitNestedNameSpecifier(NestedNameSpecifier *NNS,
     break;
   }
 
-  case NestedNameSpecifier::TypeSpecWithTemplate:
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Identifier:
   case NestedNameSpecifier::Super:
@@ -1484,15 +1479,7 @@ bool CursorVisitor::VisitNestedNameSpecifierLoc(
 
       break;
 
-    case NestedNameSpecifier::NamespaceAlias:
-      if (Visit(MakeCursorNamespaceRef(NNS->getAsNamespaceAlias(),
-                                       Q.getLocalBeginLoc(), TU)))
-        return true;
-
-      break;
-
     case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
       if (Visit(Q.getTypeLoc()))
         return true;
 
@@ -1640,7 +1627,7 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
   case BuiltinType::OCLQueue:
   case BuiltinType::OCLReserveID:
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
@@ -1683,6 +1670,10 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 
 bool CursorVisitor::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
   return Visit(MakeCursorTypeRef(TL.getTypedefNameDecl(), TL.getNameLoc(), TU));
+}
+
+bool CursorVisitor::VisitPredefinedSugarTypeLoc(PredefinedSugarTypeLoc TL) {
+  return false;
 }
 
 bool CursorVisitor::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
@@ -1794,6 +1785,11 @@ bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
 bool CursorVisitor::VisitHLSLAttributedResourceTypeLoc(
     HLSLAttributedResourceTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
+}
+
+bool CursorVisitor::VisitHLSLInlineSpirvTypeLoc(HLSLInlineSpirvTypeLoc TL) {
+  // Nothing to do.
+  return false;
 }
 
 bool CursorVisitor::VisitFunctionTypeLoc(FunctionTypeLoc TL,
@@ -3721,6 +3717,8 @@ void EnqueueVisitor::VisitOpenACCUpdateConstruct(
 void EnqueueVisitor::VisitOpenACCAtomicConstruct(
     const OpenACCAtomicConstruct *C) {
   EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
 }
 
 void EnqueueVisitor::VisitAnnotateAttr(const AnnotateAttr *A) {
@@ -4225,14 +4223,15 @@ enum CXErrorCode clang_createTranslationUnit2(CXIndex CIdx,
 
   CIndexer *CXXIdx = static_cast<CIndexer *>(CIdx);
   FileSystemOptions FileSystemOpts;
-  auto HSOpts = std::make_shared<HeaderSearchOptions>();
+  HeaderSearchOptions HSOpts;
 
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions());
+                                          *DiagOpts);
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
       ast_filename, CXXIdx->getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadEverything, Diags, FileSystemOpts, HSOpts,
+      ASTUnit::LoadEverything, DiagOpts, Diags, FileSystemOpts, HSOpts,
       /*LangOpts=*/nullptr, CXXIdx->getOnlyLocalDecls(), CaptureDiagsKind::All,
       /*AllowASTWithCompilerErrors=*/true,
       /*UserFilesAreVolatile=*/true);
@@ -4299,11 +4298,11 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   }
 
   // Configure the diagnostics.
-  std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(
+  std::shared_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(
       llvm::ArrayRef(command_line_args, num_command_line_args));
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          DiagOpts.release()));
+                                          *DiagOpts));
 
   if (options & CXTranslationUnit_KeepGoing)
     Diags->setFatalsAsError(true);
@@ -4387,10 +4386,10 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
       options, llvm::ArrayRef(*Args), /*InvocationArgs=*/{}, unsaved_files);
   std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
-      CXXIdx->getPCHContainerOperations(), Diags,
+      CXXIdx->getPCHContainerOperations(), DiagOpts, Diags,
       CXXIdx->getClangResourcesPath(), CXXIdx->getStorePreamblesInMemory(),
       CXXIdx->getPreambleStoragePath(), CXXIdx->getOnlyLocalDecls(),
-      CaptureDiagnostics, *RemappedFiles.get(),
+      CaptureDiagnostics, *RemappedFiles,
       /*RemappedFilesKeepOriginalName=*/true, PrecompilePreambleAfterNParses,
       TUKind, CacheCodeCompletionResults, IncludeBriefCommentsInCodeCompletion,
       /*AllowPCHWithCompilerErrors=*/true, SkipFunctionBodies, SingleFileParse,
@@ -4689,7 +4688,6 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
   if (ER.Val.isFloat()) {
     llvm::SmallVector<char, 100> Buffer;
     ER.Val.getFloat().toString(Buffer);
-    std::string floatStr(Buffer.data(), Buffer.size());
     result->EvalType = CXEval_Float;
     bool ignored;
     llvm::APFloat apFloat = ER.Val.getFloat();
@@ -4982,8 +4980,7 @@ clang_reparseTranslationUnit_Impl(CXTranslationUnit TU,
     RemappedFiles->push_back(std::make_pair(UF.Filename, MB.release()));
   }
 
-  if (!CXXUnit->Reparse(CXXIdx->getPCHContainerOperations(),
-                        *RemappedFiles.get()))
+  if (!CXXUnit->Reparse(CXXIdx->getPCHContainerOperations(), *RemappedFiles))
     return CXError_Success;
   if (isASTReadError(CXXUnit))
     return CXError_ASTReadError;
@@ -5170,7 +5167,7 @@ int clang_File_isEqual(CXFile file1, CXFile file2) {
 
   FileEntryRef FEnt1 = *cxfile::getFileEntryRef(file1);
   FileEntryRef FEnt2 = *cxfile::getFileEntryRef(file2);
-  return FEnt1.getUniqueID() == FEnt2.getUniqueID();
+  return FEnt1 == FEnt2;
 }
 
 CXString clang_File_tryGetRealPathName(CXFile SFile) {
@@ -5442,7 +5439,8 @@ CXString clang_getCursorSpelling(CXCursor C) {
 
     if (C.kind == CXCursor_BinaryOperator ||
         C.kind == CXCursor_CompoundAssignOperator) {
-      return clang_Cursor_getBinaryOpcodeStr(clang_Cursor_getBinaryOpcode(C));
+      return clang_getBinaryOperatorKindSpelling(
+          clang_getCursorBinaryOperatorKind(C));
     }
 
     const Decl *D = getDeclFromExpr(getCursorExpr(C));
@@ -7230,6 +7228,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::MSProperty:
   case Decl::MSGuid:
   case Decl::HLSLBuffer:
+  case Decl::HLSLRootSignature:
   case Decl::UnnamedGlobalConstant:
   case Decl::TemplateParamObject:
   case Decl::IndirectField:
@@ -7630,7 +7629,7 @@ CXString clang_getTokenSpelling(CXTranslationUnit TU, CXToken CXTok) {
     return cxstring::createEmpty();
 
   SourceLocation Loc = SourceLocation::getFromRawEncoding(CXTok.int_data[1]);
-  std::pair<FileID, unsigned> LocInfo =
+  FileIDAndOffset LocInfo =
       CXXUnit->getSourceManager().getDecomposedSpellingLoc(Loc);
   bool Invalid = false;
   StringRef Buffer =
@@ -7674,9 +7673,9 @@ CXSourceRange clang_getTokenExtent(CXTranslationUnit TU, CXToken CXTok) {
 static void getTokens(ASTUnit *CXXUnit, SourceRange Range,
                       SmallVectorImpl<CXToken> &CXTokens) {
   SourceManager &SourceMgr = CXXUnit->getSourceManager();
-  std::pair<FileID, unsigned> BeginLocInfo =
+  FileIDAndOffset BeginLocInfo =
       SourceMgr.getDecomposedSpellingLoc(Range.getBegin());
-  std::pair<FileID, unsigned> EndLocInfo =
+  FileIDAndOffset EndLocInfo =
       SourceMgr.getDecomposedSpellingLoc(Range.getEnd());
 
   // Cannot tokenize across files.
@@ -7755,7 +7754,7 @@ CXToken *clang_getToken(CXTranslationUnit TU, CXSourceLocation Location) {
   if (Begin.isInvalid())
     return nullptr;
   SourceManager &SM = CXXUnit->getSourceManager();
-  std::pair<FileID, unsigned> DecomposedEnd = SM.getDecomposedLoc(Begin);
+  FileIDAndOffset DecomposedEnd = SM.getDecomposedLoc(Begin);
   DecomposedEnd.second +=
       Lexer::MeasureTokenLength(Begin, SM, CXXUnit->getLangOpts());
 
@@ -8404,9 +8403,9 @@ static void annotatePreprocessorTokens(CXTranslationUnit TU,
 
   Preprocessor &PP = CXXUnit->getPreprocessor();
   SourceManager &SourceMgr = CXXUnit->getSourceManager();
-  std::pair<FileID, unsigned> BeginLocInfo =
+  FileIDAndOffset BeginLocInfo =
       SourceMgr.getDecomposedSpellingLoc(RegionOfInterest.getBegin());
-  std::pair<FileID, unsigned> EndLocInfo =
+  FileIDAndOffset EndLocInfo =
       SourceMgr.getDecomposedSpellingLoc(RegionOfInterest.getEnd());
 
   if (BeginLocInfo.first != EndLocInfo.first)
@@ -8643,6 +8642,100 @@ void clang_annotateTokens(CXTranslationUnit TU, CXToken *Tokens,
 }
 
 //===----------------------------------------------------------------------===//
+// Operations for querying information of a GCC inline assembly block under a
+// cursor.
+//===----------------------------------------------------------------------===//
+CXString clang_Cursor_getGCCAssemblyTemplate(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return cxstring::createEmpty();
+  if (auto const *S = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor))) {
+    ASTContext const &C = getCursorContext(Cursor);
+    std::string AsmTemplate = S->generateAsmString(C);
+    return cxstring::createDup(AsmTemplate);
+  }
+  return cxstring::createEmpty();
+}
+
+unsigned clang_Cursor_isGCCAssemblyHasGoto(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return 0;
+  if (auto const *S = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor)))
+    return S->isAsmGoto();
+  return 0;
+}
+
+unsigned clang_Cursor_getGCCAssemblyNumOutputs(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return 0;
+  if (auto const *S = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor)))
+    return S->getNumOutputs();
+  return 0;
+}
+
+unsigned clang_Cursor_getGCCAssemblyNumInputs(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return 0;
+  if (auto const *S = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor)))
+    return S->getNumInputs();
+  return 0;
+}
+
+unsigned clang_Cursor_getGCCAssemblyInput(CXCursor Cursor, unsigned Index,
+                                          CXString *Constraint,
+                                          CXCursor *ExprCursor) {
+  if (!clang_isStatement(Cursor.kind) || !Constraint || !ExprCursor)
+    return 0;
+  if (auto const *S = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor));
+      S && Index < S->getNumInputs()) {
+    *Constraint = cxstring::createDup(S->getInputConstraint(Index));
+    *ExprCursor = MakeCXCursor(S->getInputExpr(Index), getCursorDecl(Cursor),
+                               cxcursor::getCursorTU(Cursor));
+    return 1;
+  }
+  return 0;
+}
+
+unsigned clang_Cursor_getGCCAssemblyOutput(CXCursor Cursor, unsigned Index,
+                                           CXString *Constraint,
+                                           CXCursor *ExprCursor) {
+  if (!clang_isStatement(Cursor.kind) || !Constraint || !ExprCursor)
+    return 0;
+  if (auto const *S = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor));
+      S && Index < S->getNumOutputs()) {
+    *Constraint = cxstring::createDup(S->getOutputConstraint(Index));
+    *ExprCursor = MakeCXCursor(S->getOutputExpr(Index), getCursorDecl(Cursor),
+                               cxcursor::getCursorTU(Cursor));
+    return 1;
+  }
+  return 0;
+}
+
+unsigned clang_Cursor_getGCCAssemblyNumClobbers(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return 0;
+  if (auto const *S = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor)))
+    return S->getNumClobbers();
+  return 0;
+}
+
+CXString clang_Cursor_getGCCAssemblyClobber(CXCursor Cursor, unsigned Index) {
+  if (!clang_isStatement(Cursor.kind))
+    return cxstring::createEmpty();
+  if (auto const *S = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor));
+      S && Index < S->getNumClobbers())
+    return cxstring::createDup(S->getClobber(Index));
+  return cxstring::createEmpty();
+}
+
+unsigned clang_Cursor_isGCCAssemblyVolatile(CXCursor Cursor) {
+  if (!clang_isStatement(Cursor.kind))
+    return 0;
+  if (auto const *S = dyn_cast_or_null<GCCAsmStmt>(getCursorStmt(Cursor)))
+    return S->isVolatile();
+  return 0;
+}
+
+//===----------------------------------------------------------------------===//
 // Operations for querying linkage of a cursor.
 //===----------------------------------------------------------------------===//
 
@@ -8872,9 +8965,8 @@ static void getCursorPlatformAvailabilityForDecl(
         return LHS->getPlatform()->getName() < RHS->getPlatform()->getName();
       });
   ASTContext &Ctx = D->getASTContext();
-  auto It = std::unique(
-      AvailabilityAttrs.begin(), AvailabilityAttrs.end(),
-      [&Ctx](AvailabilityAttr *LHS, AvailabilityAttr *RHS) {
+  auto It = llvm::unique(
+      AvailabilityAttrs, [&Ctx](AvailabilityAttr *LHS, AvailabilityAttr *RHS) {
         if (LHS->getPlatform() != RHS->getPlatform())
           return false;
 
@@ -9211,32 +9303,13 @@ unsigned clang_Cursor_isExternalSymbol(CXCursor C, CXString *language,
 }
 
 enum CX_BinaryOperatorKind clang_Cursor_getBinaryOpcode(CXCursor C) {
-  if (C.kind != CXCursor_BinaryOperator &&
-      C.kind != CXCursor_CompoundAssignOperator) {
-    return CX_BO_Invalid;
-  }
-
-  const Expr *D = getCursorExpr(C);
-  if (const auto *BinOp = dyn_cast<BinaryOperator>(D)) {
-    switch (BinOp->getOpcode()) {
-#define BINARY_OPERATION(Name, Spelling)                                       \
-  case BO_##Name:                                                              \
-    return CX_BO_##Name;
-#include "clang/AST/OperationKinds.def"
-    }
-  }
-
-  return CX_BO_Invalid;
+  return static_cast<CX_BinaryOperatorKind>(
+      clang_getCursorBinaryOperatorKind(C));
 }
 
 CXString clang_Cursor_getBinaryOpcodeStr(enum CX_BinaryOperatorKind Op) {
-  if (Op > CX_BO_LAST)
-    return cxstring::createEmpty();
-
-  return cxstring::createDup(
-      // BinaryOperator::getOpcodeStr has no case for CX_BO_Invalid,
-      // so subtract 1
-      BinaryOperator::getOpcodeStr(static_cast<BinaryOperatorKind>(Op - 1)));
+  return clang_getBinaryOperatorKindSpelling(
+      static_cast<CXBinaryOperatorKind>(Op));
 }
 
 CXSourceRange clang_Cursor_getCommentRange(CXCursor C) {
@@ -10111,7 +10184,10 @@ cxindex::Logger::~Logger() {
 }
 
 CXString clang_getBinaryOperatorKindSpelling(enum CXBinaryOperatorKind kind) {
-  return cxstring::createRef(
+  if (kind > CXBinaryOperator_Last)
+    return cxstring::createEmpty();
+
+  return cxstring::createDup(
       BinaryOperator::getOpcodeStr(static_cast<BinaryOperatorKind>(kind - 1)));
 }
 

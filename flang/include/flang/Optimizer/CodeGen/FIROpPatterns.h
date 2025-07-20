@@ -173,6 +173,10 @@ protected:
         this->getTypeConverter());
   }
 
+  const mlir::DataLayout &getDataLayout() const {
+    return lowerTy().getDataLayout();
+  }
+
   void attachTBAATag(mlir::LLVM::AliasAnalysisOpInterface op,
                      mlir::Type baseFIRType, mlir::Type accessFIRType,
                      mlir::LLVM::GEPOp gep) const {
@@ -184,6 +188,9 @@ protected:
 
   unsigned
   getProgramAddressSpace(mlir::ConversionPatternRewriter &rewriter) const;
+
+  unsigned
+  getGlobalAddressSpace(mlir::ConversionPatternRewriter &rewriter) const;
 
   const fir::FIRToLLVMPassOptions &options;
 

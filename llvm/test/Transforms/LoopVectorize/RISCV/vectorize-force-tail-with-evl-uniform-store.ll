@@ -13,21 +13,16 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[CMP1_PEEL:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP1_PEEL]], i64 2, i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 3, [[SPEC_SELECT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 -1, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], [[TMP7]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 2
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[SPEC_SELECT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -39,7 +34,8 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 0, [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 1, [[TMP15]]
+; CHECK-NEXT:    [[TMP23:%.*]] = sub i64 [[TMP15]], 1
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 -1, [[TMP23]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[ARRAYIDX13]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[TMP18]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[VP_REVERSE:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
@@ -50,9 +46,9 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ [[SPEC_SELECT]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[SPEC_SELECT]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -61,7 +57,7 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    store i64 0, ptr [[ARRAYIDX14]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 3
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

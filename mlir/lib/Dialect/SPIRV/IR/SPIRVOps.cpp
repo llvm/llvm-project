@@ -23,7 +23,6 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
@@ -35,10 +34,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <cassert>
 #include <numeric>
 #include <optional>
-#include <type_traits>
 
 using namespace mlir;
 using namespace mlir::spirv::AttrNames;
@@ -546,6 +545,12 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
       return failure();
   }
 
+  if (llvm::isa<TensorArmType>(type)) {
+    if (parser.parseOptionalColon().succeeded())
+      if (parser.parseType(type))
+        return failure();
+  }
+
   return parser.addTypeToList(type, result.types);
 }
 
@@ -557,6 +562,13 @@ void spirv::ConstantOp::print(OpAsmPrinter &printer) {
 
 static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
                                         Type opType) {
+  if (isa<spirv::CooperativeMatrixType>(opType)) {
+    auto denseAttr = dyn_cast<DenseElementsAttr>(value);
+    if (!denseAttr || !denseAttr.isSplat())
+      return op.emitOpError("expected a splat dense attribute for cooperative "
+                            "matrix constant, but found ")
+             << denseAttr;
+  }
   if (llvm::isa<IntegerAttr, FloatAttr>(value)) {
     auto valueType = llvm::cast<TypedAttr>(value).getType();
     if (valueType != opType)
@@ -752,6 +764,44 @@ void mlir::spirv::AddressOfOp::getAsmResultNames(
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.EXTConstantCompositeReplicate
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
+  Type valueType;
+  if (auto typedAttr = dyn_cast<TypedAttr>(getValue())) {
+    valueType = typedAttr.getType();
+  } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
+    auto typedElemAttr = dyn_cast<TypedAttr>(arrayAttr[0]);
+    if (!typedElemAttr)
+      return emitError("value attribute is not typed");
+    valueType =
+        spirv::ArrayType::get(typedElemAttr.getType(), arrayAttr.size());
+  } else {
+    return emitError("unknown value attribute type");
+  }
+
+  auto compositeType = dyn_cast<spirv::CompositeType>(getType());
+  if (!compositeType)
+    return emitError("result type is not a composite type");
+
+  Type compositeElementType = compositeType.getElementType(0);
+
+  SmallVector<Type, 3> possibleTypes = {compositeElementType};
+  while (auto type = dyn_cast<spirv::CompositeType>(compositeElementType)) {
+    compositeElementType = type.getElementType(0);
+    possibleTypes.push_back(compositeElementType);
+  }
+
+  if (!is_contained(possibleTypes, valueType)) {
+    return emitError("expected value attribute type ")
+           << interleaved(possibleTypes, " or ") << ", but got: " << valueType;
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.ControlBarrierOp
 //===----------------------------------------------------------------------===//
 
@@ -775,8 +825,6 @@ void spirv::EntryPointOp::build(OpBuilder &builder, OperationState &state,
 ParseResult spirv::EntryPointOp::parse(OpAsmParser &parser,
                                        OperationState &result) {
   spirv::ExecutionModel execModel;
-  SmallVector<OpAsmParser::UnresolvedOperand, 0> identifiers;
-  SmallVector<Type, 0> idTypes;
   SmallVector<Attribute, 4> interfaceVars;
 
   FlatSymbolRefAttr fn;
@@ -807,10 +855,8 @@ void spirv::EntryPointOp::print(OpAsmPrinter &printer) {
   printer << " \"" << stringifyExecutionModel(getExecutionModel()) << "\" ";
   printer.printSymbolName(getFn());
   auto interfaceVars = getInterface().getValue();
-  if (!interfaceVars.empty()) {
-    printer << ", ";
-    llvm::interleaveComma(interfaceVars, printer);
-  }
+  if (!interfaceVars.empty())
+    printer << ", " << llvm::interleaved(interfaceVars);
 }
 
 LogicalResult spirv::EntryPointOp::verify() {
@@ -862,13 +908,9 @@ void spirv::ExecutionModeOp::print(OpAsmPrinter &printer) {
   printer << " ";
   printer.printSymbolName(getFn());
   printer << " \"" << stringifyExecutionMode(getExecutionMode()) << "\"";
-  auto values = this->getValues();
-  if (values.empty())
-    return;
-  printer << ", ";
-  llvm::interleaveComma(values, printer, [&](Attribute a) {
-    printer << llvm::cast<IntegerAttr>(a).getInt();
-  });
+  ArrayAttr values = this->getValues();
+  if (!values.empty())
+    printer << ", " << llvm::interleaved(values.getAsValueRange<IntegerAttr>());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1021,6 +1063,24 @@ LogicalResult spirv::FuncOp::verifyType() {
 
 LogicalResult spirv::FuncOp::verifyBody() {
   FunctionType fnType = getFunctionType();
+  if (!isExternal()) {
+    Block &entryBlock = front();
+
+    unsigned numArguments = this->getNumArguments();
+    if (entryBlock.getNumArguments() != numArguments)
+      return emitOpError("entry block must have ")
+             << numArguments << " arguments to match function signature";
+
+    for (auto [index, fnArgType, blockArgType] :
+         llvm::enumerate(getArgumentTypes(), entryBlock.getArgumentTypes())) {
+      if (blockArgType != fnArgType) {
+        return emitOpError("type of entry block argument #")
+               << index << '(' << blockArgType
+               << ") must match the type of the corresponding argument in "
+               << "function signature(" << fnArgType << ')';
+      }
+    }
+  }
 
   auto walkResult = walk([fnType](Operation *op) -> WalkResult {
     if (auto retOp = dyn_cast<spirv::ReturnOp>(op)) {
@@ -1806,13 +1866,8 @@ ParseResult spirv::SpecConstantCompositeOp::parse(OpAsmParser &parser,
 void spirv::SpecConstantCompositeOp::print(OpAsmPrinter &printer) {
   printer << " ";
   printer.printSymbolName(getSymName());
-  printer << " (";
-  auto constituents = this->getConstituents().getValue();
-
-  if (!constituents.empty())
-    llvm::interleaveComma(constituents, printer);
-
-  printer << ") : " << getType();
+  printer << " (" << llvm::interleaved(this->getConstituents().getValue())
+          << ") : " << getType();
 }
 
 LogicalResult spirv::SpecConstantCompositeOp::verify() {
@@ -1843,6 +1898,69 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
              << cType.getElementType(index) << ", but provided "
              << constituentSpecConstOp.getDefaultValue().getType();
   }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.EXTSpecConstantCompositeReplicateOp
+//===----------------------------------------------------------------------===//
+
+ParseResult
+spirv::EXTSpecConstantCompositeReplicateOp::parse(OpAsmParser &parser,
+                                                  OperationState &result) {
+  StringAttr compositeName;
+  FlatSymbolRefAttr specConstRef;
+  const char *attrName = "spec_const";
+  NamedAttrList attrs;
+  Type type;
+
+  if (parser.parseSymbolName(compositeName, SymbolTable::getSymbolAttrName(),
+                             result.attributes) ||
+      parser.parseLParen() ||
+      parser.parseAttribute(specConstRef, Type(), attrName, attrs) ||
+      parser.parseRParen() || parser.parseColonType(type))
+    return failure();
+
+  StringAttr compositeSpecConstituentName =
+      spirv::EXTSpecConstantCompositeReplicateOp::getConstituentAttrName(
+          result.name);
+  result.addAttribute(compositeSpecConstituentName, specConstRef);
+
+  StringAttr typeAttrName =
+      spirv::EXTSpecConstantCompositeReplicateOp::getTypeAttrName(result.name);
+  result.addAttribute(typeAttrName, TypeAttr::get(type));
+
+  return success();
+}
+
+void spirv::EXTSpecConstantCompositeReplicateOp::print(OpAsmPrinter &printer) {
+  printer << " ";
+  printer.printSymbolName(getSymName());
+  printer << " (" << this->getConstituent() << ") : " << getType();
+}
+
+LogicalResult spirv::EXTSpecConstantCompositeReplicateOp::verify() {
+  auto compositeType = dyn_cast<spirv::CompositeType>(getType());
+  if (!compositeType)
+    return emitError("result type must be a composite type, but provided ")
+           << getType();
+
+  Operation *constituentOp = SymbolTable::lookupNearestSymbolFrom(
+      (*this)->getParentOp(), this->getConstituent());
+  if (!constituentOp)
+    return emitError(
+        "splat spec constant reference defining constituent not found");
+
+  auto constituentSpecConstOp = dyn_cast<spirv::SpecConstantOp>(constituentOp);
+  if (!constituentSpecConstOp)
+    return emitError("constituent is not a spec constant");
+
+  Type constituentType = constituentSpecConstOp.getDefaultValue().getType();
+  Type compositeElementType = compositeType.getElementType(0);
+  if (constituentType != compositeElementType)
+    return emitError("constituent has incorrect type: expected ")
+           << compositeElementType << ", but provided " << constituentType;
 
   return success();
 }

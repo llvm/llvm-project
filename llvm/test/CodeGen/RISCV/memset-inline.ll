@@ -138,7 +138,7 @@ define void @memset_8(ptr %a, i8 %value) nounwind {
 ; RV64-FAST:       # %bb.0:
 ; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    lui a2, 4112
-; RV64-FAST-NEXT:    addiw a2, a2, 257
+; RV64-FAST-NEXT:    addi a2, a2, 257
 ; RV64-FAST-NEXT:    slli a3, a2, 32
 ; RV64-FAST-NEXT:    add a2, a2, a3
 ; RV64-FAST-NEXT:    mul a1, a1, a2
@@ -205,7 +205,7 @@ define void @memset_16(ptr %a, i8 %value) nounwind {
 ; RV64-FAST:       # %bb.0:
 ; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    lui a2, 4112
-; RV64-FAST-NEXT:    addiw a2, a2, 257
+; RV64-FAST-NEXT:    addi a2, a2, 257
 ; RV64-FAST-NEXT:    slli a3, a2, 32
 ; RV64-FAST-NEXT:    add a2, a2, a3
 ; RV64-FAST-NEXT:    mul a1, a1, a2
@@ -309,7 +309,7 @@ define void @memset_32(ptr %a, i8 %value) nounwind {
 ; RV64-FAST:       # %bb.0:
 ; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    lui a2, 4112
-; RV64-FAST-NEXT:    addiw a2, a2, 257
+; RV64-FAST-NEXT:    addi a2, a2, 257
 ; RV64-FAST-NEXT:    slli a3, a2, 32
 ; RV64-FAST-NEXT:    add a2, a2, a3
 ; RV64-FAST-NEXT:    mul a1, a1, a2
@@ -487,7 +487,7 @@ define void @memset_64(ptr %a, i8 %value) nounwind {
 ; RV64-FAST:       # %bb.0:
 ; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    lui a2, 4112
-; RV64-FAST-NEXT:    addiw a2, a2, 257
+; RV64-FAST-NEXT:    addi a2, a2, 257
 ; RV64-FAST-NEXT:    slli a3, a2, 32
 ; RV64-FAST-NEXT:    add a2, a2, a3
 ; RV64-FAST-NEXT:    mul a1, a1, a2
@@ -564,7 +564,7 @@ define void @aligned_memset_8(ptr align 8 %a, i8 %value) nounwind {
 ; RV64-BOTH:       # %bb.0:
 ; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    lui a2, 4112
-; RV64-BOTH-NEXT:    addiw a2, a2, 257
+; RV64-BOTH-NEXT:    addi a2, a2, 257
 ; RV64-BOTH-NEXT:    slli a3, a2, 32
 ; RV64-BOTH-NEXT:    add a2, a2, a3
 ; RV64-BOTH-NEXT:    mul a1, a1, a2
@@ -591,7 +591,7 @@ define void @aligned_memset_16(ptr align 16 %a, i8 %value) nounwind {
 ; RV64-BOTH:       # %bb.0:
 ; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    lui a2, 4112
-; RV64-BOTH-NEXT:    addiw a2, a2, 257
+; RV64-BOTH-NEXT:    addi a2, a2, 257
 ; RV64-BOTH-NEXT:    slli a3, a2, 32
 ; RV64-BOTH-NEXT:    add a2, a2, a3
 ; RV64-BOTH-NEXT:    mul a1, a1, a2
@@ -623,7 +623,7 @@ define void @aligned_memset_32(ptr align 32 %a, i8 %value) nounwind {
 ; RV64-BOTH:       # %bb.0:
 ; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    lui a2, 4112
-; RV64-BOTH-NEXT:    addiw a2, a2, 257
+; RV64-BOTH-NEXT:    addi a2, a2, 257
 ; RV64-BOTH-NEXT:    slli a3, a2, 32
 ; RV64-BOTH-NEXT:    add a2, a2, a3
 ; RV64-BOTH-NEXT:    mul a1, a1, a2
@@ -665,7 +665,7 @@ define void @aligned_memset_64(ptr align 64 %a, i8 %value) nounwind {
 ; RV64-BOTH:       # %bb.0:
 ; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    lui a2, 4112
-; RV64-BOTH-NEXT:    addiw a2, a2, 257
+; RV64-BOTH-NEXT:    addi a2, a2, 257
 ; RV64-BOTH-NEXT:    slli a3, a2, 32
 ; RV64-BOTH-NEXT:    add a2, a2, a3
 ; RV64-BOTH-NEXT:    mul a1, a1, a2

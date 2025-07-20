@@ -1,0 +1,38 @@
+
+// RUN: llvm-profdata merge %S/Inputs/branch-templates.proftext -o %t.profdata
+// RUN: llvm-cov export --format=lcov --unify-instantiations=true %S/Inputs/branch-templates.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=UNIFY
+
+// UNIFY-DAG: BRDA:14,0,0,1
+// UNIFY-DAG: BRDA:14,0,1,2
+// UNIFY-DAG: BRDA:30,0,0,1
+// UNIFY-DAG: BRDA:30,0,1,0
+// UNIFY-DAG: BRDA:32,0,0,0
+// UNIFY-DAG: BRDA:32,0,1,1
+// UNIFY-DAG: BRDA:34,0,0,1
+// UNIFY-DAG: BRDA:34,0,1,0
+// UNIFY-NOT: BRDA
+// UNIFY: BRF:8
+// UNIFY: BRH:4
+// UNIFY: LF:17
+// UNIFY: LH:13
+
+// RUN: llvm-profdata merge %S/Inputs/branch-templates.proftext -o %t.profdata
+// RUN: llvm-cov export --format=lcov --unify-instantiations=false %S/Inputs/branch-templates.o32l -instr-profile %t.profdata | FileCheck %s
+
+// CHECK-DAG: BRDA:14,0,0,0
+// CHECK-DAG: BRDA:14,0,1,1
+// CHECK-DAG: BRDA:14,1,2,1
+// CHECK-DAG: BRDA:14,1,3,0
+// CHECK-DAG: BRDA:14,2,4,0
+// CHECK-DAG: BRDA:14,2,5,1
+// CHECK-DAG: BRDA:30,0,0,1
+// CHECK-DAG: BRDA:30,0,1,0
+// CHECK-DAG: BRDA:32,0,0,0
+// CHECK-DAG: BRDA:32,0,1,1
+// CHECK-DAG: BRDA:34,0,0,1
+// CHECK-DAG: BRDA:34,0,1,0
+// CHECK-NOT: BRDA
+// CHECK: BRF:8
+// CHECK: BRH:4
+// CHECK: LF:17
+// CHECK: LH:13

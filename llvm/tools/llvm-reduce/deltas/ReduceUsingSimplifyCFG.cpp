@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceUsingSimplifyCFG.h"
+#include "Utils.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -35,26 +36,33 @@ void llvm::reduceUsingSimplifyCFGDeltaPass(Oracle &O,
 static void reduceConditionals(Oracle &O, ReducerWorkItem &WorkItem,
                                bool Direction) {
   Module &M = WorkItem.getModule();
-  SmallVector<BasicBlock *, 16> ToSimplify;
 
-  for (auto &F : M) {
+  LLVMContext &Ctx = M.getContext();
+  ConstantInt *ConstValToSet =
+      Direction ? ConstantInt::getTrue(Ctx) : ConstantInt::getFalse(Ctx);
+
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    SmallVector<BasicBlock *, 16> ToSimplify;
+
     for (auto &BB : F) {
       auto *BR = dyn_cast<BranchInst>(BB.getTerminator());
-      if (!BR || !BR->isConditional() || O.shouldKeep())
+      if (!BR || !BR->isConditional() || BR->getCondition() == ConstValToSet ||
+          O.shouldKeep())
         continue;
 
-      if (Direction)
-        BR->setCondition(ConstantInt::getTrue(BR->getContext()));
-      else
-        BR->setCondition(ConstantInt::getFalse(BR->getContext()));
-
+      BR->setCondition(ConstValToSet);
       ToSimplify.push_back(&BB);
     }
-  }
 
-  TargetTransformInfo TTI(M.getDataLayout());
-  for (auto *BB : ToSimplify)
-    simplifyCFG(BB, TTI);
+    if (!ToSimplify.empty()) {
+      // TODO: Should probably leave MergeBlockIntoPredecessor for a separate
+      // reduction
+      simpleSimplifyCFG(F, ToSimplify);
+    }
+  }
 }
 
 void llvm::reduceConditionalsTrueDeltaPass(Oracle &O,

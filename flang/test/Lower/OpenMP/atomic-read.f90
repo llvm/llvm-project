@@ -4,7 +4,7 @@
 
 ! This test checks the lowering of atomic read
 
-!CHECK: func @_QQmain() attributes {fir.bindc_name = "ompatomic"} {
+!CHECK: func @_QQmain() attributes {fir.bindc_name = "OMPATOMIC"} {
 !CHECK:    %[[A_REF:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFEa"}
 !CHECK:    %[[A_DECL:.*]]:2 = hlfir.declare %[[A_REF]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[B_REF:.*]] = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFEb"}
@@ -60,7 +60,7 @@ end program OmpAtomic
 
 !CHECK-LABEL: func.func @_QPatomic_read_pointer() {
 !CHECK:    %[[X_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "x", uniq_name = "_QFatomic_read_pointerEx"}
-!CHECK:    fir.store %2 to %0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK:    fir.store %{{.*}} to %[[X_REF]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK:    %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFatomic_read_pointerEx"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !CHECK:    %[[Y_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "y", uniq_name = "_QFatomic_read_pointerEy"}
 !CHECK:    %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFatomic_read_pointerEy"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)

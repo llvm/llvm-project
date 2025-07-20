@@ -38,6 +38,8 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
+#include "flang/Optimizer/OpenMP/Support/RegisterOpenMPExtensions.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -61,13 +63,14 @@ private:
   static constexpr llvm::StringRef bufferName = ".repacked";
 
   // Return value of fir::BaseBoxType that represents a temporary
-  // array created for the original box with given extents and
-  // type parameters. The new box has the default lower bounds.
-  // If useStack is true, then the temporary will be allocated
+  // array created for the original box with given lbounds/extents and
+  // type parameters. The new box has the same shape as the original
+  // array. If useStack is true, then the temporary will be allocated
   // in stack memory (when possible).
   static mlir::Value allocateTempBuffer(fir::FirOpBuilder &builder,
                                         mlir::Location loc, bool useStack,
                                         mlir::Value origBox,
+                                        llvm::ArrayRef<mlir::Value> lbounds,
                                         llvm::ArrayRef<mlir::Value> extents,
                                         llvm::ArrayRef<mlir::Value> typeParams);
 
@@ -97,7 +100,9 @@ public:
 // the presence of the stack attribute does not automatically
 // mean that the allocation is actually done in stack memory.
 // For example, we always do the heap allocation for polymorphic
-// types using Fortran runtime.
+// types using Fortran runtime. Currently, we allocate all
+// repack temporaries of derived types as polymorphic,
+// so that we can preserve the dynamic type of the original.
 // Adding the polymorpic mold to fir.alloca and then using
 // Fortran runtime to compute the allocation size could probably
 // resolve this limitation.
@@ -105,9 +110,37 @@ static bool canAllocateTempOnStack(mlir::Value box) {
   return !fir::isPolymorphicType(box.getType());
 }
 
+/// Return true if array repacking is safe either statically
+/// (there are no 'is_safe' attributes) or dynamically
+/// (neither of the 'is_safe' attributes claims 'isDynamicallySafe() == false').
+/// \p op is either fir.pack_array or fir.unpack_array.
+template <typename OP>
+static bool repackIsSafe(OP op) {
+  bool isSafe = true;
+  if (auto isSafeAttrs = op.getIsSafe()) {
+    // We currently support only the attributes for which
+    // isDynamicallySafe() returns false.
+    for (auto attr : *isSafeAttrs) {
+      auto iface = mlir::cast<fir::SafeTempArrayCopyAttrInterface>(attr);
+      if (iface.isDynamicallySafe())
+        TODO(op.getLoc(), "dynamically safe array repacking");
+      else
+        isSafe = false;
+    }
+  }
+  return isSafe;
+}
+
 mlir::LogicalResult
 PackArrayConversion::matchAndRewrite(fir::PackArrayOp op,
                                      mlir::PatternRewriter &rewriter) const {
+  mlir::Value box = op.getArray();
+  // If repacking is not safe, then just use the original box.
+  if (!repackIsSafe(op)) {
+    rewriter.replaceOp(op, box);
+    return mlir::success();
+  }
+
   mlir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, op.getOperation());
   if (op.getMaxSize() || op.getMaxElementSize() || op.getMinStride())
@@ -115,7 +148,6 @@ PackArrayConversion::matchAndRewrite(fir::PackArrayOp op,
   if (op.getHeuristics() != fir::PackArrayHeuristics::None)
     TODO(loc, "fir.pack_array with heuristics");
 
-  mlir::Value box = op.getArray();
   auto boxType = mlir::cast<fir::BaseBoxType>(box.getType());
 
   // For now we have to always check if the box is present.
@@ -141,7 +173,8 @@ PackArrayConversion::matchAndRewrite(fir::PackArrayOp op,
 
 mlir::Value PackArrayConversion::allocateTempBuffer(
     fir::FirOpBuilder &builder, mlir::Location loc, bool useStack,
-    mlir::Value origBox, llvm::ArrayRef<mlir::Value> extents,
+    mlir::Value origBox, llvm::ArrayRef<mlir::Value> lbounds,
+    llvm::ArrayRef<mlir::Value> extents,
     llvm::ArrayRef<mlir::Value> typeParams) {
   auto tempType = mlir::cast<fir::SequenceType>(
       fir::extractSequenceType(origBox.getType()));
@@ -161,19 +194,36 @@ mlir::Value PackArrayConversion::allocateTempBuffer(
   if (useStack && canAllocateTempOnStack(origBox))
     assert(!isHeapAllocation && "temp must have been allocated on the stack");
 
-  if (isHeapAllocation)
-    if (auto baseType = mlir::dyn_cast<fir::ReferenceType>(base.getType()))
-      if (mlir::isa<fir::BaseBoxType>(baseType.getEleTy()))
-        return builder.create<fir::LoadOp>(loc, base);
-
   mlir::Type ptrType = base.getType();
-  mlir::Type tempBoxType = fir::BoxType::get(mlir::isa<fir::HeapType>(ptrType)
-                                                 ? ptrType
-                                                 : fir::unwrapRefType(ptrType));
+  if (auto tempBoxType = mlir::dyn_cast<fir::BaseBoxType>(ptrType)) {
+    // We need to reset the CFI_attribute_allocatable before
+    // returning the temporary box to avoid any mishandling
+    // of the temporary box in Fortran runtime.
+    base = builder.create<fir::BoxAddrOp>(loc, fir::boxMemRefType(tempBoxType),
+                                          base);
+    ptrType = base.getType();
+  }
+
+  // Create the temporary using dynamic type of the original,
+  // if it is polymorphic, or it has a derived type with SEQUENCE
+  // or BIND attribute (such dummy arguments may have their dynamic
+  // type not exactly matching their static type).
+  // Note that for the latter case, the allocation can still be done
+  // without the mold, because the dynamic and static types
+  // must be storage compatible.
+  bool useDynamicType = fir::isBoxedRecordType(origBox.getType()) ||
+                        fir::isPolymorphicType(origBox.getType());
+  mlir::Type tempBoxType =
+      fir::wrapInClassOrBoxType(fir::unwrapRefType(ptrType),
+                                /*isPolymorphic=*/useDynamicType);
+  // Use the shape with proper lower bounds for the final box.
+  shape = builder.genShape(loc, lbounds, extents);
   mlir::Value newBox =
       builder.createBox(loc, tempBoxType, base, shape, /*slice=*/nullptr,
-                        typeParams, /*tdesc=*/nullptr);
-  return newBox;
+                        typeParams, useDynamicType ? origBox : nullptr);
+  // The new box might be !fir.class, while the original might be
+  // !fir.box - we have to add a conversion.
+  return builder.createConvert(loc, origBox.getType(), newBox);
 }
 
 mlir::FailureOr<mlir::Value>
@@ -181,6 +231,7 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
                                     mlir::Location loc, fir::PackArrayOp op) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   mlir::Value box = op.getArray();
+
   llvm::SmallVector<mlir::Value> typeParams(op.getTypeparams().begin(),
                                             op.getTypeparams().end());
   auto boxType = mlir::cast<fir::BaseBoxType>(box.getType());
@@ -222,6 +273,8 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
 
   fir::IfOp ifOp =
       builder.create<fir::IfOp>(loc, boxType, doPack, /*withElseRegion=*/true);
+  // Assume that the repacking is unlikely.
+  ifOp.setUnlikelyIfWeights();
 
   // Return original box.
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
@@ -250,16 +303,11 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
                             << op.getOperation() << '\n';
   }
 
-  mlir::Value tempBox =
-      allocateTempBuffer(builder, loc, op.getStack(), box, extents, typeParams);
+  mlir::Value tempBox = allocateTempBuffer(builder, loc, op.getStack(), box,
+                                           lbounds, extents, typeParams);
   if (!op.getNoCopy())
     fir::runtime::genShallowCopy(builder, loc, tempBox, box,
                                  /*resultIsAllocated=*/true);
-
-  // Set lower bounds after the original box.
-  mlir::Value shift = builder.genShift(loc, lbounds);
-  tempBox = builder.create<fir::ReboxOp>(loc, boxType, tempBox, shift,
-                                         /*slice=*/nullptr);
   builder.create<fir::ResultOp>(loc, tempBox);
 
   return ifOp.getResult(0);
@@ -268,6 +316,12 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
 mlir::LogicalResult
 UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
                                        mlir::PatternRewriter &rewriter) const {
+  // If repacking is not safe, then just remove the operation.
+  if (!repackIsSafe(op)) {
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+
   mlir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, op.getOperation());
   mlir::Type predicateType = builder.getI1Type();
@@ -288,20 +342,24 @@ UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
 
     auto isNotSame = builder.genPtrCompare(loc, mlir::arith::CmpIPredicate::ne,
                                            tempAddr, originalAddr);
-    builder.genIfThen(loc, isNotSame).genThen([&]() {});
-    // Copy from temporary to the original.
-    if (!op.getNoCopy())
-      fir::runtime::genShallowCopy(builder, loc, originalBox, tempBox,
-                                   /*resultIsAllocated=*/true);
+    builder.genIfThen(loc, isNotSame)
+        .genThen([&]() {
+          // Copy from temporary to the original.
+          if (!op.getNoCopy())
+            fir::runtime::genShallowCopy(builder, loc, originalBox, tempBox,
+                                         /*resultIsAllocated=*/true);
 
-    // Deallocate, if it was allocated in heap.
-    // Note that the stack attribute does not always mean
-    // that the allocation was actually done in stack memory.
-    // There are currently cases where we delegate the allocation
-    // to the runtime that uses heap memory, even when the stack
-    // attribute is set on fir.pack_array.
-    if (!op.getStack() || !canAllocateTempOnStack(originalBox))
-      builder.create<fir::FreeMemOp>(loc, tempAddr);
+          // Deallocate, if it was allocated in heap.
+          // Note that the stack attribute does not always mean
+          // that the allocation was actually done in stack memory.
+          // There are currently cases where we delegate the allocation
+          // to the runtime that uses heap memory, even when the stack
+          // attribute is set on fir.pack_array.
+          if (!op.getStack() || !canAllocateTempOnStack(originalBox))
+            builder.create<fir::FreeMemOp>(loc, tempAddr);
+        })
+        .getIfOp()
+        .setUnlikelyIfWeights();
   });
   rewriter.eraseOp(op);
   return mlir::success();
@@ -321,9 +379,14 @@ public:
     patterns.insert<PackArrayConversion>(context);
     patterns.insert<UnpackArrayConversion>(context);
     mlir::GreedyRewriteConfig config;
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
     (void)applyPatternsGreedily(module, std::move(patterns), config);
+  }
+
+  void getDependentDialects(mlir::DialectRegistry &registry) const override {
+    fir::acc::registerTransformationalAttrsDependentDialects(registry);
+    fir::omp::registerTransformationalAttrsDependentDialects(registry);
   }
 };
 

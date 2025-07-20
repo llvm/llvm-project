@@ -25,11 +25,12 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-void test() {
+template <template <class...> class KeyContainer>
+constexpr void test() {
   {
     using C = test_less<int>;
     using A = test_allocator<int>;
-    using M = std::flat_set<int, C, std::deque<int, A>>;
+    using M = std::flat_set<int, C, KeyContainer<int, A>>;
     M mo    = M({1, 2, 3}, C(5), A(7));
     M m     = std::move(mo);
     assert((m == M{1, 2, 3}));
@@ -43,7 +44,7 @@ void test() {
   {
     using C = test_less<int>;
     using A = min_allocator<int>;
-    using M = std::flat_set<int, C, std::vector<int, A>>;
+    using M = std::flat_set<int, C, KeyContainer<int, A>>;
     M mo    = M({1, 2, 3}, C(5), A());
     M m     = std::move(mo);
     assert((m == M{1, 2, 3}));
@@ -54,9 +55,9 @@ void test() {
     assert(mo.key_comp() == C(5));
     assert(std::move(mo).extract().get_allocator() == A());
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // A moved-from flat_set maintains its class invariant in the presence of moved-from comparators.
-    using M = std::flat_set<int, std::function<bool(int, int)>>;
+    using M = std::flat_set<int, std::function<bool(int, int)>, KeyContainer<int>>;
     M mo    = M({1, 2, 3}, std::less<int>());
     M m     = std::move(mo);
     assert(m.size() == 3);
@@ -86,47 +87,35 @@ struct ThrowingMoveAllocator {
   using value_type                                    = T;
   explicit ThrowingMoveAllocator()                    = default;
   ThrowingMoveAllocator(const ThrowingMoveAllocator&) = default;
-  ThrowingMoveAllocator(ThrowingMoveAllocator&&) noexcept(false) {}
-  T* allocate(std::ptrdiff_t n) { return std::allocator<T>().allocate(n); }
-  void deallocate(T* p, std::ptrdiff_t n) { return std::allocator<T>().deallocate(p, n); }
+  constexpr ThrowingMoveAllocator(ThrowingMoveAllocator&&) noexcept(false) {}
+  constexpr T* allocate(std::ptrdiff_t n) { return std::allocator<T>().allocate(n); }
+  constexpr void deallocate(T* p, std::ptrdiff_t n) { return std::allocator<T>().deallocate(p, n); }
   friend bool operator==(ThrowingMoveAllocator, ThrowingMoveAllocator) = default;
 };
 
 struct ThrowingMoveComp {
   ThrowingMoveComp() = default;
-  ThrowingMoveComp(const ThrowingMoveComp&) noexcept(true) {}
-  ThrowingMoveComp(ThrowingMoveComp&&) noexcept(false) {}
-  bool operator()(const auto&, const auto&) const { return false; }
+  constexpr ThrowingMoveComp(const ThrowingMoveComp&) noexcept(true) {}
+  constexpr ThrowingMoveComp(ThrowingMoveComp&&) noexcept(false) {}
+  constexpr bool operator()(const auto&, const auto&) const { return false; }
 };
 
-struct MoveSensitiveComp {
-  MoveSensitiveComp() noexcept(false)                  = default;
-  MoveSensitiveComp(const MoveSensitiveComp&) noexcept = default;
-  MoveSensitiveComp(MoveSensitiveComp&& rhs) { rhs.is_moved_from_ = true; }
-  MoveSensitiveComp& operator=(const MoveSensitiveComp&) noexcept(false) = default;
-  MoveSensitiveComp& operator=(MoveSensitiveComp&& rhs) {
-    rhs.is_moved_from_ = true;
-    return *this;
-  }
-  bool operator()(const auto&, const auto&) const { return false; }
-  bool is_moved_from_ = false;
-};
-
-void test_move_noexcept() {
+template <template <class...> class KeyContainer>
+constexpr void test_move_noexcept() {
   {
-    using C = std::flat_set<int>;
+    using C = std::flat_set<int, std::less<int>, KeyContainer<int>>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<C>);
     C c;
     C d = std::move(c);
   }
   {
-    using C = std::flat_set<int, std::less<int>, std::deque<int, test_allocator<int>>>;
+    using C = std::flat_set<int, std::less<int>, KeyContainer<int, test_allocator<int>>>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<C>);
     C c;
     C d = std::move(c);
   }
 #if _LIBCPP_VERSION
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
     using C = std::flat_set<int, std::less<int>, std::deque<int, ThrowingMoveAllocator<int>>>;
     static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
@@ -137,11 +126,24 @@ void test_move_noexcept() {
 #endif // _LIBCPP_VERSION
   {
     // Comparator fails to be nothrow-move-constructible
-    using C = std::flat_set<int, ThrowingMoveComp>;
+    using C = std::flat_set<int, ThrowingMoveComp, KeyContainer<int>>;
     static_assert(!std::is_nothrow_move_constructible_v<C>);
     C c;
     C d = std::move(c);
   }
+}
+
+constexpr bool test() {
+  test<std::vector>();
+  test_move_noexcept<std::vector>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque>();
+    test_move_noexcept<std::deque>();
+  }
+  return true;
 }
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
@@ -179,9 +181,11 @@ void test_move_exception() {
 
 int main(int, char**) {
   test();
-  test_move_noexcept();
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   test_move_exception();
+#endif
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

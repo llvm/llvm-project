@@ -29,8 +29,6 @@ c.lw a0, 0(a0)
 
 # CHECK-ASM: call undefined
 # CHECK-ASM-SAME: # encoding: [0x97'A',A,A,A,0xe7'A',0x80'A',A,A]
-# CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_call_plt
-# CHECK-ASM-NEXT: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
 # CHECK-OBJDUMP: auipc ra, 0
 # CHECK-OBJDUMP-NEXT: R_RISCV_CALL_PLT undefined
 # CHECK-OBJDUMP-NEXT: R_RISCV_RELAX *ABS*
@@ -39,7 +37,6 @@ call undefined@plt
 
 # CHECK-ASM: beq a0, a1, undefined
 # CHECK-ASM-SAME: # encoding: [0x63'A',A,0xb5'A',A]
-# CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_branch
 # CHECK-OBJDUMP: bne a0, a1, 0x14
 # CHECK-OBJDUMP-NEXT: jal zero, 0x10
 # CHECK-OBJDUMP-NEXT: R_RISCV_JAL undefined
@@ -47,7 +44,6 @@ beq a0, a1, undefined
 
 # CHECK-ASM: c.j undefined
 # CHECK-ASM-SAME: # encoding: [0bAAAAAA01,0b101AAAAA]
-# CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_rvc_jump
 # CHECK-OBJDUMP: jal zero, 0x14
 # CHECK-OBJDUMP-NEXT: R_RISCV_JAL undefined
 c.j undefined
@@ -67,8 +63,6 @@ c.lw a0, 0(a0)
 
 # CHECK-ASM: call undefined
 # CHECK-ASM-SAME: # encoding: [0x97'A',A,A,A,0xe7'A',0x80'A',A,A]
-# CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_call_plt
-# CHECK-ASM-NOT: fixup_riscv_relax
 # CHECK-OBJDUMP: auipc ra, 0
 # CHECK-OBJDUMP-NEXT: R_RISCV_CALL_PLT undefined
 # CHECK-OBJDUMP-NOT: R_RISCV_RELAX
@@ -77,14 +71,12 @@ call undefined@plt
 
 # CHECK-ASM: beq a0, a1, undefined
 # CHECK-ASM-SAME: # encoding: [0x63'A',A,0xb5'A',A]
-# CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_branch
 # CHECK-OBJDUMP: beq a0, a1, 0x26
 # CHECK-OBJDUMP-NEXT: R_RISCV_BRANCH undefined
 beq a0, a1, undefined
 
 # CHECK-ASM: c.j undefined
 # CHECK-ASM-SAME: # encoding: [0bAAAAAA01,0b101AAAAA]
-# CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_rvc_jump
 # CHECK-OBJDUMP: c.j 0x2a
 # CHECK-OBJDUMP-NEXT: R_RISCV_RVC_JUMP undefined
 c.j undefined
@@ -104,8 +96,6 @@ c.lw a0, 0(a0)
 
 # CHECK-ASM: call undefined
 # CHECK-ASM-SAME: # encoding: [0x97'A',A,A,A,0xe7'A',0x80'A',A,A]
-# CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_call_plt
-# CHECK-ASM-NEXT: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
 # CHECK-OBJDUMP: auipc ra, 0
 # CHECK-OBJDUMP-NEXT: R_RISCV_CALL_PLT undefined
 # CHECK-OBJDUMP-NEXT: R_RISCV_RELAX *ABS*
@@ -114,7 +104,6 @@ call undefined@plt
 
 # CHECK-ASM: beq a0, a1, undefined
 # CHECK-ASM-SAME: # encoding: [0x63'A',A,0xb5'A',A]
-# CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_branch
 # CHECK-OBJDUMP: bne a0, a1, 0x40
 # CHECK-OBJDUMP-NEXT: jal zero, 0x3c
 # CHECK-OBJDUMP-NEXT: R_RISCV_JAL undefined
@@ -122,7 +111,6 @@ beq a0, a1, undefined
 
 # CHECK-ASM: c.j undefined
 # CHECK-ASM-SAME: # encoding: [0bAAAAAA01,0b101AAAAA]
-# CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_rvc_jump
 # CHECK-OBJDUMP: jal zero, 0x40
 # CHECK-OBJDUMP-NEXT: R_RISCV_JAL undefined
 c.j undefined

@@ -38,16 +38,19 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0, // cuda_constant
     0, // cuda_shared
     // SYCL address space values for this map are dummy
-    0, // sycl_global
-    0, // sycl_global_device
-    0, // sycl_global_host
-    0, // sycl_local
-    0, // sycl_private
-    0, // ptr32_sptr
-    0, // ptr32_uptr
-    0, // ptr64
-    0, // hlsl_groupshared
-    2, // hlsl_constant
+    0,  // sycl_global
+    0,  // sycl_global_device
+    0,  // sycl_global_host
+    0,  // sycl_local
+    0,  // sycl_private
+    0,  // ptr32_sptr
+    0,  // ptr32_uptr
+    0,  // ptr64
+    3,  // hlsl_groupshared
+    12, // hlsl_constant
+    10, // hlsl_private
+    11, // hlsl_device
+    7,  // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -56,32 +59,34 @@ static const unsigned SPIRDefIsPrivMap[] = {
 // Used by both the SPIR and SPIR-V targets.
 static const unsigned SPIRDefIsGenMap[] = {
     4, // Default
-    // OpenCL address space values for this map are dummy and they can't be used
-    0, // opencl_global
-    0, // opencl_local
-    0, // opencl_constant
+    1, // opencl_global
+    3, // opencl_local
+    2, // opencl_constant
     0, // opencl_private
-    0, // opencl_generic
-    0, // opencl_global_device
-    0, // opencl_global_host
+    4, // opencl_generic
+    5, // opencl_global_device
+    6, // opencl_global_host
     // cuda_* address space mapping is intended for HIPSPV (HIP to SPIR-V
     // translation). This mapping is enabled when the language mode is HIP.
     1, // cuda_device
     // cuda_constant pointer can be casted to default/"flat" pointer, but in
     // SPIR-V casts between constant and generic pointers are not allowed. For
     // this reason cuda_constant is mapped to SPIR-V CrossWorkgroup.
-    1, // cuda_constant
-    3, // cuda_shared
-    1, // sycl_global
-    5, // sycl_global_device
-    6, // sycl_global_host
-    3, // sycl_local
-    0, // sycl_private
-    0, // ptr32_sptr
-    0, // ptr32_uptr
-    0, // ptr64
-    0, // hlsl_groupshared
-    0, // hlsl_constant
+    1,  // cuda_constant
+    3,  // cuda_shared
+    1,  // sycl_global
+    5,  // sycl_global_device
+    6,  // sycl_global_host
+    3,  // sycl_local
+    0,  // sycl_private
+    0,  // ptr32_sptr
+    0,  // ptr32_uptr
+    0,  // ptr64
+    3,  // hlsl_groupshared
+    0,  // hlsl_constant
+    10, // hlsl_private
+    11, // hlsl_device
+    7,  // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -188,7 +193,7 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_SpirFunction || CC == CC_OpenCLKernel) ? CCCR_OK
+    return (CC == CC_SpirFunction || CC == CC_DeviceKernel) ? CCCR_OK
                                                             : CCCR_Warning;
   }
 
@@ -200,8 +205,9 @@ public:
     AddrSpaceMap = DefaultIsGeneric ? &SPIRDefIsGenMap : &SPIRDefIsPrivMap;
   }
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    TargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
     // FIXME: SYCL specification considers unannotated pointers and references
     // to be pointing to the generic address space. See section 5.9.3 of
     // SYCL 2020 specification.
@@ -258,6 +264,9 @@ public:
     PointerWidth = PointerAlign = 32;
     SizeType = TargetInfo::UnsignedInt;
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+    // SPIR32 has support for atomic ops if atomic extension is enabled.
+    // Take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
     resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
                     "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
@@ -275,6 +284,9 @@ public:
     PointerWidth = PointerAlign = 64;
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+    // SPIR64 has support for atomic ops if atomic extension is enabled.
+    // Take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
                     "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
@@ -289,6 +301,8 @@ public:
       : BaseSPIRTargetInfo(Triple, Opts) {
     assert(Triple.isSPIRV() && "Invalid architecture for SPIR-V.");
   }
+
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool hasFeature(StringRef Feature) const override {
     return Feature == "spirv";
@@ -315,10 +329,8 @@ public:
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
-                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
+                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G10");
   }
-
-  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
@@ -374,6 +386,21 @@ public:
   const llvm::omp::GV &getGridValue() const override {
     return llvm::omp::SPIRVGridValues;
   }
+
+  std::optional<LangAS> getConstantAddressSpace() const override {
+    return ConstantAS;
+  }
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    BaseSPIRVTargetInfo::adjust(Diags, Opts, Aux);
+    // opencl_constant will map to UniformConstant in SPIR-V
+    if (Opts.OpenCL)
+      ConstantAS = LangAS::opencl_constant;
+  }
+
+private:
+  // opencl_global will map to CrossWorkgroup in SPIR-V
+  LangAS ConstantAS = LangAS::opencl_global;
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRV64AMDGCNTargetInfo final
@@ -427,8 +454,9 @@ public:
 
   void setAuxTarget(const TargetInfo *Aux) override;
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    TargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
   }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }

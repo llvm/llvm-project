@@ -59,7 +59,8 @@ mlir::Value fir::runtime::genCpuTime(fir::FirOpBuilder &builder,
                                      mlir::Location loc) {
   mlir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(CpuTime)>(loc, builder);
-  return builder.create<fir::CallOp>(loc, func, std::nullopt).getResult(0);
+  return builder.create<fir::CallOp>(loc, func, mlir::ValueRange{})
+      .getResult(0);
 }
 
 void fir::runtime::genDateAndTime(fir::FirOpBuilder &builder,
@@ -126,6 +127,30 @@ void fir::runtime::genFree(fir::FirOpBuilder &builder, mlir::Location loc,
 
   builder.create<fir::CallOp>(loc, runtimeFunc,
                               builder.createConvert(loc, intPtrTy, ptr));
+}
+
+mlir::Value fir::runtime::genFseek(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value unit,
+                                   mlir::Value offset, mlir::Value whence) {
+  auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Fseek)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, runtimeFuncTy, unit, offset,
+                                    whence, sourceFile, sourceLine);
+  return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
+  ;
+}
+
+mlir::Value fir::runtime::genFtell(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value unit) {
+  auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Ftell)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, runtimeFuncTy, unit);
+  return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
 }
 
 mlir::Value fir::runtime::genGetGID(fir::FirOpBuilder &builder,
@@ -250,6 +275,14 @@ void fir::runtime::genRename(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::runtime::createArguments(builder, loc, runtimeFuncTy, path1, path2,
                                     status, sourceFile, sourceLine);
   builder.create<fir::CallOp>(loc, runtimeFunc, args);
+}
+
+/// generate runtime call to time intrinsic
+mlir::Value fir::runtime::genTime(fir::FirOpBuilder &builder,
+                                  mlir::Location loc) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(time)>(loc, builder);
+  return builder.create<fir::CallOp>(loc, func, mlir::ValueRange{})
+      .getResult(0);
 }
 
 /// generate runtime call to transfer intrinsic with no size argument

@@ -163,6 +163,10 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
   } else {
     // Inf or NaN
     if (LIBC_UNLIKELY(x_e > 2 * FPBits::EXP_BIAS)) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
       // tan(+-Inf) = NaN
       if (xbits.get_mantissa() == 0) {
         fputil::set_errno_if_required(EDOM);

@@ -107,7 +107,7 @@ static cl::opt<bool> KeepFPICache(
     cl::init(false));
 
 // clang-format off
-const std::vector<TensorSpec> llvm::FeatureMap{
+std::vector<TensorSpec> llvm::FeatureMap{
 #define POPULATE_NAMES(DTYPE, SHAPE, NAME, __) TensorSpec::createSpec<DTYPE>(#NAME, SHAPE),
 // InlineCost features - these must come first
   INLINE_COST_FEATURE_ITERATOR(POPULATE_NAMES)
@@ -144,6 +144,7 @@ MLInlineAdvisor::MLInlineAdvisor(
           M, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
       ModelRunner(std::move(Runner)), GetDefaultAdvice(GetDefaultAdvice),
       CG(MAM.getResult<LazyCallGraphAnalysis>(M)),
+      UseIR2Vec(MAM.getCachedResult<IR2VecVocabAnalysis>(M) != nullptr),
       InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize),
       PSI(MAM.getResult<ProfileSummaryAnalysis>(M)) {
   assert(ModelRunner);
@@ -186,6 +187,19 @@ MLInlineAdvisor::MLInlineAdvisor(
     EdgeCount += getLocalCalls(KVP.first->getFunction());
   }
   NodeCount = AllNodes.size();
+
+  if (auto IR2VecVocabResult = MAM.getCachedResult<IR2VecVocabAnalysis>(M)) {
+    if (!IR2VecVocabResult->isValid()) {
+      M.getContext().emitError("IR2VecVocabAnalysis is not valid");
+      return;
+    }
+    // Add the IR2Vec features to the feature map
+    auto IR2VecDim = IR2VecVocabResult->getDimension();
+    FeatureMap.push_back(
+        TensorSpec::createSpec<float>("callee_embedding", {IR2VecDim}));
+    FeatureMap.push_back(
+        TensorSpec::createSpec<float>("caller_embedding", {IR2VecDim}));
+  }
 }
 
 unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
@@ -330,8 +344,7 @@ int64_t MLInlineAdvisor::getModuleIRSize() const {
 }
 
 FunctionPropertiesInfo &MLInlineAdvisor::getCachedFPI(Function &F) const {
-  auto InsertPair =
-      FPICache.insert(std::make_pair(&F, FunctionPropertiesInfo()));
+  auto InsertPair = FPICache.try_emplace(&F);
   if (!InsertPair.second)
     return InsertPair.first->second;
   InsertPair.first->second = FAM.getResult<FunctionPropertiesAnalysis>(F);
@@ -434,6 +447,22 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   *ModelRunner->getTensor<int64_t>(FeatureIndex::is_caller_avail_external) =
       Caller.hasAvailableExternallyLinkage();
 
+  if (UseIR2Vec) {
+    // Python side expects float embeddings. The IR2Vec embeddings are doubles
+    // as of now due to the restriction of fromJSON method used by the
+    // readVocabulary method in ir2vec::Embeddings.
+    auto setEmbedding = [&](const ir2vec::Embedding &Embedding,
+                            FeatureIndex Index) {
+      llvm::transform(Embedding, ModelRunner->getTensor<float>(Index),
+                      [](double Val) { return static_cast<float>(Val); });
+    };
+
+    setEmbedding(CalleeBefore.getFunctionEmbedding(),
+                 FeatureIndex::callee_embedding);
+    setEmbedding(CallerBefore.getFunctionEmbedding(),
+                 FeatureIndex::caller_embedding);
+  }
+
   // Add the cost features
   for (size_t I = 0;
        I < static_cast<size_t>(InlineCostFeatureIndex::NumberOfFeatures); ++I) {
@@ -442,8 +471,7 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   }
   // This one would have been set up to be right at the end.
   if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
-    *ModelRunner->getTensor<int64_t>(InlineCostFeatureIndex::NumberOfFeatures) =
-        GetDefaultAdvice(CB);
+    *ModelRunner->getTensor<int64_t>(FeatureMap.size()) = GetDefaultAdvice(CB);
   return getAdviceFromModel(CB, ORE);
 }
 
@@ -521,7 +549,7 @@ void MLInlineAdvice::reportContextForRemark(
     DiagnosticInfoOptimizationBase &OR) {
   using namespace ore;
   OR << NV("Callee", Callee->getName());
-  for (size_t I = 0; I < NumberOfFeatures; ++I)
+  for (size_t I = 0; I < FeatureMap.size(); ++I)
     OR << NV(FeatureMap[I].name(),
              *getAdvisor()->getModelRunner().getTensor<int64_t>(I));
   OR << NV("ShouldInline", isInliningRecommended());

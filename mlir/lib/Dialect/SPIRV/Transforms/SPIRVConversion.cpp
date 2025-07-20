@@ -25,19 +25,15 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/OneToNTypeConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 
-#include <functional>
 #include <optional>
 
 #define DEBUG_TYPE "mlir-spirv-conversion"
@@ -738,7 +734,7 @@ static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
             spirv::SPIRVDialect::getAttributeName(
                 spirv::Decoration::BuiltIn))) {
       auto varBuiltIn = spirv::symbolizeBuiltIn(builtinAttr.getValue());
-      if (varBuiltIn && *varBuiltIn == builtin) {
+      if (varBuiltIn == builtin) {
         return varOp;
       }
     }
@@ -779,7 +775,8 @@ getOrInsertBuiltinVariable(Block &body, Location loc, spirv::BuiltIn builtin,
   }
   case spirv::BuiltIn::SubgroupId:
   case spirv::BuiltIn::NumSubgroups:
-  case spirv::BuiltIn::SubgroupSize: {
+  case spirv::BuiltIn::SubgroupSize:
+  case spirv::BuiltIn::SubgroupLocalInvocationId: {
     auto ptrType =
         spirv::PointerType::get(integerType, spirv::StorageClass::Input);
     std::string name = getBuiltinVarName(builtin, prefix, suffix);
@@ -933,7 +930,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(&entryBlock);
 
-    OneToNTypeMapping oneToNTypeMapping(fnType.getInputs());
+    TypeConverter::SignatureConversion oneToNTypeMapping(
+        fnType.getInputs().size());
 
     // For arguments that are of illegal types and require unrolling.
     // `unrolledInputNums` stores the indices of arguments that result from
@@ -1019,22 +1017,22 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     SmallVector<Location> locs(convertedTypes.size(), newFuncOp.getLoc());
     entryBlock.addArguments(convertedTypes, locs);
 
-    // Replace the placeholder values with the new arguments. We assume there is
-    // only one block for now.
+    // Replace all uses of placeholders for initially legal arguments with their
+    // original function arguments (that were added to `newFuncOp`).
+    for (auto &[placeholderOp, argIdx] : tmpOps) {
+      if (!placeholderOp)
+        continue;
+      Value replacement = newFuncOp.getArgument(argIdx);
+      rewriter.replaceAllUsesWith(placeholderOp->getResult(0), replacement);
+    }
+
+    // Replace dummy operands of new `vector.insert_strided_slice` ops with
+    // their corresponding new function arguments. The new
+    // `vector.insert_strided_slice` ops are inserted only into the entry block,
+    // so iterating over that block is sufficient.
     size_t unrolledInputIdx = 0;
     for (auto [count, op] : enumerate(entryBlock.getOperations())) {
-      // We first look for operands that are placeholders for initially legal
-      // arguments.
       Operation &curOp = op;
-      for (auto [operandIdx, operandVal] : llvm::enumerate(op.getOperands())) {
-        Operation *operandOp = operandVal.getDefiningOp();
-        if (auto it = tmpOps.find(operandOp); it != tmpOps.end()) {
-          size_t idx = operandIdx;
-          rewriter.modifyOpInPlace(&curOp, [&curOp, &newFuncOp, it, idx] {
-            curOp.setOperand(idx, newFuncOp.getArgument(it->second));
-          });
-        }
-      }
       // Since all newly created operations are in the beginning, reaching the
       // end of them means that any later `vector.insert_strided_slice` should
       // not be touched.
@@ -1073,7 +1071,8 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
       return failure();
 
     FunctionType fnType = funcOp.getFunctionType();
-    OneToNTypeMapping oneToNTypeMapping(fnType.getResults());
+    TypeConverter::SignatureConversion oneToNTypeMapping(
+        fnType.getResults().size());
     Location loc = returnOp.getLoc();
 
     // For the new return op.
@@ -1352,9 +1351,9 @@ LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {
   // We only want to apply signature conversion once to the existing func ops.
   // Without specifying strictMode, the greedy pattern rewriter will keep
   // looking for newly created func ops.
-  GreedyRewriteConfig config;
-  config.strictMode = GreedyRewriteStrictness::ExistingOps;
-  return applyPatternsGreedily(op, std::move(patterns), config);
+  return applyPatternsGreedily(op, std::move(patterns),
+                               GreedyRewriteConfig().setStrictness(
+                                   GreedyRewriteStrictness::ExistingOps));
 }
 
 LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {

@@ -2,7 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX789,CI %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX789,GFX89,GFX8 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX789,GFX89,GFX9 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16 %s
 
 define i1 @i1_func_void() #0 {
 ; GFX789-LABEL: i1_func_void:
@@ -2310,17 +2311,30 @@ define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0)
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: void_func_sret_max_known_zero_bits:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    ds_store_b32 v0, v1
-; GFX11-NEXT:    ds_store_b32 v0, v0
-; GFX11-NEXT:    ds_store_b32 v0, v2
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: void_func_sret_max_known_zero_bits:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-TRUE16-NEXT:    ds_store_b32 v0, v1
+; GFX11-TRUE16-NEXT:    ds_store_b32 v0, v0
+; GFX11-TRUE16-NEXT:    ds_store_b32 v0, v2
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: void_func_sret_max_known_zero_bits:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-FAKE16-NEXT:    ds_store_b32 v0, v1
+; GFX11-FAKE16-NEXT:    ds_store_b32 v0, v0
+; GFX11-FAKE16-NEXT:    ds_store_b32 v0, v2
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %arg0.int = ptrtoint ptr addrspace(5) %arg0 to i32
 
   %lshr0 = lshr i32 %arg0.int, 16

@@ -30,7 +30,54 @@ LogicalResult oneToOneRewrite(
     const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
     IntegerOverflowFlags overflowFlags = IntegerOverflowFlags::none);
 
+/// Replaces the given operation "op" with a call to an LLVM intrinsic with the
+/// specified name "intrinsic" and operands.
+///
+/// The rewrite performs a simple one-to-one matching between the op and LLVM
+/// intrinsic. For example:
+///
+/// ```mlir
+/// %res = intr.op %val : vector<16xf32>
+/// ```
+///
+/// can be converted to
+///
+/// ```mlir
+/// %res = llvm.call_intrinsic "intrinsic"(%val)
+/// ```
+///
+/// The provided operands must be LLVM-compatible.
+///
+/// Upholds a convention that multi-result operations get converted into an
+/// operation returning the LLVM IR structure type, in which case individual
+/// values are first extracted before replacing the original results.
+LogicalResult intrinsicRewrite(Operation *op, StringRef intrinsic,
+                               ValueRange operands,
+                               const LLVMTypeConverter &typeConverter,
+                               RewriterBase &rewriter);
+
 } // namespace detail
+
+/// Decomposes a `src` value into a set of values of type `dstType` through
+/// series of bitcasts and vector ops. Src and dst types are expected to be int
+/// or float types or vector types of them.
+SmallVector<Value> decomposeValue(OpBuilder &builder, Location loc, Value src,
+                                  Type dstType);
+
+/// Composes a set of `src` values into a single value of type `dstType` through
+/// series of bitcasts and vector ops. Inversely to `decomposeValue`, this
+/// function is used to combine multiple values into a single value.
+Value composeValue(OpBuilder &builder, Location loc, ValueRange src,
+                   Type dstType);
+
+/// Performs the index computation to get to the element at `indices` of the
+/// memory pointed to by `memRefDesc`, using the layout map of `type`.
+/// The indices are linearized as:
+///   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
+Value getStridedElementPtr(
+    OpBuilder &builder, Location loc, const LLVMTypeConverter &converter,
+    MemRefType type, Value memRefDesc, ValueRange indices,
+    LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none);
 } // namespace LLVM
 
 /// Base class for operation conversions targeting the LLVM IR dialect. It
@@ -40,16 +87,15 @@ LogicalResult oneToOneRewrite(
 /// during the entire pattern lifetime.
 class ConvertToLLVMPattern : public ConversionPattern {
 public:
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite =
-      detail::ConversionSplitMatchAndRewriteImpl<ConvertToLLVMPattern>;
-
   ConvertToLLVMPattern(StringRef rootOpName, MLIRContext *context,
                        const LLVMTypeConverter &typeConverter,
                        PatternBenefit benefit = 1);
 
 protected:
+  /// See `ConversionPattern::ConversionPattern` for information on the other
+  /// available constructors.
+  using ConversionPattern::ConversionPattern;
+
   /// Returns the LLVM dialect.
   LLVM::LLVMDialect &getDialect() const;
 
@@ -67,21 +113,26 @@ protected:
   Type getVoidType() const;
 
   /// Get the MLIR type wrapping the LLVM i8* type.
+  [[deprecated("Use getPtrType() instead!")]]
   Type getVoidPtrType() const;
+
+  /// Get the MLIR type wrapping the LLVM ptr type.
+  Type getPtrType(unsigned addressSpace = 0) const;
 
   /// Create a constant Op producing a value of `resultType` from an index-typed
   /// integer attribute.
   static Value createIndexAttrConstant(OpBuilder &builder, Location loc,
                                        Type resultType, int64_t value);
 
-  // This is a strided getElementPtr variant that linearizes subscripts as:
-  //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
-  Value getStridedElementPtr(Location loc, MemRefType type, Value memRefDesc,
-                             ValueRange indices,
-                             ConversionPatternRewriter &rewriter) const;
+  /// Convenience wrapper for the corresponding helper utility.
+  /// This is a strided getElementPtr variant with linearized subscripts.
+  Value getStridedElementPtr(
+      ConversionPatternRewriter &rewriter, Location loc, MemRefType type,
+      Value memRefDesc, ValueRange indices,
+      LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none) const;
 
-  /// Returns if the given memref has identity maps and the element type is
-  /// convertible to LLVM.
+  /// Returns if the given memref type is convertible to LLVM and has an
+  /// identity layout map.
   bool isConvertibleAndHasIdentityMaps(MemRefType type) const;
 
   /// Returns the type of a pointer to an element of the memref.
@@ -147,15 +198,9 @@ protected:
 template <typename SourceOp>
 class ConvertOpToLLVMPattern : public ConvertToLLVMPattern {
 public:
-  using OperationT = SourceOp;
   using OpAdaptor = typename SourceOp::Adaptor;
   using OneToNOpAdaptor =
       typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
-
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite = detail::ConversionSplitMatchAndRewriteImpl<
-      ConvertOpToLLVMPattern<SourceOp>>;
 
   explicit ConvertOpToLLVMPattern(const LLVMTypeConverter &typeConverter,
                                   PatternBenefit benefit = 1)
@@ -191,6 +236,47 @@ public:
     SmallVector<Value> oneToOneOperands =
         getOneToOneAdaptorOperands(adaptor.getOperands());
     return matchAndRewrite(op, OpAdaptor(oneToOneOperands, adaptor), rewriter);
+  }
+
+private:
+  using ConvertToLLVMPattern::matchAndRewrite;
+};
+
+/// Utility class for operation conversions targeting the LLVM dialect that
+/// allows for matching and rewriting against an instance of an OpInterface
+/// class.
+template <typename SourceOp>
+class ConvertOpInterfaceToLLVMPattern : public ConvertToLLVMPattern {
+public:
+  explicit ConvertOpInterfaceToLLVMPattern(
+      const LLVMTypeConverter &typeConverter, PatternBenefit benefit = 1)
+      : ConvertToLLVMPattern(typeConverter, Pattern::MatchInterfaceOpTypeTag(),
+                             SourceOp::getInterfaceID(), benefit,
+                             &typeConverter.getContext()) {}
+
+  /// Wrappers around the RewritePattern methods that pass the derived op type.
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
+  }
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
+  }
+
+  /// Methods that operate on the SourceOp type. One of these must be
+  /// overridden by the derived pattern class.
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    llvm_unreachable("matchAndRewrite is not implemented");
+  }
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    return matchAndRewrite(op, getOneToOneAdaptorOperands(operands), rewriter);
   }
 
 private:
