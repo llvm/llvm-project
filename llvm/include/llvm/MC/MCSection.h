@@ -231,11 +231,16 @@ protected:
   /// FT_Relaxable, x86-specific
   bool AllowAutoPadding : 1;
 
+  // Track content and fixups for the fixed-size part as fragments are
+  // appended to the section. The content remains immutable, except when
+  // modified by applyFixup.
   uint32_t ContentStart = 0;
   uint32_t ContentEnd = 0;
   uint32_t FixupStart = 0;
   uint32_t FixupEnd = 0;
 
+  // Track content and fixups for the optional variable-size tail part,
+  // typically modified during relaxation.
   uint32_t VarContentStart = 0;
   uint32_t VarContentEnd = 0;
   uint32_t VarFixupStart = 0;
@@ -364,7 +369,6 @@ public:
     getContentsForAppending().append(Num, Elt);
     doneAppending();
   }
-  LLVM_ABI void setContents(ArrayRef<char> Contents);
   MutableArrayRef<char> getContents() {
     return MutableArrayRef(getParent()->ContentStorage)
         .slice(ContentStart, ContentEnd - ContentStart);
@@ -396,7 +400,6 @@ public:
   void clearFixups() { FixupEnd = FixupStart; }
   LLVM_ABI void addFixup(MCFixup Fixup);
   LLVM_ABI void appendFixups(ArrayRef<MCFixup> Fixups);
-  LLVM_ABI void setFixups(ArrayRef<MCFixup> Fixups);
   MutableArrayRef<MCFixup> getFixups() {
     return MutableArrayRef(getParent()->FixupStorage)
         .slice(FixupStart, FixupEnd - FixupStart);

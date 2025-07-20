@@ -58,16 +58,6 @@ LLVM_DUMP_METHOD void MCSection::dump(
 }
 #endif
 
-void MCFragment::setContents(ArrayRef<char> Contents) {
-  auto &S = getParent()->ContentStorage;
-  if (ContentStart + Contents.size() > ContentEnd) {
-    ContentStart = S.size();
-    S.resize_for_overwrite(S.size() + Contents.size());
-  }
-  ContentEnd = ContentStart + Contents.size();
-  llvm::copy(Contents, S.begin() + ContentStart);
-}
-
 void MCFragment::setVarContents(ArrayRef<char> Contents) {
   auto &S = getParent()->ContentStorage;
   if (VarContentStart + Contents.size() > VarContentEnd) {
@@ -92,16 +82,6 @@ void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
   }
   S.append(Fixups.begin(), Fixups.end());
   FixupEnd = S.size();
-}
-
-void MCFragment::setFixups(ArrayRef<MCFixup> Fixups) {
-  auto &S = getParent()->FixupStorage;
-  if (FixupStart + Fixups.size() > FixupEnd) {
-    FixupStart = S.size();
-    S.resize_for_overwrite(S.size() + Fixups.size());
-  }
-  FixupEnd = FixupStart + Fixups.size();
-  llvm::copy(Fixups, S.begin() + FixupStart);
 }
 
 void MCFragment::setVarFixups(ArrayRef<MCFixup> Fixups) {
