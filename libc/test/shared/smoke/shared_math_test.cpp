@@ -24,22 +24,29 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::expf16(0.0f16));
 
   ASSERT_FP_EQ(float16(8 << 5), LIBC_NAMESPACE::shared::ldexpf16(float(8), 5));
-  ASSERT_FP_EQ(float16(-1 * (8 << 5)), LIBC_NAMESPACE::shared::ldexpf16(float(-8), 5));
+  ASSERT_FP_EQ(float16(-1 * (8 << 5)),
+               LIBC_NAMESPACE::shared::ldexpf16(float(-8), 5));
 
-  EXPECT_FP_EQ_ALL_ROUNDING(0.75f16, LIBC_NAMESPACE::shared::frexpf16(24.0f, &exponent));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.75f16,
+                            LIBC_NAMESPACE::shared::frexpf16(24.0f, &exponent));
   EXPECT_EQ(exponent, 5);
 #endif
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::expf(0.0f));
 
-  EXPECT_FP_EQ_ALL_ROUNDING(0.75f, LIBC_NAMESPACE::shared::frexpf(24.0f, &exponent));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.75f,
+                            LIBC_NAMESPACE::shared::frexpf(24.0f, &exponent));
   EXPECT_EQ(exponent, 5);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(float128(0.75), LIBC_NAMESPACE::shared::frexpf128(24.0f, &exponent));
+  EXPECT_FP_EQ_ALL_ROUNDING(
+      float128(0.75), LIBC_NAMESPACE::shared::frexpf128(24.0f, &exponent));
   EXPECT_EQ(exponent, 5);
 
   ASSERT_FP_EQ(float(8 << 5), LIBC_NAMESPACE::shared::ldexpf(float(8), 5));
-  ASSERT_FP_EQ(float(-1 * (8 << 5)), LIBC_NAMESPACE::shared::ldexpf(float(-8), 5));
+  ASSERT_FP_EQ(float(-1 * (8 << 5)),
+               LIBC_NAMESPACE::shared::ldexpf(float(-8), 5));
 
-  ASSERT_FP_EQ(float128(8 << 5), LIBC_NAMESPACE::shared::ldexpf128(float(8), 5));
-  ASSERT_FP_EQ(float128(-1 * (8 << 5)), LIBC_NAMESPACE::shared::ldexpf128(float(-8), 5));
+  ASSERT_FP_EQ(float128(8 << 5),
+               LIBC_NAMESPACE::shared::ldexpf128(float(8), 5));
+  ASSERT_FP_EQ(float128(-1 * (8 << 5)),
+               LIBC_NAMESPACE::shared::ldexpf128(float(-8), 5));
 }
