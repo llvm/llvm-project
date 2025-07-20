@@ -235,7 +235,7 @@ struct S2 {
 // CHECK-PPC64LE-NEXT:    [[TMP78:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_BASEPTRS31]], i32 0, i32 5
 // CHECK-PPC64LE-NEXT:    store ptr [[PS1]], ptr [[TMP78]], align 8
 // CHECK-PPC64LE-NEXT:    [[TMP79:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_PTRS32]], i32 0, i32 5
-// CHECK-PPC64LE-NEXT:    store ptr [[TMP24]], ptr [[TMP79]], align 8
+// CHECK-PPC64LE-NEXT:    store ptr [[S]], ptr [[TMP79]], align 8
 // CHECK-PPC64LE-NEXT:    [[TMP80:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_MAPPERS33]], i64 0, i64 5
 // CHECK-PPC64LE-NEXT:    store ptr null, ptr [[TMP80]], align 8
 // CHECK-PPC64LE-NEXT:    [[TMP81:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_BASEPTRS31]], i32 0, i32 6
@@ -279,7 +279,7 @@ struct S2 {
 // CHECK-PPC64LE-NEXT:    [[TMP100:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_BASEPTRS31]], i32 0, i32 12
 // CHECK-PPC64LE-NEXT:    store ptr [[PS2]], ptr [[TMP100]], align 8
 // CHECK-PPC64LE-NEXT:    [[TMP101:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_PTRS32]], i32 0, i32 12
-// CHECK-PPC64LE-NEXT:    store ptr [[TMP43]], ptr [[TMP101]], align 8
+// CHECK-PPC64LE-NEXT:    store ptr [[S19]], ptr [[TMP101]], align 8
 // CHECK-PPC64LE-NEXT:    [[TMP102:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_MAPPERS33]], i64 0, i64 12
 // CHECK-PPC64LE-NEXT:    store ptr null, ptr [[TMP102]], align 8
 // CHECK-PPC64LE-NEXT:    [[TMP103:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_BASEPTRS31]], i32 0, i32 0
@@ -458,7 +458,7 @@ struct S2 {
 // CHECK-I386-NEXT:    [[TMP78:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_BASEPTRS31]], i32 0, i32 5
 // CHECK-I386-NEXT:    store ptr [[PS1]], ptr [[TMP78]], align 4
 // CHECK-I386-NEXT:    [[TMP79:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_PTRS32]], i32 0, i32 5
-// CHECK-I386-NEXT:    store ptr [[TMP24]], ptr [[TMP79]], align 4
+// CHECK-I386-NEXT:    store ptr [[S]], ptr [[TMP79]], align 4
 // CHECK-I386-NEXT:    [[TMP80:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_MAPPERS33]], i32 0, i32 5
 // CHECK-I386-NEXT:    store ptr null, ptr [[TMP80]], align 4
 // CHECK-I386-NEXT:    [[TMP81:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_BASEPTRS31]], i32 0, i32 6
@@ -502,7 +502,7 @@ struct S2 {
 // CHECK-I386-NEXT:    [[TMP100:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_BASEPTRS31]], i32 0, i32 12
 // CHECK-I386-NEXT:    store ptr [[PS2]], ptr [[TMP100]], align 4
 // CHECK-I386-NEXT:    [[TMP101:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_PTRS32]], i32 0, i32 12
-// CHECK-I386-NEXT:    store ptr [[TMP43]], ptr [[TMP101]], align 4
+// CHECK-I386-NEXT:    store ptr [[S19]], ptr [[TMP101]], align 4
 // CHECK-I386-NEXT:    [[TMP102:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_MAPPERS33]], i32 0, i32 12
 // CHECK-I386-NEXT:    store ptr null, ptr [[TMP102]], align 4
 // CHECK-I386-NEXT:    [[TMP103:%.*]] = getelementptr inbounds [13 x ptr], ptr [[DOTOFFLOAD_BASEPTRS31]], i32 0, i32 0

@@ -7335,7 +7335,6 @@ private:
     const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
-
     // Track info for ATTACH entry generation
     Address AttachBaseAddr = Address::invalid();
     Address AttachFirstElemAddr = Address::invalid();
@@ -8781,7 +8780,7 @@ public:
     if (PartialStruct.AttachBaseAddr.isValid() &&
         PartialStruct.AttachFirstElemAddr.isValid())
       addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachBaseAddr,
-                     PartialStruct.Base, PartialStruct.AttachBaseDecl,
+                     LBAddr, PartialStruct.AttachBaseDecl,
                      PartialStruct.AttachMapExpr);
   }
 

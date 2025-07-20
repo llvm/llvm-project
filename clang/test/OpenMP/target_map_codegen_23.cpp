@@ -244,7 +244,7 @@ int explicit_maps_struct_fields(int a){
 
 //  &p[0], &p->b[0], sizeof(p->b[0:5]), ALLOC | PARAM
 //  &p[0], &p->b[0], sizeof(p->b[0:5]), TO | FROM
-//  &p, &p[0], sizeof(p), ATTACH
+//  &p, &p->b[0], sizeof(p), ATTACH
 
 // CK24-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK24-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -274,11 +274,10 @@ int explicit_maps_struct_fields(int a){
 // CK24-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
 // CK24-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
 // CK24-DAG: store ptr [[VAR:%[^,]+]], ptr [[BP2]]
-// CK24-DAG: store ptr [[VAR2:%[^,]+]], ptr [[P2]]
+// CK24-DAG: store ptr [[SEC0]], ptr [[P2]]
 
 // CK24-DAG: [[VAR0]] = load ptr, ptr [[VAR]]
 // CK24-DAG: [[VAR00]] = load ptr, ptr [[VAR]]
-// CK24-DAG: [[VAR2]] = load ptr, ptr [[VAR]]
 
 // CK24: call void [[CALL16:@.+]](ptr {{[^,]+}})
 #pragma omp target map(p->b[:5])
@@ -487,7 +486,7 @@ int explicit_maps_struct_fields(int a){
 
 //  &p[0], &p->s.s.b[0], sizeof(p->s.s.bb[0:2]), ALLOC | PARAM
 //  &p[0], &p->s.s.bb[0], sizeof(p->s.s.bb[0:2]), TO | FROM
-//  &p, &p[0], sizeof(p), ATTACH
+//  &p, &p->s.s.b[0], sizeof(p), ATTACH
 
 // CK24-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK24-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
@@ -519,11 +518,10 @@ int explicit_maps_struct_fields(int a){
 // CK24-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
 // CK24-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
 // CK24-DAG: store ptr [[VAR:%[^,]+]], ptr [[BP2]]
-// CK24-DAG: store ptr [[VAR2:%[^,]+]], ptr [[P2]]
+// CK24-DAG: store ptr [[SEC0]], ptr [[P2]]
 
 // CK24-DAG: [[VAR0]] = load ptr, ptr [[VAR]]
 // CK24-DAG: [[VAR00]] = load ptr, ptr [[VAR]]
-// CK24-DAG: [[VAR2]] = load ptr, ptr [[VAR]]
 
 // CK24: call void [[CALL22:@.+]](ptr {{[^,]+}})
 #pragma omp target map(p->s.s.b[:2])

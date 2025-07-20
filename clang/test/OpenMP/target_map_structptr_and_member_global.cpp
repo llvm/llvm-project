@@ -49,7 +49,7 @@ void f5() {
   // &ps[0], &ps[0].x, ((&ps[0].y + 1) - &ps[0].x)/8, ALLOC
   // &ps[0], &ps->y, sizeof(ps->y), TO | MEMBER_OF(2)
   // &ps[0], &ps->x, sizeof(ps->x), TO | MEMBER_OF(2)
-  // &ps, &ps[0], sizeof(ps), ATTACH
+  // &ps, &ps[0].x, sizeof(ps), ATTACH
   #pragma omp target map(to: ps->y, ps, ps->x)
     ps->y = 9;
 }
@@ -260,7 +260,7 @@ void f5() {
 // CHECK:    [[TMP24:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 4
 // CHECK:    store ptr @ps, ptr [[TMP24]], align 8
 // CHECK:    [[TMP25:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 4
-// CHECK:    store ptr [[TMP0]], ptr [[TMP25]], align 8
+// CHECK:    store ptr [[X]], ptr [[TMP25]], align 8
 // CHECK:    [[TMP26:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 4
 // CHECK:    store ptr null, ptr [[TMP26]], align 8
 // CHECK:    [[TMP27:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
