@@ -24921,24 +24921,10 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
     // If CMOV is available, use it instead. Only prefer CMOV when SBB
     // dependency breaking is not available or when CMOV is likely to be more
     // efficient
-    if (Subtarget.canUseCMOV() &&
+    if (!isNullConstant(Y) && Subtarget.canUseCMOV() &&
         (VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
-        !Subtarget.hasSBBDepBreaking()) {
-      // Create comparison against zero to set EFLAGS
-      SDValue Zero = DAG.getConstant(0, DL, CmpVT);
-      SDValue Cmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32, CmpVal, Zero);
-
-      // For CMOV: FalseVal is used when condition is false, TrueVal when
-      // condition is true We want: when X==0 return -1, when X!=0 return Y So
-      // condition should be (X == 0), TrueVal = -1, FalseVal = Y The SBB
-      // pattern implements: (CmpVal X86CC 0) ? LHS : RHS We need to implement
-      // exactly the same select operation with CMOV CMOV semantics: CMOV
-      // condition, TrueVal, FalseVal Returns TrueVal if condition is true,
-      // FalseVal if condition is false
-
-      return DAG.getNode(X86ISD::CMOV, DL, VT, RHS, LHS,
-                         DAG.getTargetConstant(X86CC, DL, MVT::i8), Cmp);
-    }
+        !Subtarget.hasSBBDepBreaking())
+      return SDValue();
 
     // Fall back to SBB pattern for older processors or unsupported types
     SDVTList CmpVTs = DAG.getVTList(CmpVT, MVT::i32);
