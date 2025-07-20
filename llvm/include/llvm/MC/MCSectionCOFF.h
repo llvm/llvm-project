@@ -82,7 +82,6 @@ public:
                             raw_ostream &OS,
                             uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  StringRef getVirtualSectionKind() const override;
 
   unsigned getOrAssignWinCFISectionID(unsigned *NextID) const {
     if (WinCFISectionID == ~0U)

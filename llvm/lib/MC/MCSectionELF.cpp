@@ -215,5 +215,3 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 bool MCSectionELF::useCodeAlign() const {
   return getFlags() & ELF::SHF_EXECINSTR;
 }
-
-StringRef MCSectionELF::getVirtualSectionKind() const { return "SHT_NOBITS"; }

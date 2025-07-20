@@ -4,11 +4,11 @@
 # RUN: llvm-mc -triple=x86_64-pc-win32 %s
 
 .bss
-# CHECK: <unknown>:0: error: IMAGE_SCN_CNT_UNINITIALIZED_DATA section '.bss' cannot have non-zero bytes
+# CHECK: <unknown>:0: error: BSS section '.bss' cannot have non-zero bytes
   addb %bl,(%rax)
 
 .section uninitialized,"b"
-# CHECK: <unknown>:0: error: IMAGE_SCN_CNT_UNINITIALIZED_DATA section 'uninitialized' cannot have non-zero bytes
+# CHECK: <unknown>:0: error: BSS section 'uninitialized' cannot have non-zero bytes
   jmp foo
 
 .section bss0,"b"

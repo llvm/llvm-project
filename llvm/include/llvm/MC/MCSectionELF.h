@@ -88,7 +88,6 @@ public:
                             raw_ostream &OS,
                             uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  StringRef getVirtualSectionKind() const override;
 
   bool isUnique() const { return UniqueID != NonUniqueID; }
   unsigned getUniqueID() const { return UniqueID; }
