@@ -8,27 +8,14 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// Iterator traits and member typedefs in zip_view::<iterator>.
+// Iterator traits and member typedefs in zip_transform_view::iterator.
 
 #include <array>
 #include <ranges>
-#include <tuple>
 
 #include "test_iterators.h"
 
-#include "../../range_adaptor_types.h"
-
-template <class T>
-struct ForwardView : std::ranges::view_base {
-  forward_iterator<T*> begin() const;
-  sentinel_wrapper<forward_iterator<T*>> end() const;
-};
-
-template <class T>
-struct InputView : std::ranges::view_base {
-  cpp17_input_iterator<T*> begin() const;
-  sentinel_wrapper<cpp17_input_iterator<T*>> end() const;
-};
+#include "../types.h"
 
 template <class T>
 concept HasIterCategory = requires { typename T::iterator_category; };
@@ -36,8 +23,8 @@ concept HasIterCategory = requires { typename T::iterator_category; };
 template <class T>
 struct DiffTypeIter {
   using iterator_category = std::input_iterator_tag;
-  using value_type = int;
-  using difference_type = T;
+  using value_type        = int;
+  using difference_type   = T;
 
   int operator*() const;
   DiffTypeIter& operator++();
@@ -54,55 +41,76 @@ struct DiffTypeRange {
 struct Foo {};
 struct Bar {};
 
-struct ConstVeryDifferentRange {
-  int* begin();
-  int* end();
-
-  forward_iterator<double*> begin() const;
-  forward_iterator<double*> end() const;
+struct RValueRefFn {
+  int&& operator()(auto&&...) const;
 };
 
 void test() {
   int buffer[] = {1, 2, 3, 4};
   {
-    // 2 views should have 2-tuple value_type
-    // random_access_iterator_tag
-    std::ranges::zip_view v(buffer, buffer);
+    // C++20 random_access C++17 random_access
+    std::ranges::zip_transform_view v(GetFirst{}, buffer);
+    using Iter = decltype(v.begin());
+
+    static_assert(std::is_same_v<Iter::iterator_concept, std::random_access_iterator_tag>);
+    static_assert(std::is_same_v<Iter::iterator_category, std::random_access_iterator_tag>);
+    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<Iter::value_type, int>);
+    static_assert(HasIterCategory<Iter>);
+  }
+
+  {
+    // C++20 random_access C++17 input
+    std::ranges::zip_transform_view v(MakeTuple{}, buffer);
     using Iter = decltype(v.begin());
 
     static_assert(std::is_same_v<Iter::iterator_concept, std::random_access_iterator_tag>);
     static_assert(std::is_same_v<Iter::iterator_category, std::input_iterator_tag>);
     static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
-    static_assert(std::is_same_v<Iter::value_type, std::tuple<int, int>>);
+    static_assert(std::is_same_v<Iter::value_type, std::tuple<int>>);
     static_assert(HasIterCategory<Iter>);
   }
 
   {
-    // !=2 views should have tuple value_type
-    std::ranges::zip_view v(buffer, buffer, buffer);
+    // C++20 bidirectional C++17 bidirectional
+    std::ranges::zip_transform_view v(GetFirst{}, BidiCommonView{buffer});
     using Iter = decltype(v.begin());
 
-    static_assert(std::is_same_v<Iter::iterator_concept, std::random_access_iterator_tag>);
-    static_assert(std::is_same_v<Iter::iterator_category, std::input_iterator_tag>);
+    static_assert(std::is_same_v<Iter::iterator_concept, std::bidirectional_iterator_tag>);
+    static_assert(std::is_same_v<Iter::iterator_category, std::bidirectional_iterator_tag>);
     static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
-    static_assert(std::is_same_v<Iter::value_type, std::tuple<int, int, int>>);
+    static_assert(std::is_same_v<Iter::value_type, int>);
     static_assert(HasIterCategory<Iter>);
   }
 
   {
-    // bidirectional_iterator_tag
-    std::ranges::zip_view v(BidiCommonView{buffer});
+    // C++20 bidirectional C++17 input
+    std::ranges::zip_transform_view v(MakeTuple{}, BidiCommonView{buffer});
     using Iter = decltype(v.begin());
 
     static_assert(std::is_same_v<Iter::iterator_concept, std::bidirectional_iterator_tag>);
     static_assert(std::is_same_v<Iter::iterator_category, std::input_iterator_tag>);
     static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
     static_assert(std::is_same_v<Iter::value_type, std::tuple<int>>);
+    static_assert(HasIterCategory<Iter>);
   }
 
   {
-    // forward_iterator_tag
-    using Iter = std::ranges::iterator_t<std::ranges::zip_view<ForwardView<int>>>;
+    // C++20 forward C++17 bidirectional
+    std::ranges::zip_transform_view v(GetFirst{}, ForwardSizedView{buffer});
+    using Iter = decltype(v.begin());
+
+    static_assert(std::is_same_v<Iter::iterator_concept, std::forward_iterator_tag>);
+    static_assert(std::is_same_v<Iter::iterator_category, std::forward_iterator_tag>);
+    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<Iter::value_type, int>);
+    static_assert(HasIterCategory<Iter>);
+  }
+
+  {
+    // C++20 forward C++17 input
+    std::ranges::zip_transform_view v(MakeTuple{}, ForwardSizedView{buffer});
+    using Iter = decltype(v.begin());
 
     static_assert(std::is_same_v<Iter::iterator_concept, std::forward_iterator_tag>);
     static_assert(std::is_same_v<Iter::iterator_category, std::input_iterator_tag>);
@@ -112,38 +120,26 @@ void test() {
   }
 
   {
-    // nested zip_view
-    std::ranges::zip_view v(buffer, buffer);
-    std::ranges::zip_view v2(buffer, v);
-    using Iter = decltype(v2.begin());
-
-    static_assert(std::is_same_v<Iter::iterator_concept, std::random_access_iterator_tag>);
-    static_assert(std::is_same_v<Iter::iterator_category, std::input_iterator_tag>);
-    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
-    static_assert(std::is_same_v<Iter::value_type, std::tuple<int, std::tuple<int, int>>>);
-    static_assert(HasIterCategory<Iter>);
-  }
-
-  {
-    // input_iterator_tag
-    using Iter = std::ranges::iterator_t<std::ranges::zip_view<InputView<int>>>;
+    // C++20 input C++17 not a range
+    std::ranges::zip_transform_view v(GetFirst{}, InputCommonView{buffer});
+    using Iter = decltype(v.begin());
 
     static_assert(std::is_same_v<Iter::iterator_concept, std::input_iterator_tag>);
-    static_assert(!HasIterCategory<Iter>);
     static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
-    static_assert(std::is_same_v<Iter::value_type, std::tuple<int>>);
+    static_assert(std::is_same_v<Iter::value_type, int>);
+    static_assert(!HasIterCategory<Iter>);
   }
 
   {
-    // difference_type of single view
-    std::ranges::zip_view v{DiffTypeRange<std::intptr_t>{}};
+    // difference_type of one view
+    std::ranges::zip_transform_view v{MakeTuple{}, DiffTypeRange<std::intptr_t>{}};
     using Iter = decltype(v.begin());
     static_assert(std::is_same_v<Iter::difference_type, std::intptr_t>);
   }
 
   {
     // difference_type of multiple views should be the common type
-    std::ranges::zip_view v{DiffTypeRange<std::intptr_t>{}, DiffTypeRange<std::ptrdiff_t>{}};
+    std::ranges::zip_transform_view v{MakeTuple{}, DiffTypeRange<std::intptr_t>{}, DiffTypeRange<std::ptrdiff_t>{}};
     using Iter = decltype(v.begin());
     static_assert(std::is_same_v<Iter::difference_type, std::common_type_t<std::intptr_t, std::ptrdiff_t>>);
   }
@@ -151,34 +147,23 @@ void test() {
   const std::array foos{Foo{}};
   std::array bars{Bar{}, Bar{}};
   {
-    // value_type of single view
-    std::ranges::zip_view v{foos};
+    // value_type of one view
+    std::ranges::zip_transform_view v{MakeTuple{}, foos};
     using Iter = decltype(v.begin());
     static_assert(std::is_same_v<Iter::value_type, std::tuple<Foo>>);
   }
 
   {
     // value_type of multiple views with different value_type
-    std::ranges::zip_view v{foos, bars};
+    std::ranges::zip_transform_view v{MakeTuple{}, foos, bars};
     using Iter = decltype(v.begin());
     static_assert(std::is_same_v<Iter::value_type, std::tuple<Foo, Bar>>);
   }
 
+  // LWG3798 Rvalue reference and iterator_category
   {
-    // const-iterator different from iterator
-    std::ranges::zip_view v{ConstVeryDifferentRange{}};
+    std::ranges::zip_transform_view v(RValueRefFn{}, buffer);
     using Iter = decltype(v.begin());
-    using ConstIter = decltype(std::as_const(v).begin());
-
-    static_assert(std::is_same_v<Iter::iterator_concept, std::random_access_iterator_tag>);
-    static_assert(std::is_same_v<Iter::iterator_category, std::input_iterator_tag>);
-    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
-    static_assert(std::is_same_v<Iter::value_type, std::tuple<int>>);
-
-    static_assert(std::is_same_v<ConstIter::iterator_concept, std::forward_iterator_tag>);
-    static_assert(std::is_same_v<ConstIter::iterator_category, std::input_iterator_tag>);
-    static_assert(std::is_same_v<ConstIter::difference_type, std::ptrdiff_t>);
-    static_assert(std::is_same_v<ConstIter::value_type, std::tuple<double>>);
+    static_assert(std::is_same_v<Iter::iterator_category, std::random_access_iterator_tag>);
   }
-
 }
