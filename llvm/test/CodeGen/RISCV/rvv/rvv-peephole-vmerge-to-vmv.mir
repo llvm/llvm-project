@@ -78,12 +78,12 @@ body: |
     ; CHECK-NEXT: %false:vrnov0 = COPY $v9
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
     ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 4, 5 /* e32 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 %pt, %true, 8, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 %pt, %true, 4, 5 /* e32 */, 0 /* tu, mu */
     %pt:vrnov0 = COPY $v8
     %false:vrnov0 = COPY $v9
     %mask:vmv0 = COPY $v0
-    %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 4, 5 /* e32 */, 0 /* tu, mu */
-    %x:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, 8, 5 /* e32 */
+    %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 8, 5 /* e32 */, 0 /* tu, mu */
+    %x:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, 4, 5 /* e32 */
 ...
 ---
 # Shouldn't be converted because false operands are different
@@ -173,13 +173,13 @@ body: |
     ; CHECK-LABEL: name: preserve_false
     ; CHECK: liveins: $v8, $v9, $v0, $x8, $x9
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %pt:vr = COPY $v8
-    ; CHECK-NEXT: %false:vrnov0 = COPY $v9
+    ; CHECK-NEXT: %pt:vrnov0 = COPY $v8
+    ; CHECK-NEXT: %false:vr = COPY $v9
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
     ; CHECK-NEXT: %avl1:gprnox0 = COPY $x8
     ; CHECK-NEXT: %avl2:gprnox0 = COPY $x9
-    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, %avl1, 5 /* e32 */, 3 /* ta, ma */
-    ; CHECK-NEXT: [[PseudoVMV_V_V_M1_:%[0-9]+]]:vr = PseudoVMV_V_V_M1 %pt, %true, %avl2, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %mask, %avl1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, %avl2, 5 /* e32 */
     %pt:vrnov0 = COPY $v8
     %false:vr = COPY $v9
     %mask:vmv0 = COPY $v0
