@@ -24,3 +24,4 @@ bar:
 ; INST-NEXT: R_AVR_7_PCREL .text+0x6
 ; INST-NEXT: f9 f7      brne .-2
 ; INST-NEXT: R_AVR_7_PCREL .text+0x10
+; INST-NEXT: f9 f7      brne .-2
