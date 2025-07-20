@@ -1988,7 +1988,7 @@ TEST(Diagnostics, Tags) {
                         withTag(DiagnosticTag::Deprecated))));
 
   Test = Annotations(R"cpp(
-    $typedef[[typedef int INT]];
+    $typedef[[typedef]] int INT;
   )cpp");
   TU.Code = Test.code();
   TU.ClangTidyProvider = addTidyChecks("modernize-use-using");
@@ -2002,7 +2002,7 @@ TEST(Diagnostics, Tags) {
 TEST(Diagnostics, TidyDiagsArentAffectedFromWerror) {
   TestTU TU;
   TU.ExtraArgs = {"-Werror"};
-  Annotations Test(R"cpp($typedef[[typedef int INT]]; // error-ok)cpp");
+  Annotations Test(R"cpp($typedef[[typedef]] int INT; // error-ok)cpp");
   TU.Code = Test.code().str();
   TU.ClangTidyProvider = addTidyChecks("modernize-use-using");
   EXPECT_THAT(
