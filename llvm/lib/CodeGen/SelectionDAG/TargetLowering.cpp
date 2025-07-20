@@ -778,7 +778,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
   case ISD::FREEZE: {
     SDValue N0 = Op.getOperand(0);
     if (DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts,
-                                             /*PoisonOnly=*/false))
+                                             /*PoisonOnly=*/false, Depth + 1))
       return N0;
     break;
   }
@@ -3369,7 +3369,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::FREEZE: {
     SDValue N0 = Op.getOperand(0);
     if (TLO.DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts,
-                                                 /*PoisonOnly=*/false))
+                                                 /*PoisonOnly=*/false,
+                                                 Depth + 1))
       return TLO.CombineTo(Op, N0);
 
     // TODO: Replace this with the general fold from DAGCombiner::visitFREEZE
