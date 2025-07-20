@@ -163,7 +163,7 @@ TEST_F(InterpreterTest, UndoCommand) {
   auto Err2 = Interp->Parse("int foo = 42;");
   EXPECT_TRUE(!!Err2);
   auto Err3 = Interp->Undo(2);
-  EXPECT_EQ("Operation failed. Wanted to undo 2 inputs but only have 1.",
+  EXPECT_EQ("Operation failed. Wanted to undo 2 inputs, only have 1.",
             llvm::toString(std::move(Err3)));
 
   // Succeed to undo.
