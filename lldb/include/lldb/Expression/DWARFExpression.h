@@ -157,8 +157,8 @@ public:
     return data.GetByteSize() > 0;
   }
 
-  void DumpLocation(Stream *s, lldb::DescriptionLevel level, ABI *abi) const;
-  void DumpLocationWithOptions(Stream *s, lldb::DescriptionLevel level, ABI *abi, llvm::DIDumpOptions options) const;
+  void DumpLocation(Stream *s, lldb::DescriptionLevel level, ABI *abi,
+                    llvm::DIDumpOptions options = {}) const;
 
   bool MatchesOperand(StackFrame &frame, const Instruction::Operand &op) const;
 

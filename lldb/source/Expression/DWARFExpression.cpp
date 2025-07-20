@@ -66,12 +66,6 @@ void DWARFExpression::UpdateValue(uint64_t const_value,
 }
 
 void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
-                                   ABI *abi) const {
-  llvm::DIDumpOptions DumpOpts;
-  this->DumpLocationWithOptions(s, level, abi, DumpOpts);
-}
-
-void DWARFExpression::DumpLocationWithOptions(Stream *s, lldb::DescriptionLevel level,
                                    ABI *abi, llvm::DIDumpOptions options) const {
   auto *MCRegInfo = abi ? &abi->GetMCRegisterInfo() : nullptr;
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum,

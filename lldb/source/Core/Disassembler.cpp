@@ -773,7 +773,7 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
           opts.ShowAddresses = false;
           opts.PrintRegisterOnly = true; // <-- important: suppress DW_OP_... annotations, etc.
 
-          entry.expr->DumpLocationWithOptions(&loc_str, eDescriptionLevelBrief, abi, opts);
+          entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi, opts);
           
           // Only include if not empty.
           llvm::StringRef loc_clean = llvm::StringRef(loc_str.GetString()).trim();
