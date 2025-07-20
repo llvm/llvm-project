@@ -9,6 +9,7 @@
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
 
 #include "NativeRegisterContextLinux_arm.h"
+#include "NativeRegisterContextLinuxArm64Shared.h"
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
@@ -744,34 +745,8 @@ Status NativeRegisterContextLinux_arm::ReadHardwareDebugInfo() {
 
   return error;
 #else  // __aarch64__
-  ::pid_t tid = m_thread.GetID();
-
-  int regset = NT_ARM_HW_WATCH;
-  struct iovec ioVec;
-  struct user_hwdebug_state dreg_state;
-
-  ioVec.iov_base = &dreg_state;
-  ioVec.iov_len = sizeof(dreg_state);
-
-  error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET, tid, &regset,
-                                            &ioVec, ioVec.iov_len);
-
-  if (error.Fail())
-    return error;
-
-  m_max_hwp_supported = dreg_state.dbg_info & 0xff;
-
-  regset = NT_ARM_HW_BREAK;
-  error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET, tid, &regset,
-                                            &ioVec, ioVec.iov_len);
-
-  if (error.Fail())
-    return error;
-
-  m_max_hbp_supported = dreg_state.dbg_info & 0xff;
-  m_refresh_hwdebug_info = false;
-
-  return error;
+  return arm64::ReadHardwareDebugInfo(m_thread.GetID(), m_max_hwp_supported,
+                                      m_max_hbp_supported);
 #endif // __arm__
 }
 
@@ -819,38 +794,11 @@ Status NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(DREGType hwbType,
 
   return error;
 #else  // __aarch64__
-  struct iovec ioVec;
-  struct user_hwdebug_state dreg_state;
-  int regset;
-
-  memset(&dreg_state, 0, sizeof(dreg_state));
-  ioVec.iov_base = &dreg_state;
-
-  switch (hwbType) {
-  case eDREGTypeWATCH:
-    regset = NT_ARM_HW_WATCH;
-    ioVec.iov_len = sizeof(dreg_state.dbg_info) + sizeof(dreg_state.pad) +
-                    (sizeof(dreg_state.dbg_regs[0]) * m_max_hwp_supported);
-
-    for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
-      dreg_state.dbg_regs[i].addr = m_hwp_regs[i].address;
-      dreg_state.dbg_regs[i].ctrl = m_hwp_regs[i].control;
-    }
-    break;
-  case eDREGTypeBREAK:
-    regset = NT_ARM_HW_BREAK;
-    ioVec.iov_len = sizeof(dreg_state.dbg_info) + sizeof(dreg_state.pad) +
-                    (sizeof(dreg_state.dbg_regs[0]) * m_max_hbp_supported);
-
-    for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
-      dreg_state.dbg_regs[i].addr = m_hbr_regs[i].address;
-      dreg_state.dbg_regs[i].ctrl = m_hbr_regs[i].control;
-    }
-    break;
-  }
-
-  return NativeProcessLinux::PtraceWrapper(PTRACE_SETREGSET, m_thread.GetID(),
-                                           &regset, &ioVec, ioVec.iov_len);
+  uint32_t max_supported =
+      (hwbType == eDREGTypeWATCH) ? m_max_hwp_supported : m_max_hbp_supported;
+  auto &regs = (hwbType == eDREGTypeWATCH) ? m_hwp_regs : m_hbr_regs;
+  return arm64::WriteHardwareDebugRegs(hwbType, m_thread.GetID(), max_supported,
+                                       regs);
 #endif // __arm__
 }
 
