@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -7516,14 +7517,15 @@ generateGatherPattern(MachineInstr &Root,
 
   auto LoadLaneToRegister = [&](MachineInstr *OriginalInstr,
                                 Register SrcRegister, unsigned Lane,
-                                Register OffsetRegister) {
+                                Register OffsetRegister,
+                                bool OffsetRegisterKillState) {
     auto NewRegister = MRI.createVirtualRegister(FPR128RegClass);
     MachineInstrBuilder LoadIndexIntoRegister =
         BuildMI(MF, MIMetadata(*OriginalInstr), TII->get(Root.getOpcode()),
                 NewRegister)
             .addReg(SrcRegister)
             .addImm(Lane)
-            .addReg(OffsetRegister, getKillRegState(true));
+            .addReg(OffsetRegister, getKillRegState(OffsetRegisterKillState));
     InstrIdxForVirtReg.insert(std::make_pair(NewRegister, InsInstrs.size()));
     InsInstrs.push_back(LoadIndexIntoRegister);
     return NewRegister;
@@ -7531,7 +7533,8 @@ generateGatherPattern(MachineInstr &Root,
 
   // Helper to create load instruction based on opcode
   auto CreateLoadInstruction = [&](unsigned NumLanes, Register DestReg,
-                                   Register OffsetReg) -> MachineInstrBuilder {
+                                   Register OffsetReg,
+                                   bool KillState) -> MachineInstrBuilder {
     unsigned Opcode;
     switch (NumLanes) {
     case 4:
@@ -7557,25 +7560,30 @@ generateGatherPattern(MachineInstr &Root,
   auto LanesToLoadToReg0 =
       llvm::make_range(LoadToLaneInstrsAscending.begin() + 1,
                        LoadToLaneInstrsAscending.begin() + NumLanes / 2);
-  auto PrevReg = SubregToReg->getOperand(0).getReg();
+  Register PrevReg = SubregToReg->getOperand(0).getReg();
   for (auto [Index, LoadInstr] : llvm::enumerate(LanesToLoadToReg0)) {
+    const MachineOperand &OffsetRegOperand = LoadInstr->getOperand(3);
     PrevReg = LoadLaneToRegister(LoadInstr, PrevReg, Index + 1,
-                                 LoadInstr->getOperand(3).getReg());
+                                 OffsetRegOperand.getReg(),
+                                 OffsetRegOperand.isKill());
     DelInstrs.push_back(LoadInstr);
   }
-  auto LastLoadReg0 = PrevReg;
+  Register LastLoadReg0 = PrevReg;
 
   // First load into register 1. Perform a LDRSui to zero out the upper lanes in
   // a single instruction.
-  auto Lane0Load = *LoadToLaneInstrsAscending.begin();
-  auto OriginalSplitLoad =
+  MachineInstr *Lane0Load = *LoadToLaneInstrsAscending.begin();
+  MachineInstr *OriginalSplitLoad =
       *std::next(LoadToLaneInstrsAscending.begin(), NumLanes / 2);
-  auto DestRegForMiddleIndex = MRI.createVirtualRegister(
+  Register DestRegForMiddleIndex = MRI.createVirtualRegister(
       MRI.getRegClass(Lane0Load->getOperand(0).getReg()));
 
+  const MachineOperand &OriginalSplitToLoadOffsetOperand =
+      OriginalSplitLoad->getOperand(3);
   MachineInstrBuilder MiddleIndexLoadInstr =
       CreateLoadInstruction(NumLanes, DestRegForMiddleIndex,
-                            OriginalSplitLoad->getOperand(3).getReg());
+                            OriginalSplitToLoadOffsetOperand.getReg(),
+                            OriginalSplitToLoadOffsetOperand.isKill());
 
   InstrIdxForVirtReg.insert(
       std::make_pair(DestRegForMiddleIndex, InsInstrs.size()));
@@ -7583,7 +7591,7 @@ generateGatherPattern(MachineInstr &Root,
   DelInstrs.push_back(OriginalSplitLoad);
 
   // Subreg To Reg instruction for register 1.
-  auto DestRegForSubregToReg = MRI.createVirtualRegister(FPR128RegClass);
+  Register DestRegForSubregToReg = MRI.createVirtualRegister(FPR128RegClass);
   unsigned SubregType;
   switch (NumLanes) {
   case 4:
@@ -7616,14 +7624,18 @@ generateGatherPattern(MachineInstr &Root,
                        LoadToLaneInstrsAscending.end());
   PrevReg = SubRegToRegInstr->getOperand(0).getReg();
   for (auto [Index, LoadInstr] : llvm::enumerate(LanesToLoadToReg1)) {
+    const MachineOperand &OffsetRegOperand = LoadInstr->getOperand(3);
     PrevReg = LoadLaneToRegister(LoadInstr, PrevReg, Index + 1,
-                                 LoadInstr->getOperand(3).getReg());
+                                 OffsetRegOperand.getReg(),
+                                 OffsetRegOperand.isKill());
+
+    // Do not add the last reg to DelInstrs - it will be removed later.
     if (Index == NumLanes / 2 - 2) {
       break;
     }
     DelInstrs.push_back(LoadInstr);
   }
-  auto LastLoadReg1 = PrevReg;
+  Register LastLoadReg1 = PrevReg;
 
   // Create the final zip instruction to combine the results.
   MachineInstrBuilder ZipInstr =
