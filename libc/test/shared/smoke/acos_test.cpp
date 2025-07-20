@@ -13,24 +13,24 @@
 using LlvmLibcAcosTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
 TEST_F(LlvmLibcAcosTest, SpecialNumbers) {
-  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::math::acos(sNaN),
-                                           FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
+      aNaN, LIBC_NAMESPACE::math::acos(sNaN), FE_INVALID);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::math::acos(aNaN));
   EXPECT_FP_EQ(0x1.921fb54442d18p0, LIBC_NAMESPACE::math::acos(zero));
   EXPECT_FP_EQ(0x1.921fb54442d18p0, LIBC_NAMESPACE::math::acos(neg_zero));
 
   libc_errno = 0;
-  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::math::acos(inf),
-                                           FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
+      aNaN, LIBC_NAMESPACE::math::acos(inf), FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
-  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::math::acos(neg_inf),
-                                           FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
+      aNaN, LIBC_NAMESPACE::math::acos(neg_inf), FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
-  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::math::acos(2.0),
-                                           FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
+      aNaN, LIBC_NAMESPACE::math::acos(2.0), FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
-  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::math::acos(-2.0),
-                                           FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
+      aNaN, LIBC_NAMESPACE::math::acos(-2.0), FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
   EXPECT_FP_EQ(zero, LIBC_NAMESPACE::math::acos(1.0));
   EXPECT_FP_EQ(0x1.921fb54442d18p1, LIBC_NAMESPACE::math::acos(-1.0));

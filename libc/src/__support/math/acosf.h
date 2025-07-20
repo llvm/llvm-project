@@ -43,7 +43,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> ACOSF_EXCEPTS = {{
 
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-} //namespace acosf_internal
+} // namespace acosf_internal
 
 static constexpr float acosf(float x) {
   using namespace acosf_internal;
