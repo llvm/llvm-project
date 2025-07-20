@@ -254,7 +254,7 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
     Result = 0;
     for (unsigned I = Ptr.getIndex(); I != N; ++I) {
       INT_TYPE_SWITCH(ElemT, {
-        auto Elem = Ptr.atIndex(I).deref<T>();
+        auto Elem = Ptr.elem<T>(I);
         if (Elem.isZero())
           return true;
         ++Result;
