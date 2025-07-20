@@ -46,12 +46,11 @@ OPTIONS
 
  Write output in LLVM intermediate language (instead of bitcode).
 
-.. option:: --passes=<string>
+.. option:: -passes=<string>
 
- A textual (comma separated) description of the pass pipeline
- e.g.,-passes="foo,bar", to have analysis passes available before a pass, add
- "require<foo-analysis>". See `Using the New Pass Manager
- <../NewPassManager.html>`_, section ``#invoking-opt`` for more details on the
+ A textual (comma-separated) description of the pass pipeline,
+ e.g.,``-passes="sroa,instcombine"``. See
+ `invoking opt <../NewPassManager.html#invoking-opt>`_ for more details on the
  pass pipeline syntax.
 
 .. option:: -strip-debug
