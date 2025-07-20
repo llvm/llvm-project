@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION frexp
+#ifndef __CLC_OPENCL_MATH_FREXP_H__
+#define __CLC_OPENCL_MATH_FREXP_H__
+
+#define FUNCTION frexp
 #define __CLC_BODY <clc/math/unary_decl_with_int_ptr.inc>
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
+
+#endif // __CLC_OPENCL_MATH_FREXP_H__

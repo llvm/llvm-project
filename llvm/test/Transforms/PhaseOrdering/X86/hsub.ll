@@ -132,7 +132,8 @@ define <8 x i16> @sub_v8i16_76u43210(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-NEXT:    [[TMP6:%.*]] = sub <8 x i16> [[TMP4]], [[TMP5]]
 ; SSE2-NEXT:    [[HSUB41:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> [[TMP6]], <8 x i32> <i32 0, i32 8, i32 9, i32 10, i32 11, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:    [[HSUB6:%.*]] = shufflevector <8 x i16> [[HSUB41]], <8 x i16> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 poison, i32 12, i32 poison>
-; SSE2-NEXT:    [[RESULT:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> [[HSUB6]], <8 x i32> <i32 7, i32 14, i32 poison, i32 12, i32 11, i32 10, i32 9, i32 8>
+; SSE2-NEXT:    [[HSUB7:%.*]] = shufflevector <8 x i16> [[HSUB6]], <8 x i16> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 poison, i32 6, i32 15>
+; SSE2-NEXT:    [[RESULT:%.*]] = shufflevector <8 x i16> [[HSUB7]], <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 poison, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; SSE2-NEXT:    ret <8 x i16> [[RESULT]]
 ;
 ; SSE4-LABEL: @sub_v8i16_76u43210(

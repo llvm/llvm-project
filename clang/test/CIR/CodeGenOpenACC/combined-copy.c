@@ -1104,7 +1104,7 @@ void copy_member_of_array_element_member() {
 }
 
 void modifier_list() {
-  // CHECK: cir.func @modifier_list() {
+  // CHECK: cir.func{{.*}} @modifier_list() {
   int localVar;
   // CHECK-NEXT: %[[LOCALVAR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["localVar"]
 

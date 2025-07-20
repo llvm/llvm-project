@@ -2317,7 +2317,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     for (unsigned i = 0; i != Info.ParsedOperands.size(); ++i) {
       if (i != 0)
         OS << ", ";
-      Info.ParsedOperands[i]->print(OS);
+      Info.ParsedOperands[i]->print(OS, MAI);
     }
     OS << "]";
 

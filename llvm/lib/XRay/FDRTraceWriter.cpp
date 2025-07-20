@@ -96,7 +96,7 @@ Error FDRTraceWriter::visit(CustomEventRecord &R) {
   if (auto E = writeMetadata<5u>(OS, R.size(), R.tsc(), R.cpu()))
     return E;
   auto D = R.data();
-  ArrayRef<char> Bytes(D.data(), D.size());
+  ArrayRef<char> Bytes(D);
   OS.write(Bytes);
   return Error::success();
 }
@@ -105,7 +105,7 @@ Error FDRTraceWriter::visit(CustomEventRecordV5 &R) {
   if (auto E = writeMetadata<5u>(OS, R.size(), R.delta()))
     return E;
   auto D = R.data();
-  ArrayRef<char> Bytes(D.data(), D.size());
+  ArrayRef<char> Bytes(D);
   OS.write(Bytes);
   return Error::success();
 }
@@ -114,7 +114,7 @@ Error FDRTraceWriter::visit(TypedEventRecord &R) {
   if (auto E = writeMetadata<8u>(OS, R.size(), R.delta(), R.eventType()))
     return E;
   auto D = R.data();
-  ArrayRef<char> Bytes(D.data(), D.size());
+  ArrayRef<char> Bytes(D);
   OS.write(Bytes);
   return Error::success();
 }

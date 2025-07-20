@@ -1490,9 +1490,9 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
   }];
 
   let arguments = (ins
-    Tosa_I1Tensor:$input1,
-    Tosa_Tensor:$input2,
-    Tosa_Tensor:$input3
+    Tosa_I1Tensor:$input1,  // pred
+    Tosa_Tensor:$input2,    // on true
+    Tosa_Tensor:$input3     // on false
   );
 
   let results = (outs
@@ -1511,6 +1511,13 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
   let assemblyFormat = [{
     operands attr-dict `:` `(` type($input1) `,` type($input2) `,` type($input3)
     `)` `->` type($output)
+  }];
+
+  let extraClassDeclaration = [{
+    // Custom getters for readability
+    ::mlir::TypedValue<::mlir::TensorType> getPred() { return getInput1(); }
+    ::mlir::TypedValue<::mlir::TensorType> getOnTrue() { return getInput2(); }
+    ::mlir::TypedValue<::mlir::TensorType> getOnFalse() { return getInput3(); }
   }];
 }
 

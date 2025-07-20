@@ -110,7 +110,7 @@ TEST(ExecutionSessionWrapperFunctionCalls, RegisterAsyncHandlerAndRun) {
         EXPECT_TRUE(SPSArgList<int32_t>::deserialize(IB, Result));
         RP.set_value(Result);
       },
-      AddAsyncTagAddr, ArrayRef<char>(ArgBuffer.data(), ArgBuffer.size()));
+      AddAsyncTagAddr, ArrayRef<char>(ArgBuffer));
 
   EXPECT_EQ(RF.get(), (int32_t)3);
 

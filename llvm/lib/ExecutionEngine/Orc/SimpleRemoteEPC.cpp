@@ -233,7 +233,13 @@ SimpleRemoteEPC::createDefaultMemoryAccess(SimpleRemoteEPC &SREPC) {
            {FAs.WriteUInt32s, rt::MemoryWriteUInt32sWrapperName},
            {FAs.WriteUInt64s, rt::MemoryWriteUInt64sWrapperName},
            {FAs.WriteBuffers, rt::MemoryWriteBuffersWrapperName},
-           {FAs.WritePointers, rt::MemoryWritePointersWrapperName}}))
+           {FAs.WritePointers, rt::MemoryWritePointersWrapperName},
+           {FAs.ReadUInt8s, rt::MemoryReadUInt8sWrapperName},
+           {FAs.ReadUInt16s, rt::MemoryReadUInt16sWrapperName},
+           {FAs.ReadUInt32s, rt::MemoryReadUInt32sWrapperName},
+           {FAs.ReadUInt64s, rt::MemoryReadUInt64sWrapperName},
+           {FAs.ReadBuffers, rt::MemoryReadBuffersWrapperName},
+           {FAs.ReadStrings, rt::MemoryReadStringsWrapperName}}))
     return std::move(Err);
 
   return std::make_unique<EPCGenericMemoryAccess>(SREPC, FAs);

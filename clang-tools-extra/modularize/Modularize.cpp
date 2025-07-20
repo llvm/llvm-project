@@ -395,7 +395,7 @@ struct Location {
     Column = SM.getColumnNumber(Decomposed.first, Decomposed.second);
   }
 
-  operator bool() const { return File != nullptr; }
+  explicit operator bool() const { return File != nullptr; }
 
   friend bool operator==(const Location &X, const Location &Y) {
     return X.File == Y.File && X.Line == Y.Line && X.Column == Y.Column;
@@ -459,7 +459,7 @@ struct HeaderEntry {
     return !(X == Y);
   }
   friend bool operator<(const HeaderEntry &X, const HeaderEntry &Y) {
-    return X.Loc < Y.Loc || (X.Loc == Y.Loc && X.Name < Y.Name);
+    return std::tie(X.Loc, X.Name) < std::tie(Y.Loc, Y.Name);
   }
   friend bool operator>(const HeaderEntry &X, const HeaderEntry &Y) {
     return Y < X;

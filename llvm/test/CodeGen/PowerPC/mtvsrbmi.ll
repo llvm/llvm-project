@@ -10,28 +10,13 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK
 
 define dso_local noundef range(i8 -1, 1) <16 x i8> @_Z5v00FFv() {
-; CHECK:      L..CPI0_0:
-; CHECK-NEXT:   .byte   255                             # 0xff
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
-; CHECK-NEXT:   .byte   0                               # 0x0
+; CHECK-NOT:      L..CPI0_0:
+; CHECK-NOT:   .byte   255                             # 0xff
+; CHECK-NOT:   .byte   0                               # 0x0
 
 ; CHECK-LABEL: _Z5v00FFv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lwz r3, L..C0(r2) # %const.0
-; CHECK-NEXT:    lxv vs34, 0(r3)
+; CHECK-NEXT:    mtvsrbmi v2, 1
 ; CHECK-NEXT:    blr
 entry:
   ret <16 x i8> <i8 -1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>

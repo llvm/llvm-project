@@ -27955,13 +27955,6 @@ TEST_F(FormatTest, AlignArrayOfStructuresLeftAlignmentNonSquare) {
   verifyFormat("void foo() {\n"
                "  auto thing = test{\n"
                "      {\n"
-               "       {13}, {something}, // A\n"
-               "      }\n"
-               "  };\n"
-               "}",
-               "void foo() {\n"
-               "  auto thing = test{\n"
-               "      {\n"
                "       {13},\n"
                "       {something}, // A\n"
                "      }\n"
@@ -28017,13 +28010,6 @@ TEST_F(FormatTest, AlignArrayOfStructuresRightAlignmentNonSquare) {
                "};",
                Style);
   verifyFormat("void foo() {\n"
-               "  auto thing = test{\n"
-               "      {\n"
-               "       {13}, {something}, // A\n"
-               "      }\n"
-               "  };\n"
-               "}",
-               "void foo() {\n"
                "  auto thing = test{\n"
                "      {\n"
                "       {13},\n"
@@ -28492,6 +28478,10 @@ TEST_F(FormatTest, RemoveParentheses) {
                Style);
   verifyFormat("MOCK_METHOD(void, Function, (), override);",
                "MOCK_METHOD(void, Function, (), (override));", Style);
+
+  Style.MacrosSkippedByRemoveParentheses.push_back("FOO");
+  verifyFormat("FOO((a && b));", Style);
+  verifyFormat("FOO((int), func, ((std::map<int, int>)), (override));", Style);
 
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
   verifyFormat("#define Return0 return (0);", Style);

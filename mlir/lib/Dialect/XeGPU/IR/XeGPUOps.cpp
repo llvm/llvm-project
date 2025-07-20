@@ -12,6 +12,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 #include "llvm/Support/Debug.h"
 
@@ -81,15 +82,18 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
   auto tdescShape = getShapeOf(tdescTy);
-  auto chunkSize = tdescTy.getChunkSize();
+  auto chunkSize = tdescTy.getChunkSizeAsInt();
 
   if (valueTy.getElementType() != tdescTy.getElementType())
     return emitError()
            << "Value should have the same element type as TensorDesc.";
 
-  if (tdescShape[0] != maskShape[0])
+  llvm::SmallVector<int64_t> expectedMaskShape(tdescShape);
+  if (chunkSize > 1)
+    expectedMaskShape.pop_back();
+  if (expectedMaskShape != maskShape)
     return emitError()
-           << "dim-0 of the Mask and TensorDesc should be the same.";
+           << "Mask should match TensorDesc except the chunk size dim.";
 
   // a valid shape for SIMT case
   if (valueTy.getRank() == 1 && valueTy.getNumElements() == chunkSize) {
@@ -109,6 +113,68 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
+
+void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+                           Type tdesc, TypedValue<MemRefType> source) {
+  [[maybe_unused]] auto ty = source.getType();
+  assert(ty.hasStaticShape() && "expecting a memref with static shape");
+
+  build(builder, state, tdesc, source, ValueRange({}) /* dynamic offsets */,
+        ValueRange({}) /* empty dynamic shape */,
+        ValueRange({}) /* empty dynamic strides */,
+        DenseI64ArrayAttr({}) /* const offsets */,
+        DenseI64ArrayAttr({}) /* empty const shape*/,
+        DenseI64ArrayAttr({}) /* empty const strides*/);
+}
+
+void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+                           Type tdesc, TypedValue<MemRefType> source,
+                           llvm::ArrayRef<OpFoldResult> shape,
+                           llvm::ArrayRef<OpFoldResult> strides) {
+  assert(shape.size() && strides.size() && shape.size() == strides.size() &&
+         "Shape and strides must be present and of equal size for ui64 "
+         "initialization.");
+
+  llvm::SmallVector<int64_t> staticShape;
+  llvm::SmallVector<int64_t> staticStrides;
+  llvm::SmallVector<Value> dynamicShape;
+  llvm::SmallVector<Value> dynamicStrides;
+
+  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+
+  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
+  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
+
+  build(builder, state, tdesc, source, ValueRange({}), dynamicShape,
+        dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
+        staticStridesAttr);
+}
+
+void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+                           Type tdesc, TypedValue<IntegerType> source,
+                           llvm::ArrayRef<OpFoldResult> shape,
+                           llvm::ArrayRef<OpFoldResult> strides) {
+  assert(shape.size() && strides.size() && shape.size() == strides.size() &&
+         "Shape and strides must be present and of equal size for ui64 "
+         "initialization.");
+
+  llvm::SmallVector<int64_t> staticShape;
+  llvm::SmallVector<int64_t> staticStrides;
+  llvm::SmallVector<Value> dynamicShape;
+  llvm::SmallVector<Value> dynamicStrides;
+
+  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+
+  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
+  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
+
+  build(builder, state, tdesc, source, ValueRange({}), dynamicShape,
+        dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
+        staticStridesAttr);
+}
+
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source,
                            llvm::ArrayRef<OpFoldResult> offsets) {
@@ -122,8 +188,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, tdesc, source, dynamicOffsets /* dynamic offsets */,
         ValueRange({}) /* empty dynamic shape */,
         ValueRange({}) /* empty dynamic strides */,
-        staticOffsets /* const offsets */, {} /* empty const shape*/,
-        {} /* empty const strides*/);
+        builder.getDenseI64ArrayAttr(staticOffsets) /* const offsets */,
+        {} /* empty const shape*/, {} /* empty const strides*/);
 }
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
@@ -135,8 +201,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
          shape.size() == strides.size() && shape.size() == offsets.size());
 
   Type srcTy = source.getType();
-  assert(isa<IntegerType>(srcTy) ||
-         isa<MemRefType>(srcTy) && "Source has to be either int or memref.");
+  assert((isa<IntegerType, MemRefType>(srcTy)) &&
+         "Source has to be either int or memref.");
 
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<Value> dynamicShape;
@@ -194,6 +260,13 @@ LogicalResult CreateNdDescOp::verify() {
     invalidElemTy |= memrefTy.getElementType() != getElementType();
   }
 
+  if (llvm::isa<IntegerType>(getSourceType())) {
+    // strides and shape must present for integer source.
+    if (getMixedStrides().empty() || getMixedSizes().empty())
+      return emitOpError("Expecting strides and shape to be present for "
+                         "integer source.");
+  }
+
   // mismatches among shape, strides, and offsets are
   // already handeled by OffsetSizeAndStrideOpInterface.
   // So they are not check here.
@@ -203,11 +276,9 @@ LogicalResult CreateNdDescOp::verify() {
         "is a memref) should match with each other.");
 
   // check result TensorDesc rank
-  invalidRank = (getType().getRank() > 2 || getType().getRank() > rank);
-
-  if (invalidRank)
+  if (getType().getRank() > rank)
     return emitOpError(
-        "Expecting the TensorDesc rank is up to 2 and not greater than the "
+        "Expecting the TensorDesc rank is not greater than the "
         "ranks of shape, strides, offsets or the memref source.");
 
   if (invalidElemTy)
@@ -218,6 +289,53 @@ LogicalResult CreateNdDescOp::verify() {
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   return success();
+}
+
+ParseResult parseOptionalDynamicIndexList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
+
+  SmallVector<int64_t, 4> integerVals;
+  auto parseIntegerOrValue = [&]() {
+    OpAsmParser::UnresolvedOperand operand;
+    auto res = parser.parseOptionalOperand(operand);
+
+    if (res.has_value() && succeeded(res.value())) {
+      values.push_back(operand);
+      integerVals.push_back(ShapedType::kDynamic);
+      if (valueTypes && parser.parseColonType(valueTypes->emplace_back()))
+        return failure();
+    } else {
+      int64_t integer;
+      if (failed(parser.parseInteger(integer)))
+        return failure();
+      integerVals.push_back(integer);
+    }
+    return success();
+  };
+
+  // If the optional values are given there must be left bracket
+  if (parser.parseOptionalLSquare().succeeded()) {
+    if (parser.parseCommaSeparatedList(parseIntegerOrValue) ||
+        parser.parseRSquare())
+      return parser.emitError(parser.getNameLoc())
+             << "expected a list of SSA values or integers";
+    integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
+    return success();
+  }
+
+  return success();
+}
+
+void printOptionalDynamicIndexList(
+    OpAsmPrinter &printer, Operation *op, OperandRange values,
+    ArrayRef<int64_t> integers, TypeRange valueTypes = TypeRange(),
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
+
+  return printDynamicIndexList(printer, op, values, integers,
+                               /*scalableFlags=*/{}, valueTypes, delimiter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -247,11 +365,11 @@ LogicalResult LoadNdOp::verify() {
   auto tdescTy = getTensorDescType();
   auto valueTy = getType();
 
-  if (tdescTy.getRank() > 2)
-    return emitOpError("Expecting a 1D/2D TensorDesc.\n");
-
   if (tdescTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
+
+  if (tdescTy.getRank() > 2)
+    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
 
   if (!valueTy)
     return emitOpError("Invalid result, it should be a VectorType.\n");
@@ -316,15 +434,13 @@ LogicalResult LoadNdOp::verify() {
   }
 
   auto array_len = tdescTy.getArrayLength();
-  if (array_len > 1) {
+  if (array_len > 1)
     tdescShape.insert(tdescShape.begin(), array_len);
-  }
 
-  if (tdescShape != valueShape) {
+  if (tdescShape != valueShape)
     return emitOpError() << "Result shape " << makeString(valueShape)
                          << " is not consistent with tensor descriptor "
                          << tdescTy;
-  }
 
   return success();
 }
@@ -336,11 +452,11 @@ LogicalResult StoreNdOp::verify() {
   auto dstTy = getTensorDescType(); // Tile
   auto valTy = getValueType();      // Vector
 
-  if (dstTy.getRank() > 2)
-    return emitOpError("Expecting a 1D/2D TensorDesc.\n");
-
   if (dstTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
+
+  if (dstTy.getRank() > 2)
+    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
 
   if (!valTy)
     return emitOpError("Expecting a VectorType result.\n");
@@ -370,22 +486,21 @@ LogicalResult StoreNdOp::verify() {
       return emitOpError()
              << "TensorDesc doesn't need LayoutAttr for SIMT code";
 
-    if (tdescElems % valueElems) {
+    if (tdescElems % valueElems)
       return emitOpError()
              << "Value shape " << makeString(getShapeOf(valTy))
              << " is not a valid distribution for tensor descriptor " << dstTy;
-    }
+
     return success();
   }
 
   // SIMD code should have the same shape as the tensor descriptor.
   auto tdescShape = getShapeOf(dstTy);
   auto valueShape = getShapeOf(valTy);
-  if (tdescShape != valueShape) {
+  if (tdescShape != valueShape)
     return emitOpError() << "Value shape " << makeString(valueShape)
                          << " is not consistent with tensor descriptor "
                          << dstTy;
-  }
 
   return success();
 }
@@ -449,25 +564,8 @@ LogicalResult CreateDescOp::verify() {
            << ", TensorDesc: " << tdescMemorySpace;
 
   // check total size
-  auto chunkSize = tdescTy.getChunkSize();
-  auto elemBits = tdescTy.getElementType().getIntOrFloatBitWidth();
-  auto bitsPerLane = elemBits * chunkSize;
-  if (chunkSize > 1 && bitsPerLane % 32) {
-    // For 8-bit and 16-bit data, the hardware only supports chunk size of 1.
-    // For 32-bit data, the hardware can support larger larger chunk size. So
-    // we can bitcast 8-bit/16-bit data to 32-bit data for better performance.
-    // But this requires the total size is 32 bit aligned to make the
-    // optimization work.
-    return emitOpError(
-        "access size (chunk_size * sizeof(elemTy)) should be 32-bit aligned.");
-  }
-
-  auto lscConstraints = 512 * 8; // each access is upto 512 bytes.
-  if (elemBits * tdescTy.getNumElements() > lscConstraints)
-    return emitOpError("total access size (simd_lanes * chunk_size * "
-                       "sizeof(elemTy)) is upto 512 bytes.");
-
-  SmallVector<int64_t> shape({(int64_t)getNumOffsets()});
+  auto chunkSize = tdescTy.getChunkSizeAsInt();
+  SmallVector<int64_t> shape(getOffsetsType().getShape());
   if (chunkSize != 1)
     shape.push_back(chunkSize);
 
@@ -561,6 +659,23 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
                            Value tensorDesc, llvm::ArrayRef<int64_t> offsets) {
   auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
   build(builder, state, tensorDesc, ofrs);
+}
+
+LogicalResult UpdateOffsetOp::verify() {
+  auto tdescTy = getTensorDescType();
+  if (!tdescTy.isScattered())
+    return emitOpError("Expects a scattered TensorDesc.\n");
+
+  SmallVector<int64_t> expectedOffsetShape = getShapeOf(tdescTy);
+  SmallVector<int64_t> offsetShape = getShapeOf(getOffsetsType());
+  if (tdescTy.getChunkSizeAsInt() > 1)
+    expectedOffsetShape.pop_back();
+
+  if (expectedOffsetShape != offsetShape)
+    return emitOpError(
+        "Offsets should match TensorDesc except the chunk size dim.");
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -151,9 +151,6 @@ protected:
   ///  blocks.
   bool RestrictIT = false;
 
-  /// UseSjLjEH - If true, the target uses SjLj exception handling (e.g. iOS).
-  bool UseSjLjEH = false;
-
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align stackAlignment = Align(4);
@@ -270,7 +267,6 @@ private:
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
 
-  void initializeEnvironment();
   void initSubtargetFeatures(StringRef CPU, StringRef FS);
   ARMFrameLowering *initializeFrameLowering(StringRef CPU, StringRef FS);
 
@@ -321,7 +317,6 @@ public:
   }
   bool useFPVFMx16() const { return useFPVFMx() && hasFullFP16(); }
   bool useFPVFMx64() const { return useFPVFMx() && hasFP64(); }
-  bool useSjLjEH() const { return UseSjLjEH; }
   bool hasBaseDSP() const {
     if (isThumb())
       return hasThumb2() && hasDSP();
@@ -343,7 +338,6 @@ public:
   bool isTargetWatchABI() const { return TargetTriple.isWatchABI(); }
   bool isTargetDriverKit() const { return TargetTriple.isDriverKit(); }
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
-  bool isTargetNaCl() const { return TargetTriple.isOSNaCl(); }
   bool isTargetNetBSD() const { return TargetTriple.isOSNetBSD(); }
   bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
 

@@ -50,6 +50,8 @@ void MisleadingSetterOfReferenceCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Found = Result.Nodes.getNodeAs<CXXMethodDecl>("bad-set-function");
   const auto *Member = Result.Nodes.getNodeAs<FieldDecl>("member");
+  assert(Found != nullptr);
+  assert(Member != nullptr);
 
   diag(Found->getBeginLoc(),
        "function '%0' can be mistakenly used in order to change the "

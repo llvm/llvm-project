@@ -1543,30 +1543,29 @@ def Vector_TransferReadOp :
   }];
 
   let builders = [
-    /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+    /// 1. Builder that sets padding to `padding` or poison if not provided and
+    /// an empty mask (variant with attrs).
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
+                   "std::optional<Value>":$padding,
                    "AffineMapAttr":$permutationMapAttr,
                    "ArrayAttr":$inBoundsAttr)>,
-    /// 2. Builder that sets padding to zero and an empty mask (variant without attrs).
+    /// 2. Builder that sets padding to `padding` or poison if not provided and
+    /// an empty mask (variant without attrs).
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
+                   "std::optional<Value>":$padding,
                    "AffineMap":$permutationMap,
                    CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
-    /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+    /// 3. Builder that sets padding to `padding` or poison if not provided and
+    /// permutation map to 'getMinorIdentityMap'.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
-                   "Value":$padding,
-                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
-    /// 4. Builder that sets padding to zero and permutation map to
-    /// 'getMinorIdentityMap'.
-    OpBuilder<(ins "VectorType":$vectorType,
-                   "Value":$source,
-                   "ValueRange":$indices,
-                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+                   "std::optional<Value>":$padding,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>
   ];
 
   let extraClassDeclaration = [{
@@ -1810,12 +1809,42 @@ def Vector_LoadOp : Vector_Op<"load", [
     ```mlir
     %result = vector.load %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$base,
       Variadic<Index>:$indices,
-      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+      ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>,
+    OpBuilder<(ins "TypeRange":$resultTypes,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultTypes, base, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>
+  ];
+
   let results = (outs AnyVectorOfAnyRank:$result);
 
   let extraClassDeclaration = [{
@@ -1896,6 +1925,12 @@ def Vector_StoreOp : Vector_Op<"store", [
     ```mlir
     vector.store %valueToStore, %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
 
   let arguments = (ins
@@ -1903,8 +1938,21 @@ def Vector_StoreOp : Vector_Op<"store", [
       Arg<AnyMemRef, "the reference to store to",
       [MemWrite]>:$base,
       Variadic<Index>:$indices,
-      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal
-  );
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+      ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+
+  let builders = [
+    OpBuilder<(ins "Value":$valueToStore,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, valueToStore, base, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>
+  ];
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2493,6 +2541,7 @@ def Vector_ConstantMaskOp :
 
   let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def Vector_CreateMaskOp :
@@ -3011,12 +3060,7 @@ def Vector_ScanOp :
       vector<4x8x16x32xf32>, vector<4x16x32xf32>
     ```
   }];
-  let builders = [
-    OpBuilder<(ins "Value":$source, "Value":$initial_value,
-                   "CombiningKind":$kind,
-                   CArg<"int64_t", "0">:$reduction_dim,
-                   CArg<"bool", "true">:$inclusive)>
-  ];
+
   let extraClassDeclaration = [{
     VectorType getSourceType() {
       return ::llvm::cast<VectorType>(getSource().getType());

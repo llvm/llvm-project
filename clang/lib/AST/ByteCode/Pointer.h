@@ -576,6 +576,11 @@ public:
       return true;
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
+  bool isConstInMutable() const {
+    if (!isBlockPointer())
+      return false;
+    return isRoot() ? false : getInlineDesc()->IsConstInMutable;
+  }
 
   /// Checks if an object or a subfield is volatile.
   bool isVolatile() const {
@@ -688,6 +693,25 @@ public:
     return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset);
   }
 
+  /// Dereferences the element at index \p I.
+  /// This is equivalent to atIndex(I).deref<T>().
+  template <typename T> T &elem(unsigned I) const {
+    assert(isLive() && "Invalid pointer");
+    assert(isBlockPointer());
+    assert(asBlockPointer().Pointee);
+    assert(isDereferencable());
+    assert(getFieldDesc()->isPrimitiveArray());
+
+    unsigned ElemByteOffset = I * getFieldDesc()->getElemSize();
+    if (isArrayRoot())
+      return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() +
+                                    asBlockPointer().Base + sizeof(InitMapPtr) +
+                                    ElemByteOffset);
+
+    return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset +
+                                  ElemByteOffset);
+  }
+
   /// Whether this block can be read from at all. This is only true for
   /// block pointers that point to a valid location inside that block.
   bool isDereferencable() const {
@@ -761,6 +785,9 @@ public:
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
 
+  /// Compute an integer that can be used to compare this pointer to
+  /// another one. This is usually NOT the same as the pointer offset
+  /// regarding the AST record layout.
   size_t computeOffsetForComparison() const;
 
 private:
@@ -806,13 +833,13 @@ private:
   /// Next link in the pointer chain.
   Pointer *Next = nullptr;
 
+  Storage StorageKind = Storage::Int;
   union {
     BlockPointer BS;
     IntPointer Int;
     FunctionPointer Fn;
     TypeidPointer Typeid;
   } PointeeStorage;
-  Storage StorageKind = Storage::Int;
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {

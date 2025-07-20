@@ -22,7 +22,7 @@
 #include "test_macros.h"
 
 template <class KeyContainer>
-void test_one() {
+constexpr void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
   using V   = Key;
@@ -49,15 +49,22 @@ void test_one() {
   assert(*r == V(3));
 }
 
-void test() {
+constexpr bool test() {
   test_one<std::vector<int>>();
   test_one<std::vector<MoveOnly>>();
-  test_one<std::deque<int>>();
-  test_one<std::deque<MoveOnly>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test_one<std::deque<int>>();
+    test_one<std::deque<MoveOnly>>();
+  }
   test_one<MinSequenceContainer<int>>();
   test_one<MinSequenceContainer<MoveOnly>>();
   test_one<std::vector<int, min_allocator<int>>>();
   test_one<std::vector<MoveOnly, min_allocator<MoveOnly>>>();
+
+  return true;
 }
 
 void test_exception() {
@@ -73,6 +80,9 @@ void test_exception() {
 int main(int, char**) {
   test();
   test_exception();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
