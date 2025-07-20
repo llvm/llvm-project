@@ -1943,6 +1943,9 @@ module std [system] {
       header "__ranges/zip_view.h"
       export std.utility.pair
     }
+    module zip_transform_view {
+      header "__ranges/zip_transform_view.h"
+    }
 
     header "ranges"
     export *
