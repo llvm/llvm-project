@@ -255,6 +255,19 @@ protected:
       uint32_t OperandSize;
     } relax;
     struct {
+      // The alignment to ensure, in bytes.
+      Align Alignment;
+      // The size of the integer (in bytes) of \p Value.
+      uint8_t FillLen;
+      // If true, fill with target-specific nop instructions.
+      bool EmitNops;
+      // The maximum number of bytes to emit; if the alignment
+      // cannot be satisfied in this width then this fragment is ignored.
+      unsigned MaxBytesToEmit;
+      // Value to use for filling padding bytes.
+      int64_t Fill;
+    } align;
+    struct {
       // True if this is a sleb128, false if uleb128.
       bool IsSigned;
       // The value this fragment should contain.
@@ -283,6 +296,7 @@ public:
       return false;
     case MCFragment::FT_Relaxable:
     case MCFragment::FT_Data:
+    case MCFragment::FT_Align:
     case MCFragment::FT_Dwarf:
     case MCFragment::FT_DwarfFrame:
     case MCFragment::FT_LEB:
@@ -440,6 +454,38 @@ public:
     llvm::copy(Inst, S.begin() + u.relax.OperandStart);
   }
 
+  //== FT_Align functions
+  void makeAlign(Align Alignment, int64_t Fill, uint8_t FillLen,
+                 unsigned MaxBytesToEmit) {
+    Kind = FT_Align;
+    u.align.EmitNops = false;
+    u.align.Alignment = Alignment;
+    u.align.Fill = Fill;
+    u.align.FillLen = FillLen;
+    u.align.MaxBytesToEmit = MaxBytesToEmit;
+  }
+
+  Align getAlignment() const {
+    assert(Kind == FT_Align);
+    return u.align.Alignment;
+  }
+  int64_t getAlignFill() const {
+    assert(Kind == FT_Align);
+    return u.align.Fill;
+  }
+  uint8_t getAlignFillLen() const {
+    assert(Kind == FT_Align);
+    return u.align.FillLen;
+  }
+  unsigned getAlignMaxBytesToEmit() const {
+    assert(Kind == FT_Align);
+    return u.align.MaxBytesToEmit;
+  }
+  bool hasAlignEmitNops() const {
+    assert(Kind == FT_Align);
+    return u.align.EmitNops;
+  }
+
   //== FT_LEB functions
   void makeLEB(bool IsSigned, const MCExpr *Value) {
     assert(Kind == FT_Data);
@@ -485,52 +531,6 @@ class MCEncodedFragment : public MCFragment {
 protected:
   MCEncodedFragment(MCFragment::FragmentType FType, bool HasInstructions)
       : MCFragment(FType, HasInstructions) {}
-};
-
-class MCAlignFragment : public MCFragment {
-  /// Flag to indicate that (optimal) NOPs should be emitted instead
-  /// of using the provided value. The exact interpretation of this flag is
-  /// target dependent.
-  bool EmitNops : 1;
-
-  /// The alignment to ensure, in bytes.
-  Align Alignment;
-
-  /// The size of the integer (in bytes) of \p Value.
-  uint8_t FillLen;
-
-  /// The maximum number of bytes to emit; if the alignment
-  /// cannot be satisfied in this width then this fragment is ignored.
-  unsigned MaxBytesToEmit;
-
-  /// Value to use for filling padding bytes.
-  int64_t Fill;
-
-  /// When emitting Nops some subtargets have specific nop encodings.
-  const MCSubtargetInfo *STI = nullptr;
-
-public:
-  MCAlignFragment(Align Alignment, int64_t Fill, uint8_t FillLen,
-                  unsigned MaxBytesToEmit)
-      : MCFragment(FT_Align, false), EmitNops(false), Alignment(Alignment),
-        FillLen(FillLen), MaxBytesToEmit(MaxBytesToEmit), Fill(Fill) {}
-
-  Align getAlignment() const { return Alignment; }
-  int64_t getFill() const { return Fill; }
-  uint8_t getFillLen() const { return FillLen; }
-  unsigned getMaxBytesToEmit() const { return MaxBytesToEmit; }
-
-  bool hasEmitNops() const { return EmitNops; }
-  void setEmitNops(bool Value, const MCSubtargetInfo *STI) {
-    EmitNops = Value;
-    this->STI = STI;
-  }
-
-  const MCSubtargetInfo *getSubtargetInfo() const { return STI; }
-
-  static bool classof(const MCFragment *F) {
-    return F->getKind() == MCFragment::FT_Align;
-  }
 };
 
 class MCFillFragment : public MCFragment {

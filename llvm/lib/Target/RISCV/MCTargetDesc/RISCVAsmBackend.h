@@ -39,12 +39,11 @@ public:
   ~RISCVAsmBackend() override = default;
 
   // Return Size with extra Nop Bytes for alignment directive in code section.
-  bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
+  bool shouldInsertExtraNopBytesForCodeAlign(const MCFragment &AF,
                                              unsigned &Size) override;
 
   // Insert target specific fixup type for alignment directive in code section.
-  bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                     MCAlignFragment &AF) override;
+  bool shouldInsertFixupForCodeAlign(MCAssembler &Asm, MCFragment &AF) override;
 
   std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
                                     uint64_t &) override;
