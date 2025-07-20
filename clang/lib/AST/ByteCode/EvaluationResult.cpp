@@ -204,7 +204,7 @@ static void collectBlocks(const Pointer &Ptr,
 
   } else if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
-      const Pointer &ElemPointee = Ptr.atIndex(I).deref<Pointer>();
+      const Pointer &ElemPointee = Ptr.elem<Pointer>(I);
       if (isUsefulPtr(ElemPointee) && !Blocks.contains(ElemPointee.block()))
         collectBlocks(ElemPointee, Blocks);
     }

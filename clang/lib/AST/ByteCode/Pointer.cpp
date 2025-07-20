@@ -760,14 +760,14 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
         std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
         assert(ElemT);
         INT_TYPE_SWITCH(*ElemT, {
-          auto V1 = Ptr.atIndex(0).deref<T>();
-          auto V2 = Ptr.atIndex(1).deref<T>();
+          auto V1 = Ptr.elem<T>(0);
+          auto V2 = Ptr.elem<T>(1);
           R = APValue(V1.toAPSInt(), V2.toAPSInt());
           return true;
         });
       } else if (ElemTy->isFloatingType()) {
-        R = APValue(Ptr.atIndex(0).deref<Floating>().getAPFloat(),
-                    Ptr.atIndex(1).deref<Floating>().getAPFloat());
+        R = APValue(Ptr.elem<Floating>(0).getAPFloat(),
+                    Ptr.elem<Floating>(1).getAPFloat());
         return true;
       }
       return false;
@@ -782,9 +782,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       SmallVector<APValue> Values;
       Values.reserve(VT->getNumElements());
       for (unsigned I = 0; I != VT->getNumElements(); ++I) {
-        TYPE_SWITCH(ElemT, {
-          Values.push_back(Ptr.atIndex(I).deref<T>().toAPValue(ASTCtx));
-        });
+        TYPE_SWITCH(ElemT,
+                    { Values.push_back(Ptr.elem<T>(I).toAPValue(ASTCtx)); });
       }
 
       assert(Values.size() == VT->getNumElements());
