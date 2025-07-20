@@ -29,7 +29,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/lldb-forward.h"
 #include <optional>
 
 using namespace lldb_private;
