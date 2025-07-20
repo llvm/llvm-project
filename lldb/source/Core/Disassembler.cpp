@@ -787,11 +787,7 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
     if (!annotations.empty()) {
       ss.FillLastLineToColumn(annotation_column, ' ');
       ss.PutCString(" ; ");
-      for (size_t i = 0; i < annotations.size(); ++i) {
-        if (i > 0)
-          ss.PutCString(", ");
-        ss.PutCString(annotations[i]);
-      }
+      ss.PutCString(llvm::join(annotations, ", "));
     }
 
     frame->ChangePC(original_pc);
