@@ -35,6 +35,7 @@
 #include "llvm/Transforms/Coroutines/SpillUtils.h"
 #include "llvm/Transforms/Coroutines/SuspendCrossingInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
@@ -974,6 +975,159 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   return FrameTy;
 }
 
+// Fixer for the "Instruction does not dominate all uses!" bug
+// The fix consists of mapping problematic paths (where CoroBegin does not
+// dominate cleanup BBs) and clones them to 2 flows - the one that insertSpills
+// intended to create (using the spill) and another one, preserving the logics
+// of pre-splitting, which would be triggered if unwinding happened before
+// CoroBegin
+static void
+splitBasicBlocksNotDominatedByCoroBegin(const FrameDataInfo &FrameData,
+                                        coro::Shape &Shape, Function *F,
+                                        DominatorTree &DT) {
+  ValueToValueMapTy VMap;
+  DenseMap<BasicBlock *, BasicBlock *>
+ProcessedSpillBlockToAlternativeUnspilledBlockMap;
+  bool FunctionHasSomeBlockNotDominatedByCoroBegin;
+  SmallVector<BasicBlock *> SpillUserBlocks;
+  
+  for (const auto &E : FrameData.Spills) {
+    for (auto *U : E.second) {
+      if (std::find(SpillUserBlocks.begin(), SpillUserBlocks.end(),
+U->getParent()) == SpillUserBlocks.end()) {
+        SpillUserBlocks.push_back(U->getParent());
+      }
+    }
+  }
+  SpillUserBlocks.push_back(Shape.AllocaSpillBlock);
+
+  do {
+    FunctionHasSomeBlockNotDominatedByCoroBegin = false;
+    // We want to traverse the function post-order (predecessors first),
+    // and check dominance starting CoroBegin
+    bool HaveTraversedCoroBegin = false;
+    for (BasicBlock *CurrentBlock : ReversePostOrderTraversal<Function *>(F)) {
+      if (!HaveTraversedCoroBegin &&
+CurrentBlock != Shape.CoroBegin->getParent()) {
+        continue;
+      }
+      HaveTraversedCoroBegin = true;
+      
+      // Focus on 2 types of users that produce errors - those in
+      // FrameData.Spills, and decendants of Shape.AllocaSpillBlocks
+      if (!DT.dominates(Shape.CoroBegin, CurrentBlock) &&
+std::find(SpillUserBlocks.begin(), SpillUserBlocks.end(),
+CurrentBlock) != SpillUserBlocks.end()) {
+        // Mark another iteration of the loop is needed, to verify that no more
+        // dominance issues after current run
+        FunctionHasSomeBlockNotDominatedByCoroBegin = true;
+
+        // Clone (preserve) the current basic block, before it will be modified
+        // by insertSpills
+        auto UnspilledAlternativeBlock =
+CloneBasicBlock(CurrentBlock, VMap, ".unspilled_alternative", F);
+
+        // Remap the instructions, VMap here aggregates instructions across
+        // multiple BasicBlocks, and we assume that traversal is post-order,
+        // therefore successor blocks (for example instructions having funclet
+        // tags) will be mapped correctly to the new cloned cleanuppad
+        for (Instruction &I : *UnspilledAlternativeBlock) {
+          RemapInstruction(&I, VMap,
+RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+        }
+
+        // Keep track between the processed spill basic block and the cloned
+        // alternative unspilled basic block Will help us fix instructions that
+        // their context is complex (for example cleanuppad of funclet is
+        // defined in another BB)
+        ProcessedSpillBlockToAlternativeUnspilledBlockMap[CurrentBlock] =
+UnspilledAlternativeBlock;
+
+        SmallVector<Instruction *> FixUpPredTerminators;
+
+        // Find the specific predecessors that does not dominated by
+        // Shape.CoroBegin We don't fix them here but later because it's not
+        // safe while using predecessors as iterator function
+        for (BasicBlock *Pred : predecessors(CurrentBlock)) {
+          if (!DT.dominates(Shape.CoroBegin, Pred)) {
+            FixUpPredTerminators.push_back(Pred->getTerminator());
+          }
+        }
+
+        // Fixups for current block terminator
+        const auto &CurrentBlockTerminator = CurrentBlock->getTerminator();
+
+        // If it's cleanupret, find the correspondant cleanuppad (use the map to
+        // find it)
+        if (auto CurrentBlockCleanupReturnTerminator =
+dyn_cast<CleanupReturnInst>(CurrentBlockTerminator)) {
+          BasicBlock *CBCPBB =
+CurrentBlockCleanupReturnTerminator->getCleanupPad()->getParent();
+          CleanupReturnInst *DBT = dyn_cast<CleanupReturnInst>(
+UnspilledAlternativeBlock->getTerminator());
+
+          // Again assuming post-order traversal - if we mapped the predecessing
+          // cleanuppad block before, we should find it here If not, do nothing
+          if (ProcessedSpillBlockToAlternativeUnspilledBlockMap.contains(
+CBCPBB)) {
+            Instruction *DCPr =
+&ProcessedSpillBlockToAlternativeUnspilledBlockMap[CBCPBB]
+->front();           
+            CleanupPadInst *DCP = cast<CleanupPadInst>(DCPr);
+            DBT->setCleanupPad(DCP);
+          }
+
+        // If it's a branch/invoke, keep track of its successors, we want to
+          // calculate dominance between CoroBegin and them also They might need
+          // clone as well
+        } else if (auto CurrentBlockBranchTerminator =
+dyn_cast<BranchInst>(CurrentBlockTerminator)) {
+          for (unsigned int successorIdx = 0;
+successorIdx < CurrentBlockBranchTerminator->getNumSuccessors();
+++successorIdx) {
+            SpillUserBlocks.push_back(
+CurrentBlockBranchTerminator->getSuccessor(successorIdx));
+          }
+        } else if (auto CurrentBlockInvokeTerminator =
+dyn_cast<InvokeInst>(CurrentBlockTerminator)) {
+          SpillUserBlocks.push_back(
+CurrentBlockInvokeTerminator->getUnwindDest());
+        } else {
+          report_fatal_error("Not implemented terminator for this specific "
+                             "instruction fixup in current block fixups");
+        }
+
+        // Fixups on the predecessors terminator - direct them to out untouched
+        // alternative block to break dominance error.
+        for (auto FixUpPredTerminator : FixUpPredTerminators) {
+          if (auto FixUpPredTerminatorInvoke =
+dyn_cast<InvokeInst>(FixUpPredTerminator)) {
+            FixUpPredTerminatorInvoke->setUnwindDest(UnspilledAlternativeBlock);
+          } else if (auto FixUpPredTerminatorBranch =
+dyn_cast<BranchInst>(FixUpPredTerminator)) {
+            for (unsigned int successorIdx = 0;
+                successorIdx < FixUpPredTerminatorBranch->getNumSuccessors();
+                ++successorIdx) {
+              if (CurrentBlock ==
+FixUpPredTerminatorBranch->getSuccessor(successorIdx)) {
+                FixUpPredTerminatorBranch->setSuccessor(
+successorIdx, UnspilledAlternativeBlock);
+              }
+            }
+          } else {
+            report_fatal_error("Not implemented terminator for this specific "
+                               "instruction in pred fixups");
+          }
+        }
+        
+        // We changed dominance tree, so recalculate.
+        DT.recalculate(*F);
+        continue;
+      }
+    }
+  } while (FunctionHasSomeBlockNotDominatedByCoroBegin);
+}
+
 // Replace all alloca and SSA values that are accessed across suspend points
 // with GetElementPointer from coroutine frame + loads and stores. Create an
 // AllocaSpillBB that will become the new entry block for the resume parts of
@@ -1052,6 +1206,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     }
     return GEP;
   };
+
+  splitBasicBlocksNotDominatedByCoroBegin(FrameData, Shape, F, DT);
 
   for (auto const &E : FrameData.Spills) {
     Value *Def = E.first;
