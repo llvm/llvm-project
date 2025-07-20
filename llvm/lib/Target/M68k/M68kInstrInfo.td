@@ -465,6 +465,9 @@ def IsPIC        : Predicate<"TM.isPositionIndependent()">;
 def IsNotPIC     : Predicate<"!TM.isPositionIndependent()">;
 
 // ISA versions
+def IsM68000 : Predicate<"Subtarget->isM68000()">,
+                            AssemblerPredicate<(all_of FeatureISA00)>;
+
 foreach i = [0,1,2,4,6] in
 def AtLeastM680 # i # "0" : Predicate<"Subtarget->atLeastM680"#i#"0()">,
                             AssemblerPredicate<(all_of

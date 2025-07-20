@@ -583,9 +583,13 @@ bool M68kInstrInfo::ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const {
   // Replace the pseudo instruction with the real one
   if (IsToCCR)
     MIB->setDesc(get(M68k::MOV16cd));
-  else
-    // FIXME M68010 or later is required
+  else if (MIB->getParent()
+               ->getParent()
+               ->getSubtarget<M68kSubtarget>()
+               .atLeastM68010())
     MIB->setDesc(get(M68k::MOV16dc));
+  else
+    MIB->setDesc(get(M68k::MOV16ds));
 
   return true;
 }
@@ -709,6 +713,8 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 Register SrcReg, bool KillSrc,
                                 bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc = 0;
+  MachineFunction &MF = *MBB.getParent();
+  const M68kSubtarget &STI = MF.getSubtarget<M68kSubtarget>();
 
   // First deal with the normal symmetric copies.
   if (M68k::XR32RegClass.contains(DstReg, SrcReg))
@@ -718,20 +724,13 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   else if (M68k::DR8RegClass.contains(DstReg, SrcReg))
     Opc = M68k::MOV8dd;
 
-  if (Opc) {
-    BuildMI(MBB, MI, DL, get(Opc), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
-    return;
-  }
-
   // Now deal with asymmetrically sized copies. The cases that follow are upcast
   // moves.
   //
   // NOTE
   // These moves are not aware of type nature of these values and thus
   // won't do any SExt or ZExt and upper bits will basically contain garbage.
-  MachineInstrBuilder MIB(*MBB.getParent(), MI);
-  if (M68k::DR8RegClass.contains(SrcReg)) {
+  else if (M68k::DR8RegClass.contains(SrcReg)) {
     if (M68k::XR16RegClass.contains(DstReg))
       Opc = M68k::MOVXd16d8;
     else if (M68k::XR32RegClass.contains(DstReg))
@@ -740,29 +739,18 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
              M68k::XR32RegClass.contains(DstReg))
     Opc = M68k::MOVXd32d16;
 
-  if (Opc) {
-    BuildMI(MBB, MI, DL, get(Opc), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
-    return;
-  }
-
-  bool FromCCR = SrcReg == M68k::CCR;
-  bool FromSR = SrcReg == M68k::SR;
-  bool ToCCR = DstReg == M68k::CCR;
-  bool ToSR = DstReg == M68k::SR;
-
-  if (FromCCR) {
+  else if (SrcReg == M68k::CCR) {
     if (M68k::DR8RegClass.contains(DstReg)) {
       Opc = M68k::MOV8dc;
     } else if (M68k::DR16RegClass.contains(DstReg)) {
-      Opc = M68k::MOV16dc;
+      Opc = STI.isM68000() ? M68k::MOV16ds : M68k::MOV16dc;
     } else if (M68k::DR32RegClass.contains(DstReg)) {
-      Opc = M68k::MOV16dc;
+      Opc = STI.isM68000() ? M68k::MOV16ds : M68k::MOV16dc;
     } else {
       LLVM_DEBUG(dbgs() << "Cannot copy CCR to " << RI.getName(DstReg) << '\n');
       llvm_unreachable("Invalid register for MOVE from CCR");
     }
-  } else if (ToCCR) {
+  } else if (DstReg == M68k::CCR) {
     if (M68k::DR8RegClass.contains(SrcReg)) {
       Opc = M68k::MOV8cd;
     } else if (M68k::DR16RegClass.contains(SrcReg)) {
@@ -773,18 +761,71 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to CCR\n");
       llvm_unreachable("Invalid register for MOVE to CCR");
     }
-  } else if (FromSR || ToSR)
+  } else if (SrcReg == M68k::SR || DstReg == M68k::SR)
     llvm_unreachable("Cannot emit SR copy instruction");
 
-  if (Opc) {
+  if (!Opc) {
+    LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to "
+                      << RI.getName(DstReg) << '\n');
+    llvm_unreachable("Cannot emit physreg copy instruction");
+  }
+
+  unsigned CCRSrcReg = STI.isM68000() ? M68k::SR : M68k::CCR;
+
+  // Get the live registers right before the COPY instruction. If CCR is
+  // live, the MOVE is going to kill it, so we will need to preserve it.
+  LiveRegUnits UsedRegs(RI);
+  UsedRegs.addLiveOuts(MBB);
+  auto InstUpToI = MBB.end();
+  while (InstUpToI != MI) {
+    UsedRegs.stepBackward(*--InstUpToI);
+  }
+
+  if (SrcReg == M68k::CCR) {
+    BuildMI(MBB, MI, DL, get(Opc), DstReg).addReg(CCRSrcReg);
+    return;
+  }
+  if (DstReg == M68k::CCR) {
+    BuildMI(MBB, MI, DL, get(Opc), M68k::CCR)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+  if (UsedRegs.available(M68k::CCR)) {
     BuildMI(MBB, MI, DL, get(Opc), DstReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
-  LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to "
-                    << RI.getName(DstReg) << '\n');
-  llvm_unreachable("Cannot emit physreg copy instruction");
+  // CCR is live, so we must restore it after the copy. Prepare push/pop ops.
+  // 68000 must use MOVE from SR, 68010+ must use MOVE from CCR. In either
+  // case, MOVE to CCR masks out the upper byte.
+
+  // Look for an available data register for the CCR, or push to stack if
+  // there are none
+  BitVector Allocatable =
+      RI.getAllocatableSet(MF, RI.getRegClass(M68k::DR16RegClassID));
+  for (Register Reg : Allocatable.set_bits()) {
+    if (!RI.regsOverlap(DstReg, Reg) && (UsedRegs.available(Reg))) {
+      unsigned CCRPushOp = STI.isM68000() ? M68k::MOV16ds : M68k::MOV16dc;
+      unsigned CCRPopOp = M68k::MOV16cd;
+      BuildMI(MBB, MI, DL, get(CCRPushOp), Reg).addReg(CCRSrcReg);
+      BuildMI(MBB, MI, DL, get(Opc), DstReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+      BuildMI(MBB, MI, DL, get(CCRPopOp), M68k::CCR).addReg(Reg);
+      return;
+    }
+  }
+
+  unsigned CCRPushOp = STI.isM68000() ? M68k::MOV16es : M68k::MOV16ec;
+  unsigned CCRPopOp = M68k::MOV16co;
+
+  BuildMI(MBB, MI, DL, get(CCRPushOp))
+      .addReg(RI.getStackRegister())
+      .addReg(CCRSrcReg);
+  BuildMI(MBB, MI, DL, get(Opc), DstReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+  BuildMI(MBB, MI, DL, get(CCRPopOp), M68k::CCR).addReg(RI.getStackRegister());
+  return;
 }
 
 namespace {
