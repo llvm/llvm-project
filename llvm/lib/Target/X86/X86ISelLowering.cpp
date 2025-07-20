@@ -23494,10 +23494,10 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
   // TODO: Is SIGN_EXTEND_INREG needed here?
   if (CmpVT == MVT::i64 && isX86CCSigned(X86CC) &&
       Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
-      (DAG.MaskedValueIsAllOnes(Op1, APInt::getHighBitsSet(64, 32)) ||
+      (DAG.ComputeNumSignBits(Op1) > 32 ||
        Op1.getOpcode() == ISD::SIGN_EXTEND ||
        Op1.getOpcode() == ISD::SIGN_EXTEND_INREG) &&
-      (DAG.MaskedValueIsAllOnes(Op0, APInt::getHighBitsSet(64, 32)) ||
+      (DAG.ComputeNumSignBits(Op0) > 32 ||
        Op0.getOpcode() == ISD::SIGN_EXTEND ||
        Op0.getOpcode() == ISD::SIGN_EXTEND_INREG)) {
     CmpVT = MVT::i32;
