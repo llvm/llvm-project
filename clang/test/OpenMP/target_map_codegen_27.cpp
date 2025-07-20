@@ -68,10 +68,10 @@ void explicit_maps_pointer_references (int *p){
   }
 
 // Region 01
-//
-// &(ref_ptee(a)[0]), &(ref_ptee(a)[2]), 100 * sizeof(int), TO | FROM | PARAM
-// &(ref_ptee(a)), &(ref_ptee(a)[2]), sizeof(ref_ptee(a)), ATTACH
-//
+
+//  &(ref_ptee(a)[0]), &(ref_ptee(a)[2]), 100 * sizeof(int), TO | FROM | PARAM
+//  &(ref_ptee(a)), &(ref_ptee(a)[2]), sizeof(ref_ptee(a)), ATTACH
+
 // CK28-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK28-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK28-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]

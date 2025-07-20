@@ -7335,14 +7335,13 @@ private:
     const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
-    // ATTACH entries are generated based solely on array section presence
 
     // Track info for ATTACH entry generation
     Address AttachBaseAddr = Address::invalid();
     Address AttachFirstElemAddr = Address::invalid();
 
-    // Find the component that should use ATTACH-style mapping.
-    auto AttachInfo = findAttachBasePointer(Components);
+    // Find the pointer-attachment base-pointer for the given list, if any.
+    std::optional<AttachInfoTy> AttachInfo = findAttachBasePointer(Components);
 
     if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
@@ -7788,13 +7787,12 @@ private:
           PartialStruct.IsArraySection = true;
 
         if (Next == CE) {
-          // Generate ATTACH entry for array sections and subscripts on
-          // standalone pointers Info was already collected during the main
-          // component loop Check if we should use ATTACH-style mapping for this
-          // expression
-          bool IsAttachablePointeeExpr = AttachInfo &&
-                                         AttachInfo->BasePtrDecl &&
-                                         AttachInfo->BasePtrDecl == BaseDecl;
+          // For now, we are emitting ATTACH entries only when the
+          // "attach-base-pointer" is a vardecl itself, not an expression, or
+          // even a member of a struct.
+          bool IsEligibleForAttachMapping = AttachInfo &&
+                                            AttachInfo->BasePtrDecl &&
+                                            AttachInfo->BasePtrDecl == BaseDecl;
           // Pointer attachment is needed at map-entering time or for declare
           // mappers.
           bool IsMapEnteringConstructOrMapper =
@@ -7803,7 +7801,7 @@ private:
                   cast<const OMPExecutableDirective *>(CurDir)
                       ->getDirectiveKind());
 
-          if (IsAttachablePointeeExpr && IsMapEnteringConstructOrMapper) {
+          if (IsEligibleForAttachMapping && IsMapEnteringConstructOrMapper) {
             AttachBaseAddr =
                 CGF.EmitLValue(AttachInfo->BasePtrExpr).getAddress();
 
@@ -7851,11 +7849,11 @@ private:
       PartialStruct.HasCompleteRecord = true;
 
     // Handle ATTACH entries: delay if PartialStruct is being populated,
-    // otherwise add immediately
+    // otherwise add immediately.
     if (AttachBaseAddr.isValid() && AttachFirstElemAddr.isValid()) {
       if (PartialStruct.Base.isValid()) {
         // We're populating PartialStruct, delay ATTACH entry addition until
-        // after emitCombinedEntry
+        // after emitCombinedEntry.
         PartialStruct.AttachBaseAddr = AttachBaseAddr;
         PartialStruct.AttachFirstElemAddr = AttachFirstElemAddr;
         PartialStruct.AttachBaseDecl = BaseDecl;
@@ -8143,13 +8141,14 @@ private:
   }
 
   /// Result structure for findAttachBasePointer
-  struct AttachInfo {
+  struct AttachInfoTy {
     const Expr *BasePtrExpr = nullptr;      // The pointer expression
     const ValueDecl *BasePtrDecl = nullptr; // The pointer decl, if any
     const Expr *PteeExpr = nullptr; // The array section/subscript expression
 
     // Constructor with arguments
-    AttachInfo(const Expr *BasePtr, const ValueDecl *BaseDecl, const Expr *Ptee)
+    AttachInfoTy(const Expr *BasePtr, const ValueDecl *BaseDecl,
+                 const Expr *Ptee)
         : BasePtrExpr(BasePtr), BasePtrDecl(BaseDecl), PteeExpr(Ptee) {}
   };
 
@@ -8158,7 +8157,7 @@ private:
   // For example, for:
   //  `map(pp->p->s.a[0])`, the base-pointer is `pp->p`, while the pointee is
   //  `pp->p->s.a[0]`.
-  static std::optional<AttachInfo> findAttachBasePointer(
+  static std::optional<AttachInfoTy> findAttachBasePointer(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
 
     const auto *Begin = Components.begin();
@@ -8210,7 +8209,7 @@ private:
       const Expr *BasePtrExpr = NextI->getAssociatedExpression();
       const ValueDecl *BasePtrDecl = NextI->getAssociatedDeclaration();
       const auto *BeginExpr = Begin->getAssociatedExpression();
-      return AttachInfo{BasePtrExpr, BasePtrDecl, BeginExpr};
+      return AttachInfoTy{BasePtrExpr, BasePtrDecl, BeginExpr};
     }
 
     return std::nullopt;
@@ -8401,7 +8400,8 @@ private:
             } else {
               auto PrevCI = std::next(CI->Components.rbegin());
               const auto *VarD = dyn_cast<VarDecl>(VD);
-              auto AttachInfo = findAttachBasePointer(CI->Components);
+              std::optional<AttachInfoTy> AttachInfo =
+                  findAttachBasePointer(CI->Components);
               if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
                   isa<MemberExpr>(IE) ||
                   !VD->getType().getNonReferenceType()->isPointerType() ||
@@ -8660,7 +8660,8 @@ public:
   /// Generate code for the combined entry if we have a partially mapped struct
   /// and take care of the mapping flags of the arguments corresponding to
   /// individual struct members.
-  /// AttachCombinedInfo will be populated with ATTACH entries if needed.
+  /// AttachCombinedInfo will be populated with ATTACH entries if
+  /// \p PartialStruct contains attach base-pointer information.
   void emitCombinedEntry(MapCombinedInfoTy &CombinedInfo,
                          MapCombinedInfoTy &AttachCombinedInfo,
                          MapFlagsArrayTy &CurTypes,
@@ -8770,8 +8771,13 @@ public:
     for (auto &M : CurTypes)
       OMPBuilder.setCorrectMemberOfFlag(M, MemberOfFlag);
 
-    // When we are emitting a combined entry, we need to use the begin address
-    // of the combined entry for the pointee address of any ATTACH maps.
+    // When we are emitting a combined entry. If there were any pending
+    // attachments to be done, we do them to the begin address of the combined
+    // entry. Note that this means only one attachment per combined-entry will
+    // be done. So, for instance, if we have:
+    //   S *ps;
+    //   ... map(ps->a, ps->b)
+    // We won't emit separate ATTACH entries for the two list items, just one.
     if (PartialStruct.AttachBaseAddr.isValid() &&
         PartialStruct.AttachFirstElemAddr.isValid())
       addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachBaseAddr,
@@ -9033,8 +9039,8 @@ public:
                 /*NotTargetParams*/ !IsEligibleForTargetParamFlag);
           }
 
-          // Append in order: combined-entry -> curinfo (individual fields) ->
-          // attachinfo
+          // We do the appends to get the entries in the following order:
+          // combined-entry -> individual-field-entries -> attach-entry
           CurCaptureVarInfo.append(CurInfoForComponentLists);
           CurCaptureVarInfo.append(AttachCombinedInfo);
         };

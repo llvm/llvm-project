@@ -130,10 +130,10 @@ struct CC {
     }
 
 // Region 01
-//
-//   &lb[0], &lb[/*lower_bound=*/0], X * sizeof(T), (TO | FROM) / (TO | FROM | PARAM)
-//   &lb, &lb[/*lower_bound=*/0], sizeof(T*), ATTACH
-//
+
+//  &lb[0], &lb[/*lower_bound=*/0], X * sizeof(T), (TO | FROM) / (TO | FROM | PARAM)
+//  &lb, &lb[/*lower_bound=*/0], sizeof(T*), ATTACH
+
 // CK21-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK21-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK21-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]

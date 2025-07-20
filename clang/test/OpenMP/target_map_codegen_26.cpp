@@ -71,12 +71,12 @@ void zero_size_section_and_private_maps (int ii){
   int *pa;
 
 // Region 00
-//
-//   &pa, &pa, sizeof(pa), IMPLICIT | PARAM
+
+//  &pa, &pa, sizeof(pa), IMPLICIT | PARAM
 //
 // FIXME: This looks like a bug. The implicit map on a pointer
 // should be identical to pa[0:0]
-//
+
 // CK27-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK27-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK27-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -97,13 +97,13 @@ void zero_size_section_and_private_maps (int ii){
   }
 
 // Region 01
-//
-//   &(pa[0]), &pa[/*lb=*/0], /*size=*/0, TO | FROM | PARAM
-//   &pa, &pa[/*lb=*/0], sizeof(pa), ATTACH
+
+//  &(pa[0]), &pa[/*lb=*/0], /*size=*/0, TO | FROM | PARAM
+//  &pa, &pa[/*lb=*/0], sizeof(pa), ATTACH
 //
 // Can be optimized to:
-//   &pa[0], &pa[0], /*size=*/0, TO | FROM | PARAM
-//
+//  &pa[0], &pa[0], /*size=*/0, TO | FROM | PARAM
+
 // CK27-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK27-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK27-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -134,13 +134,13 @@ void zero_size_section_and_private_maps (int ii){
   }
 
 // Region 02
-//
-//   &(pa[0]), &pa[/*lb=*/0], /*size=*/0, TO | FROM | PARAM
-//   &pa, &pa[/*lb=*/0], sizeof(pa), ATTACH
+
+//  &(pa[0]), &pa[/*lb=*/0], /*size=*/0, TO | FROM | PARAM
+//  &pa, &pa[/*lb=*/0], sizeof(pa), ATTACH
 //
 // Can be optimized to:
-//   &pa[0], &pa[0], /*size=*/0, TO | FROM | PARAM
-//
+//  &pa[0], &pa[0], /*size=*/0, TO | FROM | PARAM
+
 // CK27-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK27-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK27-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -171,13 +171,13 @@ void zero_size_section_and_private_maps (int ii){
   }
 
 // Region 03
-//
-//   &pa[0], &pa[ii], /*size=*/0, TO | FROM | PARAM
-//   &pa, &pa[ii], sizeof(pa), ATTACH
+
+//  &pa[0], &pa[ii], /*size=*/0, TO | FROM | PARAM
+//  &pa, &pa[ii], sizeof(pa), ATTACH
 //
 // Can be optimized to:
-//   &pa[ii], &pa[ii], /*size=*/0, TO | FROM | PARAM
-//
+//  &pa[ii], &pa[ii], /*size=*/0, TO | FROM | PARAM
+
 // CK27-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK27-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK27-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]

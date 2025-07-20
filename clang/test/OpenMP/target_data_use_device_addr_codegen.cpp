@@ -51,7 +51,7 @@ int main() {
 //  &ptr[0], &ptr[0], TO | FROM | RETURN_PARAM
 //  &ptr, &ptr[0], ATTACH
 //  &ref_ptee(ref), &ref_ptee(ref), TO | FROM | RETURN_PARAM
-//  &arr, &arr[0], TO | FROM | ATTACH | RETURN_PARAM
+//  &arr, &arr[0], TO | FROM | RETURN_PARAM
 //
 // CHECK: [[A_ADDR:%.+]] = alloca float,
 // CHECK: [[PTR_ADDR:%.+]] = alloca ptr,
@@ -149,6 +149,14 @@ int main() {
 // CHECK: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 -1, i32 8, ptr [[BPTR]], ptr [[PTR]], ptr [[SIZE]], ptr [[MAPTYPES1]], ptr null, ptr null)
 
 // CHECK: foo
+//
+//  &this[0], &this->a, sizeof(this[0].(a-to-arr[a]) | ALLOC
+//  &this[0], &this->a, sizeof(a), TO | FROM | RETURN_PARAM | MEMBER_OF(1)
+//  &this->ptr, &this->ptr[3], 4 * sizeof(ptr[0], TO | FROM | PTR_AND_OBJ | RETURN_PARAM | MEMBER_OF(1)
+//  &this[0], &ref_ptee(this->ref), sizeof(this->ref[0]), TO | FROM | PTR_AND_OBJ | RETURN_PARAM | MEMBER_OF(1)
+//  &this->ptr, &this->ptr[0], sizeof(ptr[0], TO | FROM | PTR_AND_OBJ | MEMBER_OF(1)
+//  &this, &this->arr[0], 4 * sizeof(arr[0]), TO | FROM | RETURN_PARAM | MEMBER_OF(1)
+//
 // CHECK: [[BPTRS:%.+]] = alloca [6 x ptr],
 // CHECK: [[PTRS:%.+]] = alloca [6 x ptr],
 // CHECK: [[MAP_PTRS:%.+]] = alloca [6 x ptr],

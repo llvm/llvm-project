@@ -134,10 +134,12 @@ int explicit_maps_struct_fields(int a){
 
 //
 // Same thing but starting from a pointer.
-//
+
 // Region 13
-//   &p[0], &p->a, sizeof(p->a), TO | FROM | PARAM
-//   &p, &p->a, sizeof(p), ATTACH
+
+//  &p[0], &p->a, sizeof(p->a), TO | FROM | PARAM
+//  &p, &p->a, sizeof(p), ATTACH
+
 // CK24-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK24-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK24-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -168,8 +170,10 @@ int explicit_maps_struct_fields(int a){
   { p->a++; }
 
 // Region 14
-//   &p[0], &p->s.s, sizeof(p->s.s), TO | FROM | PARAM
-//   &p, &p->s.s, sizeof(p), ATTACH
+
+//  &p[0], &p->s.s, sizeof(p->s.s), TO | FROM | PARAM
+//  &p, &p->s.s, sizeof(p), ATTACH
+
 // CK24-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK24-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK24-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -200,8 +204,10 @@ int explicit_maps_struct_fields(int a){
   { p->a++; }
 
 // Region 15
-//   &p[0], &p->s.s.a, sizeof(p->s.s.a), TO | FROM | PARAM
-//   &p, &p->s.s.a, sizeof(p), ATTACH
+
+//  &p[0], &p->s.s.a, sizeof(p->s.s.a), TO | FROM | PARAM
+//  &p, &p->s.s.a, sizeof(p), ATTACH
+
 // CK24-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK24-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK24-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -235,9 +241,11 @@ int explicit_maps_struct_fields(int a){
   { p->a++; }
 
 // Region 16
-//   &p[0], &p->b[0], sizeof(p->b[0:5]), ALLOC | PARAM
-//   &p[0], &p->b[0], sizeof(p->b[0:5]), TO | FROM
-//   &p, &p[0], sizeof(p), ATTACH
+
+//  &p[0], &p->b[0], sizeof(p->b[0:5]), ALLOC | PARAM
+//  &p[0], &p->b[0], sizeof(p->b[0:5]), TO | FROM
+//  &p, &p[0], sizeof(p), ATTACH
+
 // CK24-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK24-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK24-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -313,8 +321,10 @@ int explicit_maps_struct_fields(int a){
   { p->a++; }
 
 // Region 18
-//   &p[0], &p->s.sa[3].a, sizeof(p->s.sa[3].a), TO | FROM | PARAM
-//   &p, &p->s.sa[3].a sizeof(p), ATTACH
+
+//  &p[0], &p->s.sa[3].a, sizeof(p->s.sa[3].a), TO | FROM | PARAM
+//  &p, &p->s.sa[3].a sizeof(p), ATTACH
+
 // CK24-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK24-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK24-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -474,9 +484,11 @@ int explicit_maps_struct_fields(int a){
   { p->a++; }
 
 // Region 22
-//   &p[0], &p->s.s.b[0], sizeof(p->s.s.bb[0:2]), ALLOC | PARAM
-//   &p[0], &p->s.s.bb[0], sizeof(p->s.s.bb[0:2]), TO | FROM
-//   &p, &p[0], sizeof(p), ATTACH
+
+//  &p[0], &p->s.s.b[0], sizeof(p->s.s.bb[0:2]), ALLOC | PARAM
+//  &p[0], &p->s.s.bb[0], sizeof(p->s.s.bb[0:2]), TO | FROM
+//  &p, &p[0], sizeof(p), ATTACH
+
 // CK24-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK24-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK24-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]

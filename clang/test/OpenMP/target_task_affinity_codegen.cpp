@@ -69,8 +69,6 @@ int main() {
 //   &B, &B[/*lb=*/0], sizeof(B), ATTACH
 //   &A[0], &A[0], sizeof(A[0]), LITERAL | PARAM
 
-// TODO: Update the test to limit the checks to relevant lines only.
-
 //.
 // CHECK1: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 4096, i64 8]
 // CHECK1: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 3, i64 16384]

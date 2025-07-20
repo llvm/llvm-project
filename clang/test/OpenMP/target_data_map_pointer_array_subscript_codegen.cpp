@@ -39,10 +39,10 @@ MyObject *objects;
 // CHECK-DAG: [[MAPS1:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 281474976710673]
 // CHECK: @main
 int main(void) {
-//
+
 //  &objects[0], &objects[1], 1 * sizeof(objects[0]), TO
 //  &objects, &objects[1], sizeof(objects), ATTACH
-//
+
 // CHECK-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[BPGEP:%.+]], ptr [[PGEP:%.+]], ptr [[SIZES0]], ptr [[MAPS0]], ptr null, ptr null)
 // CHECK-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CHECK-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
