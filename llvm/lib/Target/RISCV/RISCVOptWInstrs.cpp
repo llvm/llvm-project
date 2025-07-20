@@ -48,6 +48,8 @@ using namespace llvm;
 STATISTIC(NumRemovedSExtW, "Number of removed sign-extensions");
 STATISTIC(NumTransformedToWInstrs,
           "Number of instructions transformed to W-ops");
+STATISTIC(NumTransformedToNonWInstrs,
+          "Number of instructions transformed to non-W-ops");
 
 static cl::opt<bool> DisableSExtWRemoval("riscv-disable-sextw-removal",
                                          cl::desc("Disable removal of sext.w"),
@@ -739,7 +741,10 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
       }
 
       if (hasAllWUsers(MI, ST, MRI)) {
+        LLVM_DEBUG(dbgs() << "Replacing " << MI);
         MI.setDesc(TII.get(Opc));
+        LLVM_DEBUG(dbgs() << "     with " << MI);
+        ++NumTransformedToNonWInstrs;
         MadeChange = true;
       }
     }
