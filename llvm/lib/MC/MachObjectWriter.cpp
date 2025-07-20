@@ -804,11 +804,8 @@ void MachObjectWriter::prepareObject(MCAssembler &Asm) {
                      UndefinedSymbolData);
 
   if (!CGProfile.empty()) {
-    MCSection *CGProfileSection = getContext().getMachOSection(
-        "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
-    auto &Frag = *CGProfileSection->begin();
-    Frag.clearContents();
-    raw_svector_ostream OS(Frag.getContentsForAppending());
+    SmallString<0> Content;
+    raw_svector_ostream OS(Content);
     for (const MCObjectWriter::CGProfileEntry &CGPE : CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
@@ -816,7 +813,9 @@ void MachObjectWriter::prepareObject(MCAssembler &Asm) {
       support::endian::write(OS, ToIndex, W.Endian);
       support::endian::write(OS, CGPE.Count, W.Endian);
     }
-    Frag.doneAppending();
+    MCSection *Sec = getContext().getMachOSection("__LLVM", "__cg_profile", 0,
+                                                  SectionKind::getMetadata());
+    llvm::copy(OS.str(), Sec->curFragList()->Head->getContents().data());
   }
 }
 // BEGIN MCCAS
