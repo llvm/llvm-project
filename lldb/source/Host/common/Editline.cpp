@@ -122,21 +122,20 @@ static int GetOperation(HistoryOperation op) {
   //  - The H_FIRST returns the most recent entry in the history.
   //
   // The naming of the enum entries match the semantic meaning.
-  switch(op) {
-    case HistoryOperation::Oldest:
-      return H_LAST;
-    case HistoryOperation::Older:
-      return H_NEXT;
-    case HistoryOperation::Current:
-      return H_CURR;
-    case HistoryOperation::Newer:
-      return H_PREV;
-    case HistoryOperation::Newest:
-      return H_FIRST;
+  switch (op) {
+  case HistoryOperation::Oldest:
+    return H_LAST;
+  case HistoryOperation::Older:
+    return H_NEXT;
+  case HistoryOperation::Current:
+    return H_CURR;
+  case HistoryOperation::Newer:
+    return H_PREV;
+  case HistoryOperation::Newest:
+    return H_FIRST;
   }
   llvm_unreachable("Fully covered switch!");
 }
-
 
 EditLineStringType CombineLines(const std::vector<EditLineStringType> &lines) {
   EditLineStringStreamType combined_stream;
@@ -313,8 +312,8 @@ protected:
   /// Path to the history file.
   std::string m_path;
 };
-}
-}
+} // namespace line_editor
+} // namespace lldb_private
 
 // Editline private methods
 
@@ -582,54 +581,56 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
     m_current_line_rows = new_line_rows;
   }
 
+  if (m_terminal_size_has_changed)
+    ApplyTerminalSizeChange();
+
+  // This mutex is locked by our caller (GetLine). Unlock it while we read a
+  // character (blocking operation), so we do not hold the mutex
+  // indefinitely. This gives a chance for someone to interrupt us. After
+  // Read returns, immediately lock the mutex again and check if we were
+  // interrupted.
+  m_locked_output.reset();
+
+  if (m_redraw_callback)
+    m_redraw_callback();
+
   // Read an actual character
-  while (true) {
-    lldb::ConnectionStatus status = lldb::eConnectionStatusSuccess;
-    char ch = 0;
+  lldb::ConnectionStatus status = lldb::eConnectionStatusSuccess;
+  char ch = 0;
+  int read_count =
+      m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
 
-    if (m_terminal_size_has_changed)
-      ApplyTerminalSizeChange();
-
-    // This mutex is locked by our caller (GetLine). Unlock it while we read a
-    // character (blocking operation), so we do not hold the mutex
-    // indefinitely. This gives a chance for someone to interrupt us. After
-    // Read returns, immediately lock the mutex again and check if we were
-    // interrupted.
-    m_locked_output.reset();
-    int read_count =
-        m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
-    m_locked_output.emplace(m_output_stream_sp->Lock());
-    if (m_editor_status == EditorStatus::Interrupted) {
-      while (read_count > 0 && status == lldb::eConnectionStatusSuccess)
-        read_count =
-            m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
-      lldbassert(status == lldb::eConnectionStatusInterrupted);
-      return 0;
-    }
-
-    if (read_count) {
-      if (CompleteCharacter(ch, *c))
-        return 1;
-    } else {
-      switch (status) {
-      case lldb::eConnectionStatusSuccess: // Success
-        break;
-
-      case lldb::eConnectionStatusInterrupted:
-        llvm_unreachable("Interrupts should have been handled above.");
-
-      case lldb::eConnectionStatusError:        // Check GetError() for details
-      case lldb::eConnectionStatusTimedOut:     // Request timed out
-      case lldb::eConnectionStatusEndOfFile:    // End-of-file encountered
-      case lldb::eConnectionStatusNoConnection: // No connection
-      case lldb::eConnectionStatusLostConnection: // Lost connection while
-                                                  // connected to a valid
-                                                  // connection
-        m_editor_status = EditorStatus::EndOfInput;
-        return 0;
-      }
-    }
+  // Re-lock the output mutex to protected m_editor_status here and in the
+  // switch below.
+  m_locked_output.emplace(m_output_stream_sp->Lock());
+  if (m_editor_status == EditorStatus::Interrupted) {
+    while (read_count > 0 && status == lldb::eConnectionStatusSuccess)
+      read_count =
+          m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
+    lldbassert(status == lldb::eConnectionStatusInterrupted);
+    return 0;
   }
+
+  if (read_count) {
+    if (CompleteCharacter(ch, *c))
+      return 1;
+    return 0;
+  }
+
+  switch (status) {
+  case lldb::eConnectionStatusSuccess:
+    llvm_unreachable("Success should have resulted in positive read_count.");
+  case lldb::eConnectionStatusInterrupted:
+    llvm_unreachable("Interrupts should have been handled above.");
+  case lldb::eConnectionStatusError:
+  case lldb::eConnectionStatusTimedOut:
+  case lldb::eConnectionStatusEndOfFile:
+  case lldb::eConnectionStatusNoConnection:
+  case lldb::eConnectionStatusLostConnection:
+    m_editor_status = EditorStatus::EndOfInput;
+  }
+
+  return 0;
 }
 
 const char *Editline::Prompt() {
@@ -1111,6 +1112,8 @@ void Editline::DisplayCompletions(
   }
 }
 
+void Editline::UseColor(bool use_color) { m_color = use_color; }
+
 unsigned char Editline::TabCommand(int ch) {
   if (!m_completion_callback)
     return CC_ERROR;
@@ -1147,7 +1150,8 @@ unsigned char Editline::TabCommand(int ch) {
       to_add.push_back(' ');
       el_deletestr(m_editline, request.GetCursorArgumentPrefix().size());
       el_insertstr(m_editline, to_add.c_str());
-      // Clear all the autosuggestion parts if the only single space can be completed.
+      // Clear all the autosuggestion parts if the only single space can be
+      // completed.
       if (to_add == " ")
         return CC_REDISPLAY;
       return CC_REFRESH;
@@ -1703,6 +1707,13 @@ void Editline::PrintAsync(lldb::LockableStreamFileSP stream_sp, const char *s,
     DisplayInput();
     MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);
   }
+}
+
+void Editline::Refresh() {
+  if (!m_editline || !m_output_stream_sp)
+    return;
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
+  el_set(m_editline, EL_REFRESH);
 }
 
 bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {

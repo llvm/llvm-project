@@ -13,10 +13,8 @@ int main() {
 }
 
 //--- compile_commands.json
-[
-{
-  "directory": "foo",
-  "file":"main.cpp",
-  "command":"clang main.cpp -c"
-}
-]
+[{
+  "directory" : "foo",
+  "file" : "main.cpp",
+  "command" : "clang main.cpp -c"
+}]

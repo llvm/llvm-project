@@ -237,6 +237,11 @@ private:
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIBasicType(const DIBasicType *N, SmallVectorImpl<uint64_t> &Record,
                         unsigned Abbrev);
+  void writeDIFixedPointType(const DIFixedPointType *N,
+                             SmallVectorImpl<uint64_t> &Record,
+                             unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DIFixedPointType Nodes");
+  }
   void writeDIStringType(const DIStringType *N,
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
     llvm_unreachable("DXIL cannot contain DIStringType Nodes");
@@ -1969,12 +1974,12 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
                        unsigned(IA->getDialect() & 1) << 2);
 
       // Add the asm string.
-      const std::string &AsmStr = IA->getAsmString();
+      StringRef AsmStr = IA->getAsmString();
       Record.push_back(AsmStr.size());
       Record.append(AsmStr.begin(), AsmStr.end());
 
       // Add the constraint string.
-      const std::string &ConstraintStr = IA->getConstraintString();
+      StringRef ConstraintStr = IA->getConstraintString();
       Record.push_back(ConstraintStr.size());
       Record.append(ConstraintStr.begin(), ConstraintStr.end());
       Stream.EmitRecord(bitc::CST_CODE_INLINEASM, Record);
@@ -2540,6 +2545,25 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
   Vals.clear();
 }
 
+// HLSL Change
+namespace {
+struct ValueNameCreator {
+  MallocAllocator Allocator;
+  SmallVector<ValueName *, 2>
+      ValueNames; // SmallVector N = 2 because we currently only expect this
+                  // to hold ValueNames for Lifetime intrinsics
+  ~ValueNameCreator() {
+    for (auto *VN : ValueNames)
+      VN->Destroy(Allocator);
+  }
+  ValueName *create(StringRef Name, Value *V) {
+    ValueName *VN = ValueName::create(Name, Allocator, V);
+    ValueNames.push_back(VN);
+    return VN;
+  }
+};
+} // anonymous namespace
+
 // Emit names for globals/functions etc.
 void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
     const ValueSymbolTable &VST) {
@@ -2554,9 +2578,24 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
   // to ensure the binary is the same no matter what values ever existed.
   SmallVector<const ValueName *, 16> SortedTable;
 
+  // HLSL Change
+  ValueNameCreator VNC;
   for (auto &VI : VST) {
-    SortedTable.push_back(VI.second->getValueName());
+    ValueName *VN = VI.second->getValueName();
+    // Clang mangles lifetime intrinsic names by appending '.p0' to the end,
+    // making them invalid lifetime intrinsics in LLVM 3.7. We can't
+    // demangle in dxil-prepare because it would result in invalid IR.
+    // Therefore we have to do this in the bitcode writer while writing its
+    // name to the symbol table.
+    if (const Function *Fn = dyn_cast<Function>(VI.getValue());
+        Fn && Fn->isIntrinsic()) {
+      Intrinsic::ID IID = Fn->getIntrinsicID();
+      if (IID == Intrinsic::lifetime_start || IID == Intrinsic::lifetime_end)
+        VN = VNC.create(Intrinsic::getBaseName(IID), VI.second);
+    }
+    SortedTable.push_back(VN);
   }
+
   // The keys are unique, so there shouldn't be stability issues.
   llvm::sort(SortedTable, [](const ValueName *A, const ValueName *B) {
     return A->first() < B->first();

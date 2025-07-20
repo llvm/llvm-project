@@ -41,7 +41,6 @@ public:
                                  const MCAssembler *Asm) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
   MCExpr const *getExpr() const;
   void setMustExtend(bool Val = true);
   bool mustExtend() const;
@@ -60,11 +59,6 @@ private:
   bool S27_2_reloc;
   bool SignMismatch;
 };
-
-static inline HexagonMCExpr::VariantKind
-getVariantKind(const MCSymbolRefExpr *SRE) {
-  return HexagonMCExpr::VariantKind(SRE->getKind());
-}
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_HEXAGON_HEXAGONMCEXPR_H

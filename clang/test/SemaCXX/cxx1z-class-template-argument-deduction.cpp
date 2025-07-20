@@ -113,9 +113,9 @@ namespace dependent {
   };
   template<typename T> void f() {
     typename T::X tx = 0;
-    typename T::Y ty = 0;
+    typename T::Y ty = 0; // expected-warning {{class template argument deduction for alias templates is a C++20 extension}}
   }
-  template void f<B>();
+  template void f<B>(); // expected-note {{in instantiation of function template specialization 'dependent::f<dependent::B>' requested here}}
 
   template<typename T> struct C { C(T); };
   template<typename T> C(T) -> C<T>;
@@ -607,7 +607,7 @@ namespace function_prototypes {
   void t0() { foo0(&bar0); }
 
   template<class T> void foo1(fptr1<const T *>) {
-     static_assert(__is_same(T, char));  
+     static_assert(__is_same(T, char));
   }
   void bar1(const char * __restrict);
   void t1() { foo1(&bar1); }

@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux -post-RA-scheduler=true | FileCheck %s
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-win32 -post-RA-scheduler=true | FileCheck %s
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-uefi -post-RA-scheduler=true | FileCheck %s
 
 ; FIXME: Redundant unused stack allocation could be eliminated.
 ; CHECK: subq  ${{24|72|80}}, %rsp

@@ -631,8 +631,8 @@ Error ResourceFileWriter::writeSingleAccelerator(
   if (IsASCII && IsVirtKey)
     return createAccError("Accelerator can't be both ASCII and VIRTKEY");
 
-  if (!IsVirtKey && (Obj.Flags & (Opt::ALT | Opt::SHIFT | Opt::CONTROL)))
-    return createAccError("Can only apply ALT, SHIFT or CONTROL to VIRTKEY"
+  if (!IsVirtKey && (Obj.Flags & (Opt::SHIFT | Opt::CONTROL)))
+    return createAccError("Can only apply SHIFT or CONTROL to VIRTKEY"
                           " accelerators");
 
   if (Obj.Event.isInt()) {
@@ -1573,7 +1573,6 @@ Expected<std::unique_ptr<MemoryBuffer>>
 ResourceFileWriter::loadFile(StringRef File) const {
   SmallString<128> Path;
   SmallString<128> Cwd;
-  std::unique_ptr<MemoryBuffer> Result;
 
   // 0. The file path is absolute or has a root directory, so we shouldn't
   // try to append it on top of other base directories. (An absolute path

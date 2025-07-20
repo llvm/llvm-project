@@ -252,9 +252,7 @@ public:
   /// a short form without the type-specifiers, e.g. 'svld1(..)' instead of
   /// 'svld1_u32(..)'.
   static bool isOverloadedIntrinsic(StringRef Name) {
-    auto BrOpen = Name.find('[');
-    auto BrClose = Name.find(']');
-    return BrOpen != std::string::npos && BrClose != std::string::npos;
+    return Name.contains('[') && Name.contains(']');
   }
 
   /// Return true if the intrinsic takes a splat operand.
@@ -1043,7 +1041,10 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
     case '1':
     case '2':
     case '3':
-      T = SVEType(TS, Proto[C - '0']);
+      // Extract the modifier before passing to SVEType to handle numeric
+      // modifiers
+      auto [Mod, NumVectors] = getProtoModifier(Proto, (C - '0'));
+      T = SVEType(TS, Mod);
       break;
     }
 
@@ -1228,8 +1229,7 @@ void SVEEmitter::createIntrinsic(
 
   // Remove duplicate type specs.
   sort(TypeSpecs);
-  TypeSpecs.erase(std::unique(TypeSpecs.begin(), TypeSpecs.end()),
-                  TypeSpecs.end());
+  TypeSpecs.erase(llvm::unique(TypeSpecs), TypeSpecs.end());
 
   // Create an Intrinsic for each type spec.
   for (auto TS : TypeSpecs) {
@@ -1273,16 +1273,14 @@ void SVEEmitter::createCoreHeaderIntrinsics(raw_ostream &OS,
   // - Architectural guard (i.e. does it require SVE2 or SVE2_AES)
   // - Class (is intrinsic overloaded or not)
   // - Intrinsic name
-  std::stable_sort(Defs.begin(), Defs.end(),
-                   [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
-                     auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
-                       return std::make_tuple(
-                           I->getSVEGuard().str() + I->getSMEGuard().str(),
-                           (unsigned)I->getClassKind(), I->getName());
-                     };
-                     return ToTuple(A) < ToTuple(B);
-                   });
+  llvm::stable_sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                             const std::unique_ptr<Intrinsic> &B) {
+    auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
+      return std::make_tuple(I->getSVEGuard().str() + I->getSMEGuard().str(),
+                             (unsigned)I->getClassKind(), I->getName());
+    };
+    return ToTuple(A) < ToTuple(B);
+  });
 
   // Actually emit the intrinsic declarations.
   for (auto &I : Defs)
@@ -1903,6 +1901,9 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
     if (!Def->isFlagSet(VerifyRuntimeMode) && !Def->getSVEGuard().empty() &&
         !Def->getSMEGuard().empty())
       report_fatal_error("Missing VerifyRuntimeMode flag");
+    if (Def->isFlagSet(VerifyRuntimeMode) &&
+        (Def->getSVEGuard().empty() || Def->getSMEGuard().empty()))
+      report_fatal_error("VerifyRuntimeMode requires SVE and SME guards");
 
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());

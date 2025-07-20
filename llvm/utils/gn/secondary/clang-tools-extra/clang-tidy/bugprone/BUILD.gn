@@ -49,6 +49,7 @@ static_library("bugprone") {
     "LambdaFunctionNameCheck.cpp",
     "MacroParenthesesCheck.cpp",
     "MacroRepeatedSideEffectsCheck.cpp",
+    "MisleadingSetterOfReferenceCheck.cpp",
     "MisplacedOperatorInStrlenInAllocCheck.cpp",
     "MisplacedPointerArithmeticInAllocCheck.cpp",
     "MisplacedWideningCastCheck.cpp",

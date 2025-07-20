@@ -174,11 +174,11 @@ void ThreadPlanAssemblyTracer::Log() {
         const bool show_control_flow_kind = true;
         Instruction *instruction =
             instruction_list.GetInstructionAtIndex(0).get();
-        const FormatEntity::Entry *disassemble_format =
+        FormatEntity::Entry disassemble_format =
             m_process.GetTarget().GetDebugger().GetDisassemblyFormat();
         instruction->Dump(stream_sp.get(), max_opcode_byte_size, show_address,
                           show_bytes, show_control_flow_kind, nullptr, nullptr,
-                          nullptr, disassemble_format, 0);
+                          nullptr, &disassemble_format, 0);
       }
     }
   }

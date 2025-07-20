@@ -16,16 +16,16 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   Typedef1 t1;
   (Typedef2)t1;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: C-style casts are discouraged; use static_cast (if needed, the cast may be redundant) [google-readability-casting]
-  // CHECK-FIXES: {{^}}  static_cast<Typedef2>(t1);
+  // CHECK-FIXES: static_cast<Typedef2>(t1);
   (const char*)t1;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: {{.*}}; use static_cast (if needed
-  // CHECK-FIXES: {{^}}  static_cast<const char*>(t1);
+  // CHECK-FIXES: static_cast<const char*>(t1);
   (Typedef1)cpc;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: {{.*}}; use static_cast (if needed
-  // CHECK-FIXES: {{^}}  static_cast<Typedef1>(cpc);
+  // CHECK-FIXES: static_cast<Typedef1>(cpc);
   (Typedef1)t1;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  t1;
+  // CHECK-FIXES: t1;
 
   char *pc = (char*)cpc;
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged; use const_cast [google-readability-casting]
@@ -33,15 +33,15 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   typedef char Char;
   Char *pChar = (Char*)pc;
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: {{.*}}; use static_cast (if needed
-  // CHECK-FIXES: {{^}}  Char *pChar = static_cast<Char*>(pc);
+  // CHECK-FIXES: Char *pChar = static_cast<Char*>(pc);
 
   (Char)*cpc;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: {{.*}}; use static_cast (if needed
-  // CHECK-FIXES: {{^}}  static_cast<Char>(*cpc);
+  // CHECK-FIXES: static_cast<Char>(*cpc);
 
   (char)*pChar;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: {{.*}}; use static_cast (if needed
-  // CHECK-FIXES: {{^}}  static_cast<char>(*pChar);
+  // CHECK-FIXES: static_cast<char>(*pChar);
 
   (const char*)cpv;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: {{.*}}; use static_cast [
@@ -124,24 +124,24 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
 
   e = (Enum)Enum1;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  e = Enum1;
+  // CHECK-FIXES: e = Enum1;
 
   e = (Enum)e;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  e = e;
+  // CHECK-FIXES: e = e;
 
   e = (Enum)           e;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  e = e;
+  // CHECK-FIXES: e = e;
 
   e = (Enum)           (e);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  e = (e);
+  // CHECK-FIXES: e = (e);
 
   static const int kZero = 0;
   (int)kZero;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: redundant cast to the same type
-  // CHECK-FIXES: {{^}}  kZero;
+  // CHECK-FIXES: kZero;
 
   int b2 = static_cast<double>(b);
   int b3 = b;

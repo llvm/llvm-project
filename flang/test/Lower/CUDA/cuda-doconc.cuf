@@ -15,8 +15,9 @@ subroutine doconc1
 end
 
 ! CHECK: func.func @_QPdoconc1() {
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %{{.*}}#0 {uniq_name = "_QFdoconc1Ei"} : (!fir.ref<index>) -> (!fir.ref<index>, !fir.ref<index>)
-! CHECK: cuf.kernel<<<*, *>>>
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdoconc1Ei"} : (!fir.ref<index>) -> (!fir.ref<index>, !fir.ref<index>)
+! CHECK: cuf.kernel<<<*, *>>> (%arg0 : index)
+! CHECK: fir.store %arg0 to %[[DECL]]#0 : !fir.ref<index>
 ! CHECK: %{{.*}} = fir.load %[[DECL]]#0 : !fir.ref<index>
 
 subroutine doconc2
@@ -32,8 +33,10 @@ subroutine doconc2
 end
 
 ! CHECK: func.func @_QPdoconc2() {
-! CHECK: %[[DECLI:.*]]:2 = hlfir.declare %{{.*}}#0 {uniq_name = "_QFdoconc2Ei"} : (!fir.ref<index>) -> (!fir.ref<index>, !fir.ref<index>)
-! CHECK: %[[DECLJ:.*]]:2 = hlfir.declare %{{.*}}#0 {uniq_name = "_QFdoconc2Ej"} : (!fir.ref<index>) -> (!fir.ref<index>, !fir.ref<index>)
+! CHECK: %[[DECLI:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdoconc2Ei"} : (!fir.ref<index>) -> (!fir.ref<index>, !fir.ref<index>)
+! CHECK: %[[DECLJ:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdoconc2Ej"} : (!fir.ref<index>) -> (!fir.ref<index>, !fir.ref<index>)
 ! CHECK: cuf.kernel<<<*, *>>> (%arg0 : index, %arg1 : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index)  step (%{{.*}}, %{{.*}} : index, index) {
+! CHECK: fir.store %arg0 to %[[DECLI]]#0 : !fir.ref<index>
+! CHECK: fir.store %arg1 to %[[DECLJ]]#0 : !fir.ref<index>
 ! CHECK: %{{.*}} = fir.load %[[DECLI]]#0 : !fir.ref<index>
 ! CHECK: %{{.*}} = fir.load %[[DECLJ]]#0 : !fir.ref<index>

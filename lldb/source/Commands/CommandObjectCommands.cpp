@@ -1537,9 +1537,8 @@ private:
           option_def.completion_type = (CommandArgumentType) completion_type;
         } else
           option_def.completion_type = eNoCompletion;
-        
+
         // Usage Text:
-        std::string usage_text;
         obj_sp = opt_dict->GetValueForKey("help");
         if (!obj_sp) {
           error = Status::FromErrorStringWithFormatv(

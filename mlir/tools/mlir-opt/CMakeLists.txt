@@ -17,7 +17,6 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestFuncToLLVM
     MLIRAffineTransformsTestPasses
     MLIRArithTestPasses
-    MLIRArmNeonTestPasses
     MLIRArmSMETestPasses
     MLIRBufferizationTestPasses
     MLIRControlFlowTestPasses
@@ -29,6 +28,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRMathTestPasses
     MLIRTestMathToVCIX
     MLIRMemRefTestPasses
+    MLIRTestMemRefToLLVMWithTransforms
     MLIRMeshTest
     MLIRNVGPUTestPasses
     MLIRSCFTestPasses
@@ -40,19 +40,20 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestDialect
     MLIRTestDynDialect
     MLIRTestIR
-    MLIRTestOneToNTypeConversionPass
     MLIRTestPass
     MLIRTestReducer
     MLIRTestTransforms
     MLIRTilingInterfaceTestPasses
     MLIRTosaTestPasses
     MLIRVectorTestPasses
+    MLIRXeGPUTestPasses
     MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
     )
   set(test_libs ${test_libs}
     MLIRTestPDLL
     MLIRTestTransformDialect
+    MLIRTestIRDLToCppDialect
     )
 
   if (MLIR_ENABLE_PDL_IN_PATTERNMATCH)

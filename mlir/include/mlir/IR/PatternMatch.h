@@ -234,48 +234,9 @@ private:
 // RewritePattern
 //===----------------------------------------------------------------------===//
 
-namespace detail {
-/// Helper class that derives from a RewritePattern class and provides separate
-/// `match` and `rewrite` entry points instead of a combined `matchAndRewrite`.
-///
-/// This class is deprecated. Use `matchAndRewrite` instead of separate `match`
-/// and `rewrite`.
-template <typename PatternT>
-class SplitMatchAndRewriteImpl : public PatternT {
-  using PatternT::PatternT;
-
-  /// Attempt to match against IR rooted at the specified operation, which is
-  /// the same operation kind as getRootKind().
-  ///
-  /// Note: This function must not modify the IR.
-  virtual LogicalResult match(typename PatternT::OperationT op) const = 0;
-
-  /// Rewrite the IR rooted at the specified operation with the result of
-  /// this pattern, generating any new operations with the specified
-  /// rewriter.
-  virtual void rewrite(typename PatternT::OperationT op,
-                       PatternRewriter &rewriter) const = 0;
-
-  LogicalResult matchAndRewrite(typename PatternT::OperationT op,
-                                PatternRewriter &rewriter) const final {
-    if (succeeded(match(op))) {
-      rewrite(op, rewriter);
-      return success();
-    }
-    return failure();
-  }
-};
-} // namespace detail
-
 /// RewritePattern is the common base class for all DAG to DAG replacements.
 class RewritePattern : public Pattern {
 public:
-  using OperationT = Operation *;
-
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite = detail::SplitMatchAndRewriteImpl<RewritePattern>;
-
   virtual ~RewritePattern() = default;
 
   /// Attempt to match against code rooted at the specified operation,
@@ -312,17 +273,13 @@ private:
   template <typename T>
   using detect_has_initialize = llvm::is_detected<has_initialize, T>;
 
-  /// Initialize the derived pattern by calling its `initialize` method.
+  /// Initialize the derived pattern by calling its `initialize` method if
+  /// available.
   template <typename T>
-  static std::enable_if_t<detect_has_initialize<T>::value>
-  initializePattern(T &pattern) {
-    pattern.initialize();
+  static void initializePattern(T &pattern) {
+    if constexpr (detect_has_initialize<T>::value)
+      pattern.initialize();
   }
-  /// Empty derived pattern initializer for patterns that do not have an
-  /// initialize method.
-  template <typename T>
-  static std::enable_if_t<!detect_has_initialize<T>::value>
-  initializePattern(T &) {}
 
   /// An anchor for the virtual table.
   virtual void anchor();
@@ -334,7 +291,6 @@ namespace detail {
 /// class or Interface.
 template <typename SourceOp>
 struct OpOrInterfaceRewritePatternBase : public RewritePattern {
-  using OperationT = SourceOp;
   using RewritePattern::RewritePattern;
 
   /// Wrapper around the RewritePattern method that passes the derived op type.
@@ -357,11 +313,6 @@ template <typename SourceOp>
 struct OpRewritePattern
     : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
 
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite =
-      detail::SplitMatchAndRewriteImpl<OpRewritePattern<SourceOp>>;
-
   /// Patterns must specify the root operation name they match against, and can
   /// also specify the benefit of the pattern matching and a list of generated
   /// ops.
@@ -377,11 +328,6 @@ struct OpRewritePattern
 template <typename SourceOp>
 struct OpInterfaceRewritePattern
     : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
-
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite =
-      detail::SplitMatchAndRewriteImpl<OpInterfaceRewritePattern<SourceOp>>;
 
   OpInterfaceRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
       : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
@@ -529,6 +475,25 @@ public:
     RewriterBase::Listener *rewriteListener;
   };
 
+  /// A listener that logs notification events to llvm::dbgs() before
+  /// forwarding to the base listener.
+  struct PatternLoggingListener : public RewriterBase::ForwardingListener {
+    PatternLoggingListener(OpBuilder::Listener *listener, StringRef patternName)
+        : RewriterBase::ForwardingListener(listener), patternName(patternName) {
+    }
+
+    void notifyOperationInserted(Operation *op, InsertPoint previous) override;
+    void notifyOperationModified(Operation *op) override;
+    void notifyOperationReplaced(Operation *op, Operation *newOp) override;
+    void notifyOperationReplaced(Operation *op,
+                                 ValueRange replacement) override;
+    void notifyOperationErased(Operation *op) override;
+    void notifyPatternBegin(const Pattern &pattern, Operation *op) override;
+
+  private:
+    StringRef patternName;
+  };
+
   /// Move the blocks that belong to "region" before the given position in
   /// another region "parent". The two regions must be different. The caller
   /// is responsible for creating or updating the operation transferring flow
@@ -574,7 +539,7 @@ public:
   /// unreachable operations.
   virtual void inlineBlockBefore(Block *source, Block *dest,
                                  Block::iterator before,
-                                 ValueRange argValues = std::nullopt);
+                                 ValueRange argValues = {});
 
   /// Inline the operations of block 'source' before the operation 'op'. The
   /// source block will be deleted and must have no uses. 'argValues' is used to
@@ -583,7 +548,7 @@ public:
   /// The source block must have no successors. Otherwise, the resulting IR
   /// would have unreachable operations.
   void inlineBlockBefore(Block *source, Operation *op,
-                         ValueRange argValues = std::nullopt);
+                         ValueRange argValues = {});
 
   /// Inline the operations of block 'source' into the end of block 'dest'. The
   /// source block will be deleted and must have no uses. 'argValues' is used to
@@ -591,8 +556,7 @@ public:
   ///
   /// The dest block must have no successors. Otherwise, the resulting IR would
   /// have unreachable operation.
-  void mergeBlocks(Block *source, Block *dest,
-                   ValueRange argValues = std::nullopt);
+  void mergeBlocks(Block *source, Block *dest, ValueRange argValues = {});
 
   /// Split the operations starting at "before" (inclusive) out of the given
   /// block into a new block, and return it.
@@ -865,8 +829,7 @@ public:
   RewritePatternSet &add(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/std::nullopt,
-                 std::forward<ConstructorArg>(arg),
+    (addImpl<Ts>(/*debugLabels=*/{}, std::forward<ConstructorArg>(arg),
                  std::forward<ConstructorArgs>(args)...),
      ...);
     return *this;
@@ -949,7 +912,7 @@ public:
   RewritePatternSet &insert(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/std::nullopt, arg, args...), ...);
+    (addImpl<Ts>(/*debugLabels=*/{}, arg, args...), ...);
     return *this;
   }
 

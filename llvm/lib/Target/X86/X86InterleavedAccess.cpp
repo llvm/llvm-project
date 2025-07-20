@@ -801,13 +801,18 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
 // number of shuffles and ISA.
 // Currently, lowering is supported for 4x64 bits with Factor = 4 on AVX.
 bool X86TargetLowering::lowerInterleavedLoad(
-    LoadInst *LI, ArrayRef<ShuffleVectorInst *> Shuffles,
+    Instruction *Load, Value *Mask, ArrayRef<ShuffleVectorInst *> Shuffles,
     ArrayRef<unsigned> Indices, unsigned Factor) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   assert(!Shuffles.empty() && "Empty shufflevector input");
   assert(Shuffles.size() == Indices.size() &&
          "Unmatched number of shufflevectors and indices");
+
+  auto *LI = dyn_cast<LoadInst>(Load);
+  if (!LI)
+    return false;
+  assert(!Mask && "Unexpected mask on a load");
 
   // Create an interleaved access group.
   IRBuilder<> Builder(LI);
@@ -829,10 +834,8 @@ bool X86TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   // Holds the indices of SVI that correspond to the starting index of each
   // interleaved shuffle.
-  SmallVector<unsigned, 4> Indices;
   auto Mask = SVI->getShuffleMask();
-  for (unsigned i = 0; i < Factor; i++)
-    Indices.push_back(Mask[i]);
+  SmallVector<unsigned, 4> Indices(Mask.take_front(Factor));
 
   ArrayRef<ShuffleVectorInst *> Shuffles = ArrayRef(SVI);
 

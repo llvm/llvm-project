@@ -1008,13 +1008,23 @@ def alignedstore : PatFrag<(ops node:$val, node:$ptr),
                            (store node:$val, node:$ptr), [{
   auto *St = cast<StoreSDNode>(N);
   return St->getAlign() >= St->getMemoryVT().getStoreSize();
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &LdSt = cast<GLoadStore>(MI);
+    return LdSt.getAlign() >= LdSt.getMemSize().getValue();
+  }];
+}
 
 // Like 'load', but always requires vector size alignment.
 def alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
   auto *Ld = cast<LoadSDNode>(N);
   return Ld->getAlign() >= Ld->getMemoryVT().getStoreSize();
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &LdSt = cast<GLoadStore>(MI);
+    return LdSt.getAlign() >= LdSt.getMemSize().getValue();
+  }];
+}
 
 // 128-bit aligned load pattern fragments
 // NOTE: all 128-bit integer vector loads are promoted to v2i64

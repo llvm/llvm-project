@@ -24,11 +24,10 @@ namespace {
 
 typedef SmallPtrSet<BasicBlock *, 8> VisitedBlocksSet;
 
-// Check for structural coroutine intrinsics that should not be spilled into
-// the coroutine frame.
-static bool isCoroutineStructureIntrinsic(Instruction &I) {
-  return isa<CoroIdInst>(&I) || isa<CoroSaveInst>(&I) ||
-         isa<CoroSuspendInst>(&I);
+static bool isNonSpilledIntrinsic(Instruction &I) {
+  // Structural coroutine intrinsics that should not be spilled into the
+  // coroutine frame.
+  return isa<CoroIdInst>(&I) || isa<CoroSaveInst>(&I);
 }
 
 /// Does control flow starting at the given block ever reach a suspend
@@ -467,7 +466,7 @@ void collectSpillsAndAllocasFromInsts(
   for (Instruction &I : instructions(F)) {
     // Values returned from coroutine structure intrinsics should not be part
     // of the Coroutine Frame.
-    if (isCoroutineStructureIntrinsic(I) || &I == Shape.CoroBegin)
+    if (isNonSpilledIntrinsic(I) || &I == Shape.CoroBegin)
       continue;
 
     // Handle alloca.alloc specially here.
@@ -515,7 +514,7 @@ void collectSpillsAndAllocasFromInsts(
 void collectSpillsFromDbgInfo(SpillInfo &Spills, Function &F,
                               const SuspendCrossingInfo &Checker) {
   // We don't want the layout of coroutine frame to be affected
-  // by debug information. So we only choose to salvage DbgValueInst for
+  // by debug information. So we only choose to salvage dbg.values for
   // whose value is already in the frame.
   // We would handle the dbg.values for allocas specially
   for (auto &Iter : Spills) {
@@ -523,9 +522,7 @@ void collectSpillsFromDbgInfo(SpillInfo &Spills, Function &F,
     SmallVector<DbgValueInst *, 16> DVIs;
     SmallVector<DbgVariableRecord *, 16> DVRs;
     findDbgValues(DVIs, V, &DVRs);
-    for (DbgValueInst *DVI : DVIs)
-      if (Checker.isDefinitionAcrossSuspend(*V, DVI))
-        Spills[V].push_back(DVI);
+    assert(DVIs.empty());
     // Add the instructions which carry debug info that is in the frame.
     for (DbgVariableRecord *DVR : DVRs)
       if (Checker.isDefinitionAcrossSuspend(*V, DVR->Marker->MarkedInstr))
@@ -553,10 +550,10 @@ void sinkSpillUsesAfterCoroBegin(const DominatorTree &Dom,
         Worklist.push_back(Inst);
     }
   };
-  std::for_each(Spills.begin(), Spills.end(),
-                [&](auto &I) { collectUsers(I.first); });
-  std::for_each(Allocas.begin(), Allocas.end(),
-                [&](auto &I) { collectUsers(I.Alloca); });
+  for (auto &I : Spills)
+    collectUsers(I.first);
+  for (auto &I : Allocas)
+    collectUsers(I.Alloca);
 
   // Recursively collect users before coro.begin.
   while (!Worklist.empty()) {

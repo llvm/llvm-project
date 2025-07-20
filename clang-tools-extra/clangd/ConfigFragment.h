@@ -347,8 +347,13 @@ struct Fragment {
     ///   "IWYU": Include what you use. Insert the owning header for top-level
     ///     symbols, unless the header is already directly included or the
     ///     symbol is forward-declared
-    ///   "NeverInsert": Never insert headers
+    ///   "Never": Never insert headers
     std::optional<Located<std::string>> HeaderInsertion;
+    /// Will suggest code patterns & snippets.
+    /// Values are Config::CodePatternsPolicy:
+    ///   All  => enable all code patterns and snippets suggestion
+    ///   None => disable all code patterns and snippets suggestion
+    std::optional<Located<std::string>> CodePatterns;
   };
   CompletionBlock Completion;
 

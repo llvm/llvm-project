@@ -663,6 +663,8 @@ enum CommandArgumentType {
   eArgTypeModule,
   eArgTypeCPUName,
   eArgTypeCPUFeatures,
+  eArgTypeManagedPlugin,
+  eArgTypeProtocol,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1319,10 +1321,11 @@ enum CompletionType {
   eTypeCategoryNameCompletion = (1ul << 24),
   eCustomCompletion = (1ul << 25),
   eThreadIDCompletion = (1ul << 26),
+  eManagedPluginCompletion = (1ul << 27),
   // This last enum element is just for input validation.
   // Add new completions before this element,
   // and then increment eTerminatorCompletion's shift value
-  eTerminatorCompletion = (1ul << 27)
+  eTerminatorCompletion = (1ul << 28)
 };
 
 /// Specifies if children need to be re-computed
@@ -1381,6 +1384,14 @@ enum CommandReturnObjectCallbackResult {
   eCommandReturnObjectPrintCallbackSkipped = 0,
   /// The callback handled printing the command return object.
   eCommandReturnObjectPrintCallbackHandled = 1,
+};
+
+/// Used to determine when to show disassembly.
+enum StopDisassemblyType {
+  eStopDisassemblyTypeNever = 0,
+  eStopDisassemblyTypeNoDebugInfo,
+  eStopDisassemblyTypeNoSource,
+  eStopDisassemblyTypeAlways
 };
 
 } // namespace lldb

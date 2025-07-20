@@ -150,8 +150,8 @@ private:
     auto attrTc = TC == Fortran::common::TypeCategory::Logical
                       ? Fortran::common::TypeCategory::Integer
                       : TC;
-    attributeElementType = Fortran::lower::getFIRType(
-        builder.getContext(), attrTc, KIND, std::nullopt);
+    attributeElementType =
+        Fortran::lower::getFIRType(builder.getContext(), attrTc, KIND, {});
     for (auto element : constant.values())
       attributes.push_back(
           convertToAttribute<TC, KIND>(builder, element, attributeElementType));
@@ -230,8 +230,7 @@ static mlir::Value genScalarLit(
                 TC == Fortran::common::TypeCategory::Unsigned) {
     // MLIR requires constants to be signless
     mlir::Type ty = Fortran::lower::getFIRType(
-        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND,
-        std::nullopt);
+        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND, {});
     if (KIND == 16) {
       auto bigInt = llvm::APInt(ty.getIntOrFloatBitWidth(),
                                 TC == Fortran::common::TypeCategory::Unsigned
@@ -304,7 +303,7 @@ createStringLitOp(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::NamedAttribute sizeAttr(sizeTag, builder.getI64IntegerAttr(len));
     llvm::SmallVector<mlir::NamedAttribute> attrs = {dataAttr, sizeAttr};
     return builder.create<fir::StringLitOp>(
-        loc, llvm::ArrayRef<mlir::Type>{type}, std::nullopt, attrs);
+        loc, llvm::ArrayRef<mlir::Type>{type}, mlir::ValueRange{}, attrs);
   }
 }
 
@@ -375,8 +374,8 @@ static mlir::Value genStructureComponentInit(
                                "allocatable component value that is not NULL");
     } else {
       // Handle NULL() initialization
-      mlir::Value componentValue{fir::factory::createUnallocatedBox(
-          builder, loc, componentTy, std::nullopt)};
+      mlir::Value componentValue{
+          fir::factory::createUnallocatedBox(builder, loc, componentTy, {})};
       componentValue = builder.createConvert(loc, componentTy, componentValue);
 
       return builder.create<fir::InsertValueOp>(

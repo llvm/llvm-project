@@ -32,42 +32,31 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], 104
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], 112
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 120
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP0]]
+; CHECK-NEXT:    [[NEXT_GEP12:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP3]]
-; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP4]]
+; CHECK-NEXT:    [[NEXT_GEP13:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP7]]
-; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP8]]
+; CHECK-NEXT:    [[NEXT_GEP14:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[NEXT_GEP11:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP10]]
-; CHECK-NEXT:    [[NEXT_GEP12:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP11]]
-; CHECK-NEXT:    [[NEXT_GEP13:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP12]]
-; CHECK-NEXT:    [[NEXT_GEP14:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP13]]
-; CHECK-NEXT:    [[NEXT_GEP15:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP14]]
+; CHECK-NEXT:    [[NEXT_GEP17:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP11]]
+; CHECK-NEXT:    [[NEXT_GEP15:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP12]]
+; CHECK-NEXT:    [[NEXT_GEP18:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP13]]
+; CHECK-NEXT:    [[NEXT_GEP19:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[NEXT_GEP16:%.*]] = getelementptr i8, ptr [[M]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 4
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 4
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[NEXT_GEP3]], i64 4
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[NEXT_GEP4]], i64 4
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[NEXT_GEP5]], i64 4
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[NEXT_GEP6]], i64 4
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[NEXT_GEP7]], i64 4
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[NEXT_GEP8]], i64 4
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[NEXT_GEP9]], i64 4
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[NEXT_GEP10]], i64 4
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[NEXT_GEP11]], i64 4
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[NEXT_GEP12]], i64 4
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[NEXT_GEP13]], i64 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[NEXT_GEP14]], i64 4
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[NEXT_GEP15]], i64 4
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[NEXT_GEP16]], i64 4
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[TMP16]], i32 -4
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[TMP20]], i32 -4
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP24]], i32 -4
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i8, ptr [[TMP28]], i32 -4
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[TMP27]], i32 -4
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[TMP28]], i32 -4
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP29]], i32 -4
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i8, ptr [[TMP30]], i32 -4
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP32]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[STRIDED_VEC17:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -85,7 +74,7 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    [[TMP38:%.*]] = add <4 x i32> [[STRIDED_VEC23]], [[STRIDED_VEC22]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = add <4 x i32> [[STRIDED_VEC26]], [[STRIDED_VEC25]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <4 x i32> [[TMP36]], i32 0
-; CHECK-NEXT:    store i32 [[TMP40]], ptr [[NEXT_GEP]], align 4
+; CHECK-NEXT:    store i32 [[TMP40]], ptr [[NEXT_GEP12]], align 4
 ; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i32> [[TMP36]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP41]], ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <4 x i32> [[TMP36]], i32 2
@@ -93,7 +82,7 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <4 x i32> [[TMP36]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP43]], ptr [[NEXT_GEP4]], align 4
 ; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i32> [[TMP37]], i32 0
-; CHECK-NEXT:    store i32 [[TMP44]], ptr [[NEXT_GEP5]], align 4
+; CHECK-NEXT:    store i32 [[TMP44]], ptr [[NEXT_GEP13]], align 4
 ; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x i32> [[TMP37]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP45]], ptr [[NEXT_GEP6]], align 4
 ; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <4 x i32> [[TMP37]], i32 2
@@ -101,19 +90,19 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <4 x i32> [[TMP37]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP47]], ptr [[NEXT_GEP8]], align 4
 ; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i32> [[TMP38]], i32 0
-; CHECK-NEXT:    store i32 [[TMP48]], ptr [[NEXT_GEP9]], align 4
+; CHECK-NEXT:    store i32 [[TMP48]], ptr [[NEXT_GEP14]], align 4
 ; CHECK-NEXT:    [[TMP49:%.*]] = extractelement <4 x i32> [[TMP38]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP49]], ptr [[NEXT_GEP10]], align 4
 ; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <4 x i32> [[TMP38]], i32 2
 ; CHECK-NEXT:    store i32 [[TMP50]], ptr [[NEXT_GEP11]], align 4
 ; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <4 x i32> [[TMP38]], i32 3
-; CHECK-NEXT:    store i32 [[TMP51]], ptr [[NEXT_GEP12]], align 4
+; CHECK-NEXT:    store i32 [[TMP51]], ptr [[NEXT_GEP17]], align 4
 ; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP39]], i32 0
-; CHECK-NEXT:    store i32 [[TMP52]], ptr [[NEXT_GEP13]], align 4
+; CHECK-NEXT:    store i32 [[TMP52]], ptr [[NEXT_GEP15]], align 4
 ; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP39]], i32 1
-; CHECK-NEXT:    store i32 [[TMP53]], ptr [[NEXT_GEP14]], align 4
+; CHECK-NEXT:    store i32 [[TMP53]], ptr [[NEXT_GEP18]], align 4
 ; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <4 x i32> [[TMP39]], i32 2
-; CHECK-NEXT:    store i32 [[TMP54]], ptr [[NEXT_GEP15]], align 4
+; CHECK-NEXT:    store i32 [[TMP54]], ptr [[NEXT_GEP19]], align 4
 ; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <4 x i32> [[TMP39]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP55]], ptr [[NEXT_GEP16]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
@@ -123,11 +112,11 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[M]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL26:%.*]] = phi i32 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL26]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[PTR_IV]], i64 8
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, ptr [[PTR_IV]], i64 4
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[P_4]], align 4

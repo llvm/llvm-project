@@ -11,11 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -139,7 +136,7 @@ struct TransferReadPermutationLowering
     VectorType newReadType = VectorType::get(
         newVectorShape, op.getVectorType().getElementType(), newScalableDims);
     Value newRead = rewriter.create<vector::TransferReadOp>(
-        op.getLoc(), newReadType, op.getSource(), op.getIndices(),
+        op.getLoc(), newReadType, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
         newInBoundsAttr);
 
@@ -214,7 +211,7 @@ struct TransferWritePermutationLowering
     auto newMap = AffineMap::getMinorIdentityMap(
         map.getNumDims(), map.getNumResults(), rewriter.getContext());
     auto newWrite = rewriter.create<vector::TransferWriteOp>(
-        op.getLoc(), newVec, op.getSource(), op.getIndices(),
+        op.getLoc(), newVec, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getMask(), newInBoundsAttr);
     if (newWrite.hasPureTensorSemantics())
       return newWrite.getResult();
@@ -300,7 +297,7 @@ struct TransferWriteNonPermutationLowering
     }
     ArrayAttr newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
     auto newWrite = rewriter.create<vector::TransferWriteOp>(
-        op.getLoc(), newVec, op.getSource(), op.getIndices(),
+        op.getLoc(), newVec, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), newMask, newInBoundsAttr);
     if (newWrite.hasPureTensorSemantics())
       return newWrite.getResult();
@@ -371,7 +368,7 @@ struct TransferOpReduceRank
                   op.getInBoundsAttr().getValue().take_back(reducedShapeRank))
             : ArrayAttr();
     Value newRead = rewriter.create<vector::TransferReadOp>(
-        op.getLoc(), newReadType, op.getSource(), op.getIndices(),
+        op.getLoc(), newReadType, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
         newInBoundsAttr);
     return rewriter
@@ -474,12 +471,12 @@ struct TransferReadToVectorLoadLowering
       Value fill = rewriter.create<vector::SplatOp>(
           read.getLoc(), unbroadcastedVectorType, read.getPadding());
       res = rewriter.create<vector::MaskedLoadOp>(
-          read.getLoc(), unbroadcastedVectorType, read.getSource(),
+          read.getLoc(), unbroadcastedVectorType, read.getBase(),
           read.getIndices(), read.getMask(), fill);
     } else {
-      res = rewriter.create<vector::LoadOp>(
-          read.getLoc(), unbroadcastedVectorType, read.getSource(),
-          read.getIndices());
+      res = rewriter.create<vector::LoadOp>(read.getLoc(),
+                                            unbroadcastedVectorType,
+                                            read.getBase(), read.getIndices());
     }
 
     // Insert a broadcasting op if required.
@@ -570,11 +567,11 @@ struct TransferWriteToVectorStoreLowering
             });
 
       rewriter.create<vector::MaskedStoreOp>(
-          write.getLoc(), write.getSource(), write.getIndices(),
-          write.getMask(), write.getVector());
+          write.getLoc(), write.getBase(), write.getIndices(), write.getMask(),
+          write.getVector());
     } else {
       rewriter.create<vector::StoreOp>(write.getLoc(), write.getVector(),
-                                       write.getSource(), write.getIndices());
+                                       write.getBase(), write.getIndices());
     }
     // There's no return value for StoreOps. Use Value() to signal success to
     // matchAndRewrite.

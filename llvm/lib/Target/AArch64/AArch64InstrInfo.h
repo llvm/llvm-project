@@ -172,6 +172,10 @@ enum AArch64MachineCombinerPattern : unsigned {
   FMULv8i16_indexed_OP2,
 
   FNMADD,
+
+  GATHER_LANE_i32,
+  GATHER_LANE_i16,
+  GATHER_LANE_i8
 };
 class AArch64InstrInfo final : public AArch64GenInstrInfo {
   const AArch64RegisterInfo RI;
@@ -448,8 +452,20 @@ public:
   /// be checked.
   bool isAssociativeAndCommutative(const MachineInstr &Inst,
                                    bool Invert) const override;
-  /// When getMachineCombinerPatterns() finds patterns, this function generates
-  /// the instructions that could replace the original code sequence
+
+  /// Returns true if \P Opcode is an instruction which performs accumulation
+  /// into a destination register.
+  bool isAccumulationOpcode(unsigned Opcode) const override;
+
+  /// Returns an opcode which defines the accumulator used by \P Opcode.
+  unsigned getAccumulationStartOpcode(unsigned Opcode) const override;
+
+  unsigned
+  getReduceOpcodeForAccumulator(unsigned int AccumulatorOpCode) const override;
+
+  /// When getMachineCombinerPatterns() finds patterns, this function
+  /// generates the instructions that could replace the original code
+  /// sequence
   void genAlternativeCodeSequence(
       MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
@@ -507,7 +523,7 @@ public:
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   static bool isFalkorShiftExtFast(const MachineInstr &MI);
-  /// Return true if the instructions is a SEH instruciton used for unwinding
+  /// Return true if the instructions is a SEH instruction used for unwinding
   /// on Windows.
   static bool isSEHInstruction(const MachineInstr &MI);
 
@@ -712,6 +728,19 @@ static inline bool isIndirectBranchOpcode(int Opc) {
     return true;
   }
   return false;
+}
+
+static inline bool isIndirectCallOpcode(unsigned Opc) {
+  switch (Opc) {
+  case AArch64::BLR:
+  case AArch64::BLRAA:
+  case AArch64::BLRAB:
+  case AArch64::BLRAAZ:
+  case AArch64::BLRABZ:
+    return true;
+  default:
+    return false;
+  }
 }
 
 static inline bool isPTrueOpcode(unsigned Opc) {

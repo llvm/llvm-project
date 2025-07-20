@@ -921,7 +921,7 @@ static int linkAndVerify() {
     RuntimeDyldChecker::MemoryRegionInfo SecInfo;
     SecInfo.setTargetAddress(Dyld.getSectionLoadAddress(*SectionID));
     StringRef SecContent = Dyld.getSectionContent(*SectionID);
-    SecInfo.setContent(ArrayRef<char>(SecContent.data(), SecContent.size()));
+    SecInfo.setContent(ArrayRef<char>(SecContent));
     return SecInfo;
   };
 
@@ -945,8 +945,7 @@ static int linkAndVerify() {
                                  SI.Offset);
     StringRef SecContent =
         Dyld.getSectionContent(SI.SectionID).substr(SI.Offset);
-    StubMemInfo.setContent(
-        ArrayRef<char>(SecContent.data(), SecContent.size()));
+    StubMemInfo.setContent(ArrayRef<char>(SecContent));
     return StubMemInfo;
   };
 

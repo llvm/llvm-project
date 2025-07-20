@@ -13,13 +13,11 @@
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <optional>
@@ -119,6 +117,16 @@ public:
 
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp shuffleOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Pattern to convert a gpu.rotate op into a spirv.GroupNonUniformRotateKHROp.
+class GPURotateConversion final : public OpConversionPattern<gpu::RotateOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::RotateOp rotateOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -251,8 +259,7 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, const TypeConverter &typeConverter,
   }
   auto newFuncOp = rewriter.create<spirv::FuncOp>(
       funcOp.getLoc(), funcOp.getName(),
-      rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
-                               std::nullopt));
+      rewriter.getFunctionType(signatureConverter.getConvertedTypes(), {}));
   for (const auto &namedAttr : funcOp->getAttrs()) {
     if (namedAttr.getName() == funcOp.getFunctionTypeAttrName() ||
         namedAttr.getName() == SymbolTable::getSymbolAttrName())
@@ -435,26 +442,92 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
     return rewriter.notifyMatchFailure(
         shuffleOp, "shuffle width and target subgroup size mismatch");
 
+  assert(!adaptor.getOffset().getType().isSignedInteger() &&
+         "shuffle offset must be a signless/unsigned integer");
+
   Location loc = shuffleOp.getLoc();
-  Value trueVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
-                                            shuffleOp.getLoc(), rewriter);
   auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
   Value result;
+  Value validVal;
 
   switch (shuffleOp.getMode()) {
-  case gpu::ShuffleMode::XOR:
+  case gpu::ShuffleMode::XOR: {
     result = rewriter.create<spirv::GroupNonUniformShuffleXorOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
+    validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
+                                         shuffleOp.getLoc(), rewriter);
     break;
-  case gpu::ShuffleMode::IDX:
+  }
+  case gpu::ShuffleMode::IDX: {
     result = rewriter.create<spirv::GroupNonUniformShuffleOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
+    validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
+                                         shuffleOp.getLoc(), rewriter);
     break;
-  default:
-    return rewriter.notifyMatchFailure(shuffleOp, "unimplemented shuffle mode");
+  }
+  case gpu::ShuffleMode::DOWN: {
+    result = rewriter.create<spirv::GroupNonUniformShuffleDownOp>(
+        loc, scope, adaptor.getValue(), adaptor.getOffset());
+
+    Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
+    Value resultLaneId =
+        rewriter.create<arith::AddIOp>(loc, laneId, adaptor.getOffset());
+    validVal = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                              resultLaneId, adaptor.getWidth());
+    break;
+  }
+  case gpu::ShuffleMode::UP: {
+    result = rewriter.create<spirv::GroupNonUniformShuffleUpOp>(
+        loc, scope, adaptor.getValue(), adaptor.getOffset());
+
+    Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
+    Value resultLaneId =
+        rewriter.create<arith::SubIOp>(loc, laneId, adaptor.getOffset());
+    auto i32Type = rewriter.getIntegerType(32);
+    validVal = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::sge, resultLaneId,
+        rewriter.create<arith::ConstantOp>(
+            loc, i32Type, rewriter.getIntegerAttr(i32Type, 0)));
+    break;
+  }
   }
 
-  rewriter.replaceOp(shuffleOp, {result, trueVal});
+  rewriter.replaceOp(shuffleOp, {result, validVal});
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Rotate
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPURotateConversion::matchAndRewrite(
+    gpu::RotateOp rotateOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  const spirv::TargetEnv &targetEnv =
+      getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
+  unsigned subgroupSize =
+      targetEnv.getAttr().getResourceLimits().getSubgroupSize();
+  IntegerAttr widthAttr;
+  if (!matchPattern(rotateOp.getWidth(), m_Constant(&widthAttr)) ||
+      widthAttr.getValue().getZExtValue() > subgroupSize)
+    return rewriter.notifyMatchFailure(
+        rotateOp,
+        "rotate width is not a constant or larger than target subgroup size");
+
+  Location loc = rotateOp.getLoc();
+  auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
+  Value rotateResult = rewriter.create<spirv::GroupNonUniformRotateKHROp>(
+      loc, scope, adaptor.getValue(), adaptor.getOffset(), adaptor.getWidth());
+  Value validVal;
+  if (widthAttr.getValue().getZExtValue() == subgroupSize) {
+    validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(), loc, rewriter);
+  } else {
+    Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
+    validVal = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                              laneId, adaptor.getWidth());
+  }
+
+  rewriter.replaceOp(rotateOp, {rotateResult, validVal});
   return success();
 }
 
@@ -464,27 +537,39 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
 
 template <typename UniformOp, typename NonUniformOp>
 static Value createGroupReduceOpImpl(OpBuilder &builder, Location loc,
-                                     Value arg, bool isGroup, bool isUniform) {
+                                     Value arg, bool isGroup, bool isUniform,
+                                     std::optional<uint32_t> clusterSize) {
   Type type = arg.getType();
   auto scope = mlir::spirv::ScopeAttr::get(builder.getContext(),
                                            isGroup ? spirv::Scope::Workgroup
                                                    : spirv::Scope::Subgroup);
-  auto groupOp = spirv::GroupOperationAttr::get(builder.getContext(),
-                                                spirv::GroupOperation::Reduce);
+  auto groupOp = spirv::GroupOperationAttr::get(
+      builder.getContext(), clusterSize.has_value()
+                                ? spirv::GroupOperation::ClusteredReduce
+                                : spirv::GroupOperation::Reduce);
   if (isUniform) {
     return builder.create<UniformOp>(loc, type, scope, groupOp, arg)
         .getResult();
   }
-  return builder.create<NonUniformOp>(loc, type, scope, groupOp, arg, Value{})
+
+  Value clusterSizeValue;
+  if (clusterSize.has_value())
+    clusterSizeValue = builder.create<spirv::ConstantOp>(
+        loc, builder.getI32Type(),
+        builder.getIntegerAttr(builder.getI32Type(), *clusterSize));
+
+  return builder
+      .create<NonUniformOp>(loc, type, scope, groupOp, arg, clusterSizeValue)
       .getResult();
 }
 
-static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
-                                                Location loc, Value arg,
-                                                gpu::AllReduceOperation opType,
-                                                bool isGroup, bool isUniform) {
+static std::optional<Value>
+createGroupReduceOp(OpBuilder &builder, Location loc, Value arg,
+                    gpu::AllReduceOperation opType, bool isGroup,
+                    bool isUniform, std::optional<uint32_t> clusterSize) {
   enum class ElemType { Float, Boolean, Integer };
-  using FuncT = Value (*)(OpBuilder &, Location, Value, bool, bool);
+  using FuncT = Value (*)(OpBuilder &, Location, Value, bool, bool,
+                          std::optional<uint32_t>);
   struct OpHandler {
     gpu::AllReduceOperation kind;
     ElemType elemType;
@@ -548,7 +633,7 @@ static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
 
   for (const OpHandler &handler : handlers)
     if (handler.kind == opType && elementType == handler.elemType)
-      return handler.func(builder, loc, arg, isGroup, isUniform);
+      return handler.func(builder, loc, arg, isGroup, isUniform, clusterSize);
 
   return std::nullopt;
 }
@@ -571,7 +656,7 @@ public:
 
     auto result =
         createGroupReduceOp(rewriter, op.getLoc(), adaptor.getValue(), *opType,
-                            /*isGroup*/ true, op.getUniform());
+                            /*isGroup*/ true, op.getUniform(), std::nullopt);
     if (!result)
       return failure();
 
@@ -589,16 +674,17 @@ public:
   LogicalResult
   matchAndRewrite(gpu::SubgroupReduceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (op.getClusterSize())
+    if (op.getClusterStride() > 1) {
       return rewriter.notifyMatchFailure(
-          op, "lowering for clustered reduce not implemented");
+          op, "lowering for cluster stride > 1 is not implemented");
+    }
 
     if (!isa<spirv::ScalarType>(adaptor.getValue().getType()))
       return rewriter.notifyMatchFailure(op, "reduction type is not a scalar");
 
-    auto result = createGroupReduceOp(rewriter, op.getLoc(), adaptor.getValue(),
-                                      adaptor.getOp(),
-                                      /*isGroup=*/false, adaptor.getUniform());
+    auto result = createGroupReduceOp(
+        rewriter, op.getLoc(), adaptor.getValue(), adaptor.getOp(),
+        /*isGroup=*/false, adaptor.getUniform(), op.getClusterSize());
     if (!result)
       return failure();
 
@@ -733,7 +819,7 @@ void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
       GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,
-      GPUReturnOpConversion, GPUShuffleConversion,
+      GPUReturnOpConversion, GPUShuffleConversion, GPURotateConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
@@ -747,6 +833,8 @@ void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       spirv::BuiltIn::NumSubgroups>,
       SingleDimLaunchConfigConversion<gpu::SubgroupSizeOp,
                                       spirv::BuiltIn::SubgroupSize>,
+      SingleDimLaunchConfigConversion<
+          gpu::LaneIdOp, spirv::BuiltIn::SubgroupLocalInvocationId>,
       WorkGroupSizeConversion, GPUAllReduceConversion,
       GPUSubgroupReduceConversion, GPUPrintfConversion>(typeConverter,
                                                         patterns.getContext());

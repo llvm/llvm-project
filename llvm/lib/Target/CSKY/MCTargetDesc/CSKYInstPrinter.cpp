@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "CSKYInstPrinter.h"
 #include "MCTargetDesc/CSKYBaseInfo.h"
-#include "MCTargetDesc/CSKYMCExpr.h"
+#include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -98,9 +98,7 @@ void CSKYInstPrinter::printFPRRegName(raw_ostream &O, unsigned RegNo) const {
 }
 
 void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                   const MCSubtargetInfo &STI, raw_ostream &O,
-                                   const char *Modifier) {
-  assert((Modifier == 0 || Modifier[0] == 0) && "No modifiers supported");
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNo);
 
   if (MO.isReg()) {
@@ -140,7 +138,7 @@ void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
 }
 
 void CSKYInstPrinter::printDataSymbol(const MCInst *MI, unsigned OpNo,
@@ -152,7 +150,7 @@ void CSKYInstPrinter::printDataSymbol(const MCInst *MI, unsigned OpNo,
   if (MO.isImm())
     O << MO.getImm();
   else
-    MO.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO.getExpr());
   O << "]";
 }
 
@@ -175,7 +173,7 @@ void CSKYInstPrinter::printConstpool(const MCInst *MI, uint64_t Address,
   assert(MO.isExpr() && "Unknown operand kind in printConstpool");
 
   O << "[";
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
   O << "]";
 }
 

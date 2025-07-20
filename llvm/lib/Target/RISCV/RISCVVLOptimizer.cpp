@@ -83,8 +83,7 @@ struct OperandInfo {
   OperandInfo() = delete;
 
   static bool EMULAndEEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
-    return A.Log2EEW == B.Log2EEW && A.EMUL->first == B.EMUL->first &&
-           A.EMUL->second == B.EMUL->second;
+    return A.Log2EEW == B.Log2EEW && A.EMUL == B.EMUL;
   }
 
   static bool EEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
@@ -518,6 +517,8 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VWSUB_VV:
   case RISCV::VWSUB_VX:
   case RISCV::VWSLL_VI:
+  case RISCV::VWSLL_VX:
+  case RISCV::VWSLL_VV:
   // Vector Widening Integer Multiply Instructions
   // Destination EEW=2*SEW. Source EEW=SEW.
   case RISCV::VWMUL_VV:
@@ -746,6 +747,14 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
     return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
 
+  // Vector Register Gather with 16-bit Index Elements Instruction
+  // Dest and source data EEW=SEW. Index vector EEW=16.
+  case RISCV::VRGATHEREI16_VV: {
+    if (MO.getOperandNo() == 2)
+      return 4;
+    return MILog2SEW;
+  }
+
   default:
     return std::nullopt;
   }
@@ -965,6 +974,13 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VADC_VIM:
   case RISCV::VADC_VVM:
   case RISCV::VADC_VXM:
+  case RISCV::VMADC_VIM:
+  case RISCV::VMADC_VVM:
+  case RISCV::VMADC_VXM:
+  case RISCV::VSBC_VVM:
+  case RISCV::VSBC_VXM:
+  case RISCV::VMSBC_VVM:
+  case RISCV::VMSBC_VXM:
   // Vector Widening Integer Multiply-Add Instructions
   case RISCV::VWMACCU_VV:
   case RISCV::VWMACCU_VX:
@@ -1020,6 +1036,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
 
   // Vector Crypto
   case RISCV::VWSLL_VI:
+  case RISCV::VWSLL_VX:
+  case RISCV::VWSLL_VV:
 
   // Vector Mask Instructions
   // Vector Mask-Register Logical Instructions
@@ -1041,6 +1059,18 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMSOF_M:
   case RISCV::VIOTA_M:
   case RISCV::VID_V:
+  // Vector Slide Instructions
+  case RISCV::VSLIDEUP_VX:
+  case RISCV::VSLIDEUP_VI:
+  case RISCV::VSLIDEDOWN_VX:
+  case RISCV::VSLIDEDOWN_VI:
+  case RISCV::VSLIDE1UP_VX:
+  case RISCV::VFSLIDE1UP_VF:
+  // Vector Register Gather Instructions
+  case RISCV::VRGATHER_VI:
+  case RISCV::VRGATHER_VV:
+  case RISCV::VRGATHER_VX:
+  case RISCV::VRGATHEREI16_VV:
   // Vector Single-Width Floating-Point Add/Subtract Instructions
   case RISCV::VFADD_VF:
   case RISCV::VFADD_VV:
@@ -1097,6 +1127,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFSQRT_V:
   // Vector Floating-Point Reciprocal Square-Root Estimate Instruction
   case RISCV::VFRSQRT7_V:
+  // Vector Floating-Point Reciprocal Estimate Instruction
+  case RISCV::VFREC7_V:
   // Vector Floating-Point MIN/MAX Instructions
   case RISCV::VFMIN_VF:
   case RISCV::VFMIN_VV:
@@ -1120,6 +1152,12 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMFLE_VV:
   case RISCV::VMFGT_VF:
   case RISCV::VMFGE_VF:
+  // Vector Floating-Point Classify Instruction
+  case RISCV::VFCLASS_V:
+  // Vector Floating-Point Merge Instruction
+  case RISCV::VFMERGE_VFM:
+  // Vector Floating-Point Move Instruction
+  case RISCV::VFMV_V_F:
   // Single-Width Floating-Point/Integer Type-Convert Instructions
   case RISCV::VFCVT_XU_F_V:
   case RISCV::VFCVT_X_F_V:
@@ -1253,6 +1291,9 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     return false;
   }
 
+  assert(!RISCVII::elementsDependOnVL(RISCV::getRVVMCOpcode(MI.getOpcode())) &&
+         "Instruction shouldn't be supported if elements depend on VL");
+
   assert(MI.getOperand(0).isReg() &&
          isVectorRegClass(MI.getOperand(0).getReg(), MRI) &&
          "All supported instructions produce a vector register result");
@@ -1299,12 +1340,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   // Instructions like reductions may use a vector register as a scalar
   // register. In this case, we should treat it as only reading the first lane.
   if (isVectorOpUsedAsScalarOp(UserOp)) {
-    [[maybe_unused]] Register R = UserOp.getReg();
-    [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
-    assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
-           "Expect LMUL 1 register class for vector as scalar operands!");
     LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
-
     return MachineOperand::CreateImm(1);
   }
 
@@ -1323,6 +1359,7 @@ std::optional<MachineOperand>
 RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
   std::optional<MachineOperand> CommonVL;
   SmallSetVector<MachineOperand *, 8> Worklist;
+  SmallPtrSet<const MachineInstr *, 4> PHISeen;
   for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg()))
     Worklist.insert(&UserOp);
 
@@ -1331,12 +1368,20 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
     const MachineInstr &UserMI = *UserOp.getParent();
     LLVM_DEBUG(dbgs() << "  Checking user: " << UserMI << "\n");
 
-    if (UserMI.isCopy() && UserMI.getOperand(0).getReg().isVirtual() &&
-        UserMI.getOperand(0).getSubReg() == RISCV::NoSubRegister &&
-        UserMI.getOperand(1).getSubReg() == RISCV::NoSubRegister) {
+    if (UserMI.isFullCopy() && UserMI.getOperand(0).getReg().isVirtual()) {
       LLVM_DEBUG(dbgs() << "    Peeking through uses of COPY\n");
-      for (auto &CopyUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
-        Worklist.insert(&CopyUse);
+      Worklist.insert_range(llvm::make_pointer_range(
+          MRI->use_operands(UserMI.getOperand(0).getReg())));
+      continue;
+    }
+
+    if (UserMI.isPHI()) {
+      // Don't follow PHI cycles
+      if (!PHISeen.insert(&UserMI).second)
+        continue;
+      LLVM_DEBUG(dbgs() << "    Peeking through uses of PHI\n");
+      Worklist.insert_range(llvm::make_pointer_range(
+          MRI->use_operands(UserMI.getOperand(0).getReg())));
       continue;
     }
 

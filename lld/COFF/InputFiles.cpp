@@ -15,7 +15,6 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "lld/Common/DWARF.h"
-#include "llvm-c/lto.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -33,14 +32,11 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
 #include <optional>
-#include <system_error>
 #include <utility>
 
 using namespace llvm;
@@ -118,6 +114,35 @@ static coff_symbol_generic *cloneSymbol(COFFSymbolRef sym) {
   }
 }
 
+// Skip importing DllMain thunks from import libraries.
+static bool fixupDllMain(COFFLinkerContext &ctx, llvm::object::Archive *file,
+                         const Archive::Symbol &sym, bool &skipDllMain) {
+  if (skipDllMain)
+    return true;
+  const Archive::Child &c =
+      CHECK(sym.getMember(), file->getFileName() +
+                                 ": could not get the member for symbol " +
+                                 toCOFFString(ctx, sym));
+  MemoryBufferRef mb =
+      CHECK(c.getMemoryBufferRef(),
+            file->getFileName() +
+                ": could not get the buffer for a child buffer of the archive");
+  if (identify_magic(mb.getBuffer()) == file_magic::coff_import_library) {
+    if (ctx.config.warnExportedDllMain) {
+      // We won't place DllMain symbols in the symbol table if they are
+      // coming from a import library. This message can be ignored with the flag
+      // '/ignore:exporteddllmain'
+      Warn(ctx)
+          << file->getFileName()
+          << ": skipping exported DllMain symbol [exporteddllmain]\nNOTE: this "
+             "might be a mistake when the DLL/library was produced.";
+    }
+    skipDllMain = true;
+    return true;
+  }
+  return false;
+}
+
 ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
     : InputFile(ctx.symtab, ArchiveKind, m) {}
 
@@ -129,17 +154,16 @@ void ArchiveFile::parse() {
   file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
-  if (ctx.symtabEC) {
+  if (ctx.symtab.isEC()) {
     iterator_range<Archive::symbol_iterator> symbols =
         CHECK(file->ec_symbols(), this);
     if (!symbols.empty()) {
       for (const Archive::Symbol &sym : symbols)
-        ctx.symtabEC->addLazyArchive(this, sym);
+        ctx.symtab.addLazyArchive(this, sym);
 
       // Read both EC and native symbols on ARM64X.
-      if (!ctx.hybridSymtab)
-        return;
-    } else if (ctx.hybridSymtab) {
+      archiveSymtab = &*ctx.hybridSymtab;
+    } else {
       // If the ECSYMBOLS section is missing in the archive, the archive could
       // be either a native-only ARM64 or x86_64 archive. Check the machine type
       // of the object containing a symbol to determine which symbol table to
@@ -181,8 +205,17 @@ void ArchiveFile::parse() {
   }
 
   // Read the symbol table to construct Lazy objects.
-  for (const Archive::Symbol &sym : file->symbols())
+  bool skipDllMain = false;
+  for (const Archive::Symbol &sym : file->symbols()) {
+    // If the DllMain symbol was exported by mistake, skip importing it
+    // otherwise we might end up with a import thunk in the final binary which
+    // is wrong.
+    if (sym.getName() == "__imp_DllMain" || sym.getName() == "DllMain") {
+      if (fixupDllMain(ctx, file.get(), sym, skipDllMain))
+        continue;
+    }
     archiveSymtab->addLazyArchive(this, sym);
+  }
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -1491,6 +1524,17 @@ void DLLFile::parse() {
     symtab.addLazyDLLSymbol(this, s, impName);
     if (code)
       symtab.addLazyDLLSymbol(this, s, symbolName);
+    if (symtab.isEC()) {
+      StringRef impAuxName = saver().save("__imp_aux_" + symbolName);
+      symtab.addLazyDLLSymbol(this, s, impAuxName);
+
+      if (code) {
+        std::optional<std::string> mangledName =
+            getArm64ECMangledFunctionName(symbolName);
+        if (mangledName)
+          symtab.addLazyDLLSymbol(this, s, *mangledName);
+      }
+    }
   }
 }
 

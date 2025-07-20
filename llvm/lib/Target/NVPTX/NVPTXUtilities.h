@@ -54,6 +54,7 @@ SmallVector<unsigned, 3> getClusterDim(const Function &);
 
 std::optional<uint64_t> getOverallMaxNTID(const Function &);
 std::optional<uint64_t> getOverallReqNTID(const Function &);
+std::optional<uint64_t> getOverallClusterRank(const Function &);
 
 std::optional<unsigned> getMaxClusterRank(const Function &);
 std::optional<unsigned> getMinCTASm(const Function &);
@@ -63,9 +64,12 @@ inline bool isKernelFunction(const Function &F) {
   return F.getCallingConv() == CallingConv::PTX_Kernel;
 }
 
-bool isParamGridConstant(const Value &);
+bool isParamGridConstant(const Argument &);
 
-MaybeAlign getAlign(const Function &, unsigned);
+inline MaybeAlign getAlign(const Function &F, unsigned Index) {
+  return F.getAttributes().getAttributes(Index).getStackAlignment();
+}
+
 MaybeAlign getAlign(const CallInst &, unsigned);
 Function *getMaybeBitcastedCallee(const CallBase *CB);
 
@@ -81,9 +85,32 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 
-bool Isv2x16VT(EVT VT);
+inline bool shouldPassAsArray(Type *Ty) {
+  return Ty->isAggregateType() || Ty->isVectorTy() ||
+         Ty->getScalarSizeInBits() == 128 || Ty->isHalfTy() || Ty->isBFloatTy();
+}
 
 namespace NVPTX {
+// Returns a list of vector types that we prefer to fit into a single PTX
+// register. NOTE: This must be kept in sync with the register classes
+// defined in NVPTXRegisterInfo.td.
+inline auto packed_types() {
+  static const auto PackedTypes = {MVT::v4i8, MVT::v2f16, MVT::v2bf16,
+                                   MVT::v2i16, MVT::v2f32};
+  return PackedTypes;
+}
+
+// Checks if the type VT can fit into a single register.
+inline bool isPackedVectorTy(EVT VT) {
+  return any_of(packed_types(), [VT](EVT OVT) { return OVT == VT; });
+}
+
+// Checks if two or more of the type ET can fit into a single register.
+inline bool isPackedElementTy(EVT ET) {
+  return any_of(packed_types(),
+                [ET](EVT OVT) { return OVT.getVectorElementType() == ET; });
+}
+
 inline std::string getValidPTXIdentifier(StringRef Name) {
   std::string ValidName;
   ValidName.reserve(Name.size() + 4);
@@ -138,6 +165,8 @@ inline std::string ScopeToString(Scope S) {
     return "Cluster";
   case Scope::Device:
     return "Device";
+  case Scope::DefaultDevice:
+    return "DefaultDevice";
   }
   report_fatal_error(formatv("Unknown NVPTX::Scope \"{}\".",
                              static_cast<ScopeUnderlyingType>(S)));
@@ -158,6 +187,8 @@ inline std::string AddressSpaceToString(AddressSpace A) {
     return "const";
   case AddressSpace::Shared:
     return "shared";
+  case AddressSpace::SharedCluster:
+    return "shared::cluster";
   case AddressSpace::Param:
     return "param";
   case AddressSpace::Local:

@@ -616,8 +616,7 @@ public:
     }
 
     assert(packedResultVals.size() == op.getNumResults());
-    rewriter.replaceOpWithMultiple(
-        op, llvm::to_vector_of<ValueRange>(packedResultVals));
+    rewriter.replaceOpWithMultiple(op, std::move(packedResultVals));
     return success();
   }
 };
@@ -1349,7 +1348,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
     Level trailCOORank = stt.getLvlRank() - trailCOOStart;
     // Sets up SparseTensorSpecifier.
     for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
-      assert(!ShapedType::isDynamic(stt.getDimShape()[lvl]));
+      assert(ShapedType::isStatic(stt.getDimShape()[lvl]));
 
       // Sets up the level size.
       auto lvlSize = constantIndex(rewriter, loc, stt.getLvlShape()[lvl]);
@@ -1472,7 +1471,8 @@ struct SparseDisassembleOpConverter
     // Converts MemRefs back to Tensors.
     SmallVector<Value> retValues = llvm::to_vector(
         llvm::map_range(retMem, [&rewriter, loc](Value v) -> Value {
-          return rewriter.create<bufferization::ToTensorOp>(loc, v);
+          return rewriter.create<bufferization::ToTensorOp>(
+              loc, memref::getTensorTypeFromMemRefType(v.getType()), v);
         }));
     // Appends the actual memory length used in each buffer returned.
     retValues.append(retLen.begin(), retLen.end());

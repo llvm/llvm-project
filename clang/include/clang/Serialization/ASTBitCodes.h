@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 34;
+const unsigned VERSION_MAJOR = 35;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -399,6 +399,9 @@ enum OptionsRecordTypes {
 
   /// Record code for the preprocessor options table.
   PREPROCESSOR_OPTIONS,
+
+  /// Record code for the codegen options table.
+  CODEGEN_OPTIONS,
 };
 
 /// Record codes for the unhashed control block.
@@ -1129,7 +1132,7 @@ enum PredefinedTypeIDs {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 // \brief SVE types with auto numeration
 #define SVE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 // \brief  PowerPC MMA types with auto numeration
 #define PPC_VECTOR_TYPE(Name, Id, Size) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/PPCTypes.def"

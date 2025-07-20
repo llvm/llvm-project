@@ -72,7 +72,7 @@ void MCTargetStreamer::emitValue(const MCExpr *Value) {
   SmallString<128> Str;
   raw_svector_ostream OS(Str);
 
-  Value->print(OS, Streamer.getContext().getAsmInfo());
+  Streamer.getContext().getAsmInfo()->printExpr(OS, *Value);
   Streamer.emitRawText(OS.str());
 }
 
@@ -743,6 +743,7 @@ void MCStreamer::emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) {
       std::make_unique<WinEH::FrameInfo>(Symbol, StartProc));
   CurrentWinFrameInfo = WinFrameInfos.back().get();
   CurrentWinFrameInfo->TextSection = getCurrentSectionOnly();
+  CurrentWinFrameInfo->FunctionLoc = Loc;
 }
 
 void MCStreamer::emitWinCFIEndProc(SMLoc Loc) {
@@ -1000,8 +1001,12 @@ void MCStreamer::emitWinCFIBeginEpilogue(SMLoc Loc) {
              "(.seh_endprologue) in " +
                  CurFrame->Function->getName());
 
-  InEpilogCFI = true;
-  CurrentEpilog = emitCFILabel();
+  MCSymbol *Label = emitCFILabel();
+  CurrentWinEpilog =
+      &CurFrame->EpilogMap.insert_or_assign(Label, WinEH::FrameInfo::Epilog())
+           .first->second;
+  CurrentWinEpilog->Start = Label;
+  CurrentWinEpilog->Loc = Loc;
 }
 
 void MCStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
@@ -1009,14 +1014,50 @@ void MCStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
   if (!CurFrame)
     return;
 
-  if (!InEpilogCFI)
+  if (!CurrentWinEpilog)
     return getContext().reportError(Loc, "Stray .seh_endepilogue in " +
                                              CurFrame->Function->getName());
 
-  InEpilogCFI = false;
+  if ((CurFrame->Version >= 2) && !CurrentWinEpilog->UnwindV2Start)
+    return getContext().reportError(Loc, "Missing .seh_unwindv2start in " +
+                                             CurFrame->Function->getName());
+
+  CurrentWinEpilog->End = emitCFILabel();
+  CurrentWinEpilog = nullptr;
+}
+
+void MCStreamer::emitWinCFIUnwindV2Start(SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+
+  if (!CurrentWinEpilog)
+    return getContext().reportError(Loc, "Stray .seh_unwindv2start in " +
+                                             CurFrame->Function->getName());
+
+  if (CurrentWinEpilog->UnwindV2Start)
+    return getContext().reportError(Loc, "Duplicate .seh_unwindv2start in " +
+                                             CurFrame->Function->getName());
+
   MCSymbol *Label = emitCFILabel();
-  CurFrame->EpilogMap[CurrentEpilog].End = Label;
-  CurrentEpilog = nullptr;
+  CurrentWinEpilog->UnwindV2Start = Label;
+}
+
+void MCStreamer::emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+
+  if (CurFrame->Version != WinEH::FrameInfo::DefaultVersion)
+    return getContext().reportError(Loc, "Duplicate .seh_unwindversion in " +
+                                             CurFrame->Function->getName());
+
+  if (Version != 2)
+    return getContext().reportError(
+        Loc, "Unsupported version specified in .seh_unwindversion in " +
+                 CurFrame->Function->getName());
+
+  CurFrame->Version = Version;
 }
 
 void MCStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {}
@@ -1145,6 +1186,10 @@ void MCStreamer::visitUsedExpr(const MCExpr &Expr) {
   case MCExpr::Unary:
     visitUsedExpr(*cast<MCUnaryExpr>(Expr).getSubExpr());
     break;
+
+  case MCExpr::Specifier:
+    visitUsedExpr(*cast<MCSpecifierExpr>(Expr).getSubExpr());
+    break;
   }
 }
 
@@ -1204,7 +1249,10 @@ void MCStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
   emitULEB128Value(Diff);
 }
 
-void MCStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {}
+void MCStreamer::emitSubsectionsViaSymbols() {
+  llvm_unreachable(
+      "emitSubsectionsViaSymbols only supported on Mach-O targets");
+}
 void MCStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {}
 void MCStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {
   llvm_unreachable("this directive only supported on COFF targets");
@@ -1262,6 +1310,8 @@ void MCStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                         StringRef Name, bool KeepOriginalSym) {}
 void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {}
+void MCStreamer::emitZerofill(MCSection *, MCSymbol *, uint64_t, Align, SMLoc) {
+}
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, Align ByteAlignment) {}
 void MCStreamer::changeSection(MCSection *Section, uint32_t) {
@@ -1278,17 +1328,12 @@ void MCStreamer::emitSLEB128Value(const MCExpr *Value) {}
 void MCStreamer::emitFill(const MCExpr &NumBytes, uint64_t Value, SMLoc Loc) {}
 void MCStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                           SMLoc Loc) {}
-void MCStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                      unsigned ValueSize,
-                                      unsigned MaxBytesToEmit) {}
+void MCStreamer::emitValueToAlignment(Align, int64_t, uint8_t, unsigned) {}
 void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
-void MCStreamer::emitBundleAlignMode(Align Alignment) {}
-void MCStreamer::emitBundleLock(bool AlignToEnd) {}
 void MCStreamer::finishImpl() {}
-void MCStreamer::emitBundleUnlock() {}
 
 bool MCStreamer::popSection() {
   if (SectionStack.size() <= 1)
@@ -1359,6 +1404,26 @@ MCSymbol *MCStreamer::endSection(MCSection *Section) {
   return Sym;
 }
 
+void MCStreamer::addFragment(MCFragment *F) {
+  auto *Sec = CurFrag->getParent();
+  F->setParent(Sec);
+  F->setLayoutOrder(CurFrag->getLayoutOrder() + 1);
+  CurFrag->Next = F;
+  CurFrag = F;
+  Sec->curFragList()->Tail = F;
+}
+
+void MCStreamer::newFragment() {
+  addFragment(getContext().allocFragment<MCFragment>());
+}
+
+void MCStreamer::insert(MCFragment *F) {
+  assert(F->getKind() != MCFragment::FT_Data &&
+         "F should have a variable-size tail");
+  addFragment(F);
+  newFragment();
+}
+
 static VersionTuple
 targetVersionOrMinimumSupportedOSVersion(const Triple &Target,
                                          VersionTuple TargetVersion) {
@@ -1403,10 +1468,9 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
   case Triple::WatchOS:
     return VersionTuple(5);
   case Triple::DriverKit:
-    // DriverKit always uses the build version load command.
-    return VersionTuple();
+  case Triple::BridgeOS:
   case Triple::XROS:
-    // XROS always uses the build version load command.
+    // DriverKit/BridgeOS/XROS always use the build version load command.
     return VersionTuple();
   default:
     break;
@@ -1437,6 +1501,8 @@ getMachoBuildVersionPlatformType(const Triple &Target) {
   case Triple::XROS:
     return Target.isSimulatorEnvironment() ? MachO::PLATFORM_XROS_SIMULATOR
                                            : MachO::PLATFORM_XROS;
+  case Triple::BridgeOS:
+    return MachO::PLATFORM_BRIDGEOS;
   default:
     break;
   }
@@ -1470,6 +1536,7 @@ void MCStreamer::emitVersionForTarget(
     Version = Target.getDriverKitVersion();
     break;
   case Triple::XROS:
+  case Triple::BridgeOS:
     Version = Target.getOSVersion();
     break;
   default:

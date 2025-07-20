@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -run-pass=postra-machine-sink -verify-machineinstrs -o - %s  | FileCheck %s
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -passes='postra-machine-sink' -o - %s  | FileCheck %s
 
 ---
 # Don't sink COPY to bb.2 since SLLK define r13l that is aliased with r12q.

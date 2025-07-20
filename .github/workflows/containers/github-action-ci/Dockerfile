@@ -1,8 +1,8 @@
-FROM docker.io/library/ubuntu:22.04 as base
+FROM docker.io/library/ubuntu:24.04 as base
 ENV LLVM_SYSROOT=/opt/llvm
 
 FROM base as stage1-toolchain
-ENV LLVM_VERSION=19.1.5
+ENV LLVM_VERSION=20.1.8
 
 RUN apt-get update && \
     apt-get install -y \
@@ -14,17 +14,15 @@ RUN apt-get update && \
     python3 \
     git \
     curl \
-    zlib1g-dev
+    zlib1g-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && tar -xf llvmorg-$LLVM_VERSION.tar.gz
+RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && \
+  tar -xf llvmorg-$LLVM_VERSION.tar.gz && \
+  rm -f llvmorg-$LLVM_VERSION.tar.gz
 
 WORKDIR /llvm-project-llvmorg-$LLVM_VERSION
-
-# Patch to enable better PGO profile data.
-# TODO: Remove this for llvm 20
-ADD https://github.com/llvm/llvm-project/commit/738250989ce516f02f809bdfde474a039c77e81f.patch .
-
-RUN patch -p1 < 738250989ce516f02f809bdfde474a039c77e81f.patch
 
 RUN cmake -B ./build -G Ninja ./llvm \
   -C ./clang/cmake/caches/BOLT-PGO.cmake \
@@ -34,7 +32,7 @@ RUN cmake -B ./build -G Ninja ./llvm \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
   -DCMAKE_INSTALL_PREFIX="$LLVM_SYSROOT" \
   -DLLVM_ENABLE_PROJECTS="bolt;clang;lld;clang-tools-extra" \
-  -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format;scan-build" \
+  -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format;scan-build;llvm-symbolizer" \
   -DCLANG_DEFAULT_LINKER="lld"
 
 RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution
@@ -65,14 +63,17 @@ RUN apt-get update && \
     python3-pip \
     ccache \
     file \
-    tzdata
+    tzdata && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install sccache as it is needed by most of the project test workflows and
-# cannot be installed by the ccache action when executing as a non-root user.
-# TODO(boomanaiden154): This should be switched to being installed with apt
-# once we bump to Ubuntu 24.04.
-RUN curl -L 'https://github.com/mozilla/sccache/releases/download/v0.7.6/sccache-v0.7.6-x86_64-unknown-linux-musl.tar.gz' > /tmp/sccache.tar.gz && \
-    echo "2902a5e44c3342132f07b62e70cca75d9b23252922faf3b924f449808cc1ae58 /tmp/sccache.tar.gz" | sha256sum -c && \
+# We need sccache for caching. We cannot use the apt repository version because
+# it is too old and has bugs related to features we require (particularly GCS
+# caching), so we manually install it here.
+# TODO(boomanaiden154): We should return to installing this from the apt
+# repository once a version containing the necessary bug fixes is available.
+RUN curl -L 'https://github.com/mozilla/sccache/releases/download/v0.10.0/sccache-v0.10.0-x86_64-unknown-linux-musl.tar.gz' > /tmp/sccache.tar.gz && \
+    echo "1fbb35e135660d04a2d5e42b59c7874d39b3deb17de56330b25b713ec59f849b /tmp/sccache.tar.gz" | sha256sum -c && \
     tar xzf /tmp/sccache.tar.gz -O --wildcards '*/sccache' > '/usr/local/bin/sccache' && \
     rm /tmp/sccache.tar.gz && \
     chmod +x /usr/local/bin/sccache
@@ -95,7 +96,7 @@ WORKDIR /home/gha
 
 FROM ci-container as ci-container-agent
 
-ENV GITHUB_RUNNER_VERSION=2.322.0
+ENV GITHUB_RUNNER_VERSION=2.326.0
 
 RUN mkdir actions-runner && \
     cd actions-runner && \
