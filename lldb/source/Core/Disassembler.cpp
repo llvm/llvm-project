@@ -751,8 +751,7 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
 
     std::vector<std::string> annotations;
 
-    for (size_t i = 0; i < var_list_sp->GetSize(); ++i) {
-      VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
+    for (const VariableSP &var_sp : *var_list_sp) {
       if (!var_sp)
         continue;
 
