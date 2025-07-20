@@ -658,6 +658,18 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+// This test is not written in the op's assembly format, to reproduce a mismatch
+// between the rank of static_offsets and the number of Values sent as the
+// dynamic offsets.
+func.func @invalid_subview(%arg0 : memref<?x128xi8, 1>) {
+  %0 = memref.alloc() :memref<1xf32>
+  // expected-error@+1 {{expected the number of 'offsets' to match the number of dynamic entries in 'static_offsets' (0 vs 1)}}
+  "memref.subview"(%0) <{operandSegmentSizes = array<i32: 1, 0, 0, 0>, static_offsets = array<i64: -9223372036854775808>, static_sizes = array<i64: 1>, static_strides = array<i64: 1>}> : (memref<1xf32>) -> memref<1xf32, strided<[1], offset: ?>>
+  return
+}
+
+// -----
+
 func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
   // expected-error@+1 {{expected mixed sizes rank to match mixed strides rank (3 vs 2) so the rank of the result type is well-formed}}
