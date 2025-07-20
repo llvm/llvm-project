@@ -960,8 +960,7 @@ define i1 @fold_test_and_with_chain(ptr %x, ptr %y, i32 %z) {
 define i1 @sext_mask(i32 %a) {
 ; CHECK-LABEL: sext_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
-; CHECK-NEXT:    cmpq $-523, %rax # encoding: [0x48,0x3d,0xf5,0xfd,0xff,0xff]
+; CHECK-NEXT:    cmpl $-523, %edi # encoding: [0x81,0xff,0xf5,0xfd,0xff,0xff]
 ; CHECK-NEXT:    # imm = 0xFDF5
 ; CHECK-NEXT:    setl %al # encoding: [0x0f,0x9c,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]

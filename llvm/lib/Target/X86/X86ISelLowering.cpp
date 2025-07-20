@@ -23479,11 +23479,25 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
   }
 
   // Try to shrink i64 compares if the input has enough zero bits.
-  // TODO: Add sign-bits equivalent for isX86CCSigned(X86CC)?
   if (CmpVT == MVT::i64 && !isX86CCSigned(X86CC) &&
       Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
       DAG.MaskedValueIsZero(Op1, APInt::getHighBitsSet(64, 32)) &&
       DAG.MaskedValueIsZero(Op0, APInt::getHighBitsSet(64, 32))) {
+    CmpVT = MVT::i32;
+    Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
+    Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
+  }
+
+  // Try to shrink signed i64 compares if the input has enough one bits.
+  // Or the input is sign extended from a 32-bit value.
+  if (CmpVT == MVT::i64 && isX86CCSigned(X86CC) &&
+      Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
+      (DAG.MaskedValueIsAllOnes(Op1, APInt::getHighBitsSet(64, 32)) ||
+       Op1.getOpcode() == ISD::SIGN_EXTEND ||
+       Op1.getOpcode() == ISD::SIGN_EXTEND_INREG) &&
+      (DAG.MaskedValueIsAllOnes(Op0, APInt::getHighBitsSet(64, 32)) ||
+       Op0.getOpcode() == ISD::SIGN_EXTEND ||
+       Op0.getOpcode() == ISD::SIGN_EXTEND_INREG)) {
     CmpVT = MVT::i32;
     Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
     Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
