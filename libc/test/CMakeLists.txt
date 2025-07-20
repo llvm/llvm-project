@@ -35,3 +35,4 @@ endif()
 
 add_subdirectory(IntegrationTest)
 add_subdirectory(integration)
+add_subdirectory(shared)
