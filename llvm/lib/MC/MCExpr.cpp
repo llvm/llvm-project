@@ -379,11 +379,11 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
         // After layout, during relocation generation, it can be treated as a
         // data fragment.
         Displacement += F->getSize();
-      } else if (auto *AF = dyn_cast<MCAlignFragment>(F);
-                 AF && Layout && AF->hasEmitNops() &&
+      } else if (F->getKind() == MCFragment::FT_Align && Layout &&
+                 F->hasAlignEmitNops() &&
                  !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
-                     *AF, Count)) {
-        Displacement += Asm->computeFragmentSize(*AF);
+                     *F, Count)) {
+        Displacement += Asm->computeFragmentSize(*F);
       } else if (auto *FF = dyn_cast<MCFillFragment>(F);
                  FF && FF->getNumValues().evaluateAsAbsolute(Num)) {
         Displacement += Num * FF->getValueSize();

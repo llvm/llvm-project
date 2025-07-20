@@ -515,19 +515,15 @@ void MCObjectStreamer::emitBytes(StringRef Data) {
   DF->appendContents(ArrayRef(Data.data(), Data.size()));
 }
 
-MCAlignFragment *MCObjectStreamer::createAlignFragment(
-    Align Alignment, int64_t Fill, uint8_t FillLen, unsigned MaxBytesToEmit) {
-  if (MaxBytesToEmit == 0)
-    MaxBytesToEmit = Alignment.value();
-  return getContext().allocFragment<MCAlignFragment>(Alignment, Fill, FillLen,
-                                                     MaxBytesToEmit);
-}
-
 void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
                                             uint8_t FillLen,
                                             unsigned MaxBytesToEmit) {
-  auto *F = createAlignFragment(Alignment, Fill, FillLen, MaxBytesToEmit);
-  insert(F);
+  if (MaxBytesToEmit == 0)
+    MaxBytesToEmit = Alignment.value();
+  MCFragment *F = getCurrentFragment();
+  F->makeAlign(Alignment, Fill, FillLen, MaxBytesToEmit);
+  newFragment();
+
   // Update the maximum alignment on the current section if necessary.
   F->getParent()->ensureMinAlignment(Alignment);
 }
@@ -535,11 +531,10 @@ void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
 void MCObjectStreamer::emitCodeAlignment(Align Alignment,
                                          const MCSubtargetInfo *STI,
                                          unsigned MaxBytesToEmit) {
-  auto *F = createAlignFragment(Alignment, 0, 1, MaxBytesToEmit);
-  F->setEmitNops(true, STI);
-  insert(F);
-  // Update the maximum alignment on the current section if necessary.
-  F->getParent()->ensureMinAlignment(Alignment);
+  auto *F = getCurrentFragment();
+  emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
+  F->u.align.EmitNops = true;
+  F->STI = STI;
 
   // With RISC-V style linker relaxation, mark the section as linker-relaxable
   // if the alignment is larger than the minimum NOP size.
