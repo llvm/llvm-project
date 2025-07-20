@@ -1438,7 +1438,6 @@ if (current_toolchain == default_toolchain) {
       "__tuple/make_tuple_types.h",
       "__tuple/sfinae_helpers.h",
       "__tuple/tuple_element.h",
-      "__tuple/tuple_indices.h",
       "__tuple/tuple_like.h",
       "__tuple/tuple_like_ext.h",
       "__tuple/tuple_like_no_subrange.h",
