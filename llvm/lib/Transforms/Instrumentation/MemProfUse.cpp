@@ -361,6 +361,74 @@ static void addVPMetadata(Module &M, Instruction &I,
   }
 }
 
+static void
+handleAllocSite(Instruction &I, CallBase *CI,
+                ArrayRef<uint64_t> InlinedCallStack, LLVMContext &Ctx,
+                OptimizationRemarkEmitter &ORE, uint64_t MaxColdSize,
+                const std::set<const AllocationInfo *> &AllocInfoSet,
+                std::map<std::pair<uint64_t, unsigned>, AllocMatchInfo>
+                    &FullStackIdToAllocMatchInfo) {
+  // We may match this instruction's location list to multiple MIB
+  // contexts. Add them to a Trie specialized for trimming the contexts to
+  // the minimal needed to disambiguate contexts with unique behavior.
+  CallStackTrie AllocTrie(&ORE, MaxColdSize);
+  uint64_t TotalSize = 0;
+  uint64_t TotalColdSize = 0;
+  for (auto *AllocInfo : AllocInfoSet) {
+    // Check the full inlined call stack against this one.
+    // If we found and thus matched all frames on the call, include
+    // this MIB.
+    if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
+                                           InlinedCallStack)) {
+      NumOfMemProfMatchedAllocContexts++;
+      uint64_t FullStackId = 0;
+      if (ClPrintMemProfMatchInfo || recordContextSizeInfoForAnalysis())
+        FullStackId = computeFullStackId(AllocInfo->CallStack);
+      auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
+      TotalSize += AllocInfo->Info.getTotalSize();
+      if (AllocType == AllocationType::Cold)
+        TotalColdSize += AllocInfo->Info.getTotalSize();
+      // Record information about the allocation if match info printing
+      // was requested.
+      if (ClPrintMemProfMatchInfo) {
+        assert(FullStackId != 0);
+        FullStackIdToAllocMatchInfo[std::make_pair(FullStackId,
+                                                   InlinedCallStack.size())] = {
+            AllocInfo->Info.getTotalSize(), AllocType};
+      }
+    }
+  }
+  // If the threshold for the percent of cold bytes is less than 100%,
+  // and not all bytes are cold, see if we should still hint this
+  // allocation as cold without context sensitivity.
+  if (TotalColdSize < TotalSize && MinMatchedColdBytePercent < 100 &&
+      TotalColdSize * 100 >= MinMatchedColdBytePercent * TotalSize) {
+    AllocTrie.addSingleAllocTypeAttribute(CI, AllocationType::Cold, "dominant");
+    return;
+  }
+
+  // We might not have matched any to the full inlined call stack.
+  // But if we did, create and attach metadata, or a function attribute if
+  // all contexts have identical profiled behavior.
+  if (!AllocTrie.empty()) {
+    NumOfMemProfMatchedAllocs++;
+    // MemprofMDAttached will be false if a function attribute was
+    // attached.
+    bool MemprofMDAttached = AllocTrie.buildAndAttachMIBMetadata(CI);
+    assert(MemprofMDAttached == I.hasMetadata(LLVMContext::MD_memprof));
+    if (MemprofMDAttached) {
+      // Add callsite metadata for the instruction's location list so that
+      // it simpler later on to identify which part of the MIB contexts
+      // are from this particular instruction (including during inlining,
+      // when the callsite metadata will be updated appropriately).
+      // FIXME: can this be changed to strip out the matching stack
+      // context ids from the MIB contexts and not add any callsite
+      // metadata here to save space?
+      addCallsiteMetadata(I, InlinedCallStack, Ctx);
+    }
+  }
+}
+
 static void readMemprof(Module &M, Function &F,
                         IndexedInstrProfReader *MemProfReader,
                         const TargetLibraryInfo &TLI,
@@ -554,66 +622,8 @@ static void readMemprof(Module &M, Function &F,
       if (AllocInfoIter != LocHashToAllocInfo.end() &&
           // Only consider allocations which support hinting.
           isAllocationWithHotColdVariant(CI->getCalledFunction(), TLI)) {
-        // We may match this instruction's location list to multiple MIB
-        // contexts. Add them to a Trie specialized for trimming the contexts to
-        // the minimal needed to disambiguate contexts with unique behavior.
-        CallStackTrie AllocTrie(&ORE, MaxColdSize);
-        uint64_t TotalSize = 0;
-        uint64_t TotalColdSize = 0;
-        for (auto *AllocInfo : AllocInfoIter->second) {
-          // Check the full inlined call stack against this one.
-          // If we found and thus matched all frames on the call, include
-          // this MIB.
-          if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
-                                                 InlinedCallStack)) {
-            NumOfMemProfMatchedAllocContexts++;
-            uint64_t FullStackId = 0;
-            if (ClPrintMemProfMatchInfo || recordContextSizeInfoForAnalysis())
-              FullStackId = computeFullStackId(AllocInfo->CallStack);
-            auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
-            TotalSize += AllocInfo->Info.getTotalSize();
-            if (AllocType == AllocationType::Cold)
-              TotalColdSize += AllocInfo->Info.getTotalSize();
-            // Record information about the allocation if match info printing
-            // was requested.
-            if (ClPrintMemProfMatchInfo) {
-              assert(FullStackId != 0);
-              FullStackIdToAllocMatchInfo[std::make_pair(
-                  FullStackId, InlinedCallStack.size())] = {
-                  AllocInfo->Info.getTotalSize(), AllocType};
-            }
-          }
-        }
-        // If the threshold for the percent of cold bytes is less than 100%,
-        // and not all bytes are cold, see if we should still hint this
-        // allocation as cold without context sensitivity.
-        if (TotalColdSize < TotalSize && MinMatchedColdBytePercent < 100 &&
-            TotalColdSize * 100 >= MinMatchedColdBytePercent * TotalSize) {
-          AllocTrie.addSingleAllocTypeAttribute(CI, AllocationType::Cold,
-                                                "dominant");
-          continue;
-        }
-
-        // We might not have matched any to the full inlined call stack.
-        // But if we did, create and attach metadata, or a function attribute if
-        // all contexts have identical profiled behavior.
-        if (!AllocTrie.empty()) {
-          NumOfMemProfMatchedAllocs++;
-          // MemprofMDAttached will be false if a function attribute was
-          // attached.
-          bool MemprofMDAttached = AllocTrie.buildAndAttachMIBMetadata(CI);
-          assert(MemprofMDAttached == I.hasMetadata(LLVMContext::MD_memprof));
-          if (MemprofMDAttached) {
-            // Add callsite metadata for the instruction's location list so that
-            // it simpler later on to identify which part of the MIB contexts
-            // are from this particular instruction (including during inlining,
-            // when the callsite metadata will be updated appropriately).
-            // FIXME: can this be changed to strip out the matching stack
-            // context ids from the MIB contexts and not add any callsite
-            // metadata here to save space?
-            addCallsiteMetadata(I, InlinedCallStack, Ctx);
-          }
-        }
+        handleAllocSite(I, CI, InlinedCallStack, Ctx, ORE, MaxColdSize,
+                        AllocInfoIter->second, FullStackIdToAllocMatchInfo);
         continue;
       }
 

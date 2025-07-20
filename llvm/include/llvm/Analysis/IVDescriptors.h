@@ -47,6 +47,8 @@ enum class RecurKind {
   FMul,     ///< Product of floats.
   FMin,     ///< FP min implemented in terms of select(cmp()).
   FMax,     ///< FP max implemented in terms of select(cmp()).
+  FMinNum,  ///< FP min with llvm.minnum semantics including NaNs.
+  FMaxNum,  ///< FP max with llvm.maxnum semantics including NaNs.
   FMinimum, ///< FP min with llvm.minimum semantics
   FMaximum, ///< FP max with llvm.maximum semantics
   FMinimumNum, ///< FP min with llvm.minimumnum semantics
@@ -57,6 +59,9 @@ enum class RecurKind {
   FindFirstIVSMin, /// FindFirst reduction with select(icmp(),x,y) where one of
                    ///< (x,y) is a decreasing loop induction, and both x and y
                    ///< are integer type, producing a SMin reduction.
+  FindFirstIVUMin, /// FindFirst reduction with select(icmp(),x,y) where one of
+                   ///< (x,y) is a decreasing loop induction, and both x and y
+                   ///< are integer type, producing a UMin reduction.
   FindLastIVSMax, ///< FindLast reduction with select(cmp(),x,y) where one of
                   ///< (x,y) is increasing loop induction, and both x and y
                   ///< are integer type, producing a SMax reduction.
@@ -247,6 +252,7 @@ public:
   /// Returns true if the recurrence kind is a floating-point min/max kind.
   static bool isFPMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::FMin || Kind == RecurKind::FMax ||
+           Kind == RecurKind::FMinNum || Kind == RecurKind::FMaxNum ||
            Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum ||
            Kind == RecurKind::FMinimumNum || Kind == RecurKind::FMaximumNum;
   }
@@ -265,7 +271,8 @@ public:
   /// Returns true if the recurrence kind is of the form
   ///   select(cmp(),x,y) where one of (x,y) is decreasing loop induction.
   static bool isFindFirstIVRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::FindFirstIVSMin;
+    return Kind == RecurKind::FindFirstIVSMin ||
+           Kind == RecurKind::FindFirstIVUMin;
   }
 
   /// Returns true if the recurrence kind is of the form

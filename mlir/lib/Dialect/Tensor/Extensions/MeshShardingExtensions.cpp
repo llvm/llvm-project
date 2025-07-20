@@ -11,10 +11,6 @@
 #include "mlir/Dialect/Tensor/IR/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "llvm/Support/Debug.h"
-
-#define DEBUG_TYPE "tensor-sharding-impl"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 
 using namespace mlir;
 using namespace mlir::tensor;
