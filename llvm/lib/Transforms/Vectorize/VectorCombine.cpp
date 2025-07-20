@@ -901,14 +901,15 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
 
   Worklist.pushValue(NewOp);
 
-  // Create the cast operation
-  Value *Result = Builder.CreateCast(CastOpcode, NewOp, I.getType());
-
+  // Create the cast operation directly to ensure we get a new instruction
+  Instruction *NewCast = CastInst::Create(CastOpcode, NewOp, I.getType());
+  
   // Preserve cast instruction flags
-  if (auto *NewCast = dyn_cast<CastInst>(Result)) {
-    NewCast->copyIRFlags(LHSCast);
-    NewCast->andIRFlags(RHSCast);
-  }
+  NewCast->copyIRFlags(LHSCast);
+  NewCast->andIRFlags(RHSCast);
+  
+  // Insert the new instruction
+  Value *Result = Builder.Insert(NewCast);
 
   replaceValue(I, *Result);
   return true;
