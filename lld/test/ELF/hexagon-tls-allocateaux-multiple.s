@@ -1,11 +1,11 @@
 # REQUIRES: hexagon
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf one.s -o one.o
-# RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf two.s -o two.o
-# RUN: ld.lld -shared one.o two.o -o %t.so
-# RUN: llvm-readobj -r %t.so | FileCheck --check-prefix=RELOC %s
+# RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf a.s -o a.o
+# RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf b.s -o b.o
+# RUN: ld.lld -shared a.o b.o -o out.so
+# RUN: llvm-readobj -r out.so | FileCheck --check-prefix=RELOC %s
 
-#--- one.s
+#--- a.s
 .globl _start
 .type _start, @function
 
@@ -21,7 +21,7 @@ _start:
 tls_var:
   .word 0x1234
 
-#--- two.s
+#--- b.s
 .globl other_func
 .type other_func, @function
 
