@@ -112,7 +112,7 @@ protected:
   StringRef Name;
   SectionVariant Variant;
 
-  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsVirtual,
+  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
             MCSymbol *Begin);
   // Protected non-virtual dtor prevents destroy through a base class pointer.
   ~MCSection() {}
@@ -175,11 +175,9 @@ public:
   /// instead of 0s.
   virtual bool useCodeAlign() const = 0;
 
-  /// Return true if this is a BSS section (e.g., ELF .bss or .tbss) that does
-  /// not store content and is typically initialized to zeroes by the runtime.
+  /// Check whether this section is "virtual", that is has no actual object
+  /// file contents.
   bool isBssSection() const { return IsBss; }
-
-  virtual StringRef getVirtualSectionKind() const;
 };
 
 // Represents a contiguous piece of code or data within a section. Its size is
