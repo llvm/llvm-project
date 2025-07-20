@@ -1837,6 +1837,8 @@ public:
                                      getGEPNoWrapFlags(), getDebugLoc());
   }
 
+  bool isPart0() { return getUnrollPart(*this) == 0; }
+
   /// Return the cost of this VPHeaderPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {

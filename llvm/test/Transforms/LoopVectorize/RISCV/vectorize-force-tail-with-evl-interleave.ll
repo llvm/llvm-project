@@ -42,34 +42,6 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], <vscale x 4 x i64> [[VEC_IND]], i32 1
 ; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP23]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = add nsw <vscale x 4 x i32> [[WIDE_MASKED_GATHER5]], [[WIDE_MASKED_GATHER3]]
-; IF-EVL-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[TMP27]], i32 0
-; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP26]], ptr align 4 [[TMP29]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP11]] to i64
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP15]], [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
-; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; IF-EVL-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP33]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
-; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i64 [[IV]], i32 0
-; IF-EVL-NEXT:    [[TMP34:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i64 [[IV]], i32 1
-; IF-EVL-NEXT:    [[TMP35:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP35]], [[TMP34]]
-; IF-EVL-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; IF-EVL-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX4]], align 4
-; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; IF-EVL:       for.cond.cleanup:
-; IF-EVL-NEXT:    ret void
 ;
 ; NO-VP-LABEL: @interleave(
 ; NO-VP-NEXT:  entry:
@@ -94,9 +66,6 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP19:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC2]], 1
 ; NO-VP-NEXT:    [[TMP21:%.*]] = add nsw <vscale x 4 x i32> [[TMP19]], [[TMP18]]
 ; NO-VP-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 0
-; NO-VP-NEXT:    store <vscale x 4 x i32> [[TMP21]], ptr [[TMP24]], align 4
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
 ; NO-VP-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP28]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP:       middle.block:

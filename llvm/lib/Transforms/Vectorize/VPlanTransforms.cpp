@@ -1015,6 +1015,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     if (Op->isLiveIn())
       PredPHI->replaceAllUsesWith(Op);
   }
+  if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(&R)) {
+    if (VecPtr->getParent()->getPlan()->isUnrolled() && VecPtr->isPart0()) {
+      VecPtr->replaceAllUsesWith(VecPtr->getOperand(0));
+      return;
+    }
+  }
 
   VPValue *A;
   if (match(Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
