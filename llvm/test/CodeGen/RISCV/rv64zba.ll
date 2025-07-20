@@ -3707,7 +3707,7 @@ define ptr @test_gep_gep_dont_crash(ptr %p, i64 %a1, i64 %a2) {
 define i64 @regression(i32 signext %x, i32 signext %y) {
 ; RV64I-LABEL: regression:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a1, a0, 29
 ; RV64I-NEXT:    srli a0, a0, 27
@@ -3716,14 +3716,14 @@ define i64 @regression(i32 signext %x, i32 signext %y) {
 ;
 ; RV64ZBA-LABEL: regression:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    subw a0, a0, a1
+; RV64ZBA-NEXT:    sub a0, a0, a1
 ; RV64ZBA-NEXT:    slli.uw a0, a0, 3
 ; RV64ZBA-NEXT:    sh1add a0, a0, a0
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64XANDESPERF-LABEL: regression:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    subw a0, a0, a1
+; RV64XANDESPERF-NEXT:    sub a0, a0, a1
 ; RV64XANDESPERF-NEXT:    slli a0, a0, 32
 ; RV64XANDESPERF-NEXT:    srli a0, a0, 29
 ; RV64XANDESPERF-NEXT:    nds.lea.h a0, a0, a0
