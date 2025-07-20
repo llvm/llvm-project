@@ -62,11 +62,10 @@ function(add_offload_test_device_code test_filename test_name)
       set(output_file "${CMAKE_CURRENT_BINARY_DIR}/${test_name}.amdgpu.bin")
       add_custom_command(
         OUTPUT ${output_file}
-        # TODO(jhuber6): Add and test the '-stdlib' flag here; also consider
-        #                the '-fno-builtin' flag.
         COMMAND ${CMAKE_C_COMPILER}
         --target=amdgcn-amd-amdhsa -mcpu=${amdgpu_arch}
-        -nogpulib -flto ${ARGN} -c ${SRC_PATH} -o ${output_file}
+        -stdlib -nogpulib -flto -fno-builtin ${ARGN}
+        ${SRC_PATH} -o ${output_file}
         DEPENDS ${SRC_PATH}
       )
       add_custom_target(${test_name}.amdgpu DEPENDS ${output_file})
