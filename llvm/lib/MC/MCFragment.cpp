@@ -72,17 +72,9 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   };
 
   switch (getKind()) {
-  case MCFragment::FT_Align: {
-    const auto *AF = cast<MCAlignFragment>(this);
-    OS << " Align:" << AF->getAlignment().value() << " Fill:" << AF->getFill()
-       << " FillLen:" << unsigned(AF->getFillLen())
-       << " MaxBytesToEmit:" << AF->getMaxBytesToEmit();
-    if (AF->hasEmitNops())
-      OS << " Nops";
-    break;
-  }
   case MCFragment::FT_Data:
   case MCFragment::FT_Relaxable:
+  case MCFragment::FT_Align:
   case MCFragment::FT_LEB:
   case MCFragment::FT_Dwarf:
   case MCFragment::FT_DwarfFrame: {
@@ -110,6 +102,13 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     case MCFragment::FT_Relaxable:
       OS << ' ';
       getInst().dump_pretty(OS);
+      break;
+    case MCFragment::FT_Align:
+      OS << "\n  Align:" << getAlignment().value() << " Fill:" << getAlignFill()
+         << " FillLen:" << unsigned(getAlignFillLen())
+         << " MaxBytesToEmit:" << getAlignMaxBytesToEmit();
+      if (hasAlignEmitNops())
+        OS << " Nops";
       break;
     case MCFragment::FT_LEB: {
       OS << " Value:";

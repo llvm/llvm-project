@@ -637,7 +637,7 @@ bool RISCVAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
 
   // Otherwise, check if the offset between the symbol and fragment is fully
   // resolved, unaffected by linker-relaxable fragments (e.g. instructions or
-  // offset-affected MCAlignFragment). Complements the generic
+  // offset-affected FT_Align fragments). Complements the generic
   // isSymbolRefDifferenceFullyResolvedImpl.
   if (!PCRelTemp)
     PCRelTemp = getContext().createTempSymbol();
@@ -892,7 +892,7 @@ void RISCVAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
 // could satisfy alignment by removing Nops.
 // The function return the total Nops Size we need to insert.
 bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
-    const MCAlignFragment &AF, unsigned &Size) {
+    const MCFragment &AF, unsigned &Size) {
   // Calculate Nops Size only when linker relaxation enabled.
   const MCSubtargetInfo *STI = AF.getSubtargetInfo();
   if (!STI->hasFeature(RISCV::FeatureRelax))
@@ -914,7 +914,7 @@ bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
 // The function insert fixup_riscv_align fixup which eventually will
 // transfer to R_RISCV_ALIGN relocation type.
 bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                                    MCAlignFragment &AF) {
+                                                    MCFragment &AF) {
   // Insert the fixup only when linker relaxation enabled.
   const MCSubtargetInfo *STI = AF.getSubtargetInfo();
   if (!STI->hasFeature(RISCV::FeatureRelax))
@@ -928,7 +928,7 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
 
   MCContext &Ctx = getContext();
   const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
-  MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_RISCV_ALIGN);
+  MCFixup Fixup = MCFixup::create(AF.getFixedSize(), Dummy, ELF::R_RISCV_ALIGN);
 
   uint64_t FixedValue = 0;
   MCValue NopBytes = MCValue::get(Count);

@@ -227,25 +227,24 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     return 4;
 
   case MCFragment::FT_Align: {
-    const MCAlignFragment &AF = cast<MCAlignFragment>(F);
-    unsigned Offset = getFragmentOffset(AF);
-    unsigned Size = offsetToAlignment(Offset, AF.getAlignment());
+    unsigned Offset = F.Offset + F.getFixedSize();
+    unsigned Size = offsetToAlignment(Offset, F.getAlignment());
 
     // Insert extra Nops for code alignment if the target define
     // shouldInsertExtraNopBytesForCodeAlign target hook.
-    if (AF.getParent()->useCodeAlign() && AF.hasEmitNops() &&
-        getBackend().shouldInsertExtraNopBytesForCodeAlign(AF, Size))
-      return Size;
+    if (F.getParent()->useCodeAlign() && F.hasAlignEmitNops() &&
+        getBackend().shouldInsertExtraNopBytesForCodeAlign(F, Size))
+      return F.getFixedSize() + Size;
 
     // If we are padding with nops, force the padding to be larger than the
     // minimum nop size.
-    if (Size > 0 && AF.hasEmitNops()) {
+    if (Size > 0 && F.hasAlignEmitNops()) {
       while (Size % getBackend().getMinimumNopSize())
-        Size += AF.getAlignment().value();
+        Size += F.getAlignment().value();
     }
-    if (Size > AF.getMaxBytesToEmit())
-      return 0;
-    return Size;
+    if (Size > F.getAlignMaxBytesToEmit())
+      Size = 0;
+    return F.getFixedSize() + Size;
   }
 
   case MCFragment::FT_Org: {
@@ -419,6 +418,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   switch (F.getKind()) {
   case MCFragment::FT_Data:
   case MCFragment::FT_Relaxable:
+  case MCFragment::FT_Align:
   case MCFragment::FT_LEB:
   case MCFragment::FT_Dwarf:
   case MCFragment::FT_DwarfFrame:
@@ -431,48 +431,46 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     const auto &EF = cast<MCFragment>(F);
     OS << StringRef(EF.getContents().data(), EF.getContents().size());
     OS << StringRef(EF.getVarContents().data(), EF.getVarContents().size());
-    break;
-  }
-  case MCFragment::FT_Align: {
-    ++stats::EmittedAlignFragments;
-    const MCAlignFragment &AF = cast<MCAlignFragment>(F);
-    assert(AF.getFillLen() && "Invalid virtual align in concrete fragment!");
+    if (F.getKind() == MCFragment::FT_Align) {
+      ++stats::EmittedAlignFragments;
+      assert(F.getAlignFillLen() &&
+             "Invalid virtual align in concrete fragment!");
 
-    uint64_t Count = FragmentSize / AF.getFillLen();
-    assert(FragmentSize % AF.getFillLen() == 0 &&
-           "computeFragmentSize computed size is incorrect");
+      uint64_t Count = (FragmentSize - F.getFixedSize()) / F.getAlignFillLen();
+      assert((FragmentSize - F.getFixedSize()) % F.getAlignFillLen() == 0 &&
+             "computeFragmentSize computed size is incorrect");
 
-    // See if we are aligning with nops, and if so do that first to try to fill
-    // the Count bytes.  Then if that did not fill any bytes or there are any
-    // bytes left to fill use the Value and ValueSize to fill the rest.
-    // If we are aligning with nops, ask that target to emit the right data.
-    if (AF.hasEmitNops()) {
-      if (!Asm.getBackend().writeNopData(OS, Count, AF.getSubtargetInfo()))
-        report_fatal_error("unable to write nop sequence of " +
-                          Twine(Count) + " bytes");
-      break;
-    }
-
-    // Otherwise, write out in multiples of the value size.
-    for (uint64_t i = 0; i != Count; ++i) {
-      switch (AF.getFillLen()) {
-      default: llvm_unreachable("Invalid size!");
-      case 1:
-        OS << char(AF.getFill());
-        break;
-      case 2:
-        support::endian::write<uint16_t>(OS, AF.getFill(), Endian);
-        break;
-      case 4:
-        support::endian::write<uint32_t>(OS, AF.getFill(), Endian);
-        break;
-      case 8:
-        support::endian::write<uint64_t>(OS, AF.getFill(), Endian);
-        break;
+      // See if we are aligning with nops, and if so do that first to try to
+      // fill the Count bytes.  Then if that did not fill any bytes or there are
+      // any bytes left to fill use the Value and ValueSize to fill the rest. If
+      // we are aligning with nops, ask that target to emit the right data.
+      if (F.hasAlignEmitNops()) {
+        if (!Asm.getBackend().writeNopData(OS, Count, F.getSubtargetInfo()))
+          report_fatal_error("unable to write nop sequence of " + Twine(Count) +
+                             " bytes");
+      } else {
+        // Otherwise, write out in multiples of the value size.
+        for (uint64_t i = 0; i != Count; ++i) {
+          switch (F.getAlignFillLen()) {
+          default:
+            llvm_unreachable("Invalid size!");
+          case 1:
+            OS << char(F.getAlignFill());
+            break;
+          case 2:
+            support::endian::write<uint16_t>(OS, F.getAlignFill(), Endian);
+            break;
+          case 4:
+            support::endian::write<uint32_t>(OS, F.getAlignFill(), Endian);
+            break;
+          case 8:
+            support::endian::write<uint64_t>(OS, F.getAlignFill(), Endian);
+            break;
+          }
+        }
       }
     }
-    break;
-  }
+  } break;
 
   case MCFragment::FT_Fill: {
     ++stats::EmittedFillFragments;
@@ -703,34 +701,30 @@ void MCAssembler::layout() {
   for (MCSection &Sec : *this) {
     for (MCFragment &F : Sec) {
       // Process fragments with fixups here.
-      if (F.isEncoded()) {
-        auto Contents = F.getContents();
-        for (MCFixup &Fixup : F.getFixups()) {
+      auto Contents = F.getContents();
+      for (MCFixup &Fixup : F.getFixups()) {
+        uint64_t FixedValue;
+        MCValue Target;
+        evaluateFixup(F, Fixup, Target, FixedValue,
+                      /*RecordReloc=*/true, Contents);
+      }
+      if (F.getVarFixups().size()) {
+        // In the variable part, fixup offsets are relative to the fixed part's
+        // start. Extend the variable contents to the left to account for the
+        // fixed part size.
+        Contents = MutableArrayRef(F.getParent()->ContentStorage)
+                       .slice(F.VarContentStart - Contents.size(), F.getSize());
+        for (MCFixup &Fixup : F.getVarFixups()) {
           uint64_t FixedValue;
           MCValue Target;
           evaluateFixup(F, Fixup, Target, FixedValue,
                         /*RecordReloc=*/true, Contents);
         }
-        // In the variable part, fixup offsets are relative to the fixed part's
-        // start. Extend the variable contents to the left to account for the
-        // fixed part size.
-        auto VarFixups = F.getVarFixups();
-        if (VarFixups.size()) {
-          Contents =
-              MutableArrayRef(F.getParent()->ContentStorage)
-                  .slice(F.VarContentStart - Contents.size(), F.getSize());
-          for (MCFixup &Fixup : VarFixups) {
-            uint64_t FixedValue;
-            MCValue Target;
-            evaluateFixup(F, Fixup, Target, FixedValue,
-                          /*RecordReloc=*/true, Contents);
-          }
-        }
-      } else if (auto *AF = dyn_cast<MCAlignFragment>(&F)) {
+      } else if (F.getKind() == MCFragment::FT_Align) {
         // For RISC-V linker relaxation, an alignment relocation might be
         // needed.
-        if (AF->hasEmitNops())
-          getBackend().shouldInsertFixupForCodeAlign(*this, *AF);
+        if (F.hasAlignEmitNops())
+          getBackend().shouldInsertFixupForCodeAlign(*this, F);
       }
     }
   }
