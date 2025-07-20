@@ -2704,8 +2704,7 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
   // Synthesize a fake NNS that points to the derived class.  This will
   // perform name lookup during template instantiation.
   CXXScopeSpec SS;
-  auto *NNS =
-      NestedNameSpecifier::Create(Context, nullptr, RD->getTypeForDecl());
+  NestedNameSpecifier NNS(Context.getCanonicalTagType(RD)->getTypePtr());
   SS.MakeTrivial(Context, NNS, SourceRange(Loc, Loc));
   return DependentScopeDeclRefExpr::Create(
       Context, SS.getWithLocInContext(Context), TemplateKWLoc, NameInfo,
@@ -2996,11 +2995,10 @@ ExprResult Sema::BuildQualifiedDeclarationNameExpr(
   return BuildDeclarationNameExpr(SS, R, /*ADL=*/false);
 }
 
-ExprResult
-Sema::PerformObjectMemberConversion(Expr *From,
-                                    NestedNameSpecifier *Qualifier,
-                                    NamedDecl *FoundDecl,
-                                    NamedDecl *Member) {
+ExprResult Sema::PerformObjectMemberConversion(Expr *From,
+                                               NestedNameSpecifier Qualifier,
+                                               NamedDecl *FoundDecl,
+                                               NamedDecl *Member) {
   const auto *RD = dyn_cast<CXXRecordDecl>(Member->getDeclContext());
   if (!RD)
     return From;
@@ -3089,8 +3087,8 @@ Sema::PerformObjectMemberConversion(Expr *From,
   //     x = 17; // error: ambiguous base subobjects
   //     Derived1::x = 17; // okay, pick the Base subobject of Derived1
   //   }
-  if (Qualifier && Qualifier->getAsType()) {
-    QualType QType = QualType(Qualifier->getAsType(), 0);
+  if (Qualifier.getKind() == NestedNameSpecifier::Kind::Type) {
+    QualType QType = QualType(Qualifier.getAsType(), 0);
     assert(QType->isRecordType() && "lookup done with non-record type");
 
     QualType QRecordType = QualType(QType->castAs<RecordType>(), 0);
@@ -21230,7 +21228,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     NamedDecl *Temp = *ULE->decls_begin();
     const bool IsTypeAliasTemplateDecl = isa<TypeAliasTemplateDecl>(Temp);
 
-    NestedNameSpecifier *NNS = ULE->getQualifierLoc().getNestedNameSpecifier();
+    NestedNameSpecifier NNS = ULE->getQualifierLoc().getNestedNameSpecifier();
     // FIXME: AssumedTemplate is not very appropriate for error recovery here,
     // as it models only the unqualified-id case, where this case can clearly be
     // qualified. Thus we can't just qualify an assumed template.

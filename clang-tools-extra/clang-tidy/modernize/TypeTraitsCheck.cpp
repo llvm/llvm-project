@@ -214,14 +214,11 @@ static bool isNamedDeclInStdTraitsSet(const NamedDecl *ND,
          Set.contains(ND->getName());
 }
 
-static bool checkTemplatedDecl(const NestedNameSpecifier *NNS,
+static bool checkTemplatedDecl(NestedNameSpecifier NNS,
                                const llvm::StringSet<> &Set) {
-  if (!NNS)
+  if (NNS.getKind() != NestedNameSpecifier::Kind::Type)
     return false;
-  const Type *NNST = NNS->getAsType();
-  if (!NNST)
-    return false;
-  const auto *TST = NNST->getAs<TemplateSpecializationType>();
+  const auto *TST = NNS.getAsType()->getAs<TemplateSpecializationType>();
   if (!TST)
     return false;
   if (const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl()) {
@@ -238,8 +235,8 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
   auto EmitValueWarning = [this, &Result](const NestedNameSpecifierLoc &QualLoc,
                                           SourceLocation EndLoc) {
     SourceLocation TemplateNameEndLoc;
-    if (auto TSTL = QualLoc.getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
-        !TSTL.isNull())
+    if (auto TSTL =
+            QualLoc.getAsTypeLoc().getAs<TemplateSpecializationTypeLoc>())
       TemplateNameEndLoc = Lexer::getLocForEndOfToken(
           TSTL.getTemplateNameLoc(), 0, *Result.SourceManager,
           Result.Context->getLangOpts());
@@ -289,23 +286,21 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
     if (!DRE->hasQualifier())
       return;
     if (const auto *CTSD = dyn_cast_if_present<ClassTemplateSpecializationDecl>(
-            DRE->getQualifier()->getAsRecordDecl())) {
+            DRE->getQualifier().getAsRecordDecl())) {
       if (isNamedDeclInStdTraitsSet(CTSD, ValueTraits))
         EmitValueWarning(DRE->getQualifierLoc(), DRE->getEndLoc());
     }
     return;
   }
 
-  if (const auto *ETL = Result.Nodes.getNodeAs<ElaboratedTypeLoc>(Bind)) {
-    const NestedNameSpecifierLoc QualLoc = ETL->getQualifierLoc();
-    const auto *NNS = QualLoc.getNestedNameSpecifier();
-    if (!NNS)
-      return;
+  if (const auto *TL = Result.Nodes.getNodeAs<TypedefTypeLoc>(Bind)) {
+    const NestedNameSpecifierLoc QualLoc = TL->getQualifierLoc();
+    NestedNameSpecifier NNS = QualLoc.getNestedNameSpecifier();
     if (const auto *CTSD = dyn_cast_if_present<ClassTemplateSpecializationDecl>(
-            NNS->getAsRecordDecl())) {
+            NNS.getAsRecordDecl())) {
       if (isNamedDeclInStdTraitsSet(CTSD, TypeTraits))
-        EmitTypeWarning(ETL->getQualifierLoc(), ETL->getEndLoc(),
-                        ETL->getElaboratedKeywordLoc());
+        EmitTypeWarning(TL->getQualifierLoc(), TL->getEndLoc(),
+                        TL->getElaboratedKeywordLoc());
     }
     return;
   }

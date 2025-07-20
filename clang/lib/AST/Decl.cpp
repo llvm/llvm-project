@@ -1883,18 +1883,13 @@ bool NamedDecl::declarationReplaces(const NamedDecl *OldD,
 
   // Using declarations can be replaced if they import the same name from the
   // same context.
-  if (const auto *UD = dyn_cast<UsingDecl>(this)) {
-    ASTContext &Context = getASTContext();
-    return Context.getCanonicalNestedNameSpecifier(UD->getQualifier()) ==
-           Context.getCanonicalNestedNameSpecifier(
-               cast<UsingDecl>(OldD)->getQualifier());
-  }
-  if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this)) {
-    ASTContext &Context = getASTContext();
-    return Context.getCanonicalNestedNameSpecifier(UUVD->getQualifier()) ==
-           Context.getCanonicalNestedNameSpecifier(
-                        cast<UnresolvedUsingValueDecl>(OldD)->getQualifier());
-  }
+  if (const auto *UD = dyn_cast<UsingDecl>(this))
+    return UD->getQualifier().getCanonical() ==
+
+           cast<UsingDecl>(OldD)->getQualifier().getCanonical();
+  if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this))
+    return UUVD->getQualifier().getCanonical() ==
+           cast<UnresolvedUsingValueDecl>(OldD)->getQualifier().getCanonical();
 
   if (isRedeclarable(getKind())) {
     if (getCanonicalDecl() != OldD->getCanonicalDecl())

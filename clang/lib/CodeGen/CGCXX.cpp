@@ -278,14 +278,13 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
 /// BuildAppleKextVirtualCall - This routine is to support gcc's kext ABI making
 /// indirect call to virtual functions. It makes the call through indexing
 /// into the vtable.
-CGCallee
-CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
-                                           NestedNameSpecifier *Qual,
-                                           llvm::Type *Ty) {
-  assert((Qual->getKind() == NestedNameSpecifier::TypeSpec) &&
+CGCallee CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
+                                                    NestedNameSpecifier Qual,
+                                                    llvm::Type *Ty) {
+  assert(Qual.getKind() == NestedNameSpecifier::Kind::Type &&
          "BuildAppleKextVirtualCall - bad Qual kind");
 
-  const Type *QTy = Qual->getAsType();
+  const Type *QTy = Qual.getAsType();
   QualType T = QualType(QTy, 0);
   const RecordType *RT = T->getAs<RecordType>();
   assert(RT && "BuildAppleKextVirtualCall - Qual type must be record");

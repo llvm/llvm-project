@@ -205,45 +205,39 @@ DeclarationFragments::getStructureTypeFragment(const RecordDecl *Record) {
 // Build declaration fragments for NNS recursively so that we have the USR for
 // every part in a qualified name, and also leaves the actual underlying type
 // cleaner for its own fragment.
-DeclarationFragments
-DeclarationFragmentsBuilder::getFragmentsForNNS(const NestedNameSpecifier *NNS,
-                                                ASTContext &Context,
-                                                DeclarationFragments &After) {
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForNNS(
+    NestedNameSpecifier NNS, ASTContext &Context, DeclarationFragments &After) {
   DeclarationFragments Fragments;
-  if (NNS->getPrefix())
-    Fragments.append(getFragmentsForNNS(NNS->getPrefix(), Context, After));
+  switch (NNS.getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+    return Fragments;
 
-  switch (NNS->getKind()) {
-  case NestedNameSpecifier::Identifier:
-    Fragments.append(NNS->getAsIdentifier()->getName(),
-                     DeclarationFragments::FragmentKind::Identifier);
-    break;
-
-  case NestedNameSpecifier::Namespace: {
-    const NamespaceBaseDecl *NS = NNS->getAsNamespace();
-    if (const auto *Namespace = dyn_cast<NamespaceDecl>(NS);
-        Namespace && Namespace->isAnonymousNamespace())
+  case NestedNameSpecifier::Kind::Namespace: {
+    auto [Namespace, Prefix] = NNS.getAsNamespaceAndPrefix();
+    Fragments.append(getFragmentsForNNS(Prefix, Context, After));
+    if (const auto *NS = dyn_cast<NamespaceDecl>(Namespace);
+        NS && NS->isAnonymousNamespace())
       return Fragments;
     SmallString<128> USR;
-    index::generateUSRForDecl(NS, USR);
-    Fragments.append(NS->getName(),
-                     DeclarationFragments::FragmentKind::Identifier, USR, NS);
+    index::generateUSRForDecl(Namespace, USR);
+    Fragments.append(Namespace->getName(),
+                     DeclarationFragments::FragmentKind::Identifier, USR,
+                     Namespace);
     break;
   }
 
-  case NestedNameSpecifier::Global:
+  case NestedNameSpecifier::Kind::Global:
     // The global specifier `::` at the beginning. No stored value.
     break;
 
-  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     // Microsoft's `__super` specifier.
     Fragments.append("__super", DeclarationFragments::FragmentKind::Keyword);
     break;
 
-  case NestedNameSpecifier::TypeSpec: {
-    const Type *T = NNS->getAsType();
+  case NestedNameSpecifier::Kind::Type: {
     // FIXME: Handle C++ template specialization type
-    Fragments.append(getFragmentsForType(T, Context, After));
+    Fragments.append(getFragmentsForType(NNS.getAsType(), Context, After));
     break;
   }
   }

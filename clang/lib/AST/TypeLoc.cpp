@@ -471,6 +471,134 @@ TypeLoc TypeLoc::findExplicitQualifierLoc() const {
   return {};
 }
 
+NestedNameSpecifierLoc TypeLoc::getPrefix() const {
+  switch (getTypeLocClass()) {
+  case TypeLoc::DependentName:
+    return castAs<DependentNameTypeLoc>().getQualifierLoc();
+  case TypeLoc::TemplateSpecialization:
+    return castAs<TemplateSpecializationTypeLoc>().getQualifierLoc();
+  case TypeLoc::DependentTemplateSpecialization:
+    return castAs<DependentTemplateSpecializationTypeLoc>().getQualifierLoc();
+  case TypeLoc::DeducedTemplateSpecialization:
+    return castAs<DeducedTemplateSpecializationTypeLoc>().getQualifierLoc();
+  case TypeLoc::Enum:
+  case TypeLoc::Record:
+  case TypeLoc::InjectedClassName:
+    return castAs<TagTypeLoc>().getQualifierLoc();
+  case TypeLoc::Typedef:
+    return castAs<TypedefTypeLoc>().getQualifierLoc();
+  case TypeLoc::UnresolvedUsing:
+    return castAs<UnresolvedUsingTypeLoc>().getQualifierLoc();
+  case TypeLoc::Using:
+    return castAs<UsingTypeLoc>().getQualifierLoc();
+  default:
+    return NestedNameSpecifierLoc();
+  }
+}
+
+SourceLocation TypeLoc::getNonPrefixBeginLoc() const {
+  switch (getTypeLocClass()) {
+  case TypeLoc::TemplateSpecialization: {
+    auto TL = castAs<TemplateSpecializationTypeLoc>();
+    SourceLocation Loc = TL.getTemplateKeywordLoc();
+    if (!Loc.isValid())
+      Loc = TL.getTemplateNameLoc();
+    return Loc;
+  }
+  case TypeLoc::DependentTemplateSpecialization: {
+    auto TL = castAs<DependentTemplateSpecializationTypeLoc>();
+    SourceLocation Loc = TL.getTemplateKeywordLoc();
+    if (!Loc.isValid())
+      Loc = TL.getTemplateNameLoc();
+    return Loc;
+  }
+  case TypeLoc::DeducedTemplateSpecialization: {
+    auto TL = castAs<DeducedTemplateSpecializationTypeLoc>();
+    SourceLocation Loc = TL.getTemplateKeywordLoc();
+    if (!Loc.isValid())
+      Loc = TL.getTemplateNameLoc();
+    return Loc;
+  }
+  case TypeLoc::DependentName:
+    return castAs<DependentNameTypeLoc>().getNameLoc();
+  case TypeLoc::Enum:
+  case TypeLoc::Record:
+  case TypeLoc::InjectedClassName:
+    return castAs<TagTypeLoc>().getNameLoc();
+  case TypeLoc::Typedef:
+    return castAs<TypedefTypeLoc>().getNameLoc();
+  case TypeLoc::UnresolvedUsing:
+    return castAs<UnresolvedUsingTypeLoc>().getNameLoc();
+  case TypeLoc::Using:
+    return castAs<UsingTypeLoc>().getNameLoc();
+  default:
+    return getBeginLoc();
+  }
+}
+
+SourceLocation TypeLoc::getNonElaboratedBeginLoc() const {
+  // For elaborated types (e.g. `struct a::A`) we want the portion after the
+  // `struct` but including the namespace qualifier, `a::`.
+  switch (getTypeLocClass()) {
+  case TypeLoc::Qualified:
+    return castAs<QualifiedTypeLoc>()
+        .getUnqualifiedLoc()
+        .getNonElaboratedBeginLoc();
+  case TypeLoc::TemplateSpecialization: {
+    auto T = castAs<TemplateSpecializationTypeLoc>();
+    if (NestedNameSpecifierLoc QualifierLoc = T.getQualifierLoc())
+      return QualifierLoc.getBeginLoc();
+    return T.getTemplateNameLoc();
+  }
+  case TypeLoc::DependentTemplateSpecialization: {
+    auto T = castAs<DependentTemplateSpecializationTypeLoc>();
+    if (NestedNameSpecifierLoc QualifierLoc = T.getQualifierLoc())
+      return QualifierLoc.getBeginLoc();
+    return T.getTemplateNameLoc();
+  }
+  case TypeLoc::DeducedTemplateSpecialization: {
+    auto T = castAs<DeducedTemplateSpecializationTypeLoc>();
+    if (NestedNameSpecifierLoc QualifierLoc = T.getQualifierLoc())
+      return QualifierLoc.getBeginLoc();
+    return T.getTemplateNameLoc();
+  }
+  case TypeLoc::DependentName: {
+    auto T = castAs<DependentNameTypeLoc>();
+    if (NestedNameSpecifierLoc QualifierLoc = T.getQualifierLoc())
+      return QualifierLoc.getBeginLoc();
+    return T.getNameLoc();
+  }
+  case TypeLoc::Enum:
+  case TypeLoc::Record:
+  case TypeLoc::InjectedClassName: {
+    auto T = castAs<TagTypeLoc>();
+    if (NestedNameSpecifierLoc QualifierLoc = T.getQualifierLoc())
+      return QualifierLoc.getBeginLoc();
+    return T.getNameLoc();
+  }
+  case TypeLoc::Typedef: {
+    auto T = castAs<TypedefTypeLoc>();
+    if (NestedNameSpecifierLoc QualifierLoc = T.getQualifierLoc())
+      return QualifierLoc.getBeginLoc();
+    return T.getNameLoc();
+  }
+  case TypeLoc::UnresolvedUsing: {
+    auto T = castAs<UnresolvedUsingTypeLoc>();
+    if (NestedNameSpecifierLoc QualifierLoc = T.getQualifierLoc())
+      return QualifierLoc.getBeginLoc();
+    return T.getNameLoc();
+  }
+  case TypeLoc::Using: {
+    auto T = castAs<UsingTypeLoc>();
+    if (NestedNameSpecifierLoc QualifierLoc = T.getQualifierLoc())
+      return QualifierLoc.getBeginLoc();
+    return T.getNameLoc();
+  }
+  default:
+    return getBeginLoc();
+  }
+}
+
 void ObjCTypeParamTypeLoc::initializeLocal(ASTContext &Context,
                                            SourceLocation Loc) {
   setNameLoc(Loc);
@@ -544,9 +672,9 @@ static void initializeElaboratedKeyword(TL T, SourceLocation Loc) {
                                 : SourceLocation());
 }
 
-static NestedNameSpecifierLoc
-initializeQualifier(ASTContext &Context, NestedNameSpecifier *Qualifier,
-                    SourceLocation Loc) {
+static NestedNameSpecifierLoc initializeQualifier(ASTContext &Context,
+                                                  NestedNameSpecifier Qualifier,
+                                                  SourceLocation Loc) {
   if (!Qualifier)
     return NestedNameSpecifierLoc();
   NestedNameSpecifierLocBuilder Builder;

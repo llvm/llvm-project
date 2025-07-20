@@ -362,7 +362,7 @@ struct NewFunction {
   SourceLocation DefinitionPoint;
   std::optional<SourceLocation> ForwardDeclarationPoint;
   const CXXRecordDecl *EnclosingClass = nullptr;
-  const NestedNameSpecifier *DefinitionQualifier = nullptr;
+  NestedNameSpecifier DefinitionQualifier = std::nullopt;
   const DeclContext *SemanticDC = nullptr;
   const DeclContext *SyntacticDC = nullptr;
   const DeclContext *ForwardDeclarationSyntacticDC = nullptr;

@@ -3783,19 +3783,18 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
         D->getPosition(), D->isParameterPack(), D->getIdentifier(),
         D->templateParameterKind(), D->wasDeclaredWithTypename(), InstParams);
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
-    NestedNameSpecifierLoc QualifierLoc =
-        D->getDefaultArgument().getTemplateQualifierLoc();
-    QualifierLoc =
-        SemaRef.SubstNestedNameSpecifierLoc(QualifierLoc, TemplateArgs);
+    const TemplateArgumentLoc &A = D->getDefaultArgument();
+    NestedNameSpecifierLoc QualifierLoc = A.getTemplateQualifierLoc();
+    // FIXME: Pass in the template keyword location.
     TemplateName TName = SemaRef.SubstTemplateName(
-        QualifierLoc, D->getDefaultArgument().getArgument().getAsTemplate(),
-        D->getDefaultArgument().getTemplateNameLoc(), TemplateArgs);
+        A.getTemplateKWLoc(), QualifierLoc, A.getArgument().getAsTemplate(),
+        A.getTemplateNameLoc(), TemplateArgs);
     if (!TName.isNull())
       Param->setDefaultArgument(
           SemaRef.Context,
           TemplateArgumentLoc(SemaRef.Context, TemplateArgument(TName),
-                              D->getDefaultArgument().getTemplateQualifierLoc(),
-                              D->getDefaultArgument().getTemplateNameLoc()));
+                              A.getTemplateKWLoc(), QualifierLoc,
+                              A.getTemplateNameLoc()));
   }
   Param->setAccess(AS_public);
   Param->setImplicit(D->isImplicit());

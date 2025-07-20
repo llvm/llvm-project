@@ -7977,18 +7977,15 @@ ASTRecordReader::readTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind) {
     return readExpr();
   case TemplateArgument::Type:
     return readTypeSourceInfo();
-  case TemplateArgument::Template: {
-    NestedNameSpecifierLoc QualifierLoc =
-      readNestedNameSpecifierLoc();
-    SourceLocation TemplateNameLoc = readSourceLocation();
-    return TemplateArgumentLocInfo(getASTContext(), QualifierLoc,
-                                   TemplateNameLoc, SourceLocation());
-  }
+  case TemplateArgument::Template:
   case TemplateArgument::TemplateExpansion: {
+    SourceLocation TemplateKWLoc = readSourceLocation();
     NestedNameSpecifierLoc QualifierLoc = readNestedNameSpecifierLoc();
     SourceLocation TemplateNameLoc = readSourceLocation();
-    SourceLocation EllipsisLoc = readSourceLocation();
-    return TemplateArgumentLocInfo(getASTContext(), QualifierLoc,
+    SourceLocation EllipsisLoc = Kind == TemplateArgument::TemplateExpansion
+                                     ? readSourceLocation()
+                                     : SourceLocation();
+    return TemplateArgumentLocInfo(getASTContext(), TemplateKWLoc, QualifierLoc,
                                    TemplateNameLoc, EllipsisLoc);
   }
   case TemplateArgument::Null:
@@ -10116,41 +10113,37 @@ ASTRecordReader::readNestedNameSpecifierLoc() {
   for (unsigned I = 0; I != N; ++I) {
     auto Kind = readNestedNameSpecifierKind();
     switch (Kind) {
-    case NestedNameSpecifier::Identifier: {
-      IdentifierInfo *II = readIdentifier();
-      SourceRange Range = readSourceRange();
-      Builder.Extend(Context, II, Range.getBegin(), Range.getEnd());
-      break;
-    }
-
-    case NestedNameSpecifier::Namespace: {
+    case NestedNameSpecifier::Kind::Namespace: {
       auto *NS = readDeclAs<NamespaceBaseDecl>();
       SourceRange Range = readSourceRange();
       Builder.Extend(Context, NS, Range.getBegin(), Range.getEnd());
       break;
     }
 
-    case NestedNameSpecifier::TypeSpec: {
+    case NestedNameSpecifier::Kind::Type: {
       TypeSourceInfo *T = readTypeSourceInfo();
       if (!T)
         return NestedNameSpecifierLoc();
       SourceLocation ColonColonLoc = readSourceLocation();
-      Builder.Extend(Context, T->getTypeLoc(), ColonColonLoc);
+      Builder.Make(Context, T->getTypeLoc(), ColonColonLoc);
       break;
     }
 
-    case NestedNameSpecifier::Global: {
+    case NestedNameSpecifier::Kind::Global: {
       SourceLocation ColonColonLoc = readSourceLocation();
       Builder.MakeGlobal(Context, ColonColonLoc);
       break;
     }
 
-    case NestedNameSpecifier::Super: {
+    case NestedNameSpecifier::Kind::MicrosoftSuper: {
       CXXRecordDecl *RD = readDeclAs<CXXRecordDecl>();
       SourceRange Range = readSourceRange();
-      Builder.MakeSuper(Context, RD, Range.getBegin(), Range.getEnd());
+      Builder.MakeMicrosoftSuper(Context, RD, Range.getBegin(), Range.getEnd());
       break;
     }
+
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
     }
   }
 
