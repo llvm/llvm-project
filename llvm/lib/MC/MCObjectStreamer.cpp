@@ -224,11 +224,6 @@ void MCObjectStreamer::emitWeakReference(MCSymbol *Alias,
 }
 
 void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  changeSectionImpl(Section, Subsection);
-}
-
-bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
-                                         uint32_t Subsection) {
   assert(Section && "Cannot switch to a null section!");
   getContext().clearDwarfLocSeen();
 
@@ -247,7 +242,7 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   Section->CurFragList = &Subsections[I].second;
   CurFrag = Section->CurFragList->Tail;
 
-  return getAssembler().registerSection(*Section);
+  getAssembler().registerSection(*Section);
 }
 
 void MCObjectStreamer::switchSectionNoPrint(MCSection *Section) {

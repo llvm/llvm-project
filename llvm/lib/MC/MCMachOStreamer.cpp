@@ -132,8 +132,7 @@ public:
 } // end anonymous namespace.
 
 void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  // Change the section normally.
-  changeSectionImpl(Section, Subsection);
+  MCObjectStreamer::changeSection(Section, Subsection);
 
   // Output a linker-local symbol so we don't need section-relative local
   // relocations. The linker hates us when we do that.
