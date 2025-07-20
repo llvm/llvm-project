@@ -201,7 +201,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
   case MCFragment::FT_DwarfFrame:
   case MCFragment::FT_CVInlineLines:
   case MCFragment::FT_CVDefRange:
-  case MCFragment::FT_PseudoProbe:
     return F.getSize();
   case MCFragment::FT_Fill: {
     auto &FF = cast<MCFillFragment>(F);
@@ -424,8 +423,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   case MCFragment::FT_Dwarf:
   case MCFragment::FT_DwarfFrame:
   case MCFragment::FT_CVInlineLines:
-  case MCFragment::FT_CVDefRange:
-  case MCFragment::FT_PseudoProbe: {
+  case MCFragment::FT_CVDefRange: {
     if (F.getKind() == MCFragment::FT_Data)
       ++stats::EmittedDataFragments;
     else if (F.getKind() == MCFragment::FT_Relaxable)
@@ -974,22 +972,6 @@ bool MCAssembler::relaxFill(MCFillFragment &F) {
   return true;
 }
 
-bool MCAssembler::relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &PF) {
-  uint64_t OldSize = PF.getContents().size();
-  int64_t AddrDelta;
-  bool Abs = PF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, *this);
-  assert(Abs && "We created a pseudo probe with an invalid expression");
-  (void)Abs;
-  SmallVector<char, 8> Data;
-  raw_svector_ostream OSE(Data);
-
-  // AddrDelta is a signed integer
-  encodeSLEB128(AddrDelta, OSE, OldSize);
-  PF.setContents(Data);
-  PF.clearFixups();
-  return OldSize != Data.size();
-}
-
 bool MCAssembler::relaxFragment(MCFragment &F) {
   switch(F.getKind()) {
   default:
@@ -1011,8 +993,6 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
     return relaxCVDefRange(cast<MCCVDefRangeFragment>(F));
   case MCFragment::FT_Fill:
     return relaxFill(cast<MCFillFragment>(F));
-  case MCFragment::FT_PseudoProbe:
-    return relaxPseudoProbeAddr(cast<MCPseudoProbeAddrFragment>(F));
   }
 }
 

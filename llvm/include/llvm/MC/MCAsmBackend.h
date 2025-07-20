@@ -60,6 +60,9 @@ protected: // Can only create subclasses.
 
   MCAssembler *Asm = nullptr;
 
+  bool AllowAutoPadding = false;
+  bool AllowEnhancedRelaxation = false;
+
 public:
   MCAsmBackend(const MCAsmBackend &) = delete;
   MCAsmBackend &operator=(const MCAsmBackend &) = delete;
@@ -73,11 +76,11 @@ public:
 
   /// Return true if this target might automatically pad instructions and thus
   /// need to emit padding enable/disable directives around sensative code.
-  virtual bool allowAutoPadding() const { return false; }
+  bool allowAutoPadding() const { return AllowAutoPadding; }
   /// Return true if this target allows an unrelaxable instruction to be
   /// emitted into RelaxableFragment and then we can increase its size in a
   /// tricky way for optimization.
-  virtual bool allowEnhancedRelaxation() const { return false; }
+  bool allowEnhancedRelaxation() const { return AllowEnhancedRelaxation; }
 
   /// lifetime management
   virtual void reset() {}
