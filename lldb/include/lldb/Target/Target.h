@@ -725,10 +725,10 @@ public:
                                       bool request_hardware);
 
   // Use this to create a breakpoint from a file address and a module file spec
-  lldb::BreakpointSP CreateAddressInModuleBreakpoint(
-      lldb::addr_t file_addr, bool internal, const FileSpec &file_spec,
-      bool request_hardware, lldb::addr_t offset = 0,
-      lldb::addr_t instructions_offset = 0);
+  lldb::BreakpointSP CreateAddressInModuleBreakpoint(lldb::addr_t file_addr,
+                                                     bool internal,
+                                                     const FileSpec &file_spec,
+                                                     bool request_hardware);
 
   // Use this to create Address breakpoints:
   lldb::BreakpointSP CreateBreakpoint(const Address &addr, bool internal,
@@ -753,8 +753,8 @@ public:
       const FileSpecList *containingModules,
       const FileSpecList *containingSourceFiles, const char *func_name,
       lldb::FunctionNameType func_name_type_mask, lldb::LanguageType language,
-      lldb::addr_t offset, LazyBool skip_prologue, bool internal,
-      bool request_hardware);
+      lldb::addr_t offset, bool offset_is_insn_count, LazyBool skip_prologue,
+      bool internal, bool request_hardware);
 
   lldb::BreakpointSP
   CreateExceptionBreakpoint(enum lldb::LanguageType language, bool catch_bp,

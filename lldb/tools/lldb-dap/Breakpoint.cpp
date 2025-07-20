@@ -26,9 +26,9 @@
 using namespace lldb_dap;
 
 static std::optional<protocol::PersistenceData>
-GetPersistenceDataForAddress(lldb::SBAddress &addr) {
+GetPersistenceDataForSymbol(lldb::SBSymbol &symbol) {
   protocol::PersistenceData persistence_data;
-  lldb::SBModule module = addr.GetModule();
+  lldb::SBModule module = symbol.GetStartAddress().GetModule();
   if (!module.IsValid())
     return std::nullopt;
 
@@ -36,8 +36,8 @@ GetPersistenceDataForAddress(lldb::SBAddress &addr) {
   if (!file_spec.IsValid())
     return std::nullopt;
 
-  persistence_data.module = GetSBFileSpecPath(file_spec);
-  persistence_data.fileAddress = addr.GetFileAddress();
+  persistence_data.module_path = GetSBFileSpecPath(file_spec);
+  persistence_data.symbol_name = symbol.GetName();
   return persistence_data;
 }
 
@@ -97,16 +97,16 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
       // Assembly breakpoint.
       auto symbol = bp_addr.GetSymbol();
       if (symbol.IsValid()) {
-        lldb::SBAddress start_address = symbol.GetStartAddress();
-        breakpoint.line = m_bp.GetTarget()
-                              .ReadInstructions(start_address, bp_addr, nullptr)
-                              .GetSize() +
-                          1;
+        breakpoint.line =
+            m_bp.GetTarget()
+                .ReadInstructions(symbol.GetStartAddress(), bp_addr, nullptr)
+                .GetSize() +
+            1;
 
         // Add persistent data so that the breakpoint can be resolved
         // in future sessions.
         std::optional<protocol::PersistenceData> persistence_data =
-            GetPersistenceDataForAddress(start_address);
+            GetPersistenceDataForSymbol(symbol);
         if (persistence_data) {
           source->adapterData =
               protocol::SourceLLDBData{std::move(persistence_data)};

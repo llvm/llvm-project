@@ -43,12 +43,10 @@ const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
 
 const char *BreakpointResolver::g_option_names[static_cast<uint32_t>(
     BreakpointResolver::OptionNames::LastOptionName)] = {
-    "AddressOffset", "Exact",       "FileName",
-    "Inlines",       "Language",    "LineNumber",
-    "Column",        "ModuleName",  "NameMask",
-    "Offset",        "PythonClass", "Regex",
-    "ScriptArgs",    "SectionName", "SearchDepth",
-    "SkipPrologue",  "SymbolNames", "InstructionsOffset"};
+    "AddressOffset", "Exact",      "FileName",   "Inlines",     "Language",
+    "LineNumber",    "Column",     "ModuleName", "NameMask",    "Offset",
+    "PythonClass",   "Regex",      "ScriptArgs", "SectionName", "SearchDepth",
+    "SkipPrologue",  "SymbolNames"};
 
 const char *BreakpointResolver::ResolverTyToName(enum ResolverTy type) {
   if (type > LastKnownResolverType)
@@ -69,9 +67,9 @@ BreakpointResolver::NameToResolverTy(llvm::StringRef name) {
 BreakpointResolver::BreakpointResolver(const BreakpointSP &bkpt,
                                        const unsigned char resolverTy,
                                        lldb::addr_t offset,
-                                       lldb::addr_t instructions_offset)
+                                       bool offset_is_insn_count)
     : m_breakpoint(bkpt), m_offset(offset),
-      m_instructions_offset(instructions_offset), SubclassID(resolverTy) {}
+      m_offset_is_insn_count(offset_is_insn_count), SubclassID(resolverTy) {}
 
 BreakpointResolver::~BreakpointResolver() = default;
 
@@ -369,14 +367,15 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
 
 BreakpointLocationSP BreakpointResolver::AddLocation(Address loc_addr,
                                                      bool *new_location) {
-  if (m_instructions_offset != 0) {
+  if (m_offset_is_insn_count && m_offset > 0) {
     Target &target = GetBreakpoint()->GetTarget();
     const DisassemblerSP instructions =
-        target.ReadInstructions(loc_addr, m_instructions_offset);
+        target.ReadInstructions(loc_addr, m_offset);
     loc_addr.Slide(instructions->GetInstructionList().GetTotalByteSize());
+  } else if (!m_offset_is_insn_count) {
+    loc_addr.Slide(m_offset);
   }
 
-  loc_addr.Slide(m_offset);
   return GetBreakpoint()->AddLocation(loc_addr, new_location);
 }
 
