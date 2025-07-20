@@ -986,10 +986,10 @@ void MCAssembler::layoutSection(MCSection &Sec) {
       }
       if (!AlignFixup && Size > F.getAlignMaxBytesToEmit())
         Size = 0;
-      // Update the variable tail size. The content is ignored.
-      assert(F.VarContentStart == 0 &&
-             "VarContentStart should not be modified");
-      F.VarContentEnd = Size;
+      // Update the variable tail size, offset by FixedSize to prevent ubsan
+      // pointer-overflow in evaluateFixup. The content is ignored.
+      F.VarContentStart = F.getFixedSize();
+      F.VarContentEnd = F.VarContentStart + Size;
       if (F.VarContentEnd > F.getParent()->ContentStorage.size())
         F.getParent()->ContentStorage.resize(F.VarContentEnd);
       Offset += Size;
