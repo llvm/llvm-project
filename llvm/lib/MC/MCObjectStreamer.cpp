@@ -279,18 +279,6 @@ bool MCObjectStreamer::mayHaveInstructions(MCSection &Sec) const {
 
 void MCObjectStreamer::emitInstruction(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
-  const MCSection &Sec = *getCurrentSectionOnly();
-  if (Sec.isVirtualSection()) {
-    getContext().reportError(Inst.getLoc(), Twine(Sec.getVirtualSectionKind()) +
-                                                " section '" + Sec.getName() +
-                                                "' cannot have instructions");
-    return;
-  }
-  emitInstructionImpl(Inst, STI);
-}
-
-void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
-                                           const MCSubtargetInfo &STI) {
   MCStreamer::emitInstruction(Inst, STI);
 
   MCSection *Sec = getCurrentSectionOnly();

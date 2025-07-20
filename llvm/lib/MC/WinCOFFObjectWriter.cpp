@@ -179,7 +179,7 @@ private:
   void SetSymbolName(COFFSymbol &S);
   void SetSectionName(COFFSection &S);
 
-  bool IsPhysicalSection(COFFSection *S);
+  bool isUninitializedData(const COFFSection &S);
 
   // Entity writing methods.
   void WriteFileHeader(const COFF::header &Header);
@@ -453,8 +453,8 @@ void WinCOFFWriter::SetSymbolName(COFFSymbol &S) {
     std::memcpy(S.Data.Name, S.Name.c_str(), S.Name.size());
 }
 
-bool WinCOFFWriter::IsPhysicalSection(COFFSection *S) {
-  return (S->Header.Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA) ==
+bool WinCOFFWriter::isUninitializedData(const COFFSection &S) {
+  return (S.Header.Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA) !=
          0;
 }
 
@@ -606,6 +606,9 @@ void WinCOFFWriter::writeSection(const COFFSection &Sec) {
     assert(AuxSyms.size() == 1 && AuxSyms[0].AuxType == ATSectionDefinition);
     AuxSymbol &SecDef = AuxSyms[0];
     SecDef.Aux.SectionDefinition.CheckSum = CRC;
+  } else if (isUninitializedData(Sec)) {
+    // Error if fixups or non-zero bytes are present.
+    writeSectionContents(*Sec.MCSection);
   }
 
   // Write relocations for this section.
@@ -745,7 +748,7 @@ void WinCOFFWriter::assignFileOffsets() {
 
     Sec->Header.SizeOfRawData = Asm->getSectionAddressSize(Section);
 
-    if (IsPhysicalSection(Sec)) {
+    if (!isUninitializedData(*Sec)) {
       Sec->Header.PointerToRawData = Offset;
       Offset += Sec->Header.SizeOfRawData;
     }
