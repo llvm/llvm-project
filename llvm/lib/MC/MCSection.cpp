@@ -18,10 +18,10 @@
 
 using namespace llvm;
 
-MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
-                     bool IsVirtual, MCSymbol *Begin)
+MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
+                     MCSymbol *Begin)
     : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
-      IsBss(IsVirtual), LinkerRelaxable(false), Name(Name), Variant(V) {
+      IsBss(IsBss), LinkerRelaxable(false), Name(Name), Variant(V) {
   // The initial subsection number is 0. Create a fragment list.
   CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
 }
@@ -33,8 +33,6 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 }
 
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
-
-StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCSection::dump(
