@@ -75,9 +75,8 @@ void printReport(const TestType &Test, const ResultType &Result,
 
   llvm::errs() << llvm::formatv("=== Test Report for '{0}' === \n",
                                 FunctionConfig::Name);
-  llvm::errs() << llvm::formatv("{0,-17}: {1} ({2})\n", "Device",
-                                Test.getContext().getName(),
-                                Test.getContext().getPlatform());
+  llvm::errs() << llvm::formatv("{0,-17}: {1}\n", "Device",
+                                Test.getContext().getName());
   llvm::errs() << llvm::formatv("{0,-17}: {1} ms\n", "Elapsed time",
                                 ElapsedMilliseconds);
   llvm::errs() << llvm::formatv("{0,-17}: {1}\n", "ULP tolerance",

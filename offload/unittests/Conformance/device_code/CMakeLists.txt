@@ -1,4 +1,3 @@
-add_offload_test_device_code(LLVMLibm.c LLVMLibm)
+add_offload_test_device_code(LLVMLibm.c llvm-libm)
 
-add_custom_target(conformance_device_binaries DEPENDS LLVMLibm.bin)
-set(CONFORMANCE_TEST_DEVICE_CODE_PATH ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
+set(OFFLOAD_CONFORMANCE_DEVICE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)

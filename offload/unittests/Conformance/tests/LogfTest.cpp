@@ -26,12 +26,12 @@ template <> struct FunctionConfig<logf> {
 int main() {
   using namespace mathtest;
 
-  // TODO: Add command-line arguments parsing for test configuration.
-  auto Context = std::make_shared<DeviceContext>(/*DeviceId=*/0);
-  const llvm::StringRef Provider = "llvm-libm";
-  const llvm::StringRef DeviceBinsDirectory = DEVICE_CODE_PATH;
+  const llvm::StringRef Platform = PLATFORM;
+  auto Context = std::make_shared<DeviceContext>(Platform, /*DeviceId=*/0);
 
-  GpuMathTest<logf> LogfTest(Context, Provider, DeviceBinsDirectory);
+  const llvm::StringRef Provider = PROVIDER;
+  const llvm::StringRef DeviceBinaryDir = DEVICE_BINARY_DIR;
+  GpuMathTest<logf> LogfTest(Context, Provider, DeviceBinaryDir);
 
   IndexedRange<float> Range(/*Begin=*/0.0f,
                             /*End=*/std::numeric_limits<float>::infinity(),

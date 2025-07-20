@@ -33,12 +33,12 @@ template <> struct FunctionConfig<hypotf16> {
 } // namespace mathtest
 
 int main() {
-  // TODO: Add command-line arguments parsing for test configuration.
-  auto Context = std::make_shared<DeviceContext>(/*DeviceId=*/0);
-  const llvm::StringRef Provider = "llvm-libm";
-  const llvm::StringRef DeviceBinsDirectory = DEVICE_CODE_PATH;
+  const llvm::StringRef Platform = PLATFORM;
+  auto Context = std::make_shared<DeviceContext>(Platform, /*DeviceId=*/0);
 
-  GpuMathTest<hypotf16> Hypotf16Test(Context, Provider, DeviceBinsDirectory);
+  const llvm::StringRef Provider = PROVIDER;
+  const llvm::StringRef DeviceBinaryDir = DEVICE_BINARY_DIR;
+  GpuMathTest<hypotf16> Hypotf16Test(Context, Provider, DeviceBinaryDir);
 
   IndexedRange<float16> RangeX;
   IndexedRange<float16> RangeY;
