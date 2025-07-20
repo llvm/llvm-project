@@ -88,7 +88,7 @@ static std::string getOrcRuntimePath() {
   if (SystemTriple.isOSDarwin()) {
     llvm::sys::path::append(RuntimePath, "darwin", "liborc_rt_osx.a");
   } else if (SystemTriple.isOSLinux()) {
-    llvm::sys::path::append(RuntimePath, "linux", "liborc_rt.a");
+    llvm::sys::path::append(RuntimePath, "x86_64-unknown-linux-gnu", "liborc_rt.a");
   } else {
     // Add other platforms as needed
     llvm::sys::path::append(RuntimePath, "liborc_rt.a");
@@ -138,6 +138,8 @@ createInterpreterWithRemoteExecution(const Args &ExtraArgs = {},
                                        setvbuf(stderr, nullptr, _IONBF, 0);
                                      }));
     std::string OrcRuntimePath = getOrcRuntimePath();
+
+    std::cout << "Orc Runtime Path: " << OrcRuntimePath << "\n";
 
     if (EPC) {
       CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
