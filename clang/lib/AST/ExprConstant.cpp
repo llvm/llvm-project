@@ -18184,6 +18184,10 @@ bool Expr::EvaluateCharRangeAsString(APValue &Result,
 bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
+
+  if (Info.EnableNewConstInterp)
+    return Info.Ctx.getInterpContext().evaluateStrlen(Info, this, Result);
+
   return EvaluateBuiltinStrLen(this, Result, Info);
 }
 
