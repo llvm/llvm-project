@@ -478,62 +478,61 @@ static bool IsChainDependent(SDNode *Outer, SDNode *Inner,
   }
 }
 
-/// FindCallSeqStart - Starting from the (lowered) CALLSEQ_END node, locate
+/// findCallSeqStart - Starting from the (lowered) CALLSEQ_END node, locate
 /// the corresponding (lowered) CALLSEQ_BEGIN node.
-///
-/// NestLevel and MaxNested are used in recursion to indcate the current level
-/// of nesting of CALLSEQ_BEGIN and CALLSEQ_END pairs, as well as the maximum
-/// level seen so far.
 ///
 /// TODO: It would be better to give CALLSEQ_END an explicit operand to point
 /// to the corresponding CALLSEQ_BEGIN to avoid needing to search for it.
-static SDNode *
-FindCallSeqStart(SDNode *N, unsigned &NestLevel, unsigned &MaxNest,
-                 const TargetInstrInfo *TII) {
-  while (true) {
-    // For a TokenFactor, examine each operand. There may be multiple ways
-    // to get to the CALLSEQ_BEGIN, but we need to find the path with the
-    // most nesting in order to ensure that we find the corresponding match.
+static SDNode *findCallSeqStart(SDNode *CallSeqEnd,
+                                const TargetInstrInfo *TII) {
+  SmallVector<SDNode *> DFSStack;
+  SmallPtrSet<SDNode *, 8> Visited;
+  unsigned CallSeqDepth = 0;
+
+  DFSStack.push_back(CallSeqEnd);
+  Visited.insert(CallSeqEnd);
+
+  while (!DFSStack.empty()) {
+    SDNode *N = DFSStack.back();
+
     if (N->getOpcode() == ISD::TokenFactor) {
-      SDNode *Best = nullptr;
-      unsigned BestMaxNest = MaxNest;
       for (const SDValue &Op : N->op_values()) {
-        unsigned MyNestLevel = NestLevel;
-        unsigned MyMaxNest = MaxNest;
-        if (SDNode *New = FindCallSeqStart(Op.getNode(),
-                                           MyNestLevel, MyMaxNest, TII))
-          if (!Best || (MyMaxNest > BestMaxNest)) {
-            Best = New;
-            BestMaxNest = MyMaxNest;
-          }
+        if (!Visited.insert(Op.getNode()).second)
+          continue;
+        DFSStack.push_back(Op.getNode());
+        break;
       }
-      assert(Best);
-      MaxNest = BestMaxNest;
-      return Best;
+      if (DFSStack.back() == N)
+        DFSStack.pop_back();
+      continue;
     }
-    // Check for a lowered CALLSEQ_BEGIN or CALLSEQ_END.
+
+    // Not a TokenFactor, no need to keep it in the DFS stack.
+    DFSStack.pop_back();
+
     if (N->isMachineOpcode()) {
       if (N->getMachineOpcode() == TII->getCallFrameDestroyOpcode()) {
-        ++NestLevel;
-        MaxNest = std::max(MaxNest, NestLevel);
+        ++CallSeqDepth;
       } else if (N->getMachineOpcode() == TII->getCallFrameSetupOpcode()) {
-        assert(NestLevel != 0);
-        --NestLevel;
-        if (NestLevel == 0)
+        assert(CallSeqDepth);
+        if (--CallSeqDepth == 0)
           return N;
       }
     }
-    // Otherwise, find the chain and continue climbing.
-    for (const SDValue &Op : N->op_values())
-      if (Op.getValueType() == MVT::Other) {
-        N = Op.getNode();
-        goto found_chain_operand;
-      }
-    return nullptr;
-  found_chain_operand:;
-    if (N->getOpcode() == ISD::EntryToken)
-      return nullptr;
+
+    // Find the chain and continue climbing.
+    // A SDNode should only have a single input chain.
+    auto OpValues = N->op_values();
+    auto ItChain = find_if(OpValues, [](const SDValue &Op) {
+      return Op.getValueType() == MVT::Other;
+    });
+    if (ItChain != OpValues.end() &&
+        (*ItChain)->getOpcode() != ISD::EntryToken &&
+        Visited.insert((*ItChain).getNode()).second)
+      DFSStack.push_back((*ItChain).getNode());
   }
+
+  return nullptr;
 }
 
 /// Call ReleasePred for each predecessor, then update register live def/gen.
@@ -581,9 +580,7 @@ void ScheduleDAGRRList::ReleasePredecessors(SUnit *SU) {
     for (SDNode *Node = SU->getNode(); Node; Node = Node->getGluedNode())
       if (Node->isMachineOpcode() &&
           Node->getMachineOpcode() == TII->getCallFrameDestroyOpcode()) {
-        unsigned NestLevel = 0;
-        unsigned MaxNest = 0;
-        SDNode *N = FindCallSeqStart(Node, NestLevel, MaxNest, TII);
+        SDNode *N = findCallSeqStart(Node, TII);
         assert(N && "Must find call sequence start");
 
         SUnit *Def = &SUnits[N->getNodeId()];
