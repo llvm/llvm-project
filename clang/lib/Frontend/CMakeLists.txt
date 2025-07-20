@@ -53,6 +53,7 @@ add_clang_library(clangFrontend
   clangBasic
   clangDriver
   clangEdit
+  clangIPC2978
   clangLex
   clangParse
   clangSema

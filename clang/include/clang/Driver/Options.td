@@ -9424,3 +9424,13 @@ def wasm_opt : Flag<["--"], "wasm-opt">,
   Group<m_Group>,
   HelpText<"Enable the wasm-opt optimizer (default)">,
   MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;
+
+def no_scan_ipc : Flag<["-"], "noScanIPC">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Enable No scan IPC approach">;
+def translate_include : Flag<["-"], "translateInclude">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Consider header includes as header-units">;
+def find_include : Flag<["-"], "findIncludes">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"In No Scan IPC approach, compiler will relay the finding includes responsibility to the build-system">;

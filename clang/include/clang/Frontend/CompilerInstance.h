@@ -16,6 +16,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
@@ -179,6 +180,10 @@ class CompilerInstance : public ModuleLoader {
 
   /// The stream for verbose output.
   raw_ostream *VerboseOutputStream = &llvm::errs();
+
+  /// Pointer for managing communication with build-system if noScan flag is
+  /// set.
+  N2978::IPCManagerCompiler *ipcManager = nullptr;
 
   /// Holds information about the output file.
   ///

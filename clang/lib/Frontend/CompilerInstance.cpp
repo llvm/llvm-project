@@ -1881,6 +1881,32 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
   if (M)
     checkConfigMacros(getPreprocessor(), M, ImportLoc);
 
+  if (getHeaderSearchOpts().NoScanIPC) {
+    if (!ipcManager) {
+      if (const auto &r = N2978::makeIPCManagerCompiler(OutputFiles.begin()->Filename); r) {
+        ipcManager = new N2978::IPCManagerCompiler(r.value());
+      }
+    }
+    N2978::CTBModule mod;
+    mod.moduleName = ModuleName;
+    if (const auto &r = ipcManager->receiveBTCModule(std::move(mod)); r) {
+      auto &[requested, deps] = r.value();
+
+      // in case of noScanIPC, PrebuiltModuleFiles is empty, so we receive it
+      // from the build-system here, so the selectModuleSource() call
+      // later-on will return ModuleSource::MS_PrebuiltModulePath.
+      auto &PrebuiltModuleFiles = const_cast<std::map<std::string, std::string, std::less<>> &>(HS.getHeaderSearchOpts().PrebuiltModuleFiles);
+      PrebuiltModuleFiles.emplace(std::move(ModuleName) ,std::move(requested.filePath));
+      for (const auto &[file, logicalName] : deps) {
+        PrebuiltModuleFiles.emplace(std::move(logicalName) ,std::move(file.filePath));
+      }
+    }
+    else {
+      string errorMessage = r.error();
+      ModuleName = errorMessage;
+    }
+  }
+
   // Select the source and filename for loading the named module.
   std::string ModuleFilename;
   ModuleSource Source =

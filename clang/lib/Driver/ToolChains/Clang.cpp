@@ -4116,6 +4116,11 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     }
   }
 
+  if (Args.hasArg(options::OPT_no_scan_ipc)) {
+    CmdArgs.push_back("-noScanIPC");
+    Args.claimAllArgs(options::OPT_no_scan_ipc);
+  }
+
   // Noop if we see '-fmodules-reduced-bmi' with other translation
   // units than module units. This is more user friendly to allow end uers to
   // enable this feature without asking for help from build systems.
