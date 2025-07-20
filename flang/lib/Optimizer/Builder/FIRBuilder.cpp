@@ -286,6 +286,9 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
   if (auto firLocalOp = getRegion().getParentOfType<fir::LocalitySpecifierOp>())
     return &getRegion().front();
 
+  if (auto firLocalOp = getRegion().getParentOfType<fir::DeclareReductionOp>())
+    return &getRegion().front();
+
   return getEntryBlock();
 }
 
@@ -617,7 +620,7 @@ fir::StringLitOp fir::FirOpBuilder::createStringLitOp(mlir::Location loc,
   mlir::NamedAttribute sizeAttr(sizeTag, getI64IntegerAttr(data.size()));
   llvm::SmallVector<mlir::NamedAttribute> attrs{dataAttr, sizeAttr};
   return create<fir::StringLitOp>(loc, llvm::ArrayRef<mlir::Type>{type},
-                                  std::nullopt, attrs);
+                                  mlir::ValueRange{}, attrs);
 }
 
 mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,

@@ -71,7 +71,7 @@ config.substitutions.append(
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
 
-if config.host_os not in ["FreeBSD", "NetBSD"]:
+if config.target_os not in ["FreeBSD", "NetBSD"]:
     libdl_flag = "-ldl"
 else:
     libdl_flag = ""
@@ -127,10 +127,10 @@ push_dynamic_library_lookup_path(config, config.compiler_rt_libdir)
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
 
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     config.suffixes.append(".mm")
 
-if config.host_os == "Windows":
+if config.target_os == "Windows":
     config.substitutions.append(("%fPIC", ""))
     config.substitutions.append(("%fPIE", ""))
     config.substitutions.append(("%pie", ""))
@@ -140,7 +140,7 @@ else:
     config.substitutions.append(("%pie", "-pie"))
 
 # Only run the tests on supported OSs.
-if config.host_os not in [
+if config.target_os not in [
     "Linux",
     "Darwin",
 ]:

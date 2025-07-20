@@ -3083,8 +3083,7 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
 
     // If there was no default argument, deduction is incomplete.
     if (DefArg.getArgument().isNull()) {
-      Info.Param = makeTemplateParameter(
-          const_cast<NamedDecl *>(TemplateParams->getParam(I)));
+      Info.Param = makeTemplateParameter(TemplateParams->getParam(I));
       Info.reset(
           TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted),
           TemplateArgumentList::CreateCopy(S.Context, CTAI.CanonicalConverted));
@@ -3100,8 +3099,7 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
     if (S.CheckTemplateArgument(
             Param, DefArg, TD, TD->getLocation(), TD->getSourceRange().getEnd(),
             /*ArgumentPackIndex=*/0, CTAI, Sema::CTAK_Specified)) {
-      Info.Param = makeTemplateParameter(
-                         const_cast<NamedDecl *>(TemplateParams->getParam(I)));
+      Info.Param = makeTemplateParameter(TemplateParams->getParam(I));
       // FIXME: These template arguments are temporary. Free them!
       Info.reset(
           TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted),
@@ -3227,7 +3225,7 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
     if (ParamIdx >= TPL->size())
       ParamIdx = TPL->size() - 1;
 
-    Decl *Param = const_cast<NamedDecl *>(TPL->getParam(ParamIdx));
+    Decl *Param = TPL->getParam(ParamIdx);
     Info.Param = makeTemplateParameter(Param);
     Info.FirstArg = Ps[ArgIdx].getArgument();
     return TemplateDeductionResult::SubstitutionFailure;
@@ -3885,6 +3883,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     TemplateDeductionInfo &Info,
     SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
     bool PartialOverloading, bool PartialOrdering,
+    bool ForOverloadSetAddressResolution,
     llvm::function_ref<bool(bool)> CheckNonDependent) {
   // Unevaluated SFINAE context.
   EnterExpressionEvaluationContext Unevaluated(
@@ -4034,7 +4033,10 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
 
       auto ParamIdx = OriginalArg.ArgIdx;
       unsigned ExplicitOffset =
-          Specialization->hasCXXExplicitFunctionObjectParameter() ? 1 : 0;
+          (Specialization->hasCXXExplicitFunctionObjectParameter() &&
+           !ForOverloadSetAddressResolution)
+              ? 1
+              : 0;
       if (ParamIdx >= Specialization->getNumParams() - ExplicitOffset)
         // FIXME: This presumably means a pack ended up smaller than we
         // expected while deducing. Should this not result in deduction
@@ -4681,6 +4683,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     Result = FinishTemplateArgumentDeduction(
         FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
         &OriginalCallArgs, PartialOverloading, PartialOrdering,
+        ForOverloadSetAddressResolution,
         [&, CallingCtx](bool OnlyInitializeNonUserDefinedConversions) {
           ContextRAII SavedContext(*this, CallingCtx);
           return CheckNonDependent(ParamTypesForArgChecking,
@@ -4797,7 +4800,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     Result = FinishTemplateArgumentDeduction(
         FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
         /*OriginalCallArgs=*/nullptr, /*PartialOverloading=*/false,
-        /*PartialOrdering=*/true);
+        /*PartialOrdering=*/true, IsAddressOfFunction);
   });
   if (Result != TemplateDeductionResult::Success)
     return Result;
@@ -4981,7 +4984,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     Result = FinishTemplateArgumentDeduction(
         ConversionTemplate, Deduced, 0, ConversionSpecialized, Info,
         &OriginalCallArgs, /*PartialOverloading=*/false,
-        /*PartialOrdering=*/false);
+        /*PartialOrdering=*/false, /*ForOverloadSetAddressResolution*/ false);
   });
   Specialization = cast_or_null<CXXConversionDecl>(ConversionSpecialized);
   return Result;

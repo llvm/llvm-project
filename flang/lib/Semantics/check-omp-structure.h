@@ -163,6 +163,8 @@ public:
 private:
   bool CheckAllowedClause(llvmOmpClause clause);
   void CheckVariableListItem(const SymbolSourceMap &symbols);
+  void CheckDirectiveSpelling(
+      parser::CharBlock spelling, llvm::omp::Directive id);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
