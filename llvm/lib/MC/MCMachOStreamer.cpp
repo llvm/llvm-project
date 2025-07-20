@@ -161,7 +161,7 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
   if (cast<MCSymbolMachO>(Symbol)->isSymbolLinkerVisible())
-    insert(getContext().allocFragment<MCFragment>());
+    newFragment();
 
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
@@ -393,7 +393,7 @@ void MCMachOStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
   // On darwin all virtual sections have zerofill type. Disallow the usage of
   // .zerofill in non-virtual functions. If something similar is needed, use
   // .space or .zero.
-  if (!Section->isVirtualSection()) {
+  if (!Section->isBssSection()) {
     getContext().reportError(
         Loc, "The usage of .zerofill is restricted to sections of "
              "ZEROFILL type. Use .zero or .space instead.");

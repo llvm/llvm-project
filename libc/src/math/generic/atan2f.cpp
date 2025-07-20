@@ -8,7 +8,6 @@
 
 #include "src/math/atan2f.h"
 #include "hdr/fenv_macros.h"
-#include "inv_trigf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -18,6 +17,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/inv_trigf_utils.h"
 
 #if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
     defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT)
