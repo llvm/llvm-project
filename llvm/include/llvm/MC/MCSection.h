@@ -179,8 +179,6 @@ public:
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
   bool isVirtualSection() const { return IsVirtual; }
-
-  virtual StringRef getVirtualSectionKind() const;
 };
 
 // Represents a contiguous piece of code or data within a section. Its size is

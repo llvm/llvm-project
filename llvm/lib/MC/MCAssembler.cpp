@@ -567,15 +567,37 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
     // not tracked for efficiency.
     auto Fn = [](char c) { return c != 0; };
     for (const MCFragment &F : *Sec) {
-      if (any_of(F.getContents(), Fn) || any_of(F.getVarContents(), Fn)) {
-        reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
-                                 Sec->getName() +
+      bool HasNonZero = false;
+      switch (F.getKind()) {
+      default:
+        reportFatalInternalError("BSS section '" + Sec->getName() +
+                                 "' contains invalid fragment");
+        break;
+      case MCFragment::FT_Data:
+      case MCFragment::FT_Relaxable:
+        HasNonZero =
+            any_of(F.getContents(), Fn) || any_of(F.getVarContents(), Fn);
+        break;
+      case MCFragment::FT_Align:
+        // Disallowed for API usage. AsmParser changes non-zero fill values to
+        // 0.
+        assert(F.getAlignFill() == 0 && "Invalid align in virtual section!");
+        break;
+      case MCFragment::FT_Fill:
+        HasNonZero = cast<MCFillFragment>(F).getValue() != 0;
+        break;
+      case MCFragment::FT_Org:
+        HasNonZero = cast<MCOrgFragment>(F).getValue() != 0;
+        break;
+      }
+      if (HasNonZero) {
+        reportError(SMLoc(), "BSS section '" + Sec->getName() +
                                  "' cannot have non-zero bytes");
         break;
       }
       if (F.getFixups().size() || F.getVarFixups().size()) {
-        reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
-                                 Sec->getName() + "' cannot have fixups");
+        reportError(SMLoc(),
+                    "BSS section '" + Sec->getName() + "' cannot have fixups");
         break;
       }
     }

@@ -34,8 +34,6 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
-StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCSection::dump(
     DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> *FragToSyms)
