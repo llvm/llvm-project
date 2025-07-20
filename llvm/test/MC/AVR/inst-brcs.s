@@ -25,3 +25,4 @@ bar:
 ; INST-NEXT: f8 f3      brlo .-2
 ; INST-NEXT: R_AVR_7_PCREL .text+0xe
 ; INST-NEXT: f8 f3      brlo .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x8

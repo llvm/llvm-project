@@ -24,3 +24,4 @@ foo:
 ; INST-NEXT: ff df    rcall .-2
 ; INST-NEXT: R_AVR_13_PCREL .text+0x12
 ; INST-NEXT: ff df    rcall .-2
+; INST-NEXT: R_AVR_13_PCREL .text+0x36

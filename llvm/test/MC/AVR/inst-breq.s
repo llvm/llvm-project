@@ -24,3 +24,4 @@ bar:
 ; INST-NEXT: R_AVR_7_PCREL .text-0x8
 ; INST-NEXT: f9 f3      breq .-2
 ; INST-NEXT: R_AVR_7_PCREL .text-0xc
+; INST-NEXT: f9 f3      breq .-2
