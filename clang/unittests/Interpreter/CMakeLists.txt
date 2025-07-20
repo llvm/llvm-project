@@ -31,6 +31,10 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   Object
   )
 
+if(TARGET llvm-jitlink-executor)
+  add_dependencies(ClangReplInterpreterTests llvm-jitlink-executor)
+endif()
+
 # Exceptions on Windows are not yet supported.
 if(NOT WIN32)
   add_subdirectory(ExceptionTests)
