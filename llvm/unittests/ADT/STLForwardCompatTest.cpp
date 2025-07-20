@@ -10,6 +10,11 @@
 #include "CountCopyAndMove.h"
 #include "gtest/gtest.h"
 
+#include <optional>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+
 namespace {
 
 template <typename T>
@@ -140,6 +145,26 @@ TEST(TransformTest, MoveTransformLlvm) {
   EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
   EXPECT_EQ(0, CountCopyAndMove::MoveAssignments);
   EXPECT_EQ(0, CountCopyAndMove::Destructions);
+}
+
+TEST(TransformTest, TransformCategory) {
+  struct StructA {
+    int x;
+  };
+  struct StructB : StructA {
+    StructB(StructA &&A) : StructA(std::move(A)) {}
+  };
+
+  std::optional<StructA> A{StructA{}};
+  llvm::transformOptional(A, [](auto &&s) {
+    EXPECT_FALSE(std::is_rvalue_reference_v<decltype(s)>);
+    return StructB{std::move(s)};
+  });
+
+  llvm::transformOptional(std::move(A), [](auto &&s) {
+    EXPECT_TRUE(std::is_rvalue_reference_v<decltype(s)>);
+    return StructB{std::move(s)};
+  });
 }
 
 TEST(TransformTest, ToUnderlying) {
