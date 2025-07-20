@@ -31,15 +31,15 @@ myfn:
 
 # CHECK:             <__hexagon_thunk_myfn_from_.text.thunk>:
 # CHECK-NONPIC-NEXT:    200b4: { immext(#0x1000000)
-# CHECK-NONPIC-NEXT:             jump 0x10200bc }
+# CHECK-NONPIC-NEXT:             jump 0x10200bc <myfn> }
 # CHECK-PIC-NEXT:       200b4: { immext(#0x1000000)
 # CHECK-PIC-NEXT:               r14 = add(pc,##0x1000008) }
 # CHECK-PIC-NEXT:       { jumpr r14 }
 
 # CHECK-NONPIC:      <main>:
-# CHECK-NONPIC-NEXT:    200bc: { call 0x200b4 }
+# CHECK-NONPIC-NEXT:   200bc: { call 0x200b4 <__hexagon_thunk_myfn_from_.text.thunk> }
 # CHECK-PIC:         <main>:
-# CHECK-PIC-NEXT:      200c0: { call 0x200b4 }
+# CHECK-PIC-NEXT:      200c0: { call 0x200b4 <__hexagon_thunk_myfn_from_.text.thunk> }
 # CHECK-NEXT:                 { jumpr r31 }
 
 # CHECK:  Disassembly of section .text_high:

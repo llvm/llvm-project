@@ -39,9 +39,9 @@ _start:
 
 # CHECK: Disassembly of section .text:
 # CHECK:     <_start>:
-# CHECK-NEXT:  2021c:  { call 0x220250 }
-# CHECK-NEXT:    { call 0x220260 }
-# CHECK-NEXT:    { call 0x220270 }
+# CHECK-NEXT:  2021c:  { call 0x220250 <extern_within_range@plt> }
+# CHECK-NEXT:    { call 0x220260 <extern_beyond_range@plt> }
+# CHECK-NEXT:    { call 0x220270 <extern_close@plt> }
 # CHECK-NEXT:    { jumpr r31 }
 
 ## Verify PLT header and entries are created with exact addresses

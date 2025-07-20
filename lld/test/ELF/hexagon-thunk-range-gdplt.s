@@ -52,16 +52,16 @@ tls_var_distant:
 # CHECK-NEXT:      r2 = add(pc,##0x420130) }
 # CHECK-NEXT:    { immext(#0xfffeffc0)
 # CHECK-NEXT:      r0 = add(r2,##-0x10018) }
-# CHECK-NEXT:    { call 0x410360 }
+# CHECK-NEXT:    { call 0x410360 <__tls_get_addr@plt> }
 # CHECK-NEXT:    { immext(#0xfffeffc0)
 # CHECK-NEXT:      r0 = add(r2,##-0x10010) }
-# CHECK-NEXT:    { call 0x410360 }
+# CHECK-NEXT:    { call 0x410360 <__tls_get_addr@plt> }
 # CHECK-NEXT:    { jumpr r31 }
 
 # CHECK:     <more_code>:
 # CHECK-NEXT:   4102f8:  { immext(#0xfffeffc0)
 # CHECK-NEXT:      r0 = add(r2,##-0x10008) }
-# CHECK-NEXT:    { call 0x410360 }
+# CHECK-NEXT:    { call 0x410360 <__tls_get_addr@plt> }
 # CHECK-NEXT:    { jumpr r31 }
 
 ## Verify PLT entries are created for TLS
