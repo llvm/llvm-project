@@ -2088,6 +2088,23 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     Fatal(ctx) << "/manifestinput: requires /manifest:embed";
   }
 
+  // Handle /thinlto-distributor:<path>
+  config->dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor);
+
+  // Handle /thinlto-distributor-arg:<arg>
+  for (auto *arg : args.filtered(OPT_thinlto_distributor_arg))
+    config->dtltoDistributorArgs.push_back(arg->getValue());
+
+  // Handle /thinlto-remote-compiler:<path>
+  config->dtltoCompiler = args.getLastArgValue(OPT_thinlto_compiler);
+  if (!config->dtltoDistributor.empty() && config->dtltoCompiler.empty())
+    Err(ctx) << "A value must be specified for /thinlto-remote-compiler if "
+                "/thinlto-distributor is specified.";
+
+  // Handle /thinlto-remote-compiler-arg:<arg>
+  for (auto *arg : args.filtered(OPT_thinlto_compiler_arg))
+    config->dtltoCompilerArgs.push_back(arg->getValue());
+
   // Handle /dwodir
   config->dwoDir = args.getLastArgValue(OPT_dwodir);
 
