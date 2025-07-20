@@ -3,8 +3,8 @@
 llvm-mlir-op-builder
 ====================
 
-Flags usage of old form of invoking create on MLIR's ``OpBuilder`` and suggests
-new form.
+Checks for uses of MLIR's old/to be deprecated `OpBuilder::create<T>` form
+and suggests using `T::create` instead.
 
 Example
 -------

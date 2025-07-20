@@ -19,8 +19,8 @@
 namespace clang::tidy::llvm_check {
 namespace {
 
-using namespace ::clang::ast_matchers; // NOLINT: Too many names.
-using namespace ::clang::transformer;  // NOLINT: Too many names.
+using namespace ::clang::ast_matchers;
+using namespace ::clang::transformer;
 
 class TypeAsWrittenStencil : public StencilInterface {
 public:

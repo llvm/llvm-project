@@ -13,8 +13,8 @@
 
 namespace clang::tidy::llvm_check {
 
-/// Checks for uses of MLIR's `OpBuilder::create<T>` and suggests using
-/// `T::create` instead.
+/// Checks for uses of MLIR's old/to be deprecated `OpBuilder::create<T>` form
+/// and suggests using `T::create` instead.
 class MlirOpBuilderCheck : public utils::TransformerClangTidyCheck {
 public:
   MlirOpBuilderCheck(StringRef Name, ClangTidyContext *Context);
