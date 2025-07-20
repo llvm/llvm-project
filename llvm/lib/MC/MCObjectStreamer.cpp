@@ -106,18 +106,6 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
 }
 
-MCFragment *MCObjectStreamer::getOrCreateDataFragment() {
-  // TODO: Start a new fragment whenever finalizing the variable-size tail of a
-  // previous one, so that all getOrCreateDataFragment calls can be replaced
-  // with getCurrentFragment
-  auto *F = getCurrentFragment();
-  if (F->getKind() != MCFragment::FT_Data) {
-    F = getContext().allocFragment<MCFragment>();
-    insert(F);
-  }
-  return F;
-}
-
 void MCObjectStreamer::visitUsedSymbol(const MCSymbol &Sym) {
   Assembler->registerSymbol(Sym);
 }
@@ -215,9 +203,8 @@ void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
     return;
   }
   auto *F = getOrCreateDataFragment();
-  F->Kind = MCFragment::FT_LEB;
-  F->setLEBSigned(false);
-  F->setLEBValue(Value);
+  F->makeLEB(false, Value);
+  newFragment();
 }
 
 void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
@@ -227,9 +214,8 @@ void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
     return;
   }
   auto *F = getOrCreateDataFragment();
-  F->Kind = MCFragment::FT_LEB;
-  F->setLEBSigned(true);
-  F->setLEBValue(Value);
+  F->makeLEB(true, Value);
+  newFragment();
 }
 
 void MCObjectStreamer::emitWeakReference(MCSymbol *Alias,
@@ -381,6 +367,7 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
   F->setVarContents(Data);
   F->setVarFixups(Fixups);
   F->setInst(Inst);
+  newFragment();
 }
 
 void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
@@ -446,6 +433,7 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
   F->Kind = MCFragment::FT_Dwarf;
   F->setDwarfAddrDelta(buildSymbolDiff(*this, Label, LastLabel, SMLoc()));
   F->setDwarfLineDelta(LineDelta);
+  newFragment();
 }
 
 void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
@@ -476,6 +464,7 @@ void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
   auto *F = getOrCreateDataFragment();
   F->Kind = MCFragment::FT_DwarfFrame;
   F->setDwarfAddrDelta(buildSymbolDiff(*this, Label, LastLabel, Loc));
+  newFragment();
 }
 
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
@@ -543,20 +532,21 @@ void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
                                             unsigned MaxBytesToEmit) {
   if (MaxBytesToEmit == 0)
     MaxBytesToEmit = Alignment.value();
-  MCFragment *F = getOrCreateDataFragment();
+  MCFragment *F = getCurrentFragment();
   F->makeAlign(Alignment, Fill, FillLen, MaxBytesToEmit);
+  newFragment();
 
   // Update the maximum alignment on the current section if necessary.
-  MCSection *CurSec = getCurrentSectionOnly();
-  CurSec->ensureMinAlignment(Alignment);
+  F->getParent()->ensureMinAlignment(Alignment);
 }
 
 void MCObjectStreamer::emitCodeAlignment(Align Alignment,
                                          const MCSubtargetInfo *STI,
                                          unsigned MaxBytesToEmit) {
-  emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   auto *F = getCurrentFragment();
-  F->setAlignEmitNops(true, STI);
+  emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
+  F->u.align.EmitNops = true;
+  F->STI = STI;
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,

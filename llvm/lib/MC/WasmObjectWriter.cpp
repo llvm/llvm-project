@@ -1857,12 +1857,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     auto IT = WS.begin();
     if (IT == WS.end())
       continue;
-    const MCFragment *nextFrag = &*IT;
-    while (nextFrag != nullptr) {
-      const MCFragment &Frag = *nextFrag;
-      nextFrag = Frag.getNext();
-      if (Frag.hasInstructions() || (Frag.getKind() != MCFragment::FT_Align &&
-                                     Frag.getKind() != MCFragment::FT_Data))
+    for (auto *Frag = &*IT; Frag; Frag = Frag->getNext()) {
+      if (Frag->hasInstructions() || (Frag->getKind() != MCFragment::FT_Align &&
+                                      Frag->getKind() != MCFragment::FT_Data))
         report_fatal_error("only data supported in .init_array section");
 
       uint16_t Priority = UINT16_MAX;
@@ -1874,9 +1871,8 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         if (WS.getName().substr(PrefixLength + 1).getAsInteger(10, Priority))
           report_fatal_error("invalid .init_array section priority");
       }
-      const auto &DataFrag = Frag;
-      assert(llvm::all_of(DataFrag.getContents(), [](char C) { return !C; }));
-      for (const MCFixup &Fixup : DataFrag.getFixups()) {
+      assert(llvm::all_of(Frag->getContents(), [](char C) { return !C; }));
+      for (const MCFixup &Fixup : Frag->getFixups()) {
         assert(Fixup.getKind() ==
                MCFixup::getDataKindForSize(is64Bit() ? 8 : 4));
         const MCExpr *Expr = Fixup.getValue();
