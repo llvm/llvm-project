@@ -421,8 +421,23 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
 // TODO: AMDGPU backend already have all this bitpacking logic, we should move
 // it to some common place.
+/// \details \p Vmcnt, \p Expcnt and \p Lgkmcnt are decoded as follows:
+///     \p Vmcnt = \p Waitcnt[3:0]        (pre-gfx9)
+///     \p Vmcnt = \p Waitcnt[15:14,3:0]  (gfx9,10)
+///     \p Vmcnt = \p Waitcnt[15:10]      (gfx11)
+///     \p Expcnt = \p Waitcnt[6:4]       (pre-gfx11)
+///     \p Expcnt = \p Waitcnt[2:0]       (gfx11)
+///     \p Lgkmcnt = \p Waitcnt[11:8]     (pre-gfx10)
+///     \p Lgkmcnt = \p Waitcnt[13:8]     (gfx10)
+///     \p Lgkmcnt = \p Waitcnt[9:4]      (gfx11)
 static FailureOr<unsigned> encodeWaitcnt(Chipset chipset, unsigned vmcnt,
                                          unsigned expcnt, unsigned lgkmcnt) {
+  if (chipset.majorVersion < 9) {
+    vmcnt = std::min(15u, vmcnt);
+    expcnt = std::min(7u, expcnt);
+    lgkmcnt = std::min(15u, lgkmcnt);
+    return vmcnt | (expcnt << 4) | (lgkmcnt << 8);
+  }
   if (chipset.majorVersion == 9) {
     vmcnt = std::min(63u, vmcnt);
     expcnt = std::min(7u, expcnt);
@@ -431,6 +446,21 @@ static FailureOr<unsigned> encodeWaitcnt(Chipset chipset, unsigned vmcnt,
     unsigned highBits = (vmcnt >> 4) << 14;
     unsigned otherCnts = (expcnt << 4) | (lgkmcnt << 8);
     return lowBits | highBits | otherCnts;
+  }
+  if (chipset.majorVersion == 10) {
+    vmcnt = std::min(63u, vmcnt);
+    expcnt = std::min(7u, expcnt);
+    lgkmcnt = std::min(63u, lgkmcnt);
+    unsigned lowBits = vmcnt & 0xF;
+    unsigned highBits = (vmcnt >> 4) << 14;
+    unsigned otherCnts = (expcnt << 4) | (lgkmcnt << 8);
+    return lowBits | highBits | otherCnts;
+  }
+  if (chipset.majorVersion == 11) {
+    vmcnt = std::min(63u, vmcnt);
+    expcnt = std::min(7u, expcnt);
+    lgkmcnt = std::min(63u, lgkmcnt);
+    return (vmcnt << 10) | expcnt | (lgkmcnt << 4);
   }
   return failure();
 }
