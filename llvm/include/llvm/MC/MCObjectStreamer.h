@@ -72,9 +72,6 @@ public:
   MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug) override;
 
-protected:
-  bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
-
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
 
