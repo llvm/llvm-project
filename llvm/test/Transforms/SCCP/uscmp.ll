@@ -60,11 +60,11 @@ define i32 @scmp_to_sub_small_range(i32 range(i32 -1, 1) %a) {
 define i32 @ucmp_to_sub(i32 range(i32 0, 3) %a) {
 ; CHECK-LABEL: define i32 @ucmp_to_sub(
 ; CHECK-SAME: i32 range(i32 0, 3) [[A:%.*]]) {
-; CHECK-NEXT:    [[SCMP:%.*]] = sub nsw i32 [[A]], 1
+; CHECK-NEXT:    [[SCMP:%.*]] = sub i32 [[A]], 1
 ; CHECK-NEXT:    ret i32 [[SCMP]]
 ;
-  %scmp = call i32 @llvm.scmp(i32 %a, i32 1)
-  ret i32 %scmp
+  %ucmp = call i32 @llvm.ucmp(i32 %a, i32 1)
+  ret i32 %ucmp
 }
 
 define i8 @ucmp_to_sub_trunc(i32 range(i32 0, 3) %a) {

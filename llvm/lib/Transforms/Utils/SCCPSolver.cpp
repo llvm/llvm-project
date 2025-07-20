@@ -254,13 +254,12 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
 
   // Check if we can simplify [us]cmp(X, Y) to X - Y.
   if (auto *Cmp = dyn_cast<CmpIntrinsic>(&Inst)) {
-    Intrinsic::ID IID = Cmp->getIntrinsicID();
     Value *LHS = Cmp->getOperand(0);
     Value *RHS = Cmp->getOperand(1);
     unsigned BitWidth = LHS->getType()->getScalarSizeInBits();
     // Bail out on 1-bit comparisons.
-    // if (BitWidth == 1)
-    //   return nullptr;
+    if (BitWidth == 1)
+      return nullptr;
     ConstantRange LRange = GetRange(LHS);
     if (LRange.isSizeLargerThan(3))
       return nullptr;
@@ -270,17 +269,16 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
     ConstantRange RHSLower = RRange.sub(APInt(BitWidth, 1));
     ConstantRange RHSUpper = RRange.add(APInt(BitWidth, 1));
     ICmpInst::Predicate Pred =
-        IID == Intrinsic::scmp ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
+        Cmp->isSigned() ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
     if (!RHSLower.icmp(Pred, LRange) || !LRange.icmp(Pred, RHSUpper))
       return nullptr;
 
     IRBuilder<NoFolder> Builder(&Inst);
     Value *Sub = Builder.CreateSub(LHS, RHS, Inst.getName(), /*HasNUW=*/false,
-                                   /*HasNSW=*/IID == Intrinsic::scmp);
+                                   /*HasNSW=*/Cmp->isSigned());
     InsertedValues.insert(Sub);
     if (Sub->getType() != Inst.getType()) {
-      Sub = CastInst::CreateIntegerCast(Sub, Inst.getType(), true, "",
-                                        Inst.getIterator());
+      Sub = Builder.CreateSExtOrTrunc(Sub, Inst.getType());
       InsertedValues.insert(Sub);
     }
     return Sub;
