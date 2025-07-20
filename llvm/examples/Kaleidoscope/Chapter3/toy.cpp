@@ -165,6 +165,8 @@ public:
 
   Function *codegen();
   const std::string &getName() const { return Name; }
+
+  const std::vector<std::string> &getArgs() const { return Args; }
 };
 
 /// FunctionAST - This class represents a function definition itself.
@@ -383,7 +385,7 @@ static std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
   if (auto E = ParseExpression()) {
     // Make an anonymous proto.
     auto Proto = std::make_unique<PrototypeAST>("__anon_expr",
-                                                 std::vector<std::string>());
+                                                std::vector<std::string>());
     return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
   }
   return nullptr;
@@ -484,8 +486,28 @@ Function *FunctionAST::codegen() {
   // First, check for an existing function from a previous 'extern' declaration.
   Function *TheFunction = TheModule->getFunction(Proto->getName());
 
-  if (!TheFunction)
+  if (TheFunction && !TheFunction->empty()) {
+    fprintf(stderr, "Error: Function '%s' redefined.\n",
+            TheFunction->getName().str().c_str());
+    return nullptr;
+  }
+
+  if (!TheFunction) {
     TheFunction = Proto->codegen();
+  } else {
+    if (TheFunction->arg_size() != Proto->getArgs().size()) {
+      fprintf(stderr,
+              "Error: Function '%s' redefined with different number of "
+              "arguments.\n",
+              TheFunction->getName().str().c_str());
+      return nullptr;
+    }
+
+    size_t ArgIdx = 0ul;
+    for (auto &FArg : TheFunction->args()) {
+      FArg.setName(Proto->getArgs()[ArgIdx++]);
+    }
+  }
 
   if (!TheFunction)
     return nullptr;
