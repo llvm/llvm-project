@@ -91,8 +91,8 @@ RewriteRuleWith<std::string> mlirOpBuilderCheckRule() {
           .bind("call"),
       changeTo(cat(typeAsWritten("call"), "::create(", node("builder"), ", ",
                    callArgs("call"), ")")),
-      cat("Use OpType::create(builder, ...) instead of "
-          "builder.create<OpType>(...)"));
+      cat("use 'OpType::create(builder, ...)' instead of "
+          "'builder.create<OpType>(...)'"));
 }
 } // namespace
 
