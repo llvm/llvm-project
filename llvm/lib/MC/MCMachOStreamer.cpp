@@ -393,7 +393,7 @@ void MCMachOStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
   // On darwin all virtual sections have zerofill type. Disallow the usage of
   // .zerofill in non-virtual functions. If something similar is needed, use
   // .space or .zero.
-  if (!Section->isVirtualSection()) {
+  if (!Section->isBssSection()) {
     getContext().reportError(
         Loc, "The usage of .zerofill is restricted to sections of "
              "ZEROFILL type. Use .zero or .space instead.");

@@ -112,7 +112,7 @@ size_t MachOWriter::totalSize() const {
     for (const std::unique_ptr<Section> &S : LC.Sections) {
       if (!S->hasValidOffset()) {
         assert((S->Offset == 0) && "Skipped section's offset must be zero");
-        assert((S->isVirtualSection() || S->Size == 0) &&
+        assert((S->isBssSection() || S->Size == 0) &&
                "Non-zero-fill sections with zero offset must have zero size");
         continue;
       }
@@ -240,7 +240,7 @@ void MachOWriter::writeSections() {
     for (const std::unique_ptr<Section> &Sec : LC.Sections) {
       if (!Sec->hasValidOffset()) {
         assert((Sec->Offset == 0) && "Skipped section's offset must be zero");
-        assert((Sec->isVirtualSection() || Sec->Size == 0) &&
+        assert((Sec->isBssSection() || Sec->Size == 0) &&
                "Non-zero-fill sections with zero offset must have zero size");
         continue;
       }
