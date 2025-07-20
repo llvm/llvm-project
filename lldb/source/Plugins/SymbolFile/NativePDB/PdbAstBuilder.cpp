@@ -38,16 +38,18 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
                    TypeIndex func_type_index,
                    clang::FunctionDecl *&function_decl,
                    lldb::opaque_compiler_type_t parent_ty,
-                   llvm::StringRef proc_name, CompilerType func_ct)
+                   llvm::StringRef proc_name, ConstString mangled_name,
+                   CompilerType func_ct)
       : m_index(m_index), m_clang(m_clang), func_type_index(func_type_index),
         function_decl(function_decl), parent_ty(parent_ty),
-        proc_name(proc_name), func_ct(func_ct) {}
+        proc_name(proc_name), mangled_name(mangled_name), func_ct(func_ct) {}
   PdbIndex &m_index;
   TypeSystemClang &m_clang;
   TypeIndex func_type_index;
   clang::FunctionDecl *&function_decl;
   lldb::opaque_compiler_type_t parent_ty;
   llvm::StringRef proc_name;
+  ConstString mangled_name;
   CompilerType func_ct;
 
   llvm::Error visitKnownMember(CVMemberRecord &cvr,
@@ -88,7 +90,7 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
                          MethodOptions::CompilerGenerated;
     function_decl = m_clang.AddMethodToCXXRecordType(
         parent_ty, proc_name,
-        /*asm_label=*/{}, func_ct, /*access=*/access_type,
+        mangled_name, func_ct, /*access=*/access_type,
         /*is_virtual=*/is_virtual, /*is_static=*/is_static,
         /*is_inline=*/false, /*is_explicit=*/false,
         /*is_attr_used=*/false, /*is_artificial=*/is_artificial);
@@ -891,6 +893,11 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
         tag_record = CVTagRecord::create(index.tpi().getType(*eti)).asTag();
       }
     }
+
+    ConstString mangled_name;
+    if (auto mangled_name_opt = pdb->FindMangledFunctionName(func_id))
+      mangled_name = ConstString(*mangled_name_opt);
+
     if (!tag_record.FieldList.isSimple()) {
       CVType field_list_cvt = index.tpi().getType(tag_record.FieldList);
       FieldListRecord field_list;
@@ -898,7 +905,8 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
               field_list_cvt, field_list))
         llvm::consumeError(std::move(error));
       CreateMethodDecl process(index, m_clang, func_ti, function_decl,
-                               parent_opaque_ty, func_name, func_ct);
+                               parent_opaque_ty, func_name, mangled_name,
+                               func_ct);
       if (llvm::Error err = visitMemberRecordStream(field_list.Data, process))
         llvm::consumeError(std::move(err));
     }
@@ -906,7 +914,7 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
     if (!function_decl) {
       function_decl = m_clang.AddMethodToCXXRecordType(
           parent_opaque_ty, func_name,
-          /*asm_label=*/{}, func_ct,
+          mangled_name, func_ct,
           /*access=*/lldb::AccessType::eAccessPublic,
           /*is_virtual=*/false, /*is_static=*/false,
           /*is_inline=*/false, /*is_explicit=*/false,
