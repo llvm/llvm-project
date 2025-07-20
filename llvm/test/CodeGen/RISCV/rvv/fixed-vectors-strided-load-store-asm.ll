@@ -930,7 +930,7 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    add a2, a0, a4
 ; CHECK-NEXT:    slli a5, a4, 2
 ; CHECK-NEXT:    add a1, a1, a4
-; CHECK-NEXT:    subw a3, a3, a4
+; CHECK-NEXT:    sub a3, a3, a4
 ; CHECK-NEXT:    add a1, a1, a5
 ; CHECK-NEXT:    slli a3, a3, 32
 ; CHECK-NEXT:    srli a3, a3, 32
