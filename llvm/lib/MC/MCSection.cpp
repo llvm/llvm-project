@@ -21,7 +21,7 @@ using namespace llvm;
 MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
                      bool IsVirtual, MCSymbol *Begin)
     : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
-      IsVirtual(IsVirtual), LinkerRelaxable(false), Name(Name), Variant(V) {
+      IsBss(IsVirtual), LinkerRelaxable(false), Name(Name), Variant(V) {
   // The initial subsection number is 0. Create a fragment list.
   CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
 }

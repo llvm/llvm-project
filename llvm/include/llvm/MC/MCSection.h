@@ -91,8 +91,7 @@ private:
   bool IsRegistered : 1;
 
   bool IsText : 1;
-
-  bool IsVirtual : 1;
+  bool IsBss : 1;
 
   /// Whether the section contains linker-relaxable fragments. If true, the
   /// offset between two locations may not be fully resolved.
@@ -176,9 +175,9 @@ public:
   /// instead of 0s.
   virtual bool useCodeAlign() const = 0;
 
-  /// Check whether this section is "virtual", that is has no actual object
-  /// file contents.
-  bool isVirtualSection() const { return IsVirtual; }
+  /// Return true if this is a BSS section (e.g., ELF .bss or .tbss) that does
+  /// not store content and is typically initialized to zeroes by the runtime.
+  bool isBssSection() const { return IsBss; }
 
   virtual StringRef getVirtualSectionKind() const;
 };
