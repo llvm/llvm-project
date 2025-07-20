@@ -535,14 +535,6 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   F->u.align.EmitNops = true;
   F->STI = STI;
-
-  // With RISC-V style linker relaxation, mark the section as linker-relaxable
-  // if the alignment is larger than the minimum NOP size.
-  unsigned Size;
-  if (getAssembler().getBackend().shouldInsertExtraNopBytesForCodeAlign(*F,
-                                                                        Size)) {
-    F->getParent()->setLinkerRelaxable();
-  }
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
