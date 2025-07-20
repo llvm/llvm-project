@@ -57,6 +57,12 @@ struct BFloat16 {
     uint32_t x_bits = static_cast<uint32_t>(bits) << 16U;
     return cpp::bit_cast<float>(x_bits);
   }
+
+  LIBC_INLINE constexpr BFloat16 operator-() const {
+    fputil::FPBits<bfloat16> result(*this);
+    result.set_sign(result.is_pos() ? Sign::NEG : Sign::POS);
+    return result.get_val();
+  }
 }; // struct BFloat16
 
 } // namespace fputil

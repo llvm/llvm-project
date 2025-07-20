@@ -262,7 +262,7 @@ private:
       expected)                                                                \
       .match(actual)
 
-#define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
+#define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE(FPBits(actual).is_nan())
 
 #define ASSERT_FP_EQ(expected, actual)                                         \
   ASSERT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
