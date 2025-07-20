@@ -4188,13 +4188,11 @@ public:
     return VPB;
   }
 
-  /// Create a new VPRegionBlock with \p Name and entry and exiting blocks set
-  /// to nullptr. If \p IsReplicator is true, the region is a replicate region.
-  /// The returned block is owned by the VPlan and deleted once the VPlan is
-  /// destroyed.
-  VPRegionBlock *createVPRegionBlock(const std::string &Name = "",
-                                     bool IsReplicator = false) {
-    auto *VPB = new VPRegionBlock(Name, IsReplicator);
+  /// Create a new loop VPRegionBlock with \p Name and entry and exiting blocks set
+  /// to nullptr. The returned block is owned by the VPlan and deleted once the
+  /// VPlan is destroyed.
+  VPRegionBlock *createVPRegionBlock(const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
