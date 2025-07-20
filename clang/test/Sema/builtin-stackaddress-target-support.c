@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -verify %s -triple riscv64-unknown-unknown
 // RUN: %clang_cc1 -verify %s -triple aarch64-unknown-unknown
 
+// x86-no-diagnostics
 void *a() {
 return __builtin_stack_address(); // expected-error {{builtin is not supported on this target}}
-                                  // x86-no-diagnostics
 }
