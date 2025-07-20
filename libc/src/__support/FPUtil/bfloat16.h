@@ -43,7 +43,7 @@ struct BFloat16 {
 
       fputil::DyadicFloat<cpp::numeric_limits<cpp::make_unsigned_t<T>>::digits>
           xd(sign, 0, value);
-      bits = xd.template as<bfloat6, /*ShouldSignalExceptions=*/true>().bits;
+      bits = xd.template as<bfloat16, /*ShouldSignalExceptions=*/true>().bits;
 
     } else {
       bits = fputil::cast<bfloat16>(static_cast<float>(value)).bits;
