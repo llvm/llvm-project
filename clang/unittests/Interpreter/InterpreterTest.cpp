@@ -22,6 +22,8 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/TargetParser/Host.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

@@ -468,10 +468,10 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
   const Pointer &Result = S.Stk.peek<Pointer>();
 
   if constexpr (std::is_same_v<T, Floating>) {
-    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
-    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat A = LHS.elem<Floating>(0).getAPFloat();
+    APFloat B = LHS.elem<Floating>(1).getAPFloat();
+    APFloat C = RHS.elem<Floating>(0).getAPFloat();
+    APFloat D = RHS.elem<Floating>(1).getAPFloat();
 
     APFloat ResR(A.getSemantics());
     APFloat ResI(A.getSemantics());
@@ -480,20 +480,20 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     // Copy into the result.
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
-    Result.atIndex(0).deref<Floating>() = RA; // Floating(ResR);
+    Result.elem<Floating>(0) = RA; // Floating(ResR);
     Result.atIndex(0).initialize();
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
-    Result.atIndex(1).deref<Floating>() = RI; // Floating(ResI);
+    Result.elem<Floating>(1) = RI; // Floating(ResI);
     Result.atIndex(1).initialize();
     Result.initialize();
   } else {
     // Integer element type.
-    const T &LHSR = LHS.atIndex(0).deref<T>();
-    const T &LHSI = LHS.atIndex(1).deref<T>();
-    const T &RHSR = RHS.atIndex(0).deref<T>();
-    const T &RHSI = RHS.atIndex(1).deref<T>();
+    const T &LHSR = LHS.elem<T>(0);
+    const T &LHSI = LHS.elem<T>(1);
+    const T &RHSR = RHS.elem<T>(0);
+    const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
 
     // real(Result) = (real(LHS) * real(RHS)) - (imag(LHS) * imag(RHS))
@@ -503,7 +503,7 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     T B;
     if (T::mul(LHSI, RHSI, Bits, &B))
       return false;
-    if (T::sub(A, B, Bits, &Result.atIndex(0).deref<T>()))
+    if (T::sub(A, B, Bits, &Result.elem<T>(0)))
       return false;
     Result.atIndex(0).initialize();
 
@@ -512,7 +512,7 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::mul(LHSI, RHSR, Bits, &B))
       return false;
-    if (T::add(A, B, Bits, &Result.atIndex(1).deref<T>()))
+    if (T::add(A, B, Bits, &Result.elem<T>(1)))
       return false;
     Result.atIndex(1).initialize();
     Result.initialize();
@@ -528,10 +528,10 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
   const Pointer &Result = S.Stk.peek<Pointer>();
 
   if constexpr (std::is_same_v<T, Floating>) {
-    APFloat A = LHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat B = LHS.atIndex(1).deref<Floating>().getAPFloat();
-    APFloat C = RHS.atIndex(0).deref<Floating>().getAPFloat();
-    APFloat D = RHS.atIndex(1).deref<Floating>().getAPFloat();
+    APFloat A = LHS.elem<Floating>(0).getAPFloat();
+    APFloat B = LHS.elem<Floating>(1).getAPFloat();
+    APFloat C = RHS.elem<Floating>(0).getAPFloat();
+    APFloat D = RHS.elem<Floating>(1).getAPFloat();
 
     APFloat ResR(A.getSemantics());
     APFloat ResI(A.getSemantics());
@@ -540,21 +540,21 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     // Copy into the result.
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
-    Result.atIndex(0).deref<Floating>() = RA; // Floating(ResR);
+    Result.elem<Floating>(0) = RA; // Floating(ResR);
     Result.atIndex(0).initialize();
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
-    Result.atIndex(1).deref<Floating>() = RI; // Floating(ResI);
+    Result.elem<Floating>(1) = RI; // Floating(ResI);
     Result.atIndex(1).initialize();
 
     Result.initialize();
   } else {
     // Integer element type.
-    const T &LHSR = LHS.atIndex(0).deref<T>();
-    const T &LHSI = LHS.atIndex(1).deref<T>();
-    const T &RHSR = RHS.atIndex(0).deref<T>();
-    const T &RHSI = RHS.atIndex(1).deref<T>();
+    const T &LHSR = LHS.elem<T>(0);
+    const T &LHSI = LHS.elem<T>(1);
+    const T &RHSR = RHS.elem<T>(0);
+    const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
     const T Zero = T::from(0, Bits);
 
@@ -581,8 +581,8 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     }
 
     // real(Result) = ((real(LHS) * real(RHS)) + (imag(LHS) * imag(RHS))) / Den
-    T &ResultR = Result.atIndex(0).deref<T>();
-    T &ResultI = Result.atIndex(1).deref<T>();
+    T &ResultR = Result.elem<T>(0);
+    T &ResultI = Result.elem<T>(1);
 
     if (T::mul(LHSR, RHSR, Bits, &A) || T::mul(LHSI, RHSI, Bits, &B))
       return false;
@@ -1885,6 +1885,16 @@ inline bool Dump(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool CheckNull(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_dereferencing_null);
+    return S.noteUndefinedBehavior();
+  }
+  return true;
+}
+
 inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
                            const Pointer &Ptr) {
   Pointer Base = Ptr;
@@ -3093,7 +3103,7 @@ inline bool ArrayElem(InterpState &S, CodePtr OpPC, uint32_t Index) {
     return false;
 
   assert(Ptr.atIndex(Index).getFieldDesc()->getPrimType() == Name);
-  S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  S.Stk.push<T>(Ptr.elem<T>(Index));
   return true;
 }
 
@@ -3105,7 +3115,7 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
     return false;
 
   assert(Ptr.atIndex(Index).getFieldDesc()->getPrimType() == Name);
-  S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  S.Stk.push<T>(Ptr.elem<T>(Index));
   return true;
 }
 
