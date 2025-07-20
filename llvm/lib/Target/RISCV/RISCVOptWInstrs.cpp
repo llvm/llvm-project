@@ -731,6 +731,7 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       unsigned Opc;
+      // clang-format off
       switch (MI.getOpcode()) {
       default:
         continue;
@@ -738,7 +739,9 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
       case RISCV::ADDIW: Opc = RISCV::ADDI; break;
       case RISCV::MULW:  Opc = RISCV::MUL;  break;
       case RISCV::SLLIW: Opc = RISCV::SLLI; break;
+      case RISCV::SUBW:  Opc = RISCV::SUB;  break;
       }
+      // clang-format on
 
       if (hasAllWUsers(MI, ST, MRI)) {
         LLVM_DEBUG(dbgs() << "Replacing " << MI);
