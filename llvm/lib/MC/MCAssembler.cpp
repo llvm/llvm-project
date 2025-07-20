@@ -583,42 +583,23 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
                                    const MCSection *Sec) const {
   assert(getBackendPtr() && "Expected assembler backend");
 
-  // Ignore virtual sections.
   if (Sec->isVirtualSection()) {
     assert(getSectionFileSize(*Sec) == 0 && "Invalid size for section!");
 
-    // Check that contents are only things legal inside a virtual section.
+    // Ensure no fixups or non-zero bytes are written to BSS sections, catching
+    // errors in both input assembly code and MCStreamer API usage. Location is
+    // not tracked for efficiency.
+    auto Fn = [](char c) { return c != 0; };
     for (const MCFragment &F : *Sec) {
-      switch (F.getKind()) {
-      default: llvm_unreachable("Invalid fragment in virtual section!");
-      case MCFragment::FT_Data: {
-        // Check that we aren't trying to write a non-zero contents (or fixups)
-        // into a virtual section. This is to support clients which use standard
-        // directives to fill the contents of virtual sections.
-        if (F.getFixups().size() || F.getVarFixups().size())
-          reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
-                                   Sec->getName() + "' cannot have fixups");
-        for (char C : F.getContents())
-          if (C) {
-            reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
-                                     Sec->getName() +
-                                     "' cannot have non-zero initializers");
-            break;
-          }
+      if (any_of(F.getContents(), Fn) || any_of(F.getVarContents(), Fn)) {
+        reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
+                                 Sec->getName() +
+                                 "' cannot have non-zero bytes");
         break;
       }
-      case MCFragment::FT_Align:
-        // Check that we aren't trying to write a non-zero value into a virtual
-        // section.
-        assert((cast<MCAlignFragment>(F).getFillLen() == 0 ||
-                cast<MCAlignFragment>(F).getFill() == 0) &&
-               "Invalid align in virtual section!");
-        break;
-      case MCFragment::FT_Fill:
-        assert((cast<MCFillFragment>(F).getValue() == 0) &&
-               "Invalid fill in virtual section!");
-        break;
-      case MCFragment::FT_Org:
+      if (F.getFixups().size() || F.getVarFixups().size()) {
+        reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
+                                 Sec->getName() + "' cannot have fixups");
         break;
       }
     }
