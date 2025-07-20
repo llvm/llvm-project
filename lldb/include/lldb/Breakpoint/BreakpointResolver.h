@@ -48,7 +48,7 @@ public:
   ///   The concrete breakpoint resolver type for this breakpoint.
   BreakpointResolver(const lldb::BreakpointSP &bkpt, unsigned char resolverType,
                      lldb::addr_t offset = 0,
-                     lldb::addr_t instructions_offset = 0);
+                     bool offset_is_insn_count = false);
 
   /// The Destructor is virtual, all significant breakpoint resolvers derive
   /// from this class.
@@ -77,6 +77,7 @@ public:
   void SetOffset(lldb::addr_t offset);
 
   lldb::addr_t GetOffset() const { return m_offset; }
+  lldb::addr_t GetOffsetIsInsnCount() const { return m_offset_is_insn_count; }
 
   /// In response to this method the resolver scans all the modules in the
   /// breakpoint's target, and adds any new locations it finds.
@@ -183,7 +184,6 @@ protected:
     SearchDepth,
     SkipPrologue,
     SymbolNameArray,
-    InstructionsOffset,
     LastOptionName
   };
   static const char
@@ -222,8 +222,8 @@ private:
   lldb::BreakpointWP m_breakpoint; // This is the breakpoint we add locations to.
   lldb::addr_t m_offset;    // A random offset the user asked us to add to any
                             // breakpoints we set.
-  lldb::addr_t m_instructions_offset; // Number of instructions to add to the
-                                      // resolved breakpoint address.
+  bool m_offset_is_insn_count; // Use the offset as an instruction count
+                               // instead of an address offset.
 
   // Subclass identifier (for llvm isa/dyn_cast)
   const unsigned char SubclassID;

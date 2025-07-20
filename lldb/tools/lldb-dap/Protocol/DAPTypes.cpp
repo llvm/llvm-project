@@ -8,14 +8,14 @@ namespace lldb_dap::protocol {
 bool fromJSON(const llvm::json::Value &Params, PersistenceData &PD,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.mapOptional("module", PD.module) &&
-         O.mapOptional("fileAddress", PD.fileAddress);
+  return O && O.mapOptional("module_path", PD.module_path) &&
+         O.mapOptional("symbol_name", PD.symbol_name);
 }
 
 llvm::json::Value toJSON(const PersistenceData &PD) {
   json::Object result{
-      {"module", PD.module},
-      {"fileAddress", PD.fileAddress},
+      {"module_path", PD.module_path},
+      {"symbol_name", PD.symbol_name},
   };
 
   return result;

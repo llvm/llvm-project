@@ -1561,7 +1561,7 @@ void DynamicLoaderDarwinKernel::SetNotificationBreakpointIfNeeded() {
             .CreateBreakpoint(&module_spec_list, nullptr,
                               "OSKextLoadedKextSummariesUpdated",
                               eFunctionNameTypeFull, eLanguageTypeUnknown, 0,
-                              skip_prologue, internal_bp, hardware)
+                              false, skip_prologue, internal_bp, hardware)
             .get();
 
     bp->SetCallback(DynamicLoaderDarwinKernel::BreakpointHitCallback, this,

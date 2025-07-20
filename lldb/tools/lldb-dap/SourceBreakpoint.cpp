@@ -121,9 +121,14 @@ llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithSourceReference(
 
 llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithPersistenceData(
     const protocol::PersistenceData &persistence_data) {
-  lldb::SBFileSpec file_spec(persistence_data.module.c_str());
-  m_bp = m_dap.target.BreakpointCreateByFileAddress(
-      file_spec, persistence_data.fileAddress, 0, m_line - 1);
+  lldb::SBFileSpec file_spec(persistence_data.module_path.c_str());
+  lldb::SBFileSpecList comp_unit_list;
+  lldb::SBFileSpecList file_spec_list;
+  file_spec_list.Append(file_spec);
+  m_bp = m_dap.target.BreakpointCreateByName(
+      persistence_data.symbol_name.c_str(), lldb::eFunctionNameTypeFull,
+      lldb::eLanguageTypeUnknown, m_line - 1, true, file_spec_list,
+      comp_unit_list);
   return llvm::Error::success();
 }
 

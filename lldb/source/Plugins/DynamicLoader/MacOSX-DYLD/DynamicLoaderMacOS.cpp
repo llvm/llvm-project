@@ -530,7 +530,7 @@ bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
           m_process->GetTarget()
               .CreateBreakpoint(&dyld_filelist, source_files,
                                 "lldb_image_notifier", eFunctionNameTypeFull,
-                                eLanguageTypeUnknown, 0, skip_prologue,
+                                eLanguageTypeUnknown, 0, false, skip_prologue,
                                 internal, hardware)
               .get();
       breakpoint->SetCallback(DynamicLoaderMacOS::NotifyBreakpointHit, this,
@@ -546,7 +546,7 @@ bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
             m_process->GetTarget()
                 .CreateBreakpoint(&dyld_filelist, source_files,
                                   "gdb_image_notifier", eFunctionNameTypeFull,
-                                  eLanguageTypeUnknown, 0, skip_prologue,
+                                  eLanguageTypeUnknown, 0, false, skip_prologue,
                                   internal, hardware)
                 .get();
         breakpoint->SetCallback(DynamicLoaderMacOS::NotifyBreakpointHit, this,

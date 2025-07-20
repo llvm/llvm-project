@@ -766,16 +766,19 @@ SBBreakpoint SBTarget::BreakpointCreateByName(const char *symbol_name,
     const bool hardware = false;
     const LazyBool skip_prologue = eLazyBoolCalculate;
     const lldb::addr_t offset = 0;
+    const bool offset_is_insn_count = false;
     if (module_name && module_name[0]) {
       FileSpecList module_spec_list;
       module_spec_list.Append(FileSpec(module_name));
       sb_bp = target_sp->CreateBreakpoint(
           &module_spec_list, nullptr, symbol_name, eFunctionNameTypeAuto,
-          eLanguageTypeUnknown, offset, skip_prologue, internal, hardware);
+          eLanguageTypeUnknown, offset, offset_is_insn_count, skip_prologue,
+          internal, hardware);
     } else {
       sb_bp = target_sp->CreateBreakpoint(
           nullptr, nullptr, symbol_name, eFunctionNameTypeAuto,
-          eLanguageTypeUnknown, offset, skip_prologue, internal, hardware);
+          eLanguageTypeUnknown, offset, offset_is_insn_count, skip_prologue,
+          internal, hardware);
     }
   }
 
@@ -811,6 +814,17 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
     const SBFileSpecList &comp_unit_list) {
   LLDB_INSTRUMENT_VA(this, symbol_name, name_type_mask, symbol_language,
                      module_list, comp_unit_list);
+  return BreakpointCreateByName(symbol_name, name_type_mask, symbol_language, 0,
+                                false, module_list, comp_unit_list);
+}
+
+lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
+    const char *symbol_name, uint32_t name_type_mask,
+    LanguageType symbol_language, lldb::addr_t offset,
+    bool offset_is_insn_count, const SBFileSpecList &module_list,
+    const SBFileSpecList &comp_unit_list) {
+  LLDB_INSTRUMENT_VA(this, symbol_name, name_type_mask, symbol_language, offset,
+                     offset_is_insn_count, module_list, comp_unit_list);
 
   SBBreakpoint sb_bp;
   if (TargetSP target_sp = GetSP();
@@ -821,7 +835,8 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     FunctionNameType mask = static_cast<FunctionNameType>(name_type_mask);
     sb_bp = target_sp->CreateBreakpoint(module_list.get(), comp_unit_list.get(),
-                                        symbol_name, mask, symbol_language, 0,
+                                        symbol_name, mask, symbol_language,
+                                        offset, offset_is_insn_count,
                                         skip_prologue, internal, hardware);
   }
 
@@ -944,24 +959,6 @@ SBBreakpoint SBTarget::BreakpointCreateBySBAddress(SBAddress &sb_address) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     const bool hardware = false;
     sb_bp = target_sp->CreateBreakpoint(sb_address.ref(), false, hardware);
-  }
-
-  return sb_bp;
-}
-
-SBBreakpoint
-SBTarget::BreakpointCreateByFileAddress(const SBFileSpec &file_spec,
-                                        addr_t file_addr, addr_t offset,
-                                        addr_t instructions_offset) {
-  LLDB_INSTRUMENT_VA(this, file_spec, file_addr);
-
-  SBBreakpoint sb_bp;
-  if (TargetSP target_sp = GetSP()) {
-    std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    const bool hardware = false;
-    sb_bp = target_sp->CreateAddressInModuleBreakpoint(
-        file_addr, false, *file_spec.get(), hardware, offset,
-        instructions_offset);
   }
 
   return sb_bp;

@@ -29,10 +29,10 @@ namespace lldb_dap::protocol {
 /// breakpoints the path and line are the same For each session.
 struct PersistenceData {
   /// The source module path.
-  std::string module;
+  std::string module_path;
 
-  /// The file address of the function.
-  lldb::addr_t fileAddress;
+  /// The symbol name of the Source.
+  std::string symbol_name;
 };
 bool fromJSON(const llvm::json::Value &, PersistenceData &, llvm::json::Path);
 llvm::json::Value toJSON(const PersistenceData &);

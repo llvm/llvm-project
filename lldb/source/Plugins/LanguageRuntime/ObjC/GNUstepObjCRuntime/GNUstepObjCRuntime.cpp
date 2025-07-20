@@ -169,7 +169,7 @@ GNUstepObjCRuntime::CreateExceptionResolver(const BreakpointSP &bkpt,
   if (throw_bp)
     resolver_sp = std::make_shared<BreakpointResolverName>(
         bkpt, "objc_exception_throw", eFunctionNameTypeBase,
-        eLanguageTypeUnknown, Breakpoint::Exact, 0, eLazyBoolNo);
+        eLanguageTypeUnknown, Breakpoint::Exact, 0, false, eLazyBoolNo);
 
   return resolver_sp;
 }
