@@ -362,7 +362,7 @@ uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
 
 uint64_t MCAssembler::getSectionFileSize(const MCSection &Sec) const {
   // Virtual sections have no file size.
-  if (Sec.isVirtualSection())
+  if (Sec.isBssSection())
     return 0;
   return getSectionAddressSize(Sec);
 }
@@ -559,7 +559,7 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
                                    const MCSection *Sec) const {
   assert(getBackendPtr() && "Expected assembler backend");
 
-  if (Sec->isVirtualSection()) {
+  if (Sec->isBssSection()) {
     assert(getSectionFileSize(*Sec) == 0 && "Invalid size for section!");
 
     // Ensure no fixups or non-zero bytes are written to BSS sections, catching
