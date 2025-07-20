@@ -93,6 +93,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- The ``run-clang-tidy.py`` and ``clang-tidy-diff.py`` scripts now run checks in
+  parallel by default using all available hardware threads. Both scripts now
+  display the number of threads being used in their output.
+
 New checks
 ^^^^^^^^^^
 
