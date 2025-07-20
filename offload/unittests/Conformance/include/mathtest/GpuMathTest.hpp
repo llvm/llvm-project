@@ -9,8 +9,8 @@
 #include "mathtest/TestResult.hpp"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 
 #include <cassert>
 #include <cstddef>
@@ -47,9 +47,9 @@ public:
 
   explicit GpuMathTest(std::shared_ptr<DeviceContext> Context,
                        llvm::StringRef Provider,
-                       llvm::StringRef DeviceBinsDirectory)
+                       llvm::StringRef DeviceBinaryDir)
       : Context(std::move(Context)),
-        Kernel(getKernel(this->Context, Provider, DeviceBinsDirectory)) {
+        Kernel(getKernel(this->Context, Provider, DeviceBinaryDir)) {
     assert(this->Context && "Context must not be null");
   }
 
@@ -88,15 +88,14 @@ private:
   static DeviceKernel<KernelSignature>
   getKernel(const std::shared_ptr<DeviceContext> &Context,
             llvm::StringRef Provider,
-            llvm::StringRef DeviceBinsDirectory) noexcept {
-    llvm::StringRef BinaryName = llvm::StringSwitch<llvm::StringRef>(Provider)
-                                     .Case("llvm-libm", "LLVMLibm")
-                                     .Default("");
+            llvm::StringRef DeviceBinaryDir) noexcept {
+    constexpr llvm::StringRef ValidProviders[] = {"llvm-libm"};
 
-    if (BinaryName.empty())
+    if (llvm::find(ValidProviders, Provider) == std::end(ValidProviders))
       FATAL_ERROR(llvm::Twine("Unsupported provider: '") + Provider + "'");
 
-    const auto Image = Context->loadBinary(DeviceBinsDirectory, BinaryName);
+    llvm::StringRef BinaryName = Provider;
+    const auto Image = Context->loadBinary(DeviceBinaryDir, BinaryName);
 
     return Context->getKernel<KernelSignature>(Image,
                                                FunctionConfig::KernelName);
