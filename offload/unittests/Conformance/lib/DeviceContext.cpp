@@ -2,7 +2,10 @@
 
 #include "mathtest/ErrorHandling.hpp"
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -12,6 +15,7 @@
 #include <OffloadAPI.h>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -32,29 +36,78 @@ struct OffloadInitWrapper {
 };
 static OffloadInitWrapper Wrapper{};
 
-[[nodiscard]] ol_platform_backend_t
-getBackend(ol_device_handle_t DeviceHandle) noexcept {
-  ol_platform_handle_t Platform;
+[[nodiscard]] std::string getDeviceName(ol_device_handle_t DeviceHandle) {
+  std::size_t PropSize = 0;
+  OL_CHECK(olGetDeviceInfoSize(DeviceHandle, OL_DEVICE_INFO_NAME, &PropSize));
+
+  if (PropSize == 0)
+    return "";
+
+  std::string PropValue(PropSize, '\0');
+  OL_CHECK(olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_NAME, PropSize,
+                           PropValue.data()));
+  PropValue.pop_back(); // Remove the null terminator
+
+  return PropValue;
+}
+
+[[nodiscard]] ol_platform_handle_t
+getDevicePlatform(ol_device_handle_t DeviceHandle) noexcept {
+  ol_platform_handle_t PlatformHandle = nullptr;
   OL_CHECK(olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PLATFORM,
-                           sizeof(Platform), &Platform));
+                           sizeof(PlatformHandle), &PlatformHandle));
+  return PlatformHandle;
+}
+
+[[nodiscard]] std::string getPlatformName(ol_platform_handle_t PlatformHandle) {
+  std::size_t PropSize = 0;
+  OL_CHECK(
+      olGetPlatformInfoSize(PlatformHandle, OL_PLATFORM_INFO_NAME, &PropSize));
+
+  if (PropSize == 0)
+    return "";
+
+  std::string PropValue(PropSize, '\0');
+  OL_CHECK(olGetPlatformInfo(PlatformHandle, OL_PLATFORM_INFO_NAME, PropSize,
+                             PropValue.data()));
+  PropValue.pop_back(); // Remove the null terminator
+
+  return llvm::StringRef(PropValue).lower();
+}
+
+[[nodiscard]] ol_platform_backend_t
+getPlatformBackend(ol_platform_handle_t PlatformHandle) noexcept {
   ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
-  OL_CHECK(olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
+  OL_CHECK(olGetPlatformInfo(PlatformHandle, OL_PLATFORM_INFO_BACKEND,
                              sizeof(Backend), &Backend));
   return Backend;
 }
 
-const std::vector<ol_device_handle_t> &getDevices() {
+struct Device {
+  ol_device_handle_t Handle;
+  std::string Name;
+  std::string Platform;
+  ol_platform_backend_t Backend;
+};
+
+const std::vector<Device> &getDevices() {
   // Thread-safe initialization of a static local variable
-  static std::vector<ol_device_handle_t> Devices =
-      []() -> std::vector<ol_device_handle_t> {
-    std::vector<ol_device_handle_t> TmpDevices;
+  static auto Devices = []() {
+    std::vector<Device> TmpDevices;
 
     // Discovers all devices that are not the host
     const auto *const ResultFromIterate = olIterateDevices(
         [](ol_device_handle_t DeviceHandle, void *Data) {
-          if (getBackend(DeviceHandle) != OL_PLATFORM_BACKEND_HOST)
-            static_cast<std::vector<ol_device_handle_t> *>(Data)->push_back(
-                DeviceHandle);
+          ol_platform_handle_t PlatformHandle = getDevicePlatform(DeviceHandle);
+          ol_platform_backend_t Backend = getPlatformBackend(PlatformHandle);
+
+          if (Backend != OL_PLATFORM_BACKEND_HOST) {
+            auto Name = getDeviceName(DeviceHandle);
+            auto Platform = getPlatformName(PlatformHandle);
+
+            static_cast<std::vector<Device> *>(Data)->push_back(
+                {DeviceHandle, Name, Platform, Backend});
+          }
 
           return true;
         },
@@ -69,7 +122,19 @@ const std::vector<ol_device_handle_t> &getDevices() {
 }
 } // namespace
 
-std::size_t mathtest::countDevices() { return getDevices().size(); }
+const llvm::SetVector<llvm::StringRef> &mathtest::getPlatforms() {
+  // Thread-safe initialization of a static local variable
+  static auto Platforms = []() {
+    llvm::SetVector<llvm::StringRef> TmpPlatforms;
+
+    for (const auto &Device : getDevices())
+      TmpPlatforms.insert(Device.Platform);
+
+    return TmpPlatforms;
+  }();
+
+  return Platforms;
+}
 
 void detail::allocManagedMemory(ol_device_handle_t DeviceHandle,
                                 std::size_t Size,
@@ -82,15 +147,50 @@ void detail::allocManagedMemory(ol_device_handle_t DeviceHandle,
 // DeviceContext
 //===----------------------------------------------------------------------===//
 
-DeviceContext::DeviceContext(std::size_t DeviceId)
-    : DeviceId(DeviceId), DeviceHandle(nullptr) {
+DeviceContext::DeviceContext(std::size_t GlobalDeviceId)
+    : GlobalDeviceId(GlobalDeviceId), DeviceHandle(nullptr) {
   const auto &Devices = getDevices();
 
-  if (DeviceId >= Devices.size())
-    FATAL_ERROR("Invalid DeviceId: " + llvm::Twine(DeviceId) + ", but only " +
-                llvm::Twine(Devices.size()) + " devices are available");
+  if (GlobalDeviceId >= Devices.size())
+    FATAL_ERROR("Invalid GlobalDeviceId: " + llvm::Twine(GlobalDeviceId) +
+                ", but the number of available devices is " +
+                llvm::Twine(Devices.size()));
 
-  DeviceHandle = Devices[DeviceId];
+  DeviceHandle = Devices[GlobalDeviceId].Handle;
+}
+
+DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
+    : DeviceHandle(nullptr) {
+  std::string NormalizedPlatform = Platform.lower();
+  const auto &Platforms = getPlatforms();
+
+  if (!Platforms.contains(NormalizedPlatform))
+    FATAL_ERROR("There is no platform that matches with '" +
+                llvm::Twine(Platform) +
+                "'. Available platforms are: " + llvm::join(Platforms, ", "));
+
+  const auto &Devices = getDevices();
+
+  std::optional<std::size_t> FoundGlobalDeviceId;
+  std::size_t MatchCount = 0;
+
+  for (std::size_t Index = 0; Index < Devices.size(); ++Index) {
+    if (Devices[Index].Platform == NormalizedPlatform) {
+      if (MatchCount == DeviceId) {
+        FoundGlobalDeviceId = Index;
+        break;
+      }
+      MatchCount++;
+    }
+  }
+
+  if (!FoundGlobalDeviceId.has_value())
+    FATAL_ERROR("Invalid DeviceId: " + llvm::Twine(DeviceId) +
+                ", but the number of available devices on '" + Platform +
+                "' is " + llvm::Twine(MatchCount));
+
+  GlobalDeviceId = FoundGlobalDeviceId.value();
+  DeviceHandle = Devices[GlobalDeviceId].Handle;
 }
 
 [[nodiscard]] std::shared_ptr<DeviceImage>
@@ -124,9 +224,10 @@ DeviceContext::loadBinary(llvm::StringRef Directory, llvm::StringRef BinaryName,
 [[nodiscard]] std::shared_ptr<DeviceImage>
 DeviceContext::loadBinary(llvm::StringRef Directory,
                           llvm::StringRef BinaryName) const {
+  auto Backend = getDevices()[GlobalDeviceId].Backend;
   llvm::StringRef Extension;
 
-  switch (getBackend(DeviceHandle)) {
+  switch (Backend) {
   case OL_PLATFORM_BACKEND_AMDGPU:
     Extension = ".amdgpu.bin";
     break;
@@ -162,37 +263,10 @@ void DeviceContext::launchKernelImpl(
                           KernelArgsSize, &LaunchArgs, nullptr));
 }
 
-[[nodiscard]] std::string DeviceContext::getName() const {
-  std::size_t PropSize = 0;
-  OL_CHECK(olGetDeviceInfoSize(DeviceHandle, OL_DEVICE_INFO_NAME, &PropSize));
-
-  if (PropSize == 0)
-    return "";
-
-  std::string PropValue(PropSize, '\0');
-  OL_CHECK(olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_NAME, PropSize,
-                           PropValue.data()));
-  PropValue.pop_back(); // Remove the null terminator
-
-  return PropValue;
+[[nodiscard]] llvm::StringRef DeviceContext::getName() const {
+  return getDevices()[GlobalDeviceId].Name;
 }
 
-[[nodiscard]] std::string DeviceContext::getPlatform() const {
-  ol_platform_handle_t PlatformHandle = nullptr;
-  OL_CHECK(olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PLATFORM,
-                           sizeof(ol_platform_handle_t), &PlatformHandle));
-
-  std::size_t PropSize = 0;
-  OL_CHECK(
-      olGetPlatformInfoSize(PlatformHandle, OL_PLATFORM_INFO_NAME, &PropSize));
-
-  if (PropSize == 0)
-    return "";
-
-  std::string PropValue(PropSize, '\0');
-  OL_CHECK(olGetPlatformInfo(PlatformHandle, OL_PLATFORM_INFO_NAME, PropSize,
-                             PropValue.data()));
-  PropValue.pop_back(); // Remove the null terminator
-
-  return PropValue;
+[[nodiscard]] llvm::StringRef DeviceContext::getPlatform() const {
+  return getDevices()[GlobalDeviceId].Platform;
 }
