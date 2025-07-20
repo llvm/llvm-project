@@ -106,7 +106,7 @@ static std::string EnumToString(const Value &V) {
   assert(EnumTy && "Fail to cast to enum type");
 
   EnumDecl *ED = EnumTy->getDecl();
-  uint64_t Data = V.getULongLong();
+  uint64_t Data = V.convertTo<uint64_t>();
   bool IsFirst = true;
   llvm::APSInt AP = Ctx.MakeIntValue(Data, DesugaredTy);
 
