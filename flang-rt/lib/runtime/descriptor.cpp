@@ -85,7 +85,7 @@ RT_API_ATTRS void Descriptor::Establish(int characterKind,
 RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt,
     void *p, int rank, const SubscriptValue *extent,
     ISO::CFI_attribute_t attribute) {
-  std::size_t elementBytes{dt.sizeInBytes()};
+  auto elementBytes{static_cast<std::size_t>(dt.sizeInBytes())};
   ISO::EstablishDescriptor(
       &raw_, p, attribute, CFI_type_struct, elementBytes, rank, extent);
   if (elementBytes == 0) {
@@ -252,18 +252,21 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
   return CFI_section(&raw_, &source.raw_, lower, upper, stride) == CFI_SUCCESS;
 }
 
-RT_API_ATTRS void Descriptor::ApplyMold(const Descriptor &mold, int rank) {
-  raw_.elem_len = mold.raw_.elem_len;
+RT_API_ATTRS void Descriptor::ApplyMold(
+    const Descriptor &mold, int rank, bool isMonomorphic) {
   raw_.rank = rank;
-  raw_.type = mold.raw_.type;
   for (int j{0}; j < rank && j < mold.raw_.rank; ++j) {
     GetDimension(j) = mold.GetDimension(j);
   }
-  if (auto *addendum{Addendum()}) {
-    if (auto *moldAddendum{mold.Addendum()}) {
-      *addendum = *moldAddendum;
-    } else {
-      INTERNAL_CHECK(!addendum->derivedType());
+  if (!isMonomorphic) {
+    raw_.elem_len = mold.raw_.elem_len;
+    raw_.type = mold.raw_.type;
+    if (auto *addendum{Addendum()}) {
+      if (auto *moldAddendum{mold.Addendum()}) {
+        *addendum = *moldAddendum;
+      } else {
+        INTERNAL_CHECK(!addendum->derivedType());
+      }
     }
   }
 }
