@@ -102,6 +102,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check by removing many incorrect 
+  fixits and providing fixits where before there was only a warning.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
