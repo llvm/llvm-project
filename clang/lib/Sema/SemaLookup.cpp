@@ -3125,7 +3125,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
       // the classes and namespaces of known non-dependent arguments.
       if (!BaseType)
         continue;
-      CXXRecordDecl *BaseDecl = cast<CXXRecordDecl>(BaseType->getDecl());
+      CXXRecordDecl *BaseDecl = cast<CXXRecordDecl>(BaseType->getOriginalDecl())
+                                    ->getDefinitionOrSelf();
       if (Result.addClassTransitive(BaseDecl)) {
         // Find the associated namespace for this base class.
         DeclContext *BaseCtx = BaseDecl->getDeclContext();
@@ -3196,8 +3197,10 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        Its associated namespaces are the innermost enclosing
     //        namespaces of its associated classes.
     case Type::Record: {
+      // FIXME: This should use the original decl.
       CXXRecordDecl *Class =
-          cast<CXXRecordDecl>(cast<RecordType>(T)->getDecl());
+          cast<CXXRecordDecl>(cast<RecordType>(T)->getOriginalDecl())
+              ->getDefinitionOrSelf();
       addAssociatedClassesAndNamespaces(Result, Class);
       break;
     }
@@ -3207,7 +3210,9 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        If it is a class member, its associated class is the
     //        member’s class; else it has no associated class.
     case Type::Enum: {
-      EnumDecl *Enum = cast<EnumType>(T)->getDecl();
+      // FIXME: This should use the original decl.
+      EnumDecl *Enum =
+          cast<EnumType>(T)->getOriginalDecl()->getDefinitionOrSelf();
 
       DeclContext *Ctx = Enum->getDeclContext();
       if (CXXRecordDecl *EnclosingClass = dyn_cast<CXXRecordDecl>(Ctx))
@@ -4262,7 +4267,7 @@ private:
           const auto *Record = BaseType->getAs<RecordType>();
           if (!Record)
             continue;
-          RD = Record->getDecl();
+          RD = Record->getOriginalDecl()->getDefinitionOrSelf();
         }
 
         // FIXME: It would be nice to be able to determine whether referencing

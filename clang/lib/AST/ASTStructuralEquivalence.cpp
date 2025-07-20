@@ -885,10 +885,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       // Treat the enumeration as its underlying type and use the builtin type
       // class comparison.
       if (T1->getTypeClass() == Type::Enum) {
-        T1 = T1->getAs<EnumType>()->getDecl()->getIntegerType();
+        T1 = T1->getAs<EnumType>()->getOriginalDecl()->getIntegerType();
         assert(T2->isBuiltinType() && !T1.isNull()); // Sanity check
       } else if (T2->getTypeClass() == Type::Enum) {
-        T2 = T2->getAs<EnumType>()->getDecl()->getIntegerType();
+        T2 = T2->getAs<EnumType>()->getOriginalDecl()->getIntegerType();
         assert(T1->isBuiltinType() && !T2.isNull()); // Sanity check
       }
       TC = Type::Builtin;
@@ -1544,8 +1544,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // types
   if (Field1->isAnonymousStructOrUnion() &&
       Field2->isAnonymousStructOrUnion()) {
-    RecordDecl *D1 = Field1->getType()->castAs<RecordType>()->getDecl();
-    RecordDecl *D2 = Field2->getType()->castAs<RecordType>()->getDecl();
+    RecordDecl *D1 = Field1->getType()->castAs<RecordType>()->getOriginalDecl();
+    RecordDecl *D2 = Field2->getType()->castAs<RecordType>()->getOriginalDecl();
     return IsStructurallyEquivalent(Context, D1, D2);
   }
 
@@ -2613,7 +2613,7 @@ StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
     // struct { ... } A;
     QualType FieldType = F->getType();
     if (const auto *RecType = dyn_cast<RecordType>(FieldType)) {
-      const RecordDecl *RecDecl = RecType->getDecl();
+      const RecordDecl *RecDecl = RecType->getOriginalDecl();
       if (RecDecl->getDeclContext() == Owner && !RecDecl->getIdentifier()) {
         if (Context.hasSameType(FieldType, AnonTy))
           break;

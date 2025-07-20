@@ -122,7 +122,7 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
         }
       } else if (const auto *RecordT = dyn_cast<RecordType>(NNSType)) {
         // The nested name specifier refers to a member of a class template.
-        return RecordT->getDecl();
+        return RecordT->getOriginalDecl()->getDefinitionOrSelf();
       }
     }
 

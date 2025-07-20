@@ -2848,7 +2848,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     if (const EnumType *EnumT = T->getAs<EnumType>()) {
       // FIXME: Forward-declared enums require a TSK_ExplicitSpecialization
       // check here.
-      EnumDecl *Enum = EnumT->getDecl();
+      EnumDecl *Enum = EnumT->getOriginalDecl();
 
       // Get to the parent type.
       if (TypeDecl *Parent = dyn_cast<TypeDecl>(Enum->getParent()))
@@ -3285,7 +3285,7 @@ static QualType builtinCommonTypeImpl(Sema &S, ElaboratedTypeKeyword Keyword,
 }
 
 static bool isInVkNamespace(const RecordType *RT) {
-  DeclContext *DC = RT->getDecl()->getDeclContext();
+  DeclContext *DC = RT->getOriginalDecl()->getDeclContext();
   if (!DC)
     return false;
 
@@ -3302,8 +3302,9 @@ static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
   if (auto *RT = OperandArg->getAs<RecordType>()) {
     bool Literal = false;
     SourceLocation LiteralLoc;
-    if (isInVkNamespace(RT) && RT->getDecl()->getName() == "Literal") {
-      auto SpecDecl = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+    if (isInVkNamespace(RT) && RT->getOriginalDecl()->getName() == "Literal") {
+      auto SpecDecl =
+          dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl());
       assert(SpecDecl);
 
       const TemplateArgumentList &LiteralArgs = SpecDecl->getTemplateArgs();
@@ -3314,8 +3315,9 @@ static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
     }
 
     if (RT && isInVkNamespace(RT) &&
-        RT->getDecl()->getName() == "integral_constant") {
-      auto SpecDecl = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+        RT->getOriginalDecl()->getName() == "integral_constant") {
+      auto SpecDecl =
+          dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl());
       assert(SpecDecl);
 
       const TemplateArgumentList &ConstantArgs = SpecDecl->getTemplateArgs();
@@ -4048,7 +4050,7 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
 
   // Check the tag kind
   if (const RecordType *RT = Result->getAs<RecordType>()) {
-    RecordDecl *D = RT->getDecl();
+    RecordDecl *D = RT->getOriginalDecl()->getDefinitionOrSelf();
 
     IdentifierInfo *Id = D->getIdentifier();
     assert(Id && "templated class must have an identifier");
@@ -6276,11 +6278,11 @@ bool UnnamedLocalNoLinkageFinder::VisitDeducedTemplateSpecializationType(
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitRecordType(const RecordType* T) {
-  return VisitTagDecl(T->getDecl());
+  return VisitTagDecl(T->getOriginalDecl()->getDefinitionOrSelf());
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitEnumType(const EnumType* T) {
-  return VisitTagDecl(T->getDecl());
+  return VisitTagDecl(T->getOriginalDecl()->getDefinitionOrSelf());
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitTemplateTypeParmType(
@@ -6300,7 +6302,7 @@ bool UnnamedLocalNoLinkageFinder::VisitTemplateSpecializationType(
 
 bool UnnamedLocalNoLinkageFinder::VisitInjectedClassNameType(
                                               const InjectedClassNameType* T) {
-  return VisitTagDecl(T->getDecl());
+  return VisitTagDecl(T->getOriginalDecl()->getDefinitionOrSelf());
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitDependentNameType(
@@ -7360,7 +7362,8 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
       // that case, this may extend the argument from 1 bit to 8 bits.
       QualType IntegerType = ParamType;
       if (const EnumType *Enum = IntegerType->getAs<EnumType>())
-        IntegerType = Enum->getDecl()->getIntegerType();
+        IntegerType =
+            Enum->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
       Value = Value.extOrTrunc(IntegerType->isBitIntType()
                                    ? Context.getIntWidth(IntegerType)
                                    : Context.getTypeSize(IntegerType));
@@ -7458,7 +7461,8 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
 
     QualType IntegerType = ParamType;
     if (const EnumType *Enum = IntegerType->getAs<EnumType>()) {
-      IntegerType = Enum->getDecl()->getIntegerType();
+      IntegerType =
+          Enum->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
     }
 
     if (ParamType->isBooleanType()) {
@@ -7976,7 +7980,7 @@ static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
   // type of literal for it.
   QualType T = OrigT;
   if (const EnumType *ET = OrigT->getAs<EnumType>())
-    T = ET->getDecl()->getIntegerType();
+    T = ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
   Expr *E;
   if (T->isAnyCharacterType()) {

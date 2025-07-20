@@ -775,7 +775,7 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
 
   if (Init >= NumInits || !ILE->getInit(Init)) {
     if (const RecordType *RType = ILE->getType()->getAs<RecordType>())
-      if (!RType->getDecl()->isUnion())
+      if (!RType->getOriginalDecl()->isUnion())
         assert((Init < NumInits || VerifyOnly) &&
                "This ILE should have been expanded");
 
@@ -922,7 +922,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
     return;
 
   if (const RecordType *RType = ILE->getType()->getAs<RecordType>()) {
-    const RecordDecl *RDecl = RType->getDecl();
+    const RecordDecl *RDecl = RType->getOriginalDecl()->getDefinitionOrSelf();
     if (RDecl->isUnion() && ILE->getInitializedFieldInUnion()) {
       FillInEmptyInitForField(0, ILE->getInitializedFieldInUnion(), Entity, ILE,
                               RequiresSecondPass, FillWithNoInit);
@@ -1126,7 +1126,8 @@ int InitListChecker::numArrayElements(QualType DeclType) {
 }
 
 int InitListChecker::numStructUnionElements(QualType DeclType) {
-  RecordDecl *structDecl = DeclType->castAs<RecordType>()->getDecl();
+  RecordDecl *structDecl =
+      DeclType->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
   int InitializableMembers = 0;
   if (auto *CXXRD = dyn_cast<CXXRecordDecl>(structDecl))
     InitializableMembers += CXXRD->getNumBases();
@@ -1155,16 +1156,22 @@ static bool isIdiomaticBraceElisionEntity(const InitializedEntity &Entity) {
 
   // Allows elide brace initialization for aggregates with empty base.
   if (Entity.getKind() == InitializedEntity::EK_Base) {
-    auto *ParentRD =
-        Entity.getParent()->getType()->castAs<RecordType>()->getDecl();
+    auto *ParentRD = Entity.getParent()
+                         ->getType()
+                         ->castAs<RecordType>()
+                         ->getOriginalDecl()
+                         ->getDefinitionOrSelf();
     CXXRecordDecl *CXXRD = cast<CXXRecordDecl>(ParentRD);
     return CXXRD->getNumBases() == 1 && CXXRD->field_empty();
   }
 
   // Allow brace elision if the only subobject is a field.
   if (Entity.getKind() == InitializedEntity::EK_Member) {
-    auto *ParentRD =
-        Entity.getParent()->getType()->castAs<RecordType>()->getDecl();
+    auto *ParentRD = Entity.getParent()
+                         ->getType()
+                         ->castAs<RecordType>()
+                         ->getOriginalDecl()
+                         ->getDefinitionOrSelf();
     if (CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(ParentRD)) {
       if (CXXRD->getNumBases()) {
         return false;
@@ -4528,8 +4535,8 @@ static void TryConstructorInitialization(Sema &S,
 
   const RecordType *DestRecordType = DestType->getAs<RecordType>();
   assert(DestRecordType && "Constructor initialization requires record type");
-  CXXRecordDecl *DestRecordDecl
-    = cast<CXXRecordDecl>(DestRecordType->getDecl());
+  auto *DestRecordDecl = cast<CXXRecordDecl>(DestRecordType->getOriginalDecl())
+                             ->getDefinitionOrSelf();
 
   // Build the candidate set directly in the initialization sequence
   // structure, so that it will persist if we fail.
@@ -5050,8 +5057,8 @@ static void TryListInitialization(Sema &S,
     //     the underlying type of T, the program is ill-formed.
     auto *ET = DestType->getAs<EnumType>();
     if (S.getLangOpts().CPlusPlus17 &&
-        Kind.getKind() == InitializationKind::IK_DirectList &&
-        ET && ET->getDecl()->isFixed() &&
+        Kind.getKind() == InitializationKind::IK_DirectList && ET &&
+        ET->getOriginalDecl()->getDefinitionOrSelf()->isFixed() &&
         !S.Context.hasSameUnqualifiedType(E->getType(), DestType) &&
         (E->getType()->isIntegralOrUnscopedEnumerationType() ||
          E->getType()->isFloatingType())) {
@@ -5161,7 +5168,8 @@ static OverloadingResult TryRefInitWithConversionFunction(
       S.isCompleteType(Kind.getLocation(), T1)) {
     // The type we're converting to is a class type. Enumerate its constructors
     // to see if there is a suitable conversion.
-    CXXRecordDecl *T1RecordDecl = cast<CXXRecordDecl>(T1RecordType->getDecl());
+    auto *T1RecordDecl = cast<CXXRecordDecl>(T1RecordType->getOriginalDecl())
+                             ->getDefinitionOrSelf();
 
     for (NamedDecl *D : S.LookupConstructors(T1RecordDecl)) {
       auto Info = getConstructorInfo(D);
@@ -5184,7 +5192,8 @@ static OverloadingResult TryRefInitWithConversionFunction(
       }
     }
   }
-  if (T1RecordType && T1RecordType->getDecl()->isInvalidDecl())
+  if (T1RecordType &&
+      T1RecordType->getOriginalDecl()->getDefinitionOrSelf()->isInvalidDecl())
     return OR_No_Viable_Function;
 
   const RecordType *T2RecordType = nullptr;
@@ -5192,7 +5201,8 @@ static OverloadingResult TryRefInitWithConversionFunction(
       S.isCompleteType(Kind.getLocation(), T2)) {
     // The type we're converting from is a class type, enumerate its conversion
     // functions.
-    CXXRecordDecl *T2RecordDecl = cast<CXXRecordDecl>(T2RecordType->getDecl());
+    auto *T2RecordDecl = cast<CXXRecordDecl>(T2RecordType->getOriginalDecl())
+                             ->getDefinitionOrSelf();
 
     const auto &Conversions = T2RecordDecl->getVisibleConversionFunctions();
     for (auto I = Conversions.begin(), E = Conversions.end(); I != E; ++I) {
@@ -5228,7 +5238,8 @@ static OverloadingResult TryRefInitWithConversionFunction(
       }
     }
   }
-  if (T2RecordType && T2RecordType->getDecl()->isInvalidDecl())
+  if (T2RecordType &&
+      T2RecordType->getOriginalDecl()->getDefinitionOrSelf()->isInvalidDecl())
     return OR_No_Viable_Function;
 
   SourceLocation DeclLoc = Initializer->getBeginLoc();
@@ -5706,7 +5717,9 @@ static void TryValueInitialization(Sema &S,
   T = S.Context.getBaseElementType(T);
 
   if (const RecordType *RT = T->getAs<RecordType>()) {
-    if (CXXRecordDecl *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
+    if (CXXRecordDecl *ClassDecl =
+            dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
+      ClassDecl = ClassDecl->getDefinitionOrSelf();
       bool NeedZeroInitialization = true;
       // C++98:
       // -- if T is a class type (clause 9) with a user-declared constructor
@@ -5904,7 +5917,8 @@ static void TryOrBuildParenListInitialization(
     }
   } else if (auto *RT = Entity.getType()->getAs<RecordType>()) {
     bool IsUnion = RT->isUnionType();
-    const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+    const auto *RD =
+        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
     if (RD->isInvalidDecl()) {
       // Exit early to avoid confusion when processing members.
       // We do the same for braced list initialization in
@@ -6093,8 +6107,9 @@ static void TryUserDefinedConversion(Sema &S,
   if (const RecordType *DestRecordType = DestType->getAs<RecordType>()) {
     // The type we're converting to is a class type. Enumerate its constructors
     // to see if there is a suitable conversion.
-    CXXRecordDecl *DestRecordDecl
-      = cast<CXXRecordDecl>(DestRecordType->getDecl());
+    auto *DestRecordDecl =
+        cast<CXXRecordDecl>(DestRecordType->getOriginalDecl())
+            ->getDefinitionOrSelf();
 
     // Try to complete the type we're converting to.
     if (S.isCompleteType(Kind.getLocation(), DestType)) {
@@ -6130,8 +6145,9 @@ static void TryUserDefinedConversion(Sema &S,
     // We can only enumerate the conversion functions for a complete type; if
     // the type isn't complete, simply skip this step.
     if (S.isCompleteType(DeclLoc, SourceType)) {
-      CXXRecordDecl *SourceRecordDecl
-        = cast<CXXRecordDecl>(SourceRecordType->getDecl());
+      auto *SourceRecordDecl =
+          cast<CXXRecordDecl>(SourceRecordType->getOriginalDecl())
+              ->getDefinitionOrSelf();
 
       const auto &Conversions =
           SourceRecordDecl->getVisibleConversionFunctions();
@@ -7164,7 +7180,8 @@ static ExprResult CopyObject(Sema &S,
   Expr *CurInitExpr = (Expr *)CurInit.get();
   CXXRecordDecl *Class = nullptr;
   if (const RecordType *Record = T->getAs<RecordType>())
-    Class = cast<CXXRecordDecl>(Record->getDecl());
+    Class =
+        cast<CXXRecordDecl>(Record->getOriginalDecl())->getDefinitionOrSelf();
   if (!Class)
     return CurInit;
 
@@ -7319,8 +7336,8 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
 
   // Find constructors which would have been considered.
   OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
-  DeclContext::lookup_result Ctors =
-      S.LookupConstructors(cast<CXXRecordDecl>(Record->getDecl()));
+  DeclContext::lookup_result Ctors = S.LookupConstructors(
+      cast<CXXRecordDecl>(Record->getOriginalDecl())->getDefinitionOrSelf());
 
   // Perform overload resolution.
   OverloadCandidateSet::iterator Best;
@@ -8151,8 +8168,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
         // regardless of how we initialized the entity.
         QualType T = CurInit.get()->getType();
         if (const RecordType *Record = T->getAs<RecordType>()) {
-          CXXDestructorDecl *Destructor
-            = S.LookupDestructor(cast<CXXRecordDecl>(Record->getDecl()));
+          CXXDestructorDecl *Destructor =
+              S.LookupDestructor(cast<CXXRecordDecl>(Record->getOriginalDecl())
+                                     ->getDefinitionOrSelf());
           S.CheckDestructorAccess(CurInit.get()->getBeginLoc(), Destructor,
                                   S.PDiag(diag::err_access_dtor_temp) << T);
           S.MarkFunctionReferenced(CurInit.get()->getBeginLoc(), Destructor);
@@ -9224,7 +9242,8 @@ bool InitializationSequence::Diagnose(Sema &S,
 
             if (const RecordType *Record
                                  = Entity.getType()->getAs<RecordType>())
-              S.Diag(Record->getDecl()->getLocation(), diag::note_previous_decl)
+              S.Diag(Record->getOriginalDecl()->getLocation(),
+                     diag::note_previous_decl)
                   << S.Context.getCanonicalTagType(Record->getOriginalDecl());
           }
           break;

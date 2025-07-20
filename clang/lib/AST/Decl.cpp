@@ -2864,7 +2864,8 @@ VarDecl::needsDestruction(const ASTContext &Ctx) const {
 bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
   auto *Ty = getType()->getAs<RecordType>();
-  if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
+  if (!Ty ||
+      !Ty->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
     return false;
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List)
@@ -2879,7 +2880,10 @@ bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
 CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
   auto *Ty = getType()->getAs<RecordType>();
-  if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
+  if (!Ty)
+    return CharUnits::Zero();
+  const RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
+  if (!Ty || !RD->hasFlexibleArrayMember())
     return CharUnits::Zero();
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List || List->getNumInits() == 0)
@@ -2991,7 +2995,10 @@ bool ParmVarDecl::isDestroyedInCallee() const {
   // FIXME: isParamDestroyedInCallee() should probably imply
   // isDestructedType()
   const auto *RT = getType()->getAs<RecordType>();
-  if (RT && RT->getDecl()->isParamDestroyedInCallee() &&
+  if (RT &&
+      RT->getOriginalDecl()
+          ->getDefinitionOrSelf()
+          ->isParamDestroyedInCallee() &&
       getType().isDestructedType())
     return true;
 
@@ -3502,7 +3509,7 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
     while (const auto *TD = T->getAs<TypedefType>())
       T = TD->getDecl()->getUnderlyingType();
     const IdentifierInfo *II =
-        T->castAs<EnumType>()->getDecl()->getIdentifier();
+        T->castAs<EnumType>()->getOriginalDecl()->getIdentifier();
     if (II && II->isStr("__hot_cold_t"))
       Consume();
   }
@@ -4653,7 +4660,7 @@ bool FieldDecl::isAnonymousStructOrUnion() const {
     return false;
 
   if (const auto *Record = getType()->getAs<RecordType>())
-    return Record->getDecl()->isAnonymousStructOrUnion();
+    return Record->getOriginalDecl()->isAnonymousStructOrUnion();
 
   return false;
 }
@@ -4713,7 +4720,7 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
   const auto *RT = getType()->getAs<RecordType>();
   if (!RT)
     return false;
-  const RecordDecl *RD = RT->getDecl()->getDefinition();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
   if (!RD) {
     assert(isInvalidDecl() && "valid field has incomplete type");
     return false;
@@ -5138,7 +5145,7 @@ bool RecordDecl::isOrContainsUnion() const {
   if (const RecordDecl *Def = getDefinition()) {
     for (const FieldDecl *FD : Def->fields()) {
       const RecordType *RT = FD->getType()->getAs<RecordType>();
-      if (RT && RT->getDecl()->isOrContainsUnion())
+      if (RT && RT->getOriginalDecl()->isOrContainsUnion())
         return true;
     }
   }
@@ -5270,8 +5277,9 @@ const FieldDecl *RecordDecl::findFirstNamedDataMember() const {
       return I;
 
     if (const auto *RT = I->getType()->getAs<RecordType>())
-      if (const FieldDecl *NamedDataMember =
-              RT->getDecl()->findFirstNamedDataMember())
+      if (const FieldDecl *NamedDataMember = RT->getOriginalDecl()
+                                                 ->getDefinitionOrSelf()
+                                                 ->findFirstNamedDataMember())
         return NamedDataMember;
   }
 
@@ -5633,14 +5641,14 @@ void TypedefNameDecl::anchor() {}
 
 TagDecl *TypedefNameDecl::getAnonDeclWithTypedefName(bool AnyRedecl) const {
   if (auto *TT = getTypeSourceInfo()->getType()->getAs<TagType>()) {
-    auto *OwningTypedef = TT->getDecl()->getTypedefNameForAnonDecl();
+    auto *OwningTypedef = TT->getOriginalDecl()->getTypedefNameForAnonDecl();
     auto *ThisTypedef = this;
     if (AnyRedecl && OwningTypedef) {
       OwningTypedef = OwningTypedef->getCanonicalDecl();
       ThisTypedef = ThisTypedef->getCanonicalDecl();
     }
     if (OwningTypedef == ThisTypedef)
-      return TT->getDecl();
+      return TT->getOriginalDecl()->getDefinitionOrSelf();
   }
 
   return nullptr;
@@ -5649,7 +5657,7 @@ TagDecl *TypedefNameDecl::getAnonDeclWithTypedefName(bool AnyRedecl) const {
 bool TypedefNameDecl::isTransparentTagSlow() const {
   auto determineIsTransparent = [&]() {
     if (auto *TT = getUnderlyingType()->getAs<TagType>()) {
-      if (auto *TD = TT->getDecl()) {
+      if (auto *TD = TT->getOriginalDecl()) {
         if (TD->getName() != getName())
           return false;
         SourceLocation TTLoc = getLocation();

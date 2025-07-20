@@ -1401,8 +1401,8 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
     if (!First)
       OS << " -> ";
 
-    const auto *RD =
-        cast<CXXRecordDecl>(Base->getType()->castAs<RecordType>()->getDecl());
+    const auto *RD = cast<CXXRecordDecl>(
+        Base->getType()->castAs<RecordType>()->getOriginalDecl());
 
     if (Base->isVirtual())
       OS << "virtual ";
@@ -2213,7 +2213,7 @@ void TextNodeDumper::VisitTemplateSpecializationType(
 
 void TextNodeDumper::VisitInjectedClassNameType(
     const InjectedClassNameType *T) {
-  dumpDeclRef(T->getDecl());
+  dumpDeclRef(T->getOriginalDecl());
 }
 
 void TextNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *T) {

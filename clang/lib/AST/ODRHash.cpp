@@ -1069,7 +1069,7 @@ public:
   }
 
   void VisitInjectedClassNameType(const InjectedClassNameType *T) {
-    AddDecl(T->getDecl());
+    AddDecl(T->getOriginalDecl()->getDefinitionOrSelf());
     VisitType(T);
   }
 

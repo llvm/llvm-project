@@ -3232,8 +3232,10 @@ static bool tryMatchRecordTypes(ASTContext &Context,
   assert(lt && rt && lt != rt);
 
   if (!isa<RecordType>(lt) || !isa<RecordType>(rt)) return false;
-  RecordDecl *left = cast<RecordType>(lt)->getDecl();
-  RecordDecl *right = cast<RecordType>(rt)->getDecl();
+  RecordDecl *left =
+      cast<RecordType>(lt)->getOriginalDecl()->getDefinitionOrSelf();
+  RecordDecl *right =
+      cast<RecordType>(rt)->getOriginalDecl()->getDefinitionOrSelf();
 
   // Require union-hood to match.
   if (left->isUnion() != right->isUnion()) return false;
@@ -3847,7 +3849,9 @@ static bool IsVariableSizedType(QualType T) {
   if (T->isIncompleteArrayType())
     return true;
   const auto *RecordTy = T->getAs<RecordType>();
-  return (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember());
+  return (RecordTy && RecordTy->getOriginalDecl()
+                          ->getDefinitionOrSelf()
+                          ->hasFlexibleArrayMember());
 }
 
 static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
@@ -3893,7 +3897,9 @@ static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
           << TagTypeKind::Class; // Use "class" for Obj-C.
       IsInvalidIvar = true;
     } else if (const RecordType *RecordTy = IvarTy->getAs<RecordType>()) {
-      if (RecordTy->getDecl()->hasFlexibleArrayMember()) {
+      if (RecordTy->getOriginalDecl()
+              ->getDefinitionOrSelf()
+              ->hasFlexibleArrayMember()) {
         S.Diag(ivar->getLocation(),
                diag::err_objc_variable_sized_type_not_at_end)
             << ivar->getDeclName() << IvarTy;
@@ -5538,7 +5544,8 @@ void SemaObjC::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
       if (const RecordType *RecordTy =
               Context.getBaseElementType(Field->getType())
                   ->getAs<RecordType>()) {
-        CXXRecordDecl *RD = cast<CXXRecordDecl>(RecordTy->getDecl());
+        CXXRecordDecl *RD = cast<CXXRecordDecl>(RecordTy->getOriginalDecl())
+                                ->getDefinitionOrSelf();
         if (CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(RD)) {
           SemaRef.MarkFunctionReferenced(Field->getLocation(), Destructor);
           SemaRef.CheckDestructorAccess(

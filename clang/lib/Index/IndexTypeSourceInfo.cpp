@@ -117,7 +117,7 @@ public:
   }
 
   bool VisitTagTypeLoc(TagTypeLoc TL) {
-    TagDecl *D = TL.getDecl();
+    TagDecl *D = TL.getOriginalDecl();
     if (!IndexCtx.shouldIndexFunctionLocalSymbols() &&
         D->getParentFunctionOrMethod())
       return true;

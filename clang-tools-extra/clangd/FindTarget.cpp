@@ -878,7 +878,7 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
       Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
                                   L.getNameLoc(),
                                   /*IsDecl=*/false,
-                                  {L.getDecl()}});
+                                  {L.getOriginalDecl()}});
     }
 
     void VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc L) {
