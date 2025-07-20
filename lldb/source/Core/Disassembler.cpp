@@ -723,75 +723,83 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
 
   const size_t annotation_column = 150;
 
-  if (exe_ctx && exe_ctx->GetFramePtr()) {
+  auto annotate_variables = [&]() {
     StackFrame *frame = exe_ctx->GetFramePtr();
     TargetSP target_sp = exe_ctx->GetTargetSP();
-    if (frame && target_sp) {
-      addr_t current_pc = m_address.GetLoadAddress(target_sp.get());
-      addr_t original_pc = frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
-      if (frame->ChangePC(current_pc)) {
-        VariableListSP var_list_sp = frame->GetInScopeVariableList(true);
-        SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction);
-        addr_t func_load_addr = LLDB_INVALID_ADDRESS;
-        if (sc.function)
-          func_load_addr = sc.function->GetAddress().GetLoadAddress(target_sp.get());
+    if (!frame || !target_sp)
+      return;
 
-        // Only annotate if the current disassembly line is short enough
-        // to keep annotations aligned past the desired annotation_column.
-        if(ss.GetSizeOfLastLine() < annotation_column) {
+    addr_t current_pc = m_address.GetLoadAddress(target_sp.get());
+    addr_t original_pc = frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
 
-          std::vector<std::string> annotations;
+    if (!frame->ChangePC(current_pc))
+      return;
 
-          if (var_list_sp) {
-            for (size_t i = 0; i < var_list_sp->GetSize(); ++i) {
-              VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
-              if (!var_sp)
-                continue;
+    VariableListSP var_list_sp = frame->GetInScopeVariableList(true);
+    if (!var_list_sp)
+      return;
 
-              const char *name = var_sp->GetName().AsCString();
-              auto &expr_list = var_sp->LocationExpressionList();
-              if (!expr_list.IsValid())
-                continue;
-              // Handle std::optional<DWARFExpressionEntry>.
-              if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc)) {
-                auto entry = *entryOrErr;
+    SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction);
+    addr_t func_load_addr = LLDB_INVALID_ADDRESS;
+    if (sc.function)
+      func_load_addr = sc.function->GetAddress().GetLoadAddress(target_sp.get());
 
-                // Check if entry has a file_range, and filter on address if so.
-                if (!entry.file_range || entry.file_range->ContainsFileAddress(
-                        (current_pc - func_load_addr) + expr_list.GetFuncFileAddress())) {
-                  
-                  StreamString loc_str;
-                  ABI *abi = exe_ctx->GetProcessPtr()->GetABI().get();
-                  llvm::DIDumpOptions opts;
-                  opts.ShowAddresses = false;
-                  opts.PrintRegisterOnly = true; // <-- important: suppress DW_OP_... annotations, etc.
+    // Only annotate if the current disassembly line is short enough
+    // to keep annotations aligned past the desired annotation_column.
+    if (ss.GetSizeOfLastLine() >= annotation_column)
+      return;
 
-                  entry.expr->DumpLocationWithOptions(&loc_str, eDescriptionLevelBrief, abi, opts);
+    std::vector<std::string> annotations;
 
-                  // Only include if not empty
-                  llvm::StringRef loc_clean = llvm::StringRef(loc_str.GetString()).trim();
-                  if (!loc_clean.empty()) {
-                    annotations.push_back(llvm::formatv("{0} = {1}", name, loc_clean));
-                  }
-                }
-              }
-            }
+    for (size_t i = 0; i < var_list_sp->GetSize(); ++i) {
+      VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
+      if (!var_sp)
+        continue;
 
-            if (!annotations.empty()) {
-              ss.FillLastLineToColumn(annotation_column, ' ');
-              ss.PutCString(" ; ");
-              for (size_t i = 0; i < annotations.size(); ++i) {
-                if (i > 0)
-                  ss.PutCString(", ");
-                ss.PutCString(annotations[i]);
-              }
-            }
+      const char *name = var_sp->GetName().AsCString();
+      auto &expr_list = var_sp->LocationExpressionList();
+      if (!expr_list.IsValid())
+        continue;
+
+      // Handle std::optional<DWARFExpressionEntry>.
+      if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc)) {
+        auto entry = *entryOrErr;
+        // Check if entry has a file_range, and filter on address if so.
+        if (!entry.file_range || entry.file_range->ContainsFileAddress(
+                (current_pc - func_load_addr) + expr_list.GetFuncFileAddress())) {
+
+          StreamString loc_str;
+          ABI *abi = exe_ctx->GetProcessPtr()->GetABI().get();
+          llvm::DIDumpOptions opts;
+          opts.ShowAddresses = false;
+          opts.PrintRegisterOnly = true; // <-- important: suppress DW_OP_... annotations, etc.
+
+          entry.expr->DumpLocationWithOptions(&loc_str, eDescriptionLevelBrief, abi, opts);
+          
+          // Only include if not empty.
+          llvm::StringRef loc_clean = llvm::StringRef(loc_str.GetString()).trim();
+          if (!loc_clean.empty()) {
+            annotations.push_back(llvm::formatv("{0} = {1}", name, loc_clean));
           }
         }
-
-        frame->ChangePC(original_pc);
       }
     }
+
+    if (!annotations.empty()) {
+      ss.FillLastLineToColumn(annotation_column, ' ');
+      ss.PutCString(" ; ");
+      for (size_t i = 0; i < annotations.size(); ++i) {
+        if (i > 0)
+          ss.PutCString(", ");
+        ss.PutCString(annotations[i]);
+      }
+    }
+
+    frame->ChangePC(original_pc);
+  };
+
+  if (exe_ctx && exe_ctx->GetFramePtr()) {
+    annotate_variables();
   }
 
   if (!m_comment.empty()) {
@@ -802,6 +810,7 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
   }
   s->PutCString(ss.GetString());
 }
+
 
 bool Instruction::DumpEmulation(const ArchSpec &arch) {
   std::unique_ptr<EmulateInstruction> insn_emulator_up(
