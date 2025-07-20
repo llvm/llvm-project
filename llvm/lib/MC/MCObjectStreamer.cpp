@@ -119,7 +119,7 @@ void MCObjectStreamer::emitCFISections(bool EH, bool Debug) {
 void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
                                      SMLoc Loc) {
   MCStreamer::emitValueImpl(Value, Size, Loc);
-  MCFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getCurrentFragment();
 
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
@@ -168,7 +168,7 @@ void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // If there is a current fragment, mark the symbol as pointing into it.
   // Otherwise queue the label and set its fragment pointer when we emit the
   // next fragment.
-  MCFragment *F = getOrCreateDataFragment();
+  MCFragment *F = getCurrentFragment();
   Symbol->setFragment(F);
   Symbol->setOffset(F->getContents().size());
 
@@ -202,7 +202,7 @@ void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
     emitULEB128IntValue(IntValue);
     return;
   }
-  auto *F = getOrCreateDataFragment();
+  auto *F = getCurrentFragment();
   F->makeLEB(false, Value);
   newFragment();
 }
@@ -213,7 +213,7 @@ void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
     emitSLEB128IntValue(IntValue);
     return;
   }
-  auto *F = getOrCreateDataFragment();
+  auto *F = getCurrentFragment();
   F->makeLEB(true, Value);
   newFragment();
 }
@@ -312,7 +312,7 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
 
 void MCObjectStreamer::emitInstToData(const MCInst &Inst,
                                       const MCSubtargetInfo &STI) {
-  MCFragment *F = getOrCreateDataFragment();
+  MCFragment *F = getCurrentFragment();
 
   // Append the instruction to the data fragment.
   size_t FixupStartIndex = F->getFixups().size();
@@ -344,7 +344,7 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
 
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
                                           const MCSubtargetInfo &STI) {
-  auto *F = getOrCreateDataFragment();
+  auto *F = getCurrentFragment();
   SmallVector<char, 16> Data;
   SmallVector<MCFixup, 1> Fixups;
   getAssembler().getEmitter().encodeInstruction(Inst, Data, Fixups, STI);
@@ -417,7 +417,7 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
     return;
   }
 
-  auto *F = getOrCreateDataFragment();
+  auto *F = getCurrentFragment();
   F->Kind = MCFragment::FT_Dwarf;
   F->setDwarfAddrDelta(buildSymbolDiff(*this, Label, LastLabel, SMLoc()));
   F->setDwarfLineDelta(LineDelta);
@@ -449,7 +449,7 @@ void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
 void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                                  const MCSymbol *Label,
                                                  SMLoc Loc) {
-  auto *F = getOrCreateDataFragment();
+  auto *F = getCurrentFragment();
   F->Kind = MCFragment::FT_DwarfFrame;
   F->setDwarfAddrDelta(buildSymbolDiff(*this, Label, LastLabel, Loc));
   newFragment();
@@ -511,7 +511,7 @@ void MCObjectStreamer::emitCVFileChecksumOffsetDirective(unsigned FileNo) {
 
 void MCObjectStreamer::emitBytes(StringRef Data) {
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
-  MCFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getCurrentFragment();
   DF->appendContents(ArrayRef(Data.data(), Data.size()));
 }
 

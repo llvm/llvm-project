@@ -72,9 +72,6 @@ public:
   MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug) override;
 
-  // TODO: Change callers to use getCurrentFragment instead.
-  MCFragment *getOrCreateDataFragment() { return getCurrentFragment(); }
-
 protected:
   bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
 
