@@ -392,9 +392,6 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_EQ(V9.getKind(), Value::K_PtrOrObj);
   EXPECT_TRUE(V9.isManuallyAlloc());
 
-  if (llvm::Triple(llvm::sys::getDefaultTargetTriple()).isSystemZ())
-    GTEST_SKIP(); // Enum printing is broken for unknown reasons on SystemZ.
-
   Value V10;
   llvm::cantFail(Interp->ParseAndExecute(
       "enum D : unsigned int {Zero = 0, One}; One", &V10));
