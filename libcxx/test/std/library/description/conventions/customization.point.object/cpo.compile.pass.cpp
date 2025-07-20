@@ -18,6 +18,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_macros.h"
+
 // Test for basic properties of C++20 16.3.3.3.6 [customization.point.object].
 template <class CPO, class... Args>
 constexpr bool test(CPO& o, Args&&...) {
@@ -26,7 +28,7 @@ constexpr bool test(CPO& o, Args&&...) {
   static_assert(std::is_trivially_copyable_v<CPO>);
   static_assert(std::is_trivially_default_constructible_v<CPO>);
 
-  auto p = o;
+  auto p  = o;
   using T = decltype(p);
 
   // The type of a customization point object, ignoring cv-qualifiers, shall model semiregular.
@@ -89,11 +91,15 @@ static_assert(test(std::views::counted, a, 10));
 static_assert(test(std::views::drop, a, 10));
 //static_assert(test(std::views::drop_while, a, [](int x){ return x < 10; }));
 //static_assert(test(std::views::elements<0>, pairs));
-static_assert(test(std::views::filter, a, [](int x){ return x < 10; }));
+static_assert(test(std::views::filter, a, [](int x) { return x < 10; }));
 static_assert(test(std::views::join, arrays));
 //static_assert(test(std::views::split, a, 4));
 static_assert(test(std::views::lazy_split, a, 4));
 static_assert(test(std::views::reverse, a));
 static_assert(test(std::views::take, a, 10));
 //static_assert(test(std::views::take_while, a, [](int x){ return x < 10; }));
-static_assert(test(std::views::transform, a, [](int x){ return x + 1; }));
+static_assert(test(std::views::transform, a, [](int x) { return x + 1; }));
+
+#if TEST_STD_VER >= 23
+static_assert(test(std::views::zip_transform, [](int x, int y) { return x + y; }, a, a));
+#endif
