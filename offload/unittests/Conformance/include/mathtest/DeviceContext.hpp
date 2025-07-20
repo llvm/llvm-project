@@ -6,19 +6,19 @@
 #include "mathtest/ErrorHandling.hpp"
 #include "mathtest/Support.hpp"
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cassert>
 #include <cstddef>
 #include <memory>
-#include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
 namespace mathtest {
 
-std::size_t countDevices();
+const llvm::SetVector<llvm::StringRef> &getPlatforms();
 
 namespace detail {
 
@@ -34,8 +34,9 @@ class DeviceContext {
   // and enqueued memcpy, as well as device and host memory allocation.
 
 public:
-  // TODO: Add a constructor that also takes a 'Platform'.
-  explicit DeviceContext(std::size_t DeviceId = 0);
+  explicit DeviceContext(std::size_t GlobalDeviceId = 0);
+
+  explicit DeviceContext(llvm::StringRef Platform, std::size_t DeviceId = 0);
 
   template <typename T>
   ManagedBuffer<T> createManagedBuffer(std::size_t Size) const noexcept {
@@ -99,11 +100,9 @@ public:
     }
   }
 
-  [[nodiscard]] std::size_t getId() const noexcept { return DeviceId; }
+  [[nodiscard]] llvm::StringRef getName() const;
 
-  [[nodiscard]] std::string getName() const;
-
-  [[nodiscard]] std::string getPlatform() const;
+  [[nodiscard]] llvm::StringRef getPlatform() const;
 
 private:
   void getKernelImpl(ol_program_handle_t ProgramHandle,
@@ -114,7 +113,7 @@ private:
                         const Dim &GroupSize, const void *KernelArgs,
                         std::size_t KernelArgsSize) const noexcept;
 
-  std::size_t DeviceId;
+  std::size_t GlobalDeviceId;
   ol_device_handle_t DeviceHandle;
 };
 } // namespace mathtest
