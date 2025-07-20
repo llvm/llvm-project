@@ -343,9 +343,9 @@ public:
   bool getAllowAutoPadding() const { return AllowAutoPadding; }
   void setAllowAutoPadding(bool V) { AllowAutoPadding = V; }
 
-  // Content-related functions manage parent's storage using ContentStart and
+  //== Content-related functions manage parent's storage using ContentStart and
   // ContentSize.
-  void clearContents() { ContentEnd = ContentStart; }
+
   // Get a SmallVector reference. The caller should call doneAppending to update
   // `ContentEnd`.
   SmallVectorImpl<char> &getContentsForAppending() {
