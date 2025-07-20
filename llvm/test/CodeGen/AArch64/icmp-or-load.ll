@@ -4,9 +4,7 @@
 define i1 @loadzext_i8i8(ptr %p) {
 ; CHECK-LABEL: loadzext_i8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    ldrh w8, [x0]
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -23,9 +21,7 @@ define i1 @loadzext_i8i8(ptr %p) {
 define i1 @loadzext_c_i8i8(ptr %p) {
 ; CHECK-LABEL: loadzext_c_i8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    orr w8, w9, w8
+; CHECK-NEXT:    ldrh w8, [x0]
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -85,13 +81,7 @@ define i1 @loadzext_i8i8i8(ptr %p) {
 define i1 @loadzext_i8i8i8i8(ptr %p) {
 ; CHECK-LABEL: loadzext_i8i8i8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    ldrb w10, [x0, #2]
-; CHECK-NEXT:    ldrb w11, [x0, #3]
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w9, w10, w11
-; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -116,9 +106,7 @@ define i1 @loadzext_i8i8i8i8(ptr %p) {
 define i1 @load_i8i8(ptr %p) {
 ; CHECK-LABEL: load_i8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    ldrh w8, [x0]
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -133,9 +121,7 @@ define i1 @load_i8i8(ptr %p) {
 define i1 @load_i16i16(ptr %p) {
 ; CHECK-LABEL: load_i16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ldrh w9, [x0, #2]
-; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -182,11 +168,7 @@ define i1 @load_i64i64(ptr %p) {
 define i1 @load_i8i16i8(ptr %p) {
 ; CHECK-LABEL: load_i8i16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ldrb w9, [x0, #3]
-; CHECK-NEXT:    ldurh w10, [x0, #1]
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w10
+; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
