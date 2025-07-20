@@ -1308,7 +1308,7 @@ bool Dup(InterpState &S, CodePtr OpPC) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Pop(InterpState &S, CodePtr OpPC) {
-  S.Stk.pop<T>();
+  S.Stk.discard<T>();
   return true;
 }
 
@@ -1882,6 +1882,16 @@ bool FinishInitGlobal(InterpState &S, CodePtr OpPC);
 
 inline bool Dump(InterpState &S, CodePtr OpPC) {
   S.Stk.dump();
+  return true;
+}
+
+inline bool CheckNull(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_dereferencing_null);
+    return S.noteUndefinedBehavior();
+  }
   return true;
 }
 
