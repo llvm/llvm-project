@@ -134,7 +134,7 @@ uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
     return 0;
 
   const MCSection &NextSec = *SectionOrder[Next];
-  if (NextSec.isVirtualSection())
+  if (NextSec.isBssSection())
     return 0;
   return offsetToAlignment(EndAddr, NextSec.getAlign());
 }
@@ -277,7 +277,7 @@ void MachObjectWriter::writeSection(const MCAssembler &Asm,
   const MCSectionMachO &Section = cast<MCSectionMachO>(Sec);
 
   // The offset is unused for virtual sections.
-  if (Section.isVirtualSection()) {
+  if (Section.isBssSection()) {
     assert(Asm.getSectionFileSize(Sec) == 0 && "Invalid file size!");
     FileOffset = 0;
   }
@@ -692,13 +692,13 @@ void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm) {
   unsigned i = 0;
   // Compute the section layout order. Virtual sections must go last.
   for (MCSection &Sec : Asm) {
-    if (!Sec.isVirtualSection()) {
+    if (!Sec.isBssSection()) {
       SectionOrder.push_back(&Sec);
       cast<MCSectionMachO>(Sec).setLayoutOrder(i++);
     }
   }
   for (MCSection &Sec : Asm) {
-    if (Sec.isVirtualSection()) {
+    if (Sec.isBssSection()) {
       SectionOrder.push_back(&Sec);
       cast<MCSectionMachO>(Sec).setLayoutOrder(i++);
     }
@@ -895,7 +895,7 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
 
     VMSize = std::max(VMSize, Address + Size);
 
-    if (Sec.isVirtualSection())
+    if (Sec.isBssSection())
       continue;
 
     SectionDataSize = std::max(SectionDataSize, Address + Size);
@@ -938,7 +938,7 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
     unsigned Flags = Sec.getTypeAndAttributes();
     if (Sec.hasInstructions())
       Flags |= MachO::S_ATTR_SOME_INSTRUCTIONS;
-    if (!cast<MCSectionMachO>(Sec).isVirtualSection() &&
+    if (!cast<MCSectionMachO>(Sec).isBssSection() &&
         !isUInt<32>(SectionStart)) {
       getContext().reportError(
           SMLoc(), "cannot encode offset of section; object file too large");
