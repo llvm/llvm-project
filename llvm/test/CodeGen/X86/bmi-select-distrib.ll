@@ -132,8 +132,8 @@ define i16 @and_select_neg_i16(i1 %a0, i16 %a1) nounwind {
 ; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    negl %edx
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    movw $-1, %ax
-; X86-NEXT:    cmovnew %dx, %ax
+; X86-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; X86-NEXT:    cmovnel %edx, %eax
 ; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
@@ -143,8 +143,8 @@ define i16 @and_select_neg_i16(i1 %a0, i16 %a1) nounwind {
 ; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    negl %ecx
 ; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    movw $-1, %ax
-; X64-NEXT:    cmovnew %cx, %ax
+; X64-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
@@ -411,8 +411,8 @@ define i16 @and_select_sub_1_i16(i1 %a0, i16 %a1) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    leal -1(%ecx), %edx
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    movw $-1, %ax
-; X86-NEXT:    cmovnew %dx, %ax
+; X86-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; X86-NEXT:    cmovnel %edx, %eax
 ; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
@@ -422,8 +422,8 @@ define i16 @and_select_sub_1_i16(i1 %a0, i16 %a1) nounwind {
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    leal -1(%rsi), %ecx
 ; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    movw $-1, %ax
-; X64-NEXT:    cmovnew %cx, %ax
+; X64-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
