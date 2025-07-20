@@ -127,7 +127,6 @@ class X86AsmBackend : public MCAsmBackend {
   unsigned PrevInstOpcode = 0;
   MCBoundaryAlignFragment *PendingBA = nullptr;
   std::pair<MCFragment *, size_t> PrevInstPosition;
-  bool IsRightAfterData = false;
 
   uint8_t determinePaddingPrefix(const MCInst &Inst) const;
   bool isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const;
@@ -156,10 +155,13 @@ public:
       AlignBranchType = X86AlignBranchKindLoc;
     if (X86PadMaxPrefixSize.getNumOccurrences())
       TargetPrefixMax = X86PadMaxPrefixSize;
+
+    AllowAutoPadding =
+        AlignBoundary != Align(1) && AlignBranchType != X86::AlignBranchNone;
+    AllowEnhancedRelaxation =
+        AllowAutoPadding && TargetPrefixMax != 0 && X86PadForBranchAlign;
   }
 
-  bool allowAutoPadding() const override;
-  bool allowEnhancedRelaxation() const override;
   void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst,
                             const MCSubtargetInfo &STI);
   void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst);
@@ -365,14 +367,6 @@ static bool hasVariantSymbol(const MCInst &MI) {
   return false;
 }
 
-bool X86AsmBackend::allowAutoPadding() const {
-  return (AlignBoundary != Align(1) && AlignBranchType != X86::AlignBranchNone);
-}
-
-bool X86AsmBackend::allowEnhancedRelaxation() const {
-  return allowAutoPadding() && TargetPrefixMax != 0 && X86PadForBranchAlign;
-}
-
 /// X86 has certain instructions which enable interrupts exactly one
 /// instruction *after* the instruction which stores to SS.  Return true if the
 /// given instruction may have such an interrupt delay slot.
@@ -447,7 +441,7 @@ bool X86AsmBackend::canPadInst(const MCInst &Inst, MCObjectStreamer &OS) const {
     // semantic.
     return false;
 
-  if (IsRightAfterData)
+  if (isRightAfterData(OS.getCurrentFragment(), PrevInstPosition))
     // If this instruction follows any data, there is no clear
     // instruction boundary, inserting a nop/prefix would change semantic.
     return false;
@@ -456,6 +450,8 @@ bool X86AsmBackend::canPadInst(const MCInst &Inst, MCObjectStreamer &OS) const {
 }
 
 bool X86AsmBackend::canPadBranches(MCObjectStreamer &OS) const {
+  if (!OS.getAllowAutoPadding())
+    return false;
   assert(allowAutoPadding() && "incorrect initialization!");
 
   // We only pad in text section.
@@ -482,22 +478,28 @@ bool X86AsmBackend::needAlign(const MCInst &Inst) const {
           (AlignBranchType & X86::AlignBranchIndirect));
 }
 
+void X86_MC::emitInstruction(MCObjectStreamer &S, const MCInst &Inst,
+                             const MCSubtargetInfo &STI) {
+  bool AutoPadding = S.getAllowAutoPadding();
+  if (LLVM_LIKELY(!AutoPadding && !X86PadForAlign)) {
+    S.MCObjectStreamer::emitInstruction(Inst, STI);
+    return;
+  }
+
+  auto &Backend = static_cast<X86AsmBackend &>(S.getAssembler().getBackend());
+  Backend.emitInstructionBegin(S, Inst, STI);
+  S.MCObjectStreamer::emitInstruction(Inst, STI);
+  Backend.emitInstructionEnd(S, Inst);
+}
+
 /// Insert BoundaryAlignFragment before instructions to align branches.
 void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
                                          const MCInst &Inst, const MCSubtargetInfo &STI) {
-  // Used by canPadInst. Done here, because in emitInstructionEnd, the current
-  // fragment will have changed.
-  IsRightAfterData =
-      isRightAfterData(OS.getCurrentFragment(), PrevInstPosition);
-  bool CanPadInst = false;
-  bool AutoPadding = OS.getAllowAutoPadding();
-  if (LLVM_UNLIKELY(AutoPadding || X86PadForAlign)) {
-    CanPadInst = canPadInst(Inst, OS);
-    if (CanPadInst)
-      OS.getCurrentFragment()->setAllowAutoPadding(true);
-  }
+  bool CanPadInst = canPadInst(Inst, OS);
+  if (CanPadInst)
+    OS.getCurrentFragment()->setAllowAutoPadding(true);
 
-  if (!AutoPadding || !canPadBranches(OS))
+  if (!canPadBranches(OS))
     return;
 
   // NB: PrevInst only valid if canPadBranches is true.
@@ -552,7 +554,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
   PrevInstOpcode = Inst.getOpcode();
   PrevInstPosition = std::make_pair(CF, getSizeForInstFragment(CF));
 
-  if (!OS.getAllowAutoPadding() || !canPadBranches(OS))
+  if (!canPadBranches(OS))
     return;
 
   // PrevInst is only needed if canPadBranches. Copying an MCInst isn't cheap.
@@ -572,8 +574,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
   OS.newFragment();
 
   // Update the maximum alignment on the current section if necessary.
-  MCSection *Sec = OS.getCurrentSectionOnly();
-  Sec->ensureMinAlignment(AlignBoundary);
+  CF->getParent()->ensureMinAlignment(AlignBoundary);
 }
 
 std::optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
@@ -1543,14 +1544,6 @@ public:
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 };
 } // end anonymous namespace
-
-void X86_MC::emitInstruction(MCObjectStreamer &S, const MCInst &Inst,
-                             const MCSubtargetInfo &STI) {
-  auto &Backend = static_cast<X86AsmBackend &>(S.getAssembler().getBackend());
-  Backend.emitInstructionBegin(S, Inst, STI);
-  S.MCObjectStreamer::emitInstruction(Inst, STI);
-  Backend.emitInstructionEnd(S, Inst);
-}
 
 void X86ELFStreamer::emitInstruction(const MCInst &Inst,
                                      const MCSubtargetInfo &STI) {
