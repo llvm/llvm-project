@@ -83,8 +83,13 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     auto Fixed = getContents();
     auto Var = getVarContents();
     OS << " Size:" << Fixed.size();
-    if (getKind() != MCFragment::FT_Data)
+    if (getKind() != MCFragment::FT_Data) {
       OS << '+' << Var.size();
+      // FT_Align uses getVarContents to track the size, but the content is
+      // ignored and not useful.
+      if (getKind() == MCFragment::FT_Align)
+        Var = {};
+    }
     OS << " [";
     for (unsigned i = 0, e = Fixed.size(); i != e; ++i) {
       if (i) OS << ",";
