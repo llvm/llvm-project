@@ -8793,8 +8793,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with
   // NaNs if possible, bail out otherwise.
-  if (!VPlanTransforms::runPass(
-          VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath, *Plan))
+  if (!VPlanTransforms::runPass(VPlanTransforms::handleMaxMinNumReductions,
+                                *Plan))
     return nullptr;
 
   // Transform recipes to abstract recipes if it is legal and beneficial and
