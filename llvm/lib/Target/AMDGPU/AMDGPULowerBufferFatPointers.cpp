@@ -1583,15 +1583,13 @@ void SplitPtrStructs::killAndReplaceSplitInstructions(
     if (!SplitUsers.contains(I))
       continue;
 
-    SmallVector<DbgValueInst *> Dbgs;
-    findDbgValues(Dbgs, I);
-    for (auto *Dbg : Dbgs) {
-      IRB.SetInsertPoint(Dbg);
+    SmallVector<DbgVariableRecord *> Dbgs;
+    findDbgValues(I, Dbgs);
+    for (DbgVariableRecord *Dbg : Dbgs) {
       auto &DL = I->getDataLayout();
       assert(isSplitFatPtr(I->getType()) &&
              "We should've RAUW'd away loads, stores, etc. at this point");
-      auto *OffDbg = cast<DbgValueInst>(Dbg->clone());
-      copyMetadata(OffDbg, Dbg);
+      DbgVariableRecord *OffDbg = Dbg->clone();
       auto [Rsrc, Off] = getPtrParts(I);
 
       int64_t RsrcSz = DL.getTypeSizeInBits(Rsrc->getType());
@@ -1606,9 +1604,9 @@ void SplitPtrStructs::killAndReplaceSplitInstructions(
       if (OffExpr) {
         OffDbg->setExpression(*OffExpr);
         OffDbg->replaceVariableLocationOp(I, Off);
-        IRB.Insert(OffDbg);
+        OffDbg->insertBefore(Dbg);
       } else {
-        OffDbg->deleteValue();
+        OffDbg->eraseFromParent();
       }
       if (RsrcExpr) {
         Dbg->setExpression(*RsrcExpr);

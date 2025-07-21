@@ -73,6 +73,10 @@ public:
   getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                    TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                    const Instruction *I = nullptr) const override;
+
+  TTI::MemCmpExpansionOptions
+  enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
+
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
