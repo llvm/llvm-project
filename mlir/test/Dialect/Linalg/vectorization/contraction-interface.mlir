@@ -56,7 +56,7 @@ func.func @matmul_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 //      CHECK: %[[LOAD_A:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[A]]{{.*}}: tensor<?x?xf32>, vector<8x4xf32>
 //      CHECK: %[[LOAD_B:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[B]]{{.*}}: tensor<?x?xf32>, vector<4x16xf32>
 //      CHECK: %[[LOAD_C:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[C]]{{.*}}: tensor<?x?xf32>, vector<8x16xf32>
-//      CHECK: %[[CONTRACT:.*]] = vector.contract
+//      CHECK: %[[CONTRACT:.*]] = vector.mask{{.*}}{ vector.contract
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
@@ -90,7 +90,7 @@ func.func @matmul_dynamic_memref(%A: memref<?x?xf32>, %B: memref<?x?xf32>,
 //      CHECK: %[[LOAD_A:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[A]]{{.*}}: memref<?x?xf32>, vector<8x4xf32>
 //      CHECK: %[[LOAD_B:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[B]]{{.*}}: memref<?x?xf32>, vector<4x16xf32>
 //      CHECK: %[[LOAD_C:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[C]]{{.*}}: memref<?x?xf32>, vector<8x16xf32>
-//      CHECK: %[[CONTRACT:.*]] = vector.contract
+//      CHECK: %[[CONTRACT:.*]] = vector.mask{{.*}}{ vector.contract
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
@@ -124,7 +124,7 @@ func.func @matmul_dynamic_scalable(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 //      CHECK: %[[LOAD_A:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[A]]{{.*}}: tensor<?x?xf32>, vector<8x4xf32>
 //      CHECK: %[[LOAD_B:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[B]]{{.*}}: tensor<?x?xf32>, vector<4x[16]xf32>
 //      CHECK: %[[LOAD_C:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[C]]{{.*}}: tensor<?x?xf32>, vector<8x[16]xf32>
-//      CHECK: %[[CONTRACT:.*]] = vector.contract
+//      CHECK: %[[CONTRACT:.*]] = vector.mask{{.*}}{ vector.contract
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
@@ -197,7 +197,7 @@ func.func @matmul_dynamic_transpose(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 //      CHECK: %[[LOAD_A:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[A]]{{.*}}: tensor<?x?xf32>, vector<4x8xf32>
 //      CHECK: %[[LOAD_B:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[B]]{{.*}}: tensor<?x?xf32>, vector<16x4xf32>
 //      CHECK: %[[LOAD_C:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[C]]{{.*}}: tensor<?x?xf32>, vector<8x16xf32>
-//      CHECK: %[[CONTRACT:.*]] = vector.contract
+//      CHECK: %[[CONTRACT:.*]] = vector.mask{{.*}}{ vector.contract
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]

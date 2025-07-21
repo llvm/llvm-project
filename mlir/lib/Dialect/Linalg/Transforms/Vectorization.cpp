@@ -2191,14 +2191,15 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
   }
 
   // Create contraction.
-  Value contractOp = rewriter.create<vector::ContractionOp>(
+  Operation *contractOp = rewriter.create<vector::ContractionOp>(
       loc, /*lhs=*/vecOperands[0],
       /*rhs=*/vecOperands[1], /*acc=*/vecOperands[2],
       linalgOp.getIndexingMaps(), rewriter.getArrayAttr(iterAttrs), *maybeKind);
+  contractOp = state.maskOperation(rewriter, contractOp, linalgOp);
 
   // Store result.
-  Operation *write =
-      createWriteOrMaskedWrite(rewriter, loc, contractOp, outOperand->get());
+  Operation *write = createWriteOrMaskedWrite(
+      rewriter, loc, contractOp->getResult(0), outOperand->get());
 
   // Finalize.
   if (!write->getResults().empty())
