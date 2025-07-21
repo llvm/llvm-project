@@ -396,10 +396,6 @@ void IndexRecordHasher::hashNameSpec(const NestedNameSpecifier *nameSpec) {
     hashDecl(nameSpec->getAsNamespace()->getCanonicalDecl());
     break;
 
-  case NestedNameSpecifier::NamespaceAlias:
-    hashDecl(nameSpec->getAsNamespaceAlias()->getCanonicalDecl());
-    break;
-
   case NestedNameSpecifier::Global:
     break;
 

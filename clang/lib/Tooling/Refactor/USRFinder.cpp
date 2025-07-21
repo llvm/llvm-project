@@ -369,7 +369,7 @@ public:
   void handleNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
     while (NameLoc) {
       const NamespaceDecl *Decl =
-          NameLoc.getNestedNameSpecifier()->getAsNamespace();
+          NameLoc.getNestedNameSpecifier()->getAsNamespace()->getNamespace();
       checkOccurrence(Decl, NameLoc.getLocalBeginLoc(),
                       NameLoc.getLocalEndLoc());
       NameLoc = NameLoc.getPrefix();
