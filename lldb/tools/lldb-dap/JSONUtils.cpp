@@ -550,6 +550,15 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
   if (frame.IsArtificial() || frame.IsHidden())
     object.try_emplace("presentationHint", "subtle");
 
+  lldb::SBModule module = frame.GetModule();
+  if (module.IsValid()) {
+    std::string uuid = module.GetUUIDString();
+    if (!uuid.empty())
+      object.try_emplace("moduleId", uuid);
+    else
+      object.try_emplace("moduleId", module.GetFileSpec().GetFilename());
+  }
+
   return llvm::json::Value(std::move(object));
 }
 
