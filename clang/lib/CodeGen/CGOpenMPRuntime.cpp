@@ -7336,7 +7336,7 @@ private:
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
     // Find the pointer-attachment base-pointer for the given list, if any.
-    std::optional<AttachInfoTy> AttachInfo = findAttachBasePointer(Components);
+    const Expr *AttachPtrExpr = findAttachBasePointer(Components);
 
     if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
@@ -7382,7 +7382,8 @@ private:
         const auto *VD = dyn_cast<VarDecl>(I->getAssociatedDeclaration());
         if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
             !VD || VD->hasLocalStorage() ||
-            (AttachInfo && VD == AttachInfo->BasePtrDecl))
+            (isa_and_nonnull<DeclRefExpr>(AttachPtrExpr) &&
+             VD == cast<DeclRefExpr>(AttachPtrExpr)->getDecl()))
           BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
         else
           FirstPointerInComplexData = true;
@@ -7807,43 +7808,12 @@ private:
     if (!EncounteredME)
       PartialStruct.HasCompleteRecord = true;
 
-    // Track info for ATTACH entry generation
-    Address AttachBaseAddr = Address::invalid();
-    Address AttachFirstElemAddr = Address::invalid();
-    // For now, we are emitting ATTACH entries only when the
-    // "attach-base-pointer" is a vardecl itself, not an expression, or
-    // even a member of a struct.
-    bool IsEligibleForAttachMapping = AttachInfo && AttachInfo->BasePtrDecl &&
-                                      AttachInfo->BasePtrDecl == BaseDecl;
-    // Pointer attachment is needed at map-entering time or for declare
-    // mappers.
-    bool IsMapEnteringConstructOrMapper =
-        isa<const OMPDeclareMapperDecl *>(CurDir) ||
-        isOpenMPTargetMapEnteringDirective(
-            cast<const OMPExecutableDirective *>(CurDir)->getDirectiveKind());
-
-    if (IsEligibleForAttachMapping && IsMapEnteringConstructOrMapper) {
-      AttachBaseAddr = CGF.EmitLValue(AttachInfo->BasePtrExpr).getAddress();
-
-      if (auto *OASE = dyn_cast<ArraySectionExpr>(
-              Components.rbegin()->getAssociatedExpression())) {
-        AttachFirstElemAddr =
-            CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true).getAddress();
-      } else if (auto *ASE = dyn_cast<ArraySubscriptExpr>(
-                     Components.rbegin()->getAssociatedExpression())) {
-        AttachFirstElemAddr = CGF.EmitLValue(ASE).getAddress();
-      } else if (auto *ME = dyn_cast<MemberExpr>(
-                     Components.rbegin()->getAssociatedExpression())) {
-        AttachFirstElemAddr = CGF.EmitMemberExpr(ME).getAddress();
-      } else if (auto *UO = dyn_cast<UnaryOperator>(
-                     Components.rbegin()->getAssociatedExpression())) {
-        if (UO->getOpcode() == UO_Deref)
-          AttachFirstElemAddr = CGF.EmitLValue(UO).getAddress();
-      }
-    }
-
     // Handle ATTACH entries: delay if PartialStruct is being populated,
     // otherwise add immediately.
+    const auto &[AttachBaseAddr, AttachFirstElemAddr] = getAttachPtrPteeAddrs(
+        AttachPtrExpr,
+        /*AttachPteeExpr=*/Components.rbegin()->getAssociatedExpression(),
+        /*MapBaseDecl=*/BaseDecl, CGF, CurDir);
     if (AttachBaseAddr.isValid() && AttachFirstElemAddr.isValid()) {
       if (PartialStruct.Base.isValid()) {
         // We're populating PartialStruct, delay ATTACH entry addition until
@@ -8134,29 +8104,69 @@ private:
     }
   }
 
-  /// Result structure for findAttachBasePointer
-  struct AttachInfoTy {
-    const Expr *BasePtrExpr = nullptr;      // The pointer expression
-    const ValueDecl *BasePtrDecl = nullptr; // The pointer decl, if any
-    const Expr *PteeExpr = nullptr; // The array section/subscript expression
+  /// Returns Pointer/Pointee Addresses for attach mapping between \p
+  /// PointerExpr and \p PointeeExpr. for \p CurDir, when handling a map
+  /// clause with base \p MapBaseDecl.
+  static std::pair<Address, Address>
+  getAttachPtrPteeAddrs(const Expr *PointerExpr, const Expr *PointeeExpr,
+                        const ValueDecl *MapBaseDecl, CodeGenFunction &CGF,
+                        llvm::PointerUnion<const OMPExecutableDirective *,
+                                           const OMPDeclareMapperDecl *>
+                            CurDir) {
 
-    // Constructor with arguments
-    AttachInfoTy(const Expr *BasePtr, const ValueDecl *BaseDecl,
-                 const Expr *Ptee)
-        : BasePtrExpr(BasePtr), BasePtrDecl(BaseDecl), PteeExpr(Ptee) {}
-  };
+    Address AttachPtrAddr = Address::invalid();
+    Address AttachPteeAddr = Address::invalid();
+    if (!PointerExpr || !PointeeExpr)
+      return {AttachPtrAddr, AttachPteeAddr};
+
+    // Pointer attachment is needed at map-entering time or for declare
+    // mappers.
+    if (!isa<const OMPDeclareMapperDecl *>(CurDir) &&
+        !isOpenMPTargetMapEnteringDirective(
+            cast<const OMPExecutableDirective *>(CurDir)->getDirectiveKind()))
+      return {AttachPtrAddr, AttachPteeAddr};
+
+    const auto *DRE = dyn_cast<DeclRefExpr>(PointerExpr);
+    const VarDecl *PointerDecl =
+        !DRE ? nullptr : dyn_cast_if_present<VarDecl>(DRE->getDecl());
+
+    // For now, we are emitting ATTACH entries only when the
+    // "attach-base-pointer" is a vardecl itself, not an expression, or
+    // even a member of a struct.
+    if (!PointerDecl || PointerDecl != MapBaseDecl)
+      return {AttachPtrAddr, AttachPteeAddr};
+
+    AttachPtrAddr = CGF.EmitLValue(PointerExpr).getAddress();
+
+    if (auto *OASE = dyn_cast<ArraySectionExpr>(PointeeExpr)) {
+      AttachPteeAddr =
+          CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true).getAddress();
+    } else if (auto *ASE = dyn_cast<ArraySubscriptExpr>(PointeeExpr)) {
+      AttachPteeAddr = CGF.EmitLValue(ASE).getAddress();
+    } else if (auto *ME = dyn_cast<MemberExpr>(PointeeExpr)) {
+      AttachPteeAddr = CGF.EmitMemberExpr(ME).getAddress();
+    } else if (auto *UO = dyn_cast<UnaryOperator>(PointeeExpr)) {
+      if (UO->getOpcode() == UO_Deref)
+        AttachPteeAddr = CGF.EmitLValue(UO).getAddress();
+    }
+
+    return {AttachPtrAddr, AttachPteeAddr};
+  }
 
   // Traverse the list of Components to find the first pointer expression, which
   // should be the attachable-base-pointer for the current component-list.
   // For example, for:
   //  `map(pp->p->s.a[0])`, the base-pointer is `pp->p`, while the pointee is
   //  `pp->p->s.a[0]`.
-  static std::optional<AttachInfoTy> findAttachBasePointer(
+  static const Expr *findAttachBasePointer(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
 
     const auto *Begin = Components.begin();
     const auto *End = Components.end();
 
+    // Keep stripping away one component at a time, until we reach a pointer.
+    // The first pointer we encounter should be the base-pointer for
+    // pointer-attachment.
     for (const auto *I = Begin; I != End; ++I) {
       const Expr *CurrentExpr = I->getAssociatedExpression();
       if (!CurrentExpr)
@@ -8166,19 +8176,17 @@ private:
       if (NextI == End)
         break;
 
-      // Check if the next component (in forward direction) has a pointer type
       QualType NextType;
-
       if (const auto *NextDecl = NextI->getAssociatedDeclaration()) {
         NextType = NextDecl->getType().getNonReferenceType().getCanonicalType();
       } else if (const auto *NextExpr = NextI->getAssociatedExpression()) {
         // If NextExpr is an array-section, compute the result type using
         // getBaseOriginalType
-        if (const auto *ArraySection = dyn_cast<ArraySectionExpr>(NextExpr)) {
+        if (const auto *OASE = dyn_cast<ArraySectionExpr>(NextExpr)) {
           // Get the original base type, handling chains of array sections
           // properly
           QualType BaseType =
-              ArraySectionExpr::getBaseOriginalType(ArraySection->getBase());
+              ArraySectionExpr::getBaseOriginalType(OASE->getBase());
           if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
             NextType = ATy->getElementType();
           else
@@ -8201,12 +8209,10 @@ private:
       // The Next component is the first pointer expression encountered, so
       // that is the attachable-base-pointer for the current component-list.
       const Expr *BasePtrExpr = NextI->getAssociatedExpression();
-      const ValueDecl *BasePtrDecl = NextI->getAssociatedDeclaration();
-      const auto *BeginExpr = Begin->getAssociatedExpression();
-      return AttachInfoTy{BasePtrExpr, BasePtrDecl, BeginExpr};
+      return BasePtrExpr;
     }
 
-    return std::nullopt;
+    return nullptr;
   }
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
@@ -8394,15 +8400,15 @@ private:
             } else {
               auto PrevCI = std::next(CI->Components.rbegin());
               const auto *VarD = dyn_cast<VarDecl>(VD);
-              std::optional<AttachInfoTy> AttachInfo =
-                  findAttachBasePointer(CI->Components);
+              const Expr *AttachPtrExpr = findAttachBasePointer(CI->Components);
               if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
                   isa<MemberExpr>(IE) ||
                   !VD->getType().getNonReferenceType()->isPointerType() ||
                   PrevCI == CI->Components.rend() ||
                   isa<MemberExpr>(PrevCI->getAssociatedExpression()) || !VarD ||
                   VarD->hasLocalStorage() ||
-                  (AttachInfo && AttachInfo->BasePtrDecl == VD)) {
+                  (isa_and_nonnull<DeclRefExpr>(AttachPtrExpr) &&
+                   VD == cast<DeclRefExpr>(AttachPtrExpr)->getDecl())) {
                 CI->ForDeviceAddr = IsDevAddr;
                 CI->ReturnDevicePointer = true;
                 Found = true;
@@ -8660,8 +8666,7 @@ public:
                          MapCombinedInfoTy &AttachCombinedInfo,
                          MapFlagsArrayTy &CurTypes,
                          const StructRangeInfoTy &PartialStruct, bool IsMapThis,
-                         llvm::OpenMPIRBuilder &OMPBuilder,
-                         const ValueDecl *VD,
+                         llvm::OpenMPIRBuilder &OMPBuilder, const ValueDecl *VD,
                          unsigned OffsetForMemberOfFlag,
                          bool NotTargetParams) const {
     if (CurTypes.size() == 1 &&
