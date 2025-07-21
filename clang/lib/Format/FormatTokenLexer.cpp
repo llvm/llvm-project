@@ -1295,9 +1295,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
       case '\\':
         // The code preceding the loop and in the countLeadingWhitespace
         // function guarantees that Text is entirely whitespace, not including
-        // comments but including escaped newlines. So if 1 of these characters
-        // show up, then it has to be in an escape sequence.
-        assert(Text[i] == '\\' && [&]() -> bool {
+        // comments but including escaped newlines. So the character shows up,
+        // then it has to be in an escape sequence.
+        assert([&]() -> bool {
           size_t j = i + 1;
           while (j < Text.size() && isHorizontalWhitespace(Text[j]))
             ++j;
