@@ -380,7 +380,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
   for (BasicBlock &BB : *F) {
-    for (Instruction &I : BB) {
+    for (Instruction &I : make_early_inc_range(BB)) {
       auto Call = dyn_cast<CallInst>(&I);
       if (!Call)
         continue;
@@ -408,12 +408,16 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         if (!STI.isShader()) {
           Changed |= toSpvOverloadedIntrinsic(
               II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
+        } else {
+          II->eraseFromParent();
         }
         break;
       case Intrinsic::lifetime_end:
         if (!STI.isShader()) {
           Changed |= toSpvOverloadedIntrinsic(
               II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
+        } else {
+          II->eraseFromParent();
         }
         break;
       case Intrinsic::ptr_annotation:

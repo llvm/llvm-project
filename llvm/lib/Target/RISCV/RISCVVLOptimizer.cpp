@@ -33,6 +33,7 @@ namespace {
 class RISCVVLOptimizer : public MachineFunctionPass {
   const MachineRegisterInfo *MRI;
   const MachineDominatorTree *MDT;
+  const TargetInstrInfo *TII;
 
 public:
   static char ID;
@@ -1291,7 +1292,8 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     return false;
   }
 
-  assert(!RISCVII::elementsDependOnVL(RISCV::getRVVMCOpcode(MI.getOpcode())) &&
+  assert(!RISCVII::elementsDependOnVL(
+             TII->get(RISCV::getRVVMCOpcode(MI.getOpcode())).TSFlags) &&
          "Instruction shouldn't be supported if elements depend on VL");
 
   assert(MI.getOperand(0).isReg() &&
@@ -1484,7 +1486,6 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
 }
 
 bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
-  assert(DemandedVLs.size() == 0);
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -1494,6 +1495,10 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   if (!ST.hasVInstructions())
     return false;
+
+  TII = ST.getInstrInfo();
+
+  assert(DemandedVLs.empty());
 
   // For each instruction that defines a vector, compute what VL its
   // downstream users demand.
