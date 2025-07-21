@@ -2143,7 +2143,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       ++FI;
     }
   }
-  assert(FIB->getParent() == FBB && "Unexpectedly moved FIB?");
+
   FBB->erase(FBB->begin(), FIB);
 
   if (UpdateLiveIns)
