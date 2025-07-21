@@ -8238,12 +8238,24 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Ctx)) {
       // C++ [temp.mem]p2:
       //   A local class shall not have member templates.
-      if (RD->isLocalClass())
-        return Diag(TemplateParams->getTemplateLoc(),
-                    diag::err_template_inside_local_class)
-          << TemplateParams->getSourceRange();
-      else
-        return false;
+      if (RD->isLocalClass()) {
+        SourceLocation DiagLoc = TemplateParams->getTemplateLoc();
+        if (DiagLoc.isInvalid()) {
+          for (const NamedDecl *Param : *TemplateParams) {
+            if (Param && Param->getLocation().isValid()) {
+              DiagLoc = Param->getLocation();
+              break;
+            }
+          }
+        }
+        if (DiagLoc.isInvalid()) {
+          // Still no good location? Fall back to the class declaration itself
+          DiagLoc = RD->getLocation();
+        }
+        return Diag(DiagLoc, diag::err_template_inside_local_class)
+               << TemplateParams->getSourceRange();
+      }
+      return false;
     }
   }
 
