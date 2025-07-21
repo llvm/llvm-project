@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple amdgcn -target-feature +vmem-to-lds-load-insts -o /dev/null %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=READONLY %s
+// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx942 -target-feature +gws -o /dev/null %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=GWS %s
 
-// READONLY: warning: feature flag '+vmem-to-lds-load-insts' is ignored since the feature is read only [-Winvalid-command-line-argument]
+// GWS: warning: feature flag '+gws' is ignored since the feature is read only [-Winvalid-command-line-argument]
 
 kernel void test() {}
