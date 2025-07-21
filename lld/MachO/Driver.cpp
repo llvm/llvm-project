@@ -296,20 +296,42 @@ public:
 };
 using DeferredFiles = std::vector<DeferredFile>;
 
+class BackgroundQueue {
+  std::deque<std::function<void()>> queue;
+  std::thread *running;
+  std::mutex mutex;
+
+public:
+  void queueWork(std::function<void()> work, bool reap);
+};
+
+#include <chrono>
+
 // Most input files have been mapped but not yet paged in.
 // This code forces the page-ins on multiple threads so
 // the process is not stalled waiting on disk buffer i/o.
 void multiThreadedPageInBackground(DeferredFiles &deferred) {
+  using namespace std::chrono;
   static const size_t pageSize = Process::getPageSizeEstimate();
+  static const size_t largeArchive = 10 * 1024 * 1024;
+  static std::atomic_uint64_t totalBytes = 0;
+  std::atomic_int index = 0, included = 0;
+  auto t0 = high_resolution_clock::now();
 #if 0
   ThreadPoolStrategy oldStrategy = llvm::parallel::strategy;
   (void)llvm::make_scope_exit([&]() { llvm::parallel::strategy = oldStrategy; });
   llvm::parallel::strategy = llvm::hardware_concurrency(config->readThreads);
 
-  size_t totalBytes = parallelTransformReduce(deferred, 0,
+  parallelTransformReduce(deferred, 0,
     [](size_t acc, size_t size) { return acc + size; },
     [&](DeferredFile &file) {
       const StringRef &buffer = file.buffer.getBuffer();
+      size_t size = buffer.size();
+      totalBytes += size;
+      if (size > largeArchive)
+        return size;
+
+      included += 1;
       for (const char *page = buffer.data(), *end = page + buffer.size();
            page < end; page += pageSize)
         LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
@@ -317,9 +339,6 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
     }
     );
 #else
-  static size_t totalBytes = 0;
-  std::atomic_int index = 0;
-
   parallelFor(0, config->readThreads, [&](size_t I) {
     while (true) {
       int localIndex = index.fetch_add(1);
@@ -327,6 +346,10 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
         break;
       const StringRef &buff = deferred[localIndex].buffer.getBuffer();
       totalBytes += buff.size();
+      if (buff.size() > largeArchive)
+        continue;
+
+      included += 1;
 
       // Reference all file's mmap'd pages to load them into memory.
       for (const char *page = buff.data(), *end = page + buff.size();
@@ -335,18 +358,16 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
     }
   });
 #endif
+  auto dt = high_resolution_clock::now() - t0;
   if (getenv("LLD_MULTI_THREAD_PAGE"))
-    llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
-                 << deferred.size() << "\n";
+    llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/" << included
+                 << "/" << deferred.size() << "/"
+                 << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
 }
 
-static void multiThreadedPageIn(const DeferredFiles &deferred) {
-  static std::deque<std::unique_ptr<DeferredFiles>> queue;
-  static std::thread *running;
-  static std::mutex mutex;
-
+void BackgroundQueue::queueWork(std::function<void()> work, bool reap) {
   mutex.lock();
-  if (running && (queue.empty() || deferred.empty())) {
+  if (running && (queue.empty() || reap)) {
     mutex.unlock();
     running->join();
     mutex.lock();
@@ -354,24 +375,38 @@ static void multiThreadedPageIn(const DeferredFiles &deferred) {
     running = nullptr;
   }
 
-  if (!deferred.empty()) {
-    queue.emplace_back(std::make_unique<DeferredFiles>(deferred));
+  if (!reap) {
+    queue.emplace_back(work);
     if (!running)
       running = new std::thread([&]() {
+        bool shouldPop = false;
         while (true) {
           mutex.lock();
+          if (shouldPop)
+            queue.pop_front();
           if (queue.empty()) {
             mutex.unlock();
             break;
           }
-          auto deferred = std::move(queue.front());
-          queue.pop_front();
+          auto work = std::move(queue.front());
+          shouldPop = true;
           mutex.unlock();
-          multiThreadedPageInBackground(*deferred);
+          work();
         }
       });
   }
   mutex.unlock();
+}
+
+static void multiThreadedPageIn(const DeferredFiles &deferred,
+                                bool reap = false) {
+  static BackgroundQueue pageInQueue;
+  pageInQueue.queueWork(
+      [=]() {
+        DeferredFiles files = deferred;
+        multiThreadedPageInBackground(files);
+      },
+      reap);
 }
 
 static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
@@ -1425,14 +1460,10 @@ static void createFiles(const InputArgList &args) {
         archives.push_back(archive);
     }
 
-    if (!archiveContents.empty()) {
+    if (!archiveContents.empty())
       multiThreadedPageIn(archiveContents);
-      for (auto *archive : archives)
-        archive->addLazySymbols();
-    }
-
-    DeferredFiles reapThreads;
-    multiThreadedPageIn(reapThreads);
+    for (auto *archive : archives)
+      archive->addLazySymbols();
   }
 }
 
