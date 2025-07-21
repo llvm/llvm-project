@@ -667,15 +667,20 @@ Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
   Value *MaskOp = I->getArgOperand(1);
   Type *MaskTy = MaskOp->getType();
 
-  std::optional<uint64_t> TruncateToWidth;
+  std::optional<KnownBits> KnownPtrBits;
 
   if (!TTI->isNoopAddrSpaceCast(OldAddrSpace, NewAddrSpace)) {
+    KnownPtrBits =
+        TTI->computeKnownBitsAddrSpaceCast(OldAddrSpace, NewAddrSpace);
     // Get the mask width that is applicable to the new addrspace.
-    TruncateToWidth =
-        TTI->getAddrSpaceCastMaskWidth(OldAddrSpace, NewAddrSpace, MaskOp, I);
     // If there is no such mask, leave the ptrmask as-is and insert an
     // addrspacecast after it.
-    if (!TruncateToWidth) {
+    KnownBits KnownMaskBits = computeKnownBits(MaskOp, *DL, nullptr, I);
+    // Any masking only clearing the low bits will also apply in the new address
+    // space. (To check this: compute the number of mask bits that might be zero
+    // and compare it with the number of ptr bits that might be one.)
+    if (KnownMaskBits.getBitWidth() - KnownMaskBits.countMinLeadingOnes() >
+        KnownPtrBits->countMaxActiveBits()) {
       std::optional<BasicBlock::iterator> InsertPoint =
           I->getInsertionPointAfterDef();
       assert(InsertPoint && "insertion after ptrmask should be possible");
@@ -688,8 +693,8 @@ Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
   }
 
   IRBuilder<> B(I);
-  if (TruncateToWidth) {
-    MaskTy = B.getIntNTy(*TruncateToWidth);
+  if (KnownPtrBits) {
+    MaskTy = B.getIntNTy(KnownPtrBits->getBitWidth());
     MaskOp = B.CreateTrunc(MaskOp, MaskTy);
   }
   Value *NewPtr = operandWithNewAddressSpaceOrCreatePoison(

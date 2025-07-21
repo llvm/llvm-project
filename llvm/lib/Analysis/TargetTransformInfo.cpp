@@ -329,9 +329,10 @@ bool TargetTransformInfo::isNoopAddrSpaceCast(unsigned FromAS,
   return TTIImpl->isNoopAddrSpaceCast(FromAS, ToAS);
 }
 
-std::optional<uint64_t> TargetTransformInfo::getAddrSpaceCastMaskWidth(
-    unsigned FromAS, unsigned ToAS, Value *MaskOP, Instruction *I) const {
-  return TTIImpl->getAddrSpaceCastMaskWidth(FromAS, ToAS, MaskOP, I);
+KnownBits
+TargetTransformInfo::computeKnownBitsAddrSpaceCast(unsigned FromAS,
+                                                   unsigned ToAS) const {
+  return TTIImpl->computeKnownBitsAddrSpaceCast(FromAS, ToAS);
 }
 
 bool TargetTransformInfo::canHaveNonUndefGlobalInitializerInAddressSpace(
