@@ -70,4 +70,16 @@ def AmdgpuMaskedloadToLoadPass : Pass<"amdgpu-maskedload-to-load"> {
     "memref::MemRefDialect"
   ];
 }
+
+def AmdgpuFoldSubviewOpsPass : Pass<"amdgpu-fold-subview-ops"> {
+  let summary = "Fold subview operations into their parent operations";
+  let description = [{
+    This pass identifies `memref.subview` source of `GatherToLDSOp` and
+    attempts to fold the source op, potentially simplifying the overall
+    operation and improving performance.
+  }];
+  let dependentDialects = [
+    "memref::MemRefDialect"
+  ];
+}
 #endif // MLIR_DIALECT_AMDGPU_TRANSFORMS_PASSES_TD_
