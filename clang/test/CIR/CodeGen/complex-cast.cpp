@@ -276,7 +276,7 @@ void complex_to_complex_cast() {
 // LLVM: %[[REAL_FP_CAST:.*]] = fpext float %[[REAL]] to double
 // LLVM: %[[IMAG_FP_CAST:.*]] = fpext float %[[IMAG]] to double
 // LLVM: %[[TMP:.*]] = insertvalue { double, double } undef, double %[[REAL_FP_CAST]], 0
-// LLVM: %{{.*}} = insertvalue { double, double } %[[TMP]], double %5, 1
+// LLVM: %{{.*}} = insertvalue { double, double } %[[TMP]], double %[[IMAG_FP_CAST]], 1
 
 // OGCG: %[[REAL:.*]] = load float, ptr {{.*}}, align 4
 // OGCG: %[[IMAG:.*]] = load float, ptr getelementptr inbounds nuw ({ float, float }, ptr {{.*}}, i32 0, i32 1), align 4
