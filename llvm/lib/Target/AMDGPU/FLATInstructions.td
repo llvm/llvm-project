@@ -11,7 +11,8 @@ let WantsRoot = true in {
   def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [], -10>;
   def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [], -10>;
 
-  def GlobalSAddr : ComplexPattern<iPTR, 3, "SelectGlobalSAddr", [], [], -10>;
+  def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [], -10>;
+  def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [], -10>;
   def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [], -10>;
   def ScratchSVAddr : ComplexPattern<iPTR, 3, "SelectScratchSVAddr", [], [], -10>;
 }
@@ -182,7 +183,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
 
   bits<7> saddr;
   bits<8> vdst;
-  bits<6> cpol;
+  bits<12> cpol;
   bits<8> vdata; // vsrc
   bits<8> vaddr;
   bits<24> offset;
@@ -192,6 +193,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{31-26} = 0x3b;
   let Inst{39-32} = !if(ps.has_vdst, vdst, ?);
   let Inst{49} = ps.sve;
+  let Inst{7} = cpol{5}; // nv
   let Inst{54-53} = cpol{2-1}; // th{2-1}
   let Inst{52} = !if(ps.IsAtomicRet, 1, cpol{0}); // th{0}
   let Inst{51-50} = cpol{4-3}; // scope
@@ -200,6 +202,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{95-72} = !if(ps.has_offset, offset, ?);
 }
 
+// TODO: Rename to FlatSaddrTable, it now handles both global and flat GVS addressing mode.
 class GlobalSaddrTable <bit is_saddr, string Name = ""> {
   bit IsSaddr = is_saddr;
   string SaddrOp = Name;
@@ -1251,13 +1254,13 @@ class GlobalLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueTyp
 >;
 
 class FlatLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), vt:$in)),
-  (inst $saddr, $voffset, $offset, (i32 0), $in)
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), vt:$in)),
+  (inst $saddr, $voffset, $offset, $cpol, $in)
 >;
 
 class FlatLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset))),
-  (inst $saddr, $voffset, $offset, (i32 0))
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
+  (inst $saddr, $voffset, $offset, $cpol)
 >;
 
 class GlobalLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1271,26 +1274,26 @@ class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt>
 >;
 
 class FlatLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset))),
-  (inst $saddr, $voffset, $offset, 0)
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
+  (inst $saddr, $voffset, $offset, $cpol)
 >;
 
 class FlatStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                          ValueType vt> : GCNPat <
-  (node vt:$data, (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset)),
-  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset)
+  (node vt:$data, (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol)),
+  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset, $cpol)
 >;
 
-class GlobalAtomicSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
-                            ValueType vt, ValueType data_vt = vt> : GCNPat <
-  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), data_vt:$data)),
-  (inst $voffset, getVregSrcForVT<data_vt>.ret:$data, $saddr, $offset)
+class FlatAtomicSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ComplexPattern pat,
+                          ValueType vt, ValueType data_vt = vt> : GCNPat <
+  (vt (node (pat (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), data_vt:$data)),
+  (inst $voffset, getVregSrcForVT<data_vt>.ret:$data, $saddr, $offset, $cpol)
 >;
 
 class GlobalAtomicNoRtnSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                                  ValueType vt> : GCNPat <
-  (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), vt:$data),
-  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset)
+  (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), vt:$data),
+  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset, $cpol)
 >;
 
 class FlatStorePat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1319,6 +1322,12 @@ multiclass FlatAtomicNoRtnPatBase <string inst, string node, ValueType vt,
   let AddedComplexity = 1 in
   def : GCNPat <(vt (noRtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst) VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
+
+  def : FlatAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node),
+                           GlobalSAddr, vt, data_vt> {
+    let AddedComplexity = 9;
+    let SubtargetPredicate = HasFlatGVSMode;
+  }
 }
 
 multiclass FlatAtomicNoRtnPatWithAddrSpace<string inst, string node, string addrSpaceSuffix,
@@ -1337,6 +1346,11 @@ multiclass FlatAtomicRtnPatBase <string inst, string node, ValueType vt,
 
   def : GCNPat <(vt (rtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst#"_RTN") VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
+
+  def : FlatAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR_RTN"), rtnNode, GlobalSAddrGLC, vt, data_vt> {
+    let AddedComplexity = 8;
+    let SubtargetPredicate = HasFlatGVSMode;
+  }
 }
 
 multiclass FlatAtomicRtnPatWithAddrSpace<string inst, string intr, string addrSpaceSuffix,
@@ -1506,7 +1520,8 @@ multiclass GlobalFLATAtomicPatsNoRtnBase<string inst, string node, ValueType vt,
   def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), !cast<SDPatternOperator>(node), vt, data_vt>;
 
   let AddedComplexity = 13 in
-  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node), vt, data_vt>;
+  def : FlatAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node),
+                             GlobalSAddr, vt, data_vt>;
 }
 
 multiclass GlobalFLATAtomicPatsRtnBase<string inst, string node, ValueType vt,
@@ -1517,7 +1532,7 @@ multiclass GlobalFLATAtomicPatsRtnBase<string inst, string node, ValueType vt,
   def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst#"_RTN"), rtnNode, vt, data_vt>;
 
   let AddedComplexity = 12 in
-  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR_RTN"), rtnNode, vt, data_vt>;
+  def : FlatAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR_RTN"), rtnNode, GlobalSAddrGLC, vt, data_vt>;
 }
 
 multiclass GlobalFLATAtomicPatsNoRtn<string inst, string node, ValueType vt,
@@ -1723,6 +1738,7 @@ let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predi
 
 defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_nonext_32_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_DWORDX2, atomic_load_nonext_64_flat, i64>;
+defm : FlatLoadPats <FLAT_LOAD_DWORDX2, atomic_load_nonext_64_flat, v2i32>;
 
 defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i32>;
 defm : FlatStorePats <FLAT_STORE_SHORT, truncstorei16_flat, i32>;
@@ -1734,7 +1750,7 @@ defm : FlatStorePats <FLAT_STORE_DWORD, store_flat, vt>;
 
 foreach vt = VReg_64.RegTypes in {
 defm : FlatStorePats <FLAT_STORE_DWORDX2, store_flat, vt>;
-def : FlatLoadPat <FLAT_LOAD_DWORDX2, load_flat, vt>;
+defm : FlatLoadPats <FLAT_LOAD_DWORDX2, load_flat, vt>;
 }
 
 defm : FlatStorePats <FLAT_STORE_DWORDX3, store_flat, v3i32>;
@@ -1746,6 +1762,7 @@ defm : FlatStorePats <FLAT_STORE_DWORDX4, store_flat, vt>;
 
 defm : FlatStorePats <FLAT_STORE_DWORD, atomic_store_32_flat, i32>;
 defm : FlatStorePats <FLAT_STORE_DWORDX2, atomic_store_64_flat, i64>;
+defm : FlatStorePats <FLAT_STORE_DWORDX2, atomic_store_64_flat, v2i32>;
 defm : FlatStorePats <FLAT_STORE_BYTE, atomic_store_8_flat, i32>;
 defm : FlatStorePats <FLAT_STORE_SHORT, atomic_store_16_flat, i32>;
 
@@ -1791,12 +1808,16 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_"#as, f64>;
 
 } // end foreach as
 
-let SubtargetPredicate = isGFX12Plus in {
-  defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32 >;
+defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
+defm : FlatStorePats <FLAT_STORE_SHORT, store_flat, i16>;
 
-  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-    defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
-}
+} // End OtherPredicates = [HasFlatAddressSpace]
+
+let OtherPredicates = [isGFX12Plus] in
+defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
+
+let OtherPredicates = [isGFX12Plus, HasAtomicCSubNoRtnInsts] in
+defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
 
 let OtherPredicates = [HasD16LoadStore] in {
 defm : FlatStorePats <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;
@@ -1805,22 +1826,20 @@ defm : FlatStorePats <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
 // TODO: Handle atomic loads
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2f16>;
 
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2f16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2i16>;
+defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
 }
-
-} // End OtherPredicates = [HasFlatAddressSpace]
 
 let OtherPredicates = [HasFlatGlobalInsts] in {
 
@@ -1889,6 +1908,7 @@ defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX4, store_global, vt>;
 // appropriate waits.
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORD, atomic_load_nonext_32_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORDX2, atomic_load_nonext_64_global, i64>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORDX2, atomic_load_nonext_64_global, v2i32>;
 
 defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, truncstorei8_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, truncstorei16_global, i32>;
@@ -1928,6 +1948,7 @@ defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, atomic_store_8_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, atomic_store_16_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_DWORD, atomic_store_32_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX2, atomic_store_64_global, i64>;
+defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX2, atomic_store_64_global, v2i32>;
 
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_ADD", "atomic_load_add_global", i32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SUB", "atomic_load_sub_global", i32>;
@@ -2940,13 +2961,6 @@ multiclass VFLAT_Real_Base_gfx12<bits<8> op,
   VFLAT_Real_gfx12<op, name>;
 
 multiclass VFLAT_Real_AllAddr_gfx12<bits<8> op,
-                                      string name = get_FLAT_ps<NAME>.Mnemonic,
-                                      string alias = name> :
-  VFLAT_Real_Base_gfx12<op, name, alias> {
-  defm _SADDR : VFLAT_Real_gfx12<op, name>;
-}
-
-multiclass VGLOBAL_Real_AllAddr_gfx12<bits<8> op,
                                       string name = get_FLAT_ps<NAME>.Mnemonic,
                                       string alias = name> :
   VFLAT_Real_Base_gfx12<op, name, alias> {

@@ -1422,19 +1422,6 @@ def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
 }
 
-// Clang specific/exclusive options for OpenACC.
-def openacc_macro_override
-    : Separate<["-"], "fexperimental-openacc-macro-override">,
-      Visibility<[ClangOption, CC1Option]>,
-      Group<f_Group>,
-      HelpText<"Overrides the _OPENACC macro value for experimental testing "
-               "during OpenACC support development">;
-def openacc_macro_override_EQ
-    : Joined<["-"], "fexperimental-openacc-macro-override=">,
-      Alias<openacc_macro_override>;
-
-// End Clang specific/exclusive options for OpenACC.
-
 def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
@@ -3270,13 +3257,14 @@ defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
           "Perform ODR checks for decls in the global module fragment.">>,
   Group<f_Group>;
 
-def modules_reduced_bmi : Flag<["-"], "fmodules-reduced-bmi">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Generate the reduced BMI">,
-  MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
+defm modules_reduced_bmi : BoolOption<"f", "modules-reduced-bmi",
+  FrontendOpts<"GenReducedBMI">, DefaultFalse,
+  NegFlag<SetFalse>,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Generate the reduced BMI">>;
 
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<modules_reduced_bmi>;
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fmodules_reduced_bmi>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
@@ -7142,6 +7130,8 @@ def fintrinsic_modules_path : Separate<["-"], "fintrinsic-modules-path">,  Group
   HelpText<"Specify where to find the compiled intrinsic modules">,
   DocBrief<[{This option specifies the location of pre-compiled intrinsic modules,
   if they are not in the default location expected by the compiler.}]>;
+def fintrinsic_modules_path_EQ : Joined<["-"], "fintrinsic-modules-path=">,
+  Group<f_Group>, Alias<fintrinsic_modules_path>;
 
 defm backslash : OptInFC1FFlag<"backslash", "Specify that backslash in string introduces an escape character">;
 defm xor_operator : OptInFC1FFlag<"xor-operator", "Enable .XOR. as a synonym of .NEQV.">;

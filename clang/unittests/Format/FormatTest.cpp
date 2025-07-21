@@ -3185,7 +3185,7 @@ TEST_F(FormatTest, FormatsLabels) {
   // The opening brace may either be on the same unwrapped line as the colon or
   // on a separate one. The formatter should recognize both.
   Style = getLLVMStyle();
-  Style.BreakBeforeBraces = FormatStyle::BraceBreakingStyle::BS_Allman;
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
   verifyFormat("{\n"
                "  some_code();\n"
                "test_label:\n"
@@ -3206,7 +3206,7 @@ TEST_F(FormatTest, FormatsLabels) {
 
 TEST_F(FormatTest, MultiLineControlStatements) {
   FormatStyle Style = getLLVMStyleWithColumns(20);
-  Style.BreakBeforeBraces = FormatStyle::BraceBreakingStyle::BS_Custom;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_MultiLine;
   // Short lines should keep opening brace on same line.
   verifyFormat("if (foo) {\n"
@@ -3441,7 +3441,7 @@ TEST_F(FormatTest, MultiLineControlStatements) {
 
 TEST_F(FormatTest, BeforeWhile) {
   FormatStyle Style = getLLVMStyle();
-  Style.BreakBeforeBraces = FormatStyle::BraceBreakingStyle::BS_Custom;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
 
   verifyFormat("do {\n"
                "  foo();\n"
@@ -6680,6 +6680,17 @@ TEST_F(FormatTest, EscapedNewlines) {
                "private:         \\\n"
                "  int x(int a);",
                AlignLeft);
+
+  // Escaped with a trigraph.  The program just has to avoid crashing.
+  verifyNoCrash("#define A \?\?/\n"
+                "int i;\?\?/\n"
+                "  int j;");
+  verifyNoCrash("#define A \?\?/\r\n"
+                "int i;\?\?/\r\n"
+                "  int j;");
+  verifyNoCrash("#define A \?\?/\n"
+                "int i;",
+                getGoogleStyle(FormatStyle::LK_CSharp));
 
   // CRLF line endings
   verifyFormat("#define A \\\r\n  int i;  \\\r\n  int j;",
@@ -23779,7 +23790,7 @@ TEST_F(FormatTest, FormatsLambdas) {
   LLVMWithBeforeLambdaBody.BreakBeforeBraces = FormatStyle::BS_Custom;
   LLVMWithBeforeLambdaBody.BraceWrapping.BeforeLambdaBody = true;
   LLVMWithBeforeLambdaBody.AllowShortLambdasOnASingleLine =
-      FormatStyle::ShortLambdaStyle::SLS_None;
+      FormatStyle::SLS_None;
   verifyFormat("FctWithOneNestedLambdaInline_SLS_None(\n"
                "    []()\n"
                "    {\n"
@@ -23815,7 +23826,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                LLVMWithBeforeLambdaBody);
 
   LLVMWithBeforeLambdaBody.AllowShortLambdasOnASingleLine =
-      FormatStyle::ShortLambdaStyle::SLS_Empty;
+      FormatStyle::SLS_Empty;
   verifyFormat("FctWithOneNestedLambdaInline_SLS_Empty(\n"
                "    []()\n"
                "    {\n"
@@ -23862,7 +23873,7 @@ TEST_F(FormatTest, FormatsLambdas) {
       LLVMWithBeforeLambdaBody);
 
   LLVMWithBeforeLambdaBody.AllowShortLambdasOnASingleLine =
-      FormatStyle::ShortLambdaStyle::SLS_Inline;
+      FormatStyle::SLS_Inline;
   verifyFormat("FctWithOneNestedLambdaInline_SLS_Inline([]() { return 17; });",
                LLVMWithBeforeLambdaBody);
   verifyFormat("FctWithOneNestedLambdaEmpty_SLS_Inline([]() {});",
@@ -23893,7 +23904,7 @@ TEST_F(FormatTest, FormatsLambdas) {
       LLVMWithBeforeLambdaBody);
 
   LLVMWithBeforeLambdaBody.AllowShortLambdasOnASingleLine =
-      FormatStyle::ShortLambdaStyle::SLS_All;
+      FormatStyle::SLS_All;
   verifyFormat("FctWithOneNestedLambdaInline_SLS_All([]() { return 17; });",
                LLVMWithBeforeLambdaBody);
   verifyFormat("FctWithOneNestedLambdaEmpty_SLS_All([]() {});",
@@ -24025,7 +24036,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                LLVMWithBeforeLambdaBody);
 
   LLVMWithBeforeLambdaBody.AllowShortLambdasOnASingleLine =
-      FormatStyle::ShortLambdaStyle::SLS_None;
+      FormatStyle::SLS_None;
 
   verifyFormat("auto select = [this]() -> const Library::Object *\n"
                "{\n"
@@ -24273,7 +24284,7 @@ TEST_F(FormatTest, LambdaWithLineComments) {
   LLVMWithBeforeLambdaBody.BreakBeforeBraces = FormatStyle::BS_Custom;
   LLVMWithBeforeLambdaBody.BraceWrapping.BeforeLambdaBody = true;
   LLVMWithBeforeLambdaBody.AllowShortLambdasOnASingleLine =
-      FormatStyle::ShortLambdaStyle::SLS_All;
+      FormatStyle::SLS_All;
 
   verifyFormat("auto k = []() { return; }", LLVMWithBeforeLambdaBody);
   verifyFormat("auto k = []() // comment\n"
@@ -28371,9 +28382,14 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "Foo &operator-(Foo &);",
                Style);
 
-  Style.ReferenceAlignment = FormatStyle::ReferenceAlignmentStyle::RAS_Left;
+  Style.ReferenceAlignment = FormatStyle::RAS_Left;
   verifyFormat("[[nodiscard]]\n"
                "Foo& operator-(Foo&);",
+               Style);
+
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  verifyFormat("[[deprecated]]\n"
+               "void f() = delete;",
                Style);
 }
 
