@@ -30,6 +30,7 @@
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
+#include "llvm/BinaryFormat/SFrame.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
@@ -38,6 +39,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocationResolver.h"
+#include "llvm/Object/SFrameParser.h"
 #include "llvm/Object/StackMapParser.h"
 #include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/AMDGPUMetadata.h"
@@ -225,6 +227,8 @@ public:
   void printArchSpecificInfo() override;
   void printStackMap() const override;
   void printMemtag() override;
+  void printSectionsAsSFrame(ArrayRef<std::string> Sections) override;
+
   ArrayRef<uint8_t> getMemtagGlobalsSectionContents(uint64_t ExpectedAddr);
 
   // Hash histogram shows statistics of how efficient the hash was for the
@@ -6427,6 +6431,61 @@ template <typename ELFT> void ELFDumper<ELFT>::printMemtag() {
   }
 
   printMemtag(DynamicEntries, AndroidNoteDesc, GlobalDescriptors);
+}
+
+template <typename ELFT>
+void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
+  constexpr endianness E = ELFT::Endianness;
+  for (object::SectionRef Section :
+       getSectionRefsByNameOrIndex(ObjF, Sections)) {
+    // Validity of sections names checked in getSectionRefsByNameOrIndex.
+    StringRef SectionName = cantFail(Section.getName());
+
+    DictScope SectionScope(W,
+                           formatv("SFrame section '{0}'", SectionName).str());
+
+    StringRef SectionContent;
+    if (Error Err = Section.getContents().moveInto(SectionContent)) {
+      reportWarning(std::move(Err), FileName);
+      continue;
+    }
+
+    Expected<object::SFrameParser<E>> Parser =
+        object::SFrameParser<E>::create(arrayRefFromStringRef(SectionContent));
+    if (!Parser) {
+      reportWarning(createError("invalid sframe section: " +
+                                toString(Parser.takeError())),
+                    FileName);
+      continue;
+    }
+
+    DictScope HeaderScope(W, "Header");
+
+    const sframe::Preamble<E> &Preamble = Parser->getPreamble();
+    W.printHex("Magic", Preamble.Magic.value());
+    W.printEnum("Version", Preamble.Version.value(), sframe::getVersions());
+    W.printFlags("Flags", Preamble.Flags.value(), sframe::getFlags());
+
+    const sframe::Header<E> &Header = Parser->getHeader();
+    W.printEnum("ABI", Header.ABIArch.value(), sframe::getABIs());
+
+    W.printNumber(("CFA fixed FP offset" +
+                   Twine(Parser->usesFixedFPOffset() ? "" : " (unused)"))
+                      .str(),
+                  Header.CFAFixedFPOffset.value());
+
+    W.printNumber(("CFA fixed RA offset" +
+                   Twine(Parser->usesFixedRAOffset() ? "" : " (unused)"))
+                      .str(),
+                  Header.CFAFixedRAOffset.value());
+
+    W.printNumber("Auxiliary header length", Header.AuxHdrLen.value());
+    W.printNumber("Num FDEs", Header.NumFDEs.value());
+    W.printNumber("Num FREs", Header.NumFREs.value());
+    W.printNumber("FRE subsection length", Header.FRELen.value());
+    W.printNumber("FDE subsection offset", Header.FDEOff.value());
+    W.printNumber("FRE subsection offset", Header.FREOff.value());
+  }
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printELFLinkerOptions() {

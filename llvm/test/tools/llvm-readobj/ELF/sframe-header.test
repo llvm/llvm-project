@@ -1,0 +1,148 @@
+## Check parsing and dumping of the SFrame header.
+# RUN: yaml2obj --docnum=1 %s -o %t.1
+# RUN: llvm-readobj --sframe=.sframe_bad_sh_size --sframe=.sframe_1b \
+# RUN:   --sframe=.sframe_bad_magic --sframe=.sframe_bad_version \
+# RUN:   --sframe=.sframe_6b --sframe=.sframe_header %t.1 2>&1 | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines \
+# RUN:   -DFILE=%t.1 --check-prefix=CASE1
+
+## Check big-endian support and the handling of --sframe argument default.
+# RUN: yaml2obj --docnum=2 %s -o %t.2
+# RUN: llvm-readobj --sframe %t.2 2>&1 | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines \
+# RUN:   -DFILE=%t.2 --check-prefix=CASE2
+
+## Check handling of corrupted elf files (bad sh_name)
+# RUN: yaml2obj --docnum=3 %s -o %t.3
+# RUN: not llvm-readobj --sframe %t.3 2>&1 | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines \
+# RUN:   -DFILE=%t.3 --check-prefix=CASE3
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+Sections:
+  - Name:  .sframe_bad_sh_size
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ShSize: 0xfffff
+# CASE1-LABEL:SFrame section '.sframe_bad_sh_size' {
+#       CASE1:{{.*}}: warning: '[[FILE]]': The end of the file was unexpectedly encountered
+  - Name:  .sframe_1b
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [ 0x00 ]
+# CASE1-LABEL:SFrame section '.sframe_1b' {
+#       CASE1:{{.*}}: warning: '[[FILE]]': invalid sframe section: unexpected end of data at offset 0x1 while reading [0x0, 0x4)
+
+  - Name:  .sframe_bad_magic
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [ 0xde, 0xad, 0xbe, 0xef]
+# CASE1-LABEL:SFrame section '.sframe_bad_magic' {
+#       CASE1:{{.*}}: warning: '[[FILE]]': invalid sframe section: invalid magic number (0xadde)
+
+  - Name:  .sframe_bad_version
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [
+      0xe2, 0xde, 0x01, 0x00  # Preamble (magic, version, flags)
+    ]
+# CASE1-LABEL:SFrame section '.sframe_bad_version' {
+#       CASE1:{{.*}}: warning: '[[FILE]]': invalid sframe section: invalid/unsupported version number (1)
+
+  - Name:  .sframe_6b
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [
+      0xe2, 0xde, 0x02, 0x00,  # Preamble (magic, version, flags)
+      0x01, 0x02
+    ]
+
+# CASE1-LABEL:SFrame section '.sframe_6b' {
+#       CASE1:{{.*}}: warning: '[[FILE]]': invalid sframe section: unexpected end of data at offset 0x6 while reading [0x0, 0x1c)
+
+  - Name:  .sframe_header
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [
+      0xe2, 0xde, 0x02, 0x06,  # Preamble (magic, version, flags)
+      # Header:
+      0x03, 0x42, 0x47, 0x00,  # ABI, Fixed FP offset, Fixed RA Offset, AUX header length
+      0x01, 0x00, 0x00, 0x00,  # Number of FDEs
+      0x10, 0x00, 0x00, 0x00,  # Number of FREs
+      0x00, 0x10, 0x00, 0x00,  # FRE length
+      0x04, 0x00, 0x00, 0x00,  # FDE offset
+      0x00, 0x01, 0x00, 0x00,  # FRE offset
+    ]
+# CASE1-LABEL:SFrame section '.sframe_header' {
+#       CASE1:  Header {
+#  CASE1-NEXT:    Magic: 0xDEE2
+#  CASE1-NEXT:    Version: V2 (0x2)
+#  CASE1-NEXT:    Flags [ (0x6)
+#  CASE1-NEXT:      FDEFuncStartPCRel (0x4){{ *}}
+#  CASE1-NEXT:      FramePointer (0x2){{ *}}
+#  CASE1-NEXT:    ]
+#  CASE1-NEXT:    ABI: AMD64EndianLittle (0x3)
+#  CASE1-NEXT:    CFA fixed FP offset (unused): 66
+#  CASE1-NEXT:    CFA fixed RA offset: 71
+#  CASE1-NEXT:    Auxiliary header length: 0
+#  CASE1-NEXT:    Num FDEs: 1
+#  CASE1-NEXT:    Num FREs: 16
+#  CASE1-NEXT:    FRE subsection length: 4096
+#  CASE1-NEXT:    FDE subsection offset: 4
+#  CASE1-NEXT:    FRE subsection offset: 256
+#  CASE1-NEXT:  }
+#  CASE1-NEXT:}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2MSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .sframe
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [
+      0xde, 0xe2, 0x02, 0x01,  # Preamble (magic, version, flags)
+      # Header:
+      0x01, 0x42, 0x47, 0x00,  # ABI, Fixed FP offset, Fixed RA Offset, AUX header length
+      0x00, 0x00, 0x00, 0x01,  # Number of FDEs
+      0x00, 0x00, 0x00, 0x10,  # Number of FREs
+      0x00, 0x00, 0x10, 0x00,  # FRE length
+      0x00, 0x00, 0x00, 0x04,  # FDE offset
+      0x00, 0x00, 0x01, 0x00,  # FRE offset
+    ]
+# CASE2-LABEL:SFrame section '.sframe' {
+#       CASE2:  Header {
+#  CASE2-NEXT:    Magic: 0xDEE2
+#  CASE2-NEXT:    Version: V2 (0x2)
+#  CASE2-NEXT:    Flags [ (0x1)
+#  CASE2-NEXT:      FDESorted (0x1){{ *}}
+#  CASE2-NEXT:    ]
+#  CASE2-NEXT:    ABI: AArch64EndianBig (0x1)
+#  CASE2-NEXT:    CFA fixed FP offset (unused): 66
+#  CASE2-NEXT:    CFA fixed RA offset (unused): 71
+#  CASE2-NEXT:    Auxiliary header length: 0
+#  CASE2-NEXT:    Num FDEs: 1
+#  CASE2-NEXT:    Num FREs: 16
+#  CASE2-NEXT:    FRE subsection length: 4096
+#  CASE2-NEXT:    FDE subsection offset: 4
+#  CASE2-NEXT:    FRE subsection offset: 256
+#  CASE2-NEXT:  }
+#  CASE2-NEXT:}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2MSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .corrupted
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ShName: 0x10000
+# CASE3:{{.*}}: error: '[[FILE]]': a section [index 1] has an invalid sh_name (0x10000) offset which goes past the end of the section name string table
