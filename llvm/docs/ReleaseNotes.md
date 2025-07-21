@@ -76,6 +76,10 @@ Changes to the LLVM IR
   guaranteed to start with a `bti` or `endbr64` instruction, where
   those exist.
 
+* The `ptrtoaddr` instruction was introduced. This instruction returns the
+  address component of a pointer type variable but unlike `ptrtoint` does not
+  capture provenance ([#125687](https://github.com/llvm/llvm-project/pull/125687)).
+
 Changes to LLVM infrastructure
 ------------------------------
 
