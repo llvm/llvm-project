@@ -87,39 +87,39 @@ typedef struct omp_interop_val_t {
   const kmp_interop_type_t interop_type;
   const intptr_t device_id;
   omp_vendor_id_t vendor_id = omp_vendor_llvm;
-  omp_foreign_runtime_id_t fr_id = omp_fr_none;
+  tgt_foreign_runtime_id_t fr_id = tgt_fr_none;
   interop_attrs_t attrs{false, 0}; // Common prefer specification attributes
   int64_t impl_attrs = 0; // Implementation prefer specification attributes
 
-  void *RTLProperty = nullptr; // Plugin dependent information
+  void *rtl_property = nullptr; // Plugin dependent information
   // For implicitly created Interop objects (e.g., from a dispatch construct)
   // who owns the object
-  int OwnerGtid = -1;
+  int owner_gtid = -1;
   // Marks whether the object was requested since the last time it was synced
-  bool Clean = true;
+  bool clean = true;
 
   typedef llvm::SmallVector<omp_interop_cb_instance_t> callback_list_t;
 
-  callback_list_t CompletionCbs;
+  callback_list_t completion_cbs;
 
   void reset() {
-    OwnerGtid = -1;
+    owner_gtid = -1;
     markClean();
     clearCompletionCbs();
   }
 
   llvm::Expected<DeviceTy &> getDevice() const;
 
-  bool hasOwner() const { return OwnerGtid != -1; }
+  bool hasOwner() const { return owner_gtid != -1; }
 
-  void setOwner(int gtid) { OwnerGtid = gtid; }
-  bool isOwnedBy(int gtid) { return OwnerGtid == gtid; }
+  void setOwner(int gtid) { owner_gtid = gtid; }
+  bool isOwnedBy(int gtid) { return owner_gtid == gtid; }
   bool isCompatibleWith(int32_t InteropType, const interop_spec_t &Spec);
   bool isCompatibleWith(int32_t InteropType, const interop_spec_t &Spec,
                         int64_t DeviceNum, int gtid);
-  void markClean() { Clean = true; }
-  void markDirty() { Clean = false; }
-  bool isClean() const { return Clean; }
+  void markClean() { clean = true; }
+  void markDirty() { clean = false; }
+  bool isClean() const { return clean; }
 
   int32_t flush(DeviceTy &Device);
   int32_t sync_barrier(DeviceTy &Device);
@@ -127,14 +127,14 @@ typedef struct omp_interop_val_t {
   int32_t release(DeviceTy &Device);
 
   void addCompletionCb(ompx_interop_cb_t *cb, void *data) {
-    CompletionCbs.push_back(omp_interop_cb_instance_t(cb, data));
+    completion_cbs.push_back(omp_interop_cb_instance_t(cb, data));
   }
 
-  int numCompletionCbs() const { return CompletionCbs.size(); }
-  void clearCompletionCbs() { CompletionCbs.clear(); }
+  int numCompletionCbs() const { return completion_cbs.size(); }
+  void clearCompletionCbs() { completion_cbs.clear(); }
 
   void runCompletionCbs() {
-    for (auto &cbInstance : CompletionCbs)
+    for (auto &cbInstance : completion_cbs)
       cbInstance(this);
     clearCompletionCbs();
   }

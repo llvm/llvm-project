@@ -69,8 +69,8 @@ const char *getVendorIdToStr(const omp_vendor_id_t VendorId) {
 static const char *ForeignRuntimeStrTbl[] = {
     "none", "cuda", "cuda_driver", "opencl",
     "sycl", "hip",  "level_zero",  "hsa"};
-const char *getForeignRuntimeIdToStr(const omp_foreign_runtime_id_t FrId) {
-  if (FrId < omp_fr_none || FrId >= omp_fr_last)
+const char *getForeignRuntimeIdToStr(const tgt_foreign_runtime_id_t FrId) {
+  if (FrId < tgt_fr_none || FrId >= tgt_fr_last)
     return ("unknown");
   return ForeignRuntimeStrTbl[FrId];
 }
@@ -236,12 +236,12 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
   omp_interop_val_t *Interop = omp_interop_none;
   auto InteropSpec = Device.RTL->select_interop_preference(
       DeviceNum, InteropType, NumPrefers, Prefers);
-  if (InteropSpec.fr_id == omp_fr_none) {
+  if (InteropSpec.fr_id == tgt_fr_none) {
     DP("Interop request not supported by device %" PRId64 "\n", DeviceNum);
     return omp_interop_none;
   }
   DP("Selected interop preference is fr_id=%s%s impl_attrs=%" PRId64 "\n",
-     getForeignRuntimeIdToStr((omp_foreign_runtime_id_t)InteropSpec.fr_id),
+     getForeignRuntimeIdToStr((tgt_foreign_runtime_id_t)InteropSpec.fr_id),
      InteropSpec.attrs.inorder ? " inorder" : "", InteropSpec.impl_attrs);
 
   if (Ctx->flags.implicit) {
@@ -387,7 +387,7 @@ bool omp_interop_val_t::isCompatibleWith(int32_t InteropType,
   if (device_id != DeviceNum)
     return false;
 
-  if (GTID != OwnerGtid)
+  if (GTID != owner_gtid)
     return false;
 
   return isCompatibleWith(InteropType, Spec);

@@ -983,7 +983,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual interop_spec_t selectInteropPreference(int32_t InteropType,
                                                  int32_t NumPrefers,
                                                  interop_spec_t *Prefers) {
-    return interop_spec_t{omp_fr_none, {false, 0}, 0};
+    return interop_spec_t{tgt_fr_none, {false, 0}, 0};
   }
 
   /// Allocate and construct a kernel object.
