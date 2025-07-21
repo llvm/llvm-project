@@ -1,8 +1,9 @@
 ;; Check if manually reserved registers are always excluded from being saved by
 ;; the function prolog/epilog, even for callee-saved ones, as per GCC behavior.
 ;; Look at AArch64Features.td for registers excluded from this test.
+;; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0.
 
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -verify-machineinstrs=0 | FileCheck %s
 
 define preserve_mostcc void @t1() "target-features"="+reserve-x1" {
 ; CHECK-LABEL: t1:

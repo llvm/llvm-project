@@ -651,10 +651,10 @@ define amdgpu_kernel void @round_v8f32(ptr addrspace(1) %out, <8 x float> %in) #
 ; GFX11-NEXT:    v_dual_sub_f32 v2, s11, v0 :: v_dual_sub_f32 v3, s10, v1
 ; GFX11-NEXT:    v_sub_f32_e32 v7, s9, v4
 ; GFX11-NEXT:    v_trunc_f32_e32 v9, s13
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_sub_f32_e32 v12, s15, v5
-; GFX11-NEXT:    v_cmp_ge_f32_e64 s2, |v2|, 0.5
 ; GFX11-NEXT:    v_sub_f32_e32 v11, s8, v8
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-NEXT:    v_cmp_ge_f32_e64 s2, |v2|, 0.5
+; GFX11-NEXT:    v_sub_f32_e32 v12, s15, v5
 ; GFX11-NEXT:    v_trunc_f32_e32 v6, s14
 ; GFX11-NEXT:    v_sub_f32_e32 v14, s13, v9
 ; GFX11-NEXT:    v_trunc_f32_e32 v10, s12

@@ -418,4 +418,24 @@ def TestOpAsmAttrInterfaceTablegenDefaultAttr : Test_Attr<"TestOpAsmAttrInterfac
   let genMnemonicAlias = 1;
 }
 
+// Test attribute containing a slash token
+def SlashAttr: Test_Attr<"Slash">{
+  let mnemonic = "slash_attr";
+
+  let parameters = (
+    ins
+    "int":$lhs,
+    "int":$rhs
+  );
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+def TestCustomStorageCtorAttr : Test_Attr<"TestCustomStorageCtorAttr"> {
+    let mnemonic = "custom_storage_ctor_attr";
+    let parameters = (ins "int":$value);
+    let assemblyFormat = "`<` $value `>`";
+    let hasStorageCustomConstructor = 1;
+}
+
 #endif // TEST_ATTRDEFS

@@ -740,6 +740,54 @@ bb:
   ret void
 }
 
+define i32 @add_sext_bool_is_shared(ptr %ptr, i32 %y) {
+; GCN-LABEL: add_sext_bool_is_shared:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_mov_b64 s[4:5], 0xe8
+; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
+; GCN-NEXT:    v_subbrev_u32_e32 v0, vcc, 0, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: add_sext_bool_is_shared:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b64 s[4:5], src_shared_base
+; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, s5, v1
+; GFX9-NEXT:    v_subbrev_co_u32_e32 v0, vcc, 0, v2, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
+  %sext = sext i1 %is.shared to i32
+  %add = add i32 %sext, %y
+  ret i32 %add
+}
+
+define i32 @add_sext_bool_is_private(ptr %ptr, i32 %y) {
+; GCN-LABEL: add_sext_bool_is_private:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_mov_b64 s[4:5], 0xe4
+; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
+; GCN-NEXT:    v_subbrev_u32_e32 v0, vcc, 0, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: add_sext_bool_is_private:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, s5, v1
+; GFX9-NEXT:    v_subbrev_co_u32_e32 v0, vcc, 0, v2, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
+  %sext = sext i1 %is.private to i32
+  %add = add i32 %sext, %y
+  ret i32 %add
+}
+
 declare i1 @llvm.amdgcn.class.f32(float, i32) #0
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0

@@ -605,9 +605,10 @@ define float @loadadd31(ptr nocapture readonly %x) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX_28]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX_29:%.*]] = getelementptr inbounds float, ptr [[X]], i64 30
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[ARRAYIDX_29]], align 4
-; CHECK-NEXT:    [[RDX_OP2:%.*]] = call fast <4 x float> @llvm.vector.extract.v4f32.v24f32(<24 x float> [[TMP0]], i64 0)
+; CHECK-NEXT:    [[RDX_OP2:%.*]] = shufflevector <24 x float> [[TMP0]], <24 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RDX_OP3:%.*]] = fadd fast <4 x float> [[RDX_OP2]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast <24 x float> @llvm.vector.insert.v24f32.v4f32(<24 x float> [[TMP0]], <4 x float> [[RDX_OP3]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[RDX_OP3]], <4 x float> poison, <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <24 x float> [[TMP0]], <24 x float> [[TMP6]], <24 x i32> <i32 24, i32 25, i32 26, i32 27, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = call fast float @llvm.vector.reduce.fadd.v24f32(float 0.000000e+00, <24 x float> [[TMP5]])
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], [[TMP3]]
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = fadd fast float [[OP_RDX2]], [[TMP4]]
@@ -623,9 +624,10 @@ define float @loadadd31(ptr nocapture readonly %x) {
 ; THRESHOLD-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX_28]], align 4
 ; THRESHOLD-NEXT:    [[ARRAYIDX_29:%.*]] = getelementptr inbounds float, ptr [[X]], i64 30
 ; THRESHOLD-NEXT:    [[TMP4:%.*]] = load float, ptr [[ARRAYIDX_29]], align 4
-; THRESHOLD-NEXT:    [[RDX_OP2:%.*]] = call fast <4 x float> @llvm.vector.extract.v4f32.v24f32(<24 x float> [[TMP0]], i64 0)
+; THRESHOLD-NEXT:    [[RDX_OP2:%.*]] = shufflevector <24 x float> [[TMP0]], <24 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; THRESHOLD-NEXT:    [[RDX_OP3:%.*]] = fadd fast <4 x float> [[RDX_OP2]], [[TMP2]]
-; THRESHOLD-NEXT:    [[TMP5:%.*]] = call fast <24 x float> @llvm.vector.insert.v24f32.v4f32(<24 x float> [[TMP0]], <4 x float> [[RDX_OP3]], i64 0)
+; THRESHOLD-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[RDX_OP3]], <4 x float> poison, <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; THRESHOLD-NEXT:    [[TMP5:%.*]] = shufflevector <24 x float> [[TMP0]], <24 x float> [[TMP6]], <24 x i32> <i32 24, i32 25, i32 26, i32 27, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; THRESHOLD-NEXT:    [[OP_RDX1:%.*]] = call fast float @llvm.vector.reduce.fadd.v24f32(float 0.000000e+00, <24 x float> [[TMP5]])
 ; THRESHOLD-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], [[TMP3]]
 ; THRESHOLD-NEXT:    [[OP_RDX3:%.*]] = fadd fast float [[OP_RDX2]], [[TMP4]]

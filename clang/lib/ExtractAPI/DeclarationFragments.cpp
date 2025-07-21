@@ -220,23 +220,14 @@ DeclarationFragmentsBuilder::getFragmentsForNNS(const NestedNameSpecifier *NNS,
     break;
 
   case NestedNameSpecifier::Namespace: {
-    const NamespaceDecl *NS = NNS->getAsNamespace();
-    if (NS->isAnonymousNamespace())
+    const NamespaceBaseDecl *NS = NNS->getAsNamespace();
+    if (const auto *Namespace = dyn_cast<NamespaceDecl>(NS);
+        Namespace && Namespace->isAnonymousNamespace())
       return Fragments;
     SmallString<128> USR;
     index::generateUSRForDecl(NS, USR);
     Fragments.append(NS->getName(),
                      DeclarationFragments::FragmentKind::Identifier, USR, NS);
-    break;
-  }
-
-  case NestedNameSpecifier::NamespaceAlias: {
-    const NamespaceAliasDecl *Alias = NNS->getAsNamespaceAlias();
-    SmallString<128> USR;
-    index::generateUSRForDecl(Alias, USR);
-    Fragments.append(Alias->getName(),
-                     DeclarationFragments::FragmentKind::Identifier, USR,
-                     Alias);
     break;
   }
 
@@ -324,10 +315,15 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 
   // Declaration fragments of a pointer type is the declaration fragments of
   // the pointee type followed by a `*`,
-  if (T->isPointerType() && !T->isFunctionPointerType())
-    return Fragments
-        .append(getFragmentsForType(T->getPointeeType(), Context, After))
-        .append(" *", DeclarationFragments::FragmentKind::Text);
+  if (T->isPointerType() && !T->isFunctionPointerType()) {
+    QualType PointeeT = T->getPointeeType();
+    Fragments.append(getFragmentsForType(PointeeT, Context, After));
+    // If the pointee is itself a pointer, we do not want to insert a space
+    // before the `*` as the preceding character in the type name is a `*`.
+    if (!PointeeT->isAnyPointerType())
+      Fragments.appendSpace();
+    return Fragments.append("*", DeclarationFragments::FragmentKind::Text);
+  }
 
   // For Objective-C `id` and `Class` pointers
   // we do not spell out the `*`.
@@ -631,7 +627,7 @@ DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
                 DeclarationFragments::FragmentKind::InternalParam);
   } else {
     Fragments.append(std::move(TypeFragments));
-    if (!T->isBlockPointerType())
+    if (!T->isAnyPointerType() && !T->isBlockPointerType())
       Fragments.appendSpace();
     Fragments
         .append(Param->getName(),
@@ -706,18 +702,20 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
 
   // FIXME: Is `after` actually needed here?
   DeclarationFragments After;
+  QualType ReturnType = Func->getReturnType();
   auto ReturnValueFragment =
-      getFragmentsForType(Func->getReturnType(), Func->getASTContext(), After);
+      getFragmentsForType(ReturnType, Func->getASTContext(), After);
   if (StringRef(ReturnValueFragment.begin()->Spelling)
           .starts_with("type-parameter")) {
-    std::string ProperArgName = Func->getReturnType().getAsString();
+    std::string ProperArgName = ReturnType.getAsString();
     ReturnValueFragment.begin()->Spelling.swap(ProperArgName);
   }
 
-  Fragments.append(std::move(ReturnValueFragment))
-      .appendSpace()
-      .append(Func->getNameAsString(),
-              DeclarationFragments::FragmentKind::Identifier);
+  Fragments.append(std::move(ReturnValueFragment));
+  if (!ReturnType->isAnyPointerType())
+    Fragments.appendSpace();
+  Fragments.append(Func->getNameAsString(),
+                   DeclarationFragments::FragmentKind::Identifier);
 
   if (Func->getTemplateSpecializationInfo()) {
     Fragments.append("<", DeclarationFragments::FragmentKind::Text);
@@ -882,6 +880,9 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForCXXMethod(
         .appendSpace();
   if (Method->isVolatile())
     Fragments.append("volatile", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+  if (Method->isVirtual())
+    Fragments.append("virtual", DeclarationFragments::FragmentKind::Keyword)
         .appendSpace();
 
   // Build return type
@@ -1607,10 +1608,13 @@ DeclarationFragmentsBuilder::getFunctionSignature(const ObjCMethodDecl *);
 DeclarationFragments
 DeclarationFragmentsBuilder::getSubHeading(const NamedDecl *Decl) {
   DeclarationFragments Fragments;
-  if (isa<CXXConstructorDecl>(Decl) || isa<CXXDestructorDecl>(Decl))
+  if (isa<CXXConstructorDecl>(Decl)) {
     Fragments.append(cast<CXXRecordDecl>(Decl->getDeclContext())->getName(),
                      DeclarationFragments::FragmentKind::Identifier);
-  else if (isa<CXXConversionDecl>(Decl)) {
+  } else if (isa<CXXDestructorDecl>(Decl)) {
+    Fragments.append(cast<CXXDestructorDecl>(Decl)->getNameAsString(),
+                     DeclarationFragments::FragmentKind::Identifier);
+  } else if (isa<CXXConversionDecl>(Decl)) {
     Fragments.append(
         cast<CXXConversionDecl>(Decl)->getConversionType().getAsString(),
         DeclarationFragments::FragmentKind::Identifier);
@@ -1624,9 +1628,11 @@ DeclarationFragmentsBuilder::getSubHeading(const NamedDecl *Decl) {
   } else if (Decl->getIdentifier()) {
     Fragments.append(Decl->getName(),
                      DeclarationFragments::FragmentKind::Identifier);
-  } else
+  } else {
     Fragments.append(Decl->getDeclName().getAsString(),
                      DeclarationFragments::FragmentKind::Identifier);
+  }
+
   return Fragments;
 }
 

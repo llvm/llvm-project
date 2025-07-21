@@ -225,3 +225,58 @@ func.func @test_error_i32_unsigned_output(%arg0: tensor<1xi8>) -> tensor<1xi32> 
   %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = false, input_unsigned = false, output_unsigned = true} : (tensor<1xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi32>) -> tensor<1xi32>
   return %0 : tensor<1xi32>
 }
+
+// -----
+
+func.func @test_cond_if_then_not_isolated_from_above(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -> tensor<f32> {
+    // expected-error@+1 {{'tosa.cond_if' op is not conformant to the TOSA specification. It requires the 'then' region is isolated from above.}}
+    %0 = "tosa.cond_if"(%arg2, %arg1) ({
+      ^bb0(%arg3: tensor<f32>):
+        tosa.yield %arg1 : tensor<f32>
+      },  {
+      ^bb0(%arg3: tensor<f32>):
+        tosa.yield %arg3 : tensor<f32>
+      }) : (tensor<i1>, tensor<f32>) -> tensor<f32>
+    return %0 : tensor<f32>
+}
+
+// -----
+
+func.func @test_cond_if_else_not_isolated_from_above(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -> tensor<f32> {
+  // expected-error@+1 {{'tosa.cond_if' op is not conformant to the TOSA specification. It requires the 'else' region is isolated from above.}}
+  %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
+    ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
+      tosa.yield %arg3 : tensor<f32>
+    },  {
+    ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
+      %add = tosa.add %arg0, %arg4 : (tensor<f32>, tensor<f32>) -> tensor<f32>
+      tosa.yield %add : tensor<f32>
+    }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// -----
+
+func.func @test_cond_if_simplified_form_not_isolated_from_above(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -> tensor<f32> {
+  // expected-error@+1 {{'tosa.cond_if' op is not conformant to the TOSA specification. It requires the 'then' region is isolated from above.}}
+  %0 = tosa.cond_if %arg2 -> (tensor<f32>) {
+    tosa.yield %arg0 : tensor<f32>
+  } else {
+    tosa.yield %arg1 : tensor<f32>
+  }
+  return %0 : tensor<f32>
+}
+
+// -----
+
+// Check isolated cond_if's are valid
+func.func @test_cond_if_isolated_from_above(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -> tensor<f32> {
+  %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
+    ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
+      tosa.yield %arg3 : tensor<f32>
+    },  {
+    ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
+      tosa.yield %arg4 : tensor<f32>
+    }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
+  return %0 : tensor<f32>
+}

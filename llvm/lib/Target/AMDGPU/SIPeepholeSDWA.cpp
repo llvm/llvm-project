@@ -430,6 +430,21 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   case AMDGPU::V_CVT_PK_F32_BF8_sdwa:
     // Does not support input modifiers: noabs, noneg, nosext.
     return false;
+  case AMDGPU::V_CNDMASK_B32_sdwa:
+    // SISrcMods uses the same bitmask for SEXT and NEG modifiers and
+    // hence the compiler can only support one type of modifier for
+    // each SDWA instruction.  For V_CNDMASK_B32_sdwa, this is NEG
+    // since its operands get printed using
+    // AMDGPUInstPrinter::printOperandAndFPInputMods which produces
+    // the output intended for NEG if SEXT is set.
+    //
+    // The ISA does actually support both modifiers on most SDWA
+    // instructions.
+    //
+    // FIXME Accept SEXT here after fixing this issue.
+    if (Sext)
+      return false;
+    break;
   }
 
   // Find operand in instruction that matches source operand and replace it with
@@ -720,7 +735,9 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
   case AMDGPU::V_ASHRREV_I16_e32:
   case AMDGPU::V_LSHLREV_B16_e32:
   case AMDGPU::V_LSHRREV_B16_e64:
+  case AMDGPU::V_LSHRREV_B16_opsel_e64:
   case AMDGPU::V_ASHRREV_I16_e64:
+  case AMDGPU::V_LSHLREV_B16_opsel_e64:
   case AMDGPU::V_LSHLREV_B16_e64: {
     // from: v_lshrrev_b16_e32 v1, 8, v0
     // to SDWA src:v0 src_sel:BYTE_1
@@ -743,11 +760,13 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
       break;
 
     if (Opcode == AMDGPU::V_LSHLREV_B16_e32 ||
+        Opcode == AMDGPU::V_LSHLREV_B16_opsel_e64 ||
         Opcode == AMDGPU::V_LSHLREV_B16_e64)
       return std::make_unique<SDWADstOperand>(Dst, Src1, BYTE_1, UNUSED_PAD);
     return std::make_unique<SDWASrcOperand>(
         Src1, Dst, BYTE_1, false, false,
         Opcode != AMDGPU::V_LSHRREV_B16_e32 &&
+            Opcode != AMDGPU::V_LSHRREV_B16_opsel_e64 &&
             Opcode != AMDGPU::V_LSHRREV_B16_e64);
     break;
   }
@@ -1258,65 +1277,22 @@ MachineInstr *SIPeepholeSDWA::createSDWAVersion(MachineInstr &MI) {
     }
   }
 
-  // Copy dst_sel if present, initialize otherwise if needed
-  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_sel)) {
-    MachineOperand *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel);
-    if (DstSel) {
-      SDWAInst.add(*DstSel);
-    } else {
-      SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
-    }
-  }
+  // Initialize SDWA specific operands
+  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_sel))
+    SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
 
-  // Copy dst_unused if present, initialize otherwise if needed
-  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_unused)) {
-    MachineOperand *DstUnused = TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
-    if (DstUnused) {
-      SDWAInst.add(*DstUnused);
-    } else {
-      SDWAInst.addImm(AMDGPU::SDWA::DstUnused::UNUSED_PAD);
-    }
-  }
+  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_unused))
+    SDWAInst.addImm(AMDGPU::SDWA::DstUnused::UNUSED_PAD);
 
-  // Copy src0_sel if present, initialize otherwise
   assert(AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src0_sel));
-  MachineOperand *Src0Sel = TII->getNamedOperand(MI, AMDGPU::OpName::src0_sel);
-  if (Src0Sel) {
-    SDWAInst.add(*Src0Sel);
-  } else {
+  SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
+
+  if (Src1) {
+    assert(AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src1_sel));
     SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
   }
 
-  // Copy src1_sel if present, initialize otherwise if needed
-  if (Src1) {
-    assert(AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src1_sel));
-    MachineOperand *Src1Sel = TII->getNamedOperand(MI, AMDGPU::OpName::src1_sel);
-    if (Src1Sel) {
-      SDWAInst.add(*Src1Sel);
-    } else {
-      SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
-    }
-  }
-
   // Check for a preserved register that needs to be copied.
-  auto *DstUnused = TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
-  if (DstUnused &&
-      DstUnused->getImm() == AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE) {
-    // We expect, if we are here, that the instruction was already in it's SDWA form,
-    // with a tied operand.
-    assert(Dst && Dst->isTied());
-    assert(Opcode == static_cast<unsigned int>(SDWAOpcode));
-    // We also expect a vdst, since sdst can't preserve.
-    auto PreserveDstIdx = AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::vdst);
-    assert(PreserveDstIdx != -1);
-
-    auto TiedIdx = MI.findTiedOperandIdx(PreserveDstIdx);
-    auto Tied = MI.getOperand(TiedIdx);
-
-    SDWAInst.add(Tied);
-    SDWAInst->tieOperands(PreserveDstIdx, SDWAInst->getNumOperands() - 1);
-  }
-
   MachineInstr *Ret = SDWAInst.getInstr();
   TII->fixImplicitOperands(*Ret);
   return Ret;

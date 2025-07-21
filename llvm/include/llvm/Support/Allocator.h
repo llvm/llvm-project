@@ -249,9 +249,9 @@ public:
 
     // Use negative index to denote custom sized slabs.
     int64_t InCustomSizedSlabIdx = -1;
-    for (size_t Idx = 0, E = CustomSizedSlabs.size(); Idx < E; Idx++) {
-      const char *S = static_cast<const char *>(CustomSizedSlabs[Idx].first);
-      size_t Size = CustomSizedSlabs[Idx].second;
+    for (const auto &Slab : CustomSizedSlabs) {
+      const char *S = static_cast<const char *>(Slab.first);
+      size_t Size = Slab.second;
       if (P >= S && P < S + Size)
         return InCustomSizedSlabIdx - static_cast<int64_t>(P - S);
       InCustomSizedSlabIdx -= static_cast<int64_t>(Size);

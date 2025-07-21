@@ -109,12 +109,12 @@ OpenACCSelfClause *OpenACCSelfClause::Create(const ASTContext &C,
 
 OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
                                      SourceLocation LParenLoc,
-                                     llvm::ArrayRef<Expr *> VarList,
+                                     ArrayRef<Expr *> VarList,
                                      SourceLocation EndLoc)
     : OpenACCClauseWithParams(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
                               EndLoc),
       HasConditionExpr(std::nullopt), NumExprs(VarList.size()) {
-  llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
+  llvm::uninitialized_copy(VarList, getTrailingObjects());
 }
 
 OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
@@ -126,8 +126,7 @@ OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
   assert((!ConditionExpr || ConditionExpr->isInstantiationDependent() ||
           ConditionExpr->getType()->isScalarType()) &&
          "Condition expression type not scalar/dependent");
-  llvm::uninitialized_copy(ArrayRef(ConditionExpr),
-                           getTrailingObjects<Expr *>());
+  llvm::uninitialized_copy(ArrayRef(ConditionExpr), getTrailingObjects());
 }
 
 OpenACCClause::child_range OpenACCClause::children() {

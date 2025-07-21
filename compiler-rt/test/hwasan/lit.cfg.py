@@ -86,5 +86,5 @@ llvm_config.add_tool_substitutions(
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
 
-if config.host_os not in ["Linux", "Android"] or not config.has_lld:
+if config.target_os not in ["Linux", "Android"] or not config.has_lld:
     config.unsupported = True

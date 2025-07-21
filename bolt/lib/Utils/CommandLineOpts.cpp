@@ -12,6 +12,7 @@
 
 #include "bolt/Utils/CommandLineOpts.h"
 #include "VCSVersion.inc"
+#include "llvm/Support/Regex.h"
 
 using namespace llvm;
 
@@ -103,10 +104,56 @@ ExecutionCountThreshold("execution-count-threshold",
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
-cl::opt<unsigned>
-    HeatmapBlock("block-size",
-                 cl::desc("size of a heat map block in bytes (default 64)"),
-                 cl::init(64), cl::cat(HeatmapCategory));
+bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
+                                   StringRef Arg, HeatmapBlockSizes &Val) {
+  // Parses a human-readable suffix into a shift amount or nullopt on error.
+  auto parseSuffix = [](StringRef Suffix) -> std::optional<unsigned> {
+    if (Suffix.empty())
+      return 0;
+    if (!Regex{"^[kKmMgG]i?[bB]?$"}.match(Suffix))
+      return std::nullopt;
+    // clang-format off
+    switch (Suffix.front()) {
+      case 'k': case 'K': return 10;
+      case 'm': case 'M': return 20;
+      case 'g': case 'G': return 30;
+    }
+    // clang-format on
+    llvm_unreachable("Unexpected suffix");
+  };
+
+  SmallVector<StringRef> Sizes;
+  Arg.split(Sizes, ',');
+  unsigned PreviousSize = 0;
+  for (StringRef Size : Sizes) {
+    StringRef OrigSize = Size;
+    unsigned &SizeVal = Val.emplace_back(0);
+    if (Size.consumeInteger(10, SizeVal)) {
+      O.error("'" + OrigSize + "' value can't be parsed as an integer");
+      return true;
+    }
+    if (std::optional<unsigned> ShiftAmt = parseSuffix(Size)) {
+      SizeVal <<= *ShiftAmt;
+    } else {
+      O.error("'" + Size + "' value can't be parsed as a suffix");
+      return true;
+    }
+    if (SizeVal <= PreviousSize || (PreviousSize && SizeVal % PreviousSize)) {
+      O.error("'" + OrigSize + "' must be a multiple of previous value");
+      return true;
+    }
+    PreviousSize = SizeVal;
+  }
+  return false;
+}
+
+cl::opt<opts::HeatmapBlockSizes, false, opts::HeatmapBlockSpecParser>
+    HeatmapBlock(
+        "block-size", cl::value_desc("initial_size{,zoom-out_size,...}"),
+        cl::desc("heatmap bucket size, optionally followed by zoom-out sizes "
+                 "for coarse-grained heatmaps (default 64B, 4K, 256K)."),
+        cl::init(HeatmapBlockSizes{/*Initial*/ 64, /*Zoom-out*/ 4096, 262144}),
+        cl::cat(HeatmapCategory));
 
 cl::opt<unsigned long long> HeatmapMaxAddress(
     "max-address", cl::init(0xffffffff),

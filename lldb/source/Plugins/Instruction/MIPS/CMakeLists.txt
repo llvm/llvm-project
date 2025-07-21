@@ -5,13 +5,13 @@ endif()
 add_lldb_library(lldbPluginInstructionMIPS PLUGIN
   EmulateInstructionMIPS.cpp
 
+  LINK_COMPONENTS
+    MC
+    Support
+    ${mips_target}
   LINK_LIBS
     lldbCore
     lldbSymbol
     lldbTarget
     lldbPluginProcessUtility
-  LINK_COMPONENTS
-    MC
-    Support
-    ${mips_target}
   )

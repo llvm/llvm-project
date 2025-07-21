@@ -17,6 +17,7 @@
 #include "flang/Evaluate/common.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 namespace fir {
@@ -1685,7 +1686,9 @@ PPCIntrinsicLibrary::genVecExtract(mlir::Type resultType,
   if (!isNativeVecElemOrderOnLE())
     uremOp = convertVectorElementOrder(builder, loc, vecTyInfo, uremOp);
 
-  return builder.create<mlir::vector::ExtractElementOp>(loc, varg0, uremOp);
+  mlir::Value index = builder.createOrFold<mlir::index::CastUOp>(
+      loc, builder.getIndexType(), uremOp);
+  return builder.create<mlir::vector::ExtractOp>(loc, varg0, index);
 }
 
 // VEC_INSERT
@@ -1706,8 +1709,10 @@ PPCIntrinsicLibrary::genVecInsert(mlir::Type resultType,
   if (!isNativeVecElemOrderOnLE())
     uremOp = convertVectorElementOrder(builder, loc, vecTyInfo, uremOp);
 
-  auto res{builder.create<mlir::vector::InsertElementOp>(loc, argBases[0],
-                                                         varg1, uremOp)};
+  mlir::Value index = builder.createOrFold<mlir::index::CastUOp>(
+      loc, builder.getIndexType(), uremOp);
+  mlir::Value res =
+      builder.create<mlir::vector::InsertOp>(loc, argBases[0], varg1, index);
   return builder.create<fir::ConvertOp>(loc, vecTyInfo.toFirVectorType(), res);
 }
 
@@ -2888,8 +2893,7 @@ void PPCIntrinsicLibrary::genVecStore(llvm::ArrayRef<fir::ExtendedValue> args) {
     llvm_unreachable("invalid vector operation for generator");
   }
 
-  auto funcType{
-      mlir::FunctionType::get(context, {stTy, addr.getType()}, std::nullopt)};
+  auto funcType{mlir::FunctionType::get(context, {stTy, addr.getType()}, {})};
   mlir::func::FuncOp funcOp = builder.createFunction(loc, fname, funcType);
 
   llvm::SmallVector<mlir::Value, 4> biArgs;

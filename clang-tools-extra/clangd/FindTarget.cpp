@@ -57,7 +57,7 @@ LLVM_ATTRIBUTE_UNUSED std::string nodeToString(const DynTypedNode &N) {
     OS << ": ";
     N.print(OS, PrintingPolicy(LangOptions()));
   }
-  std::replace(S.begin(), S.end(), '\n', ' ');
+  llvm::replace(S, '\n', ' ');
   return S;
 }
 
@@ -490,9 +490,6 @@ public:
     switch (NNS->getKind()) {
     case NestedNameSpecifier::Namespace:
       add(NNS->getAsNamespace(), Flags);
-      return;
-    case NestedNameSpecifier::NamespaceAlias:
-      add(NNS->getAsNamespaceAlias(), Flags);
       return;
     case NestedNameSpecifier::Identifier:
       if (Resolver) {

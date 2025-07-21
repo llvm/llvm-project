@@ -20,7 +20,7 @@ class TestDAP_repl_mode_detection(lldbdap_testcase.DAPTestCaseBase):
 
     def test_completions(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
+        self.build_and_launch(program)
 
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")

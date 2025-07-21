@@ -98,16 +98,14 @@ private:
 
 WatchpointList::wp_collection::iterator
 WatchpointList::GetIDIterator(lldb::watch_id_t watch_id) {
-  return std::find_if(m_watchpoints.begin(),
-                      m_watchpoints.end(),            // Search full range
-                      WatchpointIDMatches(watch_id)); // Predicate
+  return llvm::find_if(m_watchpoints,                  // Search full range
+                       WatchpointIDMatches(watch_id)); // Predicate
 }
 
 WatchpointList::wp_collection::const_iterator
 WatchpointList::GetIDConstIterator(lldb::watch_id_t watch_id) const {
-  return std::find_if(m_watchpoints.begin(),
-                      m_watchpoints.end(),            // Search full range
-                      WatchpointIDMatches(watch_id)); // Predicate
+  return llvm::find_if(m_watchpoints,                  // Search full range
+                       WatchpointIDMatches(watch_id)); // Predicate
 }
 
 WatchpointSP WatchpointList::FindByID(lldb::watch_id_t watch_id) const {

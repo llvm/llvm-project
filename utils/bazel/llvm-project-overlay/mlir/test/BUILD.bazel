@@ -110,6 +110,7 @@ td_library(
     name = "TestOpTdFiles",
     srcs = glob(["lib/Dialect/Test/*.td"]),
     deps = [
+        "//mlir:BufferizableOpInterfaceTdFiles",
         "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
         "//mlir:CallInterfacesTdFiles",
@@ -123,9 +124,11 @@ td_library(
         "//mlir:InferTypeOpInterfaceTdFiles",
         "//mlir:LinalgStructuredOpsTdFiles",
         "//mlir:MemorySlotInterfacesTdFiles",
+        "//mlir:NVVMRequiresSMTraitsTdFiles",
         "//mlir:OpBaseTdFiles",
         "//mlir:PtrTdFiles",
         "//mlir:SideEffectInterfacesTdFiles",
+        "//mlir:ValueBoundsOpInterfaceTdFiles",
     ],
 )
 
@@ -240,6 +243,7 @@ gentbl_cc_library(
     test = True,
     deps = [
         ":TestOpTdFiles",
+        "//mlir:BufferizableOpInterfaceTdFiles",
         "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
     ],
@@ -252,6 +256,34 @@ cc_library(
     ]),
     deps = [
         "//mlir:IR",
+    ],
+)
+
+genrule(
+    name = "test_irdl_to_cpp_gen",
+    srcs = ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir"],
+    outs = ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir.cpp.inc"],
+    cmd = "$(location %s) $< -o $@" % "//mlir:irdl-to-cpp",
+    tools = ["//mlir:irdl-to-cpp"],
+)
+
+cc_library(
+    name = "TestIRDLToCpp",
+    srcs = glob(["lib/Dialect/TestIRDLToCpp/*.cpp"]) + ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir.cpp.inc"],
+    hdrs = glob(["lib/Dialect/TestIRDLToCpp/*.h"]),
+    includes = ["lib/Dialect/TestIRDLToCpp"],
+    deps = [
+        ":test_irdl_to_cpp_gen",
+        "//llvm:Support",
+        "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:IR",
+        "//mlir:InferTypeOpInterface",
+        "//mlir:LLVMToLLVMIRTranslation",
+        "//mlir:Pass",
+        "//mlir:ToLLVMIRTranslation",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+        "//mlir:TranslateLib",
     ],
 )
 
@@ -343,6 +375,7 @@ cc_library(
         "//llvm:IRReader",
         "//llvm:Support",
         "//mlir:ArithDialect",
+        "//mlir:BufferizationDialect",
         "//mlir:BufferizationInterfaces",
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
@@ -368,6 +401,7 @@ cc_library(
         "//mlir:LinalgInterfaces",
         "//mlir:LoopLikeInterface",
         "//mlir:MemorySlotInterfaces",
+        "//mlir:NVVMDialect",
         "//mlir:Pass",
         "//mlir:PtrDialect",
         "//mlir:Reducer",
@@ -579,6 +613,7 @@ cc_library(
         "//mlir:AffineDialect",
         "//mlir:Analysis",
         "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:InliningUtils",
@@ -853,6 +888,21 @@ cc_library(
 )
 
 cc_library(
+    name = "TestMemRefToLLVMWithTransforms",
+    srcs = glob(["lib/Conversion/MemRefToLLVM/*.cpp"]),
+    deps = [
+        "//mlir:FuncDialect",
+        "//mlir:FuncToLLVM",
+        "//mlir:IR",
+        "//mlir:LLVMCommonConversion",
+        "//mlir:LLVMDialect",
+        "//mlir:MemRefToLLVM",
+        "//mlir:MemRefTransforms",
+        "//mlir:Pass",
+    ],
+)
+
+cc_library(
     name = "TestMesh",
     srcs = glob(["lib/Dialect/Mesh/**/*.cpp"]),
     includes = ["lib/Dialect/Test"],
@@ -930,22 +980,6 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
-    ],
-)
-
-cc_library(
-    name = "TestArmNeon",
-    srcs = glob(["lib/Dialect/ArmNeon/*.cpp"]),
-    includes = ["lib/Dialect/Test"],
-    deps = [
-        "//mlir:ArmNeonDialect",
-        "//mlir:ArmNeonTransforms",
-        "//mlir:FuncDialect",
-        "//mlir:IR",
-        "//mlir:Pass",
-        "//mlir:Support",
-        "//mlir:TransformUtils",
-        "//mlir:Transforms",
     ],
 )
 
@@ -1085,6 +1119,7 @@ cc_library(
         "//mlir:NVGPUDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",
+        "//mlir:SCFTransforms",
         "//mlir:Support",
         "//mlir:TensorDialect",
         "//mlir:TransformUtils",

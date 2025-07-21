@@ -20,12 +20,14 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -486,7 +488,6 @@ Fortran::lower::genCallOpAndResult(
 
   // Deal with potential mismatches in arguments types. Passing an array to a
   // scalar argument should for instance be tolerated here.
-  bool callingImplicitInterface = caller.canBeCalledViaImplicitInterface();
   for (auto [fst, snd] : llvm::zip(caller.getInputs(), funcType.getInputs())) {
     // When passing arguments to a procedure that can be called by implicit
     // interface, allow any character actual arguments to be passed to dummy
@@ -495,8 +496,7 @@ Fortran::lower::genCallOpAndResult(
     auto *context = builder.getContext();
     if (mlir::isa<fir::BoxProcType>(snd) &&
         mlir::isa<mlir::FunctionType>(fst.getType())) {
-      auto funcTy =
-          mlir::FunctionType::get(context, std::nullopt, std::nullopt);
+      auto funcTy = mlir::FunctionType::get(context, {}, {});
       auto boxProcTy = builder.getBoxProcType(funcTy);
       if (mlir::Value host = argumentHostAssocs(converter, fst)) {
         cast = builder.create<fir::EmboxProcOp>(
@@ -518,10 +518,17 @@ Fortran::lower::genCallOpAndResult(
         // Do not attempt any reboxing here that could break this.
         bool legacyLowering =
             !converter.getLoweringOptions().getLowerToHighLevelFIR();
+        // When dealing with a dummy character argument (fir.boxchar), the
+        // effective argument might be a non-character raw pointer. This may
+        // happen when calling an implicit interface that was previously called
+        // with a character argument, or when calling an explicit interface with
+        // an IgnoreTKR dummy character arguments. Allow creating a fir.boxchar
+        // from the raw pointer, which requires a non-trivial type conversion.
+        const bool allowCharacterConversions = true;
         bool isVolatile = fir::isa_volatile_type(snd);
         cast = builder.createVolatileCast(loc, isVolatile, fst);
         cast = builder.convertWithSemantics(loc, snd, cast,
-                                            callingImplicitInterface,
+                                            allowCharacterConversions,
                                             /*allowRebox=*/legacyLowering);
       }
     }
@@ -536,6 +543,20 @@ Fortran::lower::genCallOpAndResult(
   unsigned callNumResults;
   fir::FortranProcedureFlagsEnumAttr procAttrs =
       caller.getProcedureAttrs(builder.getContext());
+
+  if (converter.getLoweringOptions().getCUDARuntimeCheck()) {
+    if (caller.getCallDescription().chevrons().empty() &&
+        !cuf::isCUDADeviceContext(builder.getRegion())) {
+      for (auto [oper, arg] :
+           llvm::zip(operands, caller.getPassedArguments())) {
+        if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(oper.getType())) {
+          const Fortran::semantics::Symbol *sym = caller.getDummySymbol(arg);
+          if (sym && Fortran::evaluate::IsCUDADeviceSymbol(*sym))
+            fir::runtime::cuda::genDescriptorCheckSection(builder, loc, oper);
+        }
+      }
+    }
+  }
 
   if (!caller.getCallDescription().chevrons().empty()) {
     // A call to a CUDA kernel with the chevron syntax.
@@ -1446,6 +1467,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // cause the fir.if results to be assumed-rank in case of OPTIONAL dummy,
   // causing extra runtime costs due to the unknown runtime size of assumed-rank
   // descriptors.
+  // For TKR dummy characters, the boxchar creation also happens later when
+  // creating the fir.call .
   preparedDummy.dummy =
       builder.createConvert(loc, dummyTypeWithActualRank, addr);
   return preparedDummy;
@@ -1690,7 +1713,7 @@ void prepareUserCallArguments(
                                     /*nonDeferredParams=*/mlir::ValueRange{},
                                     /*mutableProperties=*/{});
         fir::factory::associateMutableBox(builder, loc, ptrBox, actualExv,
-                                          /*lbounds=*/std::nullopt);
+                                          /*lbounds=*/{});
         caller.placeInput(arg, irBox);
         continue;
       }

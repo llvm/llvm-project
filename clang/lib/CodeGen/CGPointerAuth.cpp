@@ -520,6 +520,11 @@ llvm::Constant *CodeGenModule::getMemberFunctionPointer(llvm::Constant *Pointer,
         Pointer, PointerAuth.getKey(), nullptr,
         cast_or_null<llvm::ConstantInt>(PointerAuth.getDiscriminator()));
 
+  if (const auto *MFT = dyn_cast<MemberPointerType>(FT.getTypePtr())) {
+    if (MFT->hasPointeeToToCFIUncheckedCalleeFunctionType())
+      Pointer = llvm::NoCFIValue::get(cast<llvm::GlobalValue>(Pointer));
+  }
+
   return Pointer;
 }
 

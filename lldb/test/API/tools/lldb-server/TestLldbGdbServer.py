@@ -727,7 +727,7 @@ class LldbGdbServerTestCase(
         self.breakpoint_set_and_remove_work(want_hardware=False)
 
     @skipUnlessPlatform(oslist=["linux"])
-    @skipIf(archs=no_match(["arm", "aarch64"]))
+    @skipIf(archs=no_match(["arm$", "aarch64"]))
     def test_hardware_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code

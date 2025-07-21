@@ -14,11 +14,11 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -175,8 +175,6 @@ void DIEBuilder::updateReferences() {
     LocExpr.Die.replaceValue(getState().DIEAlloc, LocExpr.Attr, LocExpr.Form,
                              Value);
   }
-
-  return;
 }
 
 uint32_t DIEBuilder::allocDIE(const DWARFUnit &DU, const DWARFDie &DDie,
@@ -437,10 +435,10 @@ getUnitForOffset(DIEBuilder &Builder, DWARFContext &DWCtx,
       // This is a work around for XCode clang. There is a build error when we
       // pass DWCtx.compile_units() to llvm::upper_bound
       std::call_once(InitVectorFlag, initCUVector);
-      auto CUIter = std::upper_bound(CUOffsets.begin(), CUOffsets.end(), Offset,
-                                     [](uint64_t LHS, const DWARFUnit *RHS) {
-                                       return LHS < RHS->getNextUnitOffset();
-                                     });
+      auto CUIter = llvm::upper_bound(CUOffsets, Offset,
+                                      [](uint64_t LHS, const DWARFUnit *RHS) {
+                                        return LHS < RHS->getNextUnitOffset();
+                                      });
       CU = CUIter != CUOffsets.end() ? (*CUIter) : nullptr;
     }
     return CU;

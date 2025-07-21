@@ -18,12 +18,9 @@
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -1432,7 +1429,7 @@ LogicalResult mlir::affine::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
 
     // Check for a negative index.
     FlatAffineValueConstraints lcst(*region.getConstraints());
-    std::fill(ineq.begin(), ineq.end(), 0);
+    llvm::fill(ineq, 0);
     // d_i <= -1;
     lcst.addBound(BoundType::UB, r, -1);
     outOfBounds = !lcst.isEmpty();
@@ -1553,15 +1550,17 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   FlatAffineValueConstraints sliceUnionCst;
   assert(sliceUnionCst.getNumDimAndSymbolVars() == 0);
   std::vector<std::pair<Operation *, Operation *>> dependentOpPairs;
-  for (Operation *i : opsA) {
-    MemRefAccess srcAccess(i);
-    for (Operation *j : opsB) {
-      MemRefAccess dstAccess(j);
+  MemRefAccess srcAccess;
+  MemRefAccess dstAccess;
+  for (Operation *a : opsA) {
+    srcAccess = MemRefAccess(a);
+    for (Operation *b : opsB) {
+      dstAccess = MemRefAccess(b);
       if (srcAccess.memref != dstAccess.memref)
         continue;
       // Check if 'loopDepth' exceeds nesting depth of src/dst ops.
-      if ((!isBackwardSlice && loopDepth > getNestingDepth(i)) ||
-          (isBackwardSlice && loopDepth > getNestingDepth(j))) {
+      if ((!isBackwardSlice && loopDepth > getNestingDepth(a)) ||
+          (isBackwardSlice && loopDepth > getNestingDepth(b))) {
         LLVM_DEBUG(llvm::dbgs() << "Invalid loop depth\n");
         return SliceComputationResult::GenericFailure;
       }
@@ -1580,13 +1579,12 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
       }
       if (result.value == DependenceResult::NoDependence)
         continue;
-      dependentOpPairs.emplace_back(i, j);
+      dependentOpPairs.emplace_back(a, b);
 
       // Compute slice bounds for 'srcAccess' and 'dstAccess'.
       ComputationSliceState tmpSliceState;
-      mlir::affine::getComputationSliceState(i, j, dependenceConstraints,
-                                             loopDepth, isBackwardSlice,
-                                             &tmpSliceState);
+      getComputationSliceState(a, b, dependenceConstraints, loopDepth,
+                               isBackwardSlice, &tmpSliceState);
 
       if (sliceUnionCst.getNumDimAndSymbolVars() == 0) {
         // Initialize 'sliceUnionCst' with the bounds computed in previous step.
@@ -1951,16 +1949,16 @@ AffineForOp mlir::affine::insertBackwardComputationSlice(
 
 // Constructs  MemRefAccess populating it with the memref, its indices and
 // opinst from 'loadOrStoreOpInst'.
-MemRefAccess::MemRefAccess(Operation *loadOrStoreOpInst) {
-  if (auto loadOp = dyn_cast<AffineReadOpInterface>(loadOrStoreOpInst)) {
+MemRefAccess::MemRefAccess(Operation *memOp) {
+  if (auto loadOp = dyn_cast<AffineReadOpInterface>(memOp)) {
     memref = loadOp.getMemRef();
-    opInst = loadOrStoreOpInst;
+    opInst = memOp;
     llvm::append_range(indices, loadOp.getMapOperands());
   } else {
-    assert(isa<AffineWriteOpInterface>(loadOrStoreOpInst) &&
+    assert(isa<AffineWriteOpInterface>(memOp) &&
            "Affine read/write op expected");
-    auto storeOp = cast<AffineWriteOpInterface>(loadOrStoreOpInst);
-    opInst = loadOrStoreOpInst;
+    auto storeOp = cast<AffineWriteOpInterface>(memOp);
+    opInst = memOp;
     memref = storeOp.getMemRef();
     llvm::append_range(indices, storeOp.getMapOperands());
   }

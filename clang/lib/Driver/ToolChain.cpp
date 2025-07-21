@@ -11,13 +11,13 @@
 #include "ToolChains/Arch/ARM.h"
 #include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/Clang.h"
-#include "ToolChains/CommonArgs.h"
 #include "ToolChains/Flang.h"
 #include "ToolChains/InterfaceStubs.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
@@ -258,10 +258,10 @@ static void getAArch64MultilibFlags(const Driver &D,
   processMultilibCustomFlags(Result, Args);
 }
 
-static void getARMMultilibFlags(const Driver &D,
-                                      const llvm::Triple &Triple,
-                                      const llvm::opt::ArgList &Args,
-                                      Multilib::flags_list &Result) {
+static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
+                                llvm::Reloc::Model RelocationModel,
+                                const llvm::opt::ArgList &Args,
+                                Multilib::flags_list &Result) {
   std::vector<StringRef> Features;
   llvm::ARM::FPUKind FPUKind = tools::arm::getARMTargetFeatures(
       D, Triple, Args, Features, false /*ForAs*/, true /*ForMultilib*/);
@@ -304,6 +304,18 @@ static void getARMMultilibFlags(const Driver &D,
     llvm_unreachable("Invalid float ABI");
   }
 
+  if (RelocationModel == llvm::Reloc::ROPI ||
+      RelocationModel == llvm::Reloc::ROPI_RWPI)
+    Result.push_back("-fropi");
+  else
+    Result.push_back("-fno-ropi");
+
+  if (RelocationModel == llvm::Reloc::RWPI ||
+      RelocationModel == llvm::Reloc::ROPI_RWPI)
+    Result.push_back("-frwpi");
+  else
+    Result.push_back("-fno-rwpi");
+
   const Arg *BranchProtectionArg =
       Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
   if (BranchProtectionArg) {
@@ -344,6 +356,18 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   const llvm::Triple Triple(ComputeEffectiveClangTriple(Args));
   Result.push_back("--target=" + Triple.str());
 
+  // A difference of relocation model (absolutely addressed data, PIC, Arm
+  // ROPI/RWPI) is likely to change whether a particular multilib variant is
+  // compatible with a given link. Determine the relocation model of the
+  // current link, so as to add appropriate multilib flags.
+  llvm::Reloc::Model RelocationModel;
+  unsigned PICLevel;
+  bool IsPIE;
+  {
+    RegisterEffectiveTriple TripleRAII(*this, Triple);
+    std::tie(RelocationModel, PICLevel, IsPIE) = ParsePICArgs(*this, Args);
+  }
+
   switch (Triple.getArch()) {
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
@@ -354,7 +378,7 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    getARMMultilibFlags(D, Triple, Args, Result);
+    getARMMultilibFlags(D, Triple, RelocationModel, Args, Result);
     break;
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
@@ -376,6 +400,12 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   else
     Result.push_back("-fexceptions");
 
+  if (RelocationModel == llvm::Reloc::PIC_)
+    Result.push_back(IsPIE ? (PICLevel > 1 ? "-fPIE" : "-fpie")
+                           : (PICLevel > 1 ? "-fPIC" : "-fpic"));
+  else
+    Result.push_back("-fno-pic");
+
   // Sort and remove duplicates.
   std::sort(Result.begin(), Result.end());
   Result.erase(llvm::unique(Result), Result.end());
@@ -389,10 +419,9 @@ ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
   return SanArgs;
 }
 
-const XRayArgs& ToolChain::getXRayArgs() const {
-  if (!XRayArguments)
-    XRayArguments.reset(new XRayArgs(*this, Args));
-  return *XRayArguments;
+const XRayArgs ToolChain::getXRayArgs(const llvm::opt::ArgList &JobArgs) const {
+  XRayArgs XRayArguments(*this, JobArgs);
+  return XRayArguments;
 }
 
 namespace {
@@ -502,8 +531,7 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   StringRef Prefix(ProgName);
   Prefix = Prefix.slice(0, LastComponent);
   std::string IgnoredError;
-  bool IsRegistered =
-      llvm::TargetRegistry::lookupTarget(std::string(Prefix), IgnoredError);
+  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Prefix, IgnoredError);
   return ParsedClangName{std::string(Prefix), ModeSuffix, DS->ModeFlag,
                          IsRegistered};
 }
@@ -935,6 +963,20 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (auto Path = getPathForTriple(T))
     return *Path;
 
+  if (T.isOSAIX()) {
+    llvm::Triple AIXTriple;
+    if (T.getEnvironment() == Triple::UnknownEnvironment) {
+      // Strip unknown environment and the OS version from the triple.
+      AIXTriple = llvm::Triple(T.getArchName(), T.getVendorName(),
+                               llvm::Triple::getOSTypeName(T.getOS()));
+    } else {
+      // Strip the OS version from the triple.
+      AIXTriple = getTripleWithoutOSVersion();
+    }
+    if (auto Path = getPathForTriple(AIXTriple))
+      return *Path;
+  }
+
   if (T.isOSzOS() &&
       (!T.getOSVersion().empty() || !T.getEnvironmentVersion().empty())) {
     // Build the triple without version information
@@ -980,14 +1022,6 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
   if (Triple.isOSDarwin())
     return {};
 
-  // For AIX, get the triple without the OS version.
-  if (Triple.isOSAIX()) {
-    const llvm::Triple &TripleWithoutVersion = getTripleWithoutOSVersion();
-    llvm::sys::path::append(P, TripleWithoutVersion.str());
-    if (getVFS().exists(P))
-      return std::string(P);
-    return {};
-  }
   llvm::sys::path::append(P, Triple.str());
   return std::string(P);
 }
@@ -1727,7 +1761,7 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
       continue;
     }
     if (XOpenMPTargetNoTriple && XOpenMPTargetArg &&
-        Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() != 1) {
+        Args.getAllArgValues(options::OPT_offload_targets_EQ).size() != 1) {
       getDriver().Diag(diag::err_drv_Xopenmp_target_missing_triple);
       continue;
     }

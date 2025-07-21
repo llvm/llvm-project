@@ -868,20 +868,6 @@ void mlir::affine::getPerfectlyNestedLoops(
   }
 }
 
-/// Identify valid and profitable bands of loops to tile. This is currently just
-/// a temporary placeholder to test the mechanics of tiled code generation.
-/// Returns all maximal outermost perfect loop nests to tile.
-void mlir::affine::getTileableBands(
-    func::FuncOp f, std::vector<SmallVector<AffineForOp, 6>> *bands) {
-  // Get maximal perfect nest of 'affine.for' insts starting from root
-  // (inclusive).
-  for (AffineForOp forOp : f.getOps<AffineForOp>()) {
-    SmallVector<AffineForOp, 6> band;
-    getPerfectlyNestedLoops(band, forOp);
-    bands->push_back(band);
-  }
-}
-
 /// Unrolls this loop completely.
 LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
@@ -1015,8 +1001,7 @@ LogicalResult mlir::affine::loopUnrollByFactor(
 
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (unrollFactor == 1) {
-    if (mayBeConstantTripCount && *mayBeConstantTripCount == 1 &&
-        failed(promoteIfSingleIteration(forOp)))
+    if (mayBeConstantTripCount == 1 && failed(promoteIfSingleIteration(forOp)))
       return failure();
     return success();
   }
@@ -1103,8 +1088,7 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
 
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (unrollJamFactor == 1) {
-    if (mayBeConstantTripCount && *mayBeConstantTripCount == 1 &&
-        failed(promoteIfSingleIteration(forOp)))
+    if (mayBeConstantTripCount == 1 && failed(promoteIfSingleIteration(forOp)))
       return failure();
     return success();
   }
@@ -1969,6 +1953,12 @@ static LogicalResult generateCopy(
   if (begin == end)
     return success();
 
+  // Record the last op in the block for which we are performing copy
+  // generation. We later do the memref replacement only in [begin, lastCopyOp]
+  // so that the original memref's used in the data movement code themselves
+  // don't get replaced.
+  Operation *lastCopyOp = end->getPrevNode();
+
   // Is the copy out point at the end of the block where we are doing
   // explicit copying.
   bool isCopyOutAtEndOfBlock = (end == copyOutPlacementStart);
@@ -2145,12 +2135,6 @@ static LogicalResult generateCopy(
     }
   }
 
-  // Record the last operation where we want the memref replacement to end. We
-  // later do the memref replacement only in [begin, postDomFilter] so
-  // that the original memref's used in the data movement code themselves don't
-  // get replaced.
-  auto postDomFilter = std::prev(end);
-
   // Create fully composed affine maps for each memref.
   auto memAffineMap = b.getMultiDimIdentityMap(memIndices.size());
   fullyComposeAffineMapAndOperands(&memAffineMap, &memIndices);
@@ -2246,13 +2230,17 @@ static LogicalResult generateCopy(
   if (!isBeginAtStartOfBlock)
     prevOfBegin = std::prev(begin);
 
+  auto userFilterFn = [&](Operation *user) {
+    auto *ancestorUser = block->findAncestorOpInBlock(*user);
+    return ancestorUser && !ancestorUser->isBeforeInBlock(&*begin) &&
+           !lastCopyOp->isBeforeInBlock(ancestorUser);
+  };
+
   // *Only* those uses within the range [begin, end) of 'block' are replaced.
   (void)replaceAllMemRefUsesWith(memref, fastMemRef,
                                  /*extraIndices=*/{}, indexRemap,
                                  /*extraOperands=*/regionSymbols,
-                                 /*symbolOperands=*/{},
-                                 /*domOpFilter=*/&*begin,
-                                 /*postDomOpFilter=*/&*postDomFilter);
+                                 /*symbolOperands=*/{}, userFilterFn);
 
   *nBegin = isBeginAtStartOfBlock ? block->begin() : std::next(prevOfBegin);
 

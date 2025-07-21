@@ -22,6 +22,7 @@ typedef struct CF_BRIDGED_TYPE(id) CGImage *CGImageRef;
 #define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
 #define CF_CONSUMED __attribute__((cf_consumed))
 #define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
+#define NS_REQUIRES_PROPERTY_DEFINITIONS __attribute__((objc_requires_property_definitions))
 
 extern const CFAllocatorRef kCFAllocatorDefault;
 typedef struct _NSZone NSZone;
@@ -44,6 +45,7 @@ CFDictionaryRef CFDictionaryCreateCopy(CFAllocatorRef allocator, CFDictionaryRef
 CFDictionaryRef CFDictionaryCreateMutableCopy(CFAllocatorRef allocator, CFIndex capacity, CFDictionaryRef theDict);
 CFIndex CFDictionaryGetCount(CFDictionaryRef theDict);
 Boolean CFDictionaryContainsKey(CFDictionaryRef theDict, const void *key);
+Boolean CFEqual(CFTypeRef, CFTypeRef);
 Boolean CFDictionaryContainsValue(CFDictionaryRef theDict, const void *value);
 const void *CFDictionaryGetValue(CFDictionaryRef theDict, const void *key);
 void CFDictionaryAddValue(CFMutableDictionaryRef theDict, const void *key, const void *value);

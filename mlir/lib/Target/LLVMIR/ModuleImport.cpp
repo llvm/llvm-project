@@ -30,7 +30,6 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
@@ -164,11 +163,12 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule,
                            bool emitExpensiveWarnings,
                            bool importEmptyDICompositeTypes,
-                           bool preferUnregisteredIntrinsics)
+                           bool preferUnregisteredIntrinsics,
+                           bool importStructsAsLiterals)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
-      typeTranslator(*mlirModule->getContext()),
+      typeTranslator(*mlirModule->getContext(), importStructsAsLiterals),
       debugImporter(std::make_unique<DebugImporter>(
           mlirModule, importEmptyDICompositeTypes)),
       loopAnnotationImporter(
@@ -755,7 +755,6 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
 
   // Build ModuleFlagProfileSummaryAttr by sequentially fetching elements in
   // a fixed order: format, total count, etc.
-  SmallVector<Attribute> profileSummary;
   std::optional<ProfileSummaryFormatKind> format = convertProfileSummaryFormat(
       mlirModule, llvmModule, mdTuple->getOperand(summayIdx++));
   if (!format.has_value())
@@ -1027,6 +1026,16 @@ LogicalResult ModuleImport::convertAliases() {
     if (failed(convertAlias(&alias))) {
       return emitError(UnknownLoc::get(context))
              << "unhandled global alias: " << diag(alias);
+    }
+  }
+  return success();
+}
+
+LogicalResult ModuleImport::convertIFuncs() {
+  for (llvm::GlobalIFunc &ifunc : llvmModule->ifuncs()) {
+    if (failed(convertIFunc(&ifunc))) {
+      return emitError(UnknownLoc::get(context))
+             << "unhandled global ifunc: " << diag(ifunc);
     }
   }
   return success();
@@ -1367,6 +1376,21 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
     aliasOp.setUnnamedAddr(convertUnnamedAddrFromLLVM(alias->getUnnamedAddr()));
   aliasOp.setVisibility_(convertVisibilityFromLLVM(alias->getVisibility()));
 
+  return success();
+}
+
+LogicalResult ModuleImport::convertIFunc(llvm::GlobalIFunc *ifunc) {
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
+
+  Type type = convertType(ifunc->getValueType());
+  llvm::Constant *resolver = ifunc->getResolver();
+  Type resolverType = convertType(resolver->getType());
+  builder.create<IFuncOp>(mlirModule.getLoc(), ifunc->getName(), type,
+                          resolver->getName(), resolverType,
+                          convertLinkageFromLLVM(ifunc->getLinkage()),
+                          ifunc->isDSOLocal(), ifunc->getAddressSpace(),
+                          convertUnnamedAddrFromLLVM(ifunc->getUnnamedAddr()),
+                          convertVisibilityFromLLVM(ifunc->getVisibility()));
   return success();
 }
 
@@ -1974,8 +1998,9 @@ ModuleImport::convertCallOperands(llvm::CallBase *callInst,
   // treated as indirect calls to constant operands that need to be converted.
   // Skip the callee operand if it's inline assembly, as it's handled separately
   // in InlineAsmOp.
-  if (!isa<llvm::Function>(callInst->getCalledOperand()) && !isInlineAsm) {
-    FailureOr<Value> called = convertValue(callInst->getCalledOperand());
+  llvm::Value *calleeOperand = callInst->getCalledOperand();
+  if (!isa<llvm::Function, llvm::GlobalIFunc>(calleeOperand) && !isInlineAsm) {
+    FailureOr<Value> called = convertValue(calleeOperand);
     if (failed(called))
       return failure();
     operands.push_back(*called);
@@ -2036,12 +2061,20 @@ ModuleImport::convertFunctionType(llvm::CallBase *callInst,
   if (failed(callType))
     return failure();
   auto *callee = dyn_cast<llvm::Function>(calledOperand);
+
+  llvm::FunctionType *origCalleeType = nullptr;
+  if (callee) {
+    origCalleeType = callee->getFunctionType();
+  } else if (auto *ifunc = dyn_cast<llvm::GlobalIFunc>(calledOperand)) {
+    origCalleeType = cast<llvm::FunctionType>(ifunc->getValueType());
+  }
+
   // For indirect calls, return the type of the call itself.
-  if (!callee)
+  if (!origCalleeType)
     return callType;
 
   FailureOr<LLVMFunctionType> calleeType =
-      castOrFailure(convertType(callee->getFunctionType()));
+      castOrFailure(convertType(origCalleeType));
   if (failed(calleeType))
     return failure();
 
@@ -2060,8 +2093,8 @@ ModuleImport::convertFunctionType(llvm::CallBase *callInst,
 
 FlatSymbolRefAttr ModuleImport::convertCalleeName(llvm::CallBase *callInst) {
   llvm::Value *calledOperand = callInst->getCalledOperand();
-  if (auto *callee = dyn_cast<llvm::Function>(calledOperand))
-    return SymbolRefAttr::get(context, callee->getName());
+  if (isa<llvm::Function, llvm::GlobalIFunc>(calledOperand))
+    return SymbolRefAttr::get(context, calledOperand->getName());
   return {};
 }
 
@@ -2071,6 +2104,40 @@ LogicalResult ModuleImport::convertIntrinsic(llvm::CallInst *inst) {
 
   Location loc = translateLoc(inst->getDebugLoc());
   return emitError(loc) << "unhandled intrinsic: " << diag(*inst);
+}
+
+ArrayAttr
+ModuleImport::convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall) {
+  const auto *ia = cast<llvm::InlineAsm>(llvmCall.getCalledOperand());
+  unsigned argIdx = 0;
+  SmallVector<mlir::Attribute> opAttrs;
+  bool hasIndirect = false;
+
+  for (const llvm::InlineAsm::ConstraintInfo &ci : ia->ParseConstraints()) {
+    // Only deal with constraints that correspond to call arguments.
+    if (ci.Type == llvm::InlineAsm::isLabel || !ci.hasArg())
+      continue;
+
+    // Only increment `argIdx` in terms of constraints containing arguments,
+    // which are guaranteed to happen in the same order of the call arguments.
+    if (ci.isIndirect) {
+      if (llvm::Type *paramEltType = llvmCall.getParamElementType(argIdx)) {
+        SmallVector<mlir::NamedAttribute> attrs;
+        attrs.push_back(builder.getNamedAttr(
+            mlir::LLVM::InlineAsmOp::getElementTypeAttrName(),
+            mlir::TypeAttr::get(convertType(paramEltType))));
+        opAttrs.push_back(builder.getDictionaryAttr(attrs));
+        hasIndirect = true;
+      }
+    } else {
+      opAttrs.push_back(builder.getDictionaryAttr({}));
+    }
+    argIdx++;
+  }
+
+  // Avoid emitting an array where all entries are empty dictionaries.
+  return hasIndirect ? ArrayAttr::get(mlirModule->getContext(), opAttrs)
+                     : nullptr;
 }
 
 LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
@@ -2159,14 +2226,18 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
         Type resultTy = convertType(callInst->getType());
         if (!resultTy)
           return failure();
+        ArrayAttr operandAttrs = convertAsmInlineOperandAttrs(*callInst);
         return builder
             .create<InlineAsmOp>(
                 loc, resultTy, *operands,
                 builder.getStringAttr(asmI->getAsmString()),
                 builder.getStringAttr(asmI->getConstraintString()),
-                /*has_side_effects=*/true,
-                /*is_align_stack=*/false, /*asm_dialect=*/nullptr,
-                /*operand_attrs=*/nullptr)
+                asmI->hasSideEffects(), asmI->isAlignStack(),
+                convertTailCallKindFromLLVM(callInst->getTailCallKind()),
+                AsmDialectAttr::get(
+                    mlirModule.getContext(),
+                    convertAsmDialectFromLLVM(asmI->getDialect())),
+                operandAttrs)
             .getOperation();
       }
       bool isIncompatibleCall;
@@ -2597,6 +2668,15 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setTargetFeaturesAttr(
         LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("reciprocal-estimates");
+      attr.isStringAttribute())
+    funcOp.setReciprocalEstimatesAttr(
+        StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("prefer-vector-width");
+      attr.isStringAttribute())
+    funcOp.setPreferVectorWidth(attr.getValueAsString());
 
   if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
       attr.isStringAttribute())
@@ -3081,7 +3161,8 @@ ModuleImport::translateDereferenceableAttr(const llvm::MDNode *node,
 OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
     std::unique_ptr<llvm::Module> llvmModule, MLIRContext *context,
     bool emitExpensiveWarnings, bool dropDICompositeTypeElements,
-    bool loadAllDialects, bool preferUnregisteredIntrinsics) {
+    bool loadAllDialects, bool preferUnregisteredIntrinsics,
+    bool importStructsAsLiterals) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -3099,7 +3180,8 @@ OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule),
                             emitExpensiveWarnings, dropDICompositeTypeElements,
-                            preferUnregisteredIntrinsics);
+                            preferUnregisteredIntrinsics,
+                            importStructsAsLiterals);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))
@@ -3113,6 +3195,8 @@ OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
   if (failed(moduleImport.convertFunctions()))
     return {};
   if (failed(moduleImport.convertAliases()))
+    return {};
+  if (failed(moduleImport.convertIFuncs()))
     return {};
   moduleImport.convertTargetTriple();
   return module;

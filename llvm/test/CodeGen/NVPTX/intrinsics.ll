@@ -7,12 +7,12 @@
 define float @test_fabsf(float %f) {
 ; CHECK-LABEL: test_fabsf(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [test_fabsf_param_0];
-; CHECK-NEXT:    abs.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_fabsf_param_0];
+; CHECK-NEXT:    abs.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %x = call float @llvm.fabs.f32(float %f)
   ret float %x
@@ -21,12 +21,12 @@ define float @test_fabsf(float %f) {
 define double @test_fabs(double %d) {
 ; CHECK-LABEL: test_fabs(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %fd1, [test_fabs_param_0];
-; CHECK-NEXT:    abs.f64 %fd2, %fd1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %fd2;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_fabs_param_0];
+; CHECK-NEXT:    abs.f64 %rd2, %rd1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %x = call double @llvm.fabs.f64(double %d)
   ret double %x
@@ -35,12 +35,12 @@ define double @test_fabs(double %d) {
 define float @test_nvvm_sqrt(float %a) {
 ; CHECK-LABEL: test_nvvm_sqrt(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [test_nvvm_sqrt_param_0];
-; CHECK-NEXT:    sqrt.rn.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_nvvm_sqrt_param_0];
+; CHECK-NEXT:    sqrt.rn.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.nvvm.sqrt.f(float %a)
   ret float %val
@@ -49,12 +49,12 @@ define float @test_nvvm_sqrt(float %a) {
 define float @test_llvm_sqrt(float %a) {
 ; CHECK-LABEL: test_llvm_sqrt(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [test_llvm_sqrt_param_0];
-; CHECK-NEXT:    sqrt.rn.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_llvm_sqrt_param_0];
+; CHECK-NEXT:    sqrt.rn.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %val = call float @llvm.sqrt.f32(float %a)
   ret float %val

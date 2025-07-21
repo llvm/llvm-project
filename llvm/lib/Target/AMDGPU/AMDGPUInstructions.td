@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-class AddressSpacesImpl {
+def AddrSpaces {
   int Flat = 0;
   int Global = 1;
   int Region = 2;
@@ -20,8 +20,6 @@ class AddressSpacesImpl {
   int Private = 5;
   int Constant32Bit = 6;
 }
-
-def AddrSpaces : AddressSpacesImpl;
 
 
 class AMDGPUInst <dag outs, dag ins, string asm = "",
@@ -94,6 +92,8 @@ def FP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().F
 def NoFP16Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
 def NoFP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals == DenormalMode::getPreserveSign()">;
 def NoFP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
+def IEEEModeEnabled : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().IEEE">;
+def IEEEModeDisabled : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode().IEEE">;
 def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
 }
 

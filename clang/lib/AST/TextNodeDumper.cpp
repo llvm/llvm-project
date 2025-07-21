@@ -1050,10 +1050,6 @@ void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *N
       OS << " "; // "Namespace" is printed as the decl kind.
       dumpBareDeclRef(NNS->getAsNamespace());
       break;
-    case NestedNameSpecifier::NamespaceAlias:
-      OS << " "; // "NamespaceAlias" is printed as the decl kind.
-      dumpBareDeclRef(NNS->getAsNamespaceAlias());
-      break;
     case NestedNameSpecifier::TypeSpec:
       OS << " TypeSpec";
       dumpType(QualType(NNS->getAsType(), 0));
@@ -3041,6 +3037,16 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
 void TextNodeDumper::VisitHLSLRootSignatureDecl(
     const HLSLRootSignatureDecl *D) {
   dumpName(D);
+  OS << " version: ";
+  switch (D->getVersion()) {
+  case llvm::dxbc::RootSignatureVersion::V1_0:
+    OS << "1.0";
+    break;
+  case llvm::dxbc::RootSignatureVersion::V1_1:
+    OS << "1.1";
+    break;
+  }
+  OS << ", ";
   llvm::hlsl::rootsig::dumpRootElements(OS, D->getRootElements());
 }
 
