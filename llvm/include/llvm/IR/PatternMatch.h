@@ -822,12 +822,47 @@ template <typename Class> struct bind_ty {
   }
 };
 
+template <typename Class, typename MatchTy> struct bind_and_match_ty {
+  Class *&VR;
+  MatchTy Match;
+
+  bind_and_match_ty(Class *&V, const MatchTy &Match) : VR(V), Match(Match) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    auto *CV = dyn_cast<Class>(V);
+    if (CV && Match.match(V)) {
+      VR = CV;
+      return true;
+    }
+    return false;
+  }
+};
+
 /// Match a value, capturing it if we match.
 inline bind_ty<Value> m_Value(Value *&V) { return V; }
 inline bind_ty<const Value> m_Value(const Value *&V) { return V; }
 
+template <typename MatchTy>
+inline bind_and_match_ty<Value, MatchTy> m_Value(Value *&V,
+                                                 const MatchTy &Match) {
+  return {V, Match};
+}
+
+template <typename MatchTy>
+inline bind_and_match_ty<const Value, MatchTy> m_Value(const Value *&V,
+                                                       const MatchTy &Match) {
+  return {V, Match};
+}
+
 /// Match an instruction, capturing it if we match.
 inline bind_ty<Instruction> m_Instruction(Instruction *&I) { return I; }
+
+template <typename MatchTy>
+inline bind_and_match_ty<Instruction, MatchTy>
+m_Instruction(Instruction *&I, const MatchTy &Match) {
+  return {I, Match};
+}
+
 /// Match a unary operator, capturing it if we match.
 inline bind_ty<UnaryOperator> m_UnOp(UnaryOperator *&I) { return I; }
 /// Match a binary operator, capturing it if we match.
