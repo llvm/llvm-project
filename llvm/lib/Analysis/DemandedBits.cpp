@@ -76,8 +76,7 @@ void DemandedBits::determineLiveOperandBits(
           computeKnownBits(V2, Known2, DL, &AC, UserI, &DT);
         }
       };
-  auto GetShiftedRange = [&](unsigned const Min, unsigned const Max,
-                             bool ShiftLeft) {
+  auto GetShiftedRange = [&](unsigned Min, unsigned Max, bool ShiftLeft) {
     using ShiftFn = APInt (APInt::*)(unsigned) const;
     auto Shift = ShiftLeft ? static_cast<ShiftFn>(&APInt::shl)
                            : static_cast<ShiftFn>(&APInt::lshr);
@@ -224,7 +223,7 @@ void DemandedBits::determineLiveOperandBits(
         unsigned Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
         // Suppose AOut == 0b0000 1001
         // [min, max] = [1, 3]
-        // shift by 1 we get 0b0001 00100
+        // shift by 1 we get 0b0001 0010
         // shift by 2 we get 0b0010 0100
         // shift by 3 we get 0b0100 1000
         // we take the or for every shift to cover all the positions.
